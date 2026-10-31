@@ -713,6 +713,16 @@ describe("la clé de doublon", () => {
       cleDeDoublon({ ...lue, emetteurIdentifiantFiscal: "1234567B/B/M/000" }).mf,
     );
   });
+  it("un numéro en chiffres arabes orientaux a sa clé, la même qu'en chiffres latins", () => {
+    // Jeu synthétique, 31 octobre 2026 : « ٢٠٢٦/٥٠٣٦ » rendait une clé VIDE —
+    // les chiffres orientaux tombaient avec la ponctuation, et aucune facture
+    // arabe n'était jamais rapprochée d'un doublon.
+    assert.equal(cleDeDoublon({ ...lue, numero: "٢٠٢٦ / ٥٠٣٦" }).numero, "20265036");
+    assert.deepEqual(
+      cleDeDoublon({ ...lue, numero: "٢٠٢٦/٥٠٣٦" }),
+      cleDeDoublon({ ...lue, numero: "2026/5036" }),
+    );
+  });
   it("sans numéro lu, la clé est vide : rien n'est jamais signalé", () => {
     for (const numero of [null, "", " / - "])
       assert.deepEqual(cleDeDoublon({ ...lue, numero }), { numero: null, mf: null, lu: null });

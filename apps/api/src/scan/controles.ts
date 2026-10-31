@@ -27,6 +27,7 @@
 
 import { periodeDeTva } from "@malica/socle/exercice";
 import { memeMatricule, normaliserMatricule } from "@malica/socle/matricule";
+import { enChiffresLatins } from "@malica/socle/chiffres";
 import { texteSansUnicode } from "@malica/socle/texte-sans-unicode";
 
 import type { ChangeDuJugement } from "./cours-de-change.ts";
@@ -180,7 +181,14 @@ const VERDICT_DU_RANG: Record<number, Verdict> = {
  * appelant de production.
  */
 
-const normNumero = (n: string | null) => (n ? n.toUpperCase().replace(/[^0-9A-Z]/g, "") : null);
+// Les chiffres arabes orientaux d'abord ramenés aux latins (`enChiffresLatins`) :
+// ils tombaient avec la ponctuation, et « ٢٠٢٦/٥٠٣٦ » n'avait pas de clé.
+const normNumero = (n: string | null) =>
+  n
+    ? enChiffresLatins(n)
+        .toUpperCase()
+        .replace(/[^0-9A-Z]/g, "")
+    : null;
 
 /** Un nom d'émetteur comparable : sans accents, sans ponctuation, en capitales. */
 const normNom = (n: string | null) =>
