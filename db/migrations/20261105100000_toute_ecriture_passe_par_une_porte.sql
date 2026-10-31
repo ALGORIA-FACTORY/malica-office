@@ -24,8 +24,10 @@
 --    chemin faisait hier ; le client, lui, ne peut plus rien écrire sans elle.
 --    Personne n'est membre de `portier` : aucune session ne l'endosse.
 --
--- 2. LES 49 FONCTIONS `security invoker` deviennent des portes (section 2),
---    sans changer une ligne de leur corps.
+-- 2. LES 48 FONCTIONS `security invoker` qu'appelle un client deviennent des
+--    portes (section 2), sans changer une ligne de leur corps ; la 49e n'est
+--    appelée que par des portes de la base, et le client perd le droit de
+--    l'appeler.
 --
 -- 3. LES REQUÊTES DE L'API deviennent des portes (sections 5 à 15) : chacune
 --    fixe ce que le client écrit (colonnes, dossier tiré de l'objet, jamais de
@@ -77,7 +79,6 @@ declare
 begin
   foreach f in array array[
     'app.annulation_contre_passe_le_reglement()',
-    'app.piece_oublie_ses_propositions(uuid)',
     'fabrique.generation_proposer(uuid, text)',
     'fabrique.travail_prendre(uuid, fabrique.travail_nature_t[])',
     'public.agents_run_log(uuid, text, text, text, text, integer, integer, integer, uuid, text)',
@@ -136,6 +137,18 @@ begin
   end loop;
 end
 $$;
+
+-- Une exception, et elle n'ouvre rien : `app.piece_oublie_ses_propositions`
+-- n'est appelée que par des portes — trois de la base (`capture_piece_set_vis`,
+-- `capture_piece_supprimer`, `piece_remplacer`), qui l'exécutent en leur nom,
+-- et `piece_renvoyer`, sous le portier. Devenue elle-même porte du portier,
+-- elle aurait effacé sous la RLS de l'appelant même dans les trois premières :
+-- un siège qui ne lit pas une proposition l'aurait laissée derrière une pièce
+-- retirée, sans un mot. Elle reste `security invoker` — chacune de ses portes
+-- la joue avec ses propres droits, comme avant —, et le client perd le droit
+-- de l'appeler : aucun chemin de l'application ne le fait.
+revoke all on function app.piece_oublie_ses_propositions(uuid) from public, anon, authenticated;
+grant execute on function app.piece_oublie_ses_propositions(uuid) to portier;
 
 -- --- 3. L'origine d'une pièce : le portier n'y touche pas plus que le client -----------------------
 --

@@ -501,7 +501,7 @@
     {
       "objet": "socle.ecritures",
       "privilege": "DELETE",
-      "chemins": ["app.piece_oublie_ses_propositions", "public.socle_ecriture_propose"]
+      "chemins": ["public.socle_ecriture_propose"]
     },
     {
       "objet": "socle.ecritures",
