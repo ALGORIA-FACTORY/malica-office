@@ -6,7 +6,7 @@
  * R3 : le procès-verbal est le seul artefact qu'un modèle produit, et il ne
  * porte aucun chiffre liant. Ce module tient cette frontière en trois temps :
  *
- *   1. Les CHIFFRES sortent des moteurs du Socle — `computePnl`, `computeTva`
+ *   1. Les CHIFFRES sortent des moteurs du Socle — `computePnl`, `tvaDesExtraits`
  *      — nourris par ce que l'API rend pour ce client, exactement comme le
  *      dossier du cabinet les affiche. Les comptages viennent de la file et
  *      du calendrier. Aucun n'est calculé ici.
@@ -35,6 +35,7 @@ import { callDeepSeek, DeepSeekError, type DeepSeekMessage } from "../conseil/de
 import { nombresEtrangers } from "../conseil/redaction.ts";
 import type {
   ClientSummary,
+  DeclarationTva,
   Echeance,
   JurisdictionPack,
   LigneDePeriode,
@@ -44,9 +45,9 @@ import type {
   ReglagesCabinet,
   TaxRate,
 } from "@malica/socle/ports/repositories";
-import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import { computePnl } from "@malica/socle/engines/pnl/snapshot";
-import { computeTva } from "@malica/socle/engines/tva/compute";
+import { EXTRAIT_ILLISIBLE, tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
+import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
 import type { Fait, RaisonDEchec, ResultatRedaction } from "@malica/socle/ports/malica";
 
 /** Trente jours : l'horizon des « échéances à venir », le même que le dossier. */
@@ -63,6 +64,51 @@ const LANGUES: Record<string, string> = {
 
 interface FicheCourante {
   clotureExercice: string | null;
+}
+
+/* ------------------------------------------------------------- la TVA */
+
+/**
+ * Les chiffres de TVA du PV, depuis le SEUL calcul des écrans
+ * (`tvaDesExtraits`, au Socle). Ce fichier refaisait l'assemblage à la main
+ * et écartait EN SILENCE un extrait qui ne validait pas (3 novembre 2026).
+ *
+ * Revue de #145 : aucun montant de TVA n'est publié quand AUCUNE pièce n'a été
+ * comptée — un « 0,000 » signé au PV dirait une TVA nulle qu'on ne connaît
+ * pas. Les pièces hors du calcul sont celles dont l'extrait ne se lit pas
+ * (`EXTRAIT_ILLISIBLE`) : un refus du moteur sur une ligne ne retire pas la
+ * pièce, et une ligne n'est pas une pièce.
+ */
+export function chiffresDeLaTva(tva: TvaV1, extraits: number, devise: string): PvChiffre[] {
+  const horsCalcul = new Set(
+    tva.refused
+      .filter((r) => r.reason.startsWith(`${EXTRAIT_ILLISIBLE}:`))
+      .flatMap((r) => (r.item_id ? [r.item_id] : [])),
+  ).size;
+  const chiffres: PvChiffre[] = [];
+  if (extraits - horsCalcul > 0) {
+    const montant = (label: string, valeur: string): PvChiffre => ({
+      label,
+      valeur,
+      source: "tva",
+      genre: "montant",
+      devise,
+    });
+    chiffres.push(
+      montant("tvaCollectee", tva.totals.collectee),
+      montant("tvaDeductible", tva.totals.deductible),
+      montant("tva", tva.totals.solde),
+    );
+  }
+  if (horsCalcul > 0)
+    chiffres.push({
+      label: "tvaHorsCalcul",
+      valeur: String(horsCalcul),
+      source: "tva",
+      genre: "nombre",
+      devise: null,
+    });
+  return chiffres;
 }
 
 /* ----------------------------------------------------------- les chiffres */
@@ -100,11 +146,16 @@ async function rassemblerLesChiffres(
   ]);
 
   const debut = debutDExercice(fiche?.clotureExercice ?? null, periode);
-  const [lignes, taux, params, classes] = await Promise.all([
+  const [lignes, taux, declaration, params, classes] = await Promise.all([
     api.rpc<LigneDePeriode[]>("office", "periodeLignes", [client.tenantId, debut, fin]),
     pack
       ? api.rpc<TaxRate[]>("referentiel", "taxRates", [pack.id, client.jurisdiction])
       : Promise.resolve([] as TaxRate[]),
+    // Les lignes de la déclaration, au référentiel : le calcul de la TVA est
+    // celui de tous les écrans (`tvaDesExtraits`), et il les exige.
+    pack
+      ? api.rpc<DeclarationTva>("referentiel", "declarationTva", [pack.id, client.tenantId, fin])
+      : Promise.resolve(null),
     // Les décimales viennent du pack, jamais d'une table de devises écrite
     // en TypeScript (R4). Le dépôt lève une erreur explicite si le paramètre
     // manque : un PV aux montants à la mauvaise échelle serait signé.
@@ -163,32 +214,20 @@ async function rassemblerLesChiffres(
     );
   }
 
-  if (extraits.length > 0 && taux.length > 0) {
-    const dedans = extraits
-      .map((e) => ({ item_id: e.pieceId, lu: ExtractV1.safeParse(e.extract) }))
-      .filter((e) => e.lu.success)
-      .map((e) => ({ item_id: e.item_id, extract: (e.lu as { data: ExtractV1 }).data }));
-    if (dedans.length > 0) {
-      const tva = computeTva({
-        period: periode,
-        currency: { code: devise, decimals: decimales },
-        tax_rates: taux.map((r) => ({
-          code: r.code,
-          label: r.label,
-          rate: r.rate,
-          valid_from: r.validFrom,
-          valid_to: r.validTo,
-          jurisdiction: r.jurisdiction,
-        })),
-        achats: dedans.filter((e) => e.extract.document_kind !== "facture_vente"),
-        ventes: dedans.filter((e) => e.extract.document_kind === "facture_vente"),
-      });
-      chiffres.push(
-        montant("tvaCollectee", tva.totals.collectee, "tva"),
-        montant("tvaDeductible", tva.totals.deductible, "tva"),
-        montant("tva", tva.totals.solde, "tva"),
-      );
-    }
+  if (taux.length > 0 && declaration) {
+    chiffres.push(
+      ...chiffresDeLaTva(
+        tvaDesExtraits({
+          period: periode,
+          currency: { code: devise, decimals: decimales },
+          taux,
+          declaration,
+          rows: extraits,
+        }),
+        extraits.length,
+        devise,
+      ),
+    );
   }
 
   const duMois = file.filter((p) => p.createdAt.slice(0, 7) === periode).length;

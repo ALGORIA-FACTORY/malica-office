@@ -3,6 +3,7 @@ import { computeTva } from "../engines/tva/compute.ts";
 import {
   TND,
   TAX_RATES_TN,
+  DECLARATION_ESSAI,
   factureAchatMultiTaux,
   factureVenteSimple,
   factureTauxManquant,
@@ -14,6 +15,7 @@ describe("TVA / compute", () => {
       period: "2026-07",
       currency: TND,
       tax_rates: TAX_RATES_TN,
+      declaration: DECLARATION_ESSAI,
       achats: [{ item_id: "a1", extract: factureAchatMultiTaux() }],
       ventes: [{ item_id: "v1", extract: factureVenteSimple() }],
     });
@@ -29,6 +31,7 @@ describe("TVA / compute", () => {
       period: "2010-01",
       currency: TND,
       tax_rates: TAX_RATES_TN,
+      declaration: DECLARATION_ESSAI,
       achats: [{ item_id: "x", extract: factureTauxManquant() }],
       ventes: [],
     });
