@@ -52,11 +52,11 @@ describe("un impayé suspend la transmission et l'export", { skip: !BASE_CONFIGU
 
   const deposerTransmise = (cle: string) =>
     sousIdentiteDuServeur(dirigeant.id, (db) =>
-      db.query(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'pdf', 'partage', $2, $3, $4)`,
-        [pme, `essai/${cle}.pdf`, cle, dirigeant.id],
-      ),
+      db.query(`select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage')`, [
+        pme,
+        `essai/${cle}.pdf`,
+        cle,
+      ]),
     );
 
   before(async () => {

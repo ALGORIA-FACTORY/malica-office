@@ -45,8 +45,8 @@ describe("un reçu n'est jamais à lire", { skip: !BASE_CONFIGUREE }, () => {
       const piece = async (cle: string, source: string | null) =>
         (
           await db.query<{ id: string }>(
-            `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, source_piece_id)
-             values ($1, 'pdf', 'entite', $2, $3, $4) returning id`,
+            `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'entite', null, null,
+                                                  null, $4) as id`,
             [pme, `essai/${cle}.pdf`, cle, source],
           )
         ).rows[0]!.id;

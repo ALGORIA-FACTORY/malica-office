@@ -28,15 +28,15 @@ describe("le type d'une pièce se corrige après la lecture", { skip: !BASE_CONF
   const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
 
   const piece = async (cle: string, statut: string) => {
-    const id = await sousIdentite(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key,
-                                     created_by, document_kind, document_kind_statut)
-         values ($1, 'pdf', 'entite', $2, $3, $4, 'facture_achat', 'a_confirmer') returning id`,
-        [pme, `essai/${marque}-${cle}.pdf`, `${marque}-${cle}`, dirigeant.id],
-      );
-      return rows[0]!.id;
-    });
+    // Une pièce d'essai à l'état voulu, posée par l'administration : aucun
+    // client n'écrit une pièce hors de sa porte (`capture_piece_register`).
+    const { rows } = await admin.query<{ id: string }>(
+      `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key,
+                                   created_by, document_kind, document_kind_statut)
+       values ($1, 'pdf', 'entite', $2, $3, $4, 'facture_achat', 'a_confirmer') returning id`,
+      [pme, `essai/${marque}-${cle}.pdf`, `${marque}-${cle}`, dirigeant.id],
+    );
+    const id = rows[0]!.id;
     if (statut !== "capturee") {
       await admin.query("update capture.pieces set status = $2 where id = $1", [id, statut]);
     }

@@ -496,9 +496,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     n += 1;
     return sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'photo', 'personnel', $2, $3, $4) returning id`,
-        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+        `select public.capture_piece_register($1, 'photo', $2, $3, null, 'personnel') as id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`],
       );
       return rows[0]!.id;
     });
@@ -776,9 +775,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     n += 1;
     const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
-        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+        `select public.capture_piece_register($1, 'photo', $2, $3, null, 'entite') as id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`],
       );
       return rows[0]!.id;
     });
@@ -827,9 +825,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     n += 1;
     const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
-        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+        `select public.capture_piece_register($1, 'photo', $2, $3, null, 'entite') as id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`],
       );
       return rows[0]!.id;
     });
@@ -913,9 +910,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     n += 1;
     const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
-        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+        `select public.capture_piece_register($1, 'photo', $2, $3, null, 'entite') as id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`],
       );
       return rows[0]!.id;
     });
@@ -1071,9 +1067,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     n += 1;
     const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
-        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+        `select public.capture_piece_register($1, 'photo', $2, $3, null, 'entite') as id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`],
       );
       return rows[0]!.id;
     });
@@ -1102,9 +1097,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     n += 1;
     return sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
-        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+        `select public.capture_piece_register($1, 'photo', $2, $3, null, 'entite') as id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`],
       );
       return rows[0]!.id;
     });
@@ -1529,9 +1523,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     n += 1;
     const ancienne = await sousIdentiteDuServeur(siege.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
-        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, siege.id],
+        `select public.capture_piece_register($1, 'photo', $2, $3, null, 'entite') as id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`],
       );
       return rows[0]!.id;
     });

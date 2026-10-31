@@ -92,13 +92,10 @@ export const conversations = {
 
   /** Un fil neuf, sans titre : Malica le nommera après le premier échange. */
   async ouvrirNouvelle(db: Requete, tenantId: string): Promise<{ id: string }> {
-    const { rows } = await db.query<{ id: string }>(
-      `insert into agents.conversations (tenant_id) values ($1) returning id`,
-      [tenantId],
-    );
-    const id = rows[0]?.id;
-    if (!id) throw new Error("conversation.creation_refusee");
-    return { id };
+    const { rows } = await db.query<{ id: string }>(`select public.conversation_ouvrir($1) as id`, [
+      tenantId,
+    ]);
+    return { id: rows[0]!.id };
   },
 
   /**
@@ -110,14 +107,11 @@ export const conversations = {
    * fil abîmé.
    */
   async poser(db: Requete, input: { conversationId: string; question: string }): Promise<void> {
-    const question = input.question.trim();
-    if (!question)
-      throw Object.assign(new Error("une question ne peut pas être vide"), { code: "22023" });
-    await db.query(
-      `insert into agents.conversation_messages (conversation_id, role, contenu)
-       values ($1, 'user', $2)`,
-      [input.conversationId, question],
-    );
+    // La porte refuse une question vide et un fil qui n'est pas le sien.
+    await db.query(`select public.conversation_poser($1, $2)`, [
+      input.conversationId,
+      input.question,
+    ]);
   },
 
   /**
@@ -140,25 +134,16 @@ export const conversations = {
       latencyMs?: number | null;
     },
   ): Promise<void> {
-    await db.query(
-      `insert into agents.conversation_messages (conversation_id, role, contenu)
-       values ($1, 'user', $2)`,
-      [input.conversationId, input.question],
-    );
-    await db.query(
-      `insert into agents.conversation_messages
-         (conversation_id, role, contenu, raisonnement, model, tokens_in, tokens_out, latency_ms)
-       values ($1, 'assistant', $2, $3, $4, $5, $6, $7)`,
-      [
-        input.conversationId,
-        input.reponse,
-        input.raisonnement ?? null,
-        input.model ?? null,
-        input.tokensIn ?? null,
-        input.tokensOut ?? null,
-        input.latencyMs ?? null,
-      ],
-    );
+    await db.query(`select public.conversation_repondre($1, $2, $3, $4, $5, $6, $7, $8)`, [
+      input.conversationId,
+      input.question,
+      input.reponse,
+      input.raisonnement ?? null,
+      input.model ?? null,
+      input.tokensIn ?? null,
+      input.tokensOut ?? null,
+      input.latencyMs ?? null,
+    ]);
   },
 
   /**
@@ -177,16 +162,15 @@ export const conversations = {
     },
   ): Promise<void> {
     if (!Array.isArray(input.verdicts) || input.verdicts.length === 0) return;
+    // La porte tronque le détail à 500 caractères.
     await db.query(
-      `insert into agents.reponse_controles (tenant_id, message_id, controle, suite, detail)
-       select $1, $2, c.controle, c.suite, c.detail
-         from unnest($3::text[], $4::text[], $5::text[]) as c(controle, suite, detail)`,
+      `select public.conversation_controles_journaliser($1, $2, $3::text[], $4::text[], $5::text[])`,
       [
         input.tenantId,
         input.messageId,
         input.verdicts.map((v) => v.code),
         input.verdicts.map((v) => v.suite),
-        input.verdicts.map((v) => v.detail.slice(0, 500)),
+        input.verdicts.map((v) => v.detail),
       ],
     );
   },
@@ -217,12 +201,12 @@ export const conversations = {
       attendu?: string | null;
     },
   ): Promise<void> {
-    await db.query(
-      `insert into agents.reponse_verdicts (tenant_id, message_id, verdict, attendu)
-       values ($1, $2, $3, $4)
-       on conflict (message_id, created_by) do nothing`,
-      [input.tenantId, input.messageId, input.verdict, input.attendu ?? null],
-    );
+    await db.query(`select public.conversation_juger($1, $2, $3, $4)`, [
+      input.tenantId,
+      input.messageId,
+      input.verdict,
+      input.attendu ?? null,
+    ]);
   },
 
   /**
@@ -233,13 +217,11 @@ export const conversations = {
    * à jour n'ouvre le droit qu'à l'auteur, dans les deux cas.
    */
   async renommer(db: Requete, input: { conversationId: string; titre: string }): Promise<void> {
-    const propre = input.titre.trim().slice(0, 120);
-    if (propre.length === 0) throw new Error("conversation.titre_vide");
-    const { rowCount } = await db.query(
-      `update agents.conversations set titre = $2 where id = $1`,
-      [input.conversationId, propre],
-    );
-    if (rowCount === 0) throw new Error("conversation.introuvable_ou_non_autorisee");
+    // La porte coupe le titre à 120 caractères et refuse un titre vide.
+    await db.query(`select public.conversation_renommer($1, $2)`, [
+      input.conversationId,
+      input.titre,
+    ]);
   },
 
   /**
@@ -249,9 +231,6 @@ export const conversations = {
    * appels — modèle, jetons, coût. Il ne porte aucun texte, et il reste.
    */
   async supprimer(db: Requete, conversationId: string): Promise<void> {
-    const { rowCount } = await db.query(`delete from agents.conversations where id = $1`, [
-      conversationId,
-    ]);
-    if (rowCount === 0) throw new Error("conversation.introuvable_ou_non_autorisee");
+    await db.query(`select public.conversation_supprimer($1)`, [conversationId]);
   },
 };

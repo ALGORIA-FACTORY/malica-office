@@ -18,17 +18,21 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
+import pg from "pg";
+
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 
-const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
+const BASE_CONFIGUREE = Boolean(
+  process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
+);
 
 describe("un matricule, une société", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `um-${Date.now()}`;
   let a: Utilisateur;
   let b: Utilisateur;
-  const creees: Array<{ user: string; id: string }> = [];
+  const creees: string[] = [];
 
   async function creer(u: Utilisateur, legalId: string, nom?: string): Promise<string> {
     const id = await sousIdentite(u.id, async (db) => {
@@ -38,18 +42,19 @@ describe("un matricule, une société", { skip: !BASE_CONFIGUREE }, () => {
       );
       return rows[0]!.id;
     });
-    creees.push({ user: u.id, id });
+    creees.push(id);
     return id;
   }
 
-  async function archiver(user: string, id: string): Promise<void> {
-    await sousIdentite(user, (db) =>
-      db.query(
-        `update identity.organizations set archived_at = now(),
-                archived_reason = 'fixture de test automatisé'
-          where id = $1 and archived_at is null`,
-        [id],
-      ),
+  // Les sociétés d'essai s'archivent par l'administration : aucune porte
+  // n'archive une organisation, et un client n'écrit plus une table.
+  const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
+  async function archiver(id: string): Promise<void> {
+    await admin.query(
+      `update identity.organizations set archived_at = now(),
+              archived_reason = 'fixture de test automatisé'
+        where id = $1 and archived_at is null`,
+      [id],
     );
   }
 
@@ -62,8 +67,12 @@ describe("un matricule, une société", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   after(async () => {
-    for (const c of creees) await archiver(c.user, c.id);
-    await fermerLePool();
+    try {
+      for (const id of creees) await archiver(id);
+    } finally {
+      await admin.end();
+      await fermerLePool();
+    }
   });
 
   it("un second compte ne crée pas la société d'un autre, et apprend quoi faire", async () => {
@@ -97,7 +106,7 @@ describe("un matricule, une société", { skip: !BASE_CONFIGUREE }, () => {
   it("une société archivée libère son matricule", async () => {
     const mf = matriculeDEssai();
     const id = await creer(a, mf);
-    await archiver(a.id, id);
+    await archiver(id);
     assert.ok(await creer(b, mf));
   });
 });

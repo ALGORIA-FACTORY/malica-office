@@ -506,6 +506,11 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
      * celle-là aurait inscrit soixante FONCTIONS sans les lire. Ici on énumère
      * des PORTES, et l'ensemble gardé est celui des definer qui écrivent dans
      * `facturation` — une aujourd'hui, nommée par le rouge si elle change.
+     *
+     * Le 5 novembre (lot 6, toute écriture par une porte), `forfait_changer`
+     * devient une porte du `portier` : sa porte est `facturation.ma_licence`
+     * — l'appelant TITULAIRE de la licence, et nul autre —, et la RLS de
+     * `forfait_historique` s'applique toujours à elle.
      */
     const sansPorte = await interroger<{ f: string }>(`
       select n.nspname || '.' || p.proname || '(' ||
@@ -515,7 +520,7 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
        where p.prosecdef
          and has_function_privilege('authenticated', p.oid, 'execute')
          and p.prosrc ~* '(insert into|update|delete from)\\s+facturation\\.'
-         and p.prosrc !~* '(app\\.(is_platform|piece_lisible|member_orgs|engaged_orgs|has_org_role)|facturation\\.(peut_payer|reste_du_payable))'
+         and p.prosrc !~* '(app\\.(is_platform|piece_lisible|member_orgs|engaged_orgs|has_org_role)|facturation\\.(peut_payer|reste_du_payable|ma_licence))'
        order by 1`);
 
     assert.deepEqual(

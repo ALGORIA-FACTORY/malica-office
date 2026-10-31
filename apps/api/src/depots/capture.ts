@@ -1451,28 +1451,10 @@ export const capture = {
       reference?: string | null;
     },
   ): Promise<string> {
-    const au = input.payeLe ?? new Date().toISOString().slice(0, 10);
-    const { rows: moyen } = await db.query<{ code: string }>(
-      `select code from ref_payment_means_v
-        where pack_version_id = $1 and code = $2
-          and valid_from <= $3::date and (valid_to is null or valid_to >= $3::date)`,
-      [input.packId, input.moyenCode, au],
-    );
-    if (moyen.length === 0) {
-      throw Object.assign(
-        new Error(`Ce moyen de paiement n'existe pas au paramétrage : ${input.moyenCode}`),
-        { code: "22023" },
-      );
-    }
-
+    // La porte vérifie le moyen au paramétrage du pack, à la date du règlement
+    // (ou du jour), et tire dossier, établissement et visibilité de la pièce.
     const { rows } = await db.query<{ id: string }>(
-      `insert into capture.paiements
-         (tenant_id, entity_id, vis, piece_id, moyen_code, pack_version_id,
-          montant_mineur, devise, paye_le, justificatif_piece_id, reference)
-       select p.tenant_id, p.entity_id, p.vis, p.id, $2, $3,
-              $4::bigint, $5, $6::date, $7, $8
-         from pieces_v p where p.id = $1
-       returning id`,
+      `select public.paiement_inscrire($1, $2, $3, $4::bigint, $5, $6::date, $7, $8) as id`,
       [
         input.pieceId,
         input.moyenCode,
@@ -1484,9 +1466,7 @@ export const capture = {
         input.reference ?? null,
       ],
     );
-    const id = rows[0]?.id;
-    if (!id) throw new Error("piece introuvable ou non autorisee");
-    return id;
+    return rows[0]!.id;
   },
 
   /**

@@ -90,6 +90,19 @@ describe("refus lisible", () => {
     assert.equal(rendu, "ce geste ne vous est pas permis sur ce dossier");
   });
 
+  it("un droit refusé sur une table est une panne, pas un refus : il va au journal", () => {
+    // Aucun client n'écrit plus une table (lot 6) : une requête qui bute sur un
+    // droit est un chemin oublié de l'API. Le dire en 400 taisait la panne au
+    // journal et livrait le nom de la table.
+    for (const message of [
+      "permission denied for table pieces",
+      "permission denied for view tiers_v",
+      "droit refusé pour la table pieces",
+      "permission refusée pour la table pieces",
+    ])
+      assert.equal(refusLisible({ code: "42501", message }), null, message);
+  });
+
   it("un code « introuvable » d'un dépôt devient un 404 lisible, pas une panne", () => {
     assert.match(introuvableLisible(new Error("piece.not_found")) ?? "", /introuvable/);
     assert.match(introuvableLisible(new Error("organisation.introuvable")) ?? "", /introuvable/);

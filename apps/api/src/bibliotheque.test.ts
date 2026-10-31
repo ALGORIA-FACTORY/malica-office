@@ -47,16 +47,17 @@ describe("bibliothèque comptable sous les rôles réels", { skip: !CONFIGUREE }
     await sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, mandat!.id, true));
     // Le cas trompeur : l'expert est aussi membre de la société et peut lire
     // des pièces privées. La bibliothèque du cabinet ne doit pas les sortir.
-    const ajouter = (vis: string, type: string, parent: string | null = null) =>
-      sousIdentite(expert.id, async (db) => {
-        const { rows } = await db.query<{ id: string }>(
-          `insert into capture.pieces
+    // Des pièces d'essai à l'état voulu (type confirmé, auteur nommé) : posées
+    // par l'administration, aucun client n'écrit une pièce hors de sa porte.
+    const ajouter = async (vis: string, type: string, parent: string | null = null) => {
+      const { rows } = await admin.query<{ id: string }>(
+        `insert into capture.pieces
         (tenant_id,source,vis,storage_path,idempotency_key,created_by,document_kind,document_kind_statut,source_piece_id)
         values ($1,'pdf',$2,$3,$3,$4,$5,'confirme',$6) returning id`,
-          [client, vis, `${marque}-${Math.random()}`, expert.id, type, parent],
-        );
-        return rows[0]!.id;
-      });
+        [client, vis, `${marque}-${Math.random()}`, expert.id, type, parent],
+      );
+      return rows[0]!.id;
+    };
     facture = await ajouter("partage", "facture_achat");
     preuve = await ajouter("partage", "justificatif_paiement", facture);
     privee = await ajouter("personnel", "justificatif_paiement", facture);
@@ -164,15 +165,13 @@ describe("bibliothèque comptable sous les rôles réels", { skip: !CONFIGUREE }
 
   it("range au mois de la date du document, sinon de la réception dans le fuseau de la personne", async () => {
     // Une facture datée de mars 2001, reçue aujourd'hui : elle appartient à mars 2001.
-    const datee = await sousIdentite(expert.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces
+    const { rows: datees } = await admin.query<{ id: string }>(
+      `insert into capture.pieces
         (tenant_id,source,vis,storage_path,idempotency_key,created_by,document_kind,document_kind_statut)
         values ($1,'pdf','partage',$2,$2,$3,'facture_achat','confirme') returning id`,
-        [client, `${marque}-datee`, expert.id],
-      );
-      return rows[0]!.id;
-    });
+      [client, `${marque}-datee`, expert.id],
+    );
+    const datee = datees[0]!.id;
     await admin.query(
       `insert into capture.extractions (tenant_id,piece_id,contract,payload)
       values ($1,$2,'extract.v1',$3::jsonb)`,

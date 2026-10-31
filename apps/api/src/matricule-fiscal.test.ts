@@ -31,10 +31,14 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
+import pg from "pg";
+
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
 
-const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
+const BASE_CONFIGUREE = Boolean(
+  process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
+);
 
 describe("le format du matricule fiscal", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `mf-${Date.now()}`;
@@ -68,21 +72,26 @@ describe("le format du matricule fiscal", { skip: !BASE_CONFIGUREE }, () => {
     u = c;
   });
 
+  // Les sociétés d'essai s'archivent par l'administration : aucune porte
+  // n'archive une organisation, et un client n'écrit plus une table.
+  const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
   async function archiver(): Promise<void> {
     if (creees.length === 0) return;
-    await sousIdentite(u.id, (db) =>
-      db.query(
-        `update identity.organizations set archived_at = now(),
-                archived_reason = 'fixture de test automatisé'
-          where id = any($1::uuid[]) and archived_at is null`,
-        [creees],
-      ),
+    await admin.query(
+      `update identity.organizations set archived_at = now(),
+              archived_reason = 'fixture de test automatisé'
+        where id = any($1::uuid[]) and archived_at is null`,
+      [creees],
     );
   }
 
   after(async () => {
-    await archiver();
-    await fermerLePool();
+    try {
+      await archiver();
+    } finally {
+      await admin.end();
+      await fermerLePool();
+    }
   });
 
   it("accepte le vrai matricule d'ALGORIA FACTORY", async () => {

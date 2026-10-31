@@ -65,6 +65,18 @@ _Vérifié par_ un test qui échoue dès qu'une table passe sous RLS de tenant
 sans index menant par `tenant_id` — sans quoi chaque lecture parcourt la
 table entière, tous tenants confondus.
 
+Et l'écriture passe par une **porte**. Aucun client (`authenticated`, `anon`,
+`public`) n'écrit directement une table ni une vue : il appelle une fonction
+`security definer` qui contrôle les droits et la saisie. Les portes reprises
+des chemins du client appartiennent au rôle sans connexion `portier`, membre
+d'`authenticated` : elles s'exécutent sous les mêmes politiques que leur
+appelant, et le portier ne porte que les droits que ses portes exercent. Une
+fonction nouvelle qui écrit est une porte, ou elle bute sur un droit refusé.
+
+_Vérifié par_ `apps/api/src/les-clients-n-ecrivent-que-par-les-portes.test.ts`
+(l'instantané des droits, et le contournement famille par famille) et, en CI,
+par l'absence de tout droit refusé au journal de l'API après les épreuves.
+
 ## R7 — Une correction est une écriture nouvelle
 
 Les tables d'écriture refusent toute mise à jour, par déclencheur. On ne

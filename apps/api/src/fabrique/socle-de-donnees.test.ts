@@ -1,9 +1,11 @@
 /**
  * Le socle de la fabrique de lecteurs, éprouvé — pas relu.
  *
- * Tout ce qui suit passe par `sousIdentiteDuServeur`, donc par le rôle `authenticated`
- * avec le claim `sub` posé dans la transaction, exactement comme une requête
- * réelle. C'est la quatrième règle du plan
+ * Les lectures passent par `sousIdentiteDuServeur`, donc par le rôle
+ * `authenticated` avec le claim `sub` posé dans la transaction, exactement comme
+ * une requête réelle. Les écritures, qu'aucun client ne fait plus en direct
+ * (lot 6), passent par `sousLaPorte` : le rôle des portes, soumis aux mêmes
+ * politiques, avec la même identité. C'est la quatrième règle du plan
  * (`docs/fabrique-de-lecteurs/00-plan.md`) : une preuve obtenue en
  * superutilisateur ne prouve rien, parce qu'un superutilisateur n'est arrêté
  * par aucune politique. Les sept désaccords du 17 octobre viennent tous de là.
@@ -30,6 +32,7 @@ import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
+import { fermerLaPorte, sousLaPorte } from "../sous-la-porte-d-essai.ts";
 
 import { arreterUneBorne } from "./borne-arretee.ts";
 
@@ -48,7 +51,7 @@ async function refusDe(
   args: unknown[] = [],
 ): Promise<string | null> {
   try {
-    await sousIdentiteDuServeur(utilisateur, async (db) => db.query(sql, args));
+    await sousLaPorte(utilisateur, async (db) => db.query(sql, args));
     return null;
   } catch (erreur) {
     return codeDe(erreur);
@@ -69,7 +72,7 @@ async function motifDuRefus(
   args: unknown[] = [],
 ): Promise<string> {
   try {
-    await sousIdentiteDuServeur(utilisateur, async (db) => db.query(sql, args));
+    await sousLaPorte(utilisateur, async (db) => db.query(sql, args));
     return "";
   } catch (erreur) {
     return (erreur as { message?: string }).message ?? String(erreur);
@@ -95,8 +98,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       );
       const org = rows[0]!.org;
       const piece = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-         values ($1, 'pdf', 'partage', $2, $3) returning id`,
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage') as id`,
         [org, `essai/${marque}-${suffixe}.pdf`, `${marque}-${suffixe}`],
       );
       return [org, piece.rows[0]!.id];
@@ -105,7 +107,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
 
   /** Une recette neuve avec sa première version, chez A. */
   async function recetteNeuve(cle: string, empreinte: string): Promise<[string, string]> {
-    return sousIdentiteDuServeur(a.id, async (db) => {
+    return sousLaPorte(a.id, async (db) => {
       const r = await db.query<{ id: string }>(
         `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
          values ($1, $2, $3, 'organisation') returning id`,
@@ -148,6 +150,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
         await pool.end();
       }
     }
+    await fermerLaPorte();
     await fermerLePool();
   });
 
@@ -178,7 +181,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("une organisation ne lit pas les exemples ni les exécutions d'une autre", async () => {
-    await sousIdentiteDuServeur(a.id, async (db) => {
+    await sousLaPorte(a.id, async (db) => {
       await db.query(
         `insert into fabrique.exemples
            (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu)
@@ -201,7 +204,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("une exécution ne se rattache pas à la pièce d'une autre organisation", async () => {
-    const [, versionB] = await sousIdentiteDuServeur(b.id, async (db) => {
+    const [, versionB] = await sousLaPorte(b.id, async (db) => {
       const r = await db.query<{ id: string }>(
         `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
          values ($1, 'chez B', $2, 'organisation') returning id`,
@@ -246,7 +249,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   it("une recette mutualisée ne se lit toujours pas d'une autre organisation", async () => {
     // La colonne existe ; le partage, lui, n'est PAS activé. Le jour où il le
     // sera, ce sera par une politique écrite, pas par une valeur posée.
-    await sousIdentiteDuServeur(a.id, async (db) => {
+    await sousLaPorte(a.id, async (db) => {
       await db.query(
         `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
          values ($1, 'future mutualisée', $2, 'mutualisee')`,
@@ -269,7 +272,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   /* ------------------------------------------------------------------- R7 */
 
   it("un fait de la fabrique ne se réécrit pas", async () => {
-    await sousIdentiteDuServeur(a.id, async (db) => {
+    await sousLaPorte(a.id, async (db) => {
       await db.query(
         `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
          values ($1, $2, 'candidate', 'première inscription')`,
@@ -405,7 +408,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("une suspension est une écriture nouvelle, et l'état se lit au dernier fait", async () => {
-    const etat = await sousIdentiteDuServeur(a.id, async (db) => {
+    const etat = await sousLaPorte(a.id, async (db) => {
       await db.query(
         `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
          values ($1, $2, 'retiree', 'retrait de la version d''essai')`,
@@ -423,7 +426,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   /* -------------------------------- LA FRONTIÈRE QUI PORTE TOUT LE MODÈLE */
 
   it("une décision comptable ne nourrit aucune recette", async () => {
-    const exemple = await sousIdentiteDuServeur(a.id, async (db) => {
+    const exemple = await sousLaPorte(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into fabrique.exemples
            (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu)
@@ -463,7 +466,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("une correction de lecture, elle, nourrit une recette", async () => {
-    const exemple = await sousIdentiteDuServeur(a.id, async (db) => {
+    const exemple = await sousLaPorte(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into fabrique.exemples
            (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu)
@@ -484,7 +487,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("l'apprentissage et l'évaluation ne se mélangent pas", async () => {
-    const [apprentissage, evalue] = await sousIdentiteDuServeur(a.id, async (db) => {
+    const [apprentissage, evalue] = await sousLaPorte(a.id, async (db) => {
       const ins = async (usage: string) => {
         const { rows } = await db.query<{ id: string }>(
           `insert into fabrique.exemples
@@ -498,7 +501,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       return [await ins("apprentissage"), await ins("evaluation")];
     });
 
-    const evaluationId = await sousIdentiteDuServeur(a.id, async (db) => {
+    const evaluationId = await sousLaPorte(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into fabrique.evaluations
            (tenant_id, recette_version_id, mesures, exemples_comptes)
@@ -529,7 +532,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     // Deux faits distincts. Une promotion exige une ÉVALUATION ; aucun exemple,
     // fût-il validé par un expert, ne tient lieu de preuve de qualité.
     const [, version] = await recetteNeuve("validation", "3");
-    await sousIdentiteDuServeur(a.id, async (db) => {
+    await sousLaPorte(a.id, async (db) => {
       await db.query(
         `insert into fabrique.exemples
            (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu)
@@ -569,7 +572,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     );
     assert.equal(saut, "23514", "une recette devient active sans passer par l'observation");
 
-    const insuffisante = await sousIdentiteDuServeur(a.id, async (db) => {
+    const insuffisante = await sousLaPorte(a.id, async (db) => {
       await db.query(
         `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
          values ($1, $2, 'candidate', 'née')`,
@@ -613,7 +616,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       `le refus ne nomme pas le seuil franchi — donc il ne vient peut-être pas de lui : « ${sousLeSeuil} »`,
     );
 
-    const bonne = await sousIdentiteDuServeur(a.id, async (db) => {
+    const bonne = await sousLaPorte(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into fabrique.evaluations (tenant_id, recette_version_id, mesures, exemples_comptes)
          values ($1, $2, $3, 40) returning id`,
@@ -658,7 +661,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
 
   it("une évaluation sans la mesure attendue n'active rien", async () => {
     const [, version] = await recetteNeuve("mesure-absente", "2");
-    const evaluation = await sousIdentiteDuServeur(a.id, async (db) => {
+    const evaluation = await sousLaPorte(a.id, async (db) => {
       await db.query(
         `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
          values ($1, $2, 'candidate', 'née')`,
@@ -814,7 +817,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
      * un `jsonb` accepte toutes les clés, y compris celles que le type
      * interdit. C'est la dernière porte, et elle se ferme ici.
      */
-    const [recette] = await sousIdentiteDuServeur(a.id, async (db) => {
+    const [recette] = await sousLaPorte(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
          values ($1, 'porteuse de valeur', $2, 'organisation') returning id`,

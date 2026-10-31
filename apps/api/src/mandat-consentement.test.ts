@@ -70,11 +70,11 @@ describe("un mandat ne s'active qu'avec l'accord de la PME", { skip: !BASE_CONFI
     cabinet = await creerOrganisation(expert, "cabinet", `CABINET ${marque}`, null);
     // Une pièce PARTAGÉE : celle qu'un cabinet mandaté lirait.
     await sousIdentite(dirigeant.id, (db) =>
-      db.query(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-         values ($1, 'pdf', 'partage', $2, $3)`,
-        [pme, `essai/${marque}.pdf`, marque],
-      ),
+      db.query(`select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage') as id`, [
+        pme,
+        `essai/${marque}.pdf`,
+        marque,
+      ]),
     );
   });
 
@@ -119,8 +119,9 @@ describe("un mandat ne s'active qu'avec l'accord de la PME", { skip: !BASE_CONFI
   });
 
   it("la PME termine : l'expert ne peut pas réactiver le mandat", async () => {
+    // La PME met fin au mandat par sa porte (le dirigeant, avec un motif).
     await sousIdentite(dirigeant.id, (db) =>
-      db.query(`update engagements_v set status = 'termine' where pme_org_id = $1`, [pme]),
+      db.query(`select public.mandat_revoquer($1, 'Fin de la mission')`, [pme]),
     );
     assert.equal(await piecesVuesParLExpert(), 0);
     await assert.rejects(

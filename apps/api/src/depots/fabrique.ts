@@ -547,20 +547,15 @@ export const fabrique = {
    */
   async inscrireExecution(db: Requete, saisie: unknown): Promise<void> {
     const e = Execution.parse(saisie);
-    await db.query(
-      `insert into fabrique.executions
-         (tenant_id, recette_version_id, piece_id, issue, motif, champs_designes, duree_ms)
-       values ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        e.tenantId,
-        e.recetteVersionId,
-        e.pieceId,
-        e.issue,
-        e.motif ?? null,
-        e.champsDesignes ?? null,
-        e.dureeMs ?? null,
-      ],
-    );
+    await db.query(`select fabrique.execution_inscrire($1, $2, $3, $4, $5, $6, $7)`, [
+      e.tenantId,
+      e.recetteVersionId,
+      e.pieceId,
+      e.issue,
+      e.motif ?? null,
+      e.champsDesignes ?? null,
+      e.dureeMs ?? null,
+    ]);
   },
 
   /**

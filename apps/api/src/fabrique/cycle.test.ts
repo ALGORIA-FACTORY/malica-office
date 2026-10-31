@@ -113,18 +113,16 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
   /** Dépose une pièce et son plan de jetons, par le vrai chemin. */
   async function deposer(db: Requete, nom: string, plan: PageToken[]): Promise<string> {
     const { rows } = await db.query<{ id: string }>(
-      `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-       values ($1, 'pdf', 'partage', $2, $3) returning id`,
+      `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage') as id`,
       [orgA, `essai/${marque}-${nom}.pdf`, `${marque}-${nom}`],
     );
     const pieceId = rows[0]!.id;
-    for (const t of plan) {
-      await db.query(
-        `insert into capture.token_plan (tenant_id, piece_id, page, ordinal, text, x0, y0, x1, y1)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [orgA, pieceId, t.page, t.ordinal, t.text, t.x0, t.y0, t.x1, t.y1],
-      );
-    }
+    // Le plan de jetons s'inscrit par la porte de la lecture, comme en vrai.
+    await db.query(
+      `select public.capture_read_persist($1, $2::jsonb, 'extract.v1', '{}'::jsonb,
+                                          '[]'::jsonb, '[]'::jsonb)`,
+      [pieceId, JSON.stringify(plan)],
+    );
     pieces.set(nom, pieceId);
     plans.set(nom, plan);
     return pieceId;

@@ -402,18 +402,15 @@ export const parametrage = {
       motif?: string | null;
     },
   ): Promise<string> {
+    // La classe n'est pas demandée : le déclencheur la déduit du parent. La
+    // demander à l'appelant, c'est lui offrir de se contredire.
     const { rows } = await db.query<{ id: string }>(
-      `insert into parametrage.accounts
-         (tenant_id, account_code, label, parent_code, account_class, normal_side, motif)
-       values ($1, $2, $3, $4, '', $5, $6)
-       returning id`,
+      `select public.compte_cabinet_ouvrir($1, $2, $3, $4, $5, $6) as id`,
       [
         input.tenantId,
-        input.code.trim(),
-        input.libelle.trim(),
-        input.parent.trim(),
-        // La classe est laissée vide : le déclencheur la déduit du parent.
-        // La demander à l'appelant, c'est lui offrir de se contredire.
+        input.code,
+        input.libelle,
+        input.parent,
         input.sensUsuel ?? null,
         input.motif ?? null,
       ],
@@ -423,10 +420,7 @@ export const parametrage = {
 
   /** Referme un compte ouvert par le cabinet. Les comptes livrés ne s'effacent pas. */
   async fermerCompte(db: Requete, tenantId: string, code: string): Promise<void> {
-    await db.query(`delete from parametrage.accounts where tenant_id = $1 and account_code = $2`, [
-      tenantId,
-      code,
-    ]);
+    await db.query(`select public.compte_cabinet_fermer($1, $2)`, [tenantId, code]);
   },
 
   /**
@@ -447,24 +441,14 @@ export const parametrage = {
       motif?: string | null;
     },
   ): Promise<void> {
-    await db.query(
-      `insert into parametrage.role_bindings
-         (tenant_id, portee, portee_id, role_code, account_code, motif)
-       values ($1, $2, $3, $4, $5, $6)
-       on conflict (portee, portee_id, role_code) do update
-         set account_code = excluded.account_code,
-             motif        = excluded.motif,
-             decide_par   = auth.uid(),
-             decide_le    = now()`,
-      [
-        input.tenantId,
-        input.portee,
-        input.porteeId,
-        input.roleCode,
-        input.compte,
-        input.motif ?? null,
-      ],
-    );
+    await db.query(`select public.role_compte_definir($1, $2, $3, $4, $5, $6)`, [
+      input.tenantId,
+      input.portee,
+      input.porteeId,
+      input.roleCode,
+      input.compte,
+      input.motif ?? null,
+    ]);
   },
 
   /** Rend un rôle au défaut du pack : la surcharge disparaît, le livré reprend. */
@@ -472,11 +456,12 @@ export const parametrage = {
     db: Requete,
     input: { tenantId: string; portee: string; porteeId: string; roleCode: string },
   ): Promise<void> {
-    await db.query(
-      `delete from parametrage.role_bindings
-        where tenant_id = $1 and portee = $2 and portee_id = $3 and role_code = $4`,
-      [input.tenantId, input.portee, input.porteeId, input.roleCode],
-    );
+    await db.query(`select public.role_compte_rendre_au_pack($1, $2, $3, $4)`, [
+      input.tenantId,
+      input.portee,
+      input.porteeId,
+      input.roleCode,
+    ]);
   },
 
   /**

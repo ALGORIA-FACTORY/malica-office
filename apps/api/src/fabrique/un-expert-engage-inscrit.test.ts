@@ -116,8 +116,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
       );
       pme = rows[0]!.org;
       const p = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-         values ($1, 'pdf', 'partage', $2, $3) returning id`,
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage') as id`,
         [pme, `essai/${marque}.pdf`, marque],
       );
       piece = p.rows[0]!.id;
@@ -227,9 +226,9 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
   it("un expert sans mandat actif est refusé par la base, pas par l'écran", async () => {
     const refus = await refusDe(autreExpert.id, async (db) =>
       db.query(
-        `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
-         values ($1, $2, $3, 'organisation')`,
-        [pme, "format volé", `vol-${marque}`],
+        `select fabrique.candidate_inscrire($1, $2, $3, 'organisation', '{}'::jsonb, $4,
+                                             '{}'::jsonb, '{}'::uuid[], 'essai')`,
+        [pme, "format volé", `vol-${marque}`, "0".repeat(64)],
       ),
     );
     assert.equal(refus, "42501", "un mandat « proposé » ouvre l'écriture : il ne doit pas");
@@ -255,17 +254,18 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
       // première avant d'accepter la seconde.
       await db.query(`select public.mandat_revoquer($1, $2)`, [pme, "Changement de comptabilité"]);
       await identite.repondreAuMandat(db, propose.id, true);
-      await db.query(
-        `update identity.engagements set ends_on = current_date - 1
-          where cabinet_org_id = $1 and pme_org_id = $2`,
-        [cabinetSansMandat, pme],
-      );
     });
+    // Le mandat échoit : l'opérateur avance sa date de fin.
+    await admin.query(
+      `update identity.engagements set ends_on = current_date - 1
+        where cabinet_org_id = $1 and pme_org_id = $2`,
+      [cabinetSansMandat, pme],
+    );
     const refus = await refusDe(autreExpert.id, async (db) =>
       db.query(
-        `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
-         values ($1, $2, $3, 'organisation')`,
-        [pme, "format échu", `echu-${marque}`],
+        `select fabrique.candidate_inscrire($1, $2, $3, 'organisation', '{}'::jsonb, $4,
+                                             '{}'::jsonb, '{}'::uuid[], 'essai')`,
+        [pme, "format échu", `echu-${marque}`, "0".repeat(64)],
       ),
     );
     assert.equal(refus, "42501", "un mandat échu ouvre encore l'écriture");
@@ -293,9 +293,9 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
     );
     const refus = await refusDe(collaborateur.id, async (db) =>
       db.query(
-        `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
-         values ($1, $2, $3, 'organisation')`,
-        [pme, "format d'un collaborateur", `col-${marque}`],
+        `select fabrique.candidate_inscrire($1, $2, $3, 'organisation', '{}'::jsonb, $4,
+                                             '{}'::jsonb, '{}'::uuid[], 'essai')`,
+        [pme, "format d'un collaborateur", `col-${marque}`, "0".repeat(64)],
       ),
     );
     assert.equal(refus, "42501", "le rôle ne compte pas : tout le cabinet inscrit");
@@ -319,8 +319,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
      */
     const refus = await refusDe(expert.id, async (db) =>
       db.query(
-        `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
-         values ($1, $2, 'retiree', 'retirée par le cabinet')`,
+        `select fabrique.promotion_inscrire($1, $2, 'retiree', null, 'retirée par le cabinet')`,
         [pme, versionId],
       ),
     );
@@ -329,8 +328,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
     // Le dirigeant du dossier, lui, décide — la règle existante n'a pas bougé.
     const passe = await refusDe(patron.id, async (db) =>
       db.query(
-        `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
-         values ($1, $2, 'retiree', 'retirée par le dirigeant')`,
+        `select fabrique.promotion_inscrire($1, $2, 'retiree', null, 'retirée par le dirigeant')`,
         [pme, versionId],
       ),
     );
@@ -352,9 +350,9 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
 
     const refus = await refusDe(intrus.id, async (db) =>
       db.query(
-        `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
-         values ($1, $2, $3, 'organisation')`,
-        [pme, "format d'un intrus", `intrus-${marque}`],
+        `select fabrique.candidate_inscrire($1, $2, $3, 'organisation', '{}'::jsonb, $4,
+                                             '{}'::jsonb, '{}'::uuid[], 'essai')`,
+        [pme, "format d'un intrus", `intrus-${marque}`, "0".repeat(64)],
       ),
     );
     assert.equal(refus, "42501");
@@ -383,11 +381,10 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
     // prise. La politique d'écriture de `fabrique.travail_faits` exige
     // l'appartenance, et `app.is_platform()` n'y figure pas.
     const refus = await refusDe(operateur.id, async (db) =>
-      db.query(
-        `insert into fabrique.travail_faits (tenant_id, travail_id, tentative, nature)
-         values ($1, $2, 1, 'pris')`,
-        [pme, travailId],
-      ),
+      db.query(`select fabrique.issue_inscrire($1, $2, 1::smallint, 'pris', null, null)`, [
+        pme,
+        travailId,
+      ]),
     );
     assert.ok(
       refus === "42501" || refus === "check_violation" || typeof refus === "string",

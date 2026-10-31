@@ -2092,6 +2092,8 @@ const fr = {
     "Une dérogation au cours officiel dit pourquoi : indiquez le motif.",
   "refus.change.regle.droits":
     "Seul le cabinet qui tient ce dossier arrête sa règle de change ; pour tout le cabinet, l'expert-comptable.",
+  "refus.role_compte.droits":
+    "Seul l’expert-comptable relie un compte pour son cabinet ; pour un dossier, qui le supervise au cabinet qui le tient.",
   "refus.change.regle.saisie":
     "Une valeur choisie n'est pas au référentiel (un recul est un nombre entier de jours) : rechargez la page et choisissez à nouveau.",
   "refus.cours.invalide":
@@ -4023,6 +4025,16 @@ const fr = {
     "Ce règlement a été annulé : il ne reçoit plus de justificatif.",
   "refus.justificatif.autre_cote_du_cabinet":
     "Ce règlement n’est pas du même côté que le justificatif : l’un est transmis à votre comptabilité, l’autre non.",
+  "refus.saisie.incomplete": "Un champ obligatoire est vide : complétez-le, puis recommencez.",
+  "refus.saisie.etablissement":
+    "Cet établissement n’est pas celui de la société : choisissez l’un des siens.",
+  "refus.saisie.mal_formee":
+    "Les données envoyées sont mal formées : rechargez la page, puis recommencez.",
+  "refus.geste.non_permis": "Ce geste ne vous est pas permis sur ce dossier.",
+  "refus.banque.statut_par_le_lettrage":
+    "Une ligne de relevé se rapproche par le lettrage, pas à la main : lettrez-la avec son écriture.",
+  "refus.etablissement.principal_deja_ouvert":
+    "Cette organisation a déjà son établissement principal.",
   "pme.verifie.confirme": "saisie",
 } as const;
 
@@ -6032,6 +6044,8 @@ const en: Dict = {
     "An override of the official rate states why: enter the reason.",
   "refus.change.regle.droits":
     "Only the firm that keeps this client's books sets its exchange rule; for the whole firm, the chartered accountant.",
+  "refus.role_compte.droits":
+    "Only the chartered accountant links an account for their firm; for a client file, whoever supervises it at the firm that holds it.",
   "refus.change.regle.saisie":
     "A chosen value is not in the reference data (a look-back is a whole number of days): reload the page and choose again.",
   "refus.cours.invalide":
@@ -7857,6 +7871,15 @@ const en: Dict = {
   "refus.justificatif.reglement_eteint": "This payment was cancelled: it no longer takes a proof.",
   "refus.justificatif.autre_cote_du_cabinet":
     "This payment is not on the same side as the proof: one was sent to your accountant, the other was not.",
+  "refus.saisie.incomplete": "A required field is empty: fill it in, then try again.",
+  "refus.saisie.etablissement":
+    "This establishment does not belong to the company: choose one of its own.",
+  "refus.saisie.mal_formee": "The data sent is malformed: reload the page, then try again.",
+  "refus.geste.non_permis": "You are not allowed to do this on this file.",
+  "refus.banque.statut_par_le_lettrage":
+    "A statement line is reconciled by matching, not by hand: match it with its entry.",
+  "refus.etablissement.principal_deja_ouvert":
+    "This organisation already has its main establishment.",
   "pme.verifie.confirme": "entered",
 };
 
@@ -9807,6 +9830,8 @@ const ar: Dict = {
   "refus.cours.derogation_sans_motif": "الاستثناء من السعر الرسمي يذكر سببه: أدخل السبب.",
   "refus.change.regle.droits":
     "لا يضبط قاعدة الصرف إلا المكتب الذي يمسك هذا الملف؛ ولكامل المكتب، الخبير المحاسب.",
+  "refus.role_compte.droits":
+    "وحده الخبير المحاسب يربط حسابًا لمكتبه؛ ولملفّ ما، من يشرف عليه في المكتب الذي يتولّاه.",
   "refus.change.regle.saisie":
     "قيمة مختارة غير موجودة في المرجع (الرجوع عدد صحيح من الأيام): أعد تحميل الصفحة واختر من جديد.",
   "refus.cours.invalide": "سعر الصرف عدد موجب، لوحدة (1، 10، 100…)، بعملة ومصدر من المرجع.",
@@ -11553,6 +11578,12 @@ const ar: Dict = {
   "refus.justificatif.reglement_eteint": "أُلغي هذا التسديد: لم يعد يقبل مؤيّدًا.",
   "refus.justificatif.autre_cote_du_cabinet":
     "هذا التسديد ليس في الجهة نفسها التي فيها المؤيّد: أحدهما أُرسل إلى محاسبكم والآخر لا.",
+  "refus.saisie.incomplete": "حقل إلزامي فارغ: املؤوه ثم أعيدوا المحاولة.",
+  "refus.saisie.etablissement": "هذه المنشأة لا تتبع الشركة: اختاروا إحدى منشآتها.",
+  "refus.saisie.mal_formee": "البيانات المرسلة غير سليمة: أعيدوا تحميل الصفحة ثم أعيدوا المحاولة.",
+  "refus.geste.non_permis": "لا يُسمح لكم بهذا الإجراء على هذا الملف.",
+  "refus.banque.statut_par_le_lettrage": "يُطابَق سطر الكشف عبر الترصيد لا يدويًا: رصّدوه مع قيده.",
+  "refus.etablissement.principal_deja_ouvert": "لهذه المؤسسة مقرّها الرئيسي بالفعل.",
   "pme.verifie.confirme": "مُدخَل",
 };
 
