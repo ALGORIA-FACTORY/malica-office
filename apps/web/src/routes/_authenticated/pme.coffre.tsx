@@ -286,11 +286,13 @@ function PmeCoffre() {
         trace={null}
         principale={{ libelle: t("envoi.coffre.retour"), action: () => setMisEnSociete(null) }}
         secondaire={
-          destination
+          destination && entres.some(envoi.reste)
             ? {
                 libelle: envoi.action(destination),
                 action: () => {
-                  if (!transmettre.isPending) transmettre.mutate(entres.map((p) => p.id));
+                  // Ce qui reste à envoyer, au sens du seul prédicat.
+                  if (!transmettre.isPending)
+                    transmettre.mutate(entres.filter(envoi.reste).map((p) => p.id));
                 },
               }
             : null

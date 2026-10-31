@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   carteDuRecu,
+  resteAEnvoyer,
   demandeDuSiegeATrancher,
   etatDeMaDemande,
   gestesDuCircuit,
@@ -117,7 +118,12 @@ describe("le propriétaire reçoit", () => {
    * bouton qui ouvrait le retour était caché avec l'envoi au comptable.
    */
   it("sans cabinet engagé, le propriétaire peut toujours la retourner au siège", () => {
-    expect(carteDuRecu(gestesDuCircuit(recue, PROPRIETAIRE, false), recue.gardeeLe)).toEqual({
+    expect(
+      carteDuRecu(
+        gestesDuCircuit(recue, PROPRIETAIRE, false),
+        resteAEnvoyer(recue, PROPRIETAIRE, false),
+      ),
+    ).toEqual({
       envoyerAuComptable: false,
       retourner: true,
     });
@@ -128,18 +134,30 @@ describe("le propriétaire reçoit", () => {
       gardeeLe: "2026-10-30T10:00:00Z",
       circuit: circuit({ recoit: true, mienne: false, dernier: "envoyee" }),
     });
-    expect(carteDuRecu(gestesDuCircuit(gardee, PROPRIETAIRE, true), gardee.gardeeLe)).toEqual({
+    expect(
+      carteDuRecu(
+        gestesDuCircuit(gardee, PROPRIETAIRE, true),
+        resteAEnvoyer(gardee, PROPRIETAIRE, true),
+      ),
+    ).toEqual({
       envoyerAuComptable: false,
       retourner: true,
     });
   });
 
   it("avec un cabinet, la carte porte l'envoi et le retour ; rien pour qui ne reçoit pas", () => {
-    expect(carteDuRecu(gestesDuCircuit(recue, PROPRIETAIRE, true), null)).toEqual({
+    expect(
+      carteDuRecu(
+        gestesDuCircuit(recue, PROPRIETAIRE, true),
+        resteAEnvoyer(recue, PROPRIETAIRE, true),
+      ),
+    ).toEqual({
       envoyerAuComptable: true,
       retourner: true,
     });
-    expect(carteDuRecu(gestesDuCircuit(recue, SIEGE, true), null)).toBeNull();
+    expect(
+      carteDuRecu(gestesDuCircuit(recue, SIEGE, true), resteAEnvoyer(recue, SIEGE, true)),
+    ).toBeNull();
   });
 
   it("la demande d'un siège attend le propriétaire, et lui seul", () => {
@@ -255,5 +273,49 @@ describe("ma demande, et sa transmission au comptable", () => {
     ];
     expect(demandeDuSiegeATrancher(etats, PROPRIETAIRE)).toBeNull();
     expect(demandeDuSiegeATrancher([fait({})], PROPRIETAIRE)).toBe("rappel");
+  });
+});
+
+/*
+ * CE QUI RESTE À ENVOYER : le seul prédicat (revue Codex de #146). Le lot, son
+ * compte, la pièce suivante, Mon espace et la fin de la capture le lisent.
+ */
+describe("ce qui reste à envoyer", () => {
+  const brute = (f: Partial<Parameters<typeof resteAEnvoyer>[0]> = {}) => ({
+    vis: "entite" as const,
+    status: "lue",
+    gardeeLe: null,
+    circuit: null,
+    ...f,
+  });
+
+  it("le propriétaire : une pièce de la société, ni gardée ni partie", () => {
+    expect(resteAEnvoyer(brute(), PROPRIETAIRE, true)).toBe("cabinet");
+    expect(resteAEnvoyer(brute(), PROPRIETAIRE, false)).toBeNull();
+    expect(resteAEnvoyer(brute({ vis: "personnel" }), PROPRIETAIRE, true)).toBeNull();
+    expect(resteAEnvoyer(brute({ vis: "partage" }), PROPRIETAIRE, true)).toBeNull();
+    expect(
+      resteAEnvoyer(brute({ gardeeLe: "2026-10-27T00:00:00Z" }), PROPRIETAIRE, true),
+    ).toBeNull();
+  });
+
+  it("le propriétaire : jamais la pièce qu'il vient de retourner au siège", () => {
+    const rendue = brute({
+      circuit: circuit({ recoit: true, mienne: false, dernier: "retournee", retourPar: "Amel" }),
+    });
+    expect(resteAEnvoyer(rendue, PROPRIETAIRE, true)).toBeNull();
+  });
+
+  it("le siège : ce qui n'est pas encore parti chez le propriétaire, rien d'autre", () => {
+    expect(resteAEnvoyer(brute({ circuit: circuit({}) }), SIEGE, true)).toBe("proprietaire");
+    expect(resteAEnvoyer(brute({ circuit: circuit({ dernier: "rappelee" }) }), SIEGE, true)).toBe(
+      "proprietaire",
+    );
+    expect(
+      resteAEnvoyer(brute({ circuit: circuit({ dernier: "envoyee" }) }), SIEGE, true),
+    ).toBeNull();
+    expect(
+      resteAEnvoyer(brute({ circuit: circuit({ dernier: "retournee" }) }), SIEGE, true),
+    ).toBeNull();
   });
 });

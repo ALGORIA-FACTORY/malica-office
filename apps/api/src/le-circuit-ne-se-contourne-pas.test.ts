@@ -268,6 +268,32 @@ describe("le circuit ne se contourne pas", { skip: !BASE_CONFIGUREE }, () => {
     }
   });
 
+  it("le propriétaire n'envoie pas au comptable la pièce qu'il a retournée au siège, même par la table des lots", async () => {
+    // Revue Codex de #146 : le lot du propriétaire comptait la pièce rendue au
+    // siège. La base refuse, quelle que soit la porte.
+    const id = await s.deposer("sami", "entite");
+    await s.lire("sami", id);
+    await s.fait("sami", "collab.envoyer", id);
+    await s.fait("amel", "supervision.retourner", {
+      pieceId: id,
+      motifId: s.motifs["piece_illisible"],
+      note: "À reprendre",
+    });
+    await assert.rejects(
+      s.fait("amel", "collab.transmettreLesPieces", [id]),
+      /refus\.envoi\.chez_le_siege/,
+    );
+    await assert.rejects(
+      s.fait("amel", "collab.setPieceVis", id, "partage"),
+      /refus\.envoi\.chez_le_siege/,
+    );
+    const { rows } = await s.admin.query(`select vis from capture.pieces where id = $1`, [id]);
+    assert.equal(rows[0]?.vis, "entite");
+    // Le siège la reprend et la renvoie : le propriétaire la transmet.
+    await s.fait("sami", "collab.envoyer", id);
+    await s.fait("amel", "collab.transmettreLesPieces", [id]);
+  });
+
   it("les droits que le Socle connaît sont ceux du référentiel", async () => {
     const { rows } = await s.admin.query<{ code: string }>(
       `select code from ref.droits order by sort_order, code`,

@@ -59,6 +59,7 @@ import {
   demandeDuSiegeATrancher,
   etatDeMaDemande,
   gestesDuCircuit,
+  resteAEnvoyer,
 } from "@malica/socle/circuit";
 import {
   statutDuCircuit,
@@ -644,19 +645,23 @@ function PieceScreen() {
    * statut, les demandes. Un seul calcul, testé (`lib/circuit.ts`).
    */
   const mesDroits = acces.data?.droits ?? [];
+  const faitsDuCircuit = dossier.data
+    ? {
+        vis: dossier.data.piece.vis,
+        status: dossier.data.piece.status,
+        gardeeLe: dossier.data.piece.gardeeLe ?? null,
+        suivi: dossier.data.suivi,
+        circuit: dossier.data.circuit,
+      }
+    : null;
   const gestes =
-    dossier.data && leStatut && acces.data
-      ? gestesDuCircuit(
-          {
-            vis: dossier.data.piece.vis,
-            status: dossier.data.piece.status,
-            gardeeLe: dossier.data.piece.gardeeLe ?? null,
-            statut: leStatut,
-            circuit: dossier.data.circuit,
-          },
-          mesDroits,
-          Boolean(cabinet.data),
-        )
+    faitsDuCircuit && leStatut && acces.data
+      ? gestesDuCircuit({ ...faitsDuCircuit, statut: leStatut }, mesDroits, Boolean(cabinet.data))
+      : null;
+  /** À qui elle reste à envoyer, par moi : le seul prédicat (`resteAEnvoyer`). */
+  const resteIci =
+    faitsDuCircuit && acces.data
+      ? resteAEnvoyer(faitsDuCircuit, mesDroits, Boolean(cabinet.data))
       : null;
   // MA demande, à l'étape où je la fais : au propriétaire (siège), au cabinet.
   const dernierFaitDuRappel = etatDeMaDemande(
@@ -1092,7 +1097,11 @@ function PieceScreen() {
     // L'heure que la base a posée pour cet envoi.
     const parti = envoi.le;
     const depuis = momentDeLEnvoi(parti, locale);
-    const suivanteADecider = pieceSuivanteATransmettre(luesDuDossier.data ?? [], pieceId);
+    const suivanteADecider = pieceSuivanteATransmettre(
+      luesDuDossier.data ?? [],
+      pieceId,
+      envoiVers.reste,
+    );
     const fermer = () => {
       setEnvoye(null);
       setRenvoye(null);
@@ -1683,9 +1692,9 @@ function PieceScreen() {
   // Où elle en est chez le cabinet : envoyée, vue, prise en charge.
   const ouEnEst = ouEnEstLaPiece(dossier.data.suivi);
   const derniereFaite = ouEnEst.map((e) => e.le !== null).lastIndexOf(true);
-  const aTransmettre = gestes?.envoyer === "cabinet" && !piece.gardeeLe;
+  const aTransmettre = resteIci === "cabinet";
   const auProprietaire = gestes?.envoyer === "proprietaire";
-  const recu = carteDuRecu(gestes ?? null, piece.gardeeLe);
+  const recu = carteDuRecu(gestes ?? null, resteIci);
   const resteAPayer = resteMineur !== null && resteMineur > 0;
   const bloquee = !proposable && !sensAuCabinet && proposalAttempt != null && !proposalAttempt.ok;
 

@@ -24,7 +24,7 @@ import type { NatureTiers, PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
-import { partieLeVers, partieVers, resteATransmettre } from "@/lib/envoi";
+import { partieLeVers, partieVers } from "@/lib/envoi";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
@@ -210,7 +210,7 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
   const [envoi, setEnvoi] = useState<readonly string[] | null>(null);
   /** Un refus rédigé par la base (impayé, pièce privée) : il dit quoi faire. */
   const [refus, setRefus] = useState<string | null>(null);
-  const restantes = pieces.filter(resteATransmettre);
+  const restantes = pieces.filter(envoiVers.reste);
   const qui = destination ? envoiVers.quiPour(destination) : "";
   /** Partie dans ce geste : chez le propriétaire (le siège), ou au cabinet. */
   const partie = (p: PieceLue) => (destination ? partieVers(p, destination) : false);

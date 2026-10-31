@@ -171,6 +171,9 @@ export function statutDuCircuit(p: FaitsDeLaPiece): StatutDuCircuit {
       return apres(c.vueLe, c.envoyeeLe)
         ? { statut: "vue", chez: "proprietaire", qui: c.vuePar }
         : { statut: "envoyee", chez: "proprietaire", qui: null };
+    // « Garder » est la décision du propriétaire, sur l'envoi au comptable :
+    // elle ne retient pas le siège, dont l'étape est d'envoyer au propriétaire.
+    if (c && !c.recoit) return rien("a_envoyer");
     return rien(p.gardeeLe ? "gardee" : "a_envoyer");
   }
 

@@ -20,7 +20,12 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
-import { demandeDuSiegeATrancher, etatDeMaDemande, gestesDuCircuit } from "@malica/socle/circuit";
+import {
+  demandeDuSiegeATrancher,
+  etatDeMaDemande,
+  gestesDuCircuit,
+  resteAEnvoyer,
+} from "@malica/socle/circuit";
 import type { Droit, EtatDeDemande, PieceLue } from "@malica/socle/ports/repositories";
 import { statutDuCircuit, type StatutDuCircuit } from "@malica/socle/statut-d-envoi";
 
@@ -51,6 +56,8 @@ interface Etat {
   siege: Vue;
   proprietaire: Vue;
   gestes: Geste[];
+  /** Ce que l'envoi EN LOT compterait, pour chacun (le seul prédicat). */
+  lot: { siege: boolean; proprietaire: boolean; gardee: boolean };
 }
 
 const PROFONDEUR = 5;
@@ -116,11 +123,44 @@ describe("le circuit n'a pas d'impasse", { skip: !BASE_CONFIGUREE }, () => {
 
     // Le comptable : la pièce est chez lui, ni retournée ni prise en charge.
     if (pp.vis === "partage" && pp.status !== "retournee") gestes.push("cabinet.retourner");
+
+    // Le lot compte ce que la fiche propose d'envoyer — hors décision de garder,
+    // qui ne porte que sur l'envoi au comptable.
+    const lotSiege = resteAEnvoyer(ps, droits.sami, true);
+    const lotProprietaire = resteAEnvoyer(pp, droits.amel, true);
+    assert.equal(lotSiege, gs.envoyer, "lot du siège = sa fiche");
+    assert.equal(
+      lotProprietaire,
+      gp.envoyer === "cabinet" && pp.gardeeLe ? null : gp.envoyer,
+      "lot du propriétaire = sa fiche",
+    );
     return {
       siege: { statut: vs, vis: ps.vis },
       proprietaire: { statut: vp, vis: pp.vis },
       gestes,
+      lot: {
+        siege: lotSiege !== null,
+        proprietaire: lotProprietaire !== null,
+        gardee: Boolean(pp.gardeeLe),
+      },
     };
+  };
+
+  /**
+   * La base tient la même règle que le lot, porte contournée : ce que le lot
+   * ne compte pas pour une personne, l'envoi en lot ne le fait pas partir
+   * (refus, ou rien de changé). Une garde est une décision, pas une barrière.
+   */
+  const sonder = async (id: string, e: Etat, chemin: string) => {
+    for (const [qui, compte] of [
+      ["sami", e.lot.siege],
+      ["amel", e.lot.proprietaire || e.lot.gardee],
+    ] as const) {
+      if (compte || e.proprietaire.vis !== "entite") continue;
+      await s.fait(qui, "collab.transmettreLesPieces", [id]).catch(() => undefined);
+      const apres = await lire(id);
+      assert.equal(cle(apres), cle(e), `${chemin} : le lot de ${qui} n'a rien fait partir`);
+    }
   };
 
   const motif = () => s.motifs["piece_illisible"];
@@ -231,6 +271,7 @@ describe("le circuit n'a pas d'impasse", { skip: !BASE_CONFIGUREE }, () => {
           const nouveau = [...chemin, g];
           const id = await rejouer(nouveau);
           const e = await lire(id);
+          await sonder(id, e, nouveau.join(" → "));
           parcourus += 1;
           const nom = nouveau.join(" → ");
           const societe = e.gestes.some((x) => !x.startsWith("cabinet."));

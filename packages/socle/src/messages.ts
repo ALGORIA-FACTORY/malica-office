@@ -2021,6 +2021,10 @@ const fr = {
   "refus.retour.inscrite":
     "Un règlement de cette pièce est inscrit au journal : annulez-le d’abord, puis retournez la pièce.",
   "refus.reponse.sans_decision": "Accordez ou refusez la demande.",
+  "refus.envoi.retour_par_sa_carte":
+    "Une pièce retournée se renvoie depuis sa carte, une fois le geste demandé fait.",
+  "refus.envoi.chez_le_siege":
+    "Vous l’avez retournée à votre collaborateur : elle repartira quand il l’aura reprise et renvoyée.",
   "refus.reponse.vide": "Écrivez votre réponse avant de l’envoyer.",
   "refus.piece.remplacee":
     "Une nouvelle photo a remplacé cette pièce : c’est la nouvelle qui se traite.",
@@ -5878,6 +5882,10 @@ const en: Dict = {
   "refus.retour.inscrite":
     "A payment of this document is booked: cancel it first, then return the document.",
   "refus.reponse.sans_decision": "Grant or refuse the request.",
+  "refus.envoi.retour_par_sa_carte":
+    "A returned document is sent back from its card, once the requested fix is done.",
+  "refus.envoi.chez_le_siege":
+    "You returned it to your team member: it goes out once they have fixed it and sent it back.",
   "refus.reponse.vide": "Write your reply before sending it.",
   "refus.piece.remplacee": "A new photo replaced this document: the new one is the one to handle.",
   "refus.piece.archivee": "The client withdrew this document: it is archived.",
@@ -9586,6 +9594,8 @@ const ar: Dict = {
   "pme.retour.reponse.envoyer": "إرسال الرد",
   "refus.retour.inscrite": "دفعة هذه الوثيقة مُسجَّلة في اليومية: ألغِها أولًا، ثم أرجِع الوثيقة.",
   "refus.reponse.sans_decision": "اقبل الطلب أو ارفضه.",
+  "refus.envoi.retour_par_sa_carte": "تُعاد الوثيقة المُرجعة من بطاقتها بعد إنجاز المطلوب.",
+  "refus.envoi.chez_le_siege": "أرجعتها إلى زميلك: تُرسل بعد أن يصلحها ويعيد إرسالها.",
   "refus.reponse.vide": "اكتب ردّك قبل إرساله.",
   "refus.piece.remplacee": "حلّت صورة جديدة محلّ هذه الوثيقة: الجديدة هي التي تُعالَج.",
   "refus.piece.archivee": "سحب الحريف هذه الوثيقة: هي مؤرشفة.",

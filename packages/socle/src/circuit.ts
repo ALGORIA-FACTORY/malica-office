@@ -13,7 +13,12 @@ import type {
   EtatDeDemande,
   Visibility,
 } from "./ports/repositories.ts";
-import type { CircuitInterne, StatutDuCircuit } from "./statut-d-envoi.ts";
+import {
+  statutDuCircuit,
+  type CircuitInterne,
+  type FaitsDeLaPiece,
+  type StatutDuCircuit,
+} from "./statut-d-envoi.ts";
 
 const OBJETS: readonly DemandeSurPiece[] = ["rappel", "suppression"];
 
@@ -48,6 +53,20 @@ export interface GestesDuCircuit {
 
 const a = (droits: readonly Droit[], d: Droit) => droits.includes(d);
 
+/**
+ * Où partent les envois de cette personne : le siège envoie au propriétaire,
+ * qui transmet au comptable — s'il y en a un. `null` : personne à qui
+ * envoyer. La base choisit de même (`piece_envoyer`).
+ */
+export function destinationDesEnvois(
+  droits: readonly Droit[] | undefined,
+  aUnCabinet: boolean,
+): EtapeDeDemande | null {
+  if (droits?.includes("envoi.cabinet")) return aUnCabinet ? "cabinet" : null;
+  if (droits?.includes("envoi.proprietaire")) return "proprietaire";
+  return null;
+}
+
 export function gestesDuCircuit(
   p: PieceDuCircuit,
   droits: readonly Droit[],
@@ -55,6 +74,7 @@ export function gestesDuCircuit(
 ): GestesDuCircuit {
   const versLeComptable = a(droits, "envoi.cabinet");
   const versLeProprietaire = a(droits, "envoi.proprietaire");
+  const versOu = destinationDesEnvois(droits, aUnCabinet);
   const recoit = a(droits, "circuit.recevoir");
   const dernier = p.circuit?.dernier ?? null;
   const mienne = p.circuit?.mienne ?? false;
@@ -68,11 +88,9 @@ export function gestesDuCircuit(
   const envoyer: EtapeDeDemande | null =
     p.vis !== "entite" || chezLeSiege
       ? null
-      : versLeComptable
-        ? aUnCabinet
-          ? "cabinet"
-          : null
-        : versLeProprietaire && p.statut.statut === "a_envoyer"
+      : versOu === "cabinet"
+        ? "cabinet"
+        : versOu === "proprietaire" && p.statut.statut === "a_envoyer"
           ? "proprietaire"
           : null;
 
@@ -122,10 +140,37 @@ export interface CarteDuRecu {
  */
 export function carteDuRecu(
   g: GestesDuCircuit | null,
-  gardeeLe: string | null,
+  reste: EtapeDeDemande | null,
 ): CarteDuRecu | null {
   if (!g?.retournerAuSiege) return null;
-  return { envoyerAuComptable: g.envoyer === "cabinet" && !gardeeLe, retourner: true };
+  // L'envoi au comptable : le seul prédicat (`resteAEnvoyer`).
+  return { envoyerAuComptable: reste === "cabinet", retourner: true };
+}
+
+/**
+ * CE QUI RESTE À ENVOYER — le seul prédicat (revue Codex de #146).
+ *
+ * L'envoi en lot, son compte (« N pièces ne sont pas encore parties »), la
+ * pièce suivante à décider, Mon espace et la fin de la capture le lisent tous :
+ * une pièce reste à envoyer si la fiche y propose « Envoyer »
+ * (`gestesDuCircuit`), et, vers le comptable, que la décision de la garder
+ * n'est pas en vigueur — un bouton de masse ne défait pas une décision. Rend la destination, ou
+ * `null`. Une pièce retournée au siège n'y est donc jamais pour le propriétaire.
+ */
+export function resteAEnvoyer(
+  p: FaitsDeLaPiece,
+  droits: readonly Droit[],
+  aUnCabinet: boolean,
+): EtapeDeDemande | null {
+  const faits = { ...p, gardeeLe: p.gardeeLe ?? null, circuit: p.circuit ?? null };
+  const vers = gestesDuCircuit(
+    { ...faits, statut: statutDuCircuit(faits) },
+    droits,
+    aUnCabinet,
+  ).envoyer;
+  // La décision de garder porte sur l'envoi au comptable, et le lot ne la
+  // défait pas ; elle ne retient pas le siège, qui envoie au propriétaire.
+  return vers === "cabinet" && p.gardeeLe ? null : vers;
 }
 
 /** L'état d'une demande, tel que la personne qui l'a faite le lit. */

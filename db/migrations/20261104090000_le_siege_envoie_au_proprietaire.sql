@@ -902,6 +902,39 @@ $$;
 revoke all on function public.piece_envoyer(uuid) from public, anon;
 grant execute on function public.piece_envoyer(uuid) to authenticated;
 
+-- « Envoyer » EN LOT : ce qui reste à envoyer, rien d'autre (revue Codex de
+-- #146). Un retour en cours — du propriétaire au siège, du comptable au
+-- propriétaire — se renvoie par sa carte, avec la preuve du geste demandé ;
+-- un bouton de masse ne le fait pas partir. La même règle que le lot à
+-- l'écran (`resteAEnvoyer` au Socle). Le reste passe par la porte de l'envoi.
+create or replace function public.piece_envoyer_en_lot(p_piece uuid)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_tenant uuid;
+  v_vis    app.vis_t;
+  v_status text;
+begin
+  select tenant_id, vis, status into v_tenant, v_vis, v_status
+    from capture.pieces where id = p_piece;
+  if v_tenant is not null
+     and (case when app.a_le_droit(v_tenant, 'envoi.cabinet')
+               then v_vis = 'partage'::app.vis_t and v_status = 'retournee'
+               else v_vis = 'entite'::app.vis_t
+                    and (select fait from app.dernier_fait_du_circuit(p_piece))
+                        is not distinct from 'retournee' end) then
+    raise exception 'refus.envoi.retour_par_sa_carte' using errcode = 'check_violation';
+  end if;
+  return public.piece_envoyer(p_piece);
+end
+$$;
+
+revoke all on function public.piece_envoyer_en_lot(uuid) from public, anon;
+grant execute on function public.piece_envoyer_en_lot(uuid) to authenticated;
+
 -- « Renvoyer » : la même porte que la carte de retour. Côté comptable, repris
 -- de `20261029100000` avec le droit de transmettre ; côté propriétaire, le
 -- siège la lui renvoie.
@@ -1519,6 +1552,15 @@ begin
       raise exception 'une piece transmise ne revient que par accord du cabinet'
         using errcode = 'check_violation';
     end if;
+  end if;
+
+  -- Retournée au siège par le propriétaire, la main est au siège : elle ne
+  -- part chez le comptable qu'après qu'il l'a reprise et renvoyée (revue Codex
+  -- de #146 — le lot du propriétaire la comptait). La même règle que l'écran
+  -- (`resteAEnvoyer` au Socle), tenue ici pour toute porte.
+  if p_vis = 'partage'::app.vis_t and v_old = 'entite'::app.vis_t
+     and (select fait from app.dernier_fait_du_circuit(p_piece)) is not distinct from 'retournee' then
+    raise exception 'refus.envoi.chez_le_siege' using errcode = 'check_violation';
   end if;
 
   -- Entre Mon espace et la société : chacun les siennes, dans les deux sens.

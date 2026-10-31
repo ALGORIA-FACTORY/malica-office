@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { Visibility } from "@malica/socle/ports/repositories";
+import { resteAEnvoyer } from "@malica/socle/circuit";
+import type { Droit, Visibility } from "@malica/socle/ports/repositories";
 import type { CircuitInterne } from "@malica/socle/statut-d-envoi";
 
-import { fusionnerLEnvoi, pieceSuivanteATransmettre, resteATransmettre } from "../envoi";
+import { fusionnerLEnvoi, pieceSuivanteATransmettre } from "../envoi";
 
 const p = (
   id: string,
@@ -31,36 +32,36 @@ const duSiege = (dernier: CircuitInterne["dernier"]): CircuitInterne => ({
   mienne: true,
 });
 
-describe("ce qui reste à transmettre", () => {
-  it("une pièce de la société, ni gardée ni retournée", () => {
-    expect(resteATransmettre(p("a"))).toBe(true);
-  });
-
-  it("jamais l'espace privé, une pièce gardée, partie ou retournée", () => {
-    expect(resteATransmettre(p("a", "personnel"))).toBe(false);
-    expect(resteATransmettre(p("a", "entite", "lue", "2026-10-27"))).toBe(false);
-    expect(resteATransmettre(p("a", "partage"))).toBe(false);
-    expect(resteATransmettre(p("a", "entite", "retournee"))).toBe(false);
-  });
-
-  it("le siège : ce qui n'est pas encore parti chez le propriétaire, rien d'autre", () => {
-    expect(resteATransmettre({ ...p("a"), circuit: duSiege(null) })).toBe(true);
-    expect(resteATransmettre({ ...p("a"), circuit: duSiege("rappelee") })).toBe(true);
-    expect(resteATransmettre({ ...p("a"), circuit: duSiege("envoyee") })).toBe(false);
-    expect(resteATransmettre({ ...p("a"), circuit: duSiege("retournee") })).toBe(false);
-  });
-});
+/** Le seul prédicat, avec les droits d'un propriétaire qui a un cabinet. */
+const PROPRIETAIRE: Droit[] = [
+  "societe.tout_voir",
+  "envoi.cabinet",
+  "piece.garder",
+  "circuit.recevoir",
+];
+const reste = (x: Parameters<typeof resteAEnvoyer>[0]) =>
+  resteAEnvoyer(x, PROPRIETAIRE, true) !== null;
 
 describe("la pièce suivante", () => {
   it("prend la suivante dans l'ordre, puis reprend au début", () => {
     const liste = [p("a"), p("b", "partage"), p("c"), p("d")];
-    expect(pieceSuivanteATransmettre(liste, "c")?.id).toBe("d");
-    expect(pieceSuivanteATransmettre(liste, "d")?.id).toBe("a");
+    expect(pieceSuivanteATransmettre(liste, "c", reste)?.id).toBe("d");
+    expect(pieceSuivanteATransmettre(liste, "d", reste)?.id).toBe("a");
   });
 
   it("ne rend jamais la pièce qu'on vient d'envoyer, et rien quand il n'y a plus rien", () => {
-    expect(pieceSuivanteATransmettre([p("a")], "a")).toBeNull();
-    expect(pieceSuivanteATransmettre([p("a", "partage"), p("b", "personnel")], "a")).toBeNull();
+    expect(pieceSuivanteATransmettre([p("a")], "a", reste)).toBeNull();
+    expect(
+      pieceSuivanteATransmettre([p("a", "partage"), p("b", "personnel")], "a", reste),
+    ).toBeNull();
+  });
+
+  it("jamais une pièce que le propriétaire a retournée au siège", () => {
+    const rendue = {
+      ...p("b"),
+      circuit: { ...duSiege("retournee"), recoit: true, mienne: false },
+    };
+    expect(pieceSuivanteATransmettre([p("a"), rendue], "a", reste)).toBeNull();
   });
 });
 

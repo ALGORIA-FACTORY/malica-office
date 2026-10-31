@@ -5,11 +5,15 @@
  * Quatre écrans envoient : la fiche, la bibliothèque, Mon espace, la fin de
  * la capture. Chacun nommait la destination à sa façon, et deux nommaient le
  * comptable alors que le siège envoie au propriétaire (lot 4). La destination
- * vient des droits (`destinationDeLEnvoi`) ; le nom, les phrases de l'écran
+ * vient des droits (`destinationDesEnvois`), ce qui reste à envoyer du seul
+ * prédicat du Socle (`resteAEnvoyer`) ; le nom, les phrases de l'écran
  * « Envoyé » et le libellé du geste viennent d'ici.
  */
 import { useI18n } from "@/i18n";
-import { destinationDeLEnvoi, type DestinationDEnvoi } from "@/lib/envoi";
+import { destinationDesEnvois, resteAEnvoyer } from "@malica/socle/circuit";
+import type { FaitsDeLaPiece } from "@malica/socle/statut-d-envoi";
+
+import type { DestinationDEnvoi } from "@/lib/envoi";
 
 import { aLeDroit, useMonAcces } from "./use-mon-acces";
 import { useMonCabinet } from "./use-mon-cabinet";
@@ -18,13 +22,17 @@ export function useDestinationDeLEnvoi(tenantId: string | null | undefined) {
   const { t } = useI18n();
   const acces = useMonAcces(tenantId);
   const cabinet = useMonCabinet(tenantId);
-  const destination = destinationDeLEnvoi(acces.data?.droits, Boolean(cabinet.data));
+  const droits = acces.data?.droits ?? [];
+  const aUnCabinet = Boolean(cabinet.data);
+  const destination = destinationDesEnvois(droits, aUnCabinet);
   const quiPour = (d: DestinationDEnvoi) =>
     d === "proprietaire"
       ? t("circuit.proprietaire")
       : (cabinet.data?.name ?? t("pme.coffre.votreComptable"));
   return {
     destination,
+    /** Reste-t-elle à envoyer, par cette personne ? Le seul prédicat. */
+    reste: (p: FaitsDeLaPiece) => resteAEnvoyer(p, droits, aUnCabinet) !== null,
     /** Lus : la destination est sûre (droits et mandat). */
     pret: acces.isSuccess && cabinet.isSuccess,
     quiPour,

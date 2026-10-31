@@ -488,7 +488,13 @@ export const collab = {
   async transmettreLesPieces(db: Requete, pieceIds: string[]): Promise<{ transmises: number }> {
     let transmises = 0;
     for (const id of pieceIds) {
-      if (!(await collab.envoyer(db, id)).deja) transmises += 1;
+      // Le lot n'envoie que ce qui reste à envoyer : un retour se renvoie par
+      // sa carte (`piece_envoyer_en_lot`).
+      const { rows } = await db.query<{ deja: boolean }>(
+        `select coalesce((public.piece_envoyer_en_lot($1) ->> 'deja')::boolean, false) as deja`,
+        [id],
+      );
+      if (!rows[0]!.deja) transmises += 1;
     }
     return { transmises };
   },

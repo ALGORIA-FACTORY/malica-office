@@ -1,18 +1,17 @@
 /**
- * Ce qui reste à envoyer, et la pièce d'après — partagé par l'écran
- * « Envoyé » de la fiche et le lot de la bibliothèque (maquette validée le
- * 27 octobre 2026).
+ * L'envoi, vu de l'écran : partie vers quelle destination, à quelle heure, et
+ * la pièce d'après — partagé par l'écran « Envoyé » de la fiche, le lot de la
+ * bibliothèque, Mon espace et la fin de la capture (maquette du 27 octobre
+ * 2026).
  *
- * Une seule définition de « reste à transmettre » : la pièce est dans la
- * société (`entite`), le dirigeant n'a pas DÉCIDÉ de la garder, et le cabinet
- * ne l'a pas retournée (un retour se renvoie par sa propre carte, avec la
- * preuve du geste). Pour le siège (lot 4), ce qui reste est ce qui n'est pas
- * encore parti chez le propriétaire : son statut le dit, « À envoyer ».
+ * CE QUI RESTE À ENVOYER n'est pas défini ici : c'est le prédicat du Socle
+ * (`resteAEnvoyer`, sur `gestesDuCircuit`), que chaque écran reçoit de
+ * `useDestinationDeLEnvoi` — une seule réponse à « puis-je l'envoyer, et à
+ * qui ? » (revue Codex de #146).
  */
-import type { Droit, Visibility } from "@malica/socle/ports/repositories";
+import type { Visibility } from "@malica/socle/ports/repositories";
 import {
   statutDuCircuit,
-  statutPme,
   type CircuitInterne,
   type SuiviDEnvoi,
 } from "@malica/socle/statut-d-envoi";
@@ -27,21 +26,8 @@ export interface PieceAEnvoyer {
   transmiseLe?: string | null;
 }
 
-/**
- * Où part le geste « Envoyer » (lot 4) : le siège envoie au propriétaire, qui
- * transmet au comptable — s'il y en a un. `null` : personne à qui envoyer.
- * La base choisit de même (`piece_envoyer`) ; l'écran ne fait que le dire.
- */
+/** Où part le geste « Envoyer » (`destinationDesEnvois`, au Socle). */
 export type DestinationDEnvoi = "proprietaire" | "cabinet";
-
-export function destinationDeLEnvoi(
-  droits: readonly Droit[] | undefined,
-  aUnCabinet: boolean,
-): DestinationDEnvoi | null {
-  if (droits?.includes("envoi.cabinet")) return aUnCabinet ? "cabinet" : null;
-  if (droits?.includes("envoi.proprietaire")) return "proprietaire";
-  return null;
-}
 
 /**
  * Partie vers cette destination ? Chez le propriétaire, la pièce RESTE dans
@@ -66,25 +52,19 @@ export function partieLeVers(p: PieceAEnvoyer, d: DestinationDEnvoi): string | n
   return d === "cabinet" ? (p.transmiseLe ?? null) : (p.circuit?.envoyeeLe ?? null);
 }
 
-export function resteATransmettre(p: PieceAEnvoyer): boolean {
-  if (p.vis !== "entite" || p.gardeeLe || p.status === "retournee") return false;
-  // Le siège : ce qui n'est pas encore parti chez le propriétaire.
-  if (p.circuit && !p.circuit.recoit) return statutPme(p) === "a_envoyer";
-  return true;
-}
-
 /**
  * La pièce suivante à décider, après `courante` dans l'ordre de la liste —
- * puis depuis le début. `null` : il n'y en a plus, et « Pièce suivante » ne
- * s'affiche pas.
+ * puis depuis le début. `reste` est LE prédicat (`resteAEnvoyer`). `null` : il
+ * n'y en a plus, et « Pièce suivante » ne s'affiche pas.
  */
 export function pieceSuivanteATransmettre<P extends PieceAEnvoyer>(
   pieces: readonly P[],
   courante: string,
+  reste: (p: P) => boolean,
 ): P | null {
   const rang = pieces.findIndex((p) => p.id === courante);
   const ordre = rang < 0 ? pieces : [...pieces.slice(rang + 1), ...pieces.slice(0, rang)];
-  return ordre.find((p) => p.id !== courante && resteATransmettre(p)) ?? null;
+  return ordre.find((p) => p.id !== courante && reste(p)) ?? null;
 }
 
 /** Une pièce restée : `refus` est la phrase d'un refus rédigé (4xx), sinon `null`. */

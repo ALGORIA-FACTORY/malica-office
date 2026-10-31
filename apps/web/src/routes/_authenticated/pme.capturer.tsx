@@ -1681,7 +1681,7 @@ function PmeCapturer() {
             </div>
 
             {transmis === null ? (
-              destination ? (
+              destination && lues.some(envoiVers.reste) ? (
                 <div className="c-envoi">
                   <b>
                     {destination === "proprietaire"
@@ -1710,7 +1710,9 @@ function PmeCapturer() {
                         type="button"
                         className="pr"
                         disabled={terminer.isPending || envoyer.isPending}
-                        onClick={() => envoyer.mutate(lues.map((p) => p.id))}
+                        onClick={() =>
+                          envoyer.mutate(lues.filter(envoiVers.reste).map((p) => p.id))
+                        }
                       >
                         {envoyer.isPending ? t("common.loading") : t("pme.capture.fin.envoyer")}
                       </button>
