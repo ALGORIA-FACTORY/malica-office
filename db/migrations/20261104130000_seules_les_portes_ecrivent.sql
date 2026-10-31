@@ -419,7 +419,10 @@ create policy audit_event_log_ins on audit.event_log
   for insert to authenticated
   with check (actor = (select auth.uid())
               and (tenant_id in (select app.member_orgs())
-                   or tenant_id in (select app.engaged_orgs())));
+                   or tenant_id in (select app.engaged_orgs()))
+              -- La pièce que le fait nomme, s'il en nomme une, est un identifiant.
+              and ((payload ->> 'piece_id') is null
+                   or app.uuid_ou_null(payload ->> 'piece_id') is not null));
 
 -- Un avis ADRESSÉ à quelqu'un ne s'écrit que par une porte
 -- (`app.notifier_les_receveurs`, `notif.poster`…). Les quatre fonctions
@@ -440,7 +443,10 @@ create policy collab_notifications_ins on collab.notifications
               and kind in ('piece.renvoyee', 'ecriture.proposed', 'piece.validee',
                            'piece.retournee', 'pv.envoye')
               and (tenant_id in (select app.member_orgs())
-                   or tenant_id in (select app.engaged_orgs())));
+                   or tenant_id in (select app.engaged_orgs()))
+              -- Un contenu mal formé ne s'écrit pas (revue Codex de #146).
+              and ((payload ->> 'piece_id') is null
+                   or app.uuid_ou_null(payload ->> 'piece_id') is not null));
 
 -- --- 8. Les droits d'écriture que rien n'emploie ---------------------------------------------------
 --

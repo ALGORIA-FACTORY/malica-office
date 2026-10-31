@@ -236,20 +236,43 @@ describe("les clients n'écrivent que par les portes", { skip: !BASE_CONFIGUREE 
     );
   });
 
-  it("un identifiant mal formé dans un fait n'empêche pas de lire le journal", async () => {
-    await sql(
-      "sonia",
+  it("un identifiant mal formé ne s'écrit pas, et une ligne qui en porte ne fait rien tomber", async () => {
+    const POISON = "-".repeat(36);
+    // À l'écriture : refusé, au journal comme dans les avis.
+    await refuse(
+      sql(
+        "sonia",
+        `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, payload)
+         values ($1, auth.uid(), 'essai.poison', 'essai', 'essai', jsonb_build_object('piece_id', $2::text))`,
+        [s.pme, POISON],
+      ),
+      /row-level security/,
+    );
+    await refuse(
+      sql(
+        "sonia",
+        `insert into collab.notifications (tenant_id, kind, payload)
+         values ($1, 'piece.renvoyee', jsonb_build_object('piece_id', $2::text))`,
+        [s.pme, POISON],
+      ),
+      /row-level security/,
+    );
+
+    // Une ligne déjà là (écrite avant la garde) : chacun lit encore tout.
+    await s.admin.query(
       `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, payload)
-       values ($1, auth.uid(), 'essai.poison', 'essai', 'essai',
-               jsonb_build_object('piece_id', repeat('-', 36)))`,
-      [s.pme],
+       values ($1, $2, 'essai.poison', 'essai', 'essai', jsonb_build_object('piece_id', $3::text))`,
+      [s.pme, s.gens.sonia.id, POISON],
     );
-    const [ligne] = await sql(
-      "amel",
-      `select count(*)::int as n from event_log_v where tenant_id = $1`,
-      [s.pme],
+    await s.admin.query(
+      `insert into collab.notifications (tenant_id, kind, payload)
+       values ($1, 'piece.renvoyee', jsonb_build_object('piece_id', $2::text))`,
+      [s.pme, POISON],
     );
-    assert.ok((ligne as { n: number }).n > 0);
+    for (const qui of ["amel", "sami", "expert"] as const) {
+      await sql(qui, `select count(*) from event_log_v where tenant_id = $1`, [s.pme]);
+      await sql(qui, `select count(*) from collab.notifications where tenant_id = $1`, [s.pme]);
+    }
     await s.fait("amel", "supervision.journalDuMandat", s.pme, 5);
   });
 

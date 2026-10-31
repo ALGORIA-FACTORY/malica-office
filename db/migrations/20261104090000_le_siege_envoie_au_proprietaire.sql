@@ -2260,6 +2260,27 @@ create policy collab_demandes_sur_piece_ins on collab.demandes_sur_piece
 -- règle de lecture : l'avis de société qui en reste (« supprimée »,
 -- « archivée ») n'est émis que pour une pièce partie chez lui.
 
+-- L'identifiant qu'un contenu (`payload`) nomme : sa forme exacte, ou rien.
+-- Jamais d'erreur : `^[0-9a-f-]{36}$` laissait passer trente-six tirets, et le
+-- cast levait — une seule ligne empoisonnée faisait tomber la lecture de tous
+-- les avis de la société et du cabinet (revue Codex de #146). La seule
+-- conversion d'un identifiant lu dans un contenu ; les politiques d'écriture
+-- (`20261104130000`) refusent aussi un contenu dont l'identifiant est mal formé.
+create or replace function app.uuid_ou_null(p_texte text)
+returns uuid
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when p_texte ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      then p_texte::uuid
+  end
+$$;
+
+revoke all on function app.uuid_ou_null(text) from public, anon;
+grant execute on function app.uuid_ou_null(text) to authenticated;
+
 create or replace function app.notification_lisible(p_tenant uuid, p_user uuid, p_payload jsonb)
 returns boolean
 language sql
@@ -2272,19 +2293,17 @@ as $$
     when p_tenant not in (select app.member_orgs()) then
       coalesce(p_payload ->> 'chez', '') <> 'proprietaire'
       and case
-        when p_payload ? 'piece_id' and (p_payload ->> 'piece_id') ~* '^[0-9a-f-]{36}$'
-             and exists (select 1 from capture.pieces p
-                          where p.id = (p_payload ->> 'piece_id')::uuid)
-          then app.piece_lisible((p_payload ->> 'piece_id')::uuid)
-               or app.piece_connue_du_cabinet((p_payload ->> 'piece_id')::uuid)
+        when exists (select 1 from capture.pieces p where p.id = x.piece)
+          then app.piece_lisible(x.piece) or app.piece_connue_du_cabinet(x.piece)
         else true
       end
-    when p_payload ? 'piece_id' and (p_payload ->> 'piece_id') ~* '^[0-9a-f-]{36}$' then
-      case when exists (select 1 from capture.pieces p where p.id = (p_payload ->> 'piece_id')::uuid)
-           then app.piece_lisible((p_payload ->> 'piece_id')::uuid)
+    when x.piece is not null then
+      case when exists (select 1 from capture.pieces p where p.id = x.piece)
+           then app.piece_lisible(x.piece)
            else p_tenant in (select app.orgs_avec_droit('societe.tout_voir')) end
     else true
   end
+  from (select app.uuid_ou_null(p_payload ->> 'piece_id') as piece) x
 $$;
 
 revoke all on function app.notification_lisible(uuid, uuid, jsonb) from public, anon;

@@ -61,12 +61,9 @@ as $$
       when p_schema = 'socle' and p_table = 'ecritures' then
         (select e.piece_id from socle.ecritures e where e.id = p_objet)
     end,
-    -- La forme exacte d'un identifiant : trente-six tirets passaient la garde
-    -- et faisaient tomber, au cast, la lecture de tout le journal (revue de
-    -- #146 : un fait empoisonné, écrit par un membre).
-    case when (p_payload ->> 'piece_id')
-                ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-         then (p_payload ->> 'piece_id')::uuid end)
+    -- La forme exacte d'un identifiant, sans jamais lever : trente-six tirets
+    -- faisaient tomber, au cast, la lecture de tout le journal (revue de #146).
+    app.uuid_ou_null(p_payload ->> 'piece_id'))
 $$;
 
 revoke all on function app.piece_de_l_evenement(text, text, uuid, jsonb) from public, anon, authenticated;
