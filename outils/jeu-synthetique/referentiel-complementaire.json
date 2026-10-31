@@ -10,7 +10,7 @@
   "immobilisation": {
     "categorie": "informatique",
     "compte": "2282",
-    "source": "ref.immo_categories, code « informatique », account_immo — migration 20260825213940",
+    "source": "ref.immo_categories, code « informatique », account_immo en vigueur au jour du relevé — migrations 20260825213940 et 20261024160000 (2282 dans les deux versions)",
     "incertain": "Le compte d'une immobilisation (2282 « Équipement de bureau » pour du matériel informatique) et la TVA qui la grève (4366 du paramétrage, ou 43662 « TVA sur immobilisations » du plan NC 01) sont à confirmer par un expert-comptable."
   },
   "cours": [

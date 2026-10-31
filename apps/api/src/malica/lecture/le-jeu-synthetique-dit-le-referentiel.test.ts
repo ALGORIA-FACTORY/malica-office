@@ -40,17 +40,21 @@ describe("le complément de référentiel du jeu synthétique", { skip: !BASE_CO
     const u = await creerCompte(`jeu-synth-${Date.now()}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(u);
     const lu = await sousIdentite(u.id, async (db) => {
+      // Le pack, et chaque ligne datée, en vigueur au jour du relevé : une
+      // catégorie d'immobilisation se versionne (20261024160000), et le FODEC
+      // porte une ligne par sens. On attend UNE valeur au jour dit.
       const pack = `(select id from ref.jurisdiction_packs
                       where jurisdiction = $1 and effective_from <= $2::date
                       order by effective_from desc limit 1)`;
+      const enVigueur = `valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)`;
       const { rows: fodec } = await db.query<{ rate: string; basis: string; taxable: boolean }>(
         `select distinct rate::text as rate, basis, taxable from ref.fiscal_charges
-          where pack_version_id = ${pack} and code = $3`,
+          where pack_version_id = ${pack} and code = $3 and ${enVigueur}`,
         [RELEVE_D_ESSAI.juridiction, RELEVE_D_ESSAI.jour, COMPLEMENT.fodec.code],
       );
       const { rows: immo } = await db.query<{ account_immo: string }>(
-        `select account_immo from ref.immo_categories
-          where pack_version_id = ${pack} and code = $3`,
+        `select distinct account_immo from ref.immo_categories
+          where pack_version_id = ${pack} and code = $3 and ${enVigueur}`,
         [RELEVE_D_ESSAI.juridiction, RELEVE_D_ESSAI.jour, COMPLEMENT.immobilisation.categorie],
       );
       return { fodec, immo };
