@@ -146,5 +146,18 @@ La facture signalée (F008) imprime son total HT « 165.747.027 » : l'OCR a mis
 point à la place de la virgule, et le treillis n'en tire que la lecture en
 milliers. Elle n'est pas prouvée fausse : elle est rendue à la chaîne.
 
+**Les vraies pièces du staging** (31 octobre 2026, lecture seule, sur le poste du
+dirigeant ; aucune valeur sortie, seulement des comptes) — 457 pièces relevées,
+même code que la branche :
+
+| Issue                                     | Pièces                                                                          |
+| ----------------------------------------- | ------------------------------------------------------------------------------- |
+| Prouvées, identiques à la chaîne          | 344, dont les 132 dont l'écriture est inscrite                                  |
+| Prouvées, la chaîne n'avait pas de totaux | 43                                                                              |
+| Prouvées, différentes de la chaîne        | 1 — le HT de la chaîne ne ferme pas sa propre arithmétique ; le sudoku la ferme |
+| Non prouvées, rendues à la chaîne         | 69                                                                              |
+
+Moteur : 0,7 ms par pièce.
+
 Moteur seul (`cargo test`, grille d'essai) : 60/60, 0 fausse preuve,
 0,45 ms médian par facture.
