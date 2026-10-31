@@ -563,6 +563,25 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     },
   },
   {
+    // Revue de la PR 144 (Codex) : le timbre que le paramétrage fixe à 1,000
+    // s'imprime 2,000. Il ne tombe pas sur sa valeur : il n'ancre pas
+    // l'échelle, et lus à l'anglaise les montants tiennent encore. La seule
+    // présence d'un montant attendu taisait la convention. La réserve doit se
+    // poser ; et aucune écriture : le moteur inscrit le timbre à sa valeur
+    // fixée, que la pièce contredit — le cabinet tranche.
+    nom: "un timbre imprimé à une autre valeur que celle fixée : il n'ancre pas l'échelle",
+    reserve: "coherence_arithmetique",
+    provenance: `${REPRODUIT} (revue de la PR 144)`,
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "100,000" }],
+      ht: "100,000",
+      tva: "19,000",
+      droits: [{ code: "DROIT_TIMBRE", montant: "2,000" }],
+      ttc: "121,000",
+    }),
+    attendu: null,
+  },
+  {
     // Négatif comptable, ou base entre parenthèses (« (base 514,700) », le
     // 15 octobre 2026) : le texte ne dit pas le signe, rien ne se propose.
     nom: "des montants entre parenthèses : le signe ne se devine pas",
@@ -749,8 +768,15 @@ function jouer(cas: CasDeMesure): Issue {
       tvaNonDeductible: false,
     },
   );
+  // La réserve attendue se vérifie aussi sur un refus : un refus juste dont le
+  // jugement tait le doute n'est pas juste.
+  const reserveAbsente =
+    cas.reserve !== undefined &&
+    !jugement.motifs.some((m) => m.code === cas.reserve && m.statut === "reserve");
   if (!p.ok) {
     const motif = motifDuRefus(jugement, p.raison);
+    if (cas.attendu === null && reserveAbsente)
+      return { type: "aucune", motif: `${motif} — réserve « ${cas.reserve} » attendue, absente` };
     return cas.attendu === null ? { type: "refus_juste", motif } : { type: "aucune", motif };
   }
   if (cas.attendu === null)
@@ -765,8 +791,7 @@ function jouer(cas: CasDeMesure): Issue {
     causes.push(`journal ${e.journal} ≠ ${cas.attendu.journal}`);
   if (lues.join() !== attendues.join())
     causes.push(`lignes ${lues.join(" ; ")} ≠ ${attendues.join(" ; ")}`);
-  if (cas.reserve && !jugement.motifs.some((m) => m.code === cas.reserve && m.statut === "reserve"))
-    causes.push(`réserve « ${cas.reserve} » attendue, absente`);
+  if (reserveAbsente) causes.push(`réserve « ${cas.reserve} » attendue, absente`);
   return causes.length === 0 ? { type: "exacte" } : { type: "fausse", cause: causes.join(" · ") };
 }
 

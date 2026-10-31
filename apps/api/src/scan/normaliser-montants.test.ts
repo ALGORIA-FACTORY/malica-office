@@ -333,6 +333,27 @@ describe("un droit fixe du paramétrage ancre l'échelle", () => {
     assert.equal(r.parConvention, false);
     assert.equal(r.confiance, 1);
   });
+
+  it("un droit fixé imprimé à une autre valeur n'ancre rien : la convention se dit encore", () => {
+    // Revue de la PR 144 (Codex) : le droit attendu à 1,000 s'imprime 2,000.
+    // Il ne tombe pas sur sa valeur fixée, donc n'ancre pas l'échelle ; lus
+    // à l'anglaise (× 1000), tous les montants vérifient aussi la facture.
+    // La seule PRÉSENCE d'une valeur attendue ne doit pas taire la convention.
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "100,000", taux: "0.19" }],
+        tva: "19,000",
+        autres: [{ brut: "2,000", attendu: 1_000 }],
+        ttc: "121,000",
+      },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.autres[0], 2_000);
+    assert.equal(r.parConvention, true);
+    assert.ok(r.confiance < 1, "décidé par la convention, pas par la pièce");
+    assert.match(r.raison, /convention du séparateur/);
+  });
 });
 
 /*

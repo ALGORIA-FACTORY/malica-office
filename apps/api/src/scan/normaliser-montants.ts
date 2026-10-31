@@ -538,11 +538,15 @@ export function normaliserMontants(
   // Un droit fixé par le paramétrage ne se lit qu'à sa valeur. Imprimé
   // autrement, il n'ancre rien et garde toutes ses lectures.
   let ancre = false;
+  // Les droits que leur valeur fixée a effectivement ancrés : l'EFFET, pas la
+  // seule présence d'une valeur attendue (revue de la PR 144, Codex).
+  const ancres = new Set<string>();
   const lectures = brutes.map((l, i) => {
     const attendu = attendus.get(champs[i]!.nom);
     if (attendu === undefined) return l;
     const retenues = l.filter((c) => c.mineur === attendu);
     if (retenues.length === 0) return l;
+    ancres.add(champs[i]!.nom);
     if (retenues.length < l.length) ancre = true;
     return retenues;
   });
@@ -705,7 +709,7 @@ export function normaliserMontants(
    */
   const avecLaConvention = lectures.map((l, i) => [
     ...l,
-    ...(attendus.has(champs[i]!.nom) ? [] : (champs[i]!.ecartees ?? [])).map((mineur) => ({
+    ...(ancres.has(champs[i]!.nom) ? [] : (champs[i]!.ecartees ?? [])).map((mineur) => ({
       mineur,
       convention: "écartée par le séparateur décimal de la devise",
     })),

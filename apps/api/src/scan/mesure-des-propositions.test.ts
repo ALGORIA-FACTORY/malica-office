@@ -70,6 +70,14 @@ describe("la mesure des propositions", () => {
     );
   });
 
+  it("chaque réserve attendue se pose, que la pièce soit proposée ou refusée", () => {
+    // Revue de la PR 144 : une valeur que la seule convention décide se dit.
+    const taisues = CAS_DE_MESURE.filter((c) => c.reserve !== undefined)
+      .filter((c) => !["exacte", "refus_juste"].includes(m.parCas[c.nom]!.type))
+      .map((c) => `${c.nom} : ${JSON.stringify(m.parCas[c.nom])}`);
+    assert.deepEqual(taisues, []);
+  });
+
   it("chaque pièce du témoin est encore mesurée", () => {
     assert.deepEqual(
       Object.keys(AVANT).filter((nom) => !(nom in m.parCas)),
