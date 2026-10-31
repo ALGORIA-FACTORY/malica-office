@@ -237,7 +237,7 @@ export async function readPieceFlow(
     {
       pieceId,
       packId: contexte.packId,
-      devise: { decimales: contexte.moneyDecimals, marques: contexte.marquesDevise },
+      devise: contexte.devises.find((d) => d.code === contexte.currency),
     },
     { designe: process.env["SUDOKU_DESIGNE"] === "1" },
   );

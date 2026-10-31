@@ -229,6 +229,47 @@ create trigger champs_lus_origine_serveur
   before insert on capture.champs_lus
   for each row execute function app.exiger_origine_serveur();
 
+-- Seules les portes écrivent (20261104130000) : aucun droit d'écriture direct
+-- au client. La lecture du sudoku s'inscrit par cette porte, que le serveur
+-- seul appelle, pour une pièce que l'appelant peut modifier.
+revoke insert on table capture.champs_lus from authenticated;
+
+create or replace function public.capture_champs_lus_inscrire(
+  p_piece uuid, p_grille text, p_issue text, p_champs jsonb)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_n integer;
+begin
+  if coalesce(current_setting('malica.origine', true), '') <> 'serveur' then
+    raise exception 'reserve au serveur : capture.champs_lus' using errcode = '42501';
+  end if;
+  if not app.piece_modifiable(p_piece) then
+    raise exception 'piece.inaccessible' using errcode = '42501';
+  end if;
+  if p_issue not in ('prouvee', 'ambigue', 'aucune') then
+    raise exception 'issue inconnue : %', p_issue using errcode = '22023';
+  end if;
+  insert into capture.champs_lus
+    (tenant_id, piece_id, grille_code, champ_code, valeur, statut, citations, issue)
+  select p.tenant_id, p.id, p_grille, c.champ, c.valeur, c.statut, c.citations, p_issue
+    from capture.pieces p
+   cross join jsonb_to_recordset(p_champs)
+        as c(champ text, valeur text, statut text, citations jsonb)
+   where p.id = p_piece;
+  get diagnostics v_n = row_count;
+  return v_n;
+end
+$function$;
+
+revoke all on function public.capture_champs_lus_inscrire(uuid, text, text, jsonb)
+  from public, anon;
+grant execute on function public.capture_champs_lus_inscrire(uuid, text, text, jsonb)
+  to authenticated;
+
 comment on table capture.champs_lus is
   'Ce que le sudoku a lu sur une pièce, champ par champ : valeur, statut, citations '
   '(contrat du moteur, section 5). Écriture seule (R7).';

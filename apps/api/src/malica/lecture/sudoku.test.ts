@@ -5,7 +5,7 @@ import pg from "pg";
 
 import { moteurDisponible, resoudre, type SortieDuSudoku } from "@malica/sudoku";
 
-import { deviseDEssai } from "../../scan/devise-d-essai.ts";
+import { deviseDEssai, devisesDEssai } from "../../scan/devise-d-essai.ts";
 import { JEU_D_OR } from "./jeu-d-or.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
@@ -305,7 +305,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
         buildExtractFromTokenPlan({
           tokens: plan,
           selection: s,
-          devise,
+          ...devisesDEssai(3),
           matriculeDossier: cas.matriculeDossier,
         }).extract;
       const montants = (x: ReturnType<typeof extrait>) =>
