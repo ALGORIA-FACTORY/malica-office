@@ -150,4 +150,20 @@ describe("la coque n'invite que sur une place incluse", { skip: !BASE_CONFIGUREE
   it("le web garde la place facturée", async () => {
     assert.equal((await inviter("de-trop", {})).status, 200);
   });
+  // La recette du 1er novembre 2026 : inviter un membre répondait « déjà
+  // membre du cabinet » à une PME, en français seulement.
+  it("inviter un membre se refuse en nommant l'organisation, par une clé traduite", async () => {
+    const r = await fetch(`${base}/rpc`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${jeton}` },
+      body: JSON.stringify({
+        depot: "facturation",
+        methode: "inviterSiege",
+        args: [`${marque}@essai.local`, tenant],
+      }),
+    });
+    assert.equal(r.status, 400);
+    const { erreur } = (await r.json()) as { erreur: string };
+    assert.equal(erreur, "refus.invitation.deja_membre");
+  });
 });

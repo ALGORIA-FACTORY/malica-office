@@ -2124,6 +2124,9 @@ const fr = {
     "La facture porte plusieurs taux : choisissez le code de taxe de chaque ligne de base.",
   "refus.ecriture.taxe_sans_tva":
     "Aucune ligne de TVA : choisissez le code de taxe de chaque ligne de base (exonérée, export…).",
+  "refus.invitation.deja_membre": "Cette personne fait déjà partie de cette organisation.",
+  "refus.invitation.adresse": "Cette adresse ne ressemble pas à une adresse e-mail.",
+  "refus.invitation.titulaire": "Seul le titulaire de l’abonnement donne une place.",
   "refus.cours.supervision": "Un cours se saisit par le cabinet qui supervise le dossier.",
   "refus.cours.correction_sans_motif":
     "Ce cours existe déjà, avec un autre taux : une correction dit pourquoi. Indiquez le motif.",
@@ -6115,6 +6118,9 @@ const en: Dict = {
     "The invoice has several rates: choose the tax code of each base line.",
   "refus.ecriture.taxe_sans_tva":
     "No VAT line: choose the tax code of each base line (exempt, export…).",
+  "refus.invitation.deja_membre": "This person is already a member of this organisation.",
+  "refus.invitation.adresse": "This does not look like an email address.",
+  "refus.invitation.titulaire": "Only the subscription holder can give a seat.",
   "refus.cours.supervision": "A rate is entered by the firm that supervises the file.",
   "refus.cours.correction_sans_motif":
     "This rate already exists with another value: a correction states why. Enter the reason.",
@@ -9942,6 +9948,9 @@ const ar: Dict = {
   "refus.ecriture.taxe_base": "الفاتورة بعدّة نسب: اختر رمز الأداء لكل سطر من الأساس.",
   "refus.ecriture.taxe_sans_tva":
     "لا سطر للأداء على القيمة المضافة: اختر رمز الأداء لكل سطر من الأساس (معفى، تصدير…).",
+  "refus.invitation.deja_membre": "هذا الشخص عضو بالفعل في هذه المؤسسة.",
+  "refus.invitation.adresse": "هذا لا يبدو عنوان بريد إلكتروني.",
+  "refus.invitation.titulaire": "وحده صاحب الاشتراك يمنح مقعدًا.",
   "refus.cours.supervision": "يُدخل سعر الصرف المكتبُ الذي يشرف على الملف.",
   "refus.cours.correction_sans_motif": "هذا السعر موجود بقيمة أخرى: التصحيح يذكر سببه. أدخل السبب.",
   "refus.cours.derogation_sans_motif": "الاستثناء من السعر الرسمي يذكر سببه: أدخل السبب.",
