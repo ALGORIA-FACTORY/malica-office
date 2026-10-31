@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { unzipSync, strFromU8 } from "fflate";
 import type { DossierComptable, DocumentComptable } from "@malica/socle/ports/repositories";
-import { construireArchiveComptable, extensionDuContenu } from "../archive-comptable";
+import { construireArchiveComptable } from "../archive-comptable";
+import { extensionDuContenu } from "../nom-de-fichier";
 
 const doc = (id: string, reference = "Même référence"): DocumentComptable => ({
   id,

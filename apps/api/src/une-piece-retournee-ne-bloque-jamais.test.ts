@@ -77,8 +77,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
   /** Une pièce transmise, lue, au type lu mais pas confirmé : le cas réel. */
   const transmiseLue = async () => {
     n += 1;
-    const id = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
+    const id = await sousIdentiteDuServeur(dirigeant.id, async () => {
+      const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      transmise_le)
          values ($1, 'pdf', 'partage', $2, $3, $4, now())
@@ -461,13 +461,20 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     });
   }
 
-  it("une suppression ne se demande pas sur une pièce prise en charge : refus dès la demande", async () => {
+  it("une suppression se demande sur une pièce prise en charge : le cabinet accorde, contre-passe, archive", async () => {
+    /*
+     * Spec « Malica sans blocage » §3 (lot 4) : « Supprimer une pièce prise en
+     * charge — le comptable accorde : contre-passation, et la pièce est
+     * archivée, jamais effacée. » La demande était refusée d'emblée, et la
+     * matrice des droits du 28 octobre le relevait (« Pièce prise en charge :
+     * refusé »). Seul un RÈGLEMENT inscrit la retient encore.
+     */
     const id = await transmiseLue();
     await priseEnCharge(id);
-    await assert.rejects(
-      pmeFait("collab.demanderSurPiece", id, "suppression"),
-      /refus\.suppression\.inscrite/,
-    );
+    await pmeFait("collab.demanderSurPiece", id, "suppression");
+    await cabinetFait("collab.repondreSurPiece", id, "suppression", true, null);
+    assert.ok((await etat(id))?.archivee_le, "archivée, jamais effacée");
+    assert.equal(await ecrituresVivantes(id), 0, "son écriture est contre-passée");
   });
 
   /* ======================= relecture indépendante du lot (28 octobre 2026) */
@@ -1269,9 +1276,9 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
   };
 
   it("une version remplacée ne se lit plus : refus définitif, travail clos, octets refusés", async () => {
-    const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
+    const ancienne = await sousIdentiteDuServeur(dirigeant.id, async () => {
       n += 1;
-      const { rows } = await db.query<{ id: string }>(
+      const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      transmise_le)
          values ($1, 'pdf', 'partage', $2, $3, $4, now()) returning id`,

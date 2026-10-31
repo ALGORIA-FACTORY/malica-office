@@ -17,6 +17,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
+import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { OuvrirDossier } from "@/components/malica/OuvrirDossier";
 import {
@@ -94,10 +95,7 @@ function CabinetClients() {
   });
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
   // La même clé que le rail du cabinet : une seule lecture du rôle.
-  const acces = useQuery({
-    queryKey: ["cab-acces", org.id],
-    queryFn: () => office().acces.monAcces(org.id),
-  });
+  const acces = useMonAcces(org.id);
   const regimes = useQuery({
     queryKey: ["fiche-regimes", org.jurisdiction],
     queryFn: () => office().identity.regimesDisponibles(org.jurisdiction),

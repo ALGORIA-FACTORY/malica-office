@@ -32,7 +32,7 @@ const plusRecenteDAbord = (x: PieceLue, y: PieceLue) => y.createdAt.localeCompar
  * Une pièce dont la lecture a ÉCHOUÉ n'est pas « à lire » : elle attend un
  * geste précis, et `piecesEnEchec` la porte. La plus récente d'abord.
  */
-type LigneDeLaListe = Pick<PieceLue, "vis" | "status" | "gardeeLe" | "suivi">;
+type LigneDeLaListe = Pick<PieceLue, "vis" | "status" | "gardeeLe" | "suivi" | "circuit">;
 
 /** Le statut d'une pièce de la liste, côté PME (« Malica sans blocage », §2). */
 export function statutDeLaPieceLue(p: LigneDeLaListe): StatutPme {
@@ -41,6 +41,7 @@ export function statutDeLaPieceLue(p: LigneDeLaListe): StatutPme {
     status: p.status,
     gardeeLe: p.gardeeLe ?? null,
     suivi: p.suivi ?? null,
+    circuit: p.circuit ?? null,
   });
 }
 
@@ -53,6 +54,17 @@ export function statutDeLaPieceLue(p: LigneDeLaListe): StatutPme {
  */
 export function attendLaPersonne(p: LigneDeLaListe): boolean {
   return p.status !== "capturee" && TON_PME[statutDeLaPieceLue(p)] === "am";
+}
+
+/**
+ * La file du propriétaire (lot 4) : les pièces qu'un siège lui a envoyées et
+ * qu'il n'a pas encore ouvertes — « Reçue » —, ou que le siège a corrigées
+ * depuis — « Corrigée ». Le filtre « Reçues » de la bibliothèque lit cette
+ * seule règle.
+ */
+export function recueDUnSiege(p: LigneDeLaListe): boolean {
+  const s = statutDeLaPieceLue(p);
+  return s === "recue" || s === "corrigee";
 }
 
 export function piecesALire(pieces: readonly PieceLue[]): PieceLue[] {

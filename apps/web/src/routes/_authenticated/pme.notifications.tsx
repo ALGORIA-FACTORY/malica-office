@@ -156,6 +156,11 @@ const GENRES: Record<string, MessageKey> = {
   "piece.gardee": "notif.kind.piece.gardee",
   "piece.supprimee": "notif.kind.piece.supprimee",
   "piece.archivee": "notif.kind.piece.archivee",
+  // Le circuit siège → propriétaire (lot 4) : adressées à la personne.
+  "piece.recue_du_siege": "notif.kind.piece.recue_du_siege",
+  "piece.retournee_par_le_proprietaire": "notif.kind.piece.retournee_par_le_proprietaire",
+  "piece.supprimee_par_le_proprietaire": "notif.kind.piece.supprimee_par_le_proprietaire",
+  "piece.demande": "notif.kind.piece.demande",
 };
 
 const OU = "routes/_authenticated/pme.notifications";

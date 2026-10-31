@@ -16,6 +16,7 @@ import { Route as ConfidentialiteRouteImport } from './routes/confidentialite'
 import { Route as InvitationRouteImport } from './routes/invitation'
 import { Route as ReinitialiserRouteImport } from './routes/reinitialiser'
 import { Route as AuthenticatedCabinetRouteImport } from './routes/_authenticated/cabinet'
+import { Route as AuthenticatedMonEspaceRouteImport } from './routes/_authenticated/mon-espace'
 import { Route as AuthenticatedOfficeRouteImport } from './routes/_authenticated/office'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedPmeRouteImport } from './routes/_authenticated/pme'
@@ -94,6 +95,11 @@ const ReinitialiserRoute = ReinitialiserRouteImport.update({
 const AuthenticatedCabinetRoute = AuthenticatedCabinetRouteImport.update({
   id: '/cabinet',
   path: '/cabinet',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMonEspaceRoute = AuthenticatedMonEspaceRouteImport.update({
+  id: '/mon-espace',
+  path: '/mon-espace',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedOfficeRoute = AuthenticatedOfficeRouteImport.update({
@@ -361,6 +367,7 @@ export interface FileRoutesByFullPath {
   '/invitation': typeof InvitationRoute
   '/reinitialiser': typeof ReinitialiserRoute
   '/cabinet': typeof AuthenticatedCabinetRouteWithChildren
+  '/mon-espace': typeof AuthenticatedMonEspaceRoute
   '/office': typeof AuthenticatedOfficeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pme': typeof AuthenticatedPmeRouteWithChildren
@@ -413,6 +420,7 @@ export interface FileRoutesByTo {
   '/confidentialite': typeof ConfidentialiteRoute
   '/invitation': typeof InvitationRoute
   '/reinitialiser': typeof ReinitialiserRoute
+  '/mon-espace': typeof AuthenticatedMonEspaceRoute
   '/office': typeof AuthenticatedOfficeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/cabinet/abonnements': typeof AuthenticatedCabinetAbonnementsRoute
@@ -467,6 +475,7 @@ export interface FileRoutesById {
   '/invitation': typeof InvitationRoute
   '/reinitialiser': typeof ReinitialiserRoute
   '/_authenticated/cabinet': typeof AuthenticatedCabinetRouteWithChildren
+  '/_authenticated/mon-espace': typeof AuthenticatedMonEspaceRoute
   '/_authenticated/office': typeof AuthenticatedOfficeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pme': typeof AuthenticatedPmeRouteWithChildren
@@ -522,6 +531,7 @@ export interface FileRouteTypes {
     | '/invitation'
     | '/reinitialiser'
     | '/cabinet'
+    | '/mon-espace'
     | '/office'
     | '/onboarding'
     | '/pme'
@@ -574,6 +584,7 @@ export interface FileRouteTypes {
     | '/confidentialite'
     | '/invitation'
     | '/reinitialiser'
+    | '/mon-espace'
     | '/office'
     | '/onboarding'
     | '/cabinet/abonnements'
@@ -627,6 +638,7 @@ export interface FileRouteTypes {
     | '/invitation'
     | '/reinitialiser'
     | '/_authenticated/cabinet'
+    | '/_authenticated/mon-espace'
     | '/_authenticated/office'
     | '/_authenticated/onboarding'
     | '/_authenticated/pme'
@@ -732,6 +744,13 @@ declare module '@tanstack/react-router' {
       path: '/cabinet'
       fullPath: '/cabinet'
       preLoaderRoute: typeof AuthenticatedCabinetRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/mon-espace': {
+      id: '/_authenticated/mon-espace'
+      path: '/mon-espace'
+      fullPath: '/mon-espace'
+      preLoaderRoute: typeof AuthenticatedMonEspaceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/office': {
@@ -1162,6 +1181,7 @@ const AuthenticatedPmeRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCabinetRoute: typeof AuthenticatedCabinetRouteWithChildren
+  AuthenticatedMonEspaceRoute: typeof AuthenticatedMonEspaceRoute
   AuthenticatedOfficeRoute: typeof AuthenticatedOfficeRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPmeRoute: typeof AuthenticatedPmeRouteWithChildren
@@ -1169,6 +1189,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCabinetRoute: AuthenticatedCabinetRouteWithChildren,
+  AuthenticatedMonEspaceRoute: AuthenticatedMonEspaceRoute,
   AuthenticatedOfficeRoute: AuthenticatedOfficeRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPmeRoute: AuthenticatedPmeRouteWithChildren,

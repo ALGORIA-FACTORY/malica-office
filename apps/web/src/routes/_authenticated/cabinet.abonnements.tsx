@@ -22,6 +22,7 @@ import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-ro
 import { useState } from "react";
 import { Users } from "lucide-react";
 
+import { useMonAcces } from "@/hooks/use-mon-acces";
 import { COMMERCE } from "@/capabilities/coque";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
@@ -84,10 +85,7 @@ function CabinetAbonnements() {
 
   useMalicaPanel(<MalicaNote>{t("cab.abo.panel")}</MalicaNote>, [locale]);
 
-  const acces = useQuery({
-    queryKey: ["cab-acces", org.id],
-    queryFn: () => office().acces.monAcces(org.id),
-  });
+  const acces = useMonAcces(org.id);
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
     queryFn: () => office().supervision.listClients(org.id),

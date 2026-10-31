@@ -1,23 +1,27 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
-import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { FileLocale } from "@/components/malica/file-locale";
-import { FeuilleDuBas } from "@/components/malica/feuille-du-bas";
+import {
+  CompteDesPapiers,
+  ConfirmerLaSuppression,
+  GrilleDesMois,
+} from "@/components/malica/grille-des-mois";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { Aide } from "@/components/malica/aide";
-import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { partieLeVers, partieVers } from "@/lib/envoi";
+import { LotInterrompu, unParUn } from "@/lib/un-par-un";
 import { jourEtMois, momentDeLEnvoi, montant } from "@/lib/lisible";
-import { cn } from "@/lib/utils";
 import { EcranEnvoye } from "@/components/malica/envoye";
 import { office } from "@/verticals/malica-office/composition";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
-import { useMonCabinet } from "@/hooks/use-mon-cabinet";
+import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
+import { useEnvoyerEnLot, useSupprimerEnLot } from "@/hooks/use-gestes-du-circuit";
 
 export const Route = createFileRoute("/_authenticated/pme/coffre")({
   head: () => ({
@@ -40,34 +44,6 @@ export const Route = createFileRoute("/_authenticated/pme/coffre")({
 });
 
 const OU = "routes/_authenticated/pme.coffre";
-
-/** Un lot arrêté en route : ce qui est passé, ce qui reste, et pourquoi. */
-class LotInterrompu extends Error {
-  constructor(
-    readonly faits: readonly string[],
-    readonly restants: readonly string[],
-    override readonly cause: unknown,
-  ) {
-    super("lot interrompu");
-  }
-}
-
-/** Un geste sur chaque papier, l'un après l'autre ; s'il s'arrête, on sait où. */
-async function unParUn(
-  ids: readonly string[],
-  geste: (id: string) => Promise<unknown>,
-): Promise<readonly string[]> {
-  const faits: string[] = [];
-  for (const [i, id] of ids.entries()) {
-    try {
-      await geste(id);
-    } catch (cause) {
-      throw new LotInterrompu(faits, ids.slice(i), cause);
-    }
-    faits.push(id);
-  }
-  return faits;
-}
 
 /** Le mois d'une pièce, `AAAA-MM` : la date du document, sinon celle du dépôt. */
 const moisDe = (p: PieceLue) => (p.dateDocument ?? p.createdAt).slice(0, 7);
@@ -122,15 +98,14 @@ function PmeCoffre() {
   /** Les papiers choisis, dans l'ordre où on les a touchés. */
   const [choisis, setChoisis] = useState<readonly string[]>([]);
   const [confirmer, setConfirmer] = useState(false);
-  const feuille = useRef<HTMLDivElement | null>(null);
-  useSuperposition(confirmer, () => setConfirmer(false), feuille);
   /** Ce qui vient d'entrer dans la société, puis ce qui vient de partir au cabinet. */
   const [misEnSociete, setMisEnSociete] = useState<readonly string[] | null>(null);
   const [transmis, setTransmis] = useState<readonly string[] | null>(null);
 
   const pieces = usePiecesLues();
-  const cabinet = useMonCabinet(pme.tenantId);
-  const nomDuCabinet = cabinet.data?.name ?? t("pme.coffre.votreComptable");
+  // Le siège envoie au propriétaire ; qui transmet, au comptable (lot 4).
+  const envoi = useDestinationDeLEnvoi(pme.tenantId);
+  const destination = envoi.destination;
 
   const relire = async () => {
     await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
@@ -168,14 +143,8 @@ function PmeCoffre() {
     },
   });
 
-  const supprimer = useMutation({
-    // `false` : la pièce n'est plus visible. Ce n'est pas un succès — le
-    // journal le garde, comme sur la fiche.
-    mutationFn: (ids: readonly string[]) =>
-      unParUn(ids, async (id) => {
-        if (!(await office().capture.supprimer(id)))
-          throw new Error(`suppression sans effet : ${id}`);
-      }),
+  // La seule porte de la suppression : ce que le Socle permet, pièce par pièce.
+  const supprimer = useSupprimerEnLot(pme.tenantId, {
     onSuccess: async () => {
       setErreur(null);
       setChoisis([]);
@@ -189,13 +158,13 @@ function PmeCoffre() {
     },
   });
 
-  const transmettre = useMutation({
-    mutationFn: async (ids: readonly string[]) => {
-      // La décision est relue au dernier instant ; aucun destinataire n'est inventé.
-      const destinataire = await office().identity.monCabinet(pme.tenantId);
-      if (!destinataire) throw new Error(t("relation.sansDestinataire"));
-      await office().collab.transmettreLesPieces([...ids]);
-      return ids;
+  // La seule porte du lot : ce qui reste à envoyer, et rien d'autre.
+  const transmettre = useEnvoyerEnLot(pme.tenantId, {
+    // Vers le comptable, la décision est relue au dernier instant ; aucun
+    // destinataire n'est inventé. Un refus ici arrête le lot avant tout envoi.
+    onMutate: async () => {
+      if (destination === "cabinet" && !(await office().identity.monCabinet(pme.tenantId)))
+        throw new Error(t("relation.sansDestinataire"));
     },
     onSuccess: async (ids) => {
       setErreur(null);
@@ -213,22 +182,6 @@ function PmeCoffre() {
   const visibles = toutes
     .filter((p) => p.vis === "personnel")
     .sort((a, b) => (b.dateDocument ?? b.createdAt).localeCompare(a.dateDocument ?? a.createdAt));
-
-  /** Les mois, du plus récent au plus ancien, chacun avec ses papiers. */
-  const parMois: { mois: string; papiers: PieceLue[] }[] = [];
-  for (const p of visibles) {
-    const m = moisDe(p);
-    const dernier = parMois[parMois.length - 1];
-    if (dernier?.mois === m) dernier.papiers.push(p);
-    else parMois.push({ mois: m, papiers: [p] });
-  }
-  const anneeCourante = String(new Date().getUTCFullYear());
-  const nomDuMois = (mois: string) =>
-    new Intl.DateTimeFormat(locale, {
-      month: "long",
-      ...(mois.startsWith(anneeCourante) ? {} : { year: "numeric" }),
-      timeZone: "UTC",
-    }).format(new Date(`${mois}-01T00:00:00Z`));
 
   // Le titre suit le STATUT : une pièce lue sans émetteur n'est pas une pièce
   // non lue. Voir pme.list.tsx.
@@ -248,36 +201,41 @@ function PmeCoffre() {
     setChoisis((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
   // Un choix qui a quitté l'espace (supprimé ailleurs, relu) ne compte plus.
   const choix = choisis.filter((id) => visibles.some((p) => p.id === id));
+  /** Les papiers choisis, dans l'ordre du toucher. */
+  const choisies = choix.flatMap((id) => visibles.filter((p) => p.id === id));
+  // « Supprimer » n'est offert que si chaque papier choisi se supprime : un
+  // lot ne laisse jamais un papier derrière lui sans le dire.
+  const supprimables = choisies.length > 0 && choisies.every(supprimer.peut);
   const occupe = mettre.isPending || supprimer.isPending;
 
   const panne = pieces.error ?? null;
 
   /* ============================================================== ENVOYÉ
    *
-   * Les papiers sont partis chez le cabinet : sans cet écran, ils
-   * disparaîtraient de la grille sans un mot (maquette « Écran Envoyé », 27
-   * octobre 2026). Les mots et l'heure viennent de la base relue.
+   * Les papiers sont partis — chez le propriétaire (le siège, lot 4) ou chez
+   * le comptable : sans cet écran, ils disparaîtraient de la grille sans un
+   * mot (maquette « Écran Envoyé », 27 octobre 2026). Partie chez le
+   * propriétaire, une pièce reste dans la société : c'est le circuit qui le
+   * dit (`partieVers`). Les mots et l'heure viennent de la base relue.
    */
   const partis = transmis ? toutes.filter((p) => transmis.includes(p.id)) : [];
   const premier = partis[0];
-  if (transmis && premier && partis.every((p) => p.vis === "partage")) {
-    const quand = premier.transmiseLe ? momentDeLEnvoi(premier.transmiseLe, locale).quand : null;
+  if (transmis && premier && destination && partis.every((p) => partieVers(p, destination))) {
+    const qui = envoi.quiPour(destination);
+    const le = partieLeVers(premier, destination);
+    const quand = le ? momentDeLEnvoi(le, locale).quand : null;
     return (
       <EcranEnvoye
         titre={t("envoi.lot.tout", { count: partis.length })}
         quoi={
           quand
             ? partis.length === 1
-              ? t("envoi.piece.chez", { piece: titreDe(premier), qui: nomDuCabinet, quand })
-              : t("envoi.lot.chez", { count: partis.length, qui: nomDuCabinet, quand })
-            : t("pme.transmettre.faite", { cabinet: nomDuCabinet })
+              ? t("envoi.piece.chez", { piece: titreDe(premier), qui, quand })
+              : envoi.quoiDuLot(destination, partis.length, quand)
+            : t("pme.transmettre.faite", { cabinet: qui })
         }
-        suite={partis.length === 1 ? t("envoi.piece.suite", { qui: nomDuCabinet }) : null}
-        trace={
-          premier.transmiseLe
-            ? t("envoi.trace", { qui: nomDuCabinet, jour: jourEtMois(premier.transmiseLe, locale) })
-            : null
-        }
+        suite={partis.length === 1 ? envoi.suite(destination) : null}
+        trace={le ? envoi.trace(destination, jourEtMois(le, locale)) : null}
         principale={{ libelle: t("envoi.coffre.retour"), action: () => setTransmis(null) }}
         secondaire={
           partis.length === 1
@@ -299,8 +257,8 @@ function PmeCoffre() {
   /* ================================================= DANS LA SOCIÉTÉ
    *
    * Le même écran de fin que tout passage : ce qui a bougé, et où. Rien n'est
-   * parti chez le cabinet, et c'est écrit ; « Transmettre » est le geste
-   * suivant, s'il y a un cabinet à qui transmettre.
+   * parti, et c'est écrit ; « Envoyer » est le geste suivant, vers le
+   * propriétaire pour le siège, vers le comptable pour qui transmet.
    */
   const entres = misEnSociete ? toutes.filter((p) => misEnSociete.includes(p.id)) : [];
   const entre = entres[0];
@@ -319,19 +277,20 @@ function PmeCoffre() {
           </>
         }
         suite={
-          cabinet.data
-            ? t("pme.coffre.mis.suite", { qui: nomDuCabinet })
-            : // Sans cabinet, la raison de l'absence de « Transmettre » se dit ici.
+          destination
+            ? t("pme.coffre.mis.suite", { qui: envoi.quiPour(destination) })
+            : // Personne à qui envoyer : la raison de l'absence du geste se dit ici.
               t("relation.sansDestinataire")
         }
         trace={null}
         principale={{ libelle: t("envoi.coffre.retour"), action: () => setMisEnSociete(null) }}
         secondaire={
-          cabinet.data
+          destination && entres.some(transmettre.reste)
             ? {
-                libelle: t("pme.prive.transmettre", { cabinet: nomDuCabinet }),
+                libelle: envoi.action(destination),
                 action: () => {
-                  if (!transmettre.isPending) transmettre.mutate(entres.map((p) => p.id));
+                  // Ce qui reste à envoyer, au sens du seul prédicat.
+                  if (!transmettre.isPending) transmettre.mutate(entres);
                 },
               }
             : null
@@ -384,12 +343,7 @@ function PmeCoffre() {
           />
         </h1>
 
-        {visibles.length > 0 ? (
-          <span className="compte" role="status">
-            <i aria-hidden />
-            {t("pme.coffre.compte", { count: visibles.length })}
-          </span>
-        ) : null}
+        <CompteDesPapiers n={visibles.length} />
 
         <FileLocale vis="personnel" />
 
@@ -426,55 +380,28 @@ function PmeCoffre() {
           </div>
         ) : (
           <>
-            {parMois.map(({ mois, papiers }) => (
-              <section key={mois} className="mois" aria-label={nomDuMois(mois)}>
-                <h2>{nomDuMois(mois)}</h2>
-                <div className="grille">
-                  {papiers.map((p) => {
-                    const choisi = choix.includes(p.id);
-                    return (
-                      <div key={p.id} className={cn("tuile", choisi && "on")}>
-                        <button
-                          type="button"
-                          className="ouvrir"
-                          onClick={() =>
-                            void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } })
-                          }
-                        >
-                          <ApercuDePiece pieceId={p.id} />
-                          <b>{titreDe(p)}</b>
-                          <span className="dt">
-                            {[jour(p), somme(p)].filter(Boolean).join(" · ")}
-                          </span>
-                          {p.status === "capturee" ? (
-                            <EtatDeLecture
-                              refus={p.lectureRefusee}
-                              vis={p.vis}
-                              lecture={p.lecture}
-                              motifDitAilleurs="piece_personnelle"
-                            />
-                          ) : null}
-                        </button>
-                        <button
-                          type="button"
-                          className="choix"
-                          aria-pressed={choisi}
-                          aria-label={t("pme.coffre.choisir", { piece: titreDe(p) })}
-                          disabled={occupe}
-                          onClick={() => basculer(p.id)}
-                        >
-                          <span aria-hidden>
-                            <svg viewBox="0 0 24 24" className="g">
-                              <path d="M5 12.5l4.5 4.5L19 7.5" />
-                            </svg>
-                          </span>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
+            <GrilleDesMois
+              papiers={visibles}
+              moisDe={moisDe}
+              titreDe={titreDe}
+              ligneDe={(p) => [jour(p), somme(p)].filter(Boolean).join(" · ")}
+              enPlus={(p) =>
+                p.status === "capturee" ? (
+                  <EtatDeLecture
+                    refus={p.lectureRefusee}
+                    vis={p.vis}
+                    lecture={p.lecture}
+                    motifDitAilleurs="piece_personnelle"
+                  />
+                ) : null
+              }
+              ouvrir={(p) =>
+                void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } })
+              }
+              choisis={choix}
+              basculer={basculer}
+              occupe={occupe}
+            />
 
             {visibles.length > 0 ? (
               <div className="gestes">
@@ -488,7 +415,7 @@ function PmeCoffre() {
                 </button>
                 <button
                   type="button"
-                  disabled={choix.length === 0 || occupe}
+                  disabled={!supprimables || occupe}
                   onClick={() => setConfirmer(true)}
                 >
                   {t("pme.coffre.supprimer")}
@@ -500,34 +427,12 @@ function PmeCoffre() {
       </div>
 
       {confirmer ? (
-        <FeuilleDuBas
-          titre={t("pme.coffre.supprimer.titre", { count: choix.length })}
-          onFermer={() => setConfirmer(false)}
-          feuilleRef={feuille}
-          disposition="flex flex-col gap-4 pb-6"
-          croix={false}
-        >
-          <p className="text-[15px] text-text-2">
-            {t("pme.coffre.supprimer.sur", { count: choix.length })}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={supprimer.isPending}
-              onClick={() => supprimer.mutate(choix)}
-              className="min-h-[48px] rounded-full bg-foreground text-[15px] font-semibold text-background disabled:opacity-40"
-            >
-              {supprimer.isPending ? t("common.loading") : t("pme.supprimer.oui")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmer(false)}
-              className="min-h-[48px] rounded-full border border-line-strong text-[15px] font-semibold"
-            >
-              {t("common.cancel")}
-            </button>
-          </div>
-        </FeuilleDuBas>
+        <ConfirmerLaSuppression
+          n={choix.length}
+          enCours={supprimer.isPending}
+          oui={() => supprimer.mutate(choisies)}
+          fermer={() => setConfirmer(false)}
+        />
       ) : null}
     </div>
   );

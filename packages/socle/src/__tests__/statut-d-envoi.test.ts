@@ -9,9 +9,11 @@ import { describe, expect, it } from "vitest";
 import {
   A_TRAITER,
   statutCabinet,
+  statutDuCircuit,
   statutPme,
   TON_CABINET,
   TON_PME,
+  type CircuitInterne,
   type SuiviDEnvoi,
 } from "../statut-d-envoi.ts";
 
@@ -117,5 +119,79 @@ describe("une couleur par statut", () => {
   it("à traiter : ce qui est ambre chez le cabinet, et seulement cela", () => {
     for (const [statut, ton] of Object.entries(TON_CABINET))
       expect(A_TRAITER.has(statut as keyof typeof TON_CABINET)).toBe(ton === "am");
+  });
+});
+
+/** Un seul circuit, deux fois (lot 4) : siège → propriétaire → comptable. */
+const circuit = (c: Partial<CircuitInterne> = {}): CircuitInterne => ({
+  recoit: false,
+  dernier: "envoyee",
+  envoyeeLe: envoi,
+  vueLe: null,
+  vuePar: null,
+  retourneeLe: null,
+  retourPar: null,
+  corrigeeLe: null,
+  auteur: "Sami",
+  mienne: true,
+  ...c,
+});
+const plusTard = "2026-10-29T09:00:00.000Z";
+const encorePlusTard = "2026-10-29T10:00:00.000Z";
+
+describe("le passage siège → propriétaire", () => {
+  it("côté siège : Envoyée au propriétaire, Vue par {prénom}, Retour de {prénom}", () => {
+    const entite = { vis: "entite", status: "lue" } as const;
+    expect(statutDuCircuit({ ...entite, circuit: circuit() })).toEqual({
+      statut: "envoyee",
+      chez: "proprietaire",
+      qui: null,
+    });
+    expect(
+      statutDuCircuit({ ...entite, circuit: circuit({ vueLe: plusTard, vuePar: "Amel" }) }),
+    ).toEqual({ statut: "vue", chez: "proprietaire", qui: "Amel" });
+    expect(
+      statutDuCircuit({ ...entite, circuit: circuit({ dernier: "retournee", retourPar: "Amel" }) }),
+    ).toEqual({ statut: "retour", chez: "proprietaire", qui: "Amel" });
+    expect(statutPme({ ...entite, circuit: circuit({ dernier: "rappelee" }) })).toBe("a_envoyer");
+  });
+
+  it("côté propriétaire : Reçue jusqu'à l'ouverture, Corrigée après une correction, Retournée à {prénom}", () => {
+    const entite = { vis: "entite", status: "lue" } as const;
+    const recoit = { recoit: true, mienne: false };
+    expect(statutPme({ ...entite, circuit: circuit(recoit) })).toBe("recue");
+    expect(statutPme({ ...entite, circuit: circuit({ ...recoit, vueLe: plusTard }) })).toBe(
+      "a_envoyer",
+    );
+    expect(
+      statutPme({
+        ...entite,
+        circuit: circuit({ ...recoit, vueLe: plusTard, corrigeeLe: encorePlusTard }),
+      }),
+    ).toBe("corrigee");
+    expect(
+      statutDuCircuit({ ...entite, circuit: circuit({ ...recoit, dernier: "retournee" }) }),
+    ).toEqual({ statut: "retournee", chez: "siege", qui: "Sami" });
+    expect(TON_PME.recue).toBe("am");
+    expect(TON_PME.retournee).toBe("az");
+  });
+
+  it("chez le comptable, le siège suit son passage ; le retour et la prise en charge se lisent des deux côtés", () => {
+    const partage = { vis: "partage", status: "lue" } as const;
+    const c = circuit({ vueLe: plusTard, vuePar: "Amel" });
+    expect(statutDuCircuit({ ...partage, suivi: suivi(), circuit: c })).toEqual({
+      statut: "vue",
+      chez: "proprietaire",
+      qui: "Amel",
+    });
+    expect(statutPme({ ...partage, suivi: suivi(), circuit: circuit({ recoit: true }) })).toBe(
+      "envoyee",
+    );
+    expect(
+      statutDuCircuit({ vis: "partage", status: "retournee", suivi: suivi(), circuit: c }).chez,
+    ).toBe("cabinet");
+    expect(
+      statutPme({ ...partage, suivi: suivi({ prise: "validee", priseLe: plusTard }), circuit: c }),
+    ).toBe("prise_en_charge");
   });
 });

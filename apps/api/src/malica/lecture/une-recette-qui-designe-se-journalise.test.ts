@@ -32,6 +32,7 @@ import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../../db.ts";
+import { arreterUneBorne } from "../../fabrique/borne-arretee.ts";
 import { RECETTE_FACTURE_A } from "../../fabrique/interprete-recettes-synthetiques.ts";
 import { executerRpc } from "../../rpc.ts";
 import {
@@ -152,13 +153,10 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
        * de la borne — il éprouve le GESTE de R10, celui d'un cabinet qui
        * arrête sa borne sans migration ni déploiement. Le même geste tient
        * aujourd'hui pour une facture arabe, où une mention d'UN caractère
-       * (« ت ») reste refusée par le défaut.
+       * (« ت ») reste refusée par le défaut. La borne s'arrête par l'opérateur,
+       * une fois le dossier créé (`arreterUneBorne`, ci-dessous) : aucune
+       * route ne l'écrit (lot 6, verrous en base).
        */
-      await db.query(
-        `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
-         values ($1, 'fabrique.seuil.recette.ancre_texte_min', 2, $2)`,
-        [org, "les libellés de ce format tiennent en deux caractères"],
-      );
 
       /*
        * Le cycle de vie est tenu par la base : candidate, puis évaluée, puis
@@ -187,6 +185,13 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
         );
       }
     });
+    await arreterUneBorne(
+      org,
+      "fabrique.seuil.recette.ancre_texte_min",
+      2,
+      "les libellés de ce format tiennent en deux caractères",
+      moi.id,
+    );
 
     const url = process.env["DATABASE_URL_ADMIN"];
     assert.ok(url, "DATABASE_URL_ADMIN absente : l'archivage des fixtures n'est pas possible");

@@ -271,8 +271,11 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
     assert.equal(await vuParLaPme(id), "vue");
     assert.equal((await ligneDeFile(id))?.statut, "vue");
 
-    // Ouvrir sa propre pièce, côté PME, n'est pas « la voir » pour le cabinet.
-    await assert.rejects(pmeFait("supervision.voir", id), /introuvable ou non autorisee/);
+    // Ouvrir sa propre pièce, côté PME, n'est pas « la voir » pour le cabinet :
+    // la même porte sert la « Vue » du propriétaire (lot 4), et ici n'écrit rien.
+    assert.deepEqual(await pmeFait("supervision.voir", id), { vueLe: null, deja: false });
+    const apres = await admin.query(`select 1 from capture.vues where piece_id = $1`, [id]);
+    assert.equal(apres.rows.length, 1);
   });
 
   it("retournée avec un motif, reprise en photo, renvoyée : le cabinet lit « Corrigée »", async () => {
