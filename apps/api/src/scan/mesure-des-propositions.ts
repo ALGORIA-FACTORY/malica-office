@@ -582,6 +582,32 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     attendu: null,
   },
   {
+    // Revue de la PR 144 (Codex), le même défaut par une autre branche : le HT
+    // imprimé comprend un droit qu'aucun montant fixé n'ancre (FODEC). La base
+    // taxable se déduit (101,000 − 1,000) ; lus à l'anglaise, les montants
+    // tiennent aussi. La branche rendait sa lecture avant le contrôle de la
+    // convention : « conforme », en silence.
+    nom: "le HT imprimé comprend un droit non fixé : la convention décide, et se dit",
+    reserve: "coherence_arithmetique",
+    provenance: `${REPRODUIT} (revue de la PR 144)`,
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "101,000" }],
+      ht: "101,000",
+      tva: "19,000",
+      droits: [{ code: "FODEC", montant: "1,000" }],
+      ttc: "120,000",
+    }),
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "100.000", "0"],
+        ["4366", "19.000", "0", "TVA19"],
+        ["6652", "1.000", "0"],
+        ["401", "0", "120.000"],
+      ],
+    },
+  },
+  {
     // Négatif comptable, ou base entre parenthèses (« (base 514,700) », le
     // 15 octobre 2026) : le texte ne dit pas le signe, rien ne se propose.
     nom: "des montants entre parenthèses : le signe ne se devine pas",
@@ -717,7 +743,7 @@ const decimal = (s: string) => Number(s).toFixed(6);
 const cleDeLigne = (l: LigneAttendue) => `${l[0]}|${decimal(l[1])}|${decimal(l[2])}|${l[3] ?? ""}`;
 
 /** Juge un cas sur la vraie chaîne, avec le référentiel d'essai. */
-function juger(cas: CasDeMesure) {
+export function juger(cas: CasDeMesure) {
   // Les droits fixés du sens retenu, comme `analyserPiece`.
   const sens = cas.lecture.sensDit ?? cas.lecture.payload.document_kind;
   return jugerLaLecture(cas.lecture, {

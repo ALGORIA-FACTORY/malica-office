@@ -595,11 +595,15 @@ export function normaliserMontants(
    * valeurs : deux combinaisons aux mêmes valeurs ne sont pas deux lectures.
    * Bornées : chaque montant a au plus trois lectures.
    */
-  const combinaisonsValides = (listes: readonly Candidat[][]): Map<string, Candidat[]> => {
+  function combinaisonsValides(
+    listes: readonly Candidat[][],
+    autresCompris = false,
+  ): Map<string, Candidat[]> {
     const distinctes = new Map<string, Candidat[]>();
     const combiner = (i: number, pris: Candidat[]) => {
       if (i === listes.length) {
-        if (verifie(pris)) distinctes.set(pris.map((c) => c.mineur).join("|"), [...pris]);
+        if (verifie(pris, autresCompris))
+          distinctes.set(pris.map((c) => c.mineur).join("|"), [...pris]);
         return;
       }
       for (const c of listes[i]!) {
@@ -610,7 +614,7 @@ export function normaliserMontants(
     };
     combiner(0, []);
     return distinctes;
-  };
+  }
   const distinctes = combinaisonsValides(lectures);
 
   /*
@@ -693,6 +697,24 @@ export function normaliserMontants(
   const [retenue] = [...distinctes.values()];
   const pleine = unique ? CONFIANCE_LECTURE_UNIQUE_VERIFIEE : CONFIANCE_TRANCHEE_PAR_ARITHMETIQUE;
   const deduite = tvaNonLue !== null || baseDeduite !== null || droitsDeduits.size > 0;
+  return construire(
+    retenue!,
+    "tranche",
+    // Vérifiée par la seule TVA, la lecture ne vaut pas celle que le total
+    // confirme aussi : on ne lui donne pas la note pleine. Une valeur déduite
+    // non plus : elle est vérifiée, pas lue. (Ni une valeur que la seule
+    // convention du séparateur a décidée : `construire` le tranche.)
+    deduite || totalNonLu ? Math.min(pleine, CONFIANCE_VERIFIEE_SANS_LE_TOTAL) : pleine,
+    1,
+    (deduite
+      ? "une valeur illisible est déduite des montants imprimés, que la facture vérifie"
+      : unique
+        ? "lecture unique, vérifiée par la facture"
+        : ancre
+          ? "convention tranchée par l'arithmétique de la facture, l'échelle ancrée par un droit que fixe le paramétrage"
+          : "convention tranchée par l'arithmétique de la facture") + suffixe,
+  );
+
   /*
    * ======================================= DÉCIDÉ PAR LA CONVENTION SEULE
    *
@@ -703,46 +725,31 @@ export function normaliserMontants(
    * décidée que par la convention, pas par la pièce : elle se retient, et se
    * DIT (réserve au contrôle arithmétique, confiance jamais pleine).
    *
+   * Ce contrôle vit dans `construire`, la SEULE sortie qui rend des montants :
+   * deux branches l'avaient contourné (le droit fixé qui n'ancrait rien, puis
+   * le HT qui comprend les droits, revue Codex). Aucune branche ne peut plus
+   * rendre une valeur sans y passer ; `vide` ne rend aucun montant. Il rejoue
+   * l'égalité MÊME qui a retenu la lecture (`autresCompris`), avec les
+   * lectures que la convention a écartées, sauf sur un droit que sa valeur
+   * fixée ANCRE effectivement (`ancres`).
+   *
    * INCERTAIN : la fréquence de ces factures (montants ronds, sans timbre ni
    * reste d'arrondi, écrits à l'anglaise sans millimes) n'est pas mesurée ;
    * elle se lit sur les jugements posés (`capture.analyses`, `parConvention`).
    */
-  const avecLaConvention = lectures.map((l, i) => [
-    ...l,
-    ...(ancres.has(champs[i]!.nom) ? [] : (champs[i]!.ecartees ?? [])).map((mineur) => ({
-      mineur,
-      convention: "écartée par le séparateur décimal de la devise",
-    })),
-  ]);
-  const parConvention =
-    avecLaConvention.some((l, i) => l.length > lectures[i]!.length) &&
-    combinaisonsValides(avecLaConvention).size > 1;
-  const confiance =
-    deduite || totalNonLu || parConvention
-      ? Math.min(pleine, CONFIANCE_VERIFIEE_SANS_LE_TOTAL)
-      : pleine;
-  const tranchee = construire(
-    retenue!,
-    "tranche",
-    // Vérifiée par la seule TVA, la lecture ne vaut pas celle que le total
-    // confirme aussi : on ne lui donne pas la note pleine. Une valeur déduite
-    // non plus : elle est vérifiée, pas lue. Ni une valeur que la seule
-    // convention du séparateur a décidée.
-    confiance,
-    1,
-    (deduite
-      ? "une valeur illisible est déduite des montants imprimés, que la facture vérifie"
-      : unique
-        ? "lecture unique, vérifiée par la facture"
-        : ancre
-          ? "convention tranchée par l'arithmétique de la facture, l'échelle ancrée par un droit que fixe le paramétrage"
-          : "convention tranchée par l'arithmétique de la facture") +
-      (parConvention
-        ? " ; décidé par la convention du séparateur décimal de la devise : lus à l'anglaise, les montants vérifient aussi la facture"
-        : "") +
-      suffixe,
-  );
-  return { ...tranchee, parConvention };
+  function decideeParLaConvention(autresCompris: boolean): boolean {
+    const avecLaConvention = lectures.map((l, i) => [
+      ...l,
+      ...(ancres.has(champs[i]!.nom) ? [] : (champs[i]!.ecartees ?? [])).map((mineur) => ({
+        mineur,
+        convention: "écartée par le séparateur décimal de la devise",
+      })),
+    ]);
+    return (
+      avecLaConvention.some((l, i) => l.length > lectures[i]!.length) &&
+      combinaisonsValides(avecLaConvention, autresCompris).size > 1
+    );
+  }
 
   function valeursImprimees(pris: Candidat[]) {
     const par = new Map(champs.map((c, i) => [c.nom, BigInt(pris[i]!.mineur)]));
@@ -787,6 +794,11 @@ export function normaliserMontants(
     return true;
   }
 
+  /**
+   * LA SEULE SORTIE qui rend des montants : toute lecture retenue y passe, et
+   * le contrôle de la convention (`decideeParLaConvention`) y est fait, une
+   * fois, quelle que soit la branche qui a tranché.
+   */
   function construire(
     pris: Candidat[],
     etat: EtatNormalisation,
@@ -795,6 +807,19 @@ export function normaliserMontants(
     raison: string,
     autresCompris = false,
   ): ResultatNormalisation {
+    const parConvention = decideeParLaConvention(autresCompris);
+    const phrase =
+      etat === "tranche"
+        ? " ; décidé par la convention du séparateur décimal de la devise : lus à l'anglaise, les montants vérifient aussi la facture"
+        : " ; l'échelle n'est décidée que par la convention du séparateur décimal de la devise";
+    // La phrase se place avant ce que la pièce n'a pas laissé lire (`suffixe`).
+    const sansSuffixe = raison.endsWith(suffixe)
+      ? raison.slice(0, raison.length - suffixe.length)
+      : raison;
+    const raisonRendue = parConvention ? `${sansSuffixe}${phrase}${suffixe}` : raison;
+    const confianceRendue = parConvention
+      ? Math.min(confiance, CONFIANCE_VERIFIEE_SANS_LE_TOTAL)
+      : confiance;
     const v = valeurs(pris, autresCompris);
     const somme = (xs: bigint[]) => xs.reduce((s, x) => s + x, 0n);
     // La TVA illisible vaut le reste du TTC lu : l'écriture tombe sur le total imprimé.
@@ -840,7 +865,7 @@ export function normaliserMontants(
         ttc: v.ttc === undefined ? null : Number(v.ttc),
       },
       imprime,
-      confiance,
+      confiance: confianceRendue,
       conventions: pris.map((c, i) => `${champs[i]!.nom} : ${c.convention}`),
       lecturesValides,
       totalNonLu,
@@ -849,9 +874,9 @@ export function normaliserMontants(
       fermes: champs
         .filter((c) => !droitsDeduits.has(c.nom))
         .map((c) => entree.chemins?.[c.nom] ?? c.nom),
-      parConvention: false,
+      parConvention,
       devise: p.code,
-      raison,
+      raison: raisonRendue,
     };
   }
 }

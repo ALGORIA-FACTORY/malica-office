@@ -354,6 +354,26 @@ describe("un droit fixe du paramétrage ancre l'échelle", () => {
     assert.ok(r.confiance < 1, "décidé par la convention, pas par la pièce");
     assert.match(r.raison, /convention du séparateur/);
   });
+
+  it("le HT qui comprend un droit non fixé ne contourne pas la convention", () => {
+    // Revue de la PR 144 (Codex) : la branche « HT autres compris » rendait
+    // sa lecture avant le contrôle de la convention. 101,000 − 1,000 = 100,000
+    // de base, 19,000 de TVA, 120,000 de total — et × 1000, tout tient aussi.
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "101,000", taux: "0.19" }],
+        tva: "19,000",
+        autres: ["1,000"],
+        ttc: "120,000",
+      },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]!.ht, 100_000);
+    assert.equal(r.parConvention, true);
+    assert.ok(r.confiance < 1);
+    assert.match(r.raison, /convention du séparateur/);
+  });
 });
 
 /*
