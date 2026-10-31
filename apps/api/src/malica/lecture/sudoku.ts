@@ -277,7 +277,7 @@ export async function lireLeContexteDuSudoku(
  * l'unité imprimée (5 millimes), jamais celle d'une SOMME, qui reste exacte.
  * Mesuré le 31 octobre 2026 (jeu de 100 factures, D-08).
  */
-export function precisionImprimee(jetons: readonly JetonDuSudoku[]): number | null {
+function precisionImprimee(jetons: readonly JetonDuSudoku[]): number | null {
   let max: number | null = null;
   for (const j of jetons) {
     if (!j.montants.some((m) => m.forte)) continue;
