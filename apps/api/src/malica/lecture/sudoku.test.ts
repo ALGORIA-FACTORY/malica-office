@@ -308,6 +308,14 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       const montants = (x: ReturnType<typeof extrait>) =>
         JSON.stringify({ t: x["totals"], l: x["lines"], c: x["other_charges"] });
       assert.equal(montants(extrait(sel)), montants(extrait(cas.designation)));
+      // L'anneau 1 : les articles prouvés valent ceux du jeu d'or, montant par montant.
+      assert.equal(o.lignes?.statut, "prouve", `${cas.nom} : lignes ${o.lignes?.statut}`);
+      for (const [chemin, attendu] of Object.entries(cas.attendu)) {
+        const m = /^articles\[(\d+)\]\.(quantity|unit_price_ht|total_ht)$/.exec(chemin);
+        if (!m) continue;
+        const a = (extrait(sel)["articles"] as Array<Record<string, unknown>>)[Number(m[1])];
+        assert.equal(a?.[m[2]!], attendu, `${cas.nom} : ${chemin}`);
+      }
     }
   });
 

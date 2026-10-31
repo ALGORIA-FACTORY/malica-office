@@ -8,6 +8,7 @@
 //! jeton qui la porte (R2).
 
 mod entree;
+mod lignes;
 mod modele;
 mod numerique;
 mod reperes;
@@ -58,6 +59,9 @@ pub struct Sortie {
     pub combinaisons: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raison: Option<String>,
+    /// Les lignes d'articles (anneau 1), quand la grille porte une preuve `lignes`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lignes: Option<lignes::LignesSortie>,
 }
 
 fn erreur(m: String) -> String {
@@ -68,6 +72,7 @@ fn erreur(m: String) -> String {
         preuves: BTreeMap::new(),
         combinaisons: 0,
         raison: Some(m),
+        lignes: None,
     };
     serde_json::to_string(&s).unwrap_or_default()
 }
@@ -357,6 +362,31 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         preuves.insert(grille.preuves[*p].code.clone(), st.into());
     }
 
+    // ---------- L'anneau 1 : les lignes, sur la sortie du centre, sans la modifier ----------
+    let mut sortie_lignes = None;
+    for p in &grille.preuves {
+        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lignes::OP)) else {
+            continue;
+        };
+        if p.statut.as_deref() == Some("a_traduire") {
+            continue;
+        }
+        let st = if sortie_lignes.is_some() {
+            // une seule preuve de lignes par grille
+            "non_evaluable"
+        } else {
+            match lignes::lire_op(grille, e) {
+                Ok(op) => {
+                    let (l, st) = lignes::prouver(&op, entree, &champs);
+                    sortie_lignes = Some(l);
+                    st
+                }
+                Err(_) => "non_evaluable",
+            }
+        };
+        preuves.insert(p.code.clone(), st.into());
+    }
+
     Ok(Sortie {
         issue,
         solutions: retenues.len(),
@@ -364,6 +394,7 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         preuves,
         combinaisons: s.combinaisons,
         raison,
+        lignes: sortie_lignes,
     })
 }
 

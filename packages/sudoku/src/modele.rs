@@ -239,7 +239,9 @@ pub fn construire(entree: &Entree) -> Modele {
         let op = e.get("op").and_then(|o| o.as_str()).unwrap_or("");
         let r: Result<(), String> = (|| {
             match op {
-                "groupe_taux" => {}
+                // Les lignes se prouvent après le centre, sur sa sortie (lignes.rs) : elles
+                // n'entrent pas dans sa recherche.
+                "groupe_taux" | crate::lignes::OP => {}
                 "somme" => {
                     let total = b.unite(&lire_ref(&texte(e, "total")?))?;
                     let mut termes = vec![(total, 1)];

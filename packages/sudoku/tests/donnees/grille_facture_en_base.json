@@ -1,0 +1,817 @@
+{
+ "grille": {
+  "code": "facture",
+  "champs": [
+   {
+    "code": "acomptes_deduits",
+    "type": "montant",
+    "reperes_fr": [
+     "Acompte",
+     "Avance"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "adresse_client",
+    "type": "adresse",
+    "reperes_fr": [
+     "Adresse"
+    ],
+    "reperes_ar": [
+     "العنوان"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "adresse_emetteur",
+    "type": "adresse",
+    "reperes_fr": [
+     "Adresse",
+     "Siège social"
+    ],
+    "reperes_ar": [
+     "العنوان"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "adresse_livraison",
+    "type": "adresse",
+    "reperes_fr": [
+     "Livré à",
+     "Adresse de livraison"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "base_tva_par_taux",
+    "type": "montant",
+    "reperes_fr": [
+     "Base",
+     "Assiette",
+     "Base TVA"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "cachet_emetteur",
+    "type": "booleen",
+    "reperes_fr": [
+     "Cachet",
+     "Cachet et signature"
+    ],
+    "reperes_ar": [
+     "ختم"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "code_client",
+    "type": "identifiant",
+    "reperes_fr": [
+     "Code client",
+     "Réf. client",
+     "N° client"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "code_tva_categorie_etablissement",
+    "type": "identifiant",
+    "reperes_fr": [
+     "Code TVA",
+     "Code catégorie",
+     "N° établissement"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "conditions_generales",
+    "type": "texte",
+    "reperes_fr": [
+     "Conditions générales",
+     "Réserve de propriété"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "date_echeance",
+    "type": "date",
+    "reperes_fr": [
+     "Échéance",
+     "Payable le",
+     "À 30 jours",
+     "Conditions de paiement"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "date_emission",
+    "type": "date",
+    "reperes_fr": [
+     "Date facture",
+     "Tunis, le",
+     "Le"
+    ],
+    "reperes_ar": [
+     "التاريخ"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "date_operation",
+    "type": "date",
+    "reperes_fr": [
+     "Date",
+     "Date de livraison",
+     "Date de prestation"
+    ],
+    "reperes_ar": [
+     "التاريخ"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "designation",
+    "type": "texte",
+    "reperes_fr": [
+     "Désignation",
+     "Description",
+     "Libellé",
+     "Article"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "devise",
+    "type": "liste",
+    "reperes_fr": [
+     "DT",
+     "TND",
+     "EUR",
+     "USD"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "droit_consommation_ligne",
+    "type": "montant",
+    "reperes_fr": [
+     "DC",
+     "Droit de consommation"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "droit_timbre",
+    "type": "montant",
+    "reperes_fr": [
+     "Timbre",
+     "Timbre fiscal",
+     "Droit de timbre"
+    ],
+    "reperes_ar": [
+     "معلوم الطابع"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "fodec_applicable_ligne",
+    "type": "booleen",
+    "reperes_fr": [
+     "FODEC"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "forme_juridique_capital_emetteur",
+    "type": "texte",
+    "reperes_fr": [
+     "SARL au capital de",
+     "SA au capital de",
+     "SUARL"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "matricule_fiscal_client",
+    "type": "identifiant",
+    "reperes_fr": [
+     "MF client",
+     "Matricule fiscal",
+     "Code TVA client"
+    ],
+    "reperes_ar": [
+     "المعرف الجبائي"
+    ],
+    "format_code": "matricule_fiscal"
+   },
+   {
+    "code": "matricule_fiscal_emetteur",
+    "type": "identifiant",
+    "reperes_fr": [
+     "MF",
+     "Matricule fiscal",
+     "M.F.",
+     "Identifiant fiscal",
+     "Code TVA"
+    ],
+    "reperes_ar": [
+     "المعرف الجبائي"
+    ],
+    "format_code": "matricule_fiscal"
+   },
+   {
+    "code": "mention_export",
+    "type": "texte",
+    "reperes_fr": [
+     "Export",
+     "Exonéré export",
+     "Suspension TVA - export"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "mention_regime_forfaitaire",
+    "type": "texte",
+    "reperes_fr": [
+     "Non assujetti à la TVA",
+     "Forfaitaire"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "mention_suspension_exoneration",
+    "type": "texte",
+    "reperes_fr": [
+     "Vente en suspension de TVA",
+     "Exonéré de TVA",
+     "Exonération",
+     "Article 11"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "mode_reglement",
+    "type": "liste",
+    "reperes_fr": [
+     "Mode de paiement",
+     "Règlement",
+     "Chèque",
+     "Virement",
+     "Traite"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "montant_en_lettres",
+    "type": "texte",
+    "reperes_fr": [
+     "Arrêtée la présente facture à la somme de"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "montant_fodec",
+    "type": "montant",
+    "reperes_fr": [
+     "FODEC",
+     "F.O.D.E.C"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "montant_ligne_ht",
+    "type": "montant",
+    "reperes_fr": [
+     "Montant HT",
+     "Total HT",
+     "PT HT"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "montant_tva_par_taux",
+    "type": "montant",
+    "reperes_fr": [
+     "TVA",
+     "Montant TVA"
+    ],
+    "reperes_ar": [
+     "الأداء على القيمة المضافة"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "montant_tva_suspendue",
+    "type": "montant",
+    "reperes_fr": [
+     "TVA suspendue",
+     "En suspension de TVA"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "net_a_payer",
+    "type": "montant",
+    "reperes_fr": [
+     "Net à payer",
+     "Reste à payer"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "nom_client",
+    "type": "texte",
+    "reperes_fr": [
+     "Client",
+     "Doit",
+     "Facturé à",
+     "M.",
+     "Société"
+    ],
+    "reperes_ar": [
+     "الحريف"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "numero_facture",
+    "type": "identifiant",
+    "reperes_fr": [
+     "Facture N°",
+     "N°",
+     "Numéro",
+     "Réf."
+    ],
+    "reperes_ar": [
+     "رقم الفاتورة"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "penalites_retard",
+    "type": "texte",
+    "reperes_fr": [
+     "Pénalités de retard"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "periode_prestation",
+    "type": "periode",
+    "reperes_fr": [
+     "Période",
+     "Du ... au ..."
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "prix_unitaire_ht",
+    "type": "montant",
+    "reperes_fr": [
+     "P.U. HT",
+     "PU",
+     "Prix unitaire"
+    ],
+    "reperes_ar": [
+     "السعر"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "qr_code",
+    "type": "texte",
+    "reperes_fr": [
+     "QR"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "quantite",
+    "type": "nombre",
+    "reperes_fr": [
+     "Qté",
+     "Quantité",
+     "Nbre"
+    ],
+    "reperes_ar": [
+     "الكمية"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "raison_sociale_emetteur",
+    "type": "texte",
+    "reperes_fr": [
+     "Raison sociale",
+     "Société",
+     "Dénomination"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "ref_attestation_suspension",
+    "type": "identifiant",
+    "reperes_fr": [
+     "Attestation d'achat en suspension",
+     "Bon de commande visé",
+     "Autorisation n°"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "ref_bon_commande",
+    "type": "identifiant",
+    "reperes_fr": [
+     "BC N°",
+     "Votre commande",
+     "Réf. commande"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "ref_bon_livraison",
+    "type": "identifiant",
+    "reperes_fr": [
+     "BL N°",
+     "Bon de livraison"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "ref_devis_marche",
+    "type": "identifiant",
+    "reperes_fr": [
+     "Devis N°",
+     "Marché N°",
+     "Contrat N°"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "reference_article",
+    "type": "identifiant",
+    "reperes_fr": [
+     "Réf",
+     "Code",
+     "Code article"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "reference_ttn",
+    "type": "identifiant",
+    "reperes_fr": [
+     "Référence TTN",
+     "Réf. El Fatoora"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "registre_commerce_emetteur",
+    "type": "identifiant",
+    "reperes_fr": [
+     "RNE",
+     "RC",
+     "Registre de commerce",
+     "Identifiant unique"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "remise_globale",
+    "type": "montant",
+    "reperes_fr": [
+     "Remise",
+     "Escompte"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "remise_ligne",
+    "type": "montant",
+    "reperes_fr": [
+     "Remise",
+     "Rem. %",
+     "Rabais"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "retenue_source_mention",
+    "type": "montant",
+    "reperes_fr": [
+     "Retenue à la source",
+     "RS",
+     "RAS"
+    ],
+    "reperes_ar": [
+     "الخصم من المورد"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "rib_emetteur",
+    "type": "identifiant",
+    "reperes_fr": [
+     "RIB",
+     "IBAN",
+     "Banque",
+     "Compte"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "signature_emetteur",
+    "type": "booleen",
+    "reperes_fr": [
+     "Signature",
+     "Le gérant",
+     "Visa"
+    ],
+    "reperes_ar": [
+     "إمضاء"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "taux_tva_ligne",
+    "type": "taux",
+    "reperes_fr": [
+     "TVA %",
+     "Taux TVA",
+     "TVA"
+    ],
+    "reperes_ar": [
+     "الأداء على القيمة المضافة"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "telephone_email_emetteur",
+    "type": "texte",
+    "reperes_fr": [
+     "Tél",
+     "Fax",
+     "E-mail"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "total_brut_ht",
+    "type": "montant",
+    "reperes_fr": [
+     "Total brut",
+     "Total HT brut"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "total_ht",
+    "type": "montant",
+    "reperes_fr": [
+     "Total HT",
+     "Net HT",
+     "Montant HT"
+    ],
+    "reperes_ar": [
+     "المبلغ دون اعتبار الأداءات"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "total_ttc",
+    "type": "montant",
+    "reperes_fr": [
+     "Total TTC",
+     "Net TTC",
+     "TTC"
+    ],
+    "reperes_ar": [
+     "المبلغ الجملي"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "type_document",
+    "type": "liste",
+    "reperes_fr": [
+     "FACTURE",
+     "NOTE D'HONORAIRES",
+     "FACTURE GLOBALE"
+    ],
+    "reperes_ar": [
+     "فاتورة"
+    ],
+    "format_code": null
+   },
+   {
+    "code": "type_identifiant_client",
+    "type": "liste",
+    "reperes_fr": [
+     "CIN",
+     "Carte de séjour",
+     "Passeport"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "unite",
+    "type": "liste",
+    "reperes_fr": [
+     "U",
+     "Unité",
+     "Kg",
+     "M²",
+     "H"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   },
+   {
+    "code": "visa_client",
+    "type": "booleen",
+    "reperes_fr": [
+     "Bon pour accord",
+     "Reçu le"
+    ],
+    "reperes_ar": [],
+    "format_code": null
+   }
+  ],
+  "preuves": [
+   {
+    "code": "M01",
+    "expression": {
+     "op": "charge",
+     "code": "DROIT_TIMBRE",
+     "montant": "droit_timbre"
+    },
+    "statut": "defaut_a_valider",
+    "variante": null
+   },
+   {
+    "code": "M02",
+    "expression": {
+     "op": "charge",
+     "base": "total_ht",
+     "code": "FODEC",
+     "montant": "montant_fodec"
+    },
+    "statut": "defaut_a_valider",
+    "variante": null
+   },
+   {
+    "code": "M03",
+    "expression": {
+     "op": "somme",
+     "total": "total_ttc",
+     "parties": [
+      "total_ht",
+      "montant_tva_par_taux",
+      "montant_fodec?"
+     ]
+    },
+    "statut": "defaut_a_valider",
+    "variante": "ttc_hors_timbre"
+   },
+   {
+    "code": "M04",
+    "expression": {
+     "op": "somme",
+     "total": "net_a_payer",
+     "parties": [
+      "total_ttc",
+      "droit_timbre?"
+     ]
+    },
+    "statut": "defaut_a_valider",
+    "variante": "ttc_hors_timbre"
+   },
+   {
+    "code": "P03",
+    "expression": {
+     "op": "groupe_taux",
+     "base": "base_tva_par_taux",
+     "bareme": "tva",
+     "montant": "montant_tva_par_taux",
+     "total_base": "total_ht",
+     "exoneration": "mention_suspension_exoneration"
+    },
+    "statut": "defaut_a_valider",
+    "variante": null
+   },
+   {
+    "code": "P04",
+    "expression": {
+     "op": "somme",
+     "total": "total_ttc",
+     "parties": [
+      "total_ht",
+      "montant_tva_par_taux",
+      "montant_fodec?",
+      "droit_timbre?"
+     ]
+    },
+    "statut": "defaut_a_valider",
+    "variante": "ttc_avec_timbre"
+   },
+   {
+    "code": "P05",
+    "expression": {
+     "op": "format",
+     "champ": "matricule_fiscal_emetteur",
+     "format": "matricule_fiscal"
+    },
+    "statut": "defaut_a_valider",
+    "variante": null
+   },
+   {
+    "code": "P05b",
+    "expression": {
+     "op": "format",
+     "champ": "matricule_fiscal_client",
+     "format": "matricule_fiscal"
+    },
+    "statut": "defaut_a_valider",
+    "variante": null
+   }
+  ]
+ },
+ "pack": {
+  "decimales": 3,
+  "tolerance": 1,
+  "baremes": {
+   "tva": [
+    {
+     "code": "TVA07",
+     "ppm": 70000
+    },
+    {
+     "code": "TVA13",
+     "ppm": 130000
+    },
+    {
+     "code": "TVA19",
+     "ppm": 190000
+    }
+   ]
+  },
+  "charges": [
+   {
+    "code": "DROIT_TIMBRE",
+    "montant_fixe": 1000,
+    "taux_ppm": null,
+    "assiette_tva": false
+   },
+   {
+    "code": "FODEC",
+    "montant_fixe": null,
+    "taux_ppm": 10000,
+    "assiette_tva": true
+   }
+  ],
+  "formats": {
+   "matricule_fiscal": "[0-9]{7}[A-Za-z]/[ABPDNabpdn]/[MCPNEmcpne]/[0-9]{3}"
+  }
+ }
+}

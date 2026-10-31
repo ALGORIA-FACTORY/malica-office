@@ -96,7 +96,8 @@ create table if not exists ref.grille_preuves (
                      expression is null
                      or (jsonb_typeof(expression) = 'object'
                          and expression ->> 'op' in ('somme', 'produit', 'taux', 'groupe_taux',
-                                                     'charge', 'egal', 'format', 'ordre'))),
+                                                     'charge', 'egal', 'format', 'ordre',
+                                                     'lignes'))),
   statut           text not null check (statut in ('defaut_a_valider', 'arrete', 'a_traduire')),
   -- Nulle : la preuve vaut pour toute la grille. Nommée : elle n'appartient qu'à
   -- cette variante (une même pièce s'imprime de deux façons, par exemple le
@@ -294,7 +295,7 @@ end $$;
 -- ================================================= 3. LES GRILLES (généré)
 --
 -- Généré depuis docs/sudoku/grille_tunisie.json (genere_le 2026-10-30) par
--- generer.py : 77 grilles, 2132 champs, 362 relations, 468 preuves dont 25 traduites.
+-- generer.py : 77 grilles, 2132 champs, 362 relations, 469 preuves dont 26 traduites.
 
 insert into ref.grilles (pack_version_id, code, famille, nom, document_type, statut, valid_from, valid_to)
 select p.id, v.code, v.famille, v.nom, dt.code, 'defaut_a_valider', date '2026-01-01', null
@@ -3905,6 +3906,7 @@ select g.id, v.code, v.regle, v.genre, v.expression, v.statut, v.variante
     ('facture', 'M01', 'Droit de timbre imprimé = montant fixe du pack (ref.fiscal_charges, DROIT_TIMBRE) — preuve ajoutée par Malica', 'arithmetique', '{"op": "charge", "montant": "droit_timbre", "code": "DROIT_TIMBRE"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'M02', 'FODEC imprimé = arrondi(total HT × taux du pack) (ref.fiscal_charges, FODEC) — preuve ajoutée par Malica ; une facture dont le FODEC ne porte que sur une partie des lignes n''est pas prouvée (signalée, jamais faussement prouvée)', 'arithmetique', '{"op": "charge", "montant": "montant_fodec", "code": "FODEC", "base": "total_ht"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'M03', 'Variante TTC hors timbre : total_ttc = total HT + TVA + FODEC — preuve ajoutée par Malica', 'arithmetique', '{"op": "somme", "total": "total_ttc", "parties": ["total_ht", "montant_tva_par_taux", "montant_fodec?"]}'::jsonb, 'defaut_a_valider', 'ttc_hors_timbre'),
+    ('facture', 'L01', 'Lignes d''articles : quantité × prix (− remise) = montant de ligne, et la somme des lignes = total HT (ou total brut HT) — preuve ajoutée par Malica, non bloquante pour les totaux', 'arithmetique', '{"op": "lignes", "designation": "designation", "quantite": "quantite", "prix": "prix_unitaire_ht", "remise": "remise_ligne?", "montant": "montant_ligne_ht", "taux": "taux_tva_ligne?", "total": "total_ht", "total_brut": "total_brut_ht?"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'M04', 'Variante TTC hors timbre : net à payer = total TTC + droit de timbre — preuve ajoutée par Malica', 'arithmetique', '{"op": "somme", "total": "net_a_payer", "parties": ["total_ttc", "droit_timbre?"]}'::jsonb, 'defaut_a_valider', 'ttc_hors_timbre'),
     ('facture_electronique', 'P01', 'Le XML valide le schéma XSD TEIF officiel de la version déclarée', 'format', null::jsonb, 'a_traduire', null::text),
     ('facture_electronique', 'P02', 'La signature électronique est valide et le certificat non révoqué à la date de signature', 'format', null::jsonb, 'a_traduire', null::text),
@@ -4396,7 +4398,8 @@ begin
       cross join lateral (
         select pr.expression ->> k as n
           from unnest(array['total', 'montant', 'base', 'total_base', 'total_montant',
-                            'a', 'b', 'champ', 'avant', 'apres', 'exoneration']) k
+                            'a', 'b', 'champ', 'avant', 'apres', 'exoneration',
+                            'designation', 'quantite', 'prix', 'remise', 'taux', 'total_brut']) k
          where pr.expression ? k
         union all
         select jsonb_array_elements_text(pr.expression -> k)
