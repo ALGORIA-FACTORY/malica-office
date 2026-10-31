@@ -14,7 +14,7 @@
  * en contour.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { SensDeTva } from "@malica/socle/contracts/tva.v1";
 import type { DeclarationTva } from "@malica/socle/ports/repositories";
@@ -81,6 +81,18 @@ export function ArreterLaDeclaration({
     },
   });
 
+  /*
+   * La confirmation remplace les boutons le temps du geste, pas plus (revue
+   * Codex de #145) : le composant reste monté d'un mois, d'un dossier et d'un
+   * choix à l'autre. Un autre mois, un autre dossier ou un nouveau choix
+   * rendent les boutons.
+   */
+  const { reset } = arreter;
+  useEffect(() => {
+    reset();
+    setChoix({});
+  }, [cabinetId, dossierId, periode, reset]);
+
   const bouton = "min-h-[48px] flex-1 basis-0 px-4 text-[13px] font-semibold disabled:opacity-40";
 
   return (
@@ -104,7 +116,10 @@ export function ArreterLaDeclaration({
               </span>
               <select
                 value={ligneChoisie(a)}
-                onChange={(e) => setChoix({ ...choix, [cle(a)]: e.target.value })}
+                onChange={(e) => {
+                  setChoix({ ...choix, [cle(a)]: e.target.value });
+                  reset();
+                }}
                 // Une option longue (en arabe surtout) ne doit pas élargir la colonne.
                 className="min-h-[48px] w-full min-w-0 max-w-full truncate border border-border bg-card px-3 text-[13px]"
               >
