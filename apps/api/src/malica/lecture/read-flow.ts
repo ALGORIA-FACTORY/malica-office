@@ -238,7 +238,7 @@ export async function readPieceFlow(
     packId: contexte.packId,
     devise: { decimales: contexte.moneyDecimals, marques: contexte.marquesDevise },
   });
-  const lire = async (p: Parameters<Lecteurs["lire"]>[0]) => sudoku(await lecteurs.lire(p));
+  const lire = async (p: Parameters<Lecteurs["lire"]>[0]) => sudoku.lire(await lecteurs.lire(p));
 
   const premiereLecture = await lire(parametres);
   let read = premiereLecture;
@@ -335,6 +335,10 @@ export async function readPieceFlow(
       ),
     },
   ]);
+
+  // Les champs du sudoku, pour la lecture RETENUE seulement, et une fois son
+  // plan de jetons persisté : leurs citations pointent dans ce plan-là.
+  await sudoku.inscrire(read);
 
   /*
    * Le journal des exécutions : une ligne par organe, chacune à son tarif.
