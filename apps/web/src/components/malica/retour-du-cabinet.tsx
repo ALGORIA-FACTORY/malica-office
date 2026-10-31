@@ -78,8 +78,11 @@ export function CarteDuRetour({
   renvoyer: Geste | null;
   /** `null` : garder n'est pas son geste (le siège, le retour du propriétaire). */
   garder: Geste | null;
-  /** Effacer, ou archiver si le cabinet l'avait prise en charge : la base tranche. */
-  supprimer: Geste;
+  /**
+   * Effacer, ou archiver si le cabinet l'avait prise en charge : la base
+   * tranche. `null` : le circuit ne le lui offre pas (`gestesDuCircuit`).
+   */
+  supprimer: Geste | null;
 }) {
   const { t, locale } = useI18n();
   const [reponseOuverte, setReponseOuverte] = useState(false);
@@ -91,11 +94,11 @@ export function CarteDuRetour({
   const qui = retour.qui ?? t("pme.coffre.votreComptable");
   const faitLibelle = FAIT_DU_GESTE[retour.geste];
   const montrerLeFait = retour.fait && faitLibelle != null;
-  const permises: Partial<Record<SortieDuRetour, Geste | null>> = { renvoyer, garder };
+  const permises: Partial<Record<SortieDuRetour, Geste | null>> = { renvoyer, garder, supprimer };
   const sorties = sortiesDuRetour(retour.geste, retour.fait).filter(
     (s) => !(s in permises) || permises[s] != null,
   );
-  const enCours = Boolean(renvoyer?.enCours || garder?.enCours || supprimer.enCours);
+  const enCours = Boolean(renvoyer?.enCours || garder?.enCours || supprimer?.enCours);
   const sansGeste = { action: () => undefined, enCours: false };
 
   const bouton: Record<SortieDuRetour, { libelle: string; action: () => void; enCours?: boolean }> =
@@ -149,7 +152,7 @@ export function CarteDuRetour({
         </div>
       ) : null}
 
-      {aConfirmer ? (
+      {aConfirmer && supprimer ? (
         <div className="f-ret-sur" role="alertdialog" aria-label={t("pme.supprimer.action")}>
           <p>{t("pme.retour.supprimer.sur")}</p>
           <div className="f-dec-gestes deux">

@@ -319,3 +319,67 @@ describe("ce qui reste à envoyer", () => {
     ).toBeNull();
   });
 });
+
+/*
+ * Chaque geste de l'écran se décide ici, jamais d'après `vis` ou `status` lus
+ * à l'écran (revue Codex de #146, troisième occurrence) : le web n'a qu'une
+ * porte par geste (`hooks/use-gestes-du-circuit.ts`).
+ */
+describe("les autres gestes du circuit", () => {
+  it("rappeler : comme la demande de suppression, sauf une pièce prise en charge", () => {
+    const partie = piece({ vis: "partage", status: "lue", circuit: circuit({ recoit: true }) });
+    expect(gestesDuCircuit(partie, PROPRIETAIRE, true)).toMatchObject({
+      demanderA: "cabinet",
+      rappeler: "cabinet",
+    });
+    const prise: PieceDuCircuit = {
+      ...partie,
+      statut: { statut: "prise_en_charge", chez: "cabinet", qui: null },
+    };
+    expect(gestesDuCircuit(prise, PROPRIETAIRE, true)).toMatchObject({
+      demanderA: "cabinet",
+      rappeler: null,
+    });
+    const chezLuiDuSiege = piece({ circuit: circuit({ dernier: "envoyee" }) });
+    expect(gestesDuCircuit(chezLuiDuSiege, SIEGE, true).rappeler).toBe("proprietaire");
+  });
+
+  it("mettre de côté à la capture : qui tient « Garder », avec ou sans cabinet, jamais le siège", () => {
+    const neuve = piece({
+      vis: "personnel",
+      status: "capturee",
+      circuit: circuit({ recoit: true }),
+    });
+    expect(gestesDuCircuit(neuve, PROPRIETAIRE, false).mettreDeCote).toBe(true);
+    expect(gestesDuCircuit(neuve, PROPRIETAIRE, true).mettreDeCote).toBe(true);
+    // Sur la fiche, « Garder » reste la décision de ne pas l'envoyer au comptable.
+    expect(gestesDuCircuit(neuve, PROPRIETAIRE, true).garder).toBe(false);
+    expect(gestesDuCircuit(neuve, SIEGE, true).mettreDeCote).toBe(false);
+    const partie = piece({ vis: "partage", circuit: circuit({ recoit: true }) });
+    expect(gestesDuCircuit(partie, PROPRIETAIRE, true).mettreDeCote).toBe(false);
+    const dejaGardee = piece({
+      gardeeLe: "2026-10-27T00:00:00Z",
+      circuit: circuit({ recoit: true }),
+    });
+    expect(gestesDuCircuit(dejaGardee, PROPRIETAIRE, true).mettreDeCote).toBe(false);
+  });
+
+  it("supprimer une pièce rendue par le comptable : la sienne, ou avec le droit sur toutes", () => {
+    const rendue = piece({
+      vis: "partage",
+      status: "retournee",
+      circuit: circuit({ recoit: true }),
+    });
+    expect(gestesDuCircuit(rendue, PROPRIETAIRE, true).supprimer).toBe(true);
+    expect(gestesDuCircuit(rendue, SIEGE, true).supprimer).toBe(true);
+    const dUnAutre = piece({
+      vis: "partage",
+      status: "retournee",
+      circuit: circuit({ mienne: false }),
+    });
+    expect(gestesDuCircuit(dUnAutre, SIEGE, true).supprimer).toBe(false);
+    // Partie et pas rendue : la suppression se demande.
+    const partie = piece({ vis: "partage", status: "lue", circuit: circuit({ recoit: true }) });
+    expect(gestesDuCircuit(partie, PROPRIETAIRE, true).supprimer).toBe(false);
+  });
+});

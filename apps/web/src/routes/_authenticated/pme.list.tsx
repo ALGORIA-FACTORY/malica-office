@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
@@ -28,6 +28,7 @@ import { partieLeVers, partieVers } from "@/lib/envoi";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
+import { useEnvoyerEnLot } from "@/hooks/use-gestes-du-circuit";
 
 export const Route = createFileRoute("/_authenticated/pme/list")({
   head: () => ({
@@ -210,16 +211,12 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
   const [envoi, setEnvoi] = useState<readonly string[] | null>(null);
   /** Un refus rédigé par la base (impayé, pièce privée) : il dit quoi faire. */
   const [refus, setRefus] = useState<string | null>(null);
-  const restantes = pieces.filter(envoiVers.reste);
   const qui = destination ? envoiVers.quiPour(destination) : "";
   /** Partie dans ce geste : chez le propriétaire (le siège), ou au cabinet. */
   const partie = (p: PieceLue) => (destination ? partieVers(p, destination) : false);
   const partieLe = (p: PieceLue) => (destination ? partieLeVers(p, destination) : null);
-  const transmettre = useMutation({
-    mutationFn: async (ids: readonly string[]) => {
-      await office().collab.transmettreLesPieces([...ids]);
-      return ids;
-    },
+  // La seule porte du lot : ce qui reste à envoyer, et rien d'autre.
+  const transmettre = useEnvoyerEnLot(pme.tenantId, {
     onMutate: () => setRefus(null),
     onSuccess: async (ids) => {
       setArmee(false);
@@ -234,6 +231,7 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
       setRefus(texteDeLErreur(e, "routes/_authenticated/pme.list", "") || null);
     },
   });
+  const restantes = pieces.filter(transmettre.reste);
 
   /* ====================================================== ENVOYÉ, EN LOT
    *
@@ -295,7 +293,7 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
       {transmettre.isError && !armee ? (
         <PasEncoreParti
           qui={qui}
-          reessayer={() => transmettre.mutate(restantes.map((p) => p.id))}
+          reessayer={() => transmettre.mutate(restantes)}
           enCours={transmettre.isPending}
         />
       ) : (
@@ -303,7 +301,7 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
           type="button"
           className="btn"
           disabled={transmettre.isPending}
-          onClick={() => (armee ? transmettre.mutate(restantes.map((p) => p.id)) : setArmee(true))}
+          onClick={() => (armee ? transmettre.mutate(restantes) : setArmee(true))}
         >
           {transmettre.isPending
             ? t("common.loading")

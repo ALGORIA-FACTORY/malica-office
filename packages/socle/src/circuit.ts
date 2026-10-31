@@ -35,19 +35,36 @@ export interface GestesDuCircuit {
   envoyer: EtapeDeDemande | null;
   /** « Garder » : décider de ne pas l'envoyer au comptable. */
   garder: boolean;
+  /**
+   * La mettre de côté à la capture — ne pas la lire, ou ne pas l'envoyer :
+   * la même décision que « Garder » (`capture_piece_garder`), prise sur un
+   * lot qui vient d'être photographié, avec ou sans cabinet. Elle est à qui
+   * tient `piece.garder` ; le siège n'a rien à décider pour le propriétaire.
+   */
+  mettreDeCote: boolean;
   /** Le propriétaire retourne au siège la pièce qu'il en a reçue. */
   retournerAuSiege: boolean;
   /** Ouvrir la pièce la « voit » : le propriétaire, pièce reçue d'un siège. */
   voirALOuverture: boolean;
-  /** À qui se demande un rappel ou une suppression, ou rien. */
+  /** À qui se demande une suppression, ou rien. */
   demanderA: EtapeDeDemande | null;
+  /**
+   * À qui se demande un rappel, ou rien : comme la suppression, sauf une
+   * pièce prise en charge, qui ne se rappelle plus.
+   */
+  rappeler: EtapeDeDemande | null;
   /** « Renvoyer » sur la carte de retour est le geste de cette personne. */
   renvoyer: boolean;
   /** « Garder » sur la carte d'un retour du comptable. */
   garderLeRetour: boolean;
   /** La rendre à Mon espace : la sienne, qui n'est pas en route. */
   mettreAuPrive: boolean;
-  /** La supprimer sans rien demander. */
+  /**
+   * La supprimer sans rien demander : la sienne, ou toute pièce avec
+   * `piece.supprimer_toutes`, tant qu'elle n'est pas partie — ou rendue par
+   * le comptable (« Malica sans blocage »). La base refait chaque contrôle
+   * (`capture_piece_supprimer`).
+   */
   supprimer: boolean;
 }
 
@@ -81,6 +98,9 @@ export function gestesDuCircuit(
   const enRoute = dernier === "envoyee" || dernier === "retournee";
   const retour = p.statut.statut === "retour";
   const libre = p.status === "capturee" || p.status === "lue";
+  const supprimeToutes = a(droits, "piece.supprimer_toutes");
+  // Rendue par le comptable : elle est à nouveau au client, sans rien demander.
+  const rendue = retour && p.vis === "partage" && p.status === "retournee";
   // Retournée au siège : la main est à lui. Le propriétaire attend sa
   // reprise ; il n'envoie ni ne garde ce qu'il vient de lui rendre.
   const chezLeSiege = p.statut.chez === "siege";
@@ -104,24 +124,28 @@ export function gestesDuCircuit(
         ? "proprietaire"
         : null;
 
+  const mettreDeCote =
+    a(droits, "piece.garder") && p.vis !== "partage" && !p.gardeeLe && !chezLeSiege;
+
   return {
     envoyer,
-    garder:
-      a(droits, "piece.garder") && aUnCabinet && p.vis === "entite" && !p.gardeeLe && !chezLeSiege,
+    garder: mettreDeCote && aUnCabinet && p.vis === "entite",
+    mettreDeCote,
     retournerAuSiege: recoit && p.vis === "entite" && dernier === "envoyee",
     voirALOuverture:
       recoit &&
       p.vis === "entite" &&
       (p.statut.statut === "recue" || p.statut.statut === "corrigee"),
     demanderA,
+    rappeler: p.statut.statut === "prise_en_charge" ? null : demanderA,
     renvoyer: retour && (p.statut.chez === "proprietaire" ? versLeProprietaire : versLeComptable),
     garderLeRetour: retour && p.statut.chez === "cabinet" && a(droits, "piece.garder"),
     mettreAuPrive: p.vis === "entite" && mienne && !enRoute,
     supprimer:
-      libre &&
-      (p.vis === "personnel" ||
-        (p.vis === "entite" &&
-          (a(droits, "piece.supprimer_toutes") || (mienne && dernier !== "envoyee")))),
+      (rendue && (mienne || supprimeToutes)) ||
+      (libre &&
+        (p.vis === "personnel" ||
+          (p.vis === "entite" && (supprimeToutes || (mienne && dernier !== "envoyee"))))),
   };
 }
 

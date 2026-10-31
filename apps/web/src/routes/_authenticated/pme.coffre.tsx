@@ -21,6 +21,7 @@ import { office } from "@/verticals/malica-office/composition";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
+import { useEnvoyerEnLot, useSupprimerEnLot } from "@/hooks/use-gestes-du-circuit";
 
 export const Route = createFileRoute("/_authenticated/pme/coffre")({
   head: () => ({
@@ -142,14 +143,8 @@ function PmeCoffre() {
     },
   });
 
-  const supprimer = useMutation({
-    // `false` : la pièce n'est plus visible. Ce n'est pas un succès — le
-    // journal le garde, comme sur la fiche.
-    mutationFn: (ids: readonly string[]) =>
-      unParUn(ids, async (id) => {
-        if (!(await office().capture.supprimer(id)))
-          throw new Error(`suppression sans effet : ${id}`);
-      }),
+  // La seule porte de la suppression : ce que le Socle permet, pièce par pièce.
+  const supprimer = useSupprimerEnLot(pme.tenantId, {
     onSuccess: async () => {
       setErreur(null);
       setChoisis([]);
@@ -163,14 +158,13 @@ function PmeCoffre() {
     },
   });
 
-  const transmettre = useMutation({
-    mutationFn: async (ids: readonly string[]) => {
-      // Vers le comptable, la décision est relue au dernier instant ; aucun
-      // destinataire n'est inventé. La base choisit le passage (`piece_envoyer`).
+  // La seule porte du lot : ce qui reste à envoyer, et rien d'autre.
+  const transmettre = useEnvoyerEnLot(pme.tenantId, {
+    // Vers le comptable, la décision est relue au dernier instant ; aucun
+    // destinataire n'est inventé. Un refus ici arrête le lot avant tout envoi.
+    onMutate: async () => {
       if (destination === "cabinet" && !(await office().identity.monCabinet(pme.tenantId)))
         throw new Error(t("relation.sansDestinataire"));
-      await office().collab.transmettreLesPieces([...ids]);
-      return ids;
     },
     onSuccess: async (ids) => {
       setErreur(null);
@@ -207,6 +201,11 @@ function PmeCoffre() {
     setChoisis((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
   // Un choix qui a quitté l'espace (supprimé ailleurs, relu) ne compte plus.
   const choix = choisis.filter((id) => visibles.some((p) => p.id === id));
+  /** Les papiers choisis, dans l'ordre du toucher. */
+  const choisies = choix.flatMap((id) => visibles.filter((p) => p.id === id));
+  // « Supprimer » n'est offert que si chaque papier choisi se supprime : un
+  // lot ne laisse jamais un papier derrière lui sans le dire.
+  const supprimables = choisies.length > 0 && choisies.every(supprimer.peut);
   const occupe = mettre.isPending || supprimer.isPending;
 
   const panne = pieces.error ?? null;
@@ -286,13 +285,12 @@ function PmeCoffre() {
         trace={null}
         principale={{ libelle: t("envoi.coffre.retour"), action: () => setMisEnSociete(null) }}
         secondaire={
-          destination && entres.some(envoi.reste)
+          destination && entres.some(transmettre.reste)
             ? {
                 libelle: envoi.action(destination),
                 action: () => {
                   // Ce qui reste à envoyer, au sens du seul prédicat.
-                  if (!transmettre.isPending)
-                    transmettre.mutate(entres.filter(envoi.reste).map((p) => p.id));
+                  if (!transmettre.isPending) transmettre.mutate(entres);
                 },
               }
             : null
@@ -417,7 +415,7 @@ function PmeCoffre() {
                 </button>
                 <button
                   type="button"
-                  disabled={choix.length === 0 || occupe}
+                  disabled={!supprimables || occupe}
                   onClick={() => setConfirmer(true)}
                 >
                   {t("pme.coffre.supprimer")}
@@ -432,7 +430,7 @@ function PmeCoffre() {
         <ConfirmerLaSuppression
           n={choix.length}
           enCours={supprimer.isPending}
-          oui={() => supprimer.mutate(choix)}
+          oui={() => supprimer.mutate(choisies)}
           fermer={() => setConfirmer(false)}
         />
       ) : null}

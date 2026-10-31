@@ -44,6 +44,16 @@ import { useDossiers } from "@/hooks/use-dossiers";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { aLeDroit, useMonAcces } from "@/hooks/use-mon-acces";
 import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
+import {
+  useDemander,
+  useEnvoyer,
+  useGarder,
+  useGestesDuCircuit,
+  useMettreAuPrive,
+  useRenvoyer,
+  useResteAEnvoyer,
+  useSupprimer,
+} from "@/hooks/use-gestes-du-circuit";
 import { dossierDeLaPiece } from "@/lib/dossiers";
 import { RAISON_LONGUE } from "@/lib/lecture";
 import {
@@ -54,13 +64,7 @@ import {
   partageeAvecLeCabinet,
 } from "@/lib/fiche-de-la-piece";
 import { motDuStatut as motDeStatut } from "@/lib/statut";
-import {
-  carteDuRecu,
-  demandeDuSiegeATrancher,
-  etatDeMaDemande,
-  gestesDuCircuit,
-  resteAEnvoyer,
-} from "@malica/socle/circuit";
+import { carteDuRecu, demandeDuSiegeATrancher, etatDeMaDemande } from "@malica/socle/circuit";
 import {
   statutDuCircuit,
   TON_PME,
@@ -441,13 +445,31 @@ function PieceScreen() {
     confirmerSuppression,
     useCallback(() => setConfirmerSuppression(false), []),
   );
-  const supprimer = useMutation({
-    // `false` : la pièce n'est plus visible. Ce n'est pas un succès — le
-    // journal le garde (27 octobre 2026 : « aucun effet », sans trace).
-    mutationFn: async () => {
-      if (!(await office().capture.supprimer(pieceId)))
-        throw new Error(`suppression sans effet : ${pieceId}`);
-    },
+
+  /*
+   * LES GESTES DU CIRCUIT — par leur seule porte (`use-gestes-du-circuit.ts`).
+   *
+   * Chaque hook rend `null` quand le Socle ne propose pas le geste : la fiche
+   * ne peut pas dessiner « Transmettre », « Garder », « Rappeler » ou
+   * « Supprimer » sur une pièce où il échouerait (revue Codex de #146 : le
+   * Suivi offrait « Transmettre » sur une pièce retournée au siège).
+   */
+  const faitsDuCircuit = dossier.data
+    ? {
+        id: pieceId,
+        vis: dossier.data.piece.vis,
+        status: dossier.data.piece.status,
+        gardeeLe: dossier.data.piece.gardeeLe ?? null,
+        suivi: dossier.data.suivi,
+        circuit: dossier.data.circuit,
+      }
+    : null;
+  const gestes = useGestesDuCircuit(pme.tenantId, faitsDuCircuit);
+  /** À qui elle reste à envoyer, par moi : le seul prédicat (`resteAEnvoyer`). */
+  const resteAEnvoyerDe = useResteAEnvoyer(pme.tenantId);
+  const resteIci = faitsDuCircuit ? resteAEnvoyerDe(faitsDuCircuit) : null;
+
+  const supprimer = useSupprimer(pme.tenantId, faitsDuCircuit, {
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
       // L'accueil montre les pièces lues : sans cela, la pièce effacée y restait.
@@ -515,8 +537,7 @@ function PieceScreen() {
    * propriétaire, le propriétaire au comptable. La base choisit d'après les
    * droits de la personne, jamais d'après l'écran, et rend chez qui c'est parti.
    */
-  const transmettre = useMutation({
-    mutationFn: () => office().collab.envoyer(pieceId),
+  const transmettre = useEnvoyer(pme.tenantId, faitsDuCircuit, {
     onSuccess: async (r) => {
       setError(null);
       // Relire d'abord : l'écran dit « depuis 10:42 » avec l'heure posée par
@@ -534,8 +555,7 @@ function PieceScreen() {
    * La base tient le mur (R6) : elle refuse dès que la pièce est partie ou
    * comptabilisée. L'écran ne l'offre donc que là où il peut aboutir.
    */
-  const remettreAuPrive = useMutation({
-    mutationFn: () => office().collab.setPieceVis(pieceId, "personnel"),
+  const remettreAuPrive = useMettreAuPrive(pme.tenantId, faitsDuCircuit, {
     onSuccess: async () => {
       setError(null);
       await invalidate();
@@ -577,8 +597,7 @@ function PieceScreen() {
    * répondu », donc la question revenait à chaque visite — et un écran qui
    * redemande ce qu'on vient de lui dire apprend à ne plus répondre.
    */
-  const garder = useMutation({
-    mutationFn: () => office().collab.garderPiece(pieceId),
+  const garder = useGarder(pme.tenantId, faitsDuCircuit, {
     onSuccess: async () => {
       setError(null);
       await invalidate();
@@ -597,8 +616,7 @@ function PieceScreen() {
    * Il a raison : le cabinet travaille sur ce qu'il a reçu, et une pièce qui
    * disparaît de sa file sans un mot est pire que l'état bloqué.
    */
-  const rappeler = useMutation({
-    mutationFn: () => office().collab.demanderSurPiece(pieceId, "rappel"),
+  const rappeler = useDemander(pme.tenantId, faitsDuCircuit, "rappel", {
     onSuccess: async () => {
       setError(null);
       // La demande se lit dans `demandes-piece` : sans elle, le bouton restait
@@ -620,8 +638,7 @@ function PieceScreen() {
    * Même mécanisme, autre objet : le cabinet la conserve, c'est son métier.
    * La décision s'inscrit au journal, quelle qu'elle soit.
    */
-  const demanderSuppression = useMutation({
-    mutationFn: () => office().collab.demanderSurPiece(pieceId, "suppression"),
+  const demanderSuppression = useDemander(pme.tenantId, faitsDuCircuit, "suppression", {
     onSuccess: async () => {
       setError(null);
       await qc.invalidateQueries({ queryKey: ["demandes-piece", pieceId] });
@@ -640,29 +657,7 @@ function PieceScreen() {
     queryKey: ["demandes-piece", pieceId],
     queryFn: () => office().collab.etatDesDemandes(pieceId),
   });
-  /*
-   * Ce que le circuit propose ici (lot 4) : les droits du référentiel, le
-   * statut, les demandes. Un seul calcul, testé (`lib/circuit.ts`).
-   */
   const mesDroits = acces.data?.droits ?? [];
-  const faitsDuCircuit = dossier.data
-    ? {
-        vis: dossier.data.piece.vis,
-        status: dossier.data.piece.status,
-        gardeeLe: dossier.data.piece.gardeeLe ?? null,
-        suivi: dossier.data.suivi,
-        circuit: dossier.data.circuit,
-      }
-    : null;
-  const gestes =
-    faitsDuCircuit && leStatut && acces.data
-      ? gestesDuCircuit({ ...faitsDuCircuit, statut: leStatut }, mesDroits, Boolean(cabinet.data))
-      : null;
-  /** À qui elle reste à envoyer, par moi : le seul prédicat (`resteAEnvoyer`). */
-  const resteIci =
-    faitsDuCircuit && acces.data
-      ? resteAEnvoyer(faitsDuCircuit, mesDroits, Boolean(cabinet.data))
-      : null;
   // MA demande, à l'étape où je la fais : au propriétaire (siège), au cabinet.
   const dernierFaitDuRappel = etatDeMaDemande(
     demandes.data ?? [],
@@ -812,8 +807,7 @@ function PieceScreen() {
    * Le cabinet propose sur la lecture courante, ou force. L'écran « Envoyé. »
    * dit l'heure de la base.
    */
-  const renvoyer = useMutation({
-    mutationFn: () => office().capture.renvoyer(pieceId),
+  const renvoyer = useRenvoyer(pme.tenantId, faitsDuCircuit, {
     onSuccess: async ({ le }) => {
       setError(null);
       // Renvoyée là d'où elle est revenue : au propriétaire, ou au cabinet.
@@ -1100,7 +1094,7 @@ function PieceScreen() {
     const suivanteADecider = pieceSuivanteATransmettre(
       luesDuDossier.data ?? [],
       pieceId,
-      envoiVers.reste,
+      (p) => resteAEnvoyerDe(p) !== null,
     );
     const fermer = () => {
       setEnvoye(null);
@@ -1136,15 +1130,15 @@ function PieceScreen() {
           },
         }}
         lien={
-          priseEnCharge
-            ? null
-            : {
+          rappeler
+            ? {
                 libelle: t("envoi.rappel"),
                 action: () => {
                   fermer();
                   rappeler.mutate();
                 },
               }
+            : null
         }
       />
     );
@@ -1483,9 +1477,11 @@ function PieceScreen() {
         {/*
          * Supprimer, tout court (26 octobre 2026) : « Reprendre » efface ET
          * rouvre l'appareil photo ; une photo prise par erreur n'avait aucune
-         * sortie sans en reprendre une autre. Hors partage, la base l'accepte.
+         * sortie sans en reprendre une autre. Offert quand le circuit le
+         * permet (`gestesDuCircuit`) : la sienne, ou toutes pour qui en a le
+         * droit — pas la pièce que le siège a déjà envoyée au propriétaire.
          */}
-        {vis !== "partage" ? (
+        {supprimer ? (
           confirmerSuppression ? (
             <div className="flex flex-col gap-2 border border-border bg-card p-4">
               <p className="text-[14px]">{t("pme.supprimer.sur")}</p>
@@ -1545,13 +1541,13 @@ function PieceScreen() {
   // Le siège envoie au propriétaire : le référentiel le dit, pas un nom de rôle.
   const siege = aLeDroit(acces.data, "envoi.proprietaire");
   // Une demande ne se suit qu'où elle se fait : au propriétaire, ou au cabinet.
-  const noteSuppression = gestes?.demanderA
+  const noteSuppression = demanderSuppression
     ? demandeDeSuppression === "demandee" || demandeDeSuppression === "refusee"
       ? demandeDeSuppression
       : null
     : noteDeSuppression(demandeDeSuppression, vis);
   /** À qui je demande : mon propriétaire (le siège), ou le cabinet. */
-  const aQuiJeDemande = envoiVers.quiPour(gestes?.demanderA ?? "cabinet");
+  const aQuiJeDemande = envoiVers.quiPour(demanderSuppression?.a ?? "cabinet");
 
   /**
    * Le mois de la pièce, pour la pastille du haut. Rien si la date manque.
@@ -1683,18 +1679,31 @@ function PieceScreen() {
   const leSiege = dossier.data.circuit?.auteur ?? t("circuit.siege");
   /*
    * Retournée, la pièce est RENDUE au client : il la supprime ou la garde sans
-   * rien demander (« Malica sans blocage »). Les demandes au cabinet n'ont
-   * plus lieu d'être proposées.
+   * rien demander, et les demandes au cabinet ne se proposent plus
+   * (« Malica sans blocage ») — c'est `gestesDuCircuit` qui le dit.
    */
-  const rendue = statut === "retour" && piece.vis === "partage";
   // Tant que le retour se lit, aucune carte (relecture de #114).
   const retourSeLit = statut === "retour" && retour.isPending;
   // Où elle en est chez le cabinet : envoyée, vue, prise en charge.
   const ouEnEst = ouEnEstLaPiece(dossier.data.suivi);
   const derniereFaite = ouEnEst.map((e) => e.le !== null).lastIndexOf(true);
-  const aTransmettre = resteIci === "cabinet";
-  const auProprietaire = gestes?.envoyer === "proprietaire";
-  const recu = carteDuRecu(gestes ?? null, resteIci);
+  /*
+   * La décision d'envoyer : le geste de la fiche (`useEnvoyer`), quand la pièce
+   * reste à envoyer — une pièce gardée ne se propose plus ici ; elle garde
+   * « Transmettre quand même » dans le Suivi.
+   */
+  const envoyerIci = transmettre && resteIci === transmettre.vers ? transmettre : null;
+  const aTransmettre = envoyerIci?.vers === "cabinet" ? envoyerIci : null;
+  const auProprietaire = envoyerIci?.vers === "proprietaire" ? envoyerIci : null;
+  const recu = carteDuRecu(gestes, resteIci);
+  /** La carte d'une pièce reçue porte l'envoi au comptable : avec un cabinet. */
+  const recuAuComptable = recu?.envoyerAuComptable && cabinet.data ? aTransmettre : null;
+  /** L'envoi au comptable, gardée ou non : le Suivi y porte « Transmettre quand même ». */
+  const versLeComptable = transmettre?.vers === "cabinet" ? transmettre : null;
+  /** « Garder » sur la décision d'envoyer — pas la sortie d'une carte de retour. */
+  const garderIci = gestes?.garder ? garder : null;
+  /** « Garder » sur la carte d'un retour du comptable. */
+  const garderLeRetour = gestes?.garderLeRetour ? garder : null;
   const resteAPayer = resteMineur !== null && resteMineur > 0;
   const bloquee = !proposable && !sensAuCabinet && proposalAttempt != null && !proposalAttempt.ok;
 
@@ -1760,14 +1769,14 @@ function PieceScreen() {
               titre: raisonDuBlocage,
               sous: t("pme.bloque.geste"),
               gestes: [
-                ...(aTransmettre || auProprietaire
+                ...(envoyerIci
                   ? [
                       {
                         libelle: auProprietaire
                           ? t("circuit.envoyer")
                           : t("pme.transmettre.action"),
-                        action: () => transmettre.mutate(),
-                        eteint: transmettre.isPending || garder.isPending,
+                        action: () => envoyerIci.mutate(),
+                        eteint: envoyerIci.isPending || Boolean(garderIci?.isPending),
                         principal: true,
                       },
                     ]
@@ -1783,9 +1792,9 @@ function PieceScreen() {
                 sous: t("circuit.envoyer.aide"),
                 gestes: [
                   {
-                    libelle: transmettre.isPending ? t("common.loading") : t("circuit.envoyer"),
-                    action: () => transmettre.mutate(),
-                    eteint: transmettre.isPending,
+                    libelle: auProprietaire.isPending ? t("common.loading") : t("circuit.envoyer"),
+                    action: () => auProprietaire.mutate(),
+                    eteint: auProprietaire.isPending,
                     principal: true,
                   },
                 ],
@@ -1800,22 +1809,21 @@ function PieceScreen() {
                    */
                   ton: TON_PME[statut],
                   titre:
-                    recu.envoyerAuComptable && cabinet.data
+                    recuAuComptable && cabinet.data
                       ? t("circuit.recue.question", { qui: leSiege, cabinet: cabinet.data.name })
                       : t("circuit.recue.titre", { qui: leSiege }),
-                  sous:
-                    recu.envoyerAuComptable && cabinet.data
-                      ? t("circuit.recue.aide", { qui: leSiege })
-                      : t("circuit.recue.aide.sansEnvoi", { qui: leSiege }),
+                  sous: recuAuComptable
+                    ? t("circuit.recue.aide", { qui: leSiege })
+                    : t("circuit.recue.aide.sansEnvoi", { qui: leSiege }),
                   gestes: [
-                    ...(recu.envoyerAuComptable && cabinet.data
+                    ...(recuAuComptable
                       ? [
                           {
-                            libelle: transmettre.isPending
+                            libelle: recuAuComptable.isPending
                               ? t("common.loading")
                               : t("pme.transmettre.action"),
-                            action: () => transmettre.mutate(),
-                            eteint: transmettre.isPending,
+                            action: () => recuAuComptable.mutate(),
+                            eteint: recuAuComptable.isPending,
                             principal: true,
                           },
                         ]
@@ -1823,8 +1831,8 @@ function PieceScreen() {
                     {
                       libelle: t("circuit.retourner", { qui: leSiege }),
                       action: () => setRetournerOuvert(true),
-                      eteint: transmettre.isPending,
-                      principal: !(recu.envoyerAuComptable && cabinet.data),
+                      eteint: Boolean(recuAuComptable?.isPending),
+                      principal: !recuAuComptable,
                     },
                   ],
                 }
@@ -1839,21 +1847,21 @@ function PieceScreen() {
                     sous: t("pme.transmettre.chezvous"),
                     gestes: [
                       {
-                        libelle: transmettre.isPending
+                        libelle: aTransmettre.isPending
                           ? t("common.loading")
                           : t("pme.transmettre.action"),
-                        action: () => transmettre.mutate(),
-                        eteint: transmettre.isPending || garder.isPending,
+                        action: () => aTransmettre.mutate(),
+                        eteint: aTransmettre.isPending || Boolean(garderIci?.isPending),
                         principal: true,
                       },
-                      ...(gestes?.garder
+                      ...(garderIci
                         ? [
                             {
-                              libelle: garder.isPending
+                              libelle: garderIci.isPending
                                 ? t("common.loading")
                                 : t("pme.garder.action"),
-                              action: () => garder.mutate(),
-                              eteint: garder.isPending || transmettre.isPending,
+                              action: () => garderIci.mutate(),
+                              eteint: garderIci.isPending || aTransmettre.isPending,
                             },
                           ]
                         : []),
@@ -2026,16 +2034,16 @@ function PieceScreen() {
           onReprendreLaPhoto={reprendreLaPhoto}
           onVoirLeFait={() => allerA("suivi")}
           renvoyer={
-            gestes?.renvoyer
-              ? { action: () => renvoyer.mutate(), enCours: renvoyer.isPending }
-              : null
+            renvoyer ? { action: () => renvoyer.mutate(), enCours: renvoyer.isPending } : null
           }
           garder={
-            gestes?.garderLeRetour
-              ? { action: () => garder.mutate(), enCours: garder.isPending }
+            garderLeRetour
+              ? { action: () => garderLeRetour.mutate(), enCours: garderLeRetour.isPending }
               : null
           }
-          supprimer={{ action: () => supprimer.mutate(), enCours: supprimer.isPending }}
+          supprimer={
+            supprimer ? { action: () => supprimer.mutate(), enCours: supprimer.isPending } : null
+          }
         />
       ) : (
         <div className={`f-dec ${decision.ton}`}>
@@ -2380,7 +2388,7 @@ function PieceScreen() {
                 <p className="f-note">
                   {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
                 </p>
-              ) : gestes?.demanderA === "proprietaire" ? (
+              ) : rappeler?.a === "proprietaire" ? (
                 rappeler.isError ? (
                   <PasEncoreParti
                     qui={envoiVers.quiPour("proprietaire")}
@@ -2400,10 +2408,9 @@ function PieceScreen() {
               ) : null}
             </div>
           ) : cabinet.data &&
-            (!priseEnCharge ||
-              piece.vis !== "partage" ||
-              demandeDeRappel === "demandee" ||
-              demandeDeRappel === "refusee") ? (
+            (piece.vis === "partage"
+              ? !priseEnCharge || demandeDeRappel === "demandee" || demandeDeRappel === "refusee"
+              : versLeComptable) ? (
             <div className="f-carte f-cab">
               {piece.vis === "partage" ? (
                 <>
@@ -2423,13 +2430,13 @@ function PieceScreen() {
                     <p className="f-note">
                       {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
                     </p>
-                  ) : rendue ? null : !priseEnCharge && rappeler.isError ? (
+                  ) : rappeler?.a !== "cabinet" ? null : rappeler.isError ? (
                     <PasEncoreParti
                       qui={cabinet.data.name}
                       reessayer={() => rappeler.mutate()}
                       enCours={rappeler.isPending}
                     />
-                  ) : !priseEnCharge ? (
+                  ) : (
                     <button
                       type="button"
                       className="f-bouton"
@@ -2440,22 +2447,23 @@ function PieceScreen() {
                         ? t("common.loading")
                         : t("pme.transmettre.rappeler", { cabinet: cabinet.data.name })}
                     </button>
-                  ) : null}
+                  )}
                 </>
-              ) : piece.gardeeLe ? (
+              ) : !versLeComptable ? null : resteIci !== "cabinet" ? (
                 /*
-                 * La décision prise, et son chemin de retour : « Transmettre
-                 * quand même » ne doit jamais se fermer.
+                 * Gardée : la décision prise, et son chemin de retour —
+                 * « Transmettre quand même » ne se ferme jamais, tant que le
+                 * circuit offre l'envoi (pas sur une pièce retournée au siège).
                  */
                 <>
                   <p className="f-cab-etat">{t("pme.garder.faite")}</p>
                   <button
                     type="button"
                     className="f-bouton"
-                    disabled={transmettre.isPending}
-                    onClick={() => transmettre.mutate()}
+                    disabled={versLeComptable.isPending}
+                    onClick={() => versLeComptable.mutate()}
                   >
-                    {transmettre.isPending
+                    {versLeComptable.isPending
                       ? t("common.loading")
                       : t("pme.garder.quandmeme", { cabinet: cabinet.data.name })}
                   </button>
@@ -2467,22 +2475,24 @@ function PieceScreen() {
                   </p>
                   <p className="f-note">{t("pme.transmettre.chezvous")}</p>
                   {/* Le principal plein d'abord : à gauche, à droite en arabe. */}
-                  <div className={gestes?.garder ? "f-dec-gestes deux" : "f-dec-gestes"}>
+                  <div className={garderIci ? "f-dec-gestes deux" : "f-dec-gestes"}>
                     <button
                       type="button"
                       className="pr"
-                      disabled={transmettre.isPending || garder.isPending}
-                      onClick={() => transmettre.mutate()}
+                      disabled={versLeComptable.isPending || Boolean(garderIci?.isPending)}
+                      onClick={() => versLeComptable.mutate()}
                     >
-                      {transmettre.isPending ? t("common.loading") : t("pme.transmettre.action")}
+                      {versLeComptable.isPending
+                        ? t("common.loading")
+                        : t("pme.transmettre.action")}
                     </button>
-                    {gestes?.garder ? (
+                    {garderIci ? (
                       <button
                         type="button"
-                        disabled={garder.isPending || transmettre.isPending}
-                        onClick={() => garder.mutate()}
+                        disabled={garderIci.isPending || versLeComptable.isPending}
+                        onClick={() => garderIci.mutate()}
                       >
-                        {garder.isPending ? t("common.loading") : t("pme.garder.action")}
+                        {garderIci.isPending ? t("common.loading") : t("pme.garder.action")}
                       </button>
                     ) : null}
                   </div>
@@ -2688,7 +2698,7 @@ function PieceScreen() {
                   : t("pme.piece.revenir.libre")}
             </span>
           </div>
-          {confirmerSuppression ? (
+          {confirmerSuppression && supprimer ? (
             /* Deux temps, jamais un seul : un effacement ne part pas par mégarde. */
             <div className="f-carte f-cab">
               <p className="f-cab-etat">{t("pme.supprimer.sur")}</p>
@@ -2732,7 +2742,7 @@ function PieceScreen() {
                 </button>
               ) : null}
               {/* La remettre au privé n'a de sens que si elle n'y est pas. */}
-              {gestes?.mettreAuPrive ? (
+              {remettreAuPrive ? (
                 <button
                   type="button"
                   className="f-ligne"
@@ -2748,8 +2758,7 @@ function PieceScreen() {
                   </span>
                 </button>
               ) : null}
-              {gestes?.demanderA &&
-              !rendue &&
+              {demanderSuppression &&
               (!demandeDeSuppression ||
                 demandeDeSuppression === "retiree" ||
                 demandeDeSuppression === "accordee") ? (
@@ -2774,9 +2783,11 @@ function PieceScreen() {
                * comptée. `entite` est encore « chez le client » — la base le
                * dit (`capture_piece_supprimer`) ; l'écran ne l'offrait qu'au
                * privé, et une pièce de la société restait sans sortie
-               * (26 octobre 2026). Le collaborateur, lui, demande.
+               * (26 octobre 2026). Le collaborateur, lui, demande. Rendue par
+               * le comptable, elle se supprime sans rien demander : le Socle
+               * le dit (`gestesDuCircuit`), pas cet écran.
                */}
-              {rendue || gestes?.supprimer ? (
+              {supprimer ? (
                 <button
                   type="button"
                   className="f-ligne sup"
@@ -2804,7 +2815,7 @@ function PieceScreen() {
                 quand: momentDeLEnvoi(dernierFaitDeSuppression.createdAt, locale).quand,
               })}
             />
-          ) : demanderSuppression.isError ? (
+          ) : demanderSuppression?.isError ? (
             <PasEncoreParti
               qui={aQuiJeDemande}
               reessayer={() => demanderSuppression.mutate()}

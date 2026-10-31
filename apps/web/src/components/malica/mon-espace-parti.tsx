@@ -24,6 +24,7 @@ import {
   ConfirmerLaSuppression,
   GrilleDesMois,
 } from "@/components/malica/grille-des-mois";
+import { useSupprimerDeMonEspaceParti } from "@/hooks/use-gestes-du-circuit";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { jourEtMois } from "@/lib/lisible";
@@ -94,13 +95,8 @@ export function MonEspaceParti() {
     onError: (e: unknown) => setErreur(direLeRefus(e)),
   });
 
-  const supprimer = useMutation({
-    mutationFn: (ids: readonly string[]) =>
-      unParUn(ids, async (id) => {
-        // `false` : la pièce n'est plus visible — ce n'est pas un succès.
-        if (!(await office().capture.supprimer(id)))
-          throw new Error(`suppression sans effet : ${id}`);
-      }),
+  // La porte de la suppression (`use-gestes-du-circuit.ts`), hors de la société.
+  const supprimer = useSupprimerDeMonEspaceParti({
     onMutate: () => setErreur(null),
     onSuccess: () => setChoisis([]),
     onError: (e: unknown) => setErreur(direLeRefus(e)),

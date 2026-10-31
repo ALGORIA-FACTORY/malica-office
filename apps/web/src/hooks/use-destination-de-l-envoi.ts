@@ -5,17 +5,16 @@
  * Quatre écrans envoient : la fiche, la bibliothèque, Mon espace, la fin de
  * la capture. Chacun nommait la destination à sa façon, et deux nommaient le
  * comptable alors que le siège envoie au propriétaire (lot 4). La destination
- * vient des droits (`destinationDesEnvois`), ce qui reste à envoyer du seul
- * prédicat du Socle (`resteAEnvoyer`) ; le nom, les phrases de l'écran
- * « Envoyé » et le libellé du geste viennent d'ici.
+ * vient des droits (`destinationDesEnvois`) ; le nom, les phrases de l'écran
+ * « Envoyé » et le libellé du geste viennent d'ici. Ce qui reste à envoyer, et
+ * le geste lui-même, sont à `use-gestes-du-circuit.ts`, la seule porte.
  */
 import { useI18n } from "@/i18n";
-import { destinationDesEnvois, resteAEnvoyer } from "@malica/socle/circuit";
-import type { FaitsDeLaPiece } from "@malica/socle/statut-d-envoi";
+import { destinationDesEnvois } from "@malica/socle/circuit";
 
 import type { DestinationDEnvoi } from "@/lib/envoi";
 
-import { aLeDroit, useMonAcces } from "./use-mon-acces";
+import { useMonAcces } from "./use-mon-acces";
 import { useMonCabinet } from "./use-mon-cabinet";
 
 export function useDestinationDeLEnvoi(tenantId: string | null | undefined) {
@@ -31,13 +30,9 @@ export function useDestinationDeLEnvoi(tenantId: string | null | undefined) {
       : (cabinet.data?.name ?? t("pme.coffre.votreComptable"));
   return {
     destination,
-    /** Reste-t-elle à envoyer, par cette personne ? Le seul prédicat. */
-    reste: (p: FaitsDeLaPiece) => resteAEnvoyer(p, droits, aUnCabinet) !== null,
     /** Lus : la destination est sûre (droits et mandat). */
     pret: acces.isSuccess && cabinet.isSuccess,
     quiPour,
-    /** « Garder » est la décision de qui transmet au comptable. */
-    peutGarder: aLeDroit(acces.data, "piece.garder"),
     /** Le geste qui envoie un lot. */
     action: (d: DestinationDEnvoi) =>
       d === "proprietaire"
