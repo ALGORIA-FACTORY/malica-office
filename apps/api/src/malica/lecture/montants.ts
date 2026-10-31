@@ -27,6 +27,8 @@ import {
   type FormeDeLecture,
 } from "@malica/socle/montant-imprime";
 
+import type { Lecteur } from "./vision.ts";
+
 /** Une lecture admissible d'un texte, en unités mineures entières. */
 export interface Hypothese {
   /** La valeur en unités mineures (millimes pour le dinar), toujours entière. */
@@ -54,14 +56,34 @@ function echelle(decimales: number): number {
  * Toutes les lectures deviennent des hypothèses, que l'arithmétique de la
  * facture départage (`resoudreFacture`). Une seule exception, et elle tient à
  * la source des jetons, pas au texte : un montant en chiffres arabes ou
- * persans n'est pas lu. Le modèle de vision les rend INVERSÉS — mesuré le
- * 18 octobre 2026 sur « ١٢ » rendu « ٢١ » — et une lecture inversée d'un
+ * persans n'est lu que d'un lecteur qui les rend fidèlement
+ * (`litLesChiffresOrientaux`). Le modèle de vision les rend INVERSÉS — mesuré
+ * le 18 octobre 2026 sur « ١٢ » rendu « ٢١ » — et une lecture inversée d'un
  * montant est pire que pas de lecture (`factures.banc-amputation.test.ts`).
+ * Sans lecteur nommé, rien ne les lit.
  */
-export function treillisMontant(texte: string, devise: DeviseLue): Hypothese[] {
+export function treillisMontant(texte: string, devise: DeviseLue, lecteur?: Lecteur): Hypothese[] {
   const lu = lireUnMontantImprime(texte, devise);
-  if (lu.chiffresArabes) return [];
+  if (lu.chiffresArabes && !litLesChiffresOrientaux(lecteur)) return [];
   return lu.lectures.map((l) => ({ millimes: l.mineur, lecture: l.forme }));
+}
+
+/**
+ * Le lecteur rend-il les chiffres arabes orientaux tels qu'imprimés ?
+ *
+ * La couche de texte d'un PDF, oui : elle porte les codes des chiffres
+ * eux-mêmes, dans l'ordre où ils s'écrivent, sans rien reconnaître (jeu
+ * synthétique, 31 octobre 2026 : cas 044, 048, 052, refusés alors que la
+ * couche les portait exacts). Le modèle de vision, non (mesuré, plus haut).
+ * PaddleOCR n'a pas été mesuré sur ces chiffres : il n'est pas cru. Ni un plan
+ * fourni, dont on ne sait pas qui l'a relevé.
+ *
+ * Les séparateurs « ٫ » et « ٬ » ne sont pas en cause : le lecteur unique
+ * (`montant-imprime`) en rend toutes les lectures, et l'arithmétique de la
+ * facture tranche, comme pour « , » et « . ».
+ */
+export function litLesChiffresOrientaux(lecteur: Lecteur | undefined): boolean {
+  return lecteur === "pdf-text";
 }
 
 /* --------------------------------------------------------------- le solveur */

@@ -218,6 +218,8 @@ export async function readPieceFlow(
       // Le matricule de la fiche : c'est lui qui DÉDUIT le sens de la pièce, au
       // lieu de croire ce que le modèle en dit.
       matriculeDossier: contexte.dossier.identifiantFiscal,
+      // Le lecteur décide des chiffres orientaux (`litLesChiffresOrientaux`).
+      lecteur: lecture.lecteur,
     });
 
   const premiereLecture = await lecteurs.lire(parametres);

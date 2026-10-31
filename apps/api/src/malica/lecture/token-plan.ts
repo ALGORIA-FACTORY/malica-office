@@ -4,6 +4,7 @@ import type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
 import { treillisMontant, type Hypothese } from "./montants.ts";
+import type { Lecteur } from "./vision.ts";
 import { plageAmputee, TOLERANCE_DE_LIGNE } from "./recoller-les-milliers.ts";
 /**
  * Plan de tokens — R2 « zéro hallucination dès la lecture ».
@@ -403,6 +404,8 @@ export function lireMontantDuPlan(
   devise: DeviseLue,
   zone?: string | null,
   binding?: CitationBinding,
+  /** Qui a relevé les jetons : il décide des chiffres orientaux (`treillisMontant`). */
+  lecteur?: Lecteur,
 ): MontantLu {
   if (!ref) {
     return {
@@ -463,7 +466,7 @@ export function lireMontantDuPlan(
     };
   }
 
-  const hypotheses = treillisMontant(texte, devise);
+  const hypotheses = treillisMontant(texte, devise, lecteur);
 
   if (hypotheses.length === 0) {
     return {

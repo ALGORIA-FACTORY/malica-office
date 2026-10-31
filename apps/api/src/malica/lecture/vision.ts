@@ -190,7 +190,7 @@ export type VisionSelection = Omit<
  * renommage du modèle aurait suffi à faire relire une pièce par le lecteur
  * qui venait de la lire. Le chemin le dit désormais lui-même.
  */
-type Lecteur = "pdf-text" | "paddle" | "vision" | "fourni";
+export type Lecteur = "pdf-text" | "paddle" | "vision" | "fourni";
 
 export interface VisionRead {
   tokens: PageToken[];

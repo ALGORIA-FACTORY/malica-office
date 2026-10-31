@@ -41,7 +41,7 @@ import {
   type ReadFlag,
   type TokenRef,
 } from "./token-plan.ts";
-import type { VisionSelection } from "./vision.ts";
+import type { Lecteur, VisionSelection } from "./vision.ts";
 
 export interface BuiltRead {
   contract: string;
@@ -84,8 +84,14 @@ export function buildExtractFromTokenPlan(params: {
    * permis à un appelant de perdre cette garantie sans s'en apercevoir.
    */
   matriculeDossier: string | null;
+  /**
+   * Le lecteur qui a relevé le plan (`VisionRead.lecteur`). Il décide si les
+   * montants en chiffres arabes orientaux se lisent (`litLesChiffresOrientaux`) ;
+   * absent, ils ne se lisent pas.
+   */
+  lecteur?: Lecteur;
 }): BuiltRead {
-  const { tokens, selection, devises, deviseDuDossier } = params;
+  const { tokens, selection, devises, deviseDuDossier, lecteur } = params;
   const citations: FieldCitation[] = [];
   const flags: ReadFlag[] = [];
 
@@ -126,7 +132,8 @@ export function buildExtractFromTokenPlan(params: {
 
   const treillis = new Map<string, { ref: Ref; hypotheses: ReturnType<typeof lireHypotheses> }>();
   function lireHypotheses(field: string, ref: Ref) {
-    return lireMontantDuPlan(tokens, field, ref ?? null, devise).hypotheses;
+    return lireMontantDuPlan(tokens, field, ref ?? null, devise, null, undefined, lecteur)
+      .hypotheses;
   }
   const relever = (field: string, ref: Ref): void => {
     treillis.set(field, { ref, hypotheses: lireHypotheses(field, ref) });
@@ -273,10 +280,15 @@ export function buildExtractFromTokenPlan(params: {
    * quelles lectures restaient en lice, pour que l'écran pose la question.
    */
   const montant = (field: string, ref: Ref, zone?: string, uiField?: string): string | null => {
-    const m = lireMontantDuPlan(tokens, field, ref ?? null, devise, zone ?? null, {
-      zone: zone ?? null,
-      uiField: uiField ?? field,
-    });
+    const m = lireMontantDuPlan(
+      tokens,
+      field,
+      ref ?? null,
+      devise,
+      zone ?? null,
+      { zone: zone ?? null, uiField: uiField ?? field },
+      lecteur,
+    );
     if (m.citation) citations.push(m.citation);
 
     const invraisemblable = invraisemblables.get(field);
@@ -301,10 +313,15 @@ export function buildExtractFromTokenPlan(params: {
 
   /** Cite un token déjà lu sous un second nom de champ, sans le relire. */
   const citerAussi = (field: string, ref: Ref, zone?: string): void => {
-    const m = lireMontantDuPlan(tokens, field, ref ?? null, devise, zone ?? null, {
-      zone: zone ?? null,
-      uiField: field,
-    });
+    const m = lireMontantDuPlan(
+      tokens,
+      field,
+      ref ?? null,
+      devise,
+      zone ?? null,
+      { zone: zone ?? null, uiField: field },
+      lecteur,
+    );
     if (m.citation) citations.push(m.citation);
   };
 

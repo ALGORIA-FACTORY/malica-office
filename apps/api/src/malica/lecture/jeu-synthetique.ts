@@ -57,7 +57,7 @@ import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
 import { readPdfTextLayer } from "./pdf-text.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
-import { laCoucheSeCroit, relever, type VisionSelection } from "./vision.ts";
+import { laCoucheSeCroit, relever, type Lecteur, type VisionSelection } from "./vision.ts";
 
 const DOSSIER_DU_JEU = new URL("../../../../../outils/jeu-synthetique/", import.meta.url);
 
@@ -112,7 +112,9 @@ export function lesCas(): CasSynthetique[] {
 
 /* ------------------------------------------------------------- le relevé */
 
-type Releve = { tokens: PageToken[]; lecteur: string } | { tokens: null; raison: string };
+type Releve =
+  | { tokens: PageToken[]; lecteur: Lecteur | typeof LECTEUR_DU_DIAGNOSTIC }
+  | { tokens: null; raison: string };
 
 /**
  * Comment le banc relève : comme la production, ou — DIAGNOSTIC — en croyant
@@ -381,6 +383,8 @@ async function mesurerUnCas(cas: CasSynthetique, mode: ModeDeReleve): Promise<Re
     devises: DEVISES_LUES_D_ESSAI,
     deviseDuDossier: DEVISE_D_ESSAI,
     matriculeDossier: cas.dossier.identifiantFiscal,
+    // Le diagnostic lit la couche de texte du PDF : c'est le lecteur `pdf-text`.
+    lecteur: releve.lecteur === LECTEUR_DU_DIAGNOSTIC ? "pdf-text" : releve.lecteur,
   });
   const orCas = enCasDOr(cas, releve.tokens, selection);
   const faux = Object.entries(orCas.attendu)
