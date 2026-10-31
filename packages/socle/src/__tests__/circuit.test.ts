@@ -1,5 +1,5 @@
-import type { Droit, EtatDeDemande } from "@malica/socle/ports/repositories";
-import { statutDuCircuit, type CircuitInterne } from "@malica/socle/statut-d-envoi";
+import type { Droit, EtatDeDemande } from "../ports/repositories.ts";
+import { statutDuCircuit, type CircuitInterne } from "../statut-d-envoi.ts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,7 +8,7 @@ import {
   etatDeMaDemande,
   gestesDuCircuit,
   type PieceDuCircuit,
-} from "@/lib/circuit";
+} from "../circuit.ts";
 
 /** Les droits du référentiel, tels que `acces.monAcces` les rend (lot 4). */
 const SIEGE: Droit[] = ["envoi.proprietaire"];

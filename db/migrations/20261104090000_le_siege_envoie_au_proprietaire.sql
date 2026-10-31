@@ -1335,6 +1335,56 @@ $$;
 -- --- 10. Garder : `piece.garder` ------------------------------------------------------------------
 --
 -- Repris de `20261029100000`, la première garde en plus.
+--
+-- « Garder » vaut jusqu'au fait suivant du circuit (revue Codex de #146) : le
+-- propriétaire garde la pièce d'un siège, puis accorde son rappel — la pièce
+-- revient au siège, « à envoyer ». `gardee_le` restait posé, et la pièce
+-- restait « Gardée » des deux côtés, sans envoi possible ; garder de nouveau
+-- après un nouvel envoi répondait « déjà gardée ». La garde EN VIGUEUR est
+-- donc la dernière en date : une garde antérieure au dernier fait du passage
+-- (envoyée, retournée, rappelée) ne vaut plus. Les autres colonnes d'état du
+-- passage suivent déjà le dernier fait : `transmise_le` est remis à zéro par
+-- la porte de visibilité, la « Vue » et le retour se lisent par envoi
+-- (`app.circuit_de_la_piece`), et la file du comptable par `app.suivi_de_la_piece`.
+
+create or replace function app.garde_en_vigueur(p_piece uuid, p_gardee_le timestamptz)
+returns timestamptz
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case
+    when p_gardee_le is null then null
+    -- Ce qu'on ne lit pas, on n'en apprend rien : la valeur reçue revient.
+    when not app.piece_lisible(p_piece) then p_gardee_le
+    when p_gardee_le > coalesce((select max(c.le) from capture.circuit c
+                                  where c.piece_id in (select app.versions_de_la_piece(p_piece))),
+                                '-infinity'::timestamptz)
+      then p_gardee_le
+  end
+$$;
+
+revoke all on function app.garde_en_vigueur(uuid, timestamptz) from public, anon;
+grant execute on function app.garde_en_vigueur(uuid, timestamptz) to authenticated;
+
+-- Repris de `20261029190000` : la garde qu'on lit est celle en vigueur. Une
+-- seule lecture — la liste, la fiche, l'accueil lisent cette colonne.
+create or replace view public.pieces_v with (security_invoker = true) as
+select p.id, p.tenant_id, p.entity_id, p.vis, p.source, p.storage_path, p.sha256,
+       p.page_count, p.status, p.idempotency_key, p.created_by, p.created_at,
+       p.updated_at, p.content_type, p.document_kind, p.document_kind_statut,
+       p.transmise_le,
+       case when p.gardee_le is null then null
+            else app.garde_en_vigueur(p.id, p.gardee_le) end as gardee_le,
+       p.source_piece_id, p.archivee_le,
+       (select r.remplacee_par from capture.remplacements r where r.piece_id = p.id) as remplacee_par,
+       (select r.piece_id from capture.remplacements r where r.remplacee_par = p.id) as remplace,
+       -- La photo qui fait foi : elle-même, ou la dernière de sa chaîne. Un lien
+       -- vers une version précédente mène là en un geste, même au bout de A → B → C.
+       case when exists (select 1 from capture.remplacements r where r.piece_id = p.id)
+            then app.version_courante(p.id) else p.id end as version_courante
+  from capture.pieces p;
 
 create or replace function public.capture_piece_garder(p_piece uuid)
 returns jsonb
@@ -1347,7 +1397,8 @@ declare
   v_status text;
   v_deja timestamptz;
 begin
-  select tenant_id, vis, status, gardee_le into v_tenant, v_vis, v_status, v_deja
+  select tenant_id, vis, status, app.garde_en_vigueur(id, gardee_le)
+    into v_tenant, v_vis, v_status, v_deja
     from capture.pieces where id = p_piece for update;
   if v_tenant is null then
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';

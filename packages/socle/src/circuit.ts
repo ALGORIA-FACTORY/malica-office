@@ -12,8 +12,8 @@ import type {
   EtapeDeDemande,
   EtatDeDemande,
   Visibility,
-} from "@malica/socle/ports/repositories";
-import type { CircuitInterne, StatutDuCircuit } from "@malica/socle/statut-d-envoi";
+} from "./ports/repositories.ts";
+import type { CircuitInterne, StatutDuCircuit } from "./statut-d-envoi.ts";
 
 const OBJETS: readonly DemandeSurPiece[] = ["rappel", "suppression"];
 
@@ -61,9 +61,12 @@ export function gestesDuCircuit(
   const enRoute = dernier === "envoyee" || dernier === "retournee";
   const retour = p.statut.statut === "retour";
   const libre = p.status === "capturee" || p.status === "lue";
+  // Retournée au siège : la main est à lui. Le propriétaire attend sa
+  // reprise ; il n'envoie ni ne garde ce qu'il vient de lui rendre.
+  const chezLeSiege = p.statut.chez === "siege";
 
   const envoyer: EtapeDeDemande | null =
-    p.vis !== "entite"
+    p.vis !== "entite" || chezLeSiege
       ? null
       : versLeComptable
         ? aUnCabinet
@@ -85,7 +88,8 @@ export function gestesDuCircuit(
 
   return {
     envoyer,
-    garder: a(droits, "piece.garder") && aUnCabinet && p.vis === "entite" && !p.gardeeLe,
+    garder:
+      a(droits, "piece.garder") && aUnCabinet && p.vis === "entite" && !p.gardeeLe && !chezLeSiege,
     retournerAuSiege: recoit && p.vis === "entite" && dernier === "envoyee",
     voirALOuverture:
       recoit &&

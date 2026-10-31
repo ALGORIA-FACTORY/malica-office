@@ -59,7 +59,7 @@ import {
   demandeDuSiegeATrancher,
   etatDeMaDemande,
   gestesDuCircuit,
-} from "@/lib/circuit";
+} from "@malica/socle/circuit";
 import {
   statutDuCircuit,
   TON_PME,
