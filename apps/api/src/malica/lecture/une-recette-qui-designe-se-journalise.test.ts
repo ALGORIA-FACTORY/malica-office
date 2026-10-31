@@ -32,6 +32,7 @@ import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../../db.ts";
+import { fermerLaPorte, sousLaPorte } from "../../sous-la-porte-d-essai.ts";
 import { arreterUneBorne } from "../../fabrique/borne-arretee.ts";
 import { RECETTE_FACTURE_A } from "../../fabrique/interprete-recettes-synthetiques.ts";
 import { executerRpc } from "../../rpc.ts";
@@ -72,18 +73,16 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
   /** Une pièce, et le plan de jetons qu'une lecture y aurait posé. */
   async function pieceAvecPlan(db: Requete, suffixe: string, plan: PageToken[]): Promise<string> {
     const { rows } = await db.query<{ id: string }>(
-      `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-       values ($1, 'pdf', 'partage', $2, $3) returning id`,
+      `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage') as id`,
       [org, `essai/${marque}-${suffixe}.pdf`, `${marque}-${suffixe}`],
     );
     const piece = rows[0]!.id;
-    for (const t of plan) {
-      await db.query(
-        `insert into capture.token_plan (tenant_id, piece_id, page, ordinal, text, x0, y0, x1, y1)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [org, piece, t.page, t.ordinal, t.text, t.x0, t.y0, t.x1, t.y1],
-      );
-    }
+    // Le plan de jetons s'inscrit par la porte de la lecture, comme en vrai.
+    await db.query(
+      `select public.capture_read_persist($1, $2::jsonb, 'extract.v1', '{}'::jsonb,
+                                          '[]'::jsonb, '[]'::jsonb)`,
+      [piece, JSON.stringify(plan)],
+    );
     return piece;
   }
 
@@ -92,7 +91,7 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
     assert.ok(compte);
     moi = compte;
 
-    await sousIdentiteDuServeur(moi.id, async (db) => {
+    await sousLaPorte(moi.id, async (db) => {
       const { rows } = await db.query<{ org: string }>(
         `select public.create_organization($1, $2, $3, null, $4, $5) as org`,
         ["pme", `RECETTE ${marque}`, "autonome", "TN", "TND"],
@@ -208,6 +207,7 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
       );
       await admin.end();
     }
+    await fermerLaPorte();
     await fermerLePool();
   });
 

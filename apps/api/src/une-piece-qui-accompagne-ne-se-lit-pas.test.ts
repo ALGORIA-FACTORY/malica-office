@@ -26,10 +26,9 @@ describe("une pièce qui en accompagne une autre ne se lit pas", { skip: !BASE_C
   const piece = (cle: string, source: string | null = null) =>
     sousIdentite(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key,
-                                     created_by, source_piece_id)
-         values ($1, 'pdf', 'entite', $2, $3, $4, $5) returning id`,
-        [pme, `essai/${marque}-${cle}.pdf`, `${marque}-${cle}`, dirigeant.id, source],
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'entite', null, null,
+                                              null, $4) as id`,
+        [pme, `essai/${marque}-${cle}.pdf`, `${marque}-${cle}`, source],
       );
       return rows[0]!.id;
     });

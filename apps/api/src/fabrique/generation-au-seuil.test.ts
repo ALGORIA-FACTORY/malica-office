@@ -127,18 +127,16 @@ describe(
       plan: PageToken[],
     ): Promise<string> {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-       values ($1, 'pdf', 'partage', $2, $3) returning id`,
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage') as id`,
         [org, `essai/${marque}-${nom}.pdf`, `${marque}-${nom}`],
       );
       const pieceId = rows[0]!.id;
-      for (const t of plan) {
-        await db.query(
-          `insert into capture.token_plan (tenant_id, piece_id, page, ordinal, text, x0, y0, x1, y1)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [org, pieceId, t.page, t.ordinal, t.text, t.x0, t.y0, t.x1, t.y1],
-        );
-      }
+      // Le plan de jetons s'inscrit par la porte de la lecture, comme en vrai.
+      await db.query(
+        `select public.capture_read_persist($1, $2::jsonb, 'extract.v1', '{}'::jsonb,
+                                            '[]'::jsonb, '[]'::jsonb)`,
+        [pieceId, JSON.stringify(plan)],
+      );
       pieces.set(nom, pieceId);
       plans.set(nom, plan);
       return pieceId;
@@ -396,18 +394,18 @@ describe(
        * le plus net : le modèle rend autre chose qu'un objet.
        */
       const piece = pieces.get("a")!;
-      const travail = await sousIdentiteDuServeur(a.id, async (db) =>
-        db
-          .query<{ id: string }>(
-            `insert into fabrique.travaux
-             (tenant_id, piece_id, nature, cle_idempotence, signature_cle)
-           values ($1, $2, 'generation_recette', $3, $4) returning id`,
-            // Le MEME format : il porte ses trois exemples, donc le modele est
-            // bel et bien appele, et c'est sa reponse qu'on refuse.
-            [orgA, piece, `${marque}-refus`, signatureCle],
-          )
-          .then((r) => r.rows[0]!.id),
-      );
+      // Posé par l'opérateur : la porte de la génération n'en propose qu'une
+      // par format, et celle de ce format a déjà tourné.
+      const travail = await admin
+        .query<{ id: string }>(
+          `insert into fabrique.travaux
+             (tenant_id, piece_id, nature, cle_idempotence, signature_cle, demande_par)
+           values ($1, $2, 'generation_recette', $3, $4, $5) returning id`,
+          // Le MEME format : il porte ses trois exemples, donc le modele est
+          // bel et bien appele, et c'est sa reponse qu'on refuse.
+          [orgA, piece, `${marque}-refus`, signatureCle, a.id],
+        )
+        .then((r) => r.rows[0]!.id);
 
       const avecBase = <T>(t: (db: Requete) => Promise<T>): Promise<T> =>
         sousIdentiteDuServeur(a.id, t);

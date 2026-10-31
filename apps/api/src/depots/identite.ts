@@ -160,20 +160,9 @@ export const identite = {
       validFrom: string;
     },
   ): Promise<{ id: string }> {
-    await db.query(
-      `update identity.fiches_fiscales
-          set valid_to = $2::date
-        where tenant_id = $1 and valid_to is null and valid_from < $2::date`,
-      [input.tenantId, input.validFrom],
-    );
-
     const { rows } = await db.query<{ id: string }>(
-      `insert into identity.fiches_fiscales
-         (tenant_id, regime_imposition, regime_tva, prorata_tva, secteur,
-          debut_activite, cloture_exercice, forme_juridique, mode_depot,
-          source, piece_id, valid_from)
-       values ($1, $2, $3, $4, $5, $6::date, $7, $8, $9, $10, $11, $12::date)
-       returning id`,
+      `select public.fiche_fiscale_etablir($1, $2, $3, $4, $5, $6::date, $7, $8, $9, $10, $11,
+                                           $12::date) as id`,
       [
         input.tenantId,
         input.regimeImposition ?? null,
@@ -331,10 +320,7 @@ export const identite = {
     input: { pmeOrgId: string; cabinetOrgId: string; status?: string },
   ): Promise<string> {
     const { rows } = await db.query<{ id: string }>(
-      `insert into engagements_v (pme_org_id, cabinet_org_id, status, created_by)
-       values ($1, $2, $3, auth.uid())
-       on conflict (pme_org_id, cabinet_org_id) do update set status = excluded.status
-       returning id`,
+      `select public.mandat_creer($1, $2, $3) as id`,
       [input.pmeOrgId, input.cabinetOrgId, input.status ?? "actif"],
     );
     return rows[0]!.id;
@@ -555,10 +541,10 @@ export const identite = {
     // Création et établissement principal dans la MÊME transaction : une
     // organisation sans établissement serait inutilisable, et l'adaptateur
     // d'origine pouvait la laisser dans cet état si le second appel échouait.
-    await db.query(
-      `insert into entities_v (tenant_id, code, name, is_default) values ($1, 'PRINCIPAL', $2, true)`,
-      [orgId, input.defaultEntityName?.trim() || input.name],
-    );
+    await db.query(`select public.etablissement_principal_ouvrir($1, $2)`, [
+      orgId,
+      input.defaultEntityName?.trim() || input.name,
+    ]);
 
     return orgId;
   },
@@ -580,16 +566,8 @@ export const identite = {
   /** Écrire son prénom et son nom. Un champ vide s'efface. */
   async ecrireMonProfil(db: Requete, prenom: string | null, nom: string | null) {
     const { rows } = await db.query<{
-      prenom: string | null;
-      nom: string | null;
-      display_name: string | null;
-    }>(
-      `insert into identity.profiles (user_id, prenom, nom)
-       values (auth.uid(), nullif(btrim($1), ''), nullif(btrim($2), ''))
-       on conflict (user_id) do update set prenom = excluded.prenom, nom = excluded.nom
-       returning prenom, nom, display_name`,
-      [prenom, nom],
-    );
-    return rows[0] ?? null;
+      r: { prenom: string | null; nom: string | null; display_name: string | null };
+    }>(`select public.mon_profil_ecrire($1, $2) as r`, [prenom, nom]);
+    return rows[0]?.r ?? null;
   },
 };

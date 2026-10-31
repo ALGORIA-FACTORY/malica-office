@@ -40,16 +40,17 @@ describe("un document se rattache à une pièce", { skip: !BASE_CONFIGUREE }, ()
       return rows[0]!.id;
     });
 
-  const piece = (cle: string, vis: "entite" | "personnel" = "entite") =>
-    sousIdentite(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key,
-                                     created_by, document_kind, document_kind_statut)
-         values ($1, 'pdf', $2::app.vis_t, $3, $4, $5, 'facture_achat', 'confirme') returning id`,
-        [pme, vis, `essai/${marque}-${cle}.pdf`, `${marque}-${cle}`, dirigeant.id],
-      );
-      return rows[0]!.id;
-    });
+  // Une pièce d'essai au type confirmé, posée par l'administration : aucun
+  // client n'écrit une pièce hors de sa porte (`capture_piece_register`).
+  const piece = async (cle: string, vis: "entite" | "personnel" = "entite") => {
+    const { rows } = await admin.query<{ id: string }>(
+      `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key,
+                                   created_by, document_kind, document_kind_statut)
+       values ($1, 'pdf', $2::app.vis_t, $3, $4, $5, 'facture_achat', 'confirme') returning id`,
+      [pme, vis, `essai/${marque}-${cle}.pdf`, `${marque}-${cle}`, dirigeant.id],
+    );
+    return rows[0]!.id;
+  };
 
   const rpc = (u: Utilisateur, methode: string, ...args: unknown[]) =>
     sousIdentite(u.id, (db) => executerRpc(db, { depot: "capture", methode, args }));

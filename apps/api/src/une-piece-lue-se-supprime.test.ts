@@ -38,9 +38,8 @@ describe("une pièce lue se supprime, et sa lecture reste", { skip: !BASE_CONFIG
     });
     piece = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'pdf', 'personnel', $2, $3, $4) returning id`,
-        [pme, `essai/${marque}.pdf`, marque, dirigeant.id],
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'personnel') as id`,
+        [pme, `essai/${marque}.pdf`, marque],
       );
       return rows[0]!.id;
     });

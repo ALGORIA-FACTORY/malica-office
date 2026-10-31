@@ -35,6 +35,7 @@ import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
+import { fermerLaPorte, sousLaPorte } from "../sous-la-porte-d-essai.ts";
 
 import { arreterUneBorne } from "./borne-arretee.ts";
 import {
@@ -58,13 +59,17 @@ function codeDe(erreur: unknown): string {
   return e.code ?? e.message ?? String(erreur);
 }
 
+/**
+ * Une écriture jouée sous le rôle des portes (aucun client n'écrit plus ces
+ * tables en direct), et son refus : code et message, ou rien.
+ */
 async function refusDe(
   utilisateur: string,
   sql: string,
   args: unknown[] = [],
 ): Promise<{ code: string | null; message: string }> {
   try {
-    await sousIdentiteDuServeur(utilisateur, async (db) => db.query(sql, args));
+    await sousLaPorte(utilisateur, async (db) => db.query(sql, args));
     return { code: null, message: "" };
   } catch (erreur) {
     return {
@@ -93,8 +98,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       );
       const org = rows[0]!.org;
       const piece = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-         values ($1, 'pdf', 'partage', $2, $3) returning id`,
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage') as id`,
         [org, `essai/${marque}-${suffixe}.pdf`, `${marque}-${suffixe}`],
       );
       return [org, piece.rows[0]!.id];
@@ -105,8 +109,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
   async function pieceDeplus(suffixe: string): Promise<string> {
     return sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-         values ($1, 'pdf', 'partage', $2, $3) returning id`,
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage') as id`,
         [orgA, `essai/${marque}-${suffixe}.pdf`, `${marque}-${suffixe}`],
       );
       return rows[0]!.id;
@@ -185,6 +188,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       );
       await admin.end();
     }
+    await fermerLaPorte();
     await fermerLePool();
   });
 

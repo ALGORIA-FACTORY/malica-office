@@ -27,6 +27,7 @@ import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
+import { fermerLaPorte, sousLaPorte } from "../sous-la-porte-d-essai.ts";
 import { executerRpc } from "../rpc.ts";
 
 const BASE_CONFIGUREE = Boolean(
@@ -44,14 +45,12 @@ describe("une pièce lue se supprime", { skip: !BASE_CONFIGUREE }, () => {
   async function lueParRecette(cle: string): Promise<string> {
     return sousIdentiteDuServeur(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
-        [org, `essai/${marque}-${cle}.jpg`, `${marque}-${cle}`, u.id],
+        `select public.capture_piece_register($1, 'photo', $2, $3, null, 'entite') as id`,
+        [org, `essai/${marque}-${cle}.jpg`, `${marque}-${cle}`],
       );
       const id = rows[0]!.id;
       await db.query(
-        `insert into fabrique.executions (tenant_id, recette_version_id, piece_id, issue)
-         values ($1, $2, $3, 'designation')`,
+        `select fabrique.execution_inscrire($1, $2, $3, 'designation', null, null, null)`,
         [org, version, id],
       );
       return id;
@@ -77,17 +76,19 @@ describe("une pièce lue se supprime", { skip: !BASE_CONFIGUREE }, () => {
         ["pme", `ESSAI ${marque}`, "autonome", "TN", "TND"],
       );
       org = rows[0]!.org;
-      const r = await db.query<{ id: string }>(
-        `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
-         values ($1, $2, $3, 'organisation') returning id`,
-        [org, "essai", `essai-${marque}`],
+      // La recette naît par sa porte, candidate, comme dans la fabrique.
+      const v = await db.query<{ r: { version_id: string } }>(
+        `select fabrique.candidate_inscrire($1, $2, $3, 'organisation', $4::jsonb, $5, '{}'::jsonb,
+                                            '{}'::uuid[], 'essai') as r`,
+        [
+          org,
+          "essai",
+          `essai-${marque}`,
+          JSON.stringify({ version: 1, champs: [] }),
+          "a".repeat(64),
+        ],
       );
-      const v = await db.query<{ id: string }>(
-        `insert into fabrique.recette_versions (tenant_id, recette_id, rang, definition, empreinte)
-         values ($1, $2, 1, $3, $4) returning id`,
-        [org, r.rows[0]!.id, JSON.stringify({ version: 1, champs: [] }), "a".repeat(64)],
-      );
-      version = v.rows[0]!.id;
+      version = v.rows[0]!.r.version_id;
     });
   });
 
@@ -101,6 +102,7 @@ describe("une pièce lue se supprime", { skip: !BASE_CONFIGUREE }, () => {
       );
     } finally {
       await admin.end();
+      await fermerLaPorte();
       await fermerLePool();
     }
   });
@@ -126,7 +128,7 @@ describe("une pièce lue se supprime", { skip: !BASE_CONFIGUREE }, () => {
 
   it("une pièce qui nourrit une recette le dit, au lieu de buter sur R7", async () => {
     const id = await lueParRecette("c");
-    await sousIdentiteDuServeur(u.id, async (db) => {
+    await sousLaPorte(u.id, async (db) => {
       const x = await db.query<{ id: string }>(
         `insert into fabrique.exemples
            (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu)

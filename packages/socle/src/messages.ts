@@ -3946,6 +3946,14 @@ const fr = {
     "Ce règlement a été annulé : il ne reçoit plus de justificatif.",
   "refus.justificatif.autre_cote_du_cabinet":
     "Ce règlement n’est pas du même côté que le justificatif : l’un est transmis à votre comptabilité, l’autre non.",
+  "refus.saisie.incomplete": "Un champ obligatoire est vide : complétez-le, puis recommencez.",
+  "refus.saisie.mal_formee":
+    "Les données envoyées sont mal formées : rechargez la page, puis recommencez.",
+  "refus.geste.non_permis": "Ce geste ne vous est pas permis sur ce dossier.",
+  "refus.banque.statut_par_le_lettrage":
+    "Une ligne de relevé se rapproche par le lettrage, pas à la main : lettrez-la avec son écriture.",
+  "refus.etablissement.principal_deja_ouvert":
+    "Cette organisation a déjà son établissement principal.",
   "pme.verifie.confirme": "saisie",
 } as const;
 
@@ -7702,6 +7710,13 @@ const en: Dict = {
   "refus.justificatif.reglement_eteint": "This payment was cancelled: it no longer takes a proof.",
   "refus.justificatif.autre_cote_du_cabinet":
     "This payment is not on the same side as the proof: one was sent to your accountant, the other was not.",
+  "refus.saisie.incomplete": "A required field is empty: fill it in, then try again.",
+  "refus.saisie.mal_formee": "The data sent is malformed: reload the page, then try again.",
+  "refus.geste.non_permis": "You are not allowed to do this on this file.",
+  "refus.banque.statut_par_le_lettrage":
+    "A statement line is reconciled by matching, not by hand: match it with its entry.",
+  "refus.etablissement.principal_deja_ouvert":
+    "This organisation already has its main establishment.",
   "pme.verifie.confirme": "entered",
 };
 
@@ -11326,6 +11341,11 @@ const ar: Dict = {
   "refus.justificatif.reglement_eteint": "أُلغي هذا التسديد: لم يعد يقبل مؤيّدًا.",
   "refus.justificatif.autre_cote_du_cabinet":
     "هذا التسديد ليس في الجهة نفسها التي فيها المؤيّد: أحدهما أُرسل إلى محاسبكم والآخر لا.",
+  "refus.saisie.incomplete": "حقل إلزامي فارغ: املؤوه ثم أعيدوا المحاولة.",
+  "refus.saisie.mal_formee": "البيانات المرسلة غير سليمة: أعيدوا تحميل الصفحة ثم أعيدوا المحاولة.",
+  "refus.geste.non_permis": "لا يُسمح لكم بهذا الإجراء على هذا الملف.",
+  "refus.banque.statut_par_le_lettrage": "يُطابَق سطر الكشف عبر الترصيد لا يدويًا: رصّدوه مع قيده.",
+  "refus.etablissement.principal_deja_ouvert": "لهذه المؤسسة مقرّها الرئيسي بالفعل.",
   "pme.verifie.confirme": "مُدخَل",
 };
 

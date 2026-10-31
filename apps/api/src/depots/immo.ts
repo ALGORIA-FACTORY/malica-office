@@ -105,12 +105,8 @@ export const immo = {
         code: "22023",
       });
     const { rows } = await db.query<{ id: string }>(
-      `insert into immo_assets_v
-         (tenant_id, entity_id, vis, piece_id, category_id, label, mise_en_service,
-          valeur_brute, valeur_residuelle, method, duree_annees, coefficient,
-          devise, pack_version_id)
-       values ($1, $2, $3::app.vis_t, $4, $5, $6, $7, $8::numeric, $9::numeric,
-               $10, $11, $12::numeric, $13, $14) returning id`,
+      `select public.immo_bien_creer($1, $2, $3::app.vis_t, $4, $5, $6, $7, $8::numeric,
+                                     $9::numeric, $10, $11, $12::numeric, $13, $14) as id`,
       [
         input.tenantId,
         input.entityId,
@@ -146,11 +142,8 @@ export const immo = {
     },
   ): Promise<void> {
     await db.query(
-      `update immo_assets_v
-          set label = $2, mise_en_service = $3, valeur_brute = $4::numeric,
-              valeur_residuelle = $5::numeric, method = $6, duree_annees = $7,
-              coefficient = $8::numeric, status = $9
-        where id = $1`,
+      `select public.immo_bien_modifier($1, $2, $3, $4::numeric, $5::numeric, $6, $7,
+                                        $8::numeric, $9)`,
       [
         input.id,
         input.label,
@@ -300,8 +293,7 @@ export const immo = {
     },
   ): Promise<string> {
     const { rows } = await db.query<{ id: string }>(
-      `insert into immo_cessions_v (tenant_id, asset_id, at, prix, vnc, resultat)
-       values ($1, $2, $3, $4::numeric, $5::numeric, $6::numeric) returning id`,
+      `select public.immo_cession_inscrire($1, $2, $3, $4::numeric, $5::numeric, $6::numeric) as id`,
       [input.tenantId, input.assetId, input.at, input.prix, input.vnc, input.resultat],
     );
     return rows[0]!.id;

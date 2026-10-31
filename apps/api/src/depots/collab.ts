@@ -189,17 +189,8 @@ export const collab = {
       redigeParMalica?: boolean;
     },
   ) {
-    const { rows } = await db.query(
-      `update collab_pv_v
-          set titre               = coalesce($2, titre),
-              participants        = case when $3::boolean then $4 else participants end,
-              decisions           = case when $5::boolean then $6 else decisions end,
-              sections            = coalesce($7::jsonb, sections),
-              chiffres            = coalesce($8::jsonb, chiffres),
-              ton                 = case when $9::boolean then $10 else ton end,
-              redige_par_malica = coalesce($11, redige_par_malica)
-        where id = $1
-        returning ${COLONNES_PV}`,
+    await db.query(
+      `select public.pv_modifier($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11)`,
       [
         input.id,
         input.titre ?? null,
@@ -214,9 +205,10 @@ export const collab = {
         input.redigeParMalica ?? null,
       ],
     );
-    const p = (rows as Record<string, unknown>[])[0];
-    if (!p) throw new Error("pv.introuvable");
-    return versPv(p);
+    const { rows } = await db.query(`select ${COLONNES_PV} from collab_pv_v where id = $1`, [
+      input.id,
+    ]);
+    return versPv((rows as Record<string, unknown>[])[0]!);
   },
 
   async pvEnvoyer(db: Requete, id: string) {
@@ -290,9 +282,7 @@ export const collab = {
     },
   ): Promise<string> {
     const { rows } = await db.query<{ id: string }>(
-      `insert into collab_pv_v
-         (cabinet_tenant_id, client_tenant_id, at, titre, participants, ordre_du_jour, decisions)
-       values ($1, $2, $3, $4, $5, $6, $7) returning id`,
+      `select public.pv_creer($1, $2, $3, $4, $5, $6, $7) as id`,
       [
         input.cabinetTenantId,
         input.clientTenantId ?? null,

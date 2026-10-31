@@ -211,11 +211,8 @@ async function enRetour(db: Requete, pieceId: string): Promise<boolean> {
 }
 async function closLeRetour(db: Requete, pieceId: string, ecritureId: string): Promise<void> {
   await db.query(
-    `insert into audit.event_log
-       (tenant_id, actor, action, object_schema, object_table, object_id, payload)
-     select tenant_id, auth.uid(), 'piece.retour_clos', 'capture', 'pieces', id,
-            jsonb_build_object('ecriture_id', $2::uuid, 'par_le_cabinet', true)
-       from pieces_v where id = app.version_courante($1)`,
+    `select public.fait_consigner('piece.retour_clos', app.version_courante($1),
+                                  jsonb_build_object('ecriture_id', $2::uuid, 'par_le_cabinet', true))`,
     [pieceId, ecritureId],
   );
 }
@@ -490,11 +487,8 @@ export const office = {
     await office.book(db, id);
     // Le fait qui dit « forcée » au journal du jour (`app.ecriture_prise_en_charge`).
     await db.query(
-      `insert into audit.event_log
-         (tenant_id, actor, action, object_schema, object_table, object_id,
-          pack_version_id, payload)
-       select tenant_id, auth.uid(), 'ecriture.forcee', 'socle', 'ecritures', id,
-              pack_version_id, jsonb_build_object('piece_id', piece_id, 'remplace', $2::uuid)
+      `select public.fait_consigner('ecriture.forcee', id,
+                                    jsonb_build_object('piece_id', piece_id, 'remplace', $2::uuid))
          from ecritures_v where id = $1`,
       [id, vivante?.id ?? null],
     );
@@ -574,9 +568,8 @@ export const office = {
     // `socle_ecriture_propose` : deux inscriptions d'un même règlement, même
     // saisi sur une photo reprise, passent l'une après l'autre.
     await db.query(
-      `select pi.id from capture.pieces pi join paiements_v p
-           on pi.id = app.version_courante(p.piece_id)
-        where p.id = $1 for update of pi`,
+      `select public.pieces_verrouiller(array(select app.version_courante(p.piece_id)
+                                                from paiements_v p where p.id = $1))`,
       [paiementId],
     );
     const qualifiee = qualificationLue(qualification);
@@ -643,12 +636,10 @@ export const office = {
       }));
     // La qualification du jour est celle que l'inscription relira.
     if (qualifiee)
-      await db.query(
-        `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
-       select tenant_id, auth.uid(), 'reglement.qualifie', 'socle', 'ecritures', id, $2::jsonb
-         from ecritures_v where id = $1`,
-        [id, JSON.stringify({ paiementId, qualification: qualifiee, retenue: r.retenue })],
-      );
+      await db.query(`select public.fait_consigner('reglement.qualifie', $1, $2::jsonb)`, [
+        id,
+        JSON.stringify({ paiementId, qualification: qualifiee, retenue: r.retenue }),
+      ]);
     return id;
   },
 
@@ -723,10 +714,9 @@ export const office = {
     // appelait la fonction pour chaque pièce visible sous la RLS — douze
     // secondes par inscription à 1 337 pièces (épreuve de charge, revue de #145).
     await db.query(
-      `select pi.id from capture.pieces pi
-        where pi.id = any (select unnest(array[e.piece_id, app.version_courante(e.piece_id)])
-                             from ecritures_v e where e.id = $1)
-        order by pi.id for update of pi`,
+      `select public.pieces_verrouiller(
+                (select array[e.piece_id, app.version_courante(e.piece_id)]
+                   from ecritures_v e where e.id = $1))`,
       [ecritureId],
     );
     const { rows } = await db.query<{

@@ -59,8 +59,7 @@ export const banque = {
     },
   ): Promise<string> {
     const { rows } = await db.query<{ id: string }>(
-      `insert into banque_comptes_v (tenant_id, entity_id, label, iban, devise, account_code)
-       values ($1, $2, $3, $4, $5, $6) returning id`,
+      `select public.banque_compte_ouvrir($1, $2, $3, $4, $5, $6) as id`,
       [
         input.tenantId,
         input.entityId,
@@ -107,18 +106,13 @@ export const banque = {
   ): Promise<number> {
     if (input.lines.length === 0) return 0;
 
-    // `unnest` insère le lot en une seule instruction, et la clé
+    // La porte insère le lot en une seule instruction, et la clé
     // d'idempotence écarte les lignes déjà importées : réimporter le même
     // relevé n'en duplique aucune. `montant` reste une chaîne décimale jusqu'au
     // type `numeric` — aucun flottant sur le chemin (R1).
-    const { rows } = await db.query(
-      `insert into banque_lignes_v
-         (tenant_id, compte_id, at, label, montant, reference, import_batch, idempotency_key)
-       select $1, $2, u.at::date, u.label, u.montant::numeric, u.reference, $3, u.cle
-         from unnest($4::date[], $5::text[], $6::text[], $7::text[], $8::text[])
-              as u(at, label, montant, reference, cle)
-       on conflict (tenant_id, idempotency_key) do nothing
-       returning id`,
+    const { rows } = await db.query<{ n: number }>(
+      `select public.banque_lignes_importer($1, $2, $3, $4::date[], $5::text[], $6::numeric[],
+                                            $7::text[], $8::text[]) as n`,
       [
         input.tenantId,
         input.compteId,
@@ -130,7 +124,7 @@ export const banque = {
         input.lines.map((l) => l.idempotencyKey),
       ],
     );
-    return rows.length;
+    return Number(rows[0]!.n);
   },
 
   async bookLines(
@@ -256,6 +250,6 @@ export const banque = {
   },
 
   async setLineStatus(db: Requete, ligneId: string, status: string): Promise<void> {
-    await db.query(`update banque_lignes_v set status = $2 where id = $1`, [ligneId, status]);
+    await db.query(`select public.banque_ligne_classer($1, $2)`, [ligneId, status]);
   },
 };

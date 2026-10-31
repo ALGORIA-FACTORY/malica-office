@@ -73,19 +73,18 @@ export const tiers = {
       note?: string | null;
     },
   ): Promise<string> {
+    // La porte normalise (code en capitales, espaces retirés) et refuse une
+    // saisie vide ; la base vérifie que le compte est bien collectif.
     const { rows } = await db.query<{ id: string }>(
-      `insert into tiers_v
-         (tenant_id, nature, code, raison_sociale, compte_collectif, identifiant_fiscal, note)
-       values ($1, $2, $3, $4, $5, $6, $7)
-       returning id`,
+      `select public.tiers_ouvrir($1, $2, $3, $4, $5, $6, $7) as id`,
       [
         input.tenantId,
         input.nature,
-        input.code.trim().toUpperCase(),
-        input.raisonSociale.trim(),
-        input.compteCollectif.trim(),
-        input.identifiantFiscal?.trim() || null,
-        input.note?.trim() || null,
+        input.code,
+        input.raisonSociale,
+        input.compteCollectif,
+        input.identifiantFiscal ?? null,
+        input.note ?? null,
       ],
     );
     return rows[0]!.id;
@@ -101,19 +100,13 @@ export const tiers = {
       note?: string | null;
     },
   ): Promise<void> {
-    await db.query(
-      `update tiers_v
-          set raison_sociale = $2, compte_collectif = $3,
-              identifiant_fiscal = $4, note = $5
-        where id = $1`,
-      [
-        input.id,
-        input.raisonSociale.trim(),
-        input.compteCollectif.trim(),
-        input.identifiantFiscal?.trim() || null,
-        input.note?.trim() || null,
-      ],
-    );
+    await db.query(`select public.tiers_modifier($1, $2, $3, $4, $5)`, [
+      input.id,
+      input.raisonSociale,
+      input.compteCollectif,
+      input.identifiantFiscal ?? null,
+      input.note ?? null,
+    ]);
   },
 
   /**
@@ -124,6 +117,6 @@ export const tiers = {
    * saisie, il reste dans les livres.
    */
   async desactiver(db: Requete, id: string, actif: boolean): Promise<void> {
-    await db.query(`update tiers_v set actif = $2 where id = $1`, [id, actif]);
+    await db.query(`select public.tiers_activer($1, $2)`, [id, actif]);
   },
 };

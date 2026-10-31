@@ -590,13 +590,11 @@ export async function rejugerLaPiece(
     return { change: true, verifie: false };
   }
   if (derniere.regles === REGLES_DU_JUGEMENT) return { change: false, verifie: false };
-  const { rowCount } = await db.query(
-    `insert into capture.analyses_verifiees (tenant_id, piece_id, analyse_id, regles)
-     values ($1, $2, $3, $4)
-     on conflict (tenant_id, analyse_id, regles) do nothing`,
-    [j.tenantId, pieceId, derniere.id, REGLES_DU_JUGEMENT],
+  const { rows: verifiee } = await db.query<{ inscrite: boolean }>(
+    `select public.analyse_verifier($1, $2) as inscrite`,
+    [derniere.id, REGLES_DU_JUGEMENT],
   );
-  return { change: false, verifie: (rowCount ?? 0) > 0 };
+  return { change: false, verifie: verifiee[0]!.inscrite };
 }
 
 async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaPiece> {
@@ -827,14 +825,11 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
 }
 
 async function poserLeJugement(db: Requete, j: JugementDeLaPiece): Promise<Analyse> {
+  // La porte tire le dossier de la pièce et refuse une lecture d'une autre.
   const { rows: poses } = await db.query<{ id: string }>(
-    `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
-                                   normalisation, controles, verdict, motifs,
-                                   doublon_numero, doublon_mf, doublon_lu, regles)
-     values ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb, $9, $10, $11, $12)
-     returning id`,
+    `select public.analyse_poser($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7::jsonb, $8, $9, $10,
+                                 $11) as id`,
     [
-      j.tenantId,
       j.pieceId,
       j.extractionId,
       j.pack,

@@ -74,9 +74,7 @@ type LigneDocument = Omit<DocumentComptable, "montant"> & {
 
 /** Le fuseau de la personne connectée : sa préférence, ou le défaut livré inscrit chez elle. */
 async function fuseauDeLaPersonne(db: Requete): Promise<string> {
-  await db.query(
-    `insert into notif.preferences (user_id) values (auth.uid()) on conflict (user_id) do nothing`,
-  );
+  await db.query(`select public.mes_preferences_ouvrir()`);
   const { rows } = await db.query<{ fuseau: string | null }>(
     `select fuseau from notif.preferences where user_id = auth.uid()`,
   );

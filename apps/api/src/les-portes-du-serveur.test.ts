@@ -139,7 +139,8 @@ describe("les portes du serveur", { skip: !BASE_CONFIGUREE }, () => {
       ),
       /expert/,
     );
-    // Et l'insertion directe ne contourne pas la fonction.
+    // Et l'insertion directe ne contourne pas la fonction : aucun client
+    // n'écrit plus la table (lot 6, toute écriture par une porte).
     await assert.rejects(
       sousIdentite(collaborateur.id, (db) =>
         db.query(
@@ -148,7 +149,7 @@ describe("les portes du serveur", { skip: !BASE_CONFIGUREE }, () => {
           [cabinet, pme, collaborateur.id],
         ),
       ),
-      /row-level security|sécurité/i,
+      /permission denied for table assignments/,
     );
     const { rows } = await sousIdentite(expert.id, (db) =>
       db.query<{ id: string }>("select public.collab_assign($1, $2, $3) as id", [
