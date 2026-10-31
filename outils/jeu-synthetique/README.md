@@ -108,67 +108,74 @@ recollage des milliers) → **désignation attendue** → `buildExtractFromToken
 
 ## Résultats (31 octobre 2026, 45 PDF mesurés)
 
-|                       | champs exacts    | écritures exactes | **fausses** | refus justes | refus injustes |
-| --------------------- | ---------------- | ----------------- | ----------- | ------------ | -------------- |
-| avant les corrections | 1005/1069 (94 %) | 25/37 (68 %)      | **4**       | 7/8          | 9              |
-| après                 | 1011/1069 (95 %) | 26/37 (70 %)      | **4**       | 7/8          | 8              |
-| — français (18)       | 451/451 (100 %)  | 12/15             | 1           | 3/3          | 2              |
-| — arabe (13)          | 232/290 (80 %)   | 6/11              | 1           | 1/2          | 5              |
-| — hybride (14)        | 328/328 (100 %)  | 8/11              | 2           | 3/3          | 1              |
+Depuis la correction 3 ci-dessous, la production relit en image les 27 PDF arabes et
+hybrides dont la couche de texte a perdu ses glyphes (`laCoucheSeCroit`). Sans PaddleOCR
+ici, ils ne sont plus mesurés sur la chaîne : `RAPPORT.md` les juge à part, sur leur
+couche telle quelle (« diagnostic du Socle »). Les deux tableaux de `RAPPORT.md` se
+lisent donc ensemble ; leur somme couvre les mêmes 45 PDF qu'au premier relevé.
 
-Le détail par contenu et cas par cas est dans `RAPPORT.md`. La toute première passe
-donnait 985 champs exacts : 20 écarts venaient du banc lui-même (son désignateur citait
-le deux-points de « MF client : »), corrigé dans le banc, pas dans le produit.
+| 45 PDF (chaîne + diagnostic)            | champs exacts    | écritures exactes | à trancher | **fausses** | refus justes | refus injustes |
+| --------------------------------------- | ---------------- | ----------------- | ---------- | ----------- | ------------ | -------------- |
+| premier relevé (avant toute correction) | 1005/1069 (94 %) | 25/37 (68 %)      | —          | **4**       | 7/8          | 9              |
+| reprise (commit 8dba4f5)                | 1011/1069 (95 %) | 26/37 (70 %)      | 3          | **0**       | 8/8          | 8              |
+| après (cette reprise)                   | 1050/1069 (98 %) | 33/37 (89 %)      | 4          | **0**       | 8/8          | **0**          |
+| — chaîne : français (18 PDF)            | 451/451 (100 %)  | 14/15             | 1          | 0           | 3/3          | 0              |
+| — diagnostic : arabe (13)               | 271/290 (93 %)   | 10/11             | 1          | 0           | 2/2          | 0              |
+| — diagnostic : hybride (14)             | 328/328 (100 %)  | 9/11              | 2          | 0           | 3/3          | 0              |
+
+« à trancher » : les quatre immobilisations (007, 044, 071, 083), proposées au compte du
+paramétrage avec la réserve nommée `immobilisation_a_trancher` — ni exactes, ni fausses.
+Les 19 champs inexacts restants sont tous dans des PDF arabes au texte perdu : le nom
+de l'émetteur (glyphes sans Unicode) et le numéro relu espacé (« ٢٠٢٦ / ٥٠٣٦ »), sans
+effet sur l'écriture. Le détail par contenu et cas par cas est dans `RAPPORT.md`. La toute
+première passe donnait 985 champs exacts : 20 écarts venaient du banc lui-même (son
+désignateur citait le deux-points de « MF client : »), corrigé dans le banc.
 
 ### Causes racines corrigées dans cette PR
 
+Chacune est reproduite par une épreuve qui échoue avant et passe après.
+
 1. **Une date aux séparateurs espacés ne se lisait pas** (`normalizeDate`). La couche de
    texte d'un PDF arabe rend « ٢٠٢٦/١٠/٠٧ » en cinq jetons ; la plage se relit
-   « ٢٠٢٦ / ١٠ / ٠٧ », la date était perdue, la pièce sortait « à compléter ». Épreuve
-   `token-plan.test.ts` (échoue avant, passe après). Cas 050 : refus injuste → exacte.
+   « ٢٠٢٦ / ١٠ / ٠٧ ». Épreuve `token-plan.test.ts`. Cas 050.
 2. **Un avoir arabe se proposait en achat** : `ref.titres_de_piece` ne portait que des
-   titres français. Migration `20261106090000_un_avoir_se_dit_aussi_en_arabe.sql`
-   (« إشعار دائن », statut `anomalie`), instantané `referentiel-d-essai.json` mis à jour,
-   cas ajouté au témoin `mesure-des-propositions.ts` (échoue avant : « fausse » ; passe
-   après). `REGLES_DU_JUGEMENT` suit l'empreinte.
+   titres français. Migration `20261106090000_un_avoir_se_dit_aussi_en_arabe.sql`.
+3. **Une couche de texte aux glyphes perdus était crue** (cas 047) : elle se relit en
+   image, et un titre illisible n'est jamais « facture » (`texteSansUnicode`).
+4. **Une immobilisation partait en charge en silence** (007, 071, 083) : réserve
+   `immobilisation_a_trancher`, familles datées `ref.biens_immobilisables` (INCERTAIN).
+   Puis (044) : une désignation PERDUE pose la même question au lieu de passer.
+5. **Le FODEC n'entrait pas dans la base de la TVA** (005, 017, 042, 081). Le
+   référentiel le dit (`ref.fiscal_charges.taxable`, Code de la TVA art. 6-I cité par la
+   migration `20261019150000`) ; rien ne le lisait. `taxable` va du port `FiscalCharge`
+   au jugement et au moteur P4 ; la normalisation essaie la base imprimée comme HT (droit
+   ajouté) et comme base de la TVA (droit compris). Une pièce qui laisse le droit hors
+   de la base tient encore, telle qu'imprimée, avec une réserve qui le nomme
+   (`droitsHorsAssiette`). Épreuves `normaliser-montants.test.ts`, `controles.test.ts`,
+   `balance.test.ts`, cas du témoin.
+6. **Une vente arabe se refusait sur le nom** (046, 052) : `sens_de_la_piece` décide
+   d'abord par le MATRICULE de l'émetteur, identifiant légal ; le nom ne décide que sans
+   lui, et le contredit quand il se compare (l'inversion du 5 octobre reste une anomalie).
+   Aucun nom arabe n'existe à la fiche du dossier : il n'en faut pas.
+7. **Les montants en chiffres orientaux étaient refusés quel que soit le lecteur** (044,
+   048, 052). La politique (`treillisMontant`) venait d'une MESURE, pas d'une décision : le
+   modèle de vision les rend inversés (« ١٢ » lu « ٢١ », 18 octobre 2026). La couche de
+   texte d'un PDF porte les codes des chiffres eux-mêmes : elle est crue
+   (`litLesChiffresOrientaux`), la vision et PaddleOCR (non mesuré) ne le sont pas. Les
+   séparateurs « ٫ » « ٬ » ne sont pas en cause : le lecteur unique (`montant-imprime`) en
+   rend toutes les lectures et l'arithmétique tranche.
+8. **Un numéro en chiffres orientaux n'avait pas de clé de doublon** (`normNumero` les
+   effaçait avec la ponctuation) : aucune facture arabe n'était rapprochée d'un doublon.
 
-### Les quatre écritures fausses qui restent, et leur cause
+### Ce qui reste
 
-- **007, 071, 083 — l'immobilisation part en charge (601).** Le Socle ne sait pas
-  immobiliser : sans famille reconnue, il prend le compte par défaut du paramétrage, et
-  la famille la plus proche (`PETIT_EQUIPEMENT`) est déclarée « du matériel, pas une
-  immobilisation ». Correction à concevoir, hors de cette PR : un critère d'immobilisation
-  au référentiel (familles d'articles rattachées à `ref.immo_categories`, seuil de
-  capitalisation daté — **INCERTAIN**, à fixer par un expert-comptable), et, faute de
-  critère, une proposition qui **refuse** (« nature à confirmer ») au-dessus du seuil.
-  Au sens de R10, la 601 est un défaut que l'expert corrige ; au sens du banc, c'est une
-  écriture fausse.
-- **047 — l'avoir arabe en PDF se propose encore en achat**, malgré la correction 2 : la
-  couche de texte de ce PDF (imprimé par Chromium) ne porte AUCUN texte arabe exploitable
-  — les glyphes liés n'ont pas de correspondance Unicode (`\u0000`), le titre se lit en
-  lettres isolées. Correction à concevoir : quand la couche de texte porte des glyphes
-  sans correspondance, relire la page en image (rastériser par pdf.js et
-  `@napi-rs/canvas`, comme `miniature-pdf.ts`, puis PaddleOCR) au lieu de croire la
-  couche. Elle touche la chaîne que R2 protège ; elle n'est pas faite à moitié ici.
-
-### Les refus injustes qui restent (aucun n'écrit faux)
-
-- **FODEC (005, 017, 042, 081)** : `coherence_arithmetique/incoherent`. L'équation de la
-  normalisation (Σ HT × (1 + taux) + autres = TTC) et celle de la relecture
-  (Σ bases des lignes = HT) ignorent qu'un droit **taxable** (`ref.fiscal_charges.taxable`,
-  vrai pour le FODEC) entre dans la base de TVA. Correction : porter `taxable` du
-  référentiel jusqu'au jugement (port `FiscalCharge`, relevé, instantané), l'admettre
-  dans les deux équations, et composer l'écriture avec le HT hors droit. Moyenne, pas
-  faite ici.
-- **Ventes arabes (046, 052)** : `sens_de_la_piece`. Le contrôle confronte le NOM de
-  l'émetteur au nom du dossier, qui n'existe qu'en français ; une facture de vente en
-  arabe porte le nom arabe. Il faut un nom arabe à la fiche de la société
-  (`identity.organizations`), lu par le contrôle. Ici, le nom arabe est de toute façon
-  illisible (glyphes sans Unicode, voir 047).
-- **Montants en chiffres orientaux (044, 048, 052)** : refusés par politique
-  (`treillisMontant`), parce qu'un modèle de vision les inverse. Une couche de texte, elle,
-  est exacte : la politique pourrait les admettre selon le lecteur, si le jeton portait
-  son lecteur. Décision à prendre, pas un défaut.
+- **Rien de faux, aucun refus injuste** sur les 45 PDF. Les quatre immobilisations
+  restent « à trancher » par construction : le Socle ne choisit pas entre charge et
+  immobilisation sans critère daté au référentiel (seuil de capitalisation — INCERTAIN).
+- **Les 27 PDF au texte perdu ne sont mesurés que par le diagnostic** : en production
+  ils passent par PaddleOCR, qui ne lit pas les montants en chiffres orientaux (non
+  mesuré). Les cas 044, 048, 052 y resteront refusés tant que PaddleOCR n'est pas
+  mesuré sur ces chiffres.
 
 ## Ce qui n'a pas tourné ici
 
@@ -178,10 +185,6 @@ le deux-points de « MF client : »), corrigé dans le banc, pas dans le produit
   proxy de l'atelier (403). Les 55 images (30 photos, 25 carnets) sont donc **non
   mesurées** ; la mesure ne simule aucun OCR depuis la spécification. Elles se mesurent
   telles quelles avec `OCR_URL` pointant sur le service.
-- **La base.** Le serveur Postgres de l'atelier était arrêté et ne pouvait pas être
-  relancé depuis cette session : les épreuves en base
-  (`le-jeu-synthetique-dit-le-referentiel.test.ts`, `le-referentiel-d-essai-dit-vrai.test.ts`
-  avec le nouveau titre) n'ont pas tourné localement ; la CI les joue.
 
 ## INCERTAIN — à confirmer par un expert-comptable
 

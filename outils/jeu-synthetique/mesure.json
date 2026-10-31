@@ -191,8 +191,8 @@
   "verdict": "non_mesuree",
   "champsFaux": 0,
   "diagnostic": {
-   "verdict": "refus_injuste",
-   "champsFaux": 13
+   "verdict": "a_trancher",
+   "champsFaux": 2
   }
  },
  "045": {
@@ -223,8 +223,8 @@
   "verdict": "non_mesuree",
   "champsFaux": 0,
   "diagnostic": {
-   "verdict": "refus_injuste",
-   "champsFaux": 16
+   "verdict": "exacte",
+   "champsFaux": 2
   }
  },
  "049": {
@@ -255,8 +255,8 @@
   "verdict": "non_mesuree",
   "champsFaux": 0,
   "diagnostic": {
-   "verdict": "refus_injuste",
-   "champsFaux": 16
+   "verdict": "exacte",
+   "champsFaux": 2
   }
  },
  "053": {

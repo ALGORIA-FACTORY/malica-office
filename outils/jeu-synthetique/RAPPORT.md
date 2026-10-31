@@ -59,24 +59,24 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
 
 | | cas | mesurés | champs exacts | écritures exactes | à trancher | **fausses** | refus justes | refus mal nommés | refus injustes |
 |---|---|---|---|---|---|---|---|---|---|
-| **tous** | 27 | 27 | 560/618 (91 %) | 17/22 (77 %) | 2 | 0 | 5/5 (100 %) | 0 | 3 |
-| langue = ar | 13 | 13 | 232/290 (80 %) | 8/11 (73 %) | 0 | 0 | 2/2 (100 %) | 0 | 3 |
+| **tous** | 27 | 27 | 599/618 (97 %) | 19/22 (86 %) | 3 | 0 | 5/5 (100 %) | 0 | 0 |
+| langue = ar | 13 | 13 | 271/290 (93 %) | 10/11 (91 %) | 1 | 0 | 2/2 (100 %) | 0 | 0 |
 | langue = hybride | 14 | 14 | 328/328 (100 %) | 9/11 (82 %) | 2 | 0 | 3/3 (100 %) | 0 | 0 |
-| rendu = pdf | 27 | 27 | 560/618 (91 %) | 17/22 (77 %) | 2 | 0 | 5/5 (100 %) | 0 | 3 |
+| rendu = pdf | 27 | 27 | 599/618 (97 %) | 19/22 (86 %) | 3 | 0 | 5/5 (100 %) | 0 | 0 |
 | scenario = achat_13 | 2 | 2 | 41/42 (98 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
 | scenario = achat_eur | 2 | 2 | 37/38 (97 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
-| scenario = achat_exonere | 2 | 2 | 26/42 (62 %) | 1/2 (50 %) | 0 | 0 | — | 0 | 1 |
+| scenario = achat_exonere | 2 | 2 | 40/42 (95 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
 | scenario = achat_fodec | 2 | 2 | 47/49 (96 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
-| scenario = achat_immobilisation | 3 | 3 | 41/54 (76 %) | 0/3 (0 %) | 2 | 0 | — | 0 | 1 |
+| scenario = achat_immobilisation | 3 | 3 | 52/54 (96 %) | 0/3 (0 %) | 3 | 0 | — | 0 | 0 |
 | scenario = achat_plusieurs_taux | 2 | 2 | 62/63 (98 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
 | scenario = achat_remise | 3 | 3 | 64/66 (97 %) | 3/3 (100 %) | 0 | 0 | — | 0 | 0 |
 | scenario = achat_un_taux | 4 | 4 | 90/93 (97 %) | 2/2 (100 %) | 0 | 0 | 2/2 (100 %) | 0 | 0 |
 | scenario = avoir_achat | 2 | 2 | 43/44 (98 %) | — | 0 | 0 | 2/2 (100 %) | 0 | 0 |
 | scenario = vente_plusieurs_taux | 1 | 1 | 33/33 (100 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
-| scenario = vente_un_taux | 3 | 3 | 59/75 (79 %) | 1/2 (50 %) | 0 | 0 | 1/1 (100 %) | 0 | 1 |
+| scenario = vente_un_taux | 3 | 3 | 73/75 (97 %) | 2/2 (100 %) | 0 | 0 | 1/1 (100 %) | 0 | 0 |
 | scenario = vente_usd_export | 1 | 1 | 17/19 (89 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
 | defaut = montant_illisible | 1 | 1 | 27/27 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
-| defaut = null | 24 | 24 | 486/543 (90 %) | 17/22 (77 %) | 2 | 0 | 2/2 (100 %) | 0 | 3 |
+| defaut = null | 24 | 24 | 525/543 (97 %) | 19/22 (86 %) | 3 | 0 | 2/2 (100 %) | 0 | 0 |
 | defaut = total_faux | 1 | 1 | 26/27 (96 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
 | defaut = tva_fausse | 1 | 1 | 21/21 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
 
@@ -87,20 +87,9 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
   - champ references.numero : lu "٢٠٢٦ / ٥٠٣٦", attendu "٢٠٢٦/٥٠٣٦"
 - **043** (ar, pdf, achat_un_taux, défaut total_faux) — refus_juste : coherence_arithmetique/incoherent
   - champ issuer : lu "ﻪ\u0000 ﺣ لا \u0000 \u0000 ﻠ ﻟ \u0000 ں ا ﺮ \u0000 \u0000 \u0000 ر د", attendu "دزيران للفلاحة"
-- **044** (ar, pdf, achat_immobilisation) — refus_injuste : coherence_arithmetique/taux_non_lu
+- **044** (ar, pdf, achat_immobilisation) — a_trancher : proposée avec la réserve « immobilisation_a_trancher » : à trancher par le cabinet
   - champ issuer : lu "ں\u0000 وادرا \u0000 ٮ ﺎ \u0000 ﺳ ور", attendu "ورشات وادران"
   - champ references.numero : lu "٢٠٢٦ / ٨٠٥١", attendu "٢٠٢٦/٨٠٥١"
-  - champ totals.base_ht : lu null, attendu "4387.269"
-  - champ totals.vat : lu null, attendu "833.581"
-  - champ totals.ttc : lu null, attendu "5221.850"
-  - champ lines[0].tax_code : lu null, attendu "TVA19"
-  - champ lines[0].base_ht : lu null, attendu "4387.269"
-  - champ lines[0].vat_amount : lu null, attendu "833.581"
-  - champ other_charges[0].code : lu null, attendu "DROIT_TIMBRE"
-  - champ other_charges[0].amount : lu null, attendu "1.000"
-  - champ articles[0].quantity : lu null, attendu "1.000"
-  - champ articles[0].unit_price_ht : lu null, attendu "4387.269"
-  - champ articles[0].total_ht : lu null, attendu "4387.269"
 - **045** (ar, pdf, achat_eur) — exacte
   - champ issuer : lu "ٮ\u0000 ﺎ ﻣ ﺪ \u0000 ﺤ ﻠ ﻟ \u0000 ٮ ﺮ \u0000 \u0000 \u0000 ﺮ ﻤ \u0000 \u0000", attendu "تمزيرت للخدمات"
 - **046** (ar, pdf, vente_usd_export) — exacte
@@ -108,23 +97,9 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
   - champ references.numero : lu "٢٠٢٦ / ٦٠٤٢", attendu "٢٠٢٦/٦٠٤٢"
 - **047** (ar, pdf, avoir_achat) — refus_juste : nature_piece
   - champ issuer : lu "ٮ\u0000 ﺎ ﻣ ﺪ \u0000 ﺤ ﻠ ﻟ \u0000 ٮ ﺮ \u0000 \u0000 \u0000 ﺮ ﻤ \u0000 \u0000", attendu "تمزيرت للخدمات"
-- **048** (ar, pdf, achat_exonere) — refus_injuste : coherence_arithmetique/taux_non_lu
+- **048** (ar, pdf, achat_exonere) — exacte
   - champ issuer : lu "ﻊ \u0000 \u0000 \u0000 ر ﻮ \u0000 \u0000 ﻠ ﻟ \u0000 ە ﺮ \u0000 \u0000 ﻤ ﻟ و", attendu "ولميرة للتوزيع"
   - champ references.numero : lu "٢٠٢٦ / ٤٢٢٨", attendu "٢٠٢٦/٤٢٢٨"
-  - champ totals.base_ht : lu null, attendu "5820.320"
-  - champ totals.vat : lu null, attendu "0.000"
-  - champ totals.ttc : lu null, attendu "5821.320"
-  - champ lines[0].tax_code : lu null, attendu "EXO"
-  - champ lines[0].base_ht : lu null, attendu "5820.320"
-  - champ lines[0].vat_amount : lu null, attendu "0.000"
-  - champ other_charges[0].code : lu null, attendu "DROIT_TIMBRE"
-  - champ other_charges[0].amount : lu null, attendu "1.000"
-  - champ articles[0].quantity : lu null, attendu "2.000"
-  - champ articles[0].unit_price_ht : lu null, attendu "2908.747"
-  - champ articles[0].total_ht : lu null, attendu "5817.494"
-  - champ articles[1].quantity : lu null, attendu "1.000"
-  - champ articles[1].unit_price_ht : lu null, attendu "2.826"
-  - champ articles[1].total_ht : lu null, attendu "2.826"
 - **049** (ar, pdf, achat_13) — exacte
   - champ issuer : lu "ٮ\u0000 ﺎ \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 ﻜ ﻤ ﻠ ﻟ \u0000 ە ﺮ \u0000 \u0000 ﺼ \u0000 \u0000", attendu "قصيرة للمكتبيات"
 - **050** (ar, pdf, achat_un_taux) — exacte
@@ -132,23 +107,9 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
   - champ references.numero : lu "٢٠٢٦ / ٩١٨٣", attendu "٢٠٢٦/٩١٨٣"
 - **051** (ar, pdf, achat_plusieurs_taux) — exacte
   - champ issuer : lu "ں\u0000 ﺎ \u0000 \u0000 ﻠ ﺳ \u0000 ﻪ ﻌ \u0000 \u0000 ﻄ ﻣ", attendu "مطبعة سلفان"
-- **052** (ar, pdf, vente_un_taux) — refus_injuste : coherence_arithmetique/taux_non_lu
+- **052** (ar, pdf, vente_un_taux) — exacte
   - champ issuer : lu "ﻪ\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 ﺮ \u0000 ﺤ \u0000 \u0000 ﻟ ا \u0000 ں ﺎ \u0000 \u0000 ﺮ \u0000 \u0000 \u0000 ﻪ ﻛ ﺮ \u0000 ﺳ", attendu "شركة نرفان التجريبية"
   - champ references.numero : lu "٢٠٢٦ / ٣٥٤٢", attendu "٢٠٢٦/٣٥٤٢"
-  - champ totals.base_ht : lu null, attendu "3229.094"
-  - champ totals.vat : lu null, attendu "613.528"
-  - champ totals.ttc : lu null, attendu "3843.622"
-  - champ lines[0].tax_code : lu null, attendu "TVA19"
-  - champ lines[0].base_ht : lu null, attendu "3229.094"
-  - champ lines[0].vat_amount : lu null, attendu "613.528"
-  - champ other_charges[0].code : lu null, attendu "DROIT_TIMBRE"
-  - champ other_charges[0].amount : lu null, attendu "1.000"
-  - champ articles[0].quantity : lu null, attendu "2.000"
-  - champ articles[0].unit_price_ht : lu null, attendu "1431.741"
-  - champ articles[0].total_ht : lu null, attendu "2863.482"
-  - champ articles[1].quantity : lu null, attendu "4.000"
-  - champ articles[1].unit_price_ht : lu null, attendu "91.403"
-  - champ articles[1].total_ht : lu null, attendu "365.612"
 - **053** (ar, pdf, achat_remise) — exacte
   - champ issuer : lu "ﻪ\u0000 ﺣ لا \u0000 \u0000 ﻠ ﻟ \u0000 ں ا ﺮ \u0000 \u0000 \u0000 ر د", attendu "دزيران للفلاحة"
 - **071** (hybride, pdf, achat_immobilisation) — a_trancher : proposée avec la réserve « immobilisation_a_trancher » : à trancher par le cabinet
