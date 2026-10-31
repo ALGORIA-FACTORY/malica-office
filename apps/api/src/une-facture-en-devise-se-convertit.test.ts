@@ -965,7 +965,28 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
       motif: "Cours de la banque du cabinet",
     });
     assert.deepEqual(await tauxPropose(id), ["3.7555"]);
+    // Une dérogation vaut pour SON jour : lundi 21, l'import du vendredi.
+    const lundi = await transmise({ date: "2026-09-21" });
+    assert.deepEqual(await tauxPropose(lundi), ["3.7001"]);
   });
+
+  it("un cours saisi par la société quand elle tenait ses livres se valide chez son cabinet (revue de #148)", async () => {
+    const jour = "2026-09-22";
+    // Le cours de l'époque où la société tenait ses livres : son organisation,
+    // que le cabinet ne lit pas en direct.
+    await admin.query(
+      `insert into parametrage.cours_de_change
+         (tenant_id, origine, devise, vers_devise, date_du_cours, taux, unite, source, saisi_par)
+       values ($1, 'saisie', 'USD', 'TND', $2::date, 2.9001, 1, $3, $4)`,
+      [pme, jour, source, dirigeant.id],
+    );
+    const id = await transmise({ date: jour, devise: "USD" });
+    const r = await proposee(id);
+    assert.deepEqual([...new Set(r.proposition.lignes.map((l) => l.taux_de_change))], ["2.9001"]);
+    const ecritureId = (await cabinetFait("office.valider", id, r.empreinte)) as string;
+    assert.ok((await lignesInscrites(ecritureId)).every((l) => l.devise_origine === "USD"));
+  });
+
   it("la règle du cabinet vaut pour ses dossiers ; une valeur nulle du dossier lui rend la main (revue de #148)", async () => {
     const lire = async (jour: string) =>
       (

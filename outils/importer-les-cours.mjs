@@ -67,14 +67,14 @@ export function lireLesCours(texte) {
     fautes.push(`ligne 1 : en-tête attendu « ${ENTETE.join(",")}[,${MOTIF}] »`);
     return { cours, fautes };
   }
-  // Une ligne qui RÉPÈTE une ligne du fichier (même clé, même taux, même
-  // unité) se nomme : elle ne serait pas inscrite, et l'import tomberait sur
-  // un message trompeur (revue de #148). Une ligne qui corrige une ligne
-  // précédente du fichier, motivée, reste permise.
-  const vues = new Map();
-  const cle = (...champs) => champs.join("|");
-  // Un taux s'écrit de plusieurs façons (« 3.30 », « 3.3 ») : la clé le
-  // prend sous sa forme réduite, comme la base le compare.
+  // Une ligne qui RÉPÈTE la ligne précédente de son cours (même jour, mêmes
+  // devises, même source, même taux, même unité) se nomme : elle ne serait
+  // pas inscrite, et l'import tomberait sur un message trompeur (revue de
+  // #148). Une ligne qui la corrige, motivée, reste permise — y compris pour
+  // revenir à une valeur antérieure.
+  const derniere = new Map();
+  // Un taux s'écrit de plusieurs façons (« 3.30 », « 3.3 ») : il se compare
+  // sous sa forme réduite, comme la base le compare.
   const reduit = (t) =>
     t
       .replace(/^0+(?=\d)/, "")
@@ -94,6 +94,8 @@ export function lireLesCours(texte) {
     }
     const motif = avecMotif ? tous.slice(ENTETE.length).join(",").trim() || null : null;
     const [date, devise, versDevise, taux, unite, source] = champs;
+    const cle = `${date}|${devise}|${versDevise}|${source}`;
+    const valeur = `${reduit(taux)}/${unite}`;
     const jour = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : null;
     if (!jour || Number.isNaN(jour.getTime()) || jour.toISOString().slice(0, 10) !== date)
       fautes.push(`ligne ${n} : date « ${date} » illisible (AAAA-MM-JJ)`);
@@ -106,12 +108,10 @@ export function lireLesCours(texte) {
     else if (!/^10*$/.test(unite)) fautes.push(`ligne ${n} : unité « ${unite} » (1, 10, 100…)`);
     else if (!/^[A-Z][A-Z0-9_]*$/.test(source))
       fautes.push(`ligne ${n} : source « ${source} » illisible`);
-    else if (vues.has(cle(date, devise, versDevise, source, reduit(taux), unite)))
-      fautes.push(
-        `ligne ${n} : répète la ligne ${vues.get(cle(date, devise, versDevise, source, reduit(taux), unite))}`,
-      );
+    else if (derniere.get(cle)?.valeur === valeur)
+      fautes.push(`ligne ${n} : répète la ligne ${derniere.get(cle).n}`);
     else {
-      vues.set(cle(date, devise, versDevise, source, reduit(taux), unite), n);
+      derniere.set(cle, { n, valeur });
       cours.push({ date, devise, versDevise, taux, unite: Number(unite), source, motif });
     }
   });

@@ -98,11 +98,13 @@ test("une ligne qui répète une ligne du fichier se nomme ; une correction moti
       "2026-09-10,USD,TND,2.9,1,BCT,",
       "2026-09-10,EUR,TND,3.34,1,BCT,",
       "2026-09-10,EUR,TND,3.3401,1,BCT,Rectificatif de la source",
+      "2026-09-10,EUR,TND,3.34,1,BCT,Rectificatif annulé",
     ].join("\n"),
   );
   assert.deepEqual(fautes, ["ligne 4 : répète la ligne 2"]);
+  // Revenir à la valeur d'avant, motivé, est une correction comme une autre.
   assert.deepEqual(
     cours.map((c) => c.taux),
-    ["3.3400", "2.9", "3.3401"],
+    ["3.3400", "2.9", "3.3401", "3.34"],
   );
 });

@@ -40,8 +40,8 @@
 --      import est consigné (`parametrage.cours_de_change_imports`).
 --   5. `app.cours_applicable` : LE cours d'un dossier, pour une devise et un
 --      jour — dans le recul, le rang de son origine d'abord (une dérogation
---      du dossier, du cabinet, puis l'import officiel, puis la saisie), puis
---      le plus proche du jour. Un cours saisi ne passe JAMAIS devant
+--      du dossier, du cabinet — pour son jour seulement —, puis l'import
+--      officiel, puis la saisie), puis le plus proche du jour. Un cours saisi ne passe JAMAIS devant
 --      l'import officiel sans dérogation motivée.
 --   6. `app.cours_du_jugement_a_jour` : un jugement qui a lu un cours (ou une
 --      règle) est périmé dès que la même question rend une autre réponse.
@@ -108,15 +108,19 @@ create table ref.change_regles_d_ecart (
 insert into ref.change_regles_d_ecart (code) values ('base_la_plus_grande');
 
 -- La préséance des origines d'un cours, dans le recul : la plus petite gagne.
+-- Une origine `jour_seul` ne vaut que pour SON jour : une dérogation se décide
+-- pour une date, elle ne déborde pas sur les jours que le recul couvre
+-- (revue de #148 : la dérogation du 8 passait devant l'import du 12).
 create table ref.rangs_des_cours (
-  code text primary key check (code ~ '^[a-z][a-z_]*$'),
-  rang smallint not null unique check (rang > 0)
+  code     text primary key check (code ~ '^[a-z][a-z_]*$'),
+  rang     smallint not null unique check (rang > 0),
+  jour_seul boolean not null
 );
-insert into ref.rangs_des_cours (code, rang) values
-  ('derogation_dossier', 1),
-  ('derogation_cabinet', 2),
-  ('import', 3),
-  ('saisie', 4);
+insert into ref.rangs_des_cours (code, rang, jour_seul) values
+  ('derogation_dossier', 1, true),
+  ('derogation_cabinet', 2, true),
+  ('import', 3, false),
+  ('saisie', 4, false);
 
 do $$
 declare t text;
@@ -393,6 +397,8 @@ create table parametrage.cours_de_change_imports (
   corrections integer not null check (corrections >= 0),
   -- Qui a lancé l'import, tel que l'exploitation le nomme.
   par         text not null check (length(btrim(par)) > 0),
+  -- Le rôle de base qui a écrit : posé par la base, pas par l'opérateur.
+  role_base   text not null default session_user,
   importe_le  timestamptz not null default clock_timestamp()
 );
 
@@ -603,7 +609,8 @@ grant execute on function public.cours_de_change_saisir(uuid, text, text, date, 
 -- Pour un dossier, une devise, un jour, la source et le recul de la règle :
 -- parmi les cours publiés sans dépasser le jour ni remonter plus loin que le
 -- recul, le RANG de son origine d'abord (`ref.rangs_des_cours`) : la
--- dérogation du dossier, celle du cabinet, l'import officiel, la saisie ;
+-- dérogation du dossier, celle du cabinet (pour leur jour seulement),
+-- l'import officiel, la saisie ;
 -- puis le plus près du jour ; à rang et date égaux, la plus récente (une
 -- correction). Les cours d'un AUTRE cabinet n'entrent jamais.
 --
@@ -628,6 +635,7 @@ as $$
           or app.is_platform())
      and c.devise = p_devise and c.vers_devise = p_vers_devise and c.source = p_source
      and c.date_du_cours <= p_jour and c.date_du_cours >= p_jour - p_recul
+     and (not r.jour_seul or c.date_du_cours = p_jour)
      and (c.dossier_id is null or c.dossier_id = p_dossier)
      and (c.tenant_id is null
           or c.tenant_id = p_dossier
@@ -790,6 +798,27 @@ grant execute on function public.socle_ecriture_contre_passer(uuid, uuid) to aut
 -- et une ligne peut porter sa devise d'origine. La signature perd son défaut
 -- « TND » : une fonction ne se dépouille d'un défaut qu'en se recréant.
 
+-- Une ligne convertie est-elle conforme au cours que le jugement a lu : sa
+-- devise d'origine, la devise du dossier, le taux pour une unité ?
+-- `security definer` : le cours peut avoir été saisi par une organisation
+-- dont l'appelant n'est pas membre (la société qui tenait ses livres, avant
+-- son cabinet) ; `app.cours_applicable` le lit de même. Ne rend qu'un booléen.
+create or replace function app.cours_de_la_ligne_conforme(
+  p_cours uuid, p_devise text, p_vers_devise text, p_taux numeric)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((select c.devise = p_devise and c.vers_devise = p_vers_devise
+                          and c.taux / c.unite = p_taux
+                     from parametrage.cours_de_change c where c.id = p_cours), false)
+$$;
+
+revoke all on function app.cours_de_la_ligne_conforme(uuid, text, text, numeric) from public, anon;
+grant execute on function app.cours_de_la_ligne_conforme(uuid, text, text, numeric) to authenticated;
+
 drop function public.socle_ecriture_propose(uuid, text, date, text, uuid, jsonb, text, uuid);
 
 create function public.socle_ecriture_propose(
@@ -834,9 +863,10 @@ begin
   if exists (select 1 from jsonb_array_elements(p_lignes) l
               where nullif(l ->> 'cours_id', '') is not null
                  or nullif(l ->> 'devise_origine', '') is not null) then
+    -- Le jugement que la proposition a lu : celui de cette pièce.
     select a.controles into v_controles
       from capture.analyses a
-     where a.piece_id in (p_piece, app.version_courante(p_piece))
+     where a.piece_id = p_piece
      order by a.created_at desc
      limit 1;
     select (k -> 'preuves' -> 'cours' ->> 'id')::uuid into v_cours_juge
@@ -850,14 +880,13 @@ begin
     if exists (
       select 1
         from jsonb_array_elements(p_lignes) l
-        left join parametrage.cours_de_change c on c.id = nullif(l ->> 'cours_id', '')::uuid
        where (nullif(l ->> 'cours_id', '') is not null
               or nullif(l ->> 'devise_origine', '') is not null)
-         and (c.id is distinct from v_cours_juge
-          or (l ->> 'devise_origine') is distinct from c.devise
-          or c.vers_devise is distinct from v_devise_du_dossier
-          or (l ->> 'taux_de_change')::numeric is distinct from c.taux / c.unite
-          or (l ->> 'montant_origine') is null)) then
+         and (nullif(l ->> 'cours_id', '')::uuid is distinct from v_cours_juge
+          or (l ->> 'montant_origine') is null
+          or not app.cours_de_la_ligne_conforme(v_cours_juge, l ->> 'devise_origine',
+                                                v_devise_du_dossier,
+                                                (l ->> 'taux_de_change')::numeric))) then
       raise exception 'refus.ecriture.cours_de_la_ligne' using errcode = '22023';
     end if;
   end if;
