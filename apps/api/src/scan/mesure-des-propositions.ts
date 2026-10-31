@@ -50,8 +50,8 @@ import {
   TYPES_D_ESSAI,
 } from "./referentiel-d-essai.ts";
 import { JEU_D_OR } from "../malica/lecture/jeu-d-or.ts";
-import { buildExtractFromTokenPlan } from "../malica/lecture/read-piece.ts";
-import { texteDuMontantCite } from "../malica/lecture/token-plan.ts";
+import { buildExtractFromTokenPlan, type BuiltRead } from "../malica/lecture/read-piece.ts";
+import { texteDuMontantCite, type PageToken } from "../malica/lecture/token-plan.ts";
 import { DEVISES_LUES_D_ESSAI, devisesDEssai } from "./devise-d-essai.ts";
 
 /** Une ligne d'écriture attendue : compte, débit, crédit, et le code de taxe d'une ligne de TVA. */
@@ -178,6 +178,44 @@ function facture(f: Facture): LectureAJuger {
   };
 }
 
+/**
+ * Une lecture citée, telle que la base la porterait après `persisterLecture` :
+ * l'extraction relue au plan, le texte imprimé de chaque citation, le haut de
+ * la première page (le titre), la confiance de chaque champ.
+ *
+ * Partagée par le jeu d'or et le jeu synthétique (`jeu-synthetique.ts`) : les
+ * deux jugent une lecture construite par la MÊME relecture que la production.
+ */
+export function lectureCitee(
+  tokens: readonly PageToken[],
+  lu: BuiltRead,
+  confianceGlobale: number,
+  recueLe: string,
+): LectureAJuger {
+  // Le texte de chaque citation, comme `analyserPiece` le relit.
+  const textes = new Map<string, string[]>();
+  for (const c of lu.citations) {
+    const texte = texteDuMontantCite(tokens, c);
+    if (texte !== null) textes.set(c.field, [...(textes.get(c.field) ?? []), texte]);
+  }
+  const premiere = Math.min(...tokens.map((t) => t.page));
+  const haut = tokens
+    .filter((t) => t.page === premiere && t.y0 <= HAUT_DE_PAGE)
+    .sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0)
+    .map((t) => t.text);
+  const extrait = lu.extract as LectureAJuger["payload"];
+  return {
+    payload: extrait,
+    imprime: (champ) => textes.get(champ)?.join(" ") ?? null,
+    titre: haut.join(" ") || null,
+    sensDit: null,
+    date: extrait.document_date ?? null,
+    recueLe,
+    confianceParChamp: confianceParChamp(lu.citations, tokens, confianceGlobale),
+    doublonDe: null,
+  };
+}
+
 /** Le jeu d'or, joué comme la production : désignation relue au plan, citations, confiance. */
 function depuisLeJeuDOr(): CasDeMesure[] {
   return JEU_D_OR.map((cas) => {
@@ -187,37 +225,17 @@ function depuisLeJeuDOr(): CasDeMesure[] {
       ...devisesDEssai(cas.decimales),
       matriculeDossier: cas.matriculeDossier,
     });
-    // Le texte de chaque citation, comme `analyserPiece` le relit.
-    const textes = new Map<string, string[]>();
-    for (const c of lu.citations) {
-      const texte = texteDuMontantCite(cas.tokens, c);
-      if (texte !== null) textes.set(c.field, [...(textes.get(c.field) ?? []), texte]);
-    }
-    const premiere = Math.min(...cas.tokens.map((t) => t.page));
-    const haut = cas.tokens
-      .filter((t) => t.page === premiere && t.y0 <= HAUT_DE_PAGE)
-      .sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0)
-      .map((t) => t.text);
-    const extrait = lu.extract as LectureAJuger["payload"];
     return {
       nom: `jeu d'or — ${cas.nom}`,
       provenance: cas.provenance,
       dossier: { nom: DOSSIER.nom, identifiantFiscal: cas.matriculeDossier ?? "" },
-      lecture: {
-        payload: extrait,
-        imprime: (champ) => textes.get(champ)?.join(" ") ?? null,
-        titre: haut.join(" ") || null,
-        sensDit: null,
-        date: extrait.document_date ?? null,
-        // Lue le 4 octobre 2026 (provenance du cas).
-        recueLe: "2026-10-04",
-        confianceParChamp: confianceParChamp(
-          lu.citations,
-          cas.tokens,
-          (cas.designation as { overall_confidence: number }).overall_confidence,
-        ),
-        doublonDe: null,
-      },
+      // Lue le 4 octobre 2026 (provenance du cas).
+      lecture: lectureCitee(
+        cas.tokens,
+        lu,
+        (cas.designation as { overall_confidence: number }).overall_confidence,
+        "2026-10-04",
+      ),
       // 3 020,000 HT, 573,800 TVA, 1,000 de timbre, 3 594,800 TTC (imprimés).
       attendu: {
         journal: "ACH",
@@ -667,6 +685,18 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     attendu: null,
   },
   {
+    /*
+     * Jeu synthétique, 31 octobre 2026 : un avoir arabe titré « إشعار دائن »
+     * se proposait en ACHAT — `ref.titres_de_piece` ne connaissait que des
+     * titres français. Le pire résultat : une écriture fausse, sans réserve.
+     */
+    nom: "titré « إشعار دائن » (avoir, en arabe), aux montants positifs : jamais un achat",
+    provenance: "jeu synthétique, cas 047 (outils/jeu-synthetique/cas/047.json)",
+    lecture: facture({ ...SIMPLE, titre: "إشعار دائن رقم 2026/0045" }),
+    attendu: null,
+    refus: "nature_piece",
+  },
+  {
     nom: "un avoir aux montants négatifs : un avoir, pas une facture incohérente",
     provenance: "revue indépendante de la PR 144",
     lecture: facture({
@@ -1107,7 +1137,7 @@ export function juger(cas: CasDeMesure) {
 }
 
 /** Joue un cas sur la vraie chaîne, et compare à ce que la pièce imprime. */
-function jouer(cas: CasDeMesure): Issue {
+export function jouer(cas: CasDeMesure): Issue {
   const jugement = juger(cas);
   // L'exposant de la devise que le jugement a décidée, comme `propositionDePiece`.
   const decimales =

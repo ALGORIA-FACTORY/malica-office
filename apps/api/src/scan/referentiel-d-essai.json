@@ -191,6 +191,12 @@
       "documentType": "avoir",
       "statut": "anomalie",
       "refus": "Avoir : à saisir par le cabinet (titre « {titre} »)."
+    },
+    {
+      "motif": "إشعار\\s+دائن",
+      "documentType": "avoir",
+      "statut": "anomalie",
+      "refus": "Avoir : à saisir par le cabinet (titre « {titre} »)."
     }
   ],
   "change": {
