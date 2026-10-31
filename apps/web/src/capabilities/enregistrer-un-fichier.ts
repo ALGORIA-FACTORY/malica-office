@@ -19,7 +19,7 @@
  * documents de l'application, et le chemin est rendu pour que l'écran puisse
  * le dire. Un bouton qui semble ne rien faire est pire que pas de bouton.
  */
-import { nomSur } from "@/lib/nom-de-fichier";
+import { nomDeFichierSur } from "@/lib/nom-de-fichier";
 
 import { estNatif } from "./coque";
 
@@ -55,7 +55,7 @@ export async function enregistrerUnFichier(
   nom: string,
 ): Promise<FichierRemis> {
   const blob = octets instanceof Blob ? octets : new Blob([octets]);
-  const sur = nomSur(nom);
+  const sur = nomDeFichierSur(nom);
 
   if (estNatif()) {
     const { Filesystem, Directory } = await import("@capacitor/filesystem");

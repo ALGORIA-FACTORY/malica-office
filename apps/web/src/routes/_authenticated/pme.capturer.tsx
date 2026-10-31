@@ -17,9 +17,9 @@ import { office } from "@/verticals/malica-office/composition";
 import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
-import { useMonCabinet } from "@/hooks/use-mon-cabinet";
+import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
-import { fusionnerLEnvoi, type EtatDeLEnvoi, type Restee } from "@/lib/envoi";
+import { fusionnerLEnvoi, partieLeVers, type EtatDeLEnvoi, type Restee } from "@/lib/envoi";
 
 /**
  * Capturer — de la photo à la pièce, une question par écran.
@@ -338,7 +338,10 @@ function PmeCapturer() {
    * jamais « tout est parti » à tort.
    */
   const [envoiDuLot, setEnvoiDuLot] = useState<EtatDeLEnvoi | null>(null);
-  const cabinet = useMonCabinet(pme.tenantId);
+  // Le siège envoie au propriétaire, qui transmet au comptable (lot 4) : la
+  // destination et son nom viennent d'un seul endroit.
+  const envoiVers = useDestinationDeLEnvoi(pme.tenantId);
+  const destination = envoiVers.destination;
   const [erreur, setErreur] = useState<string | null>(null);
 
   const echoue = (e: unknown) =>
@@ -656,7 +659,9 @@ function PmeCapturer() {
    *  prend ici — à la fin de la lecture, quand le verdict existe. */
   const terminer = useMutation({
     mutationFn: async (partager: boolean) => {
-      for (const p of lues) await office().collab.garderPiece(p.id);
+      // « Garder » est la décision de qui transmet au comptable ; le siège
+      // termine sans rien décider pour le propriétaire.
+      if (envoiVers.peutGarder) for (const p of lues) await office().collab.garderPiece(p.id);
       return partager;
     },
     onSuccess: async (partager) => {
@@ -667,14 +672,18 @@ function PmeCapturer() {
     },
     onError: echoue,
   });
-  /** Envoyer au cabinet — ou renvoyer ce qui n'était pas parti. */
+  /**
+   * Envoyer — au propriétaire pour le siège, au comptable pour qui transmet :
+   * la porte de l'envoi (`piece_envoyer`) choisit, comme sur la fiche. Ou
+   * renvoyer ce qui n'était pas parti.
+   */
   const envoyer = useMutation({
     mutationFn: async (ids: readonly string[]) => {
       const parties: string[] = [];
       const restees: Restee[] = [];
       for (const id of ids) {
         try {
-          await office().collab.setPieceVis(id, "partage");
+          await office().collab.envoyer(id);
           parties.push(id);
         } catch (e) {
           // Une panne va au journal ; un refus rédigé (licence impayée…) dit
@@ -1552,16 +1561,21 @@ function PmeCapturer() {
         {/* ════════════════════════════════════════════ 8 · ENVOYÉ
             Plein écran, comme sur la fiche : qui les a reçues, depuis quand,
             et ce qui est resté — nommé (maquette du 27 octobre 2026). */}
-        {!plusTard && etape === 8 && !finPrivee && envoiDuLot && envoiDuLot.parties.length > 0
+        {!plusTard &&
+        etape === 8 &&
+        !finPrivee &&
+        destination &&
+        envoiDuLot &&
+        envoiDuLot.parties.length > 0
           ? (() => {
-              const qui = cabinet.data?.name ?? t("pme.coffre.votreComptable");
+              const qui = envoiVers.quiPour(destination);
               const parties = retenues.filter((p) => envoiDuLot.parties.includes(p.id));
               const restees = envoiDuLot.restees.flatMap((r) => {
                 const p = retenues.find((x) => x.id === r.id);
                 return p ? [{ ...p, refus: r.refus }] : [];
               });
               const derniere = parties
-                .map((p) => p.transmiseLe)
+                .map((p) => partieLeVers(p, destination))
                 .filter((d): d is string => Boolean(d))
                 .sort()
                 .at(-1);
@@ -1588,17 +1602,17 @@ function PmeCapturer() {
                             qui,
                             quand,
                           })
-                        : t("envoi.lot.chez", { count: parties.length, qui, quand })
+                        : envoiVers.quoiDuLot(destination, parties.length, quand)
                   }
                   suite={
                     aRepondre.length > 0
                       ? t("pme.capture.fin.questions", { count: aRepondre.length })
                       : seule
-                        ? t("envoi.piece.suite", { qui })
+                        ? envoiVers.suite(destination)
                         : null
                   }
                   trace={
-                    derniere ? t("envoi.trace", { qui, jour: jourEtMois(derniere, locale) }) : null
+                    derniere ? envoiVers.trace(destination, jourEtMois(derniere, locale)) : null
                   }
                   restees={{
                     titre: t("envoi.lot.restee", { count: restees.length }),
@@ -1667,13 +1681,17 @@ function PmeCapturer() {
             </div>
 
             {transmis === null ? (
-              pme.aUnCabinet ? (
+              destination ? (
                 <div className="c-envoi">
-                  <b>{t("pme.capture.fin.envoyer.q", { count: lues.length })}</b>
+                  <b>
+                    {destination === "proprietaire"
+                      ? t("pme.capture.fin.envoyer.q.proprietaire", { count: lues.length })
+                      : t("pme.capture.fin.envoyer.q", { count: lues.length })}
+                  </b>
                   {envoiDuLot && envoiDuLot.parties.length === 0 ? (
                     /* Rien n'est parti : une phrase, et réessayer. */
                     <PasEncoreParti
-                      qui={cabinet.data?.name ?? t("pme.coffre.votreComptable")}
+                      qui={envoiVers.quiPour(destination)}
                       reessayer={() => envoyer.mutate(envoiDuLot.restees.map((r) => r.id))}
                       enCours={envoyer.isPending}
                     />
@@ -1684,7 +1702,9 @@ function PmeCapturer() {
                         disabled={terminer.isPending || envoyer.isPending}
                         onClick={() => terminer.mutate(false)}
                       >
-                        {t("pme.capture.fin.garder")}
+                        {envoiVers.peutGarder
+                          ? t("pme.capture.fin.garder")
+                          : t("pme.capture.fin.terminer")}
                       </button>
                       <button
                         type="button"

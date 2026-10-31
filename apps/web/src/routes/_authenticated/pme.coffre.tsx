@@ -13,13 +13,14 @@ import { usePme } from "@/components/malica/pme-context";
 import { Aide } from "@/components/malica/aide";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { partieLeVers, partieVers } from "@/lib/envoi";
 import { LotInterrompu, unParUn } from "@/lib/un-par-un";
 import { jourEtMois, momentDeLEnvoi, montant } from "@/lib/lisible";
 import { EcranEnvoye } from "@/components/malica/envoye";
 import { office } from "@/verticals/malica-office/composition";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
-import { useMonCabinet } from "@/hooks/use-mon-cabinet";
+import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
 
 export const Route = createFileRoute("/_authenticated/pme/coffre")({
   head: () => ({
@@ -101,8 +102,9 @@ function PmeCoffre() {
   const [transmis, setTransmis] = useState<readonly string[] | null>(null);
 
   const pieces = usePiecesLues();
-  const cabinet = useMonCabinet(pme.tenantId);
-  const nomDuCabinet = cabinet.data?.name ?? t("pme.coffre.votreComptable");
+  // Le siège envoie au propriétaire ; qui transmet, au comptable (lot 4).
+  const envoi = useDestinationDeLEnvoi(pme.tenantId);
+  const destination = envoi.destination;
 
   const relire = async () => {
     await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
@@ -163,9 +165,10 @@ function PmeCoffre() {
 
   const transmettre = useMutation({
     mutationFn: async (ids: readonly string[]) => {
-      // La décision est relue au dernier instant ; aucun destinataire n'est inventé.
-      const destinataire = await office().identity.monCabinet(pme.tenantId);
-      if (!destinataire) throw new Error(t("relation.sansDestinataire"));
+      // Vers le comptable, la décision est relue au dernier instant ; aucun
+      // destinataire n'est inventé. La base choisit le passage (`piece_envoyer`).
+      if (destination === "cabinet" && !(await office().identity.monCabinet(pme.tenantId)))
+        throw new Error(t("relation.sansDestinataire"));
       await office().collab.transmettreLesPieces([...ids]);
       return ids;
     },
@@ -210,30 +213,30 @@ function PmeCoffre() {
 
   /* ============================================================== ENVOYÉ
    *
-   * Les papiers sont partis chez le cabinet : sans cet écran, ils
-   * disparaîtraient de la grille sans un mot (maquette « Écran Envoyé », 27
-   * octobre 2026). Les mots et l'heure viennent de la base relue.
+   * Les papiers sont partis — chez le propriétaire (le siège, lot 4) ou chez
+   * le comptable : sans cet écran, ils disparaîtraient de la grille sans un
+   * mot (maquette « Écran Envoyé », 27 octobre 2026). Partie chez le
+   * propriétaire, une pièce reste dans la société : c'est le circuit qui le
+   * dit (`partieVers`). Les mots et l'heure viennent de la base relue.
    */
   const partis = transmis ? toutes.filter((p) => transmis.includes(p.id)) : [];
   const premier = partis[0];
-  if (transmis && premier && partis.every((p) => p.vis === "partage")) {
-    const quand = premier.transmiseLe ? momentDeLEnvoi(premier.transmiseLe, locale).quand : null;
+  if (transmis && premier && destination && partis.every((p) => partieVers(p, destination))) {
+    const qui = envoi.quiPour(destination);
+    const le = partieLeVers(premier, destination);
+    const quand = le ? momentDeLEnvoi(le, locale).quand : null;
     return (
       <EcranEnvoye
         titre={t("envoi.lot.tout", { count: partis.length })}
         quoi={
           quand
             ? partis.length === 1
-              ? t("envoi.piece.chez", { piece: titreDe(premier), qui: nomDuCabinet, quand })
-              : t("envoi.lot.chez", { count: partis.length, qui: nomDuCabinet, quand })
-            : t("pme.transmettre.faite", { cabinet: nomDuCabinet })
+              ? t("envoi.piece.chez", { piece: titreDe(premier), qui, quand })
+              : envoi.quoiDuLot(destination, partis.length, quand)
+            : t("pme.transmettre.faite", { cabinet: qui })
         }
-        suite={partis.length === 1 ? t("envoi.piece.suite", { qui: nomDuCabinet }) : null}
-        trace={
-          premier.transmiseLe
-            ? t("envoi.trace", { qui: nomDuCabinet, jour: jourEtMois(premier.transmiseLe, locale) })
-            : null
-        }
+        suite={partis.length === 1 ? envoi.suite(destination) : null}
+        trace={le ? envoi.trace(destination, jourEtMois(le, locale)) : null}
         principale={{ libelle: t("envoi.coffre.retour"), action: () => setTransmis(null) }}
         secondaire={
           partis.length === 1
@@ -255,8 +258,8 @@ function PmeCoffre() {
   /* ================================================= DANS LA SOCIÉTÉ
    *
    * Le même écran de fin que tout passage : ce qui a bougé, et où. Rien n'est
-   * parti chez le cabinet, et c'est écrit ; « Transmettre » est le geste
-   * suivant, s'il y a un cabinet à qui transmettre.
+   * parti, et c'est écrit ; « Envoyer » est le geste suivant, vers le
+   * propriétaire pour le siège, vers le comptable pour qui transmet.
    */
   const entres = misEnSociete ? toutes.filter((p) => misEnSociete.includes(p.id)) : [];
   const entre = entres[0];
@@ -275,17 +278,17 @@ function PmeCoffre() {
           </>
         }
         suite={
-          cabinet.data
-            ? t("pme.coffre.mis.suite", { qui: nomDuCabinet })
-            : // Sans cabinet, la raison de l'absence de « Transmettre » se dit ici.
+          destination
+            ? t("pme.coffre.mis.suite", { qui: envoi.quiPour(destination) })
+            : // Personne à qui envoyer : la raison de l'absence du geste se dit ici.
               t("relation.sansDestinataire")
         }
         trace={null}
         principale={{ libelle: t("envoi.coffre.retour"), action: () => setMisEnSociete(null) }}
         secondaire={
-          cabinet.data
+          destination
             ? {
-                libelle: t("pme.prive.transmettre", { cabinet: nomDuCabinet }),
+                libelle: envoi.action(destination),
                 action: () => {
                   if (!transmettre.isPending) transmettre.mutate(entres.map((p) => p.id));
                 },

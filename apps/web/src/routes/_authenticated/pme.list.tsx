@@ -24,10 +24,10 @@ import type { NatureTiers, PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
-import { resteATransmettre } from "@/lib/envoi";
+import { partieLeVers, partieVers, resteATransmettre } from "@/lib/envoi";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
-import { aLeDroit, useMonAcces } from "@/hooks/use-mon-acces";
+import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
 
 export const Route = createFileRoute("/_authenticated/pme/list")({
   head: () => ({
@@ -196,26 +196,25 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
   const pme = usePme();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const cabinet = useMonCabinet(pme.tenantId);
   /*
    * Le même geste en lot, deux passages (lot 4) : le siège envoie au
    * propriétaire, le propriétaire au comptable. La base choisit
-   * (`collab.transmettreLesPieces` passe par `piece_envoyer`).
+   * (`collab.transmettreLesPieces` passe par `piece_envoyer`) ; l'écran le
+   * nomme comme partout (`useDestinationDeLEnvoi`).
    */
-  const acces = useMonAcces(pme.tenantId);
-  const auProprietaire = aLeDroit(acces.data, "envoi.proprietaire");
+  const envoiVers = useDestinationDeLEnvoi(pme.tenantId);
+  const destination = envoiVers.destination;
+  const auProprietaire = destination === "proprietaire";
   const [armee, setArmee] = useState(false);
   /** Les pièces parties dans ce geste — l'écran « Envoyé » les compte. */
   const [envoi, setEnvoi] = useState<readonly string[] | null>(null);
   /** Un refus rédigé par la base (impayé, pièce privée) : il dit quoi faire. */
   const [refus, setRefus] = useState<string | null>(null);
   const restantes = pieces.filter(resteATransmettre);
-  const qui = cabinet.data?.name ?? t("pme.coffre.votreComptable");
+  const qui = destination ? envoiVers.quiPour(destination) : "";
   /** Partie dans ce geste : chez le propriétaire (le siège), ou au cabinet. */
-  const partie = (p: PieceLue) =>
-    auProprietaire ? statutDuCircuit(p).chez === "proprietaire" : p.vis === "partage";
-  const partieLe = (p: PieceLue) =>
-    auProprietaire ? (p.circuit?.envoyeeLe ?? null) : (p.transmiseLe ?? null);
+  const partie = (p: PieceLue) => (destination ? partieVers(p, destination) : false);
+  const partieLe = (p: PieceLue) => (destination ? partieLeVers(p, destination) : null);
   const transmettre = useMutation({
     mutationFn: async (ids: readonly string[]) => {
       await office().collab.transmettreLesPieces([...ids]);
@@ -259,18 +258,13 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
             : t("envoi.lot.tout", { count: parties.length })
         }
         quoi={
-          derniere && auProprietaire
-            ? t("circuit.lot.chez", {
-                count: parties.length,
-                quand: momentDeLEnvoi(derniere, locale).quand,
-              })
-            : derniere
-              ? t("envoi.lot.chez", {
-                  count: parties.length,
-                  qui,
-                  quand: momentDeLEnvoi(derniere, locale).quand,
-                })
-              : t("pme.list.transmettre.fait", { count: parties.length })
+          derniere && destination
+            ? envoiVers.quoiDuLot(
+                destination,
+                parties.length,
+                momentDeLEnvoi(derniere, locale).quand,
+              )
+            : t("pme.list.transmettre.fait", { count: parties.length })
         }
         suite={null}
         trace={null}
@@ -290,7 +284,7 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
     );
   }
 
-  if ((!pme.aUnCabinet && !auProprietaire) || restantes.length === 0) return null;
+  if (!destination || restantes.length === 0) return null;
   return (
     <div className="card">
       <p className="t-body">
@@ -300,7 +294,7 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
       </p>
       {transmettre.isError && !armee ? (
         <PasEncoreParti
-          qui={auProprietaire ? t("circuit.proprietaire") : qui}
+          qui={qui}
           reessayer={() => transmettre.mutate(restantes.map((p) => p.id))}
           enCours={transmettre.isPending}
         />

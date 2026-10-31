@@ -15,6 +15,7 @@ import { statutDeLaPieceLue } from "@/lib/lecture";
 import { jourOuInstant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
+import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 
 export const Route = createFileRoute("/_authenticated/pme/regler")({
@@ -157,7 +158,8 @@ function ARegler() {
 
   const pieces = usePiecesLues();
 
-  const nomDuCabinet = cabinet.data?.name ?? t("pme.coffre.votreComptable");
+  const envoiVers = useDestinationDeLEnvoi(pme.tenantId);
+  const nomDuCabinet = envoiVers.quiPour("cabinet");
 
   // Seules les pièces ENCORE retournées : une pièce reprise puis
   // recomptabilisée ne doit plus figurer ici, même si sa notification reste.
@@ -183,7 +185,7 @@ function ARegler() {
   const quiDuRetour = (pieceId: string | undefined) => {
     const p = enAttente.find((x) => x.id === pieceId);
     const s = p ? statutDuCircuit(p) : null;
-    return s?.chez === "proprietaire" ? (s.qui ?? t("circuit.proprietaire")) : nomDuCabinet;
+    return s?.chez === "proprietaire" ? (s.qui ?? envoiVers.quiPour("proprietaire")) : nomDuCabinet;
   };
 
   /** Ce que le cabinet a répondu sur une question de conseil. */

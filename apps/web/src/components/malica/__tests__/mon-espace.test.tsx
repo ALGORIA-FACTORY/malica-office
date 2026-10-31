@@ -20,7 +20,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { ErreurApi } from "@/lib/transport/erreurs";
 
-const base = vi.hoisted(() => ({ pieces: [] as Partial<PieceLue>[] }));
+const PROPRIETAIRE = ["societe.tout_voir", "envoi.cabinet", "piece.garder", "circuit.recevoir"];
+const SIEGE = ["envoi.proprietaire"];
+const base = vi.hoisted(() => ({ pieces: [] as Partial<PieceLue>[], droits: [] as string[] }));
 const api = vi.hoisted(() => ({
   setPieceVis: vi.fn(),
   transmettreLesPieces: vi.fn(),
@@ -56,6 +58,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
     identity: {
       monCabinet: async () => ({ id: "cab", name: "CABINET ESSAI", tientLesLivres: true }),
     },
+    acces: { monAcces: async () => ({ role: "x", plateforme: false, droits: base.droits }) },
   }),
 }));
 
@@ -94,6 +97,7 @@ describe("Mon espace", () => {
       piece("c", "2026-09-14"),
       piece("d", "2026-10-21", "entite"),
     ];
+    base.droits = PROPRIETAIRE;
     api.setPieceVis.mockReset().mockImplementation(async (id: string, vis: PieceLue["vis"]) => {
       const p = base.pieces.find((x) => x.id === id)!;
       p.vis = vis;
@@ -156,6 +160,59 @@ describe("Mon espace", () => {
     fireEvent.click(screen.getByRole("button", { name: "pme.prive.transmettre" }));
     await screen.findByText("envoi.lot.tout:2");
     expect(api.transmettreLesPieces).toHaveBeenCalledWith(["a", "b"]);
+    screen.getByText("envoi.lot.chez:2");
+  });
+
+  /*
+   * Revue Codex de #146 : le lot d'un siège part chez le propriétaire et reste
+   * `entite`. Le bouton nommait le comptable, et « Envoyé » n'apparaissait
+   * jamais — un succès qui semblait n'avoir rien fait.
+   */
+  it("le siège envoie de Mon espace au propriétaire, et le voit sur « Envoyé »", async () => {
+    base.droits = SIEGE;
+    api.transmettreLesPieces.mockImplementation(async (ids: string[]) => {
+      for (const id of ids) {
+        const p = base.pieces.find((x) => x.id === id)!;
+        p.circuit = {
+          recoit: false,
+          dernier: "envoyee",
+          envoyeeLe: "2026-10-28T09:00:00Z",
+          vueLe: null,
+          vuePar: null,
+          retourneeLe: null,
+          retourPar: null,
+          corrigeeLe: null,
+          auteur: "Sami",
+          mienne: true,
+        };
+      }
+      return { transmises: ids.length };
+    });
+    monter();
+    await screen.findByText("pme.coffre.compte:3");
+    const ronds = screen.getAllByRole("button", { name: "pme.coffre.choisir" });
+    fireEvent.click(ronds[0]!);
+    fireEvent.click(ronds[1]!);
+    fireEvent.click(screen.getByRole("button", { name: "pme.coffre.mettre" }));
+    await screen.findByText("pme.coffre.mis.titre");
+    expect(screen.queryByRole("button", { name: "pme.prive.transmettre" })).toBeNull();
+
+    fireEvent.click(await screen.findByRole("button", { name: "circuit.envoyer" }));
+    await screen.findByText("envoi.lot.tout:2");
+    expect(api.transmettreLesPieces).toHaveBeenCalledWith(["a", "b"]);
+    screen.getByText("circuit.lot.chez:2");
+  });
+
+  it("le propriétaire envoie de Mon espace au comptable, nommé sur le bouton et sur « Envoyé »", async () => {
+    monter();
+    await screen.findByText("pme.coffre.compte:3");
+    fireEvent.click(screen.getAllByRole("button", { name: "pme.coffre.choisir" })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "pme.coffre.mettre" }));
+    await screen.findByText("pme.coffre.mis.titre");
+    expect(screen.queryByRole("button", { name: "circuit.envoyer" })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "pme.prive.transmettre" }));
+    await screen.findByText("envoi.lot.tout:1");
+    screen.getByText("envoi.piece.chez");
   });
 
   it("un lot arrêté en route dit ce qui est passé, et garde le reste choisi", async () => {

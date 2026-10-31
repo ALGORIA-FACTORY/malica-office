@@ -43,6 +43,7 @@ import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { aLeDroit, useMonAcces } from "@/hooks/use-mon-acces";
+import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
 import { dossierDeLaPiece } from "@/lib/dossiers";
 import { RAISON_LONGUE } from "@/lib/lecture";
 import {
@@ -252,6 +253,7 @@ function PieceScreen() {
    * siège un geste que la base lui refuse.
    */
   const acces = useMonAcces(pme.tenantId);
+  const envoiVers = useDestinationDeLEnvoi(pme.tenantId);
 
   const navigate = useNavigate();
   const navigateList = () => navigate({ to: "/pme/list" });
@@ -1084,11 +1086,9 @@ function PieceScreen() {
    */
   const envoi = renvoye ?? envoye;
   if (envoi && (envoi.chez === "proprietaire" || piece.vis === "partage")) {
-    // Le même écran aux deux passages : chez le propriétaire, ou au cabinet.
-    const auProprietaire = envoi.chez === "proprietaire";
-    const qui = auProprietaire
-      ? t("circuit.proprietaire")
-      : (cabinet.data?.name ?? t("pme.coffre.votreComptable"));
+    // Le même écran aux deux passages : chez le propriétaire, ou au cabinet,
+    // nommés comme partout (`useDestinationDeLEnvoi`).
+    const qui = envoiVers.quiPour(envoi.chez);
     // L'heure que la base a posée pour cet envoi.
     const parti = envoi.le;
     const depuis = momentDeLEnvoi(parti, locale);
@@ -1105,14 +1105,8 @@ function PieceScreen() {
           qui,
           quand: depuis.quand,
         })}
-        suite={
-          auProprietaire ? t("envoi.piece.suite.proprietaire") : t("envoi.piece.suite", { qui })
-        }
-        trace={
-          auProprietaire
-            ? t("envoi.trace.proprietaire", { jour: jourEtMois(parti, locale) })
-            : t("envoi.trace", { qui, jour: jourEtMois(parti, locale) })
-        }
+        suite={envoiVers.suite(envoi.chez)}
+        trace={envoiVers.trace(envoi.chez, jourEtMois(parti, locale))}
         principale={
           suivanteADecider
             ? {
@@ -1548,10 +1542,7 @@ function PieceScreen() {
       : null
     : noteDeSuppression(demandeDeSuppression, vis);
   /** À qui je demande : mon propriétaire (le siège), ou le cabinet. */
-  const aQuiJeDemande =
-    gestes?.demanderA === "proprietaire"
-      ? t("circuit.proprietaire")
-      : (cabinet.data?.name ?? t("pme.coffre.votreComptable"));
+  const aQuiJeDemande = envoiVers.quiPour(gestes?.demanderA ?? "cabinet");
 
   /**
    * Le mois de la pièce, pour la pastille du haut. Rien si la date manque.
@@ -2361,18 +2352,18 @@ function PieceScreen() {
               {dernierFaitDuRappel?.transmise && dernierFaitDuRappel.fait === "demandee" ? (
                 <ConfirmationSurPlace
                   titre={t("circuit.demande.transmise", {
-                    cabinet: cabinet.data?.name ?? t("pme.coffre.votreComptable"),
+                    cabinet: envoiVers.quiPour("cabinet"),
                   })}
                   detail={t("envoi.demande.detail", {
-                    qui: cabinet.data?.name ?? t("pme.coffre.votreComptable"),
+                    qui: envoiVers.quiPour("cabinet"),
                     quand: momentDeLEnvoi(dernierFaitDuRappel.createdAt, locale).quand,
                   })}
                 />
               ) : demandeDeRappel === "demandee" && dernierFaitDuRappel ? (
                 <ConfirmationSurPlace
-                  titre={t("envoi.rappel.fait", { qui: t("circuit.proprietaire") })}
+                  titre={t("envoi.rappel.fait", { qui: envoiVers.quiPour("proprietaire") })}
                   detail={t("envoi.demande.detail", {
-                    qui: t("circuit.proprietaire"),
+                    qui: envoiVers.quiPour("proprietaire"),
                     quand: momentDeLEnvoi(dernierFaitDuRappel.createdAt, locale).quand,
                   })}
                 />
@@ -2383,7 +2374,7 @@ function PieceScreen() {
               ) : gestes?.demanderA === "proprietaire" ? (
                 rappeler.isError ? (
                   <PasEncoreParti
-                    qui={t("circuit.proprietaire")}
+                    qui={envoiVers.quiPour("proprietaire")}
                     reessayer={() => rappeler.mutate()}
                     enCours={rappeler.isPending}
                   />
@@ -2799,7 +2790,7 @@ function PieceScreen() {
               }
               detail={t("envoi.demande.detail", {
                 qui: dernierFaitDeSuppression.transmise
-                  ? (cabinet.data?.name ?? t("pme.coffre.votreComptable"))
+                  ? envoiVers.quiPour("cabinet")
                   : aQuiJeDemande,
                 quand: momentDeLEnvoi(dernierFaitDeSuppression.createdAt, locale).quand,
               })}
