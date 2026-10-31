@@ -87,8 +87,8 @@ describe("l'annulation d'un règlement revient à l'expert", { skip: !BASE_CONFI
 
   /** Une facture d'achat partagée et lue : 100 DT TTC, sous le seuil de retenue. */
   async function factureLue(cle: string): Promise<string> {
-    const piece = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
+    const piece = await sousIdentiteDuServeur(dirigeant.id, async () => {
+      const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      document_kind, document_kind_statut, transmise_le)
          values ($1, 'pdf', 'partage', $2, $3, $4, 'facture_achat', 'confirme', now()) returning id`,

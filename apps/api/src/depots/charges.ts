@@ -9,6 +9,38 @@
 import type { Requete } from "../db.ts";
 import { dec, decOuNul, enVigueur } from "./decimal.ts";
 
+/**
+ * Les articles LUS qui sont des charges du mois (`charges_lues`) : un achat
+ * qui compte, dont le cabinet n'a pas pris les montants (`source =
+ * 'lecture'`), et qui n'est pas une immobilisation acquise (3 novembre 2026).
+ * Une fois une écriture prise en charge (validée, ou forcée sans se lire comme
+ * une facture), ce sont SES comptes qui décident ; avant, la famille de
+ * l'article rangée au plan (`app.articles_immobilises`). Les articles sont lus
+ * UNE fois et passés à la fonction : la vue des pièces n'est pas relue (revue
+ * de #145). Une immobilisation est HT, jamais une charge du mois. `$1` est le
+ * dossier.
+ */
+const CHARGES_LUES = `with lus as (
+         select a.*, q.document_kind as kind,
+                coalesce(a.document_date, q.created_at::date) as jour
+           from piece_articles_v a
+           join pieces_qui_comptent_v q on q.id = a.piece_id
+          where a.tenant_id = $1 and q.source = 'lecture'
+            and q.document_kind <> 'facture_vente'
+       ),
+       immobilises as materialized (
+         select x as id
+           from app.articles_immobilises($1, (
+                  select coalesce(jsonb_agg(jsonb_build_object(
+                           'id', i.id, 'piece_id', i.piece_id, 'pack', i.pack_version_id,
+                           'famille', i.famille_code, 'kind', i.kind, 'jour', i.jour)), '[]'::jsonb)
+                    from lus i)) x
+       ),
+       charges_lues as (
+         select l.* from lus l
+          where not exists (select 1 from immobilises m where m.id = l.id)
+       )`;
+
 export const charges = {
   /**
    * Les familles de charges du pack, traduites.
@@ -71,14 +103,12 @@ export const charges = {
    */
   async enAttenteDeDate(db: Requete, tenantId: string) {
     const { rows } = await db.query(
-      `select count(*) as articles, count(distinct a.piece_id) as pieces,
+      // Forcée, la pièce a la date de l'écriture du cabinet : elle n'est pas lue ici.
+      `${CHARGES_LUES}
+       select count(*) as articles, count(distinct a.piece_id) as pieces,
               sum(a.total_ht) as total_ht
-         from piece_articles_v a
-         join pieces_qui_comptent_v q on q.id = a.piece_id
-        where a.tenant_id = $1 and a.period is null
-          and q.document_kind <> 'facture_vente'
-          -- Forcée, la pièce a la date de l'écriture du cabinet.
-          and q.source = 'lecture'`,
+         from charges_lues a
+        where a.period is null`,
       [tenantId],
     );
     const r = (rows as Record<string, unknown>[])[0] ?? {};
@@ -100,16 +130,14 @@ export const charges = {
    */
   async articles(db: Requete, tenantId: string, fromPeriod: string, toPeriod: string) {
     const { rows } = await db.query(
-      `select * from (
+      `${CHARGES_LUES}
+       select * from (
          select a.piece_id, a.ordinal, a.designation, a.quantity, a.unit_price_ht,
                 a.unit_price_ttc, a.total_ht, a.famille_code, a.famille_source, a.period,
                 a.document_date, a.citation_field, a.citation_quantity,
                 a.citation_unit_price_ht, a.citation_unit_price_ttc, a.citation_total_ht,
                 'lecture' as source
-           from piece_articles_v a
-           join pieces_qui_comptent_v q on q.id = a.piece_id
-          where a.tenant_id = $1 and q.source = 'lecture'
-            and q.document_kind <> 'facture_vente'
+           from charges_lues a
          union all
          -- Prise en charge (1er novembre 2026) : la charge est ce que le
          -- cabinet a inscrit en base, au mois de son écriture, rangée dans sa

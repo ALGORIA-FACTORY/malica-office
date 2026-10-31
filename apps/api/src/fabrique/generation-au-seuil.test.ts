@@ -41,6 +41,7 @@ import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
 import { fabrique } from "../depots/fabrique.ts";
 import { MODELE_GENERATION, ROLE_GENERATION } from "../malica/modeles.ts";
 
+import { arreterUneBorne } from "./borne-arretee.ts";
 import { type AppelDeGenerateur } from "./generateur.ts";
 import { VERSION_DU_LANGAGE } from "./recette.ts";
 import {
@@ -187,20 +188,21 @@ describe(
         await deposer(db, orgA, "a", FACTURE_A());
         await deposer(db, orgA, "autre_client", FACTURE_A_AUTRE_CLIENT());
         await deposer(db, orgA, "autres_valeurs", FACTURE_A_AUTRES_VALEURS());
-        /*
-         * Le cabinet arrête sa borne d'ancre, au-dessus du défaut livré (R10) :
-         * trois lignes du pied portent « Total », et ce qui les sépare — « HT »,
-         * « TTC » — fait deux caractères. C'est la limite 4 de la livraison, et
-         * c'est exactement l'usage prévu du paramétrage.
-         */
-        await db.query(
-          `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
-         values ($1, 'fabrique.seuil.recette.ancre_texte_min', 2,
-                 'les libellés de pied font deux caractères : HT, TTC')
-         on conflict (tenant_id, code) do nothing`,
-          [orgA],
-        );
       });
+      /*
+       * Le cabinet arrête sa borne d'ancre, au-dessus du défaut livré (R10) :
+       * trois lignes du pied portent « Total », et ce qui les sépare — « HT »,
+       * « TTC » — fait deux caractères. C'est la limite 4 de la livraison, et
+       * c'est exactement l'usage prévu du paramétrage — par l'opérateur, aucune
+       * route ne l'écrit (lot 6, verrous en base).
+       */
+      await arreterUneBorne(
+        orgA,
+        "fabrique.seuil.recette.ancre_texte_min",
+        2,
+        "les libellés de pied font deux caractères : HT, TTC",
+        a.id,
+      );
 
       await sousIdentiteDuServeur(b.id, async (db) => {
         const { rows } = await db.query<{ org: string }>(
@@ -475,14 +477,13 @@ describe(
 
     it("le cabinet change le seuil sans déploiement", async () => {
       const cle = `facture-deux-${marque}`;
-      await sousIdentiteDuServeur(a.id, async (db) => {
-        await db.query(
-          `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
-         values ($1, 'fabrique.seuil.generation.pieces_min', 2, 'ce cabinet propose plus tôt')
-         on conflict (tenant_id, code) do update set value_num = excluded.value_num`,
-          [orgA],
-        );
-      });
+      await arreterUneBorne(
+        orgA,
+        "fabrique.seuil.generation.pieces_min",
+        2,
+        "ce cabinet propose plus tôt",
+        a.id,
+      );
 
       const arrete = await sousIdentiteDuServeur(a.id, async (db) => {
         const { rows } = await db.query<{ valeur: string; arrete_par_le_cabinet: boolean }>(

@@ -28,10 +28,11 @@ import type {
   EtatDUnTravail,
   GesteDeRetour,
   MontantsDuCabinet,
+  PieceDeMonEspace,
 } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece, lireMarquesDeDevise, lireParametres } from "../scan/analyse.ts";
+import { analyserPiece, lireLesDevises, lireParametres } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import {
@@ -40,8 +41,7 @@ import {
   type ContexteDuSudoku,
 } from "../malica/lecture/sudoku.ts";
 import { dateDeLaPiece } from "./dates.ts";
-import { referentiel } from "./referentiel.ts";
-import { COLONNES_DU_SUIVI, versSuivi } from "./suivi.ts";
+import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
 
 /** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
 interface VerdictDeLecture {
@@ -62,11 +62,6 @@ const REFUS_DE_LECTURE = `(
    where e.object_table = 'pieces' and e.object_id = p.id and e.action = 'lecture.refusee'
      and not exists (select 1 from extractions_v x where x.piece_id = p.id)
    order by e.at desc limit 1)`;
-
-/** Le chemin d'une pièce se déduit de la base : tenant, puis identifiant. */
-function cheminRelatif(tenantId: string, pieceId: string): string {
-  return `${tenantId}/${pieceId}`;
-}
 
 /**
  * Projeter les articles d'une pièce — un seul endroit.
@@ -347,22 +342,15 @@ export const capture = {
     );
     const id = rows[0]!.id;
 
-    // La clé d'idempotence peut rendre une pièce déjà enregistrée : on relit le
-    // tenant plutôt que de faire confiance à celui qu'on a reçu.
-    const { rows: ligne } = await db.query<{ tenant_id: string }>(
-      `select tenant_id from pieces_v where id = $1`,
-      [id],
+    // Le chemin — dossier, puis identifiant — se pose par sa porte, qui le
+    // calcule de la pièce elle-même (la clé d'idempotence peut rendre une
+    // pièce déjà enregistrée : son dossier vient de la base, pas de l'appel).
+    // Un client ne réécrit plus `storage_path` (lot 6, verrous en base).
+    const { rows: pose } = await db.query<{ chemin: string }>(
+      `select public.capture_piece_poser_chemin($1, $2) as chemin`,
+      [id, input.contentType ?? null],
     );
-    const tenant = ligne[0]!.tenant_id;
-    const chemin = cheminRelatif(tenant, id);
-
-    await db.query(
-      `update pieces_v
-          set storage_path = $2,
-              content_type = coalesce($3, content_type)
-        where id = $1`,
-      [id, chemin, input.contentType ?? null],
-    );
+    const chemin = pose[0]!.chemin;
 
     // Rejouable : la même clé rend le même reçu, et la base n'inscrit la
     // même liste qu'une fois.
@@ -377,6 +365,26 @@ export const capture = {
       await db.query(`select public.piece_remplacer($1, $2)`, [input.remplace, id]);
     }
     return { id, chemin };
+  },
+
+  /**
+   * Son Mon espace, hors des sociétés qu'il a quittées (lot 4) : il part avec
+   * son compte. La base le rend à son auteur seul ; il le télécharge (route
+   * `/pieces/:id/contenu`, sous RLS) et le supprime, sans jamais l'envoyer.
+   */
+  async monEspaceHorsSociete(db: Requete): Promise<PieceDeMonEspace[]> {
+    const { rows } = await db.query(
+      `select id, tenant_id, societe, created_at, content_type, document_kind
+         from public.mon_espace_hors_societe()`,
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      id: r["id"] as string,
+      tenantId: r["tenant_id"] as string,
+      societe: r["societe"] as string,
+      createdAt: new Date(r["created_at"] as string | Date).toISOString(),
+      contentType: (r["content_type"] as string | null) ?? null,
+      documentKind: (r["document_kind"] as string | null) ?? null,
+    }));
   },
 
   async lister(db: Requete, tenantId: string) {
@@ -432,7 +440,8 @@ export const capture = {
               -- cabinet : il décide.
               case when s.prise is not null
                    then app.montants_pris_en_charge(p.id) end as du_cabinet,
-              ${COLONNES_DU_SUIVI}
+              ${COLONNES_DU_SUIVI},
+              ${COLONNES_DU_CIRCUIT}
          from pieces_v p
          left join lateral (
            select e.payload
@@ -446,6 +455,8 @@ export const capture = {
          left join lateral (
            select * from app.suivi_de_la_piece(p.id) where p.vis = 'partage'
          ) s on true
+         -- Le passage siège → propriétaire, et le côté de qui regarde.
+         left join lateral app.circuit_de_la_piece(p.id) c on true
          /*
           * LE DERNIER TRAVAIL DE LECTURE, POUR QUE L'ÉCHEC SE VOIE.
           *
@@ -493,6 +504,7 @@ export const capture = {
         devise: cab?.devise ?? lu?.currency ?? null,
         typeDeDocument: (r["document_kind"] as string | null) ?? null,
         suivi: versSuivi(r),
+        circuit: versCircuit(r),
         lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
         // Le motif brut ne quitte jamais le serveur : il peut porter un message
         // technique. Seul son code `lecture.*` reconnu voyage.
@@ -526,6 +538,7 @@ export const capture = {
       { rows: prec },
       { rows: refus },
       { rows: suivi },
+      { rows: circuit },
       { rows: montants },
     ] = await Promise.all([
       db.query(
@@ -550,6 +563,8 @@ export const capture = {
       ]),
       // Où elle en est chez le cabinet — la même lecture que les listes.
       db.query(`select ${COLONNES_DU_SUIVI} from app.suivi_de_la_piece($1) s`, [pieceId]),
+      // Où elle en est chez le propriétaire, et de quel côté on la regarde.
+      db.query(`select ${COLONNES_DU_CIRCUIT} from app.circuit_de_la_piece($1) c`, [pieceId]),
       // Forcée, ses montants sont ceux du cabinet ; validée, ceux de la lecture.
       db.query(`select app.montants_pris_en_charge($1) as m`, [pieceId]),
     ]);
@@ -595,6 +610,7 @@ export const capture = {
         : null,
       precisions,
       suivi: suivi[0] ? versSuivi(suivi[0] as Record<string, unknown>) : null,
+      circuit: circuit[0] ? versCircuit(circuit[0] as Record<string, unknown>) : null,
       montantsDuCabinet: versMontantsDuCabinet((montants as Record<string, unknown>[])[0]?.["m"]),
       ecritureIllisible: ecritureIllisible((montants as Record<string, unknown>[])[0]?.["m"]),
       lectureRefusee: ((refus as Record<string, unknown>[])[0]?.["lecture_refusee"] ?? null) as {
@@ -662,10 +678,13 @@ export const capture = {
     const packId = (packs as Record<string, unknown>[])[0]?.["id"] as string | undefined;
     if (!packId) throw new Error("pack.absent");
 
-    // L'échelle de la devise vient du pack, pas du code. La lecture des
-    // montants s'en sert pour décider si un texte est ambigu : « 2.800 » se lit
-    // de deux façons à trois décimales, d'une seule à deux.
-    const { moneyDecimals } = await referentiel.socleParams(db, packId);
+    // Toutes les devises du référentiel : exposant, séparateur décimal,
+    // marques imprimées. La relecture décide de celle de la PIÈCE
+    // (`deviseDeLaPiece`), comme le jugement — et non plus de celle du
+    // dossier seule (revue de la PR 144) : « 2.800 » se lit de deux façons à
+    // trois décimales, « 100,000 » d'une seule quand la virgule est le
+    // séparateur décimal de la devise, et « 100,00 € » n'est pas en dinars.
+    const devises = await lireLesDevises(db);
 
     const [{ rows: taux }, { rows: charges }, { rows: tiers }] = await Promise.all([
       db.query(`select code, label, rate from ref_tva_rates_v where pack_version_id = $1`, [
@@ -693,8 +712,7 @@ export const capture = {
       },
       jurisdiction,
       currency: org["currency"] as string,
-      moneyDecimals,
-      marquesDevise: await lireMarquesDeDevise(db),
+      devises,
       dossier: {
         raisonSociale: (org["name"] as string) ?? "",
         identifiantFiscal: (org["legal_id"] as string | null) ?? null,
@@ -1258,7 +1276,8 @@ export const capture = {
   },
 
   /**
-   * « Renvoyer » : la pièce retournée repart au cabinet, son retour clos.
+   * « Renvoyer » : la pièce retournée repart à qui l'a retournée — au
+   * propriétaire (le siège), au cabinet (qui lui transmet) —, son retour clos.
    *
    * Rien ne s'inscrit ici, et c'est le propos (« Malica sans blocage »,
    * 28 octobre 2026) : le renvoi faisait inscrire par la PME l'écriture de la
@@ -1283,9 +1302,9 @@ export const capture = {
    * libellés viennent du référentiel, dans la langue demandée.
    */
   /**
-   * Ce que la PME lit d'un retour du cabinet : motif (libellé du référentiel),
-   * note, date, cabinet, le geste demandé et s'il est fait (`piece_retour`).
-   * `null` hors retour.
+   * Ce que la PME lit d'un retour — du cabinet, ou du propriétaire au siège :
+   * motif (libellé du référentiel), note, date, qui l'a retournée, le geste
+   * demandé et s'il est fait (`piece_retour`). `null` hors retour.
    */
   async retourDeLaPiece(db: Requete, pieceId: string, locale: string) {
     const { rows } = await db.query<{ r: Record<string, unknown> | null }>(
@@ -1300,12 +1319,16 @@ export const capture = {
       motif: r["motif"] as string,
       motifLibelle: r["motifLibelle"] as string,
       geste: r["geste"] as GesteDeRetour,
-      cabinet: (r["cabinet"] as string | null) ?? null,
+      chez: r["chez"] as "proprietaire" | "cabinet",
+      qui: (r["qui"] as string | null) ?? null,
       fait: Boolean(r["fait"]),
     };
   },
 
-  /** La réponse du client au cabinet sur une pièce transmise, tracée et notifiée. */
+  /**
+   * La réponse à un retour — du client au cabinet, ou du siège au propriétaire
+   * qui la lui a retournée —, tracée et notifiée.
+   */
   async repondreAuCabinet(db: Requete, pieceId: string, texte: string): Promise<void> {
     await db.query(`select public.piece_repondre_au_cabinet($1, $2)`, [pieceId, texte]);
   },

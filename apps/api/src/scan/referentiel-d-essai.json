@@ -162,9 +162,144 @@
     "TOTAL_TTC"
   ],
   "typesQuiPortentUneEcriture": ["facture_achat", "facture_vente"],
-  "exposants": {
-    "EUR": 2,
-    "TND": 3,
-    "XOF": 0
+  "titres": [
+    {
+      "motif": "pro\\s*-?\\s*forma",
+      "documentType": null,
+      "statut": "rejet",
+      "refus": "Le document est une facture proforma (titre « {titre} ») : ce n'est pas une pièce comptable, il ne se comptabilise pas."
+    },
+    {
+      "motif": "\\bdevis\\b",
+      "documentType": null,
+      "statut": "rejet",
+      "refus": "Le document est un devis (titre « {titre} ») : ce n'est pas une pièce comptable, il ne se comptabilise pas."
+    },
+    {
+      "motif": "bon\\s+de\\s+livraison",
+      "documentType": "bon_livraison",
+      "statut": "rejet",
+      "refus": "Le document est un bon de livraison (titre « {titre} ») : ce n'est pas une pièce comptable, il ne se comptabilise pas."
+    },
+    {
+      "motif": "bon\\s+de\\s+commande",
+      "documentType": null,
+      "statut": "rejet",
+      "refus": "Le document est un bon de commande (titre « {titre} ») : ce n'est pas une pièce comptable, il ne se comptabilise pas."
+    },
+    {
+      "motif": "\\bavoir\\b",
+      "documentType": "avoir",
+      "statut": "anomalie",
+      "refus": "Avoir : à saisir par le cabinet (titre « {titre} »)."
+    }
+  ],
+  "marques": [
+    {
+      "marque": "CFA",
+      "devise": "XOF"
+    },
+    {
+      "marque": "D.N.T",
+      "devise": "TND"
+    },
+    {
+      "marque": "D.N.T.",
+      "devise": "TND"
+    },
+    {
+      "marque": "D.T",
+      "devise": "TND"
+    },
+    {
+      "marque": "D.T.",
+      "devise": "TND"
+    },
+    {
+      "marque": "DINAR",
+      "devise": "TND"
+    },
+    {
+      "marque": "DINARS",
+      "devise": "TND"
+    },
+    {
+      "marque": "DNT",
+      "devise": "TND"
+    },
+    {
+      "marque": "DNT.",
+      "devise": "TND"
+    },
+    {
+      "marque": "DT",
+      "devise": "TND"
+    },
+    {
+      "marque": "DT.",
+      "devise": "TND"
+    },
+    {
+      "marque": "EUR",
+      "devise": "EUR"
+    },
+    {
+      "marque": "F CFA",
+      "devise": "XOF"
+    },
+    {
+      "marque": "F.CFA",
+      "devise": "XOF"
+    },
+    {
+      "marque": "FCFA",
+      "devise": "XOF"
+    },
+    {
+      "marque": "FRANC CFA",
+      "devise": "XOF"
+    },
+    {
+      "marque": "FRANCS CFA",
+      "devise": "XOF"
+    },
+    {
+      "marque": "TND",
+      "devise": "TND"
+    },
+    {
+      "marque": "TND.",
+      "devise": "TND"
+    },
+    {
+      "marque": "XOF",
+      "devise": "XOF"
+    },
+    {
+      "marque": "د.ت",
+      "devise": "TND"
+    },
+    {
+      "marque": "د.ت.",
+      "devise": "TND"
+    },
+    {
+      "marque": "€",
+      "devise": "EUR"
+    }
+  ],
+  "devises": {
+    "EUR": {
+      "exposant": 2,
+      "separateurDecimal": ","
+    },
+    "TND": {
+      "exposant": 3,
+      "separateurDecimal": ","
+    },
+    "XOF": {
+      "exposant": 0,
+      "separateurDecimal": ","
+    }
   }
 }

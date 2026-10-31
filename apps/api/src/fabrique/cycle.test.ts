@@ -35,6 +35,7 @@ import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
 import { fabrique } from "../depots/fabrique.ts";
 import { MODELE_GENERATION, ROLE_GENERATION } from "../malica/modeles.ts";
 
+import { arreterUneBorne } from "./borne-arretee.ts";
 import { MESURES_CONNUES } from "./cycle-mesures.ts";
 import { proposerUneRecette, type AppelDeGenerateur } from "./generateur.ts";
 import { lireLesBornesDeRecette, lireLesReglages } from "./interprete-reglages.ts";
@@ -145,7 +146,9 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
       await deposer(db, "autre_client", FACTURE_A_AUTRE_CLIENT());
       await deposer(db, "autres_valeurs", FACTURE_A_AUTRES_VALEURS());
       await deposer(db, "six_lignes", FACTURE_A_SIX_LIGNES());
+    });
 
+    {
       /*
        * Le cabinet INSCRIT SA borne d'ancre, et la décision se lit (R10).
        *
@@ -158,15 +161,17 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
        * rend ce format lisible, elle est ce qui le rend lisible SANS DÉPENDRE
        * du défaut. C'est ce qu'on veut d'un banc de cycle — la raison reste
        * vraie : trois lignes du pied portent le mot « Total », et ce qui les
-       * sépare, « HT » et « TTC », fait deux caractères.
+       * sépare, « HT » et « TTC », fait deux caractères. La borne s'arrête
+       * par l'opérateur : aucune route ne l'écrit (lot 6, verrous en base).
        */
-      await db.query(
-        `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
-         values ($1, 'fabrique.seuil.recette.ancre_texte_min', 2,
-                 'les libellés de pied font deux caractères : HT, TTC')`,
-        [orgA],
+      await arreterUneBorne(
+        orgA,
+        "fabrique.seuil.recette.ancre_texte_min",
+        2,
+        "les libellés de pied font deux caractères : HT, TTC",
+        a.id,
       );
-    });
+    }
   });
 
   after(async () => {

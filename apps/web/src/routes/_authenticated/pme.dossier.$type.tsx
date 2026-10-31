@@ -49,6 +49,10 @@ type Etat = StatutPme | "nonLue" | "autre";
 const ETATS: ReadonlyArray<{ etat: Exclude<Etat, "autre">; cle: MessageKey }> = [
   { etat: "a_envoyer", cle: MOT_PME.a_envoyer },
   { etat: "retour", cle: MOT_PME.retour },
+  // La file du propriétaire : les pièces de ses sièges (lot 4).
+  { etat: "recue", cle: MOT_PME.recue },
+  { etat: "corrigee", cle: MOT_PME.corrigee },
+  { etat: "retournee", cle: MOT_PME.retournee },
   { etat: "envoyee", cle: MOT_PME.envoyee },
   { etat: "vue", cle: MOT_PME.vue },
   { etat: "prise_en_charge", cle: MOT_PME.prise_en_charge },

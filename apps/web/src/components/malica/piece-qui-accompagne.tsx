@@ -30,6 +30,7 @@ import { FeuilleDuBas } from "@/components/malica/feuille-du-bas";
 import { usePme } from "@/components/malica/pme-context";
 import { useDecimales } from "@/hooks/use-decimales";
 import { useDossiers } from "@/hooks/use-dossiers";
+import { effacerUnDepotAvorte } from "@/hooks/use-gestes-du-circuit";
 import { clePiecesLues } from "@/hooks/use-pieces-lues";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
@@ -230,9 +231,7 @@ export function PieceQuiAccompagneFiche({
         await office().capture.remplacerJustificatif(pieceId, nouveau);
       } catch (e) {
         // Un remplacement refusé ne laisse pas une photo orpheline derrière lui.
-        await office()
-          .capture.supprimer(nouveau)
-          .catch(() => undefined);
+        await effacerUnDepotAvorte(nouveau).catch(() => undefined);
         throw e;
       }
       return nouveau;

@@ -12,7 +12,7 @@ import type { LigneSaisie } from "@malica/socle/ecriture-saisie";
 import type { Ecriture, PropositionDePiece } from "@malica/socle/ports/repositories";
 import { enUnitesExactes } from "@malica/socle/somme-decimale";
 
-import { saisieDecimale } from "@/lib/saisie-decimale";
+import { saisieDecimale } from "@malica/socle/saisie-decimale";
 
 /** D'où part la table : l'écriture prise en charge, la proposition, ou rien. */
 export type Depart = "inscrite" | "proposee" | "rien";

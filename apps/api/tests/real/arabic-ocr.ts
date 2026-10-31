@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 
 import { buildExtractFromTokenPlan } from "../../src/malica/lecture/read-piece.ts";
 import { runVisionRead } from "../../src/malica/lecture/vision.ts";
-import { deviseDEssai } from "../../src/scan/devise-d-essai.ts";
+import { devisesDEssai } from "../../src/scan/devise-d-essai.ts";
 
 interface GtTag {
   name: string;
@@ -121,7 +121,7 @@ async function main() {
   const built = buildExtractFromTokenPlan({
     tokens: read.tokens,
     selection: read.selection,
-    devise: deviseDEssai(3),
+    ...devisesDEssai(3),
     matriculeDossier: null,
   });
   console.log(

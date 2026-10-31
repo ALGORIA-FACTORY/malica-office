@@ -31,6 +31,8 @@ import pg from "pg";
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
 
+import { arreterUneBorne } from "./borne-arretee.ts";
+
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
 /** Le SQLSTATE d'une erreur `pg`, ou son message si elle n'en porte pas. */
@@ -702,12 +704,14 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     assert.ok(livres.length > 0, "aucun seuil livré : le référentiel ne porte rien");
 
     const premier = livres[0]!;
+    await arreterUneBorne(
+      orgA,
+      `fabrique.seuil.promotion.${premier.sens}.${premier.mesure}`,
+      0.123456,
+      "arrêté par le cabinet",
+      a.id,
+    );
     const apres = await sousIdentiteDuServeur(a.id, async (db) => {
-      await db.query(
-        `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
-         values ($1, $2, 0.123456, 'arrêté par le cabinet')`,
-        [orgA, `fabrique.seuil.promotion.${premier.sens}.${premier.mesure}`],
-      );
       const { rows } = await db.query<{ exigence: string }>(
         `select exigence from fabrique.seuils_exiges($1) where mesure = $2`,
         [orgA, premier.mesure],
@@ -759,12 +763,14 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       "les bornes livrées ne sont pas celles du référentiel",
     );
 
+    await arreterUneBorne(
+      orgA,
+      "fabrique.seuil.recette.ancre_texte_min",
+      1,
+      "factures arabes : mentions d'une lettre",
+      a.id,
+    );
     const surchargee = await sousIdentiteDuServeur(a.id, async (db) => {
-      await db.query(
-        `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
-         values ($1, 'fabrique.seuil.recette.ancre_texte_min', 1, 'factures arabes : mentions d''une lettre')`,
-        [orgA],
-      );
       const { rows } = await db.query<{ valeur: string; arrete_par_le_cabinet: boolean }>(
         `select valeur, arrete_par_le_cabinet from fabrique.bornes_de_recette($1)
           where borne = 'ancre_texte_min'`,

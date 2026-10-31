@@ -65,6 +65,7 @@ import { usePanneauMalica } from "@/components/malica/panneau-malica";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
 import { MalicaChat } from "@/components/malica/MalicaChat";
 import { useNotificationsDuCabinet } from "@/hooks/use-notifications-du-cabinet";
+import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
 import { cn } from "@/lib/utils";
@@ -288,10 +289,7 @@ function Coquille({
 
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
   // Qui je suis ici : le pied du rail le dit, et les lectures filtrent sur la même règle.
-  const acces = useQuery({
-    queryKey: ["cab-acces", org.id],
-    queryFn: () => office().acces.monAcces(org.id),
-  });
+  const acces = useMonAcces(org.id);
 
   const groupes: Groupe[] = [
     {

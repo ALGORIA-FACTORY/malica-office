@@ -301,7 +301,14 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(reste.rows.length, 1, "la place n'a pas été reprise");
   });
 
-  it("libererPlace refuse tant qu'il reste des pièces personnelles, et dit COMBIEN sans rien montrer", async () => {
+  it("libererPlace libère la place même avec un Mon espace : il part avec son compte, jamais lu", async () => {
+    /*
+     * « Malica sans blocage », lot 4 (décision du 28 octobre 2026) : un siège
+     * qui quitte la société laisse ses pièces de la société à la société, et
+     * son Mon espace part avec son compte. Le refus « pièces personnelles à
+     * trancher » retenait la place sur une chose que personne d'autre n'a le
+     * droit de trancher.
+     */
     const partant = a.collaborateurs[1]!;
     await admin.query(
       `insert into capture.pieces
@@ -310,24 +317,25 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
       [a.tenant, `${marque}-perso`, partant],
     );
     assert.deepEqual(await rpc(a.titulaire, "facturation", "libererPlace", a.tenant, partant), {
-      libere: false,
-      motif: "pieces_personnelles_a_trancher",
-      pieces: 1,
+      libere: true,
+      pieces: 0,
     });
     const reste = await admin.query(
       "select 1 from identity.memberships where tenant_id = $1 and user_id = $2",
       [a.tenant, partant],
     );
-    assert.equal(reste.rows.length, 1, "la place n'est pas reprise");
-    // Le dirigeant ne voit toujours pas la pièce : il connaît le nombre, pas le contenu.
-    const vues = await sousIdentiteDuServeur(a.titulaire, async (db) => {
-      const { rows } = await db.query(
-        "select 1 from pieces_v where tenant_id = $1 and created_by = $2",
-        [a.tenant, partant],
-      );
-      return rows.length;
-    });
-    assert.equal(vues, 0);
+    assert.equal(reste.rows.length, 0, "la place est reprise");
+    const lues = (qui: string) =>
+      sousIdentiteDuServeur(qui, async (db) => {
+        const { rows } = await db.query(
+          "select 1 from pieces_v where tenant_id = $1 and created_by = $2",
+          [a.tenant, partant],
+        );
+        return rows.length;
+      });
+    // Le dirigeant ne voit toujours pas la pièce ; son auteur la garde.
+    assert.equal(await lues(a.titulaire), 0);
+    assert.equal(await lues(partant), 1);
   });
 
   it("libererPlace libère la place quand rien n'est à trancher", async () => {
@@ -342,10 +350,10 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.equal(reste.rows.length, 0);
 
-    // Et la base le dit : une place de moins d'occupée.
+    // Et la base le dit : les deux places reprises, aucune n'est plus occupée.
     const forfait = (await rpc(a.titulaire, "facturation", "monForfait")) as {
       sieges_occupes: number;
     };
-    assert.equal(forfait.sieges_occupes, 1);
+    assert.equal(forfait.sieges_occupes, 0);
   });
 });

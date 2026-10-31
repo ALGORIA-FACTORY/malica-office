@@ -1334,6 +1334,9 @@
 [data-surface="pme"] [data-ecran="dossier"] .f-dec-tete{display:flex;gap:.75rem;align-items:flex-start}
 [data-surface="pme"] [data-ecran="dossier"] .f-dec-titre{margin:0;font-size:1rem;line-height:1.4;font-weight:600;letter-spacing:-.01em}
 [data-surface="pme"] [data-ecran="dossier"] .f-dec-sous{margin:.25rem 0 0;font-size:.875rem;line-height:1.45;color:var(--t2)}
+/* La note d'un refus, dans la carte de la demande d'un siège (lot 4) : elle est obligatoire. */
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-note{display:grid;gap:.375rem;font-size:.8125rem;font-weight:600}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-note textarea{resize:none;padding:.625rem .75rem;border-radius:var(--r-sm);border:1px solid var(--dl);background:var(--bg);color:var(--tx);font:inherit;font-weight:400;font-size:.9375rem}
 [data-surface="pme"] [data-ecran="dossier"] .f-dec-gestes{display:grid;gap:.625rem}
 [data-surface="pme"] [data-ecran="dossier"] .f-dec-gestes.deux{grid-template-columns:repeat(2,minmax(0,1fr))}
 [data-surface="pme"] [data-ecran="dossier"] .f-dec-gestes button{min-height:48px;padding:.5rem .875rem;border-radius:999px;border:1px solid var(--dl); background:none;color:var(--tx);font-family:inherit;font-size:.9375rem;font-weight:600;line-height:1.2;cursor:pointer}

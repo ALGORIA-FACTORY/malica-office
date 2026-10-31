@@ -476,6 +476,9 @@ const fr = {
   "pme.capture.pay.oui": "Oui",
   "pme.capture.pay.pasEncore": "Pas encore",
   "pme.capture.pay.enregistrer": "Enregistrer",
+  "pme.capture.fin.envoyer.q.proprietaire": "Les envoyer à votre propriétaire ?",
+  "pme.capture.fin.envoyer.q.proprietaire#one": "L’envoyer à votre propriétaire ?",
+  "pme.capture.fin.envoyer.q.proprietaire#other": "Les envoyer à votre propriétaire ?",
   "pme.capture.fin.envoyer.q#one": "L’envoyer à votre cabinet ?",
   "pme.capture.fin.envoyer.q": "Les envoyer à votre cabinet ?",
   "pme.capture.fin.envoyer.q#other": "Les envoyer à votre cabinet ?",
@@ -543,6 +546,9 @@ const fr = {
   "pme.paiement.totalInconnu":
     "Le total de cette facture n’a pas été lu : choisissez « Une partie seulement » et indiquez le montant payé.",
   "pme.paiement.combien": "Combien avez-vous payé ?",
+  "saisie.refus.illisible": "Montant illisible : écrivez-le comme 1 234,500.",
+  "saisie.refus.negatif": "Un montant saisi ici ne peut pas être négatif.",
+  "saisie.refus.tropPrecis": "Trop de décimales pour cette devise.",
   "pme.paiement.reference": "Numéro du chèque, de la traite ou du virement",
   "pme.paiement.quand": "Quand l’avez-vous payée ?",
   "pme.paiement.pourquoi": "Pourquoi le corriger ?",
@@ -907,6 +913,8 @@ const fr = {
   "cab.stocks.invdup": "Cette période est déjà constatée pour cet article.",
   "cab.stocks.depreciation": "Dépréciation du stock",
   "cab.stocks.vnr": "Valeur nette de réalisation",
+  "cab.stocks.vnrNegative":
+    "La valeur nette ne descend pas sous zéro : au-delà du coût, la perte relève d'une provision, pas d'une dépréciation du stock.",
   "cab.stocks.note": "Note",
   "cab.stocks.cost": "Coût du stock",
   "cab.stocks.cumul": "Cumul déprécié",
@@ -1500,6 +1508,7 @@ const fr = {
   "cab.code.pasUnNombre": "La valeur désignée n'est pas un nombre.",
   "cab.code.dateIllisible": "La date n'a pas pu être lue sur la pièce.",
   "cab.code.sensAConfirmer": "Achat ou vente : à confirmer.",
+  "cab.code.devise": "Devise imprimée différente de la devise lue : à saisir.",
   "cab.audit.extract": "Lecture citée, contrat v1.",
   "cab.audit.autre": "Événement du dossier.",
   "cab.clients.kicker": "Portefeuille du cabinet",
@@ -1930,6 +1939,7 @@ const fr = {
   "cab.retour.apercu": "Ce que le client verra",
   "cab.retour.envoyer": "Retourner la pièce",
   "pme.retour.etat": "Retournée par votre comptabilité le {date}",
+  "pme.retour.etat.qui": "Retournée par {qui} le {date}",
   "pme.retour.etat.court": "Retournée par votre comptabilité",
   "pme.retour.etat.pret": "Corrigée — prête à renvoyer",
   "pme.retour.geste.joindre_document": "Joindre la pièce",
@@ -2010,9 +2020,15 @@ const fr = {
   "pme.retour.reponse.envoyer": "Envoyer la réponse",
   "refus.retour.inscrite":
     "Un règlement de cette pièce est inscrit au journal : annulez-le d’abord, puis retournez la pièce.",
+  "refus.reponse.sans_decision": "Accordez ou refusez la demande.",
+  "refus.envoi.retour_par_sa_carte":
+    "Une pièce retournée se renvoie depuis sa carte, une fois le geste demandé fait.",
+  "refus.envoi.chez_le_siege":
+    "Vous l’avez retournée à votre collaborateur : elle repartira quand il l’aura reprise et renvoyée.",
   "refus.reponse.vide": "Écrivez votre réponse avant de l’envoyer.",
   "refus.piece.remplacee":
     "Une nouvelle photo a remplacé cette pièce : c’est la nouvelle qui se traite.",
+  "refus.piece.origine_immuable": "Une pièce garde son dossier, son auteur et sa source.",
   "refus.piece.archivee": "Le client a retiré cette pièce : elle est archivée.",
   "refus.remplacement.accompagne":
     "Un reçu ou un justificatif se reprend depuis le règlement qu’il accompagne.",
@@ -2068,6 +2084,62 @@ const fr = {
   "statut.pme.envoyee.qui": "Envoyée à {qui}",
   "statut.pme.vue.qui": "Vue par {qui}",
   "statut.pme.retour.qui": "Retour de {qui}",
+  "statut.pme.retournee.qui": "Retournée à {qui}",
+  "statut.pme.envoyee.proprietaire": "Envoyée au propriétaire",
+  "monespace.sous":
+    "Les pièces privées que vous aviez dans les sociétés quittées. Elles sont à vous seul.",
+  "monespace.vide": "Rien ici : aucune pièce privée d'une société quittée.",
+  "monespace.aide":
+    "Vous n'êtes plus membre de ces sociétés : vous pouvez télécharger ou supprimer vos pièces, jamais les leur envoyer.",
+  "monespace.lien": "Mon espace des sociétés quittées ({count})",
+  "monespace.lien#one": "Mon espace d'une société quittée (1)",
+  "monespace.lien#other": "Mon espace des sociétés quittées ({count})",
+  "circuit.lot.reste": "{count} pièces ne sont pas encore parties chez votre propriétaire.",
+  "circuit.lot.reste#one": "Une pièce n'est pas encore partie chez votre propriétaire.",
+  "circuit.lot.reste#other": "{count} pièces ne sont pas encore parties chez votre propriétaire.",
+  "circuit.lot.action": "Tout envoyer au propriétaire",
+  "circuit.lot.chez":
+    "Elles sont chez votre propriétaire depuis {quand}. Il les voit, puis les envoie au comptable.",
+  "circuit.lot.chez#one":
+    "Elle est chez votre propriétaire depuis {quand}. Il la voit, puis l'envoie au comptable.",
+  "circuit.lot.chez#other":
+    "Elles sont chez votre propriétaire depuis {quand}. Il les voit, puis les envoie au comptable.",
+  "circuit.siege": "votre collaborateur",
+  "circuit.proprietaire": "votre propriétaire",
+  "circuit.envoyer": "Envoyer au propriétaire",
+  "circuit.envoyer.question": "Prête : l'envoyer au propriétaire ?",
+  "circuit.envoyer.aide":
+    "Le propriétaire la reçoit et la voit, puis l'envoie au comptable — ou vous la retourne avec un motif. Vous ne l'envoyez pas vous-même au comptable.",
+  "circuit.recue.question": "{qui} vous l'a envoyée : l'envoyer à {cabinet} ?",
+  "circuit.recue.aide":
+    "Envoyez-la au comptable, ou retournez-la à {qui} avec un motif : il fera le geste demandé, puis vous la renverra.",
+  "circuit.recue.titre": "{qui} vous l'a envoyée",
+  "circuit.recue.aide.sansEnvoi":
+    "Elle reste dans la société. Si quelque chose manque, retournez-la à {qui} avec un motif : il fera le geste demandé, puis vous la renverra.",
+  "circuit.retourner": "Retourner à {qui}",
+  "circuit.retour.lede":
+    "Le motif dit à {qui} quoi faire, votre note comment. Il le lira tel quel sur sa pièce.",
+  "circuit.retour.note": "Note à {qui}",
+  "circuit.retour.apercu": "Ce que {qui} verra",
+  "circuit.demande.aria": "Une demande à trancher",
+  "circuit.demande.rappel": "{qui} demande à récupérer cette pièce.",
+  "circuit.demande.suppression": "{qui} demande à supprimer cette pièce.",
+  "circuit.demande.aide.titre": "Accorder ou refuser",
+  "circuit.demande.aide.rappel":
+    "Accordée, la pièce revient à {qui}, dans la société, à envoyer de nouveau.",
+  "circuit.demande.aide.suppression": "Accordée, la pièce est supprimée, et {qui} le sait.",
+  "circuit.demande.aide.transmise":
+    "La pièce est déjà chez le comptable : accordée, la demande lui part d'elle-même, et {qui} suit sa réponse.",
+  "circuit.demande.aide.refus": "Un refus porte une note : {qui} lit pourquoi.",
+  "circuit.demande.note": "Pourquoi refuser ?",
+  "circuit.demande.transmise": "Demande transmise à {cabinet}",
+  "envoi.piece.suite.proprietaire":
+    "Il la voit, puis l'envoie au comptable. Vous serez prévenu s'il vous la retourne.",
+  "envoi.trace.proprietaire": "Envoyée au propriétaire · {jour}",
+  "notif.kind.piece.recue_du_siege": "Pièce reçue d'un collaborateur",
+  "notif.kind.piece.retournee_par_le_proprietaire": "Pièce retournée par le propriétaire",
+  "notif.kind.piece.supprimee_par_le_proprietaire": "Pièce supprimée par le propriétaire",
+  "notif.kind.piece.demande": "Demande sur une pièce",
   "statut.cab.recue": "Reçue",
   "statut.cab.vue": "Vue",
   "statut.cab.corrigee": "Corrigée",
@@ -2288,6 +2360,7 @@ const fr = {
   "cab.pv.chiffre.tvaCollectee": "TVA collectée du mois",
   "cab.pv.chiffre.tvaDeductible": "TVA déductible du mois",
   "cab.pv.chiffre.tva": "TVA du mois, collectée moins déductible",
+  "cab.pv.chiffre.tvaHorsCalcul": "Pièces hors du calcul de la TVA, à reprendre",
   "cab.pv.chiffre.pieces": "Pièces transmises dans le mois",
   "cab.pv.chiffre.aSuperviser": "Pièces en attente de supervision",
   "cab.pv.chiffre.retournees": "Pièces retournées au client",
@@ -3678,6 +3751,42 @@ const fr = {
   "pme.tva.ceQuiChange": "À vérifier",
   "pme.tva.parSociete": "Par société",
   /**
+   * La déclaration de TVA, ligne par ligne (3 novembre 2026). Les LIBELLÉS
+   * des lignes viennent du référentiel (`ref.tva_declaration_lignes`) ; ces
+   * clés ne disent que le titre et les explications du ⓘ.
+   */
+  "tva.declaration.titre": "La déclaration",
+  "tva.declaration.aide":
+    "Chaque ligne de la déclaration mensuelle reçoit la TVA de sa nature : celle des immobilisations (un bien porté en classe 2) se déclare à part de celle des autres biens et services. La nature se lit sur l'écriture du cabinet, ou sur les articles de la facture rangés au plan comptable.",
+  "tva.declaration.aConfirmer":
+    "Ces lignes sont un défaut de Malica : leur correspondance exacte avec le formulaire en vigueur est à confirmer par un expert-comptable.",
+  "tva.declaration.parDefaut": "{count} lignes rangées par défaut",
+  "tva.declaration.parDefaut#one": "{count} ligne rangée par défaut",
+  "tva.declaration.parDefaut#other": "{count} lignes rangées par défaut",
+  "tva.declaration.sansLigne": "{count} montants sans ligne de déclaration",
+  "tva.declaration.sansLigne#one": "{count} montant sans ligne de déclaration",
+  "tva.declaration.sansLigne#other": "{count} montants sans ligne de déclaration",
+  "tva.declaration.sansLigne.aide":
+    "Le référentiel de la déclaration n'a pas de ligne pour ces montants : ils comptent dans les totaux, mais aucune ligne de la déclaration ne les porte. Ce n'est pas une pièce à reprendre ; signalez-le à l'équipe Malica.",
+  "tva.affectation.titre": "Lignes arrêtées par le cabinet",
+  "tva.affectation.aide":
+    "Pour chaque nature de TVA, la ligne de la déclaration qui la reçoit. Malica livre un défaut ; le cabinet l'arrête. Arrêter sans rien changer, c'est confirmer : la ligne n'est plus « à confirmer », pour vous comme pour le client.",
+  "tva.affectation.aide.portee":
+    "« Pour ce dossier » ne vaut que pour ce client. « Pour tout le cabinet » vaut pour tous vos dossiers qui n'ont pas leur propre choix ; il est réservé à l'expert-comptable. Chaque décision est datée et signée ; elle vaut à partir du mois affiché.",
+  "tva.affectation.origine.pack": "Défaut de Malica, à confirmer",
+  "tva.affectation.origine.cabinet": "Arrêtée par le cabinet",
+  "tva.affectation.origine.dossier": "Arrêtée pour ce dossier",
+  "tva.affectation.pourLeDossier": "Pour ce dossier",
+  "tva.affectation.pourLeCabinet": "Pour tout le cabinet",
+  "tva.affectation.arretee": "Lignes arrêtées.",
+  "tva.affectation.arretee.detail": "La TVA du mois les suit, ici et chez le client.",
+  "refus.tva.affectation.droits":
+    "Seul le cabinet qui tient ce dossier arrête ses lignes de TVA ; pour tout le cabinet, l'expert-comptable.",
+  "refus.tva.affectation.saisie":
+    "Une ligne choisie n'existe pas dans la déclaration de ce mois : rechargez la page et choisissez à nouveau.",
+  "tva.declaration.parDefaut.aide":
+    "Malica n'a pas pu dire quelle part de ces factures est une immobilisation : leur TVA est rangée sur la ligne par défaut de la déclaration, et comptée. Le cabinet la reclasse en forçant l'écriture.",
+  /**
    * Le solde par société n'est pas servi : le moteur tourne sur UN dossier.
    */
   "pme.fiche.barre": "Votre fiche fiscale",
@@ -4261,6 +4370,9 @@ const en: Dict = {
   "pme.capture.pay.oui": "Yes",
   "pme.capture.pay.pasEncore": "Not yet",
   "pme.capture.pay.enregistrer": "Save",
+  "pme.capture.fin.envoyer.q.proprietaire": "Send them to the owner?",
+  "pme.capture.fin.envoyer.q.proprietaire#one": "Send it to the owner?",
+  "pme.capture.fin.envoyer.q.proprietaire#other": "Send them to the owner?",
   "pme.capture.fin.envoyer.q#one": "Send it to your accountant?",
   "pme.capture.fin.envoyer.q": "Send them to your accountant?",
   "pme.capture.fin.envoyer.q#other": "Send them to your accountant?",
@@ -4328,6 +4440,9 @@ const en: Dict = {
   "pme.paiement.totalInconnu":
     "This invoice’s total was not read: choose “Only part of it” and enter the amount paid.",
   "pme.paiement.combien": "How much did you pay?",
+  "saisie.refus.illisible": "Unreadable amount: write it like 1 234,500.",
+  "saisie.refus.negatif": "An amount entered here cannot be negative.",
+  "saisie.refus.tropPrecis": "Too many decimals for this currency.",
   "pme.paiement.reference": "Cheque, draft or transfer number",
   "pme.paiement.quand": "When did you pay it?",
   "pme.paiement.pourquoi": "Why change it?",
@@ -4674,6 +4789,8 @@ const en: Dict = {
   "cab.stocks.invdup": "This period is already recorded for this item.",
   "cab.stocks.depreciation": "Inventory write-down",
   "cab.stocks.vnr": "Net realisable value",
+  "cab.stocks.vnrNegative":
+    "Net value does not go below zero: a loss beyond cost is a provision, not a write-down of the stock.",
   "cab.stocks.note": "Note",
   "cab.stocks.cost": "Inventory cost",
   "cab.stocks.cumul": "Accumulated write-down",
@@ -5260,6 +5377,7 @@ const en: Dict = {
   "cab.code.pasUnNombre": "The designated value is not a number.",
   "cab.code.dateIllisible": "The date could not be read on the document.",
   "cab.code.sensAConfirmer": "Purchase or sale: to be confirmed.",
+  "cab.code.devise": "Printed currency differs from the currency read: enter it manually.",
   "cab.audit.extract": "Cited reading, contract v1.",
   "cab.audit.autre": "Event on the file.",
   "cab.clients.kicker": "Practice portfolio",
@@ -5683,6 +5801,7 @@ const en: Dict = {
   "cab.retour.apercu": "What the client will see",
   "cab.retour.envoyer": "Return the document",
   "pme.retour.etat": "Returned by your accountant on {date}",
+  "pme.retour.etat.qui": "Returned by {qui} on {date}",
   "pme.retour.etat.court": "Returned by your accountant",
   "pme.retour.etat.pret": "Corrected — ready to send back",
   "pme.retour.geste.joindre_document": "Attach the file",
@@ -5763,8 +5882,14 @@ const en: Dict = {
   "pme.retour.reponse.envoyer": "Send the reply",
   "refus.retour.inscrite":
     "A payment of this document is booked: cancel it first, then return the document.",
+  "refus.reponse.sans_decision": "Grant or refuse the request.",
+  "refus.envoi.retour_par_sa_carte":
+    "A returned document is sent back from its card, once the requested fix is done.",
+  "refus.envoi.chez_le_siege":
+    "You returned it to your team member: it goes out once they have fixed it and sent it back.",
   "refus.reponse.vide": "Write your reply before sending it.",
   "refus.piece.remplacee": "A new photo replaced this document: the new one is the one to handle.",
+  "refus.piece.origine_immuable": "A document keeps its file, its author and its source.",
   "refus.piece.archivee": "The client withdrew this document: it is archived.",
   "refus.remplacement.accompagne":
     "A receipt or a proof of payment is retaken from the payment it goes with.",
@@ -5821,6 +5946,62 @@ const en: Dict = {
   "statut.pme.envoyee.qui": "Sent to {qui}",
   "statut.pme.vue.qui": "Seen by {qui}",
   "statut.pme.retour.qui": "Returned by {qui}",
+  "statut.pme.retournee.qui": "Returned to {qui}",
+  "statut.pme.envoyee.proprietaire": "Sent to the owner",
+  "monespace.sous":
+    "The private documents you had in the companies you left. They are yours alone.",
+  "monespace.vide": "Nothing here: no private document from a company you left.",
+  "monespace.aide":
+    "You are no longer a member of these companies: you can download or delete your documents, never send them to them.",
+  "monespace.lien": "My space from companies I left ({count})",
+  "monespace.lien#one": "My space from a company I left (1)",
+  "monespace.lien#other": "My space from companies I left ({count})",
+  "circuit.lot.reste": "{count} documents have not been sent to the owner yet.",
+  "circuit.lot.reste#one": "One document has not been sent to the owner yet.",
+  "circuit.lot.reste#other": "{count} documents have not been sent to the owner yet.",
+  "circuit.lot.action": "Send them all to the owner",
+  "circuit.lot.chez":
+    "They are with the owner since {quand}. The owner sees them, then sends them to the accountant.",
+  "circuit.lot.chez#one":
+    "It is with the owner since {quand}. The owner sees it, then sends it to the accountant.",
+  "circuit.lot.chez#other":
+    "They are with the owner since {quand}. The owner sees them, then sends them to the accountant.",
+  "circuit.siege": "your team member",
+  "circuit.proprietaire": "the owner",
+  "circuit.envoyer": "Send to the owner",
+  "circuit.envoyer.question": "Ready: send it to the owner?",
+  "circuit.envoyer.aide":
+    "The owner receives and sees it, then sends it to the accountant — or returns it to you with a reason. You do not send it to the accountant yourself.",
+  "circuit.recue.question": "{qui} sent it to you: send it to {cabinet}?",
+  "circuit.recue.aide":
+    "Send it to the accountant, or return it to {qui} with a reason: they will do what is asked, then send it back to you.",
+  "circuit.recue.titre": "{qui} sent it to you",
+  "circuit.recue.aide.sansEnvoi":
+    "It stays in the company. If something is missing, return it to {qui} with a reason: they will do what is asked, then send it back to you.",
+  "circuit.retourner": "Return to {qui}",
+  "circuit.retour.lede":
+    "The reason tells {qui} what to do, your note how. They will read it as is on their document.",
+  "circuit.retour.note": "Note to {qui}",
+  "circuit.retour.apercu": "What {qui} will see",
+  "circuit.demande.aria": "A request to answer",
+  "circuit.demande.rappel": "{qui} is asking to get this document back.",
+  "circuit.demande.suppression": "{qui} is asking to delete this document.",
+  "circuit.demande.aide.titre": "Grant or decline",
+  "circuit.demande.aide.rappel":
+    "If granted, the document goes back to {qui}, within the company, to be sent again.",
+  "circuit.demande.aide.suppression": "If granted, the document is deleted, and {qui} is told.",
+  "circuit.demande.aide.transmise":
+    "The document is already with the accountant: if granted, the request goes to them automatically, and {qui} follows their answer.",
+  "circuit.demande.aide.refus": "A refusal carries a note: {qui} reads why.",
+  "circuit.demande.note": "Why decline?",
+  "circuit.demande.transmise": "Request passed on to {cabinet}",
+  "envoi.piece.suite.proprietaire":
+    "They see it, then send it to the accountant. You'll be told if it comes back to you.",
+  "envoi.trace.proprietaire": "Sent to the owner · {jour}",
+  "notif.kind.piece.recue_du_siege": "Document received from a team member",
+  "notif.kind.piece.retournee_par_le_proprietaire": "Document returned by the owner",
+  "notif.kind.piece.supprimee_par_le_proprietaire": "Document deleted by the owner",
+  "notif.kind.piece.demande": "Request on a document",
   "statut.cab.recue": "Received",
   "statut.cab.vue": "Seen",
   "statut.cab.corrigee": "Corrected",
@@ -6039,6 +6220,7 @@ const en: Dict = {
   "cab.pv.chiffre.tvaCollectee": "Output VAT for the month",
   "cab.pv.chiffre.tvaDeductible": "Input VAT for the month",
   "cab.pv.chiffre.tva": "VAT for the month, output minus input",
+  "cab.pv.chiffre.tvaHorsCalcul": "Documents left out of the VAT calculation, to rework",
   "cab.pv.chiffre.pieces": "Documents sent during the month",
   "cab.pv.chiffre.aSuperviser": "Documents awaiting review",
   "cab.pv.chiffre.retournees": "Documents returned to the client",
@@ -7349,6 +7531,37 @@ const en: Dict = {
   "pme.tva.refusees#other": "{count} lines with no governed rate at their date",
   "pme.tva.ceQuiChange": "To check",
   "pme.tva.parSociete": "By company",
+  "tva.declaration.titre": "The return",
+  "tva.declaration.aide":
+    "Each line of the monthly return takes the VAT of its kind: VAT on fixed assets (an asset booked in class 2) is declared apart from VAT on other goods and services. The kind is read from the firm's entry, or from the invoice items mapped to the chart of accounts.",
+  "tva.declaration.aConfirmer":
+    "These lines are a Malica default: how exactly they match the form in force is to be confirmed by a chartered accountant.",
+  "tva.declaration.parDefaut": "{count} lines placed by default",
+  "tva.declaration.parDefaut#one": "{count} line placed by default",
+  "tva.declaration.parDefaut#other": "{count} lines placed by default",
+  "tva.declaration.sansLigne": "{count} amounts with no return line",
+  "tva.declaration.sansLigne#one": "{count} amount with no return line",
+  "tva.declaration.sansLigne#other": "{count} amounts with no return line",
+  "tva.declaration.sansLigne.aide":
+    "The return referential has no line for these amounts: they count in the totals, but no line of the return carries them. This is not a document to rework; report it to the Malica team.",
+  "tva.affectation.titre": "Lines set by the firm",
+  "tva.affectation.aide":
+    'For each kind of VAT, the return line that receives it. Malica ships a default; the firm sets it. Setting it unchanged confirms it: the line is no longer "to confirm", for you and for the client.',
+  "tva.affectation.aide.portee":
+    '"For this client" applies to this client only. "For the whole firm" applies to every client without its own choice, and is for the chartered accountant. Each decision is dated and signed, and applies from the month shown.',
+  "tva.affectation.origine.pack": "Malica default, to confirm",
+  "tva.affectation.origine.cabinet": "Set by the firm",
+  "tva.affectation.origine.dossier": "Set for this client",
+  "tva.affectation.pourLeDossier": "For this client",
+  "tva.affectation.pourLeCabinet": "For the whole firm",
+  "tva.affectation.arretee": "Lines set.",
+  "tva.affectation.arretee.detail": "This month's VAT follows them, here and at the client's.",
+  "refus.tva.affectation.droits":
+    "Only the firm that keeps this client's books sets its VAT lines; for the whole firm, the chartered accountant.",
+  "refus.tva.affectation.saisie":
+    "A chosen line is not in this month's return: reload the page and choose again.",
+  "tva.declaration.parDefaut.aide":
+    "Malica could not tell which part of these invoices is a fixed asset: their VAT sits on the return's default line, and is counted. The firm reclassifies it by forcing the entry.",
   "pme.fiche.barre": "Your tax profile",
   "pme.fiche.secCarte": "Your card",
   "pme.fiche.cartePasLue": "not read yet",
@@ -7899,6 +8112,9 @@ const ar: Dict = {
   "pme.capture.pay.oui": "نعم",
   "pme.capture.pay.pasEncore": "ليس بعد",
   "pme.capture.pay.enregistrer": "تسجيل",
+  "pme.capture.fin.envoyer.q.proprietaire": "إرسالها إلى المالك؟",
+  "pme.capture.fin.envoyer.q.proprietaire#one": "إرسالها إلى المالك؟",
+  "pme.capture.fin.envoyer.q.proprietaire#other": "إرسالها إلى المالك؟",
   "pme.capture.fin.envoyer.q#one": "إرسالها إلى مكتب المحاسبة؟",
   "pme.capture.fin.envoyer.q": "إرسالها إلى مكتب المحاسبة؟",
   "pme.capture.fin.envoyer.q#other": "إرسالها إلى مكتب المحاسبة؟",
@@ -7966,6 +8182,9 @@ const ar: Dict = {
   "pme.paiement.totalInconnu":
     "لم يُقرأ مجموع هذه الفاتورة: اختر «جزء منه فقط» وأدخل المبلغ المدفوع.",
   "pme.paiement.combien": "كم دفعت؟",
+  "saisie.refus.illisible": "مبلغ غير مقروء: اكتبه هكذا 1 234,500.",
+  "saisie.refus.negatif": "لا يمكن أن يكون المبلغ المُدخل هنا سالبًا.",
+  "saisie.refus.tropPrecis": "عدد الأرقام العشرية أكبر مما تسمح به هذه العملة.",
   "pme.paiement.reference": "رقم الشيك أو الكمبيالة أو التحويل",
   "pme.paiement.quand": "متى دفعتَها؟",
   "pme.paiement.pourquoi": "لماذا تصحيحه؟",
@@ -8316,6 +8535,8 @@ const ar: Dict = {
   "cab.stocks.invdup": "هذه الفترة مثبتة سابقا لهذه المادة.",
   "cab.stocks.depreciation": "تدني قيمة المخزون",
   "cab.stocks.vnr": "القيمة الصافية للتحقق",
+  "cab.stocks.vnrNegative":
+    "لا تنزل القيمة الصافية تحت الصفر: الخسارة التي تتجاوز التكلفة مُدَّخر وليست انخفاضًا في قيمة المخزون.",
   "cab.stocks.note": "ملاحظة",
   "cab.stocks.cost": "كلفة المخزون",
   "cab.stocks.cumul": "مجموع التدني",
@@ -8886,6 +9107,7 @@ const ar: Dict = {
   "cab.code.pasUnNombre": "القيمة المحدَّدة ليست عددًا.",
   "cab.code.dateIllisible": "تعذّرت قراءة التاريخ على الوثيقة.",
   "cab.code.sensAConfirmer": "شراء أم بيع: للتأكيد.",
+  "cab.code.devise": "العملة المطبوعة تختلف عن العملة المقروءة: للإدخال يدويًا.",
   "cab.audit.extract": "قراءة مُستشهَدة، عقد الإصدار 1.",
   "cab.audit.autre": "حدث في الملف.",
   "cab.clients.kicker": "محفظة المكتب",
@@ -9298,6 +9520,7 @@ const ar: Dict = {
   "cab.retour.apercu": "ما سيراه الحريف",
   "cab.retour.envoyer": "إرجاع الوثيقة",
   "pme.retour.etat": "أرجعها محاسبك في {date}",
+  "pme.retour.etat.qui": "أرجعها {qui} في {date}",
   "pme.retour.etat.court": "أرجعها محاسبك",
   "pme.retour.etat.pret": "مُصحَّحة — جاهزة لإعادة الإرسال",
   "pme.retour.geste.joindre_document": "إرفاق الوثيقة",
@@ -9372,8 +9595,12 @@ const ar: Dict = {
   "pme.retour.reponse.champ": "ردّك",
   "pme.retour.reponse.envoyer": "إرسال الرد",
   "refus.retour.inscrite": "دفعة هذه الوثيقة مُسجَّلة في اليومية: ألغِها أولًا، ثم أرجِع الوثيقة.",
+  "refus.reponse.sans_decision": "اقبل الطلب أو ارفضه.",
+  "refus.envoi.retour_par_sa_carte": "تُعاد الوثيقة المُرجعة من بطاقتها بعد إنجاز المطلوب.",
+  "refus.envoi.chez_le_siege": "أرجعتها إلى زميلك: تُرسل بعد أن يصلحها ويعيد إرسالها.",
   "refus.reponse.vide": "اكتب ردّك قبل إرساله.",
   "refus.piece.remplacee": "حلّت صورة جديدة محلّ هذه الوثيقة: الجديدة هي التي تُعالَج.",
+  "refus.piece.origine_immuable": "تحتفظ الوثيقة بملفّها وصاحبها ومصدرها.",
   "refus.piece.archivee": "سحب الحريف هذه الوثيقة: هي مؤرشفة.",
   "refus.remplacement.accompagne": "يُعاد تصوير الوصل أو إثبات الدفع من الدفعة التي يرافقها.",
   "refus.remplacement.inscrite": "تكفّل محاسبك بهذه الوثيقة: يُرجعها أولًا، ثم يُعاد تصويرها.",
@@ -9420,6 +9647,56 @@ const ar: Dict = {
   "statut.pme.envoyee.qui": "أُرسلت إلى {qui}",
   "statut.pme.vue.qui": "اطّلع عليها {qui}",
   "statut.pme.retour.qui": "أرجعها {qui}",
+  "statut.pme.retournee.qui": "أُرجعت إلى {qui}",
+  "statut.pme.envoyee.proprietaire": "أُرسلت إلى المالك",
+  "monespace.sous": "الوثائق الخاصة التي كانت لك في الشركات التي غادرتها. هي لك وحدك.",
+  "monespace.vide": "لا شيء هنا: لا وثيقة خاصة من شركة غادرتها.",
+  "monespace.aide":
+    "لم تعد عضوًا في هذه الشركات: يمكنك تنزيل وثائقك أو حذفها، ولا يمكنك إرسالها إليها.",
+  "monespace.lien": "مساحتي من الشركات التي غادرتها ({count})",
+  "monespace.lien#one": "مساحتي من شركة غادرتها (1)",
+  "monespace.lien#other": "مساحتي من الشركات التي غادرتها ({count})",
+  "circuit.lot.reste": "{count} وثائق لم تُرسل بعد إلى المالك.",
+  "circuit.lot.reste#one": "وثيقة واحدة لم تُرسل بعد إلى المالك.",
+  "circuit.lot.reste#other": "{count} وثائق لم تُرسل بعد إلى المالك.",
+  "circuit.lot.action": "إرسالها كلها إلى المالك",
+  "circuit.lot.chez": "هي لدى المالك منذ {quand}. يطّلع عليها ثم يرسلها إلى المحاسب.",
+  "circuit.lot.chez#one": "هي لدى المالك منذ {quand}. يطّلع عليها ثم يرسلها إلى المحاسب.",
+  "circuit.lot.chez#other": "هي لدى المالك منذ {quand}. يطّلع عليها ثم يرسلها إلى المحاسب.",
+  "circuit.siege": "زميلك",
+  "circuit.proprietaire": "المالك",
+  "circuit.envoyer": "إرسال إلى المالك",
+  "circuit.envoyer.question": "جاهزة: إرسالها إلى المالك؟",
+  "circuit.envoyer.aide":
+    "يستلمها المالك ويطّلع عليها، ثم يرسلها إلى المحاسب أو يُرجعها إليك مع سبب. أنت لا ترسلها بنفسك إلى المحاسب.",
+  "circuit.recue.question": "أرسلها إليك {qui}: إرسالها إلى {cabinet}؟",
+  "circuit.recue.aide":
+    "أرسلها إلى المحاسب، أو أرجعها إلى {qui} مع سبب: سيقوم بما طُلب ثم يعيد إرسالها إليك.",
+  "circuit.recue.titre": "أرسلها إليك {qui}",
+  "circuit.recue.aide.sansEnvoi":
+    "تبقى في الشركة. إن نقص شيء، أرجعها إلى {qui} مع سبب: سيقوم بما طُلب ثم يعيد إرسالها إليك.",
+  "circuit.retourner": "إرجاعها إلى {qui}",
+  "circuit.retour.lede": "السبب يقول لـ{qui} ماذا يفعل، وملاحظتك كيف. سيقرؤها كما هي على وثيقته.",
+  "circuit.retour.note": "ملاحظة إلى {qui}",
+  "circuit.retour.apercu": "ما سيراه {qui}",
+  "circuit.demande.aria": "طلب للبتّ فيه",
+  "circuit.demande.rappel": "يطلب {qui} استرجاع هذه الوثيقة.",
+  "circuit.demande.suppression": "يطلب {qui} حذف هذه الوثيقة.",
+  "circuit.demande.aide.titre": "الموافقة أو الرفض",
+  "circuit.demande.aide.rappel":
+    "عند الموافقة، تعود الوثيقة إلى {qui} داخل الشركة لإرسالها من جديد.",
+  "circuit.demande.aide.suppression": "عند الموافقة، تُحذف الوثيقة ويُعلَم {qui} بذلك.",
+  "circuit.demande.aide.transmise":
+    "الوثيقة لدى المحاسب: عند الموافقة يُحال الطلب إليه تلقائيًا، ويتابع {qui} ردّه.",
+  "circuit.demande.aide.refus": "الرفض يحمل ملاحظة: يقرأ {qui} السبب.",
+  "circuit.demande.note": "لماذا الرفض؟",
+  "circuit.demande.transmise": "أُحيل الطلب إلى {cabinet}",
+  "envoi.piece.suite.proprietaire": "يطّلع عليها ثم يرسلها إلى المحاسب. سنُعلمك إن أرجعها إليك.",
+  "envoi.trace.proprietaire": "أُرسلت إلى المالك · {jour}",
+  "notif.kind.piece.recue_du_siege": "وثيقة واردة من زميل",
+  "notif.kind.piece.retournee_par_le_proprietaire": "وثيقة أرجعها المالك",
+  "notif.kind.piece.supprimee_par_le_proprietaire": "وثيقة حذفها المالك",
+  "notif.kind.piece.demande": "طلب بخصوص وثيقة",
   "statut.cab.recue": "واردة",
   "statut.cab.vue": "اطُّلع عليها",
   "statut.cab.corrigee": "مُصحَّحة",
@@ -9630,6 +9907,7 @@ const ar: Dict = {
   "cab.pv.chiffre.tvaCollectee": "الأداء المستخلص للشهر",
   "cab.pv.chiffre.tvaDeductible": "الأداء القابل للطرح للشهر",
   "cab.pv.chiffre.tva": "أداء الشهر، المستخلص ناقص القابل للطرح",
+  "cab.pv.chiffre.tvaHorsCalcul": "وثائق خارج احتساب الأداء على القيمة المضافة، للمراجعة",
   "cab.pv.chiffre.pieces": "الوثائق المرسلة خلال الشهر",
   "cab.pv.chiffre.aSuperviser": "وثائق في انتظار الإشراف",
   "cab.pv.chiffre.retournees": "وثائق أُعيدت إلى الحريف",
@@ -10884,6 +11162,37 @@ const ar: Dict = {
   "pme.tva.refusees#other": "أسطر دون نسبة معتمدة في تاريخها: {count}",
   "pme.tva.ceQuiChange": "للتحقق",
   "pme.tva.parSociete": "حسب الشركة",
+  "tva.declaration.titre": "التصريح",
+  "tva.declaration.aide":
+    "يتلقى كل سطر من التصريح الشهري الأداء على القيمة المضافة حسب طبيعته: يُصرَّح بأداء الأصول الثابتة (أصل مُقيَّد في الصنف 2) بمعزل عن أداء السلع والخدمات الأخرى. تُقرأ الطبيعة من قيد المكتب، أو من بنود الفاتورة المرتبة حسب المخطط المحاسبي.",
+  "tva.declaration.aConfirmer":
+    "هذه الأسطر إعداد افتراضي من Malica: يجب أن يؤكد خبير محاسب مطابقتها الدقيقة للنموذج الجاري به العمل.",
+  "tva.declaration.parDefaut": "أسطر مرتبة افتراضيًا: {count}",
+  "tva.declaration.parDefaut#one": "سطر واحد مرتب افتراضيًا",
+  "tva.declaration.parDefaut#other": "أسطر مرتبة افتراضيًا: {count}",
+  "tva.declaration.sansLigne": "مبالغ دون سطر في التصريح: {count}",
+  "tva.declaration.sansLigne#one": "مبلغ واحد دون سطر في التصريح",
+  "tva.declaration.sansLigne#other": "مبالغ دون سطر في التصريح: {count}",
+  "tva.declaration.sansLigne.aide":
+    "لا يتضمن مرجع التصريح سطرًا لهذه المبالغ: هي محسوبة في المجاميع، لكن لا يحملها أي سطر من التصريح. ليست وثيقة للمراجعة؛ أبلغوا فريق Malica.",
+  "tva.affectation.titre": "أسطر يضبطها المكتب",
+  "tva.affectation.aide":
+    "لكل طبيعة من الأداء على القيمة المضافة، سطر التصريح الذي يتلقاها. تقدّم Malica إعدادًا افتراضيًا ويضبطه المكتب. الضبط دون تغيير تأكيد: لا يعود السطر «للتأكيد»، لديكم ولدى الحريف.",
+  "tva.affectation.aide.portee":
+    "«لهذا الملف» يسري على هذا الحريف وحده. «لكامل المكتب» يسري على كل الملفات التي ليس لها اختيارها، وهو للخبير المحاسب. كل قرار مؤرخ وموقّع، ويسري ابتداءً من الشهر المعروض.",
+  "tva.affectation.origine.pack": "إعداد Malica الافتراضي، للتأكيد",
+  "tva.affectation.origine.cabinet": "ضبطه المكتب",
+  "tva.affectation.origine.dossier": "ضُبط لهذا الملف",
+  "tva.affectation.pourLeDossier": "لهذا الملف",
+  "tva.affectation.pourLeCabinet": "لكامل المكتب",
+  "tva.affectation.arretee": "تم ضبط الأسطر.",
+  "tva.affectation.arretee.detail": "يتبعها أداء الشهر، هنا ولدى الحريف.",
+  "refus.tva.affectation.droits":
+    "لا يضبط أسطر الأداء إلا المكتب الذي يمسك هذا الملف؛ ولكامل المكتب، الخبير المحاسب.",
+  "refus.tva.affectation.saisie":
+    "أحد الأسطر المختارة غير موجود في تصريح هذا الشهر: أعيدوا تحميل الصفحة واختاروا من جديد.",
+  "tva.declaration.parDefaut.aide":
+    "لم تتمكن Malica من تحديد الجزء الذي يمثل أصلًا ثابتًا في هذه الفواتير: رُتّب أداؤها في السطر الافتراضي من التصريح، وهو محسوب. يعيد المكتب تصنيفه بفرض القيد.",
   "pme.fiche.barre": "وضعيتكم الجبائية",
   "pme.fiche.secCarte": "بطاقتكم",
   "pme.fiche.cartePasLue": "لم تُقرأ بعد",

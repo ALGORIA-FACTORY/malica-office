@@ -4,6 +4,33 @@ import type { ExtractV1 } from "../contracts/extract.v1.ts";
 export const TND: CurrencyDef = { code: "TND", decimals: 3 };
 export const EUR: CurrencyDef = { code: "EUR", decimals: 2 };
 
+/** Une déclaration d'essai : une ligne par sens, toutes natures confondues. */
+export const DECLARATION_ESSAI = {
+  nature_par_defaut: "AUTRE",
+  affectations: [
+    { sens: "collectee" as const, nature: "AUTRE", ligne: "COL" },
+    { sens: "deductible" as const, nature: "AUTRE", ligne: "DED" },
+  ],
+  lignes: [
+    {
+      code: "COL",
+      label: "Collectée",
+      sens: "collectee" as const,
+      nature: null,
+      ordinal: 1,
+      incertain: false,
+    },
+    {
+      code: "DED",
+      label: "Déductible",
+      sens: "deductible" as const,
+      nature: null,
+      ordinal: 2,
+      incertain: false,
+    },
+  ],
+};
+
 export const TAX_RATES_TN: readonly TaxRateRow[] = [
   {
     code: "TVA_19",

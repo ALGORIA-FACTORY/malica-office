@@ -28,17 +28,21 @@ const RETOUR: RetourDuCabinet = {
   motif: "justificatif_manquant",
   motifLibelle: "Justificatif manquant",
   geste: "joindre_document",
-  cabinet: "COMPTA ESSAI",
+  chez: "cabinet",
+  qui: "COMPTA ESSAI",
   fait: false,
 };
 
-function monter(retour: Partial<RetourDuCabinet> = {}) {
+function monter(
+  retour: Partial<RetourDuCabinet> = {},
+  droits: { renvoyer?: boolean; garder?: boolean } = {},
+) {
   const gestes = {
     onGeste: vi.fn(),
     onReprendreLaPhoto: vi.fn(),
     onVoirLeFait: vi.fn(),
-    renvoyer: { action: vi.fn(), enCours: false },
-    garder: { action: vi.fn(), enCours: false },
+    renvoyer: droits.renvoyer === false ? null : { action: vi.fn(), enCours: false },
+    garder: droits.garder === false ? null : { action: vi.fn(), enCours: false },
     supprimer: { action: vi.fn(), enCours: false },
   };
   render(
@@ -75,7 +79,24 @@ describe("une pièce retournée ne bloque jamais", () => {
   it("« Renvoyer » se fait sans que le geste soit fait : le cabinet décidera", () => {
     const g = monter();
     fireEvent.click(screen.getByRole("button", { name: "pme.retour.renvoyer" }));
-    expect(g.renvoyer.action).toHaveBeenCalledOnce();
+    expect(g.renvoyer!.action).toHaveBeenCalledOnce();
+  });
+
+  it("retour du propriétaire au siège : la même carte, son prénom, et pas de « Garder »", () => {
+    monter({ chez: "proprietaire", qui: "Amel" }, { garder: false });
+    expect(screen.getByText("Amel")).toBeTruthy();
+    expect(sorties()).not.toContain("pme.retour.garder");
+    expect(sorties()).toContain("pme.retour.renvoyer");
+  });
+
+  it("retour du comptable sur la pièce d'un siège : le siège fait le geste, le propriétaire renvoie", () => {
+    monter({}, { renvoyer: false, garder: false });
+    expect(sorties()).toEqual([
+      "pme.retour.geste.joindre_document",
+      "pme.retour.geste.reprendre_photo",
+      "pme.retour.geste.repondre",
+      "pme.retour.supprimer",
+    ]);
   });
 
   it("le geste fait, « Renvoyer » passe en tête, et ce qui est fait se voit", () => {
@@ -89,7 +110,7 @@ describe("une pièce retournée ne bloque jamais", () => {
     fireEvent.click(screen.getByRole("button", { name: "pme.retour.geste.reprendre_photo" }));
     fireEvent.click(screen.getByRole("button", { name: "pme.retour.garder" }));
     expect(g.onReprendreLaPhoto).toHaveBeenCalledOnce();
-    expect(g.garder.action).toHaveBeenCalledOnce();
+    expect(g.garder!.action).toHaveBeenCalledOnce();
   });
 
   it("supprimer se confirme, puis part ; « Annuler » rend les sorties", () => {

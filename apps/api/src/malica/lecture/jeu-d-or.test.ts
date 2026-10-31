@@ -5,7 +5,7 @@ import { repairArticles } from "./article-repair.ts";
 import { JEU_D_OR, type CasDOr } from "./jeu-d-or.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
-import { deviseDEssai } from "../../scan/devise-d-essai.ts";
+import { devisesDEssai } from "../../scan/devise-d-essai.ts";
 
 /**
  * Le banc du jeu d'or — la relecture, sur de vraies pièces.
@@ -95,7 +95,7 @@ function jouer(cas: CasDOr) {
   return buildExtractFromTokenPlan({
     tokens: cas.tokens,
     selection: cas.designation,
-    devise: deviseDEssai(cas.decimales),
+    ...devisesDEssai(cas.decimales),
     matriculeDossier: cas.matriculeDossier,
   });
 }
@@ -209,7 +209,7 @@ for (const cas of JEU_D_OR) {
     const lu = buildExtractFromTokenPlan({
       tokens: plan,
       selection: { ...cas.designation, articles: repairArticles(plan, sansColonnes) },
-      devise: deviseDEssai(cas.decimales),
+      ...devisesDEssai(cas.decimales),
       matriculeDossier: cas.matriculeDossier,
     });
 

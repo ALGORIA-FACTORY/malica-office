@@ -16,8 +16,6 @@ import type { AccountMapping, FiscalCharge, TaxRate } from "@malica/socle/ports/
 
 import type { releverLeReferentiel } from "./releve-du-referentiel.ts";
 
-export { MARQUES_D_ESSAI } from "./devise-d-essai.ts";
-
 type Sens = "facture_achat" | "facture_vente";
 
 export const RELEVE_D_ESSAI = JSON.parse(
@@ -51,7 +49,16 @@ export const TYPES_D_ESSAI = RELEVE_D_ESSAI.typesQuiPortentUneEcriture.map((code
   porteEcriture: true,
 }));
 
-export const EXPOSANTS_D_ESSAI: Readonly<Record<string, number>> = RELEVE_D_ESSAI.exposants;
+/** Ce que le titre imprimé dit de la nature de la pièce (`ref.titres_de_piece`). */
+export const TITRES_D_ESSAI = RELEVE_D_ESSAI.titres;
+
+/** Les marques imprimées de chaque devise (`ref.devises`, `ref.devises_marques`). */
+export const MARQUES_D_ESSAI = RELEVE_D_ESSAI.marques;
+
+/** L'exposant et le séparateur décimal de chaque devise de `ref.devises`. */
+export const DEVISES_D_ESSAI: Readonly<
+  Record<string, { exposant: number; separateurDecimal: string }>
+> = RELEVE_D_ESSAI.devises;
 
 /** La devise des livres du dossier d'essai : celle du pack. */
 export const DEVISE_D_ESSAI = RELEVE_D_ESSAI.devise;

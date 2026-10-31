@@ -19,7 +19,7 @@ import { EcritureDuCabinet } from "@/components/malica/ecriture-du-cabinet";
 import { PanneauRetourne, type RetourEnvoye } from "@/components/malica/envoye";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
 import { VersionPrecedente } from "@/components/malica/version-precedente";
-import { extensionDuContenu } from "@/lib/archive-comptable";
+import { nomDeFichierDePiece } from "@/lib/nom-de-fichier";
 import {
   EmptyState,
   InkCell,
@@ -31,7 +31,7 @@ import {
 } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
-import { saisieDecimale } from "@/lib/saisie-decimale";
+import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import type { CompteDuPlan } from "@malica/socle/ports/repositories";
@@ -325,7 +325,7 @@ function CabinetReview() {
       const { enregistrerUnFichier } = await import("@/capabilities/enregistrer-un-fichier");
       const { chemin } = await enregistrerUnFichier(
         octets,
-        `${ref ?? pieceId}.${extensionDuContenu(octets.type)}`,
+        nomDeFichierDePiece(ref ?? null, pieceId, octets.type),
       );
       return chemin;
     },
@@ -349,10 +349,9 @@ function CabinetReview() {
       const octets = await office().capture.apercu(jointId);
       if (!octets) throw new Error(t("cab.biblio.missing"));
       const { enregistrerUnFichier } = await import("@/capabilities/enregistrer-un-fichier");
-      const nom = nomDuType(d.piece.documentKind) ?? jointId;
       const { chemin } = await enregistrerUnFichier(
         octets,
-        `${nom}_${jointId}.${extensionDuContenu(octets.type)}`,
+        nomDeFichierDePiece(nomDuType(d.piece.documentKind), jointId, octets.type),
       );
       return chemin;
     },

@@ -285,13 +285,12 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
   it("un collaborateur du cabinet engagé n'inscrit pas : le rôle compte", async () => {
     const collaborateur = await creerCompte(`col-${marque}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(collaborateur);
-    await sousIdentiteDuServeur(expert.id, async (db) => {
-      await db.query(
-        `insert into identity.memberships (tenant_id, user_id, role)
-         values ($1, $2, 'collaborateur')`,
-        [cabinet, collaborateur.id],
-      );
-    });
+    // L'adhésion s'écrit par ses portes (invitation) ; ici, l'opérateur.
+    await admin.query(
+      `insert into identity.memberships (tenant_id, user_id, role)
+       values ($1, $2, 'collaborateur')`,
+      [cabinet, collaborateur.id],
+    );
     const refus = await refusDe(collaborateur.id, async (db) =>
       db.query(
         `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)

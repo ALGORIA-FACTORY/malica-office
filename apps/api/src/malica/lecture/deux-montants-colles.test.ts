@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { deviseDEssai } from "../../scan/devise-d-essai.ts";
+import { deviseDEssai, devisesDEssai } from "../../scan/devise-d-essai.ts";
 import { candidatsMontant } from "../../scan/normaliser-montants.ts";
 
 import { treillisMontant } from "./montants.ts";
@@ -85,7 +85,7 @@ describe("treillisMontant — ce qui se lisait se lit encore", () => {
     ["1 234,560", [1234560]],
     ["2 800,000", [2800000]],
     ["1 585,000 TND", [1585000]],
-    ["(1 234,560)", [-1234560]],
+    ["- 1 234,560 DT", [-1234560]],
     ["1 234 560", [1234560, 1234560000]],
     ["1.234.567", [1234567000]],
     ["1.234,56 TND", [1234560]],
@@ -93,23 +93,65 @@ describe("treillisMontant — ce qui se lisait se lit encore", () => {
     // Le même montant répété en colonnes (#135) : une seule valeur, la sienne.
     ["514,700 514,700", [514700]],
     ["3 020,000 3 020,000", [3020000]],
-    ["(3 020,000) (3 020,000)", [-3020000]],
-    // Un négatif entre parenthèses garde sa devise et ses espaces intérieures
-    // (revue de #138) : l'espace collée à une parenthèse n'est pas un groupe.
-    ["(1 234,560 DT)", [-1234560]],
-    ["(123,450 €)", [-123450]],
-    ["( 1 234,560 )", [-1234560]],
-    ["(DT 1 234,560)", [-1234560]],
-    ["(€ 123,450)", [-123450]],
-    [" ( 1 234,560 DT ) ", [-1234560]],
-    ["DT (1 234,560)", [-1234560]],
-    ["(1 234,560) DT", [-1234560]],
-    ["( 123,450€ )", [-123450]],
     ["3 020,000 DT 3 020,000 DT", [3020000]],
+    /*
+     * Lus au plan de jetons depuis le 30 octobre 2026, comme ils l'étaient
+     * déjà à la normalisation du scan : le bruit de colonne sépare deux
+     * occurrences, l'apostrophe sépare des milliers, et des zéros au-delà des
+     * décimales de la devise ne changent pas la valeur.
+     */
+    ["3 020,000 | 3 020,000", [3020000]],
+    ["1'234.560", [1234560]],
+    ["1234,5600", [1234560]],
   ];
   for (const [texte, attendu] of lisibles) {
     it(`« ${texte} » se lit ${attendu.join(" ou ")}`, () => {
       assert.deepEqual(valeurs(texte), attendu);
+    });
+  }
+});
+
+describe("treillisMontant — un signe que le texte ne tranche pas ne se lit pas", () => {
+  /*
+   * Jusqu'au 30 octobre 2026, ces textes se lisaient en NÉGATIF au plan de
+   * jetons, et pas du tout à la normalisation du scan (#135) : sur ces
+   * factures, une paire de parenthèses encadre aussi une base — « (base
+   * 514,700) », le 15 octobre 2026 —, et la lire en négatif inscrirait au
+   * crédit ce qui va au débit. Un seul lecteur, une seule règle : le texte ne
+   * dit pas le signe, donc on ne lit pas ; l'écran le demande.
+   *
+   * Le « + », lui, n'a jamais été un signe sur une pièce du dépôt : le
+   * 13 octobre 2026, c'était le « 4 » de « 4 135,183 », imprimé en blanc sur
+   * bande noire.
+   */
+  const sansSigneSur: readonly string[] = [
+    "(1 234,560)",
+    "(3 020,000) (3 020,000)",
+    "(1 234,560 DT)",
+    "(123,450 €)",
+    "( 1 234,560 )",
+    "(DT 1 234,560)",
+    "(€ 123,450)",
+    " ( 1 234,560 DT ) ",
+    "DT (1 234,560)",
+    "(1 234,560) DT",
+    "( 123,450€ )",
+    "(3 020,000))",
+    /*
+     * Une parenthèse orpheline non plus (revue de la PR 144) : « 1 234,560) »
+     * peut être un avoir coupé par la plage. Celle qui ferme un MOT coupé —
+     * « (base 3 020,000) » — se retire au plan (`une-parenthese-orpheline.test.ts`).
+     */
+    "3 020,000)",
+    "3 020,000 3 020,000)",
+    "(1 234,560",
+    "+ 135,183",
+    "+ 72,883",
+    "3 020,000-",
+  ];
+  for (const texte of sansSigneSur) {
+    it(`« ${texte} » ne se lit pas`, () => {
+      assert.deepEqual(valeurs(texte), []);
     });
   }
 });
@@ -128,7 +170,7 @@ describe("les marques de devise viennent du référentiel, pour les deux lecteur
     ["1 234,560 D.T.", [1234560]],
     ["د.ت 1 234,560", [1234560]],
     ["1 234,560 TND.", [1234560]],
-    ["(1 234,560 D.T.)", [-1234560]],
+    ["(1 234,560 D.T.)", []],
     ["1 234,560 DT.", [1234560]],
     ["1 234,560 د.ت.", [1234560]],
     ["D.T. 1 234,560", [1234560]],
@@ -147,30 +189,34 @@ describe("les marques de devise viennent du référentiel, pour les deux lecteur
       assert.deepEqual(valeurs(texte), attendu, "lecture au plan de jetons");
     });
   }
-  // La normalisation du scan lit les mêmes marques. Elle garde ses propres
-  // conventions (la virgule des milliers à l'anglaise ; une paire de
-  // parenthèses refusée plutôt que lue en négatif, voir
-  // `une-parenthese-orpheline.test.ts`) : on compare donc la présence d'une
-  // lecture et la valeur décimale, hors parenthèses.
-  for (const [texte, attendu] of cas.filter(([t]) => !t.includes("("))) {
+  // La normalisation du scan lit avec le MÊME lecteur depuis le 30 octobre
+  // 2026 : elle rend exactement les mêmes valeurs. (Avant, elle gardait ses
+  // propres conventions, et l'épreuve ne comparait que la présence d'une
+  // lecture, hors parenthèses.)
+  for (const [texte, attendu] of cas) {
     it(`le scan, sur « ${texte} »`, () => {
-      const lu = parLeScan(texte);
-      if (attendu.length === 0) assert.deepEqual(lu, []);
-      else assert.ok(lu.includes(attendu[0]!), `${lu.join(", ")}`);
+      assert.deepEqual(parLeScan(texte), attendu);
     });
   }
 });
 
-describe("treillisMontant — les séparateurs suivent l'exposant de la devise", () => {
-  // Le nombre de décimales vient du référentiel (money.decimals), jamais d'ici :
-  // le même texte se lit autrement selon la devise.
+describe("treillisMontant — les séparateurs suivent la devise", () => {
+  // L'exposant et le séparateur décimal viennent du référentiel (`ref.devises`),
+  // jamais d'ici : le même texte se lit autrement selon la devise.
   const cas: ReadonlyArray<readonly [texte: string, decimales: number, attendu: number[]]> = [
+    // La virgule, séparateur décimal du dinar, ne sépare pas de milliers.
     ["5,460", 3, [5460]],
-    ["5,460", 2, []],
+    ["100,000", 3, [100000]],
+    // En euros, trois chiffres ne sont pas des centimes : la virgule peut
+    // séparer des milliers, ou porter un zéro de trop (5,46 €).
+    ["5,460", 2, [546, 546000]],
+    ["12,345", 2, [1234500]],
     ["5.460", 3, [5460, 5460000]],
-    ["5.460", 2, [546000]],
+    ["5.460", 2, [546, 546000]],
     ["5,46", 2, [546]],
     ["5,46", 3, [5460]],
+    // Le franc CFA n'a pas de décimales : « 1,500 » ne peut être que 1 500.
+    ["1,500", 0, [1500]],
   ];
   for (const [texte, decimales, attendu] of cas) {
     it(`« ${texte} » à ${decimales} décimale(s) : ${attendu.length ? attendu.join(" ou ") : "illisible"}`, () => {
@@ -233,7 +279,7 @@ const lire = (selection: Partial<VisionSelection>) =>
       ...selection,
       totals: { base_ht: null, vat: null, ttc: null, ...(selection.totals ?? {}) },
     } as unknown as VisionSelection,
-    devise: deviseDEssai(DINAR),
+    ...devisesDEssai(DINAR),
     matriculeDossier: null,
   });
 

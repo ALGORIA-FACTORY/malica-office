@@ -27,6 +27,7 @@
     "enregistrerPaiement",
     "listAvecLecture",
     "lister",
+    "monEspaceHorsSociete",
     "motifsDAnnulation",
     "paiementsDUnePiece",
     "pieceQuiAccompagne",
@@ -58,6 +59,8 @@
     "demandesDUnePiece",
     "deriverEcheances",
     "echeances",
+    "envoyer",
+    "etatDesDemandes",
     "garderPiece",
     "invitations",
     "invitationsPourMoi",
@@ -251,6 +254,7 @@
     "valider"
   ],
   "parametrage": [
+    "arreterDeclarationTva",
     "calendrierCabinet",
     "creerObligationPropre",
     "definirFuseauDuCabinet",
@@ -275,6 +279,7 @@
     "accountMappings",
     "activePack",
     "classesDeComptes",
+    "declarationTva",
     "dossiers",
     "fiscalCharges",
     "journaux",

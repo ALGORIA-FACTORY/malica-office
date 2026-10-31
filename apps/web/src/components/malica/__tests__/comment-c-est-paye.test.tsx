@@ -193,6 +193,18 @@ describe("la déclaration d'un règlement", () => {
     });
     fireEvent.click(especes);
     expect(enregistrer().disabled).toBe(true);
+    // Revue de la PR 144 : le bouton se grisait sans un mot. La raison se dit.
+    expect(screen.getByRole("alert").textContent).toBe("saisie.refus.tropPrecis");
+  });
+
+  it("ne reproche rien à un montant qui s'inscrit", async () => {
+    monter();
+    await ouvrirLaFeuille();
+    fireEvent.click(screen.getByRole("button", { name: "pme.paiement.partie" }));
+    fireEvent.change(screen.getByLabelText("pme.paiement.combien"), {
+      target: { value: "12,500" },
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("inscrit seulement le reste après un acompte connu", async () => {

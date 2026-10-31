@@ -23,6 +23,8 @@ export function lecture(
     ht?: [string, string];
     tva?: string;
     ttc?: [string, string];
+    /** Le droit de timbre tel qu'imprimé (« 1,000 » par défaut). */
+    timbre?: string;
     numero?: string;
     /** Le solveur de la lecture s'est trompé : l'extraction porte des montants faux, les jetons imprimés restent justes. */
     solveurFaux?: boolean;
@@ -37,6 +39,11 @@ export function lecture(
     ligne?: string[];
     /** Les lignes suivantes d'une facture à plusieurs taux : les jetons de la base de chacune. */
     autresLignes?: string[][];
+    /**
+     * Des jetons imprimés sur la même ligne, juste AVANT ceux que la citation
+     * de la ligne couvre, et qu'elle ne cite pas — « (base », par exemple.
+     */
+    avantLaLigne?: string[];
   } = {},
 ) {
   const numero = opts.numero ?? "F-2026-0042";
@@ -51,14 +58,16 @@ export function lecture(
     [opts.ht?.[0] ?? "1", 0.7], // 7 ─┐ « 1 234,560 », coupé en deux jetons
     [opts.ht?.[1] ?? "234,560", 0.7], // 8 ─┘
     [opts.tva ?? "234,566", 0.74], // 9
-    ["1,000", 0.78], // 10
+    [opts.timbre ?? "1,000", 0.78], // 10
     [opts.ttc?.[0] ?? "1", 0.82], // 11 ─┐ « 1 470,126 »
     [opts.ttc?.[1] ?? "470,126", 0.82], // 12 ─┘
-    ...(opts.ligne ?? []).map((t): [string, number] => [t, 0.5]), // 13… la ligne, si elle est à part
+    ...(opts.avantLaLigne ?? []).map((t): [string, number] => [t, 0.5]), // 13… avant la ligne, non cités
+    ...(opts.ligne ?? []).map((t): [string, number] => [t, 0.5]), // puis la ligne, si elle est à part
     ...(opts.autresLignes ?? []).flat().map((t): [string, number] => [t, 0.55]), // puis les suivantes
   ];
-  const ordinauxDeLaLigne = (opts.ligne ?? []).map((_, i) => 13 + i);
-  let suivant = 13 + ordinauxDeLaLigne.length;
+  const avant = (opts.avantLaLigne ?? []).length;
+  const ordinauxDeLaLigne = (opts.ligne ?? []).map((_, i) => 13 + avant + i);
+  let suivant = 13 + avant + ordinauxDeLaLigne.length;
   const ordinauxDesAutres = (opts.autresLignes ?? []).map((l) => l.map(() => suivant++));
   const tokens: Jeton[] = textes.map(([text, y], ordinal) => ({
     page: 1,

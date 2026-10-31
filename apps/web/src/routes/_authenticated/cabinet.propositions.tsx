@@ -43,6 +43,7 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
+import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
@@ -114,10 +115,7 @@ function CabinetPropositions() {
     queryFn: () => office().collab.assignments(org.id),
   });
   // La même clé que le rail du cabinet : une seule lecture du rôle.
-  const acces = useQuery({
-    queryKey: ["cab-acces", org.id],
-    queryFn: () => office().acces.monAcces(org.id),
-  });
+  const acces = useMonAcces(org.id);
   // Superviser — valider, forcer — revient à l'expert ou au collaborateur ;
   // l'assistant prépare (ANO-CAB-006). La base tient la même règle.
   const superviseur = acces.data?.role === "expert" || acces.data?.role === "collaborateur";
