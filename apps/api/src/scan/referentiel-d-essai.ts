@@ -62,3 +62,6 @@ export const DEVISES_D_ESSAI: Readonly<
 
 /** La devise des livres du dossier d'essai : celle du pack. */
 export const DEVISE_D_ESSAI = RELEVE_D_ESSAI.devise;
+
+/** La règle de change du pack (`change.*` de `ref.socle_params`). */
+export const REGLE_DE_CHANGE_D_ESSAI = RELEVE_D_ESSAI.change;

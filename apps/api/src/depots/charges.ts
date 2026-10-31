@@ -6,8 +6,11 @@
  * lire le seuil d'un autre exercice.
  */
 
+import { sommeDecimale } from "@malica/socle/somme-decimale";
+
 import type { Requete } from "../db.ts";
 import { dec, decOuNul, enVigueur } from "./decimal.ts";
+import { conversionsDesPieces, montantConverti } from "./en-devise-du-dossier.ts";
 
 /**
  * Les articles LUS qui sont des charges du mois (`charges_lues`) : un achat
@@ -22,7 +25,14 @@ import { dec, decOuNul, enVigueur } from "./decimal.ts";
  */
 const CHARGES_LUES = `with lus as (
          select a.*, q.document_kind as kind,
-                coalesce(a.document_date, q.created_at::date) as jour
+                coalesce(a.document_date, q.created_at::date) as jour,
+                -- La devise de la pièce, telle que son jugement l'a décidée
+                -- (deviseDeLaPiece), à défaut celle de sa lecture.
+                coalesce((select y.normalisation ->> 'devise' from capture.analyses y
+                           where y.piece_id = a.piece_id order by y.created_at desc limit 1),
+                         (select z.payload ->> 'currency' from extractions_v z
+                           where z.piece_id = a.piece_id order by z.created_at desc limit 1))
+                  as devise
            from piece_articles_v a
            join pieces_qui_comptent_v q on q.id = a.piece_id
           where a.tenant_id = $1 and q.source = 'lecture'
@@ -40,6 +50,69 @@ const CHARGES_LUES = `with lus as (
          select l.* from lus l
           where not exists (select 1 from immobilises m where m.id = l.id)
        )`;
+
+/** La devise des livres du dossier, et son exposant (`ref.devises`). */
+async function deviseDuDossier(
+  db: Requete,
+  tenantId: string,
+): Promise<{ code: string; exposant: number }> {
+  const { rows } = await db.query<{ code: string; exposant: number }>(
+    `select o.currency as code, d.exposant
+       from organizations_v o join ref.devises d on d.code = o.currency
+      where o.id = $1`,
+    [tenantId],
+  );
+  const d = rows[0];
+  if (!d) throw new Error(`dossier introuvable, ou devise inconnue du référentiel : ${tenantId}`);
+  return { code: d.code, exposant: Number(d.exposant) };
+}
+
+/**
+ * Les articles lus d'une pièce en devise, dans la devise du dossier, au cours
+ * de son jugement (`en-devise-du-dossier.ts`). Un article sans cours n'entre
+ * dans aucun total : il est rendu à part (`sansCours`), et l'écran le compte
+ * (`enAttenteDeCours`) — jamais en silence, jamais en devise étrangère.
+ */
+async function enDeviseDuDossier<
+  T extends {
+    piece_id: string;
+    devise: string | null;
+    total_ht: string | null;
+    unit_price_ht?: string | null;
+    unit_price_ttc?: string | null;
+  },
+>(db: Requete, tenantId: string, lignes: readonly T[]) {
+  const dossier = await deviseDuDossier(db, tenantId);
+  const enDevise = lignes.filter((l) => l.devise !== null && l.devise !== dossier.code);
+  const conversions = await conversionsDesPieces(
+    db,
+    enDevise.map((l) => l.piece_id),
+  );
+  const converties: T[] = [];
+  const sansCours: T[] = [];
+  for (const l of lignes) {
+    if (l.devise === null || l.devise === dossier.code) {
+      converties.push(l);
+      continue;
+    }
+    const c = conversions.get(l.piece_id);
+    if (!c || c.de.code !== l.devise) {
+      sansCours.push(l);
+      continue;
+    }
+    converties.push({
+      ...l,
+      total_ht: montantConverti(l.total_ht, c),
+      ...(l.unit_price_ht !== undefined
+        ? { unit_price_ht: montantConverti(l.unit_price_ht, c) }
+        : {}),
+      ...(l.unit_price_ttc !== undefined
+        ? { unit_price_ttc: montantConverti(l.unit_price_ttc, c) }
+        : {}),
+    });
+  }
+  return { dossier, converties, sansCours };
+}
 
 export const charges = {
   /**
@@ -102,20 +175,50 @@ export const charges = {
    * quel geste le débloque.
    */
   async enAttenteDeDate(db: Requete, tenantId: string) {
-    const { rows } = await db.query(
-      // Forcée, la pièce a la date de l'écriture du cabinet : elle n'est pas lue ici.
+    // Forcée, la pièce a la date de l'écriture du cabinet : elle n'est pas lue ici.
+    // Additionnée dans la devise du dossier : une pièce en devise sans cours
+    // n'y entre pas — elle attend aussi son cours (`enAttenteDeCours`).
+    const { rows } = await db.query<{
+      piece_id: string;
+      devise: string | null;
+      total_ht: string | null;
+    }>(
       `${CHARGES_LUES}
-       select count(*) as articles, count(distinct a.piece_id) as pieces,
-              sum(a.total_ht) as total_ht
+       select a.piece_id, a.devise, a.total_ht::text as total_ht
          from charges_lues a
         where a.period is null`,
       [tenantId],
     );
-    const r = (rows as Record<string, unknown>[])[0] ?? {};
+    const { dossier, converties } = await enDeviseDuDossier(db, tenantId, rows);
+    const totaux = converties.flatMap((l) => (l.total_ht === null ? [] : [l.total_ht]));
     return {
-      articles: Number(r["articles"] ?? 0),
-      pieces: Number(r["pieces"] ?? 0),
-      totalHt: decOuNul(r["total_ht"], 3),
+      articles: rows.length,
+      pieces: new Set(rows.map((r) => r.piece_id)).size,
+      totalHt: totaux.length === 0 ? null : sommeDecimale(totaux, dossier.exposant),
+    };
+  },
+
+  /**
+   * Ce qui attend son cours de change : les articles lus d'une pièce en devise
+   * dont le jugement n'a trouvé aucun cours (31 octobre 2026). Ils n'entrent
+   * dans aucun total — un montant en euros ne s'additionne pas à des dinars —,
+   * et l'écran le dit, comme ce qui attend sa date.
+   */
+  async enAttenteDeCours(db: Requete, tenantId: string) {
+    const { rows } = await db.query<{
+      piece_id: string;
+      devise: string | null;
+      total_ht: string | null;
+    }>(
+      `${CHARGES_LUES}
+       select a.piece_id, a.devise, a.total_ht::text as total_ht from charges_lues a`,
+      [tenantId],
+    );
+    const { sansCours } = await enDeviseDuDossier(db, tenantId, rows);
+    return {
+      articles: sansCours.length,
+      pieces: new Set(sansCours.map((r) => r.piece_id)).size,
+      devises: [...new Set(sansCours.flatMap((r) => (r.devise ? [r.devise] : [])))].sort(),
     };
   },
 
@@ -132,8 +235,9 @@ export const charges = {
     const { rows } = await db.query(
       `${CHARGES_LUES}
        select * from (
-         select a.piece_id, a.ordinal, a.designation, a.quantity, a.unit_price_ht,
-                a.unit_price_ttc, a.total_ht, a.famille_code, a.famille_source, a.period,
+         select a.piece_id, a.ordinal, a.designation, a.quantity, a.unit_price_ht::text,
+                a.unit_price_ttc::text, a.total_ht::text, a.devise, a.famille_code,
+                a.famille_source, a.period,
                 a.document_date, a.citation_field, a.citation_quantity,
                 a.citation_unit_price_ht, a.citation_unit_price_ttc, a.citation_total_ht,
                 'lecture' as source
@@ -144,7 +248,7 @@ export const charges = {
          -- famille par le même résolveur que les articles lus — le compte
          -- d'abord, puis le libellé. La PME y lit l'émetteur, pas l'écriture.
          select q.id, l.ordinal, coalesce(x.payload ->> 'issuer', ''),
-                null::numeric, null::numeric, null::numeric, l.montant, l.famille_code,
+                null::numeric, null::text, null::text, l.montant::text, null::text, l.famille_code,
                 l.famille_source, to_char(l.date_ecriture, 'YYYY-MM'), l.date_ecriture,
                 null, null, null, null, null, 'cabinet'
            from pieces_qui_comptent_v q
@@ -158,16 +262,29 @@ export const charges = {
        order by a.period desc, a.ordinal asc`,
       [tenantId, fromPeriod, toPeriod],
     );
-    return rows.map((r) => {
+    // Une pièce en devise, convertie au cours de son jugement ; sans cours,
+    // hors du total, et comptée à part (`enAttenteDeCours`).
+    const { dossier, converties } = await enDeviseDuDossier(
+      db,
+      tenantId,
+      rows as Array<{
+        piece_id: string;
+        devise: string | null;
+        total_ht: string | null;
+        unit_price_ht: string | null;
+        unit_price_ttc: string | null;
+      }>,
+    );
+    return converties.map((r) => {
       const row = r as Record<string, unknown>;
       return {
         pieceId: row["piece_id"] as string,
         ordinal: Number(row["ordinal"] ?? 0),
         designation: row["designation"] as string,
         quantity: decOuNul(row["quantity"], 3),
-        unitPriceHt: decOuNul(row["unit_price_ht"], 3),
-        unitPriceTtc: decOuNul(row["unit_price_ttc"], 3),
-        totalHt: decOuNul(row["total_ht"], 3),
+        unitPriceHt: decOuNul(row["unit_price_ht"], dossier.exposant),
+        unitPriceTtc: decOuNul(row["unit_price_ttc"], dossier.exposant),
+        totalHt: decOuNul(row["total_ht"], dossier.exposant),
         familleCode: row["famille_code"] as string,
         familleSource: (row["famille_source"] as string) ?? "fallback",
         period: row["period"] as string,

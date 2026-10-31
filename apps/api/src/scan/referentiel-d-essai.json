@@ -194,6 +194,12 @@
       "refus": "Avoir : à saisir par le cabinet (titre « {titre} »)."
     }
   ],
+  "change": {
+    "source": "BCT",
+    "dateRetenue": "date_facture",
+    "recul": 5,
+    "ecart": "base_la_plus_grande"
+  },
   "marques": [
     {
       "marque": "CFA",
@@ -272,6 +278,14 @@
       "devise": "TND"
     },
     {
+      "marque": "US$",
+      "devise": "USD"
+    },
+    {
+      "marque": "USD",
+      "devise": "USD"
+    },
+    {
       "marque": "XOF",
       "devise": "XOF"
     },
@@ -296,6 +310,10 @@
     "TND": {
       "exposant": 3,
       "separateurDecimal": ","
+    },
+    "USD": {
+      "exposant": 2,
+      "separateurDecimal": "."
     },
     "XOF": {
       "exposant": 0,

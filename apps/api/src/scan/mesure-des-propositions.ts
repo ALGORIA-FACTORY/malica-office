@@ -36,9 +36,12 @@ import { createHash } from "node:crypto";
 import { confianceParChamp } from "./confiance.ts";
 import { HAUT_DE_PAGE, jugerLaLecture, type LectureAJuger } from "./analyse.ts";
 import { composerLaProposition } from "./proposition.ts";
+import { jourDuCours, type CoursLu } from "./cours-de-change.ts";
 import {
   DROITS_D_ESSAI,
   DEVISE_D_ESSAI,
+  DEVISES_D_ESSAI,
+  REGLE_DE_CHANGE_D_ESSAI,
   IMPUTATIONS_D_ESSAI,
   MENTIONS_D_ESSAI,
   PARAMETRES_D_ESSAI,
@@ -61,13 +64,31 @@ export interface CasDeMesure {
   lecture: LectureAJuger;
   /** Le dossier qui reçoit la pièce : son nom et son matricule. */
   dossier?: { nom: string; identifiantFiscal: string };
-  /** L'écriture juste, calculée à la main ; null : ne rien proposer est juste. */
-  attendu: { journal: string; lignes: LigneAttendue[] } | null;
+  /**
+   * L'écriture juste, calculée à la main ; null : ne rien proposer est juste.
+   * `origines` : pour une pièce en devise, le montant d'origine de chaque
+   * ligne, par compte — une conversion juste dit aussi d'où elle part.
+   */
+  attendu: {
+    journal: string;
+    lignes: LigneAttendue[];
+    origines?: ReadonlyArray<readonly [string, string]>;
+  } | null;
   /**
    * Le contrôle qui DOIT poser une réserve : une écriture exacte sans elle est
    * fausse — la pièce passerait sans que le cabinet sache pourquoi douter.
    */
   reserve?: string;
+  /**
+   * Le motif du refus quand ne rien proposer est juste : un refus pour une
+   * autre raison n'est pas juste (le cabinet ne saurait pas quoi faire).
+   */
+  refus?: string;
+  /**
+   * Le cours que `app.cours_applicable` rendrait pour la devise de la pièce ;
+   * absent : aucun cours. Un cours est une donnée : celui-ci est fictif.
+   */
+  cours?: { devise: string } & CoursLu;
 }
 
 /** Le dossier des cas fabriqués : un nom et un matricule fictifs. */
@@ -260,6 +281,17 @@ const MILLE: CasDeMesure["attendu"] = {
 };
 
 const REPRODUIT = "reproduction, sans modèle, d'un défaut relevé — montants fictifs";
+
+/** Un cours FICTIF de l'euro, publié le jour des pièces d'essai (2026-09-10). */
+const COURS_EUR: NonNullable<CasDeMesure["cours"]> = {
+  devise: "EUR",
+  id: "00000000-0000-4000-8000-0000000000e1",
+  date: "2026-09-10",
+  taux: "3.3456",
+  unite: 1,
+  source: REGLE_DE_CHANGE_D_ESSAI!.source,
+  duCabinet: false,
+};
 
 export const CAS_DE_MESURE: CasDeMesure[] = [
   ...depuisLeJeuDOr(),
@@ -686,6 +718,7 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     attendu: null,
   },
   {
+    // Sans cours : rien ne se propose, et la raison nomme le cours à saisir.
     nom: "facture en euros pour un dossier en dinars",
     provenance: REPRODUIT,
     lecture: facture({
@@ -696,6 +729,179 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       ttc: "1 190,00",
     }),
     attendu: null,
+    refus: "proposition/taux_de_change",
+  },
+  /*
+   * ======================================== LES PIÈCES EN DEVISE (31 octobre 2026)
+   *
+   * Les écritures attendues sont calculées à la main : chaque montant
+   * imprimé × le taux ÷ l'unité, arrondi au millime au plus proche, à
+   * égalité au pair ; la TVA et le total tels quels, l'écart sur la plus
+   * grande base (`change.ecart`). Les cours sont FICTIFS : un cours est une
+   * donnée, aucun n'est livré.
+   */
+  {
+    nom: "facture en euros, cours du jour : convertie au millime, réserve « taux de change »",
+    provenance: REPRODUIT,
+    lecture: facture({
+      currency: "EUR",
+      lignes: [{ code: "TVA19", ht: "1 000,00 €" }],
+      ht: "1 000,00 €",
+      tva: "190,00 €",
+      ttc: "1 190,00 €",
+    }),
+    cours: COURS_EUR,
+    reserve: "cours_de_change",
+    // 1 000,00 × 3,3456 = 3 345,600 ; 190,00 × 3,3456 = 635,664 ; 1 190,00 × 3,3456 = 3 981,264.
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "3345.600", "0"],
+        ["4366", "635.664", "0", "TVA19"],
+        ["401", "0", "3981.264"],
+      ],
+      origines: [
+        ["601", "1000.00"],
+        ["4366", "190.00"],
+        ["401", "1190.00"],
+      ],
+    },
+  },
+  {
+    nom: "vente en euros : le client au total converti, la TVA collectée convertie",
+    provenance: REPRODUIT,
+    lecture: facture({
+      sens: "facture_vente",
+      currency: "EUR",
+      lignes: [{ code: "TVA19", ht: "2 000,00" }],
+      ht: "2 000,00",
+      tva: "380,00",
+      ttc: "2 380,00",
+    }),
+    cours: COURS_EUR,
+    reserve: "cours_de_change",
+    // 2 000,00 × 3,3456 = 6 691,200 ; 380,00 × 3,3456 = 1 271,328 ; 2 380,00 × 3,3456 = 7 962,528.
+    attendu: {
+      journal: "VEN",
+      lignes: [
+        ["411", "7962.528", "0"],
+        ["4367", "0", "1271.328", "TVA19"],
+        ["701", "0", "6691.200"],
+      ],
+    },
+  },
+  {
+    nom: "facture en dollars : l'écart d'arrondi de la conversion va à la base",
+    provenance: REPRODUIT,
+    lecture: facture({
+      currency: "USD",
+      lignes: [{ code: "TVA19", ht: "333.33 US$" }],
+      ht: "333.33 US$",
+      tva: "63.33 US$",
+      ttc: "396.66 US$",
+    }),
+    cours: { ...COURS_EUR, devise: "USD", id: "00000000-0000-4000-8000-0000000000d1", taux: "3.0125" },
+    reserve: "cours_de_change",
+    /*
+     * 333,33 × 3,0125 = 1 004,1566… → 1 004,157 ; 63,33 × 3,0125 = 190,7816… →
+     * 190,782 ; 396,66 × 3,0125 = 1 194,9382… → 1 194,938. 1 004,157 +
+     * 190,782 = 1 194,939 : un millime de trop, retiré de la base (1 004,156).
+     */
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "1004.156", "0"],
+        ["4366", "190.782", "0", "TVA19"],
+        ["401", "0", "1194.938"],
+      ],
+      origines: [
+        ["601", "333.33"],
+        ["4366", "63.33"],
+        ["401", "396.66"],
+      ],
+    },
+  },
+  {
+    nom: "facture en dollars sans cours : rien ne se propose, le cours à saisir",
+    provenance: REPRODUIT,
+    lecture: facture({
+      currency: "USD",
+      lignes: [{ code: "TVA19", ht: "333.33" }],
+      ht: "333.33",
+      tva: "63.33",
+      ttc: "396.66",
+    }),
+    attendu: null,
+    refus: "proposition/taux_de_change",
+  },
+  {
+    nom: "un demi-millime exact s'arrondit au pair, jamais vers le haut",
+    provenance: REPRODUIT,
+    lecture: facture({
+      currency: "EUR",
+      lignes: [{ code: "TVA19", ht: "100,25" }],
+      ht: "100,25",
+      tva: "19,05",
+      ttc: "119,30",
+    }),
+    cours: { ...COURS_EUR, taux: "3.345" },
+    reserve: "cours_de_change",
+    /*
+     * 119,30 × 3,345 = 399,0585 : au pair, 399,058 (vers le haut : 399,059).
+     * 100,25 × 3,345 = 335,33625 → 335,336 ; 19,05 × 3,345 = 63,72225 → 63,722 ;
+     * 335,336 + 63,722 = 399,058 : aucun écart.
+     */
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "335.336", "0"],
+        ["4366", "63.722", "0", "TVA19"],
+        ["401", "0", "399.058"],
+      ],
+    },
+  },
+  {
+    nom: "facture en francs CFA, cours pour 1 000 : de l'unité au millime",
+    provenance: REPRODUIT,
+    lecture: facture({
+      currency: "XOF",
+      lignes: [{ code: "TVA19", ht: "1 000 000 F CFA" }],
+      ht: "1 000 000 F CFA",
+      tva: "190 000 F CFA",
+      ttc: "1 190 000 F CFA",
+    }),
+    cours: { ...COURS_EUR, devise: "XOF", id: "00000000-0000-4000-8000-0000000000c1", taux: "5.0123", unite: 1000 },
+    reserve: "cours_de_change",
+    // 5,0123 pour 1 000 F CFA : 5 012,300 ; 952,337 ; 5 964,637.
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "5012.300", "0"],
+        ["4366", "952.337", "0", "TVA19"],
+        ["401", "0", "5964.637"],
+      ],
+      origines: [
+        ["601", "1000000"],
+        ["4366", "190000"],
+        ["401", "1190000"],
+      ],
+    },
+  },
+  {
+    nom: "un droit de timbre imprimé en euros n'est pas le timbre du pack",
+    provenance: REPRODUIT,
+    lecture: facture({
+      currency: "EUR",
+      lignes: [{ code: "TVA19", ht: "1 000,00" }],
+      droits: [{ code: "DROIT_TIMBRE", montant: "1,00" }],
+      ht: "1 000,00",
+      tva: "190,00",
+      ttc: "1 191,00",
+    }),
+    cours: COURS_EUR,
+    // Converti, le « timbre » vaut 3,346 DT, quand le pack le fixe à 1,000 DT.
+    attendu: null,
+    refus: "proposition/desequilibre",
   },
 ];
 
@@ -734,6 +940,7 @@ function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: strin
   if (/une base n'a pas été lue/.test(raison)) return "proposition/base_non_lue";
   if (/droit hors TVA n'a pas été lu/.test(raison)) return "proposition/droit_non_lu";
   if (/à compléter/.test(raison)) return `proposition/a_completer`;
+  if (/taux .* à saisir|règle de change/.test(raison)) return "proposition/taux_de_change";
   if (/dossier tenu en|devise/.test(raison)) return "proposition/devise";
   if (/ne s'équilibre pas/.test(raison)) return "proposition/desequilibre";
   return "proposition/autre";
@@ -761,6 +968,14 @@ export function juger(cas: CasDeMesure) {
     mentionsObligatoires: MENTIONS_D_ESSAI,
     doublonProbable: null,
     devises: DEVISES_LUES_D_ESSAI,
+    // La règle du pack, et le cours que la base rendrait pour cette pièce.
+    change: {
+      regle: REGLE_DE_CHANGE_D_ESSAI,
+      jour: REGLE_DE_CHANGE_D_ESSAI
+        ? jourDuCours(REGLE_DE_CHANGE_D_ESSAI, cas.lecture.date, cas.lecture.recueLe)
+        : null,
+      cours: new Map(cas.cours ? [[cas.cours.devise, cas.cours]] : []),
+    },
   });
 }
 
@@ -779,12 +994,14 @@ function jouer(cas: CasDeMesure): Issue {
       normalisation: jugement.normalisation,
       sensDit: cas.lecture.sensDit,
       date: cas.lecture.date,
+      controles: jugement.controles,
     },
     {
       packVersionId: "pack-d-essai",
       deviseDuDossier: DEVISE_DU_DOSSIER,
       // Une devise inconnue : le jugement a déjà refusé, rien ne se compose.
       decimales: decimales ?? 0,
+      decimalesDuDossier: DEVISES_D_ESSAI[DEVISE_DU_DOSSIER]!.exposant,
       confianceReserve: PARAMETRES_D_ESSAI["lecture.confiance_reserve"],
       confianceBloquante: PARAMETRES_D_ESSAI["lecture.confiance_bloquante"],
       taxRates: TAUX_D_ESSAI,
@@ -803,6 +1020,8 @@ function jouer(cas: CasDeMesure): Issue {
     const motif = motifDuRefus(jugement, p.raison);
     if (cas.attendu === null && reserveAbsente)
       return { type: "aucune", motif: `${motif} — réserve « ${cas.reserve} » attendue, absente` };
+    if (cas.attendu === null && cas.refus !== undefined && motif !== cas.refus)
+      return { type: "aucune", motif: `${motif} — refus « ${cas.refus} » attendu` };
     return cas.attendu === null ? { type: "refus_juste", motif } : { type: "aucune", motif };
   }
   if (cas.attendu === null)
@@ -818,6 +1037,17 @@ function jouer(cas: CasDeMesure): Issue {
   if (lues.join() !== attendues.join())
     causes.push(`lignes ${lues.join(" ; ")} ≠ ${attendues.join(" ; ")}`);
   if (reserveAbsente) causes.push(`réserve « ${cas.reserve} » attendue, absente`);
+  // Une pièce en devise : chaque ligne dit son montant d'origine, et le cours.
+  const origines = (cas.attendu.origines ?? []).map(([c, m]) => `${c}|${decimal(m)}`).sort();
+  const originesLues = e.lignes
+    .flatMap((l) => (l.montant_origine ? [`${l.account_code}|${decimal(l.montant_origine)}`] : []))
+    .sort();
+  if (cas.attendu.origines && origines.join() !== originesLues.join())
+    causes.push(`origines ${originesLues.join(" ; ")} ≠ ${origines.join(" ; ")}`);
+  if (cas.cours && e.lignes.some((l) => l.cours_id !== cas.cours!.id))
+    causes.push(`cours appliqué ≠ ${cas.cours.id}`);
+  if (!cas.cours && e.lignes.some((l) => l.devise_origine))
+    causes.push("une devise d'origine sans pièce en devise");
   return causes.length === 0 ? { type: "exacte" } : { type: "fausse", cause: causes.join(" · ") };
 }
 

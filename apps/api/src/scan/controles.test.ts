@@ -21,7 +21,7 @@ import {
 } from "./controles.ts";
 import { normaliserMontants } from "./normaliser-montants.ts";
 import { deviseDEssai } from "./devise-d-essai.ts";
-import { TITRES_D_ESSAI } from "./referentiel-d-essai.ts";
+import { DEVISE_D_ESSAI, TITRES_D_ESSAI } from "./referentiel-d-essai.ts";
 
 const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 const montantsJustes = normaliserMontants(
@@ -90,6 +90,9 @@ const CONTEXTE: ContexteControle = {
   // la pièce et celle de sa réception est signalé.
   ecartDateJours: 60,
   doublonProbable: null,
+  deviseDuDossier: DEVISE_D_ESSAI,
+  // Les cours de change s'éprouvent à part (`le-cours-de-change.test.ts`).
+  change: null,
 };
 
 const statut = (p: PieceAControler, code: string, ctx = CONTEXTE) =>

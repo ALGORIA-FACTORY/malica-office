@@ -78,6 +78,32 @@ describe("la mesure des propositions", () => {
     assert.deepEqual(taisues, []);
   });
 
+  it("une pièce en devise : convertie exactement, ou refusée pour la bonne raison", () => {
+    // 31 octobre 2026 : euros, dollars, francs CFA, avec et sans cours, et les
+    // arrondis limites. Aucune n'est « aucune » ni « fausse ».
+    const enDevise = [
+      "facture en euros pour un dossier en dinars",
+      "facture en euros, cours du jour : convertie au millime, réserve « taux de change »",
+      "vente en euros : le client au total converti, la TVA collectée convertie",
+      "facture en dollars : l'écart d'arrondi de la conversion va à la base",
+      "facture en dollars sans cours : rien ne se propose, le cours à saisir",
+      "un demi-millime exact s'arrondit au pair, jamais vers le haut",
+      "facture en francs CFA, cours pour 1 000 : de l'unité au millime",
+      "un droit de timbre imprimé en euros n'est pas le timbre du pack",
+    ];
+    assert.deepEqual(
+      enDevise
+        .map((nom) => [nom, m.parCas[nom]?.type ?? "absente"] as const)
+        .filter(([, type]) => type !== "exacte" && type !== "refus_juste"),
+      [],
+    );
+    // Avec un cours, chacune se propose ; sans cours, aucune.
+    assert.deepEqual(
+      enDevise.filter((nom) => m.parCas[nom]?.type === "exacte").length,
+      CAS_DE_MESURE.filter((c) => enDevise.includes(c.nom) && c.attendu !== null).length,
+    );
+  });
+
   it("chaque pièce du témoin est encore mesurée", () => {
     assert.deepEqual(
       Object.keys(AVANT).filter((nom) => !(nom in m.parCas)),

@@ -21,6 +21,7 @@
 
 import type {
   AccountMapping,
+  CoursASaisir,
   FiscalCharge,
   PropositionDePiece,
   TaxRate,
@@ -34,6 +35,8 @@ import { dateDeLaPiece } from "../depots/dates.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
 import { analyserPiece, lireLesDevises, lireParametres } from "./analyse.ts";
+import type { ResultatControle } from "./controles.ts";
+import type { CoursLu } from "./cours-de-change.ts";
 import { tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
 
 type SensConnu = { documentKind: "facture_achat" | "facture_vente" };
@@ -156,6 +159,12 @@ export interface JugementAProposer {
   sensDit: string | null;
   /** La date retenue : lue, à défaut enregistrée ou saisie. */
   date: string | null;
+  /**
+   * Les contrôles du jugement : celui du cours de change dit, pour une pièce
+   * en devise, le cours qui la convertit — ou celui qui manque. Nuls pour un
+   * jugement qui ne les porte pas.
+   */
+  controles: ReadonlyArray<Pick<ResultatControle, "code" | "statut" | "motif" | "preuves">> | null;
 }
 
 /** Le référentiel daté de la proposition : le pack, à la date de la pièce. */
@@ -165,6 +174,8 @@ export interface ReferentielDeLaProposition {
   deviseDuDossier: string;
   /** L'exposant de la devise de la pièce (`ref.devises`). */
   decimales: number;
+  /** L'exposant de la devise du dossier (`ref.devises`) : celui d'une pièce convertie. */
+  decimalesDuDossier: number;
   confianceReserve: number;
   confianceBloquante: number;
   taxRates: TaxRate[];
@@ -224,6 +235,69 @@ function deviseDuJugement(
   return (payload as { currency?: string | null }).currency ?? deviseDuDossier;
 }
 
+/** Les preuves du contrôle `cours_de_change` (`controles.ts`), telles qu'il les pose. */
+interface PreuvesDuCours {
+  devise: string;
+  versDevise: string;
+  jour: string | null;
+  source?: string;
+  ecart?: string;
+  cours: CoursLu | null;
+}
+
+/**
+ * Le cours qu'a lu le jugement d'une pièce en devise, prêt pour la
+ * conversion — ou le refus qui nomme ce qui manque. Pure.
+ *
+ * Un jugement d'avant le 31 octobre 2026 ne porte pas le contrôle : il se
+ * refuse comme alors (« montant converti à saisir »), et le rejeu aux règles
+ * du jour (`REGLES_DU_JUGEMENT`) le refait.
+ */
+function coursDuJugement(
+  j: JugementAProposer,
+  devise: string | null,
+  r: ReferentielDeLaProposition,
+):
+  | { ok: true; conversion: NonNullable<Parameters<typeof buildProposal>[0]["conversion"]> }
+  | {
+      ok: false;
+      raison: string;
+      raisonCode: "devise" | "taux_de_change";
+      coursASaisir?: CoursASaisir;
+    } {
+  const controle = (j.controles ?? []).find((c) => c.code === "cours_de_change");
+  if (!controle)
+    return {
+      ok: false,
+      raison: `Aucune écriture ne se propose : facture en ${devise}, dossier tenu en ${r.deviseDuDossier} — montant converti à saisir.`,
+      raisonCode: "devise",
+    };
+  const p = controle.preuves as unknown as PreuvesDuCours;
+  if (controle.statut !== "reserve" || !p.cours || !p.ecart)
+    return {
+      ok: false,
+      raison: `Aucune écriture ne se propose : ${controle.motif}.`,
+      raisonCode: "taux_de_change",
+      ...(p.jour && p.source
+        ? { coursASaisir: { devise: p.devise, versDevise: p.versDevise, jour: p.jour, source: p.source } }
+        : {}),
+    };
+  return {
+    ok: true,
+    conversion: {
+      vers: { code: r.deviseDuDossier, decimals: r.decimalesDuDossier },
+      cours: {
+        id: p.cours.id,
+        date: p.cours.date,
+        source: p.cours.source,
+        taux: p.cours.taux,
+        unite: p.cours.unite,
+      },
+      ecart: p.ecart,
+    },
+  };
+}
+
 /**
  * Composer l'écriture d'un jugement qui l'autorise : montants IMPRIMÉS et
  * normalisés, référentiel daté, moteur du Socle. Pure — c'est la chaîne même
@@ -247,18 +321,22 @@ export function composerLaProposition(
    *
    * Une facture en euros d'un dossier tenu en dinars partait au journal avec
    * ses montants en euros, dans des livres en dinars : équilibrée, plausible,
-   * fausse. La conversion demande le cours du jour de l'opération, que la
-   * pièce ne porte pas ; on ne le devine pas.
+   * fausse. La conversion demande le cours que la règle de change désigne ;
+   * on ne le devine pas. Le jugement l'a lu (contrôle `cours_de_change`) :
+   * avec lui, l'écriture se compose convertie (31 octobre 2026) ; sans lui,
+   * rien ne se propose, et la raison nomme le cours à saisir.
    */
   const devise = deviseDuJugement(n, j.payload, r.deviseDuDossier);
-  if (devise !== r.deviseDuDossier)
+  if (devise === null)
     return {
       ok: false,
       verdict,
       verdictCode: codeDuVerdict(verdict),
-      raison: `Aucune écriture ne se propose : facture en ${devise}, dossier tenu en ${r.deviseDuDossier} — montant converti à saisir.`,
+      raison: "Aucune écriture ne se propose : la devise de la pièce n'est pas décidée.",
       raisonCode: "devise",
     };
+  const change = devise === r.deviseDuDossier ? null : coursDuJugement(j, devise, r);
+  if (change && !change.ok) return { verdict, verdictCode: codeDuVerdict(verdict), ...change };
   /*
    * Le taux que la facture prouve (`analyse.ts`) : la ligne qui le porte est
    * posée, ou son code corrigé — jamais en silence, la déduction est au
@@ -332,6 +410,7 @@ export function composerLaProposition(
       compteDeNature: r.compteDeNature,
       tvaNonDeductible: r.tvaNonDeductible,
       currency: devise,
+      ...(change?.ok ? { conversion: change.conversion } : {}),
       parametres: {
         decimals: dec,
         confianceReserve: r.confianceReserve,
@@ -387,6 +466,7 @@ async function proposerDepuisLeJugement(
     analyse_extraction: string | null;
     verdict: string | null;
     motifs: Array<{ motif: string }> | null;
+    controles: JugementAProposer["controles"];
     normalisation: ResultatNormalisation | null;
     pack_version_id: string | null;
     jurisdiction: string;
@@ -396,7 +476,8 @@ async function proposerDepuisLeJugement(
     recue_le: string;
   }>(
     `select e.id as extraction, e.payload, to_char(p.created_at, 'YYYY-MM-DD') as recue_le,
-            a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.normalisation,
+            a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.controles,
+            a.normalisation,
             a.pack_version_id, o.jurisdiction, o.currency as devise_du_dossier,
             case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit,
             (select q.valeur from capture.precisions q
@@ -424,6 +505,7 @@ async function proposerDepuisLeJugement(
       ...ligne,
       verdict: a.verdict,
       motifs: a.motifs,
+      controles: a.controles,
       normalisation: a.normalisation,
       pack_version_id: rows[0]!.pack_version_id,
     };
@@ -440,6 +522,7 @@ async function proposerDepuisLeJugement(
     motifs: ligne.motifs,
     normalisation: ligne.normalisation!,
     sensDit: ligne.sens_dit,
+    controles: ligne.controles,
     date,
   };
   const refus = refusDuJugement(jugement);
@@ -454,11 +537,15 @@ async function proposerDepuisLeJugement(
   const p = await lireParametres(db, pack, jour);
   // L'exposant de la devise que le jugement a décidée (`analyse.ts`).
   const devise = deviseDuJugement(ligne.normalisation!, ligne.payload, ligne.devise_du_dossier);
-  const decimales = (await lireLesDevises(db)).find((d) => d.code === devise)?.decimales ?? null;
-  if (decimales === null)
+  // Et celui de la devise du dossier : une pièce convertie s'y écrit.
+  const devises = await lireLesDevises(db);
+  const exposant = (code: string | null) => devises.find((d) => d.code === code)?.decimales ?? null;
+  const decimales = exposant(devise);
+  const decimalesDuDossier = exposant(ligne.devise_du_dossier);
+  if (decimales === null || decimalesDuDossier === null)
     return {
       ok: false,
-      raison: `Aucune écriture ne se propose : devise « ${devise} » inconnue.`,
+      raison: `Aucune écriture ne se propose : devise « ${decimales === null ? devise : ligne.devise_du_dossier} » inconnue.`,
       raisonCode: "devise",
     };
 
@@ -483,6 +570,7 @@ async function proposerDepuisLeJugement(
     packVersionId: pack,
     deviseDuDossier: ligne.devise_du_dossier,
     decimales,
+    decimalesDuDossier,
     confianceReserve: p["lecture.confiance_reserve"],
     confianceBloquante: p["lecture.confiance_bloquante"],
     taxRates,

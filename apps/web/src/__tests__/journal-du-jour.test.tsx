@@ -48,6 +48,7 @@ const ligne = (compte: string, debit: string, credit: string, ordinal: number) =
   compteLibelle: `Compte ${compte}`,
   debit,
   credit,
+  origine: null,
 });
 const ecriture = (
   id: string,

@@ -42,6 +42,11 @@ function ligne(partiel: Record<string, unknown>) {
     par: null,
     reverses_id: null,
     contre_passee_le: null,
+    devise_origine: null,
+    montant_origine: null,
+    taux_de_change: null,
+    date_du_cours: null,
+    source_du_cours: null,
     ...partiel,
   };
 }
@@ -107,6 +112,49 @@ describe("le fichier porte ses totaux et son contrôle", () => {
         ["J2", "total", "0.200", "0.100", "XXX", "desequilibre"],
         ["", "total", "9007199254741.293", "9007199254741.193", "XXX", "desequilibre"],
       ],
+    );
+  });
+});
+
+describe("une ligne convertie d'une pièce en devise", () => {
+  it("le fichier porte sa devise et son montant d'origine, le taux, la date et la source du cours", () => {
+    const journaux = rangerLeJournal(
+      [
+        ligne({
+          debit: "3345.6",
+          devise_origine: "YYY",
+          montant_origine: "1000",
+          taux_de_change: "3.3456",
+          date_du_cours: "2026-09-10",
+          source_du_cours: "SRC",
+        }),
+        ligne({ ordinal: 2, compte: "B", credit: "3345.6" }),
+      ],
+      EXPOSANTS,
+    );
+    const { entete, lignes } = contenuDuFichier(journaux, null, EXPOSANTS);
+    const texte = (c: { texte: string } | { montant: string }) =>
+      "montant" in c ? c.montant : c.texte;
+    const colonne = (nom: string) => entete.indexOf(nom);
+    const origine = [
+      "devise_origine",
+      "montant_origine",
+      "taux_de_change",
+      "date_du_cours",
+      "source_du_cours",
+    ];
+    // En fin de ligne : un import des colonnes d'avant n'en est pas dérangé.
+    assert.deepEqual(entete.slice(-5), origine);
+    assert.deepEqual(
+      origine.map((nom) => texte(lignes[0]![colonne(nom)]!)),
+      ["YYY", "1000", "3.3456", "2026-09-10", "SRC"],
+    );
+    // Le montant de la ligne reste celui des livres, à la précision de sa devise.
+    assert.equal(texte(lignes[0]![colonne("debit")]!), "3345.600");
+    // Une ligne sans devise d'origine laisse ses colonnes vides.
+    assert.deepEqual(
+      origine.map((nom) => texte(lignes[1]![colonne(nom)]!)),
+      ["", "", "", "", ""],
     );
   });
 });

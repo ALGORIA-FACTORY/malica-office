@@ -23,6 +23,21 @@ type Entree = { item_id: string | null; extract: ExtractV1 };
 /** Le motif d'un extrait qui ne valide pas le contrat : la pièce entière est hors du calcul. */
 export const EXTRAIT_ILLISIBLE = "EXTRAIT_ILLISIBLE";
 
+/**
+ * Le motif d'un extrait dans une autre devise que celle du calcul
+ * (`EXTRAIT_EN_DEVISE:<code>`) : la pièce entière est hors du calcul.
+ *
+ * 31 octobre 2026 : le calcul additionnait les montants de chaque extrait
+ * sans regarder sa devise — 190,00 € de TVA comptaient 190,000 DT. Une pièce
+ * en devise entre dans la TVA par l'extrait que le jugement a CONVERTI
+ * (`app.extraits_de_la_tva`) ; sans cours, elle reste en devise, et le calcul
+ * la refuse en la nommant, comme un extrait illisible.
+ */
+export const EXTRAIT_EN_DEVISE = "EXTRAIT_EN_DEVISE";
+
+/** Les motifs qui écartent une pièce ENTIÈRE du calcul (et non une ligne). */
+export const HORS_DU_CALCUL = [EXTRAIT_ILLISIBLE, EXTRAIT_EN_DEVISE] as const;
+
 export function tvaDesExtraits(args: {
   period: string;
   currency: { code: string; decimals: number };
@@ -39,6 +54,10 @@ export function tvaDesExtraits(args: {
     if (!lu.success) {
       const champs = [...new Set(lu.error.issues.map((i) => i.path.join(".")))].sort();
       illisibles.push({ reason: `${EXTRAIT_ILLISIBLE}:${champs.join(",")}`, item_id: row.pieceId });
+      continue;
+    }
+    if (lu.data.currency !== args.currency.code) {
+      illisibles.push({ reason: `${EXTRAIT_EN_DEVISE}:${lu.data.currency}`, item_id: row.pieceId });
       continue;
     }
     const entree = { item_id: row.pieceId, extract: lu.data };

@@ -52,6 +52,7 @@ import {
   type PieceAControler,
   type ResultatControle,
 } from "./controles.ts";
+import { lireLeChange, type ChangeDuJugement } from "./cours-de-change.ts";
 import { normaliserMontants, type ResultatNormalisation } from "./normaliser-montants.ts";
 
 const [NOM_MATRICULE_EMETTEUR, NOM_MATRICULE_CLIENT] = REFERENCES_QUI_TRANCHENT_LE_SENS;
@@ -197,6 +198,8 @@ export interface ReferentielDuJugement {
   titres: ContexteControle["titres"];
   mentionsObligatoires: ContexteControle["mentionsObligatoires"];
   doublonProbable: string | null;
+  /** La règle de change et les cours applicables (`lireLeChange`). */
+  change: ChangeDuJugement | null;
 }
 
 /** La part de l'extraction que le jugement relit. */
@@ -487,6 +490,8 @@ export function jugerLaLecture(
     seuilConfianceBloquant: r.parametres["lecture.confiance_bloquante"],
     ecartDateJours: r.parametres["piece.ecart_date_jours"],
     doublonProbable: r.doublonProbable,
+    deviseDuDossier: r.deviseDuDossier,
+    change: r.change,
   };
   const controles = controlerPiece(aControler, contexte);
   const { verdict, motifs } = rendreVerdict(controles);
@@ -811,6 +816,16 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     typesDocument: types.map((t) => ({ code: t.code, porteEcriture: t.porte_ecriture })),
     mentionsObligatoires: mentions.map((m) => ({ code: m.code, libelle: m.label })),
     doublonProbable: semblables[0]?.id ?? null,
+    // La règle de change du pack et le cours de chaque devise : une pièce en
+    // devise se juge sur le cours qui la convertira.
+    change: await lireLeChange(db, {
+      dossier: piece.tenant_id,
+      deviseDuDossier: org.currency,
+      pack,
+      jourDuParametrage: dateRef,
+      datePiece,
+      recueLe: piece.recue_le,
+    }),
   });
 
   return {

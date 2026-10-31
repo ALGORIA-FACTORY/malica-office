@@ -1336,6 +1336,40 @@ export interface EcritureLine {
   debit: string;
   credit: string;
   taxCode: string | null;
+  /**
+   * Une ligne convertie d'une pièce en devise (31 octobre 2026) : la devise
+   * et le montant d'origine, le taux pour une unité. Nuls (ou absents, pour
+   * une ligne composée à l'écran) sinon.
+   */
+  deviseOrigine?: string | null;
+  montantOrigine?: string | null;
+  tauxDeChange?: string | null;
+}
+
+/**
+ * Le cours qui manque à une pièce en devise : la règle de change du pack le
+ * nomme — la devise, celle du dossier, le jour et la source. Le cabinet le
+ * saisit en un geste depuis la pièce (`office.saisirLeCoursDeLaPiece`).
+ */
+export interface CoursASaisir {
+  devise: string;
+  versDevise: string;
+  jour: string;
+  source: string;
+}
+
+/** Un cours de change, tel que le cabinet le lit (`office.coursDeChange`). */
+export interface CoursDeChange {
+  id: string;
+  devise: string;
+  versDevise: string;
+  date: string;
+  taux: string;
+  unite: number;
+  source: string;
+  /** Saisi par le cabinet (ou la société qui tient ses livres) ; sinon importé. */
+  saisiParLeCabinet: boolean;
+  saisiLe: string;
 }
 
 export interface Ecriture {
@@ -1415,7 +1449,9 @@ export type RaisonSansEcriture =
   | "droit_non_lu"
   | "desequilibre"
   | "a_completer"
-  | "compte_manquant";
+  | "compte_manquant"
+  /** Une pièce en devise sans cours applicable : `coursASaisir` le nomme. */
+  | "taux_de_change";
 
 export type PropositionDePiece = (
   | {
@@ -1436,6 +1472,8 @@ export type PropositionDePiece = (
       controlesEnDefaut?: string[];
       /** Pourquoi l'écriture ne se compose pas, en un code stable, quand le verdict ne bloque pas. */
       raisonCode?: RaisonSansEcriture;
+      /** Le cours qui manque, quand `raisonCode` vaut `taux_de_change`. */
+      coursASaisir?: CoursASaisir;
     }
 ) & {
   /**
@@ -1472,6 +1510,25 @@ export interface OfficeRepository {
    * livres. Refus `refus.sens.ecriture_vivante` si une écriture vit déjà.
    */
   trancherLeSens(pieceId: string, sens: string): Promise<{ type: string }>;
+  /**
+   * SAISIR LE COURS d'une pièce en devise, en un geste : le cours que son
+   * jugement demande (ou sa correction au même jour), pour l'organisation
+   * qui supervise le dossier ; puis le Socle rejuge et rend la proposition.
+   * `taux` : une écriture décimale pour `unite` unités (1, 10, 100…).
+   */
+  saisirLeCoursDeLaPiece(pieceId: string, taux: string, unite: number): Promise<PropositionDePiece>;
+  /** Les cours que l'organisation lit : les siens, et ceux de l'exploitation. */
+  coursDeChange(orgId: string): Promise<CoursDeChange[]>;
+  /** Saisir un cours depuis l'écran des cours. Rend son identifiant. */
+  saisirUnCours(input: {
+    orgId: string;
+    devise: string;
+    versDevise: string;
+    date: string;
+    taux: string;
+    unite: number;
+    source: string;
+  }): Promise<string>;
   /**
    * FORCER : le comptable modifie l'écriture, ou la saisit quand le Socle ne
    * propose rien. La vivante est contre-passée, la nouvelle inscrite et
@@ -2475,6 +2532,18 @@ export interface LigneAuJournal {
   /** Chaînes décimales à la précision du pack : jamais un flottant. */
   debit: string;
   credit: string;
+  /**
+   * La ligne d'une pièce en devise, convertie (31 octobre 2026) : sa devise
+   * et son montant d'origine, le taux pour une unité, la date et la source
+   * du cours. Nuls sinon.
+   */
+  origine: {
+    devise: string;
+    montant: string;
+    taux: string;
+    dateDuCours: string;
+    source: string;
+  } | null;
 }
 
 export interface EcritureAuJournal {
@@ -2829,6 +2898,13 @@ export interface ChargesRepository {
   anomalyThreshold(packId: string, code: string): Promise<AnomalyThresholdRow | null>;
   articles(tenantId: string, fromPeriod: string, toPeriod: string): Promise<PieceArticle[]>;
   enAttenteDeDate(tenantId: string): Promise<ChargesEnAttenteDeDate>;
+  /**
+   * Les articles d'une pièce en devise sans cours de change (31 octobre
+   * 2026) : hors de tout total, comptés ici, avec leurs devises.
+   */
+  enAttenteDeCours(
+    tenantId: string,
+  ): Promise<{ articles: number; pieces: number; devises: string[] }>;
   questions(tenantId: string): Promise<ChargeQuestionRow[]>;
   answer(input: {
     tenantId: string;
