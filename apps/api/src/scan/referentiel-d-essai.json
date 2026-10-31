@@ -259,6 +259,19 @@
     "recul": 5,
     "ecart": "base_la_plus_grande"
   },
+  "reglages": {
+    "avoirs.traitement": "lie_facture",
+    "comptes_immo.plan": "nc01_2282_43662",
+    "conservation.duree": "10ans_cloture_teif",
+    "fodec.traitement": "par_article_4374_cout",
+    "immobilisation.seuil": "200",
+    "immobilisation.traitement": "actif_amorti",
+    "mois_tva.date": "exigibilite_calculee",
+    "non_residents.retenue": "au_paiement",
+    "prorata.methode": "affectation_puis_prorata",
+    "timbre.bareme": "bareme_date",
+    "ventes.compte": "par_nature_article"
+  },
   "marques": [
     {
       "marque": "CFA",

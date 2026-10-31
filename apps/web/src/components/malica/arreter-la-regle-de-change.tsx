@@ -5,26 +5,19 @@
  * et la règle d'écart sont des défauts livrés par Malica, à confirmer par un
  * expert-comptable. Le cabinet les arrête — pour ce dossier, ou pour tout le
  * cabinet — par le même geste que la déclaration de TVA
- * (`ArreterUnParametrage`). La base vérifie qui décide et ce qui se décide
- * (`app.regle_de_change_arreter`) ; les pièces en devise se rejugent à leur
- * ouverture.
+ * (`ArreterUnParametrage`) et par la porte des réglages comptables
+ * (`app.reglages_comptables_arreter`, qui les range dans leur table) ; les
+ * pièces en devise se rejugent à leur ouverture. Le nom de chaque réglage
+ * vient du référentiel, comme dans « Réglages comptabilité ».
  */
 import { useQuery } from "@tanstack/react-query";
 
 import { ArreterUnParametrage } from "@/components/malica/arreter-un-parametrage";
-import { useI18n, type MessageKey } from "@/i18n";
+import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 
 const OU = "components/malica/arreter-la-regle-de-change";
-
-/** Le nom de chaque code de la règle (`ref.socle_params`, `change.*`). */
-const NOM: Record<string, MessageKey> = {
-  "change.source": "change.regle.source",
-  "change.date_retenue": "change.regle.date_retenue",
-  "change.recul_jours": "change.regle.recul_jours",
-  "change.ecart": "change.regle.ecart",
-};
 
 export function ArreterLaRegleDeChange({
   cabinetId,
@@ -60,17 +53,17 @@ export function ArreterLaRegleDeChange({
     <section className="border border-border bg-card p-4">
       <ArreterUnParametrage
         titre={t("change.regle.titre")}
-        aide={[t("change.regle.aide"), t("tva.affectation.aide.portee")]}
+        aide={[{ texte: t("change.regle.aide") }, { texte: t("tva.affectation.aide.portee") }]}
         valeurs={valeurs.map((v) => ({
           cle: v.code,
-          libelle: NOM[v.code] ? t(NOM[v.code]!) : v.code,
+          libelle: v.libelle,
           valeur: v.valeur ?? "",
           origine: v.origine,
           options: v.options,
         }))}
         arretee={{ titre: t("change.regle.arretee"), detail: t("change.regle.arretee.detail") }}
         arreter={(portee, choix) =>
-          office().parametrage.arreterRegleDeChange({
+          office().parametrage.arreterReglagesComptables({
             cabinetId,
             portee,
             porteeId: portee === "dossier" ? dossierId : cabinetId,

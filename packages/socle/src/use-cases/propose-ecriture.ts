@@ -173,6 +173,13 @@ export function buildProposal(params: {
    */
   tvaNonDeductible?: boolean;
   /**
+   * Les droits hors TVA qu'un ACHAT incorpore au coût (31 octobre 2026) : le
+   * réglage `fodec.traitement` du cabinet (R10). Leur ligne porte le compte de
+   * la charge au lieu du compte du pack (6652) ; elle reste une ligne à part,
+   * nommée, pour que le droit se retrouve. Absents : le compte du pack.
+   */
+  droitsAuCout?: readonly string[];
+  /**
    * La pièce est en devise (31 octobre 2026) : l'écriture se compose dans la
    * devise du DOSSIER (`vers`), au cours que la règle de change désigne, et
    * l'écart d'arrondi se porte selon la règle `ecart` du référentiel
@@ -214,6 +221,8 @@ export function buildProposal(params: {
    */
   const journalDuPack = mapping.journalCode;
   if (!journalDuPack) throw new Error("MISSING_JOURNAL");
+  const compteDeCharge = params.compteDeNature || mapping.mainAccount;
+  const auCout = new Set(params.droitsAuCout ?? []);
 
   // Le pivot d'un extrait, dans une devise : le même moteur, la même
   // imputation. Un droit FIXÉ par le pack l'est dans la devise du dossier :
@@ -237,7 +246,7 @@ export function buildProposal(params: {
       })),
       mapping: {
         document_kind: e.document_kind,
-        charge_or_product_account: params.compteDeNature || mapping.mainAccount,
+        charge_or_product_account: compteDeCharge,
         vat_account: mapping.vatAccount,
         counterparty_account: mapping.counterpartyAccount,
       },
@@ -246,7 +255,10 @@ export function buildProposal(params: {
         .map((c) => ({
           code: c.code,
           label: c.label,
-          account_code: c.accountCode,
+          account_code:
+            e.document_kind === "facture_achat" && auCout.has(c.code)
+              ? compteDeCharge
+              : c.accountCode,
           document_kind: c.documentKind,
           fixed_amount: options.droitsFixes ? c.fixedAmount : null,
           taxable: c.taxable,
@@ -322,7 +334,6 @@ export function buildProposal(params: {
       .filter((m) => m.documentKind === extract.document_kind)
       .map((m) => m.vatAccount),
   ]);
-  const compteDeCharge = params.compteDeNature || mapping.mainAccount;
   const tvaVersLaCharge = (lignes: readonly JournalLineV1[], n: number): JournalLineV1[] => {
     if (!params.tvaNonDeductible || extract.document_kind === "facture_vente") return [...lignes];
     const tva = lignes.filter((l) => comptesDeTva.has(l.account_code) && Number(l.debit) > 0);

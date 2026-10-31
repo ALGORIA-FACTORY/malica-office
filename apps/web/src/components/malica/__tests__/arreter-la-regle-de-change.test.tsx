@@ -15,7 +15,7 @@ vi.mock("@/i18n", () => ({ useI18n: () => ({ t: (cle: string) => cle, locale: "f
 vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({
     referential: { regleDeChange: api.lire },
-    parametrage: { arreterRegleDeChange: api.arreter },
+    parametrage: { arreterReglagesComptables: api.arreter },
   }),
 }));
 
@@ -25,6 +25,7 @@ const REGLE: RegleDeChangeDuDossier = {
   valeurs: [
     {
       code: "change.date_retenue",
+      libelle: "Jour du cours",
       valeur: "date_facture",
       origine: "pack",
       decideLe: null,
@@ -35,14 +36,23 @@ const REGLE: RegleDeChangeDuDossier = {
     },
     {
       code: "change.ecart",
+      libelle: "Écart d'arrondi",
       valeur: "base_la_plus_grande",
       origine: "pack",
       decideLe: null,
       options: [{ code: "base_la_plus_grande", label: "Sur la plus grande base" }],
     },
-    { code: "change.recul_jours", valeur: "5", origine: "cabinet", decideLe: null, options: null },
+    {
+      code: "change.recul_jours",
+      libelle: "Recul (jours)",
+      valeur: "5",
+      origine: "cabinet",
+      decideLe: null,
+      options: null,
+    },
     {
       code: "change.source",
+      libelle: "Source du cours",
       valeur: "SRC",
       origine: "dossier",
       decideLe: null,
@@ -74,15 +84,18 @@ describe("arrêter la règle de change", () => {
     expect(screen.getByText("tva.affectation.origine.dossier")).toBeTruthy();
   });
 
+  it("le nom de chaque réglage vient du référentiel, pas de l'écran", async () => {
+    render(vue());
+    expect(await screen.findByText("Jour du cours")).toBeTruthy();
+    expect(screen.getByText("Source du cours")).toBeTruthy();
+  });
+
   it("une date retenue choisie, un recul saisi : arrêtés pour ce dossier, à partir du mois", async () => {
     render(vue());
-    fireEvent.change(
-      await screen.findByRole("combobox", { name: /^change\.regle\.date_retenue/ }),
-      {
-        target: { value: "date_reception" },
-      },
-    );
-    fireEvent.change(screen.getByRole("textbox", { name: /^change\.regle\.recul_jours/ }), {
+    fireEvent.change(await screen.findByRole("combobox", { name: /^Jour du cours/ }), {
+      target: { value: "date_reception" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /^Recul \(jours\)/ }), {
       target: { value: "3" },
     });
     fireEvent.click(screen.getByRole("button", { name: "tva.affectation.pourLeDossier" }));

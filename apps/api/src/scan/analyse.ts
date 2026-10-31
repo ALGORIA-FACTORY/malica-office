@@ -54,6 +54,7 @@ import {
 } from "./controles.ts";
 import { lireLeChange, type ChangeDuJugement } from "./cours-de-change.ts";
 import { normaliserMontants, type ResultatNormalisation } from "./normaliser-montants.ts";
+import { lireLesReglagesComptables, reglageDImmobilisation } from "./reglages-comptables.ts";
 
 const [NOM_MATRICULE_EMETTEUR, NOM_MATRICULE_CLIENT] = REFERENCES_QUI_TRANCHENT_LE_SENS;
 
@@ -250,6 +251,8 @@ export interface ReferentielDuJugement {
   titres: ContexteControle["titres"];
   /** Les mots d'un bien susceptible d'être immobilisé (`lireLesBiensImmobilisables`). */
   biensImmobilisables: ContexteControle["biensImmobilisables"];
+  /** Le seuil et le traitement d'un bien de faible valeur, arrêtés pour le dossier. */
+  immobilisation: ContexteControle["immobilisation"];
   mentionsObligatoires: ContexteControle["mentionsObligatoires"];
   doublonProbable: string | null;
   /** La règle de change et les cours applicables (`lireLeChange`). */
@@ -263,7 +266,12 @@ interface PayloadLu {
   document_kind?: string | null;
   currency?: string | null;
   lines?: Array<{ tax_code?: string | null }>;
-  articles?: Array<{ designation?: string | null }>;
+  articles?: Array<{
+    designation?: string | null;
+    quantity?: string | null;
+    unit_price_ht?: string | null;
+    total_ht?: string | null;
+  }>;
   other_charges?: Array<{ code?: string | null }>;
   references?: Record<string, string>;
   totals?: { ttc?: string | null };
@@ -537,8 +545,17 @@ export function jugerLaLecture(
     // Le sens CONFIRMÉ par la personne (20 octobre 2026), qu'il redise la
     // lecture ou la corrige : c'est lui qui est retenu (voir plus haut).
     sensConfirme: l.sensDit !== null,
-    designations: (l.payload.articles ?? []).flatMap((a) =>
-      a.designation?.trim() ? [a.designation] : [],
+    articles: (l.payload.articles ?? []).flatMap((a) =>
+      a.designation?.trim()
+        ? [
+            {
+              designation: a.designation,
+              quantite: a.quantity ?? null,
+              prixUnitaireHt: a.unit_price_ht ?? null,
+              totalHt: a.total_ht ?? null,
+            },
+          ]
+        : [],
     ),
   };
   const contexte: ContexteControle = {
@@ -546,6 +563,7 @@ export function jugerLaLecture(
     typesDocument: r.typesDocument,
     titres: r.titres,
     biensImmobilisables: r.biensImmobilisables,
+    immobilisation: r.immobilisation,
     mentionsObligatoires: r.mentionsObligatoires,
     seuilConfianceReserve: r.parametres["lecture.confiance_reserve"],
     seuilConfianceBloquant: r.parametres["lecture.confiance_bloquante"],
@@ -871,6 +889,10 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     devises: await lireLesDevises(db),
     titres: await lireLesTitres(db),
     biensImmobilisables: await lireLesBiensImmobilisables(db, pack, dateRef),
+    // Le seuil du cabinet, au jour de la pièce : le dossier, son cabinet, le pack.
+    immobilisation: reglageDImmobilisation(
+      await lireLesReglagesComptables(db, piece.tenant_id, pack, dateRef),
+    ),
     taux: new Map(taux.map((t) => [t.code, t.rate])),
     deviseDuDossier: org.currency,
     droitsFixes: new Map(

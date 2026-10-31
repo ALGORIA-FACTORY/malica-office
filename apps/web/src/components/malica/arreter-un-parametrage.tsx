@@ -17,7 +17,7 @@ import { useEffect, useState } from "react";
 
 import type { OrigineDuParametrage } from "@malica/socle/ports/repositories";
 
-import { Aide } from "@/components/malica/aide";
+import { Aide, type ParagrapheDAide } from "@/components/malica/aide";
 import { ConfirmationSurPlace } from "@/components/malica/envoye";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -36,25 +36,35 @@ export interface ValeurAArreter {
   libelle: string;
   valeur: string;
   origine: OrigineDuParametrage;
-  /** Ce que le référentiel connaît ; nul : un nombre entier, saisi. */
+  /** Ce que le référentiel connaît ; nul : un nombre, saisi. */
   options: ReadonlyArray<{ code: string; label: string }> | null;
+  /** Ce que l'écran doit dire de plus sur cette valeur (« pas encore appliqué »). */
+  note?: string | null;
 }
+
+type Portee = "dossier" | "cabinet";
 
 export function ArreterUnParametrage({
   titre,
   aide,
+  aConfirmer = null,
   valeurs,
   arretee,
   arreter: enregistrer,
+  portees = ["dossier", "cabinet"],
   invalider,
   contexte,
 }: {
   titre: string;
-  aide: string[];
+  aide: ParagrapheDAide[];
+  /** La puce « à confirmer » à côté du titre, quand un défaut n'est pas arrêté. */
+  aConfirmer?: string | null;
   valeurs: readonly ValeurAArreter[];
   arretee: { titre: string; detail: string };
   /** L'appel : la portée, et la valeur choisie de chaque clé ("" : aucune). */
-  arreter: (portee: "dossier" | "cabinet", choix: Record<string, string>) => Promise<unknown>;
+  arreter: (portee: Portee, choix: Record<string, string>) => Promise<unknown>;
+  /** Les portées offertes, la principale d'abord : sans dossier, le cabinet seul. */
+  portees?: readonly Portee[];
   /** Ce qui se relit après l'enregistrement. */
   invalider: QueryKey;
   /**
@@ -69,7 +79,7 @@ export function ArreterUnParametrage({
   const choisie = (v: ValeurAArreter) => choix[v.cle] ?? v.valeur;
 
   const mutation = useMutation({
-    mutationFn: (portee: "dossier" | "cabinet") =>
+    mutationFn: (portee: Portee) =>
       enregistrer(portee, Object.fromEntries(valeurs.map((v) => [v.cle, choisie(v)]))),
     onSuccess: async () => {
       setChoix({});
@@ -94,9 +104,14 @@ export function ArreterUnParametrage({
 
   return (
     <div className="mt-4 min-w-0 border-t border-border pt-3">
-      <p className="flex items-center gap-1 text-[12px] font-semibold">
+      <p className="flex flex-wrap items-center gap-1 text-[12px] font-semibold">
         {titre}
-        <Aide titre={titre} paragraphes={aide.map((texte) => ({ texte }))} />
+        <Aide titre={titre} paragraphes={aide} />
+        {aConfirmer ? (
+          <span className="ms-1 inline-flex items-center gap-1 border border-signal-warn px-1.5 py-0.5 text-[10.5px] font-semibold text-signal-warn">
+            {aConfirmer}
+          </span>
+        ) : null}
       </p>
       <ul className="mt-2 space-y-3">
         {valeurs.map((v) => (
@@ -119,7 +134,7 @@ export function ArreterUnParametrage({
               ) : (
                 <input
                   type="text"
-                  inputMode="numeric"
+                  inputMode="decimal"
                   dir="ltr"
                   value={choisie(v)}
                   onChange={(e) => choisir(v.cle, e.target.value)}
@@ -127,6 +142,7 @@ export function ArreterUnParametrage({
                 />
               )}
               <span className="num text-[11px] text-muted-foreground">{t(ORIGINE[v.origine])}</span>
+              {v.note ? <span className="text-[11px] text-signal-info">{v.note}</span> : null}
             </label>
           </li>
         ))}
@@ -135,22 +151,23 @@ export function ArreterUnParametrage({
         <ConfirmationSurPlace titre={arretee.titre} detail={arretee.detail} />
       ) : (
         <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate("dossier")}
-            className={`${bouton} border border-foreground bg-foreground text-background`}
-          >
-            {t("tva.affectation.pourLeDossier")}
-          </button>
-          <button
-            type="button"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate("cabinet")}
-            className={`${bouton} border border-foreground bg-transparent text-foreground`}
-          >
-            {t("tva.affectation.pourLeCabinet")}
-          </button>
+          {portees.map((portee, i) => (
+            <button
+              key={portee}
+              type="button"
+              disabled={mutation.isPending}
+              onClick={() => mutation.mutate(portee)}
+              className={`${bouton} border border-foreground ${
+                i === 0 ? "bg-foreground text-background" : "bg-transparent text-foreground"
+              }`}
+            >
+              {t(
+                portee === "dossier"
+                  ? "tva.affectation.pourLeDossier"
+                  : "tva.affectation.pourLeCabinet",
+              )}
+            </button>
+          ))}
         </div>
       )}
       {mutation.isError ? (

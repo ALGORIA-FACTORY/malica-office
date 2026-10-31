@@ -39,6 +39,7 @@ import { analyserPiece, lireLesDevises, lireParametres } from "./analyse.ts";
 import type { ResultatControle } from "./controles.ts";
 import type { CoursLu } from "./cours-de-change.ts";
 import { tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
+import { droitsAuCout, lireLesReglagesComptables } from "./reglages-comptables.ts";
 
 type SensConnu = { documentKind: "facture_achat" | "facture_vente" };
 const sensConnu = (k: string): k is SensConnu["documentKind"] =>
@@ -184,6 +185,11 @@ export interface ReferentielDeLaProposition {
   fiscalCharges: Array<FiscalCharge & SensConnu>;
   compteDeNature: string | null;
   tvaNonDeductible: boolean;
+  /**
+   * Les droits hors TVA qu'un achat incorpore au coût, selon le réglage du
+   * cabinet (`fodec.traitement`, `droitsAuCout`). Vide : le compte du pack.
+   */
+  droitsAuCout: readonly string[];
 }
 
 /**
@@ -417,6 +423,7 @@ export function composerLaProposition(
       fiscalCharges: r.fiscalCharges,
       compteDeNature: r.compteDeNature,
       tvaNonDeductible: r.tvaNonDeductible,
+      droitsAuCout: r.droitsAuCout,
       currency: devise,
       ...(change?.ok ? { conversion: change.conversion } : {}),
       parametres: {
@@ -495,6 +502,7 @@ async function proposerDepuisLeJugement(
     controles: JugementAProposer["controles"];
     normalisation: ResultatNormalisation | null;
     pack_version_id: string | null;
+    tenant_id: string;
     jurisdiction: string;
     devise_du_dossier: string;
     cours_a_jour: boolean;
@@ -505,7 +513,7 @@ async function proposerDepuisLeJugement(
     `select e.id as extraction, e.payload, to_char(p.created_at, 'YYYY-MM-DD') as recue_le,
             a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.controles,
             a.normalisation,
-            a.pack_version_id, o.jurisdiction, o.currency as devise_du_dossier,
+            a.pack_version_id, p.tenant_id, o.jurisdiction, o.currency as devise_du_dossier,
             app.cours_du_jugement_a_jour(p.tenant_id, a.controles) as cours_a_jour,
             case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit,
             (select q.valeur from capture.precisions q
@@ -626,5 +634,11 @@ async function proposerDepuisLeJugement(
     ),
     compteDeNature: await compteDeLaNature(db, pieceId),
     tvaNonDeductible: regimes[0]?.regime_tva === "non_assujetti",
+    // Le FODEC d'un achat, au coût ou au compte du pack : le réglage du
+    // cabinet pour ce dossier, au jour de la pièce (R10).
+    droitsAuCout: await droitsAuCout(
+      db,
+      await lireLesReglagesComptables(db, ligne.tenant_id, pack, jour),
+    ),
   });
 }

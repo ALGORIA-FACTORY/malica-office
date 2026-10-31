@@ -638,11 +638,23 @@ export interface ParametrageRepository {
     motif?: string | null;
   }): Promise<{ decisions: number }>;
   /**
-   * Arrêter (ou confirmer) la règle de change, pour tout le cabinet ou pour
-   * un dossier qu'il supervise (R10, `app.regle_de_change_arreter`).
-   * `valeur: null` rend au pack.
+   * Les réglages comptables (R10) vus d'un cabinet ou d'un dossier, au jour
+   * dit : chaque sujet, ses réglages résolus et d'où ils viennent, ce que le
+   * Socle applique, et les tables existantes qui le portent déjà.
    */
-  arreterRegleDeChange(input: {
+  reglagesComptables(
+    orgId: string,
+    packId: string,
+    jour: string,
+    locale?: string,
+  ): Promise<ReglagesComptables>;
+  /**
+   * Arrêter (ou CONFIRMER) des réglages comptables, pour tout le cabinet ou
+   * pour un dossier qu'il supervise (`app.reglages_comptables_arreter`). Les
+   * codes de la règle de change y passent aussi, vers leur table. `valeur:
+   * null` rend au pack.
+   */
+  arreterReglagesComptables(input: {
     cabinetId: string;
     portee: "cabinet" | "dossier";
     porteeId: string;
@@ -770,10 +782,78 @@ export type OrigineDuParametrage = "dossier" | "cabinet" | "pack";
 export interface RegleDeChangeDuDossier {
   valeurs: Array<{
     code: string;
+    /** Le nom du réglage (`ref.labels`, `reglage_comptable`), traduit. */
+    libelle: string;
     valeur: string | null;
     origine: OrigineDuParametrage;
     decideLe: string | null;
     options: Array<{ code: string; label: string }> | null;
+  }>;
+}
+
+/**
+ * Les réglages comptables d'un cabinet ou d'un dossier (`app.reglage_comptable`),
+ * sujet par sujet, dans l'ordre du référentiel. Tout texte vient de `ref.labels`
+ * (le français à défaut) ; aucun n'est écrit dans le code.
+ */
+export interface ReglagesComptables {
+  sujets: Array<{
+    code: string;
+    titre: string;
+    /** Ce que dit le texte, la pratique des cabinets, le risque en cas de contrôle. */
+    texte: string;
+    pratique: string;
+    risque: string;
+    /** Le point qui reste INCERTAIN, à confirmer ; nul s'il n'y en a pas. */
+    incertain: string | null;
+    sources: Array<{ titre: string; url: string; dateeDu: string | null; consulteeLe: string }>;
+    reglages: Array<{
+      code: string;
+      libelle: string;
+      nature: "option" | "nombre";
+      valeur: string | null;
+      origine: OrigineDuParametrage;
+      decideLe: string | null;
+      /** La référence du défaut du pack (`ref.socle_params.legal_reference`). */
+      reference: string | null;
+      /**
+       * Le Socle applique-t-il la valeur résolue ? Faux : « Enregistré — pas
+       * encore appliqué par le Socle ».
+       */
+      appliquee: boolean;
+      /** Ce que le référentiel connaît ; nul : un nombre, saisi. */
+      options: Array<{ code: string; label: string }> | null;
+    }>;
+    /** Les droits hors TVA du sujet, tels que le pack les impute (`ref.fiscal_charges`). */
+    droits: Array<{
+      sens: "facture_achat" | "facture_vente";
+      compte: string;
+      montantFixe: string | null;
+      taux: string | null;
+    }>;
+    /** Le barème par tranches du sujet (`ref.timbre_baremes`). */
+    bareme: Array<{
+      /** À qui la tranche s'applique, nommé (`ref.labels`, `bareme_categorie`). */
+      categorie: string;
+      de: string;
+      a: string | null;
+      droit: string;
+      uniteIncertaine: boolean;
+    }>;
+    /**
+     * Les catégories d'immobilisations du pack : leur compte, leur taux
+     * linéaire (100 / durée) et le taux maximal du décret 2008-492 quand il en
+     * fixe un.
+     */
+    categories: Array<{
+      code: string;
+      libelle: string;
+      compte: string;
+      tauxLineaire: string;
+      tauxMaximal: string | null;
+      /** Le taux linéaire de la catégorie dépasse le taux maximal. */
+      depasse: boolean;
+    }>;
   }>;
 }
 

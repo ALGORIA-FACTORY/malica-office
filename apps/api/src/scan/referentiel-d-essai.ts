@@ -68,3 +68,8 @@ export const DEVISE_D_ESSAI = RELEVE_D_ESSAI.devise;
 
 /** La règle de change du pack (`change.*` de `ref.socle_params`). */
 export const REGLE_DE_CHANGE_D_ESSAI = RELEVE_D_ESSAI.change;
+
+/** Les réglages comptables du pack (`ref.socle_params`), par code. */
+export const REGLAGES_D_ESSAI: ReadonlyMap<string, string> = new Map(
+  Object.entries(RELEVE_D_ESSAI.reglages),
+);

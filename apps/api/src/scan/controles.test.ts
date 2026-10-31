@@ -12,10 +12,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { D } from "@malica/socle/domain/decimal";
+
 import {
   cleDeDoublon,
   controlerPiece,
   rendreVerdict,
+  type ArticleAControler,
   type ContexteControle,
   type PieceAControler,
 } from "./controles.ts";
@@ -24,8 +27,20 @@ import { deviseDEssai } from "./devise-d-essai.ts";
 import {
   BIENS_IMMOBILISABLES_D_ESSAI,
   DEVISE_D_ESSAI,
+  DEVISES_D_ESSAI,
+  REGLAGES_D_ESSAI,
   TITRES_D_ESSAI,
 } from "./referentiel-d-essai.ts";
+import { reglageDImmobilisation } from "./reglages-comptables.ts";
+
+/** Des articles lus par leur seule désignation : aucun montant. */
+const articles = (...designations: string[]): ArticleAControler[] =>
+  designations.map((designation) => ({
+    designation,
+    quantite: null,
+    prixUnitaireHt: null,
+    totalHt: null,
+  }));
 
 const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 const montantsJustes = normaliserMontants(
@@ -81,6 +96,9 @@ const CONTEXTE: ContexteControle = {
   ],
   titres: TITRES_D_ESSAI,
   biensImmobilisables: BIENS_IMMOBILISABLES_D_ESSAI,
+  // Sans réglage d'immobilisation : tout bien reconnu est à trancher. Le seuil
+  // du cabinet s'éprouve plus bas.
+  immobilisation: null,
   mentionsObligatoires: [
     { code: "IDENT_FISCAL_EMETTEUR", libelle: "Identifiant fiscal de l'émetteur" },
     { code: "IDENT_FISCAL_CLIENT", libelle: "Identifiant fiscal du client" },
@@ -360,7 +378,7 @@ describe("un bien susceptible d'être immobilisé", () => {
     controlerPiece(p, CONTEXTE).find((c) => c.code === "immobilisation_a_trancher");
 
   it("un serveur acheté : réserve nommée, l'article et sa famille dans les preuves", () => {
-    const c = immo(facture({ designations: ["Serveur de stockage en baie", "Câble RJ45"] }));
+    const c = immo(facture({ articles: articles("Serveur de stockage en baie", "Câble RJ45") }));
     assert.equal(c?.statut, "reserve");
     assert.match(c!.motif, /Serveur de stockage en baie/);
     assert.match(c!.motif, /tranche/);
@@ -368,27 +386,30 @@ describe("un bien susceptible d'être immobilisé", () => {
   });
 
   it("en arabe aussi, article et pluriel soudés", () => {
-    assert.equal(immo(facture({ designations: ["آلة نسخ متعددة الوظائف A3"] }))?.statut, "reserve");
-    assert.equal(immo(facture({ designations: ["خادم تخزين في خزانة"] }))?.statut, "reserve");
+    assert.equal(
+      immo(facture({ articles: articles("آلة نسخ متعددة الوظائف A3") }))?.statut,
+      "reserve",
+    );
+    assert.equal(immo(facture({ articles: articles("خادم تخزين في خزانة") }))?.statut, "reserve");
   });
 
   it("un mot qui n'en contient qu'un autre ne déclenche rien", () => {
     // « serveurs » au milieu d'un mot, la location d'un chariot : rien.
     assert.equal(
-      immo(facture({ designations: ["Location de chariot élévateur", "Conserveurs"] })),
+      immo(facture({ articles: articles("Location de chariot élévateur", "Conserveurs") })),
       undefined,
     );
   });
 
   it("une vente ne s'immobilise pas : rien à trancher", () => {
     assert.equal(
-      immo(facture({ documentKind: "facture_vente", designations: ["Serveur de stockage"] })),
+      immo(facture({ documentKind: "facture_vente", articles: articles("Serveur de stockage") })),
       undefined,
     );
   });
 
   it("un achat ordinaire, ou sans articles lus : rien", () => {
-    assert.equal(immo(facture({ designations: ["Papier A4 80 g, ramette"] })), undefined);
+    assert.equal(immo(facture({ articles: articles("Papier A4 80 g, ramette") })), undefined);
     assert.equal(immo(facture()), undefined);
   });
   it("un article à la désignation perdue (glyphes sans Unicode) : la question se pose", () => {
@@ -396,13 +417,102 @@ describe("un bien susceptible d'être immobilisé", () => {
     // couche de texte en glyphes sans Unicode. Rien ne s'y reconnaissait, et
     // le serveur partait en charge, sans un mot. Un texte perdu n'est pas un
     // texte absent : on ne conclut rien de ce qu'il ne dit pas.
-    const c = immo(facture({ designations: ["ﻡ\u0000ﺩ\u0000ﺎﺧ"] }));
+    const c = immo(facture({ articles: articles("ﻡ\u0000ﺩ\u0000ﺎﺧ") }));
     assert.equal(c?.statut, "reserve");
     assert.match(c!.motif, /illisible/);
     assert.deepEqual(c!.preuves["illisibles"], ["ﻡ\u0000ﺩ\u0000ﺎﺧ"]);
   });
 });
 
+describe("le seuil d'immobilisation du cabinet (R10, 31 octobre 2026)", () => {
+  /*
+   * Le seuil et le traitement d'un bien de faible valeur sont des réglages du
+   * cabinet, livrés en défaut du pack (décret 2008-492, INCERTAIN). Avant ce
+   * réglage, un mobilier de 150 HT était « à trancher » comme un serveur de
+   * 3 000 : le seuil n'existait nulle part.
+   */
+  const defaut = reglageDImmobilisation(REGLAGES_D_ESSAI);
+  assert.ok(defaut, "le pack d'essai porte un seuil et un traitement");
+  const seuil = D(defaut.seuil);
+  const au = (r: typeof defaut) => ({ ...CONTEXTE, immobilisation: r });
+  const codes = (p: PieceAControler, ctx: ContexteControle) =>
+    controlerPiece(p, ctx)
+      .filter((c) => c.code.startsWith("immobilisation_"))
+      .map((c) => c.code);
+  const article = (designation: string, prix: string | null, q: string | null = null) => ({
+    designation,
+    quantite: q,
+    prixUnitaireHt: prix,
+    totalHt: null,
+  });
+
+  it("au-dessus du seuil : à trancher", () => {
+    const p = facture({ articles: [article("Mobilier de bureau", seuil.plus("0.001").toFixed())] });
+    assert.deepEqual(codes(p, au(defaut)), ["immobilisation_a_trancher"]);
+  });
+
+  it("au seuil ou dessous, à l'actif : bien de faible valeur, plus rien à trancher", () => {
+    const p = facture({ articles: [article("Mobilier de bureau", seuil.toFixed())] });
+    const c = controlerPiece(p, au({ ...defaut, traitement: "actif_amorti" })).find(
+      (x) => x.code === "immobilisation_faible_valeur",
+    );
+    assert.equal(c?.statut, "reserve");
+    assert.match(c!.motif, /100 %/);
+    assert.equal(c!.preuves["seuil"], defaut.seuil);
+    assert.deepEqual(codes(p, au({ ...defaut, traitement: "actif_amorti" })), [
+      "immobilisation_faible_valeur",
+    ]);
+  });
+
+  it("sous le seuil, en charge : aucune réserve", () => {
+    const p = facture({ articles: [article("Mobilier de bureau", seuil.minus("1").toFixed())] });
+    assert.deepEqual(codes(p, au({ ...defaut, traitement: "charge" })), []);
+  });
+
+  it("le total d'un lot se compare au seuil multiplié par la quantité, sans division", () => {
+    const lot = (total: string) =>
+      facture({
+        articles: [
+          {
+            designation: "Mobilier de bureau",
+            quantite: "3",
+            prixUnitaireHt: null,
+            totalHt: total,
+          },
+        ],
+      });
+    assert.deepEqual(codes(lot(seuil.times(3).toFixed()), au(defaut)), [
+      "immobilisation_faible_valeur",
+    ]);
+    assert.deepEqual(codes(lot(seuil.times(3).plus("0.001").toFixed()), au(defaut)), [
+      "immobilisation_a_trancher",
+    ]);
+  });
+
+  it("une valeur absente, ou dans une autre devise que le dossier : la question reste posée", () => {
+    const sansMontant = facture({ articles: [article("Mobilier de bureau", null)] });
+    assert.deepEqual(codes(sansMontant, au(defaut)), ["immobilisation_a_trancher"]);
+    const autre = Object.keys(DEVISES_D_ESSAI).find((c) => c !== DEVISE_D_ESSAI)!;
+    const enDevise = facture({
+      articles: [article("Mobilier de bureau", seuil.minus("1").toFixed())],
+      montants: { ...montantsJustes, devise: autre },
+    });
+    assert.deepEqual(codes(enDevise, au(defaut)), ["immobilisation_a_trancher"]);
+  });
+
+  it("deux articles, de part et d'autre du seuil : chacun sa réserve", () => {
+    const p = facture({
+      articles: [
+        article("Mobilier de bureau", seuil.minus("1").toFixed()),
+        article("Serveur de stockage", seuil.times(10).toFixed()),
+      ],
+    });
+    assert.deepEqual(codes(p, au(defaut)), [
+      "immobilisation_a_trancher",
+      "immobilisation_faible_valeur",
+    ]);
+  });
+});
 describe("destinataire", () => {
   it("adressée au tenant — matricule écrit autrement, même identité : conforme", () => {
     const c = statut(

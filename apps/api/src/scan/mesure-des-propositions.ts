@@ -1221,6 +1221,10 @@ export function juger(cas: CasDeMesure) {
     typesDocument: TYPES_D_ESSAI,
     titres: TITRES_D_ESSAI,
     biensImmobilisables: BIENS_IMMOBILISABLES_D_ESSAI,
+    // Aucun réglage d'immobilisation : tout bien reconnu est « à trancher »,
+    // comme l'attendent les cas mesurés. Le seuil du cabinet a ses épreuves
+    // (`controles.test.ts`, `reglages-comptables.test.ts`).
+    immobilisation: null,
     mentionsObligatoires: MENTIONS_D_ESSAI,
     doublonProbable: null,
     devises: DEVISES_LUES_D_ESSAI,
@@ -1269,6 +1273,10 @@ export function jouer(cas: CasDeMesure): Issue {
       fiscalCharges: DROITS_D_ESSAI,
       compteDeNature: null,
       tvaNonDeductible: false,
+      // Le FODEC d'achat au compte du pack : les cas mesurés l'attendent là
+      // (« INCERTAIN — FODEC à l'achat imputé au compte du pack »). Le réglage
+      // du cabinet a ses épreuves (`reglages-comptables.test.ts`).
+      droitsAuCout: [],
     },
   );
   // La réserve attendue se vérifie aussi sur un refus : un refus juste dont le
