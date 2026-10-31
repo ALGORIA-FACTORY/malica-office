@@ -31,7 +31,7 @@ import type {
 } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece, lireLesDevises, lireParametres } from "../scan/analyse.ts";
+import { analyserPiece, exposantDeLaDevise, lireLesDevises } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import { dateDeLaPiece } from "./dates.ts";
@@ -1552,18 +1552,16 @@ export const capture = {
     );
     /*
      * La dette éteinte se lit par `app.dette_eteinte`, la même fonction que la
-     * proposition de règlement ; ses décimales par `lireParametres`, au
-     * paramétrage daté du jour du paiement, comme la proposition. Ces deux
-     * lectures étaient recopiées ici, et la copie des décimales relisait
-     * `ref.socle_params` à la main (24 octobre 2026).
+     * proposition de règlement ; ses décimales sont celles de la devise du
+     * paiement (`ref.devises`), comme la proposition (revue de #148 : une
+     * seule source d'exposant).
      */
-    const decimalesAu = new Map<string, Promise<number>>();
-    const decimales = (pack: string, jour: string) => {
-      const cle = `${pack}|${jour}`;
-      let d = decimalesAu.get(cle);
+    const decimalesDe = new Map<string, Promise<number>>();
+    const decimales = (devise: string) => {
+      let d = decimalesDe.get(devise);
       if (!d) {
-        d = lireParametres(db, pack, jour).then((p) => p["money.decimals"]);
-        decimalesAu.set(cle, d);
+        d = exposantDeLaDevise(db, devise);
+        decimalesDe.set(devise, d);
       }
       return d;
     };
@@ -1573,7 +1571,7 @@ export const capture = {
         const brut = r["brut"] as string | null;
         const jour = r["paye_le"] as string | null;
         if (brut == null || jour == null) return null;
-        const d = await decimales(r["pack_version_id"] as string, jour);
+        const d = await decimales(r["devise"] as string);
         return Number(enUnitesExactes(brut, d));
       }),
     );

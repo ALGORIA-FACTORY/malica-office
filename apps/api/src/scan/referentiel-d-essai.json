@@ -6,7 +6,6 @@
     "lecture.confiance_bloquante": 0.4,
     "lecture.confiance_reserve": 0.7,
     "lecture.tolerance_arrondi_mineure": 1,
-    "money.decimals": 3,
     "piece.ecart_date_jours": 60
   },
   "taux": [

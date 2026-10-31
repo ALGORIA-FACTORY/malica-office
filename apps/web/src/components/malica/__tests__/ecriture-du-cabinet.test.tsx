@@ -218,7 +218,10 @@ describe("une pièce en devise, côté comptable", () => {
       target: { value: "3,3456" },
     });
     fireEvent.click(enregistrer);
-    await waitFor(() => expect(api.saisirLeCoursDeLaPiece).toHaveBeenCalledWith("p1", "3.3456", 1));
+    // Sans motif : une saisie simple, qui cède devant le cours officiel importé.
+    await waitFor(() =>
+      expect(api.saisirLeCoursDeLaPiece).toHaveBeenCalledWith("p1", "3.3456", 1, null),
+    );
   });
 
   it("convertie : le cours appliqué se lit, et chaque ligne dit son montant d'origine", () => {
@@ -228,6 +231,31 @@ describe("une pièce en devise, côté comptable", () => {
     // Corriger le taux ouvre le même formulaire.
     fireEvent.click(screen.getByRole("button", { name: "cab.cours.corriger" }));
     expect(screen.getByRole("button", { name: "cab.cours.enregistrer" })).toBeTruthy();
+  });
+
+  it("corriger un cours exige un motif, et dit pour qui la dérogation vaut (revue de #148)", async () => {
+    api.saisirLeCoursDeLaPiece.mockResolvedValue(CONVERTIE);
+    monter(CONVERTIE);
+    fireEvent.click(screen.getByRole("button", { name: "cab.cours.corriger" }));
+    const enregistrer = screen.getByRole("button", { name: "cab.cours.enregistrer" });
+    fireEvent.change(screen.getByRole("textbox", { name: /^cab\.cours\.taux/ }), {
+      target: { value: "3,40" },
+    });
+    // Un taux seul ne corrige rien : la correction dit pourquoi.
+    expect(enregistrer).toHaveProperty("disabled", true);
+    fireEvent.change(screen.getByRole("textbox", { name: "cab.cours.motif.exige" }), {
+      target: { value: "Cours de la banque du client" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "cab.cours.portee" }), {
+      target: { value: "cabinet" },
+    });
+    fireEvent.click(enregistrer);
+    await waitFor(() =>
+      expect(api.saisirLeCoursDeLaPiece).toHaveBeenCalledWith("p1", "3.40", 1, {
+        motif: "Cours de la banque du client",
+        portee: "cabinet",
+      }),
+    );
   });
 
   it("une ligne changée n'est plus celle de la pièce en devise : son origine ne s'affiche plus", () => {

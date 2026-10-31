@@ -817,6 +817,11 @@ function coursDeChange(p: PieceAControler, ctx: ContexteControle): ResultatContr
       preuves: { devise, versDevise, jour: null, cours: null },
     };
   const jour = ctx.change.jour;
+  /*
+   * La question, entière : la règle telle que la base l'a résolue (pack,
+   * jour du paramétrage, valeurs), la devise et le jour du cours. La
+   * péremption (`app.cours_du_jugement_a_jour`) la repose telle quelle.
+   */
   const question = {
     devise,
     versDevise,
@@ -825,6 +830,9 @@ function coursDeChange(p: PieceAControler, ctx: ContexteControle): ResultatContr
     recul: regle.recul,
     ecart: regle.ecart,
     dateRetenue: regle.dateRetenue,
+    pack: ctx.change.pack,
+    jourDuParametrage: ctx.change.jourDuParametrage,
+    regle: ctx.change.regleBrute,
   };
   if (!jour)
     return {

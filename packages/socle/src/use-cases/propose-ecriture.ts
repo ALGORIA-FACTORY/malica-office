@@ -6,7 +6,7 @@
  */
 
 import { computePivot } from "../index.ts";
-import { D, toFixedStr } from "../domain/decimal.ts";
+import { D, sum, toFixedStr } from "../domain/decimal.ts";
 import {
   convertirLExtrait,
   type ConversionFaite,
@@ -283,14 +283,30 @@ export function buildProposal(params: {
   const deLaPiece: CurrencyDef = { code: extract.currency, decimals };
   const conversion = params.conversion;
   const origine = conversion ? pivotDe(extract, deLaPiece, { droitsFixes: false }) : null;
+  /*
+   * La dette envers le tiers est HT + TVA + droits (le pivot ne recopie
+   * jamais un TTC dont l'écart n'est pas justifié) : c'est elle qui se
+   * convertit. Un écart imprimé, toléré dans la devise de la facture, ne
+   * glisse pas dans une base convertie.
+   */
+  const dette = toFixedStr(
+    sum([
+      ...extract.lines.flatMap((l) => [l.base_ht, l.vat_amount]),
+      ...extract.other_charges.map((x) => x.amount),
+    ]),
+    decimals,
+  );
   const converti =
     conversion && origine?.approvable
-      ? convertirLExtrait(extract, {
-          de: deLaPiece,
-          vers: conversion.vers,
-          cours: conversion.cours,
-          ecart: conversion.ecart,
-        })
+      ? convertirLExtrait(
+          { ...extract, totals: { ...extract.totals, ttc: dette } },
+          {
+            de: deLaPiece,
+            vers: conversion.vers,
+            cours: conversion.cours,
+            ecart: conversion.ecart,
+          },
+        )
       : null;
   const pivot = !conversion
     ? pivotDe(extract, deLaPiece, { droitsFixes: true })

@@ -26,6 +26,7 @@ test("un fichier juste se lit tel quel, taux en chaîne, unité en nombre", () =
       taux: "3.3456",
       unite: 1,
       source: "BCT",
+      motif: null,
     },
     {
       date: "2026-09-10",
@@ -34,8 +35,31 @@ test("un fichier juste se lit tel quel, taux en chaîne, unité en nombre", () =
       taux: "20.1234",
       unite: 1000,
       source: "BCT",
+      motif: null,
     },
   ]);
+});
+
+test("une correction porte son motif, dernière colonne, virgules comprises (revue de #148)", () => {
+  const { cours, fautes } = lireLesCours(
+    [
+      `${ENTETE},motif`,
+      "2026-09-10,EUR,TND,3.3456,1,BCT,",
+      "2026-09-10,EUR,TND,3.3401,1,BCT,Rectificatif de la source, publié le 12/09",
+      "2026-09-10,EUR,TND,3.3",
+    ].join("\n"),
+  );
+  assert.deepEqual(
+    fautes.map((f) => f.split(" : ")[0]),
+    ["ligne 4"],
+  );
+  assert.deepEqual(
+    cours.map((c) => [c.taux, c.motif]),
+    [
+      ["3.3456", null],
+      ["3.3401", "Rectificatif de la source, publié le 12/09"],
+    ],
+  );
 });
 
 test("chaque ligne fautive est nommée, et le fichier ne s'importe pas à moitié", () => {

@@ -11,8 +11,16 @@
  *   — le cours s'applique : ce qu'il vaut, sa source, sa date, et « Corriger
  *     le taux » (une correction s'ajoute, rien n'est effacé — R7).
  * Les explications sont dans le i, jamais dans la carte.
+ *
+ * Revue de #148 : le cours officiel importé passe devant un cours saisi. Pour
+ * passer devant lui, ou pour corriger un cours, le cabinet DÉROGE : un motif,
+ * et pour qui — ce dossier ou tout le cabinet. Corriger exige le motif.
  */
-import type { CoursASaisir, PropositionDePiece } from "@malica/socle/ports/repositories";
+import type {
+  CoursASaisir,
+  DerogationDeCours,
+  PropositionDePiece,
+} from "@malica/socle/ports/repositories";
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -26,28 +34,52 @@ import { office } from "@/verticals/malica-office/composition";
 
 const OU = "components/malica/cours-de-change";
 
-/** Le formulaire d'un cours : le taux, pour une unité de la devise. Un geste. */
+/** Un cours saisi, et la dérogation qu'il porte, s'il en porte une. */
+export interface CoursAEnregistrer {
+  taux: string;
+  unite: number;
+  derogation: DerogationDeCours | null;
+}
+
+/**
+ * Le formulaire d'un cours : le taux, pour une unité de la devise, et le
+ * motif d'une dérogation. Un geste. `portees` : pour qui une dérogation peut
+ * valoir ici (ce dossier n'existe que depuis une pièce) ; `motifExige` : une
+ * correction dit toujours pourquoi.
+ */
 export function FormulaireDuCours({
   devise,
   vers,
   enCours,
+  portees,
+  motifExige = false,
   onEnregistrer,
 }: {
   devise: string;
   vers: string;
   enCours: boolean;
-  onEnregistrer: (c: { taux: string; unite: number }) => void;
+  portees: ReadonlyArray<DerogationDeCours["portee"]>;
+  motifExige?: boolean;
+  onEnregistrer: (c: CoursAEnregistrer) => void;
 }) {
   const { t } = useI18n();
   const [taux, setTaux] = useState("");
   const [unite, setUnite] = useState("1");
+  const [motif, setMotif] = useState("");
+  const [portee, setPortee] = useState<DerogationDeCours["portee"]>(portees[0] ?? "cabinet");
   const cours = coursSaisi(taux, unite);
+  const motifEcrit = motif.trim();
+  const pret = cours !== null && (!motifExige || motifEcrit.length > 0);
   return (
     <form
       className="grid grid-cols-2 gap-2.5"
       onSubmit={(e) => {
         e.preventDefault();
-        if (cours) onEnregistrer(cours);
+        if (cours && pret)
+          onEnregistrer({
+            ...cours,
+            derogation: motifEcrit ? { motif: motifEcrit, portee } : null,
+          });
       }}
     >
       <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
@@ -74,9 +106,38 @@ export function FormulaireDuCours({
           className="num h-[48px] border border-border bg-background px-2 text-end text-[14px] font-normal text-foreground"
         />
       </label>
+      <label className="col-span-2 flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+        {motifExige ? t("cab.cours.motif.exige") : t("cab.cours.motif")}
+        <input
+          type="text"
+          dir="auto"
+          required={motifExige}
+          value={motif}
+          onChange={(e) => setMotif(e.target.value)}
+          className="h-[48px] border border-border bg-background px-2 text-[14px] font-normal text-foreground"
+        />
+      </label>
+      {motifEcrit && portees.length > 1 ? (
+        <label className="col-span-2 flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+          {t("cab.cours.portee")}
+          <select
+            value={portee}
+            onChange={(e) => setPortee(e.target.value as DerogationDeCours["portee"])}
+            className="h-[48px] border border-border bg-background px-2 text-[14px] font-normal text-foreground"
+          >
+            {portees.map((p) => (
+              <option key={p} value={p}>
+                {p === "dossier"
+                  ? t("tva.affectation.pourLeDossier")
+                  : t("tva.affectation.pourLeCabinet")}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <button
         type="submit"
-        disabled={enCours || cours === null}
+        disabled={enCours || !pret}
         className="col-span-2 min-h-[48px] border border-foreground bg-foreground px-4 text-[14px] font-semibold text-background hover:bg-background hover:text-foreground disabled:opacity-50"
       >
         {enCours ? t("common.loading") : t("cab.cours.enregistrer")}
@@ -103,8 +164,8 @@ export function CoursDeLaPiece({
   const [corriger, setCorriger] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const saisir = useMutation({
-    mutationFn: (c: { taux: string; unite: number }) =>
-      office().office.saisirLeCoursDeLaPiece(pieceId, c.taux, c.unite),
+    mutationFn: (c: CoursAEnregistrer) =>
+      office().office.saisirLeCoursDeLaPiece(pieceId, c.taux, c.unite, c.derogation),
     onMutate: () => setErreur(null),
     onSuccess: async () => {
       setCorriger(false);
@@ -180,6 +241,9 @@ export function CoursDeLaPiece({
           devise={devise}
           vers={vers}
           enCours={saisir.isPending}
+          portees={["dossier", "cabinet"]}
+          // Un cours appliqué se corrige : la correction dit pourquoi.
+          motifExige={!aSaisir}
           onEnregistrer={(c) => saisir.mutate(c)}
         />
       ) : null}

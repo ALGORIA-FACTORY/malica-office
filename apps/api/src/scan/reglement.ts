@@ -17,7 +17,7 @@ import {
 
 import type { Requete } from "../db.ts";
 
-import { lireParametres } from "./analyse.ts";
+import { exposantDeLaDevise } from "./analyse.ts";
 
 export type PropositionDeReglement =
   | {
@@ -191,10 +191,9 @@ export async function propositionDeReglement(
     : null;
   const referencePiece = referenceDuDocument(piece?.payload?.references);
 
-  // Les décimales viennent du paramétrage daté, par la MÊME lecture que
-  // l'analyse — deux définitions de la devise finiraient par diverger.
-  const parametres = await lireParametres(db, l.pack_version_id, l.paye_le);
-  const decimales = parametres["money.decimals"]!;
+  // Les décimales de la devise du règlement — celle des livres, vérifiée
+  // ci-dessus —, à la seule source d'exposant (`ref.devises`, revue de #148).
+  const decimales = await exposantDeLaDevise(db, l.devise);
   // Une unité mineure hors entier sûr n'est jamais arrondie silencieusement.
   const mineurs = [l.montant_mineur, piece?.ttc_mineur, piece?.tva_mineur].filter((v) => v != null);
   if (mineurs.some((v) => !Number.isSafeInteger(Number(v))))

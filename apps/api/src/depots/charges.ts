@@ -9,6 +9,7 @@
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 
 import type { Requete } from "../db.ts";
+import { exposantDuPack } from "../scan/analyse.ts";
 import { dec, decOuNul, enVigueur } from "./decimal.ts";
 import { conversionsDesPieces, montantConverti } from "./en-devise-du-dossier.ts";
 
@@ -161,7 +162,8 @@ export const charges = {
       code: ligne["code"] as string,
       minPeriods: Number(ligne["min_periods"]),
       deviationRatio: dec(ligne["deviation_ratio"], 4),
-      minAmount: dec(ligne["min_amount"], 3),
+      // Un seuil du pack, dans la devise du pack, à son exposant (revue de #148).
+      minAmount: dec(ligne["min_amount"], await exposantDuPack(db, packId)),
     };
   },
 
@@ -189,12 +191,19 @@ export const charges = {
         where a.period is null`,
       [tenantId],
     );
-    const { dossier, converties } = await enDeviseDuDossier(db, tenantId, rows);
+    const { dossier, converties, sansCours } = await enDeviseDuDossier(db, tenantId, rows);
     const totaux = converties.flatMap((l) => (l.total_ht === null ? [] : [l.total_ht]));
+    /*
+     * Les comptes et la somme ne portent pas sur les mêmes pièces (revue de
+     * #148) : une pièce en devise sans cours attend sa date, mais son montant
+     * n'est pas dans le total. Chaque compte se dit.
+     */
+    const sansCoursIds = new Set(sansCours.map((r) => r.piece_id));
     return {
       articles: rows.length,
       pieces: new Set(rows.map((r) => r.piece_id)).size,
       totalHt: totaux.length === 0 ? null : sommeDecimale(totaux, dossier.exposant),
+      piecesSansCours: sansCoursIds.size,
     };
   },
 
@@ -300,6 +309,7 @@ export const charges = {
   },
 
   async questions(db: Requete, tenantId: string) {
+    const dossier = await deviseDuDossier(db, tenantId);
     const { rows } = await db.query(
       `select id, period, famille_code, observed, baseline, deviation_ratio,
               threshold_code, answer, answered_at, answered_side
@@ -312,8 +322,9 @@ export const charges = {
         id: row["id"] as string,
         period: row["period"] as string,
         familleCode: row["famille_code"] as string,
-        observed: dec(row["observed"], 3),
-        baseline: dec(row["baseline"], 3),
+        // Des montants du dossier, à l'exposant de sa devise (revue de #148).
+        observed: dec(row["observed"], dossier.exposant),
+        baseline: dec(row["baseline"], dossier.exposant),
         deviationRatio: dec(row["deviation_ratio"], 4),
         thresholdCode: row["threshold_code"] as string,
         answer: (row["answer"] as string | null) ?? null,

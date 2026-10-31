@@ -90,6 +90,10 @@ describe("la mesure des propositions", () => {
       "un demi-millime exact s'arrondit au pair, jamais vers le haut",
       "facture en francs CFA, cours pour 1 000 : de l'unité au millime",
       "un droit de timbre imprimé en euros n'est pas le timbre du pack",
+      // Les cas adverses de la revue de #148.
+      "trois lignes, deux taux, en euros, pour un dossier tenu en francs CFA",
+      "deux lignes, deux taux, en dollars : la TVA de chaque taux, l'écart à la plus grande base",
+      "soixante lignes de 0,01 € pour un dossier en francs CFA : aucune base négative",
     ];
     assert.deepEqual(
       enDevise

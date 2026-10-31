@@ -514,4 +514,36 @@ export const parametrage = {
     );
     return { decisions: Number(rows[0]?.n ?? 0) };
   },
+
+  /**
+   * ARRÊTER LA RÈGLE DE CHANGE (R10) : comme la déclaration de TVA, pour tout
+   * le cabinet (l'expert-comptable) ou pour un dossier qu'il supervise. La
+   * base vérifie qui décide et ce qui se décide (`app.regle_de_change_arreter`).
+   */
+  async arreterRegleDeChange(
+    db: Requete,
+    input: {
+      cabinetId: string;
+      portee: "cabinet" | "dossier";
+      porteeId: string;
+      packId: string;
+      depuis: string;
+      valeurs: Array<{ code: string; valeur: string | null }>;
+      motif?: string | null;
+    },
+  ): Promise<{ decisions: number }> {
+    const { rows } = await db.query<{ n: number }>(
+      `select app.regle_de_change_arreter($1, $2, $3, $4, $5::date, $6::jsonb, $7) as n`,
+      [
+        input.cabinetId,
+        input.portee,
+        input.porteeId,
+        input.packId,
+        input.depuis,
+        JSON.stringify(input.valeurs),
+        input.motif ?? null,
+      ],
+    );
+    return { decisions: Number(rows[0]?.n ?? 0) };
+  },
 };

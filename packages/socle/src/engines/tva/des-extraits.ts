@@ -35,8 +35,17 @@ export const EXTRAIT_ILLISIBLE = "EXTRAIT_ILLISIBLE";
  */
 export const EXTRAIT_EN_DEVISE = "EXTRAIT_EN_DEVISE";
 
+/**
+ * Le motif d'une pièce en devise dont la conversion est refusée
+ * (`CONVERSION_REFUSEE:<raison>`, `ConversionRefusee`) : une facture qui ne
+ * tient pas dans sa devise, un écart hors de sa borne. Revue de #148 : la
+ * lecture de la TVA laissait l'exception remonter et arrêtait tout le mois ;
+ * la pièce sort désormais du calcul, nommée, et seule.
+ */
+export const CONVERSION_REFUSEE = "CONVERSION_REFUSEE";
+
 /** Les motifs qui écartent une pièce ENTIÈRE du calcul (et non une ligne). */
-export const HORS_DU_CALCUL = [EXTRAIT_ILLISIBLE, EXTRAIT_EN_DEVISE] as const;
+export const HORS_DU_CALCUL = [EXTRAIT_ILLISIBLE, EXTRAIT_EN_DEVISE, CONVERSION_REFUSEE] as const;
 
 export function tvaDesExtraits(args: {
   period: string;
@@ -44,12 +53,17 @@ export function tvaDesExtraits(args: {
   taux: ReadonlyArray<TaxRate>;
   /** Les lignes de la déclaration, au référentiel (`referentiel.declarationTva`). */
   declaration: DeclarationTva;
-  rows: ReadonlyArray<{ pieceId: string; extract: unknown }>;
+  /** `refus` : la pièce est déjà écartée en amont, avec sa raison (`CONVERSION_REFUSEE:…`). */
+  rows: ReadonlyArray<{ pieceId: string; extract: unknown; refus?: string }>;
 }): TvaV1 {
   const achats: Entree[] = [];
   const ventes: Entree[] = [];
   const illisibles: TvaV1["refused"] = [];
   for (const row of args.rows) {
+    if (row.refus) {
+      illisibles.push({ reason: row.refus, item_id: row.pieceId });
+      continue;
+    }
     const lu = ExtractV1.safeParse(row.extract);
     if (!lu.success) {
       const champs = [...new Set(lu.error.issues.map((i) => i.path.join(".")))].sort();

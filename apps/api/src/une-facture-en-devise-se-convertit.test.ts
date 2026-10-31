@@ -1,5 +1,6 @@
 /**
- * Une facture en devise se convertit, de bout en bout (31 octobre 2026).
+ * Une facture en devise se convertit, de bout en bout (31 octobre 2026 ;
+ * revue de #148).
  *
  * Avant #142, une facture en euros d'un dossier tenu en dinars partait au
  * journal à sa valeur faciale ; depuis, elle n'était plus proposée du tout,
@@ -10,17 +11,27 @@
  *   — le cabinet le saisit en un geste depuis la pièce, le Socle rejuge, et
  *     propose l'écriture convertie, « avec réserve : taux de change » ;
  *   — validée, elle s'inscrit en dinars, chaque ligne avec sa devise, son
- *     montant d'origine et son taux ; le journal du jour et son export les
- *     portent ; un retour les recopie à la contre-passation ;
+ *     montant d'origine, son taux et l'ORIGINE de son cours ; le journal du
+ *     jour la porte ; un retour la recopie à la contre-passation ;
  *   — la TVA du mois et « Vos charges » comptent les montants convertis ;
- *     sans cours, ils ne comptent pas — et le disent ;
- *   — un cours importé par l'exploitation (`outils/importer-les-cours.mjs`)
- *     périme le jugement, et l'ouverture rejuge ; le cours du cabinet
- *     l'emporte à date égale ; celui d'un autre cabinet n'entre jamais ;
- *   — une correction est une ligne nouvelle (R7) ; la table refuse toute
- *     modification ;
+ *     sans cours, ou sans conversion possible, ils ne comptent pas — et le
+ *     disent, chacun avec sa raison ;
+ *   — la préséance des cours : l'import officiel passe devant une saisie ;
+ *     une dérogation MOTIVÉE du cabinet passe devant l'import, celle du
+ *     dossier devant celle du cabinet ; celle d'un autre cabinet n'entre
+ *     jamais ;
+ *   — l'import est tracé, rejouable, et se corrige — y compris en revenant à
+ *     une valeur officielle antérieure —, toujours avec un motif ;
+ *   — un cours qui change périme le jugement : la conversion attend, VALIDER
+ *     refuse la proposition périmée et la suivante s'inscrit au bon cours ;
+ *   — la règle de change se résout dossier → cabinet → pack (R10) ;
  *   — une écriture ne s'inscrit que dans la devise du dossier, forcée
  *     comprise.
+ *
+ * ISOLEMENT : chaque passage crée sa propre SOURCE de cours (`ESSAI_…`) et la
+ * règle de son dossier la nomme, sans recul : un cours importé par un passage
+ * précédent — l'import vaut pour toute la base — n'entre jamais ici, et chaque
+ * épreuve a son propre jour. L'ordre des épreuves ne compte pas.
  *
  * Les cours sont FICTIFS : un cours est une donnée, aucun n'est livré.
  *
@@ -35,7 +46,15 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import type { PropositionDePiece } from "@malica/socle/ports/repositories";
+import { REGLES_D_ECART } from "@malica/socle/engines/fx/convertir-l-extrait";
+import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
+import type {
+  DeclarationTva,
+  JournalDuJour,
+  PropositionDePiece,
+  RegleDeChangeDuDossier,
+  TaxRate,
+} from "@malica/socle/ports/repositories";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
@@ -44,6 +63,7 @@ import { identite } from "./depots/identite.ts";
 import { parametrage } from "./depots/parametrage.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
+import { DATES_RETENUES } from "./scan/cours-de-change.ts";
 import { lecture as lectureDEssai } from "./scan/lecture-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
@@ -53,9 +73,17 @@ const IMPORTEUR = fileURLToPath(new URL("../../../outils/importer-les-cours.mjs"
 
 type Ok = Extract<PropositionDePiece, { ok: true }>;
 type Refus = Extract<PropositionDePiece, { ok: false }>;
+type Transmis = Array<{
+  pieceId: string;
+  extract: { currency: string; totals: { vat: string; ttc: string } };
+  refus?: string;
+}>;
 
 describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `devise-${Date.now()}`;
+  /** La source de ce passage : aucun autre passage n'en importe. */
+  const source = `ESSAI_${marque.slice("devise-".length)}`;
+  const operateur = `operateur-${marque}`;
   const mfDossier = matriculeDEssai("A", "M");
   const mfAutre = matriculeDEssai("A", "M");
   const mdp = "MotDePasseTresLong2026!";
@@ -67,7 +95,6 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
   let autreCabinet = "";
   let autrePme = "";
   let packId = "";
-  let jour = "";
   const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
 
   const rpc = (u: Utilisateur, methode: string, ...args: unknown[]) => {
@@ -80,40 +107,31 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
   let n = 0;
   /**
    * Une facture d'achat en devise, lue, jugée, transmise : HT, TVA à 19 % et
-   * TTC imprimés tels quels, sans timbre, à la date donnée. Un article
-   * chiffré au HT, pour « Vos charges ».
+   * TTC imprimés tels quels, sans timbre, au jour donné. Un article chiffré au
+   * HT, pour « Vos charges ».
    */
-  const transmise = async (
-    o: {
-      devise?: string;
-      /** Ce que la pièce imprime : HT et TTC en deux jetons, TVA en un. */
-      ht?: [string, string];
-      tva?: string;
-      ttc?: [string, string];
-      /** Ce que le solveur de la lecture a posé : HT, TVA, TTC décimaux. */
-      lus?: [string, string, string];
-      date?: string;
-    } = {},
-  ) => {
+  const transmise = async (o: {
+    date: string;
+    devise?: string;
+    /** Ce que la pièce imprime : HT et TTC en deux jetons, TVA en un. */
+    ht?: [string, string];
+    tva?: string;
+    ttc?: [string, string];
+    /** Ce que le solveur de la lecture a posé : HT, TVA, TTC décimaux. */
+    lus?: [string, string, string];
+  }) => {
     n += 1;
     const ht = o.ht ?? ["1", "000,00"];
     const tva = o.tva ?? "190,00";
     const ttc = o.ttc ?? ["1", "190,00"];
     const [htLu, tvaLu, ttcLu] = o.lus ?? ["1000.00", "190.00", "1190.00"];
     const l = lectureDEssai({ ht, tva, ttc, clientMf: mfDossier, numero: `DEV-${marque}-${n}` });
-    const date = o.date ?? "2026-09-10";
     const extract = {
       ...l.extract,
       currency: o.devise ?? "EUR",
-      document_date: date,
+      document_date: o.date,
       lines: [
-        {
-          label: "Licence",
-          tax_code: "TVA19",
-          base_ht: htLu,
-          vat_amount: tvaLu,
-          ttc: ttcLu,
-        },
+        { label: "Licence", tax_code: "TVA19", base_ht: htLu, vat_amount: tvaLu, ttc: ttcLu },
       ],
       other_charges: [],
       totals: { base_ht: htLu, vat: tvaLu, ttc: ttcLu },
@@ -152,7 +170,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
                 },
               ],
               documentKind: "facture_achat",
-              documentDate: date,
+              documentDate: o.date,
               mode: "pdf-text",
               confianceParChamp: { "totals.ttc": 0.95 },
             },
@@ -168,36 +186,73 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
 
   const proposition = (id: string) =>
     cabinetFait("office.propositionDePiece", id) as Promise<PropositionDePiece>;
+  const proposee = async (id: string) => {
+    const r = (await proposition(id)) as Ok;
+    assert.equal(r.ok, true, JSON.stringify(r));
+    return r;
+  };
+  /** Le taux de chaque ligne proposée : un seul, celui du cours appliqué. */
+  const tauxPropose = async (id: string) => [
+    ...new Set((await proposee(id)).proposition.lignes.map((l) => l.taux_de_change)),
+  ];
   const lignesInscrites = async (ecritureId: string) =>
     (
       await admin.query<{
-        account_code: string;
         debit: string;
         credit: string;
-        tax_code: string | null;
         devise_origine: string | null;
         montant_origine: string | null;
         taux_de_change: string | null;
         cours_id: string | null;
       }>(
-        `select account_code, debit::text, credit::text, tax_code, devise_origine,
-                montant_origine::text, taux_de_change::text, cours_id::text
+        `select debit::text, credit::text, devise_origine, montant_origine::text,
+                taux_de_change::text, cours_id::text
            from socle.ecriture_lignes where ecriture_id = $1 order by ordinal`,
         [ecritureId],
       )
     ).rows;
-  const coursImporte = (lignes: string[]) => {
+  /** Un import de l'exploitation : un fichier, avec la colonne `motif`. */
+  const importe = (lignes: string[]) => {
     const dossier = mkdtempSync(join(tmpdir(), "cours-"));
     const fichier = join(dossier, `cours-${marque}.csv`);
-    writeFileSync(fichier, ["date,devise,vers_devise,taux,unite,source", ...lignes].join("\n"));
-    const r = spawnSync(process.execPath, [IMPORTEUR, fichier], { encoding: "utf8" });
+    writeFileSync(
+      fichier,
+      ["date,devise,vers_devise,taux,unite,source,motif", ...lignes].join("\n"),
+    );
+    return spawnSync(process.execPath, [IMPORTEUR, fichier], {
+      encoding: "utf8",
+      env: { ...process.env, MALICA_OPERATEUR: operateur },
+    });
+  };
+  const importeOk = (lignes: string[]) => {
+    const r = importe(lignes);
     assert.equal(r.status, 0, r.stderr);
     return r.stdout;
   };
-  const mois = (j: string) => {
-    const m = j.slice(0, 7);
-    const fin = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0));
-    return [`${m}-01`, fin.toISOString().slice(0, 10)] as const;
+  const saisirUnCours = (u: Utilisateur, c: Record<string, unknown>) =>
+    rpc(u, "office.saisirUnCours", {
+      versDevise: "TND",
+      unite: 1,
+      source,
+      ...c,
+    });
+  const transmisDe = async (id: string, jourDeLaPiece: string) => {
+    // Imputée au mois de sa date, ou au mois de sa transmission si celui de
+    // sa date est déclaré : les deux fenêtres portent ses montants.
+    const mois = (j: string) => {
+      const m = j.slice(0, 7);
+      const fin = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0));
+      return [`${m}-01`, fin.toISOString().slice(0, 10)] as const;
+    };
+    const aujourdhui = (
+      await sousIdentite(expert.id, (db) => parametrage.fuseauDuCabinet(db, cabinet))
+    ).aujourdhui!;
+    for (const j of [jourDeLaPiece, aujourdhui]) {
+      const lus = (await pmeFait("office.extraitsTransmis", pme, ...mois(j))) as Transmis;
+      const trouve = lus.find((x) => x.pieceId === id);
+      if (trouve) return trouve;
+    }
+    return undefined;
   };
 
   before(async () => {
@@ -236,8 +291,25 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
           order by effective_from desc limit 1`,
       )
     ).rows[0]!.id;
-    jour = (await sousIdentite(expert.id, (db) => parametrage.fuseauDuCabinet(db, cabinet)))
-      .aujourdhui!;
+    // La source de ce passage, au référentiel ; la règle du dossier la nomme,
+    // sans recul : chaque cours ne vaut que pour son jour (R10, arrêté par le
+    // cabinet qui tient le dossier).
+    await admin.query(`insert into ref.sources_de_cours (code, nom) values ($1, $2)`, [
+      source,
+      `Source d'essai ${marque}`,
+    ]);
+    await cabinetFait("parametrage.arreterRegleDeChange", {
+      cabinetId: cabinet,
+      portee: "dossier",
+      porteeId: pme,
+      packId,
+      depuis: "2026-01-01",
+      valeurs: [
+        { code: "change.source", valeur: source },
+        { code: "change.recul_jours", valeur: "0" },
+      ],
+      motif: "Épreuve isolée",
+    });
   });
 
   after(async () => {
@@ -254,24 +326,35 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     }
   });
 
+  it("les dates retenues et les règles d'écart du référentiel sont celles que le Socle implémente", async () => {
+    const lire = async (table: string) =>
+      (
+        await admin.query<{ code: string }>(
+          `select code from ref.${table} order by code collate "C"`,
+        )
+      ).rows.map((r) => r.code);
+    assert.deepEqual(await lire("change_dates_retenues"), [...DATES_RETENUES].sort());
+    assert.deepEqual(await lire("change_regles_d_ecart"), [...REGLES_D_ECART].sort());
+  });
+
   it("sans cours, rien ne se propose : la raison nomme le cours à saisir", async () => {
-    const id = await transmise();
+    const id = await transmise({ date: "2026-09-01" });
     const r = (await proposition(id)) as Refus;
     assert.equal(r.ok, false);
     assert.equal(r.raisonCode, "taux_de_change");
-    assert.match(r.raison, /taux EUR\/TND du 2026-09-10 à saisir/);
+    assert.match(r.raison, /taux EUR\/TND du 2026-09-01 à saisir/);
     assert.deepEqual(r.coursASaisir, {
       devise: "EUR",
       versDevise: "TND",
-      jour: "2026-09-10",
-      source: "BCT",
+      jour: "2026-09-01",
+      source,
     });
     // La PME n'a rien à corriger : ce n'est pas une faute de sa pièce.
     assert.notEqual(r.verdictCode, "anomalie");
   });
 
   it("le cabinet saisit le cours en un geste ; le Socle rejuge et propose, converti, avec réserve", async () => {
-    const id = await transmise();
+    const id = await transmise({ date: "2026-09-02" });
     const r = (await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.3456", 1)) as Ok;
     assert.equal(r.ok, true, JSON.stringify(r));
     assert.equal(r.verdictCode, "reserve");
@@ -281,7 +364,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     );
     assert.ok(
       motifs[0]!.motifs.some(
-        (m) => m.code === "cours_de_change" && m.motif === "taux de change 2026-09-10 BCT",
+        (m) => m.code === "cours_de_change" && m.motif === `taux de change 2026-09-02 ${source}`,
       ),
     );
     const p = r.proposition;
@@ -299,15 +382,28 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     assert.ok(p.lignes.every((l) => l.taux_de_change === "3.3456"));
     // Rejouer le geste (un double clic) n'ajoute aucun cours.
     await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.3456", 1);
-    const { rows: cours } = await admin.query(
-      `select 1 from parametrage.cours_de_change where tenant_id = $1`,
+    const { rows: cours } = await admin.query<{ origine: string }>(
+      `select origine from parametrage.cours_de_change
+        where tenant_id = $1 and date_du_cours = '2026-09-02'`,
       [cabinet],
     );
-    assert.equal(cours.length, 1);
+    assert.deepEqual(
+      cours.map((c) => c.origine),
+      ["saisie"],
+    );
+    // La bibliothèque montre la pièce dans SA devise, à son exposant.
+    const docs = (await cabinetFait("supervision.documents", cabinet, pme, "2026-09")) as Array<{
+      id: string;
+      montant: string | null;
+      devise: string;
+    }>;
+    const doc = docs.find((x) => x.id === id);
+    assert.deepEqual([doc?.montant, doc?.devise], ["1190.00", "EUR"]);
   });
 
-  it("validée, elle s'inscrit en dinars, chaque ligne avec son origine ; le journal et l'export la disent", async () => {
+  it("validée, elle s'inscrit en dinars, chaque ligne avec son origine ; le journal dit d'où vient le cours", async () => {
     const id = await transmise({
+      date: "2026-09-03",
       devise: "USD",
       ht: ["333.33", "US$"],
       tva: "63.33",
@@ -334,28 +430,34 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     );
     assert.ok(lignes.every((l) => Number(l.taux_de_change) === 3.0125 && l.cours_id));
 
-    const journal = (await cabinetFait("journalDuJour.lire", cabinet, pme, null, "fr")) as {
-      journaux: Array<{
-        ecritures: Array<{
-          id: string;
-          lignes: Array<{ compte: string; origine: { devise: string; montant: string } | null }>;
-        }>;
-      }>;
-    };
+    const journal = (await cabinetFait(
+      "journalDuJour.lire",
+      cabinet,
+      pme,
+      null,
+      "fr",
+    )) as JournalDuJour;
     const auJournal = journal.journaux.flatMap((j) => j.ecritures).find((e) => e.id === ecritureId);
     assert.ok(auJournal, "l'écriture validée est au journal du jour");
     assert.deepEqual(
-      auJournal.lignes.map((l) => [l.origine?.devise, l.origine?.montant]),
+      auJournal.lignes.map((l) => [
+        l.origine?.devise,
+        l.origine?.montant,
+        l.origine?.source,
+        l.origine?.origineDuCours,
+        l.origine?.libelleOrigineDuCours,
+        l.origine?.motifDuCours,
+      ]),
       [
-        ["USD", "333.33"],
-        ["USD", "63.33"],
-        ["USD", "396.66"],
+        ["USD", "333.33", source, "saisie", "Saisi par le cabinet", null],
+        ["USD", "63.33", source, "saisie", "Saisi par le cabinet", null],
+        ["USD", "396.66", source, "saisie", "Saisi par le cabinet", null],
       ],
     );
   });
 
   it("retournée, la contre-passation recopie la devise, le montant et le cours d'origine", async () => {
-    const id = await transmise();
+    const id = await transmise({ date: "2026-09-04" });
     const r = (await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.3456", 1)) as Ok;
     const ecritureId = (await cabinetFait("office.valider", id, r.empreinte)) as string;
     const { rows: motifs } = await admin.query<{ id: string }>(
@@ -377,54 +479,93 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
       contre.map((l) => [l.debit, l.credit, l.devise_origine, l.montant_origine, l.cours_id]),
       origine.map((l) => [l.credit, l.debit, l.devise_origine, l.montant_origine, l.cours_id]),
     );
-    // Une pièce dont l'écriture vit ne change plus de cours ; retournée, si.
-    await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.4", 1);
+    // Une pièce dont l'écriture vit ne change plus de cours ; retournée, si
+    // — une correction, donc motivée.
+    const corrigee = (await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.4012", 1, {
+      motif: "Cours revu après retour",
+      portee: "dossier",
+    })) as Ok;
+    assert.deepEqual(
+      [...new Set(corrigee.proposition.lignes.map((l) => l.taux_de_change))],
+      ["3.4012"],
+    );
   });
 
-  it("la TVA du mois et « Vos charges » comptent les montants convertis ; sans cours, ils le disent", async () => {
-    // À une date où aucun cours n'est publié, ni dans le recul de la règle.
+  it("la TVA du mois et « Vos charges » comptent les montants convertis ; sans cours ou sans conversion, ils le disent", async () => {
     const sansCours = await transmise({
-      date: "2026-09-25",
+      date: "2026-09-05",
       ht: ["2", "000,00"],
       tva: "380,00",
       ttc: ["2", "380,00"],
       lus: ["2000.00", "380.00", "2380.00"],
     });
     const avecCours = await transmise({
+      date: "2026-09-06",
       ht: ["500,00", "€"],
       tva: "95,00",
       ttc: ["595,00", "€"],
       lus: ["500.00", "95.00", "595.00"],
     });
+    // Une facture qui ne tient pas dans SA devise : 500 + 95 ≠ 595,05.
+    const desequilibree = await transmise({
+      date: "2026-09-07",
+      ht: ["500,00", "€"],
+      tva: "95,00",
+      ttc: ["595,05", "€"],
+      lus: ["500.00", "95.00", "595.05"],
+    });
     await cabinetFait("office.saisirLeCoursDeLaPiece", avecCours, "3.3456", 1);
+    await cabinetFait("office.saisirLeCoursDeLaPiece", desequilibree, "3.3456", 1);
     // Proposée : elle compte dans les chiffres du mois (`pieces_qui_comptent_v`).
     await cabinetFait("office.proposerDepuisPiece", avecCours);
     // Une pièce en devise d'avant #142, proposée à sa valeur faciale : elle
-    // compte, mais aucun cours ne la convertit.
-    await admin.query(`update capture.pieces set status = 'proposee' where id = $1`, [sansCours]);
-    const [du, au] = mois("2026-09-10");
+    // compte, mais aucun cours ne la convertit. La déséquilibrée de même.
+    await admin.query(`update capture.pieces set status = 'proposee' where id = any($1::uuid[])`, [
+      [sansCours, desequilibree],
+    ]);
 
-    const transmis = (await pmeFait("office.extraitsTransmis", pme, du, au)) as Array<{
-      pieceId: string;
-      extract: { currency: string; totals: { vat: string; ttc: string } };
-    }>;
-    const de = (id: string) => transmis.find((x) => x.pieceId === id)?.extract;
-    // Transmise ce mois-ci : imputée au mois de sa transmission si celui de
-    // sa date est déclaré ; sinon à sa date. Les deux cas portent ses montants.
-    const [duJour, auJour] = mois(jour);
-    const duMois = (await pmeFait(
-      "office.extraitsTransmis",
-      pme,
-      duJour,
-      auJour,
-    )) as typeof transmis;
-    const lu = (id: string) => de(id) ?? duMois.find((x) => x.pieceId === id)?.extract;
+    const lus = {
+      avecCours: await transmisDe(avecCours, "2026-09-06"),
+      sansCours: await transmisDe(sansCours, "2026-09-05"),
+      desequilibree: await transmisDe(desequilibree, "2026-09-07"),
+    };
     assert.deepEqual(
-      [lu(avecCours)?.currency, lu(avecCours)?.totals.vat, lu(avecCours)?.totals.ttc],
-      ["TND", "317.832", "1990.632"],
+      [lus.avecCours?.extract.currency, lus.avecCours?.extract.totals.vat, lus.avecCours?.refus],
+      ["TND", "317.832", undefined],
     );
-    // Sans cours, l'extrait reste en euros : le calcul de la TVA le refuse en le nommant.
-    assert.equal(lu(sansCours)?.currency, "EUR");
+    assert.equal(lus.avecCours?.extract.totals.ttc, "1990.632");
+    // Sans cours, l'extrait reste en euros, tel quel ; sans conversion
+    // possible, il reste en euros ET porte sa raison.
+    assert.deepEqual(
+      [lus.sansCours?.extract.currency, lus.sansCours?.extract.totals.vat, lus.sansCours?.refus],
+      ["EUR", "380.00", undefined],
+    );
+    assert.deepEqual(
+      [lus.desequilibree?.extract.currency, lus.desequilibree?.refus],
+      ["EUR", "CONVERSION_REFUSEE:desequilibre"],
+    );
+
+    // Le calcul de la TVA — le même que celui de l'écran — compte la
+    // convertie, et écarte les deux autres en les nommant.
+    const [taux, declaration] = (await Promise.all([
+      cabinetFait("referentiel.taxRates", packId, "TN"),
+      cabinetFait("referentiel.declarationTva", packId, pme, "2026-09-30"),
+    ])) as [TaxRate[], DeclarationTva];
+    const tva = tvaDesExtraits({
+      period: "2026-09",
+      currency: { code: "TND", decimals: 3 },
+      taux,
+      declaration,
+      rows: [lus.avecCours!, lus.sansCours!, lus.desequilibree!],
+    });
+    assert.equal(tva.totals.deductible, "317.832");
+    assert.deepEqual(
+      tva.refused.map((r) => [r.item_id, r.reason]).sort(),
+      [
+        [desequilibree, "CONVERSION_REFUSEE:desequilibre"],
+        [sansCours, "EXTRAIT_EN_DEVISE:EUR"],
+      ].sort(),
+    );
 
     const articles = (await pmeFait("charges.articles", pme, "2026-09", "2026-09")) as Array<{
       pieceId: string;
@@ -434,82 +575,128 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
       articles.filter((a) => a.pieceId === avecCours).map((a) => a.totalHt),
       ["1672.800"],
     );
-    assert.equal(articles.filter((a) => a.pieceId === sansCours).length, 0);
+    assert.deepEqual(
+      articles.filter((a) => a.pieceId === sansCours),
+      [],
+    );
     const attente = (await pmeFait("charges.enAttenteDeCours", pme)) as {
       pieces: number;
+      articles: number;
       devises: string[];
     };
-    assert.ok(attente.pieces >= 1);
+    assert.ok(attente.pieces >= 1 && attente.articles >= attente.pieces);
     assert.deepEqual(attente.devises, ["EUR"]);
   });
 
-  it("un cours importé périme le jugement : l'ouverture rejuge et propose ; rejouer l'import n'ajoute rien", async () => {
-    // Un jour sans aucun cours importé dans le recul de la règle : l'import
-    // vaut pour toute la base, et un passage précédent a importé le sien.
-    const { rows: jours } = await admin.query<{ veille: string; jour: string }>(
-      `select to_char(d - 1, 'YYYY-MM-DD') as veille, to_char(d, 'YYYY-MM-DD') as jour
-         from generate_series(date '2026-01-08', date '2026-08-31', interval '7 days') g(d0)
-         cross join lateral (select g.d0::date as d) x
-        where not exists (select 1 from parametrage.cours_de_change c
-                           where c.tenant_id is null and c.devise = 'EUR'
-                             and c.date_du_cours between x.d - 6 and x.d)
-        order by d limit 1`,
+  it("préséance : l'import officiel passe devant la saisie ; une dérogation motivée, devant l'import", async () => {
+    const jour = "2026-09-08";
+    const id = await transmise({ date: jour });
+    // La saisie du cabinet, faute d'import.
+    await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.3011", 1);
+    assert.deepEqual(await tauxPropose(id), ["3.3011"]);
+
+    // L'import officiel passe devant, et périme le jugement : l'ouverture rejuge.
+    const ligne = (taux: string, motif = "") => `${jour},EUR,TND,${taux},1,${source},${motif}`;
+    assert.match(importeOk([ligne("3.3022")]), /1 nouveau\(x\), 0 correction\(s\), 0 déjà là/);
+    assert.deepEqual(await tauxPropose(id), ["3.3022"]);
+    // Rejouer l'import n'ajoute rien.
+    assert.match(importeOk([ligne("3.3022")]), /0 nouveau\(x\), 0 correction\(s\), 1 déjà là/);
+
+    // Une correction de l'import dit pourquoi : sans motif, rien n'est importé.
+    const sansMotif = importe([ligne("3.3033")]);
+    assert.equal(sansMotif.status, 1);
+    assert.match(sansMotif.stderr, /refus\.cours\.correction_sans_motif/);
+    assert.deepEqual(await tauxPropose(id), ["3.3022"]);
+    assert.match(importeOk([ligne("3.3033", "Rectificatif de la source")]), /1 correction\(s\)/);
+    assert.deepEqual(await tauxPropose(id), ["3.3033"]);
+    // Revenir à une valeur officielle ANTÉRIEURE est une correction comme une autre.
+    assert.match(
+      importeOk([ligne("3.3022", "Retour à la valeur publiée, rectificatif annulé")]),
+      /1 correction\(s\)/,
     );
-    const { veille, jour: jourDeLaPiece } = jours[0]!;
-    // Le cours publié la veille : dans le recul de la règle.
-    const id = await transmise({ date: jourDeLaPiece });
-    const avant = (await proposition(id)) as Refus;
-    assert.equal(avant.raisonCode, "taux_de_change");
-
-    const taux = "3.2001";
-    const ligne = `${veille},EUR,TND,${taux},1,BCT`;
-    assert.match(coursImporte([ligne]), /1 nouveau/);
-    assert.match(coursImporte([ligne]), /0 nouveau/);
-
-    const apres = (await proposition(id)) as Ok;
-    assert.equal(apres.ok, true, JSON.stringify(apres));
-    assert.ok(apres.proposition.lignes.every((l) => l.taux_de_change === taux));
-    assert.equal(apres.proposition.conversion?.cours.date, veille);
-
-    // À date égale, le cours du cabinet qui supervise l'emporte sur l'import ;
-    // celui d'un AUTRE cabinet n'entre jamais.
-    await rpc(autreExpert, "office.saisirUnCours", {
-      orgId: autreCabinet,
-      devise: "EUR",
-      versDevise: "TND",
-      date: jourDeLaPiece,
-      taux: "9.9999",
-      unite: 1,
-      source: "BCT",
-    });
-    const toujours = (await proposition(id)) as Ok;
-    assert.ok(toujours.proposition.lignes.every((l) => l.taux_de_change === taux));
-    await cabinetFait("office.saisirUnCours", {
-      orgId: cabinet,
-      devise: "EUR",
-      versDevise: "TND",
-      date: veille,
-      taux: "3.2002",
-      unite: 1,
-      source: "BCT",
-    });
-    const duCabinet = (await proposition(id)) as Ok;
-    assert.ok(duCabinet.proposition.lignes.every((l) => l.taux_de_change === "3.2002"));
-  });
-
-  it("une correction est une ligne nouvelle ; la table refuse toute modification", async () => {
-    const id = await transmise({ date: "2026-09-11" });
-    await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.30", 1);
-    const corrigee = (await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.31", 1)) as Ok;
-    assert.ok(corrigee.proposition.lignes.every((l) => l.taux_de_change === "3.31"));
-    const { rows } = await admin.query<{ taux: string }>(
-      `select taux::text from parametrage.cours_de_change
-        where tenant_id = $1 and date_du_cours = '2026-09-11' order by saisi_le`,
-      [cabinet],
+    assert.deepEqual(await tauxPropose(id), ["3.3022"]);
+    // Chaque import est tracé, avec qui l'a lancé ; l'import refusé n'a rien laissé.
+    const { rows: imports } = await admin.query<{ bilan: number[] }>(
+      `select array[lus, nouveaux, corrections] as bilan
+         from parametrage.cours_de_change_imports where par = $1 order by importe_le`,
+      [operateur],
     );
     assert.deepEqual(
-      rows.map((r) => r.taux),
-      ["3.30", "3.31"],
+      imports.map((i) => i.bilan),
+      [
+        [1, 1, 0],
+        [1, 0, 0],
+        [1, 0, 1],
+        [1, 0, 1],
+      ],
+    );
+
+    // La dérogation d'un AUTRE cabinet n'entre jamais.
+    await saisirUnCours(autreExpert, {
+      orgId: autreCabinet,
+      devise: "EUR",
+      date: jour,
+      taux: "9.9999",
+      motif: "Cours d'un autre cabinet",
+    });
+    assert.deepEqual(await tauxPropose(id), ["3.3022"]);
+    // Une dérogation du cabinet sans motif n'en est pas une : pour un dossier, refusée.
+    await assert.rejects(
+      saisirUnCours(expert, {
+        orgId: cabinet,
+        devise: "EUR",
+        date: jour,
+        taux: "3.3044",
+        dossierId: pme,
+      }),
+      /refus\.cours\.derogation_sans_motif/,
+    );
+    // Celle du cabinet, motivée, passe devant l'import…
+    await saisirUnCours(expert, {
+      orgId: cabinet,
+      devise: "EUR",
+      date: jour,
+      taux: "3.3044",
+      motif: "Cours de la banque du cabinet",
+    });
+    assert.deepEqual(await tauxPropose(id), ["3.3044"]);
+    // … et celle du dossier, devant celle du cabinet.
+    await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.3055", 1, {
+      motif: "Cours négocié par le client",
+      portee: "dossier",
+    });
+    assert.deepEqual(await tauxPropose(id), ["3.3055"]);
+  });
+
+  it("une correction est une ligne nouvelle et motivée ; la table refuse toute modification", async () => {
+    const jour = "2026-09-09";
+    const id = await transmise({ date: jour });
+    await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.3001", 1);
+    // Corriger sans dire pourquoi : refusé, et le cours ne change pas.
+    await assert.rejects(
+      cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.3101", 1),
+      /refus\.cours\.correction_sans_motif/,
+    );
+    assert.deepEqual(await tauxPropose(id), ["3.3001"]);
+    const corrigee = (await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.3101", 1, {
+      motif: "Erreur de saisie",
+      portee: "dossier",
+    })) as Ok;
+    assert.deepEqual(
+      [...new Set(corrigee.proposition.lignes.map((l) => l.taux_de_change))],
+      ["3.3101"],
+    );
+    const { rows } = await admin.query<{ origine: string; taux: string; motif: string | null }>(
+      `select origine, taux::text, motif from parametrage.cours_de_change
+        where tenant_id = $1 and date_du_cours = $2 order by saisi_le`,
+      [cabinet, jour],
+    );
+    assert.deepEqual(
+      rows.map((r) => [r.origine, r.taux, r.motif]),
+      [
+        ["saisie", "3.3001", null],
+        ["derogation_dossier", "3.3101", "Erreur de saisie"],
+      ],
     );
     await assert.rejects(
       admin.query(`update parametrage.cours_de_change set taux = 1 where tenant_id = $1`, [
@@ -518,35 +705,122 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     );
   });
 
-  it("seul qui supervise saisit un cours, et seulement un cours", async () => {
-    const saisie = {
-      orgId: pme,
-      devise: "EUR",
-      versDevise: "TND",
-      date: "2026-09-12",
-      taux: "3.3",
-      unite: 1,
-      source: "BCT",
-    };
-    // La société d'un dossier tenu par un cabinet ne supervise pas ses livres.
-    await assert.rejects(pmeFait("office.saisirUnCours", saisie), /refus\.cours\.supervision/);
+  it("un cours qui change périme le jugement : la conversion attend, VALIDER refuse l'ancienne proposition", async () => {
+    const jour = "2026-09-10";
+    const id = await transmise({ date: jour });
+    const avant = (await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.4001", 1)) as Ok;
+    // Elle compte dans les chiffres du mois, sans écriture encore.
+    await admin.query(`update capture.pieces set status = 'proposee' where id = $1`, [id]);
+    assert.equal((await transmisDe(id, jour))?.extract.currency, "TND");
+
+    // L'import officiel du jour passe devant la saisie : le jugement est périmé.
+    importeOk([`${jour},EUR,TND,3.4101,1,${source},`]);
+    // La TVA ne convertit plus au cours périmé : la pièce attend d'être rejugée.
+    assert.equal((await transmisDe(id, jour))?.extract.currency, "EUR");
+    // VALIDER rejuge d'abord : la proposition affichée n'est plus celle du jour.
+    await assert.rejects(cabinetFait("office.valider", id, avant.empreinte));
+    const apres = await proposee(id);
+    assert.deepEqual(
+      [...new Set(apres.proposition.lignes.map((l) => l.taux_de_change))],
+      ["3.4101"],
+    );
+    const ecritureId = (await cabinetFait("office.valider", id, apres.empreinte)) as string;
+    assert.ok((await lignesInscrites(ecritureId)).every((l) => l.taux_de_change === "3.4101"));
+  });
+
+  it("la règle de change se résout dossier → cabinet → pack, et le cabinet seul l'arrête (R10)", async () => {
+    // À partir du 20 octobre, le cours du jour de RÉCEPTION, pour ce dossier.
+    await cabinetFait("parametrage.arreterRegleDeChange", {
+      cabinetId: cabinet,
+      portee: "dossier",
+      porteeId: pme,
+      packId,
+      depuis: "2026-10-20",
+      valeurs: [{ code: "change.date_retenue", valeur: "date_reception" }],
+    });
     await assert.rejects(
-      cabinetFait("office.saisirUnCours", { ...saisie, orgId: cabinet, unite: 12 }),
+      pmeFait("parametrage.arreterRegleDeChange", {
+        cabinetId: pme,
+        portee: "dossier",
+        porteeId: pme,
+        packId,
+        depuis: "2026-10-20",
+        valeurs: [{ code: "change.date_retenue", valeur: "date_facture" }],
+      }),
+      /refus\.change\.regle\.droits/,
+    );
+    await assert.rejects(
+      cabinetFait("parametrage.arreterRegleDeChange", {
+        cabinetId: cabinet,
+        portee: "dossier",
+        porteeId: pme,
+        packId,
+        depuis: "2026-10-20",
+        valeurs: [{ code: "change.recul_jours", valeur: "cinq" }],
+      }),
+      /refus\.change\.regle\.saisie/,
+    );
+    const regle = (await cabinetFait(
+      "referentiel.regleDeChange",
+      packId,
+      pme,
+      "2026-10-21",
+      "fr",
+    )) as RegleDeChangeDuDossier;
+    assert.deepEqual(
+      regle.valeurs.map((v) => [v.code, v.valeur, v.origine]),
+      [
+        ["change.date_retenue", "date_reception", "dossier"],
+        ["change.ecart", "base_la_plus_grande", "pack"],
+        ["change.recul_jours", "0", "dossier"],
+        ["change.source", source, "dossier"],
+      ],
+    );
+    assert.ok(
+      regle.valeurs
+        .find((v) => v.code === "change.date_retenue")
+        ?.options?.some((o) => o.code === "date_reception" && o.label === "Date de réception"),
+    );
+    assert.equal(regle.valeurs.find((v) => v.code === "change.recul_jours")?.options, null);
+
+    // Une pièce du 21 octobre attend le cours de son jour de RÉCEPTION.
+    const id = await transmise({ date: "2026-10-21" });
+    const { rows } = await admin.query<{ recue_le: string }>(
+      `select to_char(created_at, 'YYYY-MM-DD') as recue_le from capture.pieces where id = $1`,
+      [id],
+    );
+    const r = (await proposition(id)) as Refus;
+    assert.equal(r.raisonCode, "taux_de_change");
+    assert.equal(r.coursASaisir?.jour, rows[0]!.recue_le);
+    assert.notEqual(r.coursASaisir?.jour, "2026-10-21");
+  });
+
+  it("seul qui supervise saisit un cours, et seulement un cours", async () => {
+    const saisie = { orgId: pme, devise: "EUR", date: "2026-09-12", taux: "3.3" };
+    // La société d'un dossier tenu par un cabinet ne supervise pas ses livres.
+    await assert.rejects(saisirUnCours(dirigeant, saisie), /refus\.cours\.supervision/);
+    await assert.rejects(
+      saisirUnCours(expert, { ...saisie, orgId: cabinet, unite: 12 }),
       /refus\.cours\.invalide/,
     );
     await assert.rejects(
-      cabinetFait("office.saisirUnCours", { ...saisie, orgId: cabinet, source: "INCONNUE" }),
+      saisirUnCours(expert, { ...saisie, orgId: cabinet, source: "INCONNUE" }),
       /refus\.cours\.invalide/,
+    );
+    // Une dérogation pour un dossier que le cabinet ne tient pas : refusée.
+    await assert.rejects(
+      saisirUnCours(expert, { ...saisie, orgId: cabinet, dossierId: autrePme, motif: "Essai" }),
+      /refus\.cours\.supervision/,
     );
   });
 
   it("une écriture ne s'inscrit que dans la devise du dossier, forcée comprise", async () => {
-    const id = await transmise({ date: "2026-09-12" });
+    const id = await transmise({ date: "2026-09-13" });
     await assert.rejects(
       cabinetFait("office.propose", {
         pieceId: id,
         journal: "ACH",
-        date: "2026-09-12",
+        date: "2026-09-13",
         libelle: "En euros",
         packVersionId: packId,
         devise: "EUR",
@@ -561,7 +835,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     const ecritureId = (await cabinetFait("office.forcer", {
       pieceId: id,
       journal: "ACH",
-      date: "2026-09-12",
+      date: "2026-09-13",
       libelle: "Saisie du cabinet",
       lignes: [
         { account_code: "601", libelle: "601", debit: "3300.000", credit: "0", tax_code: "TVA19" },

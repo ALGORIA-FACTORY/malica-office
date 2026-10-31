@@ -648,6 +648,10 @@ function ChargesScreen() {
                 {t("pme.charges.sansDate.detail", {
                   amount: `${montant(sansDate.data.totalHt ?? "0", locale)} ${pme.currency}`,
                 })}
+                {/* Le total ne compte pas une pièce en devise sans cours : on le dit. */}
+                {sansDate.data.piecesSansCours > 0
+                  ? ` ${t("pme.charges.sansDate.horsDuTotal", { count: sansDate.data.piecesSansCours })}`
+                  : null}
               </p>
               <p>
                 <Link to="/pme/list">{t("pme.charges.sansDate.action")}</Link>

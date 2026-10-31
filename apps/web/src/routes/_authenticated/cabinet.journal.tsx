@@ -534,6 +534,13 @@ function LignesDeLEcriture({ e, tous }: { e: EcritureAuJournal; tous: boolean })
                 {montant(l.origine.taux, locale)} · {l.origine.source}
               </span>
             ) : null}
+            {/* D'où vient le cours — l'officiel importé, une saisie, une dérogation — et pourquoi. */}
+            {l.origine ? (
+              <span className="block text-[11px] text-muted-foreground" dir="auto">
+                {l.origine.libelleOrigineDuCours}
+                {l.origine.motifDuCours ? ` · ${l.origine.motifDuCours}` : ""}
+              </span>
+            ) : null}
           </td>
           <td className="num px-3 py-1.5 text-end">
             {/* Une ligne n'est que d'un côté : l'autre reste vide, pas « 0 ». */}

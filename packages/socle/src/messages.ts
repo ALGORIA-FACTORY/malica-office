@@ -700,6 +700,12 @@ const fr = {
   "pme.charges.sansDate.detail":
     "Elles ne comptent dans aucun mois tant que leur date n'est pas lue : {amount}.",
   "pme.charges.sansDate.action": "Les ouvrir pour saisir la date",
+  "pme.charges.sansDate.horsDuTotal":
+    "{count} pièces en devise n’y sont pas : elles attendent aussi leur cours.",
+  "pme.charges.sansDate.horsDuTotal#one":
+    "1 pièce en devise n’y est pas : elle attend aussi son cours.",
+  "pme.charges.sansDate.horsDuTotal#other":
+    "{count} pièces en devise n’y sont pas : elles attendent aussi leur cours.",
   "pme.charges.sansCours.titre": "{count} pièces en devise attendent leur cours",
   "pme.charges.sansCours.titre#one": "1 pièce en devise attend son cours",
   "pme.charges.sansCours.titre#other": "{count} pièces en devise attendent leur cours",
@@ -2070,6 +2076,14 @@ const fr = {
   "refus.ecriture.taxe_sans_tva":
     "Aucune ligne de TVA : choisissez le code de taxe de chaque ligne de base (exonérée, export…).",
   "refus.cours.supervision": "Un cours se saisit par le cabinet qui supervise le dossier.",
+  "refus.cours.correction_sans_motif":
+    "Ce cours existe déjà, avec un autre taux : une correction dit pourquoi. Indiquez le motif.",
+  "refus.cours.derogation_sans_motif":
+    "Une dérogation au cours officiel dit pourquoi : indiquez le motif.",
+  "refus.change.regle.droits":
+    "Seul le cabinet qui tient ce dossier arrête sa règle de change ; pour tout le cabinet, l'expert-comptable.",
+  "refus.change.regle.saisie":
+    "Une valeur choisie n'est pas au référentiel (un recul est un nombre entier de jours) : rechargez la page et choisissez à nouveau.",
   "refus.cours.invalide":
     "Un cours est un taux positif, pour une unité (1, 10, 100…), dans une devise et une source du référentiel.",
   "refus.cours.sans_objet":
@@ -2125,7 +2139,7 @@ const fr = {
   "cab.cours.aide.regle":
     "La règle de change (le jour retenu, le recul jusqu’au dernier cours publié, l’écart d’arrondi) est un défaut livré par Malica, à confirmer par un expert-comptable.",
   "cab.cours.aide.trace":
-    "Le cours saisi est daté et gardé à votre nom ; il vaut pour les dossiers de votre cabinet. Une correction s’ajoute, rien n’est effacé, et la pièce est rejugée aussitôt.",
+    "Le cours saisi est daté et gardé à votre nom ; il vaut pour les dossiers de votre cabinet. Une correction s’ajoute, motivée ; rien n’est effacé, et la pièce est rejugée aussitôt.",
   "cab.cours.taux": "{vers} pour {unite} {devise}",
   "cab.cours.unite": "Unité ({devise})",
   "cab.cours.enregistrer": "Enregistrer le taux",
@@ -2135,16 +2149,26 @@ const fr = {
   "cab.cours.titre": "Cours de change",
   "cab.cours.surtitre": "Les cours que vos dossiers lisent",
   "cab.cours.malica":
-    "Un cours est une donnée : il vient de la source officielle, importé par l’exploitation ou saisi par vous. À date égale, le vôtre l’emporte pour vos dossiers.",
+    "Un cours est une donnée : il vient de la source officielle, importé par l’exploitation ou saisi par vous. Le cours officiel importé fait foi ; le vôtre ne passe devant que par une dérogation motivée, pour un dossier ou pour tout le cabinet.",
   "cab.cours.vide": "Aucun cours pour l’instant.",
-  "cab.cours.importe": "Importé",
-  "cab.cours.saisi": "Saisi par le cabinet",
   "cab.cours.date": "Date du cours",
   "cab.cours.devise": "Devise",
   "cab.cours.vers": "Devise du dossier",
   "cab.cours.source": "Source",
   "cab.cours.nouveau": "Saisir un cours",
   "cab.cours.enregistre": "Cours enregistré.",
+  "cab.cours.motif": "Motif d’une dérogation (facultatif)",
+  "cab.cours.motif.exige": "Motif de la correction",
+  "cab.cours.portee": "La dérogation vaut",
+  "change.regle.titre": "Règle de change arrêtée par le cabinet",
+  "change.regle.aide":
+    "La source du cours, le jour retenu, le recul jusqu’au dernier cours publié et la règle d’écart d’arrondi. Malica livre un défaut, à confirmer par un expert-comptable ; le cabinet l’arrête. Les pièces en devise se rejugent à leur ouverture.",
+  "change.regle.source": "Source du cours",
+  "change.regle.date_retenue": "Jour du cours",
+  "change.regle.recul_jours": "Recul jusqu’au dernier cours publié (jours)",
+  "change.regle.ecart": "Écart d’arrondi de la conversion",
+  "change.regle.arretee": "Règle de change arrêtée.",
+  "change.regle.arretee.detail": "Les pièces en devise se rejugent à leur ouverture.",
   "cab.ecriture.ligne.libelle": "Libellé",
   "cab.ecriture.ligne.champ": "{champ}, ligne {n}",
   "cab.ecriture.ligne.taxe": "Taxe",
@@ -3724,6 +3748,15 @@ const fr = {
   "pme.tva.refusees#other": "{count} lignes sans taux gouverné à leur date",
   "pme.tva.ceQuiChange": "À vérifier",
   "pme.tva.parSociete": "Par société",
+  "pme.tva.enAttenteDeCours": "En attente de cours",
+  "pme.tva.enAttenteDeCours.aide":
+    "Ces factures sont dans une autre devise que celle de votre dossier. Leur TVA compte dès que le cours de change du jour est connu : importé, ou saisi par votre cabinet.",
+  "pme.tva.conversionARevoir": "Conversion à revoir",
+  "pme.tva.conversionARevoir.aide":
+    "Ces factures en devise ne se convertissent pas telles quelles (leurs montants ne tiennent pas ensemble). Votre cabinet les reprend ; leur TVA comptera ensuite.",
+  "pme.tva.piecesEnDevise": "{count} pièces en devise",
+  "pme.tva.piecesEnDevise#one": "{count} pièce en devise",
+  "pme.tva.piecesEnDevise#other": "{count} pièces en devise",
   /**
    * La déclaration de TVA, ligne par ligne (3 novembre 2026). Les LIBELLÉS
    * des lignes viennent du référentiel (`ref.tva_declaration_lignes`) ; ces
@@ -4551,6 +4584,12 @@ const en: Dict = {
   "pme.charges.sansDate.titre#other": "{count} documents are waiting for their date",
   "pme.charges.sansDate.detail": "They count towards no month until their date is read: {amount}.",
   "pme.charges.sansDate.action": "Open them to enter the date",
+  "pme.charges.sansDate.horsDuTotal":
+    "{count} foreign-currency documents are not in it: they are also waiting for their rate.",
+  "pme.charges.sansDate.horsDuTotal#one":
+    "1 foreign-currency document is not in it: it is also waiting for its rate.",
+  "pme.charges.sansDate.horsDuTotal#other":
+    "{count} foreign-currency documents are not in it: they are also waiting for their rate.",
   "pme.charges.sansCours.titre": "{count} foreign-currency documents are waiting for their rate",
   "pme.charges.sansCours.titre#one": "1 foreign-currency document is waiting for its rate",
   "pme.charges.sansCours.titre#other":
@@ -5907,6 +5946,14 @@ const en: Dict = {
   "refus.ecriture.taxe_sans_tva":
     "No VAT line: choose the tax code of each base line (exempt, export…).",
   "refus.cours.supervision": "A rate is entered by the firm that supervises the file.",
+  "refus.cours.correction_sans_motif":
+    "This rate already exists with another value: a correction states why. Enter the reason.",
+  "refus.cours.derogation_sans_motif":
+    "An override of the official rate states why: enter the reason.",
+  "refus.change.regle.droits":
+    "Only the firm that keeps this client's books sets its exchange rule; for the whole firm, the chartered accountant.",
+  "refus.change.regle.saisie":
+    "A chosen value is not in the reference data (a look-back is a whole number of days): reload the page and choose again.",
   "refus.cours.invalide":
     "A rate is a positive number, for a unit (1, 10, 100…), in a currency and a source of the reference data.",
   "refus.cours.sans_objet":
@@ -5962,7 +6009,7 @@ const en: Dict = {
   "cab.cours.aide.regle":
     "The exchange rule (the day used, how far back to the last published rate, the rounding gap) is a default shipped by Malica, to be confirmed by a chartered accountant.",
   "cab.cours.aide.trace":
-    "The rate you enter is dated and kept in your name; it applies to your firm’s files. A correction is added, nothing is erased, and the document is judged again at once.",
+    "The rate you enter is dated and kept in your name; it applies to your firm’s files. A correction is added, with its reason; nothing is erased, and the document is judged again at once.",
   "cab.cours.taux": "{vers} for {unite} {devise}",
   "cab.cours.unite": "Unit ({devise})",
   "cab.cours.enregistrer": "Save the rate",
@@ -5972,16 +6019,26 @@ const en: Dict = {
   "cab.cours.titre": "Exchange rates",
   "cab.cours.surtitre": "The rates your files read",
   "cab.cours.malica":
-    "A rate is data: it comes from the official source, imported by operations or entered by you. On the same date, yours prevails for your files.",
+    "A rate is data: it comes from the official source, imported by operations or entered by you. The imported official rate prevails; yours goes first only through a reasoned override, for one file or for the whole firm.",
   "cab.cours.vide": "No rate yet.",
-  "cab.cours.importe": "Imported",
-  "cab.cours.saisi": "Entered by the firm",
   "cab.cours.date": "Rate date",
   "cab.cours.devise": "Currency",
   "cab.cours.vers": "File currency",
   "cab.cours.source": "Source",
   "cab.cours.nouveau": "Enter a rate",
   "cab.cours.enregistre": "Rate saved.",
+  "cab.cours.motif": "Reason for an override (optional)",
+  "cab.cours.motif.exige": "Reason for the correction",
+  "cab.cours.portee": "The override applies",
+  "change.regle.titre": "Exchange rule set by the firm",
+  "change.regle.aide":
+    "The rate source, the day used, how far back to the last published rate, and the rounding-difference rule. Malica ships a default, to be confirmed by a chartered accountant; the firm sets it. Foreign-currency documents are judged again when opened.",
+  "change.regle.source": "Rate source",
+  "change.regle.date_retenue": "Rate day",
+  "change.regle.recul_jours": "Look-back to the last published rate (days)",
+  "change.regle.ecart": "Conversion rounding difference",
+  "change.regle.arretee": "Exchange rule set.",
+  "change.regle.arretee.detail": "Foreign-currency documents are judged again when opened.",
   "cab.ecriture.ligne.libelle": "Label",
   "cab.ecriture.ligne.champ": "{champ}, line {n}",
   "cab.ecriture.ligne.taxe": "Tax",
@@ -7480,6 +7537,15 @@ const en: Dict = {
   "pme.tva.refusees#other": "{count} lines with no governed rate at their date",
   "pme.tva.ceQuiChange": "To check",
   "pme.tva.parSociete": "By company",
+  "pme.tva.enAttenteDeCours": "Awaiting exchange rate",
+  "pme.tva.enAttenteDeCours.aide":
+    "These invoices are in a currency other than your file's. Their VAT counts as soon as the day's exchange rate is known: imported, or entered by your firm.",
+  "pme.tva.conversionARevoir": "Conversion to review",
+  "pme.tva.conversionARevoir.aide":
+    "These foreign-currency invoices cannot be converted as they are (their amounts do not add up). Your firm reviews them; their VAT will count afterwards.",
+  "pme.tva.piecesEnDevise": "{count} foreign-currency documents",
+  "pme.tva.piecesEnDevise#one": "{count} foreign-currency document",
+  "pme.tva.piecesEnDevise#other": "{count} foreign-currency documents",
   "tva.declaration.titre": "The return",
   "tva.declaration.aide":
     "Each line of the monthly return takes the VAT of its kind: VAT on fixed assets (an asset booked in class 2) is declared apart from VAT on other goods and services. The kind is read from the firm's entry, or from the invoice items mapped to the chart of accounts.",
@@ -8264,6 +8330,12 @@ const ar: Dict = {
   "pme.charges.sansDate.titre#other": "{count} وثائق تنتظر تاريخها",
   "pme.charges.sansDate.detail": "لا تُحسب في أي شهر ما لم يُقرأ تاريخها: {amount}.",
   "pme.charges.sansDate.action": "افتحها لإدخال التاريخ",
+  "pme.charges.sansDate.horsDuTotal":
+    "وثائق بالعملة الأجنبية غير مشمولة فيه: {count}، تنتظر أيضًا سعر صرفها.",
+  "pme.charges.sansDate.horsDuTotal#one":
+    "وثيقة واحدة بالعملة الأجنبية غير مشمولة فيه: تنتظر أيضًا سعر صرفها.",
+  "pme.charges.sansDate.horsDuTotal#other":
+    "وثائق بالعملة الأجنبية غير مشمولة فيه: {count}، تنتظر أيضًا سعر صرفها.",
   "pme.charges.sansCours.titre": "{count} وثائق بعملة أجنبية تنتظر سعر صرفها",
   "pme.charges.sansCours.titre#one": "وثيقة واحدة بعملة أجنبية تنتظر سعر صرفها",
   "pme.charges.sansCours.titre#other": "{count} وثائق بعملة أجنبية تنتظر سعر صرفها",
@@ -9583,6 +9655,12 @@ const ar: Dict = {
   "refus.ecriture.taxe_sans_tva":
     "لا سطر للأداء على القيمة المضافة: اختر رمز الأداء لكل سطر من الأساس (معفى، تصدير…).",
   "refus.cours.supervision": "يُدخل سعر الصرف المكتبُ الذي يشرف على الملف.",
+  "refus.cours.correction_sans_motif": "هذا السعر موجود بقيمة أخرى: التصحيح يذكر سببه. أدخل السبب.",
+  "refus.cours.derogation_sans_motif": "الاستثناء من السعر الرسمي يذكر سببه: أدخل السبب.",
+  "refus.change.regle.droits":
+    "لا يضبط قاعدة الصرف إلا المكتب الذي يمسك هذا الملف؛ ولكامل المكتب، الخبير المحاسب.",
+  "refus.change.regle.saisie":
+    "قيمة مختارة غير موجودة في المرجع (الرجوع عدد صحيح من الأيام): أعد تحميل الصفحة واختر من جديد.",
   "refus.cours.invalide": "سعر الصرف عدد موجب، لوحدة (1، 10، 100…)، بعملة ومصدر من المرجع.",
   "refus.cours.sans_objet": "هذه الوثيقة لا تنتظر أي سعر صرف: هي بعملة الملف، أو ينقصها تاريخها.",
   "refus.cours.ecriture_vivante":
@@ -9634,7 +9712,7 @@ const ar: Dict = {
   "cab.cours.aide.regle":
     "قاعدة الصرف (اليوم المعتمد، والرجوع إلى آخر سعر منشور، وفارق التقريب) قيمة افتراضية من Malica، يؤكدها خبير محاسب.",
   "cab.cours.aide.trace":
-    "السعر الذي تدخله مؤرَّخ ومحفوظ باسمك؛ ويسري على ملفات مكتبك. يُضاف التصحيح ولا يُمحى شيء، وتُعاد معالجة الوثيقة فورًا.",
+    "السعر الذي تدخله مؤرَّخ ومحفوظ باسمك؛ ويسري على ملفات مكتبك. يُضاف التصحيح مع سببه ولا يُمحى شيء، وتُعاد معالجة الوثيقة فورًا.",
   "cab.cours.taux": "{vers} مقابل {unite} {devise}",
   "cab.cours.unite": "الوحدة ({devise})",
   "cab.cours.enregistrer": "حفظ السعر",
@@ -9644,16 +9722,26 @@ const ar: Dict = {
   "cab.cours.titre": "أسعار الصرف",
   "cab.cours.surtitre": "الأسعار التي تقرؤها ملفاتك",
   "cab.cours.malica":
-    "سعر الصرف معطى: يأتي من المصدر الرسمي، يستورده فريق التشغيل أو تدخله أنت. عند تساوي التاريخ، يُعتمد سعرك لملفاتك.",
+    "سعر الصرف معطى: يأتي من المصدر الرسمي، يستورده فريق التشغيل أو تدخله أنت. يُعتمد السعر الرسمي المستورد؛ ولا يتقدّم سعرك إلا باستثناء معلَّل، لملف واحد أو لكامل المكتب.",
   "cab.cours.vide": "لا يوجد سعر بعد.",
-  "cab.cours.importe": "مستورد",
-  "cab.cours.saisi": "أدخله المكتب",
   "cab.cours.date": "تاريخ السعر",
   "cab.cours.devise": "العملة",
   "cab.cours.vers": "عملة الملف",
   "cab.cours.source": "المصدر",
   "cab.cours.nouveau": "إدخال سعر",
   "cab.cours.enregistre": "تم حفظ السعر.",
+  "cab.cours.motif": "سبب الاستثناء (اختياري)",
+  "cab.cours.motif.exige": "سبب التصحيح",
+  "cab.cours.portee": "يسري الاستثناء",
+  "change.regle.titre": "قاعدة الصرف التي ضبطها المكتب",
+  "change.regle.aide":
+    "مصدر السعر، واليوم المعتمد، ومدى الرجوع إلى آخر سعر منشور، وقاعدة فارق التقريب. تقدّم Malica قيمة افتراضية يؤكدها خبير محاسب؛ ويضبطها المكتب. تُعاد معالجة الوثائق بالعملة الأجنبية عند فتحها.",
+  "change.regle.source": "مصدر السعر",
+  "change.regle.date_retenue": "يوم السعر",
+  "change.regle.recul_jours": "الرجوع إلى آخر سعر منشور (أيام)",
+  "change.regle.ecart": "فارق تقريب التحويل",
+  "change.regle.arretee": "تم ضبط قاعدة الصرف.",
+  "change.regle.arretee.detail": "تُعاد معالجة الوثائق بالعملة الأجنبية عند فتحها.",
   "cab.ecriture.ligne.libelle": "البيان",
   "cab.ecriture.ligne.champ": "{champ}، السطر {n}",
   "cab.ecriture.ligne.taxe": "الأداء",
@@ -11090,6 +11178,15 @@ const ar: Dict = {
   "pme.tva.refusees#other": "أسطر دون نسبة معتمدة في تاريخها: {count}",
   "pme.tva.ceQuiChange": "للتحقق",
   "pme.tva.parSociete": "حسب الشركة",
+  "pme.tva.enAttenteDeCours": "في انتظار سعر الصرف",
+  "pme.tva.enAttenteDeCours.aide":
+    "هذه الفواتير بعملة غير عملة ملفك. يُحتسب أداؤها حالما يُعرف سعر صرف اليوم: مستوردًا، أو يدخله مكتبك.",
+  "pme.tva.conversionARevoir": "تحويل يجب مراجعته",
+  "pme.tva.conversionARevoir.aide":
+    "لا تُحوَّل هذه الفواتير بالعملة الأجنبية كما هي (مبالغها غير متناسقة). يراجعها مكتبك؛ ثم يُحتسب أداؤها.",
+  "pme.tva.piecesEnDevise": "وثائق بالعملة الأجنبية: {count}",
+  "pme.tva.piecesEnDevise#one": "وثيقة واحدة بالعملة الأجنبية",
+  "pme.tva.piecesEnDevise#other": "وثائق بالعملة الأجنبية: {count}",
   "tva.declaration.titre": "التصريح",
   "tva.declaration.aide":
     "يتلقى كل سطر من التصريح الشهري الأداء على القيمة المضافة حسب طبيعته: يُصرَّح بأداء الأصول الثابتة (أصل مُقيَّد في الصنف 2) بمعزل عن أداء السلع والخدمات الأخرى. تُقرأ الطبيعة من قيد المكتب، أو من بنود الفاتورة المرتبة حسب المخطط المحاسبي.",

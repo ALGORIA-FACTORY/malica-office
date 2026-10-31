@@ -18,10 +18,12 @@
  */
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import {
+  ConversionRefusee,
   convertirLExtrait,
   convertirUnMontant,
   type ConversionDemandee,
 } from "@malica/socle/engines/fx/convertir-l-extrait";
+import { CONVERSION_REFUSEE } from "@malica/socle/engines/tva/des-extraits";
 
 import type { Requete } from "../db.ts";
 import { lireLesDevises } from "../scan/analyse.ts";
@@ -45,16 +47,19 @@ export async function conversionsDesPieces(
 ): Promise<Map<string, ConversionDemandee>> {
   if (pieceIds.length === 0) return new Map();
   const [{ rows }, devises] = await Promise.all([
+    // Seulement un cours À JOUR (revue de #148) : un jugement périmé attend
+    // d'être rejugé, la pièce attend son cours.
     db.query<{ piece_id: string; preuves: CoursDuJugement }>(
       `select x.piece_id, c -> 'preuves' as preuves
          from unnest($1::uuid[]) as x(piece_id)
-         cross join lateral (select a.controles from capture.analyses a
+         cross join lateral (select a.controles, a.tenant_id from capture.analyses a
                               where a.piece_id = x.piece_id
                               order by a.created_at desc limit 1) a
          cross join lateral jsonb_array_elements(
                 case when jsonb_typeof(a.controles) = 'array' then a.controles
                      else '[]'::jsonb end) c
-        where c ->> 'code' = 'cours_de_change' and c ->> 'statut' = 'reserve'`,
+        where c ->> 'code' = 'cours_de_change' and c ->> 'statut' = 'reserve'
+          and app.cours_du_jugement_a_jour(a.tenant_id, a.controles)`,
       [[...new Set(pieceIds)]],
     ),
     lireLesDevises(db),
@@ -88,11 +93,16 @@ export async function conversionsDesPieces(
  * quand son jugement a lu un cours. Un extrait déjà dans la devise du
  * dossier, illisible, ou sans cours, est rendu tel quel : le calcul de la TVA
  * le compte ou le refuse en le nommant (`tvaDesExtraits`).
+ *
+ * Une conversion que le Socle refuse (une facture qui ne tient pas dans sa
+ * devise, un écart hors de sa borne) ne fait pas tomber la lecture du mois :
+ * la pièce y reste, avec `refus` (`CONVERSION_REFUSEE:<raison>`), et le
+ * calcul l'écarte en la nommant. Toute autre erreur remonte.
  */
 export async function extraitsEnDeviseDuDossier<T extends { pieceId: string; extract: unknown }>(
   db: Requete,
   lignes: readonly T[],
-): Promise<T[]> {
+): Promise<Array<T & { refus?: string }>> {
   const enDevise = lignes.filter((l) => {
     const devise = (l.extract as { currency?: unknown } | null)?.currency;
     return typeof devise === "string";
@@ -105,7 +115,12 @@ export async function extraitsEnDeviseDuDossier<T extends { pieceId: string; ext
     const c = conversions.get(l.pieceId);
     const lu = c ? ExtractV1.safeParse(l.extract) : null;
     if (!c || !lu?.success || lu.data.currency !== c.de.code) return l;
-    return { ...l, extract: convertirLExtrait(lu.data, c).extrait };
+    try {
+      return { ...l, extract: convertirLExtrait(lu.data, c).extrait };
+    } catch (e) {
+      if (!(e instanceof ConversionRefusee)) throw e;
+      return { ...l, refus: `${CONVERSION_REFUSEE}:${e.raison}` };
+    }
   });
 }
 

@@ -17,7 +17,7 @@ import type { Requete } from "../db.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
 import { lireLesTitres, lireParametres } from "./analyse.ts";
-import { lireLaRegleDeChange } from "./cours-de-change.ts";
+import { lireLaRegleDuPack } from "./cours-de-change.ts";
 
 /** Le jour du relevé : un référentiel daté se relève à une date fixe (R11). */
 const JOUR_DU_RELEVE = "2026-10-01";
@@ -95,7 +95,7 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
     titres: await lireLesTitres(db),
     // La règle de change du pack (`change.*`) ; les cours, eux, sont des
     // données, et chaque cas de mesure dit le sien.
-    change: await lireLaRegleDeChange(db, pack.id, JOUR_DU_RELEVE),
+    change: await lireLaRegleDuPack(db, pack.id, JOUR_DU_RELEVE),
     marques,
     devises: Object.fromEntries(
       devises.map((d) => [

@@ -327,6 +327,16 @@ export interface ReferentialRepository {
     jour: string,
     locale?: string,
   ): Promise<DeclarationTva>;
+  /**
+   * La règle de change du dossier au jour dit, résolue (R10) : chaque code,
+   * sa valeur, qui l'a décidée, et ce que le cabinet peut y choisir.
+   */
+  regleDeChange(
+    packId: string,
+    dossierId: string,
+    jour: string,
+    locale?: string,
+  ): Promise<RegleDeChangeDuDossier>;
   /** Droits et taxes hors TVA du pack (droit de timbre…). */
   /** Les droits hors TVA du pack, libelle traduit. */
   fiscalCharges(packId: string, locale?: string): Promise<FiscalCharge[]>;
@@ -602,6 +612,20 @@ export interface ParametrageRepository {
     affectations: Array<{ sens: SensDeTva; nature: string; ligne: string | null }>;
     motif?: string | null;
   }): Promise<{ decisions: number }>;
+  /**
+   * Arrêter (ou confirmer) la règle de change, pour tout le cabinet ou pour
+   * un dossier qu'il supervise (R10, `app.regle_de_change_arreter`).
+   * `valeur: null` rend au pack.
+   */
+  arreterRegleDeChange(input: {
+    cabinetId: string;
+    portee: "cabinet" | "dossier";
+    porteeId: string;
+    packId: string;
+    depuis: string;
+    valeurs: Array<{ code: string; valeur: string | null }>;
+    motif?: string | null;
+  }): Promise<{ decisions: number }>;
 }
 
 // ------------------------------------------------------------- intégrations
@@ -708,6 +732,26 @@ export interface TiersRepository {
  * où se range une TVA dont la nature n'a pas été attribuée. Aucun code ni
  * libellé n'est écrit en TypeScript (R4).
  */
+/** D'où vient une valeur paramétrée (R10) : le défaut du pack, le cabinet, ce dossier. */
+export type OrigineDuParametrage = "dossier" | "cabinet" | "pack";
+
+/**
+ * La règle de change d'un dossier (`app.regle_de_change`) : pour chacun des
+ * quatre codes (`change.source`, `change.date_retenue`, `change.recul_jours`,
+ * `change.ecart`), sa valeur résolue et d'où elle vient. `options` : les
+ * valeurs que le référentiel connaît, libellées ; nul pour un nombre (le
+ * recul, en jours).
+ */
+export interface RegleDeChangeDuDossier {
+  valeurs: Array<{
+    code: string;
+    valeur: string | null;
+    origine: OrigineDuParametrage;
+    decideLe: string | null;
+    options: Array<{ code: string; label: string }> | null;
+  }>;
+}
+
 export interface DeclarationTva {
   natureParDefaut: string;
   lignes: Array<{
@@ -734,7 +778,7 @@ export interface DeclarationTva {
     sens: SensDeTva;
     nature: string;
     ligne: string | null;
-    origine: "dossier" | "cabinet" | "pack";
+    origine: OrigineDuParametrage;
     decideLe: string | null;
   }>;
 }
@@ -1367,9 +1411,28 @@ export interface CoursDeChange {
   taux: string;
   unite: number;
   source: string;
-  /** Saisi par le cabinet (ou la société qui tient ses livres) ; sinon importé. */
-  saisiParLeCabinet: boolean;
+  /**
+   * Son origine (`ref.rangs_des_cours`) : `import` (officiel, pour tous),
+   * `saisie` (le cabinet, faute d'import), `derogation_cabinet`,
+   * `derogation_dossier` — une dérogation, motivée, passe devant l'import.
+   */
+  origine: string;
+  /** Son libellé, traduit (`ref.labels`, espace `origine_du_cours`). */
+  libelleOrigine: string;
+  /** Le motif d'une dérogation ou d'une correction ; nul sinon. */
+  motif: string | null;
+  /** Le dossier d'une dérogation pour un seul dossier ; nul sinon. */
+  dossierId: string | null;
   saisiLe: string;
+}
+
+/**
+ * Une dérogation au cours officiel : pourquoi, et pour qui — ce dossier, ou
+ * tout le cabinet. Sans elle, un cours saisi cède devant l'import officiel.
+ */
+export interface DerogationDeCours {
+  motif: string;
+  portee: "dossier" | "cabinet";
 }
 
 export interface Ecriture {
@@ -1451,7 +1514,11 @@ export type RaisonSansEcriture =
   | "a_completer"
   | "compte_manquant"
   /** Une pièce en devise sans cours applicable : `coursASaisir` le nomme. */
-  | "taux_de_change";
+  | "taux_de_change"
+  /** Une pièce en devise imprime un droit que le pack fixe dans la devise du dossier. */
+  | "droit_fixe_en_devise"
+  /** La conversion est refusée (`ConversionRefusee`) : la raison est dite. */
+  | "conversion_refusee";
 
 export type PropositionDePiece = (
   | {
@@ -1516,13 +1583,21 @@ export interface OfficeRepository {
    * qui supervise le dossier ; puis le Socle rejuge et rend la proposition.
    * `taux` : une écriture décimale pour `unite` unités (1, 10, 100…).
    */
-  saisirLeCoursDeLaPiece(pieceId: string, taux: string, unite: number): Promise<PropositionDePiece>;
+  saisirLeCoursDeLaPiece(
+    pieceId: string,
+    taux: string,
+    unite: number,
+    derogation?: DerogationDeCours | null,
+  ): Promise<PropositionDePiece>;
   /**
    * L'écran des cours : ceux que l'organisation lit (les siens, et ceux de
    * l'exploitation), et ce qu'une saisie peut nommer — les sources et les
    * devises du référentiel.
    */
-  coursDeChange(orgId: string): Promise<{
+  coursDeChange(
+    orgId: string,
+    locale?: string,
+  ): Promise<{
     cours: CoursDeChange[];
     sources: Array<{ code: string; nom: string }>;
     devises: string[];
@@ -1536,6 +1611,9 @@ export interface OfficeRepository {
     taux: string;
     unite: number;
     source: string;
+    /** Une dérogation : son motif ; `dossierId` la borne à un dossier. */
+    motif?: string | null;
+    dossierId?: string | null;
   }): Promise<string>;
   /**
    * FORCER : le comptable modifie l'écriture, ou la saisit quand le Socle ne
@@ -1589,7 +1667,7 @@ export interface OfficeRepository {
     tenantId: string,
     from: string,
     to: string,
-  ): Promise<Array<{ pieceId: string; extract: unknown }>>;
+  ): Promise<Array<{ pieceId: string; extract: unknown; refus?: string }>>;
   /**
    * Les lectures des pièces TRANSMISES au cabinet dans la fenêtre.
    *
@@ -1601,7 +1679,16 @@ export interface OfficeRepository {
     tenantId: string,
     from: string,
     to: string,
-  ): Promise<Array<{ pieceId: string; extract: unknown; transmiseLe: string; imputeeLe: string }>>;
+  ): Promise<
+    Array<{
+      pieceId: string;
+      extract: unknown;
+      transmiseLe: string;
+      imputeeLe: string;
+      /** La pièce écartée en amont, nommée (`CONVERSION_REFUSEE:<raison>`). */
+      refus?: string;
+    }>
+  >;
   /** Les pièces parties au cabinet sans qu'on sache quand. Voir `extraitsTransmis`. */
   transmisesSansDate(tenantId: string): Promise<number>;
 }
@@ -1780,7 +1867,13 @@ export interface DocumentComptable {
   dateDeClassement: string;
   /** SHA-256 scellée à la réception, telle qu'en base ; nulle si la pièce n'a jamais été scellée. */
   empreinte: string | null;
+  /** Le TTC lu, dans la devise de la PIÈCE (`devise`), à son exposant. */
   montant: string | null;
+  /**
+   * La devise de la pièce telle que son jugement l'a décidée ; celle du
+   * dossier quand le jugement n'en dit rien (revue de #148 : une facture en
+   * euros s'affichait « 1 190,000 DT »).
+   */
   devise: string;
   sourcePieceId: string | null;
 }
@@ -1829,6 +1922,7 @@ export interface DossierComptable {
 /** Aucune constante fiscale en TypeScript : tout vient du pack (R4). */
 export interface SocleParams {
   packVersionId: string;
+  /** L'exposant de la devise du pack, dans `ref.devises` (sa seule source). */
   moneyDecimals: number;
   stockMethode: "cump" | "fifo";
   stockQuantiteDecimals: number;
@@ -2543,7 +2637,8 @@ export interface LigneAuJournal {
   /**
    * La ligne d'une pièce en devise, convertie (31 octobre 2026) : sa devise
    * et son montant d'origine, le taux pour une unité, la date et la source
-   * du cours. Nuls sinon.
+   * du cours, son origine (import, saisie, dérogation : code et libellé
+   * traduit) et le motif d'une dérogation. Nuls sinon.
    */
   origine: {
     devise: string;
@@ -2551,6 +2646,9 @@ export interface LigneAuJournal {
     taux: string;
     dateDuCours: string;
     source: string;
+    origineDuCours: string;
+    libelleOrigineDuCours: string;
+    motifDuCours: string | null;
   } | null;
 }
 
@@ -2896,8 +2994,13 @@ export interface ChargesEnAttenteDeDate {
   articles: number;
   /** Nombre de pièces distinctes concernées : c'est ce que la personne compte. */
   pieces: number;
-  /** Total HT en attente, pour que l'écart avec le total du mois s'explique. */
+  /**
+   * Total HT en attente, dans la devise du dossier, pour que l'écart avec le
+   * total du mois s'explique. Sans les pièces en devise sans cours.
+   */
   totalHt: string | null;
+  /** Les pièces qui attendent leur date ET leur cours : comptées, hors du total. */
+  piecesSansCours: number;
 }
 
 export interface ChargesRepository {

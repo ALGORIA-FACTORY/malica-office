@@ -256,6 +256,7 @@
   ],
   "parametrage": [
     "arreterDeclarationTva",
+    "arreterRegleDeChange",
     "calendrierCabinet",
     "creerObligationPropre",
     "definirFuseauDuCabinet",
@@ -287,6 +288,7 @@
     "juridictions",
     "mentionsDuPack",
     "moyensDePaiement",
+    "regleDeChange",
     "socleParams",
     "taxRates",
     "typesDeDocument"

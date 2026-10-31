@@ -89,6 +89,12 @@ export interface CasDeMesure {
    * absent : aucun cours. Un cours est une donnée : celui-ci est fictif.
    */
   cours?: { devise: string } & CoursLu;
+  /**
+   * La devise des livres du dossier, quand ce n'est pas celle du pack : un
+   * dossier tenu en francs CFA (forme) éprouve une conversion vers une devise
+   * SANS décimale. La règle de change reste celle du pack d'essai.
+   */
+  deviseDuDossier?: string;
 }
 
 /** Le dossier des cas fabriqués : un nom et un matricule fictifs. */
@@ -290,7 +296,8 @@ const COURS_EUR: NonNullable<CasDeMesure["cours"]> = {
   taux: "3.3456",
   unite: 1,
   source: REGLE_DE_CHANGE_D_ESSAI!.source,
-  duCabinet: false,
+  origine: "import",
+  motif: null,
 };
 
 export const CAS_DE_MESURE: CasDeMesure[] = [
@@ -912,7 +919,112 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     cours: COURS_EUR,
     // Converti, le « timbre » vaut 3,346 DT, quand le pack le fixe à 1,000 DT.
     attendu: null,
-    refus: "proposition/desequilibre",
+    refus: "proposition/droit_fixe_en_devise",
+  },
+  /*
+   * ============================== CAS ADVERSES (revue de #148, 31 octobre 2026)
+   *
+   * Plusieurs lignes, plusieurs taux, une devise d'arrivée SANS décimale
+   * (un dossier tenu en francs CFA), une devise de départ à deux décimales.
+   * La TVA de chaque taux est celle de la facture au cours ; les lignes se
+   * partagent bases et TVA par sommes cumulées ; l'écart va à la plus grande
+   * base. Calculs refaits à la main, montant par montant.
+   */
+  {
+    nom: "trois lignes, deux taux, en euros, pour un dossier tenu en francs CFA",
+    provenance: REPRODUIT,
+    deviseDuDossier: "XOF",
+    lecture: facture({
+      currency: "EUR",
+      lignes: [
+        { code: "TVA19", ht: "10,01" },
+        { code: "TVA07", ht: "10,01" },
+        { code: "TVA19", ht: "10,01" },
+      ],
+      ht: "30,03",
+      tva: "4,50",
+      ttc: "34,53",
+    }),
+    cours: { ...COURS_EUR, id: "00000000-0000-4000-8000-0000000000e2", taux: "655.957" },
+    reserve: "cours_de_change",
+    /*
+     * À 655,957 : TVA 19 % de la facture 3,80 € → 2 492,64 → 2 493 ; TVA 7 %
+     * 0,70 € → 459,17 → 459 ; bases 30,03 € → 19 698,39 → 19 698 ; total
+     * 34,53 € → 22 650,19 → 22 650 = 19 698 + 2 493 + 459 : aucun écart.
+     */
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "19698", "0"],
+        ["4366", "2493", "0", "TVA19"],
+        ["4366", "459", "0", "TVA07"],
+        ["401", "0", "22650"],
+      ],
+      origines: [
+        ["601", "30.03"],
+        ["4366", "3.80"],
+        ["4366", "0.70"],
+        ["401", "34.53"],
+      ],
+    },
+  },
+  {
+    nom: "deux lignes, deux taux, en dollars : la TVA de chaque taux, l'écart à la plus grande base",
+    provenance: REPRODUIT,
+    lecture: facture({
+      currency: "USD",
+      lignes: [
+        { code: "TVA19", ht: "333.33" },
+        { code: "TVA07", ht: "100.01" },
+      ],
+      ht: "433.34",
+      tva: "70.33",
+      ttc: "503.67",
+    }),
+    cours: {
+      ...COURS_EUR,
+      devise: "USD",
+      id: "00000000-0000-4000-8000-0000000000d2",
+      taux: "3.0125",
+    },
+    reserve: "cours_de_change",
+    /*
+     * À 3,0125 : TVA 19 % 63,33 → 190,782 ; TVA 7 % 7,00 → 21,0875 → 21,088
+     * (au pair) ; bases 433,34 → 1 305,437 ; total 503,67 → 1 517,306.
+     * 1 305,437 + 190,782 + 21,088 = 1 517,307 : un millième de trop, retiré
+     * de la base (1 305,436).
+     */
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "1305.436", "0"],
+        ["4366", "190.782", "0", "TVA19"],
+        ["4366", "21.088", "0", "TVA07"],
+        ["401", "0", "1517.306"],
+      ],
+    },
+  },
+  {
+    nom: "soixante lignes de 0,01 € pour un dossier en francs CFA : aucune base négative",
+    provenance: "revue indépendante de la PR 148 (−53 F CFA d'écart sur une base)",
+    deviseDuDossier: "XOF",
+    lecture: facture({
+      currency: "EUR",
+      lignes: Array.from({ length: 60 }, () => ({ code: "TVA19", ht: "0,01" })),
+      ht: "0,60",
+      tva: "0,00",
+      ttc: "0,60",
+    }),
+    cours: { ...COURS_EUR, id: "00000000-0000-4000-8000-0000000000e3", taux: "655.957" },
+    reserve: "cours_de_change",
+    // 0,60 € à 655,957 = 393,57 → 394 F CFA de bases, réparties ; aucune TVA (0,0019 € par ligne).
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "394", "0"],
+        ["401", "0", "394"],
+      ],
+    },
   },
 ];
 
@@ -925,7 +1037,10 @@ export type Issue =
   | { type: "aucune"; motif: string };
 
 /** Pourquoi rien n'est proposé, en un code : le contrôle en défaut, précisé. */
-function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: string): string {
+function motifDuRefus(
+  jugement: ReturnType<typeof jugerLaLecture>,
+  raisonCode: string | undefined,
+): string {
   const n = jugement.normalisation;
   const sousMotif = (): string => {
     if (n.etat === "illisible") {
@@ -948,13 +1063,10 @@ function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: strin
       .map((m) => (m.code === "coherence_arithmetique" ? `${m.code}/${sousMotif()}` : m.code))
       .join("+");
   if (n.etat !== "tranche" && n.etat !== "non_verifie") return `normalisation/${sousMotif()}`;
-  if (/une base n'a pas été lue/.test(raison)) return "proposition/base_non_lue";
-  if (/droit hors TVA n'a pas été lu/.test(raison)) return "proposition/droit_non_lu";
-  if (/à compléter/.test(raison)) return `proposition/a_completer`;
-  if (/taux .* à saisir|règle de change/.test(raison)) return "proposition/taux_de_change";
-  if (/dossier tenu en|devise/.test(raison)) return "proposition/devise";
-  if (/ne s'équilibre pas/.test(raison)) return "proposition/desequilibre";
-  return "proposition/autre";
+  // Le code stable de la proposition (`RaisonSansEcriture`), jamais sa phrase :
+  // une expression régulière sur la phrase classait un timbre en euros parmi
+  // les déséquilibres quelconques (revue de #148).
+  return `proposition/${raisonCode ?? "autre"}`;
 }
 
 const decimal = (s: string) => Number(s).toFixed(6);
@@ -967,7 +1079,7 @@ export function juger(cas: CasDeMesure) {
   return jugerLaLecture(cas.lecture, {
     parametres: PARAMETRES_D_ESSAI,
     taux: new Map(TAUX_D_ESSAI.map((t) => [t.code, t.rate])),
-    deviseDuDossier: DEVISE_DU_DOSSIER,
+    deviseDuDossier: cas.deviseDuDossier ?? DEVISE_DU_DOSSIER,
     droitsFixes: new Map(
       DROITS_D_ESSAI.flatMap((d) =>
         d.fixedAmount !== null && d.documentKind === sens ? [[d.code, d.fixedAmount] as const] : [],
@@ -982,6 +1094,10 @@ export function juger(cas: CasDeMesure) {
     // La règle du pack, et le cours que la base rendrait pour cette pièce.
     change: {
       regle: REGLE_DE_CHANGE_D_ESSAI,
+      pack: "pack-d-essai",
+      jourDuParametrage: cas.lecture.date ?? cas.lecture.recueLe,
+      // La règle brute ne sert qu'à la péremption en base : sans base, rien.
+      regleBrute: null,
       jour: REGLE_DE_CHANGE_D_ESSAI
         ? jourDuCours(REGLE_DE_CHANGE_D_ESSAI, cas.lecture.date, cas.lecture.recueLe)
         : null,
@@ -1009,10 +1125,10 @@ function jouer(cas: CasDeMesure): Issue {
     },
     {
       packVersionId: "pack-d-essai",
-      deviseDuDossier: DEVISE_DU_DOSSIER,
+      deviseDuDossier: cas.deviseDuDossier ?? DEVISE_DU_DOSSIER,
       // Une devise inconnue : le jugement a déjà refusé, rien ne se compose.
       decimales: decimales ?? 0,
-      decimalesDuDossier: DEVISES_D_ESSAI[DEVISE_DU_DOSSIER]!.exposant,
+      decimalesDuDossier: DEVISES_D_ESSAI[cas.deviseDuDossier ?? DEVISE_DU_DOSSIER]!.exposant,
       confianceReserve: PARAMETRES_D_ESSAI["lecture.confiance_reserve"],
       confianceBloquante: PARAMETRES_D_ESSAI["lecture.confiance_bloquante"],
       taxRates: TAUX_D_ESSAI,
@@ -1028,7 +1144,7 @@ function jouer(cas: CasDeMesure): Issue {
     cas.reserve !== undefined &&
     !jugement.motifs.some((m) => m.code === cas.reserve && m.statut === "reserve");
   if (!p.ok) {
-    const motif = motifDuRefus(jugement, p.raison);
+    const motif = motifDuRefus(jugement, p.raisonCode);
     if (cas.attendu === null && reserveAbsente)
       return { type: "aucune", motif: `${motif} — réserve « ${cas.reserve} » attendue, absente` };
     if (cas.attendu === null && cas.refus !== undefined && motif !== cas.refus)

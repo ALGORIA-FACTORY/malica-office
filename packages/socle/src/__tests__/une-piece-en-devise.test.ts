@@ -20,11 +20,16 @@ import { describe, expect, it } from "vitest";
 import { ExtractV1 } from "../contracts/extract.v1.ts";
 import {
   convertirLExtrait,
-  RegleDEcartInconnue,
+  ConversionRefusee,
   type ConversionDemandee,
 } from "../engines/fx/convertir-l-extrait.ts";
-import { tvaDesExtraits } from "../engines/tva/des-extraits.ts";
-import type { AccountMapping, FiscalCharge, TaxRate } from "../ports/repositories.ts";
+import { HORS_DU_CALCUL, tvaDesExtraits } from "../engines/tva/des-extraits.ts";
+import type {
+  AccountMapping,
+  DeclarationTva,
+  FiscalCharge,
+  TaxRate,
+} from "../ports/repositories.ts";
 import { buildProposal } from "../use-cases/propose-ecriture.ts";
 
 import { EUR, TAX_RATES_TN, TND } from "./fixtures.ts";
@@ -179,7 +184,104 @@ describe("convertir l'extrait d'une pièce en devise", () => {
         ...conversion(EUR, TND, "3.3456"),
         ecart: "au_hasard",
       }),
-    ).toThrow(RegleDEcartInconnue);
+    ).toThrow(ConversionRefusee);
+  });
+});
+
+/** Le refus d'une conversion, son code. */
+const refus = (f: () => unknown) => {
+  try {
+    f();
+  } catch (e) {
+    if (e instanceof ConversionRefusee) return e.raison;
+    throw e;
+  }
+  return null;
+};
+
+describe("la conversion ne se trompe jamais de beaucoup (revue de #148)", () => {
+  it("60 lignes de 0,01 € en francs CFA : l'écart reste sous sa borne, aucune base n'est négative", () => {
+    // Converties une à une, chaque ligne valait 7 F CFA, et l'écart −53 rendait une base de −46.
+    const lignes = Array.from({ length: 60 }, (): [string, string, string] => [
+      "TVA19",
+      "0.01",
+      "0.01",
+    ]);
+    const { extrait: e, conversion: c } = convertirLExtrait(
+      extrait("EUR", lignes, "1.20"),
+      conversion(EUR, XOF, "655.957"),
+    );
+    // Une demi-unité par montant arrondi : le total, un taux, la somme des bases.
+    expect(Math.abs(Number(c.ecart))).toBeLessThanOrEqual(1.5);
+    expect(e.lines.every((l) => Number(l.base_ht) >= 0)).toBe(true);
+    // Chaque base s'écarte de sa conversion exacte (6,55957) de moins d'une unité, écart compris.
+    expect(e.lines.every((l) => Math.abs(Number(l.base_ht) - 6.55957) < 2)).toBe(true);
+    expect(e.totals.ttc).toBe("787");
+  });
+
+  it("la TVA d'un taux est celle de la facture au cours, répartie sur ses lignes", () => {
+    // 10 lignes de 1,90 € : 19,00 € de TVA, 12 463 F CFA (et non 10 × 1 246 = 12 460).
+    const lignes = Array.from({ length: 10 }, (): [string, string, string] => [
+      "TVA19",
+      "10.01",
+      "1.90",
+    ]);
+    const { extrait: e } = convertirLExtrait(
+      extrait("EUR", lignes, "119.10"),
+      conversion(EUR, XOF, "655.957"),
+    );
+    expect(e.totals.vat).toBe("12463");
+    expect(e.totals.base_ht).toBe("65661");
+    expect(e.totals.ttc).toBe("78124");
+  });
+
+  it("deux taux : chaque taux converti sur son propre total", () => {
+    const { extrait: e } = convertirLExtrait(
+      extrait(
+        "EUR",
+        [
+          ["TVA19", "10.01", "1.90"],
+          ["TVA07", "10.01", "0.70"],
+          ["TVA19", "10.01", "1.90"],
+        ],
+        "34.53",
+      ),
+      conversion(EUR, XOF, "655.957"),
+    );
+    const parCode = (code: string) =>
+      e.lines.filter((l) => l.tax_code === code).reduce((s, l) => s + Number(l.vat_amount), 0);
+    expect(parCode("TVA19")).toBe(2493); // 3,80 × 655,957 = 2 492,64
+    expect(parCode("TVA07")).toBe(459); // 0,70 × 655,957 = 459,17
+  });
+
+  it("une facture qui ne tient pas dans sa devise ne se convertit pas", () => {
+    expect(
+      refus(() =>
+        convertirLExtrait(
+          extrait("EUR", [["TVA19", "1000.00", "190.00"]], "1290.00"),
+          conversion(EUR, TND, "3.3456"),
+        ),
+      ),
+    ).toBe("desequilibre");
+  });
+
+  it("un écart qui changerait le signe d'une base est refusé", () => {
+    // Deux taux de 0,01 € sur des bases nulles : 7 + 7 F CFA de TVA pour 13 au total.
+    expect(
+      refus(() =>
+        convertirLExtrait(
+          extrait(
+            "EUR",
+            [
+              ["TVA19", "0.00", "0.01"],
+              ["TVA07", "0.00", "0.01"],
+            ],
+            "0.02",
+          ),
+          conversion(EUR, XOF, "655.957"),
+        ),
+      ),
+    ).toBe("signe");
   });
 });
 
@@ -278,34 +380,57 @@ describe("proposer l'écriture d'une pièce en devise", () => {
   });
 });
 
+const DECLARATION_D_ESSAI: DeclarationTva = {
+  natureParDefaut: "AUTRE",
+  natures: [{ code: "AUTRE", label: "Autre" }],
+  affectations: [
+    { sens: "deductible", nature: "AUTRE", ligne: "DED", origine: "pack", decideLe: null },
+  ],
+  lignes: [
+    {
+      code: "DED",
+      label: "Déductible",
+      sens: "deductible",
+      nature: null,
+      ordinal: 1,
+      incertain: false,
+    },
+  ],
+};
+
 describe("la TVA du mois ne compte qu'une devise", () => {
   it("un extrait dans une autre devise que celle du calcul est refusé, nommé", () => {
     const r = tvaDesExtraits({
       period: "2026-09",
       currency: TND,
       taux: taxRates,
-      declaration: {
-        natureParDefaut: "AUTRE",
-        natures: [{ code: "AUTRE", label: "Autre" }],
-        affectations: [
-          { sens: "deductible", nature: "AUTRE", ligne: "DED", origine: "pack", decideLe: null },
-        ],
-        lignes: [
-          {
-            code: "DED",
-            label: "Déductible",
-            sens: "deductible",
-            nature: null,
-            ordinal: 1,
-            incertain: false,
-          },
-        ],
-      },
+      declaration: DECLARATION_D_ESSAI,
       rows: [
         { pieceId: "p-eur", extract: extrait("EUR", [["TVA_19", "1000.00", "190.00"]], "1190.00") },
       ],
     });
     expect(r.totals.deductible).toBe("0.000");
     expect(r.refused).toEqual([{ reason: "EXTRAIT_EN_DEVISE:EUR", item_id: "p-eur" }]);
+  });
+
+  it("une pièce dont la conversion est refusée sort du calcul, avec sa raison (revue de #148)", () => {
+    const r = tvaDesExtraits({
+      period: "2026-09",
+      currency: TND,
+      taux: taxRates,
+      declaration: DECLARATION_D_ESSAI,
+      rows: [
+        {
+          pieceId: "p-refusee",
+          extract: extrait("TND", [["TVA_19", "1000.000", "190.000"]], "1190.000"),
+          refus: "CONVERSION_REFUSEE:desequilibre",
+        },
+      ],
+    });
+    expect(r.totals.deductible).toBe("0.000");
+    expect(r.refused).toEqual([
+      { reason: "CONVERSION_REFUSEE:desequilibre", item_id: "p-refusee" },
+    ]);
+    expect(HORS_DU_CALCUL).toContain("CONVERSION_REFUSEE");
   });
 });

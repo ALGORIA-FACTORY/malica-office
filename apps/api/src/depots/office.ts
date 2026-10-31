@@ -15,7 +15,11 @@ import {
 
 import { createHash } from "node:crypto";
 
-import type { CoursDeChange, PropositionDePiece } from "@malica/socle/ports/repositories";
+import type {
+  CoursDeChange,
+  DerogationDeCours,
+  PropositionDePiece,
+} from "@malica/socle/ports/repositories";
 
 import {
   controlerLaSaisie,
@@ -25,7 +29,7 @@ import {
 import { z } from "zod";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece, lireParametres, rejugerLaPiece } from "../scan/analyse.ts";
+import { analyserPiece, exposantDeLaDevise, rejugerLaPiece } from "../scan/analyse.ts";
 import { propositionDePiece } from "../scan/proposition.ts";
 import { propositionDeReglement } from "../scan/reglement.ts";
 import { rejugerALOuverture, rejugerLesPieces, type BilanDuRejeu } from "../scan/rejeu.ts";
@@ -239,7 +243,13 @@ const SAISIE_DE_COURS = COURS.extend({
   versDevise: z.string().regex(/^[A-Z]{3}$/),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   source: z.string().min(1),
+  motif: z.string().nullable().optional(),
+  dossierId: z.string().uuid().nullable().optional(),
 });
+const DEROGATION = z
+  .object({ motif: z.string(), portee: z.enum(["dossier", "cabinet"]) })
+  .nullable()
+  .optional();
 /** Combien de cours l'écran des cours lit : les plus récents. Une borne d'écran, pas une règle. */
 const COURS_LUS = 200;
 
@@ -343,6 +353,7 @@ export const office = {
     pieceId: string,
     dateSaisie: string | null = null,
   ): Promise<string> {
+    await rejugerALOuverture(db, pieceId);
     const r = await propositionDePiece(db, pieceId, dateSaisie);
     if (!r.ok) throw Object.assign(new Error(r.raison), { code: "22023" });
     return office.propose(db, {
@@ -380,6 +391,9 @@ export const office = {
       return vivante.id;
     }
     const etaitEnRetour = await enRetour(db, pieceId);
+    // Le jugement aux règles et au cours du jour : un cours importé ou
+    // corrigé depuis l'affichage le rejuge, et l'empreinte ne tient plus.
+    await rejugerALOuverture(db, pieceId);
     const r = await propositionDePiece(db, pieceId, null);
     if (!r.ok) throw refusMetier(r.raison);
     if (empreinte === null || empreinteDe(r) !== empreinte)
@@ -433,20 +447,29 @@ export const office = {
    *
    * Une pièce dont l'écriture vit ne change plus de cours ici : son écriture
    * porte le sien. On la retourne (contre-passation), puis on saisit.
+   *
+   * Revue de #148 : un cours SAISI cède devant le cours officiel importé
+   * (`ref.rangs_des_cours`). Pour passer devant, ou pour corriger un cours
+   * déjà saisi, le cabinet DÉROGE : un motif, et pour qui — ce dossier (le
+   * dossier de la pièce), ou tout le cabinet. La base exige le motif.
    */
   async saisirLeCoursDeLaPiece(
     db: Requete,
     pieceId: string,
     taux: string,
     unite: number,
+    derogation?: DerogationDeCours | null,
   ): Promise<PropositionDePiece> {
     if (!COURS.safeParse({ taux, unite }).success) throw refusMetier("refus.cours.invalide");
+    const d = DEROGATION.safeParse(derogation);
+    if (!d.success) throw refusMetier("refus.cours.invalide");
     if (await ecritureVivante(db, pieceId)) throw refusMetier("refus.cours.ecriture_vivante");
     const { rows } = await db.query<{
       preuves: { devise: string; versDevise: string; jour: string | null; source?: string } | null;
       org: string | null;
+      dossier: string;
     }>(
-      `select (select c -> 'preuves'
+      `select p.tenant_id as dossier, (select c -> 'preuves'
                  from capture.analyses a
                  cross join lateral jsonb_array_elements(
                         case when jsonb_typeof(a.controles) = 'array' then a.controles
@@ -467,17 +490,23 @@ export const office = {
     );
     const p = rows[0]?.preuves;
     if (!p?.jour || !p.source) throw refusMetier("refus.cours.sans_objet");
-    await db.query(`select public.cours_de_change_saisir($1, $2, $3, $4::date, $5, $6, $7)`, [
-      rows[0]!.org,
-      p.devise,
-      p.versDevise,
-      // Le jour que la règle désigne : un cours trouvé plus tôt (recul) se
-      // remplace par celui du jour, qui l'emporte (`app.cours_applicable`).
-      p.jour,
-      taux,
-      unite,
-      p.source,
-    ]);
+    const derogeant = d.data ?? null;
+    await db.query(
+      `select public.cours_de_change_saisir($1, $2, $3, $4::date, $5, $6, $7, $8, $9)`,
+      [
+        rows[0]!.org,
+        p.devise,
+        p.versDevise,
+        // Le jour que la règle désigne : un cours trouvé plus tôt (recul) se
+        // remplace par celui du jour, qui l'emporte (`app.cours_applicable`).
+        p.jour,
+        taux,
+        unite,
+        p.source,
+        derogeant?.motif ?? null,
+        derogeant?.portee === "dossier" ? rows[0]!.dossier : null,
+      ],
+    );
     await rejugerLaPiece(db, pieceId);
     return office.propositionDePiece(db, pieceId);
   },
@@ -489,6 +518,7 @@ export const office = {
   async coursDeChange(
     db: Requete,
     orgId: string,
+    locale = "fr",
   ): Promise<{
     cours: CoursDeChange[];
     sources: Array<{ code: string; nom: string }>;
@@ -502,17 +532,25 @@ export const office = {
       taux: string;
       unite: number;
       source: string;
-      du_cabinet: boolean;
+      origine: string;
+      libelle_origine: string;
+      motif: string | null;
+      dossier_id: string | null;
       saisi_le: Date;
     }>(
       `select c.id, c.devise, c.vers_devise, to_char(c.date_du_cours, 'YYYY-MM-DD') as date,
-              c.taux::text as taux, c.unite, c.source, c.tenant_id is not null as du_cabinet,
-              c.saisi_le
+              c.taux::text as taux, c.unite, c.source, c.origine,
+              coalesce(demandee.value, francais.value, c.origine) as libelle_origine,
+              c.motif, c.dossier_id, c.saisi_le
          from parametrage.cours_de_change c
+         left join ref_labels_v demandee on demandee.ns = 'origine_du_cours'
+              and demandee.key = c.origine and demandee.locale = $3
+         left join ref_labels_v francais on francais.ns = 'origine_du_cours'
+              and francais.key = c.origine and francais.locale = 'fr'
         where c.tenant_id is null or c.tenant_id = $1
         order by c.date_du_cours desc, c.saisi_le desc
         limit $2`,
-      [orgId, COURS_LUS],
+      [orgId, COURS_LUS, locale],
     );
     const [{ rows: sources }, { rows: devises }] = await Promise.all([
       db.query<{ code: string; nom: string }>(
@@ -529,7 +567,10 @@ export const office = {
         taux: r.taux,
         unite: Number(r.unite),
         source: r.source,
-        saisiParLeCabinet: r.du_cabinet,
+        origine: r.origine,
+        libelleOrigine: r.libelle_origine,
+        motif: r.motif,
+        dossierId: r.dossier_id,
         saisiLe: new Date(r.saisi_le).toISOString(),
       })),
       sources,
@@ -541,6 +582,8 @@ export const office = {
    * SAISIR UN COURS depuis l'écran des cours du cabinet : la paire, le jour,
    * la source, le taux pour une unité (1, 10, 100…). La base refuse ce qui
    * n'est pas un cours, et qui ne supervise rien (`cours_de_change_saisir`).
+   * Un motif en fait une DÉROGATION (pour le cabinet, ou pour `dossierId`),
+   * qui passe devant le cours officiel importé.
    */
   async saisirUnCours(
     db: Requete,
@@ -552,14 +595,26 @@ export const office = {
       taux: string;
       unite: number;
       source: string;
+      motif?: string | null;
+      dossierId?: string | null;
     },
   ): Promise<string> {
     const lu = SAISIE_DE_COURS.safeParse(brut);
     if (!lu.success) throw refusMetier("refus.cours.invalide");
     const c = lu.data;
     const { rows } = await db.query<{ id: string }>(
-      `select public.cours_de_change_saisir($1, $2, $3, $4::date, $5, $6, $7) as id`,
-      [c.orgId, c.devise, c.versDevise, c.date, c.taux, c.unite, c.source],
+      `select public.cours_de_change_saisir($1, $2, $3, $4::date, $5, $6, $7, $8, $9) as id`,
+      [
+        c.orgId,
+        c.devise,
+        c.versDevise,
+        c.date,
+        c.taux,
+        c.unite,
+        c.source,
+        c.motif ?? null,
+        c.dossierId ?? null,
+      ],
     );
     return rows[0]!.id;
   },
@@ -615,7 +670,8 @@ export const office = {
     );
     const contexte = rows[0]!;
     if (!contexte.journal) throw refusMetier("refus.ecriture.journal");
-    const { "money.decimals": decimales } = await lireParametres(db, contexte.pack, input.date);
+    // L'exposant de la devise des livres, celle de l'écriture (`ref.devises`).
+    const decimales = await exposantDeLaDevise(db, contexte.devise);
     const lignes: LigneSaisie[] = input.lignes.map((l) => ({ ...l, tax_code: l.tax_code ?? null }));
     const { defaut } = controlerLaSaisie(lignes, decimales);
     if (defaut) throw refusMetier(`refus.ecriture.${defaut}`);

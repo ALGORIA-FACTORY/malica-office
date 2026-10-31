@@ -26,6 +26,7 @@ import type {
   PropositionDePiece,
   TaxRate,
 } from "@malica/socle/ports/repositories";
+import { ConversionRefusee } from "@malica/socle/engines/fx/convertir-l-extrait";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import { buildProposal, LectureIncomplete } from "@malica/socle/use-cases/propose-ecriture";
 import { autoriseUneEcriture, codeDuVerdict } from "@malica/socle/verdicts";
@@ -430,7 +431,15 @@ export function composerLaProposition(
         verdict,
         verdictCode: codeDuVerdict(verdict),
         raison: `L'écriture ne s'équilibre pas : ${proposition.pivot.motifs.map((x) => x.message).join(" ; ")}`,
-        raisonCode: "desequilibre",
+        /*
+         * Une pièce en devise qui imprime un droit que le pack FIXE dans la
+         * devise du dossier (le timbre) : ce n'est pas ce droit-là. La raison
+         * se dit en propre, pas comme un déséquilibre quelconque.
+         */
+        raisonCode:
+          change?.ok && proposition.pivot.motifs.some((x) => x.code === "FISCAL_CHARGE_MISMATCH")
+            ? "droit_fixe_en_devise"
+            : "desequilibre",
       };
     return {
       ok: true,
@@ -440,6 +449,16 @@ export function composerLaProposition(
       proposition,
     };
   } catch (e) {
+    // Une conversion que le Socle refuse (facture déséquilibrée dans sa
+    // devise, écart hors borne, ou qui changerait le signe d'une base).
+    if (e instanceof ConversionRefusee)
+      return {
+        ok: false,
+        verdict,
+        verdictCode: codeDuVerdict(verdict),
+        raison: `Aucune écriture ne se propose : ${e.message}`,
+        raisonCode: "conversion_refusee",
+      };
     if (e instanceof LectureIncomplete)
       return {
         ok: false,
@@ -478,6 +497,7 @@ async function proposerDepuisLeJugement(
     pack_version_id: string | null;
     jurisdiction: string;
     devise_du_dossier: string;
+    cours_a_jour: boolean;
     sens_dit: string | null;
     date_dite: string | null;
     recue_le: string;
@@ -486,6 +506,7 @@ async function proposerDepuisLeJugement(
             a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.controles,
             a.normalisation,
             a.pack_version_id, o.jurisdiction, o.currency as devise_du_dossier,
+            app.cours_du_jugement_a_jour(p.tenant_id, a.controles) as cours_a_jour,
             case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit,
             (select q.valeur from capture.precisions q
               where q.piece_id = p.id and q.champ = 'document_date'
@@ -515,8 +536,25 @@ async function proposerDepuisLeJugement(
       controles: a.controles,
       normalisation: a.normalisation,
       pack_version_id: rows[0]!.pack_version_id,
+      // Jugée à l'instant : son cours est celui du jour.
+      cours_a_jour: true,
     };
   }
+  /*
+   * Un jugement qui a lu un cours que la base ne rendrait plus (un cours
+   * importé, saisi ou corrigé depuis, une règle arrêtée autrement) ne propose
+   * rien : la pièce attend d'être rejugée — l'ouverture et VALIDER le font
+   * (`rejugerALOuverture`). Revue de #148 : un cours périmé s'inscrivait.
+   */
+  if (!ligne.cours_a_jour)
+    return {
+      ok: false,
+      ...(ligne.verdict ? { verdict: ligne.verdict } : {}),
+      verdictCode: codeDuVerdict(ligne.verdict),
+      raison:
+        "Aucune écriture ne se propose : le cours de change a changé depuis le jugement de la pièce, qui attend d'être rejugée.",
+      raisonCode: "taux_de_change",
+    };
   const pack = ligne.pack_version_id!;
   const payload = ligne.payload as { document_date?: string | null };
   // Une date lue n'est jamais remplacée ; à défaut, la date que la personne a

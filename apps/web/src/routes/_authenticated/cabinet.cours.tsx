@@ -1,12 +1,14 @@
 /**
  * Les cours de change du cabinet (31 octobre 2026).
  *
- * Une facture en devise se convertit au cours que la règle de change du pack
- * désigne. Ce cours est une donnée : importé par l'exploitation pour tous,
- * ou saisi ici par le cabinet pour ses dossiers — à date égale, le sien
- * l'emporte. L'écran montre ceux que les dossiers du cabinet lisent, et en
- * saisit un. Une correction s'ajoute (R7) : la plus récente fait foi, et les
- * pièces en devise qui l'attendaient se rejugent à leur ouverture.
+ * Une facture en devise se convertit au cours que la règle de change du
+ * dossier désigne. Ce cours est une donnée : importé par l'exploitation pour
+ * tous (l'officiel), ou saisi ici par le cabinet pour ses dossiers. À date
+ * égale, l'officiel passe devant une saisie ; une DÉROGATION motivée du
+ * cabinet passe devant l'officiel (`ref.rangs_des_cours`, revue de #148).
+ * L'écran montre ceux que les dossiers du cabinet lisent, chacun avec son
+ * origine, et en saisit un. Une correction s'ajoute (R7), motivée : la plus
+ * récente fait foi, et les pièces en devise se rejugent à leur ouverture.
  *
  * Le geste le plus courant reste celui de la pièce (« Taux … à saisir »,
  * `components/malica/cours-de-change.tsx`) : même formulaire, même porte.
@@ -16,7 +18,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
-import { FormulaireDuCours } from "@/components/malica/cours-de-change";
+import { FormulaireDuCours, type CoursAEnregistrer } from "@/components/malica/cours-de-change";
 import { EmptyState, EnTeteCabinet, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -49,19 +51,23 @@ function CabinetCours() {
   useMalicaPanel(<MalicaNote>{t("cab.cours.malica")}</MalicaNote>, [locale]);
 
   const cours = useQuery({
-    queryKey: ["cours-de-change", org.id],
-    queryFn: () => office().office.coursDeChange(org.id),
+    queryKey: ["cours-de-change", org.id, locale],
+    queryFn: () => office().office.coursDeChange(org.id, locale),
   });
 
   const saisir = useMutation({
-    mutationFn: (c: { taux: string; unite: number }) =>
+    mutationFn: (c: CoursAEnregistrer) =>
       office().office.saisirUnCours({
         orgId: org.id,
         devise,
         versDevise: vers,
         date,
         source,
-        ...c,
+        taux: c.taux,
+        unite: c.unite,
+        // Depuis cet écran, une dérogation vaut pour tout le cabinet ; celle
+        // d'un seul dossier se fait depuis sa pièce.
+        motif: c.derogation?.motif ?? null,
       }),
     onMutate: () => {
       setErreur(null);
@@ -137,6 +143,7 @@ function CabinetCours() {
             devise={devise}
             vers={vers}
             enCours={saisir.isPending}
+            portees={["cabinet"]}
             onEnregistrer={(c) => saisir.mutate(c)}
           />
         ) : null}
@@ -178,8 +185,12 @@ function CabinetCours() {
                     date: dateEnChiffres(c.date, locale),
                   })}
                 </span>
-                <span className="col-span-2 text-muted-foreground sm:col-span-1 sm:text-end">
-                  {c.saisiParLeCabinet ? t("cab.cours.saisi") : t("cab.cours.importe")}
+                <span
+                  className="col-span-2 text-muted-foreground sm:col-span-1 sm:text-end"
+                  dir="auto"
+                >
+                  {c.libelleOrigine}
+                  {c.motif ? ` · ${c.motif}` : ""}
                 </span>
               </li>
             ))}
