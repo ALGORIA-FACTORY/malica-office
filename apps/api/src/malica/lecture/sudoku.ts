@@ -323,94 +323,125 @@ export interface ChampsLusAInscrire {
   readonly grille: string;
   readonly issue: SortieDuSudoku["issue"];
   readonly champs: readonly {
-    champ: string;
+    champ: string | null;
     valeur: string | null;
-    statut: string;
+    statut: string | null;
     citations: readonly RefDeJeton[];
   }[];
 }
 
+/**
+ * Les lignes à inscrire. Un champ SIGNALÉ s'inscrit aussi, sans valeur ni
+ * citation : c'est la trace d'une lecture que le sudoku n'a pas pu prouver, et
+ * la mesure du recours à la chaîne en dépend. Une valeur, elle, n'est jamais
+ * écrite sans sa citation (R2). Si aucun champ n'est lu, une ligne de
+ * tentative (champ nul) porte l'issue : un échec ne disparaît pas.
+ */
 export function champsLusAInscrire(
   pieceId: string,
   grille: string,
   sortie: SortieDuSudoku,
 ): ChampsLusAInscrire {
+  const champs = Object.entries(sortie.champs).flatMap(([champ, lu]) => {
+    if (lu.statut === "absent") return [];
+    const inst = lu.instances ?? [];
+    if (inst.length > 0) {
+      return inst.map((i) => ({
+        champ: `${champ}:${i.taux}`,
+        valeur: i.refs.length > 0 ? i.valeur : null,
+        statut: lu.statut,
+        citations: i.refs,
+      }));
+    }
+    return [
+      {
+        champ,
+        valeur: lu.refs.length > 0 ? lu.valeur : null,
+        statut: lu.statut,
+        citations: lu.refs,
+      },
+    ];
+  });
   return {
     pieceId,
     grille,
     issue: sortie.issue,
-    champs: Object.entries(sortie.champs).flatMap(([champ, lu]) => {
-      // Une valeur sans citation ne s'écrit pas (R2) ; un champ absent non plus.
-      if (lu.statut === "absent") return [];
-      const inst = lu.instances ?? [];
-      if (inst.length > 0) {
-        return inst.map((i) => ({
-          champ: `${champ}:${i.taux}`,
-          valeur: i.valeur,
-          statut: lu.statut,
-          citations: i.refs,
-        }));
-      }
-      return lu.refs.length > 0
-        ? [{ champ, valeur: lu.valeur, statut: lu.statut, citations: lu.refs }]
-        : [];
-    }),
+    champs:
+      champs.length > 0 ? champs : [{ champ: null, valeur: null, statut: null, citations: [] }],
   };
 }
 
-export type Sudoku = (lecture: VisionRead) => Promise<VisionRead>;
+export interface Sudoku {
+  /** La lecture, dont les montants sont désignés par la preuve quand elle est prouvée. */
+  lire(lecture: VisionRead): Promise<VisionRead>;
+  /**
+   * Inscrire ce que le sudoku a lu sur la lecture RETENUE — après sa
+   * persistance, jamais avant : un rattrapage écarté ne laisse pas de champs
+   * dont les citations pointeraient dans un plan de jetons qui n'est pas
+   * celui de la pièce (R2).
+   */
+  inscrire(retenue: VisionRead): Promise<void>;
+}
 
 /**
  * Le sudoku branché sur la base, pour une pièce.
  *
  * Il reçoit la lecture de la chaîne (plan de jetons + sélection) et rend la
  * même, dont les montants sont désignés par la preuve quand la pièce est
- * prouvée. Ce qu'il a lu s'inscrit dans `capture.champs_lus`, prouvé ou non :
- * c'est la mesure du recours au modèle, pièce par pièce.
+ * prouvée. Ce qu'il a lu sur la lecture retenue s'inscrit dans
+ * `capture.champs_lus`, prouvé ou non : c'est la mesure du recours au modèle,
+ * pièce par pièce.
  */
 export function creerLeSudoku(
   api: AppelApi,
   piece: { readonly pieceId: string; readonly packId: string; readonly devise: DeviseLue },
 ): Sudoku {
   let contexte: Promise<ContexteDuSudoku> | null = null;
-  return async (lecture) => {
-    try {
-      contexte ??= api.rpc<ContexteDuSudoku>("capture", "contexteSudoku", [
-        piece.packId,
-        GRILLE_DE_LA_LECTURE_CITEE,
-      ]);
-      const { grille, pack } = await contexte;
-      const entree: EntreeDuSudoku = {
-        jetons: jetonsDuSudoku(lecture.tokens, piece.devise),
-        grille,
-        pack,
-      };
-      const sortie = resoudre(entree);
+  const lus = new WeakMap<VisionRead, ChampsLusAInscrire>();
+  return {
+    async lire(lecture) {
+      try {
+        contexte ??= api.rpc<ContexteDuSudoku>("capture", "contexteSudoku", [
+          piece.packId,
+          GRILLE_DE_LA_LECTURE_CITEE,
+        ]);
+        const { grille, pack } = await contexte;
+        const entree: EntreeDuSudoku = {
+          jetons: jetonsDuSudoku(lecture.tokens, piece.devise),
+          grille,
+          pack,
+        };
+        const sortie = resoudre(entree);
+        const aInscrire = champsLusAInscrire(piece.pieceId, grille.code, sortie);
 
-      await api
-        .rpc<void>("capture", "inscrireChampsLus", [
-          champsLusAInscrire(piece.pieceId, grille.code, sortie),
-        ])
-        .catch((e: unknown) => {
-          console.error(`sudoku : champs NON inscrits — pièce ${piece.pieceId} : ${message(e)}`);
-        });
+        const rendue: VisionRead =
+          sortie.issue !== "prouvee"
+            ? lecture
+            : {
+                ...lecture,
+                selection: selectionParLeSudoku(
+                  lecture.selection,
+                  sortie,
+                  pack.charges.map((ch) => ch.code),
+                  champsDesCharges(grille),
+                ),
+              };
+        lus.set(rendue, aInscrire);
+        return rendue;
+      } catch (e: unknown) {
+        contexte = null;
+        console.error(`sudoku : lecture non prouvée — pièce ${piece.pieceId} : ${message(e)}`);
+        return lecture;
+      }
+    },
 
-      if (sortie.issue !== "prouvee") return lecture;
-      const charges = champsDesCharges(grille);
-      return {
-        ...lecture,
-        selection: selectionParLeSudoku(
-          lecture.selection,
-          sortie,
-          pack.charges.map((ch) => ch.code),
-          charges,
-        ),
-      };
-    } catch (e: unknown) {
-      contexte = null;
-      console.error(`sudoku : lecture non prouvée — pièce ${piece.pieceId} : ${message(e)}`);
-      return lecture;
-    }
+    async inscrire(retenue) {
+      const aInscrire = lus.get(retenue);
+      if (!aInscrire) return;
+      await api.rpc<void>("capture", "inscrireChampsLus", [aInscrire]).catch((e: unknown) => {
+        console.error(`sudoku : champs NON inscrits — pièce ${piece.pieceId} : ${message(e)}`);
+      });
+    },
   };
 }
 

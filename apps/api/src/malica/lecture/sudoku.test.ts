@@ -12,6 +12,7 @@ import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import {
   champsDesCharges,
   champsLusAInscrire,
+  creerLeSudoku,
   GRILLE_DE_LA_LECTURE_CITEE,
   jetonsDuSudoku,
   lireLeContexteDuSudoku,
@@ -19,6 +20,7 @@ import {
   type ContexteDuSudoku,
 } from "./sudoku.ts";
 import type { PageToken } from "./token-plan.ts";
+import type { VisionRead } from "./vision.ts";
 
 /**
  * Le sudoku, par le chemin de production.
@@ -131,6 +133,57 @@ describe("sudoku — la sélection rendue", () => {
     assert.equal(s.issuer, cas.designation.issuer);
     assert.equal(s.document_date, cas.designation.document_date);
     assert.equal(s.document_kind, cas.designation.document_kind);
+  });
+
+  it("une lecture non prouvée s'inscrit aussi : champs signalés, sans valeur ni citation", () => {
+    const a = champsLusAInscrire("p", "facture", {
+      issue: "ambigue",
+      solutions: 2,
+      combinaisons: 9,
+      preuves: {},
+      champs: {
+        total_ht: { valeur: null, refs: [], statut: "signale" },
+        montant_fodec: { valeur: null, refs: [], statut: "absent" },
+      },
+    });
+    assert.equal(a.issue, "ambigue");
+    assert.deepEqual(a.champs, [
+      { champ: "total_ht", valeur: null, statut: "signale", citations: [] },
+    ]);
+  });
+
+  it("une sortie sans aucun champ laisse une ligne de tentative", () => {
+    const a = champsLusAInscrire("p", "facture", {
+      issue: "aucune",
+      solutions: 0,
+      combinaisons: 0,
+      preuves: {},
+      champs: {},
+      raison: "entrée invalide",
+    });
+    assert.deepEqual(a.champs, [{ champ: null, valeur: null, statut: null, citations: [] }]);
+  });
+
+  it("seule la lecture retenue s'inscrit, après sa persistance", async () => {
+    const appels: Array<{ methode: string; args: unknown[] }> = [];
+    const api = {
+      async rpc<T>(_depot: string, methode: string, args: unknown[] = []): Promise<T> {
+        appels.push({ methode, args });
+        throw new Error("hors base");
+      },
+      async contenu() {
+        throw new Error("hors base");
+      },
+    };
+    const sudoku = creerLeSudoku(api, { pieceId: "p", packId: "k", devise });
+    const lecture = { tokens: [], selection: cas.designation } as unknown as VisionRead;
+    // Le contexte est illisible : la lecture ressort à l'identique, rien ne s'inscrit.
+    assert.equal(await sudoku.lire(lecture), lecture);
+    await sudoku.inscrire(lecture);
+    assert.deepEqual(
+      appels.map((a) => a.methode),
+      ["contexteSudoku"],
+    );
   });
 
   it("les champs inscrits portent tous leur citation, un par taux", () => {
