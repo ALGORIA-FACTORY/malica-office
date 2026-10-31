@@ -63,6 +63,7 @@ describe("le sudoku s'inscrit par sa porte", { skip: !BASE_CONFIGUREE }, () => {
       "contexteSudoku",
       s.pack,
       "facture",
+      "TND",
     )) as ContexteDuSudoku;
     assert.ok(c.grille.champs.length > 0, "les champs de la grille");
     assert.ok(

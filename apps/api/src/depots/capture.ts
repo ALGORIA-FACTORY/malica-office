@@ -743,8 +743,13 @@ export const capture = {
    * La grille d'un type de document et les paramètres du pack, pour le sudoku.
    * Tout vient des vues `ref_*_v` : rien n'est écrit dans le code (R4).
    */
-  async contexteSudoku(db: Requete, packId: string, grilleCode: string): Promise<ContexteDuSudoku> {
-    return lireLeContexteDuSudoku(db, packId, grilleCode);
+  async contexteSudoku(
+    db: Requete,
+    packId: string,
+    grilleCode: string,
+    deviseCode: string,
+  ): Promise<ContexteDuSudoku> {
+    return lireLeContexteDuSudoku(db, packId, grilleCode, deviseCode);
   },
 
   /**
