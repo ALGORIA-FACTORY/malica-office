@@ -76,6 +76,21 @@ ont leur propre statut, et l'issue de la pièce reste celle du centre.
   des montants doit égaler le total HT prouvé au centre (ou le total brut). Les
   lignes prouvées remplacent les articles de la chaîne ; leur rubrique se résout
   ensuite en base, comme avant (`charge_famille_resolve`).
+- **Anneau 1, lecture « middle-out »** (quand la lecture rangée par rangée ne
+  prouve pas les lignes, en général sur un scan où l'OCR a perdu les petits
+  nombres isolés) :
+  1. On part de la rangée la plus sûre (quantité × prix = montant, lus), ou, à
+     défaut, d'une rangée sous les étiquettes de l'en-tête.
+  2. On en apprend les colonnes et le pas vertical.
+  3. On s'étend vers le haut et vers le bas.
+  4. Une quantité ou un prix absent est **trouvé** par le calcul (statut
+     `deduit`, sans citation, avec la `case` où il devrait être imprimé, pour
+     une relecture ciblée). Un montant de ligne ne se déduit que pour une seule
+     rangée, par l'écart au total.
+  5. Le tableau doit fermer exactement sur le total HT prouvé.
+
+  Une cellule déduite ne remplace jamais une désignation de la chaîne.
+
 - **Anneau 2 — les parties** (`{"op":"parties", …}`, preuve E01). Un seul des
   matricules lus est celui du dossier, et un indice imprimé (« client »,
   « émetteur ») dit le sens. La contrepartie est rapprochée des tiers du dossier,
@@ -236,6 +251,13 @@ seulement) :
 Sur les jeux du dirigeant, 84 pièces ont leurs lignes prouvées, avec 0 ligne
 fausse, y compris sur 1 871 mutations. Il n'y a ni sens, ni matricule, ni tiers
 faux.
+
+**Lecture middle-out, sur les images des 150 factures fictives** (OCR rapide) :
+les pièces aux lignes prouvées passent de 3 à 70. Elles comptent 162
+quantités trouvées par le calcul, et 0 ligne fausse. Les mutations donnent
+aussi 0 fausse : 1 358 montants changés, 219 prix effacés, 273 paires de
+montants effacées. Sur la couche de texte et sur le staging, les lignes
+restent inchangées : 0 différence avec les articles de la chaîne.
 
 Moteur seul (`cargo test`, grille d'essai) : 60/60, 0 fausse preuve,
 0,45 ms médian par facture.

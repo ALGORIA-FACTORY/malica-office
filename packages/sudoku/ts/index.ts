@@ -113,6 +113,16 @@ export interface ChampLu {
 export interface Cite {
   readonly valeur: string;
   readonly refs: readonly RefDeJeton[];
+  /** « deduit » : trouvée par le calcul du tableau, pas lue ; absente, elle est lue. */
+  readonly statut?: "lu" | "deduit";
+  /** Pour une cellule déduite : là où elle devrait être imprimée (relecture ciblée). */
+  readonly case?: {
+    readonly page: number;
+    readonly x0: number;
+    readonly y0: number;
+    readonly x1: number;
+    readonly y1: number;
+  };
 }
 
 /** Une ligne d'article (anneau 1). */
@@ -126,7 +136,9 @@ export interface LigneLue {
 }
 
 /** Une valeur de l'en-tête, citée, avec son statut. */
-export interface ValeurLue extends Cite {
+export interface ValeurLue {
+  readonly valeur: string;
+  readonly refs: readonly RefDeJeton[];
   readonly statut: "prouve" | "conforme" | "signale";
 }
 
@@ -145,6 +157,8 @@ export interface SortieDuSudoku {
     readonly statut: "prouve" | "signale" | "absent";
     readonly instances: readonly LigneLue[];
     readonly taux_par_base: string;
+    /** Le nombre de cellules trouvées par le calcul (lecture middle-out). */
+    readonly deduites?: number;
   } | null;
   readonly issue: "prouvee" | "ambigue" | "aucune";
   /** La variante de la grille qui a prouvé la pièce, quand la grille en a. */
