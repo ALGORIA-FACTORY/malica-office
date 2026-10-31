@@ -107,6 +107,69 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
     }
   });
 
+  it("le cabinet seul valide ; le seuil active réellement le second regard", async () => {
+    const regler = (seuil: string | null) =>
+      admin.query(
+        `insert into collab.reglages_cabinet (tenant_id, double_validation_au_dela, updated_by)
+         values ($1, $2, $3) on conflict (tenant_id) do update
+         set double_validation_au_dela = excluded.double_validation_au_dela`,
+        [cabinet, seuil, expert.id],
+      );
+    const inscrire = async () => {
+      const piece = await nouvellePiece("partage");
+      return sousIdentite(expert.id, async (db) => {
+        const id = await office.propose(db, facture(piece));
+        await office.book(db, id);
+        return id;
+      });
+    };
+    const valider = (id: string, utilisateur = expert.id) =>
+      sousIdentite(utilisateur, (db) =>
+        db.query(`select public.socle_ecriture_review($1, 'valide')`, [id]),
+      );
+    await admin.query(
+      `update identity.organizations set validation_mode = 'mandate' where id = $1`,
+      [pme],
+    );
+    try {
+      // Sans ligne de réglage, le défaut livré est désactivé.
+      const seul = await inscrire();
+      await valider(seul);
+      const { rows } = await admin.query(
+        `select e.reviewed_by, e.booked_by, p.status,
+                exists (select 1 from audit.event_log a
+                         where a.object_id = e.id and a.action = 'ecriture.validee') as trace
+           from socle.ecritures e join capture.pieces p on p.id = e.piece_id where e.id = $1`,
+        [seul],
+      );
+      assert.equal(rows[0].reviewed_by, rows[0].booked_by);
+      assert.equal(rows[0].status, "supervisee");
+      assert.equal(rows[0].trace, true);
+      for (const seuil of [null, "101", "100"]) {
+        await regler(seuil);
+        await valider(await inscrire());
+      }
+      for (const seuil of ["99", "0"]) {
+        await regler(seuil);
+        const id = await inscrire();
+        await assert.rejects(valider(id), /chk_ecr_4eyes/);
+        // Le même auteur reste refusé, mais une seconde personne habilitée passe.
+        await valider(id, dirigeant.id);
+      }
+      await regler("0");
+      const id = await inscrire();
+      await assert.rejects(valider(id), /chk_ecr_4eyes/);
+      await regler(null);
+      await valider(id);
+    } finally {
+      await regler(null);
+      await admin.query(
+        `update identity.organizations set validation_mode = 'autonome' where id = $1`,
+        [pme],
+      );
+    }
+  });
+
   it("ANO-004 : une pièce inscrite refuse une seconde écriture, proposée ou comptabilisée", async () => {
     const piece = await nouvellePiece("partage");
     await sousIdentite(expert.id, async (db) => {
