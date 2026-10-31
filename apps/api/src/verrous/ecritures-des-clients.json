@@ -47,6 +47,7 @@
       "privilege": "INSERT",
       "chemins": [
         "app.annulation_contre_passe_le_reglement",
+        "app.reglages_comptables_arreter",
         "public.api_key_creer",
         "public.api_key_revoquer",
         "public.banque_delettrer",
@@ -469,6 +470,11 @@
       "objet": "parametrage.accounts",
       "privilege": "INSERT",
       "chemins": ["public.compte_cabinet_ouvrir"]
+    },
+    {
+      "objet": "parametrage.reglages_comptables",
+      "privilege": "INSERT",
+      "chemins": ["app.reglages_comptables_arreter"]
     },
     {
       "objet": "parametrage.role_bindings",

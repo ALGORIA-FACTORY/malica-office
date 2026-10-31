@@ -99,6 +99,38 @@ for (const largeur of [390, 1440]) {
   }
 }
 
+/*
+ * Réglages comptabilité (décisions du CEO du 31 octobre 2026) : onze sujets,
+ * chacun arrêtable pour le cabinet, à 390 px, en français et en arabe (RTL),
+ * des boutons de 48 px, et le ⓘ qui dit l'INCERTAIN.
+ */
+for (const [locale, onglet, pourLeCabinet, incertain] of [
+  ["fr", "Comptabilité", "Pour tout le cabinet", "INCERTAIN"],
+  ["ar", "المحاسبة", "لكامل المكتب", "غير مؤكد"],
+] as const) {
+  test(`réglages comptabilité : onze sujets à 390 px, en ${locale}`, async ({ page }) => {
+    const plantages: string[] = [];
+    page.on("pageerror", (e) => plantages.push(e.message));
+    await preparerLAppareil(page, locale);
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto("/cabinet/reglages");
+    await page.getByRole("button", { name: onglet, exact: true }).click();
+    const boutons = page.getByRole("button", { name: pourLeCabinet, exact: true });
+    await expect(boutons).toHaveCount(11, { timeout: 20_000 });
+    const hauteur = (await boutons.first().boundingBox())?.height ?? 0;
+    expect(hauteur).toBeGreaterThanOrEqual(48);
+    await expect(page.locator("html")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+    const premier = page.locator("li").filter({ has: boutons.first() }).first();
+    await premier.getByRole("button", { name: /^(En savoir plus|اعرف المزيد) — / }).click();
+    await expect(page.getByRole("dialog").getByText(incertain, { exact: true })).toBeVisible();
+    const debordement = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(debordement).toBeLessThanOrEqual(1);
+    expect(plantages).toEqual([]);
+  });
+}
+
 test("la bibliothèque ouvre les documents réels et prépare une sélection", async ({ page }) => {
   await page.goto("/cabinet/bibliotheque");
   await expect(page.getByRole("heading", { name: "Bibliothèque", exact: true })).toBeVisible();

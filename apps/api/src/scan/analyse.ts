@@ -54,6 +54,7 @@ import {
 } from "./controles.ts";
 import { lireLeChange, type ChangeDuJugement } from "./cours-de-change.ts";
 import { normaliserMontants, type ResultatNormalisation } from "./normaliser-montants.ts";
+import { lireLesReglagesComptables, reglageDImmobilisation } from "./reglages-comptables.ts";
 
 const [NOM_MATRICULE_EMETTEUR, NOM_MATRICULE_CLIENT] = REFERENCES_QUI_TRANCHENT_LE_SENS;
 
@@ -194,6 +195,21 @@ export async function lireLesBiensImmobilisables(
   return rows;
 }
 
+/**
+ * Le dossier est-il non assujetti à la TVA, d'après sa fiche fiscale en
+ * vigueur ? Sa TVA est alors un coût (ANO-LIVE-001) : la même lecture que la
+ * proposition d'écriture.
+ */
+export async function nonAssujetti(db: Requete, dossier: string): Promise<boolean> {
+  const { rows } = await db.query<{ regime_tva: string | null }>(
+    `select f.regime_tva from identity.fiches_fiscales f
+      where f.tenant_id = $1 and f.valid_to is null
+      order by f.valid_from desc limit 1`,
+    [dossier],
+  );
+  return rows[0]?.regime_tva === "non_assujetti";
+}
+
 export interface Analyse {
   id: string;
   verdict: string;
@@ -250,6 +266,8 @@ export interface ReferentielDuJugement {
   titres: ContexteControle["titres"];
   /** Les mots d'un bien susceptible d'être immobilisé (`lireLesBiensImmobilisables`). */
   biensImmobilisables: ContexteControle["biensImmobilisables"];
+  /** Le seuil et le traitement d'un bien de faible valeur, arrêtés pour le dossier. */
+  immobilisation: ContexteControle["immobilisation"];
   mentionsObligatoires: ContexteControle["mentionsObligatoires"];
   doublonProbable: string | null;
   /** La règle de change et les cours applicables (`lireLeChange`). */
@@ -263,7 +281,14 @@ interface PayloadLu {
   document_kind?: string | null;
   currency?: string | null;
   lines?: Array<{ tax_code?: string | null }>;
-  articles?: Array<{ designation?: string | null }>;
+  articles?: Array<{
+    designation?: string | null;
+    quantity?: string | null;
+    unit_price_ht?: string | null;
+    unit_price_ttc?: string | null;
+    total_ht?: string | null;
+    tax_code?: string | null;
+  }>;
   other_charges?: Array<{ code?: string | null }>;
   references?: Record<string, string>;
   totals?: { ttc?: string | null };
@@ -537,8 +562,19 @@ export function jugerLaLecture(
     // Le sens CONFIRMÉ par la personne (20 octobre 2026), qu'il redise la
     // lecture ou la corrige : c'est lui qui est retenu (voir plus haut).
     sensConfirme: l.sensDit !== null,
-    designations: (l.payload.articles ?? []).flatMap((a) =>
-      a.designation?.trim() ? [a.designation] : [],
+    articles: (l.payload.articles ?? []).flatMap((a) =>
+      a.designation?.trim()
+        ? [
+            {
+              designation: a.designation,
+              quantite: a.quantity ?? null,
+              prixUnitaireHt: a.unit_price_ht ?? null,
+              totalHt: a.total_ht ?? null,
+              prixUnitaireTtc: a.unit_price_ttc ?? null,
+              tauxDeTva: (a.tax_code ? r.taux.get(a.tax_code) : undefined) ?? null,
+            },
+          ]
+        : [],
     ),
   };
   const contexte: ContexteControle = {
@@ -546,6 +582,7 @@ export function jugerLaLecture(
     typesDocument: r.typesDocument,
     titres: r.titres,
     biensImmobilisables: r.biensImmobilisables,
+    immobilisation: r.immobilisation,
     mentionsObligatoires: r.mentionsObligatoires,
     seuilConfianceReserve: r.parametres["lecture.confiance_reserve"],
     seuilConfianceBloquant: r.parametres["lecture.confiance_bloquante"],
@@ -585,7 +622,7 @@ export function jugerLaLecture(
  * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
  * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-10-31.acd5678cd23e";
+export const REGLES_DU_JUGEMENT = "2026-10-31.6d0befa68772";
 
 /** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
 interface JugementDeLaPiece {
@@ -871,6 +908,12 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     devises: await lireLesDevises(db),
     titres: await lireLesTitres(db),
     biensImmobilisables: await lireLesBiensImmobilisables(db, pack, dateRef),
+    // Le seuil du cabinet, au jour de la pièce : le dossier, son cabinet, le
+    // pack ; TTC pour un dossier non assujetti, dont la TVA est un coût.
+    immobilisation: reglageDImmobilisation(
+      await lireLesReglagesComptables(db, piece.tenant_id, pack, dateRef),
+      { pack, jour: dateRef, nonAssujetti: await nonAssujetti(db, piece.tenant_id) },
+    ),
     taux: new Map(taux.map((t) => [t.code, t.rate])),
     deviseDuDossier: org.currency,
     droitsFixes: new Map(

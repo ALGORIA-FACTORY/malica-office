@@ -41,7 +41,7 @@ export function ArreterLaDeclaration({
   return (
     <ArreterUnParametrage
       titre={t("tva.affectation.titre")}
-      aide={[t("tva.affectation.aide"), t("tva.affectation.aide.portee")]}
+      aide={[{ texte: t("tva.affectation.aide") }, { texte: t("tva.affectation.aide.portee") }]}
       valeurs={declaration.affectations.map((a) => ({
         cle: cle(a),
         libelle: `${t(SENS[a.sens])} · ${nomDeLaNature(a.nature)}`,

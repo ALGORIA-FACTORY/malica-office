@@ -308,6 +308,7 @@ export function libelleDuControle(code: string, t: T): string {
     confiance_lecture: "cab.controle.confiance_lecture",
     cours_de_change: "cab.controle.cours_de_change",
     immobilisation_a_trancher: "cab.controle.immobilisation_a_trancher",
+    immobilisation_faible_valeur: "cab.controle.immobilisation_faible_valeur",
   };
   const cle = CONTROLES[code];
   return cle ? t(cle) : libelleDuCode(code, t);
