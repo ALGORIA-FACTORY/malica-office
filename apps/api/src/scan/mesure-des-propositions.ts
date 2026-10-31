@@ -677,6 +677,33 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     },
   },
   {
+    // Jeu synthétique, 31 octobre 2026 (cas 005, 017, 042, 081) : le FODEC
+    // entre dans la base de la TVA, comme le référentiel le dit
+    // (`ref.fiscal_charges.taxable`). L'équation l'ignorait : « incohérente ».
+    nom: "un FODEC dans la base de la TVA, comme le référentiel le dit",
+    provenance: "jeu synthétique, cas 005",
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "1 000,000" }],
+      ht: "1 000,000",
+      tva: "191,900",
+      droits: [
+        { code: "FODEC", montant: "10,000" },
+        { code: "DROIT_TIMBRE", montant: "1,000" },
+      ],
+      ttc: "1 202,900",
+    }),
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "1000.000", "0"],
+        ["4366", "191.900", "0", "TVA19"],
+        ["6652", "10.000", "0"],
+        ["6654", "1.000", "0"],
+        ["401", "0", "1202.900"],
+      ],
+    },
+  },
+  {
     // Négatif comptable, ou base entre parenthèses (« (base 514,700) », le
     // 15 octobre 2026) : le texte ne dit pas le signe, rien ne se propose.
     nom: "des montants entre parenthèses : le signe ne se devine pas",
@@ -1186,6 +1213,9 @@ export function juger(cas: CasDeMesure) {
       DROITS_D_ESSAI.flatMap((d) =>
         d.fixedAmount !== null && d.documentKind === sens ? [[d.code, d.fixedAmount] as const] : [],
       ),
+    ),
+    droitsTaxables: new Set(
+      DROITS_D_ESSAI.filter((d) => d.taxable && d.documentKind === sens).map((d) => d.code),
     ),
     tenant: cas.dossier ?? DOSSIER,
     typesDocument: TYPES_D_ESSAI,

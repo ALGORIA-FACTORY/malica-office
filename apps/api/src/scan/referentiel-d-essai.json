@@ -127,25 +127,29 @@
       "code": "DROIT_TIMBRE",
       "documentKind": "facture_achat",
       "accountCode": "6654",
-      "fixedAmount": "1.000"
+      "fixedAmount": "1.000",
+      "taxable": false
     },
     {
       "code": "DROIT_TIMBRE",
       "documentKind": "facture_vente",
       "accountCode": "4371",
-      "fixedAmount": "1.000"
+      "fixedAmount": "1.000",
+      "taxable": false
     },
     {
       "code": "FODEC",
       "documentKind": "facture_achat",
       "accountCode": "6652",
-      "fixedAmount": null
+      "fixedAmount": null,
+      "taxable": true
     },
     {
       "code": "FODEC",
       "documentKind": "facture_vente",
       "accountCode": "4374",
-      "fixedAmount": null
+      "fixedAmount": null,
+      "taxable": true
     }
   ],
   "mentions": [

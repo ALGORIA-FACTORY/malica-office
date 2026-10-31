@@ -24,6 +24,11 @@ export interface FiscalChargeRule {
   document_kind?: "facture_achat" | "facture_vente" | null;
   /** Montant fixe au pack (droit de timbre…), chaîne décimale ou null. */
   fixed_amount?: string | null;
+  /**
+   * Le droit entre dans la base de la TVA (`ref.fiscal_charges.taxable` : le
+   * FODEC, Code de la TVA art. 6-I, cité par le référentiel).
+   */
+  taxable?: boolean;
 }
 
 export interface PivotInput {
@@ -83,13 +88,43 @@ export function computePivot(input: PivotInput): PivotV1 {
     }
   }
 
+  /*
+   * Les droits que le référentiel dit TAXABLES (le FODEC) entrent dans la base
+   * de la TVA (31 octobre 2026, jeu synthétique : cas 005, 017, 042, 081).
+   * Sur une pièce à UNE ligne de taxe, la TVA se vérifie sur la base seule ou
+   * sur la base et ces droits : la lecture a déjà dit laquelle la pièce suit,
+   * et mis en réserve celle qui laisse le droit hors de la base
+   * (`droitsHorsAssiette`). À plusieurs taux, rien ne dit à quelle base le
+   * droit se rattache : seule la base de la ligne se vérifie.
+   */
+  const droitsTaxables =
+    perLineRate.length === 1
+      ? sum(
+          (extract.other_charges ?? [])
+            .filter((c) =>
+              fiscalCharges.some(
+                (r) =>
+                  r.taxable === true &&
+                  r.code === c.code &&
+                  (!r.document_kind || r.document_kind === extract.document_kind),
+              ),
+            )
+            .map((c) => c.amount),
+        )
+      : D(0);
+
   // 2) Vérifier cohérence taux ↔ montants (base × rate ≈ vat) — dans la
   //    devise de la facture, une fois (`tva_verifiee_en`).
   for (const { line, rate } of perLineRate) {
     if (!rate || input.tva_verifiee_en !== undefined) continue;
     const expected = D(line.base_ht).times(rate.rate);
     const diff = expected.minus(line.vat_amount).abs();
-    if (diff.greaterThan(tolerances.rounding_tolerance)) {
+    const avecLesDroits = D(line.base_ht).plus(droitsTaxables).times(rate.rate);
+    if (
+      diff.greaterThan(tolerances.rounding_tolerance) &&
+      (droitsTaxables.isZero() ||
+        avecLesDroits.minus(line.vat_amount).abs().greaterThan(tolerances.rounding_tolerance))
+    ) {
       motifs.push({
         code: "TAX_RATE_MISMATCH",
         severity: "block",

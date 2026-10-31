@@ -59,6 +59,7 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
       documentKind: d.documentKind,
       accountCode: d.accountCode,
       fixedAmount: d.fixedAmount,
+      taxable: d.taxable,
     }))
     .sort(par((d) => `${d.code}|${d.documentKind}`));
   const { rows: mentions } = await db.query<{ code: string }>(

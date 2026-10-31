@@ -6,50 +6,83 @@ Produit par `node --experimental-strip-types outils/jeu-synthetique/mesurer.mjs`
 Chaîne mesurée : relevé de production (`relever`) → désignation ATTENDUE (désignateur
 idéal, voir le README) → relecture au plan → jugement → proposition du Socle.
 
-**55 cas non mesurés** : image : PaddleOCR non joignable (OCR_URL absente).
+**82 cas non mesurés** : image : PaddleOCR non joignable (OCR_URL absente) ; PDF au texte perdu (glyphes sans Unicode), relu en image : PaddleOCR non joignable (OCR_URL absente).
 
 ## Tableau
 
-| | cas | mesurés | champs exacts | écritures exactes | **fausses** | refus justes | refus mal nommés | refus injustes |
-|---|---|---|---|---|---|---|---|---|
-| **tous** | 100 | 45 | 1011/1069 (95 %) | 26/37 (70 %) | 4 | 7/8 (88 %) | 0 | 8 |
-| langue = ar | 30 | 13 | 232/290 (80 %) | 6/11 (55 %) | 1 | 1/2 (50 %) | 0 | 5 |
-| langue = fr | 40 | 18 | 451/451 (100 %) | 12/15 (80 %) | 1 | 3/3 (100 %) | 0 | 2 |
-| langue = hybride | 30 | 14 | 328/328 (100 %) | 8/11 (73 %) | 2 | 3/3 (100 %) | 0 | 1 |
-| rendu = manuscrit | 25 | 0 | — | — | 0 | — | 0 | 0 |
-| rendu = pdf | 45 | 45 | 1011/1069 (95 %) | 26/37 (70 %) | 4 | 7/8 (88 %) | 0 | 8 |
-| rendu = photo | 30 | 0 | — | — | 0 | — | 0 | 0 |
-| scenario = achat_13 | 7 | 3 | 62/63 (98 %) | 3/3 (100 %) | 0 | — | 0 | 0 |
-| scenario = achat_eur | 7 | 3 | 62/63 (98 %) | 3/3 (100 %) | 0 | — | 0 | 0 |
-| scenario = achat_exonere | 6 | 3 | 47/63 (75 %) | 2/3 (67 %) | 0 | — | 0 | 1 |
-| scenario = achat_fodec | 10 | 4 | 102/104 (98 %) | 0/4 (0 %) | 0 | — | 0 | 4 |
-| scenario = achat_immobilisation | 8 | 4 | 59/72 (82 %) | 0/4 (0 %) | 3 | — | 0 | 1 |
-| scenario = achat_plusieurs_taux | 9 | 4 | 125/126 (99 %) | 4/4 (100 %) | 0 | — | 0 | 0 |
-| scenario = achat_remise | 10 | 5 | 109/111 (98 %) | 5/5 (100 %) | 0 | — | 0 | 0 |
-| scenario = achat_un_taux | 15 | 8 | 189/192 (98 %) | 4/4 (100 %) | 0 | 4/4 (100 %) | 0 | 0 |
-| scenario = avoir_achat | 6 | 3 | 62/63 (98 %) | — | 1 | 2/3 (67 %) | 0 | 0 |
-| scenario = vente_plusieurs_taux | 8 | 3 | 99/99 (100 %) | 3/3 (100 %) | 0 | — | 0 | 0 |
-| scenario = vente_un_taux | 8 | 3 | 59/75 (79 %) | 1/2 (50 %) | 0 | 1/1 (100 %) | 0 | 1 |
-| scenario = vente_usd_export | 6 | 2 | 36/38 (95 %) | 1/2 (50 %) | 0 | — | 0 | 1 |
-| defaut = date_absente | 2 | 1 | 24/24 (100 %) | — | 0 | 1/1 (100 %) | 0 | 0 |
-| defaut = montant_illisible | 2 | 1 | 27/27 (100 %) | — | 0 | 1/1 (100 %) | 0 | 0 |
-| defaut = null | 92 | 40 | 886/943 (94 %) | 26/37 (70 %) | 4 | 2/3 (67 %) | 0 | 8 |
-| defaut = total_faux | 2 | 2 | 53/54 (98 %) | — | 0 | 2/2 (100 %) | 0 | 0 |
-| defaut = tva_fausse | 2 | 1 | 21/21 (100 %) | — | 0 | 1/1 (100 %) | 0 | 0 |
+| | cas | mesurés | champs exacts | écritures exactes | à trancher | **fausses** | refus justes | refus mal nommés | refus injustes |
+|---|---|---|---|---|---|---|---|---|---|
+| **tous** | 100 | 18 | 451/451 (100 %) | 14/15 (93 %) | 1 | 0 | 3/3 (100 %) | 0 | 0 |
+| langue = ar | 30 | 0 | — | — | 0 | 0 | — | 0 | 0 |
+| langue = fr | 40 | 18 | 451/451 (100 %) | 14/15 (93 %) | 1 | 0 | 3/3 (100 %) | 0 | 0 |
+| langue = hybride | 30 | 0 | — | — | 0 | 0 | — | 0 | 0 |
+| rendu = manuscrit | 25 | 0 | — | — | 0 | 0 | — | 0 | 0 |
+| rendu = pdf | 45 | 18 | 451/451 (100 %) | 14/15 (93 %) | 1 | 0 | 3/3 (100 %) | 0 | 0 |
+| rendu = photo | 30 | 0 | — | — | 0 | 0 | — | 0 | 0 |
+| scenario = achat_13 | 7 | 1 | 21/21 (100 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_eur | 7 | 1 | 25/25 (100 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_exonere | 6 | 1 | 21/21 (100 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_fodec | 10 | 2 | 55/55 (100 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_immobilisation | 8 | 1 | 18/18 (100 %) | 0/1 (0 %) | 1 | 0 | — | 0 | 0 |
+| scenario = achat_plusieurs_taux | 9 | 2 | 63/63 (100 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_remise | 10 | 2 | 45/45 (100 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_un_taux | 15 | 4 | 99/99 (100 %) | 2/2 (100 %) | 0 | 0 | 2/2 (100 %) | 0 | 0 |
+| scenario = avoir_achat | 6 | 1 | 19/19 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
+| scenario = vente_plusieurs_taux | 8 | 2 | 66/66 (100 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = vente_un_taux | 8 | 0 | — | — | 0 | 0 | — | 0 | 0 |
+| scenario = vente_usd_export | 6 | 1 | 19/19 (100 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
+| defaut = date_absente | 2 | 1 | 24/24 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
+| defaut = montant_illisible | 2 | 0 | — | — | 0 | 0 | — | 0 | 0 |
+| defaut = null | 92 | 16 | 400/400 (100 %) | 14/15 (93 %) | 1 | 0 | 1/1 (100 %) | 0 | 0 |
+| defaut = total_faux | 2 | 1 | 27/27 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
+| defaut = tva_fausse | 2 | 0 | — | — | 0 | 0 | — | 0 | 0 |
 
-« fausses » : une écriture proposée qui n'est pas l'écriture attendue, ou une écriture
-proposée là où un refus était attendu — le pire résultat. « refus mal nommés » : la pièce
+« à trancher » : l'écriture du paramétrage, proposée avec la réserve qui nomme la question
+que le Socle ne tranche pas (une immobilisation : `immobilisation_a_trancher`) — ni exacte, ni
+fausse, et jamais en silence. « fausses » : une écriture proposée qui n'est pas l'écriture
+attendue, ou une écriture proposée là où un refus était attendu — le pire résultat. « refus mal nommés » : la pièce
 est refusée, mais pas pour la raison attendue. « refus injustes » : aucune écriture,
 alors qu'une écriture juste était attendue.
 
 ## Écarts
 
-- **005** (fr, pdf, achat_fodec) — refus_injuste : coherence_arithmetique/incoherent
-- **007** (fr, pdf, achat_immobilisation) — fausse : lignes 401|0.000000|8439.831000| ; 4366|1347.376000|0.000000|TVA19 ; 601|7091.455000|0.000000| ; 6654|1.000000|0.000000| ≠ 2282|7091.455000|0.000000| ; 401|0.000000|8439.831000| ; 4366|1347.376000|0.000000|TVA19 ; 6654|1.000000|0.000000|
-- **017** (fr, pdf, achat_fodec) — refus_injuste : coherence_arithmetique/incoherent
+- **007** (fr, pdf, achat_immobilisation) — a_trancher : proposée avec la réserve « immobilisation_a_trancher » : à trancher par le cabinet
+
+## Diagnostic du Socle : les PDF au texte perdu, jugés sur leur couche telle quelle
+
+La production relit ces 27 PDF en image (glyphes sans Unicode : `laCoucheSeCroit`).
+Sans second lecteur ici, ils ne sont pas mesurés plus haut. Ce diagnostic les juge sur leur
+couche de texte telle quelle — montants, matricules et dates y sont exacts, les mots arabes
+perdus — pour garder le jugement et la proposition du Socle sous mesure. Seul le titre, perdu
+lui aussi, est celui que le rendu a imprimé : sans lui, le contrôle de la nature bloquerait
+tout, à bon droit. Ce n'est pas une mesure de la chaîne.
+
+| | cas | mesurés | champs exacts | écritures exactes | à trancher | **fausses** | refus justes | refus mal nommés | refus injustes |
+|---|---|---|---|---|---|---|---|---|---|
+| **tous** | 27 | 27 | 560/618 (91 %) | 16/22 (73 %) | 2 | 0 | 5/5 (100 %) | 0 | 4 |
+| langue = ar | 13 | 13 | 232/290 (80 %) | 7/11 (64 %) | 0 | 0 | 2/2 (100 %) | 0 | 4 |
+| langue = hybride | 14 | 14 | 328/328 (100 %) | 9/11 (82 %) | 2 | 0 | 3/3 (100 %) | 0 | 0 |
+| rendu = pdf | 27 | 27 | 560/618 (91 %) | 16/22 (73 %) | 2 | 0 | 5/5 (100 %) | 0 | 4 |
+| scenario = achat_13 | 2 | 2 | 41/42 (98 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_eur | 2 | 2 | 37/38 (97 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_exonere | 2 | 2 | 26/42 (62 %) | 1/2 (50 %) | 0 | 0 | — | 0 | 1 |
+| scenario = achat_fodec | 2 | 2 | 47/49 (96 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_immobilisation | 3 | 3 | 41/54 (76 %) | 0/3 (0 %) | 2 | 0 | — | 0 | 1 |
+| scenario = achat_plusieurs_taux | 2 | 2 | 62/63 (98 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_remise | 3 | 3 | 64/66 (97 %) | 3/3 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = achat_un_taux | 4 | 4 | 90/93 (97 %) | 2/2 (100 %) | 0 | 0 | 2/2 (100 %) | 0 | 0 |
+| scenario = avoir_achat | 2 | 2 | 43/44 (98 %) | — | 0 | 0 | 2/2 (100 %) | 0 | 0 |
+| scenario = vente_plusieurs_taux | 1 | 1 | 33/33 (100 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = vente_un_taux | 3 | 3 | 59/75 (79 %) | 1/2 (50 %) | 0 | 0 | 1/1 (100 %) | 0 | 1 |
+| scenario = vente_usd_export | 1 | 1 | 17/19 (89 %) | 0/1 (0 %) | 0 | 0 | — | 0 | 1 |
+| defaut = montant_illisible | 1 | 1 | 27/27 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
+| defaut = null | 24 | 24 | 486/543 (90 %) | 16/22 (73 %) | 2 | 0 | 2/2 (100 %) | 0 | 4 |
+| defaut = total_faux | 1 | 1 | 26/27 (96 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
+| defaut = tva_fausse | 1 | 1 | 21/21 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
+
 - **041** (ar, pdf, achat_remise) — exacte
   - champ issuer : lu "ﺢ\u0000 \u0000 \u0000 ﺴ \u0000 \u0000 ﻠ ﻟ \u0000 ں ﺎ \u0000 ﺣ ﺮ \u0000 \u0000", attendu "برجان للنسيج"
-- **042** (ar, pdf, achat_fodec) — refus_injuste : coherence_arithmetique/incoherent
+- **042** (ar, pdf, achat_fodec) — exacte
   - champ issuer : lu "ں\u0000 وادرا \u0000 ٮ ﺎ \u0000 ﺳ ور", attendu "ورشات وادران"
   - champ references.numero : lu "٢٠٢٦ / ٥٠٣٦", attendu "٢٠٢٦/٥٠٣٦"
 - **043** (ar, pdf, achat_un_taux, défaut total_faux) — refus_juste : coherence_arithmetique/incoherent
@@ -73,7 +106,7 @@ alors qu'une écriture juste était attendue.
 - **046** (ar, pdf, vente_usd_export) — refus_injuste : sens_de_la_piece
   - champ issuer : lu "ﻪ\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 ﺮ \u0000 ﺤ \u0000 \u0000 ﻟ ا \u0000 ں ﺎ \u0000 \u0000 ﺮ \u0000 \u0000 \u0000 ﻪ ﻛ ﺮ \u0000 ﺳ", attendu "شركة نرفان التجريبية"
   - champ references.numero : lu "٢٠٢٦ / ٦٠٤٢", attendu "٢٠٢٦/٦٠٤٢"
-- **047** (ar, pdf, avoir_achat) — fausse : proposée alors que le refus « nature_piece » était attendu
+- **047** (ar, pdf, avoir_achat) — refus_juste : nature_piece
   - champ issuer : lu "ٮ\u0000 ﺎ ﻣ ﺪ \u0000 ﺤ ﻠ ﻟ \u0000 ٮ ﺮ \u0000 \u0000 \u0000 ﺮ ﻤ \u0000 \u0000", attendu "تمزيرت للخدمات"
 - **048** (ar, pdf, achat_exonere) — refus_injuste : coherence_arithmetique/taux_non_lu
   - champ issuer : lu "ﻊ \u0000 \u0000 \u0000 ر ﻮ \u0000 \u0000 ﻠ ﻟ \u0000 ە ﺮ \u0000 \u0000 ﻤ ﻟ و", attendu "ولميرة للتوزيع"
@@ -118,6 +151,5 @@ alors qu'une écriture juste était attendue.
   - champ articles[1].total_ht : lu null, attendu "365.612"
 - **053** (ar, pdf, achat_remise) — exacte
   - champ issuer : lu "ﻪ\u0000 ﺣ لا \u0000 \u0000 ﻠ ﻟ \u0000 ں ا ﺮ \u0000 \u0000 \u0000 ر د", attendu "دزيران للفلاحة"
-- **071** (hybride, pdf, achat_immobilisation) — fausse : lignes 401|0.000000|12139.055000| ; 4366|1938.009000|0.000000|TVA19 ; 601|10200.046000|0.000000| ; 6654|1.000000|0.000000| ≠ 2282|10200.046000|0.000000| ; 401|0.000000|12139.055000| ; 4366|1938.009000|0.000000|TVA19 ; 6654|1.000000|0.000000|
-- **081** (hybride, pdf, achat_fodec) — refus_injuste : coherence_arithmetique/incoherent
-- **083** (hybride, pdf, achat_immobilisation) — fausse : lignes 401|0.000000|8474.537000| ; 4366|1352.918000|0.000000|TVA19 ; 601|7120.619000|0.000000| ; 6654|1.000000|0.000000| ≠ 2282|7120.619000|0.000000| ; 401|0.000000|8474.537000| ; 4366|1352.918000|0.000000|TVA19 ; 6654|1.000000|0.000000|
+- **071** (hybride, pdf, achat_immobilisation) — a_trancher : proposée avec la réserve « immobilisation_a_trancher » : à trancher par le cabinet
+- **083** (hybride, pdf, achat_immobilisation) — a_trancher : proposée avec la réserve « immobilisation_a_trancher » : à trancher par le cabinet

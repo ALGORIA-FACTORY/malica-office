@@ -70,6 +70,14 @@ describe("la mesure des propositions", () => {
     );
   });
 
+  it("les causes levées le 31 octobre (jeu synthétique) reçoivent une écriture exacte", () => {
+    const levees = ["un FODEC dans la base de la TVA, comme le référentiel le dit"];
+    assert.deepEqual(
+      levees.filter((nom) => m.parCas[nom]?.type !== "exacte"),
+      [],
+    );
+  });
+
   it("un bien susceptible d'être immobilisé se propose à trancher, jamais en silence", () => {
     // Jeu synthétique, 31 octobre 2026 : le serveur partait en charge sans un mot.
     const aTrancher = CAS_DE_MESURE.filter((c) => c.aTrancher !== undefined);

@@ -478,3 +478,80 @@ describe("le HT imprimé qui comprend déjà le timbre", () => {
     assert.equal(r.etat, "incoherent");
   });
 });
+
+describe("un droit taxable entre dans la base de la TVA, comme le référentiel le dit", () => {
+  /*
+   * Jeu synthétique, 31 octobre 2026 (cas 005, 017, 042, 081) : quatre
+   * factures d'achat avec FODEC refusées « incohérentes ». `ref.fiscal_charges`
+   * porte `taxable = true` pour le FODEC (Code de la TVA, art. 6-I : la base
+   * comprend « tous frais, droits et taxes ») ; l'équation l'ignorait.
+   *
+   * Cas 005 : HT 5 100,959 ; FODEC 1 % 51,010 ; base de la TVA 5 151,969 ;
+   * TVA 19 % 978,874 ; timbre 1,000 ; TTC 6 131,843.
+   */
+  const FODEC = { brut: "51,010", taxable: true };
+  const TIMBRE = { brut: "1,000", attendu: 1000 };
+
+  it("la ligne imprime la base de la TVA (HT + FODEC) : le HT de l'écriture en est le reste", () => {
+    const n = normaliserMontants(
+      {
+        bases: [{ ht: "5 151,969", taux: TAUX, pied: "5 100,959" }],
+        tva: "978,874",
+        autres: [FODEC, TIMBRE],
+        ttc: "6 131,843",
+      },
+      P,
+    );
+    assert.equal(n.etat, "tranche", n.raison);
+    assert.equal(n.montants.bases[0]!.ht, 5_100_959);
+    assert.equal(n.montants.tva, 978_874);
+    assert.deepEqual(n.montants.autres, [51_010, 1_000]);
+    assert.equal(n.droitsHorsAssiette, undefined);
+  });
+
+  it("la ligne imprime le HT seul : le FODEC s'ajoute à la base de la TVA", () => {
+    const n = normaliserMontants(
+      {
+        bases: [{ ht: "5 100,959", taux: TAUX }],
+        tva: "978,874",
+        autres: [FODEC, TIMBRE],
+        ttc: "6 131,843",
+      },
+      P,
+    );
+    assert.equal(n.etat, "tranche", n.raison);
+    assert.equal(n.montants.bases[0]!.ht, 5_100_959);
+  });
+
+  it("une TVA calculée sans le FODEC tient encore, mais se dit : la règle n'a pas été suivie", () => {
+    // La facture réelle du 18 octobre 2026 (MEUBLES EL AMEN) : TVA 19 % du
+    // seul HT. Le texte dit le contraire ; la pièce reste ce qu'elle est.
+    const n = normaliserMontants(
+      {
+        bases: [{ ht: "7 620,000", taux: TAUX }],
+        tva: "1 447,800",
+        autres: [{ brut: "71,200", taxable: true }, TIMBRE],
+        ttc: "9 140,000",
+      },
+      P,
+    );
+    assert.equal(n.etat, "tranche", n.raison);
+    assert.equal(n.montants.bases[0]!.ht, 7_620_000);
+    assert.deepEqual(n.droitsHorsAssiette, ["autre0"]);
+  });
+
+  it("sans total lu, « la ligne comprend le FODEC » ne se distingue pas : on ne choisit pas", () => {
+    // TVA = 19 % de 5 151,969 : la ligne est la base de la TVA (HT 5 100,959),
+    // ou le HT sans FODEC dans la base. Rien ne tranche sans le total.
+    const n = normaliserMontants(
+      {
+        bases: [{ ht: "5 151,969", taux: TAUX }],
+        tva: "978,874",
+        autres: [FODEC, TIMBRE],
+      },
+      P,
+    );
+    assert.equal(n.etat, "ambigu", n.raison);
+    assert.equal(n.montants.bases[0]!.ht, null);
+  });
+});

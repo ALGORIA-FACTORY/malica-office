@@ -20,7 +20,7 @@
   "champsFaux": 0
  },
  "005": {
-  "verdict": "refus_injuste",
+  "verdict": "exacte",
   "champsFaux": 0
  },
  "006": {
@@ -28,7 +28,7 @@
   "champsFaux": 0
  },
  "007": {
-  "verdict": "fausse",
+  "verdict": "a_trancher",
   "champsFaux": 0
  },
  "008": {
@@ -68,7 +68,7 @@
   "champsFaux": 0
  },
  "017": {
-  "verdict": "refus_injuste",
+  "verdict": "exacte",
   "champsFaux": 0
  },
  "018": {
@@ -164,56 +164,108 @@
   "champsFaux": 0
  },
  "041": {
-  "verdict": "exacte",
-  "champsFaux": 1
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 1
+  }
  },
  "042": {
-  "verdict": "refus_injuste",
-  "champsFaux": 2
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 2
+  }
  },
  "043": {
-  "verdict": "refus_juste",
-  "champsFaux": 1
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "refus_juste",
+   "champsFaux": 1
+  }
  },
  "044": {
-  "verdict": "refus_injuste",
-  "champsFaux": 13
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "refus_injuste",
+   "champsFaux": 13
+  }
  },
  "045": {
-  "verdict": "exacte",
-  "champsFaux": 1
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 1
+  }
  },
  "046": {
-  "verdict": "refus_injuste",
-  "champsFaux": 2
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "refus_injuste",
+   "champsFaux": 2
+  }
  },
  "047": {
-  "verdict": "fausse",
-  "champsFaux": 1
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "refus_juste",
+   "champsFaux": 1
+  }
  },
  "048": {
-  "verdict": "refus_injuste",
-  "champsFaux": 16
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "refus_injuste",
+   "champsFaux": 16
+  }
  },
  "049": {
-  "verdict": "exacte",
-  "champsFaux": 1
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 1
+  }
  },
  "050": {
-  "verdict": "exacte",
-  "champsFaux": 2
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 2
+  }
  },
  "051": {
-  "verdict": "exacte",
-  "champsFaux": 1
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 1
+  }
  },
  "052": {
-  "verdict": "refus_injuste",
-  "champsFaux": 16
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "refus_injuste",
+   "champsFaux": 16
+  }
  },
  "053": {
-  "verdict": "exacte",
-  "champsFaux": 1
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 1
+  }
  },
  "054": {
   "verdict": "non_mesuree",
@@ -284,60 +336,116 @@
   "champsFaux": 0
  },
  "071": {
-  "verdict": "fausse",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "a_trancher",
+   "champsFaux": 0
+  }
  },
  "072": {
-  "verdict": "exacte",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 0
+  }
  },
  "073": {
-  "verdict": "refus_juste",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "refus_juste",
+   "champsFaux": 0
+  }
  },
  "074": {
-  "verdict": "refus_juste",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "refus_juste",
+   "champsFaux": 0
+  }
  },
  "075": {
-  "verdict": "exacte",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 0
+  }
  },
  "076": {
-  "verdict": "exacte",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 0
+  }
  },
  "077": {
-  "verdict": "exacte",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 0
+  }
  },
  "078": {
-  "verdict": "exacte",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 0
+  }
  },
  "079": {
-  "verdict": "exacte",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 0
+  }
  },
  "080": {
-  "verdict": "exacte",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 0
+  }
  },
  "081": {
-  "verdict": "refus_injuste",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 0
+  }
  },
  "082": {
-  "verdict": "exacte",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "exacte",
+   "champsFaux": 0
+  }
  },
  "083": {
-  "verdict": "fausse",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "a_trancher",
+   "champsFaux": 0
+  }
  },
  "084": {
-  "verdict": "refus_juste",
-  "champsFaux": 0
+  "verdict": "non_mesuree",
+  "champsFaux": 0,
+  "diagnostic": {
+   "verdict": "refus_juste",
+   "champsFaux": 0
+  }
  },
  "085": {
   "verdict": "non_mesuree",

@@ -239,6 +239,11 @@ export interface ReferentielDuJugement {
   deviseDuDossier: string;
   /** Les droits que le paramétrage FIXE (le timbre…), en écriture décimale, par code. */
   droitsFixes: ReadonlyMap<string, string>;
+  /**
+   * Les codes des droits qui entrent dans la base de la TVA
+   * (`ref.fiscal_charges.taxable` : le FODEC). La normalisation les y admet.
+   */
+  droitsTaxables: ReadonlySet<string>;
   tenant: ContexteControle["tenant"];
   typesDocument: ContexteControle["typesDocument"];
   /** Ce que le titre imprimé dit de la nature de la pièce (`lireLesTitres`). */
@@ -390,11 +395,13 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
   const autres = droits.map((d, i) => {
     const b = brut(`other_charges[${i}].amount`);
     const attendu = d.code ? enMineur(r.droitsFixes.get(d.code)) : undefined;
+    // Le référentiel dit si le droit entre dans la base de la TVA.
+    const taxable = d.code ? r.droitsTaxables.has(d.code) : false;
     // Un droit nommé dont le montant n'est pas cité reste dans l'équation :
     // il ne s'y retient que si le paramétrage le fixe et que la facture le
     // prouve (`normaliser-montants.ts`, « ce que la facture prouve »).
-    if (attendu !== undefined) return { brut: b, attendu };
-    return b ?? { brut: null };
+    if (attendu !== undefined) return { brut: b, attendu, taxable };
+    return taxable ? { brut: b, taxable } : (b ?? { brut: null });
   });
 
   /*
@@ -578,7 +585,7 @@ export function jugerLaLecture(
  * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
  * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-10-31.645da03c3c07";
+export const REGLES_DU_JUGEMENT = "2026-10-31.01c9e948f740";
 
 /** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
 interface JugementDeLaPiece {
@@ -817,8 +824,12 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
       (payload.other_charges ?? []).map((d) => d.code).filter((c): c is string => Boolean(c)),
     ),
   ];
-  const { rows: fixes } = await db.query<{ code: string; fixed_amount: string | null }>(
-    `select distinct on (code) code, fixed_amount from ref.fiscal_charges
+  const { rows: fixes } = await db.query<{
+    code: string;
+    fixed_amount: string | null;
+    taxable: boolean;
+  }>(
+    `select distinct on (code) code, fixed_amount, taxable from ref.fiscal_charges
       where pack_version_id = $1 and code = any($2)
         and (document_kind = $3 or document_kind is null)
         and valid_from <= $4::date and (valid_to is null or valid_to >= $4::date)
@@ -865,6 +876,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     droitsFixes: new Map(
       fixes.flatMap((f) => (f.fixed_amount === null ? [] : [[f.code, f.fixed_amount] as const])),
     ),
+    droitsTaxables: new Set(fixes.filter((f) => f.taxable).map((f) => f.code)),
     tenant: { nom: org.name, identifiantFiscal: org.legal_id },
     typesDocument: types.map((t) => ({ code: t.code, porteEcriture: t.porte_ecriture })),
     mentionsObligatoires: mentions.map((m) => ({ code: m.code, libelle: m.label })),

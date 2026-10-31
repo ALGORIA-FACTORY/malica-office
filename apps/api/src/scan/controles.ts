@@ -245,21 +245,26 @@ function arithmetique(p: PieceAControler): ResultatControle {
   const m = p.montants;
   const preuves = { etat: m.etat, conventions: m.conventions, confiance: m.confiance };
   switch (m.etat) {
-    case "tranche":
+    case "tranche": {
+      /*
+       * Chaque raison de réserve se DIT, et toutes se disent : une pièce
+       * décidée par la convention qui laisse aussi le FODEC hors de la base
+       * de la TVA porte les deux (31 octobre 2026 — la première taisait la
+       * seconde).
+       */
+      const reserves: Array<{ motif: string; preuves?: Record<string, unknown> }> = [];
       /*
        * Une valeur que la pièce n'a pas laissé lire, et que son arithmétique
        * prouve (30 octobre 2026). On comptabilise, et l'on dit laquelle, par
        * quelle formule : le cabinet voit pourquoi. Jamais en silence.
        */
       if (m.deduits.length > 0)
-        return {
-          code: "coherence_arithmetique",
-          statut: "reserve",
+        reserves.push({
           motif: `Déduit, non lu : ${m.deduits
             .map((d) => `${d.champ} = ${d.valeur} (${d.formule})`)
             .join(" ; ")}. À vérifier.`,
-          preuves: { ...preuves, deduits: m.deduits },
-        };
+          preuves: { deduits: m.deduits },
+        });
       /*
        * Le total imprimé n'a pas pu être lu, et la facture tient quand même —
        * sa TVA la vérifie. On comptabilise, et on le DIT.
@@ -269,35 +274,46 @@ function arithmetique(p: PieceAControler): ResultatControle {
        * réserve comptabilise et signale à la fois.
        */
       if (m.totalNonLu)
-        return {
-          code: "coherence_arithmetique",
-          statut: "reserve",
+        reserves.push({
           motif: `Le total imprimé « ${m.totalNonLu} » n'a pas pu être lu ; les montants retenus se vérifient entre eux — ${m.raison}.`,
-          preuves,
-        };
+        });
       /*
        * La base de la ligne ne se lisait pas ; celle du pied de facture, que
        * la facture entière vérifie, a été retenue (29 octobre 2026). Même
        * raisonnement : on comptabilise, et on le dit.
        */
       if (m.ligneNonLue)
-        return {
-          code: "coherence_arithmetique",
-          statut: "reserve",
+        reserves.push({
           motif: `Base retenue depuis le pied de facture : la ligne « ${m.ligneNonLue} » ne se lit pas. À vérifier.`,
-          preuves: { ...preuves, ligneNonLue: m.ligneNonLue },
-        };
+          preuves: { ligneNonLue: m.ligneNonLue },
+        });
+      /*
+       * Un droit que le référentiel dit taxable (le FODEC) et que la TVA
+       * imprimée laisse hors de sa base (31 octobre 2026). La pièce tient
+       * ainsi, et l'écriture suit ce qu'elle imprime ; mais la règle dit le
+       * contraire : le cabinet le voit.
+       */
+      if (m.droitsHorsAssiette)
+        reserves.push({
+          motif: `La TVA imprimée n'est pas assise sur ${m.droitsHorsAssiette.join(", ")}, que le référentiel fait entrer dans la base de la TVA : la facture tient ainsi — ${m.raison}. À vérifier.`,
+          preuves: { droitsHorsAssiette: m.droitsHorsAssiette },
+        });
       /*
        * La valeur n'est décidée que par le séparateur décimal de la devise :
        * lus autrement, les montants tiennent aussi (revue de la PR 144). On
        * comptabilise la lecture de la convention, et on le dit.
        */
       if (m.parConvention)
+        reserves.push({
+          motif: `Décidé par la convention : ${m.raison}. À vérifier.`,
+          preuves: { parConvention: true },
+        });
+      if (reserves.length > 0)
         return {
           code: "coherence_arithmetique",
           statut: "reserve",
-          motif: `Décidé par la convention : ${m.raison}. À vérifier.`,
-          preuves: { ...preuves, parConvention: true },
+          motif: reserves.map((r) => r.motif).join(" "),
+          preuves: Object.assign({ ...preuves }, ...reserves.map((r) => r.preuves ?? {})),
         };
       return {
         code: "coherence_arithmetique",
@@ -305,6 +321,7 @@ function arithmetique(p: PieceAControler): ResultatControle {
         motif: `Les montants vérifient HT × (1 + taux) + autres = TTC — ${m.raison}.`,
         preuves,
       };
+    }
     case "non_verifie":
       return {
         code: "coherence_arithmetique",

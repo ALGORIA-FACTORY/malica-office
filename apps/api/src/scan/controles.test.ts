@@ -195,6 +195,59 @@ describe("cohérence arithmétique", () => {
     assert.equal(c.statut, "reserve");
     assert.match(c.motif, /\+ 470,126/);
   });
+  it("un droit taxable dans la base de la TVA, comme le référentiel le dit : conforme", () => {
+    // Jeu synthétique, cas 005 : HT 5 100,959, FODEC 51,010, TVA 19 % de
+    // 5 151,969, timbre 1,000.
+    const n = normaliserMontants(
+      {
+        bases: [{ ht: "5 100,959", taux: "0.19" }],
+        tva: "978,874",
+        autres: [{ brut: "51,010", taxable: true }, "1,000"],
+        ttc: "6 131,843",
+      },
+      P,
+    );
+    assert.equal(statut(facture({ montants: n }), "coherence_arithmetique").statut, "conforme");
+  });
+
+  it("un droit taxable laissé hors de la base de la TVA : réserve, qui nomme le droit", () => {
+    // La pièce tient ainsi, et ne se réécrit pas ; mais le référentiel dit le
+    // contraire (`ref.fiscal_charges.taxable`) : le cabinet doit le voir.
+    const n = normaliserMontants(
+      {
+        bases: [{ ht: "7 620,000", taux: "0.19" }],
+        tva: "1 447,800",
+        autres: [{ brut: "71,200", taxable: true }, "1,000"],
+        ttc: "9 140,000",
+        chemins: { autre0: "other_charges[0].amount" },
+      },
+      P,
+    );
+    const c = statut(facture({ montants: n }), "coherence_arithmetique");
+    assert.equal(c.statut, "reserve");
+    assert.match(c.motif, /other_charges\[0\]\.amount/);
+    assert.deepEqual(c.preuves["droitsHorsAssiette"], ["other_charges[0].amount"]);
+  });
+
+  it("deux raisons de réserve : les deux se disent, aucune ne tait l'autre", () => {
+    // Le témoin « le HT imprimé comprend un droit non fixé » : décidé par la
+    // convention, ET le FODEC laissé hors de la base de la TVA.
+    const n = normaliserMontants(
+      {
+        bases: [{ ht: "101,000", taux: "0.19" }],
+        tva: "19,000",
+        autres: [{ brut: "1,000", taxable: true }],
+        ttc: "120,000",
+      },
+      P,
+    );
+    const c = statut(facture({ montants: n }), "coherence_arithmetique");
+    assert.equal(c.statut, "reserve");
+    assert.equal(c.preuves["parConvention"], true);
+    assert.deepEqual(c.preuves["droitsHorsAssiette"], ["autre0"]);
+    assert.match(c.motif, /convention/);
+    assert.match(c.motif, /base de la TVA/);
+  });
 });
 
 describe("mentions obligatoires", () => {

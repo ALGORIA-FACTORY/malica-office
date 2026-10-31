@@ -311,4 +311,74 @@ describe("balance / droits hors TVA", () => {
     expect(p.motifs.some((m) => m.code === "MISSING_ACCOUNT_MAPPING")).toBe(true);
     expect(p.approvable).toBe(false);
   });
+
+  /*
+   * Jeu synthétique, 31 octobre 2026 (cas 005, 017, 042, 081) : un achat avec
+   * FODEC, la TVA assise sur HT + FODEC comme le référentiel le dit
+   * (`ref.fiscal_charges.taxable`), se refusait « TVA incohérente » : le
+   * moteur ne confrontait au taux que la base de la ligne.
+   */
+  const fodec = (taxable: boolean) => ({
+    code: "FODEC",
+    label: "FODEC",
+    account_code: "6652",
+    document_kind: "facture_achat" as const,
+    fixed_amount: null,
+    taxable,
+  });
+  const avecFodec = (tva: string, ttc: string) => {
+    const base = factureAchatSimple();
+    return {
+      ...base,
+      lines: [{ ...base.lines[0]!, vat_amount: tva, ttc }],
+      other_charges: [
+        { code: "FODEC", label: "FODEC", amount: "10.000" },
+        { code: "DROIT_TIMBRE", label: "Droit de timbre", amount: "1.000" },
+      ],
+      totals: { base_ht: "1000.000", vat: tva, ttc },
+    };
+  };
+
+  it("un droit taxable entre dans la base de la TVA : la ligne se vérifie sur HT + droit", () => {
+    const p = computePivot({
+      extract: avecFodec("191.900", "1202.900"),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      fiscal_charges: [...timbre, fodec(true)],
+      tolerances: TOLERANCES,
+    });
+    expect(p.motifs.map((m) => m.code)).toEqual(["OK"]);
+    expect(p.approvable).toBe(true);
+    expect(p.lines.find((l) => l.account_code === "6652")?.debit).toBe("10.000");
+    expect(p.totals.debit).toBe("1202.900");
+  });
+
+  it("la règle vient du référentiel : un droit non taxable n'entre pas dans la base", () => {
+    const p = computePivot({
+      extract: avecFodec("191.900", "1202.900"),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      fiscal_charges: [...timbre, fodec(false)],
+      tolerances: TOLERANCES,
+    });
+    expect(p.motifs.some((m) => m.code === "TAX_RATE_MISMATCH")).toBe(true);
+    expect(p.approvable).toBe(false);
+  });
+
+  it("une TVA imprimée sans le droit taxable se lit telle quelle (la lecture l'a mise en réserve)", () => {
+    const p = computePivot({
+      extract: avecFodec("190.000", "1201.000"),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      fiscal_charges: [...timbre, fodec(true)],
+      tolerances: TOLERANCES,
+    });
+    expect(p.approvable).toBe(true);
+  });
 });
