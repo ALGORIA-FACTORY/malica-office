@@ -35,7 +35,7 @@ import type { Requete } from "../db.ts";
 import { dateDeLaPiece } from "../depots/dates.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
-import { analyserPiece, lireLesDevises, lireParametres } from "./analyse.ts";
+import { analyserPiece, lireLesDevises, lireParametres, nonAssujetti } from "./analyse.ts";
 import type { ResultatControle } from "./controles.ts";
 import type { CoursLu } from "./cours-de-change.ts";
 import { tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
@@ -506,6 +506,7 @@ async function proposerDepuisLeJugement(
     jurisdiction: string;
     devise_du_dossier: string;
     cours_a_jour: boolean;
+    reglages_a_jour: boolean;
     sens_dit: string | null;
     date_dite: string | null;
     recue_le: string;
@@ -515,6 +516,7 @@ async function proposerDepuisLeJugement(
             a.normalisation,
             a.pack_version_id, p.tenant_id, o.jurisdiction, o.currency as devise_du_dossier,
             app.cours_du_jugement_a_jour(p.tenant_id, a.controles) as cours_a_jour,
+            app.reglages_du_jugement_a_jour(p.tenant_id, a.controles) as reglages_a_jour,
             case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit,
             (select q.valeur from capture.precisions q
               where q.piece_id = p.id and q.champ = 'document_date'
@@ -544,8 +546,9 @@ async function proposerDepuisLeJugement(
       controles: a.controles,
       normalisation: a.normalisation,
       pack_version_id: rows[0]!.pack_version_id,
-      // Jugée à l'instant : son cours est celui du jour.
+      // Jugée à l'instant : son cours et ses réglages sont ceux du jour.
       cours_a_jour: true,
+      reglages_a_jour: true,
     };
   }
   /*
@@ -562,6 +565,17 @@ async function proposerDepuisLeJugement(
       raison:
         "Aucune écriture ne se propose : le cours de change a changé depuis le jugement de la pièce, qui attend d'être rejugée.",
       raisonCode: "taux_de_change",
+    };
+  // De même pour un réglage comptable que le jugement a lu (le seuil
+  // d'immobilisation) et que le cabinet a changé depuis : il se rejuge.
+  if (!ligne.reglages_a_jour)
+    return {
+      ok: false,
+      ...(ligne.verdict ? { verdict: ligne.verdict } : {}),
+      verdictCode: codeDuVerdict(ligne.verdict),
+      raison:
+        "Aucune écriture ne se propose : un réglage comptable du cabinet a changé depuis le jugement de la pièce, qui attend d'être rejugée.",
+      raisonCode: "reglages_perimes",
     };
   const pack = ligne.pack_version_id!;
   const payload = ligne.payload as { document_date?: string | null };
@@ -608,17 +622,6 @@ async function proposerDepuisLeJugement(
     referentiel.fiscalCharges(db, pack, "fr", jour),
   ]);
 
-  // Le régime de TVA du dossier, tel que sa fiche fiscale en vigueur le dit :
-  // un non-assujetti ne déduit pas la TVA qu'il paie (ANO-LIVE-001).
-  const { rows: regimes } = await db.query<{ regime_tva: string | null }>(
-    `select f.regime_tva
-       from capture.pieces p
-       join identity.fiches_fiscales f on f.tenant_id = p.tenant_id and f.valid_to is null
-      where p.id = $1
-      order by f.valid_from desc limit 1`,
-    [pieceId],
-  );
-
   return composerLaProposition(jugement, {
     packVersionId: pack,
     deviseDuDossier: ligne.devise_du_dossier,
@@ -633,7 +636,9 @@ async function proposerDepuisLeJugement(
       sensConnu(c.documentKind),
     ),
     compteDeNature: await compteDeLaNature(db, pieceId),
-    tvaNonDeductible: regimes[0]?.regime_tva === "non_assujetti",
+    // Le régime de TVA du dossier, tel que sa fiche fiscale en vigueur le dit :
+    // un non-assujetti ne déduit pas la TVA qu'il paie (ANO-LIVE-001).
+    tvaNonDeductible: await nonAssujetti(db, ligne.tenant_id),
     // Le FODEC d'un achat, au coût ou au compte du pack : le réglage du
     // cabinet pour ce dossier, au jour de la pièce (R10).
     droitsAuCout: await droitsAuCout(

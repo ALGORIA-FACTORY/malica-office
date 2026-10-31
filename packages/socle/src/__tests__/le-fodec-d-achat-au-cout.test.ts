@@ -6,7 +6,7 @@
  * Le FODEC n'est pas déductible chez l'acheteur (Code de la TVA art. 6-I : il
  * entre dans la base de la TVA). Le dirigeant a choisi, à confirmer par un
  * expert-comptable, de l'incorporer au COÛT d'achat (`fodec.traitement` :
- * « par_article_4374_cout ») ; le pack l'imputait à 6652 « taxes non
+ * « par_article_au_cout ») ; le pack l'imputait à 6652 « taxes non
  * récupérables », sans que le cabinet puisse rien y changer. Le réglage du
  * cabinet dit désormais lesquels des droits d'un achat rejoignent la charge
  * (`droitsAuCout`) : leur ligne prend le compte de la charge, et reste une

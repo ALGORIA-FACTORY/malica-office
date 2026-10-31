@@ -195,6 +195,21 @@ export async function lireLesBiensImmobilisables(
   return rows;
 }
 
+/**
+ * Le dossier est-il non assujetti à la TVA, d'après sa fiche fiscale en
+ * vigueur ? Sa TVA est alors un coût (ANO-LIVE-001) : la même lecture que la
+ * proposition d'écriture.
+ */
+export async function nonAssujetti(db: Requete, dossier: string): Promise<boolean> {
+  const { rows } = await db.query<{ regime_tva: string | null }>(
+    `select f.regime_tva from identity.fiches_fiscales f
+      where f.tenant_id = $1 and f.valid_to is null
+      order by f.valid_from desc limit 1`,
+    [dossier],
+  );
+  return rows[0]?.regime_tva === "non_assujetti";
+}
+
 export interface Analyse {
   id: string;
   verdict: string;
@@ -270,7 +285,9 @@ interface PayloadLu {
     designation?: string | null;
     quantity?: string | null;
     unit_price_ht?: string | null;
+    unit_price_ttc?: string | null;
     total_ht?: string | null;
+    tax_code?: string | null;
   }>;
   other_charges?: Array<{ code?: string | null }>;
   references?: Record<string, string>;
@@ -553,6 +570,8 @@ export function jugerLaLecture(
               quantite: a.quantity ?? null,
               prixUnitaireHt: a.unit_price_ht ?? null,
               totalHt: a.total_ht ?? null,
+              prixUnitaireTtc: a.unit_price_ttc ?? null,
+              tauxDeTva: (a.tax_code ? r.taux.get(a.tax_code) : undefined) ?? null,
             },
           ]
         : [],
@@ -603,7 +622,7 @@ export function jugerLaLecture(
  * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
  * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-10-31.acd5678cd23e";
+export const REGLES_DU_JUGEMENT = "2026-10-31.6d0befa68772";
 
 /** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
 interface JugementDeLaPiece {
@@ -889,9 +908,11 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     devises: await lireLesDevises(db),
     titres: await lireLesTitres(db),
     biensImmobilisables: await lireLesBiensImmobilisables(db, pack, dateRef),
-    // Le seuil du cabinet, au jour de la pièce : le dossier, son cabinet, le pack.
+    // Le seuil du cabinet, au jour de la pièce : le dossier, son cabinet, le
+    // pack ; TTC pour un dossier non assujetti, dont la TVA est un coût.
     immobilisation: reglageDImmobilisation(
       await lireLesReglagesComptables(db, piece.tenant_id, pack, dateRef),
+      { pack, jour: dateRef, nonAssujetti: await nonAssujetti(db, piece.tenant_id) },
     ),
     taux: new Map(taux.map((t) => [t.code, t.rate])),
     deviseDuDossier: org.currency,

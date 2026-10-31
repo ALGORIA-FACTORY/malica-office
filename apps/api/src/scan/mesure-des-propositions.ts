@@ -45,11 +45,14 @@ import {
   REGLE_DE_CHANGE_D_ESSAI,
   IMPUTATIONS_D_ESSAI,
   MENTIONS_D_ESSAI,
+  JOUR_DU_RELEVE_D_ESSAI,
   PARAMETRES_D_ESSAI,
+  REGLAGES_D_ESSAI,
   TAUX_D_ESSAI,
   TITRES_D_ESSAI,
   TYPES_D_ESSAI,
 } from "./referentiel-d-essai.ts";
+import { reglageDImmobilisation } from "./reglages-comptables.ts";
 import { JEU_D_OR } from "../malica/lecture/jeu-d-or.ts";
 import { buildExtractFromTokenPlan, type BuiltRead } from "../malica/lecture/read-piece.ts";
 import { texteDuMontantCite, type PageToken } from "../malica/lecture/token-plan.ts";
@@ -1221,10 +1224,14 @@ export function juger(cas: CasDeMesure) {
     typesDocument: TYPES_D_ESSAI,
     titres: TITRES_D_ESSAI,
     biensImmobilisables: BIENS_IMMOBILISABLES_D_ESSAI,
-    // Aucun réglage d'immobilisation : tout bien reconnu est « à trancher »,
-    // comme l'attendent les cas mesurés. Le seuil du cabinet a ses épreuves
-    // (`controles.test.ts`, `reglages-comptables.test.ts`).
-    immobilisation: null,
+    // Les réglages du pack d'essai (`ref.socle_params`, relevés) : le seuil et
+    // le traitement d'un bien de faible valeur entrent dans l'empreinte du
+    // jugement, donc dans `REGLES_DU_JUGEMENT`.
+    immobilisation: reglageDImmobilisation(REGLAGES_D_ESSAI, {
+      pack: "pack-d-essai",
+      jour: JOUR_DU_RELEVE_D_ESSAI,
+      nonAssujetti: false,
+    }),
     mentionsObligatoires: MENTIONS_D_ESSAI,
     doublonProbable: null,
     devises: DEVISES_LUES_D_ESSAI,

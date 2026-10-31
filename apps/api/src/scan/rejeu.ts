@@ -140,12 +140,14 @@ export type IssueALOuverture = "a_jour" | "hors_perimetre" | "change" | "verifie
 export async function rejugerALOuverture(db: Requete, pieceId: string): Promise<IssueALOuverture> {
   // À jour : sous les règles du jour, ET sur le cours que la règle de change
   // désigne aujourd'hui — un cours saisi, importé ou corrigé depuis périme
-  // le jugement d'une pièce en devise (`app.cours_du_jugement_a_jour`).
+  // le jugement d'une pièce en devise (`app.cours_du_jugement_a_jour`) —, ET
+  // sur les réglages comptables qu'il a lus (`app.reglages_du_jugement_a_jour`).
   const { rows } = await db.query<{ a_jour: boolean; dans: boolean }>(
     `select coalesce((a.regles = $2 or exists (
               select 1 from capture.analyses_verifiees v
                where v.analyse_id = a.id and v.regles = $2))
-              and app.cours_du_jugement_a_jour(a.tenant_id, a.controles), false) as a_jour,
+              and app.cours_du_jugement_a_jour(a.tenant_id, a.controles)
+              and app.reglages_du_jugement_a_jour(a.tenant_id, a.controles), false) as a_jour,
             exists (select 1 from capture.pieces p
                      where p.id = $1 and ${DANS_LE_PERIMETRE}) as dans
        from (select 1) un

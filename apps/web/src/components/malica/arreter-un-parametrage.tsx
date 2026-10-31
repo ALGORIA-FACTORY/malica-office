@@ -52,6 +52,7 @@ export function ArreterUnParametrage({
   arretee,
   arreter: enregistrer,
   portees = ["dossier", "cabinet"],
+  disponible,
   invalider,
   contexte,
 }: {
@@ -61,10 +62,23 @@ export function ArreterUnParametrage({
   aConfirmer?: string | null;
   valeurs: readonly ValeurAArreter[];
   arretee: { titre: string; detail: string };
-  /** L'appel : la portée, et la valeur choisie de chaque clé ("" : aucune). */
-  arreter: (portee: Portee, choix: Record<string, string>) => Promise<unknown>;
+  /**
+   * L'appel : la portée, la valeur choisie de chaque clé ("" : aucune), et
+   * les clés que la personne a CHANGÉES — l'appelant peut n'envoyer qu'elles.
+   */
+  arreter: (
+    portee: Portee,
+    choix: Record<string, string>,
+    modifiees: ReadonlySet<string>,
+  ) => Promise<unknown>;
   /** Les portées offertes, la principale d'abord : sans dossier, le cabinet seul. */
   portees?: readonly Portee[];
+  /** Une portée a-t-elle quelque chose à arrêter ? Absent : toujours. */
+  disponible?: (
+    portee: Portee,
+    choix: Record<string, string>,
+    modifiees: ReadonlySet<string>,
+  ) => boolean;
   /** Ce qui se relit après l'enregistrement. */
   invalider: QueryKey;
   /**
@@ -77,10 +91,13 @@ export function ArreterUnParametrage({
   const qc = useQueryClient();
   const [choix, setChoix] = useState<Record<string, string>>({});
   const choisie = (v: ValeurAArreter) => choix[v.cle] ?? v.valeur;
+  const choisies = Object.fromEntries(valeurs.map((v) => [v.cle, choisie(v)]));
+  const modifiees: ReadonlySet<string> = new Set(
+    valeurs.filter((v) => choisie(v) !== v.valeur).map((v) => v.cle),
+  );
 
   const mutation = useMutation({
-    mutationFn: (portee: Portee) =>
-      enregistrer(portee, Object.fromEntries(valeurs.map((v) => [v.cle, choisie(v)]))),
+    mutationFn: (portee: Portee) => enregistrer(portee, choisies, modifiees),
     onSuccess: async () => {
       setChoix({});
       await qc.invalidateQueries({ queryKey: invalider });
@@ -155,7 +172,10 @@ export function ArreterUnParametrage({
             <button
               key={portee}
               type="button"
-              disabled={mutation.isPending}
+              disabled={
+                mutation.isPending ||
+                (disponible ? !disponible(portee, choisies, modifiees) : false)
+              }
               onClick={() => mutation.mutate(portee)}
               className={`${bouton} border border-foreground ${
                 i === 0 ? "bg-foreground text-background" : "bg-transparent text-foreground"

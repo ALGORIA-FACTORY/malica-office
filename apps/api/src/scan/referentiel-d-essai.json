@@ -261,9 +261,9 @@
   },
   "reglages": {
     "avoirs.traitement": "lie_facture",
-    "comptes_immo.plan": "nc01_2282_43662",
+    "comptes_immo.plan": "selon_categorie",
     "conservation.duree": "10ans_cloture_teif",
-    "fodec.traitement": "par_article_4374_cout",
+    "fodec.traitement": "par_article_au_cout",
     "immobilisation.seuil": "200",
     "immobilisation.traitement": "actif_amorti",
     "mois_tva.date": "exigibilite_calculee",

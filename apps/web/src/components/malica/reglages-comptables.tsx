@@ -44,21 +44,29 @@ export function ReglagesComptables({
 }: {
   cabinetId: string;
   packId: string;
-  /** Le jour du cabinet : les décisions valent à partir de lui. */
+  /** Le jour du cabinet : les réglages se lisent à ce jour. */
   jour: string;
 }) {
   const { t, locale } = useI18n();
   const [dossier, setDossier] = useState(CABINET);
-  const vu = dossier || cabinetId;
+  /*
+   * La date d'effet d'une décision : par défaut le début de l'exercice en
+   * cours (la fiche fiscale du dossier ; le 1er janvier sinon). Une décision
+   * datée du jour ne toucherait pas les pièces de l'exercice déjà reçues
+   * (revue de #154). Nulle : le défaut, relu à chaque changement de vue.
+   */
+  const [depuisChoisi, setDepuis] = useState<string | null>(null);
 
   const clients = useQuery({
     queryKey: ["cab-clients", cabinetId],
     queryFn: () => office().supervision.listClients(cabinetId),
   });
   const reglages = useQuery({
-    queryKey: ["reglages-comptables", packId, vu, jour, locale],
-    queryFn: () => office().parametrage.reglagesComptables(vu, packId, jour, locale),
+    queryKey: ["reglages-comptables", packId, cabinetId, dossier, jour, locale],
+    queryFn: () =>
+      office().parametrage.reglagesComptables(cabinetId, dossier || null, packId, jour, locale),
   });
+  const depuis = depuisChoisi ?? reglages.data?.debutExercice ?? null;
 
   return (
     <section className="space-y-4">
@@ -67,7 +75,10 @@ export function ReglagesComptables({
         <span className="text-[12px]">{t("reglages.compta.portee")}</span>
         <select
           value={dossier}
-          onChange={(e) => setDossier(e.target.value)}
+          onChange={(e) => {
+            setDossier(e.target.value);
+            setDepuis(null);
+          }}
           className="min-h-[48px] w-full min-w-0 max-w-full truncate border border-border bg-card px-3 text-[13px] sm:max-w-[360px]"
         >
           <option value={CABINET}>{t("reglages.compta.portee.cabinet")}</option>
@@ -78,6 +89,22 @@ export function ReglagesComptables({
           ))}
         </select>
       </label>
+      {depuis ? (
+        <div className="flex min-w-0 flex-col gap-1">
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-[12px]">{t("reglages.compta.depuis.champ")}</span>
+            <input
+              type="date"
+              value={depuis}
+              onChange={(e) => setDepuis(e.target.value || null)}
+              className="num min-h-[48px] w-full min-w-0 max-w-full border border-border bg-card px-3 text-[13px] sm:max-w-[360px]"
+            />
+          </label>
+          <span className="text-[11px] text-muted-foreground">
+            {t("reglages.compta.depuis", { date: dateEnChiffres(depuis, locale) })}
+          </span>
+        </div>
+      ) : null}
       {reglages.isError ? (
         <p role="alert" className="text-[12.5px] text-signal-stop">
           {texteDeLErreur(reglages.error, OU, t("common.error"))}
@@ -101,29 +128,38 @@ export function ReglagesComptables({
                   libelle: r.libelle,
                   valeur: r.valeur ?? "",
                   origine: r.origine,
-                  options: r.options,
+                  // « Pas encore appliqué » se dit AVANT de choisir, sur l'option.
+                  options:
+                    r.options?.map((o) => ({
+                      code: o.code,
+                      label: o.appliquee
+                        ? o.label
+                        : `${o.label} — ${t("reglages.compta.option.nonAppliquee")}`,
+                    })) ?? null,
                   note: r.appliquee ? null : t("reglages.compta.nonApplique"),
                 }))}
                 arretee={{
                   titre: t("reglages.compta.arrete"),
-                  detail: t("reglages.compta.arrete.detail"),
+                  detail: t("reglages.compta.depuis", {
+                    date: depuis ? dateEnChiffres(depuis, locale) : "",
+                  }),
                 }}
                 portees={dossier ? ["dossier", "cabinet"] : ["cabinet"]}
-                arreter={(portee, choix) =>
+                disponible={(portee, choix, modifiees) =>
+                  Boolean(depuis) && aArreter(s, portee, choix, modifiees).length > 0
+                }
+                arreter={(portee, choix, modifiees) =>
                   office().parametrage.arreterReglagesComptables({
                     cabinetId,
                     portee,
                     porteeId: portee === "dossier" ? dossier : cabinetId,
                     packId,
-                    depuis: jour,
-                    valeurs: s.reglages.map((r) => ({
-                      code: r.code,
-                      valeur: choix[r.code] || null,
-                    })),
+                    depuis: depuis!,
+                    valeurs: aArreter(s, portee, choix, modifiees),
                   })
                 }
                 invalider={["reglages-comptables"]}
-                contexte={[cabinetId, vu, s.code]}
+                contexte={[cabinetId, dossier, depuis, s.code]}
               />
             </li>
           ))}
@@ -131,6 +167,41 @@ export function ReglagesComptables({
       )}
     </section>
   );
+}
+
+/**
+ * Ce qu'un geste arrête — et rien de plus (revue de #154).
+ *
+ * Pour un DOSSIER : les seules valeurs que la personne a changées. Ce qui
+ * vient du cabinet ou du pack n'est pas recopié sur le dossier : il le suit.
+ *
+ * Pour tout le CABINET : les valeurs changées, comparées à celles du cabinet
+ * (jamais à celles du dossier affiché, qui se recopieraient sur tous) ; sans
+ * rien changer, c'est CONFIRMER les défauts du pack que le cabinet n'a pas
+ * encore arrêtés — une décision, même à valeur égale (#145).
+ */
+function aArreter(
+  s: Sujet,
+  portee: "dossier" | "cabinet",
+  choix: Record<string, string>,
+  modifiees: ReadonlySet<string>,
+): Array<{ code: string; valeur: string | null }> {
+  const valeur = (code: string) => choix[code] || null;
+  if (portee === "dossier")
+    return s.reglages
+      .filter((r) => modifiees.has(r.code))
+      .map((r) => ({ code: r.code, valeur: valeur(r.code) }));
+  if (modifiees.size === 0)
+    return s.reglages
+      .filter((r) => r.origineDuCabinet === "pack" && r.valeurDuCabinet !== null)
+      .map((r) => ({ code: r.code, valeur: r.valeurDuCabinet }));
+  return s.reglages
+    .filter(
+      (r) =>
+        modifiees.has(r.code) &&
+        (valeur(r.code) !== r.valeurDuCabinet || r.origineDuCabinet === "pack"),
+    )
+    .map((r) => ({ code: r.code, valeur: valeur(r.code) }));
 }
 
 /**

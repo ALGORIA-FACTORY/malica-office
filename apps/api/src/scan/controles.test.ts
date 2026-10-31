@@ -40,6 +40,8 @@ const articles = (...designations: string[]): ArticleAControler[] =>
     quantite: null,
     prixUnitaireHt: null,
     totalHt: null,
+    prixUnitaireTtc: null,
+    tauxDeTva: null,
   }));
 
 const P = { ...deviseDEssai(3), toleranceMineure: 1 };
@@ -431,7 +433,11 @@ describe("le seuil d'immobilisation du cabinet (R10, 31 octobre 2026)", () => {
    * réglage, un mobilier de 150 HT était « à trancher » comme un serveur de
    * 3 000 : le seuil n'existait nulle part.
    */
-  const defaut = reglageDImmobilisation(REGLAGES_D_ESSAI);
+  const defaut = reglageDImmobilisation(REGLAGES_D_ESSAI, {
+    pack: "pack-d-essai",
+    jour: "2026-09-10",
+    nonAssujetti: false,
+  });
   assert.ok(defaut, "le pack d'essai porte un seuil et un traitement");
   const seuil = D(defaut.seuil);
   const au = (r: typeof defaut) => ({ ...CONTEXTE, immobilisation: r });
@@ -444,6 +450,8 @@ describe("le seuil d'immobilisation du cabinet (R10, 31 octobre 2026)", () => {
     quantite: q,
     prixUnitaireHt: prix,
     totalHt: null,
+    prixUnitaireTtc: null,
+    tauxDeTva: null,
   });
 
   it("au-dessus du seuil : à trancher", () => {
@@ -464,9 +472,47 @@ describe("le seuil d'immobilisation du cabinet (R10, 31 octobre 2026)", () => {
     ]);
   });
 
-  it("sous le seuil, en charge : aucune réserve", () => {
+  it("sous le seuil, en charge : aucune réserve, mais le contrôle garde ce qu'il a lu", () => {
     const p = facture({ articles: [article("Mobilier de bureau", seuil.minus("1").toFixed())] });
-    assert.deepEqual(codes(p, au({ ...defaut, traitement: "charge" })), []);
+    const enCharge = { ...defaut, traitement: "charge" as const };
+    const c = controlerPiece(p, au(enCharge)).filter((x) => x.code.startsWith("immobilisation_"));
+    assert.deepEqual(
+      c.map((x) => [x.code, x.statut]),
+      [["immobilisation_faible_valeur", "conforme"]],
+    );
+    // Sans ce qu'il a lu, un changement de réglage ne périmerait pas le jugement.
+    assert.deepEqual(c[0]!.preuves["reglages"], enCharge.lu);
+  });
+
+  it("chaque contrôle d'immobilisation dit les réglages qu'il a lus", () => {
+    for (const prix of [seuil.minus("1"), seuil.plus("1")]) {
+      const p = facture({ articles: [article("Mobilier de bureau", prix.toFixed())] });
+      const lu: ReturnType<typeof controlerPiece>[number] | undefined = controlerPiece(
+        p,
+        au(defaut),
+      ).find((x) => x.code.startsWith("immobilisation_"));
+      assert.deepEqual(lu?.preuves["reglages"], defaut.lu);
+      assert.equal(lu?.preuves["base"], "ht");
+    }
+  });
+
+  it("un dossier non assujetti compare le seuil TTC : la TVA est un coût (INCERTAIN)", () => {
+    // Un HT sous le seuil, dont le TTC le dépasse au taux de l'article.
+    const ht = seuil.minus("1").toFixed();
+    const sansTtc = facture({
+      articles: [{ ...article("Mobilier de bureau", ht), tauxDeTva: "0.19" }],
+    });
+    const ttc = { ...defaut, base: "ttc" as const };
+    assert.deepEqual(codes(sansTtc, au(defaut)), ["immobilisation_faible_valeur"]);
+    assert.deepEqual(codes(sansTtc, au(ttc)), ["immobilisation_a_trancher"]);
+    // Un prix TTC lu sous le seuil : faible valeur.
+    const avecTtc = facture({
+      articles: [{ ...article("Mobilier de bureau", ht), prixUnitaireTtc: seuil.toFixed() }],
+    });
+    assert.deepEqual(codes(avecTtc, au(ttc)), ["immobilisation_faible_valeur"]);
+    // TTC sans prix TTC ni taux connu : la valeur ne se juge pas, la question reste.
+    const sansTaux = facture({ articles: [article("Mobilier de bureau", ht)] });
+    assert.deepEqual(codes(sansTaux, au(ttc)), ["immobilisation_a_trancher"]);
   });
 
   it("le total d'un lot se compare au seuil multiplié par la quantité, sans division", () => {
@@ -478,6 +524,8 @@ describe("le seuil d'immobilisation du cabinet (R10, 31 octobre 2026)", () => {
             quantite: "3",
             prixUnitaireHt: null,
             totalHt: total,
+            prixUnitaireTtc: null,
+            tauxDeTva: null,
           },
         ],
       });

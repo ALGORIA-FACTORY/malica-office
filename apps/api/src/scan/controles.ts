@@ -81,12 +81,15 @@ export interface PieceAControler {
   articles?: readonly ArticleAControler[];
 }
 
-/** Un article lu : sa désignation et ses montants HT, en écriture décimale, ou nuls. */
+/** Un article lu : sa désignation et ses montants, en écriture décimale, ou nuls. */
 export interface ArticleAControler {
   designation: string;
   quantite: string | null;
   prixUnitaireHt: string | null;
   totalHt: string | null;
+  prixUnitaireTtc: string | null;
+  /** Le taux de TVA de l'article (ratio du référentiel, « 0.19 »), quand son code est connu. */
+  tauxDeTva: string | null;
 }
 
 export interface ContexteControle {
@@ -1036,9 +1039,15 @@ function immobilisationATrancher(p: PieceAControler, ctx: ContexteControle): Res
   const reglage = ctx.immobilisation;
   const dansLaDevise = p.montants.devise === ctx.deviseDuDossier;
   const sousLeSeuil = (a: (typeof reconnus)[number]) =>
-    reglage !== null && dansLaDevise && valeurUnitaireAuPlus(a, reglage.seuil);
+    reglage !== null && dansLaDevise && valeurUnitaireAuPlus(a, reglage.seuil, reglage.base);
   const aTrancher = reconnus.filter((a) => !sousLeSeuil(a));
   const faibleValeur = reconnus.filter(sousLeSeuil);
+  /*
+   * Ce que le jugement a lu des réglages : la base, et le pack, le jour et
+   * les valeurs. Si le cabinet les change, le jugement se périme
+   * (`app.reglages_du_jugement_a_jour`) et se rejuge — jamais gardé en silence.
+   */
+  const lu = reglage ? { base: reglage.base, reglages: reglage.lu } : {};
 
   const controles: ResultatControle[] = [];
   if (aTrancher.length > 0 || illisibles.length > 0) {
@@ -1061,42 +1070,62 @@ function immobilisationATrancher(p: PieceAControler, ctx: ContexteControle): Res
       preuves: {
         articles: aTrancher.map((r) => r.designation),
         familles: [...new Set(aTrancher.flatMap((r) => r.familles))].sort(),
-        ...(reglage ? { seuil: reglage.seuil } : {}),
+        ...lu,
         ...(illisibles.length > 0 ? { illisibles } : {}),
       },
     });
   }
-  if (faibleValeur.length > 0 && reglage?.traitement === "actif_amorti")
+  /*
+   * Sous le seuil : à l'actif (une réserve, l'écriture proposée restant au
+   * compte du paramétrage), ou en charge (conforme au réglage). Dans les deux
+   * cas le contrôle est posé : il garde ce qu'il a lu, pour se périmer si le
+   * cabinet change d'avis.
+   */
+  if (faibleValeur.length > 0 && reglage) {
+    const base = reglage.base === "ttc" ? "TTC" : "HT";
+    const articles = faibleValeur.map((r) => `« ${r.designation} »`).join(", ");
     controles.push({
       code: "immobilisation_faible_valeur",
-      statut: "reserve",
-      motif: `Bien de faible valeur (au plus ${reglage.seuil} HT) : ${faibleValeur.map((r) => `« ${r.designation} »`).join(", ")}. Le réglage du cabinet l'inscrit à l'actif et l'amortit à 100 % l'année d'utilisation ; l'écriture proposée l'impute au compte du paramétrage.`,
+      statut: reglage.traitement === "actif_amorti" ? "reserve" : "conforme",
+      motif:
+        reglage.traitement === "actif_amorti"
+          ? `Bien de faible valeur (au plus ${reglage.seuil} ${base}) : ${articles}. Le réglage du cabinet l'inscrit à l'actif et l'amortit à 100 % l'année d'utilisation ; l'écriture proposée l'impute au compte du paramétrage.`
+          : `Bien de faible valeur (au plus ${reglage.seuil} ${base}) : ${articles}. Le réglage du cabinet le passe en charge.`,
       preuves: {
         articles: faibleValeur.map((r) => r.designation),
         familles: [...new Set(faibleValeur.flatMap((r) => r.familles))].sort(),
         seuil: reglage.seuil,
         traitement: reglage.traitement,
+        ...lu,
       },
     });
+  }
   return controles;
 }
 
 const DECIMALE = /^\d+(\.\d+)?$/;
+const lisible = (v: string | null): v is string => v !== null && DECIMALE.test(v);
 
 /**
- * La valeur unitaire HT d'un article est-elle au plus le seuil ? Le prix
- * unitaire s'il est lu ; à défaut le total HT, comparé au seuil multiplié par
- * la quantité (aucune division, aucun arrondi). Sans quantité lue, le total
- * seul : s'il est au plus le seuil, chaque unité l'est aussi. Une valeur qu'on
- * ne lit pas n'est pas sous le seuil.
+ * La valeur unitaire d'un article est-elle au plus le seuil ? HT, ou TTC
+ * pour un dossier non assujetti (INCERTAIN). Le prix unitaire s'il est lu ; à
+ * défaut le total, comparé au seuil multiplié par la quantité (aucune
+ * division, aucun arrondi). Sans quantité lue, le total seul : s'il est au
+ * plus le seuil, chaque unité l'est aussi. TTC sans prix TTC lu : le HT
+ * multiplié par (1 + taux) de l'article, quand son taux est connu. Une valeur
+ * qu'on ne lit pas n'est pas sous le seuil.
  */
-function valeurUnitaireAuPlus(a: ArticleAControler, seuil: string): boolean {
+function valeurUnitaireAuPlus(a: ArticleAControler, seuil: string, base: "ht" | "ttc"): boolean {
   if (!DECIMALE.test(seuil)) return false;
-  if (a.prixUnitaireHt !== null && DECIMALE.test(a.prixUnitaireHt))
-    return D(a.prixUnitaireHt).lte(D(seuil));
-  const quantite = a.quantite !== null && DECIMALE.test(a.quantite) ? D(a.quantite) : D(1);
-  if (a.totalHt === null || !DECIMALE.test(a.totalHt) || quantite.isZero()) return false;
-  return D(a.totalHt).lte(D(seuil).times(quantite));
+  const facteur = base === "ht" ? D(1) : lisible(a.tauxDeTva) ? D(1).plus(a.tauxDeTva) : null;
+  const enBase = (ht: string | null) => (facteur && lisible(ht) ? D(ht).times(facteur) : null);
+  const unitaire =
+    base === "ttc" && lisible(a.prixUnitaireTtc) ? D(a.prixUnitaireTtc) : enBase(a.prixUnitaireHt);
+  if (unitaire) return unitaire.lte(D(seuil));
+  const quantite = lisible(a.quantite) ? D(a.quantite) : D(1);
+  const total = enBase(a.totalHt);
+  if (!total || quantite.isZero()) return false;
+  return total.lte(D(seuil).times(quantite));
 }
 
 export function controlerPiece(p: PieceAControler, ctx: ContexteControle): ResultatControle[] {

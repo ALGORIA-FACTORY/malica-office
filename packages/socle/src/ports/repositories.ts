@@ -643,7 +643,9 @@ export interface ParametrageRepository {
    * Socle applique, et les tables existantes qui le portent déjà.
    */
   reglagesComptables(
-    orgId: string,
+    cabinetId: string,
+    /** Le dossier vu ; nul : le cabinet lui-même. */
+    dossierId: string | null,
     packId: string,
     jour: string,
     locale?: string,
@@ -797,6 +799,12 @@ export interface RegleDeChangeDuDossier {
  * (le français à défaut) ; aucun n'est écrit dans le code.
  */
 export interface ReglagesComptables {
+  /**
+   * Le premier jour de l'exercice en cours (la clôture de la fiche fiscale
+   * du dossier ; le 1er janvier pour le cabinet ou sans clôture) : la date
+   * d'effet proposée d'une décision.
+   */
+  debutExercice: string;
   sujets: Array<{
     code: string;
     titre: string;
@@ -814,6 +822,12 @@ export interface ReglagesComptables {
       valeur: string | null;
       origine: OrigineDuParametrage;
       decideLe: string | null;
+      /**
+       * La valeur et l'origine au niveau du CABINET (les mêmes vu du cabinet) :
+       * arrêter pour tout le cabinet se compare à elles.
+       */
+      valeurDuCabinet: string | null;
+      origineDuCabinet: OrigineDuParametrage;
       /** La référence du défaut du pack (`ref.socle_params.legal_reference`). */
       reference: string | null;
       /**
@@ -821,8 +835,11 @@ export interface ReglagesComptables {
        * encore appliqué par le Socle ».
        */
       appliquee: boolean;
-      /** Ce que le référentiel connaît ; nul : un nombre, saisi. */
-      options: Array<{ code: string; label: string }> | null;
+      /**
+       * Ce que le référentiel connaît, et si le Socle applique chaque option
+       * (« pas encore appliqué » se dit avant de choisir) ; nul : un nombre.
+       */
+      options: Array<{ code: string; label: string; appliquee: boolean }> | null;
     }>;
     /** Les droits hors TVA du sujet, tels que le pack les impute (`ref.fiscal_charges`). */
     droits: Array<{
@@ -1657,7 +1674,9 @@ export type RaisonSansEcriture =
   /** Une pièce en devise imprime un droit que le pack fixe dans la devise du dossier. */
   | "droit_fixe_en_devise"
   /** La conversion est refusée (`ConversionRefusee`) : la raison est dite. */
-  | "conversion_refusee";
+  | "conversion_refusee"
+  /** Un réglage comptable lu par le jugement a changé : la pièce attend d'être rejugée. */
+  | "reglages_perimes";
 
 export type PropositionDePiece = (
   | {

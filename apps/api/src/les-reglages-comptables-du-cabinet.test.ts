@@ -6,9 +6,11 @@
  * décision qui s'ajoute, datée et signée, jamais une réécriture — par UNE
  * porte (`app.reglages_comptables_arreter`) et UN résolveur
  * (`app.reglage_comptable` : le dossier, son cabinet, le pack). La règle de
- * change y passe, vers sa propre table. Et l'effet est réel : le seuil
- * d'immobilisation change la réserve du jugement, le FODEC d'achat change de
- * compte.
+ * change y passe, vers sa propre table. L'effet est réel : le seuil
+ * d'immobilisation change le jugement de la pièce, qui se PÉRIME et se
+ * rejuge quand le réglage change ; le FODEC d'achat change de compte.
+ *
+ * Chaque épreuve monte ses propres sociétés : aucune ne dépend d'une autre.
  *
  *   node --experimental-strip-types --import ./src/garde-base-de-test.ts \
  *     --test src/les-reglages-comptables-du-cabinet.test.ts
@@ -21,25 +23,17 @@ import type { ReglagesComptables } from "@malica/socle/ports/repositories";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
-import { fermerLePool, sousIdentite } from "./db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { parametrage } from "./depots/parametrage.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
-import { controlerPiece, type ContexteControle, type PieceAControler } from "./scan/controles.ts";
-import { normaliserMontants } from "./scan/normaliser-montants.ts";
-import { deviseDEssai } from "./scan/devise-d-essai.ts";
-import {
-  BIENS_IMMOBILISABLES_D_ESSAI,
-  DEVISE_D_ESSAI,
-  TITRES_D_ESSAI,
-} from "./scan/referentiel-d-essai.ts";
+import { lecture as lectureDEssai } from "./scan/lecture-d-essai.ts";
 import {
   droitsAuCout,
   lireLesReglagesComptables,
   NOMBRES_APPLIQUES,
   OPTIONS_APPLIQUEES,
-  reglageDImmobilisation,
 } from "./scan/reglages-comptables.ts";
 
 const BASE_CONFIGUREE = Boolean(
@@ -48,9 +42,10 @@ const BASE_CONFIGUREE = Boolean(
 
 /** Les choix du CEO (31 octobre 2026), tels que le pack doit les livrer. */
 const CHOIX_DU_CEO: Record<string, string> = {
+  "immobilisation.seuil": "200",
   "immobilisation.traitement": "actif_amorti",
-  "comptes_immo.plan": "nc01_2282_43662",
-  "fodec.traitement": "par_article_4374_cout",
+  "comptes_immo.plan": "selon_categorie",
+  "fodec.traitement": "par_article_au_cout",
   "timbre.bareme": "bareme_date",
   "non_residents.retenue": "au_paiement",
   "prorata.methode": "affectation_puis_prorata",
@@ -60,61 +55,33 @@ const CHOIX_DU_CEO: Record<string, string> = {
   "mois_tva.date": "exigibilite_calculee",
 };
 
+type Valeurs = Array<{ code: string; valeur: string | null }>;
+
 describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `reglages-compta-${Date.now()}`;
   const mdp = "MotDePasseTresLong2026!";
-  const mfA = matriculeDEssai("A", "M");
-  const mfB = matriculeDEssai("A", "M");
-  let dirigeantA: Utilisateur;
-  let dirigeantB: Utilisateur;
-  let expert: Utilisateur;
-  let autreExpert: Utilisateur;
-  let pmeA = "";
-  let pmeB = "";
-  let cabinet = "";
-  let autreCabinet = "";
-  let packId = "";
-  let jour = "";
   const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
+  const archiver: string[] = [];
+  let packId = "";
+  let n = 0;
 
   const rpc = (u: Utilisateur, methode: string, ...args: unknown[]) => {
     const [depot, nom] = methode.split(".") as [string, string];
     return sousIdentite(u.id, (db) => executerRpc(db, { depot, methode: nom, args }));
   };
-  const lire = (u: Utilisateur, org: string) =>
-    rpc(u, "parametrage.reglagesComptables", org, packId, jour, "fr").then(
-      (r) => r as ReglagesComptables,
-    );
-  const valeur = (r: ReglagesComptables, code: string) =>
-    r.sujets.flatMap((s) => s.reglages).find((x) => x.code === code);
-  const arreter = (
-    u: Utilisateur,
-    portee: "cabinet" | "dossier",
-    porteeId: string,
-    valeurs: Array<{ code: string; valeur: string | null }>,
-    cabinetId = cabinet,
-  ) =>
-    rpc(u, "parametrage.arreterReglagesComptables", {
-      cabinetId,
-      portee,
-      porteeId,
-      packId,
-      depuis: jour,
-      valeurs,
-    });
 
-  before(async () => {
-    const [a, b, e, x] = await Promise.all([
-      creerCompte(`dirigeant-a-${marque}@essai.local`, mdp),
-      creerCompte(`dirigeant-b-${marque}@essai.local`, mdp),
-      creerCompte(`expert-${marque}@essai.local`, mdp),
-      creerCompte(`autre-expert-${marque}@essai.local`, mdp),
+  /** Un cabinet, deux dossiers qu'il tient, leurs dirigeants : à chaque épreuve les siens. */
+  const monter = async () => {
+    n += 1;
+    const m = `${marque}-${n}`;
+    const mfA = matriculeDEssai("A", "M");
+    const mfB = matriculeDEssai("A", "M");
+    const [dirigeantA, dirigeantB, expert] = await Promise.all([
+      creerCompte(`dirigeant-a-${m}@essai.local`, mdp),
+      creerCompte(`dirigeant-b-${m}@essai.local`, mdp),
+      creerCompte(`expert-${m}@essai.local`, mdp),
     ]);
-    assert.ok(a && b && e && x);
-    dirigeantA = a;
-    dirigeantB = b;
-    expert = e;
-    autreExpert = x;
+    assert.ok(dirigeantA && dirigeantB && expert);
     const creer = (u: Utilisateur, kind: string, nom: string, mf: string | null) =>
       sousIdentite(u.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
@@ -123,10 +90,10 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
         );
         return rows[0]!.id;
       });
-    pmeA = await creer(dirigeantA, "pme", `PME A D'ESSAI ${marque}`, mfA);
-    pmeB = await creer(dirigeantB, "pme", `PME B D'ESSAI ${marque}`, mfB);
-    cabinet = await creer(expert, "cabinet", `CABINET D'ESSAI ${marque}`, null);
-    autreCabinet = await creer(autreExpert, "cabinet", `AUTRE CABINET D'ESSAI ${marque}`, null);
+    const pmeA = await creer(dirigeantA, "pme", `PME A D'ESSAI ${m}`, mfA);
+    const pmeB = await creer(dirigeantB, "pme", `PME B D'ESSAI ${m}`, mfB);
+    const cabinet = await creer(expert, "cabinet", `CABINET D'ESSAI ${m}`, null);
+    archiver.push(pmeA, pmeB, cabinet);
     for (const [u, pme, mf] of [
       [dirigeantA, pmeA, mfA],
       [dirigeantB, pmeB, mfB],
@@ -135,14 +102,40 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
       const [propose] = await sousIdentite(u.id, (db) => identite.mandatsProposes(db, pme));
       await sousIdentite(u.id, (db) => identite.repondreAuMandat(db, propose!.id, true));
     }
+    const jour = (await sousIdentite(expert.id, (db) => parametrage.fuseauDuCabinet(db, cabinet)))
+      .aujourdhui!;
+    const lire = (u: Utilisateur, dossier: string | null, au = jour) =>
+      rpc(u, "parametrage.reglagesComptables", cabinet, dossier, packId, au, "fr").then(
+        (r) => r as ReglagesComptables,
+      );
+    const arreter = (
+      u: Utilisateur,
+      portee: "cabinet" | "dossier",
+      porteeId: string,
+      valeurs: Valeurs,
+      options: { cabinetId?: string; depuis?: string } = {},
+    ) =>
+      rpc(u, "parametrage.arreterReglagesComptables", {
+        cabinetId: options.cabinetId ?? cabinet,
+        portee,
+        porteeId,
+        packId,
+        depuis: options.depuis ?? jour,
+        valeurs,
+      });
+    return { dirigeantA, dirigeantB, expert, pmeA, pmeB, mfA, cabinet, jour, lire, arreter, m };
+  };
+
+  const valeur = (r: ReglagesComptables, code: string) =>
+    r.sujets.flatMap((s) => s.reglages).find((x) => x.code === code);
+
+  before(async () => {
     packId = (
       await admin.query<{ id: string }>(
         `select id from ref.jurisdiction_packs where jurisdiction = 'TN'
           order by effective_from desc limit 1`,
       )
     ).rows[0]!.id;
-    jour = (await sousIdentite(expert.id, (db) => parametrage.fuseauDuCabinet(db, cabinet)))
-      .aujourdhui!;
   });
 
   after(async () => {
@@ -151,7 +144,7 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
         `update identity.organizations
             set archived_at = now(), archived_reason = 'fixture de test automatisé'
           where id = any($1::uuid[]) and archived_at is null`,
-        [[pmeA, pmeB, cabinet, autreCabinet].filter(Boolean)],
+        [archiver],
       );
     } finally {
       await admin.end();
@@ -160,133 +153,185 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("le pack livre les onze sujets, aux choix du CEO, tous à confirmer", async () => {
-    const r = await lire(expert, cabinet);
+    const s = await monter();
+    const r = await s.lire(s.expert, null);
     assert.equal(r.sujets.length, 11);
     for (const [code, attendu] of Object.entries(CHOIX_DU_CEO)) {
       const v = valeur(r, code);
-      assert.equal(v?.valeur, attendu, code);
-      assert.equal(v?.origine, "pack", code);
-      assert.equal(v?.decideLe, null, code);
+      assert.deepEqual([v?.valeur, v?.origine, v?.decideLe], [attendu, "pack", null], code);
       assert.match(v?.reference ?? "", /CEO.*expert-comptable/, code);
     }
-    // Le seuil : un nombre, sans liste ; la règle de change, par sa table.
+    // Le seuil : un nombre sans liste, celui du pack, tel que `ref.socle_params` le porte.
+    const { rows } = await admin.query<{ v: string }>(
+      `select trim_scale(value_num)::text as v from ref.socle_params
+        where pack_version_id = $1 and code = 'immobilisation.seuil'`,
+      [packId],
+    );
+    assert.equal(valeur(r, "immobilisation.seuil")?.valeur, rows[0]!.v);
     assert.equal(valeur(r, "immobilisation.seuil")?.options, null);
-    assert.ok(D(valeur(r, "immobilisation.seuil")!.valeur!).gt(0));
     assert.equal(valeur(r, "change.source")?.origine, "pack");
-    assert.ok((valeur(r, "change.source")?.options ?? []).length > 0);
-    // Chaque sujet dit son texte, sa pratique, son risque et ses sources.
-    for (const s of r.sujets) {
-      assert.ok(s.texte && s.pratique && s.risque, s.code);
-      assert.ok(s.sources.length > 0, s.code);
-      assert.ok(
-        s.sources.every((x) => x.url.startsWith("https://")),
-        s.code,
-      );
+    for (const x of r.sujets) {
+      assert.ok(x.texte && x.pratique && x.risque, x.code);
+      assert.ok(x.sources.length > 0 && x.sources.every((y) => y.url.startsWith("https://")));
     }
-    assert.match(r.sujets.find((s) => s.code === "immobilisation")!.incertain ?? "", /INCERTAIN/);
+    assert.match(r.sujets.find((x) => x.code === "immobilisation")!.incertain ?? "", /TTC/);
+    // Aucun code d'option ne porte un numéro de compte.
+    for (const o of r.sujets.flatMap((x) => x.reglages).flatMap((x) => x.options ?? []))
+      assert.doesNotMatch(o.code, /\d{3,}/, o.code);
+    // La date d'effet proposée : le début de l'exercice (le 1er janvier sans clôture).
+    assert.equal(r.debutExercice, `${s.jour.slice(0, 4)}-01-01`);
   });
 
-  it("ce qui n'est pas appliqué se dit ; ce qui l'est a son implémentation", async () => {
-    const r = await lire(expert, cabinet);
-    assert.equal(valeur(r, "prorata.methode")?.appliquee, false);
-    assert.equal(valeur(r, "non_residents.retenue")?.appliquee, false);
-    assert.equal(valeur(r, "mois_tva.date")?.appliquee, false);
-    assert.equal(valeur(r, "avoirs.traitement")?.appliquee, false);
-    assert.equal(valeur(r, "immobilisation.seuil")?.appliquee, true);
-    assert.equal(valeur(r, "fodec.traitement")?.appliquee, true);
-    assert.equal(valeur(r, "change.date_retenue")?.appliquee, true);
-
-    // L'épreuve qui lie le référentiel au code : une option « appliquée »
-    // en base l'est dans `reglages-comptables.ts`, et réciproquement.
-    const { rows } = await admin.query<{ reglage: string; code: string }>(
-      `select reglage, code from ref.reglages_comptables_options where applique
-        order by reglage, code`,
+  it("ce qui n'est pas appliqué se dit, jusque sur l'option ; ce qui l'est a son implémentation", async () => {
+    const s = await monter();
+    const r = await s.lire(s.expert, null);
+    for (const code of [
+      "prorata.methode",
+      "non_residents.retenue",
+      "mois_tva.date",
+      "avoirs.traitement",
+    ])
+      assert.equal(valeur(r, code)?.appliquee, false, code);
+    // L'inscription à l'actif n'est pas proposée : le défaut le dit.
+    assert.equal(valeur(r, "immobilisation.traitement")?.appliquee, false);
+    const options = valeur(r, "immobilisation.traitement")!.options!;
+    assert.deepEqual(
+      options.map((o) => [o.code, o.appliquee]),
+      [
+        ["actif_amorti", false],
+        ["charge", true],
+      ],
     );
-    const enBase = rows.map((o) => `${o.reglage}:${o.code}`).sort();
-    const enCode = Object.entries(OPTIONS_APPLIQUEES)
-      .flatMap(([r, os]) => os.map((o) => `${r}:${o}`))
-      .sort();
-    assert.deepEqual(enBase, enCode);
-    const { rows: nombres } = await admin.query<{ code: string }>(
-      `select code from ref.reglages_comptables
-        where nature = 'nombre' and porte = 'reglages_comptables' and applique order by code`,
+    assert.equal(valeur(r, "fodec.traitement")?.appliquee, true);
+    const { rows } = await admin.query<{ reglage: string; code: string }>(
+      `select reglage, code from ref.reglages_comptables_options where applique`,
     );
     assert.deepEqual(
-      nombres.map((n) => n.code),
-      [...NOMBRES_APPLIQUES].sort(),
+      rows.map((o) => `${o.reglage}:${o.code}`).sort(),
+      Object.entries(OPTIONS_APPLIQUEES)
+        .flatMap(([g, os]) => os.map((o) => `${g}:${o}`))
+        .sort(),
     );
+    const { rows: nombres } = await admin.query<{ code: string }>(
+      `select code from ref.reglages_comptables
+        where nature = 'nombre' and porte = 'reglages_comptables' and applique`,
+    );
+    assert.deepEqual(nombres.map((x) => x.code).sort(), [...NOMBRES_APPLIQUES].sort());
   });
 
   it("les comptes, le barème et les catégories viennent des tables existantes", async () => {
-    const r = await lire(expert, cabinet);
-    const timbre = r.sujets.find((s) => s.code === "timbre")!;
-    const { rows: droits } = await admin.query<{ document_kind: string; account_code: string }>(
+    const s = await monter();
+    const r = await s.lire(s.expert, null);
+    const timbre = r.sujets.find((x) => x.code === "timbre")!;
+    const { rows } = await admin.query<{ document_kind: string; account_code: string }>(
       `select distinct on (document_kind) document_kind, account_code from ref.fiscal_charges
         where pack_version_id = $1 and code = 'DROIT_TIMBRE' and valid_from <= $2::date
         order by document_kind, valid_from desc`,
-      [packId, jour],
+      [packId, s.jour],
     );
     assert.deepEqual(
       timbre.droits.map((d) => [d.sens, d.compte]).sort(),
-      droits.map((d) => [d.document_kind, d.account_code]).sort(),
+      rows.map((d) => [d.document_kind, d.account_code]).sort(),
     );
     assert.ok(timbre.bareme.length > 0 && timbre.bareme.every((b) => b.uniteIncertaine));
-    assert.deepEqual(r.sujets.find((s) => s.code === "fodec")!.bareme, []);
-    const immo = r.sujets.find((s) => s.code === "comptes_immo")!;
+    assert.deepEqual(r.sujets.find((x) => x.code === "fodec")!.bareme, []);
+    const immo = r.sujets.find((x) => x.code === "comptes_immo")!;
     assert.ok(immo.categories.length > 0);
-    // Un plafond du décret est comparé au taux linéaire de chaque catégorie.
     for (const c of immo.categories.filter((x) => x.tauxMaximal))
       assert.equal(c.depasse, D(c.tauxLineaire).gt(D(c.tauxMaximal!)), c.code);
   });
 
   it("la chaîne : pack, puis cabinet, puis dossier ; une valeur nulle rend la main", async () => {
-    const seuilDuPack = valeur(await lire(expert, cabinet), "immobilisation.seuil")!.valeur!;
+    const s = await monter();
+    const seuilDuPack = valeur(await s.lire(s.expert, null), "immobilisation.seuil")!.valeur!;
     const auCabinet = D(seuilDuPack).plus(100).toFixed();
     const auDossier = D(seuilDuPack).plus(300).toFixed();
+    const seuilDe = async (u: Utilisateur, dossier: string | null) => {
+      const v = valeur(await s.lire(u, dossier), "immobilisation.seuil")!;
+      return [v.valeur, v.origine, v.valeurDuCabinet, v.origineDuCabinet];
+    };
 
-    await arreter(expert, "cabinet", cabinet, [
+    await s.arreter(s.expert, "cabinet", s.cabinet, [
       { code: "immobilisation.seuil", valeur: auCabinet },
     ]);
-    for (const org of [cabinet, pmeA, pmeB]) {
-      const v = valeur(await lire(expert, org), "immobilisation.seuil")!;
-      assert.deepEqual([v.valeur, v.origine], [auCabinet, "cabinet"], org);
-      assert.ok(v.decideLe);
-    }
+    assert.deepEqual(await seuilDe(s.expert, null), [auCabinet, "cabinet", auCabinet, "cabinet"]);
+    assert.deepEqual(await seuilDe(s.expert, s.pmeA), [auCabinet, "cabinet", auCabinet, "cabinet"]);
 
-    await arreter(expert, "dossier", pmeA, [{ code: "immobilisation.seuil", valeur: auDossier }]);
-    const duDossier = valeur(await lire(dirigeantA, pmeA), "immobilisation.seuil")!;
-    assert.deepEqual([duDossier.valeur, duDossier.origine], [auDossier, "dossier"]);
-    assert.equal(valeur(await lire(dirigeantB, pmeB), "immobilisation.seuil")!.valeur, auCabinet);
+    await s.arreter(s.expert, "dossier", s.pmeA, [
+      { code: "immobilisation.seuil", valeur: auDossier },
+    ]);
+    // Le dossier a le sien ; la valeur du cabinet, elle, ne change pas.
+    assert.deepEqual(await seuilDe(s.expert, s.pmeA), [auDossier, "dossier", auCabinet, "cabinet"]);
+    assert.deepEqual(await seuilDe(s.expert, s.pmeB), [auCabinet, "cabinet", auCabinet, "cabinet"]);
 
-    // Nulle pour le dossier : la décision du cabinet reprend.
-    await arreter(expert, "dossier", pmeA, [{ code: "immobilisation.seuil", valeur: null }]);
-    const rendu = valeur(await lire(dirigeantA, pmeA), "immobilisation.seuil")!;
-    assert.deepEqual([rendu.valeur, rendu.origine], [auCabinet, "cabinet"]);
-    // Nulle pour le cabinet : le défaut du pack, à confirmer.
-    await arreter(expert, "cabinet", cabinet, [{ code: "immobilisation.seuil", valeur: null }]);
-    const pack = valeur(await lire(expert, pmeA), "immobilisation.seuil")!;
-    assert.deepEqual([pack.valeur, pack.origine, pack.decideLe], [seuilDuPack, "pack", null]);
+    await s.arreter(s.expert, "dossier", s.pmeA, [{ code: "immobilisation.seuil", valeur: null }]);
+    assert.deepEqual(await seuilDe(s.expert, s.pmeA), [auCabinet, "cabinet", auCabinet, "cabinet"]);
+    await s.arreter(s.expert, "cabinet", s.cabinet, [
+      { code: "immobilisation.seuil", valeur: null },
+    ]);
+    assert.deepEqual(await seuilDe(s.expert, s.pmeA), [seuilDuPack, "pack", seuilDuPack, "pack"]);
+  });
+
+  it("une décision vaut depuis SA date d'effet : celle du jour ne touche pas une pièce d'avant", async () => {
+    const s = await monter();
+    const avant = `${s.jour.slice(0, 4)}-01-15` < s.jour ? `${s.jour.slice(0, 4)}-01-15` : s.jour;
+    const seuilAu = async (jourDeLaPiece: string) =>
+      (
+        await sousIdentite(s.dirigeantA.id, (db) =>
+          lireLesReglagesComptables(db, s.pmeA, packId, jourDeLaPiece),
+        )
+      ).get("immobilisation.seuil");
+    const duPack = await seuilAu(avant);
+    const nouveau = D(duPack!).plus(50).toFixed();
+    // Décidé aujourd'hui, pour aujourd'hui : la pièce d'avant garde le pack.
+    await s.arreter(s.expert, "dossier", s.pmeA, [
+      { code: "immobilisation.seuil", valeur: nouveau },
+    ]);
+    if (avant < s.jour) assert.equal(await seuilAu(avant), duPack);
+    assert.equal(await seuilAu(s.jour), nouveau);
+    // Décidé aujourd'hui, depuis le début de l'exercice : elle le suit.
+    const debut = (await s.lire(s.expert, s.pmeA)).debutExercice;
+    await s.arreter(
+      s.expert,
+      "dossier",
+      s.pmeA,
+      [{ code: "immobilisation.seuil", valeur: nouveau }],
+      {
+        depuis: debut,
+      },
+    );
+    assert.equal(await seuilAu(avant), nouveau);
   });
 
   it("confirmer sans changer est une décision : le défaut n'est plus « à confirmer »", async () => {
-    const avant = valeur(await lire(expert, cabinet), "prorata.methode")!;
+    const s = await monter();
+    const avant = valeur(await s.lire(s.expert, null), "prorata.methode")!;
     assert.equal(avant.origine, "pack");
-    await arreter(expert, "cabinet", cabinet, [{ code: "prorata.methode", valeur: avant.valeur }]);
-    const apres = valeur(await lire(expert, pmeB), "prorata.methode")!;
+    await s.arreter(s.expert, "cabinet", s.cabinet, [
+      { code: "prorata.methode", valeur: avant.valeur },
+    ]);
+    const apres = valeur(await s.lire(s.expert, s.pmeB), "prorata.methode")!;
     assert.deepEqual([apres.valeur, apres.origine], [avant.valeur, "cabinet"]);
     assert.ok(apres.decideLe);
   });
 
   it("la règle de change passe par la même porte, vers sa propre table", async () => {
-    const source = valeur(await lire(expert, cabinet), "change.source")!.valeur!;
-    const n = await arreter(expert, "cabinet", cabinet, [
-      { code: "change.source", valeur: source },
-    ]);
-    assert.deepEqual(n, { decisions: 1 });
-    const v = valeur(await lire(expert, cabinet), "change.source")!;
+    const s = await monter();
+    const source = valeur(await s.lire(s.expert, null), "change.source")!.valeur!;
+    assert.deepEqual(
+      await s.arreter(s.expert, "cabinet", s.cabinet, [{ code: "change.source", valeur: source }]),
+      { decisions: 1 },
+    );
+    const v = valeur(await s.lire(s.expert, null), "change.source")!;
     assert.deepEqual([v.valeur, v.origine], [source, "cabinet"]);
-    // Vue d'un dossier du cabinet, par le résolveur de la règle de change lui-même.
-    const regle = (await rpc(expert, "referentiel.regleDeChange", packId, pmeA, jour, "fr")) as {
+    const regle = (await rpc(
+      s.expert,
+      "referentiel.regleDeChange",
+      packId,
+      s.pmeA,
+      s.jour,
+      "fr",
+    )) as {
       valeurs: Array<{ code: string; origine: string }>;
     };
     assert.equal(regle.valeurs.find((x) => x.code === "change.source")?.origine, "cabinet");
@@ -295,168 +340,233 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
                 where tenant_id = $1 and code like 'change.%') as generique,
               (select count(*)::int from parametrage.regles_de_change
                 where tenant_id = $1 and code = 'change.source') as change`,
-      [cabinet],
+      [s.cabinet],
     );
     assert.deepEqual(rows[0], { generique: 0, change: 1 });
   });
 
-  it("une PME, un cabinet étranger : refusés ; une valeur inconnue : refusée", async () => {
+  it("une PME, un cabinet étranger : refusés ; une valeur inconnue ou absurde : refusée", async () => {
+    const s = await monter();
+    const e = await monter();
+    const prorata = [{ code: "prorata.methode", valeur: "prorata_global" }];
     await assert.rejects(
-      arreter(
-        dirigeantA,
-        "dossier",
-        pmeA,
-        [{ code: "prorata.methode", valeur: "prorata_global" }],
-        pmeA,
-      ),
+      s.arreter(s.dirigeantA, "dossier", s.pmeA, prorata, { cabinetId: s.pmeA }),
       /refus\.reglage_comptable\.droits/,
     );
+    await assert.rejects(s.arreter(s.dirigeantA, "dossier", s.pmeA, prorata), /droits/);
     await assert.rejects(
-      arreter(dirigeantA, "dossier", pmeA, [{ code: "prorata.methode", valeur: "prorata_global" }]),
+      s.arreter(e.expert, "dossier", s.pmeA, prorata, { cabinetId: e.cabinet }),
       /refus\.reglage_comptable\.droits/,
     );
-    await assert.rejects(
-      arreter(
-        autreExpert,
-        "dossier",
-        pmeA,
-        [{ code: "prorata.methode", valeur: "prorata_global" }],
-        autreCabinet,
-      ),
-      /refus\.reglage_comptable\.droits/,
-    );
-    await assert.rejects(
-      arreter(autreExpert, "cabinet", cabinet, [
-        { code: "prorata.methode", valeur: "prorata_global" },
-      ]),
-      /refus\.reglage_comptable\.droits/,
-    );
-    // Un cabinet étranger ne lit pas non plus les réglages d'un dossier qu'il ne tient pas.
-    await assert.rejects(lire(autreExpert, pmeA), /refus\.reglage_comptable\.droits/);
+    await assert.rejects(s.arreter(e.expert, "cabinet", s.cabinet, prorata), /droits/);
+    await assert.rejects(s.lire(e.expert, s.pmeA), /refus\.reglage_comptable\.droits/);
     for (const valeurs of [
       [{ code: "prorata.methode", valeur: "option_inconnue" }],
       [{ code: "reglage.inconnu", valeur: "x" }],
-      [{ code: "immobilisation.seuil", valeur: "deux cents" }],
+      ...["deux cents", "0", "0.000", "-5", "1e3", "0.0000001", "9999999999999"].map((v) => [
+        { code: "immobilisation.seuil", valeur: v },
+      ]),
       [
         { code: "prorata.methode", valeur: "prorata_global" },
         { code: "prorata.methode", valeur: "affectation_puis_prorata" },
       ],
     ])
       await assert.rejects(
-        arreter(expert, "cabinet", cabinet, valeurs),
+        s.arreter(s.expert, "cabinet", s.cabinet, valeurs),
         /refus\.reglage_comptable\.saisie/,
+        JSON.stringify(valeurs),
       );
   });
 
+  it("un collaborateur non affecté ne lit ni le résolveur ni les décisions d'un dossier", async () => {
+    const s = await monter();
+    const collaborateur = (await creerCompte(`collab-${s.m}@essai.local`, mdp))!;
+    await admin.query(
+      `insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')`,
+      [s.cabinet, collaborateur.id],
+    );
+    await s.arreter(s.expert, "dossier", s.pmeA, [
+      { code: "prorata.methode", valeur: "prorata_global" },
+      { code: "change.recul_jours", valeur: "3" },
+    ]);
+    const lignes = (u: Utilisateur, table: string) =>
+      sousIdentite(u.id, async (db) => {
+        const { rows } = await db.query<{ n: number }>(
+          `select count(*)::int as n from parametrage.${table} where portee_id = $1`,
+          [s.pmeA],
+        );
+        return rows[0]!.n;
+      });
+    for (const table of ["reglages_comptables", "regles_de_change"]) {
+      assert.equal(await lignes(s.expert, table), 1, table);
+      assert.equal(await lignes(s.dirigeantA, table), 1, table);
+      assert.equal(await lignes(collaborateur, table), 0, table);
+      assert.equal(await lignes(s.dirigeantB, table), 0, table);
+    }
+    await assert.rejects(s.lire(collaborateur, s.pmeA), /refus\.reglage_comptable\.droits/);
+  });
+
+  it("un ancien cabinet ne lit plus, et ses décisions ne suivent pas le dossier", async () => {
+    const s = await monter();
+    await s.arreter(s.expert, "dossier", s.pmeB, [
+      { code: "prorata.methode", valeur: "prorata_global" },
+      { code: "change.recul_jours", valeur: "3" },
+    ]);
+    await sousIdentite(s.dirigeantB.id, (db) =>
+      identite.revoquerMandat(db, s.pmeB, "Je change de comptable"),
+    );
+    await assert.rejects(s.lire(s.expert, s.pmeB), /refus\.reglage_comptable\.droits/);
+    for (const table of ["reglages_comptables", "regles_de_change"]) {
+      const { rows } = await sousIdentite(s.expert.id, (db) =>
+        db.query<{ n: number }>(
+          `select count(*)::int as n from parametrage.${table} where portee_id = $1`,
+          [s.pmeB],
+        ),
+      );
+      assert.equal(rows[0]!.n, 0, table);
+    }
+    // Le dossier lui-même relit le pack : la décision de l'ancien cabinet ne le suit pas.
+    const r = await sousIdentite(s.dirigeantB.id, (db) =>
+      lireLesReglagesComptables(db, s.pmeB, packId, s.jour),
+    );
+    assert.equal(r.get("prorata.methode"), CHOIX_DU_CEO["prorata.methode"]);
+  });
+
   it("une décision ne s'écrit que par la porte, et ne se réécrit ni ne s'efface (R7)", async () => {
+    const s = await monter();
+    await s.arreter(s.expert, "cabinet", s.cabinet, [
+      { code: "prorata.methode", valeur: "prorata_global" },
+    ]);
     await assert.rejects(
-      sousIdentite(expert.id, (db) =>
+      sousIdentite(s.expert.id, (db) =>
         db.query(
           `insert into parametrage.reglages_comptables
              (tenant_id, portee, portee_id, pack_version_id, code, valeur, valid_from)
            values ($1, 'cabinet', $1, $2, 'prorata.methode', 'prorata_global', current_date)`,
-          [cabinet, packId],
+          [s.cabinet, packId],
         ),
       ),
     );
     await assert.rejects(
       admin.query(`update parametrage.reglages_comptables set valeur = null where tenant_id = $1`, [
-        cabinet,
+        s.cabinet,
       ]),
     );
     await assert.rejects(
-      admin.query(`delete from parametrage.reglages_comptables where tenant_id = $1`, [cabinet]),
+      admin.query(`delete from parametrage.reglages_comptables where tenant_id = $1`, [s.cabinet]),
     );
   });
 
-  it("le seuil arrêté pour un dossier change la réserve de son jugement", async () => {
-    const reglageDe = async (org: string) =>
-      reglageDImmobilisation(
-        await sousIdentite(dirigeantA.id, (db) => lireLesReglagesComptables(db, org, packId, jour)),
-      );
-    const avant = await reglageDe(pmeA);
-    assert.ok(avant);
-    // Un mobilier de bureau un millime au-dessus du seuil du pack.
-    const prix = D(avant.seuil).plus("0.001").toFixed();
-    const P = { ...deviseDEssai(3), toleranceMineure: 1 };
-    const piece: PieceAControler = {
-      documentKind: "facture_achat",
-      titre: "FACTURE",
-      emetteur: { nom: "FOURNISSEUR D'ESSAI", identifiantFiscal: mfB },
-      destinataire: { nom: "PME A D'ESSAI", identifiantFiscal: mfA },
-      numero: "F-ESSAI-1",
-      date: jour,
-      // Les montants de la pièce ne comptent ici que par leur devise : celle du dossier.
-      montants: normaliserMontants(
-        {
-          bases: [{ ht: "1 234,560", taux: "0.19" }],
-          tva: "234,566",
-          autres: [],
-          ttc: "1 469,126",
-        },
-        P,
-      ),
-      confianceParChamp: {},
-      reception: { doublonDe: null, recueLe: jour },
+  it("le seuil du dossier juge la pièce ; changé, il périme le jugement, qui se rejuge", async () => {
+    const s = await monter();
+    // Une pièce d'un mois déjà passé de l'exercice (la date du jour sinon).
+    const mois = Number(s.jour.slice(5, 7));
+    const datePiece =
+      mois > 1 ? `${s.jour.slice(0, 4)}-${String(mois - 1).padStart(2, "0")}-15` : s.jour;
+    const { id } = (await rpc(s.dirigeantA, "capture.enregistrer", {
+      tenantId: s.pmeA,
+      source: "pdf",
+      vis: "entite",
+      idempotencyKey: `${s.m}-piece`,
+      contentType: "application/pdf",
+      pageCount: 1,
+    })) as { id: string };
+    const l = lectureDEssai({ clientMf: s.mfA, numero: `IMMO-${s.m}` });
+    const extract = {
+      ...l.extract,
+      document_date: datePiece,
       articles: [
-        { designation: "Mobilier de bureau", quantite: "1", prixUnitaireHt: prix, totalHt: prix },
+        {
+          designation: "Mobilier de bureau",
+          quantity: "1",
+          unit_price_ht: "150.000",
+          unit_price_ttc: null,
+          total_ht: "150.000",
+          tax_code: null,
+        },
       ],
     };
-    const ctx = (immobilisation: ContexteControle["immobilisation"]): ContexteControle => ({
-      tenant: { nom: "PME A D'ESSAI", identifiantFiscal: mfA },
-      typesDocument: [{ code: "facture_achat", porteEcriture: true }],
-      titres: TITRES_D_ESSAI,
-      biensImmobilisables: BIENS_IMMOBILISABLES_D_ESSAI,
-      immobilisation,
-      mentionsObligatoires: [],
-      seuilConfianceReserve: 0.7,
-      seuilConfianceBloquant: 0.4,
-      ecartDateJours: 60,
-      doublonProbable: null,
-      deviseDuDossier: DEVISE_D_ESSAI,
-      change: null,
-    });
-    const codes = (r: ContexteControle["immobilisation"]) =>
-      controlerPiece(piece, ctx(r))
-        .filter((c) => c.code.startsWith("immobilisation_"))
-        .map((c) => c.code);
-    assert.deepEqual(codes(avant), ["immobilisation_a_trancher"]);
-
-    // Le cabinet relève le seuil pour CE dossier, et le passe en charge.
-    await arreter(expert, "dossier", pmeA, [
-      { code: "immobilisation.seuil", valeur: D(avant.seuil).plus(1).toFixed() },
-      { code: "immobilisation.traitement", valeur: "charge" },
-    ]);
-    const apres = await reglageDe(pmeA);
-    assert.deepEqual(codes(apres), []);
-    // À l'actif : le même bien devient de faible valeur, amorti à 100 %.
-    await arreter(expert, "dossier", pmeA, [
-      { code: "immobilisation.traitement", valeur: "actif_amorti" },
-    ]);
-    assert.deepEqual(codes(await reglageDe(pmeA)), ["immobilisation_faible_valeur"]);
-    // L'autre dossier garde le seuil du pack.
-    assert.deepEqual(
-      codes(
-        reglageDImmobilisation(
-          await sousIdentite(dirigeantB.id, (db) =>
-            lireLesReglagesComptables(db, pmeB, packId, jour),
-          ),
-        ),
+    await sousIdentiteDuServeur(s.dirigeantA.id, (db) =>
+      executerRpc(
+        db,
+        {
+          depot: "capture",
+          methode: "persisterLecture",
+          args: [
+            {
+              pieceId: id,
+              packId,
+              tokens: l.tokens,
+              contract: "extract.v1",
+              extract,
+              citations: l.citations,
+              flags: [],
+              articles: extract.articles,
+              documentKind: "facture_achat",
+              documentDate: datePiece,
+              mode: "pdf-text",
+              confianceParChamp: { "totals.ttc": 0.95 },
+            },
+          ],
+        },
+        "serveur",
       ),
-      ["immobilisation_a_trancher"],
     );
+    await rpc(s.dirigeantA, "capture.analyser", id);
+    await rpc(s.dirigeantA, "collab.setPieceVis", id, "partage");
+    const derniere = async () =>
+      (
+        await admin.query<{
+          controles: Array<{ code: string; statut: string; preuves: Record<string, unknown> }>;
+          a_jour: boolean;
+        }>(
+          `select a.controles, app.reglages_du_jugement_a_jour(a.tenant_id, a.controles) as a_jour
+             from capture.analyses a where a.piece_id = $1 order by a.created_at desc limit 1`,
+          [id],
+        )
+      ).rows[0]!;
+    const immo = (j: Awaited<ReturnType<typeof derniere>>) =>
+      j.controles
+        .filter((c) => c.code.startsWith("immobilisation_"))
+        .map((c) => [c.code, c.statut, c.preuves["traitement"]]);
+
+    // Le pack : 150 HT sous le seuil, à l'actif — une réserve, à jour.
+    const avant = await derniere();
+    assert.deepEqual(immo(avant), [["immobilisation_faible_valeur", "reserve", "actif_amorti"]]);
+    assert.equal(avant.a_jour, true);
+
+    // Le cabinet passe le dossier en charge, depuis le début de l'exercice.
+    const debut = (await s.lire(s.expert, s.pmeA)).debutExercice;
+    assert.ok(debut <= datePiece);
+    await s.arreter(
+      s.expert,
+      "dossier",
+      s.pmeA,
+      [{ code: "immobilisation.traitement", valeur: "charge" }],
+      { depuis: debut },
+    );
+    // Le jugement est périmé : il ne se garde pas en silence.
+    assert.equal((await derniere()).a_jour, false);
+    // L'ouverture le rejuge, aux réglages du jour.
+    await rpc(s.expert, "office.propositionDePiece", id);
+    const apres = await derniere();
+    assert.deepEqual(immo(apres), [["immobilisation_faible_valeur", "conforme", "charge"]]);
+    assert.equal(apres.a_jour, true);
   });
 
-  it("le FODEC d'achat va au coût par défaut, en 6652 si le cabinet le choisit", async () => {
-    const auCout = (u: Utilisateur, org: string) =>
-      sousIdentite(u.id, async (db) =>
-        droitsAuCout(db, await lireLesReglagesComptables(db, org, packId, jour)),
+  it("le FODEC d'achat va au coût par défaut, au compte non récupérable si le cabinet le choisit", async () => {
+    const s = await monter();
+    const auCout = () =>
+      sousIdentite(s.dirigeantB.id, async (db) =>
+        droitsAuCout(db, await lireLesReglagesComptables(db, s.pmeB, packId, s.jour)),
       );
     const { rows } = await admin.query<{ droit: string }>(
       `select droit_hors_tva as droit from ref.reglages_comptables_sujets where code = 'fodec'`,
     );
-    assert.deepEqual(await auCout(dirigeantB, pmeB), [rows[0]!.droit]);
-    await arreter(expert, "dossier", pmeB, [{ code: "fodec.traitement", valeur: "achat_6652" }]);
-    assert.deepEqual(await auCout(dirigeantB, pmeB), []);
+    assert.deepEqual(await auCout(), [rows[0]!.droit]);
+    await s.arreter(s.expert, "dossier", s.pmeB, [
+      { code: "fodec.traitement", valeur: "charge_non_recuperable" },
+    ]);
+    assert.deepEqual(await auCout(), []);
   });
 });

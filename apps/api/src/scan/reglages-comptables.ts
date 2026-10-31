@@ -30,14 +30,17 @@ const FODEC = "fodec.traitement";
  * échouer l'épreuve : l'écran ne peut pas dire « appliqué » à tort.
  *
  * Trois d'entre elles décrivent ce que le Socle fait déjà sans rien lire : le
- * plan des immobilisations (`ref.immo_categories`, 2282, TVA en 43662), le
- * timbre standard d'un dinar (`ref.fiscal_charges`) et l'avoir que le cabinet
- * saisit (`ref.titres_de_piece`).
+ * plan des immobilisations (`ref.immo_categories`), le timbre standard d'un
+ * dinar (`ref.fiscal_charges`) et l'avoir que le cabinet saisit
+ * (`ref.titres_de_piece`). « actif_amorti » n'y est PAS : la réserve le dit,
+ * mais l'écriture proposée reste au compte du paramétrage. « par_facture »
+ * y est : le Socle lit le FODEC imprimé, il ne le calcule ni par article ni
+ * par facture, et l'incorpore au coût de la même façon.
  */
 export const OPTIONS_APPLIQUEES: Readonly<Record<string, readonly string[]>> = {
-  [TRAITEMENT]: ["actif_amorti", "charge"],
-  "comptes_immo.plan": ["nc01_2282_43662"],
-  [FODEC]: ["par_article_4374_cout", "achat_6652"],
+  [TRAITEMENT]: ["charge"],
+  "comptes_immo.plan": ["selon_categorie"],
+  [FODEC]: ["par_article_au_cout", "par_facture", "charge_non_recuperable"],
   "timbre.bareme": ["fixe_1d"],
   "avoirs.traitement": ["refus_saisie_cabinet"],
 };
@@ -72,13 +75,7 @@ export async function lireLesReglagesDuPack(
   jour: string,
 ): Promise<Record<string, string>> {
   const { rows } = await db.query<{ code: string; valeur: string }>(
-    `select distinct on (s.code) s.code,
-            coalesce(s.value_text, trim_scale(s.value_num)::text) as valeur
-       from ref.socle_params s
-       join ref.reglages_comptables r on r.code = s.code and r.porte = 'reglages_comptables'
-      where s.pack_version_id = $1 and s.valid_from <= $2::date
-        and (s.valid_to is null or s.valid_to >= $2::date)
-      order by s.code, s.valid_from desc`,
+    `select code, valeur from app.reglages_du_pack($1, $2::date)`,
     [pack, jour],
   );
   return Object.fromEntries(rows.map((r) => [r.code, r.valeur]));
@@ -86,10 +83,20 @@ export async function lireLesReglagesDuPack(
 
 /** Ce que le jugement d'un achat sait de la frontière charge / immobilisation. */
 export interface ReglageDImmobilisation {
-  /** Le seuil, HORS TAXE, dans la devise du dossier (écriture décimale). */
+  /** Le seuil, dans la devise du dossier (écriture décimale). */
   seuil: string;
   /** Sous le seuil : à l'actif et amorti à 100 %, ou en charge. */
   traitement: "actif_amorti" | "charge";
+  /**
+   * La base de la comparaison : HT ; TTC pour un dossier non assujetti, dont
+   * la TVA est un coût (INCERTAIN, à confirmer par un expert-comptable).
+   */
+  base: "ht" | "ttc";
+  /**
+   * Ce que le jugement a lu, pour qu'il se périme quand la réponse change
+   * (`app.reglages_du_jugement_a_jour`) : le pack, le jour, les valeurs.
+   */
+  lu: { pack: string; jour: string; valeurs: Record<string, string> };
 }
 
 /**
@@ -98,26 +105,38 @@ export interface ReglageDImmobilisation {
  * reconnu, sans seuil deviné (R4). Un réglage à moitié présent, ou une valeur
  * que le Socle ne connaît pas, est une erreur nommée.
  */
-export function reglageDImmobilisation(r: ReglagesResolus): ReglageDImmobilisation | null {
+export function reglageDImmobilisation(
+  r: ReglagesResolus,
+  lecture: { pack: string; jour: string; nonAssujetti: boolean },
+): ReglageDImmobilisation | null {
   const seuil = r.get(SEUIL);
   const traitement = r.get(TRAITEMENT);
   if (seuil === undefined && traitement === undefined) return null;
   if (!seuil || (traitement !== "actif_amorti" && traitement !== "charge"))
     throw new Error("reglage.immobilisation.illisible");
-  return { seuil, traitement };
+  return {
+    seuil,
+    traitement,
+    base: lecture.nonAssujetti ? "ttc" : "ht",
+    lu: {
+      pack: lecture.pack,
+      jour: lecture.jour,
+      valeurs: { [SEUIL]: seuil, [TRAITEMENT]: traitement },
+    },
+  };
 }
 
 /**
  * Les droits hors TVA que l'achat incorpore au COÛT (le FODEC, sauf si le
- * cabinet a choisi 6652) : leur montant rejoint la charge, au lieu du compte
+ * cabinet a choisi les taxes non récupérables) : leur montant rejoint la charge, au lieu du compte
  * du pack. Le code du droit est celui que le sujet gouverne
  * (`ref.reglages_comptables_sujets.droit_hors_tva`). Un pack sans ce réglage
  * n'incorpore rien.
  */
 export async function droitsAuCout(db: Requete, r: ReglagesResolus): Promise<string[]> {
   const valeur = r.get(FODEC);
-  if (valeur === undefined || valeur === "achat_6652") return [];
-  if (valeur !== "par_article_4374_cout" && valeur !== "par_facture")
+  if (valeur === undefined || valeur === "charge_non_recuperable") return [];
+  if (valeur !== "par_article_au_cout" && valeur !== "par_facture")
     throw new Error("reglage.fodec.illisible");
   const { rows } = await db.query<{ droit: string }>(
     `select s.droit_hors_tva as droit
