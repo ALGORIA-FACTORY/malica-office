@@ -78,7 +78,7 @@ export async function lireLesReglagesDuPack(
        join ref.reglages_comptables r on r.code = s.code and r.porte = 'reglages_comptables'
       where s.pack_version_id = $1 and s.valid_from <= $2::date
         and (s.valid_to is null or s.valid_to >= $2::date)
-      order by s.code collate "C", s.valid_from desc`,
+      order by s.code, s.valid_from desc`,
     [pack, jour],
   );
   return Object.fromEntries(rows.map((r) => [r.code, r.valeur]));

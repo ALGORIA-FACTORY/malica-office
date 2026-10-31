@@ -520,11 +520,12 @@ export const parametrage = {
     locale = "fr",
   ): Promise<ReglagesComptables> {
     // Le libellé d'une clé dans la langue demandée (le paramètre `langue` de
-    // la requête), le français à défaut.
-    const libelle = (ns: string, cle: string, langue = "$1") =>
-      `coalesce((select l.value from ref_labels_v l where l.ns = '${ns}' and l.key = ${cle}
+    // la requête), le français à défaut. L'espace de noms s'écrit en entier
+    // à l'appel (`ns = '…'`) : la garde des libellés orphelins le cherche.
+    const libelle = (espace: string, cle: string, langue = "$1") =>
+      `coalesce((select l.value from ref_labels_v l where l.${espace} and l.key = ${cle}
                    and l.locale = ${langue}),
-                (select l.value from ref_labels_v l where l.ns = '${ns}' and l.key = ${cle}
+                (select l.value from ref_labels_v l where l.${espace} and l.key = ${cle}
                    and l.locale = 'fr'))`;
     const [resolus, sujets, reglages, options, sources, droits, baremes, categories, noms, change] =
       await Promise.all([
@@ -549,11 +550,11 @@ export const parametrage = {
           droit_hors_tva: string | null;
           categories_d_immobilisation: boolean;
         }>(
-          `select s.code, ${libelle("reglage_sujet", "s.code")} as titre,
-                  ${libelle("reglage_sujet_texte", "s.code")} as texte,
-                  ${libelle("reglage_sujet_pratique", "s.code")} as pratique,
-                  ${libelle("reglage_sujet_risque", "s.code")} as risque,
-                  ${libelle("reglage_sujet_incertain", "s.code")} as incertain,
+          `select s.code, ${libelle("ns = 'reglage_sujet'", "s.code")} as titre,
+                  ${libelle("ns = 'reglage_sujet_texte'", "s.code")} as texte,
+                  ${libelle("ns = 'reglage_sujet_pratique'", "s.code")} as pratique,
+                  ${libelle("ns = 'reglage_sujet_risque'", "s.code")} as risque,
+                  ${libelle("ns = 'reglage_sujet_incertain'", "s.code")} as incertain,
                   s.droit_hors_tva, s.categories_d_immobilisation
              from ref.reglages_comptables_sujets s
             order by s.ordre`,
@@ -571,7 +572,7 @@ export const parametrage = {
         ),
         db.query<{ reglage: string; code: string; applique: boolean; label: string | null }>(
           `select o.reglage, o.code, o.applique,
-                  ${libelle("reglage_comptable_option", "o.reglage || ':' || o.code")} as label
+                  ${libelle("ns = 'reglage_comptable_option'", "o.reglage || ':' || o.code")} as label
              from ref.reglages_comptables_options o
             order by o.reglage, o.ordre`,
           [locale],
@@ -613,7 +614,7 @@ export const parametrage = {
           unite_incertaine: boolean;
         }>(
           `select droit, categorie, montant_de::text as de, montant_a::text as a,
-                  ${libelle("bareme_categorie", "categorie", "$3")} as libelle,
+                  ${libelle("ns = 'bareme_categorie'", "categorie", "$3")} as libelle,
                   montant_du_droit::text as montant, unite_incertaine
              from ref.baremes_des_droits
             where pack_version_id = $1 and valid_from <= $2::date
