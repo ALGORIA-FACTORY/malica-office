@@ -1,0 +1,139 @@
+{
+  "id": "032",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "scenario": "achat_13",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-21",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Comptoir Belkadra SA",
+      "nomAr": "متجر بلقادرة",
+      "matricule": "4935002Q/A/M/000",
+      "adresse": "35, avenue des Jasmins, Sousse",
+      "telephone": "00 263 352"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Transport de marchandises",
+        "designationAr": "نقل البضائع",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Comptoir Belkadra SA",
+      "document_date": "17/10/2026",
+      "references.numero": "F-2026-0237",
+      "references.matricule_fiscal": "4935002Q/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "2.776,045",
+      "totals.vat": "360,886",
+      "totals.ttc": "3.137,931",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Hébergement en hôtel, nuitée",
+      "articles[0].quantity": "8",
+      "articles[0].unit_price_ht": "215,766",
+      "articles[0].total_ht": "1.726,128",
+      "articles[1].designation": "Transport de marchandises",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "1.049,917",
+      "articles[1].total_ht": "1.049,917"
+    }
+  },
+  "graineDuRendu": 46961379,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Comptoir Belkadra SA",
+      "document_date": "2026-10-17",
+      "currency": "TND",
+      "references.numero": "F-2026-0237",
+      "references.matricule_fiscal": "4935002Q/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "2776.045",
+      "totals.vat": "360.886",
+      "totals.ttc": "3137.931",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "2776.045",
+      "lines[0].vat_amount": "360.886",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "8.000",
+      "articles[0].unit_price_ht": "215.766",
+      "articles[0].total_ht": "1726.128",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "1049.917",
+      "articles[1].total_ht": "1049.917"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "2776.045",
+          "0"
+        ],
+        [
+          "4366",
+          "360.886",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "3137.931"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "id": "029",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "photo",
+  "scenario": "achat_remise",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-29",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Zarvane Équipements SARL",
+      "nomAr": "شركة زرفان للتجهيزات",
+      "matricule": "5037001K/A/M/000",
+      "adresse": "103, rue des Orangers, Radès",
+      "telephone": "00 701 570"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": {
+      "tauxImprime": "5 %",
+      "brut": "8 727,930",
+      "montant": "436,397"
+    },
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : neuf mille huit cent soixante-sept dinars et neuf cent vingt-quatre millimes.",
+    "imprime": {
+      "issuer": "Zarvane Équipements SARL",
+      "document_date": "24/09/2026",
+      "references.numero": "F-2026-1917",
+      "references.matricule_fiscal": "5037001K/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "8 291,533",
+      "totals.vat": "1 575,391",
+      "totals.ttc": "9 867,924",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Prestation de maintenance",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "799,744",
+      "articles[0].total_ht": "799,744",
+      "articles[1].designation": "Tôle galvanisée 2 mm",
+      "articles[1].quantity": "8",
+      "articles[1].unit_price_ht": "174,413",
+      "articles[1].total_ht": "1 395,304",
+      "articles[2].designation": "Cartouche d'encre noire",
+      "articles[2].quantity": "23",
+      "articles[2].unit_price_ht": "163,168",
+      "articles[2].total_ht": "3 752,864",
+      "articles[3].designation": "Location de chariot élévateur",
+      "articles[3].quantity": "2",
+      "articles[3].unit_price_ht": "1 390,009",
+      "articles[3].total_ht": "2 780,018"
+    }
+  },
+  "graineDuRendu": 1832441560,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Zarvane Équipements SARL",
+      "document_date": "2026-09-24",
+      "currency": "TND",
+      "references.numero": "F-2026-1917",
+      "references.matricule_fiscal": "5037001K/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "8291.533",
+      "totals.vat": "1575.391",
+      "totals.ttc": "9867.924",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "8291.533",
+      "lines[0].vat_amount": "1575.391",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "799.744",
+      "articles[0].total_ht": "799.744",
+      "articles[1].quantity": "8.000",
+      "articles[1].unit_price_ht": "174.413",
+      "articles[1].total_ht": "1395.304",
+      "articles[2].quantity": "23.000",
+      "articles[2].unit_price_ht": "163.168",
+      "articles[2].total_ht": "3752.864",
+      "articles[3].quantity": "2.000",
+      "articles[3].unit_price_ht": "1390.009",
+      "articles[3].total_ht": "2780.018"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "8291.533",
+          "0"
+        ],
+        [
+          "4366",
+          "1575.391",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "9867.924"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "id": "008",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "pdf",
+  "scenario": "achat_eur",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-12",
+    "devise": "EUR",
+    "exposant": 2,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Oulmira Distribution SA",
+      "nomAr": "ولميرة للتوزيع",
+      "matricule": "6455007V/A/M/000",
+      "adresse": "9, avenue des Jasmins, Gabès",
+      "telephone": "00 119 627"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Oulmira Distribution SA",
+      "document_date": "11/10/2026",
+      "references.numero": "F-2026-7414",
+      "references.matricule_fiscal": "6455007V/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "7338,93",
+      "totals.vat": "1394,40",
+      "totals.ttc": "8733,33",
+      "articles[0].designation": "Location de chariot élévateur",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "2025,80",
+      "articles[0].total_ht": "4051,60",
+      "articles[1].designation": "Cartouche d'encre noire",
+      "articles[1].quantity": "3",
+      "articles[1].unit_price_ht": "100,84",
+      "articles[1].total_ht": "302,52",
+      "articles[2].designation": "Prestation de maintenance",
+      "articles[2].quantity": "2",
+      "articles[2].unit_price_ht": "1383,01",
+      "articles[2].total_ht": "2766,02",
+      "articles[3].designation": "Papier A4 80 g, ramette",
+      "articles[3].quantity": "17",
+      "articles[3].unit_price_ht": "12,87",
+      "articles[3].total_ht": "218,79"
+    }
+  },
+  "graineDuRendu": 1668290032,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Oulmira Distribution SA",
+      "document_date": "2026-10-11",
+      "currency": "EUR",
+      "references.numero": "F-2026-7414",
+      "references.matricule_fiscal": "6455007V/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "7338.93",
+      "totals.vat": "1394.40",
+      "totals.ttc": "8733.33",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "7338.93",
+      "lines[0].vat_amount": "1394.40",
+      "articles[0].quantity": "2.00",
+      "articles[0].unit_price_ht": "2025.80",
+      "articles[0].total_ht": "4051.60",
+      "articles[1].quantity": "3.00",
+      "articles[1].unit_price_ht": "100.84",
+      "articles[1].total_ht": "302.52",
+      "articles[2].quantity": "2.00",
+      "articles[2].unit_price_ht": "1383.01",
+      "articles[2].total_ht": "2766.02",
+      "articles[3].quantity": "17.00",
+      "articles[3].unit_price_ht": "12.87",
+      "articles[3].total_ht": "218.79"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "25044.099",
+          "0"
+        ],
+        [
+          "4366",
+          "4758.390",
+          "0",
+          "TVA19"
+        ],
+        [
+          "401",
+          "0",
+          "29802.489"
+        ]
+      ],
+      "origines": [
+        [
+          "601",
+          "7338.93"
+        ],
+        [
+          "4366",
+          "1394.40"
+        ],
+        [
+          "401",
+          "8733.33"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "cours": {
+      "devise": "EUR",
+      "taux": "3.4125",
+      "unite": 1,
+      "date": "2026-10-11"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "converti au cours FICTIF 3.4125 TND pour 1 EUR, publié le 2026-10-11 (app.cours_applicable : date_facture, recul 5 jours)"
+    ]
+  }
+}

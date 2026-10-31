@@ -1,0 +1,402 @@
+{
+ "100": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "001": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "002": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "003": {
+  "verdict": "refus_juste",
+  "champsFaux": 0
+ },
+ "004": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "005": {
+  "verdict": "refus_injuste",
+  "champsFaux": 0
+ },
+ "006": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "007": {
+  "verdict": "fausse",
+  "champsFaux": 0
+ },
+ "008": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "009": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "010": {
+  "verdict": "refus_juste",
+  "champsFaux": 0
+ },
+ "011": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "012": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "013": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "014": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "015": {
+  "verdict": "refus_juste",
+  "champsFaux": 0
+ },
+ "016": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "017": {
+  "verdict": "refus_injuste",
+  "champsFaux": 0
+ },
+ "018": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "019": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "020": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "021": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "022": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "023": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "024": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "025": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "026": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "027": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "028": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "029": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "030": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "031": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "032": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "033": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "034": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "035": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "036": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "037": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "038": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "039": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "040": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "041": {
+  "verdict": "exacte",
+  "champsFaux": 1
+ },
+ "042": {
+  "verdict": "refus_injuste",
+  "champsFaux": 2
+ },
+ "043": {
+  "verdict": "refus_juste",
+  "champsFaux": 1
+ },
+ "044": {
+  "verdict": "refus_injuste",
+  "champsFaux": 13
+ },
+ "045": {
+  "verdict": "exacte",
+  "champsFaux": 1
+ },
+ "046": {
+  "verdict": "refus_injuste",
+  "champsFaux": 2
+ },
+ "047": {
+  "verdict": "fausse",
+  "champsFaux": 1
+ },
+ "048": {
+  "verdict": "refus_injuste",
+  "champsFaux": 16
+ },
+ "049": {
+  "verdict": "exacte",
+  "champsFaux": 1
+ },
+ "050": {
+  "verdict": "exacte",
+  "champsFaux": 2
+ },
+ "051": {
+  "verdict": "exacte",
+  "champsFaux": 1
+ },
+ "052": {
+  "verdict": "refus_injuste",
+  "champsFaux": 16
+ },
+ "053": {
+  "verdict": "exacte",
+  "champsFaux": 1
+ },
+ "054": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "055": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "056": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "057": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "058": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "059": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "060": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "061": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "062": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "063": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "064": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "065": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "066": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "067": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "068": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "069": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "070": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "071": {
+  "verdict": "fausse",
+  "champsFaux": 0
+ },
+ "072": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "073": {
+  "verdict": "refus_juste",
+  "champsFaux": 0
+ },
+ "074": {
+  "verdict": "refus_juste",
+  "champsFaux": 0
+ },
+ "075": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "076": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "077": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "078": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "079": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "080": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "081": {
+  "verdict": "refus_injuste",
+  "champsFaux": 0
+ },
+ "082": {
+  "verdict": "exacte",
+  "champsFaux": 0
+ },
+ "083": {
+  "verdict": "fausse",
+  "champsFaux": 0
+ },
+ "084": {
+  "verdict": "refus_juste",
+  "champsFaux": 0
+ },
+ "085": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "086": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "087": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "088": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "089": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "090": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "091": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "092": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "093": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "094": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "095": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "096": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "097": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "098": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ },
+ "099": {
+  "verdict": "non_mesuree",
+  "champsFaux": 0
+ }
+}

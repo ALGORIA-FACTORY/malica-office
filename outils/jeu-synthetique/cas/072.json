@@ -1,0 +1,152 @@
+{
+  "id": "072",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "pdf",
+  "scenario": "achat_eur",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-10-11",
+    "devise": "EUR",
+    "exposant": 2,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Talvine Matériaux SA",
+      "nomAr": "تلفين لمواد البناء",
+      "matricule": "7039011T/A/M/000",
+      "adresse": "76, zone industrielle, lot, Mahdia",
+      "telephone": "00 382 139"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Talvine Matériaux SA",
+      "document_date": "07/10/2026",
+      "references.numero": "F-2026-7516",
+      "references.matricule_fiscal": "7039011T/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "4.583,94",
+      "totals.vat": "870,95",
+      "totals.ttc": "5.454,89",
+      "articles[0].designation": "Tôle galvanisée 2 mm",
+      "articles[0].quantity": "23",
+      "articles[0].unit_price_ht": "196,50",
+      "articles[0].total_ht": "4.519,50",
+      "articles[1].designation": "Papier A4 80 g, ramette",
+      "articles[1].quantity": "6",
+      "articles[1].unit_price_ht": "10,74",
+      "articles[1].total_ht": "64,44"
+    }
+  },
+  "graineDuRendu": 297027426,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Talvine Matériaux SA",
+      "document_date": "2026-10-07",
+      "currency": "EUR",
+      "references.numero": "F-2026-7516",
+      "references.matricule_fiscal": "7039011T/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "4583.94",
+      "totals.vat": "870.95",
+      "totals.ttc": "5454.89",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "4583.94",
+      "lines[0].vat_amount": "870.95",
+      "articles[0].quantity": "23.00",
+      "articles[0].unit_price_ht": "196.50",
+      "articles[0].total_ht": "4519.50",
+      "articles[1].quantity": "6.00",
+      "articles[1].unit_price_ht": "10.74",
+      "articles[1].total_ht": "64.44"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "15642.695",
+          "0"
+        ],
+        [
+          "4366",
+          "2972.117",
+          "0",
+          "TVA19"
+        ],
+        [
+          "401",
+          "0",
+          "18614.812"
+        ]
+      ],
+      "origines": [
+        [
+          "601",
+          "4583.94"
+        ],
+        [
+          "4366",
+          "870.95"
+        ],
+        [
+          "401",
+          "5454.89"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "cours": {
+      "devise": "EUR",
+      "taux": "3.4125",
+      "unite": 1,
+      "date": "2026-10-07"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "converti au cours FICTIF 3.4125 TND pour 1 EUR, publié le 2026-10-07 (app.cours_applicable : date_facture, recul 5 jours)"
+    ]
+  }
+}

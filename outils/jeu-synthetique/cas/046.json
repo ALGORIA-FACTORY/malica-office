@@ -1,0 +1,143 @@
+{
+  "id": "046",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "pdf",
+  "scenario": "vente_usd_export",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "فاتورة",
+    "recueLe": "2026-10-08",
+    "devise": "USD",
+    "exposant": 2,
+    "format": {
+      "milliers": ",",
+      "decimal": ".",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "شركة نرفان التجريبية",
+      "nomAr": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "71، شارع الياسمين، تونس",
+      "telephone": "00 657 510"
+    },
+    "client": {
+      "nom": "منزرة للاستشارات",
+      "matricule": "8764010I/A/M/000",
+      "adresse": "أريانة"
+    },
+    "articles": [
+      {
+        "designation": "تمور دقلة نور، صندوق",
+        "designationAr": "تمور دقلة نور، صندوق",
+        "codeTaxe": "EXPORT",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "زيت زيتون سائب، طن",
+        "designationAr": "زيت زيتون سائب، طن",
+        "codeTaxe": "EXPORT",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "EXPORT",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "شركة نرفان التجريبية",
+      "document_date": "٠٣/١٠/٢٠٢٦",
+      "references.numero": "٢٠٢٦/٦٠٤٢",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "8764010I/A/M/000",
+      "totals.base_ht": "6,252.34",
+      "totals.vat": "0.00",
+      "totals.ttc": "6,252.34",
+      "articles[0].designation": "تمور دقلة نور، صندوق",
+      "articles[0].quantity": "23",
+      "articles[0].unit_price_ht": "78.79",
+      "articles[0].total_ht": "1,812.17",
+      "articles[1].designation": "زيت زيتون سائب، طن",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "4,440.17",
+      "articles[1].total_ht": "4,440.17"
+    }
+  },
+  "graineDuRendu": 959621545,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "شركة نرفان التجريبية",
+      "document_date": "2026-10-03",
+      "currency": "USD",
+      "references.numero": "٢٠٢٦/٦٠٤٢",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "8764010I/A/M/000",
+      "totals.base_ht": "6252.34",
+      "totals.vat": "0.00",
+      "totals.ttc": "6252.34",
+      "lines[0].tax_code": "EXPORT",
+      "lines[0].base_ht": "6252.34",
+      "lines[0].vat_amount": "0.00",
+      "articles[0].quantity": "23.00",
+      "articles[0].unit_price_ht": "78.79",
+      "articles[0].total_ht": "1812.17",
+      "articles[1].quantity": "1.00",
+      "articles[1].unit_price_ht": "4440.17",
+      "articles[1].total_ht": "4440.17"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "19427.271"
+        ],
+        [
+          "411",
+          "19427.271",
+          "0"
+        ]
+      ],
+      "origines": [
+        [
+          "701",
+          "6252.34"
+        ],
+        [
+          "411",
+          "6252.34"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "cours": {
+      "devise": "USD",
+      "taux": "3.1072",
+      "unite": 1,
+      "date": "2026-10-03"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "converti au cours FICTIF 3.1072 TND pour 1 USD, publié le 2026-10-03 (app.cours_applicable : date_facture, recul 5 jours)",
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

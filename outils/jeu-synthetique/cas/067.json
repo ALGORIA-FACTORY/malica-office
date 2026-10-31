@@ -1,0 +1,152 @@
+{
+  "id": "067",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "scenario": "vente_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "فاتورة",
+    "recueLe": "2026-09-14",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "شركة نرفان التجريبية",
+      "nomAr": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "71، شارع الياسمين، تونس",
+      "telephone": "00 657 510"
+    },
+    "client": {
+      "nom": "تلفين لمواد البناء",
+      "matricule": "7039011T/A/M/000",
+      "adresse": "المهدية"
+    },
+    "articles": [
+      {
+        "designation": "دواء بيطري",
+        "designationAr": "دواء بيطري",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "designation": "تكوين مهني معتمد",
+        "designationAr": "تكوين مهني معتمد",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "شركة نرفان التجريبية",
+      "document_date": "11/09/2026",
+      "references.numero": "2026/3348",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "7039011T/A/M/000",
+      "totals.base_ht": "2 839,544",
+      "totals.vat": "26,782",
+      "totals.ttc": "2 867,326",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "2 456,944",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "382,600",
+      "lines[1].vat_amount": "26,782",
+      "articles[0].designation": "دواء بيطري",
+      "articles[0].quantity": "10",
+      "articles[0].unit_price_ht": "38,260",
+      "articles[0].total_ht": "382,600",
+      "articles[1].designation": "تكوين مهني معتمد",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "1 228,472",
+      "articles[1].total_ht": "2 456,944"
+    }
+  },
+  "graineDuRendu": 2020995899,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "شركة نرفان التجريبية",
+      "document_date": "2026-09-11",
+      "currency": "TND",
+      "references.numero": "2026/3348",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "7039011T/A/M/000",
+      "totals.base_ht": "2839.544",
+      "totals.vat": "26.782",
+      "totals.ttc": "2867.326",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "2456.944",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA07",
+      "lines[1].base_ht": "382.600",
+      "lines[1].vat_amount": "26.782",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "10.000",
+      "articles[0].unit_price_ht": "38.260",
+      "articles[0].total_ht": "382.600",
+      "articles[1].quantity": "2.000",
+      "articles[1].unit_price_ht": "1228.472",
+      "articles[1].total_ht": "2456.944"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "2839.544"
+        ],
+        [
+          "4367",
+          "0",
+          "26.782",
+          "TVA07"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "2867.326",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

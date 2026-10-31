@@ -1,0 +1,141 @@
+{
+  "id": "035",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "scenario": "vente_un_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-07",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "nomAr": "مخبر قيروان التجريبي",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "76, rue des Orangers, La Marsa",
+      "telephone": "00 544 619"
+    },
+    "client": {
+      "nom": "Tamzirt Services SUARL",
+      "matricule": "6560003I/A/M/000",
+      "adresse": "Sfax"
+    },
+    "articles": [
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : quatre mille trois cent quarante-cinq dinars et quatre cent soixante-seize millimes.",
+    "imprime": {
+      "issuer": "Laboratoire Qirwane d'Essai SA",
+      "document_date": "04/09/2026",
+      "references.numero": "F-2026-0658",
+      "references.matricule_fiscal": "4794014V/A/M/000",
+      "references.matricule_fiscal_client": "6560003I/A/M/000",
+      "totals.base_ht": "3 650,820",
+      "totals.vat": "693,656",
+      "totals.ttc": "4 345,476",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Prestation de maintenance",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "1 317,998",
+      "articles[0].total_ht": "2 635,996",
+      "articles[1].designation": "Cartouche d'encre noire",
+      "articles[1].quantity": "8",
+      "articles[1].unit_price_ht": "126,853",
+      "articles[1].total_ht": "1 014,824"
+    }
+  },
+  "graineDuRendu": 1256075969,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "Laboratoire Qirwane d'Essai SA",
+      "document_date": "2026-09-04",
+      "currency": "TND",
+      "references.numero": "F-2026-0658",
+      "references.matricule_fiscal": "4794014V/A/M/000",
+      "references.matricule_fiscal_client": "6560003I/A/M/000",
+      "totals.base_ht": "3650.820",
+      "totals.vat": "693.656",
+      "totals.ttc": "4345.476",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3650.820",
+      "lines[0].vat_amount": "693.656",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "1317.998",
+      "articles[0].total_ht": "2635.996",
+      "articles[1].quantity": "8.000",
+      "articles[1].unit_price_ht": "126.853",
+      "articles[1].total_ht": "1014.824"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "3650.820"
+        ],
+        [
+          "4367",
+          "0",
+          "693.656",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "4345.476",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

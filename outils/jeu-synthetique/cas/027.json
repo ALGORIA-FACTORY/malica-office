@@ -1,0 +1,176 @@
+{
+  "id": "027",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "photo",
+  "scenario": "achat_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-25",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Comptoir Belkadra SA",
+      "nomAr": "متجر بلقادرة",
+      "matricule": "4935002Q/A/M/000",
+      "adresse": "35, avenue des Jasmins, Sousse",
+      "telephone": "00 263 352"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Pain et viennoiseries",
+        "designationAr": "خبز ومعجنات",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : trois mille deux cent soixante-sept dinars et sept cent vingt-sept millimes.",
+    "imprime": {
+      "issuer": "Comptoir Belkadra SA",
+      "document_date": "20-09-2026",
+      "references.numero": "F-2026-0959",
+      "references.matricule_fiscal": "4935002Q/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "2 758,272",
+      "totals.vat": "508,455",
+      "totals.ttc": "3 267,727",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "82,192",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "2 676,080",
+      "lines[1].vat_amount": "508,455",
+      "articles[0].designation": "Pain et viennoiseries",
+      "articles[0].quantity": "22",
+      "articles[0].unit_price_ht": "3,736",
+      "articles[0].total_ht": "82,192",
+      "articles[1].designation": "Location de chariot élévateur",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "982,923",
+      "articles[1].total_ht": "982,923",
+      "articles[2].designation": "Prestation de maintenance",
+      "articles[2].quantity": "1",
+      "articles[2].unit_price_ht": "1 509,457",
+      "articles[2].total_ht": "1 509,457",
+      "articles[3].designation": "Papier A4 80 g, ramette",
+      "articles[3].quantity": "20",
+      "articles[3].unit_price_ht": "9,185",
+      "articles[3].total_ht": "183,700"
+    }
+  },
+  "graineDuRendu": 827781688,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Comptoir Belkadra SA",
+      "document_date": "2026-09-20",
+      "currency": "TND",
+      "references.numero": "F-2026-0959",
+      "references.matricule_fiscal": "4935002Q/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "2758.272",
+      "totals.vat": "508.455",
+      "totals.ttc": "3267.727",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "82.192",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA19",
+      "lines[1].base_ht": "2676.080",
+      "lines[1].vat_amount": "508.455",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "22.000",
+      "articles[0].unit_price_ht": "3.736",
+      "articles[0].total_ht": "82.192",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "982.923",
+      "articles[1].total_ht": "982.923",
+      "articles[2].quantity": "1.000",
+      "articles[2].unit_price_ht": "1509.457",
+      "articles[2].total_ht": "1509.457",
+      "articles[3].quantity": "20.000",
+      "articles[3].unit_price_ht": "9.185",
+      "articles[3].total_ht": "183.700"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "2758.272",
+          "0"
+        ],
+        [
+          "4366",
+          "508.455",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "3267.727"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

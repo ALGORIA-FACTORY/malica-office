@@ -1,0 +1,165 @@
+{
+  "id": "037",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "scenario": "achat_fodec",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-13",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Ateliers Ouedrane SARL",
+      "nomAr": "ورشات وادران",
+      "matricule": "2924004J/A/M/000",
+      "adresse": "28, avenue des Jasmins, Bizerte",
+      "telephone": "00 868 933"
+    },
+    "client": {
+      "nom": "Société Nervane d'Essai SARL",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "Tunis"
+    },
+    "articles": [
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "FODEC",
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : douze mille cent cinquante et un dinars et neuf cent trente-huit millimes.",
+    "imprime": {
+      "issuer": "Ateliers Ouedrane SARL",
+      "document_date": "11 septembre 2026",
+      "references.numero": "F-2026-0495",
+      "references.matricule_fiscal": "2924004J/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "10 109,774",
+      "totals.vat": "1 940,066",
+      "totals.ttc": "12 151,938",
+      "other_charges[0].amount": "101,098",
+      "other_charges[1].amount": "1,000",
+      "lines[0].base_ht": "10 210,872",
+      "lines[0].vat_amount": "1 940,066",
+      "articles[0].designation": "Location de chariot élévateur",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "2 094,167",
+      "articles[0].total_ht": "2 094,167",
+      "articles[1].designation": "Prestation de maintenance",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "440,721",
+      "articles[1].total_ht": "440,721",
+      "articles[2].designation": "Tôle galvanisée 2 mm",
+      "articles[2].quantity": "18",
+      "articles[2].unit_price_ht": "420,827",
+      "articles[2].total_ht": "7 574,886"
+    }
+  },
+  "graineDuRendu": 682228532,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Ateliers Ouedrane SARL",
+      "document_date": "2026-09-11",
+      "currency": "TND",
+      "references.numero": "F-2026-0495",
+      "references.matricule_fiscal": "2924004J/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "10109.774",
+      "totals.vat": "1940.066",
+      "totals.ttc": "12151.938",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "10210.872",
+      "lines[0].vat_amount": "1940.066",
+      "other_charges[0].code": "FODEC",
+      "other_charges[0].amount": "101.098",
+      "other_charges[1].code": "DROIT_TIMBRE",
+      "other_charges[1].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "2094.167",
+      "articles[0].total_ht": "2094.167",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "440.721",
+      "articles[1].total_ht": "440.721",
+      "articles[2].quantity": "18.000",
+      "articles[2].unit_price_ht": "420.827",
+      "articles[2].total_ht": "7574.886"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "10109.774",
+          "0"
+        ],
+        [
+          "4366",
+          "1940.066",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6652",
+          "101.098",
+          "0"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "12151.938"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — FODEC à l'achat imputé au compte du pack, et compris dans la base de la TVA"
+    ]
+  }
+}

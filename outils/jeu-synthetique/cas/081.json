@@ -1,0 +1,152 @@
+{
+  "id": "081",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "pdf",
+  "scenario": "achat_fodec",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-28",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Kessira Bureautique SARL",
+      "nomAr": "قصيرة للمكتبيات",
+      "matricule": "2695006N/A/M/000",
+      "adresse": "94, rue de l'Olivier, Monastir",
+      "telephone": "00 478 234"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "FODEC",
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : mille trois cent trois dinars et trois cent quarante-huit millimes.",
+    "imprime": {
+      "issuer": "Kessira Bureautique SARL",
+      "document_date": "27/09/2026",
+      "references.numero": "F-2026-1009",
+      "references.matricule_fiscal": "2695006N/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "1 083,574",
+      "totals.vat": "207,938",
+      "totals.ttc": "1 303,348",
+      "other_charges[0].amount": "10,836",
+      "other_charges[1].amount": "1,000",
+      "lines[0].base_ht": "1 094,410",
+      "lines[0].vat_amount": "207,938",
+      "articles[0].designation": "Prestation de maintenance",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "473,124",
+      "articles[0].total_ht": "946,248",
+      "articles[1].designation": "Papier A4 80 g, ramette",
+      "articles[1].quantity": "14",
+      "articles[1].unit_price_ht": "9,809",
+      "articles[1].total_ht": "137,326"
+    }
+  },
+  "graineDuRendu": 2034966935,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Kessira Bureautique SARL",
+      "document_date": "2026-09-27",
+      "currency": "TND",
+      "references.numero": "F-2026-1009",
+      "references.matricule_fiscal": "2695006N/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "1083.574",
+      "totals.vat": "207.938",
+      "totals.ttc": "1303.348",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "1094.410",
+      "lines[0].vat_amount": "207.938",
+      "other_charges[0].code": "FODEC",
+      "other_charges[0].amount": "10.836",
+      "other_charges[1].code": "DROIT_TIMBRE",
+      "other_charges[1].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "473.124",
+      "articles[0].total_ht": "946.248",
+      "articles[1].quantity": "14.000",
+      "articles[1].unit_price_ht": "9.809",
+      "articles[1].total_ht": "137.326"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "1083.574",
+          "0"
+        ],
+        [
+          "4366",
+          "207.938",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6652",
+          "10.836",
+          "0"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "1303.348"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — FODEC à l'achat imputé au compte du pack, et compris dans la base de la TVA"
+    ]
+  }
+}

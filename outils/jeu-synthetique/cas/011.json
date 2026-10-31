@@ -1,0 +1,133 @@
+{
+  "id": "011",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "pdf",
+  "scenario": "achat_exonere",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-16",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Tamzirt Services SUARL",
+      "nomAr": "تمزيرت للخدمات",
+      "matricule": "6560003I/A/M/000",
+      "adresse": "112, rue des Orangers, Sfax",
+      "telephone": "00 496 694"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Formation professionnelle agréée",
+        "designationAr": "تكوين مهني معتمد",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "Pain et viennoiseries",
+        "designationAr": "خبز ومعجنات",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : trois mille neuf dinars et sept cent huit millimes.",
+    "imprime": {
+      "issuer": "Tamzirt Services SUARL",
+      "document_date": "15/09/2026",
+      "references.numero": "F-2026-4665",
+      "references.matricule_fiscal": "6560003I/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "3 008,708",
+      "totals.vat": "0,000",
+      "totals.ttc": "3 009,708",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Formation professionnelle agréée",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "1 501,182",
+      "articles[0].total_ht": "3 002,364",
+      "articles[1].designation": "Pain et viennoiseries",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "3,172",
+      "articles[1].total_ht": "6,344"
+    }
+  },
+  "graineDuRendu": 1751380635,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Tamzirt Services SUARL",
+      "document_date": "2026-09-15",
+      "currency": "TND",
+      "references.numero": "F-2026-4665",
+      "references.matricule_fiscal": "6560003I/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "3008.708",
+      "totals.vat": "0.000",
+      "totals.ttc": "3009.708",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "3008.708",
+      "lines[0].vat_amount": "0.000",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "1501.182",
+      "articles[0].total_ht": "3002.364",
+      "articles[1].quantity": "2.000",
+      "articles[1].unit_price_ht": "3.172",
+      "articles[1].total_ht": "6.344"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "3008.708",
+          "0"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "3009.708"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "id": "044",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "pdf",
+  "scenario": "achat_immobilisation",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-10-24",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "orientaux"
+    },
+    "emetteur": {
+      "nom": "ورشات وادران",
+      "nomAr": "ورشات وادران",
+      "matricule": "2924004J/A/M/000",
+      "adresse": "28، شارع الياسمين، بنزرت",
+      "telephone": "00 868 933"
+    },
+    "client": {
+      "nom": "مخبر قيروان التجريبي",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "المرسى"
+    },
+    "articles": [
+      {
+        "designation": "آلة نسخ متعددة الوظائف A3",
+        "designationAr": "آلة نسخ متعددة الوظائف A3",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "ورشات وادران",
+      "document_date": "٢٠٢٦/١٠/٢٠",
+      "references.numero": "٢٠٢٦/٨٠٥١",
+      "references.matricule_fiscal": "2924004J/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "٤٣٨٧,٢٦٩",
+      "totals.vat": "٨٣٣,٥٨١",
+      "totals.ttc": "٥٢٢١,٨٥٠",
+      "other_charges[0].amount": "١,٠٠٠",
+      "articles[0].designation": "آلة نسخ متعددة الوظائف A3",
+      "articles[0].quantity": "١",
+      "articles[0].unit_price_ht": "٤٣٨٧,٢٦٩",
+      "articles[0].total_ht": "٤٣٨٧,٢٦٩"
+    }
+  },
+  "graineDuRendu": 852705576,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "ورشات وادران",
+      "document_date": "2026-10-20",
+      "currency": "TND",
+      "references.numero": "٢٠٢٦/٨٠٥١",
+      "references.matricule_fiscal": "2924004J/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "4387.269",
+      "totals.vat": "833.581",
+      "totals.ttc": "5221.850",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "4387.269",
+      "lines[0].vat_amount": "833.581",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "4387.269",
+      "articles[0].total_ht": "4387.269"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "2282",
+          "4387.269",
+          "0"
+        ],
+        [
+          "4366",
+          "833.581",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "5221.850"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — Le compte d'une immobilisation (2282 « Équipement de bureau » pour du matériel informatique) et la TVA qui la grève (4366 du paramétrage, ou 43662 « TVA sur immobilisations » du plan NC 01) sont à confirmer par un expert-comptable."
+    ]
+  }
+}

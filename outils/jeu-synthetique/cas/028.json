@@ -1,0 +1,154 @@
+{
+  "id": "028",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "photo",
+  "scenario": "vente_un_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-27",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Société Nervane d'Essai SARL",
+      "nomAr": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "71, avenue des Jasmins, Tunis",
+      "telephone": "00 657 510"
+    },
+    "client": {
+      "nom": "Ateliers Ouedrane SARL",
+      "matricule": "2924004J/A/M/000",
+      "adresse": "Bizerte"
+    },
+    "articles": [
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Société Nervane d'Essai SARL",
+      "document_date": "23 octobre 2026",
+      "references.numero": "F-2026-2952",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "2924004J/A/M/000",
+      "totals.base_ht": "2.358,056",
+      "totals.vat": "448,031",
+      "totals.ttc": "2.807,087",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Cartouche d'encre noire",
+      "articles[0].quantity": "5",
+      "articles[0].unit_price_ht": "179,303",
+      "articles[0].total_ht": "896,515",
+      "articles[1].designation": "Papier A4 80 g, ramette",
+      "articles[1].quantity": "21",
+      "articles[1].unit_price_ht": "8,741",
+      "articles[1].total_ht": "183,561",
+      "articles[2].designation": "Prestation de maintenance",
+      "articles[2].quantity": "2",
+      "articles[2].unit_price_ht": "638,990",
+      "articles[2].total_ht": "1.277,980"
+    }
+  },
+  "graineDuRendu": 1988500656,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "Société Nervane d'Essai SARL",
+      "document_date": "2026-10-23",
+      "currency": "TND",
+      "references.numero": "F-2026-2952",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "2924004J/A/M/000",
+      "totals.base_ht": "2358.056",
+      "totals.vat": "448.031",
+      "totals.ttc": "2807.087",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "2358.056",
+      "lines[0].vat_amount": "448.031",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "5.000",
+      "articles[0].unit_price_ht": "179.303",
+      "articles[0].total_ht": "896.515",
+      "articles[1].quantity": "21.000",
+      "articles[1].unit_price_ht": "8.741",
+      "articles[1].total_ht": "183.561",
+      "articles[2].quantity": "2.000",
+      "articles[2].unit_price_ht": "638.990",
+      "articles[2].total_ht": "1277.980"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "2358.056"
+        ],
+        [
+          "4367",
+          "0",
+          "448.031",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "2807.087",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

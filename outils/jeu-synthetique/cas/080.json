@@ -1,0 +1,143 @@
+{
+  "id": "080",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "pdf",
+  "scenario": "achat_remise",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-10-04",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Menzra Conseil SUARL",
+      "nomAr": "منزرة للاستشارات",
+      "matricule": "8764010I/A/M/000",
+      "adresse": "52, rue de l'Olivier, Ariana",
+      "telephone": "00 378 310"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": {
+      "tauxImprime": "10 %",
+      "brut": "6.447,848",
+      "montant": "644,785"
+    },
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Menzra Conseil SUARL",
+      "document_date": "2 octobre 2026",
+      "references.numero": "F-2026-6362",
+      "references.matricule_fiscal": "8764010I/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "5.803,063",
+      "totals.vat": "1.102,582",
+      "totals.ttc": "6.906,645",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Location de chariot élévateur",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "931,040",
+      "articles[0].total_ht": "931,040",
+      "articles[1].designation": "Tôle galvanisée 2 mm",
+      "articles[1].quantity": "22",
+      "articles[1].unit_price_ht": "250,764",
+      "articles[1].total_ht": "5.516,808"
+    }
+  },
+  "graineDuRendu": 1822375469,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Menzra Conseil SUARL",
+      "document_date": "2026-10-02",
+      "currency": "TND",
+      "references.numero": "F-2026-6362",
+      "references.matricule_fiscal": "8764010I/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "5803.063",
+      "totals.vat": "1102.582",
+      "totals.ttc": "6906.645",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "5803.063",
+      "lines[0].vat_amount": "1102.582",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "931.040",
+      "articles[0].total_ht": "931.040",
+      "articles[1].quantity": "22.000",
+      "articles[1].unit_price_ht": "250.764",
+      "articles[1].total_ht": "5516.808"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "5803.063",
+          "0"
+        ],
+        [
+          "4366",
+          "1102.582",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "6906.645"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

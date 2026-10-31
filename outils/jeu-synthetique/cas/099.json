@@ -1,0 +1,146 @@
+{
+  "id": "099",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "manuscrit",
+  "scenario": "avoir_achat",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE D'AVOIR / إشعار دائن",
+    "recueLe": "2026-10-06",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Tamzirt Services SUARL",
+      "nomAr": "تمزيرت للخدمات",
+      "matricule": "6560003I/A/M/000",
+      "adresse": "112, rue des Orangers, Sfax",
+      "telephone": "00 496 694"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Tamzirt Services SUARL",
+      "document_date": "03-10-2026",
+      "references.numero": "AV-2026-8318",
+      "references.matricule_fiscal": "6560003I/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "4.313,114",
+      "totals.vat": "819,492",
+      "totals.ttc": "5.132,606",
+      "articles[0].designation": "Cartouche d'encre noire",
+      "articles[0].quantity": "16",
+      "articles[0].unit_price_ht": "108,265",
+      "articles[0].total_ht": "1.732,240",
+      "articles[1].designation": "Location de chariot élévateur",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "2.346,281",
+      "articles[1].total_ht": "2.346,281",
+      "articles[2].designation": "Papier A4 80 g, ramette",
+      "articles[2].quantity": "19",
+      "articles[2].unit_price_ht": "12,347",
+      "articles[2].total_ht": "234,593"
+    }
+  },
+  "graineDuRendu": 1692958298,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Tamzirt Services SUARL",
+      "document_date": "2026-10-03",
+      "currency": "TND",
+      "references.numero": "AV-2026-8318",
+      "references.matricule_fiscal": "6560003I/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "4313.114",
+      "totals.vat": "819.492",
+      "totals.ttc": "5132.606",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "4313.114",
+      "lines[0].vat_amount": "819.492",
+      "articles[0].quantity": "16.000",
+      "articles[0].unit_price_ht": "108.265",
+      "articles[0].total_ht": "1732.240",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "2346.281",
+      "articles[1].total_ht": "2346.281",
+      "articles[2].quantity": "19.000",
+      "articles[2].unit_price_ht": "12.347",
+      "articles[2].total_ht": "234.593"
+    },
+    "ecriture": null,
+    "issue": {
+      "type": "refus",
+      "motifs": [
+        "nature_piece"
+      ]
+    },
+    "ecritureDuComptable": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "0",
+          "4313.114"
+        ],
+        [
+          "4366",
+          "0",
+          "819.492",
+          "TVA19"
+        ],
+        [
+          "401",
+          "5132.606",
+          "0"
+        ]
+      ]
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

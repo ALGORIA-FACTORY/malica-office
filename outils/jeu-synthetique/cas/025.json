@@ -1,0 +1,139 @@
+{
+  "id": "025",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "photo",
+  "scenario": "achat_13",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-08",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Borjane Textile SARL",
+      "nomAr": "برجان للنسيج",
+      "matricule": "1381012E/A/M/000",
+      "adresse": "33, rue des Orangers, Ksar Hellal",
+      "telephone": "00 358 635"
+    },
+    "client": {
+      "nom": "Société Nervane d'Essai SARL",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "Tunis"
+    },
+    "articles": [
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Transport de marchandises",
+        "designationAr": "نقل البضائع",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : trois mille huit cent onze dinars et quarante-sept millimes.",
+    "imprime": {
+      "issuer": "Borjane Textile SARL",
+      "document_date": "5 septembre 2026",
+      "references.numero": "F-2026-7290",
+      "references.matricule_fiscal": "1381012E/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "3 371,723",
+      "totals.vat": "438,324",
+      "totals.ttc": "3 811,047",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Hébergement en hôtel, nuitée",
+      "articles[0].quantity": "11",
+      "articles[0].unit_price_ht": "224,161",
+      "articles[0].total_ht": "2 465,771",
+      "articles[1].designation": "Transport de marchandises",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "452,976",
+      "articles[1].total_ht": "905,952"
+    }
+  },
+  "graineDuRendu": 140683814,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Borjane Textile SARL",
+      "document_date": "2026-09-05",
+      "currency": "TND",
+      "references.numero": "F-2026-7290",
+      "references.matricule_fiscal": "1381012E/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "3371.723",
+      "totals.vat": "438.324",
+      "totals.ttc": "3811.047",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "3371.723",
+      "lines[0].vat_amount": "438.324",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "11.000",
+      "articles[0].unit_price_ht": "224.161",
+      "articles[0].total_ht": "2465.771",
+      "articles[1].quantity": "2.000",
+      "articles[1].unit_price_ht": "452.976",
+      "articles[1].total_ht": "905.952"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "3371.723",
+          "0"
+        ],
+        [
+          "4366",
+          "438.324",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "3811.047"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

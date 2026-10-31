@@ -1,0 +1,184 @@
+{
+  "id": "051",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "pdf",
+  "scenario": "achat_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-09-15",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "مطبعة سلفان",
+      "nomAr": "مطبعة سلفان",
+      "matricule": "1719005D/A/M/000",
+      "adresse": "103، المنطقة الصناعية، مقسم، نابل",
+      "telephone": "00 605 230"
+    },
+    "client": {
+      "nom": "مجمع سدران التجريبي",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "بن عروس"
+    },
+    "articles": [
+      {
+        "designation": "نقل البضائع",
+        "designationAr": "نقل البضائع",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "فارينة قمح كيس 50 كغ",
+        "designationAr": "فارينة قمح كيس 50 كغ",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "designation": "خدمات صيانة",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "مطبعة سلفان",
+      "document_date": "14/09/2026",
+      "references.numero": "2026/9798",
+      "references.matricule_fiscal": "1719005D/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "3 641,273",
+      "totals.vat": "503,807",
+      "totals.ttc": "4 146,080",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "735,296",
+      "lines[0].vat_amount": "51,471",
+      "lines[1].base_ht": "1 663,328",
+      "lines[1].vat_amount": "216,233",
+      "lines[2].base_ht": "1 242,649",
+      "lines[2].vat_amount": "236,103",
+      "articles[0].designation": "نقل البضائع",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "831,664",
+      "articles[0].total_ht": "1 663,328",
+      "articles[1].designation": "فارينة قمح كيس 50 كغ",
+      "articles[1].quantity": "16",
+      "articles[1].unit_price_ht": "45,956",
+      "articles[1].total_ht": "735,296",
+      "articles[2].designation": "خدمات صيانة",
+      "articles[2].quantity": "1",
+      "articles[2].unit_price_ht": "1 242,649",
+      "articles[2].total_ht": "1 242,649"
+    }
+  },
+  "graineDuRendu": 1057844248,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "مطبعة سلفان",
+      "document_date": "2026-09-14",
+      "currency": "TND",
+      "references.numero": "2026/9798",
+      "references.matricule_fiscal": "1719005D/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "3641.273",
+      "totals.vat": "503.807",
+      "totals.ttc": "4146.080",
+      "lines[0].tax_code": "TVA07",
+      "lines[0].base_ht": "735.296",
+      "lines[0].vat_amount": "51.471",
+      "lines[1].tax_code": "TVA13",
+      "lines[1].base_ht": "1663.328",
+      "lines[1].vat_amount": "216.233",
+      "lines[2].tax_code": "TVA19",
+      "lines[2].base_ht": "1242.649",
+      "lines[2].vat_amount": "236.103",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "831.664",
+      "articles[0].total_ht": "1663.328",
+      "articles[1].quantity": "16.000",
+      "articles[1].unit_price_ht": "45.956",
+      "articles[1].total_ht": "735.296",
+      "articles[2].quantity": "1.000",
+      "articles[2].unit_price_ht": "1242.649",
+      "articles[2].total_ht": "1242.649"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "3641.273",
+          "0"
+        ],
+        [
+          "4366",
+          "51.471",
+          "0",
+          "TVA07"
+        ],
+        [
+          "4366",
+          "216.233",
+          "0",
+          "TVA13"
+        ],
+        [
+          "4366",
+          "236.103",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "4146.080"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

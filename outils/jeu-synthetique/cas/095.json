@@ -1,0 +1,152 @@
+{
+  "id": "095",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "manuscrit",
+  "scenario": "vente_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-10-14",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "nomAr": "مخبر قيروان التجريبي",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "76, rue des Orangers, La Marsa",
+      "telephone": "00 544 619"
+    },
+    "client": {
+      "nom": "Zarvane Équipements SARL",
+      "matricule": "5037001K/A/M/000",
+      "adresse": "Radès"
+    },
+    "articles": [
+      {
+        "designation": "Pain et viennoiseries",
+        "designationAr": "خبز ومعجنات",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Laboratoire Qirwane d'Essai SA",
+      "document_date": "13/10/2026",
+      "references.numero": "F-2026-1193",
+      "references.matricule_fiscal": "4794014V/A/M/000",
+      "references.matricule_fiscal_client": "5037001K/A/M/000",
+      "totals.base_ht": "3.618,032",
+      "totals.vat": "462,485",
+      "totals.ttc": "4.081,517",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "60,452",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "3.557,580",
+      "lines[1].vat_amount": "462,485",
+      "articles[0].designation": "Pain et viennoiseries",
+      "articles[0].quantity": "17",
+      "articles[0].unit_price_ht": "3,556",
+      "articles[0].total_ht": "60,452",
+      "articles[1].designation": "Hébergement en hôtel, nuitée",
+      "articles[1].quantity": "12",
+      "articles[1].unit_price_ht": "296,465",
+      "articles[1].total_ht": "3.557,580"
+    }
+  },
+  "graineDuRendu": 1074946815,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "Laboratoire Qirwane d'Essai SA",
+      "document_date": "2026-10-13",
+      "currency": "TND",
+      "references.numero": "F-2026-1193",
+      "references.matricule_fiscal": "4794014V/A/M/000",
+      "references.matricule_fiscal_client": "5037001K/A/M/000",
+      "totals.base_ht": "3618.032",
+      "totals.vat": "462.485",
+      "totals.ttc": "4081.517",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "60.452",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA13",
+      "lines[1].base_ht": "3557.580",
+      "lines[1].vat_amount": "462.485",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "17.000",
+      "articles[0].unit_price_ht": "3.556",
+      "articles[0].total_ht": "60.452",
+      "articles[1].quantity": "12.000",
+      "articles[1].unit_price_ht": "296.465",
+      "articles[1].total_ht": "3557.580"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "3618.032"
+        ],
+        [
+          "4367",
+          "0",
+          "462.485",
+          "TVA13"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "4081.517",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

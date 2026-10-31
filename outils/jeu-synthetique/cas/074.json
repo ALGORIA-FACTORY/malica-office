@@ -1,0 +1,159 @@
+{
+  "id": "074",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "pdf",
+  "scenario": "avoir_achat",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE D'AVOIR / إشعار دائن",
+    "recueLe": "2026-10-23",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Fennara Logistique SARL",
+      "nomAr": "فنارة للخدمات اللوجستية",
+      "matricule": "2986008E/A/M/000",
+      "adresse": "44, rue de l'Olivier, Kairouan",
+      "telephone": "00 852 583"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Fennara Logistique SARL",
+      "document_date": "22 octobre 2026",
+      "references.numero": "AV-2026-0094",
+      "references.matricule_fiscal": "2986008E/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "4000,441",
+      "totals.vat": "760,084",
+      "totals.ttc": "4760,525",
+      "articles[0].designation": "Tôle galvanisée 2 mm",
+      "articles[0].quantity": "13",
+      "articles[0].unit_price_ht": "232,261",
+      "articles[0].total_ht": "3019,393",
+      "articles[1].designation": "Cartouche d'encre noire",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "131,295",
+      "articles[1].total_ht": "131,295",
+      "articles[2].designation": "Prestation de maintenance",
+      "articles[2].quantity": "1",
+      "articles[2].unit_price_ht": "784,569",
+      "articles[2].total_ht": "784,569",
+      "articles[3].designation": "Papier A4 80 g, ramette",
+      "articles[3].quantity": "7",
+      "articles[3].unit_price_ht": "9,312",
+      "articles[3].total_ht": "65,184"
+    }
+  },
+  "graineDuRendu": 1866001953,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Fennara Logistique SARL",
+      "document_date": "2026-10-22",
+      "currency": "TND",
+      "references.numero": "AV-2026-0094",
+      "references.matricule_fiscal": "2986008E/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "4000.441",
+      "totals.vat": "760.084",
+      "totals.ttc": "4760.525",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "4000.441",
+      "lines[0].vat_amount": "760.084",
+      "articles[0].quantity": "13.000",
+      "articles[0].unit_price_ht": "232.261",
+      "articles[0].total_ht": "3019.393",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "131.295",
+      "articles[1].total_ht": "131.295",
+      "articles[2].quantity": "1.000",
+      "articles[2].unit_price_ht": "784.569",
+      "articles[2].total_ht": "784.569",
+      "articles[3].quantity": "7.000",
+      "articles[3].unit_price_ht": "9.312",
+      "articles[3].total_ht": "65.184"
+    },
+    "ecriture": null,
+    "issue": {
+      "type": "refus",
+      "motifs": [
+        "nature_piece"
+      ]
+    },
+    "ecritureDuComptable": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "0",
+          "4000.441"
+        ],
+        [
+          "4366",
+          "0",
+          "760.084",
+          "TVA19"
+        ],
+        [
+          "401",
+          "4760.525",
+          "0"
+        ]
+      ]
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

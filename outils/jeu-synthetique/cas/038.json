@@ -1,0 +1,180 @@
+{
+  "id": "038",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "scenario": "vente_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-08",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "nomAr": "مخبر قيروان التجريبي",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "76, rue des Orangers, La Marsa",
+      "telephone": "00 544 619"
+    },
+    "client": {
+      "nom": "Tamzirt Services SUARL",
+      "matricule": "6560003I/A/M/000",
+      "adresse": "Sfax"
+    },
+    "articles": [
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Formation professionnelle agréée",
+        "designationAr": "تكوين مهني معتمد",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Laboratoire Qirwane d'Essai SA",
+      "document_date": "04/10/2026",
+      "references.numero": "F-2026-2104",
+      "references.matricule_fiscal": "4794014V/A/M/000",
+      "references.matricule_fiscal_client": "6560003I/A/M/000",
+      "totals.base_ht": "9368,261",
+      "totals.vat": "556,281",
+      "totals.ttc": "9925,542",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "6161,046",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "884,830",
+      "lines[1].vat_amount": "115,028",
+      "lines[2].base_ht": "2322,385",
+      "lines[2].vat_amount": "441,253",
+      "articles[0].designation": "Hébergement en hôtel, nuitée",
+      "articles[0].quantity": "5",
+      "articles[0].unit_price_ht": "176,966",
+      "articles[0].total_ht": "884,830",
+      "articles[1].designation": "Cartouche d'encre noire",
+      "articles[1].quantity": "13",
+      "articles[1].unit_price_ht": "178,645",
+      "articles[1].total_ht": "2322,385",
+      "articles[2].designation": "Formation professionnelle agréée",
+      "articles[2].quantity": "2",
+      "articles[2].unit_price_ht": "3080,523",
+      "articles[2].total_ht": "6161,046"
+    }
+  },
+  "graineDuRendu": 1954392310,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "Laboratoire Qirwane d'Essai SA",
+      "document_date": "2026-10-04",
+      "currency": "TND",
+      "references.numero": "F-2026-2104",
+      "references.matricule_fiscal": "4794014V/A/M/000",
+      "references.matricule_fiscal_client": "6560003I/A/M/000",
+      "totals.base_ht": "9368.261",
+      "totals.vat": "556.281",
+      "totals.ttc": "9925.542",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "6161.046",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA13",
+      "lines[1].base_ht": "884.830",
+      "lines[1].vat_amount": "115.028",
+      "lines[2].tax_code": "TVA19",
+      "lines[2].base_ht": "2322.385",
+      "lines[2].vat_amount": "441.253",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "5.000",
+      "articles[0].unit_price_ht": "176.966",
+      "articles[0].total_ht": "884.830",
+      "articles[1].quantity": "13.000",
+      "articles[1].unit_price_ht": "178.645",
+      "articles[1].total_ht": "2322.385",
+      "articles[2].quantity": "2.000",
+      "articles[2].unit_price_ht": "3080.523",
+      "articles[2].total_ht": "6161.046"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "9368.261"
+        ],
+        [
+          "4367",
+          "0",
+          "115.028",
+          "TVA13"
+        ],
+        [
+          "4367",
+          "0",
+          "441.253",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "9925.542",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

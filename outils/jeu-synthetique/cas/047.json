@@ -1,0 +1,133 @@
+{
+  "id": "047",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "pdf",
+  "scenario": "avoir_achat",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "إشعار دائن",
+    "recueLe": "2026-09-15",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "تمزيرت للخدمات",
+      "nomAr": "تمزيرت للخدمات",
+      "matricule": "6560003I/A/M/000",
+      "adresse": "112، نهج البرتقال، صفاقس",
+      "telephone": "00 496 694"
+    },
+    "client": {
+      "nom": "مخبر قيروان التجريبي",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "المرسى"
+    },
+    "articles": [
+      {
+        "designation": "صفائح مجلفنة 2 مم",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "خرطوشة حبر أسود",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "تمزيرت للخدمات",
+      "document_date": "2026/09/10",
+      "references.numero": "2026/1524",
+      "references.matricule_fiscal": "6560003I/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "5 995,638",
+      "totals.vat": "1 139,171",
+      "totals.ttc": "7 134,809",
+      "articles[0].designation": "صفائح مجلفنة 2 مم",
+      "articles[0].quantity": "20",
+      "articles[0].unit_price_ht": "194,013",
+      "articles[0].total_ht": "3 880,260",
+      "articles[1].designation": "خرطوشة حبر أسود",
+      "articles[1].quantity": "17",
+      "articles[1].unit_price_ht": "124,434",
+      "articles[1].total_ht": "2 115,378"
+    }
+  },
+  "graineDuRendu": 2024247006,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "تمزيرت للخدمات",
+      "document_date": "2026-09-10",
+      "currency": "TND",
+      "references.numero": "2026/1524",
+      "references.matricule_fiscal": "6560003I/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "5995.638",
+      "totals.vat": "1139.171",
+      "totals.ttc": "7134.809",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "5995.638",
+      "lines[0].vat_amount": "1139.171",
+      "articles[0].quantity": "20.000",
+      "articles[0].unit_price_ht": "194.013",
+      "articles[0].total_ht": "3880.260",
+      "articles[1].quantity": "17.000",
+      "articles[1].unit_price_ht": "124.434",
+      "articles[1].total_ht": "2115.378"
+    },
+    "ecriture": null,
+    "issue": {
+      "type": "refus",
+      "motifs": [
+        "nature_piece"
+      ]
+    },
+    "ecritureDuComptable": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "0",
+          "5995.638"
+        ],
+        [
+          "4366",
+          "0",
+          "1139.171",
+          "TVA19"
+        ],
+        [
+          "401",
+          "7134.809",
+          "0"
+        ]
+      ]
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "id": "033",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "scenario": "achat_un_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-28",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Ateliers Ouedrane SARL",
+      "nomAr": "ورشات وادران",
+      "matricule": "2924004J/A/M/000",
+      "adresse": "28, avenue des Jasmins, Bizerte",
+      "telephone": "00 868 933"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : quatre mille trois cent dix-huit dinars et quatre-vingt-un millimes.",
+    "imprime": {
+      "issuer": "Ateliers Ouedrane SARL",
+      "document_date": "26-09-2026",
+      "references.numero": "F-2026-8702",
+      "references.matricule_fiscal": "2924004J/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "3 627,799",
+      "totals.vat": "689,282",
+      "totals.ttc": "4 318,081",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Papier A4 80 g, ramette",
+      "articles[0].quantity": "21",
+      "articles[0].unit_price_ht": "11,436",
+      "articles[0].total_ht": "240,156",
+      "articles[1].designation": "Tôle galvanisée 2 mm",
+      "articles[1].quantity": "15",
+      "articles[1].unit_price_ht": "122,003",
+      "articles[1].total_ht": "1 830,045",
+      "articles[2].designation": "Location de chariot élévateur",
+      "articles[2].quantity": "1",
+      "articles[2].unit_price_ht": "504,673",
+      "articles[2].total_ht": "504,673",
+      "articles[3].designation": "Cartouche d'encre noire",
+      "articles[3].quantity": "15",
+      "articles[3].unit_price_ht": "70,195",
+      "articles[3].total_ht": "1 052,925"
+    }
+  },
+  "graineDuRendu": 940950683,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Ateliers Ouedrane SARL",
+      "document_date": "2026-09-26",
+      "currency": "TND",
+      "references.numero": "F-2026-8702",
+      "references.matricule_fiscal": "2924004J/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "3627.799",
+      "totals.vat": "689.282",
+      "totals.ttc": "4318.081",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3627.799",
+      "lines[0].vat_amount": "689.282",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "21.000",
+      "articles[0].unit_price_ht": "11.436",
+      "articles[0].total_ht": "240.156",
+      "articles[1].quantity": "15.000",
+      "articles[1].unit_price_ht": "122.003",
+      "articles[1].total_ht": "1830.045",
+      "articles[2].quantity": "1.000",
+      "articles[2].unit_price_ht": "504.673",
+      "articles[2].total_ht": "504.673",
+      "articles[3].quantity": "15.000",
+      "articles[3].unit_price_ht": "70.195",
+      "articles[3].total_ht": "1052.925"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "3627.799",
+          "0"
+        ],
+        [
+          "4366",
+          "689.282",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "4318.081"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

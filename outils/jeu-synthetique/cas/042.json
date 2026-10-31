@@ -1,0 +1,165 @@
+{
+  "id": "042",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "pdf",
+  "scenario": "achat_fodec",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-10-13",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "ورشات وادران",
+      "nomAr": "ورشات وادران",
+      "matricule": "2924004J/A/M/000",
+      "adresse": "28، شارع الياسمين، بنزرت",
+      "telephone": "00 868 933"
+    },
+    "client": {
+      "nom": "مجمع سدران التجريبي",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "بن عروس"
+    },
+    "articles": [
+      {
+        "designation": "خدمات صيانة",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "كراء رافعة شوكية",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "صفائح مجلفنة 2 مم",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "FODEC",
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "ورشات وادران",
+      "document_date": "١٠/١٠/٢٠٢٦",
+      "references.numero": "٢٠٢٦/٥٠٣٦",
+      "references.matricule_fiscal": "2924004J/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "3.015,556",
+      "totals.vat": "578,685",
+      "totals.ttc": "3.625,397",
+      "other_charges[0].amount": "30,156",
+      "other_charges[1].amount": "1,000",
+      "lines[0].base_ht": "3.045,712",
+      "lines[0].vat_amount": "578,685",
+      "articles[0].designation": "خدمات صيانة",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "1.642,708",
+      "articles[0].total_ht": "1.642,708",
+      "articles[1].designation": "كراء رافعة شوكية",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "655,433",
+      "articles[1].total_ht": "655,433",
+      "articles[2].designation": "صفائح مجلفنة 2 مم",
+      "articles[2].quantity": "5",
+      "articles[2].unit_price_ht": "143,483",
+      "articles[2].total_ht": "717,415"
+    }
+  },
+  "graineDuRendu": 549848889,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "ورشات وادران",
+      "document_date": "2026-10-10",
+      "currency": "TND",
+      "references.numero": "٢٠٢٦/٥٠٣٦",
+      "references.matricule_fiscal": "2924004J/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "3015.556",
+      "totals.vat": "578.685",
+      "totals.ttc": "3625.397",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3045.712",
+      "lines[0].vat_amount": "578.685",
+      "other_charges[0].code": "FODEC",
+      "other_charges[0].amount": "30.156",
+      "other_charges[1].code": "DROIT_TIMBRE",
+      "other_charges[1].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "1642.708",
+      "articles[0].total_ht": "1642.708",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "655.433",
+      "articles[1].total_ht": "655.433",
+      "articles[2].quantity": "5.000",
+      "articles[2].unit_price_ht": "143.483",
+      "articles[2].total_ht": "717.415"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "3015.556",
+          "0"
+        ],
+        [
+          "4366",
+          "578.685",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6652",
+          "30.156",
+          "0"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "3625.397"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — FODEC à l'achat imputé au compte du pack, et compris dans la base de la TVA"
+    ]
+  }
+}

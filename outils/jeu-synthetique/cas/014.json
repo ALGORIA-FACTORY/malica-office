@@ -1,0 +1,178 @@
+{
+  "id": "014",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "pdf",
+  "scenario": "achat_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-27",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Menzra Conseil SUARL",
+      "nomAr": "منزرة للاستشارات",
+      "matricule": "8764010I/A/M/000",
+      "adresse": "52, rue de l'Olivier, Ariana",
+      "telephone": "00 378 310"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Farine de blé, sac 50 kg",
+        "designationAr": "فارينة قمح كيس 50 كغ",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Formation professionnelle agréée",
+        "designationAr": "تكوين مهني معتمد",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Menzra Conseil SUARL",
+      "document_date": "25/10/2026",
+      "references.numero": "F-2026-3383",
+      "references.matricule_fiscal": "8764010I/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "10.832,164",
+      "totals.vat": "1.390,162",
+      "totals.ttc": "12.223,326",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "3.075,712",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "696,366",
+      "lines[1].vat_amount": "48,746",
+      "lines[2].base_ht": "7.060,086",
+      "lines[2].vat_amount": "1.341,416",
+      "articles[0].designation": "Farine de blé, sac 50 kg",
+      "articles[0].quantity": "11",
+      "articles[0].unit_price_ht": "63,306",
+      "articles[0].total_ht": "696,366",
+      "articles[1].designation": "Tôle galvanisée 2 mm",
+      "articles[1].quantity": "18",
+      "articles[1].unit_price_ht": "392,227",
+      "articles[1].total_ht": "7.060,086",
+      "articles[2].designation": "Formation professionnelle agréée",
+      "articles[2].quantity": "1",
+      "articles[2].unit_price_ht": "3.075,712",
+      "articles[2].total_ht": "3.075,712"
+    }
+  },
+  "graineDuRendu": 1723028873,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Menzra Conseil SUARL",
+      "document_date": "2026-10-25",
+      "currency": "TND",
+      "references.numero": "F-2026-3383",
+      "references.matricule_fiscal": "8764010I/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "10832.164",
+      "totals.vat": "1390.162",
+      "totals.ttc": "12223.326",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "3075.712",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA07",
+      "lines[1].base_ht": "696.366",
+      "lines[1].vat_amount": "48.746",
+      "lines[2].tax_code": "TVA19",
+      "lines[2].base_ht": "7060.086",
+      "lines[2].vat_amount": "1341.416",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "11.000",
+      "articles[0].unit_price_ht": "63.306",
+      "articles[0].total_ht": "696.366",
+      "articles[1].quantity": "18.000",
+      "articles[1].unit_price_ht": "392.227",
+      "articles[1].total_ht": "7060.086",
+      "articles[2].quantity": "1.000",
+      "articles[2].unit_price_ht": "3075.712",
+      "articles[2].total_ht": "3075.712"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "10832.164",
+          "0"
+        ],
+        [
+          "4366",
+          "48.746",
+          "0",
+          "TVA07"
+        ],
+        [
+          "4366",
+          "1341.416",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "12223.326"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

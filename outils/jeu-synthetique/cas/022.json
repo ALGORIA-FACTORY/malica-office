@@ -1,0 +1,143 @@
+{
+  "id": "022",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "photo",
+  "scenario": "vente_usd_export",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-15",
+    "devise": "USD",
+    "exposant": 2,
+    "format": {
+      "milliers": ",",
+      "decimal": ".",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Société Nervane d'Essai SARL",
+      "nomAr": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "71, avenue des Jasmins, Tunis",
+      "telephone": "00 657 510"
+    },
+    "client": {
+      "nom": "Oulmira Distribution SA",
+      "matricule": "6455007V/A/M/000",
+      "adresse": "Gabès"
+    },
+    "articles": [
+      {
+        "designation": "Huile d'olive en vrac, tonne",
+        "designationAr": "زيت زيتون سائب، طن",
+        "codeTaxe": "EXPORT",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "Dattes Deglet Nour, carton",
+        "designationAr": "تمور دقلة نور، صندوق",
+        "codeTaxe": "EXPORT",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "EXPORT",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Société Nervane d'Essai SARL",
+      "document_date": "11 octobre 2026",
+      "references.numero": "F-2026-2789",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "6455007V/A/M/000",
+      "totals.base_ht": "8,856.02",
+      "totals.vat": "0.00",
+      "totals.ttc": "8,856.02",
+      "articles[0].designation": "Huile d'olive en vrac, tonne",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "3,988.34",
+      "articles[0].total_ht": "7,976.68",
+      "articles[1].designation": "Dattes Deglet Nour, carton",
+      "articles[1].quantity": "11",
+      "articles[1].unit_price_ht": "79.94",
+      "articles[1].total_ht": "879.34"
+    }
+  },
+  "graineDuRendu": 2009408374,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "Société Nervane d'Essai SARL",
+      "document_date": "2026-10-11",
+      "currency": "USD",
+      "references.numero": "F-2026-2789",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "6455007V/A/M/000",
+      "totals.base_ht": "8856.02",
+      "totals.vat": "0.00",
+      "totals.ttc": "8856.02",
+      "lines[0].tax_code": "EXPORT",
+      "lines[0].base_ht": "8856.02",
+      "lines[0].vat_amount": "0.00",
+      "articles[0].quantity": "2.00",
+      "articles[0].unit_price_ht": "3988.34",
+      "articles[0].total_ht": "7976.68",
+      "articles[1].quantity": "11.00",
+      "articles[1].unit_price_ht": "79.94",
+      "articles[1].total_ht": "879.34"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "27517.425"
+        ],
+        [
+          "411",
+          "27517.425",
+          "0"
+        ]
+      ],
+      "origines": [
+        [
+          "701",
+          "8856.02"
+        ],
+        [
+          "411",
+          "8856.02"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "cours": {
+      "devise": "USD",
+      "taux": "3.1072",
+      "unite": 1,
+      "date": "2026-10-11"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "converti au cours FICTIF 3.1072 TND pour 1 USD, publié le 2026-10-11 (app.cours_applicable : date_facture, recul 5 jours)",
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

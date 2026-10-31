@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { repairArticles } from "./article-repair.ts";
-import { JEU_D_OR, type CasDOr } from "./jeu-d-or.ts";
+import { JEU_D_OR, auChemin, type CasDOr } from "./jeu-d-or.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import { devisesDEssai } from "../../scan/devise-d-essai.ts";
@@ -34,22 +34,6 @@ import { devisesDEssai } from "../../scan/devise-d-essai.ts";
  * Les deux sont nécessaires. Une relecture juste sur une désignation fausse
  * rend un montant faux, et c'est exactement ce qui s'est produit le 4 octobre.
  */
-
-/** Lit un chemin « articles[0].total_ht » dans l'extrait rendu. */
-function auChemin(extrait: Record<string, unknown>, chemin: string): unknown {
-  let courant: unknown = extrait;
-  for (const bout of chemin.split(".")) {
-    const indexe = bout.match(/^([A-Za-z_]+)\[(\d+)\]$/);
-    if (indexe) {
-      const tableau = (courant as Record<string, unknown>)?.[indexe[1]!];
-      courant = Array.isArray(tableau) ? tableau[Number(indexe[2])] : undefined;
-    } else {
-      courant = (courant as Record<string, unknown>)?.[bout];
-    }
-    if (courant === undefined || courant === null) return courant ?? null;
-  }
-  return courant;
-}
 
 /**
  * Un montant est-il l'amputation d'un autre ?

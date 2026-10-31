@@ -1,0 +1,139 @@
+{
+  "id": "058",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "photo",
+  "scenario": "achat_un_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-09-20",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "مطبعة سلفان",
+      "nomAr": "مطبعة سلفان",
+      "matricule": "1719005D/A/M/000",
+      "adresse": "103، المنطقة الصناعية، مقسم، نابل",
+      "telephone": "00 605 230"
+    },
+    "client": {
+      "nom": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "تونس"
+    },
+    "articles": [
+      {
+        "designation": "كراء رافعة شوكية",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "خرطوشة حبر أسود",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "مطبعة سلفان",
+      "document_date": "19/09/2026",
+      "references.numero": "2026/8640",
+      "references.matricule_fiscal": "1719005D/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "3 039,529",
+      "totals.vat": "577,511",
+      "totals.ttc": "3 618,040",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "كراء رافعة شوكية",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "1 487,305",
+      "articles[0].total_ht": "1 487,305",
+      "articles[1].designation": "خرطوشة حبر أسود",
+      "articles[1].quantity": "19",
+      "articles[1].unit_price_ht": "81,696",
+      "articles[1].total_ht": "1 552,224"
+    }
+  },
+  "graineDuRendu": 1918116028,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "مطبعة سلفان",
+      "document_date": "2026-09-19",
+      "currency": "TND",
+      "references.numero": "2026/8640",
+      "references.matricule_fiscal": "1719005D/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "3039.529",
+      "totals.vat": "577.511",
+      "totals.ttc": "3618.040",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3039.529",
+      "lines[0].vat_amount": "577.511",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "1487.305",
+      "articles[0].total_ht": "1487.305",
+      "articles[1].quantity": "19.000",
+      "articles[1].unit_price_ht": "81.696",
+      "articles[1].total_ht": "1552.224"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "3039.529",
+          "0"
+        ],
+        [
+          "4366",
+          "577.511",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "3618.040"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

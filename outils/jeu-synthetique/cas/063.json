@@ -1,0 +1,150 @@
+{
+  "id": "063",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "scenario": "achat_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-09-18",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "دزيران للفلاحة",
+      "nomAr": "دزيران للفلاحة",
+      "matricule": "7325009S/A/M/000",
+      "adresse": "74، المنطقة الصناعية، مقسم، باجة",
+      "telephone": "00 846 598"
+    },
+    "client": {
+      "nom": "مجمع سدران التجريبي",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "بن عروس"
+    },
+    "articles": [
+      {
+        "designation": "تكوين مهني معتمد",
+        "designationAr": "تكوين مهني معتمد",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "دواء بيطري",
+        "designationAr": "دواء بيطري",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "دزيران للفلاحة",
+      "document_date": "2026/09/13",
+      "references.numero": "2026/9439",
+      "references.matricule_fiscal": "7325009S/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "6 106,071",
+      "totals.vat": "315,907",
+      "totals.ttc": "6 422,978",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "1 593,111",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "4 512,960",
+      "lines[1].vat_amount": "315,907",
+      "articles[0].designation": "تكوين مهني معتمد",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "1 593,111",
+      "articles[0].total_ht": "1 593,111",
+      "articles[1].designation": "دواء بيطري",
+      "articles[1].quantity": "20",
+      "articles[1].unit_price_ht": "225,648",
+      "articles[1].total_ht": "4 512,960"
+    }
+  },
+  "graineDuRendu": 879789185,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "دزيران للفلاحة",
+      "document_date": "2026-09-13",
+      "currency": "TND",
+      "references.numero": "2026/9439",
+      "references.matricule_fiscal": "7325009S/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "6106.071",
+      "totals.vat": "315.907",
+      "totals.ttc": "6422.978",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "1593.111",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA07",
+      "lines[1].base_ht": "4512.960",
+      "lines[1].vat_amount": "315.907",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "1593.111",
+      "articles[0].total_ht": "1593.111",
+      "articles[1].quantity": "20.000",
+      "articles[1].unit_price_ht": "225.648",
+      "articles[1].total_ht": "4512.960"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "6106.071",
+          "0"
+        ],
+        [
+          "4366",
+          "315.907",
+          "0",
+          "TVA07"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "6422.978"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

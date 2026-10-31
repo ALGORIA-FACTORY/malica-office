@@ -1,0 +1,191 @@
+{
+  "id": "087",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "photo",
+  "scenario": "achat_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-16",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Ateliers Ouedrane SARL",
+      "nomAr": "ورشات وادران",
+      "matricule": "2924004J/A/M/000",
+      "adresse": "28, avenue des Jasmins, Bizerte",
+      "telephone": "00 868 933"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Pain et viennoiseries",
+        "designationAr": "خبز ومعجنات",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : onze mille huit cent soixante-quinze dinars et six cent vingt-sept millimes.",
+    "imprime": {
+      "issuer": "Ateliers Ouedrane SARL",
+      "document_date": "11-09-2026",
+      "references.numero": "F-2026-2923",
+      "references.matricule_fiscal": "2924004J/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "10 104,935",
+      "totals.vat": "1 769,692",
+      "totals.ttc": "11 875,627",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "28,600",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "2 413,537",
+      "lines[1].vat_amount": "313,760",
+      "lines[2].base_ht": "7 662,798",
+      "lines[2].vat_amount": "1 455,932",
+      "articles[0].designation": "Hébergement en hôtel, nuitée",
+      "articles[0].quantity": "7",
+      "articles[0].unit_price_ht": "344,791",
+      "articles[0].total_ht": "2 413,537",
+      "articles[1].designation": "Pain et viennoiseries",
+      "articles[1].quantity": "10",
+      "articles[1].unit_price_ht": "2,860",
+      "articles[1].total_ht": "28,600",
+      "articles[2].designation": "Location de chariot élévateur",
+      "articles[2].quantity": "2",
+      "articles[2].unit_price_ht": "2 222,347",
+      "articles[2].total_ht": "4 444,694",
+      "articles[3].designation": "Prestation de maintenance",
+      "articles[3].quantity": "2",
+      "articles[3].unit_price_ht": "1 609,052",
+      "articles[3].total_ht": "3 218,104"
+    }
+  },
+  "graineDuRendu": 740545706,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Ateliers Ouedrane SARL",
+      "document_date": "2026-09-11",
+      "currency": "TND",
+      "references.numero": "F-2026-2923",
+      "references.matricule_fiscal": "2924004J/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "10104.935",
+      "totals.vat": "1769.692",
+      "totals.ttc": "11875.627",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "28.600",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA13",
+      "lines[1].base_ht": "2413.537",
+      "lines[1].vat_amount": "313.760",
+      "lines[2].tax_code": "TVA19",
+      "lines[2].base_ht": "7662.798",
+      "lines[2].vat_amount": "1455.932",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "7.000",
+      "articles[0].unit_price_ht": "344.791",
+      "articles[0].total_ht": "2413.537",
+      "articles[1].quantity": "10.000",
+      "articles[1].unit_price_ht": "2.860",
+      "articles[1].total_ht": "28.600",
+      "articles[2].quantity": "2.000",
+      "articles[2].unit_price_ht": "2222.347",
+      "articles[2].total_ht": "4444.694",
+      "articles[3].quantity": "2.000",
+      "articles[3].unit_price_ht": "1609.052",
+      "articles[3].total_ht": "3218.104"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "10104.935",
+          "0"
+        ],
+        [
+          "4366",
+          "313.760",
+          "0",
+          "TVA13"
+        ],
+        [
+          "4366",
+          "1455.932",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "11875.627"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

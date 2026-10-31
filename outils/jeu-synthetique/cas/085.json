@@ -1,0 +1,139 @@
+{
+  "id": "085",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "photo",
+  "scenario": "achat_13",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-23",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Talvine Matériaux SA",
+      "nomAr": "تلفين لمواد البناء",
+      "matricule": "7039011T/A/M/000",
+      "adresse": "76, zone industrielle, lot, Mahdia",
+      "telephone": "00 382 139"
+    },
+    "client": {
+      "nom": "Société Nervane d'Essai SARL",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "Tunis"
+    },
+    "articles": [
+      {
+        "designation": "Transport de marchandises",
+        "designationAr": "نقل البضائع",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : huit mille trois cent soixante-quatorze dinars et huit cent soixante-quatre millimes.",
+    "imprime": {
+      "issuer": "Talvine Matériaux SA",
+      "document_date": "19 septembre 2026",
+      "references.numero": "F-2026-8356",
+      "references.matricule_fiscal": "7039011T/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "7 410,499",
+      "totals.vat": "963,365",
+      "totals.ttc": "8 374,864",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Transport de marchandises",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "1 068,479",
+      "articles[0].total_ht": "1 068,479",
+      "articles[1].designation": "Hébergement en hôtel, nuitée",
+      "articles[1].quantity": "23",
+      "articles[1].unit_price_ht": "275,740",
+      "articles[1].total_ht": "6 342,020"
+    }
+  },
+  "graineDuRendu": 805051606,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Talvine Matériaux SA",
+      "document_date": "2026-09-19",
+      "currency": "TND",
+      "references.numero": "F-2026-8356",
+      "references.matricule_fiscal": "7039011T/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "7410.499",
+      "totals.vat": "963.365",
+      "totals.ttc": "8374.864",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "7410.499",
+      "lines[0].vat_amount": "963.365",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "1068.479",
+      "articles[0].total_ht": "1068.479",
+      "articles[1].quantity": "23.000",
+      "articles[1].unit_price_ht": "275.740",
+      "articles[1].total_ht": "6342.020"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "7410.499",
+          "0"
+        ],
+        [
+          "4366",
+          "963.365",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "8374.864"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

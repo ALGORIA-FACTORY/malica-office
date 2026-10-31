@@ -1,0 +1,128 @@
+{
+  "id": "068",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "scenario": "achat_immobilisation",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-10-28",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "شركة زرفان للتجهيزات",
+      "nomAr": "شركة زرفان للتجهيزات",
+      "matricule": "5037001K/A/M/000",
+      "adresse": "103، نهج البرتقال، رادس",
+      "telephone": "00 701 570"
+    },
+    "client": {
+      "nom": "مخبر قيروان التجريبي",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "المرسى"
+    },
+    "articles": [
+      {
+        "designation": "خادم تخزين في خزانة",
+        "designationAr": "خادم تخزين في خزانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "شركة زرفان للتجهيزات",
+      "document_date": "٢٤/١٠/٢٠٢٦",
+      "references.numero": "٢٠٢٦/٣٠١٥",
+      "references.matricule_fiscal": "5037001K/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "9.466,286",
+      "totals.vat": "1.798,594",
+      "totals.ttc": "11.265,880",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "خادم تخزين في خزانة",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "9.466,286",
+      "articles[0].total_ht": "9.466,286"
+    }
+  },
+  "graineDuRendu": 1323389602,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "شركة زرفان للتجهيزات",
+      "document_date": "2026-10-24",
+      "currency": "TND",
+      "references.numero": "٢٠٢٦/٣٠١٥",
+      "references.matricule_fiscal": "5037001K/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "9466.286",
+      "totals.vat": "1798.594",
+      "totals.ttc": "11265.880",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "9466.286",
+      "lines[0].vat_amount": "1798.594",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "9466.286",
+      "articles[0].total_ht": "9466.286"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "2282",
+          "9466.286",
+          "0"
+        ],
+        [
+          "4366",
+          "1798.594",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "11265.880"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — Le compte d'une immobilisation (2282 « Équipement de bureau » pour du matériel informatique) et la TVA qui la grève (4366 du paramétrage, ou 43662 « TVA sur immobilisations » du plan NC 01) sont à confirmer par un expert-comptable."
+    ]
+  }
+}

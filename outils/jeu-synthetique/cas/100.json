@@ -1,0 +1,133 @@
+{
+  "id": "100",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "manuscrit",
+  "scenario": "achat_exonere",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-07",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Fennara Logistique SARL",
+      "nomAr": "فنارة للخدمات اللوجستية",
+      "matricule": "2986008E/A/M/000",
+      "adresse": "44, rue de l'Olivier, Kairouan",
+      "telephone": "00 852 583"
+    },
+    "client": {
+      "nom": "Société Nervane d'Essai SARL",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "Tunis"
+    },
+    "articles": [
+      {
+        "designation": "Pain et viennoiseries",
+        "designationAr": "خبز ومعجنات",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "Formation professionnelle agréée",
+        "designationAr": "تكوين مهني معتمد",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : deux mille cinquante-trois dinars et neuf cent quatorze millimes.",
+    "imprime": {
+      "issuer": "Fennara Logistique SARL",
+      "document_date": "6 septembre 2026",
+      "references.numero": "F-2026-6830",
+      "references.matricule_fiscal": "2986008E/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "2 052,914",
+      "totals.vat": "0,000",
+      "totals.ttc": "2 053,914",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Pain et viennoiseries",
+      "articles[0].quantity": "14",
+      "articles[0].unit_price_ht": "6,887",
+      "articles[0].total_ht": "96,418",
+      "articles[1].designation": "Formation professionnelle agréée",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "1 956,496",
+      "articles[1].total_ht": "1 956,496"
+    }
+  },
+  "graineDuRendu": 879249986,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Fennara Logistique SARL",
+      "document_date": "2026-09-06",
+      "currency": "TND",
+      "references.numero": "F-2026-6830",
+      "references.matricule_fiscal": "2986008E/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "2052.914",
+      "totals.vat": "0.000",
+      "totals.ttc": "2053.914",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "2052.914",
+      "lines[0].vat_amount": "0.000",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "14.000",
+      "articles[0].unit_price_ht": "6.887",
+      "articles[0].total_ht": "96.418",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "1956.496",
+      "articles[1].total_ht": "1956.496"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "2052.914",
+          "0"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "2053.914"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

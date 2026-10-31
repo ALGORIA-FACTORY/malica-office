@@ -1,0 +1,193 @@
+{
+  "id": "018",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "pdf",
+  "scenario": "vente_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-17",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "nomAr": "مجمع سدران التجريبي",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "77, rue de l'Olivier, Ben Arous",
+      "telephone": "00 435 733"
+    },
+    "client": {
+      "nom": "Borjane Textile SARL",
+      "matricule": "1381012E/A/M/000",
+      "adresse": "Ksar Hellal"
+    },
+    "articles": [
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Huile d'olive vierge, bidon 5 L",
+        "designationAr": "زيت زيتون بكر 5 لتر",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "designation": "Formation professionnelle agréée",
+        "designationAr": "تكوين مهني معتمد",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Groupe Sidrane d'Essai SUARL",
+      "document_date": "15-10-2026",
+      "references.numero": "F-2026-3929",
+      "references.matricule_fiscal": "3445015A/A/M/000",
+      "references.matricule_fiscal_client": "1381012E/A/M/000",
+      "totals.base_ht": "5.050,087",
+      "totals.vat": "574,823",
+      "totals.ttc": "5.625,910",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "1.125,159",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "1.424,278",
+      "lines[1].vat_amount": "99,699",
+      "lines[2].base_ht": "2.500,650",
+      "lines[2].vat_amount": "475,124",
+      "articles[0].designation": "Tôle galvanisée 2 mm",
+      "articles[0].quantity": "15",
+      "articles[0].unit_price_ht": "159,393",
+      "articles[0].total_ht": "2.390,895",
+      "articles[1].designation": "Papier A4 80 g, ramette",
+      "articles[1].quantity": "9",
+      "articles[1].unit_price_ht": "12,195",
+      "articles[1].total_ht": "109,755",
+      "articles[2].designation": "Huile d'olive vierge, bidon 5 L",
+      "articles[2].quantity": "19",
+      "articles[2].unit_price_ht": "74,962",
+      "articles[2].total_ht": "1.424,278",
+      "articles[3].designation": "Formation professionnelle agréée",
+      "articles[3].quantity": "1",
+      "articles[3].unit_price_ht": "1.125,159",
+      "articles[3].total_ht": "1.125,159"
+    }
+  },
+  "graineDuRendu": 1302475529,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "Groupe Sidrane d'Essai SUARL",
+      "document_date": "2026-10-15",
+      "currency": "TND",
+      "references.numero": "F-2026-3929",
+      "references.matricule_fiscal": "3445015A/A/M/000",
+      "references.matricule_fiscal_client": "1381012E/A/M/000",
+      "totals.base_ht": "5050.087",
+      "totals.vat": "574.823",
+      "totals.ttc": "5625.910",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "1125.159",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA07",
+      "lines[1].base_ht": "1424.278",
+      "lines[1].vat_amount": "99.699",
+      "lines[2].tax_code": "TVA19",
+      "lines[2].base_ht": "2500.650",
+      "lines[2].vat_amount": "475.124",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "15.000",
+      "articles[0].unit_price_ht": "159.393",
+      "articles[0].total_ht": "2390.895",
+      "articles[1].quantity": "9.000",
+      "articles[1].unit_price_ht": "12.195",
+      "articles[1].total_ht": "109.755",
+      "articles[2].quantity": "19.000",
+      "articles[2].unit_price_ht": "74.962",
+      "articles[2].total_ht": "1424.278",
+      "articles[3].quantity": "1.000",
+      "articles[3].unit_price_ht": "1125.159",
+      "articles[3].total_ht": "1125.159"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "5050.087"
+        ],
+        [
+          "4367",
+          "0",
+          "99.699",
+          "TVA07"
+        ],
+        [
+          "4367",
+          "0",
+          "475.124",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "5625.910",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

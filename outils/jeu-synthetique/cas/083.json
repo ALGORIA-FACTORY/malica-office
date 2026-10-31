@@ -1,0 +1,128 @@
+{
+  "id": "083",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "pdf",
+  "scenario": "achat_immobilisation",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-26",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Comptoir Belkadra SA",
+      "nomAr": "متجر بلقادرة",
+      "matricule": "4935002Q/A/M/000",
+      "adresse": "35, avenue des Jasmins, Sousse",
+      "telephone": "00 263 352"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Serveur de stockage en baie",
+        "designationAr": "خادم تخزين في خزانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : huit mille quatre cent soixante-quatorze dinars et cinq cent trente-sept millimes.",
+    "imprime": {
+      "issuer": "Comptoir Belkadra SA",
+      "document_date": "21 septembre 2026",
+      "references.numero": "F-2026-6118",
+      "references.matricule_fiscal": "4935002Q/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "7 120,619",
+      "totals.vat": "1 352,918",
+      "totals.ttc": "8 474,537",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Serveur de stockage en baie",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "7 120,619",
+      "articles[0].total_ht": "7 120,619"
+    }
+  },
+  "graineDuRendu": 384260922,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Comptoir Belkadra SA",
+      "document_date": "2026-09-21",
+      "currency": "TND",
+      "references.numero": "F-2026-6118",
+      "references.matricule_fiscal": "4935002Q/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "7120.619",
+      "totals.vat": "1352.918",
+      "totals.ttc": "8474.537",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "7120.619",
+      "lines[0].vat_amount": "1352.918",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "7120.619",
+      "articles[0].total_ht": "7120.619"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "2282",
+          "7120.619",
+          "0"
+        ],
+        [
+          "4366",
+          "1352.918",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "8474.537"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — Le compte d'une immobilisation (2282 « Équipement de bureau » pour du matériel informatique) et la TVA qui la grève (4366 du paramétrage, ou 43662 « TVA sur immobilisations » du plan NC 01) sont à confirmer par un expert-comptable."
+    ]
+  }
+}

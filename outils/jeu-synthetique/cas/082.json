@@ -1,0 +1,193 @@
+{
+  "id": "082",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "pdf",
+  "scenario": "vente_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-10-10",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Société Nervane d'Essai SARL",
+      "nomAr": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "71, avenue des Jasmins, Tunis",
+      "telephone": "00 657 510"
+    },
+    "client": {
+      "nom": "Tamzirt Services SUARL",
+      "matricule": "6560003I/A/M/000",
+      "adresse": "Sfax"
+    },
+    "articles": [
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Huile d'olive vierge, bidon 5 L",
+        "designationAr": "زيت زيتون بكر 5 لتر",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "designation": "Formation professionnelle agréée",
+        "designationAr": "تكوين مهني معتمد",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Société Nervane d'Essai SARL",
+      "document_date": "07-10-2026",
+      "references.numero": "F-2026-4851",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "6560003I/A/M/000",
+      "totals.base_ht": "7836,480",
+      "totals.vat": "832,723",
+      "totals.ttc": "8670,203",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "2549,458",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "1431,760",
+      "lines[1].vat_amount": "100,223",
+      "lines[2].base_ht": "3855,262",
+      "lines[2].vat_amount": "732,500",
+      "articles[0].designation": "Location de chariot élévateur",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "1644,360",
+      "articles[0].total_ht": "3288,720",
+      "articles[1].designation": "Prestation de maintenance",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "566,542",
+      "articles[1].total_ht": "566,542",
+      "articles[2].designation": "Huile d'olive vierge, bidon 5 L",
+      "articles[2].quantity": "22",
+      "articles[2].unit_price_ht": "65,080",
+      "articles[2].total_ht": "1431,760",
+      "articles[3].designation": "Formation professionnelle agréée",
+      "articles[3].quantity": "1",
+      "articles[3].unit_price_ht": "2549,458",
+      "articles[3].total_ht": "2549,458"
+    }
+  },
+  "graineDuRendu": 1173306650,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "Société Nervane d'Essai SARL",
+      "document_date": "2026-10-07",
+      "currency": "TND",
+      "references.numero": "F-2026-4851",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "6560003I/A/M/000",
+      "totals.base_ht": "7836.480",
+      "totals.vat": "832.723",
+      "totals.ttc": "8670.203",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "2549.458",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA07",
+      "lines[1].base_ht": "1431.760",
+      "lines[1].vat_amount": "100.223",
+      "lines[2].tax_code": "TVA19",
+      "lines[2].base_ht": "3855.262",
+      "lines[2].vat_amount": "732.500",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "1644.360",
+      "articles[0].total_ht": "3288.720",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "566.542",
+      "articles[1].total_ht": "566.542",
+      "articles[2].quantity": "22.000",
+      "articles[2].unit_price_ht": "65.080",
+      "articles[2].total_ht": "1431.760",
+      "articles[3].quantity": "1.000",
+      "articles[3].unit_price_ht": "2549.458",
+      "articles[3].total_ht": "2549.458"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "7836.480"
+        ],
+        [
+          "4367",
+          "0",
+          "100.223",
+          "TVA07"
+        ],
+        [
+          "4367",
+          "0",
+          "732.500",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "8670.203",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "id": "040",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "scenario": "achat_eur",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-15",
+    "devise": "EUR",
+    "exposant": 2,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Borjane Textile SARL",
+      "nomAr": "برجان للنسيج",
+      "matricule": "1381012E/A/M/000",
+      "adresse": "33, rue des Orangers, Ksar Hellal",
+      "telephone": "00 358 635"
+    },
+    "client": {
+      "nom": "Société Nervane d'Essai SARL",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "Tunis"
+    },
+    "articles": [
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Borjane Textile SARL",
+      "document_date": "14 octobre 2026",
+      "references.numero": "F-2026-2793",
+      "references.matricule_fiscal": "1381012E/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "3.475,24",
+      "totals.vat": "660,30",
+      "totals.ttc": "4.135,54",
+      "articles[0].designation": "Location de chariot élévateur",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "676,34",
+      "articles[0].total_ht": "1.352,68",
+      "articles[1].designation": "Tôle galvanisée 2 mm",
+      "articles[1].quantity": "16",
+      "articles[1].unit_price_ht": "132,66",
+      "articles[1].total_ht": "2.122,56"
+    }
+  },
+  "graineDuRendu": 426121284,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Borjane Textile SARL",
+      "document_date": "2026-10-14",
+      "currency": "EUR",
+      "references.numero": "F-2026-2793",
+      "references.matricule_fiscal": "1381012E/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "3475.24",
+      "totals.vat": "660.30",
+      "totals.ttc": "4135.54",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3475.24",
+      "lines[0].vat_amount": "660.30",
+      "articles[0].quantity": "2.00",
+      "articles[0].unit_price_ht": "676.34",
+      "articles[0].total_ht": "1352.68",
+      "articles[1].quantity": "16.00",
+      "articles[1].unit_price_ht": "132.66",
+      "articles[1].total_ht": "2122.56"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "11859.256",
+          "0"
+        ],
+        [
+          "4366",
+          "2253.274",
+          "0",
+          "TVA19"
+        ],
+        [
+          "401",
+          "0",
+          "14112.530"
+        ]
+      ],
+      "origines": [
+        [
+          "601",
+          "3475.24"
+        ],
+        [
+          "4366",
+          "660.30"
+        ],
+        [
+          "401",
+          "4135.54"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "cours": {
+      "devise": "EUR",
+      "taux": "3.4125",
+      "unite": 1,
+      "date": "2026-10-14"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "converti au cours FICTIF 3.4125 TND pour 1 EUR, publié le 2026-10-14 (app.cours_applicable : date_facture, recul 5 jours)"
+    ]
+  }
+}

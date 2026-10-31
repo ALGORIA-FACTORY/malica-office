@@ -1,0 +1,167 @@
+{
+  "id": "064",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "scenario": "vente_un_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "فاتورة",
+    "recueLe": "2026-10-18",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "شركة نرفان التجريبية",
+      "nomAr": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "71، شارع الياسمين، تونس",
+      "telephone": "00 657 510"
+    },
+    "client": {
+      "nom": "تمزيرت للخدمات",
+      "matricule": "6560003I/A/M/000",
+      "adresse": "صفاقس"
+    },
+    "articles": [
+      {
+        "designation": "صفائح مجلفنة 2 مم",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "ورق طباعة A4 رزمة",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "خرطوشة حبر أسود",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "كراء رافعة شوكية",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "شركة نرفان التجريبية",
+      "document_date": "١٣/١٠/٢٠٢٦",
+      "references.numero": "٢٠٢٦/٩٩٧٦",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "6560003I/A/M/000",
+      "totals.base_ht": "6.549,576",
+      "totals.vat": "1.244,419",
+      "totals.ttc": "7.794,995",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "صفائح مجلفنة 2 مم",
+      "articles[0].quantity": "10",
+      "articles[0].unit_price_ht": "400,309",
+      "articles[0].total_ht": "4.003,090",
+      "articles[1].designation": "ورق طباعة A4 رزمة",
+      "articles[1].quantity": "5",
+      "articles[1].unit_price_ht": "8,996",
+      "articles[1].total_ht": "44,980",
+      "articles[2].designation": "خرطوشة حبر أسود",
+      "articles[2].quantity": "14",
+      "articles[2].unit_price_ht": "83,495",
+      "articles[2].total_ht": "1.168,930",
+      "articles[3].designation": "كراء رافعة شوكية",
+      "articles[3].quantity": "2",
+      "articles[3].unit_price_ht": "666,288",
+      "articles[3].total_ht": "1.332,576"
+    }
+  },
+  "graineDuRendu": 62688655,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "شركة نرفان التجريبية",
+      "document_date": "2026-10-13",
+      "currency": "TND",
+      "references.numero": "٢٠٢٦/٩٩٧٦",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "6560003I/A/M/000",
+      "totals.base_ht": "6549.576",
+      "totals.vat": "1244.419",
+      "totals.ttc": "7794.995",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "6549.576",
+      "lines[0].vat_amount": "1244.419",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "10.000",
+      "articles[0].unit_price_ht": "400.309",
+      "articles[0].total_ht": "4003.090",
+      "articles[1].quantity": "5.000",
+      "articles[1].unit_price_ht": "8.996",
+      "articles[1].total_ht": "44.980",
+      "articles[2].quantity": "14.000",
+      "articles[2].unit_price_ht": "83.495",
+      "articles[2].total_ht": "1168.930",
+      "articles[3].quantity": "2.000",
+      "articles[3].unit_price_ht": "666.288",
+      "articles[3].total_ht": "1332.576"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "6549.576"
+        ],
+        [
+          "4367",
+          "0",
+          "1244.419",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "7794.995",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}
