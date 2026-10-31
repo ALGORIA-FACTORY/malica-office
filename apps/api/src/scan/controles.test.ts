@@ -391,6 +391,16 @@ describe("un bien susceptible d'être immobilisé", () => {
     assert.equal(immo(facture({ designations: ["Papier A4 80 g, ramette"] })), undefined);
     assert.equal(immo(facture()), undefined);
   });
+  it("un article à la désignation perdue (glyphes sans Unicode) : la question se pose", () => {
+    // Jeu synthétique, 31 octobre 2026 (cas 044) : « خادم » relevé par la
+    // couche de texte en glyphes sans Unicode. Rien ne s'y reconnaissait, et
+    // le serveur partait en charge, sans un mot. Un texte perdu n'est pas un
+    // texte absent : on ne conclut rien de ce qu'il ne dit pas.
+    const c = immo(facture({ designations: ["ﻡ\u0000ﺩ\u0000ﺎﺧ"] }));
+    assert.equal(c?.statut, "reserve");
+    assert.match(c!.motif, /illisible/);
+    assert.deepEqual(c!.preuves["illisibles"], ["ﻡ\u0000ﺩ\u0000ﺎﺧ"]);
+  });
 });
 
 describe("destinataire", () => {

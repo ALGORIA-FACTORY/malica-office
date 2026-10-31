@@ -986,18 +986,34 @@ function immobilisationATrancher(
     ];
     return familles.length > 0 ? [{ designation, familles }] : [];
   });
-  if (reconnus.length === 0) return null;
+  /*
+   * Une désignation PERDUE (glyphes sans Unicode) ne se compare à rien : elle
+   * peut nommer un serveur. Jeu synthétique, 31 octobre 2026 (cas 044) : le
+   * serveur arabe partait en charge, sans un mot. Un texte perdu n'est pas un
+   * texte absent — la question se pose, et se dit.
+   */
+  const illisibles = (p.designations ?? []).filter((d) => texteSansUnicode(d));
+  if (reconnus.length === 0 && illisibles.length === 0) return null;
+  const phrases = [
+    ...(reconnus.length > 0
+      ? [
+          `Bien susceptible d'être immobilisé : ${reconnus.map((r) => `« ${r.designation} »`).join(", ")}.`,
+        ]
+      : []),
+    ...(illisibles.length > 0
+      ? [
+          `Désignation illisible (texte perdu) : ${illisibles.length === 1 ? "un article" : `${illisibles.length} articles`} dont la nature ne se vérifie pas.`,
+        ]
+      : []),
+  ];
   return {
     code: "immobilisation_a_trancher",
     statut: "reserve",
-    motif: `Bien susceptible d'être immobilisé : ${reconnus
-      .map((r) => `« ${r.designation} »`)
-      .join(
-        ", ",
-      )}. L'écriture proposée l'impute au compte du paramétrage (une charge) : immobilisation ou charge, le cabinet tranche.`,
+    motif: `${phrases.join(" ")} L'écriture proposée l'impute au compte du paramétrage (une charge) : immobilisation ou charge, le cabinet tranche.`,
     preuves: {
       articles: reconnus.map((r) => r.designation),
       familles: [...new Set(reconnus.flatMap((r) => r.familles))].sort(),
+      ...(illisibles.length > 0 ? { illisibles } : {}),
     },
   };
 }
