@@ -3,6 +3,7 @@ import { statutDuCircuit, type CircuitInterne } from "@malica/socle/statut-d-env
 import { describe, expect, it } from "vitest";
 
 import {
+  carteDuRecu,
   demandeDuSiegeATrancher,
   etatDeMaDemande,
   gestesDuCircuit,
@@ -107,6 +108,36 @@ describe("le propriétaire reçoit", () => {
       mettreAuPrive: false,
       supprimer: true,
     });
+  });
+
+  /*
+   * Revue Codex de #146 : sans cabinet engagé, ou après « Garder », le seul
+   * bouton qui ouvrait le retour était caché avec l'envoi au comptable.
+   */
+  it("sans cabinet engagé, le propriétaire peut toujours la retourner au siège", () => {
+    expect(carteDuRecu(gestesDuCircuit(recue, PROPRIETAIRE, false), recue.gardeeLe)).toEqual({
+      envoyerAuComptable: false,
+      retourner: true,
+    });
+  });
+
+  it("gardée par le propriétaire, elle se retourne encore au siège", () => {
+    const gardee = piece({
+      gardeeLe: "2026-10-30T10:00:00Z",
+      circuit: circuit({ recoit: true, mienne: false, dernier: "envoyee" }),
+    });
+    expect(carteDuRecu(gestesDuCircuit(gardee, PROPRIETAIRE, true), gardee.gardeeLe)).toEqual({
+      envoyerAuComptable: false,
+      retourner: true,
+    });
+  });
+
+  it("avec un cabinet, la carte porte l'envoi et le retour ; rien pour qui ne reçoit pas", () => {
+    expect(carteDuRecu(gestesDuCircuit(recue, PROPRIETAIRE, true), null)).toEqual({
+      envoyerAuComptable: true,
+      retourner: true,
+    });
+    expect(carteDuRecu(gestesDuCircuit(recue, SIEGE, true), null)).toBeNull();
   });
 
   it("la demande d'un siège attend le propriétaire, et lui seul", () => {

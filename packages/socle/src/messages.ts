@@ -2011,6 +2011,7 @@ const fr = {
   "pme.retour.reponse.envoyer": "Envoyer la réponse",
   "refus.retour.inscrite":
     "Un règlement de cette pièce est inscrit au journal : annulez-le d’abord, puis retournez la pièce.",
+  "refus.reponse.sans_decision": "Accordez ou refusez la demande.",
   "refus.reponse.vide": "Écrivez votre réponse avant de l’envoyer.",
   "refus.piece.remplacee":
     "Une nouvelle photo a remplacé cette pièce : c’est la nouvelle qui se traite.",
@@ -2098,6 +2099,9 @@ const fr = {
   "circuit.recue.question": "{qui} vous l'a envoyée : l'envoyer à {cabinet} ?",
   "circuit.recue.aide":
     "Envoyez-la au comptable, ou retournez-la à {qui} avec un motif : il fera le geste demandé, puis vous la renverra.",
+  "circuit.recue.titre": "{qui} vous l'a envoyée",
+  "circuit.recue.aide.sansEnvoi":
+    "Elle reste dans la société. Si quelque chose manque, retournez-la à {qui} avec un motif : il fera le geste demandé, puis vous la renverra.",
   "circuit.retourner": "Retourner à {qui}",
   "circuit.retour.lede":
     "Le motif dit à {qui} quoi faire, votre note comment. Il le lira tel quel sur sa pièce.",
@@ -5818,6 +5822,7 @@ const en: Dict = {
   "pme.retour.reponse.envoyer": "Send the reply",
   "refus.retour.inscrite":
     "A payment of this document is booked: cancel it first, then return the document.",
+  "refus.reponse.sans_decision": "Grant or refuse the request.",
   "refus.reponse.vide": "Write your reply before sending it.",
   "refus.piece.remplacee": "A new photo replaced this document: the new one is the one to handle.",
   "refus.piece.archivee": "The client withdrew this document: it is archived.",
@@ -5905,6 +5910,9 @@ const en: Dict = {
   "circuit.recue.question": "{qui} sent it to you: send it to {cabinet}?",
   "circuit.recue.aide":
     "Send it to the accountant, or return it to {qui} with a reason: they will do what is asked, then send it back to you.",
+  "circuit.recue.titre": "{qui} sent it to you",
+  "circuit.recue.aide.sansEnvoi":
+    "It stays in the company. If something is missing, return it to {qui} with a reason: they will do what is asked, then send it back to you.",
   "circuit.retourner": "Return to {qui}",
   "circuit.retour.lede":
     "The reason tells {qui} what to do, your note how. They will read it as is on their document.",
@@ -9481,6 +9489,7 @@ const ar: Dict = {
   "pme.retour.reponse.champ": "ردّك",
   "pme.retour.reponse.envoyer": "إرسال الرد",
   "refus.retour.inscrite": "دفعة هذه الوثيقة مُسجَّلة في اليومية: ألغِها أولًا، ثم أرجِع الوثيقة.",
+  "refus.reponse.sans_decision": "اقبل الطلب أو ارفضه.",
   "refus.reponse.vide": "اكتب ردّك قبل إرساله.",
   "refus.piece.remplacee": "حلّت صورة جديدة محلّ هذه الوثيقة: الجديدة هي التي تُعالَج.",
   "refus.piece.archivee": "سحب الحريف هذه الوثيقة: هي مؤرشفة.",
@@ -9554,6 +9563,9 @@ const ar: Dict = {
   "circuit.recue.question": "أرسلها إليك {qui}: إرسالها إلى {cabinet}؟",
   "circuit.recue.aide":
     "أرسلها إلى المحاسب، أو أرجعها إلى {qui} مع سبب: سيقوم بما طُلب ثم يعيد إرسالها إليك.",
+  "circuit.recue.titre": "أرسلها إليك {qui}",
+  "circuit.recue.aide.sansEnvoi":
+    "تبقى في الشركة. إن نقص شيء، أرجعها إلى {qui} مع سبب: سيقوم بما طُلب ثم يعيد إرسالها إليك.",
   "circuit.retourner": "إرجاعها إلى {qui}",
   "circuit.retour.lede": "السبب يقول لـ{qui} ماذا يفعل، وملاحظتك كيف. سيقرؤها كما هي على وثيقته.",
   "circuit.retour.note": "ملاحظة إلى {qui}",

@@ -171,6 +171,103 @@ describe("le circuit ne se contourne pas", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(rows[0]?.vis, "entite");
   });
 
+  it("répondre sur une pièce jamais entrée dans le passage est refusé, et rien ne part", async () => {
+    // Revue Codex de #146 : le test NULL sautait le refus, et la réponse
+    // partait en notification de société, que le cabinet lisait.
+    const id = await s.deposer("sami", "entite");
+    await assert.rejects(
+      s.fait("sami", "capture.repondreAuCabinet", id, "REPONSE-SANS-PASSAGE"),
+      /personne a qui repondre/,
+    );
+    const { rows } = await s.admin.query(
+      `select count(*)::int as n from collab.notifications where payload ->> 'piece_id' = $1`,
+      [id],
+    );
+    assert.equal(rows[0]?.n, 0);
+  });
+
+  it("un booléen NULL ne passe aucune garde", async () => {
+    const [droit] = await sql("sonia", `select app.a_le_droit(null, 'envoi.cabinet') as d`);
+    assert.equal(droit?.d, false);
+    const id = await chezLeComptable();
+    await s.fait("expert", "supervision.retourner", {
+      pieceId: id,
+      motifId: s.motifs["piece_illisible"],
+      note: "Illisible",
+    });
+    await assert.rejects(
+      sql("sami", `select public.capture_piece_set_vis($1, 'entite'::app.vis_t, null)`, [id]),
+      /refus\.envoi\.reserve_au_proprietaire/,
+    );
+    await s.fait("sami", "collab.demanderSurPiece", id, "rappel");
+    await assert.rejects(
+      sql("amel", `select public.piece_repondre($1, 'rappel', null, null)`, [id]),
+      /refus\.reponse\.sans_decision/,
+    );
+  });
+
+  it("les faits d'une pièce ne s'effacent pas sur la foi d'un réglage de session", async () => {
+    const id = await s.deposer("sami", "entite");
+    await s.lire("sami", id);
+    // Même une session de service qui pose le réglage n'efface rien hors de
+    // `capture_piece_supprimer` : la garde lit un fait de la transaction.
+    const client = await s.admin.connect();
+    try {
+      await client.query("begin");
+      await client.query(`select set_config('malica.piece_effacable', $1, true)`, [id]);
+      await assert.rejects(
+        client.query(`delete from capture.extractions where piece_id = $1`, [id]),
+        /R7/,
+      );
+    } finally {
+      await client.query("rollback");
+      client.release();
+    }
+    // Sous l'identité d'un siège, le réglage ne donne rien non plus.
+    await assert.rejects(
+      sousIdentiteDuServeur(s.gens.sonia.id, async (db) => {
+        await db.query(`select set_config('malica.piece_effacable', $1, true)`, [id]);
+        await db.query(`delete from capture.extractions where piece_id = $1`, [id]);
+      }),
+      /permission denied|R7/,
+    );
+    const { rows } = await s.admin.query(
+      `select count(*)::int as n from capture.extractions where piece_id = $1`,
+      [id],
+    );
+    assert.ok((rows[0]?.n ?? 0) >= 1);
+    // La porte, elle, efface toujours.
+    assert.equal(await s.fait("sami", "capture.supprimer", id), true);
+  });
+
+  it("membre des deux côtés, le comptable qui ouvre une pièce partagée la « voit » pour son cabinet", async () => {
+    // Trouvé par l'épreuve « la file, les exports » (compte de développement,
+    // propriétaire ET expert) : la porte prenait le passage du propriétaire
+    // pour toute pièce lisible, et la « Vue » du cabinet ne s'écrivait plus.
+    const t = await monterUneSociete(`deux-cotes-${Date.now()}`);
+    try {
+      await t.admin.query(
+        `insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')`,
+        [t.pme, t.gens.expert.id],
+      );
+      const id = await t.deposer("amel", "entite");
+      await t.lire("amel", id);
+      await t.fait("amel", "collab.envoyer", id);
+      const vue = (await t.fait("expert", "supervision.voir", id)) as { vueLe: string | null };
+      assert.ok(vue.vueLe, "la vue du cabinet est écrite");
+      const { rows } = await t.admin.query(
+        `select cabinet_org_id from capture.vues where piece_id = $1`,
+        [id],
+      );
+      assert.deepEqual(
+        rows.map((r) => r.cabinet_org_id),
+        [t.cabinet],
+      );
+    } finally {
+      await t.fermer();
+    }
+  });
+
   it("les droits que le Socle connaît sont ceux du référentiel", async () => {
     const { rows } = await s.admin.query<{ code: string }>(
       `select code from ref.droits order by sort_order, code`,

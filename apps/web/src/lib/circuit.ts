@@ -103,6 +103,27 @@ export function gestesDuCircuit(
   };
 }
 
+/** La carte d'une pièce qu'un siège a envoyée au propriétaire. */
+export interface CarteDuRecu {
+  /** L'envoyer au comptable : un cabinet engagé, et pas gardée. */
+  envoyerAuComptable: boolean;
+  /** La retourner au siège : toujours, tant qu'elle est reçue. */
+  retourner: true;
+}
+
+/**
+ * Le retour au siège vient du circuit, jamais de l'envoi au comptable :
+ * sans cabinet engagé, ou après « Garder », la pièce reçue se retourne
+ * encore (revue Codex de #146). `null` pour qui ne la reçoit pas.
+ */
+export function carteDuRecu(
+  g: GestesDuCircuit | null,
+  gardeeLe: string | null,
+): CarteDuRecu | null {
+  if (!g?.retournerAuSiege) return null;
+  return { envoyerAuComptable: g.envoyer === "cabinet" && !gardeeLe, retourner: true };
+}
+
 /** L'état d'une demande, tel que la personne qui l'a faite le lit. */
 export interface EtatDeMaDemande {
   fait: FaitDeDemande["fait"];

@@ -53,7 +53,12 @@ import {
   partageeAvecLeCabinet,
 } from "@/lib/fiche-de-la-piece";
 import { motDuStatut as motDeStatut } from "@/lib/statut";
-import { demandeDuSiegeATrancher, etatDeMaDemande, gestesDuCircuit } from "@/lib/circuit";
+import {
+  carteDuRecu,
+  demandeDuSiegeATrancher,
+  etatDeMaDemande,
+  gestesDuCircuit,
+} from "@/lib/circuit";
 import {
   statutDuCircuit,
   TON_PME,
@@ -1689,6 +1694,7 @@ function PieceScreen() {
   const derniereFaite = ouEnEst.map((e) => e.le !== null).lastIndexOf(true);
   const aTransmettre = gestes?.envoyer === "cabinet" && !piece.gardeeLe;
   const auProprietaire = gestes?.envoyer === "proprietaire";
+  const recu = carteDuRecu(gestes ?? null, piece.gardeeLe);
   const resteAPayer = resteMineur !== null && resteMineur > 0;
   const bloquee = !proposable && !sensAuCabinet && proposalAttempt != null && !proposalAttempt.ok;
 
@@ -1784,28 +1790,41 @@ function PieceScreen() {
                   },
                 ],
               }
-            : aTransmettre && cabinet.data && gestes?.retournerAuSiege
+            : recu
               ? {
                   /*
                    * La pièce d'un siège, reçue : le propriétaire l'envoie au
-                   * comptable, ou la lui retourne avec un motif (lot 4).
+                   * comptable s'il y en a un et qu'il ne l'a pas gardée — et
+                   * la retourne au siège dans tous les cas (lot 4, revue
+                   * Codex de #146).
                    */
                   ton: TON_PME[statut],
-                  titre: t("circuit.recue.question", { qui: leSiege, cabinet: cabinet.data.name }),
-                  sous: t("circuit.recue.aide", { qui: leSiege }),
+                  titre:
+                    recu.envoyerAuComptable && cabinet.data
+                      ? t("circuit.recue.question", { qui: leSiege, cabinet: cabinet.data.name })
+                      : t("circuit.recue.titre", { qui: leSiege }),
+                  sous:
+                    recu.envoyerAuComptable && cabinet.data
+                      ? t("circuit.recue.aide", { qui: leSiege })
+                      : t("circuit.recue.aide.sansEnvoi", { qui: leSiege }),
                   gestes: [
-                    {
-                      libelle: transmettre.isPending
-                        ? t("common.loading")
-                        : t("pme.transmettre.action"),
-                      action: () => transmettre.mutate(),
-                      eteint: transmettre.isPending,
-                      principal: true,
-                    },
+                    ...(recu.envoyerAuComptable && cabinet.data
+                      ? [
+                          {
+                            libelle: transmettre.isPending
+                              ? t("common.loading")
+                              : t("pme.transmettre.action"),
+                            action: () => transmettre.mutate(),
+                            eteint: transmettre.isPending,
+                            principal: true,
+                          },
+                        ]
+                      : []),
                     {
                       libelle: t("circuit.retourner", { qui: leSiege }),
                       action: () => setRetournerOuvert(true),
                       eteint: transmettre.isPending,
+                      principal: !(recu.envoyerAuComptable && cabinet.data),
                     },
                   ],
                 }

@@ -211,7 +211,8 @@ stable
 security definer
 set search_path = ''
 as $$
-  select p_org in (select app.orgs_avec_droit(p_droit))
+  -- Jamais NULL : `not app.a_le_droit(null, …)` doit refuser.
+  select coalesce(p_org in (select app.orgs_avec_droit(p_droit)), false)
 $$;
 
 revoke all on function app.a_le_droit(uuid, text) from public, anon;
@@ -710,8 +711,8 @@ $$;
 -- reconnaît désormais à un FAIT que seule `piece_remplacer` écrit (les
 -- clients n'insèrent pas dans `capture.remplacements`) : dans cette
 -- transaction, la pièce vient de remplacer une pièce déjà partie chez le
--- comptable — elle en hérite le partage, ce n'est pas un envoi. Le réglage
--- que `piece_remplacer` pose encore n'est plus lu par personne.
+-- comptable — elle en hérite le partage, ce n'est pas un envoi. La porte ne
+-- pose plus le réglage (`20261103120000`).
 
 create or replace function app.remplacement_en_cours(p_piece uuid)
 returns boolean
@@ -857,7 +858,7 @@ begin
 
   perform app.notifier_les_receveurs(v_tenant, 'piece.recue_du_siege',
                                      jsonb_build_object('piece_id', p_piece,
-                                                        'renvoi', v_dernier = 'retournee'));
+                                                        'renvoi', coalesce(v_dernier = 'retournee', false)));
 
   return jsonb_build_object('piece_id', p_piece, 'le', v_le, 'deja', false, 'chez', 'proprietaire');
 end
@@ -971,21 +972,26 @@ declare
   v_archivee timestamptz;
   v_depuis  timestamptz;
   v_le      timestamptz;
+  v_membre  boolean;
+  v_rien    constant jsonb := jsonb_build_object('piece_id', p_piece, 'vue_le', null,
+                                                 'deja', false);
 begin
   select tenant_id, vis, archivee_le into v_tenant, v_vis, v_archivee
     from capture.pieces where id = p_piece;
+  v_membre := coalesce(v_tenant in (select app.member_orgs()) and app.piece_lisible(p_piece),
+                       false);
 
   -- Dans la société : le propriétaire qui ouvre la pièce qu'un siège lui a
   -- envoyée la « voit ». Ouvrir n'importe quelle autre pièce de la société
-  -- n'écrit rien, et ne refuse rien : l'écran ouvre, la base décide.
-  if v_tenant is not null and v_tenant in (select app.member_orgs())
-     and app.piece_lisible(p_piece) then
-    if v_vis <> 'entite'::app.vis_t
-       or v_archivee is not null
+  -- n'écrit rien, et ne refuse rien : l'écran ouvre, la base décide. Une pièce
+  -- PARTAGÉE prend le passage du comptable, même pour qui est membre des deux
+  -- côtés (compte de développement : la « Vue » du cabinet ne s'écrivait plus).
+  if v_membre and v_vis = 'entite'::app.vis_t then
+    if v_archivee is not null
        or not app.a_le_droit(v_tenant, 'circuit.recevoir')
        or exists (select 1 from capture.remplacements r where r.piece_id = p_piece)
        or (select fait from app.dernier_fait_du_circuit(p_piece)) is distinct from 'envoyee' then
-      return jsonb_build_object('piece_id', p_piece, 'vue_le', null, 'deja', false);
+      return v_rien;
     end if;
     -- Une « Vue » par envoi et par correction de l'auteur — la première, quel
     -- que soit le propriétaire : deux propriétaires qui ouvrent ensemble n'en
@@ -1006,8 +1012,12 @@ begin
     return jsonb_build_object('piece_id', p_piece, 'vue_le', v_le, 'deja', true);
   end if;
 
-  -- Le comptable : repris de `20261030090000`.
+  -- Le comptable : repris de `20261030090000`. Un membre qui n'est pas du
+  -- cabinet ouvre sans rien écrire.
   if v_tenant is null or v_vis <> 'partage'::app.vis_t then
+    if v_membre then
+      return v_rien;
+    end if;
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
   select e.cabinet_org_id into v_cabinet
@@ -1018,11 +1028,14 @@ begin
    order by e.starts_on desc nulls last
    limit 1;
   if v_cabinet is null then
+    if v_membre then
+      return v_rien;
+    end if;
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
   if v_archivee is not null
      or exists (select 1 from capture.remplacements r where r.piece_id = p_piece) then
-    return jsonb_build_object('piece_id', p_piece, 'vue_le', null, 'deja', false);
+    return v_rien;
   end if;
 
   v_depuis := coalesce(greatest(app.dernier_envoi(p_piece), app.corrigee_par_le_client(p_piece)),
@@ -1285,8 +1298,10 @@ begin
      or not app.piece_lisible(p_piece) then
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
-  v_au_proprietaire := v_vis = 'entite'::app.vis_t
-    and (select fait from app.dernier_fait_du_circuit(p_piece)) = 'retournee';
+  -- Jamais NULL : une pièce qui n'est jamais entrée dans le passage n'a
+  -- personne à qui répondre (revue Codex de #146).
+  v_au_proprietaire := coalesce(v_vis = 'entite'::app.vis_t
+    and (select fait from app.dernier_fait_du_circuit(p_piece)) = 'retournee', false);
   if v_vis <> 'partage'::app.vis_t and not v_au_proprietaire then
     raise exception 'cette piece n''est pas partagee : personne a qui repondre'
       using errcode = 'check_violation';
@@ -1407,6 +1422,8 @@ declare
   v_rendue boolean := false;
   v_derive record;
 begin
+  -- Jamais NULL : « par accord » se dit, ou ne se dit pas.
+  p_par_accord := coalesce(p_par_accord, false);
   select tenant_id, vis, status, created_by
     into v_tenant, v_old, v_status, v_auteur
     from capture.pieces where id = p_piece for update;
@@ -1446,7 +1463,7 @@ begin
       raise exception 'refus.envoi.reserve_au_proprietaire'
         using errcode = '42501', hint = 'envoi.proprietaire';
     end if;
-    v_rendue := v_status = 'retournee' and p_vis = 'entite'::app.vis_t;
+    v_rendue := coalesce(v_status = 'retournee' and p_vis = 'entite'::app.vis_t, false);
     if not v_rendue and not app.accord_donne(p_piece, 'rappel') then
       raise exception 'une piece transmise ne revient que par accord du cabinet'
         using errcode = 'check_violation';
@@ -1551,6 +1568,8 @@ declare
   v_auteur   uuid;
   v_prevenir uuid;
 begin
+  -- Jamais NULL : « par accord » se dit, ou ne se dit pas.
+  p_par_accord := coalesce(p_par_accord, false);
   perform 1 from capture.pieces
    where id in (select app.versions_de_la_piece(p_piece)) order by id for update;
 
@@ -1700,11 +1719,11 @@ begin
     )
     select id from suite order by rang
   loop
-    perform set_config('malica.piece_effacable', v_version::text, true);
-    delete from capture.pieces where id = v_version;
+    -- L'effacement s'inscrit comme un fait de la transaction, que les gardes
+    -- de R7 lisent (`20261103120000`) ; il se retire avant de rendre la main.
+    perform app.effacer_la_piece(v_version);
   end loop;
-  perform set_config('malica.piece_effacable', '', true);
-  perform set_config('malica.paiements_effacables', '', true);
+  perform app.effacements_clos();
 
   return 'supprimee';
 end
@@ -1891,6 +1910,9 @@ declare
   v_relayee boolean := false;
   v_vivante uuid;
 begin
+  if p_accorde is null then
+    raise exception 'refus.reponse.sans_decision' using errcode = 'check_violation';
+  end if;
   if not app.piece_lisible(p_piece) then
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
