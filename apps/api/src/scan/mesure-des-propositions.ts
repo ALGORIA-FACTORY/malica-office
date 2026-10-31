@@ -697,6 +697,23 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     refus: "nature_piece",
   },
   {
+    /*
+     * Le même avoir, quand son titre est PERDU (31 octobre 2026) : la couche
+     * de texte d'un PDF imprimé par Chromium rend ses glyphes liés sans
+     * correspondance Unicode. Aucun titre ne s'y reconnaissait, et la pièce
+     * passait pour une facture, par défaut. Le haut de la pièce est relevé
+     * ici tel que la couche le rendait (cas 047), en échappements.
+     */
+    nom: "un titre perdu (glyphes sans Unicode) ne fait pas une facture : jamais un achat",
+    provenance: "jeu synthétique, cas 047 (outils/jeu-synthetique/rendus/047.pdf)",
+    lecture: facture({
+      ...SIMPLE,
+      titre: "ﺎ\u0000 \u0000 ﻨ راعشإ\u0000 2026/1524",
+    }),
+    attendu: null,
+    refus: "nature_piece",
+  },
+  {
     nom: "un avoir aux montants négatifs : un avoir, pas une facture incohérente",
     provenance: "revue indépendante de la PR 144",
     lecture: facture({

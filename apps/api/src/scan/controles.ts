@@ -27,6 +27,7 @@
 
 import { periodeDeTva } from "@malica/socle/exercice";
 import { memeMatricule, normaliserMatricule } from "@malica/socle/matricule";
+import { texteSansUnicode } from "@malica/socle/texte-sans-unicode";
 
 import type { ChangeDuJugement } from "./cours-de-change.ts";
 import type { ResultatNormalisation } from "./normaliser-montants.ts";
@@ -396,6 +397,26 @@ function nature(p: PieceAControler, ctx: ContexteControle): ResultatControle {
       motif: reconnu.refus.replaceAll("{titre}", titre),
       preuves: { titre, documentKind: p.documentKind, documentType: reconnu.documentType },
     };
+  /*
+   * ======================================= CE QU'ON N'A PAS LU NE DIT PAS « FACTURE »
+   *
+   * Jeu synthétique, 31 octobre 2026 (cas 047) : un avoir arabe recevait une
+   * écriture d'ACHAT. Son titre « إشعار دائن » est au référentiel ; mais la
+   * couche de texte l'avait perdu (glyphes sans correspondance Unicode), aucun
+   * titre ne s'y reconnaissait, et ce contrôle concluait « facture » — par
+   * défaut, en silence. Ne reconnaître aucun titre n'est une preuve que si le
+   * titre a été LU. Un haut de page perdu bloque : facture ou avoir, la pièce
+   * ne le dit pas, le cabinet tranche. Un haut de page absent se propose, mais
+   * en réserve : on le dit.
+   */
+  if (titre && texteSansUnicode(titre))
+    return {
+      code: "nature_piece",
+      statut: "anomalie",
+      motif:
+        "Le haut de la pièce ne se lit pas (texte sans correspondance Unicode) : on ne peut pas dire si c'est une facture ou un avoir. Le cabinet tranche.",
+      preuves: { titre, documentKind: p.documentKind },
+    };
   if (!p.documentKind)
     return {
       code: "nature_piece",
@@ -410,6 +431,13 @@ function nature(p: PieceAControler, ctx: ContexteControle): ResultatControle {
       statut: "rejet",
       motif: `Le type « ${p.documentKind} » ne porte pas d'écriture comptable selon le paramétrage.`,
       preuves: { documentKind: p.documentKind },
+    };
+  if (!titre)
+    return {
+      code: "nature_piece",
+      statut: "reserve",
+      motif: `Pièce de type « ${p.documentKind} », mais aucun titre n'a été relevé en haut de la pièce : facture ou avoir, à confirmer.`,
+      preuves: { documentKind: p.documentKind, titre: null },
     };
   return {
     code: "nature_piece",

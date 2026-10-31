@@ -17,14 +17,14 @@ import { z } from "zod";
 
 import { callDeepSeek } from "../conseil/deepseek.ts";
 import { repairArticles } from "./article-repair.ts";
-import { extrairePagesScannees } from "./pdf-image.ts";
+import { extrairePagesScannees, pagesDessineesDuPdf } from "./pdf-image.ts";
 import {
   SecondLecteurOccupe,
   lireAvecPaddle,
   ouvrirLeCoupeCircuit,
   secondLecteurDisponible,
 } from "./paddle.ts";
-import { readPdfTextLayer } from "./pdf-text.ts";
+import { readPdfTextLayer, type PdfTextLayer } from "./pdf-text.ts";
 import { BANDES_MAX, decouperEnBandes, fusionnerBandes } from "./bandes.ts";
 import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
 import { lireAvecQwen, QwenError } from "./qwen.ts";
@@ -620,6 +620,18 @@ async function releverDesPages(
   };
 }
 
+/**
+ * La couche de texte d'un PDF se croit-elle ? Il faut qu'elle porte du texte
+ * (un scan n'en porte pas) et qu'aucune page n'en ait PERDU : un glyphe sans
+ * correspondance Unicode rend sa page illisible par la couche — le titre d'un
+ * avoir arabe y passait pour celui d'une facture (31 octobre 2026). Une page
+ * perdue fait relire la pièce entière en image : un plan de jetons vient d'un
+ * seul lecteur, sinon ses ordinaux et ses échelles ne se répondent plus.
+ */
+export function laCoucheSeCroit(couche: PdfTextLayer): boolean {
+  return couche.exploitable && couche.pagesSansUnicode.length === 0;
+}
+
 /** Le modèle de vision peut-il prendre le relais ? Sa clé le dit. */
 function visionDisponible(): boolean {
   return Boolean(process.env["QWEN_API_KEY"]?.trim());
@@ -684,7 +696,7 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
   // modèle n'a à le relire, donc aucun modèle ne peut s'y tromper.
   if (estPdf && params.bytes) {
     const couche = await readPdfTextLayer(params.bytes);
-    if (couche.exploitable && !params.sansCoucheTexte) {
+    if (laCoucheSeCroit(couche) && !params.sansCoucheTexte) {
       return {
         tokens: couche.tokens,
         source: "pdf-text",
@@ -695,8 +707,13 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
       };
     }
     // Sinon la pièce est un scan déguisé en PDF : pas de texte, des pixels.
-    // On extrait l'image de chaque page — sans canvas — et l'œil la lit.
-    const pages = await extrairePagesScannees(params.bytes);
+    // On extrait l'image de chaque page — sans canvas — et l'œil la lit. Un
+    // PDF dont le texte est PERDU n'a pas d'image à extraire : ses pages se
+    // dessinent, et l'œil les lit de même.
+    const pages =
+      couche.pagesSansUnicode.length > 0
+        ? await pagesDessineesDuPdf(params.bytes)
+        : await extrairePagesScannees(params.bytes);
     if (pages.length === 0) {
       // Ni couche de texte, ni image extractible : un code, que l'écran
       // traduit dans la langue du dirigeant. La prose ne franchit pas la

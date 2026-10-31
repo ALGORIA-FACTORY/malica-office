@@ -9,8 +9,10 @@
  * rapport (`RAPPORT.md`) avec lui.
  *
  * Sans `OCR_URL`, les photos et les carnets ne se relèvent pas : ils sortent
- * « non mesurés », et l'épreuve ne les juge pas. Les PDF, eux, se relèvent
- * toujours — leur couche de texte n'appelle aucun modèle.
+ * « non mesurés », et l'épreuve ne les juge pas. Les PDF se relèvent par leur
+ * couche de texte, sans modèle — sauf ceux dont la couche a perdu ses mots
+ * (glyphes sans Unicode), que la production relit en image : sans `OCR_URL`,
+ * eux aussi sortent « non mesurés ».
  *
  *   node --experimental-strip-types --test src/malica/lecture/jeu-synthetique.test.ts
  */
@@ -54,10 +56,12 @@ describe("le jeu synthétique", () => {
     );
   });
 
-  it("chaque PDF se relève par sa couche de texte, sans modèle", () => {
+  it("chaque PDF mesuré se relève par sa couche de texte, sans modèle", () => {
+    // Un PDF au texte perdu se relit en image (`laCoucheSeCroit`) : sans
+    // second lecteur, il sort non mesuré, et la raison le dit.
     assert.deepEqual(
       r
-        .filter((x) => x.rendu === "pdf" && x.lecteur !== "pdf-text")
+        .filter((x) => x.rendu === "pdf" && x.verdict !== "non_mesuree" && x.lecteur !== "pdf-text")
         .map((x) => `${x.id} : ${x.detail}`),
       [],
     );

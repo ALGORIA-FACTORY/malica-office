@@ -271,6 +271,24 @@ describe("nature de la pièce", () => {
   it("nature inconnue : réserve", () => {
     assert.equal(statut(facture({ documentKind: null }), "nature_piece").statut, "reserve");
   });
+  it("un titre qu'on n'a pas pu lire ne fait pas une facture : anomalie, jamais un achat", () => {
+    // Le haut de l'avoir arabe du jeu synthétique (cas 047), tel que la couche
+    // de texte de Chromium le relève : des glyphes sans correspondance Unicode.
+    const c = statut(facture({ titre: "ﺎ\u0000 \u0000 ﻨ راعشإ\u0000" }), "nature_piece");
+    assert.equal(c.statut, "anomalie");
+    assert.match(c.motif, /facture ou (un )?avoir/);
+  });
+  it("un titre reconnu l'emporte, même à côté d'un texte perdu", () => {
+    assert.equal(
+      statut(facture({ titre: "FACTURE PROFORMA \u0000ﺢ" }), "nature_piece").statut,
+      "rejet",
+    );
+  });
+  it("aucun titre relevé : la nature se propose, mais en réserve, nommée", () => {
+    const c = statut(facture({ titre: null }), "nature_piece");
+    assert.equal(c.statut, "reserve");
+    assert.match(c.motif, /titre/);
+  });
 });
 
 describe("destinataire", () => {

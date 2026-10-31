@@ -35,7 +35,9 @@
  * ================================================================ CE QU'IL TAIT
  *
  * Rien. Une image sans second lecteur joignable n'est pas comptée comme lue :
- * elle sort « non mesurée », avec la raison. Un champ que le désignateur idéal
+ * elle sort « non mesurée », avec la raison. Un PDF dont la couche de texte a
+ * perdu ses mots (`laCoucheSeCroit`) est une image pour la production : il
+ * sort de même. Un champ que le désignateur idéal
  * ne peut pas désigner (jetons non contigus dans le plan) est dit.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -53,7 +55,8 @@ import { auChemin, type CasDOr } from "./jeu-d-or.ts";
 import { secondLecteurDisponible } from "./paddle.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
-import { relever, type VisionSelection } from "./vision.ts";
+import { readPdfTextLayer } from "./pdf-text.ts";
+import { laCoucheSeCroit, relever, type VisionSelection } from "./vision.ts";
 
 const DOSSIER_DU_JEU = new URL("../../../../../outils/jeu-synthetique/", import.meta.url);
 
@@ -123,6 +126,14 @@ async function releverLaPiece(cas: CasSynthetique): Promise<Releve> {
   if (!pdf && !secondLecteurDisponible())
     return { tokens: null, raison: "image : PaddleOCR non joignable (OCR_URL absente)" };
   const octets = new Uint8Array(readFileSync(fichier));
+  // Un PDF dont la couche de texte a perdu ses mots se relit en image, comme
+  // en production (`laCoucheSeCroit`) : sans second lecteur, il n'est pas lu.
+  if (pdf && !secondLecteurDisponible() && !laCoucheSeCroit(await readPdfTextLayer(octets)))
+    return {
+      tokens: null,
+      raison:
+        "PDF au texte perdu (glyphes sans Unicode), relu en image : PaddleOCR non joignable (OCR_URL absente)",
+    };
   const mime = pdf ? "application/pdf" : "image/jpeg";
   const r = await relever({
     dataUrl: `data:${mime};base64,${Buffer.from(octets).toString("base64")}`,
