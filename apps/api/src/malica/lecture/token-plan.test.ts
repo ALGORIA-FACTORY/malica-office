@@ -95,6 +95,21 @@ describe("normalizeDate — les mois en toutes lettres", () => {
     assert.equal(normalizeDate("۱۵ سبتمبر ۲۰۲۶"), "2026-09-15");
   });
 
+  /*
+   * Jeu synthétique, 31 octobre 2026 : sur une facture arabe en PDF, la couche
+   * de texte rend « ٢٠٢٦/١٠/٠٧ » en CINQ jetons (chaque série de chiffres est
+   * une course bidirectionnelle à part), et la plage désignée se relit
+   * « ٢٠٢٦ / ١٠ / ٠٧ ». La date était perdue, la pièce sortait « à compléter ».
+   * Un œil rend la même chose quand le papier aère ses séparateurs.
+   */
+  it("lit une date dont les séparateurs sont entourés d'espaces", () => {
+    assert.equal(normalizeDate("٢٠٢٦ / ١٠ / ٠٧"), "2026-10-07");
+    assert.equal(normalizeDate("٠٧ / ١٠ / ٢٠٢٦"), "2026-10-07");
+    assert.equal(normalizeDate("07 - 10 - 2026"), "2026-10-07");
+    // L'espace seul ne sépare pas une date : « 07 10 2026 » reste absente.
+    assert.equal(normalizeDate("07 10 2026"), null);
+  });
+
   it("ne devine pas pour autant", () => {
     // Un mois sans jour ni année n'est pas une date — déjà verrouillé plus
     // haut, redit ici parce que c'est la limite de ce qu'on vient d'ouvrir.

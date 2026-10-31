@@ -157,10 +157,16 @@ export function normalizeDate(text: string): string | null {
   const rendre = (y: string, m: string, d: string): string | null =>
     dateReelle(y, m, d) ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` : null;
 
-  const iso = s.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  /*
+   * Le séparateur peut être entouré d'espaces : « ٢٠٢٦ / ١٠ / ٠٧ ». La couche
+   * de texte d'un PDF arabe rend chaque série de chiffres en jeton à part, et
+   * la plage désignée se relit espacée (jeu synthétique, 31 octobre 2026). Le
+   * séparateur reste exigé : l'espace seul ne fait pas une date.
+   */
+  const iso = s.match(/(\d{4})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})/);
   if (iso) return rendre(iso[1]!, iso[2]!, iso[3]!);
 
-  const dmy = s.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/);
+  const dmy = s.match(/(\d{1,2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{2,4})/);
   if (dmy) {
     const yRaw = dmy[3]!;
     const y = yRaw.length === 2 ? `20${yRaw}` : yRaw;
