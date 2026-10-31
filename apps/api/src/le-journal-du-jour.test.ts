@@ -299,7 +299,8 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     // Le contrôle débit = crédit est DANS le fichier : le total du journal et le général.
     const totaux = contenu.split("\r\n").filter((l) => l.includes(";total;"));
     assert.equal(totaux.length, 2);
-    for (const t of totaux) assert.ok(t.endsWith(";TND;equilibre;;"), t);
+    // Puis les cinq colonnes de devise d'origine, vides sur un total (31 octobre 2026).
+    for (const t of totaux) assert.ok(t.endsWith(";TND;equilibre;;;;;;;"), t);
     assert.equal(premier.lignes, 10, "les lignes d'écriture, sans les totaux");
     assert.equal(premier.empreinte, createHash("sha256").update(garde1.octets).digest("hex"));
     // La PME et un autre cabinet ne le lisent pas.
