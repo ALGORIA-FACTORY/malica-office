@@ -1,5 +1,6 @@
 import type { DossierComptable, DocumentComptable } from "@malica/socle/ports/repositories";
 import type { Zip as ZipEnFlux, ZipPassThrough as FichierDuZip } from "fflate";
+import { nomDeFichierDePiece } from "@/lib/nom-de-fichier";
 
 /*
  * ============================================ UN DOSSIER DE 2 000 PIÈCES
@@ -31,34 +32,6 @@ const TRANCHE = 8 * 1024 * 1024;
  * illisible. On s'arrête avant d'en remettre une corrompue.
  */
 const LIMITE_ZIP = 0xffff_ffff;
-
-export function extensionDuContenu(type: string): string {
-  const types: Record<string, string> = {
-    "application/pdf": "pdf",
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-    "image/heic": "heic",
-    "image/tiff": "tiff",
-    "text/plain": "txt",
-  };
-  return types[type.split(";")[0]!.trim().toLowerCase()] ?? "bin";
-}
-
-function nomSur(texte: string): string {
-  // Les noms viennent de pièces utilisateur ; les caractères de contrôle
-  // n'ont aucune place dans un chemin de restitution.
-  // eslint-disable-next-line no-control-regex
-  const interdits = /[\u0000-\u001f\u007f/\\:*?"<>|]/g;
-  return (
-    texte
-      .normalize("NFKC")
-      .replace(interdits, "-")
-      .replace(/\.{2,}/g, "-")
-      .trim()
-      .slice(0, 100) || "document"
-  );
-}
 
 /** Échapper les séparateurs ET les formules des tableurs provenant des pièces. */
 function csv(lignes: unknown[][]): string {
@@ -224,7 +197,7 @@ export async function construireArchiveComptable(
     for (const [i, d] of uniques.entries()) {
       const original = await chargements[i]!;
       verifier();
-      const nom = `Originaux/${nomSur(d.reference ?? d.type ?? "document")}_${d.id}.${extensionDuContenu(original.type)}`;
+      const nom = `Originaux/${nomDeFichierDePiece(d.reference ?? d.type, d.id, original.type)}`;
       await verserOriginal(zip, new ZipPassThrough(nom), original.contenu, verifier);
       delete chargements[i];
       lancer(i + PARALLELISME);

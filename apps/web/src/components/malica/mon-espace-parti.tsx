@@ -25,9 +25,9 @@ import {
   GrilleDesMois,
 } from "@/components/malica/grille-des-mois";
 import { useI18n } from "@/i18n";
-import { extensionDuContenu } from "@/lib/archive-comptable";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { jourEtMois } from "@/lib/lisible";
+import { nomDeFichierDePiece } from "@/lib/nom-de-fichier";
 import { LotInterrompu, unParUn } from "@/lib/un-par-un";
 import { office } from "@/verticals/malica-office/composition";
 
@@ -83,7 +83,7 @@ export function MonEspaceParti() {
         if (!octets) throw new Error(`contenu absent : ${id}`);
         const { chemin } = await enregistrerUnFichier(
           octets,
-          `${p.societe} ${p.createdAt.slice(0, 10)}.${extensionDuContenu(octets.type)}`,
+          nomDeFichierDePiece(`${p.societe} ${p.createdAt.slice(0, 10)}`, p.id, octets.type),
         );
         setRemis(chemin);
       }),
