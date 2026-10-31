@@ -56,6 +56,7 @@ import { secondLecteurDisponible } from "./paddle.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
 import { readPdfTextLayer } from "./pdf-text.ts";
+import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import { laCoucheSeCroit, relever, type VisionSelection } from "./vision.ts";
 
 const DOSSIER_DU_JEU = new URL("../../../../../outils/jeu-synthetique/", import.meta.url);
@@ -75,6 +76,7 @@ export interface CasSynthetique {
   piece: {
     sens: "facture_achat" | "facture_vente";
     recueLe: string;
+    titre: string;
     devise: string;
     exposant: number;
     articles: Array<{ codeTaxe: string }>;
@@ -111,11 +113,27 @@ export function lesCas(): CasSynthetique[] {
 type Releve = { tokens: PageToken[]; lecteur: string } | { tokens: null; raison: string };
 
 /**
+ * Comment le banc relève : comme la production, ou — DIAGNOSTIC — en croyant
+ * la couche de texte d'un PDF même quand elle a perdu des mots.
+ *
+ * Le diagnostic n'est pas une mesure de la chaîne : la production relit ces
+ * PDF en image. Il isole le JUGEMENT et la PROPOSITION du lecteur — les
+ * montants, les matricules et les dates de ces PDF sont exacts dans leur
+ * couche, seuls leurs mots arabes sont perdus —, pour que le Socle reste
+ * mesuré sur les 27 PDF arabes et hybrides tant qu'aucun second lecteur ne
+ * tourne ici. Ses chiffres sont rapportés à part, jamais mêlés à la mesure.
+ */
+export type ModeDeReleve = "production" | "diagnostic_couche_crue";
+
+/** Le lecteur que le diagnostic inscrit : jamais celui d'une mesure. */
+export const LECTEUR_DU_DIAGNOSTIC = "pdf-text (diagnostic)";
+
+/**
  * Le relevé de la pièce par le chemin de production. Une image ne se relève
  * que si PaddleOCR est joignable (`OCR_URL`) : le modèle de vision est payant,
  * et ce banc n'en appelle aucun (`sansAppelPayant`).
  */
-async function releverLaPiece(cas: CasSynthetique): Promise<Releve> {
+async function releverLaPiece(cas: CasSynthetique, mode: ModeDeReleve): Promise<Releve> {
   const pdf = cas.rendu === "pdf";
   const fichier = new URL(`rendus/${cas.id}.${pdf ? "pdf" : "jpg"}`, DOSSIER_DU_JEU);
   if (!existsSync(fichier))
@@ -128,7 +146,12 @@ async function releverLaPiece(cas: CasSynthetique): Promise<Releve> {
   const octets = new Uint8Array(readFileSync(fichier));
   // Un PDF dont la couche de texte a perdu ses mots se relit en image, comme
   // en production (`laCoucheSeCroit`) : sans second lecteur, il n'est pas lu.
-  if (pdf && !secondLecteurDisponible() && !laCoucheSeCroit(await readPdfTextLayer(octets)))
+  // Le diagnostic la croit : c'est le chemin `pdf-text` de `relever`, la
+  // couche et le recollage des milliers.
+  const couche = pdf ? await readPdfTextLayer(octets) : null;
+  if (couche && !laCoucheSeCroit(couche) && mode === "diagnostic_couche_crue")
+    return { tokens: recollerLesMilliers(couche.tokens), lecteur: LECTEUR_DU_DIAGNOSTIC };
+  if (couche && !laCoucheSeCroit(couche) && !secondLecteurDisponible())
     return {
       tokens: null,
       raison:
@@ -317,7 +340,7 @@ function coursDuCas(cas: CasSynthetique): CasDeMesure["cours"] {
   };
 }
 
-async function mesurerUnCas(cas: CasSynthetique): Promise<ResultatDuCas> {
+async function mesurerUnCas(cas: CasSynthetique, mode: ModeDeReleve): Promise<ResultatDuCas> {
   const base = {
     id: cas.id,
     langue: cas.langue,
@@ -326,7 +349,7 @@ async function mesurerUnCas(cas: CasSynthetique): Promise<ResultatDuCas> {
     defaut: cas.defaut,
     issueAttendue: cas.attendu.issue.type,
   };
-  const releve = await releverLaPiece(cas);
+  const releve = await releverLaPiece(cas, mode);
   if (releve.tokens === null) {
     return {
       ...base,
@@ -362,7 +385,15 @@ async function mesurerUnCas(cas: CasSynthetique): Promise<ResultatDuCas> {
     nom: orCas.nom,
     provenance: orCas.provenance,
     dossier: cas.dossier,
-    lecture: lectureCitee(releve.tokens, lu, selection.overall_confidence, cas.piece.recueLe),
+    lecture: {
+      ...lectureCitee(releve.tokens, lu, selection.overall_confidence, cas.piece.recueLe),
+      // Le diagnostic croit une couche dont le titre est PERDU : le contrôle
+      // de la nature bloquerait tout, et c'est juste (`nature_piece`). Pour
+      // mesurer le reste du jugement, il reçoit le titre que le rendu a
+      // imprimé — celui qu'un lecteur d'image relèverait. C'est la seule
+      // valeur du diagnostic qui vienne de la spécification, et il le dit.
+      ...(releve.lecteur === LECTEUR_DU_DIAGNOSTIC ? { titre: cas.piece.titre } : {}),
+    },
     attendu: attendu.ecriture,
     ...(attendu.issue.type === "ecriture" && attendu.issue.reserve
       ? { reserve: attendu.issue.reserve }
@@ -400,10 +431,11 @@ async function mesurerUnCas(cas: CasSynthetique): Promise<ResultatDuCas> {
 
 export async function mesurerLeJeu(
   cas: readonly CasSynthetique[] = lesCas(),
+  mode: ModeDeReleve = "production",
 ): Promise<ResultatDuCas[]> {
   sansAppelPayant();
   const resultats: ResultatDuCas[] = [];
-  for (const c of cas) resultats.push(await mesurerUnCas(c));
+  for (const c of cas) resultats.push(await mesurerUnCas(c, mode));
   return resultats;
 }
 
