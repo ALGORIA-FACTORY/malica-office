@@ -28,6 +28,7 @@
 import { periodeDeTva } from "@malica/socle/exercice";
 import { memeMatricule, normaliserMatricule } from "@malica/socle/matricule";
 
+import type { ChangeDuJugement } from "./cours-de-change.ts";
 import type { ResultatNormalisation } from "./normaliser-montants.ts";
 
 type Statut = "conforme" | "non_evaluable" | "reserve" | "rapprocher" | "anomalie" | "rejet";
@@ -42,7 +43,9 @@ export interface ResultatControle {
     | "coherence_dates"
     | "confiance_lecture"
     /** Le sens lu contredit ce que la pièce porte (5 octobre 2026). */
-    | "sens_de_la_piece";
+    | "sens_de_la_piece"
+    /** Une pièce en devise : le cours qui la convertit, ou celui qui manque (31 octobre 2026). */
+    | "cours_de_change";
   statut: Statut;
   motif: string;
   preuves: Record<string, unknown>;
@@ -98,6 +101,14 @@ export interface ContexteControle {
    * null.
    */
   doublonProbable: string | null;
+  /** La devise des livres du dossier. */
+  deviseDuDossier: string;
+  /**
+   * Ce que le référentiel et les cours disent du change (`lireLeChange`) ;
+   * nul quand le jugement ne les a pas lus — une pièce en devise est alors
+   * « non évaluable » sur ce point, jamais convertie.
+   */
+  change: ChangeDuJugement | null;
 }
 
 export type Verdict =
@@ -777,7 +788,77 @@ function confiance(p: PieceAControler, ctx: ContexteControle): ResultatControle 
   };
 }
 
+/**
+ * LE COURS DE CHANGE d'une pièce en devise (31 octobre 2026).
+ *
+ * Une pièce dans la devise du dossier n'a rien à convertir : aucun contrôle,
+ * et son jugement ne change pas. Une pièce en devise :
+ *
+ *   — un cours applicable (`app.cours_applicable`) : RÉSERVE, « taux de
+ *     change {date} {source} ». Elle se comptabilise, convertie ; le cabinet
+ *     sait sur quel cours. Les preuves gardent la question et la réponse :
+ *     un cours saisi ou corrigé ensuite périme le jugement
+ *     (`app.cours_du_jugement_a_jour`), et l'ouverture le rejuge ;
+ *   — aucun cours, pas de date pour le lire, ou pas de règle au pack : NON
+ *     ÉVALUABLE. Rien ne se propose (`composerLaProposition`), et la raison
+ *     nomme le cours à saisir. Ce n'est pas une faute de la pièce : la PME
+ *     n'a rien à corriger, le cabinet saisit le cours.
+ */
+function coursDeChange(p: PieceAControler, ctx: ContexteControle): ResultatControle | null {
+  const devise = p.montants.devise;
+  if (!devise || devise === ctx.deviseDuDossier) return null;
+  const versDevise = ctx.deviseDuDossier;
+  const regle = ctx.change?.regle ?? null;
+  if (!ctx.change || !regle)
+    return {
+      code: "cours_de_change",
+      statut: "non_evaluable",
+      motif: `aucune règle de change au référentiel pour convertir ${devise} en ${versDevise}`,
+      preuves: { devise, versDevise, jour: null, cours: null },
+    };
+  const jour = ctx.change.jour;
+  /*
+   * La question, entière : la règle telle que la base l'a résolue (pack,
+   * jour du paramétrage, valeurs), la devise et le jour du cours. La
+   * péremption (`app.cours_du_jugement_a_jour`) la repose telle quelle.
+   */
+  const question = {
+    devise,
+    versDevise,
+    jour,
+    source: regle.source,
+    recul: regle.recul,
+    ecart: regle.ecart,
+    dateRetenue: regle.dateRetenue,
+    pack: ctx.change.pack,
+    jourDuParametrage: ctx.change.jourDuParametrage,
+    regle: ctx.change.regleBrute,
+  };
+  if (!jour)
+    return {
+      code: "cours_de_change",
+      statut: "non_evaluable",
+      motif: `date de la pièce à saisir : le taux ${devise}/${versDevise} se lit à cette date`,
+      preuves: { ...question, cours: null },
+    };
+  const cours = ctx.change.cours.get(devise) ?? null;
+  if (!cours)
+    return {
+      code: "cours_de_change",
+      statut: "non_evaluable",
+      motif: `taux ${devise}/${versDevise} du ${jour} à saisir`,
+      preuves: { ...question, cours: null },
+    };
+  return {
+    code: "cours_de_change",
+    statut: "reserve",
+    motif: `taux de change ${cours.date} ${cours.source}`,
+    preuves: { ...question, cours },
+  };
+}
+
 export function controlerPiece(p: PieceAControler, ctx: ContexteControle): ResultatControle[] {
+  const change = coursDeChange(p, ctx);
   return [
     arithmetique(p),
     mentions(p, ctx),
@@ -787,6 +868,7 @@ export function controlerPiece(p: PieceAControler, ctx: ContexteControle): Resul
     doublon(p, ctx),
     dates(p, ctx),
     confiance(p, ctx),
+    ...(change ? [change] : []),
   ];
 }
 

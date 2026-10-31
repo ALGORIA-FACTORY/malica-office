@@ -525,7 +525,23 @@ function LignesDeLEcriture({ e, tous }: { e: EcritureAuJournal; tous: boolean })
             ) : null}
           </td>
           <td className="num px-3 py-1.5">{l.compte}</td>
-          <td className="px-3 py-1.5">{l.compteLibelle}</td>
+          <td className="px-3 py-1.5">
+            {l.compteLibelle}
+            {/* Une ligne convertie d'une pièce en devise : son montant d'origine, au cours. */}
+            {l.origine ? (
+              <span className="num block text-[11px] text-muted-foreground" dir="ltr">
+                {montant(l.origine.montant, locale)} {l.origine.devise} ×{" "}
+                {montant(l.origine.taux, locale)} · {l.origine.source}
+              </span>
+            ) : null}
+            {/* D'où vient le cours — l'officiel importé, une saisie, une dérogation — et pourquoi. */}
+            {l.origine ? (
+              <span className="block text-[11px] text-muted-foreground" dir="auto">
+                {l.origine.libelleOrigineDuCours}
+                {l.origine.motifDuCours ? ` · ${l.origine.motifDuCours}` : ""}
+              </span>
+            ) : null}
+          </td>
           <td className="num px-3 py-1.5 text-end">
             {/* Une ligne n'est que d'un côté : l'autre reste vide, pas « 0 ». */}
             {estNul(l.debit) ? "" : montant(l.debit, locale)}

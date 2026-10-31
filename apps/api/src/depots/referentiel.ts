@@ -9,8 +9,14 @@
  * dans ce fichier. Tout vient du pack, versionné par date d'effet.
  */
 
+import type {
+  OrigineDuParametrage,
+  RegleDeChangeDuDossier,
+} from "@malica/socle/ports/repositories";
+
 import type { Requete } from "../db.ts";
 
+import { exposantDuPack } from "../scan/analyse.ts";
 import { aujourdhui, dec as decStr } from "./decimal.ts";
 
 export const referentiel = {
@@ -183,6 +189,66 @@ export const referentiel = {
     };
   },
 
+  /**
+   * La règle de change du dossier au jour dit (`app.regle_de_change`, R10 :
+   * le dossier, son cabinet, le pack), et pour chaque code ce que le
+   * référentiel connaît : les sources (`ref.sources_de_cours`), les dates
+   * retenues et les règles d'écart, libellées (`ref.labels`, le français à
+   * défaut). Le recul est un nombre : il n'a pas de liste.
+   */
+  async regleDeChange(
+    db: Requete,
+    packId: string,
+    dossierId: string,
+    jour: string,
+    locale = "fr",
+  ): Promise<RegleDeChangeDuDossier> {
+    const [{ rows: valeurs }, { rows: options }] = await Promise.all([
+      db.query<{
+        code: string;
+        valeur: string | null;
+        origine: OrigineDuParametrage;
+        decide_le: Date | null;
+      }>(`select code, valeur, origine, decide_le from app.regle_de_change($1, $2, $3::date)`, [
+        dossierId,
+        packId,
+        jour,
+      ]),
+      db.query<{ code: string; option: string; label: string }>(
+        `select 'change.source' as code, s.code as option, s.nom as label
+           from ref.sources_de_cours s
+         union all
+         select 'change.date_retenue', d.code, coalesce(demandee.value, francais.value, d.code)
+           from ref.change_dates_retenues d
+           left join ref_labels_v demandee on demandee.ns = 'change_date_retenue'
+                and demandee.key = d.code and demandee.locale = $1
+           left join ref_labels_v francais on francais.ns = 'change_date_retenue'
+                and francais.key = d.code and francais.locale = 'fr'
+         union all
+         select 'change.ecart', e.code, coalesce(demandee.value, francais.value, e.code)
+           from ref.change_regles_d_ecart e
+           left join ref_labels_v demandee on demandee.ns = 'change_regle_d_ecart'
+                and demandee.key = e.code and demandee.locale = $1
+           left join ref_labels_v francais on francais.ns = 'change_regle_d_ecart'
+                and francais.key = e.code and francais.locale = 'fr'
+         order by 1, 2`,
+        [locale],
+      ),
+    ]);
+    return {
+      valeurs: valeurs.map((v) => {
+        const liste = options.filter((o) => o.code === v.code);
+        return {
+          code: v.code,
+          valeur: v.valeur,
+          origine: v.origine,
+          decideLe: v.decide_le ? v.decide_le.toISOString() : null,
+          options: liste.length > 0 ? liste.map((o) => ({ code: o.option, label: o.label })) : null,
+        };
+      }),
+    };
+  },
+
   async accountMappings(db: Requete, packId: string) {
     const { rows } = await db.query(
       `select document_kind, tax_code, main_account, vat_account, counterparty_account,
@@ -264,6 +330,8 @@ export const referentiel = {
         where c.pack_version_id = $1 and c.valid_from <= $2`,
       [packId, jour, locale],
     );
+    // Un droit fixé l'est dans la devise du pack, à son exposant (revue de #148).
+    const exposant = await exposantDuPack(db, packId);
     return rows
       .map((r) => r as Record<string, unknown>)
       .filter((r) => !r["valid_to"] || (r["valid_to"] as string) >= jour)
@@ -275,7 +343,7 @@ export const referentiel = {
         fixedAmount:
           r["fixed_amount"] === null || r["fixed_amount"] === undefined
             ? null
-            : decStr(r["fixed_amount"], 3),
+            : decStr(r["fixed_amount"], exposant),
         legalReference: (r["legal_reference"] as string | null) ?? null,
       }));
   },
@@ -309,7 +377,9 @@ export const referentiel = {
       return v;
     };
 
-    const decimals = num("money.decimals");
+    // L'exposant de la devise du pack (`ref.devises`) : la seule source des
+    // décimales (revue de #148 ; `money.decimals` en était un double).
+    const decimals = await exposantDuPack(db, packId);
     const methode = text("stock.methode");
     if (methode !== "cump" && methode !== "fifo") {
       throw new Error(`Méthode de stock inconnue au pack : ${methode}`);

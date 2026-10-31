@@ -15,6 +15,12 @@ import {
 
 import { createHash } from "node:crypto";
 
+import type {
+  CoursDeChange,
+  DerogationDeCours,
+  PropositionDePiece,
+} from "@malica/socle/ports/repositories";
+
 import {
   controlerLaSaisie,
   ligneNormalisee,
@@ -23,12 +29,13 @@ import {
 import { z } from "zod";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece, lireParametres } from "../scan/analyse.ts";
+import { analyserPiece, exposantDeLaDevise, rejugerLaPiece } from "../scan/analyse.ts";
 import { propositionDePiece } from "../scan/proposition.ts";
 import { propositionDeReglement } from "../scan/reglement.ts";
 import { rejugerALOuverture, rejugerLesPieces, type BilanDuRejeu } from "../scan/rejeu.ts";
 
 import { dec } from "./decimal.ts";
+import { extraitsEnDeviseDuDossier } from "./en-devise-du-dossier.ts";
 
 interface Ligne {
   ordinal: number;
@@ -37,6 +44,9 @@ interface Ligne {
   debit: string;
   credit: string;
   taxCode: string | null;
+  deviseOrigine: string | null;
+  montantOrigine: string | null;
+  tauxDeChange: string | null;
 }
 
 /**
@@ -58,6 +68,10 @@ function parEcriture(lignes: Record<string, unknown>[]): Map<string, Ligne[]> {
       debit: dec(l["debit"]),
       credit: dec(l["credit"]),
       taxCode: (l["tax_code"] as string | null) ?? null,
+      // Une ligne convertie d'une pièce en devise (31 octobre 2026).
+      deviseOrigine: (l["devise_origine"] as string | null) ?? null,
+      montantOrigine: l["montant_origine"] == null ? null : String(l["montant_origine"]),
+      tauxDeChange: l["taux_de_change"] == null ? null : String(l["taux_de_change"]),
     });
     carte.set(cle, liste);
   }
@@ -117,7 +131,9 @@ async function ecritureVivante(
 
 async function lignesDe(db: Requete, ids: string[]): Promise<Map<string, Ligne[]>> {
   const { rows } = await db.query(
-    `select ecriture_id, ordinal, account_code, libelle, debit, credit, tax_code
+    `select ecriture_id, ordinal, account_code, libelle, debit, credit, tax_code,
+            devise_origine, montant_origine::text as montant_origine,
+            taux_de_change::text as taux_de_change
        from ecriture_lignes_v where ecriture_id = any($1::uuid[]) order by ordinal`,
     [ids],
   );
@@ -170,7 +186,18 @@ function empreinteDe(r: Proposee): string | null {
     libelle,
     pivot.currency,
     r.packVersionId,
-    lignes.map((l) => [l.account_code, l.libelle, l.debit, l.credit, l.tax_code]),
+    lignes.map((l) => [
+      l.account_code,
+      l.libelle,
+      l.debit,
+      l.credit,
+      l.tax_code,
+      // Une pièce en devise : le cours appliqué fait partie de ce qui est montré.
+      l.devise_origine ?? null,
+      l.montant_origine ?? null,
+      l.taux_de_change ?? null,
+      l.cours_id ?? null,
+    ]),
   ];
   return createHash("sha256").update(JSON.stringify(forme)).digest("hex");
 }
@@ -194,6 +221,37 @@ const FORCER = z.object({
   lignes: z.array(LIGNE_FORCEE),
   typeDeDocument: z.string().nullable().optional(),
 });
+
+/**
+ * Un cours tel que l'écran le saisit : un taux décimal positif, en chaîne
+ * (jamais un flottant), pour une unité qui est une puissance de dix.
+ */
+const COURS = z.object({
+  taux: z
+    .string()
+    .regex(/^\d+(\.\d+)?$/)
+    .refine((t) => /[1-9]/.test(t)),
+  unite: z
+    .number()
+    .int()
+    .positive()
+    .refine((u) => /^10*$/.test(String(u))),
+});
+const SAISIE_DE_COURS = COURS.extend({
+  orgId: z.string().uuid(),
+  devise: z.string().regex(/^[A-Z]{3}$/),
+  versDevise: z.string().regex(/^[A-Z]{3}$/),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  source: z.string().min(1),
+  motif: z.string().nullable().optional(),
+  dossierId: z.string().uuid().nullable().optional(),
+});
+const DEROGATION = z
+  .object({ motif: z.string(), portee: z.enum(["dossier", "cabinet"]) })
+  .nullable()
+  .optional();
+/** Combien de cours l'écran des cours lit : les plus récents. Une borne d'écran, pas une règle. */
+const COURS_LUS = 200;
 
 /**
  * Un retour en attente que le cabinet prend en charge malgré tout (« rien ne
@@ -295,6 +353,7 @@ export const office = {
     pieceId: string,
     dateSaisie: string | null = null,
   ): Promise<string> {
+    await rejugerALOuverture(db, pieceId);
     const r = await propositionDePiece(db, pieceId, dateSaisie);
     if (!r.ok) throw Object.assign(new Error(r.raison), { code: "22023" });
     return office.propose(db, {
@@ -332,6 +391,9 @@ export const office = {
       return vivante.id;
     }
     const etaitEnRetour = await enRetour(db, pieceId);
+    // Le jugement aux règles et au cours du jour : un cours importé ou
+    // corrigé depuis l'affichage le rejuge, et l'empreinte ne tient plus.
+    await rejugerALOuverture(db, pieceId);
     const r = await propositionDePiece(db, pieceId, null);
     if (!r.ok) throw refusMetier(r.raison);
     if (empreinte === null || empreinteDe(r) !== empreinte)
@@ -375,6 +437,189 @@ export const office = {
   },
 
   /**
+   * SAISIR LE COURS d'une pièce en devise, en un geste depuis la pièce
+   * (31 octobre 2026) : le cours que son jugement demande — la devise, celle
+   * du dossier, le jour et la source de la règle de change —, ou, si le
+   * jugement en a trouvé un, sa correction au jour de la règle (R7 : une
+   * ligne nouvelle, la plus récente fait foi). Le cours vaut pour l'organisation
+   * qui supervise le dossier, donc pour tous ses dossiers. Puis le Socle
+   * rejuge la pièce (#143) et rend la proposition du jour.
+   *
+   * Une pièce dont l'écriture vit ne change plus de cours ici : son écriture
+   * porte le sien. On la retourne (contre-passation), puis on saisit.
+   *
+   * Revue de #148 : un cours SAISI cède devant le cours officiel importé
+   * (`ref.rangs_des_cours`). Pour passer devant, ou pour corriger un cours
+   * déjà saisi, le cabinet DÉROGE : un motif, et pour qui — ce dossier (le
+   * dossier de la pièce), ou tout le cabinet. La base exige le motif.
+   */
+  async saisirLeCoursDeLaPiece(
+    db: Requete,
+    pieceId: string,
+    taux: string,
+    unite: number,
+    derogation?: DerogationDeCours | null,
+  ): Promise<PropositionDePiece> {
+    if (!COURS.safeParse({ taux, unite }).success) throw refusMetier("refus.cours.invalide");
+    const d = DEROGATION.safeParse(derogation);
+    if (!d.success) throw refusMetier("refus.cours.invalide");
+    if (await ecritureVivante(db, pieceId)) throw refusMetier("refus.cours.ecriture_vivante");
+    const { rows } = await db.query<{
+      preuves: { devise: string; versDevise: string; jour: string | null; source?: string } | null;
+      org: string | null;
+      dossier: string;
+    }>(
+      `select p.tenant_id as dossier, (select c -> 'preuves'
+                 from capture.analyses a
+                 cross join lateral jsonb_array_elements(
+                        case when jsonb_typeof(a.controles) = 'array' then a.controles
+                             else '[]'::jsonb end) c
+                where a.piece_id = p.id and c ->> 'code' = 'cours_de_change'
+                  and a.created_at = (select max(y.created_at) from capture.analyses y
+                                       where y.piece_id = p.id)
+                limit 1) as preuves,
+              -- Qui supervise : le cabinet du dossier dont l'appelant est
+              -- membre, sinon le dossier lui-même (il tient ses livres).
+              coalesce((select g.cabinet_org_id from identity.engagements g
+                         where g.pme_org_id = p.tenant_id and g.status = 'actif'
+                           and g.cabinet_org_id in (select app.member_orgs())
+                         order by g.cabinet_org_id limit 1),
+                       p.tenant_id) as org
+         from pieces_v p where p.id = app.version_courante($1)`,
+      [pieceId],
+    );
+    const p = rows[0]?.preuves;
+    if (!p?.jour || !p.source) throw refusMetier("refus.cours.sans_objet");
+    const derogeant = d.data ?? null;
+    await db.query(
+      `select public.cours_de_change_saisir($1, $2, $3, $4::date, $5, $6, $7, $8, $9)`,
+      [
+        rows[0]!.org,
+        p.devise,
+        p.versDevise,
+        // Le jour que la règle désigne : un cours trouvé plus tôt (recul) se
+        // remplace par celui du jour, qui l'emporte (`app.cours_applicable`).
+        p.jour,
+        taux,
+        unite,
+        p.source,
+        derogeant?.motif ?? null,
+        derogeant?.portee === "dossier" ? rows[0]!.dossier : null,
+      ],
+    );
+    await rejugerLaPiece(db, pieceId);
+    return office.propositionDePiece(db, pieceId);
+  },
+
+  /**
+   * Les cours que l'organisation lit : ceux qu'elle a saisis, et ceux que
+   * l'exploitation a importés, du plus récent au plus ancien.
+   */
+  async coursDeChange(
+    db: Requete,
+    orgId: string,
+    locale = "fr",
+  ): Promise<{
+    cours: CoursDeChange[];
+    sources: Array<{ code: string; nom: string }>;
+    devises: string[];
+  }> {
+    const { rows } = await db.query<{
+      id: string;
+      devise: string;
+      vers_devise: string;
+      date: string;
+      taux: string;
+      unite: number;
+      source: string;
+      origine: string;
+      libelle_origine: string;
+      motif: string | null;
+      dossier_id: string | null;
+      saisi_le: Date;
+    }>(
+      `select c.id, c.devise, c.vers_devise, to_char(c.date_du_cours, 'YYYY-MM-DD') as date,
+              c.taux::text as taux, c.unite, c.source, c.origine,
+              coalesce(demandee.value, francais.value, c.origine) as libelle_origine,
+              c.motif, c.dossier_id, c.saisi_le
+         from parametrage.cours_de_change c
+         left join ref_labels_v demandee on demandee.ns = 'origine_du_cours'
+              and demandee.key = c.origine and demandee.locale = $3
+         left join ref_labels_v francais on francais.ns = 'origine_du_cours'
+              and francais.key = c.origine and francais.locale = 'fr'
+        where c.tenant_id is null or c.tenant_id = $1
+        order by c.date_du_cours desc, c.saisi_le desc
+        limit $2`,
+      [orgId, COURS_LUS, locale],
+    );
+    const [{ rows: sources }, { rows: devises }] = await Promise.all([
+      db.query<{ code: string; nom: string }>(
+        `select code, nom from ref.sources_de_cours order by code collate "C"`,
+      ),
+      db.query<{ code: string }>(`select code from ref.devises order by code collate "C"`),
+    ]);
+    return {
+      cours: rows.map((r) => ({
+        id: r.id,
+        devise: r.devise,
+        versDevise: r.vers_devise,
+        date: r.date,
+        taux: r.taux,
+        unite: Number(r.unite),
+        source: r.source,
+        origine: r.origine,
+        libelleOrigine: r.libelle_origine,
+        motif: r.motif,
+        dossierId: r.dossier_id,
+        saisiLe: new Date(r.saisi_le).toISOString(),
+      })),
+      sources,
+      devises: devises.map((d) => d.code),
+    };
+  },
+
+  /**
+   * SAISIR UN COURS depuis l'écran des cours du cabinet : la paire, le jour,
+   * la source, le taux pour une unité (1, 10, 100…). La base refuse ce qui
+   * n'est pas un cours, et qui ne supervise rien (`cours_de_change_saisir`).
+   * Un motif en fait une DÉROGATION (pour le cabinet, ou pour `dossierId`),
+   * qui passe devant le cours officiel importé.
+   */
+  async saisirUnCours(
+    db: Requete,
+    brut: {
+      orgId: string;
+      devise: string;
+      versDevise: string;
+      date: string;
+      taux: string;
+      unite: number;
+      source: string;
+      motif?: string | null;
+      dossierId?: string | null;
+    },
+  ): Promise<string> {
+    const lu = SAISIE_DE_COURS.safeParse(brut);
+    if (!lu.success) throw refusMetier("refus.cours.invalide");
+    const c = lu.data;
+    const { rows } = await db.query<{ id: string }>(
+      `select public.cours_de_change_saisir($1, $2, $3, $4::date, $5, $6, $7, $8, $9) as id`,
+      [
+        c.orgId,
+        c.devise,
+        c.versDevise,
+        c.date,
+        c.taux,
+        c.unite,
+        c.source,
+        c.motif ?? null,
+        c.dossierId ?? null,
+      ],
+    );
+    return rows[0]!.id;
+  },
+
+  /**
    * FORCER — le comptable modifie l'écriture, ou la saisit quand le Socle ne
    * propose rien (spec §4). C'est son acte : la pièce n'est ni retournée ni
    * signalée au client, qui lit « Prise en charge ».
@@ -408,19 +653,25 @@ export const office = {
     ]);
     const vivante = await ecritureVivante(db, input.pieceId);
     const etaitEnRetour = await enRetour(db, input.pieceId);
+    /*
+     * La devise est celle des LIVRES du dossier, toujours (31 octobre 2026).
+     * Elle venait de l'écriture remplacée, puis de la devise LUE : une pièce
+     * en euros forcée en dinars s'inscrivait « EUR » avec des montants en
+     * dinars, et une écriture en euros d'avant #142, forcée pour la corriger,
+     * restait en euros. Le comptable saisit dans la devise du dossier ; une
+     * pièce en devise se convertit, à la proposition, au cours de la règle.
+     */
     const { rows } = await db.query<{ pack: string; devise: string; journal: boolean }>(
       `select coalesce($2::uuid, app.pack_de_la_piece($1)) as pack,
-              coalesce($3,
-                       (select x.payload ->> 'currency' from extractions_v x
-                         where x.piece_id = $1 order by x.created_at desc limit 1),
-                       (select o.currency from organizations_v o
-                          join pieces_v p on p.tenant_id = o.id where p.id = $1)) as devise,
-              exists (select 1 from ref.journals j where j.code = $4) as journal`,
-      [input.pieceId, vivante?.pack ?? null, vivante?.devise ?? null, input.journal],
+              (select o.currency from organizations_v o
+                 join pieces_v p on p.tenant_id = o.id where p.id = $1) as devise,
+              exists (select 1 from ref.journals j where j.code = $3) as journal`,
+      [input.pieceId, vivante?.pack ?? null, input.journal],
     );
     const contexte = rows[0]!;
     if (!contexte.journal) throw refusMetier("refus.ecriture.journal");
-    const { "money.decimals": decimales } = await lireParametres(db, contexte.pack, input.date);
+    // L'exposant de la devise des livres, celle de l'écriture (`ref.devises`).
+    const decimales = await exposantDeLaDevise(db, contexte.devise);
     const lignes: LigneSaisie[] = input.lignes.map((l) => ({ ...l, tax_code: l.tax_code ?? null }));
     const { defaut } = controlerLaSaisie(lignes, decimales);
     if (defaut) throw refusMetier(`refus.ecriture.${defaut}`);
@@ -877,10 +1128,14 @@ export const office = {
        ${lusParLaPorte("c.piece_id")}`,
       [tenantId, from, to],
     );
-    return (rows as Record<string, unknown>[]).map((r) => ({
-      pieceId: r["piece_id"] as string,
-      extract: r["payload"],
-    }));
+    // Une pièce en devise, au cours de son jugement (`en-devise-du-dossier.ts`).
+    return extraitsEnDeviseDuDossier(
+      db,
+      (rows as Record<string, unknown>[]).map((r) => ({
+        pieceId: r["piece_id"] as string,
+        extract: r["payload"],
+      })),
+    );
   },
 
   /**
@@ -981,13 +1236,17 @@ export const office = {
        ${lusParLaPorte("c.piece_id, c.transmise_le, c.impute_le")}`,
       [tenantId, from, to],
     );
-    return (rows as Record<string, unknown>[]).map((r) => ({
-      pieceId: r["piece_id"] as string,
-      extract: r["payload"],
-      transmiseLe: (r["transmise_le"] as Date).toISOString().slice(0, 10),
-      /** Le jour où la pièce pèse dans la TVA (app.jour_d_imputation_tva). */
-      imputeeLe: r["impute_le"] as string,
-    }));
+    // Une pièce en devise, au cours de son jugement (`en-devise-du-dossier.ts`).
+    return extraitsEnDeviseDuDossier(
+      db,
+      (rows as Record<string, unknown>[]).map((r) => ({
+        pieceId: r["piece_id"] as string,
+        extract: r["payload"],
+        transmiseLe: (r["transmise_le"] as Date).toISOString().slice(0, 10),
+        /** Le jour où la pièce pèse dans la TVA (app.jour_d_imputation_tva). */
+        imputeeLe: r["impute_le"] as string,
+      })),
+    );
   },
 
   /**

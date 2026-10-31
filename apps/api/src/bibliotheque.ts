@@ -8,7 +8,6 @@ import type {
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import type { Requete } from "./db.ts";
 import { COLONNES_DU_SUIVI, statutAuCabinet } from "./depots/suivi.ts";
-import { lireParametres } from "./scan/analyse.ts";
 
 const Id = z.string().uuid();
 const Periode = z
@@ -45,7 +44,10 @@ const DOCUMENTS = `select p.id, p.tenant_id as "tenantId", p.document_kind as ty
   p.status, p.created_at::text as "recuLe", p.sha256 as empreinte,
   (select parent.id from pieces_v parent where parent.id = p.source_piece_id
      and parent.tenant_id = p.tenant_id and parent.vis = 'partage') as "sourcePieceId",
-  o.currency as devise,
+  -- La devise de la PIÈCE, que son jugement a décidée (revue de #148) ; un
+  -- jugement d'avant la devise de la pièce lisait celle du dossier.
+  coalesce(a.normalisation ->> 'devise', o.currency) as devise,
+  d.exposant as "exposant",
   nullif(x.payload ->> 'document_date', '') as "dateDocument",
   ${DATE_DE_CLASSEMENT} as "dateDeClassement",
   case when p.document_kind = 'facture_vente' then null
@@ -55,21 +57,19 @@ const DOCUMENTS = `select p.id, p.tenant_id as "tenantId", p.document_kind as ty
            nullif(x.payload -> 'references' ->> 'numero', ''),
            nullif(x.payload -> 'references' ->> 'reference', '')) as reference,
   case when a.normalisation ->> 'etat' in ('tranche', 'non_verifie') and a.extraction_id = x.id
-       then a.normalisation -> 'montants' ->> 'ttc' end as "ttcMineur",
-  a.pack_version_id as "packAnalyse",
-  -- La date à laquelle l'analyse a lu ses paramètres : la même règle, la même session.
-  coalesce(${DATE_DU_DOCUMENT}, to_char(p.created_at, 'YYYY-MM-DD')) as "dateAnalyse"
+       then a.normalisation -> 'montants' ->> 'ttc' end as "ttcMineur"
   from pieces_v p
   join organizations_v o on o.id = p.tenant_id
   left join lateral (select id, payload from extractions_v x
                       where x.piece_id = p.id order by created_at desc, id desc limit 1) x on true
-  left join lateral (select extraction_id, pack_version_id, normalisation from capture.analyses a
-                      where a.piece_id = p.id order by created_at desc, id desc limit 1) a on true`;
+  left join lateral (select extraction_id, normalisation from capture.analyses a
+                      where a.piece_id = p.id order by created_at desc, id desc limit 1) a on true
+  left join ref.devises d on d.code = coalesce(a.normalisation ->> 'devise', o.currency)`;
 
 type LigneDocument = Omit<DocumentComptable, "montant"> & {
   ttcMineur: string | null;
-  packAnalyse: string | null;
-  dateAnalyse: string;
+  /** L'exposant de la devise de la pièce (`ref.devises`) : celui de son unité mineure. */
+  exposant: number | null;
 };
 
 /** Le fuseau de la personne connectée : sa préférence, ou le défaut livré inscrit chez elle. */
@@ -89,31 +89,20 @@ async function fuseauDeLaPersonne(db: Requete): Promise<string> {
 }
 
 /**
- * Le montant TTC en unités de la devise. Les décimales viennent du chemin
- * commun des paramètres (`lireParametres`), au pack et à la date que l'analyse
- * a retenus : ce sont celles qui ont produit l'unité mineure.
+ * Le montant TTC en unités de la devise de la pièce, à l'exposant de cette
+ * devise (`ref.devises`) : celui qui a produit l'unité mineure à l'analyse.
+ * Une seule source d'exposant (revue de #148 : `money.decimals`, celui du
+ * pack, lisait une facture en euros au millième).
  */
-async function avecMontants(db: Requete, lignes: LigneDocument[]): Promise<DocumentComptable[]> {
-  const decimales = new Map<string, Promise<number>>();
-  const lire = (pack: string, date: string) => {
-    const cle = `${pack}|${date}`;
-    let d = decimales.get(cle);
-    if (!d) {
-      d = lireParametres(db, pack, date).then((p) => p["money.decimals"]);
-      decimales.set(cle, d);
-    }
-    return d;
-  };
-  const documents: DocumentComptable[] = [];
-  // Séquentiel : une seule connexion, et un paramètre lu une fois par (pack, date).
-  for (const { ttcMineur, packAnalyse, dateAnalyse, ...doc } of lignes) {
-    const montant =
-      ttcMineur !== null && packAnalyse !== null
-        ? depuisUniteMineure(Number(ttcMineur), await lire(packAnalyse, dateAnalyse))
-        : null;
-    documents.push({ ...doc, montant });
-  }
-  return documents;
+function avecMontants(lignes: LigneDocument[]): DocumentComptable[] {
+  return lignes.map(({ ttcMineur, exposant, ...doc }) => {
+    if (ttcMineur !== null && exposant === null)
+      throw new Error(`devise inconnue du référentiel : ${doc.devise}`);
+    return {
+      ...doc,
+      montant: ttcMineur === null ? null : depuisUniteMineure(Number(ttcMineur), exposant!),
+    };
+  });
 }
 
 /**
@@ -173,7 +162,7 @@ export async function documents(
       new Error("Ce dossier est volumineux : choisissez un mois pour le consulter."),
       { code: "22023" },
     );
-  return avecStatuts(db, await avecMontants(db, rows));
+  return avecStatuts(db, avecMontants(rows));
 }
 
 export async function documentsLies(
@@ -227,7 +216,7 @@ export async function documentsLies(
     order by p.created_at, p.id`,
     [clientId, tous, fuseau],
   );
-  const docs = await avecMontants(db, lignes);
+  const docs = avecMontants(lignes);
   const { rows: ecritures } = await db.query<DossierComptable["ecritures"][number]>(
     // Écritures et règlements d'une pièce : ceux de toutes ses versions, au nom
     // de la photo courante.

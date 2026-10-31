@@ -52,6 +52,7 @@ import {
   type PieceAControler,
   type ResultatControle,
 } from "./controles.ts";
+import { lireLeChange, type ChangeDuJugement } from "./cours-de-change.ts";
 import { normaliserMontants, type ResultatNormalisation } from "./normaliser-montants.ts";
 
 const [NOM_MATRICULE_EMETTEUR, NOM_MATRICULE_CLIENT] = REFERENCES_QUI_TRANCHENT_LE_SENS;
@@ -60,7 +61,6 @@ const [NOM_MATRICULE_EMETTEUR, NOM_MATRICULE_CLIENT] = REFERENCES_QUI_TRANCHENT_
 const refus = (message: string) => Object.assign(new Error(message), { code: "22023" });
 
 const PARAMETRES = [
-  "money.decimals",
   "lecture.confiance_reserve",
   "lecture.confiance_bloquante",
   "lecture.tolerance_arrondi_mineure",
@@ -134,6 +134,32 @@ export async function lireLesDevises(db: Requete): Promise<DeviseLue[]> {
 }
 
 /**
+ * L'exposant d'UNE devise (`ref.devises`) : la seule source des décimales
+ * d'un montant (revue de #148 — `money.decimals`, l'exposant du pack, en
+ * doublait une et s'appliquait à toute devise). Une devise inconnue lève.
+ */
+export async function exposantDeLaDevise(db: Requete, devise: string): Promise<number> {
+  const { rows } = await db.query<{ exposant: number }>(
+    `select exposant from ref.devises where code = $1`,
+    [devise],
+  );
+  if (!rows[0]) throw new Error(`devise inconnue du référentiel : ${devise}`);
+  return Number(rows[0].exposant);
+}
+
+/** L'exposant de la devise d'un pack (`ref.jurisdiction_packs.currency`). */
+export async function exposantDuPack(db: Requete, pack: string): Promise<number> {
+  const { rows } = await db.query<{ exposant: number }>(
+    `select d.exposant from ref.jurisdiction_packs p
+       join ref.devises d on d.code = p.currency
+      where p.id = $1`,
+    [pack],
+  );
+  if (!rows[0]) throw new Error(`pack inconnu, ou sa devise absente du référentiel : ${pack}`);
+  return Number(rows[0].exposant);
+}
+
+/**
  * Ce que le titre imprimé d'une pièce dit de sa nature (`ref.titres_de_piece`),
  * dans l'ordre du référentiel. Le contrôle de la nature les lit ; aucune liste
  * de titres n'est écrite en TypeScript.
@@ -197,6 +223,8 @@ export interface ReferentielDuJugement {
   titres: ContexteControle["titres"];
   mentionsObligatoires: ContexteControle["mentionsObligatoires"];
   doublonProbable: string | null;
+  /** La règle de change et les cours applicables (`lireLeChange`). */
+  change: ChangeDuJugement | null;
 }
 
 /** La part de l'extraction que le jugement relit. */
@@ -487,6 +515,8 @@ export function jugerLaLecture(
     seuilConfianceBloquant: r.parametres["lecture.confiance_bloquante"],
     ecartDateJours: r.parametres["piece.ecart_date_jours"],
     doublonProbable: r.doublonProbable,
+    deviseDuDossier: r.deviseDuDossier,
+    change: r.change,
   };
   const controles = controlerPiece(aControler, contexte);
   const { verdict, motifs } = rendreVerdict(controles);
@@ -519,7 +549,7 @@ export function jugerLaLecture(
  * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
  * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-10-31.89a2ae691908";
+export const REGLES_DU_JUGEMENT = "2026-10-31.2a25a269c337";
 
 /** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
 interface JugementDeLaPiece {
@@ -797,7 +827,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     ]),
   ]);
 
-  const { normalisation, controles, verdict, motifs } = jugerLaLecture(lecture, {
+  const referentielDuJugement: ReferentielDuJugement = {
     parametres: p,
     // La devise de la PIÈCE se décide au jugement (`deviseDeLaPiece`).
     devises: await lireLesDevises(db),
@@ -811,7 +841,31 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     typesDocument: types.map((t) => ({ code: t.code, porteEcriture: t.porte_ecriture })),
     mentionsObligatoires: mentions.map((m) => ({ code: m.code, libelle: m.label })),
     doublonProbable: semblables[0]?.id ?? null,
-  });
+    change: null,
+  };
+  /*
+   * La pièce se juge d'abord sans le change ; c'est le jugement qui décide de
+   * sa devise. Dans la devise du dossier, c'est fini : la règle de change
+   * n'est pas même lue (revue de #148 — une règle incomplète arrêtait toute
+   * pièce). En devise, la règle du dossier et le cours de chaque devise
+   * entrent, et la pièce se juge sur le cours qui la convertira.
+   */
+  const sansChange = jugerLaLecture(lecture, referentielDuJugement);
+  const devise = sansChange.normalisation.devise;
+  const { normalisation, controles, verdict, motifs } =
+    !devise || devise === org.currency
+      ? sansChange
+      : jugerLaLecture(lecture, {
+          ...referentielDuJugement,
+          change: await lireLeChange(db, {
+            dossier: piece.tenant_id,
+            deviseDuDossier: org.currency,
+            pack,
+            jourDuParametrage: dateRef,
+            datePiece,
+            recueLe: piece.recue_le,
+          }),
+        });
 
   return {
     tenantId: piece.tenant_id,

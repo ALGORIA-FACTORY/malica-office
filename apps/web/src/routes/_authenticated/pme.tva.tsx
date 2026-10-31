@@ -1,4 +1,5 @@
 import { sensDuSolde } from "@/lib/sens-du-solde";
+import { CONVERSION_REFUSEE, EXTRAIT_EN_DEVISE } from "@malica/socle/engines/tva/des-extraits";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
@@ -153,7 +154,18 @@ function PmeTva() {
         })),
       ];
 
-  const refusees = tva?.refused ?? [];
+  /*
+   * Les pièces écartées, par ce qui les écarte (revue de #148). Une pièce en
+   * devise qui attend son cours, ou dont la conversion est à revoir, n'est
+   * pas une TVA « non récupérable » : elle a sa ligne, et le dit.
+   */
+  const motifDe = (r: { reason: string }) => r.reason.split(":")[0];
+  const refusesPar = (motif: string) => (tva?.refused ?? []).filter((r) => motifDe(r) === motif);
+  const enAttenteDeCours = refusesPar(EXTRAIT_EN_DEVISE);
+  const conversionsRefusees = refusesPar(CONVERSION_REFUSEE);
+  const refusees = (tva?.refused ?? []).filter(
+    (r) => motifDe(r) !== EXTRAIT_EN_DEVISE && motifDe(r) !== CONVERSION_REFUSEE,
+  );
 
   /*
    * La déclaration, ligne par ligne, dans l'ordre et sous les libellés du
@@ -389,6 +401,53 @@ function PmeTva() {
                 <span className="bd">
                   <b>{t("pme.tva.nonRecuperable")}</b>
                   <span>{t("pme.tva.refusees", { count: refusees.length })}</span>
+                </span>
+                <span className="rt">
+                  <span className="vl">—</span>
+                </span>
+              </div>
+            ) : null}
+
+            {/*
+             * Les pièces en devise hors du calcul : celles qui attendent leur
+             * cours (le cabinet le saisit, ou l'import l'apporte), et celles
+             * dont la conversion est à revoir par le cabinet. Leur TVA n'est
+             * pas perdue : elle n'est pas encore comptée. « — », jamais 0.
+             */}
+            {enAttenteDeCours.length > 0 ? (
+              <div className="rw">
+                <i aria-hidden>
+                  <IconePiece />
+                </i>
+                <span className="bd">
+                  <b className="flex items-center gap-1">
+                    {t("pme.tva.enAttenteDeCours")}
+                    <Aide
+                      titre={t("pme.tva.enAttenteDeCours")}
+                      paragraphes={[{ texte: t("pme.tva.enAttenteDeCours.aide") }]}
+                    />
+                  </b>
+                  <span>{t("pme.tva.piecesEnDevise", { count: enAttenteDeCours.length })}</span>
+                </span>
+                <span className="rt">
+                  <span className="vl">—</span>
+                </span>
+              </div>
+            ) : null}
+            {conversionsRefusees.length > 0 ? (
+              <div className="rw">
+                <i aria-hidden>
+                  <IconePiece />
+                </i>
+                <span className="bd">
+                  <b className="flex items-center gap-1">
+                    {t("pme.tva.conversionARevoir")}
+                    <Aide
+                      titre={t("pme.tva.conversionARevoir")}
+                      paragraphes={[{ texte: t("pme.tva.conversionARevoir.aide") }]}
+                    />
+                  </b>
+                  <span>{t("pme.tva.piecesEnDevise", { count: conversionsRefusees.length })}</span>
                 </span>
                 <span className="rt">
                   <span className="vl">—</span>
