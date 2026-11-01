@@ -256,12 +256,7 @@ describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
       const r = await f();
       return { ms: performance.now() - t0, n: Array.isArray(r) ? r.length : -1 };
     };
-    const meilleure = async (f: () => Promise<unknown>) => {
-      // Trois passes, la meilleure : le premier appel paie les caches.
-      const passes = [await duree(f), await duree(f), await duree(f)];
-      return passes.reduce((a, b) => (b.ms < a.ms ? b : a));
-    };
-    const nue = await meilleure(() =>
+    const nue = () =>
       sousIdentite(
         dirigeant.id,
         async (db) =>
@@ -274,17 +269,12 @@ describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
               [pme],
             )
           ).rows,
-      ),
-    );
-    const transmis = await meilleure(() =>
-      pmeFait("office.extraitsTransmis", pme, "2000-01-01", "2100-12-31"),
-    );
-    const inscrits = await meilleure(() =>
-      cabinetFait("office.bookedExtracts", pme, "2000-01-01", "2100-12-31"),
-    );
-    const charges = await meilleure(() => pmeFait("charges.articles", pme, "2000-01", "2100-12"));
+      );
+    const transmis = () => pmeFait("office.extraitsTransmis", pme, "2000-01-01", "2100-12-31");
+    const inscrits = () => cabinetFait("office.bookedExtracts", pme, "2000-01-01", "2100-12-31");
+    const charges = () => pmeFait("charges.articles", pme, "2000-01", "2100-12");
     // « Vos charges » sans la règle des immobilisations : la requête d'avant.
-    const chargesNues = await meilleure(() =>
+    const chargesNues = () =>
       sousIdentite(
         dirigeant.id,
         async (db) =>
@@ -300,20 +290,40 @@ describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
               [pme],
             )
           ).rows,
-      ),
-    );
-    console.log(`# temps : ${JSON.stringify({ nue, transmis, inscrits, chargesNues, charges })}`);
-    assert.equal(transmis.n, 200);
-    assert.equal(inscrits.n, 40);
+      );
+    /*
+     * Chaque requête et sa référence se mesurent EN ALTERNANCE, cinq tours, et
+     * l'on garde la meilleure passe de chacune (le premier tour paie les
+     * caches). Mesurées l'une après l'autre, elles ne subissaient pas la même
+     * charge : les autres suites tournent sur la même base, et une bouffée
+     * tombée sur une seule des deux franchissait la borne (CI du 1er novembre
+     * 2026 : « transmis : 2913 ms > 2576 ms »). Les bornes, elles, ne bougent pas.
+     */
+    const enAlternance = async <K extends string>(requetes: Record<K, () => Promise<unknown>>) => {
+      const meilleures = {} as Record<K, { ms: number; n: number }>;
+      for (let tour = 0; tour < 5; tour++)
+        for (const nom of Object.keys(requetes) as K[]) {
+          const m = await duree(requetes[nom]);
+          if (!meilleures[nom] || m.ms < meilleures[nom].ms) meilleures[nom] = m;
+        }
+      return meilleures;
+    };
+    const temps = await enAlternance({ nue, transmis, inscrits, chargesNues, charges });
+    console.log(`# temps : ${JSON.stringify(temps)}`);
+    assert.equal(temps.transmis.n, 200);
+    assert.equal(temps.inscrits.n, 40);
     // Des bornes LARGES : elles échouent à l'ancien coût (8 fois et plus la
     // sélection nue), pas au bruit d'une machine chargée.
-    const borne = 4 * nue.ms + 500;
-    for (const [nom, mesure] of Object.entries({ transmis, inscrits }))
-      assert.ok(mesure.ms <= borne, `${nom} : ${mesure.ms.toFixed(0)} ms > ${borne.toFixed(0)} ms`);
-    const borneDesCharges = 2 * chargesNues.ms + 500;
+    const borne = 4 * temps.nue.ms + 500;
+    for (const nom of ["transmis", "inscrits"] as const)
+      assert.ok(
+        temps[nom].ms <= borne,
+        `${nom} : ${temps[nom].ms.toFixed(0)} ms > ${borne.toFixed(0)} ms`,
+      );
+    const borneDesCharges = 2 * temps.chargesNues.ms + 500;
     assert.ok(
-      charges.ms <= borneDesCharges,
-      `charges : ${charges.ms.toFixed(0)} ms > ${borneDesCharges.toFixed(0)} ms`,
+      temps.charges.ms <= borneDesCharges,
+      `charges : ${temps.charges.ms.toFixed(0)} ms > ${borneDesCharges.toFixed(0)} ms`,
     );
 
     // Des articles que le mois ne lit pas : 3 200, sur 80 pièces lues, ni
@@ -330,23 +340,17 @@ describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
       await Promise.all(
         Array.from({ length: 10 }, () => lue((e) => ({ ...e, articles: ignores }))),
       );
-    const transmisApres = await meilleure(() =>
-      pmeFait("office.extraitsTransmis", pme, "2000-01-01", "2100-12-31"),
-    );
-    const inscritsApres = await meilleure(() =>
-      cabinetFait("office.bookedExtracts", pme, "2000-01-01", "2100-12-31"),
-    );
-    console.log(`# temps apres : ${JSON.stringify({ transmisApres, inscritsApres })}`);
-    assert.equal(transmisApres.n, 200);
-    assert.equal(inscritsApres.n, 40);
-    for (const [nom, avant, apres] of [
-      ["transmis", transmis, transmisApres],
-      ["inscrits", inscrits, inscritsApres],
-    ] as const) {
+    const apres = await enAlternance({ transmis, inscrits });
+    console.log(`# temps apres : ${JSON.stringify(apres)}`);
+    assert.equal(apres.transmis.n, 200);
+    assert.equal(apres.inscrits.n, 40);
+    for (const nom of ["transmis", "inscrits"] as const) {
+      const avant = temps[nom];
+      const ensuite = apres[nom];
       const borneApres = 1.5 * avant.ms + 300;
       assert.ok(
-        apres.ms <= borneApres,
-        `${nom} lit des articles qu'il ne demande pas : ${apres.ms.toFixed(0)} ms > ${borneApres.toFixed(0)} ms`,
+        ensuite.ms <= borneApres,
+        `${nom} lit des articles qu'il ne demande pas : ${ensuite.ms.toFixed(0)} ms > ${borneApres.toFixed(0)} ms`,
       );
     }
   });
