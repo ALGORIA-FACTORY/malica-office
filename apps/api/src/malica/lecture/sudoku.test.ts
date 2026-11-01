@@ -883,6 +883,42 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
     assert.notEqual(x.issue, "prouvee");
   });
 
+  it("deux pages aux mêmes ordinaux gardent chacune leur montant en lettres (revue de #181)", () => {
+    // Les ordinaux repartent de zéro à chaque page (pdf-text.ts) : indexer les
+    // lettres par le seul ordinal donnait à la page 1 le montant de la page 2.
+    const page = (p: number, lettres: string): PageToken[] =>
+      [
+        "Arrêtée",
+        "la",
+        "présente",
+        "pièce",
+        "à",
+        "la",
+        "somme",
+        "de",
+        ":",
+        ...lettres.split(" "),
+      ].map((text, ordinal) => ({
+        page: p,
+        ordinal,
+        text,
+        x0: 0.05 + 0.04 * ordinal,
+        y0: 0.6,
+        x1: 0.08 + 0.04 * ordinal,
+        y1: 0.615,
+      }));
+    const j = jetonsDuSudoku(
+      [...page(1, "Deux cents dinars."), ...page(2, "Cent dinars.")],
+      devise,
+      contexte,
+    );
+    const lus = j.filter((t) => t.lettres).map((t) => [t.page, t.ordinal, t.lettres!.v]);
+    assert.deepEqual(lus, [
+      [1, 9, 200_000],
+      [2, 9, 100_000],
+    ]);
+  });
+
   it("les lettres qui contredisent les chiffres signalent la pièce (100/D-04)", () => {
     const mot = (ordinal: number, x: number, text: string): PageToken => ({
       page: 1,

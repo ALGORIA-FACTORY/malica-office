@@ -53,7 +53,7 @@ import type { Requete } from "../../db.ts";
 import { dateDeLaPiece } from "../../depots/dates.ts";
 import type { ReglagesResolus } from "../../scan/reglages-comptables.ts";
 
-import { datesDuPlan, identifiantsDuPlan, lettresDuPlan } from "./experts.ts";
+import { cleDeJeton, datesDuPlan, identifiantsDuPlan, lettresDuPlan } from "./experts.ts";
 import { treillisMontant } from "./montants.ts";
 import { lireLesReglesDeLecture, type ReglesDeLecture } from "./regles-de-lecture.ts";
 import {
@@ -157,7 +157,7 @@ export function jetonsDuSudoku(
     })),
     ...dates[i]!,
     ...(identifiants[i]!.length > 0 ? { identifiants: identifiants[i]! } : {}),
-    ...(lettres.has(t.ordinal) ? { lettres: lettres.get(t.ordinal)! } : {}),
+    ...(lettres.has(cleDeJeton(t)) ? { lettres: lettres.get(cleDeJeton(t))! } : {}),
     ...decoupesDe(t.text, devise),
   }));
 }
