@@ -629,7 +629,7 @@ export function jugerLaLecture(
  * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
  * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-11-01.26f7d123a881";
+export const REGLES_DU_JUGEMENT = "2026-11-01.447e5ce908be";
 
 /** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
 interface JugementDeLaPiece {

@@ -159,6 +159,8 @@ export const ar: Dict = {
   "plan.tiers.raison": "التسمية الاجتماعية",
   "plan.tiers.matricule": "المعرف الجبائي",
   "plan.tiers.collectif": "الحساب الجامع",
+  "plan.tiers.bareme": "جدول معلوم الطابع",
+  "plan.tiers.bareme.nonClasse": "غير مصنّف",
   "plan.tiers.add": "إضافة",
   "plan.tiers.inactive": "غير نشط",
   "plan.tiers.deactivate": "تعطيل",
@@ -2479,6 +2481,9 @@ export const ar: Dict = {
   "cab.ecriture.reserve.mois_de_tva.exigibilite_anterieure":
     "يوجد خلاص سابق لشهر الفاتورة: قد يكون الأداء مستحقا قبل تاريخ الفاتورة الذي يعتمده إعدادك.",
   "cab.ecriture.reserve.articles": "غير معروفة: {articles}",
+  "cab.ecriture.reserve.categorie_d_emetteur": "صنف المُصدِر يجب تحديده",
+  "cab.ecriture.reserve.categorie_d_emetteur.aide":
+    "معلوم الطابع المطبوع ({montant}) هو تعريفة صنف من أصناف الجدول (المساحات الكبرى)، ولا شيء يؤكد أن المُصدِر منها: هو غير مصنّف ضمن أطراف الملف. تحقق من ذلك، ثم صنّف المزود في دليل الحسابات، أطراف الملف.",
   "cab.avoir.titre": "الفاتورة الأصلية للربط",
   "cab.avoir.non_comptabilisee": "الفاتورة الأصلية لم تُسجَّل بعد",
   "cab.avoir.aide":

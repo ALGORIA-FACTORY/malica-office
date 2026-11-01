@@ -304,7 +304,15 @@
     "statistiques",
     "voir"
   ],
-  "tiers": ["comptesCollectifs", "creer", "desactiver", "lister", "modifier"],
+  "tiers": [
+    "categoriesDeBareme",
+    "classer",
+    "comptesCollectifs",
+    "creer",
+    "desactiver",
+    "lister",
+    "modifier"
+  ],
   "tour": [
     "calendrier",
     "chercherOrganisations",
