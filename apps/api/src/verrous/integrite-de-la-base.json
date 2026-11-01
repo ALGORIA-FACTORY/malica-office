@@ -32,6 +32,7 @@
     "licence_motif_suspension": "select (regexp_matches(pg_get_constraintdef(oid), '''([^'']+)''::text', 'g'))[1] from pg_constraint where conrelid = 'facturation.licences'::regclass and contype = 'c' and pg_get_constraintdef(oid) ~ '^CHECK \\(\\(motif_suspension = ANY'",
     "licence_statut": "select (regexp_matches(pg_get_constraintdef(oid), '''([^'']+)''::text', 'g'))[1] from pg_constraint where conrelid = 'facturation.licences'::regclass and contype = 'c' and pg_get_constraintdef(oid) ~ '^CHECK \\(\\(statut = ANY'",
     "mention": "select code from ref.mentions",
+    "nature_de_vente": "select code from ref.natures_de_vente",
     "moyen_en_ligne": "select code from facturation.moyens_paiement",
     "moyen_paiement": "select code from ref.payment_means",
     "moyen_paiement_par": "select code from ref.payment_means where role_achat is not null",
@@ -147,16 +148,18 @@
         "devise USD": 5,
         "compte 2282": 1,
         "compte 4366": 24,
-        "compte 4371": 1,
-        "compte 701": 2,
+        "compte 4371": 5,
+        "compte 701": 1,
         "compte 6652": 2,
-        "compte 4367": 2,
+        "compte 4367": 6,
         "compte 6654": 8,
         "devise TND": 1,
         "compte 601": 20,
-        "compte 411": 2,
+        "compte 411": 6,
         "devise EUR": 8,
-        "devise XOF": 4
+        "devise XOF": 4,
+        "compte 707": 4,
+        "compte 705": 2
       }
     }
   },

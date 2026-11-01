@@ -1792,6 +1792,9 @@ const fr = {
   "reglages.compta.categorie": "{libelle} : compte {compte}, taux linéaire {taux} %",
   "reglages.compta.categorie.max": "taux maximal {max} %",
   "reglages.compta.categorie.depasse": "Dépasse le taux maximal du décret 2008-492",
+  "reglages.compta.nature_de_vente": "{libelle} : compte {compte}",
+  "reglages.compta.nature_de_vente.repli":
+    "repli d’une vente dont la nature ne se prouve pas, et compte unique au choix du cabinet",
   "reglages.compta.depuis.champ": "Les décisions valent à partir du",
   "reglages.compta.depuis": "Depuis le {date}",
   "reglages.compta.option.nonAppliquee": "pas encore appliqué par le Socle",
@@ -2518,6 +2521,15 @@ const fr = {
     "Cette pièce n’attend aucun cours : elle est dans la devise du dossier, ou sa date manque.",
   "refus.cours.ecriture_vivante":
     "L’écriture de cette pièce est inscrite avec son cours : retournez-la d’abord (contre-passation), puis saisissez le cours.",
+  "refus.avoir.saisie":
+    "L’avoir ou la facture désignée n’est pas reconnue : rechargez la page et choisissez à nouveau.",
+  "refus.avoir.droits": "Seul le cabinet qui supervise ce dossier rattache un avoir à sa facture.",
+  "refus.avoir.facture":
+    "Cette facture n’est pas du même dossier, ou pas du même sens que l’avoir : choisissez-en une autre.",
+  "refus.avoir.ecriture_vivante":
+    "L’écriture de cet avoir est déjà inscrite : retournez-la d’abord (contre-passation), puis rattachez la facture.",
+  "refus.avoir.lien_immuable":
+    "Le lien d’un avoir à sa facture ne se modifie pas : rattachez une autre facture, le plus récent fait foi.",
   "refus.ecriture.devise_du_dossier":
     "Une écriture se passe dans la devise du dossier : une pièce en devise se convertit d’abord, au cours de la règle de change.",
   "refus.ecriture.cours_perime":
@@ -2659,6 +2671,21 @@ const fr = {
   "cab.ecriture.illisible": "Le client voit encore la lecture",
   "cab.ecriture.illisible.aide":
     "Cette écriture ne se lit pas comme une facture : une contrepartie est du côté de la pièce, ou HT + TVA + droits ne font pas le total des contreparties. Aucun montant n’est publié au client tant qu’elle ne se lit pas.",
+  "cab.ecriture.reserve.nature_de_vente": "Nature de la vente à préciser",
+  "cab.ecriture.reserve.nature_de_vente.aide":
+    "Le Socle n’a pas prouvé ce que la facture vend (marchandises, prestations, activités annexes) : la vente est proposée au compte de repli de votre plan. Vérifiez le compte de vente avant de valider, ou modifiez l’écriture.",
+  "cab.ecriture.reserve.articles": "Non reconnus : {articles}",
+  "cab.avoir.titre": "Facture d’origine à rattacher",
+  "cab.avoir.non_comptabilisee": "Facture d’origine pas encore comptabilisée",
+  "cab.avoir.aide":
+    "Un avoir se lie à sa facture (réglage « Avoirs », Code TVA art. 9). Il se propose en contre-passation de l’écriture de la facture, aux montants qu’il imprime : en extourne, ou au compte des rabais, selon le réglage du cabinet.",
+  "cab.avoir.choisir": "Choisir la facture",
+  "cab.avoir.rattacher": "Rattacher",
+  "cab.avoir.aucune":
+    "Aucune facture comptabilisée de ce dossier, du même sens : comptabilisez d’abord la facture d’origine.",
+  "cab.avoir.option": "{numero} du {date} — {emetteur} — {ttc}",
+  "cab.avoir.extourne": "Avoir : extourne de la facture d’origine",
+  "cab.avoir.rabais": "Avoir : au compte des rabais, remises et ristournes",
   "cab.ecriture.ligne.retirer": "Retirer la ligne",
   "cab.ecriture.ligne.ajouter": "Ajouter une ligne",
   "cab.ecriture.compte.inconnu": "Inconnu du plan — la base refusera",
@@ -6161,6 +6188,9 @@ const en: Dict = {
   "reglages.compta.categorie": "{libelle}: account {compte}, straight-line rate {taux}%",
   "reglages.compta.categorie.max": "maximum rate {max}%",
   "reglages.compta.categorie.depasse": "Exceeds the maximum rate of decree 2008-492",
+  "reglages.compta.nature_de_vente": "{libelle}: account {compte}",
+  "reglages.compta.nature_de_vente.repli":
+    "fallback for a sale whose nature is not proved, and single account at the firm’s choice",
   "reglages.compta.depuis.champ": "Decisions apply from",
   "reglages.compta.depuis": "From {date}",
   "reglages.compta.option.nonAppliquee": "not yet applied by the engine",
@@ -6870,6 +6900,16 @@ const en: Dict = {
     "This document awaits no rate: it is in the file’s currency, or its date is missing.",
   "refus.cours.ecriture_vivante":
     "This document’s entry is booked with its rate: return it first (reversal), then enter the rate.",
+  "refus.avoir.saisie":
+    "The credit note or the chosen invoice is not recognised: reload the page and choose again.",
+  "refus.avoir.droits":
+    "Only the firm that supervises this file links a credit note to its invoice.",
+  "refus.avoir.facture":
+    "This invoice is not from the same file, or not in the same direction as the credit note: choose another one.",
+  "refus.avoir.ecriture_vivante":
+    "The entry for this credit note is already recorded: return it first (reversal), then link the invoice.",
+  "refus.avoir.lien_immuable":
+    "The link between a credit note and its invoice cannot be changed: link another invoice, the latest one prevails.",
   "refus.ecriture.devise_du_dossier":
     "An entry is booked in the file’s currency: a foreign-currency document is converted first, at the exchange rule’s rate.",
   "refus.ecriture.cours_perime":
@@ -7011,6 +7051,21 @@ const en: Dict = {
   "cab.ecriture.illisible": "The client still sees the reading",
   "cab.ecriture.illisible.aide":
     "This entry does not read as an invoice: a counterpart sits on the document’s side, or net + VAT + duties do not equal the counterparts. No amount is shown to the client until it reads as one.",
+  "cab.ecriture.reserve.nature_de_vente": "Nature of the sale to be specified",
+  "cab.ecriture.reserve.nature_de_vente.aide":
+    "The engine has not proved what the invoice sells (goods, services, ancillary activities): the sale is proposed to the fallback account of your chart. Check the sales account before validating, or change the entry.",
+  "cab.ecriture.reserve.articles": "Not recognised: {articles}",
+  "cab.avoir.titre": "Original invoice to link",
+  "cab.avoir.non_comptabilisee": "Original invoice not yet recorded",
+  "cab.avoir.aide":
+    "A credit note is linked to its invoice (“Credit notes” setting, VAT Code art. 9). It is proposed as a reversal of the invoice entry, at the amounts it prints: as a reversal, or to the discounts account, according to the firm’s setting.",
+  "cab.avoir.choisir": "Choose the invoice",
+  "cab.avoir.rattacher": "Link",
+  "cab.avoir.aucune":
+    "No recorded invoice in this file, in the same direction: record the original invoice first.",
+  "cab.avoir.option": "{numero} of {date} — {emetteur} — {ttc}",
+  "cab.avoir.extourne": "Credit note: reversal of the original invoice",
+  "cab.avoir.rabais": "Credit note: to the rebates, discounts and refunds account",
   "cab.ecriture.ligne.retirer": "Remove the line",
   "cab.ecriture.ligne.ajouter": "Add a line",
   "cab.ecriture.compte.inconnu": "Not in the chart — the database will refuse",
@@ -10374,6 +10429,8 @@ const ar: Dict = {
   "reglages.compta.categorie": "{libelle}: الحساب {compte}، نسبة خطية {taux} %",
   "reglages.compta.categorie.max": "النسبة القصوى {max} %",
   "reglages.compta.categorie.depasse": "تتجاوز النسبة القصوى للأمر 2008-492",
+  "reglages.compta.nature_de_vente": "{libelle}: الحساب {compte}",
+  "reglages.compta.nature_de_vente.repli": "احتياطي لبيع لا تثبت طبيعته، وحساب وحيد باختيار المكتب",
   "reglages.compta.depuis.champ": "تسري القرارات ابتداء من",
   "reglages.compta.depuis": "ابتداء من {date}",
   "reglages.compta.option.nonAppliquee": "لم يطبقه المحرك بعد",
@@ -11012,6 +11069,15 @@ const ar: Dict = {
   "refus.cours.sans_objet": "هذه الوثيقة لا تنتظر أي سعر صرف: هي بعملة الملف، أو ينقصها تاريخها.",
   "refus.cours.ecriture_vivante":
     "قيد هذه الوثيقة مسجّل بسعره: أرجعها أولًا (قيد عكسي)، ثم أدخل السعر.",
+  "refus.avoir.saisie":
+    "الإشعار الدائن أو الفاتورة المختارة غير معروفة: أعد تحميل الصفحة واختر من جديد.",
+  "refus.avoir.droits": "وحده المكتب الذي يشرف على هذا الملف يربط الإشعار الدائن بفاتورته.",
+  "refus.avoir.facture":
+    "هذه الفاتورة ليست من نفس الملف، أو ليست في نفس اتجاه الإشعار الدائن: اختر فاتورة أخرى.",
+  "refus.avoir.ecriture_vivante":
+    "قيد هذا الإشعار الدائن مسجل بالفعل: أرجعه أولا (قيد عكسي)، ثم اربط الفاتورة.",
+  "refus.avoir.lien_immuable":
+    "لا يُعدَّل ربط الإشعار الدائن بفاتورته: اربط فاتورة أخرى، والأحدث هو المعتمد.",
   "refus.ecriture.devise_du_dossier":
     "يُسجَّل القيد بعملة الملف: تُحوَّل الوثيقة بالعملة الأجنبية أولًا، بسعر قاعدة الصرف.",
   "refus.ecriture.cours_perime":
@@ -11145,6 +11211,21 @@ const ar: Dict = {
   "cab.ecriture.illisible": "الحريف ما زال يرى القراءة",
   "cab.ecriture.illisible.aide":
     "هذا القيد لا يُقرأ كفاتورة: طرف مقابل في جهة الوثيقة، أو المبلغ دون أداء مع الأداء والمعاليم لا يساوي مجموع الأطراف المقابلة. لا يُنشر أي مبلغ للحريف ما دام لا يُقرأ.",
+  "cab.ecriture.reserve.nature_de_vente": "طبيعة البيع يجب تحديدها",
+  "cab.ecriture.reserve.nature_de_vente.aide":
+    "لم يُثبت المحرك ما تبيعه الفاتورة (بضائع، خدمات، أنشطة ملحقة): البيع مقترح في الحساب الاحتياطي لمخططك. تحقق من حساب المبيعات قبل المصادقة، أو عدّل القيد.",
+  "cab.ecriture.reserve.articles": "غير معروفة: {articles}",
+  "cab.avoir.titre": "الفاتورة الأصلية للربط",
+  "cab.avoir.non_comptabilisee": "الفاتورة الأصلية لم تُسجَّل بعد",
+  "cab.avoir.aide":
+    "يرتبط الإشعار الدائن بفاتورته (إعداد «الإشعارات الدائنة»، مجلة الأداء الفصل 9). يُقترح قيدا عكسيا لقيد الفاتورة، بالمبالغ التي يطبعها: عكسا للقيد، أو في حساب التخفيضات، حسب إعداد المكتب.",
+  "cab.avoir.choisir": "اختر الفاتورة",
+  "cab.avoir.rattacher": "ربط",
+  "cab.avoir.aucune":
+    "لا توجد فاتورة مسجلة في هذا الملف، في نفس الاتجاه: سجّل الفاتورة الأصلية أولا.",
+  "cab.avoir.option": "{numero} بتاريخ {date} — {emetteur} — {ttc}",
+  "cab.avoir.extourne": "إشعار دائن: عكس قيد الفاتورة الأصلية",
+  "cab.avoir.rabais": "إشعار دائن: في حساب التخفيضات والحطائط والمرتجعات",
   "cab.ecriture.ligne.retirer": "حذف السطر",
   "cab.ecriture.ligne.ajouter": "إضافة سطر",
   "cab.ecriture.compte.inconnu": "غير موجود في الدليل — ستَرفضه القاعدة",

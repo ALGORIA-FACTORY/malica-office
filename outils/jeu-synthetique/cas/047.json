@@ -103,6 +103,7 @@
     "issue": {
       "type": "refus",
       "motifs": [
+        "proposition/facture_d_origine",
         "nature_piece"
       ]
     },

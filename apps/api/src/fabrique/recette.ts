@@ -230,6 +230,14 @@ export const REFERENCES_QUI_TRANCHENT_LE_SENS = [
   "matricule_fiscal_client",
 ] as const;
 
+/**
+ * Le numéro de la facture qu'un AVOIR corrige, quand il l'imprime (1er novembre
+ * 2026, réglage `avoirs.traitement` = `lie_facture`). L'invite le demande au
+ * modèle (`vision.ts`) ; la proposition le relit pour lier l'avoir à sa facture
+ * du même dossier (`proposition.ts`). Un seul nom, pour les deux.
+ */
+export const REFERENCE_DE_LA_FACTURE_D_ORIGINE = "facture_d_origine";
+
 export const CHAMPS_DE_PIECE = [
   "issuer",
   "document_date",

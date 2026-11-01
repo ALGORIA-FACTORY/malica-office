@@ -54,7 +54,11 @@ import {
 } from "./controles.ts";
 import { lireLeChange, type ChangeDuJugement } from "./cours-de-change.ts";
 import { normaliserMontants, type ResultatNormalisation } from "./normaliser-montants.ts";
-import { lireLesReglagesComptables, reglageDImmobilisation } from "./reglages-comptables.ts";
+import {
+  lireLesReglagesComptables,
+  reglageDesAvoirs,
+  reglageDImmobilisation,
+} from "./reglages-comptables.ts";
 
 const [NOM_MATRICULE_EMETTEUR, NOM_MATRICULE_CLIENT] = REFERENCES_QUI_TRANCHENT_LE_SENS;
 
@@ -268,6 +272,8 @@ export interface ReferentielDuJugement {
   biensImmobilisables: ContexteControle["biensImmobilisables"];
   /** Le seuil et le traitement d'un bien de faible valeur, arrêtés pour le dossier. */
   immobilisation: ContexteControle["immobilisation"];
+  /** Le traitement d'un avoir, arrêté pour le dossier (`reglageDesAvoirs`). */
+  avoirs: ContexteControle["avoirs"];
   mentionsObligatoires: ContexteControle["mentionsObligatoires"];
   doublonProbable: string | null;
   /** La règle de change et les cours applicables (`lireLeChange`). */
@@ -583,6 +589,7 @@ export function jugerLaLecture(
     titres: r.titres,
     biensImmobilisables: r.biensImmobilisables,
     immobilisation: r.immobilisation,
+    avoirs: r.avoirs,
     mentionsObligatoires: r.mentionsObligatoires,
     seuilConfianceReserve: r.parametres["lecture.confiance_reserve"],
     seuilConfianceBloquant: r.parametres["lecture.confiance_bloquante"],
@@ -622,7 +629,7 @@ export function jugerLaLecture(
  * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
  * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-10-31.6d0befa68772";
+export const REGLES_DU_JUGEMENT = "2026-11-01.26f7d123a881";
 
 /** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
 interface JugementDeLaPiece {
@@ -902,6 +909,8 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     ]),
   ]);
 
+  // Les réglages du cabinet, au jour de la pièce : le dossier, son cabinet, le pack.
+  const reglages = await lireLesReglagesComptables(db, piece.tenant_id, pack, dateRef);
   const referentielDuJugement: ReferentielDuJugement = {
     parametres: p,
     // La devise de la PIÈCE se décide au jugement (`deviseDeLaPiece`).
@@ -910,10 +919,13 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     biensImmobilisables: await lireLesBiensImmobilisables(db, pack, dateRef),
     // Le seuil du cabinet, au jour de la pièce : le dossier, son cabinet, le
     // pack ; TTC pour un dossier non assujetti, dont la TVA est un coût.
-    immobilisation: reglageDImmobilisation(
-      await lireLesReglagesComptables(db, piece.tenant_id, pack, dateRef),
-      { pack, jour: dateRef, nonAssujetti: await nonAssujetti(db, piece.tenant_id) },
-    ),
+    immobilisation: reglageDImmobilisation(reglages, {
+      pack,
+      jour: dateRef,
+      nonAssujetti: await nonAssujetti(db, piece.tenant_id),
+    }),
+    // L'avoir lié à sa facture, ou refusé : le réglage du dossier.
+    avoirs: reglageDesAvoirs(reglages, { pack, jour: dateRef }),
     taux: new Map(taux.map((t) => [t.code, t.rate])),
     deviseDuDossier: org.currency,
     droitsFixes: new Map(

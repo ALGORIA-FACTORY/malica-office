@@ -101,6 +101,7 @@ const CONTEXTE: ContexteControle = {
   // Sans réglage d'immobilisation : tout bien reconnu est à trancher. Le seuil
   // du cabinet s'éprouve plus bas.
   immobilisation: null,
+  avoirs: null,
   mentionsObligatoires: [
     { code: "IDENT_FISCAL_EMETTEUR", libelle: "Identifiant fiscal de l'émetteur" },
     { code: "IDENT_FISCAL_CLIENT", libelle: "Identifiant fiscal du client" },

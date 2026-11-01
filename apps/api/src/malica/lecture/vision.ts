@@ -49,7 +49,10 @@ import {
 } from "../modeles.ts";
 // Les deux noms que l'invite IMPOSE au modèle : ils viennent de la liste que
 // la relecture attend, et non plus d'une saisie à la main. Voir SYSTEM_SELECT.
-import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
+import {
+  REFERENCE_DE_LA_FACTURE_D_ORIGINE,
+  REFERENCES_QUI_TRANCHENT_LE_SENS,
+} from "../../fabrique/recette.ts";
 
 /*
  * Les délais au-delà desquels un appel est tenu pour perdu. Sans eux, une
@@ -423,6 +426,8 @@ Si NI l'émetteur NI le client n'est le dossier, ou si tu ne peux pas l'établir
 (« facture », « bon de livraison ») ni de la présence d'un tiers connu.
 VÉRIFIE CECI AVANT DE RÉPONDRE : si "document_kind" vaut "facture_achat" et que
 "${NOM_MATRICULE_EMETTEUR}" porte le matricule du DOSSIER, tu t'es trompé — intervertis-les.
+UN AVOIR qui imprime le numéro de la facture qu'il corrige : désigne ce numéro dans
+"references.${REFERENCE_DE_LA_FACTURE_D_ORIGINE}". Sinon, ne renvoie pas cette clé.
 PLAGES DE TOKENS. Le plan est découpé sur les ESPACES : une valeur peut donc occuper plusieurs
 tokens contigus. Dans ce cas, et dans ce cas seulement, ajoute "ordinal_end" pour couvrir TOUS ses
 tokens : {"page":1,"ordinal":3,"ordinal_end":5}. Cela vaut pour n'importe quel champ.

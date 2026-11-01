@@ -23,6 +23,8 @@ export type ReglagesResolus = ReadonlyMap<string, string | null>;
 const SEUIL = "immobilisation.seuil";
 const TRAITEMENT = "immobilisation.traitement";
 const FODEC = "fodec.traitement";
+const AVOIRS = "avoirs.traitement";
+const ECRITURE_D_AVOIR = "avoirs.ecriture";
 
 /**
  * Les options que le Socle sait appliquer, réglage par réglage. Une option
@@ -42,7 +44,12 @@ export const OPTIONS_APPLIQUEES: Readonly<Record<string, readonly string[]>> = {
   "comptes_immo.plan": ["selon_categorie"],
   [FODEC]: ["par_article_au_cout", "par_facture", "charge_non_recuperable"],
   "timbre.bareme": ["fixe_1d"],
-  "avoirs.traitement": ["refus_saisie_cabinet"],
+  // L'avoir lié à sa facture (1er novembre 2026) : `controles.ts` le juge,
+  // `proposition.ts` l'écrit (`ecritureDAvoir`). « libre » reste à faire.
+  "avoirs.traitement": ["refus_saisie_cabinet", "lie_facture"],
+  "avoirs.ecriture": ["selon_avoir", "extourne", "rabais"],
+  // Le compte de vente par nature d'article, ou unique (`nature-de-vente.ts`).
+  "ventes.compte": ["par_nature_article", "unique_cabinet"],
 };
 
 /** Les réglages à un nombre que le Socle lit. */
@@ -146,4 +153,40 @@ export async function droitsAuCout(db: Requete, r: ReglagesResolus): Promise<str
     [FODEC],
   );
   return rows.map((x) => x.droit);
+}
+
+/** Ce que le jugement et la proposition d'un avoir savent du réglage du cabinet. */
+export interface ReglageDesAvoirs {
+  /** Lié à sa facture et proposé, ou refusé et saisi par le cabinet. */
+  traitement: "lie_facture" | "refus_saisie_cabinet";
+  /** L'extourne, le rabais, ou selon l'avoir (total : extourne). */
+  ecriture: "selon_avoir" | "extourne" | "rabais";
+  /** Ce que le jugement a lu, pour se périmer quand la réponse change. */
+  lu: { pack: string; jour: string; valeurs: Record<string, string> };
+}
+
+/**
+ * Le traitement d'un avoir ; nul quand le pack n'en porte aucun — l'avoir se
+ * refuse alors, comme avant le réglage. L'option « libre » n'est pas encore
+ * appliquée (`OPTIONS_APPLIQUEES`) : un avoir libre se refuse aussi, et le
+ * référentiel le dit à l'écran. Une valeur inconnue est une erreur nommée.
+ */
+export function reglageDesAvoirs(
+  r: ReglagesResolus,
+  lecture: { pack: string; jour: string },
+): ReglageDesAvoirs | null {
+  const traitement = r.get(AVOIRS);
+  const ecriture = r.get(ECRITURE_D_AVOIR);
+  if (traitement === undefined) return null;
+  if (
+    !traitement ||
+    !["lie_facture", "refus_saisie_cabinet", "libre"].includes(traitement) ||
+    (ecriture !== "selon_avoir" && ecriture !== "extourne" && ecriture !== "rabais")
+  )
+    throw new Error("reglage.avoirs.illisible");
+  return {
+    traitement: traitement === "lie_facture" ? "lie_facture" : "refus_saisie_cabinet",
+    ecriture,
+    lu: { pack: lecture.pack, jour: lecture.jour, valeurs: { [AVOIRS]: traitement } },
+  };
 }
