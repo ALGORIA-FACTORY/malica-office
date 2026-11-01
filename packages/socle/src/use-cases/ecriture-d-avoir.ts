@@ -180,8 +180,14 @@ function ecartAuRepli(x: {
     else if (l.nature === "base" && l.tax_code) ajouterA(basesCodees, l.tax_code, x.cote(l));
     else if (l.nature === "base") basesSansCode += x.cote(l);
   }
+  // Un droit que rien ne désigne est FONDU dans une base de la facture : son
+  // montant lu est sa seule trace, et c'est aussi ce qu'il ajoute aux bases.
+  let fondus = 0n;
   for (const d of x.droitsDeLaFacture)
-    if (x.nonAttribues.has(d.code)) ajouterA(droitsF, d.code, x.u(d.montant));
+    if (x.nonAttribues.has(d.code)) {
+      ajouterA(droitsF, d.code, x.u(d.montant));
+      fondus += x.u(d.montant);
+    }
   // L'avoir : ce qui va à la base d'un taux, TVA non déduite comprise.
   const versLaBase = new Map(
     x.bases.map((b) => [b.code, b.ht + (tvasF.has(b.code) ? 0n : b.tva)] as const),
@@ -205,11 +211,22 @@ function ecartAuRepli(x: {
     [...tvasF].some(([code, m]) => (tvasA.get(code) ?? 0n) > m)
   )
     return "avoir_excede_la_facture";
-  // Chaque droit et chaque TVA déduite exactement, chaque base codée au moins.
+  /*
+   * Chaque droit et chaque TVA déduite exactement, chaque base codée au moins
+   * — à ceci près qu'un droit fondu dans la ligne de charge d'un taux (revue
+   * de #173 : base TVA19 1 010 pour HT 1 000 et FODEC 10) manque à la HT de
+   * ce taux. Ce qui manque aux bases codées, tous taux ensemble, se couvre
+   * donc par les droits fondus, et une fois seulement : chaque droit étant
+   * déjà exact, aucun droit imprimé en trop ne compense une base.
+   */
+  const manque = [...basesCodees].reduce((s, [code, m]) => {
+    const v = versLaBase.get(code) ?? 0n;
+    return s + (v < m ? m - v : 0n);
+  }, 0n);
   const exacte =
     [...droitsF].every(([code, m]) => (droitsA.get(code) ?? 0n) === m) &&
     [...tvasF].every(([code, m]) => (tvasA.get(code) ?? 0n) === m) &&
-    [...basesCodees].every(([code, m]) => (versLaBase.get(code) ?? 0n) >= m);
+    manque <= fondus;
   return exacte ? null : "droit_au_cout_non_attribue";
 }
 
