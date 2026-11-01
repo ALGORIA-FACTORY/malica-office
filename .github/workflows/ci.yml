@@ -284,3 +284,19 @@ jobs:
             apps/web/e2e/sortie-rapport
             !apps/web/e2e/sortie/session-*.json
           retention-days: 7
+
+  # L'image du lecteur OCR, construite SANS être publiée : les poids s'y
+  # téléchargent à leur révision épinglée, leurs empreintes sont revérifiées,
+  # la conversion ONNX rejouée et le contrat /lire éprouvé sur chaque moteur
+  # (Dockerfile). Une image qui ne se construit pas ici ne partira pas de main.
+  image-ocr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: infra/ocr
+          file: infra/ocr/Dockerfile
+          push: false
+          cache-from: type=gha,scope=ocr
