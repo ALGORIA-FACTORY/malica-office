@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { dansLaPeriode, dossierDeLaPiece, typePourLeDossier, type Dossier } from "../dossiers";
+import {
+  dansLaPeriodeMontree,
+  dossierDeLaPiece,
+  periodeMontree,
+  typePourLeDossier,
+  type Dossier,
+} from "../dossiers";
 
 const types = [
   { code: "facture_achat", dossier: "achats", dossierSiVente: null },
@@ -71,20 +77,44 @@ describe("la période d'une carte dit vrai", () => {
   });
 
   it("le mois en cours, par la date de la pièce", () => {
-    expect(dansLaPeriode(piece("2026-10-03"), "mois", "2026-10")).toBe(true);
-    expect(dansLaPeriode(piece("2026-06-02"), "mois", "2026-10")).toBe(false);
+    expect(dansLaPeriodeMontree(piece("2026-10-03"), "2026-10")).toBe(true);
+    expect(dansLaPeriodeMontree(piece("2026-06-02"), "2026-10")).toBe(false);
   });
 
   it("l'année, pour un PV ou une déclaration", () => {
-    expect(dansLaPeriode(piece("2026-02-15"), "annee", "2026-10")).toBe(true);
-    expect(dansLaPeriode(piece("2025-12-31"), "annee", "2026-10")).toBe(false);
+    expect(dansLaPeriodeMontree(piece("2026-02-15"), "2026")).toBe(true);
+    expect(dansLaPeriodeMontree(piece("2025-12-31"), "2026")).toBe(false);
   });
 
   it("une date illisible ne fait pas disparaître la pièce : la date de la photo", () => {
-    expect(dansLaPeriode(piece("20/10/2026"), "mois", "2026-10")).toBe(true);
+    expect(dansLaPeriodeMontree(piece("20/10/2026"), "2026-10")).toBe(true);
   });
 
   it("sans date lue, la date de la photo", () => {
-    expect(dansLaPeriode(piece(null), "mois", "2026-10")).toBe(true);
+    expect(dansLaPeriodeMontree(piece(null), "2026-10")).toBe(true);
+  });
+
+  // 1er novembre 2026 : Achats et Ventes « vides » le 1er du mois, sur un dossier plein.
+  it("le 1er du mois, la carte montre le mois le plus récent qui a des pièces", () => {
+    const octobre = [piece("2026-10-27"), piece("2026-09-25"), piece("2026-10-03")];
+    expect(periodeMontree(octobre, "mois", "2026-11")).toBe("2026-10");
+  });
+
+  it("le mois en cours dès qu'il a une pièce ; jamais un mois à venir", () => {
+    expect(periodeMontree([piece("2026-10-27"), piece("2026-11-01")], "mois", "2026-11")).toBe(
+      "2026-11",
+    );
+    expect(periodeMontree([piece("2026-12-15"), piece("2026-10-02")], "mois", "2026-11")).toBe(
+      "2026-10",
+    );
+  });
+
+  it("un dossier vide montre la période en cours", () => {
+    expect(periodeMontree([], "mois", "2026-11")).toBe("2026-11");
+    expect(periodeMontree([], "annee", "2026-11")).toBe("2026");
+  });
+
+  it("l'année la plus récente pour un dossier annuel", () => {
+    expect(periodeMontree([piece("2025-06-30")], "annee", "2026-11")).toBe("2025");
   });
 });
