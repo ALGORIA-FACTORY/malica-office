@@ -9,7 +9,7 @@ import {
   useRouteContext,
   useRouterState,
 } from "@tanstack/react-router";
-import { CalendarClock, FileText, Home as HomeIcon, Lock, Plus, Settings } from "lucide-react";
+import { CalendarClock, Home as HomeIcon, Library, Lock, Plus, Settings } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
@@ -641,7 +641,7 @@ function PmeLayout() {
           <NavItem {...navItems[0]} />
           <NavItem
             to="/pme/list"
-            icon={FileText}
+            icon={Library}
             label={t("pme.home.bibliotheque")}
             active={path.startsWith("/pme/list")}
           />
