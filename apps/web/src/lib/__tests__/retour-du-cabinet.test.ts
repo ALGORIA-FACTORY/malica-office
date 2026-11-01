@@ -3,6 +3,7 @@ import { LOCALES, MESSAGES } from "@malica/socle/messages";
 
 import {
   dernierRetourParPiece,
+  estCorrigee,
   FAIT_DU_GESTE,
   LIBELLE_DU_GESTE,
   sortiesDuRetour,
@@ -30,6 +31,11 @@ describe("un retour du cabinet dit un geste", () => {
     expect(sortiesDuRetour("reprendre_photo", false)[0]).toBe("reprendre_photo");
     expect(sortiesDuRetour("repondre", false)[0]).toBe("repondre");
     expect(sortiesDuRetour("demander_suppression", false)).not.toContain("geste");
+    // Un doublon n'est jamais « corrigé » : supprimer reste en tête, même « fait ».
+    expect(sortiesDuRetour("demander_suppression", true)[0]).toBe("supprimer");
+    expect(estCorrigee("demander_suppression", true)).toBe(false);
+    expect(estCorrigee("voir_reglement", true)).toBe(false);
+    expect(estCorrigee("reprendre_photo", true)).toBe(true);
   });
 });
 

@@ -33,6 +33,8 @@ const api = vi.hoisted(() => ({
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options }),
   useNavigate: () => api.navigate,
+  // Le retour suit l'historique (`useRevenir`) : ici, rien derrière.
+  useRouter: () => ({ history: { canGoBack: () => false, back: vi.fn() }, navigate: vi.fn() }),
 }));
 vi.mock("@/components/malica/pme-context", () => ({
   usePme: () => ({ tenantId: "dossier", file: { elements: [] } }),

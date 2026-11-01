@@ -398,7 +398,7 @@ export const capture = {
     // reste, comme version précédente, derrière celle qui la remplace.
     const { rows } = await db.query(
       `select ${colonnesDeLaPiece()}
-         from pieces_v where tenant_id = $1 and remplacee_par is null
+         from pieces_v where tenant_id = $1 and remplacee_par is null and archivee_le is null
         order by created_at desc limit 100`,
       [tenantId],
     );
@@ -479,7 +479,10 @@ export const capture = {
             order by t.piece_id, t.demande_le desc
          ) w on w.piece_id = p.id
         -- Une version précédente n'est pas une pièce de plus (« Reprendre la photo »).
-        where p.tenant_id = $1 and p.remplacee_par is null
+        -- Une pièce archivée a quitté la société : la RLS la laisse lire au
+        -- cabinet engagé, et le dirigeant qui est aussi son propre comptable
+        -- la revoyait ici, « à reprendre » (recette du 1er novembre 2026).
+        where p.tenant_id = $1 and p.remplacee_par is null and p.archivee_le is null
         order by p.created_at desc`,
       [tenantId],
     );
@@ -1104,7 +1107,8 @@ export const capture = {
         [org["jurisdiction"] as string],
       ),
       db.query(
-        `select id, status from pieces_v where tenant_id = $1 and remplacee_par is null limit 500`,
+        `select id, status from pieces_v
+          where tenant_id = $1 and remplacee_par is null and archivee_le is null limit 500`,
         [tenantId],
       ),
       db.query(

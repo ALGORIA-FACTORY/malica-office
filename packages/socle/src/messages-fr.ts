@@ -273,8 +273,6 @@ export const fr = {
   "pme.home.dossier.faites#other": "{count} prises en charge",
   "pme.home.dossier.aucune": "Aucune pièce",
   "pme.home.dossier.ajouter": "+ Ajouter",
-  "pme.list.axeDossier": "Dossier",
-  "pme.list.axeCategorie": "Catégorie",
   "pme.home.recentes": "Récemment lues",
   "pme.home.ech.dans": "Dans {count} jours",
   "pme.home.ech.dans#one": "Demain",
@@ -297,7 +295,6 @@ export const fr = {
   "pme.nav.capture": "Capture",
   "pme.noorg": "Aucune organisation PME. Créez-en une pour commencer.",
   "pme.capture.photo": "Photographier",
-  "pme.list.title": "Mes pièces",
   "pme.list.transmettre.reste":
     "{count} pièces de la société ne sont pas encore parties chez votre comptabilité.",
   "pme.list.transmettre.confirmer": "Confirmer : transmettre {count} pièces",
@@ -354,7 +351,6 @@ export const fr = {
   "pme.refus.piece_remplacee": "Une nouvelle photo a remplacé celle-ci : c'est elle qui se lit.",
   "pme.refus.autre": "Je n'ai pas lu cette pièce, et la raison ne m'est pas connue.",
   "pme.refus.le": "Refusée le {date}",
-  "pme.doc.titre": "Vos documents",
   "pme.doc.importer": "Importer des PDF",
   /*
    * ====================== « LUS ET CLASSÉS » NE COMPTE QUE CE QUI L'EST
@@ -367,19 +363,11 @@ export const fr = {
   "pme.doc.lead.nonLues": "{count} ne sont pas encore lus.",
   "pme.doc.lead.nonLues#one": "{count} n'est pas encore lu.",
   "pme.doc.lead.nonLues#other": "{count} ne sont pas encore lus.",
-  "pme.doc.type.tous": "Tous",
   "pme.doc.type.achats": "Achats",
   "pme.doc.type.ventes": "Ventes",
-  "pme.doc.type.autre": "Pas encore classés",
   "pme.doc.compte": "{count} pièces",
   "pme.doc.compte#one": "{count} pièce",
   "pme.doc.compte#other": "{count} pièces",
-  "pme.doc.note": "Le type vient de ce que je lis sur la pièce, jamais d'une saisie.",
-  "pme.doc.depuis": "Passé entre mes mains",
-  "pme.doc.bilan": "{count} documents lus, classés, transmis. Aucun oubli.",
-  "pme.doc.bilan#one": "{count} document lu, classé, transmis. Aucun oubli.",
-  "pme.doc.bilan#other": "{count} documents lus, classés, transmis. Aucun oubli.",
-  "pme.doc.source": "Touchez un mois pour l'ouvrir.",
   "pme.lire.illisible":
     "Je ne trouve ni texte ni image nette dans cette pièce. Reprenez la photo, ou déposez le PDF d’origine.",
   "pme.lire.vide":
@@ -652,7 +640,6 @@ export const fr = {
   "pme.journal.credit": "Crédit",
   "pme.journal.account": "Compte",
   "pme.vue.mois": "Mois",
-  "pme.vue.annee": "Année",
   "pme.tva.source":
     "Chaque montant vient d'une pièce que votre comptable a prise en charge. Je ne calcule rien que je ne puisse citer.",
   "meta.pme.description":
@@ -749,6 +736,8 @@ export const fr = {
   "pme.regler.retour": "Retour",
   "pme.regler.demande":
     "{cabinet} a besoin d'une précision sur la facture {emetteur}. Pouvez-vous la reprendre en photo ?",
+  "pme.regler.demande.piece":
+    "{cabinet} vous a retourné la facture {emetteur}. Tout se fait depuis la pièce.",
   "pme.regler.motif": "Motif indiqué :",
   "pme.regler.motifInconnu": "non précisé",
   "pme.regler.reprendre": "Reprendre la photo",
@@ -2739,7 +2728,6 @@ export const fr = {
   "cab.ecriture.retourner": "Retourner au client…",
   "pme.piece.ou": "Où elle en est",
   "pme.piece.ou.avenir": "à venir",
-  "pme.list.aVous": "À vous",
   "cab.notif.kind.piece.confirmation_demandee": "Le client a été relancé sur une pièce.",
   "cab.notif.kind.piece.reponse_client": "Le client a répondu sur une pièce.",
   "notif.kind.piece.reponse_client": "Votre réponse est partie à la comptabilité",
@@ -4410,23 +4398,9 @@ export const fr = {
   "pme.charges.nbClasses": "{count} classes",
   "pme.charges.nbClasses#one": "{count} classe",
   "pme.charges.nbClasses#other": "{count} classes",
-  "pme.list.regrouperPar": "Regrouper par",
-  "pme.list.axeOperation": "Type d'opération",
   "pme.list.pieces": "pièces",
-  "pme.list.vueListe": "Liste",
   "pme.list.voirTout": "Voir les {n}",
   "pme.list.replier": "Replier",
-  "pme.list.pasEncoreRecu": "{mois} pas encore reçu",
-  "pme.list.legendeAttendue": "Attendue, pas encore là",
-  "pme.list.legendeRien": "Rien attendu",
-  "pme.list.legendeRecue": "Reçue",
-  "pme.list.manquants":
-    "{count} ensembles récurrents n'ont rien reçu en {mois} : {liste}. Les mois précédents en portent une chaque fois.",
-  "pme.list.manquants#one":
-    "Un ensemble récurrent n'a rien reçu en {mois} : {liste}. Les mois précédents en portent une chaque fois.",
-  "pme.list.manquants#other":
-    "{count} ensembles récurrents n'ont rien reçu en {mois} : {liste}. Les mois précédents en portent une chaque fois.",
-  "pme.list.nbTiers": "{count} tiers",
   "pme.malica.composer": "Écrivez à Malica…",
   "pme.malica.poser": "Posez votre question…",
   "pme.malica.suiteAvis": "Demander l'avis de {cabinet}",

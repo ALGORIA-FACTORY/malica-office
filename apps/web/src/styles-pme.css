@@ -403,7 +403,9 @@
  * mange la dernière ligne de chaque liste, et la dernière ligne est souvent
  * celle qu'on cherchait. */
 [data-surface="pme"] .nav {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center;
+  /* Société · Bibliothèque · Privé, puis « + » : la dernière colonne est à
+   * sa mesure (1er novembre 2026). */
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: center;
   margin-top: 1.75rem;
   /* Epinglee, elle se pose sur la zone de gestes : le 1.375rem devient un
    * plancher, et `env()` fait le reste. Pas d'autre plancher — une erreur de
@@ -448,18 +450,23 @@
  * 15px de rayon ; on prend `--r-md` (16px) plutot qu'un cinquieme rayon pour un
  * seul element — 1px d'ecart, assume. */
 [data-surface="pme"] .nav .obtur {
-  border: 1.5px solid var(--acc);
+  border: 0;
   border-radius: var(--r-md);
-  background: none;
-  color: var(--acc);
-  transition: background var(--t), color var(--t);
+  background: var(--acc);
+  color: var(--on-acc);
 }
 [data-surface="pme"] .nav .obtur[disabled] { opacity: .4; cursor: default }
-@media (hover: hover) and (pointer: fine) {
-  [data-surface="pme"] .nav .obtur:hover:not([disabled]) {
-    background: var(--acc); color: var(--on-acc);
-  }
+/* Le « + » est TOUJOURS à droite, sous le pouce — en arabe aussi (décision de
+ * Wissem, 1er novembre 2026). Le filet est donc à gauche, physiquement, et en
+ * droite-à-gauche la colonne passe en tête de la grille, c'est-à-dire à droite. */
+[data-surface="pme"] .nav .ajout {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-left: .5rem; border-left: 1px solid var(--hr);
 }
+[dir="rtl"] [data-surface="pme"] .nav,
+[data-surface="pme"][dir="rtl"] .nav { grid-template-columns: auto repeat(3, minmax(0, 1fr)) }
+[dir="rtl"] [data-surface="pme"] .nav .ajout,
+[data-surface="pme"][dir="rtl"] .nav .ajout { order: -1 }
 
 /* --- Malica parle --------------------------------------------------------
  * Large et discrète : elle occupe toute la colonne et ne se teinte pas. Son
@@ -624,6 +631,12 @@
     min-height: 44px;
   }
   [data-surface="pme"] .nav a[data-on="true"] { background: var(--d1) }
+  /* Sur le rail, « Ajouter » ferme la liste, sans filet ni ordre forcé. */
+  [data-surface="pme"] .nav .ajout,
+  [dir="rtl"] [data-surface="pme"] .nav .ajout,
+  [data-surface="pme"][dir="rtl"] .nav .ajout {
+    order: 0; display: block; padding: 0; border: 0; margin-top: .5rem;
+  }
   [data-surface="pme"] .nav .obtur {
     width: 100%;
     height: auto;
@@ -1050,9 +1063,9 @@
 [data-surface="pme"] [data-ecran="accueil"] .ligne span{flex:1;min-width:0;font-size:.8125rem;color:var(--t2)}
 [data-surface="pme"] [data-ecran="accueil"] .ligne .ar{width:18px;height:18px;color:var(--t3);flex:none}
 [data-surface="pme"] [data-ecran="accueil"] .ligne.abo{margin-top:1.875rem}
-[data-surface="pme"] [data-ecran="accueil"] .rail{display:flex;gap:.75rem;overflow-x:auto;margin:0 -1.25rem;padding:0 1.25rem .25rem;scroll-snap-type:x mandatory;scroll-padding-inline:1.25rem;scrollbar-width:none;overscroll-behavior-x:contain}
-[data-surface="pme"] [data-ecran="accueil"] .rail::-webkit-scrollbar{display:none}
-[data-surface="pme"] [data-ecran="accueil"] .rail > *{flex:none;scroll-snap-align:start}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .rail{display:flex;gap:.75rem;overflow-x:auto;margin:0 -1.25rem;padding:0 1.25rem .25rem;scroll-snap-type:x mandatory;scroll-padding-inline:1.25rem;scrollbar-width:none;overscroll-behavior-x:contain}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .rail::-webkit-scrollbar{display:none}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .rail > *{flex:none;scroll-snap-align:start}
 [data-surface="pme"] [data-ecran="accueil"] .doc{width:148px;display:grid;gap:.1875rem;color:var(--tx);text-decoration:none}
 [data-surface="pme"] [data-ecran="accueil"] .doc .pg{position:relative;display:block;width:148px;height:188px;margin-bottom:.375rem}
 [data-surface="pme"] [data-ecran="accueil"] .doc > b{font-size:.875rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1065,15 +1078,15 @@
 [data-surface="pme"] [data-ecran="accueil"] .hero .gestes{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.1875rem}
 [data-surface="pme"] [data-ecran="accueil"] .hero .gestes .cta{margin-top:0}
 [data-surface="pme"] [data-ecran="accueil"] .hero .cta.sec2{background:transparent;color:var(--tx);border:1px solid var(--dl)}
-[data-surface="pme"] [data-ecran="accueil"] .poch{width:156px;display:grid;gap:.1875rem;color:var(--tx);text-decoration:none}
-[data-surface="pme"] [data-ecran="accueil"] .poch .cv{position:relative;overflow:hidden;width:156px;height:156px;box-sizing:border-box;border-radius:14px;padding:.875rem;margin-bottom:.375rem;display:flex;flex-direction:column;justify-content:space-between;background:var(--pf);color:var(--pe)}
-[data-surface="pme"] [data-ecran="accueil"] .poch .mo{font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
-[data-surface="pme"] [data-ecran="accueil"] .poch .ini{position:absolute;inset-inline-end:-.875rem;top:1.25rem;font-size:6rem;font-weight:800;letter-spacing:-.06em;line-height:1;opacity:.1}
-[data-surface="pme"] [data-ecran="accueil"] .poch .cv b{position:relative;font-size:1.1875rem;font-weight:800;letter-spacing:-.03em;line-height:1.1}
-[data-surface="pme"] [data-ecran="accueil"] .poch .av{display:block;height:4px;border-radius:2px;background:var(--pp);overflow:hidden;margin-top:.375rem}
-[data-surface="pme"] [data-ecran="accueil"] .poch .av i{display:block;height:100%;background:currentColor}
-[data-surface="pme"] [data-ecran="accueil"] .poch > b{font-size:.875rem;font-weight:700}
-[data-surface="pme"] [data-ecran="accueil"] .poch > span{font-size:.75rem;color:var(--t3)}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .poch{width:156px;display:grid;gap:.1875rem;color:var(--tx);text-decoration:none}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .poch .cv{position:relative;overflow:hidden;width:156px;height:156px;box-sizing:border-box;border-radius:14px;padding:.875rem;margin-bottom:.375rem;display:flex;flex-direction:column;justify-content:space-between;background:var(--pf);color:var(--pe)}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .poch .mo{font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .poch .ini{position:absolute;inset-inline-end:-.875rem;top:1.25rem;font-size:6rem;font-weight:800;letter-spacing:-.06em;line-height:1;opacity:.1}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .poch .cv b{position:relative;font-size:1.1875rem;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .poch .av{display:block;height:4px;border-radius:2px;background:var(--pp);overflow:hidden;margin-top:.375rem}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .poch .av i{display:block;height:100%;background:currentColor}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .poch > b{font-size:.875rem;font-weight:700}
+[data-surface="pme"] :is([data-ecran="accueil"],[data-ecran="bibliotheque"]) .poch > span{font-size:.75rem;color:var(--t3)}
 /* Une teinte PAR DOSSIER (`ref.dossiers.teinte`), jamais par position : la
    carte, la tuile de la capture et l'en-tête du dossier la partagent. */
 [data-surface="pme"] [data-teinte="achats"]{--pf:#DCEFE3;--pe:#163A2A;--pp:#B8DCC5}
@@ -1462,27 +1475,10 @@
 
 /* ======================== écran · bibliotheque ======================== */
 
-[data-surface="pme"] [data-ecran="bibliotheque"] .app{width:100%;max-width:440px;min-height:100vh;background:var(--d0);padding-top:4rem; padding-bottom:max(0px,env(safe-area-inset-bottom,0px))}
 [data-surface="pme"] [data-ecran="bibliotheque"] h1{margin:1.0625rem 0 0;font-size:1.9375rem;font-weight:700;letter-spacing:-.042em;line-height:1.05}
 [data-surface="pme"] [data-ecran="bibliotheque"] .sub{margin:.4375rem 0 0;font-family:var(--mono);font-size:.75rem;color:var(--t3);line-height:1.5}
-[data-surface="pme"] [data-ecran="bibliotheque"] .srch{display:flex;align-items:center;gap:.6875rem;background:var(--d1);border-radius:16px; padding:.8125rem .9375rem;margin-top:1.125rem;cursor:text}
-[data-surface="pme"] [data-ecran="bibliotheque"] .srch svg{width:19px;height:19px;color:var(--t3);flex:none}
-[data-surface="pme"] [data-ecran="bibliotheque"] .srch span{font-size:.875rem;color:var(--t3);letter-spacing:-.01em}
-[data-surface="pme"] [data-ecran="bibliotheque"] .axe{display:flex;align-items:center;gap:.4375rem;margin-top:1rem}
-[data-surface="pme"] [data-ecran="bibliotheque"] .axe .ch{flex:1;min-width:0;display:flex;gap:.375rem;overflow-x:auto;scrollbar-width:none}
-[data-surface="pme"] [data-ecran="bibliotheque"] .axe .ch::-webkit-scrollbar{display:none}
-[data-surface="pme"] [data-ecran="bibliotheque"] .axe .ch button{flex:none;border:0;cursor:pointer;font-family:inherit;font-size:.8125rem; font-weight:600;padding:.5rem .8125rem;border-radius:999px;background:var(--d1);color:var(--t2); white-space:nowrap;transition:background .18s,color .18s}
-[data-surface="pme"] [data-ecran="bibliotheque"] .axe .ch button.on{background:var(--acc);color:var(--on-acc)}
-[data-surface="pme"] [data-ecran="bibliotheque"] .axe .vu{display:flex;gap:.1875rem;background:var(--d1);border-radius:999px;padding:.1875rem;flex:none}
-[data-surface="pme"] [data-ecran="bibliotheque"] .axe .vu button{width:34px;height:30px;border:0;border-radius:999px;background:none;color:var(--t3); display:grid;place-items:center;cursor:pointer}
-[data-surface="pme"] [data-ecran="bibliotheque"] .axe .vu button svg{width:17px;height:17px}
-[data-surface="pme"] [data-ecran="bibliotheque"] .axe .vu button.on{background:var(--acc);color:var(--on-acc)}
-[data-surface="pme"] [data-ecran="bibliotheque"] .lab{margin:1.0625rem 0 0;font-size:.6875rem;font-weight:600;letter-spacing:.14em; text-transform:uppercase;color:var(--t3)}
 [data-surface="pme"] [data-ecran="bibliotheque"] .fil{display:flex;gap:.4375rem;overflow-x:auto;scrollbar-width:none;margin:.625rem -1.25rem 0; padding:0 1.25rem}
 [data-surface="pme"] [data-ecran="bibliotheque"] .fil::-webkit-scrollbar{display:none}
-[data-surface="pme"] [data-ecran="bibliotheque"] .fil button{flex:none;border:0;cursor:pointer;font-family:inherit;font-size:.8125rem;font-weight:500; padding:.4375rem .8125rem;border-radius:999px;background:var(--d2);color:var(--t2);white-space:nowrap; display:inline-flex;align-items:center;gap:.4375rem}
-[data-surface="pme"] [data-ecran="bibliotheque"] .fil button.on{background:var(--acc);color:var(--on-acc);font-weight:600}
-[data-surface="pme"] [data-ecran="bibliotheque"] .fil button em{font-style:normal;font-family:var(--mono);font-size:.6875rem;opacity:.6}
 [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .sec:not(button):not(a){display:flex;align-items:baseline;justify-content:space-between;margin:1.625rem 0 .875rem}
 [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .sec h2{margin:0;font-size:1.25rem;font-weight:700;letter-spacing:-.034em}
 [data-surface="pme"] [data-ecran="bibliotheque"] .sec .ret{border:0;background:none;color:var(--acc);font-family:inherit;font-size:.8125rem; font-weight:600;cursor:pointer;padding:0}
@@ -1496,7 +1492,6 @@
 [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .grp .k{font-size:.6875rem;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .grp .v{font-family:var(--mono);font-size:.6875rem;color:var(--t2);letter-spacing:-.01em}
 [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .grp .v u{text-decoration:none;color:var(--acc2)}
-[data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .grp .miss{font-size:.6875rem;font-weight:600;color:var(--am)}
 [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .grp .n{flex:none;text-align:end;display:grid;gap:.0625rem}
 [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .grp .n b{font-family:var(--mono);font-size:1.0625rem;font-weight:600;letter-spacing:-.045em}
 [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .grp .n span{font-size:.625rem;color:var(--t3)}
@@ -1521,25 +1516,9 @@
 [data-surface="pme"] [data-ecran="bibliotheque"] .pc .tag.mg{color:var(--mg)}
 [data-surface="pme"] [data-ecran="bibliotheque"] .pc.dim .nm, [data-surface="pme"] [data-ecran="bibliotheque"] .pc.dim .vl{color:var(--t2)}
 [data-surface="pme"] [data-ecran="bibliotheque"] .more{width:100%;border:0;background:none;color:var(--acc);font-family:inherit;font-size:.8125rem; font-weight:600;cursor:pointer;padding:.75rem 0 .25rem;text-align:start}
-[data-surface="pme"] [data-ecran="bibliotheque"] .yr{background:var(--d1);border-radius:20px;padding:1rem .875rem 1.125rem;overflow:hidden}
-[data-surface="pme"] [data-ecran="bibliotheque"] .yr table{width:100%;border-collapse:collapse;table-layout:fixed}
-[data-surface="pme"] [data-ecran="bibliotheque"] .yr th{font-family:var(--mono);font-size:.5625rem;font-weight:600;color:var(--t3); letter-spacing:.04em;padding:0 0 .625rem;text-align:center}
-[data-surface="pme"] [data-ecran="bibliotheque"] .yr th:first-child{text-align:start;width:44%}
-[data-surface="pme"] [data-ecran="bibliotheque"] .yr td{padding:.3125rem 0;text-align:center;vertical-align:middle}
-[data-surface="pme"] [data-ecran="bibliotheque"] .yr td:first-child{text-align:start;font-size:.75rem;font-weight:500;color:var(--t2); letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0; padding-inline-end:.5rem}
-[data-surface="pme"] [data-ecran="bibliotheque"] .d{display:inline-block;width:9px;height:9px;border-radius:50%;background:#3C4450;vertical-align:middle}
-[data-surface="pme"] [data-ecran="bibliotheque"] .d.ok{background:var(--acc)}
-[data-surface="pme"] [data-ecran="bibliotheque"] .d.miss{background:none;box-shadow:inset 0 0 0 1.5px var(--am)}
-[data-surface="pme"] [data-ecran="bibliotheque"] .d.none{background:#ECEEEE;width:4px;height:4px}
-[data-surface="pme"] [data-ecran="bibliotheque"] .d.fut{background:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);width:7px;height:7px}
-[data-surface="pme"] [data-ecran="bibliotheque"] .lgd{display:flex;flex-wrap:wrap;gap:.875rem;margin-top:1rem;font-size:.6875rem;color:var(--t3)}
-[data-surface="pme"] [data-ecran="bibliotheque"] .lgd span{display:inline-flex;align-items:center;gap:.4375rem}
 [data-surface="pme"] [data-ecran="bibliotheque"] .ceil{display:flex;align-items:flex-start;gap:.75rem;background:rgba(168,72,31,.09); border:1px solid rgba(168,72,31,.28);border-radius:16px;padding:.875rem .9375rem;margin-top:1.125rem}
 [data-surface="pme"] [data-ecran="bibliotheque"] .ceil i{width:9px;height:9px;border-radius:50%;background:var(--mg);flex:none;margin-top:.3125rem}
 [data-surface="pme"] [data-ecran="bibliotheque"] .ceil p{margin:0;font-size:.8125rem;line-height:1.45;color:#8A3A1C}
-[data-surface="pme"] [data-ecran="bibliotheque"] .note .bd{flex:1;min-width:0}
-[data-surface="pme"] [data-ecran="bibliotheque"] .note .bd p{margin:0;font-size:.875rem;line-height:1.4;color:#3C4450;letter-spacing:-.012em}
-[data-surface="pme"] [data-ecran="bibliotheque"] .note .bd button{margin-top:.6875rem;border:0;background:var(--acc);color:var(--on-acc); border-radius:999px;padding:.5625rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:700; cursor:pointer}
 
 
 /* ======================== écran · charges ======================== */
@@ -2477,12 +2456,8 @@ html.dark:has([data-surface="pme"]),
 .dark [data-surface="pme"] [data-ecran="dossier"] .ck.q p, .dark [data-surface="pme"] [data-ecran="dossier"] .ck.no p, .dark [data-surface="pme"] [data-ecran="dossier"] .ck.az p{color:#E4E4E7}
 .dark [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .grp i{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center}
 .dark [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .grp i.cli{background:rgba(143,227,177,.13);color:var(--acc)}
-.dark [data-surface="pme"] [data-ecran="bibliotheque"] .d{display:inline-block;width:9px;height:9px;border-radius:50%;background:#2F2F34;vertical-align:middle}
-.dark [data-surface="pme"] [data-ecran="bibliotheque"] .d.none{background:#242428;width:4px;height:4px}
-.dark [data-surface="pme"] [data-ecran="bibliotheque"] .d.fut{background:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);width:7px;height:7px}
 .dark [data-surface="pme"] [data-ecran="bibliotheque"] .ceil{display:flex;align-items:flex-start;gap:.75rem;background:rgba(217,119,87,.09); border:1px solid rgba(217,119,87,.28);border-radius:16px;padding:.875rem .9375rem;margin-top:1.125rem}
 .dark [data-surface="pme"] [data-ecran="bibliotheque"] .ceil p{margin:0;font-size:.8125rem;line-height:1.45;color:#E8C9BC}
-.dark [data-surface="pme"] [data-ecran="bibliotheque"] .note .bd p{margin:0;font-size:.875rem;line-height:1.4;color:#E4E4E7;letter-spacing:-.012em}
 @media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="charges"] .mths button:hover{background:#2e2e2e}}
 .dark [data-surface="pme"] [data-ecran="charges"] .mths button[disabled]{background:transparent;color:#3d3d44;cursor:default; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
 .dark [data-surface="pme"] [data-ecran="charges"] .cls .bar{height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}

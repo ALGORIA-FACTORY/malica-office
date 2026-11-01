@@ -7,6 +7,7 @@ import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { trancheDEcheance } from "@/lib/portefeuille-actif";
 import { office } from "@/verticals/malica-office/composition";
+import { useRevenir } from "@/hooks/use-revenir";
 
 export const Route = createFileRoute("/_authenticated/pme/echeances")({
   head: () => ({
@@ -138,6 +139,7 @@ function PmeEcheances() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const navigate = useNavigate();
+  const revenir = useRevenir();
 
   // Le calendrier se dérive du pack à l'ouverture — idempotent — puis se lit.
   const derivation = useQuery({
@@ -216,7 +218,7 @@ function PmeEcheances() {
           type="button"
           className="bk"
           aria-label={t("pme.regler.retour")}
-          onClick={() => void navigate({ to: "/pme" })}
+          onClick={() => revenir("/pme")}
         >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />

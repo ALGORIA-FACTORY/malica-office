@@ -10,6 +10,7 @@ import { jourOuInstant } from "@/lib/lisible";
 import { PLAFOND_ELEMENTS } from "@/lib/hors-ligne/file";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
+import { useRevenir } from "@/hooks/use-revenir";
 
 export const Route = createFileRoute("/_authenticated/pme/a-lire")({
   head: () => ({
@@ -37,6 +38,7 @@ function ALire() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const navigate = useNavigate();
+  const revenir = useRevenir();
   /*
    * Les pièces dont on a INVERSÉ la case. D'office, les PLAFOND_ELEMENTS plus
    * récentes sont cochées — un lot n'en porte pas davantage (revue Codex de
@@ -75,7 +77,7 @@ function ALire() {
           type="button"
           className="bk"
           aria-label={t("pme.regler.retour")}
-          onClick={() => void navigate({ to: "/pme" })}
+          onClick={() => revenir("/pme")}
         >
           <svg viewBox="0 0 24 24" className="g fl" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />
