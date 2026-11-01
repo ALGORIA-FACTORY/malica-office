@@ -1,5 +1,7 @@
 {
-  "acces": ["monAcces"],
+  "acces": [
+    "monAcces"
+  ],
   "banque": [
     "audit",
     "bookLines",
@@ -23,6 +25,7 @@
     "dossier",
     "enregistrer",
     "enregistrerPaiement",
+    "lectureObservee",
     "listAvecLecture",
     "lister",
     "monEspaceHorsSociete",
@@ -102,8 +105,18 @@
     "renommer",
     "supprimer"
   ],
-  "corpus": ["editionsPlusRecentes", "modeleEmpreinte", "parametresPour", "rechercher"],
-  "exports": ["estimer", "exercices", "generer", "historique"],
+  "corpus": [
+    "editionsPlusRecentes",
+    "modeleEmpreinte",
+    "parametresPour",
+    "rechercher"
+  ],
+  "exports": [
+    "estimer",
+    "exercices",
+    "generer",
+    "historique"
+  ],
   "fabrique": [
     "codesDuReferentiel",
     "contexteDeDesignation",
@@ -209,9 +222,20 @@
     "recordCession",
     "updateAsset"
   ],
-  "integrations": ["cles", "creerCle", "etat", "revoquerCle"],
-  "journal": ["consigner", "dernieres"],
-  "journalDuJour": ["exporter", "lire"],
+  "integrations": [
+    "cles",
+    "creerCle",
+    "etat",
+    "revoquerCle"
+  ],
+  "journal": [
+    "consigner",
+    "dernieres"
+  ],
+  "journalDuJour": [
+    "exporter",
+    "lire"
+  ],
   "office": [
     "book",
     "bookedExtracts",
@@ -277,7 +301,9 @@
     "taxRates",
     "typesDeDocument"
   ],
-  "signalements": ["deposer"],
+  "signalements": [
+    "deposer"
+  ],
   "stocks": [
     "addMouvement",
     "categories",
