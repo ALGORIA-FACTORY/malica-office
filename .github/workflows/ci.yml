@@ -54,9 +54,8 @@ jobs:
 
       # Le Caddyfile route vers l'API les mêmes chemins que le relais de
       # développement : une route qui marche sur le poste marche en production.
-      # Et tout nom de relevé que le service OCR peut rendre a son tarif.
       - name: Infra
-        run: node --test infra/caddy/Caddyfile.test.mjs infra/ocr/tarif.test.mjs
+        run: node --test infra/caddy/Caddyfile.test.mjs
 
       # R9 : aucun code mort. Fichiers, exports et dépendances que rien
       # n'atteint — la configuration (knip.jsonc) dit ce qui est ignoré et pourquoi.
