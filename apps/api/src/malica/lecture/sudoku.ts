@@ -825,6 +825,13 @@ export interface Sudoku {
    * celui de la pièce (R2).
    */
   inscrire(retenue: VisionRead): Promise<void>;
+  /**
+   * Cette lecture a-t-elle été DÉSIGNÉE par une preuve ? Vrai seulement en mode
+   * `designe` et pour une pièce prouvée : ses totaux sont alors ceux de la
+   * preuve, et un rattrapage par un autre lecteur ne peut pas faire mieux.
+   * En observation, toujours faux : la chaîne garde son comportement entier.
+   */
+  prouvee(lecture: VisionRead): boolean;
 }
 
 /**
@@ -871,6 +878,7 @@ export function creerLeSudoku(
 ): Sudoku {
   const contextes = new Map<string, Promise<ContexteDuSudokuBranche>>();
   const lus = new WeakMap<VisionRead, ChampsLusAInscrire>();
+  const designees = new WeakSet<VisionRead>();
   return {
     async lire(lecture) {
       let jour: string | null = null;
@@ -921,6 +929,7 @@ export function creerLeSudoku(
                 ),
               };
         lus.set(rendue, aInscrire);
+        if (rendue !== lecture) designees.add(rendue);
         return rendue;
       } catch (e: unknown) {
         if (jour !== null) contextes.delete(jour);
@@ -935,6 +944,10 @@ export function creerLeSudoku(
       await api.rpc<void>("capture", "inscrireChampsLus", [aInscrire]).catch((e: unknown) => {
         console.error(`sudoku : champs NON inscrits — pièce ${piece.pieceId} : ${message(e)}`);
       });
+    },
+
+    prouvee(lecture) {
+      return designees.has(lecture);
     },
   };
 }

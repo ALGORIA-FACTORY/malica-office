@@ -283,8 +283,19 @@ export async function readPieceFlow(
    *
    * ON NE RELIT JAMAIS AVEC LE LECTEUR QUI VIENT DE LIRE (`autreLecteur`).
    */
+  /*
+   * ====================================== UNE PIÈCE PROUVÉE NE SE RATTRAPE PAS
+   *
+   * Mesuré sur le staging le 1er novembre 2026 : 4,6 s de lecture, puis 17 s
+   * de rattrapage par le modèle de vision, déclenché parce que le contrat sort
+   * « partiel » (des prix TTC unitaires qu'aucune facture n'imprime), et dont
+   * la lecture était écartée. Quand le sudoku a DÉSIGNÉ la pièce (réglage
+   * `lecture.sudoku` = `designe`, pièce prouvée), ses totaux tiennent par
+   * preuve : un second lecteur ne peut pas faire mieux sur eux. En
+   * observation, rien ne change.
+   */
   const autre = autreLecteur(premiereLecture, lecteurs.secondLecteurDisponible());
-  if (qualiteDeLecture(built) < QUALITE_PARFAITE && autre) {
+  if (qualiteDeLecture(built) < QUALITE_PARFAITE && autre && !sudoku.prouvee(premiereLecture)) {
     /*
      * ============== UN ECHEC AU RATTRAPAGE NE DETRUIT PAS CE QU'ON TIENT DEJA
      *

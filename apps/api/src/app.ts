@@ -41,6 +41,7 @@ import { sonderLaBase, sousIdentite } from "./db.ts";
 import { introuvableLisible, refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
 import { malica } from "./malica.ts";
+import { moteurDuSecondLecteur } from "./malica/lecture/paddle.ts";
 import { executerRpc, origineDEssai, RpcIntrouvable } from "./rpc.ts";
 import { estUneCoque, exigerIdentite, NOM_COOKIE, presenterLeClient } from "./session.ts";
 import {
@@ -477,6 +478,8 @@ app.get("/sante/profonde", async (_req, res) => {
     version: VERSION_LIVREE,
     base: "ok",
     stockage: "ok",
+    // Le moteur du second lecteur : dit, jamais exigé (il peut être éteint).
+    ocr: await moteurDuSecondLecteur(),
   };
   await sonderLaBase().catch(() => {
     verdict.base = "hs";

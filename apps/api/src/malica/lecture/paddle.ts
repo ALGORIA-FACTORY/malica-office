@@ -131,6 +131,30 @@ export class SecondLecteurOccupe extends PanneFournisseur {
   }
 }
 
+/**
+ * Le moteur que le second lecteur annonce (`/sante` du service : « onnx » ou
+ * « paddle »), pour la sonde de santé de l'API : on doit pouvoir dire lequel
+ * tourne sans entrer dans le conteneur (staging, 1er novembre 2026). Rien de
+ * plus ne sort — ni modèle, ni empreinte. `absent` sans `OCR_URL` ; `hs` s'il
+ * ne répond pas en deux secondes : la santé de l'API n'en dépend pas.
+ */
+export async function moteurDuSecondLecteur(): Promise<string> {
+  const base = process.env["OCR_URL"];
+  if (!base) return "absent";
+  try {
+    const r = await fetch(`${base.replace(/\/+$/, "")}/sante`, {
+      signal: AbortSignal.timeout(2_000),
+    });
+    if (!r.ok) return "hs";
+    const corps = (await r.json()) as { moteur?: unknown };
+    return typeof corps.moteur === "string" && /^[a-z]{1,20}$/.test(corps.moteur)
+      ? corps.moteur
+      : "inconnu";
+  } catch {
+    return "hs";
+  }
+}
+
 export async function lireAvecPaddle(
   image: Uint8Array,
   page: number,
