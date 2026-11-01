@@ -10,17 +10,25 @@ et un statut. Tout le reste — la grille, les preuves, les taux — vit en base
 
 ## 1. Les trois couches, en base (schéma `ref`, daté par le pack)
 
-| Table                  | Couche | Ce qu'elle porte                                                                                                                                                                                         |
-| ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ref.grilles`          | —      | un type de document : `code`, `famille`, `nom`, `document_type` (lien vers `ref.document_types`, nullable), `statut`                                                                                     |
-| `ref.grille_champs`    | 1      | `grille_id`, `parcelle`, `code`, `libelle`, `type`, `obligatoire`, `condition`, `reperes_fr[]`, `reperes_ar[]`, `format_code` (nullable), `groupe` (nullable), `fondement`, `source_fondement`, `statut` |
-| `ref.grille_relations` | 2      | `grille_id`, `vers`, `nature`, `cle`                                                                                                                                                                     |
-| `ref.grille_preuves`   | 3      | `grille_id`, `code`, `regle` (texte d'origine), `genre`, `expression` (jsonb, nullable), `statut`                                                                                                        |
+| Table                  | Couche | Ce qu'elle porte                                                                                                                                                                                                                          |
+| ---------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ref.grilles`          | —      | un type de document : `code`, `famille`, `nom`, `document_type` (lien vers `ref.document_types`, nullable), `statut`                                                                                                                      |
+| `ref.grille_champs`    | 1      | `grille_id`, `parcelle`, `code`, `libelle`, `type`, `obligatoire`, `condition`, `reperes_fr[]`, `reperes_ar[]`, `format_code` (nullable), `groupe` (nullable), `fondement`, `source_fondement`, `statut`, `concept_id`, `role` (nullable) |
+| `ref.concepts`         | 1      | le dictionnaire : `code`, `libelle`, `expert` (`montant`, `identifiant`, `date`, `reference`, `tiers`, `libelle`), `statut`                                                                                                               |
+| `ref.grille_relations` | 2      | `grille_id`, `vers`, `nature`, `cle`                                                                                                                                                                                                      |
+| `ref.grille_preuves`   | 3      | `grille_id`, `code`, `regle` (texte d'origine), `genre`, `expression` (jsonb, nullable), `statut`                                                                                                                                         |
 
 `statut` vaut `defaut_a_valider` pour tout ce que Malica livre (R10) ; seule
 l'expertise le passe à `arrete`. `source_fondement` vaut `texte`, `pratique` ou
 `incertain`. Une preuve sans `expression` n'est pas exécutée : son `statut` vaut
 `a_traduire`.
+
+Le **concept** relie les champs de grilles différentes qui portent la même
+notion : `raison_sociale_emetteur` (facture), `employeur_raison_sociale`
+(bulletin de paie) et `tireur_nom` (chèque) sont tous le concept
+`raison_sociale`, avec les rôles `emetteur`, `employeur` et `tireur`. L'expert
+du concept lit et vérifie tous ses champs. Un champ sans jumeau a un concept à
+lui. Le lien est livré en défaut (`20261114090000`), et l'expertise le corrige.
 
 ## 2. Le langage des preuves (`expression`)
 
