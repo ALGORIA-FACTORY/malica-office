@@ -30,7 +30,12 @@
 import type { Requete } from "../db.ts";
 import { journal } from "../depots/journal.ts";
 
-import { REGLES_DU_JUGEMENT, rejugerLaPiece } from "./analyse.ts";
+import {
+  REGLES_DU_JUGEMENT,
+  rejugerLaPiece,
+  versionDuJugement,
+  versionDuJugementSql,
+} from "./analyse.ts";
 import { propositionDePiece } from "./proposition.ts";
 
 /*
@@ -82,7 +87,7 @@ export interface BilanDuRejeu {
   changements: Array<{ pieceId: string; tenantId: string; proposable: boolean }>;
   /** Où reprendre ; `null` quand tout le périmètre a été parcouru. */
   suite: string | null;
-  /** La version des règles appliquée. */
+  /** La version appliquée : les règles et les référentiels de mots (`versionDuJugement`). */
   regles: string;
 }
 
@@ -133,19 +138,22 @@ export type IssueALOuverture = "a_jour" | "hors_perimetre" | "change" | "verifie
 /**
  * Rejuger, à l'ouverture, une pièce dont le jugement a été rendu sous des
  * règles plus anciennes — si l'appelant la supervise et qu'elle est dans le
- * périmètre. Un jugement est à jour quand sa dernière analyse porte les
- * règles du jour, ou qu'un constat sous ces règles la nomme
+ * périmètre. Un jugement est à jour quand sa dernière analyse porte la
+ * version du jour (`versionDuJugement`), ou qu'un constat sous cette version la nomme
  * (`capture.analyses_verifiees`) : il ne se recalcule alors pas.
  */
 export async function rejugerALOuverture(db: Requete, pieceId: string): Promise<IssueALOuverture> {
-  // À jour : sous les règles du jour, ET sur le cours que la règle de change
-  // désigne aujourd'hui — un cours saisi, importé ou corrigé depuis périme
-  // le jugement d'une pièce en devise (`app.cours_du_jugement_a_jour`) —, ET
-  // sur les réglages comptables qu'il a lus (`app.reglages_du_jugement_a_jour`).
+  // À jour : sous les règles du jour et les référentiels de mots du jour
+  // (`versionDuJugementSql` : un motif ajouté périme le jugement), ET sur le
+  // cours que la règle de change désigne aujourd'hui — un cours saisi,
+  // importé ou corrigé depuis périme le jugement d'une pièce en devise
+  // (`app.cours_du_jugement_a_jour`) —, ET sur les réglages comptables qu'il
+  // a lus (`app.reglages_du_jugement_a_jour`).
   const { rows } = await db.query<{ a_jour: boolean; dans: boolean }>(
-    `select coalesce((a.regles = $2 or exists (
+    `with du_jour as (select ${versionDuJugementSql("$2::text")} as version)
+     select coalesce((a.regles = (select version from du_jour) or exists (
               select 1 from capture.analyses_verifiees v
-               where v.analyse_id = a.id and v.regles = $2))
+               where v.analyse_id = a.id and v.regles = (select version from du_jour)))
               and app.cours_du_jugement_a_jour(a.tenant_id, a.controles)
               and app.reglages_du_jugement_a_jour(a.tenant_id, a.controles), false) as a_jour,
             exists (select 1 from capture.pieces p
@@ -179,7 +187,7 @@ export async function rejugerLesPieces(
     enEchec: 0,
     changements: [],
     suite: null,
-    regles: REGLES_DU_JUGEMENT,
+    regles: await versionDuJugement(db),
   };
   // En essai, tout se joue puis s'annule — les traces de panne comprises :
   // l'essai n'écrit rien, ses échecs se lisent dans le bilan.

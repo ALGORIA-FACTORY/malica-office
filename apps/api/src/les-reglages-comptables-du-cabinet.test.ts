@@ -28,6 +28,7 @@ import { identite } from "./depots/identite.ts";
 import { parametrage } from "./depots/parametrage.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
+import { REGLES_DU_JUGEMENT, versionDuJugement } from "./scan/analyse.ts";
 import { lecture as lectureDEssai } from "./scan/lecture-d-essai.ts";
 import {
   droitsAuCout,
@@ -626,6 +627,97 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
         `${designation} → ${p.proposition?.lignes.map((l) => l.account_code).join(" ")}`,
       );
     }
+  });
+
+  it("un copieur jugé avant que le référentiel le reconnaisse se rejuge à l'ouverture", async () => {
+    // Revue de #173 : le motif « copieur » (20261114090000) n'a pas changé les
+    // règles du jugement ; une pièce jugée avant gardait, à l'ouverture, sa
+    // proposition en charge sans réserve. Le jugement d'avant se simule : le
+    // dernier, recopié sans le contrôle d'immobilisation, sous la version
+    // que portent les pièces jugées avant le motif.
+    const s = await monter();
+    const id = await achatLu(s, s.jour, [
+      {
+        designation: "Copieur multifonction A3",
+        quantity: "2",
+        unit_price_ht: "617.280",
+        total_ht: "1234.560",
+      },
+    ]);
+    const jugeeAvantLeMotif = async (regles: string) => {
+      // Sans la réserve d'immobilisation, la seule de la pièce : le verdict
+      // d'alors, motivé par les contrôles conformes.
+      await admin.query(
+        `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
+                                       normalisation, controles, verdict, motifs,
+                                       doublon_numero, doublon_mf, doublon_lu, regles)
+         select a.tenant_id, a.piece_id, a.extraction_id, a.pack_version_id, a.normalisation,
+                k.controles, 'à comptabiliser',
+                (select jsonb_agg(jsonb_build_object('code', c -> 'code', 'statut', c -> 'statut',
+                                                     'motif', c -> 'motif'))
+                   from jsonb_array_elements(k.controles) c where c ->> 'statut' = 'conforme'),
+                a.doublon_numero, a.doublon_mf, a.doublon_lu, $2
+           from (select * from capture.analyses where piece_id = $1
+                  order by created_at desc limit 1) a
+          cross join lateral (
+                select jsonb_agg(c) as controles from jsonb_array_elements(a.controles) c
+                 where c ->> 'code' not like 'immobilisation\\_%') k`,
+        [id, regles],
+      );
+      assert.deepEqual(
+        (await derniere(id)).controles.filter((c) => c.statut !== "conforme"),
+        [],
+        "le jugement d'avant le motif ne porte aucune réserve",
+      );
+      assert.deepEqual(immo(await derniere(id)), []);
+    };
+    const ouverte = async () => {
+      await rpc(s.expert, "office.propositionDePiece", id);
+      return immo(await derniere(id)).map(([code, statut]) => [code, statut]);
+    };
+    // Sous le marqueur que portent les pièces jugées avant le motif.
+    await jugeeAvantLeMotif(REGLES_DU_JUGEMENT);
+    assert.deepEqual(await ouverte(), [["immobilisation_a_trancher", "reserve"]]);
+
+    // Sous la version d'un référentiel SANS le motif : le même code, un mot
+    // de moins. Elle se lit dans une transaction annulée — aucune autre
+    // épreuve ne voit le référentiel amputé.
+    const client = await admin.connect();
+    let sansLeMotif = "";
+    let duJour = "";
+    try {
+      await client.query("begin");
+      const { rowCount } = await client.query(
+        `delete from ref.biens_immobilisables where motif like '%copieu(r|rs|se|ses)%'
+            and motif not like '%photocopieu%'`,
+      );
+      assert.ok(rowCount && rowCount > 0, "le motif « copieur » est au référentiel");
+      sansLeMotif = await versionDuJugement(client);
+      await client.query("rollback");
+      duJour = await versionDuJugement(client);
+    } catch (e) {
+      await client.query("rollback");
+      throw e;
+    } finally {
+      client.release();
+    }
+    assert.notEqual(sansLeMotif, duJour, "le motif entre dans la version du jugement");
+    assert.ok(duJour.startsWith(`${REGLES_DU_JUGEMENT}+`));
+    await jugeeAvantLeMotif(sansLeMotif);
+    assert.deepEqual(await ouverte(), [["immobilisation_a_trancher", "reserve"]]);
+    // Rejugée, la pièce est à jour : la seconde ouverture ne recalcule rien.
+    const { rows: avant } = await admin.query<{ n: number }>(
+      `select count(*)::int as n from capture.analyses where piece_id = $1`,
+      [id],
+    );
+    await ouverte();
+    const { rows: apres } = await admin.query<{ n: number; regles: string }>(
+      `select (select count(*)::int from capture.analyses where piece_id = $1) as n,
+              (select regles from capture.analyses where piece_id = $1
+                order by created_at desc limit 1) as regles`,
+      [id],
+    );
+    assert.deepEqual(apres[0], { n: avant[0]!.n, regles: duJour });
   });
 
   it("le FODEC d'achat va au coût par défaut, au compte non récupérable si le cabinet le choisit", async () => {

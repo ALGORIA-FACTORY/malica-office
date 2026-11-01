@@ -605,7 +605,8 @@ export function jugerLaLecture(
 }
 
 /**
- * La version des règles du jugement, posée sur chaque analyse
+ * La version des règles du jugement : avec l'empreinte des référentiels de
+ * mots (`versionDuJugement`), elle est posée sur chaque analyse
  * (`capture.analyses.regles`).
  *
  * ================================================================= POURQUOI
@@ -632,12 +633,54 @@ export function jugerLaLecture(
  */
 export const REGLES_DU_JUGEMENT = "2026-11-01.447e5ce908be";
 
+/*
+ * Les référentiels de MOTS que le jugement compare au texte imprimé, et que la
+ * recette complète au fil des cas : un titre de pièce, un bien susceptible
+ * d'être immobilisé. Une ligne ajoutée change le jugement d'une pièce DÉJÀ
+ * jugée sans changer le code — revue de #173 : le motif « copieur »
+ * (20261114090000) laissait une pièce jugée avant en charge, sans réserve, et
+ * l'ouverture la disait à jour. Leur empreinte entre donc dans la version que
+ * chaque jugement porte (`versionDuJugementSql`).
+ *
+ * Les valeurs DATÉES du pack (taux, droits, mentions) n'y sont pas : un
+ * changement s'y écrit par une nouvelle période, et le jugement d'une pièce
+ * d'avant n'a pas à bouger. Les réglages du cabinet et les cours suivent leur
+ * propre preuve (`app.reglages_du_jugement_a_jour`, `app.cours_du_jugement_a_jour`) ;
+ * les natures de vente se lisent à la proposition, jamais figées au jugement.
+ */
+const REFERENTIELS_DU_JUGEMENT = ["ref.biens_immobilisables", "ref.titres_de_piece"] as const;
+
+/**
+ * La version d'un jugement, en SQL, à partir d'un paramètre qui porte
+ * `REGLES_DU_JUGEMENT` : `<règles>+<empreinte des référentiels>`. Une requête
+ * sur deux tables de quelques dizaines de lignes, sans clé de pièce : le même
+ * coût pour une ouverture que pour un lot.
+ */
+export function versionDuJugementSql(regles: string): string {
+  const lignes = REFERENTIELS_DU_JUGEMENT.map(
+    (t) => `select '${t}:' || r::text as t from ${t} r`,
+  ).join(" union all ");
+  return `(${regles} || '+' || (select substr(md5(coalesce(string_agg(x.t, E'\\n' order by x.t collate "C"), '')), 1, 12)
+                                   from (${lignes}) x))`;
+}
+
+/** La version que porte un jugement rendu maintenant (`versionDuJugementSql`). */
+export async function versionDuJugement(db: Requete): Promise<string> {
+  const { rows } = await db.query<{ version: string }>(
+    `select ${versionDuJugementSql("$1::text")} as version`,
+    [REGLES_DU_JUGEMENT],
+  );
+  return rows[0]!.version;
+}
+
 /** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
 interface JugementDeLaPiece {
   tenantId: string;
   pieceId: string;
   extractionId: string;
   pack: string;
+  /** La version sous laquelle il est rendu (`versionDuJugement`). */
+  regles: string;
   normalisation: ResultatNormalisation;
   controles: ResultatControle[];
   verdict: string;
@@ -700,10 +743,10 @@ export async function rejugerLaPiece(
     await poserLeJugement(db, j);
     return { change: true, verifie: false };
   }
-  if (derniere.regles === REGLES_DU_JUGEMENT) return { change: false, verifie: false };
+  if (derniere.regles === j.regles) return { change: false, verifie: false };
   const { rows: verifiee } = await db.query<{ inscrite: boolean }>(
     `select public.analyse_verifier($1, $2) as inscrite`,
-    [derniere.id, REGLES_DU_JUGEMENT],
+    [derniere.id, j.regles],
   );
   return { change: false, verifie: verifiee[0]!.inscrite };
 }
@@ -896,7 +939,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     ttc: payload.totals?.ttc ?? null,
   });
 
-  const [{ rows: types }, { rows: mentions }, { rows: semblables }] = await Promise.all([
+  const [{ rows: types }, { rows: mentions }, { rows: semblables }, regles] = await Promise.all([
     db.query<{ code: string; porte_ecriture: boolean }>(
       `select code, porte_ecriture from ref.document_types`,
     ),
@@ -910,6 +953,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
       cle.mf,
       cle.lu,
     ]),
+    versionDuJugement(db),
   ]);
 
   // Les réglages du cabinet, au jour de la pièce : le dossier, son cabinet, le pack.
@@ -970,6 +1014,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     pieceId,
     extractionId: extraction.id,
     pack,
+    regles,
     normalisation,
     controles,
     verdict,
@@ -994,7 +1039,7 @@ async function poserLeJugement(db: Requete, j: JugementDeLaPiece): Promise<Analy
       j.cle.numero,
       j.cle.mf,
       j.cle.lu,
-      REGLES_DU_JUGEMENT,
+      j.regles,
     ],
   );
 
