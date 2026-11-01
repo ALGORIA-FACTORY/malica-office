@@ -261,12 +261,17 @@ function Dossier() {
               {t("pme.dossier.verifier", { count: aVerifier.length })}
             </Link>
           ) : null}
+          {/*
+           * Le « + » du dossier est le « + » de la barre : il ouvre « Ajouter
+           * des pièces » (photographier, importer des images ou des PDF), pas
+           * l'appareil photo directement (1er novembre 2026, Wissem).
+           */}
           <button
             type="button"
             className="plus"
-            aria-label={t("pme.capture.photo")}
+            aria-label={t("pme.nav.add")}
             disabled={pme.capturing}
-            onClick={() => pme.ouvrirScanner()}
+            onClick={() => void navigate({ to: "/pme/capturer", search: {} })}
           >
             <svg viewBox="0 0 24 24" className="g" aria-hidden>
               <path d="M12 5v14M5 12h14" />
