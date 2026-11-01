@@ -314,6 +314,25 @@
     "timbre.bareme": "bareme_date",
     "ventes.compte": "par_nature_article"
   },
+  "baremeDesDroits": {
+    "standard": "standard",
+    "tranches": [
+      {
+        "droit": "DROIT_TIMBRE",
+        "categorie": "grandes_surfaces",
+        "de": "50.000",
+        "a": "100.000",
+        "montant": "1.500"
+      },
+      {
+        "droit": "DROIT_TIMBRE",
+        "categorie": "grandes_surfaces",
+        "de": "100.000",
+        "a": null,
+        "montant": "2.000"
+      }
+    ]
+  },
   "marques": [
     {
       "marque": "CFA",

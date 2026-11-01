@@ -210,6 +210,14 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
       ],
     );
     assert.equal(valeur(r, "fodec.traitement")?.appliquee, true);
+    // Le barème daté du timbre est appliqué (`bareme-du-timbre.ts`), comme le droit fixe.
+    assert.deepEqual(
+      valeur(r, "timbre.bareme")!.options!.map((o) => [o.code, o.appliquee]),
+      [
+        ["bareme_date", true],
+        ["fixe_1d", true],
+      ],
+    );
     const { rows } = await admin.query<{ reglage: string; code: string }>(
       `select reglage, code from ref.reglages_comptables_options where applique`,
     );

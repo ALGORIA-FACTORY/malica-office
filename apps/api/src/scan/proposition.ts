@@ -45,9 +45,19 @@ import { autoriseUneEcriture, codeDuVerdict } from "@malica/socle/verdicts";
 import type { Requete } from "../db.ts";
 import { dateDeLaPiece } from "../depots/dates.ts";
 import { referentiel } from "../depots/referentiel.ts";
-import { REFERENCE_DE_LA_FACTURE_D_ORIGINE } from "../fabrique/recette.ts";
+import {
+  REFERENCE_DE_LA_FACTURE_D_ORIGINE,
+  REFERENCES_QUI_TRANCHENT_LE_SENS,
+} from "../fabrique/recette.ts";
 
 import { analyserPiece, lireLesDevises, lireParametres, nonAssujetti } from "./analyse.ts";
+import {
+  categorieDeLEmetteur,
+  droitsAuBareme,
+  lireLeBaremeDesDroits,
+  optionDuTimbre,
+  type TimbreDeLaPiece,
+} from "./bareme-du-timbre.ts";
 import { cleDeDoublon, type ResultatControle } from "./controles.ts";
 import type { CoursLu } from "./cours-de-change.ts";
 import {
@@ -219,6 +229,12 @@ export interface ReferentielDeLaProposition {
    * paramétrage, comme avant.
    */
   ventes: VentesDuDossier | null;
+  /**
+   * Le barème daté du timbre et la catégorie de l'émetteur (`timbre.bareme`
+   * = `bareme_date`, 1er novembre 2026) ; nul : le droit standard seul
+   * (`fixe_1d`, ou un pack qui ne porte pas le réglage).
+   */
+  timbre: TimbreDeLaPiece | null;
   /**
    * Un avoir lié : sa facture d'origine, l'écriture de celle-ci et le
    * traitement du cabinet ; nul pour une pièce qui n'est pas un avoir.
@@ -506,13 +522,33 @@ export function composerLaProposition(
         })
       : null;
 
+  /*
+   * Le timbre au barème daté, selon la catégorie de l'émetteur
+   * (`bareme-du-timbre.ts`). Une pièce en devise garde le droit standard : le
+   * barème est tarifé dans la devise du dossier, son TTC ne s'y compare pas.
+   */
+  const timbre =
+    r.timbre && change === null
+      ? droitsAuBareme({
+          droits: r.fiscalCharges,
+          imprimes: droits.map((c, i) => ({
+            code: String(c["code"]),
+            amount: normalise.other_charges[i]!.amount,
+          })),
+          sens: String(sens),
+          ttc: normalise.totals.ttc,
+          timbre: r.timbre,
+        })
+      : null;
+  const reserves = [...(ventes?.reserve ? [ventes.reserve] : []), ...(timbre?.reserves ?? [])];
+
   try {
     const proposition = buildProposal({
       pieceId: j.pieceId,
       payload: normalise,
       taxRates: r.taxRates,
       mappings: r.mappings,
-      fiscalCharges: r.fiscalCharges,
+      fiscalCharges: timbre?.droits ?? r.fiscalCharges,
       compteDeNature: r.compteDeNature,
       tvaNonDeductible: r.tvaNonDeductible,
       droitsAuCout: r.droitsAuCout,
@@ -547,7 +583,7 @@ export function composerLaProposition(
       verdictCode: codeDuVerdict(verdict),
       packVersionId: r.packVersionId,
       proposition,
-      ...(ventes?.reserve ? { reserves: [ventes.reserve] } : {}),
+      ...(reserves.length > 0 ? { reserves } : {}),
     };
   } catch (e) {
     // Une conversion que le Socle refuse (facture déséquilibrée dans sa
@@ -932,6 +968,23 @@ async function proposerDepuisLeJugement(
   );
   const reglageDAvoir = estUnAvoir ? reglageDesAvoirs(reglages, { pack, jour }) : null;
   if (estUnAvoir && !reglageDAvoir) throw new Error("reglage.avoirs.absent");
+  // Le barème daté du timbre : l'émetteur d'un achat est un tiers du dossier,
+  // que le cabinet classe ; celui d'une vente est le dossier, que rien ne classe.
+  const references = (ligne.payload["references"] as Record<string, string> | undefined) ?? {};
+  const timbre: TimbreDeLaPiece | null =
+    optionDuTimbre(reglages) === "bareme_date"
+      ? {
+          bareme: await lireLeBaremeDesDroits(db, pack, jour),
+          categorie:
+            sens === "facture_achat"
+              ? await categorieDeLEmetteur(
+                  db,
+                  ligne.tenant_id,
+                  references[REFERENCES_QUI_TRANCHENT_LE_SENS[0]],
+                )
+              : null,
+        }
+      : null;
 
   return composerLaProposition(jugement, {
     packVersionId: pack,
@@ -954,6 +1007,7 @@ async function proposerDepuisLeJugement(
     // cabinet pour ce dossier, au jour de la pièce (R10).
     droitsAuCout: await droitsAuCout(db, reglages),
     ventes: option ? { option, natures } : null,
+    timbre,
     avoir:
       reglageDAvoir && sens
         ? await lireLAvoirAProposer(db, {
@@ -962,7 +1016,7 @@ async function proposerDepuisLeJugement(
             pack,
             jour,
             sens,
-            references: (ligne.payload["references"] as Record<string, string> | undefined) ?? {},
+            references,
             traitement: reglageDAvoir.ecriture,
           })
         : null,

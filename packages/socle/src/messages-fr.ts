@@ -165,6 +165,8 @@ export const fr = {
   "plan.tiers.raison": "Raison sociale",
   "plan.tiers.matricule": "Matricule fiscal",
   "plan.tiers.collectif": "Compte collectif",
+  "plan.tiers.bareme": "Barème du timbre",
+  "plan.tiers.bareme.nonClasse": "Non classé",
   "plan.tiers.add": "Ajouter",
   "plan.tiers.inactive": "inactif",
   "plan.tiers.deactivate": "Désactiver",
@@ -2329,6 +2331,9 @@ export const fr = {
   "cab.ecriture.reserve.nature_de_vente.aide":
     "Le Socle n’a pas prouvé ce que la facture vend (marchandises, prestations, activités annexes) : la vente est proposée au compte de repli de votre plan. Vérifiez le compte de vente avant de valider, ou modifiez l’écriture.",
   "cab.ecriture.reserve.articles": "Non reconnus : {articles}",
+  "cab.ecriture.reserve.categorie_d_emetteur": "Catégorie de l’émetteur à préciser",
+  "cab.ecriture.reserve.categorie_d_emetteur.aide":
+    "Le droit de timbre imprimé ({montant}) est le tarif d’une catégorie d’émetteur du barème (les grandes surfaces), et rien ne confirme que l’émetteur en est une : il n’est pas classé dans les tiers du dossier. Vérifiez-le, puis classez le fournisseur dans Plan comptable, Tiers du dossier.",
   "cab.avoir.titre": "Facture d’origine à rattacher",
   "cab.avoir.non_comptabilisee": "Facture d’origine pas encore comptabilisée",
   "cab.avoir.aide":

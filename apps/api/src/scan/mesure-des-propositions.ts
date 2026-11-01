@@ -37,7 +37,9 @@ import { confianceParChamp } from "./confiance.ts";
 import { HAUT_DE_PAGE, jugerLaLecture, type LectureAJuger } from "./analyse.ts";
 import { composerLaProposition } from "./proposition.ts";
 import { jourDuCours, type CoursLu } from "./cours-de-change.ts";
+import { optionDuTimbre } from "./bareme-du-timbre.ts";
 import {
+  BAREME_DES_DROITS_D_ESSAI,
   BIENS_IMMOBILISABLES_D_ESSAI,
   DROITS_D_ESSAI,
   DEVISE_D_ESSAI,
@@ -732,6 +734,9 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     // présence d'un montant attendu taisait la convention. La réserve doit se
     // poser ; et aucune écriture : le moteur inscrit le timbre à sa valeur
     // fixée, que la pièce contredit — le cabinet tranche.
+    // Depuis le barème daté (`timbre.bareme`, 1er novembre 2026), 2,000 sur
+    // 121 D est le tarif des grandes surfaces (cas suivant) : la pièce imprime
+    // donc 3,000, le tarif d'aucune catégorie, pour garder le même défaut.
     nom: "un timbre imprimé à une autre valeur que celle fixée : il n'ancre pas l'échelle",
     reserve: "coherence_arithmetique",
     provenance: `${REPRODUIT} (revue de la PR 144)`,
@@ -739,10 +744,35 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       lignes: [{ code: "TVA19", ht: "100,000" }],
       ht: "100,000",
       tva: "19,000",
+      droits: [{ code: "DROIT_TIMBRE", montant: "3,000" }],
+      ttc: "122,000",
+    }),
+    attendu: null,
+  },
+  {
+    // Le barème daté du timbre (1er novembre 2026) : 2,000 sur une facture de
+    // plus de 100 D est le tarif des grandes surfaces (CDET art. 117-I-6 bis).
+    // L'émetteur n'est classé nulle part : l'écriture se propose au timbre
+    // imprimé, avec la réserve qui dit la catégorie à préciser — jamais devinée.
+    nom: "un timbre au tarif des grandes surfaces, l'émetteur non classé : la réserve le dit",
+    reserve: "categorie_d_emetteur",
+    provenance: "barème daté du timbre, réglage timbre.bareme (bareme_date)",
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "100,000" }],
+      ht: "100,000",
+      tva: "19,000",
       droits: [{ code: "DROIT_TIMBRE", montant: "2,000" }],
       ttc: "121,000",
     }),
-    attendu: null,
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "100.000", "0"],
+        ["4366", "19.000", "0", "TVA19"],
+        ["6654", "2.000", "0"],
+        ["401", "0", "121.000"],
+      ],
+    },
   },
   {
     // Revue de la PR 144 (Codex), le même défaut par une autre branche : le HT
@@ -1389,6 +1419,13 @@ export function jouer(cas: CasDeMesure): Issue {
       ventes: ((option) => (option ? { option, natures: NATURES_DE_VENTE_D_ESSAI } : null))(
         optionDesVentes(REGLAGES_D_ESSAI),
       ),
+      // Le timbre au barème daté du pack (`timbre.bareme`). Sans base, aucun
+      // tiers n'est classé : l'émetteur est « non classé », comme chez un
+      // dossier dont le cabinet n'a pas encore classé ses fournisseurs.
+      timbre:
+        optionDuTimbre(REGLAGES_D_ESSAI) === "bareme_date"
+          ? { bareme: BAREME_DES_DROITS_D_ESSAI, categorie: null }
+          : null,
       // Un avoir lié se propose depuis l'écriture de sa facture, en base :
       // sans base, aucune facture n'est rattachée.
       avoir: null,

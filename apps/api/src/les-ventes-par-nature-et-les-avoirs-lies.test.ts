@@ -328,7 +328,8 @@ describe("les ventes par nature, les avoirs liés", { skip: !BASE_CONFIGUREE }, 
     });
     const q = await s.proposition(melee);
     assert.deepEqual(s.lignes(q), vente([[compte["VENTE_PRODUITS_FINIS"]!, "1234.560"]]));
-    assert.equal(q.ok && q.reserves?.[0]?.raison, "non_ventilable");
+    const reserve = q.ok ? q.reserves?.[0] : undefined;
+    assert.equal(reserve?.code === "nature_de_vente" && reserve.raison, "non_ventilable");
   });
 
   it("l'option « un compte unique » : toute vente au compte du cabinet, sans réserve", async () => {

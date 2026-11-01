@@ -163,6 +163,8 @@ export const en: Dict = {
   "plan.tiers.raison": "Legal name",
   "plan.tiers.matricule": "Tax ID",
   "plan.tiers.collectif": "Control account",
+  "plan.tiers.bareme": "Stamp duty scale",
+  "plan.tiers.bareme.nonClasse": "Not classified",
   "plan.tiers.add": "Add",
   "plan.tiers.inactive": "inactive",
   "plan.tiers.deactivate": "Deactivate",
@@ -2260,6 +2262,9 @@ export const en: Dict = {
   "cab.ecriture.reserve.nature_de_vente.aide":
     "The engine has not proved what the invoice sells (goods, services, ancillary activities): the sale is proposed to the fallback account of your chart. Check the sales account before validating, or change the entry.",
   "cab.ecriture.reserve.articles": "Not recognised: {articles}",
+  "cab.ecriture.reserve.categorie_d_emetteur": "Issuer category to be specified",
+  "cab.ecriture.reserve.categorie_d_emetteur.aide":
+    "The printed stamp duty ({montant}) is the rate of an issuer category of the scale (large retailers), and nothing confirms the issuer is one: it is not classified among the parties of the file. Check it, then classify the supplier in Chart of accounts, Parties of the file.",
   "cab.avoir.titre": "Original invoice to link",
   "cab.avoir.non_comptabilisee": "Original invoice not yet recorded",
   "cab.avoir.aide":

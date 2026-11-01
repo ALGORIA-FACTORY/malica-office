@@ -75,6 +75,9 @@ export const REGLE_DE_CHANGE_D_ESSAI = RELEVE_D_ESSAI.change;
 /** Le jour où le référentiel d'essai a été relevé (`releve-du-referentiel.ts`). */
 export const JOUR_DU_RELEVE_D_ESSAI: string = RELEVE_D_ESSAI.jour;
 
+/** Le barème daté des droits (`ref.baremes_des_droits`, `ref.categories_de_bareme`). */
+export const BAREME_DES_DROITS_D_ESSAI = RELEVE_D_ESSAI.baremeDesDroits;
+
 /** Les réglages comptables du pack (`ref.socle_params`), par code. */
 export const REGLAGES_D_ESSAI: ReadonlyMap<string, string> = new Map(
   Object.entries(RELEVE_D_ESSAI.reglages),

@@ -574,7 +574,7 @@
     {
       "objet": "tiers.auxiliaires",
       "privilege": "UPDATE",
-      "chemins": ["public.tiers_activer", "public.tiers_modifier"]
+      "chemins": ["public.tiers_activer", "public.tiers_classer", "public.tiers_modifier"]
     }
   ]
 }

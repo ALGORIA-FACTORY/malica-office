@@ -730,6 +730,17 @@ export interface Tiers {
   actif: boolean;
   note: string | null;
   creeLe: string;
+  /**
+   * La catégorie de l'émetteur au barème d'un droit (le timbre :
+   * `ref.categories_de_bareme`), donnée par le cabinet ; nulle : non classé.
+   */
+  categorieDeBareme: string | null;
+}
+
+/** Une catégorie d'émetteur d'un barème, nommée. */
+export interface CategorieDeBareme {
+  code: string;
+  libelle: string;
 }
 
 export type NatureTiers = "client" | "fournisseur" | "salarie" | "associe" | "compte_bancaire";
@@ -762,6 +773,9 @@ export interface TiersRepository {
     note?: string | null;
   }): Promise<void>;
   desactiver(id: string, actif: boolean): Promise<void>;
+  categoriesDeBareme(locale?: string): Promise<CategorieDeBareme[]>;
+  /** Classe l'émetteur au barème d'un droit ; nulle : non classé. */
+  classer(id: string, categorie: string | null): Promise<void>;
 }
 
 // ---------------------------------------------------------------- référentiel
@@ -1699,14 +1713,19 @@ export type RaisonSansEcriture =
 
 /**
  * Une réserve que la PROPOSITION porte (1er novembre 2026) : la vente rangée
- * au compte de repli, sa nature n'étant pas prouvée (`nature_de_vente`). La
- * raison, et les désignations que le référentiel ne reconnaît pas.
+ * au compte de repli, sa nature n'étant pas prouvée (`nature_de_vente`) — la
+ * raison, et les désignations que le référentiel ne reconnaît pas ; ou le
+ * droit imprimé au tarif d'une catégorie d'émetteur que rien ne confirme
+ * (`categorie_d_emetteur`, barème daté du timbre) — le droit, la catégorie
+ * (`ref.categories_de_bareme`) et le montant imprimé.
  */
-export interface ReserveDeProposition {
-  code: "nature_de_vente";
-  raison: "inconnue" | "sans_article" | "non_ventilable";
-  articles: string[];
-}
+export type ReserveDeProposition =
+  | {
+      code: "nature_de_vente";
+      raison: "inconnue" | "sans_article" | "non_ventilable";
+      articles: string[];
+    }
+  | { code: "categorie_d_emetteur"; droit: string; categorie: string; montant: string };
 
 /** La facture d'origine d'un avoir lié, telle que la proposition la lit. */
 export interface FactureDOrigine {

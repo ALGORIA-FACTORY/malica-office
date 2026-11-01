@@ -17,6 +17,7 @@ import type { Requete } from "../db.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
 import { lireLesBiensImmobilisables, lireLesTitres, lireParametres } from "./analyse.ts";
+import { lireLeBaremeDesDroits } from "./bareme-du-timbre.ts";
 import { lireLaRegleDuPack } from "./cours-de-change.ts";
 import { lireLesNaturesDeVente } from "./nature-de-vente.ts";
 import { lireLesReglagesDuPack } from "./reglages-comptables.ts";
@@ -105,6 +106,9 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
     // Les réglages comptables du pack (`ref.socle_params`, R10) : les défauts
     // que le cabinet confirme ou change.
     reglages: await lireLesReglagesDuPack(db, pack.id, JOUR_DU_RELEVE),
+    // Le barème daté des droits (`timbre.bareme`) : la catégorie au droit
+    // standard et les tranches des autres.
+    baremeDesDroits: await lireLeBaremeDesDroits(db, pack.id, JOUR_DU_RELEVE),
     marques,
     devises: Object.fromEntries(
       devises.map((d) => [
