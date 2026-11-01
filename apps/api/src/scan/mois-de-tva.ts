@@ -24,7 +24,7 @@ import {
   lireLesNaturesDeVente,
   type NatureDeVente,
 } from "./nature-de-vente.ts";
-import { lireLesReglagesComptables, type ReglagesResolus } from "./reglages-comptables.ts";
+import type { ReglagesResolus } from "./reglages-comptables.ts";
 
 /** Le réglage que ce module applique, et ses deux options. */
 const REGLAGE = "mois_tva.date";
@@ -38,16 +38,21 @@ export interface HypotheseDuMois {
   reserve: RaisonDuMoisDeTva | null;
 }
 
-/** Ce que la lecture du mois sait du dossier : son option et ses natures. */
-export interface MoisDeTvaDuDossier {
+/** Ce qui range une pièce dans son mois : l'option du dossier et ses natures. */
+export interface ReglesDuMois {
   /** Nulle quand le pack ne porte pas le réglage : le jour reste celui de la pièce. */
   regle: OptionDuMois | null;
   natures: readonly NatureDeVente[];
 }
 
-/** L'option du dossier ; nulle quand le pack ne porte pas le réglage. */
-function optionDuMoisDeTva(r: ReglagesResolus): OptionDuMois | null {
-  const v = r.get(REGLAGE);
+/** Ce que la lecture du mois sait du dossier : ses règles, période par période. */
+export interface MoisDeTvaDuDossier {
+  /** Dans l'ordre des débuts ; chacune vaut jusqu'à la suivante. */
+  periodes: ReadonlyArray<ReglesDuMois & { du: string }>;
+}
+
+/** Une valeur lue de `mois_tva.date` ; nulle (`undefined`) quand le pack ne porte pas le réglage. */
+function optionLue(v: string | null | undefined): OptionDuMois | null {
   if (v === undefined) return null;
   const option = OPTIONS.find((o) => o === v);
   if (!option) throw new Error("reglage.mois_tva.illisible");
@@ -55,23 +60,52 @@ function optionDuMoisDeTva(r: ReglagesResolus): OptionDuMois | null {
 }
 
 /**
- * L'option et les natures du dossier, au jour dit (la fin de la fenêtre lue) :
- * trois requêtes par lecture, jamais une par pièce.
+ * Les règles du mois du dossier, période par période : l'historique se lit
+ * une fois par lecture (`app.historique_du_mois_de_tva`), puis les natures de
+ * chaque période où l'option s'applique. Le coût suit le nombre de décisions
+ * du cabinet et de dates d'effet du référentiel, jamais le nombre de pièces.
+ *
+ * POURQUOI un historique, et pas l'option au dernier jour de la fenêtre lue
+ * (revue de #163, P1) : changée entre l'encaissement et la facture, l'option
+ * rangeait une même pièce dans deux mois — ou dans aucun — selon le mois
+ * demandé. Les règles d'une pièce se lisent au JOUR DE SA FACTURE
+ * (`reglesAuJour`), la date stable la plus défendable : ni la fenêtre, ni un
+ * règlement ajouté ou annulé après coup, ni une déclaration ne la déplacent ;
+ * c'est la date à laquelle la proposition lit déjà les réglages (« au jour de
+ * la pièce », `proposition.ts`) — la réserve que voit le cabinet et le mois où
+ * la pièce pèse ne peuvent plus se contredire ; et une décision datée (R7) qui
+ * prend effet après la facture ne réécrit pas une pièce antérieure.
  */
 export async function leMoisDeTvaDuDossier(
   db: Requete,
   dossier: string,
-  jour: string,
 ): Promise<MoisDeTvaDuDossier> {
-  const { rows } = await db.query<{ pack: string | null }>(
-    `select app.pack_du_dossier($1, $2::date) as pack`,
-    [dossier, jour],
+  const { rows } = await db.query<{ du: string; pack: string; regle: string | null }>(
+    `select h.du::text as du, h.pack, h.regle from app.historique_du_mois_de_tva($1, $2) h`,
+    [dossier, REGLAGE],
   );
-  const pack = rows[0]?.pack ?? null;
-  if (!pack) return { regle: null, natures: [] };
-  const regle = optionDuMoisDeTva(await lireLesReglagesComptables(db, dossier, pack, jour));
-  return { regle, natures: regle ? await lireLesNaturesDeVente(db, pack, jour, null) : [] };
+  const periodes: Array<ReglesDuMois & { du: string }> = [];
+  for (const h of rows) {
+    // Nulle, la valeur dit que le pack ne porte pas le réglage ce jour-là.
+    const regle = optionLue(h.regle ?? undefined);
+    const natures = regle ? await lireLesNaturesDeVente(db, h.pack, h.du, null) : [];
+    periodes.push({ du: h.du, regle, natures });
+  }
+  return { periodes };
 }
+
+/** Avant la première période, le dossier n'a pas de pack : le jour reste celui de la pièce. */
+const SANS_REGLE: ReglesDuMois = { regle: null, natures: [] };
+
+/** Les règles en vigueur au jour dit (date ISO, comparable en texte). */
+export const reglesAuJour = (mois: MoisDeTvaDuDossier, jour: string): ReglesDuMois =>
+  mois.periodes.findLast((p) => p.du <= jour) ?? SANS_REGLE;
+
+/** Les débuts et les options des périodes, en deux tableaux pour la requête (`unnest`). */
+export const periodesDeLaRequete = (mois: MoisDeTvaDuDossier) => [
+  mois.periodes.map((p) => p.du),
+  mois.periodes.map((p) => p.regle),
+];
 
 /**
  * L'hypothèse de la nature reconnue dans les articles de la pièce, et les
@@ -110,7 +144,7 @@ export async function reserveDuMoisDeTva(
     articles: unknown;
   },
 ): Promise<{ code: "mois_de_tva"; raison: RaisonDuMoisDeTva; articles: string[] } | null> {
-  const regle = optionDuMoisDeTva(p.reglages);
+  const regle = optionLue(p.reglages.get(REGLAGE));
   if (!regle) return null;
   const { rows } = await db.query<HypotheseDuMois>(
     `select h.exigibilite, h.jour::text as jour, h.reserve
