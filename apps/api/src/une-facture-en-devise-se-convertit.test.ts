@@ -787,7 +787,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     // Une pièce du 21 octobre attend le cours de son jour de RÉCEPTION.
     const id = await transmise({ date: "2026-10-21" });
     const { rows } = await admin.query<{ recue_le: string }>(
-      `select to_char(created_at, 'YYYY-MM-DD') as recue_le from capture.pieces where id = $1`,
+      `select to_char(recue_le, 'YYYY-MM-DD') as recue_le from pieces_v where id = $1`,
       [id],
     );
     const r = (await proposition(id)) as Refus;
