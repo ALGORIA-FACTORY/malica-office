@@ -313,8 +313,12 @@ describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(temps.transmis.n, 200);
     assert.equal(temps.inscrits.n, 40);
     // Des bornes LARGES : elles échouent à l'ancien coût (8 fois et plus la
-    // sélection nue), pas au bruit d'une machine chargée.
-    const borne = 4 * temps.nue.ms + 500;
+    // sélection nue), pas au bruit d'une machine chargée. Relevé sur six
+    // passages de la CI du 1er novembre 2026, mesures en alternance : le
+    // rapport transmis / nue va de 3,9 à 5,3. « 4 × nue + 500 » tombait dans
+    // cette plage et échouait une fois sur trois ; « 6 × » la laisse passer et
+    // refuse toujours l'ancien coût.
+    const borne = 6 * temps.nue.ms + 500;
     for (const nom of ["transmis", "inscrits"] as const)
       assert.ok(
         temps[nom].ms <= borne,

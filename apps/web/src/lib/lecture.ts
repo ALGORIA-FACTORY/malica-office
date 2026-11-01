@@ -56,17 +56,6 @@ export function attendLaPersonne(p: LigneDeLaListe): boolean {
   return p.status !== "capturee" && TON_PME[statutDeLaPieceLue(p)] === "am";
 }
 
-/**
- * La file du propriétaire (lot 4) : les pièces qu'un siège lui a envoyées et
- * qu'il n'a pas encore ouvertes — « Reçue » —, ou que le siège a corrigées
- * depuis — « Corrigée ». Le filtre « Reçues » de la bibliothèque lit cette
- * seule règle.
- */
-export function recueDUnSiege(p: LigneDeLaListe): boolean {
-  const s = statutDeLaPieceLue(p);
-  return s === "recue" || s === "corrigee";
-}
-
 export function piecesALire(pieces: readonly PieceLue[]): PieceLue[] {
   return (
     pieces
