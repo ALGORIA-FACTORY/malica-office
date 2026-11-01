@@ -143,6 +143,16 @@ function Dossier() {
     .filter((x) => !parSiege || !siege || x.piece.auteurId === siege)
     .map((x) => x.piece)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  /*
+   * La fiche d'une pièce lit son contexte (cabinet, droits, gestes, cache) sur
+   * la société OUVERTE. Une pièce d'une autre société ouvre donc d'abord sa
+   * société, sinon elle s'afficherait avec le cabinet et les droits d'une autre.
+   */
+  const societeDe = new Map(toutes.map((x) => [x.piece.id, x.societe]));
+  const ouvrirSaSociete = (pieceId: string) => {
+    const id = societeDe.get(pieceId);
+    if (id && id !== pme.tenantId) pme.choisirDossier(id);
+  };
 
   // ----------------------------------------------------------- les sociétés
   const nomDeSociete = (id: string) => pme.dossiers.find((d) => d.id === id)?.name ?? "";
@@ -245,6 +255,7 @@ function Dossier() {
             <Link
               to="/pme/piece/$pieceId"
               params={{ pieceId: aVerifier[0].id }}
+              onClick={() => ouvrirSaSociete(aVerifier[0]!.id)}
               className="principal"
             >
               {t("pme.dossier.verifier", { count: aVerifier.length })}
@@ -342,7 +353,12 @@ function Dossier() {
                         const e = etatDe(p);
                         const nom = ETATS.find((x) => x.etat === e);
                         return (
-                          <Link key={p.id} to="/pme/piece/$pieceId" params={{ pieceId: p.id }}>
+                          <Link
+                            key={p.id}
+                            to="/pme/piece/$pieceId"
+                            params={{ pieceId: p.id }}
+                            onClick={() => ouvrirSaSociete(p.id)}
+                          >
                             <ApercuDePiece pieceId={p.id} className="vignette" />
                             <span className="bd">
                               <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
