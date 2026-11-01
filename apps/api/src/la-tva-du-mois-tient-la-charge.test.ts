@@ -9,6 +9,12 @@
  * rapport à la même sélection nue — une borne large, pour ne pas dépendre de
  * la machine, mais qui échoue à l'ancien coût.
  *
+ * 12 novembre 2026 : sur une base où d'autres dossiers avaient travaillé, la
+ * même lecture montait de 1,5 à 3,7 s — la porte parcourait tous les articles
+ * de la base, et chaque pièce forcée toutes les prises en charge. Une base
+ * neuve ne le voit pas. L'épreuve lit donc le mois une seconde fois, après
+ * avoir déposé des articles qu'il ne lit pas, et borne ce qu'ils lui coûtent.
+ *
  *   node --experimental-strip-types --import ./src/garde-base-de-test.ts \
  *     --test src/la-tva-du-mois-tient-la-charge.test.ts
  */
@@ -53,8 +59,8 @@ describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
   const cabinetFait = (methode: string, ...args: unknown[]) => rpc(expert, methode, ...args);
 
   let n = 0;
-  /** Une pièce lue (TVA19 : HT 1 234,560, TVA 234,566, timbre 1,000), jugée, transmise. */
-  const transmise = async (extrait?: (e: Record<string, unknown>) => Record<string, unknown>) => {
+  /** Une pièce lue (TVA19 : HT 1 234,560, TVA 234,566, timbre 1,000), ni jugée ni transmise. */
+  const lue = async (extrait?: (e: Record<string, unknown>) => Record<string, unknown>) => {
     n += 1;
     const { id } = (await pmeFait("capture.enregistrer", {
       tenantId: pme,
@@ -92,6 +98,11 @@ describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
         "serveur",
       ),
     );
+    return id;
+  };
+  /** La même, jugée et transmise : elle compte dans le mois. */
+  const transmise = async (extrait?: (e: Record<string, unknown>) => Record<string, unknown>) => {
+    const id = await lue(extrait);
     await pmeFait("capture.analyser", id);
     await pmeFait("collab.setPieceVis", id, "partage");
     return id;
@@ -288,5 +299,50 @@ describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
       charges.ms <= borneDesCharges,
       `charges : ${charges.ms.toFixed(0)} ms > ${borneDesCharges.toFixed(0)} ms`,
     );
+
+    // Des articles que le mois ne lit pas : 3 200, sur 80 pièces lues, ni
+    // jugées ni transmises. La porte qui parcourait tous les articles de la
+    // base payait chacun (mesuré le 12 novembre 2026 : × 1,8 côté PME, × 3
+    // côté cabinet) ; celle qui ne lit que ses pièces ne les voit pas.
+    const ignores = Array.from({ length: 40 }, (_, k) => ({
+      designation: `Ramettes ${k}`,
+      quantity: "1",
+      total_ht: "1.000",
+      tax_code: "TVA19",
+    }));
+    for (let k = 0; k < 8; k++)
+      await Promise.all(
+        Array.from({ length: 10 }, () => lue((e) => ({ ...e, articles: ignores }))),
+      );
+    const transmisApres = await meilleure(() =>
+      pmeFait("office.extraitsTransmis", pme, "2000-01-01", "2100-12-31"),
+    );
+    const inscritsApres = await meilleure(() =>
+      cabinetFait("office.bookedExtracts", pme, "2000-01-01", "2100-12-31"),
+    );
+    console.log(`# temps apres : ${JSON.stringify({ transmisApres, inscritsApres })}`);
+    assert.equal(transmisApres.n, 200);
+    assert.equal(inscritsApres.n, 40);
+    for (const [nom, avant, apres] of [
+      ["transmis", transmis, transmisApres],
+      ["inscrits", inscrits, inscritsApres],
+    ] as const) {
+      const borneApres = 1.5 * avant.ms + 300;
+      assert.ok(
+        apres.ms <= borneApres,
+        `${nom} lit des articles qu'il ne demande pas : ${apres.ms.toFixed(0)} ms > ${borneApres.toFixed(0)} ms`,
+      );
+    }
+  });
+
+  it("les versions d'une pièce sont estimées à quelques lignes, pas mille", async () => {
+    // Estimée à 1 000 lignes (le défaut d'une fonction qui rend un ensemble),
+    // `app.versions_de_la_piece` faisait parcourir toutes les prises en charge
+    // de la base à chaque pièce forcée. Un `create or replace` sans `rows` la
+    // ramène à ce défaut : le temps ne le verrait que sur une base chargée.
+    const { rows } = await admin.query<{ prorows: number }>(
+      `select prorows from pg_proc where oid = 'app.versions_de_la_piece(uuid)'::regprocedure`,
+    );
+    assert.ok(rows[0]!.prorows <= 10, `versions_de_la_piece estimée à ${rows[0]!.prorows} lignes`);
   });
 });
