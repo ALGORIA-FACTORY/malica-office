@@ -28,7 +28,7 @@ notion : `raison_sociale_emetteur` (facture), `employeur_raison_sociale`
 (bulletin de paie) et `tireur_nom` (chèque) sont tous le concept
 `raison_sociale`, avec les rôles `emetteur`, `employeur` et `tireur`. L'expert
 du concept lit et vérifie tous ses champs. Un champ sans jumeau a un concept à
-lui. Le lien est livré en défaut (`20261114090000`), et l'expertise le corrige.
+lui. Le lien est livré en défaut (`20261115100000`), et l'expertise le corrige.
 
 ## 2. Le langage des preuves (`expression`)
 
