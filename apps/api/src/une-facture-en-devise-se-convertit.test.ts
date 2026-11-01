@@ -299,7 +299,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
       source,
       `Source d'essai ${marque}`,
     ]);
-    await cabinetFait("parametrage.arreterRegleDeChange", {
+    await cabinetFait("parametrage.arreterReglagesComptables", {
       cabinetId: cabinet,
       portee: "dossier",
       porteeId: pme,
@@ -731,7 +731,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
 
   it("la règle de change se résout dossier → cabinet → pack, et le cabinet seul l'arrête (R10)", async () => {
     // À partir du 20 octobre, le cours du jour de RÉCEPTION, pour ce dossier.
-    await cabinetFait("parametrage.arreterRegleDeChange", {
+    await cabinetFait("parametrage.arreterReglagesComptables", {
       cabinetId: cabinet,
       portee: "dossier",
       porteeId: pme,
@@ -740,7 +740,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
       valeurs: [{ code: "change.date_retenue", valeur: "date_reception" }],
     });
     await assert.rejects(
-      pmeFait("parametrage.arreterRegleDeChange", {
+      pmeFait("parametrage.arreterReglagesComptables", {
         cabinetId: pme,
         portee: "dossier",
         porteeId: pme,
@@ -748,10 +748,10 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
         depuis: "2026-10-20",
         valeurs: [{ code: "change.date_retenue", valeur: "date_facture" }],
       }),
-      /refus\.change\.regle\.droits/,
+      /refus\.reglage_comptable\.droits/,
     );
     await assert.rejects(
-      cabinetFait("parametrage.arreterRegleDeChange", {
+      cabinetFait("parametrage.arreterReglagesComptables", {
         cabinetId: cabinet,
         portee: "dossier",
         porteeId: pme,
@@ -759,7 +759,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
         depuis: "2026-10-20",
         valeurs: [{ code: "change.recul_jours", valeur: "cinq" }],
       }),
-      /refus\.change\.regle\.saisie/,
+      /refus\.reglage_comptable\.saisie/,
     );
     const regle = (await cabinetFait(
       "referentiel.regleDeChange",
@@ -936,7 +936,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
 
   it("dans le recul, l'import officiel d'avant passe devant une saisie du jour (revue de #148)", async () => {
     // Un recul de cinq jours, pour ce dossier, à partir du 16 septembre.
-    await cabinetFait("parametrage.arreterRegleDeChange", {
+    await cabinetFait("parametrage.arreterReglagesComptables", {
       cabinetId: cabinet,
       portee: "dossier",
       porteeId: pme,
@@ -1000,7 +1000,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
       ).valeurs
         .filter((v) => v.code === "change.recul_jours")
         .map((v) => [v.valeur, v.origine]);
-    await cabinetFait("parametrage.arreterRegleDeChange", {
+    await cabinetFait("parametrage.arreterReglagesComptables", {
       cabinetId: cabinet,
       portee: "cabinet",
       porteeId: cabinet,
@@ -1011,7 +1011,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     // Le dossier a sa propre décision : elle l'emporte.
     assert.deepEqual(await lire("2026-11-30"), [["5", "dossier"]]);
     // Rendue (valeur nulle) à partir du 1er décembre : le cabinet décide.
-    await cabinetFait("parametrage.arreterRegleDeChange", {
+    await cabinetFait("parametrage.arreterReglagesComptables", {
       cabinetId: cabinet,
       portee: "dossier",
       porteeId: pme,
@@ -1023,7 +1023,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     assert.deepEqual(await lire("2026-12-02"), [["3", "cabinet"]]);
     // Un autre cabinet n'arrête rien pour celui-ci.
     await assert.rejects(
-      rpc(autreExpert, "parametrage.arreterRegleDeChange", {
+      rpc(autreExpert, "parametrage.arreterReglagesComptables", {
         cabinetId: autreCabinet,
         portee: "dossier",
         porteeId: pme,
@@ -1031,7 +1031,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
         depuis: "2026-12-01",
         valeurs: [{ code: "change.recul_jours", valeur: "9" }],
       }),
-      /refus\.change\.regle\.droits/,
+      /refus\.reglage_comptable\.droits/,
     );
   });
 });

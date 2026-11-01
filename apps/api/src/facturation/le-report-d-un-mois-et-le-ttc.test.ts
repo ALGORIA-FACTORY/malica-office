@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -39,6 +40,7 @@ describe("le report d'un mois et le TTC", { skip: !ADMIN }, () => {
        values ('pme', 'Report d''essai', 'TN', 'TND') returning id`,
     );
     const tenant = o.rows[0]!.id;
+    await personnesDEssai(db, titulaire);
     await db.query(
       "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
       [tenant, titulaire],

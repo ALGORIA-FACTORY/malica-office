@@ -17,6 +17,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { IntegrationsEtApi } from "@/components/malica/integrations-panel";
+import { ReglagesComptables } from "@/components/malica/reglages-comptables";
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import {
   definirPanneauParDefaut,
@@ -51,7 +52,7 @@ export const Route = createFileRoute("/_authenticated/cabinet/reglages")({
   component: CabinetReglages,
 });
 
-type Onglet = "cabinet" | "calendrier" | "integrations";
+type Onglet = "cabinet" | "comptabilite" | "calendrier" | "integrations";
 const TOUTES = "*";
 const PERIODICITES: Record<string, MessageKey> = {
   mensuelle: "cab.settings.cal.periodicite.mensuelle",
@@ -121,6 +122,14 @@ function CabinetReglages() {
           </button>
           <button
             type="button"
+            className={classeOnglet(onglet === "comptabilite")}
+            aria-current={onglet === "comptabilite" ? "page" : undefined}
+            onClick={() => setOnglet("comptabilite")}
+          >
+            {t("cab.settings.tab.comptabilite")}
+          </button>
+          <button
+            type="button"
             className={classeOnglet(onglet === "calendrier")}
             aria-current={onglet === "calendrier" ? "page" : undefined}
             onClick={() => setOnglet("calendrier")}
@@ -140,6 +149,8 @@ function CabinetReglages() {
 
       {onglet === "cabinet" ? (
         <CabinetEtEquipe />
+      ) : onglet === "comptabilite" ? (
+        <Comptabilite />
       ) : onglet === "calendrier" ? (
         <CalendrierDesEcheances />
       ) : (
@@ -147,6 +158,39 @@ function CabinetReglages() {
       )}
     </div>
   );
+}
+
+/* ====================================================== comptabilité */
+
+/**
+ * Les réglages comptables du cabinet (R10) : au pack de sa juridiction, au
+ * jour de son fuseau — les décisions valent à partir de lui.
+ */
+function Comptabilite() {
+  const { t } = useI18n();
+  const { org } = useCabinet();
+  const pack = useQuery({
+    queryKey: ["ref-pack", org.jurisdiction],
+    queryFn: () => office().referential.activePack(org.jurisdiction),
+  });
+  const fuseau = useQuery({
+    queryKey: ["cab-fuseau", org.id],
+    queryFn: () => office().parametrage.fuseauDuCabinet(org.id),
+  });
+  const erreur = pack.error ?? fuseau.error;
+  if (erreur)
+    return (
+      <p role="alert" className="text-[12.5px] text-signal-stop">
+        {texteDeLErreur(erreur, OU, t("common.error"))}
+      </p>
+    );
+  if (pack.data === null) return <EmptyState>{t("reglages.compta.vide")}</EmptyState>;
+  // Sans fuseau, le cabinet n'a pas de jour : il le choisit d'abord (onglet du cabinet).
+  if (fuseau.data && !fuseau.data.aujourdhui)
+    return <EmptyState>{t("cab.settings.fuseau.aucun")}</EmptyState>;
+  const jour = fuseau.data?.aujourdhui;
+  if (!pack.data || !jour) return null;
+  return <ReglagesComptables cabinetId={org.id} packId={pack.data.id} jour={jour} />;
 }
 
 /* ====================================================== cabinet et équipe */

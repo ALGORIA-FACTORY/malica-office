@@ -13,7 +13,12 @@
  * refuser.
  */
 
+import type { OrigineDuParametrage, ReglagesComptables } from "@malica/socle/ports/repositories";
+
+import { debutDExercice } from "@malica/socle/exercice";
+
 import type { Requete } from "../db.ts";
+import { nomsDesReglages, optionsDeLaRegleDeChange } from "./referentiel.ts";
 import { versReport } from "./report-d-echeance.ts";
 
 /** Les réglages d'un cabinet, tels que la base les rend (défauts compris). */
@@ -501,11 +506,285 @@ export const parametrage = {
   },
 
   /**
-   * ARRÊTER LA RÈGLE DE CHANGE (R10) : comme la déclaration de TVA, pour tout
-   * le cabinet (l'expert-comptable) ou pour un dossier qu'il supervise. La
-   * base vérifie qui décide et ce qui se décide (`app.regle_de_change_arreter`).
+   * LES RÉGLAGES COMPTABLES (R10 ; décisions du CEO du 31 octobre 2026), vus
+   * d'un cabinet ou d'un dossier, au jour dit. Un seul résolveur
+   * (`app.reglage_comptable` : le dossier, son cabinet, le pack) ; la règle de
+   * change y entre par sa propre table. Chaque sujet porte ce que dit le
+   * texte, la pratique, le risque, le point INCERTAIN et ses sources ; et ce
+   * que les tables existantes en imputent déjà (droits hors TVA, barème,
+   * catégories d'immobilisations) — montré, jamais recopié.
    */
-  async arreterRegleDeChange(
+  async reglagesComptables(
+    db: Requete,
+    cabinetId: string,
+    dossierId: string | null,
+    packId: string,
+    jour: string,
+    locale = "fr",
+  ): Promise<ReglagesComptables> {
+    // Vu du dossier, s'il y en a un ; vu du cabinet sinon. Les valeurs du
+    // CABINET se lisent aussi : arrêter « pour tout le cabinet » depuis un
+    // dossier se compare à elles, jamais à celles du dossier (revue de #154).
+    const vu = dossierId ?? cabinetId;
+    const resoudre = (org: string) =>
+      db.query<{
+        code: string;
+        valeur: string | null;
+        origine: OrigineDuParametrage;
+        decide_le: Date | null;
+        reference: string | null;
+      }>(
+        `select code, valeur, origine, decide_le, reference
+           from app.reglage_comptable($1, $2, $3::date)`,
+        [org, packId, jour],
+      );
+    // Le libellé d'une clé dans la langue demandée (le paramètre `langue` de
+    // la requête), le français à défaut. L'espace de noms s'écrit en entier
+    // à l'appel (`ns = '…'`) : la garde des libellés orphelins le cherche.
+    const libelle = (espace: string, cle: string, langue = "$1") =>
+      `coalesce((select l.value from ref_labels_v l where l.${espace} and l.key = ${cle}
+                   and l.locale = ${langue}),
+                (select l.value from ref_labels_v l where l.${espace} and l.key = ${cle}
+                   and l.locale = 'fr'))`;
+    const [
+      resolus,
+      duCabinet,
+      sujets,
+      reglages,
+      options,
+      sources,
+      droits,
+      baremes,
+      categories,
+      noms,
+      change,
+      clotures,
+    ] = await Promise.all([
+      resoudre(vu),
+      dossierId ? resoudre(cabinetId) : null,
+      db.query<{
+        code: string;
+        titre: string | null;
+        texte: string | null;
+        pratique: string | null;
+        risque: string | null;
+        incertain: string | null;
+        droit_hors_tva: string | null;
+        categories_d_immobilisation: boolean;
+      }>(
+        `select s.code, ${libelle("ns = 'reglage_sujet'", "s.code")} as titre,
+                  ${libelle("ns = 'reglage_sujet_texte'", "s.code")} as texte,
+                  ${libelle("ns = 'reglage_sujet_pratique'", "s.code")} as pratique,
+                  ${libelle("ns = 'reglage_sujet_risque'", "s.code")} as risque,
+                  ${libelle("ns = 'reglage_sujet_incertain'", "s.code")} as incertain,
+                  s.droit_hors_tva, s.categories_d_immobilisation
+             from ref.reglages_comptables_sujets s
+            order by s.ordre`,
+        [locale],
+      ),
+      db.query<{
+        code: string;
+        sujet: string;
+        nature: "option" | "nombre";
+        porte: string;
+        applique: boolean;
+      }>(
+        `select code, sujet, nature, porte, applique from ref.reglages_comptables
+            order by sujet, ordre`,
+      ),
+      db.query<{ reglage: string; code: string; applique: boolean; label: string | null }>(
+        `select o.reglage, o.code, o.applique,
+                  ${libelle("ns = 'reglage_comptable_option'", "o.reglage || ':' || o.code")} as label
+             from ref.reglages_comptables_options o
+            order by o.reglage, o.ordre`,
+        [locale],
+      ),
+      db.query<{
+        sujet: string;
+        titre: string;
+        url: string;
+        datee_du: string | null;
+        consultee_le: string;
+      }>(
+        `select sujet, titre, url, to_char(datee_du, 'YYYY-MM-DD') as datee_du,
+                  to_char(consultee_le, 'YYYY-MM-DD') as consultee_le
+             from ref.reglages_comptables_sources order by sujet, ordre`,
+      ),
+      db.query<{
+        code: string;
+        document_kind: "facture_achat" | "facture_vente";
+        account_code: string;
+        fixed_amount: string | null;
+        rate: string | null;
+      }>(
+        `select distinct on (c.code, c.document_kind) c.code, c.document_kind, c.account_code,
+                  c.fixed_amount::text as fixed_amount, c.rate::text as rate
+             from ref.fiscal_charges c
+            where c.pack_version_id = $1 and c.valid_from <= $2::date
+              and (c.valid_to is null or c.valid_to >= $2::date)
+              and c.document_kind in ('facture_achat', 'facture_vente')
+            order by c.code, c.document_kind, c.valid_from desc`,
+        [packId, jour],
+      ),
+      db.query<{
+        droit: string;
+        categorie: string;
+        libelle: string | null;
+        de: string;
+        a: string | null;
+        montant: string;
+        unite_incertaine: boolean;
+      }>(
+        `select droit, categorie, montant_de::text as de, montant_a::text as a,
+                  ${libelle("ns = 'bareme_categorie'", "categorie", "$3")} as libelle,
+                  montant_du_droit::text as montant, unite_incertaine
+             from ref.baremes_des_droits
+            where pack_version_id = $1 and valid_from <= $2::date
+              and (valid_to is null or valid_to >= $2::date)
+            order by droit, categorie, montant_de`,
+        [packId, jour, locale],
+      ),
+      db.query<{
+        code: string;
+        libelle: string;
+        compte: string;
+        taux_lineaire: string;
+        taux_maximal: string | null;
+        depasse: boolean;
+      }>(
+        `select c.code, c.label as libelle, c.account_immo as compte,
+                  round(100.0 / c.duree_annees, 2)::text as taux_lineaire,
+                  m.taux_pourcent::text as taux_maximal,
+                  coalesce(round(100.0 / c.duree_annees, 2) > m.taux_pourcent, false) as depasse
+             from ref.immo_categories c
+             left join lateral (
+                    select t.taux_pourcent from ref.taux_d_amortissement_maximaux t
+                     where t.pack_version_id = c.pack_version_id and t.categorie = c.code
+                       and t.valid_from <= $2::date
+                       and (t.valid_to is null or t.valid_to >= $2::date)
+                     order by t.valid_from desc limit 1) m on true
+            where c.pack_version_id = $1 and c.valid_from <= $2::date
+              and (c.valid_to is null or c.valid_to >= $2::date)
+            order by c.code`,
+        [packId, jour],
+      ),
+      nomsDesReglages(db, locale),
+      optionsDeLaRegleDeChange(db, locale),
+      // La clôture de l'exercice du dossier (sa fiche fiscale en vigueur) :
+      // une décision vaut, par défaut, depuis le début de l'exercice.
+      dossierId
+        ? db.query<{ cloture: string | null }>(
+            `select f.cloture_exercice as cloture from identity.fiches_fiscales f
+                where f.tenant_id = $1 and f.valid_to is null
+                order by f.valid_from desc limit 1`,
+            [dossierId],
+          )
+        : null,
+    ]);
+
+    const resolu = new Map(resolus.rows.map((r) => [r.code, r]));
+    const resoluAuCabinet = duCabinet ? new Map(duCabinet.rows.map((r) => [r.code, r])) : resolu;
+    return {
+      debutExercice: debutDExercice(clotures?.rows[0]?.cloture ?? null, jour.slice(0, 7)),
+      sujets: sujets.rows.flatMap((s) => {
+        // Un réglage que le pack ne porte pas au jour dit ne se montre pas :
+        // il n'a ni valeur ni défaut à confirmer.
+        const lignes = reglages.rows.flatMap((g) => {
+          const r = resolu.get(g.code);
+          if (g.sujet !== s.code || !r) return [];
+          const choix = options.rows.filter((o) => o.reglage === g.code);
+          const liste =
+            g.porte === "regles_de_change"
+              ? (change.get(g.code)?.map((o) => ({ ...o, appliquee: g.applique })) ?? null)
+              : g.nature === "option"
+                ? choix.map((o) => ({
+                    code: o.code,
+                    label: o.label ?? o.code,
+                    appliquee: g.applique && o.applique,
+                  }))
+                : null;
+          const option = choix.find((o) => o.code === r.valeur);
+          return [
+            {
+              code: g.code,
+              libelle: noms.get(g.code) ?? g.code,
+              nature: g.nature,
+              valeur: r.valeur,
+              origine: r.origine,
+              decideLe: r.decide_le ? r.decide_le.toISOString() : null,
+              valeurDuCabinet: resoluAuCabinet.get(g.code)?.valeur ?? null,
+              origineDuCabinet: resoluAuCabinet.get(g.code)?.origine ?? "pack",
+              reference: r.reference,
+              // Le Socle applique-t-il ce qui est résolu ? Le réglage, puis
+              // l'option : une règle de change ou un nombre n'ont que le premier.
+              appliquee:
+                g.applique &&
+                (g.nature !== "option" ||
+                  g.porte !== "reglages_comptables" ||
+                  option?.applique === true),
+              options: liste,
+            },
+          ];
+        });
+        if (lignes.length === 0) return [];
+        return [
+          {
+            code: s.code,
+            titre: s.titre ?? s.code,
+            texte: s.texte ?? "",
+            pratique: s.pratique ?? "",
+            risque: s.risque ?? "",
+            incertain: s.incertain,
+            sources: sources.rows
+              .filter((x) => x.sujet === s.code)
+              .map((x) => ({
+                titre: x.titre,
+                url: x.url,
+                dateeDu: x.datee_du,
+                consulteeLe: x.consultee_le,
+              })),
+            reglages: lignes,
+            droits: droits.rows
+              .filter((d) => d.code === s.droit_hors_tva)
+              .map((d) => ({
+                sens: d.document_kind,
+                compte: d.account_code,
+                montantFixe: d.fixed_amount,
+                taux: d.rate,
+              })),
+            bareme: baremes.rows
+              .filter((b) => b.droit === s.droit_hors_tva)
+              .map((b) => ({
+                categorie: b.libelle ?? b.categorie,
+                de: b.de,
+                a: b.a,
+                droit: b.montant,
+                uniteIncertaine: b.unite_incertaine,
+              })),
+            categories: s.categories_d_immobilisation
+              ? categories.rows.map((c) => ({
+                  code: c.code,
+                  libelle: c.libelle,
+                  compte: c.compte,
+                  tauxLineaire: c.taux_lineaire,
+                  tauxMaximal: c.taux_maximal,
+                  depasse: c.depasse,
+                }))
+              : [],
+          },
+        ];
+      }),
+    };
+  },
+
+  /**
+   * ARRÊTER (ou CONFIRMER) DES RÉGLAGES COMPTABLES (R10), pour tout le
+   * cabinet (l'expert-comptable) ou pour un dossier qu'il supervise : une
+   * seule porte (`app.reglages_comptables_arreter`), qui vérifie qui décide et
+   * ce qui se décide, et transmet la règle de change à la sienne. Confirmer,
+   * c'est arrêter la valeur telle qu'elle est : une décision, datée et signée.
+   */
+  async arreterReglagesComptables(
     db: Requete,
     input: {
       cabinetId: string;
@@ -518,7 +797,7 @@ export const parametrage = {
     },
   ): Promise<{ decisions: number }> {
     const { rows } = await db.query<{ n: number }>(
-      `select app.regle_de_change_arreter($1, $2, $3, $4, $5::date, $6::jsonb, $7) as n`,
+      `select app.reglages_comptables_arreter($1, $2, $3, $4, $5::date, $6::jsonb, $7) as n`,
       [
         input.cabinetId,
         input.portee,

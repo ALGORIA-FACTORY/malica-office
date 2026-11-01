@@ -10,12 +10,12 @@ androidWebViewHierarchy: devtools
 - launchApp
 - runFlow: connexion.yaml
 - takeScreenshot: panneau-1-accueil-fil-ferme
-- tapOn: "Mon espace"
+- tapOn: "Privé"
 - extendedWaitUntil:
-    visible: "Vos papiers"
+    visible: "Mon espace privé"
     timeout: 20000
 - takeScreenshot: panneau-2-mon-espace
-- tapOn: "Accueil"
+- tapOn: "Société"
 - takeScreenshot: panneau-3-retour-accueil-immediat
 - assertNotVisible: "Conversation en cours"
 - takeScreenshot: panneau-4-retour-accueil

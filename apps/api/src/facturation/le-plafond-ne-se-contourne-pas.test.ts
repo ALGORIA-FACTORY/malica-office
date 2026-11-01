@@ -19,6 +19,7 @@ import { randomUUID } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -66,6 +67,7 @@ async function monter(
      values ('pme', 'Plafond d''essai', 'TN', 'TND') returning id`,
   );
   const tenant = org.rows[0]!.id;
+  await personnesDEssai(db, dirigeant, collaborateur);
   await db.query(
     `insert into identity.memberships (tenant_id, user_id, role)
      values ($1, $2, 'dirigeant'), ($1, $3, 'collaborateur')`,
@@ -123,6 +125,7 @@ async function cabinetSur(
      values ('cabinet', 'Cabinet d''essai', 'TN', 'TND') returning id`,
   );
   const expert = randomUUID();
+  await personnesDEssai(db, expert);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'expert')",
     [org.rows[0]!.id, expert],
@@ -400,6 +403,7 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
     await dansUneTransaction(async (db) => {
       const c = await monter(db, { consommees: FORFAIT });
       const operateur = randomUUID();
+      await personnesDEssai(db, operateur);
       await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
       await db.query(
         `insert into plateforme.requisitions

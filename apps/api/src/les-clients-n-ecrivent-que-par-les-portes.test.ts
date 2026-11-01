@@ -346,7 +346,7 @@ describe("les clients n'écrivent que par les portes", { skip: !BASE_CONFIGUREE 
       sql(
         "sonia",
         `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, payload)
-         values ($1, auth.uid(), 'essai.poison', 'essai', 'essai', jsonb_build_object('piece_id', $2::text))`,
+         values ($1, auth.uid(), 'essai.poison', 'capture', 'pieces', jsonb_build_object('piece_id', $2::text))`,
         [s.pme, POISON],
       ),
       /permission denied for table event_log/,
@@ -363,7 +363,7 @@ describe("les clients n'écrivent que par les portes", { skip: !BASE_CONFIGUREE 
     // Une ligne déjà là (écrite avant la garde) : chacun lit encore tout.
     await s.admin.query(
       `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, payload)
-       values ($1, $2, 'essai.poison', 'essai', 'essai', jsonb_build_object('piece_id', $3::text))`,
+       values ($1, $2, 'essai.poison', 'capture', 'pieces', jsonb_build_object('piece_id', $3::text))`,
       [s.pme, s.gens.sonia.id, POISON],
     );
     await s.admin.query(

@@ -161,6 +161,22 @@ _Vérifié par_ `db/reproductibilite.test.mjs`, dans `npm test` : il relit toute
 les migrations dans l'ordre et échoue sur toute violation autre que ces deux
 exceptions, nommées une par une.
 
+## R12 — Ni orphelin, ni doublon, ni littéral dans la base
+
+Une colonne `uuid` `*_id` porte une clé étrangère ; une référence polymorphe
+nomme une table qui existe ; un code du référentiel a son libellé en fr, en
+et ar, et aucun libellé ne survit à son code ; une clé `refus.*` levée a son
+message dans les trois langues, et aucun message français brut ne part vers
+l'écran ; une table de référence a sa clé naturelle unique ; aucune fonction
+ne recopie le corps d'une autre ; aucune fonction n'écrit un compte, une
+devise ou un taux du référentiel.
+
+_Vérifié par_ `apps/api/src/la-base-tient-son-integrite.test.ts`, sur la base
+neuve (job `api`) et sur la base peuplée (job `epreuves`). Ce qui reste est
+nommé, avec sa raison, dans `apps/api/src/verrous/integrite-de-la-base.json` :
+un constat nouveau fait échouer la CI, un constat réglé aussi tant qu'il n'est
+pas retiré de l'instantané.
+
 ---
 
 # Qui travaille sur ce dépôt, et qui écrit quoi

@@ -219,7 +219,15 @@ const AUJOURDHUI = new Date();
 const ISO_JOUR = AUJOURDHUI.toISOString().slice(0, 10);
 const MOIS = ISO_JOUR.slice(0, 7);
 const ANNEE = AUJOURDHUI.getUTCFullYear();
-const jourDuMois = (n) => `${MOIS}-${String(n).padStart(2, "0")}`;
+/*
+ * Aucune date du jeu ne tombe après aujourd'hui. Le 1er novembre 2026, une
+ * facture datée du 3 et réglée six jours plus tard était un règlement FUTUR,
+ * que la base refuse (`paiement.date_future`) : le jeu échouait chaque mois,
+ * du 1er jusque vers le 18. Une date du mois qui n'est pas encore venue
+ * devient aujourd'hui.
+ */
+const auPlusTard = (iso) => (iso < ISO_JOUR ? iso : ISO_JOUR);
+const jourDuMois = (n) => auPlusTard(`${MOIS}-${String(n).padStart(2, "0")}`);
 function plusJours(iso, n) {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
@@ -1526,7 +1534,7 @@ if (PMES.sotumag.id) {
       if (!contrepartie) continue;
       const achat = piece.kind === "facture_achat";
       const montant = achat ? contrepartie.credit : contrepartie.debit;
-      const dateReglement = plusJours(facturee.dateEcriture.slice(0, 10), 6);
+      const dateReglement = auPlusTard(plusJours(facturee.dateEcriture.slice(0, 10), 6));
       const avis = {
         titre: `${achat ? "AVIS DE DEBIT" : "AVIS DE CREDIT"} ${piece.reference}`,
         lignes: [
@@ -1595,7 +1603,7 @@ if (PMES.sotumag.id) {
         reglement.detail,
       );
       lignes.push({
-        at: plusJours(dateReglement, ecartJours),
+        at: auPlusTard(plusJours(dateReglement, ecartJours)),
         label: `${achat ? "VIR EMIS" : "VIR RECU"} ${piece.issuer} ${piece.reference}`,
         montant: achat ? enTexte(-enMillimes(montant)) : montant,
         reference: piece.reference,

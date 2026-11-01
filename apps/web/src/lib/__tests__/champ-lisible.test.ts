@@ -99,6 +99,10 @@ describe("codes et actions", () => {
     expect(libelleDuControle("immobilisation_a_trancher", t as never)).toBe(
       "cab.controle.immobilisation_a_trancher",
     );
+    // Sous le seuil du cabinet (31 octobre 2026) : une réserve qui se nomme aussi.
+    expect(libelleDuControle("immobilisation_faible_valeur", t as never)).toBe(
+      "cab.controle.immobilisation_faible_valeur",
+    );
     expect(libelleDuControle("nature_piece", t as never)).toBe("cab.controle.nature_piece");
     expect(libelleDuControle("inconnu", t as never)).toBe("cab.code.autre");
   });

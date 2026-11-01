@@ -232,6 +232,13 @@ jobs:
         env:
           MALICA_BASE: http://localhost:8080
 
+      # L'audit d'intégrité, rejoué sur la base PEUPLÉE : le job de l'API le
+      # passe sur une base neuve, celui-ci après le jeu de données, les
+      # épreuves et le navigateur — un orphelin que seul un parcours réel
+      # produit se voit ici.
+      - name: L'intégrité de la base après le jeu de données
+        run: npm run test --workspace @malica/api -- src/la-base-tient-son-integrite.test.ts
+
       # Aucun client n'écrit une table en direct (lot 6) : un chemin de l'API
       # qui aurait oublié sa porte bute sur un droit, et `refus.ts` le traite en
       # panne, donc au journal. Après le jeu de données, les épreuves et le

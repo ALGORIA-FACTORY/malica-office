@@ -30,8 +30,11 @@ import { memeMatricule, normaliserMatricule } from "@malica/socle/matricule";
 import { enChiffresLatins } from "@malica/socle/chiffres";
 import { texteSansUnicode } from "@malica/socle/texte-sans-unicode";
 
+import { D } from "@malica/socle/domain/decimal";
+
 import type { ChangeDuJugement } from "./cours-de-change.ts";
 import type { ResultatNormalisation } from "./normaliser-montants.ts";
+import type { ReglageDImmobilisation } from "./reglages-comptables.ts";
 
 type Statut = "conforme" | "non_evaluable" | "reserve" | "rapprocher" | "anomalie" | "rejet";
 
@@ -49,7 +52,9 @@ export interface ResultatControle {
     /** Une pièce en devise : le cours qui la convertit, ou celui qui manque (31 octobre 2026). */
     | "cours_de_change"
     /** Un achat qui désigne un bien susceptible d'être immobilisé : le cabinet tranche (31 octobre 2026). */
-    | "immobilisation_a_trancher";
+    | "immobilisation_a_trancher"
+    /** Un bien reconnu sous le seuil du cabinet : à l'actif, amorti à 100 % (31 octobre 2026). */
+    | "immobilisation_faible_valeur";
   statut: Statut;
   motif: string;
   preuves: Record<string, unknown>;
@@ -72,8 +77,19 @@ export interface PieceAControler {
    * celui de la lecture. Facultatif : absent vaut « non confirmé ».
    */
   sensConfirme?: boolean;
-  /** Les désignations des articles lus, telles qu'imprimées. Absentes : aucune. */
-  designations?: readonly string[];
+  /** Les articles lus : la désignation telle qu'imprimée, et ses montants. Absents : aucun. */
+  articles?: readonly ArticleAControler[];
+}
+
+/** Un article lu : sa désignation et ses montants, en écriture décimale, ou nuls. */
+export interface ArticleAControler {
+  designation: string;
+  quantite: string | null;
+  prixUnitaireHt: string | null;
+  totalHt: string | null;
+  prixUnitaireTtc: string | null;
+  /** Le taux de TVA de l'article (ratio du référentiel, « 0.19 »), quand son code est connu. */
+  tauxDeTva: string | null;
 }
 
 export interface ContexteControle {
@@ -97,6 +113,11 @@ export interface ContexteControle {
    * sans casse et en Unicode) et la famille de biens qu'il reconnaît.
    */
   biensImmobilisables: Array<{ motif: string; famille: string }>;
+  /**
+   * Le seuil et le traitement d'un bien de faible valeur que le cabinet a
+   * arrêtés (`app.reglage_comptable`) ; nul quand le pack n'en porte aucun.
+   */
+  immobilisation: ReglageDImmobilisation | null;
   mentionsObligatoires: Array<{ code: string; libelle: string }>;
   seuilConfianceReserve: number;
   seuilConfianceBloquant: number;
@@ -970,29 +991,39 @@ function coursDeChange(p: PieceAControler, ctx: ContexteControle): ResultatContr
  * Jeu synthétique, 31 octobre 2026 (cas 007, 071, 083) : l'achat d'un serveur
  * ou d'un photocopieur recevait l'écriture d'une charge (601), en silence —
  * une écriture fausse qui ressemblait à une écriture juste. Le Socle ne
- * tranche pas entre charge et immobilisation : la durée, le seuil et la
- * politique du cabinet appartiennent à l'expert-comptable (R10), et aucune
- * règle de capitalisation n'est écrite ici. Mais il DIT que la question se
- * pose : une RÉSERVE nommée, qui cite l'article et la famille de biens que
- * le référentiel reconnaît (`ref.biens_immobilisables`, INCERTAIN).
+ * tranche pas entre charge et immobilisation : il DIT que la question se pose,
+ * par une réserve nommée qui cite l'article et la famille de biens que le
+ * référentiel reconnaît (`ref.biens_immobilisables`, INCERTAIN).
+ *
+ * ============================================= LE SEUIL DU CABINET (31 octobre 2026)
+ *
+ * Le seuil et le traitement d'un bien de faible valeur sont des réglages du
+ * cabinet (`immobilisation.seuil`, `immobilisation.traitement` ; défaut du
+ * pack : 200 HT, inscrit à l'actif — décret 2008-492, NC 22/2008, INCERTAIN).
+ * Un bien reconnu dont la valeur unitaire HT dépasse le seuil reste « à
+ * trancher ». Sous le seuil (ou à égalité) : « bien de faible valeur », à
+ * inscrire à l'actif et amortir à 100 % dans l'année — ou rien, si le cabinet
+ * le passe en charge. La valeur se compare dans la devise du dossier : une
+ * valeur absente, illisible ou dans une autre devise ne se juge pas, et la
+ * question reste posée (« à trancher »). Sans réglage au pack, aucun seuil
+ * n'est deviné : tout bien reconnu est à trancher.
  *
  * Rien pour une vente, rien quand aucun article ne porte un de ces mots : le
  * contrôle n'apparaît alors pas, comme celui du change.
  */
-function immobilisationATrancher(
-  p: PieceAControler,
-  ctx: ContexteControle,
-): ResultatControle | null {
-  if (p.documentKind !== "facture_achat") return null;
+function immobilisationATrancher(p: PieceAControler, ctx: ContexteControle): ResultatControle[] {
+  if (p.documentKind !== "facture_achat") return [];
   const motifs = ctx.biensImmobilisables.map((b) => ({
     ...b,
     expression: new RegExp(b.motif, "iu"),
   }));
-  const reconnus = (p.designations ?? []).flatMap((designation) => {
+  const reconnus = (p.articles ?? []).flatMap((article) => {
     const familles = [
-      ...new Set(motifs.filter((m) => m.expression.test(designation)).map((m) => m.famille)),
+      ...new Set(
+        motifs.filter((m) => m.expression.test(article.designation)).map((m) => m.famille),
+      ),
     ];
-    return familles.length > 0 ? [{ designation, familles }] : [];
+    return familles.length > 0 ? [{ ...article, familles }] : [];
   });
   /*
    * Une désignation PERDUE (glyphes sans Unicode) ne se compare à rien : elle
@@ -1000,30 +1031,101 @@ function immobilisationATrancher(
    * serveur arabe partait en charge, sans un mot. Un texte perdu n'est pas un
    * texte absent — la question se pose, et se dit.
    */
-  const illisibles = (p.designations ?? []).filter((d) => texteSansUnicode(d));
-  if (reconnus.length === 0 && illisibles.length === 0) return null;
-  const phrases = [
-    ...(reconnus.length > 0
-      ? [
-          `Bien susceptible d'être immobilisé : ${reconnus.map((r) => `« ${r.designation} »`).join(", ")}.`,
-        ]
-      : []),
-    ...(illisibles.length > 0
-      ? [
-          `Désignation illisible (texte perdu) : ${illisibles.length === 1 ? "un article" : `${illisibles.length} articles`} dont la nature ne se vérifie pas.`,
-        ]
-      : []),
-  ];
-  return {
-    code: "immobilisation_a_trancher",
-    statut: "reserve",
-    motif: `${phrases.join(" ")} L'écriture proposée l'impute au compte du paramétrage (une charge) : immobilisation ou charge, le cabinet tranche.`,
-    preuves: {
-      articles: reconnus.map((r) => r.designation),
-      familles: [...new Set(reconnus.flatMap((r) => r.familles))].sort(),
-      ...(illisibles.length > 0 ? { illisibles } : {}),
-    },
-  };
+  const illisibles = (p.articles ?? [])
+    .map((a) => a.designation)
+    .filter((d) => texteSansUnicode(d));
+  if (reconnus.length === 0 && illisibles.length === 0) return [];
+
+  const reglage = ctx.immobilisation;
+  const dansLaDevise = p.montants.devise === ctx.deviseDuDossier;
+  const sousLeSeuil = (a: (typeof reconnus)[number]) =>
+    reglage !== null && dansLaDevise && valeurUnitaireAuPlus(a, reglage.seuil, reglage.base);
+  const aTrancher = reconnus.filter((a) => !sousLeSeuil(a));
+  const faibleValeur = reconnus.filter(sousLeSeuil);
+  /*
+   * Ce que le jugement a lu des réglages : la base, et le pack, le jour et
+   * les valeurs. Si le cabinet les change, le jugement se périme
+   * (`app.reglages_du_jugement_a_jour`) et se rejuge — jamais gardé en silence.
+   */
+  const lu = reglage ? { base: reglage.base, reglages: reglage.lu } : {};
+
+  const controles: ResultatControle[] = [];
+  if (aTrancher.length > 0 || illisibles.length > 0) {
+    const phrases = [
+      ...(aTrancher.length > 0
+        ? [
+            `Bien susceptible d'être immobilisé : ${aTrancher.map((r) => `« ${r.designation} »`).join(", ")}.`,
+          ]
+        : []),
+      ...(illisibles.length > 0
+        ? [
+            `Désignation illisible (texte perdu) : ${illisibles.length === 1 ? "un article" : `${illisibles.length} articles`} dont la nature ne se vérifie pas.`,
+          ]
+        : []),
+    ];
+    controles.push({
+      code: "immobilisation_a_trancher",
+      statut: "reserve",
+      motif: `${phrases.join(" ")} L'écriture proposée l'impute au compte du paramétrage (une charge) : immobilisation ou charge, le cabinet tranche.`,
+      preuves: {
+        articles: aTrancher.map((r) => r.designation),
+        familles: [...new Set(aTrancher.flatMap((r) => r.familles))].sort(),
+        ...lu,
+        ...(illisibles.length > 0 ? { illisibles } : {}),
+      },
+    });
+  }
+  /*
+   * Sous le seuil : à l'actif (une réserve, l'écriture proposée restant au
+   * compte du paramétrage), ou en charge (conforme au réglage). Dans les deux
+   * cas le contrôle est posé : il garde ce qu'il a lu, pour se périmer si le
+   * cabinet change d'avis.
+   */
+  if (faibleValeur.length > 0 && reglage) {
+    const base = reglage.base === "ttc" ? "TTC" : "HT";
+    const articles = faibleValeur.map((r) => `« ${r.designation} »`).join(", ");
+    controles.push({
+      code: "immobilisation_faible_valeur",
+      statut: reglage.traitement === "actif_amorti" ? "reserve" : "conforme",
+      motif:
+        reglage.traitement === "actif_amorti"
+          ? `Bien de faible valeur (au plus ${reglage.seuil} ${base}) : ${articles}. Le réglage du cabinet l'inscrit à l'actif et l'amortit à 100 % l'année d'utilisation ; l'écriture proposée l'impute au compte du paramétrage.`
+          : `Bien de faible valeur (au plus ${reglage.seuil} ${base}) : ${articles}. Le réglage du cabinet le passe en charge.`,
+      preuves: {
+        articles: faibleValeur.map((r) => r.designation),
+        familles: [...new Set(faibleValeur.flatMap((r) => r.familles))].sort(),
+        seuil: reglage.seuil,
+        traitement: reglage.traitement,
+        ...lu,
+      },
+    });
+  }
+  return controles;
+}
+
+const DECIMALE = /^\d+(\.\d+)?$/;
+const lisible = (v: string | null): v is string => v !== null && DECIMALE.test(v);
+
+/**
+ * La valeur unitaire d'un article est-elle au plus le seuil ? HT, ou TTC
+ * pour un dossier non assujetti (INCERTAIN). Le prix unitaire s'il est lu ; à
+ * défaut le total, comparé au seuil multiplié par la quantité (aucune
+ * division, aucun arrondi). Sans quantité lue, le total seul : s'il est au
+ * plus le seuil, chaque unité l'est aussi. TTC sans prix TTC lu : le HT
+ * multiplié par (1 + taux) de l'article, quand son taux est connu. Une valeur
+ * qu'on ne lit pas n'est pas sous le seuil.
+ */
+function valeurUnitaireAuPlus(a: ArticleAControler, seuil: string, base: "ht" | "ttc"): boolean {
+  if (!DECIMALE.test(seuil)) return false;
+  const facteur = base === "ht" ? D(1) : lisible(a.tauxDeTva) ? D(1).plus(a.tauxDeTva) : null;
+  const enBase = (ht: string | null) => (facteur && lisible(ht) ? D(ht).times(facteur) : null);
+  const unitaire =
+    base === "ttc" && lisible(a.prixUnitaireTtc) ? D(a.prixUnitaireTtc) : enBase(a.prixUnitaireHt);
+  if (unitaire) return unitaire.lte(D(seuil));
+  const quantite = lisible(a.quantite) ? D(a.quantite) : D(1);
+  const total = enBase(a.totalHt);
+  if (!total || quantite.isZero()) return false;
+  return total.lte(D(seuil).times(quantite));
 }
 
 export function controlerPiece(p: PieceAControler, ctx: ContexteControle): ResultatControle[] {
@@ -1039,7 +1141,7 @@ export function controlerPiece(p: PieceAControler, ctx: ContexteControle): Resul
     dates(p, ctx),
     confiance(p, ctx),
     ...(change ? [change] : []),
-    ...(immobilisation ? [immobilisation] : []),
+    ...immobilisation,
   ];
 }
 

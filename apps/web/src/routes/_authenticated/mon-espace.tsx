@@ -15,7 +15,7 @@ import { useI18n } from "@/i18n";
  * privé suit, par `.app:has([data-ecran="coffre"])`.
  */
 export const Route = createFileRoute("/_authenticated/mon-espace")({
-  head: () => ({ meta: [{ title: "Mon espace — Malica Office" }] }),
+  head: () => ({ meta: [{ title: "Mon espace privé — Malica Office" }] }),
   component: EcranMonEspace,
 });
 

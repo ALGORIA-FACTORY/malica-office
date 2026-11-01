@@ -19,6 +19,7 @@ import pg from "pg";
 
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && ADMIN);
@@ -40,6 +41,7 @@ describe("l'abonnement se pilote depuis l'application", { skip: !BASE_CONFIGUREE
       [`Pilote ${marque}`],
     );
     tenant = org.rows[0]!.id;
+    await personnesDEssai(admin, principal);
     await admin.query(
       "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
       [tenant, principal],
@@ -124,6 +126,7 @@ describe("l'abonnement se pilote depuis l'application", { skip: !BASE_CONFIGUREE
     assert.equal(inv.role, "dirigeant");
 
     // L'invitation acceptée, le propriétaire est là ; on l'inscrit directement.
+    await personnesDEssai(admin, proprietaire);
     await admin.query(
       "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
       [tenant, proprietaire],

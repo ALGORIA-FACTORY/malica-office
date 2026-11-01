@@ -89,7 +89,8 @@ export async function conversionsDesPieces(
                      else '[]'::jsonb end) c
         where c ->> 'code' = 'cours_de_change' and c ->> 'statut' = 'reserve'
           and (inscrite.cours_id is not null
-               or app.cours_du_jugement_a_jour(a.tenant_id, a.controles))`,
+               or (app.cours_du_jugement_a_jour(a.tenant_id, a.controles)
+                   and app.reglages_du_jugement_a_jour(a.tenant_id, a.controles)))`,
       [[...new Set(pieceIds)]],
     ),
     lireLesDevises(db),

@@ -15,6 +15,7 @@ import { after, describe, it } from "node:test";
 import pg from "pg";
 
 import { facturation } from "../depots/facturation.ts";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -50,16 +51,19 @@ async function aBlanc(corps: (db: pg.PoolClient) => Promise<void>) {
 async function uneFacture(db: pg.PoolClient) {
   const principal = randomUUID();
   const operateur = randomUUID();
+  await personnesDEssai(db, operateur);
   await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
   const o = await db.query<{ id: string }>(
     `insert into identity.organizations (kind, name, jurisdiction, currency)
      values ('pme', 'Facture d''essai', 'TN', 'TND') returning id`,
   );
   const tenant = o.rows[0]!.id;
+  await personnesDEssai(db, principal);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
     [tenant, principal],
   );
+  await personnesDEssai(db, principal);
   await db.query("insert into identity.profiles (user_id, display_name) values ($1, 'Essai')", [
     principal,
   ]);
@@ -208,6 +212,7 @@ describe("une facture se paie en ligne", { skip: !ADMIN }, () => {
     await aBlanc(async (db) => {
       const d = await uneFacture(db);
       const repreneur = randomUUID();
+      await personnesDEssai(db, repreneur);
       // La transmission, comme `public.licence_transmettre` la déclare : le
       // repreneur tient la licence et la place de dirigeant.
       await db.query("select set_config('facturation.transmission', $1, true)", [d.licence]);

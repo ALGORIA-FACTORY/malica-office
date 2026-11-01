@@ -65,20 +65,6 @@ export function typePourLeDossier(
 }
 
 /**
- * La pièce tombe-t-elle dans la période de la carte ? Le mois en cours
- * (`AAAA-MM`) pour le quotidien, l'année pour un PV ou une déclaration. La
- * date de la pièce d'abord ; celle de la photo quand la lecture n'en a pas.
- */
-export function dansLaPeriode(
-  p: Pick<PieceLue, "dateDocument" | "createdAt">,
-  periode: Dossier["periode"],
-  moisCourant: string,
-): boolean {
-  const mois = moisDeLaPiece(p);
-  return periode === "mois" ? mois === moisCourant : mois.slice(0, 4) === moisCourant.slice(0, 4);
-}
-
-/**
  * Le mois d'une pièce (`AAAA-MM`) : celui de sa date quand la lecture en a
  * rendu une LISIBLE, sinon celui de la photo. Une date d'une autre forme ne
  * fait pas disparaître la pièce de toutes les cartes.
@@ -87,4 +73,34 @@ export function moisDeLaPiece(p: Pick<PieceLue, "dateDocument" | "createdAt">): 
   const lue = p.dateDocument && /^\d{4}-\d{2}-\d{2}/.test(p.dateDocument) ? p.dateDocument : null;
   // La photo est un instant : son mois se lit à l'heure du lecteur, comme le mois en cours.
   return lue ? lue.slice(0, 7) : moisLocal(new Date(p.createdAt));
+}
+
+/**
+ * La période qu'une carte de dossier MONTRE : la plus récente qui a des
+ * pièces, sans dépasser la période en cours ; la période en cours quand le
+ * dossier est vide.
+ *
+ * 1er novembre 2026, Wissem : « Achats, Ventes dans la bibliothèque sont
+ * vides, pourquoi ? ». La carte comptait le mois CALENDAIRE en cours, à la
+ * date de la facture : le 1er du mois, et tant que les factures du mois
+ * précédent arrivent, Achats et Ventes disaient « Aucune pièce » sur un
+ * dossier plein. La carte et sa page lisent cette même règle.
+ */
+export function periodeMontree(
+  pieces: ReadonlyArray<Pick<PieceLue, "dateDocument" | "createdAt">>,
+  periode: Dossier["periode"],
+  moisCourant: string,
+): string {
+  const cle = (mois: string) => (periode === "mois" ? mois : mois.slice(0, 4));
+  const courante = cle(moisCourant);
+  const passees = pieces.map((p) => cle(moisDeLaPiece(p))).filter((m) => m <= courante);
+  return passees.length === 0 ? courante : passees.reduce((a, b) => (b > a ? b : a));
+}
+
+/** La pièce tombe-t-elle dans la période montrée (`AAAA-MM` ou `AAAA`) ? */
+export function dansLaPeriodeMontree(
+  p: Pick<PieceLue, "dateDocument" | "createdAt">,
+  montree: string,
+): boolean {
+  return moisDeLaPiece(p).startsWith(montree);
 }

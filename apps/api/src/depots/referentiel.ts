@@ -19,6 +19,61 @@ import type { Requete } from "../db.ts";
 import { exposantDuPack } from "../scan/analyse.ts";
 import { aujourdhui, dec as decStr } from "./decimal.ts";
 
+/**
+ * Ce que le référentiel connaît pour chaque code de la règle de change : les
+ * sources (`ref.sources_de_cours`), les dates retenues et les règles d'écart,
+ * libellées (`ref.labels`, le français à défaut). Le recul est un nombre : il
+ * n'a pas de liste. Une seule lecture, pour la fiche du dossier et pour les
+ * réglages comptables du cabinet.
+ */
+export async function optionsDeLaRegleDeChange(
+  db: Requete,
+  locale: string,
+): Promise<Map<string, Array<{ code: string; label: string }>>> {
+  const { rows } = await db.query<{ code: string; option: string; label: string }>(
+    `select 'change.source' as code, s.code as option, s.nom as label
+       from ref.sources_de_cours s
+     union all
+     select 'change.date_retenue', d.code, coalesce(demandee.value, francais.value, d.code)
+       from ref.change_dates_retenues d
+       left join ref_labels_v demandee on demandee.ns = 'change_date_retenue'
+            and demandee.key = d.code and demandee.locale = $1
+       left join ref_labels_v francais on francais.ns = 'change_date_retenue'
+            and francais.key = d.code and francais.locale = 'fr'
+     union all
+     select 'change.ecart', e.code, coalesce(demandee.value, francais.value, e.code)
+       from ref.change_regles_d_ecart e
+       left join ref_labels_v demandee on demandee.ns = 'change_regle_d_ecart'
+            and demandee.key = e.code and demandee.locale = $1
+       left join ref_labels_v francais on francais.ns = 'change_regle_d_ecart'
+            and francais.key = e.code and francais.locale = 'fr'
+     order by 1, 2`,
+    [locale],
+  );
+  const parCode = new Map<string, Array<{ code: string; label: string }>>();
+  for (const o of rows)
+    parCode.set(o.code, [...(parCode.get(o.code) ?? []), { code: o.option, label: o.label }]);
+  return parCode;
+}
+
+/**
+ * Le nom de chaque réglage comptable (`ref.labels`, `reglage_comptable`), dans
+ * la langue demandée, le français à défaut : un seul endroit pour tous les
+ * noms de réglages, ceux de la règle de change compris.
+ */
+export async function nomsDesReglages(db: Requete, locale: string): Promise<Map<string, string>> {
+  const { rows } = await db.query<{ code: string; nom: string }>(
+    `select r.code, coalesce(demandee.value, francais.value, r.code) as nom
+       from ref.reglages_comptables r
+       left join ref_labels_v demandee on demandee.ns = 'reglage_comptable'
+            and demandee.key = r.code and demandee.locale = $1
+       left join ref_labels_v francais on francais.ns = 'reglage_comptable'
+            and francais.key = r.code and francais.locale = 'fr'`,
+    [locale],
+  );
+  return new Map(rows.map((r) => [r.code, r.nom]));
+}
+
 export const referentiel = {
   /**
    * Les juridictions que le produit sait traiter, et leur devise.
@@ -191,10 +246,8 @@ export const referentiel = {
 
   /**
    * La règle de change du dossier au jour dit (`app.regle_de_change`, R10 :
-   * le dossier, son cabinet, le pack), et pour chaque code ce que le
-   * référentiel connaît : les sources (`ref.sources_de_cours`), les dates
-   * retenues et les règles d'écart, libellées (`ref.labels`, le français à
-   * défaut). Le recul est un nombre : il n'a pas de liste.
+   * le dossier, son cabinet, le pack), chaque code nommé et ce que le
+   * référentiel connaît pour lui (`optionsDeLaRegleDeChange`).
    */
   async regleDeChange(
     db: Requete,
@@ -203,7 +256,7 @@ export const referentiel = {
     jour: string,
     locale = "fr",
   ): Promise<RegleDeChangeDuDossier> {
-    const [{ rows: valeurs }, { rows: options }] = await Promise.all([
+    const [{ rows: valeurs }, options, noms] = await Promise.all([
       db.query<{
         code: string;
         valeur: string | null;
@@ -214,38 +267,18 @@ export const referentiel = {
         packId,
         jour,
       ]),
-      db.query<{ code: string; option: string; label: string }>(
-        `select 'change.source' as code, s.code as option, s.nom as label
-           from ref.sources_de_cours s
-         union all
-         select 'change.date_retenue', d.code, coalesce(demandee.value, francais.value, d.code)
-           from ref.change_dates_retenues d
-           left join ref_labels_v demandee on demandee.ns = 'change_date_retenue'
-                and demandee.key = d.code and demandee.locale = $1
-           left join ref_labels_v francais on francais.ns = 'change_date_retenue'
-                and francais.key = d.code and francais.locale = 'fr'
-         union all
-         select 'change.ecart', e.code, coalesce(demandee.value, francais.value, e.code)
-           from ref.change_regles_d_ecart e
-           left join ref_labels_v demandee on demandee.ns = 'change_regle_d_ecart'
-                and demandee.key = e.code and demandee.locale = $1
-           left join ref_labels_v francais on francais.ns = 'change_regle_d_ecart'
-                and francais.key = e.code and francais.locale = 'fr'
-         order by 1, 2`,
-        [locale],
-      ),
+      optionsDeLaRegleDeChange(db, locale),
+      nomsDesReglages(db, locale),
     ]);
     return {
-      valeurs: valeurs.map((v) => {
-        const liste = options.filter((o) => o.code === v.code);
-        return {
-          code: v.code,
-          valeur: v.valeur,
-          origine: v.origine,
-          decideLe: v.decide_le ? v.decide_le.toISOString() : null,
-          options: liste.length > 0 ? liste.map((o) => ({ code: o.option, label: o.label })) : null,
-        };
-      }),
+      valeurs: valeurs.map((v) => ({
+        code: v.code,
+        libelle: noms.get(v.code) ?? v.code,
+        valeur: v.valeur,
+        origine: v.origine,
+        decideLe: v.decide_le ? v.decide_le.toISOString() : null,
+        options: options.get(v.code) ?? null,
+      })),
     };
   },
 

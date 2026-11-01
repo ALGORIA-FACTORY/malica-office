@@ -722,7 +722,7 @@ const fr = {
   "pme.charges.answered.cabinet": "Votre comptabilité a répondu. Sa réponse reste au journal.",
   "pme.charges.disclaimer": "Je signale et j'interroge ; je ne modifie jamais une écriture.",
   "pme.home.card.charges": "Vos charges",
-  "pme.nav.home": "Accueil",
+  "pme.nav.home": "Société",
   "pme.tva.soldeNul": "Solde TVA nul",
   "pme.tva.soldeInconnu": "Solde TVA à confirmer",
   "pme.nav.add": "Ajouter une pièce",
@@ -1530,6 +1530,7 @@ const fr = {
   "cab.controle.confiance_lecture": "Confiance de lecture",
   "cab.controle.cours_de_change": "Cours de change",
   "cab.controle.immobilisation_a_trancher": "Immobilisation ou charge : à trancher",
+  "cab.controle.immobilisation_faible_valeur": "Bien de faible valeur (seuil du cabinet)",
   "cab.audit.extract": "Lecture citée, contrat v1.",
   "cab.audit.autre": "Événement du dossier.",
   "cab.clients.kicker": "Portefeuille du cabinet",
@@ -1772,6 +1773,34 @@ const fr = {
     "Les quatre étapes qu’un nouveau cabinet traverse une fois : le cabinet, l’équipe, les premiers mandats, le seuil de délégation. Ce n’est pas une rubrique — c’est un parcours qu’on rejoue si besoin.",
   "cab.settings.onb.rejouer": "Rejouer la mise en route",
   "cab.settings.tab.integrations": "Intégrations et API",
+  "cab.settings.tab.comptabilite": "Comptabilité",
+  "reglages.compta.portee": "Voir et arrêter pour",
+  "reglages.compta.portee.cabinet": "Tout le cabinet",
+  "reglages.compta.aConfirmer": "Défaut à confirmer par un expert-comptable",
+  "reglages.compta.nonApplique": "Enregistré — pas encore appliqué par le Socle",
+  "reglages.compta.aide.texte": "Ce que dit le texte",
+  "reglages.compta.aide.pratique": "Pratique des cabinets",
+  "reglages.compta.aide.risque": "Risque en cas de contrôle",
+  "reglages.compta.aide.incertain": "INCERTAIN",
+  "reglages.compta.aide.defaut": "Défaut du pack",
+  "reglages.compta.aide.imputation": "Ce que le pack impute aujourd’hui",
+  "reglages.compta.aide.sources": "Sources",
+  "reglages.compta.source": "{titre}, consultée le {date}",
+  "reglages.compta.source.datee": "{titre} ({datee}), consultée le {date}",
+  "reglages.compta.droit.achat": "Achat : compte {compte}",
+  "reglages.compta.droit.vente": "Vente : compte {compte}",
+  "reglages.compta.droit.montant": "{montant} par pièce",
+  "reglages.compta.droit.taux": "taux {taux}",
+  "reglages.compta.bareme.tranche": "{categorie} : de {de} à {a} → {droit}",
+  "reglages.compta.bareme.auDela": "{categorie} : au-delà de {de} → {droit}",
+  "reglages.compta.categorie": "{libelle} : compte {compte}, taux linéaire {taux} %",
+  "reglages.compta.categorie.max": "taux maximal {max} %",
+  "reglages.compta.categorie.depasse": "Dépasse le taux maximal du décret 2008-492",
+  "reglages.compta.depuis.champ": "Les décisions valent à partir du",
+  "reglages.compta.depuis": "Depuis le {date}",
+  "reglages.compta.option.nonAppliquee": "pas encore appliqué par le Socle",
+  "reglages.compta.arrete": "Réglage arrêté.",
+  "reglages.compta.vide": "Aucun réglage comptable pour ce pack.",
   "cab.integ.lede":
     "Ce qui entre et ce qui sort du Socle. Une intégration ne franchit jamais la frontière du tenant : c’est la base qui l’applique, pas la clé.",
   "cab.integ.app.nom": "Application PME",
@@ -2051,6 +2080,46 @@ const fr = {
     "Une nouvelle photo a remplacé cette pièce : c’est la nouvelle qui se traite.",
   "refus.piece.origine_immuable": "Une pièce garde son dossier, son auteur et sa source.",
   "refus.piece.archivee": "Le client a retiré cette pièce : elle est archivée.",
+  "refus.introuvable": "Introuvable, ou vous n’y avez pas accès.",
+  "refus.supervision.second_regard":
+    "La supervision exige un second regard : celui qui a inscrit l’écriture ne la valide pas lui-même.",
+  "refus.moteur.organisation_a_preciser": "Précisez l’organisation : plusieurs vous concernent.",
+  "refus.moteur.valeur_non_admise": "Cette valeur n’est pas admise : « {valeur} ».",
+  "refus.moteur.une_valeur_non_admise": "Une des valeurs envoyées n’est pas admise.",
+  "refus.moteur.periode_couverte":
+    "Une version couvre déjà cette période : faites commencer la nouvelle à une autre date.",
+  "refus.moteur.valeur_obligatoire": "Une valeur obligatoire manque.",
+  "refus.moteur.texte_trop_long": "Un des textes envoyés est trop long.",
+  "refus.moteur.nombre_hors_limites": "Un des nombres envoyés est hors limites.",
+  "refus.moteur.date_illisible": "Une des dates envoyées n’est pas lisible.",
+  "refus.moteur.date_inexistante": "Une des dates envoyées n’existe pas.",
+  "refus.moteur.caractere_illisible": "Un des textes envoyés contient un caractère illisible.",
+  "refus.moteur.geste_non_permis": "Ce geste ne vous est pas permis sur ce dossier.",
+  "refus.moteur.recommencez": "Un autre geste vient de modifier ces données : recommencez.",
+  "refus.moteur.existe_deja": "Cet élément existe déjà.",
+  "refus.moteur.rattachement_absent": "Ce rattachement n’existe pas, ou n’est plus disponible.",
+  "refus.deplacer.pas_la_sienne":
+    "Seul l’auteur d’une pièce la déplace entre Mon espace et la société.",
+  "refus.deplacer.chez_le_proprietaire":
+    "Cette pièce est chez le propriétaire : demandez-la-lui, elle ne se reprend pas dans Mon espace.",
+  "refus.envoi.proprietaire.droit":
+    "Vous n’avez pas le droit d’envoyer des pièces au propriétaire dans cette société.",
+  "refus.envoi.proprietaire.pas_la_sienne":
+    "Vous n’envoyez au propriétaire que vos propres pièces.",
+  "refus.envoi.proprietaire.hors_societe":
+    "Mettez d’abord la pièce dans la société, puis envoyez-la au propriétaire.",
+  "refus.envoi.reserve_au_proprietaire":
+    "Seul le propriétaire envoie les pièces à la comptabilité, ou les en reprend.",
+  "refus.garder.reserve_au_proprietaire":
+    "Seul le propriétaire décide de garder une pièce sans l’envoyer à la comptabilité.",
+  "refus.place.proprietaire":
+    "Le propriétaire n’occupe pas une place : il ne se retire pas par ce geste.",
+  "refus.remplacement.introuvable":
+    "La pièce à reprendre n’est plus là : gardez la photo comme une nouvelle pièce.",
+  "refus.retour.rien_recu": "Cette pièce ne vous a pas été envoyée : il n’y a rien à retourner.",
+  "refus.suppression.pas_la_sienne": "Vous ne supprimez que vos propres pièces.",
+  "refus.suppression.chez_le_proprietaire":
+    "Cette pièce est chez le propriétaire : demandez-lui de la retourner, puis supprimez-la.",
   "refus.remplacement.accompagne":
     "Un reçu ou un justificatif se reprend depuis le règlement qu’il accompagne.",
   "refus.remplacement.inscrite":
@@ -2106,6 +2175,10 @@ const fr = {
     "Seul l’expert-comptable relie un compte pour son cabinet ; pour un dossier, qui le supervise au cabinet qui le tient.",
   "refus.change.regle.saisie":
     "Une valeur choisie n'est pas au référentiel (un recul est un nombre entier de jours) : rechargez la page et choisissez à nouveau.",
+  "refus.reglage_comptable.droits":
+    "Seul l’expert-comptable arrête un réglage pour tout le cabinet ; pour un dossier, qui le supervise au cabinet qui le tient.",
+  "refus.reglage_comptable.saisie":
+    "Une valeur choisie n’est pas au référentiel (un seuil est un nombre positif) : rechargez la page et choisissez à nouveau.",
   "refus.cours.invalide":
     "Un cours est un taux positif, pour une unité (1, 10, 100…), dans une devise et une source du référentiel.",
   "refus.cours.sans_objet":
@@ -2118,7 +2191,7 @@ const fr = {
     "Le cours de cette pièce a changé depuis son jugement : rouvrez-la, elle se rejuge au cours qui fait foi.",
   "refus.ecriture.cours_de_la_ligne":
     "Une ligne convertie doit porter le cours de la pièce, sa devise et son taux, tels que le jugement les a lus.",
-  "statut.pme.mon_espace": "Mon espace",
+  "statut.pme.mon_espace": "Espace privé",
   "statut.pme.a_envoyer": "À envoyer",
   "statut.pme.gardee": "Gardée",
   "statut.pme.envoyee": "Envoyée",
@@ -2245,10 +2318,6 @@ const fr = {
   "change.regle.titre": "Règle de change arrêtée par le cabinet",
   "change.regle.aide":
     "La source du cours, le jour retenu, le recul jusqu’au dernier cours publié et la règle d’écart d’arrondi. Malica livre un défaut, à confirmer par un expert-comptable ; le cabinet l’arrête. Les pièces en devise se rejugent à leur ouverture.",
-  "change.regle.source": "Source du cours",
-  "change.regle.date_retenue": "Jour du cours",
-  "change.regle.recul_jours": "Recul jusqu’au dernier cours publié (jours)",
-  "change.regle.ecart": "Écart d’arrondi de la conversion",
   "change.regle.arretee": "Règle de change arrêtée.",
   "change.regle.arretee.detail": "Les pièces en devise se rejugent à leur ouverture.",
   "cab.ecriture.ligne.libelle": "Libellé",
@@ -2285,7 +2354,7 @@ const fr = {
   "piece.versionPrecedente.titre": "Version précédente",
   "piece.versionPrecedente.remplacee": "Une nouvelle photo a remplacé celle-ci.",
   "piece.versionPrecedente.voir": "Voir la photo actuelle",
-  "pme.nav.coffre": "Mon espace",
+  "pme.nav.coffre": "Privé",
   "pme.nav.echeances": "Échéances",
   "pme.nav.notifs": "Alertes",
   "pme.reglages.titre": "Réglages",
@@ -2316,7 +2385,8 @@ const fr = {
   "pme.coffre.votreComptable": "votre comptable",
   "pme.prive.sous": "Ce que je garde pour vous, et pour personne d'autre.",
   "pme.prive.transmettre": "Transmettre à {cabinet}",
-  "pme.prive.vide": "Rien de privé. Tout ce que vous déposez part chez votre comptable.",
+  "pme.prive.vide":
+    "Rien ici pour l’instant. Ce que vous rangez dans votre espace privé n’est vu que par vous : ni la société ni votre comptable, tant que vous ne l’envoyez pas.",
   "pme.coffre.wall":
     "La cloison est tenue par la base : votre espace personnel est invisible pour la comptabilité, pas seulement masqué.",
   "pme.echeances.title": "Échéances",
@@ -3732,7 +3802,7 @@ const fr = {
    * grille de miniatures par mois, et deux gestes sur les papiers choisis —
    * les mettre dans la société, ou les supprimer.
    */
-  "pme.coffre.titre": "Vos papiers",
+  "pme.coffre.titre": "Mon espace privé",
   "pme.coffre.compte": "Mon espace · {count} papiers",
   "pme.coffre.compte#one": "Mon espace · {count} papier",
   "pme.coffre.compte#other": "Mon espace · {count} papiers",
@@ -4699,7 +4769,7 @@ const en: Dict = {
   "pme.charges.answered.cabinet": "Your firm answered. Their answer is kept in the log.",
   "pme.charges.disclaimer": "I flag and I ask; I never change an entry.",
   "pme.home.card.charges": "Your expenses",
-  "pme.nav.home": "Home",
+  "pme.nav.home": "Company",
   "pme.tva.soldeNul": "Zero VAT balance",
   "pme.tva.soldeInconnu": "VAT balance to confirm",
   "pme.nav.add": "Add a document",
@@ -5499,6 +5569,7 @@ const en: Dict = {
   "cab.controle.confiance_lecture": "Reading confidence",
   "cab.controle.cours_de_change": "Exchange rate",
   "cab.controle.immobilisation_a_trancher": "Fixed asset or expense: to decide",
+  "cab.controle.immobilisation_faible_valeur": "Low-value asset (firm threshold)",
   "cab.audit.extract": "Cited reading, contract v1.",
   "cab.audit.autre": "Event on the file.",
   "cab.clients.kicker": "Practice portfolio",
@@ -5738,6 +5809,34 @@ const en: Dict = {
     "The four steps a new practice goes through once: the practice, the team, the first mandates, the delegation threshold. Not a section — a path you can replay when needed.",
   "cab.settings.onb.rejouer": "Replay the getting-started path",
   "cab.settings.tab.integrations": "Integrations and API",
+  "cab.settings.tab.comptabilite": "Accounting",
+  "reglages.compta.portee": "View and set for",
+  "reglages.compta.portee.cabinet": "The whole firm",
+  "reglages.compta.aConfirmer": "Default to be confirmed by a chartered accountant",
+  "reglages.compta.nonApplique": "Saved — not yet applied by the engine",
+  "reglages.compta.aide.texte": "What the text says",
+  "reglages.compta.aide.pratique": "Firms’ practice",
+  "reglages.compta.aide.risque": "Risk in a tax audit",
+  "reglages.compta.aide.incertain": "UNCERTAIN",
+  "reglages.compta.aide.defaut": "Pack default",
+  "reglages.compta.aide.imputation": "What the pack posts today",
+  "reglages.compta.aide.sources": "Sources",
+  "reglages.compta.source": "{titre}, consulted on {date}",
+  "reglages.compta.source.datee": "{titre} ({datee}), consulted on {date}",
+  "reglages.compta.droit.achat": "Purchase: account {compte}",
+  "reglages.compta.droit.vente": "Sale: account {compte}",
+  "reglages.compta.droit.montant": "{montant} per document",
+  "reglages.compta.droit.taux": "rate {taux}",
+  "reglages.compta.bareme.tranche": "{categorie}: from {de} to {a} → {droit}",
+  "reglages.compta.bareme.auDela": "{categorie}: above {de} → {droit}",
+  "reglages.compta.categorie": "{libelle}: account {compte}, straight-line rate {taux}%",
+  "reglages.compta.categorie.max": "maximum rate {max}%",
+  "reglages.compta.categorie.depasse": "Exceeds the maximum rate of decree 2008-492",
+  "reglages.compta.depuis.champ": "Decisions apply from",
+  "reglages.compta.depuis": "From {date}",
+  "reglages.compta.option.nonAppliquee": "not yet applied by the engine",
+  "reglages.compta.arrete": "Setting saved.",
+  "reglages.compta.vide": "No accounting setting for this pack.",
   "cab.integ.lede":
     "What comes into the Socle, and what goes out. An integration never crosses the tenant boundary: the database enforces it, not the key.",
   "cab.integ.app.nom": "SME app",
@@ -6012,6 +6111,45 @@ const en: Dict = {
   "refus.piece.remplacee": "A new photo replaced this document: the new one is the one to handle.",
   "refus.piece.origine_immuable": "A document keeps its file, its author and its source.",
   "refus.piece.archivee": "The client withdrew this document: it is archived.",
+  "refus.introuvable": "Not found, or you do not have access to it.",
+  "refus.supervision.second_regard":
+    "Supervision requires a second look: whoever recorded the entry does not validate it themselves.",
+  "refus.moteur.organisation_a_preciser": "Specify the organisation: several concern you.",
+  "refus.moteur.valeur_non_admise": "This value is not allowed: “{valeur}”.",
+  "refus.moteur.une_valeur_non_admise": "One of the values sent is not allowed.",
+  "refus.moteur.periode_couverte":
+    "A version already covers this period: start the new one on another date.",
+  "refus.moteur.valeur_obligatoire": "A required value is missing.",
+  "refus.moteur.texte_trop_long": "One of the texts sent is too long.",
+  "refus.moteur.nombre_hors_limites": "One of the numbers sent is out of range.",
+  "refus.moteur.date_illisible": "One of the dates sent cannot be read.",
+  "refus.moteur.date_inexistante": "One of the dates sent does not exist.",
+  "refus.moteur.caractere_illisible": "One of the texts sent contains an unreadable character.",
+  "refus.moteur.geste_non_permis": "This action is not allowed for you on this file.",
+  "refus.moteur.recommencez": "Another action has just changed this data: try again.",
+  "refus.moteur.existe_deja": "This item already exists.",
+  "refus.moteur.rattachement_absent": "This link does not exist, or is no longer available.",
+  "refus.deplacer.pas_la_sienne":
+    "Only the author of a document moves it between My space and the company.",
+  "refus.deplacer.chez_le_proprietaire":
+    "This document is with the owner: ask them for it; it cannot be taken back into My space.",
+  "refus.envoi.proprietaire.droit":
+    "You are not allowed to send documents to the owner in this company.",
+  "refus.envoi.proprietaire.pas_la_sienne": "You can only send your own documents to the owner.",
+  "refus.envoi.proprietaire.hors_societe":
+    "Put the document in the company first, then send it to the owner.",
+  "refus.envoi.reserve_au_proprietaire":
+    "Only the owner sends documents to the accountant, or takes them back.",
+  "refus.garder.reserve_au_proprietaire":
+    "Only the owner decides to keep a document without sending it to the accountant.",
+  "refus.place.proprietaire":
+    "The owner does not take up a place: they cannot be removed this way.",
+  "refus.remplacement.introuvable":
+    "The document to retake is no longer there: keep the photo as a new document.",
+  "refus.retour.rien_recu": "This document was not sent to you: there is nothing to return.",
+  "refus.suppression.pas_la_sienne": "You can only delete your own documents.",
+  "refus.suppression.chez_le_proprietaire":
+    "This document is with the owner: ask them to return it, then delete it.",
   "refus.remplacement.accompagne":
     "A receipt or a proof of payment is retaken from the payment it goes with.",
   "refus.remplacement.inscrite":
@@ -6068,6 +6206,10 @@ const en: Dict = {
     "Only the chartered accountant links an account for their firm; for a client file, whoever supervises it at the firm that holds it.",
   "refus.change.regle.saisie":
     "A chosen value is not in the reference data (a look-back is a whole number of days): reload the page and choose again.",
+  "refus.reglage_comptable.droits":
+    "Only the chartered accountant sets a setting for the whole firm; for a file, whoever supervises it at the firm that holds it.",
+  "refus.reglage_comptable.saisie":
+    "A chosen value is not in the reference data (a threshold is a positive number): reload the page and choose again.",
   "refus.cours.invalide":
     "A rate is a positive number, for a unit (1, 10, 100…), in a currency and a source of the reference data.",
   "refus.cours.sans_objet":
@@ -6080,7 +6222,7 @@ const en: Dict = {
     "This document’s rate changed after it was judged: reopen it to re-judge it at the rate that applies.",
   "refus.ecriture.cours_de_la_ligne":
     "A converted line must carry the document’s rate, currency and unit rate, as the judgment read them.",
-  "statut.pme.mon_espace": "My space",
+  "statut.pme.mon_espace": "Private space",
   "statut.pme.a_envoyer": "To send",
   "statut.pme.gardee": "Kept",
   "statut.pme.envoyee": "Sent",
@@ -6207,10 +6349,6 @@ const en: Dict = {
   "change.regle.titre": "Exchange rule set by the firm",
   "change.regle.aide":
     "The rate source, the day used, how far back to the last published rate, and the rounding-difference rule. Malica ships a default, to be confirmed by a chartered accountant; the firm sets it. Foreign-currency documents are judged again when opened.",
-  "change.regle.source": "Rate source",
-  "change.regle.date_retenue": "Rate day",
-  "change.regle.recul_jours": "Look-back to the last published rate (days)",
-  "change.regle.ecart": "Conversion rounding difference",
   "change.regle.arretee": "Exchange rule set.",
   "change.regle.arretee.detail": "Foreign-currency documents are judged again when opened.",
   "cab.ecriture.ligne.libelle": "Label",
@@ -6247,7 +6385,7 @@ const en: Dict = {
   "piece.versionPrecedente.titre": "Previous version",
   "piece.versionPrecedente.remplacee": "A new photo replaced this one.",
   "piece.versionPrecedente.voir": "See the current photo",
-  "pme.nav.coffre": "My space",
+  "pme.nav.coffre": "Private",
   "pme.nav.echeances": "Deadlines",
   "pme.nav.notifs": "Alerts",
   "pme.reglages.titre": "Settings",
@@ -6277,7 +6415,8 @@ const en: Dict = {
   "pme.coffre.votreComptable": "your accountant",
   "pme.prive.sous": "What I keep for you, and for no one else.",
   "pme.prive.transmettre": "Send to {cabinet}",
-  "pme.prive.vide": "Nothing private. Everything you file goes to your accountant.",
+  "pme.prive.vide":
+    "Nothing here yet. What you keep in your private space is seen by you alone: neither the company nor your accountant, until you send it.",
   "pme.coffre.wall":
     "The wall is enforced by the database: your private space is invisible to the practice, not merely hidden.",
   "pme.echeances.title": "Deadlines",
@@ -7646,7 +7785,7 @@ const en: Dict = {
   "pme.regler.sesAvis": "Their advice",
   "pme.regler.pied":
     "Feedback on documents and advice come from the same firm, so from the same inbox. What sets them apart is not the screen: it is what they ask you to do.",
-  "pme.coffre.titre": "Your papers",
+  "pme.coffre.titre": "My private space",
   "pme.coffre.compte": "My space · {count} papers",
   "pme.coffre.compte#one": "My space · {count} paper",
   "pme.coffre.compte#other": "My space · {count} papers",
@@ -8534,7 +8673,7 @@ const ar: Dict = {
   "pme.charges.answered.cabinet": "أجاب مكتبك. تبقى إجابته في السجل.",
   "pme.charges.disclaimer": "أُنبّه وأسأل، ولا أُغيّر أي قيد أبدًا.",
   "pme.home.card.charges": "مصاريفي",
-  "pme.nav.home": "الرئيسية",
+  "pme.nav.home": "الشركة",
   "pme.tva.soldeNul": "رصيد الأداء على القيمة المضافة منعدم",
   "pme.tva.soldeInconnu": "رصيد الأداء على القيمة المضافة للتأكيد",
   "pme.nav.add": "إضافة وثيقة",
@@ -9326,6 +9465,7 @@ const ar: Dict = {
   "cab.controle.confiance_lecture": "موثوقية القراءة",
   "cab.controle.cours_de_change": "سعر الصرف",
   "cab.controle.immobilisation_a_trancher": "أصل ثابت أم أعباء: للحسم",
+  "cab.controle.immobilisation_faible_valeur": "أصل ذو قيمة ضعيفة (عتبة المكتب)",
   "cab.audit.extract": "قراءة مُستشهَدة، عقد الإصدار 1.",
   "cab.audit.autre": "حدث في الملف.",
   "cab.clients.kicker": "محفظة المكتب",
@@ -9561,6 +9701,34 @@ const ar: Dict = {
     "الخطوات الأربع التي يمرّ بها مكتب جديد مرة واحدة: المكتب، الفريق، الوكالات الأولى، عتبة التفويض. ليس بابًا — بل مسار يُعاد عند الحاجة.",
   "cab.settings.onb.rejouer": "إعادة مسار الانطلاق",
   "cab.settings.tab.integrations": "التكاملات والواجهة البرمجية",
+  "cab.settings.tab.comptabilite": "المحاسبة",
+  "reglages.compta.portee": "العرض والضبط لـ",
+  "reglages.compta.portee.cabinet": "المكتب كله",
+  "reglages.compta.aConfirmer": "قيمة افتراضية يؤكدها خبير محاسب",
+  "reglages.compta.nonApplique": "محفوظ — لم يطبقه المحرك بعد",
+  "reglages.compta.aide.texte": "ما يقوله النص",
+  "reglages.compta.aide.pratique": "ممارسة المكاتب",
+  "reglages.compta.aide.risque": "الخطر عند المراقبة",
+  "reglages.compta.aide.incertain": "غير مؤكد",
+  "reglages.compta.aide.defaut": "القيمة الافتراضية للحزمة",
+  "reglages.compta.aide.imputation": "ما تسجله الحزمة اليوم",
+  "reglages.compta.aide.sources": "المصادر",
+  "reglages.compta.source": "{titre}، اطُّلع عليه في {date}",
+  "reglages.compta.source.datee": "{titre} ({datee})، اطُّلع عليه في {date}",
+  "reglages.compta.droit.achat": "الشراء: الحساب {compte}",
+  "reglages.compta.droit.vente": "البيع: الحساب {compte}",
+  "reglages.compta.droit.montant": "{montant} عن كل وثيقة",
+  "reglages.compta.droit.taux": "النسبة {taux}",
+  "reglages.compta.bareme.tranche": "{categorie}: من {de} إلى {a} ← {droit}",
+  "reglages.compta.bareme.auDela": "{categorie}: أكثر من {de} ← {droit}",
+  "reglages.compta.categorie": "{libelle}: الحساب {compte}، نسبة خطية {taux} %",
+  "reglages.compta.categorie.max": "النسبة القصوى {max} %",
+  "reglages.compta.categorie.depasse": "تتجاوز النسبة القصوى للأمر 2008-492",
+  "reglages.compta.depuis.champ": "تسري القرارات ابتداء من",
+  "reglages.compta.depuis": "ابتداء من {date}",
+  "reglages.compta.option.nonAppliquee": "لم يطبقه المحرك بعد",
+  "reglages.compta.arrete": "تم ضبط الإعداد.",
+  "reglages.compta.vide": "لا يوجد إعداد محاسبي لهذه الحزمة.",
   "cab.integ.lede":
     "ما يدخل إلى السوكل وما يخرج منه. لا يتجاوز أي تكامل حدود المستأجر أبدًا: قاعدة البيانات هي التي تفرضها، لا المفتاح.",
   "cab.integ.app.nom": "تطبيق المؤسسة",
@@ -9820,6 +9988,38 @@ const ar: Dict = {
   "refus.piece.remplacee": "حلّت صورة جديدة محلّ هذه الوثيقة: الجديدة هي التي تُعالَج.",
   "refus.piece.origine_immuable": "تحتفظ الوثيقة بملفّها وصاحبها ومصدرها.",
   "refus.piece.archivee": "سحب الحريف هذه الوثيقة: هي مؤرشفة.",
+  "refus.introuvable": "غير موجود، أو ليس لك حق الوصول إليه.",
+  "refus.supervision.second_regard":
+    "تتطلّب المراجعة نظرة ثانية: من سجّل القيد لا يصادق عليه بنفسه.",
+  "refus.moteur.organisation_a_preciser": "حدّد المؤسسة: تعنيك أكثر من واحدة.",
+  "refus.moteur.valeur_non_admise": "هذه القيمة غير مقبولة: «{valeur}».",
+  "refus.moteur.une_valeur_non_admise": "إحدى القيم المرسلة غير مقبولة.",
+  "refus.moteur.periode_couverte": "نسخة تغطي هذه الفترة مسبقًا: اجعل الجديدة تبدأ في تاريخ آخر.",
+  "refus.moteur.valeur_obligatoire": "قيمة إلزامية ناقصة.",
+  "refus.moteur.texte_trop_long": "أحد النصوص المرسلة طويل جدًا.",
+  "refus.moteur.nombre_hors_limites": "أحد الأرقام المرسلة خارج الحدود المسموح بها.",
+  "refus.moteur.date_illisible": "أحد التواريخ المرسلة غير مقروء.",
+  "refus.moteur.date_inexistante": "أحد التواريخ المرسلة غير موجود.",
+  "refus.moteur.caractere_illisible": "أحد النصوص المرسلة يحتوي على حرف غير مقروء.",
+  "refus.moteur.geste_non_permis": "هذا الإجراء غير مسموح لك في هذا الملف.",
+  "refus.moteur.recommencez": "إجراء آخر غيّر هذه البيانات للتوّ: أعد المحاولة.",
+  "refus.moteur.existe_deja": "هذا العنصر موجود مسبقًا.",
+  "refus.moteur.rattachement_absent": "هذا الربط غير موجود أو لم يعد متاحًا.",
+  "refus.deplacer.pas_la_sienne": "وحده صاحب الوثيقة ينقلها بين مساحتي والشركة.",
+  "refus.deplacer.chez_le_proprietaire":
+    "هذه الوثيقة عند المالك: اطلبها منه، فهي لا تُستعاد إلى مساحتي.",
+  "refus.envoi.proprietaire.droit": "ليس لك حق إرسال الوثائق إلى المالك في هذه الشركة.",
+  "refus.envoi.proprietaire.pas_la_sienne": "لا ترسل إلى المالك إلا وثائقك أنت.",
+  "refus.envoi.proprietaire.hors_societe": "ضع الوثيقة في الشركة أولًا، ثم أرسلها إلى المالك.",
+  "refus.envoi.reserve_au_proprietaire": "وحده المالك يرسل الوثائق إلى المحاسب أو يستعيدها منه.",
+  "refus.garder.reserve_au_proprietaire":
+    "وحده المالك يقرّر الاحتفاظ بوثيقة دون إرسالها إلى المحاسب.",
+  "refus.place.proprietaire": "المالك لا يشغل مقعدًا: لا يُسحب بهذه الطريقة.",
+  "refus.remplacement.introuvable":
+    "الوثيقة المراد إعادة تصويرها لم تعد موجودة: احتفظ بالصورة كوثيقة جديدة.",
+  "refus.retour.rien_recu": "لم تُرسَل إليك هذه الوثيقة: لا شيء لإرجاعه.",
+  "refus.suppression.pas_la_sienne": "لا تحذف إلا وثائقك أنت.",
+  "refus.suppression.chez_le_proprietaire": "هذه الوثيقة عند المالك: اطلب منه إرجاعها، ثم احذفها.",
   "refus.remplacement.accompagne": "يُعاد تصوير الوصل أو إثبات الدفع من الدفعة التي يرافقها.",
   "refus.remplacement.inscrite": "تكفّل محاسبك بهذه الوثيقة: يُرجعها أولًا، ثم يُعاد تصويرها.",
   "refus.remplacement.nouvelle_photo":
@@ -9864,6 +10064,10 @@ const ar: Dict = {
     "وحده الخبير المحاسب يربط حسابًا لمكتبه؛ ولملفّ ما، من يشرف عليه في المكتب الذي يتولّاه.",
   "refus.change.regle.saisie":
     "قيمة مختارة غير موجودة في المرجع (الرجوع عدد صحيح من الأيام): أعد تحميل الصفحة واختر من جديد.",
+  "refus.reglage_comptable.droits":
+    "الخبير المحاسب وحده يضبط إعدادا للمكتب كله؛ ولملف، من يشرف عليه في المكتب الذي يتولاه.",
+  "refus.reglage_comptable.saisie":
+    "قيمة مختارة غير موجودة في المرجع (العتبة عدد موجب): أعد تحميل الصفحة واختر من جديد.",
   "refus.cours.invalide": "سعر الصرف عدد موجب، لوحدة (1، 10، 100…)، بعملة ومصدر من المرجع.",
   "refus.cours.sans_objet": "هذه الوثيقة لا تنتظر أي سعر صرف: هي بعملة الملف، أو ينقصها تاريخها.",
   "refus.cours.ecriture_vivante":
@@ -9874,7 +10078,7 @@ const ar: Dict = {
     "تغيّر سعر هذه الوثيقة بعد تقييمها: أعد فتحها لتُقيَّم بالسعر المعتمد.",
   "refus.ecriture.cours_de_la_ligne":
     "يجب أن يحمل السطر المحوَّل سعر الوثيقة وعملتها وسعر الوحدة كما قرأها التقييم.",
-  "statut.pme.mon_espace": "مساحتي",
+  "statut.pme.mon_espace": "المساحة الخاصة",
   "statut.pme.a_envoyer": "للإرسال",
   "statut.pme.gardee": "محفوظة",
   "statut.pme.envoyee": "أُرسلت",
@@ -9993,10 +10197,6 @@ const ar: Dict = {
   "change.regle.titre": "قاعدة الصرف التي ضبطها المكتب",
   "change.regle.aide":
     "مصدر السعر، واليوم المعتمد، ومدى الرجوع إلى آخر سعر منشور، وقاعدة فارق التقريب. تقدّم Malica قيمة افتراضية يؤكدها خبير محاسب؛ ويضبطها المكتب. تُعاد معالجة الوثائق بالعملة الأجنبية عند فتحها.",
-  "change.regle.source": "مصدر السعر",
-  "change.regle.date_retenue": "يوم السعر",
-  "change.regle.recul_jours": "الرجوع إلى آخر سعر منشور (أيام)",
-  "change.regle.ecart": "فارق تقريب التحويل",
   "change.regle.arretee": "تم ضبط قاعدة الصرف.",
   "change.regle.arretee.detail": "تُعاد معالجة الوثائق بالعملة الأجنبية عند فتحها.",
   "cab.ecriture.ligne.libelle": "البيان",
@@ -10032,7 +10232,7 @@ const ar: Dict = {
   "piece.versionPrecedente.titre": "النسخة السابقة",
   "piece.versionPrecedente.remplacee": "حلّت صورة جديدة محلّ هذه.",
   "piece.versionPrecedente.voir": "عرض الصورة الحالية",
-  "pme.nav.coffre": "مساحتي",
+  "pme.nav.coffre": "الخاص",
   "pme.nav.echeances": "الآجال",
   "pme.nav.notifs": "التنبيهات",
   "pme.reglages.titre": "الإعدادات",
@@ -10061,7 +10261,8 @@ const ar: Dict = {
   "pme.coffre.votreComptable": "محاسبك",
   "pme.prive.sous": "ما أحفظه لك، ولا لأحد سواك.",
   "pme.prive.transmettre": "إرسال إلى {cabinet}",
-  "pme.prive.vide": "لا شيء خاصّ. كل ما تودعه يذهب إلى محاسبك.",
+  "pme.prive.vide":
+    "لا شيء هنا بعد. ما تحفظه في مساحتك الخاصة لا يراه أحد سواك: لا الشركة ولا محاسبك، ما لم ترسله.",
   "pme.coffre.wall": "الحاجز تفرضه قاعدة البيانات: فضاؤك الشخصي غير مرئي للمكتب، وليس مخفيًا فقط.",
   "pme.echeances.title": "الآجال",
   "pme.echeances.voice.empty": "لا يوجد أجل مستخرج من الحزمة حتى الآن.",
@@ -11370,7 +11571,7 @@ const ar: Dict = {
   "pme.regler.sesAvis": "ملاحظاته",
   "pme.regler.pied":
     "الملاحظات على الوثائق والآراء تأتي من المكتب نفسه، أي من صندوق الوارد نفسه. ما يميّزها ليس الشاشة، بل ما تطلبه منكم.",
-  "pme.coffre.titre": "أوراقكم",
+  "pme.coffre.titre": "مساحتي الخاصة",
   "pme.coffre.compte": "مساحتي · {count} أوراق",
   "pme.coffre.compte#one": "مساحتي · {count} ورقة",
   "pme.coffre.compte#other": "مساحتي · {count} أوراق",

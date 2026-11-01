@@ -26,12 +26,12 @@ import { useEnvoyerEnLot, useSupprimerEnLot } from "@/hooks/use-gestes-du-circui
 export const Route = createFileRoute("/_authenticated/pme/coffre")({
   head: () => ({
     meta: [
-      { title: "Mon espace — Malica Office" },
+      { title: "Mon espace privé — Malica Office" },
       {
         name: "description",
         content: "Ce que vous gardez pour vous seul, invisible au cabinet mandaté.",
       },
-      { property: "og:title", content: "Mon espace — Malica Office" },
+      { property: "og:title", content: "Mon espace privé — Malica Office" },
       {
         property: "og:description",
         content: "Ce que vous gardez pour vous seul, invisible au cabinet mandaté.",

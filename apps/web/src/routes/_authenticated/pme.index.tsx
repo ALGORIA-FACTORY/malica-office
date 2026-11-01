@@ -31,18 +31,18 @@ import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
-import { dansLaPeriode, dossierDeLaPiece } from "@/lib/dossiers";
+import { dansLaPeriodeMontree, dossierDeLaPiece, periodeMontree } from "@/lib/dossiers";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/pme/")({
   head: () => ({
     meta: [
-      { title: "Mon espace — Malica Office" },
+      { title: "Espace société — Malica Office" },
       {
         name: "description",
         content: "Ce que Malica a préparé : la TVA récupérée, le résultat, ce qui attend.",
       },
-      { property: "og:title", content: "Mon espace — Malica Office" },
+      { property: "og:title", content: "Espace société — Malica Office" },
       {
         property: "og:description",
         content: "Ce que Malica a préparé : la TVA récupérée, le résultat, ce qui attend.",
@@ -409,9 +409,11 @@ function PmeHome() {
    * un PV ou une déclaration.
    */
   const dossiers = sept.dossiers.map((d) => {
-    const pieces = lesLues.filter(
-      (p) => dossierDeLaPiece(p, sept.types) === d.code && dansLaPeriode(p, d.periode, periode),
-    );
+    const duDossier = lesLues.filter((p) => dossierDeLaPiece(p, sept.types) === d.code);
+    // La période la plus récente qui a des pièces (`periodeMontree`) : le 1er
+    // du mois, Achats et Ventes ne se disent plus vides sur un dossier plein.
+    const montree = periodeMontree(duDossier, d.periode, periode);
+    const pieces = duDossier.filter((p) => dansLaPeriodeMontree(p, montree));
     // Un reçu ou un justificatif n'attend rien : il compte pour fait. Une
     // pièce est faite quand le cabinet l'a prise en charge — la règle de la
     // liste (`statutDeLaPieceLue`), sur les faits du suivi.
@@ -423,7 +425,7 @@ function PmeHome() {
       total: pieces.length,
       faites,
       part: pieces.length === 0 ? 0 : Math.round((faites / pieces.length) * 100),
-      etiquette: d.periode === "mois" ? moisCourant : periode.slice(0, 4),
+      etiquette: d.periode === "mois" ? mois(montree) : montree,
     };
   });
 
