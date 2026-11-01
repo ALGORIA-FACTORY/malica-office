@@ -48,6 +48,8 @@ describe("la sonde profonde", { skip: !BASE_CONFIGUREE }, () => {
       { etat: "ok", base: "ok", stockage: "ok" },
     );
     assert.equal(typeof corps.version, "string");
+    // Le moteur du second lecteur est dit, sans peser sur l'état.
+    if (!process.env["OCR_URL"]) assert.equal((corps as { ocr?: string }).ocr, "absent");
     // Le témoin est effacé : la sonde ne sème pas de fichiers.
     assert.deepEqual(await readdir(racineEssai), []);
   });

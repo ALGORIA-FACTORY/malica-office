@@ -13,7 +13,12 @@ import { afterEach, describe, it } from "node:test";
 
 import { PanneFournisseur, qualifierEchec } from "../../fabrique/travaux-execution.ts";
 
-import { SecondLecteurOccupe, lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
+import {
+  SecondLecteurOccupe,
+  lireAvecPaddle,
+  moteurDuSecondLecteur,
+  secondLecteurDisponible,
+} from "./paddle.ts";
 
 const vraiFetch = globalThis.fetch;
 const ancienneUrl = process.env["OCR_URL"];
@@ -35,6 +40,18 @@ afterEach(() => {
 });
 
 describe("le second lecteur", () => {
+  it("dit son moteur à la sonde de santé, sans rien d'autre", async () => {
+    delete process.env["OCR_URL"];
+    assert.equal(await moteurDuSecondLecteur(), "absent");
+    process.env["OCR_URL"] = "http://ocr:8000";
+    serviceQuiRend({ ok: true, moteur: "onnx", empreintes: { x: "y" } });
+    assert.equal(await moteurDuSecondLecteur(), "onnx");
+    serviceQuiRend({ ok: true, moteur: "<script>" });
+    assert.equal(await moteurDuSecondLecteur(), "inconnu");
+    serviceQuiRend({}, false);
+    assert.equal(await moteurDuSecondLecteur(), "hs");
+  });
+
   it("sans OCR_URL, il n'existe pas — et ce n'est pas une panne", async () => {
     /*
      * Le jour où le service n'est pas déployé, ou tombe, la chaîne doit se

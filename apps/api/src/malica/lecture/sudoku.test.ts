@@ -738,17 +738,25 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       });
       const rendue = await sudoku.lire(lecture);
       await sudoku.inscrire(rendue);
-      return { rendue, inscrits: inscrits as ChampsLusAInscrire[] };
+      return {
+        rendue,
+        prouvee: sudoku.prouvee(rendue),
+        inscrits: inscrits as ChampsLusAInscrire[],
+      };
     };
 
     const observe = await essayer(false);
     assert.equal(observe.rendue, lecture, "en observation, la lecture n'est pas touchée");
     assert.equal(observe.inscrits.length, 1);
     assert.equal(observe.inscrits[0]!.issue, "prouvee");
+    // En observation, la pièce n'est pas « désignée » : le rattrapage garde son déclencheur.
+    assert.equal(observe.prouvee, false);
 
     const designe = await essayer(true);
     assert.notEqual(designe.rendue, lecture, "branché, la désignation prouvée remplace");
     assert.deepEqual(designe.rendue.selection.totals.ttc, { page: 1, ordinal: 114 });
+    // Branchée et prouvée : la chaîne ne lance pas de rattrapage (read-flow.ts).
+    assert.equal(designe.prouvee, true);
   });
 
   it("le TTC imprimé AVANT le timbre : prouvé par sa variante, et la chaîne reçoit le net", () => {
