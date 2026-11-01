@@ -164,7 +164,10 @@
     "TIMBRE_FISCAL",
     "TOTAL_TTC"
   ],
-  "typesQuiPortentUneEcriture": ["facture_achat", "facture_vente"],
+  "typesQuiPortentUneEcriture": [
+    "facture_achat",
+    "facture_vente"
+  ],
   "titres": [
     {
       "motif": "pro\\s*-?\\s*forma",
@@ -325,7 +328,9 @@
     "timbre.bareme": "bareme_date",
     "ventes.compte": "par_nature_article"
   },
-  "droitsAuCout": ["FODEC"],
+  "droitsAuCout": [
+    "FODEC"
+  ],
   "baremeDesDroits": {
     "standard": "standard",
     "tranches": [
@@ -452,7 +457,10 @@
       "ordre": "jma",
       "siecleDesAnneesCourtes": 20,
       "anneesCourtesEnLettres": false,
-      "suffixesOrdinaux": ["er", "re"],
+      "suffixesOrdinaux": [
+        "er",
+        "re"
+      ],
       "mois": {
         "août": 8,
         "avril": 4,
@@ -489,7 +497,11 @@
     },
     "matricule": {
       "noyau": 7,
-      "groupes": ["lettre", "lettre", 3],
+      "groupes": [
+        "lettre",
+        "lettre",
+        3
+      ],
       "separateur": "/",
       "etiquettes": [
         "\\bmatricule\\s*fiscal(e)?\\b",
@@ -504,7 +516,15 @@
         "م\\s*\\.?\\s*ج\\s*\\.?"
       ],
       "controle": {
-        "poids": [7, 6, 5, 4, 3, 2, 1],
+        "poids": [
+          7,
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ],
         "modulo": 23,
         "alphabet": "ABCDEFGHJKLMNPQRSTVWXYZ",
         "effet": "avertit"
