@@ -1,6 +1,7 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { noterAuJournal } from "./lib/journal-atelier";
+import { estIntrouvable } from "./lib/erreur-lisible";
 import { ErreurReseau } from "./lib/transport/erreurs";
 import { routeTree } from "./routeTree.gen";
 
@@ -17,6 +18,13 @@ import { routeTree } from "./routeTree.gen";
  */
 function journaliser(ou: string, raison: unknown): void {
   if (raison instanceof ErreurReseau) return;
+  /*
+   * Introuvable (404) n'est pas une panne non plus : une pièce supprimée dont
+   * un écran gardait l'aperçu, un lien vers ce qui n'est plus là. L'écran le
+   * dit (`estIntrouvable`) ; au journal, il cachait les vraies pannes
+   * (« Ce qui n'a pas marché », 1er novembre 2026).
+   */
+  if (estIntrouvable(raison)) return;
   // L'écran d'où vient l'échec : c'est lui qu'on ouvre pour corriger.
   const ecran = typeof window === "undefined" ? "" : `${window.location.pathname} · `;
   noterAuJournal(`${ecran}${ou}`, raison);

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 
-import { estIntrouvable, texteDeLErreur, vientDeNous } from "../erreur-lisible";
+import { direUnRefus, estIntrouvable, texteDeLErreur, vientDeNous } from "../erreur-lisible";
+import { estUnIdentifiant } from "../identifiant";
 import { ErreurApi } from "../transport/erreurs";
 import { chargerLaLangue } from "@/i18n/dictionnaires";
 
@@ -121,5 +122,22 @@ describe("une pièce qui n'existe plus", () => {
     expect(estIntrouvable(new ErreurApi("refus", 400))).toBe(false);
     expect(estIntrouvable(new Error("introuvable"))).toBe(false);
     expect(estIntrouvable(null)).toBe(false);
+  });
+});
+
+describe("le journal se relit en clair", () => {
+  it("une clé de refus rangée au journal se dit en phrase, avec sa valeur", async () => {
+    await chargerLaLangue("fr");
+    expect(direUnRefus("refus.moteur.valeur_non_admise?valeur=829e3c34")).toBe(
+      "Cette valeur n’est pas admise : « 829e3c34 ».",
+    );
+    expect(direUnRefus("Texte déjà écrit pour la personne.")).toBe(
+      "Texte déjà écrit pour la personne.",
+    );
+  });
+
+  it("une adresse tronquée n'est pas un identifiant : rien ne part à la base", () => {
+    expect(estUnIdentifiant("829e3c34")).toBe(false);
+    expect(estUnIdentifiant("829e3c34-c8ed-43ba-8599-8957c0a458c1")).toBe(true);
   });
 });

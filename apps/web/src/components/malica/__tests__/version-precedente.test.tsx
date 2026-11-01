@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const dossier = vi.hoisted(() => ({
   piece: {
-    id: "A",
+    id: "00000000-0000-4000-8000-00000000000a",
     tenantId: "pme",
     status: "retournee",
     remplace: null,
@@ -22,7 +22,7 @@ const dossier = vi.hoisted(() => ({
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({
     options,
-    useParams: () => ({ pieceId: "A" }),
+    useParams: () => ({ pieceId: "00000000-0000-4000-8000-00000000000a" }),
   }),
   Link: ({ children }: { children: unknown }) => createElement("a", null, children as never),
   useCanGoBack: () => false,

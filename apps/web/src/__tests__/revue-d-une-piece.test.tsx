@@ -24,7 +24,7 @@ const api = vi.hoisted(() => ({
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: { component: ComponentType }) => ({
     options,
-    useParams: () => ({ pieceId: "piece" }),
+    useParams: () => ({ pieceId: "00000000-0000-4000-8000-000000000001" }),
   }),
   Link: ({
     to,
@@ -72,7 +72,12 @@ vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({
     capture: {
       dossier: async () => ({
-        piece: { id: "piece", tenantId: "client", status: "lue", documentKind: "facture_achat" },
+        piece: {
+          id: "00000000-0000-4000-8000-000000000001",
+          tenantId: "client",
+          status: "lue",
+          documentKind: "facture_achat",
+        },
         contenu: { type: "pdf" },
         extraction: null,
       }),

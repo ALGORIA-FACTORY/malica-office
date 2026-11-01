@@ -23,7 +23,7 @@ import { libelleDOffre, offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/
 import { cleMonCabinet, useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
-import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres } from "@/lib/lisible";
 import { nombre as entier, ouverturesDuForfait } from "@/lib/forfait";
 import { CANAL } from "@/lib/telemetrie";
@@ -1277,7 +1277,7 @@ function PannesConstatees() {
         {(pannes.data ?? []).map((p) => (
           <div key={p.id} className="rw">
             <span className="bd">
-              <b>{p.message}</b>
+              <b>{direUnRefus(p.message)}</b>
               <span>
                 {p.ou}
                 {p.version ? ` · ${p.version}` : ""}

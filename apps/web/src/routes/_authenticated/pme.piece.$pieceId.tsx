@@ -73,6 +73,7 @@ import {
 } from "@malica/socle/statut-d-envoi";
 import { codeDeLecture, demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
 import { useRevenir } from "@/hooks/use-revenir";
+import { estUnIdentifiant } from "@/lib/identifiant";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   head: () => ({
@@ -119,7 +120,48 @@ type Onglet = (typeof ONGLETS)[number];
  */
 function PieceScreenDeLaPiece() {
   const { pieceId } = Route.useParams();
+  // Une adresse qui ne porte pas d'identifiant n'interroge pas la base.
+  if (!estUnIdentifiant(pieceId)) return <PieceIntrouvable />;
   return <PieceScreen key={pieceId} />;
+}
+
+/**
+ * UNE PIÈCE QUI N'EST PLUS LÀ N'EST PAS UNE PANNE (audit du 25 octobre 2026).
+ *
+ * Une suppression accordée par le cabinet efface la pièce ; la notification,
+ * un lien gardé ou une adresse mal copiée y mènent encore. L'écran le dit
+ * calmement, avec son chemin de retour — jamais « Une erreur est survenue ».
+ */
+function PieceIntrouvable() {
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const revenir = useRevenir();
+  return (
+    <div data-ecran="dossier">
+      <div className="top">
+        <button
+          type="button"
+          className="bk"
+          aria-label={t("pme.regler.retour")}
+          onClick={() => revenir("/pme/list")}
+        >
+          <svg viewBox="0 0 24 24" className="g" aria-hidden>
+            <path d="M14.5 5.5L8 12l6.5 6.5" />
+          </svg>
+        </button>
+        <span className="ttl">{t("pme.piece.title")}</span>
+      </div>
+      <div className="centr calme" role="status">
+        <i />
+        <div>
+          <p>{t("pme.piece.supprimee")}</p>
+          <button type="button" onClick={() => void navigate({ to: "/pme/list" })}>
+            {t("pme.regler.retour")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /*
@@ -852,34 +894,7 @@ function PieceScreen() {
      * notification, un lien gardé, y menaient encore — et l'écran disait
      * « Une erreur est survenue », sans chemin de retour.
      */
-    if (estIntrouvable(dossier.error)) {
-      return (
-        <div data-ecran="dossier">
-          <div className="top">
-            <button
-              type="button"
-              className="bk"
-              aria-label={t("pme.regler.retour")}
-              onClick={() => revenir("/pme/list")}
-            >
-              <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                <path d="M14.5 5.5L8 12l6.5 6.5" />
-              </svg>
-            </button>
-            <span className="ttl">{t("pme.piece.title")}</span>
-          </div>
-          <div className="centr calme" role="status">
-            <i />
-            <div>
-              <p>{t("pme.piece.supprimee")}</p>
-              <button type="button" onClick={() => void navigateList()}>
-                {t("pme.regler.retour")}
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    if (estIntrouvable(dossier.error)) return <PieceIntrouvable />;
     return <p className="text-sm text-signal-warn">{t("common.error")}</p>;
   }
 

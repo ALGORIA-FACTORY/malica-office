@@ -53,6 +53,7 @@ import { feuDuStatut } from "@/lib/file-cabinet";
 import { apresLaReponse } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { MOT_CABINET } from "@/lib/statut";
+import { estUnIdentifiant } from "@/lib/identifiant";
 
 export const Route = createFileRoute("/_authenticated/cabinet/piece/$pieceId")({
   head: () => ({
@@ -91,6 +92,18 @@ function libelleDuCompte(plan: readonly CompteDuPlan[], code: string): string | 
 }
 
 function CabinetReview() {
+  const { pieceId } = Route.useParams();
+  // Une adresse qui ne porte pas d'identifiant n'interroge pas la base.
+  if (!estUnIdentifiant(pieceId)) return <PieceSansIdentifiant />;
+  return <CabinetReviewDeLaPiece />;
+}
+
+function PieceSansIdentifiant() {
+  const { t } = useI18n();
+  return <EmptyState>{t("cab.review.nodoc")}</EmptyState>;
+}
+
+function CabinetReviewDeLaPiece() {
   const { pieceId } = Route.useParams();
   const { t, locale } = useI18n();
   const { org } = useCabinet();

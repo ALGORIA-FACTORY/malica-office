@@ -72,14 +72,7 @@ export function texteDeLErreur(raison: unknown, ou: string, defaut: string): str
     // Un refus de la base peut lever une CLÉ du dictionnaire (« refus.licence.
     // transmission ») plutôt qu'une phrase française : on la dit dans la
     // langue de la personne, avec les valeurs qu'elle cite.
-    const dict = (dictionnaireCharge(localeRangee()) ?? DICTIONNAIRE_DE_REPLI) as Record<
-      string,
-      string
-    >;
-    const { cle, valeurs } = lireUnRefus(raison.message);
-    const gabarit = dict[cle];
-    if (gabarit === undefined) return raison.message;
-    return remplirLeGabarit(gabarit, valeurs);
+    return direUnRefus(raison.message);
   }
   // Pas de réseau n'est pas une panne : on le dit, sans l'inscrire au journal —
   // le journal ne dirait rien qu'on ne sache déjà.
@@ -87,6 +80,22 @@ export function texteDeLErreur(raison: unknown, ou: string, defaut: string): str
     return (dictionnaireCharge(localeRangee()) ?? DICTIONNAIRE_DE_REPLI)["common.horsLigne"];
   noterAuJournal(ou, raison);
   return defaut;
+}
+
+/**
+ * Un refus rangé tel que la base l'a levé — une clé du dictionnaire et ses
+ * valeurs (« refus.moteur.valeur_non_admise?valeur=… ») —, dit dans la langue
+ * de la personne. Un texte qui n'est pas une clé connue est rendu tel quel.
+ * « Ce qui n'a pas marché » (réglages) relit ainsi le journal en clair.
+ */
+export function direUnRefus(message: string): string {
+  const dict = (dictionnaireCharge(localeRangee()) ?? DICTIONNAIRE_DE_REPLI) as Record<
+    string,
+    string
+  >;
+  const { cle, valeurs } = lireUnRefus(message);
+  const gabarit = dict[cle];
+  return gabarit === undefined ? message : remplirLeGabarit(gabarit, valeurs);
 }
 
 /**
