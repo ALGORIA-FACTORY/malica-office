@@ -278,12 +278,13 @@ test("le même accueil utilise le desktop et conserve la navigation du télépho
       fenetre: window.innerWidth,
     }));
     expect(dimensions.page).toBeLessThanOrEqual(dimensions.fenetre + 1);
+    // La bibliothèque est dans la barre à toutes les largeurs (1er novembre 2026).
+    await expect(nav.getByRole("link", { name: "Bibliothèque", exact: true })).toBeVisible();
     if (largeur >= 1024) {
       expect(dimensions.contenu).toBeGreaterThan(largeur * 0.65);
-      await expect(nav.getByRole("link", { name: "Mes pièces", exact: true })).toBeVisible();
       await expect(nav.getByRole("link", { name: "Échéances", exact: true })).toBeVisible();
     } else {
-      await expect(nav.getByRole("link", { name: "Mes pièces", exact: true })).toBeHidden();
+      await expect(nav.getByRole("link", { name: "Échéances", exact: true })).toBeHidden();
     }
   }
 });

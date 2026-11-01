@@ -631,44 +631,27 @@ function PmeLayout() {
          * pouces est un portage, pas un produit.
          */}
         <nav aria-label={t("pme.nav.aria")} className="nav">
+          {/*
+           * 1er novembre 2026, maquette validée par Wissem : Société ·
+           * Bibliothèque · Privé, puis « + » à DROITE, plus grand et plein — sous
+           * le pouce, et séparé d'un filet : c'est une action, pas un quatrième
+           * écran. À droite aussi en arabe (sa décision) : la feuille l'y tient.
+           * Sur poste, la même liste devient le rail, « Ajouter » en bas.
+           */}
           <NavItem {...navItems[0]} />
+          <NavItem
+            to="/pme/list"
+            icon={FileText}
+            label={t("pme.home.bibliotheque")}
+            active={path.startsWith("/pme/list")}
+          />
           <div className="nav-desktop">
-            <NavItem
-              to="/pme/list"
-              icon={FileText}
-              label={t("pme.list.title")}
-              active={path.startsWith("/pme/list")}
-            />
             <NavItem
               to="/pme/echeances"
               icon={CalendarClock}
               label={t("pme.echeances.title")}
               active={path === "/pme/echeances"}
             />
-          </div>
-          <div className="flex justify-center py-[11px]">
-            {/*
-             * L'obturateur ne porte plus que sa géométrie en utilitaires : la
-             * cible de 58 px et le centrage. Sa PEAU est dans la feuille,
-             * sous `.obtur` — le carré arrondi au trait d'accent que dit le
-             * dessin, et l'état désactivé en `[disabled]` comme partout dans
-             * ce dépôt. `bg-foreground` le peignait en disque noir dès que le
-             * thème est passé au clair : une couleur de thème écrite sur
-             * l'élément ne peut pas suivre la palette.
-             */}
-            <button
-              type="button"
-              disabled={!org || capture.isPending}
-              onClick={() => {
-                setNumeroAjout((n) => n + 1);
-                void navigate({ to: "/pme/capturer", search: {} });
-              }}
-              aria-label={t("pme.nav.add")}
-              className="obtur grid h-[58px] w-[58px] place-items-center"
-            >
-              <Plus className="h-[25px] w-[25px]" aria-hidden />
-              <span className="nav-desktop">{t("pme.nav.add")}</span>
-            </button>
           </div>
           <NavItem {...navItems[1]} />
           <div className="nav-desktop">
@@ -678,6 +661,25 @@ function PmeLayout() {
               label={t("pme.reglages.titre")}
               active={path === "/pme/reglages"}
             />
+          </div>
+          <div className="ajout">
+            {/*
+             * L'obturateur ne porte que sa géométrie en utilitaires : la cible
+             * et le centrage. Sa PEAU est dans la feuille, sous `.obtur`.
+             */}
+            <button
+              type="button"
+              disabled={!org || capture.isPending}
+              onClick={() => {
+                setNumeroAjout((n) => n + 1);
+                void navigate({ to: "/pme/capturer", search: {} });
+              }}
+              aria-label={t("pme.nav.add")}
+              className="obtur grid h-16 w-16 place-items-center"
+            >
+              <Plus className="h-7 w-7" aria-hidden />
+              <span className="nav-desktop">{t("pme.nav.add")}</span>
+            </button>
           </div>
         </nav>
 

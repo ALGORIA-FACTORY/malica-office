@@ -403,7 +403,9 @@
  * mange la dernière ligne de chaque liste, et la dernière ligne est souvent
  * celle qu'on cherchait. */
 [data-surface="pme"] .nav {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center;
+  /* Société · Bibliothèque · Privé, puis « + » : la dernière colonne est à
+   * sa mesure (1er novembre 2026). */
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: center;
   margin-top: 1.75rem;
   /* Epinglee, elle se pose sur la zone de gestes : le 1.375rem devient un
    * plancher, et `env()` fait le reste. Pas d'autre plancher — une erreur de
@@ -448,18 +450,23 @@
  * 15px de rayon ; on prend `--r-md` (16px) plutot qu'un cinquieme rayon pour un
  * seul element — 1px d'ecart, assume. */
 [data-surface="pme"] .nav .obtur {
-  border: 1.5px solid var(--acc);
+  border: 0;
   border-radius: var(--r-md);
-  background: none;
-  color: var(--acc);
-  transition: background var(--t), color var(--t);
+  background: var(--acc);
+  color: var(--on-acc);
 }
 [data-surface="pme"] .nav .obtur[disabled] { opacity: .4; cursor: default }
-@media (hover: hover) and (pointer: fine) {
-  [data-surface="pme"] .nav .obtur:hover:not([disabled]) {
-    background: var(--acc); color: var(--on-acc);
-  }
+/* Le « + » est TOUJOURS à droite, sous le pouce — en arabe aussi (décision de
+ * Wissem, 1er novembre 2026). Le filet est donc à gauche, physiquement, et en
+ * droite-à-gauche la colonne passe en tête de la grille, c'est-à-dire à droite. */
+[data-surface="pme"] .nav .ajout {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-left: .5rem; border-left: 1px solid var(--hr);
 }
+[dir="rtl"] [data-surface="pme"] .nav,
+[data-surface="pme"][dir="rtl"] .nav { grid-template-columns: auto repeat(3, minmax(0, 1fr)) }
+[dir="rtl"] [data-surface="pme"] .nav .ajout,
+[data-surface="pme"][dir="rtl"] .nav .ajout { order: -1 }
 
 /* --- Malica parle --------------------------------------------------------
  * Large et discrète : elle occupe toute la colonne et ne se teinte pas. Son
@@ -624,6 +631,12 @@
     min-height: 44px;
   }
   [data-surface="pme"] .nav a[data-on="true"] { background: var(--d1) }
+  /* Sur le rail, « Ajouter » ferme la liste, sans filet ni ordre forcé. */
+  [data-surface="pme"] .nav .ajout,
+  [dir="rtl"] [data-surface="pme"] .nav .ajout,
+  [data-surface="pme"][dir="rtl"] .nav .ajout {
+    order: 0; display: block; padding: 0; border: 0; margin-top: .5rem;
+  }
   [data-surface="pme"] .nav .obtur {
     width: 100%;
     height: auto;
