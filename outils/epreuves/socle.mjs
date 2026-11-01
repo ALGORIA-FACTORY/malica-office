@@ -39,6 +39,20 @@ export const COMPTE_DEV = {
   motDePasse: process.env["MALICA_MDP_DEV"] ?? "DeveloppeurMalica2026!",
 };
 
+/**
+ * Le second expert du cabinet de développement, créé par le même jeu d'essai.
+ *
+ * Le compte de développement est à la fois membre de ses dossiers et expert
+ * du cabinet qui les supervise. Une demande qu'il fait au cabinet — le rappel
+ * d'une pièce transmise — ne peut pas être tranchée par lui : nul ne tranche
+ * sa propre demande (`public.piece_repondre`, #146). Un autre expert du
+ * cabinet, qui n'est pas membre du dossier, l'accorde : le chemin réel.
+ */
+export const SECOND_EXPERT_DEV = {
+  email: "dev.second-expert@malica.local",
+  motDePasse: COMPTE_DEV.motDePasse,
+};
+
 /** Le dirigeant d'épreuve, partagé par les épreuves qui en ont besoin. */
 export const DIRIGEANT_EPREUVE = {
   email: "epreuve.dirigeant@malica.local",

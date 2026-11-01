@@ -37,11 +37,9 @@
 // L'identité du compte de développement vient du socle des épreuves : une
 // seule déclaration pour tout le dépôt, qu'une variable d'environnement
 // remplace sur un environnement joignable depuis Internet.
-import { COMPTE_DEV, tolererLeCertificatLocal } from "./epreuves/socle.mjs";
+import { COMPTE_DEV, SECOND_EXPERT_DEV, tolererLeCertificatLocal } from "./epreuves/socle.mjs";
 
 const BASE = (process.argv[2] ?? "http://localhost:8080").replace(/\/+$/, "");
-const EMAIL = COMPTE_DEV.email;
-const MOTDEPASSE = COMPTE_DEV.motDePasse;
 
 /*
  * Le certificat de développement est signé par lui-même : l'épreuve doit
@@ -80,6 +78,15 @@ async function rpc(depot, methode, args = []) {
   return (await r.json()).resultat;
 }
 
+/** Ouvre une session : le cookie posé par la réponse remplace le précédent. */
+function connecter(compte) {
+  return appel("/auth/connexion", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: compte.email, motDePasse: compte.motDePasse }),
+  });
+}
+
 console.log(`\nÉpreuve de bout en bout — ${BASE}\n`);
 
 /* ------------------------------------------------- 1. les pages de l'app */
@@ -98,11 +105,7 @@ console.log("\nLa session");
   verdict("sans jeton, l'API refuse", r.status === 401, `${r.status}`);
 }
 {
-  const r = await appel("/auth/connexion", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: EMAIL, motDePasse: MOTDEPASSE }),
-  });
+  const r = await connecter(COMPTE_DEV);
   verdict("connexion", r.status === 200, `${r.status}`);
   if (r.status !== 200) {
     console.log("\n  La suite dépend de la session. Arrêt.\n");
@@ -114,11 +117,7 @@ console.log("\nLa session");
   verdict("le cookie porte la session", r.status === 200, `${r.status}`);
 }
 {
-  const r = await appel("/auth/connexion", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: EMAIL, motDePasse: "mauvais-mot-de-passe" }),
-  });
+  const r = await connecter({ email: COMPTE_DEV.email, motDePasse: "mauvais-mot-de-passe" });
   verdict("un mauvais mot de passe est refusé", r.status === 401, `${r.status}`);
 }
 
@@ -352,18 +351,28 @@ console.log("\nLa transmission et la suppression");
   // rappel, le cabinet l'accorde, et c'est l'accord qui la remet chez elle.
   // Forcer `setPieceVis(…, "personnel")` est refusé par la base depuis le
   // 22 octobre 2026 — l'épreuve passe donc par le chemin réel.
-  await rpc("collab", "demanderSurPiece", [transmise.id, "rappel"]);
-  await rpc("collab", "repondreSurPiece", [transmise.id, "rappel", true, null]);
+  // La première pièce a aussi été capturée « partage » (section 5) : elle
+  // revient par le même rappel accordé, puis les deux s'effacent.
+  const reprises = [transmise.id, piece.id];
+  for (const id of reprises) await rpc("collab", "demanderSurPiece", [id, "rappel"]);
+  // Nul ne tranche sa propre demande (#146) : le compte de développement est
+  // membre du dossier, c'est un autre expert du cabinet qui accorde le rappel.
+  {
+    const r = await connecter(SECOND_EXPERT_DEV);
+    if (r.status !== 200) {
+      throw new Error(
+        `connexion du second expert refusée (${r.status}) : lancez db/dev/jeu_dessai.mjs`,
+      );
+    }
+  }
+  for (const id of reprises) await rpc("collab", "repondreSurPiece", [id, "rappel", true, null]);
+  await connecter(COMPTE_DEV);
   const fileApres = cabinet ? await rpc("supervision", "queue", [cabinet.id]) : [];
   verdict(
     "une pièce reprise quitte la file du cabinet",
     !fileApres.some((p) => p.pieceId === transmise.id || p.piece_id === transmise.id),
   );
-  // La première pièce a aussi été capturée « partage » (section 5) : elle revient
-  // par le même rappel accordé, puis les deux s'effacent.
-  await rpc("collab", "demanderSurPiece", [piece.id, "rappel"]);
-  await rpc("collab", "repondreSurPiece", [piece.id, "rappel", true, null]);
-  for (const id of [transmise.id, piece.id]) await rpc("capture", "supprimer", [id]);
+  for (const id of reprises) await rpc("capture", "supprimer", [id]);
   const restant = await rpc("capture", "listAvecLecture", [dossier.id]);
   const traces = restant.filter((p) => p.id === transmise.id || p.id === piece.id);
   verdict(
