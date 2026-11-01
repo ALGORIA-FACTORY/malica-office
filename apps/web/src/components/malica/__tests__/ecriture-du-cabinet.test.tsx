@@ -317,6 +317,25 @@ describe("la pièce côté comptable", () => {
   beforeEach(() => vi.resetAllMocks());
   afterEach(cleanup);
 
+  it("une date hors du référentiel se dit traduite, avec la date, jamais la phrase du serveur", () => {
+    // Recette (pièce 042) : une date mal lue rendait une 400 et une phrase française.
+    monter({
+      ok: false,
+      raison: "Aucune écriture ne se propose : aucun pack n'est en vigueur au 2020-10-01.",
+      raisonCode: "date_hors_referentiel",
+      dateHorsReferentiel: "2020-10-01",
+    } as PropositionDePiece);
+    expect(screen.getByText("cab.ecriture.date_hors_referentiel")).toBeTruthy();
+    expect(screen.queryByText("cab.ecriture.rien")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /cab\.ecriture\.date_hors_referentiel$/ }));
+    expect(
+      screen.getByText(
+        `cab.ecriture.date_hors_referentiel.aide ${JSON.stringify({ date: "01/10/2020" })}`,
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/aucun pack n'est en vigueur/)).toBeNull();
+  });
+
   it("rien de proposé : le comptable SAISIT l'écriture, elle part forcée", async () => {
     api.forcer.mockResolvedValue("e1");
     monter(RIEN);
