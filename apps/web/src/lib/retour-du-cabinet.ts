@@ -34,6 +34,18 @@ export const FAIT_DU_GESTE: Partial<Record<GesteDeRetour, MessageKey>> = {
 };
 
 /**
+ * La pièce est CORRIGÉE quand le geste demandé a laissé sa trace. La base dit
+ * « fait » d'un geste sans trace (`preuve = 'aucune'` : un doublon, un
+ * règlement annulé) dès le retour : rien n'y a été corrigé, et un doublon
+ * annoncé « Corrigée — prête à renvoyer » invitait à renvoyer la copie en
+ * trop (recette du 1er novembre 2026). Elle reste « Retournée » ; son geste
+ * reste en tête.
+ */
+export function estCorrigee(geste: GesteDeRetour, fait: boolean): boolean {
+  return fait && FAIT_DU_GESTE[geste] != null;
+}
+
+/**
  * Les sorties d'une pièce retournée (« Malica sans blocage », 28 octobre
  * 2026) : rien ne bloque. `geste` est le geste propre au motif quand aucune
  * autre sortie ne le porte déjà (joindre un document, corriger la date, voir
@@ -56,7 +68,7 @@ const SORTIE_DU_GESTE: Partial<Record<GesteDeRetour, SortieDuRetour>> = {
  */
 export function sortiesDuRetour(geste: GesteDeRetour, fait: boolean): SortieDuRetour[] {
   const duMotif = SORTIE_DU_GESTE[geste] ?? "geste";
-  const ordre: SortieDuRetour[] = fait
+  const ordre: SortieDuRetour[] = estCorrigee(geste, fait)
     ? ["renvoyer", duMotif, "reprendre_photo", "repondre", "garder", "supprimer"]
     : [duMotif, "renvoyer", "reprendre_photo", "repondre", "garder", "supprimer"];
   return [...new Set(ordre)];

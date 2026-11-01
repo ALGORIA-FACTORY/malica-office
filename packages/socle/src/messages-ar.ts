@@ -663,6 +663,7 @@ export const ar: Dict = {
   "pme.home.attend.cabinet#other": "{cabinet} ينتظر {count} توضيحًا",
   "pme.regler.retour": "رجوع",
   "pme.regler.demande": "{cabinet} يحتاج توضيحًا بشأن فاتورة {emetteur}. هل يمكنك إعادة تصويرها؟",
+  "pme.regler.demande.piece": "أعاد {cabinet} إليكم فاتورة {emetteur}. يتم كل شيء من الوثيقة.",
   "pme.regler.motif": "السبب المذكور:",
   "pme.regler.motifInconnu": "غير محدَّد",
   "pme.regler.reprendre": "أعد التقاط الصورة",

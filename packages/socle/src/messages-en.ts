@@ -682,6 +682,8 @@ export const en: Dict = {
   "pme.regler.retour": "Back",
   "pme.regler.demande":
     "{cabinet} needs a clarification on the {emetteur} invoice. Could you photograph it again?",
+  "pme.regler.demande.piece":
+    "{cabinet} returned the invoice from {emetteur}. Everything is done from the document.",
   "pme.regler.motif": "Reason given:",
   "pme.regler.motifInconnu": "not specified",
   "pme.regler.reprendre": "Retake the photo",

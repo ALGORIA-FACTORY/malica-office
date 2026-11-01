@@ -136,6 +136,12 @@ describe("une pièce retournée ne bloque jamais", () => {
     expect(g.supprimer.action).toHaveBeenCalledOnce();
   });
 
+  it("un doublon tel que la base le rend (« fait » d'emblée) n'est pas « Corrigée »", () => {
+    monter({ geste: "demander_suppression", motif: "doublon", fait: true });
+    expect(screen.queryByText("pme.retour.etat.pret")).toBeNull();
+    expect(sorties()[0]).toBe("pme.retour.supprimer");
+  });
+
   it("ce que fait chaque sortie est dans le ⓘ, pas dans la carte", () => {
     monter();
     expect(screen.queryByText(/pme\.retour\.aide\.renvoyer/)).toBeNull();

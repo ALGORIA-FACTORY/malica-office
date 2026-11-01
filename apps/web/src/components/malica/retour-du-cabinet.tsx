@@ -34,6 +34,7 @@ import { jourEtMois, momentDeLEnvoi } from "@/lib/lisible";
 import {
   FAIT_DU_GESTE,
   LIBELLE_DU_GESTE,
+  estCorrigee,
   sortiesDuRetour,
   type SortieDuRetour,
 } from "@/lib/retour-du-cabinet";
@@ -93,7 +94,8 @@ export function CarteDuRetour({
   // Qui l'a retournée : le cabinet, ou le prénom du propriétaire.
   const qui = retour.qui ?? t("pme.coffre.votreComptable");
   const faitLibelle = FAIT_DU_GESTE[retour.geste];
-  const montrerLeFait = retour.fait && faitLibelle != null;
+  const corrigee = estCorrigee(retour.geste, retour.fait);
+  const montrerLeFait = corrigee && faitLibelle != null;
   const permises: Partial<Record<SortieDuRetour, Geste | null>> = { renvoyer, garder, supprimer };
   const sorties = sortiesDuRetour(retour.geste, retour.fait).filter(
     (s) => !(s in permises) || permises[s] != null,
@@ -117,9 +119,9 @@ export function CarteDuRetour({
   return (
     <div className="f-ret">
       <div className="f-ret-dit">
-        <span className={retour.fait ? "f-ret-etat ok" : "f-ret-etat"}>
+        <span className={corrigee ? "f-ret-etat ok" : "f-ret-etat"}>
           <i />
-          {retour.fait
+          {corrigee
             ? t("pme.retour.etat.pret")
             : retour.chez === "proprietaire"
               ? // Le propriétaire au siège : son prénom, pas « votre comptabilité ».
