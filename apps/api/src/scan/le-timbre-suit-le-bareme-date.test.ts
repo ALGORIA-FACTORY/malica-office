@@ -224,4 +224,17 @@ describe("le timbre suit le barème daté", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.ok(categories.every((c) => c.libelle !== c.code));
   });
+
+  it("une personne étrangère au dossier ne classe pas son fournisseur", async () => {
+    const etranger = await creerCompte(`${marque}-etranger@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(etranger);
+    await classer("grandes_surfaces");
+    await assert.rejects(
+      sousIdentite(etranger.id, (db) => tiers.classer(db, fournisseur, null)),
+      /refus\.introuvable/,
+    );
+    const vus = await sousIdentite(u.id, (db) => tiers.lister(db, org, "fournisseur"));
+    assert.equal(vus.find((x) => x.id === fournisseur)?.categorieDeBareme, "grandes_surfaces");
+    await classer(null);
+  });
 });
