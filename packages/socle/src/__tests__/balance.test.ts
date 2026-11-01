@@ -204,6 +204,62 @@ describe("balance / pivot", () => {
   });
 });
 
+describe("balance / base sans TVA", () => {
+  // Recette sur le staging (1er novembre 2026) : une vente à l'export se
+  // proposait sans code de régime ; sa base manquait à la déclaration, et le
+  // forçage, lui, la refusait pour cette raison (revue de #140, cas J).
+  const EXPORT = {
+    code: "EXPORT",
+    label: "Export",
+    rate: "0",
+    valid_from: "2018-01-01",
+    valid_to: null,
+    jurisdiction: "TN",
+  };
+  const venteExport = () => {
+    const f = factureVenteSimple();
+    return {
+      ...f,
+      lines: [
+        {
+          label: "Vente",
+          tax_code: "EXPORT",
+          base_ht: "2000.000",
+          vat_amount: "0",
+          ttc: "2000.000",
+        },
+      ],
+      totals: { base_ht: "2000.000", vat: "0", ttc: "2000.000" },
+    };
+  };
+
+  it("une base sans TVA porte son code de régime", () => {
+    const p = computePivot({
+      extract: venteExport(),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: [...TAX_RATES_TN, EXPORT],
+      mapping: MAP_VENTE,
+      tolerances: TOLERANCES,
+    });
+    const base = p.lines.find((l) => l.account_code === MAP_VENTE.charge_or_product_account);
+    expect(base?.tax_code).toBe("EXPORT");
+  });
+
+  it("une base avec TVA ne change pas : son code reste sur la ligne de TVA", () => {
+    const p = computePivot({
+      extract: factureVenteSimple(),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_VENTE,
+      tolerances: TOLERANCES,
+    });
+    const base = p.lines.find((l) => l.account_code === MAP_VENTE.charge_or_product_account);
+    expect(base?.tax_code).toBeUndefined();
+  });
+});
+
 describe("balance / droits hors TVA", () => {
   const timbre = [
     {

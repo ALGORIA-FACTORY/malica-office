@@ -599,6 +599,11 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
     // Une vente : par compte de sa NATURE et par taux, chaque base avec son code
     // (`ventes.compte`) ; une nature par article, ventilée par leurs totaux.
     const bases = new Map();
+    // Le régime de chaque base : une base sans TVA (exonérée, export) dit son
+    // code, sans quoi elle manque à la déclaration — la règle du forçage
+    // (`refus.ecriture.taxe_sans_tva`, revue de #140) ; découvert par la
+    // recette sur le staging (1er novembre 2026).
+    const codesDesBases = new Map();
     const ajouter = (cle, m) => bases.set(cle, (bases.get(cle) ?? 0n) + m);
     for (const l of parTaux) {
       if (sens === "facture_vente") {
@@ -621,6 +626,7 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
           ? COMPLEMENT.immobilisation.compte
           : imputation(sens, l.code).mainAccount;
       ajouter(compte, conv(l.baseHt));
+      codesDesBases.set(compte, [...(codesDesBases.get(compte) ?? []), l.code]);
     }
     const tvas = parTaux.map((l) => ({
       code: l.code,
@@ -652,9 +658,11 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
       lignes.push(debit ? [compte, decD(m), "0", code] : [compte, "0", decD(m), code]);
     };
     // La clé d'une base : son compte, et son code de taux pour une vente.
+    const sansTva = tvas.every((t) => t.m === 0n);
     for (const [cle, m] of bases) {
       const [compte, code] = cle.split("|");
-      posePiece(compte, m, code);
+      const codes = [...new Set(codesDesBases.get(cle) ?? [])];
+      posePiece(compte, m, code ?? (sansTva && codes.length === 1 ? codes[0] : undefined));
     }
     for (const t of tvas) posePiece(t.compte, t.m, t.code);
     for (const d of lesDroits) posePiece(d.compte, d.m);

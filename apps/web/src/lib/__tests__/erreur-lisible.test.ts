@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { estIntrouvable, texteDeLErreur, vientDeNous } from "../erreur-lisible";
 import { ErreurApi } from "../transport/erreurs";
+import { chargerLaLangue } from "@/i18n/dictionnaires";
 
 const DEFAUT = "Une erreur est survenue.";
 
@@ -63,7 +64,10 @@ describe("ce qu'on montre d'une erreur", () => {
    * « cette valeur n'est pas admise : « … » ») à un écran réglé en arabe.
    * Elle rend désormais une clé, et la valeur citée la suit.
    */
-  it("dit un refus de l'API dans la langue de la personne, avec la valeur qu'il cite", () => {
+  it("dit un refus de l'API dans la langue de la personne, avec la valeur qu'il cite", async () => {
+    // L'écran n'affiche une langue qu'une fois son dictionnaire chargé
+    // (i18n/dictionnaires.ts) : l'essai la charge comme lui.
+    await chargerLaLangue("ar");
     window.localStorage.setItem("malica.locale", "ar");
     try {
       expect(texteDeLErreur(new ErreurApi("refus.introuvable", 404), "épreuve", DEFAUT)).toBe(

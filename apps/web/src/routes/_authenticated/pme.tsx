@@ -1,5 +1,5 @@
 import { LienMonEspaceParti } from "@/components/malica/mon-espace-parti";
-import { MESSAGES } from "@malica/socle/messages";
+import { fr } from "@malica/socle/messages-fr";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -52,7 +52,7 @@ const CameraScanner = lazy(() =>
  * L'en-tête se rend avant que la langue de la personne soit connue : il se lit
  * dans la langue par défaut du dictionnaire, jamais en dur dans le code.
  */
-const META = MESSAGES.fr;
+const META = fr;
 
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
