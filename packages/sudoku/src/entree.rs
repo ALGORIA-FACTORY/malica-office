@@ -67,6 +67,21 @@ pub struct Jeton {
     /// Date ISO rendue par `normalizeDate`, ou `null`.
     #[serde(default)]
     pub date: Option<String>,
+    /// Pour un jeton chiffré sans espace dont la partie entière a au moins 4 chiffres : ses
+    /// coupes possibles en deux cases collées, lues par le lecteur de production. Le moteur
+    /// ne fait que choisir une coupe fournie ; il ne relit jamais le texte.
+    #[serde(default)]
+    pub decoupes: Vec<Decoupe>,
+}
+
+/// Une coupe d'un jeton : `coupe` caractères à gauche lus comme un entier (en unités
+/// mineures), le reste lu comme un montant.
+#[derive(Deserialize, Clone)]
+pub struct Decoupe {
+    pub coupe: usize,
+    pub gauche: i64,
+    #[serde(default)]
+    pub droite: Vec<Lecture>,
 }
 
 #[derive(Deserialize, Clone, Copy)]

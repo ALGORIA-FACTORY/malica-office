@@ -50,6 +50,10 @@ pub struct Cite {
     /// bande de la rangée), pour une relecture ciblée.
     #[serde(rename = "case", skip_serializing_if = "Option::is_none")]
     pub case_: Option<Case>,
+    /// Pour une cellule issue d'une case collée (`statut` « coupe ») : la coupe retenue,
+    /// en caractères à gauche du jeton cité.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub coupe: Option<usize>,
 }
 
 /// Un rectangle de la page, en coordonnées du plan.
@@ -64,7 +68,7 @@ pub struct Case {
 
 impl Cite {
     fn lue(valeur: String, refs: Vec<RefJeton>) -> Self {
-        Cite { valeur, refs, statut: None, case_: None }
+        Cite { valeur, refs, statut: None, case_: None, coupe: None }
     }
 }
 
@@ -94,6 +98,10 @@ pub struct LignesSortie {
     /// Le nombre de cellules déduites (lecture du milieu), quand il y en a.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub deduites: Option<usize>,
+    /// La remise globale qui sépare Σ montants des lignes du total HT prouvé, quand c'est
+    /// elle qui ferme le tableau : sa valeur (positive) et le jeton qui la porte.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remise_globale: Option<Cite>,
 }
 
 /// L'op lue dans la grille.
@@ -102,6 +110,9 @@ pub struct OpLignes {
     pub total_brut: Option<String>,
     /// Le champ de la remise de ligne, s'il est déclaré (ses repères disent un tableau à remise).
     pub remise: Option<String>,
+    /// Le champ de la remise globale, s'il est déclaré : ses repères ancrent, dans le bloc
+    /// des totaux, la remise qui sépare Σ montants du total HT.
+    pub remise_globale: Option<String>,
     /// Les champs des lignes (désignation, quantité, prix, remise, montant, taux).
     pub champs_lignes: Vec<String>,
     /// Les champs des trois colonnes chiffrées : quantité, prix, montant.
@@ -170,9 +181,16 @@ pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpLignes, String> {
     let bareme = cle(e, "bareme").or_else(|| groupe.and_then(|g| cle(g, "bareme")));
     let base_par_taux = groupe.and_then(|g| cle(g, "base"));
     let total_base = groupe.and_then(|g| cle(g, "total_base"));
+    let remise_globale = match cle(e, "remise_globale") {
+        Some(r) => {
+            numerique(&r)?;
+            Some(r)
+        }
+        None => None,
+    };
     let champs_lignes =
         ["designation", "quantite", "prix", "remise", "montant", "taux"].iter().filter_map(|k| cle(e, k)).collect();
-    Ok(OpLignes { montant_total: total, total_brut, remise, champs_lignes, colonnes, bareme, base_par_taux, total_base, avec_taux })
+    Ok(OpLignes { montant_total: total, total_brut, remise, remise_globale, champs_lignes, colonnes, bareme, base_par_taux, total_base, avec_taux })
 }
 
 /// Un triplet d'une rangée (indices dans la rangée triée de gauche à droite).
@@ -438,6 +456,7 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
         instances: Vec::new(),
         taux_par_base: "non_evaluable".into(),
         deduites: None,
+        remise_globale: None,
     };
 
     let rangs = rangees(&entree.jetons);
@@ -445,7 +464,7 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
         rangs.iter().enumerate().map(|(i, r)| (i, ctx.triplets(r))).filter(|(_, t)| !t.is_empty()).collect();
     let cibles: Vec<i64> =
         [Some(op.montant_total.as_str()), op.total_brut.as_deref()].into_iter().flatten().filter_map(|c| prouvee(champs, c)).collect();
-    let (mut instances, deduites) = if candidates.is_empty() {
+    let lu = if candidates.is_empty() {
         // aucune rangée q × p = m : seule une graine ancrée par l'en-tête peut lire le tableau
         let r = if cibles.is_empty() { None } else { milieu::prouver(&ctx, op, &entree.grille, &rangs, &cibles) };
         match r {
@@ -456,7 +475,7 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
         return (vide("signale"), "non_evaluable");
     } else {
         match toujours(&ctx, op, &rangs, candidates, &cibles) {
-            Ok(i) => (i, 0),
+            Ok(instances) => milieu::Lu { instances, deduites: 0, remise_globale: None },
             // la stratégie de toujours ne prouve pas : la lecture du milieu, sinon son verdict
             Err(st) => match milieu::prouver(&ctx, op, &entree.grille, &rangs, &cibles) {
                 Some(r) => r,
@@ -464,12 +483,14 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
             },
         }
     };
+    let milieu::Lu { mut instances, deduites, remise_globale } = lu;
     let taux_par_base = verifier_taux(op, champs, &mut instances);
     let sortie = LignesSortie {
         statut: "prouve".into(),
         instances,
         taux_par_base: taux_par_base.into(),
         deduites: (deduites > 0).then_some(deduites),
+        remise_globale,
     };
     (sortie, "verifiee")
 }

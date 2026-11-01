@@ -91,6 +91,26 @@ ont leur propre statut, et l'issue de la pièce reste celle du centre.
 
   Une cellule déduite ne remplace jamais une désignation de la chaîne.
 
+  Trois cas s'ajoutent (1er novembre 2026) :
+
+  - **Tableau sur plusieurs pages.** Chaque page apprend ses colonnes depuis sa
+    propre graine ; les segments s'enchaînent tant qu'une page ne s'est pas
+    close sur un total du centre. Une rangée qui ne porte qu'un montant est un
+    report (« À reporter ») : elle n'est pas un article, et doit valoir la somme
+    courante, au millime.
+  - **Remise globale.** Quand le total brut n'est pas prouvé, les lignes
+    ferment sur Σ montants − remise = total HT, avec une remise imprimée (montant
+    fort, ou taux lu) sur une rangée du bloc des totaux qui porte un repère du
+    champ `remise_globale`. Un total brut lu doit valoir Σ. Le centre n'est pas
+    touché. La sortie porte `lignes.remise_globale` (valeur et citation).
+  - **Deux cases collées par l'OCR** (« 1 » et « 2400,000 » lus « 12400,000 »).
+    L'adaptateur propose les coupes du jeton (`decoupes`, lues par le lecteur
+    de production) ; le moteur n'en retient une que si la boîte du jeton est à
+    cheval sur les colonnes quantité et prix apprises, à l'endroit de la coupe,
+    et que gauche × droite = montant de la rangée. Les deux cellules citent le
+    même jeton, au statut `coupe`, avec la coupe retenue ; la chaîne ne les
+    relit pas dans ce jeton.
+
 - **Anneau 2 — les parties** (`{"op":"parties", …}`, preuve E01). Un seul des
   matricules lus est celui du dossier, et un indice imprimé (« client »,
   « émetteur ») dit le sens. La contrepartie est rapprochée des tiers du dossier,
@@ -127,6 +147,10 @@ en base par l'adaptateur.
 - Un taux nul n'entre pas au barème : l'exonération passe par la mention, jamais
   par une instance « 0 % » que n'importe quel zéro imprimé fermerait.
 - `date` : la date ISO rendue par `normalizeDate`, ou `null`.
+- `decoupes` (facultatif) : pour un nombre sans espace dont la partie entière a
+  au moins quatre chiffres, les coupes possibles
+  `[{"coupe":k,"gauche":<entier>,"droite":[{"v","forte"}]}]` — k caractères
+  lus comme un entier, le reste comme un montant. Le moteur ne relit pas le texte.
 - Les taux sont en parties par million : aucun flottant.
 
 ## 4. La sortie du moteur (JSON)
@@ -258,6 +282,24 @@ quantités trouvées par le calcul, et 0 ligne fausse. Les mutations donnent
 aussi 0 fausse : 1 358 montants changés, 219 prix effacés, 273 paires de
 montants effacées. Sur la couche de texte et sur le staging, les lignes
 restent inchangées : 0 différence avec les articles de la chaîne.
+
+**Tableaux sur deux pages, remises globales, cases collées** (1er novembre 2026) :
+
+| Lecture                           | Lignes prouvées                                     | Fausses |
+| --------------------------------- | --------------------------------------------------- | ------- |
+| OCR rapide, 150 factures fictives | 76 (70 avant), 199 quantités trouvées par le calcul | **0**   |
+| Couche de texte, 134 pièces       | 90 (84 avant)                                       | **0**   |
+
+- Deux pages : 50/37 (45 lignes) et 100/D-19 prouvées justes.
+- Remise globale : 100/A-05, A-20 et 50/22 prouvées justes.
+- Case collée : la coupe est retenue sur 50/11 ; la pièce reste signalée, car
+  la quantité « 1 » de sa première rangée est imprimée au-delà de la frontière
+  des colonnes. Aucune pièce réelle du jeu ne se ferme encore par une coupe.
+- Mutations, 0 fausse : 1 732 chiffres changés, 284 prix effacés, 1 295 paires
+  de montants effacées ; un report changé d'un millime, une remise fausse ou
+  absente, une case collée ramenée dans une seule colonne ne prouvent plus rien.
+- Centre et anneau 2 inchangés : 284 pièces, 568 lectures, 0 écart au témoin.
+- Staging : non rejoué pour ce lot (poste du dirigeant non relié).
 
 Moteur seul (`cargo test`, grille d'essai) : 60/60, 0 fausse preuve,
 0,45 ms médian par facture.

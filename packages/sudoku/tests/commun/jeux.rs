@@ -49,7 +49,8 @@ pub fn preuve_lignes(code: &str) -> Value {
         "variante": null,
         "expression": {"op": "lignes", "designation": "designation", "quantite": "quantite",
                        "prix": "prix_unitaire_ht", "remise": "remise_ligne?", "montant": "montant_ligne_ht",
-                       "taux": "taux_tva_ligne?", "total": "total_ht", "total_brut": "total_brut_ht?"}
+                       "taux": "taux_tva_ligne?", "total": "total_ht", "total_brut": "total_brut_ht?",
+                       "remise_globale": "remise_globale?"}
     })
 }
 

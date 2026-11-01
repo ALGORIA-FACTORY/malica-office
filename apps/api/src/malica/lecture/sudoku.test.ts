@@ -76,6 +76,22 @@ describe("sudoku — les jetons du plan", () => {
     assert.deepEqual(j[3]!.montants, []);
     assert.equal(j[3]!.date, null);
   });
+
+  it("deux cases collées par l'OCR offrent leurs coupes, lues par le lecteur de production", () => {
+    const [colle, seul] = jetonsDuSudoku(
+      [
+        { page: 1, ordinal: 0, text: "12400,000", x0: 0, y0: 0, x1: 1, y1: 1 },
+        { page: 1, ordinal: 1, text: "3 020,000", x0: 0, y0: 0, x1: 1, y1: 1 },
+      ],
+      devise,
+    );
+    assert.deepEqual(colle!.decoupes, [
+      { coupe: 1, gauche: 1_000, droite: [{ v: 2_400_000, forte: true }] },
+      { coupe: 2, gauche: 12_000, droite: [{ v: 400_000, forte: true }] },
+    ]);
+    // Un montant à espace de milliers n'est pas une case collée.
+    assert.equal(seul!.decoupes, undefined);
+  });
 });
 
 describe("sudoku — la sélection rendue", () => {
@@ -191,6 +207,40 @@ describe("sudoku — la sélection rendue", () => {
     assert.deepEqual(
       appels.map((a) => a.methode),
       ["contexteSudoku"],
+    );
+  });
+
+  it("une cellule lue dans une coupe s'inscrit avec sa coupe, et ne se relit pas dans son jeton", () => {
+    const cite = (valeur: string, ordinal: number) => ({ valeur, refs: ref(ordinal) });
+    const lignes: SortieDuSudoku["lignes"] = {
+      statut: "prouve",
+      taux_par_base: "ligne",
+      instances: [
+        {
+          designation: cite("Article", 80),
+          quantite: { ...cite("1000", 88), statut: "coupe", coupe: 1 },
+          prix: { ...cite("2400000", 88), statut: "coupe", coupe: 1 },
+          remise: null,
+          montant: cite("2400000", 90),
+          taux: null,
+        },
+      ],
+      remise_globale: cite("406000", 120),
+    };
+    const sortie = { ...prouvee, lignes };
+    const a = champsLusAInscrire("p", "facture", sortie);
+    const q = a.champs.find((c) => c.champ === "quantite#1")!;
+    assert.equal(q.statut, "coupe");
+    assert.deepEqual(q.citations, [{ page: 1, ordinal: 88, coupe: 1 }]);
+    assert.deepEqual(
+      a.champs.find((c) => c.champ === "remise_globale"),
+      { champ: "remise_globale", valeur: "406000", statut: "prouve", citations: ref(120) },
+    );
+    // Dans la chaîne, le jeton collé porte deux cases : ni quantité ni prix n'y sont relus.
+    const s = selectionParLeSudoku(cas.designation, sortie, [], {});
+    assert.deepEqual(
+      s.articles.map((x) => [x.quantity, x.unit_price_ht, x.total_ht]),
+      [[null, null, { page: 1, ordinal: 90 }]],
     );
   });
 
