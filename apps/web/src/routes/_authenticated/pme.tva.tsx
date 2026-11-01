@@ -29,6 +29,16 @@ export const Route = createFileRoute("/_authenticated/pme/tva")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  // Le mois que la carte de l'accueil montrait (`moisDeLaCarte`) : la page
+  // s'ouvre sur le même chiffre. Un mois mal formé ou à venir est ignoré.
+  validateSearch: (s: Record<string, unknown>): { mois?: string } => {
+    const mois = s["mois"];
+    return typeof mois === "string" &&
+      /^\d{4}-(0[1-9]|1[0-2])$/.test(mois) &&
+      mois <= currentPeriod()
+      ? { mois }
+      : {};
+  },
   component: PmeTva,
 });
 
@@ -102,7 +112,7 @@ function PmeTva() {
   const pme = usePme();
   const nonAssujetti = useNonAssujetti();
   const navigate = useNavigate();
-  const periode = currentPeriod();
+  const periode = Route.useSearch().mois ?? currentPeriod();
 
   const { tva, isPending } = useTvaPeriod(periode);
 

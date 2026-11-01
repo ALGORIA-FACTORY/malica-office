@@ -509,8 +509,8 @@ function PmeHome() {
          */}
 
         {/* ── 1. le chiffre du mois ─────────────────────────────────────── */}
-        <Link to="/pme/tva" className="mois">
-          <span className="k">{t("pme.home.tva.kicker", { month: moisCourant })}</span>
+        <Link to="/pme/tva" search={{ mois: a.tva.periode }} className="mois">
+          <span className="k">{t("pme.home.tva.kicker", { month: mois(a.tva.periode) })}</span>
           {nonAssujetti ? (
             <span className="v">
               <b className="t">{t("pme.home.tva.nonAssujetti")}</b>
@@ -518,14 +518,14 @@ function PmeHome() {
           ) : (
             <>
               <span className="v">
-                <b>{a.aReverser === null ? "—" : montant(a.aReverser.replace(/^-/, ""), locale)}</b>
+                <b>{a.tva.solde === null ? "—" : montant(a.tva.solde.replace(/^-/, ""), locale)}</b>
                 <u>
                   {a.devise}{" "}
-                  {sensDuSolde(a.aReverser) === "inconnu"
+                  {sensDuSolde(a.tva.solde) === "inconnu"
                     ? t("pme.tva.soldeInconnu")
-                    : sensDuSolde(a.aReverser) === "nul"
+                    : sensDuSolde(a.tva.solde) === "nul"
                       ? t("pme.tva.soldeNul")
-                      : sensDuSolde(a.aReverser) === "du"
+                      : sensDuSolde(a.tva.solde) === "du"
                         ? t("pme.home.reverser")
                         : t("pme.home.credit")}
                 </u>
@@ -533,15 +533,15 @@ function PmeHome() {
               <span className="dt">
                 <span>
                   {t("pme.tva.col.collectee")}{" "}
-                  <b>{a.collectee === null ? "—" : montant(a.collectee, locale)}</b>
+                  <b>{a.tva.collectee === null ? "—" : montant(a.tva.collectee, locale)}</b>
                 </span>
                 <span>
                   {t("pme.tva.col.deductible")}{" "}
-                  <b>{a.recuperee === null ? "—" : montant(a.recuperee, locale)}</b>
+                  <b>{a.tva.recuperee === null ? "—" : montant(a.tva.recuperee, locale)}</b>
                 </span>
                 {/* Une pièce que la TVA ne compte pas se dit : le chiffre est incomplet. */}
-                {a.horsDuCalcul > 0 ? (
-                  <span>{t("pme.home.tva.horsCalcul", { count: a.horsDuCalcul })}</span>
+                {a.tva.horsDuCalcul > 0 ? (
+                  <span>{t("pme.home.tva.horsCalcul", { count: a.tva.horsDuCalcul })}</span>
                 ) : null}
               </span>
             </>

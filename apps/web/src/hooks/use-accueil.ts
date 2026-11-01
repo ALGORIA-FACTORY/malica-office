@@ -54,7 +54,7 @@ const FENETRE = 12;
  * et un type non exporté reste atteignable du dehors par `Accueil["serie"]` —
  * rien n'est perdu, et `knip` cesse de signaler un export que personne ne lit.
  */
-interface MoisDeTva {
+export interface MoisDeTva {
   /** « 2026-04 ». */
   periode: string;
   /** La TVA déductible du mois, ou null si le mois n'a rien à dire. */
@@ -69,29 +69,21 @@ interface MoisDeTva {
 
 export interface Accueil {
   devise: string;
-  /** La TVA récupérée du mois courant. `null` : rien de comptabilisé. */
-  recuperee: string | null;
-  /** La TVA collectée du mois courant. `null` : rien de comptabilisé. */
-  collectee: string | null;
+  /**
+   * Le mois que montre la carte de TVA (`moisDeLaCarte`) : le plus récent de
+   * la série qui a quelque chose à dire, jamais un mois à venir. Son solde est
+   * ce qu'il restera à reverser à l'État (collectée moins déductible) :
+   * positif, un décaissement à prévoir ; négatif, un crédit qui se reporte.
+   * Ses pièces hors du calcul disent un chiffre incomplet, jamais écartées en
+   * silence (Codex sur #140).
+   */
+  tva: MoisDeTva;
   /** L'écart avec le mois précédent, signé. `null` si l'un des deux manque. */
   ecart: string | null;
   /** Douze mois, du plus ancien au mois courant. */
   serie: MoisDeTva[];
   /** Combien de mois d'affilée la récupération progresse, mois courant inclus. */
   moisDeSuite: number;
-  /**
-   * Ce qu'il restera à reverser à l'État : TVA collectée moins déductible.
-   *
-   * Positif, c'est un décaissement à prévoir ; négatif, un crédit qui se
-   * reporte. C'est le seul chiffre de cet écran sur lequel un dirigeant doit
-   * agir, et c'est pour cela qu'il vient en premier.
-   */
-  aReverser: string | null;
-  /**
-   * Les pièces du mois courant que la TVA ne compte pas, et pourquoi le
-   * chiffre est incomplet : jamais écartées en silence (Codex sur #140).
-   */
-  horsDuCalcul: number;
   /** Part des pièces prises en charge par le cabinet, de 0 à 1. `null` : aucune pièce. */
   avancement: number | null;
   /**
@@ -135,6 +127,22 @@ export interface Accueil {
  * corrigés le jour même ; celui-ci, nommément cité, était resté.
  */
 const moisPrecedent = moisDecale;
+
+/**
+ * Le mois que la carte de TVA montre : le plus récent de la série qui a
+ * quelque chose à dire — un solde, ou des pièces hors du calcul —, sinon le
+ * mois courant.
+ *
+ * Le 1er novembre, la carte disait « TVA · novembre — » sur un dossier dont
+ * les pièces étaient de septembre et d'octobre : le mois commençait, rien n'y
+ * était encore rangé, et le chiffre du dirigeant paraissait vide. La même
+ * règle que les cartes des dossiers (`periodeMontree`, #156). La série
+ * s'arrête au mois courant : un mois à venir n'y est jamais.
+ */
+export function moisDeLaCarte(serie: readonly MoisDeTva[]): MoisDeTva {
+  const plein = [...serie].reverse().find((m) => m.solde !== null || m.horsDuCalcul > 0);
+  return plein ?? serie[serie.length - 1]!;
+}
 
 export function useAccueil(periode: string): Accueil {
   const pme = usePme();
@@ -335,13 +343,10 @@ export function useAccueil(periode: string): Accueil {
 
   return {
     devise,
-    recuperee: courant,
-    collectee: serie[serie.length - 1]?.collectee ?? null,
+    tva: moisDeLaCarte(serie),
     ecart,
     serie,
     moisDeSuite,
-    aReverser: serie[serie.length - 1]?.solde ?? null,
-    horsDuCalcul: serie[serie.length - 1]?.horsDuCalcul ?? 0,
     avancement,
     enAttente,
     documentsLus,
