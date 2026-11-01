@@ -88,6 +88,7 @@ absent, il vaut zéro dans une somme et la preuve reste évaluable.
 | `charge`      | `{"op":"charge","montant":"m","code":"DROIT_TIMBRE","base":"b?","assiette":"tva"}`                    | m = un montant admis par le pack au jour dit, ou arrondi(base × taux)          |
 | `egal`        | `{"op":"egal","a":"x","b":"y"}`                                                                       | x = y                                                                          |
 | `format`      | `{"op":"format","champ":"c","format":"matricule_fiscal"}`                                             | la valeur respecte le motif nommé, fourni en entrée                            |
+| `lettres`     | `{"op":"lettres","champ":"montant_en_lettres","egal_a":["total_ttc","net_a_payer?"]}`                 | le montant lu en lettres égale (sans signe) la valeur prouvée d'un `egal_a`    |
 | `ordre`       | `{"op":"ordre","avant":"d1","apres":"d2"}`                                                            | d1 ≤ d2 (dates)                                                                |
 
 Les attributs que l'adaptateur et le moteur lisent dans les preuves — aucun code
@@ -182,6 +183,35 @@ ont leur propre statut, et l'issue de la pièce reste celle du centre.
 - Les dates (E02 : émission ≤ échéance) et le numéro sont lus par leurs repères,
   au statut `conforme`. Seul ce qui est **prouvé** remplace la désignation de la
   chaîne.
+- **Deux matricules au même format** (émetteur et client) ne s'attribuent qu'à
+  l'anneau 2 : leurs repères sont communs (« Matricule fiscal »), et une valeur au
+  format ne dit pas à quelle partie elle appartient. Hors E01, ils sont
+  `signale` (16 novembre 2026 : au banc des 150 factures, le matricule du client
+  sortait « conforme » comme celui d'un émetteur étranger — 6 fois sur la couche
+  de texte, 15 fois en OCR).
+- **Anneau 3 — les champs nommés** (16 novembre 2026). Un champ que nulle preuve
+  ne lit est lu par l'expert de sa famille (`ref.concepts.expert`, transmis en
+  entrée avec la `parcelle` du champ), piloté par ses seuls repères et son
+  format : `reference` et `identifiant` sans format au pack (la valeur à
+  chiffres derrière son libellé, à droite ou dessous — le lecteur du numéro de
+  l'anneau 2, rendu paramétrable), `libelle`, `nombre`, `taux` (la phrase
+  derrière le libellé), une `liste` par son vocabulaire (ses repères), une
+  `presence` seulement `signale` (un cachet ne se constate pas dans un texte).
+  Au mieux `conforme` ; `signale` si deux valeurs, si le libellé est partagé
+  par deux champs, ou s'il n'est lu que collé dans le jeton de la valeur
+  (« N°DV-PX-2026-091111 » : l'OCR y colle autre chose). Il ne lit ni les
+  cellules d'un tableau (la parcelle des champs de `lignes`), ni le champ d'une
+  preuve `lettres`, ni un champ déjà lu.
+- **Les lettres** (preuve `lettres`, P13 de la facture, P04 du chèque), après
+  tout le reste. L'adaptateur lit le montant en toutes lettres qui suit un repère
+  du champ (lexique du pack : `ref.nombres_en_lettres`, `ref.devises_en_lettres`)
+  et le porte sur le premier mot de la phrase. Égal (sans signe : un avoir) au
+  total prouvé : `verifiee`, et le champ est `prouve`. Différent : `echec`, et
+  **la pièce n'est plus prouvée, elle est signalée** (`issue = "signalee"`) ; ses
+  champs prouvés passent `signale`, valeurs et citations gardées. C'est la seule
+  preuve non arithmétique qui change l'issue : sans elle, 100/D-04 (« trois mille
+  deux cents dinars » sous un net de 9 676,890) sortait prouvée. Aucune lettre
+  lue, ou un mot illisible dans la phrase : `non_evaluable`, rien ne change.
 
 L'entrée gagne `connus` : le dossier, ses tiers et les formes juridiques, lus
 en base par l'adaptateur.
@@ -210,7 +240,17 @@ en base par l'adaptateur.
   et la facture réelle du jeu d'or n'est pas prouvée.
 - Un taux nul n'entre pas au barème : l'exonération passe par la mention, jamais
   par une instance « 0 % » que n'importe quel zéro imprimé fermerait.
-- `date` : la date ISO rendue par `normalizeDate`, ou `null`.
+- `date` : la date ISO rendue par `normalizeDate` avec la convention du pack
+  (`ref.conventions_de_date`, `ref.mois_en_lettres`), ou `null`. Une date en
+  plusieurs jetons d'une rangée (« 13 | mai | 2026 ») est portée par le premier,
+  et `date_fin` nomme l'ordinal du dernier : la citation couvre la plage.
+- `identifiants` (facultatif) : ce que `normaliserMatricule` lit dans le jeton
+  (étiquette collée, chiffres arabes, « l » pour « 1 »), avec la forme du pack
+  (`ref.identifiant_formats`) — `[{"format","valeur","fin"}]`. Le moteur les
+  préfère au motif brut.
+- `lettres` (facultatif) : `{"v","fin"}`, le montant en lettres qui commence au
+  jeton, en unités mineures de la devise de la pièce.
+- Un champ de la grille porte aussi `expert` (sa famille) et `parcelle`.
 - `decoupes` (facultatif) : pour un nombre sans espace dont la partie entière a
   au moins quatre chiffres, les coupes possibles
   `[{"coupe":k,"gauche":<entier>,"droite":[{"v","forte"}]}]` — k caractères
@@ -245,7 +285,8 @@ en base par l'adaptateur.
 ```
 
 - `issue` : `prouvee` (une seule affectation ferme toutes les preuves évaluables,
-  et au moins une preuve arithmétique), `ambigue` (plusieurs), `aucune`.
+  et au moins une preuve arithmétique), `signalee` (une seule, mais les lettres la
+  contredisent), `ambigue` (plusieurs), `aucune`.
 - `statut` d'un champ : `prouve` (il entre dans une preuve vérifiée), `conforme`
   (format et repère, sans preuve arithmétique), `signale` (ambigu), `absent`.
 - Une valeur n'est jamais émise sans citation, et jamais sans statut.
@@ -256,7 +297,9 @@ en base par l'adaptateur.
 ## 5. Ce que fait l'adaptateur TypeScript
 
 1. Lit la grille et le pack par une vue (`security_invoker`), jamais en dur.
-2. Construit `jetons` avec `treillisMontant` et `normalizeDate`.
+2. Construit `jetons` avec `treillisMontant`, et les experts qui lisent le texte
+   avec les règles du pack (`lireLesReglesDeLecture`, `experts.ts`) :
+   `normalizeDate`, `normaliserMatricule`, `lireLeMontantEnLettres`.
 3. Appelle le moteur WebAssembly, sans état.
 4. Pour une facture, convertit le résultat en `VisionSelection` (page/ordinal) :
    l'aval de R2 relit les valeurs dans le plan.
@@ -266,6 +309,11 @@ en base par l'adaptateur.
    d'une ligne de tableau et le taux d'une instance dans leurs colonnes, toutes les
    lignes d'une inscription sous un même `lecture_id`. Une valeur sans citation
    s'inscrit nulle ; la table refuse une valeur non citée et un statut nul.
+   Un matricule dont la lettre de contrôle ne tient pas la règle du pack
+   (`ref.identifiant_controles`, non publiée par la DGI : `defaut_a_valider`)
+   s'inscrit avec `avertissement = 'lettre_de_controle_discordante'` : il
+   avertit, il ne bloque pas (décision du 1er novembre 2026). La famille et le
+   rôle d'un champ ne sont pas recopiés : `grille_champ_id` y mène.
 
 Dans cette première livraison (`apps/api/src/malica/lecture/sudoku.ts`) :
 
@@ -383,3 +431,34 @@ restent inchangées : 0 différence avec les articles de la chaîne.
 
 Moteur seul (`cargo test`, grille d'essai) : 60/60, 0 fausse preuve,
 0,45 ms médian par facture.
+
+## 7. Les experts de lecture, famille par famille (16 novembre 2026)
+
+Banc des 150 factures fictives du dirigeant, par le chemin de production (règles
+du pack en base, adaptateur, moteur natif) ; vérité : `jeux_dirigeant.json`.
+Un champ compte juste, faux (valeur rendue fausse), signalé ou absent ; **aucun
+faux au statut `conforme` ou `prouve`**.
+
+| Famille (champs)             | Couche de texte (134) j / f / s / a | OCR rapide (150) j / f / s / a |
+| ---------------------------- | ----------------------------------- | ------------------------------ |
+| reference (numéro)           | 113 / 0 / 0 / 20                    | 7 / 0 / 111 / 25 ¹             |
+| date (émission, échéance)    | 128 / 0 / 0 / 33                    | 97 / 0 / 0 / 79                |
+| identifiant (matricules)     | 42 / 0 / 38 / 184                   | 24 / 0 / 74 / 192              |
+| tiers (noms, par E01)        | 26 / 0 / 0 / 238                    | 7 / 0 / 0 / 283                |
+| libellé : montant en lettres | 117 / 0 / 0 / 13                    | 77 / 0 / 0 / 63                |
+| libellé : devise             | 111 / 0 / 2 / 7                     | 110 / 0 / 1 / 19               |
+| présence (cachet)            | 0 / 0 / 0 / 4                       | 0 / 0 / 0 / 10                 |
+
+¹ 104 des 111 numéros signalés portent la bonne valeur, lue derrière un libellé
+collé (« N°… ») : signalés parce que l'OCR y colle parfois autre chose (7 fois).
+
+Avant ces experts (même banc, code du 1er novembre, grille de cette migration) :
+dates justes 32 (texte) et 36 (OCR) — une date en plusieurs jetons n'était pas
+lue ; matricules justes 51 et 35, mais 6 et 15 faux au statut `conforme` ; aucun
+montant en lettres ni devise lus. Les 3 numéros faux de l’OCR venaient du repère
+« Réf. », retiré par la migration.
+
+Le centre : couche de texte 76 factures prouvées justes, OCR rapide 73 ; **0
+fausse preuve**. 100/D-04 est signalée par ses lettres ; 100/D-08 aussi — ses
+montants sont imprimés à deux décimales, ses lettres au millime : c'était la
+seule fausse preuve connue (le sudoku rendait les valeurs arrondies).

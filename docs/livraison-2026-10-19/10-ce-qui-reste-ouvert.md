@@ -400,3 +400,28 @@ entier dans la coque, même quand la place est incluse.
 dans l'application pour les places incluses ; la base refuse à une coque la
 place qui serait facturée, en comptant les places occupées et les invitations
 en attente (`20261023120000`).
+
+## Les experts de lecture non-montant (tranché par défaut le 16 novembre 2026)
+
+Les experts lisent en observation : rien ne change dans la lecture retenue, sauf
+une pièce dont les lettres contredisent les chiffres, qui n'est plus « prouvée »
+mais « signalée » (`docs/sudoku/contrat-du-moteur.md`, §2 et §7). Défauts retenus,
+à arrêter par le dirigeant ou l'expertise :
+
+- **La lettre de contrôle du matricule avertit, ne bloque pas** (décision du
+  1er novembre). Son algorithme (somme pondérée 7..1, modulo 23) est en base,
+  `defaut_a_valider`, source `incertain` : la DGI ne le publie pas.
+- **Les lettres doivent égaler le total au millime.** Une facture imprimée à deux
+  décimales dont les lettres disent le millime (100/D-08) est signalée. Admettre
+  la précision imprimée ferait passer une contradiction d'un centime.
+- **Un numéro lu seulement derrière un libellé collé** (« N°FA-… », fréquent en
+  OCR) est signalé, avec sa valeur citée, jamais conforme : 104 justes et 7 faux
+  sur le banc OCR. Le passer conforme demande une seconde lecture (la chaîne,
+  ou la relecture de nuit).
+- **Deux matricules au même format** ne s'attribuent qu'à l'anneau 2 (E01) : hors
+  E01, ils sont signalés. Avant, 21 matricules faux sortaient « conformes ».
+- **« Réf. » n'est plus un repère du numéro de facture** : il nommait aussi la
+  référence TTN et l'en-tête de la colonne des articles (3 numéros faux). Une
+  facture réelle qui n'imprime que « Réf. » devant son numéro le verra absent.
+- **Les présences (cachet, signature) ne se constatent pas dans un texte** : leur
+  repère imprimé les signale, à vérifier sur l'image.
