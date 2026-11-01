@@ -1,0 +1,57 @@
+{
+  "_": "Les acteurs de la recette (outils/recette/va-et-vient.mjs) : comptes @recette.essai.local, organisations fictives. Les dossiers sont ceux du jeu synthétique, dans l'ordre de leurs identifiants fiscaux. Aucune donnée réelle.",
+  "cabinet": {
+    "name": "CABINET RECETTE D'ESSAI",
+    "legalId": "8822001R/A/M/000",
+    "expert": {
+      "local": "expert.recette",
+      "nom": "Hela Recette"
+    }
+  },
+  "dossiers": [
+    {
+      "cle": "team",
+      "offre": "team",
+      "dirigeant": {
+        "local": "dirigeant.nervane",
+        "nom": "Sami Nervane"
+      },
+      "siege": {
+        "local": "siege.nervane",
+        "nom": "Rim Siège"
+      }
+    },
+    {
+      "cle": "premium",
+      "offre": "premium",
+      "dirigeant": {
+        "local": "dirigeant.qirwane",
+        "nom": "Nadia Qirwane"
+      },
+      "siege": {
+        "local": "siege.qirwane",
+        "nom": "Omar Siège"
+      },
+      "secondeSociete": {
+        "name": "QIRWANE SERVICES D'ESSAI SARL",
+        "legalId": "4794099V/A/M/000"
+      }
+    },
+    {
+      "cle": "basic",
+      "offre": "basic",
+      "dirigeant": {
+        "local": "dirigeant.sidrane",
+        "nom": "Karim Sidrane"
+      }
+    }
+  ],
+  "retourUneSur": 4,
+  "noteDeRetour": "Recette : merci de confirmer.",
+  "reponseDuClient": "Confirmé, la pièce est correcte.",
+  "juridiction": "TN",
+  "organisation": {
+    "validationMode": "mandate",
+    "defaultEntityName": "Siège"
+  }
+}

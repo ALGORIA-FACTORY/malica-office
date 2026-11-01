@@ -88,3 +88,7 @@ apps/web/e2e/sortie-rapport/
 # jamais de production. Ignores parce que le contraire s'est produit — un dossier
 # non ignore fait tomber lint et knip, et finit dans un commit par `git add -A`.
 .tmp-reparation/
+
+# La recette sur une instance réelle : journaux locaux, jamais versionnés.
+outils/recette/dernier-passage.json
+outils/recette/passage-*.log
