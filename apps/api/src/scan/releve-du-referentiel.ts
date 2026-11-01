@@ -18,6 +18,7 @@ import { referentiel } from "../depots/referentiel.ts";
 
 import { lireLesBiensImmobilisables, lireLesTitres, lireParametres } from "./analyse.ts";
 import { lireLaRegleDuPack } from "./cours-de-change.ts";
+import { lireLesNaturesDeVente } from "./nature-de-vente.ts";
 import { lireLesReglagesDuPack } from "./reglages-comptables.ts";
 
 /** Le jour du relevé : un référentiel daté se relève à une date fixe (R11). */
@@ -96,6 +97,8 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
     typesQuiPortentUneEcriture: types.map((t) => t.code),
     titres: await lireLesTitres(db),
     biensImmobilisables: await lireLesBiensImmobilisables(db, pack.id, JOUR_DU_RELEVE),
+    // Les natures d'un article vendu et leurs motifs ; leur compte, celui du pack.
+    naturesDeVente: await lireLesNaturesDeVente(db, pack.id, JOUR_DU_RELEVE, null),
     // La règle de change du pack (`change.*`) ; les cours, eux, sont des
     // données, et chaque cas de mesure dit le sien.
     change: await lireLaRegleDuPack(db, pack.id, JOUR_DU_RELEVE),

@@ -18,6 +18,7 @@ import { createHash } from "node:crypto";
 import type {
   CoursDeChange,
   DerogationDeCours,
+  FactureARattacher,
   PropositionDePiece,
 } from "@malica/socle/ports/repositories";
 
@@ -213,6 +214,9 @@ const LIGNE_FORCEE = z.object({
   credit: z.string(),
   tax_code: z.string().nullable().optional(),
 });
+/** Un identifiant de pièce, relu avant tout usage. */
+const ID = z.string().uuid();
+
 const FORCER = z.object({
   pieceId: z.string().uuid(),
   journal: z.string().min(1),
@@ -395,6 +399,13 @@ export const office = {
     if (!r.ok) throw refusMetier(r.raison);
     if (empreinte === null || empreinteDe(r) !== empreinte)
       throw refusMetier("refus.proposition.changee");
+    /*
+     * Un avoir que le numéro imprimé a lié à sa facture : le lien devient un
+     * FAIT au moment où l'écriture le prend pour acquis (`avoirs_rattaches`).
+     * Une facture du même numéro arrivée ensuite ne le déplace plus.
+     */
+    if (r.avoir?.facture && !r.avoir.lie)
+      await db.query(`select public.avoir_rattacher($1, $2, 'numero')`, [pieceId, r.avoir.facture]);
     const id = await office.propose(db, {
       pieceId,
       journal: r.proposition.journal,
@@ -407,6 +418,53 @@ export const office = {
     await office.book(db, id);
     if (etaitEnRetour) await closLeRetour(db, pieceId, id);
     return id;
+  },
+
+  /**
+   * RATTACHER LA FACTURE D'ORIGINE d'un avoir (réglage `avoirs.traitement` =
+   * `lie_facture`, 1er novembre 2026) : le cabinet qui supervise le dossier
+   * la désigne, quand le numéro imprimé sur l'avoir n'en désigne aucune (ou
+   * plusieurs). Le lien est un fait, en ajout seul ; le plus récent fait foi.
+   * Puis la proposition se relit : l'avoir se propose, ou dit ce qui manque.
+   * Une pièce qui porte déjà une écriture vivante ne se rattache plus ici :
+   * on force, ce qui contre-passe.
+   */
+  async rattacherLaFacture(
+    db: Requete,
+    pieceId: string,
+    factureId: string,
+  ): Promise<PropositionDePiece> {
+    if (!ID.safeParse(pieceId).success || !ID.safeParse(factureId).success)
+      throw refusMetier("refus.avoir.saisie");
+    if (await ecritureVivante(db, pieceId)) throw refusMetier("refus.avoir.ecriture_vivante");
+    await db.query(`select public.avoir_rattacher($1, $2, 'cabinet')`, [pieceId, factureId]);
+    return office.propositionDePiece(db, pieceId);
+  },
+
+  /**
+   * Les factures auxquelles un avoir peut se rattacher : celles du même
+   * dossier et du même sens, déjà comptabilisées (une écriture prise en
+   * charge), les plus récentes d'abord. Le numéro, la date, l'émetteur et le
+   * total, tels que lus.
+   */
+  async facturesARattacher(db: Requete, pieceId: string): Promise<FactureARattacher[]> {
+    const { rows } = await db.query<FactureARattacher>(
+      `select f.id, x.payload -> 'references' ->> 'numero' as numero,
+              x.payload ->> 'document_date' as date, x.payload ->> 'issuer' as emetteur,
+              x.payload -> 'totals' ->> 'ttc' as ttc
+         from pieces_v a
+         join pieces_v f on f.tenant_id = a.tenant_id and f.document_kind = a.document_kind
+         join lateral (select e.payload from capture.extractions e
+                        where e.piece_id = f.id order by e.created_at desc limit 1) x on true
+        where a.id = app.version_courante($1)
+          and f.id = app.version_courante(f.id)
+          and f.id not in (select app.versions_de_la_piece($1))
+          and app.ecriture_prise_en_charge_de(f.id) is not null
+        order by f.created_at desc
+        limit 200`,
+      [pieceId],
+    );
+    return rows;
   },
 
   /**

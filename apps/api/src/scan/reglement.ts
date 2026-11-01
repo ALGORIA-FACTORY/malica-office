@@ -42,7 +42,7 @@ const ROLE_DE_LA_RETENUE = {
 } as const;
 
 /** Plusieurs comptes possibles pour un même rôle : la base ne choisit pas au hasard. */
-const AMBIGU = Symbol("ambigu");
+export const AMBIGU = Symbol("ambigu");
 
 /**
  * Le compte d'un rôle, à trois niveaux comme partout : le dossier, la
@@ -51,7 +51,7 @@ const AMBIGU = Symbol("ambigu");
  * les retenues : deux surcharges contradictoires sont refusées, jamais
  * départagées par l'ordre d'une requête.
  */
-async function compteDuRole(
+export async function compteDuRole(
   db: Requete,
   tenantId: string,
   role: string,

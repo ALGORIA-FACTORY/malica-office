@@ -207,7 +207,7 @@
   "verdict": "non_mesuree",
   "champsFaux": 0,
   "diagnostic": {
-   "verdict": "exacte",
+   "verdict": "a_trancher",
    "champsFaux": 2
   }
  },
@@ -255,7 +255,7 @@
   "verdict": "non_mesuree",
   "champsFaux": 0,
   "diagnostic": {
-   "verdict": "exacte",
+   "verdict": "a_trancher",
    "champsFaux": 2
   }
  },

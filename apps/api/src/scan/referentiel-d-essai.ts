@@ -55,6 +55,9 @@ export const TITRES_D_ESSAI = RELEVE_D_ESSAI.titres;
 /** Les mots d'un bien susceptible d'être immobilisé (`ref.biens_immobilisables`). */
 export const BIENS_IMMOBILISABLES_D_ESSAI = RELEVE_D_ESSAI.biensImmobilisables;
 
+/** Les natures d'un article vendu, leur compte au pack et leurs motifs (`ref.natures_de_vente`). */
+export const NATURES_DE_VENTE_D_ESSAI = RELEVE_D_ESSAI.naturesDeVente;
+
 /** Les marques imprimées de chaque devise (`ref.devises`, `ref.devises_marques`). */
 export const MARQUES_D_ESSAI = RELEVE_D_ESSAI.marques;
 

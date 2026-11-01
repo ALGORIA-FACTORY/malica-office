@@ -103,7 +103,7 @@
       "journal": "VEN",
       "lignes": [
         [
-          "701",
+          "707",
           "0",
           "16221.728",
           "EXPORT"
@@ -116,7 +116,7 @@
       ],
       "origines": [
         [
-          "701",
+          "707",
           "5220.69"
         ],
         [
@@ -129,6 +129,35 @@
       "type": "ecriture",
       "reserve": "cours_de_change"
     },
+    "aTrancher": {
+      "reserve": "nature_de_vente",
+      "ecriture": {
+        "journal": "VEN",
+        "lignes": [
+          [
+            "701",
+            "0",
+            "16221.728",
+            "EXPORT"
+          ],
+          [
+            "411",
+            "16221.728",
+            "0"
+          ]
+        ],
+        "origines": [
+          [
+            "701",
+            "5220.69"
+          ],
+          [
+            "411",
+            "5220.69"
+          ]
+        ]
+      }
+    },
     "cours": {
       "devise": "USD",
       "taux": "3.1072",
@@ -138,7 +167,8 @@
     "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
     "notes": [
       "converti au cours FICTIF 3.1072 TND pour 1 USD, publié le 2026-09-24 (app.cours_applicable : date_facture, recul 5 jours)",
-      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+      "converti au cours FICTIF 3.1072 TND pour 1 USD, publié le 2026-09-24 (app.cours_applicable : date_facture, recul 5 jours)",
+      "INCERTAIN — compte de vente par nature d'article (ventes.compte = par_nature_article, défaut du CEO du 31/10/2026) : 705 prestations, 706 annexes, 707 marchandises ; repli au compte des produits finis, avec la réserve « nature de la vente à préciser »"
     ]
   }
 }

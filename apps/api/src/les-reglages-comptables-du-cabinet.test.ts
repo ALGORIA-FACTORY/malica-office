@@ -185,13 +185,20 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
   it("ce qui n'est pas appliqué se dit, jusque sur l'option ; ce qui l'est a son implémentation", async () => {
     const s = await monter();
     const r = await s.lire(s.expert, null);
-    for (const code of [
-      "prorata.methode",
-      "non_residents.retenue",
-      "mois_tva.date",
-      "avoirs.traitement",
-    ])
+    for (const code of ["prorata.methode", "non_residents.retenue", "mois_tva.date"])
       assert.equal(valeur(r, code)?.appliquee, false, code);
+    // Appliqués depuis le 1er novembre 2026 : le compte de vente par nature,
+    // l'avoir lié à sa facture — mais pas l'avoir « libre », qui le dit.
+    for (const code of ["ventes.compte", "avoirs.traitement", "avoirs.ecriture"])
+      assert.equal(valeur(r, code)?.appliquee, true, code);
+    assert.deepEqual(
+      valeur(r, "avoirs.traitement")!.options!.map((o) => [o.code, o.appliquee]),
+      [
+        ["lie_facture", true],
+        ["libre", false],
+        ["refus_saisie_cabinet", true],
+      ],
+    );
     // L'inscription à l'actif n'est pas proposée : le défaut le dit.
     assert.equal(valeur(r, "immobilisation.traitement")?.appliquee, false);
     const options = valeur(r, "immobilisation.traitement")!.options!;
@@ -235,6 +242,22 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
     );
     assert.ok(timbre.bareme.length > 0 && timbre.bareme.every((b) => b.uniteIncertaine));
     assert.deepEqual(r.sujets.find((x) => x.code === "fodec")!.bareme, []);
+    // Les ventes montrent les natures du pack, leur compte et leur repli.
+    const { rows: natures } = await admin.query<{ code: string; compte: string; repli: boolean }>(
+      `select n.code, b.account_code as compte, n.repli
+         from ref.natures_de_vente n
+         join ref.role_bindings b on b.pack_version_id = n.pack_version_id and b.role_code = n.role_code
+        where n.pack_version_id = $1 and n.valid_to is null order by n.rang`,
+      [packId],
+    );
+    assert.deepEqual(
+      r.sujets
+        .find((x) => x.code === "ventes")!
+        .naturesDeVente.map((x) => ({ code: x.code, compte: x.compte, repli: x.repli })),
+      natures,
+    );
+    assert.ok(natures.length > 0);
+    assert.deepEqual(timbre.naturesDeVente, []);
     const immo = r.sujets.find((x) => x.code === "comptes_immo")!;
     assert.ok(immo.categories.length > 0);
     for (const c of immo.categories.filter((x) => x.tauxMaximal))
