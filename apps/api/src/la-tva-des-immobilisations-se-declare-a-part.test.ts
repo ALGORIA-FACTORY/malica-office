@@ -230,10 +230,21 @@ describe("la TVA des immobilisations se déclare à part", { skip: !BASE_CONFIGU
     AUTRE = natures.rows.find((r) => !r.immobilisation)!.code;
     // Une famille d'articles dont le compte est une immobilisation (2282) :
     // la lecture la reconnaît par le référentiel, jamais par un mot du code.
+    /*
+     * La famille ET ses libellés dans les trois langues, en UNE instruction :
+     * l'audit d'intégrité (`la-base-tient-son-integrite.test.ts`) tourne sur la
+     * même base, peut-être au même moment, et refuse un code sans libellé comme
+     * un libellé sans code. Une seule instruction, il ne voit jamais l'entre-deux.
+     */
     await admin.query(
-      `insert into ref.charge_familles
-         (pack_version_id, code, label, ordinal, is_fallback, valid_from, main_account)
-       values ($1, $2, 'Famille d''essai', 999, false, date '2020-01-01', '2282')`,
+      `with f as (
+         insert into ref.charge_familles
+           (pack_version_id, code, label, ordinal, is_fallback, valid_from, main_account)
+         values ($1, $2, 'Famille d''essai', 999, false, date '2020-01-01', '2282')
+         returning code)
+       insert into ref.labels (ns, key, locale, value)
+       select 'charge_famille', f.code, l, 'Famille d''essai'
+         from f, unnest(array['fr', 'en', 'ar']) l`,
       [packId, FAMILLE],
     );
     await admin.query(
@@ -247,7 +258,12 @@ describe("la TVA des immobilisations se déclare à part", { skip: !BASE_CONFIGU
   after(async () => {
     try {
       await admin.query(`delete from ref.charge_famille_rules where famille_code = $1`, [FAMILLE]);
-      await admin.query(`delete from ref.charge_familles where code = $1`, [FAMILLE]);
+      // La famille et ses libellés partent ensemble, pour la même raison.
+      await admin.query(
+        `with l as (delete from ref.labels where ns = 'charge_famille' and key = $1)
+         delete from ref.charge_familles where code = $1`,
+        [FAMILLE],
+      );
       await admin.query(
         `update identity.organizations
             set archived_at = now(), archived_reason = 'fixture de test automatisé'
