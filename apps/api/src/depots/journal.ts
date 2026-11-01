@@ -67,10 +67,14 @@ export const journal = {
    * faudrait un accès à la base pour savoir ce qui a échoué.
    */
   async dernieres(db: Requete, tenantId: string, limite = 50) {
+    // Après la dernière marque « tout est réglé » (`regler`) : ce qui précède
+    // reste en base, l'écran ne le montre plus.
     const { rows } = await db.query(
       `select id, ou, message, version, plateforme, at
          from journal_client_v
         where tenant_id = $1
+          and at > coalesce((select max(r.at) from journal_client_reglements_v r
+                              where r.tenant_id = $1), '-infinity')
         order by at desc
         limit $2`,
       [tenantId, Math.min(Math.max(limite, 1), 200)],
@@ -83,5 +87,16 @@ export const journal = {
       plateforme: (r["plateforme"] as string | null) ?? null,
       at: (r["at"] as Date).toISOString(),
     }));
+  },
+
+  /**
+   * « Tout est réglé » : une marque datée, en ajout seul. Rien n'est effacé
+   * (R7) ; `dernieres` ne rend plus que ce qui la suit.
+   */
+  async regler(db: Requete, tenantId: string): Promise<{ le: string }> {
+    const { rows } = await db.query<{ le: Date }>(`select public.journal_client_regler($1) as le`, [
+      tenantId,
+    ]);
+    return { le: rows[0]!.le.toISOString() };
   },
 };

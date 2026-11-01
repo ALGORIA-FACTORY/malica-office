@@ -2451,6 +2451,7 @@ export const en: Dict = {
     "This document’s entry is booked with its rate: return it first (reversal), then enter the rate.",
   "refus.avoir.saisie":
     "The credit note or the chosen invoice is not recognised: reload the page and choose again.",
+  "refus.journal.droits": "Only a member of this company can clear its log.",
   "refus.avoir.droits":
     "Only the firm that supervises this file links a credit note to its invoice.",
   "refus.avoir.facture":
@@ -2683,6 +2684,7 @@ export const en: Dict = {
   "pme.reglages.signaler.sous":
     "Say it in one sentence. It reaches the team as is, with the screen and the version — never your documents.",
   "pme.reglages.pannes": "What did not work",
+  "pme.reglages.pannes.regler": "All sorted",
   "pme.reglages.pannes.sous": "What the app noticed by itself, without you having to report it.",
   "pme.reglages.signaler.champ": "What happened, and what you expected",
   "pme.reglages.signaler.envoyer": "Send",
