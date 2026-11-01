@@ -26,8 +26,10 @@ import { enUnitesExactes } from "@malica/socle/somme-decimale";
 import { codeDeLecture } from "@malica/socle/issue-de-lecture";
 import { refusAvecValeurs } from "@malica/socle/refus-a-dire";
 import type {
+  ChampObserve,
   EtatDUnTravail,
   GesteDeRetour,
+  LectureObservee,
   MontantsDuCabinet,
   PieceDeMonEspace,
 } from "@malica/socle/ports/repositories";
@@ -792,6 +794,102 @@ export const capture = {
       ],
     );
     return { inscrits: rows[0]?.n ?? 0 };
+  },
+
+  /**
+   * Ce que le lecteur prouvé a lu sur la pièce, pour qu'on le VOIE avant de
+   * l'allumer : la dernière inscription (un seul `lecture_id`), son issue et
+   * ses champs. Rien n'est écrit ; la lecture passe sous l'identité de
+   * l'appelant, et la politique de `capture.champs_lus` (celle de la pièce)
+   * décide de ce qu'il voit — un inconnu ne relit rien.
+   *
+   * Le rôle et la famille d'experts ne sont pas dans la ligne : ils se lisent
+   * par le champ de la grille et son concept (R12). Leurs libellés, et celui
+   * de l'avertissement, viennent de `ref.labels` dans la langue demandée, le
+   * français à défaut, le code en dernier. Le libellé du champ est celui de la
+   * grille : aucun espace de noms ne le traduit encore.
+   */
+  async lectureObservee(
+    db: Requete,
+    pieceId: string,
+    locale: string,
+  ): Promise<LectureObservee | null> {
+    const { rows } = await db.query<{
+      lecture_id: string;
+      issue: LectureObservee["issue"];
+      le: Date | string;
+      grille_code: string | null;
+      grille_nom: string | null;
+      champ_code: string | null;
+      champ_libelle: string | null;
+      role: string | null;
+      role_libelle: string | null;
+      expert: string | null;
+      expert_libelle: string | null;
+      statut: ChampObserve["statut"] | null;
+      valeur: string | null;
+      rang: number | null;
+      instance: string | null;
+      citations: unknown;
+      avertissement: string | null;
+      avertissement_libelle: string | null;
+    }>(
+      `with derniere as (
+         select l.lecture_id
+           from capture.champs_lus l
+          where l.piece_id = $1
+          order by l.created_at desc, l.lecture_id
+          limit 1)
+       select l.lecture_id, l.issue, l.created_at as le,
+              l.grille_code, g.nom as grille_nom,
+              l.champ_code, gc.libelle as champ_libelle,
+              gc.role, coalesce(rd.value, rf.value, gc.role) as role_libelle,
+              c.expert, coalesce(ed.value, ef.value, c.expert) as expert_libelle,
+              l.statut, l.valeur, l.rang, l.instance, l.citations,
+              l.avertissement,
+              coalesce(ad.value, af.value, l.avertissement) as avertissement_libelle
+         from capture.champs_lus l
+         join derniere d on d.lecture_id = l.lecture_id
+         left join ref.grilles g on g.id = l.grille_id
+         left join ref.grille_champs gc on gc.id = l.grille_champ_id
+         left join ref.concepts c on c.id = gc.concept_id
+         left join ref_labels_v rd on rd.ns = 'concept_role' and rd.key = gc.role and rd.locale = $2
+         left join ref_labels_v rf on rf.ns = 'concept_role' and rf.key = gc.role and rf.locale = 'fr'
+         left join ref_labels_v ed on ed.ns = 'concept_expert' and ed.key = c.expert and ed.locale = $2
+         left join ref_labels_v ef on ef.ns = 'concept_expert' and ef.key = c.expert and ef.locale = 'fr'
+         left join ref_labels_v ad
+           on ad.ns = 'avertissement_lecture' and ad.key = l.avertissement and ad.locale = $2
+         left join ref_labels_v af
+           on af.ns = 'avertissement_lecture' and af.key = l.avertissement and af.locale = 'fr'
+        where l.piece_id = $1
+        order by l.rang nulls first, gc.parcelle, gc.code, l.instance nulls first`,
+      [pieceId, locale],
+    );
+    const tete = rows[0];
+    if (!tete) return null;
+    const code = (c: string | null, libelle: string | null) =>
+      c === null ? null : { code: c, libelle: libelle ?? c };
+    return {
+      lectureId: tete.lecture_id,
+      issue: tete.issue,
+      grille: code(tete.grille_code, tete.grille_nom),
+      le: new Date(tete.le).toISOString(),
+      // La ligne de tentative (champ nul) ne porte que l'issue : elle n'est pas un champ.
+      champs: rows
+        .filter((r) => r.champ_code !== null && r.statut !== null)
+        .map((r) => ({
+          code: r.champ_code!,
+          libelle: r.champ_libelle ?? r.champ_code!,
+          role: code(r.role, r.role_libelle),
+          expert: code(r.expert, r.expert_libelle),
+          statut: r.statut!,
+          valeur: r.valeur,
+          rang: r.rang,
+          instance: r.instance,
+          citations: Array.isArray(r.citations) ? r.citations : [],
+          avertissement: code(r.avertissement, r.avertissement_libelle),
+        })),
+    };
   },
 
   /**

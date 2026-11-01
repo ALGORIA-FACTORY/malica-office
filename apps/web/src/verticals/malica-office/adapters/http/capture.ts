@@ -21,6 +21,7 @@ import type {
   CaptureRepository,
   Citation,
   Extraction,
+  LectureObservee,
   MontantsDuCabinet,
   NewPiece,
   NouvellePiece,
@@ -131,6 +132,10 @@ export function creerCaptureHttp(): CaptureRepository {
       return rpc<PaiementDUnePiece[]>("capture", "paiementsDUnePiece", [pieceId]);
     },
     // Une pièce qui accompagne : l'API rend déjà la forme du port.
+    async lectureObservee(pieceId: string, locale: string) {
+      return rpc<LectureObservee | null>("capture", "lectureObservee", [pieceId, locale]);
+    },
+
     async retourDeLaPiece(pieceId: string, locale: string) {
       return rpc<RetourDuCabinet | null>("capture", "retourDeLaPiece", [pieceId, locale]);
     },
