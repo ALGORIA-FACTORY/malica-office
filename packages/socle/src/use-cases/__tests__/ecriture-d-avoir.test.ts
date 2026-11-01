@@ -361,4 +361,63 @@ describe("l'écriture d'un avoir lié à sa facture", () => {
       ),
     ).toBe("droit_au_cout_non_attribue");
   });
+
+  it("le FODEC au coût fondu dans la base codée de son taux : l'extourne exacte se propose", () => {
+    // Revue de #173 : le cabinet a fondu le droit dans la ligne de charge
+    // codée (base TVA19 1 010). L'avoir qui imprime HT 1 000, FODEC 10 et la
+    // même TVA reprend toute la facture ; il était refusé, la base codée
+    // comparée à la seule HT.
+    const fondue: LigneDeLaFacture[] = [
+      { ...ligne("607", "base", "1010.000", "0", "TVA19"), libelle: "FOURNISSEUR D'ESSAI" },
+      ligne("4366", "tva", "191.900", "0", "TVA19"),
+      ligne("401", "tiers", "0", "1201.900"),
+    ];
+    const fodec = (montant: string) => [{ code: "FODEC", montant }];
+    const r = avoir(AVOIR_TOTAL, "1201.900", "selon_avoir", fondue, fodec("10.000"), FODEC_LU);
+    expect(r.ok && r.reserves).toEqual([{ code: "droit_au_cout", droit: "FODEC" }]);
+    expect(r.ok && r.lignes.map((l) => [l.account_code, l.debit, l.credit, l.tax_code])).toEqual([
+      ["607", "0", "1010.000", "TVA19"],
+      ["4366", "0", "191.900", "TVA19"],
+      ["401", "1201.900", "0", null],
+    ]);
+    // Le droit fondu ne compte qu'une fois, et pour son montant : le reste
+    // de chaque composante se vérifie comme avant.
+    expect(
+      lignes(
+        avoir(
+          [{ code: "TVA19", ht: "990.000", tva: "191.900" }],
+          "1201.900",
+          "selon_avoir",
+          fondue,
+          fodec("20.000"),
+          FODEC_LU,
+        ),
+      ),
+    ).toBe("avoir_excede_la_facture");
+    expect(
+      lignes(
+        avoir(
+          [{ code: "TVA19", ht: "1005.000", tva: "191.900" }],
+          "1201.900",
+          "selon_avoir",
+          fondue,
+          fodec("5.000"),
+          FODEC_LU,
+        ),
+      ),
+    ).toBe("droit_au_cout_non_attribue");
+    // Moins que la base, même droit compté : la part manquante ne se devine pas.
+    expect(
+      lignes(
+        avoir(
+          [{ code: "TVA19", ht: "995.000", tva: "191.900" }],
+          "1196.900",
+          "extourne",
+          fondue,
+          fodec("10.000"),
+          FODEC_LU,
+        ),
+      ),
+    ).toBe("droit_au_cout_non_attribue");
+  });
 });

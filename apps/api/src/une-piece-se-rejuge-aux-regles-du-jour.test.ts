@@ -31,7 +31,7 @@ import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { contratRpc, executerRpc } from "./rpc.ts";
-import { REGLES_DU_JUGEMENT } from "./scan/analyse.ts";
+import { REGLES_DU_JUGEMENT, versionDuJugement } from "./scan/analyse.ts";
 import { lecture as lectureDEssai } from "./scan/lecture-d-essai.ts";
 import { rejugerALOuverture, type BilanDuRejeu } from "./scan/rejeu.ts";
 
@@ -59,6 +59,7 @@ describe("une pièce se rejuge aux règles du jour", { skip: !BASE_CONFIGUREE },
     sousIdentite(u.id, (db) => executerRpc(db, { depot, methode, args }));
   const rejuger = (u: Utilisateur, tenant: string | null, essai = false) =>
     rpc(u, "office", "rejugerLesPieces", tenant, null, essai) as Promise<BilanDuRejeu>;
+  const versionDuJourDuJugement = () => sousIdentite(expert.id, (db) => versionDuJugement(db));
   const proposition = (u: Utilisateur, id: string) =>
     rpc(u, "office", "propositionDePiece", id) as Promise<{ ok: boolean; empreinte?: string }>;
 
@@ -252,7 +253,9 @@ describe("une pièce se rejuge aux règles du jour", { skip: !BASE_CONFIGUREE },
     assert.equal(bilan.suite, null);
     const derniere = (await analyses(id)).at(-1);
     assert.equal(derniere?.verdict, "à comptabiliser", JSON.stringify(derniere));
-    assert.equal(derniere?.regles, REGLES_DU_JUGEMENT);
+    // Les règles du code, et les référentiels de mots du jour.
+    assert.ok(bilan.regles.startsWith(`${REGLES_DU_JUGEMENT}+`), bilan.regles);
+    assert.equal(derniere?.regles, bilan.regles);
     assert.equal((await proposition(expert, id)).ok, true);
   });
 
@@ -331,7 +334,7 @@ describe("une pièce se rejuge aux règles du jour", { skip: !BASE_CONFIGUREE },
     await jugeeALAncienne(id);
     assert.equal((await proposition(expert, id)).ok, true);
     const apres = await analyses(id);
-    assert.equal(apres.at(-1)?.regles, REGLES_DU_JUGEMENT);
+    assert.equal(apres.at(-1)?.regles, await versionDuJourDuJugement());
     await proposition(expert, id);
     assert.equal((await analyses(id)).length, apres.length);
   });
@@ -352,7 +355,7 @@ describe("une pièce se rejuge aux règles du jour", { skip: !BASE_CONFIGUREE },
       `select regles from capture.analyses_verifiees where piece_id = $1`,
       [id],
     );
-    assert.deepEqual(rows, [{ regles: REGLES_DU_JUGEMENT }]);
+    assert.deepEqual(rows, [{ regles: await versionDuJourDuJugement() }]);
     // Par l'écran : l'ouverture n'écrit plus rien.
     const ecrit = await ceQueLeRejeuEcrit();
     await proposition(expert, id);
