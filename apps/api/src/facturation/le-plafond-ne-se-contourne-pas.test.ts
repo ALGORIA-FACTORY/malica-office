@@ -282,7 +282,7 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
       await db.query("savepoint avant");
       await assert.rejects(
         db.query("select public.lecture_autorisee($1)", [c.piece]),
-        /piece introuvable ou non autorisee/,
+        /refus\.introuvable\.piece$/,
       );
       await db.query("rollback to savepoint avant");
       await db.query("reset role");
@@ -349,7 +349,7 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
         await db.query("savepoint avant");
         await assert.rejects(
           db.query("select public.lecture_consommer($1)", [partagee]),
-          /lecture refusee : plafond_atteint/,
+          /refus\.lecture\.refusee\?motif=plafond_atteint$/,
         );
         await db.query("rollback to savepoint avant");
       });
@@ -372,7 +372,7 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
         await db.query("savepoint avant_lecture");
         await assert.rejects(
           db.query("select public.lecture_autorisee($1)", [partagee]),
-          /piece introuvable ou non autorisee/,
+          /refus\.introuvable\.piece$/,
         );
         await db.query("rollback to savepoint avant_lecture");
 
@@ -431,7 +431,7 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
       await db.query("savepoint avant");
       await assert.rejects(
         db.query("select public.lecture_consommer($1)", [c.piece]),
-        /lecture refusee : plafond_atteint/,
+        /refus\.lecture\.refusee\?motif=plafond_atteint$/,
       );
       await db.query("rollback to savepoint avant");
       await db.query("reset role");

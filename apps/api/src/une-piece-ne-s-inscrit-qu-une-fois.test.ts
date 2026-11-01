@@ -115,7 +115,7 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
     });
     await assert.rejects(
       sousIdentite(expert.id, (db) => office.propose(db, facture(piece, "622"))),
-      /déjà inscrite/,
+      /refus\.ecriture\.reimputer$/,
     );
     assert.equal(await vivantes(piece, "piece"), "1");
   });
@@ -158,7 +158,7 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
         ]),
       );
     await retourner();
-    await assert.rejects(retourner(), /déjà contre-passée/);
+    await assert.rejects(retourner(), /refus\.ecriture\.contre_passee$/);
     // Retournée : la pièce se réimpute, une fois.
     await sousIdentite(expert.id, async (db) => {
       const id = await office.propose(db, facture(piece, "622"));
@@ -295,7 +295,7 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
           ],
         }),
       ),
-      /déséquilibrée/,
+      /refus\.ecriture\.desequilibree\?debit=100\.000&credit=90\.000$/,
     );
     const { rows } = await admin.query(`select 1 from socle.ecritures where piece_id = $1`, [
       piece,

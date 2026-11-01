@@ -15,10 +15,7 @@ import { introuvableLisible, refusLisible } from "./refus.ts";
 
 describe("refus lisible", () => {
   it("dit deux gestes simultanés comme un refus : le nôtre tel quel, celui du moteur sans ses verrous", () => {
-    const notre = {
-      code: "40001",
-      message: "un autre export de ce journal vient d'etre produit : recommencez",
-    };
+    const notre = { code: "40001", message: "refus.export.concurrent" };
     assert.equal(refusLisible(notre), notre.message);
     const moteur = {
       code: "40001",
@@ -81,7 +78,21 @@ describe("refus lisible", () => {
       code: "42501",
       message: 'new row violates row-level security policy for table "invitations"',
     });
-    assert.equal(rendu, "refus.moteur.geste_non_permis");
+    assert.equal(rendu, "refus.geste.non_permis");
+  });
+
+  it("rend tel quel un refus dit par sa clé, avec ses valeurs, quel que soit son code", () => {
+    // Audit du 1er novembre 2026 : la base lève une CLÉ, et les valeurs
+    // qu'elle cite la suivent (`app.refus_avec_valeurs`). L'écran la dit dans
+    // la langue de la personne ; aucun code ne la remplace par une phrase.
+    for (const [code, message] of [
+      ["23514", "refus.plan.compte_collectif?compte=411&libelle=Clients%20%26%20co"],
+      ["23505", "refus.plan.compte_livre?compte=401"],
+      ["42501", "refus.reserve.plateforme"],
+      ["40001", "refus.export.concurrent"],
+      ["22023", "refus.identifiant.invalide?valeur=123&exemple=1876543W%2FA%2FM%2F000"],
+    ])
+      assert.equal(refusLisible({ code, message }), message, `${code} ${message}`);
   });
 
   it("un droit refusé sur une table est une panne, pas un refus : il va au journal", () => {
@@ -109,6 +120,12 @@ describe("refus lisible", () => {
     ]) {
       assert.equal(introuvableLisible(new Error(phrase)), "refus.introuvable", phrase);
     }
+    // La base nomme l'objet dans sa clé : un 404 comme les autres, qui le dit.
+    for (const cle of ["refus.introuvable.piece", "refus.introuvable.cabinet", "refus.introuvable"])
+      assert.equal(introuvableLisible(new Error(cle)), cle, cle);
+    // Une clé qui n'est pas un « introuvable » n'est pas un 404.
+    assert.equal(introuvableLisible(new Error("refus.introuvable_pas.piece")), null);
+    assert.equal(introuvableLisible(new Error("refus.reserve.plateforme")), null);
     assert.equal(introuvableLisible(new Error("réseau coupé")), null);
   });
 

@@ -19,14 +19,17 @@
  * un message avec eux est une fuite en puissance.
  */
 
-import { refusAvecValeurs } from "@malica/socle/refus-a-dire";
+import { estUnRefusParCle, refusAvecValeurs } from "@malica/socle/refus-a-dire";
+
+/** L'objet demandé n'existe pas, ou pas pour l'appelant : `refus.introuvable[.<objet>]`. */
+const CLE_D_INTROUVABLE = /^refus\.introuvable(\.[a-z_]+)?$/;
 
 /** Les codes que nos déclencheurs emploient pour refuser. */
 const CODES_DE_REFUS = new Set([
   "23505", // unique_violation        — « ce compte existe déjà »
   "23503", // foreign_key_violation   — « ce rattachement n'existe pas »
   "23514", // check_violation         — « ce rôle n'admet que la classe 4 »
-  "22023", // invalid_parameter_value — « juridiction requise »
+  "22023", // invalid_parameter_value — « choisissez la juridiction »
   "P0002", // no_data_found           — « aucun compte relié à ce rôle »
   "42501", // insufficient_privilege  — « ce compte est officiel »
   "40001", // serialization_failure   — « un autre export vient d'être produit : recommencez »
@@ -127,7 +130,7 @@ export function refusLisible(erreur: unknown): string | null {
    * celle du moteur et nomme une table. On dit le refus, pas la table.
    */
   if (e.code === "42501" && /row-level security|sécurité au niveau ligne/i.test(e.message ?? ""))
-    return "refus.moteur.geste_non_permis";
+    return "refus.geste.non_permis";
 
   /*
    * Un DROIT refusé sur une table ou une vue n'est pas un refus adressé à
@@ -142,9 +145,13 @@ export function refusLisible(erreur: unknown): string | null {
   )
     return null;
 
-  // Deux gestes simultanés : notre `raise` dit lequel ; celui du moteur nomme
-  // ses verrous, et ne se montre pas.
-  if (e.code === "40001" && !/recommencez/.test(e.message ?? "")) return "refus.moteur.recommencez";
+  // Un refus qui se dit par sa clé (« refus.plan.compte_livre?compte=401 ») :
+  // la base l'a rédigé pour l'écran, qui le dit dans la langue de la personne.
+  if (estUnRefusParCle(e.message ?? "")) return e.message!;
+
+  // Deux gestes simultanés : notre `raise` dit lequel par sa clé (ci-dessus) ;
+  // celui du moteur nomme ses verrous, et ne se montre pas.
+  if (e.code === "40001") return "refus.moteur.recommencez";
 
   // Peuplés par PostgreSQL, jamais par un `raise` : c'est la signature d'une
   // violation détectée par le moteur, dont le message porte des noms internes.
@@ -180,6 +187,9 @@ export function refusLisible(erreur: unknown): string | null {
  */
 export function introuvableLisible(erreur: unknown): string | null {
   if (!(erreur instanceof Error)) return null;
+  // La base le dit par sa clé, qui nomme l'objet (« refus.introuvable.piece ») :
+  // un 404 comme les autres, dans la langue de la personne.
+  if (CLE_D_INTROUVABLE.test(erreur.message)) return erreur.message;
   // Les dépôts écrivent aussi « … introuvable ou non autorisé(e) » : une pièce
   // d'autrui ou le conseil sur un dossier étranger sortaient en 500 (ANO-036).
   return /^[a-z_]+\.(not_found|introuvable)$/.test(erreur.message) ||

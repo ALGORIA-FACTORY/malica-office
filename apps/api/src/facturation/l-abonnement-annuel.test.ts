@@ -147,13 +147,13 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
 
       await assert.rejects(
         sous(db, s.principal, () => db.query("select public.annuel_souscrire($1)", [s.tenant])),
-        /annuel_refuse:deja_engage/,
+        /refus\.annuel\.ferme\?motif=deja_engage$/,
       );
       await assert.rejects(
         sous(db, s.principal, () =>
           db.query("select public.forfait_changer('team', $1)", [s.tenant]),
         ),
-        /forfait_refuse:engagement_annuel/,
+        /refus\.forfait\.empeche\?motif=engagement_annuel&/,
       );
       const team = await sous(db, s.principal, async () => {
         const { rows } = await db.query<{ e: string | null }>(
@@ -215,7 +215,7 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
       assert.equal(etat["ferme"], "annuel_ferme");
       await assert.rejects(
         sous(db, s.principal, () => db.query("select public.annuel_souscrire($1)", [s.tenant])),
-        /annuel_refuse:annuel_ferme/,
+        /refus\.annuel\.ferme\?motif=annuel_ferme$/,
       );
     });
   });
@@ -227,7 +227,7 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
       const autre = randomUUID();
       await assert.rejects(
         sous(db, autre, () => db.query("select public.annuel_souscrire($1)", [s.tenant])),
-        /proprietaire principal/,
+        /refus\.reserve\.proprietaire_principal$/,
       );
       const etat = await sous(db, autre, async () => {
         const { rows } = await db.query<{ r: unknown }>("select public.mon_annuel($1) as r", [

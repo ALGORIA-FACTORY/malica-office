@@ -385,7 +385,7 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
     );
     await assert.rejects(valider(id), /refus\.prise_en_charge\.deja/);
     // La PME ne valide rien.
-    await assert.rejects(pmeFait("office.valider", id), /supervision revient/);
+    await assert.rejects(pmeFait("office.valider", id), /refus\.supervision\.reservee$/);
   });
 
   it("forcer une écriture validée ne retourne pas la pièce et ne prévient pas le client", async () => {

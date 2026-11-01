@@ -67,7 +67,7 @@ describe("une pièce comptabilisée reste dans la société", { skip: !BASE_CONF
   it("une pièce comptabilisée ne passe pas en personnel, même depuis la société", async () => {
     const id = await piece("compta");
     await admin.query(`update capture.pieces set status = 'comptabilisee' where id = $1`, [id]);
-    await assert.rejects(versPersonnel(id), /comptabilisee reste dans la societe/);
+    await assert.rejects(versPersonnel(id), /refus\.piece\.comptabilisee_dans_la_societe$/);
   });
 
   it("une pièce non comptabilisée y passe toujours, par son propriétaire", async () => {

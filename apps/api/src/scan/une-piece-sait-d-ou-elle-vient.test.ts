@@ -137,7 +137,7 @@ describe("la pièce dont une autre est issue", { skip: !BASE_CONFIGUREE }, () =>
           documentKind: "recu_de_paiement",
           sourcePieceId: "00000000-0000-0000-0000-000000000000",
         }),
-      /piece source introuvable ou non autorisee/,
+      /refus\.introuvable\.piece$/,
     );
   });
 });

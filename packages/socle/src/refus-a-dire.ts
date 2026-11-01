@@ -19,6 +19,12 @@ export function refusAvecValeurs(cle: string, valeurs: Record<string, string>): 
   return `${cle}?${new URLSearchParams(valeurs).toString()}`;
 }
 
+/** Le message est-il un refus dit par sa clé, avec ou sans valeurs ? */
+export function estUnRefusParCle(message: string): boolean {
+  const i = message.indexOf("?");
+  return CLE_DE_REFUS.test(i < 0 ? message : message.slice(0, i));
+}
+
 /**
  * Relit un message d'erreur : la clé et ses valeurs, ou le message tel quel
  * (sans valeurs) quand ce n'est pas un refus porteur de valeurs.

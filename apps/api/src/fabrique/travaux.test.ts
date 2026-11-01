@@ -437,7 +437,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     );
     assert.match(
       refus.message,
-      /execution/i,
+      /^refus\.fabrique\.lecture_en_cours\?piece=/,
       "un second travail se prend sur une pièce déjà en cours",
     );
   });

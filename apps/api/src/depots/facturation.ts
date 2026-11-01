@@ -294,7 +294,7 @@ export const facturation = {
   /**
    * Passer à l'année, à partir du premier du mois suivant. Rend l'engagement,
    * et le paiement en ligne à régler quand un émetteur est désigné. Un refus
-   * revient en `annuel_refuse:<code>`.
+   * revient en `refus.annuel.ferme?motif=<code>`.
    */
   async souscrireAnnuel(db: Requete, tenantId?: string) {
     const { rows } = await db.query<{ r: { engagement: string; paiement: unknown } }>(
@@ -318,7 +318,7 @@ export const facturation = {
 
   /**
    * Passer à une offre, à la date du jour. Seul le propriétaire principal le
-   * peut ; un refus revient en `forfait_refuse:<code>:<chiffres>`.
+   * peut ; un refus revient en `refus.forfait.empeche?motif=<code>&chiffres=<chiffres>`.
    */
   async changerForfait(db: Requete, offre: string, tenantId?: string) {
     const { rows } = await db.query<{ r: boolean }>(`select public.forfait_changer($1, $2) as r`, [

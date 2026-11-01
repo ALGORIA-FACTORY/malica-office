@@ -261,7 +261,7 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
       sousIdentiteDuServeur(dirigeant.id, (db) =>
         db.query("select public.lecture_autorisee($1)", [ordonnance]),
       ),
-      /piece introuvable ou non autorisee/,
+      /refus\.introuvable\.piece$/,
     );
   });
 

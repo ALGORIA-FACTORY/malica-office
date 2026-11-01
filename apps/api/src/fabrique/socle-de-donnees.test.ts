@@ -612,7 +612,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     );
     assert.match(
       sousLeSeuil,
-      /^seuil exactitude_champs_critiques/,
+      /^refus\.fabrique\.seuil_minimum\?mesure=exactitude_champs_critiques&/,
       `le refus ne nomme pas le seuil franchi — donc il ne vient peut-être pas de lui : « ${sousLeSeuil} »`,
     );
 

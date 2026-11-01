@@ -192,7 +192,7 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     const encore = (await s.fait("sami", "collab.envoyer", id)) as { deja: boolean };
     assert.equal(encore.deja, true, "le doigt ripe : rien de nouveau");
     const deSonia = await lue("sonia");
-    await assert.rejects(s.fait("sami", "collab.envoyer", deSonia), /non autorisee/);
+    await assert.rejects(s.fait("sami", "collab.envoyer", deSonia), /refus\.introuvable\.piece$/);
     // Le propriétaire, lui, envoie au comptable.
     const duProprietaire = await lue("amel");
     const p = (await s.fait("amel", "collab.envoyer", duProprietaire)) as { chez: string };
@@ -258,8 +258,11 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
 
   it("4 · Retourner avec un motif et une note — le propriétaire au siège, le comptable au client", async () => {
     const id = await chezLeProprietaire();
-    await assert.rejects(retour("sami", id, "hors_exercice"), /non autorisee/);
-    await assert.rejects(retour("amel", id, "justificatif_manquant"), /ce motif exige une note/);
+    await assert.rejects(retour("sami", id, "hors_exercice"), /refus\.introuvable\.piece$/);
+    await assert.rejects(
+      retour("amel", id, "justificatif_manquant"),
+      /refus\.motif\.note_requise$/,
+    );
     await retour("amel", id, "justificatif_manquant", "Le bon de livraison");
     assert.equal((await statut("sami", id))?.statut, "retour");
     // Rien de reçu : rien à retourner.
@@ -293,7 +296,7 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
         sousIdentiteDuServeur(s.gens[qui].id, (db) =>
           db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [id]),
         ),
-        /supervision revient/,
+        /refus\.supervision\.reservee$/,
         qui,
       );
     await s.priseEnCharge(id);
@@ -307,14 +310,14 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     await s.fait("sami", "capture.preciser", deSami, "document_date", "2026-10-07");
     await assert.rejects(
       s.fait("sonia", "capture.preciser", deSami, "document_date", "2026-10-07"),
-      /non autorisee/,
+      /refus\.introuvable\.piece$/,
     );
     await s.fait("amel", "capture.preciser", deSami, "document_date", "2026-10-08");
     const prise = await chezLeComptable("sami");
     await s.priseEnCharge(prise);
     await assert.rejects(
       s.fait("amel", "capture.preciser", prise, "document_date", "2026-10-09"),
-      /engagee ne se precise plus/,
+      /refus\.precision\.engagee$/,
     );
   });
 
@@ -435,7 +438,7 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     // Pas envoyée : il la reprend sans demander.
     await assert.rejects(
       s.fait("sami", "collab.demanderSurPiece", chezAmel, "rappel"),
-      /rien a demander/,
+      /refus\.piece\.non_partagee$/,
     );
     const auComptable = await lue("amel");
     await s.fait("amel", "collab.envoyer", auComptable);
@@ -457,11 +460,11 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     await s.fait("sami", "collab.demanderSurPiece", id, "suppression");
     await assert.rejects(
       s.fait("sami", "collab.repondreSurPiece", id, "suppression", true, null),
-      /seul le proprietaire/,
+      /refus\.reserve\.proprietaire$/,
     );
     await assert.rejects(
       s.fait("expert", "collab.repondreSurPiece", id, "suppression", true, null),
-      /non autorisee/,
+      /refus\.introuvable\.piece$/,
     );
     await s.fait("bilel", "collab.repondreSurPiece", id, "suppression", false, "Non");
     assert.ok(await vis(id));

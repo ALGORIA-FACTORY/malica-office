@@ -253,7 +253,7 @@ describe("les clients n'écrivent que par les portes", { skip: !BASE_CONFIGUREE 
     );
     await assert.rejects(
       s.fait("expert", "collab.repondreSurPiece", partie, "suppression", true, null),
-      /aucune demande en attente/,
+      /refus\.piece\.aucune_demande$/,
     );
     const { rows } = await s.admin.query(`select archivee_le from capture.pieces where id = $1`, [
       partie,
@@ -302,10 +302,7 @@ describe("les clients n'écrivent que par les portes", { skip: !BASE_CONFIGUREE 
     // Une nature hors du référentiel : refusée, même au cabinet.
     await refuse(consigner("expert", "piece.validee", ecriture, {}), /refus\.saisie\.mal_formee/);
     // Un objet qu'on ne voit pas n'existe pas : une pièce n'est pas une écriture.
-    await refuse(
-      consigner("expert", "piece.retour_clos", ecriture, {}),
-      /objet introuvable ou non autorise/,
-    );
+    await refuse(consigner("expert", "piece.retour_clos", ecriture, {}), /refus\.introuvable$/);
     // Dossier en mandat : clore un retour est l'acte du cabinet qui le tient,
     // pas de la société, qui pourtant lit la pièce.
     await s.admin.query(
@@ -724,14 +721,14 @@ describe("aucune écriture directe, famille par famille", { skip: !BASE_CONFIGUR
       sousIdentite(s.gens.amel.id, (db) => db.query(requete, valeurs));
     await assert.rejects(
       essai(`select public.tiers_activer($1, false)`, [inconnu]),
-      /tiers introuvable ou non autorise/,
+      /refus\.introuvable\.tiers$/,
     );
     await assert.rejects(
       essai(
         `select public.stocks_mouvement_inscrire($1, $2, 'entree', current_date, 1, 1, null, null)`,
         [s.pme, inconnu],
       ),
-      /article introuvable ou non autorise/,
+      /refus\.introuvable\.article$/,
     );
     // « Rapprochée », c'est le lettrage qui le dit, pas un clic.
     await assert.rejects(

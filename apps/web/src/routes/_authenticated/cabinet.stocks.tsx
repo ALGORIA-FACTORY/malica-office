@@ -418,13 +418,9 @@ function CabinetStocks() {
       setError(null);
       invalidate();
     },
-    onError: (e: unknown) =>
-      setError(
-        e instanceof Error &&
-          (e.message.includes("deja constate") || e.message.includes("stocks_inventaires_uniq"))
-          ? t("cab.stocks.invdup")
-          : texteDeLErreur(e, OU, t("common.error")),
-      ),
+    // Une période déjà constatée revient en clé (`refus.stocks.inventaire_deja`),
+    // que `texteDeLErreur` dit dans la langue de la personne.
+    onError: (e: unknown) => setError(texteDeLErreur(e, OU, t("common.error"))),
   });
 
   const constaterDepreciation = useMutation({

@@ -91,7 +91,7 @@ describe("le cabinet attribue un abonnement, la PME choisit", { skip: !BASE_CONF
   it("le dirigeant de la PME ne propose pas à la place du cabinet", async () => {
     await assert.rejects(
       sous(dirigeant, `select public.acces_proposer($1, $2, 'team')`, [cabinet, pme]),
-      /expert-comptable/,
+      /refus\.reserve\.expert$/,
     );
   });
 
@@ -118,7 +118,7 @@ describe("le cabinet attribue un abonnement, la PME choisit", { skip: !BASE_CONF
 
   it("une seule proposition ouverte à la fois", async () => {
     const id = await proposer("team");
-    await assert.rejects(proposer("solo"), /déjà proposé ou attribué/);
+    await assert.rejects(proposer("solo"), /refus\.abonnement\.deja_propose$/);
     // On laisse celle-ci ouverte pour l'épreuve suivante.
     assert.match(id, /^[0-9a-f-]{36}$/);
   });
@@ -200,7 +200,7 @@ describe("le cabinet attribue un abonnement, la PME choisit", { skip: !BASE_CONF
           `select facturation.emettre_cabinet($1, date_trunc('month', current_date)::date)`,
           [cabinet],
         ),
-        /existe deja/,
+        /refus\.facturation\.deja_emise\?periode=/,
       );
       await db.query("rollback to savepoint deux");
     } finally {

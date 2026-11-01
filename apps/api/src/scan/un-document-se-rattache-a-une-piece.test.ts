@@ -107,12 +107,18 @@ describe("un document se rattache à une pièce", { skip: !BASE_CONFIGUREE }, ()
     const facture = await piece("facture-2");
     const avoir = await piece("avoir");
     await rpc(dirigeant, "rattacher", facture, avoir);
-    await assert.rejects(rpc(dirigeant, "detacher", avoir, facture, "  "), /pourquoi/);
+    await assert.rejects(
+      rpc(dirigeant, "detacher", avoir, facture, "  "),
+      /refus\.rattachement\.motif$/,
+    );
     await rpc(dirigeant, "detacher", avoir, facture, "Pas le bon fournisseur");
     assert.deepEqual(await liees(facture), []);
     assert.deepEqual(await faits(facture, avoir), ["rattache", "detache"]);
     // Détacher ce qui ne l'est plus est refusé ; rattacher de nouveau, permis.
-    await assert.rejects(rpc(dirigeant, "detacher", facture, avoir, "encore"), /pas rattaché/);
+    await assert.rejects(
+      rpc(dirigeant, "detacher", facture, avoir, "encore"),
+      /refus\.rattachement\.absent$/,
+    );
     await rpc(dirigeant, "rattacher", avoir, facture);
     assert.deepEqual(await liees(facture), [avoir]);
   });
@@ -120,10 +126,16 @@ describe("un document se rattache à une pièce", { skip: !BASE_CONFIGUREE }, ()
   it("refuse l'espace privé, une pièce elle-même, et un autre dossier", async () => {
     const facture = await piece("facture-3");
     const privee = await piece("privee", "personnel");
-    await assert.rejects(rpc(dirigeant, "rattacher", facture, privee), /espace privé/);
-    await assert.rejects(rpc(dirigeant, "rattacher", facture, facture), /elle-même/);
+    await assert.rejects(
+      rpc(dirigeant, "rattacher", facture, privee),
+      /refus\.rattachement\.espace_prive$/,
+    );
+    await assert.rejects(
+      rpc(dirigeant, "rattacher", facture, facture),
+      /refus\.rattachement\.a_elle_meme$/,
+    );
     const autre = await piece("autre");
-    await assert.rejects(rpc(etranger, "rattacher", facture, autre), /non autorisee/);
+    await assert.rejects(rpc(etranger, "rattacher", facture, autre), /refus\.introuvable\.piece$/);
   });
 
   it("ne se réécrit pas : ni modification ni suppression directes", async () => {

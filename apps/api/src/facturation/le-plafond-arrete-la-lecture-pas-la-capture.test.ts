@@ -214,7 +214,7 @@ describe(
         sousIdentiteDuServeur(u.id, (db) =>
           db.query("select public.lecture_consommer($1)", [auDela]),
         ),
-        /lecture refusee : plafond_atteint/,
+        /refus\.lecture\.refusee\?motif=plafond_atteint$/,
       );
       assert.equal(
         await compter("select count(*) as n from facturation.lectures where piece_id = $1", [

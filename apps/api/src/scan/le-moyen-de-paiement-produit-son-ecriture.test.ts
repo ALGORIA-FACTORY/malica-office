@@ -436,7 +436,10 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     assert.equal(Number(rows[0]!.debit), 100);
     assert.equal(rows[0]!.credit, rows[0]!.debit);
     await assert.rejects(rpc("office", "inscrireLeReglement", p), /annulé/);
-    await assert.rejects(rpc("capture", "annulerPaiement", p, motif), /deja annule/);
+    await assert.rejects(
+      rpc("capture", "annulerPaiement", p, motif),
+      /refus\.paiement\.deja_annule$/,
+    );
   });
 
   it("une proposition ancienne ne peut pas comptabiliser un paiement annulé", async () => {
@@ -577,7 +580,10 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
         { account_code: "401", libelle: "Fournisseur", debit: "0.000", credit: "100.000" },
       ],
     });
-    await assert.rejects(rpc("office", "book", id), /Compte absent du plan/);
+    await assert.rejects(
+      rpc("office", "book", id),
+      /refus\.ecriture\.compte_hors_plan\?compte=COMPTE_ABSENT$/,
+    );
   });
 
   it("ne réutilise pas l'analyse d'une extraction précédente", async () => {

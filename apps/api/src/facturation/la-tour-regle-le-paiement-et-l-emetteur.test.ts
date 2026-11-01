@@ -134,7 +134,7 @@ describe("la tour règle le paiement et l'émetteur", { skip: !ADMIN }, () => {
             o.rows[0]!.id,
           ]),
         ),
-        /aujourd'hui ou plus tard/,
+        /refus\.facturation\.emetteur_futur$/,
       );
       await sous(db, op, () =>
         db.query("select plateforme.emetteur_designer($1, current_date, 'essai')", [o.rows[0]!.id]),

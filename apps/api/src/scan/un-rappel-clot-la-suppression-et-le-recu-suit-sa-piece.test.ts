@@ -149,7 +149,7 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
     // Le cabinet n'a plus rien à trancher : la pièce n'est même plus chez lui.
     await assert.rejects(
       () => rpcCab("collab", "repondreSurPiece", id, "suppression", true, null),
-      /piece introuvable ou non autorisee|aucune demande en attente/,
+      /refus\.introuvable\.piece$|refus\.piece\.aucune_demande$/,
     );
 
     // Et la PME efface elle-même ce qui est redevenu son brouillon.
