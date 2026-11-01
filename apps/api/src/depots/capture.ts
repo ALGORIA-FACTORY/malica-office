@@ -657,7 +657,7 @@ export const capture = {
   async contexteLecture(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
       `select id, tenant_id, storage_path, source, content_type,
-              to_char(created_at, 'YYYY-MM-DD') as recue_le
+              to_char(recue_le, 'YYYY-MM-DD') as recue_le
          from pieces_v where id = $1`,
       [pieceId],
     );

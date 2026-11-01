@@ -763,9 +763,10 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     document_kind: string | null;
     document_kind_statut: string;
   }>(
-    `select tenant_id, doublon_de, to_char(created_at, 'YYYY-MM-DD') as recue_le,
-            document_kind, document_kind_statut
-       from capture.pieces where id = $1`,
+    `select p.tenant_id, p.doublon_de, to_char(v.recue_le, 'YYYY-MM-DD') as recue_le,
+            p.document_kind, p.document_kind_statut
+       from capture.pieces p join pieces_v v on v.id = p.id
+      where p.id = $1`,
     [pieceId],
   );
   const piece = pieces[0];

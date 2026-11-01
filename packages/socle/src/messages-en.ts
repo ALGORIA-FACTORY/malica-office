@@ -2142,6 +2142,8 @@ export const en: Dict = {
   "refus.referentiel.taux_tva_hors_pack": "This VAT rate does not exist in the pack in force.",
   "refus.fuseau.non_defini":
     "The practice’s time zone is not set: set it in the practice settings.",
+  "refus.fuseau.dossier_non_defini":
+    "This file’s time zone is not set, neither by the file nor by its jurisdiction: the day its documents were received cannot be read. Report it to support.",
   "refus.fuseau.inconnu": "This time zone does not exist: {fuseau}.",
   "refus.reglages.proportion": "This threshold is a proportion: between 0 and 1.",
   "refus.reglages.revue_au_dessus_du_lot":

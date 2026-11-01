@@ -26,7 +26,8 @@ import { conversionsDesPieces, montantConverti } from "./en-devise-du-dossier.ts
  */
 const CHARGES_LUES = `with lus as (
          select a.*, q.document_kind as kind,
-                coalesce(a.document_date, q.created_at::date) as jour,
+                coalesce(a.document_date,
+                         (select v.recue_le from pieces_v v where v.id = q.id)) as jour,
                 -- La devise de la pièce, telle que son jugement l'a décidée
                 -- (deviseDeLaPiece), à défaut celle de sa lecture.
                 coalesce((select y.normalisation ->> 'devise' from capture.analyses y
