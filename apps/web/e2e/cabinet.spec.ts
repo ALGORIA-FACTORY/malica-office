@@ -395,3 +395,96 @@ for (const largeur of [390, 1440]) {
     });
   });
 }
+
+/*
+ * « Ce que le lecteur a lu » (lecture prouvée en observation) : la section est
+ * repliée, dit qu'elle n'est qu'une observation, met l'avertissement sous son
+ * champ, à 390 px, en français et en arabe (RTL), sans défilement de côté. La
+ * lecture est une réponse d'essai : le jeu de données n'en inscrit aucune.
+ */
+for (const [locale, titre, observation, avertissement] of [
+  ["fr", "Ce que le lecteur a lu", /rien n’est modifié dans la lecture retenue/, "Avertissement"],
+  ["ar", "ما قرأه القارئ", /لا يتغيّر شيء في القراءة المعتمدة/, "تنبيه"],
+] as const) {
+  test(`ce que le lecteur a lu : observation lisible à 390 px, en ${locale}`, async ({
+    page,
+  }, testInfo) => {
+    const plantages: string[] = [];
+    page.on("pageerror", (e) => plantages.push(e.message));
+    await preparerLAppareil(page, locale);
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.route("**/rpc", async (route) => {
+      const appel = route.request().postDataJSON() as { depot?: string; methode?: string };
+      if (appel.depot === "capture" && appel.methode === "lectureObservee") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            resultat: {
+              lectureId: "00000000-0000-4000-8000-000000000001",
+              issue: "signalee",
+              grille: { code: "facture", libelle: "Facture" },
+              le: "2026-11-01T10:00:00.000Z",
+              champs: [
+                {
+                  code: "matricule_fiscal_emetteur",
+                  libelle: "Matricule fiscal de l'émetteur",
+                  role: { code: "fournisseur", libelle: "Fournisseur" },
+                  expert: { code: "identifiant", libelle: "Identifiant" },
+                  statut: "prouve",
+                  valeur: "1876543W/A/M/000",
+                  rang: null,
+                  instance: null,
+                  citations: [{ page: 1, ordinal: 12 }],
+                  avertissement: {
+                    code: "lettre_de_controle_discordante",
+                    libelle: "Lettre de contrôle discordante (essai)",
+                  },
+                },
+                {
+                  code: "quantite",
+                  libelle: "Quantité",
+                  role: null,
+                  expert: { code: "nombre", libelle: "Nombre" },
+                  statut: "deduit",
+                  valeur: "40",
+                  rang: 1,
+                  instance: null,
+                  citations: [],
+                  avertissement: null,
+                },
+              ],
+            },
+          }),
+        });
+      } else await route.continue();
+    });
+    await page.goto("/cabinet/bibliotheque");
+    const clients = page.getByRole("combobox", { name: /^(Client|العميل)$/ });
+    const option = clients
+      .locator("option")
+      .filter({ hasText: /SOTUMAG/ })
+      .first();
+    await expect(option).toBeAttached();
+    await clients.selectOption((await option.getAttribute("value"))!);
+    await page.locator(".cab-doclib-documents li").first().locator("a").first().click();
+    await expect(page).toHaveURL(/\/cabinet\/piece\//);
+    const bouton = page.getByRole("button", { name: titre });
+    await expect(bouton).toHaveAttribute("aria-expanded", "false");
+    await bouton.click();
+    const section = page.locator(".cab-lecteur");
+    await expect(section.getByText(observation)).toBeVisible();
+    await expect(section.getByText("1876543W/A/M/000", { exact: true })).toBeVisible();
+    await expect(section.locator("tr.cab-lecteur-avertissement")).toContainText(avertissement);
+    await expect(page.locator("html")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+    const debordement = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(debordement).toBeLessThanOrEqual(1);
+    expect(plantages).toEqual([]);
+    await testInfo.attach(`ce-que-le-lecteur-a-lu-${locale}-390`, {
+      body: await section.screenshot(),
+      contentType: "image/png",
+    });
+  });
+}
