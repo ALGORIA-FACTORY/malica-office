@@ -1,7 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
+import {
+  CarteDeGroupe,
+  IconeCalendrier,
+  IconeSiege,
+  IconeSociete,
+} from "@/components/malica/carte-de-groupe";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { jourOuInstant, montant } from "@/lib/lisible";
@@ -9,10 +15,11 @@ import type { PieceLue } from "@malica/socle/ports/repositories";
 import { TON_PME, type StatutPme } from "@malica/socle/statut-d-envoi";
 import { attendLaPersonne, statutDeLaPieceLue } from "@/lib/lecture";
 import { MOT_PME } from "@/lib/statut";
-import { usePiecesLues } from "@/hooks/use-pieces-lues";
+import { usePiecesLues, usePiecesLuesDesSocietes } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { currentPeriod } from "@/hooks/use-tva";
-import { dansLaPeriodeMontree, dossierDeLaPiece, periodeMontree } from "@/lib/dossiers";
+import { dossierDeLaPiece, moisDeLaPiece, periodeMontree } from "@/lib/dossiers";
+import { sommeDecimale } from "@malica/socle/somme-decimale";
 
 export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
   head: () => ({
@@ -31,10 +38,16 @@ export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
  * Un dossier ouvert — la « playlist » d'un des sept dossiers (`ref.dossiers`).
  *
  * 23 octobre 2026, maquette validée par Wissem : la pochette touchée sur
- * l'accueil s'ouvre ici, avec UN geste principal (ouvrir ce qui attend),
- * des filtres par état — seulement ceux qui ont des pièces — et la liste, chaque
- * ligne avec la vraie page en aperçu. L'état est le statut de la pièce, un
- * mot et une couleur (« Malica sans blocage », §2) : jamais une écriture.
+ * l'accueil s'ouvre ici, avec UN geste principal (ouvrir ce qui attend) et la
+ * liste, chaque ligne avec la vraie page en aperçu. L'état est le statut de la
+ * pièce, un mot et une couleur (« Malica sans blocage », §2) : jamais une écriture.
+ *
+ * 1er novembre 2026, maquette validée par Wissem : plus de filtres par état ni
+ * de renvoi « pièces plus anciennes » vers la bibliothèque. Le dossier montre
+ * TOUTES ses pièces, rangées comme la bibliothèque : les sociétés et les sièges
+ * quand l'abonnement les ouvre, puis les mois (ou les années d'un dossier
+ * annuel), chacun déroulant ses pièces. La période la plus récente est
+ * déroulée à l'ouverture, comme la carte de l'accueil la montre.
  *
  * Les pièces viennent de la lecture que l'accueil a déjà faite
  * (`capture.listAvecLecture` : type, émetteur, date, total — toutes les
@@ -70,14 +83,36 @@ function etatDe(p: PieceLue): Etat {
 /** La couleur du point : celle du statut ; une pièce non lue reste grise. */
 const tonDe = (e: Etat) => (e === "nonLue" || e === "autre" ? "neutre" : TON_PME[e]);
 
+/** Une pièce et la société où elle est rangée. */
+interface PieceDeSociete {
+  piece: PieceLue;
+  societe: string;
+}
+
 function Dossier() {
   const { type } = Route.useParams();
   const { t, locale } = useI18n();
   const pme = usePme();
   const navigate = useNavigate();
-  const [filtre, setFiltre] = useState<Etat | "toutes">("toutes");
+
+  /*
+   * CE QUE L'ABONNEMENT OUVRE, lu à un seul endroit (`pme.forfait.ouvertures`).
+   * Les sociétés ne se regroupent que si l'offre en ouvre plusieurs ET que la
+   * personne en a plusieurs : une seule carte ne regroupe rien.
+   */
+  const parSociete = pme.forfait.ouvertures.societes && pme.dossiers.length > 1;
+  const parSiege = pme.forfait.ouvertures.sieges;
 
   const lues = usePiecesLues();
+  const autresSocietes = usePiecesLuesDesSocietes(
+    parSociete ? pme.dossiers.filter((d) => d.id !== pme.tenantId).map((d) => d.id) : [],
+  );
+
+  const [societe, setSociete] = useState<string | null>(pme.tenantId);
+  const [siege, setSiege] = useState<string | null>(null);
+  /** La période déroulée ; `undefined` : la plus récente qui a des pièces. */
+  const [ouverte, setOuverte] = useState<string | null | undefined>(undefined);
+
   /*
    * Le paramètre est un DOSSIER (`ref.dossiers`) depuis le 25 octobre 2026.
    * Un lien d'avant portait un type : il ouvre le dossier de ce type.
@@ -86,37 +121,90 @@ function Dossier() {
   const dossier =
     sept.parCode(type) ?? sept.parCode(sept.types.find((x) => x.code === type)?.dossier);
   const libelle = dossier?.libelle ?? "";
-  /*
-   * LA MÊME PÉRIODE QUE SA CARTE : la carte « Aucune pièce » ne doit pas
-   * ouvrir une page pleine (revue du 25 octobre). Ce qui est plus ancien se
-   * retrouve dans la bibliothèque, rangée par dossier.
-   */
-  const periode = currentPeriod();
-  const duDossier = (lues.data ?? []).filter(
-    (p) =>
-      dossier !== null && p.vis !== "personnel" && dossierDeLaPiece(p, sept.types) === dossier.code,
-  );
-  // La période de sa carte : la plus récente qui a des pièces (`periodeMontree`).
-  const montree = dossier ? periodeMontree(duDossier, dossier.periode, periode) : periode;
-  const horsPeriode = dossier
-    ? duDossier.filter((p) => !dansLaPeriodeMontree(p, montree)).length
-    : 0;
-  const etiquette = !dossier
-    ? ""
-    : dossier.periode === "mois"
-      ? new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
-          new Date(`${montree}-01T00:00:00Z`),
-        )
-      : montree;
-  const toutes = duDossier
-    .filter((p) => dossier !== null && dansLaPeriodeMontree(p, montree))
-    .sort((x, y) => y.createdAt.localeCompare(x.createdAt));
-  const faites = toutes.filter((p) => etatDe(p) === "prise_en_charge").length;
-  const aVerifier = toutes.filter(attendLaPersonne);
-  const filtres = ETATS.filter((e) => toutes.some((p) => etatDe(p) === e.etat));
-  const visibles = filtre === "toutes" ? toutes : toutes.filter((p) => etatDe(p) === filtre);
-  const part = toutes.length === 0 ? 0 : Math.round((faites / toutes.length) * 100);
+
+  // Une pièce privée n'est pas dans la bibliothèque, donc pas ici.
+  const duDossier = (lot: readonly PieceLue[] | undefined, id: string): PieceDeSociete[] =>
+    (lot ?? [])
+      .filter(
+        (p) =>
+          dossier !== null &&
+          p.vis !== "personnel" &&
+          dossierDeLaPiece(p, sept.types) === dossier.code,
+      )
+      .map((piece) => ({ piece, societe: id }));
+  const autresIds = pme.dossiers.filter((d) => d.id !== pme.tenantId).map((d) => d.id);
+  const toutes: PieceDeSociete[] = [
+    ...duDossier(lues.data, pme.tenantId),
+    ...(parSociete ? autresSocietes.flatMap((q, i) => duDossier(q.data, autresIds[i]!)) : []),
+  ];
+
+  const deLaSociete = toutes.filter((x) => !parSociete || !societe || x.societe === societe);
+  const retenues = deLaSociete
+    .filter((x) => !parSiege || !siege || x.piece.auteurId === siege)
+    .map((x) => x.piece)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  // ----------------------------------------------------------- les sociétés
+  const nomDeSociete = (id: string) => pme.dossiers.find((d) => d.id === id)?.name ?? "";
+  const cartesSocietes = pme.dossiers
+    .map((d) => ({
+      id: d.id,
+      pieces: toutes
+        .filter((x) => x.societe === d.id && (!parSiege || !siege || x.piece.auteurId === siege))
+        .map((x) => x.piece),
+    }))
+    .filter((c) => c.pieces.length > 0 || c.id === societe);
+
+  // ------------------------------------------------------------ les sièges
+  const sieges = new Map<string, { nom: string; pieces: PieceLue[] }>();
+  for (const { piece } of deLaSociete) {
+    const id = piece.auteurId;
+    if (!id) continue;
+    const prenom = piece.circuit?.auteur ?? "—";
+    const nom = piece.circuit?.mienne ? t("pme.dossier.vous", { nom: prenom }) : prenom;
+    const g = sieges.get(id) ?? { nom, pieces: [] };
+    g.pieces.push(piece);
+    sieges.set(id, g);
+  }
+
+  // ----------------------------------------------------------- les périodes
+  const annuel = dossier?.periode === "annee";
+  const periodeDe = (p: PieceLue) => (annuel ? moisDeLaPiece(p).slice(0, 4) : moisDeLaPiece(p));
+  const periodes = [...new Set(retenues.map(periodeDe))].sort().reverse();
+  const deroulee =
+    ouverte !== undefined
+      ? ouverte
+      : retenues.length > 0 && dossier
+        ? periodeMontree(retenues, dossier.periode, currentPeriod())
+        : null;
+  const nomDePeriode = (cle: string, avecAnnee: boolean) =>
+    annuel
+      ? cle
+      : new Intl.DateTimeFormat(locale, {
+          month: "long",
+          ...(avecAnnee ? { year: "numeric" } : {}),
+          timeZone: "UTC",
+        }).format(new Date(`${cle}-01T00:00:00Z`));
+  const etiquette = deroulee ? nomDePeriode(deroulee, false) : "";
+
+  const total = (ps: readonly PieceLue[]) => {
+    const connus = ps.map((p) => p.total).filter((v): v is string => v !== null);
+    return `${libelle} ${connus.length === 0 ? "—" : montant(sommeDecimale(connus), locale)}`;
+  };
+  const typesDe = (ps: readonly PieceLue[]) =>
+    [
+      ...new Set(
+        ps
+          .map((p) => sept.types.find((x) => x.code === p.typeDeDocument)?.libelle)
+          .filter((l): l is string => Boolean(l)),
+      ),
+    ].join(" · ");
+
+  const faites = retenues.filter((p) => etatDe(p) === "prise_en_charge").length;
+  const aVerifier = retenues.filter(attendLaPersonne);
+  const part = retenues.length === 0 ? 0 : Math.round((faites / retenues.length) * 100);
   const jour = (iso: string) => jourOuInstant(iso, locale);
+  const chargement = lues.isPending || !sept.pret || autresSocietes.some((q) => q.isPending);
 
   return (
     <div data-ecran="pochette" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
@@ -140,14 +228,14 @@ function Dossier() {
               {[t("pme.dossier.kicker"), etiquette].filter(Boolean).join(" · ")}
             </span>
             <h1>{libelle}</h1>
-            <span>{t("pme.home.dossier.pieces", { count: toutes.length })}</span>
+            <span>{t("pme.home.dossier.pieces", { count: retenues.length })}</span>
           </span>
         </div>
         <div className="av">
           <span className="bar">
             <i style={{ width: `${part}%` }} />
           </span>
-          <span>{t("pme.dossier.avancement", { fait: faites, total: toutes.length })}</span>
+          <span>{t("pme.dossier.avancement", { fait: faites, total: retenues.length })}</span>
         </div>
       </div>
 
@@ -175,60 +263,107 @@ function Dossier() {
           </button>
         </div>
 
-        {filtres.length > 1 ? (
-          <div className="filtres" role="group">
-            <button
-              type="button"
-              aria-pressed={filtre === "toutes"}
-              onClick={() => setFiltre("toutes")}
-            >
-              {t("pme.dossier.filtre.toutes")}
-            </button>
-            {filtres.map((e) => (
-              <button
-                key={e.etat}
-                type="button"
-                aria-pressed={filtre === e.etat}
-                onClick={() => setFiltre(e.etat)}
-              >
-                {t(e.cle)}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        {lues.isPending || !sept.pret ? (
+        {chargement ? (
           <p className="vide">{t("common.loading")}</p>
-        ) : visibles.length === 0 ? (
+        ) : toutes.length === 0 ? (
           <p className="vide">{t("pme.dossier.vide")}</p>
         ) : (
-          <div className="liste">
-            {visibles.map((p) => {
-              const e = etatDe(p);
-              const nom = ETATS.find((x) => x.etat === e);
+          <>
+            {parSociete ? (
+              <>
+                <div className="sec">
+                  <h2>{t("pme.dossier.organisations")}</h2>
+                  <span>{cartesSocietes.length}</span>
+                </div>
+                {cartesSocietes.map((c) => (
+                  <CarteDeGroupe
+                    key={c.id}
+                    presse={societe === c.id}
+                    accent={societe === c.id}
+                    onClick={() => {
+                      setSociete(societe === c.id ? null : c.id);
+                      setSiege(null);
+                      setOuverte(undefined);
+                    }}
+                    icone={<IconeSociete />}
+                    titre={nomDeSociete(c.id)}
+                    valeur={total(c.pieces)}
+                    n={c.pieces.length}
+                  />
+                ))}
+              </>
+            ) : null}
+
+            {parSiege && sieges.size > 0 ? (
+              <>
+                <div className="sec">
+                  <h2>{t("pme.dossier.sieges")}</h2>
+                  <span>{sieges.size}</span>
+                </div>
+                {[...sieges].map(([id, g]) => (
+                  <CarteDeGroupe
+                    key={id}
+                    presse={siege === id}
+                    accent={siege === id}
+                    onClick={() => {
+                      setSiege(siege === id ? null : id);
+                      setOuverte(undefined);
+                    }}
+                    icone={<IconeSiege />}
+                    titre={g.nom}
+                    valeur={total(g.pieces)}
+                    n={g.pieces.length}
+                  />
+                ))}
+              </>
+            ) : null}
+
+            <div className="sec">
+              <h2>{annuel ? t("pme.dossier.annees") : t("pme.vue.mois")}</h2>
+              <span>{periodes.length}</span>
+            </div>
+            {periodes.map((cle) => {
+              const ps = retenues.filter((p) => periodeDe(p) === cle);
+              const ouvert = deroulee === cle;
               return (
-                <Link key={p.id} to="/pme/piece/$pieceId" params={{ pieceId: p.id }}>
-                  <ApercuDePiece pieceId={p.id} className="vignette" />
-                  <span className="bd">
-                    <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
-                    <span>
-                      <i data-ton={tonDe(e)} />
-                      {[nom ? t(nom.cle) : null, jour(p.dateDocument ?? p.createdAt)]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </span>
-                  {p.total ? <em>{montant(p.total, locale)}</em> : null}
-                </Link>
+                <Fragment key={cle}>
+                  <CarteDeGroupe
+                    deroule={ouvert}
+                    onClick={() => setOuverte(ouvert ? null : cle)}
+                    icone={<IconeCalendrier />}
+                    titre={nomDePeriode(cle, true)}
+                    sous={<span className="k">{typesDe(ps)}</span>}
+                    valeur={total(ps)}
+                    n={ps.length}
+                  />
+                  {ouvert ? (
+                    <div className="liste">
+                      {ps.map((p) => {
+                        const e = etatDe(p);
+                        const nom = ETATS.find((x) => x.etat === e);
+                        return (
+                          <Link key={p.id} to="/pme/piece/$pieceId" params={{ pieceId: p.id }}>
+                            <ApercuDePiece pieceId={p.id} className="vignette" />
+                            <span className="bd">
+                              <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
+                              <span>
+                                <i data-ton={tonDe(e)} />
+                                {[nom ? t(nom.cle) : null, jour(p.dateDocument ?? p.createdAt)]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </span>
+                            </span>
+                            {p.total ? <em>{montant(p.total, locale)}</em> : null}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </Fragment>
               );
             })}
-          </div>
+          </>
         )}
-        {horsPeriode > 0 ? (
-          <Link to="/pme/list" search={{ axe: "dossier" }} className="plus-anciennes">
-            {t("pme.dossier.horsPeriode", { count: horsPeriode })}
-          </Link>
-        ) : null}
       </div>
     </div>
   );

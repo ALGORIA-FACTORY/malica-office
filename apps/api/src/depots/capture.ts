@@ -423,7 +423,8 @@ export const capture = {
      * sait. Le préfixe couvre donc les deux contrats.
      */
     const { rows } = await db.query(
-      `select p.id, p.status, p.created_at, p.vis, p.gardee_le, p.transmise_le, p.document_kind,
+      `select p.id, p.status, p.created_at, p.created_by, p.vis, p.gardee_le, p.transmise_le,
+              p.document_kind,
               x.payload,
               app.piece_accompagne(p.id) as accompagne,
               (select valeur from precisions_v q
@@ -485,6 +486,7 @@ export const capture = {
         id: r["id"] as string,
         status: r["status"] as string,
         createdAt: r["created_at"] as string,
+        auteurId: (r["created_by"] as string | null) ?? null,
         vis: r["vis"] as string,
         gardeeLe: (r["gardee_le"] as string | null) ?? null,
         transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
