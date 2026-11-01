@@ -14,7 +14,7 @@ androidWebViewHierarchy: devtools
     timeout: 10000
 # « Mon espace » se lit au serveur depuis le 21 octobre 2026 : hors ligne, il
 # le dit, sans erreur, et propose de réessayer.
-- tapOn: "Mon espace"
+- tapOn: "Privé"
 - assertVisible: "Pas de connexion.*"
 - assertNotVisible: "Une erreur est survenue."
 - setAirplaneMode: disabled

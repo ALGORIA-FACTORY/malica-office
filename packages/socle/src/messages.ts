@@ -722,7 +722,7 @@ const fr = {
   "pme.charges.answered.cabinet": "Votre comptabilité a répondu. Sa réponse reste au journal.",
   "pme.charges.disclaimer": "Je signale et j'interroge ; je ne modifie jamais une écriture.",
   "pme.home.card.charges": "Vos charges",
-  "pme.nav.home": "Accueil",
+  "pme.nav.home": "Société",
   "pme.tva.soldeNul": "Solde TVA nul",
   "pme.tva.soldeInconnu": "Solde TVA à confirmer",
   "pme.nav.add": "Ajouter une pièce",
@@ -2151,7 +2151,7 @@ const fr = {
     "Le cours de cette pièce a changé depuis son jugement : rouvrez-la, elle se rejuge au cours qui fait foi.",
   "refus.ecriture.cours_de_la_ligne":
     "Une ligne convertie doit porter le cours de la pièce, sa devise et son taux, tels que le jugement les a lus.",
-  "statut.pme.mon_espace": "Mon espace",
+  "statut.pme.mon_espace": "Espace privé",
   "statut.pme.a_envoyer": "À envoyer",
   "statut.pme.gardee": "Gardée",
   "statut.pme.envoyee": "Envoyée",
@@ -2314,7 +2314,7 @@ const fr = {
   "piece.versionPrecedente.titre": "Version précédente",
   "piece.versionPrecedente.remplacee": "Une nouvelle photo a remplacé celle-ci.",
   "piece.versionPrecedente.voir": "Voir la photo actuelle",
-  "pme.nav.coffre": "Mon espace",
+  "pme.nav.coffre": "Privé",
   "pme.nav.echeances": "Échéances",
   "pme.nav.notifs": "Alertes",
   "pme.reglages.titre": "Réglages",
@@ -2345,7 +2345,8 @@ const fr = {
   "pme.coffre.votreComptable": "votre comptable",
   "pme.prive.sous": "Ce que je garde pour vous, et pour personne d'autre.",
   "pme.prive.transmettre": "Transmettre à {cabinet}",
-  "pme.prive.vide": "Rien de privé. Tout ce que vous déposez part chez votre comptable.",
+  "pme.prive.vide":
+    "Rien ici pour l’instant. Ce que vous rangez dans votre espace privé n’est vu que par vous : ni la société ni votre comptable, tant que vous ne l’envoyez pas.",
   "pme.coffre.wall":
     "La cloison est tenue par la base : votre espace personnel est invisible pour la comptabilité, pas seulement masqué.",
   "pme.echeances.title": "Échéances",
@@ -3761,7 +3762,7 @@ const fr = {
    * grille de miniatures par mois, et deux gestes sur les papiers choisis —
    * les mettre dans la société, ou les supprimer.
    */
-  "pme.coffre.titre": "Vos papiers",
+  "pme.coffre.titre": "Mon espace privé",
   "pme.coffre.compte": "Mon espace · {count} papiers",
   "pme.coffre.compte#one": "Mon espace · {count} papier",
   "pme.coffre.compte#other": "Mon espace · {count} papiers",
@@ -4728,7 +4729,7 @@ const en: Dict = {
   "pme.charges.answered.cabinet": "Your firm answered. Their answer is kept in the log.",
   "pme.charges.disclaimer": "I flag and I ask; I never change an entry.",
   "pme.home.card.charges": "Your expenses",
-  "pme.nav.home": "Home",
+  "pme.nav.home": "Company",
   "pme.tva.soldeNul": "Zero VAT balance",
   "pme.tva.soldeInconnu": "VAT balance to confirm",
   "pme.nav.add": "Add a document",
@@ -6142,7 +6143,7 @@ const en: Dict = {
     "This document’s rate changed after it was judged: reopen it to re-judge it at the rate that applies.",
   "refus.ecriture.cours_de_la_ligne":
     "A converted line must carry the document’s rate, currency and unit rate, as the judgment read them.",
-  "statut.pme.mon_espace": "My space",
+  "statut.pme.mon_espace": "Private space",
   "statut.pme.a_envoyer": "To send",
   "statut.pme.gardee": "Kept",
   "statut.pme.envoyee": "Sent",
@@ -6305,7 +6306,7 @@ const en: Dict = {
   "piece.versionPrecedente.titre": "Previous version",
   "piece.versionPrecedente.remplacee": "A new photo replaced this one.",
   "piece.versionPrecedente.voir": "See the current photo",
-  "pme.nav.coffre": "My space",
+  "pme.nav.coffre": "Private",
   "pme.nav.echeances": "Deadlines",
   "pme.nav.notifs": "Alerts",
   "pme.reglages.titre": "Settings",
@@ -6335,7 +6336,8 @@ const en: Dict = {
   "pme.coffre.votreComptable": "your accountant",
   "pme.prive.sous": "What I keep for you, and for no one else.",
   "pme.prive.transmettre": "Send to {cabinet}",
-  "pme.prive.vide": "Nothing private. Everything you file goes to your accountant.",
+  "pme.prive.vide":
+    "Nothing here yet. What you keep in your private space is seen by you alone: neither the company nor your accountant, until you send it.",
   "pme.coffre.wall":
     "The wall is enforced by the database: your private space is invisible to the practice, not merely hidden.",
   "pme.echeances.title": "Deadlines",
@@ -7704,7 +7706,7 @@ const en: Dict = {
   "pme.regler.sesAvis": "Their advice",
   "pme.regler.pied":
     "Feedback on documents and advice come from the same firm, so from the same inbox. What sets them apart is not the screen: it is what they ask you to do.",
-  "pme.coffre.titre": "Your papers",
+  "pme.coffre.titre": "My private space",
   "pme.coffre.compte": "My space · {count} papers",
   "pme.coffre.compte#one": "My space · {count} paper",
   "pme.coffre.compte#other": "My space · {count} papers",
@@ -8592,7 +8594,7 @@ const ar: Dict = {
   "pme.charges.answered.cabinet": "أجاب مكتبك. تبقى إجابته في السجل.",
   "pme.charges.disclaimer": "أُنبّه وأسأل، ولا أُغيّر أي قيد أبدًا.",
   "pme.home.card.charges": "مصاريفي",
-  "pme.nav.home": "الرئيسية",
+  "pme.nav.home": "الشركة",
   "pme.tva.soldeNul": "رصيد الأداء على القيمة المضافة منعدم",
   "pme.tva.soldeInconnu": "رصيد الأداء على القيمة المضافة للتأكيد",
   "pme.nav.add": "إضافة وثيقة",
@@ -9965,7 +9967,7 @@ const ar: Dict = {
     "تغيّر سعر هذه الوثيقة بعد تقييمها: أعد فتحها لتُقيَّم بالسعر المعتمد.",
   "refus.ecriture.cours_de_la_ligne":
     "يجب أن يحمل السطر المحوَّل سعر الوثيقة وعملتها وسعر الوحدة كما قرأها التقييم.",
-  "statut.pme.mon_espace": "مساحتي",
+  "statut.pme.mon_espace": "المساحة الخاصة",
   "statut.pme.a_envoyer": "للإرسال",
   "statut.pme.gardee": "محفوظة",
   "statut.pme.envoyee": "أُرسلت",
@@ -10119,7 +10121,7 @@ const ar: Dict = {
   "piece.versionPrecedente.titre": "النسخة السابقة",
   "piece.versionPrecedente.remplacee": "حلّت صورة جديدة محلّ هذه.",
   "piece.versionPrecedente.voir": "عرض الصورة الحالية",
-  "pme.nav.coffre": "مساحتي",
+  "pme.nav.coffre": "الخاص",
   "pme.nav.echeances": "الآجال",
   "pme.nav.notifs": "التنبيهات",
   "pme.reglages.titre": "الإعدادات",
@@ -10148,7 +10150,8 @@ const ar: Dict = {
   "pme.coffre.votreComptable": "محاسبك",
   "pme.prive.sous": "ما أحفظه لك، ولا لأحد سواك.",
   "pme.prive.transmettre": "إرسال إلى {cabinet}",
-  "pme.prive.vide": "لا شيء خاصّ. كل ما تودعه يذهب إلى محاسبك.",
+  "pme.prive.vide":
+    "لا شيء هنا بعد. ما تحفظه في مساحتك الخاصة لا يراه أحد سواك: لا الشركة ولا محاسبك، ما لم ترسله.",
   "pme.coffre.wall": "الحاجز تفرضه قاعدة البيانات: فضاؤك الشخصي غير مرئي للمكتب، وليس مخفيًا فقط.",
   "pme.echeances.title": "الآجال",
   "pme.echeances.voice.empty": "لا يوجد أجل مستخرج من الحزمة حتى الآن.",
@@ -11457,7 +11460,7 @@ const ar: Dict = {
   "pme.regler.sesAvis": "ملاحظاته",
   "pme.regler.pied":
     "الملاحظات على الوثائق والآراء تأتي من المكتب نفسه، أي من صندوق الوارد نفسه. ما يميّزها ليس الشاشة، بل ما تطلبه منكم.",
-  "pme.coffre.titre": "أوراقكم",
+  "pme.coffre.titre": "مساحتي الخاصة",
   "pme.coffre.compte": "مساحتي · {count} أوراق",
   "pme.coffre.compte#one": "مساحتي · {count} ورقة",
   "pme.coffre.compte#other": "مساحتي · {count} أوراق",

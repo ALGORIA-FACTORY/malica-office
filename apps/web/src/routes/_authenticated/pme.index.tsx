@@ -37,12 +37,12 @@ import type { PieceLue } from "@malica/socle/ports/repositories";
 export const Route = createFileRoute("/_authenticated/pme/")({
   head: () => ({
     meta: [
-      { title: "Mon espace — Malica Office" },
+      { title: "Espace société — Malica Office" },
       {
         name: "description",
         content: "Ce que Malica a préparé : la TVA récupérée, le résultat, ce qui attend.",
       },
-      { property: "og:title", content: "Mon espace — Malica Office" },
+      { property: "og:title", content: "Espace société — Malica Office" },
       {
         property: "og:description",
         content: "Ce que Malica a préparé : la TVA récupérée, le résultat, ce qui attend.",
