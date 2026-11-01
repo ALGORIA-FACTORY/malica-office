@@ -12,7 +12,7 @@
 //! - une charge à montant fixe imprimé (lecture forte) ne peut pas être écartée ;
 //! - deux chemins vers la même solution n'en font qu'une : on garde la plus forte.
 
-use crate::modele::{Contrainte, Groupe, Modele, Unite, BAREME_ASSIETTE};
+use crate::modele::{Contrainte, Groupe, Modele, Unite};
 use crate::valeurs::{div_arrondi, Coef, Domaine};
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
@@ -111,12 +111,12 @@ impl<'a> Solveur<'a> {
         restreints: Vec<Option<BTreeSet<i64>>>,
         plafond: u64,
     ) -> Self {
-        // Les charges d'assiette présentes majorent la base du barème d'assiette.
-        let mut assiette_ppm: i64 = 0;
+        // Les charges d'assiette présentes majorent la base du barème que leur preuve nomme.
+        let mut assiette_ppm: BTreeMap<&str, i64> = BTreeMap::new();
         for cp in &m.contraintes {
-            if let Contrainte::Charge { m: v, taux_ppm: Some(t), assiette: true, .. } = cp.c {
-                if m.vars[v].present {
-                    assiette_ppm += t;
+            if let Contrainte::Charge { m: v, taux_ppm: Some(t), assiette: Some(b), .. } = &cp.c {
+                if m.vars[*v].present {
+                    *assiette_ppm.entry(b.as_str()).or_insert(0) += *t;
                 }
             }
         }
@@ -125,10 +125,9 @@ impl<'a> Solveur<'a> {
             let v: Vec<(String, i64, Coef)> = taux
                 .iter()
                 .map(|t| {
-                    let c = if nom == BAREME_ASSIETTE && assiette_ppm != 0 {
-                        Coef::avec_assiette(t.ppm, assiette_ppm)
-                    } else {
-                        Coef::ppm(t.ppm)
+                    let c = match assiette_ppm.get(nom.as_str()) {
+                        Some(&a) if a != 0 => Coef::avec_assiette(t.ppm, a),
+                        _ => Coef::ppm(t.ppm),
                     };
                     (t.code.clone(), t.ppm, c)
                 })
@@ -261,7 +260,7 @@ impl<'a> Solveur<'a> {
                 }
                 _ => Eval::Inconnu,
             },
-            Contrainte::Charge { m, fixe, taux_ppm, base, .. } => {
+            Contrainte::Charge { m, admis, taux_ppm, base, .. } => {
                 let vm = match e.s[*m] {
                     Some(v) => v,
                     None => return Eval::Inconnu,
@@ -269,8 +268,8 @@ impl<'a> Solveur<'a> {
                 if vm.absent {
                     return Eval::NonEvaluable;
                 }
-                if let Some(f) = fixe {
-                    return if vm.v == *f { Eval::Ok } else { Eval::Echec };
+                if !admis.is_empty() {
+                    return if admis.contains(&vm.v) { Eval::Ok } else { Eval::Echec };
                 }
                 match (taux_ppm, base) {
                     (Some(t), Some(b)) => match e.s[*b] {
@@ -446,10 +445,11 @@ impl<'a> Solveur<'a> {
                         }
                     }
                 }
-                Contrainte::Charge { m, fixe, taux_ppm, base, .. } => {
+                Contrainte::Charge { m, admis, taux_ppm, base, .. } => {
                     if e.s[*m].is_none() {
-                        if let Some(f) = fixe {
-                            return Some(self.avec_scalaire(e, *m, self.exact(*f)));
+                        if !admis.is_empty() {
+                            let cands = admis.iter().flat_map(|f| self.exact(*f)).collect();
+                            return Some(self.avec_scalaire(e, *m, cands));
                         }
                         if let (Some(t), Some(b)) = (taux_ppm, base) {
                             if let Some(vb) = e.s[*b] {

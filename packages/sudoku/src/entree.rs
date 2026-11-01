@@ -140,8 +140,15 @@ pub struct TauxBareme {
 #[derive(Deserialize, Clone)]
 pub struct ChargePack {
     pub code: String,
+    /// Le montant standard (`ref.fiscal_charges`). Gardé pour compatibilité : il compte
+    /// parmi les montants admis.
     #[serde(default)]
     pub montant_fixe: Option<i64>,
+    /// Tout montant que le pack admet pour cette charge au jour de la pièce : le standard et
+    /// les tranches de son barème, toutes catégories (`ref.baremes_des_droits`). Le lecteur
+    /// ne juge pas la conformité — le Socle le fait ensuite : il reconnaît un montant admis.
+    #[serde(default)]
+    pub montants_admis: Vec<i64>,
     #[serde(default)]
     pub taux_ppm: Option<i64>,
     #[serde(default)]

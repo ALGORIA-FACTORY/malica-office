@@ -72,7 +72,10 @@ export interface PackDuSudoku {
   readonly baremes: Readonly<Record<string, readonly { code: string; ppm: number }[]>>;
   readonly charges: readonly {
     code: string;
+    /** Le montant standard ; gardé pour compatibilité, il compte parmi les admis. */
     montant_fixe: number | null;
+    /** Tout montant que le pack admet au jour de la pièce (le standard et son barème). */
+    montants_admis?: readonly number[];
     taux_ppm: number | null;
     assiette_tva: boolean;
   }[];

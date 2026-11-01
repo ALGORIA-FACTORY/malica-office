@@ -10,10 +10,6 @@ use std::collections::HashMap;
 /// surchargeable par la clé `instances_max` de l'expression.
 const INSTANCES_MAX_CONTRAT: usize = 3;
 
-/// Le barème dont l'assiette est majorée des charges `assiette_tva` du pack :
-/// le nom de clé du contrat §3, pas une valeur réglementaire.
-pub const BAREME_ASSIETTE: &str = "tva";
-
 const TYPES_NUMERIQUES: [&str; 3] = ["montant", "nombre", "taux"];
 
 /// Une unité d'une somme : un champ scalaire, ou l'agrégat (Σ montants, Σ bases) d'un groupe.
@@ -29,7 +25,18 @@ pub enum Contrainte {
     Lin { termes: Vec<(Unite, i64)> },
     Produit { total: usize, facteurs: Vec<usize> },
     Taux { m: usize, b: usize, bareme: String },
-    Charge { m: usize, fixe: Option<i64>, taux_ppm: Option<i64>, base: Option<usize>, assiette: bool },
+    /// `fixe` : le montant standard du pack ; `admis` : tout montant que le pack admet au
+    /// jour de la pièce (le standard et les tranches de son barème). `assiette` : le barème
+    /// dont la base est majorée de cette charge — nommé par la preuve (clé `assiette`),
+    /// et seulement si le pack dit la charge `assiette_tva`.
+    Charge {
+        m: usize,
+        fixe: Option<i64>,
+        admis: Vec<i64>,
+        taux_ppm: Option<i64>,
+        base: Option<usize>,
+        assiette: Option<String>,
+    },
     Groupe { g: usize },
 }
 
@@ -289,11 +296,29 @@ pub fn construire(entree: &Entree) -> Modele {
                         Some(n) => Some(b.var(&lire_ref(n))?),
                         None => None,
                     };
-                    if ch.montant_fixe.is_none() && ch.taux_ppm.is_none() {
+                    // Les montants admis : le standard, et ceux que le pack admet au jour dit
+                    // (les tranches d'un barème). Triés, sans doublon.
+                    let mut admis: Vec<i64> =
+                        ch.montant_fixe.into_iter().chain(ch.montants_admis.iter().copied()).collect();
+                    admis.sort_unstable();
+                    admis.dedup();
+                    if admis.is_empty() && ch.taux_ppm.is_none() {
                         return Err(format!("charge « {code} » sans montant ni taux dans le pack"));
                     }
+                    // Une charge d'assiette majore la base d'un barème : la preuve le nomme.
+                    let assiette = if ch.assiette_tva {
+                        let b = texte(e, "assiette").map_err(|_| {
+                            format!("charge « {code} » d'assiette : la preuve ne nomme pas son barème (clé « assiette »)")
+                        })?;
+                        if !entree.pack.baremes.contains_key(&b) {
+                            return Err(format!("barème « {b} » absent du pack"));
+                        }
+                        Some(b)
+                    } else {
+                        None
+                    };
                     contraintes.push(ContraintePreuve {
-                        c: Contrainte::Charge { m, fixe: ch.montant_fixe, taux_ppm: ch.taux_ppm, base, assiette: ch.assiette_tva },
+                        c: Contrainte::Charge { m, fixe: ch.montant_fixe, admis, taux_ppm: ch.taux_ppm, base, assiette },
                         preuve: i,
                     });
                 }

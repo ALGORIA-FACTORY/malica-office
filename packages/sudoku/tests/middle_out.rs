@@ -78,7 +78,13 @@ fn pieces(fichier: &str) -> Vec<Piece> {
 
 /// La grille en base avec L01, E01 et E02 ; le pack en base.
 fn contexte() -> (Value, Value) {
-    let (mut g, p) = jeux::en_base();
+    let (mut g, mut p) = jeux::en_base();
+    // Le témoin est figé sur le droit standard seul (avant le barème daté du timbre,
+    // 20261115110000) : ses empreintes comptent les combinaisons explorées. Le barème
+    // est éprouvé ailleurs (grille_facture.rs, jeux_dirigeant.rs, anneau2.rs).
+    for c in p["charges"].as_array_mut().unwrap() {
+        c.as_object_mut().unwrap().remove("montants_admis");
+    }
     let preuves = g["preuves"].as_array_mut().unwrap();
     preuves.push(jeux::preuve_lignes(PREUVE_LIGNES));
     preuves.push(json!({"code": "E01", "regle": "parties", "genre": "relation", "statut": "defaut_a_valider", "variante": null,

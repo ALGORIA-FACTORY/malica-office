@@ -695,7 +695,8 @@
      "op": "charge",
      "base": "total_ht",
      "code": "FODEC",
-     "montant": "montant_fodec"
+     "montant": "montant_fodec",
+     "assiette": "tva"
     },
     "statut": "defaut_a_valider",
     "variante": null
@@ -718,6 +719,7 @@
     "code": "M04",
     "expression": {
      "op": "somme",
+     "role": "ttc",
      "total": "net_a_payer",
      "parties": [
       "total_ttc",
@@ -744,6 +746,7 @@
     "code": "P04",
     "expression": {
      "op": "somme",
+     "role": "ttc",
      "total": "total_ttc",
      "parties": [
       "total_ht",
@@ -800,6 +803,11 @@
    {
     "code": "DROIT_TIMBRE",
     "montant_fixe": 1000,
+    "montants_admis": [
+     1000,
+     1500,
+     2000
+    ],
     "taux_ppm": null,
     "assiette_tva": false
    },

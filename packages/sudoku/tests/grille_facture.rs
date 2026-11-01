@@ -259,3 +259,66 @@ fn entree_invalide_et_preuve_non_traduite() {
     assert_eq!(o["preuves"]["inconnue"], "non_evaluable");
     assert_eq!(o["preuves"]["a_traduire"], "non_evaluable");
 }
+
+/// La pièce au FODEC, avec un timbre imprimé `timbre` et le TTC qui le compte.
+fn piece_timbre(timbre: i64, texte: &str) -> Vec<Value> {
+    piece_fodec()
+        .into_iter()
+        .map(|j| match j["ordinal"].as_u64() {
+            Some(7) => jeton(7, &format!("Timbre fiscal {texte}"), 0.6, 0.69, &[(timbre, true)]),
+            Some(8) => {
+                let ttc = 1201900 + timbre;
+                jeton(8, "Total TTC", 0.6, 0.72, &[(ttc, true)])
+            }
+            _ => j,
+        })
+        .collect()
+}
+
+/// Le pack d'essai dont le timbre admet aussi les tranches d'un barème (`montants_admis`).
+fn pack_bareme() -> Value {
+    let mut p = pack_essai();
+    p["charges"][0]["montants_admis"] = json!([1000, 1500, 2000]);
+    p
+}
+
+#[test]
+fn un_timbre_du_bareme_est_reconnu_un_montant_hors_bareme_non() {
+    // Un montant admis par le barème au jour de la pièce : prouvé, et cité.
+    let o = resoudre(piece_timbre(2000, "2,000"), grille_facture(), pack_bareme());
+    assert_eq!(o["issue"], "prouvee", "{o}");
+    assert_eq!(valeur(&o, "droit_timbre"), 2000);
+    assert_eq!(o["preuves"]["timbre"], "verifiee");
+    // Sans barème, le droit standard seul : la même pièce n'est pas prouvée.
+    let o = resoudre(piece_timbre(2000, "2,000"), grille_facture(), pack_essai());
+    assert_ne!(o["issue"], "prouvee", "{o}");
+    // Un montant qu'aucun barème n'admet n'est jamais prouvé.
+    let o = resoudre(piece_timbre(3000, "3,000"), grille_facture(), pack_bareme());
+    assert_ne!(o["issue"], "prouvee", "{o}");
+    // Le droit standard reste admis.
+    let o = resoudre(piece_fodec(), grille_facture(), pack_bareme());
+    assert_eq!(o["issue"], "prouvee", "{o}");
+    assert_eq!(valeur(&o, "droit_timbre"), 1000);
+}
+
+#[test]
+fn la_charge_d_assiette_nomme_son_bareme_dans_la_preuve() {
+    // Sans la clé « assiette », le FODEC ne majore aucune base : la preuve n'est pas
+    // traduite, la TVA (calculée sur HT + FODEC) ne ferme plus, rien n'est prouvé.
+    let mut g = grille_facture();
+    for p in g["preuves"].as_array_mut().unwrap() {
+        if p["code"] == "fodec" {
+            p["expression"].as_object_mut().unwrap().remove("assiette");
+        }
+    }
+    let o = resoudre(piece_fodec(), g.clone(), pack_essai());
+    assert_ne!(o["issue"], "prouvee", "{o}");
+    // Un barème qui n'existe pas au pack : non traduite non plus.
+    for p in g["preuves"].as_array_mut().unwrap() {
+        if p["code"] == "fodec" {
+            p["expression"]["assiette"] = json!("inconnu");
+        }
+    }
+    let o = resoudre(piece_fodec(), g, pack_essai());
+    assert_ne!(o["issue"], "prouvee", "{o}");
+}

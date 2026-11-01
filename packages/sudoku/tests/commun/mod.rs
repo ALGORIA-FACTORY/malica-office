@@ -62,7 +62,7 @@ pub fn grille_facture() -> Value {
             {"code": "timbre", "regle": "droit de timbre du pack", "genre": "arithmetique",
              "expression": {"op": "charge", "montant": "droit_timbre", "code": "DROIT_TIMBRE"}},
             {"code": "fodec", "regle": "FODEC = taux du pack x total HT", "genre": "arithmetique",
-             "expression": {"op": "charge", "montant": "montant_fodec", "code": "FODEC", "base": "total_ht"}},
+             "expression": {"op": "charge", "montant": "montant_fodec", "code": "FODEC", "base": "total_ht", "assiette": "tva"}},
             {"code": "mf", "regle": "Matricule fiscal au format tunisien", "genre": "format",
              "expression": {"op": "format", "champ": "matricule_fiscal_emetteur", "format": "matricule_fiscal"}},
             {"code": "echeance", "regle": "émission avant échéance", "genre": "format",
