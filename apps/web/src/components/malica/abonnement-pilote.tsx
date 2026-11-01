@@ -27,7 +27,8 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { dateEnLettres, montant } from "@/lib/lisible";
 import { ETAT_DE_FACTURE, libelleDuPaiement } from "@/lib/paiement";
 import { saisieDecimale } from "@malica/socle/saisie-decimale";
-import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { texteDeLErreur, vientDeNous } from "@/lib/erreur-lisible";
+import { lireUnRefus } from "@malica/socle/refus-a-dire";
 import { office } from "@/verticals/malica-office/composition";
 import type { OffreDeLaGrille } from "@malica/socle/ports/repositories";
 
@@ -72,14 +73,19 @@ const FERMETURES: Record<string, MessageKey> = {
   deja_engage: "pme.reglages.annuel.ferme.deja_engage",
 };
 
-/** Un refus de la base dit en clair ; sinon le texte d'erreur commun. */
+/**
+ * Un refus de la base dit par la phrase de cet écran, qui nomme l'empêchement ;
+ * sinon le texte d'erreur commun, qui dit la clé du refus dans la langue de la
+ * personne. Le motif suit la clé (`refus.forfait.empeche?motif=organisations`).
+ */
 function refus(e: unknown, t: (k: MessageKey) => string): string {
-  const message = e instanceof Error ? e.message : String(e ?? "");
-  const forfait = /forfait_refuse:([a-z_]+)/.exec(message);
-  if (forfait && EMPECHEMENTS[forfait[1]!]) return t(EMPECHEMENTS[forfait[1]!]!);
-  const annuel = /annuel_refuse:([a-z_]+)/.exec(message);
-  if (annuel && FERMETURES[annuel[1]!]) return t(FERMETURES[annuel[1]!]!);
-  if (/offre_sans_recharge/.test(message)) return t("pme.reglages.recharges.verrou");
+  if (vientDeNous(e)) {
+    const { cle, valeurs } = lireUnRefus(e.message);
+    const motif = valeurs["motif"] ?? "";
+    if (cle === "refus.forfait.empeche" && EMPECHEMENTS[motif]) return t(EMPECHEMENTS[motif]);
+    if (cle === "refus.annuel.ferme" && FERMETURES[motif]) return t(FERMETURES[motif]);
+    if (cle === "refus.recharge.offre_sans_recharge") return t("pme.reglages.recharges.verrou");
+  }
   return texteDeLErreur(e, OU, t("common.error"));
 }
 

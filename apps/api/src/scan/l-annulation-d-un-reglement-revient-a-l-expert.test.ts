@@ -165,7 +165,7 @@ describe("l'annulation d'un règlement revient à l'expert", { skip: !BASE_CONFI
     // La PME ne l'inscrit pas elle-même, même par l'API.
     await assert.rejects(
       rpc(dirigeant, "office", "book", contre[0]!.id),
-      /expert mandaté|42501|autoris/,
+      /refus\.reserve\.expert_mandate$/,
     );
 
     await rpc(expert, "office", "book", contre[0]!.id);

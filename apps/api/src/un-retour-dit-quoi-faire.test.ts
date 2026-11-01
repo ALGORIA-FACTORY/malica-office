@@ -204,13 +204,13 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
       sousIdentiteDuServeur(expert.id, (db) =>
         supervision.retourner(db, { pieceId: id, motifId: motifs["justificatif_manquant"]! }),
       ),
-      /exige une note/,
+      /refus\.motif\.note_requise$/,
     );
     await assert.rejects(
       sousIdentiteDuServeur(dirigeant.id, (db) =>
         supervision.retourner(db, { pieceId: id, motifId: motifs["doublon"]! }),
       ),
-      /supervision revient/,
+      /refus\.supervision\.reservee$/,
     );
     assert.equal(await statut(id), "lue");
   });
@@ -248,13 +248,13 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
   it("le cabinet établit le type et inscrit lui-même : le client ne confirme rien", async () => {
     const id = await lue();
     // Le verrou R2 refuse tant que le type n'est que lu.
-    await assert.rejects(proposerEtInscrire(expert.id, id), /R2/);
+    await assert.rejects(proposerEtInscrire(expert.id, id), /refus\.inscription\.type_inconnu$/);
     // Le client n'établit pas le type par cette porte.
     await assert.rejects(
       sousIdentiteDuServeur(dirigeant.id, (db) =>
         db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [id]),
       ),
-      /supervision revient/,
+      /refus\.supervision\.reservee$/,
     );
     await sousIdentiteDuServeur(expert.id, (db) =>
       db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [id]),

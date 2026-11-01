@@ -164,7 +164,7 @@ describe("le choix entre le cabinet et l'espace privé", { skip: !BASE_CONFIGURE
     await rpc("collab", "setPieceVis", id, "partage");
     await assert.rejects(
       () => rpc("collab", "garderPiece", id),
-      /accord du cabinet/,
+      /refus\.piece\.transmise_au_cabinet$/,
       "sinon un bouton « garder » contournerait la seule règle qui exige un accord",
     );
     assert.equal((await etat(id)).vis, "partage");

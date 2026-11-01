@@ -172,7 +172,7 @@ describe("les recharges de lectures", { skip: !ADMIN }, () => {
   it("le Basic n'achète pas de recharge ; le Solo, si, et elle n'expire pas", async () => {
     await dansUneTransaction(async (db) => {
       const basic = await societe(db, "basic");
-      await assert.rejects(acheter(db, basic), /recharge_refusee:offre_sans_recharge/);
+      await assert.rejects(acheter(db, basic), /refus\.recharge\.offre_sans_recharge$/);
 
       const solo = await societe(db, "solo");
       const r = await acheter(db, solo);

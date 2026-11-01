@@ -151,7 +151,7 @@ describe("un paiement se corrige sans se réécrire", { skip: !BASE_CONFIGUREE }
     const premier = (await paiements()).find((p) => p.moyenCode === "especes" && p.eteint)!;
     await assert.rejects(
       () => rpc("capture", "annulerPaiement", premier.id, motifMoyen),
-      /deja annule/,
+      /refus\.paiement\.deja_annule$/,
     );
   });
 
@@ -166,7 +166,7 @@ describe("un paiement se corrige sans se réécrire", { skip: !BASE_CONFIGUREE }
     assert.ok(annulation);
     await assert.rejects(
       () => rpc("capture", "annulerPaiement", laDerniere.id, motifMoyen),
-      /deja une annulation/,
+      /refus\.paiement\.deja_annulation$/,
     );
   });
 

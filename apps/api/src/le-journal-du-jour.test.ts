@@ -242,15 +242,18 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   it("refuse la PME, et un autre cabinet", async () => {
-    await assert.rejects(lire(dirigeant, cabinet, pme), /introuvable ou non/);
-    await assert.rejects(lire(dirigeant, pme, pme), /introuvable ou non/);
-    await assert.rejects(lire(autreExpert, autreCabinet, pme), /introuvable ou non/);
-    await assert.rejects(lire(autreExpert, cabinet, pme), /introuvable ou non/);
+    await assert.rejects(lire(dirigeant, cabinet, pme), /refus\.introuvable\.(cabinet|dossier)$/);
+    await assert.rejects(lire(dirigeant, pme, pme), /refus\.introuvable\.(cabinet|dossier)$/);
+    await assert.rejects(
+      lire(autreExpert, autreCabinet, pme),
+      /refus\.introuvable\.(cabinet|dossier)$/,
+    );
+    await assert.rejects(lire(autreExpert, cabinet, pme), /refus\.introuvable\.(cabinet|dossier)$/);
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) =>
         journalDuJour.exporter(db, cabinet, pme, jour, "fr", "csv"),
       ),
-      /introuvable ou non/,
+      /refus\.introuvable\.(cabinet|dossier)$/,
     );
   });
 
@@ -274,7 +277,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       sousIdentite(expert.id, (db) =>
         journalDuJour.exporter(db, cabinet, pme, "2099-01-01", "fr", "csv"),
       ),
-      /à venir/,
+      /refus\.export\.jour_a_venir$/,
     );
     const { rows } = await admin.query(
       `select 1 from collab.exports where tenant_id = $1 and du = '2099-01-01'`,
@@ -409,7 +412,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
           [cabinet, pme, jour, pack],
         ),
       ),
-      /recommencez/,
+      /refus\.export\.concurrent$/,
     );
   });
 
@@ -530,7 +533,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       sousIdentite(expert.id, (db) =>
         parametrage.definirFuseauDuCabinet(db, cabinet, "Mars/Olympe"),
       ),
-      /n'existe pas/,
+      /refus\.fuseau\.inconnu\?fuseau=/,
     );
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) => parametrage.definirFuseauDuCabinet(db, cabinet, null)),

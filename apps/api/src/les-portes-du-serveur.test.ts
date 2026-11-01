@@ -180,7 +180,7 @@ describe("les portes du serveur", { skip: !BASE_CONFIGUREE }, () => {
   it("la base refuse d'écrire une lecture hors d'une transaction du serveur", async () => {
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) => db.query("select public.lecture_consommer($1)", [piece])),
-      /reserve au serveur/,
+      /refus\.reserve\.serveur$/,
     );
     // Le serveur, lui, passe la garde : l'erreur, s'il y en a une, n'est plus la sienne.
     await sousIdentite(dirigeant.id, async (db) => {
@@ -189,7 +189,7 @@ describe("les portes du serveur", { skip: !BASE_CONFIGUREE }, () => {
       try {
         await db.query("select public.lecture_consommer($1)", [piece]);
       } catch (e) {
-        assert.doesNotMatch(String((e as Error).message), /reserve au serveur/);
+        assert.doesNotMatch(String((e as Error).message), /refus\.reserve\.serveur$/);
       }
       await db.query("rollback to savepoint s");
     });

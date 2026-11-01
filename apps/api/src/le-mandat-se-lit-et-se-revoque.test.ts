@@ -113,7 +113,7 @@ describe("le mandat se lit et se révoque depuis la PME", { skip: !BASE_CONFIGUR
   it("sans motif, la révocation est refusée", async () => {
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) => identite.revoquerMandat(db, pme, "  ")),
-      /pourquoi/i,
+      /refus\.mandat\.motif_de_revocation$/,
     );
   });
 
@@ -157,7 +157,7 @@ describe("le mandat se lit et se révoque depuis la PME", { skip: !BASE_CONFIGUR
   it("une seconde révocation dit qu'il n'y a plus rien à révoquer", async () => {
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) => identite.revoquerMandat(db, pme, "encore")),
-      /Aucun mandat actif/,
+      /refus\.mandat\.aucun_actif$/,
     );
   });
 

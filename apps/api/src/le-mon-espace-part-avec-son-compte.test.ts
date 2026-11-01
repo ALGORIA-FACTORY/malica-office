@@ -76,8 +76,11 @@ describe("son Mon espace part avec son compte", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("il ne l'envoie jamais à une société dont il n'est plus membre", async () => {
-    await assert.rejects(s.fait("sami", "collab.setPieceVis", privee, "entite"), /non autorisee/);
-    await assert.rejects(s.fait("sami", "collab.envoyer", privee), /non autorisee/);
+    await assert.rejects(
+      s.fait("sami", "collab.setPieceVis", privee, "entite"),
+      /refus\.introuvable\.piece$/,
+    );
+    await assert.rejects(s.fait("sami", "collab.envoyer", privee), /refus\.introuvable\.piece$/);
     const { rows } = await s.admin.query<{ vis: string }>(
       `select vis::text as vis from capture.pieces where id = $1`,
       [privee],

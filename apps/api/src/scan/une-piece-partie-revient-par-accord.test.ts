@@ -145,7 +145,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     const id = await piece("jamais-partie");
     await assert.rejects(
       () => rpc("collab", "demanderSurPiece", id, "rappel"),
-      /n'est pas partagee|rien a demander/,
+      /refus\.piece\.non_partagee$/,
     );
   });
 
@@ -237,7 +237,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     await rpc("collab", "setPieceVis", id, "partage");
     await assert.rejects(
       () => rpc("collab", "setPieceVis", id, "personnel"),
-      /que par accord du cabinet/,
+      /refus\.piece\.transmise_au_cabinet$/,
       "le Socle doit refuser, même si aucun écran ne propose le geste",
     );
     assert.equal((await visDe(id)).vis, "partage");
@@ -248,7 +248,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     await rpc("collab", "setPieceVis", id, "partage");
     await assert.rejects(
       () => rpcCab("collab", "repondreSurPiece", id, "rappel", true, null),
-      /aucune demande en attente/,
+      /refus\.piece\.aucune_demande$/,
     );
   });
 

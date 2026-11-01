@@ -643,7 +643,7 @@ describe("la TVA des immobilisations se déclare à part", { skip: !BASE_CONFIGU
           jour,
         ]),
       ),
-      /hors de portée/,
+      /refus\.geste\.non_permis$/,
     );
     // Et la porte des extraits ne rend rien d'une pièce qu'il ne lit pas.
     const { rows } = await admin.query<{ piece_id: string }>(

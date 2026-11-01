@@ -263,7 +263,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
         const autre = await retournee(cas);
         await assert.rejects(
           pmeFait("collab.setPieceVis", autre, "personnel"),
-          /ne revient que par accord du cabinet/,
+          /refus\.piece\.transmise_au_cabinet$/,
         );
         assert.equal((await etat(autre))?.vis, "partage");
       });
@@ -1005,10 +1005,10 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     // Retournée par quelque chemin que ce soit, elle reste engagée : ni
     // supprimée, ni partie dans un espace privé.
     await admin.query(`update capture.pieces set status = 'retournee' where id = $1`, [nouvelle]);
-    await assert.rejects(pmeFait("capture.supprimer", nouvelle), /engagée/);
+    await assert.rejects(pmeFait("capture.supprimer", nouvelle), /refus\.suppression\.engagee$/);
     await assert.rejects(
       pmeFait("collab.setPieceVis", nouvelle, "personnel"),
-      /reste dans la societe/,
+      /refus\.piece\.comptabilisee_dans_la_societe$/,
     );
     assert.ok(await etat(nouvelle), "la photo courante existe toujours");
   });
@@ -1058,7 +1058,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     );
     await assert.rejects(
       cabinetFait("collab.repondreSurPiece", nouvelle, "rappel", true, null),
-      /reste partagee/,
+      /refus\.piece\.comptabilisee_partagee$/,
     );
     assert.equal((await etat(nouvelle))?.vis, "partage");
   });

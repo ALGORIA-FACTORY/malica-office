@@ -260,7 +260,7 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
         motifId: motifs["montant_incoherent"],
         note: "x",
       }),
-      /supervision revient/,
+      /refus\.supervision\.reservee$/,
     );
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) =>
@@ -269,7 +269,7 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
           motifs["montant_incoherent"],
         ]),
       ),
-      /supervision revient/,
+      /refus\.supervision\.reservee$/,
     );
     assert.deepEqual(
       (await vivantes(id)).map((e) => e.id),
@@ -302,7 +302,7 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
     const ecriture = await forcer(expert, id);
     await assert.rejects(
       pmeFait("supervision.review", { ecritureId: ecriture, outcome: "valide" }),
-      /supervision revient/,
+      /refus\.supervision\.reservee$/,
     );
     assert.equal(await notifications(id, "piece.validee"), 0);
   });
@@ -380,12 +380,12 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
   it("T9 un collaborateur n'agit que sur les dossiers qui lui sont affectés", async () => {
     const id = await transmise();
     const motif = motifs["montant_incoherent"];
-    await assert.rejects(collabFait("supervision.voir", id), /introuvable ou non autorisee/);
-    await assert.rejects(valider(collaborateur, id), /supervision revient/);
-    await assert.rejects(forcer(collaborateur, id), /supervision revient/);
+    await assert.rejects(collabFait("supervision.voir", id), /refus\.introuvable\.piece$/);
+    await assert.rejects(valider(collaborateur, id), /refus\.supervision\.reservee$/);
+    await assert.rejects(forcer(collaborateur, id), /refus\.supervision\.reservee$/);
     await assert.rejects(
       collabFait("supervision.retourner", { pieceId: id, motifId: motif, note: "x" }),
-      /supervision revient/,
+      /refus\.supervision\.reservee$/,
     );
     await cabinetFait("collab.assign", {
       cabinetTenantId: cabinet,

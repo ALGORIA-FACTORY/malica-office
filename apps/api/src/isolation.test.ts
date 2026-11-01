@@ -199,7 +199,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
       sousIdentiteDuServeur(b.id, (db) =>
         db.query(`select public.conversation_supprimer($1)`, [filA]),
       ),
-      /conversation\.introuvable_ou_non_autorisee/,
+      /refus\.introuvable\.conversation$/,
     );
     await assert.rejects(
       sousIdentiteDuServeur(b.id, (db) =>
@@ -247,7 +247,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
       sousLaPorte(a.id, (db) =>
         db.query(`update agents.conversations set created_by = $2 where id = $1`, [id, b.id]),
       ),
-      /une conversation ne change pas d'auteur/,
+      /refus\.conversation\.auteur_fixe$/,
       "changer l'auteur d'une conversation doit être refusé, même à une porte",
     );
   });

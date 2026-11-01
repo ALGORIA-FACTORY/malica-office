@@ -699,7 +699,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     });
     assert.match(
       refus,
-      /manque a l'evaluation/,
+      /^refus\.fabrique\.mesure_absente\?mesure=/,
       `l'activation est passée sans mesure, ou pour une autre raison : « ${refus} »`,
     );
 

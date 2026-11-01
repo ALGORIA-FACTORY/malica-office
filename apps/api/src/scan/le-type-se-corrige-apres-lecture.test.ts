@@ -114,12 +114,15 @@ describe("le type d'une pièce se corrige après la lecture", { skip: !BASE_CONF
 
   it("un type que le référentiel ne propose pas au choix est refusé", async () => {
     const id = await piece("hors-liste", "lue");
-    await assert.rejects(preciser(id, "justificatif_paiement"), /type de piece non propose/);
+    await assert.rejects(
+      preciser(id, "justificatif_paiement"),
+      /refus\.precision\.type_non_propose\?type=justificatif_paiement$/,
+    );
   });
 
   it("une pièce engagée ne se reclasse plus", async () => {
     const id = await piece("engagee", "comptabilisee");
-    await assert.rejects(preciser(id, "facture_vente"), /piece engagee/);
+    await assert.rejects(preciser(id, "facture_vente"), /refus\.precision\.engagee$/);
   });
 
   it("l'écran et la base disent les mêmes états précisables", async () => {
