@@ -24,6 +24,8 @@
     "bareme_categorie": "select code from ref.categories_de_bareme",
     "change_date_retenue": "select code from ref.change_dates_retenues",
     "change_regle_d_ecart": "select code from ref.change_regles_d_ecart",
+    "concept_expert": "select code from ref.experts",
+    "concept_role": "select code from ref.roles",
     "charge_famille": "select code from ref.charge_familles",
     "document_type": "select code from ref.document_types",
     "dossier": "select code from ref.dossiers",

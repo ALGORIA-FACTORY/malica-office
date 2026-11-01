@@ -10,13 +10,15 @@ et un statut. Tout le reste — la grille, les preuves, les taux — vit en base
 
 ## 1. Les trois couches, en base (schéma `ref`, daté par le pack)
 
-| Table                  | Couche | Ce qu'elle porte                                                                                                                                                                                                                          |
-| ---------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ref.grilles`          | —      | un type de document : `code`, `famille`, `nom`, `document_type` (lien vers `ref.document_types`, nullable), `statut`                                                                                                                      |
-| `ref.grille_champs`    | 1      | `grille_id`, `parcelle`, `code`, `libelle`, `type`, `obligatoire`, `condition`, `reperes_fr[]`, `reperes_ar[]`, `format_code` (nullable), `groupe` (nullable), `fondement`, `source_fondement`, `statut`, `concept_id`, `role` (nullable) |
-| `ref.concepts`         | 1      | le dictionnaire : `code`, `libelle`, `expert` (`montant`, `identifiant`, `date`, `reference`, `tiers`, `libelle`), `statut`                                                                                                               |
-| `ref.grille_relations` | 2      | `grille_id`, `vers`, `nature`, `cle`                                                                                                                                                                                                      |
-| `ref.grille_preuves`   | 3      | `grille_id`, `code`, `regle` (texte d'origine), `genre`, `expression` (jsonb, nullable), `statut`                                                                                                                                         |
+| Table                  | Couche | Ce qu'elle porte                                                                                                                                                                                                                                                |
+| ---------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ref.grilles`          | —      | un type de document : `code`, `famille`, `nom`, `document_type` (lien vers `ref.document_types`, nullable), `statut`                                                                                                                                            |
+| `ref.grille_champs`    | 1      | `grille_id`, `parcelle`, `code`, `libelle`, `type`, `obligatoire`, `condition`, `reperes_fr[]`, `reperes_ar[]`, `format_code` (nullable), `groupe` (nullable), `fondement`, `source_fondement`, `statut`, `concept_id`, `role` (nullable, clé vers `ref.roles`) |
+| `ref.concepts`         | 1      | le dictionnaire : `code`, `libelle`, `expert` (clé vers `ref.experts`), `porte_sur_une_partie`, `statut`                                                                                                                                                        |
+| `ref.experts`          | 1      | les neuf familles d'experts ; `ref.expert_types` dit quels types de champ chacune sait lire                                                                                                                                                                     |
+| `ref.roles`            | 1      | les 34 rôles d'une partie sur la pièce, libellés en fr, en, ar (`ref.labels`, espace `concept_role`)                                                                                                                                                            |
+| `ref.grille_relations` | 2      | `grille_id`, `vers`, `nature`, `cle`                                                                                                                                                                                                                            |
+| `ref.grille_preuves`   | 3      | `grille_id`, `code`, `regle` (texte d'origine), `genre`, `expression` (jsonb, nullable), `statut`                                                                                                                                                               |
 
 `statut` vaut `defaut_a_valider` pour tout ce que Malica livre (R10) ; seule
 l'expertise le passe à `arrete`. `source_fondement` vaut `texte`, `pratique` ou
@@ -26,9 +28,50 @@ l'expertise le passe à `arrete`. `source_fondement` vaut `texte`, `pratique` ou
 Le **concept** relie les champs de grilles différentes qui portent la même
 notion : `raison_sociale_emetteur` (facture), `employeur_raison_sociale`
 (bulletin de paie) et `tireur_nom` (chèque) sont tous le concept
-`raison_sociale`, avec les rôles `emetteur`, `employeur` et `tireur`. L'expert
+`raison_sociale`, avec les rôles `fournisseur`, `employeur` et `tireur`. L'expert
 du concept lit et vérifie tous ses champs. Un champ sans jumeau a un concept à
 lui. Le lien est livré en défaut (`20261115100000`), et l'expertise le corrige.
+
+### Le dictionnaire
+
+1 181 concepts ; 222 sont partagés et couvrent 1 174 des 2 133 champs. Chaque
+concept est lu par une famille d'experts, et une famille ne lit que certains
+types de champ :
+
+| Famille       | Types lus                   | Concepts |
+| ------------- | --------------------------- | -------- |
+| `montant`     | `montant`                   | 424      |
+| `nombre`      | `nombre`                    | 69       |
+| `taux`        | `taux`                      | 27       |
+| `date`        | `date`, `periode`           | 67       |
+| `identifiant` | `identifiant`               | 42       |
+| `reference`   | `identifiant`, `liste`      | 35       |
+| `tiers`       | `texte`, `adresse`, `liste` | 25       |
+| `libelle`     | `texte`, `liste`            | 433      |
+| `presence`    | `booleen`                   | 59       |
+
+`reference` est le numéro d'une pièce, la sienne (`numero_piece`) ou une autre
+qu'elle cite (`ref_*`) ; `identifiant` est attribué par un registre ou un
+organisme (matricule fiscal, CIN, RIB, numéro de série) ; `tiers` lit le nom,
+l'adresse ou la qualité d'une personne, et un lieu ; `presence` constate une
+signature, un cachet ou une mention.
+
+**Le rôle.** Un rôle nul a un seul sens : le champ ne porte sur aucune partie
+(un total, une date de la pièce, un lieu). Un concept qui porte sur une partie
+(`porte_sur_une_partie`) exige un rôle sur chacun de ses champs ; les autres le
+refusent. Une pièce nomme chaque partie par un seul rôle. Le vendeur est
+`fournisseur` et l'acheteur `client`, quel que soit le nom que la pièce leur
+donne ; `emetteur` et `destinataire` sont l'expéditeur et le destinataire d'un
+envoi ou d'un message (bon de livraison, enveloppe TEIF) ; en douane,
+l'expéditeur est l'`exportateur` et le destinataire l'`importateur`. Les autres
+règles sont dans l'en-tête de la migration.
+
+**La garde est permanente.** Des déclencheurs différés refusent, au commit, un
+champ sans concept, un concept d'un autre pack que sa grille, un type que la
+famille ne sait pas lire, un rôle manquant ou de trop ;
+`ref.champs_hors_dictionnaire()` rend ces écarts, et le test d'intégrité
+(`la-base-tient-son-integrite.test.ts`) exige qu'il soit vide et qu'aucun
+concept ne reste sans champ.
 
 ## 2. Le langage des preuves (`expression`)
 
