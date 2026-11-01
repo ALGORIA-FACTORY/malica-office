@@ -37,6 +37,7 @@
 import type { DeviseLue } from "@malica/socle/montant-imprime";
 import {
   resoudre,
+  type Cite,
   type Connus,
   type EntreeDuSudoku,
   type Grille,
@@ -93,7 +94,39 @@ export function jetonsDuSudoku(plan: readonly PageToken[], devise: DeviseLue): J
       forte: h.lecture === "decimale" && SEPARATEUR.test(t.text),
     })),
     date: normalizeDate(t.text),
+    ...decoupesDe(t.text, devise),
   }));
+}
+
+/**
+ * Les COUPES possibles d'un jeton où l'OCR a collé deux cellules voisines :
+ * « 12400,000 » peut être « 1 » | « 2400,000 » (quantité, prix). Chaque partie
+ * est lue par le lecteur de montants de production, ici, jamais par le moteur
+ * (règle ①). Le moteur ne s'en sert que si la géométrie du tableau et le
+ * calcul l'exigent (lecture middle-out) ; sinon il les ignore.
+ *
+ * Seulement un nombre sans espace, dont la partie gauche est un entier d'un à
+ * trois chiffres et la droite un montant à décimales imprimées. Mesuré le
+ * 1er novembre 2026 (jeu de 50 achats, pièce 11).
+ */
+function decoupesDe(
+  texte: string,
+  devise: DeviseLue,
+): { decoupes?: { coupe: number; gauche: number; droite: { v: number; forte: boolean }[] }[] } {
+  const brut = texte.trim();
+  if (!/^\d{4,}[.,]\d+$/u.test(brut)) return {};
+  const decoupes = [];
+  for (let k = 1; k <= 3; k++) {
+    const gauche = brut.slice(0, k);
+    const droite = brut.slice(k);
+    if (/^0/u.test(droite)) continue;
+    const g = treillisMontant(gauche, devise).find((h) => h.lecture === "entier");
+    const d = treillisMontant(droite, devise)
+      .filter((h) => h.lecture === "decimale")
+      .map((h) => ({ v: h.millimes, forte: SEPARATEUR.test(droite) }));
+    if (g && d.length > 0) decoupes.push({ coupe: k, gauche: g.millimes, droite: d });
+  }
+  return decoupes.length > 0 ? { decoupes } : {};
 }
 
 /* ===================================================== LA GRILLE ET LE PACK = */
@@ -404,14 +437,19 @@ export function selectionParLeSudoku(
   // L'anneau 1 : les lignes d'articles prouvées remplacent celles de la chaîne.
   // La rubrique de chaque article se résout ensuite comme avant, en base, sur
   // sa désignation (`charge_famille_resolve`) : rien n'est classé ici.
+  // Une cellule déduite ou lue dans une coupe ne se relit pas dans son jeton
+  // (il porte deux cases, ou aucune) : elle reste nulle dans la chaîne, et ne
+  // vit qu'inscrite, avec son statut (`champsLusAInscrire`).
+  const imprimee = (c: Cite) =>
+    c.statut === "deduit" || c.statut === "coupe" ? undefined : c.refs;
   const articles =
     sortie.lignes?.statut === "prouve"
       ? sortie.lignes.instances.map((l) => ({
           designation: plage(l.designation?.refs),
-          quantity: ref(l.quantite.refs),
-          unit_price_ht: ref(l.prix.refs),
+          quantity: ref(imprimee(l.quantite)),
+          unit_price_ht: ref(imprimee(l.prix)),
           unit_price_ttc: null,
-          total_ht: ref(l.montant.refs),
+          total_ht: ref(imprimee(l.montant)),
           tax_code: l.taux?.code ?? null,
         }))
       : selection.articles;
@@ -522,7 +560,13 @@ export function champsLusAInscrire(
       const cellules: Array<
         [
           string,
-          { valeur: string; refs: readonly RefDeJeton[]; statut?: string; case?: object } | null,
+          {
+            valeur: string;
+            refs: readonly RefDeJeton[];
+            statut?: string;
+            case?: object;
+            coupe?: number;
+          } | null,
         ]
       > = [
         ["designation", l.designation],
@@ -537,16 +581,34 @@ export function champsLusAInscrire(
           // Une cellule DÉDUITE (lecture middle-out) n'est pas imprimée : elle
           // s'inscrit comme telle, avec l'endroit où elle devrait l'être, pour
           // une relecture ciblée — jamais comme une valeur prouvée et citée.
+          // Une cellule lue dans une COUPE cite son jeton et la coupe retenue :
+          // la valeur n'est pas tout le texte du jeton.
           const deduite = c.statut === "deduit";
+          const coupee = c.statut === "coupe";
           champs.push({
             champ: `${code}#${n}`,
             valeur: c.valeur,
-            statut: deduite ? "deduit" : lignes.statut,
-            citations: deduite && c.case ? [{ case: c.case }] : c.refs,
+            statut: deduite || coupee ? c.statut! : lignes.statut,
+            citations:
+              deduite && c.case
+                ? [{ case: c.case }]
+                : coupee
+                  ? c.refs.map((r) => ({ ...r, coupe: c.coupe }))
+                  : c.refs,
           });
         }
       }
     });
+    // La remise globale qui a fermé les lignes, quand le centre ne l'a pas déjà lue.
+    const remise = lignes.remise_globale;
+    if (remise && !champs.some((c) => c.champ === "remise_globale")) {
+      champs.push({
+        champ: "remise_globale",
+        valeur: remise.valeur,
+        statut: lignes.statut,
+        citations: remise.refs,
+      });
+    }
   }
   return {
     pieceId,

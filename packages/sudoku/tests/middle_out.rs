@@ -56,7 +56,18 @@ struct Verite {
     entete: Entete,
 }
 
-type Piece = jeux::Piece<Verite>;
+/// Une coupe fournie par l'adaptateur, compactée : (coupe, gauche, [[v, forte]…]).
+type DecoupeCompacte = (usize, i64, Vec<(i64, u8)>);
+
+#[derive(Deserialize)]
+struct Piece {
+    id: String,
+    verite: Verite,
+    jetons: Vec<jeux::JetonCompact>,
+    /// Les coupes des cases collées, par indice de jeton (OCR seulement).
+    #[serde(default)]
+    decoupes: BTreeMap<String, Vec<DecoupeCompacte>>,
+}
 
 /// Les deux lectures : (nom, fichier).
 const LECTURES: [(&str, &str); 2] = [("ocr", "jeux_dirigeant_ocr.json"), ("texte", "jeux_dirigeant_jetons.json")];
@@ -192,7 +203,17 @@ fn jouer(jetons: &[Value], grille: &Value, pack: &Value, connus: &Value) -> Joue
 }
 
 fn jetons_de(p: &Piece) -> Vec<Value> {
-    p.jetons.iter().map(jeton).collect()
+    let mut js: Vec<Value> = p.jetons.iter().map(jeton).collect();
+    for (k, ds) in &p.decoupes {
+        js[k.parse::<usize>().unwrap()]["decoupes"] = ds
+            .iter()
+            .map(|(coupe, gauche, droite)| {
+                let droite: Vec<Value> = droite.iter().map(|(v, f)| json!({"v": v, "forte": *f == 1})).collect();
+                json!({"coupe": coupe, "gauche": gauche, "droite": droite})
+            })
+            .collect();
+    }
+    js
 }
 
 /// Le témoin figé : par « lecture|pièce|variante », l'empreinte du centre (et de l'anneau 2),
@@ -546,4 +567,110 @@ fn middle_out_graine_ancree_par_l_en_tete() {
         j[k]["texte"] = json!("Nb");
     });
     assert_eq!(l["statut"], "absent", "{l}");
+}
+
+/// Une pièce de l'OCR rapide, jouée avec une retouche de ses jetons : (sortie, vérité).
+fn ocr(id: &str, retouche: impl Fn(&mut Vec<Value>)) -> (Value, Verite) {
+    let (grille, pack) = contexte();
+    let ps = pieces(LECTURES[0].1);
+    let cs = connus(&ps);
+    let p = ps.iter().find(|p| p.id == id).unwrap();
+    let mut jetons = jetons_de(p);
+    retouche(&mut jetons);
+    let o = jouer(&jetons, &grille, &pack, &cs[jeu(&p.id)]).piece;
+    assert_eq!(o["issue"], "prouvee", "le centre de {id}");
+    (o, p.verite.clone())
+}
+
+fn par_ordinal(jetons: &[Value], page: u64, ordinal: u64) -> usize {
+    jetons.iter().position(|j| j["page"] == page && j["ordinal"] == ordinal).unwrap()
+}
+
+#[test]
+fn middle_out_tableau_sur_plusieurs_pages() {
+    // 50/37 : 30 rangées en page 1, 15 en page 2 sous l'en-tête répété
+    let (o, v) = ocr("50/37", |_| {});
+    assert_eq!(o["lignes"]["statut"], "prouve", "{}", o["lignes"]);
+    assert!(justes(&o, &v));
+    assert_eq!(o["lignes"]["instances"].as_array().unwrap().len(), 45);
+    // 100/D-19 : « À reporter : 11 925,000 » en bas de la page 1 n'est pas un article, et
+    // vaut la somme courante (4 125 + 7 800)
+    let (o, v) = ocr("100/D-19", |_| {});
+    assert_eq!(o["lignes"]["statut"], "prouve", "{}", o["lignes"]);
+    assert!(justes(&o, &v));
+    // un report qui ne vaut plus la somme courante : le tableau ne ferme plus
+    let (o, _) = ocr("100/D-19", |j| {
+        let k = par_ordinal(j, 1, 74);
+        j[k]["montants"] = json!([{"v": 11_926_000, "forte": true}]);
+    });
+    assert_ne!(o["lignes"]["statut"], "prouve", "{}", o["lignes"]);
+}
+
+#[test]
+fn middle_out_remise_globale() {
+    // 100/A-05 : Σ 627,000 − « Remise 5 % -31,350 » = Net HT 595,650
+    let (o, v) = ocr("100/A-05", |_| {});
+    let l = &o["lignes"];
+    assert_eq!(l["statut"], "prouve", "{l}");
+    assert!(justes(&o, &v));
+    assert_eq!(l["remise_globale"], json!({"valeur": "31350", "refs": [{"page": 1, "ordinal": 81}]}));
+    // la remise lue effacée : le taux de 5 % lu sur la rangée suffit (627 × 5 % = 31,350)
+    let (o, _) = ocr("100/A-05", |j| {
+        let k = par_ordinal(j, 1, 81);
+        j[k]["montants"] = json!([]);
+    });
+    assert_eq!(o["lignes"]["remise_globale"]["refs"], json!([{"page": 1, "ordinal": 79}]), "{}", o["lignes"]);
+    // ni montant ni taux de remise lus : rien ne ferme
+    let (o, _) = ocr("100/A-05", |j| {
+        for ord in [79, 81] {
+            let k = par_ordinal(j, 1, ord);
+            j[k]["montants"] = json!([]);
+        }
+    });
+    assert_ne!(o["lignes"]["statut"], "prouve", "{}", o["lignes"]);
+    // une remise lue fausse : rien ne ferme
+    let (o, _) = ocr("100/A-05", |j| {
+        for (ord, v) in [(79, json!([])), (81, json!([{"v": -31_340, "forte": true}]))] {
+            let k = par_ordinal(j, 1, ord);
+            j[k]["montants"] = v;
+        }
+    });
+    assert_ne!(o["lignes"]["statut"], "prouve", "{}", o["lignes"]);
+}
+
+#[test]
+fn middle_out_case_collee() {
+    // 50/11 : « 1 » et « 2400,000 » lus « 12400,000 » (jeton 88). La quantité « 1 » de la
+    // première rangée (jeton 57) est imprimée à la frontière des colonnes quantité et prix :
+    // telle quelle, la pièce reste signalée ; replacée sous « QTÉ », la coupe la ferme.
+    let (o, _) = ocr("50/11", |_| {});
+    assert_ne!(o["lignes"]["statut"], "prouve");
+    let replacer = |j: &mut Vec<Value>| {
+        let k = par_ordinal(j, 1, 57);
+        j[k]["x0"] = json!(0.757);
+        j[k]["x1"] = json!(0.765);
+    };
+    let (o, v) = ocr("50/11", replacer);
+    let l = &o["lignes"];
+    assert_eq!(l["statut"], "prouve", "{l}");
+    assert!(justes(&o, &v));
+    let video = &l["instances"][3];
+    let cite = json!([{"page": 1, "ordinal": 88}]);
+    assert_eq!(video["quantite"], json!({"valeur": "1000", "refs": cite, "statut": "coupe", "coupe": 1}));
+    assert_eq!(video["prix"], json!({"valeur": "2400000", "refs": cite, "statut": "coupe", "coupe": 1}));
+    assert_eq!(l["remise_globale"]["valeur"], "406000");
+    println!("{}", serde_json::to_string(&json!({"quantite": video["quantite"], "prix": video["prix"]})).unwrap());
+
+    // Mutation : le jeton collé ramené dans la seule colonne des prix — la coupe ne sert plus.
+    let (o, _) = ocr("50/11", |j| {
+        replacer(j);
+        let k = par_ordinal(j, 1, 88);
+        j[k]["x0"] = json!(0.805);
+        j[k]["x1"] = json!(0.86);
+    });
+    let coupes = o["lignes"]["instances"]
+        .as_array()
+        .map_or(0, |a| a.iter().filter(|i| i["quantite"]["statut"] == "coupe" || i["prix"]["statut"] == "coupe").count());
+    assert_eq!(coupes, 0, "{}", o["lignes"]);
+    assert_ne!(o["lignes"]["statut"], "prouve", "{}", o["lignes"]);
 }

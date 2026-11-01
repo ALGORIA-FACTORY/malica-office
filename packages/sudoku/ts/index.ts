@@ -32,6 +32,16 @@ export interface JetonDuSudoku {
   readonly montants: readonly LectureDeMontant[];
   /** Date ISO, ou null. */
   readonly date: string | null;
+  /**
+   * Les coupes possibles d'un jeton où l'OCR a collé deux cellules
+   * (« 12400,000 » = « 1 » | « 2400,000 ») : `coupe` caractères à gauche, lus
+   * comme un entier (`gauche`, en unités mineures) ; le reste, comme un montant.
+   */
+  readonly decoupes?: readonly {
+    readonly coupe: number;
+    readonly gauche: number;
+    readonly droite: readonly LectureDeMontant[];
+  }[];
 }
 
 export interface ChampDeGrille {
@@ -113,8 +123,13 @@ export interface ChampLu {
 export interface Cite {
   readonly valeur: string;
   readonly refs: readonly RefDeJeton[];
-  /** « deduit » : trouvée par le calcul du tableau, pas lue ; absente, elle est lue. */
-  readonly statut?: "lu" | "deduit";
+  /**
+   * « deduit » : trouvée par le calcul du tableau, pas lue ; « coupe » : lue dans
+   * un jeton où l'OCR a collé deux cases, à la coupe `coupe` ; absente, elle est lue.
+   */
+  readonly statut?: "lu" | "deduit" | "coupe";
+  /** Pour une cellule « coupe » : la coupe retenue parmi les `decoupes` du jeton. */
+  readonly coupe?: number;
   /** Pour une cellule déduite : là où elle devrait être imprimée (relecture ciblée). */
   readonly case?: {
     readonly page: number;
@@ -159,6 +174,8 @@ export interface SortieDuSudoku {
     readonly taux_par_base: string;
     /** Le nombre de cellules trouvées par le calcul (lecture middle-out). */
     readonly deduites?: number;
+    /** La remise globale lue qui ferme les lignes sur le total HT, quand le total brut n'est pas prouvé. */
+    readonly remise_globale?: Cite | null;
   } | null;
   readonly issue: "prouvee" | "ambigue" | "aucune";
   /** La variante de la grille qui a prouvé la pièce, quand la grille en a. */

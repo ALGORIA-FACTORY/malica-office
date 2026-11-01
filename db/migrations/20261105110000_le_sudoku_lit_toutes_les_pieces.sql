@@ -179,10 +179,11 @@ create table if not exists capture.champs_lus (
   grille_code text,
   champ_code  text,
   valeur      text,
-  statut      text check (statut in ('prouve', 'conforme', 'signale', 'absent', 'deduit')),
+  statut      text check (statut in ('prouve', 'conforme', 'signale', 'absent', 'deduit', 'coupe')),
   -- Les jetons qui portent la valeur ({page, ordinal}) : jamais de valeur lue sans citation (R2).
   -- Une cellule « deduit » (trouvée par le calcul du tableau) cite la case où elle
-  -- devrait être imprimée ({case}), pour une relecture ciblée.
+  -- devrait être imprimée ({case}), pour une relecture ciblée. Une cellule « coupe »
+  -- est lue dans un jeton où l'OCR a collé deux cases : elle cite ce jeton et la coupe.
   citations   jsonb,
   -- L'issue du sudoku pour la pièce : prouvee, ambigue, aucune.
   issue       text,
@@ -3946,7 +3947,7 @@ select g.id, v.code, v.regle, v.genre, v.expression, v.statut, v.variante
     ('facture', 'M01', 'Droit de timbre imprimé = montant fixe du pack (ref.fiscal_charges, DROIT_TIMBRE) — preuve ajoutée par Malica', 'arithmetique', '{"op": "charge", "montant": "droit_timbre", "code": "DROIT_TIMBRE"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'M02', 'FODEC imprimé = arrondi(total HT × taux du pack) (ref.fiscal_charges, FODEC) — preuve ajoutée par Malica ; une facture dont le FODEC ne porte que sur une partie des lignes n''est pas prouvée (signalée, jamais faussement prouvée)', 'arithmetique', '{"op": "charge", "montant": "montant_fodec", "code": "FODEC", "base": "total_ht"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'M03', 'Variante TTC hors timbre : total_ttc = total HT + TVA + FODEC — preuve ajoutée par Malica', 'arithmetique', '{"op": "somme", "total": "total_ttc", "parties": ["total_ht", "montant_tva_par_taux", "montant_fodec?"]}'::jsonb, 'defaut_a_valider', 'ttc_hors_timbre'),
-    ('facture', 'L01', 'Lignes d''articles : quantité × prix (− remise) = montant de ligne, et la somme des lignes = total HT (ou total brut HT) — preuve ajoutée par Malica, non bloquante pour les totaux', 'arithmetique', '{"op": "lignes", "designation": "designation", "quantite": "quantite", "prix": "prix_unitaire_ht", "remise": "remise_ligne?", "montant": "montant_ligne_ht", "taux": "taux_tva_ligne?", "total": "total_ht", "total_brut": "total_brut_ht?"}'::jsonb, 'defaut_a_valider', null::text),
+    ('facture', 'L01', 'Lignes d''articles : quantité × prix (− remise) = montant de ligne, et la somme des lignes = total HT (ou total brut HT, ou total HT + remise globale lue) — preuve ajoutée par Malica, non bloquante pour les totaux', 'arithmetique', '{"op": "lignes", "designation": "designation", "quantite": "quantite", "prix": "prix_unitaire_ht", "remise": "remise_ligne?", "montant": "montant_ligne_ht", "taux": "taux_tva_ligne?", "total": "total_ht", "total_brut": "total_brut_ht?", "remise_globale": "remise_globale?"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'E01', 'Les parties : un seul des matricules lus est celui du dossier ; il dit le sens (achat ou vente), l''autre est la contrepartie, rapprochée des tiers du dossier — preuve ajoutée par Malica, non bloquante', 'recoupement', '{"op": "parties", "emetteur": "matricule_fiscal_emetteur", "client": "matricule_fiscal_client", "nom_emetteur": "raison_sociale_emetteur", "nom_client": "nom_client", "numero": "numero_facture"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'E02', 'Date d''émission ≤ date d''échéance — preuve ajoutée par Malica', 'format', '{"op": "ordre", "avant": "date_emission", "apres": "date_echeance"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'M04', 'Variante TTC hors timbre : net à payer = total TTC + droit de timbre − retenue à la source − acomptes (imprimés en négatif) — preuve ajoutée par Malica', 'arithmetique', '{"op": "somme", "total": "net_a_payer", "parties": ["total_ttc", "droit_timbre?", "montant_retenue_source?", "acomptes_deduits?"]}'::jsonb, 'defaut_a_valider', 'ttc_hors_timbre'),
