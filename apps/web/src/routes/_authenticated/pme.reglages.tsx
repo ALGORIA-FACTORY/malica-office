@@ -1259,6 +1259,16 @@ function PannesConstatees() {
     queryKey: ["pannes", pme.tenantId],
     queryFn: () => office().journal.dernieres(pme.tenantId, 20),
   });
+  const qc = useQueryClient();
+  /*
+   * « Tout est réglé » (1er novembre 2026) : une marque datée, rien n'est
+   * effacé — le journal est en ajout seul (R7). La liste ne montre plus que
+   * ce qui arrivera ensuite, et disparaît d'ici tant que rien n'échoue.
+   */
+  const regler = useMutation({
+    mutationFn: () => office().journal.regler(pme.tenantId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pannes", pme.tenantId] }),
+  });
 
   if ((pannes.data ?? []).length === 0) return null;
 
@@ -1293,6 +1303,17 @@ function PannesConstatees() {
             </span>
           </div>
         ))}
+      </div>
+      <div className="mt-2 flex justify-end">
+        <button
+          type="button"
+          className="btn"
+          style={{ width: "auto" }}
+          disabled={regler.isPending}
+          onClick={() => regler.mutate()}
+        >
+          {t("pme.reglages.pannes.regler")}
+        </button>
       </div>
     </>
   );

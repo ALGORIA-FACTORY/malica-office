@@ -92,6 +92,11 @@
       "chemins": ["public.journal_client_consigner"]
     },
     {
+      "objet": "audit.journal_client_reglements",
+      "privilege": "INSERT",
+      "chemins": ["public.journal_client_regler"]
+    },
+    {
       "objet": "banque.comptes",
       "privilege": "INSERT",
       "chemins": ["public.banque_compte_ouvrir"]

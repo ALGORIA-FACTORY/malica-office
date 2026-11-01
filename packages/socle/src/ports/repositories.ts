@@ -3634,6 +3634,8 @@ export interface JournalRepository {
   }): Promise<string>;
   /** Les dernieres pannes d'un dossier, de la plus recente. */
   dernieres(tenantId: string, limite?: number): Promise<PanneConsignee[]>;
+  /** « Tout est reglé » : une marque datée ; rien n'est effacé (R7). */
+  regler(tenantId: string): Promise<{ le: string }>;
 }
 
 /** Une panne inscrite au journal. */

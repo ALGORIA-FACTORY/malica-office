@@ -2533,6 +2533,7 @@ export const fr = {
     "L’écriture de cette pièce est inscrite avec son cours : retournez-la d’abord (contre-passation), puis saisissez le cours.",
   "refus.avoir.saisie":
     "L’avoir ou la facture désignée n’est pas reconnue : rechargez la page et choisissez à nouveau.",
+  "refus.journal.droits": "Seul un membre de cette société peut régler son journal.",
   "refus.avoir.droits": "Seul le cabinet qui supervise ce dossier rattache un avoir à sa facture.",
   "refus.avoir.facture":
     "Cette facture n’est pas du même dossier, ou pas du même sens que l’avoir : choisissez-en une autre.",
@@ -2764,6 +2765,7 @@ export const fr = {
   "pme.reglages.signaler.sous":
     "Dites-le en une phrase. Elle arrive telle quelle à l'équipe, avec l'écran et la version — jamais vos documents.",
   "pme.reglages.pannes": "Ce qui n’a pas marché",
+  "pme.reglages.pannes.regler": "Tout est réglé",
   "pme.reglages.pannes.sous":
     "Ce que l’application a constaté elle-même, sans que vous ayez à le signaler.",
   "pme.reglages.signaler.champ": "Ce qui s'est passé, et ce que vous attendiez",

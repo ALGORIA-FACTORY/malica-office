@@ -157,4 +157,41 @@ describe("une panne laisse une trace en base", { skip: !BASE_CONFIGUREE }, () =>
       /mutation|interdit|denied|refus/i,
     );
   });
+
+  it("« tout est réglé » vide la liste sans rien effacer, et la suite s'y montre", async () => {
+    /*
+     * 1er novembre 2026, Wissem : « Journal vide ». Le journal est en ajout
+     * seul : la marque borne ce que l'écran montre, la base garde tout.
+     */
+    const avant = (await rpc("journal", "dernieres", org, 50)) as Panne[];
+    assert.ok(avant.length > 0);
+    await rpc("journal", "regler", org);
+    assert.deepEqual(await rpc("journal", "dernieres", org, 50), []);
+    const enBase = await admin(async (p) => {
+      const { rows } = await p.query<{ n: string }>(
+        `select count(*)::text as n from audit.journal_client where tenant_id = $1`,
+        [org],
+      );
+      return Number(rows[0]!.n);
+    });
+    assert.ok(enBase >= avant.length, "rien n'est effacé");
+    await rpc("journal", "consigner", { tenantId: org, ou: "apres", message: "nouvelle panne" });
+    const apres = (await rpc("journal", "dernieres", org, 50)) as Panne[];
+    assert.deepEqual(
+      apres.map((x) => x.ou),
+      ["apres"],
+    );
+  });
+
+  it("on ne règle pas le journal d'un autre dossier", async () => {
+    const autre = await admin(async (p) => {
+      const { rows } = await p.query<{ id: string }>(
+        `select id from identity.organizations where id <> $1 and archived_at is null limit 1`,
+        [org],
+      );
+      return rows[0]?.id ?? null;
+    });
+    if (autre === null) return;
+    await assert.rejects(() => rpc("journal", "regler", autre), /refus\.journal\.droits/);
+  });
 });
