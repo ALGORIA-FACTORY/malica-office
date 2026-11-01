@@ -2114,6 +2114,8 @@ export const en: Dict = {
   "refus.referentiel.bareme_absent":
     "Scale {code} not found on {date} for jurisdiction {juridiction}.",
   "refus.referentiel.pack_absent": "No pack is in force for this jurisdiction.",
+  "refus.referentiel.pack_absent_a_la_date":
+    "No pack is in force for {juridiction} on {date}: check the document’s date.",
   "refus.referentiel.regime_inconnu":
     "This regime does not exist for jurisdiction {juridiction} on {date}: {regime}.",
   "refus.referentiel.type_de_document":
@@ -2519,6 +2521,9 @@ export const en: Dict = {
   "cab.ecriture.titre": "The entry · editable",
   "cab.ecriture.rien": "The Socle proposes nothing: enter the entry, it will be “forced”.",
   "cab.ecriture.rien.pourquoi": "Why nothing is proposed",
+  "cab.ecriture.date_hors_referentiel": "Document date outside the reference data: to check.",
+  "cab.ecriture.date_hors_referentiel.aide":
+    "No pack is in force on {date}: the date was probably misread. Check it; if it is right, enter the entry, it will be “forced”.",
   "cab.ecriture.aide.validee":
     "Validated as proposed: “validated”. Changed or entered by hand: “forced”, with your name and the time. Both go into today’s journal.",
   "cab.ecriture.aide.client":

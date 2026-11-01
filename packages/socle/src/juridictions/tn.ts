@@ -11,6 +11,7 @@
  * `socle/juridictions/**` : ne réintroduis rien ici.
  */
 import type { JurisdictionPack, JurisdictionRule } from "../engines/echeance/next.ts";
+import { refusAvecValeurs } from "../refus-a-dire.ts";
 
 /** Ligne telle que lue depuis `ref.pack_rules`, sans hypothèse de contenu. */
 export interface PackRuleRow {
@@ -25,10 +26,23 @@ export interface PackRuleRow {
   valid_to: string | null;
 }
 
+/**
+ * Aucun pack en vigueur pour la juridiction à la date : le plus souvent, une
+ * date mal lue. Le refus se dit par sa clé, la juridiction et la date citées
+ * (`refusAvecValeurs`) — la phrase française partait telle quelle à l'écran
+ * (recette, pièce 042) ; `at` reste lisible pour qui le rattrape.
+ */
 export class PackUnavailable extends Error {
+  readonly at: string;
   constructor(jurisdiction: string, at: string) {
-    super(`Aucun pack en vigueur pour ${jurisdiction} au ${at}`);
+    super(
+      refusAvecValeurs("refus.referentiel.pack_absent_a_la_date", {
+        juridiction: jurisdiction,
+        date: at,
+      }),
+    );
     this.name = "PackUnavailable";
+    this.at = at;
   }
 }
 

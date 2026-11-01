@@ -2054,6 +2054,8 @@ export const ar: Dict = {
     "المعيار الجبائي {code} غير مُثبت بمصدر رسمي: لا يصلح لأي حساب. {note}",
   "refus.referentiel.bareme_absent": "الجدول {code} غير موجود بتاريخ {date} للولاية {juridiction}.",
   "refus.referentiel.pack_absent": "لا حزمة سارية لهذه الولاية.",
+  "refus.referentiel.pack_absent_a_la_date":
+    "لا حزمة سارية لـ{juridiction} في {date}: تحقّق من تاريخ الوثيقة.",
   "refus.referentiel.regime_inconnu":
     "هذا النظام غير موجود للولاية {juridiction} بتاريخ {date}: {regime}.",
   "refus.referentiel.type_de_document": "نوع الوثيقة هذا غير موجود في المرجع: {type}.",
@@ -2410,6 +2412,9 @@ export const ar: Dict = {
   "cab.ecriture.titre": "القيد · قابل للتعديل",
   "cab.ecriture.rien": "لا يقترح السوكل شيئًا: أدخل القيد، وسيُسجَّل «مفروضًا».",
   "cab.ecriture.rien.pourquoi": "لماذا لا يُقترح شيء",
+  "cab.ecriture.date_hors_referentiel": "تاريخ الوثيقة خارج المرجع: يجب التحقق منه.",
+  "cab.ecriture.date_hors_referentiel.aide":
+    "لا حزمة سارية في {date}: يبدو أن التاريخ قُرئ خطأً. تحقّق منه؛ وإن كان صحيحًا فأدخل القيد، وسيُسجَّل «مفروضًا».",
   "cab.ecriture.aide.validee":
     "مصادَق عليه كما اقتُرح: «مُصادَق عليه». مُعدَّل أو مُدخَل يدويًا: «مفروض»، باسمك والساعة. كلاهما يدخل يومية اليوم.",
   "cab.ecriture.aide.client": "لا يرى الحريف أي قيد ولا يؤكّد شيئًا: يقرأ فقط «تمّ التكفّل بها».",

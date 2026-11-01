@@ -209,6 +209,10 @@
       "famille": "INFORMATIQUE"
     },
     {
+      "motif": "(?<!\\p{L})copieu(r|rs|se|ses)(?!\\p{L})",
+      "famille": "INFORMATIQUE"
+    },
+    {
       "motif": "آل(ة|ات)\\s+(ال)?نسخ",
       "famille": "INFORMATIQUE"
     },

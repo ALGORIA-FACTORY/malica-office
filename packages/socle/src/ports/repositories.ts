@@ -1714,7 +1714,12 @@ export type RaisonSansEcriture =
    * Un avoir partiel reprend un droit que la facture a porté au coût, et
    * qu'aucune de ses lignes ne désigne : sa part ne se devine pas.
    */
-  | "droit_au_cout_non_attribue";
+  | "droit_au_cout_non_attribue"
+  /**
+   * Aucun pack n'est en vigueur à la date de la pièce : le plus souvent une
+   * date mal lue, à vérifier — `dateHorsReferentiel` la cite.
+   */
+  | "date_hors_referentiel";
 
 /**
  * Une réserve que la PROPOSITION porte (1er novembre 2026) : la vente rangée
@@ -1791,6 +1796,8 @@ export type PropositionDePiece = (
       coursASaisir?: CoursASaisir;
       /** Un avoir : sa facture d'origine, ou ce qui manque pour la lire. */
       avoir?: FactureDOrigine;
+      /** La date hors de tout pack, quand `raisonCode` vaut `date_hors_referentiel`. */
+      dateHorsReferentiel?: string;
     }
 ) & {
   /**

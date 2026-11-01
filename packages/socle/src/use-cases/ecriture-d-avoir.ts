@@ -34,9 +34,12 @@
  * (`droitsDeLaFacture`) : la ligne de base sans code de taxe qui porte
  * exactement ce libellé et ce montant, et elle seule, redevient la ligne de
  * ce droit. Quand rien ne la désigne ainsi (le cabinet l'a reprise), l'avoir
- * qui reprend TOUTE la facture en extourne se propose quand même, ligne pour
- * ligne, avec la réserve `droit_au_cout` ; un avoir partiel se refuse
- * (`droit_au_cout_non_attribue`) : sa part du droit ne se devine pas.
+ * qui reprend TOUTE la facture en extourne — chaque droit, chaque TVA, chaque
+ * base et le total imprimés égaux à ceux de la facture — se propose quand
+ * même, ligne pour ligne, avec la réserve `droit_au_cout` ; tout autre avoir
+ * se refuse (`droit_au_cout_non_attribue`, ou l'excès, ou le hors facture,
+ * nommés) : sa part du droit ne se devine pas, et un montant imprimé n'est
+ * jamais remplacé par celui de la facture.
  *
  * ================================================================ CE QUI REFUSE
  *
@@ -141,6 +144,73 @@ function cumuler<T extends { code: string }>(xs: readonly T[], ajouter: (a: T, b
     parCode.set(x.code, deja ? ajouter(deja, x) : x);
   }
   return [...parCode.values()];
+}
+
+/** Additionne `montant` au code, dans une table de sommes. */
+function ajouterA(m: Map<string, bigint>, code: string, montant: bigint) {
+  m.set(code, (m.get(code) ?? 0n) + montant);
+}
+
+/**
+ * Le repli « extourne exacte » d'un droit au coût que rien ne désigne : ce
+ * qui, dans l'avoir, n'est pas ce que la facture porte — `null` quand chaque
+ * composante l'est. Un taux ou un droit que la facture n'a pas est hors
+ * facture ; un droit ou une TVA déduite au-delà du sien excède la facture ;
+ * tout autre écart (un droit en moins compensé sur la base, une TVA déduite
+ * rendue à la base) laisse la part du droit indevinable.
+ */
+function ecartAuRepli(x: {
+  lignes: readonly LigneDeLaFacture[];
+  bases: ReadonlyArray<{ code: string; ht: bigint; tva: bigint }>;
+  droits: ReadonlyArray<{ code: string; montant: bigint }>;
+  cote: (l: LigneDeLaFacture) => bigint;
+  codeUnique: string | null;
+  nonAttribues: ReadonlySet<string>;
+  droitsDeLaFacture: readonly DroitDeLaFacture[];
+  u: (s: string) => bigint;
+}): RefusDAvoir | null {
+  // La facture, composante par composante.
+  const droitsF = new Map<string, bigint>();
+  const tvasF = new Map<string, bigint>();
+  const basesCodees = new Map<string, bigint>();
+  let basesSansCode = 0n;
+  for (const l of x.lignes) {
+    if (l.nature === "droit" && l.droit_code) ajouterA(droitsF, l.droit_code, x.cote(l));
+    else if (l.nature === "tva" && l.tax_code) ajouterA(tvasF, l.tax_code, x.cote(l));
+    else if (l.nature === "base" && l.tax_code) ajouterA(basesCodees, l.tax_code, x.cote(l));
+    else if (l.nature === "base") basesSansCode += x.cote(l);
+  }
+  for (const d of x.droitsDeLaFacture)
+    if (x.nonAttribues.has(d.code)) ajouterA(droitsF, d.code, x.u(d.montant));
+  // L'avoir : ce qui va à la base d'un taux, TVA non déduite comprise.
+  const versLaBase = new Map(
+    x.bases.map((b) => [b.code, b.ht + (tvasF.has(b.code) ? 0n : b.tva)] as const),
+  );
+  const tvasA = new Map(x.bases.map((b) => [b.code, b.tva] as const));
+  const droitsA = new Map(x.droits.map((d) => [d.code, d.montant] as const));
+
+  // Hors facture : un taux qu'aucune ligne ne porte, un droit qu'elle n'a pas.
+  const tauxConnu = (code: string) =>
+    basesCodees.has(code) ||
+    tvasF.has(code) ||
+    (basesSansCode > 0n && (x.codeUnique === null || x.codeUnique === code));
+  if (
+    x.bases.some((b) => (b.ht !== 0n || b.tva !== 0n) && !tauxConnu(b.code)) ||
+    x.droits.some((d) => d.montant !== 0n && !droitsF.has(d.code))
+  )
+    return "avoir_hors_facture";
+  // Au-delà de la facture, sur un droit ou sur une TVA déduite.
+  if (
+    [...droitsA].some(([code, m]) => m > (droitsF.get(code) ?? 0n)) ||
+    [...tvasF].some(([code, m]) => (tvasA.get(code) ?? 0n) > m)
+  )
+    return "avoir_excede_la_facture";
+  // Chaque droit et chaque TVA déduite exactement, chaque base codée au moins.
+  const exacte =
+    [...droitsF].every(([code, m]) => (droitsA.get(code) ?? 0n) === m) &&
+    [...tvasF].every(([code, m]) => (tvasA.get(code) ?? 0n) === m) &&
+    [...basesCodees].every(([code, m]) => (versLaBase.get(code) ?? 0n) >= m);
+  return exacte ? null : "droit_au_cout_non_attribue";
 }
 
 export function ecritureDAvoir(p: {
@@ -253,17 +323,26 @@ export function ecritureDAvoir(p: {
   if (sansLigne) {
     /*
      * Le droit au coût ne se retrouve pas. Seule l'extourne de TOUTE la
-     * facture se passe de lui : chaque ligne revient pour son montant, et la
-     * TVA imprimée doit être, taux par taux, celle de la facture.
+     * facture se passe de lui : chaque ligne revient pour son montant. Elle
+     * reprend donc les montants de la FACTURE, et ne se propose que si
+     * l'avoir imprime les mêmes, composante par composante — chaque droit,
+     * chaque TVA déduite, chaque base de taux que la facture code, et le
+     * total (revue de #169 : un droit imprimé au double, compensé sur la
+     * base, s'extournait aux montants de la facture sans rien dire).
      */
-    const exacte =
-      traitement === "extourne" &&
-      totalAvoir === totalFacture &&
-      bases.every((b) => {
-        const tvas = tvasDu(b.code);
-        return tvas.length === 0 || b.tva === tvas.reduce((s, l) => s + cote(l), 0n);
-      });
-    if (!exacte) return { ok: false, refus: "droit_au_cout_non_attribue" };
+    const ecart = ecartAuRepli({
+      lignes,
+      bases,
+      droits,
+      cote,
+      codeUnique,
+      nonAttribues,
+      droitsDeLaFacture: p.droitsDeLaFacture,
+      u,
+    });
+    if (ecart) return { ok: false, refus: ecart };
+    if (traitement !== "extourne" || totalAvoir !== totalFacture)
+      return { ok: false, refus: "droit_au_cout_non_attribue" };
     for (const l of lignes)
       retirer([l], solde.get(l)!, l.nature === "base" || l.nature === "tva" ? codeDe(l) : null);
     reserves.push({ code: "droit_au_cout", droit: sansLigne.code });

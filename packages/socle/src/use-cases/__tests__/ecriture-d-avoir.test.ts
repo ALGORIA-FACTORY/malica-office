@@ -319,4 +319,46 @@ describe("l'écriture d'un avoir lié à sa facture", () => {
       ),
     ).toBe("avoir_hors_facture");
   });
+
+  it("le FODEC au coût que rien ne retrouve : chaque composante de l'avoir doit être celle de la facture", () => {
+    // Revue de #169 : le repli ne comparait que le total et des TVA. Un avoir
+    // HT 990, FODEC 20, même TVA et même total s'extournait aux montants de
+    // la facture, sans rien dire du droit excédentaire.
+    const renommee = AU_COUT.map((l) => (l.libelle === "FODEC" ? { ...l, libelle: "Droits" } : l));
+    const repli = (
+      bases: Array<{ code: string; ht: string; tva: string }>,
+      droits: Array<{ code: string; montant: string }>,
+      ttc = "1201.900",
+    ) => lignes(avoir(bases, ttc, "selon_avoir", renommee, droits, FODEC_LU));
+    expect(
+      repli(
+        [{ code: "TVA19", ht: "990.000", tva: "191.900" }],
+        [{ code: "FODEC", montant: "20.000" }],
+      ),
+    ).toBe("avoir_excede_la_facture");
+    // Le droit en moins, la base en plus : la part du droit ne se devine pas.
+    expect(
+      repli(
+        [{ code: "TVA19", ht: "1005.000", tva: "191.900" }],
+        [{ code: "FODEC", montant: "5.000" }],
+      ),
+    ).toBe("droit_au_cout_non_attribue");
+    // Un taux que la facture n'a pas, même au même total.
+    expect(
+      repli(
+        [
+          { code: "TVA19", ht: "1000.000", tva: "181.900" },
+          { code: "TVA07", ht: "0.000", tva: "10.000" },
+        ],
+        [{ code: "FODEC", montant: "10.000" }],
+      ),
+    ).toBe("avoir_hors_facture");
+    // La TVA de la facture qui manque à l'avoir, rendue à la base.
+    expect(
+      repli(
+        [{ code: "TVA19", ht: "1191.900", tva: "0.000" }],
+        [{ code: "FODEC", montant: "10.000" }],
+      ),
+    ).toBe("droit_au_cout_non_attribue");
+  });
 });

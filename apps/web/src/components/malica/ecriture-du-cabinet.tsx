@@ -45,7 +45,7 @@ import {
   type EcritureEnSaisie,
 } from "@/lib/ecriture-du-cabinet";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { montant } from "@/lib/lisible";
+import { dateEnChiffres, montant } from "@/lib/lisible";
 import { MOT_CABINET } from "@/lib/statut";
 import { office } from "@/verticals/malica-office/composition";
 
@@ -320,18 +320,41 @@ export function EcritureDuCabinet({
         !proposition.ok &&
         proposition.raisonCode !== "taux_de_change" &&
         proposition.raisonCode !== "facture_d_origine" ? (
-        <p className="border border-signal-stop bg-card px-3.5 py-2.5 text-[13.5px] text-signal-stop">
-          {t("cab.ecriture.rien")}
-          <Aide
-            titre={t("cab.ecriture.rien.pourquoi")}
-            /*
-             * La raison vient du serveur, en français, et porte les motifs des
-             * contrôles : une seule phrase, construite là où le jugement est
-             * posé. Elle va dans le i : l'écran dit un mot et un geste.
-             */
-            paragraphes={[{ texte: proposition.raison }]}
-          />
-        </p>
+        proposition.raisonCode === "date_hors_referentiel" ? (
+          /*
+           * Une date hors de tout pack — le plus souvent mal lue : une alerte
+           * à vérifier, dite dans la langue de la personne, la date citée.
+           */
+          <p
+            role="status"
+            className="flex items-center border border-signal-warn bg-card px-3.5 py-2.5 text-[13.5px] text-signal-warn"
+          >
+            {t("cab.ecriture.date_hors_referentiel")}
+            <Aide
+              titre={t("cab.ecriture.date_hors_referentiel")}
+              paragraphes={[
+                {
+                  texte: t("cab.ecriture.date_hors_referentiel.aide", {
+                    date: dateEnChiffres(proposition.dateHorsReferentiel ?? "", locale),
+                  }),
+                },
+              ]}
+            />
+          </p>
+        ) : (
+          <p className="border border-signal-stop bg-card px-3.5 py-2.5 text-[13.5px] text-signal-stop">
+            {t("cab.ecriture.rien")}
+            <Aide
+              titre={t("cab.ecriture.rien.pourquoi")}
+              /*
+               * La raison vient du serveur, en français, et porte les motifs des
+               * contrôles : une seule phrase, construite là où le jugement est
+               * posé. Elle va dans le i : l'écran dit un mot et un geste.
+               */
+              paragraphes={[{ texte: proposition.raison }]}
+            />
+          </p>
+        )
       ) : null}
 
       <h2

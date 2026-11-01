@@ -494,34 +494,31 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
     );
   });
 
-  it("le seuil du dossier juge la pièce ; changé, il périme le jugement, qui se rejuge", async () => {
-    const s = await monter();
-    // Une pièce d'un mois déjà passé de l'exercice (la date du jour sinon).
-    const mois = Number(s.jour.slice(5, 7));
-    const datePiece =
-      mois > 1 ? `${s.jour.slice(0, 4)}-${String(mois - 1).padStart(2, "0")}-15` : s.jour;
+  /** Un achat lu du dossier A, aux articles donnés, jugé et partagé au cabinet. */
+  const achatLu = async (
+    s: Awaited<ReturnType<typeof monter>>,
+    datePiece: string,
+    articles: Array<{
+      designation: string;
+      quantity: string;
+      unit_price_ht: string;
+      total_ht: string;
+    }>,
+  ) => {
+    n += 1;
     const { id } = (await rpc(s.dirigeantA, "capture.enregistrer", {
       tenantId: s.pmeA,
       source: "pdf",
       vis: "entite",
-      idempotencyKey: `${s.m}-piece`,
+      idempotencyKey: `${s.m}-piece-${n}`,
       contentType: "application/pdf",
       pageCount: 1,
     })) as { id: string };
-    const l = lectureDEssai({ clientMf: s.mfA, numero: `IMMO-${s.m}` });
+    const l = lectureDEssai({ clientMf: s.mfA, numero: `IMMO-${s.m}-${n}` });
     const extract = {
       ...l.extract,
       document_date: datePiece,
-      articles: [
-        {
-          designation: "Mobilier de bureau",
-          quantity: "1",
-          unit_price_ht: "150.000",
-          unit_price_ttc: null,
-          total_ht: "150.000",
-          tax_code: null,
-        },
-      ],
+      articles: articles.map((a) => ({ ...a, unit_price_ttc: null, tax_code: null })),
     };
     await sousIdentiteDuServeur(s.dirigeantA.id, (db) =>
       executerRpc(
@@ -551,24 +548,42 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
     );
     await rpc(s.dirigeantA, "capture.analyser", id);
     await rpc(s.dirigeantA, "collab.setPieceVis", id, "partage");
-    const derniere = async () =>
-      (
-        await admin.query<{
-          controles: Array<{ code: string; statut: string; preuves: Record<string, unknown> }>;
-          a_jour: boolean;
-        }>(
-          `select a.controles, app.reglages_du_jugement_a_jour(a.tenant_id, a.controles) as a_jour
-             from capture.analyses a where a.piece_id = $1 order by a.created_at desc limit 1`,
-          [id],
-        )
-      ).rows[0]!;
-    const immo = (j: Awaited<ReturnType<typeof derniere>>) =>
-      j.controles
-        .filter((c) => c.code.startsWith("immobilisation_"))
-        .map((c) => [c.code, c.statut, c.preuves["traitement"]]);
+    return id;
+  };
 
+  /** Le dernier jugement d'une pièce : ses contrôles, et s'il est à jour des réglages. */
+  const derniere = async (id: string) =>
+    (
+      await admin.query<{
+        controles: Array<{ code: string; statut: string; preuves: Record<string, unknown> }>;
+        a_jour: boolean;
+      }>(
+        `select a.controles, app.reglages_du_jugement_a_jour(a.tenant_id, a.controles) as a_jour
+           from capture.analyses a where a.piece_id = $1 order by a.created_at desc limit 1`,
+        [id],
+      )
+    ).rows[0]!;
+  const immo = (j: Awaited<ReturnType<typeof derniere>>) =>
+    j.controles
+      .filter((c) => c.code.startsWith("immobilisation_"))
+      .map((c) => [c.code, c.statut, c.preuves["traitement"]]);
+
+  it("le seuil du dossier juge la pièce ; changé, il périme le jugement, qui se rejuge", async () => {
+    const s = await monter();
+    // Une pièce d'un mois déjà passé de l'exercice (la date du jour sinon).
+    const mois = Number(s.jour.slice(5, 7));
+    const datePiece =
+      mois > 1 ? `${s.jour.slice(0, 4)}-${String(mois - 1).padStart(2, "0")}-15` : s.jour;
+    const id = await achatLu(s, datePiece, [
+      {
+        designation: "Mobilier de bureau",
+        quantity: "1",
+        unit_price_ht: "150.000",
+        total_ht: "150.000",
+      },
+    ]);
     // Le pack : 150 HT sous le seuil, à l'actif — une réserve, à jour.
-    const avant = await derniere();
+    const avant = await derniere(id);
     assert.deepEqual(immo(avant), [["immobilisation_faible_valeur", "reserve", "actif_amorti"]]);
     assert.equal(avant.a_jour, true);
 
@@ -583,12 +598,34 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
       { depuis: debut },
     );
     // Le jugement est périmé : il ne se garde pas en silence.
-    assert.equal((await derniere()).a_jour, false);
+    assert.equal((await derniere(id)).a_jour, false);
     // L'ouverture le rejuge, aux réglages du jour.
     await rpc(s.expert, "office.propositionDePiece", id);
-    const apres = await derniere();
+    const apres = await derniere(id);
     assert.deepEqual(immo(apres), [["immobilisation_faible_valeur", "conforme", "charge"]]);
     assert.equal(apres.a_jour, true);
+  });
+
+  it("un bien d'équipement au-dessus du seuil ne part jamais en charge sans la réserve (cas 071)", async () => {
+    // Recette, cas 071 du jeu synthétique : un photocopieur de 10 200 TND
+    // partait en charge (605) sans réserve. Le Socle ne tranche pas
+    // l'immobilisation (`actif_amorti` n'est pas appliqué) : il le dit.
+    const s = await monter();
+    for (const designation of ["Photocopieur multifonction A3", "Copieur multifonction A3"]) {
+      const id = await achatLu(s, s.jour, [
+        { designation, quantity: "2", unit_price_ht: "617.280", total_ht: "1234.560" },
+      ]);
+      const p = (await rpc(s.expert, "office.propositionDePiece", id)) as {
+        ok: boolean;
+        proposition?: { lignes: Array<{ account_code: string }> };
+      };
+      assert.equal(p.ok, true, designation);
+      assert.deepEqual(
+        immo(await derniere(id)).map(([code, statut]) => [code, statut]),
+        [["immobilisation_a_trancher", "reserve"]],
+        `${designation} → ${p.proposition?.lignes.map((l) => l.account_code).join(" ")}`,
+      );
+    }
   });
 
   it("le FODEC d'achat va au coût par défaut, au compte non récupérable si le cabinet le choisit", async () => {

@@ -23,6 +23,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
+import { lireUnRefus } from "@malica/socle/refus-a-dire";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
@@ -397,6 +398,27 @@ describe("une pièce se rejuge aux règles du jour", { skip: !BASE_CONFIGUREE },
       [cabinet, enPanne],
     );
     assert.ok(Number(rows[0]!.n) >= 1, "la panne est au journal du cabinet");
+  });
+
+  it("une pièce datée hors de tout pack : la proposition le dit par son code, le jugement par sa clé", async () => {
+    // Recette (pièce 042) : une date mal lue rendait une 400 et la phrase
+    // française « Aucun pack en vigueur pour TN au … » à l'écran.
+    const id = await transmise(pme, mfDossier, "1990-01-10");
+    const p = (await proposition(expert, id)) as unknown as {
+      ok: boolean;
+      raisonCode?: string;
+      dateHorsReferentiel?: string;
+    };
+    assert.equal(p.ok, false);
+    assert.equal(p.raisonCode, "date_hors_referentiel");
+    assert.equal(p.dateHorsReferentiel, "1990-01-10");
+    await assert.rejects(rpc(dirigeant, "capture", "analyser", id), (e: Error) => {
+      assert.deepEqual(lireUnRefus(e.message), {
+        cle: "refus.referentiel.pack_absent_a_la_date",
+        valeurs: { juridiction: "TN", date: "1990-01-10" },
+      });
+      return true;
+    });
   });
 
   it("la société d'un dossier tenu par le cabinet ne rejuge pas", async () => {
