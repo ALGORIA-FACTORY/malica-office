@@ -910,7 +910,6 @@ export const fr = {
   "cab.stocks.variation": "Variation",
   "cab.stocks.constater": "Constater",
   "cab.stocks.invdone": "Période déjà constatée",
-  "cab.stocks.invdup": "Cette période est déjà constatée pour cet article.",
   "cab.stocks.depreciation": "Dépréciation du stock",
   "cab.stocks.vnr": "Valeur nette de réalisation",
   "cab.stocks.vnrNegative":
@@ -1192,9 +1191,6 @@ export const fr = {
   "cab.conseil.seuil.hint.vide":
     "Sans question encore, le seuil ne se mesure pas : celui-ci est le défaut du Socle.",
   "cab.conseil.seuil.enregistre": "Seuil enregistré.",
-  "cab.conseil.erreur.dejaDecide":
-    "Cet arbitrage a déjà été décidé, peut-être depuis un autre poste : la file se relit.",
-  "cab.conseil.erreur.reponseVide": "Écrivez la réponse du cabinet avant de l’envoyer.",
   "cab.conseil.corpus.kicker": "Corpus juridique · {juridiction} · {pack}",
   "cab.conseil.corpus.kicker.sansPack": "Corpus juridique · {juridiction}",
   "cab.conseil.corpus.h1": "Conseil réglementaire",
@@ -2073,6 +2069,344 @@ export const fr = {
   "refus.piece.origine_immuable": "Une pièce garde son dossier, son auteur et sa source.",
   "refus.piece.archivee": "Le client a retiré cette pièce : elle est archivée.",
   "refus.introuvable": "Introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.piece": "Pièce introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.cabinet": "Cabinet introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.dossier": "Dossier introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.facture": "Facture introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.immobilisation": "Immobilisation introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.paiement": "Paiement introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.recette": "Version de recette introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.organisation": "Organisation introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.invitation": "Invitation introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.article": "Article introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.exemple": "Exemple introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.travail": "Travail introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.ligne_de_releve": "Ligne de relevé introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.message": "Message introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.justificatif":
+    "Justificatif introuvable dans ce dossier, ou vous n’y avez pas accès.",
+  "refus.introuvable.ecriture": "Écriture introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.tiers": "Tiers introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.analyse": "Analyse introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.arbitrage": "Arbitrage introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.compte_bancaire": "Compte bancaire introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.compte": "Compte introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.echeance": "Échéance introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.mandat": "Mandat introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.client": "Client introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.proces_verbal": "Procès-verbal introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.liaison": "Liaison introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.licence": "Licence introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.report": "Report introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.requisition": "Réquisition introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.envoi": "Envoi introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.notification": "Notification introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.jour_ferie": "Jour férié introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.etablissement": "Établissement introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.conversation": "Conversation introuvable, ou vous n’y avez pas accès.",
+  "refus.authentification_requise": "Connectez-vous pour faire ce geste.",
+  "refus.reserve.plateforme": "Ce geste est réservé aux opérateurs de la plateforme.",
+  "refus.reserve.serveur": "Ce geste est réservé au serveur : il ne se fait pas depuis un écran.",
+  "refus.reserve.proprietaire_principal":
+    "Ce geste est réservé au propriétaire principal de la société.",
+  "refus.reserve.dirigeant": "Ce geste est réservé au dirigeant de la société.",
+  "refus.reserve.dirigeant_ou_plateforme":
+    "Seul le dirigeant de la société, ou la plateforme, fait naître une licence.",
+  "refus.reserve.proprietaire": "Ce geste est réservé au propriétaire de la société.",
+  "refus.reserve.expert": "Ce geste est réservé à l’expert-comptable du cabinet.",
+  "refus.reserve.expert_mandate":
+    "Ce geste est réservé à l’expert-comptable du cabinet mandaté sur ce dossier.",
+  "refus.reserve.cabinet_mandate":
+    "Seul le cabinet mandaté sur ce dossier tranche une demande sur une pièce.",
+  "refus.supervision.reservee": "La supervision revient à l’expert ou au collaborateur du cabinet.",
+  "refus.ecriture.contre_passee":
+    "Cette écriture est déjà contre-passée : elle ne se supervise plus.",
+  "refus.conversation.auteur_fixe": "Une conversation garde son auteur.",
+  "refus.conversation.dossier_fixe": "Une conversation garde son dossier.",
+  "refus.conversation.question_vide": "Écrivez votre question avant de l’envoyer.",
+  "refus.conseil.plafond":
+    "Le conseil de Malica a atteint son plafond du mois pour ce dossier ; il reprend le mois prochain.",
+  "refus.conseil.sans_cabinet": "Ce dossier n’a pas de cabinet mandaté : personne pour arbitrer.",
+  "refus.arbitrage.etat_initial": "Un arbitrage naît en attente, ou déjà répondu.",
+  "refus.arbitrage.decision_inconnue":
+    "Cette décision n’existe pas : accordez, corrigez ou écartez.",
+  "refus.arbitrage.deja_decide":
+    "Cet arbitrage a déjà été décidé, peut-être depuis un autre poste : la file se relit.",
+  "refus.arbitrage.reponse_envoyee": "Une réponse déjà envoyée ne s’écarte pas.",
+  "refus.charge.reponse_invalide": "Cette réponse n’est pas admise pour cette question.",
+  "refus.ia.tarif_absent": "Aucun tarif en vigueur pour le modèle {modele} (rôle {role}).",
+  "refus.ecriture.desequilibree":
+    "L’écriture est déséquilibrée : débit {debit} pour crédit {credit}. Équilibrez-la avant de l’enregistrer.",
+  "refus.ecriture.sans_ligne": "Une écriture sans ligne ne se comptabilise pas.",
+  "refus.ecriture.lignes_inscrites":
+    "Une écriture inscrite exige des lignes non nulles et équilibrées.",
+  "refus.ecriture.compte_hors_plan": "Ce compte n’est pas dans le plan du dossier : {compte}.",
+  "refus.ecriture.annulation_du_reglement":
+    "Une annulation doit recopier le paiement de la même pièce.",
+  "refus.ecriture.reglement_annule": "Le règlement est annulé, ou ne correspond pas à la pièce.",
+  "refus.ecriture.reglement_d_une_autre_piece": "Ce règlement n’appartient pas à cette pièce.",
+  "refus.ecriture.deja_inscrite":
+    "Cette pièce porte déjà une écriture inscrite : une seconde la compterait deux fois.",
+  "refus.ecriture.reimputer":
+    "Cette pièce est déjà inscrite. Pour la réimputer, retournez d’abord son écriture : elle sera contre-passée.",
+  "refus.ecriture.non_inscriptible":
+    "Cette écriture est introuvable, déjà comptabilisée, ou vous n’y avez pas accès.",
+  "refus.supervision.comptabilisee_seulement": "Seule une écriture comptabilisée se supervise.",
+  "refus.motif.requis": "Choisissez un motif.",
+  "refus.motif.inconnu": "Ce motif n’existe pas : choisissez-en un dans la liste.",
+  "refus.motif.note_requise": "Ce motif demande une note : dites pourquoi.",
+  "refus.ecriture.proposee_hors_plan": "Ce compte n’existe pas dans le plan comptable : {compte}.",
+  "refus.plan.compte_livre":
+    "Le compte {compte} existe déjà dans le plan livré : ouvrez une subdivision ({compte}1, {compte}2…) plutôt qu’un doublon.",
+  "refus.plan.rattachement_absent":
+    "Le compte de rattachement {compte} n’existe pas : ni dans le plan livré, ni parmi vos comptes.",
+  "refus.plan.compte_collectif":
+    "Le compte {compte} ({libelle}) est un compte collectif : il reçoit des tiers, pas des sous-comptes. Un client ou un fournisseur s’enregistre dans l’onglet Tiers, et le plan reste lisible.",
+  "refus.plan.prolonger_rattachement":
+    "Le compte {compte} doit prolonger son rattachement {parent} : « {parent}1 », « {parent}2 », et ainsi de suite.",
+  "refus.plan.compte_officiel":
+    "Le compte {compte} est officiel (NC 01) : son code, son libellé et son rattachement ne se modifient pas. Ouvrez une subdivision d’extension.",
+  "refus.plan.classe_du_role":
+    "Le rôle « {role} » ({code}) n’admet que la ou les classes {classes} : le compte {compte} est en classe {classe}.",
+  "refus.tiers.compte_non_collectif":
+    "Le compte {compte} ({libelle}) n’est pas un compte collectif : un tiers ne peut s’y rattacher. Choisissez un compte de tiers — 401, 411, 425, 442…",
+  "refus.referentiel.incomplet":
+    "Le référentiel est incomplet pour ce geste : {manque}. La plateforme doit le compléter.",
+  "refus.referentiel.manquant":
+    "Le référentiel ne porte pas encore ce qu’il faut pour ce geste. La plateforme doit le compléter.",
+  "refus.referentiel.famille_absente":
+    "Aucune famille du pack ne correspond à « {designation} » : le référentiel est incomplet.",
+  "refus.referentiel.gabarit_absent": "Aucun modèle de message {code} pour le canal {canal}.",
+  "refus.referentiel.parametre_fiscal_absent":
+    "Paramètre fiscal introuvable : {code} ({juridiction}) au {date}. Aucune valeur par défaut n’est appliquée.",
+  "refus.referentiel.parametre_fiscal_non_etabli":
+    "Le paramètre fiscal {code} n’est pas établi sur une source officielle : il ne peut pas servir à un calcul. {note}",
+  "refus.referentiel.bareme_absent":
+    "Barème {code} introuvable au {date} pour la juridiction {juridiction}.",
+  "refus.referentiel.pack_absent": "Aucun pack n’est en vigueur pour cette juridiction.",
+  "refus.referentiel.regime_inconnu":
+    "Ce régime n’existe pas pour la juridiction {juridiction} au {date} : {regime}.",
+  "refus.referentiel.type_de_document": "Ce type de document n’existe pas au référentiel : {type}.",
+  "refus.referentiel.devise_inconnue": "Cette devise n’existe pas au référentiel : {devise}.",
+  "refus.referentiel.taux_tva_hors_pack": "Ce taux de TVA n’existe pas dans le pack en vigueur.",
+  "refus.fuseau.non_defini":
+    "Le fuseau horaire du cabinet n’est pas défini : réglez-le dans les réglages du cabinet.",
+  "refus.fuseau.inconnu": "Ce fuseau horaire n’existe pas : {fuseau}.",
+  "refus.reglages.proportion": "Ce seuil est une proportion : entre 0 et 1.",
+  "refus.reglages.revue_au_dessus_du_lot":
+    "Le seuil de revue ({revue}) ne peut pas dépasser le seuil de lot ({lot}) : ce qui part en lot a été jugé plus sûr que ce qui attend une revue.",
+  "refus.reglages.double_validation": "Le montant de double validation ne peut pas être négatif.",
+  "refus.reglages.capacite":
+    "La capacité par collaborateur est un nombre de dossiers : au moins un.",
+  "refus.reglages.ton": "Le ton des restitutions est « sobre » ou « chaleureux ».",
+  "refus.report.date_requise": "Indiquez la nouvelle date.",
+  "refus.motif.a_dire": "Dites pourquoi : un motif est requis.",
+  "refus.report.periode_illisible": "Période illisible : AAAA-MM, AAAA-Tn ou AAAA.",
+  "refus.report.obligation_inconnue": "Cette obligation n’existe pas pour ce cabinet.",
+  "refus.report.obligation_hors_pack": "Cette obligation n’existe pas dans le pack.",
+  "refus.report.avant_l_echeance":
+    "Un report repousse l’échéance : le {date} est avant sa date légale, le {legale}.",
+  "refus.report.source_et_motif": "Un report publié se motive et se source.",
+  "refus.jour_ferie.source": "Un jour férié se source.",
+  "refus.collab.hors_cabinet": "Ce collaborateur n’est pas membre du cabinet.",
+  "refus.mandat.aucun_actif": "Aucun mandat actif sur ce dossier.",
+  "refus.mandat.hors_cabinet": "Ce dossier n’est pas mandaté par votre cabinet.",
+  "refus.mandat.deja_repondu": "Ce mandat a déjà reçu une réponse.",
+  "refus.mandat.motif_de_revocation": "Dites pourquoi : la comptabilité lira ce motif.",
+  "refus.mandat.un_seul_actif":
+    "Votre société a déjà une comptabilité mandatée. Révoquez ce mandat avant d’en accepter un autre.",
+  "refus.mandat.clos": "Ce mandat est introuvable, ou déjà clos.",
+  "refus.mandat.identifiant_fiscal_requis": "Indiquez l’identifiant fiscal de la PME.",
+  "refus.mandat.pme_inconnue": "Aucune PME ne porte cet identifiant fiscal dans Malica Office.",
+  "refus.dossier.raison_sociale_requise": "La raison sociale est requise.",
+  "refus.dossier.matricule_requis": "Le matricule fiscal est requis.",
+  "refus.dossier.matricule_existant":
+    "Ce matricule fiscal a déjà un dossier : proposez-lui un mandat.",
+  "refus.societe.matricule_existant":
+    "Une société porte déjà ce matricule fiscal. Demandez l’accès à son dirigeant.",
+  "refus.dossier.a_son_dirigeant": "Ce dossier a déjà son dirigeant.",
+  "refus.invitation.adresse": "Cette adresse ne ressemble pas à une adresse e-mail.",
+  "refus.invitation.deja_membre": "Cette personne fait déjà partie de cette organisation.",
+  "refus.invitation.revocation": "Seule une invitation en attente se révoque.",
+  "refus.invitation.expiree": "Cette invitation n’est plus valable.",
+  "refus.organisation.type_inconnu": "Ce type d’organisation n’existe pas.",
+  "refus.organisation.juridiction_requise": "Choisissez la juridiction de l’organisation.",
+  "refus.mandat.statut_inconnu": "Ce statut de mandat n’existe pas.",
+  "refus.etablissement.dernier":
+    "C’est le dernier établissement ouvert de cette société : il ne se ferme pas.",
+  "refus.pv.envoye":
+    "Ce procès-verbal a été envoyé au client : il ne se modifie plus. Rédigez-en un nouveau.",
+  "refus.pv.geste_d_envoi":
+    "Un procès-verbal s’envoie par le geste d’envoi, pas par une simple mise à jour.",
+  "refus.pv.reception_datee": "Une réception est un fait daté : elle ne se réécrit pas.",
+  "refus.pv.sans_client": "Ce procès-verbal n’est rattaché à aucun client : rien à envoyer.",
+  "refus.pv.mandat_inactif":
+    "Le mandat avec ce client n’est pas actif : le procès-verbal ne peut pas lui être envoyé.",
+  "refus.pv.sans_texte":
+    "Ce procès-verbal n’a pas encore de texte : rédigez-le avant de l’envoyer.",
+  "refus.fabrique.issue_sans_prise":
+    "La tentative {tentative} du travail {travail} n’a jamais été prise : elle n’a pas d’issue.",
+  "refus.fabrique.non_prenable":
+    "Le travail {travail} n’est pas prenable : état « {etat} », tentatives {tentatives}/{maximum}.",
+  "refus.fabrique.tentative_suivante":
+    "Tentative {tentative} : la prochaine tentative de ce travail est la {suivante}.",
+  "refus.fabrique.lecture_en_cours":
+    "Une autre exécution est en cours sur la pièce {piece} : deux lectures concurrentes de la même pièce se paient deux fois.",
+  "refus.fabrique.transition":
+    "Cycle de la fabrique : {de} → {vers} n’est pas une transition (permises : {permis}).",
+  "refus.fabrique.evaluation_requise":
+    "Passer à « {etat} » exige une évaluation : une validation humaine n’en tient pas lieu.",
+  "refus.fabrique.autre_version": "L’évaluation {evaluation} porte sur une autre version.",
+  "refus.fabrique.mesure_absente":
+    "La mesure « {mesure} » manque à l’évaluation : une mesure absente reste absente.",
+  "refus.fabrique.seuil_minimum":
+    "Seuil {mesure} : {valeur} est sous le minimum exigé, {exigence}.",
+  "refus.fabrique.seuil_maximum":
+    "Seuil {mesure} : {valeur} dépasse le maximum toléré, {exigence}.",
+  "refus.acces.fige": "Ce qu’un accès porte à son ouverture ne se réécrit pas.",
+  "refus.acces.termine": "Un accès terminé ne se rouvre pas : un autre s’ouvre.",
+  "refus.acces.activation_figee": "Le jour d’activation ne se réécrit pas.",
+  "refus.acces.licence_figee": "Un accès ne change pas de licence.",
+  "refus.acces.pour_un_autre": "Seul un cabinet ouvre un accès pour une autre organisation.",
+  "refus.offre.canal_sans_regle":
+    "Cette offre ({offre}) n’est pas proposée sur le canal {canal} au {date}.",
+  "refus.offre.pas_par_un_cabinet": "Un cabinet n’ouvre pas un accès {offre}.",
+  "refus.offre.pas_en_direct": "L’offre {offre} n’est pas vendue en direct.",
+  "refus.offre.hors_grille": "Cette offre n’existe pas dans la grille en vigueur.",
+  "refus.offre.naissance_absente":
+    "Aucune offre de naissance n’est en vigueur au {date} sur le canal direct.",
+  "refus.licence.organisation_non_rattachee":
+    "Cette organisation n’est pas rattachée à cette licence.",
+  "refus.licence.rattachement_illegitime":
+    "Le titulaire de la licence n’est pas dirigeant de cette organisation, et aucun accès ne l’y rattache.",
+  "refus.licence.organisation_de_plus": "Cette offre ne porte pas une organisation de plus.",
+  "refus.licence.naissance_figee":
+    "La naissance d’une licence ne se réécrit pas : un changement de forfait s’inscrit dans son historique.",
+  "refus.licence.resiliee": "Une licence résiliée ne se suspend pas.",
+  "refus.licence.absente": "Cette société n’a pas de licence.",
+  "refus.licence.deja_titulaire": "La licence est déjà à cette personne.",
+  "refus.licence.a_un_proprietaire":
+    "La licence ne se transmet qu’à un propriétaire de la société.",
+  "refus.place.offre_pleine": "Toutes les places de cette offre sont prises ({places} au total).",
+  "refus.abonnement.deja_propose":
+    "Un abonnement est déjà proposé ou attribué à ce dossier par un cabinet.",
+  "refus.abonnement.plus_en_attente": "Cette proposition n’est plus en attente.",
+  "refus.forfait.periode_figee":
+    "Une période de forfait ne se réécrit pas : seule sa fermeture s’inscrit.",
+  "refus.forfait.periode_ouverte":
+    "Une période de forfait court encore sur cette licence : fermez-la avant d’en ouvrir une autre.",
+  "refus.forfait.sans_trou":
+    "Une période de forfait reprend le jour où la précédente s’arrête ({fin}), et non le {debut}.",
+  "refus.forfait.empeche": "Ce changement d’offre n’est pas possible pour cette société.",
+  "refus.annuel.ferme": "L’abonnement à l’année n’est pas ouvert pour cette société.",
+  "refus.recharge.palier_inconnu": "Ce palier de recharge n’existe pas.",
+  "refus.recharge.offre_sans_recharge":
+    "L’offre de cette société ne porte pas de recharge de lectures.",
+  "refus.grille.trous": "La grille laisse des trous : {trous}.",
+  "refus.lecture.refusee": "La lecture de cette pièce est refusée pour ce dossier.",
+  "refus.lecture.supplement_positif": "Un supplément se compte en lectures positives.",
+  "refus.facturation.premier_du_mois": "Une période de facturation commence le premier du mois.",
+  "refus.facturation.destinataire_sans_nom":
+    "Le destinataire {destinataire} n’a pas de nom : une facture sans destinataire n’est pas une facture.",
+  "refus.facturation.rien_a_facturer": "Rien à facturer pour {periode}.",
+  "refus.facturation.deja_emise": "La facture de ce cabinet pour {periode} existe déjà.",
+  "refus.facturation.payeur_introuvable":
+    "La licence {licence} est introuvable : le payeur d’une facture ne se devine pas.",
+  "refus.facturation.format_de_reference":
+    "Aucun format de référence d’abonné n’est en vigueur au {date}.",
+  "refus.facturation.sans_numero_d_abonne": "Cette organisation n’a pas de numéro d’abonné.",
+  "refus.facturation.periode_non_supprimable": "Une période d’abonnement ne se supprime pas.",
+  "refus.facturation.periode_fermee":
+    "Cette période est déjà fermée : une correction est une écriture nouvelle.",
+  "refus.facturation.emetteur_futur": "Un émetteur se désigne pour aujourd’hui ou plus tard.",
+  "refus.facturation.emetteur_deja": "Cette organisation est déjà l’émetteur à cette date.",
+  "refus.paiement.encaissement_requis":
+    "Un moyen de paiement s’active avec son moyen d’encaissement.",
+  "refus.paiement.adresse_de_retour": "Un paiement ouvert a une adresse de retour.",
+  "refus.paiement.adresse_https": "Ce prestataire demande l’adresse https de son API.",
+  "refus.paiement.prestataire_inconnu": "Ce prestataire de paiement n’existe pas.",
+  "refus.paiement.simulateur_ferme": "Le simulateur de paiement n’est pas ouvert ici.",
+  "refus.paiement.moyen_inconnu": "Ce moyen de paiement n’existe pas au paramétrage : {moyen}.",
+  "refus.paiement.deja_annulation": "Cette ligne est déjà une annulation.",
+  "refus.paiement.deja_annule": "Ce paiement est déjà annulé.",
+  "refus.recu.attestation": "Seul un reçu issu d’une pièce atteste des règlements.",
+  "refus.recu.sans_reglement": "Un reçu ne se rattache pas à un règlement.",
+  "refus.recu.produit": "Un reçu se produit : il ne se photographie pas.",
+  "refus.honoraires.avoir_d_une_emise": "Seule une facture émise s’annule par un avoir.",
+  "refus.honoraires.avoir_non_annulable": "Un avoir ne s’annule pas.",
+  "refus.honoraires.emise_figee":
+    "Cette facture est émise : elle ne se modifie ni ne se supprime plus, elle s’annule par un avoir.",
+  "refus.honoraires.encaissable": "Seule une facture émise et non soldée s’encaisse.",
+  "refus.honoraires.avoir_non_encaissable": "Un avoir ne s’encaisse pas.",
+  "refus.honoraires.montant_positif": "Un encaissement porte un montant positif.",
+  "refus.honoraires.date_requise": "Indiquez la date de l’encaissement.",
+  "refus.honoraires.trop_percu":
+    "L’encaissement ({montant}) dépasse le reste dû ({reste}) : un trop-perçu ne se pose pas sur cette facture.",
+  "refus.honoraires.deja_emise": "Cette facture est déjà émise.",
+  "refus.honoraires.sans_ligne": "Une facture sans ligne ne s’émet pas.",
+  "refus.honoraires.total_positif": "Le total hors taxes doit être positif pour émettre.",
+  "refus.immo.rien_a_constater": "Aucun mouvement à constater.",
+  "refus.immo.dotation_positive": "La dotation doit être positive.",
+  "refus.immo.dotation_deja": "La dotation de cet exercice est déjà constatée.",
+  "refus.immo.exercice_a_venir":
+    "L’exercice {exercice} n’est pas encore ouvert : sa dotation se constate à partir du 1er janvier {exercice}.",
+  "refus.immo.date_hors_exercice": "La date de la dotation doit tomber dans l’exercice {exercice}.",
+  "refus.immo.bien_constate":
+    "Le bien « {bien} » a déjà une dotation, une dépréciation ou une cession constatée : sa valeur, sa durée, sa méthode et sa date de mise en service ne se modifient plus. Seuls le libellé et l’état restent ouverts.",
+  "refus.stocks.article_sans_categorie":
+    "Cet article est introuvable, sans catégorie du pack, ou vous n’y avez pas accès.",
+  "refus.stocks.inventaire_deja": "Cette période est déjà constatée pour cet article.",
+  "refus.banque.aucun_lettrage": "Aucun lettrage actif sur cette ligne.",
+  "refus.banque.ecriture_non_lettrable":
+    "Cette écriture est introuvable, non comptabilisée, ou hors de ce dossier.",
+  "refus.banque.ligne_deja_lettree": "Cette ligne est déjà lettrée.",
+  "refus.banque.ecriture_deja_lettree": "Cette écriture est déjà lettrée à une autre ligne.",
+  "refus.piece.transmise_au_cabinet":
+    "Cette pièce a été transmise à votre cabinet : elle ne revient que par son accord.",
+  "refus.piece.comptabilisee_dans_la_societe": "Une pièce comptabilisée reste dans la société.",
+  "refus.piece.comptabilisee_partagee": "Une pièce comptabilisée reste partagée.",
+  "refus.suppression.engagee":
+    "Cette pièce est engagée dans votre comptabilité : elle ne peut plus être supprimée.",
+  "refus.suppression.justificatif":
+    "Cette pièce sert de justificatif : elle ne peut plus être supprimée.",
+  "refus.precision.engagee":
+    "Une pièce engagée ne se précise plus : elle se corrige par une écriture.",
+  "refus.precision.type_non_propose": "Ce type de pièce n’est pas proposé : {type}.",
+  "refus.precision.date_illisible": "Cette date n’est pas lisible : {date}.",
+  "refus.precision.date_a_venir": "Une date à venir ne se précise pas : {date}.",
+  "refus.precision.champ": "Ce champ ne se précise pas : {champ}.",
+  "refus.lecture.citation_orpheline":
+    "La lecture cite le champ {champ} à un emplacement où aucun mot n’a été lu.",
+  "refus.piece.empreinte": "L’empreinte de cette pièce n’est pas valide.",
+  "refus.piece.scellee": "Le contenu de cette pièce est scellé : il ne se remplace pas.",
+  "refus.piece.non_partagee": "Cette pièce n’est pas partagée avec le cabinet.",
+  "refus.piece.aucune_demande": "Aucune demande n’est en attente sur cette pièce.",
+  "refus.rattachement.motif": "Dites pourquoi vous détachez ce document.",
+  "refus.rattachement.absent": "Ce document n’est pas rattaché à cette pièce.",
+  "refus.rattachement.a_elle_meme": "Une pièce ne se rattache pas à elle-même.",
+  "refus.rattachement.autre_dossier": "Les deux pièces ne sont pas dans le même dossier.",
+  "refus.rattachement.espace_prive":
+    "Une pièce de votre espace privé ne se rattache pas : elle n’est pas à la société.",
+  "refus.cle_api.revoquer": "Une clé d’API ne s’efface ni ne se modifie : elle se révoque.",
+  "refus.cle_api.par_une_personne":
+    "Une clé d’API ne crée ni ne révoque une autre clé : ce geste se fait par une personne.",
+  "refus.cle_api.cabinet_seulement": "Seul un cabinet porte une clé d’API.",
+  "refus.cle_api.nom_requis": "Donnez un nom à la clé.",
+  "refus.cle_api.portee_requise": "Une clé porte au moins une portée.",
+  "refus.cle_api.portee_inconnue": "Une des portées demandées n’existe pas.",
+  "refus.cle_api.revoquee": "Cette clé est introuvable, ou déjà révoquée.",
+  "refus.requisition.seconde_signature":
+    "Réquisition non approuvée : il faut une seconde signature.",
+  "refus.requisition.expiree": "Réquisition expirée le {date}.",
+  "refus.export.format_inconnu": "Ce format n’est pas un export du journal.",
+  "refus.export.jour_a_venir": "Ce jour est à venir : il n’a pas encore de journal à exporter.",
+  "refus.export.fuseau": "Le fuseau de l’export n’est pas celui du cabinet.",
+  "refus.export.concurrent": "Un autre export de ce journal vient d’être produit : recommencez.",
+  "refus.export.format_absent": "Ce format d’export n’existe pas.",
+  "refus.export.fec_par_dossier": "Le FEC se produit dossier par dossier : choisissez un client.",
+  "refus.export.periode_a_l_envers": "La période est à l’envers : le début suit la fin.",
+  "refus.identifiant.invalide":
+    "Cet identifiant n’a pas la forme attendue : « {valeur} ». Exemple : « {exemple} ».",
   "refus.supervision.second_regard":
     "La supervision exige un second regard : celui qui a inscrit l’écriture ne la valide pas lui-même.",
   "refus.moteur.organisation_a_preciser": "Précisez l’organisation : plusieurs vous concernent.",
@@ -2086,7 +2420,6 @@ export const fr = {
   "refus.moteur.date_illisible": "Une des dates envoyées n’est pas lisible.",
   "refus.moteur.date_inexistante": "Une des dates envoyées n’existe pas.",
   "refus.moteur.caractere_illisible": "Un des textes envoyés contient un caractère illisible.",
-  "refus.moteur.geste_non_permis": "Ce geste ne vous est pas permis sur ce dossier.",
   "refus.moteur.recommencez": "Un autre geste vient de modifier ces données : recommencez.",
   "refus.moteur.existe_deja": "Cet élément existe déjà.",
   "refus.moteur.rattachement_absent": "Ce rattachement n’existe pas, ou n’est plus disponible.",

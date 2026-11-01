@@ -174,7 +174,7 @@ describe("trois rôles autour d'une licence", { skip: !ADMIN }, () => {
         sous(db, proprietaire, () =>
           db.query("select public.forfait_changer('basic', $1, current_date)", [s.tenant]),
         ),
-        /forfait_refuse:pas_de_licence/,
+        /refus\.forfait\.empeche\?motif=pas_de_licence&/,
       );
     });
   });

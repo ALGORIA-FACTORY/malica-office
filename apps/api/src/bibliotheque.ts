@@ -133,8 +133,7 @@ async function exigerMandat(db: Requete, cabinetId: string, clientId: string): P
         and g.pme_org_id in (select app.mandats_visibles($1))`,
     [cabinetId, clientId],
   );
-  if (!rows[0])
-    throw Object.assign(new Error("dossier introuvable ou non mandaté"), { code: "42501" });
+  if (!rows[0]) throw Object.assign(new Error("refus.introuvable.dossier"), { code: "42501" });
 }
 
 export async function documents(

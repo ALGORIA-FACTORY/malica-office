@@ -24,6 +24,7 @@ import { enUnitesExactes } from "@malica/socle/somme-decimale";
  */
 
 import { codeDeLecture } from "@malica/socle/issue-de-lecture";
+import { refusAvecValeurs } from "@malica/socle/refus-a-dire";
 import type {
   EtatDUnTravail,
   GesteDeRetour,
@@ -853,7 +854,7 @@ export const capture = {
       [pieceId],
     );
     const ligne = rows[0];
-    if (!ligne) throw new Error("piece introuvable ou non autorisee");
+    if (!ligne) throw new Error("refus.introuvable.piece");
 
     const articles = ligne.payload?.articles ?? [];
     if (articles.length === 0) return { periode: date.slice(0, 7) };
@@ -1671,7 +1672,7 @@ export const capture = {
     );
     if (moyen.length === 0) {
       throw Object.assign(
-        new Error(`Ce moyen de paiement n'existe pas au paramétrage : ${input.moyenCode}`),
+        new Error(refusAvecValeurs("refus.paiement.moyen_inconnu", { moyen: input.moyenCode })),
         { code: "22023" },
       );
     }

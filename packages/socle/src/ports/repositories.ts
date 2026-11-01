@@ -3707,11 +3707,11 @@ export interface FacturationRepository {
   monReport(tenantId?: string): Promise<{ report: number; actif: boolean } | null>;
   /** L'année : en cours, ou proposée avec ce qui la ferme ; `null` hors propriétaire principal. */
   monAnnuel(tenantId?: string): Promise<MonAnnuel | null>;
-  /** Passer à l'année ; un refus revient en `annuel_refuse:<code>`. */
+  /** Passer à l'année ; un refus revient en `refus.annuel.ferme?motif=<code>`. */
   souscrireAnnuel(
     tenantId?: string,
   ): Promise<{ engagement: string; paiement: PaiementEnLigne | null }>;
-  /** Propriétaire principal seul ; un refus revient en `forfait_refuse:<code>:…`. */
+  /** Propriétaire principal seul ; un refus revient en `refus.forfait.empeche?motif=<code>&…`. */
   changerForfait(
     offre: string,
     tenantId?: string,

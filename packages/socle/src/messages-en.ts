@@ -855,7 +855,6 @@ export const en: Dict = {
   "cab.stocks.variation": "Variation",
   "cab.stocks.constater": "Record",
   "cab.stocks.invdone": "Period already recorded",
-  "cab.stocks.invdup": "This period is already recorded for this item.",
   "cab.stocks.depreciation": "Inventory write-down",
   "cab.stocks.vnr": "Net realisable value",
   "cab.stocks.vnrNegative":
@@ -1133,9 +1132,6 @@ export const en: Dict = {
   "cab.conseil.seuil.hint.vide":
     "Without a question yet, the threshold cannot be measured: this one is the Socle default.",
   "cab.conseil.seuil.enregistre": "Threshold saved.",
-  "cab.conseil.erreur.dejaDecide":
-    "This question has already been decided, perhaps from another device: the queue reloads.",
-  "cab.conseil.erreur.reponseVide": "Write the practice’s answer before sending it.",
   "cab.conseil.corpus.kicker": "Legal corpus · {juridiction} · {pack}",
   "cab.conseil.corpus.kicker.sansPack": "Legal corpus · {juridiction}",
   "cab.conseil.corpus.h1": "Regulatory advice",
@@ -2003,6 +1999,332 @@ export const en: Dict = {
   "refus.piece.origine_immuable": "A document keeps its file, its author and its source.",
   "refus.piece.archivee": "The client withdrew this document: it is archived.",
   "refus.introuvable": "Not found, or you do not have access to it.",
+  "refus.introuvable.piece": "Document not found, or you do not have access to it.",
+  "refus.introuvable.cabinet": "Practice not found, or you do not have access to it.",
+  "refus.introuvable.dossier": "File not found, or you do not have access to it.",
+  "refus.introuvable.facture": "Invoice not found, or you do not have access to it.",
+  "refus.introuvable.immobilisation": "Fixed asset not found, or you do not have access to it.",
+  "refus.introuvable.paiement": "Payment not found, or you do not have access to it.",
+  "refus.introuvable.recette": "Recipe version not found, or you do not have access to it.",
+  "refus.introuvable.organisation": "Organisation not found, or you do not have access to it.",
+  "refus.introuvable.invitation": "Invitation not found, or you do not have access to it.",
+  "refus.introuvable.article": "Item not found, or you do not have access to it.",
+  "refus.introuvable.exemple": "Example not found, or you do not have access to it.",
+  "refus.introuvable.travail": "Job not found, or you do not have access to it.",
+  "refus.introuvable.ligne_de_releve": "Statement line not found, or you do not have access to it.",
+  "refus.introuvable.message": "Message not found, or you do not have access to it.",
+  "refus.introuvable.justificatif":
+    "Proof not found in this file, or you do not have access to it.",
+  "refus.introuvable.ecriture": "Entry not found, or you do not have access to it.",
+  "refus.introuvable.tiers": "Third party not found, or you do not have access to it.",
+  "refus.introuvable.analyse": "Analysis not found, or you do not have access to it.",
+  "refus.introuvable.arbitrage": "Arbitration not found, or you do not have access to it.",
+  "refus.introuvable.compte_bancaire": "Bank account not found, or you do not have access to it.",
+  "refus.introuvable.compte": "Account not found, or you do not have access to it.",
+  "refus.introuvable.echeance": "Deadline not found, or you do not have access to it.",
+  "refus.introuvable.mandat": "Engagement not found, or you do not have access to it.",
+  "refus.introuvable.client": "Client not found, or you do not have access to it.",
+  "refus.introuvable.proces_verbal": "Minutes not found, or you do not have access to them.",
+  "refus.introuvable.liaison": "Link not found, or you do not have access to it.",
+  "refus.introuvable.licence": "Licence not found, or you do not have access to it.",
+  "refus.introuvable.report": "Deferral not found, or you do not have access to it.",
+  "refus.introuvable.requisition": "Requisition not found, or you do not have access to it.",
+  "refus.introuvable.envoi": "Delivery not found, or you do not have access to it.",
+  "refus.introuvable.notification": "Notification not found, or you do not have access to it.",
+  "refus.introuvable.jour_ferie": "Public holiday not found, or you do not have access to it.",
+  "refus.introuvable.etablissement": "Establishment not found, or you do not have access to it.",
+  "refus.introuvable.conversation": "Conversation not found, or you do not have access to it.",
+  "refus.authentification_requise": "Sign in to do this.",
+  "refus.reserve.plateforme": "This action is reserved for platform operators.",
+  "refus.reserve.serveur":
+    "This action is reserved for the server: it cannot be done from a screen.",
+  "refus.reserve.proprietaire_principal": "This action is reserved for the company’s main owner.",
+  "refus.reserve.dirigeant": "This action is reserved for the company’s manager.",
+  "refus.reserve.dirigeant_ou_plateforme":
+    "Only the company’s manager, or the platform, can create a licence.",
+  "refus.reserve.proprietaire": "This action is reserved for the company’s owner.",
+  "refus.reserve.expert": "This action is reserved for the practice’s chartered accountant.",
+  "refus.reserve.expert_mandate":
+    "This action is reserved for the chartered accountant of the practice engaged on this file.",
+  "refus.reserve.cabinet_mandate":
+    "Only the practice engaged on this file decides a request about a document.",
+  "refus.supervision.reservee": "Supervision belongs to the practice’s accountant or staff member.",
+  "refus.ecriture.contre_passee":
+    "This entry has already been reversed: it can no longer be supervised.",
+  "refus.conversation.auteur_fixe": "A conversation keeps its author.",
+  "refus.conversation.dossier_fixe": "A conversation keeps its file.",
+  "refus.conversation.question_vide": "Write your question before sending it.",
+  "refus.conseil.plafond":
+    "Malica’s advice has reached its monthly cap for this file; it resumes next month.",
+  "refus.conseil.sans_cabinet": "This file has no engaged practice: no one to arbitrate.",
+  "refus.arbitrage.etat_initial": "An arbitration starts pending, or already answered.",
+  "refus.arbitrage.decision_inconnue": "This decision does not exist: approve, correct or dismiss.",
+  "refus.arbitrage.deja_decide":
+    "This question has already been decided, perhaps from another device: the queue reloads.",
+  "refus.arbitrage.reponse_envoyee": "An answer already sent cannot be dismissed.",
+  "refus.charge.reponse_invalide": "This answer is not allowed for this question.",
+  "refus.ia.tarif_absent": "No current price for model {modele} (role {role}).",
+  "refus.ecriture.desequilibree":
+    "The entry is unbalanced: debit {debit} against credit {credit}. Balance it before saving.",
+  "refus.ecriture.sans_ligne": "An entry without lines cannot be posted.",
+  "refus.ecriture.lignes_inscrites": "A recorded entry requires non-zero, balanced lines.",
+  "refus.ecriture.compte_hors_plan":
+    "This account is not in the file’s chart of accounts: {compte}.",
+  "refus.ecriture.annulation_du_reglement":
+    "A cancellation must copy the payment of the same document.",
+  "refus.ecriture.reglement_annule": "The payment is cancelled, or does not match the document.",
+  "refus.ecriture.reglement_d_une_autre_piece": "This payment does not belong to this document.",
+  "refus.ecriture.deja_inscrite":
+    "This document already has a recorded entry: a second one would count it twice.",
+  "refus.ecriture.reimputer":
+    "This document is already recorded. To re-post it, return its entry first: it will be reversed.",
+  "refus.ecriture.non_inscriptible":
+    "This entry is not found, already posted, or you do not have access to it.",
+  "refus.supervision.comptabilisee_seulement": "Only a posted entry can be supervised.",
+  "refus.motif.requis": "Choose a reason.",
+  "refus.motif.inconnu": "This reason does not exist: choose one from the list.",
+  "refus.motif.note_requise": "This reason needs a note: say why.",
+  "refus.ecriture.proposee_hors_plan":
+    "This account does not exist in the chart of accounts: {compte}.",
+  "refus.plan.compte_livre":
+    "Account {compte} already exists in the delivered chart: open a sub-account ({compte}1, {compte}2…) rather than a duplicate.",
+  "refus.plan.rattachement_absent":
+    "Parent account {compte} does not exist: neither in the delivered chart nor among your accounts.",
+  "refus.plan.compte_collectif":
+    "Account {compte} ({libelle}) is a control account: it takes third parties, not sub-accounts. A customer or supplier is recorded in the Third parties tab, and the chart stays readable.",
+  "refus.plan.prolonger_rattachement":
+    "Account {compte} must extend its parent {parent}: “{parent}1”, “{parent}2”, and so on.",
+  "refus.plan.compte_officiel":
+    "Account {compte} is official (NC 01): its code, label and parent cannot be changed. Open an extension sub-account.",
+  "refus.plan.classe_du_role":
+    "Role “{role}” ({code}) only accepts the classes {classes}: account {compte} is in class {classe}.",
+  "refus.tiers.compte_non_collectif":
+    "Account {compte} ({libelle}) is not a control account: a third party cannot be attached to it. Choose a third-party account — 401, 411, 425, 442…",
+  "refus.referentiel.incomplet":
+    "The reference data is incomplete for this action: {manque}. The platform must complete it.",
+  "refus.referentiel.manquant":
+    "The reference data does not yet hold what this action needs. The platform must complete it.",
+  "refus.referentiel.famille_absente":
+    "No family of the pack matches “{designation}”: the reference data is incomplete.",
+  "refus.referentiel.gabarit_absent": "No message template {code} for channel {canal}.",
+  "refus.referentiel.parametre_fiscal_absent":
+    "Tax parameter not found: {code} ({juridiction}) on {date}. No default value is applied.",
+  "refus.referentiel.parametre_fiscal_non_etabli":
+    "Tax parameter {code} is not established on an official source: it cannot be used in a calculation. {note}",
+  "refus.referentiel.bareme_absent":
+    "Scale {code} not found on {date} for jurisdiction {juridiction}.",
+  "refus.referentiel.pack_absent": "No pack is in force for this jurisdiction.",
+  "refus.referentiel.regime_inconnu":
+    "This regime does not exist for jurisdiction {juridiction} on {date}: {regime}.",
+  "refus.referentiel.type_de_document":
+    "This document type does not exist in the reference data: {type}.",
+  "refus.referentiel.devise_inconnue":
+    "This currency does not exist in the reference data: {devise}.",
+  "refus.referentiel.taux_tva_hors_pack": "This VAT rate does not exist in the pack in force.",
+  "refus.fuseau.non_defini":
+    "The practice’s time zone is not set: set it in the practice settings.",
+  "refus.fuseau.inconnu": "This time zone does not exist: {fuseau}.",
+  "refus.reglages.proportion": "This threshold is a proportion: between 0 and 1.",
+  "refus.reglages.revue_au_dessus_du_lot":
+    "The review threshold ({revue}) cannot exceed the batch threshold ({lot}): what goes in a batch was judged safer than what awaits review.",
+  "refus.reglages.double_validation": "The dual-approval amount cannot be negative.",
+  "refus.reglages.capacite": "Capacity per staff member is a number of files: at least one.",
+  "refus.reglages.ton": "The tone of reports is “sober” or “warm”.",
+  "refus.report.date_requise": "Enter the new date.",
+  "refus.motif.a_dire": "Say why: a reason is required.",
+  "refus.report.periode_illisible": "Unreadable period: YYYY-MM, YYYY-Qn or YYYY.",
+  "refus.report.obligation_inconnue": "This obligation does not exist for this practice.",
+  "refus.report.obligation_hors_pack": "This obligation does not exist in the pack.",
+  "refus.report.avant_l_echeance":
+    "A deferral pushes the deadline back: {date} is before its legal date, {legale}.",
+  "refus.report.source_et_motif": "A published deferral needs a reason and a source.",
+  "refus.jour_ferie.source": "A public holiday needs a source.",
+  "refus.collab.hors_cabinet": "This staff member is not a member of the practice.",
+  "refus.mandat.aucun_actif": "No active engagement on this file.",
+  "refus.mandat.hors_cabinet": "This file is not engaged with your practice.",
+  "refus.mandat.deja_repondu": "This engagement has already been answered.",
+  "refus.mandat.motif_de_revocation": "Say why: the accountant will read this reason.",
+  "refus.mandat.un_seul_actif":
+    "Your company already has an engaged accountant. Revoke that engagement before accepting another.",
+  "refus.mandat.clos": "This engagement is not found, or already closed.",
+  "refus.mandat.identifiant_fiscal_requis": "Enter the company’s tax ID.",
+  "refus.mandat.pme_inconnue": "No company has this tax ID in Malica Office.",
+  "refus.dossier.raison_sociale_requise": "The company name is required.",
+  "refus.dossier.matricule_requis": "The tax ID is required.",
+  "refus.dossier.matricule_existant": "This tax ID already has a file: offer it an engagement.",
+  "refus.societe.matricule_existant":
+    "A company already has this tax ID. Ask its manager for access.",
+  "refus.dossier.a_son_dirigeant": "This file already has its manager.",
+  "refus.invitation.adresse": "This does not look like an e-mail address.",
+  "refus.invitation.deja_membre": "This person is already a member of this organisation.",
+  "refus.invitation.revocation": "Only a pending invitation can be revoked.",
+  "refus.invitation.expiree": "This invitation is no longer valid.",
+  "refus.organisation.type_inconnu": "This type of organisation does not exist.",
+  "refus.organisation.juridiction_requise": "Choose the organisation’s jurisdiction.",
+  "refus.mandat.statut_inconnu": "This engagement status does not exist.",
+  "refus.etablissement.dernier":
+    "This is the company’s last open establishment: it cannot be closed.",
+  "refus.pv.envoye":
+    "These minutes were sent to the client: they can no longer be changed. Write new ones.",
+  "refus.pv.geste_d_envoi": "Minutes are sent with the send action, not by a simple update.",
+  "refus.pv.reception_datee": "A receipt is a dated fact: it cannot be rewritten.",
+  "refus.pv.sans_client": "These minutes are not linked to any client: nothing to send.",
+  "refus.pv.mandat_inactif":
+    "The engagement with this client is not active: the minutes cannot be sent to them.",
+  "refus.pv.sans_texte": "These minutes have no text yet: write them before sending.",
+  "refus.fabrique.issue_sans_prise":
+    "Attempt {tentative} of job {travail} was never taken: it has no outcome.",
+  "refus.fabrique.non_prenable":
+    "Job {travail} cannot be taken: state “{etat}”, attempts {tentatives}/{maximum}.",
+  "refus.fabrique.tentative_suivante":
+    "Attempt {tentative}: the next attempt of this job is {suivante}.",
+  "refus.fabrique.lecture_en_cours":
+    "Another run is in progress on document {piece}: two concurrent reads of the same document are paid twice.",
+  "refus.fabrique.transition":
+    "Factory cycle: {de} → {vers} is not a transition (allowed: {permis}).",
+  "refus.fabrique.evaluation_requise":
+    "Moving to “{etat}” requires an evaluation: a human approval does not replace it.",
+  "refus.fabrique.autre_version": "Evaluation {evaluation} is about another version.",
+  "refus.fabrique.mesure_absente":
+    "Measure “{mesure}” is missing from the evaluation: a missing measure stays missing.",
+  "refus.fabrique.seuil_minimum":
+    "Threshold {mesure}: {valeur} is below the required minimum, {exigence}.",
+  "refus.fabrique.seuil_maximum":
+    "Threshold {mesure}: {valeur} exceeds the tolerated maximum, {exigence}.",
+  "refus.acces.fige": "What an access carries when opened cannot be rewritten.",
+  "refus.acces.termine": "A closed access does not reopen: another one is opened.",
+  "refus.acces.activation_figee": "The activation day cannot be rewritten.",
+  "refus.acces.licence_figee": "An access does not change licence.",
+  "refus.acces.pour_un_autre": "Only a practice opens an access for another organisation.",
+  "refus.offre.canal_sans_regle":
+    "This plan ({offre}) is not offered on channel {canal} on {date}.",
+  "refus.offre.pas_par_un_cabinet": "A practice does not open a {offre} access.",
+  "refus.offre.pas_en_direct": "Plan {offre} is not sold directly.",
+  "refus.offre.hors_grille": "This plan does not exist in the current price list.",
+  "refus.offre.naissance_absente": "No starter plan is in force on {date} on the direct channel.",
+  "refus.licence.organisation_non_rattachee": "This organisation is not attached to this licence.",
+  "refus.licence.rattachement_illegitime":
+    "The licence holder is not a manager of this organisation, and no access links them to it.",
+  "refus.licence.organisation_de_plus": "This plan does not cover one more organisation.",
+  "refus.licence.naissance_figee":
+    "A licence’s creation cannot be rewritten: a plan change is recorded in its history.",
+  "refus.licence.resiliee": "A terminated licence cannot be suspended.",
+  "refus.licence.absente": "This company has no licence.",
+  "refus.licence.deja_titulaire": "The licence already belongs to this person.",
+  "refus.licence.a_un_proprietaire": "The licence can only be passed to an owner of the company.",
+  "refus.place.offre_pleine": "All the seats of this plan are taken ({places} in total).",
+  "refus.abonnement.deja_propose":
+    "A subscription is already offered to or assigned to this file by a practice.",
+  "refus.abonnement.plus_en_attente": "This offer is no longer pending.",
+  "refus.forfait.periode_figee": "A plan period cannot be rewritten: only its closing is recorded.",
+  "refus.forfait.periode_ouverte":
+    "A plan period is still running on this licence: close it before opening another.",
+  "refus.forfait.sans_trou":
+    "A plan period resumes on the day the previous one ends ({fin}), not on {debut}.",
+  "refus.forfait.empeche": "This plan change is not possible for this company.",
+  "refus.annuel.ferme": "The yearly subscription is not open for this company.",
+  "refus.recharge.palier_inconnu": "This top-up tier does not exist.",
+  "refus.recharge.offre_sans_recharge": "This company’s plan does not include read top-ups.",
+  "refus.grille.trous": "The price list leaves gaps: {trous}.",
+  "refus.lecture.refusee": "Reading this document is refused for this file.",
+  "refus.lecture.supplement_positif": "A bonus is counted in positive reads.",
+  "refus.facturation.premier_du_mois": "A billing period starts on the first of the month.",
+  "refus.facturation.destinataire_sans_nom":
+    "Recipient {destinataire} has no name: an invoice without a recipient is not an invoice.",
+  "refus.facturation.rien_a_facturer": "Nothing to invoice for {periode}.",
+  "refus.facturation.deja_emise": "This practice’s invoice for {periode} already exists.",
+  "refus.facturation.payeur_introuvable":
+    "Licence {licence} not found: an invoice’s payer is never guessed.",
+  "refus.facturation.format_de_reference": "No subscriber reference format is in force on {date}.",
+  "refus.facturation.sans_numero_d_abonne": "This organisation has no subscriber number.",
+  "refus.facturation.periode_non_supprimable": "A subscription period cannot be deleted.",
+  "refus.facturation.periode_fermee": "This period is already closed: a correction is a new entry.",
+  "refus.facturation.emetteur_futur": "An issuer is designated for today or later.",
+  "refus.facturation.emetteur_deja": "This organisation is already the issuer on this date.",
+  "refus.paiement.encaissement_requis": "A payment method is activated with its collection method.",
+  "refus.paiement.adresse_de_retour": "An open payment has a return address.",
+  "refus.paiement.adresse_https": "This provider needs the https address of its API.",
+  "refus.paiement.prestataire_inconnu": "This payment provider does not exist.",
+  "refus.paiement.simulateur_ferme": "The payment simulator is not open here.",
+  "refus.paiement.moyen_inconnu": "This payment method does not exist in the settings: {moyen}.",
+  "refus.paiement.deja_annulation": "This line is already a cancellation.",
+  "refus.paiement.deja_annule": "This payment is already cancelled.",
+  "refus.recu.attestation": "Only a receipt produced from a document attests payments.",
+  "refus.recu.sans_reglement": "A receipt is not attached to a payment.",
+  "refus.recu.produit": "A receipt is produced: it is not photographed.",
+  "refus.honoraires.avoir_d_une_emise": "Only an issued invoice is cancelled by a credit note.",
+  "refus.honoraires.avoir_non_annulable": "A credit note cannot be cancelled.",
+  "refus.honoraires.emise_figee":
+    "This invoice is issued: it can no longer be changed or deleted; it is cancelled by a credit note.",
+  "refus.honoraires.encaissable": "Only an issued, unsettled invoice can be collected.",
+  "refus.honoraires.avoir_non_encaissable": "A credit note cannot be collected.",
+  "refus.honoraires.montant_positif": "A collection carries a positive amount.",
+  "refus.honoraires.date_requise": "Enter the collection date.",
+  "refus.honoraires.trop_percu":
+    "The collection ({montant}) exceeds the amount due ({reste}): an overpayment is not posted on this invoice.",
+  "refus.honoraires.deja_emise": "This invoice is already issued.",
+  "refus.honoraires.sans_ligne": "An invoice without lines cannot be issued.",
+  "refus.honoraires.total_positif": "The total excluding tax must be positive to issue.",
+  "refus.immo.rien_a_constater": "No movement to record.",
+  "refus.immo.dotation_positive": "The depreciation charge must be positive.",
+  "refus.immo.dotation_deja": "This year’s depreciation is already recorded.",
+  "refus.immo.exercice_a_venir":
+    "Year {exercice} is not open yet: its depreciation is recorded from 1 January {exercice}.",
+  "refus.immo.date_hors_exercice": "The depreciation date must fall within year {exercice}.",
+  "refus.immo.bien_constate":
+    "Asset “{bien}” already has a recorded depreciation, impairment or disposal: its value, life, method and in-service date can no longer be changed. Only the label and condition remain open.",
+  "refus.stocks.article_sans_categorie":
+    "This item is not found, has no pack category, or you do not have access to it.",
+  "refus.stocks.inventaire_deja": "This period is already recorded for this item.",
+  "refus.banque.aucun_lettrage": "No active match on this line.",
+  "refus.banque.ecriture_non_lettrable":
+    "This entry is not found, not posted, or outside this file.",
+  "refus.banque.ligne_deja_lettree": "This line is already matched.",
+  "refus.banque.ecriture_deja_lettree": "This entry is already matched to another line.",
+  "refus.piece.transmise_au_cabinet":
+    "This document was sent to your practice: it only comes back with its agreement.",
+  "refus.piece.comptabilisee_dans_la_societe": "A posted document stays in the company.",
+  "refus.piece.comptabilisee_partagee": "A posted document stays shared.",
+  "refus.suppression.engagee":
+    "This document is committed in your accounts: it can no longer be deleted.",
+  "refus.suppression.justificatif": "This document serves as proof: it can no longer be deleted.",
+  "refus.precision.engagee":
+    "A committed document can no longer be specified: it is corrected by an entry.",
+  "refus.precision.type_non_propose": "This document type is not offered: {type}.",
+  "refus.precision.date_illisible": "This date cannot be read: {date}.",
+  "refus.precision.date_a_venir": "A future date cannot be set: {date}.",
+  "refus.precision.champ": "This field cannot be specified: {champ}.",
+  "refus.lecture.citation_orpheline":
+    "The reading cites field {champ} at a place where no word was read.",
+  "refus.piece.empreinte": "This document’s fingerprint is not valid.",
+  "refus.piece.scellee": "This document’s content is sealed: it cannot be replaced.",
+  "refus.piece.non_partagee": "This document is not shared with the practice.",
+  "refus.piece.aucune_demande": "No request is pending on this document.",
+  "refus.rattachement.motif": "Say why you are detaching this document.",
+  "refus.rattachement.absent": "This document is not attached to this document.",
+  "refus.rattachement.a_elle_meme": "A document cannot be attached to itself.",
+  "refus.rattachement.autre_dossier": "The two documents are not in the same file.",
+  "refus.rattachement.espace_prive":
+    "A document from your private space cannot be attached: it does not belong to the company.",
+  "refus.cle_api.revoquer": "An API key is neither deleted nor changed: it is revoked.",
+  "refus.cle_api.par_une_personne":
+    "An API key neither creates nor revokes another key: a person does this.",
+  "refus.cle_api.cabinet_seulement": "Only a practice holds an API key.",
+  "refus.cle_api.nom_requis": "Give the key a name.",
+  "refus.cle_api.portee_requise": "A key carries at least one scope.",
+  "refus.cle_api.portee_inconnue": "One of the requested scopes does not exist.",
+  "refus.cle_api.revoquee": "This key is not found, or already revoked.",
+  "refus.requisition.seconde_signature": "Requisition not approved: a second signature is needed.",
+  "refus.requisition.expiree": "Requisition expired on {date}.",
+  "refus.export.format_inconnu": "This format is not a journal export.",
+  "refus.export.jour_a_venir": "This day is still to come: it has no journal to export yet.",
+  "refus.export.fuseau": "The export’s time zone is not the practice’s.",
+  "refus.export.concurrent": "Another export of this journal has just been produced: try again.",
+  "refus.export.format_absent": "This export format does not exist.",
+  "refus.export.fec_par_dossier": "The FEC is produced file by file: choose a client.",
+  "refus.export.periode_a_l_envers": "The period is reversed: the start comes after the end.",
+  "refus.identifiant.invalide":
+    "This identifier does not have the expected form: “{valeur}”. Example: “{exemple}”.",
   "refus.supervision.second_regard":
     "Supervision requires a second look: whoever recorded the entry does not validate it themselves.",
   "refus.moteur.organisation_a_preciser": "Specify the organisation: several concern you.",
@@ -2016,7 +2338,6 @@ export const en: Dict = {
   "refus.moteur.date_illisible": "One of the dates sent cannot be read.",
   "refus.moteur.date_inexistante": "One of the dates sent does not exist.",
   "refus.moteur.caractere_illisible": "One of the texts sent contains an unreadable character.",
-  "refus.moteur.geste_non_permis": "This action is not allowed for you on this file.",
   "refus.moteur.recommencez": "Another action has just changed this data: try again.",
   "refus.moteur.existe_deja": "This item already exists.",
   "refus.moteur.rattachement_absent": "This link does not exist, or is no longer available.",

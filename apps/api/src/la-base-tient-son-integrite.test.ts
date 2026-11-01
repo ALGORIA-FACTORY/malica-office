@@ -56,6 +56,7 @@ interface Verrou {
   libelles: Record<string, string>;
   cles_de_refus_composees: Record<string, string>;
   messages_bruts: Record<string, string[]>;
+  refus_calcules: Record<string, string>;
   portes_que_personne_n_appelle: Record<string, string>;
   portes_sans_appel: Record<string, string>;
   lecteurs_du_parametrage: Record<string, string[]>;
@@ -134,6 +135,7 @@ describe("l'intégrité du code qui parle à la base", () => {
     const sansRaison = [
       ...Object.entries(VERROU.colonnes_sans_cle_etrangere),
       ...Object.entries(VERROU.cles_de_refus_composees),
+      ...Object.entries(VERROU.refus_calcules),
       ...Object.entries(VERROU.portes_que_personne_n_appelle),
       ...Object.entries(VERROU.portes_sans_appel),
       ...Object.entries(VERROU.litteraux_metier).map(([f, v]) => [f, v.raison] as const),
@@ -370,17 +372,38 @@ describe("l'intégrité de la base", { skip: !BASE_CONFIGUREE }, () => {
      * utilisateur qui lit l'arabe. La frontière est rejouée ici, telle quelle :
      * un message qu'elle traduit (une clé, un « introuvable ») ou qu'elle tait
      * (une panne, au journal) n'est pas un constat.
+     *
+     * Le message se lit ENTIER : PostgreSQL concatène deux littéraux qu'un saut
+     * de ligne sépare (`'Le compte % existe… '` puis `'plutôt qu''un doublon.'`).
+     * N'en lire que le premier laissait passer quinze phrases françaises
+     * (audit du 1er novembre 2026) : leur premier morceau finit par une
+     * espace, que la frontière retire — le relevé ne les reconnaissait plus.
      */
     const rows = await q<{ fn: string; stmt: string }>(`
       with f as (${NOS_FONCTIONS})
       select f.fn, m[1] as stmt
         from f, regexp_matches(f.prosrc,
-               '(raise\\s+exception\\s+''(?:[^'']|'''')*''[^;]*;)', 'gi') m`);
+               '(raise\\s+exception\\s+''(?:[^'']|'''')*''(?:\\s*''(?:[^'']|'''')*'')*[^;]*;)', 'gi') m`);
     const parMessage = new Map<string, Set<string>>();
+    const calcules = new Set<string>();
     const inconnus: string[] = [];
     for (const { fn, stmt } of rows) {
-      const message = /'((?:[^']|'')*)'/.exec(stmt)![1]!.replaceAll("''", "'");
-      if (message === "%" || message.startsWith("refus.")) continue;
+      const litteraux = /^raise\s+exception\s+('(?:[^']|'')*'(?:\s*'(?:[^']|'')*')*)/i.exec(
+        stmt,
+      )![1]!;
+      const message = [...litteraux.matchAll(/'((?:[^']|'')*)'/g)]
+        .map((m) => m[1]!.replaceAll("''", "'"))
+        .join("");
+      if (message === "%") {
+        /*
+         * Un message calculé se calcule depuis une clé — `'refus.…' || geste`,
+         * `app.refus_avec_valeurs('refus.…', …)` —, ou sa raison est nommée
+         * dans l'instantané : une variable ne se juge pas à la lecture.
+         */
+        if (!/,\s*[^;]*'refus\./.test(stmt)) calcules.add(fn);
+        continue;
+      }
+      if (message.startsWith("refus.")) continue;
       // Une clé du dictionnaire, dite dans les trois langues, se traduit à l'écran.
       if (/^[a-z_]+(\.[a-z0-9_]+)+$/.test(message) && languesSans(message).length === 0) continue;
       const nom = /errcode\s*=\s*'([0-9A-Za-z_]+)'/i.exec(stmt)?.[1] ?? "raise_exception";
@@ -391,10 +414,15 @@ describe("l'intégrité de la base", { skip: !BASE_CONFIGUREE }, () => {
       }
       const erreur = Object.assign(new Error(message), { code });
       if (introuvableLisible(erreur) !== null) continue;
-      if (refusLisible(erreur) !== message) continue;
+      if (refusLisible(erreur) !== message.trim()) continue;
       parMessage.set(message, (parMessage.get(message) ?? new Set()).add(fn));
     }
     assert.deepEqual(inconnus, [], "condition PL/pgSQL inconnue de l'audit");
+    egalALInstantane(
+      "messages calculés sans clé refus.* (levez une clé, ou nommez la raison)",
+      [...calcules].sort(),
+      Object.keys(VERROU.refus_calcules),
+    );
     const releve = [...parMessage].map(([m, fns]) => `${m} :: ${[...fns].sort().join(" ")}`);
     egalALInstantane(
       "messages levés en français brut (faites-en une clé refus.* dite en fr, en et ar)",

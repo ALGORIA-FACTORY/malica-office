@@ -191,7 +191,7 @@ describe("le circuit ne se contourne pas", { skip: !BASE_CONFIGUREE }, () => {
     const id = await s.deposer("sami", "entite");
     await assert.rejects(
       s.fait("sami", "capture.repondreAuCabinet", id, "REPONSE-SANS-PASSAGE"),
-      /personne a qui repondre/,
+      /refus\.piece\.non_partagee$/,
     );
     const { rows } = await s.admin.query(
       `select count(*)::int as n from collab.notifications where payload ->> 'piece_id' = $1`,

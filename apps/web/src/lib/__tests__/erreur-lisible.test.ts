@@ -84,6 +84,28 @@ describe("ce qu'on montre d'une erreur", () => {
     );
   });
 
+  it("dit un refus levé par la base, chaque valeur à sa place, et la répète au besoin", async () => {
+    // `app.refus_avec_valeurs` encode chaque octet ; la phrase cite le compte
+    // deux fois (« 401 », puis « 4011, 4012… »).
+    await chargerLaLangue("en");
+    window.localStorage.setItem("malica.locale", "en");
+    try {
+      const refus = new ErreurApi("refus.plan.compte_livre?compte=401", 400);
+      expect(texteDeLErreur(refus, "épreuve", DEFAUT)).toBe(
+        "Account 401 already exists in the delivered chart: open a sub-account (4011, 4012…) rather than a duplicate.",
+      );
+      const collectif = new ErreurApi(
+        "refus.plan.compte_collectif?compte=411&libelle=Clients%20%26%20comptes%20rattach%C3%A9s",
+        400,
+      );
+      expect(texteDeLErreur(collectif, "épreuve", DEFAUT)).toMatch(
+        /^Account 411 \(Clients & comptes rattachés\) is a control account/,
+      );
+    } finally {
+      window.localStorage.removeItem("malica.locale");
+    }
+  });
+
   it("reconnaît ce qui vient de nous", () => {
     expect(vientDeNous(new ErreurApi("refus", 400))).toBe(true);
     expect(vientDeNous(new Error("autre chose"))).toBe(false);

@@ -310,7 +310,7 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
         sous(db, "authenticated", d.titulaire, () =>
           db.query("select plateforme.relances_regler(true, false, 'non')"),
         ),
-        /reserve aux operateurs/,
+        /refus\.reserve\.plateforme$/,
       );
     });
   });

@@ -172,7 +172,7 @@ describe("ce que le cabinet lit d'une pièce gardée", { skip: !BASE_CONFIGUREE 
     // Les deux sens sont désormais tenus par la base, et par elle seule.
     await assert.rejects(
       () => parMoi(dirigeant, "collab", "setPieceVis", transmise, "personnel"),
-      /que par accord du cabinet/,
+      /refus\.piece\.transmise_au_cabinet$/,
     );
   });
 });

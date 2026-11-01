@@ -166,7 +166,7 @@ describe("la réponse à une question de charge", { skip: !BASE_CONFIGUREE }, ()
   it("un tiers sans mandat est refusé, et c'est la base qui refuse", async () => {
     await assert.rejects(
       () => repondre(etranger, "exceptionnel"),
-      /organisation non autorisee/,
+      /refus\.geste\.non_permis$/,
       "sans ce refus, n'importe quel compte trancherait les charges d'un dossier qui n'est pas le sien",
     );
   });

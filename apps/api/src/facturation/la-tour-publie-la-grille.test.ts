@@ -113,7 +113,7 @@ describe("la tour publie la grille", { skip: !ADMIN }, () => {
           JSON.stringify(g.offres),
           JSON.stringify(g.recharges),
         ]),
-        /grille_refusee:.*date_passee/,
+        /refus\.grille\.trous\?trous=.*date_passee/,
       );
       await db.query("rollback to savepoint avant");
 

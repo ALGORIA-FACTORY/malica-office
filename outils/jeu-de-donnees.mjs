@@ -875,7 +875,7 @@ async function lire(pieceId, piece) {
     await persister(piece.extrait.articles);
     return `lue, ${citations.length} citations`;
   } catch (err) {
-    if (!/famille/i.test(message(err))) throw err;
+    if (!/refus\.referentiel\.famille_absente\?/.test(message(err))) throw err;
     await persister([]);
     return `lue sans articles (${message(err)})`;
   }

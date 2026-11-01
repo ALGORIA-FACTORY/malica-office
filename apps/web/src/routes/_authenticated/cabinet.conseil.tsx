@@ -82,15 +82,6 @@ const CANAUX: Record<string, MessageKey> = {
   conversation: "cab.conseil.canal.conversation",
 };
 
-/**
- * Les refus codés de la base, traduits. Un second onglet qui décide le même
- * arbitrage reçoit un code, pas une phrase : c'est ici qu'il devient lisible.
- */
-const REFUS: Record<string, MessageKey> = {
-  "arbitrage.deja_decide": "cab.conseil.erreur.dejaDecide",
-  "conseil.reponse_vide": "cab.conseil.erreur.reponseVide",
-};
-
 const OU = "routes/_authenticated/cabinet.conseil";
 
 const MINUTE_MS = 60_000;
@@ -254,10 +245,10 @@ function QuestionsDesClients() {
       setArticle("");
       await rafraichir();
     },
-    onError: (e: unknown) => {
-      const code = e instanceof Error ? REFUS[e.message] : undefined;
-      setErreur(code ? t(code) : texteDeLErreur(e, OU, t("common.error")));
-    },
+    // Un second onglet qui décide le même arbitrage reçoit une clé de refus
+    // (`refus.arbitrage.deja_decide`) : `texteDeLErreur` la dit dans la langue
+    // de la personne, comme tout refus de la base.
+    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
 
   const seuil = reglages.data?.seuilCertitudeConseil ?? null;

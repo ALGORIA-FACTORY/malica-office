@@ -260,7 +260,7 @@ describe("les moyens de paiement vivent en table", { skip: !ADMIN }, () => {
         db.query(
           "insert into facturation.moyens_paiement_etats (moyen, actif, motif) values ('d17', true, 'essai')",
         ),
-        /moyen d'encaissement/,
+        /refus\.paiement\.encaissement_requis$/,
       );
     });
   });

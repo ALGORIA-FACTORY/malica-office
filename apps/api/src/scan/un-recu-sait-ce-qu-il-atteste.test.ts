@@ -273,7 +273,7 @@ describe("un reçu sait ce qu'il atteste", { skip: !BASE_CONFIGUREE }, () => {
         sousIdentite(u.id, (db) =>
           db.query(`select public.recu_attester_paiements($1, $2::uuid[])`, [talon, [pg2]]),
         ),
-      /seul un reçu/,
+      /refus\.recu\.attestation$/,
     );
   });
 
@@ -284,7 +284,7 @@ describe("un reçu sait ce qu'il atteste", { skip: !BASE_CONFIGUREE }, () => {
     const recu = await nee("seule-r", f, "recu_de_paiement", [p]);
     await assert.rejects(
       () => rpcDe(intrus, "capture", "pieceQuiAccompagne", recu, "fr"),
-      /introuvable ou non autorisee/,
+      /refus\.introuvable\.piece$/,
     );
   });
 
@@ -481,7 +481,7 @@ describe("un reçu sait ce qu'il atteste", { skip: !BASE_CONFIGUREE }, () => {
     const f = await facture("pas-f", "COMPTOIR ESSAI");
     await assert.rejects(
       () => rpc("capture", "supprimerPieceQuiAccompagne", f),
-      /introuvable ou non autorisee/,
+      /refus\.introuvable\.piece$/,
     );
     assert.equal(await existe(f), true);
   });

@@ -165,7 +165,7 @@ describe("les échéances suivent le calendrier", { skip: !BASE_CONFIGUREE }, ()
           source: null,
         }),
       ),
-      /motive/,
+      /refus\.motif\.a_dire$/,
     );
     const pose = await sousIdentite(expert.id, (db) =>
       parametrage.poserReport(db, {
