@@ -235,9 +235,12 @@ export function computePivot(input: PivotInput): PivotV1 {
    * suit la même règle. Découvert par la recette sur le staging (1er novembre
    * 2026) : une vente à l'export se proposait sans code EXPORT.
    */
+  // Le RÉGIME dit « sans TVA » (un taux nul au référentiel), pas un montant
+  // arrondi à zéro : une base à 19 % dont la TVA s'arrondit à 0 F CFA garde
+  // son code sur la ligne de TVA, comme toute base taxable.
   const codesDesLignes = [...new Set(perLineRate.map(({ line }) => line.tax_code))];
-  const codeDeLaBase =
-    totalVAT.isZero() && codesDesLignes.length === 1 ? codesDesLignes[0] : undefined;
+  const regimeSansTva = perLineRate.every(({ rate }) => rate !== null && D(rate.rate).isZero());
+  const codeDeLaBase = regimeSansTva && codesDesLignes.length === 1 ? codesDesLignes[0] : undefined;
 
   const lines: JournalLineV1[] = [];
   if (extract.document_kind === "facture_achat") {
