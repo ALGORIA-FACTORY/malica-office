@@ -96,8 +96,14 @@ services:
       # l'allumer. Le temps de lecture double, et la memoire du second modele
       # n'a PAS ete mesuree dans la limite de 2 Go ci-dessous : a mesurer
       # (`docker stats` sur le banc) avant de l'allumer sur la machine de
-      # recette.
+      # recette. Hors conteneur, le 1er novembre 2026, moteur onnx : pointe
+      # du processus 936 Mio avec l'arabe, 888 Mio sans.
       OCR_MODELE_RECONNAISSANCE_ARABE: ${OCR_MODELE_RECONNAISSANCE_ARABE:-}
+      # Le moteur : « onnx » (defaut, premier lecteur depuis le 1er novembre
+      # 2026, quatre fois plus rapide a preuves egales) ou « paddle » (le
+      # lecteur d'avant, garde pour la relecture lourde de nuit). Memes poids,
+      # memes empreintes ; voir docs/exploitation.md.
+      OCR_MOTEUR: ${OCR_MOTEUR:-onnx}
     deploy:
       resources:
         limits:
