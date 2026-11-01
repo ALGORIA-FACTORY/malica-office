@@ -203,7 +203,7 @@
     "apps/web/src/routes/_authenticated/pme.echeances.tsx": "Vos échéances — Malica Office",
     "apps/web/src/routes/_authenticated/pme.fiche.tsx": "Votre situation fiscale — Malica Office",
     "apps/web/src/routes/_authenticated/pme.index.tsx": "Espace société — Malica Office",
-    "apps/web/src/routes/_authenticated/pme.list.tsx": "Vos documents — Malica Office",
+    "apps/web/src/routes/_authenticated/pme.list.tsx": "Bibliothèque — Malica Office",
     "apps/web/src/routes/_authenticated/pme.malica.tsx": "Malica — Malica Office",
     "apps/web/src/routes/_authenticated/pme.notifications.tsx": "Notifications — Malica Office",
     "apps/web/src/routes/_authenticated/pme.payer.$paiementId.tsx": "Moyen de paiement — Malica Office",
