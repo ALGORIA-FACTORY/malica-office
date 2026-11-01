@@ -27,6 +27,7 @@ import {
   ligneNormalisee,
   type LigneSaisie,
 } from "@malica/socle/ecriture-saisie";
+import { PackUnavailable } from "@malica/socle/juridictions/tn";
 import { z } from "zod";
 
 import type { Requete } from "../db.ts";
@@ -40,7 +41,7 @@ import {
   type HypotheseDuMois,
   type MoisDeTvaDuDossier,
 } from "../scan/mois-de-tva.ts";
-import { propositionDePiece } from "../scan/proposition.ts";
+import { propositionDePiece, propositionHorsDuReferentiel } from "../scan/proposition.ts";
 import { propositionDeReglement } from "../scan/reglement.ts";
 import { rejugerALOuverture, rejugerLesPieces, type BilanDuRejeu } from "../scan/rejeu.ts";
 
@@ -358,7 +359,13 @@ export const office = {
     // Ouvrir une pièce jugée sous des règles plus anciennes la rejuge, si
     // l'appelant la supervise : quelques requêtes, et aucune ligne si rien ne
     // change (`scan/rejeu.ts`).
-    await rejugerALOuverture(db, pieceId);
+    try {
+      await rejugerALOuverture(db, pieceId);
+    } catch (e) {
+      // Datée hors de tout pack, elle ne se juge pas : la proposition le dit.
+      if (e instanceof PackUnavailable) return propositionHorsDuReferentiel(db, pieceId, e);
+      throw e;
+    }
     const r = await propositionDePiece(db, pieceId, dateSaisie);
     return r.ok ? { ...r, empreinte: empreinteDe(r)! } : r;
   },

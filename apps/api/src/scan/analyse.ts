@@ -24,6 +24,7 @@
  * de réception —, jamais à la date du jour.
  */
 
+import { PackUnavailable } from "@malica/socle/juridictions/tn";
 import {
   deviseDeLaPiece,
   type DeviseLue,
@@ -780,7 +781,9 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     [org.jurisdiction, dateRef],
   );
   const pack = packs[0]?.id;
-  if (!pack) throw refus(`Aucun pack en vigueur pour ${org.jurisdiction} au ${dateRef}.`);
+  // Le plus souvent une date mal lue : la proposition le dit par son code
+  // (`date_hors_referentiel`), tout autre appelant par la clé du refus.
+  if (!pack) throw Object.assign(new PackUnavailable(org.jurisdiction, dateRef), { code: "22023" });
 
   const p = await lireParametres(db, pack, dateRef);
 

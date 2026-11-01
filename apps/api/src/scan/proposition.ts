@@ -31,6 +31,7 @@ import type {
   TaxRate,
 } from "@malica/socle/ports/repositories";
 import { ConversionRefusee } from "@malica/socle/engines/fx/convertir-l-extrait";
+import { PackUnavailable } from "@malica/socle/juridictions/tn";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import {
   type DroitDeLaFacture,
@@ -181,8 +182,33 @@ export async function propositionDePiece(
   pieceId: string,
   dateSaisie: string | null = null,
 ): Promise<PropositionDePiece> {
-  const resultat = await proposerDepuisLeJugement(db, pieceId, dateSaisie);
-  return { ...resultat, champsAVerifier: await champsAVerifier(db, pieceId) };
+  try {
+    const resultat = await proposerDepuisLeJugement(db, pieceId, dateSaisie);
+    return { ...resultat, champsAVerifier: await champsAVerifier(db, pieceId) };
+  } catch (e) {
+    if (e instanceof PackUnavailable) return propositionHorsDuReferentiel(db, pieceId, e);
+    throw e;
+  }
+}
+
+/**
+ * Une pièce datée hors de tout pack ne se juge pas : le plus souvent, sa date
+ * est mal lue (recette, pièce 042 : une 400 et la phrase française du refus).
+ * Ce n'est ni une panne ni un refus du geste : la proposition le dit par son
+ * code, et la date en cause, que l'écran du cabinet traduit.
+ */
+export async function propositionHorsDuReferentiel(
+  db: Requete,
+  pieceId: string,
+  e: PackUnavailable,
+): Promise<PropositionDePiece> {
+  return {
+    ok: false,
+    raison: `Aucune écriture ne se propose : aucun pack n'est en vigueur au ${e.at}, la date de la pièce est à vérifier.`,
+    raisonCode: "date_hors_referentiel",
+    dateHorsReferentiel: e.at,
+    champsAVerifier: await champsAVerifier(db, pieceId),
+  };
 }
 
 /** Ce que le jugement a posé, et ce que la personne a dit, pour proposer. */

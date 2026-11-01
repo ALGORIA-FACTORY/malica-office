@@ -2184,6 +2184,8 @@ export const fr = {
   "refus.referentiel.bareme_absent":
     "Barème {code} introuvable au {date} pour la juridiction {juridiction}.",
   "refus.referentiel.pack_absent": "Aucun pack n’est en vigueur pour cette juridiction.",
+  "refus.referentiel.pack_absent_a_la_date":
+    "Aucun pack n’est en vigueur pour {juridiction} au {date} : vérifiez la date de la pièce.",
   "refus.referentiel.regime_inconnu":
     "Ce régime n’existe pas pour la juridiction {juridiction} au {date} : {regime}.",
   "refus.referentiel.type_de_document": "Ce type de document n’existe pas au référentiel : {type}.",
@@ -2600,6 +2602,9 @@ export const fr = {
   "cab.ecriture.titre": "L’écriture · modifiable",
   "cab.ecriture.rien": "Le Socle ne propose rien : saisissez l’écriture, elle sera « forcée ».",
   "cab.ecriture.rien.pourquoi": "Pourquoi rien n’est proposé",
+  "cab.ecriture.date_hors_referentiel": "Date du document hors du référentiel : à vérifier.",
+  "cab.ecriture.date_hors_referentiel.aide":
+    "Aucun pack n’est en vigueur au {date} : la date a sans doute été mal lue. Vérifiez-la ; si elle est juste, saisissez l’écriture, elle sera « forcée ».",
   "cab.ecriture.aide.validee":
     "Validée telle que proposée : « validée ». Modifiée ou saisie : « forcée », avec votre nom et l’heure. Les deux entrent au journal du jour.",
   "cab.ecriture.aide.client":
