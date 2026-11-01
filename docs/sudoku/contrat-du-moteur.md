@@ -320,9 +320,14 @@ Dans cette première livraison (`apps/api/src/malica/lecture/sudoku.ts`) :
 - la lecture citée lit des factures : elle joue la grille `facture`. Les autres
   grilles sont en base avec leurs preuves traduites ; leur routage par type de
   document vient famille par famille, chacune avec son banc ;
-- **par défaut, il observe** : il lit chaque pièce et inscrit ce qu'il a lu dans
-  `capture.champs_lus`, mais la lecture de la chaîne ressort à l'identique. Rien ne
-  change pour personne tant que le cabinet ne le branche pas ;
+- **par défaut, il est branché** depuis le 1er novembre 2026 (décision du
+  dirigeant, sur la mesure du staging : pièce prouvée lue en 5,8 s au lieu de
+  19,5 s, aucun montant faux). Le mode se résout **au jour de la lecture**, pas à
+  la date de la pièce : une facture de 2025 lue aujourd'hui suit le réglage
+  d'aujourd'hui ;
+- **en observation** — `lecture.sudoku` = `observe`, au choix du cabinet ou du
+  dossier —, il lit chaque pièce et inscrit ce qu'il a lu dans
+  `capture.champs_lus`, mais la lecture de la chaîne ressort à l'identique ;
 - **branché** — le réglage `lecture.sudoku` = `designe` (sujet « Lecture prouvée
   des pièces » de « Réglages comptabilité », résolu par `app.reglage_comptable` :
   le dossier, son cabinet, le pack) —, quand la pièce est prouvée, il remplace la désignation des **montants**

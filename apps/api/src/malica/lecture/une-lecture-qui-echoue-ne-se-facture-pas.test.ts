@@ -177,6 +177,22 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     };
   }
 
+  /**
+   * L'API réelle, le sudoku en observation. Depuis le 1er novembre 2026 le pack le
+   * branche par défaut, et une pièce qu'il prouve n'est plus relue : les épreuves du
+   * rattrapage le remettent en observation, comme un cabinet peut le faire.
+   */
+  function apiEnObservation(): AppelApi {
+    const reelle = apiDEssai();
+    return {
+      ...reelle,
+      rpc: async <T>(depot: string, m: string, args?: unknown[]): Promise<T> => {
+        const r = await reelle.rpc<T>(depot, m, args);
+        return m === "contexteSudoku" ? ({ ...(r as object), mode: "observe" } as T) : r;
+      },
+    };
+  }
+
   async function deposer(tenantId: string, cle: string, vis: "personnel" | "partage") {
     const p = (await sousIdentiteDuServeur(u.id, (db) =>
       executerRpc(
@@ -343,7 +359,7 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
       () => lectureComplete("PP-OCR"),
     ]);
 
-    const rendu = await readPieceFlow(apiDEssai(), piece, modele);
+    const rendu = await readPieceFlow(apiEnObservation(), piece, modele);
 
     assert.equal(modele.appels, 2, "la pièce a bien été relue par l'autre lecteur");
     assert.equal(rendu.contract, "extract.v1", "et c'est la seconde lecture qui a été retenue");
@@ -362,11 +378,27 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
       },
     ]);
 
-    const rendu = await readPieceFlow(apiDEssai(), piece, modele);
+    const rendu = await readPieceFlow(apiEnObservation(), piece, modele);
 
     assert.equal(modele.appels, 2, "le rattrapage a bien été tenté");
     assert.equal(rendu.contract, "extract.v1.partiel", "la première lecture est rendue");
     assert.equal(await compter(piece), 1, "et elle est comptée, puisqu'elle a été rendue");
+  });
+
+  it("branché par défaut : une pièce prouvée n'attend pas l'autre lecteur", async () => {
+    // Décision du dirigeant, 1er novembre 2026 : le pack branche le sudoku. La
+    // pièce que ses preuves tiennent n'est pas relue — c'est le gain mesuré
+    // (5,8 s au lieu de 19,5 s), et la lecture reste comptée une fois.
+    const piece = await deposer(orgLibre, "prouvee-sans-rattrapage", "partage");
+    const modele = lecteurs([
+      () => lecturePartielle("qwen-vl-ocr"),
+      () => lectureComplete("PP-OCR"),
+    ]);
+
+    await readPieceFlow(apiDEssai(), piece, modele);
+
+    assert.equal(modele.appels, 1, "l'autre lecteur n'a pas été appelé");
+    assert.equal(await compter(piece), 1);
   });
 
   it("le lecteur qui vient de lire ne relit jamais : le modèle de vision seul ne se rattrape pas", async () => {

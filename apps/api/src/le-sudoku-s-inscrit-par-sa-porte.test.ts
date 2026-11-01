@@ -112,8 +112,8 @@ describe("le sudoku s'inscrit par sa porte", { skip: !BASE_CONFIGUREE }, () => {
       c.pack.charges.some((ch) => ch.montant_fixe !== null),
       "un droit fixe du pack",
     );
-    // Le défaut du pack : il observe.
-    assert.equal(c.mode, "observe");
+    // Le défaut du pack : il désigne (décision du dirigeant, 1er novembre 2026).
+    assert.equal(c.mode, "designe");
     // Avant la date d'effet de la grille, rien n'est en vigueur : le jour est lu, pas la date du jour.
     await assert.rejects(
       serveur(s.gens.amel.id, "contexteSudoku", s.pme, s.pack, "facture", "TND", "2020-06-01"),
