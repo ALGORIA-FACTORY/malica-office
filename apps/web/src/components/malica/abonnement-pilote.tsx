@@ -837,7 +837,9 @@ export function ARegler() {
       {ouverts.map((p) => (
         <div key={p.paiement_id} className="ln" data-paiement={p.paiement_id}>
           <b>{libelleDuPaiement(p, t)}</b>
-          <span className="mt">{montant(p.montant_ttc, locale)}</span>
+          <span className="mt">
+            {montant(p.montant_ttc, locale)} {p.devise}
+          </span>
           {p.etat === "refuse" ? <p className="warn">{t("pme.reglages.paiement.refuse")}</p> : null}
           {simulateur && revenu === p.paiement_id ? (
             <div className="acts">
@@ -961,7 +963,9 @@ export function MesFactures() {
                 {t("pme.reglages.paiement.payer")}
               </button>
             ) : (
-              <span className="mt">{montant(f.montant_ttc, locale)}</span>
+              <span className="mt">
+                {montant(f.montant_ttc, locale)} {f.devise}
+              </span>
             )}
           </div>
         );
