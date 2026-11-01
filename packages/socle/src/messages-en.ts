@@ -2582,6 +2582,9 @@ export const en: Dict = {
   "cab.ecriture.reserve.nature_de_vente": "Nature of the sale to be specified",
   "cab.ecriture.reserve.nature_de_vente.aide":
     "The engine has not proved what the invoice sells (goods, services, ancillary activities): the sale is proposed to the fallback account of your chart. Check the sales account before validating, or change the entry.",
+  "cab.ecriture.reserve.droit_au_cout": "Cost-included duty to check",
+  "cab.ecriture.reserve.droit_au_cout.aide":
+    "The original invoice carries a duty included in the purchase cost (“FODEC 1%” setting) that none of its lines identifies any more. The credit note reverses it in full: its entry reverses every line of the invoice. Check the duty’s account before approving.",
   "cab.ecriture.reserve.mois_de_tva": "VAT month to check",
   "cab.ecriture.reserve.mois_de_tva.aide":
     "The month in which this document counts for VAT follows when VAT becomes due (setting “VAT month of a document”): goods on delivery, a service on performance or on earlier collection. The engine kept the invoice date.",
@@ -2599,6 +2602,10 @@ export const en: Dict = {
   "cab.avoir.non_comptabilisee": "Original invoice not yet recorded",
   "cab.avoir.aide":
     "A credit note is linked to its invoice (“Credit notes” setting, VAT Code art. 9). It is proposed as a reversal of the invoice entry, at the amounts it prints: as a reversal, or to the discounts account, according to the firm’s setting.",
+  "cab.avoir.manque.introuvable":
+    "The number printed on the credit note matches no invoice in this file, or several: choose it below.",
+  "cab.avoir.manque.non_comptabilisee":
+    "The linked invoice has no recorded entry yet: record it, and the credit note will then be proposed.",
   "cab.avoir.choisir": "Choose the invoice",
   "cab.avoir.rattacher": "Link",
   "cab.avoir.aucune":

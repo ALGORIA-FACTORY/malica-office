@@ -44,6 +44,8 @@ export function lecture(
      * de la ligne couvre, et qu'elle ne cite pas — « (base », par exemple.
      */
     avantLaLigne?: string[];
+    /** Le FODEC tel qu'imprimé (« 12,346 »), en dernier jeton : le second droit de la pièce. */
+    fodec?: string;
   } = {},
 ) {
   const numero = opts.numero ?? "F-2026-0042";
@@ -64,11 +66,13 @@ export function lecture(
     ...(opts.avantLaLigne ?? []).map((t): [string, number] => [t, 0.5]), // 13… avant la ligne, non cités
     ...(opts.ligne ?? []).map((t): [string, number] => [t, 0.5]), // puis la ligne, si elle est à part
     ...(opts.autresLignes ?? []).flat().map((t): [string, number] => [t, 0.55]), // puis les suivantes
+    ...(opts.fodec ? [[opts.fodec, 0.8] as [string, number]] : []), // puis le FODEC
   ];
   const avant = (opts.avantLaLigne ?? []).length;
   const ordinauxDeLaLigne = (opts.ligne ?? []).map((_, i) => 13 + avant + i);
   let suivant = 13 + avant + ordinauxDeLaLigne.length;
   const ordinauxDesAutres = (opts.autresLignes ?? []).map((l) => l.map(() => suivant++));
+  const ordinalDuFodec = suivant;
   const tokens: Jeton[] = textes.map(([text, y], ordinal) => ({
     page: 1,
     ordinal,
@@ -96,6 +100,7 @@ export function lecture(
     ...cite("totals.vat", 9),
     ...cite("other_charges[0].amount", 10),
     ...cite("totals.ttc", 11, 12),
+    ...(opts.fodec ? cite("other_charges[1].amount", ordinalDuFodec) : []),
   ];
   const extract = {
     contract: "extract.v1",
@@ -112,7 +117,10 @@ export function lecture(
       },
     ],
     articles: [],
-    other_charges: [{ code: "DROIT_TIMBRE", label: "", amount: "1.000" }],
+    other_charges: [
+      { code: "DROIT_TIMBRE", label: "", amount: "1.000" },
+      ...(opts.fodec ? [{ code: "FODEC", label: "", amount: opts.fodec.replace(",", ".") }] : []),
+    ],
     totals: opts.solveurFaux
       ? { base_ht: "8888.888", vat: "234.566", ttc: "9999.999" }
       : { base_ht: "1234.560", vat: "234.566", ttc: "1470.126" },

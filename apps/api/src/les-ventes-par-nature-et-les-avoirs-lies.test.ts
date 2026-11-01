@@ -430,6 +430,44 @@ describe("les ventes par nature, les avoirs liés", { skip: !BASE_CONFIGUREE }, 
     );
   });
 
+  /*
+   * Revue de #161 : le FODEC d'un achat porté au coût (le réglage par défaut,
+   * `par_article_au_cout`) prend le compte de la charge ; l'avoir qui le
+   * reprend était refusé (`avoir_hors_facture`), même en extourne exacte.
+   * 1 234,560 HT, FODEC 1 % = 12,346, TVA 19 % sur 1 246,906 = 236,912,
+   * timbre 1,000 : TTC 1 484,818.
+   */
+  it("le FODEC porté au coût : l'avoir total extourne la facture, le droit sur sa ligne", async () => {
+    const s = await monter();
+    const montants = { fodec: "12,346", tva: "236,912", ttc: ["1", "484,818"] as [string, string] };
+    const facture = await s.piece("facture_achat", { numero: `F-${s.m}-7`, ...montants });
+    const f = await s.proposition(facture);
+    const charge = compte["facture_achat.base"]!;
+    // La facture : le FODEC au compte de la charge, une ligne à part.
+    assert.deepEqual(
+      s.lignes(f).filter((l) => l[0] === charge),
+      [
+        [charge, "12.346", "0", null],
+        [charge, "1234.560", "0", null],
+      ],
+    );
+    await s.valider(facture);
+    const id = await avoir(s, `AV-${s.m}-7`, { factureDOrigine: `F-${s.m}-7`, ...montants });
+    const p = await s.proposition(id);
+    assert.deepEqual(
+      s.lignes(p),
+      trier([
+        [compte["facture_achat.tiers"]!, "1484.818", "0", null],
+        [compte["facture_achat.tva"]!, "0", "236.912", "TVA19"],
+        [charge, "0", "1234.560", "TVA19"],
+        [charge, "0", "12.346", null],
+        [compte["facture_achat.timbre"]!, "0", "1.000", null],
+      ]),
+    );
+    assert.equal(p.ok && p.avoir?.traitement, "extourne");
+    assert.equal(p.ok && p.reserves, undefined);
+  });
+
   it("un avoir qui excède sa facture ne se propose jamais", async () => {
     const s = await monter();
     await factureValidee(s, `F-${s.m}-3`);
