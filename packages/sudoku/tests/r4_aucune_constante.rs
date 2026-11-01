@@ -66,6 +66,20 @@ fn litteraux_interdits(src: &str) -> Vec<String> {
         .collect()
 }
 
+/// Les sources `.rs` d'un dossier et de tous ses sous-dossiers.
+fn sources_rs(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    for e in std::fs::read_dir(dir).unwrap() {
+        let p = e.unwrap().path();
+        if p.is_dir() {
+            out.extend(sources_rs(&p));
+        } else if p.extension().is_some_and(|x| x == "rs") {
+            out.push(p);
+        }
+    }
+    out
+}
+
 #[test]
 fn le_detecteur_detecte() {
     assert_eq!(litteraux_interdits("let t = 190_000;"), vec!["190_000"]);
@@ -79,16 +93,13 @@ fn le_detecteur_detecte() {
 fn aucun_taux_ni_montant_reglementaire_dans_src() {
     let dir = format!("{}/src", env!("CARGO_MANIFEST_DIR"));
     let mut fautes = Vec::new();
-    let mut lus = 0;
-    for e in std::fs::read_dir(&dir).unwrap() {
-        let p = e.unwrap().path();
-        if p.extension().is_some_and(|x| x == "rs") {
-            lus += 1;
-            for l in litteraux_interdits(&std::fs::read_to_string(&p).unwrap()) {
-                fautes.push(format!("{} : {l}", p.display()));
-            }
+    let sources = sources_rs(std::path::Path::new(&dir));
+    // Tous les sources, sous-dossiers compris (src/lignes/milieu.rs n'était pas lu).
+    assert!(sources.iter().any(|p| p.ends_with("lignes/milieu.rs")), "src/lignes/milieu.rs non lu");
+    for p in &sources {
+        for l in litteraux_interdits(&std::fs::read_to_string(p).unwrap()) {
+            fautes.push(format!("{} : {l}", p.display()));
         }
     }
-    assert!(lus >= 1, "aucun source lu dans {dir}");
     assert!(fautes.is_empty(), "littéraux réglementaires dans le code : {fautes:?}");
 }
