@@ -97,18 +97,23 @@ export function identifiantsDuPlan(
 /** Un texte de repère comparable : sans casse, sans accents, sans espaces ni ponctuation. */
 const cleDeRepere = (s: string) => comparable(s).replace(/[^\p{L}\p{N}]/gu, "");
 
+/** La clé d'un jeton dans le plan : les ordinaux repartent de zéro à chaque page. */
+export const cleDeJeton = (t: { page: number; ordinal: number }) => `${t.page}:${t.ordinal}`;
+
 /**
  * Les montants écrits en lettres, chacun porté par son premier mot : la phrase qui
  * suit un repère du champ de la preuve `lettres` de la grille, sur la même rangée
  * ou juste dessous, lue avec le lexique du pack, dans la devise de la pièce.
+ * La carte est indexée par page ET ordinal (`cleDeJeton`) : sur un PDF de
+ * plusieurs pages, deux jetons partagent le même ordinal.
  */
 export function lettresDuPlan(
   plan: readonly PageToken[],
   regles: Pick<ReglesDeLecture, "lettres">,
   grille: Grille,
   devise: DeviseLue,
-): Map<number, { v: number; fin: number }> {
-  const out = new Map<number, { v: number; fin: number }>();
+): Map<string, { v: number; fin: number }> {
+  const out = new Map<string, { v: number; fin: number }>();
   const champs = new Set(
     grille.preuves.flatMap((p) => {
       const e = p.expression as Record<string, unknown> | null;
@@ -152,7 +157,7 @@ export function lettresDuPlan(
     if (!lu || lu.devise !== devise.code || lu.mots === 0) continue;
     const unite = 10 ** devise.decimales;
     if (lu.mineures !== null && lu.mineures >= unite) continue;
-    out.set(phrase[0]!.ordinal, {
+    out.set(cleDeJeton(phrase[0]!), {
       v: lu.majeures * unite + (lu.mineures ?? 0),
       fin: phrase[lu.mots - 1]!.ordinal,
     });
