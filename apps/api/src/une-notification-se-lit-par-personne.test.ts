@@ -113,7 +113,7 @@ describe("une notification se lit par personne", { skip: !BASE_CONFIGUREE }, () 
     await rpc(expert, "markRead", id);
     await assert.rejects(
       rpc(expert, "markRead", "00000000-0000-0000-0000-000000000000"),
-      /notification introuvable/,
+      /refus\.introuvable\.notification$/,
     );
   });
 });

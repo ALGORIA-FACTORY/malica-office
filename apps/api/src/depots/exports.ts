@@ -378,14 +378,14 @@ export async function contexteDExport(
     [clientTenantId ? [cabinetTenantId, clientTenantId] : [cabinetTenantId]],
   );
   const cabinet = (orgs as Record<string, unknown>[]).find((o) => o["id"] === cabinetTenantId);
-  if (!cabinet) throw new RefusExport("cabinet introuvable ou non autorisé");
+  if (!cabinet) throw new RefusExport("refus.introuvable.cabinet");
   const client = clientTenantId
     ? ((orgs as Record<string, unknown>[]).find((o) => o["id"] === clientTenantId) ?? null)
     : null;
-  if (clientTenantId && !client) throw new RefusExport("dossier introuvable ou non mandaté");
+  if (clientTenantId && !client) throw new RefusExport("refus.introuvable.dossier");
 
   const pack = await referentiel.activePack(db, cabinet["jurisdiction"] as string);
-  if (!pack) throw new RefusExport("aucun pack en vigueur pour la juridiction du cabinet");
+  if (!pack) throw new RefusExport("refus.referentiel.pack_absent");
   const params = await referentiel.socleParams(db, pack.id);
 
   const perimetre = client ?? cabinet;
@@ -412,11 +412,11 @@ async function construire(
   au: string,
   format: string,
 ): Promise<Construit> {
-  if (!estFormat(format)) throw new RefusExport("ce format d'export n'existe pas");
+  if (!estFormat(format)) throw new RefusExport("refus.export.format_absent");
   if (format === "fec" && !clientTenantId) {
-    throw new RefusExport("le FEC se produit dossier par dossier : choisissez un client");
+    throw new RefusExport("refus.export.fec_par_dossier");
   }
-  if (du > au) throw new RefusExport("la période est à l'envers : le début suit la fin");
+  if (du > au) throw new RefusExport("refus.export.periode_a_l_envers");
 
   const ctx = await contexteDExport(db, cabinetTenantId, clientTenantId);
 

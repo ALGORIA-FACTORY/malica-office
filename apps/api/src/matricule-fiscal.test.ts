@@ -33,6 +33,8 @@ import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
 
+import { lireUnRefus } from "@malica/socle/refus-a-dire";
+
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
 
@@ -117,10 +119,18 @@ describe("le format du matricule fiscal", { skip: !BASE_CONFIGUREE }, () => {
     /*
      * Un message qui dit « format invalide » laisse la personne deviner. Celui-ci
      * doit porter l'exemple du référentiel, pour qu'elle voie ce qui manque —
-     * ici, la lettre après les sept chiffres.
+     * ici, la lettre après les sept chiffres. Il le porte comme valeur de sa
+     * clé, que l'écran dit dans la langue de la personne.
      */
     const erreur = (await creer("1856324/A/M/000")) ?? "";
-    assert.match(erreur, /1876543W\/A\/M\/000/, `le message doit montrer un exemple : ${erreur}`);
+    assert.deepEqual(
+      lireUnRefus(erreur),
+      {
+        cle: "refus.identifiant.invalide",
+        valeurs: { valeur: "1856324/A/M/000", exemple: "1876543W/A/M/000" },
+      },
+      `le message doit montrer un exemple : ${erreur}`,
+    );
   });
 
   /**

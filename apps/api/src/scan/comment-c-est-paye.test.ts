@@ -227,7 +227,7 @@ describe("le paiement d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
           devise: "TND",
           payeLe: "2026-10-09",
         }),
-      /n'existe pas au paramétrage/,
+      /refus\.paiement\.moyen_inconnu\?moyen=bitcoin$/,
       "sinon l'écriture s'appuierait sur un compte qui n'existe pas, et rien ne le dirait avant la balance",
     );
   });

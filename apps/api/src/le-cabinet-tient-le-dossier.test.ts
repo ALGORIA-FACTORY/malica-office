@@ -144,7 +144,7 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
           [cabinet, code],
         ),
       ),
-      /Seul l'expert/,
+      /refus\.reserve\.expert$/,
     );
     await assert.rejects(
       sousIdentite(collaborateur.id, (db) =>
@@ -171,7 +171,7 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
           [cabinet, code],
         ),
       ),
-      /avant sa date légale/,
+      /refus\.report\.avant_l_echeance\?date=/,
     );
     await sousIdentite(expert.id, (db) =>
       db.query(
@@ -193,7 +193,7 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
           code,
         ]),
       );
-    await assert.rejects(regler(collaborateur), /Seul l'expert/);
+    await assert.rejects(regler(collaborateur), /refus\.reserve\.expert$/);
     await regler(expert);
   });
 
@@ -249,10 +249,10 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
     } finally {
       c.release();
     }
-    await assert.rejects(budget(dirigeant), /plafond du mois/);
-    await assert.rejects(budget(expert), /plafond du mois/);
+    await assert.rejects(budget(dirigeant), /refus\.conseil\.plafond$/);
+    await assert.rejects(budget(expert), /refus\.conseil\.plafond$/);
     // Un tiers n'apprend rien du dossier, pas même son plafond.
-    await assert.rejects(budget(autreExpert), /non autorisee/);
+    await assert.rejects(budget(autreExpert), /refus\.introuvable\.organisation$/);
   });
 
   it("ANO-014 : une société n'a qu'une comptabilité mandatée à la fois", async () => {
@@ -262,7 +262,7 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
     assert.ok(second);
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, second.id, true)),
-      /déjà une comptabilité mandatée/,
+      /refus\.mandat\.un_seul_actif$/,
     );
   });
 });

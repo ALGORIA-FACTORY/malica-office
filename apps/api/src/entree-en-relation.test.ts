@@ -160,7 +160,7 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
         legalId: mf,
         adresse: null,
       }),
-      /déjà un dossier/,
+      /refus\.dossier\.matricule_existant$/,
     );
   });
 
@@ -172,7 +172,7 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
         legalId: `${String(Date.now()).slice(-7)}I/A/M/000`,
         adresse: null,
       }),
-      /Seul un expert du cabinet/,
+      /refus\.reserve\.expert$/,
     );
   });
 
@@ -269,7 +269,7 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(e[b.id], "en_attente");
     await assert.rejects(
       rpc(contact, "identite", "accepterInvitationParLien", a.jeton),
-      /n'est plus valable/,
+      /refus\.invitation\.expiree$/,
     );
   });
 
@@ -290,21 +290,24 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
     // Ni par le lien…
     await assert.rejects(
       rpc(contact, "identite", "accepterInvitationParLien", c.jeton),
-      /n'est plus valable/,
+      /refus\.invitation\.expiree$/,
     );
     // …ni par l'adresse, le chemin de l'écran /office.
     const pourMoi = (await rpc(contact, "collab", "invitationsPourMoi")) as { id: string }[];
     assert.ok(!pourMoi.some((i) => i.id === c.id), "une invitation révoquée n'est plus proposée");
     await assert.rejects(
       rpc(contact, "collab", "repondreAInvitation", c.id, true),
-      /n'est plus valable/,
+      /refus\.invitation\.expiree$/,
     );
     // Et révoquer ce qui l'est déjà, ou le faire sans mandat, est refusé.
-    await assert.rejects(rpc(expert, "identite", "revoquerInvitation", c.id), /en attente/);
+    await assert.rejects(
+      rpc(expert, "identite", "revoquerInvitation", c.id),
+      /refus\.invitation\.revocation$/,
+    );
     const d = await inviter();
     await assert.rejects(
       rpc(intrus, "identite", "revoquerInvitation", d.id),
-      /introuvable ou non autorisee/,
+      /refus\.introuvable\.invitation$/,
     );
   });
 
@@ -319,7 +322,7 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal((await etats())[e.id], "expiree");
     await assert.rejects(
       rpc(contact, "identite", "accepterInvitationParLien", e.jeton),
-      /n'est plus valable/,
+      /refus\.invitation\.expiree$/,
     );
   });
 
@@ -343,14 +346,14 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
   it("un cabinet sans mandat sur le dossier n'y invite personne", async () => {
     await assert.rejects(
       rpc(intrus, "identite", "inviterContact", dossier, `x-${marque}@essai.local`),
-      /Seul un expert du cabinet mandaté/,
+      /refus\.reserve\.expert_mandate$/,
     );
   });
 
   it("une autre adresse que celle invitée ne peut pas accepter", async () => {
     await assert.rejects(
       rpc(intrus, "identite", "accepterInvitationParLien", jeton),
-      /introuvable ou non autorisee/,
+      /refus\.introuvable\.invitation$/,
     );
   });
 
@@ -386,14 +389,14 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
   it("un lien déjà servi ne sert plus", async () => {
     await assert.rejects(
       rpc(contact, "identite", "accepterInvitationParLien", jeton),
-      /n'est plus valable/,
+      /refus\.invitation\.expiree$/,
     );
   });
 
   it("un dossier qui a son dirigeant ne reçoit plus d'invitation du cabinet", async () => {
     await assert.rejects(
       rpc(expert, "identite", "inviterContact", dossier, `second-${marque}@essai.local`),
-      /déjà son dirigeant/,
+      /refus\.dossier\.a_son_dirigeant$/,
     );
   });
 

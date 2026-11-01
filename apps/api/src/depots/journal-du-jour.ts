@@ -35,6 +35,7 @@ import type {
   OrigineAuJournal,
   SoldeDuJournal,
 } from "@malica/socle/ports/repositories";
+import { refusAvecValeurs } from "@malica/socle/refus-a-dire";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 
 import type { Requete } from "../db.ts";
@@ -99,7 +100,8 @@ export type Exposants = ReadonlyMap<string, number>;
 function exposantDe(exposants: Exposants, devise: string): number {
   const n = exposants.get(devise);
   // Aucun repli (R4) : une devise absent du référentiel n'a pas de précision connue.
-  if (n === undefined) throw new RefusExport(`devise inconnue du référentiel : ${devise}`);
+  if (n === undefined)
+    throw new RefusExport(refusAvecValeurs("refus.referentiel.devise_inconnue", { devise }));
   return n;
 }
 
@@ -430,9 +432,7 @@ async function calendrierDuCabinet(
   );
   const r = rows[0]?.r;
   if (!r?.fuseau || !r.aujourdhui) {
-    throw new RefusExport(
-      "le fuseau horaire du cabinet n'est pas défini : réglez-le dans les réglages du cabinet",
-    );
+    throw new RefusExport("refus.fuseau.non_defini");
   }
   return { fuseau: r.fuseau, aujourdhui: r.aujourdhui };
 }
@@ -585,13 +585,13 @@ export const journalDuJour = {
     locale: string,
     format: string,
   ): Promise<JournalExporte> {
-    if (!estFormat(format)) throw new RefusExport("ce format d'export n'existe pas");
+    if (!estFormat(format)) throw new RefusExport("refus.export.format_absent");
     verifierLeJour(jour);
     const ctx = await contexteDExport(db, cabinetTenantId, clientTenantId);
     const { fuseau, aujourdhui } = await calendrierDuCabinet(db, cabinetTenantId);
     // Un jour à venir n'a pas de journal : il ne prend pas de numéro.
     if (jour > aujourdhui) {
-      throw new RefusExport("ce jour est à venir : il n'a pas encore de journal à exporter");
+      throw new RefusExport("refus.export.jour_a_venir");
     }
 
     await db.query(`select pg_advisory_xact_lock(hashtextextended($1, 0))`, [

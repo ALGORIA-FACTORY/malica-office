@@ -134,7 +134,7 @@ describe("facturation.emettre", { skip: !ADMIN }, () => {
         db.query("select facturation.emettre($1, date_trunc('month', current_date)::date)", [
           licence,
         ]),
-        /aucun emetteur designe/,
+        /refus\.referentiel\.manquant$/,
       );
       await db.query("rollback to savepoint avant");
 
@@ -154,7 +154,7 @@ describe("facturation.emettre", { skip: !ADMIN }, () => {
         db.query("select facturation.emettre($1, date_trunc('month', current_date)::date)", [
           licence,
         ]),
-        /reserve aux operateurs/,
+        /refus\.reserve\.plateforme$/,
       );
     });
   });

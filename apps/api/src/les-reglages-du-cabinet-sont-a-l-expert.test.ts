@@ -76,7 +76,7 @@ describe("les réglages du cabinet sont à l'expert", { skip: !BASE_CONFIGUREE }
   });
 
   it("le collaborateur est refusé, en clair, et rien ne change", async () => {
-    await assert.rejects(definir(collaborateur, 0.95), /réservés à l'expert-comptable/);
+    await assert.rejects(definir(collaborateur, 0.95), /refus\.reserve\.expert$/);
     const { rows } = await admin.query<{ s: string }>(
       `select seuil_confiance_lot::text as s from collab.reglages_cabinet where tenant_id = $1`,
       [cabinet],

@@ -20,6 +20,8 @@ import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
 
+import { MESSAGES } from "@malica/socle/messages";
+
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
@@ -80,8 +82,12 @@ describe("un matricule, une société", { skip: !BASE_CONFIGUREE }, () => {
     await creer(a, mf);
     await assert.rejects(creer(b, mf), (e: Error & { code?: string }) => {
       assert.equal(e.code, "23505");
-      assert.match(e.message, /porte déjà ce matricule/);
-      assert.match(e.message, /Demandez l'accès à son dirigeant/);
+      assert.match(e.message, /refus\.societe\.matricule_existant$/);
+      // La clé se dit dans la langue de la personne, et dit quoi faire.
+      assert.match(
+        MESSAGES.fr["refus.societe.matricule_existant"],
+        /Demandez l’accès à son dirigeant/,
+      );
       return true;
     });
   });
@@ -89,7 +95,10 @@ describe("un matricule, une société", { skip: !BASE_CONFIGUREE }, () => {
   it("ni la casse ni les espaces ne contournent la règle", async () => {
     const mf = matriculeDEssai();
     await creer(a, mf);
-    await assert.rejects(creer(b, `  ${mf.toLowerCase()}  `), /porte déjà ce matricule/);
+    await assert.rejects(
+      creer(b, `  ${mf.toLowerCase()}  `),
+      /refus\.societe\.matricule_existant$/,
+    );
   });
 
   it("le même compte qui reprend son inscription retrouve SA société, sans doublon", async () => {
@@ -100,7 +109,10 @@ describe("un matricule, une société", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   it("un nom de société fait d'espaces est refusé avec un motif, pas une erreur interne", async () => {
-    await assert.rejects(creer(a, matriculeDEssai(), "  \t  "), /nom de la société est requis/);
+    await assert.rejects(
+      creer(a, matriculeDEssai(), "  \t  "),
+      /refus\.dossier\.raison_sociale_requise$/,
+    );
   });
 
   it("une société archivée libère son matricule", async () => {

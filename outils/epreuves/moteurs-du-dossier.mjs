@@ -718,7 +718,7 @@ const dotationDAvance = await e.rpcAttenduEnEchec("immo", "constaterDotation", [
 ]);
 e.verdict(
   "un exercice futur ne se constate pas d'avance",
-  dotationDAvance !== null && /pas encore ouvert/.test(String(dotationDAvance)),
+  dotationDAvance !== null && /refus\.immo\.exercice_a_venir\?/.test(String(dotationDAvance)),
   String(dotationDAvance ?? ""),
 );
 const modification = await e.rpcAttenduEnEchec("immo", "updateAsset", [
