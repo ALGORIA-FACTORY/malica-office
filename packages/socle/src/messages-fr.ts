@@ -736,6 +736,8 @@ export const fr = {
   "pme.regler.retour": "Retour",
   "pme.regler.demande":
     "{cabinet} a besoin d'une précision sur la facture {emetteur}. Pouvez-vous la reprendre en photo ?",
+  "pme.regler.demande.piece":
+    "{cabinet} vous a retourné la facture {emetteur}. Tout se fait depuis la pièce.",
   "pme.regler.motif": "Motif indiqué :",
   "pme.regler.motifInconnu": "non précisé",
   "pme.regler.reprendre": "Reprendre la photo",

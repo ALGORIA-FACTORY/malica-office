@@ -10,7 +10,7 @@ import { LivrablesRecus } from "@/components/malica/livrables-recus";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { dernierRetourParPiece } from "@/lib/retour-du-cabinet";
+import { dernierRetourParPiece, LIBELLE_DU_GESTE } from "@/lib/retour-du-cabinet";
 import { statutDeLaPieceLue } from "@/lib/lecture";
 import { jourOuInstant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
@@ -193,6 +193,13 @@ function ARegler() {
 
   const libelleDuMotif = (id: string | undefined) =>
     (motifs.data ?? []).find((m) => m.id === id)?.label ?? t("pme.regler.motifInconnu");
+  /**
+   * Le geste que le motif demande (`ref.rejet_motifs.geste`). « Reprendre la
+   * photo » n'est QUE le sien : un doublon demandait une photo de plus
+   * (recette du 1er novembre 2026). Motif inconnu : la photo, comme avant.
+   */
+  const gesteDuMotif = (id: string | undefined) =>
+    (motifs.data ?? []).find((m) => m.id === id)?.geste ?? "reprendre_photo";
 
   const emetteur = (pieceId: string | undefined) =>
     // Une pièce en attente de règlement a forcément été lue : le repli
@@ -320,63 +327,76 @@ function ARegler() {
                   <span>{retours.length}</span>
                 </div>
 
-                {retours.map(({ notif, charge }) => (
-                  <div key={notif.id} className="card">
-                    {/*
-                     * Le dessin met le motif dans l'en-tête de la carte, à la
-                     * place où il écrit « Refusée ». C'est le bon endroit : le
-                     * motif est GOUVERNÉ — il vient de `ref.rejet_motifs`, pas
-                     * d'un texte libre — et le dirigeant lit donc le même mot
-                     * que l'expert a choisi, à côté du nom de l'émetteur.
-                     */}
-                    <div className="hd">
-                      {charge.piece_id ? (
-                        <ApercuDePiece pieceId={charge.piece_id} className="vignette" />
-                      ) : null}
-                      <b>{emetteur(charge.piece_id)}</b>
-                      <span>
-                        {t("pme.regler.motif")} {libelleDuMotif(charge.motif_id)}
-                      </span>
-                    </div>
-
-                    {/*
-                     * Un seul paragraphe, et c'est le dessin qui le veut ainsi :
-                     * la note du cabinet telle qu'il l'a écrite, puis ce qu'elle
-                     * demande. `.card p` porte `margin:0` et la feuille n'a pas
-                     * de règle `p+p` ici — deux paragraphes se toucheraient.
-                     */}
-                    <p>
-                      {charge.note ? `« ${charge.note} » ` : ""}
-                      {t("pme.regler.demande", {
-                        cabinet: quiDuRetour(charge.piece_id),
-                        emetteur: emetteur(charge.piece_id),
-                      })}
-                    </p>
-
-                    <div className="b">
+                {retours.map(({ notif, charge }) => {
+                  const geste = gesteDuMotif(charge.motif_id);
+                  const photo = geste === "reprendre_photo";
+                  const ouvrir = (pieceId: string) =>
+                    void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
+                  return (
+                    <div key={notif.id} className="card">
                       {/*
-                       * Le geste principal : rouvrir l'obturateur. C'est le
-                       * même chemin que la barre du bas — scanner de
-                       * l'appareil s'il y en a un, le nôtre sinon.
+                       * Le dessin met le motif dans l'en-tête de la carte, à la
+                       * place où il écrit « Refusée ». C'est le bon endroit : le
+                       * motif est GOUVERNÉ — il vient de `ref.rejet_motifs`, pas
+                       * d'un texte libre — et le dirigeant lit donc le même mot
+                       * que l'expert a choisi, à côté du nom de l'émetteur.
                        */}
-                      <button type="button" onClick={() => pme.ouvrirScanner()}>
-                        {t("pme.regler.reprendre")}
-                      </button>
+                      <div className="hd">
+                        {charge.piece_id ? (
+                          <ApercuDePiece pieceId={charge.piece_id} className="vignette" />
+                        ) : null}
+                        <b>{emetteur(charge.piece_id)}</b>
+                        <span>
+                          {t("pme.regler.motif")} {libelleDuMotif(charge.motif_id)}
+                        </span>
+                      </div>
+
                       {/*
-                       * Un `<button class="sec">`, pas un `<Link>` : voir
-                       * l'en-tête du fichier — `.sec` sur un `<a>` prendrait
-                       * les règles du TITRE de section.
+                       * Un seul paragraphe, et c'est le dessin qui le veut ainsi :
+                       * la note du cabinet telle qu'il l'a écrite, puis ce qu'elle
+                       * demande. `.card p` porte `margin:0` et la feuille n'a pas
+                       * de règle `p+p` ici — deux paragraphes se toucheraient.
                        */}
-                      <BoutonVoir
-                        pieceId={charge.piece_id}
-                        libelle={t("pme.regler.voir")}
-                        ouvrir={(pieceId) =>
-                          void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } })
-                        }
-                      />
+                      <p>
+                        {charge.note ? `« ${charge.note} » ` : ""}
+                        {t(photo ? "pme.regler.demande" : "pme.regler.demande.piece", {
+                          cabinet: quiDuRetour(charge.piece_id),
+                          emetteur: emetteur(charge.piece_id),
+                        })}
+                      </p>
+
+                      <div className="b">
+                        {/*
+                         * Le geste principal : rouvrir l'obturateur. C'est le
+                         * même chemin que la barre du bas — scanner de
+                         * l'appareil s'il y en a un, le nôtre sinon.
+                         */}
+                        {photo ? (
+                          <>
+                            <button type="button" onClick={() => pme.ouvrirScanner()}>
+                              {t("pme.regler.reprendre")}
+                            </button>
+                            {/*
+                             * Un `<button class="sec">`, pas un `<Link>` : voir
+                             * l'en-tête du fichier — `.sec` sur un `<a>` prendrait
+                             * les règles du TITRE de section.
+                             */}
+                            <BoutonVoir
+                              pieceId={charge.piece_id}
+                              libelle={t("pme.regler.voir")}
+                              ouvrir={ouvrir}
+                            />
+                          </>
+                        ) : charge.piece_id ? (
+                          // Les autres gestes se font sur la pièce, où sa carte de retour les porte.
+                          <button type="button" onClick={() => ouvrir(charge.piece_id!)}>
+                            {t(LIBELLE_DU_GESTE[geste])}
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {/* Le ton, à la fin : aucune urgence. */}
                 <p className="foot">{t("pme.regler.rassure")}</p>
