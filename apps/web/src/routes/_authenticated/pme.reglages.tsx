@@ -188,24 +188,30 @@ function PmeReglages() {
           />
         </h2>
       </div>
-      <div className="card abo">
-        <div className="nm">
-          <b>
-            {f?.offre ? libelleDOffre(catalogue, f.offre) : ABSENT}
-            {f?.statut ? <span className="etat-lic"> · {etatDeLicence(f.statut, t)}</span> : null}
-          </b>
-          {COMMERCE ? (
-            <span className="px">
-              {f?.prix_mensuel_ht ? `${aLEchelle(f.prix_mensuel_ht)} ${pme.currency}` : ABSENT}
+      {/*
+       * L'offre en cours, en carte de tête (maquette du 1er novembre 2026) :
+       * son nom en grand, son état en pastille, le prix et ce qu'il comprend.
+       */}
+      <div className="card abo hero">
+        <div className="kick">
+          <u>{t("pme.reglages.abo.kicker")}</u>
+          {f?.statut ? (
+            <span className={cn("pill", f.statut !== "active" && "am")}>
+              <i aria-hidden />
+              {etatDeLicence(f.statut, t)}
             </span>
           ) : null}
         </div>
-        {COMMERCE ? (
-          <>
-            <p className="ttc">{t("pme.reglages.abo.ht")}</p>
-            <TtcEtReport ht={f?.prix_mensuel_ht ?? null} />
-          </>
-        ) : null}
+        <div className="nm">
+          <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : ABSENT}</b>
+          {COMMERCE ? (
+            <span className="px">
+              {f?.prix_mensuel_ht ? aLEchelle(f.prix_mensuel_ht) : ABSENT}
+              <small>{t("pme.reglages.abo.parMois", { devise: pme.currency })}</small>
+            </span>
+          ) : null}
+        </div>
+        {COMMERCE ? <TtcEtReport ht={f?.prix_mensuel_ht ?? null} /> : null}
 
         <div className="det">
           <div>
@@ -262,6 +268,8 @@ function PmeReglages() {
        */}
       {COMMERCE ? (
         <>
+          {/* Ce qui reste à payer, juste sous l'offre : c'est le geste qui attend. */}
+          <ARegler />
           <div className="sec">
             <h2>
               {t("pme.reglages.offres")}
@@ -273,7 +281,6 @@ function PmeReglages() {
           </div>
           <ChangerDOffre />
           <PayerALAnnee />
-          <ARegler />
           <MesFactures />
 
           <div className="sec">
