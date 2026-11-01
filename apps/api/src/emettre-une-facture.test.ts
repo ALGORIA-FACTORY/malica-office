@@ -18,6 +18,7 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
+import { personnesDEssai } from "./personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 
@@ -43,10 +44,12 @@ async function preparer(
   const operateur = randomUUID();
   const licence = randomUUID();
   const titulaire = randomUUID();
+  await personnesDEssai(db, operateur);
   await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
   // Une facture s'adresse a QUELQU'UN : `emettre` exige un destinataire nomme
   // et refuse de se rabattre sur un libelle plausible. Le titulaire a donc un
   // profil, comme toute personne que l'application connait.
+  await personnesDEssai(db, titulaire);
   await db.query("insert into identity.profiles (user_id, display_name) values ($1, $2)", [
     titulaire,
     "Selim Ben Amor",
@@ -63,6 +66,7 @@ async function preparer(
      values ('pme', 'Abonnee d''essai', 'TN', 'TND') returning id`,
   );
   // Le titulaire doit être dirigeant de l'organisation qu'il rattache.
+  await personnesDEssai(db, titulaire);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
     [abonnee[0]!.id, titulaire],
@@ -102,7 +106,7 @@ describe("facturation.emettre", { skip: !ADMIN }, () => {
       await enOperateur(db, operateur);
 
       const { rows: r } = await db.query<{ r: { facture_id: string } }>(
-        "select facturation.emettre($1, date '2026-10-01') as r",
+        "select facturation.emettre($1, date_trunc('month', current_date)::date) as r",
         [licence],
       );
       const { rows } = await db.query<{ devise: string; taux_tva: string; timbre: string }>(
@@ -127,7 +131,9 @@ describe("facturation.emettre", { skip: !ADMIN }, () => {
 
       await db.query("savepoint avant");
       await assert.rejects(
-        db.query("select facturation.emettre($1, date '2026-10-01')", [licence]),
+        db.query("select facturation.emettre($1, date_trunc('month', current_date)::date)", [
+          licence,
+        ]),
         /aucun emetteur designe/,
       );
       await db.query("rollback to savepoint avant");
@@ -145,7 +151,9 @@ describe("facturation.emettre", { skip: !ADMIN }, () => {
       await enOperateur(db, randomUUID());
 
       await assert.rejects(
-        db.query("select facturation.emettre($1, date '2026-10-01')", [licence]),
+        db.query("select facturation.emettre($1, date_trunc('month', current_date)::date)", [
+          licence,
+        ]),
         /reserve aux operateurs/,
       );
     });

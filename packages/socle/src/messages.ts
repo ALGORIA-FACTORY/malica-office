@@ -2080,6 +2080,46 @@ const fr = {
     "Une nouvelle photo a remplacé cette pièce : c’est la nouvelle qui se traite.",
   "refus.piece.origine_immuable": "Une pièce garde son dossier, son auteur et sa source.",
   "refus.piece.archivee": "Le client a retiré cette pièce : elle est archivée.",
+  "refus.introuvable": "Introuvable, ou vous n’y avez pas accès.",
+  "refus.supervision.second_regard":
+    "La supervision exige un second regard : celui qui a inscrit l’écriture ne la valide pas lui-même.",
+  "refus.moteur.organisation_a_preciser": "Précisez l’organisation : plusieurs vous concernent.",
+  "refus.moteur.valeur_non_admise": "Cette valeur n’est pas admise : « {valeur} ».",
+  "refus.moteur.une_valeur_non_admise": "Une des valeurs envoyées n’est pas admise.",
+  "refus.moteur.periode_couverte":
+    "Une version couvre déjà cette période : faites commencer la nouvelle à une autre date.",
+  "refus.moteur.valeur_obligatoire": "Une valeur obligatoire manque.",
+  "refus.moteur.texte_trop_long": "Un des textes envoyés est trop long.",
+  "refus.moteur.nombre_hors_limites": "Un des nombres envoyés est hors limites.",
+  "refus.moteur.date_illisible": "Une des dates envoyées n’est pas lisible.",
+  "refus.moteur.date_inexistante": "Une des dates envoyées n’existe pas.",
+  "refus.moteur.caractere_illisible": "Un des textes envoyés contient un caractère illisible.",
+  "refus.moteur.geste_non_permis": "Ce geste ne vous est pas permis sur ce dossier.",
+  "refus.moteur.recommencez": "Un autre geste vient de modifier ces données : recommencez.",
+  "refus.moteur.existe_deja": "Cet élément existe déjà.",
+  "refus.moteur.rattachement_absent": "Ce rattachement n’existe pas, ou n’est plus disponible.",
+  "refus.deplacer.pas_la_sienne":
+    "Seul l’auteur d’une pièce la déplace entre Mon espace et la société.",
+  "refus.deplacer.chez_le_proprietaire":
+    "Cette pièce est chez le propriétaire : demandez-la-lui, elle ne se reprend pas dans Mon espace.",
+  "refus.envoi.proprietaire.droit":
+    "Vous n’avez pas le droit d’envoyer des pièces au propriétaire dans cette société.",
+  "refus.envoi.proprietaire.pas_la_sienne":
+    "Vous n’envoyez au propriétaire que vos propres pièces.",
+  "refus.envoi.proprietaire.hors_societe":
+    "Mettez d’abord la pièce dans la société, puis envoyez-la au propriétaire.",
+  "refus.envoi.reserve_au_proprietaire":
+    "Seul le propriétaire envoie les pièces à la comptabilité, ou les en reprend.",
+  "refus.garder.reserve_au_proprietaire":
+    "Seul le propriétaire décide de garder une pièce sans l’envoyer à la comptabilité.",
+  "refus.place.proprietaire":
+    "Le propriétaire n’occupe pas une place : il ne se retire pas par ce geste.",
+  "refus.remplacement.introuvable":
+    "La pièce à reprendre n’est plus là : gardez la photo comme une nouvelle pièce.",
+  "refus.retour.rien_recu": "Cette pièce ne vous a pas été envoyée : il n’y a rien à retourner.",
+  "refus.suppression.pas_la_sienne": "Vous ne supprimez que vos propres pièces.",
+  "refus.suppression.chez_le_proprietaire":
+    "Cette pièce est chez le propriétaire : demandez-lui de la retourner, puis supprimez-la.",
   "refus.remplacement.accompagne":
     "Un reçu ou un justificatif se reprend depuis le règlement qu’il accompagne.",
   "refus.remplacement.inscrite":
@@ -6070,6 +6110,45 @@ const en: Dict = {
   "refus.piece.remplacee": "A new photo replaced this document: the new one is the one to handle.",
   "refus.piece.origine_immuable": "A document keeps its file, its author and its source.",
   "refus.piece.archivee": "The client withdrew this document: it is archived.",
+  "refus.introuvable": "Not found, or you do not have access to it.",
+  "refus.supervision.second_regard":
+    "Supervision requires a second look: whoever recorded the entry does not validate it themselves.",
+  "refus.moteur.organisation_a_preciser": "Specify the organisation: several concern you.",
+  "refus.moteur.valeur_non_admise": "This value is not allowed: “{valeur}”.",
+  "refus.moteur.une_valeur_non_admise": "One of the values sent is not allowed.",
+  "refus.moteur.periode_couverte":
+    "A version already covers this period: start the new one on another date.",
+  "refus.moteur.valeur_obligatoire": "A required value is missing.",
+  "refus.moteur.texte_trop_long": "One of the texts sent is too long.",
+  "refus.moteur.nombre_hors_limites": "One of the numbers sent is out of range.",
+  "refus.moteur.date_illisible": "One of the dates sent cannot be read.",
+  "refus.moteur.date_inexistante": "One of the dates sent does not exist.",
+  "refus.moteur.caractere_illisible": "One of the texts sent contains an unreadable character.",
+  "refus.moteur.geste_non_permis": "This action is not allowed for you on this file.",
+  "refus.moteur.recommencez": "Another action has just changed this data: try again.",
+  "refus.moteur.existe_deja": "This item already exists.",
+  "refus.moteur.rattachement_absent": "This link does not exist, or is no longer available.",
+  "refus.deplacer.pas_la_sienne":
+    "Only the author of a document moves it between My space and the company.",
+  "refus.deplacer.chez_le_proprietaire":
+    "This document is with the owner: ask them for it; it cannot be taken back into My space.",
+  "refus.envoi.proprietaire.droit":
+    "You are not allowed to send documents to the owner in this company.",
+  "refus.envoi.proprietaire.pas_la_sienne": "You can only send your own documents to the owner.",
+  "refus.envoi.proprietaire.hors_societe":
+    "Put the document in the company first, then send it to the owner.",
+  "refus.envoi.reserve_au_proprietaire":
+    "Only the owner sends documents to the accountant, or takes them back.",
+  "refus.garder.reserve_au_proprietaire":
+    "Only the owner decides to keep a document without sending it to the accountant.",
+  "refus.place.proprietaire":
+    "The owner does not take up a place: they cannot be removed this way.",
+  "refus.remplacement.introuvable":
+    "The document to retake is no longer there: keep the photo as a new document.",
+  "refus.retour.rien_recu": "This document was not sent to you: there is nothing to return.",
+  "refus.suppression.pas_la_sienne": "You can only delete your own documents.",
+  "refus.suppression.chez_le_proprietaire":
+    "This document is with the owner: ask them to return it, then delete it.",
   "refus.remplacement.accompagne":
     "A receipt or a proof of payment is retaken from the payment it goes with.",
   "refus.remplacement.inscrite":
@@ -9907,6 +9986,38 @@ const ar: Dict = {
   "refus.piece.remplacee": "حلّت صورة جديدة محلّ هذه الوثيقة: الجديدة هي التي تُعالَج.",
   "refus.piece.origine_immuable": "تحتفظ الوثيقة بملفّها وصاحبها ومصدرها.",
   "refus.piece.archivee": "سحب الحريف هذه الوثيقة: هي مؤرشفة.",
+  "refus.introuvable": "غير موجود، أو ليس لك حق الوصول إليه.",
+  "refus.supervision.second_regard":
+    "تتطلّب المراجعة نظرة ثانية: من سجّل القيد لا يصادق عليه بنفسه.",
+  "refus.moteur.organisation_a_preciser": "حدّد المؤسسة: تعنيك أكثر من واحدة.",
+  "refus.moteur.valeur_non_admise": "هذه القيمة غير مقبولة: «{valeur}».",
+  "refus.moteur.une_valeur_non_admise": "إحدى القيم المرسلة غير مقبولة.",
+  "refus.moteur.periode_couverte": "نسخة تغطي هذه الفترة مسبقًا: اجعل الجديدة تبدأ في تاريخ آخر.",
+  "refus.moteur.valeur_obligatoire": "قيمة إلزامية ناقصة.",
+  "refus.moteur.texte_trop_long": "أحد النصوص المرسلة طويل جدًا.",
+  "refus.moteur.nombre_hors_limites": "أحد الأرقام المرسلة خارج الحدود المسموح بها.",
+  "refus.moteur.date_illisible": "أحد التواريخ المرسلة غير مقروء.",
+  "refus.moteur.date_inexistante": "أحد التواريخ المرسلة غير موجود.",
+  "refus.moteur.caractere_illisible": "أحد النصوص المرسلة يحتوي على حرف غير مقروء.",
+  "refus.moteur.geste_non_permis": "هذا الإجراء غير مسموح لك في هذا الملف.",
+  "refus.moteur.recommencez": "إجراء آخر غيّر هذه البيانات للتوّ: أعد المحاولة.",
+  "refus.moteur.existe_deja": "هذا العنصر موجود مسبقًا.",
+  "refus.moteur.rattachement_absent": "هذا الربط غير موجود أو لم يعد متاحًا.",
+  "refus.deplacer.pas_la_sienne": "وحده صاحب الوثيقة ينقلها بين مساحتي والشركة.",
+  "refus.deplacer.chez_le_proprietaire":
+    "هذه الوثيقة عند المالك: اطلبها منه، فهي لا تُستعاد إلى مساحتي.",
+  "refus.envoi.proprietaire.droit": "ليس لك حق إرسال الوثائق إلى المالك في هذه الشركة.",
+  "refus.envoi.proprietaire.pas_la_sienne": "لا ترسل إلى المالك إلا وثائقك أنت.",
+  "refus.envoi.proprietaire.hors_societe": "ضع الوثيقة في الشركة أولًا، ثم أرسلها إلى المالك.",
+  "refus.envoi.reserve_au_proprietaire": "وحده المالك يرسل الوثائق إلى المحاسب أو يستعيدها منه.",
+  "refus.garder.reserve_au_proprietaire":
+    "وحده المالك يقرّر الاحتفاظ بوثيقة دون إرسالها إلى المحاسب.",
+  "refus.place.proprietaire": "المالك لا يشغل مقعدًا: لا يُسحب بهذه الطريقة.",
+  "refus.remplacement.introuvable":
+    "الوثيقة المراد إعادة تصويرها لم تعد موجودة: احتفظ بالصورة كوثيقة جديدة.",
+  "refus.retour.rien_recu": "لم تُرسَل إليك هذه الوثيقة: لا شيء لإرجاعه.",
+  "refus.suppression.pas_la_sienne": "لا تحذف إلا وثائقك أنت.",
+  "refus.suppression.chez_le_proprietaire": "هذه الوثيقة عند المالك: اطلب منه إرجاعها، ثم احذفها.",
   "refus.remplacement.accompagne": "يُعاد تصوير الوصل أو إثبات الدفع من الدفعة التي يرافقها.",
   "refus.remplacement.inscrite": "تكفّل محاسبك بهذه الوثيقة: يُرجعها أولًا، ثم يُعاد تصويرها.",
   "refus.remplacement.nouvelle_photo":

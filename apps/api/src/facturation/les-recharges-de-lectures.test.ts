@@ -18,6 +18,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { facturation } from "../depots/facturation.ts";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -40,10 +41,12 @@ async function societe(db: pg.PoolClient, offre: "basic" | "solo" | "team"): Pro
      values ('pme', 'Recharge d''essai', 'TN', 'TND') returning id`,
   );
   const tenant = org.rows[0]!.id;
+  await personnesDEssai(db, principal);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
     [tenant, principal],
   );
+  await personnesDEssai(db, principal);
   await db.query("insert into identity.profiles (user_id, display_name) values ($1, $2)", [
     principal,
     "Wissem Barouni",
@@ -60,6 +63,7 @@ async function societe(db: pg.PoolClient, offre: "basic" | "solo" | "team"): Pro
   let collaborateur = "";
   if (offre === "team") {
     collaborateur = randomUUID();
+    await personnesDEssai(db, collaborateur);
     await db.query(
       "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')",
       [tenant, collaborateur],
@@ -218,6 +222,7 @@ describe("les recharges de lectures", { skip: !ADMIN }, () => {
     await dansUneTransaction(async (db) => {
       const s = await societe(db, "team");
       const proprietaire = randomUUID();
+      await personnesDEssai(db, proprietaire);
       await db.query(
         "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
         [s.tenant, proprietaire],
@@ -381,6 +386,7 @@ describe("les recharges de lectures", { skip: !ADMIN }, () => {
       const s = await societe(db, "solo");
       await acheter(db, s);
       const operateur = randomUUID();
+      await personnesDEssai(db, operateur);
       await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
       const em = await db.query<{ id: string }>(
         `insert into identity.organizations (kind, name, jurisdiction, currency)

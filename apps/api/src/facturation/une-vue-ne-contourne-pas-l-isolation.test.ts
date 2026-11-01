@@ -25,6 +25,7 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -45,6 +46,7 @@ async function abonner(db: pg.PoolClient, nom: string, ht: number): Promise<Abon
     [`Abonné ${nom}`],
   );
   const tenant = org.rows[0]!.id;
+  await personnesDEssai(db, titulaire);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
     [tenant, titulaire],
@@ -54,6 +56,7 @@ async function abonner(db: pg.PoolClient, nom: string, ht: number): Promise<Abon
   // destinataire, et ne se rabat pas sur le nom de la societe servie — ce
   // serait une mention legale fausse. Le titulaire a donc un profil, comme
   // toute personne que l'application connait.
+  await personnesDEssai(db, titulaire);
   await db.query("insert into identity.profiles (user_id, display_name) values ($1, $2)", [
     titulaire,
     `Titulaire ${nom}`,
@@ -136,6 +139,7 @@ describe("les vues accordées n'ouvrent pas l'isolation entre clients", { skip: 
       const a = await abonner(db, "A", 100);
       const b = await abonner(db, "B", 200);
       const operateur = randomUUID();
+      await personnesDEssai(db, operateur);
       await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
       await corps(db, a, b, operateur);
     } finally {

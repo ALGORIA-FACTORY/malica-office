@@ -26,6 +26,7 @@ import pg from "pg";
 
 import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && ADMIN);
@@ -64,10 +65,12 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
       [`${nom} ${marque}`],
     );
     const tenant = org.rows[0]!.id;
+    await personnesDEssai(admin, titulaire);
     await admin.query(
       "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
       [tenant, titulaire],
     );
+    await personnesDEssai(admin, titulaire);
     await admin.query("insert into identity.profiles (user_id, display_name) values ($1, $2)", [
       titulaire,
       `Dirigeant ${nom}`,
@@ -85,10 +88,12 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
     for (let i = 0; i < sieges; i++) {
       const c = randomUUID();
       collaborateurs.push(c);
+      await personnesDEssai(admin, c);
       await admin.query(
         "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')",
         [tenant, c],
       );
+      await personnesDEssai(admin, c);
       await admin.query("insert into identity.profiles (user_id, display_name) values ($1, $2)", [
         c,
         `Collaborateur ${i} ${nom}`,
@@ -115,6 +120,7 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
     a = await abonner("Alpha", 2, 2);
     b = await abonner("Bravo", 10, 1);
     s = await abonner("Solo", 0, 0, "solo");
+    await personnesDEssai(admin, operateur);
     await admin.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
   });
 

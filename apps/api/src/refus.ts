@@ -19,6 +19,8 @@
  * un message avec eux est une fuite en puissance.
  */
 
+import { refusAvecValeurs } from "@malica/socle/refus-a-dire";
+
 /** Les codes que nos déclencheurs emploient pour refuser. */
 const CODES_DE_REFUS = new Set([
   "23505", // unique_violation        — « ce compte existe déjà »
@@ -30,10 +32,12 @@ const CODES_DE_REFUS = new Set([
   "40001", // serialization_failure   — « un autre export vient d'être produit : recommencez »
 ]);
 
-/** Les règles de la base qui se nomment dans leur message, et ce qu'elles disent. */
+/**
+ * Les règles de la base qui se nomment dans leur message, et la clé qui les
+ * dit (`@malica/socle/messages`, en fr, en et ar).
+ */
 const REGLES_NOMMEES: Readonly<Record<string, string>> = {
-  chk_ecr_4eyes:
-    "la supervision exige un second regard : celui qui a inscrit l'écriture ne la valide pas lui-même",
+  chk_ecr_4eyes: "refus.supervision.second_regard",
 };
 
 interface ErreurPostgres {
@@ -55,8 +59,10 @@ interface ErreurPostgres {
  * `500 « erreur interne »` pour une faute de saisie (famille D29) ; les répéter
  * serait la fuite que ce fichier existe pour empêcher.
  *
- * Alors on les traduit : notre phrase, et d'elles on ne retient que ce qui
- * vient déjà de l'appelant — la valeur qu'il a proposée.
+ * Alors on les traduit : notre CLÉ, que l'écran dit dans la langue de la
+ * personne (audit du 1er novembre 2026 : ces phrases partaient en français à
+ * un écran arabe), et d'elles on ne retient que ce qui vient déjà de
+ * l'appelant — la valeur qu'il a proposée, qui suit la clé (`refusAvecValeurs`).
  *
  * La langue des messages de PostgreSQL suit la locale du serveur : français
  * sur le poste, anglais sur le staging. L'extraction accepte donc les deux
@@ -66,33 +72,32 @@ interface ErreurPostgres {
 const TRADUCTIONS: Record<string, (e: ErreurPostgres) => string> = {
   // cardinality_violation - `mon_forfait` sans organisation, pour quelqu'un qui
   // en tient plusieurs (sentinelle du 21 octobre 2026 : 500).
-  "21000": () => "précisez l'organisation : plusieurs vous concernent",
+  "21000": () => "refus.moteur.organisation_a_preciser",
   // invalid_text_representation — un mode de validation qui n'existe pas, une
   // date illisible, un identifiant tronqué.
   "22P02": (e) => {
     const m = /(?:«\s*(.*?)\s*»|"(.*?)")\s*$/.exec(e.message ?? "");
     const valeur = (m?.[1] ?? m?.[2])?.trim();
     return valeur
-      ? `cette valeur n'est pas admise : « ${valeur} »`
-      : "une des valeurs envoyées n'est pas admise";
+      ? refusAvecValeurs("refus.moteur.valeur_non_admise", { valeur })
+      : "refus.moteur.une_valeur_non_admise";
   },
   // exclusion_violation — deux versions datées se chevauchent : une fiche
   // fiscale réécrite à la date où commence déjà la précédente, par exemple.
-  "23P01": () =>
-    "une version couvre déjà cette période : faites commencer la nouvelle à une autre date",
+  "23P01": () => "refus.moteur.periode_couverte",
   // Campagne du 21 octobre 2026 (ANO-036) : ces refus du moteur sortaient en 500.
   // not_null_violation — un champ requis manque.
-  "23502": () => "une valeur obligatoire manque",
+  "23502": () => "refus.moteur.valeur_obligatoire",
   // string_data_right_truncation — un texte plus long que la colonne.
-  "22001": () => "un des textes envoyés est trop long",
+  "22001": () => "refus.moteur.texte_trop_long",
   // numeric_value_out_of_range — un montant ou une quantité hors limites.
-  "22003": () => "un des nombres envoyés est hors limites",
+  "22003": () => "refus.moteur.nombre_hors_limites",
   // invalid_datetime_format, datetime_field_overflow — une date illisible.
-  "22007": () => "une des dates envoyées n'est pas lisible",
-  "22008": () => "une des dates envoyées n'existe pas",
+  "22007": () => "refus.moteur.date_illisible",
+  "22008": () => "refus.moteur.date_inexistante",
   // character_not_in_repertoire, untranslatable_character — un octet nul.
-  "22021": () => "un des textes envoyés contient un caractère illisible",
-  "22P05": () => "un des textes envoyés contient un caractère illisible",
+  "22021": () => "refus.moteur.caractere_illisible",
+  "22P05": () => "refus.moteur.caractere_illisible",
 };
 
 /**
@@ -122,7 +127,7 @@ export function refusLisible(erreur: unknown): string | null {
    * celle du moteur et nomme une table. On dit le refus, pas la table.
    */
   if (e.code === "42501" && /row-level security|sécurité au niveau ligne/i.test(e.message ?? ""))
-    return "ce geste ne vous est pas permis sur ce dossier";
+    return "refus.moteur.geste_non_permis";
 
   /*
    * Un DROIT refusé sur une table ou une vue n'est pas un refus adressé à
@@ -139,21 +144,20 @@ export function refusLisible(erreur: unknown): string | null {
 
   // Deux gestes simultanés : notre `raise` dit lequel ; celui du moteur nomme
   // ses verrous, et ne se montre pas.
-  if (e.code === "40001" && !/recommencez/.test(e.message ?? ""))
-    return "un autre geste vient de modifier ces données : recommencez";
+  if (e.code === "40001" && !/recommencez/.test(e.message ?? "")) return "refus.moteur.recommencez";
 
   // Peuplés par PostgreSQL, jamais par un `raise` : c'est la signature d'une
   // violation détectée par le moteur, dont le message porte des noms internes.
   if (e.constraint || e.table || e.column) {
     // Un doublon détecté par un index unique reste un refus lisible — sans
     // le nom de l'index (recette : « ce compte existe déjà » rendait un 500).
-    if (e.code === "23505") return "cet élément existe déjà";
+    if (e.code === "23505") return "refus.moteur.existe_deja";
     // Campagne du 21 octobre 2026 (ANO-036) : une famille, une catégorie ou
     // un compte inconnus, une valeur hors de la liste admise, une valeur
     // obligatoire absente sortaient en 500. Ce sont des fautes de saisie :
     // notre phrase, jamais le nom de la contrainte.
-    if (e.code === "23503") return "ce rattachement n'existe pas, ou n'est plus disponible";
-    if (e.code === "23514") return "une des valeurs envoyées n'est pas admise";
+    if (e.code === "23503") return "refus.moteur.rattachement_absent";
+    if (e.code === "23514") return "refus.moteur.une_valeur_non_admise";
     return null;
   }
 
@@ -180,6 +184,6 @@ export function introuvableLisible(erreur: unknown): string | null {
   // d'autrui ou le conseil sur un dossier étranger sortaient en 500 (ANO-036).
   return /^[a-z_]+\.(not_found|introuvable)$/.test(erreur.message) ||
     /\bintrouvable ou non autoris/.test(erreur.message)
-    ? "introuvable, ou vous n'y avez pas accès"
+    ? "refus.introuvable"
     : null;
 }

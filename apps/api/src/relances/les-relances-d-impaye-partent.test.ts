@@ -13,6 +13,7 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -57,16 +58,19 @@ async function unImpaye(db: pg.PoolClient, palier: "suspension" | "rappel") {
     titulaire,
     `${titulaire}@essai.local`,
   ]);
+  await personnesDEssai(db, operateur);
   await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
   const o = await db.query<{ id: string }>(
     `insert into identity.organizations (kind, name, jurisdiction, currency)
      values ('pme', 'Relance d''essai', 'TN', 'TND') returning id`,
   );
   const tenant = o.rows[0]!.id;
+  await personnesDEssai(db, titulaire);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
     [tenant, titulaire],
   );
+  await personnesDEssai(db, titulaire);
   await db.query("insert into identity.profiles (user_id, display_name) values ($1, 'Essai')", [
     titulaire,
   ]);
@@ -191,6 +195,7 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
   it("qui a refusé les courriels reçoit la relance dans l'application", async () => {
     await aBlanc(async (db) => {
       const d = await unImpaye(db, "rappel");
+      await personnesDEssai(db, d.titulaire);
       await db.query(
         `insert into notif.preferences (user_id, email_actif) values ($1, false)
          on conflict (user_id) do update set email_actif = false`,

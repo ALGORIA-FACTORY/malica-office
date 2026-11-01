@@ -18,6 +18,7 @@ import pg from "pg";
 
 import { facturation } from "../depots/facturation.ts";
 import { ADAPTATEURS } from "../paiement/prestataires.ts";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -54,16 +55,19 @@ async function aBlanc(corps: (db: pg.PoolClient) => Promise<void>) {
 async function unPaiement(db: pg.PoolClient) {
   const principal = randomUUID();
   const operateur = randomUUID();
+  await personnesDEssai(db, operateur);
   await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
   const o = await db.query<{ id: string }>(
     `insert into identity.organizations (kind, name, jurisdiction, currency)
      values ('pme', 'Moyens d''essai', 'TN', 'TND') returning id`,
   );
   const tenant = o.rows[0]!.id;
+  await personnesDEssai(db, principal);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
     [tenant, principal],
   );
+  await personnesDEssai(db, principal);
   await db.query("insert into identity.profiles (user_id, display_name) values ($1, 'Essai')", [
     principal,
   ]);

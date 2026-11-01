@@ -24,10 +24,7 @@ describe("refus lisible", () => {
       code: "40001",
       message: "could not serialize access due to concurrent update",
     };
-    assert.equal(
-      refusLisible(moteur),
-      "un autre geste vient de modifier ces données : recommencez",
-    );
+    assert.equal(refusLisible(moteur), "refus.moteur.recommencez");
   });
 
   it("rend le message d'un refus écrit par un déclencheur", () => {
@@ -52,24 +49,21 @@ describe("refus lisible", () => {
       constraint: "auxiliaires_tenant_id_nature_code_key",
       table: "auxiliaires",
     };
-    assert.equal(refusLisible(erreur), "cet élément existe déjà");
+    assert.equal(refusLisible(erreur), "refus.moteur.existe_deja");
     // Depuis le 21 octobre 2026 (ANO-036), un rattachement inconnu et une
     // valeur hors liste sont dits, eux aussi, par notre phrase — jamais par
     // celle du moteur, qui nomme la contrainte.
     const fk = refusLisible({ ...erreur, code: "23503" });
-    assert.equal(fk, "ce rattachement n'existe pas, ou n'est plus disponible");
+    assert.equal(fk, "refus.moteur.rattachement_absent");
     assert.ok(!fk?.includes("auxiliaires"));
-    assert.equal(
-      refusLisible({ ...erreur, code: "23514" }),
-      "une des valeurs envoyées n'est pas admise",
-    );
+    assert.equal(refusLisible({ ...erreur, code: "23514" }), "refus.moteur.une_valeur_non_admise");
     // Une violation que nous ne traduisons pas reste tue.
     assert.equal(refusLisible({ ...erreur, code: "23P02" }), null);
   });
 
   it("un forfait demandé sans organisation, par qui en tient plusieurs, est un refus (ANO-036)", () => {
     const phrase = refusLisible({ code: "21000", message: "plusieurs licences pour ce titulaire" });
-    assert.match(phrase ?? "", /précisez l'organisation/);
+    assert.equal(phrase, "refus.moteur.organisation_a_preciser");
   });
 
   it("dit le quatre-yeux par sa phrase, pas par le nom de sa règle (ANO-CAB-005)", () => {
@@ -79,7 +73,7 @@ describe("refus lisible", () => {
         "chk_ecr_4eyes : en mode mandat, le superviseur ne peut pas etre celui qui a comptabilise",
     });
     assert.ok(phrase && !phrase.includes("chk_"), phrase ?? "");
-    assert.match(phrase, /second regard/);
+    assert.equal(phrase, "refus.supervision.second_regard");
   });
 
   it("dit un refus de RLS sans nommer la table", () => {
@@ -87,7 +81,7 @@ describe("refus lisible", () => {
       code: "42501",
       message: 'new row violates row-level security policy for table "invitations"',
     });
-    assert.equal(rendu, "ce geste ne vous est pas permis sur ce dossier");
+    assert.equal(rendu, "refus.moteur.geste_non_permis");
   });
 
   it("un droit refusé sur une table est une panne, pas un refus : il va au journal", () => {
@@ -104,14 +98,16 @@ describe("refus lisible", () => {
   });
 
   it("un code « introuvable » d'un dépôt devient un 404 lisible, pas une panne", () => {
-    assert.match(introuvableLisible(new Error("piece.not_found")) ?? "", /introuvable/);
-    assert.match(introuvableLisible(new Error("organisation.introuvable")) ?? "", /introuvable/);
+    // Une CLÉ, que l'écran dit dans la langue de la personne (audit du
+    // 1er novembre 2026 : la phrase française partait telle quelle).
+    assert.equal(introuvableLisible(new Error("piece.not_found")), "refus.introuvable");
+    assert.equal(introuvableLisible(new Error("organisation.introuvable")), "refus.introuvable");
     // ANO-036 : le paiement d'une pièce d'autrui, le conseil sur un dossier étranger.
     for (const phrase of [
       "piece introuvable ou non autorisee",
       "cabinet introuvable ou non autorisé",
     ]) {
-      assert.match(introuvableLisible(new Error(phrase)) ?? "", /introuvable/, phrase);
+      assert.equal(introuvableLisible(new Error(phrase)), "refus.introuvable", phrase);
     }
     assert.equal(introuvableLisible(new Error("réseau coupé")), null);
   });
@@ -153,12 +149,12 @@ describe("refus lisible", () => {
       table: "fiches_fiscales",
     };
 
-    it("rend la valeur refusée, et elle seule", () => {
-      assert.equal(refusLisible(ENUM_FR), "cette valeur n'est pas admise : « assistee »");
+    it("rend la valeur refusée, et elle seule, à la suite de sa clé", () => {
+      assert.equal(refusLisible(ENUM_FR), "refus.moteur.valeur_non_admise?valeur=assistee");
     });
 
     it("lit aussi la ponctuation anglaise : la locale du serveur n'est pas la nôtre", () => {
-      assert.equal(refusLisible(ENUM_EN), "cette valeur n'est pas admise : « assistee »");
+      assert.equal(refusLisible(ENUM_EN), "refus.moteur.valeur_non_admise?valeur=assistee");
     });
 
     it("ne livre ni le schéma, ni le type, ni la contrainte", () => {
@@ -171,13 +167,13 @@ describe("refus lisible", () => {
     it("traduit un chevauchement bien que PostgreSQL ait nommé la contrainte", () => {
       // Le filtre `constraint || table || column` tairait ce message ; la
       // traduction passe avant lui, justement parce qu'elle n'en répète rien.
-      assert.match(refusLisible(CHEVAUCHEMENT) ?? "", /couvre déjà cette période/);
+      assert.equal(refusLisible(CHEVAUCHEMENT), "refus.moteur.periode_couverte");
     });
 
     it("se replie sur une phrase sans valeur quand il n'y en a pas à citer", () => {
       assert.equal(
         refusLisible({ code: "22P02", message: "entrée invalide" }),
-        "une des valeurs envoyées n'est pas admise",
+        "refus.moteur.une_valeur_non_admise",
       );
     });
   });
