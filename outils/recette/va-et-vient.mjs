@@ -18,7 +18,10 @@
  *
  * Rejouable : les adresses sont fixes (@essai.local), les organisations se
  * retrouvent par leur identifiant fiscal, chaque pièce par sa clé
- * d'idempotence. Un second passage ne recrée rien.
+ * d'idempotence. Un second passage ne recrée rien : un siège déjà membre n'est
+ * pas réinvité, une pièce déjà déposée par un passage précédent est dite et
+ * laissée (son circuit est fait). Pour éprouver d'autres factures, le second
+ * argument décale la sélection : `node outils/recette/va-et-vient.mjs 8 1`.
  *
  * Ce que l'outil NE fait PAS : il n'invente aucune écriture. Une pièce que le
  * Socle propose est validée telle quelle si elle est l'écriture attendue ;
@@ -35,6 +38,7 @@ const ICI = dirname(fileURLToPath(import.meta.url));
 const JEU = join(ICI, "..", "jeu-synthetique");
 const e = creerEpreuve("le va-et-vient PME ↔ cabinet", process.env["MALICA_BASE"]);
 const PAR_DOSSIER = Number(process.argv[2] ?? 8);
+const DECALAGE = Number(process.argv[3] ?? 0);
 
 const SCENARIOS = JSON.parse(readFileSync(join(ICI, "scenarios.json"), "utf8"));
 const compte = ({ local, nom }) => ({
@@ -63,7 +67,9 @@ for (const [i, d] of DOSSIERS.entries()) {
   d.cas = cas
     .filter((c) => c.dossier.identifiantFiscal === d.legalId)
     .sort((a, b) => `${a.rendu}${a.langue}${a.id}`.localeCompare(`${b.rendu}${b.langue}${b.id}`))
-    .filter((_, k, tous) => k % Math.max(1, Math.floor(tous.length / PAR_DOSSIER)) === 0)
+    .filter(
+      (_, k, tous) => (k + DECALAGE) % Math.max(1, Math.floor(tous.length / PAR_DOSSIER)) === 0,
+    )
     .slice(0, PAR_DOSSIER);
 }
 
@@ -152,9 +158,14 @@ for (const d of DOSSIERS) {
   }
 
   if (d.siege) {
-    await etape(`${d.nom} : invitation du siège`, () =>
-      e.rpc("facturation", "inviterSiege", [d.siege.email, org.id]),
-    );
+    const dejaPlace = (
+      (await etape("places de la licence", () => e.rpc("facturation", "sieges"))) ?? []
+    ).some((p) => p.email === d.siege.email);
+    if (dejaPlace) e.sansObjet(`${d.nom} : invitation du siège`, "déjà membre");
+    else
+      await etape(`${d.nom} : invitation du siège`, () =>
+        e.rpc("facturation", "inviterSiege", [d.siege.email, org.id]),
+      );
     await e.inscrireOuConnecter(d.siege, d.siege.nom);
     let siennes = await mesOrganisations();
     if (!siennes.some((o) => o.id === org.id)) {
@@ -225,6 +236,13 @@ for (const d of DOSSIERS.filter((x) => x.org)) {
     );
     if (!enregistree) continue;
     const id = enregistree.id;
+    // Déjà déposée par un passage précédent : son circuit est fait, la rejouer
+    // la ferait relire et renvoyer hors de la société. On la dit, on la laisse.
+    const deja = await e.appel(`/pieces/${id}/contenu`);
+    if (deja.status === 200) {
+      e.sansObjet(`${c.id} : déjà passée`, "passage précédent");
+      continue;
+    }
     const p = {
       cas: c.id,
       id,
@@ -234,15 +252,12 @@ for (const d of DOSSIERS.filter((x) => x.org)) {
       defaut: c.defaut,
     };
     journal.dossiers[d.cle].pieces.push(p);
-    const deja = await e.appel(`/pieces/${id}/contenu`);
-    if (deja.status !== 200) {
-      const r = await e.appel(`/pieces/${id}/contenu`, {
-        method: "POST",
-        headers: { "Content-Type": ext === "pdf" ? "application/pdf" : "image/jpeg" },
-        body: octets,
-      });
-      e.verdict(`${c.id} : octets déposés`, r.status === 201, String(r.status));
-    }
+    const r = await e.appel(`/pieces/${id}/contenu`, {
+      method: "POST",
+      headers: { "Content-Type": ext === "pdf" ? "application/pdf" : "image/jpeg" },
+      body: octets,
+    });
+    e.verdict(`${c.id} : octets déposés`, r.status === 201, String(r.status));
     const debut = Date.now();
     const lecture = await e.appel(`/malica/lectures/${id}`, { method: "POST" });
     p.lectureMs = Date.now() - debut;
