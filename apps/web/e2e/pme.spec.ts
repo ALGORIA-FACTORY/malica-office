@@ -228,17 +228,13 @@ test("les pièces du dossier se listent et s'ouvrent", async ({ page }) => {
    * Qu'une pièce du dossier s'atteint depuis la bibliothèque, et qu'elle
    * s'ouvre sur sa propre adresse. C'est cela qui ne doit jamais casser.
    *
-   * Le CHEMIN pour y arriver, lui, a changé le 18 octobre : la bibliothèque
-   * porte désormais les quatre axes de la livraison — mois, dossier, tiers,
-   * type d'opération — et les pièces vivent dans un groupe qu'on ouvre. Cette
-   * épreuve cherchait un lien dès l'arrivée et ne trouvait plus rien.
-   *
-   * Elle est donc mise à jour, et non assouplie : elle ouvre un groupe, puis
-   * exige toujours qu'une pièce s'ouvre. Constaté au rendu avant d'être écrit —
-   * l'écran a raison, c'était l'épreuve qui était périmée.
+   * Le CHEMIN pour y arriver : depuis le 1er novembre 2026, la bibliothèque
+   * est en cartes — les dossiers en miniatures, puis les organisations, les
+   * sièges et les mois — et les pièces vivent dans une carte qu'on ouvre.
+   * L'épreuve ouvre une carte, puis exige toujours qu'une pièce s'ouvre.
    */
   await page.goto("/pme/list");
-  await expect(page.getByText("Vos documents").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bibliothèque", level: 1 })).toBeVisible();
 
   // Un groupe au moins existe : le jeu de données donne des pièces à SOTUMAG.
   const groupe = page.locator("button.grp").first();

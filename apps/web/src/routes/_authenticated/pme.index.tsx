@@ -18,6 +18,7 @@ import { statutDuCircuit } from "@malica/socle/statut-d-envoi";
 import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
+import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
 import { MandatsProposes } from "@/components/malica/MandatsProposes";
 import { usePme } from "@/components/malica/pme-context";
 import { useAccueil } from "@/hooks/use-accueil";
@@ -31,7 +32,7 @@ import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
-import { dansLaPeriodeMontree, dossierDeLaPiece, periodeMontree } from "@/lib/dossiers";
+import { dossierDeLaPiece } from "@/lib/dossiers";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/pme/")({
@@ -398,37 +399,6 @@ function PmeHome() {
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt))
     .slice(0, RECENTES);
 
-  /*
-   * SEPT DOSSIERS, TOUJOURS LES MÊMES (maquette validée le 25 octobre 2026).
-   *
-   * Une carte n'existait que pour un type qui avait des pièces : « Gouvernance »
-   * disparaissait dès qu'aucun PV n'était rangé, et sa couleur dépendait de sa
-   * place. Désormais chaque dossier du référentiel a sa carte, dans son ordre
-   * et sa teinte — vide, elle reste là, dans sa couleur (Wissem, 25 octobre).
-   * Elle compte la période qu'elle affiche : le mois en cours, ou l'année pour
-   * un PV ou une déclaration.
-   */
-  const dossiers = sept.dossiers.map((d) => {
-    const duDossier = lesLues.filter((p) => dossierDeLaPiece(p, sept.types) === d.code);
-    // La période la plus récente qui a des pièces (`periodeMontree`) : le 1er
-    // du mois, Achats et Ventes ne se disent plus vides sur un dossier plein.
-    const montree = periodeMontree(duDossier, d.periode, periode);
-    const pieces = duDossier.filter((p) => dansLaPeriodeMontree(p, montree));
-    // Un reçu ou un justificatif n'attend rien : il compte pour fait. Une
-    // pièce est faite quand le cabinet l'a prise en charge — la règle de la
-    // liste (`statutDeLaPieceLue`), sur les faits du suivi.
-    const faites = pieces.filter(
-      (p) => p.accompagne || statutDeLaPieceLue(p) === "prise_en_charge",
-    ).length;
-    return {
-      ...d,
-      total: pieces.length,
-      faites,
-      part: pieces.length === 0 ? 0 : Math.round((faites / pieces.length) * 100),
-      etiquette: d.periode === "mois" ? mois(montree) : montree,
-    };
-  });
-
   // Les prochaines échéances non faites, la plus proche d'abord.
   const aujourdhui = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
   const prochaines = (echeances.data ?? [])
@@ -565,7 +535,7 @@ function PmeHome() {
           <>
             <div className="sec">
               <h2>{t("pme.home.prepare")}</h2>
-              <Link to="/pme/list" search={{ etat: "a_vous" }}>
+              <Link to="/pme/list">
                 {t("common.toutVoir")} <Chevron className="g fl" />
               </Link>
             </div>
@@ -660,47 +630,15 @@ function PmeHome() {
         </div>
 
         {/* ── 4. vos dossiers : les sept, toujours (`ref.dossiers`) ──────── */}
-        {dossiers.length > 0 ? (
+        {sept.dossiers.length > 0 ? (
           <>
             <div className="sec">
               <h2>{t("pme.home.dossiers")}</h2>
-              <Link to="/pme/list" search={{ axe: "dossier" }}>
-                {t("pme.home.bibliotheque")} <Chevron className="g fl" />
+              <Link to="/pme/list">
+                {t("common.toutVoir")} <Chevron className="g fl" />
               </Link>
             </div>
-            <div className="rail">
-              {dossiers.map((d) => (
-                <Link
-                  key={d.code}
-                  to="/pme/dossier/$type"
-                  params={{ type: d.code }}
-                  data-teinte={d.teinte}
-                  className="poch"
-                >
-                  <span className="cv">
-                    <span className="mo">{d.etiquette}</span>
-                    <span className="ini" aria-hidden="true">
-                      {d.libelle.slice(0, 1)}
-                    </span>
-                    <b>{d.libelle}</b>
-                    <span className="av">
-                      <i style={{ width: `${d.part}%` }} />
-                    </span>
-                  </span>
-                  {d.total === 0 ? (
-                    <>
-                      <b>{t("pme.home.dossier.aucune")}</b>
-                      <span>{t("pme.home.dossier.ajouter")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <b>{t("pme.home.dossier.pieces", { count: d.total })}</b>
-                      <span>{t("pme.home.dossier.faites", { count: d.faites })}</span>
-                    </>
-                  )}
-                </Link>
-              ))}
-            </div>
+            <RailDesDossiers pieces={lesLues} />
           </>
         ) : null}
 

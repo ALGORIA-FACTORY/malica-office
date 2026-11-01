@@ -15,7 +15,7 @@ import type { PieceLue } from "@malica/socle/ports/repositories";
 import { TON_PME, type StatutPme } from "@malica/socle/statut-d-envoi";
 import { attendLaPersonne, statutDeLaPieceLue } from "@/lib/lecture";
 import { MOT_PME } from "@/lib/statut";
-import { usePiecesLues, usePiecesLuesDesSocietes } from "@/hooks/use-pieces-lues";
+import { usePiecesDesSocietes } from "@/hooks/use-pieces-des-societes";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { currentPeriod } from "@/hooks/use-tva";
 import { dossierDeLaPiece, moisDeLaPiece, periodeMontree } from "@/lib/dossiers";
@@ -83,30 +83,21 @@ function etatDe(p: PieceLue): Etat {
 /** La couleur du point : celle du statut ; une pièce non lue reste grise. */
 const tonDe = (e: Etat) => (e === "nonLue" || e === "autre" ? "neutre" : TON_PME[e]);
 
-/** Une pièce et la société où elle est rangée. */
-interface PieceDeSociete {
-  piece: PieceLue;
-  societe: string;
-}
-
 function Dossier() {
   const { type } = Route.useParams();
   const { t, locale } = useI18n();
   const pme = usePme();
   const navigate = useNavigate();
 
-  /*
-   * CE QUE L'ABONNEMENT OUVRE, lu à un seul endroit (`pme.forfait.ouvertures`).
-   * Les sociétés ne se regroupent que si l'offre en ouvre plusieurs ET que la
-   * personne en a plusieurs : une seule carte ne regroupe rien.
-   */
-  const parSociete = pme.forfait.ouvertures.societes && pme.dossiers.length > 1;
-  const parSiege = pme.forfait.ouvertures.sieges;
-
-  const lues = usePiecesLues();
-  const autresSocietes = usePiecesLuesDesSocietes(
-    parSociete ? pme.dossiers.filter((d) => d.id !== pme.tenantId).map((d) => d.id) : [],
-  );
+  const {
+    toutes: dePme,
+    parSociete,
+    parSiege,
+    chargement: lecture,
+    nomDeSociete,
+    parSieges,
+    ouvrirSaSociete,
+  } = usePiecesDesSocietes();
 
   const [societe, setSociete] = useState<string | null>(pme.tenantId);
   const [siege, setSiege] = useState<string | null>(null);
@@ -122,40 +113,16 @@ function Dossier() {
     sept.parCode(type) ?? sept.parCode(sept.types.find((x) => x.code === type)?.dossier);
   const libelle = dossier?.libelle ?? "";
 
-  // Une pièce privée n'est pas dans la bibliothèque, donc pas ici.
-  const duDossier = (lot: readonly PieceLue[] | undefined, id: string): PieceDeSociete[] =>
-    (lot ?? [])
-      .filter(
-        (p) =>
-          dossier !== null &&
-          p.vis !== "personnel" &&
-          dossierDeLaPiece(p, sept.types) === dossier.code,
-      )
-      .map((piece) => ({ piece, societe: id }));
-  const autresIds = pme.dossiers.filter((d) => d.id !== pme.tenantId).map((d) => d.id);
-  const toutes: PieceDeSociete[] = [
-    ...duDossier(lues.data, pme.tenantId),
-    ...(parSociete ? autresSocietes.flatMap((q, i) => duDossier(q.data, autresIds[i]!)) : []),
-  ];
+  const toutes = dePme.filter(
+    (x) => dossier !== null && dossierDeLaPiece(x.piece, sept.types) === dossier.code,
+  );
 
   const deLaSociete = toutes.filter((x) => !parSociete || !societe || x.societe === societe);
   const retenues = deLaSociete
     .filter((x) => !parSiege || !siege || x.piece.auteurId === siege)
     .map((x) => x.piece)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  /*
-   * La fiche d'une pièce lit son contexte (cabinet, droits, gestes, cache) sur
-   * la société OUVERTE. Une pièce d'une autre société ouvre donc d'abord sa
-   * société, sinon elle s'afficherait avec le cabinet et les droits d'une autre.
-   */
-  const societeDe = new Map(toutes.map((x) => [x.piece.id, x.societe]));
-  const ouvrirSaSociete = (pieceId: string) => {
-    const id = societeDe.get(pieceId);
-    if (id && id !== pme.tenantId) pme.choisirDossier(id);
-  };
-
   // ----------------------------------------------------------- les sociétés
-  const nomDeSociete = (id: string) => pme.dossiers.find((d) => d.id === id)?.name ?? "";
   const cartesSocietes = pme.dossiers
     .map((d) => ({
       id: d.id,
@@ -166,16 +133,7 @@ function Dossier() {
     .filter((c) => c.pieces.length > 0 || c.id === societe);
 
   // ------------------------------------------------------------ les sièges
-  const sieges = new Map<string, { nom: string; pieces: PieceLue[] }>();
-  for (const { piece } of deLaSociete) {
-    const id = piece.auteurId;
-    if (!id) continue;
-    const prenom = piece.circuit?.auteur ?? "—";
-    const nom = piece.circuit?.mienne ? t("pme.dossier.vous", { nom: prenom }) : prenom;
-    const g = sieges.get(id) ?? { nom, pieces: [] };
-    g.pieces.push(piece);
-    sieges.set(id, g);
-  }
+  const sieges = parSieges(deLaSociete.map((x) => x.piece));
 
   // ----------------------------------------------------------- les périodes
   const annuel = dossier?.periode === "annee";
@@ -214,7 +172,7 @@ function Dossier() {
   const aVerifier = retenues.filter(attendLaPersonne);
   const part = retenues.length === 0 ? 0 : Math.round((faites / retenues.length) * 100);
   const jour = (iso: string) => jourOuInstant(iso, locale);
-  const chargement = lues.isPending || !sept.pret || autresSocietes.some((q) => q.isPending);
+  const chargement = lecture || !sept.pret;
 
   return (
     <div data-ecran="pochette" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
