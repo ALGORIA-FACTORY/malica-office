@@ -161,7 +161,7 @@ const VENTE_AU_REPLI = {
 /** Un avoir sans facture d'origine rattachée : rien de proposé, le geste nommé. */
 const AVOIR_A_RATTACHER = {
   ok: false,
-  raison: "Aucune écriture ne se propose : facture d'origine à rattacher.",
+  raison: "Aucune écriture ne se propose : facture d'origine à rattacher ou à comptabiliser.",
   raisonCode: "facture_d_origine",
   avoir: { facture: null, origine: null, lie: false, manque: "introuvable" },
 } as PropositionDePiece;
@@ -506,5 +506,24 @@ describe("une vente et un avoir, côté comptable (1er novembre 2026)", () => {
     });
     fireEvent.click(rattacher);
     await waitFor(() => expect(api.rattacherLaFacture).toHaveBeenCalledWith("p1", "f1"));
+  });
+
+  /*
+   * R12 : le i disait la phrase française du serveur (`raison`). Ce qui manque
+   * se lit désormais par son code (`avoir.manque`), traduit.
+   */
+  it("un avoir sans facture : le i dit ce qui manque par une clé traduite, jamais la phrase du serveur", () => {
+    api.facturesARattacher.mockResolvedValue([]);
+    for (const manque of ["introuvable", "non_comptabilisee"] as const) {
+      monter({
+        ...AVOIR_A_RATTACHER,
+        avoir: { facture: null, origine: null, lie: false, manque },
+      } as PropositionDePiece);
+      const titre = manque === "introuvable" ? "cab.avoir.titre" : "cab.avoir.non_comptabilisee";
+      fireEvent.click(screen.getByRole("button", { name: `common.aide — ${titre}` }));
+      expect(screen.getByText(`cab.avoir.manque.${manque}`)).toBeTruthy();
+      expect(screen.queryByText(/Aucune écriture ne se propose/)).toBeNull();
+      cleanup();
+    }
   });
 });

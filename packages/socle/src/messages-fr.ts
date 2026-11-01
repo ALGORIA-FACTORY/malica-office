@@ -2663,6 +2663,9 @@ export const fr = {
   "cab.ecriture.reserve.nature_de_vente": "Nature de la vente à préciser",
   "cab.ecriture.reserve.nature_de_vente.aide":
     "Le Socle n’a pas prouvé ce que la facture vend (marchandises, prestations, activités annexes) : la vente est proposée au compte de repli de votre plan. Vérifiez le compte de vente avant de valider, ou modifiez l’écriture.",
+  "cab.ecriture.reserve.droit_au_cout": "Droit au coût à vérifier",
+  "cab.ecriture.reserve.droit_au_cout.aide":
+    "La facture d’origine porte un droit au coût d’achat (réglage « FODEC 1 % ») qu’aucune de ses lignes ne désigne plus. L’avoir la reprend en entier : son écriture contre-passe chaque ligne de la facture. Vérifiez le compte du droit avant de valider.",
   "cab.ecriture.reserve.mois_de_tva": "Mois de TVA à vérifier",
   "cab.ecriture.reserve.mois_de_tva.aide":
     "Le mois où cette pièce pèse dans la TVA suit l’exigibilité (réglage « Mois de TVA d’une pièce ») : un bien à la livraison, un service à la réalisation ou à l’encaissement s’il est antérieur. Le Socle a gardé la date de la facture.",
@@ -2680,6 +2683,10 @@ export const fr = {
   "cab.avoir.non_comptabilisee": "Facture d’origine pas encore comptabilisée",
   "cab.avoir.aide":
     "Un avoir se lie à sa facture (réglage « Avoirs », Code TVA art. 9). Il se propose en contre-passation de l’écriture de la facture, aux montants qu’il imprime : en extourne, ou au compte des rabais, selon le réglage du cabinet.",
+  "cab.avoir.manque.introuvable":
+    "Le numéro imprimé sur l’avoir ne désigne aucune facture du dossier, ou en désigne plusieurs : choisissez-la ci-dessous.",
+  "cab.avoir.manque.non_comptabilisee":
+    "La facture rattachée n’a pas encore d’écriture prise en charge : comptabilisez-la, l’avoir se proposera ensuite.",
   "cab.avoir.choisir": "Choisir la facture",
   "cab.avoir.rattacher": "Rattacher",
   "cab.avoir.aucune":

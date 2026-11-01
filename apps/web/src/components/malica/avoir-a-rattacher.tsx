@@ -49,10 +49,11 @@ export function AvoirARattacher({
   });
   if (!aRattacher) return null;
 
+  // Ce qui manque vient du serveur en CODE (R12) : aucune facture, ou une
+  // facture sans écriture prise en charge.
+  const manque = proposition.avoir?.manque ?? "introuvable";
   const titre =
-    proposition.avoir?.manque === "non_comptabilisee"
-      ? t("cab.avoir.non_comptabilisee")
-      : t("cab.avoir.titre");
+    manque === "non_comptabilisee" ? t("cab.avoir.non_comptabilisee") : t("cab.avoir.titre");
   const liste = factures.data ?? [];
   return (
     <div className="space-y-2.5 border border-signal-warn bg-card px-3.5 py-3">
@@ -60,7 +61,7 @@ export function AvoirARattacher({
         {titre}
         <Aide
           titre={titre}
-          paragraphes={[{ texte: t("cab.avoir.aide") }, { texte: proposition.raison }]}
+          paragraphes={[{ texte: t("cab.avoir.aide") }, { texte: t(`cab.avoir.manque.${manque}`) }]}
         />
       </p>
       {factures.isSuccess && liste.length === 0 ? (

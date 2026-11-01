@@ -33,6 +33,7 @@ import type {
 import { ConversionRefusee } from "@malica/socle/engines/fx/convertir-l-extrait";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import {
+  type DroitDeLaFacture,
   ecritureDAvoir,
   type EcritureDAvoir,
   type LigneDeLaFacture,
@@ -247,8 +248,17 @@ export interface ReferentielDeLaProposition {
 interface AvoirAProposer {
   /** La facture, son lien, ou ce qui manque. */
   origine: FactureDOrigine;
-  /** L'écriture prise en charge de la facture : son journal, sa devise, ses lignes rangées. */
-  ecriture: { journal: string; devise: string; lignes: LigneDeLaFacture[] } | null;
+  /**
+   * L'écriture prise en charge de la facture : son journal, sa devise, ses
+   * lignes rangées, et les droits que la lecture de la facture porte (un droit
+   * porté au coût s'y retrouve, `ecritureDAvoir`).
+   */
+  ecriture: {
+    journal: string;
+    devise: string;
+    lignes: LigneDeLaFacture[];
+    droits: DroitDeLaFacture[];
+  } | null;
   /** L'extourne, le rabais, ou selon l'avoir (`avoirs.ecriture`). */
   traitement: EcritureDAvoir;
   /** Le compte des RRR par préfixe du compte d'origine (`ref.comptes_de_rabais`), résolu. */
@@ -620,7 +630,11 @@ export function composerLaProposition(
 
 /** La raison d'un avoir qui ne se propose pas, en clair : elle va dans le i. */
 const RAISON_DE_L_AVOIR: Record<
-  "avoir_excede_la_facture" | "avoir_hors_facture" | "avoir_desequilibre" | "facture_illisible",
+  | "avoir_excede_la_facture"
+  | "avoir_hors_facture"
+  | "avoir_desequilibre"
+  | "facture_illisible"
+  | "droit_au_cout_non_attribue",
   string
 > = {
   avoir_excede_la_facture:
@@ -628,6 +642,8 @@ const RAISON_DE_L_AVOIR: Record<
   avoir_hors_facture: "l'avoir porte un taux ou un droit que sa facture d'origine n'a pas",
   avoir_desequilibre: "l'écriture de l'avoir ne s'équilibrerait pas",
   facture_illisible: "l'écriture de la facture d'origine ne se lit pas comme une facture",
+  droit_au_cout_non_attribue:
+    "le droit porté au coût de la facture d'origine ne se retrouve sur aucune de ses lignes",
 };
 
 /** L'écriture d'un avoir lié, ou le refus qui nomme ce qui manque. Pure. */
@@ -657,13 +673,9 @@ function proposerLAvoir(
       "devise",
       "un avoir en devise se saisit, sa conversion n'est pas encore appliquée",
     );
+  // Ce qui manque se dit par le code et `avoir.manque`, que l'écran traduit.
   if (!a?.ecriture || !a.origine.facture)
-    return refus(
-      "facture_d_origine",
-      a?.origine.manque === "non_comptabilisee"
-        ? "la facture d'origine n'a pas encore d'écriture prise en charge"
-        : "facture d'origine à rattacher",
-    );
+    return refus("facture_d_origine", "facture d'origine à rattacher ou à comptabiliser");
   const lu = ExtractV1.safeParse(x.normalise);
   if (!lu.success) return refus("a_completer", "la lecture de l'avoir est incomplète");
   const e = lu.data;
@@ -680,6 +692,7 @@ function proposerLAvoir(
     compteDeRabais: (compte) => rabais.find((c) => compte.startsWith(c.prefixe))?.compte ?? null,
     contrepartie: contrepartieDuDocument(e),
     reference: referenceDuDocument(e.references),
+    droitsDeLaFacture: a.ecriture.droits,
   });
   if (!ecriture.ok) return refus(ecriture.refus, RAISON_DE_L_AVOIR[ecriture.refus]);
   return {
@@ -694,6 +707,7 @@ function proposerLAvoir(
       libelle: ecriture.libelle,
       lignes: ecriture.lignes,
     },
+    ...(ecriture.reserves.length > 0 ? { reserves: ecriture.reserves } : {}),
     avoir: { ...a.origine, traitement: ecriture.traitement },
   };
 }
@@ -716,6 +730,9 @@ async function lireLAvoirAProposer(
     sens: string;
     references: Record<string, string>;
     traitement: EcritureDAvoir;
+    /** Le libellé du pack d'un droit, que l'écriture donne à un droit lu sans libellé. */
+    libelleDuDroit: (code: string) => string | null;
+    decimales: number;
   },
 ): Promise<AvoirAProposer> {
   const sans = (origine: FactureDOrigine): AvoirAProposer => ({
@@ -802,6 +819,38 @@ async function lireLAvoirAProposer(
       order by l.ordinal`,
     [e.id, p.dossier, e.pack, p.sens, e.jour],
   );
+  /*
+   * Les droits que la LECTURE de la facture porte, aux montants que son
+   * jugement a retenus, et le libellé que son écriture leur a donné
+   * (`computePivot` : l'imprimé, sinon celui du pack). Un droit porté au coût
+   * n'a pas d'autre trace : son compte est celui de la charge.
+   */
+  const { rows: lus } = await db.query<{
+    code: string;
+    libelle: string | null;
+    montant: string | null;
+    retenu: string | null;
+  }>(
+    `select c.value->>'code' as code, c.value->>'label' as libelle,
+            c.value->>'amount' as montant,
+            a.normalisation->'montants'->'autres'->>(c.ordinality::int - 1) as retenu
+       from (select x.id, x.payload from capture.extractions x
+              where x.piece_id = app.version_courante($1)
+              order by x.created_at desc limit 1) x
+       cross join lateral jsonb_array_elements(coalesce(x.payload->'other_charges', '[]'::jsonb))
+             with ordinality c
+       left join lateral (select y.normalisation from capture.analyses y
+                           where y.extraction_id = x.id order by y.created_at desc limit 1) a
+              on true
+      order by c.ordinality`,
+    [origine.facture],
+  );
+  const droits: DroitDeLaFacture[] = lus.flatMap((d) => {
+    const libelle = d.libelle || p.libelleDuDroit(d.code);
+    const montant =
+      d.retenu !== null ? depuisUniteMineure(Number(d.retenu), p.decimales) : d.montant;
+    return libelle && montant ? [{ code: d.code, libelle, montant }] : [];
+  });
   const { rows: rabais } = await db.query<{ prefixe: string; role_code: string }>(
     `select prefixe, role_code from ref.comptes_de_rabais
       where pack_version_id = $1 and document_kind = $2 and valid_from <= $3::date
@@ -817,7 +866,7 @@ async function lireLAvoirAProposer(
   }
   return {
     origine,
-    ecriture: { journal: e.journal, devise: e.devise, lignes },
+    ecriture: { journal: e.journal, devise: e.devise, lignes, droits },
     traitement: p.traitement,
     comptesDeRabais,
   };
@@ -1019,6 +1068,9 @@ async function proposerDepuisLeJugement(
             sens,
             references,
             traitement: reglageDAvoir.ecriture,
+            libelleDuDroit: (code) =>
+              tousLesDroits.find((c) => c.code === code && c.documentKind === sens)?.label ?? null,
+            decimales,
           })
         : null,
   });

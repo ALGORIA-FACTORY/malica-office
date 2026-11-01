@@ -1709,7 +1709,12 @@ export type RaisonSansEcriture =
   /** L'écriture de l'avoir ne s'équilibrerait pas, ou l'avoir ne tient pas. */
   | "avoir_desequilibre"
   /** L'écriture de la facture d'origine ne se lit pas comme une facture. */
-  | "facture_illisible";
+  | "facture_illisible"
+  /**
+   * Un avoir partiel reprend un droit que la facture a porté au coût, et
+   * qu'aucune de ses lignes ne désigne : sa part ne se devine pas.
+   */
+  | "droit_au_cout_non_attribue";
 
 /**
  * Une réserve que la PROPOSITION porte (1er novembre 2026) : la vente rangée
@@ -1723,6 +1728,9 @@ export type RaisonSansEcriture =
  * changerait le mois mais ne se reconnaît pas, un encaissement antérieur
  * partiel ne fixe pas le mois, ou (option `date_facture_alerte`) la TVA
  * serait exigible avant le mois de la facture (`app.jour_d_imputation_tva`).
+ *
+ * Et l'extourne exacte d'une facture dont le droit porté au coût ne se
+ * retrouve sur aucune ligne (`droit_au_cout`, `ecritureDAvoir`) : le droit.
  */
 export type ReserveDeProposition =
   | {
@@ -1735,7 +1743,8 @@ export type ReserveDeProposition =
       code: "mois_de_tva";
       raison: RaisonDuMoisDeTva;
       articles: string[];
-    };
+    }
+  | { code: "droit_au_cout"; droit: string };
 
 /** Pourquoi le mois de TVA d'une pièce est à vérifier (`app.jour_d_imputation_tva`). */
 export type RaisonDuMoisDeTva =

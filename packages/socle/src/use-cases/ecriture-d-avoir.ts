@@ -19,6 +19,25 @@
  * les droits. Une TVA que la facture n'a pas déduite (dossier non assujetti)
  * rejoint la base, comme à la facture.
  *
+ * Plusieurs lignes de l'avoir au même taux (ou au même droit) se cumulent
+ * AVANT d'être comparées et réparties, et chaque ligne de la facture garde
+ * son SOLDE : ce qu'une reprise a pris n'est plus disponible pour la suivante
+ * (revue de #161 : deux lignes à 19 % reprenaient chacune toute la TVA du
+ * taux).
+ *
+ * ========================================================== LE DROIT AU COÛT
+ *
+ * Un achat dont le FODEC est porté au coût (`fodec.traitement`,
+ * `droitsAuCout`) l'inscrit sur le compte de la CHARGE, en une ligne à part au
+ * libellé du droit (`buildProposal`) : son compte le range « base ». La
+ * lecture de la facture dit le droit, ce libellé et son montant
+ * (`droitsDeLaFacture`) : la ligne de base sans code de taxe qui porte
+ * exactement ce libellé et ce montant, et elle seule, redevient la ligne de
+ * ce droit. Quand rien ne la désigne ainsi (le cabinet l'a reprise), l'avoir
+ * qui reprend TOUTE la facture en extourne se propose quand même, ligne pour
+ * ligne, avec la réserve `droit_au_cout` ; un avoir partiel se refuse
+ * (`droit_au_cout_non_attribue`) : sa part du droit ne se devine pas.
+ *
  * ================================================================ CE QUI REFUSE
  *
  * Rien n'est proposé — et le refus se nomme — quand l'avoir excède la facture
@@ -55,12 +74,27 @@ export interface MontantsDeLAvoir {
   ttc: string;
 }
 
+/**
+ * Un droit hors TVA que la LECTURE de la facture porte : son code, le libellé
+ * que son écriture lui a donné (le libellé imprimé, sinon celui du pack) et
+ * son montant.
+ */
+export interface DroitDeLaFacture {
+  code: string;
+  libelle: string;
+  montant: string;
+}
+
 /** Les options du réglage `avoirs.ecriture`. */
 export type EcritureDAvoir = "selon_avoir" | "extourne" | "rabais";
 
 /** Pourquoi l'avoir ne se propose pas : un code stable, que l'écran traduit. */
 export type RefusDAvoir =
-  "avoir_excede_la_facture" | "avoir_hors_facture" | "avoir_desequilibre" | "facture_illisible";
+  | "avoir_excede_la_facture"
+  | "avoir_hors_facture"
+  | "avoir_desequilibre"
+  | "facture_illisible"
+  | "droit_au_cout_non_attribue";
 
 export type ResultatDAvoir =
   | {
@@ -77,6 +111,8 @@ export type ResultatDAvoir =
         credit: string;
         tax_code: string | null;
       }>;
+      /** Un droit au coût que rien ne désignait : l'extourne exacte, à vérifier. */
+      reserves: Array<{ code: "droit_au_cout"; droit: string }>;
     }
   | { ok: false; refus: RefusDAvoir };
 
@@ -97,6 +133,16 @@ function repartir(total: bigint, poids: readonly bigint[]): bigint[] {
   return parts;
 }
 
+/** Cumule les éléments de même code, dans l'ordre de leur première apparition. */
+function cumuler<T extends { code: string }>(xs: readonly T[], ajouter: (a: T, b: T) => T): T[] {
+  const parCode = new Map<string, T>();
+  for (const x of xs) {
+    const deja = parCode.get(x.code);
+    parCode.set(x.code, deja ? ajouter(deja, x) : x);
+  }
+  return [...parCode.values()];
+}
+
 export function ecritureDAvoir(p: {
   pieceId: string;
   sens: "facture_achat" | "facture_vente";
@@ -112,6 +158,8 @@ export function ecritureDAvoir(p: {
   /** Les faits du libellé : la contrepartie et le numéro imprimés sur l'avoir. */
   contrepartie: string | null;
   reference: string | null;
+  /** Les droits que la lecture de la facture porte : ceux portés au coût s'y retrouvent. */
+  droitsDeLaFacture: readonly DroitDeLaFacture[];
 }): ResultatDAvoir {
   const n = p.decimales;
   const u = (s: string) => enUnitesExactes(s, n);
@@ -120,7 +168,27 @@ export function ecritureDAvoir(p: {
   // achat, crédit d'une vente) ; la contrepartie, du côté opposé.
   const cote = (l: LigneDeLaFacture) =>
     achat ? u(l.debit) - u(l.credit) : u(l.credit) - u(l.debit);
-  const lignes = p.facture.lignes;
+  // Un droit au coût redevient la ligne de son droit quand la lecture de la
+  // facture la désigne seule : base, sans code de taxe, son libellé, son montant.
+  const nonAttribues = new Set<string>();
+  const attribues = new Map<LigneDeLaFacture, string>();
+  for (const d of p.droitsDeLaFacture) {
+    if (p.facture.lignes.some((l) => l.nature === "droit" && l.droit_code === d.code)) continue;
+    const designees = p.facture.lignes.filter(
+      (l) =>
+        l.nature === "base" &&
+        l.tax_code === null &&
+        l.libelle === d.libelle &&
+        cote(l) === u(d.montant) &&
+        !attribues.has(l),
+    );
+    if (designees.length === 1) attribues.set(designees[0]!, d.code);
+    else nonAttribues.add(d.code);
+  }
+  const lignes = p.facture.lignes.map((l): LigneDeLaFacture => {
+    const droit = attribues.get(l);
+    return droit ? { ...l, nature: "droit", droit_code: droit } : l;
+  });
   const tiers = lignes.filter((l) => l.nature === "tiers");
   const totalFacture = -tiers.reduce((s, l) => s + cote(l), 0n);
   // Une facture : ses contreparties d'un côté, tout le reste de l'autre, et
@@ -132,13 +200,17 @@ export function ecritureDAvoir(p: {
   )
     return { ok: false, refus: "facture_illisible" };
 
-  const bases = p.avoir.bases.map((b) => ({ code: b.code, ht: u(b.ht), tva: u(b.tva) }));
-  const droits = p.avoir.droits.map((d) => ({ code: d.code, montant: u(d.montant) }));
+  const lues = p.avoir.bases.map((b) => ({ code: b.code, ht: u(b.ht), tva: u(b.tva) }));
+  const droitsLus = p.avoir.droits.map((d) => ({ code: d.code, montant: u(d.montant) }));
   const totalAvoir =
-    bases.reduce((s, b) => s + b.ht + b.tva, 0n) + droits.reduce((s, d) => s + d.montant, 0n);
-  if (totalAvoir !== u(p.avoir.ttc) || totalAvoir <= 0n || bases.some((b) => b.ht < 0n))
+    lues.reduce((s, b) => s + b.ht + b.tva, 0n) + droitsLus.reduce((s, d) => s + d.montant, 0n);
+  if (totalAvoir !== u(p.avoir.ttc) || totalAvoir <= 0n || lues.some((b) => b.ht < 0n))
     return { ok: false, refus: "avoir_desequilibre" };
   if (totalAvoir > totalFacture) return { ok: false, refus: "avoir_excede_la_facture" };
+  // Ce que l'avoir imprime, CUMULÉ par taux et par droit : deux lignes au
+  // même taux reprennent ensemble, jamais chacune toute la facture.
+  const bases = cumuler(lues, (a, b) => ({ code: a.code, ht: a.ht + b.ht, tva: a.tva + b.tva }));
+  const droits = cumuler(droitsLus, (a, b) => ({ code: a.code, montant: a.montant + b.montant }));
   const traitement =
     p.ecriture === "selon_avoir"
       ? totalAvoir === totalFacture
@@ -150,46 +222,73 @@ export function ecritureDAvoir(p: {
   const codesDeTva = [...new Set(lignes.filter((l) => l.nature === "tva").map((l) => l.tax_code))];
   const codeUnique = codesDeTva.length === 1 ? codesDeTva[0]! : null;
   const codeDe = (l: LigneDeLaFacture) => l.tax_code ?? codeUnique;
+  const tvasDu = (code: string) => lignes.filter((l) => l.nature === "tva" && l.tax_code === code);
 
   // Ce que l'avoir retire, par compte, côté pièce.
   const retraits: Array<{ ligne: LigneDeLaFacture; montant: bigint; code: string | null }> = [];
-  // Une contrepartie se porte du côté opposé : son poids, et ce qu'on lui
+  // Le SOLDE de chaque ligne de la facture, positif : ce qui reste à reprendre.
+  // Une contrepartie se porte du côté opposé : son solde, et ce qu'on lui
   // retire, changent de signe.
+  const signe = (l: LigneDeLaFacture) => (l.nature === "tiers" ? -1n : 1n);
+  const solde = new Map(lignes.map((l) => [l, cote(l) * signe(l)]));
+  /** Retire `montant` des soldes de `pool`, à leur prorata ; faux s'il les excède. */
   const retirer = (pool: readonly LigneDeLaFacture[], montant: bigint, code: string | null) => {
-    const signe = pool[0]?.nature === "tiers" ? -1n : 1n;
-    const parts = repartir(
-      montant * signe,
-      pool.map((l) => cote(l) * signe),
-    );
-    pool.forEach((l, i) => retraits.push({ ligne: l, montant: parts[i]! * signe, code }));
+    const soldes = pool.map((l) => solde.get(l)!);
+    if (montant > soldes.reduce((s, x) => s + x, 0n)) return false;
+    const parts = repartir(montant, soldes);
+    pool.forEach((l, i) => {
+      solde.set(l, soldes[i]! - parts[i]!);
+      retraits.push({ ligne: l, montant: parts[i]! * signe(l), code });
+    });
+    return true;
   };
 
-  for (const b of bases) {
-    const parCode = lignes.filter((l) => l.nature === "base" && codeDe(l) === b.code);
-    const pool =
-      parCode.length > 0 ? parCode : lignes.filter((l) => l.nature === "base" && !codeDe(l));
-    if (pool.length === 0) return { ok: false, refus: "avoir_hors_facture" };
-    const tvas = lignes.filter((l) => l.nature === "tva" && l.tax_code === b.code);
-    // Une TVA non déduite à la facture était dans la base : elle y retourne.
-    const versLaBase = b.ht + (tvas.length === 0 ? b.tva : 0n);
-    if (versLaBase > pool.reduce((s, l) => s + cote(l), 0n))
-      return { ok: false, refus: "avoir_excede_la_facture" };
-    retirer(pool, versLaBase, b.code);
-    if (tvas.length > 0 && b.tva !== 0n) {
-      if (b.tva > tvas.reduce((s, l) => s + cote(l), 0n))
+  const reserves: Array<{ code: "droit_au_cout"; droit: string }> = [];
+  const sansLigne = droits.find(
+    (d) =>
+      d.montant !== 0n &&
+      nonAttribues.has(d.code) &&
+      !lignes.some((l) => l.nature === "droit" && l.droit_code === d.code),
+  );
+  if (sansLigne) {
+    /*
+     * Le droit au coût ne se retrouve pas. Seule l'extourne de TOUTE la
+     * facture se passe de lui : chaque ligne revient pour son montant, et la
+     * TVA imprimée doit être, taux par taux, celle de la facture.
+     */
+    const exacte =
+      traitement === "extourne" &&
+      totalAvoir === totalFacture &&
+      bases.every((b) => {
+        const tvas = tvasDu(b.code);
+        return tvas.length === 0 || b.tva === tvas.reduce((s, l) => s + cote(l), 0n);
+      });
+    if (!exacte) return { ok: false, refus: "droit_au_cout_non_attribue" };
+    for (const l of lignes)
+      retirer([l], solde.get(l)!, l.nature === "base" || l.nature === "tva" ? codeDe(l) : null);
+    reserves.push({ code: "droit_au_cout", droit: sansLigne.code });
+  } else {
+    for (const b of bases) {
+      const parCode = lignes.filter((l) => l.nature === "base" && codeDe(l) === b.code);
+      const pool =
+        parCode.length > 0 ? parCode : lignes.filter((l) => l.nature === "base" && !codeDe(l));
+      if (pool.length === 0) return { ok: false, refus: "avoir_hors_facture" };
+      const tvas = tvasDu(b.code);
+      // Une TVA non déduite à la facture était dans la base : elle y retourne.
+      const versLaBase = b.ht + (tvas.length === 0 ? b.tva : 0n);
+      if (!retirer(pool, versLaBase, b.code))
         return { ok: false, refus: "avoir_excede_la_facture" };
-      retirer(tvas, b.tva, b.code);
+      if (tvas.length > 0 && b.tva !== 0n && !retirer(tvas, b.tva, b.code))
+        return { ok: false, refus: "avoir_excede_la_facture" };
     }
+    for (const d of droits) {
+      if (d.montant === 0n) continue;
+      const pool = lignes.filter((l) => l.nature === "droit" && l.droit_code === d.code);
+      if (pool.length === 0) return { ok: false, refus: "avoir_hors_facture" };
+      if (!retirer(pool, d.montant, null)) return { ok: false, refus: "avoir_excede_la_facture" };
+    }
+    if (!retirer(tiers, totalAvoir, null)) return { ok: false, refus: "avoir_excede_la_facture" };
   }
-  for (const d of droits) {
-    if (d.montant === 0n) continue;
-    const pool = lignes.filter((l) => l.nature === "droit" && l.droit_code === d.code);
-    if (pool.length === 0) return { ok: false, refus: "avoir_hors_facture" };
-    if (d.montant > pool.reduce((s, l) => s + cote(l), 0n))
-      return { ok: false, refus: "avoir_excede_la_facture" };
-    retirer(pool, d.montant, null);
-  }
-  retirer(tiers, -totalAvoir, null);
 
   /*
    * L'écriture : chaque retrait au côté opposé de la facture (une contrepartie
@@ -273,5 +372,6 @@ export function ecritureDAvoir(p: {
     }),
     pivot,
     lignes: sortie,
+    reserves,
   };
 }
