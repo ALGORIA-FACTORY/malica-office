@@ -32,8 +32,8 @@ const ECRITURE_D_AVOIR = "avoirs.ecriture";
  * échouer l'épreuve : l'écran ne peut pas dire « appliqué » à tort.
  *
  * Trois d'entre elles décrivent ce que le Socle fait déjà sans rien lire : le
- * plan des immobilisations (`ref.immo_categories`), le timbre standard d'un
- * dinar (`ref.fiscal_charges`) et l'avoir que le cabinet saisit
+ * plan des immobilisations (`ref.immo_categories`), le timbre au seul droit
+ * standard (`ref.fiscal_charges`) et l'avoir que le cabinet saisit
  * (`ref.titres_de_piece`). « actif_amorti » n'y est PAS : la réserve le dit,
  * mais l'écriture proposée reste au compte du paramétrage. « par_facture »
  * y est : le Socle lit le FODEC imprimé, il ne le calcule ni par article ni
@@ -43,7 +43,9 @@ export const OPTIONS_APPLIQUEES: Readonly<Record<string, readonly string[]>> = {
   [TRAITEMENT]: ["charge"],
   "comptes_immo.plan": ["selon_categorie"],
   [FODEC]: ["par_article_au_cout", "par_facture", "charge_non_recuperable"],
-  "timbre.bareme": ["fixe_1d"],
+  // Le barème daté, par catégorie d'émetteur (`bareme-du-timbre.ts`, que
+  // `proposition.ts` applique) ; « fixe_1d » : le droit standard seul.
+  "timbre.bareme": ["bareme_date", "fixe_1d"],
   // L'avoir lié à sa facture (1er novembre 2026) : `controles.ts` le juge,
   // `proposition.ts` l'écrit (`ecritureDAvoir`). « libre » reste à faire.
   "avoirs.traitement": ["refus_saisie_cabinet", "lie_facture"],

@@ -17,7 +17,7 @@ export const tiers = {
   async lister(db: Requete, tenantId: string, nature: string | null) {
     const { rows } = await db.query(
       `select t.id, t.nature, t.code, t.raison_sociale, t.identifiant_fiscal,
-              t.compte_collectif, t.actif, t.note, t.cree_le,
+              t.compte_collectif, t.actif, t.note, t.cree_le, t.categorie_de_bareme,
               a.label as compte_libelle
          from tiers_v t
          left join plan_comptable_v a
@@ -39,7 +39,35 @@ export const tiers = {
       actif: Boolean(r["actif"]),
       note: (r["note"] as string | null) ?? null,
       creeLe: r["cree_le"] as string,
+      categorieDeBareme: (r["categorie_de_bareme"] as string | null) ?? null,
     }));
+  },
+
+  /**
+   * Les catégories d'émetteur d'un barème (le timbre : standard, grandes
+   * surfaces), nommées dans la langue demandée (`ref.categories_de_bareme`).
+   */
+  async categoriesDeBareme(db: Requete, locale = "fr") {
+    const { rows } = await db.query<{ code: string; libelle: string | null }>(
+      `select c.code,
+              coalesce(demandee.value, francais.value) as libelle
+         from ref.categories_de_bareme c
+         left join ref_labels_v demandee
+           on demandee.ns = 'bareme_categorie' and demandee.key = c.code and demandee.locale = $1
+         left join ref_labels_v francais
+           on francais.ns = 'bareme_categorie' and francais.key = c.code and francais.locale = 'fr'
+        order by c.ordre`,
+      [locale],
+    );
+    return rows.map((r) => ({ code: r.code, libelle: r.libelle ?? r.code }));
+  },
+
+  /**
+   * Classe l'émetteur au barème d'un droit (le timbre) ; nulle : non classé.
+   * La proposition d'une pièce le lit par son matricule (`bareme-du-timbre.ts`).
+   */
+  async classer(db: Requete, id: string, categorie: string | null): Promise<void> {
+    await db.query(`select public.tiers_classer($1, $2)`, [id, categorie]);
   },
 
   /** Les comptes du plan qui acceptent un auxiliaire — 401, 411, 425, 442… */

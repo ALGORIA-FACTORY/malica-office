@@ -729,7 +729,7 @@ const NATURES: NatureTiers[] = ["client", "fournisseur", "salarie", "associe", "
  * quelqu'un s'en apercevrait dans une balance.
  */
 function TiersDuDossier({ ouvert, onBascule }: { ouvert: boolean; onBascule: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { org } = useCabinet();
   const queryClient = useQueryClient();
 
@@ -798,6 +798,27 @@ function TiersDuDossier({ ouvert, onBascule }: { ouvert: boolean; onBascule: () 
       setCode("");
       setRaison("");
       setMatricule("");
+      setErreur(null);
+      await queryClient.invalidateQueries({ queryKey: ["tiers", dossier, nature] });
+    },
+    onError: (e) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
+  });
+
+  /*
+   * Le barème du timbre d'un fournisseur (`bareme_date`) : sa catégorie
+   * d'émetteur, que le cabinet donne. Non classé, la proposition d'une pièce
+   * au tarif d'une autre catégorie porte une réserve, au lieu de deviner.
+   */
+  const estFournisseur = nature === "fournisseur";
+  const categories = useQuery({
+    queryKey: ["categories-de-bareme", locale],
+    queryFn: () => office().tiers.categoriesDeBareme(locale),
+    enabled: estFournisseur,
+  });
+  const classer = useMutation({
+    mutationFn: (x: { id: string; categorie: string | null }) =>
+      office().tiers.classer(x.id, x.categorie),
+    onSuccess: async () => {
       setErreur(null);
       await queryClient.invalidateQueries({ queryKey: ["tiers", dossier, nature] });
     },
@@ -953,6 +974,7 @@ function TiersDuDossier({ ouvert, onBascule }: { ouvert: boolean; onBascule: () 
                 t("plan.tiers.raison"),
                 t("plan.tiers.matricule"),
                 t("plan.tiers.collectif"),
+                ...(estFournisseur ? [t("plan.tiers.bareme")] : []),
                 "",
               ]}
             >
@@ -976,6 +998,26 @@ function TiersDuDossier({ ouvert, onBascule }: { ouvert: boolean; onBascule: () 
                       </span>
                     ) : null}
                   </InkCell>
+                  {estFournisseur ? (
+                    <InkCell>
+                      <select
+                        aria-label={t("plan.tiers.bareme")}
+                        value={x.categorieDeBareme ?? ""}
+                        disabled={classer.isPending}
+                        onChange={(e) =>
+                          classer.mutate({ id: x.id, categorie: e.target.value || null })
+                        }
+                        className={CHAMP}
+                      >
+                        <option value="">{t("plan.tiers.bareme.nonClasse")}</option>
+                        {(categories.data ?? []).map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.libelle}
+                          </option>
+                        ))}
+                      </select>
+                    </InkCell>
+                  ) : null}
                   <InkCell>
                     <div className="flex flex-wrap justify-end gap-1">
                       <button

@@ -364,7 +364,8 @@ export function EcritureDuCabinet({
 
       {/*
        * Ce que la proposition porte en réserve : la nature d'une vente que le
-       * Socle n'a pas prouvée (le compte de repli), le mois de TVA à vérifier. Un mot ; le détail dans le i.
+       * Socle n'a pas prouvée (le compte de repli), un timbre au tarif d'une
+       * catégorie d'émetteur que rien ne confirme, ou le mois de TVA à vérifier. Un mot ; le détail dans le i.
        */}
       {vivante === null && proposition?.ok
         ? (proposition.reserves ?? []).map((r) => (
@@ -377,12 +378,18 @@ export function EcritureDuCabinet({
               <Aide
                 titre={t(`cab.ecriture.reserve.${r.code}`)}
                 paragraphes={[
-                  { texte: t(`cab.ecriture.reserve.${r.code}.aide`) },
+                  r.code === "categorie_d_emetteur"
+                    ? {
+                        texte: t(`cab.ecriture.reserve.${r.code}.aide`, {
+                          montant: montant(r.montant, locale),
+                        }),
+                      }
+                    : { texte: t(`cab.ecriture.reserve.${r.code}.aide`) },
                   // Le mois de TVA dit pourquoi il est à vérifier.
                   ...(r.code === "mois_de_tva"
                     ? [{ texte: t(`cab.ecriture.reserve.mois_de_tva.${r.raison}`) }]
                     : []),
-                  ...(r.articles.length > 0
+                  ...("articles" in r && r.articles.length > 0
                     ? [
                         {
                           texte: t("cab.ecriture.reserve.articles", {
