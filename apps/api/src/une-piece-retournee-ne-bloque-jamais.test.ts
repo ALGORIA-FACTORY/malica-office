@@ -240,6 +240,12 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
           assert.ok(await notifie(id, "piece.archivee"), "le cabinet est prévenu");
           // Invisible pour la PME, conservée côté cabinet.
           assert.ok(!(await listeDeLaPme()).includes(id));
+          // Même pour qui la lit aussi comme cabinet engagé : la liste de la
+          // société ne la rend pas (le dirigeant qui est son propre comptable).
+          const vueDuCabinet = (await cabinetFait("capture.listAvecLecture", pme)) as Array<{
+            id: string;
+          }>;
+          assert.ok(!vueDuCabinet.some((p) => p.id === id), "archivée : hors de la liste");
           await assert.rejects(pmeFait("capture.dossier", id), /piece\.not_found/);
           const vue = (await cabinetFait("capture.dossier", id)) as { piece: { id: string } };
           assert.equal(vue.piece.id, id);
