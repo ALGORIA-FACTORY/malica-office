@@ -56,12 +56,18 @@ export const OPTIONS_APPLIQUEES: Readonly<Record<string, readonly string[]>> = {
   // (`mois-de-tva.ts`, `app.jour_d_imputation_tva`).
   "mois_tva.date": ["exigibilite_calculee", "date_facture_alerte"],
   // Le sudoku observe ou désigne (`malica/lecture/sudoku.ts`, `modeDuSudoku`).
-  // La relecture de nuit et son délai sont enregistrés, pas appliqués.
   "lecture.sudoku": ["observe", "designe"],
+  // La relecture de nuit (17 novembre 2026) : la base la lit
+  // (`app.relecture_de_nuit`), `read-flow.ts` diffère le rattrapage quand elle
+  // est active et le fait sur-le-champ quand elle est coupée.
+  "lecture.relecture_nuit": ["active", "coupee"],
 };
 
-/** Les réglages à un nombre que le Socle lit. */
-export const NOMBRES_APPLIQUES: readonly string[] = [SEUIL];
+/**
+ * Les réglages à un nombre que le Socle lit. Le délai de la relecture de nuit
+ * est lu par la base, qui en tire l'heure du travail (`fabrique.relecture_inscrire`).
+ */
+export const NOMBRES_APPLIQUES: readonly string[] = [SEUIL, "lecture.relecture_delai_heures"];
 
 /**
  * Les réglages du dossier (ou du cabinet) au jour dit. La base dit qui peut

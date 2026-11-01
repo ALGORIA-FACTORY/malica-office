@@ -2176,6 +2176,13 @@ export const ar: Dict = {
   "refus.lecture.refusee": "قراءة هذه الوثيقة مرفوضة لهذا الملف.",
   "refus.lecture.champ_inconnu": "هذا الحقل أو هذه الشبكة غير موجودين في المرجع بتاريخ الوثيقة.",
   "refus.lecture.supplement_positif": "الإضافة تُحتسب بعدد موجب من القراءات.",
+  "refus.relecture.reglage_illisible":
+    "إعداد إعادة القراءة الليلية غير مقروء: «مفعّلة» أو «موقوفة»، ومهلة بالساعات.",
+  "refus.relecture.coupee": "إعادة القراءة الليلية موقوفة لهذا الملف.",
+  "refus.relecture.sans_lecture": "لم تُقرأ هذه الوثيقة بعد: لا شيء لإعادة قراءته.",
+  "refus.relecture.travail": "إعادة القراءة هذه ليست جارية لهذه الوثيقة.",
+  "refus.relecture.depassee": "قراءة أحدث هي المعتمدة: إعادة القراءة لا تحلّ محلّها.",
+  "refus.relecture.corrigee": "صُحّحت الوثيقة أو صودق عليها منذ قراءتها: لا تُعاد قراءتها.",
   "refus.facturation.premier_du_mois": "تبدأ فترة الفوترة في أول الشهر.",
   "refus.facturation.destinataire_sans_nom":
     "المرسَل إليه {destinataire} بلا اسم: الفاتورة بلا مرسَل إليه ليست فاتورة.",

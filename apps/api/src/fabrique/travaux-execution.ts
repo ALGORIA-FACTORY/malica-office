@@ -108,6 +108,16 @@ export interface ResultatDExecution {
 export type AvecBase = <T>(travail: (db: Requete) => Promise<T>) => Promise<T>;
 
 /**
+ * Ce qu'un travail TERMINÉ a à dire de lui-même : une relecture qui s'est
+ * abstenue n'a pas échoué, mais elle n'a pas relu — et ce n'est pas la même
+ * fin. Le motif et le détail s'inscrivent avec l'issue « termine ».
+ */
+export interface CompteRendu {
+  motif: string;
+  detail?: Record<string, unknown>;
+}
+
+/**
  * Prend un travail, l'exécute, inscrit son issue. Rend `null` s'il n'y avait
  * rien à prendre.
  *
@@ -128,15 +138,20 @@ export async function executerUnTravail(
   avecBase: AvecBase,
   tenantId: string,
   natures: readonly NatureDeTravail[],
-  executer: (travail: TravailPris) => Promise<void>,
+  executer: (travail: TravailPris) => Promise<CompteRendu | void>,
 ): Promise<ResultatDExecution | null> {
   const pris = await avecBase(async (db) => prendreUnTravail(db, tenantId, natures));
   if (!pris) return null;
 
   let issue: IssueDeTentative = "termine";
   let motif: string | null = null;
+  let detail: Record<string, unknown> | undefined;
   try {
-    await executer(pris);
+    const compteRendu = await executer(pris);
+    if (compteRendu) {
+      motif = compteRendu.motif;
+      detail = compteRendu.detail;
+    }
   } catch (erreur) {
     issue = qualifierEchec(erreur);
     motif = erreur instanceof Error ? erreur.message.slice(0, 500) : String(erreur);
@@ -149,6 +164,7 @@ export async function executerUnTravail(
       tentative: pris.tentative,
       nature: issue,
       ...(motif === null ? {} : { motif }),
+      ...(detail === undefined ? {} : { detail }),
     }),
   );
 

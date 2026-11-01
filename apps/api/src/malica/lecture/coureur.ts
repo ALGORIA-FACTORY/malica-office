@@ -15,6 +15,12 @@
  * déclenche une génération en production. La nature décide, dans le corps de
  * la boucle, et nulle part ailleurs.
  *
+ * Depuis le 17 novembre, une TROISIÈME : la relecture de nuit
+ * (`relecture_piece`, `relirePiece`), que la base ne rend prenable qu'à son
+ * heure (`pas_avant`). Elle part donc au premier appel d'un membre du dossier
+ * APRÈS cette heure — pas d'elle-même la nuit. Ce qu'il manque pour cela est
+ * dit plus bas, et dans `docs/exploitation.md` (« La relecture de nuit »).
+ *
  * ========================================================= CE QU'IL N'EST PAS
  *
  * Ce n'est pas un démon. Il ne balaie pas les organisations, et il ne tourne
@@ -48,7 +54,7 @@ import { executerUnTravail } from "../../fabrique/travaux-execution.ts";
 import type { NatureDeTravail } from "../../fabrique/travaux.ts";
 
 import { registre } from "./lectures-en-cours.ts";
-import { readPieceFlow } from "./read-flow.ts";
+import { readPieceFlow, relirePiece } from "./read-flow.ts";
 
 /**
  * Combien de travaux un seul appel accepte d'enchaîner.
@@ -72,7 +78,9 @@ const enCours = new Set<string>();
  * partira au premier appel qui suivra la configuration de la clé.
  */
 function cequejepeuxfaire(): NatureDeTravail[] {
-  const natures: NatureDeTravail[] = ["lecture_piece"];
+  // La relecture de nuit n'est prise qu'à son heure : la base ne la rend
+  // prenable qu'après son « pas avant » (`fabrique.etat_des_travaux_v`).
+  const natures: NatureDeTravail[] = ["lecture_piece", "relecture_piece"];
   if (process.env["DEEPSEEK_API_KEY"]) natures.push("generation_recette");
   return natures;
 }
@@ -141,7 +149,13 @@ async function courir(utilisateurId: string, pieceId: string): Promise<void> {
             `[coureur] recette candidate ${inscrite.versionId} (rang ${String(inscrite.rang)}) ` +
               `pour « ${t.signatureCle} »`,
           );
-          return;
+          return undefined;
+        }
+
+        // La relecture de nuit : elle dit elle-même si elle a relu, écarté ou
+        // s'est abstenue, et son compte rendu s'inscrit avec l'issue.
+        if (t.nature === "relecture_piece") {
+          return relirePiece(api, { travailId: t.travailId, pieceId: t.pieceId });
         }
 
         /*
@@ -154,6 +168,7 @@ async function courir(utilisateurId: string, pieceId: string): Promise<void> {
         await registre<Awaited<ReturnType<typeof readPieceFlow>>>().lireOuRejoindre(t.pieceId, () =>
           readPieceFlow(api, t.pieceId),
         );
+        return undefined;
       });
       if (!fait) return;
       if (fait.issue !== "termine") {

@@ -2328,6 +2328,15 @@ export const fr = {
   "refus.lecture.champ_inconnu":
     "Ce champ ou cette grille n’existe pas au référentiel à la date de la pièce.",
   "refus.lecture.supplement_positif": "Un supplément se compte en lectures positives.",
+  "refus.relecture.reglage_illisible":
+    "Le réglage de la relecture de nuit est illisible : « active » ou « coupée », et un délai en heures.",
+  "refus.relecture.coupee": "La relecture de nuit est coupée pour ce dossier.",
+  "refus.relecture.sans_lecture": "Cette pièce n’a pas encore été lue : il n’y a rien à relire.",
+  "refus.relecture.travail": "Cette relecture n’est pas en cours pour cette pièce.",
+  "refus.relecture.depassee":
+    "Une lecture plus récente fait foi : la relecture ne la remplace pas.",
+  "refus.relecture.corrigee":
+    "La pièce a été corrigée ou validée depuis sa lecture : elle ne se relit plus.",
   "refus.facturation.premier_du_mois": "Une période de facturation commence le premier du mois.",
   "refus.facturation.destinataire_sans_nom":
     "Le destinataire {destinataire} n’a pas de nom : une facture sans destinataire n’est pas une facture.",

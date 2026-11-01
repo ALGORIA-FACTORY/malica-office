@@ -60,7 +60,7 @@
         "public.cabinet_reglages_definir",
         "public.capture_piece_register",
         "public.capture_precision_persist",
-        "public.capture_read_persist",
+        "capture.lecture_inscrire",
         "public.capture_sceller_empreinte",
         "public.charge_question_answer",
         "public.collab_assign",
@@ -149,7 +149,7 @@
     {
       "objet": "capture.citations",
       "privilege": "INSERT",
-      "chemins": ["public.capture_read_persist"]
+      "chemins": ["capture.lecture_inscrire"]
     },
     {
       "objet": "capture.conformite",
@@ -159,7 +159,7 @@
     {
       "objet": "capture.extractions",
       "privilege": "INSERT",
-      "chemins": ["public.capture_read_persist"]
+      "chemins": ["capture.lecture_inscrire"]
     },
     {
       "objet": "capture.paiement_justificatifs",
@@ -219,7 +219,7 @@
       "chemins": [
         "public.capture_piece_register",
         "public.capture_precision_persist",
-        "public.capture_read_persist",
+        "capture.lecture_inscrire",
         "public.capture_sceller_empreinte",
         "public.piece_renvoyer",
         "public.socle_ecriture_book",
@@ -245,7 +245,7 @@
     {
       "objet": "capture.token_plan",
       "privilege": "INSERT",
-      "chemins": ["public.capture_read_persist"]
+      "chemins": ["capture.lecture_inscrire"]
     },
     {
       "objet": "collab.assignments",
@@ -375,7 +375,11 @@
     {
       "objet": "fabrique.travaux",
       "privilege": "INSERT",
-      "chemins": ["fabrique.generation_proposer", "fabrique.travail_inscrire"]
+      "chemins": [
+        "fabrique.generation_proposer",
+        "fabrique.relecture_inscrire",
+        "fabrique.travail_inscrire"
+      ]
     },
     {
       "objet": "facturation.forfait_historique",

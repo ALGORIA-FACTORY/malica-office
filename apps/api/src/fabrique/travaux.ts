@@ -37,8 +37,13 @@ import type { Requete } from "../db.ts";
  * `generation_recette` ne vise pas une pièce mais un FORMAT : sa cible est la
  * clé de signature portée par `fabrique.travaux.signature_cle`, et la base
  * refuse un travail de cette nature qui n'en porte pas.
+ *
+ * `relecture_piece` relit une pièce déjà lue, avec un AUTRE lecteur et pas
+ * avant son heure (`fabrique.travaux.pas_avant`) : la relecture de nuit
+ * (`lecture.relecture_nuit`). Elle s'inscrit par sa porte
+ * (`fabrique.relecture_inscrire`), jamais par `enregistrerTravail`.
  */
-export type NatureDeTravail = "lecture_piece" | "generation_recette";
+export type NatureDeTravail = "lecture_piece" | "generation_recette" | "relecture_piece";
 
 /** Les issues qu'une tentative peut inscrire. « pris » n'en est pas une. */
 export type IssueDeTentative =

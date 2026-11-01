@@ -336,6 +336,14 @@ Dans cette première livraison (`apps/api/src/malica/lecture/sudoku.ts`) :
 - non prouvée, la lecture ressort à l'identique. Un échec du sudoku (moteur
   absent, grille illisible) crie dans le journal et ne prive personne de sa
   lecture.
+- **la relecture de nuit** (`lecture.relecture_nuit` = `active`, 17 novembre 2026) : le rattrapage par un autre lecteur ne part plus dans la requête ; il
+  s'inscrit en travail `relecture_piece`, pas avant la lecture + le délai du
+  dossier, et repasse par le sudoku comme le rattrapage
+  (`lire` = `sudoku.lire(lecteurs.lire(p))`). Retenue (strictement meilleure),
+  la relecture est une lecture NOUVELLE : ses champs s'inscrivent sous un
+  nouveau `lecture_id`, et leurs citations pointent dans SON plan de jetons
+  (`capture.token_plan.extraction_id`). Une pièce prouvée en `designe` ne
+  s'inscrit pas : elle ne se rattrape pas. Voir `docs/exploitation.md`.
 
 ## 6. Ce qui est mesuré (31 octobre 2026)
 

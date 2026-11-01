@@ -203,12 +203,7 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
   it("ce qui n'est pas appliqué se dit, jusque sur l'option ; ce qui l'est a son implémentation", async () => {
     const s = await monter();
     const r = await s.lire(s.expert, null);
-    for (const code of [
-      "prorata.methode",
-      "non_residents.retenue",
-      "lecture.relecture_nuit",
-      "lecture.relecture_delai_heures",
-    ])
+    for (const code of ["prorata.methode", "non_residents.retenue"])
       assert.equal(valeur(r, code)?.appliquee, false, code);
     // Le mode du sudoku s'applique (`modeDuSudoku`) : observe ou désigne.
     assert.deepEqual(
@@ -218,7 +213,21 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
         ["designe", true],
       ],
     );
-    assert.match(r.sujets.find((x) => x.code === "lecture")!.incertain ?? "", /Non appliqués/);
+    // La relecture de nuit et son délai s'appliquent depuis le 17 novembre 2026
+    // (`app.relecture_de_nuit`) ; ce qui reste — le déclencheur planifié — se dit.
+    for (const code of ["lecture.relecture_nuit", "lecture.relecture_delai_heures"])
+      assert.equal(valeur(r, code)?.appliquee, true, code);
+    assert.deepEqual(
+      valeur(r, "lecture.relecture_nuit")!.options!.map((o) => [o.code, o.appliquee]),
+      [
+        ["active", true],
+        ["coupee", true],
+      ],
+    );
+    assert.match(
+      r.sujets.find((x) => x.code === "lecture")!.incertain ?? "",
+      /déclencheur planifié/,
+    );
     // Appliqués depuis le 1er novembre 2026 : le compte de vente par nature,
     // l'avoir lié à sa facture — mais pas l'avoir « libre », qui le dit ; et
     // depuis le 11 novembre 2026, le mois de TVA par l'exigibilité.

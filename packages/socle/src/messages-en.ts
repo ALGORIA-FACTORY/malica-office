@@ -2251,6 +2251,15 @@ export const en: Dict = {
   "refus.lecture.champ_inconnu":
     "This field or grid does not exist in the reference data on the document date.",
   "refus.lecture.supplement_positif": "A bonus is counted in positive reads.",
+  "refus.relecture.reglage_illisible":
+    "The night re-reading setting is unreadable: “on” or “off”, and a delay in hours.",
+  "refus.relecture.coupee": "Night re-reading is off for this file.",
+  "refus.relecture.sans_lecture":
+    "This document has not been read yet: there is nothing to re-read.",
+  "refus.relecture.travail": "This re-reading is not in progress for this document.",
+  "refus.relecture.depassee": "A more recent reading prevails: the re-reading does not replace it.",
+  "refus.relecture.corrigee":
+    "The document has been corrected or validated since it was read: it is no longer re-read.",
   "refus.facturation.premier_du_mois": "A billing period starts on the first of the month.",
   "refus.facturation.destinataire_sans_nom":
     "Recipient {destinataire} has no name: an invoice without a recipient is not an invoice.",
