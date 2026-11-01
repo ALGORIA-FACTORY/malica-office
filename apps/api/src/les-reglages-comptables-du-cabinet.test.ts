@@ -175,9 +175,12 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
       assert.ok(x.sources.length > 0 && x.sources.every((y) => y.url.startsWith("https://")));
     }
     assert.match(r.sujets.find((x) => x.code === "immobilisation")!.incertain ?? "", /TTC/);
-    // Aucun code d'option ne porte un numéro de compte.
+    // Aucun code d'option ne porte un numéro de compte. Les sources de cours
+    // `ESSAI_<horodatage>` sont celles qu'un autre fichier d'essai crée, le temps
+    // de son passage, sur la même base (une-facture-en-devise-se-convertit) :
+    // elles ne sont pas des options du pack.
     for (const o of r.sujets.flatMap((x) => x.reglages).flatMap((x) => x.options ?? []))
-      assert.doesNotMatch(o.code, /\d{3,}/, o.code);
+      if (!o.code.startsWith("ESSAI_")) assert.doesNotMatch(o.code, /\d{3,}/, o.code);
     // La date d'effet proposée : le début de l'exercice (le 1er janvier sans clôture).
     assert.equal(r.debutExercice, `${s.jour.slice(0, 4)}-01-01`);
   });
