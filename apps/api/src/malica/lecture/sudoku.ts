@@ -49,22 +49,73 @@ import {
 
 import type { AppelApi } from "../appel-local.ts";
 import type { Requete } from "../../db.ts";
+import { dateDeLaPiece } from "../../depots/dates.ts";
+import type { ReglagesResolus } from "../../scan/reglages-comptables.ts";
 
 import { treillisMontant } from "./montants.ts";
-import { normalizeDate, type PageToken, type TokenRef } from "./token-plan.ts";
+import {
+  normalizeDate,
+  resolveFromTokenPlan,
+  type PageToken,
+  type TokenRef,
+} from "./token-plan.ts";
 import type { VisionRead, VisionSelection } from "./vision.ts";
 
 /** La grille de la lecture citée : elle lit des factures (voir l'en-tête). */
 export const GRILLE_DE_LA_LECTURE_CITEE = "facture";
 
-/** Les codes de champs de la grille facture que la sélection connaît. */
-const CHAMP = {
-  ht: "total_ht",
-  ttc: "total_ttc",
-  net: "net_a_payer",
-  base: "base_tva_par_taux",
-  tva: "montant_tva_par_taux",
-} as const;
+/* ================================================ LES RÔLES DES CHAMPS (§2) = */
+
+/** Un nom de champ d'une expression, sans son « ? » de champ facultatif. */
+function nomDuChamp(v: unknown): string | null {
+  return typeof v === "string" && v.length > 0 ? v.replace(/\?$/u, "") : null;
+}
+
+/** L'expression d'une preuve, lue comme un objet (le moteur en a vérifié la forme). */
+function expressionDe(p: Grille["preuves"][number]): Readonly<Record<string, unknown>> {
+  return p.expression !== null && typeof p.expression === "object"
+    ? (p.expression as Record<string, unknown>)
+    : {};
+}
+
+/**
+ * Les champs que la sélection de la chaîne connaît, DÉDUITS des preuves de la
+ * grille — aucun code de champ n'est écrit ici :
+ *
+ *   - `groupe_taux` : la base et le montant par taux, et le total des bases (le HT) ;
+ *   - `somme` au rôle `ttc` : le TTC que la chaîne reçoit, variante par variante
+ *     (le net à payer, quand le TTC est imprimé avant le timbre) ;
+ *   - `lignes` : la cellule de chaque colonne du tableau, par la clé du moteur.
+ */
+export interface ChampsDeLaGrille {
+  readonly ht: string | null;
+  readonly base: string | null;
+  readonly tva: string | null;
+  readonly ttc: readonly { readonly variante: string | null; readonly champ: string }[];
+  /** Clé de la sortie du moteur (`quantite`, `prix`…) → code du champ de la grille. */
+  readonly lignes: Readonly<Record<string, string>>;
+}
+
+export function champsDeLaGrille(grille: Grille): ChampsDeLaGrille {
+  const preuves = grille.preuves.map((p) => ({ p, e: expressionDe(p) }));
+  const groupe = preuves.find((x) => x.e["op"] === "groupe_taux")?.e;
+  const lignes = preuves.find((x) => x.e["op"] === "lignes")?.e;
+  return {
+    ht: nomDuChamp(groupe?.["total_base"]),
+    base: nomDuChamp(groupe?.["base"]),
+    tva: nomDuChamp(groupe?.["montant"]),
+    ttc: preuves.flatMap(({ p, e }) => {
+      const champ = e["op"] === "somme" && e["role"] === "ttc" ? nomDuChamp(e["total"]) : null;
+      return champ ? [{ variante: p.variante ?? null, champ }] : [];
+    }),
+    lignes: Object.fromEntries(
+      Object.entries(lignes ?? {}).flatMap(([cle, v]) => {
+        const champ = cle === "op" ? null : nomDuChamp(v);
+        return champ ? [[cle, champ]] : [];
+      }),
+    ),
+  };
+}
 
 /* ======================================================== LES JETONS (§3) === */
 
@@ -132,6 +183,8 @@ function decoupesDe(
 /* ===================================================== LA GRILLE ET LE PACK = */
 
 export interface ContexteDuSudoku {
+  /** Le jour où les règles se lisent : la date de la pièce, à défaut sa réception. */
+  readonly jour: string;
   readonly grille: Grille;
   readonly pack: PackDuSudoku;
   /** Les formes juridiques du pack : le nom d'un tiers se compare sans elles. */
@@ -144,7 +197,9 @@ function ppm(x: unknown): number {
 }
 
 /**
- * La grille et les paramètres du pack, lus par les vues `security_invoker`.
+ * La grille et les paramètres du pack, lus par les vues `security_invoker`, AU
+ * JOUR DIT — la date de la pièce, à défaut sa réception, comme le jugement
+ * (`analyse.ts`) : jamais la date du jour.
  *
  * Rien n'a de valeur par défaut : un paramètre absent lève, une charge que le
  * pack définit deux fois avec deux valeurs différentes lève aussi — le moteur
@@ -156,81 +211,98 @@ export async function lireLeContexteDuSudoku(
   grilleCode: string,
   /** La devise de la pièce : son exposant (`ref.devises`) met les montants à l'échelle. */
   deviseCode: string,
+  /** Le jour des règles, `AAAA-MM-JJ`. */
+  jour: string,
 ): Promise<ContexteDuSudoku> {
+  if (dateDeLaPiece(jour, null) === null) throw new Error(`sudoku : jour illisible : ${jour}`);
   const { rows: grilles } = await db.query<{ id: string }>(
     `select id from ref_grilles_v
       where pack_version_id = $1 and code = $2
-        and valid_from <= current_date and (valid_to is null or valid_to >= current_date)`,
-    [packId, grilleCode],
+        and valid_from <= $3::date and (valid_to is null or valid_to >= $3::date)`,
+    [packId, grilleCode, jour],
   );
   if (grilles.length !== 1) {
     throw new Error(`sudoku : grille « ${grilleCode} » — ${grilles.length} en vigueur, 1 attendue`);
   }
   const grilleId = grilles[0]!.id;
 
-  const [champs, preuves, params, devises, taux, charges, formats, formes] = await Promise.all([
-    db.query<{
-      code: string;
-      type: string;
-      reperes_fr: string[] | null;
-      reperes_ar: string[] | null;
-      format_code: string | null;
-    }>(
-      `select code, type, reperes_fr, reperes_ar, format_code
+  const [champs, preuves, params, devises, taux, charges, tranches, formats, formes] =
+    await Promise.all([
+      db.query<{
+        code: string;
+        type: string;
+        reperes_fr: string[] | null;
+        reperes_ar: string[] | null;
+        format_code: string | null;
+      }>(
+        `select code, type, reperes_fr, reperes_ar, format_code
          from ref_grille_champs_v where grille_id = $1 order by code`,
-      [grilleId],
-    ),
-    db.query<{ code: string; expression: unknown; statut: string; variante: string | null }>(
-      `select code, expression, statut, variante from ref_grille_preuves_v
+        [grilleId],
+      ),
+      db.query<{ code: string; expression: unknown; statut: string; variante: string | null }>(
+        `select code, expression, statut, variante from ref_grille_preuves_v
         where grille_id = $1 and expression is not null order by code`,
-      [grilleId],
-    ),
-    db.query<{ code: string; value_num: string | null }>(
-      `select code, value_num from ref_socle_params_v
+        [grilleId],
+      ),
+      db.query<{ code: string; value_num: string | null }>(
+        `select distinct on (code) code, value_num from ref_socle_params_v
         where pack_version_id = $1
-          and code = 'lecture.tolerance_arrondi_mineure'`,
-      [packId],
-    ),
-    db.query<{ exposant: number }>(`select exposant from ref.devises where code = $1`, [
-      deviseCode,
-    ]),
-    // Un taux nul n'est pas un taux du barème : l'exonération est un chemin à
-    // part dans la grille (la mention lue), jamais une instance « 0 % » que
-    // n'importe quel zéro imprimé fermerait.
-    db.query<{ code: string; rate: string }>(
-      `select code, rate from ref_tva_rates_v
+          and code = 'lecture.tolerance_arrondi_mineure'
+          and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
+        order by code, valid_from desc`,
+        [packId, jour],
+      ),
+      db.query<{ exposant: number }>(`select exposant from ref.devises where code = $1`, [
+        deviseCode,
+      ]),
+      // Un taux nul n'est pas un taux du barème : l'exonération est un chemin à
+      // part dans la grille (la mention lue), jamais une instance « 0 % » que
+      // n'importe quel zéro imprimé fermerait.
+      db.query<{ code: string; rate: string }>(
+        `select code, rate from ref_tva_rates_v
         where pack_version_id = $1 and rate > 0
-          and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
+          and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code`,
-      [packId],
-    ),
-    db.query<{
-      code: string;
-      fixed_amount: string | null;
-      rate: string | null;
-      taxable: boolean;
-    }>(
-      `select code, fixed_amount, rate, taxable from ref_fiscal_charges_v
+        [packId, jour],
+      ),
+      db.query<{
+        code: string;
+        fixed_amount: string | null;
+        rate: string | null;
+        taxable: boolean;
+      }>(
+        `select code, fixed_amount, rate, taxable from ref_fiscal_charges_v
         where pack_version_id = $1
-          and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
+          and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code`,
-      [packId],
-    ),
-    db.query<{ kind: string; pattern: string }>(
-      `select distinct on (kind) kind, pattern from ref.identifiant_formats
+        [packId, jour],
+      ),
+      // Les montants qu'un barème admet pour un droit au jour dit, TOUTES
+      // catégories d'émetteur (`ref.baremes_des_droits`) : le lecteur reconnaît
+      // un montant admis ; il ne juge pas si c'est celui de l'émetteur — le
+      // Socle le fait ensuite (`bareme-du-timbre.ts`).
+      db.query<{ droit: string; montant: string }>(
+        `select distinct droit, montant_du_droit::text as montant from ref.baremes_des_droits
         where pack_version_id = $1
-          and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
+          and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
+        order by droit, montant`,
+        [packId, jour],
+      ),
+      db.query<{ kind: string; pattern: string }>(
+        `select distinct on (kind) kind, pattern from ref.identifiant_formats
+        where pack_version_id = $1
+          and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by kind, valid_from desc`,
-      [packId],
-    ),
-    db.query<{ code: string }>(
-      `select distinct code from ref.formes_juridiques
+        [packId, jour],
+      ),
+      db.query<{ code: string }>(
+        `select distinct code from ref.formes_juridiques
         where pack_version_id = $1
-          and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
+          and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code`,
-      [packId],
-    ),
-  ]);
+        [packId, jour],
+      ),
+    ]);
 
   const param = (code: string): number => {
     const v = params.rows.find((r) => r.code === code)?.value_num;
@@ -245,12 +317,20 @@ export async function lireLeContexteDuSudoku(
 
   // Une charge par code. Le pack la porte une fois par sens de facture (achat,
   // vente) : identiques, elles n'en font qu'une ; différentes, on refuse.
+  const mineures = (x: string) => Math.round(Number(x) * 10 ** decimales);
   const parCode = new Map<string, PackDuSudoku["charges"][number]>();
   for (const c of charges.rows) {
+    const fixe = c.fixed_amount === null ? null : mineures(c.fixed_amount);
     const une = {
       code: c.code,
-      montant_fixe:
-        c.fixed_amount === null ? null : Math.round(Number(c.fixed_amount) * 10 ** decimales),
+      montant_fixe: fixe,
+      // Le droit standard, et chaque tranche du barème au jour dit.
+      montants_admis: [
+        ...new Set([
+          ...(fixe === null ? [] : [fixe]),
+          ...tranches.rows.filter((t) => t.droit === c.code).map((t) => mineures(t.montant)),
+        ]),
+      ].sort((a, b) => a - b),
       taux_ppm: c.rate === null ? null : ppm(c.rate),
       assiette_tva: c.taxable,
     };
@@ -262,6 +342,7 @@ export async function lireLeContexteDuSudoku(
   }
 
   return {
+    jour,
     grille: {
       code: grilleCode,
       champs: champs.rows.map((c) => ({
@@ -356,10 +437,11 @@ export function resoudreLaPiece(
     const ambigue = jouees.find((j) => j.sortie.issue === "ambigue");
     return (ambigue ?? jouees[0]!).sortie;
   }
+  const roles = champsDeLaGrille(grille);
   const empreinte = (o: SortieDuSudoku) =>
     JSON.stringify([
-      o.champs[CHAMP.ht]?.valeur ?? null,
-      (o.champs[CHAMP.tva]?.instances ?? []).map((i) => [i.taux, i.valeur]),
+      roles.ht ? (o.champs[roles.ht]?.valeur ?? null) : null,
+      (roles.tva ? (o.champs[roles.tva]?.instances ?? []) : []).map((i) => [i.taux, i.valeur]),
     ]);
   const premiere = prouvees[0]!;
   if (prouvees.some((j) => empreinte(j.sortie) !== empreinte(premiere.sortie))) {
@@ -389,10 +471,15 @@ function ref(refs: readonly RefDeJeton[] | undefined): TokenRef | null {
  * La sélection de la chaîne, dont les MONTANTS sont remplacés par ceux que le
  * sudoku a prouvés. Rendue telle quelle si la pièce n'est pas prouvée.
  *
+ * Les champs se lisent par leur RÔLE dans les preuves de la grille
+ * (`champsDeLaGrille`), jamais par un code écrit ici.
+ *
  * - totaux : HT et TTC prouvés ; la TVA totale l'est quand la facture n'a
  *   qu'un taux (c'est alors l'instance unique). À plusieurs taux, le total de
  *   TVA n'est pas un champ de la grille : la chaîne garde le sien, et ses
  *   contrôles le vérifient contre les lignes prouvées.
+ * - TTC : le total de la preuve `somme` au rôle `ttc` de la variante qui a
+ *   prouvé la pièce — le montant qui ferme HT + TVA + droits.
  * - lignes de TVA : une par taux prouvé, nommée par le barème du pack. Une
  *   facture exonérée n'a aucune instance : les lignes de la chaîne restent.
  * - droits : ceux que la grille prouve (les codes de charges du pack) sont
@@ -402,14 +489,16 @@ function ref(refs: readonly RefDeJeton[] | undefined): TokenRef | null {
 export function selectionParLeSudoku(
   selection: VisionSelection,
   sortie: SortieDuSudoku,
+  grille: Grille,
   codesDeCharges: readonly string[],
-  champsDeCharges: Readonly<Record<string, string>>,
 ): VisionSelection {
   if (sortie.issue !== "prouvee") return selection;
   const c = sortie.champs;
+  const roles = champsDeLaGrille(grille);
+  const champsDeCharges = champsDesCharges(grille);
 
-  const bases = c[CHAMP.base]?.instances ?? [];
-  const montants = c[CHAMP.tva]?.instances ?? [];
+  const bases = (roles.base ? c[roles.base]?.instances : undefined) ?? [];
+  const montants = (roles.tva ? c[roles.tva]?.instances : undefined) ?? [];
   const lignes =
     montants.length === 0
       ? selection.lines
@@ -469,6 +558,14 @@ export function selectionParLeSudoku(
     ...(mfClient ? { matricule_fiscal_client: mfClient } : {}),
   };
 
+  // Le TTC que la chaîne reçoit : la preuve au rôle `ttc` de la variante qui a
+  // prouvé (ou commune), dont le total est prouvé et cité. Sur une pièce qui
+  // imprime son TTC AVANT le timbre, c'est le net à payer (M04).
+  const ttc = roles.ttc
+    .filter((t) => t.variante === null || t.variante === sortie.variante)
+    .map((t) => c[t.champ])
+    .find((x) => x?.statut === "prouve" && x.refs.length > 0);
+
   return {
     ...selection,
     issuer: nomEmetteur ?? selection.issuer,
@@ -477,146 +574,190 @@ export function selectionParLeSudoku(
     articles,
     other_charges: droits,
     totals: {
-      base_ht: ref(c[CHAMP.ht]?.refs),
+      base_ht: roles.ht ? ref(c[roles.ht]?.refs) : null,
       vat: montants.length === 1 ? ref(montants[0]!.refs) : selection.totals.vat,
-      // Le TTC de la chaîne est le montant qui ferme HT + TVA + droits : sur une
-      // pièce qui imprime son TTC AVANT le timbre, c'est le net à payer prouvé.
-      ttc: ref(
-        (c[CHAMP.net]?.statut === "prouve" && c[CHAMP.net]?.refs.length
-          ? c[CHAMP.net]
-          : c[CHAMP.ttc]
-        )?.refs,
-      ),
+      ttc: ref(ttc?.refs),
     },
   };
 }
 
 /** Quel champ de la grille porte quelle charge du pack ? Les preuves `charge` le disent. */
-export function champsDesCharges(grille: Grille): Record<string, string> {
+function champsDesCharges(grille: Grille): Record<string, string> {
   const out: Record<string, string> = {};
   for (const p of grille.preuves) {
-    const e = p.expression as { op?: unknown; code?: unknown; montant?: unknown } | null;
-    if (e?.op === "charge" && typeof e.code === "string" && typeof e.montant === "string") {
-      out[e.code] = e.montant;
-    }
+    const e = expressionDe(p);
+    const champ = nomDuChamp(e["montant"]);
+    if (e["op"] === "charge" && typeof e["code"] === "string" && champ) out[e["code"]] = champ;
   }
   return out;
 }
 
 /* ================================================== LE BRANCHEMENT ======= */
 
+/** Une ligne de `capture.champs_lus`, telle que la porte la reçoit. */
+interface ChampLuAInscrire {
+  /** Le code du champ de la grille ; nul : la ligne de tentative. */
+  readonly champ: string | null;
+  /** La n-ième ligne d'un tableau, à partir de 1. */
+  readonly rang: number | null;
+  /** L'instance d'un champ de groupe : le code du taux. */
+  readonly instance: string | null;
+  readonly valeur: string | null;
+  readonly statut: string | null;
+  readonly citations: readonly (RefDeJeton | { readonly case: object })[];
+}
+
 /** Ce que `capture.inscrireChampsLus` reçoit : la sortie, champ par champ. */
 export interface ChampsLusAInscrire {
   readonly pieceId: string;
+  /** Le pack et le jour où la porte résout la grille et ses champs. */
+  readonly packId: string;
+  readonly jour: string;
   readonly grille: string;
   readonly issue: SortieDuSudoku["issue"];
-  readonly champs: readonly {
-    champ: string | null;
-    valeur: string | null;
-    statut: string | null;
-    citations: readonly (RefDeJeton | { readonly case: object })[];
-  }[];
+  readonly champs: readonly ChampLuAInscrire[];
 }
 
 /**
  * Les lignes à inscrire. Un champ SIGNALÉ s'inscrit aussi, sans valeur ni
  * citation : c'est la trace d'une lecture que le sudoku n'a pas pu prouver, et
  * la mesure du recours à la chaîne en dépend. Une valeur, elle, n'est jamais
- * écrite sans sa citation (R2). Si aucun champ n'est lu, une ligne de
- * tentative (champ nul) porte l'issue : un échec ne disparaît pas.
+ * écrite sans sa citation (R2) : sans citation, elle s'inscrit nulle, avec son
+ * statut. Si aucun champ n'est lu, une ligne de tentative (champ nul) porte
+ * l'issue : un échec ne disparaît pas.
+ *
+ * Le rang d'une ligne de tableau et le taux d'une instance ont leur colonne ;
+ * le code de chaque cellule vient de la preuve `lignes` de la grille.
  */
 export function champsLusAInscrire(
-  pieceId: string,
-  grille: string,
+  piece: { readonly pieceId: string; readonly packId: string },
+  contexte: Pick<ContexteDuSudoku, "jour" | "grille">,
   sortie: SortieDuSudoku,
 ): ChampsLusAInscrire {
-  const champs: Array<ChampsLusAInscrire["champs"][number]> = Object.entries(sortie.champs).flatMap(
-    ([champ, lu]) => {
-      if (lu.statut === "absent") return [];
-      const inst = lu.instances ?? [];
-      if (inst.length > 0) {
-        return inst.map((i) => ({
-          champ: `${champ}:${i.taux}`,
-          valeur: i.refs.length > 0 ? i.valeur : null,
-          statut: lu.statut,
-          citations: i.refs,
-        }));
-      }
-      return [
-        {
-          champ,
-          valeur: lu.refs.length > 0 ? lu.valeur : null,
-          statut: lu.statut,
-          citations: lu.refs,
-        },
-      ];
-    },
-  );
+  const ligne = (
+    champ: string,
+    statut: string,
+    valeur: string | null,
+    citations: ChampLuAInscrire["citations"],
+    place: { rang?: number; instance?: string } = {},
+  ): ChampLuAInscrire => ({
+    champ,
+    rang: place.rang ?? null,
+    instance: place.instance ?? null,
+    valeur: citations.length > 0 ? valeur : null,
+    statut,
+    citations,
+  });
+
+  const champs: ChampLuAInscrire[] = Object.entries(sortie.champs).flatMap(([champ, lu]) => {
+    if (lu.statut === "absent") return [];
+    const inst = lu.instances ?? [];
+    if (inst.length > 0) {
+      return inst.map((i) => ligne(champ, lu.statut, i.valeur, i.refs, { instance: i.taux }));
+    }
+    return [ligne(champ, lu.statut, lu.valeur, lu.refs)];
+  });
+
   // Les lignes d'articles : une ligne inscrite par cellule citée.
   const lignes = sortie.lignes;
   if (lignes && lignes.statut !== "absent") {
+    const roles = champsDeLaGrille(contexte.grille).lignes;
+    const champDe = (cle: string): string => {
+      const champ = roles[cle];
+      if (!champ) throw new Error(`sudoku : la preuve « lignes » ne nomme pas la cellule ${cle}`);
+      return champ;
+    };
     lignes.instances.forEach((l, i) => {
-      const n = i + 1;
-      const cellules: Array<
-        [
-          string,
-          {
-            valeur: string;
-            refs: readonly RefDeJeton[];
-            statut?: string;
-            case?: object;
-            coupe?: number;
-          } | null,
-        ]
-      > = [
+      const cellules: Array<[string, Cite | null]> = [
         ["designation", l.designation],
         ["quantite", l.quantite],
-        ["prix_unitaire_ht", l.prix],
-        ["remise_ligne", l.remise],
-        ["montant_ligne_ht", l.montant],
-        ["taux_tva_ligne", l.taux ? { valeur: l.taux.code, refs: l.taux.refs } : null],
+        ["prix", l.prix],
+        ["remise", l.remise],
+        ["montant", l.montant],
+        ["taux", l.taux ? { valeur: l.taux.code, refs: l.taux.refs } : null],
       ];
-      for (const [code, c] of cellules) {
-        if (c) {
-          // Une cellule DÉDUITE (lecture middle-out) n'est pas imprimée : elle
-          // s'inscrit comme telle, avec l'endroit où elle devrait l'être, pour
-          // une relecture ciblée — jamais comme une valeur prouvée et citée.
-          // Une cellule lue dans une COUPE cite son jeton et la coupe retenue :
-          // la valeur n'est pas tout le texte du jeton.
-          const deduite = c.statut === "deduit";
-          const coupee = c.statut === "coupe";
-          champs.push({
-            champ: `${code}#${n}`,
-            valeur: c.valeur,
-            statut: deduite || coupee ? c.statut! : lignes.statut,
-            citations:
-              deduite && c.case
-                ? [{ case: c.case }]
-                : coupee
-                  ? c.refs.map((r) => ({ ...r, coupe: c.coupe }))
-                  : c.refs,
-          });
-        }
+      for (const [cle, c] of cellules) {
+        if (!c) continue;
+        // Une cellule DÉDUITE (lecture middle-out) n'est pas imprimée : elle
+        // s'inscrit comme telle, avec l'endroit où elle devrait l'être, pour
+        // une relecture ciblée — jamais comme une valeur prouvée et citée.
+        // Une cellule lue dans une COUPE cite son jeton et la coupe retenue :
+        // la valeur n'est pas tout le texte du jeton.
+        const deduite = c.statut === "deduit";
+        const coupee = c.statut === "coupe";
+        champs.push(
+          ligne(
+            champDe(cle),
+            deduite || coupee ? c.statut! : lignes.statut,
+            c.valeur,
+            deduite && c.case
+              ? [{ case: c.case }]
+              : coupee
+                ? c.refs.map((r) => ({ ...r, coupe: c.coupe }))
+                : c.refs,
+            { rang: i + 1 },
+          ),
+        );
       }
     });
     // La remise globale qui a fermé les lignes, quand le centre ne l'a pas déjà lue.
     const remise = lignes.remise_globale;
-    if (remise && !champs.some((c) => c.champ === "remise_globale")) {
-      champs.push({
-        champ: "remise_globale",
-        valeur: remise.valeur,
-        statut: lignes.statut,
-        citations: remise.refs,
-      });
+    const champRemise = remise ? champDe("remise_globale") : null;
+    if (remise && champRemise && !champs.some((c) => c.champ === champRemise)) {
+      champs.push(ligne(champRemise, lignes.statut, remise.valeur, remise.refs));
     }
   }
   return {
-    pieceId,
-    grille,
+    pieceId: piece.pieceId,
+    packId: piece.packId,
+    jour: contexte.jour,
+    grille: contexte.grille.code,
     issue: sortie.issue,
     champs:
-      champs.length > 0 ? champs : [{ champ: null, valeur: null, statut: null, citations: [] }],
+      champs.length > 0
+        ? champs
+        : [{ champ: null, rang: null, instance: null, valeur: null, statut: null, citations: [] }],
   };
+}
+
+/* ================================================ LE MODE, PAR UN RÉGLAGE === */
+
+/** Le réglage qui branche le sudoku, et ses deux options (`ref.reglages_comptables`). */
+const REGLAGE_DU_SUDOKU = "lecture.sudoku";
+const MODES = ["observe", "designe"] as const;
+type ModeDuSudoku = (typeof MODES)[number];
+
+/**
+ * Le mode du dossier : `observe` (le défaut du pack) ou `designe`. Le cabinet
+ * l'arrête comme tout réglage (« Réglages comptabilité », sujet `lecture`) ;
+ * aucun déploiement n'est requis. Absent ou inconnu : une erreur nommée, que
+ * le sudoku crie au journal — il ne devine pas un mode (R4).
+ */
+export function modeDuSudoku(r: ReglagesResolus): ModeDuSudoku {
+  const v = r.get(REGLAGE_DU_SUDOKU);
+  const mode = MODES.find((m) => m === v);
+  if (!mode) throw new Error("reglage.lecture.illisible");
+  return mode;
+}
+
+/** Le contexte d'une pièce, avec le mode que son dossier a arrêté. */
+export interface ContexteDuSudokuBranche extends ContexteDuSudoku {
+  readonly mode: ModeDuSudoku;
+}
+
+/**
+ * Le jour des règles d'une lecture : la date que la chaîne a lue
+ * (`selection.document_date`, relue dans le plan par `normalizeDate`), à
+ * défaut celle de la réception de la pièce — la règle du jugement.
+ */
+export function jourDeLaLecture(lecture: VisionRead, recueLe: string): string {
+  const lue = resolveFromTokenPlan(
+    lecture.tokens,
+    "document_date",
+    lecture.selection.document_date,
+    "date",
+  ).value;
+  return dateDeLaPiece(lue, null) ?? recueLe;
 }
 
 export interface Sudoku {
@@ -634,25 +775,32 @@ export interface Sudoku {
 /**
  * Le sudoku branché sur la base, pour une pièce.
  *
- * DEUX MODES, et le premier est celui par défaut :
+ * DEUX MODES, réglés par dossier (`lecture.sudoku`), et le premier est le
+ * défaut du pack :
  *
- *   OBSERVE  (`designe: false`) — il lit chaque pièce et inscrit ce qu'il a
- *            lu dans `capture.champs_lus`, prouvé ou non, mais la lecture de
- *            la chaîne ressort à l'identique, à l'octet près. C'est l'épreuve
- *            en vrai : sur les vraies pièces, à côté de la chaîne, sans rien
- *            pouvoir casser.
- *   DÉSIGNE  (`designe: true`) — quand la pièce est prouvée, les montants
- *            désignés par la preuve remplacent ceux de la chaîne.
+ *   OBSERVE  — il lit chaque pièce et inscrit ce qu'il a lu dans
+ *              `capture.champs_lus`, prouvé ou non, mais la lecture de la
+ *              chaîne ressort à l'identique, à l'octet près. C'est l'épreuve
+ *              en vrai : sur les vraies pièces, à côté de la chaîne, sans rien
+ *              pouvoir casser.
+ *   DÉSIGNE  — quand la pièce est prouvée, les montants désignés par la preuve
+ *              remplacent ceux de la chaîne.
  *
- * Le passage de l'un à l'autre est une décision du dirigeant, prise sur les
- * mesures de l'observation : `SUDOKU_DESIGNE=1` dans l'environnement de l'API,
- * comme `OCR_URL` branche PaddleOCR. Aucun déploiement de code n'est requis.
+ * Le passage de l'un à l'autre se décide sur les mesures de l'observation, et
+ * le cabinet l'arrête dans « Réglages comptabilité » : aucun déploiement.
+ *
+ * Les règles se lisent au jour de la pièce (`jourDeLaLecture`) ; le contexte
+ * est gardé par jour.
  */
 export function creerLeSudoku(
   api: AppelApi,
   piece: {
     readonly pieceId: string;
+    /** Le dossier de la pièce : son réglage dit le mode. */
+    readonly dossierId: string;
     readonly packId: string;
+    /** Le jour de réception de la pièce (`AAAA-MM-JJ`) : le jour des règles à défaut de date lue. */
+    readonly recueLe: string;
     /** La devise du dossier, telle que `lireLesDevises` la rend ; absente, il ne lit pas. */
     readonly devise: DeviseLue | undefined;
     /** Le dossier et ses tiers, tels que la base les connaît (anneau 2). */
@@ -663,21 +811,27 @@ export function creerLeSudoku(
       readonly raisonSociale: string;
     }[];
   },
-  mode: { readonly designe: boolean },
 ): Sudoku {
-  let contexte: Promise<ContexteDuSudoku> | null = null;
+  const contextes = new Map<string, Promise<ContexteDuSudokuBranche>>();
   const lus = new WeakMap<VisionRead, ChampsLusAInscrire>();
   return {
     async lire(lecture) {
+      let jour: string | null = null;
       try {
         if (!piece.devise) throw new Error("la devise du dossier est absente du référentiel");
-        contexte ??= api.rpc<ContexteDuSudoku>("capture", "contexteSudoku", [
-          piece.packId,
-          GRILLE_DE_LA_LECTURE_CITEE,
-          piece.devise.code,
-        ]);
+        jour = jourDeLaLecture(lecture, piece.recueLe);
+        let contexte = contextes.get(jour);
+        if (!contexte) {
+          contexte = api.rpc<ContexteDuSudokuBranche>("capture", "contexteSudoku", [
+            piece.dossierId,
+            piece.packId,
+            GRILLE_DE_LA_LECTURE_CITEE,
+            piece.devise.code,
+            jour,
+          ]);
+          contextes.set(jour, contexte);
+        }
         const ctx = await contexte;
-        const { grille, pack } = ctx;
         const connus: Connus = {
           dossier: piece.dossier.matricule
             ? { matricule: piece.dossier.matricule, raison_sociale: piece.dossier.raisonSociale }
@@ -695,24 +849,24 @@ export function creerLeSudoku(
           resoudre,
           connus,
         );
-        const aInscrire = champsLusAInscrire(piece.pieceId, grille.code, sortie);
+        const aInscrire = champsLusAInscrire(piece, ctx, sortie);
 
         const rendue: VisionRead =
-          !mode.designe || sortie.issue !== "prouvee"
+          ctx.mode !== "designe" || sortie.issue !== "prouvee"
             ? lecture
             : {
                 ...lecture,
                 selection: selectionParLeSudoku(
                   lecture.selection,
                   sortie,
-                  pack.charges.map((ch) => ch.code),
-                  champsDesCharges(grille),
+                  ctx.grille,
+                  ctx.pack.charges.map((ch) => ch.code),
                 ),
               };
         lus.set(rendue, aInscrire);
         return rendue;
       } catch (e: unknown) {
-        contexte = null;
+        if (jour !== null) contextes.delete(jour);
         console.error(`sudoku : lecture non prouvée — pièce ${piece.pieceId} : ${message(e)}`);
         return lecture;
       }

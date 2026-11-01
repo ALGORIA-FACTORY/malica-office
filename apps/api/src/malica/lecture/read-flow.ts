@@ -28,7 +28,14 @@ import { runVisionRead, type VisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
 
 interface ContexteLecture {
-  piece: { id: string; tenantId: string; source: string; contentType: string | null };
+  piece: {
+    id: string;
+    tenantId: string;
+    source: string;
+    contentType: string | null;
+    /** Le jour de réception (`AAAA-MM-JJ`). */
+    recueLe: string;
+  };
   packId: string;
   /** La devise du dossier. */
   currency: string;
@@ -228,26 +235,24 @@ export async function readPieceFlow(
    *
    * Chaque lecture — la première comme le rattrapage — passe par le sudoku.
    * Par défaut il OBSERVE : il inscrit ce qu'il a lu, et la lecture de la
-   * chaîne ressort à l'identique. Branché (`SUDOKU_DESIGNE=1`), la
-   * désignation PROUVÉE remplace celle de la chaîne pour les totaux, les
-   * lignes de TVA et les droits. Il rend un `VisionRead` : tout l'aval —
-   * relecture dans le plan, contrôles, persistance — est celui d'avant.
-   * Voir `sudoku.ts`.
+   * chaîne ressort à l'identique. Branché par le réglage du dossier
+   * (`lecture.sudoku` = `designe`, « Réglages comptabilité »), la désignation
+   * PROUVÉE remplace celle de la chaîne pour les totaux, les lignes de TVA et
+   * les droits. Il rend un `VisionRead` : tout l'aval — relecture dans le
+   * plan, contrôles, persistance — est celui d'avant. Voir `sudoku.ts`.
    */
-  const sudoku = creerLeSudoku(
-    api,
-    {
-      pieceId,
-      packId: contexte.packId,
-      devise: contexte.devises.find((d) => d.code === contexte.currency),
-      dossier: {
-        matricule: contexte.dossier.identifiantFiscal,
-        raisonSociale: contexte.dossier.raisonSociale,
-      },
-      tiers: contexte.tiers,
+  const sudoku = creerLeSudoku(api, {
+    pieceId,
+    dossierId: contexte.piece.tenantId,
+    packId: contexte.packId,
+    recueLe: contexte.piece.recueLe,
+    devise: contexte.devises.find((d) => d.code === contexte.currency),
+    dossier: {
+      matricule: contexte.dossier.identifiantFiscal,
+      raisonSociale: contexte.dossier.raisonSociale,
     },
-    { designe: process.env["SUDOKU_DESIGNE"] === "1" },
-  );
+    tiers: contexte.tiers,
+  });
   const lire = async (p: Parameters<Lecteurs["lire"]>[0]) => sudoku.lire(await lecteurs.lire(p));
 
   const premiereLecture = await lire(parametres);

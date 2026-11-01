@@ -137,6 +137,11 @@
       "chemins": ["public.avoir_rattacher"]
     },
     {
+      "objet": "capture.champs_lus",
+      "privilege": "INSERT",
+      "chemins": ["public.capture_champs_lus_inscrire"]
+    },
+    {
       "objet": "capture.citations",
       "privilege": "INSERT",
       "chemins": ["public.capture_read_persist"]

@@ -2156,6 +2156,7 @@ export const ar: Dict = {
   "refus.recharge.offre_sans_recharge": "باقة هذه الشركة لا تشمل رصيدًا إضافيًا من القراءات.",
   "refus.grille.trous": "قائمة الأسعار تترك فجوات: {trous}.",
   "refus.lecture.refusee": "قراءة هذه الوثيقة مرفوضة لهذا الملف.",
+  "refus.lecture.champ_inconnu": "هذا الحقل أو هذه الشبكة غير موجودين في المرجع بتاريخ الوثيقة.",
   "refus.lecture.supplement_positif": "الإضافة تُحتسب بعدد موجب من القراءات.",
   "refus.facturation.premier_du_mois": "تبدأ فترة الفوترة في أول الشهر.",
   "refus.facturation.destinataire_sans_nom":

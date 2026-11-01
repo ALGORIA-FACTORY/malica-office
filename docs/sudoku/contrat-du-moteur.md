@@ -42,10 +42,22 @@ absent, il vaut zéro dans une somme et la preuve reste évaluable.
 | `produit`     | `{"op":"produit","total":"t","facteurs":["q","pu"]}`                                                  | t = q × pu, à la tolérance d'arrondi du pack près                              |
 | `taux`        | `{"op":"taux","montant":"m","base":"b","bareme":"tva"}`                                               | m = arrondi(b × r) pour un taux r du barème du pack                            |
 | `groupe_taux` | `{"op":"groupe_taux","base":"b","montant":"m","total_base":"tb","total_montant":"tm","bareme":"tva"}` | une à trois instances (b, m) de taux distincts ; Σb = tb et Σm = tm exactement |
-| `charge`      | `{"op":"charge","montant":"m","code":"DROIT_TIMBRE","base":"b?"}`                                     | m = montant fixe du pack, ou arrondi(base × taux) de la charge                 |
+| `charge`      | `{"op":"charge","montant":"m","code":"DROIT_TIMBRE","base":"b?","assiette":"tva"}`                    | m = un montant admis par le pack au jour dit, ou arrondi(base × taux)          |
 | `egal`        | `{"op":"egal","a":"x","b":"y"}`                                                                       | x = y                                                                          |
 | `format`      | `{"op":"format","champ":"c","format":"matricule_fiscal"}`                                             | la valeur respecte le motif nommé, fourni en entrée                            |
 | `ordre`       | `{"op":"ordre","avant":"d1","apres":"d2"}`                                                            | d1 ≤ d2 (dates)                                                                |
+
+Les attributs que l'adaptateur et le moteur lisent dans les preuves — aucun code
+de champ n'est écrit dans le code (15 novembre 2026, `20261115110000`) :
+
+- `role` d'une `somme` : `"ttc"` nomme le total que la chaîne reçoit comme TTC,
+  variante par variante (P04 : `total_ttc` ; M04 : `net_a_payer`, quand le TTC
+  est imprimé avant le timbre) ;
+- `assiette` d'une `charge` : le barème dont la base est majorée de cette charge,
+  quand le pack la dit `assiette_tva` (le FODEC : `"tva"`). Une charge d'assiette
+  sans cette clé n'est pas traduite ;
+- le HT, la base et le montant par taux se lisent dans `groupe_taux`
+  (`total_base`, `base`, `montant`), et les cellules d'un tableau dans `lignes`.
 
 Deux clés facultatives de `groupe_taux`, ajoutées à l'exécution :
 
@@ -140,7 +152,8 @@ en base par l'adaptateur.
   "grille": {"code":"facture","champs":[...],"preuves":[...]},
   "pack": {"decimales":3,"tolerance":1,
            "baremes":{"tva":[{"code":"TVA19","ppm":190000}]},
-           "charges":[{"code":"DROIT_TIMBRE","montant_fixe":1000,"taux_ppm":null,"assiette_tva":false}],
+           "charges":[{"code":"DROIT_TIMBRE","montant_fixe":1000,"montants_admis":[1000,1500,2000],
+                       "taux_ppm":null,"assiette_tva":false}],
            "formats":{"matricule_fiscal":"[0-9]{7}[A-Za-z]/[ABPDN]/[MCPNE]/[0-9]{3}"}}
 }
 ```
@@ -160,6 +173,16 @@ en base par l'adaptateur.
   `[{"coupe":k,"gauche":<entier>,"droite":[{"v","forte"}]}]` — k caractères
   lus comme un entier, le reste comme un montant. Le moteur ne relit pas le texte.
 - Les taux sont en parties par million : aucun flottant.
+- `montants_admis` (facultatif) : tout montant que le pack admet pour la charge
+  au jour de la pièce — le droit standard (`ref.fiscal_charges`) et les tranches
+  de toutes catégories de son barème (`ref.baremes_des_droits`). Le lecteur ne
+  juge pas la conformité : le Socle le fait ensuite, selon la catégorie de
+  l'émetteur (`bareme-du-timbre.ts`). `montant_fixe` reste lu, et compte parmi
+  les admis. Seul le droit standard imprimé en lecture forte rend la charge
+  présente sans son libellé ; une tranche l'exige.
+- Tout se lit **au jour de la pièce** : la date que la chaîne a lue, à défaut sa
+  date de réception — la règle du jugement (`analyse.ts`). Le contexte est gardé
+  par jour.
 
 ## 4. La sortie du moteur (JSON)
 
@@ -194,7 +217,12 @@ en base par l'adaptateur.
 3. Appelle le moteur WebAssembly, sans état.
 4. Pour une facture, convertit le résultat en `VisionSelection` (page/ordinal) :
    l'aval de R2 relit les valeurs dans le plan.
-5. Pour toute pièce relevée, inscrit les champs dans `capture.champs_lus`.
+5. Pour toute pièce relevée, inscrit les champs dans `capture.champs_lus`, par la
+   porte `capture_champs_lus_inscrire` (au `portier`, serveur seul) : la grille et
+   ses champs résolus à la date de la pièce (un champ inconnu est refusé), le rang
+   d'une ligne de tableau et le taux d'une instance dans leurs colonnes, toutes les
+   lignes d'une inscription sous un même `lecture_id`. Une valeur sans citation
+   s'inscrit nulle ; la table refuse une valeur non citée et un statut nul.
 
 Dans cette première livraison (`apps/api/src/malica/lecture/sudoku.ts`) :
 
@@ -203,9 +231,10 @@ Dans cette première livraison (`apps/api/src/malica/lecture/sudoku.ts`) :
   document vient famille par famille, chacune avec son banc ;
 - **par défaut, il observe** : il lit chaque pièce et inscrit ce qu'il a lu dans
   `capture.champs_lus`, mais la lecture de la chaîne ressort à l'identique. Rien ne
-  change pour personne tant que le dirigeant ne le branche pas ;
-- **branché** (`SUDOKU_DESIGNE=1` dans l'environnement de l'API, comme `OCR_URL`
-  branche PaddleOCR), quand la pièce est prouvée, il remplace la désignation des **montants**
+  change pour personne tant que le cabinet ne le branche pas ;
+- **branché** — le réglage `lecture.sudoku` = `designe` (sujet « Lecture prouvée
+  des pièces » de « Réglages comptabilité », résolu par `app.reglage_comptable` :
+  le dossier, son cabinet, le pack) —, quand la pièce est prouvée, il remplace la désignation des **montants**
   (totaux, lignes de TVA, droits que la grille prouve). L'émetteur, la date et le
   sens restent désignés par la chaîne : aucune arithmétique ne les prouve ;
 - non prouvée, la lecture ressort à l'identique. Un échec du sudoku (moteur

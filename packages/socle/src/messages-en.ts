@@ -2229,6 +2229,8 @@ export const en: Dict = {
   "refus.recharge.offre_sans_recharge": "This company’s plan does not include read top-ups.",
   "refus.grille.trous": "The price list leaves gaps: {trous}.",
   "refus.lecture.refusee": "Reading this document is refused for this file.",
+  "refus.lecture.champ_inconnu":
+    "This field or grid does not exist in the reference data on the document date.",
   "refus.lecture.supplement_positif": "A bonus is counted in positive reads.",
   "refus.facturation.premier_du_mois": "A billing period starts on the first of the month.",
   "refus.facturation.destinataire_sans_nom":

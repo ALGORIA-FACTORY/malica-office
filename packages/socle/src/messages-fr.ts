@@ -2306,6 +2306,8 @@ export const fr = {
     "L’offre de cette société ne porte pas de recharge de lectures.",
   "refus.grille.trous": "La grille laisse des trous : {trous}.",
   "refus.lecture.refusee": "La lecture de cette pièce est refusée pour ce dossier.",
+  "refus.lecture.champ_inconnu":
+    "Ce champ ou cette grille n’existe pas au référentiel à la date de la pièce.",
   "refus.lecture.supplement_positif": "Un supplément se compte en lectures positives.",
   "refus.facturation.premier_du_mois": "Une période de facturation commence le premier du mois.",
   "refus.facturation.destinataire_sans_nom":

@@ -34,12 +34,14 @@ import type {
 
 import type { Requete } from "../db.ts";
 import { analyserPiece, exposantDeLaDevise, lireLesDevises } from "../scan/analyse.ts";
+import { lireLesReglagesComptables } from "../scan/reglages-comptables.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import {
   lireLeContexteDuSudoku,
+  modeDuSudoku,
   type ChampsLusAInscrire,
-  type ContexteDuSudoku,
+  type ContexteDuSudokuBranche,
 } from "../malica/lecture/sudoku.ts";
 import { dateDeLaPiece } from "./dates.ts";
 import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
@@ -648,7 +650,9 @@ export const capture = {
    */
   async contexteLecture(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
-      `select id, tenant_id, storage_path, source, content_type from pieces_v where id = $1`,
+      `select id, tenant_id, storage_path, source, content_type,
+              to_char(created_at, 'YYYY-MM-DD') as recue_le
+         from pieces_v where id = $1`,
       [pieceId],
     );
     const piece = (pieces as Record<string, unknown>[])[0];
@@ -712,6 +716,9 @@ export const capture = {
         storagePath: piece["storage_path"] as string,
         source: piece["source"] as string,
         contentType: (piece["content_type"] as string | null) ?? null,
+        // Le jour de sa réception : les règles du sudoku s'y lisent quand la
+        // pièce n'a pas de date lue (comme le jugement, `analyse.ts`).
+        recueLe: piece["recue_le"] as string,
       },
       jurisdiction,
       currency: org["currency"] as string,
@@ -743,27 +750,43 @@ export const capture = {
   },
 
   /**
-   * La grille d'un type de document et les paramètres du pack, pour le sudoku.
-   * Tout vient des vues `ref_*_v` : rien n'est écrit dans le code (R4).
+   * La grille d'un type de document et les paramètres du pack, pour le sudoku,
+   * AU JOUR de la pièce ; et son mode (`lecture.sudoku` : observe ou désigne),
+   * résolu pour le dossier comme tout réglage (le dossier, son cabinet, le
+   * pack). Tout vient de la base : rien n'est écrit dans le code (R4).
    */
   async contexteSudoku(
     db: Requete,
+    dossierId: string,
     packId: string,
     grilleCode: string,
     deviseCode: string,
-  ): Promise<ContexteDuSudoku> {
-    return lireLeContexteDuSudoku(db, packId, grilleCode, deviseCode);
+    jour: string,
+  ): Promise<ContexteDuSudokuBranche> {
+    const [contexte, reglages] = await Promise.all([
+      lireLeContexteDuSudoku(db, packId, grilleCode, deviseCode, jour),
+      lireLesReglagesComptables(db, dossierId, packId, jour),
+    ]);
+    return { ...contexte, mode: modeDuSudoku(reglages) };
   },
 
   /**
    * Ce que le sudoku a lu, champ par champ, prouvé ou non. Une lecture ne se
-   * réécrit pas (R7) : chaque passage ajoute ses lignes, la plus récente fait foi.
+   * réécrit pas (R7) : chaque passage ajoute ses lignes sous un même
+   * `lecture_id`, et l'inscription la plus récente fait foi, en entier.
    */
   async inscrireChampsLus(db: Requete, input: ChampsLusAInscrire): Promise<{ inscrits: number }> {
     // Par la porte (`capture_champs_lus_inscrire`) : seules les portes écrivent.
     const { rows } = await db.query<{ n: number }>(
-      `select public.capture_champs_lus_inscrire($1, $2, $3, $4::jsonb) as n`,
-      [input.pieceId, input.grille, input.issue, JSON.stringify(input.champs)],
+      `select public.capture_champs_lus_inscrire($1, $2, $3::date, $4, $5, $6::jsonb) as n`,
+      [
+        input.pieceId,
+        input.packId,
+        input.jour,
+        input.grille,
+        input.issue,
+        JSON.stringify(input.champs),
+      ],
     );
     return { inscrits: rows[0]?.n ?? 0 };
   },

@@ -3,20 +3,23 @@ import { readFileSync } from "node:fs";
 import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
-import { moteurDisponible, type SortieDuSudoku } from "@malica/sudoku";
+import { moteurDisponible, type Grille, type SortieDuSudoku } from "@malica/sudoku";
 
 import { deviseDEssai, devisesDEssai } from "../../scan/devise-d-essai.ts";
 import { JEU_D_OR } from "./jeu-d-or.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import {
-  champsDesCharges,
+  champsDeLaGrille,
   champsLusAInscrire,
   creerLeSudoku,
   type ChampsLusAInscrire,
+  type ContexteDuSudokuBranche,
   GRILLE_DE_LA_LECTURE_CITEE,
   jetonsDuSudoku,
+  jourDeLaLecture,
   lireLeContexteDuSudoku,
+  modeDuSudoku,
   resoudreLaPiece,
   selectionParLeSudoku,
   type ContexteDuSudoku,
@@ -94,11 +97,80 @@ describe("sudoku — les jetons du plan", () => {
   });
 });
 
+/** Une grille comme celle de la base : les rôles des champs viennent de ses preuves. */
+const GRILLE: Grille = {
+  code: "facture",
+  champs: [],
+  preuves: [
+    {
+      code: "P03",
+      statut: "defaut_a_valider",
+      variante: null,
+      expression: {
+        op: "groupe_taux",
+        base: "base_tva_par_taux",
+        montant: "montant_tva_par_taux",
+        total_base: "total_ht",
+        bareme: "tva",
+      },
+    },
+    {
+      code: "P04",
+      statut: "defaut_a_valider",
+      variante: "ttc_avec_timbre",
+      expression: { op: "somme", total: "total_ttc", parties: [], role: "ttc" },
+    },
+    {
+      code: "M03",
+      statut: "defaut_a_valider",
+      variante: "ttc_hors_timbre",
+      expression: { op: "somme", total: "total_ttc", parties: [] },
+    },
+    {
+      code: "M04",
+      statut: "defaut_a_valider",
+      variante: "ttc_hors_timbre",
+      expression: { op: "somme", total: "net_a_payer", parties: [], role: "ttc" },
+    },
+    {
+      code: "M01",
+      statut: "defaut_a_valider",
+      variante: null,
+      expression: { op: "charge", code: "DROIT_TIMBRE", montant: "droit_timbre" },
+    },
+    {
+      code: "M02",
+      statut: "defaut_a_valider",
+      variante: null,
+      expression: { op: "charge", code: "FODEC", montant: "montant_fodec", base: "total_ht" },
+    },
+    {
+      code: "L01",
+      statut: "defaut_a_valider",
+      variante: null,
+      expression: {
+        op: "lignes",
+        designation: "designation",
+        quantite: "quantite",
+        prix: "prix_unitaire_ht",
+        remise: "remise_ligne?",
+        montant: "montant_ligne_ht",
+        taux: "taux_tva_ligne?",
+        total: "total_ht",
+        remise_globale: "remise_globale?",
+      },
+    },
+  ],
+};
+const CONTEXTE = { jour: "2026-09-01", grille: GRILLE };
+const PIECE = { pieceId: "p", packId: "k" };
+
 describe("sudoku — la sélection rendue", () => {
   const cas = JEU_D_OR[0]!;
   const ref = (ordinal: number) => [{ page: 1, ordinal }];
   const prouvee: SortieDuSudoku = {
     issue: "prouvee",
+    variante: "ttc_avec_timbre",
     solutions: 1,
     combinaisons: 1,
     preuves: {},
@@ -121,19 +193,58 @@ describe("sudoku — la sélection rendue", () => {
       montant_fodec: { valeur: null, refs: [], statut: "absent" },
     },
   };
-  const charges = { DROIT_TIMBRE: "droit_timbre", FODEC: "montant_fodec" };
-
   it("une pièce non prouvée garde la sélection de la chaîne, à l'identique", () => {
-    const s = selectionParLeSudoku(cas.designation, { ...prouvee, issue: "ambigue" }, [], {});
+    const s = selectionParLeSudoku(cas.designation, { ...prouvee, issue: "ambigue" }, GRILLE, []);
     assert.equal(s, cas.designation);
+  });
+
+  it("les champs se lisent par leur rôle dans les preuves, pas par un code écrit", () => {
+    // Le même rôle sous d'autres noms : la sélection suit la grille.
+    const renommee: Grille = {
+      ...GRILLE,
+      preuves: GRILLE.preuves.map((p) => ({
+        ...p,
+        expression: JSON.parse(
+          JSON.stringify(p.expression)
+            .replaceAll('"total_ht"', '"ht_x"')
+            .replaceAll('"total_ttc"', '"ttc_x"'),
+        ) as unknown,
+      })),
+    };
+    const sortie: SortieDuSudoku = {
+      ...prouvee,
+      champs: {
+        ...prouvee.champs,
+        ht_x: prouvee.champs["total_ht"]!,
+        ttc_x: { valeur: "3594800", refs: ref(99), statut: "prouve" },
+      },
+    };
+    const s = selectionParLeSudoku(cas.designation, sortie, renommee, []);
+    assert.deepEqual(s.totals.base_ht, { page: 1, ordinal: 107 });
+    assert.deepEqual(s.totals.ttc, { page: 1, ordinal: 99 });
+    // Le TTC de la chaîne vient de la preuve au rôle « ttc » de la variante qui a prouvé.
+    const net = selectionParLeSudoku(
+      cas.designation,
+      {
+        ...prouvee,
+        variante: "ttc_hors_timbre",
+        champs: {
+          ...prouvee.champs,
+          net_a_payer: { valeur: "3595800", refs: ref(116), statut: "prouve" },
+        },
+      },
+      GRILLE,
+      [],
+    );
+    assert.deepEqual(net.totals.ttc, { page: 1, ordinal: 116 });
   });
 
   it("prouvée : totaux, ligne de TVA et droits sont ceux de la preuve", () => {
     const s = selectionParLeSudoku(
       { ...cas.designation, other_charges: [{ code: "AUTRE", amount: { page: 1, ordinal: 1 } }] },
       prouvee,
+      GRILLE,
       ["DROIT_TIMBRE", "FODEC"],
-      charges,
     );
     assert.deepEqual(s.totals, {
       base_ht: { page: 1, ordinal: 107 },
@@ -156,7 +267,7 @@ describe("sudoku — la sélection rendue", () => {
   });
 
   it("une lecture non prouvée s'inscrit aussi : champs signalés, sans valeur ni citation", () => {
-    const a = champsLusAInscrire("p", "facture", {
+    const a = champsLusAInscrire(PIECE, CONTEXTE, {
       issue: "ambigue",
       solutions: 2,
       combinaisons: 9,
@@ -168,12 +279,20 @@ describe("sudoku — la sélection rendue", () => {
     });
     assert.equal(a.issue, "ambigue");
     assert.deepEqual(a.champs, [
-      { champ: "total_ht", valeur: null, statut: "signale", citations: [] },
+      {
+        champ: "total_ht",
+        rang: null,
+        instance: null,
+        valeur: null,
+        statut: "signale",
+        citations: [],
+      },
     ]);
+    assert.deepEqual([a.packId, a.jour, a.grille], ["k", "2026-09-01", "facture"]);
   });
 
   it("une sortie sans aucun champ laisse une ligne de tentative", () => {
-    const a = champsLusAInscrire("p", "facture", {
+    const a = champsLusAInscrire(PIECE, CONTEXTE, {
       issue: "aucune",
       solutions: 0,
       combinaisons: 0,
@@ -181,7 +300,9 @@ describe("sudoku — la sélection rendue", () => {
       champs: {},
       raison: "entrée invalide",
     });
-    assert.deepEqual(a.champs, [{ champ: null, valeur: null, statut: null, citations: [] }]);
+    assert.deepEqual(a.champs, [
+      { champ: null, rang: null, instance: null, valeur: null, statut: null, citations: [] },
+    ]);
   });
 
   it("seule la lecture retenue s'inscrit, après sa persistance", async () => {
@@ -195,11 +316,15 @@ describe("sudoku — la sélection rendue", () => {
         throw new Error("hors base");
       },
     };
-    const sudoku = creerLeSudoku(
-      api,
-      { pieceId: "p", packId: "k", devise, dossier: DOSSIER_D_OR, tiers: [] },
-      { designe: true },
-    );
+    const sudoku = creerLeSudoku(api, {
+      pieceId: "p",
+      dossierId: "d",
+      packId: "k",
+      recueLe: "2026-10-02",
+      devise,
+      dossier: DOSSIER_D_OR,
+      tiers: [],
+    });
     const lecture = { tokens: [], selection: cas.designation } as unknown as VisionRead;
     // Le contexte est illisible : la lecture ressort à l'identique, rien ne s'inscrit.
     assert.equal(await sudoku.lire(lecture), lecture);
@@ -207,6 +332,45 @@ describe("sudoku — la sélection rendue", () => {
     assert.deepEqual(
       appels.map((a) => a.methode),
       ["contexteSudoku"],
+    );
+    // Sans date lue, les règles se lisent au jour de la réception.
+    assert.deepEqual(appels[0]!.args, ["d", "k", "facture", devise.code, "2026-10-02"]);
+  });
+
+  it("les règles se lisent au jour de la pièce : la date lue, à défaut la réception", () => {
+    const jeton = (ordinal: number, text: string) => ({
+      page: 1,
+      ordinal,
+      text,
+      x0: 0,
+      y0: 0,
+      x1: 1,
+      y1: 1,
+    });
+    const avec = (date: { page: number; ordinal: number } | null, texte: string) =>
+      ({
+        tokens: [jeton(0, "Date"), jeton(1, texte)],
+        selection: { ...cas.designation, document_date: date },
+      }) as unknown as VisionRead;
+    assert.equal(
+      jourDeLaLecture(avec({ page: 1, ordinal: 1 }, "15/03/2026"), "2026-10-02"),
+      "2026-03-15",
+    );
+    assert.equal(jourDeLaLecture(avec(null, "15/03/2026"), "2026-10-02"), "2026-10-02");
+    // Une date illisible n'est pas devinée : la réception.
+    assert.equal(
+      jourDeLaLecture(avec({ page: 1, ordinal: 1 }, "31/02/2026"), "2026-10-02"),
+      "2026-10-02",
+    );
+  });
+
+  it("le mode vient du réglage du dossier ; absent ou inconnu, il n'est pas deviné", () => {
+    assert.equal(modeDuSudoku(new Map([["lecture.sudoku", "observe"]])), "observe");
+    assert.equal(modeDuSudoku(new Map([["lecture.sudoku", "designe"]])), "designe");
+    assert.throws(() => modeDuSudoku(new Map()), /reglage\.lecture\.illisible/);
+    assert.throws(
+      () => modeDuSudoku(new Map([["lecture.sudoku", "oui"]])),
+      /reglage\.lecture\.illisible/,
     );
   });
 
@@ -228,35 +392,75 @@ describe("sudoku — la sélection rendue", () => {
       remise_globale: cite("406000", 120),
     };
     const sortie = { ...prouvee, lignes };
-    const a = champsLusAInscrire("p", "facture", sortie);
-    const q = a.champs.find((c) => c.champ === "quantite#1")!;
+    const a = champsLusAInscrire(PIECE, CONTEXTE, sortie);
+    // Le rang de la ligne a sa colonne ; le code de la cellule vient de la preuve « lignes ».
+    const q = a.champs.find((c) => c.champ === "quantite" && c.rang === 1)!;
     assert.equal(q.statut, "coupe");
     assert.deepEqual(q.citations, [{ page: 1, ordinal: 88, coupe: 1 }]);
+    assert.deepEqual(a.champs.find((c) => c.champ === "prix_unitaire_ht")?.rang, 1);
     assert.deepEqual(
       a.champs.find((c) => c.champ === "remise_globale"),
-      { champ: "remise_globale", valeur: "406000", statut: "prouve", citations: ref(120) },
+      {
+        champ: "remise_globale",
+        rang: null,
+        instance: null,
+        valeur: "406000",
+        statut: "prouve",
+        citations: ref(120),
+      },
     );
     // Dans la chaîne, le jeton collé porte deux cases : ni quantité ni prix n'y sont relus.
-    const s = selectionParLeSudoku(cas.designation, sortie, [], {});
+    const s = selectionParLeSudoku(cas.designation, sortie, GRILLE, []);
     assert.deepEqual(
       s.articles.map((x) => [x.quantity, x.unit_price_ht, x.total_ht]),
       [[null, null, { page: 1, ordinal: 90 }]],
     );
   });
 
-  it("les champs inscrits portent tous leur citation, un par taux", () => {
-    const a = champsLusAInscrire("p", "facture", prouvee);
+  it("les champs inscrits portent tous leur citation, un par taux, le taux dans sa colonne", () => {
+    const a = champsLusAInscrire(PIECE, CONTEXTE, prouvee);
     assert.deepEqual(
-      a.champs.map((c) => c.champ),
+      a.champs.map((c) => [c.champ, c.instance]),
       [
-        "total_ht",
-        "total_ttc",
-        "base_tva_par_taux:TVA19",
-        "montant_tva_par_taux:TVA19",
-        "droit_timbre",
+        ["total_ht", null],
+        ["total_ttc", null],
+        ["base_tva_par_taux", "TVA19"],
+        ["montant_tva_par_taux", "TVA19"],
+        ["droit_timbre", null],
       ],
     );
     assert.ok(a.champs.every((c) => c.citations.length > 0));
+  });
+
+  it("une valeur sans citation s'inscrit nulle, avec son statut (R2)", () => {
+    const lignes: SortieDuSudoku["lignes"] = {
+      statut: "prouve",
+      taux_par_base: "ligne",
+      instances: [
+        {
+          designation: null,
+          quantite: { valeur: "1000", refs: ref(1) },
+          prix: { valeur: "5000", refs: ref(2) },
+          remise: null,
+          montant: { valeur: "5000", refs: ref(3) },
+          // Le taux d'une ligne déduit de sa base, sans jeton imprimé.
+          taux: { code: "TVA19", refs: [] },
+        },
+      ],
+    };
+    const a = champsLusAInscrire(PIECE, CONTEXTE, { ...prouvee, lignes });
+    assert.deepEqual(
+      a.champs.find((c) => c.champ === "taux_tva_ligne"),
+      {
+        champ: "taux_tva_ligne",
+        rang: 1,
+        instance: null,
+        valeur: null,
+        statut: "prouve",
+        citations: [],
+      },
+    );
+    assert.ok(a.champs.every((c) => c.valeur === null || c.citations.length > 0));
   });
 });
 
@@ -293,19 +497,27 @@ interface Verite {
 describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () => {
   let contexte: ContexteDuSudoku;
   let pool: pg.Pool;
-
-  before(async () => {
-    pool = new pg.Pool({ connectionString: BASE });
+  let packId = "";
+  /** Le jour des pièces du banc : septembre 2026. */
+  const JOUR = "2026-09-15";
+  const contexteAu = async (jour: string) => {
     const c = await pool.connect();
     try {
-      const { rows } = await c.query<{ id: string }>(
-        `select id from ref_packs_v where jurisdiction = 'TN'
-          and effective_from <= current_date order by effective_from desc limit 1`,
-      );
-      contexte = await lireLeContexteDuSudoku(c, rows[0]!.id, GRILLE_DE_LA_LECTURE_CITEE, "TND");
+      return await lireLeContexteDuSudoku(c, packId, GRILLE_DE_LA_LECTURE_CITEE, "TND", jour);
     } finally {
       c.release();
     }
+  };
+
+  before(async () => {
+    pool = new pg.Pool({ connectionString: BASE });
+    const { rows } = await pool.query<{ id: string }>(
+      `select id from ref_packs_v where jurisdiction = 'TN'
+        and effective_from <= $1::date order by effective_from desc limit 1`,
+      [JOUR],
+    );
+    packId = rows[0]!.id;
+    contexte = await contexteAu(JOUR);
   });
   after(async () => {
     await pool.end();
@@ -351,8 +563,8 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       const sel = selectionParLeSudoku(
         cas.designation,
         o,
+        contexte.grille,
         contexte.pack.charges.map((c) => c.code),
-        champsDesCharges(contexte.grille),
       );
       const extrait = (s: typeof sel) =>
         buildExtractFromTokenPlan({
@@ -377,8 +589,8 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       const selParties = selectionParLeSudoku(
         cas.designation,
         avecDossier,
+        contexte.grille,
         contexte.pack.charges.map((c) => c.code),
-        champsDesCharges(contexte.grille),
       );
       const refs = extrait(selParties)["references"] as Record<string, unknown>;
       if (avecDossier.parties?.statut === "prouve") {
@@ -410,7 +622,13 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       const inscrits: unknown[] = [];
       const api = {
         async rpc<T>(_depot: string, methode: string, args: unknown[] = []): Promise<T> {
-          if (methode === "contexteSudoku") return contexte as T;
+          if (methode === "contexteSudoku") {
+            const branche: ContexteDuSudokuBranche = {
+              ...contexte,
+              mode: designe ? "designe" : "observe",
+            };
+            return branche as T;
+          }
           inscrits.push(args[0]);
           return undefined as T;
         },
@@ -418,11 +636,15 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
           throw new Error("hors base");
         },
       };
-      const sudoku = creerLeSudoku(
-        api,
-        { pieceId: "p", packId: "k", devise, dossier: DOSSIER_D_OR, tiers: [] },
-        { designe },
-      );
+      const sudoku = creerLeSudoku(api, {
+        pieceId: "p",
+        dossierId: "d",
+        packId: "k",
+        recueLe: JOUR,
+        devise,
+        dossier: DOSSIER_D_OR,
+        tiers: [],
+      });
       const rendue = await sudoku.lire(lecture);
       await sudoku.inscrire(rendue);
       return { rendue, inscrits: inscrits as ChampsLusAInscrire[] };
@@ -475,10 +697,93 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
     const sel = selectionParLeSudoku(
       JEU_D_OR[0]!.designation,
       o,
+      contexte.grille,
       contexte.pack.charges.map((c) => c.code),
-      champsDesCharges(contexte.grille),
     );
     assert.deepEqual(sel.totals.ttc, { page: 1, ordinal: 14 }, "la chaîne reçoit le net à payer");
+  });
+
+  it("les rôles des champs se déduisent des preuves de la grille en base", () => {
+    assert.deepEqual(champsDeLaGrille(contexte.grille), {
+      ht: "total_ht",
+      base: "base_tva_par_taux",
+      tva: "montant_tva_par_taux",
+      ttc: [
+        { variante: "ttc_hors_timbre", champ: "net_a_payer" },
+        { variante: "ttc_avec_timbre", champ: "total_ttc" },
+      ],
+      lignes: {
+        designation: "designation",
+        quantite: "quantite",
+        prix: "prix_unitaire_ht",
+        remise: "remise_ligne",
+        montant: "montant_ligne_ht",
+        taux: "taux_tva_ligne",
+        total: "total_ht",
+        total_brut: "total_brut_ht",
+        remise_globale: "remise_globale",
+      },
+    });
+  });
+
+  it("le pack se lit au jour de la pièce : le timbre admet son barème, rien avant la grille", async () => {
+    const timbre = (c: ContexteDuSudoku) =>
+      c.pack.charges.find((ch) => (ch.montants_admis ?? []).length > 1);
+    // Au jour dit, le droit standard ET les tranches du barème (toutes catégories).
+    const { rows } = await pool.query<{ m: string }>(
+      `select distinct (montant_du_droit * 1000)::bigint::text as m from ref.baremes_des_droits
+        where pack_version_id = $1 and valid_from <= $2::date
+          and (valid_to is null or valid_to >= $2::date)`,
+      [packId, JOUR],
+    );
+    const t = timbre(contexte)!;
+    assert.ok(t.montant_fixe !== null);
+    assert.deepEqual(
+      [...t.montants_admis!],
+      [...new Set([t.montant_fixe!, ...rows.map((r) => Number(r.m))])].sort((a, b) => a - b),
+    );
+    assert.equal(contexte.jour, JOUR);
+    // Avant la date d'effet de la grille, rien n'est en vigueur : le jour est bien lu.
+    await assert.rejects(contexteAu("2020-06-01"), /0 en vigueur/);
+  });
+
+  it("une facture qui imprime un timbre du barème est prouvée ; un montant hors barème, non", () => {
+    const ligne = (ordinal: number, y: number, x: number, text: string): PageToken => ({
+      page: 1,
+      ordinal,
+      text,
+      x0: x,
+      y0: y,
+      x1: x + 0.05,
+      y1: y + 0.015,
+    });
+    const admis = [...contexte.pack.charges.flatMap((c) => c.montants_admis ?? [])];
+    const facture = (timbre: string, net: string) => [
+      ligne(0, 0.38, 0.54, "Total"),
+      ligne(1, 0.38, 0.58, "HT"),
+      ligne(2, 0.38, 0.84, "100 000,000"),
+      ligne(3, 0.4, 0.54, "TVA"),
+      ligne(4, 0.4, 0.57, "19 %"),
+      ligne(5, 0.4, 0.84, "19 000,000"),
+      ligne(6, 0.42, 0.54, "Total"),
+      ligne(7, 0.42, 0.58, "TTC"),
+      ligne(8, 0.42, 0.84, "119 000,000"),
+      ligne(9, 0.44, 0.54, "Timbre"),
+      ligne(10, 0.44, 0.87, timbre),
+      ligne(11, 0.46, 0.54, "Net"),
+      ligne(12, 0.46, 0.57, "à"),
+      ligne(13, 0.46, 0.59, "payer"),
+      ligne(14, 0.46, 0.83, net),
+    ];
+    // 2,000 : une tranche du barème (grandes surfaces, LF 2026).
+    assert.ok(admis.includes(2_000), "2,000 est admis au jour dit");
+    const o = resoudreLaPiece(jetonsDuSudoku(facture("2,000", "119 002,000"), devise), contexte);
+    assert.equal(o.issue, "prouvee", o.raison ?? "");
+    assert.equal(valeur(o, "droit_timbre"), 2_000);
+    // 3,000 : aucun barème ne l'admet — pas de fausse preuve.
+    assert.ok(!admis.includes(3_000));
+    const x = resoudreLaPiece(jetonsDuSudoku(facture("3,000", "119 003,000"), devise), contexte);
+    assert.notEqual(x.issue, "prouvee");
   });
 
   it("banc 3 : 59/60 factures prouvées justes, zéro fausse preuve, aucun ticket prouvé", () => {
