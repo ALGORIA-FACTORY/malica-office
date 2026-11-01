@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import type { MessageKey } from "@malica/socle/messages-fr";
+import { remplirLeGabarit } from "@malica/socle/gabarit";
 import { LOCALES, RTL_LOCALES, type Locale } from "@malica/socle/messages-langues";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
@@ -60,26 +61,29 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   // Dans la coque, rien n'est rendu côté serveur : la langue choisie peut être
   // lue tout de suite, et l'écran naît dans la bonne. Sur le site, le premier
   // rendu doit rester celui du serveur — on lit après l'hydratation.
-  const [voulue, setVoulue] = useState<Locale>(() =>
-    CIBLE_COQUE && typeof window !== "undefined" ? localeRangee() : DEFAULT_LOCALE,
-  );
+  // Chaque choix est une nouvelle demande, même répété : une langue dont le
+  // chargement a échoué (hors ligne) se recharge quand la personne la choisit
+  // de nouveau, sans devoir passer par une autre.
+  const [voulue, setVoulue] = useState<{ locale: Locale }>(() => ({
+    locale: CIBLE_COQUE && typeof window !== "undefined" ? localeRangee() : DEFAULT_LOCALE,
+  }));
   // La langue affichée est celle dont le dictionnaire est arrivé : l'écran
   // garde la précédente le temps du chargement (i18n/dictionnaires.ts).
   const [locale, setAffichee] = useState<Locale | null>(() =>
-    dictionnaireCharge(voulue) ? voulue : null,
+    dictionnaireCharge(voulue.locale) ? voulue.locale : null,
   );
 
   // Lecture après hydratation : jamais dans un initialiseur d'état.
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (isLocale(stored)) setVoulue(stored);
+    if (isLocale(stored)) setVoulue({ locale: stored });
   }, []);
 
   useEffect(() => {
     let actuel = true;
-    chargerLaLangue(voulue)
+    chargerLaLangue(voulue.locale)
       .then(() => {
-        if (actuel) setAffichee(voulue);
+        if (actuel) setAffichee(voulue.locale);
       })
       // Hors ligne avant le premier chargement : l'écran reste dans la langue
       // d'avant — le français au démarrage — plutôt que de ne rien montrer.
@@ -98,7 +102,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [locale]);
 
   const setLocale = useCallback((next: Locale) => {
-    setVoulue(next);
+    setVoulue({ locale: next });
     window.localStorage.setItem(STORAGE_KEY, next);
   }, []);
 
@@ -159,11 +163,7 @@ function Traductions({
           }
         }
 
-        if (!vars) return raw;
-        return Object.entries(vars).reduce(
-          (acc, [k, v]) => acc.replaceAll(`{${k}}`, String(v)),
-          raw,
-        );
+        return vars ? remplirLeGabarit(raw, vars) : raw;
       },
     };
   }, [locale, setLocale]);
