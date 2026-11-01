@@ -2259,6 +2259,15 @@ export const en: Dict = {
   "cab.ecriture.reserve.nature_de_vente": "Nature of the sale to be specified",
   "cab.ecriture.reserve.nature_de_vente.aide":
     "The engine has not proved what the invoice sells (goods, services, ancillary activities): the sale is proposed to the fallback account of your chart. Check the sales account before validating, or change the entry.",
+  "cab.ecriture.reserve.mois_de_tva": "VAT month to check",
+  "cab.ecriture.reserve.mois_de_tva.aide":
+    "The month in which this document counts for VAT follows when VAT becomes due (setting “VAT month of a document”): goods on delivery, a service on performance or on earlier collection. The engine kept the invoice date.",
+  "cab.ecriture.reserve.mois_de_tva.nature_indecidable":
+    "A payment precedes the invoice month, but the engine cannot tell whether the document is for goods or a service: check the declaration month.",
+  "cab.ecriture.reserve.mois_de_tva.encaissement_partiel":
+    "Only part of the price was paid before the invoice month: the VAT on that part may be due earlier. Check the declaration month.",
+  "cab.ecriture.reserve.mois_de_tva.exigibilite_anterieure":
+    "A payment precedes the invoice month: VAT may be due before the invoice date your setting uses.",
   "cab.ecriture.reserve.articles": "Not recognised: {articles}",
   "cab.avoir.titre": "Original invoice to link",
   "cab.avoir.non_comptabilisee": "Original invoice not yet recorded",

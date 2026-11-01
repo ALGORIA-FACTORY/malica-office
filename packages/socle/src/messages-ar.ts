@@ -2183,6 +2183,15 @@ export const ar: Dict = {
   "cab.ecriture.reserve.nature_de_vente": "طبيعة البيع يجب تحديدها",
   "cab.ecriture.reserve.nature_de_vente.aide":
     "لم يُثبت المحرك ما تبيعه الفاتورة (بضائع، خدمات، أنشطة ملحقة): البيع مقترح في الحساب الاحتياطي لمخططك. تحقق من حساب المبيعات قبل المصادقة، أو عدّل القيد.",
+  "cab.ecriture.reserve.mois_de_tva": "شهر الأداء يجب التحقق منه",
+  "cab.ecriture.reserve.mois_de_tva.aide":
+    "يتبع الشهر الذي تُحتسب فيه هذه الوثيقة في الأداء على القيمة المضافة تاريخ الاستحقاق (إعداد «شهر الأداء لوثيقة»): البضاعة عند التسليم، والخدمة عند الإنجاز أو عند القبض إن كان سابقا. احتفظ المحرك بتاريخ الفاتورة.",
+  "cab.ecriture.reserve.mois_de_tva.nature_indecidable":
+    "يوجد خلاص سابق لشهر الفاتورة، لكن المحرك لا يعرف إن كانت الوثيقة تخص بضاعة أو خدمة: تحقق من شهر التصريح.",
+  "cab.ecriture.reserve.mois_de_tva.encaissement_partiel":
+    "خُلص جزء من الثمن فقط قبل شهر الفاتورة: قد يكون أداء هذا الجزء مستحقا قبل ذلك. تحقق من شهر التصريح.",
+  "cab.ecriture.reserve.mois_de_tva.exigibilite_anterieure":
+    "يوجد خلاص سابق لشهر الفاتورة: قد يكون الأداء مستحقا قبل تاريخ الفاتورة الذي يعتمده إعدادك.",
   "cab.ecriture.reserve.articles": "غير معروفة: {articles}",
   "cab.avoir.titre": "الفاتورة الأصلية للربط",
   "cab.avoir.non_comptabilisee": "الفاتورة الأصلية لم تُسجَّل بعد",

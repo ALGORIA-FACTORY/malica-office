@@ -31,6 +31,13 @@ import { z } from "zod";
 
 import type { Requete } from "../db.ts";
 import { analyserPiece, exposantDeLaDevise, rejugerLaPiece } from "../scan/analyse.ts";
+import {
+  dansLaFenetre,
+  hypotheseRetenue,
+  leMoisDeTvaDuDossier,
+  type HypotheseDuMois,
+  type MoisDeTvaDuDossier,
+} from "../scan/mois-de-tva.ts";
 import { propositionDePiece } from "../scan/proposition.ts";
 import { propositionDeReglement } from "../scan/reglement.ts";
 import { rejugerALOuverture, rejugerLesPieces, type BilanDuRejeu } from "../scan/rejeu.ts";
@@ -298,6 +305,26 @@ async function closLeRetour(db: Requete, pieceId: string, ecritureId: string): P
  * charges ». Le coût suit les pièces forcées, pas le nombre de pièces.
  */
 const AVEC_LEURS_EXTRAITS = "with choisies as (";
+
+/**
+ * Les hypothèses du jour d'imputation d'une pièce (`app.jour_d_imputation_tva`,
+ * une par exigibilité), et si l'une tombe dans la fenêtre ($2, $3) ; l'option
+ * du dossier est $4. `args` : le dossier, la pièce, son jour, son arrivée.
+ */
+const HYPOTHESES_DU_MOIS = (args: string) => `
+           select jsonb_agg(jsonb_build_object('exigibilite', h.exigibilite,
+                                               'jour', h.jour::text,
+                                               'reserve', h.reserve)) as hypotheses,
+                  bool_or(h.jour between $2::date and $3::date) as dans_la_fenetre
+             from app.jour_d_imputation_tva(${args}, $4) h`;
+
+/** Le jour retenu d'une ligne lue, par la nature que ses articles disent. */
+const jourDuMois = (r: Record<string, unknown>, mois: MoisDeTvaDuDossier) =>
+  hypotheseRetenue(
+    r["hypotheses"] as HypotheseDuMois[],
+    (r["payload"] as { articles?: unknown } | null)?.articles,
+    mois.natures,
+  );
 const lusParLaPorte = (colonnes: string) => `),
        lues as (
          select t.piece_id, t.payload
@@ -1145,6 +1172,9 @@ export const office = {
     // dans la TVA du mois — son écriture d'origine est toujours « booked ».
     // On ne retient que les écritures vivantes : ni contre-passation, ni
     // écriture qu'une contre-passation comptabilisée annule.
+    // Le mois de TVA suit l'exigibilité (11 novembre 2026) : l'option du
+    // dossier et ses natures, lues une fois pour la fenêtre.
+    const mois = await leMoisDeTvaDuDossier(db, tenantId, to);
     const { rows } = await db.query(
       // 3 novembre 2026 : la pièce pèse de ce qui compte dans la TVA
       // (app.extraits_de_la_tva), la même porte que la PME — forcée, les
@@ -1153,36 +1183,44 @@ export const office = {
       // recoupait pas le journal du cabinet. Les pièces se CHOISISSENT
       // d'abord, puis la porte les lit toutes en un appel.
       `${AVEC_LEURS_EXTRAITS}
-       select distinct on (x.piece_id) x.piece_id, x.payload
-         from extractions_v x
-         join ecritures_v e on e.piece_id = x.piece_id
-        where e.tenant_id = $1
-          -- L'écriture de la FACTURE : un règlement inscrit ne fait pas compter
-          -- une facture contre-passée (ANO-006, 21 octobre 2026).
-          and e.nature = 'piece'
-          and e.status = 'booked'
-          and e.reverses_id is null
-          and not exists (
-            select 1 from ecritures_v r
-             where r.reverses_id = e.id and r.status = 'booked'
-          )
-          -- Le jour d'imputation, la même règle que côté PME
-          -- (app.jour_d_imputation_tva) : la date de l'écriture, sauf mois
-          -- déjà déclaré — la pièce passe alors au jour de son inscription.
-          and app.jour_d_imputation_tva(e.tenant_id, e.date_ecriture, e.booked_at::date)
-              between $2 and $3
-          and x.contract = 'extract.v1'
-        order by x.piece_id, x.created_at desc
-       ${lusParLaPorte("c.piece_id")}`,
-      [tenantId, from, to],
+       select d.piece_id, d.payload, i.hypotheses
+         from (
+           select distinct on (x.piece_id) x.piece_id, x.payload, e.tenant_id,
+                  e.date_ecriture, e.booked_at::date as inscrite_le
+             from extractions_v x
+             join ecritures_v e on e.piece_id = x.piece_id
+            where e.tenant_id = $1
+              -- L'écriture de la FACTURE : un règlement inscrit ne fait pas compter
+              -- une facture contre-passée (ANO-006, 21 octobre 2026).
+              and e.nature = 'piece'
+              and e.status = 'booked'
+              and e.reverses_id is null
+              and not exists (
+                select 1 from ecritures_v r
+                 where r.reverses_id = e.id and r.status = 'booked'
+              )
+              and x.contract = 'extract.v1'
+            order by x.piece_id, x.created_at desc
+         ) d
+         -- Le jour d'imputation, la même règle que côté PME
+         -- (app.jour_d_imputation_tva) : la date de l'écriture, ou celle où la
+         -- TVA devient exigible ; un mois déjà déclaré passe au jour de
+         -- l'inscription. Une hypothèse par exigibilité : la nature se
+         -- reconnaît ensuite, dans les articles.
+         cross join lateral (${HYPOTHESES_DU_MOIS("d.tenant_id, d.piece_id, d.date_ecriture, d.inscrite_le")}) i
+        where i.dans_la_fenetre
+       ${lusParLaPorte("c.piece_id, c.hypotheses")}`,
+      [tenantId, from, to, mois.regle],
     );
     // Une pièce en devise, au cours de son jugement (`en-devise-du-dossier.ts`).
     return extraitsEnDeviseDuDossier(
       db,
-      (rows as Record<string, unknown>[]).map((r) => ({
-        pieceId: r["piece_id"] as string,
-        extract: r["payload"],
-      })),
+      (rows as Record<string, unknown>[])
+        .filter((r) => dansLaFenetre(jourDuMois(r, mois).jour, from, to))
+        .map((r) => ({
+          pieceId: r["piece_id"] as string,
+          extract: r["payload"],
+        })),
     );
   },
 
@@ -1235,6 +1273,8 @@ export const office = {
    * nomme à part.
    */
   async extraitsTransmis(db: Requete, tenantId: string, from: string, to: string) {
+    // Le mois de TVA suit l'exigibilité (11 novembre 2026), comme au cabinet.
+    const mois = await leMoisDeTvaDuDossier(db, tenantId, to);
     const { rows } = await db.query(
       // Forcée, la pièce pèse de ce que le CABINET a inscrit (1er novembre
       // 2026) : ses lignes, ses droits, ses totaux, la date et le sens de son
@@ -1242,58 +1282,66 @@ export const office = {
       // nature (3 novembre 2026). Une seule porte, la même que le cabinet
       // (bookedExtracts), appelée une fois pour toutes les pièces choisies.
       `${AVEC_LEURS_EXTRAITS}
-       select distinct on (x.piece_id)
-              x.piece_id, x.payload,
-              p.transmise_le, i.impute_le::text as impute_le
-         from extractions_v x
-         -- La pièce qui compte (ANO-005) : confirmée, dans la société, sans
-         -- doublon, d'un type qui porte écriture. Retournée par le cabinet,
-         -- elle n'y est pas tant qu'elle n'est pas reprise ; transmise sans
-         -- avoir été confirmée, non plus.
-         join pieces_qui_comptent_v p on p.id = x.piece_id
-         -- Son écriture vivante, si le cabinet l'a déjà inscrite : sa date
-         -- est la date de la facture. Pas encore inscrite (confirmée, chez le
-         -- cabinet), c'est la date du document qui la porte.
-         left join lateral (
-           select e.date_ecriture
-             from ecritures_v e
-            where e.piece_id = p.id
-              and e.nature = 'piece' and e.status = 'booked'
-              and e.reverses_id is null
-              and not exists (select 1 from ecritures_v r
-                               where r.reverses_id = e.id and r.status = 'booked')
-            order by e.created_at desc
-            limit 1
-         ) e on true
-         cross join lateral (select app.jour_d_imputation_tva(
-                p.tenant_id,
-                coalesce(e.date_ecriture,
-                         case when x.payload ->> 'document_date' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-                              then (x.payload ->> 'document_date')::date end,
-                         p.transmise_le::date),
-                p.transmise_le::date) as impute_le) i
-        where p.tenant_id = $1
-          and p.transmise_le is not null
-          -- 25 octobre 2026 : le mois de l'ÉCRITURE (la date de la facture),
-          -- et non plus celui de la transmission — sauf mois déjà déclaré,
-          -- où la pièce passe au jour de sa transmission. Une seule règle
-          -- pour les deux côtés (app.jour_d_imputation_tva).
-          and i.impute_le between $2::date and $3::date
-          and x.contract = 'extract.v1'
-        order by x.piece_id, x.created_at desc
-       ${lusParLaPorte("c.piece_id, c.transmise_le, c.impute_le")}`,
-      [tenantId, from, to],
+       select d.piece_id, d.payload, d.transmise_le, i.hypotheses
+         from (
+           select distinct on (x.piece_id)
+                  x.piece_id, x.payload, p.tenant_id, p.transmise_le,
+                  -- Son écriture vivante, si le cabinet l'a déjà inscrite : sa
+                  -- date est la date de la facture. Pas encore inscrite
+                  -- (confirmée, chez le cabinet), c'est la date du document.
+                  coalesce(e.date_ecriture,
+                           case when x.payload ->> 'document_date' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+                                then (x.payload ->> 'document_date')::date end,
+                           p.transmise_le::date) as jour
+             from extractions_v x
+             -- La pièce qui compte (ANO-005) : confirmée, dans la société, sans
+             -- doublon, d'un type qui porte écriture. Retournée par le cabinet,
+             -- elle n'y est pas tant qu'elle n'est pas reprise ; transmise sans
+             -- avoir été confirmée, non plus.
+             join pieces_qui_comptent_v p on p.id = x.piece_id
+             left join lateral (
+               select e.date_ecriture
+                 from ecritures_v e
+                where e.piece_id = p.id
+                  and e.nature = 'piece' and e.status = 'booked'
+                  and e.reverses_id is null
+                  and not exists (select 1 from ecritures_v r
+                                   where r.reverses_id = e.id and r.status = 'booked')
+                order by e.created_at desc
+                limit 1
+             ) e on true
+            where p.tenant_id = $1
+              and p.transmise_le is not null
+              and x.contract = 'extract.v1'
+            order by x.piece_id, x.created_at desc
+         ) d
+         -- 25 octobre 2026 : le mois de l'ÉCRITURE (la date de la facture),
+         -- et non plus celui de la transmission — sauf mois déjà déclaré, où
+         -- la pièce passe au jour de sa transmission. 11 novembre 2026 : ou
+         -- le mois où la TVA devient exigible. Une seule règle pour les deux
+         -- côtés (app.jour_d_imputation_tva).
+         cross join lateral (${HYPOTHESES_DU_MOIS("d.tenant_id, d.piece_id, d.jour, d.transmise_le::date")}) i
+        where i.dans_la_fenetre
+       ${lusParLaPorte("c.piece_id, c.transmise_le, c.hypotheses")}`,
+      [tenantId, from, to, mois.regle],
     );
     // Une pièce en devise, au cours de son jugement (`en-devise-du-dossier.ts`).
     return extraitsEnDeviseDuDossier(
       db,
-      (rows as Record<string, unknown>[]).map((r) => ({
-        pieceId: r["piece_id"] as string,
-        extract: r["payload"],
-        transmiseLe: (r["transmise_le"] as Date).toISOString().slice(0, 10),
+      (rows as Record<string, unknown>[]).flatMap((r) => {
         /** Le jour où la pièce pèse dans la TVA (app.jour_d_imputation_tva). */
-        imputeeLe: r["impute_le"] as string,
-      })),
+        const { jour } = jourDuMois(r, mois);
+        return dansLaFenetre(jour, from, to)
+          ? [
+              {
+                pieceId: r["piece_id"] as string,
+                extract: r["payload"],
+                transmiseLe: (r["transmise_le"] as Date).toISOString().slice(0, 10),
+                imputeeLe: jour,
+              },
+            ]
+          : [];
+      }),
     );
   },
 

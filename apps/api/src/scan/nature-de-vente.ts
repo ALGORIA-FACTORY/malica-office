@@ -41,6 +41,11 @@ export interface NatureDeVente {
   compte: string;
   rang: number;
   repli: boolean;
+  /**
+   * Quand la TVA de ce qui est vendu devient exigible (`livraison` ou
+   * `encaissement`) : `app.jour_d_imputation_tva` en décide le jour.
+   */
+  exigibilite: string;
   /** Les motifs (expressions régulières de JavaScript, lues sans casse et en Unicode). */
   motifs: readonly string[];
 }
@@ -91,10 +96,11 @@ export async function lireLesNaturesDeVente(
     role_code: string;
     rang: number;
     repli: boolean;
+    exigibilite: string;
     compte_du_pack: string | null;
     motifs: string[];
   }>(
-    `select n.code, n.role_code, n.rang, n.repli, b.account_code as compte_du_pack,
+    `select n.code, n.role_code, n.rang, n.repli, n.exigibilite, b.account_code as compte_du_pack,
             coalesce(array(select m.motif from ref.motifs_de_nature_de_vente m
                             where m.pack_version_id = n.pack_version_id and m.nature = n.code
                               and m.valid_from <= $2::date
@@ -115,7 +121,14 @@ export async function lireLesNaturesDeVente(
       : n.compte_du_pack;
     if (compte === AMBIGU) throw new Error("reglage.ventes.compte_ambigu");
     if (!compte) throw new Error("reglage.ventes.compte_absent");
-    natures.push({ code: n.code, compte, rang: n.rang, repli: n.repli, motifs: n.motifs });
+    natures.push({
+      code: n.code,
+      compte,
+      rang: n.rang,
+      repli: n.repli,
+      exigibilite: n.exigibilite,
+      motifs: n.motifs,
+    });
   }
   if (natures.length > 0 && natures.filter((n) => n.repli).length !== 1)
     throw new Error("reglage.ventes.repli");
@@ -125,6 +138,31 @@ export async function lireLesNaturesDeVente(
 /** La nature d'une désignation : la première reconnue, au plus petit rang ; nulle sinon. */
 function natureDe(designation: string, natures: readonly NatureDeVente[]): NatureDeVente | null {
   return natures.find((n) => n.motifs.some((m) => new RegExp(m, "iu").test(designation))) ?? null;
+}
+
+/**
+ * L'exigibilité de ce qu'une pièce vend — ou achète : c'est la vente du
+ * fournisseur. Celle de ses natures quand tous ses articles en ont une seule ;
+ * nulle (indécidable) sans article, avec un article qu'aucun motif ne
+ * reconnaît (nommé dans `inconnus`), ou avec deux exigibilités. Pure.
+ */
+export function exigibiliteDesArticles(
+  articles: ReadonlyArray<{ designation?: string | null }>,
+  natures: readonly NatureDeVente[],
+): { exigibilite: string | null; inconnus: string[] } {
+  const designations = articles.flatMap((a) =>
+    a.designation?.trim() ? [a.designation.trim()] : [],
+  );
+  const reconnues = designations.map((d) => ({ d, nature: natureDe(d, natures) }));
+  const inconnus = reconnues.filter((x) => x.nature === null).map((x) => x.d);
+  const exigibilites = new Set(reconnues.flatMap((x) => (x.nature ? [x.nature.exigibilite] : [])));
+  return {
+    exigibilite:
+      designations.length > 0 && inconnus.length === 0 && exigibilites.size === 1
+        ? [...exigibilites][0]!
+        : null,
+    inconnus,
+  };
 }
 
 /**

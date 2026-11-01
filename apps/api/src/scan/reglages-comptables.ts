@@ -50,6 +50,9 @@ export const OPTIONS_APPLIQUEES: Readonly<Record<string, readonly string[]>> = {
   "avoirs.ecriture": ["selon_avoir", "extourne", "rabais"],
   // Le compte de vente par nature d'article, ou unique (`nature-de-vente.ts`).
   "ventes.compte": ["par_nature_article", "unique_cabinet"],
+  // Le mois de TVA par l'exigibilité, ou la date de facture avec son alerte
+  // (`mois-de-tva.ts`, `app.jour_d_imputation_tva`).
+  "mois_tva.date": ["exigibilite_calculee", "date_facture_alerte"],
 };
 
 /** Les réglages à un nombre que le Socle lit. */
