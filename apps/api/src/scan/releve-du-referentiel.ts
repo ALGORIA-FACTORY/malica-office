@@ -20,7 +20,7 @@ import { lireLesBiensImmobilisables, lireLesTitres, lireParametres } from "./ana
 import { lireLeBaremeDesDroits } from "./bareme-du-timbre.ts";
 import { lireLaRegleDuPack } from "./cours-de-change.ts";
 import { lireLesNaturesDeVente } from "./nature-de-vente.ts";
-import { lireLesReglagesDuPack } from "./reglages-comptables.ts";
+import { droitsAuCout, lireLesReglagesDuPack } from "./reglages-comptables.ts";
 
 /** Le jour du relevé : un référentiel daté se relève à une date fixe (R11). */
 const JOUR_DU_RELEVE = "2026-10-01";
@@ -86,6 +86,7 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
        select marque, devise from ref.devises_marques
      ) m order by marque collate "C", devise collate "C"`,
   );
+  const reglages = await lireLesReglagesDuPack(db, pack.id, JOUR_DU_RELEVE);
   return {
     juridiction,
     jour: JOUR_DU_RELEVE,
@@ -105,7 +106,11 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
     change: await lireLaRegleDuPack(db, pack.id, JOUR_DU_RELEVE),
     // Les réglages comptables du pack (`ref.socle_params`, R10) : les défauts
     // que le cabinet confirme ou change.
-    reglages: await lireLesReglagesDuPack(db, pack.id, JOUR_DU_RELEVE),
+    reglages,
+    // Les droits qu'un achat incorpore au coût, selon le défaut du pack
+    // (`fodec.traitement`) : la fonction même que la proposition appelle, pour
+    // que la mesure et le jeu synthétique attendent ce que la recette propose.
+    droitsAuCout: await droitsAuCout(db, new Map(Object.entries(reglages))),
     // Le barème daté des droits (`timbre.bareme`) : la catégorie au droit
     // standard et les tranches des autres.
     baremeDesDroits: await lireLeBaremeDesDroits(db, pack.id, JOUR_DU_RELEVE),

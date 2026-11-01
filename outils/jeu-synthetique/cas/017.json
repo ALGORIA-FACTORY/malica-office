@@ -151,7 +151,7 @@
           "TVA19"
         ],
         [
-          "6652",
+          "601",
           "46.054",
           "0"
         ],
@@ -172,7 +172,7 @@
     },
     "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
     "notes": [
-      "INCERTAIN — FODEC à l'achat imputé au compte du pack, et compris dans la base de la TVA"
+      "INCERTAIN — FODEC à l'achat incorporé au coût, sur sa ligne au compte de la charge (fodec.traitement du pack), et compris dans la base de la TVA"
     ]
   }
 }

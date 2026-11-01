@@ -322,6 +322,7 @@
     "timbre.bareme": "bareme_date",
     "ventes.compte": "par_nature_article"
   },
+  "droitsAuCout": ["FODEC"],
   "baremeDesDroits": {
     "standard": "standard",
     "tranches": [
