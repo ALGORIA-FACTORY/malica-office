@@ -246,9 +246,9 @@ pub fn construire(entree: &Entree) -> Modele {
         let op = e.get("op").and_then(|o| o.as_str()).unwrap_or("");
         let r: Result<(), String> = (|| {
             match op {
-                // Les lignes (lignes.rs) et l'en-tête (entete.rs) se prouvent après le centre,
-                // sur sa sortie : ils n'entrent pas dans sa recherche.
-                "groupe_taux" | crate::lignes::OP | crate::entete::OP => {}
+                // Les lignes (lignes.rs), l'en-tête (entete.rs) et les lettres (lettres.rs) se
+                // prouvent après le centre, sur sa sortie : ils n'entrent pas dans sa recherche.
+                "groupe_taux" | crate::lignes::OP | crate::entete::OP | crate::lettres::OP => {}
                 "somme" => {
                     let total = b.unite(&lire_ref(&texte(e, "total")?))?;
                     let mut termes = vec![(total, 1)];

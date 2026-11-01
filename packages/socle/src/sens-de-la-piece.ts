@@ -42,7 +42,7 @@
  * Chacune rend `sens: null` et un signalement. L'écran pose alors une question
  * en un geste, avec la zone de la pièce sous les yeux.
  */
-import { normaliserMatricule } from "./matricule.ts";
+import { normaliserMatricule, type FormatDuMatricule } from "./matricule.ts";
 
 export type SensDeLaPiece = "facture_achat" | "facture_vente";
 
@@ -75,10 +75,12 @@ export function lireLeSens(e: {
   matriculeClient: string | null | undefined;
   /** Ce que le modèle a proposé. Confronté, jamais suivi d'office. */
   sensDuModele: SensDeLaPiece | null | undefined;
+  /** La forme de lecture du matricule, telle que le pack la porte (`ref.identifiant_formats`). */
+  format: FormatDuMatricule;
 }): LectureDuSens {
-  const dossier = normaliserMatricule(e.matriculeDossier);
-  const emetteur = normaliserMatricule(e.matriculeEmetteur);
-  const client = normaliserMatricule(e.matriculeClient);
+  const dossier = normaliserMatricule(e.matriculeDossier, e.format);
+  const emetteur = normaliserMatricule(e.matriculeEmetteur, e.format);
+  const client = normaliserMatricule(e.matriculeClient, e.format);
   const duModele = e.sensDuModele ?? null;
 
   /** Le modèle décide, et on dit pourquoi on l'a laissé décider. */

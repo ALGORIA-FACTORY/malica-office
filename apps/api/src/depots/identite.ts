@@ -10,6 +10,7 @@
 import { configurationCourriel } from "../courriel/brevo.ts";
 import { envoyerInvitation, type StatutCourriel } from "../courriel/invitation.ts";
 import type { Requete } from "../db.ts";
+import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 
 /** Un mandat proposé, vu depuis la PME qui doit y répondre. */
 export interface MandatPropose {
@@ -74,6 +75,24 @@ export const identite = {
       libelle: r["libelle"] as string,
       fondement: r["fondement"] as string,
     }));
+  },
+
+  /**
+   * La convention de date du pack de la juridiction, au jour dit : la carte
+   * d'identification fiscale porte une date de début d'activité, et la chaîne
+   * ne sait pas dans quel ordre elle s'écrit — la base le sait (R4).
+   */
+  async conventionDeDate(db: Requete, jurisdiction: string, jour?: string | null) {
+    const { rows } = await db.query<{ id: string; jour: string }>(
+      `select id, to_char(coalesce($2::date, current_date), 'YYYY-MM-DD') as jour
+         from ref.jurisdiction_packs
+        where jurisdiction = $1 and effective_from <= coalesce($2::date, current_date)
+        order by effective_from desc limit 1`,
+      [jurisdiction, jour ?? null],
+    );
+    const pack = rows[0];
+    if (!pack) throw new Error("pack.absent");
+    return (await lireLesReglesDeLecture(db, pack.id, pack.jour)).dates;
   },
 
   /**

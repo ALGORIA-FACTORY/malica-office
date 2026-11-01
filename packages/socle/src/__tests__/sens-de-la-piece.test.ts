@@ -17,6 +17,8 @@ import { describe, expect, it } from "vitest";
 
 import { lireLeSens } from "../sens-de-la-piece.ts";
 
+import { FORMAT_D_ESSAI } from "./regles-de-lecture-d-essai.ts";
+
 /** Le dossier d'essai : ALGORIA FACTORY, matricule fictif mais bien formé. */
 const DOSSIER = "1876543W/A/M/000";
 /** Un tiers : le bailleur de la facture de loyer du 4 octobre. */
@@ -25,6 +27,7 @@ const TIERS = "1456987L/A/P/000";
 describe("le sens déduit des matricules", () => {
   it("le dossier côté client : c'est un achat", () => {
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: TIERS,
       matriculeClient: DOSSIER,
@@ -37,6 +40,7 @@ describe("le sens déduit des matricules", () => {
 
   it("le dossier côté émetteur : c'est une vente", () => {
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: DOSSIER,
       matriculeClient: TIERS,
@@ -55,6 +59,7 @@ describe("le sens déduit des matricules", () => {
      * manquait : l'erreur ne portait pas sur un champ, mais sur tous.
      */
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: TIERS,
       matriculeClient: DOSSIER,
@@ -68,6 +73,7 @@ describe("le sens déduit des matricules", () => {
 
   it("déduit même quand le modèle n'a rien proposé", () => {
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: TIERS,
       matriculeClient: DOSSIER,
@@ -80,6 +86,7 @@ describe("le sens déduit des matricules", () => {
   it("reconnaît le dossier quelle que soit l'écriture du matricule", () => {
     // La pièce imprime « MF : ١٨٧٦٥٤٣W A M 000 », la fiche « 1876543W/A/M/000 ».
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: TIERS,
       matriculeClient: "MF : ١٨٧٦٥٤٣W A M 000",
@@ -91,6 +98,7 @@ describe("le sens déduit des matricules", () => {
   it("un établissement secondaire est le même dossier", () => {
     // Une facture adressée à la succursale concerne bien l'entreprise.
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: TIERS,
       matriculeClient: "1876543W/A/E/042",
@@ -104,6 +112,7 @@ describe("le sens déduit des matricules", () => {
 describe("les trois situations qui ne se tranchent pas toutes seules", () => {
   it("le dossier des DEUX côtés : à confirmer", () => {
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: DOSSIER,
       matriculeClient: DOSSIER,
@@ -137,6 +146,7 @@ describe("les trois situations qui ne se tranchent pas toutes seules", () => {
      * sans alarmer — il n'y a rien d'anormal ici.
      */
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: "1589037 /M/P/M/000",
       matriculeClient: null,
@@ -152,6 +162,7 @@ describe("les trois situations qui ne se tranchent pas toutes seules", () => {
     // La pièce concerne peut-être une autre entreprise. On ne choisit pas un
     // sens par défaut sur une pièce qui n'est peut-être pas la nôtre.
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: TIERS,
       matriculeClient: "1234567B/B/M/000",
@@ -172,6 +183,7 @@ describe("les trois situations qui ne se tranchent pas toutes seules", () => {
      * document, qui n'y est pour rien.
      */
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: TIERS,
       matriculeClient: "1856324/A/M/000",
@@ -187,6 +199,7 @@ describe("les trois situations qui ne se tranchent pas toutes seules", () => {
 describe("quand le modèle est le seul recours", () => {
   it("aucun matricule lu : le modèle tranche, et c'est tracé", () => {
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: null,
       matriculeClient: null,
@@ -199,6 +212,7 @@ describe("quand le modèle est le seul recours", () => {
 
   it("aucun matricule lu ET le modèle muet : à confirmer", () => {
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: DOSSIER,
       matriculeEmetteur: null,
       matriculeClient: null,
@@ -216,6 +230,7 @@ describe("quand le modèle est le seul recours", () => {
      * confondu avec une vérification.
      */
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: null,
       matriculeEmetteur: TIERS,
       matriculeClient: DOSSIER,
@@ -229,6 +244,7 @@ describe("quand le modèle est le seul recours", () => {
   it("le dossier avec un matricule INCOMPLET est traité comme sans", () => {
     // Une fiche mal saisie ne doit pas produire une déduction qui a l'air sûre.
     const r = lireLeSens({
+      format: FORMAT_D_ESSAI,
       matriculeDossier: "1856324/A/M/000",
       matriculeEmetteur: TIERS,
       matriculeClient: "1856324/A/M/000",

@@ -36,6 +36,7 @@ import type { Requete } from "../db.ts";
 import { analyserPiece, exposantDeLaDevise, lireLesDevises } from "../scan/analyse.ts";
 import { lireLesReglagesComptables } from "../scan/reglages-comptables.ts";
 import { effacerContenu } from "../stockage.ts";
+import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 
 import {
   lireLeContexteDuSudoku,
@@ -723,6 +724,8 @@ export const capture = {
       jurisdiction,
       currency: org["currency"] as string,
       devises,
+      // Comment le pack écrit une date et un matricule, au jour de réception.
+      regles: await lireLesReglesDeLecture(db, packId, piece["recue_le"] as string),
       dossier: {
         raisonSociale: (org["name"] as string) ?? "",
         identifiantFiscal: (org["legal_id"] as string | null) ?? null,

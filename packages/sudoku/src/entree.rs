@@ -67,11 +67,38 @@ pub struct Jeton {
     /// Date ISO rendue par `normalizeDate`, ou `null`.
     #[serde(default)]
     pub date: Option<String>,
+    /// Quand la date s'écrit sur plusieurs jetons d'une rangée (« 13 mai 2026 ») : l'ordinal
+    /// du dernier. La date est portée par le premier ; la citation couvre toute la plage.
+    #[serde(default)]
+    pub date_fin: Option<u32>,
+    /// Les identifiants que le lecteur du pack lit dans ce jeton (jusqu'au jeton `fin`) :
+    /// la valeur normalisée, sous le code de son format. Le moteur ne relit pas le texte.
+    #[serde(default)]
+    pub identifiants: Vec<IdentifiantLu>,
+    /// Le montant écrit en toutes lettres qui commence à ce jeton, lu par l'adaptateur dans
+    /// la devise de la pièce (unités mineures), jusqu'au jeton `fin`.
+    #[serde(default)]
+    pub lettres: Option<LettresLues>,
     /// Pour un jeton chiffré sans espace dont la partie entière a au moins 4 chiffres : ses
     /// coupes possibles en deux cases collées, lues par le lecteur de production. Le moteur
     /// ne fait que choisir une coupe fournie ; il ne relit jamais le texte.
     #[serde(default)]
     pub decoupes: Vec<Decoupe>,
+}
+
+/// Un identifiant lu par l'adaptateur (`normaliserMatricule`, forme du pack).
+#[derive(Deserialize, Clone)]
+pub struct IdentifiantLu {
+    pub format: String,
+    pub valeur: String,
+    pub fin: u32,
+}
+
+/// Un montant en toutes lettres lu par l'adaptateur, en unités mineures.
+#[derive(Deserialize, Clone, Copy)]
+pub struct LettresLues {
+    pub v: i64,
+    pub fin: u32,
 }
 
 /// Une coupe d'un jeton : `coupe` caractères à gauche lus comme un entier (en unités
@@ -108,6 +135,12 @@ pub struct Champ {
     pub reperes_ar: Vec<String>,
     #[serde(default)]
     pub format_code: Option<String>,
+    /// La famille d'experts du concept du champ (`ref.concepts.expert`).
+    #[serde(default)]
+    pub expert: Option<String>,
+    /// La parcelle de la grille où le champ s'imprime.
+    #[serde(default)]
+    pub parcelle: Option<String>,
 }
 
 #[derive(Deserialize)]

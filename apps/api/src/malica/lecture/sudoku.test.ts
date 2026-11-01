@@ -6,6 +6,7 @@ import pg from "pg";
 import { moteurDisponible, type Grille, type SortieDuSudoku } from "@malica/sudoku";
 
 import { deviseDEssai, devisesDEssai } from "../../scan/devise-d-essai.ts";
+import { REGLES_DE_LECTURE_D_ESSAI } from "../../scan/referentiel-d-essai.ts";
 import { JEU_D_OR } from "./jeu-d-or.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
@@ -51,6 +52,11 @@ import type { VisionRead } from "./vision.ts";
 const devise = deviseDEssai(3);
 /** Le dossier de la facture réelle du jeu d'or : son matricule dit le sens. */
 const DOSSIER_D_OR = { matricule: JEU_D_OR[0]!.matriculeDossier, raisonSociale: "ALGORIA FACTORY" };
+/** Les règles de lecture du pack d'essai, et une grille sans preuve de lettres. */
+const LECTURE = {
+  regles: REGLES_DE_LECTURE_D_ESSAI,
+  grille: { code: "facture", champs: [], preuves: [] } satisfies Grille,
+};
 
 describe("sudoku — les jetons du plan", () => {
   const plan: PageToken[] = [
@@ -59,7 +65,7 @@ describe("sudoku — les jetons du plan", () => {
     { page: 1, ordinal: 2, text: "01/09/2026", x0: 0, y0: 0, x1: 1, y1: 1 },
     { page: 1, ordinal: 3, text: "Total HT", x0: 0, y0: 0, x1: 1, y1: 1 },
   ];
-  const j = jetonsDuSudoku(plan, devise);
+  const j = jetonsDuSudoku(plan, devise, LECTURE);
 
   it("une décimale imprimée est forte", () => {
     assert.deepEqual(j[0]!.montants, [{ v: 3_020_000, forte: true }]);
@@ -80,6 +86,34 @@ describe("sudoku — les jetons du plan", () => {
     assert.equal(j[3]!.date, null);
   });
 
+  it("les experts de l'adaptateur lisent avec les règles du pack : date en morceaux, matricule vu", () => {
+    const rangee = (texts: string[]): PageToken[] =>
+      texts.map((text, ordinal) => ({
+        page: 1,
+        ordinal,
+        text,
+        x0: 0.1 * ordinal,
+        y0: 0.1,
+        x1: 0.1 * ordinal + 0.08,
+        y1: 0.12,
+      }));
+    const [, jour, mois, annee] = jetonsDuSudoku(
+      rangee(["Date", "13", "mai", "2026"]),
+      devise,
+      LECTURE,
+    );
+    // Portée par le premier morceau, citée jusqu'au dernier.
+    assert.equal(jour!.date, "2026-05-13");
+    assert.equal(jour!.date_fin, 3);
+    assert.equal(mois!.date, null);
+    assert.equal(annee!.date, null);
+    // L'étiquette collée, le « l » pour « 1 » : le lecteur du pack le rend normalisé.
+    const [mf] = jetonsDuSudoku(rangee(["MF:l876543W/A/M/000"]), devise, LECTURE);
+    assert.deepEqual(mf!.identifiants, [
+      { format: REGLES_DE_LECTURE_D_ESSAI.codeDuMatricule, valeur: "1876543W/A/M/000", fin: 0 },
+    ]);
+  });
+
   it("deux cases collées par l'OCR offrent leurs coupes, lues par le lecteur de production", () => {
     const [colle, seul] = jetonsDuSudoku(
       [
@@ -87,6 +121,7 @@ describe("sudoku — les jetons du plan", () => {
         { page: 1, ordinal: 1, text: "3 020,000", x0: 0, y0: 0, x1: 1, y1: 1 },
       ],
       devise,
+      LECTURE,
     );
     assert.deepEqual(colle!.decoupes, [
       { coupe: 1, gauche: 1_000, droite: [{ v: 2_400_000, forte: true }] },
@@ -162,7 +197,7 @@ const GRILLE: Grille = {
     },
   ],
 };
-const CONTEXTE = { jour: "2026-09-01", grille: GRILLE };
+const CONTEXTE = { jour: "2026-09-01", grille: GRILLE, regles: REGLES_DE_LECTURE_D_ESSAI };
 const PIECE = { pieceId: "p", packId: "k" };
 
 describe("sudoku — la sélection rendue", () => {
@@ -321,6 +356,7 @@ describe("sudoku — la sélection rendue", () => {
       dossierId: "d",
       packId: "k",
       recueLe: "2026-10-02",
+      dates: REGLES_DE_LECTURE_D_ESSAI.dates,
       devise,
       dossier: DOSSIER_D_OR,
       tiers: [],
@@ -353,13 +389,24 @@ describe("sudoku — la sélection rendue", () => {
         selection: { ...cas.designation, document_date: date },
       }) as unknown as VisionRead;
     assert.equal(
-      jourDeLaLecture(avec({ page: 1, ordinal: 1 }, "15/03/2026"), "2026-10-02"),
+      jourDeLaLecture(
+        avec({ page: 1, ordinal: 1 }, "15/03/2026"),
+        "2026-10-02",
+        REGLES_DE_LECTURE_D_ESSAI.dates,
+      ),
       "2026-03-15",
     );
-    assert.equal(jourDeLaLecture(avec(null, "15/03/2026"), "2026-10-02"), "2026-10-02");
+    assert.equal(
+      jourDeLaLecture(avec(null, "15/03/2026"), "2026-10-02", REGLES_DE_LECTURE_D_ESSAI.dates),
+      "2026-10-02",
+    );
     // Une date illisible n'est pas devinée : la réception.
     assert.equal(
-      jourDeLaLecture(avec({ page: 1, ordinal: 1 }, "31/02/2026"), "2026-10-02"),
+      jourDeLaLecture(
+        avec({ page: 1, ordinal: 1 }, "31/02/2026"),
+        "2026-10-02",
+        REGLES_DE_LECTURE_D_ESSAI.dates,
+      ),
       "2026-10-02",
     );
   });
@@ -430,6 +477,44 @@ describe("sudoku — la sélection rendue", () => {
       ],
     );
     assert.ok(a.champs.every((c) => c.citations.length > 0));
+  });
+
+  it("un matricule dont la lettre de contrôle ne tient pas sa règle s'inscrit, averti", () => {
+    const format = REGLES_DE_LECTURE_D_ESSAI.codeDuMatricule;
+    const grille: Grille = {
+      ...GRILLE,
+      champs: ["matricule_fiscal_emetteur", "matricule_fiscal_client"].map((code) => ({
+        code,
+        type: "identifiant",
+        reperes_fr: [],
+        reperes_ar: [],
+        format_code: format,
+      })),
+    };
+    const lu = (valeur: string, ordinal: number) => ({
+      valeur,
+      refs: ref(ordinal),
+      statut: "prouve" as const,
+    });
+    const a = champsLusAInscrire(
+      PIECE,
+      { ...CONTEXTE, grille },
+      {
+        ...prouvee,
+        champs: {
+          // 1876543 appelle « C » : « W » ne tient pas la règle (non publiée) — averti.
+          matricule_fiscal_client: lu("1876543W/A/M/000", 4),
+          matricule_fiscal_emetteur: lu("1876543C/A/M/000", 5),
+        },
+      },
+    );
+    assert.deepEqual(
+      a.champs.map((c) => [c.champ, c.statut, c.avertissement ?? null]),
+      [
+        ["matricule_fiscal_client", "prouve", "lettre_de_controle_discordante"],
+        ["matricule_fiscal_emetteur", "prouve", null],
+      ],
+    );
   });
 
   it("une valeur sans citation s'inscrit nulle, avec son statut (R2)", () => {
@@ -524,7 +609,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
   });
 
   const jouer = (plan: readonly PageToken[]) =>
-    resoudreLaPiece(jetonsDuSudoku(plan, devise), contexte);
+    resoudreLaPiece(jetonsDuSudoku(plan, devise, contexte), contexte);
 
   const valeur = (o: SortieDuSudoku, champ: string) => Number(o.champs[champ]?.valeur ?? 0);
   const pourMille = (code: string) =>
@@ -581,11 +666,16 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       // les mises en page à colonne latérale). Sur cette facture, aucun indice :
       // les parties sont signalées, et la sélection garde les matricules de la chaîne.
       // Prouvées, elles devraient être exactement celles du jeu d'or.
-      const avecDossier = resoudreLaPiece(jetonsDuSudoku(plan, devise), contexte, undefined, {
-        dossier: { matricule: cas.matriculeDossier!, raison_sociale: null },
-        tiers: [],
-        formes_juridiques: contexte.formesJuridiques,
-      });
+      const avecDossier = resoudreLaPiece(
+        jetonsDuSudoku(plan, devise, contexte),
+        contexte,
+        undefined,
+        {
+          dossier: { matricule: cas.matriculeDossier!, raison_sociale: null },
+          tiers: [],
+          formes_juridiques: contexte.formesJuridiques,
+        },
+      );
       const selParties = selectionParLeSudoku(
         cas.designation,
         avecDossier,
@@ -641,6 +731,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
         dossierId: "d",
         packId: "k",
         recueLe: JOUR,
+        dates: REGLES_DE_LECTURE_D_ESSAI.dates,
         devise,
         dossier: DOSSIER_D_OR,
         tiers: [],
@@ -689,7 +780,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       ligne(13, 0.46, 0.59, "payer"),
       ligne(14, 0.46, 0.83, "11 704,650"),
     ];
-    const o = resoudreLaPiece(jetonsDuSudoku(plan, devise), contexte);
+    const o = resoudreLaPiece(jetonsDuSudoku(plan, devise, contexte), contexte);
     assert.equal(o.issue, "prouvee", o.raison ?? "");
     assert.equal(o.variante, "ttc_hors_timbre");
     assert.equal(valeur(o, "total_ht"), 9_835_000);
@@ -777,13 +868,88 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
     ];
     // 2,000 : une tranche du barème (grandes surfaces, LF 2026).
     assert.ok(admis.includes(2_000), "2,000 est admis au jour dit");
-    const o = resoudreLaPiece(jetonsDuSudoku(facture("2,000", "119 002,000"), devise), contexte);
+    const o = resoudreLaPiece(
+      jetonsDuSudoku(facture("2,000", "119 002,000"), devise, contexte),
+      contexte,
+    );
     assert.equal(o.issue, "prouvee", o.raison ?? "");
     assert.equal(valeur(o, "droit_timbre"), 2_000);
     // 3,000 : aucun barème ne l'admet — pas de fausse preuve.
     assert.ok(!admis.includes(3_000));
-    const x = resoudreLaPiece(jetonsDuSudoku(facture("3,000", "119 003,000"), devise), contexte);
+    const x = resoudreLaPiece(
+      jetonsDuSudoku(facture("3,000", "119 003,000"), devise, contexte),
+      contexte,
+    );
     assert.notEqual(x.issue, "prouvee");
+  });
+
+  it("les lettres qui contredisent les chiffres signalent la pièce (100/D-04)", () => {
+    const mot = (ordinal: number, x: number, text: string): PageToken => ({
+      page: 1,
+      ordinal,
+      text,
+      x0: x,
+      y0: 0.6,
+      x1: x + 0.04,
+      y1: 0.615,
+    });
+    const chiffres: PageToken[] = [
+      ["Total", 0.38, 0.54],
+      ["HT", 0.38, 0.58],
+      ["8 131,000", 0.38, 0.84],
+      ["TVA", 0.4, 0.54],
+      ["19 %", 0.4, 0.57],
+      ["1 544,890", 0.4, 0.84],
+      ["Total", 0.42, 0.54],
+      ["TTC", 0.42, 0.58],
+      ["9 676,890", 0.42, 0.84],
+      ["Timbre", 0.44, 0.54],
+      ["1,000", 0.44, 0.87],
+    ].map(([text, y, x], ordinal) => ({
+      page: 1,
+      ordinal,
+      text: text as string,
+      x0: x as number,
+      y0: y as number,
+      x1: (x as number) + 0.05,
+      y1: (y as number) + 0.015,
+    }));
+    const avec = (lettres: string) => [
+      ...chiffres,
+      ...["Arrêtée", "la", "présente", "pièce", "à", "la", "somme", "de", ":"].map((t, i) =>
+        mot(20 + i, 0.05 + 0.03 * i, t),
+      ),
+      ...lettres.split(" ").map((t, i) => mot(40 + i, 0.35 + 0.05 * i, t)),
+    ];
+    const signalee = resoudreLaPiece(
+      jetonsDuSudoku(avec("Trois mille deux cents dinars."), devise, contexte),
+      contexte,
+    );
+    assert.equal(signalee.issue, "signalee", signalee.raison ?? "");
+    assert.equal(signalee.champs["montant_en_lettres"]?.valeur, "3200000");
+    assert.equal(signalee.champs["total_ttc"]?.statut, "signale");
+    // La même pièce, ses lettres justes : prouvée, et les lettres avec elle.
+    const prouvee = resoudreLaPiece(
+      jetonsDuSudoku(
+        avec("Neuf mille six cent soixante-seize dinars et huit cent quatre-vingt-dix millimes"),
+        devise,
+        contexte,
+      ),
+      contexte,
+    );
+    assert.equal(prouvee.issue, "prouvee", prouvee.raison ?? "");
+    assert.equal(prouvee.champs["montant_en_lettres"]?.statut, "prouve");
+    // Signalée, elle ne remplace rien dans la chaîne.
+    const sel = JEU_D_OR[0]!.designation;
+    assert.equal(
+      selectionParLeSudoku(
+        sel,
+        signalee,
+        contexte.grille,
+        contexte.pack.charges.map((c) => c.code),
+      ),
+      sel,
+    );
   });
 
   it("banc 3 : 59/60 factures prouvées justes, zéro fausse preuve, aucun ticket prouvé", () => {

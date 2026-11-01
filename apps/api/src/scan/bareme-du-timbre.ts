@@ -31,7 +31,7 @@
  * migration `20261111090000` les nomme.
  */
 import { D } from "@malica/socle/domain/decimal";
-import { normaliserMatricule } from "@malica/socle/matricule";
+import { normaliserMatricule, type FormatDuMatricule } from "@malica/socle/matricule";
 
 import type { Requete } from "../db.ts";
 
@@ -118,8 +118,10 @@ export async function categorieDeLEmetteur(
   db: Requete,
   dossier: string,
   matricule: string | null | undefined,
+  /** La forme de lecture du matricule du pack (`lireLesReglesDeLecture`). */
+  format: FormatDuMatricule,
 ): Promise<string | null> {
-  const cle = normaliserMatricule(matricule).cle;
+  const cle = normaliserMatricule(matricule, format).cle;
   if (!cle) return null;
   const { rows } = await db.query<{ identifiant_fiscal: string; categorie: string }>(
     `select identifiant_fiscal, categorie_de_bareme as categorie from tiers_v
@@ -128,7 +130,7 @@ export async function categorieDeLEmetteur(
   );
   const categories = new Set(
     rows
-      .filter((t) => normaliserMatricule(t.identifiant_fiscal).cle === cle)
+      .filter((t) => normaliserMatricule(t.identifiant_fiscal, format).cle === cle)
       .map((t) => t.categorie),
   );
   return categories.size === 1 ? [...categories][0]! : null;

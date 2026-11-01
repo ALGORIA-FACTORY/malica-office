@@ -31,7 +31,12 @@
 import { CarteFiscaleV1 } from "@malica/socle/contracts/carte-fiscale.v1";
 
 import { callDeepSeek } from "../conseil/deepseek.ts";
-import { resolveFromTokenPlan, type FieldCitation, type ReadFlag } from "./token-plan.ts";
+import {
+  resolveFromTokenPlan,
+  type ConventionDeDate,
+  type FieldCitation,
+  type ReadFlag,
+} from "./token-plan.ts";
 import { parseJsonLoose, relever } from "./vision.ts";
 
 import { z } from "zod";
@@ -100,6 +105,8 @@ export async function lireCarteFiscale(params: {
   bytes?: Uint8Array;
   /** Les régimes que la juridiction connaît, tels que la base les porte. */
   regimes: ReadonlyArray<{ axe: "imposition" | "tva"; code: string; libelle: string }>;
+  /** La convention de date du pack (`ref.conventions_de_date`). */
+  dates: ConventionDeDate;
 }): Promise<LectureDeCarte> {
   const cle = process.env["DEEPSEEK_API_KEY"];
   if (!cle) throw new Error("DEEPSEEK_API_KEY absente : la carte ne peut pas être désignée");
@@ -155,7 +162,8 @@ export async function lireCarteFiscale(params: {
     genre: "text" | "date",
     zone: string,
   ): string | null => {
-    const r = resolveFromTokenPlan(tokens, champ, ref ?? null, genre, zone, {
+    const lu = genre === "date" ? { date: params.dates } : "text";
+    const r = resolveFromTokenPlan(tokens, champ, ref ?? null, lu, zone, {
       zone,
       uiField: `carte.${champ}`,
     });

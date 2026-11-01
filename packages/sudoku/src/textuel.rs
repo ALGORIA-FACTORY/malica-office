@@ -1,17 +1,31 @@
 //! Les champs non numériques (date, identifiant) : candidats = jetons dont la
-//! valeur respecte le format fourni en entrée ; ancrage = un libellé repère du
+//! valeur respecte le format fourni en entrée — ou que le lecteur du pack y a lue
+//! (`identifiants`, `date` sur plusieurs jetons) ; ancrage = un libellé repère du
 //! champ sur le jeton avant la valeur, juste à gauche ou juste au-dessus.
 //! Statut `conforme` si une seule valeur valide (ancrée de préférence), sinon
 //! `signale` ; `absent` quand aucun jeton ne porte de valeur valide.
 
-use crate::entree::{Champ, Pack};
+use crate::entree::{Champ, Jeton, Pack};
 use crate::reperes::{reperes_de, Plan};
 use regex::Regex;
 
 pub struct Lecture {
     pub valeur: String,
     pub jeton: usize,
+    /// Le dernier jeton de la valeur (le même, quand elle tient dans un jeton).
+    pub fin: usize,
     pub ancree: bool,
+}
+
+/// Le dernier jeton d'une valeur portée par le jeton `i` et qui s'étend jusqu'à l'ordinal
+/// `fin` sur la même page ; `i` lui-même quand elle tient dans un jeton.
+pub(crate) fn jusqua(jetons: &[Jeton], i: usize, fin: Option<u32>) -> usize {
+    let Some(f) = fin else { return i };
+    let page = jetons[i].page;
+    (i..jetons.len().min(i + 16))
+        .take_while(|&k| jetons[k].page == page)
+        .find(|&k| jetons[k].ordinal == f)
+        .unwrap_or(i)
 }
 
 pub enum Issue {
@@ -46,7 +60,8 @@ pub fn lire(champ: &Champ, pack: &Pack, plan: &Plan) -> Result<Issue, String> {
             for (i, j) in plan.jetons.iter().enumerate() {
                 if let Some(d) = &j.date {
                     if iso_valide(d) {
-                        lectures.push(Lecture { valeur: d.clone(), jeton: i, ancree: plan.ancre(i, &reperes, None, true) });
+                        let fin = jusqua(plan.jetons, i, j.date_fin);
+                        lectures.push(Lecture { valeur: d.clone(), jeton: i, fin, ancree: plan.ancre(i, &reperes, None, true) });
                     }
                 }
             }
@@ -56,12 +71,22 @@ pub fn lire(champ: &Champ, pack: &Pack, plan: &Plan) -> Result<Issue, String> {
             let motif = pack.formats.get(code).ok_or_else(|| format!("format « {code} » absent du pack"))?;
             let re = Regex::new(motif).map_err(|e| format!("format « {code} » invalide : {e}"))?;
             for (i, j) in plan.jetons.iter().enumerate() {
+                // Ce que le lecteur du pack a lu dans le jeton (normalisé : étiquette collée,
+                // chiffres arabes, « l » pour « 1 ») l'emporte sur le motif brut.
+                let normalises: Vec<_> = j.identifiants.iter().filter(|x| x.format == code).collect();
+                if !normalises.is_empty() {
+                    for x in normalises {
+                        let fin = jusqua(plan.jetons, i, Some(x.fin));
+                        lectures.push(Lecture { valeur: x.valeur.clone(), jeton: i, fin, ancree: plan.ancre(i, &reperes, None, true) });
+                    }
+                    continue;
+                }
                 for m in re.find_iter(&j.texte) {
                     if m.as_str().is_empty() {
                         continue;
                     }
                     let ancree = plan.ancre(i, &reperes, Some(&j.texte[..m.start()]), true);
-                    lectures.push(Lecture { valeur: m.as_str().to_string(), jeton: i, ancree });
+                    lectures.push(Lecture { valeur: m.as_str().to_string(), jeton: i, fin: i, ancree });
                 }
             }
         }
@@ -82,7 +107,7 @@ pub fn lire(champ: &Champ, pack: &Pack, plan: &Plan) -> Result<Issue, String> {
     let n = distinctes(&retenues);
     if n == 1 {
         let l = retenues[0];
-        return Ok(Issue::Conforme(Lecture { valeur: l.valeur.clone(), jeton: l.jeton, ancree: l.ancree }));
+        return Ok(Issue::Conforme(Lecture { valeur: l.valeur.clone(), jeton: l.jeton, fin: l.fin, ancree: l.ancree }));
     }
     Ok(Issue::Signale)
 }

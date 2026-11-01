@@ -173,6 +173,7 @@
   ],
   "identite": [
     "accepterInvitationParLien",
+    "conventionDeDate",
     "createOrganization",
     "creerMandat",
     "definirOrganisation",

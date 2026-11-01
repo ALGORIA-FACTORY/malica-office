@@ -33,6 +33,27 @@ export interface JetonDuSudoku {
   /** Date ISO, ou null. */
   readonly date: string | null;
   /**
+   * Quand la date s'écrit sur plusieurs jetons d'une rangée (« 13 mai 2026 ») :
+   * l'ordinal du dernier. Elle est portée par le premier, et citée en entier.
+   */
+  readonly date_fin?: number;
+  /**
+   * Les identifiants que le lecteur du pack lit dans ce jeton (et ses voisins
+   * collés jusqu'à `fin`) : le matricule normalisé par `normaliserMatricule`,
+   * sous le code de son format. Le moteur ne relit pas le texte.
+   */
+  readonly identifiants?: readonly {
+    readonly format: string;
+    readonly valeur: string;
+    readonly fin: number;
+  }[];
+  /**
+   * Le montant écrit en toutes lettres qui commence à ce jeton, lu par
+   * l'adaptateur (`lireLeMontantEnLettres`) dans la devise de la pièce, en
+   * unités mineures ; `fin` : l'ordinal de son dernier mot.
+   */
+  readonly lettres?: { readonly v: number; readonly fin: number };
+  /**
    * Les coupes possibles d'un jeton où l'OCR a collé deux cellules
    * (« 12400,000 » = « 1 » | « 2400,000 ») : `coupe` caractères à gauche, lus
    * comme un entier (`gauche`, en unités mineures) ; le reste, comme un montant.
@@ -50,6 +71,10 @@ export interface ChampDeGrille {
   readonly reperes_fr: readonly string[];
   readonly reperes_ar: readonly string[];
   readonly format_code: string | null;
+  /** La famille d'experts du concept du champ (`ref.concepts.expert`). */
+  readonly expert?: string;
+  /** La parcelle de la grille où le champ s'imprime (`ref.grille_champs.parcelle`). */
+  readonly parcelle?: string;
 }
 
 export interface PreuveDeGrille {
@@ -180,7 +205,11 @@ export interface SortieDuSudoku {
     /** La remise globale lue qui ferme les lignes sur le total HT, quand le total brut n'est pas prouvé. */
     readonly remise_globale?: Cite | null;
   } | null;
-  readonly issue: "prouvee" | "ambigue" | "aucune";
+  /**
+   * `signalee` : une seule affectation ferme l'arithmétique, mais une preuve de
+   * recoupement la contredit (le montant en lettres) — la pièce n'est pas prouvée.
+   */
+  readonly issue: "prouvee" | "signalee" | "ambigue" | "aucune";
   /** La variante de la grille qui a prouvé la pièce, quand la grille en a. */
   readonly variante?: string;
   readonly solutions: number;

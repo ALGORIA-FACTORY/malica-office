@@ -227,6 +227,57 @@ describe("le sudoku s'inscrit par sa porte", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
+  it("une pièce signalée par ses lettres, et l'avertissement d'un expert, s'inscrivent", async () => {
+    const mf = [{ page: 1, ordinal: 12 }];
+    const r = (await serveur(
+      s.gens.amel.id,
+      "inscrireChampsLus",
+      lecture(
+        [
+          ligne("montant_en_lettres", "3200000", "signale", [{ page: 1, ordinal: 90 }]),
+          {
+            ...ligne("matricule_fiscal_emetteur", "1876543W/A/M/000", "prouve", mf),
+            avertissement: "lettre_de_controle_discordante",
+          },
+        ],
+        { issue: "signalee" },
+      ),
+    )) as { inscrits: number };
+    assert.equal(r.inscrits, 2);
+    const lus = await sousIdentiteDuServeur(s.gens.amel.id, async (db) => {
+      const { rows } = await db.query<{ champ_code: string; issue: string; avertissement: string }>(
+        `select champ_code, issue, avertissement from capture.champs_lus
+          where piece_id = $1 and issue = 'signalee' order by champ_code`,
+        [piece],
+      );
+      return rows;
+    });
+    assert.deepEqual(
+      lus.map((x) => [x.champ_code, x.issue, x.avertissement]),
+      [
+        ["matricule_fiscal_emetteur", "signalee", "lettre_de_controle_discordante"],
+        ["montant_en_lettres", "signalee", null],
+      ],
+    );
+    // Un avertissement hors du référentiel, ou sur une ligne de tentative : refusé.
+    await assert.rejects(
+      serveur(
+        s.gens.amel.id,
+        "inscrireChampsLus",
+        lecture([{ ...ligne("total_ht", null, "signale"), avertissement: "invente" }]),
+      ),
+      /refus\.saisie\.mal_formee/,
+    );
+    await assert.rejects(
+      serveur(
+        s.gens.amel.id,
+        "inscrireChampsLus",
+        lecture([{ ...ligne(null, null, null), avertissement: "lettre_de_controle_discordante" }]),
+      ),
+      /refus\.saisie\.mal_formee/,
+    );
+  });
+
   it("un champ ou une grille inconnus, ou une grille hors de sa date : refusés", async () => {
     const refuse = (champs: ChampsLusAInscrire["champs"], autre = {}) =>
       assert.rejects(

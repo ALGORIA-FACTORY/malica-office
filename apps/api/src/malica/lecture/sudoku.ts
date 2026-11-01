@@ -34,6 +34,7 @@
  * telle qu'il l'a reçue. La seule décision de repli est vers le chemin éprouvé.
  */
 
+import { lettreDeControle, normaliserMatricule } from "@malica/socle/matricule";
 import type { DeviseLue } from "@malica/socle/montant-imprime";
 import {
   resoudre,
@@ -52,10 +53,12 @@ import type { Requete } from "../../db.ts";
 import { dateDeLaPiece } from "../../depots/dates.ts";
 import type { ReglagesResolus } from "../../scan/reglages-comptables.ts";
 
+import { datesDuPlan, identifiantsDuPlan, lettresDuPlan } from "./experts.ts";
 import { treillisMontant } from "./montants.ts";
+import { lireLesReglesDeLecture, type ReglesDeLecture } from "./regles-de-lecture.ts";
 import {
-  normalizeDate,
   resolveFromTokenPlan,
+  type ConventionDeDate,
   type PageToken,
   type TokenRef,
 } from "./token-plan.ts";
@@ -129,8 +132,16 @@ export function champsDeLaGrille(grille: Grille): ChampsDeLaGrille {
  */
 const SEPARATEUR = /[.,]/u;
 
-export function jetonsDuSudoku(plan: readonly PageToken[], devise: DeviseLue): JetonDuSudoku[] {
-  return plan.map((t) => ({
+export function jetonsDuSudoku(
+  plan: readonly PageToken[],
+  devise: DeviseLue,
+  /** Les règles de lecture du pack, et la grille dont la preuve `lettres` nomme le champ. */
+  contexte: Pick<ContexteDuSudoku, "regles" | "grille">,
+): JetonDuSudoku[] {
+  const dates = datesDuPlan(plan, contexte.regles);
+  const identifiants = identifiantsDuPlan(plan, contexte.regles);
+  const lettres = lettresDuPlan(plan, contexte.regles, contexte.grille, devise);
+  return plan.map((t, i) => ({
     page: t.page,
     ordinal: t.ordinal,
     texte: t.text,
@@ -144,7 +155,9 @@ export function jetonsDuSudoku(plan: readonly PageToken[], devise: DeviseLue): J
       // décimale, mais aucun séparateur n'est imprimé. Elle reste faible.
       forte: h.lecture === "decimale" && SEPARATEUR.test(t.text),
     })),
-    date: normalizeDate(t.text),
+    ...dates[i]!,
+    ...(identifiants[i]!.length > 0 ? { identifiants: identifiants[i]! } : {}),
+    ...(lettres.has(t.ordinal) ? { lettres: lettres.get(t.ordinal)! } : {}),
     ...decoupesDe(t.text, devise),
   }));
 }
@@ -189,6 +202,8 @@ export interface ContexteDuSudoku {
   readonly pack: PackDuSudoku;
   /** Les formes juridiques du pack : le nom d'un tiers se compare sans elles. */
   readonly formesJuridiques: readonly string[];
+  /** Comment le pack écrit une date, un matricule et un montant en lettres. */
+  readonly regles: ReglesDeLecture;
 }
 
 /** Un nombre de la base en parties par million, sans flottant au bout. */
@@ -226,17 +241,22 @@ export async function lireLeContexteDuSudoku(
   }
   const grilleId = grilles[0]!.id;
 
-  const [champs, preuves, params, devises, taux, charges, tranches, formats, formes] =
+  const [champs, preuves, params, devises, taux, charges, tranches, formats, formes, regles] =
     await Promise.all([
+      // Chaque champ avec la famille d'experts de son concept, et sa parcelle : l'anneau 3
+      // lit les champs que nulle preuve ne lit, par leur famille (`ref.concepts.expert`).
       db.query<{
         code: string;
         type: string;
         reperes_fr: string[] | null;
         reperes_ar: string[] | null;
         format_code: string | null;
+        parcelle: string;
+        expert: string;
       }>(
-        `select code, type, reperes_fr, reperes_ar, format_code
-         from ref_grille_champs_v where grille_id = $1 order by code`,
+        `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert
+           from ref_grille_champs_v c join ref_concepts_v k on k.id = c.concept_id
+          where c.grille_id = $1 order by c.code`,
         [grilleId],
       ),
       db.query<{ code: string; expression: unknown; statut: string; variante: string | null }>(
@@ -302,6 +322,7 @@ export async function lireLeContexteDuSudoku(
         order by code`,
         [packId, jour],
       ),
+      lireLesReglesDeLecture(db, packId, jour),
     ]);
 
   const param = (code: string): number => {
@@ -351,6 +372,8 @@ export async function lireLeContexteDuSudoku(
         reperes_fr: c.reperes_fr ?? [],
         reperes_ar: c.reperes_ar ?? [],
         format_code: c.format_code,
+        parcelle: c.parcelle,
+        expert: c.expert,
       })),
       preuves: preuves.rows.map((p) => ({
         code: p.code,
@@ -367,6 +390,7 @@ export async function lireLeContexteDuSudoku(
       formats: Object.fromEntries(formats.rows.map((f) => [f.kind, f.pattern])),
     },
     formesJuridiques: formes.rows.map((f) => f.code),
+    regles,
   };
 }
 
@@ -434,6 +458,10 @@ export function resoudreLaPiece(
   }));
   const prouvees = jouees.filter((j) => j.sortie.issue === "prouvee");
   if (prouvees.length === 0) {
+    // Une variante dont les chiffres ferment mais que les lettres contredisent : la pièce
+    // est signalée, et c'est ce qu'on en dit d'abord.
+    const signalee = jouees.find((j) => j.sortie.issue === "signalee");
+    if (signalee) return { ...signalee.sortie, variante: signalee.variante };
     const ambigue = jouees.find((j) => j.sortie.issue === "ambigue");
     return (ambigue ?? jouees[0]!).sortie;
   }
@@ -605,6 +633,8 @@ interface ChampLuAInscrire {
   readonly valeur: string | null;
   readonly statut: string | null;
   readonly citations: readonly (RefDeJeton | { readonly case: object })[];
+  /** Ce que l'expert dit du champ sans le refuser (`ref.avertissements_de_lecture`). */
+  readonly avertissement?: string;
 }
 
 /** Ce que `capture.inscrireChampsLus` reçoit : la sortie, champ par champ. */
@@ -629,9 +659,29 @@ export interface ChampsLusAInscrire {
  * Le rang d'une ligne de tableau et le taux d'une instance ont leur colonne ;
  * le code de chaque cellule vient de la preuve `lignes` de la grille.
  */
+/**
+ * L'avertissement de la lettre de contrôle : un matricule lu, de la forme du pack,
+ * dont la lettre ne tient pas la règle (`ref.identifiant_controles`). Il ne bloque
+ * rien — la DGI ne publie pas l'algorithme (décision du 1er novembre 2026).
+ */
+const LETTRE_DISCORDANTE = "lettre_de_controle_discordante";
+
+function avertissementDe(
+  champ: string,
+  valeur: string | null,
+  contexte: Pick<ContexteDuSudoku, "grille" | "regles">,
+): { avertissement?: string } {
+  const format = contexte.grille.champs.find((c) => c.code === champ)?.format_code;
+  if (valeur === null || format !== contexte.regles.codeDuMatricule) return {};
+  const lu = normaliserMatricule(valeur, contexte.regles.matricule);
+  return lettreDeControle(lu, contexte.regles.matricule) === "discordante"
+    ? { avertissement: LETTRE_DISCORDANTE }
+    : {};
+}
+
 export function champsLusAInscrire(
   piece: { readonly pieceId: string; readonly packId: string },
-  contexte: Pick<ContexteDuSudoku, "jour" | "grille">,
+  contexte: Pick<ContexteDuSudoku, "jour" | "grille" | "regles">,
   sortie: SortieDuSudoku,
 ): ChampsLusAInscrire {
   const ligne = (
@@ -647,6 +697,7 @@ export function champsLusAInscrire(
     valeur: citations.length > 0 ? valeur : null,
     statut,
     citations,
+    ...avertissementDe(champ, citations.length > 0 ? valeur : null, contexte),
   });
 
   const champs: ChampLuAInscrire[] = Object.entries(sortie.champs).flatMap(([champ, lu]) => {
@@ -750,12 +801,16 @@ export interface ContexteDuSudokuBranche extends ContexteDuSudoku {
  * (`selection.document_date`, relue dans le plan par `normalizeDate`), à
  * défaut celle de la réception de la pièce — la règle du jugement.
  */
-export function jourDeLaLecture(lecture: VisionRead, recueLe: string): string {
+export function jourDeLaLecture(
+  lecture: VisionRead,
+  recueLe: string,
+  dates: ConventionDeDate,
+): string {
   const lue = resolveFromTokenPlan(
     lecture.tokens,
     "document_date",
     lecture.selection.document_date,
-    "date",
+    { date: dates },
   ).value;
   return dateDeLaPiece(lue, null) ?? recueLe;
 }
@@ -801,6 +856,8 @@ export function creerLeSudoku(
     readonly packId: string;
     /** Le jour de réception de la pièce (`AAAA-MM-JJ`) : le jour des règles à défaut de date lue. */
     readonly recueLe: string;
+    /** La convention de date du pack : le jour des règles se lit dans la date de la pièce. */
+    readonly dates: ConventionDeDate;
     /** La devise du dossier, telle que `lireLesDevises` la rend ; absente, il ne lit pas. */
     readonly devise: DeviseLue | undefined;
     /** Le dossier et ses tiers, tels que la base les connaît (anneau 2). */
@@ -819,7 +876,7 @@ export function creerLeSudoku(
       let jour: string | null = null;
       try {
         if (!piece.devise) throw new Error("la devise du dossier est absente du référentiel");
-        jour = jourDeLaLecture(lecture, piece.recueLe);
+        jour = jourDeLaLecture(lecture, piece.recueLe, piece.dates);
         let contexte = contextes.get(jour);
         if (!contexte) {
           contexte = api.rpc<ContexteDuSudokuBranche>("capture", "contexteSudoku", [
@@ -844,7 +901,7 @@ export function creerLeSudoku(
           formes_juridiques: ctx.formesJuridiques,
         };
         const sortie = resoudreLaPiece(
-          jetonsDuSudoku(lecture.tokens, piece.devise),
+          jetonsDuSudoku(lecture.tokens, piece.devise, ctx),
           ctx,
           resoudre,
           connus,

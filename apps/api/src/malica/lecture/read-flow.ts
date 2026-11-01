@@ -22,6 +22,7 @@ import { confianceParChamp } from "../../scan/confiance.ts";
 
 import { creerDesignateurDeRecette } from "./par-recette.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
+import type { ReglesDeLecture } from "./regles-de-lecture.ts";
 import { secondLecteurDisponible } from "./paddle.ts";
 import { creerLeSudoku } from "./sudoku.ts";
 import { runVisionRead, type VisionRead } from "./vision.ts";
@@ -41,6 +42,8 @@ interface ContexteLecture {
   currency: string;
   /** Toutes les devises du référentiel, pour lire les montants de la pièce. */
   devises: DeviseLue[];
+  /** Les règles de lecture du pack au jour de réception (`lireLesReglesDeLecture`). */
+  regles: ReglesDeLecture;
   dossier: { raisonSociale: string; identifiantFiscal: string | null };
   taxCodes: Array<{ code: string; label: string; rate: number }>;
   chargeCodes: Array<{ code: string; label: string }>;
@@ -226,6 +229,8 @@ export async function readPieceFlow(
       // Le matricule de la fiche : c'est lui qui DÉDUIT le sens de la pièce, au
       // lieu de croire ce que le modèle en dit.
       matriculeDossier: contexte.dossier.identifiantFiscal,
+      // La convention de date et la forme du matricule : celles du pack (R4).
+      regles: contexte.regles,
       // Le lecteur décide des chiffres orientaux (`litLesChiffresOrientaux`).
       lecteur: lecture.lecteur,
     });
@@ -246,6 +251,7 @@ export async function readPieceFlow(
     dossierId: contexte.piece.tenantId,
     packId: contexte.packId,
     recueLe: contexte.piece.recueLe,
+    dates: contexte.regles.dates,
     devise: contexte.devises.find((d) => d.code === contexte.currency),
     dossier: {
       matricule: contexte.dossier.identifiantFiscal,

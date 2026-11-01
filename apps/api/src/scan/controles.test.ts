@@ -29,9 +29,14 @@ import {
   DEVISE_D_ESSAI,
   DEVISES_D_ESSAI,
   REGLAGES_D_ESSAI,
+  REGLES_DE_LECTURE_D_ESSAI,
   TITRES_D_ESSAI,
 } from "./referentiel-d-essai.ts";
 import { reglageDImmobilisation } from "./reglages-comptables.ts";
+
+/** La clé de doublon, avec la forme du matricule du pack d'essai. */
+const cleDe = (p: Parameters<typeof cleDeDoublon>[0]) =>
+  cleDeDoublon(p, REGLES_DE_LECTURE_D_ESSAI.matricule);
 
 /** Des articles lus par leur seule désignation : aucun montant. */
 const articles = (...designations: string[]): ArticleAControler[] =>
@@ -91,6 +96,7 @@ function facture(modif: Partial<PieceAControler> = {}): PieceAControler {
 /** Le paramétrage — ici fixé par le test ; dans la vraie vie, lu en base, daté. */
 const CONTEXTE: ContexteControle = {
   tenant: { nom: "ALGORIA FACTORY SARL", identifiantFiscal: "1856324K/A/M/000" },
+  formatDuMatricule: REGLES_DE_LECTURE_D_ESSAI.matricule,
   typesDocument: [
     { code: "facture_achat", porteEcriture: true },
     { code: "facture_vente", porteEcriture: true },
@@ -852,15 +858,15 @@ describe("la clé de doublon", () => {
   };
   it("deux écritures de la même facture donnent la même clé", () => {
     assert.deepEqual(
-      cleDeDoublon(lue),
-      cleDeDoublon({
+      cleDe(lue),
+      cleDe({
         ...lue,
         emetteurNom: "MEUBLES EL-AMEN",
         numero: "F-2026-0042",
         ttc: "8772.7280",
       }),
     );
-    assert.deepEqual(cleDeDoublon(lue), {
+    assert.deepEqual(cleDe(lue), {
       numero: "F20260042",
       mf: null,
       lu: "MEUBLESELAMEN|2026-01-20|8772.728",
@@ -868,33 +874,33 @@ describe("la clé de doublon", () => {
   });
   it("le matricule compte à sept chiffres, lettre de contrôle lue ou non", () => {
     assert.equal(
-      cleDeDoublon({ ...lue, emetteurIdentifiantFiscal: "1234567 B M 000" }).mf,
-      cleDeDoublon({ ...lue, emetteurIdentifiantFiscal: "1234567B/B/M/000" }).mf,
+      cleDe({ ...lue, emetteurIdentifiantFiscal: "1234567 B M 000" }).mf,
+      cleDe({ ...lue, emetteurIdentifiantFiscal: "1234567B/B/M/000" }).mf,
     );
   });
   it("un numéro en chiffres arabes orientaux a sa clé, la même qu'en chiffres latins", () => {
     // Jeu synthétique, 31 octobre 2026 : « ٢٠٢٦/٥٠٣٦ » rendait une clé VIDE —
     // les chiffres orientaux tombaient avec la ponctuation, et aucune facture
     // arabe n'était jamais rapprochée d'un doublon.
-    assert.equal(cleDeDoublon({ ...lue, numero: "٢٠٢٦ / ٥٠٣٦" }).numero, "20265036");
+    assert.equal(cleDe({ ...lue, numero: "٢٠٢٦ / ٥٠٣٦" }).numero, "20265036");
     assert.deepEqual(
-      cleDeDoublon({ ...lue, numero: "٢٠٢٦/٥٠٣٦" }),
-      cleDeDoublon({ ...lue, numero: "2026/5036" }),
+      cleDe({ ...lue, numero: "٢٠٢٦/٥٠٣٦" }),
+      cleDe({ ...lue, numero: "2026/5036" }),
     );
   });
   it("sans numéro lu, la clé est vide : rien n'est jamais signalé", () => {
     for (const numero of [null, "", " / - "])
-      assert.deepEqual(cleDeDoublon({ ...lue, numero }), { numero: null, mf: null, lu: null });
+      assert.deepEqual(cleDe({ ...lue, numero }), { numero: null, mf: null, lu: null });
   });
   it("un autre total, une autre date ou un autre nom : une autre clé", () => {
-    const k = cleDeDoublon(lue).lu;
+    const k = cleDe(lue).lu;
     for (const autre of [
       { ...lue, ttc: "8772.729" },
       { ...lue, date: "2026-01-21" },
       { ...lue, emetteurNom: "MEUBLES EL AMAL" },
     ])
-      assert.notEqual(cleDeDoublon(autre).lu, k, JSON.stringify(autre));
-    assert.equal(cleDeDoublon({ ...lue, date: null }).lu, null, "sans date, pas de clé lue");
+      assert.notEqual(cleDe(autre).lu, k, JSON.stringify(autre));
+    assert.equal(cleDe({ ...lue, date: null }).lu, null, "sans date, pas de clé lue");
   });
 });
 

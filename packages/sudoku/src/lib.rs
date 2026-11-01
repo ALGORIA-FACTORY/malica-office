@@ -9,6 +9,7 @@
 
 mod entete;
 mod entree;
+mod lettres;
 mod lignes;
 mod modele;
 mod numerique;
@@ -319,13 +320,23 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         if !textuel::traite(champ, &entree.pack) {
             continue;
         }
+        // Deux champs de la grille portent le même format (le matricule de l'émetteur et celui
+        // du client) : une valeur au format ne dit pas à quelle partie elle appartient — les
+        // repères (« Matricule fiscal ») sont les mêmes. Seul l'anneau 2 (E01) l'établit ;
+        // ici, elle est signalée, jamais attribuée (banc des 150 factures, 1er novembre 2026 :
+        // le matricule du client lu « conforme » comme celui d'un émetteur étranger).
+        let partage = champ.genre == "identifiant"
+            && champ.format_code.is_some()
+            && grille.champs.iter().enumerate().any(|(k, x)| k != c && x.format_code == champ.format_code);
         let sortie = match textuel::lire(champ, &entree.pack, &plan)? {
+            Issue::Conforme(_) if partage => signale(),
             Issue::Conforme(l) => {
                 lus.insert(c, l.valeur.clone());
-                let j = &entree.jetons[l.jeton];
                 ChampSortie {
                     valeur: Some(l.valeur),
-                    refs: vec![RefJeton { page: j.page, ordinal: j.ordinal }],
+                    refs: (l.jeton..=l.fin)
+                        .map(|k| RefJeton { page: entree.jetons[k].page, ordinal: entree.jetons[k].ordinal })
+                        .collect(),
                     statut: "conforme".into(),
                     instances: None,
                 }
@@ -442,6 +453,50 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             }
         };
         preuves.insert(p.code.clone(), st.into());
+    }
+
+    // ---------- L'anneau 3 : les champs nommés, que nulle preuve ne lit ----------
+    entete::nommes(entree, &mut champs);
+
+    // ---------- Les lettres : la seconde écriture du total ----------
+    let mut contredite = false;
+    for p in &grille.preuves {
+        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP)) else {
+            continue;
+        };
+        if p.statut.as_deref() == Some("a_traduire") {
+            continue;
+        }
+        let st = match lettres::lire_op(grille, e) {
+            Ok(op) => {
+                let valeur_prouvee = |c: usize| -> Option<i64> {
+                    champs
+                        .get(&grille.champs[c].code)
+                        .filter(|x| x.statut == "prouve")
+                        .and_then(|x| x.valeur.as_deref())
+                        .and_then(|v| v.parse().ok())
+                };
+                let r = lettres::prouver(&op, entree, prouvee.then_some(&valeur_prouvee as &dyn Fn(usize) -> Option<i64>));
+                if let Some(c) = r.champ {
+                    champs.insert(grille.champs[op.champ].code.clone(), c);
+                }
+                r.statut
+            }
+            Err(_) => "non_evaluable",
+        };
+        contredite |= st == "echec";
+        preuves.insert(p.code.clone(), st.into());
+    }
+    // Les chiffres ferment, les lettres les contredisent : la pièce n'est pas prouvée, elle
+    // est signalée. Ses valeurs restent citées, au statut `signale`.
+    if contredite && issue == "prouvee" {
+        issue = "signalee".into();
+        raison = Some("le montant en lettres contredit les chiffres".into());
+        for c in champs.values_mut() {
+            if c.statut == "prouve" {
+                c.statut = "signale".into();
+            }
+        }
     }
 
     Ok(Sortie {

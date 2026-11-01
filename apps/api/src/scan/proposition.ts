@@ -52,6 +52,7 @@ import {
   REFERENCES_QUI_TRANCHENT_LE_SENS,
 } from "../fabrique/recette.ts";
 
+import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 import { analyserPiece, lireLesDevises, lireParametres, nonAssujetti } from "./analyse.ts";
 import {
   categorieDeLEmetteur,
@@ -60,7 +61,7 @@ import {
   optionDuTimbre,
   type TimbreDeLaPiece,
 } from "./bareme-du-timbre.ts";
-import { cleDeDoublon, type ResultatControle } from "./controles.ts";
+import { numeroDeDoublon, type ResultatControle } from "./controles.ts";
 import type { CoursLu } from "./cours-de-change.ts";
 import {
   lireLesNaturesDeVente,
@@ -777,13 +778,7 @@ async function lireLAvoirAProposer(
   if (liens[0]) origine = { facture: liens[0].facture, origine: liens[0].origine, lie: true };
   else {
     // Le numéro de la facture, normalisé comme la clé de doublon d'une pièce.
-    const numero = cleDeDoublon({
-      emetteurIdentifiantFiscal: null,
-      emetteurNom: null,
-      numero: p.references[REFERENCE_DE_LA_FACTURE_D_ORIGINE] ?? null,
-      date: null,
-      ttc: null,
-    }).numero;
+    const numero = numeroDeDoublon(p.references[REFERENCE_DE_LA_FACTURE_D_ORIGINE] ?? null);
     const { rows } = numero
       ? await db.query<{ id: string }>(
           `with avoir as (
@@ -1057,6 +1052,7 @@ async function proposerDepuisLeJugement(
                   db,
                   ligne.tenant_id,
                   references[REFERENCES_QUI_TRANCHENT_LE_SENS[0]],
+                  (await lireLesReglesDeLecture(db, pack, jour)).matricule,
                 )
               : null,
         }

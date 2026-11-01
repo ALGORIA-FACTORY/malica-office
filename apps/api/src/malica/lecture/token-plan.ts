@@ -1,5 +1,6 @@
 import { enChiffresLatins } from "@malica/socle/chiffres";
 import type { DeviseLue } from "@malica/socle/montant-imprime";
+import { comparable } from "@malica/socle/mot-comparable";
 import type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle/ports/malica";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
@@ -67,91 +68,80 @@ function dateReelle(y: string, m: string, d: string): boolean {
 }
 
 /**
- * Ce qui rend deux écritures d'un même mois comparables.
- *
- * Une OCR rend « fevrier » aussi souvent que « février » : refuser le premier
- * reviendrait à perdre la date pour un accent. On décompose donc, puis on
- * retire les marques — mais en DEUX plages, et c'est le piège qui a coûté un
- * test rouge : « أغسطس » décomposé donne « ا » suivi de U+0654, qui vit dans
- * le bloc arabe et non dans celui des diacritiques latins. Retirer seulement
- * U+0300–U+036F réunit « février » et « fevrier », et laisse « أوت » et
- * « اوت » distincts.
- *
- * Les marques arabes retirées couvrent aussi le tashkeel (U+064B–U+0652) :
- * une facture vocalisée se lit comme une facture qui ne l'est pas.
- */
-function comparable(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[ؐ-ًؚ-ٰٟ]/g, "")
-    .toLowerCase();
-}
-
-/**
- * Les mois, en toutes lettres.
+ * Comment une date se lit sur une pièce du pack (`ref.conventions_de_date`,
+ * `ref.mois_en_lettres`) — rien n'en est écrit ici (R4).
  *
  * ================================================================= POURQUOI
  *
  * Le 4 octobre 2026, une vraie facture portait « Tunis, le 1 septembre 2026 ».
  * Le produit a rendu `null`, le contrat exige la date, et la pièce entière est
- * sortie partielle. Aucun nom de mois n'existait alors dans le code de lecture.
+ * sortie partielle : aucun nom de mois n'existait alors dans le code de lecture.
+ * Ils y ont été écrits, puis ils sont descendus en base (16 novembre 2026) avec
+ * l'ordre jour/mois/année et le siècle d'une année à deux chiffres : un autre
+ * pack apporte les siens sans fork (R5).
  *
- * Les deux séries arabes sont présentes, et ce n'est pas un excès de zèle : la
- * Tunisie dit « جانفي », « فيفري », « أوت », là où le Machrek dit « يناير »,
- * « فبراير », « أغسطس ». Une facture peut porter l'une ou l'autre, et l'arabe
- * fait foi.
+ * L'arabe porte les deux séries de mois : la Tunisie dit « جانفي », « فيفري »,
+ * « أوت », là où le Machrek dit « يناير », « فبراير », « أغسطس ». Une facture peut
+ * porter l'une ou l'autre, et l'arabe fait foi.
  */
-const MOIS: Readonly<Record<string, number>> = {
-  janvier: 1,
-  fevrier: 2,
-  mars: 3,
-  avril: 4,
-  mai: 5,
-  juin: 6,
-  juillet: 7,
-  aout: 8,
-  septembre: 9,
-  octobre: 10,
-  novembre: 11,
-  decembre: 12,
-  // Arabe du Maghreb.
-  جانفي: 1,
-  فيفري: 2,
-  افريل: 4,
-  ماي: 5,
-  جوان: 6,
-  جويلية: 7,
-  اوت: 8,
-  // Arabe du Machrek, employé aussi par une partie des éditeurs.
-  يناير: 1,
-  فبراير: 2,
-  ابريل: 4,
-  مايو: 5,
-  يونيو: 6,
-  يوليو: 7,
-  اغسطس: 8,
-  // Communs aux deux.
-  مارس: 3,
-  سبتمبر: 9,
-  اكتوبر: 10,
-  نوفمبر: 11,
-  ديسمبر: 12,
-};
+export interface ConventionDeDate {
+  /** L'ordre d'une date numérique : jour-mois-année, mois-jour-année, année-mois-jour. */
+  readonly ordre: "jma" | "mja" | "amj";
+  /** Le siècle d'une année numérique à deux chiffres (20 : « 26 » est 2026) ; nul : refusée. */
+  readonly siecleDesAnneesCourtes: number | null;
+  /** Une date en lettres peut-elle abréger son année (« 15 mars 26 ») ? */
+  readonly anneesCourtesEnLettres: boolean;
+  /** Ce qui suit le premier jour du mois en lettres (« 1er », « 1re »). */
+  readonly suffixesOrdinaux: readonly string[];
+  /** Le numéro de chaque nom de mois, tel qu'il s'imprime. */
+  readonly mois: Readonly<Record<string, number>>;
+}
+
+interface MotifsDeDate {
+  readonly mois: ReadonlyMap<string, number>;
+  readonly enLettres: RegExp;
+}
+const MOTIFS_DE_DATE = new WeakMap<ConventionDeDate, MotifsDeDate>();
+
+const echappe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /*
  * « 1er septembre 2026 », « le 15 mars 2026 ».
  *
- * L'année est exigée sur QUATRE chiffres. Une date en lettres abrégée —
- * « 15 mars 26 » — est refusée plutôt que rattachée au siècle courant : sur
- * une pièce comptable, choisir un siècle au jugé est une écriture fausse, et
- * la date décide de la période de TVA.
+ * L'année est exigée sur QUATRE chiffres, sauf si la convention l'admet
+ * abrégée. Une date en lettres abrégée — « 15 mars 26 » — est refusée plutôt
+ * que rattachée au siècle courant : sur une pièce comptable, choisir un siècle
+ * au jugé est une écriture fausse, et la date décide de la période de TVA.
  */
-const MOTIF_EN_LETTRES = new RegExp(
-  `(\\d{1,2})\\s*(?:er|re)?\\s+(${Object.keys(MOIS).join("|")})\\s+(\\d{4})`,
-);
+function motifsDe(convention: ConventionDeDate): MotifsDeDate {
+  const deja = MOTIFS_DE_DATE.get(convention);
+  if (deja) return deja;
+  const mois = new Map(Object.entries(convention.mois).map(([nom, n]) => [comparable(nom), n]));
+  const noms = [...mois.keys()].sort((a, b) => b.length - a.length).map(echappe);
+  const suffixes = convention.suffixesOrdinaux.map((x) => echappe(comparable(x)));
+  const annee =
+    convention.anneesCourtesEnLettres && convention.siecleDesAnneesCourtes !== null
+      ? "(\\d{4}|\\d{2})"
+      : "(\\d{4})";
+  const motifs: MotifsDeDate = {
+    mois,
+    enLettres: new RegExp(
+      `(\\d{1,2})\\s*${suffixes.length > 0 ? `(?:${suffixes.join("|")})?` : ""}\\s+(${noms.join("|")})\\s+${annee}(?!\\d)`,
+    ),
+  };
+  MOTIFS_DE_DATE.set(convention, motifs);
+  return motifs;
+}
 
-export function normalizeDate(text: string): string | null {
+/** L'année écrite sur deux chiffres, rattachée au siècle de la convention ; sinon telle quelle. */
+function anneeComplete(y: string, convention: ConventionDeDate): string | null {
+  if (y.length !== 2) return y;
+  return convention.siecleDesAnneesCourtes === null
+    ? null
+    : `${convention.siecleDesAnneesCourtes}${y}`;
+}
+
+export function normalizeDate(text: string, convention: ConventionDeDate): string | null {
   // Une facture tunisienne peut porter « ١٥ سبتمبر ٢٠٢٦ ». Les MONTANTS en
   // chiffres arabes, eux, ne se lisent pas au plan : voir `treillisMontant`.
   const s = enChiffresLatins(text.trim());
@@ -167,19 +157,29 @@ export function normalizeDate(text: string): string | null {
   const iso = s.match(/(\d{4})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})/);
   if (iso) return rendre(iso[1]!, iso[2]!, iso[3]!);
 
-  const dmy = s.match(/(\d{1,2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{2,4})/);
-  if (dmy) {
-    const yRaw = dmy[3]!;
-    const y = yRaw.length === 2 ? `20${yRaw}` : yRaw;
-    // Jour/mois : la convention tunisienne et française. On ne bascule PAS sur
-    // mois/jour quand le premier nombre dépasse 12 — ce serait deviner la
-    // provenance du document, et une écriture datée au jugé est une écriture
-    // fausse. Une date qui n'existe pas est rendue absente, et demandée.
-    return rendre(y, dmy[2]!, dmy[1]!);
+  // L'ordre est celui du pack. On ne bascule PAS sur mois/jour quand le premier
+  // nombre dépasse 12 — ce serait deviner la provenance du document, et une
+  // écriture datée au jugé est une écriture fausse. Une date qui n'existe pas
+  // est rendue absente, et demandée.
+  if (convention.ordre === "amj") {
+    const amj = s.match(/(\d{2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})/);
+    const y = amj ? anneeComplete(amj[1]!, convention) : null;
+    return amj && y ? rendre(y, amj[2]!, amj[3]!) : null;
+  }
+  const num = s.match(/(\d{1,2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{2,4})/);
+  if (num) {
+    const y = anneeComplete(num[3]!, convention);
+    if (y === null) return null;
+    return convention.ordre === "jma" ? rendre(y, num[2]!, num[1]!) : rendre(y, num[1]!, num[2]!);
   }
 
-  const lettres = comparable(s).match(MOTIF_EN_LETTRES);
-  if (lettres) return rendre(lettres[3]!, String(MOIS[lettres[2]!]), lettres[1]!);
+  const motifs = motifsDe(convention);
+  const lettres = comparable(s).match(motifs.enLettres);
+  if (lettres) {
+    const y = anneeComplete(lettres[3]!, convention);
+    const m = motifs.mois.get(lettres[2]!);
+    return y && m ? rendre(y, String(m), lettres[1]!) : null;
+  }
 
   return null;
 }
@@ -333,7 +333,8 @@ export function resolveFromTokenPlan(
   tokens: readonly PageToken[],
   field: string,
   ref: TokenRef | null | undefined,
-  kind: "date" | "text",
+  /** Un texte, ou une date lue selon la convention du pack (`ref.conventions_de_date`). */
+  kind: "text" | { readonly date: ConventionDeDate },
   zone?: string | null,
   binding?: CitationBinding,
 ): ResolvedValue {
@@ -354,8 +355,8 @@ export function resolveFromTokenPlan(
   }
   const plage = jetonsDeLaPlage(tokens, ref, token);
   const texte = texteDeLaPlage(plage);
-  const citation = citer(plage, field, kind === "date" ? "date" : "texte", zone, binding);
-  if (kind === "date") {
+  const citation = citer(plage, field, kind === "text" ? "texte" : "date", zone, binding);
+  if (kind !== "text") {
     /*
      * La date se relit sur TOUTE la plage, comme un texte.
      *
@@ -365,7 +366,7 @@ export function resolveFromTokenPlan(
      * portait d'ailleurs ce « 1 » en détail, ce qui désignait le défaut sans
      * que personne le lise.
      */
-    const value = normalizeDate(texte);
+    const value = normalizeDate(texte, kind.date);
     return value === null
       ? {
           value: null,

@@ -33,6 +33,7 @@ import { askMalica, repondreAuCabinet } from "./malica/conseil/ask.ts";
 import { coureurDeLectures } from "./malica/lecture/coureur.ts";
 import { registre } from "./malica/lecture/lectures-en-cours.ts";
 import { lireCarteFiscale } from "./malica/lecture/lire-carte.ts";
+import type { ConventionDeDate } from "./malica/lecture/token-plan.ts";
 import { LectureRefusee, readPieceFlow } from "./malica/lecture/read-flow.ts";
 import { redigerLePv } from "./malica/pv/rediger.ts";
 import { introuvableLisible, refusLisible } from "./refus.ts";
@@ -246,11 +247,17 @@ malica.post("/carte", raw({ type: () => true, limit: TAILLE_MAX_CARTE }), (req, 
       Array<{ axe: "imposition" | "tva"; code: string; libelle: string }>
     >("identite", "regimesDisponibles", [jurisdiction]);
 
+    // L'ordre d'une date et ses noms de mois : la convention du pack (R4).
+    const dates = await api(req).rpc<ConventionDeDate>("identite", "conventionDeDate", [
+      jurisdiction,
+    ]);
+
     return lireCarteFiscale({
       dataUrl: `data:${mime};base64,${octets.toString("base64")}`,
       mime,
       bytes: new Uint8Array(octets),
       regimes,
+      dates,
     });
   });
 });

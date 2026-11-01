@@ -42,7 +42,11 @@
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 
-import { DEVISE_D_ESSAI, REGLE_DE_CHANGE_D_ESSAI } from "../../scan/referentiel-d-essai.ts";
+import {
+  DEVISE_D_ESSAI,
+  REGLE_DE_CHANGE_D_ESSAI,
+  REGLES_DE_LECTURE_D_ESSAI,
+} from "../../scan/referentiel-d-essai.ts";
 import { DEVISES_LUES_D_ESSAI } from "../../scan/devise-d-essai.ts";
 import {
   jouer,
@@ -383,6 +387,7 @@ async function mesurerUnCas(cas: CasSynthetique, mode: ModeDeReleve): Promise<Re
     devises: DEVISES_LUES_D_ESSAI,
     deviseDuDossier: DEVISE_D_ESSAI,
     matriculeDossier: cas.dossier.identifiantFiscal,
+    regles: REGLES_DE_LECTURE_D_ESSAI,
     // Le diagnostic lit la couche de texte du PDF : c'est le lecteur `pdf-text`.
     lecteur: releve.lecteur === LECTEUR_DU_DIAGNOSTIC ? "pdf-text" : releve.lecteur,
   });

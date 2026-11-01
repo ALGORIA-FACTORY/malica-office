@@ -21,6 +21,7 @@
     "facturation.lectures.piece_id": "Trace de facturation : une lecture reste comptée quand la pièce lue est supprimée (20261022270000_une_piece_lue_se_supprime_et_sa_lecture_reste)."
   },
   "libelles": {
+    "avertissement_lecture": "select code from ref.avertissements_de_lecture",
     "bareme_categorie": "select code from ref.categories_de_bareme",
     "change_date_retenue": "select code from ref.change_dates_retenues",
     "change_regle_d_ecart": "select code from ref.change_regles_d_ecart",

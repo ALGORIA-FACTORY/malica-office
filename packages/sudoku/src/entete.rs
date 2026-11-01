@@ -30,7 +30,7 @@
 use crate::entree::{Entree, Grille, Jeton};
 use crate::lignes::rangees_selon;
 use crate::reperes::normaliser;
-use crate::textuel::iso_valide;
+use crate::textuel::{iso_valide, jusqua};
 use crate::{ChampSortie, RefJeton};
 use regex::Regex;
 use serde::Serialize;
@@ -263,6 +263,19 @@ impl<'a> Page<'a> {
             return self.champs_de(prefixe);
         }
         self.gauche(i).or_else(|| self.dessus(i))
+    }
+
+    /// Le libellé collé en tête d'un jeton (« N°IE-2026-0701 ») : le plus long début du
+    /// texte qui égale un repère de la grille, et l'octet où la valeur commence.
+    fn libelle_colle(&self, i: usize) -> Option<(Etiquette, usize)> {
+        let t = self.j[i].texte.trim();
+        t.char_indices()
+            .map(|(b, _)| b)
+            .skip(1)
+            .filter(|&b| cle(&normaliser(&t[..b])).len() <= self.repere_max)
+            .filter(|&b| t[b..].chars().any(|c| c.is_alphanumeric()))
+            .filter_map(|b| self.champs_de(&normaliser(&t[..b])).map(|et| (et, b)))
+            .max_by_key(|(et, _)| et.cle.len())
     }
 
     fn gauche(&self, i: usize) -> Option<Etiquette> {
@@ -940,7 +953,8 @@ fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie
                         .map(|(i, _, _)| *i)
                         .unwrap_or_default();
                     lus.push((c, v.clone()));
-                    ChampSortie { valeur: Some(v), refs: page.cite(&[i]), statut: "conforme".into(), instances: None }
+                    let plage: Vec<usize> = (i..=jusqua(page.j, i, page.j[i].date_fin)).collect();
+                    ChampSortie { valeur: Some(v), refs: page.cite(&plage), statut: "conforme".into(), instances: None }
                 }
                 None => ChampSortie {
                     valeur: None,
@@ -957,35 +971,258 @@ fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie
 /// Le numéro : le jeton juste après son repère (à droite, ou dessous), qui porte au
 /// moins un chiffre, avec les morceaux qui lui sont collés. Une seule valeur → `conforme`.
 fn numero(page: &Page, n: usize, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie>, lus: &mut Vec<(usize, String)>) {
-    let mut lus_n: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+    let sortie = apres_repere(page, n, &Lecture { chiffre: true, colle_au_libelle: false, exclusif: false, motif: None });
+    if let Some(v) = &sortie.valeur {
+        lus.push((n, v.clone()));
+    }
+    champs.insert(grille.champs[n].code.clone(), sortie);
+}
+
+/// Comment l'anneau 3 lit la valeur d'un champ après son repère.
+struct Lecture<'r> {
+    /// La valeur porte au moins un chiffre, et ne prend que les morceaux qui lui sont
+    /// collés (un numéro) ; sinon elle prend les mots qui la suivent (un libellé).
+    chiffre: bool,
+    /// Le libellé peut être collé à la valeur dans le même jeton (« N°IE-2026-0701 »).
+    colle_au_libelle: bool,
+    /// Un libellé que plusieurs champs portent ne désigne aucun d'eux : le champ est signalé.
+    exclusif: bool,
+    /// Le format du pack que la valeur doit respecter, quand le champ en nomme un.
+    motif: Option<&'r Regex>,
+}
+
+/// Au plus tant de mots dans la valeur d'un libellé : une ligne, pas un paragraphe.
+const MOTS_MAX: usize = 12;
+
+/// La valeur qui suit un libellé du champ `n` : sur sa rangée (ou collée au libellé dans
+/// le même jeton), sinon juste dessous. Une seule valeur → `conforme` ; deux → `signale`.
+fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
+    // Chaque valeur lue, ses jetons, et si un libellé détaché (à gauche ou au-dessus) l'a
+    // nommée au moins une fois.
+    let mut lus_n: BTreeMap<String, (Vec<usize>, bool)> = BTreeMap::new();
+    let mut partage = false;
     for (i, j) in page.j.iter().enumerate() {
-        if !j.texte.chars().any(|c| c.is_ascii_digit()) || page.etiquette(i, "").is_none_or(|e| !e.champs.contains(&n)) {
+        if l.chiffre && !j.texte.chars().any(|c| c.is_ascii_digit()) {
             continue;
         }
-        // déjà pris comme morceau collé d'une valeur à sa gauche
+        let colle = l.colle_au_libelle.then(|| page.libelle_colle(i)).flatten();
+        // Un libellé collé ne commence pas au milieu d'une phrase : « Contrat Entreprise
+        // n°ENT-55821 » n'est pas « N° » (OCR de 50/07).
+        let (r0, k0) = page.ou[i];
+        let colle = colle.filter(|_| {
+            k0 == 0 || {
+                let p = page.rangs[r0][k0 - 1];
+                page.ponct(p)
+                    || page.j[p].texte.chars().any(|c| c.is_ascii_digit())
+                    || page.ecart(p, i) > ECART_MOT * page.h(p)
+            }
+        });
+        let (et, debut) = match colle {
+            Some((et, octet)) => (Some(et), octet),
+            None => (page.etiquette(i, ""), 0),
+        };
+        let Some(et) = et else { continue };
+        if !et.champs.contains(&n) {
+            continue;
+        }
+        if l.exclusif && et.champs.len() > 1 {
+            partage = true;
+            continue;
+        }
         let (r, k) = page.ou[i];
         let rang = &page.rangs[r];
         let colle = |a: usize, b: usize| page.ecart(a, b) <= COLLE * page.h(a);
-        if k > 0 && colle(rang[k - 1], i) && !page.ponct(rang[k - 1]) {
-            continue;
+        if debut == 0 {
+            // déjà pris comme morceau collé d'une valeur à sa gauche
+            if k > 0 && colle(rang[k - 1], i) && !page.ponct(rang[k - 1]) {
+                continue;
+            }
+            // un libellé n'est pas une valeur
+            if !l.chiffre && (page.ponct(i) || page.champs_de(&page.normes[i]).is_some()) {
+                continue;
+            }
         }
         let mut pris = vec![i];
         let mut q = k + 1;
-        while q < rang.len() && colle(rang[q - 1], rang[q]) && pris.len() < SPAN_MAX {
-            pris.push(rang[q]);
+        let max = if l.chiffre { SPAN_MAX } else { MOTS_MAX };
+        while q < rang.len() && pris.len() < max {
+            let (a, b) = (rang[q - 1], rang[q]);
+            let suit = if l.chiffre { colle(a, b) } else { page.ecart(a, b) <= ECART_MOT * page.h(a) };
+            // un autre libellé commence : la valeur s'arrête
+            if !suit || (!l.chiffre && page.champs_de(&page.normes[b]).is_some()) {
+                break;
+            }
+            pris.push(b);
             q += 1;
         }
-        let v: String = pris.iter().map(|&t| page.j[t].texte.trim()).collect();
-        lus_n.entry(v).or_insert(pris);
-    }
-    let sortie = match lus_n.len() {
-        0 => ChampSortie { valeur: None, refs: Vec::new(), statut: "absent".into(), instances: None },
-        1 => {
-            let (v, pris) = lus_n.into_iter().next().unwrap_or_default();
-            lus.push((n, v.clone()));
-            ChampSortie { valeur: Some(v), refs: page.cite(&pris), statut: "conforme".into(), instances: None }
+        let premier = page.j[i].texte.trim();
+        let premier = if debut > 0 {
+            premier
+                .get(debut.min(premier.len())..)
+                .unwrap_or_default()
+                .trim_start_matches(|c: char| ":;,-–—·|".contains(c) || c.is_whitespace())
+        } else {
+            premier
+        };
+        let suite = pris[1..].iter().map(|&t| page.j[t].texte.trim());
+        let v: String = if l.chiffre {
+            std::iter::once(premier).chain(suite).collect()
+        } else {
+            std::iter::once(premier).chain(suite).filter(|t| !t.is_empty()).collect::<Vec<_>>().join(" ")
+        };
+        if v.is_empty() || (l.chiffre && !v.chars().any(|c| c.is_ascii_digit())) {
+            continue;
         }
-        _ => ChampSortie { valeur: None, refs: Vec::new(), statut: "signale".into(), instances: None },
-    };
-    champs.insert(grille.champs[n].code.clone(), sortie);
+        if l.motif.is_some_and(|re| !re.is_match(&v)) {
+            continue;
+        }
+        let e = lus_n.entry(v).or_insert((pris, false));
+        e.1 |= debut == 0;
+    }
+    let rien = |statut: &str| ChampSortie { valeur: None, refs: Vec::new(), statut: statut.into(), instances: None };
+    match lus_n.len() {
+        0 if partage => rien("signale"),
+        0 => rien("absent"),
+        1 if !partage => {
+            let (v, (pris, detache)) = lus_n.into_iter().next().unwrap_or_default();
+            // Lue seulement derrière un libellé collé dans son jeton : l'OCR a pu coller autre
+            // chose à la valeur (« N°DV-PX-2026-091111 », 50/48). Elle se dit, citée, et se
+            // vérifie : signalée, jamais conforme.
+            let statut = if detache { "conforme" } else { "signale" };
+            ChampSortie { valeur: Some(v), refs: page.cite(&pris), statut: statut.into(), instances: None }
+        }
+        _ => rien("signale"),
+    }
+}
+
+/// Les suites de mots qui égalent EXACTEMENT un repère du champ `n` : une suite commence et
+/// finit là où les mots cessent d'être adjacents (ou à un nombre). `partage` : un repère que
+/// d'autres champs portent aussi.
+fn repere_imprime(page: &Page, n: usize) -> (Vec<Vec<usize>>, bool) {
+    let mut out = Vec::new();
+    let mut partage = false;
+    for rang in &page.rangs {
+        let mot = |k: usize| !page.ponct(rang[k]) && !page.j[rang[k]].texte.chars().any(|c| c.is_ascii_digit());
+        let lie = |a: usize, b: usize| page.ecart(rang[a], rang[b]) <= ECART_MOT * page.h(rang[a]);
+        for s in 0..rang.len() {
+            if !mot(s) {
+                continue;
+            }
+            if s > 0 && mot(s - 1) && lie(s - 1, s) {
+                // Au milieu d'une phrase, un jeton qui égale à lui seul un repère compte aussi
+                // (« Montant (USD) ») : sinon une devise imprimée entre parenthèses se perd.
+                if let Some(et) = page.champs_de(&page.normes[rang[s]]).filter(|et| et.champs.contains(&n)) {
+                    if et.champs.len() > 1 {
+                        partage = true;
+                    } else {
+                        out.push(vec![rang[s]]);
+                    }
+                }
+                continue;
+            }
+            let mut texte = String::new();
+            let mut e = s;
+            while e < rang.len() && mot(e) && (e == s || lie(e - 1, e)) {
+                texte.push_str(&page.normes[rang[e]]);
+                e += 1;
+                if cle(&texte).len() > page.repere_max {
+                    break;
+                }
+                let fin = e == rang.len() || !mot(e) || !lie(e - 1, e);
+                if let (true, Some(et)) = (fin, page.champs_de(&texte)) {
+                    if et.champs.contains(&n) {
+                        if et.champs.len() > 1 {
+                            partage = true;
+                        } else {
+                            out.push(rang[s..e].to_vec());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    (out, partage)
+}
+
+/// Les familles d'experts que l'anneau 3 lit (`ref.experts`) : celles dont la valeur suit
+/// son repère. Le montant est au centre, la date et les parties à l'anneau 2.
+const FAMILLES_NOMMEES: [&str; 6] = ["reference", "identifiant", "libelle", "nombre", "taux", "presence"];
+
+/// L'anneau 3 : les champs que nulle preuve ne lit, chacun par l'expert de sa famille,
+/// piloté par ses seuls repères (et son format, s'il en nomme un). Il ne remplace rien : un
+/// champ déjà lu (prouvé, conforme ou signalé) reste tel quel. Au mieux `conforme` — aucune
+/// arithmétique ne le prouve — ; `signale` quand deux valeurs se disputent le champ.
+///
+/// Ne lit pas : les cellules d'un tableau (la parcelle des champs de la preuve `lignes`),
+/// le champ d'une preuve `lettres` (l'adaptateur les lit), un identifiant dont le format est
+/// au pack (le centre le lit). Une présence (signature, cachet) ne se constate pas dans un
+/// texte : son repère imprimé la SIGNALE, à vérifier sur la pièce.
+pub fn nommes(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
+    let grille = &entree.grille;
+    let index = |nom: &str| grille.champs.iter().position(|c| c.code == nom.trim_end_matches('?').trim());
+    let mut cellules: BTreeSet<&str> = BTreeSet::new();
+    let mut lettres: BTreeSet<usize> = BTreeSet::new();
+    for p in grille.preuves.iter().filter(|p| p.statut.as_deref() != Some("a_traduire")) {
+        let Some(e) = p.expression.as_ref().and_then(|e| e.as_object()) else { continue };
+        match e.get("op").and_then(|o| o.as_str()) {
+            Some(crate::lignes::OP) => {
+                // Les cellules d'une ligne d'article (pas les totaux qui ferment le tableau).
+                let Ok(op) = crate::lignes::lire_op(grille, &Value::Object(e.clone())) else { continue };
+                for c in op.champs_lignes.iter().filter_map(|n| index(n)) {
+                    if let Some(parcelle) = grille.champs[c].parcelle.as_deref() {
+                        cellules.insert(parcelle);
+                    }
+                }
+            }
+            Some(crate::lettres::OP) => {
+                if let Some(c) = e.get("champ").and_then(|v| v.as_str()).and_then(index) {
+                    lettres.insert(c);
+                }
+            }
+            _ => {}
+        }
+    }
+    let page = Page::new(&entree.jetons, grille);
+    for (n, ch) in grille.champs.iter().enumerate() {
+        if champs.get(&ch.code).is_some_and(|c| c.statut != "absent")
+            || !ch.expert.as_deref().is_some_and(|f| FAMILLES_NOMMEES.contains(&f))
+            || ch.parcelle.as_deref().is_some_and(|p| cellules.contains(p))
+            || lettres.contains(&n)
+            || (ch.reperes_fr.is_empty() && ch.reperes_ar.is_empty())
+        {
+            continue;
+        }
+        let motif = ch.format_code.as_ref().and_then(|f| entree.pack.formats.get(f));
+        if ch.expert.as_deref() == Some("identifiant") && motif.is_some() {
+            continue;
+        }
+        let Ok(motif) = motif.map(|m| Regex::new(&format!("^(?:{m})$"))).transpose() else { continue };
+        let sortie = match ch.genre.as_str() {
+            "booleen" => {
+                let (vus, partage) = repere_imprime(&page, n);
+                let statut = if vus.is_empty() && !partage { "absent" } else { "signale" };
+                ChampSortie { valeur: None, refs: Vec::new(), statut: statut.into(), instances: None }
+            }
+            "liste" => {
+                let (vus, partage) = repere_imprime(&page, n);
+                let mut valeurs: BTreeMap<String, &Vec<usize>> = BTreeMap::new();
+                for v in &vus {
+                    valeurs.entry(cle(&v.iter().map(|&t| page.normes[t].as_str()).collect::<String>())).or_insert(v);
+                }
+                match valeurs.len() {
+                    1 if !partage => {
+                        let v = valeurs.into_values().next().unwrap_or(&vus[0]);
+                        ChampSortie { valeur: Some(page.texte(v)), refs: page.cite(v), statut: "conforme".into(), instances: None }
+                    }
+                    0 if !partage => ChampSortie { valeur: None, refs: Vec::new(), statut: "absent".into(), instances: None },
+                    _ => ChampSortie { valeur: None, refs: Vec::new(), statut: "signale".into(), instances: None },
+                }
+            }
+            genre => {
+                let chiffre = matches!(genre, "identifiant" | "nombre" | "taux");
+                apres_repere(&page, n, &Lecture { chiffre, colle_au_libelle: true, exclusif: true, motif: motif.as_ref() })
+            }
+        };
+        champs.insert(ch.code.clone(), sortie);
+    }
 }
