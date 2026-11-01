@@ -188,12 +188,15 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
   it("ce qui n'est pas appliqué se dit, jusque sur l'option ; ce qui l'est a son implémentation", async () => {
     const s = await monter();
     const r = await s.lire(s.expert, null);
-    for (const code of ["prorata.methode", "non_residents.retenue", "mois_tva.date"])
+    for (const code of ["prorata.methode", "non_residents.retenue"])
       assert.equal(valeur(r, code)?.appliquee, false, code);
     // Appliqués depuis le 1er novembre 2026 : le compte de vente par nature,
-    // l'avoir lié à sa facture — mais pas l'avoir « libre », qui le dit.
-    for (const code of ["ventes.compte", "avoirs.traitement", "avoirs.ecriture"])
+    // l'avoir lié à sa facture — mais pas l'avoir « libre », qui le dit ; et
+    // depuis le 11 novembre 2026, le mois de TVA par l'exigibilité.
+    for (const code of ["ventes.compte", "avoirs.traitement", "avoirs.ecriture", "mois_tva.date"])
       assert.equal(valeur(r, code)?.appliquee, true, code);
+    // Ce que le mois de TVA n'applique pas encore se dit, au point à confirmer.
+    assert.match(r.sujets.find((x) => x.code === "mois_tva")!.incertain ?? "", /Non appliqués/);
     assert.deepEqual(
       valeur(r, "avoirs.traitement")!.options!.map((o) => [o.code, o.appliquee]),
       [

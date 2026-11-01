@@ -1718,6 +1718,11 @@ export type RaisonSansEcriture =
  * droit imprimé au tarif d'une catégorie d'émetteur que rien ne confirme
  * (`categorie_d_emetteur`, barème daté du timbre) — le droit, la catégorie
  * (`ref.categories_de_bareme`) et le montant imprimé.
+ *
+ * Et (11 novembre 2026) le mois de TVA à vérifier (`mois_de_tva`) : la nature
+ * changerait le mois mais ne se reconnaît pas, un encaissement antérieur
+ * partiel ne fixe pas le mois, ou (option `date_facture_alerte`) la TVA
+ * serait exigible avant le mois de la facture (`app.jour_d_imputation_tva`).
  */
 export type ReserveDeProposition =
   | {
@@ -1725,7 +1730,16 @@ export type ReserveDeProposition =
       raison: "inconnue" | "sans_article" | "non_ventilable";
       articles: string[];
     }
-  | { code: "categorie_d_emetteur"; droit: string; categorie: string; montant: string };
+  | { code: "categorie_d_emetteur"; droit: string; categorie: string; montant: string }
+  | {
+      code: "mois_de_tva";
+      raison: RaisonDuMoisDeTva;
+      articles: string[];
+    };
+
+/** Pourquoi le mois de TVA d'une pièce est à vérifier (`app.jour_d_imputation_tva`). */
+export type RaisonDuMoisDeTva =
+  "nature_indecidable" | "encaissement_partiel" | "exigibilite_anterieure";
 
 /** La facture d'origine d'un avoir lié, telle que la proposition la lit. */
 export interface FactureDOrigine {

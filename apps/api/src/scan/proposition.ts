@@ -66,6 +66,7 @@ import {
   ventilerLesVentes,
   type VentesDuDossier,
 } from "./nature-de-vente.ts";
+import { reserveDuMoisDeTva } from "./mois-de-tva.ts";
 import { tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
 import { AMBIGU, compteDuRole } from "./reglement.ts";
 import {
@@ -986,7 +987,7 @@ async function proposerDepuisLeJugement(
         }
       : null;
 
-  return composerLaProposition(jugement, {
+  const proposee = composerLaProposition(jugement, {
     packVersionId: pack,
     deviseDuDossier: ligne.devise_du_dossier,
     decimales,
@@ -1021,4 +1022,16 @@ async function proposerDepuisLeJugement(
           })
         : null,
   });
+  if (!proposee.ok) return proposee;
+  // Le mois de TVA à vérifier (`mois_tva.date`, 11 novembre 2026) : la même
+  // fonction que la TVA du mois en décide, sous la même mécanique de réserve.
+  const mois = await reserveDuMoisDeTva(db, {
+    dossier: ligne.tenant_id,
+    pieceId,
+    pack,
+    jour,
+    reglages,
+    articles: ligne.payload["articles"],
+  });
+  return mois ? { ...proposee, reserves: [...(proposee.reserves ?? []), mois] } : proposee;
 }

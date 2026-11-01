@@ -259,6 +259,7 @@
       "compte": "706",
       "rang": 1,
       "repli": false,
+      "exigibilite": "encaissement",
       "motifs": [
         "(?<!\\p{L})(locations?|loyers?|refacturations?|refactur[ée]e?s?|commissions?|mises?\\s+[àa]\\s+disposition)(?!\\p{L})",
         "(كراء|إيجار|إعادة\\s+فوترة|عمولة)"
@@ -269,6 +270,7 @@
       "compte": "705",
       "rang": 2,
       "repli": false,
+      "exigibilite": "encaissement",
       "motifs": [
         "(?<!\\p{L})(prestations?|services?|maintenance|entretiens?|r[ée]parations?|installations?|interventions?|formations?|conseils?|[ée]tudes?|audits?|assistance|honoraires?|main\\s*-?\\s*d.\\s*[œo]e?uvre|transports?|h[ée]bergements?|nuit[ée]es?|abonnements?|missions?)(?!\\p{L})",
         "(خدم(ة|ات)|صيان(ة|ات)|إسداء|تكوين|استشار(ة|ات)|دراس(ة|ات)|نقل|إقامة|إصلاح|تركيب|أتعاب)"
@@ -279,6 +281,7 @@
       "compte": "707",
       "rang": 3,
       "repli": false,
+      "exigibilite": "livraison",
       "motifs": [
         "(?<!\\p{L})(marchandises?|ramettes?|cartons?|sacs?|bidons?|bo[iî]tes?|paquets?|rouleaux?|palettes?|f[uû]ts?|caisses?|tonnes?|cartouches?)(?!\\p{L})",
         "(بضا(ئع|عة)|رزم(ة|ات)|صندوق|صناديق|كيس|أكياس|علب(ة)?|خرطوش(ة|ات)|(?<!\\p{L})طن(?!\\p{L}))",
@@ -291,6 +294,7 @@
       "compte": "701",
       "rang": 4,
       "repli": true,
+      "exigibilite": "livraison",
       "motifs": []
     }
   ],
