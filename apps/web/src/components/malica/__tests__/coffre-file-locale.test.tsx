@@ -7,6 +7,8 @@ const etat = vi.hoisted(() => ({ priveEnAttente: false }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options }),
   useNavigate: () => vi.fn(),
+  // Le retour suit l'historique (`useRevenir`) : ici, rien derrière.
+  useRouter: () => ({ history: { canGoBack: () => false, back: vi.fn() }, navigate: vi.fn() }),
 }));
 vi.mock("@tanstack/react-query", () => ({
   // Chaque requête rend la forme de son contrat : les droits sont une liste.

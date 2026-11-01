@@ -12,6 +12,7 @@ import { nombre } from "@/lib/forfait";
 import { deMois, montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import { computeChargesByFamille } from "@malica/socle/engines/charges/familles";
+import { useRevenir } from "@/hooks/use-revenir";
 
 export const Route = createFileRoute("/_authenticated/pme/charges")({
   head: () => ({
@@ -111,6 +112,7 @@ const THRESHOLD_CODE = "FAMILLE_CONSO";
  * zéro. Zéro est un fait comptable ; l'absence n'en est pas un.
  */
 function ChargesScreen() {
+  const revenir = useRevenir();
   const { t, locale } = useI18n();
   const pme = usePme();
   const qc = useQueryClient();
@@ -459,7 +461,15 @@ function ChargesScreen() {
      */
     <div data-ecran="charges" className="-mx-4 -my-5">
       <div className="top">
-        <Link to="/pme" className="bk" aria-label={t("pme.regler.retour")}>
+        <Link
+          to="/pme"
+          className="bk"
+          aria-label={t("pme.regler.retour")}
+          onClick={(e) => {
+            e.preventDefault();
+            revenir("/pme");
+          }}
+        >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />
           </svg>

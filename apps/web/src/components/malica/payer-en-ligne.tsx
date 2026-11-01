@@ -18,6 +18,7 @@ import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
 import { libelleDuPaiement } from "@/lib/paiement";
+import { useRevenir } from "@/hooks/use-revenir";
 
 const routeSociete = getRouteApi("/_authenticated/pme/payer/$paiementId");
 const routeCabinet = getRouteApi("/_authenticated/cabinet/payer/$paiementId");
@@ -41,7 +42,7 @@ const OU_CABINET = "components/malica/payer-en-ligne#cabinet";
  */
 export function PayerEnLigneSociete() {
   const { t, locale } = useI18n();
-  const navigate = useNavigate();
+  const revenir = useRevenir();
   const { paiementId } = routeSociete.useParams();
   const { paiements, choix, paiement, prestataire, payer, message, empechement } = useChoixDuMoyen(
     paiementId,
@@ -55,7 +56,7 @@ export function PayerEnLigneSociete() {
           type="button"
           className="bk"
           aria-label={t("pme.regler.retour")}
-          onClick={() => void navigate({ to: "/pme/reglages" })}
+          onClick={() => revenir("/pme/reglages")}
         >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />

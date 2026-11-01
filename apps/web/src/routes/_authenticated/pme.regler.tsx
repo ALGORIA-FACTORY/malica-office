@@ -17,6 +17,7 @@ import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
+import { useRevenir } from "@/hooks/use-revenir";
 
 export const Route = createFileRoute("/_authenticated/pme/regler")({
   head: () => ({
@@ -140,6 +141,7 @@ function ARegler() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const navigate = useNavigate();
+  const revenir = useRevenir();
 
   /** Les deux faces du cabinet : ce qu'on s'échange, et ce qu'il nous remet. */
   const [onglet, setOnglet] = useState<"echanges" | "docs">("echanges");
@@ -229,7 +231,7 @@ function ARegler() {
           type="button"
           className="bk"
           aria-label={t("pme.regler.retour")}
-          onClick={() => void navigate({ to: "/pme" })}
+          onClick={() => revenir("/pme")}
         >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />

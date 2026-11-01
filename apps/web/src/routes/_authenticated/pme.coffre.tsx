@@ -22,6 +22,7 @@ import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
 import { useEnvoyerEnLot, useSupprimerEnLot } from "@/hooks/use-gestes-du-circuit";
+import { useRevenir } from "@/hooks/use-revenir";
 
 export const Route = createFileRoute("/_authenticated/pme/coffre")({
   head: () => ({
@@ -94,6 +95,7 @@ function PmeCoffre() {
   const pme = usePme();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const revenir = useRevenir();
   const [erreur, setErreur] = useState<string | null>(null);
   /** Les papiers choisis, dans l'ordre où on les a touchés. */
   const [choisis, setChoisis] = useState<readonly string[]>([]);
@@ -317,7 +319,7 @@ function PmeCoffre() {
            * socle, pas à cet écran.
            */
           aria-label={t("pme.regler.retour")}
-          onClick={() => void navigate({ to: "/pme" })}
+          onClick={() => revenir("/pme")}
         >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />
