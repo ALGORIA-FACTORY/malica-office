@@ -84,9 +84,10 @@ describe("ce qu'on montre d'une erreur", () => {
     );
   });
 
-  it("dit un refus levé par la base, chaque valeur à sa place, et la répète au besoin", () => {
+  it("dit un refus levé par la base, chaque valeur à sa place, et la répète au besoin", async () => {
     // `app.refus_avec_valeurs` encode chaque octet ; la phrase cite le compte
     // deux fois (« 401 », puis « 4011, 4012… »).
+    await chargerLaLangue("en");
     window.localStorage.setItem("malica.locale", "en");
     try {
       const refus = new ErreurApi("refus.plan.compte_livre?compte=401", 400);
