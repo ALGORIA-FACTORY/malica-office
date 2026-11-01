@@ -556,6 +556,7 @@ export const parametrage = {
       droits,
       baremes,
       categories,
+      natures,
       noms,
       change,
       clotures,
@@ -571,13 +572,14 @@ export const parametrage = {
         incertain: string | null;
         droit_hors_tva: string | null;
         categories_d_immobilisation: boolean;
+        natures_de_vente: boolean;
       }>(
         `select s.code, ${libelle("ns = 'reglage_sujet'", "s.code")} as titre,
                   ${libelle("ns = 'reglage_sujet_texte'", "s.code")} as texte,
                   ${libelle("ns = 'reglage_sujet_pratique'", "s.code")} as pratique,
                   ${libelle("ns = 'reglage_sujet_risque'", "s.code")} as risque,
                   ${libelle("ns = 'reglage_sujet_incertain'", "s.code")} as incertain,
-                  s.droit_hors_tva, s.categories_d_immobilisation
+                  s.droit_hors_tva, s.categories_d_immobilisation, s.natures_de_vente
              from ref.reglages_comptables_sujets s
             order by s.ordre`,
         [locale],
@@ -667,6 +669,17 @@ export const parametrage = {
               and (c.valid_to is null or c.valid_to >= $2::date)
             order by c.code`,
         [packId, jour],
+      ),
+      db.query<{ code: string; libelle: string | null; compte: string; repli: boolean }>(
+        `select n.code, ${libelle("ns = 'nature_de_vente'", "n.code", "$3")} as libelle,
+                  b.account_code as compte, n.repli
+             from ref.natures_de_vente n
+             join ref.role_bindings b
+               on b.pack_version_id = n.pack_version_id and b.role_code = n.role_code
+            where n.pack_version_id = $1 and n.valid_from <= $2::date
+              and (n.valid_to is null or n.valid_to >= $2::date)
+            order by n.rang`,
+        [packId, jour, locale],
       ),
       nomsDesReglages(db, locale),
       optionsDeLaRegleDeChange(db, locale),
@@ -769,6 +782,14 @@ export const parametrage = {
                   tauxLineaire: c.taux_lineaire,
                   tauxMaximal: c.taux_maximal,
                   depasse: c.depasse,
+                }))
+              : [],
+            naturesDeVente: s.natures_de_vente
+              ? natures.rows.map((x) => ({
+                  code: x.code,
+                  libelle: x.libelle ?? x.code,
+                  compte: x.compte,
+                  repli: x.repli,
                 }))
               : [],
           },

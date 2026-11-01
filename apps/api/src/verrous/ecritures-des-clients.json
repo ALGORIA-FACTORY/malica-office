@@ -50,6 +50,7 @@
         "app.reglages_comptables_arreter",
         "public.api_key_creer",
         "public.api_key_revoquer",
+        "public.avoir_rattacher",
         "public.banque_delettrer",
         "public.banque_lettrer",
         "public.cabinet_inviter",
@@ -129,6 +130,11 @@
       "objet": "capture.analyses_verifiees",
       "privilege": "INSERT",
       "chemins": ["public.analyse_verifier"]
+    },
+    {
+      "objet": "capture.avoirs_rattaches",
+      "privilege": "INSERT",
+      "chemins": ["public.avoir_rattacher"]
     },
     {
       "objet": "capture.citations",

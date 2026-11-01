@@ -46,13 +46,15 @@ import {
   IMPUTATIONS_D_ESSAI,
   MENTIONS_D_ESSAI,
   JOUR_DU_RELEVE_D_ESSAI,
+  NATURES_DE_VENTE_D_ESSAI,
   PARAMETRES_D_ESSAI,
   REGLAGES_D_ESSAI,
   TAUX_D_ESSAI,
   TITRES_D_ESSAI,
   TYPES_D_ESSAI,
 } from "./referentiel-d-essai.ts";
-import { reglageDImmobilisation } from "./reglages-comptables.ts";
+import { optionDesVentes } from "./nature-de-vente.ts";
+import { reglageDesAvoirs, reglageDImmobilisation } from "./reglages-comptables.ts";
 import { JEU_D_OR } from "../malica/lecture/jeu-d-or.ts";
 import { buildExtractFromTokenPlan, type BuiltRead } from "../malica/lecture/read-piece.ts";
 import { texteDuMontantCite, type PageToken } from "../malica/lecture/token-plan.ts";
@@ -137,6 +139,8 @@ interface Facture {
   ttc?: string | null;
   /** La confiance de certains champs ; les autres sont lus à 0,95. */
   confiance?: Record<string, number>;
+  /** Les articles lus : leur désignation, leur total HT et leur code de taux, s'ils sont lus. */
+  articles?: Array<{ designation: string; total_ht?: string; tax_code?: string }>;
 }
 
 /** Une lecture citée, telle que la base la porterait : champ par champ, le texte imprimé. */
@@ -173,7 +177,7 @@ function facture(f: Facture): LectureAJuger {
       document_kind: sens,
       currency: f.currency === undefined ? "TND" : f.currency,
       lines: f.lignes.map((l) => ({ label: "Achats", tax_code: l.code })),
-      articles: [],
+      articles: f.articles ?? [],
       other_charges: (f.droits ?? []).map((d) => ({ code: d.code, label: "" })),
       references: {
         numero: "F-2026-0042",
@@ -377,15 +381,102 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       ht: "2 500,000",
       tva: "475,000",
       ttc: "2 976,000",
+      articles: [{ designation: "Prestation de conseil, septembre" }],
+    }),
+    // Une prestation : 705 (`ventes.compte`, défaut du CEO), la base avec son taux.
+    attendu: {
+      journal: "VEN",
+      lignes: [
+        ["411", "2976.000", "0"],
+        ["4367", "0", "475.000", "TVA19"],
+        ["705", "0", "2500.000", "TVA19"],
+        ["4371", "0", "1.000"],
+      ],
+    },
+  },
+  {
+    nom: "vente de marchandises : 707, la base avec son taux",
+    provenance: "réglage ventes.compte du 1er novembre 2026",
+    lecture: facture({
+      sens: "facture_vente",
+      lignes: [{ code: "TVA19", ht: "2 500,000" }],
+      droits: [{ code: "DROIT_TIMBRE", montant: "1,000" }],
+      ht: "2 500,000",
+      tva: "475,000",
+      ttc: "2 976,000",
+      articles: [{ designation: "Farine de blé, sac 50 kg" }],
     }),
     attendu: {
       journal: "VEN",
       lignes: [
         ["411", "2976.000", "0"],
         ["4367", "0", "475.000", "TVA19"],
-        ["701", "0", "2500.000"],
+        ["707", "0", "2500.000", "TVA19"],
         ["4371", "0", "1.000"],
       ],
+    },
+  },
+  {
+    nom: "vente mêlée : une ligne par nature, chacune avec son taux, prouvée par les articles",
+    provenance: "réglage ventes.compte du 1er novembre 2026",
+    lecture: facture({
+      sens: "facture_vente",
+      lignes: [{ code: "TVA19", ht: "2 500,000" }],
+      droits: [{ code: "DROIT_TIMBRE", montant: "1,000" }],
+      ht: "2 500,000",
+      tva: "475,000",
+      ttc: "2 976,000",
+      articles: [
+        { designation: "Prestation de maintenance", total_ht: "1800.000" },
+        { designation: "Cartouche d'encre noire", total_ht: "700.000" },
+      ],
+    }),
+    attendu: {
+      journal: "VEN",
+      lignes: [
+        ["411", "2976.000", "0"],
+        ["4367", "0", "475.000", "TVA19"],
+        ["705", "0", "1800.000", "TVA19"],
+        ["707", "0", "700.000", "TVA19"],
+        ["4371", "0", "1.000"],
+      ],
+    },
+  },
+  {
+    nom: "vente dont la nature ne se reconnaît pas : le repli, et la réserve qui le dit",
+    provenance: "réglage ventes.compte du 1er novembre 2026",
+    lecture: facture({
+      sens: "facture_vente",
+      lignes: [{ code: "TVA19", ht: "2 500,000" }],
+      droits: [{ code: "DROIT_TIMBRE", montant: "1,000" }],
+      ht: "2 500,000",
+      tva: "475,000",
+      ttc: "2 976,000",
+      articles: [{ designation: "Médicament vétérinaire" }],
+    }),
+    // L'écriture juste dépend de ce que le dossier vend : le Socle ne la
+    // devine pas. Il propose le repli (701), et la réserve « nature de la
+    // vente à préciser » : à trancher.
+    attendu: {
+      journal: "VEN",
+      lignes: [
+        ["411", "2976.000", "0"],
+        ["4367", "0", "475.000", "TVA19"],
+        ["707", "0", "2500.000", "TVA19"],
+        ["4371", "0", "1.000"],
+      ],
+    },
+    aTrancher: {
+      reserve: "nature_de_vente",
+      attendu: {
+        journal: "VEN",
+        lignes: [
+          ["411", "2976.000", "0"],
+          ["4367", "0", "475.000", "TVA19"],
+          ["701", "0", "2500.000", "TVA19"],
+          ["4371", "0", "1.000"],
+        ],
+      },
     },
   },
   {
@@ -725,6 +816,10 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     provenance: "revue indépendante de la PR 144",
     lecture: facture({ ...SIMPLE, titre: "AVOIR N° A-2026-0007" }),
     attendu: null,
+    // Lié à sa facture (`avoirs.traitement`, défaut du CEO) : sans facture
+    // rattachée — la mesure n'a pas de base —, rien ne se propose, et la raison
+    // le nomme.
+    refus: "proposition/facture_d_origine",
   },
   {
     /*
@@ -736,7 +831,7 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     provenance: "jeu synthétique, cas 047 (outils/jeu-synthetique/cas/047.json)",
     lecture: facture({ ...SIMPLE, titre: "إشعار دائن رقم 2026/0045" }),
     attendu: null,
-    refus: "nature_piece",
+    refus: "proposition/facture_d_origine",
   },
   {
     /*
@@ -914,16 +1009,18 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       ht: "2 000,00",
       tva: "380,00",
       ttc: "2 380,00",
+      articles: [{ designation: "Huile d'olive en vrac, tonne" }],
     }),
     cours: COURS_EUR,
     reserve: "cours_de_change",
     // 2 000,00 × 3,3456 = 6 691,200 ; 380,00 × 3,3456 = 1 271,328 ; 2 380,00 × 3,3456 = 7 962,528.
+    // Une marchandise : 707, la base avec son taux.
     attendu: {
       journal: "VEN",
       lignes: [
         ["411", "7962.528", "0"],
         ["4367", "0", "1271.328", "TVA19"],
-        ["701", "0", "6691.200"],
+        ["707", "0", "6691.200", "TVA19"],
       ],
     },
   },
@@ -1232,6 +1329,10 @@ export function juger(cas: CasDeMesure) {
       jour: JOUR_DU_RELEVE_D_ESSAI,
       nonAssujetti: false,
     }),
+    avoirs: reglageDesAvoirs(REGLAGES_D_ESSAI, {
+      pack: "pack-d-essai",
+      jour: JOUR_DU_RELEVE_D_ESSAI,
+    }),
     mentionsObligatoires: MENTIONS_D_ESSAI,
     doublonProbable: null,
     devises: DEVISES_LUES_D_ESSAI,
@@ -1284,13 +1385,22 @@ export function jouer(cas: CasDeMesure): Issue {
       // (« INCERTAIN — FODEC à l'achat imputé au compte du pack »). Le réglage
       // du cabinet a ses épreuves (`reglages-comptables.test.ts`).
       droitsAuCout: [],
+      // Les comptes de vente par nature, au défaut du pack (`ventes.compte`).
+      ventes: ((option) => (option ? { option, natures: NATURES_DE_VENTE_D_ESSAI } : null))(
+        optionDesVentes(REGLAGES_D_ESSAI),
+      ),
+      // Un avoir lié se propose depuis l'écriture de sa facture, en base :
+      // sans base, aucune facture n'est rattachée.
+      avoir: null,
     },
   );
   // La réserve attendue se vérifie aussi sur un refus : un refus juste dont le
   // jugement tait le doute n'est pas juste.
-  const reserveAbsente =
-    cas.reserve !== undefined &&
-    !jugement.motifs.some((m) => m.code === cas.reserve && m.statut === "reserve");
+  // Une réserve se dit au jugement, ou sur la proposition (la nature d'une vente).
+  const reserveDite = (code: string) =>
+    jugement.motifs.some((m) => m.code === code && m.statut === "reserve") ||
+    (p.ok && (p.reserves ?? []).some((x) => x.code === code));
+  const reserveAbsente = cas.reserve !== undefined && !reserveDite(cas.reserve);
   if (!p.ok) {
     const motif = motifDuRefus(jugement, p.raisonCode);
     if (cas.attendu === null && reserveAbsente)
@@ -1331,7 +1441,7 @@ export function jouer(cas: CasDeMesure): Issue {
     t &&
     e.journal === t.attendu.journal &&
     lues.join() === t.attendu.lignes.map(cleDeLigne).sort().join() &&
-    jugement.motifs.some((m) => m.code === t.reserve && m.statut === "reserve")
+    reserveDite(t.reserve)
   )
     return { type: "a_trancher", reserve: t.reserve };
   return { type: "fausse", cause: causes.join(" · ") };

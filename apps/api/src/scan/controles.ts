@@ -34,7 +34,7 @@ import { D } from "@malica/socle/domain/decimal";
 
 import type { ChangeDuJugement } from "./cours-de-change.ts";
 import type { ResultatNormalisation } from "./normaliser-montants.ts";
-import type { ReglageDImmobilisation } from "./reglages-comptables.ts";
+import type { ReglageDesAvoirs, ReglageDImmobilisation } from "./reglages-comptables.ts";
 
 type Statut = "conforme" | "non_evaluable" | "reserve" | "rapprocher" | "anomalie" | "rejet";
 
@@ -118,6 +118,11 @@ export interface ContexteControle {
    * arrêtés (`app.reglage_comptable`) ; nul quand le pack n'en porte aucun.
    */
   immobilisation: ReglageDImmobilisation | null;
+  /**
+   * Le traitement d'un avoir que le cabinet a arrêté (`avoirs.traitement`) ;
+   * nul quand le pack n'en porte aucun — l'avoir se refuse.
+   */
+  avoirs: ReglageDesAvoirs | null;
   mentionsObligatoires: Array<{ code: string; libelle: string }>;
   seuilConfianceReserve: number;
   seuilConfianceBloquant: number;
@@ -434,6 +439,9 @@ function mentions(p: PieceAControler, ctx: ContexteControle): ResultatControle {
       };
 }
 
+/** Le type d'un avoir dans `ref.document_types` : celui que ses titres désignent. */
+const TYPE_AVOIR = "avoir";
+
 /*
  * ============================================================ LE TITRE DIT LA NATURE
  *
@@ -446,12 +454,36 @@ function mentions(p: PieceAControler, ctx: ContexteControle): ResultatControle {
 function nature(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   const titre = p.titre;
   const reconnu = titre ? ctx.titres.find((t) => new RegExp(t.motif, "iu").test(titre)) : undefined;
+  /*
+   * ============================================ L'AVOIR LIÉ À SA FACTURE (1er novembre 2026)
+   *
+   * Le réglage du cabinet (`avoirs.traitement`, défaut du CEO : `lie_facture`)
+   * : un avoir titré se comptabilise, en réserve, par la contre-passation de
+   * sa facture d'origine (`proposition.ts`) ; sans elle, rien ne se propose.
+   * Refusé par le réglage, il reste à saisir. Dans les deux cas le jugement
+   * garde ce qu'il a lu du réglage : changé, il se périme et se rejuge.
+   */
+  const avoir = reconnu?.documentType === TYPE_AVOIR ? ctx.avoirs : null;
+  const lu = avoir ? { reglages: avoir.lu } : {};
+  if (titre && reconnu && avoir?.traitement === "lie_facture" && p.documentKind)
+    return {
+      code: "nature_piece",
+      statut: "reserve",
+      motif: `Avoir (titre « ${titre} ») : il se propose en contre-passation de sa facture d'origine, qui doit lui être rattachée.`,
+      preuves: {
+        titre,
+        documentKind: p.documentKind,
+        documentType: reconnu.documentType,
+        avoir: true,
+        ...lu,
+      },
+    };
   if (titre && reconnu)
     return {
       code: "nature_piece",
       statut: reconnu.statut,
       motif: reconnu.refus.replaceAll("{titre}", titre),
-      preuves: { titre, documentKind: p.documentKind, documentType: reconnu.documentType },
+      preuves: { titre, documentKind: p.documentKind, documentType: reconnu.documentType, ...lu },
     };
   /*
    * ======================================= CE QU'ON N'A PAS LU NE DIT PAS « FACTURE »

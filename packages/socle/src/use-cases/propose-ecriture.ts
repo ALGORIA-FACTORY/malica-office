@@ -187,6 +187,13 @@ export function buildProposal(params: {
    * de la PIÈCE : la facture se vérifie d'abord dans sa devise.
    */
   conversion?: { vers: CurrencyDef; cours: CoursAApplique; ecart: string };
+  /**
+   * Le compte de vente de chaque ligne, par nature de ce qu'elle vend
+   * (réglage `ventes.compte`, 1er novembre 2026) : `computePivot` la pose. Une
+   * part chiffrée n'est admise que dans la devise de la pièce : convertie, une
+   * ventilation demanderait un arrondi que le Socle ne tranche pas.
+   */
+  ventilationDesVentes?: NonNullable<Parameters<typeof computePivot>[0]["ventilation_des_ventes"]>;
 }): ProposalResult {
   const lu = ExtractV1.safeParse(params.payload);
   if (!lu.success) {
@@ -281,6 +288,9 @@ export function buildProposal(params: {
         confidence_red: params.parametres.confianceBloquante,
       },
       ...(options.tvaVerifieeEn ? { tva_verifiee_en: options.tvaVerifieeEn } : {}),
+      ...(e.document_kind === "facture_vente" && params.ventilationDesVentes
+        ? { ventilation_des_ventes: params.ventilationDesVentes }
+        : {}),
     });
 
   /*
@@ -296,6 +306,11 @@ export function buildProposal(params: {
    */
   const deLaPiece: CurrencyDef = { code: extract.currency, decimals };
   const conversion = params.conversion;
+  if (
+    conversion &&
+    params.ventilationDesVentes?.some((parts) => parts.some((x) => x.montant !== null))
+  )
+    throw new Error("VENTILATION_EN_DEVISE");
   const origine = conversion ? pivotDe(extract, deLaPiece, { droitsFixes: false }) : null;
   /*
    * La dette envers le tiers est HT + TVA + droits (le pivot ne recopie
