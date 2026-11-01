@@ -9,6 +9,7 @@
  * pas de React, pas d'appel — pour que l'écran du cabinet et le serveur qui
  * répond aux clients composent exactement les mêmes phrases.
  */
+import { remplirLeGabarit } from "./gabarit.ts";
 import { MESSAGES, type Locale, type MessageKey } from "./messages.ts";
 import type { Arbitrage, DecisionArbitrage, SourceCitee } from "./ports/repositories.ts";
 
@@ -43,7 +44,7 @@ export function texte(
     }
   }
   if (!vars) return brut;
-  return Object.entries(vars).reduce((acc, [k, v]) => acc.replaceAll(`{${k}}`, String(v)), brut);
+  return remplirLeGabarit(brut, vars);
 }
 
 /** « code de la TVA art. 9 » — le nom du corpus quand on le connaît, son code sinon. */

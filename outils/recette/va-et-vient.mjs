@@ -294,15 +294,16 @@ const motifs = await (async () => {
 })();
 const motifRetour = motifs.find((m) => !m.requires_note) ?? motifs[0];
 const egal = (a, b) => Number(a) === Number(b);
+// Le compte, les montants ET le code de taxe : une base sans son code de régime
+// manque à la déclaration, même juste en compte et en montant (#155).
 const lignesEgales = (proposees, attendues) => {
   const norm = (ls) =>
     ls
-      .map((l) => `${l[0]}|${Number(l[1]).toFixed(3)}|${Number(l[2]).toFixed(3)}`)
+      .map((l) => `${l[0]}|${Number(l[1]).toFixed(3)}|${Number(l[2]).toFixed(3)}|${l[3] ?? ""}`)
       .sort()
       .join(";");
   return (
-    norm(proposees.map((l) => [l.account_code, l.debit, l.credit])) ===
-    norm(attendues.map((l) => l.slice(0, 3)))
+    norm(proposees.map((l) => [l.account_code, l.debit, l.credit, l.tax_code])) === norm(attendues)
   );
 };
 
@@ -353,11 +354,19 @@ for (const d of DOSSIERS.filter((x) => x.org)) {
       if (!exacte && !aTrancher)
         ecart("proposition fausse", {
           cas: p.cas,
-          proposee: prop.proposition.lignes.map((l) => [l.account_code, l.debit, l.credit]),
+          proposee: prop.proposition.lignes.map((l) => [
+            l.account_code,
+            l.debit,
+            l.credit,
+            l.tax_code ?? null,
+          ]),
           attendue: attendu.ecriture.lignes,
         });
     } else {
-      e.sansObjet(`${p.cas} : rien de proposé`, String(p.raison));
+      // Une écriture était attendue : ne rien proposer est un échec, que le
+      // forçage qui suit ne doit pas masquer.
+      e.verdict(`${p.cas} : une écriture est proposée`, false, String(p.raison));
+      ecart("rien de proposé", { cas: p.cas, raison: p.raison });
     }
 
     // Une pièce sur quatre est retournée au client avant d'être prise en charge.

@@ -35,6 +35,7 @@
  * Rien n'est donc perdu : ce que l'utilisateur ne voit plus, le poste le
  * reçoit avec sa pile d'appels.
  */
+import { remplirLeGabarit } from "@malica/socle/gabarit";
 import { lireUnRefus } from "@malica/socle/refus-a-dire";
 
 import { localeRangee } from "@/i18n";
@@ -78,7 +79,7 @@ export function texteDeLErreur(raison: unknown, ou: string, defaut: string): str
     const { cle, valeurs } = lireUnRefus(raison.message);
     const gabarit = dict[cle];
     if (gabarit === undefined) return raison.message;
-    return Object.entries(valeurs).reduce((t, [k, v]) => t.replaceAll(`{${k}}`, v), gabarit);
+    return remplirLeGabarit(gabarit, valeurs);
   }
   // Pas de réseau n'est pas une panne : on le dit, sans l'inscrire au journal —
   // le journal ne dirait rien qu'on ne sache déjà.
