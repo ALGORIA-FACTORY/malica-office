@@ -39,6 +39,7 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -77,6 +78,7 @@ async function monter(db: pg.PoolClient, consommees: number): Promise<Cabinet> {
      values ('pme', 'Imputation d''essai', 'TN', 'TND') returning id`,
   );
   const tenant = org.rows[0]!.id;
+  await personnesDEssai(db, dirigeant, collaborateur);
   await db.query(
     `insert into identity.memberships (tenant_id, user_id, role)
      values ($1, $2, 'dirigeant'), ($1, $3, 'collaborateur')`,
@@ -125,6 +127,7 @@ async function cabinetEngageSur(db: pg.PoolClient, pme: string): Promise<string>
   const membre = randomUUID();
   // L'expert du cabinet : il voit tous les dossiers engagés. Un collaborateur
   // ne voit que ceux qu'on lui attribue (20 octobre 2026).
+  await personnesDEssai(db, membre);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'expert')",
     [org.rows[0]!.id, membre],

@@ -12,6 +12,7 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -55,10 +56,12 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
        values ('pme', 'Annuel d''essai', 'TN', 'TND') returning id`,
     );
     const tenant = o.rows[0]!.id;
+    await personnesDEssai(db, principal);
     await db.query(
       "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
       [tenant, principal],
     );
+    await personnesDEssai(db, principal);
     await db.query("insert into identity.profiles (user_id, display_name) values ($1, $2)", [
       principal,
       "Wissem Barouni",
@@ -77,6 +80,7 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
 
   async function emetteur(db: pg.PoolClient) {
     const operateur = randomUUID();
+    await personnesDEssai(db, operateur);
     await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
     const em = await db.query<{ id: string }>(
       `insert into identity.organizations (kind, name, jurisdiction, currency)

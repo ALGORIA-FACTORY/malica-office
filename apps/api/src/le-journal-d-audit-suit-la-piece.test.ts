@@ -111,7 +111,7 @@ describe("le journal d'audit suit la pièce", { skip: !BASE_CONFIGUREE }, () => 
   it("banque.audit : le propriétaire lit le journal de la banque, un siège n'y lit que ses faits", async () => {
     await s.admin.query(
       `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, payload)
-       values ($1, $2, 'banque.essai', 'banque', 'releves', '{}'::jsonb)`,
+       values ($1, $2, 'banque.essai', 'banque', 'releve_lignes', '{}'::jsonb)`,
       [s.pme, s.gens.amel.id],
     );
     const proprietaire = (await s.fait("amel", "banque.audit", s.pme)) as unknown[];

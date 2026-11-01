@@ -14,6 +14,7 @@ import { after, describe, it } from "node:test";
 import pg from "pg";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
+import { personnesDEssai } from "../personne-d-essai.ts";
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
 
@@ -53,6 +54,7 @@ describe("la tour règle le paiement et l'émetteur", { skip: !ADMIN }, () => {
 
   async function operateur(db: pg.PoolClient) {
     const id = randomUUID();
+    await personnesDEssai(db, id);
     await db.query("insert into app.platform_operators (user_id) values ($1)", [id]);
     return id;
   }

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 
 import { estIntrouvable, texteDeLErreur, vientDeNous } from "../erreur-lisible";
@@ -54,6 +55,29 @@ describe("ce qu'on montre d'une erreur", () => {
     expect(texteDeLErreur(null, "épreuve", DEFAUT)).toBe(DEFAUT);
     expect(texteDeLErreur(undefined, "épreuve", DEFAUT)).toBe(DEFAUT);
     expect(texteDeLErreur({ erreur: "objet nu" }, "épreuve", DEFAUT)).toBe(DEFAUT);
+  });
+
+  /*
+   * Audit d'intégrité du 1er novembre 2026 : la frontière de l'API rendait
+   * ses refus en français (« introuvable, ou vous n'y avez pas accès »,
+   * « cette valeur n'est pas admise : « … » ») à un écran réglé en arabe.
+   * Elle rend désormais une clé, et la valeur citée la suit.
+   */
+  it("dit un refus de l'API dans la langue de la personne, avec la valeur qu'il cite", () => {
+    window.localStorage.setItem("malica.locale", "ar");
+    try {
+      expect(texteDeLErreur(new ErreurApi("refus.introuvable", 404), "épreuve", DEFAUT)).toBe(
+        "غير موجود، أو ليس لك حق الوصول إليه.",
+      );
+      const valeur = new ErreurApi("refus.moteur.valeur_non_admise?valeur=assistee", 400);
+      expect(texteDeLErreur(valeur, "épreuve", DEFAUT)).toBe("هذه القيمة غير مقبولة: «assistee».");
+    } finally {
+      window.localStorage.removeItem("malica.locale");
+    }
+    const valeur = new ErreurApi("refus.moteur.valeur_non_admise?valeur=a%26b", 400);
+    expect(texteDeLErreur(valeur, "épreuve", DEFAUT)).toBe(
+      "Cette valeur n’est pas admise : « a&b ».",
+    );
   });
 
   it("reconnaît ce qui vient de nous", () => {

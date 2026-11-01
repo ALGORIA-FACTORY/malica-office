@@ -36,6 +36,7 @@
  * reçoit avec sa pile d'appels.
  */
 import { MESSAGES } from "@malica/socle/messages";
+import { lireUnRefus } from "@malica/socle/refus-a-dire";
 
 import { localeRangee } from "@/i18n";
 
@@ -69,9 +70,12 @@ export function texteDeLErreur(raison: unknown, ou: string, defaut: string): str
   if (vientDeNous(raison)) {
     // Un refus de la base peut lever une CLÉ du dictionnaire (« refus.licence.
     // transmission ») plutôt qu'une phrase française : on la dit dans la
-    // langue de la personne.
+    // langue de la personne, avec les valeurs qu'elle cite.
     const dict = MESSAGES[localeRangee()] as Record<string, string>;
-    return dict[raison.message] ?? raison.message;
+    const { cle, valeurs } = lireUnRefus(raison.message);
+    const gabarit = dict[cle];
+    if (gabarit === undefined) return raison.message;
+    return Object.entries(valeurs).reduce((t, [k, v]) => t.replaceAll(`{${k}}`, v), gabarit);
   }
   // Pas de réseau n'est pas une panne : on le dit, sans l'inscrire au journal —
   // le journal ne dirait rien qu'on ne sache déjà.

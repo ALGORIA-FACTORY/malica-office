@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -32,6 +33,7 @@ describe("la tour publie la grille", { skip: !ADMIN }, () => {
     try {
       await db.query("begin");
       const operateur = randomUUID();
+      await personnesDEssai(db, operateur);
       await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
       await db.query("set local role authenticated");
       await db.query("select set_config('request.jwt.claim.sub', $1, true)", [operateur]);

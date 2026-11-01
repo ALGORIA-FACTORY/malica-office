@@ -16,6 +16,7 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { identite } from "../depots/identite.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -84,6 +85,7 @@ describe("la facture du cabinet se paie en ligne", { skip: !BASE_CONFIGUREE }, (
     try {
       await db.query("begin");
       const op = randomUUID();
+      await personnesDEssai(db, op);
       await db.query("insert into app.platform_operators (user_id) values ($1)", [op]);
       await db.query(
         `insert into facturation.emetteurs (organisation_id, valide_des, designe_par)

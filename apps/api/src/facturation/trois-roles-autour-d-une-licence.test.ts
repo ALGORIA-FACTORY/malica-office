@@ -17,6 +17,7 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -34,6 +35,7 @@ async function societe(db: pg.PoolClient, offre: "basic" | "team"): Promise<Soci
      values ('pme', 'Trois rôles d''essai', 'TN', 'TND') returning id`,
   );
   const tenant = org.rows[0]!.id;
+  await personnesDEssai(db, principal);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
     [tenant, principal],
@@ -52,6 +54,7 @@ async function societe(db: pg.PoolClient, offre: "basic" | "team"): Promise<Soci
 
 async function membre(db: pg.PoolClient, tenant: string, role: string): Promise<string> {
   const u = randomUUID();
+  await personnesDEssai(db, u);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, $3)",
     [tenant, u, role],
