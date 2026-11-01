@@ -15,7 +15,7 @@
  * ========================================================== CE QU'IL CRÉE
  *
  *   un compte              dev@malica.local
- *   un cabinet             CABINET MALICA
+ *   un cabinet             CABINET MALICA, et son second expert
  *   deux dossiers          DREAM OPTIC · ATLAS DISTRIBUTION
  *   deux mandats           le cabinet suit les deux
  *   des tiers              clients, fournisseurs, une banque
@@ -32,7 +32,7 @@
 // connectent. Les deux lisent donc la même déclaration, dans le socle des
 // épreuves : deux copies d'un mot de passe, c'est une copie qu'on oubliera de
 // changer.
-import { COMPTE_DEV } from "../../outils/epreuves/socle.mjs";
+import { COMPTE_DEV, SECOND_EXPERT_DEV } from "../../outils/epreuves/socle.mjs";
 
 const API = process.env["MALICA_API_URL"] ?? "http://localhost:3000";
 const EMAIL = COMPTE_DEV.email;
@@ -140,28 +140,55 @@ function pdf(titre, lignes) {
   return fichier;
 }
 
-async function ouvrirSession() {
+async function ouvrirSession(compte = COMPTE_DEV, nom = "Développeur") {
+  cookie = "";
   const inscription = await appelerBrut("/auth/inscription", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: EMAIL, motDePasse: MOTDEPASSE, nom: "Développeur" }),
+    body: JSON.stringify({ email: compte.email, motDePasse: compte.motDePasse, nom }),
   });
   if (inscription.ok) {
-    console.log(`  compte créé      ${EMAIL}`);
+    console.log(`  compte créé      ${compte.email}`);
     return;
   }
   // 409 : le compte existe déjà, c'est le cas normal d'une seconde exécution.
   const connexion = await appelerBrut("/auth/connexion", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: EMAIL, motDePasse: MOTDEPASSE }),
+    body: JSON.stringify({ email: compte.email, motDePasse: compte.motDePasse }),
   });
   if (!connexion.ok) {
     throw new Error(
-      `impossible d'ouvrir une session pour ${EMAIL} : le compte existe avec un autre mot de passe`,
+      `impossible d'ouvrir une session pour ${compte.email} : le compte existe avec un autre mot de passe`,
     );
   }
-  console.log(`  session ouverte  ${EMAIL}`);
+  console.log(`  session ouverte  ${compte.email}`);
+}
+
+/**
+ * Le second expert rejoint le cabinet, par l'invitation, comme une personne.
+ *
+ * Il tranche ce que le compte de développement demande au cabinet : membre de
+ * ses dossiers, ce dernier ne peut pas accorder lui-même le rappel qu'il a
+ * demandé (#146). La session revient ensuite au compte de développement.
+ */
+async function secondExpert(cabinet) {
+  const membres = await rpc("collab", "members", [cabinet]);
+  if (!membres.some((m) => m.email === SECOND_EXPERT_DEV.email)) {
+    await rpc("collab", "inviter", [
+      { tenantId: cabinet, email: SECOND_EXPERT_DEV.email, role: "expert" },
+    ]);
+  }
+  await ouvrirSession(SECOND_EXPERT_DEV, "Second expert");
+  const siennes = await rpc("identite", "listMyOrganizations");
+  if (!siennes.some((o) => o.id === cabinet)) {
+    const invitation = (await rpc("collab", "invitationsPourMoi")).find(
+      (i) => i.cabinetTenantId === cabinet,
+    );
+    if (!invitation) throw new Error(`aucune invitation pour ${SECOND_EXPERT_DEV.email}`);
+    await rpc("collab", "repondreAInvitation", [invitation.id, true]);
+  }
+  await ouvrirSession();
 }
 
 /**
@@ -407,6 +434,9 @@ async function main() {
   const atlas = await organisation("pme", "ATLAS DISTRIBUTION", "autonome", "9876543B/B/N/000");
   console.log(`  cabinet          CABINET MALICA`);
   console.log(`  dossiers         DREAM OPTIC · ATLAS DISTRIBUTION`);
+
+  await secondExpert(cabinet);
+  console.log(`  second expert    ${SECOND_EXPERT_DEV.email}`);
 
   for (const pme of [optic, atlas]) {
     await rpc("identite", "creerMandat", [
