@@ -190,7 +190,7 @@ describe("le mois de TVA suit l'exigibilité", { skip: !BASE_CONFIGUREE }, () =>
         depuis,
         valeurs: [{ code: "mois_tva.date", valeur }],
       });
-    return { piece, regler, transmis, inscrits, reservesDuMois, valider, arreter };
+    return { pme, piece, regler, transmis, inscrits, reservesDuMois, valider, arreter };
   };
 
   const dans = (lus: Array<{ pieceId: string }>, id: string) => lus.some((x) => x.pieceId === id);
@@ -329,4 +329,17 @@ describe("le mois de TVA suit l'exigibilité", { skip: !BASE_CONFIGUREE }, () =>
           [attendu === AVANT, attendu === FACTURE],
         );
     });
+
+  it("l'historique du réglage ne se lit pas hors du dossier, pas même ses dates", async () => {
+    const s = await monter();
+    await s.arreter("date_facture_alerte");
+    const etranger = await creerCompte(`etranger-${marque}@essai.local`, mdp);
+    assert.ok(etranger);
+    await assert.rejects(
+      sousIdentite(etranger.id, (db) =>
+        db.query(`select * from app.historique_du_mois_de_tva($1, 'mois_tva.date')`, [s.pme]),
+      ),
+      /refus\.reglage_comptable\.droits/,
+    );
+  });
 });

@@ -36,12 +36,22 @@ begin;
 
 create function app.historique_du_mois_de_tva(p_dossier uuid, p_reglage text)
 returns table (du date, pack uuid, regle text)
-language sql
+language plpgsql
 stable
 security definer
 set search_path = ''
 rows 8
 as $$
+#variable_conflict use_column
+begin
+  -- Les mêmes droits que `app.reglage_comptable`, dits d'abord : même les
+  -- seules DATES des décisions d'un dossier ne se lisent pas hors de lui.
+  if p_dossier is null
+     or not (p_dossier in (select app.member_orgs() union select app.engaged_orgs())
+             or app.is_platform()) then
+    raise exception 'refus.reglage_comptable.droits' using errcode = '42501';
+  end if;
+  return query
   with packs as (
     select jp.id, jp.effective_from
       from ref.jurisdiction_packs jp
@@ -87,7 +97,8 @@ as $$
     from jours j
     cross join lateral (select app.pack_du_dossier(p_dossier, j.du) as pack) x
    where x.pack is not null
-   order by j.du
+   order by j.du;
+end
 $$;
 
 revoke all on function app.historique_du_mois_de_tva(uuid, text) from public, anon;
