@@ -1701,12 +1701,27 @@ export type RaisonSansEcriture =
  * Une réserve que la PROPOSITION porte (1er novembre 2026) : la vente rangée
  * au compte de repli, sa nature n'étant pas prouvée (`nature_de_vente`). La
  * raison, et les désignations que le référentiel ne reconnaît pas.
+ *
+ * Et (11 novembre 2026) le mois de TVA à vérifier (`mois_de_tva`) : la nature
+ * changerait le mois mais ne se reconnaît pas, un encaissement antérieur
+ * partiel ne fixe pas le mois, ou (option `date_facture_alerte`) la TVA
+ * serait exigible avant le mois de la facture (`app.jour_d_imputation_tva`).
  */
-export interface ReserveDeProposition {
-  code: "nature_de_vente";
-  raison: "inconnue" | "sans_article" | "non_ventilable";
-  articles: string[];
-}
+export type ReserveDeProposition =
+  | {
+      code: "nature_de_vente";
+      raison: "inconnue" | "sans_article" | "non_ventilable";
+      articles: string[];
+    }
+  | {
+      code: "mois_de_tva";
+      raison: RaisonDuMoisDeTva;
+      articles: string[];
+    };
+
+/** Pourquoi le mois de TVA d'une pièce est à vérifier (`app.jour_d_imputation_tva`). */
+export type RaisonDuMoisDeTva =
+  "nature_indecidable" | "encaissement_partiel" | "exigibilite_anterieure";
 
 /** La facture d'origine d'un avoir lié, telle que la proposition la lit. */
 export interface FactureDOrigine {
