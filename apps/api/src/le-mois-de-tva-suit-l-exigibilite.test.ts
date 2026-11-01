@@ -181,16 +181,16 @@ describe("le mois de TVA suit l'exigibilité", { skip: !BASE_CONFIGUREE }, () =>
       assert.ok(p.ok && p.empreinte, `rien à valider : ${"raison" in p ? p.raison : ""}`);
       await rpc(expert, "office.valider", id, p.empreinte);
     };
-    const arreter = (valeur: string) =>
+    const arreter = (valeur: string, depuis = "2026-01-01") =>
       rpc(expert, "parametrage.arreterReglagesComptables", {
         cabinetId: cabinet,
         portee: "dossier",
         porteeId: pme,
         packId,
-        depuis: "2026-01-01",
+        depuis,
         valeurs: [{ code: "mois_tva.date", valeur }],
       });
-    return { piece, regler, transmis, inscrits, reservesDuMois, valider, arreter };
+    return { pme, piece, regler, transmis, inscrits, reservesDuMois, valider, arreter };
   };
 
   const dans = (lus: Array<{ pieceId: string }>, id: string) => lus.some((x) => x.pieceId === id);
@@ -306,5 +306,40 @@ describe("le mois de TVA suit l'exigibilité", { skip: !BASE_CONFIGUREE }, () =>
     await s.valider(id);
     assert.ok(dans(await s.transmis(FACTURE), id));
     assert.ok(!dans(await s.transmis(AVANT), id));
+  });
+
+  // Revue de #163 (P1) : l'option se lisait à la FIN de la fenêtre demandée.
+  // Changée le 1er septembre, entre l'encaissement (août) et la facture
+  // (septembre), elle rangeait la pièce dans les deux mois — ou dans aucun.
+  for (const [avant, depuis] of [
+    ["exigibilite_calculee", "date_facture_alerte"],
+    ["date_facture_alerte", "exigibilite_calculee"],
+  ] as const)
+    it(`l'option changée entre l'encaissement et la facture (${avant} → ${depuis}) : un seul mois, celui de l'option au jour de la facture`, async () => {
+      const s = await monter();
+      await s.arreter(avant);
+      await s.arreter(depuis, FACTURE.du);
+      const id = await s.piece("facture_vente", "Prestation de maintenance");
+      await s.regler(id, null);
+      await s.valider(id);
+      const attendu = depuis === "exigibilite_calculee" ? AVANT : FACTURE;
+      for (const lire of [s.transmis, s.inscrits])
+        assert.deepEqual(
+          [dans(await lire(AVANT), id), dans(await lire(FACTURE), id)],
+          [attendu === AVANT, attendu === FACTURE],
+        );
+    });
+
+  it("l'historique du réglage ne se lit pas hors du dossier, pas même ses dates", async () => {
+    const s = await monter();
+    await s.arreter("date_facture_alerte");
+    const etranger = await creerCompte(`etranger-${marque}@essai.local`, mdp);
+    assert.ok(etranger);
+    await assert.rejects(
+      sousIdentite(etranger.id, (db) =>
+        db.query(`select * from app.historique_du_mois_de_tva($1, 'mois_tva.date')`, [s.pme]),
+      ),
+      /refus\.reglage_comptable\.droits/,
+    );
   });
 });

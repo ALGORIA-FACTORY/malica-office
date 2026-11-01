@@ -35,6 +35,8 @@ import {
   dansLaFenetre,
   hypotheseRetenue,
   leMoisDeTvaDuDossier,
+  periodesDeLaRequete,
+  reglesAuJour,
   type HypotheseDuMois,
   type MoisDeTvaDuDossier,
 } from "../scan/mois-de-tva.ts";
@@ -308,22 +310,28 @@ const AVEC_LEURS_EXTRAITS = "with choisies as (";
 
 /**
  * Les hypothèses du jour d'imputation d'une pièce (`app.jour_d_imputation_tva`,
- * une par exigibilité), et si l'une tombe dans la fenêtre ($2, $3) ; l'option
- * du dossier est $4. `args` : le dossier, la pièce, son jour, son arrivée.
+ * une par exigibilité), et si l'une tombe dans la fenêtre ($2, $3). L'option
+ * est celle de la période du dossier en vigueur au JOUR DE LA FACTURE (les
+ * débuts $4 et les options $5, `periodesDeLaRequete`), jamais celle de la
+ * fenêtre lue : chaque lecture range la pièce dans le même mois
+ * (`leMoisDeTvaDuDossier` dit pourquoi). `jour` : la date de la facture.
  */
-const HYPOTHESES_DU_MOIS = (args: string) => `
+const HYPOTHESES_DU_MOIS = (dossier: string, piece: string, jour: string, arrivee: string) => `
            select jsonb_agg(jsonb_build_object('exigibilite', h.exigibilite,
                                                'jour', h.jour::text,
                                                'reserve', h.reserve)) as hypotheses,
-                  bool_or(h.jour between $2::date and $3::date) as dans_la_fenetre
-             from app.jour_d_imputation_tva(${args}, $4) h`;
+                  bool_or(h.jour between $2::date and $3::date) as dans_la_fenetre,
+                  ${jour}::text as jour_de_la_facture
+             from app.jour_d_imputation_tva(${dossier}, ${piece}, ${jour}, ${arrivee},
+                    (select p.regle from unnest($4::date[], $5::text[]) p(du, regle)
+                      where p.du <= ${jour} order by p.du desc limit 1)) h`;
 
-/** Le jour retenu d'une ligne lue, par la nature que ses articles disent. */
+/** Le jour retenu d'une ligne lue, par la nature que ses articles disent au jour de la facture. */
 const jourDuMois = (r: Record<string, unknown>, mois: MoisDeTvaDuDossier) =>
   hypotheseRetenue(
     r["hypotheses"] as HypotheseDuMois[],
     (r["payload"] as { articles?: unknown } | null)?.articles,
-    mois.natures,
+    reglesAuJour(mois, r["jour_de_la_facture"] as string).natures,
   );
 const lusParLaPorte = (colonnes: string) => `),
        lues as (
@@ -1172,9 +1180,10 @@ export const office = {
     // dans la TVA du mois — son écriture d'origine est toujours « booked ».
     // On ne retient que les écritures vivantes : ni contre-passation, ni
     // écriture qu'une contre-passation comptabilisée annule.
-    // Le mois de TVA suit l'exigibilité (11 novembre 2026) : l'option du
-    // dossier et ses natures, lues une fois pour la fenêtre.
-    const mois = await leMoisDeTvaDuDossier(db, tenantId, to);
+    // Le mois de TVA suit l'exigibilité (11 novembre 2026) : l'historique de
+    // l'option du dossier et de ses natures, lu une fois pour la fenêtre, et
+    // appliqué à chaque pièce au jour de sa facture (13 novembre 2026).
+    const mois = await leMoisDeTvaDuDossier(db, tenantId);
     const { rows } = await db.query(
       // 3 novembre 2026 : la pièce pèse de ce qui compte dans la TVA
       // (app.extraits_de_la_tva), la même porte que la PME — forcée, les
@@ -1183,7 +1192,7 @@ export const office = {
       // recoupait pas le journal du cabinet. Les pièces se CHOISISSENT
       // d'abord, puis la porte les lit toutes en un appel.
       `${AVEC_LEURS_EXTRAITS}
-       select d.piece_id, d.payload, i.hypotheses
+       select d.piece_id, d.payload, i.hypotheses, i.jour_de_la_facture
          from (
            select distinct on (x.piece_id) x.piece_id, x.payload, e.tenant_id,
                   e.date_ecriture, e.booked_at::date as inscrite_le
@@ -1207,10 +1216,10 @@ export const office = {
          -- TVA devient exigible ; un mois déjà déclaré passe au jour de
          -- l'inscription. Une hypothèse par exigibilité : la nature se
          -- reconnaît ensuite, dans les articles.
-         cross join lateral (${HYPOTHESES_DU_MOIS("d.tenant_id, d.piece_id, d.date_ecriture, d.inscrite_le")}) i
+         cross join lateral (${HYPOTHESES_DU_MOIS("d.tenant_id", "d.piece_id", "d.date_ecriture", "d.inscrite_le")}) i
         where i.dans_la_fenetre
-       ${lusParLaPorte("c.piece_id, c.hypotheses")}`,
-      [tenantId, from, to, mois.regle],
+       ${lusParLaPorte("c.piece_id, c.hypotheses, c.jour_de_la_facture")}`,
+      [tenantId, from, to, ...periodesDeLaRequete(mois)],
     );
     // Une pièce en devise, au cours de son jugement (`en-devise-du-dossier.ts`).
     return extraitsEnDeviseDuDossier(
@@ -1273,8 +1282,9 @@ export const office = {
    * nomme à part.
    */
   async extraitsTransmis(db: Requete, tenantId: string, from: string, to: string) {
-    // Le mois de TVA suit l'exigibilité (11 novembre 2026), comme au cabinet.
-    const mois = await leMoisDeTvaDuDossier(db, tenantId, to);
+    // Le mois de TVA suit l'exigibilité (11 novembre 2026), comme au cabinet :
+    // les règles en vigueur au jour de la facture (13 novembre 2026).
+    const mois = await leMoisDeTvaDuDossier(db, tenantId);
     const { rows } = await db.query(
       // Forcée, la pièce pèse de ce que le CABINET a inscrit (1er novembre
       // 2026) : ses lignes, ses droits, ses totaux, la date et le sens de son
@@ -1282,7 +1292,7 @@ export const office = {
       // nature (3 novembre 2026). Une seule porte, la même que le cabinet
       // (bookedExtracts), appelée une fois pour toutes les pièces choisies.
       `${AVEC_LEURS_EXTRAITS}
-       select d.piece_id, d.payload, d.transmise_le, i.hypotheses
+       select d.piece_id, d.payload, d.transmise_le, i.hypotheses, i.jour_de_la_facture
          from (
            select distinct on (x.piece_id)
                   x.piece_id, x.payload, p.tenant_id, p.transmise_le,
@@ -1320,10 +1330,10 @@ export const office = {
          -- la pièce passe au jour de sa transmission. 11 novembre 2026 : ou
          -- le mois où la TVA devient exigible. Une seule règle pour les deux
          -- côtés (app.jour_d_imputation_tva).
-         cross join lateral (${HYPOTHESES_DU_MOIS("d.tenant_id, d.piece_id, d.jour, d.transmise_le::date")}) i
+         cross join lateral (${HYPOTHESES_DU_MOIS("d.tenant_id", "d.piece_id", "d.jour", "d.transmise_le::date")}) i
         where i.dans_la_fenetre
-       ${lusParLaPorte("c.piece_id, c.transmise_le, c.hypotheses")}`,
-      [tenantId, from, to, mois.regle],
+       ${lusParLaPorte("c.piece_id, c.transmise_le, c.hypotheses, c.jour_de_la_facture")}`,
+      [tenantId, from, to, ...periodesDeLaRequete(mois)],
     );
     // Une pièce en devise, au cours de son jugement (`en-devise-du-dossier.ts`).
     return extraitsEnDeviseDuDossier(

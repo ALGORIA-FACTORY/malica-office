@@ -100,6 +100,7 @@
     ],
     "parametrage.reglages_comptables": [
       "app.decisions_en_vigueur",
+      "app.historique_du_mois_de_tva",
       "app.reglages_comptables_arreter"
     ],
     "parametrage.regles_de_change": ["app.decisions_en_vigueur", "app.regle_de_change_arreter"],
