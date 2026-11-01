@@ -23,8 +23,7 @@
  * à-dire comme « montre-moi ce qui traîne ».
  */
 import { PLAFOND_ELEMENTS } from "@/lib/hors-ligne/file";
-
-const UN_IDENTIFIANT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { estUnIdentifiant } from "@/lib/identifiant";
 
 export interface LotDeCapture {
   /** Les pièces de ce passage, ou `undefined` : tout ce qui n'est pas lu. */
@@ -56,7 +55,7 @@ export function identifiantsDuLot(brut: string | undefined): string[] {
   const vus = new Set<string>();
   for (const morceau of brut.split(",")) {
     const jeton = morceau.trim().toLowerCase();
-    if (UN_IDENTIFIANT.test(jeton)) vus.add(jeton);
+    if (estUnIdentifiant(jeton)) vus.add(jeton);
     if (vus.size >= PLAFOND_ELEMENTS) break;
   }
   return [...vus];
