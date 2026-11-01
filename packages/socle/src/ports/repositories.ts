@@ -1114,6 +1114,54 @@ export interface PaiementDUnePiece {
   annulationAInscrire?: string | null;
 }
 
+/** Un code du référentiel et son libellé dans la langue de l'écran. */
+export interface CodeLibelle {
+  code: string;
+  libelle: string;
+}
+
+/**
+ * Un champ tel que le lecteur prouvé l'a lu (`capture.champs_lus`). La famille
+ * d'experts et le rôle ne sont pas recopiés dans la ligne : ils se lisent par
+ * le champ de la grille (`ref.grille_champs` → `ref.concepts`).
+ */
+export interface ChampObserve {
+  /** Le code du champ dans la grille. */
+  code: string;
+  /** Le libellé du champ dans la grille (le référentiel ne le traduit pas encore). */
+  libelle: string;
+  /** À qui appartient la notion sur la pièce ; nul : elle ne porte sur aucune partie. */
+  role: CodeLibelle | null;
+  /** La famille d'experts qui lit ce champ. */
+  expert: CodeLibelle | null;
+  statut: "prouve" | "conforme" | "signale" | "absent" | "deduit" | "coupe";
+  /** La valeur lue, telle que le moteur l'a inscrite ; nulle sans citation (R2). */
+  valeur: string | null;
+  /** La n-ième ligne d'un tableau, à partir de 1 ; nul hors tableau. */
+  rang: number | null;
+  /** L'instance d'un champ de groupe (le code du taux) ; nulle sinon. */
+  instance: string | null;
+  /** Les jetons qui portent la valeur, ou la case où elle devrait être. */
+  citations: unknown[];
+  /** Ce que l'expert dit du champ sans le refuser. */
+  avertissement: CodeLibelle | null;
+}
+
+/**
+ * La dernière lecture prouvée d'une pièce, en OBSERVATION : ce que le moteur a
+ * lu, sans rien changer à la lecture retenue.
+ */
+export interface LectureObservee {
+  lectureId: string;
+  issue: "prouvee" | "signalee" | "ambigue" | "aucune";
+  /** La grille lue : son code et son nom. */
+  grille: CodeLibelle | null;
+  /** L'heure de l'inscription, celle de la base. */
+  le: string;
+  /** Triés par rang (hors tableau d'abord), puis par parcelle et code du champ. */
+  champs: ChampObserve[];
+}
+
 /** Un motif d'annulation du referentiel, traduit. */
 export interface MotifDAnnulation {
   id: string;
@@ -1514,6 +1562,12 @@ export interface CaptureRepository {
   /** Supprimer un reçu, ou un justificatif détaché de ses règlements. Même refus. */
   supprimerPieceQuiAccompagne(pieceId: string): Promise<boolean>;
   dossier(pieceId: string): Promise<PieceDossier>;
+  /**
+   * Ce que le lecteur prouvé a lu sur cette pièce à sa dernière inscription,
+   * libellés dans la langue demandée ; `null` si rien n'est inscrit, ou si
+   * l'appelant ne peut pas lire la pièce (RLS).
+   */
+  lectureObservee(pieceId: string, locale: string): Promise<LectureObservee | null>;
   /**
    * Les octets d'une pièce seuls, pour son aperçu dans une liste — sans sa
    * lecture, ses citations ni ses jetons. `null` quand la ligne existe mais

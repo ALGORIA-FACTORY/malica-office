@@ -55,6 +55,9 @@ export const OPTIONS_APPLIQUEES: Readonly<Record<string, readonly string[]>> = {
   // Le mois de TVA par l'exigibilité, ou la date de facture avec son alerte
   // (`mois-de-tva.ts`, `app.jour_d_imputation_tva`).
   "mois_tva.date": ["exigibilite_calculee", "date_facture_alerte"],
+  // Le sudoku observe ou désigne (`malica/lecture/sudoku.ts`, `modeDuSudoku`).
+  // La relecture de nuit et son délai sont enregistrés, pas appliqués.
+  "lecture.sudoku": ["observe", "designe"],
 };
 
 /** Les réglages à un nombre que le Socle lit. */

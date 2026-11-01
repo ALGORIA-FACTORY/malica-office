@@ -43,6 +43,7 @@ import { dateDeLaPiece } from "../depots/dates.ts";
  * dise. C'est le motif récurrent de ce dépôt, et il se ferme par le lien.
  */
 import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../fabrique/recette.ts";
+import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 import { texteDuMontantCite, type PageToken } from "../malica/lecture/token-plan.ts";
 
 import {
@@ -279,6 +280,8 @@ export interface ReferentielDuJugement {
   doublonProbable: string | null;
   /** La règle de change et les cours applicables (`lireLeChange`). */
   change: ChangeDuJugement | null;
+  /** La forme de lecture du matricule fiscal du pack (`lireLesReglesDeLecture`). */
+  formatDuMatricule: ContexteControle["formatDuMatricule"];
 }
 
 /** La part de l'extraction que le jugement relit. */
@@ -598,6 +601,7 @@ export function jugerLaLecture(
     doublonProbable: r.doublonProbable,
     deviseDuDossier: r.deviseDuDossier,
     change: r.change,
+    formatDuMatricule: r.formatDuMatricule,
   };
   const controles = controlerPiece(aControler, contexte);
   const { verdict, motifs } = rendreVerdict(controles);
@@ -829,6 +833,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
   if (!pack) throw Object.assign(new PackUnavailable(org.jurisdiction, dateRef), { code: "22023" });
 
   const p = await lireParametres(db, pack, dateRef);
+  const { matricule: formatDuMatricule } = await lireLesReglesDeLecture(db, pack, dateRef);
 
   /*
    * Le texte imprimé de chaque champ cité, jetons réassemblés dans l'ordre.
@@ -931,13 +936,16 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
   // au moment où elle est lue (`app.doublon_probable`), quel que soit l'ordre
   // des lectures. Le jugement pose la même règle, avec cette clé-ci.
   const refs = payload.references ?? {};
-  const cle = cleDeDoublon({
-    emetteurIdentifiantFiscal: refs[NOM_MATRICULE_EMETTEUR] ?? null,
-    emetteurNom: payload.issuer || null,
-    numero: refs["numero"] ?? null,
-    date: datePiece,
-    ttc: payload.totals?.ttc ?? null,
-  });
+  const cle = cleDeDoublon(
+    {
+      emetteurIdentifiantFiscal: refs[NOM_MATRICULE_EMETTEUR] ?? null,
+      emetteurNom: payload.issuer || null,
+      numero: refs["numero"] ?? null,
+      date: datePiece,
+      ttc: payload.totals?.ttc ?? null,
+    },
+    formatDuMatricule,
+  );
 
   const [{ rows: types }, { rows: mentions }, { rows: semblables }, regles] = await Promise.all([
     db.query<{ code: string; porte_ecriture: boolean }>(
@@ -984,6 +992,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     mentionsObligatoires: mentions.map((m) => ({ code: m.code, libelle: m.label })),
     doublonProbable: semblables[0]?.id ?? null,
     change: null,
+    formatDuMatricule,
   };
   /*
    * La pièce se juge d'abord sans le change ; c'est le jugement qui décide de

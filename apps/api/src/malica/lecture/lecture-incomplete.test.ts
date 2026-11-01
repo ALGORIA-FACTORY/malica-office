@@ -11,6 +11,10 @@ import {
   LectureIncomplete,
 } from "@malica/socle/use-cases/propose-ecriture";
 import { deviseDEssai } from "../../scan/devise-d-essai.ts";
+import { REGLES_DE_LECTURE_D_ESSAI } from "../../scan/referentiel-d-essai.ts";
+
+/** La convention de date du pack d'essai, relevée en base. */
+const DATES = REGLES_DE_LECTURE_D_ESSAI.dates;
 
 /**
  * ============================================== LE DÉFAUT QUE CECI VERROUILLE
@@ -110,40 +114,40 @@ describe("une lecture incomplète", () => {
  */
 describe("la normalisation d'une date", () => {
   it("lit le format tunisien, jour d'abord", () => {
-    assert.equal(normalizeDate("02/09/2026"), "2026-09-02");
-    assert.equal(normalizeDate("2/9/26"), "2026-09-02");
-    assert.equal(normalizeDate("02.09.2026"), "2026-09-02");
+    assert.equal(normalizeDate("02/09/2026", DATES), "2026-09-02");
+    assert.equal(normalizeDate("2/9/26", DATES), "2026-09-02");
+    assert.equal(normalizeDate("02.09.2026", DATES), "2026-09-02");
   });
 
   it("lit aussi une date déjà en ISO", () => {
-    assert.equal(normalizeDate("2026-09-02"), "2026-09-02");
+    assert.equal(normalizeDate("2026-09-02", DATES), "2026-09-02");
   });
 
   it("refuse un mois qui n'existe pas", () => {
-    assert.equal(normalizeDate("45/13/2026"), null);
-    assert.equal(normalizeDate("2026-13-01"), null);
+    assert.equal(normalizeDate("45/13/2026", DATES), null);
+    assert.equal(normalizeDate("2026-13-01", DATES), null);
   });
 
   it("refuse un jour qui n'existe pas dans ce mois", () => {
-    assert.equal(normalizeDate("31/02/2026"), null);
-    assert.equal(normalizeDate("31/04/2026"), null);
+    assert.equal(normalizeDate("31/02/2026", DATES), null);
+    assert.equal(normalizeDate("31/04/2026", DATES), null);
   });
 
   it("accepte le 29 février d'une année bissextile, et refuse l'autre", () => {
-    assert.equal(normalizeDate("29/02/2024"), "2024-02-29");
-    assert.equal(normalizeDate("29/02/2026"), null);
+    assert.equal(normalizeDate("29/02/2024", DATES), "2024-02-29");
+    assert.equal(normalizeDate("29/02/2026", DATES), null);
   });
 
   it("ne devine pas une date américaine", () => {
     // « 12/25/2026 » serait le 25 décembre aux États-Unis. Basculer sur
     // mois/jour dès que le premier nombre dépasse 12 reviendrait à deviner la
     // provenance du document — et à dater une écriture au jugé.
-    assert.equal(normalizeDate("12/25/2026"), null);
+    assert.equal(normalizeDate("12/25/2026", DATES), null);
   });
 
   it("rend rien plutôt que n'importe quoi sur un texte quelconque", () => {
-    assert.equal(normalizeDate("Facture"), null);
-    assert.equal(normalizeDate(""), null);
+    assert.equal(normalizeDate("Facture", DATES), null);
+    assert.equal(normalizeDate("", DATES), null);
   });
 });
 

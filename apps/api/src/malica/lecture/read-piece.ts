@@ -32,6 +32,7 @@ import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
 
 import { resoudreFacture, type Contrainte } from "./montants.ts";
+import type { ReglesDeLecture } from "./regles-de-lecture.ts";
 import {
   lireMontantDuPlan,
   resolveFromTokenPlan,
@@ -85,13 +86,18 @@ export function buildExtractFromTokenPlan(params: {
    */
   matriculeDossier: string | null;
   /**
+   * Les règles de lecture du pack (`lireLesReglesDeLecture`) : la convention de
+   * date et la forme du matricule. Rien n'en est écrit dans la chaîne (R4).
+   */
+  regles: Pick<ReglesDeLecture, "dates" | "matricule">;
+  /**
    * Le lecteur qui a relevé le plan (`VisionRead.lecteur`). Il décide si les
    * montants en chiffres arabes orientaux se lisent (`litLesChiffresOrientaux`) ;
    * absent, ils ne se lisent pas.
    */
   lecteur?: Lecteur;
 }): BuiltRead {
-  const { tokens, selection, devises, deviseDuDossier, lecteur } = params;
+  const { tokens, selection, devises, deviseDuDossier, lecteur, regles } = params;
   const citations: FieldCitation[] = [];
   const flags: ReadFlag[] = [];
 
@@ -263,7 +269,8 @@ export function buildExtractFromTokenPlan(params: {
     zone?: string,
     uiField?: string,
   ): string | null => {
-    const r = resolveFromTokenPlan(tokens, field, ref ?? null, kind, zone ?? null, {
+    const genre = kind === "date" ? { date: regles.dates } : "text";
+    const r = resolveFromTokenPlan(tokens, field, ref ?? null, genre, zone ?? null, {
       zone: zone ?? null,
       // Le champ confié à l'UI est nommé explicitement : la relecture d'audit
       // sait quel libellé d'écran portait ce token surligné.
@@ -508,6 +515,7 @@ export function buildExtractFromTokenPlan(params: {
     matriculeEmetteur: references[NOM_MATRICULE_EMETTEUR] ?? null,
     matriculeClient: references[NOM_MATRICULE_CLIENT] ?? null,
     sensDuModele: selection.document_kind,
+    format: regles.matricule,
   });
   if (sens.signalement) {
     flags.push({

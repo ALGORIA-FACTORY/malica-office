@@ -52,6 +52,7 @@ import {
   NATURES_DE_VENTE_D_ESSAI,
   PARAMETRES_D_ESSAI,
   REGLAGES_D_ESSAI,
+  REGLES_DE_LECTURE_D_ESSAI,
   TAUX_D_ESSAI,
   TITRES_D_ESSAI,
   TYPES_D_ESSAI,
@@ -1340,6 +1341,7 @@ export function juger(cas: CasDeMesure) {
   const sens = cas.lecture.sensDit ?? cas.lecture.payload.document_kind;
   return jugerLaLecture(cas.lecture, {
     parametres: PARAMETRES_D_ESSAI,
+    formatDuMatricule: REGLES_DE_LECTURE_D_ESSAI.matricule,
     taux: new Map(TAUX_D_ESSAI.map((t) => [t.code, t.rate])),
     deviseDuDossier: cas.deviseDuDossier ?? DEVISE_DU_DOSSIER,
     droitsFixes: new Map(

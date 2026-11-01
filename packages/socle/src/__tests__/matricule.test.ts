@@ -20,6 +20,8 @@ import { describe, expect, it } from "vitest";
 
 import { memeMatricule, normaliserMatricule } from "../matricule.ts";
 
+import { FORMAT_D_ESSAI } from "./regles-de-lecture-d-essai.ts";
+
 const CLE = "1876543W";
 const COMPLET = "1876543W/A/M/000";
 
@@ -72,19 +74,22 @@ describe("les treize écritures d'un même matricule", () => {
 
   for (const [nom, ecriture] of VARIANTES) {
     it(`${nom} → ${CLE}`, () => {
-      expect(normaliserMatricule(ecriture).cle).toBe(CLE);
+      expect(normaliserMatricule(ecriture, FORMAT_D_ESSAI).cle).toBe(CLE);
     });
   }
 
   it("et elles sont toutes égales entre elles", () => {
     for (const [nom, a] of VARIANTES) {
-      expect(memeMatricule(a, COMPLET), `${nom} doit égaler la forme canonique`).toBe(true);
+      expect(
+        memeMatricule(a, COMPLET, FORMAT_D_ESSAI),
+        `${nom} doit égaler la forme canonique`,
+      ).toBe(true);
     }
   });
 
   it("la forme pleine est reconstituée quand les trois groupes sont là", () => {
     for (const [nom, ecriture] of VARIANTES) {
-      const lu = normaliserMatricule(ecriture);
+      const lu = normaliserMatricule(ecriture, FORMAT_D_ESSAI);
       if (lu.forme === "complete") {
         expect(lu.complet, nom).toBe(COMPLET);
       }
@@ -92,39 +97,43 @@ describe("les treize écritures d'un même matricule", () => {
   });
 
   it("la forme courte se dit courte, et se compare quand même", () => {
-    const lu = normaliserMatricule("1876543W");
+    const lu = normaliserMatricule("1876543W", FORMAT_D_ESSAI);
     expect(lu.forme).toBe("courte");
     expect(lu.complet).toBeNull();
-    expect(memeMatricule("1876543W", COMPLET)).toBe(true);
+    expect(memeMatricule("1876543W", COMPLET, FORMAT_D_ESSAI)).toBe(true);
   });
 
   it("une correction se dit : on ne répare pas un identifiant en silence", () => {
     // « l876543W » devient « 1876543W ». La personne doit pouvoir contester une
     // correction qu'on a faite sur son identifiant.
-    expect(normaliserMatricule("l876543W/A/M/000").corrections).toContain("I ou L lu pour 1");
-    expect(normaliserMatricule("١٨٧٦٥٤٣W/A/M/000").corrections).toContain(
+    expect(normaliserMatricule("l876543W/A/M/000", FORMAT_D_ESSAI).corrections).toContain(
+      "I ou L lu pour 1",
+    );
+    expect(normaliserMatricule("١٨٧٦٥٤٣W/A/M/000", FORMAT_D_ESSAI).corrections).toContain(
       "chiffres arabes convertis",
     );
-    expect(normaliserMatricule("MF : 1876543W/A/M/000").corrections).toContain("étiquette retirée");
+    expect(normaliserMatricule("MF : 1876543W/A/M/000", FORMAT_D_ESSAI).corrections).toContain(
+      "étiquette retirée",
+    );
   });
 });
 
 describe("la lettre de contrôle séparée par un séparateur — vraie facture CASA-ELECT", () => {
   it("se lit, et rend la clé 1589037M", () => {
-    const lu = normaliserMatricule(CASA_ELECT);
+    const lu = normaliserMatricule(CASA_ELECT, FORMAT_D_ESSAI);
     expect(lu.cle).toBe("1589037M");
     expect(lu.forme).toBe("complete");
     expect(lu.complet).toBe("1589037M/P/M/000");
   });
 
   it("égale la même entreprise écrite sans l'espace", () => {
-    expect(memeMatricule(CASA_ELECT, "1589037M/P/M/000")).toBe(true);
+    expect(memeMatricule(CASA_ELECT, "1589037M/P/M/000", FORMAT_D_ESSAI)).toBe(true);
   });
 
   it("et n'est PAS confondue avec le dossier", () => {
     // C'est le fournisseur. La déduction du sens doit donc dire « ce n'est pas
     // le dossier », et non « je ne sais pas lire ».
-    expect(memeMatricule(CASA_ELECT, "1876543W/A/M/000")).toBe(false);
+    expect(memeMatricule(CASA_ELECT, "1876543W/A/M/000", FORMAT_D_ESSAI)).toBe(false);
   });
 
   it("les quatre groupes ne sont pas pris pour trois", () => {
@@ -134,7 +143,7 @@ describe("la lettre de contrôle séparée par un séparateur — vraie facture 
      * en question au lieu d'être déduite. Lu comme QUATRE, le premier groupe
      * est la lettre de contrôle.
      */
-    const lu = normaliserMatricule(CASA_ELECT);
+    const lu = normaliserMatricule(CASA_ELECT, FORMAT_D_ESSAI);
     expect(lu.chiffres).toBe("1589037");
     expect(lu.cle).not.toBeNull();
   });
@@ -151,15 +160,15 @@ describe("ce que le normaliseur refuse de deviner", () => {
      * coïncider deux entreprises, et une coïncidence silencieuse est pire
      * qu'une question.
      */
-    const lu = normaliserMatricule("1856324/A/M/000");
+    const lu = normaliserMatricule("1856324/A/M/000", FORMAT_D_ESSAI);
     expect(lu.forme).toBe("partielle");
     expect(lu.cle).toBeNull();
     expect(lu.chiffres).toBe("1856324");
   });
 
   it("et une forme partielle n'égale rien, pas même elle-même", () => {
-    expect(memeMatricule("1856324/A/M/000", "1856324/A/M/000")).toBe(false);
-    expect(memeMatricule("1856324/A/M/000", "1856324K/A/M/000")).toBe(false);
+    expect(memeMatricule("1856324/A/M/000", "1856324/A/M/000", FORMAT_D_ESSAI)).toBe(false);
+    expect(memeMatricule("1856324/A/M/000", "1856324K/A/M/000", FORMAT_D_ESSAI)).toBe(false);
   });
 
   it("ne répare jamais un chiffre vu à la place de la lettre de contrôle", () => {
@@ -172,20 +181,20 @@ describe("ce que le normaliseur refuse de deviner", () => {
      * Aucune clé, donc aucune comparaison ne réussira : la pièce part en
      * question, et la personne lit le matricule sur sa facture.
      */
-    const lu = normaliserMatricule("18765430/A/M/000");
+    const lu = normaliserMatricule("18765430/A/M/000", FORMAT_D_ESSAI);
     expect(lu.cle).toBeNull();
     expect(lu.forme).toBe("illisible");
   });
 
   it("un texte qui n'est pas un matricule reste illisible", () => {
     for (const rien of ["", "   ", "ALGORIA FACTORY", "MF :", "FA/2026/00412"]) {
-      expect(normaliserMatricule(rien).forme, rien).toBe("illisible");
+      expect(normaliserMatricule(rien, FORMAT_D_ESSAI).forme, rien).toBe("illisible");
     }
   });
 
   it("ne rend jamais null ni undefined", () => {
-    expect(normaliserMatricule(null).forme).toBe("illisible");
-    expect(normaliserMatricule(undefined).forme).toBe("illisible");
+    expect(normaliserMatricule(null, FORMAT_D_ESSAI).forme).toBe("illisible");
+    expect(normaliserMatricule(undefined, FORMAT_D_ESSAI).forme).toBe("illisible");
   });
 
   it("ne juge PAS les séries réglementaires : c'est le pack qui le fait", () => {
@@ -198,20 +207,20 @@ describe("ce que le normaliseur refuse de deviner", () => {
      *
      * Ce module lit. Le pack juge.
      */
-    const lu = normaliserMatricule("1876543W/Z/Q/000");
+    const lu = normaliserMatricule("1876543W/Z/Q/000", FORMAT_D_ESSAI);
     expect(lu.forme).toBe("complete");
     expect(lu.cle).toBe(CLE);
   });
 
   it("deux matricules différents ne se confondent pas", () => {
-    expect(memeMatricule("1876543W/A/M/000", "1456987L/A/P/000")).toBe(false);
+    expect(memeMatricule("1876543W/A/M/000", "1456987L/A/P/000", FORMAT_D_ESSAI)).toBe(false);
     // Même sept chiffres, lettre de contrôle différente : deux entreprises.
-    expect(memeMatricule("1876543W/A/M/000", "1876543X/A/M/000")).toBe(false);
+    expect(memeMatricule("1876543W/A/M/000", "1876543X/A/M/000", FORMAT_D_ESSAI)).toBe(false);
   });
 
   it("l'établissement ne change pas l'entreprise", () => {
     // Le siège et sa succursale portent le même noyau : la pièce adressée à
     // l'un concerne bien le dossier.
-    expect(memeMatricule("1876543W/A/M/000", "1876543W/A/E/042")).toBe(true);
+    expect(memeMatricule("1876543W/A/M/000", "1876543W/A/E/042", FORMAT_D_ESSAI)).toBe(true);
   });
 });

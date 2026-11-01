@@ -26,16 +26,26 @@ import { enUnitesExactes } from "@malica/socle/somme-decimale";
 import { codeDeLecture } from "@malica/socle/issue-de-lecture";
 import { refusAvecValeurs } from "@malica/socle/refus-a-dire";
 import type {
+  ChampObserve,
   EtatDUnTravail,
   GesteDeRetour,
+  LectureObservee,
   MontantsDuCabinet,
   PieceDeMonEspace,
 } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
 import { analyserPiece, exposantDeLaDevise, lireLesDevises } from "../scan/analyse.ts";
+import { lireLesReglagesComptables } from "../scan/reglages-comptables.ts";
 import { effacerContenu } from "../stockage.ts";
+import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 
+import {
+  lireLeContexteDuSudoku,
+  modeDuSudoku,
+  type ChampsLusAInscrire,
+  type ContexteDuSudokuBranche,
+} from "../malica/lecture/sudoku.ts";
 import { dateDeLaPiece } from "./dates.ts";
 import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
 
@@ -646,7 +656,9 @@ export const capture = {
    */
   async contexteLecture(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
-      `select id, tenant_id, storage_path, source, content_type from pieces_v where id = $1`,
+      `select id, tenant_id, storage_path, source, content_type,
+              to_char(created_at, 'YYYY-MM-DD') as recue_le
+         from pieces_v where id = $1`,
       [pieceId],
     );
     const piece = (pieces as Record<string, unknown>[])[0];
@@ -710,10 +722,15 @@ export const capture = {
         storagePath: piece["storage_path"] as string,
         source: piece["source"] as string,
         contentType: (piece["content_type"] as string | null) ?? null,
+        // Le jour de sa réception : les règles du sudoku s'y lisent quand la
+        // pièce n'a pas de date lue (comme le jugement, `analyse.ts`).
+        recueLe: piece["recue_le"] as string,
       },
       jurisdiction,
       currency: org["currency"] as string,
       devises,
+      // Comment le pack écrit une date et un matricule, au jour de réception.
+      regles: await lireLesReglesDeLecture(db, packId, piece["recue_le"] as string),
       dossier: {
         raisonSociale: (org["name"] as string) ?? "",
         identifiantFiscal: (org["legal_id"] as string | null) ?? null,
@@ -737,6 +754,144 @@ export const capture = {
         nature: x["nature"] as string,
         identifiantFiscal: (x["identifiant_fiscal"] as string | null) ?? null,
       })),
+    };
+  },
+
+  /**
+   * La grille d'un type de document et les paramètres du pack, pour le sudoku,
+   * AU JOUR de la pièce ; et son mode (`lecture.sudoku` : observe ou désigne),
+   * résolu pour le dossier comme tout réglage (le dossier, son cabinet, le
+   * pack). Tout vient de la base : rien n'est écrit dans le code (R4).
+   */
+  async contexteSudoku(
+    db: Requete,
+    dossierId: string,
+    packId: string,
+    grilleCode: string,
+    deviseCode: string,
+    jour: string,
+  ): Promise<ContexteDuSudokuBranche> {
+    const [contexte, reglages] = await Promise.all([
+      lireLeContexteDuSudoku(db, packId, grilleCode, deviseCode, jour),
+      lireLesReglagesComptables(db, dossierId, packId, jour),
+    ]);
+    return { ...contexte, mode: modeDuSudoku(reglages) };
+  },
+
+  /**
+   * Ce que le sudoku a lu, champ par champ, prouvé ou non. Une lecture ne se
+   * réécrit pas (R7) : chaque passage ajoute ses lignes sous un même
+   * `lecture_id`, et l'inscription la plus récente fait foi, en entier.
+   */
+  async inscrireChampsLus(db: Requete, input: ChampsLusAInscrire): Promise<{ inscrits: number }> {
+    // Par la porte (`capture_champs_lus_inscrire`) : seules les portes écrivent.
+    const { rows } = await db.query<{ n: number }>(
+      `select public.capture_champs_lus_inscrire($1, $2, $3::date, $4, $5, $6::jsonb) as n`,
+      [
+        input.pieceId,
+        input.packId,
+        input.jour,
+        input.grille,
+        input.issue,
+        JSON.stringify(input.champs),
+      ],
+    );
+    return { inscrits: rows[0]?.n ?? 0 };
+  },
+
+  /**
+   * Ce que le lecteur prouvé a lu sur la pièce, pour qu'on le VOIE avant de
+   * l'allumer : la dernière inscription (un seul `lecture_id`), son issue et
+   * ses champs. Rien n'est écrit ; la lecture passe sous l'identité de
+   * l'appelant, et la politique de `capture.champs_lus` (celle de la pièce)
+   * décide de ce qu'il voit — un inconnu ne relit rien.
+   *
+   * Le rôle et la famille d'experts ne sont pas dans la ligne : ils se lisent
+   * par le champ de la grille et son concept (R12). Leurs libellés, et celui
+   * de l'avertissement, viennent de `ref.labels` dans la langue demandée, le
+   * français à défaut, le code en dernier. Le libellé du champ est celui de la
+   * grille : aucun espace de noms ne le traduit encore.
+   */
+  async lectureObservee(
+    db: Requete,
+    pieceId: string,
+    locale: string,
+  ): Promise<LectureObservee | null> {
+    const { rows } = await db.query<{
+      lecture_id: string;
+      issue: LectureObservee["issue"];
+      le: Date | string;
+      grille_code: string | null;
+      grille_nom: string | null;
+      champ_code: string | null;
+      champ_libelle: string | null;
+      role: string | null;
+      role_libelle: string | null;
+      expert: string | null;
+      expert_libelle: string | null;
+      statut: ChampObserve["statut"] | null;
+      valeur: string | null;
+      rang: number | null;
+      instance: string | null;
+      citations: unknown;
+      avertissement: string | null;
+      avertissement_libelle: string | null;
+    }>(
+      `with derniere as (
+         select l.lecture_id
+           from capture.champs_lus l
+          where l.piece_id = $1
+          order by l.created_at desc, l.lecture_id
+          limit 1)
+       select l.lecture_id, l.issue, l.created_at as le,
+              l.grille_code, g.nom as grille_nom,
+              l.champ_code, gc.libelle as champ_libelle,
+              gc.role, coalesce(rd.value, rf.value, gc.role) as role_libelle,
+              c.expert, coalesce(ed.value, ef.value, c.expert) as expert_libelle,
+              l.statut, l.valeur, l.rang, l.instance, l.citations,
+              l.avertissement,
+              coalesce(ad.value, af.value, l.avertissement) as avertissement_libelle
+         from capture.champs_lus l
+         join derniere d on d.lecture_id = l.lecture_id
+         left join ref.grilles g on g.id = l.grille_id
+         left join ref.grille_champs gc on gc.id = l.grille_champ_id
+         left join ref.concepts c on c.id = gc.concept_id
+         left join ref_labels_v rd on rd.ns = 'concept_role' and rd.key = gc.role and rd.locale = $2
+         left join ref_labels_v rf on rf.ns = 'concept_role' and rf.key = gc.role and rf.locale = 'fr'
+         left join ref_labels_v ed on ed.ns = 'concept_expert' and ed.key = c.expert and ed.locale = $2
+         left join ref_labels_v ef on ef.ns = 'concept_expert' and ef.key = c.expert and ef.locale = 'fr'
+         left join ref_labels_v ad
+           on ad.ns = 'avertissement_lecture' and ad.key = l.avertissement and ad.locale = $2
+         left join ref_labels_v af
+           on af.ns = 'avertissement_lecture' and af.key = l.avertissement and af.locale = 'fr'
+        where l.piece_id = $1
+        order by l.rang nulls first, gc.parcelle, gc.code, l.instance nulls first`,
+      [pieceId, locale],
+    );
+    const tete = rows[0];
+    if (!tete) return null;
+    const code = (c: string | null, libelle: string | null) =>
+      c === null ? null : { code: c, libelle: libelle ?? c };
+    return {
+      lectureId: tete.lecture_id,
+      issue: tete.issue,
+      grille: code(tete.grille_code, tete.grille_nom),
+      le: new Date(tete.le).toISOString(),
+      // La ligne de tentative (champ nul) ne porte que l'issue : elle n'est pas un champ.
+      champs: rows
+        .filter((r) => r.champ_code !== null && r.statut !== null)
+        .map((r) => ({
+          code: r.champ_code!,
+          libelle: r.champ_libelle ?? r.champ_code!,
+          role: code(r.role, r.role_libelle),
+          expert: code(r.expert, r.expert_libelle),
+          statut: r.statut!,
+          valeur: r.valeur,
+          rang: r.rang,
+          instance: r.instance,
+          citations: Array.isArray(r.citations) ? r.citations : [],
+          avertissement: code(r.avertissement, r.avertissement_libelle),
+        })),
     };
   },
 

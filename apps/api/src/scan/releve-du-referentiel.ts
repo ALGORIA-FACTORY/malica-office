@@ -15,6 +15,7 @@
  */
 import type { Requete } from "../db.ts";
 import { referentiel } from "../depots/referentiel.ts";
+import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 
 import { lireLesBiensImmobilisables, lireLesTitres, lireParametres } from "./analyse.ts";
 import { lireLeBaremeDesDroits } from "./bareme-du-timbre.ts";
@@ -115,6 +116,8 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
     // standard et les tranches des autres.
     baremeDesDroits: await lireLeBaremeDesDroits(db, pack.id, JOUR_DU_RELEVE),
     marques,
+    // Comment le pack écrit une date, un matricule et un montant en lettres.
+    reglesDeLecture: await lireLesReglesDeLecture(db, pack.id, JOUR_DU_RELEVE),
     devises: Object.fromEntries(
       devises.map((d) => [
         d.code,

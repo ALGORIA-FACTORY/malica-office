@@ -8,6 +8,10 @@ import {
   type PageToken,
 } from "./token-plan.ts";
 import { deviseDEssai } from "../../scan/devise-d-essai.ts";
+import { REGLES_DE_LECTURE_D_ESSAI } from "../../scan/referentiel-d-essai.ts";
+
+/** La convention de date du pack d'essai, relevée en base. */
+const DATES = REGLES_DE_LECTURE_D_ESSAI.dates;
 
 /** Le dinar : trois décimales. Aucune devise n'est supposée par défaut. */
 const DINAR = deviseDEssai(3);
@@ -21,9 +25,9 @@ const tokens: PageToken[] = [
 
 describe("normalizeDate", () => {
   it("lit les deux ordres usuels", () => {
-    assert.equal(normalizeDate("12/03/2026"), "2026-03-12");
-    assert.equal(normalizeDate("2026-03-12"), "2026-03-12");
-    assert.equal(normalizeDate("mars"), null);
+    assert.equal(normalizeDate("12/03/2026", DATES), "2026-03-12");
+    assert.equal(normalizeDate("2026-03-12", DATES), "2026-03-12");
+    assert.equal(normalizeDate("mars", DATES), null);
   });
 });
 
@@ -45,7 +49,7 @@ describe("normalizeDate", () => {
  */
 describe("normalizeDate — les mois en toutes lettres", () => {
   it("lit la date relevée sur la vraie facture du 4 octobre 2026", () => {
-    assert.equal(normalizeDate("1 septembre 2026"), "2026-09-01");
+    assert.equal(normalizeDate("1 septembre 2026", DATES), "2026-09-01");
   });
 
   it("lit les douze mois français", () => {
@@ -65,34 +69,34 @@ describe("normalizeDate — les mois en toutes lettres", () => {
     ];
     mois.forEach((nom, i) => {
       const attendu = `2026-${String(i + 1).padStart(2, "0")}-15`;
-      assert.equal(normalizeDate(`15 ${nom} 2026`), attendu, nom);
+      assert.equal(normalizeDate(`15 ${nom} 2026`, DATES), attendu, nom);
     });
   });
 
   it("tolère ce que le papier et l'œil font vraiment", () => {
     // « 1er », la casse, l'absence d'accent (une OCR les perd souvent), et le
     // « le » qui précède sans être un jeton de date.
-    assert.equal(normalizeDate("1er mars 2026"), "2026-03-01");
-    assert.equal(normalizeDate("15 MARS 2026"), "2026-03-15");
-    assert.equal(normalizeDate("15 fevrier 2026"), "2026-02-15");
-    assert.equal(normalizeDate("15 Aout 2026"), "2026-08-15");
-    assert.equal(normalizeDate("le 15 mars 2026"), "2026-03-15");
+    assert.equal(normalizeDate("1er mars 2026", DATES), "2026-03-01");
+    assert.equal(normalizeDate("15 MARS 2026", DATES), "2026-03-15");
+    assert.equal(normalizeDate("15 fevrier 2026", DATES), "2026-02-15");
+    assert.equal(normalizeDate("15 Aout 2026", DATES), "2026-08-15");
+    assert.equal(normalizeDate("le 15 mars 2026", DATES), "2026-03-15");
   });
 
   it("lit les mois arabes — l'arabe fait foi", () => {
-    assert.equal(normalizeDate("15 سبتمبر 2026"), "2026-09-15");
-    assert.equal(normalizeDate("1 جانفي 2026"), "2026-01-01");
+    assert.equal(normalizeDate("15 سبتمبر 2026", DATES), "2026-09-15");
+    assert.equal(normalizeDate("1 جانفي 2026", DATES), "2026-01-01");
     // La Tunisie emploie « جانفي »/« فيفري »/« أوت » là où le Machrek emploie
     // « يناير »/« فبراير »/« أغسطس ». Les deux séries valent.
-    assert.equal(normalizeDate("1 يناير 2026"), "2026-01-01");
-    assert.equal(normalizeDate("15 أغسطس 2026"), "2026-08-15");
+    assert.equal(normalizeDate("1 يناير 2026", DATES), "2026-01-01");
+    assert.equal(normalizeDate("15 أغسطس 2026", DATES), "2026-08-15");
   });
 
   it("lit les chiffres arabes, en lettres comme en chiffres", () => {
-    assert.equal(normalizeDate("١٥ سبتمبر ٢٠٢٦"), "2026-09-15");
-    assert.equal(normalizeDate("٢٠٢٦-٠٣-١٢"), "2026-03-12");
+    assert.equal(normalizeDate("١٥ سبتمبر ٢٠٢٦", DATES), "2026-09-15");
+    assert.equal(normalizeDate("٢٠٢٦-٠٣-١٢", DATES), "2026-03-12");
     // Les chiffres persans (U+06F0) voisinent les arabes dans les polices.
-    assert.equal(normalizeDate("۱۵ سبتمبر ۲۰۲۶"), "2026-09-15");
+    assert.equal(normalizeDate("۱۵ سبتمبر ۲۰۲۶", DATES), "2026-09-15");
   });
 
   /*
@@ -103,25 +107,25 @@ describe("normalizeDate — les mois en toutes lettres", () => {
    * Un œil rend la même chose quand le papier aère ses séparateurs.
    */
   it("lit une date dont les séparateurs sont entourés d'espaces", () => {
-    assert.equal(normalizeDate("٢٠٢٦ / ١٠ / ٠٧"), "2026-10-07");
-    assert.equal(normalizeDate("٠٧ / ١٠ / ٢٠٢٦"), "2026-10-07");
-    assert.equal(normalizeDate("07 - 10 - 2026"), "2026-10-07");
+    assert.equal(normalizeDate("٢٠٢٦ / ١٠ / ٠٧", DATES), "2026-10-07");
+    assert.equal(normalizeDate("٠٧ / ١٠ / ٢٠٢٦", DATES), "2026-10-07");
+    assert.equal(normalizeDate("07 - 10 - 2026", DATES), "2026-10-07");
     // L'espace seul ne sépare pas une date : « 07 10 2026 » reste absente.
-    assert.equal(normalizeDate("07 10 2026"), null);
+    assert.equal(normalizeDate("07 10 2026", DATES), null);
   });
 
   it("ne devine pas pour autant", () => {
     // Un mois sans jour ni année n'est pas une date — déjà verrouillé plus
     // haut, redit ici parce que c'est la limite de ce qu'on vient d'ouvrir.
-    assert.equal(normalizeDate("septembre"), null);
-    assert.equal(normalizeDate("septembre 2026"), null);
+    assert.equal(normalizeDate("septembre", DATES), null);
+    assert.equal(normalizeDate("septembre 2026", DATES), null);
     // Un jour qui n'existe pas reste absent, comme pour les dates chiffrées.
-    assert.equal(normalizeDate("31 février 2026"), null);
+    assert.equal(normalizeDate("31 février 2026", DATES), null);
     // Un mot qui n'est pas un mois ne devient pas un mois.
-    assert.equal(normalizeDate("15 prairial 2026"), null);
+    assert.equal(normalizeDate("15 prairial 2026", DATES), null);
     // Une année à deux chiffres avec un mois en lettres est trop ambiguë pour
     // une écriture comptable : on la refuse plutôt que de choisir un siècle.
-    assert.equal(normalizeDate("15 mars 26"), null);
+    assert.equal(normalizeDate("15 mars 26", DATES), null);
   });
 });
 
@@ -173,7 +177,7 @@ describe("la citation d'une plage de jetons", () => {
       enLettres,
       "document_date",
       { page: 1, ordinal: 0, ordinalEnd: 2 },
-      "date",
+      { date: DATES },
     );
     assert.equal(r.value, "2026-09-01");
     assert.equal(r.flag, null);

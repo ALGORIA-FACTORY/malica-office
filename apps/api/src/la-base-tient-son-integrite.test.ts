@@ -338,6 +338,24 @@ describe("l'intégrité de la base", { skip: !BASE_CONFIGUREE }, () => {
     assert.deepEqual(constats, []);
   });
 
+  it("le dictionnaire des concepts tient : chaque champ lisible par son expert, chaque concept lu", async () => {
+    /*
+     * Des déclencheurs différés gardent chaque écriture (20261115100000) ; ce
+     * relevé relit la base entière par la même fonction, et ajoute ce qu'un
+     * déclencheur de ligne ne voit pas : un concept que plus aucun champ ne lit.
+     */
+    const rows = await q<{ constat: string }>(`
+      select champ || ' : ' || ecart as constat from ref.champs_hors_dictionnaire()
+      union all
+      select 'concept sans champ : ' || k.code from ref.concepts k
+       where not exists (select 1 from ref.grille_champs c where c.concept_id = k.id)
+      order by 1`);
+    assert.deepEqual(
+      rows.map((r) => r.constat),
+      [],
+    );
+  });
+
   it("chaque clé `refus.*` levée par une fonction a son message en fr, en et ar", async () => {
     const rows = await q<{ cle: string; fn: string }>(`
       with f as (${NOS_FONCTIONS})

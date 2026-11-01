@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 
 import { Aide } from "@/components/malica/aide";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
+import { CeQueLeLecteurALu } from "@/components/malica/ce-que-le-lecteur-a-lu";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { ControlesComptables } from "@/components/malica/controles-comptables";
@@ -1050,6 +1051,8 @@ function CabinetReview() {
                 onRetournee={setRetourEnvoye}
               />
             )}
+
+            <CeQueLeLecteurALu pieceId={pieceId} />
 
             <SectionTitle>{t("cab.review.audit")}</SectionTitle>
             {(audit.data ?? []).length === 0 ? (

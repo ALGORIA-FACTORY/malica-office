@@ -22,17 +22,28 @@ import { confianceParChamp } from "../../scan/confiance.ts";
 
 import { creerDesignateurDeRecette } from "./par-recette.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
+import type { ReglesDeLecture } from "./regles-de-lecture.ts";
 import { secondLecteurDisponible } from "./paddle.ts";
+import { creerLeSudoku } from "./sudoku.ts";
 import { runVisionRead, type VisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
 
 interface ContexteLecture {
-  piece: { id: string; tenantId: string; source: string; contentType: string | null };
+  piece: {
+    id: string;
+    tenantId: string;
+    source: string;
+    contentType: string | null;
+    /** Le jour de réception (`AAAA-MM-JJ`). */
+    recueLe: string;
+  };
   packId: string;
   /** La devise du dossier. */
   currency: string;
   /** Toutes les devises du référentiel, pour lire les montants de la pièce. */
   devises: DeviseLue[];
+  /** Les règles de lecture du pack au jour de réception (`lireLesReglesDeLecture`). */
+  regles: ReglesDeLecture;
   dossier: { raisonSociale: string; identifiantFiscal: string | null };
   taxCodes: Array<{ code: string; label: string; rate: number }>;
   chargeCodes: Array<{ code: string; label: string }>;
@@ -218,11 +229,39 @@ export async function readPieceFlow(
       // Le matricule de la fiche : c'est lui qui DÉDUIT le sens de la pièce, au
       // lieu de croire ce que le modèle en dit.
       matriculeDossier: contexte.dossier.identifiantFiscal,
+      // La convention de date et la forme du matricule : celles du pack (R4).
+      regles: contexte.regles,
       // Le lecteur décide des chiffres orientaux (`litLesChiffresOrientaux`).
       lecteur: lecture.lecteur,
     });
 
-  const premiereLecture = await lecteurs.lire(parametres);
+  /*
+   * ================================================== LE SUDOKU, APRÈS LA DÉSIGNATION
+   *
+   * Chaque lecture — la première comme le rattrapage — passe par le sudoku.
+   * Par défaut il OBSERVE : il inscrit ce qu'il a lu, et la lecture de la
+   * chaîne ressort à l'identique. Branché par le réglage du dossier
+   * (`lecture.sudoku` = `designe`, « Réglages comptabilité »), la désignation
+   * PROUVÉE remplace celle de la chaîne pour les totaux, les lignes de TVA et
+   * les droits. Il rend un `VisionRead` : tout l'aval — relecture dans le
+   * plan, contrôles, persistance — est celui d'avant. Voir `sudoku.ts`.
+   */
+  const sudoku = creerLeSudoku(api, {
+    pieceId,
+    dossierId: contexte.piece.tenantId,
+    packId: contexte.packId,
+    recueLe: contexte.piece.recueLe,
+    dates: contexte.regles.dates,
+    devise: contexte.devises.find((d) => d.code === contexte.currency),
+    dossier: {
+      matricule: contexte.dossier.identifiantFiscal,
+      raisonSociale: contexte.dossier.raisonSociale,
+    },
+    tiers: contexte.tiers,
+  });
+  const lire = async (p: Parameters<Lecteurs["lire"]>[0]) => sudoku.lire(await lecteurs.lire(p));
+
+  const premiereLecture = await lire(parametres);
   let read = premiereLecture;
   let built = construire(read);
 
@@ -256,7 +295,7 @@ export async function readPieceFlow(
      * du 24 octobre 2026). La premiere lecture existe : c'est elle qui sort.
      */
     try {
-      const secondeLecture = await lecteurs.lire({ ...parametres, ...autre });
+      const secondeLecture = await lire({ ...parametres, ...autre });
       const secondBuilt = construire(secondeLecture);
       if (qualiteDeLecture(secondBuilt) > qualiteDeLecture(built)) {
         read = secondeLecture;
@@ -317,6 +356,10 @@ export async function readPieceFlow(
       ),
     },
   ]);
+
+  // Les champs du sudoku, pour la lecture RETENUE seulement, et une fois son
+  // plan de jetons persisté : leurs citations pointent dans ce plan-là.
+  await sudoku.inscrire(read);
 
   /*
    * Le journal des exécutions : une ligne par organe, chacune à son tarif.

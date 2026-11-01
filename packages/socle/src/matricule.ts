@@ -25,20 +25,27 @@
  * de la fiche entreprise. Les recopier ici en ferait deux sources de vérité,
  * et R4 interdit la constante réglementaire dans le code.
  *
- * Ce module ne juge donc que la FORME : y a-t-il un noyau de sept chiffres et
- * une lettre de contrôle, et les trois groupes suivent-ils ?
+ * Ce module ne juge donc que la FORME : y a-t-il un noyau de chiffres et une
+ * lettre de contrôle, et les groupes que le pack décrit suivent-ils ?
  *
  * Sur une pièce lue, un matricule incomplet doit produire une QUESTION, jamais
  * un rejet de la pièce : c'est pour cela que `forme` distingue « partielle »
  * de « illisible » au lieu de rendre un simple booléen.
  *
- * ==================================================== OÙ CECI DEVRAIT VIVRE
+ * ============================================= CE QU'IL REÇOIT DE LA BASE (R4)
  *
- * Les étiquettes et les confusions d'OCR sont des dictionnaires de lecture —
- * la quatrième couche de la base de correction, gouvernée et versionnée. Elles
- * sont ici en attendant cette table, comme les noms de mois dans
- * `normalizeDate`. Ce n'est pas une constante réglementaire ; c'est du
- * vocabulaire, et il devra descendre en base avec le reste de la couche 4.
+ * La FORME d'un matricule — un noyau de sept chiffres, une lettre de contrôle,
+ * puis « lettre / lettre / trois chiffres » — est tunisienne, et les étiquettes
+ * qui le précèdent (« MF », « المعرف الجبائي ») aussi. Elles vivent dans
+ * `ref.identifiant_formats` (`noyau_chiffres`, `groupes`, `separateur`,
+ * `etiquettes`), datées par pack, et ce module les REÇOIT (`FormatDuMatricule`) :
+ * le Socle reste pur (R1), et un autre pack apporte une autre forme sans fork
+ * (R5). La règle de la lettre de contrôle (`ref.identifiant_controles`) arrive
+ * avec elle ; la DGI ne la publie pas : elle avertit, elle ne bloque jamais
+ * (décision du 1er novembre 2026).
+ *
+ * Les confusions d'OCR (« l » pour « 1 ») restent ici : elles tiennent à l'œil,
+ * pas à la juridiction.
  */
 
 import { enChiffresLatins } from "./chiffres.ts";
@@ -74,7 +81,32 @@ export interface MatriculeLu {
   corrections: string[];
 }
 
-/** Les chiffres arabes et persans, ramenés aux latins par simple décalage. */
+/**
+ * La forme de lecture d'un matricule, telle que le pack la porte
+ * (`ref.identifiant_formats`) : rien de tunisien n'est écrit ici.
+ */
+export interface FormatDuMatricule {
+  /** Le nombre de chiffres du noyau. */
+  readonly noyau: number;
+  /** Les groupes qui suivent la lettre de contrôle : une lettre, ou n chiffres. */
+  readonly groupes: readonly ("lettre" | number)[];
+  /** Le séparateur de la forme pleine reconstituée. */
+  readonly separateur: string;
+  /** Les étiquettes qui précèdent le matricule (expressions régulières, sans casse). */
+  readonly etiquettes: readonly string[];
+  /** La règle de la lettre de contrôle (`ref.identifiant_controles`), s'il y en a une. */
+  readonly controle: ControleDeLaLettre | null;
+}
+
+/** La lettre attendue : `alphabet[(Σ poids[i] × chiffre[i]) mod modulo]`. */
+export interface ControleDeLaLettre {
+  readonly poids: readonly number[];
+  readonly modulo: number;
+  readonly alphabet: string;
+  /** `avertit` : une lettre discordante se dit, rien n'est refusé. */
+  readonly effet: "avertit" | "bloque";
+}
+
 /**
  * Les diacritiques arabes, retirés avant de chercher une étiquette.
  *
@@ -86,28 +118,6 @@ export interface MatriculeLu {
 function sansTashkeel(s: string): string {
   return s.replace(/[ؐ-ًؚ-ٰٟ]/g, "");
 }
-
-/**
- * Les étiquettes qui précèdent un matricule, en français et en arabe.
- *
- * Retirées avant toute lecture : « MF » contient un M, et « Matricule » un
- * « l » que la réparation de confusion prendrait pour un 1.
- */
-const ETIQUETTES: readonly RegExp[] = [
-  /\bmatricule\s*fiscal(e)?\b/gi,
-  /\bmatricule\b/gi,
-  /\bidentifiant\s*fiscal\b/gi,
-  /\bid\s*fiscal\b/gi,
-  /\bm\s*\.?\s*f\s*\.?\b/gi,
-  /\bn\s*[°º]?\s*fiscal\b/gi,
-  /\bcode\s*tva\b/gi,
-  // Arabe : « le identifiant fiscal », et l'abrégé. La chadda de « المعرّف » a
-  // déjà été retirée par `sansTashkeel` : la mettre dans une classe mélangerait
-  // une lettre et une marque combinante, ce qui ne veut rien dire.
-  /المعرف\s*ال?جبائ[يى]/g,
-  /رقم\s*ال?جبائ[يى]/g,
-  /م\s*\.?\s*ج\s*\.?/g,
-];
 
 /**
  * Les confusions de l'œil, appliquées AUX POSITIONS DE CHIFFRES seulement.
@@ -147,21 +157,19 @@ const RIEN: MatriculeLu = {
   corrections: [],
 };
 
-export function normaliserMatricule(brut: string | null | undefined): MatriculeLu {
-  if (brut === null || brut === undefined) return RIEN;
+/** Les motifs d'un format, compilés une fois. */
+interface Motifs {
+  readonly etiquettes: readonly RegExp[];
+  readonly avecLettre: RegExp;
+  readonly sansLettre: RegExp;
+  readonly courte: RegExp;
+  readonly noyau: RegExp;
+}
+const COMPILES = new WeakMap<FormatDuMatricule, Motifs>();
 
-  let texte = sansTashkeel(enChiffresLatins(String(brut)));
-  const corrections: string[] = [];
-  if (enChiffresLatins(String(brut)) !== String(brut))
-    corrections.push("chiffres arabes convertis");
-
-  for (const e of ETIQUETTES) {
-    if (e.test(texte)) {
-      texte = texte.replace(e, " ");
-      if (!corrections.includes("étiquette retirée")) corrections.push("étiquette retirée");
-    }
-  }
-
+function motifsDe(format: FormatDuMatricule): Motifs {
+  const deja = COMPILES.get(format);
+  if (deja) return deja;
   /*
    * On raisonne sur la forme ÉCRITE, séparateurs compris.
    *
@@ -207,21 +215,49 @@ export function normaliserMatricule(brut: string | null | undefined): MatriculeL
    * « vente » sur un achat, et le contrôle du destinataire a rejeté une facture
    * d'achat parfaitement normale.
    */
-  const avecLettre = new RegExp(
-    `${DEBUT}(${C}{7})(?:${SEP}|\\s*)([A-Za-z])${SEP}([A-Za-z])${SEP}([A-Za-z])${SEP}(\\d{3})`,
-  );
-  const sansLettre = new RegExp(`${DEBUT}(${C}{7})${SEP}([A-Za-z])${SEP}([A-Za-z])${SEP}(\\d{3})`);
-  const courte = new RegExp(`${DEBUT}(${C}{7})\\s*([A-Za-z])(?![0-9A-Za-z])`);
+  const noyau = `(${C}{${format.noyau}})`;
+  const groupes = format.groupes
+    .map((g) => `${SEP}(${g === "lettre" ? "[A-Za-z]" : `\\d{${g}}`})`)
+    .join("");
+  const motifs: Motifs = {
+    etiquettes: format.etiquettes.map((e) => new RegExp(e, "gi")),
+    avecLettre: new RegExp(`${DEBUT}${noyau}(?:${SEP}|\\s*)([A-Za-z])${groupes}`),
+    sansLettre: new RegExp(`${DEBUT}${noyau}${groupes}`),
+    courte: new RegExp(`${DEBUT}${noyau}\\s*([A-Za-z])(?![0-9A-Za-z])`),
+    noyau: new RegExp(`^\\d{${format.noyau}}$`),
+  };
+  COMPILES.set(format, motifs);
+  return motifs;
+}
+
+export function normaliserMatricule(
+  brut: string | null | undefined,
+  format: FormatDuMatricule,
+): MatriculeLu {
+  if (brut === null || brut === undefined) return RIEN;
+  const { etiquettes, avecLettre, sansLettre, courte, noyau } = motifsDe(format);
+
+  let texte = sansTashkeel(enChiffresLatins(String(brut)));
+  const corrections: string[] = [];
+  if (enChiffresLatins(String(brut)) !== String(brut))
+    corrections.push("chiffres arabes convertis");
+
+  for (const e of etiquettes) {
+    if (e.test(texte)) {
+      texte = texte.replace(e, " ");
+      if (!corrections.includes("étiquette retirée")) corrections.push("étiquette retirée");
+    }
+  }
 
   const pleine = texte.match(avecLettre);
   if (pleine) {
     const { chiffres, corrections: reparees } = reparerLesChiffres(pleine[1]!.toUpperCase());
-    if (/^\d{7}$/.test(chiffres)) {
+    if (noyau.test(chiffres)) {
       const cle = `${chiffres}${pleine[2]!.toUpperCase()}`;
       return {
         cle,
         chiffres,
-        complet: `${cle}/${pleine[3]!.toUpperCase()}/${pleine[4]!.toUpperCase()}/${pleine[5]}`,
+        complet: [cle, ...pleine.slice(3).map((g) => g.toUpperCase())].join(format.separateur),
         forme: "complete",
         corrections: [...corrections, ...reparees],
       };
@@ -237,7 +273,7 @@ export function normaliserMatricule(brut: string | null | undefined): MatriculeL
   const sans = texte.match(sansLettre);
   if (sans) {
     const { chiffres, corrections: reparees } = reparerLesChiffres(sans[1]!.toUpperCase());
-    if (/^\d{7}$/.test(chiffres)) {
+    if (noyau.test(chiffres)) {
       return {
         cle: null,
         chiffres,
@@ -251,7 +287,7 @@ export function normaliserMatricule(brut: string | null | undefined): MatriculeL
   const court = texte.match(courte);
   if (court) {
     const { chiffres, corrections: reparees } = reparerLesChiffres(court[1]!.toUpperCase());
-    if (/^\d{7}$/.test(chiffres)) {
+    if (noyau.test(chiffres)) {
       return {
         cle: `${chiffres}${court[2]!.toUpperCase()}`,
         chiffres,
@@ -272,8 +308,31 @@ export function normaliserMatricule(brut: string | null | undefined): MatriculeL
  * qui tomberait sur les sept chiffres seuls confondrait deux entreprises, et
  * c'est exactement le genre de coïncidence qui ne se voit jamais.
  */
-export function memeMatricule(a: string | null | undefined, b: string | null | undefined): boolean {
-  const ca = normaliserMatricule(a).cle;
-  const cb = normaliserMatricule(b).cle;
+export function memeMatricule(
+  a: string | null | undefined,
+  b: string | null | undefined,
+  format: FormatDuMatricule,
+): boolean {
+  const ca = normaliserMatricule(a, format).cle;
+  const cb = normaliserMatricule(b, format).cle;
   return ca !== null && ca === cb;
+}
+
+/**
+ * La lettre de contrôle d'un matricule lu tient-elle sa règle ?
+ *
+ * `null` quand il n'y a rien à dire : pas de règle au pack, ou pas de lettre lue
+ * (un matricule partiel est déjà une question). `discordante` n'est un refus que
+ * si le pack le dit (`effet`) ; tant que la règle n'est pas publiée, elle avertit.
+ */
+export function lettreDeControle(
+  lu: MatriculeLu,
+  format: FormatDuMatricule,
+): "conforme" | "discordante" | null {
+  const regle = format.controle;
+  if (!regle || lu.cle === null || lu.chiffres === null) return null;
+  if (regle.poids.length !== lu.chiffres.length) return null;
+  const somme = [...lu.chiffres].reduce((s, c, i) => s + Number(c) * regle.poids[i]!, 0);
+  const attendue = regle.alphabet[somme % regle.modulo];
+  return attendue === lu.cle.slice(-1) ? "conforme" : "discordante";
 }

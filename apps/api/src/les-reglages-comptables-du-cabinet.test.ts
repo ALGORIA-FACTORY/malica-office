@@ -153,10 +153,23 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
     }
   });
 
-  it("le pack livre les onze sujets, aux choix du CEO, tous à confirmer", async () => {
+  it("le pack livre les onze sujets du CEO, tous à confirmer, et celui de la lecture", async () => {
     const s = await monter();
     const r = await s.lire(s.expert, null);
-    assert.equal(r.sujets.length, 11);
+    assert.equal(r.sujets.length, 12);
+    // La lecture prouvée (15 novembre 2026) : un réglage de Malica, pas une règle
+    // fiscale. Le sudoku observe ; la relecture de nuit est coupée, à 12 heures.
+    assert.deepEqual(
+      ["lecture.sudoku", "lecture.relecture_nuit", "lecture.relecture_delai_heures"].map((code) => [
+        valeur(r, code)?.valeur,
+        valeur(r, code)?.origine,
+      ]),
+      [
+        ["observe", "pack"],
+        ["coupee", "pack"],
+        ["12", "pack"],
+      ],
+    );
     for (const [code, attendu] of Object.entries(CHOIX_DU_CEO)) {
       const v = valeur(r, code);
       assert.deepEqual([v?.valeur, v?.origine, v?.decideLe], [attendu, "pack", null], code);
@@ -189,8 +202,22 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
   it("ce qui n'est pas appliqué se dit, jusque sur l'option ; ce qui l'est a son implémentation", async () => {
     const s = await monter();
     const r = await s.lire(s.expert, null);
-    for (const code of ["prorata.methode", "non_residents.retenue"])
+    for (const code of [
+      "prorata.methode",
+      "non_residents.retenue",
+      "lecture.relecture_nuit",
+      "lecture.relecture_delai_heures",
+    ])
       assert.equal(valeur(r, code)?.appliquee, false, code);
+    // Le mode du sudoku s'applique (`modeDuSudoku`) : observe ou désigne.
+    assert.deepEqual(
+      valeur(r, "lecture.sudoku")!.options!.map((o) => [o.code, o.appliquee]),
+      [
+        ["observe", true],
+        ["designe", true],
+      ],
+    );
+    assert.match(r.sujets.find((x) => x.code === "lecture")!.incertain ?? "", /Non appliqués/);
     // Appliqués depuis le 1er novembre 2026 : le compte de vente par nature,
     // l'avoir lié à sa facture — mais pas l'avoir « libre », qui le dit ; et
     // depuis le 11 novembre 2026, le mois de TVA par l'exigibilité.

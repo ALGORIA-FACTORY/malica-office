@@ -9,7 +9,12 @@
  */
 import type { DeviseLue } from "@malica/socle/montant-imprime";
 
-import { DEVISES_D_ESSAI, DEVISE_D_ESSAI, MARQUES_D_ESSAI } from "./referentiel-d-essai.ts";
+import {
+  DEVISES_D_ESSAI,
+  DEVISE_D_ESSAI,
+  MARQUES_D_ESSAI,
+  REGLES_DE_LECTURE_D_ESSAI,
+} from "./referentiel-d-essai.ts";
 
 /** Toutes les devises du référentiel d'essai, comme `lireLesDevises`. */
 export const DEVISES_LUES_D_ESSAI: readonly DeviseLue[] = Object.entries(DEVISES_D_ESSAI).map(
@@ -42,4 +47,6 @@ export const deviseDEssai = (
 export const devisesDEssai = (decimales: number) => ({
   devises: DEVISES_LUES_D_ESSAI.map((d) => (d.code === DEVISE_D_ESSAI ? { ...d, decimales } : d)),
   deviseDuDossier: DEVISE_D_ESSAI,
+  // La convention de date et la forme du matricule du pack d'essai.
+  regles: REGLES_DE_LECTURE_D_ESSAI,
 });

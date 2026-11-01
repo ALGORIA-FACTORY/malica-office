@@ -196,6 +196,30 @@ describe("recoller les milliers — les nombres longs, qui ont plus de deux morc
     });
   };
 
+  it("réunit un montant négatif : « -1 » + « 560,000 » (un avoir)", () => {
+    const r = recollerLesMilliers(suite(["-1", "560,000"]));
+    assert.deepEqual(
+      r.map((t) => t.text),
+      ["-1 560,000"],
+    );
+  });
+
+  it("réunit un montant à devise collée : « 1 » + « 980,000DT »", () => {
+    const r = recollerLesMilliers(suite(["1", "980,000DT"]));
+    assert.deepEqual(
+      r.map((t) => t.text),
+      ["1 980,000DT"],
+    );
+  });
+
+  it("mais pas un mot quelconque après les décimales s'il dépasse cinq lettres", () => {
+    const r = recollerLesMilliers(suite(["1", "980,000dinars"]));
+    assert.deepEqual(
+      r.map((t) => t.text),
+      ["1", "980,000dinars"],
+    );
+  });
+
   it("réunit un million : « 1 » + « 234 » + « 560,000 »", () => {
     const r = recollerLesMilliers(suite(["1", "234", "560,000"]));
     assert.equal(r.length, 1);

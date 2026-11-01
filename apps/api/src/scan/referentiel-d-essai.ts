@@ -85,3 +85,6 @@ export const REGLAGES_D_ESSAI: ReadonlyMap<string, string> = new Map(
 
 /** Les droits qu'un achat incorpore au coût, au défaut du pack (`fodec.traitement`). */
 export const DROITS_AU_COUT_D_ESSAI: readonly string[] = RELEVE_D_ESSAI.droitsAuCout;
+
+/** Comment le pack écrit une date, un matricule et un montant en lettres (`lireLesReglesDeLecture`). */
+export const REGLES_DE_LECTURE_D_ESSAI = RELEVE_D_ESSAI.reglesDeLecture;

@@ -164,7 +164,10 @@
     "TIMBRE_FISCAL",
     "TOTAL_TTC"
   ],
-  "typesQuiPortentUneEcriture": ["facture_achat", "facture_vente"],
+  "typesQuiPortentUneEcriture": [
+    "facture_achat",
+    "facture_vente"
+  ],
   "titres": [
     {
       "motif": "pro\\s*-?\\s*forma",
@@ -316,13 +319,18 @@
     "fodec.traitement": "par_article_au_cout",
     "immobilisation.seuil": "200",
     "immobilisation.traitement": "actif_amorti",
+    "lecture.relecture_delai_heures": "12",
+    "lecture.relecture_nuit": "coupee",
+    "lecture.sudoku": "observe",
     "mois_tva.date": "exigibilite_calculee",
     "non_residents.retenue": "au_paiement",
     "prorata.methode": "affectation_puis_prorata",
     "timbre.bareme": "bareme_date",
     "ventes.compte": "par_nature_article"
   },
-  "droitsAuCout": ["FODEC"],
+  "droitsAuCout": [
+    "FODEC"
+  ],
   "baremeDesDroits": {
     "standard": "standard",
     "tranches": [
@@ -444,6 +452,762 @@
       "devise": "EUR"
     }
   ],
+  "reglesDeLecture": {
+    "dates": {
+      "ordre": "jma",
+      "siecleDesAnneesCourtes": 20,
+      "anneesCourtesEnLettres": false,
+      "suffixesOrdinaux": [
+        "er",
+        "re"
+      ],
+      "mois": {
+        "août": 8,
+        "avril": 4,
+        "décembre": 12,
+        "février": 2,
+        "janvier": 1,
+        "juillet": 7,
+        "juin": 6,
+        "mai": 5,
+        "mars": 3,
+        "novembre": 11,
+        "octobre": 10,
+        "septembre": 9,
+        "أبريل": 4,
+        "أغسطس": 8,
+        "أفريل": 4,
+        "أكتوبر": 10,
+        "أوت": 8,
+        "جانفي": 1,
+        "جوان": 6,
+        "جويلية": 7,
+        "ديسمبر": 12,
+        "سبتمبر": 9,
+        "فبراير": 2,
+        "فيفري": 2,
+        "مارس": 3,
+        "ماي": 5,
+        "مايو": 5,
+        "نوفمبر": 11,
+        "يناير": 1,
+        "يوليو": 7,
+        "يونيو": 6
+      }
+    },
+    "matricule": {
+      "noyau": 7,
+      "groupes": [
+        "lettre",
+        "lettre",
+        3
+      ],
+      "separateur": "/",
+      "etiquettes": [
+        "\\bmatricule\\s*fiscal(e)?\\b",
+        "\\bmatricule\\b",
+        "\\bidentifiant\\s*fiscal\\b",
+        "\\bid\\s*fiscal\\b",
+        "\\bm\\s*\\.?\\s*f\\s*\\.?",
+        "\\bn\\s*[°º]?\\s*fiscal\\b",
+        "\\bcode\\s*tva\\b",
+        "المعرف\\s*ال?جبائ[يى]",
+        "رقم\\s*ال?جبائ[يى]",
+        "م\\s*\\.?\\s*ج\\s*\\.?"
+      ],
+      "controle": {
+        "poids": [
+          7,
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ],
+        "modulo": 23,
+        "alphabet": "ABCDEFGHJKLMNPQRSTVWXYZ",
+        "effet": "avertit"
+      }
+    },
+    "codeDuMatricule": "matricule_fiscal",
+    "lettres": {
+      "mots": [
+        {
+          "mot": "آلاف",
+          "nature": "multiplicateur",
+          "valeur": 1000
+        },
+        {
+          "mot": "أحد",
+          "nature": "nombre",
+          "valeur": 1
+        },
+        {
+          "mot": "أربع",
+          "nature": "nombre",
+          "valeur": 4
+        },
+        {
+          "mot": "أربعة",
+          "nature": "nombre",
+          "valeur": 4
+        },
+        {
+          "mot": "أربعمئة",
+          "nature": "nombre",
+          "valeur": 400
+        },
+        {
+          "mot": "أربعمائة",
+          "nature": "nombre",
+          "valeur": 400
+        },
+        {
+          "mot": "أربعون",
+          "nature": "nombre",
+          "valeur": 40
+        },
+        {
+          "mot": "أربعين",
+          "nature": "nombre",
+          "valeur": 40
+        },
+        {
+          "mot": "ألف",
+          "nature": "multiplicateur",
+          "valeur": 1000
+        },
+        {
+          "mot": "ألفا",
+          "nature": "multiplicateur",
+          "valeur": 1000
+        },
+        {
+          "mot": "ألفان",
+          "nature": "nombre",
+          "valeur": 2000
+        },
+        {
+          "mot": "ألفين",
+          "nature": "nombre",
+          "valeur": 2000
+        },
+        {
+          "mot": "إحدى",
+          "nature": "nombre",
+          "valeur": 1
+        },
+        {
+          "mot": "اثنا",
+          "nature": "nombre",
+          "valeur": 2
+        },
+        {
+          "mot": "اثنان",
+          "nature": "nombre",
+          "valeur": 2
+        },
+        {
+          "mot": "اثنتا",
+          "nature": "nombre",
+          "valeur": 2
+        },
+        {
+          "mot": "اثنتان",
+          "nature": "nombre",
+          "valeur": 2
+        },
+        {
+          "mot": "اثنتين",
+          "nature": "nombre",
+          "valeur": 2
+        },
+        {
+          "mot": "اثنين",
+          "nature": "nombre",
+          "valeur": 2
+        },
+        {
+          "mot": "تسع",
+          "nature": "nombre",
+          "valeur": 9
+        },
+        {
+          "mot": "تسعة",
+          "nature": "nombre",
+          "valeur": 9
+        },
+        {
+          "mot": "تسعمئة",
+          "nature": "nombre",
+          "valeur": 900
+        },
+        {
+          "mot": "تسعمائة",
+          "nature": "nombre",
+          "valeur": 900
+        },
+        {
+          "mot": "تسعون",
+          "nature": "nombre",
+          "valeur": 90
+        },
+        {
+          "mot": "تسعين",
+          "nature": "nombre",
+          "valeur": 90
+        },
+        {
+          "mot": "ثلاث",
+          "nature": "nombre",
+          "valeur": 3
+        },
+        {
+          "mot": "ثلاثة",
+          "nature": "nombre",
+          "valeur": 3
+        },
+        {
+          "mot": "ثلاثمئة",
+          "nature": "nombre",
+          "valeur": 300
+        },
+        {
+          "mot": "ثلاثمائة",
+          "nature": "nombre",
+          "valeur": 300
+        },
+        {
+          "mot": "ثلاثون",
+          "nature": "nombre",
+          "valeur": 30
+        },
+        {
+          "mot": "ثلاثين",
+          "nature": "nombre",
+          "valeur": 30
+        },
+        {
+          "mot": "ثمان",
+          "nature": "nombre",
+          "valeur": 8
+        },
+        {
+          "mot": "ثمانمئة",
+          "nature": "nombre",
+          "valeur": 800
+        },
+        {
+          "mot": "ثمانمائة",
+          "nature": "nombre",
+          "valeur": 800
+        },
+        {
+          "mot": "ثمانون",
+          "nature": "nombre",
+          "valeur": 80
+        },
+        {
+          "mot": "ثماني",
+          "nature": "nombre",
+          "valeur": 8
+        },
+        {
+          "mot": "ثمانية",
+          "nature": "nombre",
+          "valeur": 8
+        },
+        {
+          "mot": "ثمانيمائة",
+          "nature": "nombre",
+          "valeur": 800
+        },
+        {
+          "mot": "ثمانين",
+          "nature": "nombre",
+          "valeur": 80
+        },
+        {
+          "mot": "خمس",
+          "nature": "nombre",
+          "valeur": 5
+        },
+        {
+          "mot": "خمسة",
+          "nature": "nombre",
+          "valeur": 5
+        },
+        {
+          "mot": "خمسمئة",
+          "nature": "nombre",
+          "valeur": 500
+        },
+        {
+          "mot": "خمسمائة",
+          "nature": "nombre",
+          "valeur": 500
+        },
+        {
+          "mot": "خمسون",
+          "nature": "nombre",
+          "valeur": 50
+        },
+        {
+          "mot": "خمسين",
+          "nature": "nombre",
+          "valeur": 50
+        },
+        {
+          "mot": "سبع",
+          "nature": "nombre",
+          "valeur": 7
+        },
+        {
+          "mot": "سبعة",
+          "nature": "nombre",
+          "valeur": 7
+        },
+        {
+          "mot": "سبعمئة",
+          "nature": "nombre",
+          "valeur": 700
+        },
+        {
+          "mot": "سبعمائة",
+          "nature": "nombre",
+          "valeur": 700
+        },
+        {
+          "mot": "سبعون",
+          "nature": "nombre",
+          "valeur": 70
+        },
+        {
+          "mot": "سبعين",
+          "nature": "nombre",
+          "valeur": 70
+        },
+        {
+          "mot": "ست",
+          "nature": "nombre",
+          "valeur": 6
+        },
+        {
+          "mot": "ستة",
+          "nature": "nombre",
+          "valeur": 6
+        },
+        {
+          "mot": "ستمئة",
+          "nature": "nombre",
+          "valeur": 600
+        },
+        {
+          "mot": "ستمائة",
+          "nature": "nombre",
+          "valeur": 600
+        },
+        {
+          "mot": "ستون",
+          "nature": "nombre",
+          "valeur": 60
+        },
+        {
+          "mot": "ستين",
+          "nature": "nombre",
+          "valeur": 60
+        },
+        {
+          "mot": "صفر",
+          "nature": "nombre",
+          "valeur": 0
+        },
+        {
+          "mot": "عشر",
+          "nature": "nombre",
+          "valeur": 10
+        },
+        {
+          "mot": "عشرة",
+          "nature": "nombre",
+          "valeur": 10
+        },
+        {
+          "mot": "عشرون",
+          "nature": "nombre",
+          "valeur": 20
+        },
+        {
+          "mot": "عشرين",
+          "nature": "nombre",
+          "valeur": 20
+        },
+        {
+          "mot": "مئة",
+          "nature": "centaine",
+          "valeur": 100
+        },
+        {
+          "mot": "مئتا",
+          "nature": "nombre",
+          "valeur": 200
+        },
+        {
+          "mot": "مئتان",
+          "nature": "nombre",
+          "valeur": 200
+        },
+        {
+          "mot": "مئتين",
+          "nature": "nombre",
+          "valeur": 200
+        },
+        {
+          "mot": "مائة",
+          "nature": "centaine",
+          "valeur": 100
+        },
+        {
+          "mot": "مائتا",
+          "nature": "nombre",
+          "valeur": 200
+        },
+        {
+          "mot": "مائتان",
+          "nature": "nombre",
+          "valeur": 200
+        },
+        {
+          "mot": "مائتين",
+          "nature": "nombre",
+          "valeur": 200
+        },
+        {
+          "mot": "ملايين",
+          "nature": "multiplicateur",
+          "valeur": 1000000
+        },
+        {
+          "mot": "مليون",
+          "nature": "multiplicateur",
+          "valeur": 1000000
+        },
+        {
+          "mot": "و",
+          "nature": "prefixe",
+          "valeur": 0
+        },
+        {
+          "mot": "واحد",
+          "nature": "nombre",
+          "valeur": 1
+        },
+        {
+          "mot": "واحدة",
+          "nature": "nombre",
+          "valeur": 1
+        },
+        {
+          "mot": "cent",
+          "nature": "centaine",
+          "valeur": 100
+        },
+        {
+          "mot": "cents",
+          "nature": "centaine",
+          "valeur": 100
+        },
+        {
+          "mot": "cinq",
+          "nature": "nombre",
+          "valeur": 5
+        },
+        {
+          "mot": "cinquante",
+          "nature": "nombre",
+          "valeur": 50
+        },
+        {
+          "mot": "deux",
+          "nature": "nombre",
+          "valeur": 2
+        },
+        {
+          "mot": "dix",
+          "nature": "nombre",
+          "valeur": 10
+        },
+        {
+          "mot": "douze",
+          "nature": "nombre",
+          "valeur": 12
+        },
+        {
+          "mot": "et",
+          "nature": "liaison",
+          "valeur": 0
+        },
+        {
+          "mot": "huit",
+          "nature": "nombre",
+          "valeur": 8
+        },
+        {
+          "mot": "huitante",
+          "nature": "nombre",
+          "valeur": 80
+        },
+        {
+          "mot": "mille",
+          "nature": "multiplicateur",
+          "valeur": 1000
+        },
+        {
+          "mot": "milliard",
+          "nature": "multiplicateur",
+          "valeur": 1000000000
+        },
+        {
+          "mot": "milliards",
+          "nature": "multiplicateur",
+          "valeur": 1000000000
+        },
+        {
+          "mot": "million",
+          "nature": "multiplicateur",
+          "valeur": 1000000
+        },
+        {
+          "mot": "millions",
+          "nature": "multiplicateur",
+          "valeur": 1000000
+        },
+        {
+          "mot": "neuf",
+          "nature": "nombre",
+          "valeur": 9
+        },
+        {
+          "mot": "nonante",
+          "nature": "nombre",
+          "valeur": 90
+        },
+        {
+          "mot": "octante",
+          "nature": "nombre",
+          "valeur": 80
+        },
+        {
+          "mot": "onze",
+          "nature": "nombre",
+          "valeur": 11
+        },
+        {
+          "mot": "quarante",
+          "nature": "nombre",
+          "valeur": 40
+        },
+        {
+          "mot": "quatorze",
+          "nature": "nombre",
+          "valeur": 14
+        },
+        {
+          "mot": "quatre",
+          "nature": "nombre",
+          "valeur": 4
+        },
+        {
+          "mot": "quatre-vingt",
+          "nature": "nombre",
+          "valeur": 80
+        },
+        {
+          "mot": "quatre-vingts",
+          "nature": "nombre",
+          "valeur": 80
+        },
+        {
+          "mot": "quinze",
+          "nature": "nombre",
+          "valeur": 15
+        },
+        {
+          "mot": "seize",
+          "nature": "nombre",
+          "valeur": 16
+        },
+        {
+          "mot": "sept",
+          "nature": "nombre",
+          "valeur": 7
+        },
+        {
+          "mot": "septante",
+          "nature": "nombre",
+          "valeur": 70
+        },
+        {
+          "mot": "six",
+          "nature": "nombre",
+          "valeur": 6
+        },
+        {
+          "mot": "soixante",
+          "nature": "nombre",
+          "valeur": 60
+        },
+        {
+          "mot": "treize",
+          "nature": "nombre",
+          "valeur": 13
+        },
+        {
+          "mot": "trente",
+          "nature": "nombre",
+          "valeur": 30
+        },
+        {
+          "mot": "trois",
+          "nature": "nombre",
+          "valeur": 3
+        },
+        {
+          "mot": "un",
+          "nature": "nombre",
+          "valeur": 1
+        },
+        {
+          "mot": "une",
+          "nature": "nombre",
+          "valeur": 1
+        },
+        {
+          "mot": "vingt",
+          "nature": "nombre",
+          "valeur": 20
+        },
+        {
+          "mot": "vingts",
+          "nature": "nombre",
+          "valeur": 20
+        },
+        {
+          "mot": "zéro",
+          "nature": "nombre",
+          "valeur": 0
+        }
+      ],
+      "unites": [
+        {
+          "mot": "أورو",
+          "devise": "EUR",
+          "unite": "majeure"
+        },
+        {
+          "mot": "تونسي",
+          "devise": "TND",
+          "unite": "qualificatif"
+        },
+        {
+          "mot": "تونسيا",
+          "devise": "TND",
+          "unite": "qualificatif"
+        },
+        {
+          "mot": "تونسية",
+          "devise": "TND",
+          "unite": "qualificatif"
+        },
+        {
+          "mot": "دنانير",
+          "devise": "TND",
+          "unite": "majeure"
+        },
+        {
+          "mot": "دينار",
+          "devise": "TND",
+          "unite": "majeure"
+        },
+        {
+          "mot": "دينارا",
+          "devise": "TND",
+          "unite": "majeure"
+        },
+        {
+          "mot": "مليم",
+          "devise": "TND",
+          "unite": "mineure"
+        },
+        {
+          "mot": "مليما",
+          "devise": "TND",
+          "unite": "mineure"
+        },
+        {
+          "mot": "مليمات",
+          "devise": "TND",
+          "unite": "mineure"
+        },
+        {
+          "mot": "يورو",
+          "devise": "EUR",
+          "unite": "majeure"
+        },
+        {
+          "mot": "centime",
+          "devise": "EUR",
+          "unite": "mineure"
+        },
+        {
+          "mot": "centimes",
+          "devise": "EUR",
+          "unite": "mineure"
+        },
+        {
+          "mot": "dinar",
+          "devise": "TND",
+          "unite": "majeure"
+        },
+        {
+          "mot": "dinars",
+          "devise": "TND",
+          "unite": "majeure"
+        },
+        {
+          "mot": "euro",
+          "devise": "EUR",
+          "unite": "majeure"
+        },
+        {
+          "mot": "euros",
+          "devise": "EUR",
+          "unite": "majeure"
+        },
+        {
+          "mot": "millime",
+          "devise": "TND",
+          "unite": "mineure"
+        },
+        {
+          "mot": "millimes",
+          "devise": "TND",
+          "unite": "mineure"
+        },
+        {
+          "mot": "tunisien",
+          "devise": "TND",
+          "unite": "qualificatif"
+        },
+        {
+          "mot": "tunisiens",
+          "devise": "TND",
+          "unite": "qualificatif"
+        }
+      ]
+    }
+  },
   "devises": {
     "EUR": {
       "exposant": 2,

@@ -54,8 +54,9 @@ jobs:
 
       # Le Caddyfile route vers l'API les mêmes chemins que le relais de
       # développement : une route qui marche sur le poste marche en production.
+      # Et tout nom de relevé que le service OCR peut rendre a son tarif.
       - name: Infra
-        run: node --test infra/caddy/Caddyfile.test.mjs
+        run: node --test infra/caddy/Caddyfile.test.mjs infra/ocr/tarif.test.mjs
 
       # R9 : aucun code mort. Fichiers, exports et dépendances que rien
       # n'atteint — la configuration (knip.jsonc) dit ce qui est ignoré et pourquoi.
@@ -123,6 +124,16 @@ jobs:
       - name: Installer
         run: npm ci
 
+      # Le sudoku : un moteur Rust, servi à l'API en WebAssembly. La cible
+      # wasm32 ne s'installe pas sur tous les postes : c'est ici qu'il est
+      # construit et éprouvé — ses bancs natifs d'abord (cargo), puis le chemin
+      # de production dans la suite de l'API (`sudoku.test.ts`).
+      - name: Le moteur du sudoku
+        run: |
+          rustup target add wasm32-unknown-unknown
+          npm run build --workspace @malica/sudoku
+          npm run test --workspace @malica/sudoku
+
       # Le même chemin qu'en production : `db/migrer.mjs` tient la table des
       # migrations appliquées. Une boucle psql rejouait tout — sur une base
       # neuve c'est pareil, sur un serveur qui vit ce serait faux.
@@ -138,6 +149,8 @@ jobs:
           DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/malica
           JWT_SECRET: integration_continue_seulement_32_caracteres
           STOCKAGE_RACINE: ${{ runner.temp }}/pieces
+          # Le moteur est construit plus haut : ici, son absence est un échec.
+          MALICA_SUDOKU_EXIGE: "1"
 
   # Les épreuves : l'application vivante — API, site avec son relais, base
   # réelle, jeu de données — parcourue par les mêmes scripts que sur le poste
@@ -186,6 +199,12 @@ jobs:
 
       - name: Installer
         run: npm ci
+
+      # L'API lit avec le sudoku, comme en production.
+      - name: Le moteur du sudoku
+        run: |
+          rustup target add wasm32-unknown-unknown
+          npm run build --workspace @malica/sudoku
 
       - name: Monter le schéma
         run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
@@ -265,3 +284,19 @@ jobs:
             apps/web/e2e/sortie-rapport
             !apps/web/e2e/sortie/session-*.json
           retention-days: 7
+
+  # L'image du lecteur OCR, construite SANS être publiée : les poids s'y
+  # téléchargent à leur révision épinglée, leurs empreintes sont revérifiées,
+  # la conversion ONNX rejouée et le contrat /lire éprouvé sur chaque moteur
+  # (Dockerfile). Une image qui ne se construit pas ici ne partira pas de main.
+  image-ocr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: infra/ocr
+          file: infra/ocr/Dockerfile
+          push: false
+          cache-from: type=gha,scope=ocr

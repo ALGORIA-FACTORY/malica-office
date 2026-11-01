@@ -58,8 +58,17 @@ const ECART_MAX_EN_CARACTERES = 2;
 /** Au-delà, deux jetons ne sont pas sur la même ligne imprimée. */
 export const TOLERANCE_DE_LIGNE = 0.006;
 
-/** Ce qui peut OUVRIR un groupe de milliers : une à trois chiffres, et rien d'autre. */
-const OUVRE = /^\d{1,3}$/;
+/**
+ * Ce qui peut OUVRIR un groupe de milliers : une à trois chiffres, précédés au
+ * plus d'un signe moins.
+ *
+ * Le signe : mesuré le 31 octobre 2026 sur le jeu de 100 factures du dirigeant.
+ * Un avoir imprime « -1 560,000 », un acompte déduit « -1 500,000 » : le moins
+ * colle au premier groupe, et sans lui le recollage laissait « -1 » et
+ * « 560,000 » — un montant AMPUTÉ, le défaut même que ce module existe pour
+ * empêcher. Un téléphone ou un numéro de compte ne commence pas par un moins.
+ */
+const OUVRE = /^[-\u2212]?\d{1,3}$/;
 
 /**
  * Un groupe intermédiaire : trois chiffres nus. Il peut encore en absorber un.
@@ -107,8 +116,14 @@ const GROUPE = /^\d{3}$/;
  * 30 octobre 2026, il lit comme la normalisation du scan (#135) : la fermante
  * orpheline est du bruit, et « 3 020,000) » vaut 3 020,000, la base imprimée.
  * Une PAIRE, elle, ne se lit toujours pas (`@malica/socle/montant-imprime`).
+ *
+ * Une devise COLLÉE est admise aussi : « 1 » + « 980,000DT » (mesuré le
+ * 31 octobre 2026, jeu de 100 factures). Les décimales sont déjà là, c'est donc
+ * un montant et non un téléphone ; le lecteur de montants retire ensuite la
+ * marque, s'il la connaît au référentiel — sinon il ne lit pas, et rien n'est
+ * inventé. Jusqu'à cinq lettres (« DT », « TND », « D.T. », « د.ت »).
  */
-const DERNIER_GROUPE = /^\d{3}[.,]\d+[)\].,;:]?$/;
+const DERNIER_GROUPE = /^\d{3}[.,]\d+(?:[)\].,;:]|\p{L}[\p{L}.]{0,4})?$/u;
 
 function largeurDeCaractere(t: PageToken): number {
   return (t.x1 - t.x0) / Math.max(t.text.length, 1);

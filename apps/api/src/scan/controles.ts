@@ -26,7 +26,11 @@
  */
 
 import { periodeDeTva } from "@malica/socle/exercice";
-import { memeMatricule, normaliserMatricule } from "@malica/socle/matricule";
+import {
+  memeMatricule,
+  normaliserMatricule,
+  type FormatDuMatricule,
+} from "@malica/socle/matricule";
 import { enChiffresLatins } from "@malica/socle/chiffres";
 import { texteSansUnicode } from "@malica/socle/texte-sans-unicode";
 
@@ -141,6 +145,8 @@ export interface ContexteControle {
   doublonProbable: string | null;
   /** La devise des livres du dossier. */
   deviseDuDossier: string;
+  /** La forme de lecture du matricule fiscal du pack (`lireLesReglesDeLecture`). */
+  formatDuMatricule: FormatDuMatricule;
   /**
    * Ce que le référentiel et les cours disent du change (`lireLeChange`) ;
    * nul quand le jugement ne les a pas lus — une pièce en devise est alors
@@ -216,6 +222,9 @@ const normNumero = (n: string | null) =>
         .replace(/[^0-9A-Z]/g, "")
     : null;
 
+/** Le numéro d'une pièce, tel que la clé de doublon le compare ; nul s'il ne reste rien. */
+export const numeroDeDoublon = (n: string | null): string | null => normNumero(n) || null;
+
 /** Un nom d'émetteur comparable : sans accents, sans ponctuation, en capitales. */
 const normNom = (n: string | null) =>
   n
@@ -255,22 +264,25 @@ const normMontant = (m: string | null) => {
  * rien n'est signalé : deux achats du même jour, au même prix, chez le même
  * fournisseur, sont deux factures plausibles.
  */
-export function cleDeDoublon(piece: {
-  emetteurIdentifiantFiscal: string | null;
-  emetteurNom: string | null;
-  numero: string | null;
-  /** AAAA-MM-JJ, ou null. */
-  date: string | null;
-  /** Le total TTC lu, chaîne décimale, ou null. */
-  ttc: string | null;
-}): { numero: string | null; mf: string | null; lu: string | null } {
-  const numero = normNumero(piece.numero) || null;
+export function cleDeDoublon(
+  piece: {
+    emetteurIdentifiantFiscal: string | null;
+    emetteurNom: string | null;
+    numero: string | null;
+    /** AAAA-MM-JJ, ou null. */
+    date: string | null;
+    /** Le total TTC lu, chaîne décimale, ou null. */
+    ttc: string | null;
+  },
+  format: FormatDuMatricule,
+): { numero: string | null; mf: string | null; lu: string | null } {
+  const numero = numeroDeDoublon(piece.numero);
   if (!numero) return { numero: null, mf: null, lu: null };
   const nom = normNom(piece.emetteurNom);
   const ttc = normMontant(piece.ttc);
   return {
     numero,
-    mf: normaliserMatricule(piece.emetteurIdentifiantFiscal).chiffres || null,
+    mf: normaliserMatricule(piece.emetteurIdentifiantFiscal, format).chiffres || null,
     lu: nom && piece.date && ttc ? `${nom}|${piece.date}|${ttc}` : null,
   };
 }
@@ -537,7 +549,7 @@ function nature(p: PieceAControler, ctx: ContexteControle): ResultatControle {
 
 function destinataire(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   const tenant = ctx.tenant.identifiantFiscal;
-  if (!normaliserMatricule(tenant).cle)
+  if (!normaliserMatricule(tenant, ctx.formatDuMatricule).cle)
     return {
       code: "destinataire",
       statut: "non_evaluable",
@@ -572,14 +584,14 @@ function destinataire(p: PieceAControler, ctx: ContexteControle): ResultatContro
   const partie = vente ? p.emetteur : p.destinataire;
   const role = vente ? "l'émetteur" : "le destinataire";
   const lu = partie.identifiantFiscal;
-  if (!normaliserMatricule(lu).cle)
+  if (!normaliserMatricule(lu, ctx.formatDuMatricule).cle)
     return {
       code: "destinataire",
       statut: "reserve",
       motif: `Le matricule fiscal de ${role} n'a pas été lu : impossible de vérifier que la pièce concerne ${ctx.tenant.nom}.`,
       preuves: { role },
     };
-  if (!memeMatricule(lu, tenant))
+  if (!memeMatricule(lu, tenant, ctx.formatDuMatricule))
     return {
       code: "destinataire",
       statut: "rejet",
@@ -691,9 +703,13 @@ function sensDeLaPiece(p: PieceAControler, ctx: ContexteControle): ResultatContr
    * contradiction, aucun des deux ne l'emporte.
    */
   const parMatricule =
-    normaliserMatricule(p.emetteur.identifiantFiscal).cle &&
-    normaliserMatricule(ctx.tenant.identifiantFiscal).cle
-      ? memeMatricule(p.emetteur.identifiantFiscal, ctx.tenant.identifiantFiscal)
+    normaliserMatricule(p.emetteur.identifiantFiscal, ctx.formatDuMatricule).cle &&
+    normaliserMatricule(ctx.tenant.identifiantFiscal, ctx.formatDuMatricule).cle
+      ? memeMatricule(
+          p.emetteur.identifiantFiscal,
+          ctx.tenant.identifiantFiscal,
+          ctx.formatDuMatricule,
+        )
       : null;
   const parLeNom = nomsComparables(p.emetteur.nom, ctx.tenant.nom)
     ? memeEntreprise(p.emetteur.nom, ctx.tenant.nom)
