@@ -59,10 +59,10 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
 
 | | cas | mesurés | champs exacts | écritures exactes | à trancher | **fausses** | refus justes | refus mal nommés | refus injustes |
 |---|---|---|---|---|---|---|---|---|---|
-| **tous** | 27 | 27 | 599/618 (97 %) | 19/22 (86 %) | 3 | 0 | 5/5 (100 %) | 0 | 0 |
-| langue = ar | 13 | 13 | 271/290 (93 %) | 10/11 (91 %) | 1 | 0 | 2/2 (100 %) | 0 | 0 |
+| **tous** | 27 | 27 | 599/618 (97 %) | 17/22 (77 %) | 5 | 0 | 5/5 (100 %) | 0 | 0 |
+| langue = ar | 13 | 13 | 271/290 (93 %) | 8/11 (73 %) | 3 | 0 | 2/2 (100 %) | 0 | 0 |
 | langue = hybride | 14 | 14 | 328/328 (100 %) | 9/11 (82 %) | 2 | 0 | 3/3 (100 %) | 0 | 0 |
-| rendu = pdf | 27 | 27 | 599/618 (97 %) | 19/22 (86 %) | 3 | 0 | 5/5 (100 %) | 0 | 0 |
+| rendu = pdf | 27 | 27 | 599/618 (97 %) | 17/22 (77 %) | 5 | 0 | 5/5 (100 %) | 0 | 0 |
 | scenario = achat_13 | 2 | 2 | 41/42 (98 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
 | scenario = achat_eur | 2 | 2 | 37/38 (97 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
 | scenario = achat_exonere | 2 | 2 | 40/42 (95 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
@@ -73,10 +73,10 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
 | scenario = achat_un_taux | 4 | 4 | 90/93 (97 %) | 2/2 (100 %) | 0 | 0 | 2/2 (100 %) | 0 | 0 |
 | scenario = avoir_achat | 2 | 2 | 43/44 (98 %) | — | 0 | 0 | 2/2 (100 %) | 0 | 0 |
 | scenario = vente_plusieurs_taux | 1 | 1 | 33/33 (100 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
-| scenario = vente_un_taux | 3 | 3 | 73/75 (97 %) | 2/2 (100 %) | 0 | 0 | 1/1 (100 %) | 0 | 0 |
-| scenario = vente_usd_export | 1 | 1 | 17/19 (89 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
+| scenario = vente_un_taux | 3 | 3 | 73/75 (97 %) | 1/2 (50 %) | 1 | 0 | 1/1 (100 %) | 0 | 0 |
+| scenario = vente_usd_export | 1 | 1 | 17/19 (89 %) | 0/1 (0 %) | 1 | 0 | — | 0 | 0 |
 | defaut = montant_illisible | 1 | 1 | 27/27 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
-| defaut = null | 24 | 24 | 525/543 (97 %) | 19/22 (86 %) | 3 | 0 | 2/2 (100 %) | 0 | 0 |
+| defaut = null | 24 | 24 | 525/543 (97 %) | 17/22 (77 %) | 5 | 0 | 2/2 (100 %) | 0 | 0 |
 | defaut = total_faux | 1 | 1 | 26/27 (96 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
 | defaut = tva_fausse | 1 | 1 | 21/21 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
 
@@ -92,10 +92,10 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
   - champ references.numero : lu "٢٠٢٦ / ٨٠٥١", attendu "٢٠٢٦/٨٠٥١"
 - **045** (ar, pdf, achat_eur) — exacte
   - champ issuer : lu "ٮ\u0000 ﺎ ﻣ ﺪ \u0000 ﺤ ﻠ ﻟ \u0000 ٮ ﺮ \u0000 \u0000 \u0000 ﺮ ﻤ \u0000 \u0000", attendu "تمزيرت للخدمات"
-- **046** (ar, pdf, vente_usd_export) — exacte
+- **046** (ar, pdf, vente_usd_export) — a_trancher : proposée avec la réserve « nature_de_vente » : à trancher par le cabinet
   - champ issuer : lu "ﻪ\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 ﺮ \u0000 ﺤ \u0000 \u0000 ﻟ ا \u0000 ں ﺎ \u0000 \u0000 ﺮ \u0000 \u0000 \u0000 ﻪ ﻛ ﺮ \u0000 ﺳ", attendu "شركة نرفان التجريبية"
   - champ references.numero : lu "٢٠٢٦ / ٦٠٤٢", attendu "٢٠٢٦/٦٠٤٢"
-- **047** (ar, pdf, avoir_achat) — refus_juste : nature_piece
+- **047** (ar, pdf, avoir_achat) — refus_juste : proposition/facture_d_origine
   - champ issuer : lu "ٮ\u0000 ﺎ ﻣ ﺪ \u0000 ﺤ ﻠ ﻟ \u0000 ٮ ﺮ \u0000 \u0000 \u0000 ﺮ ﻤ \u0000 \u0000", attendu "تمزيرت للخدمات"
 - **048** (ar, pdf, achat_exonere) — exacte
   - champ issuer : lu "ﻊ \u0000 \u0000 \u0000 ر ﻮ \u0000 \u0000 ﻠ ﻟ \u0000 ە ﺮ \u0000 \u0000 ﻤ ﻟ و", attendu "ولميرة للتوزيع"
@@ -107,7 +107,7 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
   - champ references.numero : lu "٢٠٢٦ / ٩١٨٣", attendu "٢٠٢٦/٩١٨٣"
 - **051** (ar, pdf, achat_plusieurs_taux) — exacte
   - champ issuer : lu "ں\u0000 ﺎ \u0000 \u0000 ﻠ ﺳ \u0000 ﻪ ﻌ \u0000 \u0000 ﻄ ﻣ", attendu "مطبعة سلفان"
-- **052** (ar, pdf, vente_un_taux) — exacte
+- **052** (ar, pdf, vente_un_taux) — a_trancher : proposée avec la réserve « nature_de_vente » : à trancher par le cabinet
   - champ issuer : lu "ﻪ\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 ﺮ \u0000 ﺤ \u0000 \u0000 ﻟ ا \u0000 ں ﺎ \u0000 \u0000 ﺮ \u0000 \u0000 \u0000 ﻪ ﻛ ﺮ \u0000 ﺳ", attendu "شركة نرفان التجريبية"
   - champ references.numero : lu "٢٠٢٦ / ٣٥٤٢", attendu "٢٠٢٦/٣٥٤٢"
 - **053** (ar, pdf, achat_remise) — exacte

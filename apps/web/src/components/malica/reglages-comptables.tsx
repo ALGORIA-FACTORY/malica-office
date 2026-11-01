@@ -234,6 +234,12 @@ function aideDuSujet(s: Sujet, { t, locale }: Pick<I18n, "t" | "locale">): Parag
           c.tauxMaximal ? ` · ${t("reglages.compta.categorie.max", { max: c.tauxMaximal })}` : ""
         }${c.depasse ? ` · ${t("reglages.compta.categorie.depasse")}` : ""}`,
     ),
+    ...s.naturesDeVente.map(
+      (n) =>
+        `${t("reglages.compta.nature_de_vente", { libelle: n.libelle, compte: n.compte })}${
+          n.repli ? ` · ${t("reglages.compta.nature_de_vente.repli")}` : ""
+        }`,
+    ),
   ];
   const references = s.reglages.flatMap((r) =>
     r.reference ? [`${r.libelle} : ${r.reference}`] : [],

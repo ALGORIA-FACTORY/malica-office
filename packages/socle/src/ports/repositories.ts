@@ -871,6 +871,12 @@ export interface ReglagesComptables {
       /** Le taux linéaire de la catégorie dépasse le taux maximal. */
       depasse: boolean;
     }>;
+    /**
+     * Les natures d'un article vendu (`ref.natures_de_vente`) et leur compte au
+     * pack, pour le sujet des ventes ; `repli` : celle d'une vente dont la
+     * nature ne se prouve pas, et le compte unique de l'option du cabinet.
+     */
+    naturesDeVente: Array<{ code: string; libelle: string; compte: string; repli: boolean }>;
   }>;
 }
 
@@ -1676,7 +1682,45 @@ export type RaisonSansEcriture =
   /** La conversion est refusée (`ConversionRefusee`) : la raison est dite. */
   | "conversion_refusee"
   /** Un réglage comptable lu par le jugement a changé : la pièce attend d'être rejugée. */
-  | "reglages_perimes";
+  | "reglages_perimes"
+  /**
+   * Un avoir lié (1er novembre 2026) : sa facture d'origine n'est pas
+   * rattachée, ou pas encore comptabilisée — `avoir` le précise.
+   */
+  | "facture_d_origine"
+  /** L'avoir excède sa facture, au total, sur un taux ou sur un droit. */
+  | "avoir_excede_la_facture"
+  /** L'avoir porte un taux ou un droit que sa facture n'a pas. */
+  | "avoir_hors_facture"
+  /** L'écriture de l'avoir ne s'équilibrerait pas, ou l'avoir ne tient pas. */
+  | "avoir_desequilibre"
+  /** L'écriture de la facture d'origine ne se lit pas comme une facture. */
+  | "facture_illisible";
+
+/**
+ * Une réserve que la PROPOSITION porte (1er novembre 2026) : la vente rangée
+ * au compte de repli, sa nature n'étant pas prouvée (`nature_de_vente`). La
+ * raison, et les désignations que le référentiel ne reconnaît pas.
+ */
+export interface ReserveDeProposition {
+  code: "nature_de_vente";
+  raison: "inconnue" | "sans_article" | "non_ventilable";
+  articles: string[];
+}
+
+/** La facture d'origine d'un avoir lié, telle que la proposition la lit. */
+export interface FactureDOrigine {
+  /** La pièce de la facture ; nulle quand aucune n'est rattachée. */
+  facture: string | null;
+  /** Le lien : posé par le numéro de l'avoir, par le cabinet, ou à poser (le numéro la désigne). */
+  origine: "numero" | "cabinet" | null;
+  /** Le lien est-il déjà un fait (`capture.avoirs_rattaches`) ? */
+  lie: boolean;
+  /** Pourquoi rien ne se propose : aucune facture, ou une facture sans écriture prise en charge. */
+  manque?: "introuvable" | "non_comptabilisee";
+  /** L'extourne ou le rabais, quand l'écriture se propose. */
+  traitement?: "extourne" | "rabais";
+}
 
 export type PropositionDePiece = (
   | {
@@ -1687,6 +1731,10 @@ export type PropositionDePiece = (
       proposition: ProposalResult;
       /** Ce que l'écran montre, en une empreinte : VALIDER la renvoie, le serveur n'inscrit qu'elle. */
       empreinte?: string;
+      /** Les réserves de la proposition (la nature d'une vente à préciser). */
+      reserves?: ReserveDeProposition[];
+      /** Un avoir : la facture qu'il contre-passe, et comment. */
+      avoir?: FactureDOrigine;
     }
   | {
       ok: false;
@@ -1699,6 +1747,8 @@ export type PropositionDePiece = (
       raisonCode?: RaisonSansEcriture;
       /** Le cours qui manque, quand `raisonCode` vaut `taux_de_change`. */
       coursASaisir?: CoursASaisir;
+      /** Un avoir : sa facture d'origine, ou ce qui manque pour la lire. */
+      avoir?: FactureDOrigine;
     }
 ) & {
   /**
@@ -1708,6 +1758,15 @@ export type PropositionDePiece = (
    */
   champsAVerifier?: string[];
 };
+
+/** Une facture à laquelle un avoir peut se rattacher : lue, et déjà comptabilisée. */
+export interface FactureARattacher {
+  id: string;
+  numero: string | null;
+  date: string | null;
+  emetteur: string | null;
+  ttc: string | null;
+}
 
 export interface OfficeRepository {
   propose(input: ProposedEcriture): Promise<string>;
@@ -1735,6 +1794,15 @@ export interface OfficeRepository {
    * livres. Refus `refus.sens.ecriture_vivante` si une écriture vit déjà.
    */
   trancherLeSens(pieceId: string, sens: string): Promise<{ type: string }>;
+  /**
+   * RATTACHER la facture d'origine d'un avoir (`avoirs.traitement` =
+   * `lie_facture`) : le cabinet qui supervise le dossier la désigne ; le lien
+   * est un fait, en ajout seul. Rend la proposition relue. Refus
+   * `refus.avoir.*` (droits, facture d'un autre dossier ou d'un autre sens).
+   */
+  rattacherLaFacture(pieceId: string, factureId: string): Promise<PropositionDePiece>;
+  /** Les factures comptabilisées du même dossier et du même sens, pour un avoir. */
+  facturesARattacher(pieceId: string): Promise<FactureARattacher[]>;
   /**
    * SAISIR LE COURS d'une pièce en devise, en un geste : le cours que son
    * jugement demande (ou sa correction au même jour), pour l'organisation

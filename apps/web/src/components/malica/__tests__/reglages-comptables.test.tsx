@@ -51,6 +51,7 @@ const sujet = (code: string, reglages: Reglage[]) => ({
   droits: [],
   bareme: [],
   categories: [],
+  naturesDeVente: [],
 });
 
 const seuil = (r: Partial<Reglage> = {}): Reglage => ({

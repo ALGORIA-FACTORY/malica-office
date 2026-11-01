@@ -19,6 +19,8 @@ const api = vi.hoisted(() => ({
   forcer: vi.fn(),
   trancherLeSens: vi.fn(),
   saisirLeCoursDeLaPiece: vi.fn(),
+  rattacherLaFacture: vi.fn(),
+  facturesARattacher: vi.fn(),
   journal: vi.fn(),
 }));
 vi.mock("@/i18n", () => ({
@@ -37,6 +39,8 @@ vi.mock("@/verticals/malica-office/composition", () => ({
       forcer: api.forcer,
       trancherLeSens: api.trancherLeSens,
       saisirLeCoursDeLaPiece: api.saisirLeCoursDeLaPiece,
+      rattacherLaFacture: api.rattacherLaFacture,
+      facturesARattacher: api.facturesARattacher,
     },
     referential: {
       journaux: async () => [
@@ -147,6 +151,20 @@ const CONVERTIE = {
     ],
   },
 } as unknown as PropositionDePiece;
+
+/** Une vente dont la nature ne se prouve pas : le repli, et la réserve (1er novembre 2026). */
+const VENTE_AU_REPLI = {
+  ...PROPOSITION,
+  reserves: [{ code: "nature_de_vente", raison: "inconnue", articles: ["Médicament vétérinaire"] }],
+} as unknown as PropositionDePiece;
+
+/** Un avoir sans facture d'origine rattachée : rien de proposé, le geste nommé. */
+const AVOIR_A_RATTACHER = {
+  ok: false,
+  raison: "Aucune écriture ne se propose : facture d'origine à rattacher.",
+  raisonCode: "facture_d_origine",
+  avoir: { facture: null, origine: null, lie: false, manque: "introuvable" },
+} as PropositionDePiece;
 
 const TAUX = [
   { code: "TVA07", label: "TVA 7 %" },
@@ -453,5 +471,40 @@ describe("la pièce côté comptable", () => {
     monter(PROPOSITION);
     expect(document.body.innerHTML).not.toMatch(/min-w-\[/);
     expect(document.querySelector("table")).toBeNull();
+  });
+});
+
+describe("une vente et un avoir, côté comptable (1er novembre 2026)", () => {
+  beforeEach(() => vi.resetAllMocks());
+  afterEach(cleanup);
+
+  it("une vente au compte de repli dit sa réserve, et les articles dans le i", () => {
+    monter(VENTE_AU_REPLI);
+    expect(screen.getByRole("status").textContent).toContain(
+      "cab.ecriture.reserve.nature_de_vente",
+    );
+    // Une proposition sans réserve n'en dit aucune.
+    cleanup();
+    monter(PROPOSITION);
+    expect(screen.queryByText("cab.ecriture.reserve.nature_de_vente")).toBeNull();
+  });
+
+  it("un avoir sans facture : la facture se choisit et se rattache en un geste", async () => {
+    api.facturesARattacher.mockResolvedValue([
+      { id: "f1", numero: "F-1", date: "2026-10-01", emetteur: "FOURNISSEUR", ttc: "119.000" },
+    ]);
+    api.rattacherLaFacture.mockResolvedValue(PROPOSITION);
+    monter(AVOIR_A_RATTACHER);
+    expect(screen.getByText("cab.avoir.titre")).toBeTruthy();
+    // Le message générique ne s'affiche pas : le geste est nommé.
+    expect(screen.queryByText("cab.ecriture.rien")).toBeNull();
+    const rattacher = screen.getByRole("button", { name: "cab.avoir.rattacher" });
+    expect(rattacher).toHaveProperty("disabled", true);
+    await screen.findByRole("option", { name: /F-1/ });
+    fireEvent.change(screen.getByRole("combobox", { name: "cab.avoir.choisir" }), {
+      target: { value: "f1" },
+    });
+    fireEvent.click(rattacher);
+    await waitFor(() => expect(api.rattacherLaFacture).toHaveBeenCalledWith("p1", "f1"));
   });
 });

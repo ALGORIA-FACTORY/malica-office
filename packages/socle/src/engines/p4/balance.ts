@@ -64,6 +64,17 @@ export interface PivotInput {
    * la vérifie donc une fois, en devise (`buildProposal`), et le dit ici.
    */
   tva_verifiee_en?: string;
+  /**
+   * Le compte de vente de chaque ligne de l'extrait, par NATURE de ce qu'elle
+   * vend (1er novembre 2026, réglage `ventes.compte`) : une liste par ligne,
+   * dans l'ordre de `extract.lines`. Une part au montant nul porte toute la
+   * base de la ligne ; sinon les parts la ventilent, et leur somme est la
+   * base. Les bases d'une vente se posent alors par compte ET par taux, chacune
+   * avec son code. Absente : le compte unique du paramétrage, en une ligne.
+   */
+  ventilation_des_ventes?: ReadonlyArray<
+    ReadonlyArray<{ account_code: string; montant: string | null }>
+  >;
 }
 
 export function computePivot(input: PivotInput): PivotV1 {
@@ -270,12 +281,36 @@ export function computePivot(input: PivotInput): PivotV1 {
         tax_code: v.code,
       });
     }
-    lines.push({
-      account_code: mapping.charge_or_product_account,
-      label: extract.issuer,
-      debit: "0",
-      credit: round(totalHT.toString()),
-    });
+    const ventilation = input.ventilation_des_ventes;
+    if (!ventilation) {
+      lines.push({
+        account_code: mapping.charge_or_product_account,
+        label: extract.issuer,
+        debit: "0",
+        credit: round(totalHT.toString()),
+      });
+    } else {
+      // Une ligne par compte et par taux, dans l'ordre d'apparition (R11).
+      const bases: Array<{ compte: string; code: string; montant: string }> = [];
+      extract.lines.forEach((line, i) => {
+        for (const part of ventilation[i] ?? []) {
+          const montant = part.montant ?? line.base_ht;
+          const deja = bases.find(
+            (b) => b.compte === part.account_code && b.code === line.tax_code,
+          );
+          if (deja) deja.montant = D(deja.montant).plus(montant).toString();
+          else bases.push({ compte: part.account_code, code: line.tax_code, montant });
+        }
+      });
+      for (const b of bases)
+        lines.push({
+          account_code: b.compte,
+          label: extract.issuer,
+          debit: "0",
+          credit: round(b.montant),
+          tax_code: b.code,
+        });
+    }
     for (const c of charges) {
       lines.push({ account_code: c.account_code, label: c.label, debit: "0", credit: c.amount });
     }

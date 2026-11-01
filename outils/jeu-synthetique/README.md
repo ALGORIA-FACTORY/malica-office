@@ -125,6 +125,11 @@ lisent donc ensemble ; leur somme couvre les mêmes 45 PDF qu'au premier relevé
 
 « à trancher » : les quatre immobilisations (007, 044, 071, 083), proposées au compte du
 paramétrage avec la réserve nommée `immobilisation_a_trancher` — ni exactes, ni fausses.
+
+Depuis le 1er novembre 2026 (ventes par nature d'article) : la chaîne garde 14/15
+exactes, 1 à trancher, 0 fausse ; le diagnostic passe à 17/22 exactes et 5 à trancher —
+les deux ventes arabes au texte perdu (046, 052) vont au repli avec la réserve
+`nature_de_vente`, faute de désignation lisible. Toujours 0 fausse.
 Les 19 champs inexacts restants sont tous dans des PDF arabes au texte perdu : le nom
 de l'émetteur (glyphes sans Unicode) et le numéro relu espacé (« ٢٠٢٦ / ٥٠٣٦ »), sans
 effet sur l'écriture. Le détail par contenu et cas par cas est dans `RAPPORT.md`. La toute
@@ -191,11 +196,20 @@ Chacune est reproduite par une épreuve qui échoue avant et passe après.
 - Le compte d'une immobilisation (2282 pour du matériel informatique et de bureau) et sa
   TVA (4366 du paramétrage, ou 43662 « TVA sur immobilisations » du plan NC 01).
 - Le FODEC à l'achat au 6652 (non récupérable) et dans la base de TVA ; à la vente au 4374.
-- Le compte de vente 701 pour des biens comme pour des services (706 possible).
+- Le compte de vente par nature d'article (1er novembre 2026, `ventes.compte` =
+  `par_nature_article`, défaut du CEO) : 705 prestations, 706 activités annexes (une
+  location), 707 marchandises. La nature de chaque article est celle de la
+  spécification (`composer.mjs`, catalogue) ; les comptes viennent du référentiel
+  (`naturesDeVente` du relevé). Une vente que le Socle ne prouve pas (mot non reconnu,
+  désignation perdue) va au repli (701) avec la réserve `nature_de_vente` : elle se compte
+  « à trancher », jamais exacte. Les motifs (`ref.motifs_de_nature_de_vente`) sont à
+  confirmer.
 - Le timbre : posé sur chaque facture en dinars, jamais sur une pièce en devise ni sur un
   avoir ; les exemptions réelles sont à relever.
-- L'avoir : l'écriture du comptable (l'achat contre-passé, `attendu.ecritureDuComptable`)
-  est notée, mais l'issue attendue est le refus du pack (`nature_piece`, « à saisir par le
-  cabinet »).
+- L'avoir (1er novembre 2026, `avoirs.traitement` = `lie_facture`) : il se propose en
+  contre-passation de sa facture d'origine, que le banc n'a pas (aucune base) ; l'issue
+  attendue est le refus nommé `proposition/facture_d_origine` (« facture d'origine à
+  rattacher »), ou `nature_piece` quand le titre est perdu. L'écriture du comptable
+  (l'achat contre-passé, `attendu.ecritureDuComptable`) reste notée.
 - Les titres arabes d'un avoir autres que « إشعار دائن » (« فاتورة تعديلية »…).
 - La facture en euros soumise à la TVA tunisienne (choix du banc, comme le témoin du Socle).

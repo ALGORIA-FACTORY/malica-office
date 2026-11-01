@@ -30,6 +30,7 @@ import { Plus, X } from "lucide-react";
 import { useState } from "react";
 
 import { Aide } from "@/components/malica/aide";
+import { AvoirARattacher } from "@/components/malica/avoir-a-rattacher";
 import { CoursDeLaPiece } from "@/components/malica/cours-de-change";
 import type { RetourEnvoye } from "@/components/malica/envoye";
 import { RetournerAuClient } from "@/components/malica/retourner-au-client";
@@ -307,13 +308,18 @@ export function EcritureDuCabinet({
        * inscrite porte le sien : rien à saisir ici.
        */}
       {vivante === null ? (
-        <CoursDeLaPiece pieceId={pieceId} proposition={proposition} onRejugee={relire} />
+        <>
+          <CoursDeLaPiece pieceId={pieceId} proposition={proposition} onRejugee={relire} />
+          {/* Un avoir : sa facture d'origine, à rattacher en un geste. */}
+          <AvoirARattacher pieceId={pieceId} proposition={proposition} onRattachee={relire} />
+        </>
       ) : null}
 
       {sens && proposition && !proposition.ok ? null : depart.depart === "rien" &&
         proposition &&
         !proposition.ok &&
-        proposition.raisonCode !== "taux_de_change" ? (
+        proposition.raisonCode !== "taux_de_change" &&
+        proposition.raisonCode !== "facture_d_origine" ? (
         <p className="border border-signal-stop bg-card px-3.5 py-2.5 text-[13.5px] text-signal-stop">
           {t("cab.ecriture.rien")}
           <Aide
@@ -353,6 +359,43 @@ export function EcritureDuCabinet({
             titre={t("cab.ecriture.illisible")}
             paragraphes={[{ texte: t("cab.ecriture.illisible.aide") }]}
           />
+        </p>
+      ) : null}
+
+      {/*
+       * Ce que la proposition porte en réserve : la nature d'une vente que le
+       * Socle n'a pas prouvée (le compte de repli). Un mot ; le détail dans le i.
+       */}
+      {vivante === null && proposition?.ok
+        ? (proposition.reserves ?? []).map((r) => (
+            <p
+              key={r.code}
+              role="status"
+              className="flex items-center border border-signal-warn bg-card px-3.5 py-2.5 text-[13px] text-signal-warn"
+            >
+              {t(`cab.ecriture.reserve.${r.code}`)}
+              <Aide
+                titre={t(`cab.ecriture.reserve.${r.code}`)}
+                paragraphes={[
+                  { texte: t(`cab.ecriture.reserve.${r.code}.aide`) },
+                  ...(r.articles.length > 0
+                    ? [
+                        {
+                          texte: t("cab.ecriture.reserve.articles", {
+                            articles: r.articles.join(" · "),
+                          }),
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            </p>
+          ))
+        : null}
+      {vivante === null && proposition?.ok && proposition.avoir?.traitement ? (
+        <p role="status" className="flex items-center text-[12.5px] font-medium">
+          {t(`cab.avoir.${proposition.avoir.traitement}`)}
+          <Aide titre={t("cab.avoir.titre")} paragraphes={[{ texte: t("cab.avoir.aide") }]} />
         </p>
       ) : null}
 
