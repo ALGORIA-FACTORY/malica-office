@@ -11,6 +11,7 @@ import { Aide } from "@/components/malica/aide";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
+import { useRevenir } from "@/hooks/use-revenir";
 
 export const Route = createFileRoute("/_authenticated/pme/tva")({
   head: () => ({
@@ -111,7 +112,7 @@ function PmeTva() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const nonAssujetti = useNonAssujetti();
-  const navigate = useNavigate();
+  const revenir = useRevenir();
   const periode = Route.useSearch().mois ?? currentPeriod();
 
   const { tva, isPending } = useTvaPeriod(periode);
@@ -226,7 +227,7 @@ function PmeTva() {
            * dur est parti du dictionnaire local avec son dernier appel. R9.
            */
           aria-label={t("pme.regler.retour")}
-          onClick={() => void navigate({ to: "/pme" })}
+          onClick={() => revenir("/pme")}
         >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />

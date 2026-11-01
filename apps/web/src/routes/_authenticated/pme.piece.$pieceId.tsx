@@ -72,6 +72,7 @@ import {
   type TonDuStatut,
 } from "@malica/socle/statut-d-envoi";
 import { codeDeLecture, demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
+import { useRevenir } from "@/hooks/use-revenir";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   head: () => ({
@@ -262,6 +263,7 @@ function PieceScreen() {
 
   const navigate = useNavigate();
   const navigateList = () => navigate({ to: "/pme/list" });
+  const revenir = useRevenir();
 
   const dossier = useQuery({
     queryKey: ["piece", pieceId],
@@ -474,7 +476,8 @@ function PieceScreen() {
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
       // L'accueil montre les pièces lues : sans cela, la pièce effacée y restait.
       await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
-      void navigate({ to: "/pme/list" });
+      // `replace` : le retour de la bibliothèque ne ramène pas à la pièce effacée.
+      void navigate({ to: "/pme/list", replace: true });
     },
     onError: (e: unknown) => {
       setConfirmerSuppression(false);
@@ -857,7 +860,7 @@ function PieceScreen() {
               type="button"
               className="bk"
               aria-label={t("pme.regler.retour")}
-              onClick={() => void navigateList()}
+              onClick={() => revenir("/pme/list")}
             >
               <svg viewBox="0 0 24 24" className="g" aria-hidden>
                 <path d="M14.5 5.5L8 12l6.5 6.5" />
@@ -1201,7 +1204,7 @@ function PieceScreen() {
             type="button"
             className="bk"
             aria-label={t("pme.regler.retour")}
-            onClick={() => void navigateList()}
+            onClick={() => revenir("/pme/list")}
           >
             <svg viewBox="0 0 24 24" className="g" aria-hidden>
               <path d="M14.5 5.5L8 12l6.5 6.5" />
@@ -1894,7 +1897,7 @@ function PieceScreen() {
           type="button"
           className="bk"
           aria-label={t("pme.regler.retour")}
-          onClick={() => void navigateList()}
+          onClick={() => revenir("/pme/list")}
         >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />

@@ -107,6 +107,7 @@ import { laReponseAEffaceLaPiece, phraseDeLaReponse } from "@/lib/demande-sur-pi
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { jourOuInstant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
+import { useRevenir } from "@/hooks/use-revenir";
 
 export const Route = createFileRoute("/_authenticated/pme/notifications")({
   head: () => ({
@@ -191,6 +192,7 @@ function PmeNotifications() {
   const pme = usePme();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const revenir = useRevenir();
 
   /** Les deux faces de la boite : ce qui attend un geste, et tout. */
   const [onglet, setOnglet] = useState<"attente" | "tout">("attente");
@@ -283,7 +285,7 @@ function PmeNotifications() {
           type="button"
           className="bk"
           aria-label={t("pme.regler.retour")}
-          onClick={() => void navigate({ to: "/pme" })}
+          onClick={() => revenir("/pme")}
         >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />

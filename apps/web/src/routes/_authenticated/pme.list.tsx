@@ -27,6 +27,7 @@ import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { usePiecesDesSocietes } from "@/hooks/use-pieces-des-societes";
 import { useDossiers } from "@/hooks/use-dossiers";
+import { useRevenir } from "@/hooks/use-revenir";
 import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
 import { partieLeVers, partieVers } from "@/lib/envoi";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
@@ -248,6 +249,7 @@ function Bibliotheque() {
   );
 
   const [ouvert, setOuvert] = useState<Ouvert | null>(null);
+  const revenir = useRevenir();
   const [tout, setTout] = useState(false);
 
   // -------------------------------------------------------------- les groupes
@@ -350,6 +352,22 @@ function Bibliotheque() {
      * les siennes, et le dessin ne veut pas de double gouttière.
      */
     <div data-ecran="bibliotheque" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
+      {/*
+       * Le retour (Wissem, 1er novembre 2026) : une carte ouverte se referme
+       * d'abord ; sinon l'écran d'où l'on vient — l'accueil par défaut.
+       */}
+      <div className="top">
+        <button
+          type="button"
+          className="bk"
+          aria-label={t("pme.regler.retour")}
+          onClick={() => (ouvert ? setOuvert(null) : revenir("/pme"))}
+        >
+          <svg viewBox="0 0 24 24" className="g" aria-hidden>
+            <path d="M14.5 5.5L8 12l6.5 6.5" />
+          </svg>
+        </button>
+      </div>
       <div className="pad">
         <h1>{t("pme.home.bibliotheque")}</h1>
 

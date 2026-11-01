@@ -20,6 +20,7 @@ import { useDossiers } from "@/hooks/use-dossiers";
 import { currentPeriod } from "@/hooks/use-tva";
 import { dossierDeLaPiece, moisDeLaPiece, periodeMontree } from "@/lib/dossiers";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
+import { useRevenir } from "@/hooks/use-revenir";
 
 export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
   head: () => ({
@@ -88,6 +89,7 @@ function Dossier() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const navigate = useNavigate();
+  const revenir = useRevenir();
 
   const {
     toutes: dePme,
@@ -181,7 +183,7 @@ function Dossier() {
           type="button"
           className="bk"
           aria-label={t("pme.regler.retour")}
-          onClick={() => void navigate({ to: "/pme" })}
+          onClick={() => revenir("/pme")}
         >
           <svg viewBox="0 0 24 24" className="g fl" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />

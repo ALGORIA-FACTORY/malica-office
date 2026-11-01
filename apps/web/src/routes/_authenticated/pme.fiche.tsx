@@ -11,6 +11,7 @@ import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { RegimeDisponible } from "@malica/socle/ports/repositories";
+import { useRevenir } from "@/hooks/use-revenir";
 
 const CameraScanner = lazy(() =>
   import("@/components/malica/CameraScanner").then((m) => ({ default: m.CameraScanner })),
@@ -157,6 +158,7 @@ function FicheFiscale() {
   const pme = usePme();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const revenir = useRevenir();
 
   const [scanne, setScanne] = useState(false);
   useSuperposition(
@@ -344,7 +346,7 @@ function FicheFiscale() {
           type="button"
           className="bk"
           aria-label={t("pme.regler.retour")}
-          onClick={() => void navigate({ to: "/pme" })}
+          onClick={() => revenir("/pme")}
         >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />
