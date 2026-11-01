@@ -1,12 +1,16 @@
 {
   "source": "https://huggingface.co/PaddlePaddle/{modele}/resolve/{revision}/{fichier}",
   "moteurs": {
-    "onnx": { "suffixe_du_releve": "@onnx" },
-    "paddle": { "suffixe_du_releve": "" }
+    "onnx": {
+      "suffixe_du_releve": "@onnx"
+    },
+    "paddle": {
+      "suffixe_du_releve": ""
+    }
   },
   "modeles": {
     "PP-OCRv5_mobile_det": {
-      "revision": "main",
+      "revision": "0d63e78e2b680928f6b1747d76a08db6e645efb7",
       "fichiers": {
         "inference.json": "05feef1acb00aa4cd7362b15f7f501fc4f99d7b1fa73c1c871e0c7b1504b0f5c",
         "inference.pdiparams": "afa1820cb16c1fd0dad589d0f8b389139061c1ef6d68019685fd07be997dda5b",
@@ -15,7 +19,7 @@
       "inference.onnx": "6bdf743af375b13fbbeeb47a91a40063af5bfb7a7f197f6df8cb990dc827e5d6"
     },
     "latin_PP-OCRv5_mobile_rec": {
-      "revision": "main",
+      "revision": "ab2cd5cc5fa6309be2e5acdfe66eca2c2c127d57",
       "fichiers": {
         "inference.json": "820b2ee8e5072de5156c3d55124c2b03c82ef278d59f453f857c0789bacb4da1",
         "inference.pdiparams": "53cdc8b481a7394bb108f96d0fb3432b0a8f392e22c7d18f06dbb2d42b8b25f9",
@@ -24,7 +28,7 @@
       "inference.onnx": "46449fd0606cd07d856744703211ea6826e4642d4c803d91167c53cde01d3b94"
     },
     "arabic_PP-OCRv5_mobile_rec": {
-      "revision": "main",
+      "revision": "33d91636a65dca87f5562cc48860332ae367ee1b",
       "fichiers": {
         "inference.json": "d43832804d89c0e18d59f8446a3babd0ef60c44bc335efddac3176caf71d50af",
         "inference.pdiparams": "4b4271fd1dd89a40b2056e1a42e58de7c0df2fdcf1a97ca9a8916d7ec45f9143",

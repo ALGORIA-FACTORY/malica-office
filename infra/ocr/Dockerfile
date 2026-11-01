@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Le lecteur OCR, dans sa boîte : deux moteurs, les mêmes poids.
 #
 # Les poids sont TÉLÉCHARGÉS, VÉRIFIÉS ET CONVERTIS À LA CONSTRUCTION, pas au
@@ -52,6 +53,31 @@ RUN pip install --no-cache-dir \
       fastapi==0.115.6 \
       "uvicorn[standard]==0.34.0" \
       pillow==11.1.0
+
+# Les licences voyagent avec ce qu'elles couvrent (Apache-2.0 § 4, MIT) : le
+# texte de chaque paquet installé, pris dans ses métadonnées, et l'avis des
+# poids (provenance, révision, conversion) — THIRD_PARTY_NOTICES.md.
+COPY THIRD_PARTY_NOTICES.md /licenses/
+RUN python - <<'PY'
+import importlib.metadata as m, pathlib, shutil
+paquets = ["paddlepaddle", "paddleocr", "paddlex", "onnxruntime", "fastapi", "uvicorn", "pillow"]
+for p in paquets:
+    d = m.distribution(p)
+    cibles = [f for f in (d.files or []) if any(k in f.name.upper() for k in ("LICEN", "NOTICE", "COPYING"))]
+    # Un paquet qui n'embarque pas son texte : on garde au moins ce qu'il
+    # déclare (licence, page du projet), pour qu'on sache où le lire.
+    dossier = pathlib.Path("/licenses") / p
+    dossier.mkdir(parents=True, exist_ok=True)
+    meta = d.metadata
+    (dossier / "METADATA-licence.txt").write_text(
+        f"{p} {d.version}\nLicense: {meta.get('License') or meta.get('License-Expression')}\n"
+        f"Classifiers: {[c for c in meta.get_all('Classifier') or [] if 'License' in c]}\n"
+        f"Home-page: {meta.get('Home-page') or meta.get_all('Project-URL')}\n")
+    for f in cibles:
+        dest = pathlib.Path("/licenses") / p / f.name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(d.locate_file(f), dest)
+PY
 
 ENV PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True \
     OCR_MOTEUR=onnx \
