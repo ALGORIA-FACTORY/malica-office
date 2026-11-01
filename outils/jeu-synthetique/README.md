@@ -195,7 +195,10 @@ Chacune est reproduite par une épreuve qui échoue avant et passe après.
 
 - Le compte d'une immobilisation (2282 pour du matériel informatique et de bureau) et sa
   TVA (4366 du paramétrage, ou 43662 « TVA sur immobilisations » du plan NC 01).
-- Le FODEC à l'achat au 6652 (non récupérable) et dans la base de TVA ; à la vente au 4374.
+- Le FODEC à l'achat selon le réglage du pack (`fodec.traitement`, relevé en
+  `droitsAuCout`) : au coût (`par_article_au_cout`, défaut du CEO du 31 octobre 2026), sur
+  sa propre ligne au compte de la charge (601) ; au 6652 (non récupérable) avec
+  `charge_non_recuperable`. Dans la base de TVA dans les deux cas ; à la vente au 4374.
 - Le compte de vente par nature d'article (1er novembre 2026, `ventes.compte` =
   `par_nature_article`, défaut du CEO) : 705 prestations, 706 activités annexes (une
   location), 707 marchandises. La nature de chaque article est celle de la

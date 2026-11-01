@@ -104,6 +104,13 @@ const compteDeLaNature = (code) => {
 };
 const COMPTE_DE_REPLI = REFERENTIEL.naturesDeVente.find((x) => x.repli)?.compte;
 if (!COMPTE_DE_REPLI) throw new Error("aucune nature de vente de repli au référentiel");
+/*
+ * Les droits qu'un ACHAT incorpore au coût (`fodec.traitement`, relevé au pack
+ * par la fonction même de la proposition) : leur ligne porte le compte de la
+ * charge, et reste une ligne à part. Absents : le compte du pack (6652).
+ */
+const DROITS_AU_COUT = new Set(REFERENTIEL.droitsAuCout);
+const fodecAuCout = DROITS_AU_COUT.has(COMPLEMENT.fodec.code);
 
 /* --------------------------------------------------------- les noms inventés */
 
@@ -633,8 +640,13 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
       compte: imputation(sens, l.code).vatAccount,
       m: conv(l.tva),
     }));
+    // Le compte de la charge, celui du premier taux, comme la proposition.
+    const compteDeCharge = imputation(sens, parTaux[0].code).mainAccount;
     const lesDroits = droits.map((d) => ({
-      compte: droit(d.code, sens).accountCode,
+      compte:
+        sens === "facture_achat" && DROITS_AU_COUT.has(d.code)
+          ? compteDeCharge
+          : droit(d.code, sens).accountCode,
       m: conv(d.montant),
     }));
     const total = conv(ttc);
@@ -734,7 +746,9 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
     aTrancher = { reserve: "nature_de_vente", ecriture: ecritureDe(false, true) };
   if (fodec > 0n)
     notes.push(
-      "INCERTAIN — FODEC à l'achat imputé au compte du pack, et compris dans la base de la TVA",
+      fodecAuCout
+        ? "INCERTAIN — FODEC à l'achat incorporé au coût, sur sa ligne au compte de la charge (fodec.traitement du pack), et compris dans la base de la TVA"
+        : "INCERTAIN — FODEC à l'achat imputé au compte du pack, et compris dans la base de la TVA",
     );
   if (sens === "facture_vente")
     notes.push(

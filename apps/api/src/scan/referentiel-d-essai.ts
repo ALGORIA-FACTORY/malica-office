@@ -82,3 +82,6 @@ export const BAREME_DES_DROITS_D_ESSAI = RELEVE_D_ESSAI.baremeDesDroits;
 export const REGLAGES_D_ESSAI: ReadonlyMap<string, string> = new Map(
   Object.entries(RELEVE_D_ESSAI.reglages),
 );
+
+/** Les droits qu'un achat incorpore au coût, au défaut du pack (`fodec.traitement`). */
+export const DROITS_AU_COUT_D_ESSAI: readonly string[] = RELEVE_D_ESSAI.droitsAuCout;

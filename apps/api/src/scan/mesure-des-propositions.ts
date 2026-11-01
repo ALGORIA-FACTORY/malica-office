@@ -41,6 +41,7 @@ import { optionDuTimbre } from "./bareme-du-timbre.ts";
 import {
   BAREME_DES_DROITS_D_ESSAI,
   BIENS_IMMOBILISABLES_D_ESSAI,
+  DROITS_AU_COUT_D_ESSAI,
   DROITS_D_ESSAI,
   DEVISE_D_ESSAI,
   DEVISES_D_ESSAI,
@@ -795,7 +796,9 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       lignes: [
         ["601", "100.000", "0"],
         ["4366", "19.000", "0", "TVA19"],
-        ["6652", "1.000", "0"],
+        // Le FODEC au coût (`fodec.traitement` = « par_article_au_cout ») :
+        // le compte de la charge, sur sa propre ligne.
+        ["601", "1.000", "0"],
         ["401", "0", "120.000"],
       ],
     },
@@ -821,7 +824,7 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       lignes: [
         ["601", "1000.000", "0"],
         ["4366", "191.900", "0", "TVA19"],
-        ["6652", "10.000", "0"],
+        ["601", "10.000", "0"],
         ["6654", "1.000", "0"],
         ["401", "0", "1202.900"],
       ],
@@ -1411,10 +1414,10 @@ export function jouer(cas: CasDeMesure): Issue {
       fiscalCharges: DROITS_D_ESSAI,
       compteDeNature: null,
       tvaNonDeductible: false,
-      // Le FODEC d'achat au compte du pack : les cas mesurés l'attendent là
-      // (« INCERTAIN — FODEC à l'achat imputé au compte du pack »). Le réglage
-      // du cabinet a ses épreuves (`reglages-comptables.test.ts`).
-      droitsAuCout: [],
+      // Le FODEC d'achat selon le défaut du pack (`fodec.traitement`), comme
+      // la recette le propose. Forcé au compte du pack jusqu'au 1er novembre
+      // 2026, la mesure attendait 6652 quand la recette proposait 601.
+      droitsAuCout: DROITS_AU_COUT_D_ESSAI,
       // Les comptes de vente par nature, au défaut du pack (`ventes.compte`).
       ventes: ((option) => (option ? { option, natures: NATURES_DE_VENTE_D_ESSAI } : null))(
         optionDesVentes(REGLAGES_D_ESSAI),
