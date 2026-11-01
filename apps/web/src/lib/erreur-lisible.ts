@@ -35,10 +35,10 @@
  * Rien n'est donc perdu : ce que l'utilisateur ne voit plus, le poste le
  * reçoit avec sa pile d'appels.
  */
-import { MESSAGES } from "@malica/socle/messages";
 import { lireUnRefus } from "@malica/socle/refus-a-dire";
 
 import { localeRangee } from "@/i18n";
+import { dictionnaireCharge, DICTIONNAIRE_DE_REPLI } from "@/i18n/dictionnaires";
 
 import { noterAuJournal } from "./journal-atelier";
 import { ErreurApi, ErreurReseau } from "./transport/erreurs";
@@ -71,7 +71,10 @@ export function texteDeLErreur(raison: unknown, ou: string, defaut: string): str
     // Un refus de la base peut lever une CLÉ du dictionnaire (« refus.licence.
     // transmission ») plutôt qu'une phrase française : on la dit dans la
     // langue de la personne, avec les valeurs qu'elle cite.
-    const dict = MESSAGES[localeRangee()] as Record<string, string>;
+    const dict = (dictionnaireCharge(localeRangee()) ?? DICTIONNAIRE_DE_REPLI) as Record<
+      string,
+      string
+    >;
     const { cle, valeurs } = lireUnRefus(raison.message);
     const gabarit = dict[cle];
     if (gabarit === undefined) return raison.message;
@@ -79,7 +82,8 @@ export function texteDeLErreur(raison: unknown, ou: string, defaut: string): str
   }
   // Pas de réseau n'est pas une panne : on le dit, sans l'inscrire au journal —
   // le journal ne dirait rien qu'on ne sache déjà.
-  if (raison instanceof ErreurReseau) return MESSAGES[localeRangee()]["common.horsLigne"];
+  if (raison instanceof ErreurReseau)
+    return (dictionnaireCharge(localeRangee()) ?? DICTIONNAIRE_DE_REPLI)["common.horsLigne"];
   noterAuJournal(ou, raison);
   return defaut;
 }
