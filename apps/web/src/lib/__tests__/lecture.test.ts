@@ -17,6 +17,7 @@ const piece = (id: string, autre: Partial<PieceLue> = {}): PieceLue => ({
   id,
   status: "capturee",
   createdAt: "2026-10-24T10:00:00Z",
+  auteurId: null,
   vis: "personnel",
   gardeeLe: null,
   emetteur: null,

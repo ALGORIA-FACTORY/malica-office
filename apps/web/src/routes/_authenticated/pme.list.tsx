@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
+import { CarteDeGroupe, IconeCalendrier } from "@/components/malica/carte-de-groupe";
 import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
@@ -964,28 +965,26 @@ function VosDocuments() {
               <span>{groupes.length}</span>
             </div>
             {vusDansLaListe.map((g) => (
-              <button
+              <CarteDeGroupe
                 key={g.cle}
-                type="button"
-                className="grp"
                 onClick={() => {
                   setOuvert(g.cle);
                   window.scrollTo(0, 0);
                 }}
-              >
-                <i className={cn(g.queDesVentes && "cli")}>
-                  <GlypheDeLAxe axe={axe} vente={g.queDesVentes} />
-                </i>
-                <span className="bd">
-                  <b>{titreDuGroupe(g.cle)}</b>
-                  {manquant(g) ? (
+                accent={g.queDesVentes}
+                icone={<GlypheDeLAxe axe={axe} vente={g.queDesVentes} />}
+                titre={titreDuGroupe(g.cle)}
+                sous={
+                  manquant(g) ? (
                     <span className="miss">
                       {t("pme.list.pasEncoreRecu", { mois: moisCourantLisible })}
                     </span>
                   ) : (
                     <span className="k">{sousTitre(g)}</span>
-                  )}
-                  <span className="v">
+                  )
+                }
+                valeur={
+                  <>
                     {g.achats.length === 0 && g.ventes.length === 0 ? "—" : null}
                     {g.achats.length > 0
                       ? `${t("pme.doc.type.achats")} ${montant(sommeDecimale(g.achats), locale)}`
@@ -996,13 +995,10 @@ function VosDocuments() {
                         {t("pme.doc.type.ventes")} {montant(sommeDecimale(g.ventes), locale)}
                       </u>
                     ) : null}
-                  </span>
-                </span>
-                <span className="n">
-                  <b>{g.pieces.length}</b>
-                  <span>{t("pme.list.pieces")}</span>
-                </span>
-              </button>
+                  </>
+                }
+                n={g.pieces.length}
+              />
             ))}
             {groupes.length > PREMIERS ? (
               <button type="button" className="more" onClick={() => setTout(!tout)}>
@@ -1170,16 +1166,6 @@ function GlypheDeLAxe({ axe, vente }: { axe: Axe; vente: boolean }) {
   if (axe === "mois") return <IconeCalendrier />;
   if (vente) return <IconePanier />;
   return <IconeRecu />;
-}
-
-/** Un calendrier — une période. */
-function IconeCalendrier() {
-  return (
-    <svg viewBox="0 0 24 24" className="g">
-      <rect x="3.5" y="4.5" width="17" height="16" rx="2" />
-      <path d="M3.5 9.5h17M8 2.5v4M16 2.5v4" />
-    </svg>
-  );
 }
 
 /** Un reçu — ce qui porte un montant payé. */

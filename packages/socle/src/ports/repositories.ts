@@ -1269,6 +1269,12 @@ export interface PieceLue {
   status: PieceStatus;
   createdAt: string;
   /**
+   * Le compte qui a déposé la pièce (`pieces.created_by`) : le siège. Le
+   * prénom, lui, vient du circuit ; l'identifiant sert à regrouper sans
+   * confondre deux personnes du même prénom.
+   */
+  auteurId: string | null;
+  /**
    * Un reçu généré depuis une pièce, ou le justificatif d'un paiement : il
    * accompagne une autre pièce et ne se lit jamais (`app.piece_accompagne`,
    * la même règle que le verdict de lecture). Jamais « à lire ».
