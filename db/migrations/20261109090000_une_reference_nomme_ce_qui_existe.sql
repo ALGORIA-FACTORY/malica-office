@@ -21,8 +21,12 @@
 -- La portée d'une liaison de rôle (`portee` = cabinet ou dossier) est toujours
 -- une organisation : `portee_id` la nomme, comme `tenant_id`.
 --
--- Chaque clé est posée `not valid` puis validée : une base qui porterait déjà
--- un orphelin s'arrête ICI, sur le nom de la contrainte, au lieu de le garder.
+-- Chaque clé est posée `not valid`, ce qui la fait tenir aussitôt pour toute
+-- écriture nouvelle, puis validée sur l'existant. Une base qui porterait déjà
+-- un orphelin (le staging, la production) ne s'arrête pas sur le déploiement :
+-- la validation est alors laissée en attente, l'orphelin est NOMMÉ (une
+-- notice par contrainte), et l'audit d'intégrité le relève jusqu'à sa
+-- régularisation. Rien n'est effacé en silence.
 --
 -- Et une porte morte part : `ref.compte_du_role` résolvait le compte d'un rôle
 -- (dossier, puis cabinet, puis pack) — et plus rien ne l'appelait. La même
@@ -37,47 +41,92 @@ drop function ref.compte_du_role(uuid, uuid, text, uuid);
 alter table identity.profiles
   add constraint profiles_user_id_fkey
   foreign key (user_id) references auth.users (id) on delete cascade not valid;
-alter table identity.profiles validate constraint profiles_user_id_fkey;
+do $$
+begin
+  alter table identity.profiles validate constraint profiles_user_id_fkey;
+exception when foreign_key_violation then
+  raise notice 'audit d''intégrité : profiles_user_id_fkey reste à valider, des orphelins existent dans identity.profiles';
+end $$;
 
 alter table notif.preferences
   add constraint preferences_user_id_fkey
   foreign key (user_id) references auth.users (id) on delete cascade not valid;
-alter table notif.preferences validate constraint preferences_user_id_fkey;
+do $$
+begin
+  alter table notif.preferences validate constraint preferences_user_id_fkey;
+exception when foreign_key_violation then
+  raise notice 'audit d''intégrité : preferences_user_id_fkey reste à valider, des orphelins existent dans notif.preferences';
+end $$;
 
 alter table collab.push_devices
   add constraint push_devices_user_id_fkey
   foreign key (user_id) references auth.users (id) on delete cascade not valid;
-alter table collab.push_devices validate constraint push_devices_user_id_fkey;
+do $$
+begin
+  alter table collab.push_devices validate constraint push_devices_user_id_fkey;
+exception when foreign_key_violation then
+  raise notice 'audit d''intégrité : push_devices_user_id_fkey reste à valider, des orphelins existent dans collab.push_devices';
+end $$;
 
 alter table collab.notifications
   add constraint notifications_user_id_fkey
   foreign key (user_id) references auth.users (id) on delete cascade not valid;
-alter table collab.notifications validate constraint notifications_user_id_fkey;
+do $$
+begin
+  alter table collab.notifications validate constraint notifications_user_id_fkey;
+exception when foreign_key_violation then
+  raise notice 'audit d''intégrité : notifications_user_id_fkey reste à valider, des orphelins existent dans collab.notifications';
+end $$;
 
 alter table collab.notification_lectures
   add constraint notification_lectures_user_id_fkey
   foreign key (user_id) references auth.users (id) on delete cascade not valid;
-alter table collab.notification_lectures validate constraint notification_lectures_user_id_fkey;
+do $$
+begin
+  alter table collab.notification_lectures validate constraint notification_lectures_user_id_fkey;
+exception when foreign_key_violation then
+  raise notice 'audit d''intégrité : notification_lectures_user_id_fkey reste à valider, des orphelins existent dans collab.notification_lectures';
+end $$;
 
 alter table identity.memberships
   add constraint memberships_user_id_fkey
   foreign key (user_id) references auth.users (id) not valid;
-alter table identity.memberships validate constraint memberships_user_id_fkey;
+do $$
+begin
+  alter table identity.memberships validate constraint memberships_user_id_fkey;
+exception when foreign_key_violation then
+  raise notice 'audit d''intégrité : memberships_user_id_fkey reste à valider, des orphelins existent dans identity.memberships';
+end $$;
 
 alter table app.platform_operators
   add constraint platform_operators_user_id_fkey
   foreign key (user_id) references auth.users (id) not valid;
-alter table app.platform_operators validate constraint platform_operators_user_id_fkey;
+do $$
+begin
+  alter table app.platform_operators validate constraint platform_operators_user_id_fkey;
+exception when foreign_key_violation then
+  raise notice 'audit d''intégrité : platform_operators_user_id_fkey reste à valider, des orphelins existent dans app.platform_operators';
+end $$;
 
 alter table app.signalements
   add constraint signalements_user_id_fkey
   foreign key (user_id) references auth.users (id) not valid;
-alter table app.signalements validate constraint signalements_user_id_fkey;
+do $$
+begin
+  alter table app.signalements validate constraint signalements_user_id_fkey;
+exception when foreign_key_violation then
+  raise notice 'audit d''intégrité : signalements_user_id_fkey reste à valider, des orphelins existent dans app.signalements';
+end $$;
 
 alter table parametrage.role_bindings
   add constraint role_bindings_portee_id_fkey
   foreign key (portee_id) references identity.organizations (id) on delete cascade not valid;
-alter table parametrage.role_bindings validate constraint role_bindings_portee_id_fkey;
+do $$
+begin
+  alter table parametrage.role_bindings validate constraint role_bindings_portee_id_fkey;
+exception when foreign_key_violation then
+  raise notice 'audit d''intégrité : role_bindings_portee_id_fkey reste à valider, des orphelins existent dans parametrage.role_bindings';
+end $$;
 
 -- Une clé étrangère sans index fait parcourir la table entière à chaque
 -- suppression de la ligne qu'elle nomme.
