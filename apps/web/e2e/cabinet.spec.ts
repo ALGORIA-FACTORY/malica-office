@@ -100,7 +100,7 @@ for (const largeur of [390, 1440]) {
 }
 
 /*
- * Réglages comptabilité (décisions du CEO du 31 octobre 2026) : onze sujets,
+ * Réglages comptabilité (décisions du CEO du 31 octobre 2026) : douze sujets,
  * chacun arrêtable pour le cabinet, à 390 px, en français et en arabe (RTL),
  * des boutons de 48 px, et le ⓘ qui dit l'INCERTAIN.
  */
@@ -108,7 +108,7 @@ for (const [locale, onglet, pourLeCabinet, incertain] of [
   ["fr", "Comptabilité", "Pour tout le cabinet", "INCERTAIN"],
   ["ar", "المحاسبة", "لكامل المكتب", "غير مؤكد"],
 ] as const) {
-  test(`réglages comptabilité : onze sujets à 390 px, en ${locale}`, async ({ page }) => {
+  test(`réglages comptabilité : douze sujets à 390 px, en ${locale}`, async ({ page }) => {
     const plantages: string[] = [];
     page.on("pageerror", (e) => plantages.push(e.message));
     await preparerLAppareil(page, locale);
@@ -116,7 +116,7 @@ for (const [locale, onglet, pourLeCabinet, incertain] of [
     await page.goto("/cabinet/reglages");
     await page.getByRole("button", { name: onglet, exact: true }).click();
     const boutons = page.getByRole("button", { name: pourLeCabinet, exact: true });
-    await expect(boutons).toHaveCount(11, { timeout: 20_000 });
+    await expect(boutons).toHaveCount(12, { timeout: 20_000 });
     const hauteur = (await boutons.first().boundingBox())?.height ?? 0;
     expect(hauteur).toBeGreaterThanOrEqual(48);
     await expect(page.locator("html")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");

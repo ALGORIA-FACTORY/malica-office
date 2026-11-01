@@ -23,7 +23,8 @@ RUN pip install --no-cache-dir \
       paddle2onnx==2.1.0 \
       onnx==1.17.0 \
       protobuf==7.36.2 \
-      numpy==2.5.4
+      numpy==2.5.4 \
+      packaging==24.2
 
 # Un miroir interne peut remplacer la source (gabarit d'URL, voir poids.py) ;
 # les empreintes, elles, ne se remplacent pas.
