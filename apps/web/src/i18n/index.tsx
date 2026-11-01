@@ -8,18 +8,16 @@ import {
   type ReactNode,
 } from "react";
 
-import {
-  LOCALES,
-  MESSAGES,
-  RTL_LOCALES,
-  type Locale,
-  type MessageKey,
-} from "@malica/socle/messages";
+import type { MessageKey } from "@malica/socle/messages-fr";
+import { LOCALES, RTL_LOCALES, type Locale } from "@malica/socle/messages-langues";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
 
-export { LOCALES, LOCALE_NAMES } from "@malica/socle/messages";
-export type { Locale, MessageKey } from "@malica/socle/messages";
+import { chargerLaLangue, dictionnaireCharge, DICTIONNAIRE_DE_REPLI } from "./dictionnaires";
+
+export { LOCALES, LOCALE_NAMES } from "@malica/socle/messages-langues";
+export type { Locale } from "@malica/socle/messages-langues";
+export type { MessageKey } from "@malica/socle/messages-fr";
 
 const STORAGE_KEY = "malica.locale";
 const DEFAULT_LOCALE: Locale = "fr";
@@ -62,35 +60,77 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   // Dans la coque, rien n'est rendu côté serveur : la langue choisie peut être
   // lue tout de suite, et l'écran naît dans la bonne. Sur le site, le premier
   // rendu doit rester celui du serveur — on lit après l'hydratation.
-  const [locale, setLocaleState] = useState<Locale>(() =>
+  const [voulue, setVoulue] = useState<Locale>(() =>
     CIBLE_COQUE && typeof window !== "undefined" ? localeRangee() : DEFAULT_LOCALE,
+  );
+  // La langue affichée est celle dont le dictionnaire est arrivé : l'écran
+  // garde la précédente le temps du chargement (i18n/dictionnaires.ts).
+  const [locale, setAffichee] = useState<Locale | null>(() =>
+    dictionnaireCharge(voulue) ? voulue : null,
   );
 
   // Lecture après hydratation : jamais dans un initialiseur d'état.
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (isLocale(stored)) setLocaleState(stored);
+    if (isLocale(stored)) setVoulue(stored);
   }, []);
 
   useEffect(() => {
-    const dir = dirFor(locale);
+    let actuel = true;
+    chargerLaLangue(voulue)
+      .then(() => {
+        if (actuel) setAffichee(voulue);
+      })
+      // Hors ligne avant le premier chargement : l'écran reste dans la langue
+      // d'avant — le français au démarrage — plutôt que de ne rien montrer.
+      .catch(() => {
+        if (actuel) setAffichee((avant) => avant ?? DEFAULT_LOCALE);
+      });
+    return () => {
+      actuel = false;
+    };
+  }, [voulue]);
+
+  useEffect(() => {
+    if (!locale) return;
     document.documentElement.setAttribute("lang", locale);
-    document.documentElement.setAttribute("dir", dir);
+    document.documentElement.setAttribute("dir", dirFor(locale));
   }, [locale]);
 
   const setLocale = useCallback((next: Locale) => {
-    setLocaleState(next);
+    setVoulue(next);
     window.localStorage.setItem(STORAGE_KEY, next);
   }, []);
 
+  // La coque ouverte dans une autre langue que le français attend son
+  // dictionnaire (un fichier local, quelques millisecondes) : jamais un premier
+  // écran en français pour une personne qui lit l'arabe.
+  if (!locale) return null;
+
+  return (
+    <Traductions locale={locale} setLocale={setLocale}>
+      {children}
+    </Traductions>
+  );
+}
+
+function Traductions({
+  locale,
+  setLocale,
+  children,
+}: {
+  locale: Locale;
+  setLocale: (next: Locale) => void;
+  children: ReactNode;
+}) {
   const value = useMemo<I18nValue>(() => {
-    const dict = MESSAGES[locale];
+    const dict = dictionnaireCharge(locale) ?? DICTIONNAIRE_DE_REPLI;
     return {
       locale,
       dir: dirFor(locale),
       setLocale,
       t: (key, vars) => {
-        let raw = dict[key] ?? MESSAGES[DEFAULT_LOCALE][key] ?? key;
+        let raw = dict[key] ?? DICTIONNAIRE_DE_REPLI[key] ?? key;
 
         /*
          * Le pluriel se choisit, il ne s'écrit pas entre parenthèses.
@@ -111,7 +151,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
           const formes = [new Intl.PluralRules(locale).select(n), "other"];
           for (const forme of formes) {
             const variante = `${key}#${forme}` as MessageKey;
-            const trouvee = dict[variante] ?? MESSAGES[DEFAULT_LOCALE][variante];
+            const trouvee = dict[variante] ?? DICTIONNAIRE_DE_REPLI[variante];
             if (trouvee !== undefined) {
               raw = trouvee;
               break;
