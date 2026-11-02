@@ -96,7 +96,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
   }),
 }));
 
-import { LaTour } from "../la-tour";
+import { LaPasseDeNuit, LeCompteDeService } from "../tour/passe-de-nuit";
 
 afterEach(() => {
   cleanup();
@@ -106,7 +106,8 @@ afterEach(() => {
 async function carte() {
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <LaTour />
+      <LaPasseDeNuit />
+      <LeCompteDeService />
     </QueryClientProvider>,
   );
   const c = await waitFor(() => {
@@ -180,8 +181,10 @@ describe("la carte de la passe de nuit", () => {
     ).toBe(true);
   });
 
-  it("révoque le relecteur par son code, motivé", async () => {
-    const c = await carte();
+  it("révoque le relecteur par son code, motivé, depuis sa carte", async () => {
+    await carte();
+    const c = document.querySelector<HTMLElement>("[data-compte-de-service]")!;
+    expect(within(c).getByText(/tour\.nuit\.compte\.actif/)).toBeTruthy();
     fireEvent.change(within(c).getByLabelText("common.motif"), {
       target: { value: "Incident de coût" },
     });

@@ -20,6 +20,7 @@ import { Route as AuthenticatedMonEspaceRouteImport } from './routes/_authentica
 import { Route as AuthenticatedOfficeRouteImport } from './routes/_authenticated/office'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedPmeRouteImport } from './routes/_authenticated/pme'
+import { Route as AuthenticatedTourRouteImport } from './routes/_authenticated/tour'
 import { Route as AuthenticatedCabinetIndexRouteImport } from './routes/_authenticated/cabinet.index'
 import { Route as AuthenticatedCabinetAbonnementsRouteImport } from './routes/_authenticated/cabinet.abonnements'
 import { Route as AuthenticatedCabinetBibliothequeRouteImport } from './routes/_authenticated/cabinet.bibliotheque'
@@ -56,6 +57,9 @@ import { Route as AuthenticatedPmeNotificationsRouteImport } from './routes/_aut
 import { Route as AuthenticatedPmeReglagesRouteImport } from './routes/_authenticated/pme.reglages'
 import { Route as AuthenticatedPmeReglerRouteImport } from './routes/_authenticated/pme.regler'
 import { Route as AuthenticatedPmeTvaRouteImport } from './routes/_authenticated/pme.tva'
+import { Route as AuthenticatedTourIndexRouteImport } from './routes/_authenticated/tour.index'
+import { Route as AuthenticatedTourSectionRouteImport } from './routes/_authenticated/tour.$section'
+import { Route as AuthenticatedTourPmeRouteImport } from './routes/_authenticated/tour.pme'
 import { Route as AuthenticatedCabinetDossierClientIdRouteImport } from './routes/_authenticated/cabinet.dossier.$clientId'
 import { Route as AuthenticatedCabinetFactureFactureIdRouteImport } from './routes/_authenticated/cabinet.facture.$factureId'
 import { Route as AuthenticatedCabinetPayerPaiementIdRouteImport } from './routes/_authenticated/cabinet.payer.$paiementId'
@@ -63,6 +67,8 @@ import { Route as AuthenticatedCabinetPiecePieceIdRouteImport } from './routes/_
 import { Route as AuthenticatedPmeDossierTypeRouteImport } from './routes/_authenticated/pme.dossier.$type'
 import { Route as AuthenticatedPmePayerPaiementIdRouteImport } from './routes/_authenticated/pme.payer.$paiementId'
 import { Route as AuthenticatedPmePiecePieceIdRouteImport } from './routes/_authenticated/pme.piece.$pieceId'
+import { Route as AuthenticatedTourCabinetsIndexRouteImport } from './routes/_authenticated/tour.cabinets.index'
+import { Route as AuthenticatedTourCabinetsCabinetIdRouteImport } from './routes/_authenticated/tour.cabinets.$cabinetId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -116,6 +122,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
 const AuthenticatedPmeRoute = AuthenticatedPmeRouteImport.update({
   id: '/pme',
   path: '/pme',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTourRoute = AuthenticatedTourRouteImport.update({
+  id: '/tour',
+  path: '/tour',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCabinetIndexRoute =
@@ -324,6 +335,22 @@ const AuthenticatedPmeTvaRoute = AuthenticatedPmeTvaRouteImport.update({
   path: '/tva',
   getParentRoute: () => AuthenticatedPmeRoute,
 } as any)
+const AuthenticatedTourIndexRoute = AuthenticatedTourIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedTourRoute,
+} as any)
+const AuthenticatedTourSectionRoute =
+  AuthenticatedTourSectionRouteImport.update({
+    id: '/$section',
+    path: '/$section',
+    getParentRoute: () => AuthenticatedTourRoute,
+  } as any)
+const AuthenticatedTourPmeRoute = AuthenticatedTourPmeRouteImport.update({
+  id: '/pme',
+  path: '/pme',
+  getParentRoute: () => AuthenticatedTourRoute,
+} as any)
 const AuthenticatedCabinetDossierClientIdRoute =
   AuthenticatedCabinetDossierClientIdRouteImport.update({
     id: '/dossier/$clientId',
@@ -366,6 +393,18 @@ const AuthenticatedPmePiecePieceIdRoute =
     path: '/piece/$pieceId',
     getParentRoute: () => AuthenticatedPmeRoute,
   } as any)
+const AuthenticatedTourCabinetsIndexRoute =
+  AuthenticatedTourCabinetsIndexRouteImport.update({
+    id: '/cabinets/',
+    path: '/cabinets/',
+    getParentRoute: () => AuthenticatedTourRoute,
+  } as any)
+const AuthenticatedTourCabinetsCabinetIdRoute =
+  AuthenticatedTourCabinetsCabinetIdRouteImport.update({
+    id: '/cabinets/$cabinetId',
+    path: '/cabinets/$cabinetId',
+    getParentRoute: () => AuthenticatedTourRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -378,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/office': typeof AuthenticatedOfficeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pme': typeof AuthenticatedPmeRouteWithChildren
+  '/tour': typeof AuthenticatedTourRouteWithChildren
   '/cabinet/abonnements': typeof AuthenticatedCabinetAbonnementsRoute
   '/cabinet/bibliotheque': typeof AuthenticatedCabinetBibliothequeRoute
   '/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
@@ -412,8 +452,11 @@ export interface FileRoutesByFullPath {
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
   '/pme/tva': typeof AuthenticatedPmeTvaRoute
+  '/tour/$section': typeof AuthenticatedTourSectionRoute
+  '/tour/pme': typeof AuthenticatedTourPmeRoute
   '/cabinet/': typeof AuthenticatedCabinetIndexRoute
   '/pme/': typeof AuthenticatedPmeIndexRoute
+  '/tour/': typeof AuthenticatedTourIndexRoute
   '/cabinet/dossier/$clientId': typeof AuthenticatedCabinetDossierClientIdRoute
   '/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
@@ -421,6 +464,8 @@ export interface FileRoutesByFullPath {
   '/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
   '/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
+  '/tour/cabinets/$cabinetId': typeof AuthenticatedTourCabinetsCabinetIdRoute
+  '/tour/cabinets/': typeof AuthenticatedTourCabinetsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -465,8 +510,11 @@ export interface FileRoutesByTo {
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
   '/pme/tva': typeof AuthenticatedPmeTvaRoute
+  '/tour/$section': typeof AuthenticatedTourSectionRoute
+  '/tour/pme': typeof AuthenticatedTourPmeRoute
   '/cabinet': typeof AuthenticatedCabinetIndexRoute
   '/pme': typeof AuthenticatedPmeIndexRoute
+  '/tour': typeof AuthenticatedTourIndexRoute
   '/cabinet/dossier/$clientId': typeof AuthenticatedCabinetDossierClientIdRoute
   '/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
@@ -474,6 +522,8 @@ export interface FileRoutesByTo {
   '/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
   '/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
+  '/tour/cabinets/$cabinetId': typeof AuthenticatedTourCabinetsCabinetIdRoute
+  '/tour/cabinets': typeof AuthenticatedTourCabinetsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -488,6 +538,7 @@ export interface FileRoutesById {
   '/_authenticated/office': typeof AuthenticatedOfficeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pme': typeof AuthenticatedPmeRouteWithChildren
+  '/_authenticated/tour': typeof AuthenticatedTourRouteWithChildren
   '/_authenticated/cabinet/abonnements': typeof AuthenticatedCabinetAbonnementsRoute
   '/_authenticated/cabinet/bibliotheque': typeof AuthenticatedCabinetBibliothequeRoute
   '/_authenticated/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
@@ -522,8 +573,11 @@ export interface FileRoutesById {
   '/_authenticated/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/_authenticated/pme/regler': typeof AuthenticatedPmeReglerRoute
   '/_authenticated/pme/tva': typeof AuthenticatedPmeTvaRoute
+  '/_authenticated/tour/$section': typeof AuthenticatedTourSectionRoute
+  '/_authenticated/tour/pme': typeof AuthenticatedTourPmeRoute
   '/_authenticated/cabinet/': typeof AuthenticatedCabinetIndexRoute
   '/_authenticated/pme/': typeof AuthenticatedPmeIndexRoute
+  '/_authenticated/tour/': typeof AuthenticatedTourIndexRoute
   '/_authenticated/cabinet/dossier/$clientId': typeof AuthenticatedCabinetDossierClientIdRoute
   '/_authenticated/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/_authenticated/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
@@ -531,6 +585,8 @@ export interface FileRoutesById {
   '/_authenticated/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/_authenticated/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
   '/_authenticated/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
+  '/_authenticated/tour/cabinets/$cabinetId': typeof AuthenticatedTourCabinetsCabinetIdRoute
+  '/_authenticated/tour/cabinets/': typeof AuthenticatedTourCabinetsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -545,6 +601,7 @@ export interface FileRouteTypes {
     | '/office'
     | '/onboarding'
     | '/pme'
+    | '/tour'
     | '/cabinet/abonnements'
     | '/cabinet/bibliotheque'
     | '/cabinet/clients'
@@ -579,8 +636,11 @@ export interface FileRouteTypes {
     | '/pme/reglages'
     | '/pme/regler'
     | '/pme/tva'
+    | '/tour/$section'
+    | '/tour/pme'
     | '/cabinet/'
     | '/pme/'
+    | '/tour/'
     | '/cabinet/dossier/$clientId'
     | '/cabinet/facture/$factureId'
     | '/cabinet/payer/$paiementId'
@@ -588,6 +648,8 @@ export interface FileRouteTypes {
     | '/pme/dossier/$type'
     | '/pme/payer/$paiementId'
     | '/pme/piece/$pieceId'
+    | '/tour/cabinets/$cabinetId'
+    | '/tour/cabinets/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -632,8 +694,11 @@ export interface FileRouteTypes {
     | '/pme/reglages'
     | '/pme/regler'
     | '/pme/tva'
+    | '/tour/$section'
+    | '/tour/pme'
     | '/cabinet'
     | '/pme'
+    | '/tour'
     | '/cabinet/dossier/$clientId'
     | '/cabinet/facture/$factureId'
     | '/cabinet/payer/$paiementId'
@@ -641,6 +706,8 @@ export interface FileRouteTypes {
     | '/pme/dossier/$type'
     | '/pme/payer/$paiementId'
     | '/pme/piece/$pieceId'
+    | '/tour/cabinets/$cabinetId'
+    | '/tour/cabinets'
   id:
     | '__root__'
     | '/'
@@ -654,6 +721,7 @@ export interface FileRouteTypes {
     | '/_authenticated/office'
     | '/_authenticated/onboarding'
     | '/_authenticated/pme'
+    | '/_authenticated/tour'
     | '/_authenticated/cabinet/abonnements'
     | '/_authenticated/cabinet/bibliotheque'
     | '/_authenticated/cabinet/clients'
@@ -688,8 +756,11 @@ export interface FileRouteTypes {
     | '/_authenticated/pme/reglages'
     | '/_authenticated/pme/regler'
     | '/_authenticated/pme/tva'
+    | '/_authenticated/tour/$section'
+    | '/_authenticated/tour/pme'
     | '/_authenticated/cabinet/'
     | '/_authenticated/pme/'
+    | '/_authenticated/tour/'
     | '/_authenticated/cabinet/dossier/$clientId'
     | '/_authenticated/cabinet/facture/$factureId'
     | '/_authenticated/cabinet/payer/$paiementId'
@@ -697,6 +768,8 @@ export interface FileRouteTypes {
     | '/_authenticated/pme/dossier/$type'
     | '/_authenticated/pme/payer/$paiementId'
     | '/_authenticated/pme/piece/$pieceId'
+    | '/_authenticated/tour/cabinets/$cabinetId'
+    | '/_authenticated/tour/cabinets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -785,6 +858,13 @@ declare module '@tanstack/react-router' {
       path: '/pme'
       fullPath: '/pme'
       preLoaderRoute: typeof AuthenticatedPmeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tour': {
+      id: '/_authenticated/tour'
+      path: '/tour'
+      fullPath: '/tour'
+      preLoaderRoute: typeof AuthenticatedTourRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/cabinet/': {
@@ -1039,6 +1119,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPmeTvaRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
     }
+    '/_authenticated/tour/': {
+      id: '/_authenticated/tour/'
+      path: '/'
+      fullPath: '/tour/'
+      preLoaderRoute: typeof AuthenticatedTourIndexRouteImport
+      parentRoute: typeof AuthenticatedTourRoute
+    }
+    '/_authenticated/tour/$section': {
+      id: '/_authenticated/tour/$section'
+      path: '/$section'
+      fullPath: '/tour/$section'
+      preLoaderRoute: typeof AuthenticatedTourSectionRouteImport
+      parentRoute: typeof AuthenticatedTourRoute
+    }
+    '/_authenticated/tour/pme': {
+      id: '/_authenticated/tour/pme'
+      path: '/pme'
+      fullPath: '/tour/pme'
+      preLoaderRoute: typeof AuthenticatedTourPmeRouteImport
+      parentRoute: typeof AuthenticatedTourRoute
+    }
     '/_authenticated/cabinet/dossier/$clientId': {
       id: '/_authenticated/cabinet/dossier/$clientId'
       path: '/dossier/$clientId'
@@ -1087,6 +1188,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/pme/piece/$pieceId'
       preLoaderRoute: typeof AuthenticatedPmePiecePieceIdRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
+    }
+    '/_authenticated/tour/cabinets/': {
+      id: '/_authenticated/tour/cabinets/'
+      path: '/cabinets'
+      fullPath: '/tour/cabinets/'
+      preLoaderRoute: typeof AuthenticatedTourCabinetsIndexRouteImport
+      parentRoute: typeof AuthenticatedTourRoute
+    }
+    '/_authenticated/tour/cabinets/$cabinetId': {
+      id: '/_authenticated/tour/cabinets/$cabinetId'
+      path: '/cabinets/$cabinetId'
+      fullPath: '/tour/cabinets/$cabinetId'
+      preLoaderRoute: typeof AuthenticatedTourCabinetsCabinetIdRouteImport
+      parentRoute: typeof AuthenticatedTourRoute
     }
   }
 }
@@ -1201,12 +1316,33 @@ const AuthenticatedPmeRouteChildren: AuthenticatedPmeRouteChildren = {
 const AuthenticatedPmeRouteWithChildren =
   AuthenticatedPmeRoute._addFileChildren(AuthenticatedPmeRouteChildren)
 
+interface AuthenticatedTourRouteChildren {
+  AuthenticatedTourSectionRoute: typeof AuthenticatedTourSectionRoute
+  AuthenticatedTourPmeRoute: typeof AuthenticatedTourPmeRoute
+  AuthenticatedTourIndexRoute: typeof AuthenticatedTourIndexRoute
+  AuthenticatedTourCabinetsCabinetIdRoute: typeof AuthenticatedTourCabinetsCabinetIdRoute
+  AuthenticatedTourCabinetsIndexRoute: typeof AuthenticatedTourCabinetsIndexRoute
+}
+
+const AuthenticatedTourRouteChildren: AuthenticatedTourRouteChildren = {
+  AuthenticatedTourSectionRoute: AuthenticatedTourSectionRoute,
+  AuthenticatedTourPmeRoute: AuthenticatedTourPmeRoute,
+  AuthenticatedTourIndexRoute: AuthenticatedTourIndexRoute,
+  AuthenticatedTourCabinetsCabinetIdRoute:
+    AuthenticatedTourCabinetsCabinetIdRoute,
+  AuthenticatedTourCabinetsIndexRoute: AuthenticatedTourCabinetsIndexRoute,
+}
+
+const AuthenticatedTourRouteWithChildren =
+  AuthenticatedTourRoute._addFileChildren(AuthenticatedTourRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCabinetRoute: typeof AuthenticatedCabinetRouteWithChildren
   AuthenticatedMonEspaceRoute: typeof AuthenticatedMonEspaceRoute
   AuthenticatedOfficeRoute: typeof AuthenticatedOfficeRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPmeRoute: typeof AuthenticatedPmeRouteWithChildren
+  AuthenticatedTourRoute: typeof AuthenticatedTourRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1215,6 +1351,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOfficeRoute: AuthenticatedOfficeRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPmeRoute: AuthenticatedPmeRouteWithChildren,
+  AuthenticatedTourRoute: AuthenticatedTourRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =

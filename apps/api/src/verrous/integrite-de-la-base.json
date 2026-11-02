@@ -71,7 +71,6 @@
   "portes_sans_appel": {
     "billing.next_invoice_number": "DETTE : schéma billing de l'amorçage (ses tables ne sont lues par rien) ; la facturation vit dans facturation.*. Retrait du schéma à trancher (données).",
     "facturation.emettre_cabinet": "DETTE : la facture mensuelle du cabinet n'a pas encore de déclencheur (aucun travailleur ni écran ne l'émet) ; seules les épreuves l'appellent.",
-    "plateforme.accorder_lectures": "DETTE : porte d'opérateur de la tour (docs/livraison-2026-10-19/07-la-tour-de-controle.md), sans écran à ce jour.",
     "plateforme.servir_requisition": "DETTE : porte d'opérateur de la tour (réquisition d'une autorité), sans écran à ce jour.",
     "public.etablissement_archiver": "DETTE : l'archivage d'un établissement (20261018130000) n'a pas d'écran.",
     "public.set_engagement_status": "DETTE : porte de statut de mandat de l'amorçage ; les mandats passent par les portes du cabinet. Retrait à trancher."
@@ -200,7 +199,6 @@
     "apps/web/src/routes/_authenticated/cabinet.rapprochement.tsx": "Rapprochement bancaire — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.reglages.tsx": "Réglages du cabinet — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.stocks.tsx": "Stocks — Malica Office",
-    "apps/web/src/routes/_authenticated/cabinet.tour.tsx": "La tour — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.tsx": "Supervision cabinet — Malica Office",
     "apps/web/src/routes/_authenticated/mon-espace.tsx": "Mon espace privé — Malica Office",
     "apps/web/src/routes/_authenticated/office.tsx": "Choisir un espace — Malica Office",

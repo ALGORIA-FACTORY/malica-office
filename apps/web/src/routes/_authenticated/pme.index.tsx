@@ -699,7 +699,7 @@ function PmeHome() {
         ) : null}
 
         {/* ── 7. l'abonnement, en une ligne : les trois cartes d'hier ───── */}
-        <Link to="/pme/reglages" className="ligne abo">
+        <Link to="/pme/reglages" hash="mon-abonnement" className="ligne abo">
           <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : "—"}</b>
           <span>
             {t("pme.home.abo.ligne", {

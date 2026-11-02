@@ -99,6 +99,10 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   --color-signal-info: var(--signal-info);
+  --color-etat-ok: var(--etat-ok);
+  --color-etat-warn: var(--etat-warn);
+  --color-etat-stop: var(--etat-stop);
+  --color-etat-info: var(--etat-info);
   --color-marigold: var(--marigold);
   --color-marigold-on-ink: var(--marigold-on-ink);
   --color-text-2: var(--text-2);
@@ -135,6 +139,18 @@
   --signal-soft: oklch(0.955 0.018 60);
   /* Le bleu des renvois à la source (#2968A5). Il ne juge rien : il relie. */
   --signal-info: oklch(0.5 0.11 250);
+
+  /*
+   * L'encre d'un ÉTAT, en texte (pastilles de la tour, 2 novembre 2026) : les
+   * quatre couleurs fonctionnelles de la marque — Evergreen #3A8F54, Amber
+   * #B58614, Vermilion #BF4424, Azure #2968A5 —, foncées jusqu'au contraste
+   * AA (4,5:1 au moins) sur le papier. Le fond d'une pastille en est le
+   * dixième. Elles disent un état, jamais une décoration.
+   */
+  --etat-ok: #2b6b3f;
+  --etat-warn: #7a5a0d;
+  --etat-stop: #a63a1e;
+  --etat-info: #2968a5;
 
   /* La voix de Malica. Sur papier : #C8901F. */
   --marigold: oklch(0.66 0.12 78);
@@ -186,6 +202,12 @@
   --signal-stop: oklch(0.62 0.17 25);
   --signal-soft: oklch(0.27 0.02 60);
   --signal-info: oklch(0.72 0.09 250);
+
+  /* Les mêmes états, éclaircis jusqu'au contraste AA sur l'encre. */
+  --etat-ok: #7cc593;
+  --etat-warn: #e0b54a;
+  --etat-stop: #f08a6e;
+  --etat-info: #8db8e8;
 
   /* Les deux marigolds s'échangent : sur fond d'encre c'est le clair qui porte. */
   --marigold: oklch(0.8 0.11 82);

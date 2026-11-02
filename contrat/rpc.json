@@ -343,11 +343,14 @@
     "modifier"
   ],
   "tour": [
+    "accorderLectures",
     "calendrier",
     "chercherOrganisations",
+    "clients",
     "designerEmetteur",
     "emetteur",
     "grilleEnVigueur",
+    "interventions",
     "licences",
     "poserJourFerie",
     "prestatairesDePaiement",
@@ -365,9 +368,11 @@
     "reglerRelances",
     "reglerRelectureNuit",
     "relecturesDeNuit",
+    "reprendre",
     "retirerJourFerie",
     "retirerReportPublie",
     "suisJePlateforme",
+    "suspendre",
     "trousDeLaGrille"
   ]
 }

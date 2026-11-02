@@ -4177,6 +4177,66 @@ export interface LicenceVueDeLaTour {
   societes: string | null;
 }
 
+/**
+ * L'état d'un ensemble de factures, le pire d'abord (`facturation.encours_v`) ;
+ * `null` : aucune facture.
+ */
+export type EtatDesFactures = "en_retard" | "partielle" | "a_echoir" | "payee" | null;
+
+/** Un cabinet, vu de la tour : son identité et l'état de ses factures consolidées. */
+export interface CabinetDeLaTour {
+  id: string;
+  nom: string;
+  matricule: string | null;
+  juridiction: string;
+  devise: string;
+  etat: EtatDesFactures;
+  /** Le reste dû, en texte décimal de la base. */
+  reste_du: string;
+  /** La première échéance non réglée, « AAAA-MM-JJ ». */
+  echeance_le: string | null;
+}
+
+/**
+ * Une PME, vue de la tour, avec ou sans cabinet : son abonnement, sa
+ * consommation, ses factures, et sa bibliothèque EN NOMBRES — jamais un papier.
+ */
+export interface PmeDeLaTour {
+  id: string;
+  nom: string;
+  matricule: string | null;
+  devise: string;
+  /** Le cabinet sous mandat actif, ou celui qui la dote ; `null` : en direct. */
+  cabinet_id: string | null;
+  cabinet_nom: string | null;
+  /** Vrai quand le cabinet paie son abonnement (accès actif du canal cabinet). */
+  paye_par_cabinet: boolean;
+  licence_id: string | null;
+  offre_code: string | null;
+  offre_libelle: string | null;
+  /** `active`, `suspendue` ou `resiliee` ; `null` sans licence. */
+  statut: string | null;
+  lectures_consommees: number | null;
+  lectures_droit: number | null;
+  documents: number;
+  transmis_mois: number;
+  dernier_depot_le: string | null;
+  etat: EtatDesFactures;
+  reste_du: string;
+  echeance_le: string | null;
+}
+
+/** Un geste de la tour sur une licence (`plateforme.interventions`). */
+export interface InterventionDeLaTour {
+  id: string;
+  acte: string;
+  motif: string;
+  valeur: string | null;
+  effet_du: string | null;
+  effet_au: string | null;
+  le: string;
+}
+
 /** Le réglage de la passe de nuit en vigueur (`plateforme.reglages_relecture_nuit`). */
 export interface ReglageRelectureNuit {
   actif: boolean;
@@ -4237,6 +4297,21 @@ export interface PassageDeNuit {
 
 export interface TourRepository {
   suisJePlateforme(): Promise<boolean>;
+  /** Tous les cabinets et toutes les PME, avec ou sans cabinet : des compteurs et des états. */
+  clients(): Promise<{ cabinets: CabinetDeLaTour[]; pme: PmeDeLaTour[] }>;
+  /** Les derniers gestes de la tour sur une licence. */
+  interventions(licenceId: string): Promise<InterventionDeLaTour[]>;
+  /** Suspendre une licence, motivé (`plateforme.suspendre`). */
+  suspendre(licenceId: string, motif: string): Promise<unknown>;
+  /** Reprendre une licence suspendue, motivé (`plateforme.reprendre`). */
+  reprendre(licenceId: string, motif: string): Promise<unknown>;
+  /** Des lectures en plus pour un mois « AAAA-MM », motivé (`plateforme.accorder_lectures`). */
+  accorderLectures(
+    licenceId: string,
+    nombre: number,
+    mois: string,
+    motif: string,
+  ): Promise<unknown>;
   /** La passe de nuit : son réglage et l'état du relecteur, libellé dans la langue demandée. */
   reglageRelectureNuit(
     locale: string,
