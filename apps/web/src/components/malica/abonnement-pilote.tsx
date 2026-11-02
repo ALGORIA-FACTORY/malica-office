@@ -803,7 +803,8 @@ export function ARegler() {
   if (!principal) return null;
   // Ceux de la société : une facture de cabinet se paie depuis la console du cabinet.
   const ouverts = (paiements.data ?? []).filter(
-    (p) => p.etat !== "paye" && p.payeur_tenant_id === null,
+    // Ni payé, ni remplacé par un changement d'offre suivant (20261117110000).
+    (p) => p.etat !== "paye" && p.etat !== "remplace" && p.payeur_tenant_id === null,
   );
   if (ouverts.length === 0 && !retour) return null;
   /*

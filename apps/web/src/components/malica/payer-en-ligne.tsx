@@ -74,7 +74,7 @@ export function PayerEnLigneSociete() {
           <p className="warn" role="alert">
             {texteDeLErreur(paiements.error ?? choix.error, OU_SOCIETE, t("common.error"))}
           </p>
-        ) : !paiement || paiement.etat === "paye" ? (
+        ) : !paiement || paiement.etat === "paye" || paiement.etat === "remplace" ? (
           <p className="et">{t("pme.payer.rienARegler")}</p>
         ) : (
           <>
@@ -190,7 +190,7 @@ export function PayerEnLigneCabinet() {
         <p className="text-sm text-signal-warn" role="alert">
           {texteDeLErreur(paiements.error ?? choix.error, OU_CABINET, t("common.error"))}
         </p>
-      ) : !paiement || paiement.etat === "paye" ? (
+      ) : !paiement || paiement.etat === "paye" || paiement.etat === "remplace" ? (
         <p className="text-sm text-muted-foreground">{t("pme.payer.rienARegler")}</p>
       ) : (
         <div className="max-w-xl space-y-4">

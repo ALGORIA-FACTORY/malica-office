@@ -163,6 +163,33 @@ describe("une montée se paie en ligne", { skip: !ADMIN }, () => {
     });
   });
 
+  it("une montée remplacée par un autre changement ne se paie plus ; la suivante, si", async () => {
+    // 2 novembre 2026 : « À régler » empilait Basic → Premium ET Basic → Team.
+    await aBlanc(async (db) => {
+      const d = await decor(db);
+      const premiere = await monter(db, d);
+      assert.ok(premiere);
+      const seconde = await sous(db, d.principal, async () => {
+        await db.query("select public.forfait_changer('premium', $1)", [d.tenant]);
+        const { rows } = await db.query<{ p: Paiement | null }>(
+          "select public.paiement_montee_preparer($1) as p",
+          [d.tenant],
+        );
+        return rows[0]!.p;
+      });
+      assert.ok(seconde, "la seconde montée prépare son acompte");
+      const etats = await sous(db, d.principal, async () => {
+        const { rows } = await db.query<{ paiement_id: string; etat: string }>(
+          "select paiement_id, etat from facturation.paiements_en_ligne_v where licence_id = $1",
+          [d.licence],
+        );
+        return new Map(rows.map((r) => [r.paiement_id, r.etat]));
+      });
+      assert.equal(etats.get(premiere.paiement_id), "remplace");
+      assert.equal(etats.get(seconde.paiement_id), "a_payer");
+    });
+  });
+
   it("sans émetteur désigné, rien ne se prépare : l'offre s'ouvre quand même", async () => {
     await aBlanc(async (db) => {
       const d = await decor(db, false);

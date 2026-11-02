@@ -35,7 +35,8 @@ interface PaiementLu {
   montant_tva: string;
   montant_ttc: string;
   devise: string;
-  etat: "a_payer" | "lien_cree" | "paye" | "refuse";
+  /** `remplace` : un acompte de montée que le forfait suivant a remplacé ; il ne se paie plus. */
+  etat: "a_payer" | "lien_cree" | "paye" | "refuse" | "remplace";
   prestataire: string | null;
   reference: string | null;
   lien: string | null;
@@ -379,6 +380,9 @@ export const facturation = {
   async payerEnLigne(db: Requete, paiementId: string, moyen: string) {
     const p = await lirePaiement(db, paiementId);
     if (p.etat === "paye") return { ouvert: true, lien: null, paiement: p };
+    // Une montée remplacée par un autre changement d'offre ne se paie plus :
+    // la facture du mois facture les jours réellement passés (20261117110000).
+    if (p.etat === "remplace") throw new Error("refus.paiement.remplace");
     const env = await prestataireOuvert(db);
     if (!env) return { ouvert: false, lien: null, paiement: p };
 
