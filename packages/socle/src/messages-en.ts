@@ -2462,6 +2462,8 @@ export const en: Dict = {
     "This document’s entry is booked with its rate: return it first (reversal), then enter the rate.",
   "refus.avoir.saisie":
     "The credit note or the chosen invoice is not recognised: reload the page and choose again.",
+  "refus.paiement.remplace":
+    "This plan change was replaced by a later one: it is no longer payable. The monthly invoice counts the days actually spent on each plan.",
   "refus.journal.droits": "Only a member of this company can clear its log.",
   "refus.avoir.droits":
     "Only the firm that supervises this file links a credit note to its invoice.",

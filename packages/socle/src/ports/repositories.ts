@@ -4070,7 +4070,8 @@ export interface PaiementEnLigne {
   /** TVA comprise, sans timbre : le timbre est celui de la facture du mois. */
   montant_ttc: string;
   devise: string;
-  etat: "a_payer" | "lien_cree" | "paye" | "refuse";
+  /** `remplace` : un acompte de montée que le forfait suivant a remplacé ; il ne se paie plus. */
+  etat: "a_payer" | "lien_cree" | "paye" | "refuse" | "remplace";
   prestataire: string | null;
   reference: string | null;
   lien: string | null;

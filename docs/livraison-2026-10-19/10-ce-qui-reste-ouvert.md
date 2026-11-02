@@ -425,3 +425,10 @@ mais « signalée » (`docs/sudoku/contrat-du-moteur.md`, §2 et §7). Défauts 
   facture réelle qui n'imprime que « Réf. » devant son numéro le verra absent.
 - **Les présences (cachet, signature) ne se constatent pas dans un texte** : leur
   repère imprimé les signale, à vérifier sur l'image.
+
+## Tranché par Wissem le 2 novembre 2026
+
+- **Une montée remplacée ne se paie plus** (choix « 1 ») : un acompte de montée non payé dont le forfait n'est plus le forfait en cours est « remplacé » (`20261117110000`) ; la facture du mois facture les jours réellement passés à chaque offre.
+- **Une place de propriétaire coûte une place** : le rôle est donné par le propriétaire principal, le prix est celui d'une place (`ref.offres.prix_siege_sup`).
+- **Une société au-delà de l'offre : 29 DT HT par mois** (`ref.offres.prix_organisation_sup`, déjà à 29,000 dans la grille du 19 octobre).
+- **Payer à l'année : 2 mois offerts**, pour l'offre en cours (`mon_annuel`).

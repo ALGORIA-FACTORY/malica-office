@@ -2544,6 +2544,8 @@ export const fr = {
     "L’écriture de cette pièce est inscrite avec son cours : retournez-la d’abord (contre-passation), puis saisissez le cours.",
   "refus.avoir.saisie":
     "L’avoir ou la facture désignée n’est pas reconnue : rechargez la page et choisissez à nouveau.",
+  "refus.paiement.remplace":
+    "Ce changement d'offre a été remplacé par un autre : il ne se paie plus. La facture du mois compte les jours réellement passés à chaque offre.",
   "refus.journal.droits": "Seul un membre de cette société peut régler son journal.",
   "refus.avoir.droits": "Seul le cabinet qui supervise ce dossier rattache un avoir à sa facture.",
   "refus.avoir.facture":
