@@ -46,6 +46,8 @@ const CLES = [
   ["recharge-automatique"],
   ["mes-paiements"],
   ["mon-annuel"],
+  // Le prix d'une place ou d'une société suit l'offre (`usePrixEnPlus`).
+  ["prix-en-plus"],
 ];
 
 function useInvalider() {
