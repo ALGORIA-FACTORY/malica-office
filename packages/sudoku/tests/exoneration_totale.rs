@@ -53,7 +53,7 @@ fn le_refus_dit_sa_raison() {
     let (g, p) = grille_en_base();
     let outs = par_variante(&b15_exoneree(), &g, &p);
     assert!(
-        outs.iter().any(|(_, o)| o["raison"] == "exonération : le total HT ne porte pas son libellé"),
+        outs.iter().any(|(_, o)| o["raison"] == "le total HT ne porte pas son libellé"),
         "{outs:?}"
     );
 }
@@ -90,6 +90,6 @@ fn un_ht_sans_libelle_n_est_pas_prouve() {
     ]);
     let o = resoudre(j, grille_facture(), pack_essai());
     assert_eq!(o["issue"], "aucune", "{o}");
-    assert_eq!(o["raison"], "exonération : le total HT ne porte pas son libellé");
+    assert_eq!(o["raison"], "le total HT ne porte pas son libellé");
     assert_eq!(o["champs"]["total_ht"]["statut"], "signale");
 }

@@ -458,15 +458,18 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         preuves.insert(p.code.clone(), st.into());
     }
 
-    // ---------- Une exonération ne prouve que ce qui l'établit ----------
-    // Totale (zéro instance) : le groupe ne contraint plus le total des bases, et HT + droits
-    // = TTC ferme sur n'importe quelle paire de totaux. Sur une facture à deux tranches (0 % et
-    // 19 %) qui imprime « 0,000 » et « exonérée », le « Total TTC » passait pour le HT et le net
-    // pour le TTC (100/B-15, 2 novembre 2026). Le HT n'est retenu que s'il porte son libellé
-    // (repères du champ, en base), ou si les lignes le ferment exactement.
-    // Partielle : le centre n'a fermé qu'une part du total des bases ; le reste, exonéré, n'est
-    // imprimé nulle part. Seules les lignes l'établissent, et chaque taux doit y valoir sa base
-    // imprimée (`taux_par_base`) : le reste est alors, au millime, la somme des lignes sans taux.
+    // ---------- Le total HT porte son libellé, ou les lignes le ferment ----------
+    // Une preuve n'est retenue que si la valeur prise pour le total des bases (le HT) porte
+    // son libellé — repères du champ, en base, sur le jeton ou dans la suite de purs mots juste
+    // à sa gauche — ou si les lignes la ferment exactement. Décision du dirigeant (2 novembre
+    // 2026) : zéro fausse preuve l'emporte sur les pièces gagnées. Sans elle :
+    // - exonération totale (zéro instance) : le groupe ne contraint plus le HT, et HT + droits
+    //   = TTC fermait sur le « Total TTC » pris pour le HT (100/B-15, tranches 0 % et 19 %,
+    //   « 0,000 » et « exonérée » imprimés) ;
+    // - deux taux sur un ticket, un chiffre du TTC mal lu : la base à 7 % passait pour le HT,
+    //   et un montant d'article pour le TTC (50/05, OCR).
+    // Exonération partielle, en plus : le reste, exonéré, n'est imprimé nulle part ; les lignes
+    // seules l'établissent, chaque taux y valant sa base imprimée (`taux_par_base`).
     // Sinon la pièce n'est pas prouvée : rendue à la chaîne, valeurs gardées au statut signalé.
     if let (true, Some(e)) = (prouvee, unique) {
         // Les lignes lues sans cellule déduite ni remise globale, et dont la somme vaut `total`.
@@ -483,19 +486,16 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         for (g, gr) in modele.groupes.iter().enumerate() {
             let Some(sol) = e.g[g].as_ref() else { continue };
             let Some(t) = gr.total_base else { continue };
-            let total = e.s[t].filter(|v| !v.absent).map(|v| v.v);
-            if sol.exoneration {
-                let Some(ht) = total else { continue };
-                let champ = modele.vars[t].champ;
-                let ancre = dom
-                    .valeurs
-                    .get(&ht)
-                    .is_some_and(|x| x.occurrences.iter().any(|o| plan.libelle_avant(o.jeton, &reperes[champ])));
-                if !ancre && !lignes_ferment(ht, false) {
-                    refus = Some("exonération : le total HT ne porte pas son libellé");
-                }
-            } else if sol.partielle && !total.is_some_and(|ht| lignes_ferment(ht, true)) {
+            let Some(ht) = e.s[t].filter(|v| !v.absent).map(|v| v.v) else { continue };
+            let champ = modele.vars[t].champ;
+            let ancre = dom
+                .valeurs
+                .get(&ht)
+                .is_some_and(|x| x.occurrences.iter().any(|o| plan.libelle_avant(o.jeton, &reperes[champ]) || plan.ancre(o.jeton, &reperes[champ], None, true)));
+            if sol.partielle && !lignes_ferment(ht, true) {
                 refus = Some("exonération partielle non confirmée par les lignes");
+            } else if !ancre && !lignes_ferment(ht, false) {
+                refus = Some("le total HT ne porte pas son libellé");
             }
         }
         if let Some(r) = refus {

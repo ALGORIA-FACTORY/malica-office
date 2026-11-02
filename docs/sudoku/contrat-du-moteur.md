@@ -121,13 +121,25 @@ Deux clés facultatives de `groupe_taux`, ajoutées à l'exécution :
   fictives, couche de texte et OCR rapide, 0 fausse preuve. Banc adverse (mention
   « Exonéré » injectée sur toutes, puis un chiffre de montant changé : 9 381 et
   9 474 lectures) : aucune fausse preuve par l'exonération partielle.
-- L'exonération TOTALE (zéro instance) exige elle aussi son HT (2 novembre 2026) :
-  la valeur retenue pour `total_base` doit porter son libellé (repères du champ,
-  sur le jeton ou dans la suite de purs mots juste à sa gauche), ou les lignes
-  doivent la fermer exactement ; sinon `issue = "aucune"`, raison « exonération :
-  le total HT ne porte pas son libellé ». Sans cette garde, 100/B-15 (tranches 0 %
-  et 19 %, « 0,000 » imprimé, rangée « TVA 0 % » libellée « exonérée ») sortait
-  prouvée FAUSSE : le « Total TTC » pris pour le HT, le net pour le TTC.
+
+**Le total HT porte son libellé** (décision du dirigeant, 2 novembre 2026 : zéro
+fausse preuve l'emporte sur les pièces gagnées). Toute preuve exige que la valeur
+retenue pour le `total_base` d'un `groupe_taux` porte son libellé — les repères du
+champ, en base (`ref.grille_champs.reperes_fr`) : sur le jeton lui-même, dans la
+suite de purs mots qui le précède sur sa rangée (à gauche, ou à droite sur une
+pièce de droite à gauche ; les mots lus dans les deux ordres), ou en tête de sa
+colonne — sinon que les lignes la ferment exactement (sans cellule déduite ni
+remise globale). Sinon `issue = "aucune"`, raison « le total HT ne porte pas son
+libellé », champs `signale`, valeurs gardées. Sans elle, au banc :
+
+- 100/B-15 (tranches 0 % et 19 %, « 0,000 » imprimé, rangée « TVA 0 % » libellée
+  « exonérée », rien d'injecté) sortait prouvée FAUSSE par l'exonération totale :
+  le « Total TTC » 1 749,800 pris pour le HT, le net pour le TTC ;
+- 50/05 (ticket à deux taux, OCR, un chiffre du TTC mal lu) sortait prouvée
+  FAUSSE : la base à 7 % pris pour le HT, un montant d'article pour le TTC.
+
+Le repère « Total H.T » s'ajoute au total HT (`20261117110100`) : les points ne
+sont pas retirés par la comparaison des repères.
 
 `total_base` et `total_montant` sont facultatifs : une facture n'imprime pas
 toujours le total de TVA ; dans une `somme`, un champ de groupe vaut alors la
@@ -495,3 +507,33 @@ Le centre : couche de texte 76 factures prouvées justes, OCR rapide 73 ; **0
 fausse preuve**. 100/D-04 est signalée par ses lettres ; 100/D-08 aussi — ses
 montants sont imprimés à deux décimales, ses lettres au millime : c'était la
 seule fausse preuve connue (le sudoku rendait les valeurs arrondies).
+
+## 8. Le total HT porte son libellé ; l'exonération partielle (2 novembre 2026)
+
+Mesuré par le chemin de production (grille et pack lus en base, adaptateur,
+moteur natif). « Avant » : `main` au 2 novembre (`a69db54`). Banc adverse : la
+mention « Exonéré » injectée sur les 150 factures fictives, puis chaque chiffre
+d'un montant changé un à un (9 381 lectures sur la couche de texte, 9 474 en
+OCR rapide).
+
+| Banc                                               | Avant                      | Après               |
+| -------------------------------------------------- | -------------------------- | ------------------- |
+| 150 factures, couche de texte : justes / fausses   | 102 / 0                    | 101 / 0             |
+| 150 factures, OCR rapide : justes / fausses        | 109 / 0                    | 106 / 0             |
+| 100/B-15, rangée « TVA 0 % » libellée « exonérée » | **prouvée fausse**         | non prouvée         |
+| Banc adverse, couche de texte : fausses            | 65                         | **0**               |
+| Banc adverse, OCR rapide : fausses                 | 66                         | **0**               |
+| Banc 3 (60 factures, OCR par lignes) : justes      | 59 (TS) ; 60 (moteur seul) | 55 ; 55             |
+| Banc 3 : 3 000 lectures corrompues : fausses       | 0                          | 0                   |
+| Staging du 2 novembre, 6 pièces non prouvées       | 0 prouvée                  | 50/14 prouvée juste |
+
+Ce que coûte la règle (pièces justes rendues à la chaîne, toutes vérifiées) :
+100/D-10 (son HT seul sur sa rangée), 50/16, 50/29 (le HT lu dans le tableau de
+TVA d'un ticket, « TVA 19 % HT 89,861 » : la forme même de la fausse preuve
+50/05), 50/24 en OCR (aucun libellé du HT lu) ; au banc 3, F009, F024, F031,
+F032 (aucun libellé sur la rangée du HT). 50/14 est gagnée par l'exonération
+partielle.
+
+Non vérifié : la parité du moteur WebAssembly (la cible `wasm32` n'a pas pu être
+téléchargée dans l'environnement de mesure ; seul l'enrobage des exports lui est
+propre) et les vraies pièces du staging (non rejouées).

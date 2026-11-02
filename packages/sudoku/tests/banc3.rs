@@ -1,7 +1,10 @@
 //! Rejoue le banc 3 mesuré sur l'implémentation de référence : 60 factures et
 //! 6 tickets FICTIFS (générés), lus par OCR, et 3 000 lectures corrompues.
-//! Exigences : 60/60 factures prouvées justes, 6/6 tickets non prouvés,
-//! 0 fausse preuve sur les mutations.
+//! Exigences : 0 fausse preuve, 6/6 tickets non prouvés, 0 fausse preuve sur les
+//! mutations ; 55/60 factures prouvées justes. Le moteur ne retient plus un total HT qui
+//! ne porte pas son libellé (décision du dirigeant, 2 novembre 2026 : zéro fausse preuve
+//! l'emporte) : 60 avant elle, F008, F009, F024, F031 et F032 n'ont aucun libellé lu sur
+//! la rangée de leur HT.
 
 mod commun;
 
@@ -105,7 +108,7 @@ fn banc3_factures_et_tickets() {
         println!("  non prouvée : {n}");
     }
     assert_eq!(fausses, 0);
-    assert_eq!((justes, factures), (60, 60));
+    assert_eq!((justes, factures), (55, 60));
     assert_eq!((tickets_signales, tickets), (6, 6));
 }
 

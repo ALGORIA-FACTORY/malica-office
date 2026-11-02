@@ -108,9 +108,10 @@ impl<'a> Plan<'a> {
 
     /// Le jeton `i` porte-t-il son libellé, imprimé juste avant lui sur sa rangée ? Sur le
     /// jeton lui-même (« Total HT 500,000 »), ou dans la suite de purs mots (ni montant, ni
-    /// date, ni chiffre) qui le précède sans interruption : « Total | HT | 1 670,000 ». Une
-    /// autre valeur entre le libellé et `i` coupe la suite : sur « Total HT 1 670,000 Total
-    /// TTC 1 749,800 », 1 749,800 n'est pas ancré par « Total HT ».
+    /// date, ni chiffre) qui le précède sans interruption dans le sens de lecture : à gauche
+    /// (« Total | HT | 1 670,000 ») ou, sur une pièce de droite à gauche, à droite. Une autre
+    /// valeur entre le libellé et `i` coupe la suite : sur « Total HT 1 670,000 Total TTC
+    /// 1 749,800 », 1 749,800 n'est pas ancré par « Total HT ».
     pub fn libelle_avant(&self, i: usize, reperes: &[String]) -> bool {
         if reperes.is_empty() {
             return false;
@@ -121,27 +122,39 @@ impl<'a> Plan<'a> {
         }
         let a = &self.jetons[i];
         let ha = (a.y1 - a.y0).max(f64::EPSILON);
-        let mut rangee: Vec<usize> = (0..self.jetons.len())
-            .filter(|&k| {
-                let b = &self.jetons[k];
-                let hb = (b.y1 - b.y0).max(f64::EPSILON);
-                k != i && b.page == a.page && b.x1 <= a.x0 + 0.25 * ha
-                    && (a.y1.min(b.y1) - a.y0.max(b.y0)) / ha.min(hb) > 0.5
-            })
+        let meme_rangee = |b: &Jeton| {
+            let hb = (b.y1 - b.y0).max(f64::EPSILON);
+            b.page == a.page && (a.y1.min(b.y1) - a.y0.max(b.y0)) / ha.min(hb) > 0.5
+        };
+        let libelle = |b: &Jeton| b.montants.is_empty() && b.date.is_none() && !b.texte.chars().any(|c| c.is_ascii_digit());
+        // De la valeur vers l'extérieur, mot à mot. Les mots d'un libellé latin restent dans
+        // l'ordre visuel même quand la pièce s'aligne à droite (« 178,000 | Total | HT »), et
+        // une couche de texte de droite à gauche les rend en miroir (« 178,000 | HT | Total ») :
+        // la suite se lit dans les deux ordres.
+        let suite_lue = |mut cote: Vec<usize>| {
+            let (mut vers, mut depuis) = (String::new(), String::new());
+            for k in cote.drain(..) {
+                if !libelle(&self.jetons[k]) {
+                    return false;
+                }
+                vers.push_str(&self.normes[k]);
+                depuis.insert_str(0, &self.normes[k]);
+                if contient(&vers) || contient(&depuis) {
+                    return true;
+                }
+            }
+            false
+        };
+        let ordre = |x: &usize, y: &usize| self.jetons[*x].x0.partial_cmp(&self.jetons[*y].x0).unwrap_or(std::cmp::Ordering::Equal);
+        let mut gauche: Vec<usize> = (0..self.jetons.len())
+            .filter(|&k| k != i && meme_rangee(&self.jetons[k]) && self.jetons[k].x1 <= a.x0 + 0.25 * ha)
             .collect();
-        rangee.sort_by(|&x, &y| self.jetons[y].x0.partial_cmp(&self.jetons[x].x0).unwrap_or(std::cmp::Ordering::Equal));
-        let mut suite = String::new();
-        for k in rangee {
-            let b = &self.jetons[k];
-            if !b.montants.is_empty() || b.date.is_some() || b.texte.chars().any(|c| c.is_ascii_digit()) {
-                break;
-            }
-            suite.insert_str(0, &self.normes[k]);
-            if contient(&suite) {
-                return true;
-            }
-        }
-        false
+        gauche.sort_by(|x, y| ordre(y, x));
+        let mut droite: Vec<usize> = (0..self.jetons.len())
+            .filter(|&k| k != i && meme_rangee(&self.jetons[k]) && self.jetons[k].x0 >= a.x1 - 0.25 * ha)
+            .collect();
+        droite.sort_by(ordre);
+        suite_lue(gauche) || suite_lue(droite)
     }
 
     /// Un repère est-il lu quelque part sur la pièce ?

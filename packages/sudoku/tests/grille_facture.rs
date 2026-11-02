@@ -142,13 +142,13 @@ fn repere_lu_sans_montant_imprime() {
 #[test]
 fn la_solution_forte_l_emporte_sur_la_faible() {
     // Une solution forte (HT 1 000,000 ; TVA 190,000 ; TTC 1 190,000) et une solution
-    // entièrement faible (lectures entières) : la forte est prouvée, seule. Pas de
-    // libellé, pour que l'arithmétique seule départage.
+    // entièrement faible (lectures entières) : la forte est prouvée, seule. Les deux HT
+    // portent le même libellé (exigé de toute preuve), pour que l'arithmétique seule départage.
     let j = vec![
-        jeton(0, "1 000,000", 0.6, 0.60, &[(1000000, true)]),
+        jeton(0, "Total HT 1 000,000", 0.6, 0.60, &[(1000000, true)]),
         jeton(1, "190,000", 0.6, 0.64, &[(190000, true)]),
         jeton(2, "1 190,000", 0.6, 0.68, &[(1190000, true)]),
-        jeton(3, "2000", 0.1, 0.30, &[(2000000, false)]),
+        jeton(3, "Total HT 2000", 0.1, 0.30, &[(2000000, false)]),
         jeton(4, "380", 0.2, 0.30, &[(380000, false)]),
         jeton(5, "2380", 0.3, 0.30, &[(2380000, false)]),
     ];
@@ -206,7 +206,7 @@ fn total_seul_exige_des_lectures_fortes() {
     // pour le mode « total seul » : seule la TVA totale est imprimée, avec les bases.
     let grille = json!({
         "champs": [
-            {"code": "total_ht", "type": "montant"},
+            {"code": "total_ht", "type": "montant", "reperes_fr": ["Total HT"]},
             {"code": "total_ttc", "type": "montant"},
             {"code": "total_tva", "type": "montant"},
             {"code": "base_tva_par_taux", "type": "montant"},
