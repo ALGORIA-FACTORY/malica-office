@@ -206,6 +206,10 @@ app = FastAPI()
 async def sante() -> dict:
     return {
         "ok": True,
+        # L'API le relaie dans `/sante/profonde` (`ocr`) : sans lui, elle dit
+        # « inconnu » alors que la lecture passe (constaté le 2 novembre 2026,
+        # après le retour à Paddle seul de #188). Cette image n'a qu'un moteur.
+        "moteur": "paddle",
         "detection": DETECTION,
         "reconnaissance": RECONNAISSANCE,
         "reconnaissance_arabe": RECONNAISSANCE_ARABE or None,
