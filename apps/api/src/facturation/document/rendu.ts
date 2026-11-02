@@ -528,8 +528,44 @@ function paginer(m: Mise, d: DocumentDeFacture, debutDuTableau: number): LigneDu
   return pages;
 }
 
+/** Les rubriques que le rendu lit : une seule manquante, et le PDF ne se rend pas. */
+export const RUBRIQUES_DU_RENDU = [
+  "avoir",
+  "avoir_sur",
+  "a_regler_avant",
+  "client",
+  "date_echeance",
+  "date_emission",
+  "deja_paye",
+  "designation",
+  "droit_de_timbre",
+  "emetteur",
+  "en_retard",
+  "matricule_fiscal",
+  "montant_ht",
+  "montants_en",
+  "motif",
+  "numerotation",
+  "page",
+  "paiement",
+  "payee",
+  "payer_en_ligne",
+  "periode",
+  "prix_unitaire",
+  "produit",
+  "quantite",
+  "reference_abonne",
+  "reste_a_payer",
+  "total_ht",
+  "total_ttc",
+  "tva_au_taux",
+] as const;
+
 export function rendreLaFacture(d: DocumentDeFacture, o: OptionsDuRendu): Buffer {
-  if (!d.devise) throw new Error("refus.referentiel.manquant");
+  // Aucun repli : une rubrique absente du référentiel ne s'invente pas (R4).
+  if (!d.devise || RUBRIQUES_DU_RENDU.some((r) => !d.rubriques[r])) {
+    throw new Error("refus.referentiel.manquant");
+  }
   poserLesPolices();
   const rtl = d.langue === "ar";
   const texte = rtl ? ARABE : TEXTE;

@@ -13,17 +13,17 @@ référentiel change sans migration de code (R4, R10).
 
 ## 1. Ce que la facture porte, et d'où vient chaque valeur
 
-| Mention | Sur la facture | Source en base |
-|---|---|---|
-| Numéro séquentiel ininterrompu | `ALG-FA-2026-0001`, par émetteur, par année, par série | `facturation.compteurs_documents`, verrou de ligne |
-| Date d'émission | jour civil de l'émetteur (fuseau de sa juridiction) | `facturation.jour_de_l_emetteur` |
-| Identité de l'émetteur : nom, matricule fiscal, adresse | recopiée à l'émission | `identity.organizations` de l'émetteur désigné |
-| Identité du client : nom, matricule (cabinet), adresse | recopiée à l'émission | `identity.organizations` ou `identity.profiles` |
-| Désignation, quantité, prix unitaire HT | une ligne par prestation, remise et mois offert compris | `facturation.facture_lignes` |
-| Total HT, taux et montant de TVA, TTC | taux lu dans le pack (`facture.code_tva` → `ref.tva_rates`) | `ref.socle_params`, `ref.tva_rates` |
-| Droit de timbre | `facture.droit_de_timbre` du pack | `ref.socle_params` |
-| Échéance | émission + `jours_echeance` | `plateforme.reglages_facturation` |
-| Avoir : référence de la facture d'origine et motif | « Avoir sur la facture … du … », motif | `facturation.factures.avoir_de`, `motif` |
+| Mention                                                 | Sur la facture                                              | Source en base                                     |
+| ------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
+| Numéro séquentiel ininterrompu                          | `ALG-FA-2026-0001`, par émetteur, par année, par série      | `facturation.compteurs_documents`, verrou de ligne |
+| Date d'émission                                         | jour civil de l'émetteur (fuseau de sa juridiction)         | `facturation.jour_de_l_emetteur`                   |
+| Identité de l'émetteur : nom, matricule fiscal, adresse | recopiée à l'émission                                       | `identity.organizations` de l'émetteur désigné     |
+| Identité du client : nom, matricule (cabinet), adresse  | recopiée à l'émission                                       | `identity.organizations` ou `identity.profiles`    |
+| Désignation, quantité, prix unitaire HT                 | une ligne par prestation, remise et mois offert compris     | `facturation.facture_lignes`                       |
+| Total HT, taux et montant de TVA, TTC                   | taux lu dans le pack (`facture.code_tva` → `ref.tva_rates`) | `ref.socle_params`, `ref.tva_rates`                |
+| Droit de timbre                                         | `facture.droit_de_timbre` du pack                           | `ref.socle_params`                                 |
+| Échéance                                                | émission + `jours_echeance`                                 | `plateforme.reglages_facturation`                  |
+| Avoir : référence de la facture d'origine et motif      | « Avoir sur la facture … du … », motif                      | `facturation.factures.avoir_de`, `motif`           |
 
 Une facture émise ne change plus (déclencheur `deny_mutation`). Une erreur
 se corrige par un avoir numéroté dans sa propre série (`ALG-AV-2026-0001`).
