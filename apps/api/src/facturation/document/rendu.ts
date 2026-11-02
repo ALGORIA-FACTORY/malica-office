@@ -71,7 +71,11 @@ function poserLesPolices(): void {
     poser("@fontsource/inter", `inter-latin-${poids}-normal.woff2`, "Inter Malica");
     poser("@fontsource/inter", `inter-latin-ext-${poids}-normal.woff2`, "Inter Malica Ext");
     poser("@fontsource/ibm-plex-mono", `ibm-plex-mono-latin-${poids}-normal.woff2`, "Plex Malica");
-    poser("@fontsource/noto-kufi-arabic", `noto-kufi-arabic-arabic-${poids}-normal.woff2`, "Kufi Malica");
+    poser(
+      "@fontsource/noto-kufi-arabic",
+      `noto-kufi-arabic-arabic-${poids}-normal.woff2`,
+      "Kufi Malica",
+    );
   }
   policesPosees = true;
 }
@@ -89,10 +93,7 @@ function leLogo(): Image {
 /* ------------------------------------------------------------------ les nombres */
 
 /** Un montant : espaces fines entre les milliers, la décimale et l'exposant de la devise. */
-export function montant(
-  valeur: number,
-  devise: { exposant: number; separateur: string },
-): string {
+export function montant(valeur: number, devise: { exposant: number; separateur: string }): string {
   const exposant = devise.exposant;
   const unites = Math.round(Math.abs(valeur) * 10 ** exposant);
   const chiffres = unites.toString().padStart(exposant + 1, "0");
@@ -138,7 +139,11 @@ interface Mise {
  * depuis le bord de DÉBUT (gauche en fr/en, droite en ar), `cote` dit de quel
  * côté du point le texte s'étend.
  */
-function ancre(m: Mise, x: number, cote: "debut" | "fin"): { px: number; aligne: "left" | "right" } {
+function ancre(
+  m: Mise,
+  x: number,
+  cote: "debut" | "fin",
+): { px: number; aligne: "left" | "right" } {
   const px = m.rtl ? L - x : x;
   const versLaDroite = (cote === "debut") !== m.rtl;
   return { px, aligne: versLaDroite ? "left" : "right" };
@@ -149,7 +154,13 @@ function ecrire(
   s: string,
   x: number,
   y: number,
-  o: { taille: number; poids?: number; couleur?: string; cote?: "debut" | "fin"; chiffres?: boolean },
+  o: {
+    taille: number;
+    poids?: number;
+    couleur?: string;
+    cote?: "debut" | "fin";
+    chiffres?: boolean;
+  },
 ): number {
   const { px, aligne } = ancre(m, x, o.cote ?? "debut");
   m.ctx.font = `${o.poids ?? 400} ${o.taille}px ${o.chiffres ? CHIFFRES : m.texte}`;
@@ -273,7 +284,13 @@ function enTete(m: Mise, d: DocumentDeFacture, page: number): number {
   const f = d.facture;
   const largeurLogo = page === 1 ? 128 : 96;
   const hauteurLogo = (largeurLogo * 181.2) / 1063.7;
-  m.ctx.drawImage(leLogo(), m.rtl ? L - MARGE - largeurLogo : MARGE, MARGE, largeurLogo, hauteurLogo);
+  m.ctx.drawImage(
+    leLogo(),
+    m.rtl ? L - MARGE - largeurLogo : MARGE,
+    MARGE,
+    largeurLogo,
+    hauteurLogo,
+  );
   if (page > 1) {
     ecrire(m, `${d.nature_libelle} ${f.numero}`, L - MARGE, MARGE + 14, {
       taille: 9,
@@ -284,7 +301,12 @@ function enTete(m: Mise, d: DocumentDeFacture, page: number): number {
     return MARGE + 56;
   }
   ecrire(m, d.nature_libelle, L - MARGE, MARGE + 20, { taille: 24, poids: 600, cote: "fin" });
-  ecrire(m, f.numero, L - MARGE, MARGE + 40, { taille: 10.5, poids: 500, chiffres: true, cote: "fin" });
+  ecrire(m, f.numero, L - MARGE, MARGE + 40, {
+    taille: 10.5,
+    poids: 500,
+    chiffres: true,
+    cote: "fin",
+  });
   const etat = d.encours?.etat;
   if (f.nature === "facture" && etat === "payee") {
     tampon(m, d.rubriques["payee"]!, VERT, L - MARGE, MARGE + 50);
@@ -341,7 +363,13 @@ function parties(m: Mise, d: DocumentDeFacture, y: number): number {
     }
     return yy;
   };
-  const a = colonne(MARGE, r["emetteur"]!, f.emetteur_nom ?? "", f.emetteur_matricule, f.emetteur_adresse);
+  const a = colonne(
+    MARGE,
+    r["emetteur"]!,
+    f.emetteur_nom ?? "",
+    f.emetteur_matricule,
+    f.emetteur_adresse,
+  );
   const b = colonne(
     MARGE + moitie,
     r["client"]!,
@@ -379,7 +407,11 @@ function totaux(m: Mise, d: DocumentDeFacture, y: number, lienPaiement: string |
   const debut = MARGE + UTILE - 236;
   let yy = y + 26;
   const rangee = (lib: string, val: number, gras = false) => {
-    ecrire(m, lib, debut, yy, { taille: 9.5, couleur: gras ? ENCRE : GRIS, poids: gras ? 600 : 400 });
+    ecrire(m, lib, debut, yy, {
+      taille: 9.5,
+      couleur: gras ? ENCRE : GRIS,
+      poids: gras ? 600 : 400,
+    });
     ecrire(m, montant(val, devise), COL_MONTANT_FIN, yy, {
       taille: 9.5,
       chiffres: true,
@@ -389,7 +421,10 @@ function totaux(m: Mise, d: DocumentDeFacture, y: number, lienPaiement: string |
     yy += 17;
   };
   rangee(r["total_ht"]!, Number(f.montant_ht));
-  rangee(remplir(r["tva_au_taux"]!, { taux: pourCent(Number(f.taux_tva), devise.separateur) }), Number(f.montant_tva));
+  rangee(
+    remplir(r["tva_au_taux"]!, { taux: pourCent(Number(f.taux_tva), devise.separateur) }),
+    Number(f.montant_tva),
+  );
   rangee(r["droit_de_timbre"]!, Number(f.timbre));
   filet(m, yy - 6, debut, L - MARGE, ENCRE, 0.8);
   yy += 16;
@@ -400,7 +435,12 @@ function totaux(m: Mise, d: DocumentDeFacture, y: number, lienPaiement: string |
     chiffres: true,
     cote: "fin",
   });
-  ecrire(m, devise.code, COL_MONTANT_FIN, yy + 14, { taille: 7.5, couleur: GRIS, cote: "fin", chiffres: true });
+  ecrire(m, devise.code, COL_MONTANT_FIN, yy + 14, {
+    taille: 7.5,
+    couleur: GRIS,
+    cote: "fin",
+    chiffres: true,
+  });
   yy += 34;
   if (f.nature === "facture" && d.encours) {
     rangee(r["deja_paye"]!, Number(d.encours.encaisse));
@@ -422,7 +462,9 @@ function totaux(m: Mise, d: DocumentDeFacture, y: number, lienPaiement: string |
     let py = y + 26;
     etiquette(m, r["paiement"]!, MARGE, py);
     py += 16;
-    ecrire(m, remplir(r["a_regler_avant"]!, { date: jour(f.echeance_le) }), MARGE, py, { taille: 9.5 });
+    ecrire(m, remplir(r["a_regler_avant"]!, { date: jour(f.echeance_le) }), MARGE, py, {
+      taille: 9.5,
+    });
     py += 18;
     if (lienPaiement) {
       for (const t of couper(m, r["payer_en_ligne"]!, largeur, 9)) {
@@ -447,7 +489,11 @@ function piedDePage(m: Mise, d: DocumentDeFacture, page: number, pages: number) 
   const r = d.rubriques;
   const y = H - MARGE - 30;
   filet(m, y);
-  const identite = [f.emetteur_nom, f.emetteur_matricule ? `${r["matricule_fiscal"]} ${f.emetteur_matricule}` : null, f.emetteur_adresse]
+  const identite = [
+    f.emetteur_nom,
+    f.emetteur_matricule ? `${r["matricule_fiscal"]} ${f.emetteur_matricule}` : null,
+    f.emetteur_adresse,
+  ]
     .filter(Boolean)
     .join("  ·  ");
   ecrire(m, identite, MARGE, y + 14, { taille: 7, couleur: GRIS });
@@ -489,7 +535,14 @@ export function rendreLaFacture(d: DocumentDeFacture, o: OptionsDuRendu): Buffer
   const texte = rtl ? ARABE : TEXTE;
 
   // Une première passe, sur une toile de mesure, pour savoir combien de pages.
-  const mesure: Mise = { ctx: createCanvas(1, 1).getContext("2d"), rtl, texte };
+  // Sans alternances contextuelles ni ligatures : la parenthèse d'Inter devant
+  // un chiffre devient un glyphe sans correspondance Unicode, que la couche de
+  // texte perd (« (30/30 jours) » se relisait « 30/30 jours) »).
+  const sobre = <C extends { textRendering: string }>(ctx: C): C => {
+    ctx.textRendering = "optimizeSpeed";
+    return ctx;
+  };
+  const mesure: Mise = { ctx: sobre(createCanvas(1, 1).getContext("2d")), rtl, texte };
   const pdf = new PDFDocument({
     title: `${d.nature_libelle} ${d.facture.numero}`,
     author: d.facture.emetteur_nom ?? "",
@@ -498,7 +551,7 @@ export function rendreLaFacture(d: DocumentDeFacture, o: OptionsDuRendu): Buffer
     compressionLevel: 6,
   });
 
-  const page = () => pdf.beginPage(L, H) as unknown as Contexte;
+  const page = () => sobre(pdf.beginPage(L, H) as unknown as Contexte);
   const premiere: Mise = { ctx: page(), rtl, texte };
   premiere.ctx.fillStyle = PAPIER;
   premiere.ctx.fillRect(0, 0, L, H);

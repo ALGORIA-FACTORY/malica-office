@@ -117,10 +117,7 @@
       "app.historique_du_mois_de_tva",
       "app.reglages_comptables_arreter"
     ],
-    "parametrage.regles_de_change": [
-      "app.decisions_en_vigueur",
-      "app.regle_de_change_arreter"
-    ],
+    "parametrage.regles_de_change": ["app.decisions_en_vigueur", "app.regle_de_change_arreter"],
     "parametrage.role_bindings": [
       "app.nature_des_comptes",
       "apps/api/src/depots/capture.ts",
@@ -130,10 +127,7 @@
       "public.role_compte_definir",
       "public.role_compte_rendre_au_pack"
     ],
-    "parametrage.tva_affectations": [
-      "app.declaration_tva",
-      "app.tva_affecter"
-    ]
+    "parametrage.tva_affectations": ["app.declaration_tva", "app.tva_affecter"]
   },
   "litteraux_metier": {
     "apps/api/src/circuit-d-essai.ts": {

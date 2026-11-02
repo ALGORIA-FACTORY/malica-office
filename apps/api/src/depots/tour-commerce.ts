@@ -216,7 +216,14 @@ export const commerceDeLaTour = {
 
   async offrirDesMois(
     db: Requete,
-    g: { licenceId: string; payeurType: string; du: string; nombre: number; motif: string; cle: string | null },
+    g: {
+      licenceId: string;
+      payeurType: string;
+      du: string;
+      nombre: number;
+      motif: string;
+      cle: string | null;
+    },
   ) {
     const { rows } = await db.query<{ r: unknown }>(
       "select plateforme.mois_offrir($1, $2, $3::date, $4::smallint, $5, $6) as r",
@@ -239,7 +246,13 @@ export const commerceDeLaTour = {
     return rows[0]?.r ?? null;
   },
 
-  async prolongerLEssai(db: Requete, licenceId: string, jours: number, motif: string, cle: string | null) {
+  async prolongerLEssai(
+    db: Requete,
+    licenceId: string,
+    jours: number,
+    motif: string,
+    cle: string | null,
+  ) {
     const { rows } = await db.query<{ r: unknown }>(
       "select plateforme.essai_prolonger($1, $2::smallint, $3, $4) as r",
       [licenceId, jours, motif, cle],
@@ -365,10 +378,10 @@ export const commerceDeLaTour = {
 
   /** Le report des lectures non consommées : aucun, un mois, à vie. */
   async reglerLeReport(db: Requete, regle: string, motif: string) {
-    const { rows } = await db.query<{ r: unknown }>("select plateforme.report_regler($1, $2) as r", [
-      regle,
-      motif,
-    ]);
+    const { rows } = await db.query<{ r: unknown }>(
+      "select plateforme.report_regler($1, $2) as r",
+      [regle, motif],
+    );
     return rows[0]?.r ?? null;
   },
 };

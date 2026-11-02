@@ -470,3 +470,32 @@ mesurer, sans bloquer la livraison :
 - **Un modèle sans tarif** ne laisse aucune ligne de coût : la tour le signale
   (« sans coût »), le plafond en dollars ne le borne pas — seul le nombre de
   relectures le borne.
+
+## Le moteur commercial (tranché par défaut le 2 novembre 2026)
+
+Les quinze décisions du dirigeant du 2 novembre 2026 sont appliquées
+(migrations `20261119090000` à `20261119090700`). Restent ouverts, avec le
+défaut retenu pour ne pas bloquer :
+
+- **Premium, places par société (décision 7).** La grille en vigueur porte déjà
+  4 places incluses, 8 DT HT par place en plus et 29 DT HT par société au-delà
+  de deux ; le décompte des places PAR SOCIÉTÉ n'est pas branché (`droits_v`
+  compte par licence), faute d'une date d'effet pour la nouvelle ligne de
+  grille. Défaut : la grille actuelle, pour tous.
+- **Qui lit le commerce dans la PME (décision 14).** Strictement le
+  propriétaire principal (titulaire) et le chef de la comptabilité qu'il
+  désigne (droit personnel `commerce.lire`) ; un AUTRE dirigeant ne lit rien
+  tant qu'il n'est pas désigné.
+- **Le destinataire d'une facture du canal direct est la personne titulaire**,
+  sans le matricule de sa société (modèle du 20 octobre 2026). Risque fiscal
+  pour un client qui déduit la TVA : `docs/facturation/mentions-legales-2026-11-02.md`, § 2.
+- **Le timbre d'un avoir** vaut 0 (`avoir.droit_de_timbre`, INCERTAIN) ; un
+  avoir total ne laisse pas le timbre dû au client.
+- **Les gestes ne se cumulent pas** : une remise ou des mois offerts par
+  payeur et par mois ; les plafonds valent par geste.
+- **La passe du mois tient dans une transaction** (l'appel de la tour) : simple
+  et sans trou, mais longue si les licences se comptent par milliers. Une
+  passe découpée par cible viendra avec un compte de service dédié.
+- **Facture électronique (décision 15)** : non branchée ; possiblement
+  obligatoire pour les prestations de services depuis la LF 2026 (art. 53).
+  À trancher avec un fiscaliste avant la première vraie facture.

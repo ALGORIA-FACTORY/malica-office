@@ -22,9 +22,8 @@ if (!["localhost", "127.0.0.1", "[::1]"].includes(hote) && !hote.startsWith("/")
   throw new Error(`base non locale (${hote}) : les exemples ne s'émettent que sur un poste`);
 }
 
-const { emettreUneFactureDExemple } = await import(
-  "../apps/api/src/facturation/document/scenario-d-exemple.ts"
-);
+const { emettreUneFactureDExemple } =
+  await import("../apps/api/src/facturation/document/scenario-d-exemple.ts");
 const { rendreLaFacture } = await import("../apps/api/src/facturation/document/rendu.ts");
 
 const SORTIE = new URL("../docs/facturation/exemples/", import.meta.url);
@@ -46,7 +45,9 @@ try {
     const pdf = rendreLaFacture(document, { lienPaiement: lien });
     const nom = `${quoi}-exemple-${langue}.pdf`;
     writeFileSync(new URL(nom, SORTIE), pdf);
-    console.log(`docs/facturation/exemples/${nom} — ${document.facture.numero}, ${pdf.length} octets`);
+    console.log(
+      `docs/facturation/exemples/${nom} — ${document.facture.numero}, ${pdf.length} octets`,
+    );
   }
 } finally {
   await db.query("rollback");

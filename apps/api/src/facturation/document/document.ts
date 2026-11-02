@@ -11,7 +11,7 @@ import type { Requete } from "../../db.ts";
 
 export type Langue = "fr" | "en" | "ar";
 
-export const LANGUES: readonly Langue[] = ["fr", "en", "ar"];
+const LANGUES: readonly Langue[] = ["fr", "en", "ar"];
 
 export interface LigneDuDocument {
   ordinal: number;

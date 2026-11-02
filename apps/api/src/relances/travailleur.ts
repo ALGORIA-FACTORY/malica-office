@@ -94,7 +94,13 @@ export async function tourDeRelances(d: Dependances) {
       let erreur: string | null = null;
       try {
         await envoyerParBrevo(
-          { cle: config.cle, expediteur: config.expediteur, destinataire: c.email, ...message, pieces },
+          {
+            cle: config.cle,
+            expediteur: config.expediteur,
+            destinataire: c.email,
+            ...message,
+            pieces,
+          },
           d.fetchImpl,
         );
       } catch (e) {

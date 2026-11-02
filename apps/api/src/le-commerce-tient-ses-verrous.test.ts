@@ -92,7 +92,10 @@ describe("le commerce tient ses verrous", { skip: !ADMIN }, () => {
          where not exists (select 1 from pg_trigger g where g.tgrelid = t.oid
                               and g.tgname = 'service_hors_perimetre')) f
       order by 1, 2`);
-    assert.deepEqual(fautes.map((f) => `${f.nom} : ${f.faute}`), []);
+    assert.deepEqual(
+      fautes.map((f) => `${f.nom} : ${f.faute}`),
+      [],
+    );
   });
 
   it("aucun client n'écrit une table du commerce, hors des droits nommés", async () => {
@@ -160,7 +163,9 @@ describe("le commerce tient ses verrous", { skip: !ADMIN }, () => {
       .filter((v) => !v.invoker || (!v.plateforme && !(v.nom in VERROU.vues_hors_tour)))
       .map((v) => v.nom);
     assert.deepEqual(fautes, []);
-    const parties = Object.keys(VERROU.vues_hors_tour).filter((n) => !vues.some((v) => v.nom === n));
+    const parties = Object.keys(VERROU.vues_hors_tour).filter(
+      (n) => !vues.some((v) => v.nom === n),
+    );
     assert.deepEqual(parties, []);
   });
 
@@ -177,6 +182,9 @@ describe("le commerce tient ses verrous", { skip: !ADMIN }, () => {
            or has_function_privilege('portier', f::regprocedure, 'execute')`,
       [VERROU.internes],
     );
-    assert.deepEqual(ouvertes.map((o) => o.f), []);
+    assert.deepEqual(
+      ouvertes.map((o) => o.f),
+      [],
+    );
   });
 });

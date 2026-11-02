@@ -126,7 +126,11 @@ export async function emettreUneFactureDExemple(db: pg.PoolClient): Promise<Fact
       avoir,
       documents: (langue, quoi) =>
         enOperateur(db, operateur, async () => {
-          const d = await lireDocument(db, quoi === "facture" ? facture : avoir, langueDemandee(langue));
+          const d = await lireDocument(
+            db,
+            quoi === "facture" ? facture : avoir,
+            langueDemandee(langue),
+          );
           if (!d) throw new Error("document introuvable");
           return d;
         }),

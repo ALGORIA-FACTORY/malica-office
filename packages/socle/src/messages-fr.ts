@@ -4599,10 +4599,13 @@ export const fr = {
   "refus.essai.illegitime": "Cet essai ne correspond pas à la licence et à sa société.",
   "refus.essai.termine": "L’essai est terminé : il ne se prolonge plus.",
   "refus.facturation.echec": "L’émission de cette facture a échoué.",
-  "refus.facture.avant_la_numerotation": "Cette facture est antérieure à la numérotation sans trou : elle ne reçoit pas d’avoir ici.",
-  "refus.facture.avoir_au_dela": "Les avoirs dépasseraient la facture (reste à créditer : {reste}).",
+  "refus.facture.avant_la_numerotation":
+    "Cette facture est antérieure à la numérotation sans trou : elle ne reçoit pas d’avoir ici.",
+  "refus.facture.avoir_au_dela":
+    "Les avoirs dépasseraient la facture (reste à créditer : {reste}).",
   "refus.facture.chronologie": "Une facture plus récente de la série porte une date postérieure.",
-  "refus.facture.compteur_fige": "Le compteur de numérotation n’avance que d’un, et rien d’autre n’y change.",
+  "refus.facture.compteur_fige":
+    "Le compteur de numérotation n’avance que d’un, et rien d’autre n’y change.",
   "refus.facture.incomplete": "Une facture nouvelle porte son rang, son émetteur et sa langue.",
   "refus.facture.sens_de_ligne": "Le signe de cette ligne ne correspond pas à sa nature.",
   "refus.facture.total_incoherent": "Le total de la facture ne correspond pas à ses lignes.",
@@ -4620,9 +4623,11 @@ export const fr = {
   "refus.passe.cible_inconnue": "Une passe traite une licence ou un cabinet.",
   "refus.passe.mode_inconnu": "Une passe est un aperçu ou une émission.",
   "refus.passe.mois_a_venir": "Un mois à venir ne se facture pas.",
-  "refus.referentiel.libelle_absent": "Le libellé « {gabarit} » manque en {langue} dans le référentiel.",
+  "refus.referentiel.libelle_absent":
+    "Le libellé « {gabarit} » manque en {langue} dans le référentiel.",
   "refus.reserve.titulaire": "Seul le propriétaire principal de l’abonnement peut le faire.",
-  "refus.facture.ligne_hors_licence": "Cette ligne nomme une société qui n’est pas rattachée à sa licence.",
+  "refus.facture.ligne_hors_licence":
+    "Cette ligne nomme une société qui n’est pas rattachée à sa licence.",
 } as const;
 
 export type MessageKey = keyof typeof fr;

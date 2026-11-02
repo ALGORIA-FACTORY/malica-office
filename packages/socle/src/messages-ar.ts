@@ -4223,7 +4223,8 @@ export const ar: Dict = {
   "refus.essai.illegitime": "هذه الفترة التجريبية لا تطابق الترخيص وشركته.",
   "refus.essai.termine": "انتهت الفترة التجريبية ولا يمكن تمديدها.",
   "refus.facturation.echec": "تعذّر إصدار هذه الفاتورة.",
-  "refus.facture.avant_la_numerotation": "هذه الفاتورة سابقة للترقيم المتواصل: لا يُصدر لها تعديل من هنا.",
+  "refus.facture.avant_la_numerotation":
+    "هذه الفاتورة سابقة للترقيم المتواصل: لا يُصدر لها تعديل من هنا.",
   "refus.facture.avoir_au_dela": "التعديلات ستتجاوز الفاتورة (المتبقي: {reste}).",
   "refus.facture.chronologie": "فاتورة لاحقة في السلسلة تحمل تاريخًا لاحقًا.",
   "refus.facture.compteur_fige": "عدّاد الترقيم لا يتقدّم إلا بواحد.",

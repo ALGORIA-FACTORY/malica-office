@@ -4410,19 +4410,24 @@ export const en: Dict = {
   "refus.essai.illegitime": "This trial does not match the licence and its company.",
   "refus.essai.termine": "The trial is over and can no longer be extended.",
   "refus.facturation.echec": "Issuing this invoice failed.",
-  "refus.facture.avant_la_numerotation": "This invoice predates gapless numbering: no credit note can be issued from here.",
+  "refus.facture.avant_la_numerotation":
+    "This invoice predates gapless numbering: no credit note can be issued from here.",
   "refus.facture.avoir_au_dela": "Credit notes would exceed the invoice (remaining: {reste}).",
   "refus.facture.chronologie": "A later invoice in the series carries a later date.",
   "refus.facture.compteur_fige": "The numbering counter only moves forward by one.",
   "refus.facture.incomplete": "A new invoice must carry its number, issuer and language.",
   "refus.facture.sens_de_ligne": "This line’s sign does not match its nature.",
   "refus.facture.total_incoherent": "The invoice total does not match its lines.",
-  "refus.geste.au_dela_du_plafond": "This action exceeds the cap set by the control tower ({plafond}).",
-  "refus.geste.chevauchement": "An action of the same kind already covers this period for this payer.",
+  "refus.geste.au_dela_du_plafond":
+    "This action exceeds the cap set by the control tower ({plafond}).",
+  "refus.geste.chevauchement":
+    "An action of the same kind already covers this period for this payer.",
   "refus.geste.deja_annule": "This action has already been cancelled.",
-  "refus.geste.deja_facture": "This action already appears on an issued invoice: correct it with a credit note.",
+  "refus.geste.deja_facture":
+    "This action already appears on an issued invoice: correct it with a credit note.",
   "refus.geste.ferme": "This action can no longer be granted.",
-  "refus.geste.non_annulable": "This action cannot be cancelled: a suspension is lifted by a resumption.",
+  "refus.geste.non_annulable":
+    "This action cannot be cancelled: a suspension is lifted by a resumption.",
   "refus.geste.unite_inconnue": "A discount is either a percentage or an amount.",
   "refus.geste.valeur_positive": "This action’s value must be strictly positive.",
   "refus.introuvable.encaissement": "Payment not found.",
@@ -4431,7 +4436,9 @@ export const en: Dict = {
   "refus.passe.cible_inconnue": "A run processes a licence or a practice.",
   "refus.passe.mode_inconnu": "A run is either a preview or an issue.",
   "refus.passe.mois_a_venir": "A future month cannot be invoiced.",
-  "refus.referentiel.libelle_absent": "The “{gabarit}” label is missing in {langue} from the reference data.",
+  "refus.referentiel.libelle_absent":
+    "The “{gabarit}” label is missing in {langue} from the reference data.",
   "refus.reserve.titulaire": "Only the subscription’s main owner can do this.",
-  "refus.facture.ligne_hors_licence": "This line names a company that is not attached to its licence.",
+  "refus.facture.ligne_hors_licence":
+    "This line names a company that is not attached to its licence.",
 };

@@ -67,7 +67,12 @@ export async function envoyerParBrevo(
       htmlContent: e.html,
       textContent: e.texte,
       ...(e.pieces?.length
-        ? { attachment: e.pieces.map((p) => ({ name: p.nom, content: p.contenu.toString("base64") })) }
+        ? {
+            attachment: e.pieces.map((p) => ({
+              name: p.nom,
+              content: p.contenu.toString("base64"),
+            })),
+          }
         : {}),
     }),
     signal: AbortSignal.timeout(10_000),
