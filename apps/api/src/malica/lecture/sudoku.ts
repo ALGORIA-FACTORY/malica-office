@@ -95,6 +95,8 @@ export interface ChampsDeLaGrille {
   readonly base: string | null;
   readonly tva: string | null;
   readonly ttc: readonly { readonly variante: string | null; readonly champ: string }[];
+  /** Le champ du montant en lettres (preuve `lettres`), s'il y en a une. */
+  readonly lettres: string | null;
   /** Clé de la sortie du moteur (`quantite`, `prix`…) → code du champ de la grille. */
   readonly lignes: Readonly<Record<string, string>>;
 }
@@ -107,6 +109,7 @@ export function champsDeLaGrille(grille: Grille): ChampsDeLaGrille {
     ht: nomDuChamp(groupe?.["total_base"]),
     base: nomDuChamp(groupe?.["base"]),
     tva: nomDuChamp(groupe?.["montant"]),
+    lettres: nomDuChamp(preuves.find((x) => x.e["op"] === "lettres")?.e["champ"]),
     ttc: preuves.flatMap(({ p, e }) => {
       const champ = e["op"] === "somme" && e["role"] === "ttc" ? nomDuChamp(e["total"]) : null;
       return champ ? [{ variante: p.variante ?? null, champ }] : [];
@@ -564,8 +567,9 @@ export function selectionParLeSudoku(
       ? sortie.lignes.instances.map((l) => ({
           designation: plage(l.designation?.refs),
           quantity: ref(imprimee(l.quantite)),
-          unit_price_ht: ref(imprimee(l.prix)),
-          unit_price_ttc: null,
+          // Un prix imprimé TTC (la grille le déclare, `prix_ttc`) se rend comme tel.
+          unit_price_ht: l.prix_ttc ? null : ref(imprimee(l.prix)),
+          unit_price_ttc: l.prix_ttc ? ref(imprimee(l.prix)) : null,
           total_ht: ref(imprimee(l.montant)),
           tax_code: l.taux?.code ?? null,
         }))
@@ -589,10 +593,21 @@ export function selectionParLeSudoku(
   // Le TTC que la chaîne reçoit : la preuve au rôle `ttc` de la variante qui a
   // prouvé (ou commune), dont le total est prouvé et cité. Sur une pièce qui
   // imprime son TTC AVANT le timbre, c'est le net à payer (M04).
-  const ttc = roles.ttc
+  const ttcProuve = roles.ttc
     .filter((t) => t.variante === null || t.variante === sortie.variante)
-    .map((t) => c[t.champ])
-    .find((x) => x?.statut === "prouve" && x.refs.length > 0);
+    .map((t) => ({ champ: t.champ, lu: c[t.champ] }))
+    .find((x) => x.lu?.statut === "prouve" && x.lu.refs.length > 0);
+  /*
+   * Un total que le moteur a pris dans le montant EN LETTRES (`par_lettres`) :
+   * les chiffres relevés ne fermaient pas. Il se cite sur toute la phrase, pour
+   * que l'aval relise ce que la pièce imprime — des mots, pas un nombre — et que
+   * le contrôle le dise (« le total en chiffres ne se lit pas »).
+   */
+  const lettres = roles.lettres ? c[roles.lettres] : undefined;
+  const ttc =
+    ttcProuve && sortie.par_lettres === ttcProuve.champ
+      ? plage(lettres?.refs ?? ttcProuve.lu?.refs)
+      : ref(ttcProuve?.lu?.refs);
 
   return {
     ...selection,
@@ -604,7 +619,7 @@ export function selectionParLeSudoku(
     totals: {
       base_ht: roles.ht ? ref(c[roles.ht]?.refs) : null,
       vat: montants.length === 1 ? ref(montants[0]!.refs) : selection.totals.vat,
-      ttc: ref(ttc?.refs),
+      ttc,
     },
   };
 }
@@ -722,7 +737,7 @@ export function champsLusAInscrire(
       const cellules: Array<[string, Cite | null]> = [
         ["designation", l.designation],
         ["quantite", l.quantite],
-        ["prix", l.prix],
+        [l.prix_ttc ? "prix_ttc" : "prix", l.prix],
         ["remise", l.remise],
         ["montant", l.montant],
         ["taux", l.taux ? { valeur: l.taux.code, refs: l.taux.refs } : null],

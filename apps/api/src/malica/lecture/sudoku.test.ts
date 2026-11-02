@@ -303,6 +303,67 @@ describe("sudoku — la sélection rendue", () => {
     assert.equal(s.document_kind, cas.designation.document_kind);
   });
 
+  it("un total pris dans les lettres se cite sur toute la phrase (2 novembre 2026)", () => {
+    const avecLettres: Grille = {
+      ...GRILLE,
+      preuves: [
+        ...GRILLE.preuves,
+        {
+          code: "P13",
+          statut: "defaut_a_valider",
+          variante: null,
+          expression: { op: "lettres", champ: "montant_en_lettres", egal_a: ["total_ttc"] },
+        },
+      ],
+    };
+    const sortie: SortieDuSudoku = {
+      ...prouvee,
+      par_lettres: "total_ttc",
+      champs: {
+        ...prouvee.champs,
+        total_ttc: { valeur: "3594800", refs: ref(120), statut: "prouve" },
+        montant_en_lettres: {
+          valeur: "3594800",
+          refs: [1, 2, 3].map((k) => ({ page: 1, ordinal: 119 + k })),
+          statut: "prouve",
+        },
+      },
+    };
+    const s = selectionParLeSudoku(cas.designation, sortie, avecLettres, []);
+    assert.deepEqual(s.totals.ttc, { page: 1, ordinal: 120, ordinalEnd: 122 });
+    // Sans `par_lettres`, le total cite son seul jeton, comme avant.
+    const { par_lettres: _ignore, ...sansLettres } = sortie;
+    const chiffres = selectionParLeSudoku(cas.designation, sansLettres, avecLettres, []);
+    assert.deepEqual(chiffres.totals.ttc, { page: 1, ordinal: 120 });
+  });
+
+  it("un prix de ligne lu TTC se rend comme prix TTC", () => {
+    const cite = (valeur: string, ordinal: number) => ({ valeur, refs: ref(ordinal) });
+    const sortie: SortieDuSudoku = {
+      ...prouvee,
+      lignes: {
+        statut: "prouve",
+        taux_par_base: "verifiee",
+        instances: [
+          {
+            designation: null,
+            quantite: cite("2000", 10),
+            prix: cite("32000", 11),
+            remise: null,
+            montant: cite("53782", 12),
+            taux: null,
+            prix_ttc: true,
+          },
+        ],
+      },
+    };
+    const s = selectionParLeSudoku(cas.designation, sortie, GRILLE, []);
+    assert.deepEqual(
+      s.articles.map((a) => [a.unit_price_ht, a.unit_price_ttc]),
+      [[null, { page: 1, ordinal: 11 }]],
+    );
+  });
+
   it("une lecture non prouvée s'inscrit aussi : champs signalés, sans valeur ni citation", () => {
     const a = champsLusAInscrire(PIECE, CONTEXTE, {
       issue: "ambigue",

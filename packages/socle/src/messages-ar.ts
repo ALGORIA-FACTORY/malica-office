@@ -551,6 +551,9 @@ export const ar: Dict = {
   "pme.detail.qte": "الكمية {q}",
   "pme.detail.sansQte": "الكمية غير مذكورة",
   "pme.detail.pu": "سعر الوحدة {pu}",
+  "pme.detail.puTtc": "سعر الوحدة بكل الأداءات {pu}",
+  "pme.detail.totalNeFermePas":
+    "المبالغ المقروءة لا تثبت هذا المجموع (دون الأداءات + الأداء على القيمة المضافة + المعاليم): يُرجى التثبت منه في الوثيقة.",
   "pme.detail.provenance": "كل سطر مصدره الوثيقة نفسها. لا أضيف شيئًا ولا أحتسب شيئًا.",
   "pme.lecture.releve": "رُصد · {mots} كلمة محدَّدة",
   "pme.verifie.total": "المجموع المقروء على الوثيقة",

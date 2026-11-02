@@ -176,6 +176,8 @@ export interface LigneLue {
   readonly remise: Cite | null;
   readonly montant: Cite;
   readonly taux: { readonly code: string; readonly refs: readonly RefDeJeton[] } | null;
+  /** Le prix lu est TTC : la rangée ferme par q × prix ÷ (1 + taux) = montant HT. */
+  readonly prix_ttc?: boolean;
 }
 
 /** Une valeur de l'en-tête, citée, avec son statut. */
@@ -217,6 +219,11 @@ export interface SortieDuSudoku {
   readonly preuves: Readonly<Record<string, string>>;
   readonly combinaisons: number;
   readonly raison?: string;
+  /**
+   * Le champ dont la valeur vient du montant en lettres : rien ne fermait en
+   * chiffres, et la pièce s'est prouvée par lui (le total relevé de travers).
+   */
+  readonly par_lettres?: string;
 }
 
 /* ============================================================ LE MOTEUR ==== */

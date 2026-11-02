@@ -562,12 +562,12 @@ impl Lecture<'_> {
             if self.page(i) != page || self.porte(r, &self.arret) {
                 continue;
             }
-            out.extend(self.ctx.triplets(r).into_iter().map(|t| self.graine_lue(i, &t)));
+            out.extend(self.ctx.triplets(r, false).into_iter().map(|t| self.graine_lue(i, &t)));
             let inverse: Vec<usize> = r.iter().rev().copied().collect();
             let n = r.len();
             let retour = |(k, v): (usize, i64)| (n - 1 - k, v);
-            out.extend(self.ctx.triplets(&inverse).into_iter().map(|t| {
-                self.graine_lue(i, &Triplet { q: retour(t.q), p: retour(t.p), m: retour(t.m), r: t.r.map(retour) })
+            out.extend(self.ctx.triplets(&inverse, false).into_iter().map(|t| {
+                self.graine_lue(i, &Triplet { q: retour(t.q), p: retour(t.p), m: retour(t.m), r: t.r.map(retour), ttc: t.ttc })
             }));
         }
         out
@@ -1013,5 +1013,6 @@ fn sortie(lecture: &Lecture, regle: &Regle, rang: &[usize], c: &Choix, avec_taux
         remise: c.r.map(|(k, v)| Cite { statut: Some("lu"), ..Cite::lue(v.to_string(), vec![ctx.cite(k)]) }),
         montant: cellule(c.m, M),
         taux,
+        prix_ttc: false,
     }
 }

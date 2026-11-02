@@ -68,6 +68,10 @@ pub struct Sortie {
     /// et que l'entrée porte le dossier (`connus`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parties: Option<entete::PartiesSortie>,
+    /// Le champ dont la valeur vient du montant en lettres, quand c'est lui qui a fermé la
+    /// pièce (`par_les_lettres`) : un total que les chiffres ne donnaient pas.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub par_lettres: Option<String>,
 }
 
 fn erreur(m: String) -> String {
@@ -80,6 +84,7 @@ fn erreur(m: String) -> String {
         raison: Some(m),
         lignes: None,
         parties: None,
+        par_lettres: None,
     };
     serde_json::to_string(&s).unwrap_or_default()
 }
@@ -90,10 +95,85 @@ pub fn solve(input_json: &str) -> String {
         Ok(e) => e,
         Err(e) => return erreur(format!("entrée invalide : {e}")),
     };
-    match resoudre(&entree) {
+    let sortie = resoudre(&entree).map(|s| {
+        if s.issue == "aucune" && s.solutions == 0 {
+            par_les_lettres(input_json, &entree).unwrap_or(s)
+        } else {
+            s
+        }
+    });
+    match sortie {
         Ok(s) => serde_json::to_string(&s).unwrap_or_else(|e| erreur(format!("sortie : {e}"))),
         Err(m) => erreur(m),
     }
+}
+
+/// Le total que les chiffres ne donnent pas, les lettres le donnent (2 novembre 2026).
+///
+/// Une photo de facture MyTek : « 510,000 » relevé « 810,000 », et « Cinq Cent Dix Dinars »
+/// écrit en toutes lettres. Aucune affectation ne fermait, et la preuve `lettres` restait
+/// « non évaluable » : elle ne se jugeait que sur une pièce déjà prouvée. Ici, quand rien ne
+/// ferme, le montant en lettres devient UN candidat de plus, porté par le premier mot de sa
+/// phrase — et seulement pour les champs que la preuve `lettres` nomme (`egal_a`).
+///
+/// La pièce n'est retenue que si elle se prouve alors entièrement, par les mêmes règles
+/// (le HT porte son libellé, les lignes confirment une exonération partielle…), et si les
+/// lettres ne servent qu'à ces champs. Sinon rien ne change. Le moteur ne lit toujours
+/// aucun mot : la valeur vient de l'adaptateur, avec le lexique du pack (règle ①).
+fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
+    // Les champs que les lettres peuvent porter, et le champ des lettres lui-même.
+    let mut egal_a: BTreeSet<String> = BTreeSet::new();
+    let mut champs_lettres: BTreeSet<String> = BTreeSet::new();
+    for p in &entree.grille.preuves {
+        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP)) else {
+            continue;
+        };
+        if p.statut.as_deref() == Some("a_traduire") {
+            continue;
+        }
+        let Ok(op) = lettres::lire_op(&entree.grille, e) else { continue };
+        champs_lettres.insert(entree.grille.champs[op.champ].code.clone());
+        egal_a.extend(op.egal_a.iter().map(|&c| entree.grille.champs[c].code.clone()));
+    }
+    if egal_a.is_empty() {
+        return None;
+    }
+    // Un seul montant en lettres sur la pièce, strictement positif.
+    let lus = lettres::lus(entree);
+    let (v, _) = lus.first()?;
+    if *v <= 0 || lus.iter().any(|(w, _)| w != v) {
+        return None;
+    }
+    let v = *v;
+    let porteurs: BTreeSet<(u32, u32)> =
+        entree.jetons.iter().filter(|j| j.lettres.is_some()).map(|j| (j.page, j.ordinal)).collect();
+
+    let mut avec: Entree = serde_json::from_str(input_json).ok()?;
+    for j in avec.jetons.iter_mut().filter(|j| j.lettres.is_some()) {
+        j.montants.push(entree::Lecture { v, forte: true });
+    }
+    let mut s = resoudre(&avec).ok()?;
+    if s.issue != "prouvee" {
+        return None;
+    }
+    let cite_les_lettres =
+        |c: &ChampSortie| c.refs.iter().any(|r| porteurs.contains(&(r.page, r.ordinal)));
+    let mut porte = None;
+    for (code, c) in &s.champs {
+        let cite = cite_les_lettres(c) || c.instances.iter().flatten().any(|i| i.refs.iter().any(|r| porteurs.contains(&(r.page, r.ordinal))));
+        if !cite || champs_lettres.contains(code) {
+            continue;
+        }
+        // Les lettres ne portent qu'un total qu'elles doivent égaler, et cette valeur-là.
+        if !egal_a.contains(code) || c.statut != "prouve" || c.valeur.as_deref() != Some(&v.to_string()) {
+            return None;
+        }
+        porte = Some(code.clone());
+    }
+    let porte = porte?;
+    s.raison = Some(format!("le total en chiffres ne ferme pas : le montant en lettres donne {porte}, et la pièce se prouve par lui"));
+    s.par_lettres = Some(porte);
+    Some(s)
 }
 
 fn resoudre(entree: &Entree) -> Result<Sortie, String> {
@@ -157,7 +237,13 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             let ancrees: BTreeSet<i64> = dom
                 .valeurs
                 .iter()
-                .filter(|(_, val)| val.occurrences.iter().any(|o| plan.ancre(o.jeton, &reperes[champ], None, false)))
+                // Le montant en lettres, porté par le premier mot de sa phrase quand il devient
+                // candidat (`par_les_lettres`), est ancré par sa propre phrase : il compte.
+                .filter(|(_, val)| {
+                    val.occurrences.iter().any(|o| {
+                        plan.ancre(o.jeton, &reperes[champ], None, false) || entree.jetons[o.jeton].lettres.is_some()
+                    })
+                })
                 .map(|(v, _)| *v)
                 .collect();
             if ancrees.is_empty() {
@@ -471,6 +557,8 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     // Exonération partielle, en plus : le reste, exonéré, n'est imprimé nulle part ; les lignes
     // seules l'établissent, chaque taux y valant sa base imprimée (`taux_par_base`).
     // Sinon la pièce n'est pas prouvée : rendue à la chaîne, valeurs gardées au statut signalé.
+    // Un HT accepté par le seul libellé de la base, en attente des lettres (voir plus bas).
+    let mut ht_par_la_base = false;
     if let (true, Some(e)) = (prouvee, unique) {
         // Les lignes lues sans cellule déduite ni remise globale, et dont la somme vaut `total`.
         let lignes_ferment = |total: i64, par_taux: bool| {
@@ -488,25 +576,32 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             let Some(t) = gr.total_base else { continue };
             let Some(ht) = e.s[t].filter(|v| !v.absent).map(|v| v.v) else { continue };
             let champ = modele.vars[t].champ;
-            let ancre = dom
-                .valeurs
-                .get(&ht)
-                .is_some_and(|x| x.occurrences.iter().any(|o| plan.libelle_avant(o.jeton, &reperes[champ]) || plan.ancre(o.jeton, &reperes[champ], None, true)));
+            let ancre_par = |reperes: &[String]| {
+                dom.valeurs.get(&ht).is_some_and(|x| {
+                    x.occurrences.iter().any(|o| plan.libelle_avant(o.jeton, reperes) || plan.ancre(o.jeton, reperes, None, true))
+                })
+            };
+            // À un seul taux, la base imprimée EST le total HT : une valeur imprimée sous le
+            // libellé de la base (« Base TVA ») que base × taux = TVA vérifie peut tenir lieu
+            // du libellé du HT (2 novembre 2026 : MyTek imprime « Total HT » timbre compris,
+            // la base juste sous « Base TVA »). Jamais à zéro instance ni à plusieurs taux,
+            // et jamais seule : il faut encore que le montant en lettres vérifie le total —
+            // une seconde écriture de la pièce, indépendante des chiffres (plus bas).
+            let base_seule = sol.instances.len() == 1 && sol.instances[0].b == Some(ht) && !sol.partielle;
+            let ancre = ancre_par(&reperes[champ]);
             if sol.partielle && !lignes_ferment(ht, true) {
                 refus = Some("exonération partielle non confirmée par les lignes");
             } else if !ancre && !lignes_ferment(ht, false) {
-                refus = Some("le total HT ne porte pas son libellé");
+                if base_seule && ancre_par(&reperes[gr.champ_base]) {
+                    ht_par_la_base = true;
+                } else {
+                    refus = Some("le total HT ne porte pas son libellé");
+                }
             }
         }
         if let Some(r) = refus {
-            prouvee = false;
-            issue = "aucune".into();
-            raison = Some(r.into());
-            for c in champs.values_mut() {
-                if c.statut == "prouve" {
-                    c.statut = "signale".into();
-                }
-            }
+            ht_par_la_base = false;
+            retirer_la_preuve(&mut prouvee, &mut issue, &mut raison, &mut champs, r);
             for (cp, ev) in modele.contraintes.iter().zip(&evals) {
                 if *ev == Eval::Ok {
                     preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
@@ -547,6 +642,21 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         contredite |= st == "echec";
         preuves.insert(p.code.clone(), st.into());
     }
+    // Le HT pris sous le libellé de la base ne tient que si les lettres vérifient le total.
+    let lettres_verifient = preuves.iter().any(|(code, st)| {
+        st == "verifiee"
+            && grille.preuves.iter().any(|p| {
+                &p.code == code && p.expression.as_ref().and_then(|e| e.get("op")).and_then(|o| o.as_str()) == Some(lettres::OP)
+            })
+    });
+    if ht_par_la_base && prouvee && !lettres_verifient {
+        retirer_la_preuve(&mut prouvee, &mut issue, &mut raison, &mut champs, "le total HT ne porte pas son libellé");
+        for (cp, ev) in modele.contraintes.iter().zip(&evals) {
+            if *ev == Eval::Ok {
+                preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
+            }
+        }
+    }
     // Les chiffres ferment, les lettres les contredisent : la pièce n'est pas prouvée, elle
     // est signalée. Ses valeurs restent citées, au statut `signale`.
     if contredite && issue == "prouvee" {
@@ -568,7 +678,26 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         raison,
         lignes: sortie_lignes,
         parties: sortie_parties,
+        par_lettres: None,
     })
+}
+
+/// Une preuve retirée : la pièce rendue à la chaîne, ses valeurs gardées au statut signalé.
+fn retirer_la_preuve(
+    prouvee: &mut bool,
+    issue: &mut String,
+    raison: &mut Option<String>,
+    champs: &mut BTreeMap<String, ChampSortie>,
+    r: &str,
+) {
+    *prouvee = false;
+    *issue = "aucune".into();
+    *raison = Some(r.into());
+    for c in champs.values_mut() {
+        if c.statut == "prouve" {
+            c.statut = "signale".into();
+        }
+    }
 }
 
 /// Exports WebAssembly, sans wasm-bindgen : l'hôte alloue, écrit l'entrée,

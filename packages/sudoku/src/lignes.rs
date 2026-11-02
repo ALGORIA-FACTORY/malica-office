@@ -11,6 +11,11 @@
 //!    au centre. Une seule combinaison (en valeurs) qui ferme : `prouve` ; aucune ou
 //!    plusieurs : `signale`.
 //!
+//! Une grille dont les prix s'impriment TTC (« PU TTC 32,000 », montant HT « 26,891 »)
+//! le déclare par la clé `prix_ttc` de l'op : la rangée ferme alors aussi par
+//! m = arrondi(q × p × (1 − r) ÷ (1 + t)), t un taux du barème de la grille, et la ligne
+//! rend son prix comme TTC (`prix_ttc`). Sans la clé, rien ne change.
+//!
 //! Quand cette stratégie ne prouve pas (une cellule perdue par l'OCR), la lecture
 //! « du milieu vers les bords » (`milieu`) prend le relais : elle apprend la règle du
 //! tableau de sa rangée la mieux expliquée, et peut déduire une cellule manquante.
@@ -86,6 +91,9 @@ pub struct LigneSortie {
     pub remise: Option<Cite>,
     pub montant: Cite,
     pub taux: Option<TauxCite>,
+    /// Le prix lu est TTC : la rangée ferme par q × p ÷ (1 + taux) = montant HT.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub prix_ttc: bool,
 }
 
 #[derive(Serialize)]
@@ -122,6 +130,8 @@ pub struct OpLignes {
     /// Le total des bases du groupe de taux (`total_base`), s'il est déclaré.
     pub total_base: Option<String>,
     pub avec_taux: bool,
+    /// Le champ du prix TTC (`prix_ttc`), quand la grille dit que les prix peuvent s'imprimer TTC.
+    pub prix_ttc: Option<String>,
 }
 
 fn cle(e: &Value, k: &str) -> Option<String> {
@@ -188,9 +198,30 @@ pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpLignes, String> {
         }
         None => None,
     };
-    let champs_lignes =
-        ["designation", "quantite", "prix", "remise", "montant", "taux"].iter().filter_map(|k| cle(e, k)).collect();
-    Ok(OpLignes { montant_total: total, total_brut, remise, remise_globale, champs_lignes, colonnes, bareme, base_par_taux, total_base, avec_taux })
+    let prix_ttc = match cle(e, "prix_ttc") {
+        Some(t) => {
+            numerique(&t)?;
+            Some(t)
+        }
+        None => None,
+    };
+    let champs_lignes = ["designation", "quantite", "prix", "prix_ttc", "remise", "montant", "taux"]
+        .iter()
+        .filter_map(|k| cle(e, k))
+        .collect();
+    Ok(OpLignes {
+        montant_total: total,
+        total_brut,
+        remise,
+        remise_globale,
+        champs_lignes,
+        colonnes,
+        bareme,
+        base_par_taux,
+        total_base,
+        avec_taux,
+        prix_ttc,
+    })
 }
 
 /// Un triplet d'une rangée (indices dans la rangée triée de gauche à droite).
@@ -200,6 +231,8 @@ struct Triplet {
     p: (usize, i64),
     m: (usize, i64),
     r: Option<(usize, i64)>,
+    /// Le prix est TTC (la rangée ferme par le barème, voir `ferme_ttc`).
+    ttc: bool,
 }
 
 impl Triplet {
@@ -253,6 +286,8 @@ struct Contexte<'a> {
     unite: i128,
     pourcent: Regex,
     bareme: Vec<(String, i64)>,
+    /// La grille déclare des prix TTC (`prix_ttc`).
+    prix_ttc: bool,
 }
 
 impl Contexte<'_> {
@@ -306,9 +341,28 @@ impl Contexte<'_> {
         (attendu - m as i128).abs() <= self.tol as i128
     }
 
+    /// Le prix TTC : m = arrondi(q × p × (1 − r) ÷ (1 + t)) pour un taux t du barème, à la
+    /// tolérance du pack près. Le taux nul n'en est pas un (le barème ne le porte pas) : un
+    /// prix sans taxe est un prix HT, que `ferme` lit déjà.
+    fn ferme_ttc(&self, q: i64, p: i64, m: i64, r: i64) -> bool {
+        let cent = CENT * self.unite;
+        if !self.prix_ttc || r < 0 || r as i128 >= cent {
+            return false;
+        }
+        self.bareme.iter().any(|(_, t)| {
+            let attendu = div_arrondi(
+                q as i128 * p as i128 * (cent - r as i128) * PPM,
+                self.unite * cent * (PPM + *t as i128),
+            );
+            (attendu - m as i128).abs() <= self.tol as i128
+        })
+    }
+
     /// Les triplets d'une rangée, dédoublonnés par valeurs (q, p, m, r) : à valeurs
     /// égales, on garde les jetons les plus à droite (la colonne, pas la désignation).
-    fn triplets(&self, rang: &[usize]) -> Vec<Triplet> {
+    /// `avec_ttc` : la rangée peut aussi fermer par un prix TTC (la stratégie de toujours
+    /// seulement : la lecture du milieu déduit par m / p, qui suppose un prix HT).
+    fn triplets(&self, rang: &[usize], avec_ttc: bool) -> Vec<Triplet> {
         // q et m peuvent être négatifs (une reprise : « -20 × 1,500 = -30,000 ») ; p est positif.
         let lectures = |k: usize, prix: bool| -> Vec<i64> {
             let mut v: Vec<i64> = self.jetons[rang[k]]
@@ -345,10 +399,15 @@ impl Contexte<'_> {
                                     remises.iter().filter(|(k, _)| *k != qi && *k != pi && *k != mi).map(|x| Some(*x)),
                                 );
                                 for r in candidats {
-                                    if !self.ferme(q, p, m, r.map_or(0, |x| x.1)) {
+                                    let rv = r.map_or(0, |x| x.1);
+                                    let ttc = if self.ferme(q, p, m, rv) {
+                                        false
+                                    } else if avec_ttc && self.ferme_ttc(q, p, m, rv) {
+                                        true
+                                    } else {
                                         continue;
-                                    }
-                                    let t = Triplet { q: (qi, q), p: (pi, p), m: (mi, m), r };
+                                    };
+                                    let t = Triplet { q: (qi, q), p: (pi, p), m: (mi, m), r, ttc };
                                     let cle = t.valeurs();
                                     let garder = match par_valeurs.get(&cle) {
                                         None => true,
@@ -427,6 +486,7 @@ impl Contexte<'_> {
             remise: t.r.map(un),
             montant: un(t.m),
             taux,
+            prix_ttc: t.ttc,
         }
     }
 }
@@ -450,6 +510,7 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
             .and_then(|b| pack.baremes.get(b))
             .map(|v| v.iter().filter(|t| t.ppm > 0).map(|t| (t.code.clone(), t.ppm)).collect())
             .unwrap_or_default(),
+        prix_ttc: op.prix_ttc.is_some(),
     };
     let vide = |statut: &str| LignesSortie {
         statut: statut.into(),
@@ -461,7 +522,7 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
 
     let rangs = rangees(&entree.jetons);
     let candidates: Vec<(usize, Vec<Triplet>)> =
-        rangs.iter().enumerate().map(|(i, r)| (i, ctx.triplets(r))).filter(|(_, t)| !t.is_empty()).collect();
+        rangs.iter().enumerate().map(|(i, r)| (i, ctx.triplets(r, true))).filter(|(_, t)| !t.is_empty()).collect();
     let cibles: Vec<i64> =
         [Some(op.montant_total.as_str()), op.total_brut.as_deref()].into_iter().flatten().filter_map(|c| prouvee(champs, c)).collect();
     let lu = if candidates.is_empty() {

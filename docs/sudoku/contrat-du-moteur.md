@@ -537,3 +537,36 @@ partielle.
 Non vérifié : la parité du moteur WebAssembly (la cible `wasm32` n'a pas pu être
 téléchargée dans l'environnement de mesure ; seul l'enrobage des exports lui est
 propre) et les vraies pièces du staging (non rejouées).
+
+## 9. Le prix TTC d'une ligne, le total en lettres (2 novembre 2026)
+
+Une photo de facture MyTek (staging, Android) : « PU TTC 32,000 » et montants HT
+« 26,891 » ; « TOTAL HT: 428,731 » imprimé timbre compris, la base juste
+(427,731) sous « Base TVA » ; le TTC « 510,000 » relevé « 810,000 » ; « Cinq
+Cent Dix Dinars » en toutes lettres. Rien ne fermait, et la pièce partait en
+rattrapage (deux lectures complètes, environ quatre minutes).
+
+- **Le prix TTC d'une ligne.** La preuve `lignes` peut nommer un champ
+  `prix_ttc` (`prix_unitaire_ttc?`, migration 20261118120000). Une rangée ferme
+  alors aussi par m = arrondi(q × p × (1 − r) ÷ (1 + t)), t un taux du barème de
+  la grille, à la tolérance du pack. La ligne rend `prix_ttc: true` ;
+  l'adaptateur range le prix dans `unit_price_ttc`. Stratégie de toujours
+  seulement : la lecture du milieu déduit par m / p, qui suppose un prix HT.
+- **Le libellé de la base pour le HT.** À un seul taux, une valeur imprimée sous
+  le libellé de la base, que base × taux = TVA vérifie, tient lieu du libellé du
+  HT — **seulement si la preuve `lettres` vérifie le total** (une seconde
+  écriture de la pièce, indépendante des chiffres). Jamais à zéro instance ni à
+  plusieurs taux. Sans lettres vérifiées, la règle du § 8 reste entière.
+- **Le total en lettres.** Quand aucune affectation ne ferme, le montant en
+  lettres devient un candidat de plus, porté par le premier mot de sa phrase. La
+  pièce n'est retenue que si elle se prouve alors entièrement, par les mêmes
+  règles, et si les lettres ne portent qu'un champ de leur `egal_a`, à leur
+  valeur. La sortie le dit : `par_lettres` (le code du champ). L'adaptateur cite
+  alors toute la phrase comme TTC ; la relecture le recompose par le Socle
+  (HT + TVA + droits) seulement si la phrase, lue avec le lexique du pack, vaut
+  cette somme (`read-piece.ts`) ; le jugement pose une réserve (« Total retenu
+  d'après le montant en lettres »).
+
+Mesuré : bancs natifs du moteur (`cargo test`, dont `tests/la_photo_mytek.rs`).
+Non vérifié dans l'environnement de travail : le chemin WebAssembly et les bancs
+TypeScript (`sudoku.test.ts`, zéro fausse preuve) — la CI les rejoue.
