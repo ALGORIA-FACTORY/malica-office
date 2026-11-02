@@ -145,13 +145,13 @@ describe("le relecteur de nuit est borné par la base", { skip: !BASE_CONFIGUREE
     assert.deepEqual(r, { s: "relecteur_de_nuit", p: false, e: 0 });
   });
 
-  it("il lit les pièces de son dossier — personnelle comprise —, et rien d'un autre", async () => {
+  it("il lit la pièce à relire — personnelle comprise —, jamais plus que son auteur, rien d'un autre", async () => {
     const vues = await sous<{ id: string }>(a.pme, `select id from capture.pieces`);
     const ids = vues.map((v) => v.id);
     assert.ok(ids.includes(due), "la pièce à relire, quoique personnelle");
-    assert.ok(ids.includes(autre), "les autres pièces du dossier, pour juger (doublon probable)");
     assert.ok(!ids.includes(ailleurs), "rien de B");
-    // Jamais plus que l'auteur de la pièce relue (Sami) n'en verrait.
+    // Jamais plus que l'auteur de la pièce relue (Sami, sans `tout_voir`) n'en verrait.
+    assert.ok(!ids.includes(autre), "ni la pièce de la société de Sonia");
     assert.ok(!ids.includes(privee), "ni la pièce PERSONNELLE de Sonia");
     assert.ok(!ids.includes(archivee), "ni une pièce archivée");
     const deB = await sous(a.pme, `select 1 from capture.pieces where tenant_id = $1`, [b.pme]);

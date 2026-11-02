@@ -205,15 +205,57 @@ revoke all on function app.relecture_due(uuid, uuid) from public, anon;
 grant execute on function app.relecture_due(uuid, uuid) to authenticated;
 
 /*
- * Une pièce de son dossier que le relecteur peut LIRE. Jamais plus que
- * l'auteur de la pièce relue n'en verrait (revue indépendante de #200) :
+ * Les organisations où une PERSONNE donnée porte un droit : la règle de
+ * `app.orgs_avec_droit`, écrite une fois, pour l'appelant comme pour l'auteur
+ * de la pièce que relit le relecteur de nuit.
+ */
+create function app.orgs_avec_droit_de(p_personne uuid, p_droit text)
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select m.tenant_id
+    from identity.memberships m
+    join identity.organizations o on o.id = m.tenant_id
+    join ref.droits_des_roles d
+      on d.org_kind = o.kind and d.role = m.role and d.droit = p_droit
+     and d.valid_from <= current_date
+     and (d.valid_to is null or d.valid_to > current_date)
+   where m.user_id = p_personne
+$$;
+
+revoke all on function app.orgs_avec_droit_de(uuid, text) from public, anon, authenticated;
+
+create or replace function app.orgs_avec_droit(p_droit text)
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select x from app.orgs_avec_droit_de(auth.uid(), p_droit) x
+   where app.api_tenant() is null
+  union all
+  select app.api_tenant()
+   where app.api_tenant() is not null
+$function$;
+
+/*
+ * Une pièce de son dossier que le relecteur peut LIRE : jamais plus que
+ * l'auteur de la relecture EN COURS n'en verrait (revue indépendante et Codex,
+ * PR #200) — `app.piece_lisible` pour cette personne :
  *   - une pièce archivée, jamais ;
- *   - une pièce de la société (`entite`, `partage`), oui ;
- *   - une pièce PERSONNELLE, seulement si elle est de l'auteur de la relecture
- *     EN COURS — ou, quand aucune n'est en cours, si elle porte elle-même une
- *     relecture due (pour que la file puisse la prendre).
+ *   - une pièce de cet auteur, oui ;
+ *   - une pièce de la société d'un AUTRE auteur, seulement si cet auteur a
+ *     `societe.tout_voir` dans le dossier ;
+ *   - une pièce personnelle d'un autre, jamais.
+ * Quand aucune relecture n'est en cours, il ne voit que les pièces qui portent
+ * elles-mêmes une relecture due — ce que la file doit voir pour la prendre.
  * Sans cela, le doublon probable cherché pendant la relecture de la pièce de
- * Sami pouvait désigner la facture privée de Sonia (`preuves.semblable`).
+ * Sami pouvait désigner une facture de Sonia que Sami ne voit pas
+ * (`preuves.semblable`).
  */
 create function app.piece_lisible_au_relecteur(
   p_tenant uuid, p_piece uuid, p_vis app.vis_t, p_auteur uuid, p_archivee timestamptz)
@@ -231,18 +273,17 @@ begin
      or not app.relecture_due(p_tenant, null) then
     return false;
   end if;
-  if p_vis in ('entite'::app.vis_t, 'partage'::app.vis_t) then
-    return true;
-  end if;
   select q.created_by into v_auteur_en_cours
     from fabrique.etat_des_travaux_v e
     join capture.pieces q on q.id = e.piece_id
    where e.tenant_id = p_tenant and e.nature = 'relecture_piece' and e.etat = 'en_cours'
    limit 1;
-  if v_auteur_en_cours is not null then
-    return p_auteur is not distinct from v_auteur_en_cours;
+  if v_auteur_en_cours is null then
+    return app.relecture_due(p_tenant, p_piece);
   end if;
-  return app.relecture_due(p_tenant, p_piece);
+  return p_auteur is not distinct from v_auteur_en_cours
+      or (p_vis in ('entite'::app.vis_t, 'partage'::app.vis_t)
+          and p_tenant in (select app.orgs_avec_droit_de(v_auteur_en_cours, 'societe.tout_voir')));
 end
 $$;
 

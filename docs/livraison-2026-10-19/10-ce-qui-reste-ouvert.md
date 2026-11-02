@@ -448,7 +448,8 @@ mesurer, sans bloquer la livraison :
   (`la-passe-de-nuit.test.ts`, « retenue » : rejugée par le dirigeant, la pièce
   changeait). La lecture s'étend donc au dossier tant qu'une relecture y est due,
   sans jamais dépasser ce que l'auteur de la pièce relue verrait : ni pièce
-  archivée, ni pièce personnelle d'un autre (`app.piece_lisible_au_relecteur`,
+  archivée, ni pièce d'un autre que l'auteur ne voit pas — la personnelle, ni celle de la
+  société sans `societe.tout_voir` (`app.piece_lisible_au_relecteur`,
   revue indépendante) ; l'écriture reste bornée à la pièce relue, et les octets
   (`contenu`) aussi. À confirmer par le dirigeant.
 - **ALGORIA paie, jusque dans le budget du client.** La dépense du relecteur ne

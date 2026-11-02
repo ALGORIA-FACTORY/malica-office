@@ -755,7 +755,7 @@ describe("la passe de nuit", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   describe("le relecteur ne voit pas plus que l'auteur de la pièce relue", () => {
-    it("la relecture de Sami ne se rapproche pas de la facture PRIVÉE de Sonia", async () => {
+    it("la relecture de Sami ne se rapproche pas des factures de Sonia qu'il ne voit pas (PRIVÉE ou de la société)", async () => {
       await regler();
       const s = await monterUneSociete(`nuit-privee-${Date.now()}`);
       try {
@@ -793,6 +793,15 @@ describe("la passe de nuit", { skip: !BASE_CONFIGUREE }, () => {
           lecteurs([() => numerotee(complete("qwen-vl-ocr", TOKENS_DE_L_AUTRE))]),
         );
         await s.fait("sonia", "collab.setPieceVis", privee, "personnel");
+        // Et une copie de la société, que Sami (sans `societe.tout_voir`) ne voit
+        // pas davantage (Codex, PR #200).
+        const deLaSociete = await s.deposer("sonia", "entite");
+        await octets(deLaSociete);
+        await readPieceFlow(
+          creerAppelLocal((t) => sousIdentite(s.gens.sonia.id, t)),
+          deLaSociete,
+          lecteurs([() => numerotee(complete("qwen-vl-ocr", TOKENS_DE_L_AUTRE))]),
+        );
         // Sami lit la même facture, imparfaitement : sa relecture est due.
         const piece = await s.deposer("sami", "entite");
         await octets(piece);
@@ -810,11 +819,13 @@ describe("la passe de nuit", { skip: !BASE_CONFIGUREE }, () => {
             where a.piece_id = $1 order by a.created_at desc limit 1`,
           [piece],
         );
-        assert.doesNotMatch(rows[0]!.motifs, /"code": "doublon"/, "Sami ne voit pas cette facture");
-        assert.ok(
-          !rows[0]!.motifs.includes(privee) && !rows[0]!.controles.includes(privee),
-          "et son identifiant ne fuit nulle part",
-        );
+        assert.doesNotMatch(rows[0]!.motifs, /"code": "doublon"/, "Sami ne voit aucune des deux");
+        for (const id of [privee, deLaSociete]) {
+          assert.ok(
+            !rows[0]!.motifs.includes(id) && !rows[0]!.controles.includes(id),
+            "et leur identifiant ne fuit nulle part",
+          );
+        }
         // Sous le relecteur, la pièce privée de Sonia n'est pas lisible.
         const vues = await sousLeRelecteurDeNuit(
           s.pme,
