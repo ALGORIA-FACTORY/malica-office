@@ -2136,6 +2136,8 @@ export interface AuditEntry {
   at: string;
   motifId: string | null;
   payload: unknown;
+  /** Le code du compte de service qui a agi (`relecteur_de_nuit`), nul pour une personne. */
+  service: string | null;
 }
 
 /** Les statistiques d'un cabinet, agrégées en base sur ses mandats. */
@@ -4175,8 +4177,86 @@ export interface LicenceVueDeLaTour {
   societes: string | null;
 }
 
+/** Le réglage de la passe de nuit en vigueur (`plateforme.reglages_relecture_nuit`). */
+export interface ReglageRelectureNuit {
+  actif: boolean;
+  /** « HH:MM:SS », à l'heure locale de chaque dossier. */
+  fenetre_debut: string;
+  fenetre_fin: string;
+  plafond_usd_24h_plateforme: number;
+  plafond_usd_24h_dossier: number;
+  relectures_max_24h_dossier: number;
+  part_max_plafond_mensuel: number;
+  alerte_retard_nuits: number;
+  motif: string;
+  decide_le: string;
+}
+
+/** Un compte de service (le relecteur de nuit) : son état en vigueur et son nom. */
+export interface CompteDeService {
+  code: string;
+  libelle: string;
+  actif: boolean;
+  motif: string;
+  decide_le: string;
+}
+
+/** Ce que la passe de nuit a fait pour un dossier, un jour LOCAL du dossier. */
+export interface RelecturesDeNuitDuJour {
+  /** « YYYY-MM-DD » ; nul pour un dossier sans fuseau. */
+  jour: string | null;
+  tenant_id: string;
+  dossier: string;
+  retenues: number;
+  ecartees: number;
+  /** Par motif `relecture.abstention.*`. */
+  abstentions: Record<string, number>;
+  pannes: number;
+  epuisees: number;
+  en_attente: number;
+  plus_ancienne_nuits: number | null;
+  en_retard: boolean;
+  cout_usd: string;
+  sans_cout: number;
+}
+
+/** Un passage de la passe de nuit, et comment il s'est arrêté. */
+export interface PassageDeNuit {
+  id: string;
+  ouvert_le: string;
+  raison: "termine" | "cede" | "fenetre_close" | "plafond" | "en_cours" | "interrompu";
+  ferme_le: string | null;
+  compteurs: {
+    retenues?: number;
+    ecartees?: number;
+    abstentions?: number;
+    pannes?: number;
+    ecarts?: Record<string, number>;
+  };
+}
+
 export interface TourRepository {
   suisJePlateforme(): Promise<boolean>;
+  /** La passe de nuit : son réglage et l'état du relecteur, libellé dans la langue demandée. */
+  reglageRelectureNuit(
+    locale: string,
+  ): Promise<{ reglage: ReglageRelectureNuit | null; compte: CompteDeService | null }>;
+  reglerRelectureNuit(
+    reglage: {
+      actif: boolean;
+      fenetreDebut: string;
+      fenetreFin: string;
+      plafondUsd24hPlateforme: string;
+      plafondUsd24hDossier: string;
+      relecturesMax24hDossier: number;
+      partMaxPlafondMensuel: string;
+      alerteRetardNuits: number;
+    },
+    motif: string,
+  ): Promise<unknown>;
+  /** Activer ou révoquer un compte de service, sans déploiement. */
+  reglerCompteDeService(code: string, actif: boolean, motif: string): Promise<unknown>;
+  relecturesDeNuit(): Promise<{ lignes: RelecturesDeNuitDuJour[]; passages: PassageDeNuit[] }>;
   grilleEnVigueur(): Promise<GrilleProposee | null>;
   trousDeLaGrille(
     effectiveFrom: string,

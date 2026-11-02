@@ -21,12 +21,13 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
 import { BASE_CONFIGUREE, monterUneSociete, type SocieteDEssai } from "../../circuit-d-essai.ts";
-import { fermerLePool, sousIdentiteDuServeur } from "../../db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "../../db.ts";
 import { parametrage } from "../../depots/parametrage.ts";
 import { executerUnTravail } from "../../fabrique/travaux-execution.ts";
 import { enregistrerTravail, type NatureDeTravail } from "../../fabrique/travaux.ts";
 import { creerAppelLocal } from "../appel-local.ts";
 
+import { naturesDuCoureur } from "./coureur.ts";
 import { readPieceFlow, relirePiece } from "./read-flow.ts";
 
 /** Aucun modèle ne doit être appelé : la pièce n'est pas à Sonia. */
@@ -82,8 +83,16 @@ describe(
         natures,
         async (t) =>
           t.nature === "relecture_piece"
-            ? relirePiece(creerAppelLocal(s.gens.sonia.id), t, SANS_MODELE)
-            : void (await readPieceFlow(creerAppelLocal(s.gens.sonia.id), t.pieceId, SANS_MODELE)),
+            ? relirePiece(
+                creerAppelLocal((x) => sousIdentite(s.gens.sonia.id, x)),
+                t,
+                SANS_MODELE,
+              )
+            : void (await readPieceFlow(
+                creerAppelLocal((x) => sousIdentite(s.gens.sonia.id, x)),
+                t.pieceId,
+                SANS_MODELE,
+              )),
       );
 
     const etat = async (travailId: string) =>
@@ -126,6 +135,12 @@ describe(
 
       assert.equal(fait, null, "Sonia ne prend pas une relecture qu'elle ne peut pas faire");
       assert.deepEqual(await etat(travailId), { etat: "a_faire", tentatives: 0 });
+    });
+
+    it("le coureur des membres ne prend plus de relecture : elle est à la passe de nuit", () => {
+      assert.ok(!naturesDuCoureur({}).includes("relecture_piece"));
+      assert.ok(!naturesDuCoureur({ DEEPSEEK_API_KEY: "x" }).includes("relecture_piece"));
+      assert.ok(naturesDuCoureur({}).includes("lecture_piece"));
     });
 
     it("Sami, lui, prend la lecture de sa pièce", async () => {

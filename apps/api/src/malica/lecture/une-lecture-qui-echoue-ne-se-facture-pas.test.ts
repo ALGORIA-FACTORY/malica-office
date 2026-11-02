@@ -25,7 +25,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, emettreJeton, type Utilisateur } from "../../auth.ts";
-import { fermerLePool, sousIdentiteDuServeur } from "../../db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "../../db.ts";
 import { executerRpc } from "../../rpc.ts";
 import { creerAppelLocal, type AppelApi } from "../appel-local.ts";
 
@@ -164,7 +164,7 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
   /** L'API réelle, sauf le contenu : la pièce n'a pas d'octets sur disque. */
   function apiDEssai(surcharges: Partial<AppelApi> = {}): AppelApi {
     return {
-      ...creerAppelLocal(u.id),
+      ...creerAppelLocal((t) => sousIdentite(u.id, t)),
       contenu: async () => ({ octets: new Uint8Array([1, 2, 3]), type: "image/jpeg" }),
       ...surcharges,
     };

@@ -602,6 +602,10 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
      *
      * Ce qui est interdit, c'est l'absence de condition : un `using (true)`
      * sur une table de tenant ouvre la table au premier compte venu.
+     *
+     * Une politique RESTRICTIVE n'ouvre rien : elle ne peut que retirer des
+     * lignes à ce que les permissives accordent. Celle du relecteur de nuit
+     * (`service_hors_perimetre`, 20261118100000) n'a donc pas à se cadrer.
      */
     const ouvertes = await interroger<{ table_: string; politique: string; cmd: string }>(`
       select p.schemaname || '.' || p.tablename as table_, p.policyname as politique, p.cmd
@@ -610,7 +614,8 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
         join pg_namespace ns on ns.oid = cl.relnamespace and ns.nspname = p.schemaname
         join pg_attribute a on a.attrelid = cl.oid and a.attname = 'tenant_id'
                            and a.attnum > 0 and not a.attisdropped
-       where coalesce(p.qual, '') || ' ' || coalesce(p.with_check, '') !~
+       where p.permissive = 'PERMISSIVE'
+         and coalesce(p.qual, '') || ' ' || coalesce(p.with_check, '') !~
              'tenant_id|member_orgs|engaged_orgs|has_org_role|is_platform|auth\\.uid|current_uid'
        order by 1, 2`);
 

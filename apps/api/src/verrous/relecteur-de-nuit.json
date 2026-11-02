@@ -1,0 +1,40 @@
+{
+  "regle": "Le relecteur de nuit (identity.comptes_de_service, code relecteur_de_nuit) n'écrit et ne lit sur une table de tenant que si elle est nommée ici, avec sa raison. Toute autre table de tenant porte le déclencheur service_hors_perimetre (écriture refusée) et la politique restrictive service_hors_perimetre (zéro ligne). Une table nouvelle, ni gardée ni nommée, fait échouer le-relecteur-de-nuit-est-borne.test.ts. Dans la liste d'écriture, une ligne qui vise une autre pièce que celle qu'il relit est refusée (app.service_sur_sa_piece). Migration : 20261118100000_le_relecteur_de_nuit.",
+  "ecriture": {
+    "agents.agent_runs": "Le coût de chaque appel de modèle de la relecture (agents_run_log), au nom du relecteur : c'est ce que mesurent les plafonds de nuit.",
+    "audit.event_log": "L'audit de la relecture retenue (piece.read, avec le travail), dont le relecteur est l'acteur.",
+    "capture.analyses": "Le rejugement de la pièce sur sa relecture retenue (analyse_poser).",
+    "capture.champs_lus": "Ce que le sudoku a lu sur la relecture (capture_champs_lus_inscrire).",
+    "capture.citations": "Les citations de la relecture retenue, dans son propre plan (lecture_inscrire, R2).",
+    "capture.extractions": "La relecture retenue est une lecture NOUVELLE (R7), par capture_relecture_persist.",
+    "capture.piece_articles": "La projection des articles de la lecture qui fait foi, reconstruite à la relecture retenue.",
+    "capture.pieces": "Le statut et le type lu de la pièce, mis à jour par lecture_inscrire — sur la pièce relue seulement.",
+    "capture.token_plan": "Le plan de jetons de la relecture retenue, nommé par sa lecture (lecture_inscrire).",
+    "fabrique.executions": "L'exécution d'une recette pendant la relecture (execution_inscrire), mesure de la fabrique.",
+    "fabrique.travail_faits": "La prise et l'issue de la relecture dans la file (travail_prendre, issue_inscrire), au nom du relecteur."
+  },
+  "lecture": {
+    "agents.agent_runs": "Écrite par la relecture (voir écriture) ; relue par le retour d'agents_run_log.",
+    "audit.event_log": "Écrite par la relecture (voir écriture) ; la politique d'insertion relit la ligne.",
+    "capture.analyses": "Le dernier jugement de la pièce, et ceux des autres pièces pour le doublon probable (app.doublon_probable_de).",
+    "capture.champs_lus": "Écrite par la relecture (voir écriture) ; relue au rendu de l'inscription.",
+    "capture.citations": "Le jugement relit les citations de la lecture qui fait foi (analyse.ts).",
+    "capture.extractions": "La lecture relue, et la plus récente qui fait foi (relecture_a_faire, capture_relecture_persist, analyse).",
+    "capture.piece_articles": "Écrite par la relecture (voir écriture) ; reconstruite par effacement et réinscription.",
+    "capture.pieces": "La pièce relue et les autres pièces du dossier : contexte de lecture, jugement, doublon probable.",
+    "capture.precisions": "Ce que le client ou le cabinet a précisé sur la pièce entre dans son jugement (analyse.ts) : sans elle, le verdict serait faux.",
+    "capture.remplacements": "Une pièce remplacée ne se relit pas (relecture_a_faire, etat_des_travaux_v, pieces_v).",
+    "capture.token_plan": "Le jugement et la désignation par recette relisent les plans de jetons (de la pièce, et des exemples).",
+    "fabrique.exemples": "La désignation par recette relit les exemples d'apprentissage de ses versions (contexteDeDesignation).",
+    "fabrique.executions": "Écrite par la relecture (voir écriture) ; relue au retour de execution_inscrire.",
+    "fabrique.promotions": "L'état des recettes (fabrique.etat_des_recettes_v) qui désignent pour le dossier.",
+    "fabrique.recette_version_exemples": "Les exemples d'apprentissage d'une version de recette (contexteDeDesignation).",
+    "fabrique.recette_versions": "La définition des versions de recette qui désignent (contexteDeDesignation).",
+    "fabrique.recettes": "Les recettes du dossier (fabrique.etat_des_recettes_v).",
+    "fabrique.travail_faits": "L'état de la relecture dans la file (etat_des_travaux_v), sa prise et son issue.",
+    "fabrique.travaux": "La relecture elle-même : sa lecture relue, sa consigne, son état (relecture_a_faire, travail_prendre).",
+    "identity.fiches_fiscales": "Le régime de TVA du dossier entre dans son jugement (nonAssujetti, analyse.ts).",
+    "parametrage.fabrique_seuils": "Les bornes arrêtées par le cabinet (tentatives, abandon, recettes, signatures) : sans elles, la file et la fabrique liraient le seul défaut du pack.",
+    "tiers.auxiliaires": "Les tiers connus du dossier, donnés au lecteur comme à une lecture de journée (contexteLecture)."
+  }
+}

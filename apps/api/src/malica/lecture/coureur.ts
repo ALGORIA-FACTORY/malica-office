@@ -15,20 +15,19 @@
  * déclenche une génération en production. La nature décide, dans le corps de
  * la boucle, et nulle part ailleurs.
  *
- * Depuis le 17 novembre, une TROISIÈME : la relecture de nuit
- * (`relecture_piece`, `relirePiece`), que la base ne rend prenable qu'à son
- * heure (`pas_avant`). Elle part donc au premier appel d'un membre du dossier
- * APRÈS cette heure — pas d'elle-même la nuit. Ce qu'il manque pour cela est
- * dit plus bas, et dans `docs/exploitation.md` (« La relecture de nuit »).
+ * La relecture de nuit (`relecture_piece`) n'est PAS de son ressort, et ne
+ * l'est plus depuis le 2 novembre 2026 (passe de nuit, décision 4) : elle ne
+ * part plus en journée, au premier appel d'un membre, mais la nuit, sous le
+ * relecteur de nuit (`passe-de-nuit.ts`). La faire tourner ici la prendrait
+ * aussi sous l'identité d'un membre qui ne lit pas forcément la pièce
+ * (constat B.0, `le-coureur-ne-prend-que-ce-qu-il-lit.test.ts`).
  *
  * ========================================================= CE QU'IL N'EST PAS
  *
  * Ce n'est pas un démon. Il ne balaie pas les organisations, et il ne tourne
  * pas tout seul au démarrage — parce qu'il tourne SOUS L'IDENTITÉ de
- * l'appelant, et qu'un balayage de toutes les organisations exigerait une
- * identité de service qui n'existe pas dans ce dépôt. « Aucun chemin
- * utilisateur n'emprunte un rôle privilégié » (R6), et inventer ce rôle ici
- * se déciderait ailleurs qu'au fond d'un fichier.
+ * l'appelant (R6). Le seul balayage planifié est la passe de nuit, et elle
+ * ne fait que des relectures, sous son propre compte de service.
  *
  * La conséquence est donc nommée, et elle n'est pas cachée : un travail
  * laissé en plan par un redémarrage redevient prenable tout seul passé son
@@ -54,7 +53,7 @@ import { executerUnTravail } from "../../fabrique/travaux-execution.ts";
 import type { NatureDeTravail } from "../../fabrique/travaux.ts";
 
 import { registre } from "./lectures-en-cours.ts";
-import { readPieceFlow, relirePiece } from "./read-flow.ts";
+import { readPieceFlow } from "./read-flow.ts";
 
 /**
  * Combien de travaux un seul appel accepte d'enchaîner.
@@ -77,11 +76,12 @@ const enCours = new Set<string>();
  * n'en aurait plus jamais. Ne pas la prendre la laisse « à faire », et elle
  * partira au premier appel qui suivra la configuration de la clé.
  */
-function cequejepeuxfaire(): NatureDeTravail[] {
-  // La relecture de nuit n'est prise qu'à son heure : la base ne la rend
-  // prenable qu'après son « pas avant » (`fabrique.etat_des_travaux_v`).
-  const natures: NatureDeTravail[] = ["lecture_piece", "relecture_piece"];
-  if (process.env["DEEPSEEK_API_KEY"]) natures.push("generation_recette");
+export function naturesDuCoureur(
+  env: Record<string, string | undefined> = process.env,
+): NatureDeTravail[] {
+  // Pas de relecture : elle est à la passe de nuit, jamais en journée.
+  const natures: NatureDeTravail[] = ["lecture_piece"];
+  if (env["DEEPSEEK_API_KEY"]) natures.push("generation_recette");
   return natures;
 }
 
@@ -118,13 +118,13 @@ async function courir(utilisateurId: string, pieceId: string): Promise<void> {
 
   enCours.add(tenantId);
   try {
-    const api = creerAppelLocal(utilisateurId);
+    const api = creerAppelLocal((travail) => sousIdentite(utilisateurId, travail));
     // La file écrit lectures, exécutions et journaux : elle le fait en tant
     // que serveur, sous la RLS de l'utilisateur (`sousIdentiteDuServeur`).
     const avecBase = <T>(travail: Parameters<typeof sousIdentite<T>>[1]): Promise<T> =>
       sousIdentiteDuServeur(utilisateurId, travail);
     for (let tour = 0; tour < TOURS_MAX; tour += 1) {
-      const fait = await executerUnTravail(avecBase, tenantId, cequejepeuxfaire(), async (t) => {
+      const fait = await executerUnTravail(avecBase, tenantId, naturesDuCoureur(), async (t) => {
         /*
          * LA NATURE DÉCIDE, et elle décide ici seulement. Sans ce
          * branchement, un travail de génération pris par la file serait
@@ -150,12 +150,6 @@ async function courir(utilisateurId: string, pieceId: string): Promise<void> {
               `pour « ${t.signatureCle} »`,
           );
           return undefined;
-        }
-
-        // La relecture de nuit : elle dit elle-même si elle a relu, écarté ou
-        // s'est abstenue, et son compte rendu s'inscrit avec l'issue.
-        if (t.nature === "relecture_piece") {
-          return relirePiece(api, { travailId: t.travailId, pieceId: t.pieceId });
         }
 
         /*
