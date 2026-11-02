@@ -12,7 +12,14 @@ import type { CabinetDeLaTour, PmeDeLaTour } from "@malica/socle/ports/repositor
 
 /** Ce qu'une pastille dit d'un client : payé, à échoir, impayé, suspendu… */
 export type EtatDuClient =
-  "paye" | "a_echoir" | "partiel" | "impaye" | "suspendu" | "sans_facture" | "sans_licence";
+  | "paye"
+  | "a_echoir"
+  | "partiel"
+  | "impaye"
+  | "irrecouvrable"
+  | "suspendu"
+  | "sans_facture"
+  | "sans_licence";
 
 /** L'état d'une PME : la suspension d'abord, puis la pire de ses factures. */
 export function etatDeLaPme(p: PmeDeLaTour): EtatDuClient {
@@ -30,6 +37,8 @@ function etatDesFactures(etat: CabinetDeLaTour["etat"]): EtatDuClient {
   switch (etat) {
     case "en_retard":
       return "impaye";
+    case "irrecouvrable":
+      return "irrecouvrable";
     case "partielle":
       return "partiel";
     case "a_echoir":
@@ -124,7 +133,7 @@ function retenue(p: PmeDeLaTour, filtre: FiltrePme): boolean {
     case "sans_cabinet":
       return p.cabinet_id === null;
     case "impayes":
-      return p.etat === "en_retard";
+      return p.etat === "en_retard" || p.etat === "irrecouvrable";
     case "au_quota":
       return auQuota(p);
     case "suspendus":

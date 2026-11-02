@@ -3505,6 +3505,7 @@ export const en: Dict = {
   "tour.etat.a_echoir": "Due soon",
   "tour.etat.partiel": "Partly paid",
   "tour.etat.impaye": "Unpaid",
+  "tour.etat.irrecouvrable": "Written off",
   "tour.etat.suspendu": "Suspended",
   "tour.etat.sans_facture": "No invoice",
   "tour.etat.sans_licence": "No licence",

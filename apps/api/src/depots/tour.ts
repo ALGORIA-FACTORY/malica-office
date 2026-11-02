@@ -25,22 +25,35 @@ import { secretsPoses } from "../paiement/prestataires.ts";
 import { versReport } from "./report-d-echeance.ts";
 
 /**
- * L'état d'un ensemble de factures, le pire d'abord : en retard, puis payée en
- * partie, puis à échoir ; « payée » quand tout est réglé ; rien sans facture.
- * Les états sont ceux de `facturation.encours_v` — l'écran ne les recalcule
- * pas. Une seule définition, pour le cabinet (ses factures consolidées) et
- * pour la PME (les factures qui portent sa licence).
+ * L'état d'un ensemble de factures, le pire d'abord : en retard, irrécouvrable,
+ * payée en partie, à échoir ; « payée » seulement si une facture l'a été ; rien
+ * sans facture, ou si toutes sont annulées. Les états sont ceux de
+ * `facturation.encours_v` — l'écran ne les recalcule pas. Une seule
+ * définition, pour le cabinet (ses factures consolidées) et pour la PME.
+ *
+ * `propre` dit quelles factures portent le MONTANT dû de l'appelant : une
+ * facture consolidée du cabinet dit l'état de la PME qu'elle couvre, mais sa
+ * dette reste celle du cabinet — on ne l'impute à aucune PME. Le reste dû se
+ * dit dans la devise des factures (`factures.devise`, celle de l'émetteur),
+ * jamais dans celle du client ; plusieurs devises ne s'additionnent pas : le
+ * reste dû vaut alors `null`.
  */
-const ETAT_DES_FACTURES = `
+function etatDesFactures(propre: string): string {
+  const du = `e.etat in ('a_echoir', 'en_retard', 'partielle') and (${propre})`;
+  return `
   select case when bool_or(e.etat = 'en_retard') then 'en_retard'
+              when bool_or(e.etat = 'irrecouvrable') then 'irrecouvrable'
               when bool_or(e.etat = 'partielle') then 'partielle'
               when bool_or(e.etat = 'a_echoir') then 'a_echoir'
-              when count(*) > 0 then 'payee' end as etat,
-         coalesce(sum(e.reste_du) filter (
-           where e.etat in ('a_echoir', 'en_retard', 'partielle')), 0)::text as reste_du,
-         min(e.echeance_le) filter (
-           where e.etat in ('a_echoir', 'en_retard', 'partielle'))::text as echeance_le
-    from facturation.encours_v e`;
+              when bool_or(e.etat = 'payee') then 'payee' end as etat,
+         case when count(distinct fa.devise) filter (where ${du}) <= 1
+              then coalesce(sum(e.reste_du) filter (where ${du}), 0)::text end as reste_du,
+         case when count(distinct fa.devise) filter (where ${du}) = 1
+              then min(fa.devise) filter (where ${du}) end as devise_du,
+         min(e.echeance_le) filter (where ${du})::text as echeance_le
+    from facturation.encours_v e
+    join facturation.factures fa on fa.id = e.facture_id`;
+}
 
 const Id = z.string().uuid();
 /** Un motif se lit un an après devant un client : jamais vide. */
@@ -69,10 +82,9 @@ export const tour = {
     const [cabinets, pme] = await Promise.all([
       db.query<CabinetDeLaTour>(
         `select o.id, o.name as nom, o.legal_id as matricule, o.jurisdiction as juridiction,
-                o.currency as devise, f.etat, f.reste_du, f.echeance_le
+                o.currency as devise, f.etat, f.reste_du, f.devise_du, f.echeance_le
            from identity.organizations o
-           cross join lateral (${ETAT_DES_FACTURES}
-             join facturation.factures fa on fa.id = e.facture_id
+           cross join lateral (${etatDesFactures("true")}
             where fa.payeur_type = 'cabinet' and fa.payeur_tenant_id = o.id) f
           where o.kind = 'cabinet' and o.archived_at is null and (select app.is_platform())
           order by o.name, o.id`,
@@ -93,7 +105,7 @@ export const tour = {
                 coalesce(b.documents, 0)::int as documents,
                 coalesce(b.transmis_mois_courant, 0)::int as transmis_mois,
                 b.dernier_depot_le::text as dernier_depot_le,
-                f.etat, f.reste_du, f.echeance_le
+                f.etat, f.reste_du, f.devise_du, f.echeance_le
            from identity.organizations o
            left join identity.engagements m on m.pme_org_id = o.id and m.status = 'actif'
            left join facturation.acces a
@@ -102,8 +114,7 @@ export const tour = {
            left join facturation.licence_organisations lo on lo.tenant_id = o.id
            left join plateforme.licences_v l on l.licence_id = lo.licence_id
            left join bibliotheques b on b.tenant_id = o.id
-           cross join lateral (${ETAT_DES_FACTURES}
-             join facturation.factures fa on fa.id = e.facture_id
+           cross join lateral (${etatDesFactures("fa.licence_id is not null")}
             where lo.licence_id is not null
               and (fa.licence_id = lo.licence_id
                    or fa.id in (select fl.facture_id from facturation.facture_lignes fl

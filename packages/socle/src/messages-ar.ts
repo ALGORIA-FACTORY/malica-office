@@ -3366,6 +3366,7 @@ export const ar: Dict = {
   "tour.etat.a_echoir": "قريب الاستحقاق",
   "tour.etat.partiel": "مدفوع جزئيًا",
   "tour.etat.impaye": "غير مدفوع",
+  "tour.etat.irrecouvrable": "غير قابل للتحصيل",
   "tour.etat.suspendu": "معلّق",
   "tour.etat.sans_facture": "بلا فاتورة",
   "tour.etat.sans_licence": "بلا ترخيص",

@@ -83,7 +83,9 @@ export function FicheDeLaPme({ pme, fermer }: { pme: PmeDeLaTour; fermer: () => 
     [
       "tour.fiche.reste",
       <span key="r" className="num">
-        {Number(pme.reste_du) > 0 ? `${montant(pme.reste_du, locale)} ${pme.devise}` : "—"}
+        {pme.reste_du && pme.devise_du && Number(pme.reste_du) > 0
+          ? `${montant(pme.reste_du, locale)} ${pme.devise_du}`
+          : "—"}
       </span>,
     ],
     [

@@ -202,6 +202,48 @@ describe("la tour voit ses clients, et personne d'autre", { skip: !ADMIN }, () =
       assert.equal(directe.lectures_consommees, 1);
       assert.equal(directe.etat, "en_retard");
       assert.equal(Number(directe.reste_du), 120);
+      assert.equal(directe.devise_du, "TND", "la devise est celle de la facture");
+    });
+  });
+
+  it("une facture annulée n'est pas « payée », et la consolidée reste au cabinet", async () => {
+    await aBlanc(async (db, m) => {
+      // Une facture directe, annulée : aucun encaissement, aucune dette.
+      await db.query(`update facturation.factures set statut = 'annulee' where licence_id = $1`, [
+        m.licenceDirecte,
+      ]);
+      // Une consolidée du cabinet, en retard, qui couvre la PME sous mandat.
+      const { rows } = await db.query<{ id: string }>(
+        `insert into facturation.factures
+           (licence_id, numero, periode, emise_le, echeance_le, organisations, sieges_payants,
+            montant_ht, taux_tva, montant_tva, timbre, montant_ttc, devise,
+            payeur_type, payeur_tenant_id, destinataire_nom)
+         values (null, $1, (date_trunc('month', current_date) - interval '1 month')::date,
+                 current_date - 20, current_date - 5, 2, 0, 300, 0.19, 57, 1, 358, 'TND',
+                 'cabinet', $2, 'Cabinet d''essai de la tour') returning id`,
+        [`TOUR-C-${randomUUID()}`, m.cabinet],
+      );
+      await db.query(
+        `insert into facturation.facture_lignes
+           (facture_id, ordinal, libelle, quantite, prix_unitaire, montant_ht, licence_id, tenant_id)
+         values ($1, 1, 'PME sous mandat', 1, 150, 150, $2, $3)`,
+        [rows[0]!.id, m.licenceDuCabinet, m.pmeDuCabinet],
+      );
+
+      await sous(db, m.operateur);
+      const { cabinets, pme } = await tour.clients(db);
+      const directe = pme.find((p) => p.id === m.pmeDirecte)!;
+      assert.equal(directe.etat, null, "toutes annulées : ni payée, ni due");
+      assert.equal(Number(directe.reste_du), 0);
+
+      const cabinet = cabinets.find((c) => c.id === m.cabinet)!;
+      assert.equal(cabinet.etat, "en_retard");
+      assert.equal(Number(cabinet.reste_du), 358);
+
+      const couverte = pme.find((p) => p.id === m.pmeDuCabinet)!;
+      assert.equal(couverte.etat, "en_retard", "l'état de la consolidée se lit chez la PME");
+      assert.equal(Number(couverte.reste_du), 0, "sa dette n'est imputée à aucune PME");
+      assert.equal(couverte.devise_du, null);
     });
   });
 
@@ -215,6 +257,7 @@ describe("la tour voit ses clients, et personne d'autre", { skip: !ADMIN }, () =
         "cabinet_nom",
         "dernier_depot_le",
         "devise",
+        "devise_du",
         "documents",
         "echeance_le",
         "etat",

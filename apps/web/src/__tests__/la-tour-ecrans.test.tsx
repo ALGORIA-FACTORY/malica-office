@@ -75,6 +75,7 @@ const cabinet = (
   devise: "TND",
   etat,
   reste_du: etat === "en_retard" ? "240.000" : "0",
+  devise_du: etat === "en_retard" ? "TND" : null,
   echeance_le: null,
 });
 
@@ -97,6 +98,7 @@ const pme = (id: string, nom: string, reste: Partial<PmeDeLaTour> = {}): PmeDeLa
   dernier_depot_le: "2026-11-01 09:00:00+00",
   etat: "payee",
   reste_du: "0",
+  devise_du: null,
   echeance_le: null,
   ...reste,
 });

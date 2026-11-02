@@ -140,9 +140,11 @@ function UnCabinet() {
             cle: "reste",
             libelle: t("tour.fiche.reste"),
             valeur:
-              Number(cabinet.reste_du) > 0
-                ? `${montant(cabinet.reste_du, locale)} ${cabinet.devise}`
-                : "0",
+              cabinet.reste_du === null
+                ? "—"
+                : cabinet.devise_du && Number(cabinet.reste_du) > 0
+                  ? `${montant(cabinet.reste_du, locale)} ${cabinet.devise_du}`
+                  : "0",
             ton: etatDuCabinet(cabinet) === "impaye" ? "stop" : undefined,
           },
         ]}

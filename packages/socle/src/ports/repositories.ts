@@ -4181,7 +4181,8 @@ export interface LicenceVueDeLaTour {
  * L'état d'un ensemble de factures, le pire d'abord (`facturation.encours_v`) ;
  * `null` : aucune facture.
  */
-export type EtatDesFactures = "en_retard" | "partielle" | "a_echoir" | "payee" | null;
+export type EtatDesFactures =
+  "en_retard" | "irrecouvrable" | "partielle" | "a_echoir" | "payee" | null;
 
 /** Un cabinet, vu de la tour : son identité et l'état de ses factures consolidées. */
 export interface CabinetDeLaTour {
@@ -4191,8 +4192,13 @@ export interface CabinetDeLaTour {
   juridiction: string;
   devise: string;
   etat: EtatDesFactures;
-  /** Le reste dû, en texte décimal de la base. */
-  reste_du: string;
+  /**
+   * Le reste dû, en texte décimal de la base, dans `devise_du` ; `null` quand
+   * les factures dues sont en plusieurs devises (elles ne s'additionnent pas).
+   */
+  reste_du: string | null;
+  /** La devise des factures dues (celle de l'émetteur) ; `null` sans dette. */
+  devise_du: string | null;
   /** La première échéance non réglée, « AAAA-MM-JJ ». */
   echeance_le: string | null;
 }
@@ -4222,7 +4228,9 @@ export interface PmeDeLaTour {
   transmis_mois: number;
   dernier_depot_le: string | null;
   etat: EtatDesFactures;
-  reste_du: string;
+  /** La dette PROPRE de la PME (ses factures directes) ; la consolidée reste au cabinet. */
+  reste_du: string | null;
+  devise_du: string | null;
   echeance_le: string | null;
 }
 

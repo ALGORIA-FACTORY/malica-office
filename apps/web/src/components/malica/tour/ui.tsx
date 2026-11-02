@@ -23,6 +23,7 @@ const TONS: Record<EtatDuClient, { cle: MessageKey; ton: string }> = {
   a_echoir: { cle: "tour.etat.a_echoir", ton: "text-etat-warn bg-etat-warn/10" },
   partiel: { cle: "tour.etat.partiel", ton: "text-etat-warn bg-etat-warn/10" },
   impaye: { cle: "tour.etat.impaye", ton: "text-etat-stop bg-etat-stop/10" },
+  irrecouvrable: { cle: "tour.etat.irrecouvrable", ton: "text-etat-stop bg-etat-stop/10" },
   suspendu: { cle: "tour.etat.suspendu", ton: "bg-foreground text-background" },
   sans_facture: { cle: "tour.etat.sans_facture", ton: "text-muted-foreground bg-muted" },
   sans_licence: { cle: "tour.etat.sans_licence", ton: "text-muted-foreground bg-muted" },

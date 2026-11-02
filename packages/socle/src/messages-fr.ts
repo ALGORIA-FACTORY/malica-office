@@ -3604,6 +3604,7 @@ export const fr = {
   "tour.etat.a_echoir": "À échoir",
   "tour.etat.partiel": "Partiel",
   "tour.etat.impaye": "Impayé",
+  "tour.etat.irrecouvrable": "Irrécouvrable",
   "tour.etat.suspendu": "Suspendu",
   "tour.etat.sans_facture": "Sans facture",
   "tour.etat.sans_licence": "Sans licence",
