@@ -29,6 +29,7 @@ import path from "node:path";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../../auth.ts";
+import { monterUneSociete } from "../../circuit-d-essai.ts";
 import {
   fermerLePool,
   horsRlsAuthentificationSeule,
@@ -549,44 +550,48 @@ describe("la passe de nuit", { skip: !BASE_CONFIGUREE }, () => {
       );
     });
 
-    it("la journée d'un membre ne compte pas la nuit, mais compte au mensuel", async () => {
-      await regler({ part: "0.5", dossier: "1" });
+    it("ALGORIA paie : la nuit ne mange pas le budget du client, ni le client celui de la nuit", async () => {
+      await regler({ part: "0.5", dossier: "100" });
       const autre = await dossier();
       const budget = () =>
         ordonnanceur<string | null>("select fabrique.relecture_nuit_budget($1, $2) as r", [
           autre.pme,
           NUIT,
         ]);
-      // Trois dollars dépensés en journée par le dirigeant.
-      await admin.query(
-        `insert into agents.agent_runs (tenant_id, agent, model, sovereign, cost, status, created_by)
-         values ($1, 'lecture', 'essai', false, 3, 'ok', $2)`,
-        [autre.pme, autre.u.id],
-      );
-      assert.equal(
-        await budget(),
-        null,
-        "le plafond de nuit (1 $) ne la voit pas, ni le mensuel (3 $ < la moitié de 10 $)",
-      );
-      // Un plafond mensuel de 4 $ pour le dossier : 3 $ dépassent sa moitié.
+      const depenseDuClient = async () =>
+        Number(
+          (
+            await admin.query<{ d: string }>(`select app.depense_ia_du_mois($1)::text as d`, [
+              autre.pme,
+            ])
+          ).rows[0]!.d,
+        );
+      const depenser = (cout: number, par: string) =>
+        admin.query(
+          `insert into agents.agent_runs (tenant_id, agent, model, sovereign, cost, status, created_by)
+           values ($1, 'lecture', 'essai', false, $2, 'ok', $3)`,
+          [autre.pme, cout, par],
+        );
+      // Un plafond mensuel de 4 $ pour le dossier : la nuit s'arrête à 2 $.
       await admin.query(
         `insert into agents.budgets (tenant_id, monthly_cost_cap) values ($1, 4)
          on conflict (tenant_id) do update set monthly_cost_cap = 4`,
         [autre.pme],
       );
+      // Trois dollars dépensés en journée par le dirigeant : son budget, pas celui de la nuit.
+      await depenser(3, autre.u.id);
+      assert.equal(await depenseDuClient(), 3);
+      assert.equal(await budget(), null, "la dépense du client ne ferme pas la nuit");
+      // Deux dollars dépensés par le relecteur : la moitié du plafond, la nuit s'arrête…
+      await depenser(2, service);
       assert.equal(await budget(), "plafond.mensuel");
-      await admin.query(`update agents.budgets set monthly_cost_cap = 1000 where tenant_id = $1`, [
-        autre.pme,
-      ]);
-      assert.equal(await budget(), null);
-      // Un dollar dépensé par le relecteur, cette nuit, dans ce dossier.
-      await admin.query(
-        `insert into agents.agent_runs (tenant_id, agent, model, sovereign, cost, status, created_by,
-                                        created_at)
-         values ($1, 'lecture', 'essai', false, 1, 'ok', $2, $3)`,
-        [autre.pme, service, NUIT],
-      );
+      // … et le budget de l'assistant du client n'a pas bougé.
+      assert.equal(await depenseDuClient(), 3, "ALGORIA paie : rien ne s'impute au client");
+      // Le plafond de nuit du dossier, sur 24 h, ne voit que le relecteur.
+      await regler({ part: "1", dossier: "2" });
       assert.equal(await budget(), "plafond.dossier");
+      await regler({ part: "1", dossier: "2.5" });
+      assert.equal(await budget(), null, "les 3 $ du dirigeant n'y comptent pas");
     });
   });
 
@@ -746,6 +751,80 @@ describe("la passe de nuit", { skip: !BASE_CONFIGUREE }, () => {
         return rows.length;
       });
       assert.equal(membre, 0);
+    });
+  });
+
+  describe("le relecteur ne voit pas plus que l'auteur de la pièce relue", () => {
+    it("la relecture de Sami ne se rapproche pas de la facture PRIVÉE de Sonia", async () => {
+      await regler();
+      const s = await monterUneSociete(`nuit-privee-${Date.now()}`);
+      try {
+        await admin.query(
+          `update identity.organizations set fuseau = 'Africa/Dakar' where id = $1`,
+          [s.pme],
+        );
+        const jourDuCabinet = (
+          await sousIdentite(s.gens.expert.id, (db) => parametrage.fuseauDuCabinet(db, s.cabinet))
+        ).aujourdhui!;
+        await sousIdentite(s.gens.expert.id, (db) =>
+          parametrage.arreterReglagesComptables(db, {
+            cabinetId: s.cabinet,
+            portee: "dossier",
+            porteeId: s.pme,
+            packId: s.pack,
+            depuis: jourDuCabinet,
+            valeurs: [
+              { code: "lecture.sudoku", valeur: "observe" },
+              { code: "lecture.relecture_nuit", valeur: "active" },
+              { code: "lecture.relecture_delai_heures", valeur: "0.000001" },
+            ],
+          }),
+        );
+        const octets = async (id: string) => {
+          await mkdir(path.join(racine(), s.pme), { recursive: true });
+          await writeFile(path.join(racine(), s.pme, id), new Uint8Array([0xff, 0xd8, 0xff]));
+        };
+        // Sonia lit sa facture, puis la range dans son espace privé.
+        const privee = await s.deposer("sonia", "entite");
+        await octets(privee);
+        await readPieceFlow(
+          creerAppelLocal((t) => sousIdentite(s.gens.sonia.id, t)),
+          privee,
+          lecteurs([() => numerotee(complete("qwen-vl-ocr", TOKENS_DE_L_AUTRE))]),
+        );
+        await s.fait("sonia", "collab.setPieceVis", privee, "personnel");
+        // Sami lit la même facture, imparfaitement : sa relecture est due.
+        const piece = await s.deposer("sami", "entite");
+        await octets(piece);
+        await readPieceFlow(
+          creerAppelLocal((t) => sousIdentite(s.gens.sami.id, t)),
+          piece,
+          lecteurs([() => partielle("qwen-vl-ocr")]),
+        );
+
+        await tourDeNuit(passe(lecteurs([() => numerotee(complete("PP-OCR", TOKENS_DE_L_AUTRE))])));
+
+        assert.equal((await relecture(piece)).dernier_motif, "relecture.retenue");
+        const { rows } = await admin.query<{ motifs: string; controles: string }>(
+          `select a.motifs::text as motifs, a.controles::text as controles from capture.analyses a
+            where a.piece_id = $1 order by a.created_at desc limit 1`,
+          [piece],
+        );
+        assert.doesNotMatch(rows[0]!.motifs, /"code": "doublon"/, "Sami ne voit pas cette facture");
+        assert.ok(
+          !rows[0]!.motifs.includes(privee) && !rows[0]!.controles.includes(privee),
+          "et son identifiant ne fuit nulle part",
+        );
+        // Sous le relecteur, la pièce privée de Sonia n'est pas lisible.
+        const vues = await sousLeRelecteurDeNuit(
+          s.pme,
+          async (db) =>
+            (await db.query(`select 1 from capture.pieces where id = $1`, [privee])).rows,
+        );
+        assert.equal(vues.length, 0);
+      } finally {
+        await s.fermer();
+      }
     });
   });
 });

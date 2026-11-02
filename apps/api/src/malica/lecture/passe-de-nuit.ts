@@ -21,12 +21,19 @@
  * Avant chaque relecture, dans cet ordre :
  *   1. une lecture fraîche attend → la passe CÈDE (le client passe d'abord) ;
  *   2. le dossier est sorti de sa fenêtre → on ne le relit pas ;
- *   3. le plafond est atteint → on ne PREND pas le travail : aucune tentative
- *      consommée ; le plafond de la plateforme ferme la passe ;
+ *   3. la tour a coupé la passe, ou le plafond est atteint → on ne PREND pas
+ *      le travail : aucune tentative consommée ; la coupure (« coupe ») et le
+ *      plafond de la plateforme ferment le passage ;
  *   4. sinon, une relecture, avec le code existant (`relirePiece`).
  *
  * Une relecture par dossier et par tour, une seule à la fois : un dossier
  * chargé ne prive pas les autres de leur nuit.
+ *
+ * Révoquer le RELECTEUR pendant une relecture (raisonné, non éprouvé) : ses
+ * appels suivants ne voient plus rien, l'issue ne s'inscrit plus sous lui, et
+ * le passage reste « interrompu » ; le travail pris redevient prenable à son
+ * âge d'abandon, une tentative consommée. L'interrupteur, lui, arrête avant la
+ * relecture suivante sans rien consommer : c'est le geste à préférer.
  *
  * ============================================================ SANS HORLOGE
  *

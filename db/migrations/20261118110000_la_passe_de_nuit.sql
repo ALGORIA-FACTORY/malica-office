@@ -235,18 +235,67 @@ $$;
 revoke all on function plateforme.relecture_nuit_ouverte() from public, anon, authenticated;
 
 /*
+ * ALGORIA PAIE, JUSQUE DANS LE BUDGET DU CLIENT (revue indépendante de #200).
+ *
+ * Les appels du relecteur se journalisent dans `agents.agent_runs` du dossier :
+ * c'est là que la tour et les plafonds de nuit les mesurent. Mais
+ * `app.depense_ia_du_mois` — ce que le conseil de Malica oppose au plafond
+ * mensuel du CLIENT (`conseil_budget_exiger`) — les comptait aussi : la nuit
+ * pouvait manger jusqu'à la moitié du budget de l'assistant du client.
+ *
+ * Une mesure, en un endroit, et deux lectures : la dépense du mois d'un
+ * dossier, celle de ses personnes (`p_du_service = false` : le budget du
+ * client) ou celle des comptes de service (`true` : ce qu'ALGORIA y dépense la
+ * nuit). Le MOIS est le mois UTC (`date_trunc('month', now())`), comme depuis
+ * 20261022590000 : défaut connu, non corrigé ici — une dépense du 1er à 00:30
+ * heure de Tunis compte au mois précédent.
+ */
+create function app.depense_ia_du_mois_selon(p_tenant uuid, p_du_service boolean)
+returns numeric
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(sum(r.cost), 0)
+    from agents.agent_runs r
+   where r.tenant_id = p_tenant
+     and r.created_at >= date_trunc('month', now())
+     and exists (select 1 from identity.comptes_de_service c where c.id = r.created_by)
+         = p_du_service
+$$;
+
+revoke all on function app.depense_ia_du_mois_selon(uuid, boolean) from public, anon, authenticated;
+
+-- Le budget du CLIENT : ses personnes seules. Signature et droits inchangés.
+create or replace function app.depense_ia_du_mois(p_tenant uuid)
+returns numeric
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select app.depense_ia_du_mois_selon(p_tenant, false)
+$$;
+
+comment on function app.depense_ia_du_mois(uuid) is
+  'La dépense IA du mois (UTC) d''un dossier par ses personnes : ce que son plafond mensuel '
+  'borne. Les comptes de service (le relecteur de nuit, payé par ALGORIA) n''y comptent pas.';
+
+/*
  * La raison de ne pas relire ce dossier à l'instant `p_a`, ou nul :
  *   passe.coupee         la tour a coupé la passe, ou révoqué le relecteur —
  *                        vérifié en premier, avant toute prise ;
  *   plafond.plateforme   la dépense du relecteur sur 24 h, tous dossiers ;
  *   plafond.dossier      sa dépense sur 24 h dans ce dossier ;
  *   plafond.relectures   ses prises sur 24 h dans ce dossier ;
- *   plafond.mensuel      la dépense IA du mois du dossier — journée comprise —
- *                        a atteint la part réglée de son plafond mensuel.
- * La dépense de nuit est celle du relecteur seul (`created_by`) : ce qu'un
- * membre dépense en journée ne compte pas au plafond de nuit, mais compte au
- * mensuel. Le coût n'est connu qu'APRÈS l'appel : un plafond peut être
- * dépassé d'au plus une relecture, et c'est dit.
+ *   plafond.mensuel      la dépense du RELECTEUR dans ce dossier ce mois (UTC) a
+ *                        atteint la part réglée du plafond mensuel du dossier.
+ * Choix (revue indépendante de #200) : la part du mensuel borne ce qu'ALGORIA
+ * dépense pour un dossier, mesurée CONTRE le plafond du client mais sans
+ * JAMAIS le consommer — la dépense du client ne compte à aucun plafond de
+ * nuit, et celle de la nuit ne compte pas à son budget. Le coût n'est connu
+ * qu'APRÈS l'appel : un plafond peut être dépassé d'au plus une relecture.
  */
 create function fabrique.relecture_nuit_budget(p_tenant uuid, p_a timestamptz)
 returns text
@@ -280,7 +329,7 @@ begin
      >= v_reglage.relectures_max_24h_dossier then
     return 'plafond.relectures';
   end if;
-  if app.depense_ia_du_mois(p_tenant)
+  if app.depense_ia_du_mois_selon(p_tenant, true)
      >= v_reglage.part_max_plafond_mensuel * app.plafond_ia_de(p_tenant) then
     return 'plafond.mensuel';
   end if;

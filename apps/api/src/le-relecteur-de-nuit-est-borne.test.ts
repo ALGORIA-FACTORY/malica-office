@@ -45,6 +45,9 @@ describe("le relecteur de nuit est borné par la base", { skip: !BASE_CONFIGUREE
   let autre = "";
   /** Une pièce de B. */
   let ailleurs = "";
+  /** Une pièce personnelle de Sonia, et une pièce archivée de A. */
+  let privee = "";
+  let archivee = "";
   let operateur = "";
   let service = "";
   /** Le rôle de connexion de l'API, pour poser des claims à la main. */
@@ -82,6 +85,9 @@ describe("le relecteur de nuit est borné par la base", { skip: !BASE_CONFIGUREE
     autre = await a.deposer("sonia", "entite");
     await a.lire("sonia", autre);
     ailleurs = await b.deposer("sami", "entite");
+    privee = await a.deposer("sonia", "personnel");
+    archivee = await a.deposer("sonia", "entite");
+    await a.admin.query(`update capture.pieces set archivee_le = now() where id = $1`, [archivee]);
     await b.lire("sami", ailleurs);
     operateur = a.gens.bilel.id;
     await a.admin.query(`insert into app.platform_operators (user_id, note) values ($1, $2)`, [
@@ -145,6 +151,9 @@ describe("le relecteur de nuit est borné par la base", { skip: !BASE_CONFIGUREE
     assert.ok(ids.includes(due), "la pièce à relire, quoique personnelle");
     assert.ok(ids.includes(autre), "les autres pièces du dossier, pour juger (doublon probable)");
     assert.ok(!ids.includes(ailleurs), "rien de B");
+    // Jamais plus que l'auteur de la pièce relue (Sami) n'en verrait.
+    assert.ok(!ids.includes(privee), "ni la pièce PERSONNELLE de Sonia");
+    assert.ok(!ids.includes(archivee), "ni une pièce archivée");
     const deB = await sous(a.pme, `select 1 from capture.pieces where tenant_id = $1`, [b.pme]);
     assert.equal(deB.length, 0);
   });
@@ -194,6 +203,15 @@ describe("le relecteur de nuit est borné par la base", { skip: !BASE_CONFIGUREE
         tarif!.model,
         tarif!.role,
         autre,
+      ]),
+      /refus\.service\.hors_perimetre/,
+    );
+    // Un coût sans pièce n'est pas de la relecture.
+    await assert.rejects(
+      sous(a.pme, `select public.agents_run_log($1, 'essai', $2, $3, 'ok', 1, 1, 1, null, null)`, [
+        a.pme,
+        tarif!.model,
+        tarif!.role,
       ]),
       /refus\.service\.hors_perimetre/,
     );

@@ -204,6 +204,53 @@ $$;
 revoke all on function app.relecture_due(uuid, uuid) from public, anon;
 grant execute on function app.relecture_due(uuid, uuid) to authenticated;
 
+/*
+ * Une pièce de son dossier que le relecteur peut LIRE. Jamais plus que
+ * l'auteur de la pièce relue n'en verrait (revue indépendante de #200) :
+ *   - une pièce archivée, jamais ;
+ *   - une pièce de la société (`entite`, `partage`), oui ;
+ *   - une pièce PERSONNELLE, seulement si elle est de l'auteur de la relecture
+ *     EN COURS — ou, quand aucune n'est en cours, si elle porte elle-même une
+ *     relecture due (pour que la file puisse la prendre).
+ * Sans cela, le doublon probable cherché pendant la relecture de la pièce de
+ * Sami pouvait désigner la facture privée de Sonia (`preuves.semblable`).
+ */
+create function app.piece_lisible_au_relecteur(
+  p_tenant uuid, p_piece uuid, p_vis app.vis_t, p_auteur uuid, p_archivee timestamptz)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_auteur_en_cours uuid;
+begin
+  if p_tenant is null or p_archivee is not null
+     or app.dossier_du_service() is distinct from p_tenant
+     or not app.relecture_due(p_tenant, null) then
+    return false;
+  end if;
+  if p_vis in ('entite'::app.vis_t, 'partage'::app.vis_t) then
+    return true;
+  end if;
+  select q.created_by into v_auteur_en_cours
+    from fabrique.etat_des_travaux_v e
+    join capture.pieces q on q.id = e.piece_id
+   where e.tenant_id = p_tenant and e.nature = 'relecture_piece' and e.etat = 'en_cours'
+   limit 1;
+  if v_auteur_en_cours is not null then
+    return p_auteur is not distinct from v_auteur_en_cours;
+  end if;
+  return app.relecture_due(p_tenant, p_piece);
+end
+$$;
+
+revoke all on function app.piece_lisible_au_relecteur(uuid, uuid, app.vis_t, uuid, timestamptz)
+  from public, anon;
+grant execute on function app.piece_lisible_au_relecteur(uuid, uuid, app.vis_t, uuid, timestamptz)
+  to authenticated;
+
 /* L'identifiant d'un compte de service, pour l'API seule : aucun uuid n'est écrit en TypeScript. */
 create function app.compte_de_service_id(p_code text)
 returns uuid
@@ -269,7 +316,7 @@ as $function$
   select e.pme_org_id
     from identity.engagements e
    where e.cabinet_org_id in (select app.member_orgs())
-     and app.service() is null
+     and (select app.service()) is null
      and e.status = 'actif'
      and e.starts_on <= current_date
      and (e.ends_on is null or e.ends_on >= current_date)
@@ -291,7 +338,7 @@ security definer
 set search_path = ''
 as $function$
   select app.api_tenant() is null
-     and app.service() is null
+     and (select app.service()) is null
      and exists (select 1 from app.platform_operators po where po.user_id = auth.uid())
 $function$;
 
@@ -320,13 +367,13 @@ as $function$
         -- L'exception, et elle est nommée.
         or app.plateforme_requise(p.tenant_id)
         -- Le relecteur de nuit : les pièces de son dossier, en LECTURE, tant
-        -- qu'une relecture y est due ou en cours. Voir l'en-tête : l'analyse
-        -- d'une relecture juge la pièce contre son dossier (doublon probable),
-        -- comme pour un membre qui voit tout. Il n'ÉCRIT que sur la pièce
-        -- qu'il relit (`app.service_sur_sa_piece`).
+        -- qu'une relecture y est due ou en cours, jamais plus que l'auteur de la
+        -- pièce relue n'en verrait (`app.piece_lisible_au_relecteur`). Voir
+        -- l'en-tête : l'analyse juge la pièce contre son dossier (doublon
+        -- probable). Il n'ÉCRIT que sur la pièce qu'il relit.
         or case when app.dossier_du_service() is null then false
-                else p.tenant_id = app.dossier_du_service()
-                     and app.relecture_due(p.tenant_id, null) end
+                else app.piece_lisible_au_relecteur(p.tenant_id, p.id, p.vis, p.created_by,
+                                                    p.archivee_le) end
       )
   )
 $function$;
@@ -353,8 +400,8 @@ create policy capture_pieces_sel on capture.pieces
             and app.piece_connue_du_cabinet(id))
         or app.plateforme_requise(tenant_id)
         or case when (select app.dossier_du_service()) is null then false
-                else tenant_id = (select app.dossier_du_service())
-                     and app.relecture_due(tenant_id, null) end)
+                else app.piece_lisible_au_relecteur(tenant_id, id, vis, created_by,
+                                                    archivee_le) end)
     end);
 
 -- --------------------------------------------- 4. Ce qu'il n'écrit pas, ce qu'il ne lit pas
@@ -400,8 +447,9 @@ begin
     return case when tg_op = 'DELETE' then old else new end;
   end if;
   v_piece := (to_jsonb(case when tg_op = 'DELETE' then old else new end) ->> tg_argv[0])::uuid;
-  if v_piece is not null
-     and not app.relecture_due(app.dossier_du_service(), v_piece) then
+  -- Une ligne sans pièce (un coût, une exécution) n'est pas de la relecture : refusée.
+  if v_piece is null
+     or not app.relecture_due(app.dossier_du_service(), v_piece) then
     raise exception 'refus.service.hors_perimetre' using errcode = '42501';
   end if;
   return case when tg_op = 'DELETE' then old else new end;
