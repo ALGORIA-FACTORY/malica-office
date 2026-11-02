@@ -175,15 +175,18 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         s.chercher();
     }
 
-    // Déduplication : une même solution par deux chemins n'en fait qu'une, la plus forte.
+    // Déduplication : une même solution par deux chemins n'en fait qu'une, la plus forte —
+    // et, à force égale, celle qui n'invoque pas d'exonération partielle (qui exige les lignes).
+    let partielle = |sol: &Solution| sol.etat.g.iter().any(|g| g.as_ref().is_some_and(|g| g.partielle));
     let mut uniques: BTreeMap<_, Solution> = BTreeMap::new();
     for sol in s.solutions.drain(..) {
         let k = cle(&sol.etat);
-        match uniques.get(&k) {
-            Some(x) if !x.faible || sol.faible => {}
-            _ => {
-                uniques.insert(k, sol);
-            }
+        let remplace = match uniques.get(&k) {
+            None => true,
+            Some(x) => (x.faible && !sol.faible) || (x.faible == sol.faible && partielle(x) && !partielle(&sol)),
+        };
+        if remplace {
+            uniques.insert(k, sol);
         }
     }
     let toutes: Vec<Solution> = uniques.into_values().collect();
@@ -216,7 +219,7 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         issue = "aucune".into();
         raison = Some("aucune preuve arithmétique vérifiée".into());
     }
-    let prouvee = issue == "prouvee";
+    let mut prouvee = issue == "prouvee";
 
     // ---------- Les champs ----------
     let mut champs: BTreeMap<String, ChampSortie> = BTreeMap::new();
@@ -453,6 +456,63 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             }
         };
         preuves.insert(p.code.clone(), st.into());
+    }
+
+    // ---------- Le total HT porte son libellé, ou les lignes le ferment ----------
+    // Une preuve n'est retenue que si la valeur prise pour le total des bases (le HT) porte
+    // son libellé — repères du champ, en base, sur le jeton ou dans la suite de purs mots juste
+    // à sa gauche — ou si les lignes la ferment exactement. Décision du dirigeant (2 novembre
+    // 2026) : zéro fausse preuve l'emporte sur les pièces gagnées. Sans elle :
+    // - exonération totale (zéro instance) : le groupe ne contraint plus le HT, et HT + droits
+    //   = TTC fermait sur le « Total TTC » pris pour le HT (100/B-15, tranches 0 % et 19 %,
+    //   « 0,000 » et « exonérée » imprimés) ;
+    // - deux taux sur un ticket, un chiffre du TTC mal lu : la base à 7 % passait pour le HT,
+    //   et un montant d'article pour le TTC (50/05, OCR).
+    // Exonération partielle, en plus : le reste, exonéré, n'est imprimé nulle part ; les lignes
+    // seules l'établissent, chaque taux y valant sa base imprimée (`taux_par_base`).
+    // Sinon la pièce n'est pas prouvée : rendue à la chaîne, valeurs gardées au statut signalé.
+    if let (true, Some(e)) = (prouvee, unique) {
+        // Les lignes lues sans cellule déduite ni remise globale, et dont la somme vaut `total`.
+        let lignes_ferment = |total: i64, par_taux: bool| {
+            sortie_lignes.as_ref().is_some_and(|l| {
+                l.statut == "prouve"
+                    && (!par_taux || l.taux_par_base == "verifiee")
+                    && l.deduites.is_none()
+                    && l.remise_globale.is_none()
+                    && l.instances.iter().map(|x| x.montant.valeur.parse::<i64>().ok()).sum::<Option<i64>>() == Some(total)
+            })
+        };
+        let mut refus: Option<&str> = None;
+        for (g, gr) in modele.groupes.iter().enumerate() {
+            let Some(sol) = e.g[g].as_ref() else { continue };
+            let Some(t) = gr.total_base else { continue };
+            let Some(ht) = e.s[t].filter(|v| !v.absent).map(|v| v.v) else { continue };
+            let champ = modele.vars[t].champ;
+            let ancre = dom
+                .valeurs
+                .get(&ht)
+                .is_some_and(|x| x.occurrences.iter().any(|o| plan.libelle_avant(o.jeton, &reperes[champ]) || plan.ancre(o.jeton, &reperes[champ], None, true)));
+            if sol.partielle && !lignes_ferment(ht, true) {
+                refus = Some("exonération partielle non confirmée par les lignes");
+            } else if !ancre && !lignes_ferment(ht, false) {
+                refus = Some("le total HT ne porte pas son libellé");
+            }
+        }
+        if let Some(r) = refus {
+            prouvee = false;
+            issue = "aucune".into();
+            raison = Some(r.into());
+            for c in champs.values_mut() {
+                if c.statut == "prouve" {
+                    c.statut = "signale".into();
+                }
+            }
+            for (cp, ev) in modele.contraintes.iter().zip(&evals) {
+                if *ev == Eval::Ok {
+                    preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
+                }
+            }
+        }
     }
 
     // ---------- L'anneau 3 : les champs nommés, que nulle preuve ne lit ----------

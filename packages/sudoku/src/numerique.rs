@@ -44,6 +44,9 @@ pub struct SolGroupe {
     pub exige_forte: bool,
     /// Exonération : zéro instance, montant nul imprimé.
     pub exoneration: bool,
+    /// Exonération partielle : bases toutes imprimées, Σ bases < total des bases ; la
+    /// part exonérée (total − Σ bases) doit être confirmée par les lignes (`lib.rs`).
+    pub partielle: bool,
 }
 
 #[derive(Clone)]
@@ -296,6 +299,12 @@ impl<'a> Solveur<'a> {
                 if let Some(tb) = gr.total_base {
                     match e.s[tb] {
                         None => connu = false,
+                        // exonération partielle : une part strictement positive du total, de son signe
+                        Some(v) if !v.absent && sol.partielle => {
+                            if !partie_stricte(sol.somme_b, v.v) {
+                                return Eval::Echec;
+                            }
+                        }
                         Some(v) if !v.absent && !sol.exoneration && v.v != sol.somme_b => return Eval::Echec,
                         _ => {}
                     }
@@ -535,7 +544,8 @@ impl<'a> Solveur<'a> {
                     match &e.g[*g] {
                         Some(sol) => {
                             if let Some(tb) = gr.total_base {
-                                if e.s[tb].is_none() {
+                                // une solution partielle ne naît que le total des bases connu
+                                if e.s[tb].is_none() && !sol.partielle {
                                     let v = sol.somme_b;
                                     return Some(self.avec_scalaire(e, tb, self.exact(v)));
                                 }
@@ -593,7 +603,8 @@ impl<'a> Solveur<'a> {
             hi = hi.max(x);
         }
         let (mut lo, mut hi) = (lo - marge, hi + marge);
-        if self.exo_possible(g) {
+        // exonération (totale ou partielle) : le montant peut tomber jusqu'à zéro
+        if self.exo_possible(g) || self.partielle_possible(g) {
             lo = lo.min(0);
             hi = hi.max(0);
         }
@@ -602,6 +613,11 @@ impl<'a> Solveur<'a> {
 
     fn exo_possible(&self, g: usize) -> bool {
         self.exo_autorisee[g] && self.zero_fort
+    }
+
+    /// Exonération partielle : déclarée par la grille, et sa mention lue.
+    fn partielle_possible(&self, g: usize) -> bool {
+        self.m.groupes[g].exoneration_partielle && self.exo_autorisee[g]
     }
 
     /// Les candidats d'un champ libre, filtrés par les intervalles des sommes où
@@ -697,6 +713,7 @@ impl<'a> Solveur<'a> {
                 faible: false,
                 exige_forte: true,
                 exoneration: true,
+                partielle: false,
             });
         }
         let kmax = gr.instances_max.min(n);
@@ -709,6 +726,28 @@ impl<'a> Solveur<'a> {
                     return Vec::new();
                 }
             }
+        }
+        // Exonération partielle : le total des bases connu, des instances dont CHAQUE base est
+        // imprimée et dont la somme n'en est qu'une part stricte ; lectures fortes seulement.
+        // Le reste (total − Σ bases) est la part exonérée : la pièce ne sera prouvée que si
+        // les lignes la confirment (`lib.rs`).
+        if let (true, Some(sb)) = (self.partielle_possible(g), sb) {
+            let mut partielles = Vec::new();
+            for k in 1..=kmax {
+                for combo in combinaisons_k(n, k) {
+                    let ks: Vec<Coef> = combo.iter().map(|&i| coefs[i]).collect();
+                    let mut choisis = Vec::new();
+                    self.enumerer(&combo, &ks, sm, None, &mut choisis, &mut partielles);
+                    if self.depasse {
+                        return Vec::new();
+                    }
+                }
+            }
+            out.extend(partielles.into_iter().filter(|s| !s.faible && partie_stricte(s.somme_b, sb)).map(|mut s| {
+                s.partielle = true;
+                s.exige_forte = true;
+                s
+            }));
         }
         // « Total seul » : le total des montants est imprimé, pas les montants par taux ;
         // deux taux, bases imprimées, lectures fortes seulement (règle verrouillée par la mesure).
@@ -844,6 +883,7 @@ impl<'a> Solveur<'a> {
                         faible: faible_m,
                         exige_forte: false,
                         exoneration: false,
+                        partielle: false,
                     });
                 }
                 return;
@@ -875,6 +915,7 @@ impl<'a> Solveur<'a> {
                         faible: faible_m || *fb,
                         exige_forte: false,
                         exoneration: false,
+                        partielle: false,
                     });
                     return;
                 }
@@ -895,6 +936,7 @@ impl<'a> Solveur<'a> {
                         faible: faible_m,
                         exige_forte: false,
                         exoneration: false,
+                        partielle: false,
                     });
                 }
             }
@@ -909,6 +951,7 @@ impl<'a> Solveur<'a> {
                         faible: faible_m || fb,
                         exige_forte: false,
                         exoneration: false,
+                        partielle: false,
                     });
                 }
             }
@@ -945,11 +988,17 @@ impl<'a> Solveur<'a> {
                         faible: false,
                         exige_forte: true,
                         exoneration: false,
+                        partielle: false,
                     });
                 }
             }
         }
     }
+}
+
+/// `partie` est une part stricte de `total` : même signe, non nulle, plus petite en valeur absolue.
+fn partie_stricte(partie: i64, total: i64) -> bool {
+    partie != 0 && partie.signum() == total.signum() && partie.abs() < total.abs()
 }
 
 fn produit_cartesien(l: &[Vec<(i64, bool)>], i: usize, cur: &mut Vec<(i64, bool)>, faible: bool, out: &mut Vec<(Vec<i64>, bool)>) {

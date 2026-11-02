@@ -610,7 +610,8 @@
     "reperes_fr": [
      "Total HT",
      "Net HT",
-     "Montant HT"
+     "Montant HT",
+     "Total H.T"
     ],
     "reperes_ar": [
      "المبلغ دون اعتبار الأداءات"

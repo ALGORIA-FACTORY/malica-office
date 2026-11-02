@@ -37,9 +37,11 @@ import type { VisionRead } from "./vision.ts";
  * l'adaptateur, moteur WebAssembly — et tient les seuils mesurés :
  *
  *   — zéro fausse preuve, sur les factures comme sur 3 000 lectures corrompues ;
- *   — 59 factures sur 60 prouvées justes (F008 imprime son total HT
+ *   — 55 factures sur 60 prouvées justes (F008 imprime son total HT
  *     « 165.747.027 » : l'OCR a remplacé la virgule, le treillis n'en tire
- *     que la lecture en milliers, et la pièce est signalée — pas prouvée fausse) ;
+ *     que la lecture en milliers, et la pièce est signalée — pas prouvée fausse ;
+ *     F009, F024, F031 et F032 n'ont aucun libellé lu sur la rangée de leur HT,
+ *     que toute preuve exige depuis le 2 novembre 2026) ;
  *   — les 6 tickets, qui ne sont pas des factures, jamais prouvés ;
  *   — la facture réelle du jeu d'or prouvée, et son extrait identique à celui
  *     de la désignation enregistrée.
@@ -996,7 +998,65 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
     );
   });
 
-  it("banc 3 : 59/60 factures prouvées justes, zéro fausse preuve, aucun ticket prouvé", () => {
+  /** Le plan d'une pièce des jeux du dirigeant (jetons compacts), tel que l'OCR ou la couche de texte l'a lu. */
+  type JetonCompact = [number, number, string, number, number, number, number, unknown, unknown];
+  const planDuJeu = (fichier: string, id: string): { plan: PageToken[]; jour: string } => {
+    const p = (
+      lire(fichier) as {
+        id: string;
+        verite: { entete: { date: string } };
+        jetons: JetonCompact[];
+      }[]
+    ).find((x) => x.id === id)!;
+    return {
+      plan: p.jetons.map(([page, ordinal, text, x0, y0, x1, y1]) => ({
+        page,
+        ordinal,
+        text,
+        x0,
+        y0,
+        x1,
+        y1,
+      })),
+      jour: p.verite.entete.date,
+    };
+  };
+
+  it("un total HT sans son libellé ne prouve rien (100/B-15 exonérée, 50/05 au TTC mal lu)", async () => {
+    // 100/B-15 : tranches 0 % et 19 %, « 0,000 » imprimé, rangée « TVA 0 % » libellée « exonérée »
+    // — le « Total TTC » 1 749,800 passait pour le HT, prouvé FAUX.
+    const b15 = planDuJeu("jeux_dirigeant_jetons.json", "100/B-15");
+    const plan = b15.plan.map((t) =>
+      t.ordinal === 120 && t.text === "%" ? { ...t, text: "% (exonérée)" } : t,
+    );
+    assert.ok(
+      plan.some((t) => t.text === "% (exonérée)"),
+      "la rangée TVA 0 % de 100/B-15",
+    );
+    const cb = await contexteAu(b15.jour);
+    const ob = resoudreLaPiece(jetonsDuSudoku(plan, devise, cb), cb);
+    // refusée, une pièce garde ses valeurs, au statut signalé : ce qui compte, c'est qu'aucune ne soit prouvée fausse
+    const prouveFaux = (o: SortieDuSudoku, faux: string) =>
+      o.champs["total_ht"]?.valeur === faux && o.champs["total_ht"]?.statut === "prouve";
+    assert.ok(!prouveFaux(ob, "1749800"), JSON.stringify(ob.champs["total_ht"]));
+    if (ob.issue === "prouvee") assert.equal(ob.champs["total_ht"]?.valeur, "1670000");
+    // 50/05 (ticket, OCR) : le premier « 99.404 » du TTC lu « 09.404 » — la base à 7 % 12,450
+    // passait pour le HT et un montant d'article 13,322 pour le TTC, prouvé FAUX.
+    const t05 = planDuJeu("jeux_dirigeant_ocr.json", "50/05");
+    const mute = t05.plan.map((t) =>
+      t.ordinal === 61 && t.text === "99.404" ? { ...t, text: "09.404" } : t,
+    );
+    assert.ok(
+      mute.some((t) => t.text === "09.404"),
+      "le TTC de 50/05",
+    );
+    const c05 = await contexteAu(t05.jour);
+    const o05 = resoudreLaPiece(jetonsDuSudoku(mute, devise, c05), c05);
+    assert.ok(!prouveFaux(o05, "12450"), JSON.stringify(o05.champs["total_ht"]));
+    assert.notEqual(o05.issue, "prouvee");
+  });
+
+  it("banc 3 : 55/60 factures prouvées justes, zéro fausse preuve, aucun ticket prouvé", () => {
     let justes = 0;
     const fausses: string[] = [];
     let tickets = 0;
@@ -1013,7 +1073,9 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
     }
     assert.deepEqual(fausses, []);
     assert.equal(tickets, 0);
-    assert.equal(justes, 59);
+    // 59 avant la règle du libellé du total HT (2 novembre 2026) : F009, F024, F031 et F032
+    // n'ont aucun libellé lu sur la rangée de leur HT.
+    assert.equal(justes, 55);
   });
 
   it("banc 3 : 3 000 lectures corrompues, zéro fausse preuve", () => {
