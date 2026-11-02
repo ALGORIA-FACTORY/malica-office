@@ -70,6 +70,50 @@ const REFUS_DE_LECTURE = `(
      and not exists (select 1 from extractions_v x where x.piece_id = p.id)
    order by e.at desc limit 1)`;
 
+/** Une lecture à persister — la première comme une relecture retenue. */
+interface LectureAPersister {
+  pieceId: string;
+  packId: string;
+  tokens: unknown;
+  contract: string;
+  extract: unknown;
+  citations: unknown;
+  flags: unknown;
+  articles: unknown[];
+  documentKind: string | null;
+  documentDate: string | null;
+  /** Comment la pièce a été relevée (pdf-text, le modèle de vision…). Facultatif : les appels d'avant le 18 septembre ne le passaient pas. */
+  mode?: string | null;
+  /** La confiance de chaque champ lu, entre 0 et 1. Facultative, même raison. */
+  confianceParChamp?: Record<string, number>;
+}
+
+/** Ce qu'une relecture doit savoir avant de payer un modèle. */
+interface RelectureAFaire {
+  pieceId: string;
+  extractionId: string;
+  contract: string;
+  flags: Array<{ code: string }>;
+  consigne: { lecteur: string; paddleTente: boolean };
+  /** La raison de s'abstenir, ou nul : remplacee, lecture_depassee, correction_humaine, coupee. */
+  abstention: string | null;
+  /** La correction humaine trouvée (precision, ecriture, decision, retour…), ou nul. */
+  trace: string | null;
+}
+
+/** Les arguments de lecture communs aux deux portes, dans leur ordre. */
+function argumentsDeLecture(input: LectureAPersister): unknown[] {
+  return [
+    JSON.stringify(input.tokens),
+    input.contract,
+    JSON.stringify(input.extract),
+    JSON.stringify(input.citations),
+    JSON.stringify(input.flags),
+    input.mode ?? null,
+    JSON.stringify(input.confianceParChamp ?? {}),
+  ];
+}
+
 /**
  * Projeter les articles d'une pièce — un seul endroit.
  *
@@ -87,8 +131,14 @@ async function projeterLesArticles(
     documentKind: string | null;
     documentDate: string | null;
   },
+  /**
+   * Reconstruire même sans article. Une relecture retenue fait foi : si elle
+   * n'en lit aucun, la projection de la lecture d'avant ne doit pas survivre à
+   * l'écran des charges (la porte SQL vide, puis n'insère rien).
+   */
+  memeVide = false,
 ): Promise<void> {
-  if (input.articles.length === 0) return;
+  if (input.articles.length === 0 && !memeVide) return;
 
   // Sans sens de facture, pas de compte : on ne suppose pas « achat ». Les
   // articles sont gardés sans imputation ; elle viendra avec la précision de
@@ -937,41 +987,90 @@ export const capture = {
     return analyserPiece(db, pieceId);
   },
 
-  async persisterLecture(
-    db: Requete,
-    input: {
-      pieceId: string;
-      packId: string;
-      tokens: unknown;
-      contract: string;
-      extract: unknown;
-      citations: unknown;
-      flags: unknown;
-      articles: unknown[];
-      documentKind: string | null;
-      documentDate: string | null;
-      /** Comment la pièce a été relevée (pdf-text, le modèle de vision…). Facultatif : les appels d'avant le 18 septembre ne le passaient pas. */
-      mode?: string | null;
-      /** La confiance de chaque champ lu, entre 0 et 1. Facultative, même raison. */
-      confianceParChamp?: Record<string, number>;
-    },
-  ): Promise<void> {
+  async persisterLecture(db: Requete, input: LectureAPersister): Promise<void> {
     await db.query(
       `select public.capture_read_persist($1, $2::jsonb, $3, $4::jsonb, $5::jsonb, $6::jsonb,
                                           $7, $8::jsonb)`,
-      [
-        input.pieceId,
-        JSON.stringify(input.tokens),
-        input.contract,
-        JSON.stringify(input.extract),
-        JSON.stringify(input.citations),
-        JSON.stringify(input.flags),
-        input.mode ?? null,
-        JSON.stringify(input.confianceParChamp ?? {}),
-      ],
+      [input.pieceId, ...argumentsDeLecture(input)],
     );
 
     await projeterLesArticles(db, input);
+  },
+
+  /**
+   * La relecture de nuit est-elle ACTIVE pour le dossier de cette pièce ? La
+   * base le dit (`app.relecture_de_nuit` : le réglage du dossier, de son
+   * cabinet, puis le défaut du pack) ; ce dépôt ne lit aucune valeur.
+   */
+  async relectureDeNuit(db: Requete, pieceId: string): Promise<boolean> {
+    const { rows } = await db.query<{ active: boolean }>(
+      `select app.relecture_de_nuit(tenant_id) is not null as active from pieces_v where id = $1`,
+      [pieceId],
+    );
+    if (!rows[0]) throw new Error("refus.introuvable.piece");
+    return rows[0].active;
+  },
+
+  /**
+   * Inscrire la relecture de la lecture qui fait foi. L'heure (« pas avant »)
+   * est celle de la base : la lecture + le délai du dossier.
+   */
+  async inscrireRelecture(
+    db: Requete,
+    pieceId: string,
+    consigne: { lecteur: string; paddleTente: boolean },
+  ): Promise<{ travailId: string; deja: boolean; pasAvant: string }> {
+    const { rows } = await db.query<{
+      r: { travail_id: string; deja: boolean; pas_avant: string };
+    }>(`select fabrique.relecture_inscrire($1, $2::jsonb) as r`, [
+      pieceId,
+      JSON.stringify(consigne),
+    ]);
+    const r = rows[0]!.r;
+    return { travailId: r.travail_id, deja: r.deja, pasAvant: r.pas_avant };
+  },
+
+  /** Ce qu'une relecture doit savoir avant de payer un modèle (`fabrique.relecture_a_faire`). */
+  async relectureAFaire(db: Requete, travailId: string): Promise<RelectureAFaire> {
+    const { rows } = await db.query<{
+      r: {
+        piece_id: string;
+        extraction_id: string;
+        contract: string;
+        flags: Array<{ code: string }>;
+        consigne: { lecteur: string; paddleTente: boolean };
+        abstention: string | null;
+        trace: string | null;
+      };
+    }>(`select fabrique.relecture_a_faire($1) as r`, [travailId]);
+    const r = rows[0]!.r;
+    return {
+      pieceId: r.piece_id,
+      extractionId: r.extraction_id,
+      contract: r.contract,
+      flags: r.flags,
+      consigne: r.consigne,
+      abstention: r.abstention,
+      trace: r.trace,
+    };
+  },
+
+  /**
+   * Persister une relecture RETENUE : une lecture nouvelle (R7), par sa porte
+   * (`capture_relecture_persist`), qui exige le travail pris et revérifie
+   * qu'aucune personne n'a corrigé la pièce depuis.
+   */
+  async persisterRelecture(
+    db: Requete,
+    input: LectureAPersister & { travailId: string },
+  ): Promise<void> {
+    await db.query(
+      `select public.capture_relecture_persist($1, $2, $3::jsonb, $4, $5::jsonb, $6::jsonb,
+                                               $7::jsonb, $8, $9::jsonb)`,
+      [input.travailId, input.pieceId, ...argumentsDeLecture(input)],
+    );
+
+    await projeterLesArticles(db, input, true);
   },
 
   /**

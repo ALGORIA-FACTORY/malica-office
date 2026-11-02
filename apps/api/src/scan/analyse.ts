@@ -860,22 +860,27 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
    * (`texteDuMontantCite`) : la parenthèse qui ferme un MOT coupé par la plage
    * — « (base 3 020,000) » cité « 3 020,000) » — se retire, et elle seule
    * (revue de la PR 144). Le plan entier est donc relu : c'est lui qui le dit.
+   *
+   * Le plan et les citations sont ceux de LA LECTURE JUGÉE : une relecture
+   * de nuit porte son propre plan (17 novembre 2026), et mêler les deux
+   * citerait des jetons d'une autre lecture. Un plan sans lecture nommée
+   * (antérieur, ou banc d'essai) reste celui de la pièce.
    */
   const [{ rows: cites }, { rows: plan }] = await Promise.all([
     db.query<{ field: string; page: number; ordinal: number; fin: number }>(
       `select c.field, d.page, d.ordinal, coalesce(c.ordinal_end, d.ordinal) as fin
          from capture.citations c
          join capture.token_plan d on d.id = c.token_id
-        where c.piece_id = $1
+        where c.piece_id = $1 and coalesce(c.extraction_id, $2) = $2
         order by c.field, d.page, d.ordinal`,
-      [pieceId],
+      [pieceId, extraction.id],
     ),
     db.query<PageToken>(
       `select page, ordinal, text, x0::float8 as x0, y0::float8 as y0, x1::float8 as x1,
               y1::float8 as y1
          from capture.token_plan
-        where piece_id = $1 order by page, ordinal`,
-      [pieceId],
+        where piece_id = $1 and coalesce(extraction_id, $2) = $2 order by page, ordinal`,
+      [pieceId, extraction.id],
     ),
   ]);
   const imprime = new Map<string, string[]>();
@@ -886,10 +891,12 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
 
   const { rows: haut } = await db.query<{ text: string }>(
     `select text from capture.token_plan
-      where piece_id = $1 and page = (select min(page) from capture.token_plan where piece_id = $1)
+      where piece_id = $1 and coalesce(extraction_id, $3) = $3
+        and page = (select min(page) from capture.token_plan
+                     where piece_id = $1 and coalesce(extraction_id, $3) = $3)
         and y0 <= $2
       order by y0, x0`,
-    [pieceId, HAUT_DE_PAGE],
+    [pieceId, HAUT_DE_PAGE, extraction.id],
   );
 
   const lecture: LectureAJuger = {
