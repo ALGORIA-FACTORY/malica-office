@@ -625,6 +625,50 @@ describe("la passe de nuit", { skip: !BASE_CONFIGUREE }, () => {
       assert.equal(ensuite.retenues, 1);
     });
 
+    it("la tour coupe la passe pendant un passage : la relecture suivante n'est pas prise", async () => {
+      // Deux dossiers, une relecture due chacun : un passage les prendrait toutes
+      // les deux dans le même tour. La tour coupe pendant la première.
+      const premiere = await luePartielle(u, pme);
+      const autre = await dossier();
+      const seconde = await luePartielle(autre.u, autre.pme);
+      let appels = 0;
+      const coupeEnRoute: Lecteurs = {
+        lire: async () => {
+          appels += 1;
+          await regler({ actif: false }, "coupée pendant le passage");
+          return numerotee(complete("PP-OCR", TOKENS_DE_L_AUTRE));
+        },
+        secondLecteurDisponible: () => true,
+      };
+      try {
+        const bilan = await tourDeNuit(passe(coupeEnRoute));
+
+        assert.equal(appels, 1, "un seul modèle payé");
+        assert.equal(bilan.raison, "coupe");
+        assert.equal((await relecture(premiere)).dernier_motif, "relecture.retenue");
+        assert.deepEqual(
+          (({ etat, tentatives }) => ({ etat, tentatives }))(await relecture(seconde)),
+          { etat: "a_faire", tentatives: 0 },
+          "la seconde attend, sans tentative brûlée",
+        );
+        const { rows } = await admin.query<{ nature: string }>(
+          `select nature from fabrique.passage_faits where passage_id = $1 and nature <> 'ouvert'`,
+          [bilan.passage],
+        );
+        assert.deepEqual(
+          rows.map((r) => r.nature),
+          ["coupe"],
+        );
+      } finally {
+        await regler();
+      }
+      // Rouverte, la passe reprend la seconde.
+      const ensuite = await tourDeNuit(
+        passe(lecteurs([() => numerotee(complete("PP-OCR", TOKENS_DE_L_AUTRE))])),
+      );
+      assert.equal(ensuite.retenues, 1);
+    });
+
     it("deux tics en même temps : un seul passage", async () => {
       const cle = await ordonnanceur<string>("select fabrique.passe_de_nuit_verrou()::text as r");
       const un = () => sousVerrouDeSession(cle, () => tourDeNuit(passe(lecteurs([]))));

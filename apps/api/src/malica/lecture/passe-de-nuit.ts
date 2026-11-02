@@ -65,7 +65,7 @@ const METHODES_DU_RELECTEUR: MethodesPermises = {
 };
 
 /** Pourquoi un passage s'arrête — les faits de fin de `fabrique.passage_faits`. */
-type RaisonDArret = "cede" | "fenetre_close" | "plafond" | "termine";
+type RaisonDArret = "cede" | "coupe" | "fenetre_close" | "plafond" | "termine";
 
 export interface DependancesDeLaNuit {
   /** Hors RLS, sous le rôle de connexion de l'API : l'ordonnanceur seul. */
@@ -137,6 +137,7 @@ function appelDuRelecteur(d: DependancesDeLaNuit, tenantId: string, pieceId: str
  * de sa nuit, n'arrête rien : il a la sienne.
  */
 function raisonDuRepos(dossiers: DossierARelire[], fenetreFermee: boolean): RaisonDArret {
+  if (dossiers.some((x) => x.ecart === "passe.coupee")) return "coupe";
   if (dossiers.some((x) => x.ecart === "plafond.plateforme")) return "plafond";
   return fenetreFermee ? "fenetre_close" : "termine";
 }
@@ -200,12 +201,18 @@ export async function tourDeNuit(d: DependancesDeLaNuit): Promise<BilanDeNuit> {
         fenetreFermee = true;
         continue;
       }
-      // 3. Au plafond, le travail n'est pas pris : aucune tentative consommée.
+      // 3. La passe coupée par la tour, ou le plafond atteint : le travail n'est
+      //    pas pris, aucune tentative consommée. La base relit l'interrupteur
+      //    avant CHAQUE relecture : couper arrête un passage en cours.
       const plafond = await une<string | null>(
         d.executer,
         "select fabrique.relecture_nuit_budget($1, $2) as r",
         [dossier.tenant_id, a],
       );
+      if (plafond === "passe.coupee") {
+        raison = "coupe";
+        break passe;
+      }
       if (plafond === "plafond.plateforme") {
         raison = "plafond";
         break passe;

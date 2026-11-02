@@ -3528,6 +3528,7 @@ export const en: Dict = {
   "tour.nuit.raison.termine": "Finished",
   "tour.nuit.raison.en_cours": "Running",
   "tour.nuit.raison.cede": "Yielded to a reading",
+  "tour.nuit.raison.coupe": "Switched off by the tower",
   "tour.nuit.raison.fenetre_close": "Window closed",
   "tour.nuit.raison.plafond": "Cap reached",
   "tour.nuit.raison.interrompu": "Interrupted",

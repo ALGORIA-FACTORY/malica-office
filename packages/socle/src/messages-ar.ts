@@ -3388,6 +3388,7 @@ export const ar: Dict = {
   "tour.nuit.raison.termine": "انتهى",
   "tour.nuit.raison.en_cours": "جارٍ",
   "tour.nuit.raison.cede": "أفسح المجال لقراءة",
+  "tour.nuit.raison.coupe": "أوقفه برج المراقبة",
   "tour.nuit.raison.fenetre_close": "النافذة مغلقة",
   "tour.nuit.raison.plafond": "بلغ السقف",
   "tour.nuit.raison.interrompu": "توقّف",

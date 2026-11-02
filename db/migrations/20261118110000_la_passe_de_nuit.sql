@@ -215,7 +215,29 @@ create index if not exists travail_faits_inscrit_par_inscrit_le_idx
   on fabrique.travail_faits (inscrit_par, inscrit_le);
 
 /*
+ * La passe est-elle ouverte, ici et maintenant ? L'interrupteur de la tour ET
+ * le relecteur actif. Une seule lecture de l'état, pour l'ouverture d'un
+ * passage comme avant CHAQUE relecture : couper la passe arrête un passage en
+ * cours avant le travail suivant (revue Codex, PR #200).
+ */
+create function plateforme.relecture_nuit_ouverte()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((plateforme.relecture_nuit_en_vigueur()).actif, false)
+     and exists (select 1 from identity.comptes_de_service_v v
+                  where v.code = 'relecteur_de_nuit' and v.actif)
+$$;
+
+revoke all on function plateforme.relecture_nuit_ouverte() from public, anon, authenticated;
+
+/*
  * La raison de ne pas relire ce dossier à l'instant `p_a`, ou nul :
+ *   passe.coupee         la tour a coupé la passe, ou révoqué le relecteur —
+ *                        vérifié en premier, avant toute prise ;
  *   plafond.plateforme   la dépense du relecteur sur 24 h, tous dossiers ;
  *   plafond.dossier      sa dépense sur 24 h dans ce dossier ;
  *   plafond.relectures   ses prises sur 24 h dans ce dossier ;
@@ -238,6 +260,9 @@ declare
   v_service uuid := app.compte_de_service_id('relecteur_de_nuit');
   v_depuis timestamptz := p_a - interval '1 day';
 begin
+  if not plateforme.relecture_nuit_ouverte() then
+    return 'passe.coupee';
+  end if;
   if (select coalesce(sum(r.cost), 0) from agents.agent_runs r
        where r.created_by = v_service and r.created_at > v_depuis and r.created_at <= p_a)
      >= v_reglage.plafond_usd_24h_plateforme then
@@ -281,7 +306,7 @@ create table fabrique.passage_faits (
   id         uuid primary key default gen_random_uuid(),
   passage_id uuid not null references fabrique.passages_de_nuit (id),
   nature     text not null
-               check (nature in ('ouvert', 'cede', 'fenetre_close', 'plafond', 'termine')),
+               check (nature in ('ouvert', 'cede', 'coupe', 'fenetre_close', 'plafond', 'termine')),
   detail     jsonb not null default '{}'::jsonb check (jsonb_typeof(detail) = 'object'),
   inscrit_le timestamptz not null
 );
@@ -292,7 +317,8 @@ create unique index passage_faits_une_ouverture_ux on fabrique.passage_faits (pa
   where nature = 'ouvert';
 
 comment on table fabrique.passage_faits is
-  'Ouvert, puis une fin : cede (une lecture fraîche attendait), fenetre_close, plafond '
+  'Ouvert, puis une fin : cede (une lecture fraîche attendait), coupe (la passe coupée '
+  'ou le relecteur révoqué pendant le passage), fenetre_close, plafond '
   '(plateforme), termine. Le détail porte les compteurs du passage et les dossiers écartés.';
 
 do $$
@@ -350,9 +376,7 @@ declare
   v_reglage plateforme.reglages_relecture_nuit := plateforme.relecture_nuit_en_vigueur();
   v_passage uuid;
 begin
-  if not coalesce(v_reglage.actif, false)
-     or not exists (select 1 from identity.comptes_de_service_v v
-                     where v.code = 'relecteur_de_nuit' and v.actif) then
+  if not plateforme.relecture_nuit_ouverte() then
     return null;
   end if;
   insert into fabrique.passages_de_nuit (ouvert_le) values (p_a) returning id into v_passage;
@@ -446,7 +470,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  if p_raison is null or p_raison not in ('cede', 'fenetre_close', 'plafond', 'termine') then
+  if p_raison is null or p_raison not in ('cede', 'coupe', 'fenetre_close', 'plafond', 'termine') then
     raise exception 'refus.saisie.mal_formee' using errcode = '22023';
   end if;
   insert into fabrique.passage_faits (passage_id, nature, detail, inscrit_le)

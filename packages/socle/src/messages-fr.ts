@@ -3628,6 +3628,7 @@ export const fr = {
   "tour.nuit.raison.termine": "Terminé",
   "tour.nuit.raison.en_cours": "En cours",
   "tour.nuit.raison.cede": "Cédé à une lecture",
+  "tour.nuit.raison.coupe": "Coupé par la tour",
   "tour.nuit.raison.fenetre_close": "Fenêtre fermée",
   "tour.nuit.raison.plafond": "Plafond atteint",
   "tour.nuit.raison.interrompu": "Interrompu",

@@ -4224,7 +4224,7 @@ export interface RelecturesDeNuitDuJour {
 export interface PassageDeNuit {
   id: string;
   ouvert_le: string;
-  raison: "termine" | "cede" | "fenetre_close" | "plafond" | "en_cours" | "interrompu";
+  raison: "termine" | "cede" | "coupe" | "fenetre_close" | "plafond" | "en_cours" | "interrompu";
   ferme_le: string | null;
   compteurs: {
     retenues?: number;

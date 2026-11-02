@@ -717,6 +717,7 @@ const RAISONS: Record<PassageDeNuit["raison"], { cle: MessageKey; couleur: strin
   termine: { cle: "tour.nuit.raison.termine", couleur: "text-signal-ok" },
   en_cours: { cle: "tour.nuit.raison.en_cours", couleur: "text-signal-info" },
   cede: { cle: "tour.nuit.raison.cede", couleur: "text-signal-info" },
+  coupe: { cle: "tour.nuit.raison.coupe", couleur: "text-signal-warn" },
   fenetre_close: { cle: "tour.nuit.raison.fenetre_close", couleur: "text-muted-foreground" },
   plafond: { cle: "tour.nuit.raison.plafond", couleur: "text-signal-warn" },
   interrompu: { cle: "tour.nuit.raison.interrompu", couleur: "text-signal-stop" },
