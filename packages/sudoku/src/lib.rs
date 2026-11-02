@@ -216,7 +216,7 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         issue = "aucune".into();
         raison = Some("aucune preuve arithmétique vérifiée".into());
     }
-    let prouvee = issue == "prouvee";
+    let mut prouvee = issue == "prouvee";
 
     // ---------- Les champs ----------
     let mut champs: BTreeMap<String, ChampSortie> = BTreeMap::new();
@@ -453,6 +453,52 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             }
         };
         preuves.insert(p.code.clone(), st.into());
+    }
+
+    // ---------- L'exonération totale exige son HT ----------
+    // Zéro instance : le groupe ne contraint plus le total des bases, et HT + droits = TTC
+    // ferme sur n'importe quelle paire de totaux. Sur une facture à deux tranches (0 % et
+    // 19 %) qui imprime « 0,000 » et « exonérée », le « Total TTC » passait pour le HT et le
+    // net pour le TTC (100/B-15, 2 novembre 2026). Le HT n'est donc retenu que s'il porte
+    // son libellé (repères du champ, en base), ou si les lignes le ferment exactement.
+    if prouvee {
+        if let Some(e) = unique {
+            let mut refusee = false;
+            for (g, gr) in modele.groupes.iter().enumerate() {
+                if !e.g[g].as_ref().is_some_and(|x| x.exoneration) {
+                    continue;
+                }
+                let Some(t) = gr.total_base else { continue };
+                let Some(ht) = e.s[t].filter(|v| !v.absent).map(|v| v.v) else { continue };
+                let champ = modele.vars[t].champ;
+                let ancre = dom
+                    .valeurs
+                    .get(&ht)
+                    .is_some_and(|x| x.occurrences.iter().any(|o| plan.libelle_avant(o.jeton, &reperes[champ])));
+                let par_les_lignes = sortie_lignes.as_ref().is_some_and(|l| {
+                    l.statut == "prouve"
+                        && l.deduites.is_none()
+                        && l.remise_globale.is_none()
+                        && l.instances.iter().map(|x| x.montant.valeur.parse::<i64>().ok()).sum::<Option<i64>>() == Some(ht)
+                });
+                refusee |= !ancre && !par_les_lignes;
+            }
+            if refusee {
+                prouvee = false;
+                issue = "aucune".into();
+                raison = Some("exonération : le total HT ne porte pas son libellé".into());
+                for c in champs.values_mut() {
+                    if c.statut == "prouve" {
+                        c.statut = "signale".into();
+                    }
+                }
+                for (cp, ev) in modele.contraintes.iter().zip(&evals) {
+                    if *ev == Eval::Ok {
+                        preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
+                    }
+                }
+            }
+        }
     }
 
     // ---------- L'anneau 3 : les champs nommés, que nulle preuve ne lit ----------

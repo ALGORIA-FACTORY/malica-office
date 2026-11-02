@@ -106,6 +106,44 @@ impl<'a> Plan<'a> {
         })
     }
 
+    /// Le jeton `i` porte-t-il son libellé, imprimé juste avant lui sur sa rangée ? Sur le
+    /// jeton lui-même (« Total HT 500,000 »), ou dans la suite de purs mots (ni montant, ni
+    /// date, ni chiffre) qui le précède sans interruption : « Total | HT | 1 670,000 ». Une
+    /// autre valeur entre le libellé et `i` coupe la suite : sur « Total HT 1 670,000 Total
+    /// TTC 1 749,800 », 1 749,800 n'est pas ancré par « Total HT ».
+    pub fn libelle_avant(&self, i: usize, reperes: &[String]) -> bool {
+        if reperes.is_empty() {
+            return false;
+        }
+        let contient = |t: &str| reperes.iter().any(|r| t.contains(r.as_str()));
+        if contient(&self.normes[i]) {
+            return true;
+        }
+        let a = &self.jetons[i];
+        let ha = (a.y1 - a.y0).max(f64::EPSILON);
+        let mut rangee: Vec<usize> = (0..self.jetons.len())
+            .filter(|&k| {
+                let b = &self.jetons[k];
+                let hb = (b.y1 - b.y0).max(f64::EPSILON);
+                k != i && b.page == a.page && b.x1 <= a.x0 + 0.25 * ha
+                    && (a.y1.min(b.y1) - a.y0.max(b.y0)) / ha.min(hb) > 0.5
+            })
+            .collect();
+        rangee.sort_by(|&x, &y| self.jetons[y].x0.partial_cmp(&self.jetons[x].x0).unwrap_or(std::cmp::Ordering::Equal));
+        let mut suite = String::new();
+        for k in rangee {
+            let b = &self.jetons[k];
+            if !b.montants.is_empty() || b.date.is_some() || b.texte.chars().any(|c| c.is_ascii_digit()) {
+                break;
+            }
+            suite.insert_str(0, &self.normes[k]);
+            if contient(&suite) {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Un repère est-il lu quelque part sur la pièce ?
     pub fn annonce(&self, reperes: &[String]) -> bool {
         !reperes.is_empty() && self.normes.iter().any(|t| reperes.iter().any(|r| t.contains(r.as_str())))
