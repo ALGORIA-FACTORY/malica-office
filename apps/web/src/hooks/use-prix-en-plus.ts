@@ -6,15 +6,19 @@
  * Play Store), et le serveur lui refuse cette méthode (`METHODES_COMMERCIALES`).
  * Sans licence dont on est titulaire, la base rend `null` et rien ne s'affiche.
  */
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 
-import { COMMERCE } from "@/capabilities/coque";
 import { office } from "@/verticals/malica-office/composition";
 
 export function usePrixEnPlus(tenantId: string) {
   return useQuery({
     queryKey: ["prix-en-plus", tenantId],
-    queryFn: () => office().facturation.mesPrixEnPlus(tenantId),
-    enabled: COMMERCE && tenantId.length > 0,
+    // `__COMMERCE__` et non `COMMERCE` : la constante de Vite est pliée avant
+    // le découpage, et l'appel disparaît du paquet de la coque
+    // (`outils/coque-sans-commerce.mjs`, `capabilities/coque.ts`).
+    queryFn:
+      __COMMERCE__ && tenantId.length > 0
+        ? () => office().facturation.mesPrixEnPlus(tenantId)
+        : skipToken,
   });
 }
