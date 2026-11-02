@@ -172,8 +172,14 @@ describe("la relecture de nuit", { skip: !BASE_CONFIGUREE }, () => {
   const journalisesPour = (pieceId: string) => journalises.filter((p) => p === pieceId).length;
 
   /** Un dossier que le cabinet tient, son dirigeant, et — s'il est dit — son réglage. */
+  /**
+   * Un dossier de l'épreuve. Le sudoku y est en OBSERVATION par défaut : depuis
+   * le 1er novembre 2026 le pack le branche, et une pièce qu'il prouve n'est ni
+   * rattrapée ni relue — ce que ces épreuves mesurent ne se produirait pas.
+   */
   async function dossier(
     reglage: { nuit: "active" | "coupee"; delai: string } | null,
+    sudoku: "observe" | "designe" = "observe",
   ): Promise<{ u: Utilisateur; pme: string }> {
     n += 1;
     const u = await creerCompte(`dirigeant-${marque}-${n}@essai.local`, mdp);
@@ -190,21 +196,24 @@ describe("la relecture de nuit", { skip: !BASE_CONFIGUREE }, () => {
     await sousIdentite(expert.id, (db) => identite.proposerMandat(db, cabinet, mf));
     const [propose] = await sousIdentite(u.id, (db) => identite.mandatsProposes(db, pme));
     await sousIdentite(u.id, (db) => identite.repondreAuMandat(db, propose!.id, true));
-    if (reglage) {
-      await sousIdentite(expert.id, (db) =>
-        parametrage.arreterReglagesComptables(db, {
-          cabinetId: cabinet,
-          portee: "dossier",
-          porteeId: pme,
-          packId,
-          depuis: jour,
-          valeurs: [
-            { code: "lecture.relecture_nuit", valeur: reglage.nuit },
-            { code: "lecture.relecture_delai_heures", valeur: reglage.delai },
-          ],
-        }),
-      );
-    }
+    await sousIdentite(expert.id, (db) =>
+      parametrage.arreterReglagesComptables(db, {
+        cabinetId: cabinet,
+        portee: "dossier",
+        porteeId: pme,
+        packId,
+        depuis: jour,
+        valeurs: [
+          { code: "lecture.sudoku", valeur: sudoku },
+          ...(reglage
+            ? [
+                { code: "lecture.relecture_nuit", valeur: reglage.nuit },
+                { code: "lecture.relecture_delai_heures", valeur: reglage.delai },
+              ]
+            : []),
+        ],
+      }),
+    );
     return { u, pme };
   }
 
@@ -347,6 +356,17 @@ describe("la relecture de nuit", { skip: !BASE_CONFIGUREE }, () => {
 
     assert.equal(modele.appels, 1);
     assert.deepEqual(await relectures(piece), []);
+  });
+
+  it("branché (le défaut du pack) : une pièce prouvée n'est ni rattrapée ni relue la nuit", async () => {
+    const { u, pme } = await dossier({ nuit: "active", delai: "12" }, "designe");
+    const piece = await deposer(u, pme, "prouvee");
+    const modele = lecteurs([() => partielle("qwen-vl-ocr")]);
+
+    await readPieceFlow(apiDe(u), piece, modele);
+
+    assert.equal(modele.appels, 1, "aucun second lecteur dans la requête");
+    assert.deepEqual(await relectures(piece), [], "et aucun travail de nuit");
   });
 
   describe("quand son heure est venue", () => {
