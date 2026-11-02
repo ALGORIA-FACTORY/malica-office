@@ -158,14 +158,15 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
     const r = await s.lire(s.expert, null);
     assert.equal(r.sujets.length, 12);
     // La lecture prouvée (15 novembre 2026) : un réglage de Malica, pas une règle
-    // fiscale. Le sudoku observe ; la relecture de nuit est coupée, à 12 heures.
+    // fiscale. Le sudoku désigne (décision du dirigeant, 1er novembre 2026) ; la
+    // relecture de nuit est coupée, à 12 heures.
     assert.deepEqual(
       ["lecture.sudoku", "lecture.relecture_nuit", "lecture.relecture_delai_heures"].map((code) => [
         valeur(r, code)?.valeur,
         valeur(r, code)?.origine,
       ]),
       [
-        ["observe", "pack"],
+        ["designe", "pack"],
         ["coupee", "pack"],
         ["12", "pack"],
       ],

@@ -321,7 +321,7 @@
     "immobilisation.traitement": "actif_amorti",
     "lecture.relecture_delai_heures": "12",
     "lecture.relecture_nuit": "coupee",
-    "lecture.sudoku": "observe",
+    "lecture.sudoku": "designe",
     "mois_tva.date": "exigibilite_calculee",
     "non_residents.retenue": "au_paiement",
     "prorata.methode": "affectation_puis_prorata",

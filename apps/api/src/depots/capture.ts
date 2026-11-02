@@ -47,6 +47,7 @@ import {
   type ContexteDuSudokuBranche,
 } from "../malica/lecture/sudoku.ts";
 import { dateDeLaPiece } from "./dates.ts";
+import { aujourdhui } from "./decimal.ts";
 import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
 
 /** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
@@ -762,6 +763,11 @@ export const capture = {
    * AU JOUR de la pièce ; et son mode (`lecture.sudoku` : observe ou désigne),
    * résolu pour le dossier comme tout réglage (le dossier, son cabinet, le
    * pack). Tout vient de la base : rien n'est écrit dans le code (R4).
+   *
+   * Le MODE se résout au jour de la LECTURE, pas à celui de la pièce : c'est un
+   * choix de fonctionnement du cabinet, pas une règle fiscale datée. Résolu à la
+   * date de la pièce, une facture antérieure au défaut du pack n'avait aucun
+   * mode, et le sudoku se taisait (relevé le 1er novembre 2026).
    */
   async contexteSudoku(
     db: Requete,
@@ -773,7 +779,7 @@ export const capture = {
   ): Promise<ContexteDuSudokuBranche> {
     const [contexte, reglages] = await Promise.all([
       lireLeContexteDuSudoku(db, packId, grilleCode, deviseCode, jour),
-      lireLesReglagesComptables(db, dossierId, packId, jour),
+      lireLesReglagesComptables(db, dossierId, packId, aujourdhui()),
     ]);
     return { ...contexte, mode: modeDuSudoku(reglages) };
   },
