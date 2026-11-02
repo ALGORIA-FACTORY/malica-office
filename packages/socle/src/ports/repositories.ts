@@ -3723,6 +3723,14 @@ export type PropositionDeReglement =
  * collaborateur, qui ne détient pas la licence. Ce n'est pas une panne, et
  * l'écran doit le dire autrement qu'un zéro.
  */
+/** Le prix d'une place et d'une société au-delà de l'offre en cours, et ce qu'elle comprend. */
+export interface PrixEnPlus {
+  prix_siege_sup: string;
+  prix_organisation_sup: string;
+  sieges_inclus: number;
+  organisations_incluses: number;
+}
+
 export interface MonForfait {
   /** `basic` · `solo` · `team` · `premium` — un CODE, jamais traduit. */
   offre: string | null;
@@ -3773,6 +3781,8 @@ export interface FacturationRepository {
    * n'y a qu'une licence possible.
    */
   monForfait(tenantId?: string): Promise<MonForfait | null>;
+  /** Le prix d'une place et d'une société en plus ; `null` à qui n'est pas titulaire. */
+  mesPrixEnPlus(tenantId: string): Promise<PrixEnPlus | null>;
   sieges(): Promise<SiegeDeLaLicence[]>;
   organisations(): Promise<OrganisationDeLaLicence[]>;
   inviterSiege(

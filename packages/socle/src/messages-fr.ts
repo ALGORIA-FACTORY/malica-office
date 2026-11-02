@@ -35,7 +35,7 @@ export const fr = {
   "relation.documents.recu": "Réception confirmée le {date}",
   "relation.documents.recevoir": "Confirmer la réception",
 
-  "pme.reglages.profil.editer": "Modifier",
+  "pme.reglages.profil.editer": "Modifier mon nom",
   // Relation entreprise et comptabilité : états et actions partagés.
   "relation.echeances.retard": "En retard",
   "relation.echeances.semaine": "Dans les 7 prochains jours",
@@ -408,9 +408,25 @@ export const fr = {
   "pme.membres.role.dirigeant": "Propriétaire",
   "pme.membres.role.collaborateur": "Utilisateur",
   "pme.membres.adresse": "adresse e-mail",
-  "pme.membres.inviter": "Inviter",
   "pme.membres.envoyee": "Invitation envoyée à {email}.",
   "pme.membres.attend": "en attente",
+  "pme.inviter.titreRole": "Son rôle",
+  "pme.inviter.titreAdresse": "Son adresse e-mail",
+  "pme.inviter.place": "Une place",
+  "pme.inviter.placeMemePrix": "Une place · même prix",
+  "pme.inviter.utilisateur.droit1": "Dépose et suit ses propres pièces",
+  "pme.inviter.utilisateur.droit2": "Les envoie au propriétaire",
+  "pme.inviter.proprietaire.droit1": "Voit toutes les pièces de la société",
+  "pme.inviter.proprietaire.droit2": "Envoie au cabinet, reçoit les pièces des utilisateurs",
+  "pme.inviter.proprietaire.droit3": "Garde ou supprime toute pièce",
+  "pme.inviter.envoyer": "Envoyer l'invitation",
+  "pme.inviter.cout.compris":
+    "Compris dans votre offre : {occupes} / {inclus} places occupées. Au-delà, {prix} {devise} HT par place et par mois.",
+  "pme.inviter.cout.enPlus":
+    "Toutes les places de votre offre sont occupées : celle-ci est facturée {prix} {devise} HT par mois.",
+  "pme.inviter.enAttente": "Invitations en attente",
+  "pme.reglages.orgs.prix":
+    "Au-delà des sociétés comprises dans votre offre ({inclus}), chacune est facturée {prix} {devise} HT par mois.",
   "pme.paiement.titre": "Comment avez-vous payé ?",
   "pme.capture.ajouter.titre": "Ajouter des pièces",
   "pme.capture.dest.titre": "Pour qui ?",

@@ -122,6 +122,31 @@ export const facturation = {
    * propriétaire tombaient en erreur. L'écran passe désormais l'organisation
    * ouverte ; sans elle, la base ne répond que s'il n'y a qu'une réponse.
    */
+  /**
+   * Le prix d'une place et d'une société au-delà de l'offre en cours
+   * (`mes_prix_en_plus`, 20261117120000) : ce que « Inviter » et « Sociétés »
+   * disent avant le geste. `null` à qui n'est pas titulaire.
+   */
+  async mesPrixEnPlus(db: Requete, tenantId: string) {
+    const { rows } = await db.query<{
+      r: {
+        prix_siege_sup: string;
+        prix_organisation_sup: string;
+        sieges_inclus: number;
+        organisations_incluses: number;
+      } | null;
+    }>(`select public.mes_prix_en_plus($1) as r`, [tenantId]);
+    const r = rows[0]?.r ?? null;
+    return r
+      ? {
+          prix_siege_sup: String(r.prix_siege_sup),
+          prix_organisation_sup: String(r.prix_organisation_sup),
+          sieges_inclus: Number(r.sieges_inclus),
+          organisations_incluses: Number(r.organisations_incluses),
+        }
+      : null;
+  },
+
   async monForfait(db: Requete, tenantId?: string | null) {
     const { rows } = await db.query(
       `select offre, statut, lectures_droit, lectures_consommees, lectures_restantes,
