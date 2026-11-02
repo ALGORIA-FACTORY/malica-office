@@ -27,7 +27,9 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { dateEnLettres, montant } from "@/lib/lisible";
 import { ETAT_DE_FACTURE, libelleDuPaiement } from "@/lib/paiement";
 import { saisieDecimale } from "@malica/socle/saisie-decimale";
+import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { texteDeLErreur, vientDeNous } from "@/lib/erreur-lisible";
+import { cn } from "@/lib/utils";
 import { lireUnRefus } from "@malica/socle/refus-a-dire";
 import { office } from "@/verticals/malica-office/composition";
 import type { OffreDeLaGrille } from "@malica/socle/ports/repositories";
@@ -260,9 +262,9 @@ export function ChangerDOffre() {
   }
 
   const entier = (n: number) => new Intl.NumberFormat(locale).format(n);
+  // Le prix est dans l'en-tête de la carte : la ligne dit ce qu'il comprend.
   const ligne = (o: OffreDeLaGrille) =>
     [
-      t("pme.reglages.offres.prix", { prix: aLEchelle(o.prix_mensuel_ht), devise: pme.currency }),
       t("pme.reglages.offres.lectures", { n: entier(o.lectures_par_organisation) }),
       o.sieges_inclus > 0
         ? t("pme.reglages.offres.places", { count: o.sieges_inclus })
@@ -271,7 +273,7 @@ export function ChangerDOffre() {
     ].join(" · ");
 
   return (
-    <div className="rows">
+    <div className="grid gap-2">
       {/*
        * L'offre en cours ne se répète pas ici : la carte « L'abonnement »,
        * juste au-dessus, la porte déjà avec son prix. La relister faisait deux
@@ -282,17 +284,23 @@ export function ChangerDOffre() {
         .map((o) => {
           const bloque = o.empechement ? EMPECHEMENTS[o.empechement] : undefined;
           return (
-            <div key={o.code} className="card abo" data-offre={o.code} data-courant={o.courant}>
-              <div className="nm">
+            <div
+              key={o.code}
+              className={cn("offre", armee === o.code && "arme")}
+              data-offre={o.code}
+              data-courant={o.courant}
+            >
+              <div className="hd">
                 <b>{o.libelle}</b>
                 <span className="px">
-                  {t("pme.reglages.offres.incluses", { n: entier(o.lectures_incluses) })}
+                  {aLEchelle(o.prix_mensuel_ht)}
+                  <small>{t("pme.reglages.abo.parMois", { devise: pme.currency })}</small>
                 </span>
               </div>
-              <p className="t-body">{ligne(o)}</p>
+              <p>{ligne(o)}</p>
               {/* Le TTC vient de la base, par la fiscalité de la facture (R4). */}
               {o.prix_ttc !== null ? (
-                <p className="t-body">
+                <p>
                   {t("pme.reglages.offres.ttc", {
                     prix: aLEchelle(o.prix_ttc),
                     devise: pme.currency,
@@ -300,11 +308,11 @@ export function ChangerDOffre() {
                 </p>
               ) : null}
               {o.empechement ? (
-                <p className="t-body">{bloque ? t(bloque) : null}</p>
+                <p>{bloque ? t(bloque) : null}</p>
               ) : (
                 <button
                   type="button"
-                  className="btn"
+                  className={cn("btn", armee !== o.code && "btn-sec")}
                   disabled={changer.isPending}
                   onClick={() =>
                     armee === o.code ? changer.mutate(o.code) : (setArmee(o.code), setRetour(null))
@@ -393,12 +401,19 @@ export function PayerALAnnee() {
   const ferme = a.ferme ? FERMETURES[a.ferme] : undefined;
 
   return (
-    <div className="card abo" data-annuel>
-      <div className="nm">
-        <b>{t("pme.reglages.annuel.titre", { offerts: p.mois_offerts })}</b>
-        <span className="px">{`${aLEchelle(p.montant_ht)} ${pme.currency}`}</span>
+    <div className={cn("offre annee", armee && "arme")} data-annuel>
+      <span className="pill">
+        <i aria-hidden />
+        {t("pme.reglages.annuel.offerts", { count: p.mois_offerts })}
+      </span>
+      <div className="hd">
+        <b>{t("pme.reglages.annuel.titreCourt")}</b>
+        <span className="px">
+          {aLEchelle(p.montant_ht)}
+          <small>{t("pme.reglages.annuel.parAn", { devise: pme.currency })}</small>
+        </span>
       </div>
-      <p className="t-body">
+      <p>
         {t("pme.reglages.annuel.detail", {
           offre: libelleDOffre(catalogue, p.offre),
           prix: p.prix_mensuel_ht,
@@ -408,22 +423,20 @@ export function PayerALAnnee() {
         })}
       </p>
       {p.ttc !== null ? (
-        <p className="t-body">
-          {t("pme.reglages.annuel.ttc", { ttc: aLEchelle(p.ttc), devise: pme.currency })}
-        </p>
+        <p>{t("pme.reglages.annuel.ttc", { ttc: aLEchelle(p.ttc), devise: pme.currency })}</p>
       ) : null}
-      <p className="t-body">
+      <p>
         {t("pme.reglages.annuel.dates", {
           du: dateEnLettres(p.du, locale),
           au: dateEnLettres(p.au, locale),
         })}
       </p>
       {a.ferme ? (
-        <p className="t-body">{ferme ? t(ferme) : null}</p>
+        <p>{ferme ? t(ferme) : null}</p>
       ) : (
         <button
           type="button"
-          className="btn"
+          className={cn("btn", !armee && "btn-sec")}
           disabled={souscrire.isPending}
           onClick={() => (armee ? souscrire.mutate() : (setArmee(true), setRetour(null)))}
         >
@@ -471,6 +484,8 @@ export function MesRecharges() {
     retry: false,
   });
   const [retour, setRetour] = useState<string | null>(null);
+  /** Le palier touché ; aucun : le plus grand. */
+  const [palier, setPalier] = useState<string | null>(null);
   const [palierAuto, setPalierAuto] = useState("");
   const [plafond, setPlafond] = useState("");
 
@@ -532,57 +547,79 @@ export function MesRecharges() {
     );
   }
 
+  /*
+   * La réserve d'abord, puis les paliers en tuiles — on en touche une, un seul
+   * bouton achète (maquette du 1er novembre 2026). Aucun prix par lecture :
+   * l'écran ne calcule pas de prix (R3, R4).
+   */
+  const choisi = liste.find((p) => p.code === palier) ?? liste[liste.length - 1] ?? null;
   return (
     <>
-      <div className="rows">
-        {liste.map((p) => (
-          <div key={p.code} className="card abo" data-palier={p.code}>
-            <div className="nm">
-              <b>{t("pme.reglages.recharges.palier", { n: p.lectures })}</b>
-              <span className="px">
-                {t("pme.reglages.recharges.prix", {
-                  prix: aLEchelle(p.prix_ht),
-                  devise: pme.currency,
-                })}
+      {(miennes.data ?? []).length === 0 ? (
+        <p className="t-body">{t("pme.reglages.recharges.aucune")}</p>
+      ) : (
+        (miennes.data ?? []).map((r) => (
+          <div key={r.recharge_id} className="reserve" data-recharge={r.recharge_id}>
+            <span className="bd">
+              <u>{t("pme.reglages.recharges.miennes")}</u>
+              <b>
+                {r.expire_le === null
+                  ? t("pme.reglages.recharges.reste.sansDateLimite", {
+                      restantes: r.restantes,
+                      lectures: r.lectures,
+                    })
+                  : t("pme.reglages.recharges.reste", {
+                      restantes: r.restantes,
+                      lectures: r.lectures,
+                      date: dateEnLettres(r.expire_le, locale),
+                    })}
+              </b>
+            </span>
+            {r.gelee || r.expiree ? (
+              <span>
+                {r.gelee ? t("pme.reglages.recharges.gelee") : t("pme.reglages.recharges.expiree")}
               </span>
-            </div>
-            <button
-              type="button"
-              className="btn"
-              disabled={acheter.isPending}
-              onClick={() => acheter.mutate(p.code)}
-            >
-              {t("pme.reglages.recharges.acheter")}
-            </button>
+            ) : null}
           </div>
+        ))
+      )}
+
+      <div className="paliers mt-3" role="group" aria-label={t("pme.reglages.recharges")}>
+        {liste.map((p) => (
+          <button
+            key={p.code}
+            type="button"
+            data-palier={p.code}
+            aria-pressed={choisi?.code === p.code}
+            onClick={() => setPalier(p.code)}
+          >
+            <b>{new Intl.NumberFormat(locale).format(p.lectures)}</b>
+            <span>{t("pme.reglages.recharges.lectures")}</span>
+            <em>
+              {t("pme.reglages.recharges.prix", {
+                prix: aLEchelle(p.prix_ht),
+                devise: pme.currency,
+              })}
+            </em>
+          </button>
         ))}
       </div>
+      {choisi ? (
+        <button
+          type="button"
+          className="btn mt-3"
+          disabled={acheter.isPending}
+          onClick={() => acheter.mutate(choisi.code)}
+        >
+          {t("pme.reglages.recharges.acheterPalier", {
+            n: choisi.lectures,
+            prix: aLEchelle(choisi.prix_ht),
+            devise: pme.currency,
+          })}
+        </button>
+      ) : null}
 
-      <div className="card">
-        <b>{t("pme.reglages.recharges.miennes")}</b>
-        {(miennes.data ?? []).length === 0 ? (
-          <p className="t-body">{t("pme.reglages.recharges.aucune")}</p>
-        ) : (
-          (miennes.data ?? []).map((r) => (
-            <p key={r.recharge_id} className="t-body" data-recharge={r.recharge_id}>
-              {r.expire_le === null
-                ? t("pme.reglages.recharges.reste.sansDateLimite", {
-                    restantes: r.restantes,
-                    lectures: r.lectures,
-                  })
-                : t("pme.reglages.recharges.reste", {
-                    restantes: r.restantes,
-                    lectures: r.lectures,
-                    date: dateEnLettres(r.expire_le, locale),
-                  })}
-              {r.gelee ? ` — ${t("pme.reglages.recharges.gelee")}` : ""}
-              {r.expiree ? ` — ${t("pme.reglages.recharges.expiree")}` : ""}
-            </p>
-          ))
-        )}
-      </div>
-
-      <div className="card">
+      <div className="card mt-3">
         <b>{t("pme.reglages.recharges.auto")}</b>
         <p className="t-body">{t("pme.reglages.recharges.auto.sous")}</p>
         <p className="t-body">
@@ -769,50 +806,63 @@ export function ARegler() {
     (p) => p.etat !== "paye" && p.payeur_tenant_id === null,
   );
   if (ouverts.length === 0 && !retour) return null;
+  /*
+   * UNE carte, un total (maquette du 1er novembre 2026). Le total est la
+   * somme décimale du Socle (`sommeDecimale`), et seulement dans une seule
+   * devise : deux devises ne s'additionnent pas.
+   */
+  const devises = [...new Set(ouverts.map((p) => p.devise))];
+  const total = devises.length === 1 ? sommeDecimale(ouverts.map((p) => p.montant_ttc)) : null;
 
   return (
-    <div className="rows" data-a-regler>
-      <div className="sec">
-        <h2>{t("pme.reglages.paiement.titre")}</h2>
+    <div className="regler" data-a-regler>
+      <div className="hd">
+        <i aria-hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <rect x="3.5" y="6" width="17" height="12.5" rx="2.5" />
+            <path d="M3.5 10h17M7.5 15h3" strokeLinecap="round" />
+          </svg>
+        </i>
+        <span className="bd">
+          <b>{t("pme.reglages.paiement.titre")}</b>
+          <span>{t("pme.reglages.paiement.combien", { count: ouverts.length })}</span>
+        </span>
+        {total !== null ? (
+          <span className="tot">
+            {montant(total, locale)}
+            <small>{t("pme.reglages.paiement.ttc", { devise: devises[0]! })}</small>
+          </span>
+        ) : null}
       </div>
       {ouverts.map((p) => (
-        <div key={p.paiement_id} className="card abo" data-paiement={p.paiement_id}>
-          <div className="nm">
-            <b>{libelleDuPaiement(p, t)}</b>
-            <span className="px">
-              {t("pme.reglages.paiement.montant", {
-                ttc: montant(p.montant_ttc, locale),
-                devise: p.devise,
-              })}
-            </span>
-          </div>
+        <div key={p.paiement_id} className="ln" data-paiement={p.paiement_id}>
+          <b>{libelleDuPaiement(p, t)}</b>
+          <span className="mt">
+            {montant(p.montant_ttc, locale)} {p.devise}
+          </span>
           {p.etat === "refuse" ? <p className="warn">{t("pme.reglages.paiement.refuse")}</p> : null}
           {simulateur && revenu === p.paiement_id ? (
-            <>
-              <p className="t-body">{t("pme.reglages.paiement.simulateur")}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="btn"
-                  style={{ width: "auto" }}
-                  disabled={simuler.isPending}
-                  onClick={() => simuler.mutate({ id: p.paiement_id, decision: "paye" })}
-                >
-                  {t("pme.reglages.paiement.simuler.payer")}
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  style={{ width: "auto" }}
-                  disabled={simuler.isPending}
-                  onClick={() => simuler.mutate({ id: p.paiement_id, decision: "refuse" })}
-                >
-                  {t("pme.reglages.paiement.simuler.refuser")}
-                </button>
-              </div>
-            </>
+            <div className="acts">
+              <span className="t-body">{t("pme.reglages.paiement.simulateur")}</span>
+              <button
+                type="button"
+                className="btn"
+                disabled={simuler.isPending}
+                onClick={() => simuler.mutate({ id: p.paiement_id, decision: "paye" })}
+              >
+                {t("pme.reglages.paiement.simuler.payer")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sec"
+                disabled={simuler.isPending}
+                onClick={() => simuler.mutate({ id: p.paiement_id, decision: "refuse" })}
+              >
+                {t("pme.reglages.paiement.simuler.refuser")}
+              </button>
+            </div>
           ) : (
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="acts">
               {/* Ce bloc n'existe que sur le web et la PWA (`COMMERCE`). Le moyen
                   se choisit sur sa page : logos et noms viennent des tables. */}
               <Link
@@ -825,8 +875,7 @@ export function ARegler() {
               {p.etat === "lien_cree" ? (
                 <button
                   type="button"
-                  className="btn"
-                  style={{ width: "auto" }}
+                  className="btn btn-sec"
                   disabled={verifier.isPending}
                   onClick={() => verifier.mutate(p.paiement_id)}
                 >
@@ -884,41 +933,40 @@ export function MesFactures() {
   if (!principal || !factures.data || factures.data.length === 0) return null;
 
   return (
-    <div className="rows" data-mes-factures>
+    <div data-mes-factures>
       <div className="sec">
         <h2>{t("pme.reglages.factures.titre")}</h2>
       </div>
       {factures.data.map((f) => {
         const due = f.etat === "a_echoir" || f.etat === "en_retard" || f.etat === "partielle";
         return (
-          <div key={f.facture_id} className="card abo" data-facture={f.facture_id}>
-            <div className="nm">
+          <div key={f.facture_id} className="fac" data-facture={f.facture_id}>
+            <span className="bd">
               <b>{f.numero}</b>
-              <span className="px">{montant(f.montant_ttc, locale)}</span>
-            </div>
-            <p className="ttc">
-              {f.periode.slice(0, 7)} · {t(ETAT_DE_FACTURE[f.etat])}
-            </p>
+              <span className={f.etat === "en_retard" ? "warn" : undefined}>
+                {f.periode.slice(0, 7)} · {t(ETAT_DE_FACTURE[f.etat])}
+                {due
+                  ? ` · ${t("pme.reglages.factures.reste", {
+                      montant: montant(f.reste_du, locale),
+                      devise: f.devise,
+                    })}`
+                  : ""}
+              </span>
+            </span>
             {due ? (
-              <>
-                <p className={f.etat === "en_retard" ? "warn" : "t-body"}>
-                  {t("pme.reglages.factures.reste", {
-                    montant: montant(f.reste_du, locale),
-                    devise: f.devise,
-                  })}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={payer.isPending}
-                    onClick={() => payer.mutate(f.facture_id)}
-                  >
-                    {t("pme.reglages.paiement.payer")}
-                  </button>
-                </div>
-              </>
-            ) : null}
+              <button
+                type="button"
+                className="btn"
+                disabled={payer.isPending}
+                onClick={() => payer.mutate(f.facture_id)}
+              >
+                {t("pme.reglages.paiement.payer")}
+              </button>
+            ) : (
+              <span className="mt">
+                {montant(f.montant_ttc, locale)} {f.devise}
+              </span>
+            )}
           </div>
         );
       })}

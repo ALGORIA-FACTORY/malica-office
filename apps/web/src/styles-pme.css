@@ -2008,6 +2008,69 @@
 [data-surface="pme"] [data-ecran="parametres"] .note{display:flex;align-items:flex-start;gap:.8125rem;background:var(--d1);border-radius:20px; padding:.9375rem;margin-top:1.25rem;border-inline-start:2px solid var(--acc)}
 [data-surface="pme"] [data-ecran="parametres"] .note p{margin:0;font-size:.875rem;line-height:1.4;color:#3C4450;letter-spacing:-.012em}
 
+/* ===== l'abonnement, les paiements, les recharges (maquette du 1er novembre 2026) =====
+ * Une carte par sujet, un geste principal chacune. Les couleurs ne viennent que
+ * des variables : le clair et le sombre suivent sans règle `.dark`. */
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero{position:relative;overflow:hidden;border-radius:24px;padding:1.25rem 1.125rem 1.125rem;background:color-mix(in srgb,var(--acc) 9%,var(--d1));border:1px solid color-mix(in srgb,var(--acc) 30%,transparent)}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .kick{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.75rem}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .kick u{text-decoration:none;font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+[data-surface="pme"] [data-ecran="parametres"] .pill{display:inline-flex;align-items:center;gap:.375rem;padding:.3125rem .625rem;border-radius:999px;font-size:.75rem;font-weight:600;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+[data-surface="pme"] [data-ecran="parametres"] .pill i{width:7px;height:7px;border-radius:50%;background:currentColor}
+[data-surface="pme"] [data-ecran="parametres"] .pill.am{background:color-mix(in srgb,var(--am) 16%,transparent);color:var(--am)}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .nm b{font-size:2rem;font-weight:800;letter-spacing:-.04em}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .nm .px{font-size:1.375rem;text-align:end}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .nm .px small{display:block;font-family:inherit;font-size:.6875rem;font-weight:500;letter-spacing:0;color:var(--t2)}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .ttc{text-align:start}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .det{grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .det div{flex-direction:column-reverse;align-items:flex-start;gap:.125rem;background:color-mix(in srgb,var(--tx) 5%,transparent);border-radius:14px;padding:.625rem .75rem}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .det div b{font-size:1.0625rem}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .det div u{font-size:.6875rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="parametres"] .abo.hero .q{border-top:0;padding-top:0}
+[data-surface="pme"] [data-ecran="parametres"] .regler{border-radius:20px;padding:1rem 1.125rem;background:color-mix(in srgb,var(--am) 10%,var(--d1));border:1px solid color-mix(in srgb,var(--am) 32%,transparent);display:grid;gap:.75rem}
+[data-surface="pme"] [data-ecran="parametres"] .regler .hd{display:flex;align-items:center;gap:.75rem}
+[data-surface="pme"] [data-ecran="parametres"] .regler .hd > i{width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;background:color-mix(in srgb,var(--am) 18%,transparent);color:var(--am)}
+[data-surface="pme"] [data-ecran="parametres"] .regler .hd > i svg{width:20px;height:20px}
+[data-surface="pme"] [data-ecran="parametres"] .regler .hd .bd{flex:1;min-width:0;display:grid;gap:.125rem}
+[data-surface="pme"] [data-ecran="parametres"] .regler .hd .bd b{font-size:.9375rem;font-weight:700}
+[data-surface="pme"] [data-ecran="parametres"] .regler .hd .bd span{font-size:.75rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="parametres"] .regler .hd .tot{text-align:end;font-family:var(--mono);font-size:1.125rem;font-weight:600;letter-spacing:-.03em}
+[data-surface="pme"] [data-ecran="parametres"] .regler .hd .tot small{display:block;font-family:inherit;font-size:.625rem;font-weight:500;letter-spacing:0;color:var(--t2)}
+[data-surface="pme"] [data-ecran="parametres"] .regler .ln{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.25rem .75rem;padding:.75rem 0 0;border-top:1px solid color-mix(in srgb,var(--am) 18%,transparent)}
+[data-surface="pme"] [data-ecran="parametres"] .regler .ln b{font-size:.875rem;font-weight:600;line-height:1.3}
+[data-surface="pme"] [data-ecran="parametres"] .regler .ln .mt{font-family:var(--mono);font-size:.9375rem;font-weight:600;letter-spacing:-.02em}
+[data-surface="pme"] [data-ecran="parametres"] .regler .ln .acts{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:.5rem}
+[data-surface="pme"] [data-ecran="parametres"] .regler .ln .acts .btn{width:auto;min-height:40px;padding:.5rem 1rem;font-size:.8125rem}
+[data-surface="pme"] [data-ecran="parametres"] .regler .ln .warn{grid-column:1 / -1;margin:0;font-size:.75rem;color:var(--ve)}
+[data-surface="pme"] [data-ecran="parametres"] .offre{border-radius:20px;padding:1rem 1.125rem;background:var(--d1);border:1.5px solid transparent;display:grid;gap:.625rem}
+[data-surface="pme"] [data-ecran="parametres"] .offre.arme{border-color:var(--acc)}
+[data-surface="pme"] [data-ecran="parametres"] .offre .hd{display:flex;align-items:baseline;gap:.75rem}
+[data-surface="pme"] [data-ecran="parametres"] .offre .hd b{flex:1;font-size:1.0625rem;font-weight:700;letter-spacing:-.02em}
+[data-surface="pme"] [data-ecran="parametres"] .offre .hd .px{font-family:var(--mono);font-size:1.0625rem;font-weight:600;letter-spacing:-.03em;text-align:end}
+[data-surface="pme"] [data-ecran="parametres"] .offre .hd .px small{display:block;font-family:inherit;font-size:.625rem;font-weight:500;letter-spacing:0;color:var(--t2)}
+[data-surface="pme"] [data-ecran="parametres"] .offre .pill{justify-self:start}
+[data-surface="pme"] [data-ecran="parametres"] .offre p{margin:0;font-size:.75rem;line-height:1.45;color:var(--t2)}
+[data-surface="pme"] [data-ecran="parametres"] .offre .btn-sec{color:var(--tx)}
+[data-surface="pme"] [data-ecran="parametres"] .regler{margin-top:.75rem}
+[data-surface="pme"] [data-ecran="parametres"] .offre.annee{margin-top:.5rem;background:color-mix(in srgb,var(--acc) 7%,var(--d1));border-color:color-mix(in srgb,var(--acc) 30%,transparent)}
+[data-surface="pme"] [data-ecran="parametres"] .paliers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.625rem}
+[data-surface="pme"] [data-ecran="parametres"] .paliers button{display:flex;flex-direction:column;align-items:flex-start;gap:.0625rem;min-height:112px;padding:.875rem 1rem;border-radius:18px;border:1.5px solid transparent;background:var(--d1);color:var(--tx);font-family:inherit;text-align:start;cursor:pointer;touch-action:manipulation}
+[data-surface="pme"] [data-ecran="parametres"] .paliers button[aria-pressed="true"]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 9%,var(--d1))}
+[data-surface="pme"] [data-ecran="parametres"] .paliers button b{font-family:var(--mono);font-size:1.625rem;font-weight:600;letter-spacing:-.04em}
+[data-surface="pme"] [data-ecran="parametres"] .paliers button span{font-size:.75rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="parametres"] .paliers button em{margin-top:auto;font-style:normal;font-family:var(--mono);font-size:.875rem;font-weight:600}
+[data-surface="pme"] [data-ecran="parametres"] .reserve{display:flex;align-items:center;gap:.875rem;border-radius:20px;padding:1rem 1.125rem;background:color-mix(in srgb,var(--acc) 9%,var(--d1));border:1px solid color-mix(in srgb,var(--acc) 26%,transparent)}
+[data-surface="pme"] [data-ecran="parametres"] .reserve .bd{flex:1;min-width:0;display:grid;gap:.125rem}
+[data-surface="pme"] [data-ecran="parametres"] .reserve .bd u{text-decoration:none;font-size:.75rem;color:var(--acc)}
+[data-surface="pme"] [data-ecran="parametres"] .reserve .bd b{font-size:1rem;font-weight:700;letter-spacing:-.02em}
+[data-surface="pme"] [data-ecran="parametres"] .reserve > span:not(.bd){max-width:9rem;font-size:.6875rem;line-height:1.4;color:var(--t2);text-align:end}
+[data-surface="pme"] [data-ecran="parametres"] .fac{display:flex;align-items:center;gap:.75rem;padding:.875rem 1rem;border-radius:16px;background:var(--d1)}
+[data-surface="pme"] [data-ecran="parametres"] .fac + .fac{margin-top:.5rem}
+[data-surface="pme"] [data-ecran="parametres"] .fac .bd{flex:1;min-width:0;display:grid;gap:.125rem}
+[data-surface="pme"] [data-ecran="parametres"] .fac .bd b{font-size:.875rem;font-weight:600}
+[data-surface="pme"] [data-ecran="parametres"] .fac .bd span{font-size:.6875rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="parametres"] .fac .mt{font-family:var(--mono);font-size:.875rem;font-weight:600}
+[data-surface="pme"] [data-ecran="parametres"] .fac .btn{width:auto;min-height:40px;padding:.5rem 1rem;font-size:.8125rem}
+
 
 /* Les blocs « architecture » et « tour » vivaient ici — 154 lignes, deux
  * maquettes de PAGE (un memo d'architecture, la tour de controle) portees avec
