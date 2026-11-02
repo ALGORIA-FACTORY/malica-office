@@ -46,6 +46,7 @@ import {
   libelleDeLAction,
   libelleDuChamp,
   libelleDuCode,
+  libelleDuService,
   valeurDuChamp,
   valeurLisible,
 } from "@/lib/champ-lisible";
@@ -1077,7 +1078,15 @@ function CabinetReviewDeLaPiece() {
                     key={entry.id}
                     className="flex items-baseline justify-between gap-3 bg-card px-3 py-2"
                   >
-                    <span>{libelleDeLAction(entry.action, t, entry.payload)}</span>
+                    <span>
+                      {libelleDeLAction(entry.action, t, entry.payload)}
+                      {entry.service ? (
+                        <span className="text-muted-foreground">
+                          {" · "}
+                          {libelleDuService(entry.service, t)}
+                        </span>
+                      ) : null}
+                    </span>
                     <span className="num shrink-0 text-muted-foreground">
                       {new Intl.DateTimeFormat(locale, {
                         day: "2-digit",

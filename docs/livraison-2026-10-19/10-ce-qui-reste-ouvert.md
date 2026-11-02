@@ -432,3 +432,27 @@ mais « signalée » (`docs/sudoku/contrat-du-moteur.md`, §2 et §7). Défauts 
 - **Une place de propriétaire coûte une place** : le rôle est donné par le propriétaire principal, le prix est celui d'une place (`ref.offres.prix_siege_sup`).
 - **Une société au-delà de l'offre : 29 DT HT par mois** (`ref.offres.prix_organisation_sup`, déjà à 29,000 dans la grille du 19 octobre).
 - **Payer à l'année : 2 mois offerts**, pour l'offre en cours (`mon_annuel`).
+
+## La passe de nuit (livrée coupée le 2 novembre 2026)
+
+Conception validée par le dirigeant le 2 novembre ; ce qui reste à trancher ou à
+mesurer, sans bloquer la livraison :
+
+- **Les plafonds sont INCERTAINS** (1 USD et 200 relectures par dossier, 20 USD
+  pour la plateforme, par 24 h glissantes ; arrêt à 50 % du plafond IA mensuel) :
+  le coût réel d'une relecture n'a pas été mesuré. À revoir dans la tour après la
+  première nuit observée sur le staging.
+- **Écart à la conception, éprouvé.** La conception bornait la LECTURE du
+  relecteur à la pièce relue. Exécuté, l'analyse d'une relecture retenue ne
+  voyait plus les autres pièces du dossier : le doublon probable disparaissait
+  (`la-passe-de-nuit.test.ts`, « retenue » : rejugée par le dirigeant, la pièce
+  changeait). La lecture s'étend donc au dossier tant qu'une relecture y est due ;
+  l'écriture reste bornée à la pièce relue, et les octets (`contenu`) aussi. À
+  confirmer par le dirigeant.
+- **Le mois du plafond mensuel** est celui de `app.depense_ia_du_mois`
+  (`date_trunc('month', now())`, mois UTC), réutilisée telle quelle : une dépense
+  du 1er à 00:30 heure de Tunis compte au mois précédent. Défaut préexistant,
+  non corrigé ici.
+- **Un modèle sans tarif** ne laisse aucune ligne de coût : la tour le signale
+  (« sans coût »), le plafond en dollars ne le borne pas — seul le nombre de
+  relectures le borne.
