@@ -66,6 +66,9 @@ const TOKENS: PageToken[] = [
   jeton(2, "1000.000"),
   jeton(3, "190.000"),
   jeton(4, "1190.000"),
+  // Le libellé du HT, sur sa rangée, à gauche : le sudoku ne prouve pas un total HT qui ne
+  // porte pas son libellé (décision du 2 novembre 2026).
+  { page: 1, ordinal: 6, text: "Total HT", x0: 0.0, y0: 0.12, x1: 0.09, y1: 0.14 },
 ];
 /** Le plan d'un autre lecteur : un jeton de plus, pour reconnaître le sien. */
 const TOKENS_DE_L_AUTRE: PageToken[] = [...TOKENS, jeton(5, "MERCI")];
