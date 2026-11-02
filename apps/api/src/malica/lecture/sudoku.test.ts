@@ -870,6 +870,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       ht: "total_ht",
       base: "base_tva_par_taux",
       tva: "montant_tva_par_taux",
+      lettres: "montant_en_lettres",
       ttc: [
         { variante: "ttc_hors_timbre", champ: "net_a_payer" },
         { variante: "ttc_avec_timbre", champ: "total_ttc" },
@@ -878,6 +879,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
         designation: "designation",
         quantite: "quantite",
         prix: "prix_unitaire_ht",
+        prix_ttc: "prix_unitaire_ttc",
         remise: "remise_ligne",
         montant: "montant_ligne_ht",
         taux: "taux_tva_ligne",
