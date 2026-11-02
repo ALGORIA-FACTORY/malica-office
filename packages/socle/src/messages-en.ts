@@ -35,7 +35,7 @@ export const en: Dict = {
   "relation.documents.recu": "Receipt confirmed on {date}",
   "relation.documents.recevoir": "Confirm receipt",
 
-  "pme.reglages.profil.editer": "Edit",
+  "pme.reglages.profil.editer": "Edit my name",
   // Relation entreprise et comptabilité : états et actions partagés.
   "relation.echeances.retard": "Overdue",
   "relation.echeances.semaine": "In the next 7 days",
@@ -373,6 +373,23 @@ export const en: Dict = {
   "pme.membres.inviter": "Invite",
   "pme.membres.envoyee": "Invitation sent to {email}.",
   "pme.membres.attend": "pending",
+  "pme.inviter.titreRole": "Their role",
+  "pme.inviter.titreAdresse": "Their email address",
+  "pme.inviter.place": "One seat",
+  "pme.inviter.placeMemePrix": "One seat · same price",
+  "pme.inviter.utilisateur.droit1": "Uploads and tracks their own documents",
+  "pme.inviter.utilisateur.droit2": "Sends them to the owner",
+  "pme.inviter.proprietaire.droit1": "Sees every document of the company",
+  "pme.inviter.proprietaire.droit2": "Sends to the firm, receives users' documents",
+  "pme.inviter.proprietaire.droit3": "Keeps or deletes any document",
+  "pme.inviter.envoyer": "Send the invitation",
+  "pme.inviter.cout.compris":
+    "Included in your plan: {occupes} / {inclus} seats taken. Beyond that, {prix} {devise} excl. tax per seat per month.",
+  "pme.inviter.cout.enPlus":
+    "Every seat in your plan is taken: this one is billed {prix} {devise} excl. tax per month.",
+  "pme.inviter.enAttente": "Pending invitations",
+  "pme.reglages.orgs.prix":
+    "Beyond the companies included in your plan ({inclus}), each one is billed {prix} {devise} excl. tax per month.",
   "pme.paiement.titre": "How did you pay?",
   "pme.capture.ajouter.titre": "Add documents",
   "pme.capture.dest.titre": "For whom?",

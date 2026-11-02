@@ -35,7 +35,7 @@ export const ar: Dict = {
   "relation.documents.recu": "تم تأكيد الاستلام بتاريخ {date}",
   "relation.documents.recevoir": "تأكيد الاستلام",
 
-  "pme.reglages.profil.editer": "تعديل",
+  "pme.reglages.profil.editer": "تعديل اسمي",
   // Relation entreprise et comptabilité : états et actions partagés.
   "relation.echeances.retard": "متأخرة",
   "relation.echeances.semaine": "خلال الأيام السبعة القادمة",
@@ -361,6 +361,23 @@ export const ar: Dict = {
   "pme.membres.inviter": "دعوة",
   "pme.membres.envoyee": "أُرسلت الدعوة إلى {email}.",
   "pme.membres.attend": "في الانتظار",
+  "pme.inviter.titreRole": "دوره",
+  "pme.inviter.titreAdresse": "عنوان بريده الإلكتروني",
+  "pme.inviter.place": "مقعد واحد",
+  "pme.inviter.placeMemePrix": "مقعد واحد · بنفس السعر",
+  "pme.inviter.utilisateur.droit1": "يودع وثائقه ويتابعها",
+  "pme.inviter.utilisateur.droit2": "يرسلها إلى المالك",
+  "pme.inviter.proprietaire.droit1": "يرى كل وثائق الشركة",
+  "pme.inviter.proprietaire.droit2": "يرسل إلى مكتب المحاسبة ويتلقى وثائق المستخدمين",
+  "pme.inviter.proprietaire.droit3": "يحتفظ بأي وثيقة أو يحذفها",
+  "pme.inviter.envoyer": "إرسال الدعوة",
+  "pme.inviter.cout.compris":
+    "مشمول في عرضك: المقاعد المشغولة {occupes} / {inclus}. ما زاد عن ذلك: {prix} {devise} دون احتساب الأداء لكل مقعد شهريًا.",
+  "pme.inviter.cout.enPlus":
+    "كل مقاعد عرضك مشغولة: يُفوتر هذا المقعد {prix} {devise} دون احتساب الأداء شهريًا.",
+  "pme.inviter.enAttente": "دعوات في الانتظار",
+  "pme.reglages.orgs.prix":
+    "ما زاد عن الشركات المشمولة في عرضك ({inclus})، تُفوتر كل شركة {prix} {devise} دون احتساب الأداء شهريًا.",
   "pme.paiement.titre": "كيف دفعتَ؟",
   "pme.capture.ajouter.titre": "إضافة وثائق",
   "pme.capture.dest.titre": "لمن؟",

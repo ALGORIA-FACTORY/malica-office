@@ -19,6 +19,7 @@ import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
 import { LienMonEspaceParti } from "@/components/malica/mon-espace-parti";
 import { usePrix } from "@/hooks/use-decimales";
+import { usePrixEnPlus } from "@/hooks/use-prix-en-plus";
 import { libelleDOffre, offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/use-offres";
 import { cleMonCabinet, useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useMonAcces } from "@/hooks/use-mon-acces";
@@ -116,6 +117,13 @@ function PmeReglages() {
   const catalogue = useCatalogueDesOffres().data;
 
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
+  // La même lecture que « Mon nom » (`["mon-profil"]`) : une seule requête.
+  const profil = useQuery({
+    queryKey: ["mon-profil"],
+    queryFn: () => office().identity.monProfil(),
+  });
+  const acces = useMonAcces(pme.tenantId);
+  const prixEnPlus = usePrixEnPlus(pme.tenantId);
 
   const abo = useLAbonnement();
   const f = abo.forfait;
@@ -147,28 +155,37 @@ function PmeReglages() {
           />
         </h2>
       </div>
-      <div className="card">
-        <div className="moi">
-          <span className="av">{initiale(compte.data?.email ?? null)}</span>
-          <span className="bd">
-            {/*
-             * Le Socle ne porte pas de nom d'usage : `Compte` est
-             * `{ id, email }`. On montre donc l'adresse, et on n'invente pas le
-             * nom de la maquette — un nom fabriqué par l'interface est un nom
-             * faux le jour où quelqu'un d'autre se connecte.
-             */}
-            <b>{compte.data?.email ?? ABSENT}</b>
-            <span>{pme.orgName}</span>
-            {/*
-             * Le pluriel passe par `count` : « 1 organisation(s) » n'existe
-             * dans aucune langue, et l'arabe ne s'accorde pas comme le
-             * français. `Intl.PluralRules` tranche à notre place.
-             */}
-            <span className="ro">
-              {t("pme.reglages.compte.orgs", { count: pme.dossiers.length })}
+      {/*
+       * Le profil en tête (maquette du 1er novembre 2026) : l'initiale en grand,
+       * le nom que la personne a écrit (`identity.profiles`), son adresse, son
+       * rôle et sa société. Aucun nom n'est inventé : sans prénom, l'adresse.
+       */}
+      <div className="card profil">
+        <span className="av" aria-hidden>
+          {initiale(profil.data?.prenom || compte.data?.email || null)}
+        </span>
+        <b>
+          {[profil.data?.prenom, profil.data?.nom].filter(Boolean).join(" ") ||
+            (compte.data?.email ?? ABSENT)}
+        </b>
+        {profil.data?.prenom ? <span className="ml">{compte.data?.email}</span> : null}
+        <span className="pills">
+          {acces.data?.role ? (
+            <span className="pill">
+              {t(
+                acces.data.role === "dirigeant"
+                  ? "pme.membres.role.dirigeant"
+                  : "pme.membres.role.collaborateur",
+              )}
             </span>
-          </span>
-        </div>
+          ) : null}
+          <span className="pill neutre">{pme.orgName}</span>
+        </span>
+        {/*
+         * Le pluriel passe par `count` : « 1 organisation(s) » n'existe dans
+         * aucune langue, et l'arabe ne s'accorde pas comme le français.
+         */}
+        <span className="ro">{t("pme.reglages.compte.orgs", { count: pme.dossiers.length })}</span>
         <MonNom />
         {/* Son Mon espace des sociétés quittées : il part avec le compte (lot 4). */}
         <LienMonEspaceParti className="btn btn-sec mt-2" />
@@ -338,6 +355,16 @@ function PmeReglages() {
             </i>
             <span className="bd">
               <b>{t("pme.reglages.orgs.ajouter")}</b>
+              {/* Le prix est lu dans la grille, et dit au web et à la PWA seulement. */}
+              {prixEnPlus.data && Number(prixEnPlus.data.prix_organisation_sup) > 0 ? (
+                <span>
+                  {t("pme.reglages.orgs.prix", {
+                    inclus: String(prixEnPlus.data.organisations_incluses),
+                    prix: aLEchelle(prixEnPlus.data.prix_organisation_sup),
+                    devise: pme.currency,
+                  })}
+                </span>
+              ) : null}
             </span>
           </Link>
         ) : COMMERCE ? (
@@ -396,7 +423,9 @@ function PmeReglages() {
           {/* Dans l'application Android, la base n'offre que les places
               incluses (`facturation.place_offrir`, 20261023120000) : une place
               qui serait facturée est un achat, et reste au web et à la PWA. */}
-          <InviterDansMonDossier />
+          <InviterDansMonDossier
+            occupes={f?.sieges_occupes == null ? null : Number(f.sieges_occupes)}
+          />
           <MesProprietaires />
         </>
       ) : null}

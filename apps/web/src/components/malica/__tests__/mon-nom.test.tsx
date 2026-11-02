@@ -40,10 +40,9 @@ describe("le profil du compte", () => {
   });
   afterEach(cleanup);
 
-  it("affiche les valeurs en lecture seule et un bouton Éditer", async () => {
+  it("n'ouvre aucun champ avant le geste Modifier", async () => {
     monter();
     await screen.findByRole("button", { name: "pme.reglages.profil.editer" });
-    expect(screen.getByText("Wissem")).toBeTruthy();
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(api.ecrire).not.toHaveBeenCalled();
   });
@@ -57,7 +56,6 @@ describe("le profil du compte", () => {
     fireEvent.click(screen.getByRole("button", { name: "pme.reglages.profil.enregistrer" }));
     await screen.findByRole("button", { name: "pme.reglages.profil.editer" });
     expect(screen.queryByRole("textbox")).toBeNull();
-    expect(screen.getByText("Wissem actualisé")).toBeTruthy();
     expect(api.ecrire).toHaveBeenCalledWith(" Wissem actualisé ", "Barouni");
     expect(screen.getByRole("status").textContent).toContain("pme.reglages.profil.enregistre");
   });

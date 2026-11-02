@@ -11,6 +11,7 @@
 export const METHODES_COMMERCIALES: ReadonlySet<string> = new Set([
   "mesOffres",
   "prixTtc",
+  "mesPrixEnPlus",
   "monReport",
   "monAnnuel",
   "souscrireAnnuel",

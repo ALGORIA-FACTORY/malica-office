@@ -142,31 +142,19 @@ export function MonNom() {
       ) : profil.isError ? (
         <p role="alert">{refus(profil.error, t)}</p>
       ) : !edition ? (
-        <div className="mt-3 flex items-start justify-between gap-4">
-          <dl className="grid flex-1 gap-3 sm:grid-cols-2">
-            <div>
-              <dt className="t-body">{t("pme.reglages.profil.prenom")}</dt>
-              <dd>{profil.data?.prenom || "—"}</dd>
-            </div>
-            <div>
-              <dt className="t-body">{t("pme.reglages.profil.nom")}</dt>
-              <dd>{profil.data?.nom || "—"}</dd>
-            </div>
-          </dl>
-          <button
-            type="button"
-            className="btn"
-            style={{ width: "auto" }}
-            onClick={() => {
-              setRetour(null);
-              setEdition(true);
-            }}
-          >
-            {t("pme.reglages.profil.editer")}
-          </button>
-        </div>
+        // Le nom se lit dans la tête du profil, juste au-dessus : ici, le geste.
+        <button
+          type="button"
+          className="btn btn-sec"
+          onClick={() => {
+            setRetour(null);
+            setEdition(true);
+          }}
+        >
+          {t("pme.reglages.profil.editer")}
+        </button>
       ) : (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="grid gap-2">
           <input
             disabled={ecrire.isPending}
             value={prenom}

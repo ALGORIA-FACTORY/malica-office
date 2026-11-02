@@ -149,6 +149,7 @@
     "mesFactures",
     "mesOffres",
     "mesPaiements",
+    "mesPrixEnPlus",
     "mesRecharges",
     "monAnnuel",
     "monForfait",
