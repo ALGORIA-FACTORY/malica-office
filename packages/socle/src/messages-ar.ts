@@ -2079,6 +2079,8 @@ export const ar: Dict = {
   "refus.referentiel.taux_tva_hors_pack":
     "نسبة الأداء على القيمة المضافة هذه غير موجودة في الحزمة السارية.",
   "refus.fuseau.non_defini": "المنطقة الزمنية للمكتب غير محدّدة: اضبطها في إعدادات المكتب.",
+  "refus.fuseau.dossier_non_defini":
+    "المنطقة الزمنية لهذا الملف غير محدّدة، لا من الملف ولا من ولايته القضائية: لا يمكن قراءة يوم استلام وثائقه. أبلغ الدعم بذلك.",
   "refus.fuseau.inconnu": "هذه المنطقة الزمنية غير موجودة: {fuseau}.",
   "refus.reglages.proportion": "هذا الحدّ نسبة: بين 0 و1.",
   "refus.reglages.revue_au_dessus_du_lot":

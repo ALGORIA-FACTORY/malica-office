@@ -216,6 +216,89 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     assert.equal(dossier.extraction.payload.document_date, "2026-09-10");
   });
 
+  it("le jour de réception est celui du dossier, pas celui d'UTC", async () => {
+    /*
+     * Main rouge du 1er novembre 2026, 23:02 UTC : une pièce datée du jour
+     * (dans le fuseau du dossier) recevait « datée après sa réception », car
+     * la réception se lisait en UTC — la veille, entre minuit et une heure à
+     * Tunis. La pièce est reçue à 00:30 au fuseau du dossier, le jour même de
+     * sa date imprimée.
+     */
+    const jour = "2026-09-10";
+    const piece = await pieceLue("minuit", lecture({ numero: "P-MINUIT" }));
+    const recevoirA = (heure: string) =>
+      admin(async (p) => {
+        const { rows } = await p.query<{ utc: string }>(
+          `update capture.pieces x
+              set created_at = ($2::date + $3::time) at time zone coalesce(o.fuseau, c.fuseau)
+             from identity.organizations o
+             left join ref.calendrier_juridiction c on c.jurisdiction = o.jurisdiction
+            where x.id = $1 and o.id = x.tenant_id
+           returning to_char(x.created_at at time zone 'UTC', 'YYYY-MM-DD') as utc`,
+          [piece, jour, heure],
+        );
+        return rows[0]!.utc;
+      });
+    assert.notEqual(await recevoirA("00:30"), jour, "en UTC, c'est encore la veille");
+    const dates = async () =>
+      (
+        (await rpc("capture", "analyser", piece)) as {
+          controles: Array<{ code: string; statut: string; preuves?: { recueLe?: string } }>;
+        }
+      ).controles.find((c) => c.code === "coherence_dates");
+
+    const jugee = await dates();
+    assert.deepEqual([jugee?.statut, jugee?.preuves?.recueLe], ["conforme", jour]);
+    const contexte = (await rpc("capture", "contexteLecture", piece)) as {
+      piece: { recueLe: string };
+    };
+    assert.equal(contexte.piece.recueLe, jour, "la lecture lit ses règles au même jour");
+    const r = (await rpc("office", "propositionDePiece", piece)) as Proposition;
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+
+    // Le réglage du DOSSIER l'emporte sur celui de sa juridiction : à l'ouest
+    // d'UTC, le même instant est encore la veille, et la réserve est juste.
+    await admin((p) =>
+      p.query(`update identity.organizations set fuseau = 'America/Sao_Paulo' where id = $1`, [
+        org,
+      ]),
+    );
+    try {
+      const veille = await dates();
+      assert.deepEqual(
+        [veille?.statut, veille?.preuves?.recueLe],
+        ["reserve", "2026-09-09"],
+        "reçue la veille, au fuseau du dossier",
+      );
+    } finally {
+      await admin((p) =>
+        p.query(`update identity.organizations set fuseau = null where id = $1`, [org]),
+      );
+    }
+  });
+
+  it("sans fuseau ni pour le dossier ni pour sa juridiction, la réception ne se lit pas en UTC", async () => {
+    const piece = await pieceLue("sans-fuseau", lecture({ numero: "P-SANS-FUSEAU" }));
+    await admin(async (p) => {
+      const c = await p.connect();
+      try {
+        await c.query("begin");
+        await c.query(
+          `update ref.calendrier_juridiction set fuseau = null
+            where jurisdiction = (select jurisdiction from identity.organizations where id = $1)`,
+          [org],
+        );
+        await assert.rejects(
+          c.query(`select recue_le from pieces_v where id = $1`, [piece]),
+          /refus\.fuseau\.dossier_non_defini/,
+        );
+      } finally {
+        await c.query("rollback");
+        c.release();
+      }
+    });
+  });
+
   it("comptabilisable au verdict, mais le moteur ne l'approuve pas : pas d'écriture, et pourquoi", async () => {
     // Les contrôles lisent la confiance PAR CHAMP (haute ici) ; le moteur, la
     // confiance GLOBALE de la désignation (0,3, sous le seuil bloquant).

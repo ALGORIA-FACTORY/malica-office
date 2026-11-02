@@ -2210,6 +2210,8 @@ export const fr = {
   "refus.referentiel.taux_tva_hors_pack": "Ce taux de TVA n’existe pas dans le pack en vigueur.",
   "refus.fuseau.non_defini":
     "Le fuseau horaire du cabinet n’est pas défini : réglez-le dans les réglages du cabinet.",
+  "refus.fuseau.dossier_non_defini":
+    "Le fuseau horaire de ce dossier n’est pas défini, ni par lui ni par sa juridiction : le jour de réception de ses pièces ne peut pas se lire. Signalez-le au support.",
   "refus.fuseau.inconnu": "Ce fuseau horaire n’existe pas : {fuseau}.",
   "refus.reglages.proportion": "Ce seuil est une proportion : entre 0 et 1.",
   "refus.reglages.revue_au_dessus_du_lot":

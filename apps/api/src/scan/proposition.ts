@@ -917,7 +917,8 @@ async function proposerDepuisLeJugement(
     date_dite: string | null;
     recue_le: string;
   }>(
-    `select e.id as extraction, e.payload, to_char(p.created_at, 'YYYY-MM-DD') as recue_le,
+    `select e.id as extraction, e.payload,
+            (select to_char(v.recue_le, 'YYYY-MM-DD') from pieces_v v where v.id = p.id) as recue_le,
             a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.controles,
             a.normalisation,
             a.pack_version_id, p.tenant_id, o.jurisdiction, o.currency as devise_du_dossier,
