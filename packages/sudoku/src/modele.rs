@@ -61,6 +61,10 @@ pub struct Groupe {
     pub bareme: String,
     /// Champ dont la mention autorise l'exonération (zéro instance), s'il est déclaré.
     pub exoneration: Option<usize>,
+    /// Exonération PARTIELLE (`exoneration_partielle`) : sous la même mention, une part du
+    /// total des bases est exonérée — Σ bases imprimées < total. Jamais seule : la pièce
+    /// n'est prouvée que si les lignes la confirment (`lib.rs`, après l'anneau 1).
+    pub exoneration_partielle: bool,
     pub instances_max: usize,
 }
 
@@ -212,6 +216,16 @@ pub fn construire(entree: &Entree) -> Modele {
                 Some(n) => Some(b.champ(n)?),
                 None => None,
             };
+            let exoneration_partielle = match e.get("exoneration_partielle") {
+                None => false,
+                Some(v) => {
+                    let oui = v.as_bool().ok_or("clé « exoneration_partielle » : booléen attendu")?;
+                    if oui && exoneration.is_none() {
+                        return Err("« exoneration_partielle » sans champ « exoneration » (la mention)".into());
+                    }
+                    oui
+                }
+            };
             let instances_max = e
                 .get("instances_max")
                 .and_then(|v| v.as_u64())
@@ -224,6 +238,7 @@ pub fn construire(entree: &Entree) -> Modele {
                 total_montant: None,
                 bareme,
                 exoneration,
+                exoneration_partielle,
                 instances_max,
             });
             let g = b.groupes.len() - 1;

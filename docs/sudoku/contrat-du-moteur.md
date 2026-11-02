@@ -108,6 +108,26 @@ Deux clés facultatives de `groupe_taux`, ajoutées à l'exécution :
 - `exoneration` : un champ dont la **mention lue** autorise zéro instance (facture
   exonérée ou en suspension) — sur des lectures fortes seulement ;
 - `instances_max` : le nombre maximal de taux distincts (3 par défaut).
+- `exoneration_partielle` (booléen, avec `exoneration` seulement ; 2 novembre 2026,
+  `20261117110000`) : la mention lue, une part du total des bases peut être
+  exonérée. Le moteur admet des instances dont **chaque** base est imprimée, en
+  lectures fortes, et dont la somme est une part stricte du `total_base`. Le reste
+  n'est imprimé nulle part : la pièce n'est prouvée que si l'anneau 1 l'établit —
+  lignes lues sans cellule déduite ni remise globale, Σ montants = `total_base`,
+  Σ montants par taux = base imprimée de ce taux. Sinon `issue = "aucune"`, raison
+  « exonération partielle non confirmée par les lignes », champs `signale`. À
+  valeurs égales, une solution sans exonération partielle l'emporte. Mesure :
+  50/14 (billets d'avion à 0 % et frais à 19 %) prouvée juste ; 150 factures
+  fictives, couche de texte et OCR rapide, 0 fausse preuve. Banc adverse (mention
+  « Exonéré » injectée sur toutes, puis un chiffre de montant changé : 9 381 et
+  9 474 lectures) : aucune fausse preuve par l'exonération partielle.
+- L'exonération TOTALE (zéro instance) exige elle aussi son HT (2 novembre 2026) :
+  la valeur retenue pour `total_base` doit porter son libellé (repères du champ,
+  sur le jeton ou dans la suite de purs mots juste à sa gauche), ou les lignes
+  doivent la fermer exactement ; sinon `issue = "aucune"`, raison « exonération :
+  le total HT ne porte pas son libellé ». Sans cette garde, 100/B-15 (tranches 0 %
+  et 19 %, « 0,000 » imprimé, rangée « TVA 0 % » libellée « exonérée ») sortait
+  prouvée FAUSSE : le « Total TTC » pris pour le HT, le net pour le TTC.
 
 `total_base` et `total_montant` sont facultatifs : une facture n'imprime pas
 toujours le total de TVA ; dans une `somme`, un champ de groupe vaut alors la
