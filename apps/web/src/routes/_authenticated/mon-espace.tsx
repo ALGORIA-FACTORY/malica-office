@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { COMMERCE } from "@/capabilities/coque";
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import { MonEspaceParti } from "@/components/malica/mon-espace-parti";
 import { useMonAcces } from "@/hooks/use-mon-acces";
@@ -62,7 +63,7 @@ function LienDeLaTour() {
     queryFn: () => office().identity.listMyOrganizations(),
   });
   const acces = useMonAcces(orgs.data?.[0]?.id);
-  if (!acces.data?.plateforme) return null;
+  if (!COMMERCE || !acces.data?.plateforme) return null;
   return (
     <Link to="/tour" data-lien-tour className="btn btn-sec mx-4 mt-3">
       {t("tour.titre")}

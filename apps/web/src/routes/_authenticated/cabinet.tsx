@@ -368,7 +368,7 @@ function Coquille({
     // La tour : aux seuls opérateurs d'ALGORIA. La base refuse tout aux autres.
     // Elle est un espace à elle depuis le 2 novembre 2026 (`/tour`), et son
     // entrée a son groupe : rangée sous « Cabinet », elle était repliée.
-    ...(acces.data?.plateforme
+    ...(COMMERCE && acces.data?.plateforme
       ? [
           {
             key: "tour",

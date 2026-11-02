@@ -45,7 +45,8 @@ export const Route = createFileRoute("/_authenticated/tour/cabinets/$cabinetId")
     ...(s["onglet"] === "bibliotheque" ? { onglet: "bibliotheque" as const } : {}),
     ...(s["vue"] === "cabinet" ? { vue: "cabinet" as const } : {}),
   }),
-  component: UnCabinet,
+  // Le commerce n'entre pas dans le paquet de la coque (`outils/coque-sans-commerce.mjs`).
+  component: __COMMERCE__ ? UnCabinet : () => null,
 });
 
 const OU = "routes/_authenticated/tour.cabinets.$cabinetId";

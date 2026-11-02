@@ -2,16 +2,13 @@
  * Abonnements — la comptabilité revendeur (règles du 20 octobre 2026).
  *
  * L'écran vit dans `components/malica/abonnements-du-cabinet.tsx` depuis le
- * 2 novembre 2026 : la tour montre le même, en lecture. Cette route le pose
- * dans la coquille du cabinet, avec la parole de Malica.
+ * 2 novembre 2026 : la tour montre le même, en lecture. Il se charge en
+ * différé derrière `__COMMERCE__`, pour que la coque Android n'en garde aucun
+ * morceau (`outils/coque-sans-commerce.mjs`).
  */
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, lazyRouteComponent, redirect } from "@tanstack/react-router";
 
-import { AbonnementsDuCabinet } from "@/components/malica/abonnements-du-cabinet";
 import { COMMERCE } from "@/capabilities/coque";
-import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
-import { MalicaNote } from "@/components/malica/office-ui";
-import { useI18n } from "@/i18n";
 
 export const Route = createFileRoute("/_authenticated/cabinet/abonnements")({
   head: () => ({
@@ -33,12 +30,10 @@ export const Route = createFileRoute("/_authenticated/cabinet/abonnements")({
   beforeLoad: () => {
     if (!COMMERCE) throw redirect({ to: "/cabinet" });
   },
-  component: COMMERCE ? CabinetAbonnements : () => null,
+  component: __COMMERCE__
+    ? lazyRouteComponent(
+        () => import("@/components/malica/abonnements-du-cabinet"),
+        "AbonnementsDeMonCabinet",
+      )
+    : () => null,
 });
-
-function CabinetAbonnements() {
-  const { t, locale } = useI18n();
-  const { org } = useCabinet();
-  useMalicaPanel(<MalicaNote>{t("cab.abo.panel")}</MalicaNote>, [locale]);
-  return <AbonnementsDuCabinet cabinet={org} />;
-}

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
-import { CIBLE_COQUE } from "@/capabilities/coque";
+import { CIBLE_COQUE, COMMERCE } from "@/capabilities/coque";
 import { FichierNonPdf, files, type PickedFile } from "@/capabilities/files";
 import { BandeauHorsLigne } from "@/components/malica/bandeau-hors-ligne";
 import { EntetePme } from "@/components/malica/entete-pme";
@@ -674,7 +674,7 @@ function PmeLayout() {
             />
           </div>
           {/* Sur téléphone, la tour s'ouvre depuis « Mon espace » : la barre a trois places. */}
-          {operateur ? (
+          {operateur && COMMERCE ? (
             <div className="nav-desktop">
               <NavItem to="/tour" icon={TowerControl} label={t("tour.titre")} active={false} />
             </div>

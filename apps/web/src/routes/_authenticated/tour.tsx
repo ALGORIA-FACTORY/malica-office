@@ -13,10 +13,11 @@
  * autre compte, l'écran dit que la tour est réservée, et ne montre rien.
  */
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, Menu, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { COMMERCE } from "@/capabilities/coque";
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import { MarqueRg } from "@/components/malica/office-ui";
 import { entreeActive, MENU, type EntreeDuMenu } from "@/components/malica/tour/sections";
@@ -27,7 +28,13 @@ import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/tour")({
-  component: LaTour,
+  // La tour est un poste de travail, et elle lit le commerce (abonnements,
+  // factures) : pas dans l'application Android (`COMMERCE`). Une adresse
+  // tapée dans la coque ramène au portail.
+  beforeLoad: () => {
+    if (!COMMERCE) throw redirect({ to: "/office" });
+  },
+  component: __COMMERCE__ ? LaTour : () => null,
 });
 
 function LaTour() {
