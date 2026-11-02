@@ -358,7 +358,6 @@ export const ar: Dict = {
   "pme.membres.role.dirigeant": "مالك",
   "pme.membres.role.collaborateur": "مستخدم",
   "pme.membres.adresse": "عنوان البريد الإلكتروني",
-  "pme.membres.inviter": "دعوة",
   "pme.membres.envoyee": "أُرسلت الدعوة إلى {email}.",
   "pme.membres.attend": "في الانتظار",
   "pme.inviter.titreRole": "دوره",

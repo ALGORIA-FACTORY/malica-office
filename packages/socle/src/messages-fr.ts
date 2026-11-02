@@ -408,7 +408,6 @@ export const fr = {
   "pme.membres.role.dirigeant": "Propriétaire",
   "pme.membres.role.collaborateur": "Utilisateur",
   "pme.membres.adresse": "adresse e-mail",
-  "pme.membres.inviter": "Inviter",
   "pme.membres.envoyee": "Invitation envoyée à {email}.",
   "pme.membres.attend": "en attente",
   "pme.inviter.titreRole": "Son rôle",

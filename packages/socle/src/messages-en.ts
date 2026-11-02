@@ -370,7 +370,6 @@ export const en: Dict = {
   "pme.membres.role.dirigeant": "Owner",
   "pme.membres.role.collaborateur": "User",
   "pme.membres.adresse": "email address",
-  "pme.membres.inviter": "Invite",
   "pme.membres.envoyee": "Invitation sent to {email}.",
   "pme.membres.attend": "pending",
   "pme.inviter.titreRole": "Their role",
