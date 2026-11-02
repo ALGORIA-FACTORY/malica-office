@@ -486,6 +486,18 @@ describe("le moteur commercial", { skip: !BASE_CONFIGUREE }, () => {
         for (const [sql, params] of portes) {
           await refuse(db, sql, params, /refus\.reserve\.plateforme|permission denied/);
         }
+        // Le stock d'une licence qu'on ne consulte pas ne se lit pas, même par
+        // une fonction (revue Codex de #202) — ni par son rapport reporté.
+        if (qui === "CB" || qui === "P0" || qui === "S") {
+          for (const f of ["lectures_dues_solde", "lectures_reportees"]) {
+            await refuse(
+              db,
+              `select facturation.${f}($1, $2::date)`,
+              [m.licenceA, m.periode],
+              /refus\.geste\.non_permis/,
+            );
+          }
+        }
         // Les fonctions internes ne s'appellent même pas.
         await refuse(
           db,
@@ -630,6 +642,19 @@ describe("le moteur commercial", { skip: !BASE_CONFIGUREE }, () => {
       await un.query("begin");
       assert.equal(await prendre(un), 2);
       await un.query("commit");
+      // La largeur est un minimum : le 10 000e numéro garde ses cinq chiffres.
+      await un.query("begin");
+      await un.query(
+        `insert into facturation.compteurs_documents (emetteur_organisation_id, annee, nature, prefixe, dernier_rang)
+         values ($1, 2026, 'avoir', 'CPT-AV', 9999)`,
+        [org],
+      );
+      const { rows } = await un.query<{ numero: string }>(
+        "select numero from facturation.numero_suivant($1, 2026::smallint, 'avoir')",
+        [org],
+      );
+      assert.equal(rows[0]!.numero, "CPT-AV-2026-10000");
+      await un.query("rollback");
     } finally {
       un.release();
       deux.release();
@@ -835,6 +860,23 @@ describe("le moteur commercial", { skip: !BASE_CONFIGUREE }, () => {
         [m.gesteVisible],
         /refus\.geste\.deja_facture/,
       );
+      // Une remise rejouée par sa clé rend le geste déjà inscrit : elle ne bute
+      // pas sur le chevauchement avec elle-même (revue Codex de #202).
+      const r1 = (
+        await db.query<{ r: { id: string } }>(
+          `select plateforme.remise_accorder($1, 'montant', 1, 'titulaire', $2::date, 1::smallint,
+                                             'Geste rejoué', 'cle-remise-1') as r`,
+          [m.licenceA, m.periode],
+        )
+      ).rows[0]!.r;
+      const r2 = (
+        await db.query<{ r: { id: string; deja: boolean } }>(
+          `select plateforme.remise_accorder($1, 'montant', 1, 'titulaire', $2::date, 1::smallint,
+                                             'Geste rejoué', 'cle-remise-1') as r`,
+          [m.licenceA, m.periode],
+        )
+      ).rows[0]!.r;
+      assert.deepEqual([r2.id, r2.deja], [r1.id, true]);
       // La clé d'idempotence rend le même geste, sans en inscrire un second.
       const g1 = (
         await db.query<{ r: { id: string } }>(

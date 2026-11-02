@@ -23,7 +23,11 @@ export interface FactureDExemple {
   operateur: string;
   facture: string;
   avoir: string;
-  documents: (langue: Langue, quoi: "facture" | "avoir") => Promise<DocumentDeFacture>;
+  documents: (
+    langue: Langue,
+    quoi: "facture" | "avoir",
+    auJour?: boolean,
+  ) => Promise<DocumentDeFacture>;
 }
 
 /** Sous l'identité de l'opérateur, comme la tour. */
@@ -124,12 +128,13 @@ export async function emettreUneFactureDExemple(db: pg.PoolClient): Promise<Fact
       operateur,
       facture,
       avoir,
-      documents: (langue, quoi) =>
+      documents: (langue, quoi, auJour = false) =>
         enOperateur(db, operateur, async () => {
           const d = await lireDocument(
             db,
             quoi === "facture" ? facture : avoir,
             langueDemandee(langue),
+            auJour,
           );
           if (!d) throw new Error("document introuvable");
           return d;

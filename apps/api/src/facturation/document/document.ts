@@ -49,7 +49,9 @@ export interface DocumentDeFacture {
   langue: Langue;
   periode: { mois: string | null; annee: number };
   lignes: LigneDuDocument[];
-  encours: { encaisse: number; reste_du: number; etat: string; avoirs: number } | null;
+  /** À l'émission pour l'original (sans état), au jour pour un relevé. */
+  encours: { encaisse: number; reste_du: number; etat: string | null; avoirs: number } | null;
+  au_jour: boolean;
   avoir_de: { numero: string; emise_le: string } | null;
   rubriques: Record<string, string>;
   devise: { code: string; exposant: number; separateur: string } | null;
@@ -66,14 +68,20 @@ export function langueDemandee(valeur: unknown): Langue | null {
     : null;
 }
 
+/**
+ * L'original (par défaut) ne dit que ce qui était vrai à l'émission, et se
+ * rend aux mêmes octets que l'empreinte inscrite ; `auJour` ajoute les
+ * encaissements, les avoirs et le retard : un relevé, pas l'original.
+ */
 export async function lireDocument(
   db: Requete,
   factureId: string,
   langue: Langue | null,
+  auJour = false,
 ): Promise<DocumentDeFacture | null> {
   const { rows } = await db.query<{ d: DocumentDeFacture | null }>(
-    "select facturation.document_de_facture($1, $2) as d",
-    [factureId, langue],
+    "select facturation.document_de_facture($1, $2, $3) as d",
+    [factureId, langue, auJour],
   );
   return rows[0]?.d ?? null;
 }

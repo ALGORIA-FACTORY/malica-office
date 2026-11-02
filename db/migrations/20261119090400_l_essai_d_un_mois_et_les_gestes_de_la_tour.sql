@@ -92,18 +92,17 @@ begin
   if p_motif is null or length(btrim(p_motif)) = 0 then
     raise exception 'refus.commerce.motif_requis' using errcode = 'check_violation';
   end if;
-  if not exists (select 1 from ref.actes_intervention a where a.code = p_acte and a.ouvert) then
-    raise exception 'refus.geste.ferme' using errcode = 'check_violation';
-  end if;
-
   if p_cle is not null then
     select * into v_existe from plateforme.interventions where cle_idempotence = p_cle;
     if v_existe.id is not null then
-      if v_existe.licence_id <> p_licence or v_existe.acte <> p_acte then
+      if v_existe.licence_id <> p_licence or v_existe.acte <> coalesce(p_acte, v_existe.acte) then
         raise exception 'refus.commerce.cle_deja_prise' using errcode = 'unique_violation';
       end if;
       return to_jsonb(v_existe) || jsonb_build_object('deja', true);
     end if;
+  end if;
+  if not exists (select 1 from ref.actes_intervention a where a.code = p_acte and a.ouvert) then
+    raise exception 'refus.geste.ferme' using errcode = 'check_violation';
   end if;
 
   perform 1 from facturation.licences where id = p_licence for update;
@@ -199,6 +198,14 @@ begin
     end if;
   end if;
   v_au := (p_du + make_interval(months => p_mois) - interval '1 day')::date;
+  -- Une requête rejouée rend le geste déjà inscrit, avant tout autre contrôle ;
+  -- le verrou de la licence sérialise deux gestes concurrents AVANT que le
+  -- chevauchement ne se juge (revue Codex de #202).
+  if p_cle is not null and exists (select 1 from plateforme.interventions i
+                                    where i.cle_idempotence = p_cle) then
+    return plateforme.geste_inscrire(p_licence, null, null, null, null, null, p_motif, p_cle, null);
+  end if;
+  perform 1 from facturation.licences where id = p_licence for update;
   if plateforme.geste_chevauche(p_licence, array['remise_pourcentage', 'remise_montant'],
                                 p_payeur_type, p_du, v_au) then
     raise exception 'refus.geste.chevauchement' using errcode = 'check_violation';
@@ -236,6 +243,14 @@ begin
       using errcode = 'check_violation';
   end if;
   v_au := (p_du + make_interval(months => p_nombre) - interval '1 day')::date;
+  -- Une requête rejouée rend le geste déjà inscrit, avant tout autre contrôle ;
+  -- le verrou de la licence sérialise deux gestes concurrents AVANT que le
+  -- chevauchement ne se juge (revue Codex de #202).
+  if p_cle is not null and exists (select 1 from plateforme.interventions i
+                                    where i.cle_idempotence = p_cle) then
+    return plateforme.geste_inscrire(p_licence, null, null, null, null, null, p_motif, p_cle, null);
+  end if;
+  perform 1 from facturation.licences where id = p_licence for update;
   if plateforme.geste_chevauche(p_licence, array['mois_offerts'], p_payeur_type, p_du, v_au) then
     raise exception 'refus.geste.chevauchement' using errcode = 'check_violation';
   end if;
@@ -505,5 +520,4 @@ language sql stable security definer set search_path = '' as $$
                                       - greatest(ev.du, p_periode))
                       from facturation.essais_v ev where ev.licence_id = p_licence), 0)::int
 $$;
-revoke all on function facturation.jours_d_essai(uuid, date) from public, anon;
-grant execute on function facturation.jours_d_essai(uuid, date) to authenticated;
+revoke all on function facturation.jours_d_essai(uuid, date) from public, anon, authenticated;

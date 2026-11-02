@@ -159,13 +159,41 @@ $$;
 revoke all on function facturation.premier_mois(uuid) from public, anon, authenticated;
 
 /**
+ * Qui peut demander le stock d'une licence : la plateforme, qui la lit
+ * (`licences_lisibles`), ou un membre d'une de ses sociétés et le cabinet qui
+ * y est engagé — ceux dont les lectures la consomment (`lecture_autorisee`
+ * lit le report sous l'identité du lecteur). Personne d'autre : la fonction
+ * est `definer`, la RLS du registre ne la protège pas (revue Codex de #202).
+ * Une session ouverte par un superutilisateur, SANS identité (migration,
+ * maintenance, épreuve qui pose ses fixtures), n'est pas un client : l'API se
+ * connecte sous `malica_api` et pose toujours l'identité de l'appelant.
+ */
+create function facturation.licence_consultable(p_licence uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select (auth.uid() is null
+          and exists (select 1 from pg_catalog.pg_roles r
+                       where r.rolname = session_user and r.rolsuper))
+      or app.is_platform()
+      or p_licence in (select facturation.licences_lisibles())
+      or exists (select 1 from facturation.licence_organisations lo
+                  where lo.licence_id = p_licence
+                    and (lo.tenant_id in (select app.member_orgs())
+                         or lo.tenant_id in (select app.engaged_orgs())))
+$$;
+revoke all on function facturation.licence_consultable(uuid) from public, anon, authenticated;
+
+/**
  * Le solde du stock au début du mois `p_periode` : le registre des mois
  * clos, les lectures offertes jusqu'à ce mois inclus, et l'écart des mois
  * antérieurs que la passe n'a pas encore clos. Jamais négatif.
  */
 create function facturation.lectures_dues_solde(p_licence uuid, p_periode date) returns integer
-language sql stable security definer set search_path = '' as $$
-  select greatest(0,
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not facturation.licence_consultable(p_licence) then
+    raise exception 'refus.geste.non_permis' using errcode = '42501';
+  end if;
+  return greatest(0,
     coalesce((select sum(case when d.nature = 'puisement' then -d.lectures else d.lectures end)
                 from facturation.lectures_dues d
                where d.licence_id = p_licence
@@ -176,18 +204,24 @@ language sql stable security definer set search_path = '' as $$
                                        interval '1 month') m
                  where not exists (select 1 from facturation.lectures_dues d
                                     where d.licence_id = p_licence and d.periode = m::date
-                                      and d.nature <> 'offerte')), 0))::int
+                                      and d.nature <> 'offerte')), 0))::int;
+end
 $$;
 revoke all on function facturation.lectures_dues_solde(uuid, date) from public, anon;
 grant execute on function facturation.lectures_dues_solde(uuid, date) to authenticated;
 
 /** Ce que le mois reçoit en plus de son forfait, selon la règle de report en vigueur. */
 create function facturation.lectures_reportees(p_licence uuid, p_periode date) returns integer
-language sql stable security definer set search_path = '' as $$
-  select case public.abonnement_reglage() ->> 'report_regle'
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not facturation.licence_consultable(p_licence) then
+    raise exception 'refus.geste.non_permis' using errcode = '42501';
+  end if;
+  return case public.abonnement_reglage() ->> 'report_regle'
            when 'a_vie' then facturation.lectures_dues_solde(p_licence, p_periode)
            when 'un_mois' then facturation.report_de(p_licence, p_periode)
-           else 0 end
+           else 0 end;
+end
 $$;
 revoke all on function facturation.lectures_reportees(uuid, date) from public, anon;
 grant execute on function facturation.lectures_reportees(uuid, date) to authenticated;

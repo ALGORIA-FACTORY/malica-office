@@ -168,8 +168,17 @@ $$;
  * L'IDENTITÉ DE L'APPELANT : la RLS de la facture décide (null sinon). Les
  * lignes à gabarit se rendent dans la langue demandée ; les rubriques
  * viennent de `ref.labels`.
+ *
+ * L'ORIGINAL (`p_au_jour` faux) ne lit que ce qui était vrai à l'émission et
+ * ne change plus : ce qu'elle portait de payé (`encaisse_a_l_emission`, les
+ * paiements en ligne imputés), aucun avoir, aucun état, la page de paiement du
+ * gabarit en vigueur le jour d'émission. Rendu de nouveau, il redonne les octets dont
+ * l'empreinte est inscrite (revue Codex de #202). L'ÉTAT DU JOUR (`p_au_jour`)
+ * ajoute ce qui s'est passé depuis — encaissements, avoirs, retard — : c'est
+ * un relevé, pas l'original.
  */
-create function facturation.document_de_facture(p_facture uuid, p_langue text default null)
+create function facturation.document_de_facture(
+  p_facture uuid, p_langue text default null, p_au_jour boolean default false)
 returns jsonb
 language sql stable security invoker set search_path = '' as $$
   with f as (select * from facturation.factures x where x.id = p_facture),
@@ -191,9 +200,16 @@ language sql stable security invoker set search_path = '' as $$
                 'quantite', x.quantite, 'prix_unitaire', x.prix_unitaire,
                 'montant_ht', x.montant_ht) order by x.ordinal)
          from facturation.facture_lignes x where x.facture_id = f.id), '[]'::jsonb),
-    'encours', (select jsonb_build_object('encaisse', e.encaisse, 'reste_du', e.reste_du,
-                                          'etat', e.etat, 'avoirs', e.avoirs)
-                  from facturation.encours_v e where e.facture_id = f.id),
+    'encours', case when p_au_jour then
+                 (select jsonb_build_object('encaisse', e.encaisse, 'reste_du', e.reste_du,
+                                            'etat', e.etat, 'avoirs', e.avoirs)
+                    from facturation.encours_v e where e.facture_id = f.id)
+               else
+                 jsonb_build_object('encaisse', f.encaisse_a_l_emission,
+                                    'reste_du', f.montant_ttc::numeric - f.encaisse_a_l_emission::numeric,
+                                    'etat', null, 'avoirs', 0)
+               end,
+    'au_jour', p_au_jour,
     'avoir_de', (select jsonb_build_object('numero', a.numero, 'emise_le', a.emise_le)
                    from facturation.factures a where a.id = f.avoir_de),
     'rubriques', (select jsonb_object_agg(r.key, r.value) from ref.labels r, langue
@@ -205,15 +221,16 @@ language sql stable security invoker set search_path = '' as $$
                         where g.canal = 'email'
                           and g.code = case f.payeur_type when 'cabinet' then 'facture.emise.cabinet'
                                                           else 'facture.emise' end
-                        order by g.effective_from desc limit 1),
+                          and g.effective_from <= f.emise_le
+                        order by g.effective_from desc, g.locale limit 1),
     'nature_libelle', (select n.value from ref.labels n, langue
                         where n.ns = 'nature_document' and n.key = f.nature and n.locale = langue.l),
     'original', (select d.sha256 from facturation.facture_documents d
                   where d.facture_id = f.id and d.version = 1))
   from f
 $$;
-revoke all on function facturation.document_de_facture(uuid, text) from public, anon;
-grant execute on function facturation.document_de_facture(uuid, text) to authenticated;
+revoke all on function facturation.document_de_facture(uuid, text, boolean) from public, anon;
+grant execute on function facturation.document_de_facture(uuid, text, boolean) to authenticated;
 
 /**
  * L'API inscrit l'empreinte d'un PDF rendu. L'original (version 1) d'une
@@ -299,7 +316,7 @@ grant execute on function plateforme.document_inscrire(uuid, text, text, text) t
  */
 create function notif.facture_de_l_envoi(p_envoi uuid) returns jsonb
 language sql stable security definer set search_path = '' as $$
-  select facturation.document_de_facture(fe.facture_id, null)
+  select facturation.document_de_facture(fe.facture_id, null, false)
     from facturation.facture_envois fe where fe.envoi_id = p_envoi
 $$;
 revoke all on function notif.facture_de_l_envoi(uuid) from public, anon, authenticated;

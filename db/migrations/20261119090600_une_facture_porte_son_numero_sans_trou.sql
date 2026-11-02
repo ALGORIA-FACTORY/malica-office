@@ -128,7 +128,10 @@ begin
    where x.emetteur_organisation_id = p_org and x.annee = p_annee and x.nature = p_nature
   returning x.dernier_rang into rang;
 
-  numero := c.prefixe || '-' || p_annee || '-' || lpad(rang::text, c.largeur, '0');
+  -- `largeur` est un MINIMUM : le 10 000e numéro garde ses cinq chiffres
+  -- (lpad tronquerait, et redonnerait le numéro du rang 1 000 — revue Codex de #202).
+  numero := c.prefixe || '-' || p_annee || '-'
+            || lpad(rang::text, greatest(c.largeur, length(rang::text)), '0');
 end
 $$;
 revoke all on function facturation.numero_suivant(uuid, smallint, text) from public, anon, authenticated;
@@ -149,7 +152,12 @@ alter table facturation.factures
   add column langue                   text check (langue in ('fr', 'ar', 'en')),
   add column passe_id                 uuid,
   add column motif                    text,
-  add column cle_idempotence          text unique;
+  add column cle_idempotence          text unique,
+  add column encaisse_a_l_emission    app.money_t not null default 0
+    check (encaisse_a_l_emission::numeric >= 0);
+comment on column facturation.factures.encaisse_a_l_emission is
+  'Ce que la facture portait déjà de payé le jour de son émission (paiements en ligne imputés) : '
+  'l''original du PDF le dit, et ne change plus quand d''autres encaissements suivent.';
 
 update facturation.factures set nature = case when avoir_de is null then 'facture' else 'avoir' end;
 alter table facturation.factures alter column nature set not null;
@@ -481,6 +489,7 @@ declare
   v_debut    facturation.engagements_annuels;
   v_mois     numeric;
   v_recharges numeric;
+  v_deja_paye numeric;
   v_couvert  text := null;
   v_par_cabinet boolean := false;
   v_valeurs_mois jsonb := jsonb_build_object('mois', extract(month from p_periode)::int,
@@ -581,6 +590,17 @@ begin
 
     v_tva := round(v_ht * em.taux, 3);
 
+    -- Ce que les paiements en ligne non imputés vont porter sur la facture :
+    -- l'original le dit, figé (la boucle d'imputation, plus bas, les inscrit).
+    select coalesce(sum(p.montant_ttc), 0) into v_deja_paye
+      from facturation.paiements_en_ligne p
+     where p.licence_id = p_licence and p.objet <> 'facture'
+       and exists (select 1 from facturation.paiement_evenements e
+                    join facturation.prestataires_paiement pp on pp.code = e.prestataire
+                                                             and pp.fait_entrer_argent
+                   where e.paiement_id = p.id and e.etat = 'paye')
+       and not exists (select 1 from facturation.paiement_imputations i where i.paiement_id = p.id);
+
     -- Le numéro EN DERNIER : tout ce qui pouvait refuser a refusé.
     perform facturation.chronologie_tenue(em.organisation_id, 'facture',
                                           extract(year from em.jour)::smallint, em.jour);
@@ -594,7 +614,8 @@ begin
        payeur_type, payeur_tenant_id, payeur_personne,
        destinataire_nom, destinataire_legal_id, destinataire_adresse, reference_abonne,
        nature, annee, rang, emetteur_id, emetteur_organisation_id, emetteur_nom,
-       emetteur_matricule, emetteur_adresse, emetteur_juridiction, langue, passe_id)
+       emetteur_matricule, emetteur_adresse, emetteur_juridiction, langue, passe_id,
+       encaisse_a_l_emission)
     values
       (p_licence, v_num.numero, p_periode, em.jour, em.jour + rf.jours_echeance, l.offre_code,
        c.organisations, v_sieges, v_ht, em.taux, v_tva, em.timbre,
@@ -602,7 +623,8 @@ begin
        l.payeur_type, l.payeur_tenant_id, l.payeur_personne,
        v_nom, v_legal, v_adresse, l.acces_reference,
        'facture', extract(year from em.jour)::smallint, v_num.rang, em.emetteur_id,
-       em.organisation_id, em.nom, em.matricule, em.adresse, em.juridiction, v_langue, p_passe)
+       em.organisation_id, em.nom, em.matricule, em.adresse, em.juridiction, v_langue, p_passe,
+       v_deja_paye)
     returning id into v_id;
 
     v_ordinal := 0;

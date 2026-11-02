@@ -1,11 +1,13 @@
 /**
- * La route du PDF d'une facture : `GET /factures/:id/pdf?langue=fr|en|ar`.
+ * La route du PDF d'une facture : `GET /factures/:id/pdf?langue=fr|en|ar&au_jour=1`.
  *
  * Un flux binaire n'a pas sa place dans `/rpc`. L'autorisation est un
  * `select` sous l'identité de l'appelant (`facturation.document_de_facture`) :
  * si la RLS ne rend pas la facture, la réponse est 404 — jamais 403, qui
- * dirait qu'elle existe. Le PDF se rend depuis l'instantané de la facture,
- * qui ne change plus : rendu de nouveau, il redonne les octets de l'original.
+ * dirait qu'elle existe. Par défaut, l'ORIGINAL : il se rend depuis
+ * l'instantané de la facture, qui ne change plus, et redonne les octets dont
+ * l'empreinte est inscrite. `au_jour=1` rend l'état du jour (payée, en retard,
+ * avoirs) : un relevé, pas l'original.
  */
 import type { Request, Response } from "express";
 
@@ -23,7 +25,7 @@ export async function servirLaFacture(req: Request, res: Response): Promise<void
     return;
   }
   const document = await sousIdentite(req.utilisateur!.id, (db) =>
-    lireDocument(db, id, langueDemandee(req.query["langue"])),
+    lireDocument(db, id, langueDemandee(req.query["langue"]), req.query["au_jour"] === "1"),
   );
   if (!document) {
     res.status(404).end();

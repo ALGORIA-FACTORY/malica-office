@@ -62,7 +62,7 @@ describe("le PDF de la facture", { skip: !ADMIN }, () => {
     it(`en ${langue} : déterministe, lisible, ses montants et ses rubriques`, async () => {
       await aBlanc(async (db) => {
         const exemple = await emettreUneFactureDExemple(db);
-        const d = await exemple.documents(langue, "facture");
+        const d = await exemple.documents(langue, "facture", true);
         const un = rendreLaFacture(d, { lienPaiement: "https://app.essai.local/pme/reglages" });
         const deux = rendreLaFacture(d, { lienPaiement: "https://app.essai.local/pme/reglages" });
         assert.equal(empreinte(un), empreinte(deux), "mêmes données, mêmes octets");
@@ -177,6 +177,23 @@ describe("le PDF de la facture", { skip: !ADMIN }, () => {
         empreinte(rendreLaFacture(jointe.rows[0]!.d!, { lienPaiement: null })),
         empreinte(pdf),
       );
+
+      // Un encaissement de plus : l'original ne bouge pas, le relevé du jour si.
+      await db.query("set local role authenticated");
+      await db.query(
+        `select plateforme.encaissement_inscrire($1, 1, 'virement', 'VIR-2', f.emise_le)
+           from facturation.factures f where f.id = $1`,
+        [exemple.facture],
+      );
+      await db.query("reset role");
+      const apres = await exemple.documents("fr", "facture");
+      assert.equal(
+        empreinte(rendreLaFacture(apres, { lienPaiement: null })),
+        empreinte(pdf),
+        "l'original ne change plus",
+      );
+      const releve = await exemple.documents("fr", "facture", true);
+      assert.notEqual(empreinte(rendreLaFacture(releve, { lienPaiement: null })), empreinte(pdf));
     });
   });
 });

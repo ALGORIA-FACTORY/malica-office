@@ -60,7 +60,8 @@ const FACTURE_JOINTE: DocumentDeFacture = {
       montant_ht: 10,
     },
   ],
-  encours: { encaisse: 0, reste_du: 12.9, etat: "a_echoir", avoirs: 0 },
+  encours: { encaisse: 0, reste_du: 12.9, etat: null, avoirs: 0 },
+  au_jour: false,
   avoir_de: null,
   // Les rubriques viennent du référentiel ; ici, leur clé suffit.
   rubriques: Object.fromEntries(RUBRIQUES_DU_RENDU.map((r) => [r, r])),

@@ -9,7 +9,9 @@
  * transaction qu'il annule : une facture fictive est émise par le vrai chemin
  * (`scenario-d-exemple.ts`), puis rendue en français, en anglais et en arabe,
  * et son avoir en français. Les PDF s'écrivent dans docs/facturation/exemples.
- * Rien ne reste en base.
+ * Rien ne reste en base. La facture est rendue « au jour » : un encaissement
+ * partiel et un avoir ont suivi l'émission, et le relevé les montre ; l'original
+ * (`-original-fr.pdf`) ne montre que ce qui était vrai à l'émission.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 
@@ -35,15 +37,15 @@ try {
   await db.query("begin");
   const exemple = await emettreUneFactureDExemple(db);
   const lien = "https://app.malica.example/pme/reglages";
-  for (const [langue, quoi] of [
-    ["fr", "facture"],
-    ["en", "facture"],
-    ["ar", "facture"],
-    ["fr", "avoir"],
+  for (const [langue, quoi, auJour, nom] of [
+    ["fr", "facture", true, "facture-exemple-fr.pdf"],
+    ["en", "facture", true, "facture-exemple-en.pdf"],
+    ["ar", "facture", true, "facture-exemple-ar.pdf"],
+    ["fr", "facture", false, "facture-exemple-original-fr.pdf"],
+    ["fr", "avoir", false, "avoir-exemple-fr.pdf"],
   ]) {
-    const document = await exemple.documents(langue, quoi);
+    const document = await exemple.documents(langue, quoi, auJour);
     const pdf = rendreLaFacture(document, { lienPaiement: lien });
-    const nom = `${quoi}-exemple-${langue}.pdf`;
     writeFileSync(new URL(nom, SORTIE), pdf);
     console.log(
       `docs/facturation/exemples/${nom} — ${document.facture.numero}, ${pdf.length} octets`,
