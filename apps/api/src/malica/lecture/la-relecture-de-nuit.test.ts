@@ -469,6 +469,44 @@ describe("la relecture de nuit", { skip: !BASE_CONFIGUREE }, () => {
       assert.equal(verdict.motif, "piece_deja_lue");
     });
 
+    it("retenue sans article : les articles de la lecture d'avant ne restent pas à l'écran", async () => {
+      // Codex, PR #193 : la projection des articles n'était pas reconstruite
+      // quand la relecture retenue n'en lisait aucun.
+      const piece = await deposer(u, pme, "articles-perimes");
+      const avecUnArticle = (): VisionRead => {
+        const p = partielle("qwen-vl-ocr");
+        const article = {
+          designation: ref(0),
+          quantity: null,
+          unit_price_ht: null,
+          unit_price_ttc: null,
+          total_ht: ref(2),
+          tax_code: null,
+        };
+        return lecture(
+          "qwen-vl-ocr",
+          { ...p.selection, articles: [article] } as unknown as VisionSelection,
+          TOKENS,
+        );
+      };
+      await readPieceFlow(apiDe(u), piece, lecteurs([avecUnArticle]));
+      const articles = async () =>
+        Number(
+          (
+            await admin.query<{ n: string }>(
+              `select count(*) as n from capture.piece_articles where piece_id = $1`,
+              [piece],
+            )
+          ).rows[0]!.n,
+        );
+      assert.equal(await articles(), 1, "la première lecture projette son article");
+
+      const fait = await executer(u, pme, lecteurs([() => complete("PP-OCR", TOKENS_DE_L_AUTRE)]));
+
+      assert.equal(fait?.motif, "relecture.retenue");
+      assert.equal(await articles(), 0, "la lecture qui fait foi n'en a lu aucun");
+    });
+
     it("pas strictement meilleure : la lecture d'avant reste, et le coût se journalise quand même", async () => {
       const piece = await luePartielle("egale");
       const avant = journalisesPour(piece);

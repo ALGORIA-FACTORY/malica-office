@@ -131,8 +131,14 @@ async function projeterLesArticles(
     documentKind: string | null;
     documentDate: string | null;
   },
+  /**
+   * Reconstruire même sans article. Une relecture retenue fait foi : si elle
+   * n'en lit aucun, la projection de la lecture d'avant ne doit pas survivre à
+   * l'écran des charges (la porte SQL vide, puis n'insère rien).
+   */
+  memeVide = false,
 ): Promise<void> {
-  if (input.articles.length === 0) return;
+  if (input.articles.length === 0 && !memeVide) return;
 
   // Sans sens de facture, pas de compte : on ne suppose pas « achat ». Les
   // articles sont gardés sans imputation ; elle viendra avec la précision de
@@ -1064,7 +1070,7 @@ export const capture = {
       [input.travailId, input.pieceId, ...argumentsDeLecture(input)],
     );
 
-    await projeterLesArticles(db, input);
+    await projeterLesArticles(db, input, true);
   },
 
   /**
