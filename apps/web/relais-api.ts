@@ -58,6 +58,8 @@ const CHEMINS: ReadonlyArray<{ base: string; exact: boolean }> = [
   { base: "/journal-atelier", exact: true },
   // Malica : tout ce qui fait parler un modèle, hors de /rpc.
   { base: "/malica", exact: false },
+  // Le PDF d'une facture (`/factures/<id>/pdf`) : un flux, hors de /rpc.
+  { base: "/factures", exact: false },
   // Seuls les sous-chemins : /auth est l'écran de connexion.
   { base: "/auth", exact: false },
 ];

@@ -31,6 +31,8 @@ export interface Expedition {
   sujet: string;
   html: string;
   texte: string;
+  /** Les pièces jointes : le PDF d'une facture, rendu par l'API. */
+  pieces?: ReadonlyArray<{ nom: string; contenu: Buffer }>;
 }
 
 const API_BREVO = "https://api.brevo.com/v3/smtp/email";
@@ -64,6 +66,9 @@ export async function envoyerParBrevo(
       subject: e.sujet,
       htmlContent: e.html,
       textContent: e.texte,
+      ...(e.pieces?.length
+        ? { attachment: e.pieces.map((p) => ({ name: p.nom, content: p.contenu.toString("base64") })) }
+        : {}),
     }),
     signal: AbortSignal.timeout(10_000),
   });

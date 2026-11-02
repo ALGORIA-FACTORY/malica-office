@@ -15,8 +15,12 @@
 import type { Requete } from "../db.ts";
 import { secretsPoses } from "../paiement/prestataires.ts";
 import { versReport } from "./report-d-echeance.ts";
+import { commerceDeLaTour } from "./tour-commerce.ts";
 
 export const tour = {
+  /** Le moteur commercial : factures, avoirs, encaissements, gestes, passe, réglages. */
+  ...commerceDeLaTour,
+
   /** Vrai pour un opérateur de la plateforme : l'écran de la tour ne s'affiche qu'à lui. */
   async suisJePlateforme(db: Requete) {
     const { rows } = await db.query<{ r: boolean }>(`select app.is_platform() as r`);

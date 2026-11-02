@@ -16,6 +16,8 @@
  */
 import { configurationCourriel, envoyerParBrevo } from "../courriel/brevo.ts";
 import type { Requete } from "../db.ts";
+import type { DocumentDeFacture } from "../facturation/document/document.ts";
+import { rendreLaFacture } from "../facturation/document/rendu.ts";
 
 import { courrielDeNotification } from "./courriel-de-notification.ts";
 
@@ -71,10 +73,28 @@ export async function tourDeRelances(d: Dependances) {
             ? { libelle: c.action_libelle, url: `${config.urlPublique}${c.action_route}` }
             : null,
       });
+      // Le courriel d'une facture porte son PDF, rendu depuis l'instantané de
+      // la facture (le même octet pour octet que l'original inscrit).
+      const { rows: jointe } = await db.query<{ d: DocumentDeFacture | null }>(
+        "select notif.facture_de_l_envoi($1) as d",
+        [c.envoi_id],
+      );
+      const facture = jointe[0]?.d ?? null;
+      const pieces = facture
+        ? [
+            {
+              nom: `${facture.facture.numero}.pdf`,
+              contenu: rendreLaFacture(facture, {
+                lienPaiement:
+                  facture.route_paiement && `${config.urlPublique}${facture.route_paiement}`,
+              }),
+            },
+          ]
+        : [];
       let erreur: string | null = null;
       try {
         await envoyerParBrevo(
-          { cle: config.cle, expediteur: config.expediteur, destinataire: c.email, ...message },
+          { cle: config.cle, expediteur: config.expediteur, destinataire: c.email, ...message, pieces },
           d.fetchImpl,
         );
       } catch (e) {

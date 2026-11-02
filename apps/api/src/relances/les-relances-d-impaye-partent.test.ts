@@ -105,6 +105,9 @@ async function unImpaye(db: pg.PoolClient, palier: "suspension" | "rappel") {
   });
   const facture = r.factures[0]!.facture_id;
   // L'échéance est reculée d'après le seuil du palier voulu, lu dans la base.
+  // Le temps passe : une facture émise ne se réécrit pas (deny_mutation),
+  // l'épreuve la vieillit donc déclencheurs suspendus, le temps de l'instruction.
+  await db.query("set local session_replication_role = replica");
   await db.query(
     `update facturation.factures
         set emise_le = current_date - 1 - s.jours, echeance_le = current_date - s.jours
@@ -114,6 +117,7 @@ async function unImpaye(db: pg.PoolClient, palier: "suspension" | "rappel") {
       where id = $1`,
     [facture, `recouvrement.${palier === "suspension" ? "suspension" : "rappel"}_jours`],
   );
+  await db.query("set local session_replication_role = origin");
   return { titulaire, operateur, licence, facture };
 }
 

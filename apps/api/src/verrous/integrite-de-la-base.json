@@ -21,26 +21,35 @@
     "facturation.lectures.piece_id": "Trace de facturation : une lecture reste comptée quand la pièce lue est supprimée (20261022270000_une_piece_lue_se_supprime_et_sa_lecture_reste)."
   },
   "libelles": {
+    "acte_intervention": "select code from ref.actes_intervention",
     "avertissement_lecture": "select code from ref.avertissements_de_lecture",
     "bareme_categorie": "select code from ref.categories_de_bareme",
     "change_date_retenue": "select code from ref.change_dates_retenues",
     "change_regle_d_ecart": "select code from ref.change_regles_d_ecart",
+    "charge_famille": "select code from ref.charge_familles",
     "compte_de_service": "select code from identity.comptes_de_service",
     "concept_expert": "select code from ref.experts",
     "concept_role": "select code from ref.roles",
-    "charge_famille": "select code from ref.charge_familles",
+    "decision_facture": "select code from ref.decisions_facture",
     "document_type": "select code from ref.document_types",
     "dossier": "select code from ref.dossiers",
+    "droit_personnel": "select code from ref.droits where personnel",
+    "facture_ligne": "select code from ref.gabarits_de_ligne",
+    "facture_rubrique": "select code from ref.rubriques_facture",
     "fiscal_charge": "select code from ref.fiscal_charges",
     "journal": "select code from ref.journals",
     "justificatif_du_moyen": "select code from ref.payment_means where role_achat is not null",
     "licence_motif_suspension": "select (regexp_matches(pg_get_constraintdef(oid), '''([^'']+)''::text', 'g'))[1] from pg_constraint where conrelid = 'facturation.licences'::regclass and contype = 'c' and pg_get_constraintdef(oid) ~ '^CHECK \\(\\(motif_suspension = ANY'",
     "licence_statut": "select (regexp_matches(pg_get_constraintdef(oid), '''([^'']+)''::text', 'g'))[1] from pg_constraint where conrelid = 'facturation.licences'::regclass and contype = 'c' and pg_get_constraintdef(oid) ~ '^CHECK \\(\\(statut = ANY'",
     "mention": "select code from ref.mentions",
-    "nature_de_vente": "select code from ref.natures_de_vente",
+    "mois": "select numero::text from ref.mois",
     "moyen_en_ligne": "select code from facturation.moyens_paiement",
     "moyen_paiement": "select code from ref.payment_means",
     "moyen_paiement_par": "select code from ref.payment_means where role_achat is not null",
+    "nature_de_vente": "select code from ref.natures_de_vente",
+    "nature_document": "select code from ref.natures_document",
+    "nature_lecture_due": "select code from ref.natures_lecture_due",
+    "nature_ligne_facture": "select code from ref.natures_ligne_facture",
     "origine_du_cours": "select code from ref.rangs_des_cours",
     "paiement_motif_annulation": "select code from ref.paiement_motifs_annulation",
     "prestataire_paiement": "select code from facturation.prestataires_paiement",
@@ -51,7 +60,9 @@
     "reglage_sujet_pratique": "select code from ref.reglages_comptables_sujets",
     "reglage_sujet_risque": "select code from ref.reglages_comptables_sujets",
     "reglage_sujet_texte": "select code from ref.reglages_comptables_sujets",
+    "regle_report": "select code from ref.regles_report",
     "rejet_motif": "select code from ref.rejet_motifs",
+    "resultat_passe": "select code from ref.resultats_passe",
     "tva_declaration_ligne": "select code from ref.tva_declaration_lignes",
     "tva_nature": "select code from ref.tva_natures",
     "tva_rate": "select code from ref.tva_rates"
@@ -70,8 +81,6 @@
   },
   "portes_sans_appel": {
     "billing.next_invoice_number": "DETTE : schéma billing de l'amorçage (ses tables ne sont lues par rien) ; la facturation vit dans facturation.*. Retrait du schéma à trancher (données).",
-    "facturation.emettre_cabinet": "DETTE : la facture mensuelle du cabinet n'a pas encore de déclencheur (aucun travailleur ni écran ne l'émet) ; seules les épreuves l'appellent.",
-    "plateforme.accorder_lectures": "DETTE : porte d'opérateur de la tour (docs/livraison-2026-10-19/07-la-tour-de-controle.md), sans écran à ce jour.",
     "plateforme.servir_requisition": "DETTE : porte d'opérateur de la tour (réquisition d'une autorité), sans écran à ce jour.",
     "public.etablissement_archiver": "DETTE : l'archivage d'un établissement (20261018130000) n'a pas d'écran.",
     "public.set_engagement_status": "DETTE : porte de statut de mandat de l'amorçage ; les mandats passent par les portes du cabinet. Retrait à trancher."
@@ -108,7 +117,10 @@
       "app.historique_du_mois_de_tva",
       "app.reglages_comptables_arreter"
     ],
-    "parametrage.regles_de_change": ["app.decisions_en_vigueur", "app.regle_de_change_arreter"],
+    "parametrage.regles_de_change": [
+      "app.decisions_en_vigueur",
+      "app.regle_de_change_arreter"
+    ],
     "parametrage.role_bindings": [
       "app.nature_des_comptes",
       "apps/api/src/depots/capture.ts",
@@ -118,7 +130,10 @@
       "public.role_compte_definir",
       "public.role_compte_rendre_au_pack"
     ],
-    "parametrage.tva_affectations": ["app.declaration_tva", "app.tva_affecter"]
+    "parametrage.tva_affectations": [
+      "app.declaration_tva",
+      "app.tva_affecter"
+    ]
   },
   "litteraux_metier": {
     "apps/api/src/circuit-d-essai.ts": {
@@ -133,6 +148,12 @@
       "raison": "Générateur de pièces synthétiques de la fabrique : « 118 » est un NUMÉRO de facture imprimé sur la pièce, pas un compte.",
       "litteraux": {
         "compte 118": 1
+      }
+    },
+    "apps/api/src/facturation/document/scenario-d-exemple.ts": {
+      "raison": "Scénario d'exemple du rendu des factures (importé par l'épreuve du rendu et par outils/factures-d-exemple.mjs) : une société d'essai tunisienne, fictive.",
+      "litteraux": {
+        "devise TND": 1
       }
     },
     "apps/api/src/malica/lecture/jeu-d-or.ts": {

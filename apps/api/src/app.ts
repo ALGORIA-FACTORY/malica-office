@@ -51,6 +51,7 @@ import {
   servirUnExport,
   sonderLeStockage,
 } from "./stockage.ts";
+import { servirLaFacture } from "./facturation/document/servir.ts";
 
 /** Le journal d'atelier, en fichier — relisible après coup, en développement seulement. */
 const JOURNAL_ATELIER = new URL("../journal-atelier.log", import.meta.url);
@@ -137,6 +138,11 @@ app.get("/pieces/:id/miniature", exigerIdentite, (req, res, next) => {
 /** Un export numéroté du journal du jour, gardé — voir `stockage.ts`. Même garde, même RLS. */
 app.get("/exports/:id/contenu", exigerIdentite, (req, res, next) => {
   servirUnExport(req, res).catch(next);
+});
+
+/** Le PDF d'une facture ou d'un avoir, rendu sous l'identité de l'appelant — voir `facturation/document/servir.ts`. */
+app.get("/factures/:id/pdf", exigerIdentite, (req, res, next) => {
+  servirLaFacture(req, res).catch(next);
 });
 
 app.use(express.json({ limit: "1mb" }));

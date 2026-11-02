@@ -247,11 +247,15 @@ describe("une facture se paie en ligne", { skip: !ADMIN }, () => {
   it("suspendue pour impayé, la licence reprend quand plus aucune facture n'est en retard", async () => {
     await aBlanc(async (db) => {
       const d = await uneFacture(db);
+      // Le temps passe : une facture émise ne se réécrit pas (deny_mutation),
+      // l'épreuve la vieillit donc déclencheurs suspendus, le temps de l'instruction.
+      await db.query("set local session_replication_role = replica");
       await db.query(
         `update facturation.factures
             set emise_le = current_date - 30, echeance_le = current_date - 15 where id = $1`,
         [d.facture],
       );
+      await db.query("set local session_replication_role = origin");
       await db.query(
         `update facturation.licences
             set statut = 'suspendue', suspendue_le = now(), motif_suspension = 'impaye'
