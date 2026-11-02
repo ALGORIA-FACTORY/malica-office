@@ -181,6 +181,94 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /**
+   * La passe de nuit : le réglage en vigueur, et l'état du relecteur de nuit
+   * avec son libellé dans la langue demandée (le français à défaut).
+   */
+  async reglageRelectureNuit(db: Requete, locale: string) {
+    const { rows } = await db.query<{ reglage: unknown; compte: unknown }>(
+      `select (select to_jsonb(r) - 'decide_par' from plateforme.reglages_relecture_nuit r
+                order by r.decide_le desc, r.id desc limit 1) as reglage,
+              (select jsonb_build_object('code', v.code, 'actif', v.actif, 'motif', v.motif,
+                                         'decide_le', v.decide_le,
+                                         'libelle', coalesce(l.value, f.value, v.code))
+                 from identity.comptes_de_service_v v
+                 left join ref_labels_v l on l.ns = 'compte_de_service' and l.key = v.code
+                                         and l.locale = $1
+                 left join ref_labels_v f on f.ns = 'compte_de_service' and f.key = v.code
+                                         and f.locale = 'fr'
+                order by v.code limit 1) as compte`,
+      [locale],
+    );
+    return { reglage: rows[0]?.reglage ?? null, compte: rows[0]?.compte ?? null };
+  },
+
+  /** La tour règle la passe de nuit : daté, motivé, en ajout seul. */
+  async reglerRelectureNuit(
+    db: Requete,
+    r: {
+      actif: boolean;
+      fenetreDebut: string;
+      fenetreFin: string;
+      plafondUsd24hPlateforme: string;
+      plafondUsd24hDossier: string;
+      relecturesMax24hDossier: number;
+      partMaxPlafondMensuel: string;
+      alerteRetardNuits: number;
+    },
+    motif: string,
+  ) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.relecture_nuit_regler($1, $2::time, $3::time, $4::numeric, $5::numeric,
+                                                $6, $7::numeric, $8, $9) as r`,
+      [
+        r.actif,
+        r.fenetreDebut,
+        r.fenetreFin,
+        r.plafondUsd24hPlateforme,
+        r.plafondUsd24hDossier,
+        r.relecturesMax24hDossier,
+        r.partMaxPlafondMensuel,
+        r.alerteRetardNuits,
+        motif,
+      ],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour active ou révoque un compte de service, sans déploiement : motivé, en ajout seul. */
+  async reglerCompteDeService(db: Requete, code: string, actif: boolean, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select identity.compte_de_service_regler($1, $2, $3) as r`,
+      [code, actif, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /**
+   * Ce que la passe de nuit a fait, par dossier et par jour local du dossier
+   * (`plateforme.relectures_de_nuit_v`), et les derniers passages avec leur
+   * raison d'arrêt. Les bornes ne sont qu'une borne d'affichage.
+   */
+  async relecturesDeNuit(db: Requete) {
+    const [lignes, passages] = await Promise.all([
+      db.query(
+        `select jour, tenant_id, dossier, retenues, ecartees, abstentions, pannes, epuisees,
+                en_attente, plus_ancienne_nuits, en_retard, cout_usd::text as cout_usd, sans_cout
+           from plateforme.relectures_de_nuit_v
+          order by jour desc nulls first, dossier
+          limit 200`,
+      ),
+      db.query(
+        `select id, ouvert_le, raison, ferme_le, compteurs
+           from plateforme.passages_de_nuit_v
+          order by ouvert_le desc
+          limit 20`,
+      ),
+    ]);
+    return { lignes: lignes.rows, passages: passages.rows };
+  },
+
   /** L'émetteur des factures en vigueur, ou `null` tant qu'aucun n'est désigné. */
   async emetteur(db: Requete) {
     const { rows } = await db.query<{ r: unknown }>(`select plateforme.emetteur_en_vigueur() as r`);

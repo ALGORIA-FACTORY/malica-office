@@ -488,8 +488,11 @@ export const supervision = {
     // « ecriture.forcee » de la MÊME écriture qui dit ce qui s'est passé. Le
     // fait reste au journal d'audit (R7) ; la piste de la pièce ne le répète
     // pas sous un nom faux.
+    // `service` : le code du compte de service quand l'acteur n'est pas une
+    // personne (le relecteur de nuit) — l'écran dit qui a agi, jamais un uuid.
     const { rows } = await db.query(
-      `select e.id, e.action, e.actor, e.at, e.motif_id, e.payload
+      `select e.id, e.action, e.actor, e.at, e.motif_id, e.payload,
+              app.compte_de_service_de(e.actor) as service
          from event_log_v e
         where (e.object_id = $1 or e.payload ->> 'piece_id' = $2)
           and not (e.action = 'ecriture.proposed'
@@ -505,6 +508,7 @@ export const supervision = {
       actor: (r["actor"] as string | null) ?? null,
       at: r["at"] as string,
       motifId: (r["motif_id"] as string | null) ?? null,
+      service: (r["service"] as string | null) ?? null,
       payload: r["payload"],
     }));
   },

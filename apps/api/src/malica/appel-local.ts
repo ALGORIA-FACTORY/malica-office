@@ -24,8 +24,8 @@
  * sur ces formes-là. On les leur rend à l'identique, pour qu'un déplacement de
  * code ne change pas ce qu'ils lisent.
  */
-import { sousIdentite } from "../db.ts";
-import { executerRpc } from "../rpc.ts";
+import type { AvecBase } from "../fabrique/travaux-execution.ts";
+import { executerRpc, RpcIntrouvable } from "../rpc.ts";
 import { lireContenu } from "../stockage.ts";
 
 export interface AppelApi {
@@ -37,17 +37,30 @@ export interface AppelApi {
 
 export class PieceIntrouvable extends Error {}
 
-export function creerAppelLocal(utilisateurId: string): AppelApi {
+/**
+ * Les méthodes qu'un appelant restreint peut joindre, par dépôt. Hors de la
+ * liste, l'appel répond comme une méthode inconnue — avant toute transaction.
+ */
+export type MethodesPermises = Readonly<Record<string, ReadonlySet<string>>>;
+
+/**
+ * L'API en mémoire, sous l'identité que porte `executer` : une personne
+ * (`sousIdentite`), ou le relecteur de nuit (`sousLeRelecteurDeNuit`). C'est
+ * le même code pour les deux : seul l'exécuteur change, et, pour un service,
+ * la liste des méthodes qu'il a le droit de joindre.
+ */
+export function creerAppelLocal(executer: AvecBase, permises?: MethodesPermises): AppelApi {
   return {
     async rpc<T>(depot: string, methode: string, args: unknown[] = []): Promise<T> {
-      const resultat = await sousIdentite(utilisateurId, (db) =>
-        executerRpc(db, { depot, methode, args }, "serveur"),
-      );
+      if (permises && !permises[depot]?.has(methode)) {
+        throw new RpcIntrouvable(`méthode inconnue : ${depot}.${methode}`);
+      }
+      const resultat = await executer((db) => executerRpc(db, { depot, methode, args }, "serveur"));
       return (resultat === undefined ? undefined : JSON.parse(JSON.stringify(resultat))) as T;
     },
 
     async contenu(pieceId: string) {
-      const contenu = await sousIdentite(utilisateurId, (db) => lireContenu(db, pieceId));
+      const contenu = await executer((db) => lireContenu(db, pieceId));
       if (!contenu) throw new PieceIntrouvable(`pièce introuvable : ${pieceId}`);
       return contenu;
     },

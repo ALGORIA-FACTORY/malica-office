@@ -319,7 +319,7 @@
     "fodec.traitement": "par_article_au_cout",
     "immobilisation.seuil": "200",
     "immobilisation.traitement": "actif_amorti",
-    "lecture.relecture_delai_heures": "12",
+    "lecture.relecture_delai_heures": "4",
     "lecture.relecture_nuit": "coupee",
     "lecture.sudoku": "designe",
     "mois_tva.date": "exigibilite_calculee",

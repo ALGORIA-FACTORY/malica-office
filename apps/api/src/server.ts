@@ -10,6 +10,7 @@ import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
 
 import { app } from "./app.ts";
 import { fermerLePool } from "./db.ts";
+import { demarrerLaNuit } from "./malica/lecture/demarrer-la-nuit.ts";
 import { demarrerLesRelances } from "./relances/demarrer.ts";
 import { racine } from "./stockage.ts";
 
@@ -40,6 +41,9 @@ racine();
 
 // Les relances d'impayé : rien ne part tant que la tour ne les a pas ouvertes.
 demarrerLesRelances();
+
+// La passe de nuit : rien ne se relit tant que la tour ne l'a pas ouverte.
+demarrerLaNuit();
 
 const port = Number(process.env["PORT"] ?? 3000);
 const serveur = app.listen(port, () => {

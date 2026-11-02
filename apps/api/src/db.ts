@@ -114,13 +114,60 @@ export async function sousCleDuCabinet<T>(
   return sousClaims({ sub: cle.auNomDe, api_tenant: cle.tenantId }, travail);
 }
 
+/**
+ * Exécute un travail sous le RELECTEUR DE NUIT, pour un seul dossier.
+ *
+ * Ce n'est ni une personne, ni un rôle privilégié : la transaction endosse
+ * `authenticated` comme toutes les autres, et la base décide de ce que ce
+ * compte voit (20261118100000_le_relecteur_de_nuit) — son dossier tant qu'une
+ * relecture y est due ou en cours, les pièces qu'elle vise, rien d'autre.
+ *
+ * C'est la SEULE fonction qui pose ses claims. L'identifiant du compte est lu
+ * en base par son code, sous le rôle de connexion de l'API (la fonction n'est
+ * ouverte qu'à lui) : aucun identifiant de compte n'est écrit en TypeScript.
+ * Sans la marque du serveur, ou si la tour a révoqué le compte, la base ne
+ * reconnaît plus le service, et il ne voit plus rien.
+ */
+export async function sousLeRelecteurDeNuit<T>(
+  tenantId: string,
+  travail: (db: Requete) => Promise<T>,
+): Promise<T> {
+  return sousClaims(
+    async (db) => {
+      const { rows } = await db.query<{ id: string | null }>(
+        "select app.compte_de_service_id($1) as id",
+        [COMPTE_DU_RELECTEUR],
+      );
+      const id = rows[0]?.id;
+      if (!id) throw new Error(`compte de service absent : ${COMPTE_DU_RELECTEUR}`);
+      return { sub: id, service: COMPTE_DU_RELECTEUR, service_tenant: tenantId };
+    },
+    async (db) => {
+      await db.query("select set_config('malica.origine', 'serveur', true)");
+      return travail(db);
+    },
+  );
+}
+
+/** Le code du compte, tel que `identity.comptes_de_service` le déclare. */
+const COMPTE_DU_RELECTEUR = "relecteur_de_nuit";
+
+/**
+ * Ouvre la transaction, endosse `authenticated` et pose les claims.
+ *
+ * Les claims peuvent se LIRE en base avant d'endosser le rôle : c'est le cas
+ * d'un compte de service, dont l'identifiant n'est ouvert qu'au rôle de
+ * connexion de l'API.
+ */
 async function sousClaims<T>(
-  claims: Record<string, string>,
+  claimsOuLecture: Record<string, string> | ((db: Requete) => Promise<Record<string, string>>),
   travail: (db: Requete) => Promise<T>,
 ): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query("begin");
+    const claims =
+      typeof claimsOuLecture === "function" ? await claimsOuLecture(client) : claimsOuLecture;
     await client.query("set local role authenticated");
     for (const [nom, valeur] of Object.entries(claims)) {
       // Le troisième argument à `true` limite la valeur à la transaction.
@@ -158,6 +205,36 @@ export async function horsRlsAuthentificationSeule<T>(
     throw erreur;
   } finally {
     client.release();
+  }
+}
+
+/**
+ * Tient un verrou consultatif de SESSION (sa clé, un `bigint` dit par la base)
+ * le temps d'un travail, ou rend `null`
+ * s'il est déjà tenu ailleurs — par ce processus ou par une autre API.
+ *
+ * Une connexion est réservée pour toute la durée : un verrou de session meurt
+ * avec elle, et un processus tué le relâche donc de lui-même. Le travail ouvre
+ * ses propres transactions courtes ; cette connexion ne fait que tenir le
+ * verrou, hors de toute transaction.
+ */
+export async function sousVerrouDeSession<T>(
+  cle: string,
+  travail: () => Promise<T>,
+): Promise<T | null> {
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query<{ ok: boolean }>(
+      "select pg_try_advisory_lock($1::bigint) as ok",
+      [cle],
+    );
+    if (!rows[0]?.ok) return null;
+    return await travail();
+  } finally {
+    // La connexion est DÉTRUITE, pas rendue : le verrou meurt avec elle, même
+    // si le déverrouillage aurait échoué — une connexion rendue au pool en le
+    // tenant encore bloquerait toutes les passes suivantes.
+    client.release(true);
   }
 }
 

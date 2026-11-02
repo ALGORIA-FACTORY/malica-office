@@ -413,3 +413,15 @@ export function libelleDeLAction(action: string, t: T, payload?: unknown): strin
   };
   return t(ACTIONS[action] ?? "cab.audit.autre");
 }
+
+/**
+ * Qui a agi, quand ce n'est pas une personne : le compte de service
+ * (`identity.comptes_de_service`), dit par son nom, jamais par un uuid. Un
+ * code que l'écran ne connaît pas encore se dit « un service », sans mentir.
+ */
+export function libelleDuService(code: string, t: T): string {
+  const SERVICES: Record<string, MessageKey> = {
+    relecteur_de_nuit: "cab.audit.service.relecteur_de_nuit",
+  };
+  return t(SERVICES[code] ?? "cab.audit.service.autre");
+}

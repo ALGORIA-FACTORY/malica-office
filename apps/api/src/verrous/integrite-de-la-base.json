@@ -25,6 +25,7 @@
     "bareme_categorie": "select code from ref.categories_de_bareme",
     "change_date_retenue": "select code from ref.change_dates_retenues",
     "change_regle_d_ecart": "select code from ref.change_regles_d_ecart",
+    "compte_de_service": "select code from identity.comptes_de_service",
     "concept_expert": "select code from ref.experts",
     "concept_role": "select code from ref.roles",
     "charge_famille": "select code from ref.charge_familles",
@@ -136,6 +137,12 @@
     },
     "apps/api/src/malica/lecture/jeu-d-or.ts": {
       "raison": "Jeu d'or des épreuves de lecture : la devise que la pièce réelle imprime.",
+      "litteraux": {
+        "devise TND": 1
+      }
+    },
+    "apps/api/src/malica/lecture/lectures-d-essai.ts": {
+      "raison": "Lectures d'essai partagées par les épreuves de la relecture et de la passe de nuit (importé par les seuls *.test.ts) : la devise de la facture fictive.",
       "litteraux": {
         "devise TND": 1
       }

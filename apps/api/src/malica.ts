@@ -54,7 +54,8 @@ const Locale = z.enum(["fr", "en", "ar"]).default("fr");
 
 /** L'API vue de l'intérieur, sous l'identité de la requête. */
 function api(req: Request) {
-  return creerAppelLocal(req.utilisateur!.id);
+  const id = req.utilisateur!.id;
+  return creerAppelLocal((travail) => sousIdentite(id, travail));
 }
 
 /**

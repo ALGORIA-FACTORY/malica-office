@@ -159,7 +159,7 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
     assert.equal(r.sujets.length, 12);
     // La lecture prouvée (15 novembre 2026) : un réglage de Malica, pas une règle
     // fiscale. Le sudoku désigne (décision du dirigeant, 1er novembre 2026) ; la
-    // relecture de nuit est coupée, à 12 heures.
+    // relecture de nuit est coupée, à 4 heures (passe de nuit, 2 novembre 2026).
     assert.deepEqual(
       ["lecture.sudoku", "lecture.relecture_nuit", "lecture.relecture_delai_heures"].map((code) => [
         valeur(r, code)?.valeur,
@@ -168,7 +168,7 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
       [
         ["designe", "pack"],
         ["coupee", "pack"],
-        ["12", "pack"],
+        ["4", "pack"],
       ],
     );
     for (const [code, attendu] of Object.entries(CHOIX_DU_CEO)) {
@@ -214,7 +214,7 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
       ],
     );
     // La relecture de nuit et son délai s'appliquent depuis le 17 novembre 2026
-    // (`app.relecture_de_nuit`) ; ce qui reste — le déclencheur planifié — se dit.
+    // (`app.relecture_de_nuit`) ; depuis le 2 novembre 2026, la passe de nuit la fait partir.
     for (const code of ["lecture.relecture_nuit", "lecture.relecture_delai_heures"])
       assert.equal(valeur(r, code)?.appliquee, true, code);
     assert.deepEqual(
@@ -224,10 +224,7 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
         ["coupee", true],
       ],
     );
-    assert.match(
-      r.sujets.find((x) => x.code === "lecture")!.incertain ?? "",
-      /déclencheur planifié/,
-    );
+    assert.match(r.sujets.find((x) => x.code === "lecture")!.incertain ?? "", /passe de nuit/);
     // Appliqués depuis le 1er novembre 2026 : le compte de vente par nature,
     // l'avoir lié à sa facture — mais pas l'avoir « libre », qui le dit ; et
     // depuis le 11 novembre 2026, le mois de TVA par l'exigibilité.
