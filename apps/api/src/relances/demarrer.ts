@@ -3,6 +3,7 @@
  * appellent `tourDeRelances` directement, sans horloge ni base réelle.
  */
 import { horsRlsAuthentificationSeule } from "../db.ts";
+import { tracerUnTravail } from "../observabilite/journal.ts";
 
 import { tourDeRelances } from "./travailleur.ts";
 
@@ -15,7 +16,18 @@ export function demarrerLesRelances(env: Record<string, string | undefined> = pr
   let annonceSansCle = false;
   const tour = async () => {
     try {
-      const r = await tourDeRelances({ executer: horsRlsAuthentificationSeule, env });
+      // Une trace par tour : chaque courriel remis y est une étape `envoi`.
+      const r = await tracerUnTravail(
+        "relances",
+        null,
+        () => tourDeRelances({ executer: horsRlsAuthentificationSeule, env }),
+        {
+          juger: (bilan) => ({
+            issue: bilan.echecs > 0 ? "erreur" : "ok",
+            resultat: bilan.sansCle ? "sans_cle" : `remis_${bilan.remis}_echecs_${bilan.echecs}`,
+          }),
+        },
+      );
       if (r.sansCle && !annonceSansCle) {
         console.warn("[relances] BREVO_API_KEY absente : les courriels décidés restent à remettre");
         annonceSansCle = true;

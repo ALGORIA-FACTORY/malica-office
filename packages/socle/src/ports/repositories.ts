@@ -1261,6 +1261,17 @@ export interface NewPiece {
   idempotencyKey: string;
 }
 
+/**
+ * Le suivi d'une opération à travers ses appels : l'identifiant de trace né à
+ * la capture (`x-malica-trace`), et la clé d'idempotence du pas (`x-malica-cle`)
+ * — un renvoi après reconnexion réutilise les deux, et l'API ne le compte
+ * qu'une fois. Voir `docs/journalisation-parcours.md`.
+ */
+export interface SuiviDeTrace {
+  trace: string;
+  cle?: string;
+}
+
 /** La ligne d'une pièce, sans ses octets — ce que `enregistrer` écrit. */
 export interface NouvellePiece {
   tenantId: string;
@@ -1447,8 +1458,13 @@ export interface CaptureRepository {
    * ensuite (redéposer remplace). Une application tuée au milieu rejoue le pas
    * manquant, jamais les deux.
    */
-  enregistrer(piece: NouvellePiece): Promise<string>;
-  deposerOctets(pieceId: string, octets: Blob, contentType: string): Promise<void>;
+  enregistrer(piece: NouvellePiece, suivi?: SuiviDeTrace | null): Promise<string>;
+  deposerOctets(
+    pieceId: string,
+    octets: Blob,
+    contentType: string,
+    suivi?: SuiviDeTrace | null,
+  ): Promise<void>;
   /** Les deux pas d'un trait, pour qui n'a pas de file — le cabinet, un import. */
   register(input: NewPiece): Promise<string>;
   list(tenantId: string): Promise<Piece[]>;
@@ -3638,6 +3654,27 @@ export interface JournalRepository {
   dernieres(tenantId: string, limite?: number): Promise<PanneConsignee[]>;
   /** « Tout est reglé » : une marque datée ; rien n'est effacé (R7). */
   regler(tenantId: string): Promise<{ le: string }>;
+  /**
+   * Les étapes que l'appareil a vécues hors de toute requête (capture, file
+   * hors ligne, synchronisation, affichage), par lots de cinquante au plus.
+   * Elles vont au journal d'observabilité, pas à celui des pannes.
+   */
+  etapes(lot: readonly EtapeDeLAppareil[]): Promise<{ acceptees: number; ecartees: number }>;
+}
+
+/** Une étape de l'appareil : des identifiants et des scalaires courts, ni photo ni texte. */
+export interface EtapeDeLAppareil {
+  trace: string;
+  /** `perte` : ce que l'appareil a dû laisser tomber, compté (`nombre`, `raison`). */
+  etape: "capture" | "file_hors_ligne" | "synchronisation" | "affiche" | "perte";
+  issue: "ok" | "refus" | "erreur" | "ignore";
+  /** Ce qui fait « la même étape » : un renvoi de la même clé est une répétition. */
+  cle: string;
+  /** ISO 8601. */
+  debut: string;
+  dureeMs?: number | null;
+  piece?: string | null;
+  detail?: Readonly<Record<string, string | number | boolean | null>>;
 }
 
 /** Une panne inscrite au journal. */

@@ -42,6 +42,7 @@ import { introuvableLisible, refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
 import { malica } from "./malica.ts";
 import { moteurDuSecondLecteur } from "./malica/lecture/paddle.ts";
+import { emettreLeGeste, gesteDe } from "./observabilite/gestes.ts";
 import { codeDuRefus, consigner } from "./observabilite/journal.ts";
 import { issueDuStatut, tracerLaRequete } from "./observabilite/requete.ts";
 import { traceCourante } from "./observabilite/trace.ts";
@@ -417,32 +418,43 @@ const NOM_D_APPEL = /^[A-Za-z][A-Za-z0-9]{0,63}$/;
  * et les lignes d'audit que l'appel a écrites — référencées, pas recopiées.
  * Elle s'écrit à la sortie, que l'appel réussisse, soit refusé ou tombe : le
  * journal a sa propre connexion, une transaction annulée n'emporte pas la trace.
+ *
+ * Un appel que `observabilite.gestes` dit sensible y ajoute son étape MÉTIER
+ * (`observabilite/gestes.ts`) : le geste, l'objet, la pièce, l'audit.
  */
-function noterLAppel(res: Response, appel: { depot: string; methode: string }): void {
+function noterLAppel(
+  res: Response,
+  appel: { depot: string; methode: string; args: unknown[] },
+): void {
   const trace = traceCourante();
   if (!trace) return;
   const debut = new Date();
   res.once("close", () => {
     const issue = res.writableFinished ? issueDuStatut(res.statusCode) : "ignore";
     const refus: unknown = res.locals["refus"];
+    // La clé du refus, sans les valeurs qui la suivent ; jamais un texte brut.
+    const codeRefus = typeof refus === "string" ? codeDuRefus(refus) : null;
+    const dureeMs = Date.now() - debut.getTime();
     consigner(
       "rpc",
       issue,
       {
         debut,
-        dureeMs: Date.now() - debut.getTime(),
+        dureeMs,
         // Une transaction qui n'a pas abouti n'a rien audité.
         audits: issue === "ok" ? trace.audits : [],
         detail: {
           depot: NOM_D_APPEL.test(appel.depot) ? appel.depot : null,
           methode: NOM_D_APPEL.test(appel.methode) ? appel.methode : null,
           statut: res.statusCode,
-          // La clé du refus, sans les valeurs qui la suivent ; jamais un texte brut.
-          code_refus: typeof refus === "string" ? codeDuRefus(refus) : null,
+          code_refus: codeRefus,
         },
       },
       trace,
     );
+    void gesteDe(appel.depot, appel.methode).then((geste) => {
+      if (geste) emettreLeGeste(geste, appel, trace, { issue, codeRefus, debut, dureeMs });
+    });
   });
 }
 

@@ -279,6 +279,14 @@ export async function consignerEnBase(evenements: readonly unknown[]): Promise<B
   return rows[0]!.bilan;
 }
 
+/** Le référentiel du journal (gestes, étapes de l'appareil), tel que la base le rend. */
+export async function lireLeReferentielDuJournal(): Promise<unknown> {
+  const { rows } = await poolDuJournal.query<{ r: unknown }>(
+    "select observabilite.referentiel_du_journal() as r",
+  );
+  return rows[0]!.r;
+}
+
 /** Purge un paquet de traces au-delà de la rétention réglée en base ; rend leur nombre. */
 export async function purgerLeJournal(): Promise<number> {
   const { rows } = await poolDuJournal.query<{ n: number }>("select observabilite.purger() as n");

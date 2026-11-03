@@ -22,7 +22,9 @@ import type {
   ReponseDeMalica,
   ResultatRedaction,
 } from "@malica/socle/ports/malica";
+import type { SuiviDeTrace } from "@malica/socle/ports/repositories";
 
+import { entetesDuSuivi, suiviDesArguments } from "@/lib/parcours/traces";
 import { transport } from "@/lib/transport";
 import { ErreurApi } from "@/lib/transport/erreurs";
 
@@ -33,7 +35,13 @@ import { ErreurApi } from "@/lib/transport/erreurs";
  */
 async function appelerRoute<T>(
   chemin: string,
-  init: { method?: "GET" | "POST"; corps?: unknown; octets?: Blob } = {},
+  init: {
+    method?: "GET" | "POST";
+    corps?: unknown;
+    octets?: Blob;
+    /** La lecture d'une pièce : elle porte la trace née à sa capture, si l'appareil la connaît. */
+    suivi?: SuiviDeTrace | null;
+  } = {},
 ): Promise<T> {
   const reponse = await transport().appeler(`/malica${chemin}`, {
     method: init.method ?? "POST",
@@ -41,7 +49,7 @@ async function appelerRoute<T>(
       ? { headers: init.octets.type ? { "Content-Type": init.octets.type } : {}, body: init.octets }
       : init.corps !== undefined
         ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(init.corps) }
-        : {}),
+        : { headers: entetesDuSuivi(init.suivi) }),
   });
   if (!reponse.ok) {
     const corps = (await reponse.json().catch(() => null)) as { erreur?: string } | null;
@@ -55,19 +63,25 @@ async function appelerRoute<T>(
 export function creerMalicaHttp(): MalicaPort {
   return {
     lirePiece(pieceId: string): Promise<LectureDePiece> {
-      return appelerRoute(`/lectures/${pieceId}`);
+      return appelerRoute(`/lectures/${pieceId}`, { suivi: suiviDesArguments([pieceId]) });
     },
 
     etatDeLecture(pieceId: string): Promise<EtatDeLecture> {
-      return appelerRoute(`/lectures/${pieceId}`, { method: "GET" });
+      return appelerRoute(`/lectures/${pieceId}`, {
+        method: "GET",
+        suivi: suiviDesArguments([pieceId]),
+      });
     },
 
-    async demanderLaLecture(pieceId: string): Promise<{ travailId: string; deja: boolean }> {
+    async demanderLaLecture(
+      pieceId: string,
+      suivi?: SuiviDeTrace | null,
+    ): Promise<{ travailId: string; deja: boolean }> {
       const { travailId, deja } = await appelerRoute<{
         enCours: boolean;
         travailId: string;
         deja: boolean;
-      }>(`/lectures/${pieceId}?attendre=0`);
+      }>(`/lectures/${pieceId}?attendre=0`, { suivi: suivi ?? suiviDesArguments([pieceId]) });
       return { travailId, deja };
     },
 

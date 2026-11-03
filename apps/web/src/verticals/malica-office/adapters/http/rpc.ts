@@ -10,12 +10,28 @@
  * (`malica.ts`). Et la politique de l'appel — session, jeton, réseau,
  * version — n'est pas ici non plus : elle est dans `lib/transport`, partagée.
  */
+import type { SuiviDeTrace } from "@malica/socle/ports/repositories";
+
+import { entetesDuSuivi, suiviDesArguments } from "@/lib/parcours/traces";
 import { transport } from "@/lib/transport";
 
-export async function appeler(depot: string, methode: string, args: unknown[]): Promise<unknown> {
+/**
+ * Un appel nomme une pièce dont l'appareil connaît la trace : il la porte
+ * (`x-malica-trace`), et l'API rattache ses étapes à la capture. Le suivi
+ * explicite d'un pas de la file y ajoute sa clé (`x-malica-cle`).
+ */
+export async function appeler(
+  depot: string,
+  methode: string,
+  args: unknown[],
+  suivi?: SuiviDeTrace | null,
+): Promise<unknown> {
   const { resultat } = await transport().json<{ resultat: unknown }>("/rpc", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...entetesDuSuivi(suivi ?? suiviDesArguments(args)),
+    },
     body: JSON.stringify({ depot, methode, args }),
   });
   return resultat;

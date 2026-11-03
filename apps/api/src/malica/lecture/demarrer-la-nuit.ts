@@ -14,6 +14,7 @@ import {
   sousLeRelecteurDeNuit,
   sousVerrouDeSession,
 } from "../../db.ts";
+import { tracerUnTravail } from "../../observabilite/journal.ts";
 
 import { tourDeNuit } from "./passe-de-nuit.ts";
 
@@ -31,12 +32,24 @@ export function demarrerLaNuit() {
         );
         return rows[0]!.cle;
       });
-      const bilan = await sousVerrouDeSession(cle, () =>
-        tourDeNuit({
-          executer: horsRlsAuthentificationSeule,
-          avecService: (tenantId) => (travail) => sousLeRelecteurDeNuit(tenantId, travail),
-          maintenant: () => new Date(),
-        }),
+      // Une trace par tic ; chaque relecture y naît rattachée à sa pièce (`executerUnTravail`).
+      const bilan = await tracerUnTravail(
+        "passe_de_nuit",
+        null,
+        () =>
+          sousVerrouDeSession(cle, () =>
+            tourDeNuit({
+              executer: horsRlsAuthentificationSeule,
+              avecService: (tenantId) => (travail) => sousLeRelecteurDeNuit(tenantId, travail),
+              maintenant: () => new Date(),
+            }),
+          ),
+        {
+          juger: (b) => ({
+            issue: (b?.pannes ?? 0) > 0 ? "erreur" : "ok",
+            resultat: b?.passage ? (b.raison ?? "interrompu") : "sans_passage",
+          }),
+        },
       );
       if (bilan?.passage) {
         console.log(

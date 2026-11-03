@@ -44,6 +44,7 @@ import {
   relue,
   type EcritureEnSaisie,
 } from "@/lib/ecriture-du-cabinet";
+import { AffichageSignale } from "@/components/malica/affichage-signale";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnChiffres, montant } from "@/lib/lisible";
 import { MOT_CABINET } from "@/lib/statut";
@@ -670,6 +671,18 @@ export function EcritureDuCabinet({
           >
             {controle && !controle.defaut ? t("cab.ecriture.equilibree") : manque}
           </p>
+          {/*
+           * Ce que l'écran montre de la lecture ou de l'écriture, tel quel :
+           * une saisie en cours n'est pas un résultat affiché.
+           */}
+          {telleQuelle && controle ? (
+            <AffichageSignale
+              pieceId={pieceId}
+              ecran="comptabilite"
+              source={depart.depart}
+              valeurs={{ total_debit: controle.totalDebit, total_credit: controle.totalCredit }}
+            />
+          ) : null}
           <p className="num text-end">
             <span className="sr-only">{t("pme.journal.debit")} </span>
             {controle?.totalDebit ? montant(controle.totalDebit, locale) : "—"}

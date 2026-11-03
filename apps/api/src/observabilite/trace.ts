@@ -36,12 +36,23 @@ export interface Trace {
   piece: string | null;
   /** Les lignes d'`audit.event_log` écrites par l'appel en cours, relues avant le commit. */
   audits: string[];
+  /** Ce que ces lignes portent — dossier, table, objet, action —, noté par la base au fil de l'eau. */
+  objets: ObjetAudite[];
+}
+
+/** L'objet d'une ligne d'`audit.event_log`, tel que la transaction l'a noté. */
+interface ObjetAudite {
+  readonly dossier: string | null;
+  /** `schema.table` */
+  readonly table: string;
+  readonly objet: string | null;
+  readonly action: string;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Un identifiant bien formé, ou rien : ce qui vient du réseau ne se croit pas sur parole. */
-function uuidBienForme(valeur: unknown): string | null {
+export function uuidBienForme(valeur: unknown): string | null {
   return typeof valeur === "string" && UUID.test(valeur) ? valeur.toLowerCase() : null;
 }
 
@@ -92,6 +103,7 @@ export function nouvelleTrace(
     acteur: uuidBienForme(champs.acteur),
     piece: null,
     audits: [],
+    objets: [],
   };
 }
 
@@ -107,12 +119,30 @@ export function noterLObjet(objet: { tenant?: string | null; piece?: string | nu
   trace.piece ??= uuidBienForme(objet.piece);
 }
 
-/** Ajoute à la trace en cours les lignes d'audit qu'une transaction vient d'écrire. */
-export function noterLesAudits(identifiants: readonly string[]): void {
+/**
+ * Ajoute à la trace en cours les lignes d'audit qu'une transaction vient
+ * d'écrire, et leurs objets. Le dossier de la première nomme celui de
+ * l'opération s'il ne l'était pas : c'est la base qui l'a écrit.
+ */
+export function noterLesAudits(
+  identifiants: readonly string[],
+  objets: readonly unknown[] = [],
+): void {
   const trace = traceCourante();
   if (!trace) return;
   for (const id of identifiants) {
     const propre = uuidBienForme(id);
     if (propre && !trace.audits.includes(propre)) trace.audits.push(propre);
   }
+  for (const brut of objets) {
+    const o = brut as Partial<Record<keyof ObjetAudite, unknown>> | null;
+    if (!o || typeof o.table !== "string" || typeof o.action !== "string") continue;
+    trace.objets.push({
+      dossier: uuidBienForme(o.dossier),
+      table: o.table,
+      objet: uuidBienForme(o.objet),
+      action: o.action,
+    });
+  }
+  trace.tenant ??= trace.objets.find((o) => o.dossier)?.dossier ?? null;
 }

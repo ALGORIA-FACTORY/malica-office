@@ -12,7 +12,9 @@ import { ErreurApi, ErreurReseau } from "@/lib/transport/erreurs";
 
 import { depotMemoire } from "../depot";
 import { PLAFOND_ELEMENTS } from "../file";
-import { creerVidage, FilePleine, type PortsDuVidage } from "../vidage";
+import type { EtapeDeLAppareil, SuiviDeTrace } from "@malica/socle/ports/repositories";
+
+import { creerVidage, FilePleine, suiviDuPas, type PortsDuVidage } from "../vidage";
 
 /*
  * ============================ POURQUOI L'ENTRÉE TYPE N'EST PLUS « PERSONNEL »
@@ -383,5 +385,108 @@ describe("le vol unique et le plafond", () => {
     );
     await v.abandonner("k0");
     await expect(v.deposer({ ...ENTREE, cle: "encore" }, octets(1))).resolves.toBe("encore");
+  });
+});
+
+describe("la trace suit la pièce, de la capture à la synchronisation", () => {
+  const TRACE = "0b5c7f4e-2a51-4c1e-9d0e-6f7a1b2c3d4e";
+
+  it("hors ligne puis deux échecs réseau : la même trace et la même clé à chaque renvoi", async () => {
+    const depot = depotMemoire();
+    let enLigne = false;
+    let pannes = 2;
+    const suivis: string[] = [];
+    const noter = (pas: string, suivi: SuiviDeTrace | null) =>
+      suivis.push(`${pas}:${suivi?.trace ?? "-"}:${suivi?.cle ?? "-"}`);
+    const ports: PortsDuVidage = {
+      async enregistrer(e) {
+        noter("enregistrer", suiviDuPas(e, "enregistrer"));
+        if (pannes > 0) {
+          pannes -= 1;
+          throw new ErreurReseau("injoignable");
+        }
+        return "piece-1";
+      },
+      async deposerOctets(_id, _o, _t, suivi) {
+        noter("octets", suivi);
+      },
+      async demanderLaLecture(_id, suivi) {
+        noter("lecture", suivi);
+      },
+    };
+    const etapes: EtapeDeLAppareil[] = [];
+    const retenues: string[] = [];
+    let horloge = Date.parse("2026-11-03T08:00:00Z");
+    const v = creerVidage({
+      depot,
+      ports,
+      enLigne: () => enLigne,
+      maintenant: () => horloge,
+      nouvelleTrace: () => TRACE,
+      parcours: {
+        signaler: (e) => etapes.push(e),
+        retenir: (ids, trace) => retenues.push(`${ids.join(",")}>${trace}`),
+      },
+    });
+
+    // La capture, sans réseau : rangée, tracée, en attente.
+    await v.deposer({ ...ENTREE, cle: "k1" }, octets());
+    const range = (await depot.lister())[0]!;
+    expect(range).toMatchObject({ trace: TRACE, horsLigneLe: "2026-11-03T08:00:00.000Z" });
+    expect(etapes.map((e) => e.etape)).toEqual(["capture", "file_hors_ligne"]);
+
+    // Le réseau revient, tombe deux fois, puis tient : trois passes.
+    enLigne = true;
+    for (let i = 0; i < 3; i += 1) {
+      horloge += 10 * 60 * 1000;
+      await v.vider();
+    }
+    expect(await depot.lister()).toEqual([]);
+    expect(suivis).toEqual([
+      `enregistrer:${TRACE}:k1.enregistrer`,
+      `enregistrer:${TRACE}:k1.enregistrer`,
+      `enregistrer:${TRACE}:k1.enregistrer`,
+      `octets:${TRACE}:k1.octets`,
+      `lecture:${TRACE}:k1.lecture`,
+    ]);
+    expect(retenues).toEqual([`k1>${TRACE}`, `piece-1>${TRACE}`]);
+
+    // Une seule trace d'un bout à l'autre ; la synchronisation nomme la pièce,
+    // part une fois, et mesure l'attente depuis la mise en file.
+    expect(new Set(etapes.map((e) => e.trace))).toEqual(new Set([TRACE]));
+    const synchro = etapes.filter((e) => e.etape === "synchronisation");
+    expect(synchro).toHaveLength(1);
+    expect(synchro[0]).toMatchObject({
+      issue: "ok",
+      cle: "synchronisation",
+      piece: "piece-1",
+      debut: "2026-11-03T08:00:00.000Z",
+      dureeMs: 30 * 60 * 1000,
+      detail: { tentatives: 2 },
+    });
+    // Capture et attente se redisent à l'arrivée, avec la pièce et la même clé.
+    expect(etapes.filter((e) => e.etape === "capture").map((e) => [e.cle, e.piece])).toEqual([
+      ["capture", null],
+      ["capture", "piece-1"],
+    ]);
+  });
+
+  it("un refus définitif se dit comme une synchronisation refusée", async () => {
+    const depot = depotMemoire();
+    const r = ports({ enregistrer: () => new ErreurApi("refus.piece.remplacee", 400) });
+    const etapes: EtapeDeLAppareil[] = [];
+    const v = creerVidage({
+      depot,
+      ports: r.ports,
+      enLigne: () => true,
+      nouvelleTrace: () => TRACE,
+      parcours: { signaler: (e) => etapes.push(e), retenir: () => undefined },
+    });
+    await v.deposer({ ...ENTREE, cle: "k1" }, octets());
+    await v.vider();
+    expect(etapes.find((e) => e.etape === "synchronisation")).toMatchObject({
+      issue: "refus",
+      trace: TRACE,
+    });
   });
 });

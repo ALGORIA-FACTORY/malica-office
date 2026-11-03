@@ -23,10 +23,123 @@
  * Et ce n'est pas une mesure d'usage : rien n'est consigné qu'une panne. On
  * n'y verse aucune charge utile, aucune valeur de pièce — l'endroit du code,
  * le message, la pile, la version et la plateforme, et c'est tout.
+ *
+ * ============================================ ET LES ÉTAPES DE L'APPAREIL
+ *
+ * `etapes` est l'autre porte de l'appareil, et elle ne va PAS ici dans
+ * `audit.journal_client` : cette table est sous RLS du dossier, relue par
+ * l'écran de réglages du dirigeant, sans déduplication — y verser chaque
+ * capture la noierait, et montrerait au dirigeant ce qui n'est pas une panne.
+ * Les étapes partent au journal d'observabilité (`observabilite/journal.ts`),
+ * que seul l'exploitant lit, dédoublonnées par (trace, étape, clé).
  */
+import { z } from "zod";
+
 import type { Requete } from "../db.ts";
+import { referentielDuJournal } from "../observabilite/gestes.ts";
+import { consigner } from "../observabilite/journal.ts";
+import { nouvelleTrace, traceCourante } from "../observabilite/trace.ts";
+
+/** Un lot borné : cinquante étapes, des scalaires courts, ni photo ni texte. */
+const LOT_MAX = 50;
+const EtapeDeLAppareil = z.object({
+  trace: z.string().uuid(),
+  etape: z.string().regex(/^[a-z][a-z_]{1,39}$/),
+  issue: z.enum(["ok", "refus", "erreur", "ignore"]),
+  cle: z.string().regex(/^[\w.:|-]{1,100}$/),
+  debut: z.string().datetime({ offset: true }),
+  dureeMs: z
+    .number()
+    .int()
+    .min(0)
+    .max(30 * 24 * 3600 * 1000)
+    .nullish(),
+  piece: z.string().uuid().nullish(),
+  detail: z
+    .record(
+      z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),
+      z.union([z.string().max(64), z.number().finite(), z.boolean(), z.null()]),
+    )
+    .refine((d) => Object.keys(d).length <= 12)
+    .default({}),
+});
 
 export const journal = {
+  /**
+   * Les étapes que l'appareil a vécues hors de toute requête : la capture, la
+   * file hors ligne, la synchronisation, et ce que l'écran a AFFICHÉ.
+   *
+   * Ce que la porte garantit :
+   *   - seules les étapes que la base dit émises par l'appareil passent
+   *     (`observabilite.etapes.emise_par_l_appareil`) ; une étape `rpc` ou
+   *     `validation` venue d'un téléphone est écartée ;
+   *   - l'acteur est l'appelant, jamais ce que le lot prétend ; la trace d'un
+   *     autre acteur ne reçoit rien (`observabilite.consigner` l'isole) ;
+   *   - une pièce n'est nommée que si l'appelant la VOIT (sa RLS) : une pièce de
+   *     l'espace privé d'un autre, ou d'un autre dossier, n'y entre pas ;
+   *   - un élément mal formé est écarté et compté, jamais une exception : un
+   *     lot rejoué après une reconnexion ne s'empoisonne pas.
+   */
+  async etapes(db: Requete, lot: unknown): Promise<{ acceptees: number; ecartees: number }> {
+    if (!Array.isArray(lot) || lot.length > LOT_MAX) {
+      throw Object.assign(new Error("refus.saisie.mal_formee"), { code: "22023" });
+    }
+    const { etapesDeLAppareil } = await referentielDuJournal();
+    const valides = lot
+      .map((brut) => EtapeDeLAppareil.safeParse(brut))
+      .flatMap((r) =>
+        r.success && etapesDeLAppareil.has(r.data.etape)
+          ? [{ ...r.data, piece: r.data.piece?.toLowerCase() ?? null }]
+          : [],
+      );
+    if (valides.length === 0) return { acceptees: 0, ecartees: lot.length };
+
+    const { rows } = await db.query<{ moi: string | null }>("select auth.uid()::text as moi");
+    const moi = rows[0]?.moi ?? null;
+    const demandees = [...new Set(valides.flatMap((e) => (e.piece ? [e.piece] : [])))];
+    const visibles = new Map(
+      demandees.length === 0
+        ? []
+        : (
+            await db.query<{ id: string; tenant_id: string }>(
+              "select id::text, tenant_id::text from capture.pieces where id = any ($1::uuid[])",
+              [demandees],
+            )
+          ).rows.map((p) => [p.id, p.tenant_id] as const),
+    );
+
+    // L'origine et la version sont celles que la requête a déclarées.
+    const requete = traceCourante();
+    const maintenant = Date.now();
+    for (const e of valides) {
+      const piece = e.piece && visibles.has(e.piece) ? e.piece : null;
+      const debut = new Date(Math.min(Date.parse(e.debut), maintenant));
+      const trace = {
+        ...nouvelleTrace(requete?.origine ?? "api", {
+          id: e.trace,
+          version: requete?.version ?? null,
+          acteur: moi,
+          tenant: piece ? (visibles.get(piece) ?? null) : null,
+        }),
+        debut,
+      };
+      trace.piece = piece;
+      consigner(
+        e.etape,
+        e.issue,
+        {
+          cle: e.cle,
+          debut,
+          ...(e.dureeMs == null ? {} : { dureeMs: e.dureeMs }),
+          piece,
+          detail: e.detail,
+        },
+        trace,
+      );
+    }
+    return { acceptees: valides.length, ecartees: lot.length - valides.length };
+  },
+
   /**
    * Inscrire une panne. Rend l'identifiant de la trace.
    *

@@ -22,7 +22,8 @@
  */
 import pg from "pg";
 
-import { fermerLePool, sousIdentite } from "../apps/api/src/db.ts";
+import { fermerLePool, fermerLePoolDuJournal, sousIdentite } from "../apps/api/src/db.ts";
+import { arreterLeJournal, tracerUnTravail } from "../apps/api/src/observabilite/journal.ts";
 import { executerRpc } from "../apps/api/src/rpc.ts";
 
 const USAGE =
@@ -70,12 +71,25 @@ let regles = "";
 let apres = null;
 try {
   do {
-    const bilan = await sousIdentite(compte.id, (db) =>
-      executerRpc(db, {
-        depot: "office",
-        methode: "rejugerLesPieces",
-        args: [tenant, apres, essai],
-      }),
+    // Chaque page du rejeu est une tâche tracée : l'audit qu'elle écrit y est référencé.
+    const bilan = await tracerUnTravail(
+      "rejuger_les_pieces",
+      null,
+      () =>
+        sousIdentite(compte.id, (db) =>
+          executerRpc(db, {
+            depot: "office",
+            methode: "rejugerLesPieces",
+            args: [tenant, apres, essai],
+          }),
+        ),
+      {
+        tenant,
+        juger: (b) => ({
+          issue: b.enEchec > 0 ? "erreur" : "ok",
+          resultat: `${essai ? "essai_" : ""}rejugees_${b.rejugees}_changees_${b.changees}`,
+        }),
+      },
     );
     regles = bilan.regles;
     for (const c of bilan.changements)
@@ -90,6 +104,9 @@ try {
   } while (apres);
 } finally {
   await fermerLePool();
+  // Les tâches tracées partent avant la sortie ; sans fichier d'attente, une base absente est une perte comptée.
+  await arreterLeJournal();
+  await fermerLePoolDuJournal();
 }
 
 console.log(
