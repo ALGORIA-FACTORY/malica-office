@@ -319,7 +319,16 @@ function arithmetique(p: PieceAControler): ResultatControle {
        * personne ne saurait qu'un montant imprimé a été laissé de côté. Une
        * réserve comptabilise et signale à la fois.
        */
-      if (m.totalNonLu)
+      /*
+       * Un total cité en LETTRES (aucun chiffre) : la lecture l'a recomposé parce
+       * que la phrase vaut HT + TVA + droits (2 novembre 2026, `read-piece.ts`).
+       * Le chiffre relevé, lui, ne fermait pas : on le dit autrement.
+       */
+      if (m.totalNonLu && !/\p{Nd}/u.test(m.totalNonLu))
+        reserves.push({
+          motif: `Total retenu d'après le montant en lettres « ${m.totalNonLu} » : le total en chiffres ne se lit pas ; les montants retenus se vérifient entre eux — ${m.raison}. À vérifier sur la pièce.`,
+        });
+      else if (m.totalNonLu)
         reserves.push({
           motif: `Le total imprimé « ${m.totalNonLu} » n'a pas pu être lu ; les montants retenus se vérifient entre eux — ${m.raison}.`,
         });

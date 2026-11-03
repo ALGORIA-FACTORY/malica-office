@@ -56,6 +56,7 @@ import {
 } from "@/hooks/use-gestes-du-circuit";
 import { dossierDeLaPiece } from "@/lib/dossiers";
 import { RAISON_LONGUE } from "@/lib/lecture";
+import { cn } from "@/lib/utils";
 import {
   dateAEnregistrer,
   etiquetteDeLecture,
@@ -831,6 +832,11 @@ function PieceScreen() {
         }
     : null;
   const proposal = proposalAttempt?.ok ? proposalAttempt.value : null;
+  /** Le jugement dit que les montants lus ne ferment pas le total (`coherence_arithmetique`). */
+  const totalNeFermePas =
+    proposalAttempt != null &&
+    !proposalAttempt.ok &&
+    proposalAttempt.controlesEnDefaut.includes("coherence_arithmetique");
   /*
    * ANO-025 : un champ lu sous le seuil de réserve n'affiche pas la coche
    * « source », qui dirait une certitude. Le jugement déterministe le nomme ;
@@ -1291,7 +1297,9 @@ function PieceScreen() {
                       : t("pme.detail.sansQte")}
                     {a.unit_price_ht
                       ? " · " + t("pme.detail.pu", { pu: lisible(a.unit_price_ht) ?? "—" })
-                      : ""}
+                      : a.unit_price_ttc
+                        ? " · " + t("pme.detail.puTtc", { pu: lisible(a.unit_price_ttc) ?? "—" })
+                        : ""}
                     {a.tax_code ? " · " + a.tax_code : ""}
                   </p>
                 </div>
@@ -1328,10 +1336,28 @@ function PieceScreen() {
                 <span className="text-[14px] font-semibold">
                   {duCabinet ? t("pme.verifie.totalTtc") : t("pme.verifie.total")}
                 </span>
-                <span className="num text-[15px] font-semibold">
+                <span
+                  className={cn(
+                    "num text-[15px] font-semibold",
+                    totalNeFermePas && "text-[color:var(--ve)]",
+                  )}
+                >
                   {lisible(totaux?.ttc) ?? "—"} {deviseDeLaPiece}
                 </span>
               </div>
+              {/*
+               * Un total que la somme des montants lus ne donne pas (2 novembre
+               * 2026 : « 510,000 » relevé « 810,000 ») : le jugement le refuse,
+               * et l'écran ne l'affiche plus comme s'il était juste.
+               */}
+              {totalNeFermePas ? (
+                <p
+                  role="alert"
+                  className="mt-1.5 text-[12px] leading-[1.45] text-[color:var(--ve)]"
+                >
+                  {t("pme.detail.totalNeFermePas")}
+                </p>
+              ) : null}
             </div>
           )}
           <p className="mt-4 text-[11.5px] leading-[1.5] text-muted-foreground">

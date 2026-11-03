@@ -50,7 +50,7 @@ pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpLettres, String> {
 }
 
 /// Les montants en lettres que l'adaptateur a lus, chacun cité sur toute sa phrase.
-fn lus(entree: &Entree) -> Vec<(i64, Vec<RefJeton>)> {
+pub(crate) fn lus(entree: &Entree) -> Vec<(i64, Vec<RefJeton>)> {
     entree
         .jetons
         .iter()
