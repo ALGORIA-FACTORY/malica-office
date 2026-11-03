@@ -209,6 +209,7 @@ describe("chaque parcours se suit", { skip: !BASE_CONFIGUREE }, () => {
       "affiche",
       "capture",
       "file_hors_ligne",
+      "perte",
       "synchronisation",
     ]);
   });
@@ -287,6 +288,39 @@ describe("chaque parcours se suit", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(retour!.piece_id, piece, "la pièce visée, vue par l'appelant avant l'appel");
     assert.deepEqual(retour!.audit_ids, [], "une transaction annulée n'a rien audité");
     assert.ok((await diagnostic(piece)).some((e) => e.etape === "retour" && e.issue === "refus"));
+  });
+
+  it("un geste sur une ÉCRITURE se rattache à sa pièce, sous la RLS de l'appelant", async () => {
+    const trace = randomUUID();
+    const { id: piece } = await enregistrer(trace, randomUUID());
+    // L'écriture de la pièce, posée telle qu'une proposition l'inscrit.
+    const [ecriture] = await lire<{ id: string }>(
+      `insert into socle.ecritures (tenant_id, vis, journal, date_ecriture, devise, libelle,
+                                    pack_version_id, piece_id, created_by)
+       values ($1, 'partage', 'ACH', current_date, 'TND', 'Essai', (select id from ref.jurisdiction_packs
+               where jurisdiction = 'TN' order by effective_from desc limit 1), $2, $3)
+       returning id`,
+      [orgA, piece, a.id],
+    );
+    const traceB = randomUUID();
+    await appeler(a, "office", "book", [ecriture!.id], { "x-malica-trace": trace });
+    // Un autre dossier ne voit pas l'écriture : son geste ne nomme aucune pièce.
+    await appeler(b, "office", "book", [ecriture!.id], { "x-malica-trace": traceB });
+
+    const [deA] = await attendre(async () => {
+      const r = await evenements("e.trace_id = $1 and e.etape = 'comptabilisation'", [trace]);
+      return r.length === 1 ? r : null;
+    }, "la comptabilisation de A");
+    assert.equal(deA!.piece_id, piece, "l'écriture mène à sa pièce");
+    assert.equal(deA!.detail["objet_type"], "ecriture");
+    assert.equal(deA!.detail["objet_id"], ecriture!.id);
+    assert.ok((await diagnostic(piece)).some((e) => e.etape === "comptabilisation"));
+
+    const [deB] = await attendre(async () => {
+      const r = await evenements("e.acteur = $1 and e.etape = 'comptabilisation'", [b.id]);
+      return r.length === 1 ? r : null;
+    }, "la comptabilisation refusée de B");
+    assert.equal(deB!.piece_id, null);
   });
 
   it("l'appareil signale ses étapes par lots ; un renvoi ne fait pas de doublon", async () => {

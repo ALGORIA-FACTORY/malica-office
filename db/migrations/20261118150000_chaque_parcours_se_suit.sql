@@ -73,6 +73,10 @@ update observabilite.etapes set emise_par_l_appareil = true,
  where code = 'affiche';
 update observabilite.etapes set cles_autorisees = cles_autorisees || '{resultat}'::text[]
  where code = 'tache';
+-- L'appareil dit aussi ce qu'il a dû laisser tomber (sa borne mémoire), compté.
+update observabilite.etapes set emise_par_l_appareil = true,
+       cles_autorisees = cles_autorisees || '{plateforme}'::text[]
+ where code = 'perte';
 update observabilite.etapes set cles_autorisees = '{canal,resultat}' where code = 'envoi';
 
 -- --- 2. Les gestes : méthode RPC → étape métier ----------------------------------------------------

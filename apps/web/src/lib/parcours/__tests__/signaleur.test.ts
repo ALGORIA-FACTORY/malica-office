@@ -105,6 +105,49 @@ describe("hors ligne, le lot attend", () => {
     await s.vider();
     expect(envoyees().map((e) => e.cle)).toEqual(["capture"]);
   });
+
+  it("un envoi lent ne fait rien perdre en silence : ce qui déborde est compté et dit", async () => {
+    // Le premier envoi reste en vol pendant que trois cents étapes arrivent.
+    let liberer: () => void = () => undefined;
+    let premier = true;
+    const recues: EtapeDeLAppareil[] = [];
+    const s = creerSignaleur({
+      envoyer: async (lot) => {
+        if (premier) {
+          premier = false;
+          await new Promise<void>((r) => {
+            liberer = r;
+          });
+        }
+        recues.push(...lot);
+      },
+      plateforme: () => "android",
+      nouvelleTrace: () => "99999999-9999-4999-8999-999999999999",
+      delaiMs: 60_000,
+    });
+    for (let i = 0; i < 300; i += 1) {
+      s.signaler({
+        trace: CAPTURE,
+        etape: "capture",
+        issue: "ok",
+        cle: `c${i}`,
+        debut: "2026-11-03T08:00:00.000Z",
+      });
+    }
+    liberer();
+    await s.vider();
+
+    const etapes = recues.filter((e) => e.etape === "capture");
+    const pertes = recues.filter((e) => e.etape === "perte");
+    // Aucune étape envoyée deux fois, et chaque étape absente est comptée.
+    expect(new Set(etapes.map((e) => e.cle)).size).toBe(etapes.length);
+    const comptees = pertes.reduce((n, p) => n + Number(p.detail?.["nombre"] ?? 0), 0);
+    expect(etapes.length + comptees).toBe(300);
+    // Le lot en vol est arrivé entier : les cinquante premières n'ont pas cédé.
+    expect(etapes.slice(0, 50).map((e) => e.cle)).toEqual(
+      Array.from({ length: 50 }, (_, i) => `c${i}`),
+    );
+  });
 });
 
 describe("les en-têtes d'un appel suivi", () => {

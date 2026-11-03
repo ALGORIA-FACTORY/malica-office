@@ -19,9 +19,9 @@
  * injoignable, le dernier connu vaut ; jamais lu, aucun geste ne s'émet (l'étape
  * `rpc` reste) — c'est dit dans `docs/journalisation-parcours.md`.
  */
-import { lireLeReferentielDuJournal } from "../db.ts";
+import { lireLeReferentielDuJournal, type Requete } from "../db.ts";
 import { consigner, type Issue } from "./journal.ts";
-import { uuidBienForme, type Trace } from "./trace.ts";
+import { noterLObjet, uuidBienForme, type Trace } from "./trace.ts";
 
 export interface Geste {
   readonly depot: string;
@@ -89,7 +89,7 @@ export async function gesteDe(depot: string, methode: string): Promise<Geste | n
  * ou `null`. Seul un uuid bien formé sort : un jeton, un texte, un montant
  * restent dans l'appel.
  */
-export function identifiantAuChemin(
+function identifiantAuChemin(
   args: readonly unknown[],
   chemin: readonly string[] | null,
 ): string | null {
@@ -109,6 +109,46 @@ export function identifiantAuChemin(
 }
 
 const TABLE_DES_PIECES = "capture.pieces";
+
+/*
+ * Les objets qui MÈNENT à une pièce, et la lecture qui y mène. Ce n'est pas un
+ * référentiel métier : c'est le schéma — une écriture porte sa pièce
+ * (`socle.ecritures.piece_id`), et l'audit d'une écriture vise l'écriture, pas
+ * la pièce. Sans cette lecture, `office.book` n'apparaîtrait pas dans la
+ * chronologie de la pièce qu'il comptabilise.
+ */
+const PIECE_DE_L_OBJET: Readonly<Record<string, string>> = {
+  piece: "select id::text as piece, tenant_id::text as dossier from capture.pieces where id = $1",
+  ecriture:
+    "select piece_id::text as piece, tenant_id::text as dossier from socle.ecritures where id = $1",
+};
+
+/**
+ * La pièce d'un geste, AVANT l'appel, sous la RLS de l'appelant : si
+ * l'appelant voit l'objet (la pièce, ou l'écriture qui la porte), sa pièce
+ * devient celle de l'opération. Un geste refusé reste ainsi rattaché à la
+ * pièce qu'il visait — la transaction annulée n'aura rien audité — sans qu'un
+ * appelant puisse inscrire son geste dans la chronologie d'une pièce qu'il ne
+ * voit pas. Une lecture indexée, sous un point de sauvegarde : elle ne peut
+ * pas faire échouer l'appel qu'elle précède.
+ */
+export async function noterLaPieceDuGeste(
+  db: Requete,
+  geste: Geste,
+  args: readonly unknown[],
+): Promise<void> {
+  const lecture = PIECE_DE_L_OBJET[geste.objetType];
+  const objet = lecture ? identifiantAuChemin(args, geste.objetChemin) : null;
+  if (!lecture || !objet) return;
+  await db.query("savepoint observabilite_piece");
+  try {
+    const { rows } = await db.query<{ piece: string | null; dossier: string }>(lecture, [objet]);
+    if (rows[0]?.piece) noterLObjet({ tenant: rows[0].dossier, piece: rows[0].piece });
+    await db.query("release savepoint observabilite_piece");
+  } catch {
+    await db.query("rollback to savepoint observabilite_piece");
+  }
+}
 
 /**
  * L'étape métier d'un appel, à sa sortie. Une étape par pièce que l'audit a
@@ -131,7 +171,8 @@ export function emettreLeGeste(
     ...new Set(
       [
         ...objets.filter((o) => o.table === TABLE_DES_PIECES).map((o) => o.objet),
-        geste.objetType === "piece" ? trace.piece : null,
+        // La pièce que la lecture d'avant l'appel a trouvée, vue par l'appelant.
+        geste.objetType in PIECE_DE_L_OBJET ? trace.piece : null,
       ].filter((p): p is string => p !== null),
     ),
   ].slice(0, 16);

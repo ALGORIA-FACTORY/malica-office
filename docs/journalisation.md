@@ -71,7 +71,7 @@ Pas garanti :
   mémoire : au plus `JOURNAL_INTERVALLE_MS` (1 s) d'événements. Ce qui était
   déjà sur disque revient ;
 - les étapes de l'appareil (`capture`, `file_hors_ligne`, `synchronisation`,
-  `affiche`) dorment en mémoire du téléphone jusqu'à leur envoi : une
+  `affiche`) dorment en mémoire du téléphone jusqu'à leur envoi (au-delà de deux cents, les plus anciennes cèdent, comptées par une étape `perte`, raison `memoire`) : une
   application tuée les perd, sauf ce que la file hors ligne redit à la
   synchronisation (voir [`journalisation-parcours.md`](journalisation-parcours.md)) ;
 - la rétention purge une trace parente avant ses enfants si elle est plus

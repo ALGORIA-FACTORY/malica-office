@@ -24,7 +24,7 @@ Le journal d'observabilité **référence** ces journaux, il ne les recopie pas 
 
 ## Le canal de l'appareil
 
-Les étapes `capture`, `file_hors_ligne`, `synchronisation` et `affiche`
+Les étapes `capture`, `file_hors_ligne`, `synchronisation`, `affiche` — et `perte`, ce que la borne mémoire de l'appareil (deux cents en attente) a dû laisser tomber, compté —
 partent par `journal.etapes` (une méthode RPC dédiée), par lots de cinquante au
 plus, et **non** par `audit.journal_client` : cette table est sous RLS du
 dossier, relue par l'écran de réglages du dirigeant et sans déduplication — y

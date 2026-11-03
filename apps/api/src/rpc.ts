@@ -41,8 +41,8 @@ import { stocks } from "./depots/stocks.ts";
 import { supervision } from "./depots/supervision.ts";
 import { tiers } from "./depots/tiers.ts";
 import { tour } from "./depots/tour.ts";
-import { gesteDe, identifiantAuChemin } from "./observabilite/gestes.ts";
-import { noterLesAudits, noterLObjet, traceCourante } from "./observabilite/trace.ts";
+import { gesteDe, noterLaPieceDuGeste } from "./observabilite/gestes.ts";
+import { noterLesAudits, traceCourante } from "./observabilite/trace.ts";
 
 /**
  * Le registre. Chaque méthode reçoit la connexion déjà placée sous l'identité
@@ -229,39 +229,17 @@ export async function executerRpc(
     // transaction, elle ne survit pas à l'appel et un client ne la pose pas.
     await db.query("select set_config('malica.origine', 'serveur', true)");
   }
-  await noterLaPieceDuGeste(db, appel);
+  await noterLaPiece(db, appel);
   const resultat = await methode(db, ...appel.args);
   await releverLesAudits(db);
   return resultat;
 }
 
-/**
- * La pièce d'un geste sensible, AVANT l'appel : si l'appelant la voit (sa
- * RLS, pas la nôtre), elle devient la pièce de l'opération. Un geste refusé
- * reste ainsi rattaché à la pièce qu'il visait — la transaction annulée
- * n'aura rien audité — sans qu'un appelant puisse inscrire son refus dans la
- * chronologie d'une pièce qu'il ne voit pas.
- *
- * Une lecture seule, sous un point de sauvegarde : elle ne peut pas faire
- * échouer l'appel qu'elle précède.
- */
-async function noterLaPieceDuGeste(db: Requete, appel: AppelRpc): Promise<void> {
+/** La pièce d'un geste sensible, avant l'appel (`observabilite/gestes.ts`). Hors trace, rien. */
+async function noterLaPiece(db: Requete, appel: AppelRpc): Promise<void> {
   if (!traceCourante()) return;
   const geste = await gesteDe(appel.depot, appel.methode);
-  if (geste?.objetType !== "piece") return;
-  const piece = identifiantAuChemin(appel.args, geste.objetChemin);
-  if (!piece) return;
-  await db.query("savepoint observabilite_piece");
-  try {
-    const { rows } = await db.query<{ tenant_id: string }>(
-      "select tenant_id from capture.pieces where id = $1",
-      [piece],
-    );
-    if (rows[0]) noterLObjet({ tenant: rows[0].tenant_id, piece });
-    await db.query("release savepoint observabilite_piece");
-  } catch {
-    await db.query("rollback to savepoint observabilite_piece");
-  }
+  if (geste) await noterLaPieceDuGeste(db, geste, appel.args);
 }
 
 /**

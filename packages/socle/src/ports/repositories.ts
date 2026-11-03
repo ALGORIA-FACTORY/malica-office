@@ -3665,7 +3665,8 @@ export interface JournalRepository {
 /** Une étape de l'appareil : des identifiants et des scalaires courts, ni photo ni texte. */
 export interface EtapeDeLAppareil {
   trace: string;
-  etape: "capture" | "file_hors_ligne" | "synchronisation" | "affiche";
+  /** `perte` : ce que l'appareil a dû laisser tomber, compté (`nombre`, `raison`). */
+  etape: "capture" | "file_hors_ligne" | "synchronisation" | "affiche" | "perte";
   issue: "ok" | "refus" | "erreur" | "ignore";
   /** Ce qui fait « la même étape » : un renvoi de la même clé est une répétition. */
   cle: string;
