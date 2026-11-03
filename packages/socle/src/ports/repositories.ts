@@ -3800,6 +3800,8 @@ export interface OrganisationDeLaLicence {
   tenant_id: string;
   nom: string;
   lectures_consommees: number | string | null;
+  /** L'appelant est-il titulaire de la licence ? Rendu quand la société ouverte est donnée. */
+  titulaire?: boolean;
 }
 
 /**
@@ -3822,8 +3824,10 @@ export interface FacturationRepository {
   monForfait(tenantId?: string): Promise<MonForfait | null>;
   /** Le prix d'une place et d'une société en plus ; `null` à qui n'est pas titulaire. */
   mesPrixEnPlus(tenantId: string): Promise<PrixEnPlus | null>;
-  sieges(): Promise<SiegeDeLaLicence[]>;
-  organisations(): Promise<OrganisationDeLaLicence[]>;
+  /** Les sièges vus depuis la société ouverte (`tenantId`) ; sans elle, ceux de mes licences. */
+  sieges(tenantId?: string): Promise<SiegeDeLaLicence[]>;
+  /** Les sociétés de la licence qui couvre la société ouverte, elle en tête. */
+  organisations(tenantId?: string): Promise<OrganisationDeLaLicence[]>;
   inviterSiege(
     email: string,
     tenantId: string,

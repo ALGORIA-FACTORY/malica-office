@@ -337,6 +337,14 @@ function PmeReglages() {
       {abo.organisations.map((o) => (
         <Organisation key={o.tenantId} org={o} courante={o.tenantId === pme.tenantId} />
       ))}
+      {/*
+       * La licence de la société ouverte appartient à un autre titulaire
+       * (3 novembre 2026) : on le dit, plutôt que de montrer la licence du
+       * compte comme si c'était la sienne.
+       */}
+      {abo.titulaire === false ? (
+        <p className="mn">{t("pme.reglages.orgs.autreTitulaire", { societe: pme.orgName })}</p>
+      ) : null}
       {abo.organisations.length === 0 ? (
         <div className="card">
           <p className="t-body">{abo.ennui ?? t("pme.reglages.orgs.aucune")}</p>
@@ -618,6 +626,8 @@ const CLE_SIEGES = "forfait-sieges";
 const CLE_ORGANISATIONS = "forfait-organisations";
 
 interface LAbonnement {
+  /** L'appelant est-il titulaire de la licence de la société ouverte ? `null` : pas encore lu. */
+  titulaire: boolean | null;
   forfait: MonForfait | null;
   organisations: Array<{ tenantId: string; nom: string; lectures: number | null }>;
   sieges: SiegeDeLaLicence[];
@@ -668,12 +678,12 @@ function useLAbonnement(): LAbonnement {
 
   const organisations = useQuery({
     queryKey: [CLE_ORGANISATIONS, pme.tenantId],
-    queryFn: () => office().facturation.organisations(),
+    queryFn: () => office().facturation.organisations(pme.tenantId),
     retry: false,
   });
   const sieges = useQuery({
     queryKey: [CLE_SIEGES, pme.tenantId],
-    queryFn: () => office().facturation.sieges(),
+    queryFn: () => office().facturation.sieges(pme.tenantId),
     retry: false,
   });
 
@@ -713,6 +723,9 @@ function useLAbonnement(): LAbonnement {
   return {
     forfait: forfait.ligne,
     organisations: listeOrgs,
+    // La licence de la société ouverte est-elle la mienne ? `null` tant que la
+    // base ne l'a pas dit (le repli des dossiers ne le sait pas).
+    titulaire: organisations.data?.[0]?.titulaire ?? null,
     sieges: sieges.data ?? [],
     enCours: forfait.enCours || organisations.isPending || sieges.isPending,
     ennui,

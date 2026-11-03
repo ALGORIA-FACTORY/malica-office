@@ -3480,6 +3480,8 @@ export const en: Dict = {
     "No licence is attached to this account. Caps and price stay empty until then.",
   "pme.reglages.orgs": "Companies",
   "pme.reglages.orgs.aucune": "No organisation on this licence.",
+  "pme.reglages.orgs.autreTitulaire":
+    "{societe}’s licence belongs to its principal owner: only this company is shown here. Open your other companies from the selector at the top.",
   "pme.reglages.orgs.ajouter": "Add a company",
   "pme.reglages.orgs.ajouter.sous":
     "One more organisation on the licence, with its own engagement and its own documents. The cap is held by the database.",
