@@ -41,6 +41,7 @@ import { stocks } from "./depots/stocks.ts";
 import { supervision } from "./depots/supervision.ts";
 import { tiers } from "./depots/tiers.ts";
 import { tour } from "./depots/tour.ts";
+import { noterLesAudits, traceCourante } from "./observabilite/trace.ts";
 
 /**
  * Le registre. Chaque méthode reçoit la connexion déjà placée sous l'identité
@@ -227,5 +228,22 @@ export async function executerRpc(
     // transaction, elle ne survit pas à l'appel et un client ne la pose pas.
     await db.query("select set_config('malica.origine', 'serveur', true)");
   }
-  return methode(db, ...appel.args);
+  const resultat = await methode(db, ...appel.args);
+  await releverLesAudits(db);
+  return resultat;
+}
+
+/**
+ * Les lignes d'`audit.event_log` que la transaction a écrites, avant qu'elle
+ * ne se ferme : la base les note au fil des insertions
+ * (`app.audit_se_note_dans_la_transaction`). L'étape `rpc` les référence ;
+ * elle ne recopie rien de ce que l'audit porte. Hors d'une trace, rien à noter.
+ */
+async function releverLesAudits(db: Requete): Promise<void> {
+  if (!traceCourante()) return;
+  const { rows } = await db.query<{ ids: string | null }>(
+    "select current_setting('malica.audit_ids', true) as ids",
+  );
+  const ids = rows[0]?.ids;
+  if (ids) noterLesAudits(ids.split(","));
 }

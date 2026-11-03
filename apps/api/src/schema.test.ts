@@ -606,6 +606,13 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
      * Une politique RESTRICTIVE n'ouvre rien : elle ne peut que retirer des
      * lignes à ce que les permissives accordent. Celle du relecteur de nuit
      * (`service_hors_perimetre`, 20261118100000) n'a donc pas à se cadrer.
+     *
+     * Une politique réservée à un rôle qu'aucun client ni l'API ne peut
+     * endosser n'ouvre rien non plus au « premier compte venu » : c'est le cas
+     * du journal d'observabilité (20261118130000), que seul son propriétaire
+     * `greffier` écrit et que seul `malica_exploitation` lit. Dès qu'un de ces
+     * rôles deviendrait accessible à `authenticated`, `anon` ou `malica_api`,
+     * sa politique sans condition rougirait ici.
      */
     const ouvertes = await interroger<{ table_: string; politique: string; cmd: string }>(`
       select p.schemaname || '.' || p.tablename as table_, p.policyname as politique, p.cmd
@@ -617,6 +624,13 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
        where p.permissive = 'PERMISSIVE'
          and coalesce(p.qual, '') || ' ' || coalesce(p.with_check, '') !~
              'tenant_id|member_orgs|engaged_orgs|has_org_role|is_platform|auth\\.uid|current_uid'
+         and exists (
+               select 1 from unnest(p.roles) r(nom)
+                where case when r.nom = 'public' then true
+                           else exists (select 1 from unnest(array['authenticated', 'anon', 'malica_api']) c(client)
+                                         where exists (select 1 from pg_roles x where x.rolname = c.client)
+                                           and pg_has_role(c.client, r.nom, 'member'))
+                      end)
        order by 1, 2`);
 
     assert.deepEqual(

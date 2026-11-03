@@ -238,6 +238,57 @@ export async function sousVerrouDeSession<T>(
   }
 }
 
+/*
+ * ============================================ LA CONNEXION DU JOURNAL
+ *
+ * Le journal d'observabilité a SA connexion, jamais celle d'une transaction
+ * métier : la trace d'un appel refusé ou annulé (rollback) est justement celle
+ * qu'on cherche, et elle mourrait avec la transaction qui l'aurait portée.
+ *
+ * Deux connexions au plus, des délais courts : le journal ne doit jamais
+ * prendre à l'application les connexions dont elle a besoin, ni la faire
+ * attendre. Une connexion oisive ne retient pas le processus
+ * (`allowExitOnIdle`), et une connexion qui tombe ne le fait pas tomber.
+ */
+const poolDuJournal = new Pool({
+  connectionString: url(),
+  max: 2,
+  statement_timeout: 5_000,
+  connectionTimeoutMillis: 3_000,
+  allowExitOnIdle: true,
+  options: "-c jit=off",
+});
+poolDuJournal.on("error", (erreur) => {
+  console.error("[journal] connexion perdue :", erreur.message);
+});
+
+/** Ce que `observabilite.consigner` rend d'un lot. */
+export interface BilanDuJournal {
+  inscrits: number;
+  repetes: number;
+  rejetes: number;
+  dossiers_ecartes: number;
+}
+
+/** Inscrit un lot d'événements par la seule porte du journal, hors de toute transaction métier. */
+export async function consignerEnBase(evenements: readonly unknown[]): Promise<BilanDuJournal> {
+  const { rows } = await poolDuJournal.query<{ bilan: BilanDuJournal }>(
+    "select observabilite.consigner($1::jsonb) as bilan",
+    [JSON.stringify(evenements)],
+  );
+  return rows[0]!.bilan;
+}
+
+/** Purge un paquet de traces au-delà de la rétention réglée en base ; rend leur nombre. */
+export async function purgerLeJournal(): Promise<number> {
+  const { rows } = await poolDuJournal.query<{ n: number }>("select observabilite.purger() as n");
+  return rows[0]!.n;
+}
+
+export async function fermerLePoolDuJournal(): Promise<void> {
+  await poolDuJournal.end();
+}
+
 /** La sonde de `/sante/profonde` : la base répond-elle, sous le rôle de l'API ? */
 export async function sonderLaBase(): Promise<void> {
   await pool.query("select 1");

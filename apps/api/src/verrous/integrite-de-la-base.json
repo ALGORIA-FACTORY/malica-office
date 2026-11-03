@@ -18,7 +18,10 @@
     "capture.champs_lus.lecture_id": "Identifiant d'une inscription du sudoku, commun à toutes ses lignes (20261115110000_la_lecture_prouvee_se_tient) : il ne nomme aucune autre ligne, il groupe celles-ci, et « la plus récente fait foi » se lit inscription par inscription. Le rattacher à capture.extractions demanderait que capture_read_persist rende l'identifiant de la lecture qu'il inscrit : DETTE nommée.",
     "capture.effacements_en_cours.paiement_id": "Nomme le paiement que capture_piece_supprimer est EN TRAIN d'effacer, le temps de sa transaction : une clé bloquerait l'effacement. L'audit vérifie que la table est vide hors de cette transaction.",
     "capture.effacements_en_cours.piece_id": "Nomme la pièce que capture_piece_supprimer est EN TRAIN d'effacer, le temps de sa transaction : une clé bloquerait l'effacement. L'audit vérifie que la table est vide hors de cette transaction.",
-    "facturation.lectures.piece_id": "Trace de facturation : une lecture reste comptée quand la pièce lue est supprimée (20261022270000_une_piece_lue_se_supprime_et_sa_lecture_reste)."
+    "facturation.lectures.piece_id": "Trace de facturation : une lecture reste comptée quand la pièce lue est supprimée (20261022270000_une_piece_lue_se_supprime_et_sa_lecture_reste).",
+    "observabilite.evenements.piece_id": "Journal d'observabilité (20261118130000) : l'étape d'une pièce refusée, annulée par rollback ou supprimée ensuite doit rester lisible ; la pièce peut n'avoir jamais existé en base.",
+    "observabilite.traces.parente_id": "Journal d'observabilité (20261118130000) : une trace parente peut arriver après l'enfant (rejeu du fichier d'attente) ou être purgée avant lui par la rétention.",
+    "observabilite.traces.piece_id": "Journal d'observabilité (20261118130000) : la trace d'une pièce refusée, annulée par rollback ou supprimée ensuite doit rester ; la pièce peut n'avoir jamais existé en base."
   },
   "libelles": {
     "avertissement_lecture": "select code from ref.avertissements_de_lecture",

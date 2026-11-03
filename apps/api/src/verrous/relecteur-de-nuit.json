@@ -11,7 +11,8 @@
     "capture.pieces": "Le statut et le type lu de la pièce, mis à jour par lecture_inscrire — sur la pièce relue seulement.",
     "capture.token_plan": "Le plan de jetons de la relecture retenue, nommé par sa lecture (lecture_inscrire).",
     "fabrique.executions": "L'exécution d'une recette pendant la relecture (execution_inscrire), mesure de la fabrique.",
-    "fabrique.travail_faits": "La prise et l'issue de la relecture dans la file (travail_prendre, issue_inscrire), au nom du relecteur."
+    "fabrique.travail_faits": "La prise et l'issue de la relecture dans la file (travail_prendre, issue_inscrire), au nom du relecteur.",
+    "observabilite.traces": "Journal d'observabilité (20261118130000) : authenticated n'a ni l'usage du schéma ni un droit sur ses tables, le relecteur n'y écrit donc rien ; seul observabilite.consigner, au rôle de l'API, y écrit."
   },
   "lecture": {
     "agents.agent_runs": "Écrite par la relecture (voir écriture) ; relue par le retour d'agents_run_log.",
@@ -25,8 +26,8 @@
     "capture.precisions": "Ce que le client ou le cabinet a précisé sur la pièce entre dans son jugement (analyse.ts) : sans elle, le verdict serait faux.",
     "capture.remplacements": "Une pièce remplacée ne se relit pas (relecture_a_faire, etat_des_travaux_v, pieces_v).",
     "capture.token_plan": "Le jugement et la désignation par recette relisent les plans de jetons (de la pièce, et des exemples).",
-    "fabrique.exemples": "La désignation par recette relit les exemples d'apprentissage de ses versions (contexteDeDesignation).",
     "fabrique.executions": "Écrite par la relecture (voir écriture) ; relue au retour de execution_inscrire.",
+    "fabrique.exemples": "La désignation par recette relit les exemples d'apprentissage de ses versions (contexteDeDesignation).",
     "fabrique.promotions": "L'état des recettes (fabrique.etat_des_recettes_v) qui désignent pour le dossier.",
     "fabrique.recette_version_exemples": "Les exemples d'apprentissage d'une version de recette (contexteDeDesignation).",
     "fabrique.recette_versions": "La définition des versions de recette qui désignent (contexteDeDesignation).",
@@ -34,6 +35,7 @@
     "fabrique.travail_faits": "L'état de la relecture dans la file (etat_des_travaux_v), sa prise et son issue.",
     "fabrique.travaux": "La relecture elle-même : sa lecture relue, sa consigne, son état (relecture_a_faire, travail_prendre).",
     "identity.fiches_fiscales": "Le régime de TVA du dossier entre dans son jugement (nonAssujetti, analyse.ts).",
+    "observabilite.traces": "Journal d'observabilité (20261118130000) : authenticated n'a ni l'usage du schéma ni un droit sur ses tables, le relecteur n'y lit donc rien ; seul malica_exploitation le lit.",
     "parametrage.fabrique_seuils": "Les bornes arrêtées par le cabinet (tentatives, abandon, recettes, signatures) : sans elles, la file et la fabrique liraient le seul défaut du pack.",
     "tiers.auxiliaires": "Les tiers connus du dossier, donnés au lecteur comme à une lecture de journée (contexteLecture)."
   }

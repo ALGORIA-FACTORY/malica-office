@@ -178,6 +178,8 @@ jobs:
       JWT_SECRET: integration_continue_seulement_32_caracteres
       # Le contexte runner n'existe pas au niveau du job : un chemin fixe du runner Linux.
       STOCKAGE_RACINE: /tmp/malica-pieces
+      # Le fichier d'attente du journal d'observabilité, exigé au démarrage.
+      JOURNAL_ATTENTE: /tmp/malica-journal
       # Le jeu de données ouvre une session par compte, à la file, depuis une
       # seule adresse : la limite de trente connexions par minute — faite pour
       # freiner une devinette de mot de passe — le refusait (429).
