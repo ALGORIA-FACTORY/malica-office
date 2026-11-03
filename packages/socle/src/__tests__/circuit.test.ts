@@ -8,6 +8,7 @@ import {
   demandeDuSiegeATrancher,
   etatDeMaDemande,
   gestesDuCircuit,
+  MOTIF_DU_PLAFOND,
   type PieceDuCircuit,
 } from "../circuit.ts";
 
@@ -47,6 +48,7 @@ const piece = (
   return {
     ...base,
     accompagne: p.accompagne ?? null,
+    lectureRefusee: p.lectureRefusee ?? null,
     statut: statutDuCircuit({ ...base, suivi: null }),
   };
 };
@@ -113,6 +115,22 @@ describe("une pièce non lue ne part pas au cabinet (3 novembre 2026)", () => {
   it("un reçu, un justificatif ne se lisent jamais : ils suivent leur pièce", () => {
     const recu = piece({ ...sienne, status: "capturee", accompagne: true });
     expect(gestesDuCircuit(recu, PROPRIETAIRE, true).envoyer).toBe("cabinet");
+  });
+
+  it("au plafond du forfait, elle part non lue : le cabinet la saisit", () => {
+    const auPlafond = piece({
+      ...sienne,
+      status: "capturee",
+      lectureRefusee: { motif: MOTIF_DU_PLAFOND, le: "2026-11-03T10:00:00Z" },
+    });
+    expect(gestesDuCircuit(auPlafond, PROPRIETAIRE, true).envoyer).toBe("cabinet");
+    // Un autre refus (un doublon strict) ne la laisse pas partir.
+    const doublon = piece({
+      ...sienne,
+      status: "capturee",
+      lectureRefusee: { motif: "piece_en_double", le: "2026-11-03T10:00:00Z" },
+    });
+    expect(gestesDuCircuit(doublon, PROPRIETAIRE, true).envoyer).toBeNull();
   });
 
   it("le siège envoie toujours au propriétaire, qui la lira avant de transmettre", () => {
