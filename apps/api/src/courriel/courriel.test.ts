@@ -7,7 +7,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { configurationCourriel, envoyerParBrevo, type Expedition } from "./brevo.ts";
+import {
+  configurationCourriel,
+  CourrielRetenu,
+  destinataireAutorise,
+  envoyerParBrevo,
+  type Expedition,
+} from "./brevo.ts";
 import { courrielInvitation, envoyerInvitation } from "./invitation.ts";
 
 const INVITATION = {
@@ -69,7 +75,32 @@ describe("la configuration d'envoi", () => {
       cle: "cle",
       expediteur: { email: "w.barouni@algoria-factory.com", nom: "Malica Office" },
       urlPublique: "http://localhost:8080",
+      // Hors production et sans liste : personne.
+      destinataires: [],
     });
+  });
+
+  it("la liste des destinataires : production sans restriction, sinon adresses et domaines", () => {
+    const base = {
+      BREVO_API_KEY: "cle",
+      MALICA_COURRIEL_EXPEDITEUR: "no-reply@algoria-factory.com",
+      MALICA_URL_PUBLIQUE: "http://localhost:8080",
+    };
+    assert.equal(
+      configurationCourriel({ ...base, MALICA_COURRIEL_PRODUCTION: "oui" })!.destinataires,
+      null,
+    );
+    const liste = configurationCourriel({
+      ...base,
+      MALICA_COURRIEL_DESTINATAIRES: " Recette@Algoria-Factory.com , @essai.local ,",
+    })!.destinataires;
+    assert.deepEqual(liste, ["recette@algoria-factory.com", "@essai.local"]);
+    assert.equal(destinataireAutorise(liste, "RECETTE@algoria-factory.com"), true);
+    assert.equal(destinataireAutorise(liste, "x@essai.local"), true);
+    assert.equal(destinataireAutorise(liste, "x@sous.essai.local"), false);
+    assert.equal(destinataireAutorise(liste, "client@exemple.tn"), false);
+    assert.equal(destinataireAutorise([], "recette@algoria-factory.com"), false);
+    assert.equal(destinataireAutorise(null, "client@exemple.tn"), true);
   });
 
   it("une clé sans expéditeur ni adresse publique est une erreur, pas un silence", () => {
@@ -84,6 +115,7 @@ describe("l'envoi par Brevo", () => {
   const expedition: Expedition = {
     cle: "cle-secrete",
     expediteur: { email: "w.barouni@algoria-factory.com", nom: "Malica Office" },
+    destinataires: null,
     destinataire: "contact@algoria-factory.com",
     sujet: "Sujet",
     html: "<p>corps</p>",
@@ -112,6 +144,19 @@ describe("l'envoi par Brevo", () => {
     assert.equal(corps.textContent, "corps");
   });
 
+  it("hors de la liste, le courriel est retenu AVANT tout appel à Brevo", async () => {
+    let appels = 0;
+    const faux = async () => {
+      appels += 1;
+      return new Response("{}", { status: 201 });
+    };
+    await assert.rejects(
+      envoyerParBrevo({ ...expedition, destinataires: ["@essai.local"] }, faux as typeof fetch),
+      CourrielRetenu,
+    );
+    assert.equal(appels, 0);
+  });
+
   it("un refus de Brevo remonte avec son statut, sans la clé", async () => {
     const faux = async () => new Response('{"message":"unauthorized"}', { status: 401 });
     await assert.rejects(envoyerParBrevo(expedition, faux as typeof fetch), (e: Error) => {
@@ -134,6 +179,7 @@ describe("l'envoi d'une invitation", () => {
     cle: "cle",
     expediteur: { email: "w.barouni@algoria-factory.com", nom: "Malica Office" },
     urlPublique: "http://localhost:8080",
+    destinataires: null,
   };
 
   it("sans configuration : rien ne part, et le lien reste à transmettre", async () => {

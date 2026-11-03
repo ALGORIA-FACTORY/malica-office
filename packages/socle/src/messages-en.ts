@@ -319,6 +319,8 @@ export const en: Dict = {
     "This document duplicates one already read: I am not reading it again.",
   "pme.refus.piece_personnelle":
     "This document is private. Add it to the company to allow reading; sending it to the accountant is a separate action.",
+  "refus.courriel.hors_liste":
+    "Email held back: outside production, this recipient is not on the allowed list.",
   "refus.piece.rappelEnAttente":
     "A return of this document has been requested from the accounting firm: wait for its answer.",
   "refus.licence.transmission": "Sending suspended: a payment on your subscription is overdue.",
@@ -4422,6 +4424,8 @@ export const en: Dict = {
     "This action exceeds the cap set by the control tower ({plafond}).",
   "refus.geste.chevauchement":
     "An action of the same kind already covers this period for this payer.",
+  "refus.geste.cumul_depasse":
+    "This action would take the licence’s total beyond the cap ({plafond}): {deja} already granted over {fenetre} months.",
   "refus.geste.deja_annule": "This action has already been cancelled.",
   "refus.geste.deja_facture":
     "This action already appears on an issued invoice: correct it with a credit note.",

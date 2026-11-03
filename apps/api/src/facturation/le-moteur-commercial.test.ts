@@ -181,7 +181,7 @@ describe("le moteur commercial", { skip: !BASE_CONFIGUREE }, () => {
     );
     const periode = (
       await db.query<{ p: string }>(
-        "select date_trunc('month', facturation.jour_de_l_emetteur($1))::date::text as p",
+        "select date_trunc('month', facturation.jour_de_l_organisation($1))::date::text as p",
         [emetteur],
       )
     ).rows[0]!.p;
@@ -472,7 +472,7 @@ describe("le moteur commercial", { skip: !BASE_CONFIGUREE }, () => {
         ],
         ["select plateforme.facture_decider($1, 'irrecouvrable', 'x')", [m.factureA]],
         [
-          "select plateforme.commerce_regler(100, 12, 36::smallint, 12::smallint, 100000, 90::smallint, 'x')",
+          "select plateforme.commerce_regler(100, 12, 36::smallint, 12::smallint, 100000, 90::smallint, 12::smallint, 'x')",
           [],
         ],
         ["select plateforme.facturation_regler(false, 0::smallint, 1::smallint, 'x')", []],
@@ -567,6 +567,12 @@ describe("le moteur commercial", { skip: !BASE_CONFIGUREE }, () => {
       droits.includes("commerce.lire"),
       "le droit personnel se lit avec les droits du rôle",
     );
+    // Une porte du chemin du client appartient au portier (R6) : elle écrit sous la RLS.
+    const proprietaire = await admin.query<{ p: string }>(
+      `select pg_get_userbyid(proowner) as p from pg_proc
+        where oid = 'public.droit_personnel_regler(uuid, uuid, text, boolean, text)'::regprocedure`,
+    );
+    assert.equal(proprietaire.rows[0]!.p, "portier");
   });
 
   /* --------------------------------------------------------------- les comportements */
@@ -1053,5 +1059,604 @@ describe("le moteur commercial", { skip: !BASE_CONFIGUREE }, () => {
         [autre],
       );
     }
+  });
+
+  /* ------------------------------------------- la revue indépendante de #202 */
+
+  /** Pose l'identité d'une personne quelconque, comme `comme` le fait pour un acteur. */
+  async function sous(db: pg.PoolClient, personne: string) {
+    await db.query("set local role authenticated");
+    await db.query("select set_config('request.jwt.claim.sub', $1, true)", [personne]);
+    await db.query("select set_config('request.jwt.claim.service', '', true)");
+    await db.query("select set_config('request.jwt.claim.service_tenant', '', true)");
+    await db.query("select set_config('malica.origine', '', true)");
+  }
+
+  /** Une organisation posée dans la transaction, et la personne qui y tient un rôle. */
+  async function organisation(
+    db: pg.PoolClient,
+    kind: "pme" | "cabinet",
+    personne: string,
+    role: string,
+  ) {
+    const org = (
+      await db.query<{ id: string }>(
+        `insert into identity.organizations (kind, name, legal_id, adresse, jurisdiction, currency)
+         values ($1, $2, $3, 'Tunis', 'TN', 'TND') returning id`,
+        [kind, `EPREUVE ${randomUUID().slice(0, 8)}`, matriculeDEssai()],
+      )
+    ).rows[0]!.id;
+    await db.query(
+      "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, $3)",
+      [org, personne, role],
+    );
+    return org;
+  }
+
+  /** Une licence de toutes pièces, datée : sa société, son titulaire, son premier forfait. */
+  async function licenceDatee(db: pg.PoolClient, offre: string, du: string) {
+    const titulaire = randomUUID();
+    await personnesDEssai(db, titulaire);
+    const org = await organisation(db, "pme", titulaire, "dirigeant");
+    const licence = (
+      await db.query<{ id: string }>(
+        `insert into facturation.licences (titulaire, offre_code, offre_depuis)
+         values ($1, $2, $3::date) returning id`,
+        [titulaire, offre, du],
+      )
+    ).rows[0]!.id;
+    await db.query(
+      "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",
+      [licence, org],
+    );
+    return { licence, org, titulaire };
+  }
+
+  /** Une facture du titulaire, posée hors des portes (déclencheurs levés) : son seul rôle est d'exister. */
+  async function factureFactice(db: pg.PoolClient, licence: string, periode: string) {
+    await db.query("set local session_replication_role = replica");
+    await db.query(
+      `insert into facturation.factures
+         (licence_id, offre_code, numero, periode, emise_le, echeance_le, organisations,
+          sieges_payants, montant_ht, taux_tva, montant_tva, timbre, montant_ttc, devise,
+          payeur_type, payeur_personne, destinataire_nom, nature)
+       select $1, 'solo', $2, $3::date, $3::date, $3::date, 1, 0, 1, 0, 0, 0, 1, 'TND',
+              'titulaire', l.titulaire, 'Factice', 'facture'
+         from facturation.licences l where l.id = $1`,
+      [licence, `FACTICE-${randomUUID()}`, periode],
+    );
+    await db.query("set local session_replication_role = origin");
+  }
+
+  it("les plafonds se cumulent par licence sur la fenêtre glissante, gestes annulés exclus", async () => {
+    await dansLArgent(async (db, m) => {
+      const cumul = /refus\.geste\.cumul_depasse/;
+      const mois = (n: number) => `($2::date + interval '${n} month')::date`;
+      await comme(db, "T");
+      // L'essai : 10 jours, puis 6 de plus dépasseraient les 15 du plafond ; 5 non.
+      await db.query(
+        "select plateforme.essai_prolonger($1, 10::smallint, 'Retard de mise en route')",
+        [m.licence0],
+      );
+      await refuse(
+        db,
+        "select plateforme.essai_prolonger($1, 6::smallint, 'Encore')",
+        [m.licence0],
+        cumul,
+      );
+      await db.query("select plateforme.essai_prolonger($1, 5::smallint, 'Le reste')", [
+        m.licence0,
+      ]);
+      // Les lectures : 50 déjà offertes par le monde ; 250 de plus font les 300 du plafond.
+      await db.query("select plateforme.lectures_offrir($1, 250, 'Incident de lecture')", [
+        m.licenceA,
+      ]);
+      await refuse(db, "select plateforme.lectures_offrir($1, 1, 'Encore')", [m.licenceA], cumul);
+      // Les mois offerts : 2, puis 1 sur une autre période, au-delà des 2 du plafond.
+      const offerts = (
+        await db.query<{ r: { id: string } }>(
+          `select plateforme.mois_offrir($1, 'titulaire', ${mois(1)}, 2::smallint, 'Fidélité') as r`,
+          [m.licenceA, m.periode],
+        )
+      ).rows[0]!.r;
+      await refuse(
+        db,
+        `select plateforme.mois_offrir($1, 'titulaire', ${mois(4)}, 1::smallint, 'Encore')`,
+        [m.licenceA, m.periode],
+        cumul,
+      );
+      // Annulé, un geste ne compte plus dans le cumul.
+      await db.query("select plateforme.geste_annuler($1, 'Saisi sur la mauvaise licence')", [
+        offerts.id,
+      ]);
+      await db.query(
+        `select plateforme.mois_offrir($1, 'titulaire', ${mois(4)}, 1::smallint, 'Le bon geste')`,
+        [m.licenceA, m.periode],
+      );
+      // Les remises : 1 mois (le monde, payé par le cabinet) + 11 font les 12 du plafond ;
+      // une seconde remise de 12 mois, dos à dos, ne passe plus.
+      await db.query(
+        `select plateforme.remise_accorder($1, 'pourcentage', 20, 'titulaire', ${mois(1)}, 11::smallint, 'Lancement')`,
+        [m.licenceA, m.periode],
+      );
+      await refuse(
+        db,
+        `select plateforme.remise_accorder($1, 'pourcentage', 20, 'titulaire', ${mois(12)}, 12::smallint, 'Dos à dos')`,
+        [m.licenceA, m.periode],
+        cumul,
+      );
+      // La fenêtre est glissante : un geste d'il y a 13 mois ne compte plus, un d'il y a 11 mois si.
+      await enSuperutilisateur(db);
+      await db.query(
+        `insert into plateforme.interventions (licence_id, acte, motif, valeur, operateur, created_at)
+         values ($1, 'lectures_offertes', 'Ancien', 300, $2, now() - interval '13 months')`,
+        [m.licenceB, ids.T],
+      );
+      await comme(db, "T");
+      await db.query("select plateforme.lectures_offrir($1, 300, 'Hors fenêtre')", [m.licenceB]);
+      await refuse(db, "select plateforme.lectures_offrir($1, 1, 'Encore')", [m.licenceB], cumul);
+      // La fenêtre est un réglage de la tour (R10) : sur un mois, le geste d'aujourd'hui seul compte.
+      const r = (
+        await db.query<{ r: { fenetre_cumul_mois: number } }>(
+          `select plateforme.commerce_regler(20, 1, 12::smallint, 2::smallint, 300, 15::smallint,
+                                             1::smallint, 'Fenêtre courte') as r`,
+        )
+      ).rows[0]!.r;
+      assert.equal(r.fenetre_cumul_mois, 1);
+      await refuse(db, "select plateforme.lectures_offrir($1, 1, 'Encore')", [m.licenceB], cumul);
+    });
+  });
+
+  it("le stock ne crédite que les jours payés : naissance en cours de mois, fin d'essai, montée, descente", async () => {
+    await dansLArgent(async (db) => {
+      const ecart = async (licence: string, periode: string) =>
+        Number(
+          (
+            await db.query<{ e: number }>("select facturation.ecart_du_mois($1, $2::date) as e", [
+              licence,
+              periode,
+            ])
+          ).rows[0]!.e,
+        );
+      // Le droit mensuel d'une offre, lu dans la grille : une société, aucune place en plus.
+      const droit = async (offre: string, le: string) =>
+        Number(
+          (
+            await db.query<{ d: number }>(
+              "select facturation.lectures_du_forfait(ref.offre_a($1, $2::date), 1, 0) as d",
+              [offre, le],
+            )
+          ).rows[0]!.d,
+        );
+      const solo = await droit("solo", "2026-11-01");
+      const team = await droit("team", "2026-11-01");
+      assert.ok(solo > 0 && team > solo);
+
+      // Née le 20 novembre : 11 jours payés sur 30, pas le mois entier.
+      const nee = await licenceDatee(db, "solo", "2026-11-20");
+      assert.equal(await ecart(nee.licence, "2026-11-01"), Math.floor((solo * 11) / 30));
+      assert.equal(await ecart(nee.licence, "2026-12-01"), solo, "un mois plein payé");
+
+      // Essai du 20 octobre au 20 novembre (exclu) : octobre ne crédite rien, novembre 11 jours.
+      const essai = await licenceDatee(db, "solo", "2026-10-20");
+      await db.query(
+        `insert into facturation.essais (licence_id, tenant_id, titulaire, canal, du, au, grille_le)
+         values ($1, $2, $3, 'direct', date '2026-10-20', date '2026-11-20', date '2026-11-02')`,
+        [essai.licence, essai.org, essai.titulaire],
+      );
+      assert.equal(await ecart(essai.licence, "2026-10-01"), 0);
+      assert.equal(await ecart(essai.licence, "2026-11-01"), Math.floor((solo * 11) / 30));
+
+      // Un changement d'offre le 15 : l'ancienne compte 14 jours, la nouvelle 16.
+      const changer = async (licence: string, de: string, vers: string, titulaire: string) => {
+        await db.query(
+          `update facturation.forfait_historique set effet_au = date '2026-11-15'
+            where licence_id = $1 and effet_au is null`,
+          [licence],
+        );
+        await db.query(
+          `insert into facturation.forfait_historique
+             (licence_id, offre_code, offre_depuis, canal, effet_du, motif, decide_par)
+           values ($1, $2, date '2026-11-15', 'direct', date '2026-11-15', $3, $4)`,
+          [licence, vers, de === "solo" ? "montee" : "descente", titulaire],
+        );
+      };
+      const montee = await licenceDatee(db, "solo", "2026-10-19");
+      await changer(montee.licence, "solo", "team", montee.titulaire);
+      assert.equal(
+        await ecart(montee.licence, "2026-11-01"),
+        Math.floor((solo * 14 + team * 16) / 30),
+        "la montée ne crédite pas le mois entier au nouveau forfait",
+      );
+      const descente = await licenceDatee(db, "team", "2026-10-19");
+      await changer(descente.licence, "team", "solo", descente.titulaire);
+      assert.equal(
+        await ecart(descente.licence, "2026-11-01"),
+        Math.min(solo, Math.floor((team * 14 + solo * 16) / 30)),
+        "la descente crédite au plus le quota du mois",
+      );
+    });
+  });
+
+  it("un collaborateur du cabinet, un accès suspendu ou fini n'ouvrent ni la licence ni ses factures", async () => {
+    await dansLArgent(async (db, m) => {
+      const X = randomUUID();
+      const E = randomUUID();
+      await personnesDEssai(db, X, E);
+      // X : collaborateur du cabinet A. E : expert d'un cabinet C dont l'accès à P0 est suspendu.
+      await db.query(
+        "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')",
+        [a.cabinet, X],
+      );
+      const cabinetC = await organisation(db, "cabinet", E, "expert");
+      // L'accès est posé tel que l'histoire l'aurait laissé (déclencheurs levés) : c'est
+      // sa lecture qu'on éprouve, pas sa naissance.
+      await db.query("set local session_replication_role = replica");
+      const acces = (
+        await db.query<{ id: string }>(
+          `insert into facturation.acces
+             (tenant_id, licence_id, canal, cabinet_tenant_id, offre_code, offre_depuis, statut,
+              propose_le, propose_par, repondu_le, repondu_par, effet_du)
+           values ($1, $2, 'cabinet', $3, 'team', $4::date, 'suspendu', $4::date, $5, $4::date, $6,
+                   $4::date)
+           returning id`,
+          [pme0, m.licence0, cabinetC, m.periode, E, p0.id],
+        )
+      ).rows[0]!.id;
+      await db.query("set local session_replication_role = origin");
+      const lit = async (qui: string) => {
+        await sous(db, qui);
+        const r = {
+          licenceA: await compter(db, "select count(*) n from facturation.licences where id = $1", [
+            m.licenceA,
+          ]),
+          licence0: await compter(db, "select count(*) n from facturation.licences where id = $1", [
+            m.licence0,
+          ]),
+          factureCabinetA: await compter(
+            db,
+            "select count(*) n from facturation.factures where id = $1",
+            [m.factureCabinetA],
+          ),
+        };
+        await enSuperutilisateur(db);
+        return r;
+      };
+      const nonPermis = /refus\.geste\.non_permis/;
+      assert.deepEqual(await lit(X), { licenceA: 0, licence0: 0, factureCabinetA: 0 });
+      await sous(db, X);
+      await refuse(
+        db,
+        "select * from facturation.a_facturer($1, $2::date)",
+        [m.licenceA, m.periode],
+        nonPermis,
+      );
+      await refuse(
+        db,
+        "select * from facturation.a_facturer_cabinet($1, $2::date)",
+        [a.cabinet, m.periode],
+        nonPermis,
+      );
+      const document = (
+        await db.query<{ d: unknown }>("select facturation.document_de_facture($1, 'fr') as d", [
+          m.factureCabinetA,
+        ])
+      ).rows[0]!.d;
+      assert.equal(document, null, "ni le PDF de la facture du cabinet");
+      await enSuperutilisateur(db);
+      // L'expert du cabinet A, lui, lit la facture de son cabinet et ce qu'elle facture.
+      assert.equal((await lit(ids.CA!)).factureCabinetA, 1);
+      // Suspendu, l'accès n'ouvre rien ; actif, il ouvre ; terminé, plus rien.
+      assert.equal((await lit(E)).licence0, 0);
+      await sous(db, E);
+      await refuse(
+        db,
+        "select * from facturation.a_facturer($1, $2::date)",
+        [m.licence0, m.periode],
+        nonPermis,
+      );
+      await enSuperutilisateur(db);
+      await db.query("set local session_replication_role = replica");
+      await db.query("update facturation.acces set statut = 'actif' where id = $1", [acces]);
+      await db.query("set local session_replication_role = origin");
+      assert.equal((await lit(E)).licence0, 1);
+      await db.query("set local session_replication_role = replica");
+      await db.query(
+        `update facturation.acces set statut = 'termine', effet_au = $2::date,
+                motif_fin = 'retrait_cabinet' where id = $1`,
+        [acces, m.periode],
+      );
+      await db.query("set local session_replication_role = origin");
+      assert.equal((await lit(E)).licence0, 0);
+      await sous(db, E);
+      await refuse(
+        db,
+        "select * from facturation.a_facturer($1, $2::date)",
+        [m.licence0, m.periode],
+        nonPermis,
+      );
+      await enSuperutilisateur(db);
+    });
+  });
+
+  it("le client lit le libellé d'un geste, jamais son motif ; le solde du stock, seulement s'il lit le commerce", async () => {
+    await dansLArgent(async (db, m) => {
+      await comme(db, "PA");
+      await refuse(
+        db,
+        "select motif from plateforme.interventions where id = $1",
+        [m.gesteVisible],
+        /permission denied/,
+      );
+      const gestes = (await executerRpc(db, {
+        depot: "facturation",
+        methode: "gestesCommerciaux",
+        args: ["fr"],
+      })) as Array<Record<string, unknown>>;
+      assert.ok(
+        gestes.some((g) => g["id"] === m.gesteVisible),
+        "le geste visible sort",
+      );
+      assert.ok(
+        gestes.every((g) => !("motif" in g)),
+        "son motif, jamais",
+      );
+      await enSuperutilisateur(db);
+      // La tour lit le motif.
+      await comme(db, "T");
+      const tour = (
+        await db.query<{ motif: string }>(
+          "select motif from plateforme.exceptions_v where id = $1",
+          [m.gesteVisible],
+        )
+      ).rows[0]!;
+      assert.equal(tour.motif, "Remise de bienvenue du cabinet");
+      const droitTour = (
+        await db.query<{ d: number }>(
+          "select lectures_droit d from facturation.consommation_v where licence_id = $1",
+          [m.licenceA],
+        )
+      ).rows[0]!.d;
+      await enSuperutilisateur(db);
+      // Sami, collaborateur sans le droit : ni le solde, ni le report…
+      await comme(db, "PC");
+      await refuse(
+        db,
+        "select facturation.lectures_dues_solde($1, $2::date)",
+        [m.licenceA, m.periode],
+        /refus\.geste\.non_permis/,
+      );
+      const report = (await db.query<{ r: unknown }>("select public.mon_report($1) as r", [a.pme]))
+        .rows[0]!.r;
+      assert.equal(report, null);
+      // … mais son quota de lectures compte toujours le stock.
+      const quota = (
+        await db.query<{ d: number }>("select lectures_droit d from public.mon_forfait($1)", [
+          a.pme,
+        ])
+      ).rows[0]!.d;
+      assert.equal(quota, droitTour);
+      await enSuperutilisateur(db);
+      // Sonia, chef de la comptabilité, lit le solde.
+      await comme(db, "CC");
+      const solde = Number(
+        (
+          await db.query<{ s: number }>(
+            "select facturation.lectures_dues_solde($1, $2::date) as s",
+            [m.licenceA, m.periode],
+          )
+        ).rows[0]!.s,
+      );
+      assert.ok(solde >= 50);
+      await enSuperutilisateur(db);
+    });
+  });
+
+  it("un essai fini le jour de sa fin ne se prolonge plus ; une prolongation facturée ne s'annule plus", async () => {
+    await dansLArgent(async (db, m) => {
+      const jour = (
+        await db.query<{ j: string }>("select facturation.jour_de_l_organisation($1)::text as j", [
+          m.emetteur,
+        ])
+      ).rows[0]!.j;
+      // Un essai dont la fin (exclue) est aujourd'hui : il est fini.
+      const fini = await licenceDatee(db, "solo", "2026-10-01");
+      await db.query(
+        `insert into facturation.essais (licence_id, tenant_id, titulaire, canal, du, au, grille_le)
+         values ($1, $2, $3, 'direct', $4::date - 20, $4::date, date '2026-11-02')`,
+        [fini.licence, fini.org, fini.titulaire, jour],
+      );
+      await comme(db, "T");
+      await refuse(
+        db,
+        "select plateforme.essai_prolonger($1, 1::smallint, 'Trop tard')",
+        [fini.licence],
+        /refus\.essai\.termine/,
+      );
+      // L'essai de P0 court : prolongé d'un jour, puis le mois où tombe ce jour est facturé.
+      const g = (
+        await db.query<{ r: { id: string } }>(
+          "select plateforme.essai_prolonger($1, 1::smallint, 'Retard de mise en route') as r",
+          [m.licence0],
+        )
+      ).rows[0]!.r;
+      await enSuperutilisateur(db);
+      const moisDeLaFin = (
+        await db.query<{ p: string }>(
+          "select date_trunc('month', au)::date::text as p from facturation.essais where licence_id = $1",
+          [m.licence0],
+        )
+      ).rows[0]!.p;
+      await factureFactice(db, m.licence0, moisDeLaFin);
+      await comme(db, "T");
+      await refuse(
+        db,
+        "select plateforme.geste_annuler($1, 'Trop tard')",
+        [g.id],
+        /refus\.geste\.deja_facture/,
+      );
+    });
+  });
+
+  it("le jour est celui de la société, pas celui du serveur, à la frontière du mois (#194)", async () => {
+    await dansLArgent(async (db, m) => {
+      // La règle : 23 h 30 UTC le dernier jour du mois est déjà le 1er à Tunis.
+      const j = (
+        await db.query<{ j: string }>(
+          "select facturation.jour_a($1, timestamptz '2026-11-30 23:30:00+00')::text as j",
+          [m.emetteur],
+        )
+      ).rows[0]!.j;
+      assert.equal(j, "2026-12-01");
+      // Le serveur passe au 1er du mois prochain, 00 h 30 à Tunis — encore la veille en UTC :
+      // `facturation.jour_de_l_organisation` lit l'instant que l'épreuve pose (transaction annulée).
+      await db.query(`
+        create or replace function facturation.jour_de_l_organisation(p_org uuid) returns date
+        language sql stable security definer set search_path = '' as $$
+          select facturation.jour_a(p_org, current_setting('epreuve.maintenant')::timestamptz)
+        $$`);
+      const poser = (instant: string) =>
+        db.query("select set_config('epreuve.maintenant', $1, true)", [instant]);
+      const suivant = (
+        await db.query<{ p: string }>("select ($1::date + interval '1 month')::date::text as p", [
+          m.periode,
+        ])
+      ).rows[0]!.p;
+      await db.query("set local timezone = 'UTC'");
+      await poser(`${suivant} 00:30:00 Africa/Tunis`);
+
+      // Le mois qui finit se clôt : la passe du 1er à 00 h 30 le voit fini (la clôture
+      // n'est ouverte qu'à la passe ; la tour l'appelle ici sans elle).
+      await comme(db, "T");
+      await enSuperutilisateur(db);
+      await db.query("select facturation.cloturer_lectures($1, $2::date, null)", [
+        m.licenceA,
+        m.periode,
+      ]);
+      // Les lectures offertes à cet instant sont du mois qui commence.
+      await comme(db, "T");
+      await db.query("select plateforme.lectures_offrir($1, 10, 'Nouveau mois')", [m.licence0]);
+      await enSuperutilisateur(db);
+      const clos = await compter(
+        db,
+        `select count(*) n from facturation.lectures_dues
+          where licence_id = $1 and periode = $2::date and nature <> 'offerte'`,
+        [m.licenceA, m.periode],
+      );
+      assert.equal(clos, 1, "le mois d'avant est clos");
+      const offerte = (
+        await db.query<{ p: string }>(
+          `select periode::text as p from facturation.lectures_dues
+            where licence_id = $1 and nature = 'offerte' order by inscrit_le desc limit 1`,
+          [m.licence0],
+        )
+      ).rows[0]!.p;
+      assert.equal(offerte, suivant);
+
+      // Une licence qui naît à cet instant naît le 1er.
+      const t = randomUUID();
+      await personnesDEssai(db, t);
+      const pme = await organisation(db, "pme", t, "dirigeant");
+      const licence = (
+        await db.query<{ id: string }>("select facturation.licence_naitre($1, $2) as id", [pme, t])
+      ).rows[0]!.id;
+      const nee = (
+        await db.query<{ d: string }>(
+          "select offre_depuis::text as d from facturation.licences where id = $1",
+          [licence],
+        )
+      ).rows[0]!.d;
+      assert.equal(nee, suivant);
+
+      // L'émetteur valable dès le 1er est celui du 1er.
+      const nouvel = (
+        await db.query<{ id: string }>(
+          `insert into identity.organizations (kind, name, legal_id, adresse, jurisdiction, currency)
+           values ('pme', 'ALGORIA Factory (nouvel émetteur)', '0000001X/A/M/000', 'Tunis', 'TN', 'TND')
+           returning id`,
+        )
+      ).rows[0]!.id;
+      await db.query(
+        `insert into facturation.emetteurs (organisation_id, valide_des, designe_par)
+         values ($1, $2::date, $3)`,
+        [nouvel, suivant, ids.T],
+      );
+      const emetteur = (
+        await db.query<{ o: string }>(
+          "select organisation_id as o from facturation.emetteur_en_vigueur()",
+        )
+      ).rows[0]!.o;
+      assert.equal(emetteur, nouvel);
+
+      // Le retard se compte au jour de l'émetteur : deux jours après l'échéance, à 00 h 30.
+      const echeance = (
+        await db.query<{ e: string }>(
+          "select echeance_le::text as e from facturation.factures where id = $1",
+          [m.factureA],
+        )
+      ).rows[0]!.e;
+      const surlendemain = (
+        await db.query<{ d: string }>("select ($1::date + 2)::text as d", [echeance])
+      ).rows[0]!.d;
+      await poser(`${surlendemain} 00:30:00 Africa/Tunis`);
+      await comme(db, "T");
+      const encours = (
+        await db.query<{ etat: string; jours: number }>(
+          "select etat, jours_de_retard as jours from facturation.encours_v where facture_id = $1",
+          [m.factureA],
+        )
+      ).rows[0]!;
+      assert.deepEqual([encours.etat, encours.jours], ["en_retard", 2]);
+      await enSuperutilisateur(db);
+    });
+  });
+
+  it("Premium compte une place par société et par personne dès sa grille datée ; un abonné d'avant garde la sienne", async () => {
+    await dansLArgent(async (db) => {
+      const premium = async (depuis: string) => {
+        const l = await licenceDatee(db, "premium", depuis);
+        // Une seconde société, et cinq personnes qui travaillent dans les deux.
+        const seconde = await organisation(db, "pme", l.titulaire, "dirigeant");
+        await db.query(
+          "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",
+          [l.licence, seconde],
+        );
+        const gens = [randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+        await personnesDEssai(db, ...gens);
+        for (const p of gens) {
+          for (const org of [l.org, seconde]) {
+            await db.query(
+              "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')",
+              [org, p],
+            );
+          }
+        }
+        return (
+          await db.query<{ sieges: number; prix: string; lectures: number }>(
+            `select sieges_occupes as sieges, prix_mensuel_ht::text as prix, lectures_droit as lectures
+               from facturation.droits_v where licence_id = $1`,
+            [l.licence],
+          )
+        ).rows[0]!;
+      };
+      const grille = (
+        await db.query<{ portee: string; prix_siege: string; lectures_siege: number }>(
+          `select portee_sieges as portee, prix_siege_sup::text as prix_siege,
+                  lectures_par_siege_sup as lectures_siege
+             from ref.offre_a('premium', date '2026-12-01')`,
+        )
+      ).rows[0]!;
+      assert.equal(grille.portee, "organisation");
+      const avant = await premium("2026-11-01");
+      const apres = await premium("2026-12-01");
+      assert.equal(avant.sieges, 5, "avant : une personne, une place");
+      assert.equal(apres.sieges, 10, "après : une place par société et par personne");
+      assert.equal(
+        Number(apres.prix) - Number(avant.prix),
+        5 * Number(grille.prix_siege),
+        "cinq places de plus au prix de la place",
+      );
+      assert.equal(apres.lectures - avant.lectures, 5 * grille.lectures_siege);
+    });
   });
 });

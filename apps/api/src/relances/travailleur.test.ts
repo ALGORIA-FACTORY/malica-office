@@ -94,7 +94,18 @@ const ENV = {
   BREVO_API_KEY: "cle-d-essai",
   MALICA_COURRIEL_EXPEDITEUR: "noreply@essai.local",
   MALICA_URL_PUBLIQUE: "https://app.essai.local/",
+  MALICA_COURRIEL_DESTINATAIRES: "@essai.local",
 };
+
+/** Un faux Brevo qui compte ses appels. */
+function brevoCompte() {
+  const envoyes: Array<Record<string, unknown>> = [];
+  const fetchImpl = (async (_url: string, init: RequestInit) => {
+    envoyes.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+    return new Response(JSON.stringify({ messageId: "m" }), { status: 201 });
+  }) as typeof fetch;
+  return { envoyes, fetchImpl };
+}
 
 describe("le travailleur des relances", () => {
   it("sans clé Brevo : il laisse décider la base, n'envoie rien, n'inscrit rien", async () => {
@@ -134,6 +145,46 @@ describe("le travailleur des relances", () => {
     assert.equal(pieces.length, 1);
     assert.equal(pieces[0]!.name, "ALG-FA-2026-0007.pdf");
     assert.equal(Buffer.from(pieces[0]!.content, "base64").subarray(0, 5).toString(), "%PDF-");
+  });
+
+  it("hors production, une adresse hors de la liste est retenue : Brevo n'est pas appelé, « retenu » s'inscrit", async () => {
+    const b = fausseBase(FACTURE_JOINTE);
+    const brevo = brevoCompte();
+    const r = await tourDeRelances({
+      executer: b.executer,
+      env: { ...ENV, MALICA_COURRIEL_DESTINATAIRES: "recette@algoria.local, @autre.local" },
+      fetchImpl: brevo.fetchImpl,
+    });
+    assert.equal(brevo.envoyes.length, 0);
+    assert.equal(r.retenus, 1);
+    assert.equal(r.remis, 0);
+    const remise = b.appels.find((a) => a.sql.includes("notif.remettre"));
+    assert.deepEqual(remise?.params, ["e1", "retenu", "refus.courriel.hors_liste"]);
+  });
+
+  it("hors production, une liste vide n'écrit à personne", async () => {
+    const b = fausseBase();
+    const brevo = brevoCompte();
+    const { MALICA_COURRIEL_DESTINATAIRES: _liste, ...sansListe } = ENV;
+    const r = await tourDeRelances({
+      executer: b.executer,
+      env: sansListe,
+      fetchImpl: brevo.fetchImpl,
+    });
+    assert.equal(brevo.envoyes.length, 0);
+    assert.equal(r.retenus, 1);
+  });
+
+  it("en production, la liste ne restreint rien (décision 12 : l'envoi reste allumé)", async () => {
+    const b = fausseBase();
+    const brevo = brevoCompte();
+    const r = await tourDeRelances({
+      executer: b.executer,
+      env: { ...ENV, MALICA_COURRIEL_DESTINATAIRES: "", MALICA_COURRIEL_PRODUCTION: "oui" },
+      fetchImpl: brevo.fetchImpl,
+    });
+    assert.equal(brevo.envoyes.length, 1);
+    assert.equal(r.remis, 1);
   });
 
   it("un refus de Brevo s'inscrit « echoue », avec l'erreur", async () => {

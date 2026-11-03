@@ -336,6 +336,8 @@ export const fr = {
     "Cette pièce est le double d'une pièce déjà lue : je ne la relis pas.",
   "pme.refus.piece_personnelle":
     "Cette pièce est privée. Ajoutez-la à la société pour permettre sa lecture ; l’envoi à la comptabilité est une action distincte.",
+  "refus.courriel.hors_liste":
+    "Courriel retenu : hors production, ce destinataire n’est pas dans la liste autorisée.",
   "refus.piece.rappelEnAttente":
     "Le retour de cette pièce est demandé au cabinet : attendez sa réponse.",
   "refus.licence.transmission":
@@ -4611,6 +4613,8 @@ export const fr = {
   "refus.facture.total_incoherent": "Le total de la facture ne correspond pas à ses lignes.",
   "refus.geste.au_dela_du_plafond": "Ce geste dépasse le plafond fixé par la tour ({plafond}).",
   "refus.geste.chevauchement": "Un geste de même nature couvre déjà cette période pour ce payeur.",
+  "refus.geste.cumul_depasse":
+    "Ce geste porterait le cumul de la licence au-delà du plafond ({plafond}) : {deja} déjà accordés sur {fenetre} mois.",
   "refus.geste.deja_annule": "Ce geste est déjà annulé.",
   "refus.geste.deja_facture": "Ce geste figure déjà sur une facture émise : corrigez par un avoir.",
   "refus.geste.ferme": "Ce geste ne s’accorde plus.",

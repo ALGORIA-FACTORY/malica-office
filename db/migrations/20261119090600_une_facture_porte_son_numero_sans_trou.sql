@@ -279,12 +279,6 @@ create trigger facture_decisions_ajout_seul before update or delete on facturati
 
 -- ------------------------------------------------------------ 6. Les briques de l'émission
 
-/** Le jour civil de l'émetteur : son fuseau, sinon celui de sa juridiction. */
-create function facturation.jour_de_l_emetteur(p_org uuid) returns date
-language sql stable security definer set search_path = '' as $$
-  select (now() at time zone app.fuseau_du_cabinet(p_org))::date
-$$;
-revoke all on function facturation.jour_de_l_emetteur(uuid) from public, anon, authenticated;
 
 /** L'émetteur en vigueur et tout ce qu'une facture en recopie. Aucun repli (R4). */
 create function facturation.emetteur_en_vigueur(
@@ -298,12 +292,14 @@ begin
     into emetteur_id, organisation_id, nom, matricule, adresse, juridiction, devise
     from facturation.emetteurs e
     join identity.organizations o on o.id = e.organisation_id
-   where e.valide_des <= current_date
+   -- Le jour de CHAQUE émetteur candidat, dans son fuseau (#194) : un émetteur
+   -- valable dès le 1er l'est dès 00 h 00 à Tunis, pas à 01 h 00.
+   where e.valide_des <= facturation.jour_de_l_organisation(e.organisation_id)
    order by e.valide_des desc limit 1;
   if emetteur_id is null then
     raise exception 'refus.referentiel.manquant' using errcode = 'no_data_found';
   end if;
-  jour := facturation.jour_de_l_emetteur(organisation_id);
+  jour := facturation.jour_de_l_organisation(organisation_id);
 
   select p.id into pack from ref.jurisdiction_packs p
    where p.jurisdiction = juridiction and p.effective_from <= jour
@@ -928,7 +924,7 @@ begin
   end if;
 
   select * into em from facturation.emetteur_en_vigueur();
-  v_jour := facturation.jour_de_l_emetteur(f.emetteur_organisation_id);
+  v_jour := facturation.jour_de_l_organisation(f.emetteur_organisation_id);
   perform facturation.chronologie_tenue(f.emetteur_organisation_id, 'avoir',
                                         extract(year from v_jour)::smallint, v_jour);
   select * into v_num from facturation.numero_suivant(f.emetteur_organisation_id,
@@ -1021,7 +1017,18 @@ begin
   if g.acte not in ('remise_pourcentage', 'remise_montant', 'mois_offerts', 'prolongation_essai') then
     raise exception 'refus.geste.non_annulable' using errcode = 'check_violation';
   end if;
-  if exists (select 1 from facturation.facture_lignes x where x.intervention_id = p_geste) then
+  -- Un geste dont l'effet est déjà facturé ne s'annule pas : il se corrige
+  -- par un avoir. Une remise et des mois offerts portent une ligne ; une
+  -- prolongation d'essai, non — elle retire des jours au prorata : toute
+  -- facture du titulaire d'un mois qu'elle touche l'a déjà comptée.
+  if exists (select 1 from facturation.facture_lignes x where x.intervention_id = p_geste)
+     or (g.acte = 'prolongation_essai'
+         and exists (select 1 from facturation.factures f
+                       join facturation.essais_v e on e.licence_id = f.licence_id
+                      where f.licence_id = g.licence_id and f.avoir_de is null
+                        and f.payeur_type = 'titulaire'
+                        and (f.periode + interval '1 month')::date > e.au
+                        and f.periode < e.au + e.jours_prolonges)) then
     raise exception 'refus.geste.deja_facture' using errcode = 'check_violation';
   end if;
   if not plateforme.geste_en_vigueur(p_geste) then
@@ -1061,12 +1068,18 @@ create or replace view facturation.encours_v with (security_invoker = true) as
            + case when coalesce(a.ht, 0) >= f.montant_ht::numeric then f.timbre::numeric else 0 end
            >= f.montant_ttc::numeric then 'payee'
       when coalesce(e.encaisse, 0::numeric) > 0 then 'partielle'
-      when f.echeance_le < current_date then 'en_retard'
+      when f.echeance_le < j.jour then 'en_retard'
       else 'a_echoir'
     end as etat,
-    greatest(0, current_date - f.echeance_le) as jours_de_retard,
+    greatest(0, j.jour - f.echeance_le) as jours_de_retard,
     coalesce(a.ttc, 0) as avoirs
    from facturation.factures f
+   -- Le retard se compte au jour de l'ÉMETTEUR (#194). Une facture d'avant
+   -- l'émetteur (sans son organisation) n'a pas de fuseau recopié : jour du
+   -- serveur, comme elle l'a toujours lu.
+   cross join lateral (select case when f.emetteur_organisation_id is null then current_date
+                                   else facturation.jour_de_l_organisation(f.emetteur_organisation_id)
+                              end as jour) j
    left join lateral (select sum(x.montant::numeric) as encaisse
                         from facturation.encaissements x where x.facture_id = f.id) e on true
    left join lateral (select sum(x.montant_ttc::numeric) as ttc, sum(x.montant_ht::numeric) as ht

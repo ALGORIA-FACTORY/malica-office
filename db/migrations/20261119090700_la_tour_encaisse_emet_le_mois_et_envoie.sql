@@ -17,7 +17,11 @@
 --  l'original, si la tour n'a pas éteint l'envoi, la base pose un courriel
 --  `facture.emise` (lien vers l'espace client) ; le travailleur des relances
 --  le remet par Brevo avec le PDF joint. Sans clé Brevo (poste, CI,
---  épreuves), rien ne part : les courriels restent « à remettre ».
+--  épreuves), rien ne part : les courriels restent « à remettre ». Hors
+--  production, le travailleur ne remet qu'aux adresses de la liste de
+--  l'environnement (`MALICA_COURRIEL_DESTINATAIRES`, vide = rien) : un envoi
+--  retenu s'inscrit `retenu` dans `notif.remises`, état terminal
+--  (docs/exploitation.md).
 --
 --  LA PASSE (décision 11, manuelle). « Aperçu du mois » puis « Émettre le
 --  mois », depuis la tour. Une seule passe réelle par mois ; on la REPREND,
@@ -63,7 +67,7 @@ begin
   if p_montant is null or p_montant <= 0 then
     raise exception 'refus.encaissement.montant_positif' using errcode = 'check_violation';
   end if;
-  if p_encaisse_le is null or p_encaisse_le > facturation.jour_de_l_emetteur(f.emetteur_organisation_id) then
+  if p_encaisse_le is null or p_encaisse_le > facturation.jour_de_l_organisation(f.emetteur_organisation_id) then
     raise exception 'refus.encaissement.date_future' using errcode = 'check_violation';
   end if;
   select e.reste_du into v_reste from facturation.encours_v e where e.facture_id = p_facture;
@@ -104,7 +108,7 @@ begin
   end if;
   insert into facturation.encaissements (facture_id, montant, moyen, reference, encaisse_le, annule_id, motif)
   values (e.facture_id, -e.montant::numeric, e.moyen, e.reference,
-          facturation.jour_de_l_emetteur((select f.emetteur_organisation_id from facturation.factures f
+          facturation.jour_de_l_organisation((select f.emetteur_organisation_id from facturation.factures f
                                             where f.id = e.facture_id)),
           e.id, p_motif)
   returning id into v_id;
@@ -648,8 +652,8 @@ revoke all on plateforme.factures_v from public, anon;
 grant select on plateforme.factures_v to authenticated;
 
 create view plateforme.exceptions_v with (security_invoker = true) as
-  select i.id, i.licence_id, i.acte, i.valeur, i.payeur_type, i.effet_du, i.effet_au, i.motif,
-         i.operateur, i.created_at, i.annule,
+  select i.id, i.licence_id, i.acte, i.valeur, i.payeur_type, i.effet_du, i.effet_au, n.motif,
+         n.operateur, i.created_at, i.annule,
          (select x.id from plateforme.interventions x where x.annule = i.id) as annule_par,
          plateforme.geste_en_vigueur(i.id) and i.acte <> 'annulation' as en_vigueur,
          a.visible_client,
@@ -659,6 +663,9 @@ create view plateforme.exceptions_v with (security_invoker = true) as
            where lo.licence_id = i.licence_id) as societes
     from plateforme.interventions i
     join ref.actes_intervention a on a.code = i.acte
+    -- Le motif et l'opérateur ne sont pas des colonnes que le client lit
+    -- (droits de colonne, 20261119090400) : la tour les lit par la note.
+    cross join lateral plateforme.note_du_geste(i.id) n
    where (select app.is_platform());
 revoke all on plateforme.exceptions_v from public, anon;
 grant select on plateforme.exceptions_v to authenticated;
@@ -690,6 +697,49 @@ select g.code, g.canal, g.locale, g.sujet, g.titre,
  where g.code in ('facture.emise', 'facture.emise.cabinet') and g.canal = 'email'
    and g.effective_from = date '2026-10-23'
 on conflict (code, canal, locale, effective_from) do nothing;
+
+-- Un courriel RETENU par la garde des destinataires (hors production, adresse
+-- hors de la liste) : la tentative s'inscrit, motivée, et l'envoi ne se
+-- retente pas — la garde dirait la même chose à la tentative suivante.
+alter table notif.remises drop constraint remises_resultat_check;
+alter table notif.remises add constraint remises_resultat_check
+  check (resultat in ('remis', 'echoue', 'refuse', 'retenu'));
+
+create or replace view notif.envois_v with (security_invoker = true) as
+ select e.id,
+    e.tenant_id,
+    e.destinataire,
+    e.code,
+    e.canal,
+    e.gabarit_id,
+    e.sujet_cle,
+    e.titre_rendu,
+    e.corps_rendu,
+    e.decision,
+    e.motif_abandon,
+    e.cree_le,
+    r.resultat as dernier_resultat,
+    r.tente_le as derniere_tentative_le,
+    (coalesce(n.tentatives, (0)::bigint))::integer as tentatives,
+    (r.resultat = 'remis'::text) as remis,
+        case
+            when (e.decision = 'abandonne'::text) then 'abandonne'::text
+            when (r.resultat = 'remis'::text) then 'remis'::text
+            when (r.resultat = 'refuse'::text) then 'refuse'::text
+            when (r.resultat = 'retenu'::text) then 'retenu'::text
+            when (r.resultat = 'echoue'::text) then 'a_reessayer'::text
+            else 'a_remettre'::text
+        end as etat
+   from ((notif.envois e
+     left join lateral ( select remises.resultat,
+            remises.tente_le
+           from notif.remises
+          where (remises.envoi_id = e.id)
+          order by remises.tente_le desc
+         limit 1) r on (true))
+     left join lateral ( select count(*) as tentatives
+           from notif.remises
+          where (remises.envoi_id = e.id)) n on (true));
 
 -- ------------------------------------------------------------ 6. Un doublon retiré (R9)
 

@@ -791,11 +791,14 @@ export const facturation = {
     return rows;
   },
 
-  /** Les gestes commerciaux VISIBLES de la licence (une note interne ne sort jamais de la tour). */
+  /**
+   * Les gestes commerciaux VISIBLES de la licence, sous leur libellé : le motif
+   * que la tour a écrit ne sort jamais d'elle (droits de colonne en base).
+   */
   async gestesCommerciaux(db: Requete, locale: string) {
     const { rows } = await db.query(
       `select i.id, i.licence_id, i.acte, coalesce(l.value, f.value, i.acte) as libelle,
-              i.valeur::text, i.payeur_type, i.effet_du::text, i.effet_au::text, i.motif,
+              i.valeur::text, i.payeur_type, i.effet_du::text, i.effet_au::text,
               i.created_at, i.annule, plateforme.geste_en_vigueur(i.id) as en_vigueur
          from plateforme.interventions i
          left join ref_labels_v l on l.ns = 'acte_intervention' and l.key = i.acte and l.locale = $1

@@ -18,9 +18,11 @@
 --  compte quand même, à la volée, au même calcul (`ecart_du_mois`) : le
 --  client ne perd rien parce que la tour n'a pas encore lancé la passe.
 --
---  Décision 3 : les jours d'ESSAI n'alimentent pas le stock (le crédit d'un
---  mois se proratise sur ses jours payés). Décision 4 : un mois OFFERT
---  alimente le stock comme un mois payé (rien à faire : son forfait existe).
+--  Décision 3 : les jours d'ESSAI n'alimentent pas le stock, ni les jours
+--  d'avant la naissance de la licence : le crédit d'un mois est borné par le
+--  droit de ses jours PAYÉS (`droit_paye`, au prorata des segments du forfait,
+--  jours d'essai retirés). Décision 4 : un mois OFFERT alimente le stock comme
+--  un mois payé (rien à faire : son forfait existe).
 --  Décision 8 : une licence RÉSILIÉE ne crédite plus rien ; son stock est
 --  gelé, jamais remboursé, et rendu si elle reprend.
 --
@@ -34,12 +36,17 @@
 
 -- ------------------------------------------------------------ 1. Le droit et le lu d'un mois
 
-/** Le droit du forfait d'une licence sur un mois : l'offre portée le dernier jour du mois. */
+/**
+ * Le droit PLEIN du forfait d'une licence sur un mois : l'offre portée le
+ * dernier jour du mois, sans prorata. C'est le quota que le mois a ouvert à la
+ * lecture (`consommation_v`) ; au-delà, la lecture puise dans le stock.
+ */
 create function facturation.droit_du_forfait(p_licence uuid, p_periode date) returns integer
 language sql stable security definer set search_path = '' as $$
   select coalesce((
-    select (o.lectures_par_organisation * greatest(pl.organisations, o.organisations_incluses)
-            + o.lectures_par_siege_sup * greatest(0, pl.sieges_occupes - o.sieges_inclus))::int
+    select facturation.lectures_du_forfait(
+             o, pl.organisations,
+             facturation.sieges_comptes(o.portee_sieges, pl.sieges_occupes, pl.sieges_par_societe))
       from facturation.forfait_historique h
       cross join lateral ref.offre_a(h.offre_code, h.offre_depuis) o
       cross join facturation.places_v pl
@@ -50,6 +57,40 @@ language sql stable security definer set search_path = '' as $$
      limit 1), 0)
 $$;
 revoke all on function facturation.droit_du_forfait(uuid, date) from public, anon, authenticated;
+
+/**
+ * Le droit des jours PAYÉS (ou offerts) d'un mois : chaque segment du forfait
+ * qui touche le mois compte au prorata de ses jours (`effet_au` exclu), moins
+ * les jours d'essai (décision 3). Une licence née le 20 n'a payé que du 20 à
+ * la fin du mois ; une descente au 15 compte l'ancienne offre jusqu'au 14.
+ */
+create function facturation.droit_paye(p_licence uuid, p_periode date) returns integer
+language sql stable security definer set search_path = '' as $$
+  with mois as (
+    select p_periode as du, (p_periode + interval '1 month')::date as au,
+           ((p_periode + interval '1 month')::date - p_periode) as jours
+  ),
+  essai as (
+    select ev.du, ev.fin_effective as au from facturation.essais_v ev where ev.licence_id = p_licence
+  )
+  select coalesce(floor(sum(
+           facturation.lectures_du_forfait(
+             o, pl.organisations,
+             facturation.sieges_comptes(o.portee_sieges, pl.sieges_occupes, pl.sieges_par_societe))::numeric
+           * greatest(0, (s.au - s.du)
+                         - coalesce((select greatest(0, least(s.au, e.au) - greatest(s.du, e.du))
+                                       from essai e), 0))
+           / (select m.jours from mois m))), 0)::integer
+    from facturation.forfait_historique h
+    cross join mois m
+    cross join lateral ref.offre_a(h.offre_code, h.offre_depuis) o
+    cross join facturation.places_v pl
+    cross join lateral (select greatest(h.effet_du, m.du) as du,
+                               least(coalesce(h.effet_au, m.au), m.au) as au) s
+   where h.licence_id = p_licence and pl.licence_id = p_licence
+     and s.au > s.du
+$$;
+revoke all on function facturation.droit_paye(uuid, date) from public, anon, authenticated;
 
 /** Les lectures d'un mois prises sur le forfait ou le stock (hors recharges). */
 create function facturation.lues_hors_recharge(p_licence uuid, p_periode date) returns integer
@@ -125,27 +166,23 @@ create trigger facturation_lectures_dues_ajout_seul before update or delete on f
 -- ------------------------------------------------------------ 3. L'écart d'un mois, le solde
 
 /**
- * Ce qu'un mois apporte au stock (positif) ou y prend (négatif). Les jours
- * d'essai ne créditent rien (décision 3) ; une licence résiliée non plus
+ * Ce qu'un mois apporte au stock (positif) ou y prend (négatif). Lu au-delà
+ * du quota plein du mois : puisé dans le stock. En deçà : le reste crédite,
+ * borné par le droit des jours payés (décision 3 : ni l'essai ni les jours
+ * d'avant la naissance ne créditent). Une licence résiliée ne crédite rien
  * (décision 8).
  */
 create function facturation.ecart_du_mois(p_licence uuid, p_periode date) returns integer
 language plpgsql stable security definer set search_path = '' as $$
 declare
-  v_droit integer := facturation.droit_du_forfait(p_licence, p_periode);
+  v_plein integer := facturation.droit_du_forfait(p_licence, p_periode);
   v_lues  integer := facturation.lues_hors_recharge(p_licence, p_periode);
-  v_jours integer := ((p_periode + interval '1 month')::date - p_periode);
-  v_essai integer := facturation.jours_d_essai(p_licence, p_periode);
-  v_ecart integer;
 begin
-  if exists (select 1 from facturation.licences l where l.id = p_licence and l.statut = 'resiliee') then
-    return least(0, v_droit - v_lues);
+  if v_lues > v_plein
+     or exists (select 1 from facturation.licences l where l.id = p_licence and l.statut = 'resiliee') then
+    return least(0, v_plein - v_lues);
   end if;
-  v_ecart := v_droit - v_lues;
-  if v_ecart > 0 and v_essai > 0 then
-    v_ecart := floor(v_ecart::numeric * (v_jours - v_essai) / v_jours)::int;
-  end if;
-  return v_ecart;
+  return least(v_plein - v_lues, facturation.droit_paye(p_licence, p_periode));
 end
 $$;
 revoke all on function facturation.ecart_du_mois(uuid, date) from public, anon, authenticated;
@@ -159,22 +196,34 @@ $$;
 revoke all on function facturation.premier_mois(uuid) from public, anon, authenticated;
 
 /**
- * Qui peut demander le stock d'une licence : la plateforme, qui la lit
- * (`licences_lisibles`), ou un membre d'une de ses sociétés et le cabinet qui
- * y est engagé — ceux dont les lectures la consomment (`lecture_autorisee`
- * lit le report sous l'identité du lecteur). Personne d'autre : la fonction
- * est `definer`, la RLS du registre ne la protège pas (revue Codex de #202).
- * Une session ouverte par un superutilisateur, SANS identité (migration,
- * maintenance, épreuve qui pose ses fixtures), n'est pas un client : l'API se
- * connecte sous `malica_api` et pose toujours l'identité de l'appelant.
+ * Qui lit le SOLDE du stock d'une licence : ceux qui lisent son commerce
+ * (`licences_lisibles` : la plateforme, le propriétaire principal, le chef de
+ * la comptabilité, l'expert sous mandat — décision 14). Une session ouverte
+ * par un superutilisateur, SANS identité (migration, maintenance, épreuve qui
+ * pose ses fixtures), n'est pas un client : l'API se connecte sous
+ * `malica_api` et pose toujours l'identité de l'appelant.
  */
-create function facturation.licence_consultable(p_licence uuid) returns boolean
+create function facturation.stock_lisible(p_licence uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
   select (auth.uid() is null
           and exists (select 1 from pg_catalog.pg_roles r
                        where r.rolname = session_user and r.rolsuper))
-      or app.is_platform()
       or p_licence in (select facturation.licences_lisibles())
+$$;
+revoke all on function facturation.stock_lisible(uuid) from public, anon, authenticated;
+
+/**
+ * Qui fait COMPTER le stock dans son quota de lectures : ceux qui lisent le
+ * solde, et tout membre d'une société de la licence ou le cabinet qui y est
+ * engagé — ceux dont les lectures la consomment (`lecture_verdict` lit le
+ * quota sous l'identité du lecteur). Le quota leur montre un total
+ * (`lectures_droit`, `lectures_restantes`), jamais le solde du stock.
+ * Personne d'autre : la fonction est `definer`, la RLS du registre ne la
+ * protège pas (revue Codex de #202).
+ */
+create function facturation.licence_consultable(p_licence uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select facturation.stock_lisible(p_licence)
       or exists (select 1 from facturation.licence_organisations lo
                   where lo.licence_id = p_licence
                     and (lo.tenant_id in (select app.member_orgs())
@@ -185,14 +234,13 @@ revoke all on function facturation.licence_consultable(uuid) from public, anon, 
 /**
  * Le solde du stock au début du mois `p_periode` : le registre des mois
  * clos, les lectures offertes jusqu'à ce mois inclus, et l'écart des mois
- * antérieurs que la passe n'a pas encore clos. Jamais négatif.
+ * antérieurs que la passe n'a pas encore clos. Jamais négatif. Interne :
+ * `lectures_dues_solde` (le solde, à qui lit le commerce) et
+ * `lectures_reportees` (le quota, à qui lit) l'appellent.
  */
-create function facturation.lectures_dues_solde(p_licence uuid, p_periode date) returns integer
+create function facturation.solde_des_lectures_dues(p_licence uuid, p_periode date) returns integer
 language plpgsql stable security definer set search_path = '' as $$
 begin
-  if not facturation.licence_consultable(p_licence) then
-    raise exception 'refus.geste.non_permis' using errcode = '42501';
-  end if;
   return greatest(0,
     coalesce((select sum(case when d.nature = 'puisement' then -d.lectures else d.lectures end)
                 from facturation.lectures_dues d
@@ -207,6 +255,18 @@ begin
                                       and d.nature <> 'offerte')), 0))::int;
 end
 $$;
+revoke all on function facturation.solde_des_lectures_dues(uuid, date) from public, anon, authenticated;
+
+/** Le solde du stock, à qui lit le commerce de la licence (décision 14). */
+create function facturation.lectures_dues_solde(p_licence uuid, p_periode date) returns integer
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not facturation.stock_lisible(p_licence) then
+    raise exception 'refus.geste.non_permis' using errcode = '42501';
+  end if;
+  return facturation.solde_des_lectures_dues(p_licence, p_periode);
+end
+$$;
 revoke all on function facturation.lectures_dues_solde(uuid, date) from public, anon;
 grant execute on function facturation.lectures_dues_solde(uuid, date) to authenticated;
 
@@ -218,7 +278,7 @@ begin
     raise exception 'refus.geste.non_permis' using errcode = '42501';
   end if;
   return case public.abonnement_reglage() ->> 'report_regle'
-           when 'a_vie' then facturation.lectures_dues_solde(p_licence, p_periode)
+           when 'a_vie' then facturation.solde_des_lectures_dues(p_licence, p_periode)
            when 'un_mois' then facturation.report_de(p_licence, p_periode)
            else 0 end;
 end
@@ -248,12 +308,15 @@ create or replace view facturation.consommation_v with (security_invoker = true)
     d.titulaire,
     r.report as lectures_report
    from ((facturation.droits_reels_v d
-     cross join lateral (select facturation.lectures_reportees(d.licence_id,
-                                  (date_trunc('month', current_date::timestamptz))::date) as report) r)
+     -- Le mois en cours est celui de la société (#194), le même que celui où
+     -- `lecture_consommer` range la lecture.
+     cross join lateral (select date_trunc('month', facturation.jour_de_la_licence(d.licence_id))::date
+                                  as mois) m
+     cross join lateral (select facturation.lectures_reportees(d.licence_id, m.mois) as report) r)
      left join lateral (select count(*) as consommees
            from facturation.lectures l
           where l.licence_id = d.licence_id
-            and l.periode = (date_trunc('month', current_date::timestamptz))::date
+            and l.periode = m.mois
             and l.recharge_id is null) c on true);
 
 create or replace function public.mon_report(p_tenant uuid default null)
@@ -270,11 +333,14 @@ begin
     select lo.licence_id into v_licence from facturation.licence_organisations lo
      where lo.tenant_id = p_tenant and lo.tenant_id in (select app.member_orgs());
   end if;
-  if v_licence is null then
+  -- Le report est le SOLDE du stock : il ne se montre qu'à qui lit le
+  -- commerce de la licence (décision 14), pas à tout membre.
+  if v_licence is null or not facturation.stock_lisible(v_licence) then
     return null;
   end if;
   return jsonb_build_object(
-    'report', facturation.lectures_reportees(v_licence, date_trunc('month', current_date)::date),
+    'report', facturation.lectures_reportees(
+                v_licence, date_trunc('month', facturation.jour_de_la_licence(v_licence))::date),
     'actif', v_regle <> 'aucun',
     'regle', v_regle);
 end
@@ -289,14 +355,94 @@ create view facturation.lectures_dues_v with (security_invoker = true) as
          coalesce(sum(d.lectures) filter (where d.nature <> 'puisement'), 0)::int as credits,
          coalesce(sum(d.lectures) filter (where d.nature = 'puisement'), 0)::int as puisees,
          coalesce(sum(d.lectures) filter (where d.nature = 'offerte'), 0)::int as offertes,
-         facturation.lectures_dues_solde(l.id, (date_trunc('month', current_date::timestamptz))::date)
-           as solde,
+         facturation.lectures_dues_solde(
+           l.id, date_trunc('month', facturation.jour_de_la_licence(l.id))::date) as solde,
          max(d.periode) filter (where d.nature <> 'offerte') as dernier_mois_clos
     from facturation.licences l
     left join facturation.lectures_dues d on d.licence_id = l.id
    group by l.id;
 revoke all on facturation.lectures_dues_v from public, anon;
 grant select on facturation.lectures_dues_v to authenticated;
+
+-- Une lecture se range dans le mois de la SOCIÉTÉ (#194), celui que
+-- `consommation_v` compte : à 00 h 30 le 1er à Tunis, elle est du mois qui
+-- commence. Reprise de la définition EN VIGUEUR ; seul le mois change.
+CREATE OR REPLACE FUNCTION public.lecture_consommer(p_piece uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_tenant   uuid;
+  v_licence  uuid;
+  v_verdict  jsonb;
+  v_motif    text;
+  v_recharge uuid;
+begin
+  -- La porte, nommée, et d'abord. La RLS de `capture.pieces` ne s'applique
+  -- plus ici : sans cette ligne, tout compte authentifié ferait compter la
+  -- lecture d'une pièce qu'il n'a pas le droit de voir.
+  if not app.piece_lisible(p_piece) then
+    raise exception 'refus.introuvable.piece' using errcode = '42501';
+  end if;
+
+  -- La règle du plafond vit à UN seul endroit, et c'est ici qu'on l'invoque.
+  v_verdict := public.lecture_verdict(p_piece);
+  if not (v_verdict ->> 'autorisee')::boolean then
+    raise exception '%', app.refus_avec_valeurs('refus.lecture.refusee', 'motif', (v_verdict ->> 'motif')::text)
+      using errcode = 'check_violation';
+  end if;
+
+  v_motif := v_verdict ->> 'motif';
+  if v_motif = 'relecture_gratuite' then
+    return v_verdict;
+  end if;
+
+  -- Rien de ce qui s'écrit ne vient de l'appelant : le tenant est celui de la
+  -- pièce, la licence est celle du tenant. C'est ce qui tient les sections 8
+  -- et 9 sans la politique.
+  select tenant_id into v_tenant from capture.pieces where id = p_piece;
+  select licence_id into v_licence
+    from facturation.licence_organisations where tenant_id = v_tenant;
+
+  if v_motif in ('sur_recharge', 'recharge_automatique') then
+    -- Deux lectures simultanées ne prennent pas la même dernière unité : on
+    -- verrouille la licence avant de choisir (ou d'acheter) : les lectures sur
+    -- recharge d'un même client passent l'une après l'autre.
+    perform 1 from facturation.licences l where l.id = v_licence for update;
+
+    -- Une lecture concurrente a pu acheter pendant l'attente : on n'en achète
+    -- une que s'il n'en reste toujours aucune.
+    if v_motif = 'recharge_automatique' and facturation.recharge_disponible(v_licence) = 0 then
+      perform facturation.recharge_inscrire(
+        v_licence, v_verdict ->> 'palier', 'automatique', auth.uid());
+    end if;
+
+    select r.recharge_id into v_recharge
+      from facturation.recharges_v r
+     where r.licence_id = v_licence and r.utilisable and r.restantes > 0
+     order by r.expire_le, r.achetee_le, r.recharge_id
+     limit 1;
+    if v_recharge is null then
+      raise exception '%', app.refus_avec_valeurs('refus.lecture.refusee', 'motif', 'plafond_atteint') using errcode = 'check_violation';
+    end if;
+  end if;
+
+  insert into facturation.lectures
+    (tenant_id, licence_id, piece_id, periode, consommee_par, recharge_id)
+  values (v_tenant, v_licence, p_piece,
+          date_trunc('month', facturation.jour_de_la_licence(v_licence))::date, auth.uid(), v_recharge)
+  on conflict (piece_id) do nothing;
+
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                               object_id, payload)
+  values (v_tenant, auth.uid(), 'lecture.consommee', 'capture', 'pieces', p_piece,
+          jsonb_build_object('licence_id', v_licence, 'recharge_id', v_recharge));
+
+  return public.lecture_verdict(p_piece);
+end
+$function$;
 
 -- ------------------------------------------------------------ 4. La clôture, les lectures offertes
 
@@ -316,7 +462,9 @@ begin
   if not app.is_platform() then
     raise exception 'refus.reserve.plateforme' using errcode = '42501';
   end if;
-  if p_periode >= date_trunc('month', current_date)::date then
+  -- Le mois en cours est celui de la société (#194) : à 00 h 30 le 1er à
+  -- Tunis, le mois d'avant est clos, même s'il est encore 23 h 30 en UTC.
+  if p_periode >= date_trunc('month', facturation.jour_de_la_licence(p_licence))::date then
     return 0;
   end if;
   for m in
@@ -344,8 +492,9 @@ create function plateforme.lectures_offrir(
 returns jsonb
 language plpgsql security definer set search_path = '' as $$
 declare
-  r   plateforme.reglages_commerciaux;
-  v_g jsonb;
+  r      plateforme.reglages_commerciaux;
+  v_g    jsonb;
+  v_mois date;
 begin
   if not app.is_platform() then
     raise exception 'refus.reserve.plateforme' using errcode = '42501';
@@ -356,12 +505,20 @@ begin
                                                 'plafond', r.lectures_offertes_max::text)
       using errcode = 'check_violation';
   end if;
+  if p_cle is not null and exists (select 1 from plateforme.interventions i
+                                    where i.cle_idempotence = p_cle) then
+    return plateforme.geste_inscrire(p_licence, 'lectures_offertes', null, null, null, null,
+                                     p_motif, p_cle, null);
+  end if;
+  perform 1 from facturation.licences where id = p_licence for update;
+  perform plateforme.cumul_borner(p_licence, array['lectures_offertes'], false, p_nombre,
+                                  r.lectures_offertes_max);
+  v_mois := date_trunc('month', facturation.jour_de_la_licence(p_licence))::date;
   v_g := plateforme.geste_inscrire(p_licence, 'lectures_offertes', p_nombre, null,
-                                   date_trunc('month', current_date)::date, null, p_motif, p_cle, null);
+                                   v_mois, null, p_motif, p_cle, null);
   if not (v_g ->> 'deja')::boolean then
     insert into facturation.lectures_dues (licence_id, periode, nature, lectures, intervention_id, inscrit_par)
-    values (p_licence, date_trunc('month', current_date)::date, 'offerte', p_nombre,
-            (v_g ->> 'id')::uuid, auth.uid());
+    values (p_licence, v_mois, 'offerte', p_nombre, (v_g ->> 'id')::uuid, auth.uid());
   end if;
   return v_g;
 end

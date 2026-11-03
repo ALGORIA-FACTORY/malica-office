@@ -217,6 +217,8 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
       BREVO_API_KEY: "cle-de-test",
       MALICA_COURRIEL_EXPEDITEUR: "w.barouni@algoria-factory.com",
       MALICA_URL_PUBLIQUE: "http://localhost:8080",
+      // Hors production, la garde n'écrit qu'aux adresses de la liste.
+      MALICA_COURRIEL_DESTINATAIRES: emailContact,
     });
     globalThis.fetch = (async (_u: string | URL | Request, init?: RequestInit) => {
       envoye = JSON.parse(String(init?.body));
@@ -236,7 +238,12 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
       assert.ok(envoye!.htmlContent.includes(r.lien));
     } finally {
       globalThis.fetch = fetchReel;
-      for (const k of ["BREVO_API_KEY", "MALICA_COURRIEL_EXPEDITEUR", "MALICA_URL_PUBLIQUE"]) {
+      for (const k of [
+        "BREVO_API_KEY",
+        "MALICA_COURRIEL_EXPEDITEUR",
+        "MALICA_URL_PUBLIQUE",
+        "MALICA_COURRIEL_DESTINATAIRES",
+      ]) {
         if (avant[k] === undefined) delete process.env[k];
         else process.env[k] = avant[k];
       }

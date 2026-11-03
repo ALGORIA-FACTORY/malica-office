@@ -335,12 +335,13 @@ export const commerceDeLaTour = {
       moisOffertsMax: number;
       lecturesOffertesMax: number;
       prolongationEssaiMaxJours: number;
+      fenetreCumulMois: number;
     },
     motif: string,
   ) {
     const { rows } = await db.query<{ r: unknown }>(
       `select plateforme.commerce_regler($1::numeric, $2::numeric, $3::smallint, $4::smallint,
-                                         $5::integer, $6::smallint, $7) as r`,
+                                         $5::integer, $6::smallint, $7::smallint, $8) as r`,
       [
         p.remisePctMax,
         p.remiseMontantMaxMois,
@@ -348,6 +349,7 @@ export const commerceDeLaTour = {
         p.moisOffertsMax,
         p.lecturesOffertesMax,
         p.prolongationEssaiMaxJours,
+        p.fenetreCumulMois,
         motif,
       ],
     );

@@ -27,6 +27,7 @@ create table plateforme.reglages_commerciaux (
   mois_offerts_max            smallint not null check (mois_offerts_max between 0 and 12),
   lectures_offertes_max       integer not null check (lectures_offertes_max between 0 and 100000),
   prolongation_essai_max_jours smallint not null check (prolongation_essai_max_jours between 0 and 90),
+  fenetre_cumul_mois          smallint not null check (fenetre_cumul_mois between 1 and 36),
   motif                       text not null check (length(btrim(motif)) > 0),
   decide_par                  uuid references auth.users (id),
   decide_le                   timestamptz not null default now()
@@ -34,16 +35,20 @@ create table plateforme.reglages_commerciaux (
 comment on table plateforme.reglages_commerciaux is
   'Les plafonds des gestes commerciaux de la tour (décision du dirigeant n° 5). Une remise en '
   'montant se borne en MOIS de l''abonnement HT (`remise_montant_max_mois` × prix mensuel HT de '
-  'la licence) : aucune devise n''est écrite ici. Dernière décision = en vigueur ; ajout seul.';
+  'la licence) : aucune devise n''est écrite ici. Chaque plafond borne le geste ET le CUMUL des '
+  'gestes de même nature, non annulés, accordés à la licence sur `fenetre_cumul_mois` mois '
+  'glissants (revue indépendante de #202). Dernière décision = en vigueur ; ajout seul.';
 create index reglages_commerciaux_decide_idx on plateforme.reglages_commerciaux (decide_le desc, id desc);
 create index reglages_commerciaux_decide_par_idx on plateforme.reglages_commerciaux (decide_par);
 
 insert into plateforme.reglages_commerciaux
   (remise_pct_max, remise_montant_max_mois, remise_duree_max_mois, mois_offerts_max,
-   lectures_offertes_max, prolongation_essai_max_jours, motif, decide_par, decide_le)
+   lectures_offertes_max, prolongation_essai_max_jours, fenetre_cumul_mois, motif, decide_par,
+   decide_le)
 values
-  (20, 1, 12, 2, 300, 15,
-   'Défaut livré : niveau prudent arrêté par le dirigeant le 2 novembre 2026 (décision n° 5).',
+  (20, 1, 12, 2, 300, 15, 12,
+   'Défaut livré : niveau prudent arrêté par le dirigeant le 2 novembre 2026 (décision n° 5), '
+   'plafond du geste et plafond du cumul par licence sur 12 mois glissants.',
    null, timestamptz '2026-11-02 00:00:00+00');
 
 -- ------------------------------------------------------------ 2. La facturation
@@ -125,7 +130,7 @@ revoke all on function plateforme.reglage_facturation() from public, anon, authe
 create function plateforme.commerce_regler(
   p_remise_pct_max numeric, p_remise_montant_max_mois numeric, p_remise_duree_max_mois smallint,
   p_mois_offerts_max smallint, p_lectures_offertes_max integer,
-  p_prolongation_essai_max_jours smallint, p_motif text)
+  p_prolongation_essai_max_jours smallint, p_fenetre_cumul_mois smallint, p_motif text)
 returns jsonb
 language plpgsql security definer set search_path = '' as $$
 declare v_id uuid;
@@ -138,17 +143,17 @@ begin
   end if;
   insert into plateforme.reglages_commerciaux
     (remise_pct_max, remise_montant_max_mois, remise_duree_max_mois, mois_offerts_max,
-     lectures_offertes_max, prolongation_essai_max_jours, motif, decide_par)
+     lectures_offertes_max, prolongation_essai_max_jours, fenetre_cumul_mois, motif, decide_par)
   values (p_remise_pct_max, p_remise_montant_max_mois, p_remise_duree_max_mois,
           p_mois_offerts_max, p_lectures_offertes_max, p_prolongation_essai_max_jours,
-          p_motif, auth.uid())
+          p_fenetre_cumul_mois, p_motif, auth.uid())
   returning id into v_id;
   return (select to_jsonb(r) - 'decide_par' from plateforme.reglages_commerciaux r where r.id = v_id);
 end
 $$;
-revoke all on function plateforme.commerce_regler(numeric, numeric, smallint, smallint, integer, smallint, text)
+revoke all on function plateforme.commerce_regler(numeric, numeric, smallint, smallint, integer, smallint, smallint, text)
   from public, anon;
-grant execute on function plateforme.commerce_regler(numeric, numeric, smallint, smallint, integer, smallint, text)
+grant execute on function plateforme.commerce_regler(numeric, numeric, smallint, smallint, integer, smallint, smallint, text)
   to authenticated;
 
 create function plateforme.facturation_regler(

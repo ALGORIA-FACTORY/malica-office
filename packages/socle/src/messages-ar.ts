@@ -311,6 +311,8 @@ export const ar: Dict = {
   "pme.refus.piece_en_double": "هذه الوثيقة نسخة من وثيقة سبقت قراءتها: لن أعيد قراءتها.",
   "pme.refus.piece_personnelle":
     "هذه الوثيقة خاصة. أضفها إلى المؤسسة لقراءتها؛ إرسالها للمحاسبة عملية مستقلة.",
+  "refus.courriel.hors_liste":
+    "تم حجز الرسالة: خارج بيئة الإنتاج، هذا المرسَل إليه ليس ضمن القائمة المسموح بها.",
   "refus.piece.rappelEnAttente": "طُلب من مكتب المحاسبة استرجاع هذه الوثيقة: انتظر ردّه.",
   "refus.licence.transmission": "الإرسال موقوف: دفعة من اشتراككم متأخرة.",
   "refus.licence.export": "التصدير موقوف: اشتراك هذا الملف غير مسدَّد.",
@@ -4233,6 +4235,8 @@ export const ar: Dict = {
   "refus.facture.total_incoherent": "مجموع الفاتورة لا يطابق أسطرها.",
   "refus.geste.au_dela_du_plafond": "هذا الإجراء يتجاوز السقف الذي حدّدته المنصة ({plafond}).",
   "refus.geste.chevauchement": "إجراء من النوع نفسه يغطي هذه الفترة لهذا الدافع.",
+  "refus.geste.cumul_depasse":
+    "هذا الإجراء يتجاوز بمجموع الرخصة السقف المحدد ({plafond}): {deja} ممنوحة خلال {fenetre} شهرًا.",
   "refus.geste.deja_annule": "هذا الإجراء أُلغي مسبقًا.",
   "refus.geste.deja_facture": "هذا الإجراء مدرج في فاتورة صادرة: صحّحوه بفاتورة تعديلية.",
   "refus.geste.ferme": "هذا الإجراء لم يعد متاحًا.",

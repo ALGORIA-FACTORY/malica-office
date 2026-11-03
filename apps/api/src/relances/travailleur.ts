@@ -9,12 +9,20 @@
  *
  * Rien ne part tant que la tour n'a pas ouvert les relances (la base rend
  * `actives: false` et aucune ligne), ni sans la clé Brevo du serveur : sans
- * elle, les courriels restent « à remettre », et on le dit au journal.
+ * elle, les courriels restent « à remettre », et on le dit au journal. Hors
+ * production, la garde des destinataires (`courriel/brevo.ts`) retient tout
+ * courriel vers une adresse hors de la liste : la tentative s'inscrit
+ * `retenu`, motivée, et l'envoi ne se retente pas.
  *
  * Le travailleur se connecte avec le rôle de l'API, sans endosser personne :
  * ces trois fonctions ne sont ouvertes qu'à ce rôle.
  */
-import { configurationCourriel, envoyerParBrevo } from "../courriel/brevo.ts";
+import {
+  configurationCourriel,
+  CourrielRetenu,
+  envoyerParBrevo,
+  REFUS_HORS_LISTE,
+} from "../courriel/brevo.ts";
 import type { Requete } from "../db.ts";
 import type { DocumentDeFacture } from "../facturation/document/document.ts";
 import { rendreLaFacture } from "../facturation/document/rendu.ts";
@@ -49,10 +57,11 @@ export async function tourDeRelances(d: Dependances) {
   });
 
   const config = configurationCourriel(d.env);
-  if (!config) return { decision, remis: 0, echecs: 0, sansCle: true };
+  if (!config) return { decision, remis: 0, echecs: 0, retenus: 0, sansCle: true };
 
   let remis = 0;
   let echecs = 0;
+  let retenus = 0;
   // Un courriel par transaction : la base le verrouille en le rendant, le
   // travailleur l'envoie et inscrit la tentative avant de le relâcher. Deux
   // API qui tournent ne remettent donc jamais le même, et un incident sur
@@ -92,11 +101,13 @@ export async function tourDeRelances(d: Dependances) {
           ]
         : [];
       let erreur: string | null = null;
+      let resultat: "remis" | "echoue" | "retenu" = "remis";
       try {
         await envoyerParBrevo(
           {
             cle: config.cle,
             expediteur: config.expediteur,
+            destinataires: config.destinataires,
             destinataire: c.email,
             ...message,
             pieces,
@@ -104,18 +115,21 @@ export async function tourDeRelances(d: Dependances) {
           d.fetchImpl,
         );
       } catch (e) {
-        erreur = e instanceof Error ? e.message.slice(0, 500) : "échec";
+        resultat = e instanceof CourrielRetenu ? "retenu" : "echoue";
+        erreur =
+          e instanceof CourrielRetenu
+            ? REFUS_HORS_LISTE
+            : e instanceof Error
+              ? e.message.slice(0, 500)
+              : "échec";
       }
-      await db.query("select notif.remettre($1, $2, $3)", [
-        c.envoi_id,
-        erreur === null ? "remis" : "echoue",
-        erreur,
-      ]);
-      return erreur === null ? "remis" : "echoue";
+      await db.query("select notif.remettre($1, $2, $3)", [c.envoi_id, resultat, erreur]);
+      return resultat;
     });
     if (traite === null) break;
     if (traite === "remis") remis += 1;
+    else if (traite === "retenu") retenus += 1;
     else echecs += 1;
   }
-  return { decision, remis, echecs, sansCle: false };
+  return { decision, remis, echecs, retenus, sansCle: false };
 }

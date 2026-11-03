@@ -80,8 +80,8 @@ export async function emettreUneFactureDExemple(db: pg.PoolClient): Promise<Fact
   // Le mois facturé : le mois en cours, entier, dans le jour civil de l'émetteur
   // (la grille en vigueur le couvre ; un mois plus ancien pourrait la précéder).
   const { rows: p } = await db.query<{ periode: string; achat: string }>(
-    `select date_trunc('month', facturation.jour_de_l_emetteur($1))::date::text as periode,
-            date_trunc('month', facturation.jour_de_l_emetteur($1))::date::text as achat`,
+    `select date_trunc('month', facturation.jour_de_l_organisation($1))::date::text as periode,
+            date_trunc('month', facturation.jour_de_l_organisation($1))::date::text as achat`,
     [emetteur],
   );
   const { periode, achat } = p[0]!;

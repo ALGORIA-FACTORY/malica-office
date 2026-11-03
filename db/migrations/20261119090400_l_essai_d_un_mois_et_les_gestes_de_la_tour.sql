@@ -15,7 +15,10 @@
 --  (un geste s'annule par un geste, une fois), les plafonds en vigueur au
 --  moment du geste et une clé d'idempotence. Trois portes ici, toutes
 --  nominatives, motivées, plafonnées par `plateforme.reglages_commerciaux`
---  (décision 5), sans double validation (décision 6) :
+--  (décision 5), sans double validation (décision 6). Chaque plafond borne le
+--  geste ET le cumul des gestes de même nature accordés à la licence sur la
+--  fenêtre glissante du réglage (`plateforme.cumul_borner`) : trois gestes de
+--  15 jours ne font pas 45 jours d'essai de plus.
 --
 --    plateforme.remise_accorder    en pourcentage ou en montant, sur N mois ;
 --    plateforme.mois_offrir        N mois offerts, à partir d'un mois ;
@@ -46,6 +49,25 @@ alter table plateforme.interventions
 create index interventions_payeur_type_fk_idx on plateforme.interventions (payeur_type);
 create index interventions_reglage_id_fk_idx on plateforme.interventions (reglage_id);
 create index interventions_licence_acte_idx on plateforme.interventions (licence_id, acte, effet_du);
+
+-- La PME et son cabinet lisent les gestes visibles de leur licence (politique
+-- `plateforme_interventions_sel_client`), mais pas ce que la tour en dit : le
+-- motif, l'état d'avant, l'opérateur, la clé et le réglage restent dans la
+-- tour (décision 14). Une politique filtre des lignes, pas des colonnes : ce
+-- sont les droits de colonne qui le tiennent. La tour lit le reste par
+-- `plateforme.note_du_geste`, gardée.
+revoke select on table plateforme.interventions from authenticated;
+grant select (id, licence_id, acte, valeur, effet_du, effet_au, created_at, payeur_type, annule)
+  on table plateforme.interventions to authenticated;
+
+/** Ce que la tour seule lit d'un geste : son motif et son opérateur. Rien pour un autre appelant. */
+create function plateforme.note_du_geste(p_geste uuid, out motif text, out operateur uuid)
+language sql stable security definer set search_path = '' as $$
+  select i.motif, i.operateur from plateforme.interventions i
+   where i.id = p_geste and app.is_platform()
+$$;
+revoke all on function plateforme.note_du_geste(uuid) from public, anon;
+grant execute on function plateforme.note_du_geste(uuid) to authenticated;
 
 /** Une valeur strictement positive dès que l'unité de l'acte n'est pas « aucune ». */
 create function plateforme.geste_a_sa_valeur() returns trigger
@@ -153,6 +175,45 @@ language sql stable security definer set search_path = '' as $$
 $$;
 revoke all on function plateforme.geste_chevauche(uuid, text[], text, date, date) from public, anon, authenticated;
 
+/**
+ * Le cumul, sur la licence, des gestes de ces actes en vigueur (non annulés)
+ * accordés dans la fenêtre glissante du réglage : la somme des valeurs
+ * (jours, lectures, mois offerts) ou, `p_en_mois`, la somme des mois d'effet
+ * (une remise). Le plafond d'un geste est aussi celui de leur somme (revue
+ * indépendante de #202, niveau prudent de la décision 5).
+ */
+create function plateforme.cumul_des_gestes(p_licence uuid, p_actes text[], p_en_mois boolean)
+returns numeric
+language sql stable security definer set search_path = '' as $$
+  select coalesce(sum(case when p_en_mois
+                           then extract(year from age((i.effet_au + 1)::timestamp, i.effet_du::timestamp)) * 12
+                                + extract(month from age((i.effet_au + 1)::timestamp, i.effet_du::timestamp))
+                           else i.valeur end), 0)
+    from plateforme.interventions i
+   where i.licence_id = p_licence and i.acte = any (p_actes)
+     and plateforme.geste_en_vigueur(i.id)
+     and i.created_at > now() - make_interval(months => (plateforme.reglage_commercial()).fenetre_cumul_mois)
+$$;
+revoke all on function plateforme.cumul_des_gestes(uuid, text[], boolean) from public, anon, authenticated;
+
+/** Refuse un geste dont l'ajout porte le cumul au-delà du plafond. Licence verrouillée par l'appelant. */
+create function plateforme.cumul_borner(
+  p_licence uuid, p_actes text[], p_en_mois boolean, p_ajout numeric, p_plafond numeric)
+returns void
+language plpgsql stable security definer set search_path = '' as $$
+declare v_deja numeric := plateforme.cumul_des_gestes(p_licence, p_actes, p_en_mois);
+begin
+  if v_deja + p_ajout > p_plafond then
+    raise exception '%', app.refus_avec_valeurs('refus.geste.cumul_depasse',
+                                                'plafond', p_plafond::text,
+                                                'deja', v_deja::text,
+                                                'fenetre', (plateforme.reglage_commercial()).fenetre_cumul_mois::text)
+      using errcode = 'check_violation';
+  end if;
+end
+$$;
+revoke all on function plateforme.cumul_borner(uuid, text[], boolean, numeric, numeric) from public, anon, authenticated;
+
 create function plateforme.remise_accorder(
   p_licence uuid, p_unite text, p_valeur numeric, p_payeur_type text, p_du date,
   p_mois smallint, p_motif text, p_cle text default null)
@@ -212,6 +273,8 @@ begin
                                 p_payeur_type, p_du, v_au) then
     raise exception 'refus.geste.chevauchement' using errcode = 'check_violation';
   end if;
+  perform plateforme.cumul_borner(p_licence, array['remise_pourcentage', 'remise_montant'], true,
+                                  p_mois, r.remise_duree_max_mois);
   return plateforme.geste_inscrire(p_licence,
                                    case p_unite when 'pourcentage' then 'remise_pourcentage'
                                                 else 'remise_montant' end,
@@ -256,6 +319,7 @@ begin
   if plateforme.geste_chevauche(p_licence, array['mois_offerts'], p_payeur_type, p_du, v_au) then
     raise exception 'refus.geste.chevauchement' using errcode = 'check_violation';
   end if;
+  perform plateforme.cumul_borner(p_licence, array['mois_offerts'], false, p_nombre, r.mois_offerts_max);
   return plateforme.geste_inscrire(p_licence, 'mois_offerts', p_nombre, p_payeur_type,
                                    p_du, v_au, p_motif, p_cle, null);
 end
@@ -349,7 +413,7 @@ $$;
 
 /** La naissance d'une licence ouvre l'essai, une fois, si le canal en donne un. */
 create or replace function facturation.licence_naitre(
-  p_tenant uuid, p_titulaire uuid, p_offre text default null, p_le date default current_date)
+  p_tenant uuid, p_titulaire uuid, p_offre text default null, p_le date default null)
 returns uuid
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -365,6 +429,9 @@ begin
   if v_kind is distinct from 'pme' then
     return null;
   end if;
+  -- Le jour de la naissance est celui de la société (#194), jamais celui du
+  -- serveur : à 00 h 30 à Tunis le 1er, la licence naît le 1er.
+  p_le := coalesce(p_le, facturation.jour_de_l_organisation(p_tenant));
 
   if auth.uid() is not null
      and not (app.is_platform() or app.has_org_role(p_tenant, array['dirigeant'])) then
@@ -422,6 +489,105 @@ begin
 end
 $$;
 
+-- La société qui naît passe son jour à la licence : plus celui du serveur.
+-- Reprise de la définition EN VIGUEUR ; seul l'appel change.
+CREATE OR REPLACE FUNCTION public.create_organization(p_kind text, p_name text, p_validation_mode app.validation_mode_t DEFAULT 'mandate'::app.validation_mode_t, p_legal_id text DEFAULT NULL::text, p_jurisdiction text DEFAULT NULL::text, p_currency text DEFAULT NULL::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_uid  uuid := auth.uid();
+  v_org  uuid;
+  v_role text;
+  v_refus text;
+begin
+  if v_uid is null then
+    raise exception 'refus.authentification_requise' using errcode = '42501';
+  end if;
+  if p_kind not in ('pme','cabinet') then
+    raise exception 'refus.organisation.type_inconnu' using errcode = '22023';
+  end if;
+
+  -- Un nom fait d'espaces n'est pas un nom.
+  p_name := nullif(btrim(regexp_replace(coalesce(p_name, ''), '\s+', ' ', 'g')), '');
+  if p_name is null then
+    raise exception 'refus.dossier.raison_sociale_requise' using errcode = '22023',
+      hint = 'organisation.nom_requis';
+  end if;
+
+  -- À juridiction connue, la devise se déduit du pack : pas de constante ici.
+  if p_jurisdiction is null then
+    raise exception 'refus.organisation.juridiction_requise' using errcode = '22023';
+  end if;
+  if p_currency is null then
+    select p.currency into p_currency
+      from ref.jurisdiction_packs p
+     where p.jurisdiction = p_jurisdiction
+       and p.effective_from <= current_date
+     order by p.effective_from desc
+     limit 1;
+    if p_currency is null then
+      raise exception 'refus.referentiel.pack_absent'
+        using errcode = '22023';
+    end if;
+  end if;
+
+  -- Les espaces autour viennent du copier-coller : on nettoie, on ne refuse pas.
+  p_legal_id := nullif(btrim(coalesce(p_legal_id, '')), '');
+
+  v_refus := public.identifiant_verifier(p_jurisdiction, 'matricule_fiscal', p_legal_id);
+  if v_refus is not null then
+    raise exception '%', v_refus using errcode = '22023';
+  end if;
+
+  -- On accepte large, on range net : la pièce imprime des capitales.
+  p_legal_id := upper(p_legal_id);
+
+  -- Reprendre une inscription n'est pas créer une seconde société : si la
+  -- personne est déjà membre d'une société active qui porte ce matricule,
+  -- c'est celle-là.
+  if p_legal_id is not null then
+    select o.id into v_org
+      from identity.organizations o
+      join identity.memberships m on m.tenant_id = o.id and m.user_id = v_uid
+     where o.jurisdiction = p_jurisdiction
+       and upper(o.legal_id) = p_legal_id
+       and o.kind = p_kind
+       and o.archived_at is null
+     order by o.created_at
+     limit 1;
+    if v_org is not null then
+      return v_org;
+    end if;
+  end if;
+
+  insert into identity.organizations (kind, name, legal_id, jurisdiction, currency,
+                                      validation_mode, created_by)
+  values (p_kind, p_name, p_legal_id, p_jurisdiction, p_currency,
+          p_validation_mode, v_uid)
+  returning id into v_org;
+
+  v_role := case when p_kind = 'cabinet' then 'expert' else 'dirigeant' end;
+
+  insert into identity.memberships (tenant_id, user_id, role)
+  values (v_org, v_uid, v_role);
+
+  -- Une PME naît avec sa licence ; un cabinet n'en a pas (rend vide, sans lever).
+  -- Le jour de la naissance (et de l'essai) est celui de la société (#194) :
+  -- `licence_naitre` le lit dans son fuseau.
+  perform facturation.licence_naitre(v_org, v_uid);
+
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                              object_id, payload)
+  values (v_org, v_uid, 'organization.created', 'identity', 'organizations', v_org,
+          jsonb_build_object('kind', p_kind, 'role', v_role));
+
+  return v_org;
+end
+$function$;
+
 create function plateforme.essai_prolonger(
   p_licence uuid, p_jours smallint, p_motif text, p_cle text default null)
 returns jsonb
@@ -439,13 +605,23 @@ begin
                                                 'plafond', r.prolongation_essai_max_jours::text)
       using errcode = 'check_violation';
   end if;
+  if p_cle is not null and exists (select 1 from plateforme.interventions i
+                                    where i.cle_idempotence = p_cle) then
+    return plateforme.geste_inscrire(p_licence, 'prolongation_essai', null, null, null, null,
+                                     p_motif, p_cle, null);
+  end if;
+  perform 1 from facturation.licences where id = p_licence for update;
   select * into v_e from facturation.essais_v where licence_id = p_licence;
   if v_e.id is null then
     raise exception 'refus.essai.absent' using errcode = 'no_data_found';
   end if;
-  if v_e.dote_le is not null or v_e.fin_effective < current_date then
+  -- `fin_effective` est EXCLUE : le jour de fin, l'essai est déjà fini. Le
+  -- jour est celui de la société, pas celui du serveur (#194).
+  if v_e.dote_le is not null or v_e.fin_effective <= facturation.jour_de_la_licence(p_licence) then
     raise exception 'refus.essai.termine' using errcode = 'check_violation';
   end if;
+  perform plateforme.cumul_borner(p_licence, array['prolongation_essai'], false, p_jours,
+                                  r.prolongation_essai_max_jours);
   return plateforme.geste_inscrire(p_licence, 'prolongation_essai', p_jours, null,
                                    null, null, p_motif, p_cle, null);
 end
@@ -460,12 +636,9 @@ returns table(payeur_type text, payeur_tenant_id uuid, payeur_personne uuid, off
               acces_reference text, jours integer, jours_du_mois integer, montant_ht app.money_t)
 language plpgsql stable security definer set search_path = '' as $$
 begin
-  if not (app.is_platform()
-          or exists (select 1 from facturation.licences l
-                      where l.id = p_licence and l.titulaire = auth.uid())
-          or exists (select 1 from facturation.acces a
-                      where a.licence_id = p_licence
-                        and a.cabinet_tenant_id in (select app.member_orgs()))) then
+  -- Le prédicat du commerce, et lui seul (décision 14) : un collaborateur, un
+  -- cabinet dont l'accès est fini ou révoqué n'y lisent rien.
+  if not (app.is_platform() or p_licence in (select facturation.licences_lisibles())) then
     raise exception
       'refus.geste.non_permis'
       using errcode = '42501';
@@ -514,6 +687,59 @@ begin
   group by l.payeur_type, l.payeur_tenant_id, l.payeur_personne;
 end
 $$;
+
+-- Le compteur du cabinet : ses EXPERTS, pas tout membre (décision 14, même
+-- brique que `factures_lisibles`). Reprise de la définition EN VIGUEUR ;
+-- seule la garde change.
+CREATE OR REPLACE FUNCTION facturation.a_facturer_cabinet(p_cabinet uuid, p_periode date)
+ RETURNS TABLE(licence_id uuid, tenant_id uuid, organisation text, reference text, offre_code text, jours integer, jours_du_mois integer, montant_ht app.money_t)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+  if not (app.is_platform() or facturation.expert_du_cabinet(p_cabinet)) then
+    raise exception 'refus.geste.non_permis'
+      using errcode = '42501';
+  end if;
+
+  return query
+  with mois as (
+    select p_periode                                     as du,
+           (p_periode + interval '1 month')::date         as au_exclu,
+           ((p_periode + interval '1 month')::date - p_periode)::int as jours
+  ),
+  lignes as (
+    select pv.licence_id                         as licence_id,
+           a.tenant_id                           as tenant_id,
+           pv.acces_reference                    as reference,
+           pv.part_offre_code                    as part_offre_code,
+           pv.part_ht                            as part_ht,
+           m.jours                               as jours_du_mois,
+           greatest(pv.du, m.du)                 as seg_du,
+           least(coalesce(pv.au_exclu, m.au_exclu), m.au_exclu) as seg_au_exclu
+      from facturation.payeurs_v pv
+      join facturation.acces a on a.id = pv.acces_id
+      cross join mois m
+     where pv.payeur_type = 'cabinet'
+       and pv.payeur_tenant_id = p_cabinet
+       and pv.du < m.au_exclu
+       and (pv.au_exclu is null or pv.au_exclu > m.du)
+  )
+  select
+    l.licence_id,
+    l.tenant_id,
+    o.name,
+    (array_agg(l.reference order by l.seg_du desc))[1],
+    (array_agg(l.part_offre_code order by l.seg_du desc))[1],
+    sum(l.seg_au_exclu - l.seg_du)::int,
+    max(l.jours_du_mois)::int,
+    round(sum(l.part_ht * (l.seg_au_exclu - l.seg_du) / l.jours_du_mois), 3)::app.money_t
+  from lignes l
+  join identity.organizations o on o.id = l.tenant_id
+  group by l.licence_id, l.tenant_id, o.name;
+end
+$function$;
 
 /** Les jours d'essai d'une licence dans un mois : zéro hors essai. */
 create function facturation.jours_d_essai(p_licence uuid, p_periode date) returns integer
