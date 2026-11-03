@@ -3590,6 +3590,8 @@ export const fr = {
     "Aucune licence n’est rattachée à ce compte. Les plafonds et le prix restent vides jusque-là.",
   "pme.reglages.orgs": "Sociétés",
   "pme.reglages.orgs.aucune": "Aucune organisation sur cette licence.",
+  "pme.reglages.orgs.autreTitulaire":
+    "La licence de {societe} appartient à son propriétaire principal : vous ne voyez ici que cette société. Vos autres sociétés s’ouvrent depuis le sélecteur en haut.",
   "pme.reglages.orgs.ajouter": "Ajouter une société",
   "pme.reglages.orgs.ajouter.sous":
     "Une organisation de plus sur la licence, avec son propre mandat et ses propres pièces. Le plafond est tenu par la base.",

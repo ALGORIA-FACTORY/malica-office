@@ -3354,6 +3354,8 @@ export const ar: Dict = {
   "pme.reglages.abo.sansLicence": "لا توجد رخصة مرتبطة بهذا الحساب. تبقى الحدود والسعر فارغة.",
   "pme.reglages.orgs": "الشركات",
   "pme.reglages.orgs.aucune": "لا توجد مؤسسة على هذه الرخصة.",
+  "pme.reglages.orgs.autreTitulaire":
+    "ترخيص {societe} يعود إلى مالكها الرئيسي: لا تظهر هنا إلا هذه الشركة. افتح شركاتك الأخرى من المُحدِّد في الأعلى.",
   "pme.reglages.orgs.ajouter": "إضافة شركة",
   "pme.reglages.orgs.ajouter.sous":
     "مؤسسة أخرى على الرخصة، لها تكليفها الخاص ووثائقها الخاصة. الحدّ تتولّاه قاعدة البيانات.",
