@@ -792,6 +792,14 @@ begin
   rf := plateforme.reglage_facturation();
   v_langue := facturation.langue_du_payeur('cabinet', p_cabinet, null);
 
+  -- Les licences facturées d'abord, dans l'ordre : une annulation de geste
+  -- concurrente (`geste_annuler`, qui prend le même verrou avant de juger)
+  -- attend la facture, et la voit (revue Codex de #202).
+  perform 1 from facturation.licences x
+   where x.id in (select a.licence_id from facturation.a_facturer_cabinet(p_cabinet, p_periode) a)
+   order by x.id
+     for update;
+
   for l in select * from facturation.a_facturer_cabinet(p_cabinet, p_periode) a where a.montant_ht > 0 loop
     v_nb := v_nb + 1;
     v_ht := v_ht + l.montant_ht;
@@ -1012,6 +1020,9 @@ begin
   if g.id is null then
     raise exception 'refus.introuvable.geste' using errcode = 'no_data_found';
   end if;
+  -- Le verrou de la licence AVANT de juger : une émission en cours (qui le
+  -- tient) finit d'abord, et sa facture se voit ici (revue Codex de #202).
+  perform 1 from facturation.licences where id = g.licence_id for update;
   -- Une suspension se lève par une reprise ; des lectures offertes sont déjà
   -- dans le stock ; une annulation ne s'annule pas.
   if g.acte not in ('remise_pourcentage', 'remise_montant', 'mois_offerts', 'prolongation_essai') then
