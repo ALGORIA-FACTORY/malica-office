@@ -2127,6 +2127,12 @@ export const fr = {
   "refus.introuvable.paiement": "Paiement introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.recette": "Version de recette introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.organisation": "Organisation introuvable, ou vous n’y avez pas accès.",
+  "refus.organisation.pas_une_societe": "Seule une société se confie à un dirigeant.",
+  "refus.organisation.deja_dirigee":
+    "Cette société a déjà des membres : ses dirigeants invitent eux-mêmes.",
+  "refus.archivage.motif_requis": "Dites pourquoi cette organisation est archivée.",
+  "refus.organisation.emettrice":
+    "Cette organisation émet les factures Malica : désignez un autre émetteur avant de l’archiver.",
   "refus.introuvable.invitation": "Invitation introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.article": "Article introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.exemple": "Exemple introuvable, ou vous n’y avez pas accès.",

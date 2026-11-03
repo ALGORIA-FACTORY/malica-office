@@ -4328,6 +4328,16 @@ export interface TourRepository {
   ): Promise<unknown>;
   emetteur(): Promise<OrganisationEmettrice | null>;
   chercherOrganisations(texte: string): Promise<OrganisationEmettrice[]>;
+  /** Confier une société sans membre à son premier dirigeant (un compte existant). */
+  confierOrganisation(
+    organisationId: string,
+    email: string,
+  ): Promise<{ organisation_id: string; dirigeant: string; licence: string | null }>;
+  /** Archiver une organisation, motif à l'appui ; rien ne s'efface. */
+  archiverOrganisation(
+    organisationId: string,
+    motif: string,
+  ): Promise<{ organisation_id: string; archivee_le: string }>;
   designerEmetteur(organisationId: string, valideDes: string, motif: string): Promise<unknown>;
   /** Le réglage de l'abonnement en vigueur : le report d'un mois, l'année et ses mois offerts. */
   reglageAbonnement(): Promise<ReglageAbonnement>;
