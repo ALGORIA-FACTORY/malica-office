@@ -281,6 +281,8 @@ export const ar: Dict = {
   "pme.dossier.verifier#other": "عرض {count} وثائق بانتظارك",
   "pme.dossier.vide": "لا وثيقة في هذا الملف بعد.",
   "pme.dossier.organisations": "المؤسسات",
+  "pme.societes.toutes": "كل الشركات",
+  "pme.societes.choix": "الشركة المعروضة",
   "pme.dossier.sieges": "المقاعد",
   "pme.dossier.annees": "السنوات",
   "pme.dossier.vous": "{nom} (أنت)",
@@ -3355,7 +3357,7 @@ export const ar: Dict = {
   "pme.reglages.orgs": "الشركات",
   "pme.reglages.orgs.aucune": "لا توجد مؤسسة على هذه الرخصة.",
   "pme.reglages.orgs.autreTitulaire":
-    "ترخيص {societe} يعود إلى مالكها الرئيسي: لا تظهر هنا إلا هذه الشركة. افتح شركاتك الأخرى من المُحدِّد في الأعلى.",
+    "ترخيص {societe} يعود إلى مالكها الرئيسي: يُدار سعره ومقاعده من حسابه.",
   "pme.reglages.orgs.ajouter": "إضافة شركة",
   "pme.reglages.orgs.ajouter.sous":
     "مؤسسة أخرى على الرخصة، لها تكليفها الخاص ووثائقها الخاصة. الحدّ تتولّاه قاعدة البيانات.",
@@ -3635,6 +3637,8 @@ export const ar: Dict = {
   "pme.reglages.sieges.aucun": "لم يَرِد بعد أيّ مقعد لهذه الرخصة، ولا حتى مقعدك.",
   "pme.reglages.org.ouverte": "مفتوحة",
   "pme.reglages.org.surLicence": "على الرخصة",
+  "pme.reglages.org.principal": "المالك الرئيسي",
+  "pme.reglages.org.offre": "العرض:",
   "pme.reglages.org.matricule": "المعرّف الجبائي مثبَّت بقراءة بطاقة التعريف الجبائي.",
   "pme.reglages.org.matricule.fort": "غير قابل للتغيير من أوّل وثيقة تُستلَم.",
   "pme.reglages.org.cabinet": "المكتب:",

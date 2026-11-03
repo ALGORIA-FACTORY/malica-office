@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -179,7 +179,8 @@ function PmeReglages() {
               )}
             </span>
           ) : null}
-          <span className="pill neutre">{pme.orgName}</span>
+          {/* Plusieurs sociétés : chacune a sa carte plus bas, aucune n'est « la » société. */}
+          {pme.dossiers.length <= 1 ? <span className="pill neutre">{pme.orgName}</span> : null}
         </span>
         {/*
          * Le pluriel passe par `count` : « 1 organisation(s) » n'existe dans
@@ -334,17 +335,13 @@ function PmeReglages() {
           })}
         </span>
       </div>
-      {abo.organisations.map((o) => (
-        <Organisation key={o.tenantId} org={o} courante={o.tenantId === pme.tenantId} />
-      ))}
       {/*
-       * La licence de la société ouverte appartient à un autre titulaire
-       * (3 novembre 2026) : on le dit, plutôt que de montrer la licence du
-       * compte comme si c'était la sienne.
+       * Toutes les sociétés, sans sélection (3 novembre 2026) : chacune sa
+       * carte, son offre, son cabinet, son mandat.
        */}
-      {abo.titulaire === false ? (
-        <p className="mn">{t("pme.reglages.orgs.autreTitulaire", { societe: pme.orgName })}</p>
-      ) : null}
+      {abo.organisations.map((o) => (
+        <Organisation key={o.tenantId} org={o} titulaire={abo.titulaire.get(o.tenantId)} />
+      ))}
       {abo.organisations.length === 0 ? (
         <div className="card">
           <p className="t-body">{abo.ennui ?? t("pme.reglages.orgs.aucune")}</p>
@@ -626,8 +623,8 @@ const CLE_SIEGES = "forfait-sieges";
 const CLE_ORGANISATIONS = "forfait-organisations";
 
 interface LAbonnement {
-  /** L'appelant est-il titulaire de la licence de la société ouverte ? `null` : pas encore lu. */
-  titulaire: boolean | null;
+  /** Par société : l'appelant est-il titulaire de sa licence ? Absente : pas encore lu. */
+  titulaire: ReadonlyMap<string, boolean>;
   forfait: MonForfait | null;
   organisations: Array<{ tenantId: string; nom: string; lectures: number | null }>;
   sieges: SiegeDeLaLicence[];
@@ -676,16 +673,51 @@ function useLAbonnement(): LAbonnement {
    */
   const forfait = pme.forfait;
 
-  const organisations = useQuery({
-    queryKey: [CLE_ORGANISATIONS, pme.tenantId],
-    queryFn: () => office().facturation.organisations(pme.tenantId),
-    retry: false,
+  /*
+   * TOUTES LES SOCIÉTÉS, SANS SÉLECTION (3 novembre 2026). Chaque société de
+   * la personne est lue pour elle-même (`licence_organisations_de`) : son
+   * titulaire voit toute sa licence, un autre propriétaire voit cette
+   * société-là. L'union se fait par société, et un siège par société et par
+   * personne — un siège n'appartient qu'à une société.
+   */
+  const ids = pme.dossiers.length > 0 ? pme.dossiers.map((d) => d.id) : [pme.tenantId];
+  const lectures = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: [CLE_ORGANISATIONS, id],
+      queryFn: () => office().facturation.organisations(id),
+      retry: false,
+    })),
   });
-  const sieges = useQuery({
-    queryKey: [CLE_SIEGES, pme.tenantId],
-    queryFn: () => office().facturation.sieges(pme.tenantId),
-    retry: false,
+  const places = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: [CLE_SIEGES, id],
+      queryFn: () => office().facturation.sieges(id),
+      retry: false,
+    })),
   });
+  const unique = <T,>(lignes: T[], cle: (l: T) => string) => [
+    ...new Map(lignes.map((l) => [cle(l), l])).values(),
+  ];
+  const organisations = {
+    data: lectures.every((q) => q.data)
+      ? unique(
+          lectures.flatMap((q) => q.data ?? []),
+          (o) => o.tenant_id,
+        ).sort((a, b) => ids.indexOf(a.tenant_id) - ids.indexOf(b.tenant_id))
+      : undefined,
+    error: lectures.find((q) => q.error)?.error ?? null,
+    isPending: lectures.some((q) => q.isPending),
+  };
+  const sieges = {
+    data: places.every((q) => q.data)
+      ? unique(
+          places.flatMap((q) => q.data ?? []),
+          (s) => `${s.tenant_id}:${s.user_id}`,
+        )
+      : undefined,
+    error: places.find((q) => q.error)?.error ?? null,
+    isPending: places.some((q) => q.isPending),
+  };
 
   const panne = organisations.error ?? sieges.error ?? null;
   const role = acces.data?.role ?? null;
@@ -723,9 +755,9 @@ function useLAbonnement(): LAbonnement {
   return {
     forfait: forfait.ligne,
     organisations: listeOrgs,
-    // La licence de la société ouverte est-elle la mienne ? `null` tant que la
-    // base ne l'a pas dit (le repli des dossiers ne le sait pas).
-    titulaire: organisations.data?.[0]?.titulaire ?? null,
+    // Ce que la personne détient : par société, `true` si elle est titulaire
+    // de sa licence. Vide tant que la base ne l'a pas dit.
+    titulaire: new Map((organisations.data ?? []).map((o) => [o.tenant_id, o.titulaire === true])),
     sieges: sieges.data ?? [],
     enCours: forfait.enCours || organisations.isPending || sieges.isPending,
     ennui,
@@ -794,23 +826,43 @@ function degradation(
  */
 function Organisation({
   org,
-  courante,
+  titulaire,
 }: {
   org: { tenantId: string; nom: string; lectures: number | null };
-  courante: boolean;
+  /** Titulaire de la licence de cette société ? `undefined` : pas encore lu. */
+  titulaire: boolean | undefined;
 }) {
   const { t, locale } = useI18n();
   const pme = usePme();
   const cabinet = useMonCabinet(org.tenantId);
+  const dossier = pme.dossiers.find((d) => d.id === org.tenantId);
+  /*
+   * L'offre de CETTE société, sous la clé du layout (`mon-forfait`, id) : la
+   * même lecture, pas une seconde vérité. Un propriétaire non titulaire en lit
+   * le nom et les lectures, pas le prix (`mon_forfait`, branche du membre).
+   */
+  const forfait = useQuery({
+    queryKey: [CLE_FORFAIT, org.tenantId],
+    queryFn: () => office().facturation.monForfait(org.tenantId),
+    enabled: dossier !== undefined,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const catalogue = useCatalogueDesOffres().data;
 
-  const matricule = courante ? pme.matricule : null;
+  const matricule = dossier?.matricule ?? null;
 
   return (
     <div className="card org">
       <div className="hd">
         <b>{org.nom}</b>
-        <span className={cn("etat", courante ? "ac" : "in")}>
-          {courante ? t("pme.reglages.org.ouverte") : t("pme.reglages.org.surLicence")}
+        {/* Qui je suis dans cette société : la licence, ou le rôle. */}
+        <span className={cn("etat", titulaire ? "ac" : "in")}>
+          {titulaire
+            ? t("pme.reglages.org.principal")
+            : dossier?.role
+              ? roleLisible(dossier.role, t)
+              : t("pme.reglages.org.surLicence")}
         </span>
       </div>
       <span className="mf">
@@ -822,9 +874,17 @@ function Organisation({
         {t("pme.reglages.org.cabinet")}{" "}
         <b>{cabinet.data?.name ?? t("pme.reglages.org.cabinet.aucun")}</b>
       </p>
+      {forfait.data?.offre ? (
+        <p className="mn">
+          {t("pme.reglages.org.offre")} <b>{libelleDOffre(catalogue, forfait.data.offre)}</b>
+        </p>
+      ) : null}
       <p className="mn">
         {t("pme.reglages.org.lectures")} <b>{nombre(org.lectures ?? undefined, locale)}</b>
       </p>
+      {titulaire === false ? (
+        <p className="mn">{t("pme.reglages.orgs.autreTitulaire", { societe: org.nom })}</p>
+      ) : null}
       {cabinet.data ? <LeMandat tenantId={org.tenantId} /> : null}
       {/* Accepter un abonnement est un geste d'achat : jamais dans la coque. */}
       {COMMERCE ? <AbonnementDeLaComptabilite tenantId={org.tenantId} /> : null}
@@ -1106,7 +1166,12 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
               key={`${s.tenant_id}:${s.user_id}`}
               siege={s}
               moi={s.user_id === compte.data?.id}
-              dirigeant={dirigeant}
+              // Le rôle dans la société du groupe, pas dans le dossier ouvert :
+              // les réglages montrent toutes les sociétés (3 novembre 2026).
+              dirigeant={
+                (pme.dossiers.find((d) => d.id === g.tenantId)?.role ?? null) === "dirigeant" ||
+                (g.tenantId === pme.tenantId && dirigeant)
+              }
             />
           ))}
         </div>

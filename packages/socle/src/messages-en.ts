@@ -285,6 +285,8 @@ export const en: Dict = {
   "pme.dossier.verifier#other": "See the {count} documents waiting for you",
   "pme.dossier.vide": "No document in this folder yet.",
   "pme.dossier.organisations": "Organisations",
+  "pme.societes.toutes": "All companies",
+  "pme.societes.choix": "Company shown",
   "pme.dossier.sieges": "Seats",
   "pme.dossier.annees": "Years",
   "pme.dossier.vous": "{nom} (you)",
@@ -3493,7 +3495,7 @@ export const en: Dict = {
   "pme.reglages.orgs": "Companies",
   "pme.reglages.orgs.aucune": "No organisation on this licence.",
   "pme.reglages.orgs.autreTitulaire":
-    "{societe}’s licence belongs to its principal owner: only this company is shown here. Open your other companies from the selector at the top.",
+    "{societe}’s licence belongs to its principal owner: its price and seats are managed from their account.",
   "pme.reglages.orgs.ajouter": "Add a company",
   "pme.reglages.orgs.ajouter.sous":
     "One more organisation on the licence, with its own engagement and its own documents. The cap is held by the database.",
@@ -3787,6 +3789,8 @@ export const en: Dict = {
   "pme.reglages.sieges.aucun": "No seat has come back for this licence yet, not even yours.",
   "pme.reglages.org.ouverte": "Open",
   "pme.reglages.org.surLicence": "On the licence",
+  "pme.reglages.org.principal": "Principal owner",
+  "pme.reglages.org.offre": "Plan:",
   "pme.reglages.org.matricule": "Tax number established by reading the tax identification card.",
   "pme.reglages.org.matricule.fort": "Immutable from the first document received.",
   "pme.reglages.org.cabinet": "Firm:",

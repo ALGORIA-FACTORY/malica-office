@@ -23,11 +23,13 @@ export function usePiecesDesSocietes() {
   const { t } = useI18n();
 
   /*
-   * CE QUE L'ABONNEMENT OUVRE, lu à un seul endroit (`pme.forfait.ouvertures`).
-   * Les sociétés ne se regroupent que si l'offre en ouvre plusieurs ET que la
-   * personne en a plusieurs : une seule carte ne regroupe rien.
+   * TOUTES LES SOCIÉTÉS DE LA PERSONNE (3 novembre 2026). Le sélecteur de
+   * l'en-tête est parti : le propriétaire voit toutes ses sociétés, chacune
+   * à part. L'offre de la société ouverte ne décide plus de ce qu'il voit des
+   * autres — elle ne décidait que d'une société parmi plusieurs, sans le
+   * dire. Une seule société ne regroupe rien.
    */
-  const parSociete = pme.forfait.ouvertures.societes && pme.dossiers.length > 1;
+  const parSociete = pme.dossiers.length > 1;
   const parSiege = pme.forfait.ouvertures.sieges;
 
   const lues = usePiecesLues();
