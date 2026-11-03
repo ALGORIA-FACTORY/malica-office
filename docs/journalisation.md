@@ -24,7 +24,9 @@ Ce que le journal ne recopie pas : les faits métier sont dans `audit.event_log`
 
 - `anon`, `authenticated` et `malica_api` ne lisent rien : pas même l'usage du
   schéma pour les deux premiers. `malica_api` n'exécute que
-  `observabilite.consigner` et `observabilite.purger`.
+  `observabilite.consigner`, `observabilite.purger` et
+  `observabilite.trace_d_origine` (un identifiant, rien de ce que la trace
+  porte : la parente d'une relecture de nuit).
 - Le propriétaire est `greffier` (sans connexion), et non le `portier` : le
   portier est membre d'`authenticated` pour que ses portes subissent les
   politiques de l'appelant ; ici aucun client ne lit, et le greffier ne possède
@@ -62,17 +64,53 @@ Pas garanti :
   mémoire : au plus `JOURNAL_INTERVALLE_MS` (1 s) d'événements. Ce qui était
   déjà sur disque revient ;
 - l'étape `affiche` et les étapes du téléphone ne sont pas encore émises (lots
-  suivants) : aujourd'hui, seules `http`, `rpc` et `perte` le sont ;
+  suivants) : aujourd'hui, `http`, `rpc`, `perte`, `tache` et la chaîne de
+  lecture (ci-dessous) le sont ;
 - un client qui réutiliserait l'identifiant de trace d'un autre y ajouterait
   ses étapes (sans pouvoir y poser un dossier qui n'est pas le sien) ;
 - la rétention purge une trace parente avant ses enfants si elle est plus
   ancienne : l'enfant reste, sa parente est nommée sans être lisible.
+
+## La chaîne de lecture d'une pièce
+
+Migration `20261118140000_la_lecture_d_une_piece_se_suit.sql` ; code dans
+`apps/api/src/malica/lecture/etapes-de-lecture.ts`. Chaque étape porte la
+pièce ; sa clé est (pièce, passe) — `premiere`, `rattrapage`, `relecture` —,
+si bien qu'une passe rejouée sous la même trace compte une répétition.
+
+| Étape         | Où                                                                      | Ce que `detail` porte                                                                                                                                                                                         |
+| ------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `upload`      | `stockage.ts`, `POST /pieces/:id/contenu`                               | `statut` (`scellee`, `deja_scellee`, `remplacee`, `trop_grosse`, `panne`), `octets`, `type_contenu`, `doublon_de`. Ni les octets ni leur empreinte.                                                           |
+| `ocr`         | `read-flow.ts` (chaque passe) ; `refus` quand la base refuse la lecture | `passe`, `lecteur`, `modele`, `modele_designation`, `jetons` (leur nombre), `latence_ms`, `paddle_tente`, `motif` (refus), `erreur` (nom de l'erreur, jamais son message).                                    |
+| `extraction`  | `read-flow.ts`                                                          | Ce que la lecture PROPOSE (sa désignation relue dans le plan, avant le sudoku) : `contrat`, `qualite`, `devise`, `base_ht`, `tva`, `ttc`, `droits`, `ttc_par_lettres`, `incoherence`.                         |
+| `sudoku`      | `sudoku.ts` (`verdict`), tracé par `read-flow.ts`                       | `mode`, `issue`, `designee`, `regle` (`lettres:<champ>` ou `variante:<nom>`), `raison`, les montants prouvés, `lettres` (le montant lu en lettres), `preuve_lettres`, `ecart_ttc` (proposé − prouvé).         |
+| `rattrapage`  | `read-flow.ts` (synchrone ou différé)                                   | `declenche`, `raison` (`lecture_parfaite`, `piece_prouvee`, `sans_autre_lecteur`, `contrat_partiel`, `montants_incoherents`, …, `abstention_<motif>` la nuit), `differe`, `qualite_avant`/`apres`, `retenue`. |
+| `persistance` | `read-flow.ts`                                                          | Les montants ENREGISTRÉS et `extraction_id` (la ligne de `capture.extractions`, référencée) ; en échec, `erreur` et `code_refus`.                                                                             |
+| `jugement`    | `scan/analyse.ts` (`capture.analyser`, la lecture, le rejeu)            | `chemin` (`analyse`, `rejeu`), `analyse_id`, `extraction_id`, `verdict`, `etat`, les montants normalisés, `change`, `essai` (rejeu à blanc, annulé ensuite).                                                  |
+| `tache`       | `coureur.ts` (lecture en file), `relirePiece` (relecture de nuit)       | `nom`, `tentative`. La trace est ENFANT : de la requête qui a demandé la lecture, ou de `observabilite.trace_d_origine(piece)` — la capture — pour une relecture.                                             |
 
 ## Consulter
 
 ```sql
 -- La chronologie d'une pièce, en une requête.
 select debut, origine, etape, issue, duree_ms, detail, audit_ids, repetitions, trace_id, parente_id
+  from observabilite.diagnostic_piece('<uuid de la pièce>');
+
+-- La lecture d'une pièce, une question par colonne (le cas MyTek :
+-- `malica/lecture/la-lecture-d-une-piece-se-suit.test.ts`). Une relecture de
+-- nuit retenue a ses propres lignes (`passe = 'relecture'`, trace enfant).
+select max(detail ->> 'ttc')     filter (where etape = 'extraction' and detail ->> 'passe' = 'premiere') as ttc_propose,
+       max(detail ->> 'base_ht') filter (where etape = 'extraction' and detail ->> 'passe' = 'premiere') as ht_propose,
+       max(detail ->> 'lettres') filter (where etape = 'sudoku' and detail ->> 'passe' = 'premiere') as lettres,
+       max(detail ->> 'issue')   filter (where etape = 'sudoku' and detail ->> 'passe' = 'premiere') as sudoku,
+       max(detail ->> 'regle')   filter (where etape = 'sudoku' and detail ->> 'passe' = 'premiere') as regle,
+       max(detail ->> 'ecart_ttc') filter (where etape = 'sudoku' and detail ->> 'passe' = 'premiere') as ecart_ttc,
+       bool_or((detail ->> 'declenche')::boolean) filter (where etape = 'rattrapage') as rattrapage,
+       max(detail ->> 'raison')  filter (where etape = 'rattrapage') as raison_rattrapage,
+       max(detail ->> 'base_ht') filter (where etape = 'persistance' and issue = 'ok') as ht_persiste,
+       max(detail ->> 'ttc')     filter (where etape = 'persistance' and issue = 'ok') as ttc_persiste,
+       max(detail ->> 'extraction_id') filter (where etape = 'persistance' and issue = 'ok') as extraction_id,
+       max(detail ->> 'verdict') filter (where etape = 'jugement') as verdict
   from observabilite.diagnostic_piece('<uuid de la pièce>');
 
 -- Une trace donnée (l'identifiant rendu dans l'en-tête x-malica-trace).

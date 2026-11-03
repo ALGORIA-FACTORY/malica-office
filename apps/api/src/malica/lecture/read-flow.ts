@@ -18,9 +18,22 @@ import type { DeviseLue } from "@malica/socle/montant-imprime";
 
 import type { AppelApi } from "../appel-local.ts";
 
+import { traceDOrigineDeLaPiece } from "../../db.ts";
 import type { CompteRendu } from "../../fabrique/travaux-execution.ts";
+import { consigner, tracerUnTravail } from "../../observabilite/journal.ts";
+import { noterLObjet } from "../../observabilite/trace.ts";
 import { confianceParChamp } from "../../scan/confiance.ts";
 
+import {
+  raisonDuRattrapage,
+  tracerLaPersistance,
+  tracerLeRattrapage,
+  tracerLeSudoku,
+  tracerLExtraction,
+  tracerLOcr,
+  type Passe,
+  type RaisonDuRattrapage,
+} from "./etapes-de-lecture.ts";
 import { creerDesignateurDeRecette } from "./par-recette.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import type { ReglesDeLecture } from "./regles-de-lecture.ts";
@@ -134,6 +147,7 @@ async function preparer(api: AppelApi, pieceId: string, lecteurs: Lecteurs) {
   // La pièce, son organisation, le pack en vigueur, les taux et les charges :
   // un appel là où il en fallait cinq, mêmes requêtes côté base.
   const contexte = await api.rpc<ContexteLecture>("capture", "contexteLecture", [pieceId]);
+  noterLObjet({ tenant: contexte.piece.tenantId, piece: pieceId });
 
   const fichier = await api.contenu(pieceId);
   const bytes = fichier.octets;
@@ -227,8 +241,29 @@ async function preparer(api: AppelApi, pieceId: string, lecteurs: Lecteurs) {
     },
     tiers: contexte.tiers,
   });
-  const lire = async (p: Parameters<Lecteurs["lire"]>[0]) => sudoku.lire(await lecteurs.lire(p));
-  return { contexte, parametres, construire, sudoku, lire };
+  const decimalesDe = (lu: Construite) =>
+    (
+      contexte.devises.find((d) => d.code === lu.extract["currency"]) ??
+      contexte.devises.find((d) => d.code === contexte.currency)
+    )?.decimales ?? 0;
+
+  /*
+   * Une passe de lecture, et ses trois étapes au journal (`etapes-de-lecture.ts`) :
+   * l'appel au lecteur, ce que sa désignation PROPOSE une fois relue dans le
+   * plan, puis le verdict du sudoku et son écart. Ce qui sort est la lecture
+   * rendue par le sudoku — désignée par la preuve, ou telle quelle — et sa
+   * relecture dans le plan, qui fait foi pour la suite.
+   */
+  const lire = async (p: Parameters<Lecteurs["lire"]>[0], passe: Passe) => {
+    const brute = await tracerLOcr(pieceId, passe, () => lecteurs.lire(p));
+    const lecture = await sudoku.lire(brute);
+    const proposee = construire(brute);
+    const decimales = decimalesDe(proposee);
+    tracerLExtraction(pieceId, passe, proposee, qualiteDeLecture(proposee), decimales);
+    tracerLeSudoku(pieceId, passe, sudoku.verdict(lecture), proposee, decimales);
+    return { lecture, construite: lecture === brute ? proposee : construire(lecture) };
+  };
+  return { contexte, parametres, sudoku, lire, decimalesDe };
 }
 
 export async function readPieceFlow(
@@ -249,12 +284,19 @@ export async function readPieceFlow(
    * Ce fichier ne porte ni seuil, ni compteur, ni libellé : il appelle, la base
    * décide (R3, R4). Une pièce lue compte UNE lecture, rattrapage compris.
    */
+  noterLObjet({ piece: pieceId });
   const verdict = await api.rpc<{ autorisee: boolean; motif: string }>(
     "capture",
     "lectureAutorisee",
     [pieceId],
   );
   if (!verdict.autorisee) {
+    // Refusée AVANT tout appel payant : l'étape du lecteur le dit, avec le motif de la base.
+    consigner("ocr", "refus", {
+      cle: `${pieceId}:premiere`,
+      piece: pieceId,
+      detail: { passe: "premiere", motif: verdict.motif },
+    });
     /*
      * Le refus s'INSCRIT : la lecture d'arrière-plan lancée par la file hors
      * ligne n'a personne à qui répondre, et un refus qui ne s'écrit nulle part
@@ -272,11 +314,16 @@ export async function readPieceFlow(
     throw new LectureRefusee(verdict.motif);
   }
 
-  const { contexte, parametres, construire, sudoku, lire } = await preparer(api, pieceId, lecteurs);
+  const { contexte, parametres, sudoku, lire, decimalesDe } = await preparer(
+    api,
+    pieceId,
+    lecteurs,
+  );
 
-  const premiereLecture = await lire(parametres);
+  const premiere = await lire(parametres, "premiere");
+  const premiereLecture = premiere.lecture;
   let read = premiereLecture;
-  let built = construire(read);
+  let built = premiere.construite;
 
   /*
    * ================================= DEUX LECTEURS, ET LE SECOND RATTRAPE LE PREMIER
@@ -308,10 +355,15 @@ export async function readPieceFlow(
    * observation, rien ne change.
    */
   const autre = autreLecteur(premiereLecture, lecteurs.secondLecteurDisponible());
+  const qualiteAvant = qualiteDeLecture(built);
+  const raison = raisonDuRattrapage(
+    built,
+    qualiteAvant >= QUALITE_PARFAITE,
+    autre !== null,
+    sudoku.prouvee(premiereLecture),
+  );
   const aRattraper =
-    qualiteDeLecture(built) < QUALITE_PARFAITE &&
-    autre !== null &&
-    !sudoku.prouvee(premiereLecture);
+    qualiteAvant < QUALITE_PARFAITE && autre !== null && !sudoku.prouvee(premiereLecture);
   /*
    * ======================================== LA RELECTURE DE NUIT (17 novembre 2026)
    *
@@ -332,6 +384,13 @@ export async function readPieceFlow(
    * c'est le comportement du réglage coupé, pas une valeur devinée.
    */
   const differee = aRattraper ? await relectureDeNuitActive(api, pieceId) : false;
+  const rattrapage = {
+    declenche: aRattraper && !differee,
+    raison,
+    differe: differee,
+    qualiteAvant,
+  };
+  if (!rattrapage.declenche) tracerLeRattrapage(pieceId, "rattrapage", rattrapage);
   if (aRattraper && !differee) {
     /*
      * ============== UN ECHEC AU RATTRAPAGE NE DETRUIT PAS CE QU'ON TIENT DEJA
@@ -343,13 +402,20 @@ export async function readPieceFlow(
      * du 24 octobre 2026). La premiere lecture existe : c'est elle qui sort.
      */
     try {
-      const secondeLecture = await lire({ ...parametres, ...autre });
-      const secondBuilt = construire(secondeLecture);
-      if (qualiteDeLecture(secondBuilt) > qualiteDeLecture(built)) {
-        read = secondeLecture;
-        built = secondBuilt;
+      const seconde = await lire({ ...parametres, ...autre }, "rattrapage");
+      const qualiteApres = qualiteDeLecture(seconde.construite);
+      const retenue = qualiteApres > qualiteAvant;
+      tracerLeRattrapage(pieceId, "rattrapage", rattrapage, {
+        qualiteApres,
+        retenue,
+        lecteur: seconde.lecture.lecteur,
+      });
+      if (retenue) {
+        read = seconde.lecture;
+        built = seconde.construite;
       }
     } catch (e: unknown) {
+      tracerLeRattrapage(pieceId, "rattrapage", rattrapage, { erreur: e });
       console.error(
         `[lecture] rattrapage impossible — pièce ${pieceId} : ${
           e instanceof Error ? e.message : String(e)
@@ -359,7 +425,9 @@ export async function readPieceFlow(
   }
 
   const { lecture: aPersister, flags } = lectureAPersister(pieceId, contexte.packId, read, built);
-  await api.rpc<void>("capture", "persisterLecture", [aPersister]);
+  await tracerLaPersistance(pieceId, "premiere", built, decimalesDe(built), () =>
+    api.rpc<{ extractionId: string | null }>("capture", "persisterLecture", [aPersister]),
+  );
 
   // Les champs du sudoku, pour la lecture RETENUE seulement, et une fois son
   // plan de jetons persisté : leurs citations pointent dans ce plan-là.
@@ -603,37 +671,79 @@ interface RelectureAFaire {
  */
 export async function relirePiece(
   api: AppelApi,
-  travail: { travailId: string; pieceId: string },
+  travail: { travailId: string; pieceId: string; tentative?: number },
   lecteurs: Lecteurs = LECTEURS,
 ): Promise<CompteRendu> {
+  /*
+   * Une trace ENFANT de l'opération qui a fait naître la pièce (sa capture) :
+   * la chronologie de la pièce suit la relecture de nuit jusqu'à elle. La même
+   * tentative rejouée retombe sur la même trace (`travailId`), sans doubler une
+   * étape. Sans journal joignable, la relecture se fait quand même, sans parente.
+   */
+  const parente = await traceDOrigineDeLaPiece(travail.pieceId).catch(() => null);
+  return tracerUnTravail("relecture_piece", parente, () => relire(api, travail, lecteurs), {
+    travailId: travail.travailId,
+    ...(travail.tentative === undefined ? {} : { tentative: travail.tentative }),
+  });
+}
+
+async function relire(
+  api: AppelApi,
+  travail: { travailId: string; pieceId: string },
+  lecteurs: Lecteurs,
+): Promise<CompteRendu> {
   const { travailId, pieceId } = travail;
+  noterLObjet({ piece: pieceId });
   const aFaire = await api.rpc<RelectureAFaire>("capture", "relectureAFaire", [travailId]);
   if (aFaire.pieceId !== pieceId) {
     throw new Error(`relecture : le travail ${travailId} ne vise pas la pièce ${pieceId}`);
   }
-  const abstention = (raison: string, detail: Record<string, unknown> = {}): CompteRendu => ({
-    motif: `relecture.abstention.${raison}`,
-    detail,
+  const avant = qualiteDeLecture(aFaire);
+  /*
+   * Le rattrapage différé, au journal : relu ou non, et pourquoi. Une
+   * abstention est une raison nommée (`abstention_<motif>`), jamais un silence.
+   */
+  const rattrapage = (raison: RaisonDuRattrapage, declenche: boolean) => ({
+    declenche,
+    raison,
+    differe: true,
+    qualiteAvant: avant,
   });
+  const abstention = (raison: string, detail: Record<string, unknown> = {}): CompteRendu => {
+    tracerLeRattrapage(pieceId, "relecture", rattrapage(`abstention_${raison}`, false));
+    return { motif: `relecture.abstention.${raison}`, detail };
+  };
   if (aFaire.abstention) return abstention(aFaire.abstention, { trace: aFaire.trace });
 
-  const avant = qualiteDeLecture(aFaire);
   if (avant >= QUALITE_PARFAITE) return abstention("deja_parfaite");
   const autre = autreLecteur(aFaire.consigne, lecteurs.secondLecteurDisponible());
   if (!autre) return abstention("sans_autre_lecteur");
 
-  const { contexte, parametres, construire, sudoku, lire } = await preparer(api, pieceId, lecteurs);
-  const seconde = await lire({ ...parametres, ...autre });
-  const construite = construire(seconde);
+  const declenchee = rattrapage(raisonDuRattrapage(aFaire, false, true, false), true);
+  const { contexte, parametres, sudoku, lire, decimalesDe } = await preparer(
+    api,
+    pieceId,
+    lecteurs,
+  );
+  const { lecture: seconde, construite } = await lire({ ...parametres, ...autre }, "relecture");
   await journaliser(api, contexte.piece.tenantId, pieceId, seconde);
 
   const apres = qualiteDeLecture(construite);
   const detail = { avant, apres, lecteur: seconde.lecteur };
+  tracerLeRattrapage(pieceId, "relecture", declenchee, {
+    qualiteApres: apres,
+    retenue: apres > avant,
+    lecteur: seconde.lecteur,
+  });
   if (apres <= avant) return { motif: "relecture.ecartee", detail };
 
   const { lecture } = lectureAPersister(pieceId, contexte.packId, seconde, construite);
   try {
-    await api.rpc<void>("capture", "persisterRelecture", [{ ...lecture, travailId }]);
+    await tracerLaPersistance(pieceId, "relecture", construite, decimalesDe(construite), () =>
+      api.rpc<{ extractionId: string | null }>("capture", "persisterRelecture", [
+        { ...lecture, travailId },
+      ]),
+    );
   } catch (e: unknown) {
     // Une personne a corrigé la pièce PENDANT la relecture : la base refuse,
     // et la relecture s'abstient — la correction humaine l'emporte.

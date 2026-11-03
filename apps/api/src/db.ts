@@ -285,6 +285,18 @@ export async function purgerLeJournal(): Promise<number> {
   return rows[0]!.n;
 }
 
+/**
+ * La trace d'origine d'une pièce (sa capture, son dépôt), ou rien : la parente
+ * d'un travail différé. Par la connexion du journal, qui n'en lit rien d'autre.
+ */
+export async function traceDOrigineDeLaPiece(pieceId: string): Promise<string | null> {
+  const { rows } = await poolDuJournal.query<{ id: string | null }>(
+    "select observabilite.trace_d_origine($1) as id",
+    [pieceId],
+  );
+  return rows[0]?.id ?? null;
+}
+
 export async function fermerLePoolDuJournal(): Promise<void> {
   await poolDuJournal.end();
 }

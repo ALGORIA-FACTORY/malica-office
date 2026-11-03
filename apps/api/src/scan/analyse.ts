@@ -30,7 +30,7 @@ import {
   type DeviseLue,
   type MarqueDeDevise,
 } from "@malica/socle/montant-imprime";
-import { enUnitesExactes } from "@malica/socle/somme-decimale";
+import { depuisUniteMineure, enUnitesExactes } from "@malica/socle/somme-decimale";
 
 import type { Requete } from "../db.ts";
 import { dateDeLaPiece } from "../depots/dates.ts";
@@ -45,6 +45,7 @@ import { dateDeLaPiece } from "../depots/dates.ts";
 import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../fabrique/recette.ts";
 import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 import { texteDuMontantCite, type PageToken } from "../malica/lecture/token-plan.ts";
+import { consigner } from "../observabilite/journal.ts";
 
 import {
   controlerPiece,
@@ -694,7 +695,10 @@ interface JugementDeLaPiece {
 
 /** Juger une pièce lue et poser le jugement. Un nouveau passage s'ajoute toujours. */
 export async function analyserPiece(db: Requete, pieceId: string): Promise<Analyse> {
-  return poserLeJugement(db, await jugerLaPiece(db, pieceId));
+  const j = await jugerLaPiece(db, pieceId);
+  const analyse = await poserLeJugement(db, j);
+  await tracerLeJugement(db, j, analyse.id, { chemin: "analyse" });
+  return analyse;
 }
 
 /**
@@ -716,6 +720,8 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
 export async function rejugerLaPiece(
   db: Requete,
   pieceId: string,
+  /** Le rejeu « à blanc » (`rejugerLesPieces`, `essai`) : tout s'annule, et le journal le dit. */
+  options: { essai?: boolean } = {},
 ): Promise<{ change: boolean; verifie: boolean }> {
   const j = await jugerLaPiece(db, pieceId);
   const { rows } = await db.query<{ id: string; regles: string | null; identique: boolean }>(
@@ -743,10 +749,13 @@ export async function rejugerLaPiece(
     ],
   );
   const derniere = rows[0];
+  const essai = options.essai ?? false;
   if (!derniere?.identique) {
-    await poserLeJugement(db, j);
+    const posee = await poserLeJugement(db, j);
+    await tracerLeJugement(db, j, posee.id, { chemin: "rejeu", change: true, essai });
     return { change: true, verifie: false };
   }
+  await tracerLeJugement(db, j, derniere.id, { chemin: "rejeu", change: false, essai });
   if (derniere.regles === j.regles) return { change: false, verifie: false };
   const { rows: verifiee } = await db.query<{ inscrite: boolean }>(
     `select public.analyse_verifier($1, $2) as inscrite`,
@@ -1038,6 +1047,43 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     motifs,
     cle,
   };
+}
+
+/**
+ * Le jugement au journal d'observabilité : le verdict, l'état des montants et
+ * ce que le Socle en retient, et les lignes qui le portent (`capture.analyses`,
+ * `capture.extractions`) — référencées, pas recopiées. Écrit hors de la
+ * transaction : une analyse annulée ensuite se lit par l'étape `rpc` en erreur.
+ */
+async function tracerLeJugement(
+  db: Requete,
+  j: JugementDeLaPiece,
+  analyseId: string,
+  champs: { chemin: "analyse" | "rejeu"; change?: boolean; essai?: boolean },
+): Promise<void> {
+  const devise = j.normalisation.devise ?? null;
+  const exposant = devise ? await exposantDeLaDevise(db, devise) : null;
+  const m = j.normalisation.montants;
+  const enDecimales = (v: number | null) =>
+    v === null || exposant === null ? null : depuisUniteMineure(v, exposant);
+  const bases = m.bases.map((b) => b.ht).filter((v): v is number => v !== null);
+  consigner("jugement", "ok", {
+    cle: `${j.pieceId}:${analyseId}`,
+    piece: j.pieceId,
+    detail: {
+      chemin: champs.chemin,
+      analyse_id: analyseId,
+      extraction_id: j.extractionId,
+      verdict: j.verdict,
+      etat: j.normalisation.etat,
+      devise,
+      base_ht: bases.length > 0 ? enDecimales(bases.reduce((a, b) => a + b, 0)) : null,
+      tva: enDecimales(m.tva),
+      ttc: enDecimales(m.ttc),
+      change: champs.change ?? null,
+      essai: champs.essai ?? null,
+    },
+  });
 }
 
 async function poserLeJugement(db: Requete, j: JugementDeLaPiece): Promise<Analyse> {

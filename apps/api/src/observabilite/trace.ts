@@ -12,7 +12,7 @@
  * `journal.ts`, l'entrée HTTP dans `requete.ts`.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 /** D'où vient l'opération : le vocabulaire de `observabilite.origine_t`. */
 export type Origine = "android" | "pwa" | "web" | "api" | "tache";
@@ -46,6 +46,17 @@ function uuidBienForme(valeur: unknown): string | null {
 }
 
 const contexte = new AsyncLocalStorage<Trace>();
+
+/**
+ * Un identifiant de trace TIRÉ de ce qui identifie un travail (le travail et sa
+ * tentative) : la même tentative rejouée retombe sur la même trace, et ses
+ * étapes comptent des répétitions au lieu de s'ajouter. Forme d'un UUID v8.
+ */
+export function identifiantDerive(...parties: readonly string[]): string {
+  const h = createHash("sha256").update(parties.join("\u0000")).digest("hex");
+  const variante = ((Number.parseInt(h[16]!, 16) & 0x3) | 0x8).toString(16);
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-8${h.slice(13, 16)}-${variante}${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
 
 /** La trace de l'opération en cours, s'il y en a une. */
 export function traceCourante(): Trace | undefined {

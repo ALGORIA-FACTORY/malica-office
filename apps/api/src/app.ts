@@ -42,7 +42,7 @@ import { introuvableLisible, refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
 import { malica } from "./malica.ts";
 import { moteurDuSecondLecteur } from "./malica/lecture/paddle.ts";
-import { consigner } from "./observabilite/journal.ts";
+import { codeDuRefus, consigner } from "./observabilite/journal.ts";
 import { issueDuStatut, tracerLaRequete } from "./observabilite/requete.ts";
 import { traceCourante } from "./observabilite/trace.ts";
 import { executerRpc, origineDEssai, RpcIntrouvable } from "./rpc.ts";
@@ -438,8 +438,7 @@ function noterLAppel(res: Response, appel: { depot: string; methode: string }): 
           methode: NOM_D_APPEL.test(appel.methode) ? appel.methode : null,
           statut: res.statusCode,
           // La clé du refus, sans les valeurs qui la suivent ; jamais un texte brut.
-          code_refus:
-            typeof refus === "string" ? (/^refus\.[a-z0-9_.]+/.exec(refus)?.[0] ?? null) : null,
+          code_refus: typeof refus === "string" ? codeDuRefus(refus) : null,
         },
       },
       trace,

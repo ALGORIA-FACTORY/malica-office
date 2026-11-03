@@ -46,11 +46,13 @@
  */
 
 import { creerAppelLocal } from "../appel-local.ts";
-import { sousIdentite, sousIdentiteDuServeur } from "../../db.ts";
+import { sousIdentite, sousIdentiteDuServeur, traceDOrigineDeLaPiece } from "../../db.ts";
 import { generateurDeepSeek } from "../../fabrique/generateur-modele.ts";
 import { executerUneGeneration } from "../../fabrique/travail-de-generation.ts";
 import { executerUnTravail } from "../../fabrique/travaux-execution.ts";
 import type { NatureDeTravail } from "../../fabrique/travaux.ts";
+import { tracerUnTravail } from "../../observabilite/journal.ts";
+import { traceCourante } from "../../observabilite/trace.ts";
 
 import { registre } from "./lectures-en-cours.ts";
 import { readPieceFlow } from "./read-flow.ts";
@@ -159,8 +161,24 @@ async function courir(utilisateurId: string, pieceId: string): Promise<void> {
          * file, elle, tient le cas que le registre ne peut pas tenir : la
          * mort du processus.
          */
-        await registre<Awaited<ReturnType<typeof readPieceFlow>>>().lireOuRejoindre(t.pieceId, () =>
-          readPieceFlow(api, t.pieceId),
+        /*
+         * Une trace ENFANT par travail : celle de la requête qui l'a demandé
+         * pour sa pièce, celle de la capture pour un travail repris d'un autre.
+         * La file draine aussi ces derniers : sans cela, leurs étapes
+         * s'inscriraient sous une requête qui ne les a pas faits naître.
+         */
+        const parente =
+          t.pieceId === pieceId
+            ? (traceCourante()?.id ?? null)
+            : await traceDOrigineDeLaPiece(t.pieceId).catch(() => null);
+        await tracerUnTravail(
+          "lecture_piece",
+          parente,
+          () =>
+            registre<Awaited<ReturnType<typeof readPieceFlow>>>().lireOuRejoindre(t.pieceId, () =>
+              readPieceFlow(api, t.pieceId),
+            ),
+          { tenant: tenantId, tentative: t.tentative, travailId: t.travailId },
         );
         return undefined;
       });

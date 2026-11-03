@@ -32,7 +32,13 @@ import { createInterface } from "node:readline";
 
 import { consignerEnBase, purgerLeJournal } from "../db.ts";
 import { introuvableLisible, refusLisible } from "../refus.ts";
-import { nouvelleTrace, sousLaTrace, traceCourante, type Trace } from "./trace.ts";
+import {
+  identifiantDerive,
+  nouvelleTrace,
+  sousLaTrace,
+  traceCourante,
+  type Trace,
+} from "./trace.ts";
 
 /** L'issue d'une étape : le vocabulaire de `observabilite.issue_t`. */
 export type Issue = "ok" | "refus" | "erreur" | "ignore";
@@ -559,8 +565,13 @@ export function consigner(
 }
 
 /** L'issue d'une erreur : un refus rédigé pour l'appelant, ou une panne. */
-function issueDe(erreur: unknown): Issue {
+export function issueDeLErreur(erreur: unknown): Issue {
   return refusLisible(erreur) || introuvableLisible(erreur) ? "refus" : "erreur";
+}
+
+/** La clé d'un refus (`refus.…`), sans les valeurs qui la suivent ; jamais un texte brut. */
+export function codeDuRefus(texte: string): string | null {
+  return /^refus\.[a-z0-9_.]+/.exec(texte)?.[0] ?? null;
 }
 
 /** Mesure un travail comme une étape : sa durée et son issue, qu'il réussisse ou non. */
@@ -575,7 +586,11 @@ export async function mesurer<T>(
     consigner(etape, "ok", { ...options, debut, dureeMs: Date.now() - debut.getTime() });
     return resultat;
   } catch (erreur) {
-    consigner(etape, issueDe(erreur), { ...options, debut, dureeMs: Date.now() - debut.getTime() });
+    consigner(etape, issueDeLErreur(erreur), {
+      ...options,
+      debut,
+      dureeMs: Date.now() - debut.getTime(),
+    });
     throw erreur;
   }
 }
@@ -589,9 +604,28 @@ export function tracerUnTravail<T>(
   nom: string,
   parente: string | null,
   travail: () => Promise<T>,
-  champs: { tenant?: string | null; tentative?: number } = {},
+  champs: {
+    tenant?: string | null;
+    tentative?: number;
+    /**
+     * Ce qui identifie le travail (la ligne de `fabrique.travaux`) : avec la
+     * tentative, il donne l'identifiant de la trace — la même tentative
+     * rejouée ne double aucune étape. Sans lui, une trace neuve.
+     */
+    travailId?: string;
+  } = {},
 ): Promise<T> {
-  const trace = nouvelleTrace("tache", { parente, tenant: champs.tenant ?? null });
+  const tentative = String(champs.tentative ?? 0);
+  const trace = nouvelleTrace("tache", {
+    parente,
+    tenant: champs.tenant ?? null,
+    ...(champs.travailId
+      ? {
+          id: identifiantDerive(champs.travailId, tentative),
+          cleDeRequete: `tentative:${tentative}`,
+        }
+      : {}),
+  });
   const detail = champs.tentative === undefined ? { nom } : { nom, tentative: champs.tentative };
   return sousLaTrace(trace, () => mesurer("tache", travail, { detail }));
 }

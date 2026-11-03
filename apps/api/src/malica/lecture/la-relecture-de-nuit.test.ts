@@ -25,6 +25,7 @@
  * l'identité des personnes. R7 : les organisations d'essai s'archivent.
  */
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
@@ -34,8 +35,9 @@ import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "../../db.ts";
 import { identite } from "../../depots/identite.ts";
 import { parametrage } from "../../depots/parametrage.ts";
 import { executerUnTravail } from "../../fabrique/travaux-execution.ts";
-import { enregistrerTravail, prendreUnTravail } from "../../fabrique/travaux.ts";
+import { enregistrerTravail, prendreUnTravail, type TravailPris } from "../../fabrique/travaux.ts";
 import { matriculeDEssai } from "../../matricule-d-essai.ts";
+import { nouvelleTrace, sousLaTrace } from "../../observabilite/trace.ts";
 import { executerRpc } from "../../rpc.ts";
 import { creerAppelLocal, type AppelApi } from "../appel-local.ts";
 
@@ -88,6 +90,17 @@ describe("la relecture de nuit", { skip: !BASE_CONFIGUREE }, () => {
     };
   };
   const journalisesPour = (pieceId: string) => journalises.filter((p) => p === pieceId).length;
+
+  /** Le journal d'observabilité écrit par lots, après coup : on attend qu'il l'ait fait. */
+  async function attendre<T>(lire: () => Promise<T | null | false>, quoi: string): Promise<T> {
+    const limite = Date.now() + 10_000;
+    for (;;) {
+      const v = await lire();
+      if (v) return v;
+      if (Date.now() > limite) assert.fail(`le journal n'a pas écrit : ${quoi}`);
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
 
   /** Un dossier que le cabinet tient, son dirigeant, et — s'il est dit — son réglage. */
   /**
@@ -456,6 +469,71 @@ describe("la relecture de nuit", { skip: !BASE_CONFIGUREE }, () => {
       assert.equal(modele.appels, 1);
       assert.equal(await compter("capture.extractions", piece), 1, "rien n'est réécrit ni ajouté");
       assert.equal(journalisesPour(piece), avant + 2);
+    });
+
+    it("se trace en ENFANT de la lecture d'origine, et la même tentative rejouée ne double rien", async () => {
+      const origine = randomUUID();
+      const piece = await deposer(u, pme, "tracee");
+      await sousLaTrace(nouvelleTrace("android", { id: origine }), () =>
+        readPieceFlow(apiDe(u), piece, lecteurs([() => partielle("qwen-vl-ocr")])),
+      );
+      // La parente se lit en base : on attend que le journal y ait écrit la lecture.
+      await attendre(async () => {
+        const { rows } = await admin.query<{ id: string | null }>(
+          "select observabilite.trace_d_origine($1) as id",
+          [piece],
+        );
+        return rows[0]?.id === origine;
+      }, "la trace d'origine");
+      const modele = lecteurs([() => complete("PP-OCR", TOKENS_DE_L_AUTRE)]);
+      let pris: TravailPris | null = null;
+
+      const fait = await executerUnTravail(
+        (travail) => sousIdentiteDuServeur(u.id, travail),
+        pme,
+        ["relecture_piece"],
+        (t) => {
+          pris = t;
+          return relirePiece(apiDe(u), t, modele);
+        },
+      );
+      assert.equal(fait?.motif, "relecture.retenue");
+      // La MÊME tentative exécutée une seconde fois (un processus qui la reprend
+      // avant d'en inscrire l'issue) : elle s'abstient, sans appel payant.
+      const rejouee = await relirePiece(apiDe(u), pris!, modele);
+      assert.equal(rejouee.motif, "relecture.abstention.lecture_depassee");
+      assert.equal(modele.appels, 1);
+
+      const lignes = await attendre(async () => {
+        const { rows } = await admin.query<{
+          trace_id: string;
+          parente_id: string | null;
+          origine: string;
+          etape: string;
+          detail: Record<string, unknown>;
+          repetitions: number;
+        }>(
+          `select trace_id, parente_id, origine::text, etape, detail, repetitions
+             from observabilite.diagnostic_piece($1) where origine = 'tache'`,
+          [piece],
+        );
+        const tache = rows.find((l) => l.etape === "tache");
+        return tache && tache.repetitions === 1 ? rows : null;
+      }, "la répétition de la tentative");
+      assert.deepEqual(
+        [...new Set(lignes.map((l) => l.parente_id))],
+        [origine],
+        "une seule trace enfant, rattachée à la lecture d'origine",
+      );
+      const une = (etape: string) => lignes.filter((l) => l.etape === etape);
+      assert.equal(une("ocr").length, 1, "l'autre lecteur n'a relu qu'une fois");
+      assert.equal(une("persistance").length, 1);
+      assert.equal(une("persistance")[0]!.detail["passe"], "relecture");
+      const [rattrapage, ...autres] = une("rattrapage");
+      assert.equal(autres.length, 0);
+      assert.equal(rattrapage!.repetitions, 1, "l'abstention rejouée est une répétition");
+      assert.equal(rattrapage!.detail["retenue"], true, "la première inscription vaut");
+      assert.equal(rattrapage!.detail["raison"], "contrat_partiel");
     });
 
     it("isolation : un autre dossier ne prend pas le travail, ne le lit pas, n'écrit rien par sa porte", async () => {
