@@ -34,7 +34,7 @@
 drop trigger if exists une_piece_non_lue_ne_part_pas on capture.pieces;
 drop function if exists app.une_piece_non_lue_ne_part_pas();
 
-create function app.une_piece_transmise_est_lue()
+create or replace function app.une_piece_transmise_est_lue()
 returns trigger
 language plpgsql
 security definer
@@ -64,6 +64,7 @@ $$;
 
 revoke all on function app.une_piece_transmise_est_lue() from public, anon, authenticated;
 
+drop trigger if exists une_piece_transmise_lue_d_abord on capture.pieces;
 create trigger une_piece_transmise_lue_d_abord
   before update of vis on capture.pieces
   for each row execute function app.une_piece_transmise_est_lue();
