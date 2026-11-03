@@ -1165,10 +1165,22 @@ describe("le moteur commercial", { skip: !BASE_CONFIGUREE }, () => {
         [m.licenceA, m.periode],
         cumul,
       );
-      // Annulé, un geste ne compte plus dans le cumul.
-      await db.query("select plateforme.geste_annuler($1, 'Saisi sur la mauvaise licence')", [
-        offerts.id,
-      ]);
+      // Annulé, un geste ne compte plus dans le cumul. L'annulation rejouée par sa
+      // clé rend la même annulation (revue Codex de #202) ; la clé ne sert pas ailleurs.
+      const annuler = (geste: string) =>
+        db.query<{ r: { id: string; deja: boolean } }>(
+          "select plateforme.geste_annuler($1, 'Saisi sur la mauvaise licence', 'cle-annulation-1') as r",
+          [geste],
+        );
+      const premiere = (await annuler(offerts.id)).rows[0]!.r;
+      const rejouee = (await annuler(offerts.id)).rows[0]!.r;
+      assert.deepEqual([rejouee.id, rejouee.deja], [premiere.id, true]);
+      await refuse(
+        db,
+        "select plateforme.geste_annuler($1, 'Autre', 'cle-annulation-1')",
+        [m.gesteVisible],
+        /refus\.commerce\.cle_deja_prise/,
+      );
       await db.query(
         `select plateforme.mois_offrir($1, 'titulaire', ${mois(4)}, 1::smallint, 'Le bon geste')`,
         [m.licenceA, m.periode],

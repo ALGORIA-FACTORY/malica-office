@@ -1011,10 +1011,25 @@ grant execute on function plateforme.facture_decider(uuid, text, text) to authen
 create function plateforme.geste_annuler(p_geste uuid, p_motif text, p_cle text default null)
 returns jsonb
 language plpgsql security definer set search_path = '' as $$
-declare g plateforme.interventions;
+declare
+  g       plateforme.interventions;
+  v_rejeu plateforme.interventions;
 begin
   if not app.is_platform() then
     raise exception 'refus.reserve.plateforme' using errcode = '42501';
+  end if;
+  -- Une annulation rejouée par sa clé rend l'annulation déjà inscrite, avant
+  -- tout autre contrôle — sinon elle buterait sur « déjà annulé », alors
+  -- qu'elle a réussi (revue Codex de #202). La clé d'une autre écriture reste
+  -- refusée.
+  if p_cle is not null then
+    select * into v_rejeu from plateforme.interventions where cle_idempotence = p_cle;
+    if v_rejeu.id is not null then
+      if v_rejeu.acte <> 'annulation' or v_rejeu.annule is distinct from p_geste then
+        raise exception 'refus.commerce.cle_deja_prise' using errcode = 'unique_violation';
+      end if;
+      return to_jsonb(v_rejeu) || jsonb_build_object('deja', true);
+    end if;
   end if;
   select * into g from plateforme.interventions where id = p_geste;
   if g.id is null then
