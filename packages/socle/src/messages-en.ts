@@ -545,6 +545,11 @@ export const en: Dict = {
   "pme.type.passer": "I don't know",
   "pme.type.corrigeable": "Malica checks it when reading. You can change it later.",
   "pme.piece.type.modifier": "Change type",
+  "pme.piece.nom.modifier": "Edit the issuer’s name",
+  "pme.piece.nom.label": "Issuer’s name",
+  "pme.piece.nom.aide": "As printed on the document. The original reading is kept.",
+  "pme.piece.nom.enregistrer": "Save",
+  "pme.piece.nom.corrige": "Corrected",
   "pme.type.lot": "{count} documents, all of the same kind",
   "pme.type.lot#one": "{count} document",
   "pme.type.lot#other": "{count} documents, all of the same kind",
@@ -1660,6 +1665,7 @@ export const en: Dict = {
   "cab.journal.piece.type_etabli": "Document type set by the practice.",
   "cab.journal.piece.type_corrige": "The client corrected the document type.",
   "cab.journal.piece.date_corrigee": "The client corrected the document date.",
+  "cab.journal.piece.nom_corrige": "The client corrected the issuer’s name.",
   "cab.journal.piece.vers_cabinet": "Document sent to the practice.",
   "cab.journal.piece.rendue": "Document handed back to the client, at their request.",
   "cab.journal.piece.vers_societe": "Document back in the company.",
@@ -2356,6 +2362,8 @@ export const en: Dict = {
   "refus.precision.type_non_propose": "This document type is not offered: {type}.",
   "refus.precision.date_illisible": "This date cannot be read: {date}.",
   "refus.precision.date_a_venir": "A future date cannot be set: {date}.",
+  "refus.precision.nom_vide": "The name cannot be empty.",
+  "refus.precision.nom_trop_long": "The name is too long: {max} characters at most.",
   "refus.precision.champ": "This field cannot be specified: {champ}.",
   "refus.lecture.citation_orpheline":
     "The reading cites field {champ} at a place where no word was read.",
@@ -3484,6 +3492,8 @@ export const en: Dict = {
     "No licence is attached to this account. Caps and price stay empty until then.",
   "pme.reglages.orgs": "Companies",
   "pme.reglages.orgs.aucune": "No organisation on this licence.",
+  "pme.reglages.orgs.autreTitulaire":
+    "{societe}’s licence belongs to its principal owner: only this company is shown here. Open your other companies from the selector at the top.",
   "pme.reglages.orgs.ajouter": "Add a company",
   "pme.reglages.orgs.ajouter.sous":
     "One more organisation on the licence, with its own engagement and its own documents. The cap is held by the database.",

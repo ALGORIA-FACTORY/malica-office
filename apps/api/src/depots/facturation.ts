@@ -217,20 +217,44 @@ export const facturation = {
   },
 
   /** Les membres de toutes les organisations de la licence. */
-  async sieges(db: Requete) {
-    const { rows } = await db.query(
-      `select user_id, nom, role, tenant_id, organisation, email
-         from licence_sieges_v order by organisation, role, nom, user_id`,
-    );
+  /**
+   * Les sièges. Avec la société OUVERTE (3 novembre 2026), ceux que l'écran de
+   * cette société doit montrer : toute la licence pour son titulaire, la
+   * société pour son dirigeant (`licence_sieges_de`). Sans société, ceux des
+   * licences dont l'appelant est titulaire — l'ancienne lecture, qui montrait
+   * la licence du COMPTE dans les réglages d'une autre société.
+   */
+  async sieges(db: Requete, tenantId?: string | null) {
+    const { rows } = tenantId
+      ? await db.query(
+          `select user_id, nom, role, tenant_id, organisation, email
+             from public.licence_sieges_de($1)`,
+          [tenantId],
+        )
+      : await db.query(
+          `select user_id, nom, role, tenant_id, organisation, email
+             from licence_sieges_v order by organisation, role, nom, user_id`,
+        );
     return rows;
   },
 
-  /** Les organisations de la licence, et ce que chacune a consommé ce mois-ci. */
-  async organisations(db: Requete) {
-    const { rows } = await db.query(
-      `select tenant_id, nom, lectures_consommees
-         from licence_organisations_v order by nom, tenant_id`,
-    );
+  /**
+   * Les sociétés de la licence, et ce que chacune a consommé ce mois-ci. Avec
+   * la société ouverte, la licence qui LA couvre, elle en tête
+   * (`licence_organisations_de`) ; sans, les licences dont l'appelant est
+   * titulaire.
+   */
+  async organisations(db: Requete, tenantId?: string | null) {
+    const { rows } = tenantId
+      ? await db.query(
+          `select tenant_id, nom, lectures_consommees, titulaire
+             from public.licence_organisations_de($1)`,
+          [tenantId],
+        )
+      : await db.query(
+          `select tenant_id, nom, lectures_consommees
+             from licence_organisations_v order by nom, tenant_id`,
+        );
     return rows;
   },
 

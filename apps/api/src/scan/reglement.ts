@@ -150,7 +150,9 @@ export async function propositionDeReglement(
   }
 
   // La pièce telle qu'elle a été LUE : l'émetteur, sa référence, et le TTC
-  // tranché par l'analyse (en unités mineures). Rien n'est recalculé ici.
+  // tranché par l'analyse (en unités mineures). Rien n'est recalculé ici. Le
+  // nom de l'émetteur corrigé par une personne (`app.emetteur_dit`) remplace
+  // le nom lu : c'est lui que porte le libellé du règlement.
   const { rows: lue } = await db.query<{
     payload: { issuer?: string; currency?: string; references?: Record<string, string> } | null;
     ttc_mineur: number | null;
@@ -158,7 +160,9 @@ export async function propositionDeReglement(
     jurisdiction: string;
     devise_comptable: string;
   }>(
-    `select e.payload,
+    `select case when app.emetteur_dit(p.id) is null then e.payload
+                 else e.payload || jsonb_build_object('issuer', app.emetteur_dit(p.id)) end
+              as payload,
             (a.normalisation -> 'montants' ->> 'ttc')::bigint as ttc_mineur,
             (a.normalisation -> 'montants' ->> 'tva')::bigint as tva_mineur,
             o.jurisdiction, o.currency as devise_comptable

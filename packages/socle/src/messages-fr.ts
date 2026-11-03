@@ -584,6 +584,11 @@ export const fr = {
   "pme.type.passer": "Je ne sais pas",
   "pme.type.corrigeable": "Malica le vérifie à la lecture. Vous pourrez le changer.",
   "pme.piece.type.modifier": "Modifier le type",
+  "pme.piece.nom.modifier": "Modifier le nom de l’émetteur",
+  "pme.piece.nom.label": "Nom de l’émetteur",
+  "pme.piece.nom.aide": "Tel qu’il est imprimé sur la pièce. La lecture d’origine est gardée.",
+  "pme.piece.nom.enregistrer": "Enregistrer",
+  "pme.piece.nom.corrige": "Corrigé",
   "pme.type.lot": "{count} documents, de même nature",
   "pme.type.lot#one": "{count} document",
   "pme.type.lot#other": "{count} documents, de même nature",
@@ -1725,6 +1730,7 @@ export const fr = {
   "cab.journal.piece.type_etabli": "Type de pièce établi par le cabinet.",
   "cab.journal.piece.type_corrige": "Le client a corrigé le type de la pièce.",
   "cab.journal.piece.date_corrigee": "Le client a corrigé la date de la pièce.",
+  "cab.journal.piece.nom_corrige": "Le client a corrigé le nom de l’émetteur.",
   "cab.journal.piece.vers_cabinet": "Pièce envoyée au cabinet.",
   "cab.journal.piece.rendue": "Pièce rendue au client, à sa demande.",
   "cab.journal.piece.vers_societe": "Pièce revenue dans la société.",
@@ -2438,6 +2444,8 @@ export const fr = {
   "refus.precision.type_non_propose": "Ce type de pièce n’est pas proposé : {type}.",
   "refus.precision.date_illisible": "Cette date n’est pas lisible : {date}.",
   "refus.precision.date_a_venir": "Une date à venir ne se précise pas : {date}.",
+  "refus.precision.nom_vide": "Le nom ne peut pas être vide.",
+  "refus.precision.nom_trop_long": "Le nom est trop long : {max} caractères au plus.",
   "refus.precision.champ": "Ce champ ne se précise pas : {champ}.",
   "refus.lecture.citation_orpheline":
     "La lecture cite le champ {champ} à un emplacement où aucun mot n’a été lu.",
@@ -3582,6 +3590,8 @@ export const fr = {
     "Aucune licence n’est rattachée à ce compte. Les plafonds et le prix restent vides jusque-là.",
   "pme.reglages.orgs": "Sociétés",
   "pme.reglages.orgs.aucune": "Aucune organisation sur cette licence.",
+  "pme.reglages.orgs.autreTitulaire":
+    "La licence de {societe} appartient à son propriétaire principal : vous ne voyez ici que cette société. Vos autres sociétés s’ouvrent depuis le sélecteur en haut.",
   "pme.reglages.orgs.ajouter": "Ajouter une société",
   "pme.reglages.orgs.ajouter.sous":
     "Une organisation de plus sur la licence, avec son propre mandat et ses propres pièces. Le plafond est tenu par la base.",

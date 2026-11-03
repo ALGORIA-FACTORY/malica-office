@@ -1598,15 +1598,16 @@ export interface CaptureRepository {
   miniature(pieceId: string): Promise<Blob | null>;
   /**
    * Ce que la personne précise ou corrige : le type de la pièce, un code que
-   * le référentiel propose au choix (`propose_a_la_capture`). Une entrée
+   * le référentiel propose au choix (`propose_a_la_capture`), ou le nom de
+   * son émetteur (`issuer`, 3 novembre 2026). Une entrée
    * nouvelle, jamais une modification de la lecture (R7) ; la base contraint
    * le champ, la valeur et l'état de la pièce.
    */
   preciser(
     pieceId: string,
-    champ: "document_kind",
+    champ: "document_kind" | "issuer",
     valeur: string,
-  ): Promise<{ id: string; champ: string; valeur: string }>;
+  ): Promise<{ id: string | null; champ: string; valeur: string }>;
   /**
    * Rejuger la pièce après une précision : le verdict suit la réponse de la
    * personne. Sans ce geste, l'écran garderait le verdict d'avant.
@@ -3800,6 +3801,8 @@ export interface OrganisationDeLaLicence {
   tenant_id: string;
   nom: string;
   lectures_consommees: number | string | null;
+  /** L'appelant est-il titulaire de la licence ? Rendu quand la société ouverte est donnée. */
+  titulaire?: boolean;
 }
 
 /**
@@ -3822,8 +3825,10 @@ export interface FacturationRepository {
   monForfait(tenantId?: string): Promise<MonForfait | null>;
   /** Le prix d'une place et d'une société en plus ; `null` à qui n'est pas titulaire. */
   mesPrixEnPlus(tenantId: string): Promise<PrixEnPlus | null>;
-  sieges(): Promise<SiegeDeLaLicence[]>;
-  organisations(): Promise<OrganisationDeLaLicence[]>;
+  /** Les sièges vus depuis la société ouverte (`tenantId`) ; sans elle, ceux de mes licences. */
+  sieges(tenantId?: string): Promise<SiegeDeLaLicence[]>;
+  /** Les sociétés de la licence qui couvre la société ouverte, elle en tête. */
+  organisations(tenantId?: string): Promise<OrganisationDeLaLicence[]>;
   inviterSiege(
     email: string,
     tenantId: string,
