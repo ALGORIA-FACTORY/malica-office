@@ -288,4 +288,135 @@ describe("le journal ne perd rien", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.equal(rows.length, 1, "la perte est dite : sept événements, faute de disque");
   });
+
+  it("un fichier d'attente tourne : il ne grossit pas au-delà de sa borne", async () => {
+    const rep = path.join(dossier, "rotation");
+    const j = journal(rep, {
+      ecrire: async () => {
+        throw panne();
+      },
+      borne: 1000,
+      fichierMaxOctets: 4096,
+    });
+    for (let i = 0; i < 60; i += 1) j.consigner(evenement(randomUUID(), i));
+    await j.vider();
+    const noms = await fichiers(rep);
+    assert.ok(noms.length > 1, `un seul fichier pour 60 événements : ${noms.join(", ")}`);
+    for (const nom of noms) {
+      const taille = (await readFile(path.join(rep, nom))).length;
+      // Un lot (5 événements) peut déborder la borne d'au plus lui-même.
+      assert.ok(taille <= 4096 + 5 * 1024, `${nom} : ${taille} octets`);
+    }
+  });
+
+  it("un long fichier d'attente se rejoue en flux, la mémoire bornée", async () => {
+    // Un fichier de plusieurs dizaines de Mo, rejoué par un processus au tas
+    // de 64 Mo : lu d'un bloc puis découpé, il ne tiendrait pas.
+    const rep = path.join(dossier, "flux");
+    const { mkdirSync, writeSync, openSync, closeSync } = await import("node:fs");
+    mkdirSync(rep, { recursive: true });
+    const fd = openSync(path.join(rep, "attente-longue-0.jsonl"), "w");
+    const trace = randomUUID();
+    const bloc: string[] = [];
+    for (let i = 0; i < 150_000; i += 1) {
+      bloc.push(
+        JSON.stringify({ ...evenement(trace, i), detail: { remplissage: "x".repeat(200) } }),
+      );
+      if (bloc.length === 5_000) {
+        writeSync(fd, bloc.join("\n") + "\n");
+        bloc.length = 0;
+      }
+    }
+    closeSync(fd);
+    const script = `
+      import { Journal } from ${JSON.stringify(path.join(ICI, "journal.ts"))};
+      let n = 0;
+      const j = new Journal({
+        ecrire: async (lot) => { n += lot.length; return { rejetes: 0 }; },
+        repertoire: ${JSON.stringify(rep)}, borne: 1000, taille: 200, intervalleMs: 10, rejeuMs: 50,
+      });
+      await j.rejouer();
+      console.log("rejoues " + n);
+    `;
+    const enfant = spawn(
+      process.execPath,
+      [
+        "--max-old-space-size=64",
+        "--experimental-strip-types",
+        "--no-warnings",
+        "--input-type=module",
+        "-e",
+        script,
+      ],
+      { cwd: API, env: process.env, stdio: ["ignore", "pipe", "pipe"] },
+    );
+    let sortie = "";
+    enfant.stdout.on("data", (d: Buffer) => (sortie += d.toString()));
+    enfant.stderr.on("data", (d: Buffer) => (sortie += d.toString()));
+    const code = await new Promise((r) => enfant.once("exit", r));
+    assert.equal(code, 0, sortie.slice(-500));
+    assert.match(sortie, /rejoues 150000/);
+    assert.deepEqual(await fichiers(rep), []);
+  });
+
+  it("base coupée pendant le rejeu et disque plein : le fichier réclamé reste, rien n'est détruit", async () => {
+    const rep = path.join(dossier, "garde");
+    const trace = randomUUID();
+    let coupee = false;
+    let lots = 0;
+    let disquePlein = false;
+    const j = journal(rep, {
+      // La base tombe après le premier lot du rejeu.
+      ecrire: async (lot) => {
+        if (coupee) throw panne();
+        lots += 1;
+        if (lots > 1) throw panne();
+        return consignerEnBase(lot);
+      },
+      ajouter: (chemin, texte) => {
+        if (disquePlein)
+          throw Object.assign(new Error("ENOSPC: no space left on device"), { code: "ENOSPC" });
+        appendFileSync(chemin, texte);
+      },
+    });
+    coupee = true;
+    for (let i = 0; i < 20; i += 1) j.consigner(evenement(trace, i));
+    await j.vider();
+    assert.equal((await fichiers(rep)).length, 1);
+    coupee = false;
+    disquePlein = true;
+    await new Promise((r) => setTimeout(r, 60));
+    await j.rejouer();
+    assert.deepEqual(await compter(trace), { n: 5, r: 0 }, "le premier lot est passé");
+    const restants = await fichiers(rep);
+    assert.equal(restants.length, 1, "le fichier réclamé est gardé");
+    const lignes = (await readFile(path.join(rep, restants[0]!), "utf8")).trim().split("\n");
+    assert.equal(lignes.length, 20);
+
+    // Base et disque revenus : la reprise inscrit le reste, sans doublon.
+    disquePlein = false;
+    const reprise = journal(rep);
+    await reprise.rejouer();
+    const { n } = await compter(trace);
+    assert.equal(n, 20);
+    assert.deepEqual(await fichiers(rep), []);
+  });
+
+  it("un événement que la porte rejette est une perte dite, avec sa raison", async () => {
+    const j = journal(null);
+    const trace = randomUUID();
+    j.consigner(evenement(trace, 1));
+    j.consigner({ ...evenement(trace, 2), etape: "etape_inconnue" });
+    await j.vider();
+    // La perte part au lot suivant.
+    await j.vider();
+    assert.deepEqual(await compter(trace), { n: 1, r: 0 });
+    const { rows } = await admin.query(
+      `select 1 from observabilite.evenements
+        where etape = 'perte' and detail = '{"nombre": 1, "raison": "rejete"}'::jsonb
+          and inscrit_le >= $1`,
+      [debutDuTest],
+    );
+    assert.equal(rows.length, 1, "l'événement rejeté par la porte est compté et dit");
+  });
 });

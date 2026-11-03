@@ -24,10 +24,11 @@
  * C'est le prix de « ne jamais ralentir une requête » ; le compter serait
  * mentir, puisque le processus qui compte est mort.
  */
-import { appendFileSync, mkdirSync } from "node:fs";
-import { readdir, readFile, rename, stat, unlink, utimes } from "node:fs/promises";
+import { appendFileSync, createReadStream, mkdirSync } from "node:fs";
+import { readdir, rename, stat, unlink, utimes } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { createInterface } from "node:readline";
 
 import { consignerEnBase, purgerLeJournal } from "../db.ts";
 import { introuvableLisible, refusLisible } from "../refus.ts";
@@ -63,8 +64,12 @@ export interface Evenement {
 }
 
 export interface OptionsDuJournal {
-  /** Écrit un lot en base ; rejette si la base ne répond pas ou refuse. */
-  ecrire: (lot: readonly Evenement[]) => Promise<unknown>;
+  /**
+   * Écrit un lot en base ; rejette si la base ne répond pas ou refuse. Rend
+   * le nombre d'événements que la porte a écartés à la validation : ce sont
+   * des pertes, et elles se disent.
+   */
+  ecrire: (lot: readonly Evenement[]) => Promise<{ rejetes: number }>;
   /** Le dossier du fichier d'attente ; `null` : rien ne se déverse, tout débordement est une perte. */
   repertoire: string | null;
   /** Le nombre d'événements que la file tient en mémoire, au plus. */
@@ -75,7 +80,13 @@ export interface OptionsDuJournal {
   intervalleMs: number;
   /** Le délai entre deux rejeux du fichier d'attente, et l'attente après une panne de base. */
   rejeuMs: number;
+  /** La taille d'un fichier d'attente au-delà de laquelle on passe au suivant (16 Mo par défaut). */
+  fichierMaxOctets?: number;
+  /** L'écriture sur disque (ajout en fin de fichier) ; remplacée par les épreuves du disque plein. */
+  ajouter?: (chemin: string, texte: string) => void;
 }
+
+const FICHIER_MAX_OCTETS = 16 * 1024 * 1024;
 
 /**
  * Une panne de la base (connexion, délai, arrêt) se réessaie plus tard ; un
@@ -105,6 +116,8 @@ export class Journal {
   private readonly pertes = new Map<string, number>();
   private readonly instance = randomUUID();
   private sequence = 0;
+  /** Ce que le fichier d'attente en cours porte déjà : au-delà de la borne, il tourne. */
+  private octetsDuFichier = 0;
 
   private readonly options: OptionsDuJournal;
 
@@ -162,8 +175,11 @@ export class Journal {
     })().finally(() => {
       this.ecriture = null;
       // Un événement arrivé entre la fin de la boucle et ce rappel n'a pas pu
-      // se planifier : il l'est maintenant.
-      if (this.file.length > 0) this.planifier();
+      // se planifier : il l'est maintenant. Une perte comptée pendant le lot
+      // (un rejet de la porte) se dit au suivant, sauf base en panne.
+      if (this.file.length > 0 || (this.pertes.size > 0 && Date.now() >= this.baseEnPanneJusqua)) {
+        this.planifier();
+      }
     });
     return this.ecriture;
   }
@@ -227,13 +243,13 @@ export class Journal {
    */
   private async ecrireOuTrier(lot: readonly Evenement[]): Promise<void> {
     try {
-      await this.options.ecrire(lot);
+      this.compterLesRejets(await this.options.ecrire(lot));
     } catch (erreur) {
       if (!estUnRefusDeLaBase(erreur)) throw erreur;
       console.error("[journal] la base refuse un lot :", (erreur as Error).message);
       for (const evenement of lot) {
         try {
-          await this.options.ecrire([evenement]);
+          this.compterLesRejets(await this.options.ecrire([evenement]));
         } catch (refus) {
           if (!estUnRefusDeLaBase(refus)) throw refus;
           this.perdre([evenement], "rejet");
@@ -242,23 +258,51 @@ export class Journal {
     }
   }
 
+  /**
+   * Les événements que la porte a écartés (mal formés, étape inconnue) ne sont
+   * pas inscrits : ils sont perdus, et la perte se dit comme les autres.
+   */
+  private compterLesRejets(bilan: { rejetes: number } | undefined): void {
+    const rejetes = bilan?.rejetes ?? 0;
+    if (rejetes > 0) this.compterLaPerte("rejete", rejetes);
+  }
+
   /** Sur disque, d'un seul appel système : sinon c'est une perte, comptée. */
   private deverser(lot: readonly Evenement[]): void {
     if (lot.length === 0) return;
-    const repertoire = this.options.repertoire;
-    if (!repertoire) {
+    if (!this.options.repertoire) {
       this.perdre(lot, "sans_fichier");
       return;
     }
+    if (!this.ecrireSurDisque(lot.map((e) => JSON.stringify(e)))) this.perdre(lot, "disque");
+  }
+
+  /**
+   * Ajoute des lignes au fichier d'attente en cours, qui TOURNE au-delà de sa
+   * borne : un fichier ne grossit pas indéfiniment, et le rejeu les prend un
+   * par un. Rend faux si le disque refuse (plein, absent) ; ne lève jamais.
+   */
+  private ecrireSurDisque(lignes: readonly string[]): boolean {
+    const repertoire = this.options.repertoire;
+    if (!repertoire || lignes.length === 0) return lignes.length === 0;
+    const texte = lignes.join("\n") + "\n";
+    const octets = Buffer.byteLength(texte);
     try {
       mkdirSync(repertoire, { recursive: true });
-      appendFileSync(
+      const borne = this.options.fichierMaxOctets ?? FICHIER_MAX_OCTETS;
+      if (this.octetsDuFichier > 0 && this.octetsDuFichier + octets > borne) {
+        this.sequence += 1;
+        this.octetsDuFichier = 0;
+      }
+      (this.options.ajouter ?? appendFileSync)(
         path.join(repertoire, `${PREFIXE_ATTENTE}${this.instance}-${this.sequence}.jsonl`),
-        lot.map((e) => JSON.stringify(e)).join("\n") + "\n",
+        texte,
       );
+      this.octetsDuFichier += octets;
+      return true;
     } catch (erreur) {
       console.error("[journal] déversement impossible :", (erreur as Error).message);
-      this.perdre(lot, "disque");
+      return false;
     }
   }
 
@@ -308,30 +352,80 @@ export class Journal {
     for (const nom of noms.sort()) {
       if (Date.now() < this.baseEnPanneJusqua) break;
       const reclame = await this.reclamer(repertoire, nom);
-      if (!reclame) continue;
-      const lignes = (await readFile(reclame, "utf8")).split("\n").filter((l) => l.length > 0);
-      const evenements: Evenement[] = [];
-      for (const ligne of lignes) {
-        try {
-          evenements.push(JSON.parse(ligne) as Evenement);
-        } catch {
-          this.compterLaPerte("illisible", 1);
-        }
-      }
-      let ecrits = 0;
-      try {
-        for (; ecrits < evenements.length; ecrits += this.options.taille) {
-          await this.ecrireOuTrier(evenements.slice(ecrits, ecrits + this.options.taille));
-        }
-      } catch {
-        this.baseEnPanneJusqua = Date.now() + this.options.rejeuMs;
-        // Ce qui n'est pas écrit retourne en attente, sous un nom neuf.
-        this.deverser(evenements.slice(ecrits));
-      }
-      await unlink(reclame);
+      if (reclame) await this.rejouerUnFichier(repertoire, reclame);
     }
     // Les pertes du rejeu se disent au prochain lot.
     if (this.pertes.size > 0) this.planifier();
+  }
+
+  /**
+   * Rejoue un fichier réclamé EN FLUX : ligne à ligne, un lot au plus en
+   * mémoire, quelle que soit la longueur de la panne qui l'a rempli.
+   *
+   * Si la base tombe en chemin, le reste — le lot en cours et les lignes non
+   * lues — est réécrit dans un fichier d'attente neuf ; le fichier réclamé ne
+   * s'efface qu'une fois ce reste à l'abri. Si le disque refuse aussi, il est
+   * GARDÉ, rendu à l'attente : la reprise le relira depuis le début, et ce qui
+   * est déjà inscrit n'y comptera qu'une répétition (la clé d'idempotence).
+   */
+  private async rejouerUnFichier(repertoire: string, reclame: string): Promise<void> {
+    const flux = createReadStream(reclame, { encoding: "utf8" });
+    const lignes = createInterface({ input: flux, crlfDelay: Infinity });
+    const suite = lignes[Symbol.asyncIterator]();
+    let lot: Evenement[] = [];
+    let aLAbri = true;
+    try {
+      for (;;) {
+        const { value: ligne, done } = await suite.next();
+        if (!done && ligne.length > 0) {
+          try {
+            lot.push(JSON.parse(ligne) as Evenement);
+          } catch {
+            this.compterLaPerte("illisible", 1);
+          }
+        }
+        if (lot.length >= this.options.taille || (done && lot.length > 0)) {
+          try {
+            await this.ecrireOuTrier(lot);
+          } catch {
+            this.baseEnPanneJusqua = Date.now() + this.options.rejeuMs;
+            aLAbri = await this.reecrireLeReste(lot, suite);
+            break;
+          }
+          lot = [];
+        }
+        if (done) break;
+      }
+    } finally {
+      lignes.close();
+      flux.destroy();
+    }
+    if (aLAbri) {
+      await unlink(reclame);
+    } else {
+      await rename(
+        reclame,
+        path.join(repertoire, `${PREFIXE_ATTENTE}reprise-${randomUUID()}.jsonl`),
+      );
+    }
+  }
+
+  /** Réécrit le lot en cours et les lignes non lues ; faux dès que le disque refuse. */
+  private async reecrireLeReste(
+    lot: readonly Evenement[],
+    suite: AsyncIterator<string>,
+  ): Promise<boolean> {
+    if (!this.ecrireSurDisque(lot.map((e) => JSON.stringify(e)))) return false;
+    let paquet: string[] = [];
+    for (;;) {
+      const { value: ligne, done } = await suite.next();
+      if (!done && ligne.length > 0) paquet.push(ligne);
+      if (paquet.length >= this.options.taille || (done && paquet.length > 0)) {
+        if (!this.ecrireSurDisque(paquet)) return false;
+        paquet = [];
+      }
+      if (done) return true;
+    }
   }
 
   /**
@@ -350,7 +444,10 @@ export class Journal {
       } else if (!nom.startsWith(PREFIXE_ATTENTE)) {
         return null;
       }
-      if (nom === `${PREFIXE_ATTENTE}${this.instance}-${this.sequence}.jsonl`) this.sequence += 1;
+      if (nom === `${PREFIXE_ATTENTE}${this.instance}-${this.sequence}.jsonl`) {
+        this.sequence += 1;
+        this.octetsDuFichier = 0;
+      }
       const cible = path.join(repertoire, `${PREFIXE_REJEU}${this.instance}-${randomUUID()}.jsonl`);
       await rename(chemin, cible);
       const maintenant = new Date();
@@ -420,6 +517,7 @@ function journal(): Journal {
       taille: entier("JOURNAL_LOT", 200),
       intervalleMs: entier("JOURNAL_INTERVALLE_MS", 1_000),
       rejeuMs: entier("JOURNAL_REJEU_MS", 30_000),
+      fichierMaxOctets: entier("JOURNAL_FICHIER_MAX_OCTETS", FICHIER_MAX_OCTETS),
     });
     // Un processus qui se termine de lui-même (une épreuve, un outil) écrit
     // d'abord ce qui reste : `beforeExit` revient tant que la file n'est pas vide.
