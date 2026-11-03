@@ -9,8 +9,13 @@ import "dotenv/config";
 import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
 
 import { app } from "./app.ts";
-import { fermerLePool } from "./db.ts";
+import { fermerLePool, fermerLePoolDuJournal } from "./db.ts";
 import { demarrerLaNuit } from "./malica/lecture/demarrer-la-nuit.ts";
+import {
+  arreterLeJournal,
+  demarrerLeJournal,
+  exigerLeFichierDAttente,
+} from "./observabilite/journal.ts";
 import { demarrerLesRelances } from "./relances/demarrer.ts";
 import { racine } from "./stockage.ts";
 
@@ -38,6 +43,10 @@ setDefaultAutoSelectFamilyAttemptTimeout(Number(process.env["RESEAU_DELAI_FAMILL
 // racine de stockage absente est une panne d'installation : elle doit empêcher
 // l'API de démarrer, comme le fait un secret de jetons manquant.
 racine();
+// De même pour le fichier d'attente du journal : sans lui, une panne de base
+// ferait perdre les traces en silence. Ce qui y attend se rejoue maintenant.
+exigerLeFichierDAttente();
+demarrerLeJournal();
 
 // Les relances d'impayé : rien ne part tant que la tour ne les a pas ouvertes.
 demarrerLesRelances();
@@ -52,8 +61,12 @@ const serveur = app.listen(port, () => {
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
+    // Les requêtes en cours finissent ; leurs étapes rejoignent le journal,
+    // qui se vide en base ou sur disque avant que les connexions ne tombent.
     serveur.close(() => {
-      void fermerLePool().then(() => process.exit(0));
+      void arreterLeJournal()
+        .then(() => Promise.all([fermerLePool(), fermerLePoolDuJournal()]))
+        .then(() => process.exit(0));
     });
   });
 }

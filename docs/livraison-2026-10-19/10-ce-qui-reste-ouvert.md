@@ -470,3 +470,10 @@ mesurer, sans bloquer la livraison :
 - **Un modèle sans tarif** ne laisse aucune ligne de coût : la tour le signale
   (« sans coût »), le plafond en dollars ne le borne pas — seul le nombre de
   relectures le borne.
+
+## La rétention du journal d'observabilité (tranchée par défaut le 3 novembre 2026)
+
+- **90 jours**, valeur de départ INCERTAINE (`observabilite.reglages`, migration 20261118130000) : un trimestre de recette et de support. Les traces nomment un
+  acteur (son identifiant) et une pièce, jamais leur contenu. Le dirigeant
+  arrête la durée ; la changer est une ligne en base, sans déploiement
+  (`docs/journalisation.md`).

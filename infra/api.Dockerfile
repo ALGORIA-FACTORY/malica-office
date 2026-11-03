@@ -33,8 +33,10 @@ COPY packages/sudoku/ts ./packages/sudoku/ts
 COPY --from=sudoku /srv/packages/sudoku/target/wasm32-unknown-unknown/release/malica_sudoku.wasm ./packages/sudoku/
 COPY apps/api ./apps/api
 COPY db ./db
-# Rien ne tourne en root : le stockage des pièces appartient à `node`.
-RUN mkdir -p /pieces && chown -R node:node /pieces /srv
+# Rien ne tourne en root : le stockage des pièces appartient à `node`, et le
+# fichier d'attente du journal aussi — un volume neuf monté sur /journal en
+# hérite le propriétaire.
+RUN mkdir -p /pieces /journal && chown -R node:node /pieces /journal /srv
 USER node
 WORKDIR /srv/apps/api
 EXPOSE 3000
