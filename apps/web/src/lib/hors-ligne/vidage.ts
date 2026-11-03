@@ -16,7 +16,15 @@
  *   — un réseau absent ou une panne serveur arrête la passe et recule
  *     l'élément (1 s, 2 s, 4 s… cinq minutes au plus) ; un refus lisible de
  *     l'API marque l'élément en échec définitif, montré, jamais jeté.
+ *   — une trace naît au dépôt et suit l'élément : chaque pas la porte, avec
+ *     sa clé (`<clé>.enregistrer`, `.octets`, `.lecture`) — un renvoi après
+ *     reconnexion est le MÊME pas pour l'API, jamais un second. La capture,
+ *     l'attente hors ligne et la synchronisation se signalent à l'API
+ *     (`lib/parcours`), et se redisent à l'arrivée : une application tuée
+ *     hors ligne n'en perd rien, l'API ne les compte qu'une fois.
  */
+import type { EtapeDeLAppareil, SuiviDeTrace } from "@malica/socle/ports/repositories";
+
 import { ErreurApi, ErreurReseau, ErreurVersion } from "@/lib/transport/erreurs";
 import { lectureInterdite } from "@/lib/visibilite-a-la-capture";
 
@@ -43,14 +51,33 @@ export interface PortsDuVidage {
   /** `capture.enregistrer` : la ligne, contre la clé. Rend l'identifiant de la pièce. */
   enregistrer(element: ElementDeFile): Promise<string>;
   /** `/pieces/:id/contenu` : les octets. */
-  deposerOctets(pieceId: string, octets: Blob, contentType: string): Promise<void>;
+  deposerOctets(
+    pieceId: string,
+    octets: Blob,
+    contentType: string,
+    suivi: SuiviDeTrace | null,
+  ): Promise<void>;
   /** `/malica/lectures/:id?attendre=0` : la lecture part, on n'attend pas. */
-  demanderLaLecture(pieceId: string): Promise<void>;
+  demanderLaLecture(pieceId: string, suivi: SuiviDeTrace | null): Promise<void>;
+}
+
+/** Ce que la file dit du parcours d'une pièce — `lib/parcours`, ou rien dans une épreuve. */
+export interface ParcoursDeLaFile {
+  signaler(etape: EtapeDeLAppareil): void;
+  retenir(identifiants: readonly (string | null)[], trace: string): void;
+}
+
+/** Le suivi d'un pas : la trace de l'élément, et la clé du pas. */
+export function suiviDuPas(
+  e: ElementDeFile,
+  pas: "enregistrer" | "octets" | "lecture",
+): SuiviDeTrace | null {
+  return e.trace ? { trace: e.trace, cle: `${e.cle}.${pas}` } : null;
 }
 
 export interface Vidage {
   /** Range l'élément et ses octets, puis lance une passe. Rend la clé. */
-  deposer(entree: Omit<NouvelElement, "taille">, octets: Blob): Promise<string>;
+  deposer(entree: Omit<NouvelElement, "taille" | "trace">, octets: Blob): Promise<string>;
   /** Une passe sur tout ce qui peut partir. Vol unique. */
   vider(): Promise<void>;
   /**
@@ -90,8 +117,59 @@ export function creerVidage(deps: {
   ports: PortsDuVidage;
   enLigne: () => boolean;
   maintenant?: () => number;
+  parcours?: ParcoursDeLaFile;
+  nouvelleTrace?: () => string;
 }): Vidage {
   const maintenant = deps.maintenant ?? (() => Date.now());
+  const nouvelleTrace = deps.nouvelleTrace ?? (() => crypto.randomUUID());
+
+  /**
+   * Les étapes de l'appareil pour un élément. `capture` et `file_hors_ligne`
+   * se redisent à l'arrivée, avec la pièce : l'API ne compte qu'une fois la
+   * même (trace, étape, clé), et une application tuée hors ligne retrouve
+   * ainsi ce que sa mémoire avait perdu.
+   */
+  function signalerLaCapture(e: ElementDeFile): void {
+    if (!e.trace || !deps.parcours) return;
+    deps.parcours.signaler({
+      trace: e.trace,
+      etape: "capture",
+      issue: "ok",
+      cle: "capture",
+      debut: e.creeLe,
+      piece: e.pieceId,
+      detail: { source: e.source },
+    });
+    if (e.horsLigneLe) {
+      deps.parcours.signaler({
+        trace: e.trace,
+        etape: "file_hors_ligne",
+        issue: "ok",
+        cle: "file_hors_ligne",
+        debut: e.horsLigneLe,
+        piece: e.pieceId,
+        detail: { tentatives: e.tentatives },
+      });
+    }
+  }
+
+  /** La file s'est vidée pour cet élément : arrivé, ou refusé pour de bon. */
+  function signalerLaSynchronisation(e: ElementDeFile): void {
+    if (!e.trace || !deps.parcours) return;
+    signalerLaCapture(e);
+    const debut = e.horsLigneLe ?? e.creeLe;
+    const refuse = e.etat === "echec_definitif";
+    deps.parcours.signaler({
+      trace: e.trace,
+      etape: "synchronisation",
+      issue: refuse ? "refus" : "ok",
+      cle: refuse ? `synchronisation.refus.${e.tentatives}` : "synchronisation",
+      debut,
+      dureeMs: Math.max(0, maintenant() - Date.parse(debut)),
+      piece: e.pieceId,
+      detail: { tentatives: e.tentatives },
+    });
+  }
   const abonnes = new Set<(elements: ElementDeFile[]) => void>();
   let passe: Promise<void> | null = null;
 
@@ -118,6 +196,16 @@ export function creerVidage(deps: {
   async function appliquer(e: ElementDeFile, evt: Evenement): Promise<ElementDeFile> {
     const suivant = transition(e, evt, maintenant());
     if (abandonnees.has(`${e.cle}@${e.creeLe}`)) return suivant;
+    if (suivant.trace) {
+      if (suivant.pieceId && !e.pieceId) deps.parcours?.retenir([suivant.pieceId], suivant.trace);
+      if (suivant.horsLigneLe && !e.horsLigneLe) signalerLaCapture(suivant);
+      if (
+        (suivant.etat === "lecture_demandee" || suivant.etat === "echec_definitif") &&
+        suivant.etat !== e.etat
+      ) {
+        signalerLaSynchronisation(suivant);
+      }
+    }
     if (suivant.etat === "lecture_demandee") {
       await deps.depot.supprimer(e.cle);
       await publier(suivant);
@@ -160,7 +248,12 @@ export function creerVidage(deps: {
           return true;
         }
         try {
-          await deps.ports.deposerOctets(e.pieceId!, octets, e.contentType);
+          await deps.ports.deposerOctets(
+            e.pieceId!,
+            octets,
+            e.contentType,
+            suiviDuPas(e, "octets"),
+          );
         } catch (erreur) {
           /*
            * 410 : la photo a été reprise ailleurs pendant que ses octets
@@ -217,7 +310,7 @@ export function creerVidage(deps: {
          * pas. La capture ne s'arrête jamais.
          */
         if (!NE_SE_RELIT_PAS.has(e.documentKind ?? "") && !lectureInterdite(e.vis)) {
-          await deps.ports.demanderLaLecture(e.pieceId!);
+          await deps.ports.demanderLaLecture(e.pieceId!, suiviDuPas(e, "lecture"));
         }
         await appliquer(e, { type: "lecture_demandee" });
         return true;
@@ -266,8 +359,15 @@ export function creerVidage(deps: {
       if (elements.length >= PLAFOND_ELEMENTS || taille + octets.size > PLAFOND_OCTETS) {
         throw new FilePleine();
       }
-      const element = nouvelElement({ ...entree, taille: octets.size }, maintenant());
+      const trace = nouvelleTrace();
+      const neuf = nouvelElement({ ...entree, taille: octets.size, trace }, maintenant());
+      // Rangé hors ligne : il attend le réseau dès sa naissance, et on le dit.
+      const element = deps.enLigne()
+        ? neuf
+        : { ...neuf, horsLigneLe: new Date(maintenant()).toISOString() };
       await deps.depot.ecrire(element, octets);
+      deps.parcours?.retenir([element.cle], trace);
+      signalerLaCapture(element);
       await publier();
       void vider();
       return element.cle;

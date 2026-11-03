@@ -41,7 +41,8 @@ import { stocks } from "./depots/stocks.ts";
 import { supervision } from "./depots/supervision.ts";
 import { tiers } from "./depots/tiers.ts";
 import { tour } from "./depots/tour.ts";
-import { noterLesAudits, traceCourante } from "./observabilite/trace.ts";
+import { gesteDe, identifiantAuChemin } from "./observabilite/gestes.ts";
+import { noterLesAudits, noterLObjet, traceCourante } from "./observabilite/trace.ts";
 
 /**
  * Le registre. Chaque méthode reçoit la connexion déjà placée sous l'identité
@@ -228,22 +229,61 @@ export async function executerRpc(
     // transaction, elle ne survit pas à l'appel et un client ne la pose pas.
     await db.query("select set_config('malica.origine', 'serveur', true)");
   }
+  await noterLaPieceDuGeste(db, appel);
   const resultat = await methode(db, ...appel.args);
   await releverLesAudits(db);
   return resultat;
 }
 
 /**
+ * La pièce d'un geste sensible, AVANT l'appel : si l'appelant la voit (sa
+ * RLS, pas la nôtre), elle devient la pièce de l'opération. Un geste refusé
+ * reste ainsi rattaché à la pièce qu'il visait — la transaction annulée
+ * n'aura rien audité — sans qu'un appelant puisse inscrire son refus dans la
+ * chronologie d'une pièce qu'il ne voit pas.
+ *
+ * Une lecture seule, sous un point de sauvegarde : elle ne peut pas faire
+ * échouer l'appel qu'elle précède.
+ */
+async function noterLaPieceDuGeste(db: Requete, appel: AppelRpc): Promise<void> {
+  if (!traceCourante()) return;
+  const geste = await gesteDe(appel.depot, appel.methode);
+  if (geste?.objetType !== "piece") return;
+  const piece = identifiantAuChemin(appel.args, geste.objetChemin);
+  if (!piece) return;
+  await db.query("savepoint observabilite_piece");
+  try {
+    const { rows } = await db.query<{ tenant_id: string }>(
+      "select tenant_id from capture.pieces where id = $1",
+      [piece],
+    );
+    if (rows[0]) noterLObjet({ tenant: rows[0].tenant_id, piece });
+    await db.query("release savepoint observabilite_piece");
+  } catch {
+    await db.query("rollback to savepoint observabilite_piece");
+  }
+}
+
+/**
  * Les lignes d'`audit.event_log` que la transaction a écrites, avant qu'elle
  * ne se ferme : la base les note au fil des insertions
- * (`app.audit_se_note_dans_la_transaction`). L'étape `rpc` les référence ;
- * elle ne recopie rien de ce que l'audit porte. Hors d'une trace, rien à noter.
+ * (`app.audit_se_note_dans_la_transaction`), avec leur objet (dossier, table,
+ * identifiant, action). Les étapes `rpc` et métier les référencent ; la charge
+ * de l'audit n'est jamais recopiée. Hors d'une trace, rien à noter.
  */
 async function releverLesAudits(db: Requete): Promise<void> {
   if (!traceCourante()) return;
-  const { rows } = await db.query<{ ids: string | null }>(
-    "select current_setting('malica.audit_ids', true) as ids",
+  const { rows } = await db.query<{ ids: string | null; objets: string | null }>(
+    `select current_setting('malica.audit_ids', true) as ids,
+            current_setting('malica.audit_objets', true) as objets`,
   );
   const ids = rows[0]?.ids;
-  if (ids) noterLesAudits(ids.split(","));
+  if (!ids) return;
+  let objets: unknown[] = [];
+  try {
+    objets = JSON.parse(rows[0]?.objets || "[]") as unknown[];
+  } catch {
+    // Une note illisible n'efface pas les identifiants : l'étape les référence quand même.
+  }
+  noterLesAudits(ids.split(","), Array.isArray(objets) ? objets : []);
 }

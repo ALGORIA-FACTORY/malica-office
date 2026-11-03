@@ -11,7 +11,8 @@ dans `apps/api/src/observabilite/`.
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `observabilite.traces`                  | Une opération d'origine : `id` (venu du client par `x-malica-trace`, sinon créé à l'entrée HTTP), `parente_id` (un travail différé, une reprise), `origine` (`android`, `pwa`, `web`, `api`, `tache`), `tenant_id`, `acteur`, `piece_id`, `version` du client, `debut`.                                             |
 | `observabilite.evenements`              | Ses étapes : `etape` (vocabulaire fermé), `issue` (`ok`, `refus`, `erreur`, `ignore` — `ignore` dit aussi une requête abandonnée par le client), `debut`, `duree_ms`, `cle` d'idempotence, `acteur`, `piece_id`, `audit_ids` (les lignes d'`audit.event_log` que l'étape a écrites), `detail` borné, `repetitions`. |
-| `observabilite.etapes`                  | Le vocabulaire, et pour chaque étape les seules clés que son `detail` peut porter.                                                                                                                                                                                                                                  |
+| `observabilite.etapes`                  | Le vocabulaire, et pour chaque étape les seules clés que son `detail` peut porter, et si l'appareil peut l'émettre (`emise_par_l_appareil`).                                                                                                                                                                        |
+| `observabilite.gestes`                  | Le référentiel méthode RPC → étape métier (geste, type d'objet, où l'appel le nomme). Lu par l'API par `referentiel_du_journal()`.                                                                                                                                                                                  |
 | `observabilite.reglages`                | La rétention (90 jours au départ, INCERTAIN). La dernière ligne vaut.                                                                                                                                                                                                                                               |
 | `observabilite.chronologie_v`           | Chaque étape avec sa trace, à plat.                                                                                                                                                                                                                                                                                 |
 | `observabilite.diagnostic_piece(piece)` | La chronologie d'une pièce, traces parentes et enfants comprises.                                                                                                                                                                                                                                                   |
@@ -56,18 +57,23 @@ Garanti, et éprouvé (`le-journal-survit-a-l-echec.test.ts`,
 - ce qui est réellement perdu (disque inutilisable, ligne illisible, lot refusé
   par la base) est compté et dit par une étape `perte` (`nombre`, `raison`) ;
 - le `detail` ne garde que les clés autorisées par l'étape, des scalaires (une
-  chaîne coupée à 200 caractères), 2 048 octets au plus.
+  chaîne coupée à 200 caractères), 2 048 octets au plus ;
+- une trace n'appartient qu'à son acteur : l'étape d'un autre acteur (ou d'un
+  acteur hors du dossier de la trace) part sous une trace propre, dérivée, sans
+  parente (20261118150000) ;
+- un geste sensible (`observabilite.gestes`) a son étape métier : acteur,
+  objet, pièce, issue, clé du refus, lignes d'audit. La cartographie des
+  parcours est dans [`journalisation-parcours.md`](journalisation-parcours.md).
 
 Pas garanti :
 
 - un arrêt brutal (SIGKILL, panne de la machine) perd ce que la file tenait en
   mémoire : au plus `JOURNAL_INTERVALLE_MS` (1 s) d'événements. Ce qui était
   déjà sur disque revient ;
-- l'étape `affiche` et les étapes du téléphone ne sont pas encore émises (lots
-  suivants) : aujourd'hui, `http`, `rpc`, `perte`, `tache` et la chaîne de
-  lecture (ci-dessous) le sont ;
-- un client qui réutiliserait l'identifiant de trace d'un autre y ajouterait
-  ses étapes (sans pouvoir y poser un dossier qui n'est pas le sien) ;
+- les étapes de l'appareil (`capture`, `file_hors_ligne`, `synchronisation`,
+  `affiche`) dorment en mémoire du téléphone jusqu'à leur envoi : une
+  application tuée les perd, sauf ce que la file hors ligne redit à la
+  synchronisation (voir [`journalisation-parcours.md`](journalisation-parcours.md)) ;
 - la rétention purge une trace parente avant ses enfants si elle est plus
   ancienne : l'enfant reste, sa parente est nommée sans être lisible.
 
@@ -78,16 +84,16 @@ Migration `20261118140000_la_lecture_d_une_piece_se_suit.sql` ; code dans
 pièce ; sa clé est (pièce, passe) — `premiere`, `rattrapage`, `relecture` —,
 si bien qu'une passe rejouée sous la même trace compte une répétition.
 
-| Étape         | Où                                                                      | Ce que `detail` porte                                                                                                                                                                                         |
-| ------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `upload`      | `stockage.ts`, `POST /pieces/:id/contenu`                               | `statut` (`scellee`, `deja_scellee`, `remplacee`, `trop_grosse`, `panne`), `octets`, `type_contenu`, `doublon_de`. Ni les octets ni leur empreinte.                                                           |
-| `ocr`         | `read-flow.ts` (chaque passe) ; `refus` quand la base refuse la lecture | `passe`, `lecteur`, `modele`, `modele_designation`, `jetons` (leur nombre), `latence_ms`, `paddle_tente`, `motif` (refus), `erreur` (nom de l'erreur, jamais son message).                                    |
-| `extraction`  | `read-flow.ts`                                                          | Ce que la lecture PROPOSE (sa désignation relue dans le plan, avant le sudoku) : `contrat`, `qualite`, `devise`, `base_ht`, `tva`, `ttc`, `droits`, `ttc_par_lettres`, `incoherence`.                         |
-| `sudoku`      | `sudoku.ts` (`verdict`), tracé par `read-flow.ts`                       | `mode`, `issue`, `designee`, `regle` (`lettres:<champ>` ou `variante:<nom>`), `raison`, les montants prouvés, `lettres` (le montant lu en lettres), `preuve_lettres`, `ecart_ttc` (proposé − prouvé).         |
-| `rattrapage`  | `read-flow.ts` (synchrone ou différé)                                   | `declenche`, `raison` (`lecture_parfaite`, `piece_prouvee`, `sans_autre_lecteur`, `contrat_partiel`, `montants_incoherents`, …, `abstention_<motif>` la nuit), `differe`, `qualite_avant`/`apres`, `retenue`. |
-| `persistance` | `read-flow.ts`                                                          | Les montants ENREGISTRÉS et `extraction_id` (la ligne de `capture.extractions`, référencée) ; en échec, `erreur` et `code_refus`.                                                                             |
-| `jugement`    | `scan/analyse.ts` (`capture.analyser`, la lecture, le rejeu)            | `chemin` (`analyse`, `rejeu`), `analyse_id`, `extraction_id`, `verdict`, `etat`, les montants normalisés, `change`, `essai` (rejeu à blanc, annulé ensuite).                                                  |
-| `tache`       | `coureur.ts` (lecture en file), `relirePiece` (relecture de nuit)       | `nom`, `tentative`. La trace est ENFANT : de la requête qui a demandé la lecture, ou de `observabilite.trace_d_origine(piece)` — la capture — pour une relecture.                                             |
+| Étape         | Où                                                                      | Ce que `detail` porte                                                                                                                                                                                                                                                                 |
+| ------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `upload`      | `stockage.ts`, `POST /pieces/:id/contenu`                               | `statut` (`scellee`, `deja_scellee`, `remplacee`, `trop_grosse`, `panne`), `octets`, `type_contenu`, `doublon_de`. Ni les octets ni leur empreinte.                                                                                                                                   |
+| `ocr`         | `read-flow.ts` (chaque passe) ; `refus` quand la base refuse la lecture | `passe`, `lecteur`, `modele`, `modele_designation`, `jetons` (leur nombre), `latence_ms`, `paddle_tente`, `motif` (refus), `erreur` (nom de l'erreur, jamais son message).                                                                                                            |
+| `extraction`  | `read-flow.ts`                                                          | Ce que la lecture PROPOSE (sa désignation relue dans le plan, avant le sudoku) : `contrat`, `qualite`, `devise`, `base_ht`, `tva`, `ttc`, `droits`, `ttc_par_lettres`, `incoherence`.                                                                                                 |
+| `sudoku`      | `sudoku.ts` (`verdict`), tracé par `read-flow.ts`                       | `mode`, `issue`, `designee`, `regle` (`lettres:<champ>` ou `variante:<nom>`), `raison`, les montants prouvés, `lettres` (le montant lu en lettres), `preuve_lettres`, `ecart_ttc` (proposé − prouvé).                                                                                 |
+| `rattrapage`  | `read-flow.ts` (synchrone ou différé)                                   | `declenche`, `raison` (`lecture_parfaite`, `piece_prouvee`, `sans_autre_lecteur`, `contrat_partiel`, `montants_incoherents`, …, `abstention_<motif>` la nuit), `differe`, `qualite_avant`/`apres`, `retenue`.                                                                         |
+| `persistance` | `read-flow.ts`                                                          | Les montants ENREGISTRÉS et `extraction_id` (la ligne de `capture.extractions`, référencée) ; en échec, `erreur` et `code_refus`.                                                                                                                                                     |
+| `jugement`    | `scan/analyse.ts` (`capture.analyser`, la lecture, le rejeu)            | `chemin` (`analyse`, `rejeu`), `analyse_id`, `extraction_id`, `verdict`, `etat`, les montants normalisés, `change`, `essai` (rejeu à blanc, annulé ensuite).                                                                                                                          |
+| `tache`       | `coureur.ts` (lecture en file), `relirePiece` (relecture de nuit)       | `nom`, `tentative`, `resultat` (un travail qui rend son issue au lieu de la lever : passe de nuit, relances, rejeu — `20261118150000`). La trace est ENFANT : de la requête qui a demandé la lecture, ou de `observabilite.trace_d_origine(piece)` — la capture — pour une relecture. |
 
 ## Consulter
 

@@ -77,6 +77,14 @@ export interface ElementDeFile {
   creeLe: string;
   etat: EtatElement;
   pieceId: string | null;
+  /**
+   * L'opération née à la capture (`x-malica-trace`) : chaque pas, chaque
+   * renvoi, chaque reprise la porte, et l'API rattache tout à cette capture.
+   * Absente d'un élément rangé avant qu'elle existe : il part sans suivi.
+   */
+  trace?: string;
+  /** ISO : la première fois que l'élément a attendu le réseau. Absente s'il ne l'a jamais attendu. */
+  horsLigneLe?: string | null;
   tentatives: number;
   /** ISO, ou `null` : dès que possible. */
   prochainEssaiLe: string | null;
@@ -97,6 +105,7 @@ export type NouvelElement = Pick<
   | "remplace"
   | "nomFichier"
   | "taille"
+  | "trace"
 >;
 
 export type Evenement =
@@ -176,6 +185,11 @@ export function transition(e: ElementDeFile, evt: Evenement, maintenant: number)
       return {
         ...e,
         tentatives,
+        // Le réseau absent : l'élément attend, et on retient depuis quand.
+        horsLigneLe:
+          evt.nature === "reseau"
+            ? (e.horsLigneLe ?? new Date(maintenant).toISOString())
+            : (e.horsLigneLe ?? null),
         derniereErreur: evt.message,
         prochainEssaiLe: new Date(maintenant + delaiAvantEssai(tentatives)).toISOString(),
       };

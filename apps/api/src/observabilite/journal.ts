@@ -37,6 +37,7 @@ import {
   nouvelleTrace,
   sousLaTrace,
   traceCourante,
+  uuidBienForme,
   type Trace,
 } from "./trace.ts";
 
@@ -613,6 +614,13 @@ export function tracerUnTravail<T>(
      * rejouée ne double aucune étape. Sans lui, une trace neuve.
      */
     travailId?: string;
+    /** La pièce que le travail traite : la chronologie de la pièce le retrouve. */
+    piece?: string | null;
+    /**
+     * Un travail qui rend son échec au lieu de le lever (une file durable
+     * inscrit l'issue de sa tentative) dit ici son issue et son résultat.
+     */
+    juger?: (resultat: T) => { issue: Issue; resultat: string | null };
   } = {},
 ): Promise<T> {
   const tentative = String(champs.tentative ?? 0);
@@ -626,8 +634,27 @@ export function tracerUnTravail<T>(
         }
       : {}),
   });
+  trace.piece = uuidBienForme(champs.piece);
   const detail = champs.tentative === undefined ? { nom } : { nom, tentative: champs.tentative };
-  return sousLaTrace(trace, () => mesurer("tache", travail, { detail }));
+  const juger = champs.juger;
+  if (!juger) return sousLaTrace(trace, () => mesurer("tache", travail, { detail }));
+  return sousLaTrace(trace, async () => {
+    const debut = new Date();
+    const fin = () => ({ debut, dureeMs: Date.now() - debut.getTime() });
+    let resultat: T;
+    try {
+      resultat = await travail();
+    } catch (erreur) {
+      consigner("tache", issueDeLErreur(erreur), { ...fin(), detail });
+      throw erreur;
+    }
+    const verdict = juger(resultat);
+    consigner("tache", verdict.issue, {
+      ...fin(),
+      detail: { ...detail, resultat: verdict.resultat },
+    });
+    return resultat;
+  });
 }
 
 /** Le démarrage de l'API : rejouer ce qui attend, puis purger au-delà de la rétention. */

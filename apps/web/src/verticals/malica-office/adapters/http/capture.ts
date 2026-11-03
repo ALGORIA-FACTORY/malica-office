@@ -35,7 +35,9 @@ import type {
   PieceQuiAccompagne,
   RetourDuCabinet,
 } from "@malica/socle/ports/repositories";
+import type { SuiviDeTrace } from "@malica/socle/ports/repositories";
 import type { CircuitInterne, SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
+import { entetesDuSuivi, suiviDesArguments } from "@/lib/parcours/traces";
 import { transport } from "@/lib/transport";
 import { ErreurApi } from "@/lib/transport/erreurs";
 import { appeler } from "./rpc";
@@ -48,8 +50,13 @@ import { appeler } from "./rpc";
  * d'en-tête. Elle est réutilisée telle quelle ; seul le type de retour est
  * précisé, ce que le mandataire ne peut pas faire.
  */
-async function rpc<T>(depot: string, methode: string, args: unknown[]): Promise<T> {
-  return (await appeler(depot, methode, args)) as T;
+async function rpc<T>(
+  depot: string,
+  methode: string,
+  args: unknown[],
+  suivi?: SuiviDeTrace | null,
+): Promise<T> {
+  return (await appeler(depot, methode, args, suivi)) as T;
 }
 
 function versPiece(p: Record<string, unknown>): Piece {
@@ -158,17 +165,30 @@ export function creerCaptureHttp(): CaptureRepository {
       return rpc<boolean>("capture", "supprimerPieceQuiAccompagne", [pieceId]);
     },
 
-    async enregistrer(piece: NouvellePiece): Promise<string> {
+    async enregistrer(piece: NouvellePiece, suivi?: SuiviDeTrace | null): Promise<string> {
       // Le type du fichier est écrit en base à l'enregistrement : c'est là
       // qu'on le connaît, et c'est de là qu'il sera relu.
-      const { id } = await rpc<{ id: string; chemin: string }>("capture", "enregistrer", [piece]);
+      const { id } = await rpc<{ id: string; chemin: string }>(
+        "capture",
+        "enregistrer",
+        [piece],
+        suivi,
+      );
       return id;
     },
 
-    async deposerOctets(pieceId: string, octets: Blob, contentType: string): Promise<void> {
+    async deposerOctets(
+      pieceId: string,
+      octets: Blob,
+      contentType: string,
+      suivi?: SuiviDeTrace | null,
+    ): Promise<void> {
       const depot = await transport().appeler(`/pieces/${pieceId}/contenu`, {
         method: "POST",
-        headers: contentType ? { "Content-Type": contentType } : {},
+        headers: {
+          ...(contentType ? { "Content-Type": contentType } : {}),
+          ...entetesDuSuivi(suivi ?? suiviDesArguments([pieceId])),
+        },
         body: octets,
       });
       if (!depot.ok) {

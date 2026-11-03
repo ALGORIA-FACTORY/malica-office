@@ -16,6 +16,7 @@
  */
 import { configurationCourriel, envoyerParBrevo } from "../courriel/brevo.ts";
 import type { Requete } from "../db.ts";
+import { consigner } from "../observabilite/journal.ts";
 
 import { courrielDeNotification } from "./courriel-de-notification.ts";
 
@@ -85,6 +86,12 @@ export async function tourDeRelances(d: Dependances) {
         erreur === null ? "remis" : "echoue",
         erreur,
       ]);
+      // L'étape `envoi`, sous la trace du tour : ni l'adresse, ni le message —
+      // l'envoi se retrouve par son identifiant, dans `notif`.
+      consigner("envoi", erreur === null ? "ok" : "erreur", {
+        cle: c.envoi_id,
+        detail: { canal: "courriel", resultat: erreur === null ? "remis" : "echoue" },
+      });
       return erreur === null ? "remis" : "echoue";
     });
     if (traite === null) break;

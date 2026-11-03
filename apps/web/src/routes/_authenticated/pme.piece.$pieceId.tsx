@@ -8,6 +8,7 @@ import { useDecimales } from "@/hooks/use-decimales";
 import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n, type MessageKey } from "@/i18n";
+import { AffichageSignale } from "@/components/malica/affichage-signale";
 import { CommentCEstPaye } from "@/components/malica/comment-c-est-paye";
 import { QuestionDuType } from "@/components/malica/question-du-type";
 import { usePme } from "@/components/malica/pme-context";
@@ -2019,6 +2020,12 @@ function PieceScreen() {
       ) : null}
 
       <div className="f-mt">
+        <AffichageSignale
+          pieceId={pieceId}
+          ecran="pme"
+          source={duCabinet ? "cabinet" : "lecture"}
+          valeurs={{ ttc: totaux?.ttc, base_ht: totaux?.base_ht, tva: totaux?.vat }}
+        />
         <div className={vente ? "amt vent" : "amt"}>
           {lisible(totaux?.ttc) ?? "—"}{" "}
           <u>

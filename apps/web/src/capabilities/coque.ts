@@ -51,13 +51,26 @@ export function estNatif(): boolean {
 }
 
 /**
- * Ce que la coque dit d'elle à l'API : « coque-android/0.1.0 », ou
- * « web/0.1.0 » depuis un navigateur. La version est celle du dépôt, posée
- * au build ; sans elle, « atelier » — que l'API ignore, comme il se doit.
+ * Vrai pour l'application installée depuis le navigateur (PWA, ANO-033) :
+ * elle s'ouvre en plein écran, sans barre d'adresse.
+ */
+export function estInstallee(): boolean {
+  try {
+    return globalThis.matchMedia?.("(display-mode: standalone)").matches === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ce que la coque dit d'elle à l'API : « coque-android/0.1.0 », « pwa/0.1.0 »
+ * depuis l'application installée, ou « web/0.1.0 » depuis un onglet. L'API en
+ * tire l'origine de ses traces. La version est celle du dépôt, posée au
+ * build ; sans elle, « atelier » — que l'API ignore, comme il se doit.
  */
 export function versionClient(): string {
   const version = (import.meta.env["VITE_VERSION_CLIENT"] as string | undefined) ?? "0.0.0";
-  if (!CIBLE_COQUE) return `web/${version}`;
+  if (!CIBLE_COQUE) return `${estInstallee() ? "pwa" : "web"}/${version}`;
   const global = globalThis as { Capacitor?: { getPlatform?: () => string } };
   const plateforme = global.Capacitor?.getPlatform?.() ?? "web";
   return `coque-${plateforme}/${version}`;
