@@ -289,7 +289,15 @@ function PmeEcheances() {
               )}
             </p>
             <div className="b">
-              <button type="button" onClick={() => void navigate({ to: "/pme/fiche" })}>
+              <button
+                type="button"
+                onClick={() => {
+                  // La fiche se lit sur le dossier ouvert : celui de la
+                  // société montrée (revue de #211).
+                  if (societes[0] && societes[0] !== pme.tenantId) pme.choisirDossier(societes[0]);
+                  void navigate({ to: "/pme/fiche" });
+                }}
+              >
                 {t("pme.echeances.fiche.lien")}
               </button>
             </div>

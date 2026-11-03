@@ -375,6 +375,7 @@ export const en: Dict = {
   "pme.membres.envoyee": "Invitation sent to {email}.",
   "pme.membres.attend": "pending",
   "pme.inviter.titreRole": "Their role",
+  "pme.inviter.titreSociete": "The company",
   "pme.inviter.titreAdresse": "Their email address",
   "pme.inviter.place": "One seat",
   "pme.inviter.placeMemePrix": "One seat · same price",

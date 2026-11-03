@@ -363,6 +363,7 @@ export const ar: Dict = {
   "pme.membres.envoyee": "أُرسلت الدعوة إلى {email}.",
   "pme.membres.attend": "في الانتظار",
   "pme.inviter.titreRole": "دوره",
+  "pme.inviter.titreSociete": "الشركة",
   "pme.inviter.titreAdresse": "عنوان بريده الإلكتروني",
   "pme.inviter.place": "مقعد واحد",
   "pme.inviter.placeMemePrix": "مقعد واحد · بنفس السعر",

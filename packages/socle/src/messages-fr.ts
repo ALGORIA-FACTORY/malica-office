@@ -413,6 +413,7 @@ export const fr = {
   "pme.membres.envoyee": "Invitation envoyée à {email}.",
   "pme.membres.attend": "en attente",
   "pme.inviter.titreRole": "Son rôle",
+  "pme.inviter.titreSociete": "La société",
   "pme.inviter.titreAdresse": "Son adresse e-mail",
   "pme.inviter.place": "Une place",
   "pme.inviter.placeMemePrix": "Une place · même prix",

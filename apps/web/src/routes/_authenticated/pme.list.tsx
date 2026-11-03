@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import {
@@ -257,6 +257,9 @@ function Bibliotheque() {
   );
 
   const [ouvert, setOuvert] = useState<Ouvert | null>(null);
+  // Changer de société referme le groupe déroulé : il montrait l'autre
+  // (revue de #211).
+  useEffect(() => setOuvert(null), [pme.societeAffichee]);
   const revenir = useRevenir();
   const [tout, setTout] = useState(false);
 
