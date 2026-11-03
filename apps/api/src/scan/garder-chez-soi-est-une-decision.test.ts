@@ -34,7 +34,8 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "../db.ts";
+import { lireLaPieceDEssai } from "../lecture-d-essai.ts";
 import { executerRpc } from "../rpc.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
@@ -142,6 +143,7 @@ describe("le choix entre le cabinet et l'espace privé", { skip: !BASE_CONFIGURE
      */
     const id = await piece("gardee-puis-partie");
     await rpc("collab", "garderPiece", id);
+    await sousIdentiteDuServeur(u.id, (db) => lireLaPieceDEssai(db, id));
     await rpc("collab", "setPieceVis", id, "partage");
 
     const e = await etat(id);
@@ -161,6 +163,7 @@ describe("le choix entre le cabinet et l'espace privé", { skip: !BASE_CONFIGURE
      * existe, et il passe par l'accord du cabinet.
      */
     const id = await piece("deja-partie");
+    await sousIdentiteDuServeur(u.id, (db) => lireLaPieceDEssai(db, id));
     await rpc("collab", "setPieceVis", id, "partage");
     await assert.rejects(
       () => rpc("collab", "garderPiece", id),

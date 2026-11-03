@@ -616,6 +616,9 @@ export const fr = {
   "pme.verifie.corriger": "Reprendre la photo",
   "pme.tva.nonAssujetti":
     "Votre dossier n'est pas assujetti à la TVA : vous n'avez ni TVA à reverser ni crédit à reporter. La TVA payée sur vos achats est comprise dans vos charges.",
+  "pme.piece.partieNonLue": "Chez {cabinet}, pas encore lue.",
+  "pme.piece.partieNonLue.sous":
+    "Je peux encore la lire ici. Elle ne se supprime plus d’ici : demandez au cabinet de la retirer.",
   "pme.scan.final":
     "Voici la page telle que je la lirai. Si elle vous convient, lisez-la ; sinon, reprenez la photo.",
   "pme.scan.page": "Page {n}",
@@ -2099,6 +2102,7 @@ export const fr = {
   "refus.reponse.sans_decision": "Accordez ou refusez la demande.",
   "refus.envoi.retour_par_sa_carte":
     "Une pièce retournée se renvoie depuis sa carte, une fois le geste demandé fait.",
+  "refus.envoi.pas_lue": "Cette pièce n’est pas encore lue : lisez-la, puis envoyez-la.",
   "refus.envoi.chez_le_siege":
     "Vous l’avez retournée à votre collaborateur : elle repartira quand il l’aura reprise et renvoyée.",
   "refus.reponse.vide": "Écrivez votre réponse avant de l’envoyer.",

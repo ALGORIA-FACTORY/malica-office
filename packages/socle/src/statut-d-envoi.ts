@@ -140,6 +140,8 @@ export interface FaitsDeLaPiece {
   gardeeLe?: string | null;
   suivi?: SuiviDEnvoi | null;
   circuit?: CircuitInterne | null;
+  /** Un reçu ou un justificatif, qui suit sa pièce (`PieceLue.accompagne`). */
+  accompagne?: boolean | null;
 }
 
 const rien = (statut: StatutPme): StatutDuCircuit => ({ statut, chez: null, qui: null });

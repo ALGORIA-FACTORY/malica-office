@@ -28,6 +28,11 @@ export interface PieceDuCircuit {
   gardeeLe: string | null;
   statut: StatutDuCircuit;
   circuit: CircuitInterne | null;
+  /**
+   * Un reçu ou un justificatif : il ne se lit jamais et suit sa pièce
+   * (`app.piece_accompagne`). Absent : une pièce ordinaire.
+   */
+  accompagne?: boolean | null;
 }
 
 export interface GestesDuCircuit {
@@ -104,12 +109,18 @@ export function gestesDuCircuit(
   // Retournée au siège : la main est à lui. Le propriétaire attend sa
   // reprise ; il n'envoie ni ne garde ce qu'il vient de lui rendre.
   const chezLeSiege = p.statut.chez === "siege";
+  // Une pièce non lue ne part pas au cabinet : on transmet ce qu'on connaît
+  // (3 novembre 2026). Un reçu, un justificatif ne se lisent jamais : ils
+  // suivent leur pièce. La base tient la même règle (`une_piece_non_lue_ne_part_pas`).
+  const nonLue = p.status === "capturee" && !p.accompagne;
 
   const envoyer: EtapeDeDemande | null =
     p.vis !== "entite" || chezLeSiege
       ? null
       : versOu === "cabinet"
-        ? "cabinet"
+        ? nonLue
+          ? null
+          : "cabinet"
         : versOu === "proprietaire" && p.statut.statut === "a_envoyer"
           ? "proprietaire"
           : null;

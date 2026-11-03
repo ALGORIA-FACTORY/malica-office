@@ -21,9 +21,10 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
+import { lireLaPieceDEssai } from "../lecture-d-essai.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
@@ -60,6 +61,12 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
       pageCount: 1,
     })) as { id: string };
     return p.id;
+  }
+
+  /** Transmet la pièce au cabinet, lue d'abord : une pièce non lue ne part pas (3 novembre 2026). */
+  async function transmettre(id: string) {
+    await sousIdentiteDuServeur(u.id, (db) => lireLaPieceDEssai(db, id));
+    await rpc("collab", "setPieceVis", id, "partage");
   }
 
   const visDe = (id: string) =>
@@ -133,7 +140,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     const id = await piece("libre");
     assert.equal((await visDe(id)).vis, "personnel", "une pièce naît chez son dirigeant");
 
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     const apres = await visDe(id);
     assert.equal(apres.vis, "partage");
     assert.ok(apres.transmise_le, "l'envoi se date, sinon aucune TVA ne peut être rangée");
@@ -154,7 +161,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
    */
   it("une pièce transmise ne revient PAS d'elle-même", async () => {
     const id = await piece("demande");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
 
     const r = (await rpc("collab", "demanderSurPiece", id, "rappel")) as {
       dejaDemandee: boolean;
@@ -173,7 +180,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
 
   it("deux fois la même demande ne fait pas deux lignes dans la file du cabinet", async () => {
     const id = await piece("doublon");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "rappel");
     const r = (await rpc("collab", "demanderSurPiece", id, "rappel")) as {
       dejaDemandee: boolean;
@@ -186,7 +193,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     // Deux gestes séparés laisseraient une demande accordée sans effet, et
     // personne ne saurait laquelle des deux vérités croire.
     const id = await piece("accord");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "rappel");
     await rpcCab("collab", "repondreSurPiece", id, "rappel", true, null);
 
@@ -206,7 +213,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
 
   it("le refus laisse la pièce au cabinet, et EXIGE son motif", async () => {
     const id = await piece("refus");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "rappel");
 
     await assert.rejects(
@@ -234,7 +241,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
      * tombait. Ce que seul l'écran tient n'est pas tenu.
      */
     const id = await piece("garde-base");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await assert.rejects(
       () => rpc("collab", "setPieceVis", id, "personnel"),
       /refus\.piece\.transmise_au_cabinet$/,
@@ -245,7 +252,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
 
   it("répondre à une demande qui n'existe pas est refusé", async () => {
     const id = await piece("sans-demande");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await assert.rejects(
       () => rpcCab("collab", "repondreSurPiece", id, "rappel", true, null),
       /refus\.piece\.aucune_demande$/,
@@ -260,7 +267,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
      * revenir.
      */
     const id = await piece("redemande");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "rappel");
     await rpcCab("collab", "repondreSurPiece", id, "rappel", false, "Pas maintenant.");
 
@@ -285,7 +292,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
   for (const objet of ["rappel", "suppression"] as const) {
     it(`le dirigeant qui tranche sa propre demande de ${objet} est refusé`, async () => {
       const id = await piece(`auto-${objet}`);
-      await rpc("collab", "setPieceVis", id, "partage");
+      await transmettre(id);
       await rpc("collab", "demanderSurPiece", id, objet);
 
       await assert.rejects(
@@ -308,7 +315,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
 
   it("la politique d'écriture refuse au membre du dossier d'inscrire un fait qui tranche", async () => {
     const id = await piece("insertion-directe");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "suppression");
     for (const fait of ["accordee", "refusee"]) {
       await assert.rejects(
@@ -358,7 +365,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
       ),
     );
     const id = await piece("mandat-propose");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "rappel");
     await assert.rejects(
       sousIdentite(autre.id, (db) =>
@@ -381,7 +388,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
 
   it("le cabinet sous mandat accorde la suppression : la pièce disparaît, la trace reste", async () => {
     const id = await piece("accord-cabinet-suppression");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "suppression");
     await rpcCab("collab", "repondreSurPiece", id, "suppression", true, null);
     const reste = await admin(

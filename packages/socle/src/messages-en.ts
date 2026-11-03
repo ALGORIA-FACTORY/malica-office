@@ -577,6 +577,9 @@ export const en: Dict = {
   "pme.verifie.corriger": "Retake the photo",
   "pme.tva.nonAssujetti":
     "Your business is not registered for VAT: there is no VAT to pay back and no credit to carry over. The VAT you pay on purchases is part of your expenses.",
+  "pme.piece.partieNonLue": "At {cabinet}, not read yet.",
+  "pme.piece.partieNonLue.sous":
+    "I can still read it here. It can no longer be deleted from here: ask the firm to remove it.",
   "pme.scan.final":
     "Here is the page as I will read it. If it looks right, read it; otherwise retake the photo.",
   "pme.scan.page": "Page {n}",
@@ -2030,6 +2033,7 @@ export const en: Dict = {
   "refus.reponse.sans_decision": "Grant or refuse the request.",
   "refus.envoi.retour_par_sa_carte":
     "A returned document is sent back from its card, once the requested fix is done.",
+  "refus.envoi.pas_lue": "This document has not been read yet: read it, then send it.",
   "refus.envoi.chez_le_siege":
     "You returned it to your team member: it goes out once they have fixed it and sent it back.",
   "refus.reponse.vide": "Write your reply before sending it.",

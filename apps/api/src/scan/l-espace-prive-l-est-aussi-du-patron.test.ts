@@ -44,6 +44,7 @@ import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
+import { lireLaPieceDEssai } from "../lecture-d-essai.ts";
 import { executerRpc } from "../rpc.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
@@ -162,9 +163,12 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
     // Le siège ne transmet pas au comptable (lot 4, 28 octobre 2026) : il
     // verse sa pièce à la société, et le dirigeant la transmet.
     partagee = await deposer("partagee", "entite");
-    await sousIdentiteDuServeur(dirigeant.id, (db) =>
-      db.query("select public.capture_piece_set_vis($1, 'partage')", [partagee]),
-    );
+    // Une pièce non lue ne part pas au cabinet (3 novembre 2026) : le dirigeant
+    // la lit d'abord, puis la transmet.
+    await sousIdentiteDuServeur(dirigeant.id, async (db) => {
+      await lireLaPieceDEssai(db, partagee);
+      await db.query("select public.capture_piece_set_vis($1, 'partage')", [partagee]);
+    });
 
     // Ses dépendances : ce que la lecture en a tiré, le règlement qu'il a saisi,
     // et la citation qui pointe un mot de la page.

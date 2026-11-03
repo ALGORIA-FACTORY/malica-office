@@ -21,7 +21,8 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "../db.ts";
+import { lireLaPieceDEssai } from "../lecture-d-essai.ts";
 import { executerRpc } from "../rpc.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
@@ -60,6 +61,12 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
         ...extra,
       })) as { id: string }
     ).id;
+
+  /** Transmet la pièce au cabinet, lue d'abord : une pièce non lue ne part pas (3 novembre 2026). */
+  const transmettre = async (id: string) => {
+    await sousIdentiteDuServeur(u.id, (db) => lireLaPieceDEssai(db, id));
+    await rpc("collab", "setPieceVis", id, "partage");
+  };
 
   const visDe = (id: string) =>
     admin(async (p) => {
@@ -125,7 +132,7 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
 
   it("le rappel accordé clôt la demande de suppression en attente, sans la réécrire", async () => {
     const id = await deposer("suppression-puis-rappel");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "suppression");
     await rpc("collab", "demanderSurPiece", id, "rappel");
 
@@ -158,7 +165,7 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
 
   it("un rappel accordé sans demande de suppression n'en invente pas", async () => {
     const id = await deposer("rappel-seul");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "rappel");
     await rpcCab("collab", "repondreSurPiece", id, "rappel", true, null);
     assert.deepEqual(await faits(id, "suppression"), []);
@@ -166,7 +173,7 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
 
   it("un rappel REFUSÉ laisse la demande de suppression en attente", async () => {
     const id = await deposer("rappel-refuse");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "suppression");
     await rpc("collab", "demanderSurPiece", id, "rappel");
     await rpcCab("collab", "repondreSurPiece", id, "rappel", false, "Déjà déclarée.");
@@ -175,7 +182,7 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
 
   it("personne n'inscrit « retiree » en direct : seule la base le fait", async () => {
     const id = await deposer("retiree-forge");
-    await rpc("collab", "setPieceVis", id, "partage");
+    await transmettre(id);
     await rpc("collab", "demanderSurPiece", id, "suppression");
     for (const qui of [u, expert]) {
       await assert.rejects(
@@ -206,7 +213,7 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
 
   it("un reçu d'une pièce transmise est transmis avec elle", async () => {
     const facture = await deposer("facture-partagee");
-    await rpc("collab", "setPieceVis", facture, "partage");
+    await transmettre(facture);
     const recu = await deposer("recu-de-partagee", {
       vis: "personnel",
       documentKind: "recu_de_paiement",
@@ -217,7 +224,7 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
 
   it("la file du cabinet et ses compteurs ne prennent pas un reçu pour une pièce à lire", async () => {
     const facture = await deposer("facture-file");
-    await rpc("collab", "setPieceVis", facture, "partage");
+    await transmettre(facture);
     const recu = await deposer("recu-file", {
       documentKind: "recu_de_paiement",
       sourcePieceId: facture,
@@ -247,7 +254,7 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
 
   it("le rappel accordé ramène aussi le reçu qui en est issu", async () => {
     const facture = await deposer("facture-rappelee");
-    await rpc("collab", "setPieceVis", facture, "partage");
+    await transmettre(facture);
     const recu = await deposer("recu-rappele", {
       documentKind: "recu_de_paiement",
       sourcePieceId: facture,

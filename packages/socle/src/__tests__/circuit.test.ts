@@ -44,7 +44,11 @@ const piece = (
     gardeeLe: p.gardeeLe ?? null,
     circuit: p.circuit ?? null,
   } as const;
-  return { ...base, statut: statutDuCircuit({ ...base, suivi: null }) };
+  return {
+    ...base,
+    accompagne: p.accompagne ?? null,
+    statut: statutDuCircuit({ ...base, suivi: null }),
+  };
 };
 
 /** L'état d'une demande à une étape, tel que `collab.etatDesDemandes` le rend. */
@@ -88,6 +92,37 @@ describe("le geste « Envoyer », un seul, deux passages", () => {
       envoyer: null,
       garder: false,
     });
+  });
+});
+
+describe("une pièce non lue ne part pas au cabinet (3 novembre 2026)", () => {
+  const sienne = { circuit: circuit({ recoit: true }) };
+
+  it("non lue : ni « Envoyer », ni dans le lot de la Bibliothèque", () => {
+    const nonLue = piece({ ...sienne, status: "capturee" });
+    expect(gestesDuCircuit(nonLue, PROPRIETAIRE, true).envoyer).toBeNull();
+    expect(resteAEnvoyer(nonLue, PROPRIETAIRE, true)).toBeNull();
+  });
+
+  it("lue, elle part ; la règle ne retient rien d'autre", () => {
+    const lue = piece({ ...sienne, status: "lue" });
+    expect(gestesDuCircuit(lue, PROPRIETAIRE, true).envoyer).toBe("cabinet");
+    expect(resteAEnvoyer(lue, PROPRIETAIRE, true)).toBe("cabinet");
+  });
+
+  it("un reçu, un justificatif ne se lisent jamais : ils suivent leur pièce", () => {
+    const recu = piece({ ...sienne, status: "capturee", accompagne: true });
+    expect(gestesDuCircuit(recu, PROPRIETAIRE, true).envoyer).toBe("cabinet");
+  });
+
+  it("le siège envoie toujours au propriétaire, qui la lira avant de transmettre", () => {
+    const nonLue = piece({ circuit: circuit({}), status: "capturee" });
+    expect(gestesDuCircuit(nonLue, SIEGE, true).envoyer).toBe("proprietaire");
+  });
+
+  it("non lue, elle se supprime encore : elle n'est pas partie", () => {
+    const nonLue = piece({ ...sienne, status: "capturee" });
+    expect(gestesDuCircuit(nonLue, PROPRIETAIRE, true).supprimer).toBe(true);
   });
 });
 

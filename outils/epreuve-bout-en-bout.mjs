@@ -311,12 +311,45 @@ console.log("\nLa transmission et la suppression");
     headers: { "Content-Type": "application/pdf" },
     body: pdf,
   });
-  await rpc("collab", "setPieceVis", [transmise.id, "partage"]);
+  // Non lue, elle ne part pas au cabinet (3 novembre 2026) : la base le refuse,
+  // quelle que soit la porte (`une_piece_non_lue_ne_part_pas`).
+  let nonLueRefusee = false;
+  let motifNonLue = "";
+  try {
+    await rpc("collab", "setPieceVis", [transmise.id, "partage"]);
+  } catch (e) {
+    nonLueRefusee = true;
+    motifNonLue = String(e.message).slice(0, 80);
+  }
+  verdict(
+    "une pièce non lue ne part pas au cabinet",
+    nonLueRefusee && motifNonLue.includes("refus.envoi.pas_lue"),
+    motifNonLue,
+  );
+  await rpc("capture", "supprimer", [transmise.id]);
+
+  // Une pièce qui naît chez le cabinet (la porte des intégrations, comme la
+  // capture plus haut) : c'est elle que la suite suit jusqu'à sa file.
+  const partie = await rpc("capture", "enregistrer", [
+    {
+      tenantId: dossier.id,
+      source: "photo",
+      vis: "partage",
+      idempotencyKey: `transmise-partie-${Date.now()}`,
+      contentType: "application/pdf",
+      pageCount: 1,
+    },
+  ]);
+  await appel(`/pieces/${partie.id}/contenu`, {
+    method: "POST",
+    headers: { "Content-Type": "application/pdf" },
+    body: pdf,
+  });
 
   const apres = await rpc("capture", "listAvecLecture", [dossier.id]);
   verdict(
     "la transmission se voit dans l'historique",
-    apres.find((p) => p.id === transmise.id)?.vis === "partage",
+    apres.find((p) => p.id === partie.id)?.vis === "partage",
   );
 
   // L'étape centrale : le cabinet la voit dans SA file — le chemin réel,
@@ -326,14 +359,14 @@ console.log("\nLa transmission et la suppression");
   const file = cabinet ? await rpc("supervision", "queue", [cabinet.id]) : [];
   verdict(
     "la pièce transmise paraît dans la file du cabinet",
-    file.some((p) => p.pieceId === transmise.id || p.piece_id === transmise.id),
+    file.some((p) => p.pieceId === partie.id || p.piece_id === partie.id),
     `${file.length} pièce(s) dans la file`,
   );
 
   let refuse = false;
   let message = "";
   try {
-    await rpc("capture", "supprimer", [transmise.id]);
+    await rpc("capture", "supprimer", [partie.id]);
   } catch (e) {
     refuse = true;
     message = String(e.message).slice(0, 80);
@@ -353,7 +386,7 @@ console.log("\nLa transmission et la suppression");
   // 22 octobre 2026 — l'épreuve passe donc par le chemin réel.
   // La première pièce a aussi été capturée « partage » (section 5) : elle
   // revient par le même rappel accordé, puis les deux s'effacent.
-  const reprises = [transmise.id, piece.id];
+  const reprises = [partie.id, piece.id];
   for (const id of reprises) await rpc("collab", "demanderSurPiece", [id, "rappel"]);
   // Nul ne tranche sa propre demande (#146) : le compte de développement est
   // membre du dossier, c'est un autre expert du cabinet qui accorde le rappel.
@@ -370,11 +403,11 @@ console.log("\nLa transmission et la suppression");
   const fileApres = cabinet ? await rpc("supervision", "queue", [cabinet.id]) : [];
   verdict(
     "une pièce reprise quitte la file du cabinet",
-    !fileApres.some((p) => p.pieceId === transmise.id || p.piece_id === transmise.id),
+    !fileApres.some((p) => p.pieceId === partie.id || p.piece_id === partie.id),
   );
   for (const id of reprises) await rpc("capture", "supprimer", [id]);
   const restant = await rpc("capture", "listAvecLecture", [dossier.id]);
-  const traces = restant.filter((p) => p.id === transmise.id || p.id === piece.id);
+  const traces = restant.filter((p) => p.id === partie.id || p.id === piece.id);
   verdict(
     "l'épreuve efface ce qu'elle a créé",
     traces.length === 0,

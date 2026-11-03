@@ -1369,6 +1369,51 @@ function PieceScreen() {
     );
   }
 
+  // Une demande ne se suit qu'où elle se fait : au propriétaire, ou au cabinet.
+  const noteSuppression = demanderSuppression
+    ? demandeDeSuppression === "demandee" || demandeDeSuppression === "refusee"
+      ? demandeDeSuppression
+      : null
+    : noteDeSuppression(demandeDeSuppression, vis);
+  /** À qui je demande : mon propriétaire (le siège), ou le cabinet. */
+  const aQuiJeDemande = envoiVers.quiPour(demanderSuppression?.a ?? "cabinet");
+  /**
+   * « Demander la suppression », quand elle peut l'être : une demande déjà
+   * inscrite ne se redemande pas ; une demande retirée (la pièce était revenue
+   * au privé) ou accordée peut l'être. La fiche lue et la pièce partie sans
+   * avoir été lue l'offrent toutes deux, par ce seul calcul.
+   */
+  const demanderLaSuppression =
+    demanderSuppression &&
+    (!demandeDeSuppression ||
+      demandeDeSuppression === "retiree" ||
+      demandeDeSuppression === "accordee")
+      ? demanderSuppression
+      : null;
+  /** Où en est ma demande de suppression : dite une fois, lue aux deux endroits. */
+  const suiviDeLaSuppression =
+    noteSuppression === "demandee" && dernierFaitDeSuppression ? (
+      <ConfirmationSurPlace
+        titre={
+          dernierFaitDeSuppression.transmise
+            ? t("circuit.demande.transmise", { cabinet: aQuiJeDemande })
+            : t("envoi.suppression.fait", { qui: aQuiJeDemande })
+        }
+        detail={t("envoi.demande.detail", {
+          qui: dernierFaitDeSuppression.transmise ? envoiVers.quiPour("cabinet") : aQuiJeDemande,
+          quand: momentDeLEnvoi(dernierFaitDeSuppression.createdAt, locale).quand,
+        })}
+      />
+    ) : demanderSuppression?.isError ? (
+      <PasEncoreParti
+        qui={aQuiJeDemande}
+        reessayer={() => demanderSuppression.mutate()}
+        enCours={demanderSuppression.isPending}
+      />
+    ) : noteSuppression === "refusee" ? (
+      <p className="f-note">{t("pme.piece.suppressionRefusee")}</p>
+    ) : null;
+
   /* ========================================================= PAS ENCORE LUE
    *
    * Le scan final, en grand, AVANT le geste : c'est lui qui sera lu, pas
@@ -1496,6 +1541,25 @@ function PieceScreen() {
             </button>
           </div>
         ) : null}
+        {/*
+         * ============================ CHEZ LE CABINET, PAS ENCORE LUE
+         *
+         * Plus aucune pièce ne part sans être lue (`une_piece_non_lue_ne_part_pas`).
+         * Deux cas restent : celles parties avant le 3 novembre, et la nouvelle
+         * photo d'une pièce déjà partie, qui hérite de son partage. L'écran les
+         * montrait comme une pièce qui attend chez soi, sans « Supprimer » ni
+         * raison : la personne restait devant deux boutons sans comprendre. Il
+         * dit maintenant où elle est, garde la lecture, et offre la seule
+         * sortie qui existe : la demander au cabinet.
+         */}
+        {vis === "partage" ? (
+          <div className="manque" data-k="attente">
+            <p className="t-body font-semibold">
+              {t("pme.piece.partieNonLue", { cabinet: envoiVers.quiPour("cabinet") })}
+            </p>
+            <p className="t-body mt-1">{t("pme.piece.partieNonLue.sous")}</p>
+          </div>
+        ) : null}
         {/* Après un échec, ses deux gestes sont dans la carte d'échec, au-dessus. */}
         {echecDeLecture ? null : (
           <>
@@ -1519,6 +1583,19 @@ function PieceScreen() {
             </button>
           </>
         )}
+        {vis === "partage" && demanderLaSuppression ? (
+          <button
+            type="button"
+            disabled={demanderLaSuppression.isPending}
+            onClick={() => demanderLaSuppression.mutate()}
+            className="h-[48px] w-full text-[14px] font-medium text-signal-stop disabled:opacity-50"
+          >
+            {demanderLaSuppression.isPending
+              ? t("common.loading")
+              : t("pme.piece.demanderSuppression")}
+          </button>
+        ) : null}
+        {vis === "partage" ? suiviDeLaSuppression : null}
         {/*
          * Supprimer, tout court (26 octobre 2026) : « Reprendre » efface ET
          * rouvre l'appareil photo ; une photo prise par erreur n'avait aucune
@@ -1585,14 +1662,6 @@ function PieceScreen() {
    */
   // Le siège envoie au propriétaire : le référentiel le dit, pas un nom de rôle.
   const siege = aLeDroit(acces.data, "envoi.proprietaire");
-  // Une demande ne se suit qu'où elle se fait : au propriétaire, ou au cabinet.
-  const noteSuppression = demanderSuppression
-    ? demandeDeSuppression === "demandee" || demandeDeSuppression === "refusee"
-      ? demandeDeSuppression
-      : null
-    : noteDeSuppression(demandeDeSuppression, vis);
-  /** À qui je demande : mon propriétaire (le siège), ou le cabinet. */
-  const aQuiJeDemande = envoiVers.quiPour(demanderSuppression?.a ?? "cabinet");
 
   /**
    * Le mois de la pièce, pour la pastille du haut. Rien si la date manque.
@@ -2809,20 +2878,16 @@ function PieceScreen() {
                   </span>
                 </button>
               ) : null}
-              {demanderSuppression &&
-              (!demandeDeSuppression ||
-                demandeDeSuppression === "retiree" ||
-                demandeDeSuppression === "accordee") ? (
-                /* Une demande déjà inscrite ne se redemande pas ; une demande retirée (la pièce était revenue au privé) peut l'être. */
+              {demanderLaSuppression ? (
                 <button
                   type="button"
                   className="f-ligne sup"
-                  disabled={demanderSuppression.isPending}
-                  onClick={() => demanderSuppression.mutate()}
+                  disabled={demanderLaSuppression.isPending}
+                  onClick={() => demanderLaSuppression.mutate()}
                 >
                   <span className="bd">
                     <span className="lb-a">
-                      {demanderSuppression.isPending
+                      {demanderLaSuppression.isPending
                         ? t("common.loading")
                         : t("pme.piece.demanderSuppression")}
                     </span>
@@ -2852,29 +2917,7 @@ function PieceScreen() {
             </div>
           )}
           {/* Hors partage, une vieille demande ne parle plus : le « Supprimer » ordinaire suffit. */}
-          {noteSuppression === "demandee" && dernierFaitDeSuppression ? (
-            <ConfirmationSurPlace
-              titre={
-                dernierFaitDeSuppression.transmise
-                  ? t("circuit.demande.transmise", { cabinet: aQuiJeDemande })
-                  : t("envoi.suppression.fait", { qui: aQuiJeDemande })
-              }
-              detail={t("envoi.demande.detail", {
-                qui: dernierFaitDeSuppression.transmise
-                  ? envoiVers.quiPour("cabinet")
-                  : aQuiJeDemande,
-                quand: momentDeLEnvoi(dernierFaitDeSuppression.createdAt, locale).quand,
-              })}
-            />
-          ) : demanderSuppression?.isError ? (
-            <PasEncoreParti
-              qui={aQuiJeDemande}
-              reessayer={() => demanderSuppression.mutate()}
-              enCours={demanderSuppression.isPending}
-            />
-          ) : noteSuppression === "refusee" ? (
-            <p className="f-note">{t("pme.piece.suppressionRefusee")}</p>
-          ) : null}
+          {suiviDeLaSuppression}
         </div>
       ) : null}
     </div>

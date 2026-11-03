@@ -11,7 +11,8 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
-import { fermerLePool, sousIdentite } from "./db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "./db.ts";
+import { lireLaPieceDEssai } from "./lecture-d-essai.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
@@ -83,6 +84,9 @@ describe("une pièce comptabilisée reste dans la société", { skip: !BASE_CONF
   it("en défaut de paiement, rien de nouveau ne part au cabinet", async () => {
     // Règle du 20 octobre 2026 : impayé → la lecture ET la transmission s'arrêtent.
     const id = await piece("impaye");
+    // Lue avant l'impayé : une pièce non lue ne part pas au cabinet (3 novembre
+    // 2026), et c'est bien la licence qui doit refuser ici, pas la lecture.
+    await sousIdentiteDuServeur(dirigeant.id, (db) => lireLaPieceDEssai(db, id));
     await admin.query(
       `update facturation.licences l set statut = 'suspendue', suspendue_le = now()
          from facturation.licence_organisations lo
