@@ -848,6 +848,8 @@ function Organisation({
   const pme = usePme();
   const cabinet = useMonCabinet(org.tenantId);
   const dossier = pme.dossiers.find((d) => d.id === org.tenantId);
+  /** Ce que la révocation a fait, dit ici : le bloc du mandat disparaît avec lui. */
+  const [revoque, setRevoque] = useState<string | null>(null);
   /*
    * L'offre de CETTE société, sous la clé du layout (`mon-forfait`, id) : la
    * même lecture, pas une seconde vérité. Un propriétaire non titulaire en lit
@@ -897,7 +899,12 @@ function Organisation({
       {titulaire === false ? (
         <p className="mn">{t("pme.reglages.orgs.autreTitulaire", { societe: org.nom })}</p>
       ) : null}
-      {cabinet.data ? <LeMandat tenantId={org.tenantId} /> : null}
+      {cabinet.data ? <LeMandat tenantId={org.tenantId} onRevoque={setRevoque} /> : null}
+      {revoque && !cabinet.data ? (
+        <p className="t-body" aria-live="polite">
+          {revoque}
+        </p>
+      ) : null}
       {/* Accepter un abonnement est un geste d'achat : jamais dans la coque. */}
       {COMMERCE ? <AbonnementDeLaComptabilite tenantId={org.tenantId} /> : null}
     </div>
@@ -1041,7 +1048,17 @@ function TtcEtReport({ ht }: { ht: string | null }) {
  * motif (la comptabilité le lira à son journal) et une seconde touche. Elle ne
  * touche pas la licence — c'est la règle des scénarios D.
  */
-function LeMandat({ tenantId }: { tenantId: string }) {
+function LeMandat({
+  tenantId,
+  onRevoque,
+}: {
+  tenantId: string;
+  /**
+   * Le mandat révoqué, dit par la carte de la société : sans mandat, ce bloc
+   * disparaît avec son cabinet, et sa phrase de retour avec lui.
+   */
+  onRevoque: (phrase: string) => void;
+}) {
   const { t, locale } = useI18n();
   const qc = useQueryClient();
   const [ouvert, setOuvert] = useState(false);
@@ -1057,11 +1074,21 @@ function LeMandat({ tenantId }: { tenantId: string }) {
   const fin = useMutation({
     mutationFn: () => office().identity.revoquerMandat(tenantId, motif.trim()),
     onSuccess: async () => {
-      setRetour(t("pme.reglages.org.mandat.revoque"));
       setRevoquer(false);
       setArmee(false);
-      await qc.invalidateQueries({ queryKey: ["mon-mandat", tenantId] });
-      await qc.invalidateQueries({ queryKey: cleMonCabinet(tenantId) });
+      onRevoque(t("pme.reglages.org.mandat.revoque"));
+      /*
+       * TOUT SE RELIT ENSEMBLE (staging, 3 novembre 2026). Les deux lectures
+       * se suivaient : la carte gardait « Cabinet : Cabinet Ben Salah » le
+       * temps de la première. Le cabinet, le mandat et l'abonnement qu'il
+       * couvrait (il s'arrête avec le mandat) se relisent en même temps.
+       */
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["mon-mandat", tenantId] }),
+        qc.invalidateQueries({ queryKey: cleMonCabinet(tenantId) }),
+        qc.invalidateQueries({ queryKey: ["abonnements-pour-moi", tenantId] }),
+        qc.invalidateQueries({ queryKey: [CLE_FORFAIT, tenantId] }),
+      ]);
     },
     onError: (e: unknown) => {
       setArmee(false);
