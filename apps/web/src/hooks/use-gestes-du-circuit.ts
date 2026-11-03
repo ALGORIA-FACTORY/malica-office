@@ -64,6 +64,7 @@ function useLeCircuit(tenantId: string | null | undefined) {
     suivi: f.suivi ?? null,
     circuit: f.circuit ?? null,
     accompagne: f.accompagne ?? null,
+    lectureRefusee: f.lectureRefusee ?? null,
   });
   return {
     gestesDe: (f: FaitsDeLaPiece): GestesDuCircuit | null => {

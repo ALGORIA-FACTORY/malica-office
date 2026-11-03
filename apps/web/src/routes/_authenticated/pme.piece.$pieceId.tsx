@@ -509,6 +509,10 @@ function PieceScreen() {
         gardeeLe: dossier.data.piece.gardeeLe ?? null,
         suivi: dossier.data.suivi,
         circuit: dossier.data.circuit,
+        // Ce que la base dit de sa lecture : un reçu ne se lit jamais, et au
+        // plafond une pièce part non lue (`gestesDuCircuit`).
+        accompagne: Boolean(accompagne.data),
+        lectureRefusee: dossier.data.lectureRefusee ?? null,
       }
     : null;
   const gestes = useGestesDuCircuit(pme.tenantId, faitsDuCircuit);
@@ -1442,6 +1446,14 @@ function PieceScreen() {
       <p className="f-note">{t("pme.piece.suppressionRefusee")}</p>
     ) : null;
 
+  /**
+   * Chez le cabinet, pas encore lue, et plus supprimable d'ici : la seule
+   * sortie est de le demander. Une pièce RENDUE par le cabinet (retournée,
+   * sa photo reprise) se supprime encore sans rien demander (`gestesDuCircuit`) :
+   * elle n'est pas dans ce cas.
+   */
+  const chezLeCabinetNonLue = vis === "partage" && piece.status === "capturee" && !supprimer;
+
   /* ========================================================= PAS ENCORE LUE
    *
    * Le scan final, en grand, AVANT le geste : c'est lui qui sera lu, pas
@@ -1580,12 +1592,14 @@ function PieceScreen() {
          * dit maintenant où elle est, garde la lecture, et offre la seule
          * sortie qui existe : la demander au cabinet.
          */}
-        {vis === "partage" ? (
+        {chezLeCabinetNonLue ? (
           <div className="manque" data-k="attente">
             <p className="t-body font-semibold">
               {t("pme.piece.partieNonLue", { cabinet: envoiVers.quiPour("cabinet") })}
             </p>
-            <p className="t-body mt-1">{t("pme.piece.partieNonLue.sous")}</p>
+            <p className="t-body mt-1">
+              {t("pme.piece.partieNonLue.sous", { qui: aQuiJeDemande })}
+            </p>
           </div>
         ) : null}
         {/* Après un échec, ses deux gestes sont dans la carte d'échec, au-dessus. */}
@@ -1611,7 +1625,7 @@ function PieceScreen() {
             </button>
           </>
         )}
-        {vis === "partage" && demanderLaSuppression ? (
+        {chezLeCabinetNonLue && demanderLaSuppression ? (
           <button
             type="button"
             disabled={demanderLaSuppression.isPending}
@@ -1623,7 +1637,7 @@ function PieceScreen() {
               : t("pme.piece.demanderSuppression")}
           </button>
         ) : null}
-        {vis === "partage" ? suiviDeLaSuppression : null}
+        {chezLeCabinetNonLue ? suiviDeLaSuppression : null}
         {/*
          * Supprimer, tout court (26 octobre 2026) : « Reprendre » efface ET
          * rouvre l'appareil photo ; une photo prise par erreur n'avait aucune

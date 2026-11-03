@@ -623,7 +623,7 @@ export const fr = {
     "Votre dossier n'est pas assujetti à la TVA : vous n'avez ni TVA à reverser ni crédit à reporter. La TVA payée sur vos achats est comprise dans vos charges.",
   "pme.piece.partieNonLue": "Chez {cabinet}, pas encore lue.",
   "pme.piece.partieNonLue.sous":
-    "Je peux encore la lire ici. Elle ne se supprime plus d’ici : demandez au cabinet de la retirer.",
+    "Je peux encore la lire ici. Elle ne se supprime plus d’ici : demandez à {qui} de la retirer.",
   "pme.scan.final":
     "Voici la page telle que je la lirai. Si elle vous convient, lisez-la ; sinon, reprenez la photo.",
   "pme.scan.page": "Page {n}",

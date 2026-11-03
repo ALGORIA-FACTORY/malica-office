@@ -584,7 +584,7 @@ export const en: Dict = {
     "Your business is not registered for VAT: there is no VAT to pay back and no credit to carry over. The VAT you pay on purchases is part of your expenses.",
   "pme.piece.partieNonLue": "At {cabinet}, not read yet.",
   "pme.piece.partieNonLue.sous":
-    "I can still read it here. It can no longer be deleted from here: ask the firm to remove it.",
+    "I can still read it here. It can no longer be deleted from here: ask {qui} to remove it.",
   "pme.scan.final":
     "Here is the page as I will read it. If it looks right, read it; otherwise retake the photo.",
   "pme.scan.page": "Page {n}",

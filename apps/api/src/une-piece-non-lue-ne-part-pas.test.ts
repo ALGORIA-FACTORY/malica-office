@@ -76,6 +76,39 @@ describe("une pièce non lue ne part pas au cabinet", { skip: !BASE_CONFIGUREE }
     assert.equal(rows[0]?.n, 1);
   });
 
+  it("au plafond du forfait, elle part non lue : le cabinet la saisit", async () => {
+    const id = await s.deposer("amel", "entite");
+    // Le fait que `lecture_refusee_inscrire` pose quand le forfait est épuisé
+    // (le chemin complet, 65 lectures, est éprouvé par `le-plafond-arrete-…`).
+    await s.admin.query(
+      `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                                    object_id, payload)
+       values ($1, $2, 'lecture.refusee', 'capture', 'pieces', $3,
+               jsonb_build_object('motif', 'plafond_atteint'))`,
+      [s.pme, s.gens.amel.id, id],
+    );
+    await s.fait("amel", "collab.envoyer", id);
+    assert.equal(await visDe(id), "partage");
+  });
+
+  it("licence suspendue : c'est la licence qui parle d'abord, pas la lecture", async () => {
+    const id = await s.deposer("amel", "entite");
+    const statut = (etat: "active" | "suspendue") =>
+      s.admin.query(
+        `update facturation.licences l
+            set statut = $2, suspendue_le = case when $2 = 'active' then null else now() end
+           from facturation.licence_organisations lo
+          where lo.licence_id = l.id and lo.tenant_id = $1`,
+        [s.pme, etat],
+      );
+    await statut("suspendue");
+    try {
+      await assert.rejects(s.fait("amel", "collab.envoyer", id), /refus\.licence/);
+    } finally {
+      await statut("active");
+    }
+  });
+
   it("reprendre la photo d'une pièce déjà partie reste possible : ce n'est pas un envoi", async () => {
     const ancienne = await s.deposer("amel", "entite");
     await s.lire("amel", ancienne);
