@@ -272,9 +272,9 @@ export function creerCaptureHttp(): CaptureRepository {
       return reponse.status === 200 ? await reponse.blob() : null;
     },
 
-    async preciser(pieceId: string, champ: "document_kind", valeur: string) {
+    async preciser(pieceId: string, champ: "document_kind" | "issuer", valeur: string) {
       return (await appeler("capture", "preciser", [pieceId, champ, valeur])) as {
-        id: string;
+        id: string | null;
         champ: string;
         valeur: string;
       };

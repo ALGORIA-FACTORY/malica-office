@@ -342,6 +342,7 @@ function libelleDuPayload(action: string, payload: Payload): MessageKey | null {
     if (payload["par_le_cabinet"] === true) return "cab.journal.piece.type_etabli";
     if (payload["champ"] === "document_kind") return "cab.journal.piece.type_corrige";
     if (payload["champ"] === "document_date") return "cab.journal.piece.date_corrigee";
+    if (payload["champ"] === "issuer") return "cab.journal.piece.nom_corrige";
     return null;
   }
   if (action === "piece.demande") return phraseDeLaDemande(payload);
