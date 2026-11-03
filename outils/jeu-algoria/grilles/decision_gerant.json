@@ -1,0 +1,91 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "decision_gerant",
+    "nom": "Décision du gérant (SARL/SUARL)",
+    "typeDeDocument": "document_gouvernance",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "date_decision",
+      "concept": "date_assemblee",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Identification",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "denomination",
+      "concept": "raison_sociale",
+      "role": "entreprise",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Identification",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "fondement_pouvoir",
+      "concept": "fondement_pouvoir",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Décision",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "gerant",
+      "concept": "raison_sociale",
+      "role": "dirigeant",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Identification",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "objet",
+      "concept": "decision_objet",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Décision",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ratification_requise",
+      "concept": "ratification_requise",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Décision",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signature_gerant",
+      "concept": "signature_cachet",
+      "role": "dirigeant",
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "Décision",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "texte",
+      "concept": "decision_texte",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Décision",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    }
+  ]
+}

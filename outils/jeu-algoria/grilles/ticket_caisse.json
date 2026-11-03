@@ -1,0 +1,161 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "ticket_caisse",
+    "nom": "Ticket de caisse",
+    "typeDeDocument": "ticket_caisse",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "adresse_magasin",
+      "concept": "adresse",
+      "role": "fournisseur",
+      "type": "adresse",
+      "obligatoire": "non",
+      "parcelle": "En-tête émetteur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "caisse_caissier",
+      "concept": "caisse_caissier",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_heure",
+      "concept": "date_heure",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "designation",
+      "concept": "designation",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Lignes et totaux",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "droit_timbre",
+      "concept": "droit_timbre",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes et totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "enseigne",
+      "concept": "enseigne",
+      "role": "fournisseur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "En-tête émetteur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "matricule_fiscal_emetteur",
+      "concept": "matricule_fiscal",
+      "role": "fournisseur",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "En-tête émetteur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "mode_reglement",
+      "concept": "mode_paiement",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Règlement",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_recu_rendu",
+      "concept": "montant_recu_rendu",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Règlement",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "numero_ticket",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "prix_ttc_ligne",
+      "concept": "prix_ttc_ligne",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Lignes et totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "quantite",
+      "concept": "quantite",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "Lignes et totaux",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_transaction_carte",
+      "concept": "ref_transaction_carte",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Règlement",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_ttc",
+      "concept": "total_ttc",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Lignes et totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ventilation_tva",
+      "concept": "montant_tva",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Lignes et totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    }
+  ]
+}

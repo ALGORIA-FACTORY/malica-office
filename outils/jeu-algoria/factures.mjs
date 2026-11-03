@@ -60,7 +60,7 @@ import {
   VENTES_EXPORT,
 } from "./catalogue.mjs";
 
-const MOIS_FR = [
+export const MOIS_FR = [
   "janvier",
   "février",
   "mars",
@@ -74,8 +74,8 @@ const MOIS_FR = [
   "novembre",
   "décembre",
 ];
-const iso = (j) => j.toISOString().slice(0, 10);
-const deux = (n) => String(n).padStart(2, "0");
+export const iso = (j) => j.toISOString().slice(0, 10);
+export const deux = (n) => String(n).padStart(2, "0");
 /** Un taux du référentiel (« 0.190000 ») tel qu'une page l'imprime : « 19 ». */
 const pourcent = (taux) => String(versMineur(taux, 2));
 
@@ -128,7 +128,7 @@ export function lesParties({ tirer, choisir }) {
  * compact (un cas sur trois), espacé (quelques-uns), en chiffres orientaux
  * dans des carnets arabes. La valeur attendue reste la forme normalisée.
  */
-function formeDuMatricule(matricule, forme) {
+export function formeDuMatricule(matricule, forme) {
   if (forme === "compact") return matricule.replaceAll("/", "");
   if (forme === "espace") return matricule.replace(/^(\d{7})/, "$1 ");
   if (forme === "oriental") return enChiffresOrientaux(matricule);
@@ -140,6 +140,67 @@ function ean13(tirer) {
   const corps = `619${String(tirer(0, 1e9)).padStart(9, "0")}`;
   const somme = [...corps].reduce((s, c, i) => s + Number(c) * (i % 2 === 0 ? 1 : 3), 0);
   return `${corps}${(10 - (somme % 10)) % 10}`;
+}
+
+/* ------------------------------------------------- ce qui s'imprime, et sa vérité */
+
+/**
+ * Ce qu'une page imprime, chemin par chemin, et sa vérité clé par les codes de
+ * la grille. `pose(chemin, texte, concept, valeur)` : le texte imprimé au
+ * chemin, et la valeur attendue du champ ; `poseConcept` : une valeur attendue
+ * sans chemin propre. Un code `x[i].y` remplit la i-ième occurrence de `x`
+ * (une ligne d'articles, un mouvement, une résolution), un code `x[k]` la clé
+ * `k` de `x` (un taux de TVA).
+ */
+export function lesPoses() {
+  const imprime = {};
+  const versConcept = {};
+  const concepts = {};
+  const poseConcept = (concept, valeur) => {
+    const m = /^(\w+)\[(\w+)\]\.(\w+)$/.exec(concept);
+    if (m) {
+      (concepts[m[1]] ??= [])[Number(m[2])] ??= {};
+      concepts[m[1]][Number(m[2])][m[3]] = valeur;
+    } else {
+      const t = /^(\w+)\[(\w+)\]$/.exec(concept);
+      if (t) (concepts[t[1]] ??= {})[t[2]] = valeur;
+      else concepts[concept] = valeur;
+    }
+  };
+  const pose = (chemin, texte, concept, valeur) => {
+    imprime[chemin] = texte;
+    if (concept) {
+      versConcept[chemin] = concept;
+      poseConcept(concept, valeur);
+    }
+  };
+  return { imprime, versConcept, concepts, pose, poseConcept };
+}
+
+/**
+ * Les effets d'une prise de vue, tirés dans cet ordre : photo de téléphone
+ * (l'ombre de la main une fois sur deux, froissé ou pli), ou scan (photocopie
+ * ou page passée).
+ */
+export function effetsDeLaPriseDeVue(capture, tirer) {
+  const realisme = [];
+  if (capture === "photo")
+    realisme.push(
+      "fond_bureau",
+      "perspective",
+      "rotation",
+      "eclairage_inegal",
+      "flou",
+      ...(tirer(0, 2) ? ["ombre_main"] : []),
+      ...(tirer(0, 3) === 0 ? ["froisse"] : tirer(0, 2) ? ["pli"] : []),
+    );
+  if (capture === "scan")
+    realisme.push(
+      "biais",
+      "grain",
+      ...(tirer(0, 3) === 0 ? ["photocopie"] : tirer(0, 2) ? ["pale"] : []),
+    );
+  return realisme;
 }
 
 /* --------------------------------------------------------------- un cas */
@@ -439,27 +500,7 @@ export function composerFacture({ rang, g, j, scenario, parties, tirages, graine
     : null;
 
   /* ce qui s'imprime, champ par champ — clé par le chemin de la page */
-  const imprime = {};
-  const versConcept = {};
-  const concepts = {};
-  const pose = (chemin, texte, concept, valeur) => {
-    imprime[chemin] = texte;
-    if (concept) {
-      versConcept[chemin] = concept;
-      poseConcept(concept, valeur);
-    }
-  };
-  const poseConcept = (concept, valeur) => {
-    const m = /^(\w+)\[(\w+)\]\.(\w+)$/.exec(concept);
-    if (m) {
-      (concepts[m[1]] ??= [])[Number(m[2])] ??= {};
-      concepts[m[1]][Number(m[2])][m[3]] = valeur;
-    } else {
-      const t = /^(\w+)\[(\w+)\]$/.exec(concept);
-      if (t) (concepts[t[1]] ??= {})[t[2]] = valeur;
-      else concepts[concept] = valeur;
-    }
-  };
+  const { imprime, versConcept, concepts, pose, poseConcept } = lesPoses();
 
   const titre = detail
     ? "Bon de Livraison/Facture"
@@ -602,23 +643,7 @@ export function composerFacture({ rang, g, j, scenario, parties, tirages, graine
 
   /* le réalisme, tiré ici pour que la vérité le sache */
   const capture = carnet ? g.capture : rendu === "pdf_image" ? choisir(["photo", "scan"]) : rendu;
-  const realisme = [];
-  if (capture === "photo")
-    realisme.push(
-      "fond_bureau",
-      "perspective",
-      "rotation",
-      "eclairage_inegal",
-      "flou",
-      ...(tirer(0, 2) ? ["ombre_main"] : []),
-      ...(tirer(0, 3) === 0 ? ["froisse"] : tirer(0, 2) ? ["pli"] : []),
-    );
-  if (capture === "scan")
-    realisme.push(
-      "biais",
-      "grain",
-      ...(tirer(0, 3) === 0 ? ["photocopie"] : tirer(0, 2) ? ["pale"] : []),
-    );
+  const realisme = effetsDeLaPriseDeVue(capture, tirer);
   const papier = capture === "photo" || capture === "scan";
   const tampon =
     carnet || (papier && tirer(0, 5) < 3) || (rendu === "pdf" && !detail && tirer(0, 4) === 0);

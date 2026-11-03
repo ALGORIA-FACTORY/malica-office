@@ -1,0 +1,394 @@
+{
+  "id": "155",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "contrat",
+  "grille": "contrat_cdi",
+  "langue": "fr",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "H",
+  "mise_en_page": "H-machine",
+  "scenario": "contrat_cdi",
+  "realisme": [
+    "biais",
+    "grain",
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Contrat de travail à durée indéterminée",
+    "parties": [
+      {
+        "role": "employeur",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "salarie",
+        "nom": "Yosra Kelvandi",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "employeur",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "salarie",
+      "nom": "Yosra Kelvandi",
+      "matricule": null,
+      "est": "tiers"
+    },
+    "style": null,
+    "police": "machine",
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+        "telephone": "00 71 940 517",
+        "est": "dossier"
+      },
+      "code": "employeur_signature_cachet"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "titre",
+        "texte": [
+          {
+            "c": "intitule"
+          }
+        ],
+        "sous": [
+          "N° ",
+          {
+            "c": "reference_contrat"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Entre :"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "employeur_raison_sociale"
+          },
+          ", dont le siège est au ",
+          {
+            "c": "employeur_adresse"
+          },
+          ", matricule fiscal ",
+          {
+            "c": "employeur_matricule_fiscal"
+          },
+          ", affiliée à la CNSS sous le n° ",
+          {
+            "c": "employeur_numero_cnss"
+          },
+          ", représentée par son gérant, ci-après « l'Employeur », d'une part,"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Et :"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Mme ",
+          {
+            "c": "salarie_nom_prenom"
+          },
+          ", de nationalité ",
+          {
+            "c": "salarie_nationalite"
+          },
+          ", demeurant ",
+          {
+            "c": "salarie_adresse"
+          },
+          ", titulaire du ",
+          {
+            "c": "salarie_diplome_qualification"
+          },
+          ", ci-après « la Salariée », d'autre part."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 1 — Engagement"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "La Salariée est engagée à durée indéterminée à compter du ",
+          {
+            "c": "date_debut"
+          },
+          " en qualité d'",
+          {
+            "c": "emploi_poste"
+          },
+          ", ",
+          {
+            "c": "categorie_echelon"
+          },
+          ". Elle exerce ses fonctions au ",
+          {
+            "c": "lieu_travail"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 2 — Période d'essai"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Le présent contrat ne devient définitif qu'à l'issue d'une période d'essai de ",
+          {
+            "c": "periode_essai_duree"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 3 — Durée du travail"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "La durée du travail est de ",
+          {
+            "c": "duree_hebdo"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 4 — Rémunération"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "La Salariée perçoit un salaire mensuel ",
+          {
+            "c": "salaire_brut_ou_net"
+          },
+          " de ",
+          {
+            "c": "salaire_base"
+          },
+          " dinars, payable ",
+          {
+            "c": "periodicite_paie"
+          },
+          " par virement."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 6 — Confidentialité"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "clause_confidentialite"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 8 — Préavis"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "preavis"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Fait à Tunis, le ",
+          {
+            "c": "lieu_date_signature"
+          },
+          ", en ",
+          {
+            "c": "nombre_exemplaires"
+          },
+          " exemplaires."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "La Salariée (lu et approuvé)",
+        "droite": "L'Employeur"
+      }
+    ],
+    "imprime": {
+      "intitule": "CONTRAT DE TRAVAIL À DURÉE INDÉTERMINÉE",
+      "reference_contrat": "RH-CDI-2026-28",
+      "employeur_raison_sociale": "ALGORIA FACTORY SARL",
+      "employeur_adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "employeur_matricule_fiscal": "1958330VAM000",
+      "employeur_numero_cnss": "99418273-06",
+      "salarie_nom_prenom": "Yosra Kelvandi",
+      "salarie_nationalite": "tunisienne",
+      "salarie_adresse": "30, rue des Vernelles, 2091 El Menzah VI",
+      "salarie_diplome_qualification": "Diplôme national d'ingénieur en informatique",
+      "date_debut": "2 novembre 2026",
+      "emploi_poste": "Ingénieure sécurité des systèmes",
+      "categorie_echelon": "Cadre — échelon 2",
+      "lieu_travail": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "periode_essai_duree": "six mois",
+      "duree_hebdo": "quarante heures par semaine",
+      "salaire_brut_ou_net": "brut",
+      "salaire_base": "3 300,000",
+      "periodicite_paie": "mensuellement",
+      "clause_confidentialite": "La Salariée s'engage à ne divulguer aucune information relative aux clients, aux logiciels et aux méthodes de l'Employeur, pendant et après le contrat.",
+      "preavis": "Chaque partie peut mettre fin au contrat moyennant un préavis d'un mois, sauf faute grave.",
+      "lieu_date_signature": "27/10/2026",
+      "nombre_exemplaires": "2"
+    },
+    "versConcept": {
+      "intitule": "intitule",
+      "reference_contrat": "reference_contrat",
+      "employeur_raison_sociale": "employeur_raison_sociale",
+      "employeur_adresse": "employeur_adresse",
+      "employeur_matricule_fiscal": "employeur_matricule_fiscal",
+      "employeur_numero_cnss": "employeur_numero_cnss",
+      "salarie_nom_prenom": "salarie_nom_prenom",
+      "salarie_nationalite": "salarie_nationalite",
+      "salarie_adresse": "salarie_adresse",
+      "salarie_diplome_qualification": "salarie_diplome_qualification",
+      "date_debut": "date_debut",
+      "emploi_poste": "emploi_poste",
+      "categorie_echelon": "categorie_echelon",
+      "lieu_travail": "lieu_travail",
+      "periode_essai_duree": "periode_essai_duree",
+      "duree_hebdo": "duree_hebdo",
+      "salaire_brut_ou_net": "salaire_brut_ou_net",
+      "salaire_base": "salaire_base",
+      "periodicite_paie": "periodicite_paie",
+      "clause_confidentialite": "clause_confidentialite",
+      "preavis": "preavis",
+      "lieu_date_signature": "lieu_date_signature",
+      "nombre_exemplaires": "nombre_exemplaires"
+    },
+    "marques": {
+      "cachet_emetteur": "employeur_signature_cachet",
+      "signature_emetteur": "signature_employeur"
+    },
+    "cheminsDuDossier": [
+      "employeur_matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 243961585,
+  "attendu": {
+    "concepts": {
+      "intitule": "CONTRAT DE TRAVAIL À DURÉE INDÉTERMINÉE",
+      "reference_contrat": "RH-CDI-2026-28",
+      "employeur_raison_sociale": "ALGORIA FACTORY SARL",
+      "employeur_adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "employeur_matricule_fiscal": "1958330V/A/M/000",
+      "employeur_numero_cnss": "99418273-06",
+      "salarie_nom_prenom": "Yosra Kelvandi",
+      "salarie_nationalite": "tunisienne",
+      "salarie_adresse": "30, rue des Vernelles, 2091 El Menzah VI",
+      "salarie_diplome_qualification": "Diplôme national d'ingénieur en informatique",
+      "date_debut": "2026-11-02",
+      "emploi_poste": "Ingénieure sécurité des systèmes",
+      "categorie_echelon": "Cadre — échelon 2",
+      "lieu_travail": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "periode_essai_duree": "P6M",
+      "duree_hebdo": "40 heures",
+      "salaire_brut_ou_net": "brut",
+      "salaire_base": "3300.000",
+      "periodicite_paie": "mensuelle",
+      "clause_confidentialite": "La Salariée s'engage à ne divulguer aucune information relative aux clients, aux logiciels et aux méthodes de l'Employeur, pendant et après le contrat.",
+      "preavis": "Chaque partie peut mettre fin au contrat moyennant un préavis d'un mois, sauf faute grave.",
+      "lieu_date_signature": "2026-10-27",
+      "nombre_exemplaires": "2",
+      "employeur_signature_cachet": true,
+      "signature_employeur": true
+    },
+    "confondus": {},
+    "notes": [
+      "Salariée inventée, embauchée le 2 novembre 2026 : absente des déclarations CNSS des trimestres 2 et 3 (cas 144, 145). Aucun numéro de CIN."
+    ],
+    "non_imprimes": [
+      "anciennete_reprise",
+      "avenant_numero",
+      "clause_mobilite",
+      "clause_non_concurrence",
+      "conges",
+      "convention_collective",
+      "employeur_activite",
+      "employeur_rne",
+      "employeur_telephone_email",
+      "issu_conversion_cdd",
+      "legalisation_signature",
+      "periode_essai_renouvellement",
+      "primes_contractuelles",
+      "salarie_cin",
+      "salarie_date_naissance",
+      "salarie_matricule_cnss",
+      "salarie_matricule_interne",
+      "signature_salarie",
+      "temps_partiel",
+      "visa_ministere_etranger"
+    ]
+  }
+}

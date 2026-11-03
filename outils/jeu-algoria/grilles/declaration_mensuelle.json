@@ -1,0 +1,681 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "declaration_mensuelle",
+    "nom": "Déclaration mensuelle des impôts (TVA, retenues à la source, TCL, TFP, FOPROLOS, droit de timbre, autres taxes)",
+    "typeDeDocument": "declaration_impot",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "activite",
+      "concept": "activite",
+      "role": "contribuable",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "identification_et_periode",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "adresse",
+      "concept": "adresse",
+      "role": "contribuable",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "identification_et_periode",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "autres_taxes",
+      "concept": "autres_taxes_detail",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "droit_de_timbre_et_autres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_exonere",
+      "concept": "ca_exonere",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_export",
+      "concept": "ca_export",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_suspension",
+      "concept": "ca_suspension",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_taxable_13",
+      "concept": "ca_taxable_taux_intermediaire",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_taxable_19",
+      "concept": "ca_taxable_taux_normal",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_taxable_7",
+      "concept": "ca_taxable_taux_reduit",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "credit_a_reporter",
+      "concept": "credit_a_reporter",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_deductible",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "credit_reporte_mois_precedent",
+      "concept": "credit_reporte_mois_precedent",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_deductible",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "css_retenue_salaires",
+      "concept": "retenue_css",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_depot",
+      "concept": "date_depot",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "identification_et_periode",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "declaration_neant",
+      "concept": "declaration_neant",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "totaux_et_paiement",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "demande_restitution",
+      "concept": "demande_restitution",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_deductible",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "foprolos_base",
+      "concept": "foprolos_base",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "taxes_sur_salaires",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "foprolos_montant",
+      "concept": "foprolos_montant",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "taxes_sur_salaires",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "foprolos_taux",
+      "concept": "foprolos_taux",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "selon_cas",
+      "parcelle": "taxes_sur_salaires",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "contribuable",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "identification_et_periode",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "mode_depot",
+      "concept": "mode_depot",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "identification_et_periode",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mode_paiement",
+      "concept": "mode_paiement",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "totaux_et_paiement",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nature_depot",
+      "concept": "nature_depot",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "identification_et_periode",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "penalites_retard",
+      "concept": "penalites",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "totaux_et_paiement",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periode",
+      "concept": "periode",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "oui",
+      "parcelle": "identification_et_periode",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "prorata_deduction",
+      "concept": "prorata_deduction",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_deductible",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "raison_sociale",
+      "concept": "raison_sociale",
+      "role": "contribuable",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "identification_et_periode",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "ras_achats_1_5",
+      "concept": "ras_achats_biens_services",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_autres",
+      "concept": "ras_autres",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_dividendes",
+      "concept": "ras_dividendes",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_honoraires_10",
+      "concept": "ras_honoraires_loyers",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_honoraires_3",
+      "concept": "ras_honoraires_regime_reel",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_interets",
+      "concept": "ras_interets",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_jetons_presence",
+      "concept": "ras_jetons_presence",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_non_residents",
+      "concept": "ras_non_residents",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_plus_value_immobiliere",
+      "concept": "ras_plus_value_immobiliere",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_salaires_base",
+      "concept": "ras_salaires_base",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_salaires_montant",
+      "concept": "ras_salaires_montant",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ras_tva",
+      "concept": "retenue_tva",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reference_accuse",
+      "concept": "ref_accuse",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "identification_et_periode",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reference_quittance",
+      "concept": "ref_quittance",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "totaux_et_paiement",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signature_cachet",
+      "concept": "signature_cachet",
+      "role": "contribuable",
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "totaux_et_paiement",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "tcl_ca_export",
+      "concept": "tcl_ca_export",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tcl",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tcl_ca_local",
+      "concept": "tcl_ca_local",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tcl",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tcl_montant",
+      "concept": "tcl_montant",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tcl",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tcl_taux",
+      "concept": "tcl_taux",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "selon_cas",
+      "parcelle": "tcl",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tfp_avance_imputee",
+      "concept": "tfp_avance_imputee",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "taxes_sur_salaires",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tfp_base",
+      "concept": "tfp_base",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "taxes_sur_salaires",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tfp_montant",
+      "concept": "tfp_montant",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "taxes_sur_salaires",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tfp_taux",
+      "concept": "tfp_taux",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "selon_cas",
+      "parcelle": "taxes_sur_salaires",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "timbre_montant",
+      "concept": "droit_timbre",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "droit_de_timbre_et_autres",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "timbre_nombre_factures",
+      "concept": "timbre_nombre_factures",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "selon_cas",
+      "parcelle": "droit_de_timbre_et_autres",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "timbre_tarif",
+      "concept": "timbre_tarif",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "droit_de_timbre_et_autres",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_a_payer",
+      "concept": "net_a_payer",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "totaux_et_paiement",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_principal",
+      "concept": "total_principal",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "totaux_et_paiement",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_ras",
+      "concept": "total_ras",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "retenues_a_la_source",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_tva_collectee",
+      "concept": "total_tva_collectee",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_tva_deductible",
+      "concept": "total_tva_deductible",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "tva_deductible",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_13",
+      "concept": "tva_collectee_taux_intermediaire",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_19",
+      "concept": "tva_collectee_taux_normal",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_7",
+      "concept": "tva_collectee_taux_reduit",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_a_payer",
+      "concept": "tva_a_payer",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_deductible",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_autoliquidee",
+      "concept": "tva_autoliquidee",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_ded_biens_services",
+      "concept": "tva_ded_biens_services",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_deductible",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_ded_immobilisations",
+      "concept": "tva_ded_immobilisations",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_deductible",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_ded_importations",
+      "concept": "tva_ded_importations",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_deductible",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_retenue_subie",
+      "concept": "tva_retenue_subie",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_deductible",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_reversements",
+      "concept": "tva_reversements",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "tva_collectee",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    }
+  ]
+}

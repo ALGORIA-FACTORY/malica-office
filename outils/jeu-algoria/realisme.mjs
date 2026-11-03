@@ -50,19 +50,42 @@ const ANCRES = {
     signature: [".cachet", [70, 130], [18, 40]],
     annotation: [".cachet", [-300, -190], [0, 40]],
   },
+  // Les pièces (gabarits G à K, `mises-en-page.mjs`) : sur le bloc des
+  // signatures, côté de la partie qui signe ; la petite pièce, plus serrée.
+  piece: {
+    tampon: [".cachet", [-20, 30], [-4, 16]],
+    signature: [".cachet", [40, 120], [8, 26]],
+  },
+  petite: {
+    tampon: [".cachet", [-30, 10], [-30, -10]],
+    signature: [".cachet", [20, 90], [-14, 4]],
+  },
 };
 function ancrage(cas, marque, h) {
   const g =
-    cas.gabarit === "A" ? "A" : cas.gabarit === "E" || cas.gabarit === "F" ? "carnet" : "classique";
+    cas.gabarit === "A"
+      ? "A"
+      : cas.gabarit === "E" || cas.gabarit === "F"
+        ? "carnet"
+        : cas.gabarit === "K"
+          ? "petite"
+          : "GHIJ".includes(cas.gabarit)
+            ? "piece"
+            : "classique";
   const [ancre, [x0, x1], [y0, y1]] = ANCRES[g][marque];
-  return `data-ancre="${ancre}" data-dx="${Math.floor(entre(h, x0, x1))}" data-dy="${Math.floor(entre(h, y0, y1))}"`;
+  // Une pièce ramène sa marque tournée dans la feuille ; une facture garde la place
+  // de ses rendus publiés (`placerLesMarques`).
+  const ramener = g === "piece" || g === "petite" ? " data-ramener" : "";
+  return `data-ancre="${ancre}" data-dx="${Math.floor(entre(h, x0, x1))}" data-dy="${Math.floor(entre(h, y0, y1))}"${ramener}`;
 }
 
 /* ---------------------------------------------------------------- le tampon */
 
 function tampon(cas, h) {
   const p = cas.piece;
-  const e = p.emetteur;
+  // Le tampon d'une pièce est celui de la partie qui signe : l'émetteur d'une
+  // facture, la banque d'un ordre de virement, l'administration d'une carte.
+  const e = p.tampon.partie ?? p.emetteur;
   const arabe = cas.langue === "ar" && e.nomAr && e.role !== "dossier";
   const nom = (arabe ? e.nomAr : e.nom).toUpperCase();
   const ville = (
@@ -71,12 +94,13 @@ function tampon(cas, h) {
   const encre = ["#2747b5", "#4b3aa6", "#a3302b", "#1f5f9e"][Math.floor(h() * 4)];
   const angle = fixe(entre(h, -24, 24), 1);
   const graine = Math.floor(h() * 1000);
-  const mf = p.tampon.porteLeMatricule ? p.imprime["references.matricule_fiscal"] : null;
+  const chemin = p.tampon.chemin ?? "references.matricule_fiscal";
+  const mf = p.tampon.porteLeMatricule ? p.imprime[chemin] : null;
   const centre = mf
     ? `<text x="80" y="76" text-anchor="middle" font-size="10" font-family="Imprime">M.F.</text>
-       <text data-champ="references.matricule_fiscal" x="80" y="92" text-anchor="middle" font-size="12.5" font-weight="700" font-family="Imprime" direction="ltr">${echapper(mf)}</text>`
-    : `<text x="80" y="78" text-anchor="middle" font-size="11" font-family="Imprime">${cas.langue === "ar" ? "الإدارة" : "LA DIRECTION"}</text>
-       <text x="80" y="94" text-anchor="middle" font-size="9.5" font-family="Imprime" direction="ltr">Tél ${echapper(e.telephone)}</text>`;
+       <text data-champ="${chemin}" x="80" y="92" text-anchor="middle" font-size="12.5" font-weight="700" font-family="Imprime" direction="ltr">${echapper(mf)}</text>`
+    : `<text x="80" y="78" text-anchor="middle" font-size="11" font-family="${p.tampon.centre && cas.langue === "ar" ? "Naskh" : "Imprime"}">${echapper(p.tampon.centre ?? (cas.langue === "ar" ? "الإدارة" : "LA DIRECTION"))}</text>
+       ${e.telephone ? `<text x="80" y="94" text-anchor="middle" font-size="9.5" font-family="Imprime" direction="ltr">Tél ${echapper(e.telephone)}</text>` : ""}`;
   return `<div class="realisme tampon" data-champ="cachet_emetteur" ${ancrage(cas, "tampon", h)}
   style="position:absolute;width:42mm;height:42mm;transform:rotate(${angle}deg);opacity:${fixe(entre(h, 0.62, 0.86))};mix-blend-mode:multiply;z-index:5">
 <svg viewBox="0 0 160 160" width="100%" height="100%" style="overflow:visible">
@@ -155,6 +179,16 @@ export function placerLesMarques() {
     const haut = Math.max(8, Math.min(f.height - m.offsetHeight - 8, a.top - f.top + dy));
     m.style.left = `${gauche}px`;
     m.style.top = `${haut}px`;
+    // Tournée, la marque d'une pièce déborde de sa boîte : ramenée dans la feuille si
+    // un coin en sort.
+    if (!m.hasAttribute("data-ramener")) continue;
+    const r = m.getBoundingClientRect();
+    const rx =
+      r.right > f.right ? f.right - r.right - 1 : r.left < f.left ? f.left - r.left + 1 : 0;
+    const ry =
+      r.bottom > f.bottom ? f.bottom - r.bottom - 1 : r.top < f.top ? f.top - r.top + 1 : 0;
+    if (rx) m.style.left = `${gauche + rx}px`;
+    if (ry) m.style.top = `${haut + ry}px`;
   }
   document.body.style.removeProperty("transform");
 }

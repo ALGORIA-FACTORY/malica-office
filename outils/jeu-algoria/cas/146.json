@@ -1,0 +1,437 @@
+{
+  "id": "146",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "declaration_impot",
+  "grille": "declaration_annuelle_is_irpp",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-encadre",
+  "scenario": "is_2025",
+  "realisme": [
+    "tampon"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Déclaration annuelle de l'impôt sur les sociétés",
+    "parties": [
+      {
+        "role": "contribuable",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "administration",
+        "nom": "Direction Générale des Impôts",
+        "matricule": null,
+        "est": "administration"
+      }
+    ],
+    "emetteur": {
+      "role": "contribuable",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "administration",
+      "nom": "Direction Générale des Impôts",
+      "matricule": null,
+      "est": "administration"
+    },
+    "style": "encadre",
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+        "telephone": "00 71 940 517",
+        "est": "dossier"
+      },
+      "code": null
+    },
+    "ratures": [],
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            "République Tunisienne"
+          ],
+          [
+            "Ministère des Finances"
+          ],
+          [
+            "Direction Générale des Impôts"
+          ]
+        ],
+        "droite": [
+          [
+            "الجمهورية التونسية"
+          ],
+          [
+            "وزارة المالية"
+          ],
+          [
+            "الإدارة العامة للأداءات"
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "DÉCLARATION ANNUELLE DE L'IMPÔT SUR LES SOCIÉTÉS"
+        ],
+        "sous": [
+          "Exercice ",
+          {
+            "c": "exercice"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Raison sociale",
+            {
+              "c": "raison_sociale"
+            }
+          ],
+          [
+            "Matricule fiscal",
+            {
+              "c": "matricule_fiscal"
+            }
+          ],
+          [
+            "Forme juridique",
+            {
+              "c": "forme_juridique"
+            }
+          ],
+          [
+            "Régime",
+            {
+              "c": "regime_fiscal"
+            }
+          ],
+          [
+            "Nature",
+            {
+              "c": "nature_declaration"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Chiffre d'affaires"
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "100",
+            "Chiffre d'affaires local TTC",
+            {
+              "c": "ca_local_ttc"
+            }
+          ],
+          [
+            "110",
+            "Chiffre d'affaires à l'export",
+            {
+              "c": "ca_export"
+            }
+          ],
+          [
+            "120",
+            "Chiffre d'affaires total",
+            {
+              "c": "ca_total_brut"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Détermination du résultat fiscal"
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "200",
+            "Résultat comptable avant impôt",
+            {
+              "c": "resultat_comptable"
+            }
+          ],
+          [
+            "210",
+            [
+              "Réintégration — ",
+              {
+                "c": "reintegrations.0"
+              }
+            ],
+            {
+              "t": "835,000"
+            }
+          ],
+          [
+            "211",
+            [
+              "Réintégration — ",
+              {
+                "c": "reintegrations.1"
+              }
+            ],
+            {
+              "t": "2.034,000"
+            }
+          ],
+          [
+            "230",
+            [
+              "Déduction — ",
+              {
+                "c": "deductions.0"
+              }
+            ],
+            {
+              "t": "1.227,000"
+            }
+          ],
+          [
+            "250",
+            "Résultat fiscal avant déficits",
+            {
+              "c": "resultat_fiscal_avant_deficits"
+            }
+          ],
+          [
+            "260",
+            "Bénéfice imposable",
+            {
+              "c": "benefice_imposable"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Liquidation de l'impôt"
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "300",
+            [
+              "Impôt au taux de ",
+              {
+                "c": "taux_is"
+              }
+            ],
+            {
+              "c": "is_calcule"
+            }
+          ],
+          [
+            "310",
+            "Minimum d'impôt",
+            {
+              "c": "minimum_impot"
+            }
+          ],
+          [
+            "320",
+            "Impôt dû",
+            {
+              "c": "is_du"
+            }
+          ],
+          [
+            "330",
+            "Acomptes provisionnels payés",
+            {
+              "c": "acomptes_payes"
+            }
+          ],
+          [
+            "340",
+            "Retenues à la source subies",
+            {
+              "c": "retenues_subies"
+            }
+          ],
+          [
+            "350",
+            "Reste à payer",
+            {
+              "c": "reste_a_payer"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Annexes :",
+            {
+              "c": "etats_financiers"
+            }
+          ],
+          [
+            "Déposée le :",
+            {
+              "c": "date_depot"
+            }
+          ],
+          [
+            "Accusé n° :",
+            {
+              "c": "reference_accuse"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "Cachet et signature"
+      }
+    ],
+    "imprime": {
+      "exercice": "2025",
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "matricule_fiscal": "1958330V/A/M/000",
+      "forme_juridique": "SARL",
+      "regime_fiscal": "Régime réel",
+      "nature_declaration": "Initiale",
+      "ca_local_ttc": "788.526,442",
+      "ca_export": "58.478,000",
+      "ca_total_brut": "847.004,442",
+      "resultat_comptable": "101.449,243",
+      "reintegrations.0": "Amendes et pénalités",
+      "reintegrations.1": "Cadeaux au-delà du plafond déductible",
+      "deductions.0": "Reprise de provision déjà imposée",
+      "resultat_fiscal_avant_deficits": "103.091,243",
+      "benefice_imposable": "103.091,243",
+      "taux_is": "20 %",
+      "is_calcule": "20.618,249",
+      "minimum_impot": "1.577,053",
+      "is_du": "20.618,249",
+      "acomptes_payes": "9.577,878",
+      "retenues_subies": "3.301,313",
+      "reste_a_payer": "7.739,058",
+      "etats_financiers": "états financiers de l'exercice joints",
+      "date_depot": "10/03/2026",
+      "reference_accuse": "IS-2025-5062660"
+    },
+    "versConcept": {
+      "exercice": "exercice",
+      "raison_sociale": "raison_sociale",
+      "matricule_fiscal": "matricule_fiscal",
+      "forme_juridique": "forme_juridique",
+      "regime_fiscal": "regime_fiscal",
+      "nature_declaration": "nature_declaration",
+      "ca_local_ttc": "ca_local_ttc",
+      "ca_export": "ca_export",
+      "ca_total_brut": "ca_total_brut",
+      "resultat_comptable": "resultat_comptable",
+      "reintegrations.0": "reintegrations",
+      "reintegrations.1": "reintegrations",
+      "deductions.0": "deductions",
+      "resultat_fiscal_avant_deficits": "resultat_fiscal_avant_deficits",
+      "benefice_imposable": "benefice_imposable",
+      "taux_is": "taux_is",
+      "is_calcule": "is_calcule",
+      "minimum_impot": "minimum_impot",
+      "is_du": "is_du",
+      "acomptes_payes": "acomptes_payes",
+      "retenues_subies": "retenues_subies",
+      "reste_a_payer": "reste_a_payer",
+      "etats_financiers": "etats_financiers",
+      "date_depot": "date_depot",
+      "reference_accuse": "reference_accuse"
+    },
+    "marques": {},
+    "cheminsDuDossier": [
+      "matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 1267847308,
+  "attendu": {
+    "concepts": {
+      "exercice": "2025-01-01/2025-12-31",
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "matricule_fiscal": "1958330V/A/M/000",
+      "forme_juridique": "SARL",
+      "regime_fiscal": "reel",
+      "nature_declaration": "initiale",
+      "ca_local_ttc": "788526.442",
+      "ca_export": "58478.000",
+      "ca_total_brut": "847004.442",
+      "resultat_comptable": "101449.243",
+      "reintegrations": [
+        "Amendes et pénalités",
+        "Cadeaux au-delà du plafond déductible"
+      ],
+      "deductions": [
+        "Reprise de provision déjà imposée"
+      ],
+      "resultat_fiscal_avant_deficits": "103091.243",
+      "benefice_imposable": "103091.243",
+      "taux_is": "20",
+      "is_calcule": "20618.249",
+      "minimum_impot": "1577.053",
+      "is_du": "20618.249",
+      "acomptes_payes": "9577.878",
+      "retenues_subies": "3301.313",
+      "reste_a_payer": "7739.058",
+      "etats_financiers": true,
+      "date_depot": "2026-03-10",
+      "reference_accuse": "IS-2025-5062660"
+    },
+    "confondus": {},
+    "notes": [
+      "Résultat fiscal = résultat comptable + réintégrations − déductions ; IS = résultat fiscal × taux relevé (20 %) ; minimum = 0,2 % du CA local TTC, plancher 500 DT (relevés) ; impôt dû = le plus grand ; reste = dû − acomptes − retenues. L'impôt dû est la base des acomptes de 2026 (cas 148 et 149).",
+      "Le résultat comptable avant impôt de cette déclaration ne se rapproche pas du bénéfice net du procès-verbal du cas 121 : deux tirages, pas une liasse."
+    ],
+    "non_imprimes": [
+      "amortissements_differes",
+      "bareme_irpp",
+      "categories_revenus",
+      "commissaire_aux_comptes",
+      "contribution_conjoncturelle",
+      "css",
+      "deductions_avantages",
+      "deductions_familiales",
+      "deficits_reportes",
+      "documentation_prix_transfert",
+      "excedent_a_reporter",
+      "excedent_anterieur",
+      "tableau_amortissements"
+    ]
+  }
+}

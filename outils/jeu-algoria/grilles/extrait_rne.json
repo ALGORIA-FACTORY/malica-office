@@ -1,0 +1,341 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "extrait_rne",
+    "nom": "Extrait du Registre national des entreprises (RNE)",
+    "typeDeDocument": "extrait_rne",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "activite_principale",
+      "concept": "activite_principale",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "activites_secondaires",
+      "concept": "activites_secondaires",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ancien_numero_rc",
+      "concept": "ancien_numero_rc",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "identifiant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "associes_liste",
+      "concept": "associes_liste",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Associés et bénéficiaires effectifs",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "be_pourcentage",
+      "concept": "be_pourcentage",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "selon_cas",
+      "parcelle": "Associés et bénéficiaires effectifs",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "beneficiaires_effectifs",
+      "concept": "beneficiaires_effectifs",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Associés et bénéficiaires effectifs",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "capital",
+      "concept": "capital_social",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "commissaire_aux_comptes",
+      "concept": "raison_sociale",
+      "role": "commissaire_aux_comptes",
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Dirigeants et organes",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "date_debut_activite",
+      "concept": "date_debut_activite",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_delivrance",
+      "concept": "date_delivrance",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "En-tête et authentification",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_immatriculation",
+      "concept": "date_immatriculation",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "denomination",
+      "concept": "raison_sociale",
+      "role": "entreprise",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "depot_etats_financiers",
+      "concept": "depot_etats_financiers",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "non",
+      "parcelle": "Historique des inscriptions",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "dirigeant_date_nomination",
+      "concept": "dirigeant_date_nomination",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Dirigeants et organes",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "dirigeant_identifiant",
+      "concept": "cin",
+      "role": "dirigeant",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Dirigeants et organes",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "dirigeant_nationalite",
+      "concept": "nationalite",
+      "role": "dirigeant",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Dirigeants et organes",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "dirigeant_nom",
+      "concept": "nom_prenom",
+      "role": "dirigeant",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Dirigeants et organes",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "dirigeant_qualite",
+      "concept": "qualite",
+      "role": "dirigeant",
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Dirigeants et organes",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "duree",
+      "concept": "duree_societe",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "etablissements_secondaires",
+      "concept": "etablissements_secondaires",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "exercice_cloture",
+      "concept": "date_cloture",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "forme_juridique",
+      "concept": "forme_juridique",
+      "role": "entreprise",
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "identifiant_unique",
+      "concept": "identifiant_unique_rne",
+      "role": "entreprise",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "inscriptions_modificatives",
+      "concept": "inscriptions_modificatives",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Historique des inscriptions",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "langue_extrait",
+      "concept": "langue_extrait",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "En-tête et authentification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "entreprise",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "nom_commercial_enseigne",
+      "concept": "enseigne",
+      "role": "entreprise",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "numero_extrait",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "En-tête et authentification",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "qr_code_verification",
+      "concept": "qr_code",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "En-tête et authentification",
+      "expert": "identifiant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "siege",
+      "concept": "adresse",
+      "role": "entreprise",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "statut_entreprise",
+      "concept": "statut_entreprise",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Identification de l'entreprise",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "suretes_nantissements",
+      "concept": "suretes_nantissements",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Historique des inscriptions",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "type_extrait",
+      "concept": "type_extrait",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "En-tête et authentification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    }
+  ]
+}

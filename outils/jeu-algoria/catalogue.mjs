@@ -430,3 +430,170 @@ export const MENTIONS_DE_DETAIL = [
   "Les marchandises restent la propriété du vendeur jusqu'au paiement intégral. Garantie selon les conditions remises avec le produit ; elle ne couvre ni la casse ni l'oxydation. Aucun échange ni remboursement au-delà de sept jours, emballage d'origine exigé.",
   "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce.",
 ];
+
+/* ======================================================== les autres pièces */
+
+/*
+ * Les personnes et organismes des pièces qui ne sont pas des factures (cas 121
+ * à 161) : tous inventés. Les associés et le gérant d'ALGORIA sur ces pages ne
+ * sont PAS ses associés réels — le nom et le matricule de la société sont les
+ * seules données réelles. Aucun numéro de CIN n'est imprimé ; les matricules
+ * CNSS commencent par « 99 », comme les RIB.
+ */
+
+/** Les associés inventés (5 000 parts de 10 DT : le capital de 50 000 DT). */
+export const ASSOCIES = [
+  {
+    nom: "Nadhem Ourvani",
+    ar: "ناظم أورفاني",
+    parts: 2500,
+    domicile: "7, rue des Glycines Selvanes, 2092 El Manar",
+    gerant: true,
+  },
+  {
+    nom: "Lyna Tazerouit",
+    ar: "لينة تازروِيت",
+    parts: 1500,
+    domicile: "22, avenue Kerzane, 2045 L'Aouina",
+    gerant: false,
+  },
+  {
+    nom: "Faycel Morbane",
+    ar: "فيصل موربان",
+    parts: 1000,
+    domicile: "3, impasse des Orvales, 4000 Sousse",
+    gerant: false,
+  },
+];
+
+/** Les salariés inventés d'ALGORIA : brut mensuel en dinars. */
+export const SALARIES = [
+  {
+    nom: "Mehdi Varnasse",
+    ar: "مهدي فارناس",
+    interne: "ALG-0017",
+    poste: "Ingénieur données",
+    posteAr: "مهندس بيانات",
+    categorie: "Cadre — échelon 4",
+    entree: "2024-09-02",
+    brut: 4200,
+    adresse: "18, rue Zelmira, 2080 Ariana",
+  },
+  {
+    nom: "Sana Belkorvi",
+    ar: "سناء بلكورفي",
+    interne: "ALG-0021",
+    poste: "Développeuse full-stack",
+    posteAr: "مطوّرة برمجيات",
+    categorie: "Cadre — échelon 3",
+    entree: "2025-01-06",
+    brut: 3650,
+    adresse: "5, rue des Ormelles, 2036 Soukra",
+  },
+  {
+    nom: "Oussama Trezini",
+    ar: "أسامة ترزيني",
+    interne: "ALG-0024",
+    poste: "Consultant conformité",
+    posteAr: "مستشار امتثال",
+    categorie: "Cadre — échelon 2",
+    entree: "2025-03-17",
+    brut: 3100,
+    adresse: "41, avenue Ferzane, 1004 El Menzah",
+  },
+  {
+    nom: "Rim Zaghvani",
+    ar: "ريم زغفاني",
+    interne: "ALG-0026",
+    poste: "Assistante administrative",
+    posteAr: "مساعدة إدارية",
+    categorie: "Agent de maîtrise — échelon 5",
+    entree: "2025-06-02",
+    brut: 1850,
+    adresse: "9, rue Talvane, 2015 Le Kram",
+  },
+  {
+    nom: "Anis Quermadi",
+    ar: "أنيس قرمادي",
+    interne: "ALG-0029",
+    poste: "Analyste financier",
+    posteAr: "محلل مالي",
+    categorie: "Cadre — échelon 1",
+    entree: "2025-11-03",
+    brut: 2800,
+    adresse: "12, rue des Selvines, 2073 Borj Louzir",
+  },
+  {
+    nom: "Yosra Kelvandi",
+    ar: "يسرى كلفاندي",
+    interne: "ALG-0031",
+    poste: "Ingénieure sécurité des systèmes",
+    posteAr: "مهندسة سلامة الأنظمة",
+    categorie: "Cadre — échelon 2",
+    entree: "2026-11-02",
+    brut: 3300,
+    adresse: "30, rue des Vernelles, 2091 El Menzah VI",
+    diplome: "Diplôme national d'ingénieur en informatique",
+  },
+];
+
+/** Les autres parties des pièces : inventées, mots rares, aucun logo. */
+export const AUTRES = {
+  bailleur: {
+    fr: "Société Immobilière Varzane SARL",
+    ar: "الشركة العقارية فارزان",
+    adresse: "27, avenue Kelvira, 1002 Tunis Belvédère",
+    representant: "Hamza Ouldrane",
+  },
+  bailleurSfax: {
+    fr: "Société Belkhira Immobilière SA",
+    ar: "شركة بلخيرة العقارية",
+    adresse: "طريق قرمدة كلم 4، 3062 صفاقس",
+    representant: "عادل بلخيرة",
+  },
+  local: "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+  localSfax: "المنطقة الصناعية بوديان، مقسم 31، 3064 صفاقس",
+  assureur: {
+    fr: "Mutuelle Ervaline d'Assurances",
+    adresse: "Immeuble Orvane, rue du Lac Morvane, 1053 Les Berges du Lac",
+  },
+  artisan: {
+    ar: "ورشة قمران للترصيص",
+    fr: "Atelier Qamrane Plomberie",
+    adresse: "نهج الزرزور 11، 2034 الزهراء",
+  },
+  papeterie: {
+    enseigne: "MARVELLE PAPETERIE",
+    adresse: "Centre Orzane, local 4, 1053 Les Berges du Lac",
+  },
+  superette: {
+    enseigne: "مغازة زيروان",
+    enseigneFr: "Superette Zirwane",
+    adresse: "شارع الأرز 56، 2045 العوينة",
+  },
+  restaurant: {
+    nom: "Le Comptoir Olvane",
+    adresse: "6, rue du Lac Ermane, 1053 Les Berges du Lac",
+  },
+  association: {
+    nom: "Association Selvarine des Sciences des Données",
+    adresse: "Pôle Kervane, 2088 Ariana",
+  },
+  syndic: {
+    ar: "اتحاد مالكي إقامة ورزان",
+  },
+  agence: {
+    nom: "Agence Lac Morvane",
+    code: "017",
+    adresse: "Rue du Lac Morvane, 1053 Les Berges du Lac",
+    telephone: "00 71 962 330",
+    bic: "OUZDTNT1XXX",
+  },
+  agenceSelvane: {
+    nom: "Agence Ennasr Kelvane",
+    code: "204",
+    adresse: "Avenue Hedi Selvane, 2037 Ennasr",
+    telephone: "00 70 118 452",
+    bic: "CRSLTNT1XXX",
+  },
+};

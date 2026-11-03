@@ -1,9 +1,11 @@
-# Le jeu d'ALGORIA : cent vingt factures au plus près du réel
+# Le jeu d'ALGORIA : cent soixante et une pièces au plus près du réel
 
-Cent vingt factures **inventées** — cent achats, vingt ventes — dont la seule partie réelle
-est **ALGORIA FACTORY SARL**, la société du staging. Elles nourrissent le banc **sans IA ni
-GPU** : OCR rapide sur CPU (ONNX PP-OCRv5) → moteur Sudoku (preuves au centre, rangées,
-milieu vers les bords) → experts de champ menés par le dictionnaire des concepts en base.
+Cent vingt factures **inventées** — cent achats, vingt ventes — et quarante et une autres
+pièces (cas 121 à 161 : gouvernance, paiements, banque, caisse, paie, déclarations, contrats,
+baux, documents sans grille), dont la seule partie réelle est **ALGORIA FACTORY SARL**, la
+société du staging. Elles nourrissent le banc **sans IA ni GPU** : OCR rapide sur CPU
+(ONNX PP-OCRv5) → moteur Sudoku (preuves au centre, rangées, milieu vers les bords) →
+experts de champ menés par le dictionnaire des concepts en base.
 L'objectif du dirigeant : 100 % — chaque champ imprimé lu juste ou dit « inconnu », jamais
 faux, jamais posé sur la mauvaise partie. Chaque cas le dit (`synthetique: true`,
 `provenance`).
@@ -11,7 +13,9 @@ faux, jamais posé sur la mauvaise partie. Chaque cas le dit (`synthetique: true
 Le jeu réutilise celui de `outils/jeu-synthetique/` : le même hasard graine
 (`hasard.mjs`), la même arithmétique entière (`montants.mjs`), le même référentiel et la
 même écriture attendue (`referentiel.mjs`), la même facture classique (`page.mjs`). Rien
-n'est recopié.
+n'est recopié. Les autres pièces sont composées par `pieces.mjs` et dessinées par
+`mises-en-page.mjs` ; elles reprennent les poses de la vérité, la prise de vue et la main
+qui écrit des factures (`lesPoses`, `effetsDeLaPriseDeVue`, `uneMain`).
 
 ## Les parties — la règle, et sa seule exception
 
@@ -37,27 +41,64 @@ n'est recopié.
 - Les matricules fictifs ont la forme tunisienne mais leur lettre de contrôle est tirée au
   hasard (`matriculeDEssai`) : le contrôle de clé du pack (« avertit ») peut le signaler.
 
+### Le rôle d'ALGORIA dans les autres pièces
+
+Chaque pièce dit ses parties (`piece.parties` : le rôle de la grille, et `est` : `dossier`
+pour ALGORIA, `tiers`, `administration`), avec `piece.emetteur` (qui l'émet) et
+`piece.client` (l'autre). Le matricule d'ALGORIA n'est imprimé qu'aux chemins de
+`piece.cheminsDuDossier` ; le compositeur refuse toute page où il paraît ailleurs, ou dans un
+texte hors champ, et toute page où un matricule paraît deux fois (`controlerLesMatricules`).
+
+| ALGORIA est…                           | pièces                                                                  |
+| -------------------------------------- | ----------------------------------------------------------------------- |
+| la société                             | PV d'AGO, PV d'AGE, statuts, extrait du RNE, décision du gérant         |
+| cliente d'un fournisseur               | avoir reçu (126) ; émettrice de l'avoir 127, à un client inventé        |
+| destinataire, payeuse                  | bons de livraison, ordre de virement, chèque, reçus, tickets (anonymes) |
+| employeur                              | notes de frais, bulletins, CNSS, attestation de travail, CDI            |
+| titulaire du compte                    | relevés (banques inventées, code 99)                                    |
+| contribuable                           | déclarations, acomptes, carte et attestation d'immatriculation          |
+| bénéficiaire d'une retenue             | certificat de retenue à la source (le payeur est son client inventé)    |
+| prestataire / preneuse / souscriptrice | contrat de prestation, baux (ALGORIA locataire), avis d'assurance       |
+
+Les associés, le gérant, les salariés, les bailleurs, l'assureur, les banques, les commerces
+sont inventés (`catalogue.mjs`) : ce ne sont pas les associés réels d'ALGORIA. Aucun numéro
+de CIN ; les matricules CNSS des salariés commencent par `99`. Les administrations (DGI,
+CNSS, RNE) sont nommées en clair, sans logo ; l'extrait du RNE, la carte et l'attestation
+d'immatriculation portent la mention imprimée « Spécimen fictif — jeu d'essai ».
+
 ## Les commandes
 
 ```sh
 node --experimental-strip-types outils/jeu-algoria/composer.mjs   # cas/NNN.json
 node outils/jeu-algoria/rendre.mjs [NNN …]                          # rendus/NNN.{pdf,jpg} + NNN.boites.json
 # la grille, relevée dans une base migrée (node db/migrer.mjs --base <url>) :
-DATABASE_URL_ADMIN=<url> node outils/jeu-algoria/relever-les-grilles.mjs [facture …]
+DATABASE_URL_ADMIN=<url> node outils/jeu-algoria/relever-les-grilles.mjs facture pv_ago pv_age \
+  statuts extrait_rne decision_gerant avoir bon_livraison virement cheque recu_quittance \
+  note_frais releve_bancaire ticket_caisse bulletin_paie declaration_mensuelle \
+  declaration_cnss_trimestrielle declaration_annuelle_is_irpp acompte_provisionnel \
+  carte_identification_fiscale certificat_retenue_source attestation_travail \
+  contrat_commercial contrat_cdi bail_commercial avis_echeance_assurance
 ```
 
-Générateur graine (mulberry32, graine `20261103`), dessin par Chromium, dates des PDF
-figées : deux passes successives (composer puis rendre) donnent les 360 fichiers
-identiques à l'octet (SHA-256, vérifié le 3 novembre 2026). Les rendus pèsent 21 Mo
-(3,4 Mo de PDF, 17 Mo de JPEG, 1,3 Mo de boîtes) ; les cas 2 Mo.
+Le relevé écrit aussi `parametres.json` : les taux et seuils que les pièces lisent (IS,
+minimum d'impôt, acomptes, CNSS, TFP, FOPROLOS, retenues à la source, barème de l'IRPP,
+frais professionnels), pris dans `ref.fiscal_parameters` avec leur confiance. Aucun taux
+n'est écrit dans le compositeur.
 
-## Le schéma d'un cas — prêt pour les pièces qui ne sont pas des factures
+Générateur graine (mulberry32, graine `20261103` ; chaque pièce a son propre générateur,
+tiré de la graine et de son numéro), dessin par Chromium, dates des PDF figées : deux passes
+successives (composer puis rendre) donnent les 483 fichiers identiques à l'octet (SHA-256,
+vérifié le 3 novembre 2026), et les 360 fichiers des factures sont ceux d'avant les autres
+pièces, à l'octet. Les rendus pèsent 27 Mo (dont, pour les 41 pièces, 1,9 Mo de PDF,
+3,7 Mo de JPEG, 0,3 Mo de boîtes) ; les cas 2,4 Mo.
+
+## Le schéma d'un cas
 
 Un cas porte `type` (le code de `ref.document_types`) et `grille` (le code de
-`ref.grilles`). Sa vérité se clé par les champs de SA grille, relevée en base dans
-`grilles/<code>.json` (code du champ, concept, rôle, type, obligation, famille d'experts).
-Les 41 pièces qui ne sont pas des factures entreront dans `cas/` avec leur type et leur
-grille, la grille relevée par `relever-les-grilles.mjs <code>`.
+`ref.grilles`, ou `null`). Sa vérité se clé par les champs de SA grille, relevée en base
+dans `grilles/<code>.json` (code du champ, concept, rôle, type, obligation, famille
+d'experts). Le compositeur refuse toute clé — et toute clé de `confondus` — que la grille
+du cas ne porte pas, et toute valeur pour une pièce sans grille.
 
 - `synthetique`, `provenance`, `type`, `grille`, `langue`, `rendu` (`pdf`, `pdf_image`,
   `photo`, `scan`, `manuscrit`), `capture` (photo ou scan), `gabarit` (A à F),
@@ -86,9 +127,33 @@ grille, la grille relevée par `relever-les-grilles.mjs <code>`.
     est un succès.
 - `rendus/NNN.boites.json` : `champs` (boîte de chaque chemin imprimé), `concepts` (boîte
   de chaque champ de grille), `lignesImprimees`. Boîtes en fractions de la feuille (PDF)
-  ou de l'image (photo, scan, PDF-image).
+  ou de l'image (photo, scan, PDF-image). Pour une pièce, un champ imprimé en plusieurs
+  morceaux (les points d'un ordre du jour) a la boîte qui les couvre ; le tampon et la
+  signature vont au code de LEUR champ (`piece.marques` : `cachet_signature`,
+  `signature_gerant`, `employeur_signature_cachet`…).
 
-## La matrice produite
+### Les autres pièces, en plus
+
+- `mise_en_page` (gabarit G à K, style, police), `piece.blocs` (la page entière : en-tête,
+  titre, champs, tableau, texte d'acte, cases d'un formulaire, cadre, rouleau, signatures),
+  `piece.parties`, `piece.marques`, `piece.cheminsDuDossier`, `piece.souche`,
+  `piece.ratures` ;
+- `attendu.concepts` : seulement ce qui est imprimé, aux codes de la grille. Une occurrence
+  répétée (article, mouvement, résolution, associé, salarié, partie d'un contrat) est une
+  ligne de `lignes`, clé par les codes de la grille. Écritures normalisées : montants en
+  décimal à trois chiffres, dates ISO, date-heure `2026-10-14T17:42`, heure `10:00`,
+  période `2026-09-01/2026-09-30`, durée ISO (`P3Y`, `P12M`), clôture annuelle `--12-31`,
+  taux en pourcentage décimal (`"9.18"`, `"19"`), listes en tableaux, booléens `true`
+  quand la mention ou la marque est sur la page ; la TVA d'un ticket par taux
+  (`ventilation_tva: {"19": …}`), le reçu et le rendu d'un paiement en espèces
+  (`montant_recu_rendu: {recu, rendu}`) ;
+- `attendu.confondus` : la carte d'identification fiscale imprime le matricule en clair
+  (identifiant, clé, code TVA, catégorie, établissement s'y lisent) ; l'attestation
+  d'immatriculation l'imprime en cinq cases (le matricule complet s'y reconstitue) ;
+- `attendu.non_imprimes` : les champs de la grille absents de la page ; une pièce sans
+  grille n'en a aucun, et son issue juste est de ne RIEN extraire (zéro valeur fausse).
+
+## La matrice produite (les factures)
 
 | achats (100)                | PDF texte | PDF-image | scan JPEG | photo JPEG | total  |
 | --------------------------- | --------- | --------- | --------- | ---------- | ------ |
@@ -120,6 +185,83 @@ Lignes imprimées (lignes de texte distinctes, regroupées par ordonnée — deu
 côte comptent une) : gabarit A min 23, médiane 31, max 126 ; tout le jeu min 15, médiane
 23, max 126 ; 9 pages denses à 125 lignes ou plus (gabarit A, 20 à 25 articles et leurs
 numéros de série ; le corps descend par pas de 0,1 pt pour tenir l'A4, jamais sous 5 pt).
+
+## Les 41 autres pièces
+
+| cas | type                         | grille                         | mise en page | langue | rendu           | ALGORIA             |
+| --- | ---------------------------- | ------------------------------ | ------------ | ------ | --------------- | ------------------- |
+| 121 | pv_ago                       | pv_ago                         | H            | FR     | pdf             | la société          |
+| 122 | pv_age                       | pv_age                         | H-machine    | FR     | scan            | la société          |
+| 123 | statuts                      | statuts                        | H-machine    | FR     | pdf_image/scan  | la société          |
+| 124 | extrait_rne                  | extrait_rne                    | G-encadre    | FR/AR  | pdf             | la société          |
+| 125 | document_gouvernance         | decision_gerant                | H            | FR     | photo           | la société          |
+| 126 | avoir                        | avoir                          | G-encadre    | FR     | pdf             | cliente (reçu)      |
+| 127 | avoir                        | avoir                          | G-bande      | AR     | scan            | émettrice           |
+| 128 | bon_livraison                | bon_livraison                  | G-bande      | FR     | pdf             | destinataire        |
+| 129 | bon_livraison                | bon_livraison                  | J            | AR     | manuscrit/photo | destinataire        |
+| 130 | justificatif_paiement        | virement                       | G-encadre    | FR     | pdf             | donneur d'ordre     |
+| 131 | justificatif_paiement        | cheque                         | K            | FR     | manuscrit/photo | tireur              |
+| 132 | recu_de_paiement             | recu_quittance                 | J            | AR     | manuscrit/scan  | débiteur            |
+| 133 | recu_de_paiement             | recu_quittance                 | G-bande      | FR     | pdf             | débiteur            |
+| 134 | note_frais                   | note_frais                     | G-bande      | FR     | pdf             | employeur           |
+| 135 | note_frais                   | note_frais                     | J            | FR     | manuscrit/photo | employeur           |
+| 136 | releve_bancaire              | releve_bancaire                | G-encadre    | FR     | pdf             | titulaire           |
+| 137 | releve_bancaire              | releve_bancaire                | G-bande      | FR/AR  | scan            | titulaire           |
+| 138 | ticket_caisse                | ticket_caisse                  | I            | FR     | photo           | acheteuse (anonyme) |
+| 139 | ticket_caisse                | ticket_caisse                  | I            | AR     | pdf_image/scan  | acheteuse (anonyme) |
+| 140 | bulletin_paie                | bulletin_paie                  | G-encadre    | FR     | pdf             | employeur           |
+| 141 | bulletin_paie                | bulletin_paie                  | G-bande      | FR/AR  | scan            | employeur           |
+| 142 | declaration_tva              | declaration_mensuelle          | G-encadre    | FR     | pdf             | contribuable        |
+| 143 | declaration_tva              | declaration_mensuelle          | G-bande      | AR     | pdf_image/photo | contribuable        |
+| 144 | declaration_cnss             | declaration_cnss_trimestrielle | G-encadre    | FR     | pdf             | employeur           |
+| 145 | declaration_cnss             | declaration_cnss_trimestrielle | G-bande      | FR/AR  | scan            | employeur           |
+| 146 | declaration_impot            | declaration_annuelle_is_irpp   | G-encadre    | FR     | pdf             | contribuable        |
+| 147 | declaration_impot            | declaration_mensuelle          | G-bande      | FR     | scan            | contribuable        |
+| 148 | acompte_provisionnel         | acompte_provisionnel           | G-encadre    | FR     | pdf             | contribuable        |
+| 149 | acompte_provisionnel         | acompte_provisionnel           | G-bande      | AR     | photo           | contribuable        |
+| 150 | carte_identification_fiscale | carte_identification_fiscale   | K            | FR/AR  | photo           | contribuable        |
+| 151 | carte_identification_fiscale | carte_identification_fiscale   | G-encadre    | FR     | scan            | contribuable        |
+| 152 | document_fiscal_social       | certificat_retenue_source      | G-encadre    | FR     | pdf             | bénéficiaire        |
+| 153 | document_fiscal_social       | attestation_travail            | H            | AR     | scan            | employeur           |
+| 154 | contrat                      | contrat_commercial             | H            | FR     | pdf             | prestataire         |
+| 155 | contrat                      | contrat_cdi                    | H-machine    | FR     | scan            | employeur           |
+| 156 | bail                         | bail_commercial                | H            | FR     | pdf             | preneuse            |
+| 157 | bail                         | bail_commercial                | H            | AR     | scan            | preneuse            |
+| 158 | autre_document               | avis_echeance_assurance        | G-bande      | FR     | pdf             | souscriptrice       |
+| 159 | autre_document               | — (null)                       | H            | FR     | photo           | (citée)             |
+| 160 | non_comptable                | — (null)                       | G-bande      | FR     | photo           | —                   |
+| 161 | non_comptable                | — (null)                       | H            | AR     | scan            | —                   |
+
+**Du type à la grille.** La base relie chaque grille à un type (`ref.grilles.document_type`).
+Le jeu en suit le lien partout où il existe, et le dit quand il ne le suit pas :
+
+- `declaration_tva` : **aucune** grille en base ; la déclaration mensuelle tunisienne porte la
+  TVA, donc `declaration_mensuelle` (que la base relie à `declaration_impot`) ;
+- `document_gouvernance` : sept grilles en base ; `decision_gerant`, la plus proche d'une
+  décision de SARL (`pv_conseil_administration` vise une SA) ;
+- `justificatif_paiement` : `virement` et `cheque` parmi sept ; `document_fiscal_social` :
+  `certificat_retenue_source` et `attestation_travail` parmi onze ; `contrat` :
+  `contrat_commercial` et `contrat_cdi` parmi sept ; `declaration_impot` : les deux grilles
+  de la base ; `autre_document` : `avis_echeance_assurance` (une des treize grilles reliées)
+  pour l'un, aucune pour l'autre ;
+- `non_comptable` : aucune grille en base, `grille: null`.
+
+Les gabarits des pièces (`mises-en-page.mjs`) : **G** document de gestion imprimé (style
+`encadre` ou `bande`), **H** acte (police `machine` pour l'acte dactylographié), **I** ticket
+de caisse sur rouleau, **J** formulaire pré-imprimé rempli à la main (souche, numéro rouge,
+ratures, chiffres orientaux), **K** petite pièce posée seule (chèque, carte). Les deux pièces
+d'un même type ont deux mises en page différentes.
+
+**Les montants se répondent**, en millimes (`montants.mjs`) : l'avoir 126 reprend la facture
+050, l'avoir 127 la vente 107, le virement 130 règle la facture 041, le chèque 131 la 047,
+le certificat 152 retient sur la vente 103 ; le relevé d'octobre 136 porte ces paiements, le
+loyer de la quittance 133 (bail 156), les cotisations de la déclaration CNSS 144 et la
+déclaration 142 — solde initial + crédits − débits = solde final. Bulletins : brut − CNSS −
+IRPP = net (IRPP au barème relevé, annualisé, frais professionnels plafonnés) ; le brut de
+septembre du bulletin 141 est celui de la déclaration CNSS 144. TVA : collectée − déductible
+= à payer (142), ou − crédit à reporter (143). L'IS de 2025 (146) est la base des acomptes
+148 et 149. Toutes les dates des pièces sont de 2026 (sauf l'immatriculation de 2024, les
+entrées des salariés et l'exercice 2025 déclaré).
 
 ## Le gabarit A, d'après le ticket réel
 
@@ -187,3 +329,16 @@ thermique n'est produit dans cette étape.
   relue.
 - Les écritures attendues des ventes (705 / 706 / 707, repli au 701) et du FODEC : voir
   les INCERTAIN du jeu synthétique, qui les calcule de la même façon.
+- Pièces : les taux CNSS (9,18 % salarial, 16,57 % patronal, 25,75 % global) sont relevés en
+  base avec la confiance « a_confirmer » ; la contribution sociale de solidarité sur salaires
+  n'est pas appliquée (`CSS_PERSONNES` « non trouvé ») ; la réserve légale à 5 % (art. 287
+  CSC) et la majorité des trois quarts d'une AGE de SARL sont des choix du banc, non relevés
+  en base ; l'assiette de la retenue sur loyers (HT) n'a pas été relue.
+- La forme réelle d'une carte d'identification fiscale, d'un extrait du RNE et de la formule
+  de chèque (date de validité, plafond, code QR) n'a pas été relue : les pages suivent les
+  champs des grilles. L'identifiant unique du RNE est pris pour les huit premiers caractères
+  du matricule.
+- Titres : « BON DE LIVRAISON » (128) est rangé en rejet par `ref.titres_de_piece`, et c'est
+  l'issue juste ; « AVOIR » et « إشعار دائن » en anomalie (avoir), l'issue attendue. « وصل
+  تسليم » (129) n'est couvert par aucun motif (ils sont français) : l'issue que le banc en
+  tirera n'est pas tranchée.

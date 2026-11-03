@@ -1,0 +1,472 @@
+{
+  "id": "140",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "bulletin_paie",
+  "grille": "bulletin_paie",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-encadre",
+  "scenario": "paie_avec_charges",
+  "realisme": [],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Bulletin de paie",
+    "parties": [
+      {
+        "role": "employeur",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "salarie",
+        "nom": "Mehdi Varnasse",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "employeur",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "salarie",
+      "nom": "Mehdi Varnasse",
+      "matricule": null,
+      "est": "tiers"
+    },
+    "style": "encadre",
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "employeur_raison_sociale",
+              "cls": "gros"
+            }
+          ],
+          [
+            {
+              "c": "employeur_adresse"
+            }
+          ],
+          [
+            "MF : ",
+            {
+              "c": "employeur_matricule_fiscal"
+            }
+          ],
+          [
+            "N° employeur CNSS : ",
+            {
+              "c": "employeur_numero_cnss"
+            }
+          ]
+        ],
+        "droite": [
+          [
+            {
+              "t": "BULLETIN DE PAIE",
+              "cls": "gros"
+            }
+          ],
+          [
+            "Période : ",
+            {
+              "c": "periode_paie"
+            }
+          ],
+          [
+            "Payé le ",
+            {
+              "c": "date_paiement"
+            },
+            " par ",
+            {
+              "c": "mode_paiement"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Nom et prénom :",
+            {
+              "c": "salarie_nom_prenom"
+            }
+          ],
+          [
+            "Matricule :",
+            {
+              "c": "salarie_matricule_interne"
+            }
+          ],
+          [
+            "N° CNSS :",
+            {
+              "c": "salarie_matricule_cnss"
+            }
+          ],
+          [
+            "Emploi :",
+            {
+              "c": "emploi_poste"
+            }
+          ],
+          [
+            "Catégorie :",
+            {
+              "c": "categorie_echelon"
+            }
+          ],
+          [
+            "Entrée le :",
+            {
+              "c": "date_entree"
+            }
+          ],
+          [
+            "Situation :",
+            {
+              "c": "salarie_situation_familiale"
+            }
+          ],
+          [
+            "Contrat :",
+            {
+              "c": "type_contrat"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Rubrique",
+          "Base",
+          "Taux",
+          "À payer",
+          "À retenir"
+        ],
+        "nombres": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "lignes": [
+          [
+            "Salaire de base",
+            "",
+            "",
+            {
+              "c": "salaire_base"
+            },
+            ""
+          ],
+          [
+            "Indemnité de transport",
+            "",
+            "",
+            {
+              "c": "indemnite_transport"
+            },
+            ""
+          ],
+          [
+            "Indemnité de présence",
+            "",
+            "",
+            {
+              "c": "indemnite_presence"
+            },
+            ""
+          ],
+          [
+            {
+              "t": "SALAIRE BRUT",
+              "cls": ""
+            },
+            "",
+            "",
+            {
+              "c": "salaire_brut"
+            },
+            ""
+          ],
+          [
+            "Cotisation CNSS",
+            {
+              "c": "assiette_cnss"
+            },
+            {
+              "c": "taux_cnss_salarie"
+            },
+            "",
+            {
+              "c": "retenue_cnss_salarie"
+            }
+          ],
+          [
+            "Salaire imposable",
+            "",
+            "",
+            {
+              "c": "salaire_imposable"
+            },
+            ""
+          ],
+          [
+            "Retenue IRPP",
+            {
+              "c": "base_annualisee"
+            },
+            "barème",
+            "",
+            {
+              "c": "retenue_irpp"
+            }
+          ]
+        ],
+        "pied": [
+          [
+            "NET À PAYER",
+            {
+              "c": "net_a_payer"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Arrêté le présent bulletin à la somme nette de ",
+          {
+            "c": "net_en_lettres"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Charges patronales"
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "CNSS patronale :",
+            {
+              "c": "cnss_patronale"
+            }
+          ],
+          [
+            "TFP :",
+            {
+              "c": "tfp"
+            }
+          ],
+          [
+            "FOPROLOS :",
+            {
+              "c": "foprolos"
+            }
+          ],
+          [
+            "Coût total employeur :",
+            {
+              "c": "cout_total_employeur"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "petit",
+        "morceaux": [
+          {
+            "c": "mention_conservation"
+          }
+        ]
+      }
+    ],
+    "imprime": {
+      "employeur_raison_sociale": "ALGORIA FACTORY SARL",
+      "employeur_adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "employeur_matricule_fiscal": "1958330V/A/M/000",
+      "employeur_numero_cnss": "99418273-06",
+      "periode_paie": "Octobre 2026",
+      "date_paiement": "31/10/2026",
+      "mode_paiement": "virement",
+      "salarie_nom_prenom": "Mehdi Varnasse",
+      "salarie_matricule_interne": "ALG-0017",
+      "salarie_matricule_cnss": "99311615-30",
+      "emploi_poste": "Ingénieur données",
+      "categorie_echelon": "Cadre — échelon 4",
+      "date_entree": "02/09/2024",
+      "salarie_situation_familiale": "Célibataire",
+      "type_contrat": "CDI",
+      "salaire_base": "4 063,000",
+      "indemnite_transport": "89,000",
+      "indemnite_presence": "48,000",
+      "salaire_brut": "4 200,000",
+      "assiette_cnss": "4 200,000",
+      "taux_cnss_salarie": "9,18 %",
+      "retenue_cnss_salarie": "385,560",
+      "salaire_imposable": "3 814,440",
+      "base_annualisee": "43 773,280",
+      "retenue_irpp": "909,032",
+      "net_a_payer": "2 905,408",
+      "net_en_lettres": "deux mille neuf cent cinq dinars et quatre cent huit millimes",
+      "cnss_patronale": "695,940",
+      "tfp": "84,000",
+      "foprolos": "42,000",
+      "cout_total_employeur": "5 021,940",
+      "mention_conservation": "Dans votre intérêt, conservez ce bulletin sans limitation de durée."
+    },
+    "versConcept": {
+      "employeur_raison_sociale": "employeur_raison_sociale",
+      "employeur_adresse": "employeur_adresse",
+      "employeur_matricule_fiscal": "employeur_matricule_fiscal",
+      "employeur_numero_cnss": "employeur_numero_cnss",
+      "periode_paie": "periode_paie",
+      "date_paiement": "date_paiement",
+      "mode_paiement": "mode_paiement",
+      "salarie_nom_prenom": "salarie_nom_prenom",
+      "salarie_matricule_interne": "salarie_matricule_interne",
+      "salarie_matricule_cnss": "salarie_matricule_cnss",
+      "emploi_poste": "emploi_poste",
+      "categorie_echelon": "categorie_echelon",
+      "date_entree": "date_entree",
+      "salarie_situation_familiale": "salarie_situation_familiale",
+      "type_contrat": "type_contrat",
+      "salaire_base": "salaire_base",
+      "indemnite_transport": "indemnite_transport",
+      "indemnite_presence": "indemnite_presence",
+      "salaire_brut": "salaire_brut",
+      "assiette_cnss": "assiette_cnss",
+      "taux_cnss_salarie": "taux_cnss_salarie",
+      "retenue_cnss_salarie": "retenue_cnss_salarie",
+      "salaire_imposable": "salaire_imposable",
+      "base_annualisee": "base_annualisee",
+      "retenue_irpp": "retenue_irpp",
+      "net_a_payer": "net_a_payer",
+      "net_en_lettres": "net_en_lettres",
+      "cnss_patronale": "cnss_patronale",
+      "tfp": "tfp",
+      "foprolos": "foprolos",
+      "cout_total_employeur": "cout_total_employeur",
+      "mention_conservation": "mention_conservation"
+    },
+    "marques": {},
+    "cheminsDuDossier": [
+      "employeur_matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 1344348218,
+  "attendu": {
+    "concepts": {
+      "employeur_raison_sociale": "ALGORIA FACTORY SARL",
+      "employeur_adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "employeur_matricule_fiscal": "1958330V/A/M/000",
+      "employeur_numero_cnss": "99418273-06",
+      "periode_paie": "2026-10-01/2026-10-31",
+      "date_paiement": "2026-10-31",
+      "mode_paiement": "virement",
+      "salarie_nom_prenom": "Mehdi Varnasse",
+      "salarie_matricule_interne": "ALG-0017",
+      "salarie_matricule_cnss": "99311615-30",
+      "emploi_poste": "Ingénieur données",
+      "categorie_echelon": "Cadre — échelon 4",
+      "date_entree": "2024-09-02",
+      "salarie_situation_familiale": "célibataire",
+      "type_contrat": "CDI",
+      "salaire_base": "4063.000",
+      "indemnite_transport": "89.000",
+      "indemnite_presence": "48.000",
+      "salaire_brut": "4200.000",
+      "assiette_cnss": "4200.000",
+      "taux_cnss_salarie": "9.18",
+      "retenue_cnss_salarie": "385.560",
+      "salaire_imposable": "3814.440",
+      "base_annualisee": "43773.280",
+      "retenue_irpp": "909.032",
+      "net_a_payer": "2905.408",
+      "net_en_lettres": "deux mille neuf cent cinq dinars et quatre cent huit millimes",
+      "cnss_patronale": "695.940",
+      "tfp": "84.000",
+      "foprolos": "42.000",
+      "cout_total_employeur": "5021.940",
+      "mention_conservation": "Dans votre intérêt, conservez ce bulletin sans limitation de durée."
+    },
+    "confondus": {},
+    "notes": [
+      "Net = brut − CNSS salariale − IRPP. IRPP : (imposable × 12 − frais professionnels plafonnés) au barème relevé, divisé par 12 et arrondi au millime. Coût employeur = brut + CNSS patronale + TFP + FOPROLOS.",
+      "INCERTAIN — les taux CNSS (9,18 % salarial, 16,57 % patronal) sont relevés en base avec la confiance « a_confirmer » ; la contribution sociale de solidarité sur salaires n'est pas appliquée (CSS_PERSONNES « non trouvé » en base). Aucune déduction pour charge de famille (salarié célibataire)."
+    ],
+    "non_imprimes": [
+      "absences",
+      "accident_travail",
+      "anciennete",
+      "assurance_groupe_salarie",
+      "autres_primes_indemnites",
+      "autres_retenues_liste",
+      "avance_sur_salaire",
+      "avantages_en_nature",
+      "banque_salarie",
+      "conges_payes_pris",
+      "convention_collective",
+      "cotisation_fpe_salarie",
+      "cotisation_syndicale",
+      "css_salarie",
+      "cumuls_annuels",
+      "employeur_activite",
+      "employeur_rne",
+      "employeur_signature_cachet",
+      "employeur_telephone_email",
+      "foprolos_salarie",
+      "heures_normales",
+      "heures_supplementaires",
+      "jours_feries_payes",
+      "jours_travailles",
+      "pret_employeur",
+      "prime_anciennete",
+      "prime_rendement",
+      "regime_horaire",
+      "retraite_complementaire_salarie",
+      "saisie_cession",
+      "salarie_adresse",
+      "salarie_cin",
+      "salarie_date_naissance",
+      "salarie_nationalite",
+      "signature_salarie",
+      "solde_conges",
+      "taux_horaire_ou_journalier",
+      "total_retenues"
+    ]
+  }
+}

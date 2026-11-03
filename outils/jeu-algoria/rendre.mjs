@@ -2,7 +2,7 @@
  * Rendre le jeu d'ALGORIA : chaque cas en PDF, en PDF-image, en photo ou en
  * scan — et la boîte de chaque champ sur la page.
  *
- *   node outils/jeu-algoria/rendre.mjs            (les 120 cas)
+ *   node outils/jeu-algoria/rendre.mjs            (les 161 cas)
  *   node outils/jeu-algoria/rendre.mjs 001 042    (quelques-uns)
  *
  * ================================================================== LES SORTIES
@@ -32,6 +32,7 @@ import { chromium } from "playwright";
 import { boites, pdfFige } from "../jeu-synthetique/page.mjs";
 
 import { page as pageDuCas } from "./gabarits.mjs";
+import { pagePiece } from "./mises-en-page.mjs";
 import { placerLesMarques, prisDeVue, surLePapier } from "./realisme.mjs";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
@@ -96,7 +97,8 @@ try {
       deviceScaleFactor: image ? (dense ? 2 : 1.5) : 1,
     });
     const page = await contexte.newPage();
-    let feuille = surLePapier(cas, pageDuCas(cas));
+    // Une facture a son gabarit (A à F) ; une autre pièce porte ses blocs (G à K).
+    let feuille = surLePapier(cas, cas.piece.blocs ? pagePiece(cas) : pageDuCas(cas));
 
     // La page à plat d'abord : ses lignes, son débordement, et le PDF de logiciel.
     await poser(page, feuille);
@@ -158,11 +160,31 @@ try {
     const manquants = Object.keys(cas.piece.imprime).filter((c) => !(c in champs));
     if (manquants.length > 0)
       throw new Error(`${cas.id} : champs non posés sur la page — ${manquants.join(", ")}`);
+    // La boîte qui couvre deux boîtes : un champ imprimé en plusieurs morceaux
+    // (les points d'un ordre du jour), ou le cachet et la signature d'un seul champ.
+    // Une facture garde la boîte de son dernier chemin (une TVA imprimée deux fois
+    // à un seul taux : celle du tableau par taux), comme ses rendus déjà publiés.
+    const union = (a, b) =>
+      a
+        ? {
+            x0: Math.min(a.x0, b.x0),
+            y0: Math.min(a.y0, b.y0),
+            x1: Math.max(a.x1, b.x1),
+            y1: Math.max(a.y1, b.y1),
+          }
+        : b;
     const concepts = {};
     for (const [chemin, concept] of Object.entries(cas.piece.versConcept))
-      concepts[concept] = champs[chemin];
-    for (const marque of ["cachet_emetteur", "signature_emetteur"])
-      if (champs[marque]) concepts[marque] = champs[marque];
+      concepts[concept] = cas.piece.blocs
+        ? union(concepts[concept], champs[chemin])
+        : champs[chemin];
+    // Le tampon et la signature, au code de LEUR champ dans la grille du cas.
+    const marques = cas.piece.marques ?? {
+      cachet_emetteur: "cachet_emetteur",
+      signature_emetteur: "signature_emetteur",
+    };
+    for (const [marque, code] of Object.entries(marques))
+      if (champs[marque]) concepts[code] = union(concepts[code], champs[marque]);
     writeFileSync(
       join(SORTIE, `${cas.id}.boites.json`),
       `${JSON.stringify({ page: 1, lignesImprimees, champs, concepts }, null, 1)}\n`,

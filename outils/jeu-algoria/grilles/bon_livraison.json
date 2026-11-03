@@ -1,0 +1,211 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "bon_livraison",
+    "nom": "Bon de livraison (et bon de sortie)",
+    "typeDeDocument": "bon_livraison",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "adresse_destinataire",
+      "concept": "adresse",
+      "role": "destinataire",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "Destinataire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "adresse_expediteur",
+      "concept": "adresse",
+      "role": "emetteur",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "Expéditeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "date_bl",
+      "concept": "date_piece",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Références",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "designation",
+      "concept": "designation",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Lignes",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "immatriculation_vehicule",
+      "concept": "numero_immatriculation",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Transport",
+      "expert": "identifiant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "matricule_fiscal_destinataire",
+      "concept": "matricule_fiscal",
+      "role": "destinataire",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Destinataire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "matricule_fiscal_expediteur",
+      "concept": "matricule_fiscal",
+      "role": "emetteur",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Expéditeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "nom_destinataire",
+      "concept": "raison_sociale",
+      "role": "destinataire",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Destinataire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "nom_expediteur",
+      "concept": "raison_sociale",
+      "role": "emetteur",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Expéditeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "numero_bl",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "numero_lot_serie",
+      "concept": "numero_lot_serie",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Lignes",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "prix_ht",
+      "concept": "prix_unitaire_ht",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "quantite_livree",
+      "concept": "quantite_livree",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_commande",
+      "concept": "ref_bon_commande",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_facture",
+      "concept": "ref_facture",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_facture_electronique_transport",
+      "concept": "ref_ttn",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signature_cachet_receptionnaire",
+      "concept": "signature_cachet",
+      "role": "destinataire",
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Signature et cachet",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "signature_livreur",
+      "concept": "signature_cachet",
+      "role": "emetteur",
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Signature et cachet",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "transporteur_chauffeur",
+      "concept": "transporteur_chauffeur",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Transport",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "unite",
+      "concept": "unite",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Lignes",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    }
+  ]
+}

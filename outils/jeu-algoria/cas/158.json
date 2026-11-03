@@ -1,0 +1,260 @@
+{
+  "id": "158",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "autre_document",
+  "grille": "avis_echeance_assurance",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-bande",
+  "scenario": "avis_echeance",
+  "realisme": [],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Avis d'échéance",
+    "parties": [
+      {
+        "role": "assureur",
+        "nom": "Mutuelle Ervaline d'Assurances",
+        "matricule": null,
+        "est": "tiers"
+      },
+      {
+        "role": "souscripteur",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "assureur",
+      "nom": "Mutuelle Ervaline d'Assurances",
+      "matricule": null,
+      "est": "tiers"
+    },
+    "client": {
+      "role": "souscripteur",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": "bande",
+    "police": null,
+    "couleur": "#0b5aa6",
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "assureur",
+              "cls": "gros"
+            }
+          ],
+          [
+            "Immeuble Orvane, rue du Lac Morvane, 1053 Les Berges du Lac"
+          ]
+        ],
+        "droite": [
+          [
+            {
+              "c": "souscripteur"
+            }
+          ],
+          [
+            "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis"
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "AVIS D'ÉCHÉANCE N° ",
+          {
+            "c": "numero_avis"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Police n° :",
+            {
+              "c": "numero_police"
+            }
+          ],
+          [
+            "Risque :",
+            {
+              "c": "risque_concerne"
+            }
+          ],
+          [
+            "Période couverte :",
+            {
+              "c": "periode_couverte"
+            }
+          ],
+          [
+            "Échéance :",
+            {
+              "c": "date_echeance"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Décompte",
+          "Montant (DT)"
+        ],
+        "nombres": [
+          1
+        ],
+        "lignes": [
+          [
+            "Prime nette",
+            {
+              "c": "prime_nette"
+            }
+          ],
+          [
+            "Accessoires",
+            {
+              "c": "accessoires"
+            }
+          ],
+          [
+            "Taxes",
+            {
+              "c": "taxes"
+            }
+          ]
+        ],
+        "pied": [
+          [
+            "Total à payer",
+            {
+              "c": "montant_ttc"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "À régler au plus tard le ",
+          {
+            "c": "date_limite_paiement"
+          },
+          " — ",
+          {
+            "c": "modes_paiement.0"
+          },
+          ", ",
+          {
+            "c": "modes_paiement.1"
+          },
+          ", ",
+          {
+            "c": "modes_paiement.2"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "petit",
+        "morceaux": [
+          {
+            "c": "mention_non_paiement"
+          }
+        ]
+      }
+    ],
+    "imprime": {
+      "assureur": "Mutuelle Ervaline d'Assurances",
+      "souscripteur": "ALGORIA FACTORY SARL",
+      "numero_avis": "AE-26-743691",
+      "numero_police": "MRB-66039",
+      "risque_concerne": "Multirisque bureaux — 14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "periode_couverte": "du 01/12/2026 au 30/11/2027",
+      "date_echeance": "01/12/2026",
+      "prime_nette": "1 777,849",
+      "accessoires": "32,000",
+      "taxes": "163,903",
+      "montant_ttc": "1 973,752",
+      "date_limite_paiement": "10/12/2026",
+      "modes_paiement.0": "chèque",
+      "modes_paiement.1": "virement",
+      "modes_paiement.2": "espèces en agence",
+      "mention_non_paiement": "À défaut de paiement dans les dix jours de l'échéance, la garantie est suspendue trente jours après mise en demeure."
+    },
+    "versConcept": {
+      "assureur": "assureur",
+      "souscripteur": "souscripteur",
+      "numero_avis": "numero_avis",
+      "numero_police": "numero_police",
+      "risque_concerne": "risque_concerne",
+      "periode_couverte": "periode_couverte",
+      "date_echeance": "date_echeance",
+      "prime_nette": "prime_nette",
+      "accessoires": "accessoires",
+      "taxes": "taxes",
+      "montant_ttc": "montant_ttc",
+      "date_limite_paiement": "date_limite_paiement",
+      "modes_paiement.0": "modes_paiement",
+      "modes_paiement.1": "modes_paiement",
+      "modes_paiement.2": "modes_paiement",
+      "mention_non_paiement": "mention_non_paiement"
+    },
+    "marques": {},
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 2098889229,
+  "attendu": {
+    "concepts": {
+      "assureur": "Mutuelle Ervaline d'Assurances",
+      "souscripteur": "ALGORIA FACTORY SARL",
+      "numero_avis": "AE-26-743691",
+      "numero_police": "MRB-66039",
+      "risque_concerne": "Multirisque bureaux — 14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "periode_couverte": "2026-12-01/2027-11-30",
+      "date_echeance": "2026-12-01",
+      "prime_nette": "1777.849",
+      "accessoires": "32.000",
+      "taxes": "163.903",
+      "montant_ttc": "1973.752",
+      "date_limite_paiement": "2026-12-10",
+      "modes_paiement": [
+        "chèque",
+        "virement",
+        "espèces en agence"
+      ],
+      "mention_non_paiement": "À défaut de paiement dans les dix jours de l'échéance, la garantie est suspendue trente jours après mise en demeure."
+    },
+    "confondus": {},
+    "notes": [
+      "Type « autre_document » lu par la grille « avis_echeance_assurance », que la base relie à ce type. Total = prime nette + accessoires + taxes. La période couverte déborde sur 2027 : c'est l'année d'assurance."
+    ],
+    "non_imprimes": [
+      "statut_paiement"
+    ]
+  }
+}

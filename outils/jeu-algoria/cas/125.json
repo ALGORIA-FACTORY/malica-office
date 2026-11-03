@@ -1,0 +1,203 @@
+{
+  "id": "125",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "document_gouvernance",
+  "grille": "decision_gerant",
+  "langue": "fr",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "H",
+  "mise_en_page": "H",
+  "scenario": "document_gouvernance",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Décision du gérant",
+    "parties": [
+      {
+        "role": "entreprise",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "dirigeant",
+        "nom": "Nadhem Ourvani",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "entreprise",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "dirigeant",
+      "nom": "Nadhem Ourvani",
+      "matricule": null,
+      "est": "tiers"
+    },
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+        "telephone": "00 71 940 517",
+        "est": "dossier"
+      },
+      "code": null
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "denomination",
+              "cls": "gros"
+            }
+          ],
+          [
+            "SARL au capital de 50 000 DT"
+          ],
+          [
+            "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis"
+          ]
+        ],
+        "droite": [
+          [
+            "Tunis, le ",
+            {
+              "c": "date_decision"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "DÉCISION DU GÉRANT N° 2026-07"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Le soussigné, M. ",
+          {
+            "c": "gerant"
+          },
+          ", agissant en qualité de gérant de la société, ",
+          {
+            "c": "fondement_pouvoir"
+          },
+          ","
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "centre gras",
+        "morceaux": [
+          "DÉCIDE"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Objet : ",
+          {
+            "c": "objet"
+          },
+          {
+            "br": true
+          },
+          {
+            "c": "texte"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "ratification_requise"
+          }
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": [
+          "Le Gérant",
+          {
+            "br": true
+          },
+          "Nadhem Ourvani"
+        ]
+      }
+    ],
+    "imprime": {
+      "denomination": "ALGORIA FACTORY SARL",
+      "date_decision": "2 octobre 2026",
+      "gerant": "Nadhem Ourvani",
+      "fondement_pouvoir": "en vertu des pouvoirs qu'il tient de l'article 14 des statuts",
+      "objet": "Ouverture d'un établissement secondaire",
+      "texte": "L'ouverture d'un dépôt de matériel informatique, établissement secondaire de la société, à la zone industrielle de Boudiane, lot 31, 3064 Sfax, à compter du 1er novembre 2026. Le gérant est chargé des formalités d'inscription au Registre national des entreprises et auprès de l'administration fiscale.",
+      "ratification_requise": "La présente décision sera soumise à la ratification de la prochaine assemblée générale ordinaire."
+    },
+    "versConcept": {
+      "denomination": "denomination",
+      "date_decision": "date_decision",
+      "gerant": "gerant",
+      "fondement_pouvoir": "fondement_pouvoir",
+      "objet": "objet",
+      "texte": "texte",
+      "ratification_requise": "ratification_requise"
+    },
+    "marques": {
+      "signature_emetteur": "signature_gerant"
+    },
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 1593128915,
+  "attendu": {
+    "concepts": {
+      "denomination": "ALGORIA FACTORY SARL",
+      "date_decision": "2026-10-02",
+      "gerant": "Nadhem Ourvani",
+      "fondement_pouvoir": "article 14 des statuts",
+      "objet": "ouverture d'un établissement secondaire",
+      "texte": "L'ouverture d'un dépôt de matériel informatique, établissement secondaire de la société, à la zone industrielle de Boudiane, lot 31, 3064 Sfax, à compter du 1er novembre 2026. Le gérant est chargé des formalités d'inscription au Registre national des entreprises et auprès de l'administration fiscale.",
+      "ratification_requise": true,
+      "signature_gerant": true
+    },
+    "confondus": {},
+    "notes": [],
+    "non_imprimes": []
+  }
+}

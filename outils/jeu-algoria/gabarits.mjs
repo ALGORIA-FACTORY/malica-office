@@ -31,7 +31,7 @@ export const POLICES_EN_PLUS = `
 `;
 
 /** Une valeur imprimée, dans une boîte mesurée. */
-function champ(p, chemin, { classe = "", style = "" } = {}) {
+export function champ(p, chemin, { classe = "", style = "" } = {}) {
   const texte = p.imprime[chemin];
   if (texte === undefined) return "";
   // Des chiffres orientaux seuls (matricule, date, montant) se lisent de gauche à droite.
@@ -152,6 +152,29 @@ ${p.enLettres ? `<div class="arretee">Arrêtée la présente pièce à la somme 
 
 /* ============================================================ E, F — carnet */
 
+/**
+ * La main qui écrit une valeur : police manuscrite, ligne de base et
+ * inclinaison irrégulières (tirées de `h`), et la valeur barrée d'une rature
+ * écrite juste avant. `m` : la première main (`m1`) ou la seconde (`m2`).
+ */
+export function uneMain(p, h) {
+  return (chemin, m) => {
+    const jitter = `transform:translateY(${((h() - 0.5) * 4).toFixed(1)}px) rotate(${((h() - 0.5) * 3).toFixed(1)}deg)`;
+    const barre = (p.ratures ?? []).find((r) => r.chemin === chemin);
+    const avant = barre
+      ? `<span class="main ${m} rature" style="display:inline-block">${echapper(barre.barre)}</span> `
+      : "";
+    return `${avant}${champ(p, chemin, { classe: `main ${m}`, style: `display:inline-block;${jitter}` })}`;
+  };
+}
+
+/** Les deux mains et la rature, en CSS : l'encre de la première main est celle du cas. */
+export const cssDeLaMain = (ar, encre) =>
+  `.main { font-family: ${ar ? '"MainArabe", "Main"' : '"Main", "MainArabe"'}; font-size: ${ar ? "1.45em" : "1.65em"}; color: ${encre}; text-shadow: 0 0 0.6px ${encre}, 0.4px 0.3px 0.9px rgba(30,30,90,0.45); }
+.main.m2 { font-family: ${ar ? '"MainArabe2", "Main2"' : '"Main2", "MainArabe2"'}; color: #1b1b1f; transform: skewX(-12deg); letter-spacing: -0.3px; }
+.rature { text-decoration: line-through; text-decoration-thickness: 2px; opacity: 0.85; }
+`;
+
 const CARNET = {
   fr: {
     facture: "FACTURE N°",
@@ -213,14 +236,8 @@ function pageCarnet(cas) {
   // Deux écritures : celle du cas, et l'autre pour les totaux d'un carnet à deux mains.
   const main = cas.graineDuRendu % 2 === 0 ? "m1" : "m2";
   const autre = cas.realisme.includes("deux_ecritures") ? (main === "m1" ? "m2" : "m1") : main;
-  const ecrit = (chemin, m = main) => {
-    const jitter = `transform:translateY(${((h() - 0.5) * 4).toFixed(1)}px) rotate(${((h() - 0.5) * 3).toFixed(1)}deg)`;
-    const barre = p.ratures.find((r) => r.chemin === chemin);
-    const avant = barre
-      ? `<span class="main ${m} rature" style="display:inline-block">${echapper(barre.barre)}</span> `
-      : "";
-    return `${avant}${champ(p, chemin, { classe: `main ${m}`, style: `display:inline-block;${jitter}` })}`;
-  };
+  const ecrire = uneMain(p, h);
+  const ecrit = (chemin, m = main) => ecrire(chemin, m);
   const lignes = p.articles
     .map(
       (
@@ -288,10 +305,7 @@ table.pied td { text-align: end; padding: 0.6mm 2mm; min-width: 35mm; border-bot
 table.pied tr.ttc th { font-weight: 700; }
 .lettres { margin-top: 2mm; }
 .signature { margin-top: 3mm; margin-inline-start: auto; width: 70mm; height: 22mm; text-align: center; font-size: 9pt; }
-.main { font-family: ${ar ? '"MainArabe", "Main"' : '"Main", "MainArabe"'}; font-size: ${ar ? "1.45em" : "1.65em"}; color: ${encre}; text-shadow: 0 0 0.6px ${encre}, 0.4px 0.3px 0.9px rgba(30,30,90,0.45); }
-.main.m2 { font-family: ${ar ? '"MainArabe2", "Main2"' : '"Main2", "MainArabe2"'}; color: #1b1b1f; transform: skewX(-12deg); letter-spacing: -0.3px; }
-.rature { text-decoration: line-through; text-decoration-thickness: 2px; opacity: 0.85; }
-</style></head><body><div class="feuille">
+${cssDeLaMain(ar, encre)}</style></head><body><div class="feuille">
 <div class="souche"><div>${L.souche}</div><div class="no">N° <span dir="ltr">${echapper(p.imprime["references.numero"])}</span></div></div>
 <div class="preimprime">
   <div class="nom">${champ(p, "issuer")}</div>

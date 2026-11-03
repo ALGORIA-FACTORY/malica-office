@@ -1,0 +1,661 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "releve_bancaire",
+    "nom": "Relevé de compte bancaire (et relevé de compte courant postal CCP)",
+    "typeDeDocument": "releve_bancaire",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "arrete_periode",
+      "concept": "periode_arrete_agios",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "selon_cas",
+      "parcelle": "Arrêté d'intérêts, frais et taxes",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "autorisation_decouvert",
+      "concept": "autorisation_decouvert",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "banque_agence_adresse",
+      "concept": "adresse",
+      "role": "banque",
+      "type": "adresse",
+      "obligatoire": "non",
+      "parcelle": "En-tête banque",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "banque_agence_code",
+      "concept": "code_agence",
+      "role": "banque",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "En-tête banque",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "banque_agence_nom",
+      "concept": "nom_agence",
+      "role": "banque",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "En-tête banque",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "banque_agence_telephone",
+      "concept": "telephone_email",
+      "role": "banque",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "En-tête banque",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "banque_bic",
+      "concept": "bic",
+      "role": "banque",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "En-tête banque",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "banque_code",
+      "concept": "code_banque",
+      "role": "banque",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "En-tête banque",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "banque_matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "banque",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "En-tête banque",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "banque_nom",
+      "concept": "nom_banque",
+      "role": "banque",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "En-tête banque",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "canal",
+      "concept": "canal",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Identification du relevé",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "commission_plus_fort_decouvert",
+      "concept": "commission_plus_fort_decouvert",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Arrêté d'intérêts, frais et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "compte_cle_rib",
+      "concept": "cle_rib",
+      "role": "titulaire_compte",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Compte et titulaire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "compte_devise",
+      "concept": "compte_devise",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Compte et titulaire",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "compte_iban",
+      "concept": "iban",
+      "role": "titulaire_compte",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Compte et titulaire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "compte_numero",
+      "concept": "numero_compte",
+      "role": "titulaire_compte",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "Compte et titulaire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "compte_rib",
+      "concept": "rib",
+      "role": "titulaire_compte",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Compte et titulaire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "compte_titulaire_adresse",
+      "concept": "adresse",
+      "role": "titulaire_compte",
+      "type": "adresse",
+      "obligatoire": "non",
+      "parcelle": "Compte et titulaire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "compte_titulaire_id_client",
+      "concept": "identifiant_client",
+      "role": "titulaire_compte",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Compte et titulaire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "compte_titulaire_matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "titulaire_compte",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Compte et titulaire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "compte_titulaire_nom",
+      "concept": "raison_sociale",
+      "role": "titulaire_compte",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Compte et titulaire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "compte_type",
+      "concept": "compte_type",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Compte et titulaire",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_edition",
+      "concept": "date_piece",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Identification du relevé",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "interets_crediteurs",
+      "concept": "interets_crediteurs",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Arrêté d'intérêts, frais et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "interets_debiteurs",
+      "concept": "interets_debiteurs",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Arrêté d'intérêts, frais et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_code_operation",
+      "concept": "ligne_code_operation",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_contrepartie_rib",
+      "concept": "rib",
+      "role": "contrepartie",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "ligne_cours_change",
+      "concept": "cours_change",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_credit",
+      "concept": "ligne_credit",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_date_operation",
+      "concept": "date_operation",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_date_valeur",
+      "concept": "date_valeur",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_debit",
+      "concept": "ligne_debit",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_devise_origine",
+      "concept": "ligne_devise_origine",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_libelle",
+      "concept": "ligne_libelle",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_libelle_complementaire",
+      "concept": "ligne_libelle_complementaire",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_lien_piece",
+      "concept": "ref_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_numero_cheque",
+      "concept": "ref_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_reference",
+      "concept": "ref_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_sens",
+      "concept": "ligne_sens",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_solde_apres",
+      "concept": "ligne_solde_apres",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Lignes d'opérations (une par mouvement)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mention_reclamation",
+      "concept": "mention_reclamation",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Mentions de pied",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mention_sbf",
+      "concept": "mention_sbf",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Mentions de pied",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mentions_legales_banque",
+      "concept": "mentions_legales_banque",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Mentions de pied",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nombre_operations",
+      "concept": "nombre_operations",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nombres_debiteurs",
+      "concept": "nombres_debiteurs",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "Arrêté d'intérêts, frais et taxes",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periode_debut",
+      "concept": "date_debut",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Identification du relevé",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periode_fin",
+      "concept": "date_fin",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Identification du relevé",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "recap_annuel_commissions",
+      "concept": "recap_annuel_commissions",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Arrêté d'intérêts, frais et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "releve_numero",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Identification du relevé",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "releve_page",
+      "concept": "releve_page",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Identification du relevé",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "retenue_source_interets",
+      "concept": "retenue_source",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Arrêté d'intérêts, frais et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "solde_disponible",
+      "concept": "solde_disponible",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "solde_en_lettres",
+      "concept": "montant_en_lettres",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "solde_en_valeur",
+      "concept": "solde_en_valeur",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "solde_final",
+      "concept": "solde_final",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "solde_final_date",
+      "concept": "solde_final_date",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "solde_final_sens",
+      "concept": "solde_final_sens",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "solde_initial",
+      "concept": "solde_initial",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "solde_initial_date",
+      "concept": "solde_initial_date",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "solde_initial_sens",
+      "concept": "solde_initial_sens",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "solde_intermediaire",
+      "concept": "solde_intermediaire",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "taux_debiteur",
+      "concept": "taux_debiteur",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "selon_cas",
+      "parcelle": "Arrêté d'intérêts, frais et taxes",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_credits",
+      "concept": "total_credits",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_debits",
+      "concept": "total_debits",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Soldes (absents de la table Malica actuelle — à créer)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_sur_commissions",
+      "concept": "montant_tva",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Arrêté d'intérêts, frais et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    }
+  ]
+}

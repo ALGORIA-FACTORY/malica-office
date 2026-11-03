@@ -1,0 +1,298 @@
+{
+  "id": "129",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "bon_livraison",
+  "grille": "bon_livraison",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "capture": "photo",
+  "gabarit": "J",
+  "mise_en_page": "J",
+  "scenario": "bl_manuscrit",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "froisse",
+    "tampon",
+    "signature",
+    "souche_carbone",
+    "ratures",
+    "chiffres_orientaux"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "وصل تسليم",
+    "parties": [
+      {
+        "role": "emetteur",
+        "nom": "سيدمارة للبلاستيك",
+        "matricule": "8911010A/A/M/000",
+        "est": "tiers"
+      },
+      {
+        "role": "destinataire",
+        "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "emetteur",
+      "nom": "سيدمارة للبلاستيك",
+      "matricule": "8911010A/A/M/000",
+      "est": "tiers"
+    },
+    "client": {
+      "role": "destinataire",
+      "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": true,
+    "souche": {
+      "texte": "الأرومة",
+      "numero": "0931"
+    },
+    "tampon": {
+      "partie": {
+        "nom": "Sidmara Plasturgie SA",
+        "nomAr": "سيدمارة للبلاستيك",
+        "adresse": "نهج الميموزا، سوسة",
+        "telephone": "00 49 905 271",
+        "role": "fournisseur"
+      },
+      "porteLeMatricule": true,
+      "chemin": "matricule_fiscal_expediteur",
+      "code": "signature_livreur"
+    },
+    "ratures": [
+      {
+        "chemin": "lignes[0].quantite_livree",
+        "barre": "٢١"
+      }
+    ],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "orientaux"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "nom_expediteur",
+              "cls": "gros",
+              "imp": true
+            }
+          ],
+          [
+            {
+              "c": "adresse_expediteur",
+              "imp": true
+            }
+          ],
+          [
+            "الهاتف : ",
+            "00 49 905 271"
+          ]
+        ],
+        "droite": []
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "وصل تسليم عدد ",
+          {
+            "c": "numero_bl",
+            "cls": "rouge",
+            "imp": true
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "التاريخ :",
+            {
+              "c": "date_bl"
+            }
+          ],
+          [
+            "المرسل إليه :",
+            {
+              "c": "nom_destinataire"
+            }
+          ],
+          [
+            "العنوان :",
+            {
+              "c": "adresse_destinataire"
+            }
+          ],
+          [
+            "المعرف الجبائي :",
+            {
+              "c": "matricule_fiscal_destinataire"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "البيان",
+          "الوحدة",
+          "الكمية"
+        ],
+        "nombres": [
+          2
+        ],
+        "minimum": 7,
+        "lignes": [
+          [
+            {
+              "c": "lignes[0].designation"
+            },
+            {
+              "c": "lignes[0].unite"
+            },
+            {
+              "c": "lignes[0].quantite_livree"
+            }
+          ],
+          [
+            {
+              "c": "lignes[1].designation"
+            },
+            {
+              "c": "lignes[1].unite"
+            },
+            {
+              "c": "lignes[1].quantite_livree"
+            }
+          ],
+          [
+            {
+              "c": "lignes[2].designation"
+            },
+            {
+              "c": "lignes[2].unite"
+            },
+            {
+              "c": "lignes[2].quantite_livree"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "إمضاء المستلم",
+        "droite": "الختم والإمضاء"
+      }
+    ],
+    "imprime": {
+      "nom_expediteur": "سيدمارة للبلاستيك",
+      "adresse_expediteur": "40، نهج الميموزا، سوسة",
+      "numero_bl": "0931",
+      "date_bl": "٠٨/١٠/٢٠٢٦",
+      "nom_destinataire": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "adresse_destinataire": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "matricule_fiscal_destinataire": "١٩٥٨٣٣٠V/A/M/٠٠٠",
+      "lignes[0].designation": "كابل كهربائي 3 × 2,5 مم²، لفة",
+      "lignes[0].unite": "لفة",
+      "lignes[0].quantite_livree": "٧",
+      "lignes[1].designation": "غمد ICTA 20 مم، لفة",
+      "lignes[1].unite": "لفة",
+      "lignes[1].quantite_livree": "٨",
+      "lignes[2].designation": "صندوق تخزين بلاستيكي 40 لتر",
+      "lignes[2].unite": "قطعة",
+      "lignes[2].quantite_livree": "٩",
+      "matricule_fiscal_expediteur": "8911010A/A/M/000"
+    },
+    "versConcept": {
+      "nom_expediteur": "nom_expediteur",
+      "adresse_expediteur": "adresse_expediteur",
+      "numero_bl": "numero_bl",
+      "date_bl": "date_bl",
+      "nom_destinataire": "nom_destinataire",
+      "adresse_destinataire": "adresse_destinataire",
+      "matricule_fiscal_destinataire": "matricule_fiscal_destinataire",
+      "lignes[0].designation": "lignes[0].designation",
+      "lignes[0].unite": "lignes[0].unite",
+      "lignes[0].quantite_livree": "lignes[0].quantite_livree",
+      "lignes[1].designation": "lignes[1].designation",
+      "lignes[1].unite": "lignes[1].unite",
+      "lignes[1].quantite_livree": "lignes[1].quantite_livree",
+      "lignes[2].designation": "lignes[2].designation",
+      "lignes[2].unite": "lignes[2].unite",
+      "lignes[2].quantite_livree": "lignes[2].quantite_livree",
+      "matricule_fiscal_expediteur": "matricule_fiscal_expediteur"
+    },
+    "marques": {
+      "cachet_emetteur": "signature_livreur",
+      "signature_emetteur": "signature_livreur"
+    },
+    "cheminsDuDossier": [
+      "matricule_fiscal_destinataire"
+    ]
+  },
+  "graineDuRendu": 786869630,
+  "attendu": {
+    "concepts": {
+      "nom_expediteur": "سيدمارة للبلاستيك",
+      "adresse_expediteur": "40، نهج الميموزا، سوسة",
+      "numero_bl": "0931",
+      "date_bl": "2026-10-08",
+      "nom_destinataire": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "adresse_destinataire": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "matricule_fiscal_destinataire": "1958330V/A/M/000",
+      "lignes": [
+        {
+          "designation": "كابل كهربائي 3 × 2,5 مم²، لفة",
+          "unite": "rouleau",
+          "quantite_livree": "7"
+        },
+        {
+          "designation": "غمد ICTA 20 مم، لفة",
+          "unite": "rouleau",
+          "quantite_livree": "8"
+        },
+        {
+          "designation": "صندوق تخزين بلاستيكي 40 لتر",
+          "unite": "pièce",
+          "quantite_livree": "9"
+        }
+      ],
+      "matricule_fiscal_expediteur": "8911010A/A/M/000",
+      "signature_livreur": true
+    },
+    "confondus": {},
+    "notes": [
+      "Carnet arabe rempli à la main : le matricule de l'expéditeur n'est que dans son tampon ; celui d'ALGORIA (destinataire), écrit en chiffres orientaux. Titre « وصل تسليم » : non couvert par ref.titres_de_piece (motif français seulement) — INCERTAIN sur l'issue que le banc en tirera."
+    ],
+    "non_imprimes": [
+      "immatriculation_vehicule",
+      "numero_lot_serie",
+      "prix_ht",
+      "ref_commande",
+      "ref_facture",
+      "ref_facture_electronique_transport",
+      "signature_cachet_receptionnaire",
+      "transporteur_chauffeur"
+    ]
+  }
+}
