@@ -470,3 +470,47 @@ mesurer, sans bloquer la livraison :
 - **Un modèle sans tarif** ne laisse aucune ligne de coût : la tour le signale
   (« sans coût »), le plafond en dollars ne le borne pas — seul le nombre de
   relectures le borne.
+
+## Le moteur commercial (tranché par défaut le 2 novembre 2026)
+
+Les quinze décisions du dirigeant du 2 novembre 2026 sont appliquées
+(migrations `20261119090000` à `20261119090700`, et `20261119090450` pour la
+décision 7). Restent ouverts, avec le défaut retenu pour ne pas bloquer :
+
+- **Premium, places par société (décision 7) : la date d'effet.** Le décompte
+  par société × personne est une colonne de la grille
+  (`ref.offres.portee_sieges = 'organisation'`), portée par une ligne Premium
+  datée du **1er décembre 2026** — « le premier jour du mois qui suit le
+  déploiement », en supposant un déploiement en novembre. INCERTAIN : si le
+  déploiement glisse, la tour publie la même ligne à la bonne date
+  (`plateforme.grille_publier`, qui garde la portée). Les abonnés souscrits
+  avant gardent la ligne du 19 octobre (`offre_depuis`) jusqu'à leur prochain
+  changement d'offre.
+- **Qui lit le commerce dans la PME (décision 14).** Strictement le
+  propriétaire principal (titulaire) et le chef de la comptabilité qu'il
+  désigne (droit personnel `commerce.lire`) ; un AUTRE dirigeant ne lit rien
+  tant qu'il n'est pas désigné.
+- **Le destinataire d'une facture du canal direct est la personne titulaire**,
+  sans le matricule de sa société (modèle du 20 octobre 2026). Risque fiscal
+  pour un client qui déduit la TVA : `docs/facturation/mentions-legales-2026-11-02.md`, § 2.
+- **Le timbre d'un avoir** vaut 0 (`avoir.droit_de_timbre`, INCERTAIN) ; un
+  avoir total ne laisse pas le timbre dû au client.
+- **Les gestes se cumulent sous le plafond** (revue indépendante de #202) : le
+  plafond d'un geste borne aussi la somme des gestes de même nature, non
+  annulés, accordés à la licence sur `fenetre_cumul_mois` mois glissants
+  (défaut 12, réglage de la tour). Défauts retenus : le cumul est PAR LICENCE,
+  tous payeurs confondus ; une remise se cumule en MOIS (pourcentage et montant
+  ensemble, sous `remise_duree_max_mois`), le montant mensuel reste borné par
+  geste ; la fenêtre se compte à la date où le geste est accordé, pas à ses mois
+  d'effet.
+- **Le solde du stock et le quota.** Le solde des lectures dues (`mon_report`,
+  `lectures_dues_solde`, `lectures_dues_v`) ne se lit que par qui lit le
+  commerce (décision 14) ; le QUOTA de lectures d'un collaborateur
+  (`mon_forfait`, `lecture_verdict`) compte toujours le stock, sans le montrer
+  à part — sans quoi ses lectures s'arrêteraient au forfait du mois.
+- **La passe du mois tient dans une transaction** (l'appel de la tour) : simple
+  et sans trou, mais longue si les licences se comptent par milliers. Une
+  passe découpée par cible viendra avec un compte de service dédié.
+- **Facture électronique (décision 15)** : non branchée ; possiblement
+  obligatoire pour les prestations de services depuis la LF 2026 (art. 53).
+  À trancher avec un fiscaliste avant la première vraie facture.

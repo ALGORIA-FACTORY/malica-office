@@ -98,6 +98,7 @@ export const DROITS = [
   "piece.garder",
   "circuit.recevoir",
   "piece.supprimer_toutes",
+  "commerce.lire",
 ] as const;
 
 export type Droit = (typeof DROITS)[number];

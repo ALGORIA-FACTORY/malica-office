@@ -64,6 +64,7 @@
         "public.capture_sceller_empreinte",
         "public.charge_question_answer",
         "public.collab_assign",
+        "public.droit_personnel_regler",
         "public.etablissement_archiver",
         "public.export_journaliser",
         "public.fait_consigner",
@@ -400,6 +401,11 @@
       "objet": "identity.api_keys",
       "privilege": "UPDATE",
       "chemins": ["public.api_key_revoquer"]
+    },
+    {
+      "objet": "identity.droits_personnels",
+      "privilege": "INSERT",
+      "chemins": ["public.droit_personnel_regler"]
     },
     {
       "objet": "identity.engagements",

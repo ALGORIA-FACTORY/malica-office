@@ -138,6 +138,10 @@ services:
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       MALICA_COURRIEL_EXPEDITEUR: ${MALICA_COURRIEL_EXPEDITEUR:-no-reply@algoria-factory.com}
       MALICA_COURRIEL_NOM: ${MALICA_COURRIEL_NOM:-Malica Office}
+      # La garde des destinataires : « oui » en production seulement ; ailleurs,
+      # la liste (vide = personne). Jamais de défaut « oui » ici.
+      MALICA_COURRIEL_PRODUCTION: ${MALICA_COURRIEL_PRODUCTION:-non}
+      MALICA_COURRIEL_DESTINATAIRES: ${MALICA_COURRIEL_DESTINATAIRES:-}
       MALICA_URL_PUBLIQUE: https://${DOMAINE}
     volumes:
       - ${PIECES_DIR}:/pieces

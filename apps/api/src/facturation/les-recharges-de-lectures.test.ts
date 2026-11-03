@@ -417,7 +417,7 @@ describe("les recharges de lectures", { skip: !ADMIN }, () => {
         [id],
       );
       assert.equal(lignes.rows.length, 2, "l'abonnement, puis la recharge");
-      assert.match(lignes.rows[1]!.libelle, /^Recharge /);
+      assert.match(lignes.rows[1]!.libelle, /^Recharge de /);
       assert.equal(Number(lignes.rows[1]!.montant_ht), PALIER.prix);
 
       const facture = await db.query<{ ht: string; timbre: string; somme: string }>(

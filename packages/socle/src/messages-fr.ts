@@ -336,6 +336,8 @@ export const fr = {
     "Cette pièce est le double d'une pièce déjà lue : je ne la relis pas.",
   "pme.refus.piece_personnelle":
     "Cette pièce est privée. Ajoutez-la à la société pour permettre sa lecture ; l’envoi à la comptabilité est une action distincte.",
+  "refus.courriel.hors_liste":
+    "Courriel retenu : hors production, ce destinataire n’est pas dans la liste autorisée.",
   "refus.piece.rappelEnAttente":
     "Le retour de cette pièce est demandé au cabinet : attendez sa réponse.",
   "refus.licence.transmission":
@@ -2366,7 +2368,7 @@ export const fr = {
   "refus.facturation.destinataire_sans_nom":
     "Le destinataire {destinataire} n’a pas de nom : une facture sans destinataire n’est pas une facture.",
   "refus.facturation.rien_a_facturer": "Rien à facturer pour {periode}.",
-  "refus.facturation.deja_emise": "La facture de ce cabinet pour {periode} existe déjà.",
+  "refus.facturation.deja_emise": "La facture de {periode} existe déjà.",
   "refus.facturation.payeur_introuvable":
     "La licence {licence} est introuvable : le payeur d’une facture ne se devine pas.",
   "refus.facturation.format_de_reference":
@@ -4587,6 +4589,49 @@ export const fr = {
   "refus.etablissement.principal_deja_ouvert":
     "Cette organisation a déjà son établissement principal.",
   "pme.verifie.confirme": "saisie",
+  "refus.commerce.cle_deja_prise": "Cette clé d’opération a déjà servi pour un autre geste.",
+  "refus.commerce.motif_requis": "Indiquez un motif : chaque geste commercial est motivé.",
+  "refus.droit.hors_societe": "Cette personne n’est pas membre de la société.",
+  "refus.droit.non_personnel": "Ce droit ne s’accorde pas à une personne.",
+  "refus.encaissement.au_dela_du_reste": "L’encaissement dépasse le reste dû ({reste}).",
+  "refus.encaissement.date_future": "Un encaissement ne se date pas dans le futur.",
+  "refus.encaissement.deja_annule": "Cet encaissement est déjà annulé.",
+  "refus.encaissement.montant_positif": "Le montant d’un encaissement est positif.",
+  "refus.essai.absent": "Cette licence n’a pas d’essai gratuit.",
+  "refus.essai.illegitime": "Cet essai ne correspond pas à la licence et à sa société.",
+  "refus.essai.termine": "L’essai est terminé : il ne se prolonge plus.",
+  "refus.facturation.echec": "L’émission de cette facture a échoué.",
+  "refus.facture.avant_la_numerotation":
+    "Cette facture est antérieure à la numérotation sans trou : elle ne reçoit pas d’avoir ici.",
+  "refus.facture.avoir_au_dela":
+    "Les avoirs dépasseraient la facture (reste à créditer : {reste}).",
+  "refus.facture.chronologie": "Une facture plus récente de la série porte une date postérieure.",
+  "refus.facture.compteur_fige":
+    "Le compteur de numérotation n’avance que d’un, et rien d’autre n’y change.",
+  "refus.facture.incomplete": "Une facture nouvelle porte son rang, son émetteur et sa langue.",
+  "refus.facture.sens_de_ligne": "Le signe de cette ligne ne correspond pas à sa nature.",
+  "refus.facture.total_incoherent": "Le total de la facture ne correspond pas à ses lignes.",
+  "refus.geste.au_dela_du_plafond": "Ce geste dépasse le plafond fixé par la tour ({plafond}).",
+  "refus.geste.chevauchement": "Un geste de même nature couvre déjà cette période pour ce payeur.",
+  "refus.geste.cumul_depasse":
+    "Ce geste porterait le cumul de la licence au-delà du plafond ({plafond}) : {deja} déjà accordés sur {fenetre} mois.",
+  "refus.geste.deja_annule": "Ce geste est déjà annulé.",
+  "refus.geste.deja_facture": "Ce geste figure déjà sur une facture émise : corrigez par un avoir.",
+  "refus.geste.ferme": "Ce geste ne s’accorde plus.",
+  "refus.geste.non_annulable": "Ce geste ne s’annule pas : une suspension se lève par une reprise.",
+  "refus.geste.unite_inconnue": "Une remise est en pourcentage ou en montant.",
+  "refus.geste.valeur_positive": "La valeur de ce geste est strictement positive.",
+  "refus.introuvable.encaissement": "Encaissement introuvable.",
+  "refus.introuvable.geste": "Geste introuvable.",
+  "refus.introuvable.passe": "Passe mensuelle introuvable.",
+  "refus.passe.cible_inconnue": "Une passe traite une licence ou un cabinet.",
+  "refus.passe.mode_inconnu": "Une passe est un aperçu ou une émission.",
+  "refus.passe.mois_a_venir": "Un mois à venir ne se facture pas.",
+  "refus.referentiel.libelle_absent":
+    "Le libellé « {gabarit} » manque en {langue} dans le référentiel.",
+  "refus.reserve.titulaire": "Seul le propriétaire principal de l’abonnement peut le faire.",
+  "refus.facture.ligne_hors_licence":
+    "Cette ligne nomme une société qui n’est pas rattachée à sa licence.",
 } as const;
 
 export type MessageKey = keyof typeof fr;

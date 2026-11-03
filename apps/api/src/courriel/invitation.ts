@@ -153,6 +153,7 @@ export async function envoyerInvitation(
       {
         cle: config.cle,
         expediteur: config.expediteur,
+        destinataires: config.destinataires,
         destinataire: i.email,
         sujet: c.sujet,
         html: c.html,

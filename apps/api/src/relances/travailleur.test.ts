@@ -7,6 +7,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import type { Requete } from "../db.ts";
+import type { DocumentDeFacture } from "../facturation/document/document.ts";
+import { RUBRIQUES_DU_RENDU } from "../facturation/document/rendu.ts";
 
 import { courrielDeNotification } from "./courriel-de-notification.ts";
 import { tourDeRelances } from "./travailleur.ts";
@@ -21,11 +23,60 @@ const COURRIEL = {
   action_route: "/pme/reglages",
 };
 
-function fausseBase() {
+/** Une facture jointe, telle que `notif.facture_de_l_envoi` la rend (fictive). */
+const FACTURE_JOINTE: DocumentDeFacture = {
+  facture: {
+    id: "f1",
+    numero: "ALG-FA-2026-0007",
+    nature: "facture",
+    periode: "2026-11-01",
+    emise_le: "2026-11-02",
+    echeance_le: "2026-11-17",
+    montant_ht: 10,
+    taux_tva: 0.19,
+    montant_tva: 1.9,
+    timbre: 1,
+    montant_ttc: 12.9,
+    devise: "TND",
+    payeur_type: "titulaire",
+    destinataire_nom: "Selim Ben Amor",
+    destinataire_legal_id: null,
+    destinataire_adresse: null,
+    reference_abonne: null,
+    emetteur_nom: "Émetteur d'essai",
+    emetteur_matricule: null,
+    emetteur_adresse: null,
+    motif: null,
+  },
+  langue: "fr",
+  periode: { mois: "novembre", annee: 2026 },
+  lignes: [
+    {
+      ordinal: 1,
+      nature: "abonnement",
+      libelle: "Abonnement",
+      quantite: 1,
+      prix_unitaire: 10,
+      montant_ht: 10,
+    },
+  ],
+  encours: { encaisse: 0, reste_du: 12.9, etat: null, avoirs: 0 },
+  au_jour: false,
+  avoir_de: null,
+  // Les rubriques viennent du référentiel ; ici, leur clé suffit.
+  rubriques: Object.fromEntries(RUBRIQUES_DU_RENDU.map((r) => [r, r])),
+  devise: { code: "TND", exposant: 3, separateur: "," },
+  nature_libelle: "Facture",
+  route_paiement: "/pme/reglages",
+  original: null,
+};
+
+function fausseBase(jointe: DocumentDeFacture | null = null) {
   const appels: Array<{ sql: string; params: unknown[] | undefined }> = [];
   const db = {
     query: async (sql: string, params?: unknown[]) => {
       appels.push({ sql, params });
+      if (sql.includes("facture_de_l_envoi")) return { rows: [{ d: jointe }] };
       if (sql.includes("relancer_les_impayes"))
         return { rows: [{ r: { actives: true, postes: 1 } }] };
       // La file rend le courriel une fois, puis se vide (il est inscrit).
@@ -43,7 +94,18 @@ const ENV = {
   BREVO_API_KEY: "cle-d-essai",
   MALICA_COURRIEL_EXPEDITEUR: "noreply@essai.local",
   MALICA_URL_PUBLIQUE: "https://app.essai.local/",
+  MALICA_COURRIEL_DESTINATAIRES: "@essai.local",
 };
+
+/** Un faux Brevo qui compte ses appels. */
+function brevoCompte() {
+  const envoyes: Array<Record<string, unknown>> = [];
+  const fetchImpl = (async (_url: string, init: RequestInit) => {
+    envoyes.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+    return new Response(JSON.stringify({ messageId: "m" }), { status: 201 });
+  }) as typeof fetch;
+  return { envoyes, fetchImpl };
+}
 
 describe("le travailleur des relances", () => {
   it("sans clé Brevo : il laisse décider la base, n'envoie rien, n'inscrit rien", async () => {
@@ -68,6 +130,61 @@ describe("le travailleur des relances", () => {
     assert.match(String(envoyes[0]!["htmlContent"]), /https:\/\/app\.essai\.local\/pme\/reglages/);
     const remise = b.appels.find((a) => a.sql.includes("notif.remettre"));
     assert.deepEqual(remise?.params, ["e1", "remis", null]);
+  });
+
+  it("le courriel d'une facture porte son PDF, rendu depuis la facture jointe", async () => {
+    const b = fausseBase(FACTURE_JOINTE);
+    const envoyes: Array<Record<string, unknown>> = [];
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      envoyes.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+      return new Response(JSON.stringify({ messageId: "m2" }), { status: 201 });
+    }) as typeof fetch;
+    const r = await tourDeRelances({ executer: b.executer, env: ENV, fetchImpl });
+    assert.equal(r.remis, 1);
+    const pieces = envoyes[0]!["attachment"] as Array<{ name: string; content: string }>;
+    assert.equal(pieces.length, 1);
+    assert.equal(pieces[0]!.name, "ALG-FA-2026-0007.pdf");
+    assert.equal(Buffer.from(pieces[0]!.content, "base64").subarray(0, 5).toString(), "%PDF-");
+  });
+
+  it("hors production, une adresse hors de la liste est retenue : Brevo n'est pas appelé, « retenu » s'inscrit", async () => {
+    const b = fausseBase(FACTURE_JOINTE);
+    const brevo = brevoCompte();
+    const r = await tourDeRelances({
+      executer: b.executer,
+      env: { ...ENV, MALICA_COURRIEL_DESTINATAIRES: "recette@algoria.local, @autre.local" },
+      fetchImpl: brevo.fetchImpl,
+    });
+    assert.equal(brevo.envoyes.length, 0);
+    assert.equal(r.retenus, 1);
+    assert.equal(r.remis, 0);
+    const remise = b.appels.find((a) => a.sql.includes("notif.remettre"));
+    assert.deepEqual(remise?.params, ["e1", "retenu", "refus.courriel.hors_liste"]);
+  });
+
+  it("hors production, une liste vide n'écrit à personne", async () => {
+    const b = fausseBase();
+    const brevo = brevoCompte();
+    const { MALICA_COURRIEL_DESTINATAIRES: _liste, ...sansListe } = ENV;
+    const r = await tourDeRelances({
+      executer: b.executer,
+      env: sansListe,
+      fetchImpl: brevo.fetchImpl,
+    });
+    assert.equal(brevo.envoyes.length, 0);
+    assert.equal(r.retenus, 1);
+  });
+
+  it("en production, la liste ne restreint rien (décision 12 : l'envoi reste allumé)", async () => {
+    const b = fausseBase();
+    const brevo = brevoCompte();
+    const r = await tourDeRelances({
+      executer: b.executer,
+      env: { ...ENV, MALICA_COURRIEL_DESTINATAIRES: "", MALICA_COURRIEL_PRODUCTION: "oui" },
+      fetchImpl: brevo.fetchImpl,
+    });
+    assert.equal(brevo.envoyes.length, 1);
+    assert.equal(r.remis, 1);
   });
 
   it("un refus de Brevo s'inscrit « echoue », avec l'erreur", async () => {

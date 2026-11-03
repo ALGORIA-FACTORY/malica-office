@@ -75,15 +75,23 @@ async function abonner(db: pg.PoolClient, nom: string, ht: number): Promise<Abon
     "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",
     [licence, tenant],
   );
-  // En retard depuis longtemps : `a_relancer_v` la retient, à un palier.
+  // En retard depuis longtemps : `a_relancer_v` la retient, à un palier. Une
+  // facture de 2024 est une facture d'AVANT la numérotation sans trou
+  // (20261119090600) : ses colonnes d'émetteur restent nulles, ce qu'aucune
+  // facture nouvelle ne peut plus être. L'épreuve la pose donc comme l'histoire
+  // l'a laissée, déclencheurs de la facture suspendus le temps de l'instruction.
+  await db.query("set local session_replication_role = replica");
   await db.query(
     `insert into facturation.factures
        (licence_id, numero, periode, emise_le, echeance_le, offre_code, organisations,
-        sieges_payants, montant_ht, taux_tva, montant_tva, timbre, montant_ttc, devise)
+        sieges_payants, montant_ht, taux_tva, montant_tva, timbre, montant_ttc, devise,
+        nature, payeur_type, payeur_personne, destinataire_nom)
      values ($1, $2, date '2024-12-01', date '2024-12-01', date '2025-01-15', 'solo', 1,
-             0, $3::numeric, 0.19, $3::numeric * 0.19, 1, $3::numeric * 1.19 + 1, 'TND')`,
-    [licence, `ESSAI-${nom}-${licence.slice(0, 8)}`, ht],
+             0, $3::numeric, 0.19, $3::numeric * 0.19, 1, $3::numeric * 1.19 + 1, 'TND',
+             'facture', 'titulaire', $4, $5)`,
+    [licence, `ESSAI-${nom}-${licence.slice(0, 8)}`, ht, titulaire, `Titulaire ${nom}`],
   );
+  await db.query("set local session_replication_role = origin");
   await db.query(
     `insert into plateforme.reclamations (licence_id, tenant_id, objet, sujet, corps, ouverte_par)
      values ($1, $2, 'autre', $3, 'corps', $4)`,
@@ -121,7 +129,7 @@ const PAR_LICENCE: Array<[string, string]> = [
   ["facturation.droits_reels_v", "licence_id"],
   ["facturation.encours_v", "licence_id"],
   ["facturation.a_relancer_v", "licence_id"],
-  ["plateforme.clients_v", "licence_id"],
+  ["facturation.lectures_dues_v", "licence_id"],
   ["plateforme.reclamations_v", "licence_id"],
 ];
 

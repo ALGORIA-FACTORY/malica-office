@@ -743,4 +743,106 @@ export const facturation = {
       montant_ht: string;
     }>;
   },
+  /* ----------------------------------------------- le commerce, vu du client */
+
+  /**
+   * Les libellés du commerce, dans la langue de l'écran (le français à
+   * défaut) : gestes, natures de document et de ligne, lectures dues, règles
+   * de report, résultats de passe, décisions sur facture, droit du chef de la
+   * comptabilité, mois, gabarits de ligne et rubriques du PDF. L'écran ne les
+   * écrit pas : il les lit ici.
+   */
+  async libellesDuCommerce(db: Requete, locale: string) {
+    const { rows } = await db.query<{ ns: string; key: string; value: string }>(
+      `select f.ns, f.key, coalesce(l.value, f.value) as value
+         from ref_labels_v f
+         left join ref_labels_v l on l.ns = f.ns and l.key = f.key and l.locale = $1
+        where f.locale = 'fr'
+          and (f.ns = 'acte_intervention' or f.ns = 'decision_facture'
+               or f.ns = 'droit_personnel' or f.ns = 'facture_ligne'
+               or f.ns = 'facture_rubrique' or f.ns = 'mois'
+               or f.ns = 'nature_document' or f.ns = 'nature_lecture_due'
+               or f.ns = 'nature_ligne_facture' or f.ns = 'regle_report'
+               or f.ns = 'resultat_passe')
+        order by f.ns, f.key`,
+      [locale],
+    );
+    const parEspace: Record<string, Record<string, string>> = {};
+    for (const r of rows) (parEspace[r.ns] ??= {})[r.key] = r.value;
+    return parEspace;
+  },
+
+  /**
+   * Les factures et avoirs que l'appelant lit — titulaire, chef de la
+   * comptabilité, membres du cabinet payeur. Aucun filtre ici : la RLS
+   * (`facturation.factures_lisibles`) décide, et ne rend rien à un autre.
+   */
+  async facturesLisibles(db: Requete) {
+    const { rows } = await db.query(
+      `select f.id, f.nature, f.numero, f.periode::text, f.emise_le::text, f.echeance_le::text,
+              f.payeur_type, f.montant_ht::text, f.montant_tva::text, f.timbre::text,
+              f.montant_ttc::text, f.devise, f.avoir_de, f.langue,
+              e.reste_du::text, e.etat
+         from facturation.factures f
+         left join facturation.encours_v e on e.facture_id = f.id
+        order by f.emise_le desc, f.numero desc
+        limit 200`,
+    );
+    return rows;
+  },
+
+  /**
+   * Les gestes commerciaux VISIBLES de la licence, sous leur libellé : le motif
+   * que la tour a écrit ne sort jamais d'elle (droits de colonne en base).
+   */
+  async gestesCommerciaux(db: Requete, locale: string) {
+    const { rows } = await db.query(
+      `select i.id, i.licence_id, i.acte, coalesce(l.value, f.value, i.acte) as libelle,
+              i.valeur::text, i.payeur_type, i.effet_du::text, i.effet_au::text,
+              i.created_at, i.annule, plateforme.geste_en_vigueur(i.id) as en_vigueur
+         from plateforme.interventions i
+         left join ref_labels_v l on l.ns = 'acte_intervention' and l.key = i.acte and l.locale = $1
+         left join ref_labels_v f on f.ns = 'acte_intervention' and f.key = i.acte and f.locale = 'fr'
+        order by i.created_at desc
+        limit 200`,
+      [locale],
+    );
+    return rows;
+  },
+
+  /** L'essai de la licence, et sa fin effective (prolongations, arrêt quand un cabinet dote). */
+  async monEssai(db: Requete) {
+    const { rows } = await db.query(
+      `select licence_id, du::text, au::text, jours_prolonges, fin_effective::text, dote_le::text
+         from facturation.essais_v order by du desc limit 20`,
+    );
+    return rows;
+  },
+
+  /** Le stock de lectures dues de la licence : gardées à vie, montrées telles quelles. */
+  async mesLecturesDues(db: Requete) {
+    const { rows } = await db.query(
+      `select licence_id, credits, puisees, offertes, solde, dernier_mois_clos::text
+         from facturation.lectures_dues_v order by licence_id`,
+    );
+    return rows;
+  },
+
+  /**
+   * Le propriétaire principal désigne (ou retire) le chef de la comptabilité
+   * de sa société : un droit personnel, `commerce.lire` (décision du 2 novembre 2026).
+   */
+  async designerChefDeLaComptabilite(
+    db: Requete,
+    tenantId: string,
+    personneId: string,
+    accorde: boolean,
+    motif: string,
+  ) {
+    const { rows } = await db.query<{ r: unknown }>(
+      "select public.droit_personnel_regler($1, $2, 'commerce.lire', $3, $4) as r",
+      [tenantId, personneId, accorde, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
 };

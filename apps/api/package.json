@@ -10,9 +10,12 @@
     "test": "node --experimental-strip-types --env-file-if-exists=.env --env-file-if-exists=.env.test --import ./src/garde-base-de-test.ts --test"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^1.0.8",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/noto-kufi-arabic": "^5.3.0",
     "@malica/socle": "*",
     "@malica/sudoku": "*",
+    "@napi-rs/canvas": "^1.0.8",
     "bcryptjs": "2.4.3",
     "cookie-parser": "1.4.7",
     "cors": "2.8.5",

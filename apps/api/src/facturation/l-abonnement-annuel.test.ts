@@ -182,13 +182,13 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
       // Le mois en cours reste au mois.
       const ce = await emettre(await mois(db, 0));
       const l0 = await lignes(ce.factures[0]!.facture_id);
-      assert.match(l0[0]!.libelle, /^Abonnement solo/);
+      assert.match(l0[0]!.libelle, /^Abonnement Solo/);
 
       // Le premier mois de l'année porte la ligne annuelle, et rien de mensuel.
       const debut = await emettre(await mois(db, 1));
       const l1 = await lignes(debut.factures[0]!.facture_id);
       assert.equal(l1.length, 1);
-      assert.match(l1[0]!.libelle, /^Abonnement annuel solo/);
+      assert.match(l1[0]!.libelle, /^Abonnement annuel Solo/);
       assert.equal(Number(l1[0]!.montant_ht), prix * (12 - offerts));
 
       // Un mois couvert, sans rien d'autre : aucune facture.
