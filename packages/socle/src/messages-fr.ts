@@ -732,7 +732,6 @@ export const fr = {
   "pme.tva.soldeInconnu": "Solde TVA à confirmer",
   "pme.nav.add": "Ajouter une pièce",
   "pme.nav.office": "Espace",
-  "pme.org.switch": "Société active",
   "pme.nav.aria": "Navigation principale",
   "pme.home.greet.morning": "Bonjour.",
   "pme.home.greet.afternoon": "Bon après-midi.",
@@ -3895,7 +3894,6 @@ export const fr = {
     "Des sièges isolés — chacun ne voit que ses pièces — et vous validez avant la transmission à la comptabilité.",
   "pme.reglages.sieges.aucun":
     "Aucun siège n’est encore remonté pour cette licence, pas même le vôtre.",
-  "pme.reglages.org.ouverte": "Ouverte",
   "pme.reglages.org.surLicence": "Sur la licence",
   "pme.reglages.org.principal": "Propriétaire principal",
   "pme.reglages.org.offre": "Offre :",

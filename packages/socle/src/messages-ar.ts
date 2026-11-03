@@ -660,7 +660,6 @@ export const ar: Dict = {
   "pme.tva.soldeInconnu": "رصيد الأداء على القيمة المضافة للتأكيد",
   "pme.nav.add": "إضافة وثيقة",
   "pme.nav.office": "الفضاء",
-  "pme.org.switch": "الشركة النشطة",
   "pme.nav.aria": "التنقل الرئيسي",
   "pme.home.greet.morning": "صباح الخير.",
   "pme.home.greet.afternoon": "طاب يومك.",
@@ -3635,7 +3634,6 @@ export const ar: Dict = {
   "pme.reglages.sieges.verrou":
     "مقاعد معزولة — كلّ واحد لا يرى إلّا وثائقه — وأنت من يصادق قبل الإرسال إلى المكتب.",
   "pme.reglages.sieges.aucun": "لم يَرِد بعد أيّ مقعد لهذه الرخصة، ولا حتى مقعدك.",
-  "pme.reglages.org.ouverte": "مفتوحة",
   "pme.reglages.org.surLicence": "على الرخصة",
   "pme.reglages.org.principal": "المالك الرئيسي",
   "pme.reglages.org.offre": "العرض:",

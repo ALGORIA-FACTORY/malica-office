@@ -678,7 +678,6 @@ export const en: Dict = {
   "pme.tva.soldeInconnu": "VAT balance to confirm",
   "pme.nav.add": "Add a document",
   "pme.nav.office": "Workspace",
-  "pme.org.switch": "Active company",
   "pme.nav.aria": "Main navigation",
   "pme.home.greet.morning": "Good morning.",
   "pme.home.greet.afternoon": "Good afternoon.",
@@ -3787,7 +3786,6 @@ export const en: Dict = {
   "pme.reglages.sieges.verrou":
     "Isolated seats — each one sees only its own documents — and you confirm before anything reaches the firm.",
   "pme.reglages.sieges.aucun": "No seat has come back for this licence yet, not even yours.",
-  "pme.reglages.org.ouverte": "Open",
   "pme.reglages.org.surLicence": "On the licence",
   "pme.reglages.org.principal": "Principal owner",
   "pme.reglages.org.offre": "Plan:",
