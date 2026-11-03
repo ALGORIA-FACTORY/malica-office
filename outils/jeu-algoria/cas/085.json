@@ -1,0 +1,295 @@
+{
+  "id": "085",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "capture": "scan",
+  "gabarit": "E",
+  "scenario": "taux_7",
+  "realisme": [
+    "biais",
+    "grain",
+    "photocopie",
+    "tampon",
+    "signature",
+    "souche_carbone"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Sidmara Plasturgie SA",
+      "nomAr": "سيدمارة للبلاستيك",
+      "enseigne": null,
+      "matricule": "8911010A/A/M/000",
+      "matriculeImprime": "8911010A/A/M/000",
+      "adresse": "40, rue des Mimosas, Sousse",
+      "telephone": "00 49 905 271",
+      "fax": "00 30 114 631",
+      "email": null,
+      "site": null,
+      "rc": "B448475742022",
+      "rib": "99 240 8955450458323 82",
+      "banque": "Banque Talmira",
+      "code": "C4120607",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "01/07/26",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Café en grains, sac 1 kg",
+        "designationAr": "قهوة حبوب، كيس 1 كغ",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "designation": "Plateau repas séminaire",
+        "designationAr": "وجبة ندوة",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA07",
+        "tauxImprime": "7 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Sidmara Plasturgie SA",
+      "document_date": "01/07/26",
+      "references.numero": "0541",
+      "references.matricule_fiscal": "8911010A/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "40, rue des Mimosas, Sousse",
+      "telephone_emetteur": "00 49 905 271",
+      "registre_commerce_emetteur": "B448475742022",
+      "mode_reglement": "Traite",
+      "totals.base_ht": "274,275",
+      "totals.vat": "19,199",
+      "totals.ttc": "294,474",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Café en grains, sac 1 kg",
+      "articles[0].quantity": "7",
+      "articles[0].unit_price_ht": "32,027",
+      "articles[0].total_ht": "224,189",
+      "articles[1].designation": "Plateau repas séminaire",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "25,043",
+      "articles[1].total_ht": "50,086"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[7]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 1851620409,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Sidmara Plasturgie SA",
+      "document_date": "2026-07-01",
+      "currency": "TND",
+      "references.numero": "0541",
+      "references.matricule_fiscal": "8911010A/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "274.275",
+      "totals.vat": "19.199",
+      "totals.ttc": "294.474",
+      "lines[0].tax_code": "TVA07",
+      "lines[0].base_ht": "274.275",
+      "lines[0].vat_amount": "19.199",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "7.000",
+      "articles[0].unit_price_ht": "32.027",
+      "articles[0].total_ht": "224.189",
+      "articles[1].quantity": "2.000",
+      "articles[1].unit_price_ht": "25.043",
+      "articles[1].total_ht": "50.086"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "274.275",
+          "0"
+        ],
+        [
+          "4366",
+          "19.199",
+          "0",
+          "TVA07"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "294.474"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Sidmara Plasturgie SA",
+      "date_operation": "2026-07-01",
+      "numero_facture": "0541",
+      "matricule_fiscal_emetteur": "8911010A/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "40, rue des Mimosas, Sousse",
+      "telephone_email_emetteur": {
+        "telephone": "00 49 905 271"
+      },
+      "registre_commerce_emetteur": "B448475742022",
+      "mode_reglement": "Traite",
+      "total_ht": "274.275",
+      "montant_tva_par_taux": {
+        "7": "19.199"
+      },
+      "total_ttc": "294.474",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "7": "274.275"
+      },
+      "lignes": [
+        {
+          "designation": "Café en grains, sac 1 kg",
+          "quantite": "7",
+          "prix_unitaire_ht": "32.027",
+          "montant_ligne_ht": "224.189",
+          "taux_tva_ligne": "7"
+        },
+        {
+          "designation": "Plateau repas séminaire",
+          "quantite": "2",
+          "prix_unitaire_ht": "25.043",
+          "montant_ligne_ht": "50.086",
+          "taux_tva_ligne": "7"
+        }
+      ],
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

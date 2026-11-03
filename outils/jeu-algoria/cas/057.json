@@ -1,0 +1,338 @@
+{
+  "id": "057",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "ar",
+  "rendu": "pdf_image",
+  "capture": "photo",
+  "gabarit": "C",
+  "scenario": "fodec",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "froisse",
+    "annotation"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "شركة وزديرة للكوابل",
+      "nomAr": "شركة وزديرة للكوابل",
+      "enseigne": null,
+      "matricule": "6228007B/A/M/000",
+      "matriculeImprime": "6228007B/A/M/000",
+      "adresse": "90، نهج الصناعات التقليدية، منزل بورقيبة",
+      "telephone": "00 60 976 411",
+      "fax": "00 44 125 954",
+      "email": null,
+      "site": null,
+      "rc": "B492177192012",
+      "rib": "99 763 3388660978853 03",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C7063448",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "2026/04/24",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "كابل كهربائي 3 × 2,5 مم²، لفة",
+        "designationAr": "كابل كهربائي 3 × 2,5 مم²، لفة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "غمد ICTA 20 مم، لفة",
+        "designationAr": "غمد ICTA 20 مم، لفة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "طباعة بطاقات زيارة، علبة 500",
+        "designationAr": "طباعة بطاقات زيارة، علبة 500",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "FODEC",
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": null,
+    "annotation": "خالص",
+    "ratures": [],
+    "imprime": {
+      "issuer": "شركة وزديرة للكوابل",
+      "document_date": "2026/04/24",
+      "references.numero": "2026/4460",
+      "references.matricule_fiscal": "6228007B/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "90، نهج الصناعات التقليدية، منزل بورقيبة",
+      "telephone_emetteur": "00 60 976 411",
+      "registre_commerce_emetteur": "B492177192012",
+      "rib_emetteur": "99 763 3388660978853 03",
+      "mode_reglement": "تحويل بنكي",
+      "totals.base_ht": "4 944,730",
+      "totals.vat": "948,894",
+      "totals.ttc": "5 944,071",
+      "other_charges[0].amount": "49,447",
+      "other_charges[1].amount": "1,000",
+      "lines[0].base_ht": "4 994,177",
+      "lines[0].vat_amount": "948,894",
+      "articles[0].designation": "كابل كهربائي 3 × 2,5 مم²، لفة",
+      "articles[0].quantity": "17",
+      "articles[0].unit_price_ht": "106,481",
+      "articles[0].total_ht": "1 810,177",
+      "articles[1].designation": "غمد ICTA 20 مم، لفة",
+      "articles[1].quantity": "24",
+      "articles[1].unit_price_ht": "53,027",
+      "articles[1].total_ht": "1 272,648",
+      "articles[2].designation": "طباعة بطاقات زيارة، علبة 500",
+      "articles[2].quantity": "19",
+      "articles[2].unit_price_ht": "97,995",
+      "articles[2].total_ht": "1 861,905"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "montant_fodec",
+      "other_charges[1].amount": "droit_timbre",
+      "lines[0].base_ht": "base_tva_par_taux[19]",
+      "lines[0].vat_amount": "montant_tva_par_taux[19]",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 923446338,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "شركة وزديرة للكوابل",
+      "document_date": "2026-04-24",
+      "currency": "TND",
+      "references.numero": "2026/4460",
+      "references.matricule_fiscal": "6228007B/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "4944.730",
+      "totals.vat": "948.894",
+      "totals.ttc": "5944.071",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "4994.177",
+      "lines[0].vat_amount": "948.894",
+      "other_charges[0].code": "FODEC",
+      "other_charges[0].amount": "49.447",
+      "other_charges[1].code": "DROIT_TIMBRE",
+      "other_charges[1].amount": "1.000",
+      "articles[0].quantity": "17.000",
+      "articles[0].unit_price_ht": "106.481",
+      "articles[0].total_ht": "1810.177",
+      "articles[1].quantity": "24.000",
+      "articles[1].unit_price_ht": "53.027",
+      "articles[1].total_ht": "1272.648",
+      "articles[2].quantity": "19.000",
+      "articles[2].unit_price_ht": "97.995",
+      "articles[2].total_ht": "1861.905"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "4944.730",
+          "0"
+        ],
+        [
+          "4366",
+          "948.894",
+          "0",
+          "TVA19"
+        ],
+        [
+          "601",
+          "49.447",
+          "0"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "5944.071"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — FODEC à l'achat incorporé au coût, sur sa ligne au compte de la charge (fodec.traitement du pack), et compris dans la base de la TVA",
+      "Annotation manuscrite « خالص » : ni la date ni le montant de la pièce."
+    ],
+    "concepts": {
+      "type_document": "فاتورة",
+      "raison_sociale_emetteur": "شركة وزديرة للكوابل",
+      "date_operation": "2026-04-24",
+      "numero_facture": "2026/4460",
+      "matricule_fiscal_emetteur": "6228007B/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "90، نهج الصناعات التقليدية، منزل بورقيبة",
+      "telephone_email_emetteur": {
+        "telephone": "00 60 976 411"
+      },
+      "registre_commerce_emetteur": "B492177192012",
+      "rib_emetteur": "99 763 3388660978853 03",
+      "mode_reglement": "تحويل بنكي",
+      "total_ht": "4944.730",
+      "montant_tva_par_taux": {
+        "19": "948.894"
+      },
+      "total_ttc": "5944.071",
+      "montant_fodec": "49.447",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "4994.177"
+      },
+      "lignes": [
+        {
+          "designation": "كابل كهربائي 3 × 2,5 مم²، لفة",
+          "quantite": "17",
+          "prix_unitaire_ht": "106.481",
+          "montant_ligne_ht": "1810.177",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "غمد ICTA 20 مم، لفة",
+          "quantite": "24",
+          "prix_unitaire_ht": "53.027",
+          "montant_ligne_ht": "1272.648",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "طباعة بطاقات زيارة، علبة 500",
+          "quantite": "19",
+          "prix_unitaire_ht": "97.995",
+          "montant_ligne_ht": "1861.905",
+          "taux_tva_ligne": "19"
+        }
+      ]
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_en_lettres",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

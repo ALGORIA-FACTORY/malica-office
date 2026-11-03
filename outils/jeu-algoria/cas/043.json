@@ -1,0 +1,339 @@
+{
+  "id": "043",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "pdf_image",
+  "capture": "scan",
+  "gabarit": "B",
+  "scenario": "un_taux",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale",
+    "tampon"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Kessarine Transports SARL",
+      "nomAr": "قصارين للنقل",
+      "enseigne": null,
+      "matricule": "7960009A/A/M/000",
+      "matriculeImprime": "7960009A/A/M/000",
+      "adresse": "28, avenue de la Liberté, Radès",
+      "telephone": "00 37 780 448",
+      "fax": "00 71 232 327",
+      "email": null,
+      "site": null,
+      "rc": "B812336362009",
+      "rib": "99 415 6420634767039 20",
+      "banque": "Crédit Selvane",
+      "code": "C6246300",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "20/08/2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Cartouche d'encre couleur",
+        "designationAr": "خرطوشة حبر ملون",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de déménagement de bureaux",
+        "designationAr": "خدمة نقل مكاتب",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Entretien climatisation, visite",
+        "designationAr": "صيانة المكيفات، زيارة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Classeur à levier, dos 8 cm",
+        "designationAr": "ملف برافعة، ظهر 8 سم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": false
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Kessarine Transports SARL",
+      "document_date": "20/08/2026",
+      "references.numero": "FA26/04707",
+      "references.matricule_fiscal": "7960009A/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "28, avenue de la Liberté, Radès",
+      "telephone_emetteur": "00 37 780 448",
+      "registre_commerce_emetteur": "B812336362009",
+      "totals.base_ht": "8 805,470",
+      "totals.vat": "1 673,039",
+      "totals.ttc": "10 479,509",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Cartouche d'encre couleur",
+      "articles[0].quantity": "21",
+      "articles[0].unit_price_ht": "71,932",
+      "articles[0].total_ht": "1 510,572",
+      "articles[1].designation": "Prestation de déménagement de bureaux",
+      "articles[1].quantity": "3",
+      "articles[1].unit_price_ht": "1 401,756",
+      "articles[1].total_ht": "4 205,268",
+      "articles[2].designation": "Entretien climatisation, visite",
+      "articles[2].quantity": "15",
+      "articles[2].unit_price_ht": "198,158",
+      "articles[2].total_ht": "2 972,370",
+      "articles[3].designation": "Classeur à levier, dos 8 cm",
+      "articles[3].quantity": "22",
+      "articles[3].unit_price_ht": "5,330",
+      "articles[3].total_ht": "117,260"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 121829237,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Kessarine Transports SARL",
+      "document_date": "2026-08-20",
+      "currency": "TND",
+      "references.numero": "FA26/04707",
+      "references.matricule_fiscal": "7960009A/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "8805.470",
+      "totals.vat": "1673.039",
+      "totals.ttc": "10479.509",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "8805.470",
+      "lines[0].vat_amount": "1673.039",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "21.000",
+      "articles[0].unit_price_ht": "71.932",
+      "articles[0].total_ht": "1510.572",
+      "articles[1].quantity": "3.000",
+      "articles[1].unit_price_ht": "1401.756",
+      "articles[1].total_ht": "4205.268",
+      "articles[2].quantity": "15.000",
+      "articles[2].unit_price_ht": "198.158",
+      "articles[2].total_ht": "2972.370",
+      "articles[3].quantity": "22.000",
+      "articles[3].unit_price_ht": "5.330",
+      "articles[3].total_ht": "117.260"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "8805.470",
+          "0"
+        ],
+        [
+          "4366",
+          "1673.039",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "10479.509"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Kessarine Transports SARL",
+      "date_operation": "2026-08-20",
+      "numero_facture": "FA26/04707",
+      "matricule_fiscal_emetteur": "7960009A/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "28, avenue de la Liberté, Radès",
+      "telephone_email_emetteur": {
+        "telephone": "00 37 780 448"
+      },
+      "registre_commerce_emetteur": "B812336362009",
+      "total_ht": "8805.470",
+      "montant_tva_par_taux": {
+        "19": "1673.039"
+      },
+      "total_ttc": "10479.509",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "8805.470"
+      },
+      "lignes": [
+        {
+          "designation": "Cartouche d'encre couleur",
+          "quantite": "21",
+          "prix_unitaire_ht": "71.932",
+          "montant_ligne_ht": "1510.572",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Prestation de déménagement de bureaux",
+          "quantite": "3",
+          "prix_unitaire_ht": "1401.756",
+          "montant_ligne_ht": "4205.268",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Entretien climatisation, visite",
+          "quantite": "15",
+          "prix_unitaire_ht": "198.158",
+          "montant_ligne_ht": "2972.370",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Classeur à levier, dos 8 cm",
+          "quantite": "22",
+          "prix_unitaire_ht": "5.330",
+          "montant_ligne_ht": "117.260",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "cachet_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

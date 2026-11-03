@@ -1,0 +1,439 @@
+{
+  "id": "119",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_vente",
+  "grille": "facture",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "capture": "photo",
+  "gabarit": "F",
+  "scenario": "plusieurs_taux",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "pli",
+    "tampon",
+    "signature",
+    "souche_carbone",
+    "deux_ecritures"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330VAM000",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "client": {
+      "nom": "شركة إلمارا للفلاحة",
+      "nomAr": "شركة إلمارا للفلاحة",
+      "enseigne": null,
+      "matricule": "9261020K/A/M/000",
+      "matriculeImprime": "9261020K/A/M/000",
+      "adresse": "95، نهج الميموزا، باجة",
+      "telephone": "00 68 440 214",
+      "fax": "00 60 583 643",
+      "email": null,
+      "site": null,
+      "rc": "B791260922008",
+      "rib": "99 489 3530140115458 53",
+      "banque": "Banque Talmira",
+      "code": "C9395886",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "client"
+    },
+    "date": "17/10/2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "مساعدة MEL Plus Suite، جزاف شهري",
+        "designationAr": "مساعدة MEL Plus Suite، جزاف شهري",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "اشتراك Malica Office — مستوى Foundation، 12 شهرا",
+        "designationAr": "اشتراك Malica Office — مستوى Foundation، 12 شهرا",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "وضع مستشار على الذمة، يوم",
+        "designationAr": "وضع مستشار على الذمة، يوم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "إعداد وإدماج RegFlow، يوم",
+        "designationAr": "إعداد وإدماج RegFlow، يوم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "تكوين مهني معتمد RegFISC، يوم",
+        "designationAr": "تكوين مهني معتمد RegFISC، يوم",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "ALGORIA FACTORY SARL",
+      "document_date": "17/10/2026",
+      "references.numero": "0613",
+      "references.matricule_fiscal": "1958330VAM000",
+      "references.matricule_fiscal_client": "9261020K/A/M/000",
+      "nom_client": "شركة إلمارا للفلاحة",
+      "adresse_client": "95، نهج الميموزا، باجة",
+      "adresse_emetteur": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone_emetteur": "00 71 940 517",
+      "registre_commerce_emetteur": "B01283932024",
+      "totals.base_ht": "20 263,477",
+      "totals.vat": "3 526,439",
+      "totals.ttc": "23 790,916",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "1 703,273",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "18 560,204",
+      "lines[1].vat_amount": "3 526,439",
+      "articles[0].designation": "مساعدة MEL Plus Suite، جزاف شهري",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "1 131,900",
+      "articles[0].total_ht": "1 131,900",
+      "articles[1].designation": "اشتراك Malica Office — مستوى Foundation، 12 شهرا",
+      "articles[1].quantity": "3",
+      "articles[1].unit_price_ht": "4 005,209",
+      "articles[1].total_ht": "12 015,627",
+      "articles[2].designation": "وضع مستشار على الذمة، يوم",
+      "articles[2].quantity": "3",
+      "articles[2].unit_price_ht": "1 192,039",
+      "articles[2].total_ht": "3 576,117",
+      "articles[3].designation": "إعداد وإدماج RegFlow، يوم",
+      "articles[3].quantity": "2",
+      "articles[3].unit_price_ht": "918,280",
+      "articles[3].total_ht": "1 836,560",
+      "articles[4].designation": "تكوين مهني معتمد RegFISC، يوم",
+      "articles[4].quantity": "1",
+      "articles[4].unit_price_ht": "1 703,273",
+      "articles[4].total_ht": "1 703,273",
+      "mention_exoneration": "عملية معفاة من الأداء على القيمة المضافة"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "lines[0].base_ht": "base_tva_par_taux[0]",
+      "lines[0].vat_amount": "montant_tva_par_taux[0]",
+      "lines[1].base_ht": "base_tva_par_taux[19]",
+      "lines[1].vat_amount": "montant_tva_par_taux[19]",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "mention_exoneration": "mention_suspension_exoneration"
+    }
+  },
+  "graineDuRendu": 728492422,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "ALGORIA FACTORY SARL",
+      "document_date": "2026-10-17",
+      "currency": "TND",
+      "references.numero": "0613",
+      "references.matricule_fiscal": "1958330V/A/M/000",
+      "references.matricule_fiscal_client": "9261020K/A/M/000",
+      "totals.base_ht": "20263.477",
+      "totals.vat": "3526.439",
+      "totals.ttc": "23790.916",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "1703.273",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA19",
+      "lines[1].base_ht": "18560.204",
+      "lines[1].vat_amount": "3526.439",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "1131.900",
+      "articles[0].total_ht": "1131.900",
+      "articles[1].quantity": "3.000",
+      "articles[1].unit_price_ht": "4005.209",
+      "articles[1].total_ht": "12015.627",
+      "articles[2].quantity": "3.000",
+      "articles[2].unit_price_ht": "1192.039",
+      "articles[2].total_ht": "3576.117",
+      "articles[3].quantity": "2.000",
+      "articles[3].unit_price_ht": "918.280",
+      "articles[3].total_ht": "1836.560",
+      "articles[4].quantity": "1.000",
+      "articles[4].unit_price_ht": "1703.273",
+      "articles[4].total_ht": "1703.273"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "705",
+          "0",
+          "1703.273",
+          "EXO"
+        ],
+        [
+          "705",
+          "0",
+          "14984.087",
+          "TVA19"
+        ],
+        [
+          "706",
+          "0",
+          "3576.117",
+          "TVA19"
+        ],
+        [
+          "4367",
+          "0",
+          "3526.439",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "23790.916",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "aTrancher": {
+      "reserve": "nature_de_vente",
+      "ecriture": {
+        "journal": "VEN",
+        "lignes": [
+          [
+            "701",
+            "0",
+            "1703.273",
+            "EXO"
+          ],
+          [
+            "701",
+            "0",
+            "18560.204",
+            "TVA19"
+          ],
+          [
+            "4367",
+            "0",
+            "3526.439",
+            "TVA19"
+          ],
+          [
+            "4371",
+            "0",
+            "1.000"
+          ],
+          [
+            "411",
+            "23790.916",
+            "0"
+          ]
+        ]
+      }
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente par nature d'article (ventes.compte = par_nature_article, défaut du CEO du 31/10/2026) : 705 prestations, 706 annexes, 707 marchandises ; repli au compte des produits finis, avec la réserve « nature de la vente à préciser »"
+    ],
+    "concepts": {
+      "type_document": "فاتورة",
+      "raison_sociale_emetteur": "ALGORIA FACTORY SARL",
+      "date_operation": "2026-10-17",
+      "numero_facture": "0613",
+      "matricule_fiscal_emetteur": "1958330V/A/M/000",
+      "matricule_fiscal_client": "9261020K/A/M/000",
+      "nom_client": "شركة إلمارا للفلاحة",
+      "adresse_client": "95، نهج الميموزا، باجة",
+      "adresse_emetteur": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone_email_emetteur": {
+        "telephone": "00 71 940 517"
+      },
+      "registre_commerce_emetteur": "B01283932024",
+      "total_ht": "20263.477",
+      "total_ttc": "23790.916",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "0": "1703.273",
+        "19": "18560.204"
+      },
+      "montant_tva_par_taux": {
+        "0": "0.000",
+        "19": "3526.439"
+      },
+      "lignes": [
+        {
+          "designation": "مساعدة MEL Plus Suite، جزاف شهري",
+          "quantite": "1",
+          "prix_unitaire_ht": "1131.900",
+          "montant_ligne_ht": "1131.900",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "اشتراك Malica Office — مستوى Foundation، 12 شهرا",
+          "quantite": "3",
+          "prix_unitaire_ht": "4005.209",
+          "montant_ligne_ht": "12015.627",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "وضع مستشار على الذمة، يوم",
+          "quantite": "3",
+          "prix_unitaire_ht": "1192.039",
+          "montant_ligne_ht": "3576.117",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "إعداد وإدماج RegFlow، يوم",
+          "quantite": "2",
+          "prix_unitaire_ht": "918.280",
+          "montant_ligne_ht": "1836.560",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "تكوين مهني معتمد RegFISC، يوم",
+          "quantite": "1",
+          "prix_unitaire_ht": "1703.273",
+          "montant_ligne_ht": "1703.273",
+          "taux_tva_ligne": "0"
+        }
+      ],
+      "mention_suspension_exoneration": "عملية معفاة من الأداء على القيمة المضافة",
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

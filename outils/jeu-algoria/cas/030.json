@@ -1,0 +1,351 @@
+{
+  "id": "030",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "A",
+  "scenario": "un_taux",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "tampon"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "Bon de Livraison/Facture",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Valmera Tech SA",
+      "nomAr": null,
+      "enseigne": "VALMERA TECH",
+      "matricule": "5219002Q/A/M/000",
+      "matriculeImprime": "5219002Q/A/M/000",
+      "adresse": "Avenue de l'Environnement, immeuble Yasmine, 3e étage, 4051 Sahloul",
+      "telephone": "00 63 748 126",
+      "fax": "00 31 639 128",
+      "email": "commandes@valmera-tech.example",
+      "site": "www.valmera-tech.example",
+      "rc": "B503883242019",
+      "rib": "99 332 2483440455643 42",
+      "banque": "Banque Talmira",
+      "code": "C8259746",
+      "couleur": "#c0392b",
+      "slogan": "high-tech pour tous",
+      "magasin": "07",
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "07/08/2026",
+    "chargee": "Mayssa Trabelsa",
+    "votreReference": "Commande téléphonique",
+    "articles": [
+      {
+        "designation": "Piles alcalines AA, lot de 4",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "PIL-AA4",
+        "codeBarre": "6197664820441",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Câble HDMI 2.0 1,8 m",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "HDMI-18M",
+        "codeBarre": "6198045985636",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Câble réseau Cat6 3 m",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "CBL-C6-3M",
+        "codeBarre": "6194623949465",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": "86,294",
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": false
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Valmera Tech SA",
+      "document_date": "07/08/2026",
+      "references.numero": "FAC-26M07LIV-261106",
+      "references.matricule_fiscal": "5219002Q/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Avenue de l'Environnement, immeuble Yasmine, 3e étage, 4051 Sahloul",
+      "telephone_emetteur": "00 63 748 126",
+      "registre_commerce_emetteur": "B503883242019",
+      "rib_emetteur": "99 332 2483440455643 42",
+      "mode_reglement": "CHEQUE",
+      "code_client": "C2866490",
+      "totals.base_ht": "85,294",
+      "totals.vat": "16,206",
+      "totals.ttc": "102,500",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Piles alcalines AA, lot de 4",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ttc": "10,000",
+      "articles[0].reference": "PIL-AA4",
+      "articles[0].total_ht": "8,403",
+      "articles[1].designation": "Câble HDMI 2.0 1,8 m",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ttc": "21,000",
+      "articles[1].reference": "HDMI-18M",
+      "articles[1].total_ht": "35,294",
+      "articles[2].designation": "Câble réseau Cat6 3 m",
+      "articles[2].quantity": "5",
+      "articles[2].unit_price_ttc": "9,900",
+      "articles[2].reference": "CBL-C6-3M",
+      "articles[2].total_ht": "41,597",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce."
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "code_client": "code_client",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ttc": "lignes[0].prix_unitaire_ttc",
+      "articles[0].reference": "lignes[0].reference_article",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ttc": "lignes[1].prix_unitaire_ttc",
+      "articles[1].reference": "lignes[1].reference_article",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ttc": "lignes[2].prix_unitaire_ttc",
+      "articles[2].reference": "lignes[2].reference_article",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "conditions_generales": "conditions_generales"
+    }
+  },
+  "graineDuRendu": 1921829461,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Valmera Tech SA",
+      "document_date": "2026-08-07",
+      "currency": "TND",
+      "references.numero": "FAC-26M07LIV-261106",
+      "references.matricule_fiscal": "5219002Q/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "85.294",
+      "totals.vat": "16.206",
+      "totals.ttc": "102.500",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "85.294",
+      "lines[0].vat_amount": "16.206",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].total_ht": "8.403",
+      "articles[1].quantity": "2.000",
+      "articles[1].total_ht": "35.294",
+      "articles[2].quantity": "5.000",
+      "articles[2].total_ht": "41.597"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "85.294",
+          "0"
+        ],
+        [
+          "4366",
+          "16.206",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "102.500"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Piège : le titre « Bon de Livraison/Facture » contient « bon de livraison », que ref.titres_de_piece refuse (rejet) — la pièce EST une facture (TVA, timbre, matricules) : l'issue juste est une écriture ; un refus sur le titre est un refus injuste. « Total avec Timbre » vaut HT + timbre, jamais le TTC.",
+      "INCERTAIN — timbre de 1,000 DT (droit fixe du référentiel) : le barème des grandes surfaces (1,500 / 2,000 DT, ref.baremes_des_droits) ne s'applique pas à ces enseignes fictives."
+    ],
+    "concepts": {
+      "type_document": "Bon de Livraison/Facture",
+      "raison_sociale_emetteur": "Valmera Tech SA",
+      "date_operation": "2026-08-07",
+      "numero_facture": "FAC-26M07LIV-261106",
+      "matricule_fiscal_emetteur": "5219002Q/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Avenue de l'Environnement, immeuble Yasmine, 3e étage, 4051 Sahloul",
+      "telephone_email_emetteur": {
+        "telephone": "00 63 748 126",
+        "fax": "00 31 639 128",
+        "email": "commandes@valmera-tech.example",
+        "site": "www.valmera-tech.example"
+      },
+      "registre_commerce_emetteur": "B503883242019",
+      "rib_emetteur": "99 332 2483440455643 42",
+      "mode_reglement": "CHEQUE",
+      "total_ht": "85.294",
+      "montant_tva_par_taux": {
+        "19": "16.206"
+      },
+      "total_ttc": "102.500",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "85.294"
+      },
+      "lignes": [
+        {
+          "designation": "Piles alcalines AA, lot de 4",
+          "quantite": "1",
+          "prix_unitaire_ttc": "10.000",
+          "reference_article": "PIL-AA4",
+          "montant_ligne_ht": "8.403",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Câble HDMI 2.0 1,8 m",
+          "quantite": "2",
+          "prix_unitaire_ttc": "21.000",
+          "reference_article": "HDMI-18M",
+          "montant_ligne_ht": "35.294",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Câble réseau Cat6 3 m",
+          "quantite": "5",
+          "prix_unitaire_ttc": "9.900",
+          "reference_article": "CBL-C6-3M",
+          "montant_ligne_ht": "41.597",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce.",
+      "cachet_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "adresse_livraison": "adresse_client",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ht",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

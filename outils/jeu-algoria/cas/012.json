@@ -1,0 +1,326 @@
+{
+  "id": "012",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "pdf_image",
+  "capture": "scan",
+  "gabarit": "A",
+  "scenario": "remise_ligne",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale",
+    "tampon",
+    "annotation"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "Bon de Livraison/Facture",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Valmera Tech SA",
+      "nomAr": null,
+      "enseigne": "VALMERA TECH",
+      "matricule": "5219002Q/A/M/000",
+      "matriculeImprime": "5219002Q/A/M/000",
+      "adresse": "Avenue de l'Environnement, immeuble Yasmine, 3e étage, 4051 Sahloul",
+      "telephone": "00 63 748 126",
+      "fax": "00 31 639 128",
+      "email": "commandes@valmera-tech.example",
+      "site": "www.valmera-tech.example",
+      "rc": "B503883242019",
+      "rib": "99 332 2483440455643 42",
+      "banque": "Banque Talmira",
+      "code": "C6721856",
+      "couleur": "#c0392b",
+      "slogan": "high-tech pour tous",
+      "magasin": "07",
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "02/02/2026",
+    "chargee": "Hedi Belkhouja",
+    "votreReference": "Retrait magasin",
+    "articles": [
+      {
+        "designation": "Barrette mémoire DDR4 16 Go",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "RAM-D4-16",
+        "codeBarre": "6195245028002",
+        "remise": "5,00",
+        "taux": "19",
+        "sousLignes": [
+          "S N : 936907578242702",
+          "D1 **1.00"
+        ]
+      },
+      {
+        "designation": "Chargeur USB-C 65 W",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "CHG-C65W",
+        "codeBarre": "6194132079011",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "SN:"
+        ]
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": "321,462",
+    "enLettres": "Arrêtée la présente pièce à la somme de: trois cent quatre-vingt-deux dinars et trois cent cinquante millimes",
+    "tampon": {
+      "porteLeMatricule": false
+    },
+    "annotation": "Reçu le 04/02",
+    "ratures": [],
+    "imprime": {
+      "issuer": "Valmera Tech SA",
+      "document_date": "02/02/2026",
+      "references.numero": "FAC-26M07LIV-269205",
+      "references.matricule_fiscal": "5219002Q/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Avenue de l'Environnement, immeuble Yasmine, 3e étage, 4051 Sahloul",
+      "telephone_emetteur": "00 63 748 126",
+      "registre_commerce_emetteur": "B503883242019",
+      "rib_emetteur": "99 332 2483440455643 42",
+      "mode_reglement": "TRAITE",
+      "code_client": "C1419022",
+      "totals.base_ht": "320,462",
+      "totals.vat": "60,888",
+      "totals.ttc": "382,350",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Barrette mémoire DDR4 16 Go",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ttc": "136,500",
+      "articles[0].reference": "RAM-D4-16",
+      "articles[0].total_ht": "217,941",
+      "articles[1].designation": "Chargeur USB-C 65 W",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ttc": "122,000",
+      "articles[1].reference": "CHG-C65W",
+      "articles[1].total_ht": "102,521",
+      "montant_en_lettres": "trois cent quatre-vingt-deux dinars et trois cent cinquante millimes",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce."
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "code_client": "code_client",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ttc": "lignes[0].prix_unitaire_ttc",
+      "articles[0].reference": "lignes[0].reference_article",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ttc": "lignes[1].prix_unitaire_ttc",
+      "articles[1].reference": "lignes[1].reference_article",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres",
+      "conditions_generales": "conditions_generales"
+    }
+  },
+  "graineDuRendu": 2034318968,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Valmera Tech SA",
+      "document_date": "2026-02-02",
+      "currency": "TND",
+      "references.numero": "FAC-26M07LIV-269205",
+      "references.matricule_fiscal": "5219002Q/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "320.462",
+      "totals.vat": "60.888",
+      "totals.ttc": "382.350",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "320.462",
+      "lines[0].vat_amount": "60.888",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].total_ht": "217.941",
+      "articles[1].quantity": "1.000",
+      "articles[1].total_ht": "102.521"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "320.462",
+          "0"
+        ],
+        [
+          "4366",
+          "60.888",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "382.350"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Piège : le titre « Bon de Livraison/Facture » contient « bon de livraison », que ref.titres_de_piece refuse (rejet) — la pièce EST une facture (TVA, timbre, matricules) : l'issue juste est une écriture ; un refus sur le titre est un refus injuste. « Total avec Timbre » vaut HT + timbre, jamais le TTC.",
+      "INCERTAIN — timbre de 1,000 DT (droit fixe du référentiel) : le barème des grandes surfaces (1,500 / 2,000 DT, ref.baremes_des_droits) ne s'applique pas à ces enseignes fictives.",
+      "Annotation manuscrite « Reçu le 04/02 » : ni la date ni le montant de la pièce."
+    ],
+    "concepts": {
+      "type_document": "Bon de Livraison/Facture",
+      "raison_sociale_emetteur": "Valmera Tech SA",
+      "date_operation": "2026-02-02",
+      "numero_facture": "FAC-26M07LIV-269205",
+      "matricule_fiscal_emetteur": "5219002Q/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Avenue de l'Environnement, immeuble Yasmine, 3e étage, 4051 Sahloul",
+      "telephone_email_emetteur": {
+        "telephone": "00 63 748 126",
+        "fax": "00 31 639 128",
+        "email": "commandes@valmera-tech.example",
+        "site": "www.valmera-tech.example"
+      },
+      "registre_commerce_emetteur": "B503883242019",
+      "rib_emetteur": "99 332 2483440455643 42",
+      "mode_reglement": "TRAITE",
+      "total_ht": "320.462",
+      "montant_tva_par_taux": {
+        "19": "60.888"
+      },
+      "total_ttc": "382.350",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "320.462"
+      },
+      "lignes": [
+        {
+          "designation": "Barrette mémoire DDR4 16 Go",
+          "quantite": "2",
+          "prix_unitaire_ttc": "136.500",
+          "reference_article": "RAM-D4-16",
+          "remise_ligne": "5",
+          "montant_ligne_ht": "217.941",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Chargeur USB-C 65 W",
+          "quantite": "1",
+          "prix_unitaire_ttc": "122.000",
+          "reference_article": "CHG-C65W",
+          "montant_ligne_ht": "102.521",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "trois cent quatre-vingt-deux dinars et trois cent cinquante millimes",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce.",
+      "cachet_emetteur": true,
+      "visa_client": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "adresse_livraison": "adresse_client",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ht",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_ttn",
+      "remise_globale",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite"
+    ]
+  }
+}

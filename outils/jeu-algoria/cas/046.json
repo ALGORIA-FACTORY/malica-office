@@ -1,0 +1,289 @@
+{
+  "id": "046",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "B",
+  "scenario": "exonere",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Centre Felmane de Formation",
+      "nomAr": "مركز فلمان للتكوين",
+      "enseigne": null,
+      "matricule": "4064013Z/A/M/000",
+      "matriculeImprime": "4064013Z/A/M/000",
+      "adresse": "22, rue des Mimosas, Tunis",
+      "telephone": "00 38 356 183",
+      "fax": "00 67 844 230",
+      "email": null,
+      "site": null,
+      "rc": "B197052572021",
+      "rib": "99 307 3021311760907 63",
+      "banque": "Banque Talmira",
+      "code": "C8848027",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "08-02-2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Formation professionnelle agréée, jour",
+        "designationAr": "تكوين مهني معتمد، يوم",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "Formation certifiante en ligne, accès par stagiaire",
+        "designationAr": "تكوين إشهادي عن بعد، نفاذ لكل متكوّن",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Centre Felmane de Formation",
+      "document_date": "08-02-2026",
+      "references.numero": "F-2026-1977",
+      "references.matricule_fiscal": "4064013Z/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "22, rue des Mimosas, Tunis",
+      "telephone_emetteur": "00 38 356 183",
+      "rib_emetteur": "99 307 3021311760907 63",
+      "totals.base_ht": "8 088,847",
+      "totals.vat": "0,000",
+      "totals.ttc": "8 089,847",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Formation professionnelle agréée, jour",
+      "articles[0].quantity": "3",
+      "articles[0].unit_price_ht": "1 119,778",
+      "articles[0].total_ht": "3 359,334",
+      "articles[1].designation": "Formation certifiante en ligne, accès par stagiaire",
+      "articles[1].quantity": "23",
+      "articles[1].unit_price_ht": "205,631",
+      "articles[1].total_ht": "4 729,513",
+      "mention_exoneration": "Opération exonérée de TVA"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "rib_emetteur": "rib_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[0]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "mention_exoneration": "mention_suspension_exoneration"
+    }
+  },
+  "graineDuRendu": 78935871,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Centre Felmane de Formation",
+      "document_date": "2026-02-08",
+      "currency": "TND",
+      "references.numero": "F-2026-1977",
+      "references.matricule_fiscal": "4064013Z/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "8088.847",
+      "totals.vat": "0.000",
+      "totals.ttc": "8089.847",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "8088.847",
+      "lines[0].vat_amount": "0.000",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "3.000",
+      "articles[0].unit_price_ht": "1119.778",
+      "articles[0].total_ht": "3359.334",
+      "articles[1].quantity": "23.000",
+      "articles[1].unit_price_ht": "205.631",
+      "articles[1].total_ht": "4729.513"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "8088.847",
+          "0",
+          "EXO"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "8089.847"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Centre Felmane de Formation",
+      "date_operation": "2026-02-08",
+      "numero_facture": "F-2026-1977",
+      "matricule_fiscal_emetteur": "4064013Z/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "22, rue des Mimosas, Tunis",
+      "telephone_email_emetteur": {
+        "telephone": "00 38 356 183"
+      },
+      "rib_emetteur": "99 307 3021311760907 63",
+      "total_ht": "8088.847",
+      "montant_tva_par_taux": {
+        "0": "0.000"
+      },
+      "total_ttc": "8089.847",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "0": "8088.847"
+      },
+      "lignes": [
+        {
+          "designation": "Formation professionnelle agréée, jour",
+          "quantite": "3",
+          "prix_unitaire_ht": "1119.778",
+          "montant_ligne_ht": "3359.334",
+          "taux_tva_ligne": "0"
+        },
+        {
+          "designation": "Formation certifiante en ligne, accès par stagiaire",
+          "quantite": "23",
+          "prix_unitaire_ht": "205.631",
+          "montant_ligne_ht": "4729.513",
+          "taux_tva_ligne": "0"
+        }
+      ],
+      "mention_suspension_exoneration": "Opération exonérée de TVA",
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "registre_commerce_emetteur",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

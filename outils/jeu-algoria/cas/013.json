@@ -1,0 +1,553 @@
+{
+  "id": "013",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "pdf_image",
+  "capture": "photo",
+  "gabarit": "A",
+  "scenario": "un_taux",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "tampon"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "Bon de Livraison/Facture",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Tixora Informatique SARL",
+      "nomAr": null,
+      "enseigne": "TIXORA INFORMATIQUE",
+      "matricule": "3184001O/A/M/000",
+      "matriculeImprime": "3184001O/A/M/000",
+      "adresse": "Route de la Marsa, km 9, résidence Ennour, 2046 Sidi Daoud",
+      "telephone": "00 74 117 488",
+      "fax": "00 69 286 795",
+      "email": "service.client@tixora-info.example",
+      "site": "www.tixora-info.example",
+      "rc": "B795416542016",
+      "rib": "99 155 7620585496592 48",
+      "banque": "Crédit Selvane",
+      "code": "C2400326",
+      "couleur": "#0b5aa6",
+      "slogan": "matériel & solutions",
+      "magasin": "01",
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "13/01/2026",
+    "chargee": "Yassine Mrabta",
+    "votreReference": "Facture Vente en ligne",
+    "articles": [
+      {
+        "designation": "Barrette mémoire DDR4 16 Go",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "RAM-D4-16",
+        "codeBarre": "6193053810611",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "S N : 657659823759621",
+          "D1 **1.00"
+        ]
+      },
+      {
+        "designation": "Câble réseau Cat6 3 m",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "CBL-C6-3M",
+        "codeBarre": "6199589006849",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "SN:"
+        ]
+      },
+      {
+        "designation": "Cartouche toner noir",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "TNR-N26A",
+        "codeBarre": "6193840395130",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "SN:"
+        ]
+      },
+      {
+        "designation": "Disque SSD NVMe 1 To",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "SSD-NV1T",
+        "codeBarre": "6190617481058",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "S N : 427375902820995"
+        ]
+      },
+      {
+        "designation": "Écran 24 pouces IPS",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "ECR-24IPS",
+        "codeBarre": "6195461139780",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "S N : 440433580787155",
+          "D1 **1.00"
+        ]
+      },
+      {
+        "designation": "Hub USB-C 7 ports",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "HUB-C7P",
+        "codeBarre": "6193380770022",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Souris optique sans fil",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "SOU-WL220",
+        "codeBarre": "6193343201068",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Ramette papier A4 80 g",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "PAP-A4-80",
+        "codeBarre": "6193574800696",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Webcam HD 1080p",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "WCM-1080",
+        "codeBarre": "6196076726129",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "S N : 986240927009539",
+          "D1 **1.00"
+        ]
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": "1.204,360",
+    "enLettres": "Arrêtée la présente pièce à la somme de: MILLE QUATRE CENT TRENTE-DEUX DINARS ET NEUF CENT QUATRE-VINGT-DIX-HUIT MILLIMES",
+    "tampon": {
+      "porteLeMatricule": false
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Tixora Informatique SARL",
+      "document_date": "13/01/2026",
+      "references.numero": "FAC-26M01LIV-262780",
+      "references.matricule_fiscal": "3184001O/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Route de la Marsa, km 9, résidence Ennour, 2046 Sidi Daoud",
+      "telephone_emetteur": "00 74 117 488",
+      "registre_commerce_emetteur": "B795416542016",
+      "rib_emetteur": "99 155 7620585496592 48",
+      "mode_reglement": "CHEQUE",
+      "code_client": "C9331609",
+      "totals.base_ht": "1.203,360",
+      "totals.vat": "228,638",
+      "totals.ttc": "1.432,998",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Barrette mémoire DDR4 16 Go",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ttc": "105,000",
+      "articles[0].reference": "RAM-D4-16",
+      "articles[0].total_ht": "88,235",
+      "articles[1].designation": "Câble réseau Cat6 3 m",
+      "articles[1].quantity": "4",
+      "articles[1].unit_price_ttc": "6,000",
+      "articles[1].reference": "CBL-C6-3M",
+      "articles[1].total_ht": "20,168",
+      "articles[2].designation": "Cartouche toner noir",
+      "articles[2].quantity": "1",
+      "articles[2].unit_price_ttc": "272,000",
+      "articles[2].reference": "TNR-N26A",
+      "articles[2].total_ht": "228,571",
+      "articles[3].designation": "Disque SSD NVMe 1 To",
+      "articles[3].quantity": "1",
+      "articles[3].unit_price_ttc": "260,000",
+      "articles[3].reference": "SSD-NV1T",
+      "articles[3].total_ht": "218,487",
+      "articles[4].designation": "Écran 24 pouces IPS",
+      "articles[4].quantity": "1",
+      "articles[4].unit_price_ttc": "391,000",
+      "articles[4].reference": "ECR-24IPS",
+      "articles[4].total_ht": "328,571",
+      "articles[5].designation": "Hub USB-C 7 ports",
+      "articles[5].quantity": "1",
+      "articles[5].unit_price_ttc": "81,000",
+      "articles[5].reference": "HUB-C7P",
+      "articles[5].total_ht": "68,067",
+      "articles[6].designation": "Souris optique sans fil",
+      "articles[6].quantity": "1",
+      "articles[6].unit_price_ttc": "26,000",
+      "articles[6].reference": "SOU-WL220",
+      "articles[6].total_ht": "21,849",
+      "articles[7].designation": "Ramette papier A4 80 g",
+      "articles[7].quantity": "2",
+      "articles[7].unit_price_ttc": "11,500",
+      "articles[7].reference": "PAP-A4-80",
+      "articles[7].total_ht": "19,328",
+      "articles[8].designation": "Webcam HD 1080p",
+      "articles[8].quantity": "2",
+      "articles[8].unit_price_ttc": "125,000",
+      "articles[8].reference": "WCM-1080",
+      "articles[8].total_ht": "210,084",
+      "montant_en_lettres": "MILLE QUATRE CENT TRENTE-DEUX DINARS ET NEUF CENT QUATRE-VINGT-DIX-HUIT MILLIMES",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce."
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "code_client": "code_client",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ttc": "lignes[0].prix_unitaire_ttc",
+      "articles[0].reference": "lignes[0].reference_article",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ttc": "lignes[1].prix_unitaire_ttc",
+      "articles[1].reference": "lignes[1].reference_article",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ttc": "lignes[2].prix_unitaire_ttc",
+      "articles[2].reference": "lignes[2].reference_article",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ttc": "lignes[3].prix_unitaire_ttc",
+      "articles[3].reference": "lignes[3].reference_article",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ttc": "lignes[4].prix_unitaire_ttc",
+      "articles[4].reference": "lignes[4].reference_article",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ttc": "lignes[5].prix_unitaire_ttc",
+      "articles[5].reference": "lignes[5].reference_article",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht",
+      "articles[6].designation": "lignes[6].designation",
+      "articles[6].quantity": "lignes[6].quantite",
+      "articles[6].unit_price_ttc": "lignes[6].prix_unitaire_ttc",
+      "articles[6].reference": "lignes[6].reference_article",
+      "articles[6].total_ht": "lignes[6].montant_ligne_ht",
+      "articles[7].designation": "lignes[7].designation",
+      "articles[7].quantity": "lignes[7].quantite",
+      "articles[7].unit_price_ttc": "lignes[7].prix_unitaire_ttc",
+      "articles[7].reference": "lignes[7].reference_article",
+      "articles[7].total_ht": "lignes[7].montant_ligne_ht",
+      "articles[8].designation": "lignes[8].designation",
+      "articles[8].quantity": "lignes[8].quantite",
+      "articles[8].unit_price_ttc": "lignes[8].prix_unitaire_ttc",
+      "articles[8].reference": "lignes[8].reference_article",
+      "articles[8].total_ht": "lignes[8].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres",
+      "conditions_generales": "conditions_generales"
+    }
+  },
+  "graineDuRendu": 1969922182,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Tixora Informatique SARL",
+      "document_date": "2026-01-13",
+      "currency": "TND",
+      "references.numero": "FAC-26M01LIV-262780",
+      "references.matricule_fiscal": "3184001O/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "1203.360",
+      "totals.vat": "228.638",
+      "totals.ttc": "1432.998",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "1203.360",
+      "lines[0].vat_amount": "228.638",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].total_ht": "88.235",
+      "articles[1].quantity": "4.000",
+      "articles[1].total_ht": "20.168",
+      "articles[2].quantity": "1.000",
+      "articles[2].total_ht": "228.571",
+      "articles[3].quantity": "1.000",
+      "articles[3].total_ht": "218.487",
+      "articles[4].quantity": "1.000",
+      "articles[4].total_ht": "328.571",
+      "articles[5].quantity": "1.000",
+      "articles[5].total_ht": "68.067",
+      "articles[6].quantity": "1.000",
+      "articles[6].total_ht": "21.849",
+      "articles[7].quantity": "2.000",
+      "articles[7].total_ht": "19.328",
+      "articles[8].quantity": "2.000",
+      "articles[8].total_ht": "210.084"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "1203.360",
+          "0"
+        ],
+        [
+          "4366",
+          "228.638",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "1432.998"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Piège : le titre « Bon de Livraison/Facture » contient « bon de livraison », que ref.titres_de_piece refuse (rejet) — la pièce EST une facture (TVA, timbre, matricules) : l'issue juste est une écriture ; un refus sur le titre est un refus injuste. « Total avec Timbre » vaut HT + timbre, jamais le TTC.",
+      "INCERTAIN — timbre de 1,000 DT (droit fixe du référentiel) : le barème des grandes surfaces (1,500 / 2,000 DT, ref.baremes_des_droits) ne s'applique pas à ces enseignes fictives."
+    ],
+    "concepts": {
+      "type_document": "Bon de Livraison/Facture",
+      "raison_sociale_emetteur": "Tixora Informatique SARL",
+      "date_operation": "2026-01-13",
+      "numero_facture": "FAC-26M01LIV-262780",
+      "matricule_fiscal_emetteur": "3184001O/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Route de la Marsa, km 9, résidence Ennour, 2046 Sidi Daoud",
+      "telephone_email_emetteur": {
+        "telephone": "00 74 117 488",
+        "fax": "00 69 286 795",
+        "email": "service.client@tixora-info.example",
+        "site": "www.tixora-info.example"
+      },
+      "registre_commerce_emetteur": "B795416542016",
+      "rib_emetteur": "99 155 7620585496592 48",
+      "mode_reglement": "CHEQUE",
+      "total_ht": "1203.360",
+      "montant_tva_par_taux": {
+        "19": "228.638"
+      },
+      "total_ttc": "1432.998",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "1203.360"
+      },
+      "lignes": [
+        {
+          "designation": "Barrette mémoire DDR4 16 Go",
+          "quantite": "1",
+          "prix_unitaire_ttc": "105.000",
+          "reference_article": "RAM-D4-16",
+          "montant_ligne_ht": "88.235",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Câble réseau Cat6 3 m",
+          "quantite": "4",
+          "prix_unitaire_ttc": "6.000",
+          "reference_article": "CBL-C6-3M",
+          "montant_ligne_ht": "20.168",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Cartouche toner noir",
+          "quantite": "1",
+          "prix_unitaire_ttc": "272.000",
+          "reference_article": "TNR-N26A",
+          "montant_ligne_ht": "228.571",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Disque SSD NVMe 1 To",
+          "quantite": "1",
+          "prix_unitaire_ttc": "260.000",
+          "reference_article": "SSD-NV1T",
+          "montant_ligne_ht": "218.487",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Écran 24 pouces IPS",
+          "quantite": "1",
+          "prix_unitaire_ttc": "391.000",
+          "reference_article": "ECR-24IPS",
+          "montant_ligne_ht": "328.571",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Hub USB-C 7 ports",
+          "quantite": "1",
+          "prix_unitaire_ttc": "81.000",
+          "reference_article": "HUB-C7P",
+          "montant_ligne_ht": "68.067",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Souris optique sans fil",
+          "quantite": "1",
+          "prix_unitaire_ttc": "26.000",
+          "reference_article": "SOU-WL220",
+          "montant_ligne_ht": "21.849",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Ramette papier A4 80 g",
+          "quantite": "2",
+          "prix_unitaire_ttc": "11.500",
+          "reference_article": "PAP-A4-80",
+          "montant_ligne_ht": "19.328",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Webcam HD 1080p",
+          "quantite": "2",
+          "prix_unitaire_ttc": "125.000",
+          "reference_article": "WCM-1080",
+          "montant_ligne_ht": "210.084",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "MILLE QUATRE CENT TRENTE-DEUX DINARS ET NEUF CENT QUATRE-VINGT-DIX-HUIT MILLIMES",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce.",
+      "cachet_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "adresse_livraison": "adresse_client",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ht",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

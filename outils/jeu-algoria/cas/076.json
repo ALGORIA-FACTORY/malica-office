@@ -1,0 +1,409 @@
+{
+  "id": "076",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "capture": "photo",
+  "gabarit": "E",
+  "scenario": "un_taux",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "pli",
+    "tampon",
+    "signature",
+    "souche_carbone",
+    "ratures"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Orvane Électricité SARL",
+      "nomAr": "أورفان للكهرباء",
+      "enseigne": null,
+      "matricule": "9249014H/A/M/000",
+      "matriculeImprime": "9249014H/A/M/000",
+      "adresse": "92, rue du Lac Ourmi, Nabeul",
+      "telephone": "00 78 277 472",
+      "fax": "00 55 249 441",
+      "email": null,
+      "site": null,
+      "rc": "B379580182014",
+      "rib": "99 579 5925573564547 19",
+      "banque": "Banque Talmira",
+      "code": "C2967350",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "17/06/2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Entretien climatisation, visite",
+        "designationAr": "صيانة المكيفات، زيارة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de déménagement de bureaux",
+        "designationAr": "خدمة نقل مكاتب",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Ramette papier A4 80 g",
+        "designationAr": "رزمة ورق A4 80 غ",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de salle de réunion, demi-journée",
+        "designationAr": "كراء قاعة اجتماعات، نصف يوم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Classeur à levier, dos 8 cm",
+        "designationAr": "ملف برافعة، ظهر 8 سم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre couleur",
+        "designationAr": "خرطوشة حبر ملون",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": "Arrêtée la présente facture à la somme de : onze mille deux cent quinze dinars et deux cent quatre-vingt-dix-neuf millimes.",
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [
+      {
+        "chemin": "articles[0].total_ht",
+        "barre": "4 556,932"
+      },
+      {
+        "chemin": "articles[1].quantity",
+        "barre": "4"
+      }
+    ],
+    "imprime": {
+      "issuer": "Orvane Électricité SARL",
+      "document_date": "17/06/2026",
+      "references.numero": "0649",
+      "references.matricule_fiscal": "9249014H/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "92, rue du Lac Ourmi, Nabeul",
+      "telephone_emetteur": "00 78 277 472",
+      "registre_commerce_emetteur": "B379580182014",
+      "mode_reglement": "Espèces",
+      "totals.base_ht": "9 423,781",
+      "totals.vat": "1 790,518",
+      "totals.ttc": "11 215,299",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Entretien climatisation, visite",
+      "articles[0].quantity": "12",
+      "articles[0].unit_price_ht": "373,911",
+      "articles[0].total_ht": "4 486,932",
+      "articles[1].designation": "Prestation de déménagement de bureaux",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "761,102",
+      "articles[1].total_ht": "1 522,204",
+      "articles[2].designation": "Ramette papier A4 80 g",
+      "articles[2].quantity": "5",
+      "articles[2].unit_price_ht": "12,776",
+      "articles[2].total_ht": "63,880",
+      "articles[3].designation": "Location de salle de réunion, demi-journée",
+      "articles[3].quantity": "3",
+      "articles[3].unit_price_ht": "407,091",
+      "articles[3].total_ht": "1 221,273",
+      "articles[4].designation": "Classeur à levier, dos 8 cm",
+      "articles[4].quantity": "20",
+      "articles[4].unit_price_ht": "5,618",
+      "articles[4].total_ht": "112,360",
+      "articles[5].designation": "Cartouche d'encre couleur",
+      "articles[5].quantity": "13",
+      "articles[5].unit_price_ht": "155,164",
+      "articles[5].total_ht": "2 017,132",
+      "montant_en_lettres": "onze mille deux cent quinze dinars et deux cent quatre-vingt-dix-neuf millimes"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ht": "lignes[5].prix_unitaire_ht",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres"
+    }
+  },
+  "graineDuRendu": 393095493,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Orvane Électricité SARL",
+      "document_date": "2026-06-17",
+      "currency": "TND",
+      "references.numero": "0649",
+      "references.matricule_fiscal": "9249014H/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "9423.781",
+      "totals.vat": "1790.518",
+      "totals.ttc": "11215.299",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "9423.781",
+      "lines[0].vat_amount": "1790.518",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "12.000",
+      "articles[0].unit_price_ht": "373.911",
+      "articles[0].total_ht": "4486.932",
+      "articles[1].quantity": "2.000",
+      "articles[1].unit_price_ht": "761.102",
+      "articles[1].total_ht": "1522.204",
+      "articles[2].quantity": "5.000",
+      "articles[2].unit_price_ht": "12.776",
+      "articles[2].total_ht": "63.880",
+      "articles[3].quantity": "3.000",
+      "articles[3].unit_price_ht": "407.091",
+      "articles[3].total_ht": "1221.273",
+      "articles[4].quantity": "20.000",
+      "articles[4].unit_price_ht": "5.618",
+      "articles[4].total_ht": "112.360",
+      "articles[5].quantity": "13.000",
+      "articles[5].unit_price_ht": "155.164",
+      "articles[5].total_ht": "2017.132"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "9423.781",
+          "0"
+        ],
+        [
+          "4366",
+          "1790.518",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "11215.299"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Ratures : la valeur barrée n'est jamais la valeur attendue ; la valeur juste est écrite à côté."
+    ],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Orvane Électricité SARL",
+      "date_operation": "2026-06-17",
+      "numero_facture": "0649",
+      "matricule_fiscal_emetteur": "9249014H/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "92, rue du Lac Ourmi, Nabeul",
+      "telephone_email_emetteur": {
+        "telephone": "00 78 277 472"
+      },
+      "registre_commerce_emetteur": "B379580182014",
+      "mode_reglement": "Espèces",
+      "total_ht": "9423.781",
+      "montant_tva_par_taux": {
+        "19": "1790.518"
+      },
+      "total_ttc": "11215.299",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "9423.781"
+      },
+      "lignes": [
+        {
+          "designation": "Entretien climatisation, visite",
+          "quantite": "12",
+          "prix_unitaire_ht": "373.911",
+          "montant_ligne_ht": "4486.932",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Prestation de déménagement de bureaux",
+          "quantite": "2",
+          "prix_unitaire_ht": "761.102",
+          "montant_ligne_ht": "1522.204",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Ramette papier A4 80 g",
+          "quantite": "5",
+          "prix_unitaire_ht": "12.776",
+          "montant_ligne_ht": "63.880",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Location de salle de réunion, demi-journée",
+          "quantite": "3",
+          "prix_unitaire_ht": "407.091",
+          "montant_ligne_ht": "1221.273",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Classeur à levier, dos 8 cm",
+          "quantite": "20",
+          "prix_unitaire_ht": "5.618",
+          "montant_ligne_ht": "112.360",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Cartouche d'encre couleur",
+          "quantite": "13",
+          "prix_unitaire_ht": "155.164",
+          "montant_ligne_ht": "2017.132",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "onze mille deux cent quinze dinars et deux cent quatre-vingt-dix-neuf millimes",
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

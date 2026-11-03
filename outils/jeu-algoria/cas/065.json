@@ -1,0 +1,287 @@
+{
+  "id": "065",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "ar",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "C",
+  "scenario": "exonere",
+  "realisme": [
+    "biais",
+    "grain",
+    "photocopie"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "مركز فلمان للتكوين",
+      "nomAr": "مركز فلمان للتكوين",
+      "enseigne": null,
+      "matricule": "4064013Z/A/M/000",
+      "matriculeImprime": "4064013Z/A/M/000",
+      "adresse": "22، نهج الميموزا، تونس",
+      "telephone": "00 38 356 183",
+      "fax": "00 67 844 230",
+      "email": null,
+      "site": null,
+      "rc": "B197052572021",
+      "rib": "99 307 3021311760907 63",
+      "banque": "Banque Talmira",
+      "code": "C4805437",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330VAM000",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "2026/01/23",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "تكوين مهني معتمد، يوم",
+        "designationAr": "تكوين مهني معتمد، يوم",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "تكوين إشهادي عن بعد، نفاذ لكل متكوّن",
+        "designationAr": "تكوين إشهادي عن بعد، نفاذ لكل متكوّن",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "مركز فلمان للتكوين",
+      "document_date": "2026/01/23",
+      "references.numero": "2026/3948",
+      "references.matricule_fiscal": "4064013Z/A/M/000",
+      "references.matricule_fiscal_client": "1958330VAM000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "22، نهج الميموزا، تونس",
+      "telephone_emetteur": "00 38 356 183",
+      "registre_commerce_emetteur": "B197052572021",
+      "mode_reglement": "نقدا",
+      "totals.base_ht": "10 295,440",
+      "totals.vat": "0,000",
+      "totals.ttc": "10 296,440",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "تكوين مهني معتمد، يوم",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "1 582,511",
+      "articles[0].total_ht": "1 582,511",
+      "articles[1].designation": "تكوين إشهادي عن بعد، نفاذ لكل متكوّن",
+      "articles[1].quantity": "23",
+      "articles[1].unit_price_ht": "378,823",
+      "articles[1].total_ht": "8 712,929",
+      "mention_exoneration": "عملية معفاة من الأداء على القيمة المضافة"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[0]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "mention_exoneration": "mention_suspension_exoneration"
+    }
+  },
+  "graineDuRendu": 135052681,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "مركز فلمان للتكوين",
+      "document_date": "2026-01-23",
+      "currency": "TND",
+      "references.numero": "2026/3948",
+      "references.matricule_fiscal": "4064013Z/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "10295.440",
+      "totals.vat": "0.000",
+      "totals.ttc": "10296.440",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "10295.440",
+      "lines[0].vat_amount": "0.000",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "1582.511",
+      "articles[0].total_ht": "1582.511",
+      "articles[1].quantity": "23.000",
+      "articles[1].unit_price_ht": "378.823",
+      "articles[1].total_ht": "8712.929"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "10295.440",
+          "0",
+          "EXO"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "10296.440"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "فاتورة",
+      "raison_sociale_emetteur": "مركز فلمان للتكوين",
+      "date_operation": "2026-01-23",
+      "numero_facture": "2026/3948",
+      "matricule_fiscal_emetteur": "4064013Z/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "22، نهج الميموزا، تونس",
+      "telephone_email_emetteur": {
+        "telephone": "00 38 356 183"
+      },
+      "registre_commerce_emetteur": "B197052572021",
+      "mode_reglement": "نقدا",
+      "total_ht": "10295.440",
+      "montant_tva_par_taux": {
+        "0": "0.000"
+      },
+      "total_ttc": "10296.440",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "0": "10295.440"
+      },
+      "lignes": [
+        {
+          "designation": "تكوين مهني معتمد، يوم",
+          "quantite": "1",
+          "prix_unitaire_ht": "1582.511",
+          "montant_ligne_ht": "1582.511",
+          "taux_tva_ligne": "0"
+        },
+        {
+          "designation": "تكوين إشهادي عن بعد، نفاذ لكل متكوّن",
+          "quantite": "23",
+          "prix_unitaire_ht": "378.823",
+          "montant_ligne_ht": "8712.929",
+          "taux_tva_ligne": "0"
+        }
+      ],
+      "mention_suspension_exoneration": "عملية معفاة من الأداء على القيمة المضافة"
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}
