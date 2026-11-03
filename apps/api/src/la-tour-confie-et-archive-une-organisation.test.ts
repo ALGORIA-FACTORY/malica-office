@@ -143,6 +143,11 @@ describe("la Tour confie et archive une organisation", { skip: !BASE_CONFIGUREE 
     // Le matricule est libre : une autre société le porte.
     const autre = await orgSansMembre(mf);
     assert.ok(autre);
+    // Un cabinet ne s'archive pas par ce geste : ses mandats le lient.
+    await assert.rejects(
+      fait(plateforme, "tour.archiverOrganisation", cabinet, "essai"),
+      /pas_une_societe/,
+    );
     // Archivée, elle ne s'archive pas deux fois.
     await assert.rejects(
       fait(plateforme, "tour.archiverOrganisation", org, "encore"),

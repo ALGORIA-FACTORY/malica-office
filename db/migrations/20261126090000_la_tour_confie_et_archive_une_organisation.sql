@@ -96,6 +96,7 @@ set search_path = ''
 as $$
 declare
   v_nom     text;
+  v_kind    text;
   v_archive timestamptz;
   v_motif   text := btrim(coalesce(p_motif, ''));
   v_mandat  record;
@@ -107,10 +108,16 @@ begin
     raise exception 'refus.archivage.motif_requis' using errcode = '22023';
   end if;
 
-  select o.name, o.archived_at into v_nom, v_archive
+  select o.name, o.kind, o.archived_at into v_nom, v_kind, v_archive
     from identity.organizations o where o.id = p_org for update;
   if v_nom is null or v_archive is not null then
     raise exception 'refus.introuvable.organisation' using errcode = '42501';
+  end if;
+  -- Une SOCIÉTÉ seulement (revue de #217). Un cabinet archivé garderait ses
+  -- mandats, ses membres et l'accès de ses experts aux dossiers clients :
+  -- sa sortie demande de rendre chaque mandat, ce que ce geste ne fait pas.
+  if v_kind <> 'pme' then
+    raise exception 'refus.organisation.pas_une_societe' using errcode = '22023';
   end if;
   -- Les factures Malica partent sous son nom : elle ne s'archive pas tant
   -- qu'elle est l'émetteur en vigueur.
@@ -137,13 +144,16 @@ begin
   update facturation.acces a
      set statut = 'termine', effet_au = current_date, motif_fin = 'fin_engagement'
    where a.tenant_id = p_org and a.statut in ('actif', 'suspendu');
+  -- Une proposition en attente tombe — si la société a une licence : un accès
+  -- terminé en porte une (`acces_propose_sans_licence`). Sans licence, elle
+  -- reste « proposée » sur une société archivée, que plus personne ne dirige
+  -- ni ne voit (revue de #217) : rien ne la facture.
   update facturation.acces a
      set statut = 'termine',
-         licence_id = coalesce(a.licence_id,
-                               (select lo.licence_id from facturation.licence_organisations lo
-                                 where lo.tenant_id = p_org)),
+         licence_id = lo.licence_id,
          effet_du = current_date, effet_au = current_date, motif_fin = 'fin_engagement'
-   where a.tenant_id = p_org and a.statut = 'propose';
+    from facturation.licence_organisations lo
+   where a.tenant_id = p_org and a.statut = 'propose' and lo.tenant_id = p_org;
 
   update identity.organizations
      set archived_at = now(), archived_reason = v_motif
@@ -161,7 +171,7 @@ revoke all on function public.plateforme_organisation_archiver(uuid, text) from 
 grant execute on function public.plateforme_organisation_archiver(uuid, text) to authenticated;
 
 comment on function public.plateforme_organisation_archiver(uuid, text) is
-  'La plateforme archive une organisation, motif à l''appui, sans rien effacer (R7) : '
+  'La plateforme archive une société (jamais un cabinet), motif à l''appui, sans rien effacer (R7) : '
   'son mandat actif et l''accès de son cabinet se terminent ; son matricule redevient '
   'libre. L''émetteur des factures en vigueur ne s''archive pas. Journalisé.';
 
