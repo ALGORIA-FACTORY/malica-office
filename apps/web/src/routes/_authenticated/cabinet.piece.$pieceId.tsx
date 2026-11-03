@@ -547,6 +547,14 @@ function CabinetReviewDeLaPiece() {
     piece.documentKindStatut !== "confirme" &&
     proposition.data?.ok === false &&
     ((proposition.data.controlesEnDefaut ?? []).includes("sens_de_la_piece") ||
+      /*
+       * Le Socle dit « à compléter — type » (recette du 2 novembre 2026) :
+       * la PME avait DÉCLARÉ un achat, la lecture n'a rien tranché, et le type
+       * déclaré n'est pas un type établi. Les boutons Achat / Vente restaient
+       * cachés parce qu'un type était déclaré ; c'est pourtant au cabinet de
+       * l'établir.
+       */
+      (proposition.data.aCompleter ?? []).includes("type") ||
       leSensResteADemander({ sensLu, typeDeclare: piece.documentKind }));
   /*
    * Forcer ne dépend jamais du sens : un type qui ne porte pas d'écriture (un

@@ -641,6 +641,7 @@ export function composerLaProposition(
         verdictCode: codeDuVerdict(verdict),
         raison: `Aucune écriture ne se propose : à compléter — ${e.champs.join(", ")}.`,
         raisonCode: "a_completer",
+        aCompleter: [...e.champs],
       };
     if (e instanceof Error && e.message === "MISSING_ACCOUNT_MAPPING")
       return {
