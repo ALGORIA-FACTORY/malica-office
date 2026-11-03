@@ -510,6 +510,35 @@ describe("le moteur commercial", { skip: !BASE_CONFIGUREE }, () => {
     });
   });
 
+  it("un mandat ne vaut lecture que dans ses dates", async () => {
+    await dansLArgent(async (db, m) => {
+      // Le cabinet B, mandaté par la PME sans cabinet : un mandat « actif » mais
+      // échu hier, puis un mandat en cours (revue Codex de #202).
+      const voit = async () => {
+        await comme(db, "CB");
+        const n = await compter(db, "select count(*) n from facturation.licences where id = $1", [
+          m.licence0,
+        ]);
+        await enSuperutilisateur(db);
+        return n;
+      };
+      const engagement = (
+        await db.query<{ id: string }>(
+          `insert into identity.engagements (pme_org_id, cabinet_org_id, status, starts_on, ends_on)
+           values ($1, $2, 'actif', current_date - 30, current_date - 1) returning id`,
+          [pme0, b.cabinet],
+        )
+      ).rows[0]!.id;
+      assert.equal(await voit(), 0, "un mandat échu n'ouvre rien");
+      await db.query("update identity.engagements set ends_on = null where id = $1", [engagement]);
+      assert.equal(await voit(), 1, "un mandat en cours ouvre la licence au cabinet");
+      await db.query("update identity.engagements set starts_on = current_date + 1 where id = $1", [
+        engagement,
+      ]);
+      assert.equal(await voit(), 0, "un mandat qui n'a pas commencé n'ouvre rien");
+    });
+  });
+
   it("le chef de la comptabilité ne se désigne que par le propriétaire principal", async () => {
     await assert.rejects(
       sousIdentite(a.gens.bilel.id, (db) =>

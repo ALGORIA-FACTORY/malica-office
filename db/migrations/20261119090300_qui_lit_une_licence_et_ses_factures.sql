@@ -137,11 +137,11 @@ language sql stable security definer set search_path = '' as $$
           or exists (select 1 from facturation.licence_organisations lo
                       where lo.licence_id = l.id
                         and app.a_le_droit(lo.tenant_id, 'commerce.lire'))
+          -- Le mandat en vigueur AUJOURD'HUI (statut et dates), par le prédicat
+          -- du dépôt : `app.engaged_orgs_as_expert` (revue Codex de #202).
           or exists (select 1 from facturation.licence_organisations lo
-                       join identity.engagements e on e.pme_org_id = lo.tenant_id
-                                                  and e.status = 'actif'
                       where lo.licence_id = l.id
-                        and app.has_org_role(e.cabinet_org_id, array['expert']))
+                        and lo.tenant_id in (select app.engaged_orgs_as_expert()))
           or exists (select 1 from facturation.acces a
                       where a.licence_id = l.id
                         and a.statut in ('actif', 'suspendu')
