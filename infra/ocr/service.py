@@ -1,5 +1,23 @@
 """
-Le second lecteur : PaddleOCR derrière une porte HTTP, sur le réseau interne.
+Le lecteur OCR : PP-OCRv5 derrière une porte HTTP, sur le réseau interne.
+
+========================================= ONNX D'ABORD, PADDLE LA NUIT (1er nov. 2026)
+
+Décision du dirigeant, sur mesure. Banc du 1er novembre 2026 : 150 pièces
+fictives (152 pages, jeux « 100 » et « 50 »), même redimension que ce service,
+jetons passés par le code de production (`lireAvecPaddle`, `recollerLesMilliers`)
+puis par le moteur Sudoku natif ; poste à 2 cœurs Xeon 2,1 GHz :
+
+    moteur (mêmes poids)        centre prouvé  lignes prouvées  médiane  p95    pointe
+    paddle (Paddle 3.3.1)            111             91          11,1 s  15,7 s  1,45 Gio
+    onnx (onnxruntime 1.31.1)        111             91           3,1 s   4,6 s  0,87 Gio
+
+Mêmes textes sur 149 pages sur 152 (3 lignes diffèrent), mêmes preuves, une
+seule « fausse » au sens du banc, la même pour les deux : 100/D-08, imprimée à
+deux décimales, dont le Sudoku prouve les montants IMPRIMÉS (3,28 pour
+3,276). Le multilingue de RapidOCR, essayé aussi, prouve moins (110 / 81).
+D'où `OCR_MOTEUR=onnx` par défaut ; `paddle` reste pour la relecture de nuit.
+Chiffres complets et réserves : docs/exploitation.md, section OCR.
 
 ================================================================== POURQUOI
 
@@ -19,8 +37,10 @@ Il ne comprend rien. Il rend du texte et des positions ; décider lequel de ces
 nombres est le total reste le travail de la désignation, et R2 ne bouge pas :
 le modèle qui désigne ne voit toujours pas la pièce.
 
-Il ne décide pas non plus quand on l'appelle. C'est l'API qui le fait, et
-seulement quand la première lecture a échoué.
+Il ne décide pas non plus quand on l'appelle. C'est l'API qui le fait
+(`apps/api/src/malica/lecture/vision.ts`, `relever`) : pour une photo, et pour
+un PDF dont la couche de texte ne se croit pas, il passe AVANT le modèle de
+vision ; un PDF qui porte son texte ne lui arrive jamais.
 
 =================================================== LE CONTRAT, EN UNE PHRASE
 
@@ -35,6 +55,7 @@ import os
 import re
 import threading
 import time
+from pathlib import Path
 
 import numpy
 from PIL import Image, ImageOps
@@ -45,6 +66,29 @@ import cv2  # noqa: E402
 from fastapi import FastAPI, HTTPException, Request  # noqa: E402
 from paddleocr import PaddleOCR, TextRecognition  # noqa: E402
 from starlette.concurrency import run_in_threadpool  # noqa: E402
+
+import poids  # noqa: E402
+
+# ============================================================= LE MOTEUR
+#
+# `onnx` (défaut) : les poids PP-OCRv5 convertis en ONNX, exécutés par
+# onnxruntime À TRAVERS le pipeline de PaddleOCR (`engine="onnxruntime"`) —
+# même découpe, même post-traitement, mêmes poids vérifiés : seul le moteur de
+# calcul change. C'est le PREMIER lecteur depuis le 1er novembre 2026.
+#
+# `paddle` : Paddle Inference, le lecteur d'avant, gardé pour la relecture
+# lourde de nuit. Même contrat, mêmes poids.
+#
+# Un autre mot est refusé au démarrage : un moteur inconnu ne se rabat sur
+# rien en silence.
+MOTEUR = os.environ.get("OCR_MOTEUR", "onnx")
+if MOTEUR not in poids.MANIFESTE["moteurs"]:
+    raise SystemExit(f"OCR_MOTEUR inconnu : {MOTEUR}")
+POIDS = Path(os.environ.get("OCR_POIDS", "/app/poids"))
+
+# Un seul réglage de fils pour les deux moteurs : celui que le compose pose
+# déjà (`OCR_FILS` → `OMP_NUM_THREADS`). Deux sur la CX23 (mesuré, plus bas).
+FILS = int(os.environ.get("OMP_NUM_THREADS", "2"))
 
 # Les modèles MOBILE, pas « server » : mesurés à 1,8 Go de pointe, quand les
 # modèles medium font tomber le conteneur sur la machine de recette, partagée
@@ -60,6 +104,30 @@ from starlette.concurrency import run_in_threadpool  # noqa: E402
 # changerait le relevé sans qu'une ligne de code bouge (R8).
 DETECTION = os.environ.get("OCR_MODELE_DETECTION", "PP-OCRv5_mobile_det")
 RECONNAISSANCE = os.environ.get("OCR_MODELE_RECONNAISSANCE", "latin_PP-OCRv5_mobile_rec")
+# Le second alphabet, ligne par ligne (voir plus bas) : vide = coupé.
+RECONNAISSANCE_ARABE = os.environ.get("OCR_MODELE_RECONNAISSANCE_ARABE", "")
+
+# ============================================ CE QUI EST CHARGÉ, ET SON NOM
+#
+# Seuls les modèles de `poids.json` existent : leurs poids sont DANS l'image,
+# vérifiés à la construction, et revérifiés ici AVANT d'être chargés. Un autre
+# nom, ou un fichier altéré, arrête le service au démarrage — au lieu de
+# télécharger on ne sait quoi, et de rendre des relevés refusés au journal
+# faute de tarif.
+#
+# Le nom du relevé porte les modèles ET le moteur : deux moteurs, même sur les
+# mêmes poids, ne rendent pas des relevés identiques à l'octet, et le journal
+# doit pouvoir les compter séparément. Chaque nom possible est tarifé
+# (migrations 20261014090000, 20261025100000, 20261115090000) ; l'accord est
+# vérifié par `infra/ocr/tarif.test.mjs`.
+_MODELES = [m for m in (DETECTION, RECONNAISSANCE, RECONNAISSANCE_ARABE) if m]
+EMPREINTES = {m: poids.verifier(POIDS, MOTEUR, m) for m in _MODELES}
+_SUFFIXE = poids.MANIFESTE["moteurs"][MOTEUR]["suffixe_du_releve"]
+MODELE = "+".join(_MODELES) + _SUFFIXE
+# Une page sans ligne relue en arabe n'a été lue que par le modèle latin : son
+# relevé porte ce nom-là (tarifé lui aussi), pas celui d'un modèle qui n'a pas
+# tourné.
+MODELE_LATIN = "+".join((DETECTION, RECONNAISSANCE)) + _SUFFIXE
 
 # L'appareil : « cpu ». Mesure du 24 octobre 2026 sur une RTX 5070 (Paddle
 # 3.2.1 cu129) : 0,2 s par page au lieu de 9 s, au meme taux de champs
@@ -79,15 +147,41 @@ APPAREIL = os.environ.get("OCR_APPAREIL", "cpu")
 # `enable_mkldnn=False` n'est pas un réglage de confort : avec l'accélérateur
 # activé, paddle 3.3.1 échoue sur « ConvertPirAttribute2RuntimeAttribute not
 # support ». Vérifié identique sur Linux et sur Windows, le 13 octobre 2026.
+#
+# `lang` n'est plus passé : PaddleOCR l'ignore dès que les modèles sont
+# nommés (il le dit lui-même), et un réglage sans effet est un réglage qui
+# ment (`OCR_LANGUE` est retiré de l'image).
+_COMMUN = (
+    {"device": APPAREIL, "enable_mkldnn": False, "cpu_threads": FILS}
+    if MOTEUR == "paddle"
+    else {
+        "device": APPAREIL,
+        "engine": "onnxruntime",
+        # Sans l'arène mémoire d'onnxruntime : chaque page a sa taille, et
+        # l'arène garde la plus grande. Mesuré le 1er novembre 2026 sur 20
+        # pages : pointe 749 Mio au lieu de 1 099, même vitesse, mêmes textes.
+        "engine_config": {
+            "intra_op_num_threads": FILS,
+            "inter_op_num_threads": 1,
+            "enable_cpu_mem_arena": False,
+        },
+    }
+)
+
+
+def _dossier(modele: str) -> str:
+    return str(POIDS / MOTEUR / modele)
+
+
 _ocr = PaddleOCR(
-    lang=os.environ.get("OCR_LANGUE", "fr"),
-    device=APPAREIL,
     text_detection_model_name=DETECTION,
+    text_detection_model_dir=_dossier(DETECTION),
     text_recognition_model_name=RECONNAISSANCE,
+    text_recognition_model_dir=_dossier(RECONNAISSANCE),
     use_doc_orientation_classify=False,
     use_doc_unwarping=False,
     use_textline_orientation=False,
-    enable_mkldnn=False,
+    **_COMMUN,
 )
 
 # ======================================================== LE SECOND ALPHABET
@@ -102,27 +196,55 @@ _ocr = PaddleOCR(
 # de 0,56 s par page a travers ce service sur carte graphique, redimension
 # comprise ; 0,2 s pour le modele latin seul hors service).
 #
-# Quand `OCR_MODELE_RECONNAISSANCE_ARABE` est posee, chaque ligne detectee est
-# relue par le modele arabe, et la ligne garde la lecture qui contient de
+# Quand `OCR_MODELE_RECONNAISSANCE_ARABE` est posee, chaque ligne detectee qui
+# peut etre arabe (portes plus bas) est relue par le modele arabe, et la ligne garde la lecture qui contient de
 # l'arabe ET dont la confiance tient : un chiffre reste latin, un mot arabe
 # devient arabe. Une seule detection, deux reconnaissances : le cout est celui
 # de la seconde reconnaissance, pas d'une seconde lecture.
-RECONNAISSANCE_ARABE = os.environ.get("OCR_MODELE_RECONNAISSANCE_ARABE", "")
-# Seul le modele mesure, precharge dans l'image et tarife (migration
-# 20261025100000) est accepte : un autre nom se telechargerait au demarrage et
-# chaque releve serait refuse au journal, faute de tarif.
-MODELES_ARABES_CONNUS = {"arabic_PP-OCRv5_mobile_rec"}
-if RECONNAISSANCE_ARABE and RECONNAISSANCE_ARABE not in MODELES_ARABES_CONNUS:
-    raise SystemExit(f"OCR_MODELE_RECONNAISSANCE_ARABE inconnu : {RECONNAISSANCE_ARABE}")
 _arabe = (
-    TextRecognition(model_name=RECONNAISSANCE_ARABE, device=APPAREIL, enable_mkldnn=False)
+    TextRecognition(model_name=RECONNAISSANCE_ARABE, model_dir=_dossier(RECONNAISSANCE_ARABE), **_COMMUN)
     if RECONNAISSANCE_ARABE
     else None
 )
+# Les lignes relues par lots, triées par largeur comme le fait le pipeline :
+# un lot de lignes de même gabarit se rembourre peu. Mesuré sur trois pages :
+# mêmes textes qu'une à une.
+LOT_ARABE = 6
+
+# ============================ SEULES LES LIGNES QUI PEUVENT ÊTRE ARABES SE RELISENT
+#
+# 3 novembre 2026, facture MyTek (française, 140 lignes) : relire CHAQUE ligne
+# en arabe doublait le relevé (4,5 s au lieu de 2,2 s sur la carte graphique)
+# pour un résultat identique à l'octet. Deux portes, mesurées :
+#
+#   - une ligne de chiffres n'est jamais rendue à l'arabe (`_garder_l_arabe`) :
+#     la relire ne peut rien changer. Écartée, le relevé est identique ;
+#   - le modèle latin, devant un mot arabe, rend du bruit à basse confiance.
+#     Banc du 3 novembre 2026 (85 pages fictives — 30 arabes, 15 françaises,
+#     40 difficiles — et MyTek ; 2 872 lignes) : les 67 lignes que l'arabe
+#     remplace avaient toutes une confiance latine ≤ 0,923. Au seuil de 0,95,
+#     4 % des lignes se relisent (12 sur 140 pour MyTek) et AUCUNE ligne arabe
+#     n'est perdue ; à 0,90, une l'est.
+#
+# Le seuil est un réglage d'exploitation, pas une règle métier : 1,01 relit
+# toutes les lignes qui ne sont pas des chiffres.
+ARABE_SI_CONFIANCE_SOUS = float(os.environ.get("OCR_ARABE_SI_CONFIANCE_SOUS", "0.95"))
+
+
+def _a_relire_en_arabe(latin: str, score_latin: float) -> bool:
+    return not _ligne_de_chiffres(latin) and score_latin < ARABE_SI_CONFIANCE_SOUS
 
 
 def _a_de_l_arabe(texte: str) -> bool:
     return any("\u0600" <= c <= "\u06ff" or "\ufb50" <= c <= "\ufeff" for c in texte)
+
+
+def _ligne_de_chiffres(latin: str) -> bool:
+    """Une ligne surtout faite de chiffres (montants, dates, numeros) : elle
+    reste au modele latin, qui les lit mieux."""
+    visibles = [c for c in latin if not c.isspace()]
+    chiffres = sum(1 for c in visibles if c.isdigit() or c in ",./:-")
+    return bool(visibles) and chiffres / len(visibles) >= 0.6
 
 
 def _garder_l_arabe(latin: str, arabe: str, score_latin: float, score_arabe: float) -> bool:
@@ -130,9 +252,7 @@ def _garder_l_arabe(latin: str, arabe: str, score_latin: float, score_arabe: flo
     ligne de mots arabes passe au modele arabe, si sa confiance tient."""
     if not _a_de_l_arabe(arabe):
         return False
-    visibles = [c for c in latin if not c.isspace()]
-    chiffres = sum(1 for c in visibles if c.isdigit() or c in ",./:-")
-    if visibles and chiffres / len(visibles) >= 0.6:
+    if _ligne_de_chiffres(latin):
         return False
     # Une ligne MIXTE (« المجموع 4 135,183 ») ne bascule que si les deux
     # lectures portent les memes nombres : le modele latin lit mieux les
@@ -163,7 +283,8 @@ def _decouper(tableau: numpy.ndarray, polygone) -> numpy.ndarray:
 
 
 def _relire_en_arabe(tableau, polygones, textes, scores):
-    """Relire chaque ligne en arabe ; garder l'arabe la ou il en a.
+    """Relire en arabe les lignes qui peuvent l'être ; garder l'arabe la ou il
+    en a. Rend aussi si le modèle arabe a servi : le nom du relevé le dit.
 
     Seulement sur `rec_polys` — les polygones des lignes RECONNUES, alignes
     index par index sur `rec_texts` et `rec_scores`. Jamais sur `dt_polys`,
@@ -171,15 +292,19 @@ def _relire_en_arabe(tableau, polygones, textes, scores):
     """
     n = min(len(polygones), len(textes), len(scores))
     if _arabe is None or n == 0:
-        return textes, scores
-    decoupes = [_decouper(tableau, polygones[i]) for i in range(n)]
-    relus = [r.json["res"] for r in _arabe.predict(decoupes)]
+        return textes, scores, False
+    candidates = [i for i in range(n) if _a_relire_en_arabe(textes[i], float(scores[i]))]
+    if not candidates:
+        return textes, scores, False
+    decoupes = {i: _decouper(tableau, polygones[i]) for i in candidates}
+    ordre = sorted(candidates, key=lambda i: decoupes[i].shape[1] / max(1, decoupes[i].shape[0]))
+    lus = [r.json["res"] for r in _arabe.predict([decoupes[i] for i in ordre], batch_size=LOT_ARABE)]
     sortie_t, sortie_s = list(textes), list(scores)
-    for i, r in enumerate(relus[:n]):
+    for i, r in zip(ordre, lus):
         texte_ar, score_ar = r.get("rec_text", ""), float(r.get("rec_score", 0.0))
         if _garder_l_arabe(textes[i], texte_ar, float(scores[i]), score_ar):
             sortie_t[i], sortie_s[i] = texte_ar, score_ar
-    return sortie_t, sortie_s
+    return sortie_t, sortie_s, True
 
 
 # Le predicteur n'est pas sur a plusieurs fils : une seule lecture a la fois,
@@ -206,14 +331,15 @@ app = FastAPI()
 async def sante() -> dict:
     return {
         "ok": True,
-        # L'API le relaie dans `/sante/profonde` (`ocr`) : sans lui, elle dit
-        # « inconnu » alors que la lecture passe (constaté le 2 novembre 2026,
-        # après le retour à Paddle seul de #188). Cette image n'a qu'un moteur.
-        "moteur": "paddle",
+        "moteur": MOTEUR,
+        "modele": MODELE,
         "detection": DETECTION,
         "reconnaissance": RECONNAISSANCE,
         "reconnaissance_arabe": RECONNAISSANCE_ARABE or None,
         "appareil": APPAREIL,
+        # Les empreintes vérifiées au démarrage : ce qui tourne se compare à
+        # `poids.json` sans entrer dans le conteneur.
+        "empreintes": EMPREINTES,
     }
 
 
@@ -281,12 +407,14 @@ def _lire_seul(octets: bytes) -> dict:
     tableau = numpy.asarray(image)[:, :, ::-1]  # PIL rend du RVB, Paddle attend du BVR
 
     lignes = []
+    arabe_lu = False
     for resultat in _ocr.predict(tableau):
         donnees = resultat.json["res"] if hasattr(resultat, "json") else resultat
         textes = donnees.get("rec_texts", [])
         polygones = donnees.get("rec_polys", []) or donnees.get("dt_polys", [])
         scores = donnees.get("rec_scores", [])
-        textes, scores = _relire_en_arabe(tableau, donnees.get("rec_polys", []), textes, scores)
+        textes, scores, relu = _relire_en_arabe(tableau, donnees.get("rec_polys", []), textes, scores)
+        arabe_lu = arabe_lu or relu
         for i, texte in enumerate(textes):
             if not texte or not texte.strip():
                 continue
@@ -314,5 +442,5 @@ def _lire_seul(octets: bytes) -> dict:
     return {
         "lignes": lignes,
         "millisecondes": int((time.time() - debut) * 1000),
-        "modele": "+".join(m for m in (DETECTION, RECONNAISSANCE, RECONNAISSANCE_ARABE) if m),
+        "modele": MODELE if arabe_lu else MODELE_LATIN,
     }
