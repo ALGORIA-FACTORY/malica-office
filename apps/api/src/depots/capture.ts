@@ -987,14 +987,19 @@ export const capture = {
     return analyserPiece(db, pieceId);
   },
 
-  async persisterLecture(db: Requete, input: LectureAPersister): Promise<void> {
-    await db.query(
+  /** Rend la ligne inscrite (`capture.extractions`) : le journal la référence, sans la recopier. */
+  async persisterLecture(
+    db: Requete,
+    input: LectureAPersister,
+  ): Promise<{ extractionId: string | null }> {
+    const { rows } = await db.query<{ r: { extraction_id?: string } | null }>(
       `select public.capture_read_persist($1, $2::jsonb, $3, $4::jsonb, $5::jsonb, $6::jsonb,
-                                          $7, $8::jsonb)`,
+                                          $7, $8::jsonb) as r`,
       [input.pieceId, ...argumentsDeLecture(input)],
     );
 
     await projeterLesArticles(db, input);
+    return { extractionId: rows[0]?.r?.extraction_id ?? null };
   },
 
   /**
@@ -1063,14 +1068,15 @@ export const capture = {
   async persisterRelecture(
     db: Requete,
     input: LectureAPersister & { travailId: string },
-  ): Promise<void> {
-    await db.query(
+  ): Promise<{ extractionId: string | null }> {
+    const { rows } = await db.query<{ r: { extraction_id?: string } | null }>(
       `select public.capture_relecture_persist($1, $2, $3::jsonb, $4, $5::jsonb, $6::jsonb,
-                                               $7::jsonb, $8, $9::jsonb)`,
+                                               $7::jsonb, $8, $9::jsonb) as r`,
       [input.travailId, input.pieceId, ...argumentsDeLecture(input)],
     );
 
     await projeterLesArticles(db, input, true);
+    return { extractionId: rows[0]?.r?.extraction_id ?? null };
   },
 
   /**

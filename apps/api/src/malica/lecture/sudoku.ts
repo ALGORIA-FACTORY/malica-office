@@ -36,6 +36,7 @@
 
 import { lettreDeControle, normaliserMatricule } from "@malica/socle/matricule";
 import type { DeviseLue } from "@malica/socle/montant-imprime";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import {
   resoudre,
   type Cite,
@@ -53,6 +54,7 @@ import type { Requete } from "../../db.ts";
 import { dateDeLaPiece } from "../../depots/dates.ts";
 import type { ReglagesResolus } from "../../scan/reglages-comptables.ts";
 
+import type { VerdictDuSudoku } from "./etapes-de-lecture.ts";
 import { cleDeJeton, datesDuPlan, identifiantsDuPlan, lettresDuPlan } from "./experts.ts";
 import { treillisMontant } from "./montants.ts";
 import { lireLesReglesDeLecture, type ReglesDeLecture } from "./regles-de-lecture.ts";
@@ -624,6 +626,65 @@ export function selectionParLeSudoku(
   };
 }
 
+/**
+ * Ce que le sudoku a rendu, pour le journal (`etapes-de-lecture.ts`) : son
+ * issue, ce qui tranche, et les montants qu'il prouve — en décimales de la
+ * devise, comme la lecture les porte. Les champs se lisent par leur RÔLE dans
+ * la grille, jamais par un code écrit ici.
+ */
+function verdictDuSudoku(
+  sortie: SortieDuSudoku,
+  contexte: Pick<ContexteDuSudokuBranche, "grille" | "mode">,
+  jetons: readonly JetonDuSudoku[],
+  designee: boolean,
+  decimales: number,
+): VerdictDuSudoku {
+  const c = sortie.champs;
+  const roles = champsDeLaGrille(contexte.grille);
+  const enDecimales = (v: string | null | undefined): string | null =>
+    v === null || v === undefined || !/^-?\d+$/u.test(v)
+      ? null
+      : depuisUniteMineure(Number(v), decimales);
+  const somme = (valeurs: readonly (string | null)[]): string | null => {
+    const lues = valeurs.filter((v): v is string => v !== null && /^-?\d+$/u.test(v));
+    return lues.length === 0
+      ? null
+      : depuisUniteMineure(
+          lues.reduce((s, v) => s + Number(v), 0),
+          decimales,
+        );
+  };
+  const champTtc = roles.ttc.find(
+    (t) => (t.variante === null || t.variante === sortie.variante) && c[t.champ]?.valeur != null,
+  )?.champ;
+  const tva = roles.tva ? c[roles.tva] : undefined;
+  const lettres = jetons.find((j) => j.lettres)?.lettres;
+  const preuveLettres = contexte.grille.preuves.find((p) => expressionDe(p)["op"] === "lettres");
+  return {
+    mode: contexte.mode,
+    issue: sortie.issue,
+    designee,
+    regle: sortie.par_lettres
+      ? `lettres:${sortie.par_lettres}`
+      : sortie.variante
+        ? `variante:${sortie.variante}`
+        : null,
+    raison: sortie.raison ?? null,
+    solutions: sortie.solutions,
+    baseHt: roles.ht ? enDecimales(c[roles.ht]?.valeur) : null,
+    tva: tva?.instances?.length
+      ? somme(tva.instances.map((i) => i.valeur))
+      : enDecimales(tva?.valeur),
+    ttc: champTtc ? enDecimales(c[champTtc]?.valeur) : null,
+    droits: somme(
+      Object.values(champsDesCharges(contexte.grille)).map((ch) => c[ch]?.valeur ?? null),
+    ),
+    lettres: lettres ? depuisUniteMineure(lettres.v, decimales) : null,
+    preuveLettres: preuveLettres ? (sortie.preuves[preuveLettres.code] ?? null) : null,
+    erreur: null,
+  };
+}
+
 /** Quel champ de la grille porte quelle charge du pack ? Les preuves `charge` le disent. */
 function champsDesCharges(grille: Grille): Record<string, string> {
   const out: Record<string, string> = {};
@@ -847,7 +908,26 @@ export interface Sudoku {
    * En observation, toujours faux : la chaîne garde son comportement entier.
    */
   prouvee(lecture: VisionRead): boolean;
+  /** Ce que le sudoku a rendu de cette lecture, pour le journal ; rien s'il ne l'a pas vue. */
+  verdict(lecture: VisionRead): VerdictDuSudoku | null;
 }
+
+/** Le verdict d'un sudoku qui n'a pas pu juger : seule son erreur est dite. */
+const SANS_VERDICT: VerdictDuSudoku = {
+  mode: null,
+  issue: "panne",
+  designee: false,
+  regle: null,
+  raison: null,
+  solutions: null,
+  baseHt: null,
+  tva: null,
+  ttc: null,
+  droits: null,
+  lettres: null,
+  preuveLettres: null,
+  erreur: null,
+};
 
 /**
  * Le sudoku branché sur la base, pour une pièce.
@@ -894,6 +974,7 @@ export function creerLeSudoku(
   const contextes = new Map<string, Promise<ContexteDuSudokuBranche>>();
   const lus = new WeakMap<VisionRead, ChampsLusAInscrire>();
   const designees = new WeakSet<VisionRead>();
+  const verdicts = new WeakMap<VisionRead, VerdictDuSudoku>();
   return {
     async lire(lecture) {
       let jour: string | null = null;
@@ -923,12 +1004,8 @@ export function creerLeSudoku(
           ),
           formes_juridiques: ctx.formesJuridiques,
         };
-        const sortie = resoudreLaPiece(
-          jetonsDuSudoku(lecture.tokens, piece.devise, ctx),
-          ctx,
-          resoudre,
-          connus,
-        );
+        const jetons = jetonsDuSudoku(lecture.tokens, piece.devise, ctx);
+        const sortie = resoudreLaPiece(jetons, ctx, resoudre, connus);
         const aInscrire = champsLusAInscrire(piece, ctx, sortie);
 
         const rendue: VisionRead =
@@ -945,12 +1022,21 @@ export function creerLeSudoku(
               };
         lus.set(rendue, aInscrire);
         if (rendue !== lecture) designees.add(rendue);
+        verdicts.set(
+          rendue,
+          verdictDuSudoku(sortie, ctx, jetons, rendue !== lecture, piece.devise.decimales),
+        );
         return rendue;
       } catch (e: unknown) {
         if (jour !== null) contextes.delete(jour);
         console.error(`sudoku : lecture non prouvée — pièce ${piece.pieceId} : ${message(e)}`);
+        verdicts.set(lecture, { ...SANS_VERDICT, erreur: e instanceof Error ? e.name : typeof e });
         return lecture;
       }
+    },
+
+    verdict(lecture) {
+      return verdicts.get(lecture) ?? null;
     },
 
     async inscrire(retenue) {
