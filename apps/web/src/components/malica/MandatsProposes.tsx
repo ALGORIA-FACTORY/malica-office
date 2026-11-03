@@ -18,7 +18,17 @@ import { office } from "@/verticals/malica-office/composition";
 
 import { MalicaAvatar } from "./office-ui";
 
-export function MandatsProposes({ tenantId }: { tenantId: string }) {
+export function MandatsProposes({
+  tenantId,
+  societe,
+}: {
+  tenantId: string;
+  /**
+   * Le nom de la société à qui le cabinet propose, quand la personne en a
+   * plusieurs : sans en-tête qui la nomme (3 novembre 2026), la carte le dit.
+   */
+  societe?: string | undefined;
+}) {
   const { t, locale } = useI18n();
   const qc = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
@@ -59,7 +69,7 @@ export function MandatsProposes({ tenantId }: { tenantId: string }) {
           <MalicaAvatar size={28} alt="Malica" rond />
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {t("pme.mandat.kicker")}
+              {societe ? `${t("pme.mandat.kicker")} · ${societe}` : t("pme.mandat.kicker")}
             </p>
             <p className="mt-1 text-[13.5px] leading-[1.5]">
               {t("pme.mandat.texte", { cabinet: m.cabinet })}

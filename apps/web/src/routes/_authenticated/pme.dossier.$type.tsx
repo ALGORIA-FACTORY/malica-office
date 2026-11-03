@@ -8,6 +8,7 @@ import {
   IconeSiege,
   IconeSociete,
 } from "@/components/malica/carte-de-groupe";
+import { FiltreDesSocietes } from "@/components/malica/filtre-des-societes";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { jourOuInstant, montant } from "@/lib/lisible";
@@ -101,7 +102,13 @@ function Dossier() {
     ouvrirSaSociete,
   } = usePiecesDesSocietes();
 
-  const [societe, setSociete] = useState<string | null>(pme.tenantId);
+  /*
+   * La société montrée : celle des puces de la bibliothèque, partagée
+   * (`pme.societeAffichee`), toutes par défaut — plus le dossier ouvert de
+   * l'en-tête, parti le 3 novembre 2026.
+   */
+  const societe = pme.societeAffichee;
+  const setSociete = pme.afficherSociete;
   const [siege, setSiege] = useState<string | null>(null);
   /** La période déroulée ; `undefined` : la plus récente qui a des pièces. */
   const [ouverte, setOuverte] = useState<string | null | undefined>(undefined);
@@ -238,6 +245,8 @@ function Dossier() {
             </svg>
           </button>
         </div>
+
+        <FiltreDesSocietes />
 
         {chargement ? (
           <p className="vide">{t("common.loading")}</p>

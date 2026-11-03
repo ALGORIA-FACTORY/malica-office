@@ -71,27 +71,37 @@ export function InviterDansMonDossier({ occupes }: { occupes: number | null }) {
   const pme = usePme();
   const qc = useQueryClient();
   const prix = usePrix();
-  const grille = usePrixEnPlus(pme.tenantId);
+  /*
+   * LA SOCIÉTÉ QUI REÇOIT L'INVITATION, DITE (revue de #211, 3 novembre 2026).
+   * Sans sélecteur dans l'en-tête, « le dossier ouvert » n'est plus visible :
+   * avec plusieurs sociétés, la personne choisit la société à chaque
+   * invitation, et rien ne part tant qu'elle ne l'a pas fait. Un siège
+   * n'appartient qu'à une société.
+   */
+  const [choisie, setChoisie] = useState<string | null>(null);
+  const cible = pme.dossiers.length > 1 ? choisie : pme.tenantId;
+  const grille = usePrixEnPlus(cible ?? pme.tenantId);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("utilisateur");
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoyee, setEnvoyee] = useState<string | null>(null);
 
   const invitations = useQuery({
-    queryKey: ["invitations-du-dossier", pme.tenantId],
-    queryFn: () => office().collab.invitations(pme.tenantId),
+    queryKey: ["invitations-du-dossier", cible],
+    queryFn: () => office().collab.invitations(cible!),
+    enabled: cible !== null,
   });
 
   const inviter = useMutation({
     mutationFn: () =>
       role === "proprietaire"
-        ? office().facturation.inviterProprietaire(email.trim(), pme.tenantId)
-        : office().facturation.inviterSiege(email.trim(), pme.tenantId),
+        ? office().facturation.inviterProprietaire(email.trim(), cible!)
+        : office().facturation.inviterSiege(email.trim(), cible!),
     onSuccess: async (r) => {
       setErreur(null);
       setEnvoyee(r.email);
       setEmail("");
-      await qc.invalidateQueries({ queryKey: ["invitations-du-dossier", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: ["invitations-du-dossier", cible] });
       await qc.invalidateQueries({ queryKey: ["forfait-sieges"] });
       await qc.invalidateQueries({ queryKey: ["mon-forfait"] });
     },
@@ -110,8 +120,10 @@ export function InviterDansMonDossier({ occupes }: { occupes: number | null }) {
    * grille ET le nombre de places occupées. Sinon, rien plutôt qu'un chiffre
    * deviné.
    */
+  // Les places occupées sont celles de la licence du dossier ouvert : le coût
+  // ne se dit que pour lui, jamais deviné pour une autre société.
   const cout =
-    g && occupes !== null
+    g && occupes !== null && cible === pme.tenantId
       ? occupes < g.sieges_inclus
         ? t("pme.inviter.cout.compris", {
             occupes: String(occupes),
@@ -124,6 +136,30 @@ export function InviterDansMonDossier({ occupes }: { occupes: number | null }) {
 
   return (
     <div className="card invite">
+      {pme.dossiers.length > 1 ? (
+        <>
+          <span className="lb" id="inviter-societe">
+            {t("pme.inviter.titreSociete")}
+          </span>
+          <div role="radiogroup" aria-labelledby="inviter-societe" className="roles">
+            {pme.dossiers.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                role="radio"
+                aria-checked={d.id === choisie}
+                onClick={() => setChoisie(d.id)}
+                className="role"
+              >
+                <span className="hd">
+                  <i aria-hidden />
+                  <b>{d.name}</b>
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
       {/* L'explication de l'invitation et des rôles est dans le ⓘ d'« Utilisateurs ». */}
       <span className="lb" id="inviter-role">
         {t("pme.inviter.titreRole")}
@@ -175,7 +211,7 @@ export function InviterDansMonDossier({ occupes }: { occupes: number | null }) {
         type="button"
         className="btn"
         onClick={() => inviter.mutate()}
-        disabled={inviter.isPending || email.trim().length === 0}
+        disabled={inviter.isPending || email.trim().length === 0 || cible === null}
       >
         {t("pme.inviter.envoyer")}
       </button>

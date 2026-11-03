@@ -3,10 +3,10 @@
  *
  * =========================================================== CE QU'ELLE PORTE
  *
- *   [ logo ALGORIA ]   nom de l'organisation            [ W ]
+ *   [ logo ALGORIA ]                                     [ W ]
  *
- * Et rien d'autre. Le logo à gauche, le dossier ouvert au centre, l'initiale
- * de la personne à droite. Le retour et le titre d'un écran vivent SOUS elle,
+ * Et rien d'autre. Le logo à gauche, l'initiale de la personne à droite (le
+ * nom du dossier ouvert est parti le 3 novembre 2026, voir plus bas). Le retour et le titre d'un écran vivent SOUS elle,
  * dans `.top` — jamais dedans.
  *
  * ===================================================== CE QUI EST PARTI D'ICI
@@ -46,44 +46,28 @@ import { useI18n } from "@/i18n";
 import { MarqueAlgoria } from "./office-ui";
 
 export interface EntetePmeProps {
-  /** Le nom du dossier ouvert. `null` tant qu'aucun dossier n'est lu. */
-  orgNom: string | null;
-  /** Les dossiers PME de la personne. Un seul : le nom se lit, il ne se choisit pas. */
-  dossiers: ReadonlyArray<{ id: string; name: string }>;
-  dossierActif: string | null;
-  choisirDossier: (id: string) => void;
   /** L'initiale du compte ouvert — la PERSONNE, jamais Malica. */
   initiale: string;
 }
 
-export function EntetePme({
-  orgNom,
-  dossiers,
-  dossierActif,
-  choisirDossier,
-  initiale,
-}: EntetePmeProps) {
+export function EntetePme({ initiale }: EntetePmeProps) {
   const { t } = useI18n();
 
   return (
     <header className="appbar">
       <MarqueAlgoria aria-hidden className="mk" />
-      {dossiers.length > 1 ? (
-        <select
-          aria-label={t("pme.org.switch")}
-          value={dossierActif ?? ""}
-          onChange={(e) => choisirDossier(e.target.value)}
-          className="org"
-        >
-          {dossiers.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <span className="org">{orgNom ?? ""}</span>
-      )}
+      {/*
+       * PLUS DE SÉLECTEUR DE SOCIÉTÉ (décision du dirigeant, 3 novembre 2026).
+       *
+       * Le nom au centre décidait en silence de ce que montraient l'accueil, la
+       * bibliothèque, les échéances et les réglages : SOTUMAG ouverte, les
+       * réglages montraient la licence d'ALGORIA. Le choix d'une société vit
+       * désormais là où l'on travaille — la bibliothèque et les échéances, qui
+       * montrent toutes les sociétés par défaut — et la capture demande « pour
+       * quelle société ». La case reste, vide, pour que la barre garde son
+       * dessin.
+       */}
+      <span className="org" aria-hidden />
       {/*
        * L'initiale mène aux réglages. Le lecteur d'écran annonçait « W » seul :
        * le lien dit où il mène, et la lettre reste `aria-hidden` de fait

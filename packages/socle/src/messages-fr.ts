@@ -287,6 +287,8 @@ export const fr = {
   "pme.dossier.verifier#other": "Voir les {count} pièces qui vous attendent",
   "pme.dossier.vide": "Aucune pièce dans ce dossier pour l’instant.",
   "pme.dossier.organisations": "Organisations",
+  "pme.societes.toutes": "Toutes les sociétés",
+  "pme.societes.choix": "Société montrée",
   "pme.dossier.sieges": "Sièges",
   "pme.dossier.annees": "Années",
   "pme.dossier.vous": "{nom} (vous)",
@@ -411,6 +413,7 @@ export const fr = {
   "pme.membres.envoyee": "Invitation envoyée à {email}.",
   "pme.membres.attend": "en attente",
   "pme.inviter.titreRole": "Son rôle",
+  "pme.inviter.titreSociete": "La société",
   "pme.inviter.titreAdresse": "Son adresse e-mail",
   "pme.inviter.place": "Une place",
   "pme.inviter.placeMemePrix": "Une place · même prix",
@@ -730,7 +733,6 @@ export const fr = {
   "pme.tva.soldeInconnu": "Solde TVA à confirmer",
   "pme.nav.add": "Ajouter une pièce",
   "pme.nav.office": "Espace",
-  "pme.org.switch": "Société active",
   "pme.nav.aria": "Navigation principale",
   "pme.home.greet.morning": "Bonjour.",
   "pme.home.greet.afternoon": "Bon après-midi.",
@@ -3591,7 +3593,7 @@ export const fr = {
   "pme.reglages.orgs": "Sociétés",
   "pme.reglages.orgs.aucune": "Aucune organisation sur cette licence.",
   "pme.reglages.orgs.autreTitulaire":
-    "La licence de {societe} appartient à son propriétaire principal : vous ne voyez ici que cette société. Vos autres sociétés s’ouvrent depuis le sélecteur en haut.",
+    "La licence de {societe} appartient à son propriétaire principal : son prix et ses places se gèrent depuis son compte.",
   "pme.reglages.orgs.ajouter": "Ajouter une société",
   "pme.reglages.orgs.ajouter.sous":
     "Une organisation de plus sur la licence, avec son propre mandat et ses propres pièces. Le plafond est tenu par la base.",
@@ -3893,8 +3895,9 @@ export const fr = {
     "Des sièges isolés — chacun ne voit que ses pièces — et vous validez avant la transmission à la comptabilité.",
   "pme.reglages.sieges.aucun":
     "Aucun siège n’est encore remonté pour cette licence, pas même le vôtre.",
-  "pme.reglages.org.ouverte": "Ouverte",
   "pme.reglages.org.surLicence": "Sur la licence",
+  "pme.reglages.org.principal": "Propriétaire principal",
+  "pme.reglages.org.offre": "Offre :",
   "pme.reglages.org.matricule":
     "Matricule établi par lecture de la carte d’identification fiscale.",
   "pme.reglages.org.matricule.fort": "Immuable dès la première pièce reçue.",

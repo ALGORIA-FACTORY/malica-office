@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/malica/carte-de-groupe";
 import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
+import { FiltreDesSocietes } from "@/components/malica/filtre-des-societes";
 import { usePme } from "@/components/malica/pme-context";
 import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
 import { useI18n } from "@/i18n";
@@ -242,13 +243,23 @@ function Bibliotheque() {
 
   const { toutes, parSociete, parSiege, chargement, nomDeSociete, parSieges, ouvrirSaSociete } =
     usePiecesDesSocietes();
-  /** Les pièces de la société ouverte : celles des dossiers, des sièges et des mois. */
+  /*
+   * Les pièces montrées : toutes les sociétés, ou celle des puces
+   * (`pme.societeAffichee`, 3 novembre 2026) — celles des dossiers, des sièges
+   * et des mois.
+   */
   const ici = useMemo(
-    () => toutes.filter((x) => x.societe === pme.tenantId).map((x) => x.piece),
-    [toutes, pme.tenantId],
+    () =>
+      toutes
+        .filter((x) => pme.societeAffichee === null || x.societe === pme.societeAffichee)
+        .map((x) => x.piece),
+    [toutes, pme.societeAffichee],
   );
 
   const [ouvert, setOuvert] = useState<Ouvert | null>(null);
+  // Changer de société referme le groupe déroulé : il montrait l'autre
+  // (revue de #211).
+  useEffect(() => setOuvert(null), [pme.societeAffichee]);
   const revenir = useRevenir();
   const [tout, setTout] = useState(false);
 
@@ -381,6 +392,8 @@ function Bibliotheque() {
           {compte(f?.lectures_restantes)} / {compte(f?.lectures_droit)} · {t("pme.home.lectures")}
         </p>
 
+        <FiltreDesSocietes />
+
         <TransmettreCeQuiReste pieces={brutes} />
 
         {/* Les pièces remises « à plus tard » : on les retrouve d'ici aussi. */}
@@ -480,7 +493,7 @@ function Bibliotheque() {
             ) : null}
 
             {/* ------------------------------------------- les organisations */}
-            {parSociete && organisations.length > 0 ? (
+            {parSociete && pme.societeAffichee === null && organisations.length > 0 ? (
               <>
                 <div className="sec">
                   <h2>{t("pme.dossier.organisations")}</h2>
