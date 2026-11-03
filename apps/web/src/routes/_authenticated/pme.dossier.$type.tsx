@@ -8,7 +8,6 @@ import {
   IconeSiege,
   IconeSociete,
 } from "@/components/malica/carte-de-groupe";
-import { FiltreDesSocietes } from "@/components/malica/filtre-des-societes";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { jourOuInstant, montant } from "@/lib/lisible";
@@ -246,8 +245,6 @@ function Dossier() {
           </button>
         </div>
 
-        <FiltreDesSocietes />
-
         {chargement ? (
           <p className="vide">{t("common.loading")}</p>
         ) : toutes.length === 0 ? (
@@ -260,6 +257,24 @@ function Dossier() {
                   <h2>{t("pme.dossier.organisations")}</h2>
                   <span>{cartesSocietes.length}</span>
                 </div>
+                {/* « Toutes les sociétés » en tête : la sélection est ici, une fois. */}
+                <CarteDeGroupe
+                  presse={societe === null}
+                  accent={societe === null}
+                  onClick={() => {
+                    setSociete(null);
+                    setSiege(null);
+                    setOuverte(undefined);
+                  }}
+                  icone={<IconeSociete />}
+                  titre={t("pme.societes.toutes")}
+                  valeur={total(
+                    toutes
+                      .filter((x) => !parSiege || !siege || x.piece.auteurId === siege)
+                      .map((x) => x.piece),
+                  )}
+                  n={toutes.filter((x) => !parSiege || !siege || x.piece.auteurId === siege).length}
+                />
                 {cartesSocietes.map((c) => (
                   <CarteDeGroupe
                     key={c.id}

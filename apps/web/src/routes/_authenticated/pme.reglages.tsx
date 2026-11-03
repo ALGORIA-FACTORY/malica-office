@@ -212,7 +212,12 @@ function PmeReglages() {
        */}
       <div className="card abo hero">
         <div className="kick">
-          <u>{t("pme.reglages.abo.kicker")}</u>
+          {/* Plusieurs sociétés : la carte dit de laquelle est cette offre. */}
+          <u>
+            {pme.dossiers.length > 1
+              ? `${t("pme.reglages.abo.kicker")} · ${pme.orgName}`
+              : t("pme.reglages.abo.kicker")}
+          </u>
           {f?.statut ? (
             <span className={cn("pill", f.statut !== "active" && "am")}>
               <i aria-hidden />
@@ -328,11 +333,18 @@ function PmeReglages() {
             ]}
           />
         </h2>
+        {/*
+         * « n sur m » ne vaut que pour UNE licence : avec des sociétés sur
+         * plusieurs licences, « 2 sur 1 » mêlait la mienne et celle d'un autre
+         * titulaire (staging, 3 novembre 2026). Le nombre seul, alors.
+         */}
         <span>
-          {t("pme.reglages.surTotal", {
-            n: abo.organisations.length,
-            total: nombre(f?.organisations, locale),
-          })}
+          {[...abo.titulaire.values()].every(Boolean)
+            ? t("pme.reglages.surTotal", {
+                n: abo.organisations.length,
+                total: nombre(f?.organisations, locale),
+              })
+            : nombre(abo.organisations.length, locale)}
         </span>
       </div>
       {/*
@@ -1168,9 +1180,13 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
               moi={s.user_id === compte.data?.id}
               // Le rôle dans la société du groupe, pas dans le dossier ouvert :
               // les réglages montrent toutes les sociétés (3 novembre 2026).
+              // Reprendre une place est l'acte du titulaire de la licence : sur
+              // la licence d'un autre, l'écran ne le propose pas (staging, 3
+              // novembre 2026 — il le proposait sur le propriétaire principal).
               dirigeant={
-                (pme.dossiers.find((d) => d.id === g.tenantId)?.role ?? null) === "dirigeant" ||
-                (g.tenantId === pme.tenantId && dirigeant)
+                abo.titulaire.get(g.tenantId) === true &&
+                ((pme.dossiers.find((d) => d.id === g.tenantId)?.role ?? null) === "dirigeant" ||
+                  (g.tenantId === pme.tenantId && dirigeant))
               }
             />
           ))}

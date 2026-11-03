@@ -1152,16 +1152,13 @@
 [data-surface="pme"] [data-ecran="pochette"] .plus{width:48px;height:48px;margin-inline-start:auto;border-radius:50%;border:1px solid var(--dl);background:transparent;color:var(--tx);display:grid;place-items:center;cursor:pointer}
 [data-surface="pme"] [data-ecran="pochette"] .plus svg{width:22px;height:22px}
 /* Les puces de filtre : la pochette (et ses dossiers), puis le choix de la
- * société de la bibliothèque et des échéances (3 novembre 2026) — un seul
- * dessin. */
+ * société des échéances (3 novembre 2026) — un seul dessin. La bibliothèque
+ * et ses dossiers choisissent par leurs cartes « Organisations ». */
 [data-surface="pme"] [data-ecran="pochette"] .filtres,
-[data-surface="pme"] [data-ecran="bibliotheque"] .filtres,
 [data-surface="pme"] [data-ecran="echeances"] .filtres{display:flex;gap:.5rem;overflow-x:auto;margin:1rem -1.25rem 0;padding:0 1.25rem;scrollbar-width:none}
 [data-surface="pme"] [data-ecran="pochette"] .filtres button,
-[data-surface="pme"] [data-ecran="bibliotheque"] .filtres button,
 [data-surface="pme"] [data-ecran="echeances"] .filtres button{flex:none;min-height:36px;padding:0 .875rem;border-radius:18px;border:1px solid var(--dl);background:transparent;color:var(--tx);font:inherit;font-size:.8125rem;font-weight:600;cursor:pointer}
 [data-surface="pme"] [data-ecran="pochette"] .filtres button[aria-pressed="true"],
-[data-surface="pme"] [data-ecran="bibliotheque"] .filtres button[aria-pressed="true"],
 [data-surface="pme"] [data-ecran="echeances"] .filtres button[aria-pressed="true"]{background:var(--tx);color:var(--bg);border-color:var(--tx)}
 [data-surface="pme"] [data-ecran="pochette"] .liste{display:grid;margin-top:.75rem}
 [data-surface="pme"] [data-ecran="pochette"] .liste a{display:flex;align-items:center;gap:.75rem;min-height:64px;padding:.5rem 0;border-bottom:1px solid var(--hr);color:var(--tx);text-decoration:none}
