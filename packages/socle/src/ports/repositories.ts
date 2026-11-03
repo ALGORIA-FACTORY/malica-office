@@ -1875,6 +1875,12 @@ export type PropositionDePiece = (
       avoir?: FactureDOrigine;
       /** La date hors de tout pack, quand `raisonCode` vaut `date_hors_referentiel`. */
       dateHorsReferentiel?: string;
+      /**
+       * Les champs qui manquent, en clés métier (`type`, `date`…), quand
+       * `raisonCode` vaut `a_completer`. Le cabinet tranche le sens quand
+       * c'est le `type` qui manque (recette du 2 novembre 2026).
+       */
+      aCompleter?: string[];
     }
 ) & {
   /**
