@@ -231,8 +231,8 @@ struct Triplet {
     p: (usize, i64),
     m: (usize, i64),
     r: Option<(usize, i64)>,
-    /// Le prix est TTC (la rangée ferme par le barème, voir `ferme_ttc`).
-    ttc: bool,
+    /// Le prix est TTC : le code du seul taux du barème qui ferme la rangée (`ferme_ttc`).
+    ttc: Option<String>,
 }
 
 impl Triplet {
@@ -342,20 +342,32 @@ impl Contexte<'_> {
     }
 
     /// Le prix TTC : m = arrondi(q × p × (1 − r) ÷ (1 + t)) pour un taux t du barème, à la
-    /// tolérance du pack près. Le taux nul n'en est pas un (le barème ne le porte pas) : un
-    /// prix sans taxe est un prix HT, que `ferme` lit déjà.
-    fn ferme_ttc(&self, q: i64, p: i64, m: i64, r: i64) -> bool {
+    /// tolérance du pack près. Rend le code du taux, s'il est le SEUL à fermer — et, quand la
+    /// rangée imprime son taux (`imprime`), seulement ce taux-là : un prix TTC fermé à 7 % sur
+    /// une ligne imprimée à 19 % n'est pas une lecture. Le taux nul n'en est pas un (le
+    /// barème ne le porte pas) : un prix sans taxe est un prix HT, que `ferme` lit déjà.
+    fn ferme_ttc(&self, q: i64, p: i64, m: i64, r: i64, imprime: Option<&str>) -> Option<String> {
         let cent = CENT * self.unite;
         if !self.prix_ttc || r < 0 || r as i128 >= cent {
-            return false;
+            return None;
         }
-        self.bareme.iter().any(|(_, t)| {
-            let attendu = div_arrondi(
-                q as i128 * p as i128 * (cent - r as i128) * PPM,
-                self.unite * cent * (PPM + *t as i128),
-            );
-            (attendu - m as i128).abs() <= self.tol as i128
-        })
+        let ferment: Vec<&String> = self
+            .bareme
+            .iter()
+            .filter(|(code, _)| imprime.is_none_or(|i| i == code))
+            .filter(|(_, t)| {
+                let attendu = div_arrondi(
+                    q as i128 * p as i128 * (cent - r as i128) * PPM,
+                    self.unite * cent * (PPM + *t as i128),
+                );
+                (attendu - m as i128).abs() <= self.tol as i128
+            })
+            .map(|(code, _)| code)
+            .collect();
+        match ferment.as_slice() {
+            [un] => Some((*un).clone()),
+            _ => None,
+        }
     }
 
     /// Les triplets d'une rangée, dédoublonnés par valeurs (q, p, m, r) : à valeurs
@@ -401,9 +413,20 @@ impl Contexte<'_> {
                                 for r in candidats {
                                     let rv = r.map_or(0, |x| x.1);
                                     let ttc = if self.ferme(q, p, m, rv) {
-                                        false
-                                    } else if avec_ttc && self.ferme_ttc(q, p, m, rv) {
-                                        true
+                                        None
+                                    } else if avec_ttc {
+                                        // Le taux imprimé sur la rangée, hors des trois cellules.
+                                        let pris = [Some(qi), Some(pi), Some(mi), r.map(|x| x.0)];
+                                        let imprime = self.taux_parmi(
+                                            rang.iter()
+                                                .enumerate()
+                                                .filter(|(k, _)| !pris.contains(&Some(*k)))
+                                                .map(|(_, &jk)| jk),
+                                        );
+                                        match self.ferme_ttc(q, p, m, rv, imprime.as_ref().map(|t| t.code.as_str())) {
+                                            Some(code) => Some(code),
+                                            None => continue,
+                                        }
                                     } else {
                                         continue;
                                     };
@@ -486,7 +509,7 @@ impl Contexte<'_> {
             remise: t.r.map(un),
             montant: un(t.m),
             taux,
-            prix_ttc: t.ttc,
+            prix_ttc: t.ttc.is_some(),
         }
     }
 }

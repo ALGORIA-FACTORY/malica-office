@@ -49,10 +49,13 @@ fn pied(ttc: i64, lettres: Option<i64>) -> Vec<Value> {
         jeton(28, "TTC:", 0.80, 0.75, &[]),
         jeton(29, "810,000", 1.01, 0.75, &[(ttc, true)]),
         jeton(30, "Arrêtée la présente pièce à la somme de:", 0.05, 0.80, &[]),
-        jeton(31, "Cinq Cent Dix Dinars.", 0.26, 0.80, &[]),
+        jeton(31, "Cinq", 0.26, 0.80, &[]),
+        jeton(32, "Cent", 0.37, 0.80, &[]),
+        jeton(33, "Dix", 0.48, 0.80, &[]),
+        jeton(34, "Dinars.", 0.59, 0.80, &[]),
     ];
     if let Some(v) = lettres {
-        j[11]["lettres"] = json!({"v": v, "fin": 31});
+        j[11]["lettres"] = json!({"v": v, "fin": 34});
     }
     j
 }
@@ -93,7 +96,7 @@ fn le_ttc_mal_releve_se_lit_dans_les_lettres() {
     assert_eq!(o["issue"], "prouvee", "{o}");
     assert_eq!(o["par_lettres"], "total_ttc");
     assert_eq!(valeur(&o, "total_ttc"), 510_000);
-    assert_eq!(ordinaux(&o, "total_ttc"), vec![31], "le total cite la phrase en lettres");
+    assert_eq!(ordinaux(&o, "total_ttc"), vec![31, 32, 33, 34], "le total cite toute la phrase en lettres");
     assert_eq!(valeur(&o, "total_ht"), 427_731, "la base juste, pas le « Total HT » timbre compris");
     assert_eq!(valeur(&o, "droit_timbre"), 1_000);
     assert_eq!(o["preuves"]["lettres"], "verifiee");
@@ -166,4 +169,34 @@ fn le_libelle_de_la_base_ne_suffit_pas_sans_les_lettres() {
     let o = resoudre(j, grille(true), pack_essai());
     assert_eq!(o["issue"], "prouvee", "{o}");
     assert_eq!(valeur(&o, "total_ht"), 427_731);
+}
+
+#[test]
+fn un_prix_ttc_ne_ferme_qu_au_taux_imprime_sur_sa_rangee() {
+    // 1 × 107,000 TTC = 100,000 HT à 7 % ; la rangée imprime « 19% » : ce n'est pas une lecture.
+    let rangee = |taux: &str| {
+        vec![
+            jeton(0, "Désignation", 0.05, 0.20, &[]),
+            jeton(1, "Qté", 0.30, 0.20, &[]),
+            jeton(2, "PU TTC", 0.52, 0.20, &[]),
+            jeton(3, "Montant", 0.74, 0.20, &[]),
+            jeton(10, "Article", 0.05, 0.24, &[]),
+            jeton(11, "1", 0.30, 0.24, &[(1000, false)]),
+            jeton(12, "PU", 0.52, 0.24, &[(107_000, true)]),
+            jeton(13, "M", 0.74, 0.24, &[(100_000, true)]),
+            jeton(14, taux, 0.96, 0.24, &[]),
+            jeton(20, "Total HT 100,000", 0.05, 0.60, &[(100_000, true)]),
+            jeton(21, "TVA 7% 7,000", 0.05, 0.63, &[(7_000, true)]),
+            jeton(22, "Total TTC 107,000", 0.05, 0.66, &[(107_000, true)]),
+        ]
+    };
+    let lignes = |taux: &str| {
+        let o = resoudre(rangee(taux), grille(true), pack_essai());
+        o["lignes"].clone()
+    };
+    let au_bon_taux = lignes("7%");
+    assert_eq!(au_bon_taux["statut"], "prouve", "{au_bon_taux}");
+    assert_eq!(au_bon_taux["instances"][0]["prix_ttc"], true);
+    let au_mauvais = lignes("19%");
+    assert_ne!(au_mauvais["statut"], "prouve", "{au_mauvais}");
 }

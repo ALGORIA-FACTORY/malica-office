@@ -140,11 +140,11 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
     }
     // Un seul montant en lettres sur la pièce, strictement positif.
     let lus = lettres::lus(entree);
-    let (v, _) = lus.first()?;
+    let (v, phrase) = lus.first()?;
     if *v <= 0 || lus.iter().any(|(w, _)| w != v) {
         return None;
     }
-    let v = *v;
+    let (v, phrase) = (*v, phrase.clone());
     let porteurs: BTreeSet<(u32, u32)> =
         entree.jetons.iter().filter(|j| j.lettres.is_some()).map(|j| (j.page, j.ordinal)).collect();
 
@@ -171,6 +171,11 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
         porte = Some(code.clone());
     }
     let porte = porte?;
+    // Le total cite toute sa phrase, comme le champ des lettres : un seul mot ne porte pas
+    // le montant (« Cinq » pour « Cinq Cent Dix Dinars »).
+    if let Some(c) = s.champs.get_mut(&porte) {
+        c.refs = phrase;
+    }
     s.raison = Some(format!("le total en chiffres ne ferme pas : le montant en lettres donne {porte}, et la pièce se prouve par lui"));
     s.par_lettres = Some(porte);
     Some(s)

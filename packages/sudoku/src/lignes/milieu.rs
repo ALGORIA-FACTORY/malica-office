@@ -567,7 +567,7 @@ impl Lecture<'_> {
             let n = r.len();
             let retour = |(k, v): (usize, i64)| (n - 1 - k, v);
             out.extend(self.ctx.triplets(&inverse, false).into_iter().map(|t| {
-                self.graine_lue(i, &Triplet { q: retour(t.q), p: retour(t.p), m: retour(t.m), r: t.r.map(retour), ttc: t.ttc })
+                self.graine_lue(i, &Triplet { q: retour(t.q), p: retour(t.p), m: retour(t.m), r: t.r.map(retour), ttc: t.ttc.clone() })
             }));
         }
         out
