@@ -877,6 +877,13 @@ describe("le moteur commercial", { skip: !BASE_CONFIGUREE }, () => {
         )
       ).rows[0]!.r;
       assert.deepEqual([r2.id, r2.deja], [r1.id, true]);
+      // La même clé sur un AUTRE geste reste refusée : le rejeu compare l'acte.
+      await refuse(
+        db,
+        "select plateforme.mois_offrir($1, 'titulaire', $2::date, 1::smallint, 'Autre geste', 'cle-remise-1')",
+        [m.licenceA, m.periode],
+        /refus\.commerce\.cle_deja_prise/,
+      );
       // La clé d'idempotence rend le même geste, sans en inscrire un second.
       const g1 = (
         await db.query<{ r: { id: string } }>(
