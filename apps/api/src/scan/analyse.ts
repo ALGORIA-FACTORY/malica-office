@@ -792,7 +792,21 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
   );
   const extraction = extractions[0];
   if (!extraction) throw refus("Cette pièce n'a pas encore été lue : il n'y a rien à juger.");
-  const payload = extraction.payload as PayloadLu;
+  /*
+   * LE NOM DIT PAR LA PERSONNE L'EMPORTE SUR LE NOM LU (3 novembre 2026).
+   *
+   * Recette, facture MyTek : la lecture a pris le logo stylisé, lu « MITEK »,
+   * pour le nom de l'émetteur. La correction est une précision (R7) ; le
+   * jugement, la clé de doublon et l'écriture proposée la lisent ici, une fois.
+   */
+  const { rows: nomsDits } = await db.query<{ nom: string | null }>(
+    `select app.emetteur_dit($1) as nom`,
+    [pieceId],
+  );
+  const nomDit = nomsDits[0]?.nom ?? null;
+  const payload = (
+    nomDit ? { ...extraction.payload, issuer: nomDit } : extraction.payload
+  ) as PayloadLu;
   /*
    * LE SENS DIT PAR LA PERSONNE L'EMPORTE SUR LE SENS LU (21 octobre 2026).
    *

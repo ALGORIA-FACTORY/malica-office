@@ -1598,15 +1598,16 @@ export interface CaptureRepository {
   miniature(pieceId: string): Promise<Blob | null>;
   /**
    * Ce que la personne précise ou corrige : le type de la pièce, un code que
-   * le référentiel propose au choix (`propose_a_la_capture`). Une entrée
+   * le référentiel propose au choix (`propose_a_la_capture`), ou le nom de
+   * son émetteur (`issuer`, 3 novembre 2026). Une entrée
    * nouvelle, jamais une modification de la lecture (R7) ; la base contraint
    * le champ, la valeur et l'état de la pièce.
    */
   preciser(
     pieceId: string,
-    champ: "document_kind",
+    champ: "document_kind" | "issuer",
     valeur: string,
-  ): Promise<{ id: string; champ: string; valeur: string }>;
+  ): Promise<{ id: string | null; champ: string; valeur: string }>;
   /**
    * Rejuger la pièce après une précision : le verdict suit la réponse de la
    * personne. Sans ce geste, l'écran garderait le verdict d'avant.

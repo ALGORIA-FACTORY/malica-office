@@ -51,7 +51,7 @@ const DOCUMENTS = `select p.id, p.tenant_id as "tenantId", p.document_kind as ty
   nullif(x.payload ->> 'document_date', '') as "dateDocument",
   ${DATE_DE_CLASSEMENT} as "dateDeClassement",
   case when p.document_kind = 'facture_vente' then null
-       else nullif(btrim(x.payload ->> 'issuer'), '') end as tiers,
+       else nullif(btrim(coalesce(app.emetteur_dit(p.id), x.payload ->> 'issuer')), '') end as tiers,
   coalesce(nullif(x.payload -> 'references' ->> 'invoice_no', ''),
            nullif(x.payload -> 'references' ->> 'document_no', ''),
            nullif(x.payload -> 'references' ->> 'numero', ''),

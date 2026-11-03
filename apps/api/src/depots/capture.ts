@@ -491,6 +491,9 @@ export const capture = {
               (select valeur from precisions_v q
                 where q.piece_id = p.id and q.champ = 'document_kind'
                 order by decided_at desc limit 1) as precision_kind,
+              -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
+              -- reste telle quelle), que la liste préfère au nom lu.
+              app.emetteur_dit(p.id) as emetteur_dit,
               ${REFUS_DE_LECTURE} as lecture_refusee,
               w.etat as lecture_etat, w.dernier_motif as lecture_motif,
               w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le,
@@ -555,7 +558,7 @@ export const capture = {
         gardeeLe: (r["gardee_le"] as string | null) ?? null,
         transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
         accompagne: Boolean(r["accompagne"]),
-        emetteur: lu?.issuer ?? null,
+        emetteur: (r["emetteur_dit"] as string | null) ?? lu?.issuer ?? null,
         dateDocument: cab?.dateEcriture ?? lu?.document_date ?? null,
         kind:
           cab?.documentKind ??
@@ -657,6 +660,10 @@ export const capture = {
         precisions["document_date"],
       );
       if (date) p["document_date"] = date;
+      // Le nom de l'émetteur corrigé (3 novembre 2026) l'emporte sur le nom
+      // lu, comme le type : la personne a la pièce sous les yeux, la lecture
+      // a pu prendre un logo pour un nom (« MITEK » pour « MyTek »).
+      if (precisions["issuer"]) p["issuer"] = precisions["issuer"];
       return p;
     })();
     return {
@@ -968,13 +975,14 @@ export const capture = {
     pieceId: string,
     champ: string,
     valeur: string,
-  ): Promise<{ id: string; champ: string; valeur: string }> {
+  ): Promise<{ id: string | null; champ: string; valeur: string }> {
+    // `id` est nul quand la personne redit le nom déjà retenu : rien ne s'écrit.
     const { rows } = await db.query(`select public.capture_precision_persist($1, $2, $3) as p`, [
       pieceId,
       champ,
       valeur,
     ]);
-    const p = (rows as Array<{ p: { id: string; champ: string; valeur: string } }>)[0]?.p;
+    const p = (rows as Array<{ p: { id: string | null; champ: string; valeur: string } }>)[0]?.p;
     if (!p) throw new Error("precision.non_enregistree");
     return { id: p.id, champ: p.champ, valeur: p.valeur };
   },

@@ -11,6 +11,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { AffichageSignale } from "@/components/malica/affichage-signale";
 import { CommentCEstPaye } from "@/components/malica/comment-c-est-paye";
 import { QuestionDuType } from "@/components/malica/question-du-type";
+import { NomDeLEmetteur } from "@/components/malica/nom-de-l-emetteur";
 import { usePme } from "@/components/malica/pme-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
@@ -580,6 +581,30 @@ function PieceScreen() {
   const [corrigerType, setCorrigerType] = useState(false);
 
   /**
+   * LE NOM DE L'ÉMETTEUR SE CORRIGE (3 novembre 2026).
+   *
+   * Recette, facture MyTek : la lecture a pris le logo, lu « MITEK », pour le
+   * nom. Le crayon devant le nom ouvre la saisie ; la réponse est une
+   * précision (R7), la lecture reste telle qu'elle a été faite. Le jugement
+   * suit, comme pour le type : le tiers et le libellé de l'écriture portent
+   * le nom retenu.
+   */
+  const [corrigerNom, setCorrigerNom] = useState(false);
+  const corrigerLeNom = useMutation({
+    mutationFn: async (nom: string) => {
+      await office().capture.preciser(pieceId, "issuer", nom);
+      await office().capture.analyser(pieceId);
+    },
+    onSuccess: async () => {
+      setError(null);
+      setCorrigerNom(false);
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /**
    * « Envoyer » — un seul geste, deux passages (lot 4) : le siège au
    * propriétaire, le propriétaire au comptable. La base choisit d'après les
    * droits de la personne, jamais d'après l'écran, et rend chez qui c'est parti.
@@ -1030,12 +1055,15 @@ function PieceScreen() {
     champ: string;
     /** Le montant vient de l'écriture du cabinet : il n'a pas de source sur la pièce. */
     parLeCabinet?: boolean;
+    /** Corrigé à la main (une précision, R7) : la source montre ce qui avait été lu. */
+    corrige?: boolean;
   }> = [
     {
       cle: "issuer",
       label: t("pme.extract.issuer"),
       valeur: payload?.issuer ?? null,
       champ: "issuer",
+      corrige: Boolean(dossier.data?.precisions["issuer"]),
     },
     {
       cle: "date",
@@ -1976,7 +2004,39 @@ function PieceScreen() {
             <i />
             {motDuStatut(statutComplet)}
           </span>
-          <h1>{payload?.issuer ?? t("pme.piece.title")}</h1>
+          {corrigerNom ? (
+            <NomDeLEmetteur
+              actuel={payload?.issuer ?? ""}
+              enCours={corrigerLeNom.isPending}
+              onEnregistrer={(nom) =>
+                nom === (payload?.issuer ?? "").trim()
+                  ? setCorrigerNom(false)
+                  : corrigerLeNom.mutate(nom)
+              }
+              onAnnuler={() => setCorrigerNom(false)}
+            />
+          ) : (
+            <h1 className="f-nom">
+              <span>{payload?.issuer ?? t("pme.piece.title")}</span>
+              {/*
+               * Le nom se corrige tant que la pièce n'est pas engagée — la
+               * base le redit (`capture_precision_persist`).
+               */}
+              {STATUTS_PRECISABLES.has(piece.status) ? (
+                <button
+                  type="button"
+                  className="f-crayon"
+                  onClick={() => setCorrigerNom(true)}
+                  aria-label={t("pme.piece.nom.modifier")}
+                  title={t("pme.piece.nom.modifier")}
+                >
+                  <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                    <path d="M4 20h4L19 9l-4-4L4 16z" />
+                  </svg>
+                </button>
+              ) : null}
+            </h1>
+          )}
           <div className="f-typ">
             {/*
              * Le type se corrige après la lecture (23 octobre 2026), tant que
@@ -2271,21 +2331,24 @@ function PieceScreen() {
                 >
                   <span className="bd">
                     <span className="lb">{l.label}</span>
-                    {(() => {
-                      switch (
-                        etiquetteDeLecture({
-                          confianceConnue,
-                          aVerifier: aVerifier.has(l.champ),
-                        })
-                      ) {
-                        case "inconnue":
-                          return <span className="et">{t("pme.citation.show")}</span>;
-                        case "aVerifier":
-                          return <span className="et am">{t("pme.citation.aVerifier")}</span>;
-                        case "source":
-                          return <span className="et ok">{t("pme.citation.source")}</span>;
-                      }
-                    })()}
+                    {l.corrige ? <span className="et ok">{t("pme.piece.nom.corrige")}</span> : null}
+                    {l.corrige
+                      ? null
+                      : (() => {
+                          switch (
+                            etiquetteDeLecture({
+                              confianceConnue,
+                              aVerifier: aVerifier.has(l.champ),
+                            })
+                          ) {
+                            case "inconnue":
+                              return <span className="et">{t("pme.citation.show")}</span>;
+                            case "aVerifier":
+                              return <span className="et am">{t("pme.citation.aVerifier")}</span>;
+                            case "source":
+                              return <span className="et ok">{t("pme.citation.source")}</span>;
+                          }
+                        })()}
                   </span>
                   <span className="vl">{l.valeur ?? "—"}</span>
                   <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
