@@ -11,7 +11,6 @@ import {
 } from "@/components/malica/carte-de-groupe";
 import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
-import { FiltreDesSocietes } from "@/components/malica/filtre-des-societes";
 import { usePme } from "@/components/malica/pme-context";
 import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
 import { useI18n } from "@/i18n";
@@ -65,9 +64,9 @@ function compte(valeur: number | string | null | undefined): string {
   return n === null ? "—" : String(n);
 }
 
-/** Le groupe déroulé : un mois, un siège ou une organisation, et sa clé. */
+/** Le groupe déroulé : un mois ou un siège, et sa clé. */
 interface Ouvert {
-  genre: "mois" | "siege" | "societe";
+  genre: "mois" | "siege";
   cle: string;
 }
 
@@ -323,15 +322,10 @@ function Bibliotheque() {
       ? null
       : ouvert.genre === "mois"
         ? { titre: nomDuMois(ouvert.cle), pieces: mois.find(([c]) => c === ouvert.cle)?.[1] ?? [] }
-        : ouvert.genre === "siege"
-          ? {
-              titre: sieges.get(ouvert.cle)?.nom ?? "",
-              pieces: sieges.get(ouvert.cle)?.pieces ?? [],
-            }
-          : {
-              titre: nomDeSociete(ouvert.cle),
-              pieces: organisations.find((c) => c.id === ouvert.cle)?.pieces ?? [],
-            };
+        : {
+            titre: sieges.get(ouvert.cle)?.nom ?? "",
+            pieces: sieges.get(ouvert.cle)?.pieces ?? [],
+          };
   const ouvrir = (suivant: Ouvert) => {
     setOuvert(suivant);
     window.scrollTo(0, 0);
@@ -390,9 +384,9 @@ function Bibliotheque() {
           {t("pme.doc.compte", { count: ici.length })}
           <br />
           {compte(f?.lectures_restantes)} / {compte(f?.lectures_droit)} · {t("pme.home.lectures")}
+          {/* Le compteur est celui d'une société : il la nomme quand il y en a plusieurs. */}
+          {pme.dossiers.length > 1 ? ` · ${pme.orgName}` : null}
         </p>
-
-        <FiltreDesSocietes />
 
         <TransmettreCeQuiReste pieces={brutes} />
 
@@ -493,16 +487,34 @@ function Bibliotheque() {
             ) : null}
 
             {/* ------------------------------------------- les organisations */}
-            {parSociete && pme.societeAffichee === null && organisations.length > 0 ? (
+            {/*
+             * LES ORGANISATIONS SONT LA SÉLECTION (Wissem, 3 novembre 2026 :
+             * « pas de doublons »). « Toutes les sociétés » en tête, puis
+             * chacune : toucher une carte montre ses dossiers, ses sièges et
+             * ses mois au-dessus et en dessous. Le choix est partagé avec les
+             * dossiers (`pme.societeAffichee`).
+             */}
+            {parSociete && organisations.length > 0 ? (
               <>
                 <div className="sec">
                   <h2>{t("pme.dossier.organisations")}</h2>
                   <span>{organisations.length}</span>
                 </div>
+                <CarteDeGroupe
+                  presse={pme.societeAffichee === null}
+                  accent={pme.societeAffichee === null}
+                  onClick={() => pme.afficherSociete(null)}
+                  icone={<IconeSociete />}
+                  titre={t("pme.societes.toutes")}
+                  valeur={sommes(toutes.map((x) => x.piece))}
+                  n={toutes.length}
+                />
                 {organisations.map((c) => (
                   <CarteDeGroupe
                     key={c.id}
-                    onClick={() => ouvrir({ genre: "societe", cle: c.id })}
+                    presse={pme.societeAffichee === c.id}
+                    accent={pme.societeAffichee === c.id}
+                    onClick={() => pme.afficherSociete(c.id)}
                     icone={<IconeSociete />}
                     titre={nomDeSociete(c.id)}
                     valeur={sommes(c.pieces)}
