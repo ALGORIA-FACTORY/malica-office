@@ -27,12 +27,12 @@ import { useMemo } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
-import { useDecimales } from "./use-decimales";
+import { useDecimales, useDecimalesEnEchec } from "./use-decimales";
 import { usePiecesLues } from "./use-pieces-lues";
 import { avancementDeLaListe } from "@/lib/lecture";
 import { office } from "@/verticals/malica-office/composition";
 import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
-import { useDeclarationsTva } from "./use-declaration-tva";
+import { useDeclarationsTva, useDeclarationsTvaEnEchec } from "./use-declaration-tva";
 import { computePnl } from "@malica/socle";
 
 import { moisDecale, moisGlissants } from "@malica/socle/exercice";
@@ -194,6 +194,10 @@ export function useAccueil(periode: string): Accueil {
     [periode],
   );
   const declarations = useDeclarationsTva(pme.packId, pme.tenantId, finsDeMois);
+  // Une entrée du calcul en échec : la carte quitte son attente neutre.
+  const declarationsEnEchec = useDeclarationsTvaEnEchec(pme.packId, pme.tenantId, finsDeMois);
+  const decimalesEnEchec = useDecimalesEnEchec();
+  const entreeEnEchec = declarationsEnEchec || decimalesEnEchec;
 
   const lignes = useQuery({
     queryKey: ["accueil-lignes", pme.tenantId, periode],
@@ -372,6 +376,6 @@ export function useAccueil(periode: string): Accueil {
     chargesEcart,
     retournees,
     enCours: extraits.isPending || taux.isPending || lignes.isPending || pieces.isPending,
-    tvaEnCours: !lue && !extraits.isError && !taux.isError,
+    tvaEnCours: !lue && !extraits.isError && !taux.isError && !entreeEnEchec,
   };
 }
