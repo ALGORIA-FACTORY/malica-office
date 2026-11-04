@@ -1,8 +1,8 @@
 /**
  * La tour — l'espace commun des opérateurs d'ALGORIA (2 novembre 2026).
  *
- * Elle était une page du cabinet (`/cabinet/tour`, 19 octobre 2026). Elle
- * devient un espace à elle, au-dessus des cabinets et des PME, avec son menu :
+ * Elle était une page du cabinet (19 octobre 2026) ; son ancienne adresse,
+ * `/cabinet/tour`, a été retirée le 4 novembre 2026. Elle est un espace à elle, au-dessus des cabinets et des PME, avec son menu :
  * les CLIENTS (cabinets ; PME et leurs abonnements), la PLATEFORME, la
  * LECTURE. Le cap d'AGENTS.md le dit : « la tour de contrôle d'ALGORIA
  * Factory les voit toutes les deux ».
