@@ -182,7 +182,7 @@ cache `cache9`) ; les autres gardent leur lecture :
 |                |     juste |  faux |   silence | inventé | signalé (non affirmé) |
 | -------------- | --------: | ----: | --------: | ------: | --------------------: |
 | Bulletin 5     |     5 029 |     0 |     6 450 |       0 |                   245 |
-| **Bulletin 6** | **5 117** | **0** | **6 363** |   **0** |               **244** |
+| **Bulletin 6** | **5 120** | **0** | **6 360** |   **0** |               **244** |
 
 Et, pour la première fois, la **couche de texte** du jeu du dirigeant (134 pièces,
 `jeux_dirigeant_jetons.json`), que le banc des 412 ne mesurait pas. Elle portait **5 faux**
@@ -209,6 +209,16 @@ Causes exactes et corrections :
   pour « … couleur A4 », ticket à chasse fixe) et se tait.
 - **Une règle de comparaison du banc, dite ici** : une vérité arabe saisie dans l'ordre
   visuel (les lettres retournées, 100/D-14) se compare aussi retournée. Une pièce change.
+
+Étape 3, les grilles autres que la facture (deux preuves traduites, en base) :
+
+- **Le devis** se prouve par ses totaux : HT + TVA = TTC, et TVA = HT × un taux du barème.
+  Les trois devis du banc sont prouvés. La vérité du jeu du dirigeant ne porte pas leurs
+  totaux, donc le tableau ne les compte pas. Ils ont été vérifiés à la main contre la
+  somme des lignes de la vérité : 12 490,000, 6 438,000 et 10 700,000 HT à 19 %, justes
+  tous les neuf.
+- **L'avoir** se prouve aussi par son taux. a127 est prouvé juste (3 champs) et a126 le
+  reste. Un avoir avec FODEC ou à plusieurs taux reste muet, jamais faux.
 
 Restent dans le silence, avec leur cause : les factures arabes MANUSCRITES (chiffres
 orientaux tracés à la main, lus de travers par les deux modèles : étape 5), les ventes à
