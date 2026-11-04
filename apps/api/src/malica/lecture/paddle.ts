@@ -40,6 +40,7 @@ import type { MarqueDeLaPage, PageToken } from "@malica/socle/ports/malica";
 import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
 
 import { decouperEnMots } from "./mots.ts";
+import type { LectureDeCellule } from "./relecture.ts";
 
 /** Ce que le service rend. Le contrat tient en trois champs. */
 interface LignePaddle {
@@ -244,6 +245,28 @@ export async function lireAvecPaddle(
     modele: complete.modele ?? "paddleocr",
     millisecondes: complete.millisecondes ?? 0,
   };
+}
+
+/**
+ * Relire des cellules, chacune SEULE dans sa boîte (`POST /relire`) : la relecture guidée
+ * par la contradiction (`relecture.ts`). `null` quand le service n'est pas branché.
+ */
+export async function relireDesCellules(
+  image: Uint8Array,
+  boites: readonly (readonly [number, number, number, number])[],
+): Promise<LectureDeCellule[] | null> {
+  const base = process.env["OCR_URL"];
+  if (!base || boites.length === 0) return null;
+  const reponse = await fetch(`${base.replace(/\/+$/, "")}/relire`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image: Buffer.from(image).toString("base64"), boites }),
+    signal: AbortSignal.timeout(DELAI_MS),
+  });
+  if (!reponse.ok) throw new PanneFournisseur(`second lecteur : ${String(reponse.status)}`);
+  const corps = (await reponse.json()) as { occupe?: boolean; lectures?: LectureDeCellule[] };
+  if (corps.occupe) throw new SecondLecteurOccupe();
+  return corps.lectures ?? null;
 }
 
 /** Un temps de la lecture, tel que le service le rend (une ligne JSON). */

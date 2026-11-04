@@ -269,6 +269,26 @@ Le doute compte contre le moteur. Une valeur de moins de trois signes, une valeu
 « Normal » ne veut pas dire « perdu pour toujours ». Ces silences se gagnent par une
 meilleure lecture (OCR, étape 5), pas par le moteur.
 
+## Bulletin 8 — la relecture guidée par la contradiction (4 novembre 2026, soir)
+
+Quand une pièce est prouvée par ses totaux et que ses lignes ne ferment pas, le banc fait
+relire, cellule par cellule, les seules cellules des rangées d'articles
+(`relecture.ts`, `POST /relire` du service OCR). Une relecture ne remplace un jeton que si
+elle est plus sûre ; le moteur rejuge ensuite.
+
+|                | juste | faux | dont à travailler | inventé |
+| -------------- | ----: | ---: | ----------------: | ------: |
+| avant          | 5 454 |    0 |             5 167 |       0 |
+| avec relecture | 5 472 |    0 |             5 151 |       0 |
+
+Le diagnostic qui suit : sur les pièces prouvées, 779 cellules de lignes ont toutes leurs
+valeurs dans la lecture, et le tableau ne se prouve pas quand même. Ce n'est plus l'OCR,
+c'est la structure. Un article a sa désignation sur la rangée visuelle du dessous, ses
+chiffres sur celle du dessus, et des lignes « SN » s'intercalent. C'est le chantier
+suivant.
+
+Pas encore fait : la relecture en production, et sur les PDF.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

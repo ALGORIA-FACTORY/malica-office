@@ -64,6 +64,8 @@ import {
 } from "./sudoku.ts";
 import type { MarqueDeLaPage } from "@malica/socle/ports/malica";
 
+import { relireDesCellules } from "./paddle.ts";
+import { avecLesRelectures, cellulesContredites, type LectureDeCellule } from "./relecture.ts";
 import type { PageToken } from "./token-plan.ts";
 import { relever } from "./vision.ts";
 
@@ -117,6 +119,10 @@ interface PieceDuBanc {
   readonly interdits?: readonly string[];
   /** `prouve` : la preuve des jetons du tableau, jouée dès leur arrivée (`surLeTableau`). */
   readonly releve: (prouve?: (tokens: PageToken[]) => boolean) => Promise<ReleveGarde>;
+  /** Relire des cellules seules (une image d'une page) ; gardé en cache comme le relevé. */
+  readonly relire?: (
+    boites: readonly (readonly [number, number, number, number])[],
+  ) => Promise<LectureDeCellule[] | null>;
 }
 
 /**
@@ -535,12 +541,26 @@ async function mesurerLaPiece(
   if (!devise) return panne(commun, `devise inconnue : ${piece.devise}`);
   if (!contexte) return panne(commun, "contexte absent");
   const t0 = performance.now();
-  const sortie = resoudreSur(releve.tokens, contexte, devise, releve.marques);
+  let tokens = releve.tokens;
+  let sortie = resoudreSur(tokens, contexte, devise, releve.marques);
+  // La relecture guidée par la contradiction : les cellules du tableau, seules, quand le
+  // centre est prouvé et que les lignes ne le sont pas (`relecture.ts`).
+  const total = champsDeLaGrille(contexte.grille).ht;
+  const contredites = piece.relire && total ? cellulesContredites(tokens, sortie, total) : [];
+  if (contredites.length > 0) {
+    const lues = await piece.relire!(
+      contredites.map((i) => [tokens[i]!.x0, tokens[i]!.y0, tokens[i]!.x1, tokens[i]!.y1] as const),
+    );
+    if (lues) {
+      tokens = avecLesRelectures(tokens, contredites, lues);
+      sortie = resoudreSur(tokens, contexte, devise, releve.marques);
+    }
+  }
   const sudokuMs = Math.round(performance.now() - t0);
   if (brut)
     writeFileSync(
       join(brut, `${piece.corpus}-${piece.id.replace(/\W+/gu, "_")}.json`),
-      JSON.stringify({ sortie, tokens: releve.tokens }),
+      JSON.stringify({ sortie, tokens }),
     );
 
   const { concepts, confondus } = piece;
@@ -620,7 +640,7 @@ async function mesurerLaPiece(
     },
     champs: champs.map((c) =>
       c.issue === "silence"
-        ? { ...c, normal: absenteDeLaLecture(c.attendu, c.type ?? "", releve.tokens) }
+        ? { ...c, normal: absenteDeLaLecture(c.attendu, c.type ?? "", tokens) }
         : c,
     ),
   };
@@ -674,6 +694,20 @@ function absenteDeLaLecture(attendu: unknown, type: string, tokens: readonly Pag
 const JOUR_PAR_DEFAUT = "2026-10-01";
 const jourDe = (v: unknown) =>
   typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/u.test(v) ? v : JOUR_PAR_DEFAUT;
+
+/** Les relectures de cellules d'une image, gardées en cache par leurs boîtes. */
+function relireDuFichier(chemin: string, garde: string): NonNullable<PieceDuBanc["relire"]> {
+  return async (boites) => {
+    const cle = JSON.stringify(boites);
+    const deja = existsSync(garde)
+      ? (JSON.parse(readFileSync(garde, "utf8")) as Record<string, LectureDeCellule[]>)
+      : {};
+    if (deja[cle]) return deja[cle];
+    const lues = await relireDesCellules(new Uint8Array(readFileSync(chemin)), boites);
+    if (lues) writeFileSync(garde, JSON.stringify({ ...deja, [cle]: lues }));
+    return lues;
+  };
+}
 
 /** Le relevé de production d'un fichier, gardé en cache. */
 function releveDuFichier(chemin: string, garde: string): PieceDuBanc["releve"] {
@@ -774,6 +808,9 @@ function corpusAlgoria(dossier: string, cache: string, deviseDuPack: string): Pi
         releve: fichier
           ? releveDuFichier(fichier, join(cache, `algoria-${cas.id}.json`))
           : () => Promise.reject(new Error("rendu absent")),
+        ...(fichier && !fichier.endsWith(".pdf")
+          ? { relire: relireDuFichier(fichier, join(cache, `algoria-${cas.id}.relu.json`)) }
+          : {}),
       } satisfies PieceDuBanc;
     });
 }
@@ -875,6 +912,9 @@ function corpusSynthetique(dossier: string, cache: string, deviseDuPack: string)
         releve: fichier
           ? releveDuFichier(fichier, join(cache, `synthetique-${cas.id}.json`))
           : () => Promise.reject(new Error("rendu absent")),
+        ...(fichier && !fichier.endsWith(".pdf")
+          ? { relire: relireDuFichier(fichier, join(cache, `synthetique-${cas.id}.relu.json`)) }
+          : {}),
       } satisfies PieceDuBanc;
     });
 }
@@ -1009,6 +1049,7 @@ function corpusPhoto(
       confondus: { date_emission: "date_operation" },
       verite: "partielle",
       releve: releveDuFichier(image, join(cache, `reel-${basename(image)}.json`)),
+      relire: relireDuFichier(image, join(cache, `reel-${basename(image)}.relu.json`)),
     },
   ];
 }

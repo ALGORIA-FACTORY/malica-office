@@ -412,6 +412,36 @@ modèle de vision le voit, mais il coûte et il se trompe sans le dire. L'OCR ne
 **Effet mesuré.** 26 cachets justes sur le banc, aucun inventé. Hors banc : 41 sur 81
 cachets trouvés, 0 faux sur 80 pièces sans cachet.
 
+### I-P — L'OCR guidé par la contradiction : relire les seules cellules d'un tableau qui ne ferme pas
+
+**Problème.** Sur une photo ou un scan, un chiffre mal lu dans une cellule (« 71.950 » pour
+« 73.950 », « T » pour « 1 ») suffit pour que la somme des lignes ne ferme pas. Relire la
+page entière coûte toute la lecture et rend souvent la même erreur, parce que le modèle
+voit la cellule dans le même contexte.
+
+**Ce qui est nouveau.**
+
+- La contradiction désigne la zone. La relecture ne se demande que si les totaux de la
+  pièce sont prouvés et que ses lignes ne ferment pas. Elle ne vise que les cellules des
+  rangées d'articles : les rangées au-dessus du total qui portent au moins deux montants
+  décimaux, moins la rangée du total. Les cellules relues sont courtes (au plus 12 signes)
+  et portent un chiffre, ou ont au plus 2 signes.
+- Chaque cellule est découpée seule, avec une marge réglable (`OCR_RELECTURE_MARGE`), et
+  reconnue hors de sa ligne (`POST /relire`).
+- Une relecture ne remplace un jeton que si son texte diffère et que sa confiance est plus
+  haute. Le moteur déterministe juge ensuite, une seconde fois : une relecture fausse ne
+  ferme pas la somme et ne devient rien.
+
+**Effet mesuré** (412 pièces) : 18 cellules de lignes deviennent justes (a028, s032).
+Aucun champ juste n'est perdu ; 0 faux et 0 inventé avant comme après.
+
+**Limites, dites.**
+
+- Seul le banc l'emploie ; le pipeline de production ne l'appelle pas encore.
+- Seules les pièces image sont relues ; les PDF ne le sont pas.
+- Une lecture mal rangée (désignation et chiffres d'un article sur deux rangées visuelles)
+  ne se corrige pas en relisant. C'est un défaut de structure du tableau, traité à part.
+
 ### I-K — La lecture en deux temps : le tableau d'abord, rien de sauté
 
 **Problème.** La preuve a besoin du tableau et des totaux. Les longues mentions servent à
@@ -440,8 +470,9 @@ champs justes (mesuré).
 
 ### I-H — À venir : l'OCR guidé par la contradiction, et l'appariement global des libellés
 
-Ces deux inventions ne sont pas encore faites. Elles sont décrites pour dater leur
-conception.
+L'appariement global est fait (I-M). L'OCR guidé par la contradiction est fait pour les
+cellules d'un tableau qui ne ferme pas (I-P). La relecture d'un identifiant dont la clé
+échoue reste à faire.
 
 **L'OCR guidé par la contradiction.** Le moteur désigne à l'OCR les seules zones à relire :
 

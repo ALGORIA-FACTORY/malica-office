@@ -51,6 +51,7 @@ jetons attend ; convertir des pixels côté Node demanderait de lui faire
 connaître la taille de l'image, qu'il n'a pas.
 """
 
+import base64
 import io
 import json
 import os
@@ -566,6 +567,48 @@ async def lire(requete: Request) -> StreamingResponse:
     ligne JSON par temps (`_vagues`) : le tableau d'abord, la page entière ensuite. Le second
     temps est la lecture complète."""
     return StreamingResponse(_en_flux(await requete.body()), media_type="application/x-ndjson")
+
+
+# LA RELECTURE D'UNE CELLULE, SEULE (4 novembre 2026). Lue dans sa ligne, une cellule
+# partage la decoupe de ses voisines : « 73.950 » lu « 71.950 », « 1 » lu « T ». Lue seule,
+# dans sa boite elargie d'une marge, elle se lit juste : mesure sur algoria-028, les deux
+# cellules relues justes (0,94 et 0,99). L'API ne relit que les cellules que l'arithmetique
+# de la piece contredit ; la preuve, elle, reste l'arithmetique.
+RELECTURE_MARGE = float(os.environ.get("OCR_RELECTURE_MARGE", "0.15"))  # en hauteurs de cellule
+
+
+def _relire(lecteur: "_Lecteur", octets: bytes, boites: list) -> list:
+    tableau, largeur, hauteur = _image(octets)
+    decoupes = []
+    for x0, y0, x1, y1 in boites:
+        h = (y1 - y0) * hauteur
+        marge = RELECTURE_MARGE * h
+        decoupes.append(tableau[
+            int(max(0, y0 * hauteur - marge)):int(min(hauteur, y1 * hauteur + marge)),
+            int(max(0, x0 * largeur - marge)):int(min(largeur, x1 * largeur + marge)),
+        ])
+    valides = [i for i, d in enumerate(decoupes) if d.size > 0]
+    lus = [("", 0.0)] * len(decoupes)
+    for i, l in zip(valides, _reconnaitre(lecteur, [decoupes[i] for i in valides])):
+        lus[i] = l
+    return [{"texte": t, "confiance": c} for t, c in lus]
+
+
+@app.post("/relire")
+async def relire(requete: Request) -> dict:
+    """`{"image": base64, "boites": [[x0, y0, x1, y1], ...]}` (boites normalisees) : la
+    lecture latine de chaque boite, seule, dans l'ordre (`{"lectures": [{texte, confiance}]}`).
+    Un lecteur occupe le dit (`{"occupe": true}`)."""
+    corps = json.loads(await requete.body())
+    try:
+        lecteur = await run_in_threadpool(_libres.get, True, ATTENTE_MAX_S)
+    except queue.Empty:
+        return {"occupe": True}
+    try:
+        octets = base64.b64decode(corps["image"])
+        return {"lectures": await run_in_threadpool(_relire, lecteur, octets, corps["boites"])}
+    finally:
+        _libres.put(lecteur)
 
 
 async def _en_flux(octets: bytes):
