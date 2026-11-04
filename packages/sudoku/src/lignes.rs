@@ -466,13 +466,19 @@ struct Contexte<'a> {
     bareme: Vec<(String, i64)>,
     /// La grille déclare des prix TTC (`prix_ttc`).
     prix_ttc: bool,
+    /// Les colonnes de REMISE nommées par l'en-tête du tableau : (x0, x1, bas de l'en-tête).
+    colonnes_remise: Vec<(f64, f64, f64)>,
 }
 
 impl Contexte<'_> {
     /// Le jeton est-il marqué « % » (sur lui-même, ou au début du jeton suivant de la rangée) ?
     fn marque_pourcent(&self, rang: &[usize], k: usize) -> bool {
-        self.jetons[rang[k]].texte.contains('%')
+        let j = &self.jetons[rang[k]];
+        let centre = (j.x0 + j.x1) / 2.0;
+        j.texte.contains('%')
             || rang.get(k + 1).is_some_and(|&n| self.jetons[n].texte.trim_start().starts_with('%'))
+            // sous l'intitulé d'une colonne de remise (« Remise », « R. ») : le « % » est dans l'en-tête
+            || self.colonnes_remise.iter().any(|&(x0, x1, bas)| j.y0 >= bas && centre >= x0 && centre <= x1)
     }
 
     /// Les pourcentages lus sur un jeton, en unités mineures du pourcentage (« 10 % » → 10 × 10^déc).
@@ -752,6 +758,46 @@ pub(crate) fn sans_la_remise(pris: &[usize], remise: Option<usize>, jetons: &[Je
     pris.iter().copied().filter(|&i| i != r && !(rangee(i) && jetons[i].x0 >= x0 - f64::EPSILON && jetons[i].x1 <= x1 + f64::EPSILON)).collect()
 }
 
+/// Les colonnes de remise d'un tableau : sur une rangée d'en-tête — au moins deux autres
+/// intitulés des champs de la parcelle des lignes —, l'intitulé, mot entier, d'un repère du
+/// champ de la remise (« Remise », « R. »). Banc sans IA du 4 novembre 2026 : « 5,00 » sous
+/// « R. », sans « % » sur la ligne, n'était pas une remise, et les lignes de 46 factures ne
+/// fermaient pas. La colonne s'étend d'une largeur d'intitulé de part et d'autre (un nombre
+/// se cadre à droite sous un intitulé court).
+fn colonnes_de_remise(op: &OpLignes, entree: &Entree) -> Vec<(f64, f64, f64)> {
+    let cle = |s: &str| crate::reperes::normaliser(s).chars().filter(|c| c.is_alphanumeric()).collect::<String>();
+    let grille = &entree.grille;
+    let index = |nom: &str| grille.champs.iter().position(|c| c.code == nom.trim_end_matches('?'));
+    let Some(r) = op.remise.as_deref().and_then(index) else { return Vec::new() };
+    let Some(parcelle) = index(&op.designation).and_then(|d| grille.champs[d].parcelle.clone()) else { return Vec::new() };
+    let reperes = |c: &crate::entree::Champ| -> Vec<String> {
+        c.reperes_fr.iter().chain(c.reperes_ar.iter()).map(|x| cle(x)).filter(|x| !x.is_empty()).collect()
+    };
+    let de_la_remise = reperes(&grille.champs[r]);
+    let des_lignes: Vec<String> = grille
+        .champs
+        .iter()
+        .enumerate()
+        .filter(|(k, c)| *k != r && c.parcelle.as_deref() == Some(parcelle.as_str()))
+        .flat_map(|(_, c)| reperes(c))
+        .collect();
+    let mut colonnes = Vec::new();
+    for rang in rangees_selon(&entree.jetons, f64::min) {
+        let cles: Vec<String> = rang.iter().map(|&i| cle(&entree.jetons[i].texte)).collect();
+        if cles.iter().filter(|k| des_lignes.contains(k)).count() < 2 {
+            continue;
+        }
+        for (&i, k) in rang.iter().zip(&cles) {
+            if de_la_remise.contains(k) {
+                let j = &entree.jetons[i];
+                let w = j.x1 - j.x0;
+                colonnes.push((j.x0 - w, j.x1 + w, j.y1));
+            }
+        }
+    }
+    colonnes
+}
+
 /// La valeur prouvée d'un champ scalaire au centre.
 fn prouvee(champs: &BTreeMap<String, ChampSortie>, code: &str) -> Option<i64> {
     champs.get(code).filter(|c| c.statut == "prouve").and_then(|c| c.valeur.as_ref()).and_then(|v| v.parse().ok())
@@ -772,6 +818,7 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
             .map(|v| v.iter().filter(|t| t.ppm > 0).map(|t| (t.code.clone(), t.ppm)).collect())
             .unwrap_or_default(),
         prix_ttc: op.prix_ttc.is_some(),
+        colonnes_remise: colonnes_de_remise(op, entree),
     };
     let vide = |statut: &str| LignesSortie {
         statut: statut.into(),

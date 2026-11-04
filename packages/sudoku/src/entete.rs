@@ -1624,8 +1624,15 @@ fn liste_du_domaine(page: &Page, n: usize, ch: &crate::entree::Champ) -> ChampSo
     let formes: Vec<(&str, String)> = ch
         .valeurs
         .iter()
-        .flat_map(|v| v.formes.iter().map(move |f| (v.code.as_str(), mot(f))))
-        .filter(|(_, f)| !f.is_empty())
+        .flat_map(|v| v.formes.iter().map(move |f| (v.code.as_str(), f.as_str(), mot(f))))
+        // Une forme qui perd son SYMBOLE (« US$ » → « US ») et devient un fragment de deux
+        // lettres n'est plus elle-même : deux jetons « U | S » d'une adresse la lisaient, et
+        // la devise de 22 pièces en dinars se taisait (banc sans IA du 4 novembre 2026).
+        .filter(|(_, brute, f)| {
+            !f.is_empty()
+                && (f.chars().count() >= 3 || brute.chars().all(|c| c.is_alphanumeric() || c == '.' || c.is_whitespace()))
+        })
+        .map(|(code, _, f)| (code, f))
         .collect();
     // (code, jetons, ancré)
     let mut vus: Vec<(&str, Vec<usize>, bool)> = Vec::new();
