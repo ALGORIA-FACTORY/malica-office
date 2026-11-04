@@ -629,6 +629,83 @@ impl<'a> Page<'a> {
         out
     }
 
+    /// Les grappes légales de deux matricules : chaque étiquette d'un champ que la grille
+    /// donne au seul rôle de l'émetteur (registre de commerce, RIB, téléphone, capital…) ou au
+    /// seul rôle du client, imprimée près d'eux, va au matricule le PLUS PROCHE (l'écart entre
+    /// colonnes pèse double : un bloc est une colonne). Rend, pour chacun, (émetteur, client).
+    /// Une étiquette que les deux rôles portent (« Adresse ») ne compte pas ; les matricules
+    /// non plus.
+    fn grappes(
+        &self,
+        a: &[&Occ],
+        b: &[&Occ],
+        grille: &Grille,
+        op: &OpParties,
+        formes: &BTreeSet<String>,
+    ) -> ((usize, usize), (usize, usize)) {
+        let role = |c: usize| grille.champs[c].role.clone();
+        let (re, rc) = (role(op.emetteur), role(op.client));
+        if re.is_none() || rc.is_none() || re == rc {
+            return ((0, 0), (0, 0));
+        }
+        let cles_de = |r: &Option<String>| -> BTreeSet<String> {
+            grille
+                .champs
+                .iter()
+                .filter(|c| c.role == *r && c.format_code.is_none())
+                .flat_map(|c| c.reperes_fr.iter().chain(c.reperes_ar.iter()))
+                .map(|x| mot(x))
+                // une forme juridique (« SUARL ») est une valeur du nom, pas une étiquette
+                .filter(|x| x.chars().count() >= 2 && !formes.contains(x))
+                .collect()
+        };
+        let (e, c) = (cles_de(&re), cles_de(&rc));
+        let seuls_e: BTreeSet<&String> = e.iter().filter(|k| !c.contains(*k)).collect();
+        let seuls_c: BTreeSet<&String> = c.iter().filter(|k| !e.contains(*k)).collect();
+        let pris: BTreeSet<usize> = a.iter().chain(b.iter()).flat_map(|o| o.jetons.iter().copied()).collect();
+        // L'écart d'un jeton à une occurrence : entre colonnes (doublé) et entre rangées.
+        let ecart = |t: usize, o: &Occ| -> f64 {
+            let j = &self.j[t];
+            let (x0, x1) = (self.j[o.jetons[0]].x0, self.j[*o.jetons.last().unwrap_or(&o.jetons[0])].x1);
+            let (y0, y1) = (self.j[o.jetons[0]].y0, self.j[o.jetons[0]].y1);
+            if j.page != self.j[o.jetons[0]].page {
+                return f64::MAX;
+            }
+            let dx = (x0 - j.x1).max(j.x0 - x1).max(0.0);
+            let dy = (y0 - j.y1).max(j.y0 - y1).max(0.0);
+            2.0 * dx + dy
+        };
+        let plus_pres = |t: usize, occs: &[&Occ]| occs.iter().map(|o| ecart(t, o)).fold(f64::MAX, f64::min);
+        let (mut ea, mut ca, mut eb, mut cb) = (BTreeSet::new(), BTreeSet::new(), BTreeSet::new(), BTreeSet::new());
+        for rang in &self.rangs {
+            for (k, &t) in rang.iter().enumerate() {
+                if pris.contains(&t) {
+                    continue;
+                }
+                let (da, db) = (plus_pres(t, a), plus_pres(t, b));
+                if da.min(db) > 2.0 * BLOC_HAUTEUR {
+                    continue;
+                }
+                // un libellé d'un à trois mots qui commence ici
+                let mut texte = String::new();
+                for &u in rang.iter().skip(k).take(3) {
+                    texte.push_str(&mot(&self.j[u].texte));
+                    let (vers_e, vers_c) = if da < db { (&mut ea, &mut ca) } else { (&mut eb, &mut cb) };
+                    if da == db {
+                        break;
+                    }
+                    if seuls_e.contains(&texte) {
+                        vers_e.insert(t);
+                    }
+                    if seuls_c.contains(&texte) {
+                        vers_c.insert(t);
+                    }
+                }
+            }
+        }
+        ((ea.len(), ca.len()), (eb.len(), cb.len()))
+    }
+
     /// Les mots d'un nom écrit à gauche du jeton `k` de la rangée `r` (ponctuation sautée),
     /// jusqu'à la ponctuation ou un blanc : dans l'ordre de la rangée.
     fn mots_avant(&self, r: usize, mut k: usize) -> Vec<usize> {
@@ -971,6 +1048,17 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         if ancre(o, Camp::Client) {
             votes.push(Sens::Vente);
         }
+        // La GRAPPE LÉGALE : autour d'un matricule, les étiquettes des champs que la grille
+        // donne à UN rôle seul (registre de commerce, RIB, capital, téléphone de l'émetteur…).
+        // La partie dont le bloc porte la grappe de l'émetteur, quand l'autre n'en porte
+        // aucune, est l'émetteur — sans « Client : » ni « Fournisseur : » imprimés.
+        let ((eo, co), (edo, cdo)) = page.grappes(&par_valeur[o], &par_valeur[d.as_str()], grille, op, &formes);
+        if eo > 0 && co == 0 && edo == 0 {
+            votes.push(Sens::Achat);
+        }
+        if edo > 0 && cdo == 0 && eo == 0 {
+            votes.push(Sens::Vente);
+        }
         // La géométrie corrobore, elle ne décide jamais seule : un émetteur peut imprimer
         // son matricule plus bas que le bloc du client (colonne latérale).
         if !votes.is_empty() {
@@ -1066,7 +1154,11 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
             let (a, b) = (mots_de(rs), mots_de(&n.valeur));
             !a.is_empty() && a == b
         });
-        if sien || meme {
+        // Ni un identifiant : un nom qui cite les jetons d'un matricule lu n'est pas un nom.
+        let identifiant = occs.iter().any(|o| {
+            o.jetons.iter().any(|&t| n.refs.iter().any(|r| r.page == page.j[t].page && r.ordinal == page.j[t].ordinal))
+        });
+        if sien || meme || identifiant {
             cote_autre.nom = None;
         }
     }

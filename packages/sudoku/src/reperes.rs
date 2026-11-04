@@ -24,7 +24,23 @@ pub fn droite_a_gauche(s: &str) -> bool {
     })
 }
 
+/// Les proclitiques arabes collés à un mot défini se ramènent à l'article : « للحريف » (pour
+/// le client) se compare à « الحريف », comme « وال… », « بال… », « فال… », « كال… ». Une
+/// étiquette arabe porte souvent le nom de la partie avec sa préposition (« المعرف الجبائي
+/// للحريف ») : sans ce retour, « الحريف » n'y était jamais reconnu.
+fn sans_proclitique(mot: &str) -> String {
+    for p in ["لل", "وال", "بال", "فال", "كال"] {
+        if let Some(reste) = mot.strip_prefix(p) {
+            if reste.chars().count() >= 2 {
+                return format!("ال{reste}");
+            }
+        }
+    }
+    mot.to_string()
+}
+
 pub fn normaliser(s: &str) -> String {
+    let s: String = s.split_whitespace().map(sans_proclitique).collect::<Vec<_>>().join(" ");
     s.chars()
         .flat_map(|c| c.to_lowercase())
         .filter(|c| !c.is_whitespace())

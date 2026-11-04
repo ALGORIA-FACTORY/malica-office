@@ -64,3 +64,17 @@ fn un_deux_points_seul_dit_le_cote_du_libelle() {
     let rc = &s["champs"]["registre_commerce_emetteur"]["valeur"];
     assert!(rc.is_null() || *rc == c["attendu"]["rc"], "RC lu de travers : {rc}");
 }
+
+#[test]
+fn la_grappe_legale_dit_l_emetteur_sans_libelle_de_partie() {
+    let (p, a) = parties("dirigeant-50_08");
+    assert_eq!(p["sens"], a["sens"], "{}", p);
+    assert_eq!(p["emetteur"]["matricule"]["valeur"], a["emetteur"]);
+}
+
+#[test]
+fn un_proclitique_arabe_ne_cache_pas_la_partie() {
+    let (p, a) = parties("synthetique-050");
+    assert_eq!(p["sens"], a["sens"], "{}", p);
+    assert_eq!(p["client"]["matricule"]["valeur"], a["client"]);
+}
