@@ -246,6 +246,30 @@ function PmeHome() {
     );
   const moisCourant = mois(periode);
 
+  /*
+   * ============================================ LE PETIT LIBELLÉ DE LA CARTE DE TVA
+   *
+   * Deux défauts relevés le 4 novembre 2026, réglés dans le même libellé, sans
+   * rien ajouter à la carte :
+   *
+   *  - pendant le chargement, il nommait le mois courant, puis basculait sur
+   *    le mois retenu (`moisDeLaCarte`). Il ne nomme plus aucun mois tant que
+   *    les lectures qui le décident ne sont pas arrivées ;
+   *  - un propriétaire de plusieurs sociétés ne savait pas de laquelle étaient
+   *    les chiffres. La carte calcule sur la société OUVERTE (`pme.tenantId`,
+   *    nommée `pme.orgName`) — pas sur le filtre de la bibliothèque
+   *    (`pme.societeAffichee`), que l'accueil ne lit pas. C'est donc elle que le
+   *    libellé nomme, et seulement quand il y en a plusieurs.
+   */
+  const plusieursSocietes = pme.dossiers.length > 1;
+  const kickerTva = a.tvaEnCours
+    ? plusieursSocietes
+      ? t("pme.home.tva.kicker.attente.societe", { societe: pme.orgName })
+      : t("pme.home.tva.kicker.attente")
+    : plusieursSocietes
+      ? t("pme.home.tva.kicker.societe", { month: mois(a.tva.periode), societe: pme.orgName })
+      : t("pme.home.tva.kicker", { month: mois(a.tva.periode) });
+
   const heure = new Date().getHours();
   /*
    * Le salut porte le prénom quand la personne l'a écrit (Réglages, depuis le
@@ -494,8 +518,13 @@ function PmeHome() {
          */}
 
         {/* ── 1. le chiffre du mois ─────────────────────────────────────── */}
-        <Link to="/pme/tva" search={{ mois: a.tva.periode }} className="mois">
-          <span className="k">{t("pme.home.tva.kicker", { month: mois(a.tva.periode) })}</span>
+        <Link
+          to="/pme/tva"
+          search={{ mois: a.tva.periode }}
+          className="mois"
+          aria-busy={a.tvaEnCours || undefined}
+        >
+          <span className="k">{kickerTva}</span>
           {nonAssujetti ? (
             <span className="v">
               <b className="t">{t("pme.home.tva.nonAssujetti")}</b>
@@ -504,15 +533,18 @@ function PmeHome() {
             <>
               <span className="v">
                 <b>{a.tva.solde === null ? "—" : montant(a.tva.solde.replace(/^-/, ""), locale)}</b>
+                {/* En chargement, aucun sens : « à confirmer » serait déjà un état. */}
                 <u>
                   {a.devise}{" "}
-                  {sensDuSolde(a.tva.solde) === "inconnu"
-                    ? t("pme.tva.soldeInconnu")
-                    : sensDuSolde(a.tva.solde) === "nul"
-                      ? t("pme.tva.soldeNul")
-                      : sensDuSolde(a.tva.solde) === "du"
-                        ? t("pme.home.reverser")
-                        : t("pme.home.credit")}
+                  {a.tvaEnCours
+                    ? null
+                    : sensDuSolde(a.tva.solde) === "inconnu"
+                      ? t("pme.tva.soldeInconnu")
+                      : sensDuSolde(a.tva.solde) === "nul"
+                        ? t("pme.tva.soldeNul")
+                        : sensDuSolde(a.tva.solde) === "du"
+                          ? t("pme.home.reverser")
+                          : t("pme.home.credit")}
                 </u>
               </span>
               <span className="dt">

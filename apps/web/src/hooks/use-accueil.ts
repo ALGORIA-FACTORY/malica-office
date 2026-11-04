@@ -118,6 +118,17 @@ export interface Accueil {
   /** Les pièces que le cabinet a retournées, et qui attendent le dirigeant. */
   retournees: number;
   enCours: boolean;
+  /**
+   * Vrai tant que la carte de TVA ne sait pas encore quel mois montrer.
+   *
+   * Relevé le 4 novembre 2026 : pendant le chargement, la carte disait
+   * « TVA · novembre — Solde TVA à confirmer », puis basculait sur
+   * « TVA · février 142,130 Crédit de TVA ». La série vide retombait sur le
+   * mois courant, et le dirigeant lisait une seconde un mois et un état faux.
+   * L'écran reste neutre tant que ceci est vrai. Une lecture en échec n'est
+   * plus « en cours » : la carte dit alors qu'elle ne sait pas, comme avant.
+   */
+  tvaEnCours: boolean;
 }
 
 /*
@@ -200,7 +211,11 @@ export function useAccueil(periode: string): Accueil {
   const pieces = usePiecesLues();
 
   // ------------------------------------------------------ la série de douze
-  const serie = useMemo<MoisDeTva[]>(() => {
+  //
+  // `lue` dit si les entrées du calcul sont TOUTES arrivées. Tant qu'elles ne
+  // le sont pas, la série est vide et `moisDeLaCarte` retomberait sur le mois
+  // courant : l'écran ne doit pas l'annoncer (voir `tvaEnCours`).
+  const { serie, lue } = useMemo<{ serie: MoisDeTva[]; lue: boolean }>(() => {
     const mois: MoisDeTva[] = moisGlissants(periode, FENETRE).map((p) => ({
       periode: p,
       recuperee: null,
@@ -208,7 +223,8 @@ export function useAccueil(periode: string): Accueil {
       solde: null,
       horsDuCalcul: 0,
     }));
-    if (!extraits.data || !taux.data || !declarations || decimalesDuPack === null) return mois;
+    if (!extraits.data || !taux.data || !declarations || decimalesDuPack === null)
+      return { serie: mois, lue: false };
     const decimales = decimalesDuPack;
     const tarifs = taux.data;
 
@@ -235,7 +251,7 @@ export function useAccueil(periode: string): Accueil {
       parMois.set(cle, [...(parMois.get(cle) ?? []), ligne]);
     }
 
-    return mois.map((m) => {
+    const calcules = mois.map((m) => {
       const dedans = parMois.get(m.periode);
       const declaration = declarations.get(monthBounds(m.periode).to);
       if (!dedans || dedans.length === 0 || !declaration) return m;
@@ -256,6 +272,7 @@ export function useAccueil(periode: string): Accueil {
         horsDuCalcul: calcul.refused.length,
       };
     });
+    return { serie: calcules, lue: true };
   }, [extraits.data, taux.data, declarations, periode, devise, decimalesDuPack]);
 
   const courant = serie[serie.length - 1]?.recuperee ?? null;
@@ -355,5 +372,6 @@ export function useAccueil(periode: string): Accueil {
     chargesEcart,
     retournees,
     enCours: extraits.isPending || taux.isPending || lignes.isPending || pieces.isPending,
+    tvaEnCours: !lue && !extraits.isError && !taux.isError,
   };
 }
