@@ -224,6 +224,42 @@ impl<'a> Page<'a> {
         self.cles[i].is_empty()
     }
 
+    /// Le jeton `i` a-t-il, juste sous lui et dans sa colonne, un jeton de même FORME (un
+    /// nombre sous un nombre, un mot sous un mot : mêmes suites de chiffres, de lettres et
+    /// de signes) qui n'est pas un libellé ? Alors il est une cellule d'une colonne de
+    /// valeurs. Une date au-dessus d'une référence d'article n'en est pas une.
+    fn en_colonne(&self, i: usize) -> bool {
+        let j = &self.j[i];
+        let forme = |t: &Jeton| {
+            let mut f: Vec<char> = Vec::new();
+            for c in t.texte.trim().chars() {
+                let k = if c.is_ascii_digit() {
+                    '9'
+                } else if c.is_alphabetic() {
+                    'a'
+                } else {
+                    c
+                };
+                if f.last() != Some(&k) || !matches!(k, '9' | 'a') {
+                    f.push(k);
+                }
+            }
+            f
+        };
+        let chiffre = |t: &Jeton| forme(t);
+        let (r, _) = self.ou[i];
+        self.rangs.iter().skip(r + 1).take(2).flatten().any(|&b| {
+            let t = &self.j[b];
+            t.page == j.page
+                && t.y0 - j.y1 <= DESSUS * self.h(i)
+                && t.x0 <= j.x1 + MARGE
+                && t.x1 >= j.x0 - MARGE
+                && !self.ponct(b)
+                && chiffre(t) == chiffre(j)
+                && self.champs_de(&self.normes[b]).is_none()
+        })
+    }
+
     /// La rangée `r` se poursuit-elle à la ligne d'après, comme un paragraphe ? Oui quand la
     /// rangée suivante, serrée sous elle (à moins d'une hauteur de corps), commence à la même
     /// marge, ne commence pas par un libellé, et n'est pas plus longue qu'elle : une ligne
@@ -437,6 +473,13 @@ impl<'a> Page<'a> {
             })
             .collect();
         let (&premier, &dernier) = (sur.first()?, sur.last()?);
+        // Un en-tête au-dessus d'une COLONNE de valeurs (« Qté » sur 2, 5, …) nomme une
+        // cellule de tableau, pas un champ de la pièce : la quantité d'une ligne n'est pas
+        // « la quantité » de l'avoir (banc du 4 novembre 2026, avoir, bon de livraison,
+        // note de frais).
+        if self.en_colonne(i) {
+            return None;
+        }
         // Un libellé qui commence une phrase n'est pas l'en-tête de ce qui est dessous : la
         // ligne du dessous est la suite du paragraphe (« Réserve de propriété : le transfert
         // … Toute / réclamation doit être formulée … », conditions générales, banc du
@@ -1407,8 +1450,23 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
             }
             let (a, b) = (rang[q - 1], rang[q]);
             let suit = if l.chiffre { colle(a, b) } else { page.ecart(a, b) <= ECART_MOT * page.h(a) };
+            let libelle = !l.chiffre && page.champs_de(&page.normes[b]).is_some();
             // un autre libellé commence : la valeur s'arrête
-            if !suit || (!l.chiffre && page.champs_de(&page.normes[b]).is_some()) {
+            if !suit || libelle {
+                // Arrêtée sur un mot qui la touche — un identifiant à blancs (« 239 TU
+                // 4170 »), un libellé sans séparateur au milieu d'une phrase (« Cadre —
+                // échelon 4 ») : la valeur est peut-être coupée, elle n'est pas entière.
+                let touche = page.ecart(a, b) <= ECART_MOT * page.h(a) && !page.ponct(b);
+                let separe = q + 1 < rang.len() && page.ponct(rang[q + 1]);
+                // un identifiant se poursuit par un code (chiffres, capitales), pas par un mot
+                let code = {
+                    let t = page.j[b].texte.trim();
+                    t.chars().any(|c| c.is_ascii_digit())
+                        || (t.chars().all(|c| c.is_alphabetic()) && t.chars().all(|c| c.is_uppercase()))
+                };
+                if touche && if l.chiffre { code } else { libelle && !separe } {
+                    entier = false;
+                }
                 break;
             }
             pris.push(b);
@@ -1632,6 +1690,8 @@ pub fn nommes(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
         if champs.get(&ch.code).is_some_and(|c| c.statut != "absent")
             || !ch.expert.as_deref().is_some_and(|f| FAMILLES_NOMMEES.contains(&f))
             || ch.parcelle.as_deref().is_some_and(|p| cellules.contains(p))
+            // une cellule d'une parcelle répétée n'est pas un champ de la pièce
+            || ch.repetee
             || lettres.contains(&n)
             || (ch.reperes_fr.is_empty() && ch.reperes_ar.is_empty())
         {

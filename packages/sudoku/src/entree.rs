@@ -148,6 +148,10 @@ pub struct Champ {
     /// La partie que le champ décrit (`ref.grille_champs.role`), s'il en décrit une.
     #[serde(default)]
     pub role: Option<String>,
+    /// Le champ appartient à une parcelle répétée (une occurrence par ligne) : il ne se lit
+    /// pas comme un champ unique de la pièce.
+    #[serde(default)]
+    pub repetee: bool,
     /// Le domaine d'un champ « liste » : chaque code et ses formes imprimables (le libellé du
     /// code dans les trois langues, ses marques). Présent, le champ ne se lit qu'en un code.
     #[serde(default)]

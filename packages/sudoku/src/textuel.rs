@@ -45,6 +45,10 @@ pub(crate) fn iso_valide(s: &str) -> bool {
 /// Les types non numériques que le moteur sait lire : la date, et l'identifiant
 /// dont le format est fourni par le pack. Les autres ne sont pas émis.
 pub fn traite(champ: &Champ, pack: &Pack) -> bool {
+    // une cellule d'une parcelle répétée n'est pas un champ de la pièce
+    if champ.repetee {
+        return false;
+    }
     match champ.genre.as_str() {
         "date" => true,
         "identifiant" => champ.format_code.as_ref().is_some_and(|f| pack.formats.contains_key(f)),

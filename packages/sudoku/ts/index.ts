@@ -83,6 +83,11 @@ export interface ChampDeGrille {
    */
   readonly role?: string | null;
   /**
+   * Le champ appartient à une parcelle répétée (une occurrence par ligne, par résolution,
+   * par mouvement : `ref.grille_champs.repetee`) : il ne se lit pas comme un champ unique.
+   */
+  readonly repetee?: boolean;
+  /**
    * Le domaine d'un champ « liste » (`ref_valeurs_des_domaines_v`) : chaque code et ses
    * formes imprimables. Présent, le champ ne se lit qu'en un code de ce domaine.
    */

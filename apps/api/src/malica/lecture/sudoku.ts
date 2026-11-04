@@ -266,9 +266,10 @@ export async function lireLeContexteDuSudoku(
         expert: string;
         role: string | null;
         domaine: string | null;
+        repetee: boolean;
       }>(
         `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert, c.role,
-                k.domaine
+                k.domaine, c.repetee
            from ref_grille_champs_v c join ref_concepts_v k on k.id = c.concept_id
           where c.grille_id = $1 order by c.code`,
         [grilleId],
@@ -407,6 +408,7 @@ export async function lireLeContexteDuSudoku(
         parcelle: c.parcelle,
         expert: c.expert,
         role: c.role,
+        ...(c.repetee ? { repetee: true } : {}),
         ...(c.domaine ? { valeurs: valeursDe(c.domaine) } : {}),
       })),
       preuves: preuves.rows.map((p) => ({
