@@ -201,7 +201,7 @@ function CabinetNotifications() {
   const erreur = marquer.error ?? toutMarquer.error;
 
   return (
-    <div className="space-y-6">
+    <div className="cab-lisible space-y-6">
       <EnTeteCabinet
         surtitre={
           <>
@@ -296,7 +296,7 @@ function CabinetNotifications() {
                           onClick={() => {
                             if (!lue) marquer.mutate(n.id);
                           }}
-                          className="border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
+                          className="cab-cible border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
                         >
                           {t("cab.notif.ouvrir")}
                         </Link>
@@ -306,7 +306,7 @@ function CabinetNotifications() {
                           onClick={() => {
                             if (!lue) marquer.mutate(n.id);
                           }}
-                          className="border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
+                          className="cab-cible border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
                         >
                           {t("cab.notif.ouvrir")}
                         </Link>

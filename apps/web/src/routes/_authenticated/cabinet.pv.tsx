@@ -196,7 +196,7 @@ function CabinetPv() {
   const panne = pvs.error ?? clients.error;
 
   return (
-    <div className="space-y-8">
+    <div className="cab-lisible space-y-8">
       {/* ---- masthead */}
       <EnTeteCabinet
         surtitre={<>{t("cab.pv.kicker", { date: dateCourte(jour) })}</>}

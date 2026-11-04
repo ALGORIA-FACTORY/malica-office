@@ -638,7 +638,7 @@ function CabinetRapprochement() {
     "border border-border bg-card px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-accent disabled:opacity-50";
 
   return (
-    <div className="space-y-8">
+    <div className="cab-lisible space-y-8">
       {/* ---- masthead */}
       <EnTeteCabinet
         surtitre={<>{kicker}</>}
@@ -1117,14 +1117,19 @@ function CabinetRapprochement() {
                       t("cab.banque.status"),
                       "",
                     ]}
+                    empile
                   >
                     {lignesRows.map((l) => (
                       <InkTableRow key={l.id}>
                         <InkCell numeric>{dateCourte(l.at)}</InkCell>
-                        <InkCell>{l.label}</InkCell>
-                        <InkCell numeric>{montant(l.montant, locale)}</InkCell>
-                        <InkCell numeric>{l.reference ?? "—"}</InkCell>
-                        <InkCell>
+                        <InkCell label={t("cab.banque.label")}>{l.label}</InkCell>
+                        <InkCell numeric label={t("cab.banque.amount")}>
+                          {montant(l.montant, locale)}
+                        </InkCell>
+                        <InkCell numeric label={t("cab.banque.reference")}>
+                          {l.reference ?? "—"}
+                        </InkCell>
+                        <InkCell label={t("cab.banque.status")}>
                           <span
                             className={cn(
                               "border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
@@ -1175,15 +1180,18 @@ function CabinetRapprochement() {
                       t("cab.banque.piece"),
                       t("cab.banque.status"),
                     ]}
+                    empile
                   >
                     {bookRows.map((b) => (
                       <InkTableRow key={b.id}>
                         <InkCell numeric>{dateCourte(b.at)}</InkCell>
-                        <InkCell>
+                        <InkCell label={t("cab.banque.label")}>
                           <EcritureRef book={b} titre={t("cab.banque.openpiece")} />
                         </InkCell>
-                        <InkCell numeric>{montant(b.montant, locale)}</InkCell>
-                        <InkCell>
+                        <InkCell numeric label={t("cab.banque.amount")}>
+                          {montant(b.montant, locale)}
+                        </InkCell>
+                        <InkCell label={t("cab.banque.piece")}>
                           {b.pieceId ? (
                             <Link
                               to="/cabinet/piece/$pieceId"
@@ -1196,7 +1204,7 @@ function CabinetRapprochement() {
                             "—"
                           )}
                         </InkCell>
-                        <InkCell>
+                        <InkCell label={t("cab.banque.status")}>
                           {b.lettree ? (
                             <span className="border border-foreground px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                               {t("cab.banque.lettree")}
@@ -1235,22 +1243,27 @@ function CabinetRapprochement() {
                       t("cab.banque.motif"),
                       t("cab.banque.note"),
                     ]}
+                    empile
                   >
                     {(journal.data ?? []).map((l) => (
                       <InkTableRow key={l.id}>
                         <InkCell numeric>{horodatage(l.createdAt)}</InkCell>
-                        <InkCell>{t(`cab.banque.action.${l.action}`)}</InkCell>
-                        <InkCell>{bankById.get(l.ligneId)?.label ?? "—"}</InkCell>
-                        <InkCell>
+                        <InkCell label={t("cab.banque.action")}>
+                          {t(`cab.banque.action.${l.action}`)}
+                        </InkCell>
+                        <InkCell label={t("cab.banque.line")}>
+                          {bankById.get(l.ligneId)?.label ?? "—"}
+                        </InkCell>
+                        <InkCell label={t("cab.banque.book")}>
                           <EcritureRef
                             book={bookById.get(l.ecritureId)}
                             titre={t("cab.banque.openpiece")}
                           />
                         </InkCell>
-                        <InkCell>
+                        <InkCell label={t("cab.banque.motif")}>
                           {l.motifId ? (motifById.get(l.motifId)?.label ?? "—") : "—"}
                         </InkCell>
-                        <InkCell>{l.note ?? "—"}</InkCell>
+                        <InkCell label={t("cab.banque.note")}>{l.note ?? "—"}</InkCell>
                       </InkTableRow>
                     ))}
                   </InkTable>

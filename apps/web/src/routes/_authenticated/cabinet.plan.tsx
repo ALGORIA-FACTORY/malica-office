@@ -159,7 +159,7 @@ function PlanComptable() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="cab-lisible space-y-8">
       {/* ---- masthead */}
       <EnTeteCabinet
         surtitre={<>{kicker}</>}
@@ -359,7 +359,7 @@ function PlanDuCabinet({
           onChange={(e) => setCherche(e.target.value)}
           placeholder={t("plan.search")}
           aria-label={t("plan.search")}
-          className="ms-auto min-h-[36px] w-48 border border-border bg-card px-2.5 text-[12px]"
+          className="ms-auto min-h-[36px] w-48 border border-border bg-card px-2.5 text-[12px] max-sm:w-full"
         />
       </div>
 
@@ -371,7 +371,9 @@ function PlanDuCabinet({
       ) : lignes.length === 0 ? (
         <EmptyState>{t("plan.nct.empty")}</EmptyState>
       ) : (
-        <div className="overflow-x-auto border border-border bg-card">
+        // Au téléphone, chaque compte tient sur deux lignes (`cab-plan-lignes`) :
+        // le code et le libellé, puis l'origine et le geste.
+        <div className="cab-plan-lignes overflow-x-auto border border-border bg-card">
           <table className="min-w-full border-collapse text-[12.5px]">
             <caption className="sr-only">{t("plan.title")}</caption>
             <thead>
@@ -397,8 +399,13 @@ function PlanDuCabinet({
               {lignes.map((c) => {
                 const duCabinet = c.origine === "cabinet";
                 return (
-                  <tr key={c.code} className="border-b border-border hover:bg-secondary/60">
+                  <tr
+                    key={c.code}
+                    data-cabinet={duCabinet || undefined}
+                    className="border-b border-border hover:bg-secondary/60"
+                  >
                     <td
+                      data-col="code"
                       className={cn(
                         "num whitespace-nowrap px-3 py-2 align-top text-[13px] font-medium",
                         duCabinet && "border-s-2 border-s-marigold text-marigold",
@@ -406,7 +413,7 @@ function PlanDuCabinet({
                     >
                       {c.code}
                     </td>
-                    <td className="px-3 py-2 align-top">
+                    <td data-col="libelle" className="px-3 py-2 align-top">
                       {c.libelle}
                       {c.source && c.origine === "extension" ? (
                         <span className="mt-0.5 block text-[10.5px] text-muted-foreground">
@@ -450,7 +457,7 @@ function PlanDuCabinet({
                         </form>
                       ) : null}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 align-top">
+                    <td data-col="origine" className="whitespace-nowrap px-3 py-2 align-top">
                       <span
                         className={cn(
                           "text-[9.5px] font-semibold uppercase tracking-[0.14em]",
@@ -461,12 +468,14 @@ function PlanDuCabinet({
                       </span>
                     </td>
                     <td
+                      data-col="collectif"
+                      data-vide={c.collectif ? undefined : true}
                       className="px-3 py-2 align-top text-[11.5px] text-muted-foreground"
                       title={c.collectif ? t("plan.collectif") : undefined}
                     >
                       {c.collectif ? t("plan.collectif.court") : "—"}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-end align-top">
+                    <td data-col="geste" className="whitespace-nowrap px-3 py-2 text-end align-top">
                       {c.collectif ? null : duCabinet ? (
                         <button
                           type="button"
@@ -629,6 +638,7 @@ function Roles({
         <InkTable
           caption={t("plan.roles.title")}
           head={[t("plan.col.role"), t("plan.col.compte"), t("plan.col.origine"), ""]}
+          empile
         >
           {lignes.map((r) => (
             <InkTableRow key={r.code}>
@@ -640,7 +650,7 @@ function Roles({
                 ) : null}
               </InkCell>
 
-              <InkCell>
+              <InkCell label={t("plan.col.compte")}>
                 {enEdition === r.code ? (
                   <select
                     autoFocus
@@ -670,7 +680,7 @@ function Roles({
                 )}
               </InkCell>
 
-              <InkCell>
+              <InkCell label={t("plan.col.origine")}>
                 <SignalLight
                   tone={r.origine === "aucun" ? "warn" : r.origine === "pack" ? "neutral" : "ok"}
                   label={t(`plan.origin.${r.origine}`)}
@@ -977,11 +987,12 @@ function TiersDuDossier({ ouvert, onBascule }: { ouvert: boolean; onBascule: () 
                 ...(estFournisseur ? [t("plan.tiers.bareme")] : []),
                 "",
               ]}
+              empile
             >
               {(liste.data ?? []).map((x) => (
                 <InkTableRow key={x.id}>
                   <InkCell numeric>{x.code}</InkCell>
-                  <InkCell>
+                  <InkCell label={t("plan.tiers.raison")}>
                     {x.raisonSociale}
                     {!x.actif ? (
                       <span className="ms-2 text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">
@@ -989,8 +1000,10 @@ function TiersDuDossier({ ouvert, onBascule }: { ouvert: boolean; onBascule: () 
                       </span>
                     ) : null}
                   </InkCell>
-                  <InkCell numeric>{x.identifiantFiscal ?? "—"}</InkCell>
-                  <InkCell>
+                  <InkCell numeric label={t("plan.tiers.matricule")}>
+                    {x.identifiantFiscal ?? "—"}
+                  </InkCell>
+                  <InkCell label={t("plan.tiers.collectif")}>
                     <span className="num">{x.compteCollectif}</span>
                     {x.compteLibelle ? (
                       <span className="block text-[10.5px] text-muted-foreground">
@@ -999,7 +1012,7 @@ function TiersDuDossier({ ouvert, onBascule }: { ouvert: boolean; onBascule: () 
                     ) : null}
                   </InkCell>
                   {estFournisseur ? (
-                    <InkCell>
+                    <InkCell label={t("plan.tiers.bareme")}>
                       <select
                         aria-label={t("plan.tiers.bareme")}
                         value={x.categorieDeBareme ?? ""}

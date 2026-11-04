@@ -182,7 +182,7 @@ function CabinetJournal() {
     "inline-flex min-h-[48px] items-center gap-1 border border-border bg-card px-4 text-[13px] font-semibold hover:bg-accent disabled:opacity-40";
 
   return (
-    <div className="space-y-6">
+    <div className="cab-lisible space-y-6">
       <EnTeteCabinet
         surtitre={
           <>
@@ -393,7 +393,9 @@ function CabinetJournal() {
                 {j.soldes.map((s) => `${montant(s.debit, locale)} ${s.devise}`).join(" · ")}
               </span>
             </h2>
-            <div className="overflow-x-auto border border-border bg-card">
+            {/* Au téléphone (`cab-jdj-lignes`), une ligne d'écriture tient sur la
+                largeur : compte, libellé, montant — l'en-tête de l'écriture au-dessus. */}
+            <div className="cab-jdj-lignes overflow-x-auto border border-border bg-card">
               <table className="w-full min-w-[760px] border-collapse text-[13px]">
                 <thead className="bg-muted text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                   <tr>
@@ -428,12 +430,25 @@ function CabinetJournal() {
                 <tfoot>
                   {j.soldes.map((s) => (
                     <tr key={s.devise} className="border-t border-foreground font-semibold">
-                      <td colSpan={4} className="px-3 py-2">
+                      <td data-col="total" colSpan={4} className="px-3 py-2">
                         {t("cab.jdj.total")} · {s.devise}
                       </td>
-                      <td className="num px-3 py-2 text-end">{montant(s.debit, locale)}</td>
-                      <td className="num px-3 py-2 text-end">{montant(s.credit, locale)}</td>
                       <td
+                        data-col="debit"
+                        data-label={t("cab.jdj.col.debit")}
+                        className="num px-3 py-2 text-end"
+                      >
+                        {montant(s.debit, locale)}
+                      </td>
+                      <td
+                        data-col="credit"
+                        data-label={t("cab.jdj.col.credit")}
+                        className="num px-3 py-2 text-end"
+                      >
+                        {montant(s.credit, locale)}
+                      </td>
+                      <td
+                        data-col="origine"
                         className={cn(
                           "px-3 py-2",
                           s.equilibre ? "text-signal-ok" : "text-signal-stop",
@@ -502,9 +517,15 @@ function LignesDeLEcriture({ e, tous }: { e: EcritureAuJournal; tous: boolean })
   return (
     <>
       {e.lignes.map((l, i) => (
-        <tr key={l.ordinal} className={cn(i === 0 ? "border-t border-border" : "")}>
-          <td className="num px-3 py-1.5 text-muted-foreground">{i === 0 ? e.heure : ""}</td>
-          <td className="px-3 py-1.5 font-medium">
+        <tr
+          key={l.ordinal}
+          data-premiere={i === 0 || undefined}
+          className={cn(i === 0 ? "border-t border-border" : "")}
+        >
+          <td data-col="heure" className="num px-3 py-1.5 text-muted-foreground">
+            {i === 0 ? e.heure : ""}
+          </td>
+          <td data-col="piece" className="px-3 py-1.5 font-medium">
             {i === 0 ? (
               <>
                 {tous ? (
@@ -524,8 +545,10 @@ function LignesDeLEcriture({ e, tous }: { e: EcritureAuJournal; tous: boolean })
               </>
             ) : null}
           </td>
-          <td className="num px-3 py-1.5">{l.compte}</td>
-          <td className="px-3 py-1.5">
+          <td data-col="compte" className="num px-3 py-1.5">
+            {l.compte}
+          </td>
+          <td data-col="libelle" className="px-3 py-1.5">
             {l.compteLibelle}
             {/* Une ligne convertie d'une pièce en devise : son montant d'origine, au cours. */}
             {l.origine ? (
@@ -542,14 +565,28 @@ function LignesDeLEcriture({ e, tous }: { e: EcritureAuJournal; tous: boolean })
               </span>
             ) : null}
           </td>
-          <td className="num px-3 py-1.5 text-end">
-            {/* Une ligne n'est que d'un côté : l'autre reste vide, pas « 0 ». */}
+          {/* Une ligne n'est que d'un côté : l'autre reste vide, pas « 0 » — et au
+              téléphone, le côté vide disparaît, le montant porte son sens. */}
+          <td
+            data-col="debit"
+            data-label={t("cab.jdj.col.debit")}
+            data-vide={estNul(l.debit) || undefined}
+            className="num px-3 py-1.5 text-end"
+          >
             {estNul(l.debit) ? "" : montant(l.debit, locale)}
           </td>
-          <td className="num px-3 py-1.5 text-end">
+          <td
+            data-col="credit"
+            data-label={t("cab.jdj.col.credit")}
+            data-vide={estNul(l.credit) || undefined}
+            className="num px-3 py-1.5 text-end"
+          >
             {estNul(l.credit) ? "" : montant(l.credit, locale)}
           </td>
-          <td className={cn("px-3 py-1.5 text-[12px] font-semibold", origine.ton)}>
+          <td
+            data-col="origine"
+            className={cn("px-3 py-1.5 text-[12px] font-semibold", origine.ton)}
+          >
             {i === 0 ? (
               <>
                 {t(origine.cle)}
