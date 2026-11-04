@@ -2057,6 +2057,12 @@ export const en: Dict = {
   "refus.introuvable.paiement": "Payment not found, or you do not have access to it.",
   "refus.introuvable.recette": "Recipe version not found, or you do not have access to it.",
   "refus.introuvable.organisation": "Organisation not found, or you do not have access to it.",
+  "refus.organisation.pas_une_societe": "Only a company can be entrusted to a manager.",
+  "refus.organisation.deja_dirigee":
+    "This company already has members: its managers invite people themselves.",
+  "refus.archivage.motif_requis": "Say why this organisation is archived.",
+  "refus.organisation.emettrice":
+    "This organisation issues Malica’s invoices: designate another issuer before archiving it.",
   "refus.introuvable.invitation": "Invitation not found, or you do not have access to it.",
   "refus.introuvable.article": "Item not found, or you do not have access to it.",
   "refus.introuvable.exemple": "Example not found, or you do not have access to it.",

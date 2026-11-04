@@ -275,6 +275,32 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /**
+   * Confier une société SANS AUCUN membre à son premier dirigeant, un compte
+   * existant (4 novembre 2026) : sa licence naît à son nom. Une société qui a
+   * déjà des membres ne se confie pas — ses dirigeants invitent.
+   */
+  async confierOrganisation(db: Requete, organisationId: string, email: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select public.plateforme_organisation_confier($1, $2) as r`,
+      [organisationId, email],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /**
+   * Archiver une organisation, motif à l'appui : rien ne s'efface (R7), son
+   * mandat et l'accès de son cabinet se terminent, son matricule redevient
+   * libre. L'émetteur des factures en vigueur ne s'archive pas.
+   */
+  async archiverOrganisation(db: Requete, organisationId: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select public.plateforme_organisation_archiver($1, $2) as r`,
+      [organisationId, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   async chercherOrganisations(db: Requete, texte: string) {
     const { rows } = await db.query(
       `select organisation_id, nom, matricule, juridiction, devise
