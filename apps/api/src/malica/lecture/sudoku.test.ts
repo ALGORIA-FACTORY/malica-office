@@ -109,6 +109,9 @@ describe("sudoku — les jetons du plan", () => {
     assert.equal(jour!.date_fin, 3);
     assert.equal(mois!.date, null);
     assert.equal(annee!.date, null);
+    // Le mois collé à l'année par l'OCR (« 04 | février2026 », 100/C-05).
+    const [colle] = jetonsDuSudoku(rangee(["04", "février2026"]), devise, LECTURE);
+    assert.equal(colle!.date, "2026-02-04");
     // L'étiquette collée, le « l » pour « 1 » : le lecteur du pack le rend normalisé.
     const [mf] = jetonsDuSudoku(rangee(["MF:l876543W/A/M/000"]), devise, LECTURE);
     assert.deepEqual(mf!.identifiants, [

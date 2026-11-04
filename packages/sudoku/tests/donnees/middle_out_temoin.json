@@ -248,11 +248,11 @@
     "lignes": null
   },
   "ocr|100/B-12|ttc_avec_timbre": {
-    "centre": "280974b019cf2cd7",
+    "centre": "11a72d1ad2aabc17",
     "lignes": null
   },
   "ocr|100/B-12|ttc_hors_timbre": {
-    "centre": "59174c49f0f69b71",
+    "centre": "f1d99250627aaa31",
     "lignes": null
   },
   "ocr|100/B-13|ttc_avec_timbre": {
@@ -352,11 +352,11 @@
     "lignes": null
   },
   "ocr|100/C-05|ttc_avec_timbre": {
-    "centre": "7ef74d3a66fad761",
+    "centre": "d3ed7b9bad5c9090",
     "lignes": null
   },
   "ocr|100/C-05|ttc_hors_timbre": {
-    "centre": "c5e47f3d9fff874d",
+    "centre": "058b62ea662b9618",
     "lignes": null
   },
   "ocr|100/C-06|ttc_avec_timbre": {
@@ -472,11 +472,11 @@
     "lignes": null
   },
   "ocr|100/C-20|ttc_avec_timbre": {
-    "centre": "7ef74d3a66fad761",
+    "centre": "bd3de522e6da542d",
     "lignes": null
   },
   "ocr|100/C-20|ttc_hors_timbre": {
-    "centre": "6381044dd18128e5",
+    "centre": "87a15e2f4e0564b5",
     "lignes": null
   },
   "ocr|100/D-01|ttc_avec_timbre": {
@@ -840,19 +840,19 @@
     "lignes": null
   },
   "ocr|50/06|ttc_avec_timbre": {
-    "centre": "154648334c7ba285",
+    "centre": "f914a78f9b55e381",
     "lignes": null
   },
   "ocr|50/06|ttc_hors_timbre": {
-    "centre": "97280e19a8b5ebd1",
+    "centre": "7b78e3185cb2be4d",
     "lignes": null
   },
   "ocr|50/07|ttc_avec_timbre": {
-    "centre": "2d10f85eebf70baa",
+    "centre": "776ae80d6a00cd10",
     "lignes": null
   },
   "ocr|50/07|ttc_hors_timbre": {
-    "centre": "e62f302d570626e3",
+    "centre": "089fe515fdcf76d7",
     "lignes": null
   },
   "ocr|50/08|ttc_avec_timbre": {
@@ -1000,11 +1000,11 @@
     "lignes": null
   },
   "ocr|50/26|ttc_avec_timbre": {
-    "centre": "f9d730340fdaba42",
+    "centre": "32c881cb5460c57a",
     "lignes": null
   },
   "ocr|50/26|ttc_hors_timbre": {
-    "centre": "ce1622202354d2a3",
+    "centre": "21047b82015f338b",
     "lignes": null
   },
   "ocr|50/27|ttc_avec_timbre": {
@@ -1253,7 +1253,7 @@
   },
   "texte|100/A-07|ttc_hors_timbre": {
     "centre": "f4d7f25e6823f576",
-    "lignes": "dd3f3e7ad471d6e2"
+    "lignes": "f0b7949f7c7f739e"
   },
   "texte|100/A-08|ttc_avec_timbre": {
     "centre": "5b5e9e1a402973dd",
@@ -1309,7 +1309,7 @@
   },
   "texte|100/A-14|ttc_hors_timbre": {
     "centre": "e838257295678141",
-    "lignes": "7260f6dd090c0299"
+    "lignes": "859f02bdfc757bf9"
   },
   "texte|100/A-15|ttc_avec_timbre": {
     "centre": "45018fdf4fd46f3c",
@@ -1448,11 +1448,11 @@
     "lignes": "76efe628e3301bd6"
   },
   "texte|100/B-12|ttc_avec_timbre": {
-    "centre": "7757620702b6ba35",
+    "centre": "ea54b52df8f13b00",
     "lignes": null
   },
   "texte|100/B-12|ttc_hors_timbre": {
-    "centre": "4d36865ac9aea9d9",
+    "centre": "c5897b4fb7a8632c",
     "lignes": null
   },
   "texte|100/B-13|ttc_avec_timbre": {
@@ -1552,11 +1552,11 @@
     "lignes": "d189bcd50cd9ea52"
   },
   "texte|100/C-05|ttc_avec_timbre": {
-    "centre": "9257b257c0902f00",
+    "centre": "c980018e111b882a",
     "lignes": null
   },
   "texte|100/C-05|ttc_hors_timbre": {
-    "centre": "c8c1cf370087baac",
+    "centre": "cbb04c4b190e4e1e",
     "lignes": null
   },
   "texte|100/C-06|ttc_avec_timbre": {
@@ -1672,11 +1672,11 @@
     "lignes": "4201fa4014ae68cc"
   },
   "texte|100/C-20|ttc_avec_timbre": {
-    "centre": "9cf0c8025eec3f6b",
+    "centre": "9a08b52c6332162e",
     "lignes": null
   },
   "texte|100/C-20|ttc_hors_timbre": {
-    "centre": "132619e52bc02303",
+    "centre": "4b82c7fbfe550286",
     "lignes": "66788f4330d7d714"
   },
   "texte|100/D-01|ttc_avec_timbre": {
@@ -2016,11 +2016,11 @@
     "lignes": null
   },
   "texte|50/10|ttc_avec_timbre": {
-    "centre": "e6d22a4fdf665414",
+    "centre": "98b24fcb86a91028",
     "lignes": null
   },
   "texte|50/10|ttc_hors_timbre": {
-    "centre": "ccadc322eef9b026",
+    "centre": "140c4b47eab3c652",
     "lignes": null
   },
   "texte|50/11|ttc_avec_timbre": {
@@ -2040,11 +2040,11 @@
     "lignes": null
   },
   "texte|50/14|ttc_avec_timbre": {
-    "centre": "b46d16fe72577c28",
+    "centre": "c6a77f59507f10ed",
     "lignes": null
   },
   "texte|50/14|ttc_hors_timbre": {
-    "centre": "e56f85fb6f198e1a",
+    "centre": "833f1b6c7683f3af",
     "lignes": null
   },
   "texte|50/15|ttc_avec_timbre": {
@@ -2112,19 +2112,19 @@
     "lignes": null
   },
   "texte|50/25|ttc_avec_timbre": {
-    "centre": "8689d00841e58f9d",
+    "centre": "8da89116c805b750",
     "lignes": "921f1d047d778a20"
   },
   "texte|50/25|ttc_hors_timbre": {
-    "centre": "366350394e63fcdd",
+    "centre": "a60b1fdacc1c3ee6",
     "lignes": null
   },
   "texte|50/26|ttc_avec_timbre": {
-    "centre": "17a2d6242d90ca19",
+    "centre": "b79f40e4767f1028",
     "lignes": null
   },
   "texte|50/26|ttc_hors_timbre": {
-    "centre": "4dccf678df66561d",
+    "centre": "da7a9ac508b5c87c",
     "lignes": null
   },
   "texte|50/27|ttc_avec_timbre": {
@@ -2184,11 +2184,11 @@
     "lignes": null
   },
   "texte|50/37|ttc_avec_timbre": {
-    "centre": "dd03a0cbca8c4628",
+    "centre": "93598ade2c24e95c",
     "lignes": "e5325573c39a58be"
   },
   "texte|50/37|ttc_hors_timbre": {
-    "centre": "63f19bb8af0e0438",
+    "centre": "63f1fd2125545d0a",
     "lignes": null
   },
   "texte|50/38|ttc_avec_timbre": {
@@ -2216,11 +2216,11 @@
     "lignes": null
   },
   "texte|50/43|ttc_avec_timbre": {
-    "centre": "45432b02262b1304",
+    "centre": "4dc6f4eba3c314a6",
     "lignes": "5397a9a9d8b9e11f"
   },
   "texte|50/43|ttc_hors_timbre": {
-    "centre": "aeea61794452cc86",
+    "centre": "cb1310213065e7aa",
     "lignes": null
   },
   "texte|50/44|ttc_avec_timbre": {

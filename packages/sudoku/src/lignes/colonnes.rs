@@ -28,6 +28,8 @@ use crate::RefJeton;
 
 /// L'écart, en hauteurs de jeton, au-delà duquel deux intitulés sont deux cellules.
 const ECART_CELLULE: f64 = 1.2;
+/// Un blanc et un mot de deux signes : la place qu'un mot coupé à l'impression aurait prise.
+const SIGNES_D_UN_MOT_COUPE: f64 = 3.0;
 /// La rangée d'en-tête est au plus à tant de hauteurs au-dessus de la première ligne.
 const EN_TETE_MAX: f64 = 6.0;
 
@@ -257,8 +259,20 @@ pub fn affiner(
         // Un texte qui bute sur la colonne suivante a pu être COUPÉ à l'impression (la cellule
         // trop étroite) : « Contrat d'entretien climatisation - se », sous l'intitulé QTÉ.
         // Ce qui est imprimé n'est pas la désignation entière : elle se tait.
+        // Sur la DERNIÈRE ligne de la cellule, la marge se compte aussi en caractères : un mot
+        // entier coupé (« A4 », 50/45, ticket à chasse fixe) laisse moins de place qu'un blanc et
+        // deux signes avant la colonne. Une ligne qui en suit une autre est un retour à la
+        // ligne, pas une coupe.
+        let derniere = lignes_de_texte.iter().rev().find(|l| !l.is_empty());
         let coupe_par_la_colonne = cellules.get(k + 1).is_some_and(|suivante| {
             lignes_de_texte.iter().flatten().any(|&i| jetons[i].x1 >= suivante.x0 - h)
+                || derniere.is_some_and(|l| {
+                    l.iter().any(|&i| {
+                        let j = &jetons[i];
+                        let signe = (j.x1 - j.x0) / j.texte.chars().count().max(1) as f64;
+                        j.x1 >= suivante.x0 - SIGNES_D_UN_MOT_COUPE * signe
+                    })
+                })
         });
         if coupe_par_la_colonne {
             l.designation = None;
@@ -266,6 +280,8 @@ pub fn affiner(
         }
         // chaque ligne est déjà dans son ordre de lecture (`en_lignes`)
         let pris: Vec<usize> = lignes_de_texte.into_iter().flatten().collect();
+        let remise = l.remise.as_ref().and_then(|c| c.refs.first()).and_then(jeton_de);
+        let pris = super::sans_la_remise(&pris, remise, jetons);
         l.designation = (!pris.is_empty()).then(|| {
             Cite::lue(
                 pris.iter().map(|&i| jetons[i].texte.trim()).collect::<Vec<_>>().join(" "),

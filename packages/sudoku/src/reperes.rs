@@ -45,6 +45,9 @@ fn sans_proclitique(mot: &str) -> String {
 /// (« Date de la livraison », « المعرّف البنكي »).
 pub const MOTS_D_UN_LIBELLE: usize = 4;
 
+/// En deçà de tant de lettres, un repère n'est reconnu que comme un mot entier.
+const REPERE_COURT: usize = 4;
+
 pub fn normaliser(s: &str) -> String {
     let s: String = s.split_whitespace().map(sans_proclitique).collect::<Vec<_>>().join(" ");
     s.chars()
@@ -273,10 +276,27 @@ impl<'a> Plan<'a> {
         if reperes.is_empty() {
             return false;
         }
-        let contient = |t: &str| reperes.iter().any(|r| t.contains(r.as_str()));
+        // Un repère court (« le », « n° ») ne se cherche pas DANS un mot : « AVANTLE », collé
+        // par l'OCR, n'est pas le libellé « Le » (banc sans IA du 4 novembre 2026, 50/06 :
+        // l'échéance rendue comme date d'émission). Il égale le jeton entier.
+        let contient = |t: &str| {
+            let net = t.trim_matches(|c: char| !c.is_alphanumeric());
+            reperes.iter().any(|r| if r.chars().count() < REPERE_COURT { net == r.as_str() } else { t.contains(r.as_str()) })
+        };
+        // Sur le jeton de la valeur, un repère court se colle en TÊTE, devant ce qui n'est pas
+        // une lettre (« MF0458213A/A/C/000 »).
+        let en_tete = |t: &str| {
+            reperes.iter().any(|r| {
+                if r.chars().count() < REPERE_COURT {
+                    t.strip_prefix(r.as_str()).is_some_and(|reste| !reste.starts_with(char::is_alphabetic))
+                } else {
+                    t.contains(r.as_str())
+                }
+            })
+        };
         let propre = match avant {
             Some(a) => contient(&normaliser(a)),
-            None => contient(&self.normes[i]),
+            None => en_tete(&self.normes[i]),
         };
         // un voisin n'ancre que s'il est un pur libellé : il ne porte lui-même ni montant ni date
         let libelle = |k: usize| {
@@ -333,6 +353,10 @@ impl<'a> Plan<'a> {
         };
         let (g, g_dp) = au_dela(self.gauche[i], &|x| self.gauche[x]);
         let (d, d_dp) = au_dela(self.droite[fin], &|x| self.droite[x]);
+        // Le deux-points collé à la valeur compte aussi : « التاريخ | :11-09-2026 », l'OCR
+        // l'a lu avec la date (banc sans IA du 4 novembre 2026, s087).
+        let g_dp = g_dp || self.jetons[i].texte.trim_start().starts_with(':');
+        let d_dp = d_dp || self.jetons[fin].texte.trim_end().ends_with(':');
         propre
             || g.is_some_and(|k| (!self.rtl[k] || g_dp) && libelle_vers(Some(k), &|x| self.gauche[x]))
             || d.is_some_and(|k| (self.rtl[k] || d_dp) && libelle_vers(Some(k), &|x| self.droite[x]))

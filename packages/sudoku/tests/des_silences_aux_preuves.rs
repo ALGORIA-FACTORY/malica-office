@@ -67,3 +67,21 @@ fn une_mention_d_exoneration_en_plusieurs_jetons_s_annonce() {
 fn une_solution_qui_partage_un_jeton_n_est_pas_une_seconde_lecture() {
     prouvee_juste("algoria-036");
 }
+
+/// La valeur conforme d'un champ, dans une variante au moins.
+fn conforme(id: &str, champ: &str) -> Vec<String> {
+    jouer(id).0.iter().filter(|o| o["champs"][champ]["statut"] == "conforme").filter_map(|o| o["champs"][champ]["valeur"].as_str().map(str::to_string)).collect()
+}
+
+#[test]
+fn un_deux_points_colle_a_la_date_dit_le_sens_du_libelle() {
+    assert!(conforme("synthetique-087", "date_emission").iter().all(|d| d == "2026-09-11"));
+    assert!(!conforme("synthetique-087", "date_emission").is_empty());
+    assert!(!conforme("synthetique-087", "date_operation").is_empty());
+}
+
+#[test]
+fn un_repere_court_colle_en_tete_de_la_valeur_l_ancre() {
+    let (sorties, _) = jouer("dirigeant-50_16");
+    assert!(sorties.iter().any(|o| o["champs"]["matricule_fiscal_emetteur"]["valeur"] == "0458213A/A/C/000"), "{sorties:?}");
+}

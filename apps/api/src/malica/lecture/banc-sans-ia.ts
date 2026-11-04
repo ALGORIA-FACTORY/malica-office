@@ -402,11 +402,19 @@ function mesurerLesRangees(
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/gu, "")
         .replace(/ /gu, "");
+    // Une vérité arabe saisie dans l'ordre VISUEL (les lettres de droite à gauche rendues de
+    // gauche à droite : « ﺓﺩﺭﻮﺘﺴﻣ », 100/D-14 de la couche de texte) est le même texte que sa
+    // lecture dans l'ordre logique : elle se compare aussi retournée.
+    const vraie = sansEspace(v.designation);
+    // (retournée AVANT la normalisation : la ligature « ﻼ » se décompose en lam puis alif)
+    const visuelle = /\p{Script=Arabic}/u.test(vraie)
+      ? sansEspace([...String(v.designation)].reverse().join(""))
+      : null;
     cellule(
       "designation",
       v.designation,
       d,
-      d !== null && sansEspace(d) === sansEspace(v.designation),
+      d !== null && (sansEspace(d) === vraie || sansEspace(d) === visuelle),
     );
   }
   return out;

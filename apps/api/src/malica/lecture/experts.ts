@@ -58,7 +58,17 @@ export function datesDuPlan(
   plan: readonly PageToken[],
   regles: Pick<ReglesDeLecture, "dates">,
 ): { date: string | null; date_fin?: number }[] {
-  const seules = plan.map((t) => normalizeDate(t.text, regles.dates));
+  // L'OCR colle le mois à l'année (« 04 | février2026 », 100/C-05) : un texte qui ne se
+  // lit pas se relit, ses lettres et ses chiffres décollés.
+  const lire = (texte: string) =>
+    normalizeDate(texte, regles.dates) ??
+    normalizeDate(
+      texte.replace(/(\p{L})(\d)/gu, "$1 $2").replace(/(\d)(\p{L})/gu, "$1 $2"),
+      regles.dates,
+    );
+  const seules = plan.map((t) =>
+    /^\d/u.test(t.text.trim()) ? lire(t.text) : normalizeDate(t.text, regles.dates),
+  );
   return plan.map((t, i) => {
     if (seules[i] !== null) return { date: seules[i]! };
     // Une date en morceaux commence par le jour et finit par l'année, et aucun de ses
@@ -67,7 +77,7 @@ export function datesDuPlan(
     for (const f of fenetres(plan, i, JETONS_D_UNE_DATE)) {
       const dernier = f[f.length - 1]!;
       if (!/\d$/u.test(dernier.text.trim()) || f.some((_, k) => seules[i + k] !== null)) continue;
-      const d = normalizeDate(f.map((x) => x.text).join(" "), regles.dates);
+      const d = lire(f.map((x) => x.text).join(" "));
       if (d !== null) return { date: d, date_fin: dernier.ordinal };
     }
     return { date: null };

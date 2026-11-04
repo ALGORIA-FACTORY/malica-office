@@ -694,7 +694,7 @@ impl Contexte<'_> {
     }
 
     fn sortie(&self, rang: &[usize], t: &Triplet, avec_taux: bool) -> LigneSortie {
-        let gauche: Vec<usize> = rang[..t.q.0].to_vec();
+        let gauche = sans_la_remise(&rang[..t.q.0], t.r.map(|(k, _)| rang[k]), self.jetons);
         let designation = if gauche.is_empty() {
             None
         } else {
@@ -720,6 +720,36 @@ impl Contexte<'_> {
             prix_ttc: t.ttc.is_some(),
         }
     }
+}
+
+/// Les jetons d'une désignation, sans la REMISE que la ligne y a prise, ni l'annotation
+/// qui l'entoure : « Vitrerie trimestrielle (remise 10 %) » — la cellule « 10 » prise,
+/// « (remise » et « %) » restaient dans la désignation (banc sans IA du 4 novembre 2026,
+/// 100/A-07, couche de texte). L'annotation est le groupe entre parenthèses qui contient la
+/// remise, sur sa rangée ; sans parenthèses, le « % » seul qui la suit.
+pub(crate) fn sans_la_remise(pris: &[usize], remise: Option<usize>, jetons: &[Jeton]) -> Vec<usize> {
+    let Some(r) = remise else { return pris.to_vec() };
+    let jr = &jetons[r];
+    let rangee = |i: usize| {
+        let j = &jetons[i];
+        j.page == jr.page && (j.y1.min(jr.y1) - j.y0.max(jr.y0)) > 0.5 * (j.y1 - j.y0).min(jr.y1 - jr.y0)
+    };
+    let ouvre = pris
+        .iter()
+        .filter(|&&i| rangee(i) && jetons[i].x1 <= jr.x0 + f64::EPSILON)
+        .max_by(|&&a, &&b| jetons[a].x0.partial_cmp(&jetons[b].x0).unwrap_or(std::cmp::Ordering::Equal))
+        .filter(|&&i| jetons[i].texte.trim_start().starts_with('('));
+    let ferme = pris
+        .iter()
+        .filter(|&&i| rangee(i) && jetons[i].x0 >= jr.x1 - f64::EPSILON)
+        .min_by(|&&a, &&b| jetons[a].x0.partial_cmp(&jetons[b].x0).unwrap_or(std::cmp::Ordering::Equal))
+        .copied();
+    let (x0, x1) = match (ouvre, ferme) {
+        (Some(&o), Some(f)) if jetons[f].texte.trim_end().ends_with(')') => (jetons[o].x0, jetons[f].x1),
+        (_, Some(f)) if jetons[f].texte.trim() == "%" => (jr.x0, jetons[f].x1),
+        _ => (jr.x0, jr.x1),
+    };
+    pris.iter().copied().filter(|&i| i != r && !(rangee(i) && jetons[i].x0 >= x0 - f64::EPSILON && jetons[i].x1 <= x1 + f64::EPSILON)).collect()
 }
 
 /// La valeur prouvée d'un champ scalaire au centre.

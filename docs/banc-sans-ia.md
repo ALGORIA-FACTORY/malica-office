@@ -174,6 +174,46 @@ place.
 
 Les régressions sont fixées dans `packages/sudoku/tests/des_silences_aux_preuves.rs`.
 
+## Bulletin 6 — les dates, l'OCR des chiffres orientaux, et la couche de texte à zéro (4 novembre 2026, matin)
+
+Mêmes 412 pièces. Les pièces arabes et hybrides sont relues par l'OCR corrigé (126 pages,
+cache `cache9`) ; les autres gardent leur lecture :
+
+|                |     juste |  faux |   silence | inventé | signalé (non affirmé) |
+| -------------- | --------: | ----: | --------: | ------: | --------------------: |
+| Bulletin 5     |     5 029 |     0 |     6 450 |       0 |                   245 |
+| **Bulletin 6** | **5 117** | **0** | **6 363** |   **0** |               **244** |
+
+Et, pour la première fois, la **couche de texte** du jeu du dirigeant (134 pièces,
+`jeux_dirigeant_jetons.json`), que le banc des 412 ne mesurait pas. Elle portait **5 faux**
+affirmés avant cette passe ; elle n'en porte plus : **1 761 justes, 0 faux, 0 inventé**.
+
+Causes exactes et corrections :
+
+- **OCR** (`infra/ocr/service.py`) : devant des chiffres arabes orientaux, le modèle latin
+  ne rend que leurs séparateurs (« , »), et une ligne de ponctuation passait pour une ligne
+  de chiffres : la lecture arabe était jetée. Il faut désormais un chiffre, et un latin qui
+  n'a lu aucun chiffre n'a rien à troquer contre l'arabe.
+- **Le deux-points collé à la valeur** (« التاريخ | :11-09-2026 ») dit le sens du libellé
+  comme un deux-points seul.
+- **L'expert des dates ne défait plus une date ancrée** sous son libellé quand il ne voit
+  rien lui-même, sauf si c'est la date qu'il donne à l'autre champ de la paire.
+- **Un repère court** (« Le », « MF ») ne se lit pas dans un mot (« AVANTLE ») ; sur le
+  jeton de la valeur, il se colle en tête (« MF0458213A/A/C/000 »).
+- **Une date est un tout** : ni morceau d'une référence (« CEV-26-04-0778 »), ni d'une
+  période (« 05/05-15/05 »), et ses deux séparateurs sont de la même espèce. Un mois collé
+  à l'année (« 04 | février2026 ») se relit décollé.
+- **Couche de texte** : la remise prise dans la désignation emporte son annotation
+  (« (remise 10 %) ») ; un texte qui finit à moins d'un blanc et deux signes de la
+  colonne suivante, sur la dernière ligne de sa cellule, a pu être coupé (« … couleur »
+  pour « … couleur A4 », ticket à chasse fixe) et se tait.
+- **Une règle de comparaison du banc, dite ici** : une vérité arabe saisie dans l'ordre
+  visuel (les lettres retournées, 100/D-14) se compare aussi retournée. Une pièce change.
+
+Restent dans le silence, avec leur cause : les factures arabes MANUSCRITES (chiffres
+orientaux tracés à la main, lus de travers par les deux modèles : étape 5), les ventes à
+l'export (taux zéro EXPORT, mention à traduire), les pièces dont l'OCR a perdu un total.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

@@ -29,6 +29,15 @@ describe("normalizeDate", () => {
     assert.equal(normalizeDate("2026-03-12", DATES), "2026-03-12");
     assert.equal(normalizeDate("mars", DATES), null);
   });
+
+  it("une date est un tout : ni morceau d'une référence, ni d'une période (50/14)", () => {
+    assert.equal(normalizeDate("CEV-26-04-0778", DATES), null);
+    assert.equal(normalizeDate("05/05-15/05", DATES), null);
+    assert.equal(normalizeDate("27/10-2026", DATES), null);
+    // la barre seule d'un « le / » collée devant, un libellé collé : elle se lit
+    assert.equal(normalizeDate("/02/09/2026", DATES), "2026-09-02");
+    assert.equal(normalizeDate("Échéance:20/02/2026", DATES), "2026-02-20");
+  });
 });
 
 /**

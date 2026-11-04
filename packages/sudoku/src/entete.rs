@@ -1339,7 +1339,25 @@ fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie
                 }
             }
         }
+        let (pa, pb) = (va.clone(), vb.clone());
         for (c, v, candidates) in [(a, va, ma), (b, vb, eb)] {
+            // Rien vu ici, quand l'ancrage textuel (`textuel`) a lu la date sous son libellé :
+            // cet expert ne la défait pas (banc sans IA du 4 novembre 2026, s087 : « التاريخ |
+            // :11-09-2026 », lue conforme, effacée en « absent ») — sauf si c'est la date que
+            // la paire donne à l'AUTRE champ.
+            let code = &grille.champs[c].code;
+            let autre = if c == a { &pb } else { &pa };
+            if v.is_none() && candidates.is_empty() {
+                if let Some(deja) = champs
+                    .get(code)
+                    .filter(|x| x.statut == "conforme" && x.valeur.is_some() && x.valeur != *autre)
+                {
+                    if let Some(d) = &deja.valeur {
+                        lus.push((c, d.clone()));
+                    }
+                    continue;
+                }
+            }
             let sortie = match v {
                 Some(v) => {
                     let i = lues
@@ -1359,7 +1377,7 @@ fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie
                     instances: None,
                 },
             };
-            champs.insert(grille.champs[c].code.clone(), sortie);
+            champs.insert(code.clone(), sortie);
         }
     }
 }

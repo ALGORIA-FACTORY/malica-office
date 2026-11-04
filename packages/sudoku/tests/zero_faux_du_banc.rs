@@ -89,3 +89,31 @@ fn une_designation_sur_trois_lignes_reste_entiere() {
         Some("Loyer mensuel local a usage de bureaux - Immeuble Le Prestige, 3e étage (Sept. 2026)")
     );
 }
+
+/// « AVANTLE 20/02/2026 » : un repère court (« Le ») ne se lit pas dans un mot collé, et la
+/// date que la paire émission/échéance donne à l'échéance n'est pas l'émission.
+#[test]
+fn un_repere_court_ne_se_lit_pas_dans_un_mot() {
+    for o in sorties("dirigeant-50_06") {
+        assert_ne!(o["champs"]["date_emission"]["valeur"], "2026-02-20", "{}", o["champs"]["date_emission"]);
+    }
+}
+
+/// La remise prise dans la désignation emporte son annotation : « (remise 10 %) ».
+#[test]
+fn la_remise_prise_emporte_son_annotation() {
+    for o in sorties("dirigeant-100_A_07") {
+        for d in designations(&o).into_iter().flatten() {
+            assert!(!d.contains("remise") && !d.contains('%'), "{d}");
+        }
+    }
+}
+
+/// Un texte qui s'arrête à moins d'un blanc et deux signes de la colonne suivante a pu
+/// être coupé à l'impression : il se tait.
+#[test]
+fn un_mot_coupe_avant_la_colonne_fait_taire_la_designation() {
+    for o in sorties("dirigeant-50_45-texte") {
+        assert!(designations(&o).first().is_none_or(Option::is_none), "{:?}", designations(&o));
+    }
+}

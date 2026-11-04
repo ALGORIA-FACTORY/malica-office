@@ -258,10 +258,13 @@ def _a_de_l_arabe(texte: str) -> bool:
 
 def _ligne_de_chiffres(latin: str) -> bool:
     """Une ligne surtout faite de chiffres (montants, dates, numeros) : elle
-    reste au modele latin, qui les lit mieux."""
+    reste au modele latin, qui les lit mieux. Il y faut au moins un chiffre :
+    devant des chiffres arabes orientaux (« ٥٢٢١٫٨٥٠ »), le modele latin ne rend
+    que leurs separateurs (« , ») — banc sans IA du 4 novembre 2026, s044 —, et
+    une ligne de ponctuation n'est pas une ligne de chiffres."""
     visibles = [c for c in latin if not c.isspace()]
     chiffres = sum(1 for c in visibles if c.isdigit() or c in ",./:-")
-    return bool(visibles) and chiffres / len(visibles) >= 0.6
+    return any(c.isdigit() for c in visibles) and chiffres / len(visibles) >= 0.6
 
 
 def _garder_l_arabe(latin: str, arabe: str, score_latin: float, score_arabe: float) -> bool:
@@ -274,7 +277,9 @@ def _garder_l_arabe(latin: str, arabe: str, score_latin: float, score_arabe: flo
     # Une ligne MIXTE (« المجموع 4 135,183 ») ne bascule que si les deux
     # lectures portent les memes nombres : le modele latin lit mieux les
     # chiffres, et un montant ne se troque pas contre un libelle mieux lu.
-    if re.findall(r"\d+", latin) != re.findall(r"\d+", arabe):
+    # Le latin qui n'a lu AUCUN chiffre n'a rien a troquer : les nombres de l'arabe
+    # (chiffres orientaux) sont les seuls lus.
+    if re.findall(r"\d+", latin) and re.findall(r"\d+", latin) != re.findall(r"\d+", arabe):
         return False
     return score_arabe >= score_latin * 0.8
 
