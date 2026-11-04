@@ -159,6 +159,7 @@ export function jetonsDuSudoku(
     y0: t.y0,
     x1: t.x1,
     y1: t.y1,
+    ...(typeof t.confidence === "number" ? { confiance: t.confidence } : {}),
     montants: treillisMontant(t.text, devise).map((h) => ({
       v: h.millimes,
       // « 16000 » se lit aussi 16,000 (virgule perdue) : le treillis l'appelle
@@ -280,7 +281,7 @@ export async function lireLeContexteDuSudoku(
       db.query<{ code: string; value_num: string | null }>(
         `select distinct on (code) code, value_num from ref_socle_params_v
         where pack_version_id = $1
-          and code = 'lecture.tolerance_arrondi_mineure'
+          and code in ('lecture.tolerance_arrondi_mineure', 'lecture.confiance_du_texte')
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code, valid_from desc`,
         [packId, jour],
@@ -418,6 +419,7 @@ export async function lireLeContexteDuSudoku(
     pack: {
       decimales,
       tolerance: param("lecture.tolerance_arrondi_mineure"),
+      confiance_du_texte: param("lecture.confiance_du_texte"),
       baremes: { tva: taux.rows.map((t) => ({ code: t.code, ppm: ppm(t.rate) })) },
       charges: [...parCode.values()],
       formats: Object.fromEntries(formats.rows.map((f) => [f.kind, f.pattern])),

@@ -247,8 +247,184 @@ impl Triplet {
 }
 
 /// Les rangées : jetons groupés par bande horizontale, triés de gauche à droite.
-fn rangees(jetons: &[Jeton]) -> Vec<Vec<usize>> {
-    rangees_selon(jetons, f64::min)
+/// La pente d'une page sur laquelle les pentes de ses paires de jetons s'accordent le plus.
+const PENTE_MAX: f64 = 0.15;
+/// La largeur d'une classe de l'histogramme des pentes.
+const PAS_DE_PENTE: f64 = 0.002;
+/// Le nombre de paires d'accord en deçà duquel la page est tenue pour droite.
+const ACCORD_MIN: usize = 6;
+
+/// La pente de chaque page (dy / dx), lue sur ses jetons seuls.
+///
+/// Une page photographiée ou scannée de travers fait dériver une rangée de plusieurs
+/// hauteurs de corps entre sa marge gauche et son montant : le montant ne recouvre plus la
+/// référence, et la ligne d'articles se coupe en deux. Deux boîtes d'une même rangée,
+/// éloignées en abscisse, donnent la pente de la page ; deux boîtes de deux rangées
+/// voisines en donnent une autre, qui varie avec leur écart. Les pentes des vraies paires
+/// s'accumulent toutes dans la même classe, celles des fausses s'étalent : la classe la
+/// plus peuplée est la pente.
+///
+/// Le vote se fait par BOÎTE de l'OCR, pas par mot : les mots d'une même boîte (mêmes
+/// bords, au bit près) sont horizontaux par construction, et deux longues lignes voisines
+/// voteraient autant de fois que le produit de leurs mots.
+fn pentes(jetons: &[Jeton]) -> BTreeMap<u32, f64> {
+    // les boîtes : les jetons de mêmes bords (au bit près), recousus tant que le blanc qui
+    // les sépare tient dans deux hauteurs de corps — les mots d'une boîte de l'OCR. Les
+    // cellules d'une même rangée d'un PDF ont aussi les mêmes bords, mais un large blanc les
+    // sépare : elles restent des boîtes distinctes, et votent pour une page droite.
+    let mut memes_bords: BTreeMap<(u32, u64, u64), Vec<(f64, f64)>> = BTreeMap::new();
+    for j in jetons {
+        memes_bords.entry((j.page, j.y0.to_bits(), j.y1.to_bits())).or_default().push((j.x0, j.x1));
+    }
+    let mut par_page: BTreeMap<u32, Vec<(f64, f64, f64, f64)>> = BTreeMap::new();
+    for ((page, y0, y1), mut xs) in memes_bords {
+        let (y0, y1) = (f64::from_bits(y0), f64::from_bits(y1));
+        xs.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+        let boites = par_page.entry(page).or_default();
+        let mut courante: Option<(f64, f64)> = None;
+        for (x0, x1) in xs {
+            courante = match courante {
+                Some((a, b)) if x0 - b <= 2.0 * (y1 - y0) => Some((a, b.max(x1))),
+                Some((a, b)) => {
+                    boites.push((a, y0, b, y1));
+                    Some((x0, x1))
+                }
+                None => Some((x0, x1)),
+            };
+        }
+        if let Some((a, b)) = courante {
+            boites.push((a, y0, b, y1));
+        }
+    }
+    let classes = (2.0 * PENTE_MAX / PAS_DE_PENTE).round() as usize + 1;
+    par_page
+        .into_iter()
+        .map(|(page, b)| {
+            let mut pentes: Vec<f64> = Vec::new();
+            for (n, a) in b.iter().enumerate() {
+                for c in &b[n + 1..] {
+                    let h = (a.3 - a.1).max(c.3 - c.1);
+                    let dx = (c.0 + c.2 - a.0 - a.2) / 2.0;
+                    let dy = (c.1 + c.3 - a.1 - a.3) / 2.0;
+                    // une paire éloignée, et dont l'écart vertical tient dans une hauteur de corps
+                    if dx.abs() < 4.0 * h || dy.abs() > 1.5 * h {
+                        continue;
+                    }
+                    let p = dy / dx;
+                    if p.abs() <= PENTE_MAX {
+                        pentes.push(p);
+                    }
+                }
+            }
+            let mut histo = vec![0usize; classes];
+            let classe = |p: f64| ((p + PENTE_MAX) / PAS_DE_PENTE).round() as usize;
+            for &p in &pentes {
+                histo[classe(p).min(classes - 1)] += 1;
+            }
+            // la classe la plus peuplée, avec ses deux voisines ; à égalité, la plus proche de zéro
+            let accord = |k: usize| histo[k] + if k > 0 { histo[k - 1] } else { 0 } + histo.get(k + 1).copied().unwrap_or(0);
+            let pic = (0..classes).max_by_key(|&k| (accord(k), std::cmp::Reverse((k as i64 - (classes / 2) as i64).abs())));
+            // Deux rangées voisines d'une page DROITE votent autant pour +p que pour −p : une
+            // pente que son miroir égale presque n'est que leur écart, pas une inclinaison.
+            let miroir = |k: usize| classes - 1 - k;
+            let pente = pic
+                .filter(|&k| accord(k) >= ACCORD_MIN && (k.abs_diff(classes / 2) <= 1 || 2 * accord(miroir(k)) <= accord(k)))
+                .map_or(0.0, |k| {
+                    let mut dans: Vec<f64> = pentes.iter().copied().filter(|&p| classe(p).abs_diff(k) <= 1).collect();
+                    dans.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                    dans[dans.len() / 2]
+                });
+            (page, pente)
+        })
+        .collect()
+}
+
+/// Les jetons, leurs ordonnées redressées par la pente de leur page (`pentes`) : une ligne
+/// d'articles suit sa page, quelle que soit son inclinaison, sans redresser l'image.
+fn redresses(jetons: &[Jeton]) -> Vec<Jeton> {
+    let pente = pentes(jetons);
+    jetons
+        .iter()
+        .map(|j| {
+            let p = pente.get(&j.page).copied().unwrap_or(0.0);
+            let d = p * (j.x0 + j.x1) / 2.0;
+            Jeton { y0: j.y0 - d, y1: j.y1 - d, ..j.clone() }
+        })
+        .collect()
+}
+
+/// Les lignes de texte d'une cellule, de haut en bas, chacune dans son ordre de lecture
+/// (de droite à gauche pour une ligne arabe) : une rangée qui réunit les deux lignes d'une
+/// désignation ne se lit pas en triant ses mots par abscisse.
+pub(crate) fn en_lignes(jetons: &[Jeton], ids: &[usize]) -> Vec<Vec<usize>> {
+    let mut ordre = ids.to_vec();
+    ordre.sort_by(|&a, &b| jetons[a].y0.partial_cmp(&jetons[b].y0).unwrap_or(std::cmp::Ordering::Equal));
+    let mut lignes: Vec<Vec<usize>> = Vec::new();
+    for i in ordre {
+        let j = &jetons[i];
+        let place = lignes.iter().rposition(|l| {
+            let a = &jetons[l[0]];
+            let h = (a.y1 - a.y0).min(j.y1 - j.y0).max(f64::EPSILON);
+            (a.y1.min(j.y1) - a.y0.max(j.y0)) > 0.5 * h
+        });
+        match place {
+            Some(k) => lignes[k].push(i),
+            None => lignes.push(vec![i]),
+        }
+    }
+    for l in &mut lignes {
+        l.sort_by(|&a, &b| jetons[a].x0.partial_cmp(&jetons[b].x0).unwrap_or(std::cmp::Ordering::Equal));
+        // une ligne écrite de droite à gauche se lit depuis sa droite
+        if l.iter().any(|&k| crate::reperes::droite_a_gauche(&jetons[k].texte)) {
+            l.reverse();
+        }
+    }
+    lignes
+}
+
+/// Les rangées des lignes d'articles, sur des jetons redressés : les classes de la
+/// relation « se recouvrent de plus de la moitié de la plus petite hauteur », de proche en
+/// proche. Une cellule dont le texte tient sur deux lignes et dont les chiffres sont
+/// centrés entre elles est UNE rangée : ses chiffres recouvrent l'une et l'autre ligne, et
+/// aucun jeton n'en est l'ancre — l'ordre de lecture n'y change rien.
+fn rangees(droits: &[Jeton]) -> Vec<Vec<usize>> {
+    let n = droits.len();
+    let mut parent: Vec<usize> = (0..n).collect();
+    fn racine(p: &mut [usize], mut i: usize) -> usize {
+        while p[i] != i {
+            p[i] = p[p[i]];
+            i = p[i];
+        }
+        i
+    }
+    for a in 0..n {
+        for b in a + 1..n {
+            let (ja, jb) = (&droits[a], &droits[b]);
+            let h = (ja.y1 - ja.y0).min(jb.y1 - jb.y0).max(f64::EPSILON);
+            if ja.page == jb.page && (ja.y1.min(jb.y1) - ja.y0.max(jb.y0)) > 0.5 * h {
+                let (ra, rb) = (racine(&mut parent, a), racine(&mut parent, b));
+                if ra != rb {
+                    parent[ra.max(rb)] = ra.min(rb);
+                }
+            }
+        }
+    }
+    let mut classes: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
+    for i in 0..n {
+        let r = racine(&mut parent, i);
+        classes.entry(r).or_default().push(i);
+    }
+    let mut rangs: Vec<Vec<usize>> = classes.into_values().collect();
+    let haut = |r: &Vec<usize>| (droits[r[0]].page, r.iter().map(|&i| droits[i].y0).fold(f64::MAX, f64::min));
+    rangs.sort_by(|a, b| {
+        let (pa, ya) = haut(a);
+        let (pb, yb) = haut(b);
+        pa.cmp(&pb).then(ya.partial_cmp(&yb).unwrap_or(std::cmp::Ordering::Equal))
+    });
+    for r in &mut rangs {
+        r.sort_by(|&a, &b| droits[a].x0.partial_cmp(&droits[b].x0).unwrap_or(std::cmp::Ordering::Equal));
+    }
+    rangs
 }
 
 /// Les rangées, un jeton rejoignant la bande dont le premier jeton le recouvre de plus de
@@ -454,13 +630,38 @@ impl Contexte<'_> {
         par_valeurs.into_values().collect()
     }
 
-    /// La désignation : les jetons donnés, joints, cités.
-    fn designation(&self, jetons: &[usize]) -> Cite {
-        // une désignation écrite de droite à gauche se lit depuis sa droite
-        let mut ordre = jetons.to_vec();
-        if ordre.iter().any(|&k| crate::reperes::droite_a_gauche(&self.jetons[k].texte)) {
-            ordre.reverse();
-        }
+    /// La désignation : les jetons donnés, ligne par ligne, cités.
+    /// `ancre` est la cellule chiffrée de la ligne (sa quantité) : la ligne de texte qui la
+    /// recouvre le plus est la ligne principale ; d'une autre ligne, seuls les mots qui se
+    /// tiennent dans son étendue en sont la suite — un bloc posé à côté du tableau
+    /// (« MATRICULE FISCAL ») que la rangée a recouvert n'en est pas.
+    fn designation(&self, jetons: &[usize], ancre: Option<usize>) -> Cite {
+        let lignes = en_lignes(self.jetons, jetons);
+        let recouvre = |l: &Vec<usize>, a: &Jeton| {
+            l.iter().map(|&k| (self.jetons[k].y1.min(a.y1) - self.jetons[k].y0.max(a.y0)).max(0.0)).fold(0.0, f64::max)
+        };
+        let principale = ancre.and_then(|a| {
+            let a = &self.jetons[a];
+            (0..lignes.len()).max_by(|&x, &y| {
+                recouvre(&lignes[x], a).partial_cmp(&recouvre(&lignes[y], a)).unwrap_or(std::cmp::Ordering::Equal)
+            })
+        });
+        let ordre: Vec<usize> = match principale {
+            Some(m) => {
+                // l'étendue de la ligne principale, élargie d'un blanc entre deux mots
+                let h = lignes[m].iter().map(|&k| self.jetons[k].y1 - self.jetons[k].y0).fold(0.0, f64::max);
+                let x0 = lignes[m].iter().map(|&k| self.jetons[k].x0).fold(f64::MAX, f64::min) - 2.0 * h;
+                let x1 = lignes[m].iter().map(|&k| self.jetons[k].x1).fold(f64::MIN, f64::max) + 2.0 * h;
+                lignes
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(i, l)| {
+                        l.iter().copied().filter(move |&k| i == m || self.jetons[k].x1 > x0 && self.jetons[k].x0 < x1)
+                    })
+                    .collect()
+            }
+            None => lignes.into_iter().flatten().collect(),
+        };
         Cite::lue(
             ordre.iter().map(|&k| self.jetons[k].texte.trim()).collect::<Vec<_>>().join(" "),
             ordre.iter().map(|&k| self.cite(k)).collect(),
@@ -500,7 +701,7 @@ impl Contexte<'_> {
         let designation = if gauche.is_empty() {
             None
         } else {
-            Some(self.designation(&gauche))
+            Some(self.designation(&gauche, Some(rang[t.q.0])))
         };
         let un = |(k, v): (usize, i64)| Cite::lue(v.to_string(), vec![self.cite(rang[k])]);
         // Le taux : un jeton de la rangée, à droite de la quantité, hors q, p, m et remise.
@@ -553,7 +754,8 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
         remise_globale: None,
     };
 
-    let rangs = rangees(&entree.jetons);
+    let droits = redresses(&entree.jetons);
+    let rangs = rangees(&droits);
     let candidates: Vec<(usize, Vec<Triplet>)> =
         rangs.iter().enumerate().map(|(i, r)| (i, ctx.triplets(r, true))).filter(|(_, t)| !t.is_empty()).collect();
     let cibles: Vec<i64> =
@@ -578,7 +780,21 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
         }
     };
     let milieu::Lu { mut instances, deduites, remise_globale } = lu;
-    colonnes::affiner(&mut instances, &entree.jetons, &rangs, &entree.grille, &op.designation);
+    colonnes::affiner(&mut instances, &droits, &rangs, &entree.grille, &op.designation);
+    // Les chiffres d'une ligne sont prouvés par le calcul ; sa désignation ne l'est par
+    // rien. Un mot que l'OCR lit sans assurance (« كاء » pour « كراء ») ferait une
+    // désignation fausse : elle est tue, la ligne reste.
+    if let Some(seuil) = pack.confiance_du_texte {
+        let sur: BTreeMap<(u32, u32), f64> =
+            entree.jetons.iter().filter_map(|j| j.confiance.map(|c| ((j.page, j.ordinal), c))).collect();
+        for l in instances.iter_mut() {
+            if l.designation.as_ref().is_some_and(|d| {
+                d.refs.iter().any(|r| sur.get(&(r.page, r.ordinal)).is_some_and(|&c| c < seuil))
+            }) {
+                l.designation = None;
+            }
+        }
+    }
     let taux_par_base = verifier_taux(op, champs, &mut instances);
     let sortie = LignesSortie {
         statut: "prouve".into(),

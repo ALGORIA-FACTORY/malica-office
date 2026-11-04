@@ -109,20 +109,38 @@ fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {
     let mut prouvees: Vec<(usize, Value)> = Vec::new();
     let mut signalees: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut absentes: Vec<String> = Vec::new();
+    let mut promues: Vec<String> = Vec::new();
     for (ip, p) in pieces.iter().enumerate() {
         let jetons: Vec<Value> = p.jetons.iter().map(jeton).collect();
         let (jouees, us) = par_variante_chrono(&jetons, &grille, &pack);
         let o = la_piece(&jouees);
 
-        // Le centre, rejoué sans la preuve : identique, variante par variante.
+        // Le centre, rejoué sans la preuve : identique, variante par variante — sauf une
+        // promotion : un total HT sans son libellé, que des lignes JUSTES ferment
+        // exactement (lib.rs, « le total HT porte son libellé, ou les lignes le ferment »).
         let (centre, us_centre) = par_variante_chrono(&jetons, &grille_centre, &pack);
+        let promue = |a: &Value, b: &Value| {
+            a["issue"] == "prouvee"
+                && b["raison"] == "le total HT ne porte pas son libellé"
+                && a["lignes"]["statut"] == "prouve"
+                && justes(a, &p.verite, &ppm)
+        };
+        let mut promue_ici = false;
         for ((v, a), (_, b)) in jouees.iter().zip(&centre) {
             if sans_lignes(a) != *b {
-                centres_changes.push(format!("{} ({v})", p.id));
+                if promue(a, b) {
+                    promue_ici = true;
+                } else {
+                    centres_changes.push(format!("{} ({v})", p.id));
+                }
             }
         }
         if la_piece(&centre)["issue"] != o["issue"] {
-            centres_changes.push(format!("{} (issue)", p.id));
+            if promue_ici {
+                promues.push(p.id.clone());
+            } else {
+                centres_changes.push(format!("{} (issue)", p.id));
+            }
         }
 
         let e = stats.entry(jeu(&p.id)).or_default();
@@ -167,6 +185,7 @@ fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {
         println!("  signalées — preuve {raison} : {} {ids:?}", ids.len());
     }
     println!("  absentes (aucune rangée q × p = m) : {absentes:?}");
+    println!("  centres promus par des lignes justes qui ferment le HT : {promues:?}");
     assert!(centres_changes.is_empty(), "centre modifié par la preuve lignes : {centres_changes:?}");
     assert!(fausses.is_empty(), "lignes fausses prouvées : {fausses:#?}");
     assert!(!prouvees.is_empty(), "aucune pièce aux lignes prouvées");

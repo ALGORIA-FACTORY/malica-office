@@ -1007,7 +1007,7 @@ fn sortie(lecture: &Lecture, regle: &Regle, rang: &[usize], c: &Choix, avec_taux
         None
     };
     LigneSortie {
-        designation: (!gauche.is_empty()).then(|| ctx.designation(&gauche)),
+        designation: (!gauche.is_empty()).then(|| ctx.designation(&gauche, lus.iter().next().copied())),
         quantite: cellule(c.q, Q),
         prix: cellule(c.p, P),
         remise: c.r.map(|(k, v)| Cite { statut: Some("lu"), ..Cite::lue(v.to_string(), vec![ctx.cite(k)]) }),

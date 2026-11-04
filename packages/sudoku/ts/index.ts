@@ -30,6 +30,8 @@ export interface JetonDuSudoku {
   readonly x1: number;
   readonly y1: number;
   readonly montants: readonly LectureDeMontant[];
+  /** La confiance de l'OCR dans ce jeton (0..1) ; absente, il est exact. */
+  readonly confiance?: number;
   /** Date ISO, ou null. */
   readonly date: string | null;
   /**
@@ -115,6 +117,11 @@ export interface PackDuSudoku {
     assiette_tva: boolean;
   }[];
   readonly formats: Readonly<Record<string, string>>;
+  /**
+   * Sous cette confiance de lecture, un texte qu'aucun calcul ne prouve (une
+   * désignation) n'est pas rendu (`lecture.confiance_du_texte`).
+   */
+  readonly confiance_du_texte?: number;
 }
 
 /** Ce que la base sait du dossier et de ses tiers (anneau 2). */

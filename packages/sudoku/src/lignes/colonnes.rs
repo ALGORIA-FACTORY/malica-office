@@ -21,7 +21,7 @@
 
 use std::collections::BTreeMap;
 
-use super::{Cite, LigneSortie};
+use super::{en_lignes, Cite, LigneSortie};
 use crate::entree::{Grille, Jeton};
 use crate::reperes::normaliser;
 use crate::RefJeton;
@@ -93,8 +93,19 @@ pub fn affiner(
         .flat_map(|n| rangs[n].iter().copied())
         .collect();
     let frontiere = |a: &Cellule, b: &Cellule| couloir(&lignes, jetons, a.x0, b.x1).unwrap_or((a.x1 + b.x0) / 2.0);
-    let gauche = if k == 0 { f64::MIN } else { frontiere(&cellules[k - 1], &cellules[k]) };
-    let droite = if k + 1 == cellules.len() { f64::MAX } else { frontiere(&cellules[k], &cellules[k + 1]) };
+    // La première (dernière) colonne n'a pas de voisine : sa frontière extérieure est le plus
+    // large couloir blanc entre le bord de la page et son intitulé — la marge, ou le blanc qui
+    // sépare le tableau d'un bloc posé à côté (« MATRICULE FISCAL » d'une colonne latérale).
+    let gauche = if k == 0 {
+        couloir(&lignes, jetons, 0.0, cellules[k].x1).unwrap_or(f64::MIN)
+    } else {
+        frontiere(&cellules[k - 1], &cellules[k])
+    };
+    let droite = if k + 1 == cellules.len() {
+        couloir(&lignes, jetons, cellules[k].x0, 1.0).unwrap_or(f64::MAX)
+    } else {
+        frontiere(&cellules[k], &cellules[k + 1])
+    };
 
     let rangs_des_lignes: Vec<usize> = instances
         .iter()
@@ -108,15 +119,74 @@ pub fn affiner(
     // Le bord droit effectif de la colonne : le plus loin qu'un texte y va, sur les lignes.
     let bord = lignes.iter().filter(|&&i| dedans(i)).map(|&i| jetons[i].x1).fold(f64::MIN, f64::max);
     let debut = lignes.iter().filter(|&&i| dedans(i)).map(|&i| jetons[i].x0).fold(f64::MAX, f64::min);
-    for l in instances.iter_mut() {
-        let Some(n) = ancre(l).and_then(|i| rang_de.get(&i).copied()) else { continue };
-        let chiffres: Vec<usize> = [Some(&l.quantite), Some(&l.prix), Some(&l.montant), l.remise.as_ref()]
+    let chiffres_de = |l: &LigneSortie| -> Vec<usize> {
+        [Some(&l.quantite), Some(&l.prix), Some(&l.montant), l.remise.as_ref()]
             .into_iter()
             .flatten()
             .flat_map(|c| c.refs.iter().filter_map(jeton_de))
-            .collect();
-        let mut lignes_de_texte: Vec<Vec<usize>> =
-            vec![rangs[n].iter().copied().filter(|i| !chiffres.contains(i)).filter(|&i| dedans(i)).collect()];
+            .collect()
+    };
+    // une rangée qui porte une étiquette (« SN: ») ou un numéro est une autre information ;
+    // un numéro est fait de chiffres (« 322911304202613 », « SN12345678 ») — une
+    // référence d'article qui en mêle (« 65ML L3110 ») reste de la désignation
+    let autre_information = |r: &[usize]| {
+        r.iter().any(|&i| {
+            let t = jetons[i].texte.trim();
+            let chiffres = t.chars().filter(|c| c.is_ascii_digit()).count();
+            let signes = t.chars().filter(|c| c.is_alphanumeric()).count();
+            t.ends_with(':') || chiffres >= 6 && 5 * chiffres >= 4 * signes
+        })
+    };
+    let etendue = |ids: &mut dyn Iterator<Item = usize>| {
+        ids.fold((f64::MAX, f64::MIN), |(a, b), i| (a.min(jetons[i].y0), b.max(jetons[i].y1)))
+    };
+
+    // La tête d'une désignation sur plusieurs lignes : un tableau CENTRE ses chiffres sur la
+    // cellule, et la première ligne du texte monte au-dessus de la rangée des chiffres. Une
+    // rangée de texte juste au-dessus, toute dans la colonne, en est la tête quand elle
+    // rapproche le milieu du texte du milieu des chiffres — un tableau qui aligne ses
+    // chiffres sur la première ligne ne la prend pas (son milieu s'en éloignerait).
+    let tetes: BTreeMap<usize, Vec<usize>> = instances
+        .iter()
+        .filter_map(|l| {
+            let n = ancre(l).and_then(|i| rang_de.get(&i).copied())?;
+            let chiffres = chiffres_de(l);
+            let (c0, c1) = etendue(&mut chiffres.iter().copied());
+            let milieu_chiffres = (c0 + c1) / 2.0;
+            let texte: Vec<usize> = rangs[n].iter().copied().filter(|i| !chiffres.contains(i) && dedans(*i)).collect();
+            let (mut t0, t1) = if texte.is_empty() { (c0, c1) } else { etendue(&mut texte.iter().copied()) };
+            let mut prises = Vec::new();
+            let mut m = n;
+            while m > 0 {
+                m -= 1;
+                let r = &rangs[m];
+                let (r0, r1) = etendue(&mut r.iter().copied());
+                let proche = jetons[r[0]].page == jetons[rangs[n][0]].page && t0 - r1 <= 0.8 * h;
+                let mieux = ((r0 + t1) / 2.0 - milieu_chiffres).abs() < ((t0 + t1) / 2.0 - milieu_chiffres).abs();
+                if !proche || !mieux || rangs_des_lignes.contains(&m) || autre_information(r) || !r.iter().all(|&i| dedans(i)) {
+                    break;
+                }
+                prises.push(m);
+                t0 = r0;
+            }
+            (!prises.is_empty()).then_some((n, prises))
+        })
+        .collect();
+    let prises_en_tete: Vec<usize> = tetes.values().flatten().copied().collect();
+
+    for l in instances.iter_mut() {
+        let Some(n) = ancre(l).and_then(|i| rang_de.get(&i).copied()) else { continue };
+        let chiffres = chiffres_de(l);
+        let mut lignes_de_texte: Vec<Vec<usize>> = tetes
+            .get(&n)
+            .map(|t| t.iter().rev().flat_map(|&m| en_lignes(jetons, &rangs[m])).collect())
+            .unwrap_or_default();
+        let texte: Vec<usize> = rangs[n].iter().copied().filter(|i| !chiffres.contains(i)).filter(|&i| dedans(i)).collect();
+        if texte.is_empty() {
+            lignes_de_texte.push(texte);
+        } else {
+            lignes_de_texte.extend(en_lignes(jetons, &texte));
+        }
         // La suite d'une désignation COUPÉE en fin de ligne : seulement si la ligne touche le
         // bord de sa colonne (le texte a manqué de place), les rangées suivantes, serrées,
         // dont TOUS les jetons tombent dans la colonne — et qui ne sont pas des lignes. Une
@@ -129,28 +199,18 @@ pub fn affiner(
         let mut m = n + 1;
         while m < rangs.len()
             && coupee(lignes_de_texte.last().map(|v| v.as_slice()).unwrap_or_default())
-            // une rangée qui porte une étiquette (« SN: ») ou un numéro est une autre information
-            && !rangs[m].iter().any(|&i| {
-                let t = jetons[i].texte.trim();
-                t.ends_with(':') || t.chars().filter(|c| c.is_ascii_digit()).count() >= 6
-            }) && !rangs_des_lignes.contains(&m) && rangs[m].iter().all(|&i| dedans(i)) {
+            && !autre_information(&rangs[m])
+            && !prises_en_tete.contains(&m)
+            && !rangs_des_lignes.contains(&m) && rangs[m].iter().all(|&i| dedans(i)) {
             let (a, b) = (&jetons[rangs[m - 1][0]], &jetons[rangs[m][0]]);
             if a.page != b.page || b.y0 - a.y1 > 0.8 * h {
                 break;
             }
-            lignes_de_texte.push(rangs[m].clone());
+            lignes_de_texte.extend(en_lignes(jetons, &rangs[m]));
             m += 1;
         }
-        let pris: Vec<usize> = lignes_de_texte
-            .into_iter()
-            .flat_map(|mut r| {
-                // une ligne écrite de droite à gauche se lit depuis sa droite
-                if r.iter().any(|&i| crate::reperes::droite_a_gauche(&jetons[i].texte)) {
-                    r.reverse();
-                }
-                r
-            })
-            .collect();
+        // chaque ligne est déjà dans son ordre de lecture (`en_lignes`)
+        let pris: Vec<usize> = lignes_de_texte.into_iter().flatten().collect();
         l.designation = (!pris.is_empty()).then(|| {
             Cite::lue(
                 pris.iter().map(|&i| jetons[i].texte.trim()).collect::<Vec<_>>().join(" "),

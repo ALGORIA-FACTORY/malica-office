@@ -64,6 +64,10 @@ pub struct Jeton {
     /// Lectures du treillis, en unités mineures. Le moteur ne relit jamais le texte.
     #[serde(default)]
     pub montants: Vec<Lecture>,
+    /// La confiance de l'OCR dans ce jeton (0..1) ; absente, il est exact (couche de
+    /// texte d'un PDF).
+    #[serde(default)]
+    pub confiance: Option<f64>,
     /// Date ISO rendue par `normalizeDate`, ou `null`.
     #[serde(default)]
     pub date: Option<String>,
@@ -176,6 +180,11 @@ pub struct Pack {
     pub charges: Vec<ChargePack>,
     #[serde(default)]
     pub formats: HashMap<String, String>,
+    /// La confiance de lecture au-dessous de laquelle un TEXTE qu'aucun calcul ne prouve
+    /// (une désignation) n'est pas rendu (`lecture.confiance_du_texte`) ; absente, tout
+    /// texte lu est rendu.
+    #[serde(default)]
+    pub confiance_du_texte: Option<f64>,
 }
 
 #[derive(Deserialize, Clone)]

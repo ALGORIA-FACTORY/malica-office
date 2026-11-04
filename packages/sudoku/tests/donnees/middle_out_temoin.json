@@ -1057,7 +1057,7 @@
   },
   "ocr|50/33|ttc_avec_timbre": {
     "centre": "d91c42cbb394a8d3",
-    "lignes": "b34848af1bfc0227"
+    "lignes": "edc49ad6ac9b2c8a"
   },
   "ocr|50/33|ttc_hors_timbre": {
     "centre": "1c65e83423734456",
@@ -1752,11 +1752,11 @@
     "lignes": "bd4ec323c75e6128"
   },
   "texte|100/D-10|ttc_avec_timbre": {
-    "centre": "20ef26cd2babc33f",
+    "centre": "31004772a186897f",
     "lignes": null
   },
   "texte|100/D-10|ttc_hors_timbre": {
-    "centre": "1765fc3d255f50e1",
+    "centre": "c9ad277ef703b924",
     "lignes": null
   },
   "texte|100/D-11|ttc_avec_timbre": {
