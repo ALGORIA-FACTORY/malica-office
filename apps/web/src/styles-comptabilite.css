@@ -1573,12 +1573,16 @@
  * Une table `empile` (InkTable) sur un téléphone : une carte par ligne. La
  * première cellule est le titre ; les autres posent leur libellé (data-label)
  * à gauche de la valeur. Aucun défilement de côté.
+ *
+ * La classe vaut aussi pour une table écrite à la main : on la pose sur son
+ * conteneur et on nomme les cellules (`data-label`). Les sélecteurs doublés
+ * gardent à InkTable la spécificité qui la fait passer devant `.cab-table td`.
  */
 @media (max-width: 640px) {
-  .cab-table.cab-table-empile {
+  .cab-table-empile {
     overflow-x: visible;
   }
-  .cab-table.cab-table-empile thead {
+  .cab-table-empile thead {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1586,34 +1590,301 @@
     clip: rect(0 0 0 0);
     white-space: nowrap;
   }
-  .cab-table.cab-table-empile table,
-  .cab-table.cab-table-empile tbody,
-  .cab-table.cab-table-empile tr,
-  .cab-table.cab-table-empile td {
+  .cab-table-empile table,
+  .cab-table-empile tbody,
+  .cab-table-empile tfoot,
+  .cab-table-empile tr,
+  .cab-table-empile td {
     display: block;
     width: 100%;
+    min-width: 0;
   }
-  .cab-table.cab-table-empile tr {
+  .cab-table-empile tr {
     padding: 10px 12px;
   }
   .cabinet-workspace .cab-table.cab-table-empile td,
-  .cab-table.cab-table-empile td {
+  .cab-table-empile td {
     display: flex;
     justify-content: space-between;
     gap: 12px;
     max-width: none;
     padding: 2px 0;
   }
-  .cab-table.cab-table-empile td:not([data-label]) {
+  .cab-table.cab-table-empile td:not([data-label]),
+  .cab-table-empile td:not([data-label]) {
     display: block;
     padding-bottom: 6px;
     font-weight: 500;
   }
-  .cab-table.cab-table-empile td[data-label]::before {
+  .cab-table-empile td[data-label]::before {
     content: attr(data-label);
     color: var(--muted-foreground);
     font-family: var(--font-sans);
     font-size: 11.5px;
+    font-weight: 400;
     text-align: start;
+  }
+  /* Une cellule sans valeur ne fait pas une ligne de carte. */
+  .cab-table.cab-table-empile td[data-vide],
+  .cab-table-empile td[data-vide] {
+    display: none;
+  }
+}
+
+/*
+ * Les écrans du cabinet lus au téléphone : `cab-lisible` sur leur racine.
+ *
+ * ============================================================== POURQUOI
+ *
+ * Relevé à 375 px le 4 novembre 2026 : le plan comptable portait près de neuf
+ * cents textes sous 12 px et plus de deux cent cinquante cibles sous 32 px. Ce
+ * sont des tailles de bureau, où l'œil est à soixante centimètres et la souris
+ * précise ; au téléphone, elles ne se lisent pas et ne se touchent pas.
+ *
+ * Le bureau ne change pas : tout ce qui suit vit sous 640 px, ou sous un
+ * pointeur grossier (le doigt). Plutôt que de doubler chaque classe d'une
+ * variante, on pose un plancher : toute taille d'appoint sous 12 px y remonte,
+ * y compris celles qu'un écran ajoutera demain.
+ */
+@media (max-width: 640px) {
+  .cabinet-workspace
+    .cab-lisible
+    :is(
+      .text-\[9px\],
+      .text-\[9\.5px\],
+      .text-\[10px\],
+      .text-\[10\.5px\],
+      .text-\[11px\],
+      .text-\[11\.5px\]
+    ),
+  .cabinet-workspace .cab-lisible .cab-table-empile td[data-label]::before {
+    font-size: 12px;
+  }
+  /* Le corps d'une table est le texte principal : 14 px au téléphone. */
+  .cabinet-workspace .cab-lisible :is(.cab-table, .cab-table-empile) table {
+    font-size: 14px;
+  }
+  /*
+   * Une cellule de carte qui porte plusieurs morceaux (un compte et son
+   * libellé, un état et sa raison) les empile à droite de son libellé, au lieu
+   * de les étaler sur la ligne.
+   */
+  .cabinet-workspace .cab-lisible .cab-table-empile td[data-label]:has(> * + *) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 12px;
+    align-content: start;
+  }
+  .cabinet-workspace .cab-lisible .cab-table-empile td[data-label]:has(> * + *)::before {
+    grid-row: 1;
+    grid-column: 1;
+  }
+  .cabinet-workspace .cab-lisible .cab-table-empile td[data-label]:has(> * + *) > * {
+    grid-column: 2;
+    justify-self: end;
+    text-align: end;
+  }
+
+  /*
+   * Le plan comptable : un compte sur deux lignes, sans table de côté. Le code
+   * et le libellé d'abord, puis l'origine, le collectif et le geste. Le filet
+   * d'or du cabinet passe de la cellule du code à la ligne entière.
+   */
+  .cab-plan-lignes {
+    overflow-x: visible;
+  }
+  .cab-plan-lignes thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .cab-plan-lignes :is(table, tbody) {
+    display: block;
+    min-width: 0;
+  }
+  .cab-plan-lignes tr {
+    display: grid;
+    grid-template-columns: 4.5rem auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "code libelle libelle libelle"
+      ". origine collectif geste";
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 2px;
+    padding: 10px 12px;
+  }
+  .cab-plan-lignes tr[data-cabinet] {
+    border-inline-start: 2px solid var(--marigold);
+  }
+  .cab-plan-lignes td {
+    display: block;
+    padding: 0;
+    border-inline-start-width: 0;
+  }
+  .cab-plan-lignes td[data-col="code"] {
+    grid-area: code;
+    align-self: start;
+    font-size: 14px;
+  }
+  .cab-plan-lignes td[data-col="libelle"] {
+    grid-area: libelle;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .cab-plan-lignes td[data-col="origine"] {
+    grid-area: origine;
+  }
+  .cab-plan-lignes td[data-col="collectif"] {
+    grid-area: collectif;
+  }
+  .cab-plan-lignes td[data-col="collectif"][data-vide] {
+    visibility: hidden;
+  }
+  .cab-plan-lignes td[data-col="geste"] {
+    grid-area: geste;
+  }
+
+  /*
+   * Le journal du jour : une ligne d'écriture par rangée — compte, libellé,
+   * montant —, l'heure, la pièce et l'origine au-dessus de la première. Une
+   * ligne n'est que d'un côté : le côté vide disparaît, et le montant dit son
+   * sens (débit ou crédit) au-dessus du chiffre.
+   */
+  .cab-jdj-lignes {
+    overflow-x: visible;
+  }
+  .cab-jdj-lignes thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .cab-jdj-lignes :is(table, tbody, tfoot) {
+    display: block;
+    min-width: 0;
+    font-size: 14px;
+  }
+  .cab-jdj-lignes tr {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+    grid-template-areas: "compte libelle montant";
+    align-items: baseline;
+    column-gap: 10px;
+    row-gap: 6px;
+    padding: 6px 12px;
+  }
+  .cab-jdj-lignes tbody tr[data-premiere] {
+    grid-template-areas:
+      "heure piece origine"
+      "compte libelle montant";
+    padding-top: 12px;
+  }
+  .cab-jdj-lignes td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+  }
+  .cab-jdj-lignes
+    tbody
+    tr:not([data-premiere])
+    td:is([data-col="heure"], [data-col="piece"], [data-col="origine"]),
+  .cab-jdj-lignes td[data-vide] {
+    display: none;
+  }
+  .cab-jdj-lignes td[data-col="heure"] {
+    grid-area: heure;
+  }
+  .cab-jdj-lignes td[data-col="piece"] {
+    grid-area: piece;
+  }
+  .cab-jdj-lignes td[data-col="origine"] {
+    grid-area: origine;
+    text-align: end;
+  }
+  .cab-jdj-lignes td[data-col="compte"] {
+    grid-area: compte;
+  }
+  .cab-jdj-lignes td[data-col="libelle"] {
+    grid-area: libelle;
+  }
+  .cab-jdj-lignes td:is([data-col="debit"], [data-col="credit"]) {
+    grid-area: montant;
+    text-align: end;
+    white-space: nowrap;
+  }
+  .cab-jdj-lignes td:is([data-col="debit"], [data-col="credit"])::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--muted-foreground);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 400;
+  }
+  /* Le total d'une devise : son libellé, puis débit et crédit côte à côte, puis l'équilibre. */
+  .cab-jdj-lignes tfoot tr {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "total total"
+      "debit credit"
+      "origine origine";
+    padding-block: 10px;
+  }
+  .cab-jdj-lignes tfoot td[data-col="total"] {
+    grid-area: total;
+  }
+  .cab-jdj-lignes tfoot td[data-col="debit"] {
+    grid-area: debit;
+    text-align: start;
+  }
+  .cab-jdj-lignes tfoot td[data-col="credit"] {
+    grid-area: credit;
+  }
+  .cab-jdj-lignes tfoot td[data-col="origine"] {
+    text-align: start;
+  }
+
+  /*
+   * Une rangée d'onglets qui défile de côté (`cab-defile`) le montre : une
+   * ombre naît au bord où il reste à voir, et s'efface quand on y est. Les
+   * fonds `local` suivent le contenu et couvrent l'ombre au bord atteint ; ils
+   * valent dans les deux sens d'écriture.
+   */
+  .cabinet-workspace .cab-defile {
+    background:
+      linear-gradient(to right, var(--background) 30%, transparent) left / 32px 100% no-repeat local,
+      linear-gradient(to left, var(--background) 30%, transparent) right / 32px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / 18%), transparent) left / 12px 100%
+        no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / 18%), transparent) right / 12px 100%
+        no-repeat scroll;
+    scrollbar-width: none;
+  }
+}
+@media (max-width: 640px), (pointer: coarse) {
+  .cabinet-workspace
+    .cab-lisible
+    :is(
+      button:not([role="switch"]),
+      select,
+      input:not([type="checkbox"]):not([type="radio"]),
+      .cab-cible
+    ) {
+    min-height: 44px;
+  }
+  /* Un lien qui se touche comme un bouton (`cab-cible`) centre son texte. */
+  .cabinet-workspace .cab-lisible .cab-cible {
+    display: inline-flex;
+    align-items: center;
+  }
+  /* L'interrupteur garde son dessin ; sa zone de toucher, elle, déborde. */
+  .cabinet-workspace .cab-lisible [role="switch"]::after {
+    content: "";
+    position: absolute;
+    inset: -12px -4px;
   }
 }

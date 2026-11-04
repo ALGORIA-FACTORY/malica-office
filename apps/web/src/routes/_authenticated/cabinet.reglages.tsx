@@ -106,12 +106,15 @@ function CabinetReglages() {
     );
 
   return (
-    <div className="space-y-8">
+    <div className="cab-lisible space-y-8">
       <EnTeteCabinet
         surtitre={<>{t("cab.settings.kicker", { cabinet: org.name })}</>}
         titre={<>{t("cab.settings.title")}</>}
       >
-        <nav className="mt-6 flex gap-5 overflow-x-auto" aria-label={t("cab.settings.title")}>
+        <nav
+          className="cab-defile mt-6 flex gap-5 overflow-x-auto"
+          aria-label={t("cab.settings.title")}
+        >
           <button
             type="button"
             className={classeOnglet(onglet === "cabinet")}
@@ -416,7 +419,7 @@ function CabinetEtEquipe() {
               <Link
                 to="/cabinet/mise-en-route"
                 search={{ etape: 2 }}
-                className="border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground"
+                className="cab-cible border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground"
               >
                 {t("cab.settings.inviter")}
               </Link>
@@ -518,7 +521,7 @@ function CabinetEtEquipe() {
         </p>
         <Link
           to="/cabinet/mise-en-route"
-          className="mt-3 inline-block border border-foreground px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
+          className="cab-cible mt-3 inline-block border border-foreground px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
         >
           {t("cab.settings.onb.rejouer")}
         </Link>
@@ -799,6 +802,18 @@ function CalendrierDesEcheances() {
       ? `${String(o.echeanceJour).padStart(2, "0")}/${String(o.echeanceMois).padStart(2, "0")}`
       : String(o.echeanceJour);
 
+  // Les colonnes : l'en-tête au bureau, le nom de chaque valeur sur la carte
+  // du téléphone.
+  const col = {
+    active: t("cab.settings.cal.col.active"),
+    obligation: t("cab.settings.cal.col.obligation"),
+    legal: t("cab.settings.cal.col.legal"),
+    periodicite: t("cab.settings.cal.col.periodicite"),
+    jour: t("cab.settings.cal.col.jour"),
+    rappel: t("cab.settings.cal.col.rappel"),
+    mandats: t("cab.settings.cal.col.mandats"),
+  };
+
   return (
     <div className="space-y-8">
       <p className="max-w-[70ch] text-[13.5px] leading-[1.55] text-text-2">
@@ -884,19 +899,20 @@ function CalendrierDesEcheances() {
           <EmptyState>{t("cab.settings.cal.vide")}</EmptyState>
         ) : (
           <fieldset disabled={lectureSeule} className="contents">
-            <div className="overflow-x-auto border border-border bg-card">
+            {/* Au téléphone, une obligation par carte (`cab-table-empile`). */}
+            <div className="cab-table-empile overflow-x-auto border border-border bg-card">
               <table className="min-w-full border-collapse text-[12.5px]">
                 <caption className="sr-only">{t("cab.settings.cal.titre")}</caption>
                 <thead>
                   <tr className="border-b border-foreground">
                     {[
-                      t("cab.settings.cal.col.active"),
-                      t("cab.settings.cal.col.obligation"),
-                      t("cab.settings.cal.col.legal"),
-                      t("cab.settings.cal.col.periodicite"),
-                      t("cab.settings.cal.col.jour"),
-                      t("cab.settings.cal.col.rappel"),
-                      t("cab.settings.cal.col.mandats"),
+                      col.active,
+                      col.obligation,
+                      col.legal,
+                      col.periodicite,
+                      col.jour,
+                      col.rappel,
+                      col.mandats,
                     ].map((h, i) => (
                       <th
                         key={h}
@@ -951,7 +967,7 @@ function CalendrierDesEcheances() {
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2" title={o.regle}>
+                      <td data-label={col.legal} className="px-3 py-2" title={o.regle}>
                         <span className="num block text-[11px] text-signal-info">
                           {baseLegale(o)}
                         </span>
@@ -959,17 +975,22 @@ function CalendrierDesEcheances() {
                           {o.regle}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2">
+                      <td data-label={col.periodicite} className="whitespace-nowrap px-3 py-2">
                         {PERIODICITES[o.periodicite]
                           ? t(PERIODICITES[o.periodicite]!)
                           : o.periodicite}
                       </td>
-                      <td className="num whitespace-nowrap px-3 py-2 text-end">{jourLimite(o)}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-end">
+                      <td
+                        data-label={col.jour}
+                        className="num whitespace-nowrap px-3 py-2 text-end"
+                      >
+                        {jourLimite(o)}
+                      </td>
+                      <td data-label={col.rappel} className="whitespace-nowrap px-3 py-2 text-end">
                         <select
                           value={o.rappelJours}
                           disabled={!o.active}
-                          aria-label={t("cab.settings.cal.col.rappel")}
+                          aria-label={col.rappel}
                           onChange={(e) =>
                             regler.mutate({
                               code: o.code,
@@ -988,7 +1009,12 @@ function CalendrierDesEcheances() {
                             ))}
                         </select>
                       </td>
-                      <td className="num whitespace-nowrap px-3 py-2 text-end">{o.mandats}</td>
+                      <td
+                        data-label={col.mandats}
+                        className="num whitespace-nowrap px-3 py-2 text-end"
+                      >
+                        {o.mandats}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

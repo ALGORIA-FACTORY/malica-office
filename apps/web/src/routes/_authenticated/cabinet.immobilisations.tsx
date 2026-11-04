@@ -680,7 +680,7 @@ function CabinetImmobilisations() {
   ) : null;
 
   return (
-    <div className="space-y-8">
+    <div className="cab-lisible space-y-8">
       {/* ---- masthead */}
       <EnTeteCabinet
         surtitre={<>{kicker}</>}
@@ -782,7 +782,8 @@ function CabinetImmobilisations() {
             ) : assetRows.length === 0 ? (
               <EmptyState>{t("cab.immo.empty")}</EmptyState>
             ) : (
-              <div className="overflow-x-auto border border-border bg-card">
+              // Au téléphone, un bien par carte (`cab-table-empile`), sans défilement de côté.
+              <div className="cab-table-empile overflow-x-auto border border-border bg-card">
                 <table className="min-w-full border-collapse text-[12.5px]">
                   <caption className="sr-only">{t("cab.immo.assets")}</caption>
                   <thead>
@@ -845,17 +846,34 @@ function CabinetImmobilisations() {
                               </span>
                             ) : null}
                           </td>
-                          <td className="num whitespace-nowrap px-3 py-2 text-[11.5px]">
+                          <td
+                            data-label={t("cab.immo.mes")}
+                            className="num whitespace-nowrap px-3 py-2 text-[11.5px]"
+                          >
                             {dateLisible(a.miseEnService)}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2">{methodeDuree(a)}</td>
-                          <td className="num whitespace-nowrap px-3 py-2 text-end">
+                          <td
+                            data-label={t("cab.immo.col.methode")}
+                            className="whitespace-nowrap px-3 py-2"
+                          >
+                            {methodeDuree(a)}
+                          </td>
+                          <td
+                            data-label={t("cab.immo.vb")}
+                            className="num whitespace-nowrap px-3 py-2 text-end"
+                          >
                             {montant(a.valeurBrute, locale)}
                           </td>
-                          <td className="num whitespace-nowrap px-3 py-2 text-end">
+                          <td
+                            data-label={t("cab.immo.col.dotation", { annee: exercice })}
+                            className="num whitespace-nowrap px-3 py-2 text-end"
+                          >
                             {enServiceLigne && s?.ligne ? montant(s.ligne.dotation, locale) : "—"}
                           </td>
-                          <td className="num whitespace-nowrap px-3 py-2 text-end">
+                          <td
+                            data-label={t("cab.immo.vnc")}
+                            className="num whitespace-nowrap px-3 py-2 text-end"
+                          >
                             {enServiceLigne && s ? montant(s.vnc, locale) : "—"}
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-end">
@@ -955,15 +973,26 @@ function CabinetImmobilisations() {
                           t("cab.immo.vnc"),
                           "",
                         ]}
+                        empile
                       >
                         {plan.lignes.map((l) => (
                           <InkTableRow key={l.exercice}>
                             <InkCell numeric>{l.exercice}</InkCell>
-                            <InkCell numeric>{l.months}</InkCell>
-                            <InkCell numeric>{montant(l.base, locale)}</InkCell>
-                            <InkCell numeric>{montant(l.dotation, locale)}</InkCell>
-                            <InkCell numeric>{montant(l.cumul, locale)}</InkCell>
-                            <InkCell numeric>{montant(l.vnc, locale)}</InkCell>
+                            <InkCell numeric label={t("cab.immo.months")}>
+                              {l.months}
+                            </InkCell>
+                            <InkCell numeric label={t("cab.immo.base")}>
+                              {montant(l.base, locale)}
+                            </InkCell>
+                            <InkCell numeric label={t("cab.immo.dotation")}>
+                              {montant(l.dotation, locale)}
+                            </InkCell>
+                            <InkCell numeric label={t("cab.immo.cumul")}>
+                              {montant(l.cumul, locale)}
+                            </InkCell>
+                            <InkCell numeric label={t("cab.immo.vnc")}>
+                              {montant(l.vnc, locale)}
+                            </InkCell>
                             <InkCell className="text-end">
                               {constatees.has(`${asset.id}:${l.exercice}`) ? (
                                 <span className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-signal-ok">
@@ -1060,13 +1089,20 @@ function CabinetImmobilisations() {
                             t("cab.immo.cession.vnc"),
                             t("cab.immo.cession.resultat"),
                           ]}
+                          empile
                         >
                           {assetCessions.map((c) => (
                             <InkTableRow key={c.id}>
                               <InkCell numeric>{dateLisible(c.at)}</InkCell>
-                              <InkCell numeric>{montant(c.prix, locale)}</InkCell>
-                              <InkCell numeric>{montant(c.vnc, locale)}</InkCell>
-                              <InkCell numeric>{montant(c.resultat, locale)}</InkCell>
+                              <InkCell numeric label={t("cab.immo.cession.prix")}>
+                                {montant(c.prix, locale)}
+                              </InkCell>
+                              <InkCell numeric label={t("cab.immo.cession.vnc")}>
+                                {montant(c.vnc, locale)}
+                              </InkCell>
+                              <InkCell numeric label={t("cab.immo.cession.resultat")}>
+                                {montant(c.resultat, locale)}
+                              </InkCell>
                             </InkTableRow>
                           ))}
                         </InkTable>
@@ -1148,15 +1184,24 @@ function CabinetImmobilisations() {
                             t("cab.immo.cumul"),
                             t("cab.immo.dep.note"),
                           ]}
+                          empile
                         >
                           {assetDepreciations.map((d) => (
                             <InkTableRow key={d.id}>
                               <InkCell numeric>{dateLisible(d.at)}</InkCell>
-                              <InkCell numeric>{montant(d.vnc, locale)}</InkCell>
-                              <InkCell numeric>{montant(d.valeurRecouvrable, locale)}</InkCell>
-                              <InkCell numeric>{montant(d.mouvement, locale)}</InkCell>
-                              <InkCell numeric>{montant(d.cumul, locale)}</InkCell>
-                              <InkCell>{d.note ?? "—"}</InkCell>
+                              <InkCell numeric label={t("cab.immo.dep.vnc")}>
+                                {montant(d.vnc, locale)}
+                              </InkCell>
+                              <InkCell numeric label={t("cab.immo.dep.recouvrable")}>
+                                {montant(d.valeurRecouvrable, locale)}
+                              </InkCell>
+                              <InkCell numeric label={t("cab.immo.dep.mouvement")}>
+                                {montant(d.mouvement, locale)}
+                              </InkCell>
+                              <InkCell numeric label={t("cab.immo.cumul")}>
+                                {montant(d.cumul, locale)}
+                              </InkCell>
+                              <InkCell label={t("cab.immo.dep.note")}>{d.note ?? "—"}</InkCell>
                             </InkTableRow>
                           ))}
                         </InkTable>
@@ -1200,13 +1245,20 @@ function CabinetImmobilisations() {
                                 t("cab.immo.ecriture.debit"),
                                 t("cab.immo.ecriture.credit"),
                               ]}
+                              empile
                             >
                               {e.lines.map((l) => (
                                 <InkTableRow key={l.ordinal}>
                                   <InkCell numeric>{l.accountCode}</InkCell>
-                                  <InkCell>{l.libelle}</InkCell>
-                                  <InkCell numeric>{montant(l.debit, locale)}</InkCell>
-                                  <InkCell numeric>{montant(l.credit, locale)}</InkCell>
+                                  <InkCell label={t("cab.immo.ecriture.libelle")}>
+                                    {l.libelle}
+                                  </InkCell>
+                                  <InkCell numeric label={t("cab.immo.ecriture.debit")}>
+                                    {montant(l.debit, locale)}
+                                  </InkCell>
+                                  <InkCell numeric label={t("cab.immo.ecriture.credit")}>
+                                    {montant(l.credit, locale)}
+                                  </InkCell>
                                 </InkTableRow>
                               ))}
                             </InkTable>

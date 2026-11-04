@@ -479,8 +479,21 @@ function CabinetStocks() {
 
   const categorie = form ? categoryRows.find((c) => c.id === form.categoryId) : undefined;
 
+  // Les colonnes des mouvements : l'en-tête au bureau, le nom de chaque valeur
+  // sur la carte du téléphone.
+  const colMouvement = {
+    date: t("cab.stocks.date"),
+    sens: t("cab.stocks.sens"),
+    quantite: t("cab.stocks.qty"),
+    valeur: t("cab.stocks.col.valeur", { devise }),
+    apres: t("cab.stocks.qtyafter"),
+    // Le coût unitaire après mouvement — moyen en CUMP, du dernier lot en
+    // FIFO : la colonne ne nomme pas une méthode.
+    cout: t("cab.stocks.cu.apres"),
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="cab-lisible space-y-8">
       {/* ---- masthead */}
       <EnTeteCabinet
         surtitre={kicker}
@@ -762,20 +775,20 @@ function CabinetStocks() {
               ) : !valo || valo.lignes.length === 0 ? (
                 <EmptyState>{t("cab.stocks.nomouv")}</EmptyState>
               ) : (
-                <div className="overflow-x-auto border border-border bg-card">
+                // Au téléphone, un mouvement par carte (`cab-table-empile`) : chaque
+                // valeur porte le nom de sa colonne.
+                <div className="cab-table-empile overflow-x-auto border border-border bg-card">
                   <table className="min-w-full border-collapse text-[12.5px]">
                     <caption className="sr-only">{t("cab.stocks.mouvements.titre")}</caption>
                     <thead>
                       <tr className="border-b border-foreground">
                         {[
-                          [t("cab.stocks.date"), false],
-                          [t("cab.stocks.sens"), false],
-                          [t("cab.stocks.qty"), true],
-                          [t("cab.stocks.col.valeur", { devise }), true],
-                          [t("cab.stocks.qtyafter"), true],
-                          // Le coût unitaire après mouvement — moyen en CUMP, du
-                          // dernier lot en FIFO : la colonne ne nomme pas une méthode.
-                          [t("cab.stocks.cu.apres"), true],
+                          [colMouvement.date, false],
+                          [colMouvement.sens, false],
+                          [colMouvement.quantite, true],
+                          [colMouvement.valeur, true],
+                          [colMouvement.apres, true],
+                          [colMouvement.cout, true],
                         ].map(([h, fin]) => (
                           <th
                             key={String(h)}
@@ -799,7 +812,10 @@ function CabinetStocks() {
                           <td className="num whitespace-nowrap px-3 py-2 text-[11.5px]">
                             {dateLisible(l.at)}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2">
+                          <td
+                            data-label={colMouvement.sens}
+                            className="whitespace-nowrap px-3 py-2"
+                          >
                             <span className="inline-flex items-center gap-2">
                               <span
                                 aria-hidden
@@ -811,18 +827,30 @@ function CabinetStocks() {
                               {t(`cab.stocks.sens.${l.sens}`)}
                             </span>
                           </td>
-                          <td className="num whitespace-nowrap px-3 py-2 text-end font-medium">
+                          <td
+                            data-label={colMouvement.quantite}
+                            className="num whitespace-nowrap px-3 py-2 text-end font-medium"
+                          >
                             {l.sens === "sortie"
                               ? `−${quantite(l.quantite, locale)}`
                               : quantite(l.quantite, locale)}
                           </td>
-                          <td className="num whitespace-nowrap px-3 py-2 text-end font-medium">
+                          <td
+                            data-label={colMouvement.valeur}
+                            className="num whitespace-nowrap px-3 py-2 text-end font-medium"
+                          >
                             {montant(l.valeur_mouvement, locale)}
                           </td>
-                          <td className="num whitespace-nowrap px-3 py-2 text-end font-medium">
+                          <td
+                            data-label={colMouvement.apres}
+                            className="num whitespace-nowrap px-3 py-2 text-end font-medium"
+                          >
                             {quantite(l.quantite_apres, locale)}
                           </td>
-                          <td className="num whitespace-nowrap px-3 py-2 text-end font-medium">
+                          <td
+                            data-label={colMouvement.cout}
+                            className="num whitespace-nowrap px-3 py-2 text-end font-medium"
+                          >
                             {montant(l.cump, locale)}
                           </td>
                         </tr>
@@ -976,17 +1004,23 @@ function CabinetStocks() {
                 t("cab.stocks.method"),
                 "",
               ]}
+              empile
             >
               {itemRows.map((i) => (
                 <InkTableRow key={i.id}>
                   <InkCell numeric className={i.id === item.id ? "font-semibold" : ""}>
                     {i.reference}
                   </InkCell>
-                  <InkCell className={i.id === item.id ? "font-semibold" : ""}>
+                  <InkCell
+                    label={t("cab.stocks.designation")}
+                    className={i.id === item.id ? "font-semibold" : ""}
+                  >
                     {i.designation}
                   </InkCell>
-                  <InkCell>{i.unite}</InkCell>
-                  <InkCell>{t(`cab.stocks.method.${i.methode}`)}</InkCell>
+                  <InkCell label={t("cab.stocks.unite")}>{i.unite}</InkCell>
+                  <InkCell label={t("cab.stocks.method")}>
+                    {t(`cab.stocks.method.${i.methode}`)}
+                  </InkCell>
                   <InkCell>
                     <span className="flex gap-2">
                       <button
@@ -1106,17 +1140,28 @@ function CabinetStocks() {
                   t("cab.stocks.cumul"),
                   t("cab.stocks.note"),
                 ]}
+                empile
               >
                 {depreciationRows.map((d) => (
                   <InkTableRow key={d.id}>
                     <InkCell numeric>{dateLisible(d.at)}</InkCell>
-                    <InkCell numeric>{montant(d.valeurStock, locale)}</InkCell>
-                    <InkCell numeric>{montant(d.valeurNette, locale)}</InkCell>
-                    <InkCell numeric className={signe(d.mouvement)}>
+                    <InkCell numeric label={t("cab.stocks.cost")}>
+                      {montant(d.valeurStock, locale)}
+                    </InkCell>
+                    <InkCell numeric label={t("cab.stocks.vnr")}>
+                      {montant(d.valeurNette, locale)}
+                    </InkCell>
+                    <InkCell
+                      numeric
+                      label={t("cab.stocks.movement")}
+                      className={signe(d.mouvement)}
+                    >
                       {montantSigne(d.mouvement, locale)}
                     </InkCell>
-                    <InkCell numeric>{montant(d.cumul, locale)}</InkCell>
-                    <InkCell>{d.note ?? "—"}</InkCell>
+                    <InkCell numeric label={t("cab.stocks.cumul")}>
+                      {montant(d.cumul, locale)}
+                    </InkCell>
+                    <InkCell label={t("cab.stocks.note")}>{d.note ?? "—"}</InkCell>
                   </InkTableRow>
                 ))}
               </InkTable>
@@ -1151,13 +1196,18 @@ function CabinetStocks() {
                         t("cab.stocks.debit"),
                         t("cab.stocks.credit"),
                       ]}
+                      empile
                     >
                       {e.lines.map((l) => (
                         <InkTableRow key={`${e.id}-${l.ordinal}`}>
                           <InkCell numeric>{l.accountCode}</InkCell>
-                          <InkCell>{l.libelle}</InkCell>
-                          <InkCell numeric>{montant(l.debit, locale)}</InkCell>
-                          <InkCell numeric>{montant(l.credit, locale)}</InkCell>
+                          <InkCell label={t("cab.stocks.designation")}>{l.libelle}</InkCell>
+                          <InkCell numeric label={t("cab.stocks.debit")}>
+                            {montant(l.debit, locale)}
+                          </InkCell>
+                          <InkCell numeric label={t("cab.stocks.credit")}>
+                            {montant(l.credit, locale)}
+                          </InkCell>
                         </InkTableRow>
                       ))}
                     </InkTable>
