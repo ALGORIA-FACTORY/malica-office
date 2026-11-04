@@ -438,14 +438,10 @@ function LesMois({
     <>
       <div className="cab-doclib-controle" role="group" aria-label={t("cab.biblio.regles")}>
         <div className="flex flex-wrap">
-          <Compteur
-            n={compte.aValider}
-            mot={t("cab.biblio.compteur.aValider", { count: compte.aValider })}
-            ton="warn"
-          />
+          <Compteur n={compte.aValider} mot={t("cab.biblio.compteur.aValider")} ton="warn" />
           <Compteur
             n={compte.moisSansPiece}
-            mot={t("cab.biblio.compteur.moisSansPiece", { count: compte.moisSansPiece })}
+            mot={t("cab.biblio.compteur.moisSansPiece")}
             ton="warn"
           />
           <Compteur
