@@ -104,7 +104,7 @@
 }
 .cabinet-workspace .cab-doclib-documents > li {
   display: grid;
-  grid-template-columns: 18px 46px minmax(0, 1fr) auto 115px 20px;
+  grid-template-columns: 18px 46px minmax(0, 1fr) auto 115px 40px;
   align-items: center;
   gap: 12px;
   padding-block: 20px;
@@ -174,6 +174,253 @@
   font-size: 12px;
   color: var(--muted-foreground);
 }
+/* ---- Bibliothèque rangée : client › mois › type › pièces (maquette du 4 novembre 2026).
+   Écrite pour le téléphone d'abord : une colonne, puis des cartes en grille. */
+.cabinet-workspace .cab-doclib-barre {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cabinet-workspace .cab-doclib-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.cabinet-workspace .cab-doclib-actions .cab-doclib-search {
+  width: 100%;
+}
+.cabinet-workspace .cab-doclib-actions > .cab-doclib-button {
+  flex: 1 1 auto;
+}
+/* Le retour : un seul geste, et on le voit. */
+.cabinet-workspace .cab-doclib-retour {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow:
+    0 6px 16px rgb(24 34 48 / 0.22),
+    0 0 0 5px var(--card);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.cabinet-workspace .cab-doclib-retour svg {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.18s ease;
+}
+.cabinet-workspace [dir="rtl"] .cab-doclib-retour svg,
+[dir="rtl"] .cabinet-workspace .cab-doclib-retour svg {
+  transform: scaleX(-1);
+}
+@media (hover: hover) {
+  .cabinet-workspace .cab-doclib-retour:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 10px 22px rgb(24 34 48 / 0.28),
+      0 0 0 5px var(--accent);
+  }
+  .cabinet-workspace .cab-doclib-retour:hover svg {
+    transform: translateX(-3px);
+  }
+  [dir="rtl"] .cabinet-workspace .cab-doclib-retour:hover svg {
+    transform: scaleX(-1) translateX(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cabinet-workspace .cab-doclib-retour,
+  .cabinet-workspace .cab-doclib-retour svg {
+    transition: none;
+  }
+}
+.cabinet-workspace .cab-doclib .cab-doclib-ou {
+  margin: 0;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.cabinet-workspace .cab-doclib-ou strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.cabinet-workspace .cab-doclib-cartes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 12px;
+}
+.cabinet-workspace .cab-doclib-carte {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  transition: border-color 0.15s ease;
+}
+.cabinet-workspace .cab-doclib-carte:hover,
+.cabinet-workspace .cab-doclib-carte:focus-within {
+  border-color: var(--line-strong);
+}
+.cabinet-workspace .cab-doclib-carte .apercu.vignette {
+  width: 64px;
+  height: 84px;
+}
+.cabinet-workspace .cab-doclib-carte > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cabinet-workspace .cab-doclib-carte-lien {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+/* Toute la carte s'ouvre ; le téléchargement passe au-dessus. */
+.cabinet-workspace .cab-doclib-carte-lien::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+}
+.cabinet-workspace .cab-doclib-au-dessus {
+  position: relative;
+  z-index: 1;
+}
+.cabinet-workspace .cab-doclib-total {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.cabinet-workspace .cab-doclib-total .num {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.cabinet-workspace .cab-doclib-a-saisir {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--signal-warn);
+}
+.cabinet-workspace .cab-doclib-icone {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 8px;
+}
+.cabinet-workspace .cab-doclib-trou {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-height: 52px;
+  padding: 8px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  background: var(--accent);
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.cabinet-workspace .cab-doclib-trou strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.cabinet-workspace .cab-doclib-controle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+.cabinet-workspace .cab-doclib-compteur {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.cabinet-workspace .cab-doclib-compteur .num {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.cabinet-workspace .cab-doclib-compteur[data-ton="warn"] .num {
+  color: var(--signal-warn);
+}
+.cabinet-workspace .cab-doclib-compteur[data-ton="ok"] .num {
+  color: var(--signal-ok);
+}
+.cabinet-workspace .cab-doclib-regles,
+.cabinet-workspace .cab-doclib-etiquette {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.cabinet-workspace .cab-doclib-attente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--signal-warn) 30%, transparent);
+  border-radius: 12px;
+  background: var(--signal-soft);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.cabinet-workspace .cab-doclib-attente strong {
+  color: var(--signal-warn);
+}
+.cabinet-workspace .cab-doclib-absents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+@media (min-width: 720px) {
+  .cabinet-workspace .cab-doclib-barre {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cabinet-workspace .cab-doclib-actions {
+    flex-wrap: nowrap;
+  }
+  .cabinet-workspace .cab-doclib-actions .cab-doclib-search {
+    width: 280px;
+  }
+  .cabinet-workspace .cab-doclib-actions > .cab-doclib-button {
+    flex: none;
+  }
+}
 @media (max-width: 640px) {
   .cabinet-workspace .cab-doclib-clients {
     grid-template-columns: 1fr;
@@ -185,11 +432,13 @@
     grid-template-columns: 18px 46px minmax(0, 1fr) auto;
     gap: 10px;
   }
-  .cabinet-workspace .cab-doclib-arrow {
-    display: none;
-  }
+  /* Au téléphone, l'état et le téléchargement de la pièce passent sous son nom. */
   .cabinet-workspace .cab-doclib-doc-status {
-    grid-column: 2 / -1;
+    grid-column: 2 / 4;
+  }
+  .cabinet-workspace .cab-doclib-arrow {
+    grid-column: 4;
+    justify-self: end;
   }
   .cabinet-workspace .cab-doclib-dialog {
     padding: 20px;

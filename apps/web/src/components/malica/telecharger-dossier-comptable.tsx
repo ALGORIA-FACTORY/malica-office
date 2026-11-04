@@ -13,12 +13,18 @@ export function TelechargerDossierComptable({
   nomClient,
   pieces,
   libelle,
+  compact = false,
+  principal = false,
 }: {
   cabinetId: string;
   clientId: string;
   nomClient: string;
   pieces: string[];
   libelle?: string;
+  /** Une icône seule, pour une carte ou une ligne : le libellé reste dit au lecteur d'écran. */
+  compact?: boolean;
+  /** Le geste principal de l'écran. */
+  principal?: boolean;
 }) {
   const { t } = useI18n();
   const dialogue = useRef<HTMLDialogElement>(null);
@@ -71,12 +77,25 @@ export function TelechargerDossierComptable({
     <>
       <button
         type="button"
-        className="cab-doclib-button"
-        onClick={ouvrir}
+        className={
+          compact
+            ? "cab-doclib-button cab-doclib-icone"
+            : principal
+              ? "cab-doclib-button cab-doclib-primary"
+              : "cab-doclib-button"
+        }
+        onClick={(e) => {
+          // Sur une carte qui s'ouvre, télécharger n'ouvre pas la carte.
+          e.preventDefault();
+          e.stopPropagation();
+          ouvrir();
+        }}
         disabled={pieces.length === 0}
+        aria-label={compact ? (libelle ?? t("cab.biblio.download")) : undefined}
+        title={compact ? (libelle ?? t("cab.biblio.download")) : undefined}
       >
         <Download className="h-4 w-4" aria-hidden />
-        {libelle ?? t("cab.biblio.download")}
+        {compact ? null : (libelle ?? t("cab.biblio.download"))}
       </button>
       <dialog ref={dialogue} className="cab-doclib-dialog" onCancel={fermer}>
         <div className="flex items-start justify-between gap-4">

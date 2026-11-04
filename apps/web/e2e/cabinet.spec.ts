@@ -2,7 +2,7 @@
  * L'expert-comptable, sur un bureau : le cabinet s'ouvre, ses dossiers sont
  * là, un dossier client s'ouvre.
  */
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { preparerLAppareil } from "./comptes";
 
@@ -131,6 +131,61 @@ for (const [locale, onglet, pourLeCabinet, incertain] of [
   });
 }
 
+/**
+ * La bibliothèque se range par mois, puis par type (maquette du 4 novembre
+ * 2026) : on ouvre le mois le plus récent, puis son premier type, et l'on
+ * revient par la flèche pour éprouver le retour.
+ */
+async function ouvrirLesPremieresPieces(page: Page) {
+  await page.locator(".cab-doclib-carte-lien").first().click();
+  await expect(page).toHaveURL(/mois=\d{4}-\d{2}/);
+  await page.getByRole("link", { name: "Revenir", exact: true }).click();
+  await expect(page).not.toHaveURL(/mois=/);
+  await page.locator(".cab-doclib-carte-lien").first().click();
+  await page.locator(".cab-doclib-carte-lien").first().click();
+  await expect(page).toHaveURL(/type=/);
+}
+
+for (const largeur of [360, 390, 1440]) {
+  test(`bibliothèque : mois, types et pièces lisibles à ${largeur} px`, async ({
+    page,
+  }, testInfo) => {
+    const plantages: string[] = [];
+    page.on("pageerror", (e) => plantages.push(e.message));
+    await page.setViewportSize({ width: largeur, height: 900 });
+    await page.goto("/cabinet/bibliotheque");
+    const clients = page.getByRole("combobox", { name: "Client", exact: true });
+    const option = clients
+      .locator("option")
+      .filter({ hasText: /SOTUMAG/ })
+      .first();
+    await expect(option).toBeAttached();
+    await clients.selectOption((await option.getAttribute("value"))!);
+    for (const niveau of ["mois", "types", "pieces"]) {
+      if (niveau !== "mois") await page.locator(".cab-doclib-carte-lien").first().click();
+      await expect(
+        page
+          .locator(niveau === "pieces" ? ".cab-doclib-documents li" : ".cab-doclib-carte")
+          .first(),
+      ).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      await testInfo.attach(`bibliotheque-${niveau}-${largeur}`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
+    }
+    // Échap remonte d'un niveau, comme la flèche.
+    await page.keyboard.press("Escape");
+    await expect(page).not.toHaveURL(/type=/);
+    await expect(page).toHaveURL(/mois=/);
+    expect(plantages).toEqual([]);
+  });
+}
+
 test("la bibliothèque ouvre les documents réels et prépare une sélection", async ({ page }) => {
   await page.goto("/cabinet/bibliotheque");
   await expect(page.getByRole("heading", { name: "Bibliothèque", exact: true })).toBeVisible();
@@ -143,6 +198,7 @@ test("la bibliothèque ouvre les documents réels et prépare une sélection", a
   const id = await option.getAttribute("value");
   expect(id).toBeTruthy();
   await clients.selectOption(id!);
+  await ouvrirLesPremieresPieces(page);
   const ligne = page.locator(".cab-doclib-documents li").first();
   await expect(ligne).toBeVisible();
   await ligne.getByRole("checkbox").check();
@@ -371,6 +427,7 @@ for (const largeur of [390, 1440]) {
       .first();
     await expect(option).toBeAttached();
     await clients.selectOption((await option.getAttribute("value"))!);
+    await ouvrirLesPremieresPieces(page);
     await page.locator(".cab-doclib-documents li").first().locator("a").first().click();
     const inscription = page
       .getByText("Règlement fournisseur · ESSAI-PARTIEL", { exact: true })
@@ -467,6 +524,7 @@ for (const [locale, titre, observation, avertissement] of [
       .first();
     await expect(option).toBeAttached();
     await clients.selectOption((await option.getAttribute("value"))!);
+    await ouvrirLesPremieresPieces(page);
     await page.locator(".cab-doclib-documents li").first().locator("a").first().click();
     await expect(page).toHaveURL(/\/cabinet\/piece\//);
     const bouton = page.getByRole("button", { name: titre });
