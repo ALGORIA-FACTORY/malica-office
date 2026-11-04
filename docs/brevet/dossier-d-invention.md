@@ -361,6 +361,38 @@ sont générales et ne dépendent d'aucun modèle :
 **Effet mesuré.** Mêmes 412 pièces, même OCR : 74 faux et 16 inventés → 0 et 0. 338 pistes
 signalées. Un champ juste perdu, qui n'était prouvé que par une preuve sans contenu.
 
+### I-M — L'appariement global d'une colonne de libellés par l'ordre
+
+**Problème.** Le libellé d'un total se cherche sur son voisin. Une pièce photographiée
+dont la colonne des montants a glissé d'une demi-rangée met chaque libellé à côté de la
+valeur suivante : le TTC à côté du « Total avec timbre ». La preuve arithmétique tient,
+mais le HT ne « porte pas son libellé » et la pièce est rendue muette.
+
+**Ce qui est nouveau.**
+
+- Les libellés se reconnaissent en colonne : des suites de mots de même taille, alignées
+  à gauche et serrées, dont la majorité finit par « : ». Les bords de la colonne sont des
+  libellés à « : ».
+- L'ordre vertical se conserve même quand la géométrie glisse. Le i-ème libellé va à la
+  i-ème valeur de la suite consécutive de montants imprimés, à sa droite et dans sa
+  hauteur, la plus proche rangée par rangée. Les suites presque aussi proches comptent
+  toutes, puisque le sens du glissement est inconnu.
+- L'appariement ne prouve rien. Il dit seulement qu'une valeur établie par l'arithmétique
+  porte bien son libellé, et il restreint les valeurs qu'un champ peut prendre.
+
+**Effet mesuré.** Cinq factures prouvées justes, sans faux nouveau.
+
+### I-N — Une charge proportionnelle annoncée par son taux imprimé
+
+**Problème.** Une charge facultative (le FODEC) n'est cherchée que si son libellé est lu.
+Si le libellé est perdu, la base de TVA (HT + FODEC) est prise pour le HT.
+
+**Ce qui est nouveau.** Le taux de la charge, tiré du référentiel daté, imprimé sur une
+rangée qui porte un montant et AUCUN mot, l'annonce aussi. Un mot sur la rangée (« Retenue
+à la source 1 % ») nomme autre chose au même taux et n'annonce rien.
+
+**Effet mesuré.** Quatre factures prouvées justes, FODEC compris, sans faux nouveau.
+
 ### I-K — La lecture en deux temps : le tableau d'abord, rien de sauté
 
 **Problème.** La preuve a besoin du tableau et des totaux. Les longues mentions servent à

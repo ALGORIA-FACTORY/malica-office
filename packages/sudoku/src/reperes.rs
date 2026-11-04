@@ -5,6 +5,8 @@
 //! voisins n'ancrent que s'ils sont de purs libellés, sans montant ni date).
 
 use crate::entree::{Champ, Jeton};
+use crate::valeurs::{CENT, PPM};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Un texte d'une écriture de droite à gauche : l'hébreu, l'arabe, le syriaque, le
 /// thâna, le n'ko… — les blocs Unicode dont les lettres ont la classe bidirectionnelle
@@ -86,6 +88,11 @@ pub struct Plan<'a> {
     droite: Vec<Option<usize>>,
     dessus: Vec<Option<usize>>,
     rtl: Vec<bool>,
+    /// Les libellés (normalisés) que l'ordre d'une colonne de libellés donne à une valeur
+    /// (`colonnes_de_libelles`).
+    paires: BTreeMap<usize, Vec<String>>,
+    /// Les taux (en ppm) imprimés sur une rangée sans mot qui porte un montant imprimé.
+    taux_chiffres: BTreeSet<i64>,
 }
 
 impl<'a> Plan<'a> {
@@ -130,7 +137,20 @@ impl<'a> Plan<'a> {
             dessus[i] = meilleur_d.map(|(k, _)| k);
         }
         let rtl = jetons.iter().map(|j| droite_a_gauche(&j.texte)).collect();
-        Plan { jetons, normes, gauche, droite, dessus, rtl }
+        let paires = colonnes_de_libelles(jetons);
+        let taux_chiffres = taux_sur_rangees_chiffrees(jetons);
+        Plan { jetons, normes, gauche, droite, dessus, rtl, paires, taux_chiffres }
+    }
+
+    /// Le taux `ppm` est-il imprimé, sans mot, sur une rangée qui porte un montant
+    /// (« 31,675 1 % ») ?
+    pub fn taux_chiffre(&self, ppm: i64) -> bool {
+        self.taux_chiffres.contains(&ppm)
+    }
+
+    /// La valeur `i` est-elle, dans l'ordre d'une colonne de libellés, celle d'un repère ?
+    pub fn apparie(&self, i: usize, reperes: &[String]) -> bool {
+        self.paires.get(&i).is_some_and(|ts| ts.iter().any(|t| reperes.iter().any(|r| t.contains(r.as_str()))))
     }
 
     /// Un repère est-il lu sur une RANGÉE qui porte un montant, à gauche de ce montant ?
@@ -307,4 +327,172 @@ impl<'a> Plan<'a> {
             || d.is_some_and(|k| (self.rtl[k] || d_dp) && libelle_vers(Some(k), &|x| self.droite[x]))
             || (dessus && self.dessus[i].is_some_and(libelle))
     }
+}
+
+/// L'appariement GLOBAL d'une colonne de libellés et des valeurs à sa droite.
+///
+/// Une pièce imprime ses totaux en deux colonnes : les libellés (« TOTAL HT: », « TVA: »,
+/// « Timbre fiscal: », « TTC: ») à gauche, les montants à droite. Photographiée, la colonne
+/// des montants glisse d'une demi-rangée : le voisin d'un libellé n'est plus sa valeur
+/// (banc sans IA du 4 novembre 2026, algoria-013 : « TTC: » à côté du « Total avec
+/// timbre »). L'ORDRE, lui, se conserve. Une colonne de libellés — des suites de mots,
+/// alignées à gauche et serrées, en majorité terminées par « : » — et, à sa droite, dans sa
+/// hauteur, au moins autant de montants imprimés : le i-ème libellé est celui de la i-ème
+/// valeur de la suite la plus proche — ou de chacune des suites presque aussi proches
+/// (moins d'une hauteur de rangée d'écart cumulé) : une colonne qui a glissé d'une
+/// demi-rangée ne dit pas de quel côté. L'appariement ne PROUVE rien : il dit seulement
+/// qu'une valeur que l'arithmétique a établie porte bien son libellé. Moins de valeurs que
+/// de libellés : rien n'est apparié.
+fn colonnes_de_libelles(jetons: &[Jeton]) -> BTreeMap<usize, Vec<String>> {
+    let h = |j: &Jeton| (j.y1 - j.y0).max(f64::EPSILON);
+    let mot = |j: &Jeton| j.montants.is_empty() && j.date.is_none() && !j.texte.chars().any(|c| c.is_ascii_digit());
+    // Les rangées, ordonnées de gauche à droite (celles des lignes d'articles).
+    let mut rangs = crate::lignes::rangees_selon(jetons, f64::min);
+    // Les libellés : une suite de mots adjacents dont le dernier finit par « : ».
+    struct Libelle {
+        page: u32,
+        x0: f64,
+        x1: f64,
+        y0: f64,
+        y1: f64,
+        h: f64,
+        /// La suite finit par « : ».
+        deux_points: bool,
+        texte: String,
+    }
+    let mut libelles: Vec<Libelle> = Vec::new();
+    let clore = |suite: &mut Vec<usize>, libelles: &mut Vec<Libelle>| {
+        if let Some(&fin) = suite.last() {
+            let js: Vec<&Jeton> = suite.iter().map(|&q| &jetons[q]).collect();
+            libelles.push(Libelle {
+                page: jetons[fin].page,
+                x0: js.iter().map(|q| q.x0).fold(f64::MAX, f64::min),
+                x1: js.iter().map(|q| q.x1).fold(f64::MIN, f64::max),
+                y0: js.iter().map(|q| q.y0).fold(f64::MAX, f64::min),
+                y1: js.iter().map(|q| q.y1).fold(f64::MIN, f64::max),
+                h: js.iter().map(|q| h(q)).fold(0.0, f64::max),
+                deux_points: jetons[fin].texte.trim_end().ends_with(':'),
+                texte: normaliser(&js.iter().map(|q| q.texte.as_str()).collect::<Vec<_>>().join(" ")),
+            });
+        }
+        suite.clear();
+    };
+    for r in &mut rangs {
+        let mut suite: Vec<usize> = Vec::new();
+        for &k in r.iter() {
+            let j = &jetons[k];
+            // adjacents, et de la même taille : un libellé ne prolonge pas la phrase voisine
+            // que la rangée recouvre (« … dinars | TTC: », algoria-013)
+            let colle = suite.last().is_none_or(|&p| {
+                let (hp, hj) = (h(&jetons[p]), h(j));
+                j.x0 - jetons[p].x1 <= 1.5 * hj && hp.max(hj) <= 1.5 * hp.min(hj)
+            });
+            if !mot(j) || !colle {
+                clore(&mut suite, &mut libelles);
+            }
+            if !mot(j) {
+                continue;
+            }
+            suite.push(k);
+            if j.texte.trim_end().ends_with(':') {
+                clore(&mut suite, &mut libelles);
+            }
+        }
+        clore(&mut suite, &mut libelles);
+    }
+    libelles.sort_by(|a, b| a.page.cmp(&b.page).then(a.y0.partial_cmp(&b.y0).unwrap_or(std::cmp::Ordering::Equal)));
+    // Les colonnes : des libellés alignés à gauche, chacun juste sous le précédent.
+    let mut colonnes: Vec<Vec<usize>> = Vec::new();
+    for (k, l) in libelles.iter().enumerate() {
+        let suit = colonnes.iter_mut().find(|c| {
+            let p = &libelles[*c.last().expect("colonne non vide")];
+            p.page == l.page
+                && (p.x0 - l.x0).abs() <= 2.0 * l.h
+                && l.y0 - p.y1 <= 1.5 * l.h
+                && l.y0 >= p.y0
+                && p.h.max(l.h) <= 1.5 * p.h.min(l.h)
+        });
+        match suit {
+            Some(c) => c.push(k),
+            None => colonnes.push(vec![k]),
+        }
+    }
+    let mut paires = BTreeMap::new();
+    // Une colonne de libellés : au moins deux, dont plus de la moitié finissent par « : »
+    // (l'OCR en perd un : « Timbre fiscalt », algoria-029).
+    // Ses bords sont des libellés à « : » : une ligne sans, en tête ou en queue, n'en est pas.
+    for c in colonnes.iter_mut() {
+        while c.last().is_some_and(|&k| !libelles[k].deux_points) {
+            c.pop();
+        }
+        while c.first().is_some_and(|&k| !libelles[k].deux_points) {
+            c.remove(0);
+        }
+    }
+    let libellee = |c: &&Vec<usize>| {
+        let n = c.iter().filter(|&&k| libelles[k].deux_points).count();
+        n >= 2 && 2 * n > c.len()
+    };
+    for c in colonnes.iter().filter(libellee) {
+        let ls: Vec<&Libelle> = c.iter().map(|&k| &libelles[k]).collect();
+        let hc = ls.iter().map(|l| l.h).fold(0.0, f64::max);
+        let (haut, bas) = (ls[0].y0 - hc, ls[ls.len() - 1].y1 + hc);
+        let droite = ls.iter().map(|l| l.x1).fold(f64::MIN, f64::max);
+        let mut valeurs: Vec<usize> = (0..jetons.len())
+            .filter(|&i| {
+                let j = &jetons[i];
+                let centre = (j.y0 + j.y1) / 2.0;
+                j.page == ls[0].page && j.x0 > droite && centre >= haut && centre <= bas && j.montants.iter().any(|m| m.forte)
+            })
+            .collect();
+        if valeurs.len() < ls.len() {
+            continue;
+        }
+        let centre = |i: usize| (jetons[i].y0 + jetons[i].y1) / 2.0;
+        valeurs.sort_by(|&a, &b| centre(a).partial_cmp(&centre(b)).unwrap_or(std::cmp::Ordering::Equal));
+        // Une valeur de trop dans la hauteur (le montant de la dernière ligne d'articles,
+        // juste au-dessus) : la suite de valeurs consécutives la plus proche, rangée par
+        // rangée, des libellés ; deux suites aussi proches n'apparient rien.
+        let ecart = |debut: usize| -> f64 {
+            ls.iter().enumerate().map(|(k, l)| (centre(valeurs[debut + k]) - (l.y0 + l.y1) / 2.0).abs()).sum()
+        };
+        let mut fenetres: Vec<(f64, usize)> = (0..=valeurs.len() - ls.len()).map(|d| (ecart(d), d)).collect();
+        fenetres.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+        let meilleur = fenetres[0].0;
+        for &(_, debut) in fenetres.iter().take_while(|(e, _)| *e - meilleur < hc) {
+            for (k, l) in ls.iter().enumerate() {
+                paires.entry(valeurs[debut + k]).or_insert_with(Vec::new).push(l.texte.clone());
+            }
+        }
+    }
+    paires
+}
+
+/// Les taux (en ppm) qu'une rangée sans mot imprime à côté d'un montant imprimé : « 1 % »
+/// ou « 1% », « 19,5 % ». Une charge proportionnelle du pack (le FODEC) dont le libellé est
+/// perdu s'annonce encore par son taux chiffré (banc sans IA du 4 novembre 2026,
+/// algoria-054 : « 31,675 1 % », le libellé arabe du FODEC non lu ; la base à 19 %,
+/// FODEC compris, était prise pour le HT).
+fn taux_sur_rangees_chiffrees(jetons: &[Jeton]) -> BTreeSet<i64> {
+    let motif = regex::Regex::new(r"(?:^|[^\d.,])(\d{1,2})(?:[.,](\d{1,3}))?\s*%").expect("motif");
+    let mut taux = BTreeSet::new();
+    for r in crate::lignes::rangees_selon(jetons, f64::min) {
+        // une rangée SANS mot : un mot y nomme une autre chose au même taux (« Retenue à la
+        // source 1 % », d100/B-01)
+        if !r.iter().any(|&i| jetons[i].montants.iter().any(|m| m.forte))
+            || r.iter().any(|&i| jetons[i].texte.chars().any(char::is_alphabetic))
+        {
+            continue;
+        }
+        let texte = r.iter().map(|&i| jetons[i].texte.as_str()).collect::<Vec<_>>().join(" ");
+        for c in motif.captures_iter(&texte) {
+            // « 19,5 % » : 195 / 10 pour cent, en ppm (millionièmes)
+            let chiffres = format!("{}{}", &c[1], c.get(2).map_or("", |d| d.as_str()));
+            let echelle = 10i128.pow(c.get(2).map_or(0, |d| d.as_str().len()) as u32);
+            if let Ok(n) = chiffres.parse::<i128>() {
+                taux.insert((n * PPM / (CENT * echelle)) as i64);
+            }
+        }
+    }
+    taux
 }

@@ -125,6 +125,40 @@ Chaque faux a eu sa cause exacte et sa correction générale :
   base. Une seule pièce change : 50/12, de faux à juste.
 - Les régressions sont fixées dans `packages/sudoku/tests/zero_faux_du_banc.rs`.
 
+## Bulletin 5 — des silences aux preuves, sans nouveau faux (5 novembre 2026)
+
+Mêmes 412 pièces, même cache OCR, toujours **0 faux et 0 inventé** :
+
+|                |     juste |  faux |   silence | inventé | signalé (non affirmé) |
+| -------------- | --------: | ----: | --------: | ------: | --------------------: |
+| Bulletin 4     |     4 757 |     0 |     6 629 |       0 |                   338 |
+| **Bulletin 5** | **4 821** | **0** | **6 609** |   **0** |               **294** |
+
+Le diagnostic d'abord : sur les 85 factures non prouvées sans raison dite, 47 portaient
+tous leurs totaux lus. Ce n'était pas l'OCR, c'était l'appariement des libellés. Trois
+mécanismes généraux :
+
+- **L'appariement global d'une colonne de libellés** (`reperes::colonnes_de_libelles`).
+  Photographiée, la colonne des montants glisse d'une demi-rangée, et le voisin d'un
+  libellé n'est plus sa valeur. L'ordre, lui, se conserve : le i-ème libellé d'une
+  colonne (alignée, serrée, en majorité terminée par « : ») va à la i-ème valeur de la
+  suite la plus proche. Un « : » perdu (« Timbre fiscalt ») ne rompt pas la colonne, et
+  une valeur de trop au-dessus (la dernière ligne d'articles) non plus. Pièces
+  prouvées : a013, a029, a030, a034, a035.
+- **Une charge proportionnelle s'annonce par son taux** imprimé, sans mot, sur une
+  rangée chiffrée (« 31,675 1 % »). Le FODEC dont le libellé arabe n'est pas lu n'est
+  plus pris dans le HT. « Retenue à la source 1 % » porte un mot et n'annonce rien.
+  Pièces prouvées : a054, a057, s042, s062.
+- **Un point collé après des décimales complètes** (« 534,443. ») laisse une lecture
+  faible ; l'arithmétique la retient ou non. « 8, » reste illisible. Pièce prouvée : a018.
+
+Mesuré, puis écarté : relancer la recherche sans la restriction aux valeurs ancrées
+quand elle ne trouve rien. Sur le jeu des 100 factures, la variante « TTC avec timbre »
+prenait alors le net à payer pour le TTC. Rien n'en dépendait une fois l'appariement en
+place.
+
+Les régressions sont fixées dans `packages/sudoku/tests/des_silences_aux_preuves.rs`.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

@@ -8,6 +8,9 @@ use std::collections::BTreeMap;
 /// Dénominateur des parties par million : l'unité du contrat, pas un taux.
 pub const PPM: i128 = 1_000_000;
 
+/// Un pourcentage s'exprime sur cent : l'unité du symbole « % », pas un taux.
+pub const CENT: i128 = 100;
+
 /// Division arrondie au plus proche, demi loin de zéro (d > 0).
 pub fn div_arrondi(n: i128, d: i128) -> i128 {
     if n >= 0 {

@@ -27,7 +27,7 @@ mod colonnes;
 mod milieu;
 
 use crate::entree::{Entree, Grille, Jeton};
-use crate::valeurs::{div_arrondi, PPM};
+use crate::valeurs::{div_arrondi, CENT, PPM};
 use crate::{ChampSortie, RefJeton};
 use regex::Regex;
 use serde::Serialize;
@@ -39,9 +39,6 @@ pub const OP: &str = "lignes";
 
 /// Plafond des combinaisons de triplets explorées ; au-delà, les lignes sont signalées.
 const PLAFOND_COMBINAISONS: u64 = 100_000;
-
-/// Un pourcentage s'exprime sur cent : l'unité du symbole « % », pas un taux.
-const CENT: i128 = 100;
 
 #[derive(Serialize, Clone)]
 pub struct Cite {

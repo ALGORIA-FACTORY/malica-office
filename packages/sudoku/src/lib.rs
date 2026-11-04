@@ -202,18 +202,20 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     // sans montant à côté : c'est ce qui empêche un TTC de « fermer » sans le timbre
     // imprimé que l'OCR a manqué. Les autres champs facultatifs (retenue, acompte…)
     // ne le sont que sur une rangée chiffrée.
-    let charges: BTreeSet<usize> = modele
+    // Une charge PROPORTIONNELLE l'est aussi par son taux, imprimé sur une rangée chiffrée
+    // (« 31,675 1 % ») : son libellé perdu ne l'efface pas.
+    let charges: BTreeMap<usize, Option<i64>> = modele
         .contraintes
         .iter()
         .filter_map(|cp| match cp.c {
-            Contrainte::Charge { m, .. } => Some(m),
+            Contrainte::Charge { m, taux_ppm, .. } => Some((m, taux_ppm)),
             _ => None,
         })
         .collect();
     for (i, v) in modele.vars.iter_mut().enumerate() {
         if v.facultatif {
-            let annonce = if charges.contains(&i) {
-                plan.annonce(&reperes[v.champ])
+            let annonce = if let Some(taux) = charges.get(&i) {
+                plan.annonce(&reperes[v.champ]) || taux.is_some_and(|t| t > 0 && plan.taux_chiffre(t))
             } else {
                 plan.annonce_chiffree(&reperes[v.champ])
             };
@@ -247,7 +249,9 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 // candidat (`par_les_lettres`), est ancré par sa propre phrase : il compte.
                 .filter(|(_, val)| {
                     val.occurrences.iter().any(|o| {
-                        plan.ancre(o.jeton, &reperes[champ], None, false) || entree.jetons[o.jeton].lettres.is_some()
+                        plan.ancre(o.jeton, &reperes[champ], None, false)
+                            || plan.apparie(o.jeton, &reperes[champ])
+                            || entree.jetons[o.jeton].lettres.is_some()
                     })
                 })
                 .map(|(v, _)| *v)
@@ -671,7 +675,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             let champ = modele.vars[t].champ;
             let ancre_par = |reperes: &[String]| {
                 dom.valeurs.get(&ht).is_some_and(|x| {
-                    x.occurrences.iter().any(|o| plan.libelle_avant(o.jeton, reperes) || plan.ancre(o.jeton, reperes, None, true))
+                    x.occurrences.iter().any(|o| {
+                        plan.libelle_avant(o.jeton, reperes)
+                            || plan.ancre(o.jeton, reperes, None, true)
+                            || plan.apparie(o.jeton, reperes)
+                    })
                 })
             };
             // À un seul taux, la base imprimée EST le total HT : une valeur imprimée sous le

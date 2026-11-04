@@ -132,6 +132,27 @@ describe("sudoku — les jetons du plan", () => {
     // Un montant à espace de milliers n'est pas une case collée.
     assert.equal(seul!.decoupes, undefined);
   });
+
+  it("un point collé après des décimales complètes laisse une lecture faible (algoria-018)", () => {
+    const jeton = (ordinal: number, text: string) => ({
+      page: 1,
+      ordinal,
+      text,
+      x0: 0,
+      y0: 0,
+      x1: 1,
+      y1: 1,
+    });
+    const [ponctue, coupe, entier] = jetonsDuSudoku(
+      [jeton(0, "534,443."), jeton(1, "8,"), jeton(2, "534,443")],
+      devise,
+      LECTURE,
+    );
+    assert.deepEqual(ponctue!.montants, [{ v: 534_443, forte: false }]);
+    // Des décimales incomplètes : un montant peut-être coupé, rien n'est lu.
+    assert.deepEqual(coupe!.montants, []);
+    assert.deepEqual(entier!.montants, [{ v: 534_443, forte: true }]);
+  });
 });
 
 /** Une grille comme celle de la base : les rôles des champs viennent de ses preuves. */

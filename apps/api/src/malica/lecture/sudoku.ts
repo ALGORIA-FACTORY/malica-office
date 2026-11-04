@@ -162,17 +162,38 @@ export function jetonsDuSudoku(
     y1: t.y1,
     ...(typeof t.confidence === "number" ? { confiance: t.confidence } : {}),
     ...(jetonDouteux(t.text) ? { douteux: true } : {}),
-    montants: treillisMontant(t.text, devise).map((h) => ({
-      v: h.millimes,
-      // « 16000 » se lit aussi 16,000 (virgule perdue) : le treillis l'appelle
-      // décimale, mais aucun séparateur n'est imprimé. Elle reste faible.
-      forte: h.lecture === "decimale" && SEPARATEUR.test(t.text),
-    })),
+    montants: montantsDuJeton(t.text, devise),
     ...dates[i]!,
     ...(identifiants[i]!.length > 0 ? { identifiants: identifiants[i]! } : {}),
     ...(lettres.has(cleDeJeton(t)) ? { lettres: lettres.get(cleDeJeton(t))! } : {}),
     ...decoupesDe(t.text, devise),
   }));
+}
+
+/**
+ * Les lectures d'un jeton pour le moteur. « 16000 » se lit aussi 16,000 (virgule
+ * perdue) : le treillis l'appelle décimale, mais aucun séparateur n'est imprimé. Elle
+ * reste faible.
+ *
+ * Un point ou une virgule APRÈS des décimales complètes (« 534,443. », la ponctuation de
+ * la phrase collée par l'OCR) : le lecteur unique refuse le texte, un montant finit par
+ * un chiffre (« 8, » n'est pas fini). Ici les décimales de la devise sont toutes
+ * imprimées : le texte sans sa marque finale se lit, en lecture FAIBLE — c'est
+ * l'arithmétique de la pièce qui la retient ou non. Banc sans IA du 4 novembre 2026,
+ * algoria-018 : « 19 % 2 812,858 534,443. », la TVA d'un taux perdue, la pièce non
+ * prouvée.
+ */
+function montantsDuJeton(texte: string, devise: DeviseLue): { v: number; forte: boolean }[] {
+  const lues = treillisMontant(texte, devise).map((h) => ({
+    v: h.millimes,
+    forte: h.lecture === "decimale" && SEPARATEUR.test(texte),
+  }));
+  if (lues.length > 0 || devise.decimales === 0) return lues;
+  const complete = new RegExp(`[.,]\\d{${devise.decimales}}[.,]$`, "u");
+  if (!complete.test(texte.trim())) return lues;
+  return treillisMontant(texte.trim().slice(0, -1), devise)
+    .filter((h) => h.lecture === "decimale")
+    .map((h) => ({ v: h.millimes, forte: false }));
 }
 
 /**
