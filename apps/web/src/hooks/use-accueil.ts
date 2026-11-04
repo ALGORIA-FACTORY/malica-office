@@ -140,19 +140,16 @@ export interface Accueil {
 const moisPrecedent = moisDecale;
 
 /**
- * Le mois que la carte de TVA montre : le plus récent de la série qui a
- * quelque chose à dire — un solde, ou des pièces hors du calcul —, sinon le
- * mois courant.
- *
- * Le 1er novembre, la carte disait « TVA · novembre — » sur un dossier dont
- * les pièces étaient de septembre et d'octobre : le mois commençait, rien n'y
- * était encore rangé, et le chiffre du dirigeant paraissait vide. La même
- * règle que les cartes des dossiers (`periodeMontree`, #156). La série
- * s'arrête au mois courant : un mois à venir n'y est jamais.
+ * Le mois que la carte de TVA montre : le mois EN COURS, toujours — décision
+ * du dirigeant, 4 novembre 2026. La carte montrait jusque-là le plus récent
+ * mois « qui avait quelque chose à dire », et un dossier dont la dernière
+ * pièce était de février affichait « TVA · février » en novembre : le chiffre
+ * parlait d'un autre mois que celui qu'on vit. Un mois en cours encore vide
+ * dit « à confirmer », il ne se remplace pas par un autre. La série s'arrête
+ * au mois courant : son dernier mois est celui-là.
  */
 export function moisDeLaCarte(serie: readonly MoisDeTva[]): MoisDeTva {
-  const plein = [...serie].reverse().find((m) => m.solde !== null || m.horsDuCalcul > 0);
-  return plein ?? serie[serie.length - 1]!;
+  return serie[serie.length - 1]!;
 }
 
 export function useAccueil(periode: string): Accueil {
