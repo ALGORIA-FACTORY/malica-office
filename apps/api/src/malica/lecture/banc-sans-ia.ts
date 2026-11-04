@@ -259,11 +259,14 @@ function comparer(
           champ.valeurs.find(
             (d) => cle(d.code) === cle(attendu) || d.formes.some((f) => cle(f) === cle(attendu)),
           )?.code ?? String(attendu);
-        return { lu: v, juste: v === vrai };
+        // Un titre double (« Bon de Livraison/Facture ») : juste si l'une de ses formes est
+        // celle du code lu.
+        const formesLues = champ.valeurs.find((d) => d.code === v)?.formes ?? [];
+        return {
+          lu: v,
+          juste: v === vrai || formesLues.some((f) => cle(attendu).includes(cle(f))),
+        };
       }
-      // Le type de pièce se lit en code (« facture ») ; la vérité porte le titre imprimé.
-      if (champ.code === "type_document")
-        return { lu: v, juste: texteNormal(attendu).split(" ").includes(texteNormal(v)) };
       if (champ.expert === "tiers")
         return { lu: v, juste: nomNormal(v, contexte) === nomNormal(attendu, contexte) };
       return { lu: v, juste: texteNormal(v) === texteNormal(attendu) };

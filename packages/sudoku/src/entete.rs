@@ -1392,6 +1392,17 @@ fn liste_du_domaine(page: &Page, n: usize, ch: &crate::entree::Champ) -> ChampSo
                     meilleur = Some((code, e));
                 }
             }
+            // Une forme prise dans l'étiquette d'un AUTRE champ n'est pas une valeur : « Reçu
+            // le » (le visa du client) ne dit pas que la pièce est un reçu.
+            let dans_une_etiquette = |s: usize, e: usize| {
+                let autour = [(s.saturating_sub(2), e), (s.saturating_sub(1), e), (s, (e + 1).min(rang.len() - 1)), (s, (e + 2).min(rang.len() - 1))];
+                autour.iter().any(|&(a, b)| {
+                    (a, b) != (s, e) && page.libelle_de(&rang[a..=b]).is_some_and(|et| !et.champs.contains(&n))
+                })
+            };
+            // … sauf si la forme est elle-même un repère du champ (« FACTURE » dans « FACTURE N° »).
+            let repere_du_champ = |s: usize, e: usize| page.libelle_de(&rang[s..=e]).is_some_and(|et| et.champs.contains(&n));
+            let meilleur = meilleur.filter(|&(_, e)| repere_du_champ(s, e) || !dans_une_etiquette(s, e));
             match meilleur {
                 Some((code, e)) => {
                     let jetons = rang[s..=e].to_vec();
@@ -1401,6 +1412,19 @@ fn liste_du_domaine(page: &Page, n: usize, ch: &crate::entree::Champ) -> ChampSo
                     s = e + 1;
                 }
                 None => s += 1,
+            }
+        }
+        // Une barre sépare deux valeurs dans un même jeton (« Livraison/Facture ») : chacune
+        // de ses parties se lit aussi comme une forme.
+        for &t in rang.iter() {
+            let texte = &page.j[t].texte;
+            if !texte.contains('/') || vus.iter().any(|v| v.1.contains(&t)) {
+                continue;
+            }
+            for partie in texte.split('/') {
+                if let Some((code, _)) = formes.iter().find(|(_, f)| *f == mot(partie)) {
+                    vus.push((code, vec![t], false));
+                }
             }
         }
     }
@@ -1479,20 +1503,14 @@ pub fn nommes(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
                 ChampSortie { valeur: None, refs: Vec::new(), statut: statut.into(), instances: None }
             }
             "liste" if !ch.valeurs.is_empty() => liste_du_domaine(&page, n, ch),
+            // Une liste sans domaine ne se lit pas : ses repères mêlent étiquettes (« Statut »,
+            // « Régime », « Motif ») et valeurs, et rien ne dit lesquels sont des valeurs. Banc
+            // sans IA du 4 novembre 2026 : 14 étiquettes rendues comme valeurs. Le champ attend
+            // son domaine (`ref.concepts.domaine`) ; il ne dit, d'ici là, que l'étiquette vue.
             "liste" => {
                 let (vus, partage) = repere_imprime(&page, n);
-                let mut valeurs: BTreeMap<String, &Vec<usize>> = BTreeMap::new();
-                for v in &vus {
-                    valeurs.entry(cle(&v.iter().map(|&t| page.normes[t].as_str()).collect::<String>())).or_insert(v);
-                }
-                match valeurs.len() {
-                    1 if !partage => {
-                        let v = valeurs.into_values().next().unwrap_or(&vus[0]);
-                        ChampSortie { valeur: Some(page.texte(v)), refs: page.cite(v), statut: "conforme".into(), instances: None }
-                    }
-                    0 if !partage => ChampSortie { valeur: None, refs: Vec::new(), statut: "absent".into(), instances: None },
-                    _ => ChampSortie { valeur: None, refs: Vec::new(), statut: "signale".into(), instances: None },
-                }
+                let statut = if vus.is_empty() && !partage { "absent" } else { "signale" };
+                ChampSortie { valeur: None, refs: Vec::new(), statut: statut.into(), instances: None }
             }
             genre => {
                 let chiffre = matches!(genre, "identifiant" | "nombre" | "taux");
