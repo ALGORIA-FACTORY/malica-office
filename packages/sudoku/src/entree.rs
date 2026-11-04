@@ -68,6 +68,9 @@ pub struct Jeton {
     /// texte d'un PDF).
     #[serde(default)]
     pub confiance: Option<f64>,
+    /// Le jeton porte un mot que l'OCR a pu mal lire (le lexique de l'adaptateur le dit).
+    #[serde(default)]
+    pub douteux: bool,
     /// Date ISO rendue par `normalizeDate`, ou `null`.
     #[serde(default)]
     pub date: Option<String>,

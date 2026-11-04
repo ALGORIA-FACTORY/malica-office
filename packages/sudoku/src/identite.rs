@@ -93,3 +93,40 @@ pub fn exclusive(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
         }
     }
 }
+
+/// Une valeur qu'aucun calcul ne prouve — une date, un identifiant, un nom, un texte — n'est
+/// affirmée que si l'OCR l'a lue avec assurance : chacun de ses jetons au moins au seuil du
+/// pack (`lecture.confiance_du_texte`). Sinon elle reste, SIGNALÉE : une piste, pas une
+/// lecture. Banc sans IA du 4 novembre 2026 : chaque date, matricule ou registre faux non
+/// prouvé avait un jeton lu à moins de 0,96 (« 4084013Z » pour « 4064013Z », « 2028 » pour
+/// « 2026 »), et 1 108 justes sur 1 109 étaient lues à 0,97 ou plus.
+///
+/// Les champs `garantis` ne passent pas par là : un calcul, une seconde écriture ou un domaine
+/// fermé les valide déjà. Une valeur qui égale l'identité du dossier non plus : la base la
+/// confirme, caractère par caractère.
+pub fn assurance(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>, garantis: &BTreeSet<&str>) {
+    let seuil = entree.pack.confiance_du_texte;
+    // les jetons lus sans assurance, ou dont un mot a pu être mal lu (le lexique de l'adaptateur)
+    let incertains: BTreeSet<(u32, u32)> = entree
+        .jetons
+        .iter()
+        .filter(|j| j.douteux || seuil.is_some_and(|s| j.confiance.is_some_and(|c| c < s)))
+        .map(|j| (j.page, j.ordinal))
+        .collect();
+    let connue = entree.connus.as_ref().and_then(|c| c.dossier.as_ref()).map(|d| {
+        let compact = |s: &str| s.chars().filter(|c| c.is_alphanumeric()).flat_map(|c| c.to_uppercase()).collect::<String>();
+        (compact(&d.matricule), compact)
+    });
+    for (code, c) in champs.iter_mut() {
+        if garantis.contains(code.as_str()) || !matches!(c.statut.as_str(), "prouve" | "conforme") {
+            continue;
+        }
+        let Some(v) = c.valeur.as_deref() else { continue };
+        if connue.as_ref().is_some_and(|(m, compact)| !m.is_empty() && compact(v) == *m) {
+            continue;
+        }
+        if c.refs.iter().any(|r| incertains.contains(&(r.page, r.ordinal))) {
+            c.statut = "signale".into();
+        }
+    }
+}

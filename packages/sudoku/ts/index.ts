@@ -32,6 +32,8 @@ export interface JetonDuSudoku {
   readonly montants: readonly LectureDeMontant[];
   /** La confiance de l'OCR dans ce jeton (0..1) ; absente, il est exact. */
   readonly confiance?: number;
+  /** Le jeton porte un mot que l'OCR a pu mal lire (`lexique.ts` de l'API). */
+  readonly douteux?: boolean;
   /** Date ISO, ou null. */
   readonly date: string | null;
   /**

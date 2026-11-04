@@ -209,6 +209,16 @@ pub fn affiner(
             lignes_de_texte.extend(en_lignes(jetons, &rangs[m]));
             m += 1;
         }
+        // Un texte qui bute sur la colonne suivante a pu être COUPÉ à l'impression (la cellule
+        // trop étroite) : « Contrat d'entretien climatisation - se », sous l'intitulé QTÉ.
+        // Ce qui est imprimé n'est pas la désignation entière : elle se tait.
+        let coupe_par_la_colonne = cellules.get(k + 1).is_some_and(|suivante| {
+            lignes_de_texte.iter().flatten().any(|&i| jetons[i].x1 >= suivante.x0 - h)
+        });
+        if coupe_par_la_colonne {
+            l.designation = None;
+            continue;
+        }
         // chaque ligne est déjà dans son ordre de lecture (`en_lignes`)
         let pris: Vec<usize> = lignes_de_texte.into_iter().flatten().collect();
         l.designation = (!pris.is_empty()).then(|| {

@@ -32,7 +32,7 @@ use crate::{ChampSortie, RefJeton};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Le nom de l'op dans le langage des preuves.
 pub const OP: &str = "lignes";
@@ -784,15 +784,18 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
     // Les chiffres d'une ligne sont prouvés par le calcul ; sa désignation ne l'est par
     // rien. Un mot que l'OCR lit sans assurance (« كاء » pour « كراء ») ferait une
     // désignation fausse : elle est tue, la ligne reste.
-    if let Some(seuil) = pack.confiance_du_texte {
-        let sur: BTreeMap<(u32, u32), f64> =
-            entree.jetons.iter().filter_map(|j| j.confiance.map(|c| ((j.page, j.ordinal), c))).collect();
-        for l in instances.iter_mut() {
-            if l.designation.as_ref().is_some_and(|d| {
-                d.refs.iter().any(|r| sur.get(&(r.page, r.ordinal)).is_some_and(|&c| c < seuil))
-            }) {
-                l.designation = None;
-            }
+    // Un mot que l'OCR a pu mal lire (le lexique de l'adaptateur) fait taire la désignation
+    // aussi : « Transport de matérel », « 12 chifres ».
+    let seuil = pack.confiance_du_texte;
+    let incertains: BTreeSet<(u32, u32)> = entree
+        .jetons
+        .iter()
+        .filter(|j| j.douteux || seuil.is_some_and(|s| j.confiance.is_some_and(|c| c < s)))
+        .map(|j| (j.page, j.ordinal))
+        .collect();
+    for l in instances.iter_mut() {
+        if l.designation.as_ref().is_some_and(|d| d.refs.iter().any(|r| incertains.contains(&(r.page, r.ordinal)))) {
+            l.designation = None;
         }
     }
     let taux_par_base = verifier_taux(op, champs, &mut instances);

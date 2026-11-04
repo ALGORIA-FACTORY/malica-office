@@ -368,8 +368,10 @@ function mesurerLesRangees(
     const d = l?.designation?.valeur ?? null;
     // L'espace qu'un OCR perd ou ajoute n'est pas un mot : la désignation se compare sans lui.
     // Ni l'accent qu'il perd (« boite » pour « boîte ») : la lettre reste la même.
+    // Le signe de multiplication et la lettre x se valent dans une dimension (« 160 × 80 »
+    // imprimé, « 160 x 80 » dans la vérité) : c'est la même désignation.
     const sansEspace = (x: unknown) =>
-      texteNormal(x)
+      texteNormal(String(x).replace(/×/gu, "x"))
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/gu, "")
         .replace(/ /gu, "");

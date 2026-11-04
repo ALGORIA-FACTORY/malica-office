@@ -65,6 +65,7 @@ import {
   type TokenRef,
 } from "./token-plan.ts";
 import type { VisionRead, VisionSelection } from "./vision.ts";
+import { jetonDouteux } from "./lexique.ts";
 
 /** La grille de la lecture citée : elle lit des factures (voir l'en-tête). */
 export const GRILLE_DE_LA_LECTURE_CITEE = "facture";
@@ -160,6 +161,7 @@ export function jetonsDuSudoku(
     x1: t.x1,
     y1: t.y1,
     ...(typeof t.confidence === "number" ? { confiance: t.confidence } : {}),
+    ...(jetonDouteux(t.text) ? { douteux: true } : {}),
     montants: treillisMontant(t.text, devise).map((h) => ({
       v: h.millimes,
       // « 16000 » se lit aussi 16,000 (virgule perdue) : le treillis l'appelle

@@ -701,6 +701,24 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     // ---------- L'identité du dossier : un seul rôle par pièce ----------
     identite::exclusive(entree, &mut champs);
 
+    // ---------- Ce qu'aucun calcul ne prouve se lit avec assurance ----------
+    // Hors de son ressort : ce que l'arithmétique prouve (les montants du centre), ce que les
+    // chiffres confirment (le montant en lettres), et ce qu'un domaine fermé valide (une
+    // valeur de liste n'est rendue qu'égale, forme pour forme, à un code de son domaine).
+    let mut garantis: BTreeSet<&str> = modele.vars.iter().map(|v| grille.champs[v.champ].code.as_str()).collect();
+    for p in grille.preuves.iter().filter(|p| p.statut.as_deref() != Some("a_traduire")) {
+        if let Some(op) = p
+            .expression
+            .as_ref()
+            .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP))
+            .and_then(|e| lettres::lire_op(grille, e).ok())
+        {
+            garantis.insert(grille.champs[op.champ].code.as_str());
+        }
+    }
+    garantis.extend(grille.champs.iter().filter(|c| !c.valeurs.is_empty()).map(|c| c.code.as_str()));
+    identite::assurance(entree, &mut champs, &garantis);
+
     Ok(Sortie {
         issue,
         solutions: retenues.len(),

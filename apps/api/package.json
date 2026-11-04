@@ -10,17 +10,22 @@
     "test": "node --experimental-strip-types --env-file-if-exists=.env --env-file-if-exists=.env.test --import ./src/garde-base-de-test.ts --test"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^1.0.8",
     "@malica/socle": "*",
     "@malica/sudoku": "*",
+    "@napi-rs/canvas": "^1.0.8",
+    "an-array-of-english-words": "2.0.0",
+    "an-array-of-french-words": "2.0.0",
     "bcryptjs": "2.4.3",
     "cookie-parser": "1.4.7",
     "cors": "2.8.5",
+    "dictionary-en": "4.0.0",
+    "dictionary-fr": "3.0.0",
     "dotenv": "16.4.7",
     "express": "4.21.2",
     "express-rate-limit": "8.7.0",
     "fflate": "0.8.3",
     "jsonwebtoken": "9.0.2",
+    "nspell": "2.1.5",
     "pdfjs-dist": "^6.2.108",
     "pg": "8.13.1",
     "zod": "3.25.76"
@@ -32,6 +37,7 @@
     "@types/express": "4.17.21",
     "@types/jsonwebtoken": "9.0.7",
     "@types/node": "22.20.1",
+    "@types/nspell": "2.1.6",
     "@types/pg": "8.11.10",
     "typescript": "5.9.3"
   }
