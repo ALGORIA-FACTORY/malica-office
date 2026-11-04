@@ -54,8 +54,8 @@ connaître la taille de l'image, qu'il n'a pas.
 import io
 import json
 import os
+import queue
 import re
-import threading
 import time
 from pathlib import Path
 
@@ -190,8 +190,6 @@ _DETECTER_AVEC = {
     for cle in ("limit_side_len", "limit_type", "max_side_limit", "thresh", "box_thresh", "unclip_ratio")
 }
 _SEUIL_DE_RECONNAISSANCE = float(_REGLAGES["TextRecognition"]["score_thresh"])
-_detection = TextDetection(model_name=DETECTION, model_dir=_dossier(DETECTION), **_COMMUN)
-_latin = TextRecognition(model_name=RECONNAISSANCE, model_dir=_dossier(RECONNAISSANCE), **_COMMUN)
 _trier = SortQuadBoxes()
 _decouper = CropByPolys(det_box_type="quad")
 # Le lot de reconnaissance, pour les deux alphabets : celui du pipeline, les lignes triees
@@ -223,11 +221,6 @@ LOT = int(os.environ.get("OCR_LOT", _REGLAGES["TextRecognition"]["batch_size"]))
 # l'arabe ET dont la confiance tient : un chiffre reste latin, un mot arabe
 # devient arabe. Une seule detection, deux reconnaissances : le cout est celui
 # de la seconde reconnaissance, pas d'une seconde lecture.
-_arabe = (
-    TextRecognition(model_name=RECONNAISSANCE_ARABE, model_dir=_dossier(RECONNAISSANCE_ARABE), **_COMMUN)
-    if RECONNAISSANCE_ARABE
-    else None
-)
 # Les lignes de la sonde (voir `_relire_en_arabe`).
 SONDE_ARABE = int(os.environ.get("OCR_SONDE_ARABE", "4"))
 
@@ -382,7 +375,7 @@ def _choisir(latin: str, s_latin: float, arabe: str, s_arabe: float):
     return latin, s_latin, False
 
 
-def _relire_en_arabe(tableau, polygones, textes, scores):
+def _relire_en_arabe(lecteur: "_Lecteur", tableau, polygones, textes, scores):
     """Relire en arabe les lignes qui peuvent l'être ; garder l'arabe la ou il
     en a. Une ligne mixte se coupe en morceaux, et chacun garde sa lecture.
 
@@ -395,7 +388,7 @@ def _relire_en_arabe(tableau, polygones, textes, scores):
     """
     n = min(len(polygones), len(textes), len(scores))
     sortie = [[(textes[i], scores[i], None)] for i in range(len(textes))]
-    if _arabe is None or n == 0:
+    if lecteur.arabe is None or n == 0:
         return sortie, False
     candidates = [
         i for i in range(n)
@@ -409,7 +402,7 @@ def _relire_en_arabe(tableau, polygones, textes, scores):
     # 4 novembre 2026, facture MyTek (francaise) : 0,9 s de relecture arabe pour rien.
     sonde = sorted(candidates, key=lambda i: float(scores[i]))[:SONDE_ARABE]
     if len(candidates) > len(sonde):
-        lus_sonde = [r.json["res"] for r in _arabe.predict([decoupes[i] for i in sonde], batch_size=LOT)]
+        lus_sonde = [r.json["res"] for r in lecteur.arabe.predict([decoupes[i] for i in sonde], batch_size=LOT)]
         if not any(
             _a_de_l_arabe(r.get("rec_text", ""))
             and float(r.get("rec_score", 0.0)) >= float(scores[i]) * 0.8
@@ -417,7 +410,7 @@ def _relire_en_arabe(tableau, polygones, textes, scores):
         ):
             return sortie, False
     ordre = sorted(candidates, key=lambda i: decoupes[i].shape[1] / max(1, decoupes[i].shape[0]))
-    lus = [r.json["res"] for r in _arabe.predict([decoupes[i] for i in ordre], batch_size=LOT)]
+    lus = [r.json["res"] for r in lecteur.arabe.predict([decoupes[i] for i in ordre], batch_size=LOT)]
     mixtes = []
     for i, r in zip(ordre, lus):
         texte_ar, score_ar = r.get("rec_text", ""), float(r.get("rec_score", 0.0))
@@ -426,11 +419,11 @@ def _relire_en_arabe(tableau, polygones, textes, scores):
         elif _garder_l_arabe(textes[i], texte_ar, float(scores[i]), score_ar):
             sortie[i] = [(texte_ar, score_ar, None)]
     if mixtes:
-        _lire_mot_par_mot(tableau, polygones, decoupes, mixtes, textes, scores, sortie)
+        _lire_mot_par_mot(lecteur, polygones, decoupes, mixtes, sortie)
     return sortie, True
 
 
-def _lire_mot_par_mot(tableau, polygones, decoupes, mixtes, textes, scores, sortie):
+def _lire_mot_par_mot(lecteur: "_Lecteur", polygones, decoupes, mixtes, sortie):
     """Chaque ligne mixte, coupee a ses blancs, lue morceau par morceau par les
     deux modeles. Une ligne qu'on ne sait pas couper (un seul morceau) garde sa
     lecture latine : on ne troque pas des lettres latines contre de l'arabe."""
@@ -445,8 +438,8 @@ def _lire_mot_par_mot(tableau, polygones, decoupes, mixtes, textes, scores, sort
     if not taches:
         return
     images = [t[3] for t in taches]
-    lat = [r.json["res"] for r in _latin.predict(images, batch_size=LOT)]
-    ara = [r.json["res"] for r in _arabe.predict(images, batch_size=LOT)]
+    lat = [r.json["res"] for r in lecteur.latin.predict(images, batch_size=LOT)]
+    ara = [r.json["res"] for r in lecteur.arabe.predict(images, batch_size=LOT)]
     par_ligne: dict = {}
     for (i, a, b, img), rl, ra in zip(taches, lat, ara):
         texte, score, arabe = _choisir(
@@ -474,7 +467,7 @@ def _lire_mot_par_mot(tableau, polygones, decoupes, mixtes, textes, scores, sort
         crops = [decoupes[g[0]][:, max(0, g[1] - 2):min(decoupes[g[0]].shape[1], g[2] + 2)] for g in a_relire]
         latins = [g for g, c in zip(a_relire, crops) if not g[3]]
         arabes = [g for g, c in zip(a_relire, crops) if g[3]]
-        for modele, lot in ((_latin, latins), (_arabe, arabes)):
+        for modele, lot in ((lecteur.latin, latins), (lecteur.arabe, arabes)):
             if not lot:
                 continue
             images = [crops[a_relire.index(g)] for g in lot]
@@ -499,17 +492,42 @@ def _lire_mot_par_mot(tableau, polygones, decoupes, mixtes, textes, scores, sort
         ]
 
 
-# Le predicteur n'est pas sur a plusieurs fils : une seule lecture a la fois,
-# mais HORS de la boucle d'evenements. Avant, `predict` tournait dans la
-# boucle elle-meme : pendant une lecture de trente secondes, le controle de
-# sante ne repondait plus et le conteneur passait « unhealthy » (audit du
-# 24 octobre 2026).
-_un_a_la_fois = threading.Lock()
+# ============================================================== LES LECTEURS
+#
+# Un predicteur n'est pas sur a plusieurs fils : un LECTEUR (ses trois modeles) fait une
+# lecture a la fois, HORS de la boucle d'evenements. Avant, `predict` tournait dans la
+# boucle elle-meme : pendant une lecture de trente secondes, le controle de sante ne
+# repondait plus et le conteneur passait « unhealthy » (audit du 24 octobre 2026).
+#
+# `OCR_LECTEURS` lecteurs lisent en meme temps, chacun sur `OMP_NUM_THREADS` fils : le
+# produit est le nombre de coeurs que le service occupe. Mesure du 4 novembre 2026 : sur
+# deux coeurs, la reconnaissance est liee au calcul (voir `LOT`) — un lecteur a deux fils ;
+# une machine a quatre coeurs en porte deux, et l'API lit alors deux pages a la fois (elle
+# lit `lecteurs` sur `/sante`). La memoire croit d'un jeu de modeles par lecteur.
+class _Lecteur:
+    """Les modeles d'une lecture : detection, reconnaissance latine, arabe s'il est pose."""
 
-# Et l'attente du verrou est BORNEE (revue du 24 octobre 2026). L'API renonce
-# a 120 s ; une requete qui attendrait plus longtemps serait lue pour rien, et
-# pousserait les suivantes en delai. Au-dela, 503 : l'API bascule tout de
-# suite sur le modele de vision. Une lecture deja commencee, elle, ne
+    def __init__(self) -> None:
+        self.detection = TextDetection(model_name=DETECTION, model_dir=_dossier(DETECTION), **_COMMUN)
+        self.latin = TextRecognition(model_name=RECONNAISSANCE, model_dir=_dossier(RECONNAISSANCE), **_COMMUN)
+        self.arabe = (
+            TextRecognition(model_name=RECONNAISSANCE_ARABE, model_dir=_dossier(RECONNAISSANCE_ARABE), **_COMMUN)
+            if RECONNAISSANCE_ARABE
+            else None
+        )
+
+
+LECTEURS = int(os.environ.get("OCR_LECTEURS", "1"))
+if LECTEURS < 1:
+    raise SystemExit(f"OCR_LECTEURS doit valoir au moins 1 : {LECTEURS}")
+_libres: queue.Queue = queue.Queue()
+for _ in range(LECTEURS):
+    _libres.put(_Lecteur())
+
+# Et l'attente d'un lecteur libre est BORNEE (revue du 24 octobre 2026). L'API
+# renonce a 120 s ; une requete qui attendrait plus longtemps serait lue pour
+# rien, et pousserait les suivantes en delai. Au-dela, « occupe » : l'API bascule
+# tout de suite sur le modele de vision. Une lecture deja commencee, elle, ne
 # s'interrompt pas — Paddle ne sait pas annuler — d'ou une borne bien sous
 # le delai de l'API.
 ATTENTE_MAX_S = float(os.environ.get("OCR_ATTENTE_MAX_S", "45"))
@@ -528,6 +546,8 @@ async def sante() -> dict:
         "detection": DETECTION,
         "reconnaissance": RECONNAISSANCE,
         "reconnaissance_arabe": RECONNAISSANCE_ARABE or None,
+        # Les lectures que le service mene en meme temps : l'API y borne ses pages.
+        "lecteurs": LECTEURS,
         "appareil": APPAREIL,
         # Les empreintes vérifiées au démarrage : ce qui tourne se compare à
         # `poids.json` sans entrer dans le conteneur.
@@ -549,16 +569,18 @@ async def _en_flux(octets: bytes):
     Le statut HTTP part avant le premier temps : un lecteur occupe le dit DANS le flux
     (`{"occupe": true}`), et l'API bascule sur l'autre lecteur. Le verrou n'est rendu qu'une fois le fil de calcul revenu — une
     attente sur un fil ne s'annule pas avant lui (anyio) : deux lectures ne se recouvrent
-    jamais, meme si le client part en cours de route."""
-    if not await run_in_threadpool(_un_a_la_fois.acquire, True, ATTENTE_MAX_S):
+    jamais sur un lecteur, meme si le client part en cours de route."""
+    try:
+        lecteur = await run_in_threadpool(_libres.get, True, ATTENTE_MAX_S)
+    except queue.Empty:
         yield json.dumps({"occupe": True}) + "\n"
         return
     try:
-        vagues = _vagues(octets)
+        vagues = _vagues(lecteur, octets)
         while (temps := await run_in_threadpool(next, vagues, None)) is not None:
             yield json.dumps(temps, ensure_ascii=False) + "\n"
     finally:
-        _un_a_la_fois.release()
+        _libres.put(lecteur)
 
 
 # ================================================ LA LECTURE PAR VAGUES (4 novembre 2026)
@@ -652,23 +674,23 @@ def _premiere_vague(boites: list) -> list:
     ]
 
 
-def _reconnaitre(decoupes: list) -> list:
+def _reconnaitre(lecteur: "_Lecteur", decoupes: list) -> list:
     """La lecture latine de chaque decoupe : (texte, score). Triees par largeur avant d'etre
     reconnues, comme le fait le pipeline (un lot de meme gabarit se rembourre peu)."""
     ordre = sorted(range(len(decoupes)), key=lambda i: decoupes[i].shape[1] / float(decoupes[i].shape[0]))
     lus: list = [None] * len(decoupes)
-    for i, r in zip(ordre, _latin.predict([decoupes[i] for i in ordre], batch_size=LOT)):
+    for i, r in zip(ordre, lecteur.latin.predict([decoupes[i] for i in ordre], batch_size=LOT)):
         res = r.json["res"]  # une copie profonde a chaque lecture de `json` : une seule
         lus[i] = (res.get("rec_text", ""), float(res.get("rec_score", 0.0)))
     return lus
 
 
-def _vagues(octets: bytes):
+def _vagues(lecteur: "_Lecteur", octets: bytes):
     """La lecture d'une page, en deux temps (voir plus haut). Chaque temps rend un dict
     `{"vague", "lignes", "modele", "millisecondes"}` ; le second est la lecture complete."""
     debut = time.time()
     tableau, largeur, hauteur = _image(octets)
-    detectes = _detection.predict(tableau, **_DETECTER_AVEC)[0].json["res"]["dt_polys"]
+    detectes = lecteur.detection.predict(tableau, **_DETECTER_AVEC)[0].json["res"]["dt_polys"]
     polygones = list(_trier(detectes)) if len(detectes) else []
     # La decoupe de chaque ligne ; une decoupe vide n'est pas une ligne (comme le pipeline).
     decoupes = list(_decouper(tableau, polygones)) if polygones else []
@@ -699,7 +721,7 @@ def _vagues(octets: bytes):
 
     premiere = _premiere_vague(boites)
     lus: list = [None] * len(decoupes)
-    for i, l in zip(premiere, _reconnaitre([decoupes[i] for i in premiere])):
+    for i, l in zip(premiere, _reconnaitre(lecteur, [decoupes[i] for i in premiere])):
         lus[i] = l
     # Le premier temps : la lecture latine du tableau et des boites courtes, sans relecture
     # arabe (un montant ne passe jamais a l'arabe, `_garder_l_arabe`).
@@ -707,12 +729,13 @@ def _vagues(octets: bytes):
     yield temps(1, retenues(premiere), [[(l[0], l[1], None)] if l else [] for l in lus], False)
 
     reste = [i for i in range(len(decoupes)) if lus[i] is None]
-    for i, l in zip(reste, _reconnaitre([decoupes[i] for i in reste])):
+    for i, l in zip(reste, _reconnaitre(lecteur, [decoupes[i] for i in reste])):
         lus[i] = l
     # Le second temps : toutes les lignes, dans l'ordre du pipeline, relues en arabe la ou
     # il le faut — la lecture complete.
     toutes = retenues(range(len(decoupes)))
     morceaux, arabe = _relire_en_arabe(
+        lecteur,
         tableau,
         [polygones[i] for i in toutes],
         [lus[i][0] for i in toutes],

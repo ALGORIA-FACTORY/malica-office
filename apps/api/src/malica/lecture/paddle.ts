@@ -139,19 +139,35 @@ export class SecondLecteurOccupe extends PanneFournisseur {
  * ne répond pas en deux secondes : la santé de l'API n'en dépend pas.
  */
 export async function moteurDuSecondLecteur(): Promise<string> {
+  if (!process.env["OCR_URL"]) return "absent";
+  const corps = await santeDuSecondLecteur();
+  if (!corps) return "hs";
+  return typeof corps.moteur === "string" && /^[a-z]{1,20}$/.test(corps.moteur)
+    ? corps.moteur
+    : "inconnu";
+}
+
+/**
+ * Les lectures que le second lecteur mène en même temps (`lecteurs` sur
+ * `/sante`, `OCR_LECTEURS` du service) : les pages d'une pièce se lisent
+ * autant à la fois. Un, s'il ne le dit pas.
+ */
+export async function lecteursDuSecondLecteur(): Promise<number> {
+  const n = (await santeDuSecondLecteur())?.lecteurs;
+  return typeof n === "number" && Number.isInteger(n) && n >= 1 ? n : 1;
+}
+
+/** `/sante` du service, en deux secondes au plus ; `null` s'il ne répond pas. */
+async function santeDuSecondLecteur(): Promise<{ moteur?: unknown; lecteurs?: unknown } | null> {
   const base = process.env["OCR_URL"];
-  if (!base) return "absent";
+  if (!base) return null;
   try {
     const r = await fetch(`${base.replace(/\/+$/, "")}/sante`, {
       signal: AbortSignal.timeout(2_000),
     });
-    if (!r.ok) return "hs";
-    const corps = (await r.json()) as { moteur?: unknown };
-    return typeof corps.moteur === "string" && /^[a-z]{1,20}$/.test(corps.moteur)
-      ? corps.moteur
-      : "inconnu";
+    return r.ok ? ((await r.json()) as { moteur?: unknown; lecteurs?: unknown }) : null;
   } catch {
-    return "hs";
+    return null;
   }
 }
 

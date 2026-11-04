@@ -20,6 +20,7 @@ import { repairArticles } from "./article-repair.ts";
 import { extrairePagesScannees, pagesDessineesDuPdf } from "./pdf-image.ts";
 import {
   SecondLecteurOccupe,
+  lecteursDuSecondLecteur,
   lireAvecPaddle,
   ouvrirLeCoupeCircuit,
   secondLecteurDisponible,
@@ -583,45 +584,63 @@ async function releverDesPages(
 ): Promise<{ releve: Releve | null; tente: boolean }> {
   if (sansPaddle || !secondLecteurDisponible()) return { releve: null, tente: false };
 
-  const tokens: PageToken[] = [];
-  let modele = "paddleocr";
-  for (const image of pages) {
-    let lu: Awaited<ReturnType<typeof lireAvecPaddle>>;
-    try {
-      // Le tableau d'abord, quand la pièce tient sur une page : une page d'une
-      // pièce plus longue n'en porte qu'une partie.
-      lu = await lireAvecPaddle(
-        octetsDuDataUrl(image.dataUrl),
-        image.page,
-        undefined,
-        surLeTableau && pages.length === 1
-          ? (t) => surLeTableau(recollerLesMilliers(t))
-          : undefined,
-      );
-    } catch (e) {
-      /*
-       * PADDLEOCR TOMBÉ NE REND PLUS LA PIÈCE ILLISIBLE.
-       *
-       * Quand le modèle de vision est là, la pièce bascule sur lui, et le
-       * coupe-circuit écarte PaddleOCR des pièces suivantes. Sans modèle de
-       * vision, la panne remonte telle quelle : la file durable la rejouera,
-       * et c'est le seul recours qui reste.
-       */
-      if (!(e instanceof PanneFournisseur) || !visionDisponible()) throw e;
-      // Occupé n'est pas tombé : cette pièce seule change de lecteur.
-      if (!(e instanceof SecondLecteurOccupe)) ouvrirLeCoupeCircuit();
-      console.error(
-        `[lecture] PaddleOCR indisponible (${e.message}) : bascule sur le modèle de vision`,
-      );
-      return { releve: null, tente: true };
-    }
-    // Une seule page muette et on renonce : un plan de jetons incomplet
-    // ferait désigner sur une pièce amputée, ce qui est pire que de la
-    // relire entièrement avec l'autre lecteur.
-    if (!lu || lu.tokens.length === 0) return { releve: null, tente: true };
-    tokens.push(...lu.tokens);
-    modele = lu.modele;
+  // Les pages d'une pièce, autant à la fois que le service a de lecteurs ; chacune
+  // garde sa place dans le plan.
+  const lues: Array<Awaited<ReturnType<typeof lireAvecPaddle>>> = [];
+  const enParallele = pages.length > 1 ? await lecteursDuSecondLecteur() : 1;
+  let suivante = 0;
+  const arret: { echec: { erreur: unknown } | null; muette: boolean } = {
+    echec: null,
+    muette: false,
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(enParallele, pages.length) }, async () => {
+      while (!arret.echec && !arret.muette && suivante < pages.length) {
+        const k = suivante++;
+        const image = pages[k]!;
+        try {
+          // Le tableau d'abord, quand la pièce tient sur une page : une page d'une
+          // pièce plus longue n'en porte qu'une partie.
+          lues[k] = await lireAvecPaddle(
+            octetsDuDataUrl(image.dataUrl),
+            image.page,
+            undefined,
+            surLeTableau && pages.length === 1
+              ? (t) => surLeTableau(recollerLesMilliers(t))
+              : undefined,
+          );
+        } catch (erreur) {
+          arret.echec ??= { erreur };
+          return;
+        }
+        // Une seule page muette et on renonce : un plan de jetons incomplet
+        // ferait désigner sur une pièce amputée, ce qui est pire que de la
+        // relire entièrement avec l'autre lecteur.
+        if (!lues[k] || lues[k].tokens.length === 0) arret.muette = true;
+      }
+    }),
+  );
+  if (arret.echec) {
+    const e = arret.echec.erreur;
+    /*
+     * PADDLEOCR TOMBÉ NE REND PLUS LA PIÈCE ILLISIBLE.
+     *
+     * Quand le modèle de vision est là, la pièce bascule sur lui, et le
+     * coupe-circuit écarte PaddleOCR des pièces suivantes. Sans modèle de
+     * vision, la panne remonte telle quelle : la file durable la rejouera,
+     * et c'est le seul recours qui reste.
+     */
+    if (!(e instanceof PanneFournisseur) || !visionDisponible()) throw e;
+    // Occupé n'est pas tombé : cette pièce seule change de lecteur.
+    if (!(e instanceof SecondLecteurOccupe)) ouvrirLeCoupeCircuit();
+    console.error(
+      `[lecture] PaddleOCR indisponible (${e.message}) : bascule sur le modèle de vision`,
+    );
+    return { releve: null, tente: true };
   }
+  if (arret.muette) return { releve: null, tente: true };
+  const tokens: PageToken[] = lues.flatMap((lu) => lu!.tokens);
+  const modele = lues.at(-1)?.modele ?? "paddleocr";
   return {
     releve: {
       tokens,

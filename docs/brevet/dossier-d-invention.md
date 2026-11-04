@@ -325,26 +325,31 @@ désignation ne l'est par rien. Sur le banc, toutes les désignations dont un mo
 **Effet mesuré.** Les 4 désignations arabes mal lues de la pièce 087 sont tues, et 2 autres
 désignations fausses aussi. Aucune juste n'est perdue.
 
-### I-K — La lecture par vagues, jugée par la preuve (mesurée, gardée désactivée)
+### I-K — La lecture en deux temps : le tableau d'abord, rien de sauté
 
-**Ce qui est fait.**
+**Problème.** La preuve a besoin du tableau et des totaux. Les longues mentions servent à
+d'autres champs : matricules, montant en lettres, mode de règlement. Tout lire avant de
+prouver fait attendre la preuve. Sauter le reste quand les totaux ferment perdait 243
+champs justes (mesuré).
 
-- La page est détectée une fois, et le tableau est toujours lu, tous ses articles.
-- La première vague lit aussi les boîtes courtes.
-- Le moteur de preuve, déterministe, juge cette première vague. Si la pièce ne se prouve
-  pas, la seconde vague relit les seules boîtes restantes, fusionnées à leur place.
+**Ce qui est nouveau.**
 
-**Mesure** (412 pièces, OCR frais, deux processeurs) :
+- La page est détectée une fois. La géométrie seule désigne le premier temps : les rangées
+  d'au moins quatre boîtes, du premier au dernier rang, et les boîtes courtes.
+- Ces boîtes sont reconnues d'abord et rendues aussitôt, dans un flux (une ligne JSON par
+  temps). Le moteur de preuve, déterministe, les juge pendant que le reste se lit.
+- Le second temps est la lecture complète, relue en arabe là où il le faut. Elle est
+  identique à celle du pipeline d'un seul tenant, et c'est la seule que l'API garde.
+- Le service fait lui-même les gestes du pipeline (détecter, trier, découper, reconnaître),
+  avec ses modules et ses réglages lus dans sa configuration, jamais recopiés.
 
-- Le temps OCR baisse de 26 %, à une médiane de 3,4 s.
-- La première vague suffit à 154 images sur 207.
-- Mais 243 champs justes deviennent muets : matricules, montant en lettres, mode de
-  règlement. La preuve des totaux ne couvre pas ces champs, et leurs lignes ne sont pas
-  relues quand les totaux ferment.
+**Effet mesuré** (412 pièces, OCR frais, deux processeurs) :
 
-**Décision.** La lecture par vagues reste désactivée par défaut : elle ne s'active qu'avec
-une preuve explicite. Le critère juste est celui de I-H : relire les zones des champs
-encore muets, pas la page entière.
+- 78 pièces sont prouvées dès le tableau, en 1,8 s médianes.
+- La lecture complète passe de 4,5 s à 3,9 s médianes. Le gain vient surtout de l'image
+  contiguë : OpenCV recopiait l'image entière à chaque découpe de ligne.
+- 5 116 champs justes contre 5 114, 73 faux contre 74 : aucun champ perdu, aucun nouveau
+  faux.
 
 ### I-H — À venir : l'OCR guidé par la contradiction, et l'appariement global des libellés
 

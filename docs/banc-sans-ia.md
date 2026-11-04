@@ -62,14 +62,30 @@ Mêmes 412 pièces, même cache OCR que le bulletin 2 :
   - I-I : la pente de la page lue sur ses boîtes, et les rangées par recouvrement ;
   - I-J : un texte non prouvé se tait sous `lecture.confiance_du_texte`.
 
-L'OCR, relancé sans cache :
+L'OCR, relancé sans cache à chaque mesure (210 images, deux processeurs, sans GPU) :
 
-- **Sonde arabe.** Une page sans arabe ne paie plus la relecture arabe. La médiane passe de
-  5,5 s à 4,5 s par image, et les résultats sont identiques au champ près.
-- **Lecture par vagues** (`--vagues`) :
-  - la médiane passe à 3,4 s (−26 %) ;
-  - mais 243 champs justes deviennent muets, et 4 faux s'ajoutent (voir I-K) ;
-  - elle reste désactivée par défaut.
+|                                           |   médiane |       p95 |     total |
+| ----------------------------------------- | --------: | --------: | --------: |
+| Bulletin 2                                |     5,5 s |         — |         — |
+| Sonde arabe                               |     4,5 s |     9,4 s |   1 059 s |
+| **Lecture en deux temps, image contiguë** | **3,9 s** | **8,5 s** | **901 s** |
+
+- **Sonde arabe.** Une page sans arabe ne paie plus la relecture arabe, à champs
+  identiques.
+- **Image contiguë.** OpenCV recopiait l'image entière à chaque découpe de ligne. Sur
+  MyTek, la découpe passe de 1,2 s à 0,02 s et la détection de 1,3 s à 0,9 s.
+- **Deux temps.** Le service rend le tableau d'abord, puis la page entière. 78 pièces sont
+  prouvées dès le tableau, en 1,8 s médianes.
+- **Rien n'est sauté.** Par rapport à la lecture d'avant, 5 116 champs sont justes contre
+  5 114 et 73 faux contre 74. Aucun champ n'est perdu, aucun ne devient faux.
+- **Mesuré, puis écarté :**
+  - sauter la seconde vague quand les totaux se prouvent : 243 champs justes perdus ;
+  - une ligne à la fois : 2,5 % gagnés, mais deux faux de plus ;
+  - des poids int8 : plus lents sur ce processeur, et 36 lignes sur 140 lues autrement ;
+  - deux sessions en parallèle sur les mêmes lots : aucun gain.
+- **Débit.** `OCR_LECTEURS` lit plusieurs pages à la fois. Sur deux cœurs, deux pages de
+  MyTek prennent 8,2 s avec deux lecteurs d'un fil, contre 10,8 s avec un lecteur de deux
+  fils. L'API lit les pages d'une pièce autant à la fois que le service le dit.
 
 ## Les corpus
 

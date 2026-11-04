@@ -15,6 +15,7 @@ import { PanneFournisseur, qualifierEchec } from "../../fabrique/travaux-executi
 
 import {
   SecondLecteurOccupe,
+  lecteursDuSecondLecteur,
   lireAvecPaddle,
   moteurDuSecondLecteur,
   secondLecteurDisponible,
@@ -60,6 +61,18 @@ describe("le second lecteur", () => {
     assert.equal(await moteurDuSecondLecteur(), "inconnu");
     serviceQuiRend({}, false);
     assert.equal(await moteurDuSecondLecteur(), "hs");
+  });
+
+  it("dit combien de pages il lit à la fois ; un, s'il ne le dit pas", async () => {
+    process.env["OCR_URL"] = "http://ocr:8000";
+    serviceQuiRend({ ok: true, moteur: "onnx", lecteurs: 2 });
+    assert.equal(await lecteursDuSecondLecteur(), 2);
+    serviceQuiRend({ ok: true, moteur: "onnx" });
+    assert.equal(await lecteursDuSecondLecteur(), 1);
+    serviceQuiRend({ ok: true, lecteurs: 0 });
+    assert.equal(await lecteursDuSecondLecteur(), 1);
+    serviceQuiRend({}, false);
+    assert.equal(await lecteursDuSecondLecteur(), 1);
   });
 
   it("sans OCR_URL, il n'existe pas — et ce n'est pas une panne", async () => {
