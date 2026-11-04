@@ -251,6 +251,16 @@ function comparer(
         const parts = Object.values(attendu as Record<string, unknown>).filter(Boolean);
         return { lu: v, juste: parts.every((p) => lu.includes(texteNormal(p))) };
       }
+      // Un champ liste à domaine rend un CODE : la vérité (un code, ou le texte imprimé)
+      // se ramène au même domaine.
+      if (champ.valeurs && champ.valeurs.length > 0) {
+        const cle = (x: unknown) => texteNormal(x).replace(/ /gu, "");
+        const vrai =
+          champ.valeurs.find(
+            (d) => cle(d.code) === cle(attendu) || d.formes.some((f) => cle(f) === cle(attendu)),
+          )?.code ?? String(attendu);
+        return { lu: v, juste: v === vrai };
+      }
       // Le type de pièce se lit en code (« facture ») ; la vérité porte le titre imprimé.
       if (champ.code === "type_document")
         return { lu: v, juste: texteNormal(attendu).split(" ").includes(texteNormal(v)) };
@@ -548,7 +558,7 @@ function rendu(dossier: string, id: string): string | null {
 const lireJson = <T>(f: string): T => JSON.parse(readFileSync(f, "utf8")) as T;
 
 /** Le jeu d'ALGORIA : la vérité couvre toute la grille de chaque pièce. */
-function corpusAlgoria(dossier: string, cache: string): PieceDuBanc[] {
+function corpusAlgoria(dossier: string, cache: string, deviseDuPack: string): PieceDuBanc[] {
   interface Cas {
     id: string;
     type: string;
@@ -586,7 +596,7 @@ function corpusAlgoria(dossier: string, cache: string): PieceDuBanc[] {
         rendu: cas.rendu,
         langue: cas.langue,
         gabarit: cas.gabarit ?? null,
-        devise: cas.piece.devise ?? "TND",
+        devise: cas.piece.devise ?? deviseDuPack,
         jour: jourDe(c["date_operation"] ?? c["date_emission"] ?? c["date_document"]),
         sens,
         dossier: { matricule: cas.dossier.identifiantFiscal, raison: cas.dossier.nom },
@@ -613,7 +623,7 @@ const INTERDITS_DU_DEFAUT: Readonly<Record<string, readonly string[]>> = {
 };
 
 /** Le jeu synthétique : sa vérité nomme les chemins de la lecture, traduits en champs. */
-function corpusSynthetique(dossier: string, cache: string): PieceDuBanc[] {
+function corpusSynthetique(dossier: string, cache: string, deviseDuPack: string): PieceDuBanc[] {
   interface Cas {
     id: string;
     rendu: string;
@@ -686,7 +696,7 @@ function corpusSynthetique(dossier: string, cache: string): PieceDuBanc[] {
         rendu: cas.rendu,
         langue: cas.langue,
         gabarit: cas.scenario ?? null,
-        devise: cas.piece.devise ?? a["currency"] ?? "TND",
+        devise: cas.piece.devise ?? a["currency"] ?? deviseDuPack,
         jour: jourDe(a["document_date"]),
         sens,
         dossier: { matricule: cas.dossier.identifiantFiscal, raison: cas.dossier.nom },
@@ -721,7 +731,7 @@ const GRILLE_DU_DIRIGEANT: Readonly<Record<string, string>> = {
 };
 
 /** Les jeux du dirigeant (100 et 50) : le plan relevé sur le staging, et leur vérité. */
-function corpusDuDirigeant(fichier: string): PieceDuBanc[] {
+function corpusDuDirigeant(fichier: string, deviseDuPack: string): PieceDuBanc[] {
   interface Rangee {
     qte: number | null;
     pu_ht: number | null;
@@ -771,7 +781,7 @@ function corpusDuDirigeant(fichier: string): PieceDuBanc[] {
       rendu: "photo",
       langue: "fr",
       gabarit: j.id.split("-")[0] ?? null,
-      devise: "TND",
+      devise: deviseDuPack,
       jour: jourDe(e["date"]),
       sens: algoria && GRILLE_DU_DIRIGEANT[type] === "facture" ? "achat" : null,
       dossier:
@@ -801,7 +811,12 @@ function corpusDuDirigeant(fichier: string): PieceDuBanc[] {
  * Une pièce réelle, lue sur place (jamais copiée dans le dépôt) : l'image, et une
  * vérité JSON `{ type, grille, sens, dossier, concepts }` tenue à côté d'elle.
  */
-function corpusPhoto(image: string, verite: string, cache: string): PieceDuBanc[] {
+function corpusPhoto(
+  image: string,
+  verite: string,
+  cache: string,
+  deviseDuPack: string,
+): PieceDuBanc[] {
   const v = lireJson<{
     type: string;
     grille: string;
@@ -818,7 +833,7 @@ function corpusPhoto(image: string, verite: string, cache: string): PieceDuBanc[
       rendu: "photo",
       langue: "fr",
       gabarit: null,
-      devise: "TND",
+      devise: deviseDuPack,
       jour: jourDe(v.concepts["date_operation"]),
       sens: v.sens,
       dossier: v.dossier,
@@ -830,18 +845,18 @@ function corpusPhoto(image: string, verite: string, cache: string): PieceDuBanc[
   ];
 }
 
-function chargerLeCorpus(spec: string, cache: string): PieceDuBanc[] {
+function chargerLeCorpus(spec: string, cache: string, deviseDuPack: string): PieceDuBanc[] {
   const [genre, ...reste] = spec.split(":");
   const chemin = resolve(reste[0] ?? "");
   switch (genre) {
     case "algoria":
-      return corpusAlgoria(chemin, cache);
+      return corpusAlgoria(chemin, cache, deviseDuPack);
     case "synthetique":
-      return corpusSynthetique(chemin, cache);
+      return corpusSynthetique(chemin, cache, deviseDuPack);
     case "dirigeant":
-      return corpusDuDirigeant(chemin);
+      return corpusDuDirigeant(chemin, deviseDuPack);
     case "photo":
-      return corpusPhoto(chemin, resolve(reste[1] ?? ""), cache);
+      return corpusPhoto(chemin, resolve(reste[1] ?? ""), cache, deviseDuPack);
     default:
       throw new Error(`corpus inconnu : ${spec}`);
   }
@@ -930,6 +945,7 @@ async function principal(): Promise<void> {
       "moteur-natif": { type: "string" },
       // Garder l'entrée du moteur de chaque pièce : de quoi en faire une épreuve du moteur.
       entrees: { type: "string" },
+      juridiction: { type: "string" },
     },
   });
   const base = process.env["DATABASE_URL_ADMIN"];
@@ -938,9 +954,6 @@ async function principal(): Promise<void> {
   mkdirSync(cache, { recursive: true });
   if (values.brut) mkdirSync(values.brut, { recursive: true });
   const voulus = values.cas ? new Set(values.cas.split(",")) : null;
-  const pieces = (values.corpus ?? [])
-    .flatMap((s) => chargerLeCorpus(s, cache))
-    .filter((p) => !voulus || voulus.has(p.id));
   // Le moteur natif (`cargo build --release --example resoudre`) : le même code que
   // le WebAssembly, là où la cible wasm32 ne s'installe pas.
   const natif = values["moteur-natif"];
@@ -957,12 +970,18 @@ async function principal(): Promise<void> {
   if (entrees) mkdirSync(entrees, { recursive: true });
   const db = new pg.Pool({ connectionString: base, max: 2 });
   try {
-    const { rows } = await db.query<{ id: string }>(
-      `select id from ref_packs_v where jurisdiction = 'TN' and effective_from <= $1::date
+    // Le pack de la juridiction (`--juridiction`, celle des corpus du dépôt par défaut) : sa
+    // devise est celle d'une pièce qui ne dit pas la sienne.
+    const juridiction = values.juridiction ?? "TN";
+    const { rows } = await db.query<{ id: string; currency: string }>(
+      `select id, currency from ref_packs_v where jurisdiction = $2 and effective_from <= $1::date
         order by effective_from desc limit 1`,
-      [JOUR_PAR_DEFAUT],
+      [JOUR_PAR_DEFAUT, juridiction],
     );
-    if (rows.length !== 1) throw new Error("aucun pack TN en vigueur");
+    if (rows.length !== 1) throw new Error(`aucun pack ${juridiction} en vigueur`);
+    const pieces = (values.corpus ?? [])
+      .flatMap((s) => chargerLeCorpus(s, cache, rows[0]!.currency))
+      .filter((p) => !voulus || voulus.has(p.id));
     const mesures: MesureDeLaPiece[] = [];
     for (const p of pieces) {
       let appel = 0;

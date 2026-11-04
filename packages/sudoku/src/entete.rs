@@ -1361,6 +1361,64 @@ fn repere_imprime(page: &Page, n: usize) -> (Vec<Vec<usize>>, bool) {
     (out, partage)
 }
 
+/// Un champ « liste » qui a un domaine : il ne rend qu'un CODE du domaine, lu sous l'une de
+/// ses formes imprimables (le libellé du code dans une des trois langues, une marque :
+/// « DT », « Espèces », « نقدًا »), jamais le texte d'une étiquette. Les formes ancrées par
+/// un libellé du champ l'emportent ; un seul code → `conforme`, deux → `signale`.
+///
+/// Banc sans IA du 4 novembre 2026 : « règlement: » rendu pour le mode de règlement, « (DT) »
+/// pour la devise.
+fn liste_du_domaine(page: &Page, n: usize, ch: &crate::entree::Champ) -> ChampSortie {
+    const MOTS_D_UNE_FORME: usize = 4;
+    let formes: Vec<(&str, String)> = ch
+        .valeurs
+        .iter()
+        .flat_map(|v| v.formes.iter().map(move |f| (v.code.as_str(), mot(f))))
+        .filter(|(_, f)| !f.is_empty())
+        .collect();
+    // (code, jetons, ancré)
+    let mut vus: Vec<(&str, Vec<usize>, bool)> = Vec::new();
+    for rang in &page.rangs {
+        let mut s = 0;
+        while s < rang.len() {
+            let mut texte = String::new();
+            let mut meilleur: Option<(&str, usize)> = None;
+            for e in s..rang.len().min(s + MOTS_D_UNE_FORME) {
+                if e > s && page.ecart(rang[e - 1], rang[e]) > ECART_MOT * page.h(rang[e - 1]) {
+                    break;
+                }
+                texte.push_str(&mot(&page.j[rang[e]].texte));
+                if let Some((code, _)) = formes.iter().find(|(_, f)| *f == texte) {
+                    meilleur = Some((code, e));
+                }
+            }
+            match meilleur {
+                Some((code, e)) => {
+                    let jetons = rang[s..=e].to_vec();
+                    let ancre = page.etiquette(jetons[0], "").is_some_and(|et| et.champs.contains(&n))
+                        || page.etiquette(jetons[jetons.len() - 1], "").is_some_and(|et| et.champs.contains(&n));
+                    vus.push((code, jetons, ancre));
+                    s = e + 1;
+                }
+                None => s += 1,
+            }
+        }
+    }
+    let ancres: Vec<&(&str, Vec<usize>, bool)> = vus.iter().filter(|v| v.2).collect();
+    let retenus: Vec<&(&str, Vec<usize>, bool)> = if ancres.is_empty() { vus.iter().collect() } else { ancres };
+    let mut codes: Vec<&str> = retenus.iter().map(|v| v.0).collect();
+    codes.sort();
+    codes.dedup();
+    match codes.as_slice() {
+        [] => ChampSortie { valeur: None, refs: Vec::new(), statut: "absent".into(), instances: None },
+        [code] => {
+            let v = retenus[0];
+            ChampSortie { valeur: Some((*code).to_string()), refs: page.cite(&v.1), statut: "conforme".into(), instances: None }
+        }
+        _ => ChampSortie { valeur: None, refs: Vec::new(), statut: "signale".into(), instances: None },
+    }
+}
+
 /// Les familles d'experts que l'anneau 3 lit (`ref.experts`) : celles dont la valeur suit
 /// son repère. Le montant est au centre, la date et les parties à l'anneau 2.
 const FAMILLES_NOMMEES: [&str; 6] = ["reference", "identifiant", "libelle", "nombre", "taux", "presence"];
@@ -1420,6 +1478,7 @@ pub fn nommes(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
                 let statut = if vus.is_empty() && !partage { "absent" } else { "signale" };
                 ChampSortie { valeur: None, refs: Vec::new(), statut: statut.into(), instances: None }
             }
+            "liste" if !ch.valeurs.is_empty() => liste_du_domaine(&page, n, ch),
             "liste" => {
                 let (vus, partage) = repere_imprime(&page, n);
                 let mut valeurs: BTreeMap<String, &Vec<usize>> = BTreeMap::new();

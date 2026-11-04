@@ -144,6 +144,17 @@ pub struct Champ {
     /// La partie que le champ décrit (`ref.grille_champs.role`), s'il en décrit une.
     #[serde(default)]
     pub role: Option<String>,
+    /// Le domaine d'un champ « liste » : chaque code et ses formes imprimables (le libellé du
+    /// code dans les trois langues, ses marques). Présent, le champ ne se lit qu'en un code.
+    #[serde(default)]
+    pub valeurs: Vec<ValeurDuDomaine>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct ValeurDuDomaine {
+    pub code: String,
+    #[serde(default)]
+    pub formes: Vec<String>,
 }
 
 #[derive(Deserialize)]

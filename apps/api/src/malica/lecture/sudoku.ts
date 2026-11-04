@@ -264,8 +264,10 @@ export async function lireLeContexteDuSudoku(
         parcelle: string;
         expert: string;
         role: string | null;
+        domaine: string | null;
       }>(
-        `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert, c.role
+        `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert, c.role,
+                k.domaine
            from ref_grille_champs_v c join ref_concepts_v k on k.id = c.concept_id
           where c.grille_id = $1 order by c.code`,
         [grilleId],
@@ -373,6 +375,24 @@ export async function lireLeContexteDuSudoku(
     parCode.set(c.code, une);
   }
 
+  // Les domaines des champs « liste » : chaque code et toutes ses formes imprimables
+  // (son libellé dans les trois langues, ses marques), lus en base.
+  const domaines = [...new Set(champs.rows.flatMap((c) => (c.domaine ? [c.domaine] : [])))];
+  const { rows: formesDesDomaines } =
+    domaines.length === 0
+      ? { rows: [] as { domaine: string; code: string; forme: string }[] }
+      : await db.query<{ domaine: string; code: string; forme: string }>(
+          `select domaine, code, forme from ref_valeurs_des_domaines_v
+            where domaine = any($1::text[]) order by domaine, code, forme`,
+          [domaines],
+        );
+  const valeursDe = (domaine: string) => {
+    const parCode = new Map<string, string[]>();
+    for (const f of formesDesDomaines)
+      if (f.domaine === domaine) parCode.set(f.code, [...(parCode.get(f.code) ?? []), f.forme]);
+    return [...parCode].map(([code, f]) => ({ code, formes: f }));
+  };
+
   return {
     jour,
     grille: {
@@ -386,6 +406,7 @@ export async function lireLeContexteDuSudoku(
         parcelle: c.parcelle,
         expert: c.expert,
         role: c.role,
+        ...(c.domaine ? { valeurs: valeursDe(c.domaine) } : {}),
       })),
       preuves: preuves.rows.map((p) => ({
         code: p.code,

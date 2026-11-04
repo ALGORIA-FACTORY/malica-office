@@ -80,6 +80,11 @@ export interface ChampDeGrille {
    * employeur…), ou `null` : l'identité du dossier ne remplit qu'un seul rôle par pièce.
    */
   readonly role?: string | null;
+  /**
+   * Le domaine d'un champ « liste » (`ref_valeurs_des_domaines_v`) : chaque code et ses
+   * formes imprimables. Présent, le champ ne se lit qu'en un code de ce domaine.
+   */
+  readonly valeurs?: readonly { readonly code: string; readonly formes: readonly string[] }[];
 }
 
 export interface PreuveDeGrille {
