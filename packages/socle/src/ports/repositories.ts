@@ -4322,6 +4322,37 @@ export interface ReglageRelectureNuit {
   decide_le: string;
 }
 
+/**
+ * L'émission automatique des factures mensuelles (4 novembre 2026), telle que
+ * `plateforme.facturation_auto_etat()` la rend : la décision en vigueur, qui
+ * l'a prise (`null` pour la décision livrée), et le dernier passage du robot.
+ */
+export interface EtatFacturationAuto {
+  reglage: {
+    actif: boolean;
+    rattrapage_mois: number;
+    motif: string;
+    decide_le: string;
+    decide_par_email: string | null;
+    decide_par_nom: string | null;
+  } | null;
+  dernier: {
+    jour: string;
+    passee_le: string;
+    emises: number;
+    deja_emises: number;
+    rien_a_facturer: number;
+    erreurs: number;
+    detail_erreurs: Array<{
+      licence?: string;
+      cabinet?: string;
+      periode: string;
+      cle: string;
+      etat: string;
+    }>;
+  } | null;
+}
+
 /** Un compte de service (le relecteur de nuit) : son état en vigueur et son nom. */
 export interface CompteDeService {
   code: string;
@@ -4473,6 +4504,10 @@ export interface TourRepository {
   } | null>;
   /** La tour ouvre ou ferme les relances d'impayé et la suspension automatique. */
   reglerRelances(actives: boolean, suspensionAutomatique: boolean, motif: string): Promise<unknown>;
+  /** L'émission automatique des factures : la décision en vigueur et le dernier passage. */
+  reglageFacturationAuto(): Promise<EtatFacturationAuto>;
+  /** La tour ouvre ou coupe l'émission automatique : daté, motivé, en ajout seul. */
+  reglerFacturationAuto(actif: boolean, rattrapageMois: number, motif: string): Promise<unknown>;
   /** Le calendrier d'une juridiction : règle de report, jours fériés, reports publiés. */
   calendrier(juridiction: string): Promise<CalendrierDeLaJuridiction>;
   poserJourFerie(input: {
