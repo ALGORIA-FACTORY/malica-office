@@ -224,6 +224,22 @@ impl<'a> Page<'a> {
         self.cles[i].is_empty()
     }
 
+    /// La rangée `r` se poursuit-elle à la ligne d'après, comme un paragraphe ? Oui quand la
+    /// rangée suivante, serrée sous elle (à moins d'une hauteur de corps), commence à la même
+    /// marge, ne commence pas par un libellé, et n'est pas plus longue qu'elle : une ligne
+    /// renvoyée à la ligne est pleine. Une liste « Client : … / Adresse : … » n'en est pas un.
+    fn se_poursuit(&self, r: usize) -> bool {
+        let (Some(rang), Some(suivante)) = (self.rangs.get(r), self.rangs.get(r + 1)) else { return false };
+        let (Some(&a), Some(&b)) = (rang.first(), suivante.first()) else { return false };
+        let fin = |g: &[usize]| g.iter().map(|&i| self.j[i].x1).fold(f64::MIN, f64::max);
+        let bas = rang.iter().map(|&i| self.j[i].y1).fold(f64::MIN, f64::max);
+        self.j[a].page == self.j[b].page
+            && self.j[b].y0 - bas < self.h(a)
+            && (self.j[b].x0 - self.j[a].x0).abs() <= MARGE
+            && self.champs_de(&self.normes[b]).is_none()
+            && fin(rang) >= fin(suivante) - MARGE
+    }
+
     fn cite(&self, jetons: &[usize]) -> Vec<RefJeton> {
         jetons.iter().map(|&i| RefJeton { page: self.j[i].page, ordinal: self.j[i].ordinal }).collect()
     }
@@ -421,6 +437,17 @@ impl<'a> Page<'a> {
             })
             .collect();
         let (&premier, &dernier) = (sur.first()?, sur.last()?);
+        // Un libellé qui commence une phrase n'est pas l'en-tête de ce qui est dessous : la
+        // ligne du dessous est la suite du paragraphe (« Réserve de propriété : le transfert
+        // … Toute / réclamation doit être formulée … », conditions générales, banc du
+        // 4 novembre 2026). Un en-tête finit son segment de rangée.
+        let mut apres = dernier + 1;
+        while apres < rang.len() && self.ponct(rang[apres]) {
+            apres += 1;
+        }
+        if apres < rang.len() && self.ecart(rang[apres - 1], rang[apres]) <= ECART_MOT * h {
+            return None;
+        }
         let mut e = dernier + 1;
         while e > premier && self.ponct(rang[e - 1]) {
             e -= 1;
@@ -1280,7 +1307,7 @@ fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie
 /// Le numéro : le jeton juste après son repère (à droite, ou dessous), qui porte au
 /// moins un chiffre, avec les morceaux qui lui sont collés. Une seule valeur → `conforme`.
 fn numero(page: &Page, n: usize, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie>, lus: &mut Vec<(usize, String)>) {
-    let sortie = apres_repere(page, n, &Lecture { chiffre: true, colle_au_libelle: false, exclusif: false, motif: None });
+    let sortie = apres_repere(page, n, &Lecture { chiffre: true, colle_au_libelle: false, exclusif: false, motif: None, phrase: false });
     if let Some(v) = &sortie.valeur {
         lus.push((n, v.clone()));
     }
@@ -1298,6 +1325,11 @@ struct Lecture<'r> {
     exclusif: bool,
     /// Le format du pack que la valeur doit respecter, quand le champ en nomme un.
     motif: Option<&'r Regex>,
+    /// La valeur est un texte libre (`texte`) : elle ne suit son libellé, sur la même
+    /// rangée, que derrière un séparateur ou un blanc ; collée, c'est la suite de la même
+    /// phrase (« Article 11 — Droit applicable et litiges » : « et litiges » n'est pas le
+    /// droit applicable).
+    phrase: bool,
 }
 
 /// Au plus tant de mots dans la valeur d'un libellé : une ligne, pas un paragraphe.
@@ -1308,7 +1340,7 @@ const MOTS_MAX: usize = 12;
 fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
     // Chaque valeur lue, ses jetons, et si un libellé détaché (à gauche ou au-dessus) l'a
     // nommée au moins une fois.
-    let mut lus_n: BTreeMap<String, (Vec<usize>, bool)> = BTreeMap::new();
+    let mut lus_n: BTreeMap<String, (Vec<usize>, bool, bool)> = BTreeMap::new();
     let mut partage = false;
     for (i, j) in page.j.iter().enumerate() {
         if l.chiffre && !j.texte.chars().any(|c| c.is_ascii_digit()) {
@@ -1346,6 +1378,15 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
             if k > 0 && colle(rang[k - 1], i) && !page.ponct(rang[k - 1]) {
                 continue;
             }
+            // la suite de la phrase du libellé, pas sa valeur
+            if l.phrase
+                && k > 0
+                && !page.ponct(rang[k - 1])
+                && page.ecart(rang[k - 1], i) <= ECART_MOT * page.h(i)
+                && page.dessus(i).is_none_or(|d| d.champs != et.champs)
+            {
+                continue;
+            }
             // un libellé n'est pas une valeur
             if !l.chiffre && (page.ponct(i) || page.champs_de(&page.normes[i]).is_some()) {
                 continue;
@@ -1354,7 +1395,16 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
         let mut pris = vec![i];
         let mut q = k + 1;
         let max = if l.chiffre { SPAN_MAX } else { MOTS_MAX };
-        while q < rang.len() && pris.len() < max {
+        // Un texte n'est rendu qu'ENTIER : arrêté par la fin de sa rangée, par un blanc ou
+        // par un autre libellé — pas par la borne de mots —, et sans suite à la ligne
+        // d'après. Banc sans IA du 4 novembre 2026 : « réclamation », un mot d'un paragraphe
+        // de conditions générales, était rendu comme les conditions entières.
+        let mut entier = true;
+        while q < rang.len() {
+            if pris.len() == max {
+                entier = false;
+                break;
+            }
             let (a, b) = (rang[q - 1], rang[q]);
             let suit = if l.chiffre { colle(a, b) } else { page.ecart(a, b) <= ECART_MOT * page.h(a) };
             // un autre libellé commence : la valeur s'arrête
@@ -1363,6 +1413,9 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
             }
             pris.push(b);
             q += 1;
+        }
+        if !l.chiffre && q == rang.len() && page.se_poursuit(r) {
+            entier = false;
         }
         let premier = page.j[i].texte.trim();
         let premier = if debut > 0 {
@@ -1385,19 +1438,20 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
         if l.motif.is_some_and(|re| !re.is_match(&v)) {
             continue;
         }
-        let e = lus_n.entry(v).or_insert((pris, false));
+        let e = lus_n.entry(v).or_insert((pris, false, true));
         e.1 |= debut == 0;
+        e.2 &= entier;
     }
     let rien = |statut: &str| ChampSortie { valeur: None, refs: Vec::new(), statut: statut.into(), instances: None };
     match lus_n.len() {
         0 if partage => rien("signale"),
         0 => rien("absent"),
         1 if !partage => {
-            let (v, (pris, detache)) = lus_n.into_iter().next().unwrap_or_default();
+            let (v, (pris, detache, entier)) = lus_n.into_iter().next().unwrap_or_default();
             // Lue seulement derrière un libellé collé dans son jeton : l'OCR a pu coller autre
             // chose à la valeur (« N°DV-PX-2026-091111 », 50/48). Elle se dit, citée, et se
-            // vérifie : signalée, jamais conforme.
-            let statut = if detache { "conforme" } else { "signale" };
+            // vérifie : signalée, jamais conforme. Un texte coupé aussi.
+            let statut = if detache && entier { "conforme" } else { "signale" };
             ChampSortie { valeur: Some(v), refs: page.cite(&pris), statut: statut.into(), instances: None }
         }
         _ => rien("signale"),
@@ -1606,7 +1660,11 @@ pub fn nommes(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
             }
             genre => {
                 let chiffre = matches!(genre, "identifiant" | "nombre" | "taux");
-                apres_repere(&page, n, &Lecture { chiffre, colle_au_libelle: true, exclusif: true, motif: motif.as_ref() })
+                apres_repere(
+                    &page,
+                    n,
+                    &Lecture { chiffre, colle_au_libelle: true, exclusif: true, motif: motif.as_ref(), phrase: genre == "texte" },
+                )
             }
         };
         champs.insert(ch.code.clone(), sortie);

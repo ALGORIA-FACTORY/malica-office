@@ -112,7 +112,13 @@ interface PieceDuBanc {
   readonly releve: (prouve?: (tokens: PageToken[]) => boolean) => Promise<ReleveGarde>;
 }
 
-type Issue = "juste" | "faux" | "silence" | "invente";
+/**
+ * `signale` : le moteur rend une valeur SIGNALÉE (`statut: "signale"`) — une piste à
+ * vérifier, qu'il n'affirme pas. Elle n'est ni juste ni fausse : comptée à part, avec,
+ * pour la transparence, combien de ces pistes la vérité aurait données fausses
+ * (`signaleFaux`).
+ */
+type Issue = "juste" | "faux" | "silence" | "invente" | "signale";
 
 interface MesureDuChamp {
   readonly champ: string;
@@ -120,6 +126,8 @@ interface MesureDuChamp {
   readonly issue: Issue;
   readonly attendu: unknown;
   readonly lu: string | null;
+  /** Une piste signalée que la vérité dit fausse (ou présente quand rien n'est imprimé). */
+  readonly signaleFaux?: boolean;
 }
 
 export interface MesureDeLaPiece {
@@ -501,17 +509,27 @@ async function mesurerLaPiece(
       if (source !== champ.code && !r.juste && r.lu !== null && champ.type !== "date")
         r = { lu: r.lu, juste: identifiantNormal(attendu).includes(identifiantNormal(r.lu)) };
     }
-    const issue: Issue | null = imprime
-      ? r.lu === null
-        ? "silence"
-        : r.juste
-          ? "juste"
-          : "faux"
-      : r.lu === null
-        ? null
-        : "invente";
+    const signalee = r.lu !== null && sortie.champs[champ.code]?.statut === "signale";
+    const issue: Issue | null = signalee
+      ? "signale"
+      : imprime
+        ? r.lu === null
+          ? "silence"
+          : r.juste
+            ? "juste"
+            : "faux"
+        : r.lu === null
+          ? null
+          : "invente";
     if (issue)
-      champs.push({ champ: champ.code, expert: champ.expert ?? "?", issue, attendu, lu: r.lu });
+      champs.push({
+        champ: champ.code,
+        expert: champ.expert ?? "?",
+        issue,
+        attendu,
+        lu: r.lu,
+        ...(signalee ? { signaleFaux: !imprime || !r.juste } : {}),
+      });
   }
   champs.push(
     ...mesurerLesRangees(
@@ -901,7 +919,7 @@ function chargerLeCorpus(spec: string, cache: string, deviseDuPack: string): Pie
 /* ============================================================ LE RAPPORT == */
 
 type Compte = Record<Issue, number>;
-const zero = (): Compte => ({ juste: 0, faux: 0, silence: 0, invente: 0 });
+const zero = (): Compte => ({ juste: 0, faux: 0, silence: 0, invente: 0, signale: 0 });
 
 export function rapport(mesures: readonly MesureDeLaPiece[]): string {
   const par = (cle: (m: MesureDeLaPiece, c: MesureDuChamp) => string) => {
@@ -916,14 +934,14 @@ export function rapport(mesures: readonly MesureDeLaPiece[]): string {
     return [...t.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   };
   const ligne = (k: string, x: Compte) => {
-    const imprimes = x.juste + x.faux + x.silence;
+    const imprimes = x.juste + x.faux + x.silence + x.signale;
     const pct = imprimes ? ((100 * x.juste) / imprimes).toFixed(1) : "—";
-    return `| ${k} | ${x.juste} | ${x.faux} | ${x.silence} | ${x.invente} | ${pct} % |`;
+    return `| ${k} | ${x.juste} | ${x.faux} | ${x.silence} | ${x.invente} | ${x.signale} | ${pct} % |`;
   };
   const tete = (t: string) => [
     `\n### ${t}\n`,
-    "| | juste | faux | silence | inventé | juste / imprimés |",
-    "|---|--:|--:|--:|--:|--:|",
+    "| | juste | faux | silence | inventé | signalé (à vérifier) | juste / imprimés |",
+    "|---|--:|--:|--:|--:|--:|--:|",
   ];
   const total = zero();
   for (const m of mesures) for (const c of m.champs) total[c.issue]++;
@@ -960,6 +978,10 @@ export function rapport(mesures: readonly MesureDeLaPiece[]): string {
       : "",
     ...tete("Total"),
     ligne("tous les champs", total),
+    "",
+    `Pistes signalées (non affirmées) : ${total.signale}, dont ${
+      mesures.flatMap((m) => m.champs).filter((c) => c.signaleFaux).length
+    } que la vérité dit fausses.`,
     ...tete("Par corpus"),
     ...par((m) => m.corpus).map(([k, x]) => ligne(k, x)),
     ...tete("Par famille d'experts"),
@@ -1040,7 +1062,7 @@ async function principal(): Promise<void> {
       mesures.push(m);
       const n = (i: Issue) => m.champs.filter((c) => c.issue === i).length;
       console.error(
-        `${m.corpus} ${m.id} ${m.type} ${m.issue} — juste ${n("juste")} faux ${n("faux")} silence ${n("silence")} inventé ${n("invente")}` +
+        `${m.corpus} ${m.id} ${m.type} ${m.issue} — juste ${n("juste")} faux ${n("faux")} silence ${n("silence")} inventé ${n("invente")} signalé ${n("signale")}` +
           `${m.sens.juste === false ? " ÉCHANGE" : ""} ${m.releveMs ?? "-"} ms ${m.erreur ?? ""}`,
       );
     }
