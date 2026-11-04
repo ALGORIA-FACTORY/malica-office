@@ -65,6 +65,8 @@ export const enBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.compteur.aValider": "to validate",
   "cab.biblio.compteur.moisSansPiece": "months without documents",
   "cab.biblio.compteur.moisPrets": "months ready",
+  "cab.biblio.compteur.moisPrets#one": "month ready",
+  "cab.biblio.compteur.moisPrets#other": "months ready",
   "cab.biblio.regles": "Checked by rules",
   "cab.biblio.reglesDetail":
     "Rules applied: months without documents between the first and the last one, the validation state of each document. No AI analysis.",
@@ -78,4 +80,5 @@ export const enBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.telechargerPiece": "Download this document",
   "cab.biblio.toutCocher": "Select all",
   "cab.biblio.toutTelecharger": "Download all ({n})",
+  "cab.biblio.volumineux": "This file is large: open a month to see its documents.",
 };

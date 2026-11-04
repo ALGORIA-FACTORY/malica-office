@@ -52,10 +52,25 @@ export function rangerParMois<T extends Pick<DocumentComptable, "dateDeClassemen
     if (groupe) groupe.push(p);
     else parMois.set(m, [p]);
   }
-  const mois = [...parMois.keys()].sort().reverse();
-  const rangees: Rangee<T>[] = [];
+  return rangerLesMois([...parMois.keys()]).map((r) =>
+    r.genre === "trou" ? r : { genre: "mois", mois: r.mois, pieces: parMois.get(r.mois)! },
+  );
+}
+
+/**
+ * Les mois présents, du plus récent au plus ancien, et entre deux d'entre eux
+ * les mois absents regroupés en un « trou ». Sert aussi au sommaire d'un
+ * dossier trop grand pour se restituer d'un coup.
+ */
+export function rangerLesMois(
+  presents: readonly string[],
+): Array<{ genre: "mois"; mois: string } | Extract<Rangee<never>, { genre: "trou" }>> {
+  const mois = [...new Set(presents)].sort().reverse();
+  const rangees: Array<
+    { genre: "mois"; mois: string } | Extract<Rangee<never>, { genre: "trou" }>
+  > = [];
   mois.forEach((m, i) => {
-    rangees.push({ genre: "mois", mois: m, pieces: parMois.get(m)! });
+    rangees.push({ genre: "mois", mois: m });
     const suivant = mois[i + 1];
     if (!suivant) return;
     const du = moisPrecedent(m);

@@ -2185,6 +2185,14 @@ export interface SupervisionRepository {
     clientId: string,
     periode: string | null,
   ): Promise<DocumentComptable[]>;
+  /**
+   * Le sommaire du dossier : pièces transmises par mois de classement et par
+   * type, et la borne au-delà de laquelle `documents` exige un mois.
+   */
+  moisDuDossier(
+    cabinetId: string,
+    clientId: string,
+  ): Promise<{ plafond: number; mois: Array<{ mois: string; type: string | null; n: number }> }>;
   /** Ferme les liens documentaires sous la même autorisation, sans inclure de pièce privée. */
   documentsLies(cabinetId: string, clientId: string, pieces: string[]): Promise<DossierComptable>;
   controlesPiece(cabinetId: string, pieceId: string): Promise<ControlesComptables | null>;

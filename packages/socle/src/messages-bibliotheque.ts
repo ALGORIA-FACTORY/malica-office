@@ -64,6 +64,8 @@ export const frBibliotheque = {
   "cab.biblio.compteur.aValider": "à valider",
   "cab.biblio.compteur.moisSansPiece": "mois sans pièce",
   "cab.biblio.compteur.moisPrets": "mois prêts",
+  "cab.biblio.compteur.moisPrets#one": "mois prêt",
+  "cab.biblio.compteur.moisPrets#other": "mois prêts",
   "cab.biblio.regles": "Contrôlé par règles",
   "cab.biblio.reglesDetail":
     "Règles appliquées : les mois sans pièce entre la première et la dernière pièce, l’état de validation de chaque pièce. Aucune analyse par l’IA.",
@@ -77,6 +79,7 @@ export const frBibliotheque = {
   "cab.biblio.telechargerPiece": "Télécharger cette pièce",
   "cab.biblio.toutCocher": "Tout cocher",
   "cab.biblio.toutTelecharger": "Tout télécharger ({n})",
+  "cab.biblio.volumineux": "Ce dossier est volumineux : ouvrez un mois pour voir ses pièces.",
 } as const;
 
 export type MessagesDeLaBibliotheque = Record<keyof typeof frBibliotheque, string>;

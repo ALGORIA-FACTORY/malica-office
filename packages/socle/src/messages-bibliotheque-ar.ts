@@ -62,6 +62,8 @@ export const arBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.compteur.aValider": "للمصادقة",
   "cab.biblio.compteur.moisSansPiece": "أشهر دون وثائق",
   "cab.biblio.compteur.moisPrets": "أشهر جاهزة",
+  "cab.biblio.compteur.moisPrets#one": "شهر جاهز",
+  "cab.biblio.compteur.moisPrets#other": "أشهر جاهزة",
   "cab.biblio.regles": "مراقبة بالقواعد",
   "cab.biblio.reglesDetail":
     "القواعد المطبقة: الأشهر دون وثائق بين أول وثيقة وآخرها، وحالة المصادقة لكل وثيقة. لا تحليل بالذكاء الاصطناعي.",
@@ -75,4 +77,5 @@ export const arBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.telechargerPiece": "تنزيل هذه الوثيقة",
   "cab.biblio.toutCocher": "تحديد الكل",
   "cab.biblio.toutTelecharger": "تنزيل الكل ({n})",
+  "cab.biblio.volumineux": "هذا الملف كبير: افتح شهراً لرؤية وثائقه.",
 };

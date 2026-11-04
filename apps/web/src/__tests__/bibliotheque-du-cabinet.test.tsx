@@ -65,24 +65,37 @@ const unDocument = (
   sourcePieceId: null,
 });
 
+const dossier = [
+  unDocument("f", "facture_achat", "F-1"),
+  unDocument("a", "avoir", "AV-1"),
+  unDocument("x", null, "X-1"),
+  unDocument("m", "facture_vente", "M-1", "2025-10-02"),
+];
+/** La borne de l'API : au-delà, la bibliothèque ne charge que le mois ouvert. */
+let plafond = 2000;
+const appels: Array<string | null> = [];
+
 vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({
     supervision: {
       listClients: async () => [
         { tenantId: "client", name: "Client", engagementStatus: "actif", legalId: null },
       ],
-      documents: async () => [
-        unDocument("f", "facture_achat", "F-1"),
-        unDocument("a", "avoir", "AV-1"),
-        unDocument("x", null, "X-1"),
-        unDocument("m", "facture_achat", "M-1", "2025-10-02"),
-      ],
+      documents: async (_c: string, _t: string, periode: string | null) => {
+        appels.push(periode);
+        return dossier.filter((d) => !periode || d.dateDeClassement.startsWith(periode));
+      },
+      moisDuDossier: async () => ({
+        plafond,
+        mois: dossier.map((d) => ({ mois: d.dateDeClassement.slice(0, 7), type: d.type, n: 1 })),
+      }),
     },
     referential: {
       typesDeDocument: async () => [
         { code: "facture_achat", libelle: "Facture d'achat", transmissible: true },
         { code: "avoir", libelle: "Avoir", transmissible: true },
         { code: "facture_vente", libelle: "Facture de vente", transmissible: true },
+        { code: "releve", libelle: "Relevé bancaire", transmissible: true },
       ],
     },
   }),
@@ -118,10 +131,10 @@ describe("bibliothèque du cabinet", () => {
     await screen.findByText("Avoir");
     // Un avoir n'est plus rangé dans « autres » faute d'un code écrit à la main.
     expect(titres()).toEqual(["Facture d'achat", "Avoir", "cab.biblio.autres"]);
-    // Le type du référentiel absent ce mois-ci est dit, pas dessiné en carte.
+    // Absent : un type que ce client transmet d'habitude, pas tout le référentiel.
     expect(
-      within(document.querySelector(".cab-doclib-absents")!).getByText("Facture de vente"),
-    ).toBeTruthy();
+      [...document.querySelectorAll(".cab-doclib-etiquette")].map((e) => e.textContent),
+    ).toEqual(["Facture de vente"]);
   });
 
   it("dans un type, liste ses pièces et rien d'autre", async () => {
@@ -144,5 +157,21 @@ describe("bibliothèque du cabinet", () => {
       target: { value: "-1" },
     });
     expect((await screen.findAllByText(/31\/01\/2026/)).length).toBe(3);
+  });
+
+  it("un dossier trop grand s'ouvre sur ses mois, et ne charge que le mois ouvert", async () => {
+    plafond = 3;
+    appels.length = 0;
+    niveau = {};
+    ouvrir();
+    await screen.findByText("Janvier 2026");
+    expect(screen.getByText("cab.biblio.volumineux")).toBeTruthy();
+    expect(appels).toEqual([]);
+    cleanup();
+    niveau = { client: "client", mois: "2026-01" };
+    ouvrir();
+    await screen.findByText("Avoir");
+    expect(appels).toEqual(["2026-01"]);
+    plafond = 2000;
   });
 });
