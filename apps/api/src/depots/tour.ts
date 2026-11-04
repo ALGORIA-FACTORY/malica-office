@@ -276,6 +276,20 @@ export const tour = {
   },
 
   /**
+   * Qui appartient à une organisation, et qui est titulaire de sa licence
+   * (4 novembre 2026) : en lecture, pour la plateforme seule. Sans cela, la
+   * Tour refusait de confier une société « déjà dirigée » sans dire par qui.
+   */
+  async membresDeLOrganisation(db: Requete, organisationId: string) {
+    const { rows } = await db.query(
+      `select user_id, email, nom, role, depuis::text, titulaire_licence
+         from public.plateforme_organisation_membres($1)`,
+      [organisationId],
+    );
+    return rows;
+  },
+
+  /**
    * Confier une société SANS AUCUN membre à son premier dirigeant, un compte
    * existant (4 novembre 2026) : sa licence naît à son nom. Une société qui a
    * déjà des membres ne se confie pas — ses dirigeants invitent.
