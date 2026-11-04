@@ -39,11 +39,17 @@ fn sans_proclitique(mot: &str) -> String {
     mot.to_string()
 }
 
+/// Les mots au plus d'un libellé de date ou d'identifiant lu sur ses voisins
+/// (« Date de la livraison », « المعرّف البنكي »).
+pub const MOTS_D_UN_LIBELLE: usize = 4;
+
 pub fn normaliser(s: &str) -> String {
     let s: String = s.split_whitespace().map(sans_proclitique).collect::<Vec<_>>().join(" ");
     s.chars()
         .flat_map(|c| c.to_lowercase())
-        .filter(|c| !c.is_whitespace())
+        // Les signes qui ne changent pas le mot arabe : voyelles brèves, chadda, soukoun,
+        // alif suscrit, tatwil. « المعرّف » et « المعرف » sont un même libellé.
+        .filter(|c| !c.is_whitespace() && !matches!(c, '\u{064B}'..='\u{065F}' | '\u{0670}' | '\u{0640}'))
         .map(|c| match c {
             'é' | 'è' | 'ê' | 'ë' => 'e',
             'à' | 'â' | 'ä' => 'a',
@@ -51,6 +57,9 @@ pub fn normaliser(s: &str) -> String {
             'ô' | 'ö' => 'o',
             'û' | 'ù' | 'ü' => 'u',
             'ç' => 'c',
+            // les formes de l'alif, et le ya final sans points
+            'أ' | 'إ' | 'آ' | 'ٱ' => 'ا',
+            'ى' => 'ي',
             _ => c,
         })
         .collect()
@@ -214,6 +223,22 @@ impl<'a> Plan<'a> {
     /// jeton qui précède la valeur, quand on connaît sa position ; sinon tout le jeton.
     /// `dessus` : le jeton juste au-dessus compte aussi (en-tête de colonne).
     pub fn ancre(&self, i: usize, reperes: &[String], avant: Option<&str>, dessus: bool) -> bool {
+        self.ancre_valeur(i, i, reperes, avant, dessus, 1)
+    }
+
+    /// `ancre` pour une valeur portée par les jetons `i` à `fin` : le libellé qui la suit
+    /// (écriture de droite à gauche) se cherche après son DERNIER jeton — un RIB imprimé en
+    /// quatre groupes a son « المعرف البنكي » à droite du quatrième. `mots` : les mots au
+    /// plus d'un libellé lu sur les voisins (1 : le voisin seul, comme pour un montant).
+    pub fn ancre_valeur(
+        &self,
+        i: usize,
+        fin: usize,
+        reperes: &[String],
+        avant: Option<&str>,
+        dessus: bool,
+        mots: usize,
+    ) -> bool {
         if reperes.is_empty() {
             return false;
         }
@@ -227,11 +252,59 @@ impl<'a> Plan<'a> {
             let j = &self.jetons[k];
             j.montants.is_empty() && j.date.is_none() && contient(&self.normes[k])
         };
+        // Un séparateur imprimé seul (« Date : 07/08/2026 », « التاريخ / Date : ») n'est pas
+        // un voisin : le libellé est au-delà. Banc sans IA du 4 novembre 2026 : sans ce pas,
+        // 179 dates d'opération ne tenaient qu'au repli « seule date de la page ».
+        let separateur = |k: usize| !self.jetons[k].texte.chars().any(char::is_alphanumeric);
+        // Le premier voisin au-delà des séparateurs, et si un deux-points était parmi eux.
+        let au_dela = |depart: Option<usize>, suivant: &dyn Fn(usize) -> Option<usize>| {
+            let (mut k, mut deux_points) = (depart, false);
+            while let Some(x) = k.filter(|&x| separateur(x)) {
+                deux_points |= self.jetons[x].texte.contains(':');
+                k = suivant(x);
+            }
+            (k, deux_points)
+        };
         // Le libellé précède la valeur dans SON ordre de lecture : à gauche en écriture
-        // latine, à droite en écriture de droite à gauche.
+        // latine, à droite en écriture de droite à gauche. Un deux-points entre eux dit le
+        // sens à lui seul : « التاريخ : 26 mai 2026 », sur une pièce bilingue, met le libellé
+        // arabe à gauche de sa valeur.
+        //
+        // Un libellé de plusieurs mots (« المعرّف البنكي », « Date de livraison ») se lit sur
+        // les mots voisins, du plus proche au plus lointain : il contient toujours le plus
+        // proche, et se lit dans l'ordre de la ligne (le plus lointain d'abord).
+        let mot = |k: usize| {
+            let j = &self.jetons[k];
+            j.montants.is_empty() && j.date.is_none() && !separateur(k)
+        };
+        //
+        // Lu sur plusieurs mots, un libellé est un repère ENTIER, mot pour mot (ponctuation
+        // collée ôtée) : « Valable jusqu'au » n'est pas le repère « Le » qu'il contient.
+        let net = |x: usize| self.normes[x].trim_matches(|c: char| !c.is_alphanumeric());
+        let est_repere = |t: &str| reperes.iter().any(|r| r == t);
+        let libelle_vers = |depart: Option<usize>, suivant: &dyn Fn(usize) -> Option<usize>| {
+            if mots == 1 {
+                return depart.is_some_and(libelle);
+            }
+            let mut lus: Vec<&str> = Vec::new();
+            let mut k = depart;
+            while let Some(x) = k.filter(|&x| mot(x)) {
+                lus.insert(0, net(x));
+                if est_repere(&lus.concat()) {
+                    return true;
+                }
+                if lus.len() == mots {
+                    break;
+                }
+                k = suivant(x);
+            }
+            false
+        };
+        let (g, g_dp) = au_dela(self.gauche[i], &|x| self.gauche[x]);
+        let (d, d_dp) = au_dela(self.droite[fin], &|x| self.droite[x]);
         propre
-            || self.gauche[i].is_some_and(|k| !self.rtl[k] && libelle(k))
-            || self.droite[i].is_some_and(|k| self.rtl[k] && libelle(k))
+            || g.is_some_and(|k| (!self.rtl[k] || g_dp) && libelle_vers(Some(k), &|x| self.gauche[x]))
+            || d.is_some_and(|k| (self.rtl[k] || d_dp) && libelle_vers(Some(k), &|x| self.droite[x]))
             || (dessus && self.dessus[i].is_some_and(libelle))
     }
 }
