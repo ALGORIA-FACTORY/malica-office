@@ -58,7 +58,7 @@ describe("banc sans IA — le rapport", () => {
         },
       ]),
     ]);
-    assert.match(r, /\| tous les champs \| 1 \| 1 \| 1 \| 0 \| 0 \| 33\.3 % \|/u);
+    assert.match(r, /\| tous les champs \| 1 \| 1 \| 1 \| 0 \| 1 \| 0 \| 0 \| 33\.3 % \|/u);
     assert.match(r, /échangés : 1/u);
   });
 });

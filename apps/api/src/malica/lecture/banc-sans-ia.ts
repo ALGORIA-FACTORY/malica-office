@@ -130,11 +130,19 @@ type Issue = "juste" | "faux" | "silence" | "invente" | "signale";
 interface MesureDuChamp {
   readonly champ: string;
   readonly expert: string;
+  /** Le type du champ de la grille (`ligne` pour une cellule du tableau). */
+  readonly type?: string;
   readonly issue: Issue;
   readonly attendu: unknown;
   readonly lu: string | null;
   /** Une piste signalée que la vérité dit fausse (ou présente quand rien n'est imprimé). */
   readonly signaleFaux?: boolean;
+  /**
+   * Un silence NORMAL : la valeur attendue n'est nulle part dans la lecture de la pièce
+   * (`absenteDeLaLecture`) — perdue par l'OCR, illisible, ou non imprimée telle que la
+   * vérité la dit. Aucun moteur ne la prouverait sur ce relevé.
+   */
+  readonly normal?: boolean;
 }
 
 export interface MesureDeLaPiece {
@@ -369,7 +377,8 @@ function mesurerLesRangees(
       : lu === null
         ? null
         : "invente";
-    if (issue) out.push({ champ: `lignes.${champ}`, expert: "lignes", issue, attendu, lu });
+    if (issue)
+      out.push({ champ: `lignes.${champ}`, expert: "lignes", type: "ligne", issue, attendu, lu });
   };
   for (let i = 0; i < n; i++) {
     const v = vraies[i] ?? {};
@@ -542,6 +551,7 @@ async function mesurerLaPiece(
       champs.push({
         champ: champ.code,
         expert: champ.expert ?? "?",
+        type: champ.type,
         issue: r.lu === null ? "juste" : "faux",
         attendu: "(rien : la pièce le rend faux exprès)",
         lu: r.lu,
@@ -577,6 +587,7 @@ async function mesurerLaPiece(
       champs.push({
         champ: champ.code,
         expert: champ.expert ?? "?",
+        type: champ.type,
         issue,
         attendu,
         lu: r.lu,
@@ -604,8 +615,55 @@ async function mesurerLaPiece(
       juste: piece.sens === null || sensLu === null ? null : piece.sens === sensLu,
       raison: sortie.parties?.raison ?? null,
     },
-    champs,
+    champs: champs.map((c) =>
+      c.issue === "silence"
+        ? { ...c, normal: absenteDeLaLecture(c.attendu, c.type ?? "", releve.tokens) }
+        : c,
+    ),
   };
+}
+
+/**
+ * La valeur attendue est-elle ABSENTE de la lecture ? On la cherche dans le texte relu de
+ * la pièce, débarrassé de ses espaces, de sa ponctuation et de ses accents, les confusions
+ * classiques de l'OCR repliées (O/0, I/l/1) : ses chiffres (« 1203.360 » → « 1203360 »,
+ * une date dans ses deux ordres) ou ses lettres et chiffres (un nom, un matricule). Le
+ * doute compte contre le moteur : une valeur trop courte pour être cherchée (moins de 3
+ * signes), une valeur de liste (« TND » s'imprime « DT ») et une marque (un cachet, une
+ * signature) ne sont jamais « normales » — leur silence reste à travailler.
+ */
+function absenteDeLaLecture(attendu: unknown, type: string, tokens: readonly PageToken[]): boolean {
+  if (type === "liste" || type === "booleen") return false;
+  const replie = (t: string) =>
+    texteNormal(t)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/gu, "")
+      .toUpperCase()
+      .replace(/O/gu, "0")
+      .replace(/[IL]/gu, "1")
+      .replace(/[^\p{L}\p{N}]/gu, "");
+  const texte = tokens.map((t) => t.text).join(" ");
+  const signes = replie(texte);
+  const chiffres = latins(texte).replace(/\D/gu, "");
+  const valeurs = (v: unknown): string[] =>
+    v !== null && typeof v === "object" ? Object.values(v).flatMap(valeurs) : [String(v)];
+  const cherchables = valeurs(attendu).filter((v) => v !== "true" && v !== "false");
+  if (cherchables.length === 0) return false;
+  return cherchables.some((v) => {
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/u.exec(v);
+    if (iso) {
+      const [, a, m, j] = iso;
+      return ![`${j}${m}${a}`, `${a}${m}${j}`, `${Number(j)}${m}${a}`].some((f) =>
+        chiffres.includes(f),
+      );
+    }
+    if (/^-?\d+([.,]\d+)?$/u.test(v.trim())) {
+      const d = v.replace(/\D/gu, "");
+      return d.length >= 3 && !chiffres.includes(d);
+    }
+    const n = replie(v);
+    return n.length >= 3 && !signes.includes(n);
+  });
 }
 
 /* ========================================================== LES CORPUS ==== */
@@ -971,8 +1029,12 @@ function chargerLeCorpus(spec: string, cache: string, deviseDuPack: string): Pie
 
 /* ============================================================ LE RAPPORT == */
 
-type Compte = Record<Issue, number>;
-const zero = (): Compte => ({ juste: 0, faux: 0, silence: 0, invente: 0, signale: 0 });
+type Compte = Record<Issue | "normal", number>;
+const zero = (): Compte => ({ juste: 0, faux: 0, silence: 0, normal: 0, invente: 0, signale: 0 });
+const compter = (x: Compte, c: MesureDuChamp) => {
+  x[c.issue]++;
+  if (c.normal) x.normal++;
+};
 
 export function rapport(mesures: readonly MesureDeLaPiece[]): string {
   const par = (cle: (m: MesureDeLaPiece, c: MesureDuChamp) => string) => {
@@ -981,7 +1043,7 @@ export function rapport(mesures: readonly MesureDeLaPiece[]): string {
       for (const c of m.champs) {
         const k = cle(m, c);
         const x = t.get(k) ?? zero();
-        x[c.issue]++;
+        compter(x, c);
         t.set(k, x);
       }
     return [...t.entries()].sort((a, b) => a[0].localeCompare(b[0]));
@@ -989,15 +1051,15 @@ export function rapport(mesures: readonly MesureDeLaPiece[]): string {
   const ligne = (k: string, x: Compte) => {
     const imprimes = x.juste + x.faux + x.silence + x.signale;
     const pct = imprimes ? ((100 * x.juste) / imprimes).toFixed(1) : "—";
-    return `| ${k} | ${x.juste} | ${x.faux} | ${x.silence} | ${x.invente} | ${x.signale} | ${pct} % |`;
+    return `| ${k} | ${x.juste} | ${x.faux} | ${x.silence} | ${x.normal} | ${x.silence - x.normal} | ${x.invente} | ${x.signale} | ${pct} % |`;
   };
   const tete = (t: string) => [
     `\n### ${t}\n`,
-    "| | juste | faux | silence | inventé | signalé (à vérifier) | juste / imprimés |",
-    "|---|--:|--:|--:|--:|--:|--:|",
+    "| | juste | faux | silence | dont normal (absent de la lecture) | dont à travailler | inventé | signalé (à vérifier) | juste / imprimés |",
+    "|---|--:|--:|--:|--:|--:|--:|--:|--:|",
   ];
   const total = zero();
-  for (const m of mesures) for (const c of m.champs) total[c.issue]++;
+  for (const m of mesures) for (const c of m.champs) compter(total, c);
   const sens = mesures.filter((m) => m.sens.attendu !== null);
   const issues = new Map<string, number>();
   for (const m of mesures) issues.set(m.issue, (issues.get(m.issue) ?? 0) + 1);

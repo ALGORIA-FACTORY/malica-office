@@ -247,6 +247,28 @@ Mêmes 412 pièces. Les pages lues par le second lecteur sont relues pour leurs 
 - **Pas encore** : la signature (un trait d'encre fin, à distinguer de l'écriture
   manuscrite) et les champs qui mêlent cachet et signature (« Signature et cachet »).
 
+## La colonne « normal » (4 novembre 2026, après-midi)
+
+Un silence est un champ imprimé que le moteur n'affirme pas. Le rapport le coupe désormais
+en deux :
+
+- **normal** : la valeur attendue n'est nulle part dans la lecture de la pièce. Elle a été
+  perdue par l'OCR (« LSB » pour « USB »), elle est illisible, ou elle n'est pas imprimée
+  telle que la vérité la dit. Aucun moteur ne la prouverait sur ce relevé.
+- **à travailler** : la valeur est dans la lecture, et le moteur ne sait pas encore la
+  prouver ou l'attribuer.
+
+Le doute compte contre le moteur. Une valeur de moins de trois signes, une valeur de liste
+(« TND » s'imprime « DT ») et une marque (un cachet, une signature) ne sont jamais
+« normales ».
+
+|                 | silence | dont normal | dont à travailler |
+| --------------- | ------: | ----------: | ----------------: |
+| tous les champs |   6 334 |         866 |             5 468 |
+
+« Normal » ne veut pas dire « perdu pour toujours ». Ces silences se gagnent par une
+meilleure lecture (OCR, étape 5), pas par le moteur.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |
