@@ -12,11 +12,172 @@
  * ne pas ouvrir ClicToPay dans le vide.
  */
 
+import { z } from "zod";
+
+import type {
+  CabinetDeLaTour,
+  InterventionDeLaTour,
+  PmeDeLaTour,
+} from "@malica/socle/ports/repositories";
+
 import type { Requete } from "../db.ts";
 import { secretsPoses } from "../paiement/prestataires.ts";
 import { versReport } from "./report-d-echeance.ts";
 
+/**
+ * L'état d'un ensemble de factures, le pire d'abord : en retard, irrécouvrable,
+ * payée en partie, à échoir ; « payée » seulement si une facture l'a été ; rien
+ * sans facture, ou si toutes sont annulées. Les états sont ceux de
+ * `facturation.encours_v` — l'écran ne les recalcule pas. Une seule
+ * définition, pour le cabinet (ses factures consolidées) et pour la PME.
+ *
+ * `propre` dit quelles factures portent le MONTANT dû de l'appelant : une
+ * facture consolidée du cabinet dit l'état de la PME qu'elle couvre, mais sa
+ * dette reste celle du cabinet — on ne l'impute à aucune PME. Le reste dû se
+ * dit dans la devise des factures (`factures.devise`, celle de l'émetteur),
+ * jamais dans celle du client ; plusieurs devises ne s'additionnent pas : le
+ * reste dû vaut alors `null`.
+ */
+function etatDesFactures(propre: string): string {
+  const du = `e.etat in ('a_echoir', 'en_retard', 'partielle') and (${propre})`;
+  return `
+  select case when bool_or(e.etat = 'en_retard') then 'en_retard'
+              when bool_or(e.etat = 'irrecouvrable') then 'irrecouvrable'
+              when bool_or(e.etat = 'partielle') then 'partielle'
+              when bool_or(e.etat = 'a_echoir') then 'a_echoir'
+              when bool_or(e.etat = 'payee') then 'payee' end as etat,
+         case when count(distinct fa.devise) filter (where ${du}) <= 1
+              then coalesce(sum(e.reste_du) filter (where ${du}), 0)::text end as reste_du,
+         case when count(distinct fa.devise) filter (where ${du}) = 1
+              then min(fa.devise) filter (where ${du}) end as devise_du,
+         min(e.echeance_le) filter (where ${du})::text as echeance_le
+    from facturation.encours_v e
+    join facturation.factures fa on fa.id = e.facture_id`;
+}
+
+const Id = z.string().uuid();
+/** Un motif se lit un an après devant un client : jamais vide. */
+const Motif = z.string().trim().min(1);
+const Mois = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+const Lectures = z.number().int().positive().max(100_000);
+
+/** Une saisie que la porte refuserait : dite par une clé, jamais par une phrase brute. */
+function saisie<T>(schema: z.ZodType<T>, valeur: unknown): T {
+  const r = schema.safeParse(valeur);
+  if (!r.success) throw Object.assign(new Error("refus.saisie.mal_formee"), { code: "22023" });
+  return r.data;
+}
+
 export const tour = {
+  /**
+   * Les clients de la plateforme : tous les cabinets, toutes les PME — avec ou
+   * sans cabinet. Des compteurs et des états, jamais un papier : la
+   * bibliothèque se lit en nombres (`plateforme.bibliotheques_compter`).
+   *
+   * Chaque lecture passe par la RLS de l'appelant, et chacune porte en plus
+   * `(select app.is_platform())` : la base, et pas seulement la garde de
+   * `executerRpc`, rend zéro ligne à qui n'est pas opérateur.
+   */
+  async clients(db: Requete): Promise<{ cabinets: CabinetDeLaTour[]; pme: PmeDeLaTour[] }> {
+    const [cabinets, pme] = await Promise.all([
+      db.query<CabinetDeLaTour>(
+        `select o.id, o.name as nom, o.legal_id as matricule, o.jurisdiction as juridiction,
+                o.currency as devise, f.etat, f.reste_du, f.devise_du, f.echeance_le
+           from identity.organizations o
+           cross join lateral (${etatDesFactures("true")}
+            where fa.payeur_type = 'cabinet' and fa.payeur_tenant_id = o.id) f
+          where o.kind = 'cabinet' and o.archived_at is null and (select app.is_platform())
+          order by o.name, o.id`,
+      ),
+      db.query<PmeDeLaTour>(
+        `with bibliotheques as (select * from plateforme.bibliotheques_compter())
+         select o.id, o.name as nom, o.legal_id as matricule, o.currency as devise,
+                c.id as cabinet_id, c.name as cabinet_nom,
+                coalesce(a.statut = 'actif', false) as paye_par_cabinet,
+                l.licence_id, l.offre_code,
+                -- Une licence née avant la grille de son offre n'a pas de libellé
+                -- daté : celui de la dernière grille, jamais le code brut.
+                coalesce(l.offre_libelle,
+                         (select r.libelle from ref.offres r where r.code = l.offre_code
+                           order by r.effective_from desc limit 1)) as offre_libelle,
+                l.statut,
+                l.lectures_consommees, l.lectures_droit,
+                coalesce(b.documents, 0)::int as documents,
+                coalesce(b.transmis_mois_courant, 0)::int as transmis_mois,
+                b.dernier_depot_le::text as dernier_depot_le,
+                f.etat, f.reste_du, f.devise_du, f.echeance_le
+           from identity.organizations o
+           left join identity.engagements m on m.pme_org_id = o.id and m.status = 'actif'
+           left join facturation.acces a
+             on a.tenant_id = o.id and a.canal = 'cabinet' and a.statut <> 'termine'
+           left join identity.organizations c on c.id = coalesce(m.cabinet_org_id, a.cabinet_tenant_id)
+           left join facturation.licence_organisations lo on lo.tenant_id = o.id
+           left join plateforme.licences_v l on l.licence_id = lo.licence_id
+           left join bibliotheques b on b.tenant_id = o.id
+           cross join lateral (${etatDesFactures("fa.licence_id is not null")}
+            where lo.licence_id is not null
+              and (fa.licence_id = lo.licence_id
+                   or fa.id in (select fl.facture_id from facturation.facture_lignes fl
+                                 where fl.licence_id = lo.licence_id))) f
+          where o.kind = 'pme' and o.archived_at is null and (select app.is_platform())
+          order by o.name, o.id`,
+      ),
+    ]);
+    return { cabinets: cabinets.rows, pme: pme.rows };
+  },
+
+  /** Les derniers gestes de la tour sur une licence : qui, quand, pourquoi. */
+  async interventions(db: Requete, licenceId: string): Promise<InterventionDeLaTour[]> {
+    const { rows } = await db.query<InterventionDeLaTour>(
+      `select i.id, i.acte, i.motif, i.valeur::text as valeur, i.effet_du::text as effet_du,
+              i.effet_au::text as effet_au, i.created_at::text as le
+         from plateforme.interventions i
+        where i.licence_id = $1 and (select app.is_platform())
+        order by i.created_at desc, i.id
+        limit 20`,
+      [saisie(Id, licenceId)],
+    );
+    return rows;
+  },
+
+  /** Suspendre une licence : l'œil s'arrête, la capture continue. Motivé. */
+  async suspendre(db: Requete, licenceId: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(`select plateforme.suspendre($1, $2) as r`, [
+      saisie(Id, licenceId),
+      saisie(Motif, motif),
+    ]);
+    return rows[0]?.r ?? null;
+  },
+
+  /** Reprendre une licence suspendue ; la base dit combien de pièces attendent. */
+  async reprendre(db: Requete, licenceId: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(`select plateforme.reprendre($1, $2) as r`, [
+      saisie(Id, licenceId),
+      saisie(Motif, motif),
+    ]);
+    return rows[0]?.r ?? null;
+  },
+
+  /**
+   * Des lectures en plus, pour UN mois (« AAAA-MM ») : la fenêtre se borne au
+   * mois choisi. `accorder_lectures` laissée sans fin ajouterait le supplément
+   * chaque mois, sans limite (`facturation.droits_reels_v`).
+   */
+  async accorderLectures(
+    db: Requete,
+    licenceId: string,
+    nombre: number,
+    mois: string,
+    motif: string,
+  ) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.accorder_lectures($1, $2, $3, d.du, (d.du + interval '1 month - 1 day')::date) as r
+         from (select to_date($4, 'YYYY-MM') as du) d`,
+      [saisie(Id, licenceId), saisie(Lectures, nombre), saisie(Motif, motif), saisie(Mois, mois)],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /** Vrai pour un opérateur de la plateforme : l'écran de la tour ne s'affiche qu'à lui. */
   async suisJePlateforme(db: Requete) {
     const { rows } = await db.query<{ r: boolean }>(`select app.is_platform() as r`);

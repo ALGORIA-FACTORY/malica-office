@@ -9,10 +9,18 @@ import {
   useRouteContext,
   useRouterState,
 } from "@tanstack/react-router";
-import { CalendarClock, Home as HomeIcon, Library, Lock, Plus, Settings } from "lucide-react";
+import {
+  CalendarClock,
+  Home as HomeIcon,
+  Library,
+  Lock,
+  Plus,
+  Settings,
+  TowerControl,
+} from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
-import { CIBLE_COQUE } from "@/capabilities/coque";
+import { CIBLE_COQUE, COMMERCE } from "@/capabilities/coque";
 import { FichierNonPdf, files, type PickedFile } from "@/capabilities/files";
 import { BandeauHorsLigne } from "@/components/malica/bandeau-hors-ligne";
 import { EntetePme } from "@/components/malica/entete-pme";
@@ -38,6 +46,7 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { etiqueterLeDossier } from "@/lib/telemetrie";
 import { clePiecesLues } from "@/hooks/use-pieces-lues";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
+import { useMonAcces } from "@/hooks/use-mon-acces";
 
 /*
  * Le cadrage du navigateur — détection, redressement, et un modèle qui se
@@ -122,6 +131,8 @@ function PmeLayout() {
    * aussi expert ailleurs croyait l'inverse.
    */
   const aUnCabinet = Boolean(monCabinet.data?.id);
+  // La tour, aux seuls opérateurs d'ALGORIA : la même lecture que le rail du cabinet.
+  const operateur = useMonAcces(org?.id).data?.plateforme === true;
   const hasCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
 
   // Garde de rôle : sans appartenance PME, on renvoie au portail plutôt qu'un écran muet.
@@ -671,6 +682,12 @@ function PmeLayout() {
               active={path === "/pme/reglages"}
             />
           </div>
+          {/* Sur téléphone, la tour s'ouvre depuis « Mon espace » : la barre a trois places. */}
+          {operateur && COMMERCE ? (
+            <div className="nav-desktop">
+              <NavItem to="/tour" icon={TowerControl} label={t("tour.titre")} active={false} />
+            </div>
+          ) : null}
           <div className="ajout">
             {/*
              * L'obturateur ne porte que sa géométrie en utilitaires : la cible

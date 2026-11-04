@@ -345,13 +345,16 @@
     "modifier"
   ],
   "tour": [
+    "accorderLectures",
     "archiverOrganisation",
     "calendrier",
     "chercherOrganisations",
+    "clients",
     "confierOrganisation",
     "designerEmetteur",
     "emetteur",
     "grilleEnVigueur",
+    "interventions",
     "licences",
     "membresDeLOrganisation",
     "poserJourFerie",
@@ -370,9 +373,11 @@
     "reglerRelances",
     "reglerRelectureNuit",
     "relecturesDeNuit",
+    "reprendre",
     "retirerJourFerie",
     "retirerReportPublie",
     "suisJePlateforme",
+    "suspendre",
     "trousDeLaGrille"
   ]
 }

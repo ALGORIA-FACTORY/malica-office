@@ -190,11 +190,18 @@ function PmeReglages() {
         <MonNom />
         {/* Son Mon espace des sociétés quittées : il part avec le compte (lot 4). */}
         <LienMonEspaceParti className="btn btn-sec mt-2" />
+        {/* La tour, aux seuls opérateurs d'ALGORIA : la même lecture que le rail du cabinet. */}
+        {COMMERCE && acces.data?.plateforme ? (
+          <Link to="/tour" data-lien-tour className="btn btn-sec mt-2">
+            {t("tour.titre")}
+          </Link>
+        ) : null}
         <SeDeconnecter className="btn btn-sec mt-2" />
       </div>
 
       {/* ─────────────────────────────────────────────── l'abonnement */}
-      <div className="sec">
+      {/* « Mon abonnement » s'ouvre ici depuis l'accueil (`#mon-abonnement`). */}
+      <div className="sec" id="mon-abonnement">
         <h2>
           {t("pme.reglages.abo")}
           <Aide
