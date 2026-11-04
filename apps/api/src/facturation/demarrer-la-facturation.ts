@@ -1,12 +1,14 @@
 /**
- * L'émission automatique des factures mensuelles (décision du 4 novembre 2026,
- * « option 1 ») : un tic toutes les heures, lancé par `server.ts` seul.
+ * L'émission automatique des factures (décisions du 4 novembre 2026) : un tic
+ * toutes les heures, lancé par `server.ts` seul.
  *
- * Toute la règle est en base (`fabrique.facturation_du_jour`, migration
- * 20261127090000) : quels mois sont clos, qui paie, ce qui est déjà facturé,
- * le prorata, le timbre. Ce travailleur ne décide que QUAND il passe :
+ * Toute la règle est en base (`fabrique.facturation_du_jour`, migrations
+ * 20261127090000 et 20261128090000) : deux périmètres que la tour ouvre
+ * chacun seul — les cabinets au mois, à terme échu ; les PME d'avance, à leur
+ * date anniversaire —, qui paie, ce qui est déjà facturé, le prorata, le
+ * timbre. Ce travailleur ne décide que QUAND il passe :
  *
- *   - la tour a coupé l'émission : rien, pas même le jour lu ;
+ *   - la tour a coupé les deux périmètres : rien, pas même le jour lu ;
  *   - sinon, le jour de la PLATEFORME (le fuseau de l'émetteur, lu en base —
  *     jamais une heure du serveur, R4) est passé à la base, qui ne fait le
  *     travail qu'une fois par jour et par décision de la tour.
@@ -22,27 +24,41 @@ import { tracerUnTravail } from "../observabilite/journal.ts";
 const CADENCE_MS = 60 * 60 * 1000;
 const PREMIER_TOUR_MS = 3 * 60 * 1000;
 
-/** Ce que rend `fabrique.facturation_du_jour`. */
-export interface BilanDuJour {
+/** Ce qu'un périmètre a fait ce jour-là. */
+interface BilanDuPerimetre {
   etat: "coupee" | "deja_passee" | "passee";
-  jour: string;
   emises?: number;
   deja_emises?: number;
   rien_a_facturer?: number;
   erreurs?: number;
 }
 
+/** Ce que rend `fabrique.facturation_du_jour`. */
+export interface BilanDuJour {
+  etat: "coupee" | "deja_passee" | "passee";
+  jour: string;
+  cabinets?: BilanDuPerimetre;
+  pme?: BilanDuPerimetre;
+}
+
+const PERIMETRES = ["cabinets", "pme"] as const;
+
+/** Les erreurs des deux périmètres. */
+const erreursDu = (b: BilanDuJour | null) =>
+  PERIMETRES.reduce((n, p) => n + (b?.[p]?.erreurs ?? 0), 0);
+
 type Executer = <T>(travail: (db: Requete) => Promise<T>) => Promise<T>;
 
 /**
- * Un tour, dans UNE transaction de l'exécuteur : `null` si l'émission est
- * coupée, sinon le bilan du jour. Les épreuves l'appellent avec leur propre
+ * Un tour, dans UNE transaction de l'exécuteur : `null` si les deux
+ * périmètres sont coupés, sinon le bilan du jour. Les épreuves l'appellent avec leur propre
  * transaction, sous le rôle de l'API.
  */
 export async function tourDeFacturation(executer: Executer): Promise<BilanDuJour | null> {
   return executer(async (db) => {
     const { rows: ouverte } = await db.query<{ ouverte: boolean }>(
-      "select plateforme.facturation_auto_ouverte() as ouverte",
+      `select plateforme.facturation_auto_ouverte('cabinets')
+              or plateforme.facturation_auto_ouverte('pme') as ouverte`,
     );
     if (!ouverte[0]?.ouverte) return null;
     const { rows: jour } = await db.query<{ jour: string }>(
@@ -72,16 +88,18 @@ export function demarrerLaFacturation() {
         () => sousVerrouDeSession(cle, () => tourDeFacturation(horsRlsAuthentificationSeule)),
         {
           juger: (b) => ({
-            issue: (b?.erreurs ?? 0) > 0 ? "erreur" : "ok",
+            issue: erreursDu(b) > 0 ? "erreur" : "ok",
             // Sans bilan : l'émission est coupée, ou une autre API tient le verrou.
             resultat: b ? b.etat : "sans_passage",
           }),
         },
       );
-      if (bilan?.etat === "passee") {
+      for (const p of PERIMETRES) {
+        const b = bilan?.[p];
+        if (b?.etat !== "passee") continue;
         console.log(
-          `[facturation] ${bilan.jour} — ${bilan.emises} émise(s), ${bilan.deja_emises} déjà ` +
-            `émise(s), ${bilan.rien_a_facturer} sans rien à facturer, ${bilan.erreurs} erreur(s)`,
+          `[facturation] ${bilan!.jour} ${p} — ${b.emises} émise(s), ${b.deja_emises} déjà ` +
+            `émise(s), ${b.rien_a_facturer} sans rien à facturer, ${b.erreurs} erreur(s)`,
         );
       }
     } catch (e) {

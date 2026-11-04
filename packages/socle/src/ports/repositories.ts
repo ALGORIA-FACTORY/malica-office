@@ -4323,11 +4323,18 @@ export interface ReglageRelectureNuit {
 }
 
 /**
- * L'émission automatique des factures mensuelles (4 novembre 2026), telle que
- * `plateforme.facturation_auto_etat()` la rend : la décision en vigueur, qui
- * l'a prise (`null` pour la décision livrée), et le dernier passage du robot.
+ * Les deux périmètres de l'émission automatique (4 novembre 2026) : la facture
+ * mensuelle des cabinets, à terme échu ; les échéances anniversaire et les
+ * compléments des PME, d'avance. Chacun s'ouvre et se coupe seul.
  */
-export interface EtatFacturationAuto {
+export type PerimetreDeFacturation = "cabinets" | "pme";
+
+/**
+ * Un périmètre, tel que `plateforme.facturation_auto_etat()` le rend : la
+ * décision en vigueur, qui l'a prise (`null` pour la décision livrée), et le
+ * dernier passage du robot sous ce périmètre.
+ */
+export interface EtatDuPerimetreDeFacturation {
   reglage: {
     actif: boolean;
     rattrapage_mois: number;
@@ -4352,6 +4359,9 @@ export interface EtatFacturationAuto {
     }>;
   } | null;
 }
+
+/** L'émission automatique : ses deux périmètres, indépendants. */
+export type EtatFacturationAuto = Record<PerimetreDeFacturation, EtatDuPerimetreDeFacturation>;
 
 /** Un compte de service (le relecteur de nuit) : son état en vigueur et son nom. */
 export interface CompteDeService {
@@ -4504,10 +4514,15 @@ export interface TourRepository {
   } | null>;
   /** La tour ouvre ou ferme les relances d'impayé et la suspension automatique. */
   reglerRelances(actives: boolean, suspensionAutomatique: boolean, motif: string): Promise<unknown>;
-  /** L'émission automatique des factures : la décision en vigueur et le dernier passage. */
+  /** L'émission automatique : pour chaque périmètre, la décision en vigueur et le dernier passage. */
   reglageFacturationAuto(): Promise<EtatFacturationAuto>;
-  /** La tour ouvre ou coupe l'émission automatique : daté, motivé, en ajout seul. */
-  reglerFacturationAuto(actif: boolean, rattrapageMois: number, motif: string): Promise<unknown>;
+  /** La tour ouvre ou coupe un périmètre de l'émission : daté, motivé, en ajout seul. */
+  reglerFacturationAuto(
+    perimetre: PerimetreDeFacturation,
+    actif: boolean,
+    rattrapageMois: number,
+    motif: string,
+  ): Promise<unknown>;
   /** Le calendrier d'une juridiction : règle de report, jours fériés, reports publiés. */
   calendrier(juridiction: string): Promise<CalendrierDeLaJuridiction>;
   poserJourFerie(input: {

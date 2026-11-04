@@ -2393,6 +2393,8 @@ export const fr = {
   "refus.relecture_nuit.passage_ferme": "Ce passage de nuit est fermé.",
   "refus.facturation_auto.rattrapage_hors_bornes":
     "Le rattrapage compte au moins un mois : le mois qui vient de se clore.",
+  "refus.facturation_auto.perimetre_inconnu":
+    "Un périmètre de facturation est « cabinets » ou « pme ».",
   "refus.facturation.premier_du_mois": "Une période de facturation commence le premier du mois.",
   "refus.facturation.destinataire_sans_nom":
     "Le destinataire {destinataire} n’a pas de nom : une facture sans destinataire n’est pas une facture.",
@@ -3865,15 +3867,24 @@ export const fr = {
   "tour.menu.facturation": "Facturation automatique",
   "tour.facturation": "Facturation automatique",
   "tour.facturation.aide":
-    "Ouverte, Malica émet chaque jour les factures des mois clos qui manquent : une par payeur et par mois, au prorata des jours, jamais deux. Coupée, aucune facture ne part d'elle-même.",
+    "Deux périmètres indépendants, chacun ouvert ou coupé, motif à l'appui. Coupé, aucune facture de ce périmètre ne part d'elle-même.",
   "tour.facturation.etat.ouverte": "Ouverte depuis le {date}.",
   "tour.facturation.etat.coupee": "Coupée depuis le {date} : aucune facture ne part d'elle-même.",
   "tour.facturation.par": "Décidé par {qui}.",
   "tour.facturation.parLaLivraison": "Décidé à la livraison.",
   "tour.facturation.motif": "Motif : {motif}",
-  "tour.facturation.rattrapage": "Mois clos examinés à chaque passage",
-  "tour.facturation.rattrapage.aide":
+  "tour.facturation.cabinets": "Cabinets — au mois, à terme échu",
+  "tour.facturation.cabinets.aide":
+    "Chaque jour, Malica émet la facture mensuelle de chaque cabinet pour les mois clos qui manquent : une par cabinet et par mois, au prorata des jours, jamais deux.",
+  "tour.facturation.cabinets.rattrapage": "Mois clos examinés à chaque passage",
+  "tour.facturation.cabinets.rattrapage.aide":
     "1 : le mois qui vient de se clore. Au-delà, des mois plus anciens jamais facturés le seront.",
+  "tour.facturation.pme": "PME — d'avance, à la date anniversaire",
+  "tour.facturation.pme.aide":
+    "Ce que la PME paie se facture d'avance, le jour anniversaire de son abonnement, sans prorata. Une montée, une place ou une société en plus partent le jour même sur une facture complémentaire ; une descente vaut à l'échéance suivante.",
+  "tour.facturation.pme.rattrapage": "Échéances examinées à chaque passage",
+  "tour.facturation.pme.rattrapage.aide":
+    "1 : la période en cours. Au-delà, des échéances plus anciennes jamais facturées le seront.",
   "tour.facturation.invalide": "Un nombre entier, au moins 1.",
   "tour.facturation.ouvrir": "Ouvrir l'émission",
   "tour.facturation.couper": "Couper l'émission",

@@ -505,3 +505,78 @@ La facture reste mensuelle, par payeur, au prorata des jours. Tranché par défa
 - **L'acteur au journal** des factures émises est l'opérateur dont la décision
   d'ouvrir est en vigueur, pas un compte de service : c'est lui qui a autorisé
   l'émission, nommément.
+
+## La PME paie d'avance, à sa date anniversaire (livrée coupée le 4 novembre 2026)
+
+Décisions du dirigeant (A à I), migration 20261128090000 : le cabinet reste au
+mois, à terme échu ; ce que la PME paie se facture d'avance, à la date
+anniversaire, sans prorata ; une montée, une place ou une société en plus partent
+le jour même sur une facture complémentaire. Deux périmètres à la tour, coupés.
+Ce qui remplace la ligne « le titulaire est facturé à terme échu » ci-dessus.
+
+**INCERTAIN — juridique et fiscal, à valider par le fiscaliste avant d'ouvrir le
+périmètre PME :**
+
+- **Facturer d'avance** un service à venir (période anniversaire entière, dès son
+  premier jour) : fait générateur et exigibilité de la TVA au regard du CTVA
+  tunisien ; la facture est datée du jour d'émission, la période couverte est
+  écrite sur la ligne. À vérifier : texte (CTVA, articles sur le fait générateur
+  des prestations de services), pratique (abonnements logiciels facturés
+  d'avance), risque en contrôle (TVA exigible à l'encaissement de l'avance).
+- **Un droit de timbre sur chaque facture complémentaire** : chaque complément
+  est une facture à part entière et porte le timbre du pack
+  (`facture.droit_de_timbre`), comme la décision C le demande. Le coût pour le
+  client et la conformité (un timbre par facture) sont à confirmer.
+- **Aucun avoir à la descente** : la période déjà facturée reste due, la baisse
+  vaut à l'échéance suivante (E). Conforme si les conditions générales le disent ;
+  à écrire dans les CGV avant ouverture.
+- **Une période payée d'avance reste due à la fin de l'abonnement** : rien n'est
+  facturé après la fin, rien n'est rendu. Politique à écrire dans les CGV.
+
+**Tranché par défaut, à confirmer :**
+
+- **Les droits d'une descente sont immédiats** (comme avant) : seule la
+  facturation attend l'échéance suivante. Différer l'offre elle-même jusqu'à
+  l'échéance demanderait que `forfait_courant_v` lise l'offre en vigueur à la
+  date du jour, et non la dernière ouverte — un changement de toutes les lectures
+  de droits, hors de ce lot. Une remontée dans la même période ne refacture
+  rien : le tarif couvert est déjà payé.
+- **Un complément par jour** : un second changement le même jour, après un
+  complément déjà émis, part au passage du lendemain, à partir du lendemain (un
+  jour d'écart offert). La clé d'unicité est « payeur, licence, nature, premier
+  jour couvert », comme demandé.
+- **Ce que le robot attrape le lendemain** : la fin de l'accès d'un cabinet un
+  jour passé, ou un geste daté de la veille, se facture à partir du jour du
+  passage, pas du jour du geste (quelques jours d'écart offerts au client). Les
+  gestes du jour (montée, place, société, fin d'accès) passent sur le champ, à la
+  validation de la transaction (déclencheurs différés).
+- **Le saut d'ancien à nouveau** : une PME déjà facturée au mois reprend où sa
+  dernière facture s'arrête, jusqu'à son anniversaire, au prorata de la période
+  anniversaire. Avec le rattrapage livré (1 : la période en cours), des jours
+  plus anciens jamais facturés le restent. Avant d'ouvrir le périmètre PME,
+  facturer au mois ce qui doit l'être, ou régler le rattrapage.
+- **Acomptes de montée en attente** : un acompte préparé périmètre coupé reste
+  payable ; payé, il s'impute sur la prochaine échéance de la PME. Si sa montée
+  tombe dans une période facturée après l'ouverture, l'écart des jours entre la
+  montée et l'ouverture n'est pas facturé, mais l'acompte s'impute quand même
+  (paiement sans ligne correspondante, en faveur du client). À solder à la main
+  s'il en reste à l'ouverture.
+- **Recharges de lectures** : inchangé — la recharge se paie aussitôt en ligne
+  (acompte TTC, sans timbre) et se facture sur la facture suivante du titulaire :
+  désormais son échéance anniversaire (recharges achetées jusqu'au jour
+  d'émission), avec l'imputation du paiement. Une licence entièrement payée par
+  un cabinet n'a pas de facture de titulaire : ses recharges ne se facturent pas
+  (défaut préexistant).
+- **Licence suspendue** : la facturation continue (comme avant). Une licence
+  résiliée n'est plus facturée.
+- **L'annuel** commence à l'échéance suivante de la PME et se facture ce jour-là
+  (une ligne de douze mois) ; ensuite chaque anniversaire ne facture que les
+  places et sociétés en plus. L'émission manuelle de la plateforme
+  (`facturation.emettre`, au mois) ne reconnaît une année que si elle commence
+  le premier d'un mois : à n'utiliser que pour une PME encore facturée au mois.
+- **La page de paiement** (`mes_factures`) montre le mois de la facture
+  (`periode`), pas la période couverte : la ligne de la facture porte les dates
+  exactes. Montrer `couvre_du`/`couvre_au` à l'écran est un lot d'interface.
+- **Un numéro peut encore se perdre** (ligne ci-dessus) : l'émission de la PME
+  vérifie tout ce qu'elle peut AVANT de tirer son numéro (déjà émise, jours de
+  base déjà facturés, licence sans société, destinataire sans nom, timbre).
