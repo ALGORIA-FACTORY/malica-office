@@ -140,11 +140,16 @@ const SEPARATEUR = /[.,]/u;
 export function jetonsDuSudoku(
   plan: readonly PageToken[],
   devise: DeviseLue,
-  /** Les règles de lecture du pack, et la grille dont la preuve `lettres` nomme le champ. */
-  contexte: Pick<ContexteDuSudoku, "regles" | "grille">,
+  /**
+   * Les règles de lecture du pack, la grille dont la preuve `lettres` nomme le champ, et
+   * les formats d'identifiants du pack (`ref.identifiant_formats`), quand on les a.
+   */
+  contexte: Pick<ContexteDuSudoku, "regles" | "grille"> & {
+    readonly pack?: Pick<ContexteDuSudoku["pack"], "formats">;
+  },
 ): JetonDuSudoku[] {
   const dates = datesDuPlan(plan, contexte.regles);
-  const identifiants = identifiantsDuPlan(plan, contexte.regles);
+  const identifiants = identifiantsDuPlan(plan, contexte.regles, contexte.pack?.formats ?? {});
   const lettres = lettresDuPlan(plan, contexte.regles, contexte.grille, devise);
   return plan.map((t, i) => ({
     page: t.page,

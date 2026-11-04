@@ -18,6 +18,7 @@
  *
  * Le moteur fait le reste : il ancre, départage, cite, et juge.
  */
+import { enChiffresLatins } from "@malica/socle/chiffres";
 import { normaliserMatricule } from "@malica/socle/matricule";
 import { lireLeMontantEnLettres } from "@malica/socle/montant-en-lettres";
 import type { DeviseLue } from "@malica/socle/montant-imprime";
@@ -73,24 +74,65 @@ export function datesDuPlan(
   });
 }
 
-/** Les matricules complets qu'un jeton porte, seul ou avec les morceaux de sa rangée. */
+/** Un identifiant au format du pack tient en huit jetons au plus (un IBAN en sept groupes). */
+const JETONS_D_UN_IDENTIFIANT = 8;
+
+/** La forme compacte d'un identifiant imprimé : chiffres latins, majuscules, sans espaces ni séparateurs. */
+const compacte = (s: string) =>
+  enChiffresLatins(s)
+    .toUpperCase()
+    .replace(/[\s./\-–—:]/gu, "");
+
+/**
+ * Les identifiants qu'un jeton commence, seul ou avec les jetons de sa rangée :
+ *
+ *   - le MATRICULE, tel que l'œil l'a vu (`normaliserMatricule`, la forme du pack) ;
+ *   - tout AUTRE format d'identifiant du pack (`ref.identifiant_formats` : RIB, IBAN…),
+ *     lu sur la forme compacte de la suite de jetons — l'imprimé coupe un RIB en groupes
+ *     (« 99 340 9403398267119 10 »), l'OCR en jetons : le format ne connaît ni l'un ni
+ *     l'autre. Le motif doit couvrir la suite ENTIÈRE ; la plus courte qui le fait est
+ *     retenue, et la suite s'arrête au bout de la rangée.
+ *
+ * Rien n'est écrit ici d'un identifiant particulier : un pack qui déclare un format le
+ * fait lire. Banc sans IA du 4 novembre 2026 : 55 RIB coupés au premier groupe.
+ */
 export function identifiantsDuPlan(
   plan: readonly PageToken[],
   regles: Pick<ReglesDeLecture, "matricule" | "codeDuMatricule">,
+  formats: Readonly<Record<string, string>> = {},
 ): { format: string; valeur: string; fin: number }[][] {
   const complet = (texte: string) => {
     const lu = normaliserMatricule(texte, regles.matricule);
     return lu.forme === "complete" ? lu.complet : null;
   };
+  const autres = Object.entries(formats)
+    .filter(([code]) => code !== regles.codeDuMatricule)
+    .map(([code, motif]) => ({ code, re: new RegExp(`^(?:${motif})$`, "u") }));
   return plan.map((t, i) => {
-    const seul = complet(t.text);
-    if (seul) return [{ format: regles.codeDuMatricule, valeur: seul, fin: t.ordinal }];
-    if (!/\d/u.test(t.text)) return [];
-    for (const f of fenetres(plan, i, JETONS_D_UN_MATRICULE)) {
-      const v = complet(f.map((x) => x.text).join(" "));
-      if (v) return [{ format: regles.codeDuMatricule, valeur: v, fin: f[f.length - 1]!.ordinal }];
+    const lus: { format: string; valeur: string; fin: number }[] = [];
+    if (/\d/u.test(enChiffresLatins(t.text))) {
+      const seul = complet(t.text);
+      if (seul) lus.push({ format: regles.codeDuMatricule, valeur: seul, fin: t.ordinal });
+      else
+        for (const f of fenetres(plan, i, JETONS_D_UN_MATRICULE)) {
+          const v = complet(f.map((x) => x.text).join(" "));
+          if (v) {
+            lus.push({ format: regles.codeDuMatricule, valeur: v, fin: f[f.length - 1]!.ordinal });
+            break;
+          }
+        }
     }
-    return [];
+    if (/[\p{L}\p{N}]/u.test(t.text))
+      for (const { code, re } of autres) {
+        for (const f of [[t], ...fenetres(plan, i, JETONS_D_UN_IDENTIFIANT)]) {
+          const v = compacte(f.map((x) => x.text).join(""));
+          if (re.test(v)) {
+            lus.push({ format: code, valeur: v, fin: f[f.length - 1]!.ordinal });
+            break;
+          }
+        }
+      }
+    return lus;
   });
 }
 
