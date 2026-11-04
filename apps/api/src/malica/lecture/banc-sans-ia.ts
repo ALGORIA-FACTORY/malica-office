@@ -396,9 +396,9 @@ function mesurerLesRangees(
       lu: lu ?? null,
       juste: lu !== undefined && enUnites(att, exposant) === entier(lu),
     });
-    const q = num(v.quantite, l?.quantite.valeur);
+    const q = num(v.quantite, l?.quantite?.valeur);
     cellule("quantite", v.quantite, q.lu, q.juste);
-    const p = num(prixVrai, l?.prix.valeur);
+    const p = num(prixVrai, l?.prix?.valeur);
     cellule("prix", prixVrai, p.lu, p.juste);
     const m = num(v.montant_ligne_ht, l?.montant.valeur);
     cellule("montant", v.montant_ligne_ht, m.lu, m.juste);
@@ -408,8 +408,9 @@ function mesurerLesRangees(
         ? String(Math.round(Number(v.remise_ligne) * 100_000) / 1000)
         : v.remise_ligne;
     // Une ligne PROUVÉE sans remise affirme une remise nulle : q × PU = montant. La vérité
-    // « remise : 0 » d'une ligne qui n'en imprime pas est cette valeur-là.
-    const sansRemise = l && !l.remise && Number(remiseVraie) === 0;
+    // « remise : 0 » d'une ligne qui n'en imprime pas est cette valeur-là. Une ligne
+    // partielle (quantité ou prix tus) n'affirme rien de sa remise.
+    const sansRemise = l?.quantite && l.prix && !l.remise && Number(remiseVraie) === 0;
     const r = sansRemise ? { lu: "0", juste: true } : num(remiseVraie, l?.remise?.valeur);
     cellule("remise", remiseVraie, r.lu, r.juste);
     const t = l?.taux ? pourcentDuTaux(contexte, l.taux.code) : null;

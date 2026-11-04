@@ -34,6 +34,8 @@ export interface JetonDuSudoku {
   readonly confiance?: number;
   /** Le jeton porte un mot que l'OCR a pu mal lire (`lexique.ts` de l'API). */
   readonly douteux?: boolean;
+  /** La probabilité du caractère le moins sûr du mot, quand le lecteur la donne. */
+  readonly faible?: number;
   /** Date ISO, ou null. */
   readonly date: string | null;
   /**
@@ -133,6 +135,11 @@ export interface PackDuSudoku {
    * désignation) n'est pas rendu (`lecture.confiance_du_texte`).
    */
   readonly confiance_du_texte?: number;
+  /**
+   * Sous cette probabilité, le caractère le moins sûr d'un mot (`faible`) le rend
+   * incertain (`lecture.confiance_du_caractere`).
+   */
+  readonly confiance_du_caractere?: number;
 }
 
 /** Ce que la base sait du dossier et de ses tiers (anneau 2). */
@@ -211,8 +218,9 @@ export interface Cite {
 /** Une ligne d'article (anneau 1). */
 export interface LigneLue {
   readonly designation: Cite | null;
-  readonly quantite: Cite;
-  readonly prix: Cite;
+  /** Absente : une ligne partielle (lecture du milieu) tait la cellule qu'elle ne prouve pas. */
+  readonly quantite?: Cite;
+  readonly prix?: Cite;
   readonly remise: Cite | null;
   readonly montant: Cite;
   readonly taux: { readonly code: string; readonly refs: readonly RefDeJeton[] } | null;

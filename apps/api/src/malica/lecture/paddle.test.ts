@@ -147,6 +147,36 @@ describe("le second lecteur", () => {
     );
   });
 
+  it("chaque mot garde son caractère le moins sûr, que la moyenne de la ligne noie", async () => {
+    // « sans fil » sous une tache, lu « sans fi » : la ligne à 0,98, le i à 0,69
+    process.env["OCR_URL"] = "http://ocr:8000";
+    serviceQuiRend({
+      lignes: [
+        {
+          texte: " sans fi",
+          boite: [0.1, 0.2, 0.3, 0.22],
+          confiance: 0.98,
+          caracteres: [0.99, 0.995, 0.99, 0.98, 0.97, 0.99, 0.99, 0.69],
+        },
+        // sans probabilité par caractère (une relecture arabe), ou une de moins que le texte
+        { texte: "Total HT", boite: [0.1, 0.3, 0.3, 0.32], confiance: 0.97 },
+        { texte: "TVA", boite: [0.1, 0.4, 0.3, 0.42], confiance: 0.97, caracteres: [0.9, 0.9] },
+      ],
+    });
+    const r = await lireAvecPaddle(new Uint8Array([1]), 1);
+    assert.deepEqual(
+      r!.tokens.map((t) => [t.text, t.faible]),
+      [
+        ["sans", 0.97],
+        ["fi", 0.69],
+        ["Total", undefined],
+        ["HT", undefined],
+        ["TVA", undefined],
+      ],
+    );
+    assert.equal(r!.tokens[1]!.confidence, 0.98);
+  });
+
   it("les coordonnées restent dans la page, même si le service déborde", async () => {
     process.env["OCR_URL"] = "http://ocr:8000";
     serviceQuiRend({ lignes: [{ texte: "Total", boite: [-0.5, -1, 2, 3], confiance: 1 }] });

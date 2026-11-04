@@ -289,6 +289,55 @@ suivant.
 
 Pas encore fait : la relecture en production, et sur les PDF.
 
+## Bulletin 9 — le tableau qui se prouve en taisant ce que l'OCR a perdu (4 novembre 2026, nuit)
+
+Sur les pièces prouvées, 779 cellules de lignes avaient toutes leurs valeurs dans la
+lecture, et le tableau ne se prouvait pas. La cause racine, pièce par pièce (algoria-018,
+un scan) :
+
+- **La lecture du milieu ignorait les prix TTC.** Le gabarit A imprime « PU TTC » et un
+  montant HT : 1 × 247,000 ÷ 1,19 = 207,563. La lecture du milieu ne fermait que par
+  q × p = m. Ses graines venaient de `triplets(r, false)` : aucune graine sur un tableau
+  TTC, aucune ligne. Elle ferme désormais ses rangées par la même règle que la stratégie
+  de toujours (`Contexte::fermeture`).
+- **Un « 1 » isolé que l'OCR n'a pas vu bloquait tout le tableau.** L'en-tête annonce une
+  remise (« R. ») : la quantité ne se déduit pas, et la rangée bloquait. Une **rangée
+  partielle** reste une ligne : son montant est prouvé par la somme exacte, sa cellule
+  perdue est **tue**. Le prix n'est rendu que si une quantité entière le ferme avec le
+  montant. Un tableau qui porte une rangée partielle ou une remise lue ne déduit plus
+  rien (100/A-07 : deux quantités déduites justes par chance, que rien ne garantissait).
+- **Le numéro de série n'est pas la désignation.** « Multiprise parafoudre 5 prises
+  SN:981368512458374 » : la ligne « SN : … » de la cellule ouvre un autre champ de la
+  parcelle (`numero_serie_ligne`, migration 20261127200000). Deux mots d'une même ligne de
+  texte ne se recouvrent pas (« Hub SN: USB-C », algoria-025).
+- **Un mot sous une tache.** « Souris optique sans fi » : la ligne à 0,98, le i à 0,69.
+  Le second lecteur rend désormais la probabilité de chaque caractère ; un mot dont le
+  caractère le moins sûr est sous 0,8 (`lecture.confiance_du_caractere`, migration 20261127210000) fait taire la désignation ou le nom qui le porte. Le seuil vient de la
+  mesure : sur 162 désignations justes d'images, 15 ont un caractère sous 0,8 ; les deux
+  désignations fausses en avaient un à 0,69 et à 0,78.
+
+Une relecture des désignations par le même modèle a été essayée puis retirée : elle
+redisait « sans fi », et coûtait 43 désignations justes.
+
+|            | juste | faux | dont à travailler | inventé |
+| ---------- | ----: | ---: | ----------------: | ------: |
+| bulletin 8 | 5 472 |    0 |             5 151 |       0 |
+| bulletin 9 | 5 936 |    0 |             4 681 |       0 |
+
+Six valeurs justes passent en « signalé » : un caractère sous 0,8 les rend incertaines,
+le moteur les signale au lieu de les affirmer.
+
+**Ce qui reste fragile, dit.**
+
+- Le seuil de 0,8 laisse une marge courte (une désignation fausse à 0,78). Il se
+  règle par une ligne de référentiel.
+- Un tableau prouvé du milieu SANS en-tête lisible prend dans la désignation tout ce
+  qui est à gauche de la colonne des quantités. Un bloc posé à côté du tableau (« RC »,
+  un téléphone) peut y entrer. Aucune pièce du banc ne le fait aujourd'hui (0 faux) ;
+  une épreuve du moteur le montre sur une pièce retouchée (50/11).
+- La probabilité par caractère n'existe que pour le second lecteur ; la relecture
+  arabe et les PDF n'en ont pas.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

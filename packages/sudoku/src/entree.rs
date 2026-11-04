@@ -82,6 +82,10 @@ pub struct Jeton {
     /// Le jeton porte un mot que l'OCR a pu mal lire (le lexique de l'adaptateur le dit).
     #[serde(default)]
     pub douteux: bool,
+    /// La probabilité du caractère le MOINS sûr du mot (0..1), quand le lecteur la donne :
+    /// la confiance d'une ligne en est la moyenne, où un mot sous une tache se noie.
+    #[serde(default)]
+    pub faible: Option<f64>,
     /// Date ISO rendue par `normalizeDate`, ou `null`.
     #[serde(default)]
     pub date: Option<String>,
@@ -102,6 +106,17 @@ pub struct Jeton {
     /// ne fait que choisir une coupe fournie ; il ne relit jamais le texte.
     #[serde(default)]
     pub decoupes: Vec<Decoupe>,
+}
+
+impl Jeton {
+    /// Un texte qu'aucun calcul ne prouve (une désignation, un nom) ne se rend pas lu par ce
+    /// jeton : un mot que le lexique de l'adaptateur dit douteux, une ligne lue sous la
+    /// confiance du texte, ou un caractère du mot lu sous la confiance du caractère.
+    pub fn incertain(&self, pack: &Pack) -> bool {
+        self.douteux
+            || pack.confiance_du_texte.is_some_and(|s| self.confiance.is_some_and(|c| c < s))
+            || pack.confiance_du_caractere.is_some_and(|s| self.faible.is_some_and(|f| f < s))
+    }
 }
 
 /// Un identifiant lu par l'adaptateur (`normaliserMatricule`, forme du pack).
@@ -206,6 +221,11 @@ pub struct Pack {
     /// texte lu est rendu.
     #[serde(default)]
     pub confiance_du_texte: Option<f64>,
+    /// La probabilité au-dessous de laquelle le caractère le moins sûr d'un mot (`faible`)
+    /// rend ce mot incertain (`lecture.confiance_du_caractere`) ; absente, rien n'est lu
+    /// au caractère.
+    #[serde(default)]
+    pub confiance_du_caractere: Option<f64>,
     /// Les taux nuls de chaque barème (`EXO`, `EXPORT`), par leur code. Ils ne sont pas dans
     /// `baremes` : un zéro imprimé fermerait n'importe quelle instance « 0 % ». Ils ne servent
     /// qu'à NOMMER la part exonérée d'une exonération partielle prouvée par les lignes.

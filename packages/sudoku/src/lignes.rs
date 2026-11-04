@@ -84,8 +84,12 @@ pub struct TauxCite {
 #[derive(Serialize, Clone)]
 pub struct LigneSortie {
     pub designation: Option<Cite>,
-    pub quantite: Cite,
-    pub prix: Cite,
+    /// Absente : la cellule n'est pas imprimée, ou illisible, et rien ne la prouve (une
+    /// rangée « partielle » de la lecture du milieu) — elle est tue, jamais inventée.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quantite: Option<Cite>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prix: Option<Cite>,
     pub remise: Option<Cite>,
     pub montant: Cite,
     pub taux: Option<TauxCite>,
@@ -359,10 +363,18 @@ pub(crate) fn en_lignes(jetons: &[Jeton], ids: &[usize]) -> Vec<Vec<usize>> {
     let mut lignes: Vec<Vec<usize>> = Vec::new();
     for i in ordre {
         let j = &jetons[i];
+        // Deux mots d'une même ligne ne se recouvrent pas : un jeton posé SUR un mot de la
+        // ligne (plus de la moitié de la largeur du plus étroit) est d'une autre ligne — le
+        // « SN : » de la ligne suivante d'une page inclinée (algoria-025, « Hub SN: USB-C »).
         let place = lignes.iter().rposition(|l| {
             let a = &jetons[l[0]];
             let h = (a.y1 - a.y0).min(j.y1 - j.y0).max(f64::EPSILON);
             (a.y1.min(j.y1) - a.y0.max(j.y0)) > 0.5 * h
+                && l.iter().all(|&k| {
+                    let b = &jetons[k];
+                    let w = (b.x1 - b.x0).min(j.x1 - j.x0).max(f64::EPSILON);
+                    b.x1.min(j.x1) - b.x0.max(j.x0) <= 0.5 * w
+                })
         });
         match place {
             Some(k) => lignes[k].push(i),
@@ -480,6 +492,38 @@ struct Contexte<'a> {
     prix_ttc: bool,
     /// Les colonnes de REMISE nommées par l'en-tête du tableau : (x0, x1, bas de l'en-tête).
     colonnes_remise: Vec<(f64, f64, f64)>,
+    /// Les repères (normalisés) des AUTRES champs de la parcelle de la désignation (le
+    /// numéro de série, la référence…) : une ligne de sa cellule qui en ouvre un n'est pas
+    /// la suite de la désignation (`designation`).
+    autres_champs: Vec<String>,
+}
+
+/// Les repères des autres champs répétés de la parcelle de la désignation, lus dans la grille.
+fn autres_champs(designation: &str, grille: &Grille) -> Vec<String> {
+    let parcelle = grille.champs.iter().find(|c| c.code == designation).and_then(|c| c.parcelle.as_ref());
+    grille
+        .champs
+        .iter()
+        .filter(|c| c.repetee && c.code != designation && c.parcelle.is_some() && c.parcelle.as_ref() == parcelle)
+        .flat_map(crate::reperes::reperes_de)
+        .collect()
+}
+
+/// Une ligne de texte de la cellule d'une désignation ouvre-t-elle un AUTRE champ de la
+/// parcelle (`autres`) : elle commence par l'un de ses repères, suivi d'une valeur qui
+/// commence par un chiffre, ou de rien (la valeur perdue) — « SN : 9813… », « S N :
+/// 7585… », « SN: ». Elle n'est alors pas la suite de la désignation : c'est le numéro de
+/// série de l'article (banc sans IA du 4 novembre 2026, algoria-018). Un mot qui ne fait
+/// que commencer comme un repère court (« U-shaped » pour l'unité « U ») ou un libellé
+/// suivi de lettres (« Réf : ABC ») reste dans la désignation.
+fn ouvre_un_autre_champ(jetons: &[Jeton], ligne: &[usize], autres: &[String]) -> bool {
+    let texte: String = ligne.iter().map(|&k| crate::reperes::normaliser(&jetons[k].texte)).collect();
+    autres.iter().any(|r| {
+        texte.strip_prefix(r.as_str()).is_some_and(|reste| {
+            let valeur = reste.trim_start_matches(|c: char| !c.is_alphanumeric());
+            valeur.is_empty() || valeur.starts_with(|c: char| c.is_ascii_digit())
+        })
+    })
 }
 
 impl Contexte<'_> {
@@ -537,6 +581,18 @@ impl Contexte<'_> {
         (attendu - m as i128).abs() <= self.tol as i128
     }
 
+    /// La rangée ferme-t-elle : par un prix HT (`Some(None)`), sinon, quand la grille le
+    /// permet, par un prix TTC (`Some(Some(code))`) au seul taux du barème qui ferme — le
+    /// taux imprimé sur la rangée hors des cellules `prises`, quand elle en imprime un. La
+    /// même règle pour la stratégie de toujours et pour la lecture du milieu.
+    fn fermeture(&self, (q, p, m, r): (i64, i64, i64, i64), rang: &[usize], prises: &[usize]) -> Option<Option<String>> {
+        if self.ferme(q, p, m, r) {
+            return Some(None);
+        }
+        let imprime = self.taux_parmi(rang.iter().copied().filter(|k| !prises.contains(k)));
+        self.ferme_ttc(q, p, m, r, imprime.as_ref().map(|t| t.code.as_str())).map(Some)
+    }
+
     /// Le prix TTC : m = arrondi(q × p × (1 − r) ÷ (1 + t)) pour un taux t du barème, à la
     /// tolérance du pack près. Rend le code du taux, s'il est le SEUL à fermer — et, quand la
     /// rangée imprime son taux (`imprime`), seulement ce taux-là : un prix TTC fermé à 7 % sur
@@ -568,8 +624,7 @@ impl Contexte<'_> {
 
     /// Les triplets d'une rangée, dédoublonnés par valeurs (q, p, m, r) : à valeurs
     /// égales, on garde les jetons les plus à droite (la colonne, pas la désignation).
-    /// `avec_ttc` : la rangée peut aussi fermer par un prix TTC (la stratégie de toujours
-    /// seulement : la lecture du milieu déduit par m / p, qui suppose un prix HT).
+    /// `avec_ttc` : la rangée peut aussi fermer par un prix TTC (`fermeture`).
     fn triplets(&self, rang: &[usize], avec_ttc: bool) -> Vec<Triplet> {
         // q et m peuvent être négatifs (une reprise : « -20 × 1,500 = -30,000 ») ; p est positif.
         let lectures = |k: usize, prix: bool| -> Vec<i64> {
@@ -608,23 +663,13 @@ impl Contexte<'_> {
                                 );
                                 for r in candidats {
                                     let rv = r.map_or(0, |x| x.1);
-                                    let ttc = if self.ferme(q, p, m, rv) {
-                                        None
-                                    } else if avec_ttc {
-                                        // Le taux imprimé sur la rangée, hors des trois cellules.
-                                        let pris = [Some(qi), Some(pi), Some(mi), r.map(|x| x.0)];
-                                        let imprime = self.taux_parmi(
-                                            rang.iter()
-                                                .enumerate()
-                                                .filter(|(k, _)| !pris.contains(&Some(*k)))
-                                                .map(|(_, &jk)| jk),
-                                        );
-                                        match self.ferme_ttc(q, p, m, rv, imprime.as_ref().map(|t| t.code.as_str())) {
-                                            Some(code) => Some(code),
-                                            None => continue,
-                                        }
-                                    } else {
-                                        continue;
+                                    // Le taux imprimé sur la rangée, hors des trois cellules.
+                                    let prises: Vec<usize> =
+                                        [Some(qi), Some(pi), Some(mi), r.map(|x| x.0)].into_iter().flatten().map(|k| rang[k]).collect();
+                                    let ttc = match self.fermeture((q, p, m, rv), rang, &prises) {
+                                        Some(None) => None,
+                                        Some(Some(code)) if avec_ttc => Some(code),
+                                        _ => continue,
                                     };
                                     let t = Triplet { q: (qi, q), p: (pi, p), m: (mi, m), r, ttc };
                                     let cle = t.valeurs();
@@ -650,8 +695,14 @@ impl Contexte<'_> {
     /// recouvre le plus est la ligne principale ; d'une autre ligne, seuls les mots qui se
     /// tiennent dans son étendue en sont la suite — un bloc posé à côté du tableau
     /// (« MATRICULE FISCAL ») que la rangée a recouvert n'en est pas.
-    fn designation(&self, jetons: &[usize], ancre: Option<usize>) -> Cite {
-        let lignes = en_lignes(self.jetons, jetons);
+    /// Une ligne qui ouvre un autre champ de la parcelle (`ouvre_un_autre_champ`) n'en est
+    /// pas non plus. Rien ne reste : pas de désignation.
+    fn designation(&self, jetons: &[usize], ancre: Option<usize>) -> Option<Cite> {
+        let lignes: Vec<Vec<usize>> =
+            en_lignes(self.jetons, jetons).into_iter().filter(|l| !ouvre_un_autre_champ(self.jetons, l, &self.autres_champs)).collect();
+        if lignes.is_empty() {
+            return None;
+        }
         let recouvre = |l: &Vec<usize>, a: &Jeton| {
             l.iter().map(|&k| (self.jetons[k].y1.min(a.y1) - self.jetons[k].y0.max(a.y0)).max(0.0)).fold(0.0, f64::max)
         };
@@ -677,10 +728,10 @@ impl Contexte<'_> {
             }
             None => lignes.into_iter().flatten().collect(),
         };
-        Cite::lue(
+        Some(Cite::lue(
             ordre.iter().map(|&k| self.jetons[k].texte.trim()).collect::<Vec<_>>().join(" "),
             ordre.iter().map(|&k| self.cite(k)).collect(),
-        )
+        ))
     }
 
     /// Le taux d'une rangée : parmi ces jetons, ceux qui valent un taux du barème ;
@@ -713,11 +764,7 @@ impl Contexte<'_> {
 
     fn sortie(&self, rang: &[usize], t: &Triplet, avec_taux: bool) -> LigneSortie {
         let gauche = sans_la_remise(&rang[..t.q.0], t.r.map(|(k, _)| rang[k]), self.jetons);
-        let designation = if gauche.is_empty() {
-            None
-        } else {
-            Some(self.designation(&gauche, Some(rang[t.q.0])))
-        };
+        let designation = if gauche.is_empty() { None } else { self.designation(&gauche, Some(rang[t.q.0])) };
         let un = |(k, v): (usize, i64)| Cite::lue(v.to_string(), vec![self.cite(rang[k])]);
         // Le taux : un jeton de la rangée, à droite de la quantité, hors q, p, m et remise.
         let taux = if avec_taux {
@@ -730,8 +777,8 @@ impl Contexte<'_> {
         };
         LigneSortie {
             designation,
-            quantite: un(t.q),
-            prix: un(t.p),
+            quantite: Some(un(t.q)),
+            prix: Some(un(t.p)),
             remise: t.r.map(un),
             montant: un(t.m),
             taux,
@@ -831,6 +878,7 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
             .unwrap_or_default(),
         prix_ttc: op.prix_ttc.is_some(),
         colonnes_remise: colonnes_de_remise(op, entree),
+        autres_champs: autres_champs(&op.designation, &entree.grille),
     };
     let vide = |statut: &str| LignesSortie {
         statut: statut.into(),
@@ -885,11 +933,11 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
     // désignation fausse : elle est tue, la ligne reste.
     // Un mot que l'OCR a pu mal lire (le lexique de l'adaptateur) fait taire la désignation
     // aussi : « Transport de matérel », « 12 chifres ».
-    let seuil = pack.confiance_du_texte;
+    // Un caractère lu sans assurance aussi : « sans fi » pour « sans fil » sous une tache.
     let incertains: BTreeSet<(u32, u32)> = entree
         .jetons
         .iter()
-        .filter(|j| j.douteux || seuil.is_some_and(|s| j.confiance.is_some_and(|c| c < s)))
+        .filter(|j| j.incertain(pack))
         .map(|j| (j.page, j.ordinal))
         .collect();
     for l in instances.iter_mut() {

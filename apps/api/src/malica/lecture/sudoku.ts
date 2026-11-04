@@ -163,6 +163,7 @@ export function jetonsDuSudoku(
     y1: t.y1,
     ...(typeof t.confidence === "number" ? { confiance: t.confidence } : {}),
     ...(jetonDouteux(t.text) ? { douteux: true } : {}),
+    ...(typeof t.faible === "number" ? { faible: t.faible } : {}),
     montants: montantsDuJeton(t.text, devise),
     ...dates[i]!,
     ...(identifiants[i]!.length > 0 ? { identifiants: identifiants[i]! } : {}),
@@ -307,7 +308,8 @@ export async function lireLeContexteDuSudoku(
       db.query<{ code: string; value_num: string | null }>(
         `select distinct on (code) code, value_num from ref_socle_params_v
         where pack_version_id = $1
-          and code in ('lecture.tolerance_arrondi_mineure', 'lecture.confiance_du_texte')
+          and code in ('lecture.tolerance_arrondi_mineure', 'lecture.confiance_du_texte',
+                       'lecture.confiance_du_caractere')
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code, valid_from desc`,
         [packId, jour],
@@ -449,6 +451,7 @@ export async function lireLeContexteDuSudoku(
       decimales,
       tolerance: param("lecture.tolerance_arrondi_mineure"),
       confiance_du_texte: param("lecture.confiance_du_texte"),
+      confiance_du_caractere: param("lecture.confiance_du_caractere"),
       baremes: {
         tva: taux.rows
           .filter((t) => ppm(t.rate) > 0)
@@ -627,8 +630,8 @@ export function selectionParLeSudoku(
   // Une cellule déduite ou lue dans une coupe ne se relit pas dans son jeton
   // (il porte deux cases, ou aucune) : elle reste nulle dans la chaîne, et ne
   // vit qu'inscrite, avec son statut (`champsLusAInscrire`).
-  const imprimee = (c: Cite) =>
-    c.statut === "deduit" || c.statut === "coupe" ? undefined : c.refs;
+  const imprimee = (c: Cite | undefined) =>
+    !c || c.statut === "deduit" || c.statut === "coupe" ? undefined : c.refs;
   const articles =
     sortie.lignes?.statut === "prouve"
       ? sortie.lignes.instances.map((l) => ({
@@ -862,8 +865,8 @@ export function champsLusAInscrire(
     lignes.instances.forEach((l, i) => {
       const cellules: Array<[string, Cite | null]> = [
         ["designation", l.designation],
-        ["quantite", l.quantite],
-        [l.prix_ttc ? "prix_ttc" : "prix", l.prix],
+        ["quantite", l.quantite ?? null],
+        [l.prix_ttc ? "prix_ttc" : "prix", l.prix ?? null],
         ["remise", l.remise],
         ["montant", l.montant],
         ["taux", l.taux ? { valeur: l.taux.code, refs: l.taux.refs } : null],

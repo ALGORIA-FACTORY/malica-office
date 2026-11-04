@@ -510,12 +510,40 @@ def _lire_mot_par_mot(lecteur: "_Lecteur", polygones, decoupes, mixtes, sortie):
 # deux coeurs, la reconnaissance est liee au calcul (voir `LOT`) — un lecteur a deux fils ;
 # une machine a quatre coeurs en porte deux, et l'API lit alors deux pages a la fois (elle
 # lit `lecteurs` sur `/sante`). La memoire croit d'un jeu de modeles par lecteur.
+class _Caracteres:
+    """Le decodeur CTC de la reconnaissance latine, qui garde aussi la probabilite de CHAQUE
+    caractere lu, decoupe apres decoupe, dans l'ordre ou elles sont reconnues (`lues` : le
+    predicteur decode tous ses lots avant de rendre la premiere). Le score d'une ligne en est la moyenne : un mot
+    sous une tache (« sans fil » lu « sans fi », le i a 0,50) s'y noie a 0,96 (banc sans IA
+    du 4 novembre 2026, algoria-032). Le texte rendu est celui du decodeur, inchange."""
+
+    def __init__(self, decodeur) -> None:
+        self.decodeur = decodeur
+        self.lues: list = []
+
+    def __call__(self, pred, *args, **kwargs):
+        probabilites = numpy.array(pred[0])
+        indices = probabilites.argmax(axis=-1)
+        maxima = probabilites.max(axis=-1)
+        ignores = set(self.decodeur.get_ignored_tokens())
+        for b in range(len(indices)):
+            garde = numpy.ones(len(indices[b]), dtype=bool)
+            garde[1:] = indices[b][1:] != indices[b][:-1]
+            for k in ignores:
+                garde &= indices[b] != k
+            self.lues.append([round(float(p), 3) for p in maxima[b][garde]])
+        return self.decodeur(pred, *args, **kwargs)
+
+
 class _Lecteur:
     """Les modeles d'une lecture : detection, reconnaissance latine, arabe s'il est pose."""
 
     def __init__(self) -> None:
         self.detection = TextDetection(model_name=DETECTION, model_dir=_dossier(DETECTION), **_COMMUN)
         self.latin = TextRecognition(model_name=RECONNAISSANCE, model_dir=_dossier(RECONNAISSANCE), **_COMMUN)
+        predicteur = self.latin.paddlex_predictor
+        self.caracteres = _Caracteres(predicteur.post_op)
+        predicteur.post_op = self.caracteres
         self.arabe = (
             TextRecognition(model_name=RECONNAISSANCE_ARABE, model_dir=_dossier(RECONNAISSANCE_ARABE), **_COMMUN)
             if RECONNAISSANCE_ARABE
@@ -590,7 +618,7 @@ def _relire(lecteur: "_Lecteur", octets: bytes, boites: list) -> list:
     valides = [i for i, d in enumerate(decoupes) if d.size > 0]
     lus = [("", 0.0)] * len(decoupes)
     for i, l in zip(valides, _reconnaitre(lecteur, [decoupes[i] for i in valides])):
-        lus[i] = l
+        lus[i] = l[:2]
     return [{"texte": t, "confiance": c} for t, c in lus]
 
 
@@ -757,13 +785,22 @@ def _premiere_vague(boites: list) -> list:
 
 
 def _reconnaitre(lecteur: "_Lecteur", decoupes: list) -> list:
-    """La lecture latine de chaque decoupe : (texte, score). Triees par largeur avant d'etre
-    reconnues, comme le fait le pipeline (un lot de meme gabarit se rembourre peu)."""
+    """La lecture latine de chaque decoupe : (texte, score, probabilites de ses caracteres
+    ou None). Triees par largeur avant d'etre reconnues, comme le fait le pipeline (un lot
+    de meme gabarit se rembourre peu). Les probabilites d'une decoupe sont celles de son lot
+    (`_Caracteres`), dans le meme ordre ; elles ne valent que si elles comptent un nombre
+    par caractere du texte."""
     ordre = sorted(range(len(decoupes)), key=lambda i: decoupes[i].shape[1] / float(decoupes[i].shape[0]))
     lus: list = [None] * len(decoupes)
-    for i, r in zip(ordre, lecteur.latin.predict([decoupes[i] for i in ordre], batch_size=LOT)):
+    lecteur.caracteres.lues = []
+    for n, (i, r) in enumerate(zip(ordre, lecteur.latin.predict([decoupes[i] for i in ordre], batch_size=LOT))):
         res = r.json["res"]  # une copie profonde a chaque lecture de `json` : une seule
-        lus[i] = (res.get("rec_text", ""), float(res.get("rec_score", 0.0)))
+        texte = res.get("rec_text", "")
+        lues = lecteur.caracteres.lues
+        probabilites = lues[n] if n < len(lues) else None
+        if probabilites is not None and len(probabilites) != len(texte):
+            probabilites = None
+        lus[i] = (texte, float(res.get("rec_score", 0.0)), probabilites)
     return lus
 
 
@@ -789,10 +826,14 @@ def _vagues(lecteur: "_Lecteur", octets: bytes):
                     continue
                 boite = boites[i] if pixels is None else _boite(
                     ((pixels[0], pixels[1]), (pixels[2], pixels[3])), largeur, hauteur)
+                # les probabilites des caracteres, quand le morceau est la lecture latine de
+                # toute la ligne (une relecture arabe ou un morceau n'en a pas)
+                latine = lus[i] if pixels is None and lus[i] is not None and lus[i][0] == texte else None
                 lignes.append({
                     "texte": texte,
                     "boite": boite,
                     "confiance": float(score) if score is not None else None,
+                    **({"caracteres": latine[2]} if latine and latine[2] is not None else {}),
                 })
         return {
             "vague": vague,

@@ -197,6 +197,16 @@ ont leur propre statut, et l'issue de la pièce reste celle du centre.
 
   Une cellule déduite ne remplace jamais une désignation de la chaîne.
 
+  **Rangée partielle** (4 novembre 2026). Une rangée dont le montant est lu en
+  lecture forte, avec un nombre dans la colonne des quantités ou un prix lu, et
+  qu'aucune cellule déduite n'explique, reste une ligne : la somme exacte au
+  total prouvé confirme son montant. Sa cellule absente ou illisible est **tue** :
+  `quantite` ou `prix` est absent de la ligne, jamais inventé. Le prix (et une
+  remise lue sur la rangée) n'est rendu que si une quantité entière le ferme
+  avec le montant ; la quantité absente ne l'est jamais. Un tableau qui porte une
+  rangée partielle ou une remise lue ne déduit rien : il se relit sans
+  déduction.
+
   Trois cas s'ajoutent (1er novembre 2026) :
 
   - **Tableau sur plusieurs pages.** Chaque page apprend ses colonnes depuis sa
@@ -560,8 +570,19 @@ rattrapage (deux lectures complètes, environ quatre minutes).
   `prix_ttc` (`prix_unitaire_ttc?`, migration 20261118120000). Une rangée ferme
   alors aussi par m = arrondi(q × p × (1 − r) ÷ (1 + t)), t un taux du barème de
   la grille, à la tolérance du pack. La ligne rend `prix_ttc: true` ;
-  l'adaptateur range le prix dans `unit_price_ttc`. Stratégie de toujours
-  seulement : la lecture du milieu déduit par m / p, qui suppose un prix HT.
+  l'adaptateur range le prix dans `unit_price_ttc`. La lecture du milieu ferme
+  ses rangées par la même règle (`Contexte::fermeture`) ; elle ne déduit une
+  quantité TTC qu'entière, et un montant TTC qu'au taux imprimé sur la rangée.
+- **Ce qui n'est pas la désignation.** Une ligne de la cellule de la désignation
+  qui commence par le repère d'un autre champ de la parcelle des lignes (le
+  numéro de série « SN : 9813… », `numero_serie_ligne`), suivi d'une valeur
+  chiffrée ou de rien, n'en est pas la suite. Deux mots d'une même ligne de
+  texte ne se recouvrent pas : un jeton posé sur un mot est d'une autre ligne.
+- **Le caractère le moins sûr.** Un jeton peut porter `faible`, la probabilité
+  de son caractère le moins sûr (le second lecteur la donne). Sous
+  `lecture.confiance_du_caractere` (0,8), le mot est incertain : un texte
+  qu'aucun calcul ne prouve (une désignation, un nom) qui le porte n'est pas
+  rendu (`Jeton::incertain`).
 - **Le libellé de la base pour le HT.** À un seul taux, une valeur imprimée sous
   le libellé de la base, que base × taux = TVA vérifie, tient lieu du libellé du
   HT — **seulement si la preuve `lettres` vérifie le total** (une seconde

@@ -48,6 +48,8 @@ interface LignePaddle {
   /** [x0, y0, x1, y1], NORMALISÉS de 0 à 1 dans la page. */
   boite: [number, number, number, number];
   confiance: number | null;
+  /** La probabilité de chaque caractère du texte, quand le service la donne. */
+  caracteres?: number[];
 }
 
 export interface ReleveDuSecondLecteur {
@@ -295,6 +297,21 @@ async function* tempsDeLecture(corps: ReadableStream<Uint8Array>): AsyncGenerato
   if (reste.trim()) yield JSON.parse(reste) as TempsDeLecture;
 }
 
+/**
+ * Pour chaque mot de la ligne (dans l'ordre de `decouperEnMots` : les suites sans blanc du
+ * texte rogné), la probabilité de son caractère le moins sûr ; rien quand le service ne
+ * donne pas une probabilité par caractère.
+ */
+export function plusFaibles(l: Pick<LignePaddle, "texte" | "caracteres">): number[] | undefined {
+  const p = l.caracteres;
+  if (!p || p.length !== l.texte.length) return undefined;
+  const avant = l.texte.length - l.texte.trimStart().length;
+  return [...l.texte.trim().matchAll(/\S+/gu)].map((m) => {
+    const debut = avant + (m.index ?? 0);
+    return Math.min(...p.slice(debut, debut + m[0].length));
+  });
+}
+
 /** Les jetons des lignes lues : les mots de chaque ligne, situés dans la page. */
 function jetonsDesLignes(lignes: readonly LignePaddle[], page: number): PageToken[] {
   const tokens: PageToken[] = [];
@@ -302,10 +319,19 @@ function jetonsDesLignes(lignes: readonly LignePaddle[], page: number): PageToke
     const [x0, y0, x1, y1] = l.boite ?? [0, 0, 1, 1];
     if (![x0, y0, x1, y1].every((n) => typeof n === "number" && Number.isFinite(n))) continue;
     const mots = decouperEnMots(l.texte, { x0, y0, x1, y1 }, page, tokens.length);
+    const faibles = plusFaibles(l);
     // La confiance de la LIGNE vaut pour chacun de ses mots. Aucun producteur
     // ne la remplissait jusqu'ici — `confiance.ts` lisait donc toujours 1, et
     // la confiance par champ se réduisait à celle de la désignation.
-    for (const m of mots) tokens.push(l.confiance === null ? m : { ...m, confidence: l.confiance });
+    // Chaque mot garde aussi son caractère le moins sûr (`faible`).
+    mots.forEach((m, k) => {
+      const faible = faibles?.[k];
+      tokens.push({
+        ...m,
+        ...(l.confiance === null ? {} : { confidence: l.confiance }),
+        ...(faible === undefined ? {} : { faible }),
+      });
+    });
   }
   return tokens;
 }

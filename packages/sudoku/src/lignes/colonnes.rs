@@ -53,6 +53,7 @@ pub fn affiner(
 ) {
     let Some(d) = grille.champs.iter().position(|c| c.code == designation) else { return };
     let Some(parcelle) = grille.champs[d].parcelle.as_deref() else { return };
+    let autres = super::autres_champs(designation, grille);
     // Les repères de la parcelle des lignes, par champ.
     let reperes: Vec<(usize, String)> = grille
         .champs
@@ -66,11 +67,11 @@ pub fn affiner(
         jetons.iter().enumerate().map(|(i, j)| ((j.page, j.ordinal), i)).collect();
     let jeton_de = |r: &RefJeton| par_ref.get(&(r.page, r.ordinal)).copied();
     // Le jeton qui situe une ligne : une cellule lue (une cellule déduite n'en a pas).
-    let ancre = |l: &LigneSortie| [&l.montant, &l.prix, &l.quantite].into_iter().find_map(|c| c.refs.first().and_then(jeton_de));
+    let ancre = |l: &LigneSortie| [Some(&l.montant), l.prix.as_ref(), l.quantite.as_ref()].into_iter().flatten().find_map(|c| c.refs.first().and_then(jeton_de));
     let rang_de: BTreeMap<usize, usize> = rangs.iter().enumerate().flat_map(|(n, r)| r.iter().map(move |&i| (i, n))).collect();
 
     // La première rangée prouvée, et l'en-tête au-dessus d'elle.
-    let Some(premiere) = instances.iter().filter_map(|l| ancre(l)).filter_map(|i| rang_de.get(&i).copied()).min()
+    let Some(premiere) = instances.iter().filter_map(&ancre).filter_map(|i| rang_de.get(&i).copied()).min()
     else {
         return;
     };
@@ -94,7 +95,7 @@ pub fn affiner(
     // Les jetons des rangées prouvées : ce sont eux qui placent les frontières.
     let lignes: Vec<usize> = instances
         .iter()
-        .filter_map(|l| ancre(l))
+        .filter_map(&ancre)
         .filter_map(|i| rang_de.get(&i).copied())
         .flat_map(|n| rangs[n].iter().copied())
         .collect();
@@ -126,7 +127,7 @@ pub fn affiner(
     let bord = lignes.iter().filter(|&&i| dedans(i)).map(|&i| jetons[i].x1).fold(f64::MIN, f64::max);
     let debut = lignes.iter().filter(|&&i| dedans(i)).map(|&i| jetons[i].x0).fold(f64::MAX, f64::min);
     let chiffres_de = |l: &LigneSortie| -> Vec<usize> {
-        [Some(&l.quantite), Some(&l.prix), Some(&l.montant), l.remise.as_ref()]
+        [l.quantite.as_ref(), l.prix.as_ref(), Some(&l.montant), l.remise.as_ref()]
             .into_iter()
             .flatten()
             .flat_map(|c| c.refs.iter().filter_map(jeton_de))
@@ -278,8 +279,10 @@ pub fn affiner(
             l.designation = None;
             continue;
         }
-        // chaque ligne est déjà dans son ordre de lecture (`en_lignes`)
-        let pris: Vec<usize> = lignes_de_texte.into_iter().flatten().collect();
+        // chaque ligne est déjà dans son ordre de lecture (`en_lignes`) ; une ligne qui ouvre
+        // un autre champ de la parcelle (le numéro de série) n'est pas la désignation
+        let pris: Vec<usize> =
+            lignes_de_texte.into_iter().filter(|l| !super::ouvre_un_autre_champ(jetons, l, &autres)).flatten().collect();
         let remise = l.remise.as_ref().and_then(|c| c.refs.first()).and_then(jeton_de);
         let pris = super::sans_la_remise(&pris, remise, jetons);
         l.designation = (!pris.is_empty()).then(|| {
@@ -315,7 +318,7 @@ fn taire_les_coupees(
         .filter(|r| r.chars().count() >= 2)
         .collect();
     let rang_d = |l: &LigneSortie| {
-        [&l.montant, &l.prix, &l.quantite].into_iter().find_map(|c| c.refs.first().and_then(jeton_de)).and_then(|i| rang_de.get(&i).copied())
+        [Some(&l.montant), l.prix.as_ref(), l.quantite.as_ref()].into_iter().flatten().find_map(|c| c.refs.first().and_then(jeton_de)).and_then(|i| rang_de.get(&i).copied())
     };
     let lignes: Vec<usize> = instances.iter().filter_map(rang_d).collect();
     for l in instances.iter_mut() {

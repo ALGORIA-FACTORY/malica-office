@@ -442,6 +442,55 @@ Aucun champ juste n'est perdu ; 0 faux et 0 inventé avant comme après.
 - Une lecture mal rangée (désignation et chiffres d'un article sur deux rangées visuelles)
   ne se corrige pas en relisant. C'est un défaut de structure du tableau, traité à part.
 
+### I-Q — Le tableau prouvé qui tait la cellule perdue : la rangée partielle
+
+**Problème.** Sur une photo ou un scan, l'OCR perd un petit nombre isolé (la quantité
+« 1 »). Si la quantité ne peut pas se déduire (un tableau à remise), la rangée bloque, et
+TOUT le tableau se tait — des dizaines de cellules lues justes avec elle.
+
+**Ce qui est nouveau.**
+
+- Une rangée dont le montant est lu, et qui porte un nombre dans la colonne des
+  quantités ou un prix, reste une ligne du tableau même si elle ne ferme pas seule. La
+  somme EXACTE des montants au total prouvé est sa preuve.
+- La cellule perdue est tue : la sortie l'omet, elle n'est ni lue ni déduite. Le prix
+  n'est rendu que si une quantité entière le ferme avec le montant (une lecture fausse
+  du prix ne ferme presque jamais) ; la quantité absente, jamais.
+- Un tableau qui porte une rangée partielle ou une remise lue renonce à toute déduction
+  et se relit sans elle : la cause du silence (une remise perdue) pourrait fausser une
+  cellule déduite ailleurs.
+- La même règle de fermeture (prix HT, ou TTC au seul taux imprimé) sert la stratégie
+  rangée par rangée et la lecture du milieu.
+
+**Effet mesuré** (412 pièces) : 5 472 → 5 936 champs justes, 0 faux, 0 inventé.
+
+### I-R — Ce qui n'est pas la désignation : le repère d'un autre champ de la ligne
+
+**Problème.** La cellule d'une désignation porte souvent d'autres champs de la ligne : un
+numéro de série, une référence. Lue d'un bloc, la désignation est fausse.
+
+**Ce qui est nouveau.** Une ligne de texte de la cellule qui commence par le repère d'un
+AUTRE champ de la parcelle des lignes (lu dans la grille, `ref.grille_champs`), suivi
+d'une valeur chiffrée ou de rien, n'est pas la suite de la désignation. Un mot qui ne
+fait que commencer comme un repère court (« U-shaped ») reste dans la désignation. Deux
+mots d'une même ligne de texte ne se recouvrent pas : un jeton posé sur un mot vient
+d'une autre ligne.
+
+### I-S — Le caractère le moins sûr d'un mot, et non la moyenne de sa ligne
+
+**Problème.** L'OCR rend une confiance par ligne, moyenne des probabilités de ses
+caractères. Un mot sous une tache s'y noie : « sans fil » lu « sans fi », la ligne à 0,98,
+le i à 0,69. Une seconde lecture par le même modèle redit l'erreur.
+
+**Ce qui est nouveau.** Le décodeur de la reconnaissance garde la probabilité de chaque
+caractère, sans changer le texte rendu. Chaque mot porte celle de son caractère le moins
+sûr. Sous un seuil daté du référentiel (`lecture.confiance_du_caractere`), le mot est
+incertain : un texte qu'aucun calcul ne prouve (une désignation, un nom) qui le porte
+n'est pas rendu, ou il est signalé.
+
+**Effet mesuré.** Les deux désignations fausses de la mesure se taisent ; 15 justes sur
+162 aussi (le prix de la règle).
+
 ### I-K — La lecture en deux temps : le tableau d'abord, rien de sauté
 
 **Problème.** La preuve a besoin du tableau et des totaux. Les longues mentions servent à

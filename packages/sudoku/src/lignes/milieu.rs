@@ -43,7 +43,7 @@
 use super::{Case, Cite, Contexte, LigneSortie, OpLignes, Triplet, PLAFOND_COMBINAISONS};
 use crate::entree::{Grille, Jeton};
 use crate::reperes::{normaliser, reperes_de};
-use crate::valeurs::div_arrondi;
+use crate::valeurs::{div_arrondi, PPM};
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
@@ -68,12 +68,16 @@ enum Cellule {
     Deduite(i64),
     /// Une part d'une case collée : (jeton, valeur, coupe).
     Coupe(usize, i64, usize),
+    /// Absente ou illisible, et que rien ne prouve : tue (une rangée partielle).
+    Inconnue,
 }
 
 impl Cellule {
     fn v(&self) -> i64 {
         match self {
             Cellule::Lue(_, v) | Cellule::Deduite(v) | Cellule::Coupe(_, v, _) => *v,
+            // jamais une valeur lue : une quantité lue n'est pas nulle, un prix est positif
+            Cellule::Inconnue => 0,
         }
     }
     fn deduite(&self) -> bool {
@@ -82,7 +86,7 @@ impl Cellule {
     fn jeton(&self) -> Option<usize> {
         match self {
             Cellule::Lue(k, _) | Cellule::Coupe(k, _, _) => Some(*k),
-            Cellule::Deduite(_) => None,
+            Cellule::Deduite(_) | Cellule::Inconnue => None,
         }
     }
 }
@@ -95,6 +99,8 @@ struct Choix {
     m: Cellule,
     /// La remise lue : (jeton, valeur).
     r: Option<(usize, i64)>,
+    /// Le prix est TTC : le code du taux qui ferme la rangée (`Contexte::fermeture`).
+    ttc: Option<String>,
 }
 
 impl Choix {
@@ -383,6 +389,7 @@ impl Lecture<'_> {
                                     p: Cellule::Coupe(k, p, d.coupe),
                                     m: Cellule::Lue(mk, m),
                                     r: None,
+                                    ttc: None,
                                 });
                             }
                         }
@@ -436,8 +443,9 @@ impl Lecture<'_> {
                         let mut rs: Vec<Option<(usize, i64)>> = vec![None];
                         rs.extend(remises.iter().filter(|(k, _)| ![qk, pk, mk].contains(k)).map(|x| Some(*x)));
                         for r in rs {
-                            if self.ctx.ferme(q, p, m, r.map_or(0, |x| x.1)) {
-                                let c = Choix { q: Cellule::Lue(qk, q), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r };
+                            let prises: Vec<usize> = [Some(qk), Some(pk), Some(mk), r.map(|x| x.0)].into_iter().flatten().collect();
+                            if let Some(ttc) = self.ctx.fermeture((q, p, m, r.map_or(0, |x| x.1)), rang, &prises) {
+                                let c = Choix { q: Cellule::Lue(qk, q), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r, ttc };
                                 par_valeurs.entry(c.valeurs()).or_insert(c);
                             }
                         }
@@ -459,45 +467,91 @@ impl Lecture<'_> {
         // les deux autres lues, et rien ne dit une remise.
         let absente = |c: usize| cols[c].is_empty();
         let mut choix: Vec<Choix> = Vec::new();
+        // Un prix TTC (la grille le permet) : les taux du barème, ou le seul taux imprimé
+        // sur la rangée hors des cellules prises — celui que `fermeture` exige.
+        let taux_ttc = |prises: &[usize]| -> Vec<(String, i64)> {
+            if !self.ctx.prix_ttc {
+                return Vec::new();
+            }
+            let imprime = self.ctx.taux_parmi(rang.iter().copied().filter(|k| !prises.contains(k)));
+            self.ctx.bareme.iter().filter(|(c, _)| imprime.as_ref().is_none_or(|i| &i.code == c)).cloned().collect()
+        };
+        let ferme_ttc_a = |q: i64, p: i64, m: i64, prises: &[usize], code: &str| {
+            self.ctx.fermeture((q, p, m, 0), rang, prises).flatten().is_some_and(|c| c == code)
+        };
         if deduire && !hors_bareme {
             if absente(Q) && !ps.is_empty() && !ms.is_empty() {
-                // b. la quantité : m / p, exacte, strictement positive
                 for &(pk, p) in &ps {
                     for &(mk, m) in &ms {
+                        // b. la quantité : m / p, exacte, strictement positive
                         let n = m as i128 * unite;
                         if m > 0 && n % p as i128 == 0 {
                             if let Ok(q) = i64::try_from(n / p as i128) {
                                 if q > 0 && div_arrondi(q as i128 * p as i128, unite) == m as i128 {
-                                    choix.push(Choix { q: Cellule::Deduite(q), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r: None });
+                                    choix.push(Choix { q: Cellule::Deduite(q), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r: None, ttc: None });
                                 }
+                            }
+                        }
+                        // b'. un prix TTC : m × (1 + t) / p, une quantité ENTIÈRE (l'arrondi du
+                        // montant HT ne laisse rien d'exact) que ce seul taux ferme
+                        if m <= 0 {
+                            continue;
+                        }
+                        for (code, ppm) in taux_ttc(&[pk, mk]) {
+                            let k = div_arrondi(m as i128 * (PPM + ppm as i128), PPM * p as i128);
+                            let Ok(q) = i64::try_from(k * unite) else { continue };
+                            if k > 0 && ferme_ttc_a(q, p, m, &[pk, mk], &code) {
+                                choix.push(Choix { q: Cellule::Deduite(q), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r: None, ttc: Some(code) });
                             }
                         }
                     }
                 }
             } else if absente(P) && !qs.is_empty() && !ms.is_empty() {
-                // c. le prix : le seul p > 0 tel que arrondi(q × p) = m exactement
                 for &(qk, q) in &qs {
                     for &(mk, m) in &ms {
                         if q <= 0 || m <= 0 {
                             continue;
                         }
+                        // c. le prix : le seul p > 0 tel que arrondi(q × p) = m exactement
                         let p0 = div_arrondi(m as i128 * unite, q as i128);
                         let exacts: Vec<i128> =
                             (p0 - 1..=p0 + 1).filter(|&p| p > 0 && div_arrondi(q as i128 * p, unite) == m as i128).collect();
                         if let [p] = exacts.as_slice() {
                             if let Ok(p) = i64::try_from(*p) {
-                                choix.push(Choix { q: Cellule::Lue(qk, q), p: Cellule::Deduite(p), m: Cellule::Lue(mk, m), r: None });
+                                choix.push(Choix { q: Cellule::Lue(qk, q), p: Cellule::Deduite(p), m: Cellule::Lue(mk, m), r: None, ttc: None });
+                            }
+                        }
+                        // c'. un prix TTC : le seul p qui ferme à ce seul taux
+                        for (code, ppm) in taux_ttc(&[qk, mk]) {
+                            let p0 = div_arrondi(m as i128 * unite * (PPM + ppm as i128), q as i128 * PPM);
+                            let exacts: Vec<i64> = (p0 - 2..=p0 + 2)
+                                .filter(|&p| p > 0)
+                                .filter_map(|p| i64::try_from(p).ok())
+                                .filter(|&p| ferme_ttc_a(q, p, m, &[qk, mk], &code))
+                                .collect();
+                            if let [p] = exacts.as_slice() {
+                                choix.push(Choix { q: Cellule::Lue(qk, q), p: Cellule::Deduite(*p), m: Cellule::Lue(mk, m), r: None, ttc: Some(code) });
                             }
                         }
                     }
                 }
             } else if absente(M) && !qs.is_empty() && !ps.is_empty() {
-                // d. le montant : arrondi(q × p), que seule la somme pourra confirmer
+                // d. le montant : arrondi(q × p), que seule la somme pourra confirmer ; un
+                // prix TTC, au seul taux imprimé sur la rangée
                 for &(qk, q) in &qs {
                     for &(pk, p) in &ps {
-                        if q > 0 {
-                            if let Ok(m) = i64::try_from(div_arrondi(q as i128 * p as i128, unite)) {
-                                choix.push(Choix { q: Cellule::Lue(qk, q), p: Cellule::Lue(pk, p), m: Cellule::Deduite(m), r: None });
+                        if q <= 0 {
+                            continue;
+                        }
+                        if let Ok(m) = i64::try_from(div_arrondi(q as i128 * p as i128, unite)) {
+                            choix.push(Choix { q: Cellule::Lue(qk, q), p: Cellule::Lue(pk, p), m: Cellule::Deduite(m), r: None, ttc: None });
+                        }
+                        let imprime = self.ctx.taux_parmi(rang.iter().copied().filter(|k| ![qk, pk].contains(k)));
+                        let taux = imprime.and_then(|i| self.ctx.bareme.iter().find(|(c, _)| *c == i.code).cloned());
+                        if let (true, Some((code, ppm))) = (self.ctx.prix_ttc, taux) {
+                            let m = div_arrondi(q as i128 * p as i128 * PPM, unite * (PPM + ppm as i128));
+                            if let Ok(m) = i64::try_from(m) {
+                                choix.push(Choix { q: Cellule::Lue(qk, q), p: Cellule::Lue(pk, p), m: Cellule::Deduite(m), r: None, ttc: Some(code) });
                             }
                         }
                     }
@@ -506,11 +560,54 @@ impl Lecture<'_> {
             }
         }
         choix.extend(coupes);
-        if choix.is_empty() {
-            Classe::Bloque
-        } else {
-            Classe::Expliquee(choix)
+        if !choix.is_empty() {
+            return Classe::Expliquee(choix);
         }
+        // e. La rangée partielle : son montant lu en lecture forte dans sa colonne, et un
+        // nombre dans la colonne des quantités ou un prix lu — une ligne, que la somme exacte
+        // au total prouvé confirme, et dont la cellule absente (ou illisible) est TUE : rien
+        // n'est déduit (une remise perdue fausserait la quantité ; un tableau à remise ne
+        // déduit pas). Le prix — et la remise lue sur la rangée — ne sont rendus que si une
+        // quantité entière les ferme avec le montant ; la quantité absente ne l'est jamais.
+        if !ms.is_empty() && (!cols[Q].is_empty() || !ps.is_empty()) {
+            for &(mk, m) in &ms {
+                let mut prix: Vec<Choix> = Vec::new();
+                if absente(Q) {
+                    let cent = CENT * unite;
+                    for &(pk, p) in &ps {
+                        let rs = std::iter::once(None).chain(remises.iter().filter(|(k, _)| ![pk, mk].contains(k)).map(|x| Some(*x)));
+                        for r in rs {
+                            let rv = r.map_or(0, |x| x.1) as i128;
+                            if rv >= cent {
+                                continue;
+                            }
+                            // la quantité entière que le montant permet, au plus une par voie
+                            // (un prix HT, ou TTC à un taux du barème)
+                            let entiere = |ppm: i128| div_arrondi(m as i128 * (PPM + ppm) * cent, PPM * p as i128 * (cent - rv));
+                            let voies = std::iter::once(None).chain(self.ctx.bareme.iter().map(|(c, t)| Some((c.clone(), *t))));
+                            let prises: Vec<usize> = [Some(pk), Some(mk), r.map(|x| x.0)].into_iter().flatten().collect();
+                            let ferme = voies.into_iter().find_map(|v| {
+                                let k = entiere(v.as_ref().map_or(0, |x| x.1 as i128));
+                                let q = i64::try_from(k * unite).ok().filter(|_| k > 0)?;
+                                self.ctx
+                                    .fermeture((q, p, m, rv as i64), rang, &prises)
+                                    .filter(|t| t.as_deref() == v.as_ref().map(|x| x.0.as_str()))
+                            });
+                            if let Some(ttc) = ferme {
+                                prix.push(Choix { q: Cellule::Inconnue, p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r, ttc });
+                            }
+                        }
+                    }
+                }
+                if prix.is_empty() {
+                    choix.push(Choix { q: Cellule::Inconnue, p: Cellule::Inconnue, m: Cellule::Lue(mk, m), r: None, ttc: None });
+                } else {
+                    choix.extend(prix);
+                }
+            }
+            return Classe::Expliquee(choix);
+        }
+        Classe::Bloque
     }
 
     /// La graine d'un triplet lu (positions dans la rangée).
@@ -530,6 +627,7 @@ impl Lecture<'_> {
                 p: Cellule::Lue(rang[t.p.0], t.p.1),
                 m: Cellule::Lue(rang[t.m.0], t.m.1),
                 r: t.r.map(|(k, v)| (rang[k], v)),
+                ttc: t.ttc.clone(),
             },
         }
     }
@@ -554,19 +652,20 @@ impl Lecture<'_> {
         Regle { page: g.page, cols, centres: vec![g.y], hauteur }
     }
 
-    /// Les graines lues d'une page : un triplet q × p = m, de gauche à droite puis de droite
-    /// à gauche ; jamais une rangée qui porte un repère du centre.
+    /// Les graines lues d'une page : un triplet q × p = m (un prix HT, ou TTC quand la grille
+    /// le permet), de gauche à droite puis de droite à gauche ; jamais une rangée qui porte
+    /// un repère du centre.
     fn graines_lues(&self, page: u32) -> Vec<Graine> {
         let mut out = Vec::new();
         for (i, r) in self.rangs.iter().enumerate() {
             if self.page(i) != page || self.porte(r, &self.arret) {
                 continue;
             }
-            out.extend(self.ctx.triplets(r, false).into_iter().map(|t| self.graine_lue(i, &t)));
+            out.extend(self.ctx.triplets(r, true).into_iter().map(|t| self.graine_lue(i, &t)));
             let inverse: Vec<usize> = r.iter().rev().copied().collect();
             let n = r.len();
             let retour = |(k, v): (usize, i64)| (n - 1 - k, v);
-            out.extend(self.ctx.triplets(&inverse, false).into_iter().map(|t| {
+            out.extend(self.ctx.triplets(&inverse, true).into_iter().map(|t| {
                 self.graine_lue(i, &Triplet { q: retour(t.q), p: retour(t.p), m: retour(t.m), r: t.r.map(retour), ttc: t.ttc.clone() })
             }));
         }
@@ -615,7 +714,7 @@ impl Lecture<'_> {
                                     page,
                                     hauteur: (jp.y1 - jp.y0).max(f64::EPSILON),
                                     y: centre_y(jm),
-                                    choix: Choix { q: Cellule::Deduite(0), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r: None },
+                                    choix: Choix { q: Cellule::Deduite(0), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r: None, ttc: None },
                                 };
                                 // la rangée vue par sa propre règle : quantité absente, déduite
                                 let Classe::Expliquee(choix) = self.classer(&Self::regle(&g), rang, true) else { continue };
@@ -635,7 +734,24 @@ impl Lecture<'_> {
     }
 
     /// Le segment d'une graine : les rangées de sa page, ou rien si une rangée bloque.
+    /// Un tableau qui porte une rangée partielle (une cellule tue) ou une remise lue ne
+    /// déduit rien : ce qui fait taire une cellule (une remise perdue, une lecture fausse)
+    /// peut fausser une cellule déduite ailleurs. Il se relit alors sans déduction — ses
+    /// rangées incomplètes deviennent partielles.
     fn segment(&self, g: &Graine) -> Option<Segment> {
+        let seg = self.segment_selon(g, true)?;
+        let partielle = |c: &Choix| c.q == Cellule::Inconnue || c.p == Cellule::Inconnue;
+        let douteux = seg.lignes.iter().any(|l| l.choix.iter().any(|c| partielle(c) || c.r.is_some()));
+        let deduit = seg.lignes.iter().any(|l| l.choix.iter().any(|c| c.q.deduite() || c.p.deduite() || c.m.deduite()));
+        if douteux && deduit {
+            self.segment_selon(g, false)
+        } else {
+            Some(seg)
+        }
+    }
+
+    /// Le segment d'une graine, la déduction permise ou non (`permise`).
+    fn segment_selon(&self, g: &Graine, permise: bool) -> Option<Segment> {
         let rangs = self.rangs;
         let s = g.s;
         let mut regle = Self::regle(g);
@@ -653,8 +769,13 @@ impl Lecture<'_> {
             return None;
         }
         let a_remise = g.choix.r.is_some() || entete.is_some_and(|i| self.porte(&rangs[i], &self.remise));
-        let deduire = !a_remise;
-        let mut lignes = vec![Ligne { rang: s, choix: vec![g.choix.clone()], report: Vec::new(), regle: None }];
+        let deduire = permise && !a_remise;
+        // la graine d'en-tête porte une quantité déduite : sans déduction, elle est tue
+        let mut graine = g.choix.clone();
+        if !permise && graine.q.deduite() {
+            graine.q = Cellule::Inconnue;
+        }
+        let mut lignes = vec![Ligne { rang: s, choix: vec![graine], report: Vec::new(), regle: None }];
 
         let accueillir = |regle: &mut Regle, i: usize, classe: Classe, lignes: &mut Vec<Ligne>| -> Option<bool> {
             match classe {
@@ -978,17 +1099,25 @@ fn sortie(lecture: &Lecture, regle: &Regle, rang: &[usize], c: &Choix, avec_taux
     let ctx = lecture.ctx;
     let (y0, y1) = lecture.bande(rang);
     let cellule = |cel: Cellule, col: usize| match cel {
-        Cellule::Lue(k, v) => Cite { statut: Some("lu"), ..Cite::lue(v.to_string(), vec![ctx.cite(k)]) },
+        Cellule::Lue(k, v) => Some(Cite { statut: Some("lu"), ..Cite::lue(v.to_string(), vec![ctx.cite(k)]) }),
         Cellule::Coupe(k, v, coupe) => {
-            Cite { statut: Some("coupe"), coupe: Some(coupe), ..Cite::lue(v.to_string(), vec![ctx.cite(k)]) }
+            Some(Cite { statut: Some("coupe"), coupe: Some(coupe), ..Cite::lue(v.to_string(), vec![ctx.cite(k)]) })
         }
-        Cellule::Deduite(v) => Cite {
+        Cellule::Deduite(v) => Some(Cite {
             statut: Some("deduit"),
             case_: Some(Case { page: regle.page, x0: regle.cols[col].x0, y0, x1: regle.cols[col].x1, y1 }),
             ..Cite::lue(v.to_string(), Vec::new())
-        },
+        }),
+        Cellule::Inconnue => None,
     };
-    let lus: BTreeSet<usize> = [c.q, c.p, c.m].iter().filter_map(Cellule::jeton).chain(c.r.map(|x| x.0)).collect();
+    // Les jetons d'une cellule tue (une rangée partielle) ne sont ni le taux ni la désignation.
+    let tues: BTreeSet<usize> = [(Q, c.q), (P, c.p)]
+        .into_iter()
+        .filter(|(_, cel)| *cel == Cellule::Inconnue)
+        .flat_map(|(col, _)| rang.iter().copied().filter(move |&k| regle.colonne(&ctx.jetons[k]) == Some(col)))
+        .collect();
+    let lus: BTreeSet<usize> =
+        [c.q, c.p, c.m].iter().filter_map(Cellule::jeton).chain(c.r.map(|x| x.0)).chain(tues.iter().copied()).collect();
     // La désignation : au-delà de la colonne des quantités, du côté opposé aux prix.
     let q = &regle.cols[Q];
     let rtl = regle.cols[P].centre() < q.centre();
@@ -1007,12 +1136,18 @@ fn sortie(lecture: &Lecture, regle: &Regle, rang: &[usize], c: &Choix, avec_taux
         None
     };
     LigneSortie {
-        designation: (!gauche.is_empty()).then(|| ctx.designation(&gauche, lus.iter().next().copied())),
+        // la ligne principale de la désignation est celle de la quantité, sinon du prix, sinon
+        // du montant
+        designation: if gauche.is_empty() {
+            None
+        } else {
+            ctx.designation(&gauche, [c.q, c.p, c.m].iter().find_map(Cellule::jeton))
+        },
         quantite: cellule(c.q, Q),
         prix: cellule(c.p, P),
         remise: c.r.map(|(k, v)| Cite { statut: Some("lu"), ..Cite::lue(v.to_string(), vec![ctx.cite(k)]) }),
-        montant: cellule(c.m, M),
+        montant: cellule(c.m, M).expect("le montant d'une ligne est lu ou déduit"),
         taux,
-        prix_ttc: false,
+        prix_ttc: c.ttc.is_some() && c.p != Cellule::Inconnue,
     }
 }

@@ -29,6 +29,12 @@ export interface PageToken {
   x1: number;
   y1: number;
   confidence?: number | null;
+  /**
+   * La probabilité du caractère le MOINS sûr du mot, quand le lecteur la donne (le second
+   * lecteur, `infra/ocr/service.py`). La confiance d'une ligne est la moyenne de ses
+   * caractères : un mot sous une tache s'y noie (« sans fi », le i à 0,69, la ligne à 0,98).
+   */
+  faible?: number;
 }
 
 /**

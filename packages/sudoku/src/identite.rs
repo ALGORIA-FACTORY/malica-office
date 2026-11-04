@@ -105,12 +105,11 @@ pub fn exclusive(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
 /// fermé les valide déjà. Une valeur qui égale l'identité du dossier non plus : la base la
 /// confirme, caractère par caractère.
 pub fn assurance(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>, garantis: &BTreeSet<&str>) {
-    let seuil = entree.pack.confiance_du_texte;
-    // les jetons lus sans assurance, ou dont un mot a pu être mal lu (le lexique de l'adaptateur)
+    // les jetons lus sans assurance, ou dont un mot a pu être mal lu (`Jeton::incertain`)
     let incertains: BTreeSet<(u32, u32)> = entree
         .jetons
         .iter()
-        .filter(|j| j.douteux || seuil.is_some_and(|s| j.confiance.is_some_and(|c| c < s)))
+        .filter(|j| j.incertain(&entree.pack))
         .map(|j| (j.page, j.ordinal))
         .collect();
     let connue = entree.connus.as_ref().and_then(|c| c.dossier.as_ref()).map(|d| {

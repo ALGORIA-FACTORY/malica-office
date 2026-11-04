@@ -168,20 +168,26 @@ fn mineures(x: f64) -> i64 {
     (x * 1000.0).round() as i64
 }
 
-/// Les lignes prouvées valent-elles la vérité (quantité, prix, montant ; cellules déduites comprises) ?
+/// Les lignes prouvées valent-elles la vérité (quantité, prix, montant ; cellules déduites
+/// comprises) ? Une ligne partielle tait sa quantité ou son prix : seules ses cellules
+/// rendues se comparent. Chaque ligne lue prend une ligne vraie distincte, les lignes
+/// complètes d'abord.
 fn justes(o: &Value, v: &Verite) -> bool {
     let Some(vraies) = &v.lignes else { return false };
     let inst = o["lignes"]["instances"].as_array().unwrap();
     if inst.len() != vraies.len() {
         return false;
     }
-    let n = |x: &Value| x["valeur"].as_str().unwrap().parse::<i64>().unwrap();
-    let mut lues: Vec<(i64, i64, i64)> = inst.iter().map(|l| (n(&l["quantite"]), n(&l["prix"]), n(&l["montant"]))).collect();
-    let mut attendues: Vec<(i64, i64, i64)> =
+    let n = |x: &Value| x["valeur"].as_str().map(|s| s.parse::<i64>().unwrap());
+    let mut lues: Vec<(Option<i64>, Option<i64>, i64)> =
+        inst.iter().map(|l| (n(&l["quantite"]), n(&l["prix"]), n(&l["montant"]).unwrap())).collect();
+    lues.sort_by_key(|(q, p, _)| (q.is_none(), p.is_none()));
+    let mut libres: Vec<(i64, i64, i64)> =
         vraies.iter().map(|l| (mineures(l.qte), mineures(l.pu_ht), mineures(l.montant_ht))).collect();
-    lues.sort();
-    attendues.sort();
-    lues == attendues
+    lues.iter().all(|&(q, p, m)| {
+        let k = libres.iter().position(|&(vq, vp, vm)| vm == m && q.is_none_or(|q| q == vq) && p.is_none_or(|p| p == vp));
+        k.map(|k| libres.remove(k)).is_some()
+    })
 }
 
 /// Les cellules déduites d'une sortie : (champ, cellule).
@@ -535,12 +541,19 @@ fn middle_out_prix_deduit_et_tableau_a_remise() {
     assert_eq!((p["valeur"].as_str(), p["statut"].as_str()), (Some("260000"), Some("deduit")));
 
     // un en-tête qui annonce une remise de ligne : une remise perdue fausserait la quantité
-    // déduite, rien ne se déduit
+    // déduite, rien ne se déduit — les deux rangées dont l'OCR n'a pas vu la quantité
+    // restent des lignes (partielles) : leur prix et leur montant lus, leur quantité tue
     let (o, _) = a01(|j| {
         let k = ordinal_de(j, "Unité", 0.246);
         j[k]["texte"] = json!("Remise");
     });
-    assert_eq!(o["lignes"]["statut"], "signale");
+    let l = &o["lignes"];
+    assert_eq!(l["statut"], "prouve", "{l}");
+    assert!(deduites(&o).is_empty() && l["deduites"].is_null(), "{l}");
+    let i = l["instances"].as_array().unwrap();
+    let tues: Vec<(&Value, &Value)> = i.iter().filter(|x| x["quantite"].is_null()).map(|x| (&x["prix"]["valeur"], &x["montant"]["valeur"])).collect();
+    assert_eq!(tues, vec![(&json!("385000"), &json!("385000")), (&json!("1150000"), &json!("2300000"))]);
+    assert!(i.iter().all(|x| x["prix"]["statut"] == "lu" && x["montant"]["statut"] == "lu"));
 }
 
 /// La pièce 100/A-02 lue par l'OCR rapide : aucune quantité vue, aucune rangée aux trois
@@ -668,7 +681,7 @@ fn middle_out_case_collee() {
     println!("{}", serde_json::to_string(&json!({"quantite": video["quantite"], "prix": video["prix"]})).unwrap());
 
     // Mutation : le jeton collé ramené dans la seule colonne des prix — la coupe ne sert plus.
-    let (o, _) = ocr("50/11", |j| {
+    let (o, v) = ocr("50/11", |j| {
         replacer(j);
         let k = par_ordinal(j, 1, 88);
         j[k]["x0"] = json!(0.805);
@@ -678,5 +691,9 @@ fn middle_out_case_collee() {
         .as_array()
         .map_or(0, |a| a.iter().filter(|i| i["quantite"]["statut"] == "coupe" || i["prix"]["statut"] == "coupe").count());
     assert_eq!(coupes, 0, "{}", o["lignes"]);
-    assert_ne!(o["lignes"]["statut"], "prouve", "{}", o["lignes"]);
+    // sans la coupe, les rangées du jeton collé et de la quantité perdue restent des lignes
+    // partielles : leur montant prouvé par la somme, leur quantité et leur prix tus
+    assert!(justes(&o, &v), "{}", o["lignes"]);
+    let tues = o["lignes"]["instances"].as_array().unwrap().iter().filter(|i| i["quantite"].is_null() && i["prix"].is_null()).count();
+    assert_eq!(tues, 2, "{}", o["lignes"]);
 }
