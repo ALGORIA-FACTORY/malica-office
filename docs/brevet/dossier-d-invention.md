@@ -325,6 +325,42 @@ désignation ne l'est par rien. Sur le banc, toutes les désignations dont un mo
 **Effet mesuré.** Les 4 désignations arabes mal lues de la pièce 087 sont tues, et 2 autres
 désignations fausses aussi. Aucune juste n'est perdue.
 
+### I-L — Une valeur affirmée, ou une piste : la frontière que le moteur ne franchit pas
+
+**Problème.** Un moteur qui rend une valeur sans preuve suffisante produit une erreur
+plausible, la pire. Au banc du 4 novembre 2026, 73 valeurs fausses et 16 inventées étaient
+rendues comme lues.
+
+**Ce qui est nouveau.** Chaque valeur porte un statut : `prouve` (l'arithmétique),
+`conforme` (un format et un libellé qui la désigne seule), `signale` (une piste, montrée,
+jamais affirmée), `absent`. Les règles qui font passer une valeur de l'affirmé à la piste
+sont générales et ne dépendent d'aucun modèle :
+
+1. **Ancrage.** Une date ou un identifiant n'est conforme que si un libellé du champ le
+   désigne, à travers les séparateurs, dans le sens que donne le deux-points, et pour un
+   libellé de plusieurs mots, mot pour mot.
+2. **Partie.** Le champ d'une partie dont le libellé précède plusieurs valeurs sur la page
+   est une piste : le libellé ne dit pas de qui.
+3. **Assurance.** Une valeur non garantie par un calcul ou par un domaine fermé est une
+   piste si un de ses jetons est douteux : sous le seuil de confiance daté du référentiel,
+   ou douteux pour le lexique (point 4).
+4. **Doute lexical sans modèle.** Un mot est douteux s'il perd la lettre de son élision,
+   s'il met une lettre à la place d'un chiffre dans un petit nombre, s'il est inconnu des
+   dictionnaires Hunspell et des listes de mots, ou s'il le devient par une confusion
+   classique de l'OCR (l↔i, o↔0, rn↔m, c↔e). Un sigle, un terme à casse mêlée, un composé de
+   deux mots connus et une abréviation d'un mot connu ne le sont pas.
+5. **Unicité du jeton.** Une valeur imprimée une fois n'est lue que pour un champ. Le champ
+   en surnombre est absent, et les contraintes sont réévaluées : une preuve qui ne
+   comparait un jeton qu'à lui-même tombe.
+6. **Ventilation complète.** Une ventilation par taux n'est affirmée que complète. La part
+   exonérée d'une exonération partielle en est une instance, nommée par un taux nul du
+   référentiel et vérifiée par la somme des lignes sans taux.
+7. **Texte entier.** Un texte non prouvé n'est rendu qu'entier : pas coupé par la borne de
+   mots, ni par une cellule trop étroite, ni suivi d'une rangée qui peut en être la suite.
+
+**Effet mesuré.** Mêmes 412 pièces, même OCR : 74 faux et 16 inventés → 0 et 0. 338 pistes
+signalées. Un champ juste perdu, qui n'était prouvé que par une preuve sans contenu.
+
 ### I-K — La lecture en deux temps : le tableau d'abord, rien de sauté
 
 **Problème.** La preuve a besoin du tableau et des totaux. Les longues mentions servent à

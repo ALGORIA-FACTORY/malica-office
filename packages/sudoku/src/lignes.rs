@@ -798,7 +798,8 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
             l.designation = None;
         }
     }
-    let taux_par_base = verifier_taux(op, champs, &mut instances);
+    let nuls = op.bareme.as_ref().and_then(|b| pack.taux_nuls.get(b)).map(Vec::as_slice).unwrap_or_default();
+    let taux_par_base = verifier_taux(op, champs, nuls, &mut instances);
     let sortie = LignesSortie {
         statut: "prouve".into(),
         instances,
@@ -869,7 +870,14 @@ fn toujours(
 
 /// Σ montants des lignes par taux = base de ce taux au centre, quand c'est évaluable :
 /// `verifiee`, `echec` (les taux lus sont alors retirés des lignes) ou `non_evaluable`.
-fn verifier_taux(op: &OpLignes, champs: &BTreeMap<String, ChampSortie>, instances: &mut [LigneSortie]) -> &'static str {
+/// La part exonérée d'une exonération partielle (une base au centre sous un taux nul,
+/// `nuls`) vaut la somme des lignes sans taux.
+fn verifier_taux(
+    op: &OpLignes,
+    champs: &BTreeMap<String, ChampSortie>,
+    nuls: &[String],
+    instances: &mut [LigneSortie],
+) -> &'static str {
     let mut taux_par_base = "non_evaluable";
     // Une base seulement déduite (non imprimée) n'est connue que pour un taux unique : c'est
     // alors le total des bases du groupe, prouvé au centre.
@@ -892,10 +900,14 @@ fn verifier_taux(op: &OpLignes, champs: &BTreeMap<String, ChampSortie>, instance
     if let Some(bases) = bases {
         if instances.iter().any(|l| l.taux.is_some()) {
             let mut sommes: BTreeMap<String, i64> = BTreeMap::new();
+            let exoneree = bases.keys().find(|c| nuls.contains(c));
             for l in instances.iter() {
-                if let Some(t) = &l.taux {
-                    *sommes.entry(t.code.clone()).or_default() += l.montant.valeur.parse::<i64>().unwrap_or_default();
-                }
+                let code = match (&l.taux, exoneree) {
+                    (Some(t), _) => &t.code,
+                    (None, Some(c)) => c,
+                    (None, None) => continue,
+                };
+                *sommes.entry(code.clone()).or_default() += l.montant.valeur.parse::<i64>().unwrap_or_default();
             }
             if sommes == bases {
                 taux_par_base = "verifiee";

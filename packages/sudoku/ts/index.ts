@@ -114,6 +114,8 @@ export interface PackDuSudoku {
   readonly decimales: number;
   readonly tolerance: number;
   readonly baremes: Readonly<Record<string, readonly { code: string; ppm: number }[]>>;
+  /** Les codes des taux nuls de chaque barème : ils nomment la part exonérée, jamais un calcul. */
+  readonly taux_nuls?: Readonly<Record<string, readonly string[]>>;
   readonly charges: readonly {
     code: string;
     /** Le montant standard ; gardé pour compatibilité, il compte parmi les admis. */

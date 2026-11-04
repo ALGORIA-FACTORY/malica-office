@@ -34,6 +34,9 @@
  *
  * Corpus : `algoria:<dossier>`, `synthetique:<dossier>`, `dirigeant:<fichier json>`,
  * `photo:<image>:<vérité json>` (une pièce réelle, lue sur place, jamais copiée).
+ *
+ * Le banc échoue (code 1) dès qu'une valeur affirmée est fausse, qu'une valeur est
+ * inventée ou que les parties sont échangées : zéro est la seule mesure acceptée.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -178,6 +181,26 @@ const identifiantNormal = (v: unknown) =>
     .toUpperCase()
     .replace(/[^A-Z0-9]/gu, "");
 
+/**
+ * La vérité d'un identifiant sans le libellé que sa saisie a gardé en tête (« N° 1547 ») :
+ * un repère du champ, ou sa fin (« Facture N° » → « N° »), suivi d'un blanc ou d'un
+ * deux-points. Le libellé n'est pas la valeur : le moteur rend « 1547 », que la pièce
+ * imprime derrière « N° ». Les repères viennent de la grille, en base.
+ */
+function sansSonLibelle(attendu: unknown, champ: ChampDeGrille): string {
+  const v = String(attendu).trim();
+  const libelles = [...champ.reperes_fr, ...champ.reperes_ar].flatMap((r) => {
+    const mots = r.trim().split(/\s+/u);
+    return mots.map((_, i) => mots.slice(i).join(" "));
+  });
+  const pris = libelles
+    .filter(
+      (l) => l && v.toLowerCase().startsWith(l.toLowerCase()) && /^[\s:]/u.test(v.slice(l.length)),
+    )
+    .sort((a, b) => b.length - a.length)[0];
+  return pris ? v.slice(pris.length).replace(/^[\s:]+/u, "") : v;
+}
+
 /** Un nombre décimal de la vérité (« 841.849 », 385) en unités de l'exposant. */
 export function enUnites(v: unknown, exposant: number): bigint | null {
   if (v === null || v === undefined) return null;
@@ -200,12 +223,13 @@ export function dateIso(v: unknown): string {
 const entier = (v: string | null | undefined): bigint | null =>
   v !== null && v !== undefined && /^-?\d+$/u.test(v) ? BigInt(v) : null;
 
-/** Le pourcentage d'un code de taux du barème (`TVA19` → « 19 »). */
+/** Le pourcentage d'un code de taux du barème (`TVA19` → « 19 », `EXO` → « 0 »). */
 function pourcentDuTaux(contexte: ContexteDuSudoku, code: string): string {
   for (const bareme of Object.values(contexte.pack.baremes)) {
     const t = bareme.find((x) => x.code === code);
     if (t) return String(t.ppm / 10_000);
   }
+  if (Object.values(contexte.pack.taux_nuls ?? {}).some((t) => t.includes(code))) return "0";
   return code;
 }
 
@@ -252,7 +276,10 @@ function comparer(
     case "montant":
       return { lu: v, juste: entier(v) !== null && enUnites(attendu, exposant) === entier(v) };
     case "identifiant":
-      return { lu: v, juste: identifiantNormal(v) === identifiantNormal(attendu) };
+      return {
+        lu: v,
+        juste: identifiantNormal(v) === identifiantNormal(sansSonLibelle(attendu, champ)),
+      };
     case "booleen":
       return { lu: v, juste: (String(attendu) === "true") === (v !== "false") };
     case "nombre":
@@ -1070,6 +1097,21 @@ async function principal(): Promise<void> {
     }
     if (values.sortie) writeFileSync(values.sortie, JSON.stringify(mesures));
     console.log(rapport(mesures));
+    // Le banc BLOQUE : une valeur affirmée fausse, une valeur inventée ou des parties
+    // échangées font échouer la mesure. Une piste signalée ne bloque pas : elle n'est pas
+    // affirmée.
+    const fautes = mesures.flatMap((m) => [
+      ...m.champs
+        .filter((c) => c.issue === "faux" || c.issue === "invente")
+        .map((c) => `${m.corpus} ${m.id} ${c.champ} : ${c.issue} (lu ${c.lu})`),
+      ...(m.sens.juste === false ? [`${m.corpus} ${m.id} : parties échangées`] : []),
+    ]);
+    if (fautes.length > 0) {
+      console.error(
+        `\n${fautes.length} valeur(s) affirmée(s) fausse(s) ou inventée(s) :\n${fautes.join("\n")}`,
+      );
+      process.exitCode = 1;
+    }
   } finally {
     await db.end();
   }

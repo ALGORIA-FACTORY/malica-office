@@ -294,10 +294,11 @@ export async function lireLeContexteDuSudoku(
       ]),
       // Un taux nul n'est pas un taux du barème : l'exonération est un chemin à
       // part dans la grille (la mention lue), jamais une instance « 0 % » que
-      // n'importe quel zéro imprimé fermerait.
+      // n'importe quel zéro imprimé fermerait. Les taux nuls ne font que nommer
+      // la part exonérée d'une exonération partielle (`pack.taux_nuls`).
       db.query<{ code: string; rate: string }>(
         `select code, rate from ref_tva_rates_v
-        where pack_version_id = $1 and rate > 0
+        where pack_version_id = $1
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code`,
         [packId, jour],
@@ -424,7 +425,12 @@ export async function lireLeContexteDuSudoku(
       decimales,
       tolerance: param("lecture.tolerance_arrondi_mineure"),
       confiance_du_texte: param("lecture.confiance_du_texte"),
-      baremes: { tva: taux.rows.map((t) => ({ code: t.code, ppm: ppm(t.rate) })) },
+      baremes: {
+        tva: taux.rows
+          .filter((t) => ppm(t.rate) > 0)
+          .map((t) => ({ code: t.code, ppm: ppm(t.rate) })),
+      },
+      taux_nuls: { tva: taux.rows.filter((t) => ppm(t.rate) === 0).map((t) => t.code) },
       charges: [...parCode.values()],
       formats: Object.fromEntries(formats.rows.map((f) => [f.kind, f.pattern])),
     },

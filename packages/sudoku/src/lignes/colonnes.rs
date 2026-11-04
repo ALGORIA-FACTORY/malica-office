@@ -82,9 +82,13 @@ pub fn affiner(
     })
     .find_map(|n| en_tete(&rangs[n], jetons, &reperes, h))
     else {
+        taire_les_coupees(instances, jetons, rangs, grille, h, &jeton_de, &rang_de);
         return;
     };
-    let Some(k) = cellules.iter().position(|c| c.champ == Some(d)) else { return };
+    let Some(k) = cellules.iter().position(|c| c.champ == Some(d)) else {
+        taire_les_coupees(instances, jetons, rangs, grille, h, &jeton_de, &rang_de);
+        return;
+    };
     // Les jetons des rangées prouvées : ce sont eux qui placent les frontières.
     let lignes: Vec<usize> = instances
         .iter()
@@ -129,16 +133,69 @@ pub fn affiner(
     // une rangée qui porte une étiquette (« SN: ») ou un numéro est une autre information ;
     // un numéro est fait de chiffres (« 322911304202613 », « SN12345678 ») — une
     // référence d'article qui en mêle (« 65ML L3110 ») reste de la désignation
+    // — un MONTANT, lui, a ses séparateurs (« 28 000,000 ») : cité dans la désignation
+    // (« selon devis … de 28 000,000 DT HT »), il en est la suite, pas un numéro
     let autre_information = |r: &[usize]| {
         r.iter().any(|&i| {
             let t = jetons[i].texte.trim();
             let chiffres = t.chars().filter(|c| c.is_ascii_digit()).count();
             let signes = t.chars().filter(|c| c.is_alphanumeric()).count();
-            t.ends_with(':') || chiffres >= 6 && 5 * chiffres >= 4 * signes
+            let montant = t.contains([',', '.']) && !jetons[i].montants.is_empty();
+            t.ends_with(':') || chiffres >= 6 && 5 * chiffres >= 4 * signes && !montant
         })
     };
     let etendue = |ids: &mut dyn Iterator<Item = usize>| {
         ids.fold((f64::MAX, f64::MIN), |(a, b), i| (a.min(jetons[i].y0), b.max(jetons[i].y1)))
+    };
+    // Le tableau s'étend de la marge de sa première colonne à celle de sa dernière.
+    let (tableau_g, tableau_d) = (
+        couloir(&lignes, jetons, 0.0, cellules[0].x1).unwrap_or(f64::MIN),
+        cellules.last().and_then(|c| couloir(&lignes, jetons, c.x0, 1.0)).unwrap_or(f64::MAX),
+    );
+    let dans_le_tableau = |i: usize| {
+        let centre = (jetons[i].x0 + jetons[i].x1) / 2.0;
+        centre >= tableau_g && centre < tableau_d
+    };
+    // La part d'une rangée qui tombe dans la colonne, quand tout ce qu'elle porte DANS le
+    // tableau y tombe : un bloc posé à côté du tableau (« MATRICULE FISCAL », colonne
+    // latérale) que la rangée recouvre n'en est pas ; une autre cellule du tableau (« Montant
+    // TVA TOTAL ») fait de la rangée autre chose qu'une suite.
+    let dans_la_colonne = |r: &[usize]| -> Vec<usize> {
+        if r.iter().any(|&i| dans_le_tableau(i) && !dedans(i)) {
+            return Vec::new();
+        }
+        r.iter().copied().filter(|&i| dedans(i)).collect()
+    };
+    // La suite d'une désignation COUPÉE en fin de ligne : seulement si la ligne touche le
+    // bord de sa colonne (le texte a manqué de place), les rangées suivantes, serrées,
+    // dont des jetons tombent dans la colonne — et qui ne sont pas des lignes. Une ligne
+    // courte suivie d'un numéro de série (« S N : 7645… ») n'est pas coupée.
+    let coupee = |r: &[usize]| {
+        let fin = r.iter().map(|&i| jetons[i].x1).fold(f64::MIN, f64::max);
+        let ici = r.iter().map(|&i| jetons[i].x0).fold(f64::MAX, f64::min);
+        !r.is_empty() && (fin >= bord - 0.15 * (bord - debut) || ici <= debut + 0.15 * (bord - debut) && r.iter().any(|&i| crate::reperes::droite_a_gauche(&jetons[i].texte)))
+    };
+    // Les rangées de la suite d'une ligne dont `derniere` est la dernière ligne de texte,
+    // à partir de la rangée `m`, hors des rangées `exclues`.
+    let suite = |mut m: usize, mut derniere: Vec<usize>, exclues: &[usize]| -> Vec<usize> {
+        let mut prises = Vec::new();
+        while m < rangs.len() && coupee(&derniere) && !rangs_des_lignes.contains(&m) && !exclues.contains(&m) {
+            let dans = dans_la_colonne(&rangs[m]);
+            // serrée : l'écart se mesure entre les textes de la colonne, pas entre les blocs
+            // voisins que les rangées recouvrent
+            let serree = || {
+                let (_, fin) = etendue(&mut derniere.iter().copied());
+                let (haut, _) = etendue(&mut dans.iter().copied());
+                jetons[derniere[0]].page == jetons[dans[0]].page && haut - fin <= 0.8 * h
+            };
+            if dans.is_empty() || autre_information(&dans) || !serree() {
+                break;
+            }
+            derniere = en_lignes(jetons, &dans).pop().unwrap_or_default();
+            prises.push(m);
+            m += 1;
+        }
+        prises
     };
 
     // La tête d'une désignation sur plusieurs lignes : un tableau CENTRE ses chiffres sur la
@@ -154,7 +211,13 @@ pub fn affiner(
             let (c0, c1) = etendue(&mut chiffres.iter().copied());
             let milieu_chiffres = (c0 + c1) / 2.0;
             let texte: Vec<usize> = rangs[n].iter().copied().filter(|i| !chiffres.contains(i) && dedans(*i)).collect();
-            let (mut t0, t1) = if texte.is_empty() { (c0, c1) } else { etendue(&mut texte.iter().copied()) };
+            let (mut t0, mut t1) = if texte.is_empty() { (c0, c1) } else { etendue(&mut texte.iter().copied()) };
+            // le milieu du texte compte sa suite sous la rangée (une cellule de trois lignes,
+            // les chiffres sur celle du milieu)
+            let derniere = en_lignes(jetons, &texte).pop().unwrap_or_default();
+            for m in suite(n + 1, derniere, &[]) {
+                t1 = t1.max(etendue(&mut dans_la_colonne(&rangs[m]).into_iter()).1);
+            }
             let mut prises = Vec::new();
             let mut m = n;
             while m > 0 {
@@ -187,27 +250,9 @@ pub fn affiner(
         } else {
             lignes_de_texte.extend(en_lignes(jetons, &texte));
         }
-        // La suite d'une désignation COUPÉE en fin de ligne : seulement si la ligne touche le
-        // bord de sa colonne (le texte a manqué de place), les rangées suivantes, serrées,
-        // dont TOUS les jetons tombent dans la colonne — et qui ne sont pas des lignes. Une
-        // ligne courte suivie d'un numéro de série (« S N : 7645… ») n'est pas coupée.
-        let coupee = |r: &[usize]| {
-            let fin = r.iter().map(|&i| jetons[i].x1).fold(f64::MIN, f64::max);
-            let ici = r.iter().map(|&i| jetons[i].x0).fold(f64::MAX, f64::min);
-            !r.is_empty() && (fin >= bord - 0.15 * (bord - debut) || ici <= debut + 0.15 * (bord - debut) && r.iter().any(|&i| crate::reperes::droite_a_gauche(&jetons[i].texte)))
-        };
-        let mut m = n + 1;
-        while m < rangs.len()
-            && coupee(lignes_de_texte.last().map(|v| v.as_slice()).unwrap_or_default())
-            && !autre_information(&rangs[m])
-            && !prises_en_tete.contains(&m)
-            && !rangs_des_lignes.contains(&m) && rangs[m].iter().all(|&i| dedans(i)) {
-            let (a, b) = (&jetons[rangs[m - 1][0]], &jetons[rangs[m][0]]);
-            if a.page != b.page || b.y0 - a.y1 > 0.8 * h {
-                break;
-            }
-            lignes_de_texte.extend(en_lignes(jetons, &rangs[m]));
-            m += 1;
+        let derniere = lignes_de_texte.last().cloned().unwrap_or_default();
+        for m in suite(n + 1, derniere, &prises_en_tete) {
+            lignes_de_texte.extend(en_lignes(jetons, &dans_la_colonne(&rangs[m])));
         }
         // Un texte qui bute sur la colonne suivante a pu être COUPÉ à l'impression (la cellule
         // trop étroite) : « Contrat d'entretien climatisation - se », sous l'intitulé QTÉ.
@@ -227,6 +272,53 @@ pub fn affiner(
                 pris.iter().map(|&i| RefJeton { page: jetons[i].page, ordinal: jetons[i].ordinal }).collect(),
             )
         });
+    }
+}
+
+/// Sans en-tête, la colonne de la désignation n'est pas connue : sa suite à la ligne d'après
+/// ne se distingue pas d'un autre texte. Une rangée serrée sous la ligne, qui n'est pas une
+/// ligne, dont des jetons tombent sous la désignation et qui ne commence pas par un libellé
+/// de la grille (« Total HT »), peut en être la suite : la désignation n'est pas prouvée
+/// entière, elle se tait. Banc sans IA du 4 novembre 2026, 50/32 : « Acompte 30 % —
+/// Développement application mobile Malica » rendue sans « (Android) selon devis
+/// DV-2026-007 de 28 000,000 DT HT », sa seconde ligne.
+fn taire_les_coupees(
+    instances: &mut [LigneSortie],
+    jetons: &[Jeton],
+    rangs: &[Vec<usize>],
+    grille: &Grille,
+    h: f64,
+    jeton_de: &dyn Fn(&RefJeton) -> Option<usize>,
+    rang_de: &BTreeMap<usize, usize>,
+) {
+    let libelles: Vec<String> = grille
+        .champs
+        .iter()
+        .flat_map(|c| c.reperes_fr.iter().chain(c.reperes_ar.iter()))
+        .map(|r| cle(r))
+        .filter(|r| r.chars().count() >= 2)
+        .collect();
+    let rang_d = |l: &LigneSortie| {
+        [&l.montant, &l.prix, &l.quantite].into_iter().find_map(|c| c.refs.first().and_then(jeton_de)).and_then(|i| rang_de.get(&i).copied())
+    };
+    let lignes: Vec<usize> = instances.iter().filter_map(rang_d).collect();
+    for l in instances.iter_mut() {
+        let (Some(n), Some(d)) = (rang_d(l), l.designation.as_ref()) else { continue };
+        let ids: Vec<usize> = d.refs.iter().filter_map(jeton_de).collect();
+        let (Some(&premier), Some(r)) = (ids.first(), rangs.get(n + 1)) else { continue };
+        if lignes.contains(&(n + 1)) {
+            continue;
+        }
+        let x0 = ids.iter().map(|&i| jetons[i].x0).fold(f64::MAX, f64::min);
+        let x1 = ids.iter().map(|&i| jetons[i].x1).fold(f64::MIN, f64::max);
+        let bas = ids.iter().map(|&i| jetons[i].y1).fold(f64::MIN, f64::max);
+        let dessous: Vec<usize> = r.iter().copied().filter(|&i| jetons[i].x1 > x0 && jetons[i].x0 < x1).collect();
+        let Some(haut) = dessous.iter().map(|&i| jetons[i].y0).reduce(f64::min) else { continue };
+        let texte = cle(&dessous.iter().map(|&i| jetons[i].texte.as_str()).collect::<Vec<_>>().join(" "));
+        let libelle = libelles.iter().any(|x| texte.starts_with(x.as_str()));
+        if jetons[r[0]].page == jetons[premier].page && haut - bas <= 0.8 * h && !libelle {
+            l.designation = None;
+        }
     }
 }
 

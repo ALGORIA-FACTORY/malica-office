@@ -1084,7 +1084,7 @@
     "lignes": null
   },
   "ocr|50/36|ttc_hors_timbre": {
-    "centre": "0396513ef8b097ee",
+    "centre": "e26ea53533ab2ff3",
     "lignes": null
   },
   "ocr|50/37|ttc_avec_timbre": {
@@ -1180,7 +1180,7 @@
     "lignes": null
   },
   "ocr|50/48|ttc_hors_timbre": {
-    "centre": "15bfc57ea3bd3103",
+    "centre": "355e0d0329fd8d5f",
     "lignes": null
   },
   "ocr|50/49|ttc_avec_timbre": {
@@ -2180,8 +2180,8 @@
     "lignes": "1b64ded05346a610"
   },
   "texte|50/36|ttc_hors_timbre": {
-    "centre": "fa76c1dc54c98b74",
-    "lignes": "1b64ded05346a610"
+    "centre": "b7a87e8227903091",
+    "lignes": null
   },
   "texte|50/37|ttc_avec_timbre": {
     "centre": "dd03a0cbca8c4628",
@@ -2260,8 +2260,8 @@
     "lignes": "e93fb813cc1f6a89"
   },
   "texte|50/48|ttc_hors_timbre": {
-    "centre": "21d8f2f36429df1a",
-    "lignes": "e93fb813cc1f6a89"
+    "centre": "b5354d914fc86969",
+    "lignes": null
   },
   "texte|50/49|ttc_avec_timbre": {
     "centre": "c6dc4f3992beab3f",

@@ -192,6 +192,11 @@ pub struct Pack {
     /// texte lu est rendu.
     #[serde(default)]
     pub confiance_du_texte: Option<f64>,
+    /// Les taux nuls de chaque barème (`EXO`, `EXPORT`), par leur code. Ils ne sont pas dans
+    /// `baremes` : un zéro imprimé fermerait n'importe quelle instance « 0 % ». Ils ne servent
+    /// qu'à NOMMER la part exonérée d'une exonération partielle prouvée par les lignes.
+    #[serde(default)]
+    pub taux_nuls: HashMap<String, Vec<String>>,
 }
 
 #[derive(Deserialize, Clone)]

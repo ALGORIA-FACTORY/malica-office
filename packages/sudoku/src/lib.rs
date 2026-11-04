@@ -286,7 +286,43 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     let fortes: Vec<Solution> = toutes.iter().filter(|x| !x.faible).cloned().collect();
     let retenues = if fortes.is_empty() { toutes } else { fortes };
 
-    let unique: Option<&Etat> = if retenues.len() == 1 { Some(&retenues[0].etat) } else { None };
+    // Une valeur imprimée une fois n'est lue que pour UN champ. Banc sans IA du 4 novembre
+    // 2026, algoria-135 : « Total 304,000 », seul ; net à rembourser = total − avance
+    // (absente) fermait sur ce même jeton, et le net, jamais imprimé, était rendu prouvé —
+    // une preuve qui ne compare un jeton qu'à lui-même. Les champs en surnombre (d'abord les
+    // facultatifs, puis ceux dont le libellé n'ancre aucune occurrence) sont absents — un net
+    // à payer sans timbre n'est pas imprimé à part du TTC —, puis les contraintes se
+    // réévaluent : une preuve qui ne tenait que par ce partage tombe. Un champ OBLIGATOIRE
+    // en surnombre invalide la solution : elle lisait un champ requis là où il n'est pas.
+    let mut partage_requis = false;
+    let lu: Option<Etat> = (retenues.len() == 1).then(|| {
+        let mut e = retenues[0].etat.clone();
+        let mut par_valeur: BTreeMap<i64, Vec<(bool, bool, usize)>> = BTreeMap::new();
+        for (i, x) in e.s.iter().enumerate() {
+            if let Some(x) = x.filter(|x| !x.absent) {
+                let champ = modele.vars[i].champ;
+                let ancree = dom.valeurs.get(&x.v).is_some_and(|val| {
+                    val.occurrences.iter().any(|o| plan.ancre(o.jeton, &reperes[champ], None, false))
+                });
+                par_valeur.entry(x.v).or_default().push((modele.vars[i].facultatif, !ancree, i));
+            }
+        }
+        for (v, mut vars) in par_valeur {
+            let jetons: BTreeSet<usize> =
+                dom.valeurs.get(&v).map(|val| val.occurrences.iter().map(|o| o.jeton).collect()).unwrap_or_default();
+            if vars.len() <= jetons.len() {
+                continue;
+            }
+            vars.sort();
+            for &(_, _, i) in &vars[jetons.len()..] {
+                partage_requis |= !modele.vars[i].facultatif;
+                e.s[i] = Some(numerique::Val { v: 0, absent: true, faible: false });
+            }
+        }
+        e
+    });
+    let lu = lu.filter(|_| !partage_requis);
+    let unique: Option<&Etat> = lu.as_ref();
     let mut issue = match retenues.len() {
         0 => "aucune",
         1 => "prouvee",
@@ -294,6 +330,10 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     }
     .to_string();
     let mut raison = None;
+    if partage_requis {
+        issue = "aucune".into();
+        raison = Some("une valeur imprimée une fois est lue pour deux champs".into());
+    }
     if s.depasse {
         issue = "aucune".into();
         raison = Some(format!("plafond de {plafond} combinaisons atteint"));
@@ -405,7 +445,7 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                             })
                             .collect();
                         let majoration: i64 = charges.iter().sum();
-                        let inst = sol
+                        let mut inst: Vec<InstanceSortie> = sol
                             .instances
                             .iter()
                             .map(|it| {
@@ -423,7 +463,31 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                                 }
                             })
                             .collect();
-                        ChampSortie { valeur: None, refs: Vec::new(), statut: "prouve".into(), instances: Some(inst) }
+                        // Exonération partielle : la part exonérée est une instance de la
+                        // ventilation — base = total des bases − Σ bases imprimées, montant nul —,
+                        // nommée par le taux nul que la grille désigne. Sans ce taux, la
+                        // ventilation est incomplète et n'est pas affirmée. Banc sans IA du
+                        // 4 novembre 2026 : « 0 % 4 032,000 0,000 » imprimé, la ventilation
+                        // rendue ne portait que le 19 %. Les lignes confirment le reste
+                        // (contrôle plus bas), sinon la preuve est retirée.
+                        let exoneree = match (sol.partielle, &gr.taux_exonere) {
+                            (false, _) => Some(None),
+                            (true, None) => None,
+                            (true, Some(code)) => gr
+                                .total_base
+                                .and_then(|t| e.s[t].filter(|v| !v.absent))
+                                .map(|total| {
+                                    let v = if est_base { total.v - sol.somme_b } else { 0 };
+                                    Some(InstanceSortie { taux: code.clone(), valeur: Some(v.to_string()), refs: cite(v, champ) })
+                                }),
+                        };
+                        match exoneree {
+                            Some(reste) => {
+                                inst.extend(reste);
+                                ChampSortie { valeur: None, refs: Vec::new(), statut: "prouve".into(), instances: Some(inst) }
+                            }
+                            None => signale(),
+                        }
                     }
                 }
                 _ => signale(),
@@ -583,8 +647,8 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     //   « 0,000 » et « exonérée » imprimés) ;
     // - deux taux sur un ticket, un chiffre du TTC mal lu : la base à 7 % passait pour le HT,
     //   et un montant d'article pour le TTC (50/05, OCR).
-    // Exonération partielle, en plus : le reste, exonéré, n'est imprimé nulle part ; les lignes
-    // seules l'établissent, chaque taux y valant sa base imprimée (`taux_par_base`).
+    // Exonération partielle, en plus : le reste, exonéré, n'est pas une base qu'un calcul de
+    // taux prouve (le montant nul ferme n'importe quel zéro) ; les lignes seules l'établissent, chaque taux y valant sa base imprimée (`taux_par_base`).
     // Sinon la pièce n'est pas prouvée : rendue à la chaîne, valeurs gardées au statut signalé.
     // Un HT accepté par le seul libellé de la base, en attente des lettres (voir plus bas).
     let mut ht_par_la_base = false;

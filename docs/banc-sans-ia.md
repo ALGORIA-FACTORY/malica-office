@@ -87,6 +87,44 @@ L'OCR, relancé sans cache à chaque mesure (210 images, deux processeurs, sans 
   MyTek prennent 8,2 s avec deux lecteurs d'un fil, contre 10,8 s avec un lecteur de deux
   fils. L'API lit les pages d'une pièce autant à la fois que le service le dit.
 
+## Bulletin 4 — zéro valeur fausse affirmée (4 novembre 2026, fin de nuit)
+
+Mêmes 412 pièces, même cache OCR. Le banc compte désormais à part les **pistes
+signalées** : une valeur que le moteur montre sans l'affirmer (statut `signale`). Elles ne
+sont plus comptées justes. C'est pourquoi la colonne « juste » baisse : elle ne compte que
+ce que le moteur affirme.
+
+|                          |     juste |  faux |   silence | inventé | signalé (non affirmé) |
+| ------------------------ | --------: | ----: | --------: | ------: | --------------------: |
+| Bulletin 3 (tout compté) |     5 114 |    74 |     6 536 |      16 |                     — |
+| **Bulletin 4**           | **4 757** | **0** | **6 629** |   **0** |               **338** |
+
+Sur les 338 pistes signalées, la vérité en dit 26 fausses : ce sont des pistes, jamais des
+valeurs rendues.
+
+Chaque faux a eu sa cause exacte et sa correction générale :
+
+| Cause                                                                                                    | Correction                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Une date ou un identifiant sans libellé, rendu pour plusieurs champs                                     | sans ancre, le champ est signalé ; ancrage par séparateur, deux-points, libellé de plusieurs mots exact, arabe normalisé     |
+| Le champ d'une partie lu au voisin (matricule du preneur pour le bailleur, RC du client pour l'émetteur) | plusieurs valeurs pour un même libellé de partie : signalé                                                                   |
+| Une cellule d'une parcelle répétée rendue comme champ de la pièce                                        | `ref.grille_champs.repetee` : ce n'est pas un champ de la pièce                                                              |
+| Un texte coupé (borne de mots, paragraphe qui continue, cellule trop étroite)                            | un texte n'est rendu qu'entier                                                                                               |
+| Un mot mal lu par l'OCR avec assurance (« matérel », « 2oo », « I'Ouest »)                               | doute lexical sans modèle : Hunspell fr/en et listes de mots, confusions classiques de l'OCR ; la valeur non prouvée se tait |
+| Une valeur non prouvée sous le seuil de confiance                                                        | `lecture.confiance_du_texte` à 0,96 (distribution dans la migration)                                                         |
+| La ventilation d'une exonération partielle sans sa part exonérée (a102)                                  | la part exonérée est une instance, nommée par `taux_exonere` (EXO) et vérifiée par les lignes sans taux                      |
+| Un net à rembourser jamais imprimé, « prouvé » sur le jeton du total (a135)                              | une valeur imprimée une fois n'est lue que pour un champ ; une preuve qui ne tenait que par ce partage tombe                 |
+| Une désignation sur trois lignes, la tête perdue (50/08)                                                 | le centrage de la cellule compte la suite sous la rangée                                                                     |
+| Une désignation dont la seconde ligne cite un montant (50/32)                                            | sans en-tête reconnu, une rangée serrée sous la ligne fait taire la désignation                                              |
+
+- **Un champ juste perdu, honnêtement :** a135 `total_frais` (304,000). Il n'était
+  « prouvé » que par net = total − avance, sur le même jeton. Il revient avec la preuve
+  « somme des lignes = total » de la note de frais (P01, encore `a_traduire`).
+- **Une règle de comparaison du banc, dite ici :** la vérité d'un identifiant saisie avec
+  son libellé (« N° 1547 ») se compare sans ce libellé, pris dans les repères du champ en
+  base. Une seule pièce change : 50/12, de faux à juste.
+- Les régressions sont fixées dans `packages/sudoku/tests/zero_faux_du_banc.rs`.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

@@ -285,6 +285,23 @@ impl<'a> Page<'a> {
     }
 
     /// Les champs dont un repère égale exactement ce libellé.
+    /// Un jeton qui égale un repère du champ `n`, hors de `pris`, est-il suivi sur sa rangée
+    /// d'une valeur à chiffres autre que `v` ?
+    fn autre_valeur_du_libelle(&self, n: usize, pris: &[usize], v: &str) -> bool {
+        let compact = |t: &str| t.chars().filter(|c| c.is_alphanumeric()).collect::<String>();
+        let v = compact(v);
+        (0..self.j.len()).filter(|i| !pris.contains(i)).any(|i| {
+            if !self.champs_de(&self.normes[i]).is_some_and(|e| e.champs.contains(&n)) {
+                return false;
+            }
+            let (r, k) = self.ou[i];
+            self.rangs[r].get(k + 1).is_some_and(|&b| {
+                let t = compact(&self.j[b].texte);
+                !pris.contains(&b) && t.chars().any(|c| c.is_ascii_digit()) && !v.contains(&t) && !t.contains(&v)
+            })
+        })
+    }
+
     fn champs_de(&self, texte: &str) -> Option<Etiquette> {
         let k = cle(texte);
         let champs: BTreeSet<usize> = self.reperes.iter().filter(|(r, _)| *r == k).map(|(_, c)| *c).collect();
@@ -1350,7 +1367,7 @@ fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie
 /// Le numéro : le jeton juste après son repère (à droite, ou dessous), qui porte au
 /// moins un chiffre, avec les morceaux qui lui sont collés. Une seule valeur → `conforme`.
 fn numero(page: &Page, n: usize, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie>, lus: &mut Vec<(usize, String)>) {
-    let sortie = apres_repere(page, n, &Lecture { chiffre: true, colle_au_libelle: false, exclusif: false, motif: None, phrase: false });
+    let sortie = apres_repere(page, n, &Lecture { chiffre: true, colle_au_libelle: false, exclusif: false, motif: None, phrase: false, partie: false });
     if let Some(v) = &sortie.valeur {
         lus.push((n, v.clone()));
     }
@@ -1373,6 +1390,9 @@ struct Lecture<'r> {
     /// phrase (« Article 11 — Droit applicable et litiges » : « et litiges » n'est pas le
     /// droit applicable).
     phrase: bool,
+    /// Le champ est celui d'UNE partie (il a un rôle : le registre de commerce de
+    /// l'émetteur) : un libellé imprimé deux fois devant deux valeurs ne dit pas de qui.
+    partie: bool,
 }
 
 /// Au plus tant de mots dans la valeur d'un libellé : une ligne, pas un paragraphe.
@@ -1506,6 +1526,15 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
         0 => rien("absent"),
         1 if !partage => {
             let (v, (pris, detache, entier)) = lus_n.into_iter().next().unwrap_or_default();
+            // Le champ d'une partie, quand son libellé précède ailleurs une AUTRE valeur à
+            // chiffres, que la lecture n'a pas retenue (le libellé y entame une phrase) : la
+            // page porte deux valeurs du même libellé, et rien ne dit laquelle est celle de
+            // la partie. Banc sans IA du 4 novembre 2026, algoria-034 : « RC: » du client,
+            // près du matricule du dossier, rendu comme le registre de l'émetteur, dont le
+            // « RC: » imprimé en pied de page suivait « Garantie selon les ».
+            if l.partie && page.autre_valeur_du_libelle(n, &pris, &v) {
+                return rien("signale");
+            }
             // Lue seulement derrière un libellé collé dans son jeton : l'OCR a pu coller autre
             // chose à la valeur (« N°DV-PX-2026-091111 », 50/48). Elle se dit, citée, et se
             // vérifie : signalée, jamais conforme. Un texte coupé aussi.
@@ -1723,7 +1752,14 @@ pub fn nommes(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
                 apres_repere(
                     &page,
                     n,
-                    &Lecture { chiffre, colle_au_libelle: true, exclusif: true, motif: motif.as_ref(), phrase: genre == "texte" },
+                    &Lecture {
+                        chiffre,
+                        colle_au_libelle: true,
+                        exclusif: true,
+                        motif: motif.as_ref(),
+                        phrase: genre == "texte",
+                        partie: ch.role.is_some(),
+                    },
                 )
             }
         };

@@ -4,7 +4,10 @@
 //! 1,000, TTC 3 386,200 ; « Le transport aérien international est exonéré de TVA ».
 //!
 //! Exigences :
-//! - prouvée juste, la part exonérée (3 290,000) établie par les lignes ;
+//! - prouvée juste, la part exonérée (3 290,000) établie par les lignes, et rendue comme
+//!   une instance de la ventilation sous le taux nul que la grille désigne (`taux_exonere`) ;
+//! - sans `taux_exonere`, la ventilation est incomplète : elle est signalée, pas affirmée,
+//!   et la pièce n'est pas prouvée ;
 //! - la clé absente, rien ne change : la pièce n'est pas prouvée ;
 //! - jamais sans les lignes, ni sans la mention, ni quand une cellule ne ferme pas.
 
@@ -25,9 +28,11 @@ fn plan() -> Vec<Value> {
     p.jetons.iter().map(jeux::jeton).collect()
 }
 
-/// La grille de la base, avec ou sans la preuve des lignes, et P03 avec ou sans la clé.
+/// La grille de la base, avec ou sans la preuve des lignes, et P03 avec ou sans la clé
+/// (qui nomme alors la part exonérée par le taux nul EXO du pack).
 fn contexte(lignes: bool, partielle: bool) -> (Value, Value) {
-    let (mut g, p) = jeux::en_base();
+    let (mut g, mut p) = jeux::en_base();
+    p["taux_nuls"] = json!({"tva": ["EXO", "EXPORT"]});
     // L'instantané est antérieur aux repères de la mention en base (`20261105110000` :
     // « Exonéré », « Exonérée »…) ; la pièce imprime « exonéré de TVA. », en trois jetons.
     for c in g["champs"].as_array_mut().unwrap() {
@@ -40,6 +45,7 @@ fn contexte(lignes: bool, partielle: bool) -> (Value, Value) {
     for x in preuves.iter_mut() {
         if x["code"] == "P03" && partielle {
             x["expression"]["exoneration_partielle"] = json!(true);
+            x["expression"]["taux_exonere"] = json!("EXO");
         }
     }
     if lignes {
@@ -70,10 +76,15 @@ fn prouvee_juste_par_les_lignes() {
     assert_eq!(valeur(&o, "total_ttc"), "3386200");
     assert_eq!(valeur(&o, "droit_timbre"), "1000");
     let tva = &o["champs"]["montant_tva_par_taux"]["instances"];
-    assert_eq!(tva.as_array().unwrap().len(), 1, "{tva}");
+    assert_eq!(tva.as_array().unwrap().len(), 2, "{tva}");
     assert_eq!(tva[0]["taux"], "TVA19");
     assert_eq!(tva[0]["valeur"], "15200");
-    assert_eq!(o["champs"]["base_tva_par_taux"]["instances"][0]["valeur"], "80000");
+    assert_eq!(tva[1]["taux"], "EXO");
+    assert_eq!(tva[1]["valeur"], "0");
+    let bases = &o["champs"]["base_tva_par_taux"]["instances"];
+    assert_eq!(bases[0]["valeur"], "80000");
+    assert_eq!(bases[1]["taux"], "EXO");
+    assert_eq!(bases[1]["valeur"], "3290000");
     assert_eq!(o["lignes"]["statut"], "prouve");
     assert_eq!(o["lignes"]["taux_par_base"], "verifiee");
     // la part exonérée : les lignes sans taux, 2 × 1 645,000
@@ -85,6 +96,33 @@ fn prouvee_juste_par_les_lignes() {
         .map(|l| l["montant"]["valeur"].as_str().unwrap().parse::<i64>().unwrap())
         .sum();
     assert_eq!(sans_taux, 3_290_000);
+}
+
+#[test]
+fn sans_taux_exonere_la_ventilation_n_est_pas_affirmee() {
+    let (mut g, p) = contexte(true, true);
+    for x in g["preuves"].as_array_mut().unwrap() {
+        if x["code"] == "P03" {
+            x["expression"].as_object_mut().unwrap().remove("taux_exonere");
+        }
+    }
+    // la ventilation non affirmée, les lignes n'ont plus de base par taux à vérifier : la
+    // part exonérée n'est pas établie, la pièce n'est pas prouvée
+    let o = la_piece(&par_variante(&plan(), &g, &p));
+    assert_ne!(o["issue"], "prouvee", "{o}");
+    assert_eq!(o["champs"]["base_tva_par_taux"]["statut"], "signale");
+    assert_eq!(o["champs"]["montant_tva_par_taux"]["statut"], "signale");
+}
+
+#[test]
+fn un_taux_exonere_hors_des_taux_nuls_est_refuse() {
+    let (mut g, p) = contexte(true, true);
+    for x in g["preuves"].as_array_mut().unwrap() {
+        if x["code"] == "P03" {
+            x["expression"]["taux_exonere"] = json!("TVA19");
+        }
+    }
+    assert_ne!(la_piece(&par_variante(&plan(), &g, &p))["issue"], "prouvee");
 }
 
 #[test]

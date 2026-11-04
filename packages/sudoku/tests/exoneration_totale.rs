@@ -53,7 +53,10 @@ fn le_refus_dit_sa_raison() {
     let (g, p) = grille_en_base();
     let outs = par_variante(&b15_exoneree(), &g, &p);
     assert!(
-        outs.iter().any(|(_, o)| o["raison"] == "le total HT ne porte pas son libellé"),
+        // le TTC pris pour le HT : refusé par son libellé, ou parce que ce TTC, imprimé une
+        // fois, ne se lit pas pour deux champs
+        outs.iter().any(|(_, o)| o["raison"] == "le total HT ne porte pas son libellé"
+            || o["raison"] == "une valeur imprimée une fois est lue pour deux champs"),
         "{outs:?}"
     );
 }
