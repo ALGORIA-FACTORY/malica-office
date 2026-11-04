@@ -411,7 +411,8 @@
           "taux_tva_ligne": "19"
         }
       ],
-      "montant_en_lettres": "soixante-treize mille deux cents dinars et quatre-vingt-huit millimes"
+      "montant_en_lettres": "soixante-treize mille deux cents dinars et quatre-vingt-huit millimes",
+      "devise": "TND"
     },
     "confondus": {
       "date_emission": "date_operation",
@@ -424,7 +425,6 @@
       "code_client",
       "conditions_generales",
       "date_echeance",
-      "devise",
       "droit_consommation_ligne",
       "fodec_applicable_ligne",
       "forme_juridique_capital_emetteur",

@@ -283,6 +283,7 @@
         }
       ],
       "montant_en_lettres": "trois cent quatre-vingt-deux dinars et trois cent cinquante millimes",
+      "devise": "TND",
       "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce.",
       "cachet_emetteur": true,
       "visa_client": true
@@ -295,7 +296,6 @@
     "non_imprimes": [
       "acomptes_deduits",
       "date_echeance",
-      "devise",
       "droit_consommation_ligne",
       "fodec_applicable_ligne",
       "forme_juridique_capital_emetteur",

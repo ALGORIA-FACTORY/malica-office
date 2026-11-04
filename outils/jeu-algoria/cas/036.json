@@ -241,6 +241,7 @@
         }
       ],
       "montant_en_lettres": "sept mille sept cent vingt dinars et quatre-vingt-trois millimes",
+      "devise": "TND",
       "mention_suspension_exoneration": "Opération exonérée de TVA"
     },
     "confondus": {
@@ -254,7 +255,6 @@
       "code_client",
       "conditions_generales",
       "date_echeance",
-      "devise",
       "droit_consommation_ligne",
       "fodec_applicable_ligne",
       "forme_juridique_capital_emetteur",

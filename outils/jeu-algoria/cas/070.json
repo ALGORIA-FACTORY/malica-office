@@ -351,6 +351,7 @@
         }
       ],
       "montant_en_lettres": "quinze mille huit cent trente-deux dinars et sept cent trois millimes",
+      "devise": "TND",
       "cachet_emetteur": true,
       "signature_emetteur": true,
       "visa_client": true
@@ -365,7 +366,6 @@
       "code_client",
       "conditions_generales",
       "date_echeance",
-      "devise",
       "droit_consommation_ligne",
       "fodec_applicable_ligne",
       "forme_juridique_capital_emetteur",

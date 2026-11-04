@@ -258,8 +258,9 @@ export async function lireLeContexteDuSudoku(
         format_code: string | null;
         parcelle: string;
         expert: string;
+        role: string | null;
       }>(
-        `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert
+        `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert, c.role
            from ref_grille_champs_v c join ref_concepts_v k on k.id = c.concept_id
           where c.grille_id = $1 order by c.code`,
         [grilleId],
@@ -379,6 +380,7 @@ export async function lireLeContexteDuSudoku(
         format_code: c.format_code,
         parcelle: c.parcelle,
         expert: c.expert,
+        role: c.role,
       })),
       preuves: preuves.rows.map((p) => ({
         code: p.code,

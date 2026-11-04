@@ -75,6 +75,11 @@ export interface ChampDeGrille {
   readonly expert?: string;
   /** La parcelle de la grille où le champ s'imprime (`ref.grille_champs.parcelle`). */
   readonly parcelle?: string;
+  /**
+   * La partie que le champ décrit (`ref.grille_champs.role` : fournisseur, client,
+   * employeur…), ou `null` : l'identité du dossier ne remplit qu'un seul rôle par pièce.
+   */
+  readonly role?: string | null;
 }
 
 export interface PreuveDeGrille {

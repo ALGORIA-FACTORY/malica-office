@@ -177,6 +177,8 @@ struct Occ {
 struct Page<'a> {
     j: &'a [Jeton],
     normes: Vec<String>,
+    /// Le jeton est-il écrit de droite à gauche ?
+    rtl: Vec<bool>,
     cles: Vec<String>,
     rangs: Vec<Vec<usize>>,
     /// (rangée, position) de chaque jeton.
@@ -206,7 +208,8 @@ impl<'a> Page<'a> {
             .filter(|(r, _): &(String, usize)| !r.is_empty())
             .collect::<Vec<_>>();
         let repere_max = reperes.iter().map(|(r, _)| r.len()).max().unwrap_or_default();
-        Page { j: jetons, normes, cles, rangs, ou, reperes, repere_max }
+        let rtl = jetons.iter().map(|j| crate::reperes::droite_a_gauche(&j.texte)).collect();
+        Page { j: jetons, normes, rtl, cles, rangs, ou, reperes, repere_max }
     }
 
     fn h(&self, i: usize) -> f64 {
@@ -241,6 +244,11 @@ impl<'a> Page<'a> {
     /// le texte doit égaler un repère. « Payable avant le » n'est pas « Le », et
     /// « Contrat Entreprise n° » n'est pas « N° ».
     fn libelle_entier(&self, rang: &[usize], e: usize, debut_min: usize, h: f64) -> Option<Etiquette> {
+        self.libelle_entier_ou(rang, e, debut_min, h).map(|(et, _)| et)
+    }
+
+    /// Comme `libelle_entier`, avec le premier mot du libellé.
+    fn libelle_entier_ou(&self, rang: &[usize], e: usize, debut_min: usize, h: f64) -> Option<(Etiquette, usize)> {
         let mut s = e - 1;
         while s > debut_min {
             let p = rang[s - 1];
@@ -249,11 +257,114 @@ impl<'a> Page<'a> {
             }
             s -= 1;
         }
-        let texte: String = rang[s..e].iter().map(|&x| self.normes[x].as_str()).collect();
+        self.libelle_de(&rang[s..e]).map(|et| (et, s))
+    }
+
+    /// De quel côté un libellé désigne-t-il sa valeur ? Vrai : à sa GAUCHE.
+    ///
+    /// Ni l'écriture du libellé ni la place d'un deux-points ne suffisent seules : « Client
+    /// / الحريف : Société Nervane » (pièce bilingue, de gauche à droite) porte le libellé
+    /// arabe à GAUCHE de sa valeur, « ALGORIA FACTORY SARL : الحريف » (pièce arabe) à sa
+    /// DROITE, et l'OCR perd ou déplace les séparateurs. Chaque indice VOTE, pondéré :
+    ///
+    ///   3  le deux-points du libellé lui-même, collé à son bord (« MF: », « :المعرف ») ;
+    ///   2  un séparateur entre le libellé et une VALEUR (un jeton qui n'est ni ponctuation
+    ///      ni libellé de la grille) : seul (« RC : B37… ») ou collé à la valeur
+    ///      (« :Laboratoire ») — un séparateur suivi d'un autre libellé (« Client : الحريف »,
+    ///      la paire bilingue) ne vote pas ;
+    ///   1  la valeur la plus proche, de part et d'autre ;
+    ///   et, à égalité, l'écriture du libellé.
+    fn vers_la_gauche(&self, mots: &[usize]) -> bool {
+        let (Some(&premier), Some(&dernier)) = (mots.first(), mots.last()) else { return false };
+        let h = self.h(premier);
+        let libelle = |t: usize| self.ponct(t) || self.champs_de(&self.normes[t]).is_some();
+        let deux_points_seul = |t: usize| self.ponct(t) && self.j[t].texte.contains(':');
+        // Le côté gauche (rangée du premier mot, vers la gauche) et le côté droit.
+        let (r, k) = self.ou[premier];
+        let cote_g: Vec<usize> = self.rangs[r][..k].iter().rev().copied().collect();
+        let (r2, k2) = self.ou[dernier];
+        let cote_d: Vec<usize> = self.rangs[r2][k2 + 1..].to_vec();
+        // Le vote d'un côté : séparateur vers une valeur, et la distance de cette valeur.
+        let vote = |cote: &[usize], bord0: usize, vers_gauche: bool| -> (i32, Option<f64>) {
+            let ecart = |a: usize, b: usize| if vers_gauche { self.ecart(b, a) } else { self.ecart(a, b) };
+            let mut bord = bord0;
+            let mut separe = false;
+            for (n, &t) in cote.iter().enumerate() {
+                if ecart(bord, t) > ECART_VALEUR * h {
+                    break;
+                }
+                let texte = self.j[t].texte.trim();
+                let colle = if vers_gauche { texte.ends_with(':') } else { texte.starts_with(':') };
+                if n == 0 && ecart(bord, t) <= ECART_MOT * h && deux_points_seul(t) {
+                    separe = true;
+                } else if !libelle(t) {
+                    let poids = if separe || (n == 0 && colle) { 2 } else { 0 };
+                    return (poids, Some(ecart(bord0, t)));
+                } else if n == 0 || !separe {
+                    // un autre libellé (la paire bilingue) : le séparateur ne lui était pas destiné
+                    separe = false;
+                }
+                bord = t;
+            }
+            (0, None)
+        };
+        let (sep_g, dist_g) = vote(&cote_g, premier, true);
+        let (sep_d, dist_d) = vote(&cote_d, dernier, false);
+        let fin = self.j[dernier].texte.trim_end_matches(|c: char| c == '/' || c.is_whitespace());
+        let debut = self.j[premier].texte.trim_start();
+        let propre_g = if debut.starts_with(':') { 3 } else { 0 };
+        let propre_d = if fin.ends_with(':') { 3 } else { 0 };
+        let proche = match (dist_g, dist_d) {
+            (Some(_), None) => (1, 0),
+            (None, Some(_)) => (0, 1),
+            (Some(g), Some(d)) if (g - d).abs() > 0.25 * h => if g < d { (1, 0) } else { (0, 1) },
+            _ => (0, 0),
+        };
+        let (g, d) = (propre_g + sep_g + proche.0, propre_d + sep_d + proche.1);
+        if g != d {
+            return g > d;
+        }
+        mots.iter().any(|&t| self.rtl[t])
+    }
+
+    /// Le libellé que portent ces mots, dans l'ordre visuel : de gauche à droite pour
+    /// une écriture latine, de droite à gauche pour l'arabe (« الجبائي | المعرف »
+    /// se lit « المعرف الجبائي »).
+    fn libelle_de(&self, mots: &[usize]) -> Option<Etiquette> {
+        let texte: String = if mots.iter().any(|&x| self.rtl[x]) {
+            mots.iter().rev().map(|&x| self.normes[x].as_str()).collect()
+        } else {
+            mots.iter().map(|&x| self.normes[x].as_str()).collect()
+        };
         if cle(&texte).len() > self.repere_max {
             return None;
         }
         self.champs_de(&texte)
+    }
+
+    /// Le libellé arabe à DROITE d'une valeur sur sa rangée : la suite entière des mots
+    /// adjacents qui commence juste après elle (ponctuation sautée), sans chiffre.
+    fn droite(&self, i: usize) -> Option<Etiquette> {
+        let (r, k) = self.ou[i];
+        let rang = &self.rangs[r];
+        let h = self.h(i);
+        let mut s = k + 1;
+        while s < rang.len() && self.ponct(rang[s]) {
+            s += 1;
+        }
+        if s >= rang.len() || self.ecart(i, rang[s]) > ECART_VALEUR * h {
+            return None;
+        }
+        let mut e = s + 1;
+        while e < rang.len()
+            && self.ecart(rang[e - 1], rang[e]) <= ECART_MOT * h
+            && !self.j[rang[e]].texte.chars().any(|c| c.is_ascii_digit())
+            && !self.ponct(rang[e])
+        {
+            e += 1;
+        }
+        let et = self.libelle_de(&rang[s..e])?;
+        self.vers_la_gauche(&rang[s..e]).then_some(et)
     }
 
     /// Le libellé à gauche d'une valeur sur sa rangée (ou dans le jeton lui-même,
@@ -262,7 +373,7 @@ impl<'a> Page<'a> {
         if !cle(prefixe).is_empty() {
             return self.champs_de(prefixe);
         }
-        self.gauche(i).or_else(|| self.dessus(i))
+        self.droite(i).or_else(|| self.gauche(i)).or_else(|| self.dessus(i))
     }
 
     /// Le libellé collé en tête d'un jeton (« N°IE-2026-0701 ») : le plus long début du
@@ -289,7 +400,9 @@ impl<'a> Page<'a> {
         if e == 0 || self.ecart(rang[e - 1], i) > ECART_VALEUR * h {
             return None;
         }
-        self.libelle_entier(rang, e, 0, h)
+        // Un libellé qui désigne vers sa gauche est celui d'une AUTRE valeur, plus à gauche.
+        let (et, s) = self.libelle_entier_ou(rang, e, 0, h)?;
+        (!self.vers_la_gauche(&rang[s..e])).then_some(et)
     }
 
     fn dessus(&self, i: usize) -> Option<Etiquette> {
@@ -340,7 +453,7 @@ impl<'a> Page<'a> {
                     if texte.len() > self.repere_max {
                         break;
                     }
-                    if let Some(et) = self.champs_de(&texte) {
+                    if let Some(et) = self.libelle_de(&rang[s..e]) {
                         if meilleur.as_ref().is_none_or(|(_, m)| et.cle.len() > m.cle.len()) {
                             meilleur = Some((e, et));
                         }
@@ -355,6 +468,41 @@ impl<'a> Page<'a> {
                     continue;
                 };
                 out.push(Libelle { camp, jetons: rang[s..e].to_vec() });
+            }
+            // Un libellé arabe ferme son segment, à droite : on le lit depuis la fin.
+            for f in 0..rang.len() {
+                let h = self.h(rang[f]);
+                let fin = f + 1 == rang.len() || self.ecart(rang[f], rang[f + 1]) > ECART_SEGMENT * h || self.ponct(rang[f + 1]);
+                if !self.rtl[rang[f]] || !fin || out.iter().any(|l| l.jetons.contains(&rang[f])) {
+                    continue;
+                }
+                let mut meilleur: Option<(usize, Etiquette)> = None;
+                let mut d = f + 1;
+                while d > 0 {
+                    if d <= f && self.ecart(rang[d - 1], rang[d]) > ECART_MOT * h {
+                        break;
+                    }
+                    d -= 1;
+                    if !self.rtl[rang[d]] {
+                        break;
+                    }
+                    match self.libelle_de(&rang[d..=f]) {
+                        Some(et) if meilleur.as_ref().is_none_or(|(_, m)| et.cle.len() > m.cle.len()) => meilleur = Some((d, et)),
+                        _ => {}
+                    }
+                }
+                let Some((d, et)) = meilleur else { continue };
+                if !self.vers_la_gauche(&rang[d..=f]) {
+                    continue;
+                }
+                let camp = if et.champs.contains(&op.nom_client) && camps.decide(Camp::Client, &et.cle) {
+                    Camp::Client
+                } else if et.champs.contains(&op.nom_emetteur) && camps.decide(Camp::Emetteur, &et.cle) {
+                    Camp::Emetteur
+                } else {
+                    continue;
+                };
+                out.push(Libelle { camp, jetons: rang[d..=f].to_vec() });
             }
         }
         out
@@ -445,11 +593,14 @@ impl<'a> Page<'a> {
             .iter()
             .filter(|l| {
                 let a = &self.j[l.jetons[0]];
-                a.page == o.page
-                    && a.y0 <= o.y0 + 0.5 * self.h(i)
-                    && o.y0 - a.y0 <= BLOC_HAUTEUR
-                    && o.x0 >= a.x0 - MARGE
-                    && o.x0 <= a.x0 + BLOC_LARGEUR
+                let vertical = a.page == o.page && a.y0 <= o.y0 + 0.5 * self.h(i) && o.y0 - a.y0 <= BLOC_HAUTEUR;
+                // Un bloc ouvert par un libellé arabe s'étend vers la gauche, depuis son bord droit.
+                if self.vers_la_gauche(&l.jetons) {
+                    let x1 = l.jetons.iter().map(|&t| self.j[t].x1).fold(f64::MIN, f64::max);
+                    vertical && o.x1 <= x1 + MARGE && o.x1 >= x1 - BLOC_LARGEUR
+                } else {
+                    vertical && o.x0 >= a.x0 - MARGE && o.x0 <= a.x0 + BLOC_LARGEUR
+                }
             })
             .max_by(|a, b| {
                 let (ja, jb) = (&self.j[a.jetons[0]], &self.j[b.jetons[0]]);
@@ -475,6 +626,27 @@ impl<'a> Page<'a> {
             out.push(rang[k]);
             k += 1;
         }
+        out
+    }
+
+    /// Les mots d'un nom écrit à gauche du jeton `k` de la rangée `r` (ponctuation sautée),
+    /// jusqu'à la ponctuation ou un blanc : dans l'ordre de la rangée.
+    fn mots_avant(&self, r: usize, mut k: usize) -> Vec<usize> {
+        let rang = &self.rangs[r];
+        while k > 0 && self.ponct(rang[k - 1]) {
+            k -= 1;
+        }
+        let mut out: Vec<usize> = Vec::new();
+        while k > 0 && !self.ponct(rang[k - 1]) {
+            if let Some(&p) = out.last() {
+                if self.ecart(rang[k - 1], p) > ECART_MOT * self.h(p) {
+                    break;
+                }
+            }
+            out.push(rang[k - 1]);
+            k -= 1;
+        }
+        out.reverse();
         out
     }
 
@@ -525,6 +697,34 @@ impl<'a> Page<'a> {
     /// Le nom d'une partie inconnue : le texte ancré par le libellé de son bloc, sinon
     /// la rangée la plus proche au-dessus de son matricule qui porte une forme juridique.
     fn nom_inconnu(&self, occs: &[&Occ], libelle: Option<&Libelle>, formes: &BTreeSet<String>) -> Option<Vec<usize>> {
+        if let Some(l) = libelle.filter(|l| self.vers_la_gauche(&l.jetons)) {
+            // Le nom se lit à GAUCHE d'un libellé arabe, sur sa rangée ; sinon juste dessous,
+            // aligné sur son bord droit.
+            let debut = *l.jetons.first()?;
+            let (r, k) = self.ou[debut];
+            let h = self.h(debut);
+            let avant = self.mots_avant(r, k);
+            if avant.last().is_some_and(|&a| self.ecart(a, debut) <= ECART_VALEUR * h) {
+                return Some(avant);
+            }
+            let x1 = l.jetons.iter().map(|&t| self.j[t].x1).fold(f64::MIN, f64::max);
+            let a = &self.j[debut];
+            let dessous = self.rangs.iter().enumerate().skip(r + 1).find(|(_, rg)| {
+                let b = &self.j[rg[0]];
+                b.page == a.page && b.y0 > a.y0
+            });
+            if let Some((rr, rg)) = dessous {
+                if self.j[rg[0]].y0 - a.y1 <= DESSUS * h {
+                    if let Some(k0) = rg.iter().rposition(|&t| self.j[t].x1 <= x1 + MARGE && self.j[t].x1 >= x1 - BLOC_LARGEUR) {
+                        let m = self.mots_avant(rr, k0 + 1);
+                        if !m.is_empty() {
+                            return Some(m);
+                        }
+                    }
+                }
+            }
+            return None;
+        }
         if let Some(l) = libelle {
             let fin = *l.jetons.last()?;
             let (r, k) = self.ou[fin];
@@ -852,6 +1052,23 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         };
         let libelle = par_valeur[autre].iter().find_map(|o| camp_de(o).filter(|(c, _)| *c == camp_autre).and_then(|(_, l)| l));
         cote_autre.nom = page.nom_inconnu(&occs_autre, libelle, &formes).map(|j| valeur(&page, &j, page.texte(&j), "conforme"));
+    }
+
+    // Le nom de l'autre partie n'est JAMAIS celui du dossier : ni ses jetons, ni ses mots
+    // (formes juridiques ôtées). Banc sans IA du 4 novembre 2026 : sur 17 achats, la
+    // raison sociale d'ALGORIA sortait comme celle du fournisseur — la rangée à forme
+    // juridique la plus proche du matricule du fournisseur était celle du client.
+    // Un nom qui ne départage pas les parties ne se rend pas.
+    if let Some(n) = cote_autre.nom.as_ref() {
+        let sien = cote_dossier.nom.as_ref().is_some_and(|d| d.refs.iter().any(|r| n.refs.contains(r)));
+        let mots_de = |t: &str| -> Vec<String> { t.split_whitespace().map(mot).filter(|m| !m.is_empty() && !formes.contains(m)).collect() };
+        let meme = dossier.raison_sociale.as_deref().is_some_and(|rs| {
+            let (a, b) = (mots_de(rs), mots_de(&n.valeur));
+            !a.is_empty() && a == b
+        });
+        if sien || meme {
+            cote_autre.nom = None;
+        }
     }
 
     let (emetteur, client) = match sens {

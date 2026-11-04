@@ -141,6 +141,9 @@ pub struct Champ {
     /// La parcelle de la grille où le champ s'imprime.
     #[serde(default)]
     pub parcelle: Option<String>,
+    /// La partie que le champ décrit (`ref.grille_champs.role`), s'il en décrit une.
+    #[serde(default)]
+    pub role: Option<String>,
 }
 
 #[derive(Deserialize)]

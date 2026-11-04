@@ -470,6 +470,7 @@
         }
       ],
       "montant_en_lettres": "mille vingt-deux dinars et un millimes",
+      "devise": "TND",
       "conditions_generales": "Les marchandises restent la propriété du vendeur jusqu'au paiement intégral. Garantie selon les conditions remises avec le produit ; elle ne couvre ni la casse ni l'oxydation. Aucun échange ni remboursement au-delà de sept jours, emballage d'origine exigé.",
       "cachet_emetteur": true,
       "signature_emetteur": true
@@ -482,7 +483,6 @@
     "non_imprimes": [
       "acomptes_deduits",
       "date_echeance",
-      "devise",
       "droit_consommation_ligne",
       "fodec_applicable_ligne",
       "forme_juridique_capital_emetteur",

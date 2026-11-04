@@ -327,7 +327,8 @@
           "montant_ligne_ht": "1761.105",
           "taux_tva_ligne": "19"
         }
-      ]
+      ],
+      "devise": "TND"
     },
     "confondus": {
       "date_emission": "date_operation",
@@ -340,7 +341,6 @@
       "code_client",
       "conditions_generales",
       "date_echeance",
-      "devise",
       "droit_consommation_ligne",
       "fodec_applicable_ligne",
       "forme_juridique_capital_emetteur",

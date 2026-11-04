@@ -9,6 +9,7 @@
 
 mod entete;
 mod entree;
+mod identite;
 mod lettres;
 mod lignes;
 mod modele;
@@ -29,7 +30,7 @@ use valeurs::Domaine;
 /// Plafond de combinaisons par défaut, quand l'entrée n'en fixe pas.
 const PLAFOND_DEFAUT: u64 = 200_000;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, PartialEq, Eq)]
 pub struct RefJeton {
     pub page: u32,
     pub ordinal: u32,
@@ -673,6 +674,9 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             }
         }
     }
+
+    // ---------- L'identité du dossier : un seul rôle par pièce ----------
+    identite::exclusive(entree, &mut champs);
 
     Ok(Sortie {
         issue,

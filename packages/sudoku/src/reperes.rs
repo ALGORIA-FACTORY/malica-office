@@ -6,6 +6,24 @@
 
 use crate::entree::{Champ, Jeton};
 
+/// Un texte d'une écriture de droite à gauche : l'hébreu, l'arabe, le syriaque, le
+/// thâna, le n'ko… — les blocs Unicode dont les lettres ont la classe bidirectionnelle
+/// R ou AL. Son libellé se lit à DROITE de sa valeur, et le bloc qu'il ouvre s'étend
+/// vers la gauche : toute relation « avant / après » du moteur se calcule dans l'ordre
+/// de lecture du jeton, jamais en « gauche / droite » écrit en dur.
+///
+/// Banc sans IA du 4 novembre 2026 : les pièces arabes se lisaient comme des pièces
+/// françaises — l'étiquette « الحريف » (client) ouvrait son bloc vers la droite, sur la
+/// colonne du fournisseur, et le sens de six achats sortait « vente ».
+pub fn droite_a_gauche(s: &str) -> bool {
+    s.chars().any(|c| {
+        matches!(c,
+            '\u{0590}'..='\u{08FF}' | '\u{FB1D}'..='\u{FDFF}' | '\u{FE70}'..='\u{FEFF}'
+            | '\u{10800}'..='\u{10FFF}' | '\u{1E800}'..='\u{1EFFF}')
+            && c.is_alphabetic()
+    })
+}
+
 pub fn normaliser(s: &str) -> String {
     s.chars()
         .flat_map(|c| c.to_lowercase())
@@ -39,7 +57,10 @@ pub struct Plan<'a> {
     pub jetons: &'a [Jeton],
     pub normes: Vec<String>,
     gauche: Vec<Option<usize>>,
+    /// Le voisin de droite, sur la même ligne : le libellé d'une valeur écrite de droite à gauche.
+    droite: Vec<Option<usize>>,
     dessus: Vec<Option<usize>>,
+    rtl: Vec<bool>,
 }
 
 impl<'a> Plan<'a> {
@@ -47,11 +68,13 @@ impl<'a> Plan<'a> {
         let normes = jetons.iter().map(|j| normaliser(&j.texte)).collect();
         let n = jetons.len();
         let mut gauche = vec![None; n];
+        let mut droite = vec![None; n];
         let mut dessus = vec![None; n];
         for (i, a) in jetons.iter().enumerate() {
             let ha = (a.y1 - a.y0).max(f64::EPSILON);
             let la = (a.x1 - a.x0).max(f64::EPSILON);
             let mut meilleur_g: Option<(usize, f64)> = None;
+            let mut meilleur_dr: Option<(usize, f64)> = None;
             let mut meilleur_d: Option<(usize, f64)> = None;
             for (k, b) in jetons.iter().enumerate() {
                 if k == i || b.page != a.page {
@@ -64,6 +87,11 @@ impl<'a> Plan<'a> {
                     && meilleur_g.is_none_or(|(_, x)| b.x1 > x) {
                         meilleur_g = Some((k, b.x1));
                     }
+                // juste à droite : même ligne, le plus proche
+                if recouvre_v > 0.5 && b.x0 >= a.x1 - 0.25 * ha && b.x1 > a.x1
+                    && meilleur_dr.is_none_or(|(_, x)| b.x0 < x) {
+                        meilleur_dr = Some((k, b.x0));
+                    }
                 // juste au-dessus : recouvrement horizontal, le plus proche verticalement
                 let lb = (b.x1 - b.x0).max(f64::EPSILON);
                 let recouvre_h = (a.x1.min(b.x1) - a.x0.max(b.x0)) / la.min(lb);
@@ -73,9 +101,11 @@ impl<'a> Plan<'a> {
                     }
             }
             gauche[i] = meilleur_g.map(|(k, _)| k);
+            droite[i] = meilleur_dr.map(|(k, _)| k);
             dessus[i] = meilleur_d.map(|(k, _)| k);
         }
-        Plan { jetons, normes, gauche, dessus }
+        let rtl = jetons.iter().map(|j| droite_a_gauche(&j.texte)).collect();
+        Plan { jetons, normes, gauche, droite, dessus, rtl }
     }
 
     /// Un repère est-il lu sur une RANGÉE qui porte un montant, à gauche de ce montant ?
@@ -94,7 +124,9 @@ impl<'a> Plan<'a> {
             }
             let ha = (a.y1 - a.y0).max(f64::EPSILON);
             self.jetons.iter().enumerate().any(|(k, b)| {
-                if k == i || b.page != a.page || b.x0 >= a.x0 {
+                // le libellé précède le montant dans son ordre de lecture
+                let avant = if self.rtl[k] { b.x0 > a.x0 } else { b.x0 < a.x0 };
+                if k == i || b.page != a.page || !avant {
                     return false;
                 }
                 let hb = (b.y1 - b.y0).max(f64::EPSILON);
@@ -179,6 +211,11 @@ impl<'a> Plan<'a> {
             let j = &self.jetons[k];
             j.montants.is_empty() && j.date.is_none() && contient(&self.normes[k])
         };
-        propre || self.gauche[i].is_some_and(libelle) || (dessus && self.dessus[i].is_some_and(libelle))
+        // Le libellé précède la valeur dans SON ordre de lecture : à gauche en écriture
+        // latine, à droite en écriture de droite à gauche.
+        propre
+            || self.gauche[i].is_some_and(|k| !self.rtl[k] && libelle(k))
+            || self.droite[i].is_some_and(|k| self.rtl[k] && libelle(k))
+            || (dessus && self.dessus[i].is_some_and(libelle))
     }
 }

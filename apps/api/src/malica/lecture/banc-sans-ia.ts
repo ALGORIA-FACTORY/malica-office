@@ -35,13 +35,19 @@
  * Corpus : `algoria:<dossier>`, `synthetique:<dossier>`, `dirigeant:<fichier json>`,
  * `photo:<image>:<vérité json>` (une pièce réelle, lue sur place, jamais copiée).
  */
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 import pg from "pg";
 
-import { resoudre, type ChampDeGrille, type SortieDuSudoku } from "@malica/sudoku";
+import {
+  resoudre,
+  type ChampDeGrille,
+  type EntreeDuSudoku,
+  type SortieDuSudoku,
+} from "@malica/sudoku";
 
 import { DEVISES_LUES_D_ESSAI } from "../../scan/devise-d-essai.ts";
 
@@ -93,6 +99,12 @@ interface PieceDuBanc {
   readonly confondus: Readonly<Record<string, string>>;
   /** `grille` : la vérité couvre toute la grille ; sinon les seuls champs connus. */
   readonly verite: "complete" | "partielle";
+  /**
+   * Les champs que la pièce rend faux exprès (un total faux, un montant
+   * illisible, une date absente) : la seule lecture juste est de ne rien en
+   * dire. Lus, ils sont faux ; tus, ils sont justes.
+   */
+  readonly interdits?: readonly string[];
   readonly releve: () => Promise<ReleveGarde>;
 }
 
@@ -347,6 +359,7 @@ async function mesurerLaPiece(
   piece: PieceDuBanc,
   /** Un dossier où garder la sortie brute du moteur et le plan, pour le diagnostic. */
   brut?: string,
+  moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
 ): Promise<MesureDeLaPiece> {
   const base = {
     corpus: piece.corpus,
@@ -404,7 +417,7 @@ async function mesurerLaPiece(
   const sortie = resoudreLaPiece(
     jetonsDuSudoku(releve.tokens, devise, contexte),
     contexte,
-    resoudre,
+    moteur,
     {
       dossier: piece.dossier
         ? { matricule: piece.dossier.matricule, raison_sociale: piece.dossier.raison }
@@ -423,8 +436,20 @@ async function mesurerLaPiece(
   const { concepts, confondus } = piece;
   const lettres = champsDeLaGrille(contexte.grille).lettres;
   const champs: MesureDuChamp[] = [];
+  const interdits = new Set(piece.interdits ?? []);
   for (const champ of contexte.grille.champs) {
     if (champ.code === "lignes") continue;
+    if (interdits.has(champ.code)) {
+      const r = comparer(champ, null, sortie, contexte, devise.decimales);
+      champs.push({
+        champ: champ.code,
+        expert: champ.expert ?? "?",
+        issue: r.lu === null ? "juste" : "faux",
+        attendu: "(rien : la pièce le rend faux exprès)",
+        lu: r.lu,
+      });
+      continue;
+    }
     const source = Object.hasOwn(concepts, champ.code) ? champ.code : confondus[champ.code];
     const imprime = source !== undefined && Object.hasOwn(concepts, source);
     if (!imprime && piece.verite === "partielle") continue;
@@ -573,6 +598,15 @@ function corpusAlgoria(dossier: string, cache: string): PieceDuBanc[] {
 /** Le pourcentage d'un code de taxe du jeu synthétique (`TVA19` → « 19 »). */
 const pourcentDuCode = (code: string) => /(\d+)$/u.exec(code)?.[1] ?? code;
 
+/** Ce qu'un défaut voulu du jeu synthétique rend faux : le moteur doit s'en taire. */
+const TOTAUX = ["total_ht", "total_ttc", "montant_tva_par_taux", "base_tva_par_taux"];
+const INTERDITS_DU_DEFAUT: Readonly<Record<string, readonly string[]>> = {
+  total_faux: TOTAUX,
+  tva_fausse: TOTAUX,
+  montant_illisible: TOTAUX,
+  date_absente: ["date_operation", "date_emission"],
+};
+
 /** Le jeu synthétique : sa vérité nomme les chemins de la lecture, traduits en champs. */
 function corpusSynthetique(dossier: string, cache: string): PieceDuBanc[] {
   interface Cas {
@@ -580,6 +614,7 @@ function corpusSynthetique(dossier: string, cache: string): PieceDuBanc[] {
     rendu: string;
     langue: string;
     scenario?: string;
+    defaut?: string | null;
     dossier: { nom: string; identifiantFiscal: string };
     piece: { sens: string; devise?: string };
     attendu: { champs: Record<string, string> };
@@ -653,6 +688,7 @@ function corpusSynthetique(dossier: string, cache: string): PieceDuBanc[] {
         concepts: c,
         confondus: { date_emission: "date_operation" },
         verite: "partielle",
+        ...(cas.defaut ? { interdits: INTERDITS_DU_DEFAUT[cas.defaut] ?? [] } : {}),
         releve: fichier
           ? releveDuFichier(fichier, join(cache, `synthetique-${cas.id}.json`))
           : () => Promise.reject(new Error("rendu absent")),
@@ -719,7 +755,7 @@ function corpusDuDirigeant(fichier: string): PieceDuBanc[] {
         prix_unitaire_ht: dec(l.pu_ht),
         montant_ligne_ht: dec(l.montant_ht),
         remise_ligne: dec(l.remise),
-        taux_tva_ligne: dec(l.taux_tva),
+        // Le taux de la rangée n'est pas imprimé sur ces tableaux : la vérité le déduit.
       }));
     const algoria = /ALGORI/iu.test(e["client"] ?? "");
     return {
@@ -886,6 +922,9 @@ async function principal(): Promise<void> {
       cas: { type: "string" },
       sortie: { type: "string" },
       brut: { type: "string" },
+      "moteur-natif": { type: "string" },
+      // Garder l'entrée du moteur de chaque pièce : de quoi en faire une épreuve du moteur.
+      entrees: { type: "string" },
     },
   });
   const base = process.env["DATABASE_URL_ADMIN"];
@@ -897,6 +936,20 @@ async function principal(): Promise<void> {
   const pieces = (values.corpus ?? [])
     .flatMap((s) => chargerLeCorpus(s, cache))
     .filter((p) => !voulus || voulus.has(p.id));
+  // Le moteur natif (`cargo build --release --example resoudre`) : le même code que
+  // le WebAssembly, là où la cible wasm32 ne s'installe pas.
+  const natif = values["moteur-natif"];
+  const moteur = natif
+    ? (entree: EntreeDuSudoku) =>
+        JSON.parse(
+          execFileSync(resolve(natif), {
+            input: JSON.stringify(entree),
+            maxBuffer: 64 << 20,
+          }).toString(),
+        ) as SortieDuSudoku
+    : resoudre;
+  const entrees = values.entrees;
+  if (entrees) mkdirSync(entrees, { recursive: true });
   const db = new pg.Pool({ connectionString: base, max: 2 });
   try {
     const { rows } = await db.query<{ id: string }>(
@@ -907,7 +960,16 @@ async function principal(): Promise<void> {
     if (rows.length !== 1) throw new Error("aucun pack TN en vigueur");
     const mesures: MesureDeLaPiece[] = [];
     for (const p of pieces) {
-      const m = await mesurerLaPiece(db, rows[0]!.id, p, values.brut);
+      let appel = 0;
+      const garde = (entree: EntreeDuSudoku) => {
+        if (entrees)
+          writeFileSync(
+            join(entrees, `${p.corpus}-${p.id.replace(/\W+/gu, "_")}-${appel++}.json`),
+            JSON.stringify(entree),
+          );
+        return moteur(entree);
+      };
+      const m = await mesurerLaPiece(db, rows[0]!.id, p, values.brut, garde);
       mesures.push(m);
       const n = (i: Issue) => m.champs.filter((c) => c.issue === i).length;
       console.error(

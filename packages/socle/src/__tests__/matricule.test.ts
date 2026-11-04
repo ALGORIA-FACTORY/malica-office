@@ -224,3 +224,28 @@ describe("ce que le normaliseur refuse de deviner", () => {
     expect(memeMatricule("1876543W/A/M/000", "1876543W/A/E/042", FORMAT_D_ESSAI)).toBe(true);
   });
 });
+
+/**
+ * ===================== LA FORME COLLÉE, RELEVÉE LE 3 NOVEMBRE 2026
+ *
+ * « 1958330VAM000 » : aucun séparateur. Le jeu d'ALGORIA l'imprime sur 35
+ * factures ; le normaliseur la rendait illisible, et le sens de la pièce ne se
+ * déduisait plus (« le matricule du dossier n'est pas lu »).
+ */
+describe("la forme collée, sans un séparateur", () => {
+  it("se lit pleine, et égale la forme barrée", () => {
+    const lu = normaliserMatricule("1876543WAM000", FORMAT_D_ESSAI);
+    expect(lu.forme).toBe("complete");
+    expect(lu.complet).toBe(COMPLET);
+    expect(memeMatricule("MF/CIN: 1876543WAM000", COMPLET, FORMAT_D_ESSAI)).toBe(true);
+  });
+
+  it("une lettre de moins ne se devine pas : on ne saurait pas laquelle manque", () => {
+    expect(normaliserMatricule("1876543AM000", FORMAT_D_ESSAI).cle).toBeNull();
+  });
+
+  it("un numéro plus long ne s'y découpe pas", () => {
+    expect(normaliserMatricule("91876543WAM000", FORMAT_D_ESSAI).forme).toBe("illisible");
+    expect(normaliserMatricule("1876543WAM0001", FORMAT_D_ESSAI).forme).not.toBe("complete");
+  });
+});

@@ -624,7 +624,12 @@ export function composerFacture({ rang, g, j, scenario, parties, tirages, graine
     poseConcept(`lignes[${i}].taux_tva_ligne`, pourcent(tauxDe(a.codeTaxe)));
   });
   if (lettres) pose("montant_en_lettres", lettres, "montant_en_lettres", lettres);
-  if (devise !== DEVISE_DU_DOSSIER) poseConcept("devise", devise);
+  // La devise est imprimée dès que la page porte sa marque : « DNT » après le
+  // TTC (gabarit A), « (DT) » à côté du total (la facture classique, B à D). Le
+  // carnet n'en porte pas, sauf une devise étrangère. Relevé par le banc sans IA,
+  // le 4 novembre 2026 : la vérité la taisait, et le moteur, qui la lisait, était
+  // compté comme inventant.
+  if (devise !== DEVISE_DU_DOSSIER || !carnet) poseConcept("devise", devise);
   const exonere = parTaux.some((l) => l.code === "EXO");
   if (exonere) {
     const m =

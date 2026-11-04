@@ -528,6 +528,7 @@
         }
       ],
       "montant_en_lettres": "QUARANTE-TROIS MILLE NEUF CENT CINQUANTE ET UN DINARS ET CINQ CENT CINQUANTE MILLIMES",
+      "devise": "TND",
       "mention_suspension_exoneration": "Opération exonérée de TVA",
       "conditions_generales": "Les marchandises restent la propriété du vendeur jusqu'au paiement intégral. Garantie selon les conditions remises avec le produit ; elle ne couvre ni la casse ni l'oxydation. Aucun échange ni remboursement au-delà de sept jours, emballage d'origine exigé."
     },
@@ -540,7 +541,6 @@
       "acomptes_deduits",
       "cachet_emetteur",
       "date_echeance",
-      "devise",
       "droit_consommation_ligne",
       "fodec_applicable_ligne",
       "mention_export",

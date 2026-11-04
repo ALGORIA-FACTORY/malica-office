@@ -206,6 +206,14 @@ _arabe = (
     if RECONNAISSANCE_ARABE
     else None
 )
+# Le modele latin, seul, pour relire les morceaux d'une ligne mixte (plus bas) :
+# le meme modele que celui du pipeline, sans sa detection. Il n'existe qu'avec
+# le second alphabet : sans lui, aucune ligne n'est jamais dite mixte.
+_ocr_latin_seul = (
+    TextRecognition(model_name=RECONNAISSANCE, model_dir=_dossier(RECONNAISSANCE), **_COMMUN)
+    if RECONNAISSANCE_ARABE
+    else None
+)
 # Les lignes relues par lots, triées par largeur comme le fait le pipeline :
 # un lot de lignes de même gabarit se rembourre peu. Mesuré sur trois pages :
 # mêmes textes qu'une à une.
@@ -232,7 +240,11 @@ ARABE_SI_CONFIANCE_SOUS = float(os.environ.get("OCR_ARABE_SI_CONFIANCE_SOUS", "0
 
 
 def _a_relire_en_arabe(latin: str, score_latin: float) -> bool:
-    return not _ligne_de_chiffres(latin) and score_latin < ARABE_SI_CONFIANCE_SOUS
+    # Une ligne de chiffres se relit aussi quand le latin doute : depuis le
+    # 4 novembre 2026, c'est souvent une ligne MIXTE (« الهاتف : 00 49 600 628 »)
+    # dont l'etiquette arabe a ete perdue ; relue mot par mot, elle la retrouve,
+    # et ses chiffres restent au latin (`_choisir`).
+    return score_latin < ARABE_SI_CONFIANCE_SOUS
 
 
 def _a_de_l_arabe(texte: str) -> bool:
@@ -282,29 +294,182 @@ def _decouper(tableau: numpy.ndarray, polygone) -> numpy.ndarray:
     return numpy.rot90(ligne) if hauteur / largeur >= 1.5 else ligne
 
 
+# ============================== UNE LIGNE MIXTE SE LIT MOT PAR MOT, CHACUN DANS SON ÉCRITURE
+#
+# 4 novembre 2026, banc sans IA (412 pieces) : sur une facture arabe, la ligne
+# « المعرف الجبائي : 1399012W/A/M/000 » rendait « 99012W///000: » par le modele
+# latin (0,63) — l'arabe de l'etiquette le derange — et le modele arabe, lui, ne
+# lit pas les lettres latines : « ALGORIA FACTORY SARL : الحريف » devenait
+# « LORA OY Lالحريف ». Aucun des deux modeles ne lit une ligne mixte ; choisir
+# l'un des deux pour la ligne entiere perd toujours une ecriture. Le matricule
+# du dossier n'etait plus lu, et le sens de la piece ne se deduisait plus.
+#
+# Une ligne dont les deux lectures disent deux ecritures se coupe donc a ses
+# blancs (le profil d'encre de la decoupe), et chaque morceau se lit par les
+# deux modeles : il garde la lecture de SON ecriture. Les morceaux sortent comme
+# des lignes, chacun avec sa boite : un matricule a gauche d'une etiquette arabe
+# garde sa place sur la page.
+
+# Un blanc qui separe deux mots : au moins cette fraction de la hauteur de ligne.
+BLANC_ENTRE_MOTS = float(os.environ.get("OCR_BLANC_ENTRE_MOTS", "0.2"))
+_LATIN = re.compile(r"[A-Za-z0-9]")
+
+
+def _ligne_mixte(latin: str, arabe: str) -> bool:
+    """Les deux lectures disent deux ecritures : l'arabe voit des lettres
+    arabes, le latin des lettres ou des chiffres."""
+    return _a_de_l_arabe(arabe) and re.search(r"[A-Za-z0-9]{2,}", latin) is not None
+
+
+def _morceaux(decoupe: numpy.ndarray) -> list:
+    """Les intervalles [x0, x1) d'encre d'une ligne redressee, coupes a ses blancs."""
+    gris = cv2.cvtColor(decoupe, cv2.COLOR_BGR2GRAY) if decoupe.ndim == 3 else decoupe
+    _, encre = cv2.threshold(gris, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    colonnes = (encre > 0).sum(axis=0)
+    hauteur, largeur = encre.shape[:2]
+    blanc_min = max(4, int(BLANC_ENTRE_MOTS * hauteur))
+    morceaux, debut, vide = [], None, 0
+    for x in range(largeur):
+        if colonnes[x] > 0:
+            if debut is None:
+                debut = x
+            vide = 0
+        elif debut is not None:
+            vide += 1
+            if vide >= blanc_min:
+                morceaux.append((debut, x - vide + 1))
+                debut, vide = None, 0
+    if debut is not None:
+        morceaux.append((debut, largeur - vide))
+    return [(a, b) for a, b in morceaux if b - a >= 2]
+
+
+# Un caractere latin imprime tient environ une demi-hauteur de ligne. Une
+# lecture qui, pour sa boite, en rend bien moins a laisse quelque chose de cote
+# — l'etiquette arabe d'un matricule (« المعرف الجبائي : 1399012W/A/M/000 » lu
+# « 9012W///000: ») : meme une ligne de chiffres se relit alors.
+LARGEUR_PAR_CARACTERE_MAX = float(os.environ.get("OCR_LARGEUR_PAR_CARACTERE_MAX", "0.7"))
+
+
+def _trop_court(texte: str, polygone) -> bool:
+    xs = [float(p[0]) for p in polygone]
+    ys = [float(p[1]) for p in polygone]
+    hauteur = max(1.0, max(ys) - min(ys))
+    return (max(xs) - min(xs)) / max(1, len(texte.strip())) > LARGEUR_PAR_CARACTERE_MAX * hauteur
+
+
+def _choisir(latin: str, s_latin: float, arabe: str, s_arabe: float):
+    """La lecture d'un morceau : l'arabe s'il en a et que sa confiance tient,
+    sinon le latin."""
+    if _a_de_l_arabe(arabe) and not _ligne_de_chiffres(latin) and s_arabe >= s_latin * 0.8:
+        return arabe, s_arabe, True
+    return latin, s_latin, False
+
+
 def _relire_en_arabe(tableau, polygones, textes, scores):
     """Relire en arabe les lignes qui peuvent l'être ; garder l'arabe la ou il
-    en a. Rend aussi si le modèle arabe a servi : le nom du relevé le dit.
+    en a. Une ligne mixte se coupe en morceaux, et chacun garde sa lecture.
+
+    Rend les lignes sous la forme (texte, score, boite_ou_None) : `None` garde
+    la boite du polygone de la ligne ; une boite (x0, y0, x1, y1) en pixels est
+    celle d'un morceau. Rend aussi si le modèle arabe a servi.
 
     Seulement sur `rec_polys` — les polygones des lignes RECONNUES, alignes
     index par index sur `rec_texts` et `rec_scores`. Jamais sur `dt_polys`,
     qui ne leur correspond pas.
     """
     n = min(len(polygones), len(textes), len(scores))
+    sortie = [[(textes[i], scores[i], None)] for i in range(len(textes))]
     if _arabe is None or n == 0:
-        return textes, scores, False
-    candidates = [i for i in range(n) if _a_relire_en_arabe(textes[i], float(scores[i]))]
+        return sortie, False
+    candidates = [
+        i for i in range(n)
+        if _a_relire_en_arabe(textes[i], float(scores[i])) or _trop_court(textes[i], polygones[i])
+    ]
     if not candidates:
-        return textes, scores, False
+        return sortie, False
     decoupes = {i: _decouper(tableau, polygones[i]) for i in candidates}
     ordre = sorted(candidates, key=lambda i: decoupes[i].shape[1] / max(1, decoupes[i].shape[0]))
     lus = [r.json["res"] for r in _arabe.predict([decoupes[i] for i in ordre], batch_size=LOT_ARABE)]
-    sortie_t, sortie_s = list(textes), list(scores)
+    mixtes = []
     for i, r in zip(ordre, lus):
         texte_ar, score_ar = r.get("rec_text", ""), float(r.get("rec_score", 0.0))
-        if _garder_l_arabe(textes[i], texte_ar, float(scores[i]), score_ar):
-            sortie_t[i], sortie_s[i] = texte_ar, score_ar
-    return sortie_t, sortie_s, True
+        if _ligne_mixte(textes[i], texte_ar):
+            mixtes.append(i)
+        elif _garder_l_arabe(textes[i], texte_ar, float(scores[i]), score_ar):
+            sortie[i] = [(texte_ar, score_ar, None)]
+    if mixtes:
+        _lire_mot_par_mot(tableau, polygones, decoupes, mixtes, textes, scores, sortie)
+    return sortie, True
+
+
+def _lire_mot_par_mot(tableau, polygones, decoupes, mixtes, textes, scores, sortie):
+    """Chaque ligne mixte, coupee a ses blancs, lue morceau par morceau par les
+    deux modeles. Une ligne qu'on ne sait pas couper (un seul morceau) garde sa
+    lecture latine : on ne troque pas des lettres latines contre de l'arabe."""
+    taches = []  # (ligne, x0, x1, image du morceau)
+    for i in mixtes:
+        d = decoupes[i]
+        morceaux = _morceaux(d)
+        if len(morceaux) < 2:
+            continue
+        for a, b in morceaux:
+            taches.append((i, a, b, d[:, max(0, a - 2):min(d.shape[1], b + 2)]))
+    if not taches:
+        return
+    images = [t[3] for t in taches]
+    lat = [r.json["res"] for r in _ocr_latin_seul.predict(images, batch_size=LOT_ARABE)]
+    ara = [r.json["res"] for r in _arabe.predict(images, batch_size=LOT_ARABE)]
+    par_ligne: dict = {}
+    for (i, a, b, img), rl, ra in zip(taches, lat, ara):
+        texte, score, arabe = _choisir(
+            rl.get("rec_text", ""), float(rl.get("rec_score", 0.0)),
+            ra.get("rec_text", ""), float(ra.get("rec_score", 0.0)),
+        )
+        if texte.strip():
+            par_ligne.setdefault(i, []).append([a, b, texte, score, arabe])
+    # Les morceaux voisins d'une meme ecriture se rejoignent et se relisent
+    # ensemble : un RIB coupe a ses blancs (« 99 | 684 | 592007571 | 5690 ») se
+    # relit d'un trait, dans son ordre a lui, et le modele voit le contexte.
+    groupes = []  # (ligne, x0, x1, arabe)
+    for i, morceaux in par_ligne.items():
+        morceaux.sort(key=lambda m: m[0])
+        courant = None
+        for m in morceaux:
+            if courant is not None and courant[3] == m[4]:
+                courant[2] = m[1]
+                courant[4].append(m)
+            else:
+                courant = [i, m[0], m[1], m[4], [m]]
+                groupes.append(courant)
+    a_relire = [g for g in groupes if len(g[4]) > 1]
+    if a_relire:
+        crops = [decoupes[g[0]][:, max(0, g[1] - 2):min(decoupes[g[0]].shape[1], g[2] + 2)] for g in a_relire]
+        latins = [g for g, c in zip(a_relire, crops) if not g[3]]
+        arabes = [g for g, c in zip(a_relire, crops) if g[3]]
+        for modele, lot in ((_ocr_latin_seul, latins), (_arabe, arabes)):
+            if not lot:
+                continue
+            images = [crops[a_relire.index(g)] for g in lot]
+            for g, r in zip(lot, (r.json["res"] for r in modele.predict(images, batch_size=LOT_ARABE))):
+                texte = r.get("rec_text", "")
+                if texte.strip():
+                    g[4] = [[g[1], g[2], texte, float(r.get("rec_score", 0.0)), g[3]]]
+    for i in par_ligne:
+        xs = [float(p[0]) for p in polygones[i]]
+        ys = [float(p[1]) for p in polygones[i]]
+        gauche, haut, bas = min(xs), min(ys), max(ys)
+        echelle = (max(xs) - gauche) / max(1, decoupes[i].shape[1])
+        siens = [g for g in groupes if g[0] == i]
+        # L'ordre de lecture : les groupes de droite a gauche quand l'un est
+        # arabe ; a l'interieur d'un groupe latin, de gauche a droite.
+        if any(g[3] for g in siens):
+            siens.sort(key=lambda g: -g[1])
+        sortie[i] = [
+            (t, s, (gauche + a * echelle, haut, gauche + b * echelle, bas))
+            for g in siens
+            for a, b, t, s, _ in g[4]
+        ]
 
 
 # Le predicteur n'est pas sur a plusieurs fils : une seule lecture a la fois,
@@ -413,31 +578,38 @@ def _lire_seul(octets: bytes) -> dict:
         textes = donnees.get("rec_texts", [])
         polygones = donnees.get("rec_polys", []) or donnees.get("dt_polys", [])
         scores = donnees.get("rec_scores", [])
-        textes, scores, relu = _relire_en_arabe(tableau, donnees.get("rec_polys", []), textes, scores)
+        lues, relu = _relire_en_arabe(tableau, donnees.get("rec_polys", []), textes, scores)
         arabe_lu = arabe_lu or relu
-        for i, texte in enumerate(textes):
-            if not texte or not texte.strip():
-                continue
-            # Le polygone a quatre points et peut être incliné : on rend la
-            # boîte alignée sur les axes qui l'englobe. C'est ce dont la
-            # désignation a besoin pour raisonner en lignes et en colonnes.
-            boite = [0.0, 0.0, 1.0, 1.0]
-            if i < len(polygones) and polygones[i] is not None:
-                xs = [float(p[0]) for p in polygones[i]]
-                ys = [float(p[1]) for p in polygones[i]]
-                boite = [
-                    max(0.0, min(1.0, min(xs) / largeur)),
-                    max(0.0, min(1.0, min(ys) / hauteur)),
-                    max(0.0, min(1.0, max(xs) / largeur)),
-                    max(0.0, min(1.0, max(ys) / hauteur)),
-                ]
-            lignes.append(
-                {
-                    "texte": texte,
-                    "boite": boite,
-                    "confiance": float(scores[i]) if i < len(scores) else None,
-                }
-            )
+        for i, morceaux in enumerate(lues):
+            for texte, score, pixels in morceaux:
+                if not texte or not texte.strip():
+                    continue
+                # Le polygone a quatre points et peut être incliné : on rend la
+                # boîte alignée sur les axes qui l'englobe. C'est ce dont la
+                # désignation a besoin pour raisonner en lignes et en colonnes.
+                boite = [0.0, 0.0, 1.0, 1.0]
+                if pixels is not None:
+                    x0, y0, x1, y1 = pixels
+                elif i < len(polygones) and polygones[i] is not None:
+                    xs = [float(p[0]) for p in polygones[i]]
+                    ys = [float(p[1]) for p in polygones[i]]
+                    x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
+                else:
+                    x0 = None
+                if x0 is not None:
+                    boite = [
+                        max(0.0, min(1.0, x0 / largeur)),
+                        max(0.0, min(1.0, y0 / hauteur)),
+                        max(0.0, min(1.0, x1 / largeur)),
+                        max(0.0, min(1.0, y1 / hauteur)),
+                    ]
+                lignes.append(
+                    {
+                        "texte": texte,
+                        "boite": boite,
+                        "confiance": float(score) if score is not None else None,
+                    }
+                )
 
     return {
         "lignes": lignes,

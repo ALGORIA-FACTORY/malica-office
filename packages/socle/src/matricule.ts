@@ -163,6 +163,8 @@ interface Motifs {
   readonly avecLettre: RegExp;
   readonly sansLettre: RegExp;
   readonly courte: RegExp;
+  /** Toute la forme collée, sans un séparateur : « 1958330VAM000 ». */
+  readonly compacte: RegExp;
   readonly noyau: RegExp;
 }
 const COMPILES = new WeakMap<FormatDuMatricule, Motifs>();
@@ -224,6 +226,20 @@ function motifsDe(format: FormatDuMatricule): Motifs {
     avecLettre: new RegExp(`${DEBUT}${noyau}(?:${SEP}|\\s*)([A-Za-z])${groupes}`),
     sansLettre: new RegExp(`${DEBUT}${noyau}${groupes}`),
     courte: new RegExp(`${DEBUT}${noyau}\\s*([A-Za-z])(?![0-9A-Za-z])`),
+    /*
+     * La forme collée, relevée le 3 novembre 2026 : « 1958330VAM000 » (35 des
+     * 120 factures du jeu d'ALGORIA l'impriment). Sans séparateur, rien ne
+     * distingue un groupe d'un autre, sinon leur NATURE : la lettre de contrôle,
+     * puis chaque groupe du pack, lettre ou chiffres, exactement — et rien de
+     * collé avant ni après, pour qu'aucun numéro plus long ne s'y découpe.
+     * Une lettre de moins (« 1958330AM000 ») ne s'y lit pas : sans séparateur,
+     * on ne saurait pas laquelle manque.
+     */
+    compacte: new RegExp(
+      `(?:^|[^0-9A-Za-z])${noyau}([A-Za-z])${format.groupes
+        .map((g) => (g === "lettre" ? "([A-Za-z])" : `(\\d{${g}})`))
+        .join("")}(?![0-9A-Za-z])`,
+    ),
     noyau: new RegExp(`^\\d{${format.noyau}}$`),
   };
   COMPILES.set(format, motifs);
@@ -235,7 +251,7 @@ export function normaliserMatricule(
   format: FormatDuMatricule,
 ): MatriculeLu {
   if (brut === null || brut === undefined) return RIEN;
-  const { etiquettes, avecLettre, sansLettre, courte, noyau } = motifsDe(format);
+  const { etiquettes, avecLettre, sansLettre, courte, compacte, noyau } = motifsDe(format);
 
   let texte = sansTashkeel(enChiffresLatins(String(brut)));
   const corrections: string[] = [];
@@ -249,7 +265,7 @@ export function normaliserMatricule(
     }
   }
 
-  const pleine = texte.match(avecLettre);
+  const pleine = texte.match(avecLettre) ?? texte.match(compacte);
   if (pleine) {
     const { chiffres, corrections: reparees } = reparerLesChiffres(pleine[1]!.toUpperCase());
     if (noyau.test(chiffres)) {

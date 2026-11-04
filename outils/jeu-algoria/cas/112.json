@@ -407,6 +407,7 @@
           "taux_tva_ligne": "19"
         }
       ],
+      "devise": "TND",
       "mention_suspension_exoneration": "Opération exonérée de TVA",
       "cachet_emetteur": true
     },
@@ -420,7 +421,6 @@
       "code_client",
       "conditions_generales",
       "date_echeance",
-      "devise",
       "droit_consommation_ligne",
       "fodec_applicable_ligne",
       "mention_export",
