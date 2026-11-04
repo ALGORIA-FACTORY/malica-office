@@ -25,6 +25,27 @@ Les relevés OCR sont gardés par pièce (`--cache`) : la mesure du moteur se re
 13 secondes pour les 412 pièces. Une pièce réelle (`photo:`) se lit sur place et
 n'est jamais copiée dans le dépôt.
 
+## Bulletin 2 — après les mécanismes généraux (4 novembre 2026, soir)
+
+Mêmes 412 pièces, moteur natif (même code que le WebAssembly), OCR avec lecture mixte :
+
+|                |     juste |   faux |   silence | inventé |
+| -------------- | --------: | -----: | --------: | ------: |
+| Bulletin 1     |     4 014 |    452 |     7 642 |      37 |
+| **Bulletin 2** | **4 842** | **84** | **6 798** |  **16** |
+
+- Sens des parties dit : 131 sur 348, contre 62 ; aucune inversion.
+- Les mécanismes et leurs mesures : `docs/brevet/dossier-d-invention.md` (I-A à I-G).
+- Ce qui reste :
+  - les silences (pièces non prouvées, 160 environ ; parties sans indice) ;
+  - les faux de l'OCR manuscrit ;
+  - les experts des pièces qui ne sont pas des factures ;
+  - la présence d'un cachet ou d'une signature (aucun détecteur visuel).
+- La médiane OCR CPU est de 5,5 s par image, contre 2,3 s : c'est le coût de la lecture
+  mixte, à réduire par l'OCR guidé (I-H).
+- Le banc se lance avec `--moteur-natif packages/sudoku/target/release/examples/resoudre`
+  quand la cible wasm32 ne s'installe pas.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |
