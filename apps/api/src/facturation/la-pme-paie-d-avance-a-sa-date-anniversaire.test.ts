@@ -275,6 +275,21 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
     });
   });
 
+  it("le rattrapage recule d'échéances anniversaire, pas de mois civils (né un 31, vu le 30 mars)", async () => {
+    await aBlanc(async (db) => {
+      // Relevé de revue (#228) : 30 mars - 1 mois = 28 février, qui ramenait
+      // le plancher à [28 févr., 31 mars) et sautait [31 janv., 28 févr.).
+      const s = await socle(db);
+      const p = await unePme(db, "2027-01-31");
+      await regler(db, s, "pme", true, 2);
+      await passer(db, "2027-03-30");
+      assert.deepEqual((await facturesDuTitulaire(db, p.licence)).map(fenetre), [
+        ["base", "2027-01-31", "2027-02-28", "2027-03-30"],
+        ["base", "2027-02-28", "2027-03-31", "2027-03-30"],
+      ]);
+    });
+  });
+
   it("une montée le 5 décembre : complément le jour même pour 15 jours d'écart, puis le 20 au nouveau prix", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);

@@ -668,8 +668,14 @@ begin
   end if;
 
   if v_s is not null then
-    v_plancher := (facturation.echeance_de(
-                    v_ancre, (p_jour - make_interval(months => p_rattrapage - 1))::date)).debut;
+    -- La fenêtre recule d'ÉCHÉANCES, depuis la période en cours, sur l'ancre
+    -- d'origine : reculer de mois civils ramène un 30 mars au 28 février et
+    -- sauterait [31 janv., 28 févr.) (revue de #228).
+    v_plancher := (facturation.echeance_de(v_ancre, p_jour)).debut;
+    for i in 2 .. p_rattrapage loop
+      exit when v_plancher <= v_ancre;
+      v_plancher := (facturation.echeance_de(v_ancre, v_plancher - 1)).debut;
+    end loop;
     if v_s < v_plancher then
       v_s := v_plancher;
       v_premiere := false;
