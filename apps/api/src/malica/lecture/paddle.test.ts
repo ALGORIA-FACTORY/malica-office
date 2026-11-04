@@ -16,6 +16,7 @@ import { PanneFournisseur, qualifierEchec } from "../../fabrique/travaux-executi
 import {
   SecondLecteurOccupe,
   lireAvecPaddle,
+  lireParVagues,
   moteurDuSecondLecteur,
   secondLecteurDisponible,
 } from "./paddle.ts";
@@ -221,5 +222,59 @@ describe("le second lecteur", () => {
     assert.ok(echec instanceof SecondLecteurOccupe);
     // Sans autre lecteur, la file durable doit pouvoir la rejouer.
     assert.ok(echec instanceof PanneFournisseur);
+  });
+
+  it("par vagues : la seconde n'est lue que si la première ne se prouve pas", async () => {
+    process.env["OCR_URL"] = "http://ocr:8000";
+    const appels: string[] = [];
+    const reponses: Record<string, unknown> = {
+      "/lire?vague=1": {
+        lignes: [
+          { texte: "TOTAL TTC", boite: [0.5, 0.8, 0.7, 0.82], confiance: 0.99 },
+          { texte: "1 2,000", boite: [0.1, 0.4, 0.9, 0.42], confiance: 0.99 },
+        ],
+        reste: [
+          {
+            polygone: [
+              [0, 0.9],
+              [1, 0.9],
+              [1, 0.95],
+              [0, 0.95],
+            ],
+          },
+        ],
+        modele: "PP-OCRv5",
+      },
+      "/relire": {
+        lignes: [{ texte: "Conditions", boite: [0.1, 0.9, 0.4, 0.95], confiance: 0.98 }],
+      },
+    };
+    globalThis.fetch = (async (url: string, init: RequestInit) => {
+      const chemin = new URL(url).pathname + new URL(url).search;
+      appels.push(chemin);
+      if (chemin === "/relire") {
+        const corps = JSON.parse(String(init.body)) as { image: string; polygones: unknown[] };
+        assert.equal(corps.polygones.length, 1);
+        assert.equal(Buffer.from(corps.image, "base64")[0], 7);
+      }
+      return { ok: true, status: 200, json: async () => reponses[chemin] } as unknown as Response;
+    }) as typeof fetch;
+
+    // prouvée dès la première : une seule vague, les lignes dans l'ordre de la page
+    const une = await lireParVagues(new Uint8Array([7]), 1, () => true);
+    assert.equal(une?.vagues, 1);
+    assert.deepEqual(appels, ["/lire?vague=1"]);
+    assert.equal(une?.tokens[0]?.text, "1");
+
+    // non prouvée : la seconde vague relit le reste, fusionné à sa place
+    appels.length = 0;
+    const deux = await lireParVagues(new Uint8Array([7]), 1, () => false);
+    assert.equal(deux?.vagues, 2);
+    assert.deepEqual(appels, ["/lire?vague=1", "/relire"]);
+    assert.equal(deux?.tokens.at(-1)?.text, "Conditions");
+    assert.deepEqual(
+      deux?.tokens.map((t) => t.ordinal),
+      deux?.tokens.map((_, i) => i),
+    );
   });
 });

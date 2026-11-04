@@ -50,7 +50,9 @@ jetons attend ; convertir des pixels côté Node demanderait de lui faire
 connaître la taille de l'image, qu'il n'a pas.
 """
 
+import base64
 import io
+import json
 import os
 import re
 import threading
@@ -64,7 +66,7 @@ os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
 import cv2  # noqa: E402
 from fastapi import FastAPI, HTTPException, Request  # noqa: E402
-from paddleocr import PaddleOCR, TextRecognition  # noqa: E402
+from paddleocr import PaddleOCR, TextDetection, TextRecognition  # noqa: E402
 from starlette.concurrency import run_in_threadpool  # noqa: E402
 
 import poids  # noqa: E402
@@ -206,18 +208,18 @@ _arabe = (
     if RECONNAISSANCE_ARABE
     else None
 )
-# Le modele latin, seul, pour relire les morceaux d'une ligne mixte (plus bas) :
-# le meme modele que celui du pipeline, sans sa detection. Il n'existe qu'avec
-# le second alphabet : sans lui, aucune ligne n'est jamais dite mixte.
-_ocr_latin_seul = (
-    TextRecognition(model_name=RECONNAISSANCE, model_dir=_dossier(RECONNAISSANCE), **_COMMUN)
-    if RECONNAISSANCE_ARABE
-    else None
-)
+# Les deux modeles du pipeline, chacun seul : la detection (la GEOMETRIE de la page, les
+# boites des lignes) et la reconnaissance latine. La lecture par vagues (plus bas) detecte
+# une fois, puis ne reconnait que les lignes dont la preuve a besoin ; les morceaux d'une
+# ligne mixte se relisent aussi par le modele latin seul.
+_detection = TextDetection(model_name=DETECTION, model_dir=_dossier(DETECTION), **_COMMUN)
+_ocr_latin_seul = TextRecognition(model_name=RECONNAISSANCE, model_dir=_dossier(RECONNAISSANCE), **_COMMUN)
 # Les lignes relues par lots, triées par largeur comme le fait le pipeline :
 # un lot de lignes de même gabarit se rembourre peu. Mesuré sur trois pages :
 # mêmes textes qu'une à une.
 LOT_ARABE = 6
+# Les lignes de la sonde (voir `_relire_en_arabe`).
+SONDE_ARABE = int(os.environ.get("OCR_SONDE_ARABE", "4"))
 
 # ============================ SEULES LES LIGNES QUI PEUVENT ÊTRE ARABES SE RELISENT
 #
@@ -389,6 +391,18 @@ def _relire_en_arabe(tableau, polygones, textes, scores):
     if not candidates:
         return sortie, False
     decoupes = {i: _decouper(tableau, polygones[i]) for i in candidates}
+    # LA SONDE : une page sans arabe ne paie pas la relecture. Les lignes les moins sures sont
+    # relues d'abord ; si aucune ne garde l'arabe, aucune autre ne sera relue. Mesure du
+    # 4 novembre 2026, facture MyTek (francaise) : 0,9 s de relecture arabe pour rien.
+    sonde = sorted(candidates, key=lambda i: float(scores[i]))[:SONDE_ARABE]
+    if len(candidates) > len(sonde):
+        lus_sonde = [r.json["res"] for r in _arabe.predict([decoupes[i] for i in sonde], batch_size=LOT_ARABE)]
+        if not any(
+            _a_de_l_arabe(r.get("rec_text", ""))
+            and float(r.get("rec_score", 0.0)) >= float(scores[i]) * 0.8
+            for i, r in zip(sonde, lus_sonde)
+        ):
+            return sortie, False
     ordre = sorted(candidates, key=lambda i: decoupes[i].shape[1] / max(1, decoupes[i].shape[0]))
     lus = [r.json["res"] for r in _arabe.predict([decoupes[i] for i in ordre], batch_size=LOT_ARABE)]
     mixtes = []
@@ -510,9 +524,134 @@ async def sante() -> dict:
 
 @app.post("/lire")
 async def lire(requete: Request) -> dict:
-    """Une image en corps brut ; des lignes et leurs boîtes normalisées."""
+    """Une image en corps brut ; des lignes et leurs boîtes normalisées.
+
+    `?vague=1` : la lecture par VAGUES (voir `_premiere_vague`) — les lignes de la
+    premiere vague, et les boites qui restent a lire (`reste`), a relire par `/relire`
+    si la preuve ne ferme pas.
+    """
     octets = await requete.body()
+    if requete.query_params.get("vague") == "1":
+        return await run_in_threadpool(_sous_verrou, _premiere_vague, octets)
     return await run_in_threadpool(_lire, octets)
+
+
+@app.post("/relire")
+async def relire(requete: Request) -> dict:
+    """La seconde vague : `{"image": base64, "polygones": [[[x, y], …], …]}` — les
+    polygones rendus en `reste` par la premiere. Aucune detection n'est refaite."""
+    corps = json.loads(await requete.body())
+    octets = base64.b64decode(corps["image"])
+    polygones = [numpy.array(p, dtype=numpy.float32) for p in corps.get("polygones", [])]
+    return await run_in_threadpool(_sous_verrou, _relire_les_polygones, octets, polygones)
+
+
+def _sous_verrou(f, *args):
+    if not _un_a_la_fois.acquire(timeout=ATTENTE_MAX_S):
+        raise HTTPException(status_code=503, detail="lecteur occupe")
+    try:
+        return f(*args)
+    finally:
+        _un_a_la_fois.release()
+
+
+# ============================================== LA LECTURE PAR VAGUES (4 novembre 2026)
+#
+# La detection (la geometrie : les boites des lignes) coute 0,3 a 0,5 s par page ; la
+# RECONNAISSANCE coute environ 60 ms par ligne, et c'est elle qui fait le temps (8 s pour les
+# 140 lignes de MyTek). La premiere vague ne reconnait donc que ce que la geometrie seule dit
+# utile : le TABLEAU (les rangees de quatre boites ou plus, du premier au dernier rang) et,
+# hors tableau, les boites COURTES (etiquettes, montants, identifiants). Les longues lignes
+# pleines (conditions, mentions, montant en lettres) restent en `reste` : l'API ne les fait
+# relire (`/relire`) que si la preuve ne ferme pas. Mesure du 4 novembre 2026 sur MyTek, deux
+# processeurs : prouvee en 3,1 s au lieu de 8,5, memes totaux.
+# La reconnaissance UNE LIGNE A LA FOIS : un lot se rembourre a la largeur de sa plus longue
+# ligne. Mesure du 4 novembre 2026, MyTek, 136 lignes, deux processeurs : lot de 1, 2,4 s ;
+# lot de 6, 5,6 s ; lot de 16, 16 s.
+LOT_LATIN = int(os.environ.get("OCR_LOT_LATIN", "1"))
+VAGUE_RANG_DE_TABLEAU = int(os.environ.get("OCR_VAGUE_RANG_DE_TABLEAU", "4"))
+VAGUE_LARGEUR_COURTE = float(os.environ.get("OCR_VAGUE_LARGEUR_COURTE", "0.35"))
+
+
+def _image(octets: bytes):
+    """L'image redressee et bornee (voir `_lire_seul`), en tableau BVR."""
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(octets))).convert("RGB")
+    cote = int(os.environ.get("OCR_COTE_MAX", "1600"))
+    if max(image.size) > cote:
+        f = cote / max(image.size)
+        image = image.resize((max(1, round(image.width * f)), max(1, round(image.height * f))), Image.LANCZOS)
+    return numpy.asarray(image)[:, :, ::-1], image.width, image.height
+
+
+def _boite(p, largeur: int, hauteur: int):
+    xs = [float(x) for x, _ in p]
+    ys = [float(y) for _, y in p]
+    return min(xs) / largeur, min(ys) / hauteur, max(xs) / largeur, max(ys) / hauteur
+
+
+def _premiere_vague(octets: bytes) -> dict:
+    debut = time.time()
+    tableau, largeur, hauteur = _image(octets)
+    polygones = [numpy.array(p, dtype=numpy.float32) for p in list(_detection.predict(tableau))[0].json["res"]["dt_polys"]]
+    boites = [_boite(p, largeur, hauteur) for p in polygones]
+    # Les rangees, par recouvrement vertical ; une rangee de N boites ou plus est du tableau.
+    rangees: list = []
+    for i in sorted(range(len(boites)), key=lambda k: boites[k][1]):
+        b = boites[i]
+        for r in rangees:
+            a = boites[r[0]]
+            h = min(a[3] - a[1], b[3] - b[1])
+            if min(a[3], b[3]) - max(a[1], b[1]) > 0.5 * h:
+                r.append(i)
+                break
+        else:
+            rangees.append([i])
+    du_tableau = [r for r in rangees if len(r) >= VAGUE_RANG_DE_TABLEAU]
+    haut = min((boites[r[0]][1] for r in du_tableau), default=1.0)
+    bas = max((max(boites[i][3] for i in r) for r in du_tableau), default=0.0)
+    dans_le_tableau = lambda i: boites[i][1] >= haut - 0.005 and boites[i][3] <= bas + 0.005
+    lues = [i for i in range(len(boites)) if dans_le_tableau(i) or boites[i][2] - boites[i][0] <= VAGUE_LARGEUR_COURTE]
+    reste = [i for i in range(len(boites)) if i not in set(lues)]
+    r = _lignes_des_polygones(tableau, [polygones[i] for i in lues], largeur, hauteur)
+    r["reste"] = [{"polygone": polygones[i].tolist(), "boite": list(boites[i])} for i in reste]
+    r["boites"] = len(boites)
+    r["millisecondes"] = int((time.time() - debut) * 1000)
+    return r
+
+
+def _relire_les_polygones(octets: bytes, polygones: list) -> dict:
+    debut = time.time()
+    tableau, largeur, hauteur = _image(octets)
+    r = _lignes_des_polygones(tableau, polygones, largeur, hauteur)
+    r["millisecondes"] = int((time.time() - debut) * 1000)
+    return r
+
+
+def _lignes_des_polygones(tableau, polygones: list, largeur: int, hauteur: int) -> dict:
+    """La reconnaissance des seuls polygones donnes : latine par lots, puis la relecture
+    arabe ou mixte de `_relire_en_arabe` ; les lignes dans l'ordre de la page."""
+    if not polygones:
+        return {"lignes": [], "modele": MODELE_LATIN}
+    ordre = sorted(range(len(polygones)), key=lambda i: (round(float(polygones[i][:, 1].min()) / 10), float(polygones[i][:, 0].min())))
+    polygones = [polygones[i] for i in ordre]
+    lus = [r.json["res"] for r in _ocr_latin_seul.predict([_decouper(tableau, p) for p in polygones], batch_size=LOT_LATIN)]
+    textes = [r.get("rec_text", "") for r in lus]
+    scores = [float(r.get("rec_score", 0.0)) for r in lus]
+    lues, relu = _relire_en_arabe(tableau, polygones, textes, scores)
+    lignes = []
+    for i, morceaux in enumerate(lues):
+        for texte, score, pixels in morceaux:
+            if not texte or not texte.strip():
+                continue
+            x0, y0, x1, y1 = pixels if pixels is not None else (
+                float(polygones[i][:, 0].min()), float(polygones[i][:, 1].min()),
+                float(polygones[i][:, 0].max()), float(polygones[i][:, 1].max()))
+            lignes.append({
+                "texte": texte,
+                "boite": [max(0.0, min(1.0, v)) for v in (x0 / largeur, y0 / hauteur, x1 / largeur, y1 / hauteur)],
+                "confiance": float(score) if score is not None else None,
+            })
+    return {"lignes": lignes, "modele": MODELE if relu else MODELE_LATIN}
 
 
 def _lire(octets: bytes) -> dict:

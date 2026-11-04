@@ -80,6 +80,8 @@ interface ReleveGarde {
   readonly tokens: PageToken[];
   readonly lecteur: string;
   readonly millisecondes: number;
+  /** Lu par vagues : 1 si la première a suffi à la preuve, 2 sinon. */
+  readonly vagues?: 1 | 2;
 }
 
 /** Une pièce du banc, quel que soit son corpus. */
@@ -105,7 +107,8 @@ interface PieceDuBanc {
    * dire. Lus, ils sont faux ; tus, ils sont justes.
    */
   readonly interdits?: readonly string[];
-  readonly releve: () => Promise<ReleveGarde>;
+  /** `prouvee` : la preuve qui dit si la première vague d'une image suffit (`--vagues`). */
+  readonly releve: (prouvee?: (tokens: PageToken[]) => boolean) => Promise<ReleveGarde>;
 }
 
 type Issue = "juste" | "faux" | "silence" | "invente";
@@ -128,6 +131,8 @@ export interface MesureDeLaPiece {
   readonly gabarit: string | null;
   readonly lecteur: string | null;
   readonly releveMs: number | null;
+  /** Lu par vagues : 1 si la première a suffi, 2 sinon ; null hors vagues. */
+  readonly vagues?: 1 | 2 | null;
   readonly sudokuMs: number | null;
   readonly issue: SortieDuSudoku["issue"] | "sans_grille" | "panne";
   readonly raison: string | null;
@@ -378,6 +383,8 @@ async function mesurerLaPiece(
   /** Un dossier où garder la sortie brute du moteur et le plan, pour le diagnostic. */
   brut?: string,
   moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
+  /** Lire les images par vagues, la preuve du moteur décidant de la seconde. */
+  vagues = false,
 ): Promise<MesureDeLaPiece> {
   const base = {
     corpus: piece.corpus,
@@ -402,13 +409,53 @@ async function mesurerLaPiece(
       champs: [],
       erreur,
     }) as MesureDeLaPiece;
+  const devise = DEVISES_LUES_D_ESSAI.find((d) => d.code === piece.devise);
+  let contexte: ContexteDuSudoku | null = null;
+  if (piece.grille && devise) {
+    const client = await db.connect();
+    try {
+      contexte = await lireLeContexteDuSudoku(
+        client,
+        packId,
+        piece.grille,
+        piece.devise,
+        piece.jour,
+      );
+    } catch (e) {
+      return panne({}, `contexte : ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      client.release();
+    }
+  }
+  const connus = (c: ContexteDuSudoku) => ({
+    dossier: piece.dossier
+      ? { matricule: piece.dossier.matricule, raison_sociale: piece.dossier.raison }
+      : null,
+    tiers: [],
+    formes_juridiques: c.formesJuridiques,
+  });
+  // La preuve de la première vague : le même moteur, sur les jetons qu'elle a lus.
+  const prouvee =
+    vagues && contexte && devise
+      ? (tokens: PageToken[]) =>
+          resoudreLaPiece(
+            jetonsDuSudoku(tokens, devise, contexte),
+            contexte,
+            moteur,
+            connus(contexte),
+          ).issue === "prouvee"
+      : undefined;
   let releve: ReleveGarde;
   try {
-    releve = await piece.releve();
+    releve = await piece.releve(prouvee);
   } catch (e) {
     return panne({}, `relevé : ${e instanceof Error ? e.message : String(e)}`);
   }
-  const commun = { lecteur: releve.lecteur, releveMs: releve.millisecondes };
+  const commun = {
+    lecteur: releve.lecteur,
+    releveMs: releve.millisecondes,
+    vagues: releve.vagues ?? null,
+  };
   if (!piece.grille) {
     return {
       ...base,
@@ -420,29 +467,14 @@ async function mesurerLaPiece(
       champs: [],
     };
   }
-  const devise = DEVISES_LUES_D_ESSAI.find((d) => d.code === piece.devise);
   if (!devise) return panne(commun, `devise inconnue : ${piece.devise}`);
-  let contexte: ContexteDuSudoku;
-  const client = await db.connect();
-  try {
-    contexte = await lireLeContexteDuSudoku(client, packId, piece.grille, piece.devise, piece.jour);
-  } catch (e) {
-    return panne(commun, `contexte : ${e instanceof Error ? e.message : String(e)}`);
-  } finally {
-    client.release();
-  }
+  if (!contexte) return panne(commun, `contexte absent`);
   const t0 = performance.now();
   const sortie = resoudreLaPiece(
     jetonsDuSudoku(releve.tokens, devise, contexte),
     contexte,
     moteur,
-    {
-      dossier: piece.dossier
-        ? { matricule: piece.dossier.matricule, raison_sociale: piece.dossier.raison }
-        : null,
-      tiers: [],
-      formes_juridiques: contexte.formesJuridiques,
-    },
+    connus(contexte),
   );
   const sudokuMs = Math.round(performance.now() - t0);
   if (brut)
@@ -525,8 +557,11 @@ const jourDe = (v: unknown) =>
   typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/u.test(v) ? v : JOUR_PAR_DEFAUT;
 
 /** Le relevé de production d'un fichier, gardé en cache. */
-function releveDuFichier(chemin: string, garde: string): () => Promise<ReleveGarde> {
-  return async () => {
+function releveDuFichier(
+  chemin: string,
+  garde: string,
+): (prouvee?: (tokens: PageToken[]) => boolean) => Promise<ReleveGarde> {
+  return async (prouvee) => {
     if (existsSync(garde)) return JSON.parse(readFileSync(garde, "utf8")) as ReleveGarde;
     const mime = chemin.endsWith(".pdf")
       ? "application/pdf"
@@ -539,11 +574,13 @@ function releveDuFichier(chemin: string, garde: string): () => Promise<ReleveGar
       dataUrl: `data:${mime};base64,${Buffer.from(octets).toString("base64")}`,
       mime,
       bytes: octets,
+      ...(prouvee ? { prouvee } : {}),
     });
     const g = {
       tokens: r.tokens,
       lecteur: r.lecteur,
       millisecondes: Math.round(performance.now() - t0),
+      ...(r.vagues ? { vagues: r.vagues } : {}),
     };
     writeFileSync(garde, JSON.stringify(g));
     return g;
@@ -918,6 +955,9 @@ export function rapport(mesures: readonly MesureDeLaPiece[]): string {
     ocr.length
       ? `- OCR CPU : médiane ${ocr[Math.floor(ocr.length / 2)]} ms, max ${ocr.at(-1)} ms (${ocr.length} images)`
       : "",
+    mesures.some((m) => m.vagues)
+      ? `- Vagues : la première suffit à ${mesures.filter((m) => m.vagues === 1).length} images, la seconde est lue pour ${mesures.filter((m) => m.vagues === 2).length}`
+      : "",
     ...tete("Total"),
     ligne("tous les champs", total),
     ...tete("Par corpus"),
@@ -949,6 +989,9 @@ async function principal(): Promise<void> {
       // Garder l'entrée du moteur de chaque pièce : de quoi en faire une épreuve du moteur.
       entrees: { type: "string" },
       juridiction: { type: "string" },
+      // Lire les images par vagues (`lireParVagues`) : la seconde seulement si la preuve
+      // de la première ne ferme pas.
+      vagues: { type: "boolean" },
     },
   });
   const base = process.env["DATABASE_URL_ADMIN"];
@@ -996,7 +1039,14 @@ async function principal(): Promise<void> {
           );
         return moteur(entree);
       };
-      const m = await mesurerLaPiece(db, rows[0]!.id, p, values.brut, garde);
+      const m = await mesurerLaPiece(
+        db,
+        rows[0]!.id,
+        p,
+        values.brut,
+        garde,
+        values.vagues ?? false,
+      );
       mesures.push(m);
       const n = (i: Issue) => m.champs.filter((c) => c.issue === i).length;
       console.error(

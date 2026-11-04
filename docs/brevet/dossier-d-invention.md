@@ -244,6 +244,108 @@ multilingue. La nouveauté éventuelle tient à l'arbitrage par confiance entre 
 reconnaisseurs, au déclencheur par densité, et au regroupement pour relecture. Revendiquer
 en dépendance, pas seul.
 
+### I-I — La pente de la page lue sur ses propres boîtes, et les rangées par recouvrement
+
+**Problème.** Sur une page photographiée de travers, une ligne d'articles dérive de plus
+d'une hauteur de corps entre sa marge et son montant. Le montant ne recouvre plus la
+référence, la ligne se coupe en deux et le tableau n'est pas lu (MyTek : 5 articles sur 5
+perdus). Une désignation sur deux lignes, chiffres centrés entre elles, perdait sa première
+ligne au profit de l'article précédent.
+
+**Ce qui est nouveau.**
+
+- La pente se lit sur les seules boîtes de l'OCR, sans redresser l'image :
+  - deux boîtes éloignées en abscisse, dont l'écart vertical tient dans une hauteur de
+    corps, votent pour leur pente dy/dx ;
+  - la classe la plus peuplée de l'histogramme est la pente ;
+  - les vraies paires s'accumulent dans une même classe, les fausses s'étalent.
+- Le vote se fait par boîte, pas par mot. Les jetons de mêmes bords (au bit près) sont
+  recousus tant que le blanc qui les sépare tient dans deux hauteurs de corps : ce sont
+  les mots d'une même ligne de l'OCR. Des cellules de PDF séparées par un large blanc
+  restent distinctes et votent pour une page droite.
+- Une pente que sa pente miroir égale presque est rejetée. Sur une page droite, deux
+  rangées voisines votent autant pour +p que pour −p : c'est leur écart, pas une
+  inclinaison.
+- Les rangées sont les classes de la relation « se recouvrent de plus de la moitié de la
+  plus petite hauteur », de proche en proche, sur les ordonnées redressées. Aucun jeton
+  n'est l'ancre, et une cellule à deux lignes de chiffres centrés reste une seule rangée.
+- Une désignation se lit ligne par ligne. Une rangée de texte juste au-dessus en est la
+  tête si elle rapproche le milieu du texte du milieu des chiffres.
+- Un bloc posé à côté du tableau n'en fait pas partie (« MATRICULE FISCAL » d'une colonne
+  latérale) :
+  - les colonnes extrêmes sont bornées par le plus large couloir blanc jusqu'au bord ;
+  - sans en-tête, seuls les mots qui tiennent dans l'étendue de la ligne principale la
+    prolongent.
+
+**Effet mesuré** (412 pièces, même cache OCR) :
+
+|       | justes | faux |
+| ----- | -----: | ---: |
+| Avant |  4 842 |   84 |
+| Après |  5 114 |   74 |
+
+- Aucun champ n'est passé de juste à faux.
+- MyTek : les cinq articles, leurs taux et leurs désignations sont prouvés.
+- Couche de texte des jeux du dirigeant : lignes prouvées de 84 à 91.
+
+**Projet de revendication 6.** Procédé de regroupement en rangées des jetons d'un document
+reconnu, dans lequel :
+
+- une pente est estimée par le mode d'un histogramme des pentes de paires de boîtes de
+  reconnaissance éloignées horizontalement et voisines verticalement ;
+- les boîtes de bords identiques sont fusionnées en deçà d'un blanc proportionnel à leur
+  hauteur ;
+- une pente est rejetée quand la classe de la pente opposée réunit au moins la moitié de
+  ses votes ;
+- les rangées sont les composantes connexes de la relation de recouvrement vertical sur
+  les ordonnées corrigées de cette pente.
+
+**Antériorité probable.** Le redressement par projection de profils ou par transformée de
+Hough est classique, mais il opère sur les pixels. La nouveauté éventuelle tient :
+
+- au vote sur les boîtes déjà reconnues ;
+- à la fusion des boîtes de mêmes bords ;
+- au rejet par la pente miroir ;
+- aux rangées par composantes connexes sans ancre.
+
+### I-J — Un texte qu'aucun calcul ne prouve se lit avec assurance, ou se tait
+
+**Problème.** Les chiffres d'une ligne sont prouvés par q × p = m et par le total. Sa
+désignation ne l'est par rien. Sur le banc, toutes les désignations dont un mot était lu
+à moins de 0,9 étaient fausses (7 sur 7). Toutes les justes dépassaient 0,95.
+
+**Ce qui est nouveau.**
+
+- Une valeur PROUVÉE se rend quelle que soit la confiance de l'OCR, car c'est
+  l'arithmétique qui la garantit.
+- Une valeur NON PROUVABLE se rend seulement si chacun de ses jetons dépasse un seuil de
+  confiance, `lecture.confiance_du_texte` : un paramètre daté du référentiel.
+- Sinon, elle est tue, et la ligne et ses chiffres restent.
+
+**Effet mesuré.** Les 4 désignations arabes mal lues de la pièce 087 sont tues, et 2 autres
+désignations fausses aussi. Aucune juste n'est perdue.
+
+### I-K — La lecture par vagues, jugée par la preuve (mesurée, gardée désactivée)
+
+**Ce qui est fait.**
+
+- La page est détectée une fois, et le tableau est toujours lu, tous ses articles.
+- La première vague lit aussi les boîtes courtes.
+- Le moteur de preuve, déterministe, juge cette première vague. Si la pièce ne se prouve
+  pas, la seconde vague relit les seules boîtes restantes, fusionnées à leur place.
+
+**Mesure** (412 pièces, OCR frais, deux processeurs) :
+
+- Le temps OCR baisse de 26 %, à une médiane de 3,4 s.
+- La première vague suffit à 154 images sur 207.
+- Mais 243 champs justes deviennent muets : matricules, montant en lettres, mode de
+  règlement. La preuve des totaux ne couvre pas ces champs, et leurs lignes ne sont pas
+  relues quand les totaux ferment.
+
+**Décision.** La lecture par vagues reste désactivée par défaut : elle ne s'active qu'avec
+une preuve explicite. Le critère juste est celui de I-H : relire les zones des champs
+encore muets, pas la page entière.
+
 ### I-H — À venir : l'OCR guidé par la contradiction, et l'appariement global des libellés
 
 Ces deux inventions ne sont pas encore faites. Elles sont décrites pour dater leur
@@ -295,7 +397,7 @@ Système de lecture de documents comptables comprenant :
 ## 6. Ce qui reste à faire avant dépôt
 
 1. Une recherche d'antériorité professionnelle, puis le choix des inventions à déposer.
-   Les plus fortes à ce jour : I-B, I-E, I-A, puis I-H une fois faite.
+   Les plus fortes à ce jour : I-B, I-E, I-I, I-A, puis I-H une fois faite.
 2. Garder le secret jusqu'au dépôt : ni démonstration publique, ni code public.
 3. Les mesures sur des pièces réelles (le banc a une pièce réelle, MyTek) : elles
    renforcent les effets techniques revendiqués.

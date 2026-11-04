@@ -21,6 +21,7 @@ import { extrairePagesScannees, pagesDessineesDuPdf } from "./pdf-image.ts";
 import {
   SecondLecteurOccupe,
   lireAvecPaddle,
+  lireParVagues,
   ouvrirLeCoupeCircuit,
   secondLecteurDisponible,
 } from "./paddle.ts";
@@ -579,15 +580,24 @@ function octetsDuDataUrl(dataUrl: string): Uint8Array {
 async function releverDesPages(
   pages: ReadonlyArray<{ dataUrl: string; page: number }>,
   sansPaddle: boolean,
+  prouvee?: (tokens: PageToken[]) => boolean,
 ): Promise<{ releve: Releve | null; tente: boolean }> {
   if (sansPaddle || !secondLecteurDisponible()) return { releve: null, tente: false };
 
   const tokens: PageToken[] = [];
   let modele = "paddleocr";
+  let vagues: 1 | 2 | undefined;
   for (const image of pages) {
     let lu: Awaited<ReturnType<typeof lireAvecPaddle>>;
     try {
-      lu = await lireAvecPaddle(octetsDuDataUrl(image.dataUrl), image.page);
+      // Par vagues quand une preuve est donnée et que la pièce tient sur une page : une
+      // page d'une pièce plus longue ne se prouve pas seule.
+      lu =
+        prouvee && pages.length === 1
+          ? await lireParVagues(octetsDuDataUrl(image.dataUrl), image.page, (t) =>
+              prouvee(recollerLesMilliers(t)),
+            )
+          : await lireAvecPaddle(octetsDuDataUrl(image.dataUrl), image.page);
     } catch (e) {
       /*
        * PADDLEOCR TOMBÉ NE REND PLUS LA PIÈCE ILLISIBLE.
@@ -611,6 +621,7 @@ async function releverDesPages(
     if (!lu || lu.tokens.length === 0) return { releve: null, tente: true };
     tokens.push(...lu.tokens);
     modele = lu.modele;
+    if (lu.vagues) vagues = lu.vagues;
   }
   return {
     releve: {
@@ -620,6 +631,7 @@ async function releverDesPages(
       paddleTente: true,
       tokensIn: null,
       tokensOut: null,
+      ...(vagues ? { vagues } : {}),
     },
     tente: true,
   };
@@ -649,6 +661,8 @@ export interface Releve {
   paddleTente: boolean;
   tokensIn: number | null;
   tokensOut: number | null;
+  /** Lu par vagues : 1 si la première a suffi à la preuve, 2 sinon (`lireParVagues`). */
+  vagues?: 1 | 2;
 }
 
 export interface ParamsDeReleve {
@@ -664,6 +678,11 @@ export interface ParamsDeReleve {
    * faisait que repayer la désignation.
    */
   sansCoucheTexte?: boolean;
+  /**
+   * La preuve qui dit si la première vague d'une image suffit (`lireParVagues`) : le
+   * moteur déterministe, sur les jetons lus. Absente, l'image est lue d'un seul tenant.
+   */
+  prouvee?: (tokens: PageToken[]) => boolean;
 }
 
 /**
@@ -727,7 +746,7 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
     }
 
     // Le second lecteur passe DEVANT, quand il est là.
-    const parPaddle = await releverDesPages(pages, params.sansPaddle ?? false);
+    const parPaddle = await releverDesPages(pages, params.sansPaddle ?? false, params.prouvee);
     /*
      * LE NOM DU MODELE, SANS LE CHEMIN QUI L'A APPELE.
      *
@@ -768,6 +787,7 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
   const parPaddle = await releverDesPages(
     [{ dataUrl: params.dataUrl, page: 1 }],
     params.sansPaddle ?? false,
+    params.prouvee,
   );
   if (parPaddle.releve) return parPaddle.releve;
 

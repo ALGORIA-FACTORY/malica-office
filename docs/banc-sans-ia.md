@@ -46,6 +46,31 @@ Mêmes 412 pièces, moteur natif (même code que le WebAssembly), OCR avec lectu
 - Le banc se lance avec `--moteur-natif packages/sudoku/target/release/examples/resoudre`
   quand la cible wasm32 ne s'installe pas.
 
+## Bulletin 3 — la pente de la page, et la vitesse sans perte (4 novembre 2026, nuit)
+
+Mêmes 412 pièces, même cache OCR que le bulletin 2 :
+
+|                |     juste |   faux |   silence | inventé |
+| -------------- | --------: | -----: | --------: | ------: |
+| Bulletin 2     |     4 842 |     84 |     6 798 |      16 |
+| **Bulletin 3** | **5 114** | **74** | **6 536** |  **16** |
+
+- Aucun champ n'est passé de juste à faux.
+- MyTek : les cinq articles sont prouvés, avec leurs taux et leurs désignations complètes.
+  Avant, aucun ne l'était, parce que la page est inclinée.
+- Les mécanismes sont dans le dossier d'invention :
+  - I-I : la pente de la page lue sur ses boîtes, et les rangées par recouvrement ;
+  - I-J : un texte non prouvé se tait sous `lecture.confiance_du_texte`.
+
+L'OCR, relancé sans cache :
+
+- **Sonde arabe.** Une page sans arabe ne paie plus la relecture arabe. La médiane passe de
+  5,5 s à 4,5 s par image, et les résultats sont identiques au champ près.
+- **Lecture par vagues** (`--vagues`) :
+  - la médiane passe à 3,4 s (−26 %) ;
+  - mais 243 champs justes deviennent muets, et 4 faux s'ajoutent (voir I-K) ;
+  - elle reste désactivée par défaut.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |
