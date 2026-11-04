@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import pg from "pg";
 import { creerCompte, type Utilisateur } from "./auth.ts";
-import { documents, documentsLies, controlesPiece } from "./bibliotheque.ts";
+import { documents, documentsLies, controlesPiece, moisDuDossier } from "./bibliotheque.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
@@ -90,6 +90,21 @@ describe("bibliothèque comptable sous les rôles réels", { skip: !CONFIGUREE }
       null,
       "ne pas inventer un client avec l'émetteur",
     );
+  });
+
+  it("résume le dossier par mois et par type, sous le même mandat", async () => {
+    const sommaire = await sousIdentite(expert.id, (db) => moisDuDossier(db, cabinet, client));
+    assert.ok(sommaire.plafond > 0);
+    assert.equal(
+      sommaire.mois.reduce((n, m) => n + m.n, 0),
+      3,
+      "les seules pièces transmises",
+    );
+    assert.deepEqual(
+      new Set(sommaire.mois.map((m) => m.type)),
+      new Set(["facture_achat", "justificatif_paiement", "facture_vente"]),
+    );
+    await assert.rejects(sousIdentite(intrus.id, (db) => moisDuDossier(db, cabinet, client)));
   });
 
   it("ferme les liens du dossier et exclut le justificatif privé", async () => {

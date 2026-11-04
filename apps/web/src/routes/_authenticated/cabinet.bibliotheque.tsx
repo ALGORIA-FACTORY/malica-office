@@ -12,6 +12,7 @@ import {
   compter,
   etatDu,
   moisDe,
+  rangerLesMois,
   rangerParMois,
   totalDu,
   typeRange,
@@ -230,9 +231,24 @@ function BibliothequeDuClient({
   const { t, locale } = useI18n();
   const navigate = Route.useNavigate();
   const [recherche, setRecherche] = useState("");
+  /*
+   * Le sommaire d'abord : il dit les mois et les types, et si le dossier se
+   * restitue d'un coup. Au-delà du plafond de l'API, on ne charge que le mois
+   * ouvert (revue de #219 : un grand dossier ne s'ouvrait plus du tout).
+   */
+  const sommaire = useQuery({
+    queryKey: ["cab-bibliotheque-sommaire", cabinetId, client.tenantId],
+    queryFn: () => office().supervision.moisDuDossier(cabinetId, client.tenantId),
+  });
+  const complet = sommaire.data
+    ? sommaire.data.mois.reduce((n, m) => n + m.n, 0) <= sommaire.data.plafond
+    : false;
+  const periode = mois ?? null;
   const documents = useQuery({
-    queryKey: ["cab-bibliotheque", cabinetId, client.tenantId],
-    queryFn: () => office().supervision.documents(cabinetId, client.tenantId, null),
+    queryKey: ["cab-bibliotheque", cabinetId, client.tenantId, complet ? null : periode],
+    queryFn: () =>
+      office().supervision.documents(cabinetId, client.tenantId, complet ? null : periode),
+    enabled: sommaire.isSuccess && (complet || periode !== null),
   });
   const types = useQuery({
     queryKey: ["types-document", locale],
@@ -265,13 +281,17 @@ function BibliothequeDuClient({
     return () => window.removeEventListener("keydown", surEchap);
   }, [navigate, parent?.client, parent?.mois]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (documents.isPending) return <p role="status">{t("common.loading")}</p>;
-  if (documents.isError)
+  const enAttente = sommaire.isPending || (documents.isPending && documents.fetchStatus !== "idle");
+  const echec = sommaire.error ?? documents.error;
+  if (echec)
     return (
       <p role="alert" className="text-signal-stop">
-        {texteDeLErreur(documents.error, "bibliothèque", t("common.error"))}
+        {texteDeLErreur(echec, "bibliothèque", t("common.error"))}
       </p>
     );
+  if (enAttente) return <p role="status">{t("common.loading")}</p>;
+  const typesDuDossier = new Set((sommaire.data?.mois ?? []).map((m) => typeRange(m.type, codes)));
+  const vide = (sommaire.data?.mois.length ?? 0) === 0;
 
   const cherche = recherche.trim().toLocaleLowerCase(locale);
   const trouves = cherche
@@ -344,7 +364,7 @@ function BibliothequeDuClient({
           )}
         </div>
       </div>
-      {tous.length === 0 ? (
+      {vide ? (
         <EmptyState>{t("cab.biblio.empty")}</EmptyState>
       ) : type || cherche ? (
         <ListeDesPieces
@@ -363,10 +383,13 @@ function BibliothequeDuClient({
           mois={mois}
           codes={codes}
           types={types.data ?? []}
+          typesDuDossier={typesDuDossier}
           nomType={nomType}
         />
-      ) : (
+      ) : complet ? (
         <LesMois pieces={tous} cabinetId={cabinetId} client={client} />
+      ) : (
+        <LeSommaire mois={sommaire.data!.mois} client={client} />
       )}
     </section>
   );
@@ -443,7 +466,11 @@ function LesMois({
             mot={t("cab.biblio.compteur.moisSansPiece")}
             ton="warn"
           />
-          <Compteur n={compte.moisPrets} mot={t("cab.biblio.compteur.moisPrets")} ton="ok" />
+          <Compteur
+            n={compte.moisPrets}
+            mot={t("cab.biblio.compteur.moisPrets", { count: compte.moisPrets })}
+            ton="ok"
+          />
         </div>
         <span className="cab-doclib-regles" title={t("cab.biblio.reglesDetail")}>
           {t("cab.biblio.regles")}
@@ -471,6 +498,7 @@ function LeMois({
   mois,
   codes,
   types,
+  typesDuDossier,
   nomType,
 }: {
   pieces: DocumentComptable[];
@@ -479,6 +507,8 @@ function LeMois({
   mois: string;
   codes: ReadonlySet<string>;
   types: Array<{ code: string; libelle: string; transmissible: boolean }>;
+  /** Les types que ce client a déjà transmis, dans n'importe quel mois. */
+  typesDuDossier: ReadonlySet<string>;
   nomType: (code: string) => string;
 }) {
   const { t, locale } = useI18n();
@@ -493,7 +523,9 @@ function LeMois({
     ...types.map((ty) => ty.code).filter((c) => parType.has(c)),
     ...(parType.has(AUTRES) ? [AUTRES] : []),
   ];
-  const absents = types.filter((ty) => ty.transmissible && !parType.has(ty.code));
+  // Absent : un type que CE client transmet d'habitude (vu dans un autre mois),
+  // pas tout le référentiel — vingt étiquettes ne disent rien (recette du 4 novembre).
+  const absents = types.filter((ty) => typesDuDossier.has(ty.code) && !parType.has(ty.code));
   const enAttente = pieces.filter((d) => d.statut && A_TRAITER.has(d.statut));
   if (pieces.length === 0) return <EmptyState>{t("cab.biblio.empty")}</EmptyState>;
   return (
@@ -666,6 +698,72 @@ function ListeDesPieces({
         <span>{t("cab.biblio.count", { n: pieces.length })}</span>
         <span>{t("cab.biblio.linked")}</span>
       </div>
+    </>
+  );
+}
+
+/**
+ * Niveau 1 d'un dossier trop grand pour se restituer d'un coup : les mois et
+ * leurs types, comptés en base ; chaque mois s'ouvre et se charge seul.
+ */
+function LeSommaire({
+  mois,
+  client,
+}: {
+  mois: Array<{ mois: string; type: string | null; n: number }>;
+  client: ClientSummary;
+}) {
+  const { t, locale } = useI18n();
+  const parMois = new Map<string, number>();
+  for (const m of mois) parMois.set(m.mois, (parMois.get(m.mois) ?? 0) + m.n);
+  const cartes: ReactNode[] = [];
+  let lot: ReactNode[] = [];
+  const fermerLeLot = () => {
+    if (lot.length)
+      cartes.push(
+        <ul key={`lot-${cartes.length}`} className="cab-doclib-cartes">
+          {lot}
+        </ul>,
+      );
+    lot = [];
+  };
+  for (const r of rangerLesMois([...parMois.keys()])) {
+    if (r.genre === "trou") {
+      fermerLeLot();
+      cartes.push(
+        <p key={`trou-${r.du}`} className="cab-doclib-trou">
+          <strong>
+            {r.n === 1
+              ? nomDuMois(r.du, locale)
+              : t("cab.biblio.trou", { du: nomDuMois(r.au, locale), au: nomDuMois(r.du, locale) })}
+          </strong>
+          <span> · {t("cab.biblio.aucunePiece")}</span>
+        </p>,
+      );
+      continue;
+    }
+    lot.push(
+      <li key={r.mois} className="cab-doclib-carte">
+        <div className="min-w-0 flex-1">
+          <Link
+            to="/cabinet/bibliotheque"
+            search={{ client: client.tenantId, mois: r.mois }}
+            className="cab-doclib-carte-lien"
+          >
+            {nomDuMois(r.mois, locale)}
+          </Link>
+          <span className="text-[12px] text-muted-foreground">
+            {t("cab.biblio.pieces", { count: parMois.get(r.mois)! })}
+          </span>
+        </div>
+      </li>,
+    );
+  }
+  fermerLeLot();
+  return (
+    <>
+      <p className="text-[13px] text-muted-foreground">{t("cab.biblio.volumineux")}</p>
+      {cartes}
     </>
   );
 }

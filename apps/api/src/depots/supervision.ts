@@ -14,7 +14,7 @@ import type { Requete } from "../db.ts";
 import type { GesteDeRetour } from "@malica/socle/ports/repositories";
 import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
 import { A_TRAITER, type StatutCabinet } from "@malica/socle/statut-d-envoi";
-import { documents, documentsLies, controlesPiece } from "../bibliotheque.ts";
+import { documents, documentsLies, controlesPiece, moisDuDossier } from "../bibliotheque.ts";
 
 import { COLONNES_DU_SUIVI, statutAuCabinet, versSuivi } from "./suivi.ts";
 
@@ -74,6 +74,7 @@ const PRIORITE: Readonly<Record<StatutCabinet, number>> = {
 
 export const supervision = {
   documents,
+  moisDuDossier,
   documentsLies,
   controlesPiece,
   async listMyCabinets(db: Requete) {
