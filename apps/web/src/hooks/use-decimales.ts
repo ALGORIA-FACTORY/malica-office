@@ -32,15 +32,23 @@ import { montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 
 /** Les décimales du pack du dossier, ou `null` tant qu'on ne les a pas. */
-export function useDecimales(): number | null {
+function useParamsDuPack() {
   const pme = usePme();
-  const params = useQuery({
+  return useQuery({
     queryKey: ["socle-params", pme.packId],
     queryFn: () => office().referential.socleParams(pme.packId!),
     enabled: !!pme.packId,
     staleTime: 60 * 60 * 1000,
   });
-  return params.data?.moneyDecimals ?? null;
+}
+
+export function useDecimales(): number | null {
+  return useParamsDuPack().data?.moneyDecimals ?? null;
+}
+
+/** Vrai si les paramètres du pack n'ont pas pu être lus (revue de #222). */
+export function useDecimalesEnEchec(): boolean {
+  return useParamsDuPack().isError;
 }
 
 /**

@@ -58,6 +58,23 @@ export function useDeclarationsTva(
   );
 }
 
+/**
+ * Vrai si l'une de ces lectures a échoué après ses reprises : l'accueil sort
+ * alors de son attente neutre au lieu d'attendre une donnée qui ne viendra pas
+ * (revue de #222). Mêmes clés que `useDeclarationsTva` : aucune requête de plus.
+ */
+export function useDeclarationsTvaEnEchec(
+  packId: string | null | undefined,
+  dossierId: string | null | undefined,
+  jours: readonly string[],
+): boolean {
+  const { locale } = useI18n();
+  return useQueries({
+    queries: jours.map((jour) => lecture(packId, dossierId, jour, locale)),
+    combine: (lectures) => lectures.some((l) => l.isError),
+  });
+}
+
 /** Une référence stable : TanStack ne recombine que si une lecture change. */
 function toutesLues(lectures: UseQueryResult<DeclarationTva>[]) {
   return lectures.every((l) => l.data) ? lectures.map((l) => l.data!) : null;
