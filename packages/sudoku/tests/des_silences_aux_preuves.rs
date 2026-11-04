@@ -53,3 +53,17 @@ fn une_valeur_de_trop_dans_la_hauteur_ne_rompt_pas_l_appariement() {
 fn une_charge_s_annonce_par_son_taux_imprime_sans_mot() {
     prouvee_juste("algoria-054");
 }
+
+#[test]
+fn une_mention_d_exoneration_en_plusieurs_jetons_s_annonce() {
+    prouvee_juste("algoria-055");
+    let (sorties, _) = jouer("algoria-055");
+    let o = sorties.iter().find(|o| o["issue"] == "prouvee").expect("prouvée");
+    let base = &o["champs"]["base_tva_par_taux"]["instances"][0];
+    assert_eq!((base["taux"].as_str(), base["valeur"].as_str()), (Some("EXO"), Some("2184765")));
+}
+
+#[test]
+fn une_solution_qui_partage_un_jeton_n_est_pas_une_seconde_lecture() {
+    prouvee_juste("algoria-036");
+}

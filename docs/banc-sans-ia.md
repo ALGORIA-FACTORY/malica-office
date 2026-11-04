@@ -125,14 +125,14 @@ Chaque faux a eu sa cause exacte et sa correction générale :
   base. Une seule pièce change : 50/12, de faux à juste.
 - Les régressions sont fixées dans `packages/sudoku/tests/zero_faux_du_banc.rs`.
 
-## Bulletin 5 — des silences aux preuves, sans nouveau faux (5 novembre 2026)
+## Bulletin 5 — des silences aux preuves, sans nouveau faux (4 novembre 2026, aube)
 
 Mêmes 412 pièces, même cache OCR, toujours **0 faux et 0 inventé** :
 
 |                |     juste |  faux |   silence | inventé | signalé (non affirmé) |
 | -------------- | --------: | ----: | --------: | ------: | --------------------: |
 | Bulletin 4     |     4 757 |     0 |     6 629 |       0 |                   338 |
-| **Bulletin 5** | **4 821** | **0** | **6 609** |   **0** |               **294** |
+| **Bulletin 5** | **5 029** | **0** | **6 450** |   **0** |               **245** |
 
 Le diagnostic d'abord : sur les 85 factures non prouvées sans raison dite, 47 portaient
 tous leurs totaux lus. Ce n'était pas l'OCR, c'était l'appariement des libellés. Trois
@@ -151,6 +151,21 @@ mécanismes généraux :
   Pièces prouvées : a054, a057, s042, s062.
 - **Un point collé après des décimales complètes** (« 534,443. ») laisse une lecture
   faible ; l'arithmétique la retient ou non. « 8, » reste illisible. Pièce prouvée : a018.
+
+- **Le dictionnaire des concepts complété, en base** : le HT arabe « المبلغ الصافي دون اعتبار
+  الأداءات » et « المجموع دون اعتبار الأداءات » (a053, a063, a096, a099, s041, s053), la
+  mention d'exonération arabe « معفاة من الأداء » et « معفى من الأداء ». Une mention en
+  plusieurs jetons s'annonce désormais (un mot par jeton en arabe).
+- **L'exonération totale nomme sa part exonérée** (`taux_exonere`, EXO, INCERTAIN comme
+  pour la partielle) : la ventilation rend « 0 % : tout le HT », que la vérité attend.
+- **Le partage d'un jeton se juge sur chaque solution, avant l'unicité.** Une seconde
+  solution qui lisait un champ requis sur le jeton d'un autre (le TTC sur le seul
+  « 1,000 » du timbre, le HT sur « 0,000 ») n'est pas une seconde lecture. Lue forte, une
+  valeur ne compte que ses occurrences fortes. Nettoyée, la solution doit encore tenir.
+  Huit factures ambiguës sont levées (a036, a046, a055, a065, a066, a073…), lignes
+  comprises.
+- **Retirer la preuve arithmétique ne retire que ses champs** : les matricules établis
+  par l'identité (anneau 2) restent prouvés, quelle que soit la variante.
 
 Mesuré, puis écarté : relancer la recherche sans la restriction aux valeurs ancrées
 quand elle ne trouve rien. Sur le jeu des 100 factures, la variante « TTC avec timbre »

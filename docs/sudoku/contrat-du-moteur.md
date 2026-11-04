@@ -121,10 +121,11 @@ Deux clés facultatives de `groupe_taux`, ajoutées à l'exécution :
   fictives, couche de texte et OCR rapide, 0 fausse preuve. Banc adverse (mention
   « Exonéré » injectée sur toutes, puis un chiffre de montant changé : 9 381 et
   9 474 lectures) : aucune fausse preuve par l'exonération partielle.
-- `taux_exonere` (code, avec `exoneration_partielle` seulement ; 4 novembre 2026,
-  `20261127130000`) : le taux nul du barème (`pack.taux_nuls`, jamais dans
+- `taux_exonere` (code, avec `exoneration` ; 4 novembre 2026, `20261127130000` et
+  `20261127150000`) : le taux nul du barème (`pack.taux_nuls`, jamais dans
   `pack.baremes`) qui **nomme** la part exonérée. Elle devient une instance de la
-  ventilation : base = `total_base` − Σ bases imprimées, montant nul ; l'anneau 1 la
+  ventilation : base = `total_base` − Σ bases imprimées (tout le `total_base` sous une
+  exonération totale), montant nul ; sous une exonération partielle, l'anneau 1 la
   vérifie par la somme des lignes sans taux. Un code absent des taux nuls du pack est
   une grille invalide. Sans `taux_exonere`, la ventilation d'une exonération partielle
   est incomplète : elle est `signale`, jamais affirmée. Mesure : algoria-102 (deux

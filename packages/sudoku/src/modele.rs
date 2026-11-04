@@ -66,9 +66,9 @@ pub struct Groupe {
     /// n'est prouvée que si les lignes la confirment (`lib.rs`, après l'anneau 1).
     pub exoneration_partielle: bool,
     /// Le code du taux nul (`taux_exonere`, l'un des `taux_nuls` du barème) qui nomme la part
-    /// exonérée d'une exonération partielle : elle est une instance de la ventilation par
-    /// taux, base = total − Σ bases imprimées, montant nul. Sans lui, la ventilation d'une
-    /// exonération partielle est incomplète : elle n'est pas affirmée.
+    /// exonérée : elle est une instance de la ventilation par taux, base = total − Σ bases
+    /// imprimées (le total entier sous une exonération totale), montant nul. Sans lui, la
+    /// ventilation d'une exonération partielle est incomplète : elle n'est pas affirmée.
     pub taux_exonere: Option<String>,
     pub instances_max: usize,
 }
@@ -235,8 +235,8 @@ pub fn construire(entree: &Entree) -> Modele {
                 None => None,
                 Some(v) => {
                     let code = v.as_str().ok_or("clé « taux_exonere » : code de taux attendu")?;
-                    if !exoneration_partielle {
-                        return Err("« taux_exonere » sans « exoneration_partielle »".into());
+                    if exoneration.is_none() {
+                        return Err("« taux_exonere » sans « exoneration » (la mention)".into());
                     }
                     if !entree.pack.taux_nuls.get(&bareme).is_some_and(|t| t.iter().any(|c| c == code)) {
                         return Err(format!("taux « {code} » absent des taux nuls du barème « {bareme} »"));

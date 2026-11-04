@@ -188,6 +188,14 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     let dom = Domaine::new(&entree.jetons);
     let mut modele: Modele = modele::construire(entree);
     let reperes: Vec<Vec<String>> = grille.champs.iter().map(reperes_de).collect();
+    // Les champs de la preuve arithmétique : ceux que son retrait fait passer à signalés.
+    let numeriques: BTreeSet<String> = modele
+        .vars
+        .iter()
+        .map(|v| v.champ)
+        .chain(modele.groupes.iter().flat_map(|g| [g.champ_base, g.champ_montant]))
+        .map(|c| grille.champs[c].code.clone())
+        .collect();
 
     // Présence des champs facultatifs, décidée avant la recherche.
     let fixes: BTreeMap<usize, i64> = modele
@@ -298,12 +306,19 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     // à payer sans timbre n'est pas imprimé à part du TTC —, puis les contraintes se
     // réévaluent : une preuve qui ne tenait que par ce partage tombe. Un champ OBLIGATOIRE
     // en surnombre invalide la solution : elle lisait un champ requis là où il n'est pas.
-    let mut partage_requis = false;
-    let lu: Option<Etat> = (retenues.len() == 1).then(|| {
-        let mut e = retenues[0].etat.clone();
+    // Ce partage se juge sur CHAQUE solution retenue, avant l'unicité : une solution qui lit
+    // un champ requis sur le jeton d'un autre (le HT à 0 sur « 0 % », le TTC sur le seul
+    // « 1,000 » du timbre, algoria-055) n'est pas une seconde lecture de la pièce.
+    let sans_partage = |etat: &Etat| -> (Etat, bool) {
+        let mut e = etat.clone();
+        let mut requis = false;
         let mut par_valeur: BTreeMap<i64, Vec<(bool, bool, usize)>> = BTreeMap::new();
+        let mut faibles: BTreeSet<i64> = BTreeSet::new();
         for (i, x) in e.s.iter().enumerate() {
             if let Some(x) = x.filter(|x| !x.absent) {
+                if x.faible {
+                    faibles.insert(x.v);
+                }
                 let champ = modele.vars[i].champ;
                 let ancree = dom.valeurs.get(&x.v).is_some_and(|val| {
                     val.occurrences.iter().any(|o| plan.ancre(o.jeton, &reperes[champ], None, false))
@@ -312,22 +327,35 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             }
         }
         for (v, mut vars) in par_valeur {
-            let jetons: BTreeSet<usize> =
-                dom.valeurs.get(&v).map(|val| val.occurrences.iter().map(|o| o.jeton).collect()).unwrap_or_default();
+            // lue forte, une valeur ne compte que ses occurrences fortes : le « 1 » d'une
+            // adresse n'est pas un second « 1,000 »
+            let jetons: BTreeSet<usize> = dom
+                .valeurs
+                .get(&v)
+                .map(|val| val.occurrences.iter().filter(|o| o.forte || faibles.contains(&v)).map(|o| o.jeton).collect())
+                .unwrap_or_default();
             if vars.len() <= jetons.len() {
                 continue;
             }
             vars.sort();
             for &(_, _, i) in &vars[jetons.len()..] {
-                partage_requis |= !modele.vars[i].facultatif;
+                requis |= !modele.vars[i].facultatif;
                 e.s[i] = Some(numerique::Val { v: 0, absent: true, faible: false });
             }
         }
-        e
-    });
-    let lu = lu.filter(|_| !partage_requis);
-    let unique: Option<&Etat> = lu.as_ref();
-    let mut issue = match retenues.len() {
+        (e, requis)
+    };
+    // Nettoyée, la solution doit encore tenir : une contrainte qui échoue sans le champ
+    // retiré (le TTC qui ne tenait que par le « 1,000 » du timbre) la disqualifie.
+    let lues: Vec<Etat> = retenues
+        .iter()
+        .map(|r| sans_partage(&r.etat))
+        .filter(|(e, requis)| !requis && modele.contraintes.iter().all(|cp| s.evaluer(e, &cp.c) != Eval::Echec))
+        .map(|(e, _)| e)
+        .collect();
+    let partage_requis = !retenues.is_empty() && lues.is_empty();
+    let unique: Option<&Etat> = if lues.len() == 1 { lues.first() } else { None };
+    let mut issue = match lues.len() {
         0 => "aucune",
         1 => "prouvee",
         _ => "ambigue",
@@ -421,15 +449,26 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 Some(e) if prouvee => {
                     let sol = e.g[g].as_ref().expect("groupe résolu");
                     if sol.exoneration {
-                        if est_base {
-                            absent()
-                        } else {
-                            ChampSortie {
+                        // Exonération totale : la part exonérée est tout le total des bases,
+                        // nommée par le taux nul de la grille quand elle en désigne un.
+                        let total = gr.total_base.and_then(|t| e.s[t].filter(|v| !v.absent)).map(|v| v.v);
+                        match (&gr.taux_exonere, total) {
+                            (Some(code), Some(t)) => {
+                                let v = if est_base { t } else { 0 };
+                                ChampSortie {
+                                    valeur: None,
+                                    refs: Vec::new(),
+                                    statut: "prouve".into(),
+                                    instances: Some(vec![InstanceSortie { taux: code.clone(), valeur: Some(v.to_string()), refs: cite(v, champ) }]),
+                                }
+                            }
+                            _ if est_base => absent(),
+                            _ => ChampSortie {
                                 valeur: Some("0".into()),
                                 refs: cite(0, champ),
                                 statut: "prouve".into(),
                                 instances: Some(Vec::new()),
-                            }
+                            },
                         }
                     } else {
                         // L'assiette PROUVÉE : la base d'un taux est la somme de tout ce que le
@@ -702,7 +741,7 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         }
         if let Some(r) = refus {
             ht_par_la_base = false;
-            retirer_la_preuve(&mut prouvee, &mut issue, &mut raison, &mut champs, r);
+            retirer_la_preuve(&mut prouvee, &mut issue, &mut raison, &mut champs, &numeriques, r);
             for (cp, ev) in modele.contraintes.iter().zip(&evals) {
                 if *ev == Eval::Ok {
                     preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
@@ -751,7 +790,7 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             })
     });
     if ht_par_la_base && prouvee && !lettres_verifient {
-        retirer_la_preuve(&mut prouvee, &mut issue, &mut raison, &mut champs, "le total HT ne porte pas son libellé");
+        retirer_la_preuve(&mut prouvee, &mut issue, &mut raison, &mut champs, &numeriques, "le total HT ne porte pas son libellé");
         for (cp, ev) in modele.contraintes.iter().zip(&evals) {
             if *ev == Eval::Ok {
                 preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
@@ -805,18 +844,22 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
 }
 
 /// Une preuve retirée : la pièce rendue à la chaîne, ses valeurs gardées au statut signalé.
+/// La preuve arithmétique retirée : ses champs (`numeriques`) passent de prouvés à signalés.
+/// Ceux que l'anneau 2 a établis par l'identité (les matricules des parties) ne dépendent
+/// pas d'elle et restent : sinon l'en-tête changerait avec la variante de la grille.
 fn retirer_la_preuve(
     prouvee: &mut bool,
     issue: &mut String,
     raison: &mut Option<String>,
     champs: &mut BTreeMap<String, ChampSortie>,
+    numeriques: &BTreeSet<String>,
     r: &str,
 ) {
     *prouvee = false;
     *issue = "aucune".into();
     *raison = Some(r.into());
-    for c in champs.values_mut() {
-        if c.statut == "prouve" {
+    for (code, c) in champs.iter_mut() {
+        if c.statut == "prouve" && numeriques.contains(code) {
             c.statut = "signale".into();
         }
     }

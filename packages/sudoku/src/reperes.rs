@@ -234,9 +234,20 @@ impl<'a> Plan<'a> {
         suite_lue(gauche) || suite_lue(droite)
     }
 
-    /// Un repère est-il lu quelque part sur la pièce ?
+    /// Un repère est-il lu quelque part sur la pièce ? Sur un jeton, ou sur une suite d'au
+    /// plus `MOTS_D_UN_LIBELLE` jetons consécutifs de la même page : l'OCR rend un mot par
+    /// jeton (« معفاة | من | الأداء », la mention d'exonération d'une facture arabe).
     pub fn annonce(&self, reperes: &[String]) -> bool {
-        !reperes.is_empty() && self.normes.iter().any(|t| reperes.iter().any(|r| t.contains(r.as_str())))
+        !reperes.is_empty()
+            && (0..self.normes.len()).any(|i| {
+                let mut suite = String::new();
+                (i..self.normes.len().min(i + MOTS_D_UN_LIBELLE))
+                    .take_while(|&k| self.jetons[k].page == self.jetons[i].page)
+                    .any(|k| {
+                        suite.push_str(&self.normes[k]);
+                        reperes.iter().any(|r| suite.contains(r.as_str()))
+                    })
+            })
     }
 
     /// Le jeton `i` est-il ancré par l'un des repères ? `avant` : le texte brut du
