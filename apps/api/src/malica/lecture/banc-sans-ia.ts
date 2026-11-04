@@ -340,7 +340,12 @@ function mesurerLesRangees(
     cellule("taux", v.taux_tva_ligne, t, t !== null && Number(t) === Number(v.taux_tva_ligne));
     const d = l?.designation?.valeur ?? null;
     // L'espace qu'un OCR perd ou ajoute n'est pas un mot : la désignation se compare sans lui.
-    const sansEspace = (x: unknown) => texteNormal(x).replace(/ /gu, "");
+    // Ni l'accent qu'il perd (« boite » pour « boîte ») : la lettre reste la même.
+    const sansEspace = (x: unknown) =>
+      texteNormal(x)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/gu, "")
+        .replace(/ /gu, "");
     cellule(
       "designation",
       v.designation,

@@ -23,6 +23,7 @@
 //! Non bloquant : cette preuve lit la sortie du centre et ne la modifie jamais.
 //! Aucune constante réglementaire : le barème vient du pack (R4).
 
+mod colonnes;
 mod milieu;
 
 use crate::entree::{Entree, Grille, Jeton};
@@ -114,6 +115,8 @@ pub struct LignesSortie {
 
 /// L'op lue dans la grille.
 pub struct OpLignes {
+    /// Le champ de la désignation.
+    pub designation: String,
     pub montant_total: String,
     pub total_brut: Option<String>,
     /// Le champ de la remise de ligne, s'il est déclaré (ses repères disent un tableau à remise).
@@ -155,7 +158,8 @@ pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpLignes, String> {
             g => Err(format!("champ « {nom} » de type {g}, non numérique")),
         }
     };
-    genre(&exige("designation")?)?;
+    let designation = exige("designation")?;
+    genre(&designation)?;
     let colonnes = [exige("quantite")?, exige("prix")?, exige("montant")?];
     for c in &colonnes {
         numerique(c)?;
@@ -210,6 +214,7 @@ pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpLignes, String> {
         .filter_map(|k| cle(e, k))
         .collect();
     Ok(OpLignes {
+        designation,
         montant_total: total,
         total_brut,
         remise,
@@ -451,9 +456,14 @@ impl Contexte<'_> {
 
     /// La désignation : les jetons donnés, joints, cités.
     fn designation(&self, jetons: &[usize]) -> Cite {
+        // une désignation écrite de droite à gauche se lit depuis sa droite
+        let mut ordre = jetons.to_vec();
+        if ordre.iter().any(|&k| crate::reperes::droite_a_gauche(&self.jetons[k].texte)) {
+            ordre.reverse();
+        }
         Cite::lue(
-            jetons.iter().map(|&k| self.jetons[k].texte.trim()).collect::<Vec<_>>().join(" "),
-            jetons.iter().map(|&k| self.cite(k)).collect(),
+            ordre.iter().map(|&k| self.jetons[k].texte.trim()).collect::<Vec<_>>().join(" "),
+            ordre.iter().map(|&k| self.cite(k)).collect(),
         )
     }
 
@@ -568,6 +578,7 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
         }
     };
     let milieu::Lu { mut instances, deduites, remise_globale } = lu;
+    colonnes::affiner(&mut instances, &entree.jetons, &rangs, &entree.grille, &op.designation);
     let taux_par_base = verifier_taux(op, champs, &mut instances);
     let sortie = LignesSortie {
         statut: "prouve".into(),
