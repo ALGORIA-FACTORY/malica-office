@@ -1,6 +1,5 @@
 /**
- * Les adresses de la tour (2 novembre 2026) : l'ancienne adresse du cabinet
- * mène à la tour, la tour s'ouvre sur ses cabinets, une section inconnue ne
+ * Les adresses de la tour (2 novembre 2026) : la tour s'ouvre sur ses cabinets, une section inconnue ne
  * rend jamais une page vide — et le menu porte, dans l'ordre, ce que la
  * maquette nomme. Le dictionnaire dit chaque libellé de la tour en fr, en, ar.
  */
@@ -17,7 +16,6 @@ import { fr } from "@malica/socle/messages-fr";
 vi.mock("@/verticals/malica-office/composition", () => ({ office: () => ({}) }));
 
 import { entreeActive, MENU, SECTIONS } from "../components/malica/tour/sections";
-import { Route as AncienneTour } from "../routes/_authenticated/cabinet.tour";
 import { Route as Section } from "../routes/_authenticated/tour.$section";
 import { Route as Accueil } from "../routes/_authenticated/tour.index";
 
@@ -37,8 +35,9 @@ function cible(f: AvantChargement, params?: Record<string, string>): string | nu
 }
 
 describe("les adresses de la tour", () => {
-  it("/cabinet/tour mène à /tour", () => {
-    expect(cible(avant(AncienneTour))).toBe("/tour");
+  it("l'ancienne adresse /cabinet/tour n'existe plus (4 novembre 2026)", () => {
+    const routes = readdirSync(join(__dirname, "../routes/_authenticated"));
+    expect(routes.filter((f) => f.startsWith("cabinet.tour"))).toEqual([]);
   });
 
   it("/tour s'ouvre sur les cabinets", () => {
