@@ -75,7 +75,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
         unDocument("f", "facture_achat", "F-1"),
         unDocument("a", "avoir", "AV-1"),
         unDocument("x", null, "X-1"),
-        unDocument("m", "facture_achat", "M-1", "2025-10-02"),
+        unDocument("m", "facture_vente", "M-1", "2025-10-02"),
       ],
     },
     referential: {
@@ -83,6 +83,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
         { code: "facture_achat", libelle: "Facture d'achat", transmissible: true },
         { code: "avoir", libelle: "Avoir", transmissible: true },
         { code: "facture_vente", libelle: "Facture de vente", transmissible: true },
+        { code: "releve", libelle: "Relevé bancaire", transmissible: true },
       ],
     },
   }),
@@ -118,10 +119,10 @@ describe("bibliothèque du cabinet", () => {
     await screen.findByText("Avoir");
     // Un avoir n'est plus rangé dans « autres » faute d'un code écrit à la main.
     expect(titres()).toEqual(["Facture d'achat", "Avoir", "cab.biblio.autres"]);
-    // Le type du référentiel absent ce mois-ci est dit, pas dessiné en carte.
+    // Absent : un type que ce client transmet d'habitude, pas tout le référentiel.
     expect(
-      within(document.querySelector(".cab-doclib-absents")!).getByText("Facture de vente"),
-    ).toBeTruthy();
+      [...document.querySelectorAll(".cab-doclib-etiquette")].map((e) => e.textContent),
+    ).toEqual(["Facture de vente"]);
   });
 
   it("dans un type, liste ses pièces et rien d'autre", async () => {

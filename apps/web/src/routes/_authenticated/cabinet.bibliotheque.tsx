@@ -363,6 +363,7 @@ function BibliothequeDuClient({
           mois={mois}
           codes={codes}
           types={types.data ?? []}
+          typesDuDossier={new Set(tous.map((d) => typeRange(d.type, codes)))}
           nomType={nomType}
         />
       ) : (
@@ -437,13 +438,21 @@ function LesMois({
     <>
       <div className="cab-doclib-controle" role="group" aria-label={t("cab.biblio.regles")}>
         <div className="flex flex-wrap">
-          <Compteur n={compte.aValider} mot={t("cab.biblio.compteur.aValider")} ton="warn" />
           <Compteur
-            n={compte.moisSansPiece}
-            mot={t("cab.biblio.compteur.moisSansPiece")}
+            n={compte.aValider}
+            mot={t("cab.biblio.compteur.aValider", { count: compte.aValider })}
             ton="warn"
           />
-          <Compteur n={compte.moisPrets} mot={t("cab.biblio.compteur.moisPrets")} ton="ok" />
+          <Compteur
+            n={compte.moisSansPiece}
+            mot={t("cab.biblio.compteur.moisSansPiece", { count: compte.moisSansPiece })}
+            ton="warn"
+          />
+          <Compteur
+            n={compte.moisPrets}
+            mot={t("cab.biblio.compteur.moisPrets", { count: compte.moisPrets })}
+            ton="ok"
+          />
         </div>
         <span className="cab-doclib-regles" title={t("cab.biblio.reglesDetail")}>
           {t("cab.biblio.regles")}
@@ -471,6 +480,7 @@ function LeMois({
   mois,
   codes,
   types,
+  typesDuDossier,
   nomType,
 }: {
   pieces: DocumentComptable[];
@@ -479,6 +489,8 @@ function LeMois({
   mois: string;
   codes: ReadonlySet<string>;
   types: Array<{ code: string; libelle: string; transmissible: boolean }>;
+  /** Les types que ce client a déjà transmis, dans n'importe quel mois. */
+  typesDuDossier: ReadonlySet<string>;
   nomType: (code: string) => string;
 }) {
   const { t, locale } = useI18n();
@@ -493,7 +505,9 @@ function LeMois({
     ...types.map((ty) => ty.code).filter((c) => parType.has(c)),
     ...(parType.has(AUTRES) ? [AUTRES] : []),
   ];
-  const absents = types.filter((ty) => ty.transmissible && !parType.has(ty.code));
+  // Absent : un type que CE client transmet d'habitude (vu dans un autre mois),
+  // pas tout le référentiel — vingt étiquettes ne disent rien (recette du 4 novembre).
+  const absents = types.filter((ty) => typesDuDossier.has(ty.code) && !parType.has(ty.code));
   const enAttente = pieces.filter((d) => d.statut && A_TRAITER.has(d.statut));
   if (pieces.length === 0) return <EmptyState>{t("cab.biblio.empty")}</EmptyState>;
   return (
