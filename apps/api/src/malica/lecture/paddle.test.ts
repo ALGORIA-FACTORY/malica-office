@@ -16,7 +16,6 @@ import { PanneFournisseur, qualifierEchec } from "../../fabrique/travaux-executi
 import {
   SecondLecteurOccupe,
   lireAvecPaddle,
-  lireParVagues,
   moteurDuSecondLecteur,
   secondLecteurDisponible,
 } from "./paddle.ts";
@@ -24,14 +23,24 @@ import {
 const vraiFetch = globalThis.fetch;
 const ancienneUrl = process.env["OCR_URL"];
 
-/** Un service qui répond ce qu'on lui dit, sans réseau. */
-function serviceQuiRend(corps: unknown, ok = true, status = ok ? 200 : 500) {
+/**
+ * Un service qui répond ce qu'on lui dit, sans réseau : `/lire` en deux temps
+ * (une ligne JSON chacun), `corps` étant la lecture complète ; `/sante` en JSON.
+ */
+function serviceQuiRend(corps: object, ok = true, status = ok ? 200 : 500) {
+  globalThis.fetch = (async (url: string) =>
+    new Response(
+      String(url).endsWith("/lire")
+        ? `${JSON.stringify({ vague: 1, lignes: [] })}\n${JSON.stringify({ vague: 2, ...corps })}\n`
+        : JSON.stringify(corps),
+      { status },
+    )) as typeof fetch;
+}
+
+/** Un service qui rend ces lignes JSON, telles quelles. */
+function serviceQuiDit(...lignes: object[]) {
   globalThis.fetch = (async () =>
-    ({
-      ok,
-      status,
-      json: async () => corps,
-    }) as unknown as Response) as typeof fetch;
+    new Response(lignes.map((l) => JSON.stringify(l)).join("\n") + "\n")) as typeof fetch;
 }
 
 afterEach(() => {
@@ -215,66 +224,40 @@ describe("le second lecteur", () => {
     assert.equal(await lireAvecPaddle(new Uint8Array([1]), 1), null);
   });
 
-  it("un service OCCUPÉ (503) est une panne d'un instant, nommée à part", async () => {
+  it("un service OCCUPÉ est une panne d'un instant, nommée à part", async () => {
     process.env["OCR_URL"] = "http://ocr:8000";
-    serviceQuiRend({}, false, 503);
+    serviceQuiDit({ occupe: true });
     const echec = await lireAvecPaddle(new Uint8Array([1]), 1).catch((e: unknown) => e);
     assert.ok(echec instanceof SecondLecteurOccupe);
     // Sans autre lecteur, la file durable doit pouvoir la rejouer.
     assert.ok(echec instanceof PanneFournisseur);
   });
 
-  it("par vagues : la seconde n'est lue que si la première ne se prouve pas", async () => {
+  it("le tableau arrive d'abord ; la lecture rendue est la complète", async () => {
     process.env["OCR_URL"] = "http://ocr:8000";
-    const appels: string[] = [];
-    const reponses: Record<string, unknown> = {
-      "/lire?vague=1": {
-        lignes: [
-          { texte: "TOTAL TTC", boite: [0.5, 0.8, 0.7, 0.82], confiance: 0.99 },
-          { texte: "1 2,000", boite: [0.1, 0.4, 0.9, 0.42], confiance: 0.99 },
-        ],
-        reste: [
-          {
-            polygone: [
-              [0, 0.9],
-              [1, 0.9],
-              [1, 0.95],
-              [0, 0.95],
-            ],
-          },
-        ],
-        modele: "PP-OCRv5",
-      },
-      "/relire": {
-        lignes: [{ texte: "Conditions", boite: [0.1, 0.9, 0.4, 0.95], confiance: 0.98 }],
-      },
-    };
-    globalThis.fetch = (async (url: string, init: RequestInit) => {
-      const chemin = new URL(url).pathname + new URL(url).search;
-      appels.push(chemin);
-      if (chemin === "/relire") {
-        const corps = JSON.parse(String(init.body)) as { image: string; polygones: unknown[] };
-        assert.equal(corps.polygones.length, 1);
-        assert.equal(Buffer.from(corps.image, "base64")[0], 7);
-      }
-      return { ok: true, status: 200, json: async () => reponses[chemin] } as unknown as Response;
-    }) as typeof fetch;
-
-    // prouvée dès la première : une seule vague, les lignes dans l'ordre de la page
-    const une = await lireParVagues(new Uint8Array([7]), 1, () => true);
-    assert.equal(une?.vagues, 1);
-    assert.deepEqual(appels, ["/lire?vague=1"]);
-    assert.equal(une?.tokens[0]?.text, "1");
-
-    // non prouvée : la seconde vague relit le reste, fusionné à sa place
-    appels.length = 0;
-    const deux = await lireParVagues(new Uint8Array([7]), 1, () => false);
-    assert.equal(deux?.vagues, 2);
-    assert.deepEqual(appels, ["/lire?vague=1", "/relire"]);
-    assert.equal(deux?.tokens.at(-1)?.text, "Conditions");
-    assert.deepEqual(
-      deux?.tokens.map((t) => t.ordinal),
-      deux?.tokens.map((_, i) => i),
+    const ligne = (texte: string, y: number) => ({
+      texte,
+      boite: [0.1, y, 0.5, y + 0.02],
+      confiance: 0.99,
+    });
+    serviceQuiDit(
+      { vague: 1, lignes: [ligne("TOTAL 1,000", 0.5)] },
+      { vague: 2, lignes: [ligne("TOTAL 1,000", 0.5), ligne("Conditions", 0.9)], modele: "m" },
     );
+    const tableaux: string[][] = [];
+    const r = await lireAvecPaddle(new Uint8Array([1]), 1, undefined, (t) =>
+      tableaux.push(t.map((j) => j.text)),
+    );
+    assert.deepEqual(tableaux, [["TOTAL", "1,000"]]);
+    assert.deepEqual(
+      r?.tokens.map((j) => j.text),
+      ["TOTAL", "1,000", "Conditions"],
+    );
+  });
+
+  it("un flux coupé avant la lecture complète est une panne, pas une lecture", async () => {
+    process.env["OCR_URL"] = "http://ocr:8000";
+    serviceQuiDit({ vague: 1, lignes: [{ texte: "TOTAL", boite: [0, 0, 1, 1], confiance: 1 }] });
+    await assert.rejects(() => lireAvecPaddle(new Uint8Array([1]), 1), PanneFournisseur);
   });
 });

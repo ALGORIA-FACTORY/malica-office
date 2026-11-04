@@ -53,8 +53,6 @@ export interface ReleveDuSecondLecteur {
   tokens: PageToken[];
   modele: string;
   millisecondes: number;
-  /** Lu par vagues (`lireParVagues`) : 1 si la première a suffi, 2 sinon. */
-  vagues?: 1 | 2;
 }
 
 /** Le délai au-delà duquel on renonce : un rattrapage qui s'éternise n'en est plus un. */
@@ -120,8 +118,8 @@ export function refermerLeCoupeCircuit(): void {
  * déployé, et il reste nominal.
  */
 /**
- * Le service répond 503 quand il lit déjà une pièce et que l'attente dépasse
- * `OCR_ATTENTE_MAX_S` (`infra/ocr/service.py`). Il est VIVANT : seule CETTE
+ * Le service dit `{"occupe": true}` quand il lit déjà une pièce et que l'attente
+ * dépasse `OCR_ATTENTE_MAX_S` (`infra/ocr/service.py`). Il est VIVANT : seule CETTE
  * pièce bascule sur l'autre lecteur ; le coupe-circuit, lui, reste fermé —
  * sinon une rafale de captures enverrait toutes les suivantes, pendant une
  * minute, sur le modèle payant. Sans autre lecteur, c'est une panne comme une
@@ -129,7 +127,7 @@ export function refermerLeCoupeCircuit(): void {
  */
 export class SecondLecteurOccupe extends PanneFournisseur {
   constructor() {
-    super("second lecteur occupé : 503");
+    super("second lecteur occupé");
   }
 }
 
@@ -157,140 +155,96 @@ export async function moteurDuSecondLecteur(): Promise<string> {
   }
 }
 
-/** Un appel au service : sa réponse, ou la panne que la file durable sait rejouer. */
-async function appeler(
-  base: string,
-  chemin: string,
-  corps: { type: string; octets: Uint8Array | string },
-  signal?: AbortSignal,
-): Promise<Record<string, unknown>> {
-  const minuteur = AbortSignal.timeout(DELAI_MS);
-  const arret = signal ? AbortSignal.any([signal, minuteur]) : minuteur;
-  let reponse: Response;
-  try {
-    reponse = await fetch(`${base.replace(/\/+$/, "")}${chemin}`, {
-      method: "POST",
-      headers: { "Content-Type": corps.type },
-      // Les octets bruts : `fetch` accepte un tableau typé tel quel.
-      body: corps.octets,
-      signal: arret,
-    });
-  } catch (e) {
-    // Service éteint, réseau coupé, délai dépassé — et `OCR_URL` est bien
-    // posée : quelqu'un a déployé ce lecteur et il ne répond pas.
-    throw new PanneFournisseur(
-      `second lecteur injoignable : ${e instanceof Error ? e.message : String(e)}`,
-    );
-  }
-  if (reponse.status === 503) throw new SecondLecteurOccupe();
-  if (!reponse.ok) {
-    throw new PanneFournisseur(`second lecteur : ${String(reponse.status)}`);
-  }
-  return (await reponse.json()) as Record<string, unknown>;
-}
-
+/**
+ * ============================================ DEUX TEMPS, UNE SEULE LECTURE
+ *
+ * Le service rend chaque page en deux temps, une ligne JSON chacun : le TABLEAU
+ * d'abord (ses rangées et les boîtes courtes, lus en premier), puis la page
+ * entière — la lecture complète, celle qui est rendue. `surLeTableau` reçoit les
+ * jetons du premier temps dès qu'ils arrivent : de quoi prouver les totaux et
+ * les articles pendant que le reste de la page se lit. Rien n'est sauté : le
+ * second temps reste la seule lecture qui compte.
+ */
 export async function lireAvecPaddle(
   image: Uint8Array,
   page: number,
   signal?: AbortSignal,
+  surLeTableau?: (tokens: PageToken[]) => void,
 ): Promise<ReleveDuSecondLecteur | null> {
   const base = process.env["OCR_URL"];
   if (!base) return null;
-  const corps = (await appeler(
-    base,
-    "/lire",
-    { type: "application/octet-stream", octets: image },
-    signal,
-  )) as { lignes?: LignePaddle[]; modele?: string; millisecondes?: number };
-  const lignes = corps.lignes ?? [];
+
+  const minuteur = AbortSignal.timeout(DELAI_MS);
+  const arret = signal ? AbortSignal.any([signal, minuteur]) : minuteur;
+
+  // Service éteint, réseau coupé, délai dépassé, flux interrompu — et `OCR_URL`
+  // est bien posée : quelqu'un a déployé ce lecteur et il ne répond pas.
+  const injoignable = (e: unknown) =>
+    new PanneFournisseur(
+      `second lecteur injoignable : ${e instanceof Error ? e.message : String(e)}`,
+    );
+  let reponse: Response;
+  try {
+    reponse = await fetch(`${base.replace(/\/+$/, "")}/lire`, {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream" },
+      // Les octets bruts : `fetch` accepte un tableau typé tel quel.
+      body: image,
+      signal: arret,
+    });
+  } catch (e) {
+    throw injoignable(e);
+  }
+  if (!reponse.ok || !reponse.body) {
+    throw new PanneFournisseur(`second lecteur : ${String(reponse.status)}`);
+  }
+
+  let complete: TempsDeLecture | null = null;
+  try {
+    for await (const temps of tempsDeLecture(reponse.body)) {
+      if (temps.occupe) throw new SecondLecteurOccupe();
+      if (temps.vague === 1) surLeTableau?.(jetonsDesLignes(temps.lignes ?? [], page));
+      else complete = temps;
+    }
+  } catch (e) {
+    throw e instanceof PanneFournisseur ? e : injoignable(e);
+  }
+  if (!complete) throw new PanneFournisseur("second lecteur : lecture interrompue");
+
+  const lignes = complete.lignes ?? [];
   if (lignes.length === 0) return null;
   return {
     tokens: jetonsDesLignes(lignes, page),
-    modele: corps.modele ?? "paddleocr",
-    millisecondes: corps.millisecondes ?? 0,
+    modele: complete.modele ?? "paddleocr",
+    millisecondes: complete.millisecondes ?? 0,
   };
 }
 
-/**
- * Lire une page par VAGUES : ne reconnaître que ce dont la preuve a besoin.
- *
- * ================================================================== POURQUOI
- *
- * Mesure du 4 novembre 2026, facture MyTek (une page, 136 lignes détectées, CPU, sans
- * GPU ni modèle de langage) : la lecture complète prend 7,3 s ; la détection seule, la
- * géométrie de la page, 0,4 s. La plupart des lignes — mentions légales, conditions —
- * ne servent à aucune preuve.
- *
- * ===================================================================== COMMENT
- *
- *   — vague 1 (`/lire?vague=1`) : la page est détectée une fois ; le TABLEAU (les rangées
- *     d'au moins quatre boîtes) est toujours lu, tous ses articles, et les boîtes courtes
- *     (étiquettes, montants, dates). Le service rend aussi les boîtes qu'il n'a pas lues ;
- *   — `prouvee` juge les jetons de la vague 1 : si la pièce se prouve, elle est lue ;
- *   — vague 2 (`/relire`) : sinon, les seules boîtes restantes sont reconnues, et les
- *     deux vagues fusionnées dans l'ordre de la page (rangée, puis abscisse).
- *
- * MyTek : vague 1 en 3,4 à 3,8 s, vague 2 en 1,0 s — 4,5 s au pire contre 7,3 s, et la
- * même preuve (totaux, cinq articles, taux) que la lecture complète.
- *
- * Le jugement est celui du moteur de preuve, déterministe : aucun modèle ne décide
- * qu'une vague suffit.
- */
-export async function lireParVagues(
-  image: Uint8Array,
-  page: number,
-  prouvee: (tokens: PageToken[]) => boolean,
-  signal?: AbortSignal,
-): Promise<ReleveDuSecondLecteur | null> {
-  const base = process.env["OCR_URL"];
-  if (!base) return null;
-  const t0 = performance.now();
-  const v1 = (await appeler(
-    base,
-    "/lire?vague=1",
-    { type: "application/octet-stream", octets: image },
-    signal,
-  )) as { lignes?: LignePaddle[]; reste?: { polygone: unknown }[]; modele?: string };
-  const lignes1 = v1.lignes ?? [];
-  const reste = v1.reste ?? [];
-  const premiere = jetonsDesLignes(dansLOrdreDeLaPage(lignes1), page);
-  const fin = (tokens: PageToken[], vagues: 1 | 2): ReleveDuSecondLecteur | null =>
-    tokens.length === 0
-      ? null
-      : {
-          tokens,
-          modele: v1.modele ?? "paddleocr",
-          millisecondes: Math.round(performance.now() - t0),
-          vagues,
-        };
-  if (reste.length === 0 || (premiere.length > 0 && prouvee(premiere))) return fin(premiere, 1);
-  const v2 = (await appeler(
-    base,
-    "/relire",
-    {
-      type: "application/json",
-      octets: JSON.stringify({
-        image: Buffer.from(image).toString("base64"),
-        polygones: reste.map((r) => r.polygone),
-      }),
-    },
-    signal,
-  )) as { lignes?: LignePaddle[] };
-  return fin(jetonsDesLignes(dansLOrdreDeLaPage([...lignes1, ...(v2.lignes ?? [])]), page), 2);
+/** Un temps de la lecture, tel que le service le rend (une ligne JSON). */
+interface TempsDeLecture {
+  occupe?: boolean;
+  vague?: 1 | 2;
+  lignes?: LignePaddle[];
+  modele?: string;
+  millisecondes?: number;
 }
 
-/**
- * Deux vagues fusionnées, dans l'ordre de la page : rangée (le haut de la boîte), puis
- * abscisse — elles se lisent comme une lecture d'un seul tenant.
- */
-function dansLOrdreDeLaPage(lignes: readonly LignePaddle[]): LignePaddle[] {
-  return [...lignes].sort(
-    (a, b) =>
-      (a.boite?.[1] ?? 0) - (b.boite?.[1] ?? 0) || (a.boite?.[0] ?? 0) - (b.boite?.[0] ?? 0),
-  );
+/** Les temps d'une réponse en lignes JSON, à mesure qu'ils arrivent. */
+async function* tempsDeLecture(corps: ReadableStream<Uint8Array>): AsyncGenerator<TempsDeLecture> {
+  let reste = "";
+  for await (const morceau of corps.pipeThrough(new TextDecoderStream())) {
+    reste += morceau;
+    let fin: number;
+    while ((fin = reste.indexOf("\n")) >= 0) {
+      const ligne = reste.slice(0, fin).trim();
+      reste = reste.slice(fin + 1);
+      if (ligne) yield JSON.parse(ligne) as TempsDeLecture;
+    }
+  }
+  if (reste.trim()) yield JSON.parse(reste) as TempsDeLecture;
 }
 
-/** Les jetons des lignes lues : les mots de chaque ligne, avec la confiance de la ligne. */
+/** Les jetons des lignes lues : les mots de chaque ligne, situés dans la page. */
 function jetonsDesLignes(lignes: readonly LignePaddle[], page: number): PageToken[] {
   const tokens: PageToken[] = [];
   for (const l of lignes) {
