@@ -684,6 +684,9 @@ export const en: Dict = {
   "pme.home.greet.afternoon": "Good afternoon.",
   "pme.home.greet.evening": "Good evening.",
   "pme.home.tva.kicker": "VAT · {month}",
+  "pme.home.tva.kicker.societe": "VAT · {month} · {societe}",
+  "pme.home.tva.kicker.attente": "VAT",
+  "pme.home.tva.kicker.attente.societe": "VAT · {societe}",
   "pme.home.card.echeances": "Deadlines",
   "pme.home.voix.attendent": "{count} invoices are waiting for your answer.",
   "pme.home.voix.attendent#one": "One invoice is waiting for your answer.",
@@ -3533,6 +3536,10 @@ export const en: Dict = {
   "tour.etat.irrecouvrable": "Written off",
   "tour.etat.suspendu": "Suspended",
   "tour.etat.sans_facture": "No invoice",
+  "tour.legende.sansFacture":
+    "“No invoice”: no subscription invoice has been issued for this licence yet, or all were cancelled.",
+  "tour.legende.echeance":
+    "“Due date”: the nearest deadline of an invoice still due on the licence; “—” when there is none. An invoice a firm pays for its clients shows on the firm’s page.",
   "tour.etat.sans_licence": "No licence",
   "tour.col.pme": "SME",
   "tour.col.cabinet": "Firm",

@@ -29,6 +29,19 @@ export function TableDesPme({
   sansCabinet?: boolean;
 }) {
   const { t, locale } = useI18n();
+  /*
+   * Ce que « Sans facture » et une échéance « — » veulent dire, sous la table,
+   * seulement quand une ligne les montre (4 novembre 2026 : toutes les lignes
+   * les portaient, sans un mot). Ce n'est pas une lecture manquée : l'état et
+   * l'échéance viennent de `facturation.encours_v` (`tour.clients`). « Sans
+   * facture », c'est aucune facture émise pour la licence (ou toutes
+   * annulées) ; l'échéance est la plus proche d'une facture encore due PORTÉE
+   * PAR LA LICENCE — celle qu'un cabinet consolide reste à sa fiche.
+   */
+  const legende = [
+    pme.some((p) => etatDeLaPme(p) === "sans_facture") ? t("tour.legende.sansFacture") : null,
+    pme.some((p) => p.licence_id && !p.echeance_le) ? t("tour.legende.echeance") : null,
+  ].filter(Boolean);
   return (
     <div data-table-pme>
       <div
@@ -94,6 +107,11 @@ export function TableDesPme({
           </li>
         ))}
       </ul>
+      {legende.length > 0 ? (
+        <p className="border-t border-border pt-2 text-[11px] text-muted-foreground">
+          {legende.join(" ")}
+        </p>
+      ) : null}
     </div>
   );
 }

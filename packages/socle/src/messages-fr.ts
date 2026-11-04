@@ -738,6 +738,9 @@ export const fr = {
   "pme.home.greet.afternoon": "Bon après-midi.",
   "pme.home.greet.evening": "Bonsoir.",
   "pme.home.tva.kicker": "TVA · {month}",
+  "pme.home.tva.kicker.societe": "TVA · {month} · {societe}",
+  "pme.home.tva.kicker.attente": "TVA",
+  "pme.home.tva.kicker.attente.societe": "TVA · {societe}",
   "pme.home.card.echeances": "Échéances",
   "pme.home.voix.attendent": "{count} factures attendent votre réponse.",
   "pme.home.voix.attendent#one": "Une facture attend votre réponse.",
@@ -3632,6 +3635,10 @@ export const fr = {
   "tour.etat.irrecouvrable": "Irrécouvrable",
   "tour.etat.suspendu": "Suspendu",
   "tour.etat.sans_facture": "Sans facture",
+  "tour.legende.sansFacture":
+    "« Sans facture » : aucune facture d’abonnement n’a encore été émise pour cette licence, ou toutes ont été annulées.",
+  "tour.legende.echeance":
+    "« Échéance » : la date limite la plus proche d’une facture encore due au nom de la licence ; « — » s’il n’y en a aucune. Celle qu’un cabinet paie pour ses clients se lit sur sa fiche.",
   "tour.etat.sans_licence": "Sans licence",
   "tour.col.pme": "PME",
   "tour.col.cabinet": "Cabinet",

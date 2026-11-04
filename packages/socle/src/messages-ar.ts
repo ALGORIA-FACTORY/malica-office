@@ -666,6 +666,9 @@ export const ar: Dict = {
   "pme.home.greet.afternoon": "طاب يومك.",
   "pme.home.greet.evening": "مساء الخير.",
   "pme.home.tva.kicker": "الأداء · {month}",
+  "pme.home.tva.kicker.societe": "الأداء · {month} · {societe}",
+  "pme.home.tva.kicker.attente": "الأداء",
+  "pme.home.tva.kicker.attente.societe": "الأداء · {societe}",
   "pme.home.card.echeances": "الآجال",
   "pme.home.voix.attendent": "{count} فواتير تنتظر ردّك.",
   "pme.home.voix.attendent#one": "فاتورة واحدة تنتظر ردّك.",
@@ -3392,6 +3395,10 @@ export const ar: Dict = {
   "tour.etat.irrecouvrable": "غير قابل للتحصيل",
   "tour.etat.suspendu": "معلّق",
   "tour.etat.sans_facture": "بلا فاتورة",
+  "tour.legende.sansFacture":
+    "«بلا فاتورة»: لم تُصدَر بعد أي فاتورة اشتراك لهذا الترخيص، أو أُلغيت كلها.",
+  "tour.legende.echeance":
+    "«الاستحقاق»: أقرب أجل لفاتورة ما زالت مستحقة باسم الترخيص؛ «—» إن لم توجد. أما ما يدفعه المكتب عن حرفائه فيظهر في بطاقة المكتب.",
   "tour.etat.sans_licence": "بلا ترخيص",
   "tour.col.pme": "المؤسسة",
   "tour.col.cabinet": "المكتب",
