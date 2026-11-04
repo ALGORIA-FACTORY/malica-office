@@ -1,18 +1,38 @@
 // @vitest-environment jsdom
-/** La bibliothèque du cabinet : onglets tirés du référentiel, date de classement. */
+/** La bibliothèque du cabinet : mois › types tirés du référentiel › pièces, date de classement. */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ComponentType, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DocumentComptable } from "@malica/socle/ports/repositories";
 
+/** L'adresse du niveau ouvert : chaque épreuve la pose. */
+let niveau: Record<string, string> = {};
+
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: { component: ComponentType }) => ({
     options,
-    useSearch: () => ({}),
+    useSearch: () => niveau,
     useNavigate: () => vi.fn(),
   }),
-  Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+  Link: ({
+    children,
+    to,
+    search,
+    className,
+  }: {
+    children: ReactNode;
+    to: string;
+    search?: object;
+    className?: string;
+  }) => (
+    <a
+      className={className}
+      href={search ? `${to}?${new URLSearchParams(search as Record<string, string>)}` : to}
+    >
+      {children}
+    </a>
+  ),
 }));
 vi.mock("@/i18n", () => ({
   useI18n: () => ({ t: (cle: string) => cle, locale: "fr", dir: "ltr" }),
@@ -24,7 +44,12 @@ vi.mock("@/components/malica/telecharger-dossier-comptable", () => ({
   TelechargerDossierComptable: () => null,
 }));
 
-const document = (id: string, type: string | null, reference: string): DocumentComptable => ({
+const unDocument = (
+  id: string,
+  type: string | null,
+  reference: string,
+  date = "2026-01-31",
+): DocumentComptable => ({
   id,
   tenantId: "client",
   type,
@@ -32,7 +57,7 @@ const document = (id: string, type: string | null, reference: string): DocumentC
   reference,
   tiers: null,
   dateDocument: null,
-  dateDeClassement: "2026-01-31",
+  dateDeClassement: date,
   recuLe: "2026-01-31 23:30:00+00",
   empreinte: null,
   montant: null,
@@ -47,16 +72,17 @@ vi.mock("@/verticals/malica-office/composition", () => ({
         { tenantId: "client", name: "Client", engagementStatus: "actif", legalId: null },
       ],
       documents: async () => [
-        document("f", "facture_achat", "F-1"),
-        document("a", "avoir", "AV-1"),
-        document("x", null, "X-1"),
+        unDocument("f", "facture_achat", "F-1"),
+        unDocument("a", "avoir", "AV-1"),
+        unDocument("x", null, "X-1"),
+        unDocument("m", "facture_achat", "M-1", "2025-10-02"),
       ],
     },
     referential: {
       typesDeDocument: async () => [
-        { code: "facture_achat", libelle: "Facture d'achat" },
-        { code: "avoir", libelle: "Avoir" },
-        { code: "facture_vente", libelle: "Facture de vente" },
+        { code: "facture_achat", libelle: "Facture d'achat", transmissible: true },
+        { code: "avoir", libelle: "Avoir", transmissible: true },
+        { code: "facture_vente", libelle: "Facture de vente", transmissible: true },
       ],
     },
   }),
@@ -68,36 +94,55 @@ const Ecran = (Route as unknown as { options: { component: ComponentType } }).op
 
 afterEach(cleanup);
 
+const ouvrir = () =>
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Ecran />
+    </QueryClientProvider>,
+  );
+const titres = () =>
+  [...document.querySelectorAll(".cab-doclib-carte-lien")].map((a) => a.textContent);
+
 describe("bibliothèque du cabinet", () => {
-  it("tire ses onglets du référentiel, pour les seuls types présents", async () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <Ecran />
-      </QueryClientProvider>,
-    );
-    const onglets = within(await screen.findByRole("tablist"));
-    await onglets.findByRole("tab", { name: "Avoir" });
-    expect(onglets.getAllByRole("tab").map((o) => o.textContent)).toEqual([
-      "cab.biblio.all",
-      "Facture d'achat",
-      "Avoir",
-      "cab.biblio.autres",
-    ]);
+  it("range le dossier par mois, du plus récent, les mois vides regroupés", async () => {
+    niveau = {};
+    ouvrir();
+    await screen.findByText("Janvier 2026");
+    expect(titres()).toEqual(["Janvier 2026", "Octobre 2025"]);
+    expect(screen.getByText("cab.biblio.trou")).toBeTruthy();
+  });
+
+  it("dans un mois, tire ses cartes du référentiel, pour les seuls types présents", async () => {
+    niveau = { client: "client", mois: "2026-01" };
+    ouvrir();
+    await screen.findByText("Avoir");
     // Un avoir n'est plus rangé dans « autres » faute d'un code écrit à la main.
-    fireEvent.click(onglets.getByRole("tab", { name: "Avoir" }));
-    expect(screen.getByText("AV-1")).toBeTruthy();
+    expect(titres()).toEqual(["Facture d'achat", "Avoir", "cab.biblio.autres"]);
+    // Le type du référentiel absent ce mois-ci est dit, pas dessiné en carte.
+    expect(
+      within(document.querySelector(".cab-doclib-absents")!).getByText("Facture de vente"),
+    ).toBeTruthy();
+  });
+
+  it("dans un type, liste ses pièces et rien d'autre", async () => {
+    niveau = { client: "client", mois: "2026-01", type: "avoir" };
+    ouvrir();
+    expect(await screen.findByText("AV-1")).toBeTruthy();
     expect(screen.queryByText("F-1")).toBeNull();
-    fireEvent.click(onglets.getByRole("tab", { name: "cab.biblio.autres" }));
-    expect(screen.getByText("X-1")).toBeTruthy();
+    cleanup();
+    niveau = { client: "client", mois: "2026-01", type: "_autres" };
+    ouvrir();
+    expect(await screen.findByText("X-1")).toBeTruthy();
     expect(screen.queryByText("AV-1")).toBeNull();
   });
 
   it("date chaque document de sa date de classement, telle que l'API l'a établie", async () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <Ecran />
-      </QueryClientProvider>,
-    );
+    niveau = {};
+    ouvrir();
+    // Une recherche ouvre la liste à plat, sur tout le dossier.
+    fireEvent.change(await screen.findByRole("textbox", { name: "cab.biblio.search" }), {
+      target: { value: "-1" },
+    });
     expect((await screen.findAllByText(/31\/01\/2026/)).length).toBe(3);
   });
 });
