@@ -371,9 +371,21 @@ pub(crate) fn en_lignes(jetons: &[Jeton], ids: &[usize]) -> Vec<Vec<usize>> {
     }
     for l in &mut lignes {
         l.sort_by(|&a, &b| jetons[a].x0.partial_cmp(&jetons[b].x0).unwrap_or(std::cmp::Ordering::Equal));
-        // une ligne écrite de droite à gauche se lit depuis sa droite
+        // une ligne écrite de droite à gauche se lit depuis sa droite — mais une suite de
+        // mots latins ou de nombres y garde son ordre de gauche à droite (« غمد ICTA 20 مم »,
+        // pas « غمد 20 ICTA », algoria-054)
         if l.iter().any(|&k| crate::reperes::droite_a_gauche(&jetons[k].texte)) {
             l.reverse();
+            let mut debut = 0;
+            while debut < l.len() {
+                if crate::reperes::droite_a_gauche(&jetons[l[debut]].texte) {
+                    debut += 1;
+                    continue;
+                }
+                let fin = (debut..l.len()).find(|&k| crate::reperes::droite_a_gauche(&jetons[l[k]].texte)).unwrap_or(l.len());
+                l[debut..fin].reverse();
+                debut = fin;
+            }
         }
     }
     lignes
@@ -829,7 +841,20 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
     };
 
     let droits = redresses(&entree.jetons);
-    let rangs = rangees(&droits);
+    let mut rangs = rangees(&droits);
+    // Une rangée de droite à gauche (un tableau arabe : « المبلغ | الأداء | سعر الوحدة |
+    // الكمية | البيان ») porte ses cellules dans l'ordre inverse : montant, prix, quantité,
+    // puis la désignation. Quand elle ne se lit pas de gauche à droite, elle se lit
+    // retournée — sa désignation, alors à la suite de la quantité, reprend son ordre de
+    // lecture. Banc sans IA du 4 novembre 2026 : aucune ligne d'une facture arabe n'était lue.
+    for r in rangs.iter_mut() {
+        if ctx.triplets(r, true).is_empty() && r.iter().any(|&k| crate::reperes::droite_a_gauche(&droits[k].texte)) {
+            let retournee: Vec<usize> = r.iter().rev().copied().collect();
+            if !ctx.triplets(&retournee, true).is_empty() {
+                *r = retournee;
+            }
+        }
+    }
     let candidates: Vec<(usize, Vec<Triplet>)> =
         rangs.iter().enumerate().map(|(i, r)| (i, ctx.triplets(r, true))).filter(|(_, t)| !t.is_empty()).collect();
     let cibles: Vec<i64> =

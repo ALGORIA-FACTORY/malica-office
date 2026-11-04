@@ -401,7 +401,10 @@ function mesurerLesRangees(
       v.remise_ligne !== undefined && Number(v.remise_ligne) < 1
         ? String(Math.round(Number(v.remise_ligne) * 100_000) / 1000)
         : v.remise_ligne;
-    const r = num(remiseVraie, l?.remise?.valeur);
+    // Une ligne PROUVÉE sans remise affirme une remise nulle : q × PU = montant. La vérité
+    // « remise : 0 » d'une ligne qui n'en imprime pas est cette valeur-là.
+    const sansRemise = l && !l.remise && Number(remiseVraie) === 0;
+    const r = sansRemise ? { lu: "0", juste: true } : num(remiseVraie, l?.remise?.valeur);
     cellule("remise", remiseVraie, r.lu, r.juste);
     const t = l?.taux ? pourcentDuTaux(contexte, l.taux.code) : null;
     cellule("taux", v.taux_tva_ligne, t, t !== null && Number(t) === Number(v.taux_tva_ligne));
