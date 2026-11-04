@@ -1866,6 +1866,16 @@
   }
 }
 @media (max-width: 640px), (pointer: coarse) {
+  /*
+   * Le plancher ne rabote jamais une cible déjà plus haute : une commande qui
+   * porte sa propre hauteur minimale (`min-h-[48px]` des sujets du
+   * paramétrage, tenus à 48 px par l'épreuve e2e) la garde. Seules celles qui
+   * n'en portent pas, ou qui en portent une plus basse, remontent à 44 px.
+   *
+   * Le `:is(button, …)` de tête donne à ces règles la spécificité de
+   * `.cabinet-workspace input:not(…)` (38 px, plus haut dans la feuille), qui
+   * sans lui l'emporterait sur la hauteur déclarée d'un champ.
+   */
   .cabinet-workspace
     .cab-lisible
     :is(
@@ -1873,8 +1883,22 @@
       select,
       input:not([type="checkbox"]):not([type="radio"]),
       .cab-cible
+    ):not([class*="min-h-"]),
+  .cabinet-workspace
+    .cab-lisible
+    :is(button, select, input, textarea, a, span):is(
+      .min-h-\[30px\],
+      .min-h-\[32px\],
+      .min-h-\[34px\],
+      .min-h-\[36px\],
+      .min-h-\[38px\],
+      .min-h-\[40px\],
+      .min-h-\[44px\]
     ) {
     min-height: 44px;
+  }
+  .cabinet-workspace .cab-lisible :is(button, select, input, textarea, a, span).min-h-\[48px\] {
+    min-height: 48px;
   }
   /* Un lien qui se touche comme un bouton (`cab-cible`) centre son texte. */
   .cabinet-workspace .cab-lisible .cab-cible {
