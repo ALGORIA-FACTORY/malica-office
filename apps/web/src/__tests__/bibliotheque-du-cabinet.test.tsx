@@ -65,18 +65,30 @@ const unDocument = (
   sourcePieceId: null,
 });
 
+const dossier = [
+  unDocument("f", "facture_achat", "F-1"),
+  unDocument("a", "avoir", "AV-1"),
+  unDocument("x", null, "X-1"),
+  unDocument("m", "facture_vente", "M-1", "2025-10-02"),
+];
+/** La borne de l'API : au-delà, la bibliothèque ne charge que le mois ouvert. */
+let plafond = 2000;
+const appels: Array<string | null> = [];
+
 vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({
     supervision: {
       listClients: async () => [
         { tenantId: "client", name: "Client", engagementStatus: "actif", legalId: null },
       ],
-      documents: async () => [
-        unDocument("f", "facture_achat", "F-1"),
-        unDocument("a", "avoir", "AV-1"),
-        unDocument("x", null, "X-1"),
-        unDocument("m", "facture_vente", "M-1", "2025-10-02"),
-      ],
+      documents: async (_c: string, _t: string, periode: string | null) => {
+        appels.push(periode);
+        return dossier.filter((d) => !periode || d.dateDeClassement.startsWith(periode));
+      },
+      moisDuDossier: async () => ({
+        plafond,
+        mois: dossier.map((d) => ({ mois: d.dateDeClassement.slice(0, 7), type: d.type, n: 1 })),
+      }),
     },
     referential: {
       typesDeDocument: async () => [
@@ -145,5 +157,21 @@ describe("bibliothèque du cabinet", () => {
       target: { value: "-1" },
     });
     expect((await screen.findAllByText(/31\/01\/2026/)).length).toBe(3);
+  });
+
+  it("un dossier trop grand s'ouvre sur ses mois, et ne charge que le mois ouvert", async () => {
+    plafond = 3;
+    appels.length = 0;
+    niveau = {};
+    ouvrir();
+    await screen.findByText("Janvier 2026");
+    expect(screen.getByText("cab.biblio.volumineux")).toBeTruthy();
+    expect(appels).toEqual([]);
+    cleanup();
+    niveau = { client: "client", mois: "2026-01" };
+    ouvrir();
+    await screen.findByText("Avoir");
+    expect(appels).toEqual(["2026-01"]);
+    plafond = 2000;
   });
 });

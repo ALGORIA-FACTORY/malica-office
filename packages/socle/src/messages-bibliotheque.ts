@@ -79,6 +79,7 @@ export const frBibliotheque = {
   "cab.biblio.telechargerPiece": "Télécharger cette pièce",
   "cab.biblio.toutCocher": "Tout cocher",
   "cab.biblio.toutTelecharger": "Tout télécharger ({n})",
+  "cab.biblio.volumineux": "Ce dossier est volumineux : ouvrez un mois pour voir ses pièces.",
 } as const;
 
 export type MessagesDeLaBibliotheque = Record<keyof typeof frBibliotheque, string>;

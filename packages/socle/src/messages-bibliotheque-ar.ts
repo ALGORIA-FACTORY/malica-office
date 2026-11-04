@@ -77,4 +77,5 @@ export const arBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.telechargerPiece": "تنزيل هذه الوثيقة",
   "cab.biblio.toutCocher": "تحديد الكل",
   "cab.biblio.toutTelecharger": "تنزيل الكل ({n})",
+  "cab.biblio.volumineux": "هذا الملف كبير: افتح شهراً لرؤية وثائقه.",
 };

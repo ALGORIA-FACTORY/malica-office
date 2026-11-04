@@ -162,6 +162,33 @@ export async function documents(
   return avecStatuts(db, avecMontants(rows));
 }
 
+/**
+ * Le sommaire du dossier : combien de pièces transmises par mois de
+ * classement et par type, et la borne au-delà de laquelle `documents` exige
+ * un mois. La bibliothèque s'ouvre ainsi sur ses mois même quand le dossier
+ * entier ne se restitue pas d'un coup (revue de #219) : rien n'est tronqué,
+ * l'écran charge alors le seul mois ouvert.
+ */
+export async function moisDuDossier(
+  db: Requete,
+  cabinetId: string,
+  clientId: string,
+): Promise<{ plafond: number; mois: Array<{ mois: string; type: string | null; n: number }> }> {
+  await exigerMandat(db, cabinetId, clientId);
+  const fuseau = await fuseauDeLaPersonne(db);
+  const { rows } = await db.query<{ mois: string; type: string | null; n: number }>(
+    `select left(${DATE_DE_CLASSEMENT.replace("$3", "$2")}, 7) as mois, p.document_kind as type, count(*)::int as n
+       from pieces_v p
+       left join lateral (select payload from extractions_v x
+                           where x.piece_id = p.id order by created_at desc, id desc limit 1) x on true
+      where p.tenant_id = $1 and p.vis = 'partage' and p.remplacee_par is null
+      group by 1, 2
+      order by 1 desc, 2`,
+    [clientId, fuseau],
+  );
+  return { plafond: MAX_DOCUMENTS, mois: rows };
+}
+
 export async function documentsLies(
   db: Requete,
   cabinetId: string,

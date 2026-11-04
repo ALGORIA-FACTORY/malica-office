@@ -80,4 +80,5 @@ export const enBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.telechargerPiece": "Download this document",
   "cab.biblio.toutCocher": "Select all",
   "cab.biblio.toutTelecharger": "Download all ({n})",
+  "cab.biblio.volumineux": "This file is large: open a month to see its documents.",
 };
