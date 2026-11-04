@@ -2234,6 +2234,8 @@ export const ar: Dict = {
   "refus.relecture_nuit.hors_bornes":
     "قيمة من قيم المرور الليلي خارج حدودها: السقوف موجبة، والحصة بين 0 و1، والتنبيه ليلة واحدة على الأقل.",
   "refus.relecture_nuit.passage_ferme": "هذا المرور الليلي مغلق.",
+  "refus.facturation_auto.rattrapage_hors_bornes":
+    "يشمل الاستدراك شهراً واحداً على الأقل: الشهر الذي أُغلق للتو.",
   "refus.facturation.premier_du_mois": "تبدأ فترة الفوترة في أول الشهر.",
   "refus.facturation.destinataire_sans_nom":
     "المرسَل إليه {destinataire} بلا اسم: الفاتورة بلا مرسَل إليه ليست فاتورة.",
@@ -3609,6 +3611,27 @@ export const ar: Dict = {
   "tour.relances.etat.fermees": "موقوفة: لا يُرسل أي تذكير.",
   "tour.relances.etat.ouvertes": "مفعّلة منذ {date}.",
   "tour.relances.etat.suspension": "مفعّلة منذ {date}، مع التعليق التلقائي.",
+  "tour.menu.facturation": "الفوترة الآلية",
+  "tour.facturation": "الفوترة الآلية",
+  "tour.facturation.aide":
+    "عند فتحها، تُصدر ماليكا كل يوم فواتير الأشهر المُغلقة الناقصة: فاتورة واحدة لكل دافع ولكل شهر، بالتناسب مع الأيام، ولا تُصدر مرتين أبداً. عند إيقافها، لا تخرج أي فاتورة من تلقاء نفسها.",
+  "tour.facturation.etat.ouverte": "مفتوحة منذ {date}.",
+  "tour.facturation.etat.coupee": "موقوفة منذ {date}: لا تخرج أي فاتورة من تلقاء نفسها.",
+  "tour.facturation.par": "قرّره {qui}.",
+  "tour.facturation.parLaLivraison": "تقرّر عند التسليم.",
+  "tour.facturation.motif": "السبب: {motif}",
+  "tour.facturation.rattrapage": "الأشهر المُغلقة التي تُفحص في كل مرور",
+  "tour.facturation.rattrapage.aide":
+    "1: الشهر الذي أُغلق للتو. وما زاد على ذلك، ستُفوتر الأشهر الأقدم التي لم تُفوتر قط.",
+  "tour.facturation.invalide": "عدد صحيح، 1 على الأقل.",
+  "tour.facturation.ouvrir": "فتح الإصدار",
+  "tour.facturation.couper": "إيقاف الإصدار",
+  "tour.facturation.dernier": "آخر مرور: {date}",
+  "tour.facturation.dernier.aucun": "لا مرور بعد.",
+  "tour.facturation.compteur.emises": "صادرة",
+  "tour.facturation.compteur.deja": "صادرة من قبل",
+  "tour.facturation.compteur.rien": "لا شيء للفوترة",
+  "tour.facturation.compteur.erreurs": "أخطاء",
   "tour.abonnement.report": "ترحيل القراءات",
   "tour.abonnement.report.aide":
     "تنتقل قراءات الباقة غير المستهلكة إلى الشهر الموالي، ولا أبعد من ذلك. تحتفظ الأرصدة بأجلها الخاص.",

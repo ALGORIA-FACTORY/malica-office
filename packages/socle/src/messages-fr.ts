@@ -2391,6 +2391,8 @@ export const fr = {
   "refus.relecture_nuit.hors_bornes":
     "Une valeur de la passe de nuit est hors de ses bornes : les plafonds sont positifs, la part est entre 0 et 1, l’alerte compte au moins une nuit.",
   "refus.relecture_nuit.passage_ferme": "Ce passage de nuit est fermé.",
+  "refus.facturation_auto.rattrapage_hors_bornes":
+    "Le rattrapage compte au moins un mois : le mois qui vient de se clore.",
   "refus.facturation.premier_du_mois": "Une période de facturation commence le premier du mois.",
   "refus.facturation.destinataire_sans_nom":
     "Le destinataire {destinataire} n’a pas de nom : une facture sans destinataire n’est pas une facture.",
@@ -3860,6 +3862,27 @@ export const fr = {
   "tour.relances.etat.fermees": "Fermées : aucune relance ne part.",
   "tour.relances.etat.ouvertes": "Ouvertes depuis le {date}.",
   "tour.relances.etat.suspension": "Ouvertes depuis le {date}, avec suspension automatique.",
+  "tour.menu.facturation": "Facturation automatique",
+  "tour.facturation": "Facturation automatique",
+  "tour.facturation.aide":
+    "Ouverte, Malica émet chaque jour les factures des mois clos qui manquent : une par payeur et par mois, au prorata des jours, jamais deux. Coupée, aucune facture ne part d'elle-même.",
+  "tour.facturation.etat.ouverte": "Ouverte depuis le {date}.",
+  "tour.facturation.etat.coupee": "Coupée depuis le {date} : aucune facture ne part d'elle-même.",
+  "tour.facturation.par": "Décidé par {qui}.",
+  "tour.facturation.parLaLivraison": "Décidé à la livraison.",
+  "tour.facturation.motif": "Motif : {motif}",
+  "tour.facturation.rattrapage": "Mois clos examinés à chaque passage",
+  "tour.facturation.rattrapage.aide":
+    "1 : le mois qui vient de se clore. Au-delà, des mois plus anciens jamais facturés le seront.",
+  "tour.facturation.invalide": "Un nombre entier, au moins 1.",
+  "tour.facturation.ouvrir": "Ouvrir l'émission",
+  "tour.facturation.couper": "Couper l'émission",
+  "tour.facturation.dernier": "Dernier passage : le {date}",
+  "tour.facturation.dernier.aucun": "Aucun passage encore.",
+  "tour.facturation.compteur.emises": "Émises",
+  "tour.facturation.compteur.deja": "Déjà émises",
+  "tour.facturation.compteur.rien": "Rien à facturer",
+  "tour.facturation.compteur.erreurs": "Erreurs",
   "tour.abonnement.report": "Report des lectures",
   "tour.abonnement.report.aide":
     "Les lectures du forfait non consommées passent sur le mois suivant, et pas plus loin. Les recharges gardent leur propre échéance.",

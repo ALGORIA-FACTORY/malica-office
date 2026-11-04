@@ -477,3 +477,31 @@ mesurer, sans bloquer la livraison :
   acteur (son identifiant) et une pièce, jamais leur contenu. Le dirigeant
   arrête la durée ; la changer est une ligne en base, sans déploiement
   (`docs/journalisation.md`).
+
+## L'émission automatique des factures (livrée coupée le 4 novembre 2026)
+
+Décision du dirigeant : « option 1 », le robot passe chaque jour, d'abord sur le
+staging (migration 20261127090000, carte « Facturation automatique » de la tour).
+La facture reste mensuelle, par payeur, au prorata des jours. Tranché par défaut,
+à confirmer :
+
+- **Le rattrapage vaut 1 mois** : chaque passage n'examine que le mois qui vient
+  de se clore. Facturer d'office des mois plus anciens jamais facturés (une
+  licence née en septembre, ouverte en novembre) est un arbitrage commercial ; la
+  tour élargit la fenêtre, motif à l'appui, quand le dirigeant le décide.
+- **Le titulaire est facturé à terme échu** : le mois de novembre part le
+  1er décembre. Facturer à l'avance (dès le premier jour) changerait le modèle de
+  `facturation.emettre`, pas le robot. INCERTAIN au regard de la règle fiscale du
+  moment de la facturation (CTVA tunisien) : à confirmer par le fiscaliste.
+- **L'échéance reste 15 jours**, défaut SQL préexistant de `emettre` et
+  `emettre_cabinet`, pas un paramètre daté en base (R4/R10 au sens strict) : à
+  déplacer dans `ref.socle_params` si le dirigeant veut la régler.
+- **Un numéro peut encore se perdre** : un mois déjà facturé est sauté avant tout
+  numéro, mais une émission qui échoue APRÈS avoir tiré son numéro (une licence
+  sans organisation, par exemple) en perd un à chaque passage, une fois par jour
+  — `nextval` ne se rend pas au rollback. La continuité de la numérotation des
+  factures est INCERTAINE au regard du texte tunisien ; défaut préexistant de
+  `facturation.numero_facture_seq`, non corrigé ici.
+- **L'acteur au journal** des factures émises est l'opérateur dont la décision
+  d'ouvrir est en vigueur, pas un compte de service : c'est lui qui a autorisé
+  l'émission, nommément.

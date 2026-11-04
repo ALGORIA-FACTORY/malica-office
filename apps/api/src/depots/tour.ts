@@ -342,6 +342,23 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /** L'émission automatique des factures : la décision en vigueur, qui l'a prise, le dernier passage. */
+  async reglageFacturationAuto(db: Requete) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.facturation_auto_etat() as r`,
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour ouvre ou coupe l'émission automatique : daté, motivé, en ajout seul. */
+  async reglerFacturationAuto(db: Requete, actif: boolean, rattrapageMois: number, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.facturation_auto_regler($1, $2, $3) as r`,
+      [actif, rattrapageMois, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /**
    * La passe de nuit : le réglage en vigueur, et l'état du relecteur de nuit
    * avec son libellé dans la langue demandée (le français à défaut).

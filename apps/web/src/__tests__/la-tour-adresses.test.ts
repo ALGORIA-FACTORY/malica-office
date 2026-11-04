@@ -53,7 +53,10 @@ describe("les adresses de la tour", () => {
   it("le menu porte les trois groupes de la maquette, dans l'ordre", () => {
     expect(MENU.map((g) => [g.cle, g.entrees.map((e) => e.cle)])).toEqual([
       ["clients", ["cabinets", "pme"]],
-      ["plateforme", ["grille", "paiement", "emetteur", "relances", "calendrier", "licences"]],
+      [
+        "plateforme",
+        ["grille", "paiement", "emetteur", "facturation", "relances", "calendrier", "licences"],
+      ],
       ["lecture", ["nuit", "modeles", "compte"]],
     ]);
   });

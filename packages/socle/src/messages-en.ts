@@ -2313,6 +2313,8 @@ export const en: Dict = {
   "refus.relecture_nuit.hors_bornes":
     "A night pass value is out of bounds: caps are positive, the share is between 0 and 1, the alert counts at least one night.",
   "refus.relecture_nuit.passage_ferme": "This night pass is closed.",
+  "refus.facturation_auto.rattrapage_hors_bornes":
+    "The catch-up covers at least one month: the month that has just closed.",
   "refus.facturation.premier_du_mois": "A billing period starts on the first of the month.",
   "refus.facturation.destinataire_sans_nom":
     "Recipient {destinataire} has no name: an invoice without a recipient is not an invoice.",
@@ -3757,6 +3759,27 @@ export const en: Dict = {
   "tour.relances.etat.fermees": "Disabled: no reminder is sent.",
   "tour.relances.etat.ouvertes": "Enabled since {date}.",
   "tour.relances.etat.suspension": "Enabled since {date}, with automatic suspension.",
+  "tour.menu.facturation": "Automatic invoicing",
+  "tour.facturation": "Automatic invoicing",
+  "tour.facturation.aide":
+    "When open, Malica issues every day the missing invoices of closed months: one per payer and per month, prorated by days, never twice. When off, no invoice goes out on its own.",
+  "tour.facturation.etat.ouverte": "Open since {date}.",
+  "tour.facturation.etat.coupee": "Off since {date}: no invoice goes out on its own.",
+  "tour.facturation.par": "Decided by {qui}.",
+  "tour.facturation.parLaLivraison": "Decided at delivery.",
+  "tour.facturation.motif": "Reason: {motif}",
+  "tour.facturation.rattrapage": "Closed months examined on each run",
+  "tour.facturation.rattrapage.aide":
+    "1: the month that has just closed. Beyond that, older months never invoiced will be.",
+  "tour.facturation.invalide": "A whole number, at least 1.",
+  "tour.facturation.ouvrir": "Open issuing",
+  "tour.facturation.couper": "Turn issuing off",
+  "tour.facturation.dernier": "Last run: {date}",
+  "tour.facturation.dernier.aucun": "No run yet.",
+  "tour.facturation.compteur.emises": "Issued",
+  "tour.facturation.compteur.deja": "Already issued",
+  "tour.facturation.compteur.rien": "Nothing to invoice",
+  "tour.facturation.compteur.erreurs": "Errors",
   "tour.abonnement.report": "Carry-over of reads",
   "tour.abonnement.report.aide":
     "Unused reads of the plan move to the next month, and no further. Top-ups keep their own expiry.",

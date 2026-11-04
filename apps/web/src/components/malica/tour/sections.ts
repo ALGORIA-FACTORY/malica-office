@@ -17,6 +17,7 @@ import {
   KeyRound,
   LayoutGrid,
   MoonStar,
+  Receipt,
   Send,
   Store,
   type LucideIcon,
@@ -28,6 +29,7 @@ import type { MessageKey } from "@/i18n";
 import { ReglerLAbonnement } from "./abonnement";
 import { LeCalendrierFiscal } from "./calendrier-fiscal";
 import { DesignerLEmetteur } from "./emetteur";
+import { LaFacturationAutomatique } from "./facturation-automatique";
 import { LaGrille } from "./grille";
 import { LesLicences } from "./licences";
 import { ReglerLePaiement } from "./paiement";
@@ -47,6 +49,11 @@ export const SECTIONS = {
   grille: { libelle: "tour.menu.grille", icone: LayoutGrid, cartes: [LaGrille, ReglerLAbonnement] },
   paiement: { libelle: "tour.menu.paiement", icone: CreditCard, cartes: [ReglerLePaiement] },
   emetteur: { libelle: "tour.menu.emetteur", icone: FileSignature, cartes: [DesignerLEmetteur] },
+  facturation: {
+    libelle: "tour.menu.facturation",
+    icone: Receipt,
+    cartes: [LaFacturationAutomatique],
+  },
   relances: { libelle: "tour.menu.relances", icone: Send, cartes: [ReglerLesRelances] },
   calendrier: {
     libelle: "tour.menu.calendrier",
@@ -97,7 +104,15 @@ export const MENU: ReadonlyArray<{ cle: string; libelle: MessageKey; entrees: En
     cle: "plateforme",
     libelle: "tour.menu.plateforme",
     entrees: (
-      ["grille", "paiement", "emetteur", "relances", "calendrier", "licences"] as const
+      [
+        "grille",
+        "paiement",
+        "emetteur",
+        "facturation",
+        "relances",
+        "calendrier",
+        "licences",
+      ] as const
     ).map(deSection),
   },
   {
