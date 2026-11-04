@@ -85,3 +85,27 @@ fn un_repere_court_colle_en_tete_de_la_valeur_l_ancre() {
     let (sorties, _) = jouer("dirigeant-50_16");
     assert!(sorties.iter().any(|o| o["champs"]["matricule_fiscal_emetteur"]["valeur"] == "0458213A/A/C/000"), "{sorties:?}");
 }
+
+/// Le cachet vu sans modèle se lit pour le seul champ qui l'attend ; sans marque, ou quand
+/// deux champs l'attendent, il ne s'affirme pas.
+#[test]
+fn le_cachet_vu_sans_modele_se_lit_pour_le_seul_champ_qui_l_attend() {
+    let cas: Vec<Value> = serde_json::from_str(include_str!("donnees/des_silences_aux_preuves.json")).expect("jeu lisible");
+    let entree = cas.iter().find(|c| c["id"] == "algoria-014").expect("cas")["entree"].clone();
+    let lire = |e: &Value| -> Value { serde_json::from_str(&malica_sudoku::solve(&e.to_string())).expect("sortie") };
+    let o = lire(&entree);
+    assert_eq!(o["champs"]["cachet_emetteur"]["valeur"], "true", "{}", o["champs"]["cachet_emetteur"]);
+    assert_eq!(o["champs"]["cachet_emetteur"]["statut"], "conforme");
+    // sans marque relevée : rien n'est affirmé
+    let mut sans = entree.clone();
+    sans["marques"] = serde_json::json!([]);
+    assert_ne!(lire(&sans)["champs"]["cachet_emetteur"]["statut"], "conforme");
+    // deux champs qui attendent un cachet : il ne dit pas de qui il est
+    let mut deux = entree.clone();
+    for c in deux["grille"]["champs"].as_array_mut().expect("champs") {
+        if c["code"] == "visa_client" {
+            c["marque"] = serde_json::json!("cachet");
+        }
+    }
+    assert_ne!(lire(&deux)["champs"]["cachet_emetteur"]["statut"], "conforme");
+}

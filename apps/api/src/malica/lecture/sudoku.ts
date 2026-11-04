@@ -44,6 +44,7 @@ import {
   type EntreeDuSudoku,
   type Grille,
   type JetonDuSudoku,
+  type MarqueDuSudoku,
   type PackDuSudoku,
   type RefDeJeton,
   type SortieDuSudoku,
@@ -290,9 +291,10 @@ export async function lireLeContexteDuSudoku(
         role: string | null;
         domaine: string | null;
         repetee: boolean;
+        marque: string | null;
       }>(
         `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert, c.role,
-                k.domaine, c.repetee
+                k.domaine, c.repetee, c.marque
            from ref_grille_champs_v c join ref_concepts_v k on k.id = c.concept_id
           where c.grille_id = $1 order by c.code`,
         [grilleId],
@@ -433,6 +435,7 @@ export async function lireLeContexteDuSudoku(
         expert: c.expert,
         role: c.role,
         ...(c.repetee ? { repetee: true } : {}),
+        ...(c.marque === "cachet" ? { marque: c.marque } : {}),
         ...(c.domaine ? { valeurs: valeursDe(c.domaine) } : {}),
       })),
       preuves: preuves.rows.map((p) => ({
@@ -503,10 +506,11 @@ export function resoudreLaPiece(
   contexte: ContexteDuSudoku,
   moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
   connus?: Connus,
+  marques?: readonly MarqueDuSudoku[],
 ): SortieDuSudoku {
   const grille = contexte.grille;
   const pack = packALaPrecision(contexte.pack, jetons);
-  const avecConnus = connus ? { connus } : {};
+  const avecConnus = { ...(connus ? { connus } : {}), ...(marques?.length ? { marques } : {}) };
   const noms = [...new Set(grille.preuves.flatMap((p) => (p.variante ? [p.variante] : [])))].sort();
   if (noms.length === 0) return moteur({ jetons, grille, pack, ...avecConnus });
 
@@ -1066,7 +1070,7 @@ export function creerLeSudoku(
           formes_juridiques: ctx.formesJuridiques,
         };
         const jetons = jetonsDuSudoku(lecture.tokens, piece.devise, ctx);
-        const sortie = resoudreLaPiece(jetons, ctx, resoudre, connus);
+        const sortie = resoudreLaPiece(jetons, ctx, resoudre, connus, lecture.marques);
         const aInscrire = champsLusAInscrire(piece, ctx, sortie);
 
         const rendue: VisionRead =

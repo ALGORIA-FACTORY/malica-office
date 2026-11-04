@@ -89,6 +89,8 @@ export interface ChampDeGrille {
    * par mouvement : `ref.grille_champs.repetee`) : il ne se lit pas comme un champ unique.
    */
   readonly repetee?: boolean;
+  /** La marque qu'un champ de présence attend (`ref.grille_champs.marque` : « cachet »). */
+  readonly marque?: "cachet";
   /**
    * Le domaine d'un champ « liste » (`ref_valeurs_des_domaines_v`) : chaque code et ses
    * formes imprimables. Présent, le champ ne se lit qu'en un code de ce domaine.
@@ -144,9 +146,21 @@ export interface Connus {
   readonly formes_juridiques: readonly string[];
 }
 
+/** Une marque vue sans modèle sur la page (un cachet), en coordonnées 0..1. */
+export interface MarqueDuSudoku {
+  readonly page: number;
+  readonly type: "cachet";
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+}
+
 export interface EntreeDuSudoku {
   readonly connus?: Connus;
   readonly jetons: readonly JetonDuSudoku[];
+  /** Les marques de la pièce (les cachets) : un champ de présence qui en attend une la lit. */
+  readonly marques?: readonly MarqueDuSudoku[];
   readonly grille: Grille;
   readonly pack: PackDuSudoku;
   readonly plafond?: number;

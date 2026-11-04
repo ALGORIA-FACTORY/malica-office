@@ -62,6 +62,8 @@ import {
   resoudreLaPiece,
   type ContexteDuSudoku,
 } from "./sudoku.ts";
+import type { MarqueDeLaPage } from "@malica/socle/ports/malica";
+
 import type { PageToken } from "./token-plan.ts";
 import { relever } from "./vision.ts";
 
@@ -82,6 +84,8 @@ interface RangeeVraie {
 
 interface ReleveGarde {
   readonly tokens: PageToken[];
+  /** Les cachets vus sans modèle (le second lecteur) ; absents d'un relevé gardé avant eux. */
+  readonly marques?: MarqueDeLaPage[];
   readonly lecteur: string;
   readonly millisecondes: number;
   /** Le premier temps d'une image (le tableau) : quand il est arrivé, et s'il a prouvé. */
@@ -471,14 +475,25 @@ async function mesurerLaPiece(
       client.release();
     }
   }
-  const resoudreSur = (tokens: PageToken[], c: ContexteDuSudoku, d: DeviseLue) =>
-    resoudreLaPiece(jetonsDuSudoku(tokens, d, c), c, moteur, {
-      dossier: piece.dossier
-        ? { matricule: piece.dossier.matricule, raison_sociale: piece.dossier.raison }
-        : null,
-      tiers: [],
-      formes_juridiques: c.formesJuridiques,
-    });
+  const resoudreSur = (
+    tokens: PageToken[],
+    c: ContexteDuSudoku,
+    d: DeviseLue,
+    marques: readonly MarqueDeLaPage[] = [],
+  ) =>
+    resoudreLaPiece(
+      jetonsDuSudoku(tokens, d, c),
+      c,
+      moteur,
+      {
+        dossier: piece.dossier
+          ? { matricule: piece.dossier.matricule, raison_sociale: piece.dossier.raison }
+          : null,
+        tiers: [],
+        formes_juridiques: c.formesJuridiques,
+      },
+      marques,
+    );
   let releve: ReleveGarde;
   try {
     releve = await piece.releve(
@@ -508,7 +523,7 @@ async function mesurerLaPiece(
   if (!devise) return panne(commun, `devise inconnue : ${piece.devise}`);
   if (!contexte) return panne(commun, "contexte absent");
   const t0 = performance.now();
-  const sortie = resoudreSur(releve.tokens, contexte, devise);
+  const sortie = resoudreSur(releve.tokens, contexte, devise, releve.marques);
   const sudokuMs = Math.round(performance.now() - t0);
   if (brut)
     writeFileSync(
@@ -629,6 +644,7 @@ function releveDuFichier(chemin: string, garde: string): PieceDuBanc["releve"] {
     });
     const g: ReleveGarde = {
       tokens: r.tokens,
+      marques: r.marques,
       lecteur: r.lecteur,
       millisecondes: Math.round(performance.now() - t0),
       ...(tableau ? { tableau } : {}),

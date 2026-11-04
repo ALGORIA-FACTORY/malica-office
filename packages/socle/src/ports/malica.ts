@@ -31,6 +31,20 @@ export interface PageToken {
   confidence?: number | null;
 }
 
+/**
+ * Une marque vue sur la page sans être un texte : un cachet d'encre de couleur, relevé sans
+ * modèle par le second lecteur (`infra/ocr/service.py`, `_cachets`). Coordonnées
+ * normalisées 0..1 dans la page.
+ */
+export interface MarqueDeLaPage {
+  page: number;
+  type: "cachet";
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
 export interface TokenRef {
   page: number;
   ordinal: number;

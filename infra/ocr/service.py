@@ -657,6 +657,40 @@ def _boite(polygone, largeur: int, hauteur: int) -> list:
     ]
 
 
+# LE CACHET, sans modele : une empreinte d'encre de COULEUR (bleue, violette, rouge),
+# compacte (ni trait, ni ligne de texte) et creuse (un anneau, un cadre : peu d'encre pour
+# sa boite). Mesure du 4 novembre 2026 sur les 161 pieces du jeu d'ALGORIA (rendus du
+# depot, 80 points par pouce) : 41 cachets trouves sur 81, AUCUN sur les 80 pieces sans
+# cachet. Une photocopie (le cachet devenu gris) n'est pas vue : rien n'est rendu plutot
+# qu'un faux.
+CACHET_SATURATION_MIN = int(os.environ.get("OCR_CACHET_SATURATION_MIN", "70"))
+CACHET_TAILLE = (0.07, 0.40)  # le plus grand cote, en fraction de la largeur de la page
+CACHET_ALLONGEMENT = (0.55, 1.8)  # largeur / hauteur
+CACHET_REMPLISSAGE_MAX = 0.45  # encre / boite
+
+
+def _cachets(tableau: numpy.ndarray) -> list:
+    """Les cachets d'encre de couleur de la page, en boites normalisees de 0 a 1."""
+    hauteur, largeur = tableau.shape[:2]
+    hsv = cv2.cvtColor(tableau, cv2.COLOR_BGR2HSV)
+    encre = ((hsv[:, :, 1] > CACHET_SATURATION_MIN) & (hsv[:, :, 2] > 40) & (hsv[:, :, 2] < 235)).astype(numpy.uint8) * 255
+    noyau = max(3, int(largeur * 0.006))
+    encre = cv2.morphologyEx(encre, cv2.MORPH_CLOSE, numpy.ones((noyau, noyau), numpy.uint8))
+    n, _, stats, _ = cv2.connectedComponentsWithStats(encre, 8)
+    marques = []
+    for c in range(1, n):
+        x, y, w, h, aire = (int(v) for v in stats[c])
+        cote = max(w, h) / largeur
+        if not CACHET_TAILLE[0] <= cote <= CACHET_TAILLE[1]:
+            continue
+        if not CACHET_ALLONGEMENT[0] <= w / max(h, 1) <= CACHET_ALLONGEMENT[1]:
+            continue
+        if aire / (w * h) > CACHET_REMPLISSAGE_MAX:
+            continue
+        marques.append({"type": "cachet", "boite": [x / largeur, y / hauteur, (x + w) / largeur, (y + h) / hauteur]})
+    return marques
+
+
 def _premiere_vague(boites: list) -> list:
     """Les index des boites du premier temps : le tableau, et les boites courtes."""
     rangees: list = []
@@ -704,7 +738,7 @@ def _vagues(lecteur: "_Lecteur", octets: bytes):
     decoupes = [decoupes[i] for i in gardes]
     boites = [_boite(p, largeur, hauteur) for p in polygones]
 
-    def temps(vague: int, lues: list, morceaux_par_ligne: list, arabe: bool) -> dict:
+    def temps(vague: int, lues: list, morceaux_par_ligne: list, arabe: bool, marques: list | None = None) -> dict:
         lignes = []
         for i in lues:
             for texte, score, pixels in morceaux_par_ligne[i]:
@@ -720,6 +754,7 @@ def _vagues(lecteur: "_Lecteur", octets: bytes):
         return {
             "vague": vague,
             "lignes": lignes,
+            **({"marques": marques} if marques is not None else {}),
             "modele": MODELE if arabe else MODELE_LATIN,
             "millisecondes": int((time.time() - debut) * 1000),
         }
@@ -749,4 +784,5 @@ def _vagues(lecteur: "_Lecteur", octets: bytes):
     par_ligne: list = [[] for _ in decoupes]
     for k, i in enumerate(toutes):
         par_ligne[i] = morceaux[k]
-    yield temps(2, toutes, par_ligne, arabe)
+    # Le second temps porte aussi les MARQUES de la page (les cachets), vues sans modele.
+    yield temps(2, toutes, par_ligne, arabe, _cachets(tableau))

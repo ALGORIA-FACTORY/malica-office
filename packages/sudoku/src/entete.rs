@@ -1750,6 +1750,16 @@ pub fn nommes(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
         }
         let Ok(motif) = motif.map(|m| Regex::new(&format!("^(?:{m})$"))).transpose() else { continue };
         let sortie = match ch.genre.as_str() {
+            // Le champ qui attend une MARQUE (un cachet) la lit, vue sans modèle, quand il est
+            // le seul de la grille à l'attendre : un cachet ne dit pas de qui il est quand deux
+            // champs l'attendent. La marque n'est pas un jeton : rien n'est cité.
+            "booleen" if ch.marque.as_ref().is_some_and(|m| {
+                entree.marques.iter().any(|x| &x.genre == m)
+                    && grille.champs.iter().filter(|c| c.marque.as_ref() == Some(m)).count() == 1
+            }) =>
+            {
+                ChampSortie { valeur: Some("true".into()), refs: Vec::new(), statut: "conforme".into(), instances: None }
+            }
             "booleen" => {
                 let (vus, partage) = repere_imprime(&page, n);
                 let statut = if vus.is_empty() && !partage { "absent" } else { "signale" };

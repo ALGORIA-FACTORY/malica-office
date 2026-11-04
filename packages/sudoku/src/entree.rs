@@ -17,6 +17,17 @@ pub struct Entree {
     /// se lit par le format et les repères seuls.
     #[serde(default)]
     pub connus: Option<Connus>,
+    /// Les marques vues sans modèle sur la pièce (les cachets du second lecteur).
+    #[serde(default)]
+    pub marques: Vec<Marque>,
+}
+
+/// Une marque de la page qui n'est pas un texte : un cachet d'encre. Sa page et sa boîte
+/// sont dans l'entrée ; le moteur n'en lit que le genre.
+#[derive(Deserialize)]
+pub struct Marque {
+    #[serde(rename = "type")]
+    pub genre: String,
 }
 
 /// Les données du dossier et de ses tiers, lues en base par l'adaptateur.
@@ -155,6 +166,9 @@ pub struct Champ {
     /// pas comme un champ unique de la pièce.
     #[serde(default)]
     pub repetee: bool,
+    /// La marque qu'un champ de présence attend (« cachet », `ref.grille_champs.marque`).
+    #[serde(default)]
+    pub marque: Option<String>,
     /// Le domaine d'un champ « liste » : chaque code et ses formes imprimables (le libellé du
     /// code dans les trois langues, ses marques). Présent, le champ ne se lit qu'en un code.
     #[serde(default)]

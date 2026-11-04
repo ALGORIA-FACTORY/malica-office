@@ -35,7 +35,7 @@
  * exactement comme avant. C'est délibéré : le jour où le service tombe, une
  * lecture partielle reste une lecture partielle — jamais une panne.
  */
-import type { PageToken } from "@malica/socle/ports/malica";
+import type { MarqueDeLaPage, PageToken } from "@malica/socle/ports/malica";
 
 import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
 
@@ -51,6 +51,8 @@ interface LignePaddle {
 
 export interface ReleveDuSecondLecteur {
   tokens: PageToken[];
+  /** Les marques de la page (les cachets), vues sans modèle. */
+  marques: MarqueDeLaPage[];
   modele: string;
   millisecondes: number;
 }
@@ -231,6 +233,14 @@ export async function lireAvecPaddle(
   if (lignes.length === 0) return null;
   return {
     tokens: jetonsDesLignes(lignes, page),
+    marques: (complete.marques ?? []).map((m) => ({
+      page,
+      type: m.type,
+      x0: m.boite[0],
+      y0: m.boite[1],
+      x1: m.boite[2],
+      y1: m.boite[3],
+    })),
     modele: complete.modele ?? "paddleocr",
     millisecondes: complete.millisecondes ?? 0,
   };
@@ -241,6 +251,8 @@ interface TempsDeLecture {
   occupe?: boolean;
   vague?: 1 | 2;
   lignes?: LignePaddle[];
+  /** Le second temps seulement : les cachets de la page. */
+  marques?: { type: "cachet"; boite: [number, number, number, number] }[];
   modele?: string;
   millisecondes?: number;
 }

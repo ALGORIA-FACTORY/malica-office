@@ -224,6 +224,29 @@ Restent dans le silence, avec leur cause : les factures arabes MANUSCRITES (chif
 orientaux tracés à la main, lus de travers par les deux modèles : étape 5), les ventes à
 l'export (taux zéro EXPORT, mention à traduire), les pièces dont l'OCR a perdu un total.
 
+## Bulletin 7 — le cachet vu sans modèle (4 novembre 2026, midi)
+
+Mêmes 412 pièces. Les pages lues par le second lecteur sont relues pour leurs marques
+(cache `cache10`, 209 pages) : leurs textes sont identiques au pixel.
+
+|                |     juste |  faux |   silence | inventé | signalé (non affirmé) |
+| -------------- | --------: | ----: | --------: | ------: | --------------------: |
+| Bulletin 6     |     5 120 |     0 |     6 360 |       0 |                   244 |
+| **Bulletin 7** | **5 146** | **0** | **6 334** |   **0** |               **244** |
+
+- **Le détecteur** (`infra/ocr/service.py`, `_cachets`) cherche une empreinte d'encre de
+  COULEUR, compacte (ni trait, ni ligne de texte) et creuse (un anneau, un cadre). Mesuré
+  hors banc sur les 161 rendus du jeu d'ALGORIA : 41 cachets trouvés sur 81, aucun sur
+  les 80 pièces sans cachet. Une photocopie, où le cachet devient gris, n'est pas vue :
+  rien n'est rendu plutôt qu'un faux.
+- **Le moteur** ne l'affirme que pour le champ qui l'attend (`ref.grille_champs.marque`,
+  posé sur le cachet de l'émetteur de la facture), et seulement s'il est le seul de la
+  grille à l'attendre : un cachet ne dit pas de qui il est.
+- **26 cachets justes**, 0 inventé, alors que la vérité complète du jeu d'ALGORIA aurait
+  compté comme inventé tout cachet lu sur une pièce qui n'en porte pas.
+- **Pas encore** : la signature (un trait d'encre fin, à distinguer de l'écriture
+  manuscrite) et les champs qui mêlent cachet et signature (« Signature et cachet »).
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

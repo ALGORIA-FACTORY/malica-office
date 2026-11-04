@@ -30,6 +30,8 @@ import { BANDES_MAX, decouperEnBandes, fusionnerBandes } from "./bandes.ts";
 import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
 import { lireAvecQwen, QwenError } from "./qwen.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
+import type { MarqueDeLaPage } from "@malica/socle/ports/malica";
+
 import type { PageToken, TokenRef } from "./token-plan.ts";
 
 /**
@@ -198,6 +200,11 @@ export type Lecteur = "pdf-text" | "paddle" | "vision" | "fourni";
 
 export interface VisionRead {
   tokens: PageToken[];
+  /**
+   * Les marques vues sans modèle (les cachets) par le relevé qui a produit `tokens` ;
+   * absentes d'une lecture rejouée ou fournie, qui ne les a pas vues.
+   */
+  marques?: MarqueDeLaPage[];
   selection: VisionSelection;
   lecteur: Lecteur;
   /** PaddleOCR a-t-il été essayé sur cette pièce (même sans rien rendre) ? */
@@ -644,6 +651,7 @@ async function releverDesPages(
   return {
     releve: {
       tokens,
+      marques: lues.flatMap((lu) => lu!.marques),
       source: modele,
       lecteur: "paddle",
       paddleTente: true,
@@ -673,6 +681,8 @@ function visionDisponible(): boolean {
 
 export interface Releve {
   tokens: PageToken[];
+  /** Les marques vues sans modèle (les cachets) ; seul le second lecteur en relève. */
+  marques: MarqueDeLaPage[];
   source: string;
   lecteur: Lecteur;
   paddleTente: boolean;
@@ -739,6 +749,7 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
     if (laCoucheSeCroit(couche) && !params.sansCoucheTexte) {
       return {
         tokens: couche.tokens,
+        marques: [],
         source: "pdf-text",
         lecteur: "pdf-text",
         paddleTente: false,
@@ -792,6 +803,7 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
     }
     return {
       tokens,
+      marques: [],
       source: modeleOcr(),
       lecteur: "vision",
       paddleTente: parPaddle.tente,
@@ -810,6 +822,7 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
   const lecture = await lireUnePage({ dataUrl: params.dataUrl, page: 1 });
   return {
     tokens: lecture.tokens,
+    marques: [],
     source: modeleOcr(),
     lecteur: "vision",
     paddleTente: parPaddle.tente,
@@ -969,6 +982,7 @@ export async function runVisionRead(params: {
   const pass1: Releve = params.tokens
     ? {
         tokens: params.tokens as PageToken[],
+        marques: [],
         source: params.releveur ?? "fourni",
         lecteur: "fourni",
         paddleTente: false,
@@ -1008,6 +1022,7 @@ export async function runVisionRead(params: {
     if (parRecette) {
       return {
         tokens,
+        marques: pass1.marques,
         selection: parRecette.selection,
         model: `${pass1.source}+${MODELE_RECETTE}`,
         readModel: pass1.source,
@@ -1082,6 +1097,7 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
 
   return {
     tokens,
+    marques: pass1.marques,
     selection,
     // La lecture a deux auteurs : le journal doit nommer les deux, sinon un
     // coût ou une régression de qualité devient impossible à imputer.

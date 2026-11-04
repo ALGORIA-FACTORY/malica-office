@@ -393,6 +393,25 @@ rangée qui porte un montant et AUCUN mot, l'annonce aussi. Un mot sur la rangé
 
 **Effet mesuré.** Quatre factures prouvées justes, FODEC compris, sans faux nouveau.
 
+### I-O — Le cachet vu sans modèle, et attribué par la grille
+
+**Problème.** La présence d'un cachet décide de la valeur probante d'une pièce. Un
+modèle de vision le voit, mais il coûte et il se trompe sans le dire. L'OCR ne le voit pas.
+
+**Ce qui est nouveau.**
+
+- Le cachet se reconnaît sans modèle, par trois propriétés physiques de l'encre : sa
+  couleur (saturée, ni noire ni grise), sa compacité (ni trait ni ligne de texte) et son
+  creux (un anneau ou un cadre porte peu d'encre pour sa boîte).
+- Le détecteur est réglé pour ne rien rendre plutôt que se tromper : une photocopie, qui
+  grise le cachet, n'est pas vue.
+- Le cachet n'est attribué qu'à un champ que la grille déclare l'attendre
+  (`ref.grille_champs.marque`), et seulement si ce champ est le seul à l'attendre. Une
+  marque ne dit pas de quelle partie elle est ; la grille le dit, ou rien n'est affirmé.
+
+**Effet mesuré.** 26 cachets justes sur le banc, aucun inventé. Hors banc : 41 sur 81
+cachets trouvés, 0 faux sur 80 pièces sans cachet.
+
 ### I-K — La lecture en deux temps : le tableau d'abord, rien de sauté
 
 **Problème.** La preuve a besoin du tableau et des totaux. Les longues mentions servent à
