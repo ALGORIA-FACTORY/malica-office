@@ -198,6 +198,12 @@ _decouper = CropByPolys(det_box_type="quad")
 # par largeur (un lot de meme gabarit se rembourre peu). Mesure du 4 novembre 2026, banc
 # sans IA (412 pieces, 210 images) : une ligne a la fois ne gagne que 2,5 % de la mediane,
 # et change le bruit de lecture de quelques champs (deux faux de plus).
+#
+# Mesure le meme jour, et consigne pour qu'on ne la refasse pas (MyTek, deux processeurs) :
+# la reconnaissance est liee au calcul, pas au Python (3,7 s de 3,9 dans onnxruntime).
+#   - deux sessions a un fil, lots identiques en parallele : 3,2 s contre 3,1 s ;
+#   - poids quantifies en int8 (dynamique) : 5,9 s contre 3,5 s, et 36 lignes sur 140 lues
+#     autrement (« Algorla Factory », « MontantW ») — sans instructions VNNI, l'int8 perd.
 LOT = int(os.environ.get("OCR_LOT", _REGLAGES["TextRecognition"]["batch_size"]))
 
 # ======================================================== LE SECOND ALPHABET
@@ -652,7 +658,8 @@ def _reconnaitre(decoupes: list) -> list:
     ordre = sorted(range(len(decoupes)), key=lambda i: decoupes[i].shape[1] / float(decoupes[i].shape[0]))
     lus: list = [None] * len(decoupes)
     for i, r in zip(ordre, _latin.predict([decoupes[i] for i in ordre], batch_size=LOT)):
-        lus[i] = (r.json["res"].get("rec_text", ""), float(r.json["res"].get("rec_score", 0.0)))
+        res = r.json["res"]  # une copie profonde a chaque lecture de `json` : une seule
+        lus[i] = (res.get("rec_text", ""), float(res.get("rec_score", 0.0)))
     return lus
 
 
