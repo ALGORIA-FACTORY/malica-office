@@ -85,6 +85,23 @@ describe("la Tour confie et archive une organisation", { skip: !BASE_CONFIGUREE 
       role: string;
     }>;
     assert.equal(orgs.find((o) => o.id === org)?.role, "dirigeant");
+    // La Tour voit qui la dirige, et qui paie sa licence ; personne d'autre.
+    const membres = (await fait(plateforme, "tour.membresDeLOrganisation", org)) as Array<{
+      email: string;
+      role: string;
+      titulaire_licence: boolean;
+    }>;
+    assert.deepEqual(
+      membres.map((m) => [m.email, m.role, m.titulaire_licence]),
+      [[dirigeant.email, "dirigeant", true]],
+    );
+    await assert.rejects(fait(intrus, "tour.membresDeLOrganisation", org), /opérateurs/);
+    await assert.rejects(
+      sousIdentiteDuServeur(intrus.id, (db) =>
+        db.query(`select * from public.plateforme_organisation_membres($1)`, [org]),
+      ),
+      /reserve\.plateforme/,
+    );
     // Une société qui a un membre ne se confie plus.
     await assert.rejects(
       fait(plateforme, "tour.confierOrganisation", org, intrus.email),

@@ -4328,6 +4328,17 @@ export interface TourRepository {
   ): Promise<unknown>;
   emetteur(): Promise<OrganisationEmettrice | null>;
   chercherOrganisations(texte: string): Promise<OrganisationEmettrice[]>;
+  /** Les membres d'une organisation et le titulaire de sa licence (plateforme, lecture). */
+  membresDeLOrganisation(organisationId: string): Promise<
+    Array<{
+      user_id: string;
+      email: string | null;
+      nom: string | null;
+      role: string | null;
+      depuis: string | null;
+      titulaire_licence: boolean;
+    }>
+  >;
   /** Confier une société sans membre à son premier dirigeant (un compte existant). */
   confierOrganisation(
     organisationId: string,
