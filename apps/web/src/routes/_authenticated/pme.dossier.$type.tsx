@@ -101,7 +101,13 @@ function Dossier() {
     ouvrirSaSociete,
   } = usePiecesDesSocietes();
 
-  const [societe, setSociete] = useState<string | null>(pme.tenantId);
+  /*
+   * La société montrée : celle des puces de la bibliothèque, partagée
+   * (`pme.societeAffichee`), toutes par défaut — plus le dossier ouvert de
+   * l'en-tête, parti le 3 novembre 2026.
+   */
+  const societe = pme.societeAffichee;
+  const setSociete = pme.afficherSociete;
   const [siege, setSiege] = useState<string | null>(null);
   /** La période déroulée ; `undefined` : la plus récente qui a des pièces. */
   const [ouverte, setOuverte] = useState<string | null | undefined>(undefined);
@@ -251,6 +257,24 @@ function Dossier() {
                   <h2>{t("pme.dossier.organisations")}</h2>
                   <span>{cartesSocietes.length}</span>
                 </div>
+                {/* « Toutes les sociétés » en tête : la sélection est ici, une fois. */}
+                <CarteDeGroupe
+                  presse={societe === null}
+                  accent={societe === null}
+                  onClick={() => {
+                    setSociete(null);
+                    setSiege(null);
+                    setOuverte(undefined);
+                  }}
+                  icone={<IconeSociete />}
+                  titre={t("pme.societes.toutes")}
+                  valeur={total(
+                    toutes
+                      .filter((x) => !parSiege || !siege || x.piece.auteurId === siege)
+                      .map((x) => x.piece),
+                  )}
+                  n={toutes.filter((x) => !parSiege || !siege || x.piece.auteurId === siege).length}
+                />
                 {cartesSocietes.map((c) => (
                   <CarteDeGroupe
                     key={c.id}

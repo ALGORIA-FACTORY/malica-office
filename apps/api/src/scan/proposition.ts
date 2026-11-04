@@ -641,6 +641,7 @@ export function composerLaProposition(
         verdictCode: codeDuVerdict(verdict),
         raison: `Aucune écriture ne se propose : à compléter — ${e.champs.join(", ")}.`,
         raisonCode: "a_completer",
+        aCompleter: [...e.champs],
       };
     if (e instanceof Error && e.message === "MISSING_ACCOUNT_MAPPING")
       return {
@@ -915,6 +916,7 @@ async function proposerDepuisLeJugement(
     reglages_a_jour: boolean;
     sens_dit: string | null;
     date_dite: string | null;
+    emetteur_dit: string | null;
     recue_le: string;
   }>(
     `select e.id as extraction, e.payload,
@@ -927,7 +929,8 @@ async function proposerDepuisLeJugement(
             case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit,
             (select q.valeur from capture.precisions q
               where q.piece_id = p.id and q.champ = 'document_date'
-              order by q.decided_at desc limit 1) as date_dite
+              order by q.decided_at desc limit 1) as date_dite,
+            app.emetteur_dit(p.id) as emetteur_dit
        from capture.pieces p
        join identity.organizations o on o.id = p.tenant_id
        join lateral (select id, payload from capture.extractions x
@@ -940,6 +943,10 @@ async function proposerDepuisLeJugement(
   let ligne = derniers[0];
   if (!ligne)
     return { ok: false, raison: "Cette pièce n'a pas encore été lue.", raisonCode: "non_lue" };
+  // Le nom de l'émetteur corrigé par une personne (R7) remplace le nom lu :
+  // le libellé de l'écriture et le tiers le portent (3 novembre 2026).
+  if (ligne.emetteur_dit)
+    ligne = { ...ligne, payload: { ...ligne.payload, issuer: ligne.emetteur_dit } };
   if (ligne.analyse_extraction !== ligne.extraction) {
     const a = await analyserPiece(db, pieceId);
     const { rows } = await db.query<{ pack_version_id: string }>(

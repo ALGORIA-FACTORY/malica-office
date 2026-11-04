@@ -22,9 +22,10 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
+import { lireLaPieceDEssai } from "../lecture-d-essai.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -54,6 +55,8 @@ describe("les trois chemins ouverts à l'écran", { skip: !BASE_CONFIGUREE }, ()
       contentType: "image/jpeg",
       pageCount: 1,
     })) as { id: string };
+    // Une pièce non lue ne part pas au cabinet (3 novembre 2026) : on la lit d'abord.
+    if (vis === "partage") await sousIdentiteDuServeur(u.id, (db) => lireLaPieceDEssai(db, p.id));
     if (vis !== "personnel") await rpc("collab", "setPieceVis", p.id, vis);
     return p.id;
   }

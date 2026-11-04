@@ -37,6 +37,8 @@ import type { Request, Response } from "express";
 import { sousLAppelant } from "./cles-api.ts";
 import type { Requete } from "./db.ts";
 import { fabrique } from "./miniature.ts";
+import { consigner, type Issue } from "./observabilite/journal.ts";
+import { noterLObjet } from "./observabilite/trace.ts";
 
 /**
  * La racine du stockage, exigée au démarrage comme `JWT_SECRET`.
@@ -256,6 +258,22 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
     res.status(404).json({ erreur: "pièce introuvable" });
     return;
   }
+  noterLObjet({ tenant: piece.tenant_id, piece: piece.id });
+  /*
+   * L'étape `upload`, une fois par pièce et par trace : le renvoi des mêmes
+   * octets après une reconnexion (même `x-malica-trace`) compte une
+   * répétition. Ni les octets ni leur empreinte n'y entrent : leur taille, ce
+   * que la base en a dit, et la pièce dont ils sont le doublon.
+   */
+  const debut = new Date();
+  const etape = (issue: Issue, detail: Record<string, string | number | null>) =>
+    consigner("upload", issue, {
+      cle: `${piece.id}:upload`,
+      piece: piece.id,
+      debut,
+      dureeMs: Date.now() - debut.getTime(),
+      detail,
+    });
 
   const destination = cheminAbsolu(piece.tenant_id, piece.id);
   await mkdir(path.dirname(destination), { recursive: true });
@@ -298,6 +316,7 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
   } catch (erreur) {
     await rm(provisoire, { force: true });
     if (erreur instanceof PieceTropGrosse) {
+      etape("refus", { statut: "trop_grosse" });
       res.status(413).json({ erreur: "pièce trop volumineuse" });
       return;
     }
@@ -306,17 +325,26 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
     // une panne : la pièce n'en veut plus, et la file n'en demande pas la
     // lecture.
     if ((erreur as { message?: string }).message === "refus.piece.remplacee") {
+      etape("refus", { statut: "remplacee" });
       res.status(410).json({ erreur: "refus.piece.remplacee" });
       return;
     }
     if ((erreur as { code?: string }).code === "23514") {
+      etape("refus", { statut: "deja_scellee" });
       res.status(409).json({ erreur: "le contenu de cette pièce est scellé" });
       return;
     }
+    etape("erreur", { statut: "panne" });
     throw erreur;
   }
 
   const { size } = await stat(destination);
+  etape("ok", {
+    statut: "scellee",
+    octets: size,
+    type_contenu: piece.content_type ?? null,
+    doublon_de: scelle.doublonDe,
+  });
   res.status(201).json({
     pieceId: piece.id,
     octets: size,

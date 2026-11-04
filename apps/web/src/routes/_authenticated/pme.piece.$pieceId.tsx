@@ -8,8 +8,10 @@ import { useDecimales } from "@/hooks/use-decimales";
 import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n, type MessageKey } from "@/i18n";
+import { AffichageSignale } from "@/components/malica/affichage-signale";
 import { CommentCEstPaye } from "@/components/malica/comment-c-est-paye";
 import { QuestionDuType } from "@/components/malica/question-du-type";
+import { NomDeLEmetteur } from "@/components/malica/nom-de-l-emetteur";
 import { usePme } from "@/components/malica/pme-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
@@ -56,6 +58,7 @@ import {
 } from "@/hooks/use-gestes-du-circuit";
 import { dossierDeLaPiece } from "@/lib/dossiers";
 import { RAISON_LONGUE } from "@/lib/lecture";
+import { cn } from "@/lib/utils";
 import {
   dateAEnregistrer,
   etiquetteDeLecture,
@@ -506,6 +509,10 @@ function PieceScreen() {
         gardeeLe: dossier.data.piece.gardeeLe ?? null,
         suivi: dossier.data.suivi,
         circuit: dossier.data.circuit,
+        // Ce que la base dit de sa lecture : un reçu ne se lit jamais, et au
+        // plafond une pièce part non lue (`gestesDuCircuit`).
+        accompagne: Boolean(accompagne.data),
+        lectureRefusee: dossier.data.lectureRefusee ?? null,
       }
     : null;
   const gestes = useGestesDuCircuit(pme.tenantId, faitsDuCircuit);
@@ -576,6 +583,30 @@ function PieceScreen() {
   });
   /** La feuille « Qu'est-ce que c'est ? », rouverte pour corriger le type. */
   const [corrigerType, setCorrigerType] = useState(false);
+
+  /**
+   * LE NOM DE L'ÉMETTEUR SE CORRIGE (3 novembre 2026).
+   *
+   * Recette, facture MyTek : la lecture a pris le logo, lu « MITEK », pour le
+   * nom. Le crayon devant le nom ouvre la saisie ; la réponse est une
+   * précision (R7), la lecture reste telle qu'elle a été faite. Le jugement
+   * suit, comme pour le type : le tiers et le libellé de l'écriture portent
+   * le nom retenu.
+   */
+  const [corrigerNom, setCorrigerNom] = useState(false);
+  const corrigerLeNom = useMutation({
+    mutationFn: async (nom: string) => {
+      await office().capture.preciser(pieceId, "issuer", nom);
+      await office().capture.analyser(pieceId);
+    },
+    onSuccess: async () => {
+      setError(null);
+      setCorrigerNom(false);
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
 
   /**
    * « Envoyer » — un seul geste, deux passages (lot 4) : le siège au
@@ -831,6 +862,11 @@ function PieceScreen() {
         }
     : null;
   const proposal = proposalAttempt?.ok ? proposalAttempt.value : null;
+  /** Le jugement dit que les montants lus ne ferment pas le total (`coherence_arithmetique`). */
+  const totalNeFermePas =
+    proposalAttempt != null &&
+    !proposalAttempt.ok &&
+    proposalAttempt.controlesEnDefaut.includes("coherence_arithmetique");
   /*
    * ANO-025 : un champ lu sous le seuil de réserve n'affiche pas la coche
    * « source », qui dirait une certitude. Le jugement déterministe le nomme ;
@@ -1023,12 +1059,15 @@ function PieceScreen() {
     champ: string;
     /** Le montant vient de l'écriture du cabinet : il n'a pas de source sur la pièce. */
     parLeCabinet?: boolean;
+    /** Corrigé à la main (une précision, R7) : la source montre ce qui avait été lu. */
+    corrige?: boolean;
   }> = [
     {
       cle: "issuer",
       label: t("pme.extract.issuer"),
       valeur: payload?.issuer ?? null,
       champ: "issuer",
+      corrige: Boolean(dossier.data?.precisions["issuer"]),
     },
     {
       cle: "date",
@@ -1291,7 +1330,9 @@ function PieceScreen() {
                       : t("pme.detail.sansQte")}
                     {a.unit_price_ht
                       ? " · " + t("pme.detail.pu", { pu: lisible(a.unit_price_ht) ?? "—" })
-                      : ""}
+                      : a.unit_price_ttc
+                        ? " · " + t("pme.detail.puTtc", { pu: lisible(a.unit_price_ttc) ?? "—" })
+                        : ""}
                     {a.tax_code ? " · " + a.tax_code : ""}
                   </p>
                 </div>
@@ -1328,10 +1369,28 @@ function PieceScreen() {
                 <span className="text-[14px] font-semibold">
                   {duCabinet ? t("pme.verifie.totalTtc") : t("pme.verifie.total")}
                 </span>
-                <span className="num text-[15px] font-semibold">
+                <span
+                  className={cn(
+                    "num text-[15px] font-semibold",
+                    totalNeFermePas && "text-[color:var(--ve)]",
+                  )}
+                >
                   {lisible(totaux?.ttc) ?? "—"} {deviseDeLaPiece}
                 </span>
               </div>
+              {/*
+               * Un total que la somme des montants lus ne donne pas (2 novembre
+               * 2026 : « 510,000 » relevé « 810,000 ») : le jugement le refuse,
+               * et l'écran ne l'affiche plus comme s'il était juste.
+               */}
+              {totalNeFermePas ? (
+                <p
+                  role="alert"
+                  className="mt-1.5 text-[12px] leading-[1.45] text-[color:var(--ve)]"
+                >
+                  {t("pme.detail.totalNeFermePas")}
+                </p>
+              ) : null}
             </div>
           )}
           <p className="mt-4 text-[11.5px] leading-[1.5] text-muted-foreground">
@@ -1341,6 +1400,59 @@ function PieceScreen() {
       </div>
     );
   }
+
+  // Une demande ne se suit qu'où elle se fait : au propriétaire, ou au cabinet.
+  const noteSuppression = demanderSuppression
+    ? demandeDeSuppression === "demandee" || demandeDeSuppression === "refusee"
+      ? demandeDeSuppression
+      : null
+    : noteDeSuppression(demandeDeSuppression, vis);
+  /** À qui je demande : mon propriétaire (le siège), ou le cabinet. */
+  const aQuiJeDemande = envoiVers.quiPour(demanderSuppression?.a ?? "cabinet");
+  /**
+   * « Demander la suppression », quand elle peut l'être : une demande déjà
+   * inscrite ne se redemande pas ; une demande retirée (la pièce était revenue
+   * au privé) ou accordée peut l'être. La fiche lue et la pièce partie sans
+   * avoir été lue l'offrent toutes deux, par ce seul calcul.
+   */
+  const demanderLaSuppression =
+    demanderSuppression &&
+    (!demandeDeSuppression ||
+      demandeDeSuppression === "retiree" ||
+      demandeDeSuppression === "accordee")
+      ? demanderSuppression
+      : null;
+  /** Où en est ma demande de suppression : dite une fois, lue aux deux endroits. */
+  const suiviDeLaSuppression =
+    noteSuppression === "demandee" && dernierFaitDeSuppression ? (
+      <ConfirmationSurPlace
+        titre={
+          dernierFaitDeSuppression.transmise
+            ? t("circuit.demande.transmise", { cabinet: aQuiJeDemande })
+            : t("envoi.suppression.fait", { qui: aQuiJeDemande })
+        }
+        detail={t("envoi.demande.detail", {
+          qui: dernierFaitDeSuppression.transmise ? envoiVers.quiPour("cabinet") : aQuiJeDemande,
+          quand: momentDeLEnvoi(dernierFaitDeSuppression.createdAt, locale).quand,
+        })}
+      />
+    ) : demanderSuppression?.isError ? (
+      <PasEncoreParti
+        qui={aQuiJeDemande}
+        reessayer={() => demanderSuppression.mutate()}
+        enCours={demanderSuppression.isPending}
+      />
+    ) : noteSuppression === "refusee" ? (
+      <p className="f-note">{t("pme.piece.suppressionRefusee")}</p>
+    ) : null;
+
+  /**
+   * Chez le cabinet, pas encore lue, et plus supprimable d'ici : la seule
+   * sortie est de le demander. Une pièce RENDUE par le cabinet (retournée,
+   * sa photo reprise) se supprime encore sans rien demander (`gestesDuCircuit`) :
+   * elle n'est pas dans ce cas.
+   */
+  const chezLeCabinetNonLue = vis === "partage" && piece.status === "capturee" && !supprimer;
 
   /* ========================================================= PAS ENCORE LUE
    *
@@ -1469,6 +1581,27 @@ function PieceScreen() {
             </button>
           </div>
         ) : null}
+        {/*
+         * ============================ CHEZ LE CABINET, PAS ENCORE LUE
+         *
+         * Plus aucune pièce ne part sans être lue (`une_piece_non_lue_ne_part_pas`).
+         * Deux cas restent : celles parties avant le 3 novembre, et la nouvelle
+         * photo d'une pièce déjà partie, qui hérite de son partage. L'écran les
+         * montrait comme une pièce qui attend chez soi, sans « Supprimer » ni
+         * raison : la personne restait devant deux boutons sans comprendre. Il
+         * dit maintenant où elle est, garde la lecture, et offre la seule
+         * sortie qui existe : la demander au cabinet.
+         */}
+        {chezLeCabinetNonLue ? (
+          <div className="manque" data-k="attente">
+            <p className="t-body font-semibold">
+              {t("pme.piece.partieNonLue", { cabinet: envoiVers.quiPour("cabinet") })}
+            </p>
+            <p className="t-body mt-1">
+              {t("pme.piece.partieNonLue.sous", { qui: aQuiJeDemande })}
+            </p>
+          </div>
+        ) : null}
         {/* Après un échec, ses deux gestes sont dans la carte d'échec, au-dessus. */}
         {echecDeLecture ? null : (
           <>
@@ -1492,6 +1625,19 @@ function PieceScreen() {
             </button>
           </>
         )}
+        {chezLeCabinetNonLue && demanderLaSuppression ? (
+          <button
+            type="button"
+            disabled={demanderLaSuppression.isPending}
+            onClick={() => demanderLaSuppression.mutate()}
+            className="h-[48px] w-full text-[14px] font-medium text-signal-stop disabled:opacity-50"
+          >
+            {demanderLaSuppression.isPending
+              ? t("common.loading")
+              : t("pme.piece.demanderSuppression")}
+          </button>
+        ) : null}
+        {chezLeCabinetNonLue ? suiviDeLaSuppression : null}
         {/*
          * Supprimer, tout court (26 octobre 2026) : « Reprendre » efface ET
          * rouvre l'appareil photo ; une photo prise par erreur n'avait aucune
@@ -1558,14 +1704,6 @@ function PieceScreen() {
    */
   // Le siège envoie au propriétaire : le référentiel le dit, pas un nom de rôle.
   const siege = aLeDroit(acces.data, "envoi.proprietaire");
-  // Une demande ne se suit qu'où elle se fait : au propriétaire, ou au cabinet.
-  const noteSuppression = demanderSuppression
-    ? demandeDeSuppression === "demandee" || demandeDeSuppression === "refusee"
-      ? demandeDeSuppression
-      : null
-    : noteDeSuppression(demandeDeSuppression, vis);
-  /** À qui je demande : mon propriétaire (le siège), ou le cabinet. */
-  const aQuiJeDemande = envoiVers.quiPour(demanderSuppression?.a ?? "cabinet");
 
   /**
    * Le mois de la pièce, pour la pastille du haut. Rien si la date manque.
@@ -1949,7 +2087,39 @@ function PieceScreen() {
             <i />
             {motDuStatut(statutComplet)}
           </span>
-          <h1>{payload?.issuer ?? t("pme.piece.title")}</h1>
+          {corrigerNom ? (
+            <NomDeLEmetteur
+              actuel={payload?.issuer ?? ""}
+              enCours={corrigerLeNom.isPending}
+              onEnregistrer={(nom) =>
+                nom === (payload?.issuer ?? "").trim()
+                  ? setCorrigerNom(false)
+                  : corrigerLeNom.mutate(nom)
+              }
+              onAnnuler={() => setCorrigerNom(false)}
+            />
+          ) : (
+            <h1 className="f-nom">
+              <span>{payload?.issuer ?? t("pme.piece.title")}</span>
+              {/*
+               * Le nom se corrige tant que la pièce n'est pas engagée — la
+               * base le redit (`capture_precision_persist`).
+               */}
+              {STATUTS_PRECISABLES.has(piece.status) ? (
+                <button
+                  type="button"
+                  className="f-crayon"
+                  onClick={() => setCorrigerNom(true)}
+                  aria-label={t("pme.piece.nom.modifier")}
+                  title={t("pme.piece.nom.modifier")}
+                >
+                  <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                    <path d="M4 20h4L19 9l-4-4L4 16z" />
+                  </svg>
+                </button>
+              ) : null}
+            </h1>
+          )}
           <div className="f-typ">
             {/*
              * Le type se corrige après la lecture (23 octobre 2026), tant que
@@ -1993,6 +2163,12 @@ function PieceScreen() {
       ) : null}
 
       <div className="f-mt">
+        <AffichageSignale
+          pieceId={pieceId}
+          ecran="pme"
+          source={duCabinet ? "cabinet" : "lecture"}
+          valeurs={{ ttc: totaux?.ttc, base_ht: totaux?.base_ht, tva: totaux?.vat }}
+        />
         <div className={vente ? "amt vent" : "amt"}>
           {lisible(totaux?.ttc) ?? "—"}{" "}
           <u>
@@ -2238,21 +2414,24 @@ function PieceScreen() {
                 >
                   <span className="bd">
                     <span className="lb">{l.label}</span>
-                    {(() => {
-                      switch (
-                        etiquetteDeLecture({
-                          confianceConnue,
-                          aVerifier: aVerifier.has(l.champ),
-                        })
-                      ) {
-                        case "inconnue":
-                          return <span className="et">{t("pme.citation.show")}</span>;
-                        case "aVerifier":
-                          return <span className="et am">{t("pme.citation.aVerifier")}</span>;
-                        case "source":
-                          return <span className="et ok">{t("pme.citation.source")}</span>;
-                      }
-                    })()}
+                    {l.corrige ? <span className="et ok">{t("pme.piece.nom.corrige")}</span> : null}
+                    {l.corrige
+                      ? null
+                      : (() => {
+                          switch (
+                            etiquetteDeLecture({
+                              confianceConnue,
+                              aVerifier: aVerifier.has(l.champ),
+                            })
+                          ) {
+                            case "inconnue":
+                              return <span className="et">{t("pme.citation.show")}</span>;
+                            case "aVerifier":
+                              return <span className="et am">{t("pme.citation.aVerifier")}</span>;
+                            case "source":
+                              return <span className="et ok">{t("pme.citation.source")}</span>;
+                          }
+                        })()}
                   </span>
                   <span className="vl">{l.valeur ?? "—"}</span>
                   <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
@@ -2776,20 +2955,16 @@ function PieceScreen() {
                   </span>
                 </button>
               ) : null}
-              {demanderSuppression &&
-              (!demandeDeSuppression ||
-                demandeDeSuppression === "retiree" ||
-                demandeDeSuppression === "accordee") ? (
-                /* Une demande déjà inscrite ne se redemande pas ; une demande retirée (la pièce était revenue au privé) peut l'être. */
+              {demanderLaSuppression ? (
                 <button
                   type="button"
                   className="f-ligne sup"
-                  disabled={demanderSuppression.isPending}
-                  onClick={() => demanderSuppression.mutate()}
+                  disabled={demanderLaSuppression.isPending}
+                  onClick={() => demanderLaSuppression.mutate()}
                 >
                   <span className="bd">
                     <span className="lb-a">
-                      {demanderSuppression.isPending
+                      {demanderLaSuppression.isPending
                         ? t("common.loading")
                         : t("pme.piece.demanderSuppression")}
                     </span>
@@ -2819,29 +2994,7 @@ function PieceScreen() {
             </div>
           )}
           {/* Hors partage, une vieille demande ne parle plus : le « Supprimer » ordinaire suffit. */}
-          {noteSuppression === "demandee" && dernierFaitDeSuppression ? (
-            <ConfirmationSurPlace
-              titre={
-                dernierFaitDeSuppression.transmise
-                  ? t("circuit.demande.transmise", { cabinet: aQuiJeDemande })
-                  : t("envoi.suppression.fait", { qui: aQuiJeDemande })
-              }
-              detail={t("envoi.demande.detail", {
-                qui: dernierFaitDeSuppression.transmise
-                  ? envoiVers.quiPour("cabinet")
-                  : aQuiJeDemande,
-                quand: momentDeLEnvoi(dernierFaitDeSuppression.createdAt, locale).quand,
-              })}
-            />
-          ) : demanderSuppression?.isError ? (
-            <PasEncoreParti
-              qui={aQuiJeDemande}
-              reessayer={() => demanderSuppression.mutate()}
-              enCours={demanderSuppression.isPending}
-            />
-          ) : noteSuppression === "refusee" ? (
-            <p className="f-note">{t("pme.piece.suppressionRefusee")}</p>
-          ) : null}
+          {suiviDeLaSuppression}
         </div>
       ) : null}
     </div>

@@ -15,7 +15,7 @@
  * seul (R2).
  */
 import type { Locale } from "../messages.ts";
-import type { PvReunion, SourceCitee } from "./repositories.ts";
+import type { PvReunion, SourceCitee, SuiviDeTrace } from "./repositories.ts";
 
 /* ------------------------------------------------------------- le relevé */
 
@@ -338,7 +338,10 @@ export interface MalicaPort {
    * `deja` dit si le travail existait : la file hors ligne rejoue, et un
    * rejeu ne doit pas se lire comme une seconde lecture.
    */
-  demanderLaLecture(pieceId: string): Promise<{ travailId: string; deja: boolean }>;
+  demanderLaLecture(
+    pieceId: string,
+    suivi?: SuiviDeTrace | null,
+  ): Promise<{ travailId: string; deja: boolean }>;
   /** L'œil lit la carte d'identification fiscale ; l'écran propose, l'expert arrête (R10). */
   lireCarte(input: { jurisdiction: string; fichier: Blob }): Promise<LectureDeCarte>;
   demander(question: QuestionAMalica): Promise<ReponseDeMalica>;

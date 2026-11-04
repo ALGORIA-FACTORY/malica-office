@@ -1261,6 +1261,17 @@ export interface NewPiece {
   idempotencyKey: string;
 }
 
+/**
+ * Le suivi d'une opération à travers ses appels : l'identifiant de trace né à
+ * la capture (`x-malica-trace`), et la clé d'idempotence du pas (`x-malica-cle`)
+ * — un renvoi après reconnexion réutilise les deux, et l'API ne le compte
+ * qu'une fois. Voir `docs/journalisation-parcours.md`.
+ */
+export interface SuiviDeTrace {
+  trace: string;
+  cle?: string;
+}
+
 /** La ligne d'une pièce, sans ses octets — ce que `enregistrer` écrit. */
 export interface NouvellePiece {
   tenantId: string;
@@ -1447,8 +1458,13 @@ export interface CaptureRepository {
    * ensuite (redéposer remplace). Une application tuée au milieu rejoue le pas
    * manquant, jamais les deux.
    */
-  enregistrer(piece: NouvellePiece): Promise<string>;
-  deposerOctets(pieceId: string, octets: Blob, contentType: string): Promise<void>;
+  enregistrer(piece: NouvellePiece, suivi?: SuiviDeTrace | null): Promise<string>;
+  deposerOctets(
+    pieceId: string,
+    octets: Blob,
+    contentType: string,
+    suivi?: SuiviDeTrace | null,
+  ): Promise<void>;
   /** Les deux pas d'un trait, pour qui n'a pas de file — le cabinet, un import. */
   register(input: NewPiece): Promise<string>;
   list(tenantId: string): Promise<Piece[]>;
@@ -1582,15 +1598,16 @@ export interface CaptureRepository {
   miniature(pieceId: string): Promise<Blob | null>;
   /**
    * Ce que la personne précise ou corrige : le type de la pièce, un code que
-   * le référentiel propose au choix (`propose_a_la_capture`). Une entrée
+   * le référentiel propose au choix (`propose_a_la_capture`), ou le nom de
+   * son émetteur (`issuer`, 3 novembre 2026). Une entrée
    * nouvelle, jamais une modification de la lecture (R7) ; la base contraint
    * le champ, la valeur et l'état de la pièce.
    */
   preciser(
     pieceId: string,
-    champ: "document_kind",
+    champ: "document_kind" | "issuer",
     valeur: string,
-  ): Promise<{ id: string; champ: string; valeur: string }>;
+  ): Promise<{ id: string | null; champ: string; valeur: string }>;
   /**
    * Rejuger la pièce après une précision : le verdict suit la réponse de la
    * personne. Sans ce geste, l'écran garderait le verdict d'avant.
@@ -1858,6 +1875,12 @@ export type PropositionDePiece = (
       avoir?: FactureDOrigine;
       /** La date hors de tout pack, quand `raisonCode` vaut `date_hors_referentiel`. */
       dateHorsReferentiel?: string;
+      /**
+       * Les champs qui manquent, en clés métier (`type`, `date`…), quand
+       * `raisonCode` vaut `a_completer`. Le cabinet tranche le sens quand
+       * c'est le `type` qui manque (recette du 2 novembre 2026).
+       */
+      aCompleter?: string[];
     }
 ) & {
   /**
@@ -3638,6 +3661,27 @@ export interface JournalRepository {
   dernieres(tenantId: string, limite?: number): Promise<PanneConsignee[]>;
   /** « Tout est reglé » : une marque datée ; rien n'est effacé (R7). */
   regler(tenantId: string): Promise<{ le: string }>;
+  /**
+   * Les étapes que l'appareil a vécues hors de toute requête (capture, file
+   * hors ligne, synchronisation, affichage), par lots de cinquante au plus.
+   * Elles vont au journal d'observabilité, pas à celui des pannes.
+   */
+  etapes(lot: readonly EtapeDeLAppareil[]): Promise<{ acceptees: number; ecartees: number }>;
+}
+
+/** Une étape de l'appareil : des identifiants et des scalaires courts, ni photo ni texte. */
+export interface EtapeDeLAppareil {
+  trace: string;
+  /** `perte` : ce que l'appareil a dû laisser tomber, compté (`nombre`, `raison`). */
+  etape: "capture" | "file_hors_ligne" | "synchronisation" | "affiche" | "perte";
+  issue: "ok" | "refus" | "erreur" | "ignore";
+  /** Ce qui fait « la même étape » : un renvoi de la même clé est une répétition. */
+  cle: string;
+  /** ISO 8601. */
+  debut: string;
+  dureeMs?: number | null;
+  piece?: string | null;
+  detail?: Readonly<Record<string, string | number | boolean | null>>;
 }
 
 /** Une panne inscrite au journal. */
@@ -3763,6 +3807,8 @@ export interface OrganisationDeLaLicence {
   tenant_id: string;
   nom: string;
   lectures_consommees: number | string | null;
+  /** L'appelant est-il titulaire de la licence ? Rendu quand la société ouverte est donnée. */
+  titulaire?: boolean;
 }
 
 /**
@@ -3785,8 +3831,10 @@ export interface FacturationRepository {
   monForfait(tenantId?: string): Promise<MonForfait | null>;
   /** Le prix d'une place et d'une société en plus ; `null` à qui n'est pas titulaire. */
   mesPrixEnPlus(tenantId: string): Promise<PrixEnPlus | null>;
-  sieges(): Promise<SiegeDeLaLicence[]>;
-  organisations(): Promise<OrganisationDeLaLicence[]>;
+  /** Les sièges vus depuis la société ouverte (`tenantId`) ; sans elle, ceux de mes licences. */
+  sieges(tenantId?: string): Promise<SiegeDeLaLicence[]>;
+  /** Les sociétés de la licence qui couvre la société ouverte, elle en tête. */
+  organisations(tenantId?: string): Promise<OrganisationDeLaLicence[]>;
   inviterSiege(
     email: string,
     tenantId: string,
@@ -4363,6 +4411,27 @@ export interface TourRepository {
   ): Promise<unknown>;
   emetteur(): Promise<OrganisationEmettrice | null>;
   chercherOrganisations(texte: string): Promise<OrganisationEmettrice[]>;
+  /** Les membres d'une organisation et le titulaire de sa licence (plateforme, lecture). */
+  membresDeLOrganisation(organisationId: string): Promise<
+    Array<{
+      user_id: string;
+      email: string | null;
+      nom: string | null;
+      role: string | null;
+      depuis: string | null;
+      titulaire_licence: boolean;
+    }>
+  >;
+  /** Confier une société sans membre à son premier dirigeant (un compte existant). */
+  confierOrganisation(
+    organisationId: string,
+    email: string,
+  ): Promise<{ organisation_id: string; dirigeant: string; licence: string | null }>;
+  /** Archiver une organisation, motif à l'appui ; rien ne s'efface. */
+  archiverOrganisation(
+    organisationId: string,
+    motif: string,
+  ): Promise<{ organisation_id: string; archivee_le: string }>;
   designerEmetteur(organisationId: string, valideDes: string, motif: string): Promise<unknown>;
   /** Le réglage de l'abonnement en vigueur : le report d'un mois, l'année et ses mois offerts. */
   reglageAbonnement(): Promise<ReglageAbonnement>;

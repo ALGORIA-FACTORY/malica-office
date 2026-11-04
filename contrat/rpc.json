@@ -232,6 +232,7 @@
   "journal": [
     "consigner",
     "dernieres",
+    "etapes",
     "regler"
   ],
   "journalDuJour": [
@@ -344,14 +345,17 @@
   ],
   "tour": [
     "accorderLectures",
+    "archiverOrganisation",
     "calendrier",
     "chercherOrganisations",
     "clients",
+    "confierOrganisation",
     "designerEmetteur",
     "emetteur",
     "grilleEnVigueur",
     "interventions",
     "licences",
+    "membresDeLOrganisation",
     "poserJourFerie",
     "prestatairesDePaiement",
     "publierGrille",

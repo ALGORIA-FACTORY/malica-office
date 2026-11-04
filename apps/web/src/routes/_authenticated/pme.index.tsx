@@ -355,14 +355,17 @@ function PmeHome() {
   // Comme l'écran des échéances : le calendrier se dérive d'abord
   // (idempotent), puis se lit — sinon un compte dont personne n'a encore
   // ouvert ses échéances n'en verrait aucune ici (revue de #80).
+  // Toutes les sociétés de la personne (3 novembre 2026), comme l'écran des
+  // échéances quand ses puces sont sur « Toutes » — la même clé de cache.
+  const societes = pme.dossiers.length > 0 ? pme.dossiers.map((d) => d.id) : [pme.tenantId];
   const derivation = useQuery({
-    queryKey: ["echeances-derivation", pme.tenantId],
-    queryFn: () => office().collab.deriverEcheances([pme.tenantId]),
+    queryKey: ["echeances-derivation", ...societes],
+    queryFn: () => office().collab.deriverEcheances(societes),
     staleTime: 60_000,
   });
   const echeances = useQuery({
-    queryKey: ["echeances", pme.tenantId],
-    queryFn: () => office().collab.echeances([pme.tenantId]),
+    queryKey: ["echeances", ...societes],
+    queryFn: () => office().collab.echeances(societes),
     enabled: derivation.isFetched,
   });
   const catalogue = useCatalogueDesOffres().data;
@@ -420,7 +423,19 @@ function PmeHome() {
     <div data-ecran="accueil" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
       {/* Un cabinet propose ? Le dirigeant répond avant tout le reste. */}
       <div className="px-5 pt-3">
-        <MandatsProposes tenantId={pme.tenantId} />
+        {/*
+         * Chaque société de la personne (3 novembre 2026) : sans sélecteur
+         * dans l'en-tête, une proposition faite à une autre société que celle
+         * ouverte resterait invisible. La carte nomme la société dès qu'il y
+         * en a plusieurs.
+         */}
+        {(pme.dossiers.length > 0 ? pme.dossiers : [{ id: pme.tenantId, name: "" }]).map((d) => (
+          <MandatsProposes
+            key={d.id}
+            tenantId={d.id}
+            societe={pme.dossiers.length > 1 ? d.name : undefined}
+          />
+        ))}
         <PastilleAEnvoyer />
       </div>
 
@@ -685,6 +700,10 @@ function PmeHome() {
                 >
                   <span className="j">{jour(e.dueDate)}</span>
                   <b>{e.label}</b>
+                  {/* Plusieurs sociétés : l'échéance dit la sienne. */}
+                  {societes.length > 1 ? (
+                    <span>{pme.dossiers.find((d) => d.id === e.tenantId)?.name ?? ""}</span>
+                  ) : null}
                   <span>
                     {e.jours < 0
                       ? t("pme.home.ech.retard")

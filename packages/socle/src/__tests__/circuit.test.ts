@@ -8,6 +8,7 @@ import {
   demandeDuSiegeATrancher,
   etatDeMaDemande,
   gestesDuCircuit,
+  MOTIF_DU_PLAFOND,
   type PieceDuCircuit,
 } from "../circuit.ts";
 
@@ -44,7 +45,12 @@ const piece = (
     gardeeLe: p.gardeeLe ?? null,
     circuit: p.circuit ?? null,
   } as const;
-  return { ...base, statut: statutDuCircuit({ ...base, suivi: null }) };
+  return {
+    ...base,
+    accompagne: p.accompagne ?? null,
+    lectureRefusee: p.lectureRefusee ?? null,
+    statut: statutDuCircuit({ ...base, suivi: null }),
+  };
 };
 
 /** L'état d'une demande à une étape, tel que `collab.etatDesDemandes` le rend. */
@@ -88,6 +94,53 @@ describe("le geste « Envoyer », un seul, deux passages", () => {
       envoyer: null,
       garder: false,
     });
+  });
+});
+
+describe("une pièce non lue ne part pas au cabinet (3 novembre 2026)", () => {
+  const sienne = { circuit: circuit({ recoit: true }) };
+
+  it("non lue : ni « Envoyer », ni dans le lot de la Bibliothèque", () => {
+    const nonLue = piece({ ...sienne, status: "capturee" });
+    expect(gestesDuCircuit(nonLue, PROPRIETAIRE, true).envoyer).toBeNull();
+    expect(resteAEnvoyer(nonLue, PROPRIETAIRE, true)).toBeNull();
+  });
+
+  it("lue, elle part ; la règle ne retient rien d'autre", () => {
+    const lue = piece({ ...sienne, status: "lue" });
+    expect(gestesDuCircuit(lue, PROPRIETAIRE, true).envoyer).toBe("cabinet");
+    expect(resteAEnvoyer(lue, PROPRIETAIRE, true)).toBe("cabinet");
+  });
+
+  it("un reçu, un justificatif ne se lisent jamais : ils suivent leur pièce", () => {
+    const recu = piece({ ...sienne, status: "capturee", accompagne: true });
+    expect(gestesDuCircuit(recu, PROPRIETAIRE, true).envoyer).toBe("cabinet");
+  });
+
+  it("au plafond du forfait, elle part non lue : le cabinet la saisit", () => {
+    const auPlafond = piece({
+      ...sienne,
+      status: "capturee",
+      lectureRefusee: { motif: MOTIF_DU_PLAFOND, le: "2026-11-03T10:00:00Z" },
+    });
+    expect(gestesDuCircuit(auPlafond, PROPRIETAIRE, true).envoyer).toBe("cabinet");
+    // Un autre refus (un doublon strict) ne la laisse pas partir.
+    const doublon = piece({
+      ...sienne,
+      status: "capturee",
+      lectureRefusee: { motif: "piece_en_double", le: "2026-11-03T10:00:00Z" },
+    });
+    expect(gestesDuCircuit(doublon, PROPRIETAIRE, true).envoyer).toBeNull();
+  });
+
+  it("le siège envoie toujours au propriétaire, qui la lira avant de transmettre", () => {
+    const nonLue = piece({ circuit: circuit({}), status: "capturee" });
+    expect(gestesDuCircuit(nonLue, SIEGE, true).envoyer).toBe("proprietaire");
+  });
+
+  it("non lue, elle se supprime encore : elle n'est pas partie", () => {
+    const nonLue = piece({ ...sienne, status: "capturee" });
+    expect(gestesDuCircuit(nonLue, PROPRIETAIRE, true).supprimer).toBe(true);
   });
 });
 

@@ -257,7 +257,7 @@ export const charges = {
          -- cabinet a inscrit en base, au mois de son écriture, rangée dans sa
          -- famille par le même résolveur que les articles lus — le compte
          -- d'abord, puis le libellé. La PME y lit l'émetteur, pas l'écriture.
-         select q.id, l.ordinal, coalesce(x.payload ->> 'issuer', ''),
+         select q.id, l.ordinal, coalesce(app.emetteur_dit(q.id), x.payload ->> 'issuer', ''),
                 null::numeric, null::text, null::text, l.montant::text, null::text, l.famille_code,
                 l.famille_source, to_char(l.date_ecriture, 'YYYY-MM'), l.date_ecriture,
                 null, null, null, null, null, 'cabinet'

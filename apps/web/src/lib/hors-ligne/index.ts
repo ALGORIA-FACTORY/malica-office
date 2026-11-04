@@ -7,12 +7,14 @@
  * l'appareil pour la coque, que rien n'évacue.
  */
 import { estNatif } from "@/capabilities/coque";
+import { signaleur } from "@/lib/parcours";
+import { retenirLaTrace } from "@/lib/parcours/traces";
 import { office } from "@/verticals/malica-office/composition";
 
 import { depotMemoire } from "./depot";
 import { creerDepotFichiers } from "./depot-fichiers";
 import { creerDepotIdb } from "./depot-idb";
-import { creerVidage, type Vidage } from "./vidage";
+import { creerVidage, suiviDuPas, type Vidage } from "./vidage";
 
 let instance: Vidage | null = null;
 
@@ -26,27 +28,34 @@ export function vidage(): Vidage {
           : creerDepotIdb(),
       ports: {
         enregistrer: (e) =>
-          office().capture.enregistrer({
-            tenantId: e.tenantId,
-            entityId: e.entityId,
-            source: e.source,
-            vis: e.vis,
-            idempotencyKey: e.cle,
-            contentType: e.contentType,
-            documentKind: e.documentKind ?? null,
-            sourcePieceId: e.sourcePieceId ?? null,
-            paiementsAttestes: e.paiementsAttestes ?? null,
-            remplace: e.remplace ?? null,
-          }),
-        deposerOctets: (pieceId, octets, contentType) =>
-          office().capture.deposerOctets(pieceId, octets, contentType),
+          office().capture.enregistrer(
+            {
+              tenantId: e.tenantId,
+              entityId: e.entityId,
+              source: e.source,
+              vis: e.vis,
+              idempotencyKey: e.cle,
+              contentType: e.contentType,
+              documentKind: e.documentKind ?? null,
+              sourcePieceId: e.sourcePieceId ?? null,
+              paiementsAttestes: e.paiementsAttestes ?? null,
+              remplace: e.remplace ?? null,
+            },
+            suiviDuPas(e, "enregistrer"),
+          ),
+        deposerOctets: (pieceId, octets, contentType, suivi) =>
+          office().capture.deposerOctets(pieceId, octets, contentType, suivi),
         // Le numéro du travail durable n'est pas repris ici : la file hors
         // ligne lance et s'en va, et c'est l'écran qui suit la lecture.
-        demanderLaLecture: async (pieceId) => {
-          await office().malica.demanderLaLecture(pieceId);
+        demanderLaLecture: async (pieceId, suivi) => {
+          await office().malica.demanderLaLecture(pieceId, suivi);
         },
       },
       enLigne: () => (typeof navigator === "undefined" ? true : navigator.onLine),
+      parcours: {
+        signaler: (etape) => signaleur().signaler(etape),
+        retenir: retenirLaTrace,
+      },
     });
   }
   return instance;

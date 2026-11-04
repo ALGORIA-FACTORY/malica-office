@@ -1151,9 +1151,15 @@
 [data-surface="pme"] [data-ecran="pochette"] .principal{flex:1;min-height:48px;border-radius:24px;background:var(--acc);color:var(--on-acc);display:flex;align-items:center;justify-content:center;padding:0 1rem;font-size:.9375rem;font-weight:700;text-decoration:none;text-align:center}
 [data-surface="pme"] [data-ecran="pochette"] .plus{width:48px;height:48px;margin-inline-start:auto;border-radius:50%;border:1px solid var(--dl);background:transparent;color:var(--tx);display:grid;place-items:center;cursor:pointer}
 [data-surface="pme"] [data-ecran="pochette"] .plus svg{width:22px;height:22px}
-[data-surface="pme"] [data-ecran="pochette"] .filtres{display:flex;gap:.5rem;overflow-x:auto;margin:1rem -1.25rem 0;padding:0 1.25rem;scrollbar-width:none}
-[data-surface="pme"] [data-ecran="pochette"] .filtres button{flex:none;min-height:36px;padding:0 .875rem;border-radius:18px;border:1px solid var(--dl);background:transparent;color:var(--tx);font:inherit;font-size:.8125rem;font-weight:600;cursor:pointer}
-[data-surface="pme"] [data-ecran="pochette"] .filtres button[aria-pressed="true"]{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+/* Les puces de filtre : la pochette (et ses dossiers), puis le choix de la
+ * société des échéances (3 novembre 2026) — un seul dessin. La bibliothèque
+ * et ses dossiers choisissent par leurs cartes « Organisations ». */
+[data-surface="pme"] [data-ecran="pochette"] .filtres,
+[data-surface="pme"] [data-ecran="echeances"] .filtres{display:flex;gap:.5rem;overflow-x:auto;margin:1rem -1.25rem 0;padding:0 1.25rem;scrollbar-width:none}
+[data-surface="pme"] [data-ecran="pochette"] .filtres button,
+[data-surface="pme"] [data-ecran="echeances"] .filtres button{flex:none;min-height:36px;padding:0 .875rem;border-radius:18px;border:1px solid var(--dl);background:transparent;color:var(--tx);font:inherit;font-size:.8125rem;font-weight:600;cursor:pointer}
+[data-surface="pme"] [data-ecran="pochette"] .filtres button[aria-pressed="true"],
+[data-surface="pme"] [data-ecran="echeances"] .filtres button[aria-pressed="true"]{background:var(--tx);color:var(--bg);border-color:var(--tx)}
 [data-surface="pme"] [data-ecran="pochette"] .liste{display:grid;margin-top:.75rem}
 [data-surface="pme"] [data-ecran="pochette"] .liste a{display:flex;align-items:center;gap:.75rem;min-height:64px;padding:.5rem 0;border-bottom:1px solid var(--hr);color:var(--tx);text-decoration:none}
 [data-surface="pme"] [data-ecran="pochette"] .liste .bd{flex:1;min-width:0;display:grid;gap:.1875rem}
@@ -1329,6 +1335,20 @@
 [data-surface="pme"] [data-ecran="dossier"] .f-etat.az{background:var(--az-d);color:var(--az)}
 [data-surface="pme"] [data-ecran="dossier"] .f-etat.ok{background:var(--me);color:var(--me-tx)}
 [data-surface="pme"] [data-ecran="dossier"] .f-typ{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+/* Le nom de l'émetteur et son crayon (3 novembre 2026) : le crayon suit le
+ * nom, dans le titre ; une cible de 44px, un trait de 16px. */
+[data-surface="pme"] [data-ecran="dossier"] .f-qui h1.f-nom{display:flex;align-items:flex-start;gap:.25rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-qui h1.f-nom span{min-width:0}
+[data-surface="pme"] [data-ecran="dossier"] .f-crayon{flex:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-.5rem -.625rem -.5rem 0; border:0;border-radius:999px;background:none;color:var(--t2);cursor:pointer}
+[data-surface="pme"] [data-ecran="dossier"] .f-crayon:hover{color:var(--tx);background:var(--d1)}
+[data-surface="pme"] [data-ecran="dossier"] .f-crayon:focus-visible{outline:2px solid var(--tx);outline-offset:-4px}
+[data-surface="pme"] [data-ecran="dossier"] .f-crayon .g{width:16px;height:16px;stroke-width:2}
+[data-surface="pme"] [data-ecran="dossier"] .f-nom-saisie{display:grid;gap:.5rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-nom-saisie label{font-size:.75rem;font-weight:600;color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .f-nom-saisie input{min-height:48px;border:1px solid var(--dl);border-radius:12px;background:var(--d0);color:var(--tx); padding:0 .75rem;font-family:inherit;font-size:1.0625rem;font-weight:700}
+[data-surface="pme"] [data-ecran="dossier"] .f-nom-saisie input:focus-visible{outline:2px solid var(--tx);outline-offset:1px}
+[data-surface="pme"] [data-ecran="dossier"] .f-nom-gestes{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-bouton.pr{border:0;background:var(--acc);color:var(--on-acc);font-weight:700}
 [data-surface="pme"] [data-ecran="dossier"] .f-typ .puce{display:inline-flex;align-items:center;gap:.375rem;min-height:34px;padding:0 .75rem; border-radius:999px;border:1px solid var(--dl);background:none;color:var(--tx);font-family:inherit;font-size:.8125rem;font-weight:600}
 [data-surface="pme"] [data-ecran="dossier"] .f-typ button.puce{cursor:pointer}
 [data-surface="pme"] [data-ecran="dossier"] .f-typ .puce svg{width:14px;height:14px;stroke-width:2}

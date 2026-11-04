@@ -71,8 +71,22 @@ export interface PmeContextValue {
    * il doit pouvoir proposer le changement de dossier sans redemander la liste
    * à l'API, que le shell a déjà.
    */
-  dossiers: ReadonlyArray<{ id: string; name: string }>;
+  dossiers: ReadonlyArray<{
+    id: string;
+    name: string;
+    /** Le matricule de CETTE société : les réglages les montrent toutes (3 novembre 2026). */
+    matricule?: string | null;
+    /** Le rôle de la personne dans cette société. */
+    role?: string | null;
+  }>;
   choisirDossier: (id: string) => void;
+  /**
+   * La société que la bibliothèque, ses dossiers et les échéances montrent :
+   * `null` = toutes (3 novembre 2026). Un choix d'ÉCRAN, partagé entre ces
+   * trois-là et nulle part ailleurs ; il ne change pas le dossier ouvert.
+   */
+  societeAffichee: string | null;
+  afficherSociete: (id: string | null) => void;
   /** Vrai si ce compte suit aussi un cabinet — sinon la bascule n'a nulle part où aller. */
   aUnCabinet: boolean;
   /** Geste cœur : un tap, moins de dix secondes. Piloté par le shell. */

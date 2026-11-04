@@ -13,6 +13,7 @@ import pg from "pg";
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
+import { lireLaPieceDEssai } from "./lecture-d-essai.ts";
 import { office } from "./depots/office.ts";
 import { supervision } from "./depots/supervision.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
@@ -136,17 +137,7 @@ export async function monterUneSociete(marque: string): Promise<SocieteDEssai> {
   };
 
   const lire = async (qui: Personne, pieceId: string) => {
-    await sousIdentiteDuServeur(gens[qui].id, (db) =>
-      db.query(
-        `select public.capture_read_persist($1, $2::jsonb, 'extract.v1', $3::jsonb,
-                                             '[]'::jsonb, '[]'::jsonb)`,
-        [
-          pieceId,
-          JSON.stringify([{ page: 1, ordinal: 0, text: "TOTAL", x0: 0, y0: 0, x1: 1, y1: 1 }]),
-          JSON.stringify({ document_kind: "facture_achat" }),
-        ],
-      ),
-    );
+    await sousIdentiteDuServeur(gens[qui].id, (db) => lireLaPieceDEssai(db, pieceId));
   };
 
   const priseEnCharge = async (pieceId: string) => {

@@ -19,7 +19,7 @@
  * écrans. Deux dérivations finiraient par se contredire — c'est exactement
  * ce que l'audit du 25 octobre avait relevé entre la pastille et le parcours.
  */
-import type { PieceStatus, Visibility } from "./ports/repositories.ts";
+import type { LectureRefusee, PieceStatus, Visibility } from "./ports/repositories.ts";
 
 /** Ce que la base sait du chemin d'une pièce envoyée au cabinet. */
 export interface SuiviDEnvoi {
@@ -140,6 +140,10 @@ export interface FaitsDeLaPiece {
   gardeeLe?: string | null;
   suivi?: SuiviDEnvoi | null;
   circuit?: CircuitInterne | null;
+  /** Un reçu ou un justificatif, qui suit sa pièce (`PieceLue.accompagne`). */
+  accompagne?: boolean | null;
+  /** Le dernier refus de lecture inscrit (`PieceLue.lectureRefusee`). */
+  lectureRefusee?: LectureRefusee | null;
 }
 
 const rien = (statut: StatutPme): StatutDuCircuit => ({ statut, chez: null, qui: null });

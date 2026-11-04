@@ -285,6 +285,8 @@ export const en: Dict = {
   "pme.dossier.verifier#other": "See the {count} documents waiting for you",
   "pme.dossier.vide": "No document in this folder yet.",
   "pme.dossier.organisations": "Organisations",
+  "pme.societes.toutes": "All companies",
+  "pme.societes.choix": "Company shown",
   "pme.dossier.sieges": "Seats",
   "pme.dossier.annees": "Years",
   "pme.dossier.vous": "{nom} (you)",
@@ -373,6 +375,7 @@ export const en: Dict = {
   "pme.membres.envoyee": "Invitation sent to {email}.",
   "pme.membres.attend": "pending",
   "pme.inviter.titreRole": "Their role",
+  "pme.inviter.titreSociete": "The company",
   "pme.inviter.titreAdresse": "Their email address",
   "pme.inviter.place": "One seat",
   "pme.inviter.placeMemePrix": "One seat · same price",
@@ -545,6 +548,11 @@ export const en: Dict = {
   "pme.type.passer": "I don't know",
   "pme.type.corrigeable": "Malica checks it when reading. You can change it later.",
   "pme.piece.type.modifier": "Change type",
+  "pme.piece.nom.modifier": "Edit the issuer’s name",
+  "pme.piece.nom.label": "Issuer’s name",
+  "pme.piece.nom.aide": "As printed on the document. The original reading is kept.",
+  "pme.piece.nom.enregistrer": "Save",
+  "pme.piece.nom.corrige": "Corrected",
   "pme.type.lot": "{count} documents, all of the same kind",
   "pme.type.lot#one": "{count} document",
   "pme.type.lot#other": "{count} documents, all of the same kind",
@@ -565,6 +573,9 @@ export const en: Dict = {
   "pme.detail.qte": "Qty {q}",
   "pme.detail.sansQte": "No quantity given",
   "pme.detail.pu": "Unit {pu}",
+  "pme.detail.puTtc": "Unit price incl. tax {pu}",
+  "pme.detail.totalNeFermePas":
+    "The amounts read do not verify this total (excl. tax + VAT + duties): check it on the document.",
   "pme.detail.provenance":
     "Every line comes from the document itself. I add nothing, I compute nothing.",
   "pme.lecture.releve": "Noted · {mots} words located",
@@ -574,6 +585,9 @@ export const en: Dict = {
   "pme.verifie.corriger": "Retake the photo",
   "pme.tva.nonAssujetti":
     "Your business is not registered for VAT: there is no VAT to pay back and no credit to carry over. The VAT you pay on purchases is part of your expenses.",
+  "pme.piece.partieNonLue": "At {cabinet}, not read yet.",
+  "pme.piece.partieNonLue.sous":
+    "I can still read it here. It can no longer be deleted from here: ask {qui} to remove it.",
   "pme.scan.final":
     "Here is the page as I will read it. If it looks right, read it; otherwise retake the photo.",
   "pme.scan.page": "Page {n}",
@@ -665,7 +679,6 @@ export const en: Dict = {
   "pme.tva.soldeInconnu": "VAT balance to confirm",
   "pme.nav.add": "Add a document",
   "pme.nav.office": "Workspace",
-  "pme.org.switch": "Active company",
   "pme.nav.aria": "Main navigation",
   "pme.home.greet.morning": "Good morning.",
   "pme.home.greet.afternoon": "Good afternoon.",
@@ -1654,6 +1667,7 @@ export const en: Dict = {
   "cab.journal.piece.type_etabli": "Document type set by the practice.",
   "cab.journal.piece.type_corrige": "The client corrected the document type.",
   "cab.journal.piece.date_corrigee": "The client corrected the document date.",
+  "cab.journal.piece.nom_corrige": "The client corrected the issuer’s name.",
   "cab.journal.piece.vers_cabinet": "Document sent to the practice.",
   "cab.journal.piece.rendue": "Document handed back to the client, at their request.",
   "cab.journal.piece.vers_societe": "Document back in the company.",
@@ -2027,6 +2041,7 @@ export const en: Dict = {
   "refus.reponse.sans_decision": "Grant or refuse the request.",
   "refus.envoi.retour_par_sa_carte":
     "A returned document is sent back from its card, once the requested fix is done.",
+  "refus.envoi.pas_lue": "This document has not been read yet: read it, then send it.",
   "refus.envoi.chez_le_siege":
     "You returned it to your team member: it goes out once they have fixed it and sent it back.",
   "refus.reponse.vide": "Write your reply before sending it.",
@@ -2042,6 +2057,12 @@ export const en: Dict = {
   "refus.introuvable.paiement": "Payment not found, or you do not have access to it.",
   "refus.introuvable.recette": "Recipe version not found, or you do not have access to it.",
   "refus.introuvable.organisation": "Organisation not found, or you do not have access to it.",
+  "refus.organisation.pas_une_societe": "Only a company can be entrusted to a manager.",
+  "refus.organisation.deja_dirigee":
+    "This company already has members: its managers invite people themselves.",
+  "refus.archivage.motif_requis": "Say why this organisation is archived.",
+  "refus.organisation.emettrice":
+    "This organisation issues Malica’s invoices: designate another issuer before archiving it.",
   "refus.introuvable.invitation": "Invitation not found, or you do not have access to it.",
   "refus.introuvable.article": "Item not found, or you do not have access to it.",
   "refus.introuvable.exemple": "Example not found, or you do not have access to it.",
@@ -2349,6 +2370,8 @@ export const en: Dict = {
   "refus.precision.type_non_propose": "This document type is not offered: {type}.",
   "refus.precision.date_illisible": "This date cannot be read: {date}.",
   "refus.precision.date_a_venir": "A future date cannot be set: {date}.",
+  "refus.precision.nom_vide": "The name cannot be empty.",
+  "refus.precision.nom_trop_long": "The name is too long: {max} characters at most.",
   "refus.precision.champ": "This field cannot be specified: {champ}.",
   "refus.lecture.citation_orpheline":
     "The reading cites field {champ} at a place where no word was read.",
@@ -3477,6 +3500,8 @@ export const en: Dict = {
     "No licence is attached to this account. Caps and price stay empty until then.",
   "pme.reglages.orgs": "Companies",
   "pme.reglages.orgs.aucune": "No organisation on this licence.",
+  "pme.reglages.orgs.autreTitulaire":
+    "{societe}’s licence belongs to its principal owner: its price and seats are managed from their account.",
   "pme.reglages.orgs.ajouter": "Add a company",
   "pme.reglages.orgs.ajouter.sous":
     "One more organisation on the licence, with its own engagement and its own documents. The cap is held by the database.",
@@ -3868,8 +3893,9 @@ export const en: Dict = {
   "pme.reglages.sieges.verrou":
     "Isolated seats — each one sees only its own documents — and you confirm before anything reaches the firm.",
   "pme.reglages.sieges.aucun": "No seat has come back for this licence yet, not even yours.",
-  "pme.reglages.org.ouverte": "Open",
   "pme.reglages.org.surLicence": "On the licence",
+  "pme.reglages.org.principal": "Principal owner",
+  "pme.reglages.org.offre": "Plan:",
   "pme.reglages.org.matricule": "Tax number established by reading the tax identification card.",
   "pme.reglages.org.matricule.fort": "Immutable from the first document received.",
   "pme.reglages.org.cabinet": "Firm:",

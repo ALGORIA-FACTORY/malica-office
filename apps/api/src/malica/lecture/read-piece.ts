@@ -27,6 +27,7 @@ import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
 import { empruntAuVocabulaireReserve, lireLeSens } from "@malica/socle/sens-de-la-piece";
 import { D, toFixedStr } from "@malica/socle/domain/decimal";
 import { deviseDeLaPiece, type DeviseLue } from "@malica/socle/montant-imprime";
+import { lireLeMontantEnLettres } from "@malica/socle/montant-en-lettres";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
 import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
@@ -89,7 +90,7 @@ export function buildExtractFromTokenPlan(params: {
    * Les règles de lecture du pack (`lireLesReglesDeLecture`) : la convention de
    * date et la forme du matricule. Rien n'en est écrit dans la chaîne (R4).
    */
-  regles: Pick<ReglesDeLecture, "dates" | "matricule">;
+  regles: Pick<ReglesDeLecture, "dates" | "matricule"> & Partial<Pick<ReglesDeLecture, "lettres">>;
   /**
    * Le lecteur qui a relevé le plan (`VisionRead.lecteur`). Il décide si les
    * montants en chiffres arabes orientaux se lisent (`litLesChiffresOrientaux`) ;
@@ -551,6 +552,48 @@ export function buildExtractFromTokenPlan(params: {
     });
   }
 
+  /*
+   * ======================================= LE TOTAL ÉCRIT EN LETTRES (2 novembre 2026)
+   *
+   * Une photo MyTek : « 510,000 » relevé « 810,000 », et « Cinq Cent Dix Dinars »
+   * écrit sous les totaux. Le sudoku a fermé la pièce par le montant en lettres et
+   * cite cette phrase comme total (`par_lettres`). Ces mots ne se lisent pas en
+   * chiffres : sans rien de plus, le TTC sortait vide et la lecture « partielle ».
+   *
+   * Il se recompose ici, par le Socle, à une condition stricte : la phrase citée
+   * se lit en lettres avec le lexique du pack, dans la devise de la pièce, et sa
+   * valeur ÉGALE HT + TVA + droits lus. Sinon il reste vide. Le jugement relit
+   * la même phrase et le dit (« le total en chiffres ne se lit pas »).
+   */
+  let ttcRetenu = totalTtc;
+  if (
+    ttcRetenu === null &&
+    totalBase !== null &&
+    totalVat !== null &&
+    selection.totals.ttc &&
+    regles.lettres
+  ) {
+    const texte = texteDuMontantCite(tokens, selection.totals.ttc);
+    const mots = texte ? texte.split(/\s+/u).filter((m) => m.length > 0) : [];
+    const lu = mots.length > 0 ? lireLeMontantEnLettres(mots, regles.lettres) : null;
+    const somme = otherCharges.reduce(
+      (s, c) => s.plus(D(c["amount"]!)),
+      D(totalBase).plus(D(totalVat)),
+    );
+    if (lu && lu.devise === devise.code && lu.mots > 0) {
+      const unite = 10 ** decimals;
+      const enLettres = D(lu.majeures).plus(D(lu.mineures ?? 0).div(unite));
+      if (enLettres.eq(somme)) {
+        ttcRetenu = toFixedStr(somme, decimals);
+        flags.push({
+          field: "totals.ttc",
+          code: "DERIVED_BY_SOCLE",
+          detail: `TTC = HT + TVA + droits, égal au montant écrit en lettres « ${mots.join(" ")} »`,
+        });
+      }
+    }
+  }
+
   const candidate = {
     contract: "extract.v1",
     // Illisible, un champ reste VIDE : jamais « » ni « 0 », qui passaient la
@@ -564,7 +607,7 @@ export function buildExtractFromTokenPlan(params: {
     totals: {
       base_ht: totalBase ?? null,
       vat: totalVat ?? null,
-      ttc: totalTtc ?? null,
+      ttc: ttcRetenu ?? null,
     },
     references,
     // La confiance globale du désignateur, sous une clé stable : c'est

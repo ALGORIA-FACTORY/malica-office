@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import {
@@ -64,9 +64,9 @@ function compte(valeur: number | string | null | undefined): string {
   return n === null ? "—" : String(n);
 }
 
-/** Le groupe déroulé : un mois, un siège ou une organisation, et sa clé. */
+/** Le groupe déroulé : un mois ou un siège, et sa clé. */
 interface Ouvert {
-  genre: "mois" | "siege" | "societe";
+  genre: "mois" | "siege";
   cle: string;
 }
 
@@ -242,13 +242,23 @@ function Bibliotheque() {
 
   const { toutes, parSociete, parSiege, chargement, nomDeSociete, parSieges, ouvrirSaSociete } =
     usePiecesDesSocietes();
-  /** Les pièces de la société ouverte : celles des dossiers, des sièges et des mois. */
+  /*
+   * Les pièces montrées : toutes les sociétés, ou celle des puces
+   * (`pme.societeAffichee`, 3 novembre 2026) — celles des dossiers, des sièges
+   * et des mois.
+   */
   const ici = useMemo(
-    () => toutes.filter((x) => x.societe === pme.tenantId).map((x) => x.piece),
-    [toutes, pme.tenantId],
+    () =>
+      toutes
+        .filter((x) => pme.societeAffichee === null || x.societe === pme.societeAffichee)
+        .map((x) => x.piece),
+    [toutes, pme.societeAffichee],
   );
 
   const [ouvert, setOuvert] = useState<Ouvert | null>(null);
+  // Changer de société referme le groupe déroulé : il montrait l'autre
+  // (revue de #211).
+  useEffect(() => setOuvert(null), [pme.societeAffichee]);
   const revenir = useRevenir();
   const [tout, setTout] = useState(false);
 
@@ -312,15 +322,10 @@ function Bibliotheque() {
       ? null
       : ouvert.genre === "mois"
         ? { titre: nomDuMois(ouvert.cle), pieces: mois.find(([c]) => c === ouvert.cle)?.[1] ?? [] }
-        : ouvert.genre === "siege"
-          ? {
-              titre: sieges.get(ouvert.cle)?.nom ?? "",
-              pieces: sieges.get(ouvert.cle)?.pieces ?? [],
-            }
-          : {
-              titre: nomDeSociete(ouvert.cle),
-              pieces: organisations.find((c) => c.id === ouvert.cle)?.pieces ?? [],
-            };
+        : {
+            titre: sieges.get(ouvert.cle)?.nom ?? "",
+            pieces: sieges.get(ouvert.cle)?.pieces ?? [],
+          };
   const ouvrir = (suivant: Ouvert) => {
     setOuvert(suivant);
     window.scrollTo(0, 0);
@@ -379,6 +384,8 @@ function Bibliotheque() {
           {t("pme.doc.compte", { count: ici.length })}
           <br />
           {compte(f?.lectures_restantes)} / {compte(f?.lectures_droit)} · {t("pme.home.lectures")}
+          {/* Le compteur est celui d'une société : il la nomme quand il y en a plusieurs. */}
+          {pme.dossiers.length > 1 ? ` · ${pme.orgName}` : null}
         </p>
 
         <TransmettreCeQuiReste pieces={brutes} />
@@ -480,16 +487,34 @@ function Bibliotheque() {
             ) : null}
 
             {/* ------------------------------------------- les organisations */}
+            {/*
+             * LES ORGANISATIONS SONT LA SÉLECTION (Wissem, 3 novembre 2026 :
+             * « pas de doublons »). « Toutes les sociétés » en tête, puis
+             * chacune : toucher une carte montre ses dossiers, ses sièges et
+             * ses mois au-dessus et en dessous. Le choix est partagé avec les
+             * dossiers (`pme.societeAffichee`).
+             */}
             {parSociete && organisations.length > 0 ? (
               <>
                 <div className="sec">
                   <h2>{t("pme.dossier.organisations")}</h2>
                   <span>{organisations.length}</span>
                 </div>
+                <CarteDeGroupe
+                  presse={pme.societeAffichee === null}
+                  accent={pme.societeAffichee === null}
+                  onClick={() => pme.afficherSociete(null)}
+                  icone={<IconeSociete />}
+                  titre={t("pme.societes.toutes")}
+                  valeur={sommes(toutes.map((x) => x.piece))}
+                  n={toutes.length}
+                />
                 {organisations.map((c) => (
                   <CarteDeGroupe
                     key={c.id}
-                    onClick={() => ouvrir({ genre: "societe", cle: c.id })}
+                    presse={pme.societeAffichee === c.id}
+                    accent={pme.societeAffichee === c.id}
+                    onClick={() => pme.afficherSociete(c.id)}
                     icone={<IconeSociete />}
                     titre={nomDeSociete(c.id)}
                     valeur={sommes(c.pieces)}

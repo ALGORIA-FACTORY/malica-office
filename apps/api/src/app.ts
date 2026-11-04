@@ -42,6 +42,10 @@ import { introuvableLisible, refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
 import { malica } from "./malica.ts";
 import { moteurDuSecondLecteur } from "./malica/lecture/paddle.ts";
+import { emettreLeGeste, gesteDe } from "./observabilite/gestes.ts";
+import { codeDuRefus, consigner } from "./observabilite/journal.ts";
+import { issueDuStatut, tracerLaRequete } from "./observabilite/requete.ts";
+import { traceCourante } from "./observabilite/trace.ts";
 import { executerRpc, origineDEssai, RpcIntrouvable } from "./rpc.ts";
 import { estUneCoque, exigerIdentite, NOM_COOKIE, presenterLeClient } from "./session.ts";
 import {
@@ -80,9 +84,18 @@ export const app = express();
 // relais : sans ceci, la limitation par adresse compterait tout le monde
 // comme une seule personne, et les journaux nommeraient le relais.
 app.set("trust proxy", 1);
+/*
+ * La trace d'abord, avant toute garde : une requête refusée à la porte (CORS,
+ * coque dépassée, identité absente) est justement celle qu'on cherche ensuite.
+ * Voir `observabilite/requete.ts`.
+ */
+app.use(tracerLaRequete);
 app.use(cookieParser());
 app.use(
   cors({
+    // Le navigateur ne laisse lire au script que les en-têtes exposés : la
+    // trace rendue en est un, pour qu'un écran puisse la citer au support.
+    exposedHeaders: ["x-malica-trace"],
     /*
      * Liste explicite : un `*` avec cookies serait refusé par le navigateur, et
      * le refléter aveuglément reviendrait à n'avoir aucune restriction.
@@ -397,6 +410,54 @@ const Appel = z.object({
   args: z.array(z.unknown()).max(8).default([]),
 });
 
+/** Un nom de dépôt ou de méthode tel qu'il se trace : un identifiant, jamais un texte libre. */
+const NOM_D_APPEL = /^[A-Za-z][A-Za-z0-9]{0,63}$/;
+
+/**
+ * L'étape `rpc` : le dépôt et la méthode, l'issue, la clé du refus, la durée,
+ * et les lignes d'audit que l'appel a écrites — référencées, pas recopiées.
+ * Elle s'écrit à la sortie, que l'appel réussisse, soit refusé ou tombe : le
+ * journal a sa propre connexion, une transaction annulée n'emporte pas la trace.
+ *
+ * Un appel que `observabilite.gestes` dit sensible y ajoute son étape MÉTIER
+ * (`observabilite/gestes.ts`) : le geste, l'objet, la pièce, l'audit.
+ */
+function noterLAppel(
+  res: Response,
+  appel: { depot: string; methode: string; args: unknown[] },
+): void {
+  const trace = traceCourante();
+  if (!trace) return;
+  const debut = new Date();
+  res.once("close", () => {
+    const issue = res.writableFinished ? issueDuStatut(res.statusCode) : "ignore";
+    const refus: unknown = res.locals["refus"];
+    // La clé du refus, sans les valeurs qui la suivent ; jamais un texte brut.
+    const codeRefus = typeof refus === "string" ? codeDuRefus(refus) : null;
+    const dureeMs = Date.now() - debut.getTime();
+    consigner(
+      "rpc",
+      issue,
+      {
+        debut,
+        dureeMs,
+        // Une transaction qui n'a pas abouti n'a rien audité.
+        audits: issue === "ok" ? trace.audits : [],
+        detail: {
+          depot: NOM_D_APPEL.test(appel.depot) ? appel.depot : null,
+          methode: NOM_D_APPEL.test(appel.methode) ? appel.methode : null,
+          statut: res.statusCode,
+          code_refus: codeRefus,
+        },
+      },
+      trace,
+    );
+    void gesteDe(appel.depot, appel.methode).then((geste) => {
+      if (geste) emettreLeGeste(geste, appel, trace, { issue, codeRefus, debut, dureeMs });
+    });
+  });
+}
+
 app.post("/rpc", exigerAppelant, async (req, res, next) => {
   try {
     const saisie = Appel.safeParse(req.body);
@@ -404,6 +465,7 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
       res.status(400).json({ erreur: "appel invalide" });
       return;
     }
+    noterLAppel(res, saisie.data);
     /*
      * Rien ne se vend dans l'application installée depuis un store : le
      * paiement, les prix, les offres et l'acceptation d'un abonnement se font
@@ -446,6 +508,7 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
     }
     const absent = introuvableLisible(erreur);
     if (absent) {
+      res.locals["refus"] = absent;
       res.status(404).json({ erreur: absent });
       return;
     }
@@ -453,6 +516,7 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
     // masquer derrière « erreur interne » lui retirerait la seule chose utile.
     const refus = refusLisible(erreur);
     if (refus) {
+      res.locals["refus"] = refus;
       res.status(400).json({ erreur: refus });
       return;
     }

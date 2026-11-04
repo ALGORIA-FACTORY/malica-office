@@ -207,7 +207,7 @@ export async function rejugerLesPieces(
     for (const piece of page) {
       await db.query("savepoint rejeu_piece");
       try {
-        const { change } = await rejugerLaPiece(db, piece.id);
+        const { change } = await rejugerLaPiece(db, piece.id, { essai: options.essai ?? false });
         const proposition = await propositionDePiece(db, piece.id);
         await db.query("release savepoint rejeu_piece");
         bilan.rejugees += 1;

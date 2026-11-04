@@ -54,8 +54,9 @@ jobs:
 
       # Le Caddyfile route vers l'API les mêmes chemins que le relais de
       # développement : une route qui marche sur le poste marche en production.
+      # Et tout nom de relevé que le service OCR peut rendre a son tarif.
       - name: Infra
-        run: node --test infra/caddy/Caddyfile.test.mjs
+        run: node --test infra/caddy/Caddyfile.test.mjs infra/ocr/tarif.test.mjs
 
       # R9 : aucun code mort. Fichiers, exports et dépendances que rien
       # n'atteint — la configuration (knip.jsonc) dit ce qui est ignoré et pourquoi.
@@ -178,6 +179,8 @@ jobs:
       JWT_SECRET: integration_continue_seulement_32_caracteres
       # Le contexte runner n'existe pas au niveau du job : un chemin fixe du runner Linux.
       STOCKAGE_RACINE: /tmp/malica-pieces
+      # Le fichier d'attente du journal d'observabilité, exigé au démarrage.
+      JOURNAL_ATTENTE: /tmp/malica-journal
       # Le jeu de données ouvre une session par compte, à la file, depuis une
       # seule adresse : la limite de trente connexions par minute — faite pour
       # freiner une devinette de mot de passe — le refusait (429).

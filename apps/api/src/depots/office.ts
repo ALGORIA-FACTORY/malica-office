@@ -492,7 +492,7 @@ export const office = {
   async facturesARattacher(db: Requete, pieceId: string): Promise<FactureARattacher[]> {
     const { rows } = await db.query<FactureARattacher>(
       `select f.id, x.payload -> 'references' ->> 'numero' as numero,
-              x.payload ->> 'document_date' as date, x.payload ->> 'issuer' as emetteur,
+              x.payload ->> 'document_date' as date, coalesce(app.emetteur_dit(f.id), x.payload ->> 'issuer') as emetteur,
               x.payload -> 'totals' ->> 'ttc' as ttc
          from pieces_v a
          join pieces_v f on f.tenant_id = a.tenant_id and f.document_kind = a.document_kind

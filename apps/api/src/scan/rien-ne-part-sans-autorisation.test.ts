@@ -37,7 +37,8 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "../db.ts";
+import { lireLaPieceDEssai } from "../lecture-d-essai.ts";
 import { executerRpc } from "../rpc.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
@@ -152,6 +153,9 @@ describe("ce que le cabinet lit d'une pièce gardée", { skip: !BASE_CONFIGUREE 
   it("une fois la pièce transmise, le paiement devient lisible", async () => {
     // L'erreur inverse serait aussi fausse : le moyen de paiement décide du
     // compte de trésorerie, et le cabinet doit l'avoir pour imputer.
+    // Une pièce non lue ne part pas au cabinet (3 novembre 2026) : le
+    // dirigeant la lit d'abord, puis la transmet.
+    await sousIdentiteDuServeur(dirigeant.id, (db) => lireLaPieceDEssai(db, transmise));
     await parMoi(dirigeant, "collab", "setPieceVis", transmise, "partage");
     const vus = (await parMoi(expert, "capture", "paiementsDUnePiece", transmise)) as Array<{
       moyenCode: string;

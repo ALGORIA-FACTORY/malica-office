@@ -25,6 +25,7 @@ import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { fabrique } from "./depots/fabrique.ts";
 import { identite } from "./depots/identite.ts";
+import { lireLaPieceDEssai } from "./lecture-d-essai.ts";
 import { office } from "./depots/office.ts";
 import { supervision } from "./depots/supervision.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
@@ -61,17 +62,13 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
 
   /** Une lecture minimale, persistée par la porte du serveur : un jeton, un type lu. */
   const lire = (pieceId: string) =>
-    sousIdentiteDuServeur(dirigeant.id, (db) =>
-      db.query(
-        `select public.capture_read_persist($1, $2::jsonb, 'extract.v1', $3::jsonb,
-                                             '[]'::jsonb, '[]'::jsonb)`,
-        [
-          pieceId,
-          JSON.stringify([{ page: 1, ordinal: 0, text: "TOTAL", x0: 0, y0: 0, x1: 1, y1: 1 }]),
-          JSON.stringify({ document_kind: "facture_achat" }),
-        ],
-      ),
-    );
+    sousIdentiteDuServeur(dirigeant.id, (db) => lireLaPieceDEssai(db, pieceId));
+
+  /** Transmet la pièce au cabinet, lue d'abord : une pièce non lue ne part pas (3 novembre 2026). */
+  const lireEtPartager = async (pieceId: string) => {
+    await lire(pieceId);
+    await pmeFait("collab.setPieceVis", pieceId, "partage");
+  };
 
   let n = 0;
   /** Une pièce transmise, lue, au type lu mais pas confirmé : le cas réel. */
@@ -788,7 +785,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     });
     const paiement = await payer(ancienne, 20000);
     const nouvelle = await remplacer(ancienne, "entite");
-    await pmeFait("collab.setPieceVis", nouvelle, "partage");
+    await lireEtPartager(nouvelle);
     const { id: talon } = (await pmeFait("capture.enregistrer", {
       tenantId: pme,
       source: "photo",
@@ -838,7 +835,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     });
     const paiement = await payer(ancienne, 25000);
     const nouvelle = await remplacer(ancienne, "entite");
-    await pmeFait("collab.setPieceVis", nouvelle, "partage");
+    await lireEtPartager(nouvelle);
     const vus = (await cabinetFait("capture.paiementsDUnePiece", nouvelle)) as Array<{
       id: string;
     }>;
@@ -923,8 +920,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     });
     const paiement = await payer(ancienne, 20000);
     const nouvelle = await remplacer(ancienne, "entite");
-    await pmeFait("collab.setPieceVis", nouvelle, "partage");
-    await lire(nouvelle);
+    await lireEtPartager(nouvelle);
     await ttcTranche(nouvelle, 20000);
     await sousIdentiteDuServeur(expert.id, (db) =>
       db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [nouvelle]),
@@ -1114,19 +1110,13 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     const ancienne = await societe();
     const paiement = await payer(ancienne, 30000);
     const nouvelle = await remplacer(ancienne, "entite");
-    await pmeFait("collab.setPieceVis", nouvelle, "partage");
     const numero = `FB-${marque}`;
+    // Lue avant d'être transmise : une pièce non lue ne part pas (3 novembre
+    // 2026). La lecture porte ici le numéro, que l'export et le rapprochement lisent.
     await sousIdentiteDuServeur(dirigeant.id, (db) =>
-      db.query(
-        `select public.capture_read_persist($1, $2::jsonb, 'extract.v1', $3::jsonb,
-                                             '[]'::jsonb, '[]'::jsonb)`,
-        [
-          nouvelle,
-          JSON.stringify([{ page: 1, ordinal: 0, text: "TOTAL", x0: 0, y0: 0, x1: 1, y1: 1 }]),
-          JSON.stringify({ document_kind: "facture_achat", references: { numero } }),
-        ],
-      ),
+      lireLaPieceDEssai(db, nouvelle, { document_kind: "facture_achat", references: { numero } }),
     );
+    await pmeFait("collab.setPieceVis", nouvelle, "partage");
     await ttcTranche(nouvelle, 30000);
     await sousIdentiteDuServeur(expert.id, (db) =>
       db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [nouvelle]),
@@ -1169,7 +1159,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
   it("un règlement ou un reçu saisi sur l'ancienne photo prend le côté de la courante", async () => {
     const ancienne = await societe();
     const nouvelle = await remplacer(ancienne, "entite");
-    await pmeFait("collab.setPieceVis", nouvelle, "partage");
+    await lireEtPartager(nouvelle);
     const paiement = await payer(ancienne, 1000);
     const { rows } = await admin.query<{ vis: string }>(
       `select vis::text as vis from capture.paiements where id = $1`,

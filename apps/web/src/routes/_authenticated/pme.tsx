@@ -143,6 +143,14 @@ function PmeLayout() {
     if (pmeOrgs.length === 0 && hasCabinet && !CIBLE_COQUE) void navigate({ to: "/office" });
   }, [orgsQuery.isPending, pmeOrgs.length, hasCabinet, navigate]);
 
+  /*
+   * La société que la bibliothèque et les échéances montrent : toutes, par
+   * défaut. Un id qui n'est plus parmi les dossiers retombe sur « toutes ».
+   */
+  const [societeVue, setSocieteVue] = useState<string | null>(null);
+  const societeAffichee =
+    societeVue !== null && pmeOrgs.some((o) => o.id === societeVue) ? societeVue : null;
+
   function selectOrg(id: string) {
     setActiveId(id);
     writeActiveOrgId(id);
@@ -551,13 +559,7 @@ function PmeLayout() {
          * `header` et la feuille porte `.appbar` — le collage, l'encoche, le
          * filet, le fond.
          */}
-        <EntetePme
-          orgNom={org?.name ?? null}
-          dossiers={pmeOrgs.map((o) => ({ id: o.id, name: o.name }))}
-          dossierActif={org?.id ?? null}
-          choisirDossier={selectOrg}
-          initiale={initiale}
-        />
+        <EntetePme initiale={initiale} />
 
         <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
           {orgsQuery.isPending ? (
@@ -584,8 +586,15 @@ function PmeLayout() {
                 packId: packQuery.data?.id ?? null,
                 orgName: org.name,
                 matricule: org.legalId,
-                dossiers: pmeOrgs.map((o) => ({ id: o.id, name: o.name })),
+                dossiers: pmeOrgs.map((o) => ({
+                  id: o.id,
+                  name: o.name,
+                  matricule: o.legalId ?? null,
+                  role: o.role ?? null,
+                })),
                 choisirDossier: selectOrg,
+                societeAffichee,
+                afficherSociete: setSocieteVue,
                 aUnCabinet,
                 capture: (kind) => choisir.mutate(kind),
                 ouvrirScanner,

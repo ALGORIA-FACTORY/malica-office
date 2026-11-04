@@ -287,6 +287,8 @@ export const fr = {
   "pme.dossier.verifier#other": "Voir les {count} pièces qui vous attendent",
   "pme.dossier.vide": "Aucune pièce dans ce dossier pour l’instant.",
   "pme.dossier.organisations": "Organisations",
+  "pme.societes.toutes": "Toutes les sociétés",
+  "pme.societes.choix": "Société montrée",
   "pme.dossier.sieges": "Sièges",
   "pme.dossier.annees": "Années",
   "pme.dossier.vous": "{nom} (vous)",
@@ -411,6 +413,7 @@ export const fr = {
   "pme.membres.envoyee": "Invitation envoyée à {email}.",
   "pme.membres.attend": "en attente",
   "pme.inviter.titreRole": "Son rôle",
+  "pme.inviter.titreSociete": "La société",
   "pme.inviter.titreAdresse": "Son adresse e-mail",
   "pme.inviter.place": "Une place",
   "pme.inviter.placeMemePrix": "Une place · même prix",
@@ -584,6 +587,11 @@ export const fr = {
   "pme.type.passer": "Je ne sais pas",
   "pme.type.corrigeable": "Malica le vérifie à la lecture. Vous pourrez le changer.",
   "pme.piece.type.modifier": "Modifier le type",
+  "pme.piece.nom.modifier": "Modifier le nom de l’émetteur",
+  "pme.piece.nom.label": "Nom de l’émetteur",
+  "pme.piece.nom.aide": "Tel qu’il est imprimé sur la pièce. La lecture d’origine est gardée.",
+  "pme.piece.nom.enregistrer": "Enregistrer",
+  "pme.piece.nom.corrige": "Corrigé",
   "pme.type.lot": "{count} documents, de même nature",
   "pme.type.lot#one": "{count} document",
   "pme.type.lot#other": "{count} documents, de même nature",
@@ -604,6 +612,9 @@ export const fr = {
   "pme.detail.qte": "Qté {q}",
   "pme.detail.sansQte": "Quantité non indiquée",
   "pme.detail.pu": "PU {pu}",
+  "pme.detail.puTtc": "PU TTC {pu}",
+  "pme.detail.totalNeFermePas":
+    "Les montants lus ne vérifient pas ce total (HT + TVA + droits) : à vérifier sur la pièce.",
   "pme.detail.provenance":
     "Chaque ligne vient de la pièce elle-même. Je n'ajoute ni ne calcule rien.",
   "pme.lecture.releve": "Relevé · {mots} mots situés",
@@ -613,6 +624,9 @@ export const fr = {
   "pme.verifie.corriger": "Reprendre la photo",
   "pme.tva.nonAssujetti":
     "Votre dossier n'est pas assujetti à la TVA : vous n'avez ni TVA à reverser ni crédit à reporter. La TVA payée sur vos achats est comprise dans vos charges.",
+  "pme.piece.partieNonLue": "Chez {cabinet}, pas encore lue.",
+  "pme.piece.partieNonLue.sous":
+    "Je peux encore la lire ici. Elle ne se supprime plus d’ici : demandez à {qui} de la retirer.",
   "pme.scan.final":
     "Voici la page telle que je la lirai. Si elle vous convient, lisez-la ; sinon, reprenez la photo.",
   "pme.scan.page": "Page {n}",
@@ -719,7 +733,6 @@ export const fr = {
   "pme.tva.soldeInconnu": "Solde TVA à confirmer",
   "pme.nav.add": "Ajouter une pièce",
   "pme.nav.office": "Espace",
-  "pme.org.switch": "Société active",
   "pme.nav.aria": "Navigation principale",
   "pme.home.greet.morning": "Bonjour.",
   "pme.home.greet.afternoon": "Bon après-midi.",
@@ -1719,6 +1732,7 @@ export const fr = {
   "cab.journal.piece.type_etabli": "Type de pièce établi par le cabinet.",
   "cab.journal.piece.type_corrige": "Le client a corrigé le type de la pièce.",
   "cab.journal.piece.date_corrigee": "Le client a corrigé la date de la pièce.",
+  "cab.journal.piece.nom_corrige": "Le client a corrigé le nom de l’émetteur.",
   "cab.journal.piece.vers_cabinet": "Pièce envoyée au cabinet.",
   "cab.journal.piece.rendue": "Pièce rendue au client, à sa demande.",
   "cab.journal.piece.vers_societe": "Pièce revenue dans la société.",
@@ -2096,6 +2110,7 @@ export const fr = {
   "refus.reponse.sans_decision": "Accordez ou refusez la demande.",
   "refus.envoi.retour_par_sa_carte":
     "Une pièce retournée se renvoie depuis sa carte, une fois le geste demandé fait.",
+  "refus.envoi.pas_lue": "Cette pièce n’est pas encore lue : lisez-la, puis envoyez-la.",
   "refus.envoi.chez_le_siege":
     "Vous l’avez retournée à votre collaborateur : elle repartira quand il l’aura reprise et renvoyée.",
   "refus.reponse.vide": "Écrivez votre réponse avant de l’envoyer.",
@@ -2112,6 +2127,12 @@ export const fr = {
   "refus.introuvable.paiement": "Paiement introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.recette": "Version de recette introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.organisation": "Organisation introuvable, ou vous n’y avez pas accès.",
+  "refus.organisation.pas_une_societe": "Seule une société se confie à un dirigeant.",
+  "refus.organisation.deja_dirigee":
+    "Cette société a déjà des membres : ses dirigeants invitent eux-mêmes.",
+  "refus.archivage.motif_requis": "Dites pourquoi cette organisation est archivée.",
+  "refus.organisation.emettrice":
+    "Cette organisation émet les factures Malica : désignez un autre émetteur avant de l’archiver.",
   "refus.introuvable.invitation": "Invitation introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.article": "Article introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.exemple": "Exemple introuvable, ou vous n’y avez pas accès.",
@@ -2431,6 +2452,8 @@ export const fr = {
   "refus.precision.type_non_propose": "Ce type de pièce n’est pas proposé : {type}.",
   "refus.precision.date_illisible": "Cette date n’est pas lisible : {date}.",
   "refus.precision.date_a_venir": "Une date à venir ne se précise pas : {date}.",
+  "refus.precision.nom_vide": "Le nom ne peut pas être vide.",
+  "refus.precision.nom_trop_long": "Le nom est trop long : {max} caractères au plus.",
   "refus.precision.champ": "Ce champ ne se précise pas : {champ}.",
   "refus.lecture.citation_orpheline":
     "La lecture cite le champ {champ} à un emplacement où aucun mot n’a été lu.",
@@ -3575,6 +3598,8 @@ export const fr = {
     "Aucune licence n’est rattachée à ce compte. Les plafonds et le prix restent vides jusque-là.",
   "pme.reglages.orgs": "Sociétés",
   "pme.reglages.orgs.aucune": "Aucune organisation sur cette licence.",
+  "pme.reglages.orgs.autreTitulaire":
+    "La licence de {societe} appartient à son propriétaire principal : son prix et ses places se gèrent depuis son compte.",
   "pme.reglages.orgs.ajouter": "Ajouter une société",
   "pme.reglages.orgs.ajouter.sous":
     "Une organisation de plus sur la licence, avec son propre mandat et ses propres pièces. Le plafond est tenu par la base.",
@@ -3976,8 +4001,9 @@ export const fr = {
     "Des sièges isolés — chacun ne voit que ses pièces — et vous validez avant la transmission à la comptabilité.",
   "pme.reglages.sieges.aucun":
     "Aucun siège n’est encore remonté pour cette licence, pas même le vôtre.",
-  "pme.reglages.org.ouverte": "Ouverte",
   "pme.reglages.org.surLicence": "Sur la licence",
+  "pme.reglages.org.principal": "Propriétaire principal",
+  "pme.reglages.org.offre": "Offre :",
   "pme.reglages.org.matricule":
     "Matricule établi par lecture de la carte d’identification fiscale.",
   "pme.reglages.org.matricule.fort": "Immuable dès la première pièce reçue.",

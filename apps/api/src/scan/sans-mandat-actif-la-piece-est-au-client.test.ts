@@ -21,7 +21,8 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "../db.ts";
+import { lireLaPieceDEssai } from "../lecture-d-essai.ts";
 import { executerRpc } from "../rpc.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
@@ -81,6 +82,9 @@ describe("sans mandat actif, la pièce est au client", { skip: !BASE_CONFIGUREE 
       contentType: "image/jpeg",
       pageCount: 1,
     })) as { id: string };
+    // Une pièce non lue ne part pas au cabinet (3 novembre 2026) : le dirigeant
+    // la lit d'abord, puis la transmet.
+    await sousIdentiteDuServeur(dirigeant.id, (db) => lireLaPieceDEssai(db, p.id));
     await rpc(dirigeant, "collab", "setPieceVis", p.id, "partage");
     return p.id;
   }

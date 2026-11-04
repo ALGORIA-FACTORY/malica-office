@@ -688,7 +688,7 @@ export function MesProprietaires() {
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
   const sieges = useQuery({
     queryKey: ["forfait-sieges", pme.tenantId],
-    queryFn: () => office().facturation.sieges(),
+    queryFn: () => office().facturation.sieges(pme.tenantId),
     enabled: principal,
     retry: false,
   });

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { OrigineDEcheance } from "@/components/malica/origine-d-echeance";
+import { FiltreDesSocietes } from "@/components/malica/filtre-des-societes";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -141,18 +142,32 @@ function PmeEcheances() {
   const navigate = useNavigate();
   const revenir = useRevenir();
 
-  // Le calendrier se dérive du pack à l'ouverture — idempotent — puis se lit.
+  /*
+   * LES SOCIÉTÉS MONTRÉES (3 novembre 2026) : toutes, ou celle des puces
+   * (`pme.societeAffichee`). Le calendrier se dérive du pack à l'ouverture —
+   * idempotent — puis se lit, pour chacune ; les deux appels prennent déjà une
+   * liste de sociétés.
+   */
+  const societes = pme.societeAffichee
+    ? [pme.societeAffichee]
+    : pme.dossiers.length > 0
+      ? pme.dossiers.map((d) => d.id)
+      : [pme.tenantId];
+  const plusieurs = societes.length > 1;
+  const nomDeSociete = (id: string) => pme.dossiers.find((d) => d.id === id)?.name ?? "";
   const derivation = useQuery({
-    queryKey: ["echeances-derivation", pme.tenantId],
-    queryFn: () => office().collab.deriverEcheances([pme.tenantId]),
+    queryKey: ["echeances-derivation", ...societes],
+    queryFn: () => office().collab.deriverEcheances(societes),
     staleTime: 60_000,
   });
   const echeances = useQuery({
-    queryKey: ["echeances", pme.tenantId],
-    queryFn: () => office().collab.echeances([pme.tenantId]),
+    queryKey: ["echeances", ...societes],
+    queryFn: () => office().collab.echeances(societes),
     enabled: derivation.isFetched,
   });
-  const raison = derivation.data?.[0]?.raison ?? null;
+  // La fiche ou le pack qui manque se dit pour UNE société : son lien mène à
+  // la fiche du dossier ouvert, il ne se montre donc que pour celle-là.
+  const raison = plusieurs ? null : (derivation.data?.[0]?.raison ?? null);
 
   const rows = echeances.data ?? [];
   const today = new Date().toISOString().slice(0, 10);
@@ -233,6 +248,8 @@ function PmeEcheances() {
       <div className="pad">
         <h1>{t("pme.echeances.titre")}</h1>
 
+        <FiltreDesSocietes />
+
         {/*
          * Le grand chiffre du dessin somme des dinars. Aucun montant n'est au
          * contrat : le chiffre est un `—` assumé, et le `<u>` le nomme.
@@ -272,7 +289,15 @@ function PmeEcheances() {
               )}
             </p>
             <div className="b">
-              <button type="button" onClick={() => void navigate({ to: "/pme/fiche" })}>
+              <button
+                type="button"
+                onClick={() => {
+                  // La fiche se lit sur le dossier ouvert : celui de la
+                  // société montrée (revue de #211).
+                  if (societes[0] && societes[0] !== pme.tenantId) pme.choisirDossier(societes[0]);
+                  void navigate({ to: "/pme/fiche" });
+                }}
+              >
                 {t("pme.echeances.fiche.lien")}
               </button>
             </div>
@@ -319,6 +344,8 @@ function PmeEcheances() {
                             : t("pme.echeances.sous.avenir", { count: reste })}
                       </span>
                       <OrigineDEcheance echeance={e} />
+                      {/* Toutes les sociétés : chaque échéance dit la sienne. */}
+                      {plusieurs ? <span>{nomDeSociete(e.tenantId)}</span> : null}
                     </span>
                     <span className="rt">
                       {/*

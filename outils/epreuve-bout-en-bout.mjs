@@ -151,11 +151,13 @@ verdict(
 /* ------------------------------------------------------ 5. la capture */
 console.log("\nLa capture");
 const marque = `bout-en-bout-${Date.now()}`;
+// Elle naît dans la société, pas chez le cabinet : une pièce non lue n'y part
+// pas (3 novembre 2026), et aucune capture de l'application ne l'y fait naître.
 const piece = await rpc("capture", "enregistrer", [
   {
     tenantId: dossier.id,
     source: "photo",
-    vis: "partage",
+    vis: "entite",
     idempotencyKey: marque,
     contentType: "application/pdf",
     pageCount: 1,
@@ -193,7 +195,7 @@ const pdf = Buffer.from(
     {
       tenantId: dossier.id,
       source: "photo",
-      vis: "partage",
+      vis: "entite",
       idempotencyKey: marque,
       contentType: "application/pdf",
       pageCount: 1,
@@ -261,9 +263,10 @@ console.log("\nL'historique des documents");
     lues.length === 0 || lues.some((p) => p.emetteur || p.total),
     `${lues.length} pièces lues`,
   );
+  // Trois lieux depuis le 19 octobre : l'espace privé, la société, le cabinet.
   verdict(
-    "chaque pièce dit si elle est partie au cabinet",
-    histoire.every((p) => p.vis === "personnel" || p.vis === "partage"),
+    "chaque pièce dit où elle est, et si elle est partie au cabinet",
+    histoire.every((p) => ["personnel", "entite", "partage"].includes(p.vis)),
   );
 }
 
@@ -311,68 +314,44 @@ console.log("\nLa transmission et la suppression");
     headers: { "Content-Type": "application/pdf" },
     body: pdf,
   });
-  await rpc("collab", "setPieceVis", [transmise.id, "partage"]);
-
-  const apres = await rpc("capture", "listAvecLecture", [dossier.id]);
-  verdict(
-    "la transmission se voit dans l'historique",
-    apres.find((p) => p.id === transmise.id)?.vis === "partage",
-  );
-
-  // L'étape centrale : le cabinet la voit dans SA file — le chemin réel,
-  // sous RLS, celui que l'écran du cabinet emprunte.
-  const cabinet = orgs.find((o) => o.kind === "cabinet");
-  verdict("un cabinet mandaté existe", Boolean(cabinet), cabinet?.name ?? "aucun");
-  const file = cabinet ? await rpc("supervision", "queue", [cabinet.id]) : [];
-  verdict(
-    "la pièce transmise paraît dans la file du cabinet",
-    file.some((p) => p.pieceId === transmise.id || p.piece_id === transmise.id),
-    `${file.length} pièce(s) dans la file`,
-  );
-
-  let refuse = false;
-  let message = "";
+  // Non lue, elle ne part pas au cabinet (3 novembre 2026) : la base le refuse,
+  // quelle que soit la porte (`une_piece_transmise_lue_d_abord`). La pièce lue
+  // qui part, paraît dans la file du cabinet et ne se supprime plus est éprouvée
+  // avec la chaîne de lecture (`--modeles`) : sans modèle, rien ne se lit.
+  let nonLueRefusee = false;
+  let motifNonLue = "";
   try {
-    await rpc("capture", "supprimer", [transmise.id]);
+    await rpc("collab", "setPieceVis", [transmise.id, "partage"]);
   } catch (e) {
-    refuse = true;
-    message = String(e.message).slice(0, 80);
+    nonLueRefusee = true;
+    motifNonLue = String(e.message).slice(0, 80);
   }
-  // Le refus vient de la BASE, pas de l'écran : un écran se contourne.
-  verdict("une pièce transmise ne se supprime plus", refuse, message);
+  verdict(
+    "une pièce non lue ne part pas au cabinet",
+    nonLueRefusee && motifNonLue.includes("refus.envoi.pas_lue"),
+    motifNonLue || "elle est partie",
+  );
 
   /* ------------------------------------------------- 8. rien ne reste */
   // Une épreuve qui laisse des pièces fictives dans le dossier d'un client
   // n'est pas une épreuve : quelqu'un les verra, « Pas encore lue », et
-  // tentera de les lire. Tout ce qui a été créé ici est repris, puis effacé.
+  // tentera de les lire. Tout ce qui a été créé ici est effacé.
   console.log("\nRien ne reste");
-  // Une pièce transmise ne revient que par accord du cabinet (migration
-  // 20261011160000, gardée par `capture_piece_set_vis`) : la PME demande le
-  // rappel, le cabinet l'accorde, et c'est l'accord qui la remet chez elle.
-  // Forcer `setPieceVis(…, "personnel")` est refusé par la base depuis le
-  // 22 octobre 2026 — l'épreuve passe donc par le chemin réel.
-  // La première pièce a aussi été capturée « partage » (section 5) : elle
-  // revient par le même rappel accordé, puis les deux s'effacent.
-  const reprises = [transmise.id, piece.id];
-  for (const id of reprises) await rpc("collab", "demanderSurPiece", [id, "rappel"]);
-  // Nul ne tranche sa propre demande (#146) : le compte de développement est
-  // membre du dossier, c'est un autre expert du cabinet qui accorde le rappel.
-  {
+  // Partie malgré tout (une régression de la règle ci-dessus), elle ne revient
+  // que par accord du cabinet : la PME demande le rappel, un autre expert
+  // l'accorde (nul ne tranche sa propre demande, #146), puis elle s'efface.
+  if (!nonLueRefusee) {
+    await rpc("collab", "demanderSurPiece", [transmise.id, "rappel"]);
     const r = await connecter(SECOND_EXPERT_DEV);
     if (r.status !== 200) {
       throw new Error(
         `connexion du second expert refusée (${r.status}) : lancez db/dev/jeu_dessai.mjs`,
       );
     }
+    await rpc("collab", "repondreSurPiece", [transmise.id, "rappel", true, null]);
+    await connecter(COMPTE_DEV);
   }
-  for (const id of reprises) await rpc("collab", "repondreSurPiece", [id, "rappel", true, null]);
-  await connecter(COMPTE_DEV);
-  const fileApres = cabinet ? await rpc("supervision", "queue", [cabinet.id]) : [];
-  verdict(
-    "une pièce reprise quitte la file du cabinet",
-    !fileApres.some((p) => p.pieceId === transmise.id || p.piece_id === transmise.id),
-  );
-  for (const id of reprises) await rpc("capture", "supprimer", [id]);
+  for (const id of [transmise.id, piece.id]) await rpc("capture", "supprimer", [id]);
   const restant = await rpc("capture", "listAvecLecture", [dossier.id]);
   const traces = restant.filter((p) => p.id === transmise.id || p.id === piece.id);
   verdict(
@@ -462,7 +441,7 @@ if (process.argv.includes("--modeles")) {
     {
       tenantId: dossier.id,
       source: "photo",
-      vis: "partage",
+      vis: "entite",
       idempotencyKey: `bout-en-bout-modeles-${Date.now()}`,
       contentType: "image/png",
       pageCount: 1,
@@ -500,6 +479,28 @@ if (process.argv.includes("--modeles")) {
       r.ok && VERDICTS.includes(lecture.verdict),
       lecture.verdict ?? "aucun verdict",
     );
+    // Lue, elle part au cabinet (la règle du 3 novembre 2026), paraît dans sa
+    // file — le chemin réel, sous RLS, celui que l'écran du cabinet emprunte —
+    // et ne se supprime plus : le refus vient de la BASE, pas de l'écran.
+    if (r.ok) {
+      await rpc("collab", "setPieceVis", [lue.id, "partage"]);
+      const cabinet = orgs.find((o) => o.kind === "cabinet");
+      const file = cabinet ? await rpc("supervision", "queue", [cabinet.id]) : [];
+      verdict(
+        "la pièce lue part au cabinet et paraît dans sa file",
+        file.some((p) => p.pieceId === lue.id || p.piece_id === lue.id),
+        `${file.length} pièce(s) dans la file`,
+      );
+      let refuse = false;
+      let message = "";
+      try {
+        await rpc("capture", "supprimer", [lue.id]);
+      } catch (e) {
+        refuse = true;
+        message = String(e.message).slice(0, 80);
+      }
+      verdict("une pièce transmise ne se supprime plus", refuse, message);
+    }
     // 3B-6 : la proposition d'écriture vient du SERVEUR, depuis les montants
     // imprimés et normalisés — le client n'envoie aucune ligne.
     if (["à comptabiliser", "à comptabiliser avec réserve"].includes(lecture.verdict)) {

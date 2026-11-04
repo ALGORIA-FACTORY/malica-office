@@ -11,6 +11,7 @@ import type {
   Droit,
   EtapeDeDemande,
   EtatDeDemande,
+  LectureRefusee,
   Visibility,
 } from "./ports/repositories.ts";
 import {
@@ -22,12 +23,25 @@ import {
 
 const OBJETS: readonly DemandeSurPiece[] = ["rappel", "suppression"];
 
+/**
+ * Le motif que la base inscrit quand le forfait refuse une lecture
+ * (`public.lecture_verdict`) : un identifiant de la base, pas un libellé.
+ */
+export const MOTIF_DU_PLAFOND = "plafond_atteint";
+
 export interface PieceDuCircuit {
   vis: Visibility;
   status: string;
   gardeeLe: string | null;
   statut: StatutDuCircuit;
   circuit: CircuitInterne | null;
+  /**
+   * Un reçu ou un justificatif : il ne se lit jamais et suit sa pièce
+   * (`app.piece_accompagne`). Absent : une pièce ordinaire.
+   */
+  accompagne?: boolean | null;
+  /** Le dernier refus de lecture inscrit, tant qu'elle n'est pas lue (`PieceLue.lectureRefusee`). */
+  lectureRefusee?: LectureRefusee | null;
 }
 
 export interface GestesDuCircuit {
@@ -104,12 +118,21 @@ export function gestesDuCircuit(
   // Retournée au siège : la main est à lui. Le propriétaire attend sa
   // reprise ; il n'envoie ni ne garde ce qu'il vient de lui rendre.
   const chezLeSiege = p.statut.chez === "siege";
+  // Une pièce non lue ne part pas au cabinet : on transmet ce qu'on connaît
+  // (3 novembre 2026). Un reçu, un justificatif ne se lisent jamais : ils
+  // suivent leur pièce. Au plafond du forfait, la lecture est refusée : la
+  // pièce part non lue, et le cabinet la saisit. La base tient la même règle
+  // (`une_piece_transmise_lue_d_abord`).
+  const nonLue =
+    p.status === "capturee" && !p.accompagne && p.lectureRefusee?.motif !== MOTIF_DU_PLAFOND;
 
   const envoyer: EtapeDeDemande | null =
     p.vis !== "entite" || chezLeSiege
       ? null
       : versOu === "cabinet"
-        ? "cabinet"
+        ? nonLue
+          ? null
+          : "cabinet"
         : versOu === "proprietaire" && p.statut.statut === "a_envoyer"
           ? "proprietaire"
           : null;
