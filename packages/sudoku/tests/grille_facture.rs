@@ -50,8 +50,10 @@ fn un_taux_fodec_et_timbre_prouves_et_cites() {
     }
     let tva = &o["champs"]["montant_tva_par_taux"]["instances"];
     assert_eq!(tva, &json!([{"taux": "TVA19", "valeur": "191900", "refs": [{"page": 1, "ordinal": 6}]}]));
+    // L'assiette de la TVA est le HT majoré du FODEC (1 010,000) : une somme prouvée, que
+    // la pièce n'imprime pas — elle ne cite donc aucun jeton (le HT n'est pas la base).
     let base = &o["champs"]["base_tva_par_taux"]["instances"];
-    assert_eq!(base, &json!([{"taux": "TVA19", "valeur": "1000000", "refs": [{"page": 1, "ordinal": 4}]}]));
+    assert_eq!(base, &json!([{"taux": "TVA19", "valeur": "1010000", "refs": []}]));
     for p in ["ttc", "tva", "timbre", "fodec", "mf", "echeance"] {
         assert_eq!(o["preuves"][p], "verifiee", "preuve {p}");
     }

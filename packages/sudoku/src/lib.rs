@@ -388,11 +388,34 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                             }
                         }
                     } else {
+                        // L'assiette PROUVÉE : la base d'un taux est la somme de tout ce que le
+                        // pack met dans l'assiette de son barème — la base des lignes et les
+                        // charges d'assiette présentes (le FODEC) —, jamais un jeton choisi. Banc
+                        // sans IA du 4 novembre 2026 : la base rendue était le HT sur 10 pièces
+                        // « prouvées » à FODEC. À plusieurs taux, la charge ne se répartit pas
+                        // sans les lignes : la base n'est pas rendue.
+                        let charges: Vec<i64> = modele
+                            .contraintes
+                            .iter()
+                            .filter_map(|cp| match &cp.c {
+                                modele::Contrainte::Charge { m, assiette: Some(b), .. } if *b == gr.bareme => {
+                                    e.s[*m].filter(|x| !x.absent).map(|x| x.v)
+                                }
+                                _ => None,
+                            })
+                            .collect();
+                        let majoration: i64 = charges.iter().sum();
                         let inst = sol
                             .instances
                             .iter()
                             .map(|it| {
                                 let v = if est_base { it.b } else { it.m };
+                                let v = match v {
+                                    Some(b) if est_base && majoration != 0 => {
+                                        (sol.instances.len() == 1).then_some(b + majoration)
+                                    }
+                                    autre => autre,
+                                };
                                 InstanceSortie {
                                     taux: coefs[it.taux].0.clone(),
                                     valeur: v.map(|x| x.to_string()),
