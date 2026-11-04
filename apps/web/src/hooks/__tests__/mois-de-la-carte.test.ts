@@ -1,6 +1,6 @@
 /**
- * La carte de TVA de l'accueil montre le mois le plus récent qui a quelque
- * chose à dire, jamais un mois vide parce qu'il vient de commencer.
+ * La carte de TVA de l'accueil montre le mois en cours, toujours (décision
+ * du dirigeant, 4 novembre 2026), même vide.
  */
 import { describe, expect, it } from "vitest";
 
@@ -15,16 +15,16 @@ const vide = (periode: string): MoisDeTva => ({
 });
 
 describe("moisDeLaCarte", () => {
-  it("le 1er du mois, montre le dernier mois qui a un solde", () => {
+  it("montre le mois en cours même quand un mois passé a un solde", () => {
     const serie = [
       vide("2026-09"),
       { ...vide("2026-10"), recuperee: "19.000", collectee: "0.000", solde: "-19.000" },
       vide("2026-11"),
     ];
-    expect(moisDeLaCarte(serie).periode).toBe("2026-10");
+    expect(moisDeLaCarte(serie).periode).toBe("2026-11");
   });
 
-  it("un mois dont les pièces sont toutes hors du calcul compte aussi : il le dit", () => {
+  it("le mois en cours garde ses pièces hors du calcul", () => {
     const serie = [vide("2026-10"), { ...vide("2026-11"), horsDuCalcul: 2 }];
     expect(moisDeLaCarte(serie).periode).toBe("2026-11");
   });
