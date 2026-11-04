@@ -316,17 +316,21 @@ export function InkTable({
   children,
   caption,
   empile,
+  className,
 }: {
   head: ReactNode[];
   children: ReactNode;
   caption?: string;
   empile?: boolean;
+  /** Une mise en page propre à un écran (la file du cabinet en cartes, au téléphone). */
+  className?: string;
 }) {
   return (
     <div
       className={cn(
         "cab-table overflow-x-auto border border-border bg-card",
         empile && "cab-table-empile",
+        className,
       )}
     >
       <table className="min-w-full border-collapse text-[13px]">

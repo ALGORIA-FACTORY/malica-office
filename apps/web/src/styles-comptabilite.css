@@ -783,10 +783,13 @@
   gap: 24px;
   padding: 8px 0 0;
 }
+/*
+ * Pas de `text-transform: capitalize` : il relevait chaque mot (« Mercredi 4
+ * Novembre »). L'initiale de la phrase se pose dans le texte (`enDebutDePhrase`).
+ */
 .cab-eyebrow {
   font-size: 12px;
   color: #667085;
-  text-transform: capitalize;
 }
 .cab-day-header h1 {
   margin-top: 7px;
@@ -1615,5 +1618,105 @@
     font-family: var(--font-sans);
     font-size: 11.5px;
     text-align: start;
+  }
+}
+
+/*
+ * La file du cabinet (QueueTable) au téléphone : une carte par pièce.
+ *
+ * Relevé sur staging le 4 novembre 2026 à 375 px : sept colonnes dans un
+ * défilement de côté, et le libellé écrasé à une lettre par ligne. Sous
+ * 720 px, la même ligne se pose en grille : le rang, la vignette et le client
+ * avec son statut en tête ; le libellé sur toute la largeur ; le montant,
+ * l'attente et « Ouvrir » au pied. Au-delà de 720 px, rien ne change : la
+ * table reste la table.
+ */
+@media (max-width: 719.98px) {
+  .cabinet-workspace .cab-table.cab-file {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .cabinet-workspace .cab-table.cab-file thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .cabinet-workspace .cab-table.cab-file table {
+    display: block;
+    width: 100%;
+  }
+  .cabinet-workspace .cab-table.cab-file tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cabinet-workspace .cab-table.cab-file tr {
+    display: grid;
+    grid-template-columns: 1.5rem minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "rang client client statut"
+      "libelle libelle libelle libelle"
+      "montant montant attente ouvrir";
+    align-items: center;
+    gap: 10px 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+  }
+  .cabinet-workspace .cab-table.cab-file td {
+    display: block;
+    min-width: 0;
+    max-width: none;
+    padding: 0;
+    text-align: start;
+  }
+  .cabinet-workspace .cab-table.cab-file td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    color: var(--muted-foreground);
+    font-family: var(--font-sans);
+    font-size: 11px;
+  }
+  .cabinet-workspace .cab-table.cab-file .cab-file-rang {
+    grid-area: rang;
+    align-self: start;
+    padding-top: 2px;
+    color: var(--muted-foreground);
+    font-size: 11px;
+  }
+  .cabinet-workspace .cab-table.cab-file .cab-file-client {
+    grid-area: client;
+    overflow-wrap: anywhere;
+  }
+  .cabinet-workspace .cab-table.cab-file .cab-file-statut {
+    grid-area: statut;
+    align-self: start;
+    justify-self: end;
+  }
+  .cabinet-workspace .cab-table.cab-file .cab-file-libelle {
+    grid-area: libelle;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    overflow-wrap: anywhere;
+  }
+  .cabinet-workspace .cab-table.cab-file .cab-file-montant {
+    grid-area: montant;
+  }
+  .cabinet-workspace .cab-table.cab-file .cab-file-attente {
+    grid-area: attente;
+  }
+  .cabinet-workspace .cab-table.cab-file .cab-file-ouvrir {
+    grid-area: ouvrir;
+    justify-self: end;
+  }
+  .cabinet-workspace .cab-table.cab-file .cab-file-ouvrir a {
+    min-height: 44px;
   }
 }

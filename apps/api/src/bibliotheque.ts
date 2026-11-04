@@ -40,6 +40,18 @@ const DATE_DU_DOCUMENT = `case when x.payload ->> 'document_date' ~ '^\\d{4}-\\d
 const DATE_DE_CLASSEMENT = `coalesce(${DATE_DU_DOCUMENT},
        to_char(p.created_at at time zone $3::text, 'YYYY-MM-DD'))`;
 
+/**
+ * Le tiers d'une pièce : l'émetteur tel qu'une personne l'a corrigé
+ * (`app.emetteur_dit`), sinon tel que la dernière lecture l'a lu. Rien pour
+ * une facture de vente : son émetteur est le dossier lui-même.
+ *
+ * Une seule règle pour la bibliothèque et la file du cabinet : le même
+ * fournisseur doit se lire pareil dans les deux écrans.
+ */
+export const tiersDeLaPiece = (piece: string, payload: string) =>
+  `case when ${piece}.document_kind = 'facture_vente' then null
+       else nullif(btrim(coalesce(app.emetteur_dit(${piece}.id), ${payload} ->> 'issuer')), '') end`;
+
 const DOCUMENTS = `select p.id, p.tenant_id as "tenantId", p.document_kind as type,
   p.status, p.created_at::text as "recuLe", p.sha256 as empreinte,
   (select parent.id from pieces_v parent where parent.id = p.source_piece_id
@@ -50,8 +62,7 @@ const DOCUMENTS = `select p.id, p.tenant_id as "tenantId", p.document_kind as ty
   d.exposant as "exposant",
   nullif(x.payload ->> 'document_date', '') as "dateDocument",
   ${DATE_DE_CLASSEMENT} as "dateDeClassement",
-  case when p.document_kind = 'facture_vente' then null
-       else nullif(btrim(coalesce(app.emetteur_dit(p.id), x.payload ->> 'issuer')), '') end as tiers,
+  ${tiersDeLaPiece("p", "x.payload")} as tiers,
   coalesce(nullif(x.payload -> 'references' ->> 'invoice_no', ''),
            nullif(x.payload -> 'references' ->> 'document_no', ''),
            nullif(x.payload -> 'references' ->> 'numero', ''),

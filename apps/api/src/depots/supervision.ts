@@ -14,7 +14,13 @@ import type { Requete } from "../db.ts";
 import type { GesteDeRetour } from "@malica/socle/ports/repositories";
 import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
 import { A_TRAITER, type StatutCabinet } from "@malica/socle/statut-d-envoi";
-import { documents, documentsLies, controlesPiece, moisDuDossier } from "../bibliotheque.ts";
+import {
+  documents,
+  documentsLies,
+  controlesPiece,
+  moisDuDossier,
+  tiersDeLaPiece,
+} from "../bibliotheque.ts";
 
 import { COLONNES_DU_SUIVI, statutAuCabinet, versSuivi } from "./suivi.ts";
 
@@ -176,7 +182,8 @@ export const supervision = {
               coalesce(p.transmise_le, p.created_at) as envoyee_le,
               o.name as client, e.id as ecriture_id, e.libelle, e.date_ecriture,
               m.montant, c.email as collaborateur, cf.confiance,
-              dem.objet as demande_objet, dbl.doublon_de, ${COLONNES_DU_SUIVI}
+              dem.objet as demande_objet, dbl.doublon_de,
+              ${tiersDeLaPiece("p", "cf.payload")} as tiers, ${COLONNES_DU_SUIVI}
          from ${PIECES_DU_CABINET}
          left join organizations_v o on o.id = p.tenant_id
          -- L'écriture VIVANTE de la pièce — celle de la facture d'abord, sinon
@@ -199,12 +206,13 @@ export const supervision = {
              from ecriture_lignes_v l where l.ecriture_id = e.id
          ) m on true
          -- La confiance de la dernière lecture, telle que le désignateur l'a
-         -- rendue. Absente pour une pièce lue avant qu'on la persiste.
+         -- rendue. Absente pour une pièce lue avant qu'on la persiste. La même
+         -- lecture porte l'émetteur lu, repli du tiers quand personne ne l'a dit.
          left join lateral (
            -- La clé vient du contrat, en paramètre : la relire ici en littéral
            -- était la huitième occurrence du même défaut muet. Un renommage
            -- faisait passer cette colonne a NULL sans erreur ni drapeau.
-           select (x2.payload -> 'field_confidence' ->> $3)::numeric as confiance
+           select (x2.payload -> 'field_confidence' ->> $3)::numeric as confiance, x2.payload
              from extractions_v x2 where x2.piece_id = p.id
             order by x2.created_at desc limit 1
          ) cf on true
@@ -276,6 +284,7 @@ export const supervision = {
           confiance: p["confiance"] == null ? null : Number(p["confiance"]),
           demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
           doublonDe: (p["doublon_de"] as string | null) ?? null,
+          tiers: (p["tiers"] as string | null) ?? null,
         };
       })
       .sort((a, b) => {

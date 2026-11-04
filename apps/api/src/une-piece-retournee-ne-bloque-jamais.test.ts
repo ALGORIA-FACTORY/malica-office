@@ -1447,6 +1447,26 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     assert.equal(file.find((q) => q.pieceId === nouvelle)?.ecritureId, ecriture);
   });
 
+  it("la file du cabinet nomme le fournisseur lu d'une pièce sans écriture", async () => {
+    // Staging, 4 novembre 2026 : « Lue — aucune écriture », sans un nom.
+    const id = await privee();
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      lireLaPieceDEssai(db, id, {
+        document_kind: "facture_achat",
+        issuer: "  STE MYTEK INFORMATIQUE ",
+      }),
+    );
+    await pmeFait("collab.setPieceVis", id, "partage");
+    const file = (await cabinetFait("supervision.queue", cabinet, pme)) as Array<{
+      pieceId: string;
+      ecritureId: string | null;
+      tiers: string | null;
+    }>;
+    const ligne = file.find((q) => q.pieceId === id);
+    assert.equal(ligne?.ecritureId, null);
+    assert.equal(ligne?.tiers, "STE MYTEK INFORMATIQUE", "la dernière lecture, sans ses blancs");
+  });
+
   it("une photo reprise aux mêmes octets n'est pas le doublon de sa version précédente", async () => {
     const ancienne = await privee();
     const empreinte = "b".repeat(63) + String(n % 10);

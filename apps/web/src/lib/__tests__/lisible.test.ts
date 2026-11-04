@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  compteDuBadge,
   dateEnChiffres,
+  enDebutDePhrase,
   dateEnLettres,
   deMois,
   jourEtMois,
@@ -193,5 +195,42 @@ describe("une date du Socle ne fait jamais tomber un écran", () => {
   it("illisible — « infinity » du 29 octobre 2026 —, elle s'affiche neutre sans lever", () => {
     expect(dateEnLettres("infinity", "fr")).toBe("—");
     expect(dateEnChiffres("infinity", "fr")).toBe("—");
+  });
+});
+
+describe("un texte qui ouvre une phrase", () => {
+  it("relève la seule initiale, pas chaque mot (« Mercredi 4 novembre »)", () => {
+    expect(enDebutDePhrase("mercredi 4 novembre", "fr")).toBe("Mercredi 4 novembre");
+  });
+
+  it("laisse l'anglais tel qu'Intl l'écrit, et l'arabe sans casse", () => {
+    expect(enDebutDePhrase("Wednesday, November 4", "en")).toBe("Wednesday, November 4");
+    expect(enDebutDePhrase("الأربعاء 4 نوفمبر", "ar")).toBe("الأربعاء 4 نوفمبر");
+  });
+
+  it("ne casse pas sur un texte vide", () => {
+    expect(enDebutDePhrase("", "fr")).toBe("");
+  });
+
+  it("sur une vraie date d'Intl, le mois reste en minuscules", () => {
+    const jour = new Intl.DateTimeFormat("fr", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC",
+    }).format(new Date("2026-11-04T00:00:00Z"));
+    expect(enDebutDePhrase(jour, "fr")).toBe("Mercredi 4 novembre");
+  });
+});
+
+describe("le compte d'un badge", () => {
+  it("reste exact jusqu'à 99", () => {
+    expect(compteDuBadge(1)).toBe("1");
+    expect(compteDuBadge(99)).toBe("99");
+  });
+
+  it("plafonne à « 99+ » au-delà : trois chiffres débordent la pastille", () => {
+    expect(compteDuBadge(100)).toBe("99+");
+    expect(compteDuBadge(1234)).toBe("99+");
   });
 });
