@@ -68,6 +68,7 @@ import { useNotificationsDuCabinet } from "@/hooks/use-notifications-du-cabinet"
 import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
+import { compteDuBadge } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary, MonAcces, Organization } from "@malica/socle/ports/repositories";
@@ -890,6 +891,11 @@ function BarreDuHaut({
   groupes: Groupe[];
 }) {
   const { t } = useI18n();
+  // Le compte exact se lit dans l'étiquette ; la pastille, elle, plafonne à « 99+ ».
+  const cloche =
+    nonLues > 0
+      ? t("cab.top.notifications.nonLues", { count: nonLues })
+      : t("cab.top.notifications");
   const [recherche, setRecherche] = useState("");
   const [ouverte, setOuverte] = useState(false);
   const champ = useRef<HTMLInputElement | null>(null);
@@ -966,14 +972,19 @@ function BarreDuHaut({
       </div>
       <Link
         to="/cabinet/notifications"
-        aria-label={t("cab.top.notifications")}
-        title={t("cab.top.notifications")}
+        aria-label={cloche}
+        title={cloche}
         className="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
       >
-        <Bell size={16} strokeWidth={1.9} />
+        <Bell size={16} strokeWidth={1.9} aria-hidden />
         {nonLues > 0 ? (
-          <span className="num absolute -end-px -top-px min-w-[14px] bg-marigold px-0.5 text-center text-[9px] font-semibold leading-[14px] text-foreground">
-            {nonLues}
+          // « 100 » débordait la pastille à 375 px (4 novembre 2026) : trois
+          // chiffres n'y tiennent pas, « 99+ » si, sur une ligne.
+          <span
+            aria-hidden
+            className="num absolute -end-px -top-px min-w-[14px] max-w-[calc(100%+2px)] whitespace-nowrap bg-marigold px-[3px] text-center text-[9px] font-semibold leading-[14px] tracking-[-0.02em] text-foreground"
+          >
+            {compteDuBadge(nonLues)}
           </span>
         ) : null}
       </Link>

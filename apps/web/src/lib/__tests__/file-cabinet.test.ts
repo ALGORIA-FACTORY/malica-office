@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
 
-import { feuDuStatut, joursDAttente, prisesEnChargeDepuis } from "../file-cabinet";
+import { dansLeFiltre, feuDuStatut, joursDAttente, prisesEnChargeDepuis } from "../file-cabinet";
 
 describe("joursDAttente", () => {
   const maintenant = Date.parse("2026-09-04T10:00:00Z");
@@ -56,5 +56,26 @@ describe("prisesEnChargeDepuis", () => {
   it("ne compte ni une pièce vue, ni une pièce sans suivi", () => {
     const pieces = [{ suivi: suivi({ vueLe: "2026-09-04T08:00:00Z" }) }, { suivi: null }];
     expect(prisesEnChargeDepuis(pieces, depuis)).toBe(0);
+  });
+});
+
+describe("dansLeFiltre", () => {
+  const piece = (statut: "recue" | "retournee" | "validee", doublonDe: string | null = null) => ({
+    statut,
+    doublonDe,
+  });
+
+  it("range une pièce par son statut, et « tout » les prend toutes", () => {
+    expect(dansLeFiltre(piece("recue"), "a_traiter")).toBe(true);
+    expect(dansLeFiltre(piece("recue"), "prise")).toBe(false);
+    expect(dansLeFiltre(piece("retournee"), "retournee")).toBe(true);
+    expect(dansLeFiltre(piece("validee"), "prise")).toBe(true);
+    expect(dansLeFiltre(piece("validee"), "tout")).toBe(true);
+  });
+
+  it("« doublons » ne garde que les pièces qui en répètent une autre, quel que soit leur statut", () => {
+    expect(dansLeFiltre(piece("recue", "p0"), "doublons")).toBe(true);
+    expect(dansLeFiltre(piece("validee", "p0"), "doublons")).toBe(true);
+    expect(dansLeFiltre(piece("recue"), "doublons")).toBe(false);
   });
 });

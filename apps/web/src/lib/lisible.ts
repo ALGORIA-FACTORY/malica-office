@@ -201,3 +201,30 @@ export function momentDeLEnvoi(
   ).format(d);
   return { quand, aujourdhui };
 }
+
+/**
+ * Un texte qui ouvre une phrase : sa première lettre seule passe en majuscule.
+ *
+ * Relevé sur staging le 4 novembre 2026 : l'accueil du cabinet titrait
+ * « Mercredi 4 Novembre ». Le `text-transform: capitalize` de la feuille
+ * mettait une majuscule à CHAQUE mot ; en français, le mois et le jour
+ * s'écrivent en minuscules, et seule l'initiale de la phrase se relève.
+ * L'anglais garde les majuscules qu'Intl lui donne déjà ; l'arabe n'a pas
+ * de casse, et la fonction le laisse tel quel.
+ */
+export function enDebutDePhrase(texte: string, locale: string): string {
+  const [premier] = texte;
+  if (premier === undefined) return texte;
+  return premier.toLocaleUpperCase(locale) + texte.slice(premier.length);
+}
+
+/** Au-delà de ce compte, un badge dit « 99+ » : trois chiffres débordent la pastille. */
+const PLAFOND_DU_BADGE = 99;
+
+/**
+ * Le compte qu'affiche un badge : exact jusqu'à 99, « 99+ » au-delà. Le compte
+ * exact reste dans l'étiquette lue par un lecteur d'écran, jamais tronqué.
+ */
+export function compteDuBadge(n: number): string {
+  return n > PLAFOND_DU_BADGE ? `${PLAFOND_DU_BADGE}+` : String(n);
+}

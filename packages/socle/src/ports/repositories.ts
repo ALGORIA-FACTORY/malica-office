@@ -2150,6 +2150,12 @@ export interface QueueItem {
    * signal, jamais une suppression : la PME décide.
    */
   doublonDe: string | null;
+  /**
+   * Le fournisseur de la pièce : l'émetteur dit par une personne, sinon lu.
+   * `null` pour une facture de vente, ou quand rien n'a été lu. La file le
+   * montre quand aucune écriture ne porte encore de libellé.
+   */
+  tiers: string | null;
 }
 
 export interface AuditEntry {
