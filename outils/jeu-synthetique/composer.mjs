@@ -46,6 +46,13 @@ import {
 } from "./referentiel.mjs";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Un taux imprimé en pourcentage, sans l'erreur du flottant : « 0.07 » × 100 donnait
+ * « 7.000000000000001 % » sur douze factures (relevé par le banc sans IA, 4 novembre 2026),
+ * et aucune lecture ne peut fermer une preuve sur ce taux-là.
+ */
+const pourcentImprime = (taux) => String(Math.round(Number(taux) * 1_000_000) / 10_000);
 const GRAINE = 20261031;
 
 /* ----------------------------------------------------------- le hasard graine */
@@ -619,13 +626,13 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
         designation: a.designation,
         designationAr: a.designationAr,
         codeTaxe: a.codeTaxe,
-        tauxImprime: `${Number(tauxDe(a.codeTaxe)) * 100} %`,
+        tauxImprime: `${pourcentImprime(tauxDe(a.codeTaxe))} %`,
       })),
       tableauParTaux,
-      parTaux: parTaux.map((l) => ({ code: l.code, tauxImprime: `${Number(l.taux) * 100} %` })),
+      parTaux: parTaux.map((l) => ({ code: l.code, tauxImprime: `${pourcentImprime(l.taux)} %` })),
       remise: tauxRemise
         ? {
-            tauxImprime: `${Number(tauxRemise) * 100} %`,
+            tauxImprime: `${pourcentImprime(tauxRemise)} %`,
             brut: montant(brut),
             montant: montant(remise),
           }

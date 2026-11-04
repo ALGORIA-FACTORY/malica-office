@@ -38,7 +38,7 @@
         "designation": "Médicament vétérinaire",
         "designationAr": "دواء بيطري",
         "codeTaxe": "TVA07",
-        "tauxImprime": "7.000000000000001 %"
+        "tauxImprime": "7 %"
       },
       {
         "designation": "Hébergement en hôtel, nuitée",
@@ -67,7 +67,7 @@
       },
       {
         "code": "TVA07",
-        "tauxImprime": "7.000000000000001 %"
+        "tauxImprime": "7 %"
       },
       {
         "code": "TVA13",

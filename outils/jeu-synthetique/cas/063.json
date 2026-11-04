@@ -44,7 +44,7 @@
         "designation": "دواء بيطري",
         "designationAr": "دواء بيطري",
         "codeTaxe": "TVA07",
-        "tauxImprime": "7.000000000000001 %"
+        "tauxImprime": "7 %"
       }
     ],
     "tableauParTaux": true,
@@ -55,7 +55,7 @@
       },
       {
         "code": "TVA07",
-        "tauxImprime": "7.000000000000001 %"
+        "tauxImprime": "7 %"
       }
     ],
     "remise": null,

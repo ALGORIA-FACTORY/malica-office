@@ -44,14 +44,14 @@
         "designation": "Huile d'olive vierge, bidon 5 L",
         "designationAr": "زيت زيتون بكر 5 لتر",
         "codeTaxe": "TVA07",
-        "tauxImprime": "7.000000000000001 %"
+        "tauxImprime": "7 %"
       }
     ],
     "tableauParTaux": true,
     "parTaux": [
       {
         "code": "TVA07",
-        "tauxImprime": "7.000000000000001 %"
+        "tauxImprime": "7 %"
       },
       {
         "code": "TVA13",
