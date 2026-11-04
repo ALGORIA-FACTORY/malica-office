@@ -139,7 +139,7 @@ for (const [locale, onglet, pourLeCabinet, incertain] of [
 async function ouvrirLesPremieresPieces(page: Page) {
   await page.locator(".cab-doclib-carte-lien").first().click();
   await expect(page).toHaveURL(/mois=\d{4}-\d{2}/);
-  await page.getByRole("link", { name: "Revenir", exact: true }).click();
+  await page.locator(".cab-doclib-retour").click();
   await expect(page).not.toHaveURL(/mois=/);
   await page.locator(".cab-doclib-carte-lien").first().click();
   await page.locator(".cab-doclib-carte-lien").first().click();
