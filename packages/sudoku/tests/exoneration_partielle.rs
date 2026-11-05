@@ -211,3 +211,59 @@ fn la_cle_sans_mention_declaree_n_est_pas_traduite() {
     }
     assert_ne!(la_piece(&par_variante(&plan(), &g, &p))["issue"], "prouvee");
 }
+
+/// La grille avec la mention d'export, qui nomme EXPORT (`autres_exonerations`).
+fn jouer_avec_l_export(jetons: &[Value]) -> Value {
+    let (mut g, p) = contexte(true, true);
+    let champs = g["champs"].as_array_mut().unwrap();
+    if let Some(c) = champs.iter_mut().find(|c| c["code"] == "mention_export") {
+        c["reperes_fr"] = json!(["Export", "Exportation", "En suspension"]);
+    } else {
+        let mut c = champs
+            .iter()
+            .find(|c| c["code"] == "mention_suspension_exoneration")
+            .expect("mention")
+            .clone();
+        c["code"] = json!("mention_export");
+        c["reperes_fr"] = json!(["Export", "Exportation", "En suspension"]);
+        champs.push(c);
+    }
+    for x in g["preuves"].as_array_mut().unwrap() {
+        if x["code"] == "P03" {
+            x["expression"]["autres_exonerations"] = json!({"mention_export": "EXPORT"});
+        }
+    }
+    la_piece(&par_variante(jetons, &g, &p))
+}
+
+#[test]
+fn le_taux_nul_suit_la_mention_imprimee() {
+    // Décision du dirigeant (5 novembre 2026) : « exonéré » → EXO ; « export »,
+    // « exportation », « en suspension » → EXPORT.
+    let o = jouer_avec_l_export(&plan());
+    assert_eq!(o["issue"], "prouvee", "{o}");
+    assert_eq!(
+        o["champs"]["base_tva_par_taux"]["instances"][1]["taux"],
+        "EXO"
+    );
+    // la même pièce, sous la mention d'export
+    let mut j = plan();
+    let k = indice(&j, "exonéré", 0);
+    j[k]["texte"] = json!("Exportation");
+    let o = jouer_avec_l_export(&j);
+    assert_eq!(o["issue"], "prouvee", "{o}");
+    assert_eq!(
+        o["champs"]["base_tva_par_taux"]["instances"][1]["taux"],
+        "EXPORT"
+    );
+    // les deux mentions imprimées : la part exonérée n'est pas nommée, rien n'est affirmé
+    let mut j = plan();
+    let mut export = j[k].clone();
+    export["ordinal"] = json!(9002);
+    export["texte"] = json!("Exportation");
+    export["y0"] = json!(0.98);
+    export["y1"] = json!(0.99);
+    j.push(export);
+    let o = jouer_avec_l_export(&j);
+    assert_ne!(o["issue"], "prouvee", "{o}");
+}

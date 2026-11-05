@@ -606,6 +606,10 @@ rattrapage (deux lectures complètes, environ quatre minutes).
 - **Ce que le dossier dit quand la pièce n'imprime rien** (`champ.defaut_du_dossier`,
   `connus.devise`). Un champ dont le concept porte `defaut_du_dossier = devise`, que rien
   n'a lu, reçoit la devise du dossier au statut `deduit`, sans référence.
+- **Le taux nul de la part exonérée** (`groupe_taux.autres_exonerations`, `{mention:
+  taux}`) : la part exonérée prend le taux de la mention imprimée (`taux_exonere` pour la
+  mention `exoneration`) ; deux mentions de taux différents imprimées, elle n'est pas
+  nommée.
 - **Le caractère le moins sûr.** Un jeton peut porter `faible`, la probabilité
   de son caractère le moins sûr (le second lecteur la donne). Sous
   `lecture.confiance_du_caractere` (0,8), le mot est incertain : un texte

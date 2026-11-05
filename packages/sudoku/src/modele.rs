@@ -81,6 +81,11 @@ pub struct Groupe {
     /// imprimées (le total entier sous une exonération totale), montant nul. Sans lui, la
     /// ventilation d'une exonération partielle est incomplète : elle n'est pas affirmée.
     pub taux_exonere: Option<String>,
+    /// Les AUTRES mentions qui autorisent l'exonération, chacune avec le taux nul qu'elle
+    /// nomme (`autres_exonerations` : « mention_export » → EXPORT). Le taux de la part
+    /// exonérée suit la mention IMPRIMÉE ; deux mentions de taux différents imprimées : la
+    /// part n'est pas nommée. Décision du dirigeant (5 novembre 2026).
+    pub autres_exonerations: Vec<(usize, String)>,
     pub instances_max: usize,
 }
 
@@ -302,6 +307,28 @@ pub fn construire(entree: &Entree) -> Modele {
                     Some(code.to_string())
                 }
             };
+            let mut autres_exonerations = Vec::new();
+            if let Some(m) = e.get("autres_exonerations") {
+                let m = m
+                    .as_object()
+                    .ok_or("clé « autres_exonerations » : { mention: taux } attendu")?;
+                for (mention, code) in m {
+                    let code = code
+                        .as_str()
+                        .ok_or("clé « autres_exonerations » : code de taux attendu")?;
+                    if !entree
+                        .pack
+                        .taux_nuls
+                        .get(&bareme)
+                        .is_some_and(|t| t.iter().any(|c| c == code))
+                    {
+                        return Err(format!(
+                            "taux « {code} » absent des taux nuls du barème « {bareme} »"
+                        ));
+                    }
+                    autres_exonerations.push((b.champ(mention)?, code.to_string()));
+                }
+            }
             let instances_max = e
                 .get("instances_max")
                 .and_then(|v| v.as_u64())
@@ -316,6 +343,7 @@ pub fn construire(entree: &Entree) -> Modele {
                 exoneration,
                 exoneration_partielle,
                 taux_exonere,
+                autres_exonerations,
                 instances_max,
             });
             let g = b.groupes.len() - 1;

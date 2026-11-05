@@ -500,9 +500,9 @@ correctif).
 | banc, sens lu                   | 6 223 |    0 |       0 |             4 383 |
 | couche de texte, sens déclaré   | 1 990 |    0 |       0 |               808 |
 
-## Bulletin 15 — le matricule sans sa lettre, et la devise non imprimée (5 novembre 2026)
+## Bulletin 15 — le matricule sans sa lettre, la devise non imprimée, EXO ou EXPORT (5 novembre 2026)
 
-Deux décisions du dirigeant, du 5 novembre 2026.
+Trois décisions du dirigeant, du 5 novembre 2026.
 
 - **Un matricule imprimé sans sa lettre de contrôle se calcule.** Les pièces du jeu du
   dirigeant impriment « 1856324/A/M/000 » : 192 matricules se taisaient, le motif exigeant la
@@ -527,6 +527,14 @@ Deux décisions du dirigeant, du 5 novembre 2026.
   pas même l'étiquette. Une devise imprimée l'emporte toujours. Le banc juge une valeur
   déduite contre la vraie devise de la pièce (juste si elle est celle du dossier, faux
   sinon), jamais contre la devise du dossier.
+
+- **Le taux nul suit la mention imprimée** (décision du 5 novembre 2026, « ok »). La preuve
+  `groupe_taux` gagne `autres_exonerations` (`{"mention_export": "EXPORT"}`) : « exonéré »
+  nomme EXO ; « export », « exportation », « en suspension », « Article 11 » (repères passés
+  au champ `mention_export`) nomment EXPORT. Deux mentions de taux différents imprimées : la
+  part exonérée n'est pas nommée. INCERTAIN fiscalement pour la suspension, défaut à
+  valider. Sans effet sur le banc (une seule pièce à l'export, algoria-111, en dollars :
+  désormais ambiguë au lieu de muette, sans faux).
 
 |                                 | juste | faux | inventé | dont à travailler |
 | ------------------------------- | ----: | ---: | ------: | ----------------: |

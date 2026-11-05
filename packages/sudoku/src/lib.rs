@@ -264,10 +264,32 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             v.present = annonce || fixe_imprime;
         }
     }
-    let exo: Vec<bool> = modele
+    // Les mentions d'exonération imprimées, et le taux nul que chacune nomme : la part
+    // exonérée prend le taux de LA mention imprimée ; deux mentions de taux différents, ou
+    // une mention sans taux, et elle n'est pas nommée.
+    let mentions: Vec<Vec<Option<&String>>> = modele
         .groupes
         .iter()
-        .map(|g| g.exoneration.is_some_and(|c| plan.annonce(&reperes[c])))
+        .map(|g| {
+            g.exoneration
+                .map(|c| (c, g.taux_exonere.as_ref()))
+                .into_iter()
+                .chain(g.autres_exonerations.iter().map(|(c, t)| (*c, Some(t))))
+                .filter(|(c, _)| plan.annonce(&reperes[*c]))
+                .map(|(_, t)| t)
+                .collect()
+        })
+        .collect();
+    let exo: Vec<bool> = mentions.iter().map(|m| !m.is_empty()).collect();
+    let taux_nomme: Vec<Option<String>> = mentions
+        .iter()
+        .map(|m| {
+            let codes: BTreeSet<Option<&String>> = m.iter().copied().collect();
+            match codes.into_iter().collect::<Vec<_>>().as_slice() {
+                [Some(code)] => Some((*code).clone()),
+                _ => None,
+            }
+        })
         .collect();
 
     // Un champ que seules des sommes exactes contraignent peut prendre n'importe quel
@@ -547,7 +569,7 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                             .total_base
                             .and_then(|t| e.s[t].filter(|v| !v.absent))
                             .map(|v| v.v);
-                        match (&gr.taux_exonere, total) {
+                        match (&taux_nomme[g], total) {
                             (Some(code), Some(t)) => {
                                 let v = if est_base { t } else { 0 };
                                 ChampSortie {
@@ -614,7 +636,7 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                         // 4 novembre 2026 : « 0 % 4 032,000 0,000 » imprimé, la ventilation
                         // rendue ne portait que le 19 %. Les lignes confirment le reste
                         // (contrôle plus bas), sinon la preuve est retirée.
-                        let exoneree = match (sol.partielle, &gr.taux_exonere) {
+                        let exoneree = match (sol.partielle, &taux_nomme[g]) {
                             (false, _) => Some(None),
                             (true, None) => None,
                             (true, Some(code)) => gr
