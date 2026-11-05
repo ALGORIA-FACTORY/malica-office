@@ -55,6 +55,7 @@ import {
   compteDeCharge,
   ecritureEnMasse,
   estChargeOuProduit,
+  aValiderDUnGeste,
   lotDe,
   parPiece,
   type EcritureDuLot,
@@ -490,6 +491,8 @@ function CabinetPropositions() {
                 retenir={retenir}
                 ecritureDe={ecritureDe}
                 lueParRecette={lueParRecette}
+                seuilLot={seuilLot}
+                seuilRevue={seuilRevue}
                 occupe={occupe || !superviseur}
                 valider={(pieces) => valider.mutate(pieces)}
                 forcer={(input) => forcer.mutate(input)}
@@ -545,6 +548,8 @@ function GroupeClient({
   retenir,
   ecritureDe,
   lueParRecette,
+  seuilLot,
+  seuilRevue,
   occupe,
   valider,
   forcer,
@@ -565,6 +570,9 @@ function GroupeClient({
   ecritureDe: Map<string, Ecriture>;
   /** Vrai quand une RECETTE a lu cette pièce : alors aucun pourcentage ne s'affiche. */
   lueParRecette: (pieceId: string) => boolean;
+  /** Les seuils du cabinet : ce que « Valider » valide sans sélection. */
+  seuilLot: number | null;
+  seuilRevue: number | null;
   occupe: boolean;
   valider: (pieces: QueueItem[]) => void;
   forcer: (input: {
@@ -578,6 +586,7 @@ function GroupeClient({
   const retenues = groupe.pieces.filter((p) => estRetenue(p.pieceId));
   const toutes = retenues.length === groupe.pieces.length;
   const retenuesOuToutes = retenues.length > 0 ? retenues : groupe.pieces;
+  const dUnGeste = aValiderDUnGeste(groupe.pieces, retenues, seuilLot, seuilRevue, lueParRecette);
 
   /*
    * L'écriture de chaque pièce : celle qu'un client inscrivait autrefois et
@@ -696,11 +705,16 @@ function GroupeClient({
           </button>
           <button
             type="button"
-            disabled={occupe}
-            onClick={() => valider(retenuesOuToutes)}
+            disabled={occupe || dUnGeste.length === 0}
+            onClick={() => valider(dUnGeste)}
             className="border border-foreground bg-foreground px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
           >
-            {t("cab.prop.groupe.valider")}
+            {retenues.length > 0
+              ? t("cab.prop.groupe.validerRetenues", { count: dUnGeste.length })
+              : t("cab.prop.groupe.validerSures", {
+                  count: dUnGeste.length,
+                  seuil: seuilLot === null ? "—" : Math.round(seuilLot * 100),
+                })}
           </button>
         </div>
       </div>

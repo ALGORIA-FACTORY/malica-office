@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Ecriture } from "@malica/socle/ports/repositories";
 
 import {
+  aValiderDUnGeste,
   compteDeCharge,
   ecritureEnMasse,
   estChargeOuProduit,
@@ -138,5 +139,32 @@ describe("un lot, pièce par pièce", () => {
     );
     expect(vues).toEqual(["a", "b", "c", "d"]);
     expect(bilan).toEqual({ passees: 2, echecs: 2, raison: "refus b" });
+  });
+});
+
+describe("« Valider » d'un client", () => {
+  const p = (pieceId: string, confiance: number | null) => ({ pieceId, confiance });
+  const pieces = [
+    p("sure", 0.95),
+    p("moyenne", 0.8),
+    p("basse", 0.2),
+    p("sans", null),
+    p("recette", 1),
+  ];
+  const parRecette = (id: string) => id === "recette";
+
+  it("ne valide d'un geste que le lot au-dessus du seuil du cabinet", () => {
+    expect(aValiderDUnGeste(pieces, [], 0.9, 0.7, parRecette).map((x) => x.pieceId)).toEqual([
+      "sure",
+    ]);
+  });
+
+  it("valide telle quelle la sélection que l'expert a faite", () => {
+    const retenues = [pieces[2]!, pieces[3]!];
+    expect(aValiderDUnGeste(pieces, retenues, 0.9, 0.7, parRecette)).toEqual(retenues);
+  });
+
+  it("ne valide rien tant que les seuils ne sont pas lus", () => {
+    expect(aValiderDUnGeste(pieces, [], null, 0.7, parRecette)).toEqual([]);
   });
 });
