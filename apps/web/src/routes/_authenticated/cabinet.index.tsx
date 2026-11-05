@@ -14,7 +14,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   CheckCheck,
@@ -49,6 +49,7 @@ import { MOT_CABINET } from "@/lib/statut";
 import { initialesDe } from "@/lib/initiales";
 import { enDebutDePhrase, montant } from "@/lib/lisible";
 import { idsDesMandatsActifs } from "@/lib/portefeuille-actif";
+import { oublierLOrdre } from "@/lib/ordre-de-revue";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -80,6 +81,9 @@ const JOUR_MS = 86_400_000;
 function CabinetToday() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
+  // Revenir à la file, c'est recommencer une revue : l'ordre gardé d'une pièce
+  // à l'autre (`ordre-de-revue.ts`) repart de la file telle qu'elle est ici.
+  useEffect(() => oublierLOrdre(org.id), [org.id]);
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],

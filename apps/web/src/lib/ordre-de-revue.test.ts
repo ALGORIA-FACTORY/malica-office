@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dansLOrdreVu } from "./ordre-de-revue";
+import { dansLOrdreVu, oublierLOrdre, ordreDeLaRevue, retenirLOrdre } from "./ordre-de-revue";
 
 const r = (pieceId: string, statut = "recue") => ({ pieceId, statut });
 
@@ -19,5 +19,15 @@ describe("l'ordre de la revue", () => {
 
   it("suit la base tant que rien n'a été montré", () => {
     expect(dansLOrdreVu(null, [r("x"), r("y")]).map((x) => x.pieceId)).toEqual(["x", "y"]);
+  });
+
+  it("garde l'ordre d'une pièce à l'autre, et l'oublie au retour à la file", () => {
+    retenirLOrdre("cab", ["a", "b", "c"]);
+    // L'écran remonté sur « b » retrouve l'ordre de départ, pas la file retriée.
+    expect(ordreDeLaRevue("cab", "b")).toEqual(["a", "b", "c"]);
+    // Une pièce hors de cette revue en commence une autre.
+    expect(ordreDeLaRevue("cab", "z")).toBeNull();
+    oublierLOrdre("cab");
+    expect(ordreDeLaRevue("cab", "a")).toBeNull();
   });
 });
