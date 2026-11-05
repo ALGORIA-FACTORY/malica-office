@@ -669,6 +669,9 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 .any(|(k, x)| k != c && x.format_code == champ.format_code);
         let sortie = match textuel::lire(champ, &entree.pack, &plan)? {
             Issue::Conforme(_) if partage => signale(),
+            Issue::Conforme(l) if entete::le_dossier_parmi_d_autres(champ, entree, &l.valeur) => {
+                signale()
+            }
             Issue::Conforme(l) => {
                 lus.insert(c, l.valeur.clone());
                 ChampSortie {
@@ -893,6 +896,32 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
 
     // ---------- L'anneau 3 : les champs nommés, que nulle preuve ne lit ----------
     entete::nommes(entree, &mut champs);
+
+    // ---------- Ce que le dossier dit quand la pièce n'imprime rien ----------
+    // Décision du dirigeant (5 novembre 2026) : une pièce sans devise imprimée est dans la
+    // devise du dossier. Le champ dont le concept le porte (`ref.concepts.defaut_du_dossier`)
+    // et que rien n'a lu — pas même son étiquette — la reçoit, DÉDUITE, sans référence.
+    for ch in grille.champs.iter().filter(|c| !c.repetee) {
+        let Some(valeur) = ch
+            .defaut_du_dossier
+            .as_deref()
+            .and_then(|d| entree.connus.as_ref().and_then(|c| c.defaut(d)))
+        else {
+            continue;
+        };
+        let dans_le_domaine = ch.valeurs.is_empty() || ch.valeurs.iter().any(|v| v.code == valeur);
+        if dans_le_domaine && champs.get(&ch.code).is_none_or(|c| c.statut == "absent") {
+            champs.insert(
+                ch.code.clone(),
+                ChampSortie {
+                    valeur: Some(valeur.to_string()),
+                    refs: Vec::new(),
+                    statut: "deduit".into(),
+                    instances: None,
+                },
+            );
+        }
+    }
 
     // ---------- Les lettres : la seconde écriture du total ----------
     let mut contredite = false;

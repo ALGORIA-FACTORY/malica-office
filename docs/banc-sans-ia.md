@@ -500,6 +500,42 @@ correctif).
 | banc, sens lu                   | 6 223 |    0 |       0 |             4 383 |
 | couche de texte, sens déclaré   | 1 990 |    0 |       0 |               808 |
 
+## Bulletin 15 — le matricule sans sa lettre, et la devise non imprimée (5 novembre 2026)
+
+Deux décisions du dirigeant, du 5 novembre 2026.
+
+- **Un matricule imprimé sans sa lettre de contrôle se calcule.** Les pièces du jeu du
+  dirigeant impriment « 1856324/A/M/000 » : 192 matricules se taisaient, le motif exigeant la
+  lettre. La règle de la lettre est en base (`ref.identifiant_controles` : somme pondérée
+  7..1 des sept chiffres, modulo 23, sur l'alphabet sans I, O ni U ; elle retrouve 146 des
+  150 matricules publics testés ; la DGI ne la publie pas, statut `defaut_a_valider`,
+  source `incertain`). Le motif de LECTURE (`ref.identifiant_formats.pattern_lu`) rend la
+  lettre facultative ; le motif de SAISIE ne change pas — une fiche ne s'enregistre toujours
+  pas sans sa lettre. Une écriture sans lettre se compare par la lettre calculée ; la valeur
+  rendue reste l'imprimée. Si la lettre calculée diffère de celle de la fiche sur les mêmes
+  chiffres, rien n'est placé (moteur) et le contrôle du destinataire met une réserve, jamais
+  un rejet. Limite à dire : la lettre calculée ne VÉRIFIE rien — elle est fonction des
+  chiffres ; seule une lettre imprimée peut révéler un chiffre mal lu.
+- **Un faux évité en chemin.** Le devis 100/C-01 n'a qu'un champ de matricule, celui du
+  fournisseur ; « MF:1856324/A/M/000 », sous « Client : », devenait lisible et s'y rangeait.
+  Un champ d'identifiant d'une partie lu égal au matricule du dossier, quand la page imprime
+  un autre identifiant de même noyau (même hors du motif), se signale : le ranger serait
+  affirmer le sens sans l'avoir lu.
+- **Une pièce sans devise imprimée est dans la devise du dossier.** `ref.concepts` gagne
+  `defaut_du_dossier` (`devise` pour le concept de la devise de la pièce) ; le moteur rend la
+  devise du dossier au statut `deduit`, sans référence de jeton, quand rien n'est imprimé —
+  pas même l'étiquette. Une devise imprimée l'emporte toujours. Le banc juge une valeur
+  déduite contre la vraie devise de la pièce (juste si elle est celle du dossier, faux
+  sinon), jamais contre la devise du dossier.
+
+|                                 | juste | faux | inventé | dont à travailler |
+| ------------------------------- | ----: | ---: | ------: | ----------------: |
+| banc, sens déclaré, bulletin 14 | 6 495 |    0 |       0 |             4 071 |
+| banc, sens déclaré              | 6 655 |    0 |       0 |             3 924 |
+| banc, sens lu                   | 6 353 |    0 |       0 |             4 266 |
+| couche de texte, sens déclaré   | 2 116 |    0 |       0 |               679 |
+| couche de texte, sens lu        | 1 975 |    0 |       0 |               822 |
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

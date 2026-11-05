@@ -63,9 +63,10 @@ export type FormeDuMatricule = "complete" | "courte" | "partielle" | "illisible"
 export interface MatriculeLu {
   /**
    * La clé de comparaison : sept chiffres et la lettre de contrôle, en
-   * capitales. `null` dès que la lettre manque — comparer sur les sept chiffres
-   * seuls ferait coïncider deux entreprises différentes, et une coïncidence
-   * silencieuse est pire qu'une question.
+   * capitales. Quand la lettre manque, elle se calcule par la règle du pack ;
+   * sans règle, `null` — comparer sur les sept chiffres seuls ferait coïncider
+   * deux entreprises différentes, et une coïncidence silencieuse est pire
+   * qu'une question.
    */
   cle: string | null;
   /** Les sept chiffres, même quand la lettre manque. Pour expliquer, jamais pour comparer. */
@@ -283,19 +284,27 @@ export function normaliserMatricule(
   /*
    * Trois groupes sans lettre de contrôle : c'est l'ancienne fiche du staging,
    * et c'est une forme qu'une pièce peut porter. Une QUESTION, jamais un rejet
-   * de la pièce — et surtout aucune clé, pour qu'aucune comparaison ne réussisse
-   * par accident.
+   * de la pièce. DÉCISION du dirigeant (5 novembre 2026) : quand le pack porte la
+   * règle de la lettre (`ref.identifiant_controles`), la clé se CALCULE — elle se
+   * compare, elle ne s'affiche pas (`complet` reste nul, rien n'est inventé dans
+   * la valeur rendue) ; la correction le dit. Sans règle, aucune clé, pour
+   * qu'aucune comparaison ne réussisse par accident.
    */
   const sans = texte.match(sansLettre);
   if (sans) {
     const { chiffres, corrections: reparees } = reparerLesChiffres(sans[1]!.toUpperCase());
     if (noyau.test(chiffres)) {
+      const lettre = lettreCalculee(chiffres, format.controle);
       return {
-        cle: null,
+        cle: lettre === null ? null : `${chiffres}${lettre}`,
         chiffres,
         complet: null,
         forme: "partielle",
-        corrections: [...corrections, ...reparees],
+        corrections: [
+          ...corrections,
+          ...reparees,
+          ...(lettre === null ? [] : [`lettre de contrôle calculée : ${lettre}`]),
+        ],
       };
     }
   }
@@ -341,14 +350,22 @@ export function memeMatricule(
  * (un matricule partiel est déjà une question). `discordante` n'est un refus que
  * si le pack le dit (`effet`) ; tant que la règle n'est pas publiée, elle avertit.
  */
+/** La lettre que la règle attend pour ces chiffres, ou `null` sans règle applicable. */
+function lettreCalculee(chiffres: string, regle: ControleDeLaLettre | null): string | null {
+  if (!regle || regle.poids.length !== chiffres.length) return null;
+  const somme = [...chiffres].reduce((s, c, i) => s + Number(c) * regle.poids[i]!, 0);
+  return regle.alphabet[somme % regle.modulo] ?? null;
+}
+
 export function lettreDeControle(
   lu: MatriculeLu,
   format: FormatDuMatricule,
 ): "conforme" | "discordante" | null {
   const regle = format.controle;
   if (!regle || lu.cle === null || lu.chiffres === null) return null;
-  if (regle.poids.length !== lu.chiffres.length) return null;
-  const somme = [...lu.chiffres].reduce((s, c, i) => s + Number(c) * regle.poids[i]!, 0);
-  const attendue = regle.alphabet[somme % regle.modulo];
+  // Une clé calculée (forme partielle) n'a pas de lettre lue à juger.
+  if (lu.forme === "partielle") return null;
+  const attendue = lettreCalculee(lu.chiffres, regle);
+  if (attendue === null) return null;
   return attendue === lu.cle.slice(-1) ? "conforme" : "discordante";
 }

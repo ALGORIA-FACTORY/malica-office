@@ -202,3 +202,49 @@ fn l_etiquette_du_client_dit_le_sens_de_la_piece() {
         lire(&sans)["parties"]
     );
 }
+
+#[test]
+fn une_piece_sans_devise_imprimee_est_dans_la_devise_du_dossier() {
+    // algoria-051 : ni « DT », ni « TND », ni « dinars ». Décision du dirigeant (5 novembre
+    // 2026) : la devise du dossier, DÉDUITE, sans référence de jeton.
+    let (sorties, _) = jouer("algoria-051");
+    let devise = &sorties[0]["champs"]["devise"];
+    assert_eq!(
+        (devise["valeur"].as_str(), devise["statut"].as_str()),
+        (Some("TND"), Some("deduit")),
+        "{devise}"
+    );
+    assert!(devise["refs"].as_array().is_some_and(|r| r.is_empty()));
+    // la donnée vient du dossier : sans elle, le champ se tait
+    let cas: Vec<Value> =
+        serde_json::from_str(include_str!("donnees/des_silences_aux_preuves.json"))
+            .expect("jeu lisible");
+    let mut e = cas
+        .into_iter()
+        .find(|c| c["id"] == "algoria-051")
+        .expect("cas")["entree"]
+        .clone();
+    e["connus"]
+        .as_object_mut()
+        .expect("connus")
+        .remove("devise");
+    let o: Value =
+        serde_json::from_str(&malica_sudoku::solve(&e.to_string())).expect("sortie lisible");
+    assert_eq!(o["champs"]["devise"]["statut"], "absent");
+    // une devise imprimée l'emporte toujours
+    e["connus"]["devise"] = serde_json::json!("TND");
+    let j = e["jetons"].as_array_mut().expect("jetons");
+    let mut usd = j[0].clone();
+    usd["ordinal"] = serde_json::json!(9001);
+    usd["texte"] = serde_json::json!("USD");
+    usd["y0"] = serde_json::json!(0.97);
+    usd["y1"] = serde_json::json!(0.98);
+    j.push(usd);
+    let o: Value =
+        serde_json::from_str(&malica_sudoku::solve(&e.to_string())).expect("sortie lisible");
+    assert_ne!(
+        o["champs"]["devise"]["statut"], "deduit",
+        "{}",
+        o["champs"]["devise"]
+    );
+}

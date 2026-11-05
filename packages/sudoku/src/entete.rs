@@ -27,7 +27,7 @@
 //! au bon de commande, pas au numéro de facture). Aucune constante réglementaire :
 //! formats, repères et formes juridiques arrivent en entrée (R4).
 
-use crate::entree::{Entree, Grille, Jeton};
+use crate::entree::{Champ, Entree, Grille, Jeton};
 use crate::lignes::rangees_selon;
 use crate::reperes::normaliser;
 use crate::textuel::{iso_valide, jusqua};
@@ -174,6 +174,53 @@ fn norme_matricule(s: &str) -> String {
         .filter(|c| !c.is_whitespace())
         .flat_map(|c| c.to_uppercase())
         .collect()
+}
+
+/// Un champ d'identifiant d'une PARTIE (le champ a un rôle) lu égal au matricule du
+/// DOSSIER alors que la page imprime un autre identifiant de même noyau : la pièce a deux
+/// parties, et l'étiquette (« MF ») ne dit pas laquelle est le dossier. Le rendre, ce
+/// serait affirmer le sens de la pièce sans l'avoir lu (banc du 5 novembre 2026, dirigeant
+/// 100/C-01 : un devis reçu, le matricule du client sous « MF » lu comme celui du
+/// fournisseur, celui du fournisseur imprimé « 1105673/K/M/000 », hors du motif). L'autre
+/// identifiant se reconnaît à son noyau — les chiffres de la règle de contrôle, puis la
+/// lettre facultative et un séparateur —, même quand le motif le refuse : une lettre mal
+/// lue ne doit pas faire du dossier la seule partie de la page. Il se signale.
+pub(crate) fn le_dossier_parmi_d_autres(champ: &Champ, entree: &Entree, valeur: &str) -> bool {
+    let Some(code) = champ.format_code.as_deref() else {
+        return false;
+    };
+    let (Some(controle), Some(dossier), Some(_)) = (
+        entree.pack.controles.get(code),
+        entree.connus.as_ref().and_then(|c| c.dossier.as_ref()),
+        champ.role.as_ref(),
+    ) else {
+        return false;
+    };
+    let complete = |v: &str| controle.complete(&norme_matricule(v));
+    let d = complete(&dossier.matricule);
+    if complete(valeur) != d {
+        return false;
+    }
+    let noyau_du_dossier: String = d.chars().take(controle.poids.len()).collect();
+    let Ok(re) = Regex::new(&format!(r"[0-9]{{{}}}[A-Za-z]?/", controle.poids.len())) else {
+        return false;
+    };
+    // Les jetons d'une page recollés : un identifiant coupé en deux jetons (« 1105673 »
+    // « /K/M/000 ») se voit aussi. Un recollement fortuit ne fait que taire le champ.
+    let mut pages: BTreeMap<u32, String> = BTreeMap::new();
+    for j in &entree.jetons {
+        pages
+            .entry(j.page)
+            .or_default()
+            .push_str(&norme_matricule(&j.texte));
+    }
+    pages.values().any(|t| {
+        re.find_iter(t).any(|m| {
+            let avant = t[..m.start()].chars().next_back();
+            !avant.is_some_and(|c| c.is_ascii_digit())
+                && !m.as_str().starts_with(noyau_du_dossier.as_str())
+        })
+    })
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -1359,6 +1406,40 @@ pub fn prouver(
     for o in &occs {
         par_valeur.entry(o.valeur.clone()).or_default().push(o);
     }
+    // Un matricule imprimé sans sa lettre de contrôle se compare par la lettre que la
+    // règle du pack calcule (`ref.identifiant_controles`) ; la valeur rendue reste celle
+    // qui est imprimée. Ses écritures avec et sans lettre sont un seul matricule, rendu
+    // dans sa forme la plus pleine.
+    let controle = entree.pack.controles.get(&code_format);
+    let complete = |v: &str| controle.map_or_else(|| v.to_string(), |c| c.complete(v));
+    // La même écriture sans sa lettre, quelle qu'elle soit : « 1856324G/A/M/000 » et
+    // « 1856324/A/M/000 » ont le même noyau.
+    let sans_lettre = |v: &str| -> String {
+        let Some(c) = controle else {
+            return v.to_string();
+        };
+        let n = c.poids.len();
+        v.chars()
+            .enumerate()
+            .filter(|&(i, ch)| !(i == n && ch.is_alphabetic()))
+            .map(|(_, ch)| ch)
+            .collect()
+    };
+    let mut groupes: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for k in par_valeur.keys() {
+        groupes.entry(complete(k)).or_default().push(k.clone());
+    }
+    for ks in groupes.values().filter(|ks| ks.len() > 1) {
+        let rep = ks
+            .iter()
+            .max_by_key(|k| k.len())
+            .expect("groupe non vide")
+            .clone();
+        for k in ks.iter().filter(|k| **k != rep) {
+            let v = par_valeur.remove(k).expect("valeur lue");
+            par_valeur.get_mut(&rep).expect("valeur lue").extend(v);
+        }
+    }
     // Les camps d'une occurrence : repère propre à gauche, puis bloc de partie.
     let camp_de = |o: &Occ| -> Option<(Camp, Option<&Libelle>)> {
         if let Some(et) = page.etiquette(o.jetons[0], &o.prefixe) {
@@ -1401,7 +1482,14 @@ pub fn prouver(
         declare: false,
         raison: Some(raison.into()),
     };
-    let d = norme_matricule(&dossier.matricule);
+    // Le matricule du dossier tel que la pièce l'imprime : sa fiche, ou l'écriture lue
+    // qui lui est égale une fois sa lettre calculée.
+    let fiche = norme_matricule(&dossier.matricule);
+    let d = par_valeur
+        .keys()
+        .find(|k| complete(k) == complete(&fiche))
+        .cloned()
+        .unwrap_or(fiche);
     // Le sens déclaré par la personne, s'il y en a un.
     let declare_par: Option<Sens> = match connus.sens.as_deref() {
         Some("achat") => Some(Sens::Achat),
@@ -1417,11 +1505,15 @@ pub fn prouver(
     valeurs.push(d.as_str());
     valeurs.sort_unstable();
     valeurs.dedup();
-    if valeurs
-        .iter()
-        .enumerate()
-        .any(|(i, a)| valeurs[i + 1..].iter().any(|b| a_un_chiffre_pres(a, b)))
-    {
+    if valeurs.iter().enumerate().any(|(i, a)| {
+        valeurs[i + 1..].iter().any(|b| {
+            let (sa, sb) = (sans_lettre(a), sans_lettre(b));
+            // à un chiffre près, ou le même noyau dont la lettre calculée diffère
+            a_un_chiffre_pres(a, b)
+                || a_un_chiffre_pres(&sa, &sb)
+                || (sa == sb && complete(a) != complete(b))
+        })
+    }) {
         return Resultat {
             parties: Some(vide(
                 "signale",

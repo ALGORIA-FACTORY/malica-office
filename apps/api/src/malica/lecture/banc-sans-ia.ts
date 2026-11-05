@@ -107,6 +107,15 @@ interface PieceDuBanc {
   readonly jour: string;
   readonly sens: "achat" | "vente" | null;
   readonly dossier: { readonly matricule: string; readonly raison: string } | null;
+  /** La devise du dossier (celle du pack) : celle d'une pièce qui n'en imprime aucune. */
+  readonly deviseDuDossier: string;
+  /**
+   * La vraie valeur d'un champ que la pièce n'imprime PAS, quand la vérité la connaît (la
+   * devise réelle d'une pièce du jeu d'ALGORIA). Un champ que le moteur DÉDUIT du dossier
+   * (`ref.concepts.defaut_du_dossier`) se juge contre elle : juste si la pièce est bien
+   * dans la devise du dossier, faux sinon. Sans elle, une valeur déduite est inventée.
+   */
+  readonly nonImprimes?: Readonly<Record<string, string>>;
   readonly concepts: Concepts;
   readonly confondus: Readonly<Record<string, string>>;
   /** `grille` : la vérité couvre toute la grille ; sinon les seuls champs connus. */
@@ -517,6 +526,8 @@ async function mesurerLaPiece(
         tiers: [],
         formes_juridiques: c.formesJuridiques,
         ...(sensDeclare && piece.sens ? { sens: piece.sens } : {}),
+        // La devise du DOSSIER (celle du pack), jamais celle de la vérité de la pièce.
+        devise: piece.deviseDuDossier,
       },
       marques,
       texteExact,
@@ -594,7 +605,13 @@ async function mesurerLaPiece(
     const source = Object.hasOwn(concepts, champ.code) ? champ.code : confondus[champ.code];
     const imprime = source !== undefined && Object.hasOwn(concepts, source);
     if (!imprime && piece.verite === "partielle") continue;
-    const attendu = imprime ? concepts[source] : null;
+    // Un champ non imprimé que le moteur DÉDUIT du dossier se juge contre sa vraie valeur.
+    const vraiDuDeduit =
+      !imprime && sortie.champs[champ.code]?.statut === "deduit"
+        ? piece.nonImprimes?.[champ.code]
+        : undefined;
+    const juge = imprime || vraiDuDeduit !== undefined;
+    const attendu = imprime ? concepts[source] : (vraiDuDeduit ?? null);
     let r: Lecture;
     if (champ.code === lettres && imprime)
       r = montantDesLettres(sortie, champ.code, concepts, devise.decimales);
@@ -607,7 +624,7 @@ async function mesurerLaPiece(
     const signalee = r.lu !== null && sortie.champs[champ.code]?.statut === "signale";
     const issue: Issue | null = signalee
       ? "signale"
-      : imprime
+      : juge
         ? r.lu === null
           ? "silence"
           : r.juste
@@ -809,6 +826,8 @@ function corpusAlgoria(dossier: string, cache: string, deviseDuPack: string): Pi
         langue: cas.langue,
         gabarit: cas.gabarit ?? null,
         devise: cas.piece.devise ?? deviseDuPack,
+        deviseDuDossier: deviseDuPack,
+        nonImprimes: { devise: cas.piece.devise ?? deviseDuPack },
         jour: jourDe(c["date_operation"] ?? c["date_emission"] ?? c["date_document"]),
         sens,
         dossier: { matricule: cas.dossier.identifiantFiscal, raison: cas.dossier.nom },
@@ -912,6 +931,7 @@ function corpusSynthetique(dossier: string, cache: string, deviseDuPack: string)
         langue: cas.langue,
         gabarit: cas.scenario ?? null,
         devise: cas.piece.devise ?? a["currency"] ?? deviseDuPack,
+        deviseDuDossier: deviseDuPack,
         jour: jourDe(a["document_date"]),
         sens,
         dossier: { matricule: cas.dossier.identifiantFiscal, raison: cas.dossier.nom },
@@ -1004,6 +1024,7 @@ function corpusDuDirigeant(fichier: string, deviseDuPack: string, exact = false)
       langue: "fr",
       gabarit: j.id.split("-")[0] ?? null,
       devise: deviseDuPack,
+      deviseDuDossier: deviseDuPack,
       jour: jourDe(e["date"]),
       sens: algoria && GRILLE_DU_DIRIGEANT[type] === "facture" ? "achat" : null,
       dossier:
@@ -1056,6 +1077,7 @@ function corpusPhoto(
       langue: "fr",
       gabarit: null,
       devise: deviseDuPack,
+      deviseDuDossier: deviseDuPack,
       jour: jourDe(v.concepts["date_operation"]),
       sens: v.sens,
       dossier: v.dossier,

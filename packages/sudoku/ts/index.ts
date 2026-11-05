@@ -100,6 +100,8 @@ export interface ChampDeGrille {
    * formes imprimables. Présent, le champ ne se lit qu'en un code de ce domaine.
    */
   readonly valeurs?: readonly { readonly code: string; readonly formes: readonly string[] }[];
+  /** La donnée du dossier qui vaut quand la pièce n'imprime rien (`devise`). */
+  readonly defaut_du_dossier?: "devise";
 }
 
 export interface PreuveDeGrille {
@@ -132,6 +134,10 @@ export interface PackDuSudoku {
     assiette_tva: boolean;
   }[];
   readonly formats: Readonly<Record<string, string>>;
+  /** La règle de la lettre de contrôle, par code de format (`ref.identifiant_controles`). */
+  readonly controles?: Readonly<
+    Record<string, { poids: readonly number[]; modulo: number; alphabet: string }>
+  >;
   /**
    * Sous cette confiance de lecture, un texte qu'aucun calcul ne prouve (une
    * désignation) n'est pas rendu (`lecture.confiance_du_texte`).
@@ -160,6 +166,8 @@ export interface Connus {
    * le dossier ; l'autre matricule est le tiers. Absent : le moteur le cherche sur la pièce.
    */
   readonly sens?: "achat" | "vente";
+  /** La devise du dossier : celle d'une pièce qui n'en imprime aucune. */
+  readonly devise?: string;
 }
 
 /** Une marque vue sans modèle sur la page (un cachet), en coordonnées 0..1. */
@@ -201,7 +209,7 @@ export interface InstanceLue {
 export interface ChampLu {
   readonly valeur: string | null;
   readonly refs: readonly RefDeJeton[];
-  readonly statut: "prouve" | "conforme" | "signale" | "absent";
+  readonly statut: "prouve" | "conforme" | "deduit" | "signale" | "absent";
   readonly instances?: readonly InstanceLue[];
 }
 

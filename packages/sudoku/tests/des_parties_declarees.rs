@@ -153,3 +153,45 @@ fn un_nom_connu_lu_avec_un_accent_qu_il_n_a_pas_ne_se_rend_pas() {
     assert_eq!(p["statut"], "prouve", "{p}");
     assert!(p["client"]["nom"].is_null(), "{p}");
 }
+
+#[test]
+fn un_matricule_imprime_sans_sa_lettre_se_compare_par_la_lettre_calculee() {
+    // dirigeant-100/A-01 : « 1856324/A/M/000 » et « 1247856/A/M/000 », imprimés sans la
+    // lettre de contrôle ; la fiche du dossier non plus. La valeur rendue est l'imprimée.
+    let mut e = entree("dirigeant-100/A-01");
+    let p = parties(&e);
+    assert_eq!(p["statut"], "prouve", "{p}");
+    assert_eq!(p["client"]["matricule"]["valeur"], "1856324/A/M/000");
+    assert_eq!(p["emetteur"]["matricule"]["valeur"], "1247856/A/M/000");
+    // la fiche porte la lettre que la règle calcule (1·7+8·6+5·5+6·4+3·3+2·2+4·1 = 121,
+    // 121 mod 23 = 6, « G ») : l'écriture sans lettre est le dossier, rendue telle quelle
+    e["connus"]["dossier"]["matricule"] = json!("1856324G/A/M/000");
+    let p = parties(&e);
+    assert_eq!(p["client"]["matricule"]["valeur"], "1856324/A/M/000", "{p}");
+    // une autre lettre sur les mêmes chiffres : les lectures se contredisent, rien n'est placé
+    e["connus"]["dossier"]["matricule"] = json!("1856324K/A/M/000");
+    let p = parties(&e);
+    assert_eq!(
+        p["raison"], "deux lectures d'un matricule se contredisent",
+        "{p}"
+    );
+    // sans la règle au pack, l'écriture sans lettre n'égale que son identique
+    e["pack"]["controles"] = json!({});
+    assert!(parties(&e)["client"]["matricule"].is_null());
+}
+
+#[test]
+fn le_matricule_du_dossier_n_est_pas_celui_d_une_partie_que_rien_ne_designe() {
+    // dirigeant-100/C-01 : un devis reçu ; « MF:1856324/A/M/000 » sous « Client : » ; celui
+    // du fournisseur imprimé « 1105673/K/M/000 », hors du motif. La grille du devis n'a que
+    // le matricule du fournisseur : le dossier ne s'y range pas.
+    let e = entree("dirigeant-100/C-01");
+    let o: Value =
+        serde_json::from_str(&malica_sudoku::solve(&e.to_string())).expect("sortie lisible");
+    let m = &o["champs"]["matricule_fiscal_emetteur"];
+    assert_eq!(
+        (m["valeur"].is_null(), m["statut"].as_str()),
+        (true, Some("signale")),
+        "{m}"
+    );
+}

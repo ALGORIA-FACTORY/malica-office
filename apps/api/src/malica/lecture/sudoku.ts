@@ -294,9 +294,10 @@ export async function lireLeContexteDuSudoku(
         domaine: string | null;
         repetee: boolean;
         marque: string | null;
+        defaut_du_dossier: "devise" | null;
       }>(
         `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert, c.role,
-                k.domaine, c.repetee, c.marque
+                k.domaine, c.repetee, c.marque, k.defaut_du_dossier
            from ref_grille_champs_v c join ref_concepts_v k on k.id = c.concept_id
           where c.grille_id = $1 order by c.code`,
         [grilleId],
@@ -353,7 +354,10 @@ export async function lireLeContexteDuSudoku(
         [packId, jour],
       ),
       db.query<{ kind: string; pattern: string }>(
-        `select distinct on (kind) kind, pattern from ref.identifiant_formats
+        // Le motif de LECTURE quand il diffère de celui de saisie (`pattern_lu`) : un
+        // matricule imprimé sans sa lettre de contrôle se lit.
+        `select distinct on (kind) kind, coalesce(pattern_lu, pattern) as pattern
+           from ref.identifiant_formats
         where pack_version_id = $1
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by kind, valid_from desc`,
@@ -440,6 +444,7 @@ export async function lireLeContexteDuSudoku(
         ...(c.repetee ? { repetee: true } : {}),
         ...(c.marque === "cachet" ? { marque: c.marque } : {}),
         ...(c.domaine ? { valeurs: valeursDe(c.domaine) } : {}),
+        ...(c.defaut_du_dossier ? { defaut_du_dossier: c.defaut_du_dossier } : {}),
       })),
       preuves: preuves.rows.map((p) => ({
         code: p.code,
@@ -462,6 +467,17 @@ export async function lireLeContexteDuSudoku(
       taux_nuls: { tva: taux.rows.filter((t) => ppm(t.rate) === 0).map((t) => t.code) },
       charges: [...parCode.values()],
       formats: Object.fromEntries(formats.rows.map((f) => [f.kind, f.pattern])),
+      // La lettre de contrôle du matricule, quand le pack en porte la règle : un matricule
+      // imprimé sans elle se compare par la lettre calculée.
+      controles: regles.matricule.controle
+        ? {
+            [regles.codeDuMatricule]: {
+              poids: [...regles.matricule.controle.poids],
+              modulo: regles.matricule.controle.modulo,
+              alphabet: regles.matricule.controle.alphabet,
+            },
+          }
+        : {},
     },
     formesJuridiques: formes.rows.map((f) => f.code),
     regles,
@@ -1087,6 +1103,8 @@ export function creerLeSudoku(
           // Le sens que la personne a confirmé : il place le dossier, l'autre matricule
           // est le tiers.
           ...(piece.sens ? { sens: piece.sens } : {}),
+          // La devise du dossier : celle d'une pièce qui n'en imprime aucune.
+          devise: piece.devise.code,
         };
         const jetons = jetonsDuSudoku(lecture.tokens, piece.devise, ctx);
         const sortie = resoudreLaPiece(

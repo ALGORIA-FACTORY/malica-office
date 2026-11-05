@@ -594,6 +594,18 @@ rattrapage (deux lectures complètes, environ quatre minutes).
   de `lecture.confiance_du_caractere` ; sinon `signale`. Deux matricules lus qui ne
   diffèrent que d'un chiffre : rien n'est rendu (« deux lectures d'un matricule se
   contredisent »).
+- **Le matricule sans sa lettre** (`pack.controles`, par code de format : `poids`,
+  `modulo`, `alphabet`, depuis `ref.identifiant_controles`). Une écriture imprimée sans sa
+  lettre de contrôle se compare par la lettre calculée ; la valeur rendue reste
+  l'imprimée. Ses écritures avec et sans lettre sont un seul matricule. Même noyau, lettre
+  calculée différente : « deux lectures d'un matricule se contredisent ». Le motif reçu
+  dans `pack.formats` est celui de LECTURE (`coalesce(pattern_lu, pattern)`).
+- **Le dossier dans une partie que rien ne désigne.** Un champ d'identifiant d'une partie
+  (`role`), lu égal au matricule du dossier quand la page imprime un autre identifiant de
+  même noyau, est `signale`.
+- **Ce que le dossier dit quand la pièce n'imprime rien** (`champ.defaut_du_dossier`,
+  `connus.devise`). Un champ dont le concept porte `defaut_du_dossier = devise`, que rien
+  n'a lu, reçoit la devise du dossier au statut `deduit`, sans référence.
 - **Le caractère le moins sûr.** Un jeton peut porter `faible`, la probabilité
   de son caractère le moins sûr (le second lecteur la donne). Sous
   `lecture.confiance_du_caractere` (0,8), le mot est incertain : un texte

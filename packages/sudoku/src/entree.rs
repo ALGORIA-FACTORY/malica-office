@@ -51,6 +51,19 @@ pub struct Connus {
     /// lui, le font signaler — jamais recopier.
     #[serde(default)]
     pub sens: Option<String>,
+    /// La devise du dossier : celle d'une pièce qui n'en imprime aucune.
+    #[serde(default)]
+    pub devise: Option<String>,
+}
+
+impl Connus {
+    /// La donnée du dossier qu'un concept nomme (`ref.concepts.defaut_du_dossier`).
+    pub fn defaut(&self, donnee: &str) -> Option<&str> {
+        match donnee {
+            "devise" => self.devise.as_deref(),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Deserialize, Clone)]
@@ -209,6 +222,10 @@ pub struct Champ {
     /// code dans les trois langues, ses marques). Présent, le champ ne se lit qu'en un code.
     #[serde(default)]
     pub valeurs: Vec<ValeurDuDomaine>,
+    /// La donnée du dossier qui vaut quand la pièce n'imprime rien
+    /// (`ref.concepts.defaut_du_dossier` : `devise`).
+    #[serde(default)]
+    pub defaut_du_dossier: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -227,6 +244,44 @@ pub struct Preuve {
     pub statut: Option<String>,
 }
 
+/// La lettre attendue : `alphabet[(Σ poids[i] × chiffre[i]) mod modulo]`.
+#[derive(Deserialize, Clone, Debug)]
+pub struct Controle {
+    pub poids: Vec<u32>,
+    pub modulo: u32,
+    pub alphabet: String,
+}
+
+impl Controle {
+    /// La lettre de contrôle d'un noyau de chiffres, s'il a la longueur des poids.
+    pub fn lettre(&self, chiffres: &str) -> Option<char> {
+        let d: Vec<u32> = chiffres
+            .chars()
+            .map(|c| c.to_digit(10))
+            .collect::<Option<_>>()?;
+        if d.len() != self.poids.len() || self.modulo == 0 {
+            return None;
+        }
+        let somme: u32 = d.iter().zip(&self.poids).map(|(c, p)| c * p).sum();
+        self.alphabet.chars().nth((somme % self.modulo) as usize)
+    }
+
+    /// La forme de comparaison d'un identifiant : imprimé sans sa lettre (le noyau de
+    /// chiffres suivi d'un séparateur ou de rien), la lettre calculée s'insère après le
+    /// noyau ; sinon il est rendu tel quel.
+    pub fn complete(&self, v: &str) -> String {
+        let n = self.poids.len();
+        let noyau: String = v.chars().take(n).collect();
+        let reste: String = v.chars().skip(n).collect();
+        let sans_lettre =
+            noyau.chars().count() == n && !reste.starts_with(|c: char| c.is_alphanumeric());
+        match (sans_lettre, self.lettre(&noyau)) {
+            (true, Some(l)) => format!("{noyau}{l}{reste}"),
+            _ => v.to_string(),
+        }
+    }
+}
+
 #[derive(Deserialize)]
 pub struct Pack {
     pub decimales: u32,
@@ -237,6 +292,11 @@ pub struct Pack {
     pub charges: Vec<ChargePack>,
     #[serde(default)]
     pub formats: HashMap<String, String>,
+    /// La règle de la lettre de contrôle d'un format (`ref.identifiant_controles`), par
+    /// code de format : un identifiant imprimé SANS sa lettre se compare par la lettre
+    /// calculée. Absente, il ne se compare qu'à l'identique.
+    #[serde(default)]
+    pub controles: HashMap<String, Controle>,
     /// La confiance de lecture au-dessous de laquelle un TEXTE qu'aucun calcul ne prouve
     /// (une désignation) n'est pas rendu (`lecture.confiance_du_texte`) ; absente, tout
     /// texte lu est rendu.
