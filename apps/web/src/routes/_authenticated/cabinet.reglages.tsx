@@ -685,7 +685,10 @@ function Groupe({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border border-border bg-card">
+    // `min-w-0` : un élément de grille ne rétrécit pas sous son contenu. Les
+    // lignes tronquées (les adresses) l'élargissaient à 686 px sur un écran
+    // de 360, et les champs sortaient de l'écran (mesure du 5 novembre 2026).
+    <section className="min-w-0 border border-border bg-card">
       <div className="flex items-center border-b border-border px-4 py-3">
         <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           {titre}

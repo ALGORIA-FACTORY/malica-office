@@ -931,7 +931,7 @@ function CabinetRapprochement() {
               </section>
 
               {/* ---- ce qui reste sans vis-à-vis */}
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2 [&>*]:min-w-0">
                 <section>
                   <SectionTitle>{t("cab.banque.orphansbank")}</SectionTitle>
                   {chargement ? (
@@ -945,7 +945,7 @@ function CabinetRapprochement() {
                       {orphelinesBanque.map((l) => (
                         <li
                           key={l.id}
-                          className="flex items-baseline justify-between gap-3 bg-card px-3 py-2 text-[12.5px]"
+                          className="flex min-w-0 items-baseline justify-between gap-3 bg-card px-3 py-2 text-[12.5px]"
                         >
                           <span className="min-w-0">
                             <span className="block truncate">{l.label}</span>
@@ -989,7 +989,7 @@ function CabinetRapprochement() {
                       {orphelinesLivre.map((b) => (
                         <li
                           key={b.id}
-                          className="flex items-baseline justify-between gap-3 bg-card px-3 py-2 text-[12.5px]"
+                          className="flex min-w-0 items-baseline justify-between gap-3 bg-card px-3 py-2 text-[12.5px]"
                         >
                           <span className="min-w-0">
                             <span className="block truncate">

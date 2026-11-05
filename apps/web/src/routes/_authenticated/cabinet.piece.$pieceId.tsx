@@ -487,7 +487,7 @@ function CabinetReviewDeLaPiece() {
             }}
             aria-label={t("cab.review.back")}
             title={t("cab.review.back")}
-            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
+            className="flex h-11 w-11 lg:h-[34px] lg:w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
           >
             ←
           </Link>
@@ -594,7 +594,7 @@ function CabinetReviewDeLaPiece() {
           }}
           aria-label={t("cab.review.back")}
           title={t("cab.review.back")}
-          className="flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
+          className="flex h-11 w-11 lg:h-[34px] lg:w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
         >
           ←
         </Link>
@@ -657,7 +657,7 @@ function CabinetReviewDeLaPiece() {
             disabled={!precedente}
             aria-label={t("cab.review.prev")}
             title={t("cab.review.prev")}
-            className="flex h-[34px] w-[34px] items-center justify-center border border-border bg-card hover:bg-accent disabled:opacity-40"
+            className="flex h-11 w-11 lg:h-[34px] lg:w-[34px] items-center justify-center border border-border bg-card hover:bg-accent disabled:opacity-40"
           >
             ↑
           </button>
@@ -667,7 +667,7 @@ function CabinetReviewDeLaPiece() {
             disabled={!suivante}
             aria-label={t("cab.review.next")}
             title={t("cab.review.next")}
-            className="flex h-[34px] w-[34px] items-center justify-center border border-border bg-card hover:bg-accent disabled:opacity-40"
+            className="flex h-11 w-11 lg:h-[34px] lg:w-[34px] items-center justify-center border border-border bg-card hover:bg-accent disabled:opacity-40"
           >
             ↓
           </button>

@@ -445,7 +445,8 @@ export function DocumentView({ contenu, highlight, label, attente }: Props) {
       : null;
 
   const outil =
-    "min-h-[32px] border border-border px-2 text-[11px] uppercase tracking-wide hover:bg-accent disabled:opacity-40";
+    // 44 px de large au téléphone : « − », « + » et « ↻ » tenaient en 20 px.
+    "min-h-[32px] min-w-[44px] border border-border px-2 text-[11px] uppercase tracking-wide hover:bg-accent disabled:opacity-40 sm:min-w-0";
 
   return (
     <div className="space-y-2">

@@ -432,7 +432,7 @@ function CabinetToday() {
 
           {toReview > 0 ? (
             <div className="cab-batch-link">
-              <Link to="/cabinet/propositions">
+              <Link to="/cabinet/propositions" className="cab-cible">
                 {t("cab.today.bulk")}
                 <ArrowRight size={15} />
               </Link>
@@ -494,7 +494,7 @@ function CabinetToday() {
               action={
                 <Link
                   to="/cabinet/pilotage"
-                  className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground underline"
+                  className="cab-cible text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground underline"
                 >
                   {t("cab.today.charge.affecter")}
                 </Link>
@@ -534,7 +534,7 @@ function CabinetToday() {
               action={
                 <Link
                   to="/cabinet/echeances"
-                  className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground underline"
+                  className="cab-cible text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground underline"
                 >
                   {t("cab.today.echeances.all")}
                 </Link>

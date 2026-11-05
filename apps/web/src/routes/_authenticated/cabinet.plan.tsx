@@ -536,7 +536,7 @@ function PlanDuCabinet({
                               : `${t("plan.subdivide")} ${c.code}`
                           }
                           title={ouvertSous === c.code ? undefined : t("plan.subdivide")}
-                          className={BOUTON}
+                          className={cn(BOUTON, "min-w-[44px] sm:min-w-0")}
                         >
                           {/* Un « + » discret par ligne, plutôt que 600 fois le mot. */}
                           {ouvertSous === c.code ? t("plan.cancel") : "+"}
