@@ -175,6 +175,27 @@ impl<'a> Plan<'a> {
         self.taux_chiffres.contains(&ppm)
     }
 
+    /// Un taux NUL (« 0 % ») est-il imprimé sur une rangée qui porte un montant non nul : la
+    /// ventilation qui imprime sa part exonérée (« TVA 0 % — Base 1.988,009 0,000 »), ou une
+    /// ligne d'article à 0 % ? C'est la preuve qu'une part du total est sous un taux nul,
+    /// même sans mention d'exonération (banc sans IA du 5 novembre 2026 : 31 factures
+    /// muettes). L'arithmétique décide ensuite : HT, TVA nulle et TTC doivent fermer.
+    pub fn taux_nul_imprime(&self) -> bool {
+        let zero = regex::Regex::new(r"(?:^|[^\d.,])0(?:[.,]0{1,3})?\s*%").expect("motif");
+        crate::lignes::rangees_selon(self.jetons, f64::min)
+            .iter()
+            .any(|r| {
+                let texte: String = r
+                    .iter()
+                    .map(|&i| self.jetons[i].texte.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                zero.is_match(&texte)
+                    && r.iter()
+                        .any(|&i| self.jetons[i].montants.iter().any(|m| m.forte && m.v != 0))
+            })
+    }
+
     /// La valeur `i` est-elle, dans l'ordre d'une colonne de libellés, celle d'un repère ?
     pub fn apparie(&self, i: usize, reperes: &[String]) -> bool {
         self.paires.get(&i).is_some_and(|ts| {

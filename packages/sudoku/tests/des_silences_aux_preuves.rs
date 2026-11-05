@@ -248,3 +248,23 @@ fn une_piece_sans_devise_imprimee_est_dans_la_devise_du_dossier() {
         o["champs"]["devise"]
     );
 }
+
+#[test]
+fn un_taux_nul_imprime_sans_mention_prouve_la_piece_et_tait_le_code() {
+    // synthetique-002 : « TVA 0 % — Base 1.988,009 0,000 », 7 % et 19 %, aucune mention ;
+    // synthetique-011 : deux lignes à « 0 % », « Total TVA 0,000 ». Décision du dirigeant
+    // (5 novembre 2026) : sans mention, le code du taux nul (EXO ou EXPORT) n'est pas
+    // affirmé ; la pièce, elle, se prouve.
+    let (s, _) = jouer("synthetique-002");
+    let o = &s[0];
+    assert_eq!(o["issue"], "prouvee", "{o}");
+    assert_eq!(o["champs"]["total_ht"]["valeur"], "4832708");
+    assert_eq!(o["champs"]["total_ttc"]["valeur"], "5230538");
+    assert_eq!(o["champs"]["base_tva_par_taux"]["statut"], "signale");
+    let (s, _) = jouer("synthetique-011");
+    let o = &s[0];
+    assert_eq!(o["issue"], "prouvee", "{o}");
+    assert_eq!(o["champs"]["total_ht"]["valeur"], "3008708");
+    assert_eq!(o["champs"]["total_ttc"]["valeur"], "3009708");
+    assert_ne!(o["champs"]["base_tva_par_taux"]["statut"], "prouve");
+}

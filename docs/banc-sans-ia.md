@@ -544,6 +544,33 @@ Trois décisions du dirigeant, du 5 novembre 2026.
 | couche de texte, sens déclaré   | 2 116 |    0 |       0 |               679 |
 | couche de texte, sens lu        | 1 975 |    0 |       0 |               822 |
 
+## Bulletin 16 — un taux nul imprimé prouve la pièce (5 novembre 2026)
+
+Le découpage des 4 266 cellules « à travailler » (sens lu) : 1 915 de lignes, 876 de noms
+des parties, 629 d'identifiants, 384 de montants, 259 de références ; 2 112 sur des pièces
+non prouvées (139 pièces). Parmi les factures non prouvées dont l'OCR a lu le HT et le TTC,
+31 impriment un taux nul (« TVA 0 % — Base 1.988,009 0,000 », ou des lignes à « 0 % ») sans
+mention d'exonération : l'exonération n'était permise que par la mention.
+
+- **Un taux nul imprimé sur une rangée chiffrée est la preuve d'une part exonérée**
+  (`Plan::taux_nul_imprime`). L'arithmétique décide : HT, TVA, droits et TTC doivent
+  fermer ; une exonération partielle exige toujours que les lignes la confirment, taux par
+  taux.
+- **Sans mention, le code se tait.** La part exonérée est nommée provisoirement par un taux
+  nul du barème, le temps que les lignes la vérifient ; la ventilation est ensuite
+  signalée (EXO ou EXPORT : la pièce ne le dit pas, le comptable choisit — décision du
+  5 novembre). Totaux, droits, lignes : prouvés.
+- **Le numéro de facture a son repère arabe court** « رقم » (et « فاتورة رقم ») : les
+  factures arabes impriment « فاتورة رقم », l'ordre inverse de « رقم الفاتورة ».
+
+|                                 | juste | faux | inventé | dont à travailler |
+| ------------------------------- | ----: | ---: | ------: | ----------------: |
+| banc, sens lu, bulletin 15      | 6 353 |    0 |       0 |             4 266 |
+| banc, sens lu                   | 6 609 |    0 |       0 |             4 034 |
+| banc, sens déclaré              | 6 911 |    0 |       0 |             3 692 |
+| couche de texte, sens déclaré   | 2 124 |    0 |       0 |               671 |
+| couche de texte, sens lu        | 1 983 |    0 |       0 |               814 |
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

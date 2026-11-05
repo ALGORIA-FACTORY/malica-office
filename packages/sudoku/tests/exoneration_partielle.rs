@@ -135,11 +135,15 @@ fn sans_taux_exonere_la_ventilation_n_est_pas_affirmee() {
         }
     }
     // la ventilation non affirmée, les lignes n'ont plus de base par taux à vérifier : la
-    // part exonérée n'est pas établie, la pièce n'est pas prouvée
-    let o = la_piece(&par_variante(&plan(), &g, &p));
+    // part exonérée n'est pas établie, la pièce n'est pas prouvée…
+    let o = la_piece(&par_variante(&sans_zero_pour_cent(plan()), &g, &p));
     assert_ne!(o["issue"], "prouvee", "{o}");
     assert_eq!(o["champs"]["base_tva_par_taux"]["statut"], "signale");
     assert_eq!(o["champs"]["montant_tva_par_taux"]["statut"], "signale");
+    // … sauf quand le taux nul est imprimé : la part se prouve, son code se tait
+    let o = la_piece(&par_variante(&plan(), &g, &p));
+    assert_eq!(o["issue"], "prouvee", "{o}");
+    assert_eq!(o["champs"]["base_tva_par_taux"]["statut"], "signale");
 }
 
 #[test]
@@ -170,9 +174,34 @@ fn jamais_sans_les_lignes() {
     assert_eq!(o["preuves"]["P03"], "non_fermee");
 }
 
+/// Le plan sans aucun taux nul imprimé : les « % » qui suivent un « 0 » sont effacés.
+fn sans_zero_pour_cent(mut j: Vec<Value>) -> Vec<Value> {
+    for k in 1..j.len() {
+        if j[k]["texte"] == "%" && j[k - 1]["texte"] == "0" {
+            j[k]["texte"] = json!("");
+        }
+    }
+    j
+}
+
 #[test]
-fn jamais_sans_la_mention() {
+fn sans_mention_le_taux_nul_imprime_prouve_la_part_et_tait_son_code() {
+    // Décision du dirigeant (5 novembre 2026) : une ventilation qui imprime son taux nul
+    // (« 0 % ») établit la part exonérée, que les lignes confirment ; sans mention, son
+    // code (EXO ou EXPORT) n'est pas affirmé.
     let mut j = plan();
+    let k = indice(&j, "exonéré", 0);
+    j[k]["texte"] = json!("soumis");
+    let o = jouer(&j, true, true);
+    assert_eq!(o["issue"], "prouvee", "{o}");
+    assert_eq!(valeur(&o, "total_ht"), "3370000");
+    assert_eq!(o["champs"]["base_tva_par_taux"]["statut"], "signale");
+    assert_eq!(o["champs"]["montant_tva_par_taux"]["statut"], "signale");
+}
+
+#[test]
+fn jamais_sans_la_mention_ni_le_taux_nul() {
+    let mut j = sans_zero_pour_cent(plan());
     let k = indice(&j, "exonéré", 0);
     j[k]["texte"] = json!("soumis");
     assert_ne!(jouer(&j, true, true)["issue"], "prouvee");
@@ -256,7 +285,7 @@ fn le_taux_nul_suit_la_mention_imprimee() {
         o["champs"]["base_tva_par_taux"]["instances"][1]["taux"],
         "EXPORT"
     );
-    // les deux mentions imprimées : la part exonérée n'est pas nommée, rien n'est affirmé
+    // les deux mentions imprimées : la part exonérée n'est pas nommée
     let mut j = plan();
     let mut export = j[k].clone();
     export["ordinal"] = json!(9002);
@@ -265,5 +294,5 @@ fn le_taux_nul_suit_la_mention_imprimee() {
     export["y1"] = json!(0.99);
     j.push(export);
     let o = jouer_avec_l_export(&j);
-    assert_ne!(o["issue"], "prouvee", "{o}");
+    assert_eq!(o["champs"]["base_tva_par_taux"]["statut"], "signale", "{o}");
 }

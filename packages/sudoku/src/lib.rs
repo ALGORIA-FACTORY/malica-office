@@ -280,7 +280,27 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 .collect()
         })
         .collect();
-    let exo: Vec<bool> = mentions.iter().map(|m| !m.is_empty()).collect();
+    // Sans mention, une ventilation qui imprime son taux nul (« TVA 0 % — Base … ») permet
+    // l'exonération ; elle ne nomme pas son taux (EXO ou EXPORT) : décision du dirigeant
+    // (5 novembre 2026), sans mention rien n'est affirmé — la part se prouve, son code se tait.
+    let nul_imprime: Vec<bool> = modele
+        .groupes
+        .iter()
+        .map(|g| {
+            g.exoneration.is_some()
+                && entree
+                    .pack
+                    .taux_nuls
+                    .get(&g.bareme)
+                    .is_some_and(|t| !t.is_empty())
+                && plan.taux_nul_imprime()
+        })
+        .collect();
+    let exo: Vec<bool> = mentions
+        .iter()
+        .zip(&nul_imprime)
+        .map(|(m, n)| !m.is_empty() || *n)
+        .collect();
     let taux_nomme: Vec<Option<String>> = mentions
         .iter()
         .map(|m| {
@@ -555,6 +575,9 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         };
         champs.insert(code, sortie);
     }
+    // Les ventilations dont la part exonérée n'est nommée que provisoirement (un taux nul
+    // imprimé sans mention) : tues après la vérification des lignes.
+    let mut a_taire: Vec<String> = Vec::new();
     for (g, gr) in modele.groupes.iter().enumerate() {
         let coefs = s.coefs_groupe(g);
         for (champ, est_base) in [(gr.champ_base, true), (gr.champ_montant, false)] {
@@ -636,7 +659,25 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                         // 4 novembre 2026 : « 0 % 4 032,000 0,000 » imprimé, la ventilation
                         // rendue ne portait que le 19 %. Les lignes confirment le reste
                         // (contrôle plus bas), sinon la preuve est retirée.
-                        let exoneree = match (sol.partielle, &taux_nomme[g]) {
+                        // Un taux nul imprimé sans mention : la part se nomme, le temps que
+                        // les lignes la vérifient, par un taux nul du barème ; son code est tu
+                        // ensuite (`a_taire`).
+                        let provisoire = (taux_nomme[g].is_none() && nul_imprime[g])
+                            .then(|| {
+                                entree
+                                    .pack
+                                    .taux_nuls
+                                    .get(&gr.bareme)
+                                    .and_then(|t| t.first().cloned())
+                            })
+                            .flatten();
+                        if sol.partielle && provisoire.is_some() {
+                            a_taire.push(code.clone());
+                        }
+                        let exoneree = match (
+                            sol.partielle,
+                            taux_nomme[g].as_ref().or(provisoire.as_ref()),
+                        ) {
                             (false, _) => Some(None),
                             (true, None) => None,
                             (true, Some(code)) => gr
@@ -914,6 +955,12 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 }
             }
         }
+    }
+
+    // La part exonérée prouvée, son taux non nommé : la ventilation se signale (EXO ou
+    // EXPORT, la pièce ne le dit pas : le comptable choisit). Le reste de la preuve tient.
+    for code in &a_taire {
+        champs.insert(code.clone(), signale());
     }
 
     // ---------- L'anneau 3 : les champs nommés, que nulle preuve ne lit ----------

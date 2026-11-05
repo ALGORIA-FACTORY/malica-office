@@ -610,6 +610,9 @@ rattrapage (deux lectures complètes, environ quatre minutes).
   taux}`) : la part exonérée prend le taux de la mention imprimée (`taux_exonere` pour la
   mention `exoneration`) ; deux mentions de taux différents imprimées, elle n'est pas
   nommée.
+- **Le taux nul imprimé.** Un « 0 % » sur une rangée qui porte un montant non nul permet
+  l'exonération comme la mention ; sans mention qui nomme son taux, la part exonérée se
+  prouve et la ventilation se signale.
 - **Le caractère le moins sûr.** Un jeton peut porter `faible`, la probabilité
   de son caractère le moins sûr (le second lecteur la donne). Sous
   `lecture.confiance_du_caractere` (0,8), le mot est incertain : un texte
