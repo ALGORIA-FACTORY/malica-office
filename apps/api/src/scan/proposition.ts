@@ -69,6 +69,7 @@ import {
   ventilerLesVentes,
   type VentesDuDossier,
 } from "./nature-de-vente.ts";
+import { ventilerParCompte, type Ventilation } from "./ventilation.ts";
 import { reserveDuMoisDeTva } from "./mois-de-tva.ts";
 import { tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
 import { AMBIGU, compteDuRole } from "./reglement.ts";
@@ -101,46 +102,52 @@ export type { PropositionDePiece };
  */
 
 /**
- * Le compte de la nature de la charge, ou rien.
+ * Le compte de la nature de chaque article d'un achat, dans l'ordre des
+ * articles lus (ceux qui portent une désignation, comme `capture_articles_persist`
+ * les inscrit) ; nul pour un article au repli (« non classé ») ou dont la
+ * nature n'a pas de compte de la classe du paramétrage.
  *
  * Recette du 20 octobre 2026 : honoraires, loyer, électricité partaient tous
- * au 601, parce que l'imputation venait du seul SENS de la pièce. La nature,
- * elle, se lit sur le libellé de chaque article (`piece_articles_v`), et
- * `ref.charge_familles` porte son compte depuis le 7 octobre.
- *
- * Trois conditions, sinon on garde le paramétrage :
- *   • tous les articles tombent dans la MÊME nature — une pièce mêlée ne se
- *     range pas d'un seul compte ;
- *   • aucun n'est au repli (« non classé ») : ne pas savoir n'est pas savoir ;
- *   • le compte de la nature est de la même CLASSE que celui du paramétrage —
- *     une nature de charge ne s'applique pas à une vente.
+ * au 601, parce que l'imputation venait du seul SENS de la pièce. La nature se
+ * lit sur le libellé de chaque article (`piece_articles_v`), et
+ * `ref.charge_familles` porte son compte depuis le 7 octobre. Le 5 novembre
+ * 2026, une facture mêlée (licence, paramétrage, formation, maintenance)
+ * partait encore en entier au 601, en silence : la ventilation est désormais
+ * celle de la vente (`ventilerParCompte`), avec sa réserve.
  */
-async function compteDeLaNature(db: Requete, pieceId: string): Promise<string | null> {
-  const { rows } = await db.query<{ compte: string | null }>(
-    `with a as (
-       select a.famille_code, a.pack_version_id, p.document_kind
-         from piece_articles_v a
-         join pieces_v p on p.id = a.piece_id
-        where a.piece_id = $1)
-     select case
-              when count(*) > 0
-               and count(distinct a.famille_code) = 1
-               and bool_and(not coalesce(f.is_fallback, true))
-               and bool_and(f.main_account is not null)
-               and bool_and(left(f.main_account, 1) = left(m.main_account, 1))
-              then min(f.main_account)
+async function comptesDesArticlesDAchat(db: Requete, pieceId: string): Promise<ArticleDAchat[]> {
+  const { rows } = await db.query<{
+    designation: string;
+    total_ht: string | null;
+    compte: string | null;
+  }>(
+    `select a.designation, a.total_ht::text as total_ht,
+            case
+              when not coalesce(f.is_fallback, true) and f.main_account is not null
+               and left(f.main_account, 1) = left(m.main_account, 1)
+              then f.main_account
             end as compte
-       from a
+       from piece_articles_v a
+       join pieces_v p on p.id = a.piece_id
        left join ref_charge_familles_v f
               on f.pack_version_id = a.pack_version_id and f.code = a.famille_code
              and f.valid_to is null
        left join lateral (
               select mm.main_account from ref_account_mappings_v mm
-               where mm.pack_version_id = a.pack_version_id and mm.document_kind = a.document_kind
-               order by mm.main_account limit 1) m on true`,
+               where mm.pack_version_id = a.pack_version_id and mm.document_kind = p.document_kind
+               order by mm.main_account limit 1) m on true
+      where a.piece_id = $1
+      order by a.ordinal`,
     [pieceId],
   );
-  return rows[0]?.compte ?? null;
+  return rows;
+}
+
+/** Un article d'achat inscrit, et le compte de sa nature (nul : non reconnue). */
+interface ArticleDAchat {
+  designation: string;
+  total_ht: string | null;
+  compte: string | null;
 }
 
 /**
@@ -245,7 +252,11 @@ export interface ReferentielDeLaProposition {
   taxRates: TaxRate[];
   mappings: Array<AccountMapping & SensConnu>;
   fiscalCharges: Array<FiscalCharge & SensConnu>;
-  compteDeNature: string | null;
+  /**
+   * Le compte de la nature de chaque article d'un achat (`comptesDesArticlesDAchat`),
+   * dans l'ordre des articles lus ; nul quand la nature ne se reconnaît pas.
+   */
+  comptesDesAchats: ReadonlyArray<ArticleDAchat>;
   tvaNonDeductible: boolean;
   /**
    * Les droits hors TVA qu'un achat incorpore au coût, selon le réglage du
@@ -561,6 +572,46 @@ export function composerLaProposition(
       : null;
 
   /*
+   * Un achat : le compte de chaque ligne, par la nature de ce qu'il achète
+   * (familles de charges). Ce qui ne se prouve pas va au compte du
+   * paramétrage, avec sa réserve — il partait au 601 sans un mot.
+   */
+  // Les articles inscrits (`piece_articles_v`) portent leur nature ; le code de
+  // taxe de chacun vient de la lecture, quand les deux listes se répondent.
+  const articlesLus = (
+    (j.payload as { articles?: Parameters<typeof ventilerLesVentes>[0]["articles"] }).articles ?? []
+  ).filter((a) => a.designation?.trim());
+  const memesArticles =
+    articlesLus.length === r.comptesDesAchats.length &&
+    articlesLus.every(
+      (a, i) => a.designation!.trim() === r.comptesDesAchats[i]!.designation.trim(),
+    );
+  const repliDesAchats = r.mappings
+    .filter((x) => x.documentKind === "facture_achat")
+    .map((x) => x.mainAccount)
+    .sort()[0];
+  const achats =
+    sens === "facture_achat" && repliDesAchats
+      ? ventilerParCompte({
+          code: "nature_de_charge",
+          lignes: lignesLues.map((l, i) => ({ code: String(l["tax_code"]), ht: m.bases[i]!.ht! })),
+          articles: r.comptesDesAchats.map((a, i) => ({
+            ...a,
+            tax_code: memesArticles ? (articlesLus[i]!.tax_code ?? null) : null,
+          })),
+          exposant: dec,
+          enDevise: change !== null,
+          repli: repliDesAchats,
+        })
+      : null;
+  const compteUnique = (v: Ventilation | undefined) =>
+    v &&
+    v.every((parts) => parts.length === 1 && parts[0]!.account_code === v[0]?.[0]?.account_code)
+      ? v[0]![0]!.account_code
+      : null;
+  const compteDesAchats = compteUnique(achats?.ventilation);
+
+  /*
    * Le timbre au barème daté, selon la catégorie de l'émetteur
    * (`bareme-du-timbre.ts`). Une pièce en devise garde le droit standard : le
    * barème est tarifé dans la devise du dossier, son TTC ne s'y compare pas.
@@ -578,7 +629,11 @@ export function composerLaProposition(
           timbre: r.timbre,
         })
       : null;
-  const reserves = [...(ventes?.reserve ? [ventes.reserve] : []), ...(timbre?.reserves ?? [])];
+  const reserves = [
+    ...(ventes?.reserve ? [ventes.reserve] : []),
+    ...(achats?.reserve ? [achats.reserve] : []),
+    ...(timbre?.reserves ?? []),
+  ];
 
   try {
     const proposition = buildProposal({
@@ -587,12 +642,13 @@ export function composerLaProposition(
       taxRates: r.taxRates,
       mappings: r.mappings,
       fiscalCharges: timbre?.droits ?? r.fiscalCharges,
-      compteDeNature: r.compteDeNature,
+      compteDeNature: compteDesAchats,
       tvaNonDeductible: r.tvaNonDeductible,
       droitsAuCout: r.droitsAuCout,
       currency: devise,
       ...(change?.ok ? { conversion: change.conversion } : {}),
-      ...(ventes ? { ventilationDesVentes: ventes.ventilation } : {}),
+      ...(ventes ? { ventilationDesBases: ventes.ventilation } : {}),
+      ...(achats && !compteDesAchats ? { ventilationDesBases: achats.ventilation } : {}),
       parametres: {
         decimals: dec,
         confianceReserve: r.confianceReserve,
@@ -1079,7 +1135,7 @@ async function proposerDepuisLeJugement(
     fiscalCharges: tousLesDroits.filter((c): c is typeof c & SensConnu =>
       sensConnu(c.documentKind),
     ),
-    compteDeNature: await compteDeLaNature(db, pieceId),
+    comptesDesAchats: await comptesDesArticlesDAchat(db, pieceId),
     // Le régime de TVA du dossier, tel que sa fiche fiscale en vigueur le dit :
     // un non-assujetti ne déduit pas la TVA qu'il paie (ANO-LIVE-001).
     tvaNonDeductible: await nonAssujetti(db, ligne.tenant_id),

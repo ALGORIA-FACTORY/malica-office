@@ -1816,7 +1816,8 @@ export type RaisonSansEcriture =
  */
 export type ReserveDeProposition =
   | {
-      code: "nature_de_vente";
+      /** La nature de ce qu'une vente vend, ou de ce qu'un achat achète, à préciser. */
+      code: "nature_de_vente" | "nature_de_charge";
       raison: "inconnue" | "sans_article" | "non_ventilable";
       articles: string[];
     }

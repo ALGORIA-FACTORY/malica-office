@@ -188,12 +188,13 @@ export function buildProposal(params: {
    */
   conversion?: { vers: CurrencyDef; cours: CoursAApplique; ecart: string };
   /**
-   * Le compte de vente de chaque ligne, par nature de ce qu'elle vend
-   * (réglage `ventes.compte`, 1er novembre 2026) : `computePivot` la pose. Une
+   * Le compte de chaque ligne, par nature de ce qu'une vente vend (réglage
+   * `ventes.compte`, 1er novembre 2026) ou de ce qu'un achat achète (familles
+   * de charges, 5 novembre 2026) : `computePivot` la pose. Une
    * part chiffrée n'est admise que dans la devise de la pièce : convertie, une
    * ventilation demanderait un arrondi que le Socle ne tranche pas.
    */
-  ventilationDesVentes?: NonNullable<Parameters<typeof computePivot>[0]["ventilation_des_ventes"]>;
+  ventilationDesBases?: NonNullable<Parameters<typeof computePivot>[0]["ventilation_des_bases"]>;
 }): ProposalResult {
   const lu = ExtractV1.safeParse(params.payload);
   if (!lu.success) {
@@ -288,9 +289,7 @@ export function buildProposal(params: {
         confidence_red: params.parametres.confianceBloquante,
       },
       ...(options.tvaVerifieeEn ? { tva_verifiee_en: options.tvaVerifieeEn } : {}),
-      ...(e.document_kind === "facture_vente" && params.ventilationDesVentes
-        ? { ventilation_des_ventes: params.ventilationDesVentes }
-        : {}),
+      ...(params.ventilationDesBases ? { ventilation_des_bases: params.ventilationDesBases } : {}),
     });
 
   /*
@@ -308,7 +307,7 @@ export function buildProposal(params: {
   const conversion = params.conversion;
   if (
     conversion &&
-    params.ventilationDesVentes?.some((parts) => parts.some((x) => x.montant !== null))
+    params.ventilationDesBases?.some((parts) => parts.some((x) => x.montant !== null))
   )
     throw new Error("VENTILATION_EN_DEVISE");
   const origine = conversion ? pivotDe(extract, deLaPiece, { droitsFixes: false }) : null;

@@ -2769,6 +2769,9 @@ export const fr = {
   "cab.ecriture.illisible": "Le client voit encore la lecture",
   "cab.ecriture.illisible.aide":
     "Cette écriture ne se lit pas comme une facture : une contrepartie est du côté de la pièce, ou HT + TVA + droits ne font pas le total des contreparties. Aucun montant n’est publié au client tant qu’elle ne se lit pas.",
+  "cab.ecriture.reserve.nature_de_charge": "Nature de l’achat à préciser",
+  "cab.ecriture.reserve.nature_de_charge.aide":
+    "Le Socle n’a pas prouvé ce que la facture achète (marchandises, services, fournitures…) : l’achat est proposé au compte du paramétrage de votre plan. Vérifiez le compte de charge avant de valider, ou modifiez l’écriture.",
   "cab.ecriture.reserve.nature_de_vente": "Nature de la vente à préciser",
   "cab.ecriture.reserve.nature_de_vente.aide":
     "Le Socle n’a pas prouvé ce que la facture vend (marchandises, prestations, activités annexes) : la vente est proposée au compte de repli de votre plan. Vérifiez le compte de vente avant de valider, ou modifiez l’écriture.",
