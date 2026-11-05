@@ -258,6 +258,8 @@ export const fr = {
 
   "common.loading": "Chargement…",
   "common.aide": "En savoir plus",
+  "common.lireLaSuite": "Lire la suite",
+  "common.reduire": "Réduire",
   "common.fermer": "Fermer",
   "pme.membres.roles.aide":
     "Utilisateur : le quotidien — il dépose et suit les pièces. Propriétaire : il dirige la société, et sa place est payée.",

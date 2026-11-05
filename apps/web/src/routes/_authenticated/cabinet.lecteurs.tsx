@@ -305,10 +305,17 @@ function CabinetLecteurs() {
 
       {/* ---- les formats, leurs exemples un par un, et ce qui manque */}
       <section className="space-y-3">
-        <SectionTitle>{t("cab.lecteurs.section.formats")}</SectionTitle>
-        <p className="max-w-[46rem] text-[12.5px] leading-[1.55] text-text-2">
-          {t("cab.lecteurs.formats.doctrine")}
-        </p>
+        <SectionTitle
+          aide={[
+            { texte: t("cab.lecteurs.formats.doctrine") },
+            {
+              titre: t("cab.lecteurs.section.naissance"),
+              texte: t("cab.lecteurs.naissance.corps"),
+            },
+          ]}
+        >
+          {t("cab.lecteurs.section.formats")}
+        </SectionTitle>
         {client && formats.isPending ? (
           <EmptyState>{t("common.loading")}</EmptyState>
         ) : (formats.data?.formats.length ?? 0) === 0 ? (
@@ -326,10 +333,9 @@ function CabinetLecteurs() {
 
       {/* ---- les dérives : elles survivent à la suspension qu'elles ont causée */}
       <section className="space-y-3">
-        <SectionTitle>{t("cab.lecteurs.section.derives")}</SectionTitle>
-        <p className="max-w-[46rem] text-[12.5px] leading-[1.55] text-text-2">
-          {t("cab.lecteurs.derives.doctrine")}
-        </p>
+        <SectionTitle aide={t("cab.lecteurs.derives.doctrine")}>
+          {t("cab.lecteurs.section.derives")}
+        </SectionTitle>
         {client && derives.isPending ? (
           <EmptyState>{t("common.loading")}</EmptyState>
         ) : (derives.data ?? []).length === 0 ? (
@@ -358,14 +364,9 @@ function CabinetLecteurs() {
         )}
       </section>
 
-      {/* Ce qu'il faut pour qu'une recette naisse. Ce n'est pas un seuil de
-          paramétrage : à un seul exemple, l'ossature n'existe pas. */}
-      <section className="space-y-3">
-        <SectionTitle>{t("cab.lecteurs.section.naissance")}</SectionTitle>
-        <p className="border border-border bg-card px-4 py-4 text-[13px] leading-[1.6] text-muted-foreground">
-          {t("cab.lecteurs.naissance.corps")}
-        </p>
-      </section>
+      {/* Ce qu'il faut pour qu'une recette naisse s'ouvre par le ⓘ des formats :
+          ce n'est pas un seuil de paramétrage, à un seul exemple l'ossature
+          n'existe pas. */}
     </div>
   );
 }

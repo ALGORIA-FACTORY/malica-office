@@ -543,11 +543,12 @@ function CabinetEtEquipe() {
 
       {/* ---- le parcours de mise en route : un parcours qu'on rejoue si besoin */}
       <section className="border border-border bg-card p-4">
-        <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="flex items-center text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           {t("cab.settings.onb.titre")}
-        </p>
-        <p className="mt-1 max-w-[70ch] text-[12.5px] leading-[1.5] text-text-2">
-          {t("cab.settings.onb.lede")}
+          <Aide
+            titre={t("cab.settings.onb.titre")}
+            paragraphes={[{ texte: t("cab.settings.onb.lede") }]}
+          />
         </p>
         <Link
           to="/cabinet/mise-en-route"
@@ -604,11 +605,12 @@ function FuseauDuCabinet() {
 
   return (
     <section className="border border-border bg-card p-4">
-      <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="flex items-center text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         {t("cab.settings.fuseau.titre")}
-      </p>
-      <p className="mt-1 max-w-[70ch] text-[12.5px] leading-[1.5] text-text-2">
-        {t("cab.settings.fuseau.lede")}
+        <Aide
+          titre={t("cab.settings.fuseau.titre")}
+          paragraphes={[{ texte: t("cab.settings.fuseau.lede") }]}
+        />
       </p>
       {expert ? (
         <div className="mt-3 grid max-w-xl gap-2">
@@ -1156,10 +1158,9 @@ function ReportsExceptionnels({
 
   return (
     <section className="space-y-3">
-      <SectionTitle>{t("cab.settings.cal.reports.titre")}</SectionTitle>
-      <p className="max-w-[70ch] text-[12.5px] leading-[1.55] text-text-2">
-        {t("cab.settings.cal.reports.lede")}
-      </p>
+      <SectionTitle aide={t("cab.settings.cal.reports.lede")}>
+        {t("cab.settings.cal.reports.titre")}
+      </SectionTitle>
 
       {reports.isError ? (
         <p role="alert" className="text-[12.5px] text-signal-stop">
@@ -1321,10 +1322,13 @@ function ObligationPropre({
 
   return (
     <section className="border border-s-2 border-border border-s-marigold bg-card p-4">
-      <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="flex items-center text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         {t("cab.settings.cal.propre.titre")}
+        <Aide
+          titre={t("cab.settings.cal.propre.titre")}
+          paragraphes={[{ texte: t("cab.settings.cal.propre.lede") }]}
+        />
       </p>
-      <p className="mt-1 text-[12px] text-text-2">{t("cab.settings.cal.propre.lede")}</p>
       <div className="mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
         <label className="flex flex-col gap-1">
           <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">

@@ -29,6 +29,7 @@ import {
   SectionTitle,
   EnTeteCabinet,
 } from "@/components/malica/office-ui";
+import { TexteReplie } from "@/components/malica/texte-replie";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { initialesDe } from "@/lib/initiales";
@@ -571,7 +572,13 @@ function CabinetPilotage() {
                     <InkCell numeric>{jour(a.createdAt)}</InkCell>
                     <InkCell>{nomDuClient(a.clientTenantId)}</InkCell>
                     <InkCell>{emailDe.get(a.collaboratorId) ?? "—"}</InkCell>
-                    <InkCell>{a.briefing ?? "—"}</InkCell>
+                    <InkCell>
+                      {a.briefing ? (
+                        <TexteReplie texte={a.briefing} lignes={3} className="max-w-[48ch]" />
+                      ) : (
+                        "—"
+                      )}
+                    </InkCell>
                     <InkCell>
                       {a.active ? t("cab.pil.journal.active") : t("cab.pil.journal.passee")}
                     </InkCell>

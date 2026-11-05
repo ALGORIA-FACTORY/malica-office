@@ -251,6 +251,8 @@ export const ar: Dict = {
 
   "common.loading": "جارٍ التحميل…",
   "common.aide": "اعرف المزيد",
+  "common.lireLaSuite": "قراءة المزيد",
+  "common.reduire": "إخفاء",
   "common.fermer": "إغلاق",
   "pme.membres.roles.aide":
     "المستخدم: العمل اليومي — يودع الوثائق ويتابعها. المالك: يسيّر الشركة، ومقعده مدفوع.",
