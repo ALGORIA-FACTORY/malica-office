@@ -132,6 +132,49 @@ describe("un acheteur non assujetti ne déduit pas la TVA (ANO-LIVE-001)", () =>
     ]);
   });
 
+  it("un droit au coût suit les charges ventilées, au prorata, sans 601 orphelin", () => {
+    const avecFodec = {
+      ...factureAchatSimple(),
+      other_charges: [{ code: "FODEC", label: "FODEC", amount: "10.000" }],
+      totals: { base_ht: "1000.000", vat: "190.000", ttc: "1200.000" },
+    };
+    const r = buildProposal({
+      pieceId: "11111111-1111-1111-1111-111111111111",
+      payload: avecFodec,
+      taxRates,
+      mappings,
+      fiscalCharges: [
+        {
+          code: "FODEC",
+          label: "FODEC",
+          documentKind: "facture_achat",
+          accountCode: "6652",
+          fixedAmount: null,
+          taxable: false,
+          legalReference: null,
+        },
+      ],
+      droitsAuCout: ["FODEC"],
+      currency: "TND",
+      parametres: { decimals: 3, confianceReserve: 0.7, confianceBloquante: 0.4 },
+      ventilationDesBases: [
+        [
+          { account_code: "622", montant: "600.000" },
+          { account_code: "613", montant: "400.000" },
+        ],
+      ],
+    });
+    expect(r.lignes.some((l) => l.account_code === "6071" || l.account_code === "6652")).toBe(
+      false,
+    );
+    const somme = (compte: string) =>
+      r.lignes
+        .filter((l) => l.account_code === compte)
+        .reduce((t, l) => t + Number(l.debit), 0)
+        .toFixed(3);
+    expect([somme("622"), somme("613")]).toEqual(["606.000", "404.000"]);
+  });
+
   it("une vente ne bouge pas : il n'y a rien à déduire", () => {
     expect(nonDeductible(factureVenteSimple()).lignes).toEqual(
       proposer(factureVenteSimple()).lignes,

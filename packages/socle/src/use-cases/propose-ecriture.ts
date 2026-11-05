@@ -390,8 +390,50 @@ export function buildProposal(params: {
       )
       .filter((l) => !tva.includes(l));
   };
-  const lignesDuPivot = tvaVersLaCharge(pivot.lines, decimalesDuPivot);
-  const lignesDOrigine = converti && origine ? tvaVersLaCharge(origine.lines, decimals) : null;
+  /*
+   * Un droit au coût (le FODEC, réglage `fodec.traitement`) sur un achat
+   * VENTILÉ (6 novembre 2026) : il allait au compte de charge du paramétrage,
+   * que la ventilation a justement remplacé — un 601 qui ne portait plus que
+   * le droit. Il suit désormais les charges qu'il grève, au prorata de leur
+   * base, le reliquat d'arrondi sur la dernière ; chaque part garde le nom du
+   * droit, pour qu'il se retrouve. Sans ventilation, rien ne change.
+   */
+  const droitsSurLesCharges = (lignes: readonly JournalLineV1[], n: number): JournalLineV1[] => {
+    if (
+      !params.ventilationDesBases ||
+      extract.document_kind !== "facture_achat" ||
+      auCout.size === 0
+    )
+      return [...lignes];
+    const charges = lignes.filter(
+      (l) => l.tax_code && !comptesDeTva.has(l.account_code) && D(l.debit).gt(0),
+    );
+    const bases = charges.reduce((t, l) => t.plus(D(l.debit)), D(0));
+    if (charges.length === 0 || bases.isZero()) return [...lignes];
+    return lignes.flatMap((l) => {
+      // Ventilé, chaque base porte son code de taxe : une ligne de débit sans
+      // code, au compte du paramétrage, est un droit au coût.
+      const estUnDroit = !l.tax_code && l.account_code === compteDeCharge && D(l.debit).gt(0);
+      if (!estUnDroit) return [l];
+      let reste = D(l.debit);
+      return charges.map((c, k) => {
+        const part =
+          k === charges.length - 1
+            ? reste
+            : D(toFixedStr(D(l.debit).times(D(c.debit)).div(bases), n));
+        reste = reste.minus(part);
+        return { ...l, account_code: c.account_code, debit: toFixedStr(part, n) };
+      });
+    });
+  };
+  const lignesDuPivot = tvaVersLaCharge(
+    droitsSurLesCharges(pivot.lines, decimalesDuPivot),
+    decimalesDuPivot,
+  );
+  const lignesDOrigine =
+    converti && origine
+      ? tvaVersLaCharge(droitsSurLesCharges(origine.lines, decimals), decimals)
+      : null;
   /** Le montant d'une ligne, du côté qui le porte ; null pour une ligne nulle. */
   const montantDe = (l: JournalLineV1 | undefined) =>
     !l ? null : !D(l.debit).isZero() ? l.debit : !D(l.credit).isZero() ? l.credit : null;
