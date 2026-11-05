@@ -88,8 +88,8 @@ function CabinetClient() {
     queryFn: () => office().supervision.queue(org.id, clientId),
   });
   const echeances = useQuery({
-    queryKey: ["cab-echeances", org.id, [clientId]],
-    queryFn: () => office().collab.echeances([clientId]),
+    queryKey: ["cab-echeances", org.id, [clientId], locale],
+    queryFn: () => office().collab.echeances([clientId], locale),
   });
   const journal = useQuery({
     queryKey: ["cab-journal", clientId],

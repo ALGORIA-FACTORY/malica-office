@@ -26,13 +26,17 @@ export const immo = {
    * (20261024160000) : la ligne close reste celle des biens déjà enregistrés,
    * et seule la ligne en vigueur s'offre à un bien nouveau.
    */
-  async categories(db: Requete, packVersionId: string) {
+  async categories(db: Requete, packVersionId: string, locale = "fr") {
+    // Le nom dans la langue demandée (`ref.labels`, `immo_categorie`), le
+    // français du référentiel à défaut.
     const { rows } = await db.query(
-      `select id, code, label, method, duree_annees, coefficient, account_immo,
-              account_amort, account_dotation, legal_reference,
-              valid_from::text as valid_from, valid_to::text as valid_to
-         from ref_immo_categories_v where pack_version_id = $1 order by code`,
-      [packVersionId],
+      `select c.id, c.code, coalesce(l.value, c.label) as label, c.method, c.duree_annees,
+              c.coefficient, c.account_immo, c.account_amort, c.account_dotation,
+              c.legal_reference, c.valid_from::text as valid_from, c.valid_to::text as valid_to
+         from ref_immo_categories_v c
+         left join ref_labels_v l on l.ns = 'immo_categorie' and l.key = c.code and l.locale = $2
+        where c.pack_version_id = $1 order by c.code`,
+      [packVersionId, locale],
     );
     return enVigueur(rows as Record<string, unknown>[]).map((r) => ({
       id: r["id"] as string,

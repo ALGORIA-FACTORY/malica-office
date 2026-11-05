@@ -2394,7 +2394,7 @@ export interface Cession {
 }
 
 export interface ImmoRepository {
-  categories(packVersionId: string): Promise<ImmoCategory[]>;
+  categories(packVersionId: string, locale?: string): Promise<ImmoCategory[]>;
   listAssets(tenantId: string): Promise<Asset[]>;
   createAsset(input: NewAsset): Promise<string>;
   dotations(tenantId: string, assetId?: string): Promise<Dotation[]>;
@@ -2916,7 +2916,7 @@ export interface CollabRepository {
   stats(tenantIds: string[]): Promise<ClientStats[]>;
   notifications(tenantIds: string[]): Promise<Notification[]>;
   markRead(id: string): Promise<void>;
-  echeances(tenantIds: string[]): Promise<Echeance[]>;
+  echeances(tenantIds: string[], locale?: string): Promise<Echeance[]>;
   /** Dériver le calendrier de chaque dossier depuis le pack ; idempotent. */
   deriverEcheances(tenantIds: string[]): Promise<DerivationEcheances[]>;
   marquerEcheance(id: string, fait: boolean): Promise<{ status: string }>;

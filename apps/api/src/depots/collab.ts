@@ -367,14 +367,22 @@ export const collab = {
    * Les échéances des dossiers, avec l'obligation qui fonde chacune : sa
    * règle littérale, son texte, son article. Rien ici n'est saisi.
    */
-  async echeances(db: Requete, tenantIds: string[]) {
+  /**
+   * Les échéances des dossiers, l'intitulé d'une obligation du référentiel
+   * dans la langue demandée (`ref.labels`, `fiscal_obligation`), celui de
+   * l'échéance à défaut — une obligation propre au cabinet garde le sien.
+   */
+  async echeances(db: Requete, tenantIds: string[], locale = "fr") {
     if (tenantIds.length === 0) return [];
     const { rows } = await db.query(
-      `select id, tenant_id, kind, label, period, due_date, status, fait_le,
-              echeance_regle, texte_source, article, periodicite,
-              date_legale, date_origine, report_motif, report_source
-         from echeances_v where tenant_id = any($1::uuid[]) order by due_date, label`,
-      [tenantIds],
+      `select e.id, e.tenant_id, e.kind, coalesce(l.value, e.label) as label, e.period,
+              e.due_date, e.status, e.fait_le, e.echeance_regle, e.texte_source, e.article,
+              e.periodicite, e.date_legale, e.date_origine, e.report_motif, e.report_source
+         from echeances_v e
+         left join ref_labels_v l
+                on l.ns = 'fiscal_obligation' and l.key = e.kind and l.locale = $2
+        where e.tenant_id = any($1::uuid[]) order by e.due_date, e.label`,
+      [tenantIds, locale],
     );
     return (rows as Record<string, unknown>[]).map((e) => ({
       id: e["id"] as string,
