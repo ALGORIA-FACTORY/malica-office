@@ -50,6 +50,13 @@ export function ventilerParCompte(p: {
   exposant: number;
   enDevise: boolean;
   repli: string;
+  /**
+   * Une pièce sans article lu porte-t-elle la réserve ? Oui pour une vente
+   * (1er novembre 2026). Non pour un achat : sans article, il garde le
+   * compte du paramétrage comme avant, et le cabinet le voit à la revue —
+   * une réserve sur chaque ticket lu sans détail serait du bruit.
+   */
+  reserverSansArticle: boolean;
 }): { ventilation: Ventilation; reserve: NatureAPreciser | null } {
   const toutAuRepli = (reserve: NatureAPreciser | null) => ({
     ventilation: p.lignes.map(() => [{ account_code: p.repli, montant: null }]),
@@ -60,7 +67,9 @@ export function ventilerParCompte(p: {
     a.designation?.trim() ? [{ ...a, designation: a.designation.trim() }] : [],
   );
   if (articles.length === 0)
-    return toutAuRepli({ code: p.code, raison: "sans_article", articles: [] });
+    return toutAuRepli(
+      p.reserverSansArticle ? { code: p.code, raison: "sans_article", articles: [] } : null,
+    );
   const inconnus = articles.filter((a) => a.compte === null).map((a) => a.designation);
   if (inconnus.length > 0)
     return toutAuRepli({ code: p.code, raison: "inconnue", articles: inconnus });

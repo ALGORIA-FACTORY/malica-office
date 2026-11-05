@@ -228,6 +228,18 @@
       "famille": "INFORMATIQUE"
     },
     {
+      "motif": "(?<!\\p{L})(acquisition|achat)\\s+(de\\s+|d['’]\\s*)?(logiciels?|progiciels?)(?!\\p{L})",
+      "famille": "LOGICIEL"
+    },
+    {
+      "motif": "(?<!\\p{L})(logiciels?|progiciels?)\\s+(de\\s+gestion|comptables?|erp)(?!\\p{L})",
+      "famille": "LOGICIEL"
+    },
+    {
+      "motif": "(?<!\\p{L})licences?\\s+perp[ée]tuelles?(?!\\p{L})",
+      "famille": "LOGICIEL"
+    },
+    {
       "motif": "(?<!\\p{L})machines?[-\\s]outils?(?!\\p{L})",
       "famille": "MATERIEL"
     },

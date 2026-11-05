@@ -602,6 +602,7 @@ export function composerLaProposition(
           exposant: dec,
           enDevise: change !== null,
           repli: repliDesAchats,
+          reserverSansArticle: false,
         })
       : null;
   const compteUnique = (v: Ventilation | undefined) =>

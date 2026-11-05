@@ -189,5 +189,6 @@ export function ventilerLesVentes(p: {
     exposant: p.exposant,
     enDevise: p.enDevise,
     repli: repli.compte,
+    reserverSansArticle: true,
   });
 }
