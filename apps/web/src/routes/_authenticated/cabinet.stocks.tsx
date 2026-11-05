@@ -530,6 +530,7 @@ function CabinetStocks() {
                     {itemRows.map((i) => (
                       <option key={i.id} value={i.id}>
                         {i.reference} · {i.designation}
+                        {i.active ? "" : ` · ${t("cab.stocks.inactif")}`}
                       </option>
                     ))}
                   </select>
@@ -1016,6 +1017,12 @@ function CabinetStocks() {
                     className={i.id === item.id ? "font-semibold" : ""}
                   >
                     {i.designation}
+                    {/* Désactivé : il reste lisible, mais on le dit (recette du 5 novembre 2026). */}
+                    {i.active ? null : (
+                      <span className="ms-2 border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        {t("cab.stocks.inactif")}
+                      </span>
+                    )}
                   </InkCell>
                   <InkCell label={t("cab.stocks.unite")}>{i.unite}</InkCell>
                   <InkCell label={t("cab.stocks.method")}>
