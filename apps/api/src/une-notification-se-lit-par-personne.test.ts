@@ -116,4 +116,29 @@ describe("une notification se lit par personne", { skip: !BASE_CONFIGUREE }, () 
       /refus\.introuvable\.notification$/,
     );
   });
+
+  it("une notification non lue ne sort jamais de la liste, même après cent plus récentes", async () => {
+    const ancienne = async () =>
+      (
+        await admin.query<{ id: string }>(
+          `insert into collab.notifications (tenant_id, kind, payload, created_at)
+           values ($1, 'piece.reponse_client', '{}'::jsonb, now() - interval '30 days')
+           returning id`,
+          [pme],
+        )
+      ).rows[0]!.id;
+    const enAttente = await ancienne();
+    const dejaLue = await ancienne();
+    await rpc(expert, "markRead", dejaLue);
+    await admin.query(
+      `insert into collab.notifications (tenant_id, kind, payload)
+       select $1, 'piece.reponse_client', '{}'::jsonb from generate_series(1, 100)`,
+      [pme],
+    );
+    const ids = ((await rpc(expert, "notifications", [pme])) as Array<{ id: string }>).map(
+      (n) => n.id,
+    );
+    assert.ok(ids.includes(enAttente), "la notification en attente a disparu de la liste");
+    assert.ok(!ids.includes(dejaLue), "une notification lue, plus ancienne que cent, reste");
+  });
 });
