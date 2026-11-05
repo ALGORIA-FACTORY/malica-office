@@ -2953,7 +2953,7 @@ export const fr = {
     "Malica ne répond pas pour l’instant. Le procès-verbal est enregistré sans texte ; réessayez plus tard.",
   "cab.pv.malica.kicker": "Rédigé par Malica",
   "cab.pv.malica.corps":
-    "Le texte est d’elle ; chaque chiffre porte le moteur qui l’a produit. Aucun montant n’a traversé un modèle de langage.",
+    "Le texte est d’elle ; chaque chiffre vient du moteur qui l’a produit, et la relecture refuse tout nombre qui n’y figure pas.",
   "cab.pv.cabinet.kicker": "Repris par le cabinet",
   "cab.pv.cabinet.corps":
     "Le texte a été relu et repris par le cabinet. Les chiffres restent ceux du Socle.",
