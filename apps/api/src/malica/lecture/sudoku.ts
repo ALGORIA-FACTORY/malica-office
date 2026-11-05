@@ -1005,6 +1005,23 @@ export interface Sudoku {
   prouvee(lecture: VisionRead): boolean;
   /** Ce que le sudoku a rendu de cette lecture, pour le journal ; rien s'il ne l'a pas vue. */
   verdict(lecture: VisionRead): VerdictDuSudoku | null;
+  /**
+   * L'état des lignes d'articles de cette lecture : `prouvees` (la somme les prouve, chaque
+   * désignation sûre), `a_verifier` (lues sans preuve, ou une désignation incertaine :
+   * décision du 5 novembre 2026, la nuit les reprend) ou `sans` (rien à en dire).
+   */
+  lignes(lecture: VisionRead): EtatDesLignes;
+}
+
+export type EtatDesLignes = "prouvees" | "a_verifier" | "sans";
+
+/** L'état des lignes d'une sortie du moteur. */
+export function etatDesLignes(sortie: SortieDuSudoku): EtatDesLignes {
+  const l = sortie.lignes;
+  if (!l || l.instances.length === 0) return "sans";
+  const incertaine = l.instances.some((i) => i.designation?.statut === "incertain");
+  if (l.statut === "prouve" && !incertaine) return "prouvees";
+  return "a_verifier";
 }
 
 /** Le verdict d'un sudoku qui n'a pas pu juger : seule son erreur est dite. */
@@ -1075,6 +1092,7 @@ export function creerLeSudoku(
   const lus = new WeakMap<VisionRead, ChampsLusAInscrire>();
   const designees = new WeakSet<VisionRead>();
   const verdicts = new WeakMap<VisionRead, VerdictDuSudoku>();
+  const lignes = new WeakMap<VisionRead, EtatDesLignes>();
   return {
     async lire(lecture) {
       let jour: string | null = null;
@@ -1133,6 +1151,7 @@ export function creerLeSudoku(
                 ),
               };
         lus.set(rendue, aInscrire);
+        lignes.set(rendue, etatDesLignes(sortie));
         if (rendue !== lecture) designees.add(rendue);
         verdicts.set(
           rendue,
@@ -1161,6 +1180,10 @@ export function creerLeSudoku(
 
     prouvee(lecture) {
       return designees.has(lecture);
+    },
+
+    lignes(lecture) {
+      return lignes.get(lecture) ?? "sans";
     },
   };
 }

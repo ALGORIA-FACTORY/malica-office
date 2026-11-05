@@ -644,6 +644,23 @@ Deux décisions du dirigeant du 5 novembre 2026.
 | banc, sens lu                   | 6 765 |    0 |       0 |        3 424 |     997 |
 | couche de texte, sens déclaré   | 2 124 |    0 |       0 |          457 |     238 |
 
+## Bulletin 20 — la nuit reprend les lignes à vérifier (5 novembre 2026)
+
+La passe de nuit existait (décision du 2 novembre : la relecture par l'autre lecteur — le
+modèle de vision pour une lecture OCR — part la nuit, sous plafond, payée par ALGORIA).
+Elle ne relisait qu'une lecture IMPARFAITE (contrat partiel, arithmétique incohérente), et
+ne retenait qu'une relecture de QUALITÉ supérieure : une pièce aux totaux justes mais aux
+lignes non prouvées n'était jamais relue.
+
+- La première lecture dont les lignes sont à vérifier (lues sans preuve, ou une
+  désignation incertaine) inscrit une relecture de nuit, avec `consigne.lignes`
+  (`20261127290000`). Jamais en journée.
+- La nuit, une relecture ainsi demandée est retenue, à qualité égale, quand le moteur
+  PROUVE ses lignes (`relectureRetenue`). Le modèle propose, la somme tranche : l'IA ne
+  rend aucun verdict. Moins bonne, elle n'est jamais retenue.
+- Le banc n'en dit rien encore : il ne rejoue pas la nuit. La mesure viendra de la
+  première nuit observée sur le staging, la passe étant livrée coupée.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

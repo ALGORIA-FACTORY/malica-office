@@ -110,6 +110,15 @@ const LECTEURS: Lecteurs = { lire: runVisionRead, secondLecteurDisponible };
  * lecture qu'aucun rattrapage ne peut ameliorer.
  */
 const QUALITE_PARFAITE = 3;
+/**
+ * Une relecture de nuit est-elle retenue ? STRICTEMENT meilleure en qualité ; ou, à
+ * qualité égale, demandée pour ses lignes et les ayant fait PROUVER par le moteur
+ * (5 novembre 2026). Jamais moins bonne, quoi qu'en disent ses lignes.
+ */
+export function relectureRetenue(avant: number, apres: number, lignesProuvees: boolean): boolean {
+  return apres > avant || (apres === avant && lignesProuvees);
+}
+
 export function qualiteDeLecture(b: {
   contract: string;
   flags: ReadonlyArray<{ code: string }>;
@@ -386,7 +395,15 @@ export async function readPieceFlow(
    * Si elle ne peut pas répondre, on le crie et on rattrape comme avant —
    * c'est le comportement du réglage coupé, pas une valeur devinée.
    */
-  const differee = aRattraper ? await relectureDeNuitActive(api, pieceId) : false;
+  /*
+   * ========================================= LES LIGNES À VÉRIFIER (5 novembre 2026)
+   *
+   * Décision du dirigeant : les lignes qu'aucune somme ne prouve se montrent « lu, non
+   * vérifié » le jour ; la NUIT les reprend, avec l'autre lecteur, et le moteur les prouve
+   * au matin. Jamais en journée : ce n'est pas un rattrapage synchrone.
+   */
+  const lignesARelire = autre !== null && sudoku.lignes(premiereLecture) === "a_verifier";
+  const differee = aRattraper || lignesARelire ? await relectureDeNuitActive(api, pieceId) : false;
   const rattrapage = {
     declenche: aRattraper && !differee,
     raison,
@@ -446,7 +463,11 @@ export async function readPieceFlow(
     await api
       .rpc("capture", "inscrireRelecture", [
         pieceId,
-        { lecteur: premiereLecture.lecteur, paddleTente: premiereLecture.paddleTente },
+        {
+          lecteur: premiereLecture.lecteur,
+          paddleTente: premiereLecture.paddleTente,
+          ...(lignesARelire ? { lignes: true } : {}),
+        },
       ])
       .catch((e: unknown) => {
         console.error(
@@ -643,7 +664,8 @@ interface RelectureAFaire {
   pieceId: string;
   contract: string;
   flags: ReadonlyArray<{ code: string }>;
-  consigne: Pick<VisionRead, "lecteur" | "paddleTente">;
+  /** `lignes` : la première lecture laissait des lignes à vérifier (5 novembre 2026). */
+  consigne: Pick<VisionRead, "lecteur" | "paddleTente"> & { lignes?: boolean };
   abstention: string | null;
   trace: string | null;
 }
@@ -732,13 +754,21 @@ async function relire(
   await journaliser(api, contexte.piece.tenantId, pieceId, seconde);
 
   const apres = qualiteDeLecture(construite);
-  const detail = { avant, apres, lecteur: seconde.lecteur };
+  /*
+   * Une relecture demandée pour ses LIGNES (`consigne.lignes`) est retenue, à qualité
+   * égale, quand le moteur PROUVE ses lignes : la somme des lignes, taux par taux, ferme
+   * sur le total. C'est le calcul qui tranche, jamais le lecteur (l'IA ne rend aucun
+   * verdict).
+   */
+  const lignesProuvees = aFaire.consigne.lignes === true && sudoku.lignes(seconde) === "prouvees";
+  const retenue = relectureRetenue(avant, apres, lignesProuvees);
+  const detail = { avant, apres, lecteur: seconde.lecteur, lignesProuvees };
   tracerLeRattrapage(pieceId, "relecture", declenchee, {
     qualiteApres: apres,
-    retenue: apres > avant,
+    retenue,
     lecteur: seconde.lecteur,
   });
-  if (apres <= avant) return { motif: "relecture.ecartee", detail };
+  if (!retenue) return { motif: "relecture.ecartee", detail };
 
   const { lecture } = lectureAPersister(pieceId, contexte.packId, seconde, construite);
   try {

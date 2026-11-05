@@ -95,7 +95,7 @@ interface RelectureAFaire {
   extractionId: string;
   contract: string;
   flags: Array<{ code: string }>;
-  consigne: { lecteur: string; paddleTente: boolean };
+  consigne: { lecteur: string; paddleTente: boolean; lignes?: boolean };
   /** La raison de s'abstenir, ou nul : remplacee, lecture_depassee, correction_humaine, coupee. */
   abstention: string | null;
   /** La correction humaine trouvée (precision, ecriture, decision, retour…), ou nul. */
@@ -1040,7 +1040,7 @@ export const capture = {
   async inscrireRelecture(
     db: Requete,
     pieceId: string,
-    consigne: { lecteur: string; paddleTente: boolean },
+    consigne: { lecteur: string; paddleTente: boolean; lignes?: boolean },
   ): Promise<{ travailId: string; deja: boolean; pasAvant: string }> {
     const { rows } = await db.query<{
       r: { travail_id: string; deja: boolean; pas_avant: string };
@@ -1060,7 +1060,7 @@ export const capture = {
         extraction_id: string;
         contract: string;
         flags: Array<{ code: string }>;
-        consigne: { lecteur: string; paddleTente: boolean };
+        consigne: { lecteur: string; paddleTente: boolean; lignes?: boolean };
         abstention: string | null;
         trace: string | null;
       };
