@@ -299,6 +299,11 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
       source,
       `Source d'essai ${marque}`,
     ]);
+    // Une source sert sa juridiction : celle-ci, la Tunisie du dossier.
+    await admin.query(
+      `insert into ref.sources_de_cours_juridictions (source, jurisdiction) values ($1, 'TN')`,
+      [source],
+    );
     await cabinetFait("parametrage.arreterReglagesComptables", {
       cabinetId: cabinet,
       portee: "dossier",
