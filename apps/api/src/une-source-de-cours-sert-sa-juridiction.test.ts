@@ -27,14 +27,15 @@ describe("une source de cours sert sa juridiction", { skip: !BASE_CONFIGUREE }, 
     }
   });
 
-  it("n'offre à un dossier tunisien que la BCT", async () => {
+  it("offre la BCT à un dossier tunisien, jamais la BCEAO", async () => {
     const options = await sousIdentite(s.gens.amel.id, (db) =>
       optionsDeLaRegleDeChange(db, "fr", s.pack),
     );
-    assert.deepEqual(
-      options.get("change.source")?.map((o) => o.code),
-      ["BCT"],
-    );
+    // D'autres épreuves posent leurs propres sources tunisiennes : on ne
+    // compte pas, on vérifie ce que la juridiction sert et ce qu'elle ne sert pas.
+    const codes = options.get("change.source")?.map((o) => o.code) ?? [];
+    assert.ok(codes.includes("BCT"));
+    assert.ok(!codes.includes("BCEAO"));
   });
 
   it("refuse d'arrêter la BCEAO pour la Tunisie", async () => {
