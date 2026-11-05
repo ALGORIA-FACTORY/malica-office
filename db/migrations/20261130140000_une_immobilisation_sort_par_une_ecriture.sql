@@ -14,8 +14,11 @@
 --   1. la dotation de l'exercice de sortie, jusqu'au mois de sortie inclus
 --      (prorata au mois entamé, la règle de la mise en service), calculée par
 --      le Socle (`sortieDuPlan`) et VÉRIFIÉE ici : le cumul des dotations
---      inscrites plus celle-ci doit être le cumul du plan à la sortie, sinon
---      un exercice antérieur n'a pas été doté et la porte refuse ;
+--      inscrites des exercices antérieurs plus celle-ci doit être le cumul du
+--      plan à la sortie, sinon un exercice antérieur n'a pas été doté et la
+--      porte refuse. Si l'exercice de sortie est déjà doté (la dotation
+--      annuelle, posée avant), l'écriture n'en passe que l'ÉCART — un
+--      complément, ou une reprise de ce qui dépasse la sortie ;
 --   2. l'écriture de sortie (modèle `IMMO_CESSION_SORTIE` / `IMMO_REBUT` du
 --      référentiel) : au débit les amortissements cumulés, la dépréciation
 --      cumulée, la valeur nette comptable en charge nette sur cession ; au
@@ -119,6 +122,8 @@ as $$
 declare
   a record;
   v_dotees numeric;
+  v_dote_exercice numeric;
+  v_ecart numeric;
   v_deja_dote boolean;
   v_deprec numeric;
   v_vnc numeric;
@@ -167,19 +172,19 @@ begin
     raise exception 'refus.immo.sortie.avant_mise_en_service' using errcode = '22023';
   end if;
 
-  -- La dotation de l'exercice de sortie ne double pas une dotation déjà
-  -- constatée pour cet exercice (une dotation annuelle entière, posée avant
-  -- la sortie, se reprend à la main).
-  select coalesce(sum(d.dotation), 0), bool_or(d.exercice = p_exercice)
-    into v_dotees, v_deja_dote
+  -- Les dotations inscrites ; celle de l'exercice de sortie, si elle l'est
+  -- déjà (une dotation annuelle posée avant la sortie), se reprend par
+  -- l'écart — une écriture nouvelle (R7), jamais une réécriture.
+  select coalesce(sum(d.dotation), 0),
+         coalesce(sum(d.dotation) filter (where d.exercice = p_exercice), 0),
+         bool_or(d.exercice = p_exercice)
+    into v_dotees, v_dote_exercice, v_deja_dote
     from immo.dotations d
    where d.asset_id = p_asset;
-  if coalesce(v_deja_dote, false) and coalesce(p_dotation, 0) > 0 then
-    raise exception 'refus.immo.sortie.exercice_deja_dote' using errcode = '22023';
-  end if;
+  v_ecart := coalesce(p_dotation, 0) - v_dote_exercice;
   -- Le cumul du plan à la sortie, du Socle, est celui des livres : sinon un
   -- exercice antérieur n'a pas été doté.
-  if v_dotees + coalesce(p_dotation, 0) <> p_cumul then
+  if v_dotees - v_dote_exercice + coalesce(p_dotation, 0) <> p_cumul then
     raise exception 'refus.immo.sortie.dotations_manquantes' using errcode = '22023';
   end if;
 
@@ -203,13 +208,22 @@ begin
           p_pack_version, 'proposee')
   returning id into v_ecr;
 
-  if coalesce(p_dotation, 0) > 0 then
+  -- La dotation de l'exercice de sortie, ou l'écart avec celle déjà inscrite.
+  if v_ecart > 0 then
     insert into socle.ecriture_lignes (tenant_id, ecriture_id, ordinal, account_code,
                                        libelle, debit, credit)
     values (a.tenant_id, v_ecr, 1, a.account_dotation,
-            'Dotation de l''exercice de sortie — ' || a.label, p_dotation, 0),
+            'Dotation de l''exercice de sortie — ' || a.label, v_ecart, 0),
            (a.tenant_id, v_ecr, 2, a.account_amort,
-            'Amortissements — ' || a.label, 0, p_dotation);
+            'Amortissements — ' || a.label, 0, v_ecart);
+    v_ordinal := 2;
+  elsif v_ecart < 0 then
+    insert into socle.ecriture_lignes (tenant_id, ecriture_id, ordinal, account_code,
+                                       libelle, debit, credit)
+    values (a.tenant_id, v_ecr, 1, a.account_amort,
+            'Amortissements au-delà de la sortie — ' || a.label, -v_ecart, 0),
+           (a.tenant_id, v_ecr, 2, a.account_dotation,
+            'Dotation reprise au-delà de la sortie — ' || a.label, 0, -v_ecart);
     v_ordinal := 2;
   end if;
   if p_cumul > 0 then
@@ -243,7 +257,9 @@ begin
      set status = 'booked', booked_by = auth.uid(), booked_at = now(), updated_at = now()
    where id = v_ecr;
 
-  if coalesce(p_dotation, 0) > 0 then
+  -- La dotation de sortie se garde au registre quand l'exercice n'en avait
+  -- pas ; sinon la ligne annuelle reste (R7), et l'écart est à l'écriture.
+  if coalesce(p_dotation, 0) > 0 and not coalesce(v_deja_dote, false) then
     insert into immo.dotations (tenant_id, asset_id, exercice, months, dotation, cumul,
                                 vnc, ecriture_id, pack_version_id, created_by)
     values (a.tenant_id, p_asset, p_exercice, p_mois, p_dotation, p_cumul,
@@ -290,6 +306,7 @@ begin
   values (a.tenant_id, auth.uid(), 'immo.sortie', 'immo', 'cessions', v_sortie, p_pack_version,
           jsonb_build_object('asset_id', p_asset, 'motif', p_motif, 'vnc', v_vnc,
                              'resultat', v_resultat, 'dotation', coalesce(p_dotation, 0),
+                             'ecart_de_dotation', v_ecart,
                              'ecriture_id', v_ecr, 'ecriture_prix_id', v_ecr_prix));
 
   return jsonb_build_object('sortie_id', v_sortie, 'ecriture_id', v_ecr,

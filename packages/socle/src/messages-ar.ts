@@ -2302,8 +2302,6 @@ export const ar: Dict = {
     "الخروج يتجاوز المخزون المتوفّر في هذا التاريخ: سجّل الدخول أوّلًا.",
   "refus.immo.sortie.deja_sortie": "هذا الأصل خرج سابقا من الموازنة.",
   "refus.immo.sortie.avant_mise_en_service": "تاريخ الخروج سابق لتاريخ دخول الأصل حيّز الاستعمال.",
-  "refus.immo.sortie.exercice_deja_dote":
-    "استهلاك سنة الخروج مسجّل كاملًا: ألغِه بقيد عكسي قبل إخراج الأصل.",
   "refus.immo.sortie.dotations_manquantes": "سنة سابقة دون استهلاك: سجّل استهلاكها أوّلًا.",
   "refus.immo.sortie.prix_au_rebut": "الإتلاف بلا سعر وبلا أداء.",
   "refus.immo.sortie.compte_du_role":

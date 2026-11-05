@@ -2466,8 +2466,6 @@ export const fr = {
   "refus.immo.sortie.deja_sortie": "Ce bien est déjà sorti du bilan.",
   "refus.immo.sortie.avant_mise_en_service":
     "La date de sortie précède la mise en service du bien.",
-  "refus.immo.sortie.exercice_deja_dote":
-    "La dotation de l’exercice de sortie est déjà constatée en entier : contre-passez-la avant de faire sortir le bien.",
   "refus.immo.sortie.dotations_manquantes":
     "Un exercice antérieur n’est pas doté : constatez d’abord ses amortissements.",
   "refus.immo.sortie.prix_au_rebut": "Une mise au rebut n’a ni prix ni TVA.",

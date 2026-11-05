@@ -117,6 +117,8 @@ describe("vncNette", () => {
   });
 });
 
+const D_SOMME = (xs: string[]) => xs.reduce((t, x) => t + Number(x), 0).toFixed(3);
+
 describe("sortie du plan (cession, mise au rebut)", () => {
   // 12 000 sur 4 ans, en service le 1er janvier 2026 : 3 000 par an.
   const plan = computeAmortissement({ ...base, method: "lineaire", miseEnService: "2026-01-01" });
@@ -150,6 +152,21 @@ describe("sortie du plan (cession, mise au rebut)", () => {
     expect(s.dotation).toBe("0.000");
     expect(s.cumul).toBe("12000.000");
     expect(s.vncAmortie).toBe("0.000");
+  });
+
+  it("cumule les dotations arrondies que les livres portent, pas le cumul du plan", () => {
+    // 100 sur 3 ans : 33,333 par an aux livres.
+    const arrondi = computeAmortissement({
+      ...base,
+      valeurBrute: "100.000",
+      dureeAnnees: 3,
+      method: "lineaire",
+      miseEnService: "2024-01-01",
+    });
+    const s = sortieDuPlan(arrondi, "2026-03-15", 3);
+    expect(s.dotation).toBe("8.333");
+    expect(s.cumul).toBe("74.999");
+    expect(D_SOMME(arrondi.lignes.slice(0, 2).map((l) => l.dotation))).toBe("66.666");
   });
 
   it("refuse une sortie avant la mise en service", () => {

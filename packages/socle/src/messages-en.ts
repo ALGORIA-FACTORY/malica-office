@@ -2384,8 +2384,6 @@ export const en: Dict = {
   "refus.immo.sortie.deja_sortie": "This asset is already off the balance sheet.",
   "refus.immo.sortie.avant_mise_en_service":
     "The disposal date is before the asset was put into service.",
-  "refus.immo.sortie.exercice_deja_dote":
-    "The full depreciation of the year of disposal is already booked: reverse it before disposing of the asset.",
   "refus.immo.sortie.dotations_manquantes": "An earlier year has no depreciation: book it first.",
   "refus.immo.sortie.prix_au_rebut": "Scrapping has no price and no VAT.",
   "refus.immo.sortie.compte_du_role":

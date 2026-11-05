@@ -149,8 +149,9 @@ export function cumulAt(plan: AmortissementV1, at: string): string {
  * Après la fin du plan, le bien est amorti : rien à doter. Avant la mise en
  * service, il n'existe pas.
  *
- * `cumul` est le cumul des dotations à la sortie — la porte `immo_sortir` le
- * compare à ce que les livres portent, et refuse si un exercice manque.
+ * `cumul` est le cumul des dotations à la sortie, exercice par exercice
+ * arrondi — la porte `immo_sortir` le compare à ce que les livres portent, et
+ * refuse si un exercice manque.
  *
  * INCERTAIN (à confirmer par un expert-comptable) : le mois de sortie inclus.
  * Certains cabinets dotent au jour près.
@@ -166,8 +167,12 @@ export function sortieDuPlan(
   }
   const brute = D(plan.valeur_brute);
   const ligne = plan.lignes.find((l) => l.exercice === sortie.year);
-  const precedentes = plan.lignes.filter((l) => l.exercice < sortie.year);
-  const cumulAvant = D(precedentes.at(-1)?.cumul ?? "0");
+  // Le cumul des dotations ARRONDIES de chaque exercice — ce que les livres
+  // portent —, pas le cumul du plan, arrondi à part : 33,333 + 33,333 font
+  // 66,666 au grand livre quand le plan dit 66,667 (revue de #249).
+  const cumulAvant = plan.lignes
+    .filter((l) => l.exercice < sortie.year)
+    .reduce((t, l) => t.plus(D(l.dotation)), D(0));
   if (!ligne) {
     return {
       exercice: sortie.year,

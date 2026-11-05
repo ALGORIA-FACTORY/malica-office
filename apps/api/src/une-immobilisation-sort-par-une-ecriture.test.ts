@@ -146,6 +146,29 @@ describe("une immobilisation sort par une écriture", { skip: !BASE_CONFIGUREE }
     );
   });
 
+  it("reprend ce qui dépasse la sortie quand l'exercice est déjà doté en entier", async () => {
+    const bien = await creer("Doté en entier");
+    await doter2025(bien);
+    await sousIdentite(s.gens.amel.id, (db) =>
+      db.query(
+        `select public.immo_dotation_constater($1, 2026::smallint, 12::smallint, 3000, 6000,
+                                               6000, $2)`,
+        [bien, s.pack],
+      ),
+    );
+    // Sortie le 15 mars 2026 : 750 dus, 3 000 posés — 2 250 reviennent.
+    const r = await sortir(bien, "rebute", "2026-03-15");
+    assert.equal(Number(r["vnc"]), 8250);
+    const l = await lignes(r["ecriture_id"]!);
+    assert.deepEqual(
+      l.slice(0, 2).map((x) => [x.account_code, Number(x.debit), Number(x.credit)]),
+      [
+        [categorie.amort, 2250, 0],
+        [categorie.dotation, 0, 2250],
+      ],
+    );
+  });
+
   it("refuse une sortie quand un exercice antérieur n'est pas doté", async () => {
     const bien = await creer("Sans dotation");
     await assert.rejects(
