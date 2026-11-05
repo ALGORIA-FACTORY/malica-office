@@ -230,6 +230,9 @@ export const en: Dict = {
   "app.orgs.create": "New organisation",
   "portal.title": "Choose your workspace",
   "portal.subtitle": "Two applications, one governed ledger.",
+  "portal.tour.body":
+    "The ALGORIA Factory operators' space: firms, SMEs, subscriptions and platform settings.",
+  "portal.tour.cta": "Enter",
   "portal.pme.count": "Companies linked",
   "portal.cabinet.count": "Clients under mandate",
   "portal.norole": "No workspace available for this account.",
@@ -3521,7 +3524,6 @@ export const en: Dict = {
   "pme.reglages.verrou.nonLu": "Locked because the plan was not read, not because it was refused.",
   "pme.reglages.surTotal": "{n} of {total}",
   "tour.quitter": "Leave the tower",
-  "tour.menu.espace": "ALGORIA",
   "tour.menu.clients": "Clients",
   "tour.menu.cabinets": "Firms",
   "tour.menu.pme": "SMEs and subscriptions",

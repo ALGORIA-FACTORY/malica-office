@@ -176,18 +176,12 @@ describe("la garde de la tour", () => {
   });
 });
 
-describe("Mon espace ne montre la tour qu'aux opérateurs", () => {
-  it("opérateur : l'entrée est là", async () => {
+describe("Mon espace n'ouvre plus la tour (5 novembre 2026)", () => {
+  it("même un opérateur n'y trouve aucune entrée : la tour s'ouvre par son adresse", async () => {
     monter(ecran(MonEspace));
-    expect(await screen.findByText("tour.titre")).toBeTruthy();
-  });
-
-  it("autre compte : aucune entrée", async () => {
-    donnees.plateforme = false;
-    monter(ecran(MonEspace));
-    await waitFor(() => expect(document.querySelector("[data-lien-tour]")).toBeNull());
     await new Promise((r) => setTimeout(r, 30));
     expect(document.querySelector("[data-lien-tour]")).toBeNull();
+    expect(screen.queryByText("tour.titre")).toBeNull();
   });
 });
 

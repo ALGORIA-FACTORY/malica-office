@@ -232,6 +232,9 @@ export const fr = {
   "app.orgs.create": "Nouvelle organisation",
   "portal.title": "Choisissez votre espace",
   "portal.subtitle": "Deux applications, une seule base gouvernée.",
+  "portal.tour.body":
+    "L'espace des opérateurs d'ALGORIA Factory : cabinets, PME, abonnements et réglages de la plateforme.",
+  "portal.tour.cta": "Entrer",
   "portal.pme.count": "PME rattachées",
   "portal.cabinet.count": "Clients sous mandat",
   "portal.norole": "Aucun espace disponible pour ce compte.",
@@ -3621,7 +3624,6 @@ export const fr = {
     "Verrouillé parce que le forfait n’est pas lu, pas parce qu’il est refusé.",
   "pme.reglages.surTotal": "{n} sur {total}",
   "tour.quitter": "Quitter la tour",
-  "tour.menu.espace": "ALGORIA",
   "tour.menu.clients": "Clients",
   "tour.menu.cabinets": "Cabinets",
   "tour.menu.pme": "PME et abonnements",

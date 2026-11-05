@@ -42,7 +42,6 @@ import {
   ScanSearch,
   Search,
   Settings2,
-  TowerControl,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -366,18 +365,8 @@ function Coquille({
         { to: "/cabinet/reglages", label: t("cab.nav.settings"), icon: Settings2, exact: false },
       ],
     },
-    // La tour : aux seuls opérateurs d'ALGORIA. La base refuse tout aux autres.
-    // Elle est un espace à elle depuis le 2 novembre 2026 (`/tour`), et son
-    // entrée a son groupe : rangée sous « Cabinet », elle était repliée.
-    ...(COMMERCE && acces.data?.plateforme
-      ? [
-          {
-            key: "tour",
-            label: t("tour.menu.espace"),
-            items: [{ to: "/tour", label: t("tour.titre"), icon: TowerControl, exact: false }],
-          },
-        ]
-      : []),
+    // La tour n'a plus d'entrée ici (décision du dirigeant, 5 novembre 2026) :
+    // elle s'ouvre par son adresse, `/tour`, aux seuls opérateurs d'ALGORIA.
   ];
   // La recherche et le fil d'Ariane connaissent aussi les onglets du dossier.
   const groupesDeRecherche: Groupe[] = [

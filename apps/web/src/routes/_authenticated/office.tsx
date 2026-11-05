@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
-import { Building2, Smartphone } from "lucide-react";
+import { Building2, Smartphone, TowerControl } from "lucide-react";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
 import { useEffect, type ReactNode } from "react";
@@ -55,6 +55,19 @@ function OfficeHome() {
     enabled: cabinetOrgs.length > 0,
   });
 
+  /*
+   * La tour s'ouvre d'ici, et d'ici seulement (décision du dirigeant, 5
+   * novembre 2026) : une carte aux seuls opérateurs d'ALGORIA, la même lecture
+   * que la tour elle-même (`tour.suisJePlateforme` → `app.is_platform()`).
+   * Un opérateur n'est donc jamais renvoyé d'office vers son seul espace.
+   */
+  const plateforme = useQuery({
+    queryKey: ["tour-suis-je"],
+    queryFn: () => office().tour.suisJePlateforme(),
+    retry: false,
+  });
+  const operateur = plateforme.data === true;
+
   // Un seul espace disponible : on y entre directement, sans écran intermédiaire.
   useEffect(() => {
     // Dans la coque, il n'y a qu'un espace : celui du dirigeant. Le cabinet
@@ -63,10 +76,17 @@ function OfficeHome() {
       void navigate({ to: "/pme", replace: true });
       return;
     }
-    if (orgsQuery.isPending) return;
+    if (orgsQuery.isPending || plateforme.isPending || operateur) return;
     if (pmeOrgs.length > 0 && cabinetOrgs.length === 0) void navigate({ to: "/pme" });
     if (cabinetOrgs.length > 0 && pmeOrgs.length === 0) void navigate({ to: "/cabinet" });
-  }, [orgsQuery.isPending, pmeOrgs.length, cabinetOrgs.length, navigate]);
+  }, [
+    orgsQuery.isPending,
+    plateforme.isPending,
+    operateur,
+    pmeOrgs.length,
+    cabinetOrgs.length,
+    navigate,
+  ]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -111,7 +131,7 @@ function OfficeHome() {
         {/* Son Mon espace des sociétés quittées : il part avec le compte (lot 4). */}
         <LienMonEspaceParti className="mt-6 inline-flex min-h-[48px] items-center border border-border px-4 text-sm font-medium" />
 
-        {!orgsQuery.isPending && pmeOrgs.length === 0 && cabinetOrgs.length === 0 ? (
+        {!orgsQuery.isPending && pmeOrgs.length === 0 && cabinetOrgs.length === 0 && !operateur ? (
           <p className="mt-8 border border-border bg-card p-6 text-sm text-muted-foreground">
             {t("portal.norole")}
           </p>
@@ -138,6 +158,15 @@ function OfficeHome() {
                 cta={t("cab.brand")}
                 meta={`${t("portal.cabinet.count")} : ${clientsQuery.data?.length ?? 0}`}
                 tenants={cabinetOrgs.map((o) => o.name)}
+              />
+            ) : null}
+            {operateur ? (
+              <AccessCard
+                to="/tour"
+                icon={<TowerControl className="h-5 w-5" aria-hidden />}
+                title={t("tour.titre")}
+                body={t("portal.tour.body")}
+                cta={t("portal.tour.cta")}
               />
             ) : null}
           </section>
@@ -171,7 +200,7 @@ function AccessCard({
   tenants,
   primary,
 }: {
-  to: "/pme" | "/cabinet";
+  to: "/pme" | "/cabinet" | "/tour";
   icon: ReactNode;
   title: string;
   body: string;
