@@ -246,3 +246,57 @@ fn un_numero_colle_a_son_libelle_qui_a_la_forme_d_une_reference_est_conforme() {
         serde_json::from_str(&malica_sudoku::solve(&e.to_string())).expect("sortie lisible");
     assert_eq!(o["champs"]["numero_facture"]["statut"], "signale");
 }
+
+/// L'entrée, sa preuve des parties complétée des clés de 20261127270000 et 280000, et la
+/// règle de la lettre du pack (20261127230000).
+fn avec_groupes_et_adresses(id: &str) -> Value {
+    let mut e = entree(id);
+    e["pack"]["controles"] = json!({"matricule_fiscal": {
+        "poids": [7, 6, 5, 4, 3, 2, 1], "modulo": 23, "alphabet": "ABCDEFGHJKLMNPQRSTVWXYZ"}});
+    for p in e["grille"]["preuves"].as_array_mut().expect("preuves") {
+        if p["expression"]["op"] == "parties" {
+            p["expression"]["groupes_emetteur"] = json!("code_tva_categorie_etablissement");
+            p["expression"]["adresse_emetteur"] = json!("adresse_emetteur");
+            p["expression"]["adresse_client"] = json!("adresse_client");
+        }
+    }
+    e
+}
+
+#[test]
+fn le_code_tva_de_l_emetteur_se_lit_dans_son_matricule() {
+    // algoria-001 : « 2815004Q/A/M/000 », le fournisseur
+    let o: Value = serde_json::from_str(&malica_sudoku::solve(
+        &avec_groupes_et_adresses("algoria-001").to_string(),
+    ))
+    .expect("sortie lisible");
+    let c = &o["champs"]["code_tva_categorie_etablissement"];
+    assert_eq!(
+        (c["valeur"].as_str(), c["statut"].as_str()),
+        (Some("A/M/000"), Some("prouve")),
+        "{c}"
+    );
+}
+
+#[test]
+fn l_adresse_d_une_partie_est_la_ligne_sous_son_nom() {
+    // algoria-001 : sous « Sirvane Store SARL », « Zone commerciale Ezzahra, bloc C, 2034
+    // Ezzahra », puis « Tél: … » ; sous « ALGORIA FACTORY SARL », « 14, rue des Cyprès… »
+    let o: Value = serde_json::from_str(&malica_sudoku::solve(
+        &avec_groupes_et_adresses("algoria-001").to_string(),
+    ))
+    .expect("sortie lisible");
+    assert_eq!(
+        o["champs"]["adresse_emetteur"]["valeur"], "Zone commerciale Ezzahra, bloc C, 2034 Ezzahra",
+        "{}",
+        o["champs"]["adresse_emetteur"]
+    );
+    assert_eq!(
+        o["champs"]["adresse_client"]["valeur"],
+        "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis"
+    );
+    // sans les clés, rien
+    let o: Value = serde_json::from_str(&malica_sudoku::solve(&entree("algoria-001").to_string()))
+        .expect("sortie lisible");
+    assert!(o["champs"]["adresse_emetteur"]["valeur"].is_null());
+}

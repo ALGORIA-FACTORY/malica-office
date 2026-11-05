@@ -596,6 +596,29 @@ mention d'exonération : l'exonération n'était permise que par la mention.
 | banc, sens lu                   | 6 732 |    0 |       0 |        4 005 |     182 |
 | couche de texte, sens déclaré   | 2 124 |    0 |       0 |          671 |       5 |
 
+## Bulletin 18 — la relecture ciblée essayée ; le code TVA et l'adresse des parties (5 novembre 2026)
+
+- **La relecture OCR ciblée n'est pas un levier, avec ce modèle.** Essai sur algoria-018
+  (scan) : chaque mot incertain, puis chaque segment de ligne, relu seul dans sa boîte. Les
+  relectures sont le plus souvent pires (« Cartouche toneror » → « Carouhe sr ») et
+  certaines sont fausses ET sûres (« Arrêtée » → « Arrêté » à 0,81 par caractère) : les
+  rendre aurait créé des faux. Essai retiré, rien n'est livré. Le gain viendrait d'un
+  modèle de reconnaissance plus fort, que ce conteneur ne peut pas télécharger.
+- **Le code TVA, la catégorie et l'établissement de l'émetteur** se lisent dans son
+  matricule (« 2815004Q/A/M/000 » → « A/M/000 ») : la preuve `parties` gagne
+  `groupes_emetteur`, au statut du matricule. 120 cellules jamais lues.
+- **L'adresse d'une partie** est la ligne sous son nom placé, alignée sur son bord gauche,
+  rendue seulement entière (la ligne d'après s'ouvre sur un libellé), portant un numéro,
+  jamais en écriture de droite à gauche. Le premier essai donnait 18 faux (débuts de ligne
+  perdus, « Tel: » collé, adresses arabes, slogans) : les règles ci-dessus les écartent.
+
+|                                 | juste | faux | inventé | à travailler | signalé |
+| ------------------------------- | ----: | ---: | ------: | -----------: | ------: |
+| banc, sens déclaré, bulletin 17 | 7 073 |    0 |       0 |        3 620 |     230 |
+| banc, sens déclaré              | 7 194 |    0 |       0 |        3 479 |     253 |
+| banc, sens lu                   | 6 765 |    0 |       0 |        3 969 |     186 |
+| couche de texte, sens déclaré   | 2 124 |    0 |       0 |          671 |       5 |
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

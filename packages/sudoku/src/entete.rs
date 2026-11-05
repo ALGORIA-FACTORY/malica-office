@@ -105,6 +105,14 @@ pub struct OpParties {
     nom_emetteur: usize,
     nom_client: usize,
     numero: Option<usize>,
+    /// Le champ des groupes qui suivent la lettre de contrôle du matricule de l'émetteur
+    /// (`groupes_emetteur` : le code TVA, la catégorie, l'établissement — « A/M/000 »),
+    /// imprimés DANS ce matricule.
+    groupes_emetteur: Option<usize>,
+    /// Les adresses des parties (`adresse_emetteur`, `adresse_client`) : la ligne imprimée
+    /// sous leur nom, dans leur bloc.
+    adresse_emetteur: Option<usize>,
+    adresse_client: Option<usize>,
 }
 
 fn cle_op(e: &Value, k: &str) -> Option<String> {
@@ -134,12 +142,25 @@ pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpParties, String> {
         Some(_) => Some(champ("numero")?),
         None => None,
     };
+    let groupes_emetteur = match cle_op(e, "groupes_emetteur") {
+        Some(_) => Some(champ("groupes_emetteur")?),
+        None => None,
+    };
+    let facultatif = |k: &str| -> Result<Option<usize>, String> {
+        match cle_op(e, k) {
+            Some(_) => Ok(Some(champ(k)?)),
+            None => Ok(None),
+        }
+    };
     Ok(OpParties {
         emetteur,
         client,
         nom_emetteur: champ("nom_emetteur")?,
         nom_client: champ("nom_client")?,
         numero,
+        groupes_emetteur,
+        adresse_emetteur: facultatif("adresse_emetteur")?,
+        adresse_client: facultatif("adresse_client")?,
     })
 }
 
@@ -1237,6 +1258,82 @@ impl<'a> Page<'a> {
         None
     }
 
+    /// L'adresse imprimée sous un nom, dans son bloc : la ligne qui suit, alignée sur le
+    /// bord gauche du nom, faite de mots (pas d'un libellé). Rendue seulement ENTIÈRE : la
+    /// ligne d'après, dans le bloc, s'ouvre sur un libellé (« Tél : », « MF : ») ou le bloc
+    /// s'arrête — une adresse sur deux lignes ne se rend pas coupée —, et elle porte un
+    /// numéro. Jamais en écriture de droite à gauche. Banc sans IA du 5 novembre 2026 : 240
+    /// adresses muettes ; 18 faux au premier essai (débuts de ligne, « Tel: » collé,
+    /// adresses arabes, slogans), écartés par ces règles.
+    fn adresse_sous(&self, nom: &[usize]) -> Option<Vec<usize>> {
+        let premier = *nom.first()?;
+        if self.vers_la_gauche(nom) {
+            return None;
+        }
+        let a = &self.j[premier];
+        let x0 = nom.iter().map(|&t| self.j[t].x0).fold(f64::MAX, f64::min);
+        let y1 = nom.iter().map(|&t| self.j[t].y1).fold(f64::MIN, f64::max);
+        let h = self.h(premier);
+        // la ligne du bloc sous `y`, alignée sur `x0` : ses mots contigus
+        let ligne_sous = |y: f64| -> Option<Vec<usize>> {
+            let rg = self.rangs.iter().find(|rg| {
+                let b = &self.j[rg[0]];
+                b.page == a.page && b.y0 >= y - 0.25 * h
+            })?;
+            if self.j[rg[0]].y0 - y > DESSUS * h {
+                return None;
+            }
+            let k0 = rg
+                .iter()
+                .position(|&t| (self.j[t].x0 - x0).abs() <= MARGE)?;
+            // le début d'un segment : aucun mot collé à sa gauche
+            if k0 > 0 && self.ecart(rg[k0 - 1], rg[k0]) <= ECART_SEGMENT * self.h(rg[k0]) {
+                return None;
+            }
+            let mut pris = vec![rg[k0]];
+            for w in rg[k0..].windows(2) {
+                if self.ecart(w[0], w[1]) > ECART_SEGMENT * self.h(w[0]) {
+                    break;
+                }
+                pris.push(w[1]);
+            }
+            // une seule ligne imprimée : les mots à la même hauteur
+            let y = self.j[pris[0]].y0;
+            if pris.iter().any(|&t| (self.j[t].y0 - y).abs() > 0.3 * h) {
+                return None;
+            }
+            Some(pris)
+        };
+        // un libellé n'importe où dans la ligne (« … Tunis Tel: 00 71 … »)
+        let libelle = |l: &[usize]| {
+            l.iter()
+                .any(|&t| self.etiquette(t, "").is_some() || self.j[t].texte.contains(':'))
+        };
+        let adresse = ligne_sous(y1)?;
+        // une écriture de droite à gauche se lit dans l'ordre de son bloc, pas ici
+        if adresse.iter().any(|&t| self.j[t].texte.chars().any(|c| ('\u{0600}'..='\u{06FF}').contains(&c)))
+            || libelle(&adresse)
+            || !adresse
+                .iter()
+                .any(|&t| self.j[t].texte.chars().any(char::is_alphabetic))
+            // une adresse porte un numéro (de rue, le code postal) : « Sahloul », seul, est la
+            // fin d'une adresse coupée ; « I A S O U V E R A I N E », un slogan
+            || !adresse
+                .iter()
+                .any(|&t| self.j[t].texte.chars().any(|c| c.is_ascii_digit()))
+        {
+            return None;
+        }
+        let fin = adresse
+            .iter()
+            .map(|&t| self.j[t].y1)
+            .fold(f64::MIN, f64::max);
+        match ligne_sous(fin) {
+            Some(suite) if !libelle(&suite) => None,
+            _ => Some(adresse),
+        }
+    }
+
     /// Le nom qui finit par la forme juridique `rang[k]` : les mots à sa gauche, une
     /// ponctuation sautée au plus, jusqu'à un blanc, une ponctuation ou une autre forme.
     fn nom_a_forme(
@@ -1904,6 +2001,52 @@ pub fn prouver(
     ] {
         if let Some(v) = v {
             champs.insert(grille.champs[c].code.clone(), champ_de(v));
+            lus.push((c, v.valeur.clone()));
+        }
+    }
+    // Les groupes du matricule de l'émetteur (« 2815004Q/A/M/000 » → « A/M/000 ») : le
+    // noyau (la longueur de la règle de la lettre), la lettre s'il y en a une, un séparateur.
+    if let (Some(c), Some(m), Some(ctl)) =
+        (op.groupes_emetteur, emetteur.matricule.as_ref(), controle)
+    {
+        let mut reste = m.valeur.chars().skip(ctl.poids.len()).peekable();
+        reste.next_if(|c| c.is_alphabetic());
+        if reste.next().is_some_and(|c| !c.is_alphanumeric()) {
+            let groupes: String = reste.collect();
+            if !groupes.is_empty() {
+                champs.insert(
+                    grille.champs[c].code.clone(),
+                    ChampSortie {
+                        valeur: Some(groupes.clone()),
+                        refs: m.refs.clone(),
+                        statut: m.statut.clone(),
+                        instances: None,
+                    },
+                );
+                lus.push((c, groupes));
+            }
+        }
+    }
+    // Les adresses, sous les noms placés.
+    for (c, nom) in [
+        (op.adresse_emetteur, &emetteur.nom),
+        (op.adresse_client, &client.nom),
+    ] {
+        let (Some(c), Some(nom)) = (c, nom) else {
+            continue;
+        };
+        let jetons: Vec<usize> = nom
+            .refs
+            .iter()
+            .filter_map(|r| {
+                page.j
+                    .iter()
+                    .position(|j| j.page == r.page && j.ordinal == r.ordinal)
+            })
+            .collect();
+        if let Some(a) = page.adresse_sous(&jetons) {
+            let v = valeur(&page, &a, page.texte(&a), "conforme");
+            champs.insert(grille.champs[c].code.clone(), champ_de(&v));
             lus.push((c, v.valeur.clone()));
         }
     }
