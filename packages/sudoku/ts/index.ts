@@ -219,9 +219,11 @@ export interface Cite {
   readonly refs: readonly RefDeJeton[];
   /**
    * « deduit » : trouvée par le calcul du tableau, pas lue ; « coupe » : lue dans
-   * un jeton où l'OCR a collé deux cases, à la coupe `coupe` ; absente, elle est lue.
+   * un jeton où l'OCR a collé deux cases, à la coupe `coupe` ; « incertain » : une
+   * désignation dont un caractère est lu sans assurance, montrée non vérifiée ; absente,
+   * elle est lue.
    */
-  readonly statut?: "lu" | "deduit" | "coupe";
+  readonly statut?: "lu" | "deduit" | "coupe" | "incertain";
   /** Pour une cellule « coupe » : la coupe retenue parmi les `decoupes` du jeton. */
   readonly coupe?: number;
   /** Pour une cellule déduite : là où elle devrait être imprimée (relecture ciblée). */
@@ -275,6 +277,12 @@ export interface SortieDuSudoku {
     readonly deduites?: number;
     /** La remise globale lue qui ferme les lignes sur le total HT, quand le total brut n'est pas prouvé. */
     readonly remise_globale?: Cite | null;
+    /**
+     * Des lignes lues SANS preuve (`statut` « signale ») : chacune a-t-elle sa désignation,
+     * sa quantité, son prix et son montant ? Décision du 5 novembre 2026 : elles se montrent
+     * « lu, non vérifié », la lecture de nuit les reprend.
+     */
+    readonly complet?: boolean;
   } | null;
   /**
    * `signalee` : une seule affectation ferme l'arithmétique, mais une preuve de

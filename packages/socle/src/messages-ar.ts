@@ -1567,6 +1567,7 @@ export const ar: Dict = {
   "cab.lecteur.statut.prouve": "مُثبَت",
   "cab.lecteur.statut.conforme": "مطابق",
   "cab.lecteur.statut.signale": "مُنبَّه عليه",
+  "cab.lecteur.statut.signale_ligne": "مقروء، للتحقق",
   "cab.lecteur.statut.absent": "غائب",
   "cab.lecteur.statut.deduit": "مُستنتَج",
   "cab.lecteur.statut.coupe": "مُجزَّأ",

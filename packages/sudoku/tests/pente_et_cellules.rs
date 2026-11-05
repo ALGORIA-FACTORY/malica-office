@@ -27,7 +27,13 @@ fn lues(id: &str) -> (Vec<Option<String>>, Vec<String>) {
         .as_array()
         .expect("lignes")
         .iter()
-        .map(|l| l["designation"]["valeur"].as_str().map(str::to_string))
+        // une désignation `incertaine` est montrée, non vérifiée : elle ne compte pas lue
+        .map(|l| {
+            l["designation"]["valeur"]
+                .as_str()
+                .filter(|_| l["designation"]["statut"] != "incertain")
+                .map(str::to_string)
+        })
         .collect();
     let vraies = c["designations"]
         .as_array()

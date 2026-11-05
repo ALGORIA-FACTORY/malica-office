@@ -1660,6 +1660,7 @@ export const fr = {
   "cab.lecteur.statut.prouve": "Prouvé",
   "cab.lecteur.statut.conforme": "Conforme",
   "cab.lecteur.statut.signale": "Signalé",
+  "cab.lecteur.statut.signale_ligne": "Lu, à vérifier",
   "cab.lecteur.statut.absent": "Absent",
   "cab.lecteur.statut.deduit": "Déduit",
   "cab.lecteur.statut.coupe": "Coupé",

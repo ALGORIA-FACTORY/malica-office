@@ -904,10 +904,13 @@ export function champsLusAInscrire(
         // la valeur n'est pas tout le texte du jeton.
         const deduite = c.statut === "deduit";
         const coupee = c.statut === "coupe";
+        // Une désignation INCERTAINE, ou une ligne lue sans preuve : signalée, « lu, non
+        // vérifié » (décision du 5 novembre 2026) — jamais inscrite comme prouvée.
+        const nonVerifiee = c.statut === "incertain" || lignes.statut === "signale";
         champs.push(
           ligne(
             champDe(cle),
-            deduite || coupee ? c.statut! : lignes.statut,
+            deduite || coupee ? c.statut! : nonVerifiee ? "signale" : lignes.statut,
             c.valeur,
             deduite && c.case
               ? [{ case: c.case }]

@@ -1596,6 +1596,7 @@ export const en: Dict = {
   "cab.lecteur.statut.prouve": "Proven",
   "cab.lecteur.statut.conforme": "Conforming",
   "cab.lecteur.statut.signale": "Flagged",
+  "cab.lecteur.statut.signale_ligne": "Read, to check",
   "cab.lecteur.statut.absent": "Missing",
   "cab.lecteur.statut.deduit": "Inferred",
   "cab.lecteur.statut.coupe": "Split",

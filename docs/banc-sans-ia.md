@@ -619,6 +619,31 @@ mention d'exonération : l'exonération n'était permise que par la mention.
 | banc, sens lu                   | 6 765 |    0 |       0 |        3 969 |     186 |
 | couche de texte, sens déclaré   | 2 124 |    0 |       0 |          671 |       5 |
 
+## Bulletin 19 — la prise de vue contrôlée ; les lignes « lu, non vérifié » (5 novembre 2026)
+
+Deux décisions du dirigeant du 5 novembre 2026.
+
+- **Le contrôle de la prise de vue, sur l'appareil.** L'analyse en direct mesurait la
+  netteté et la taille du document. Elle mesure aussi, DANS le document : le niveau du
+  papier (trop sombre : refus), le rapport des côtés opposés (pris trop de biais : refus) et
+  l'égalité de la lumière entre ses quarts (une ombre : conseil, la prise reste permise).
+  Seuils larges : les 96 photos et scans du jeu passent ; le calibrage sur de vraies photos
+  de téléphone reste à faire.
+- **Les lignes que la somme ne prouve pas se montrent, signalées.** Elles étaient tues.
+  Chaque rangée qui ferme q × p = m d'une seule façon est rendue au statut `signale`
+  (« Lu, à vérifier » à l'écran), avec `complet` : chaque ligne a-t-elle sa désignation, sa
+  quantité, son prix et son montant, sans rangée chiffrée laissée de côté ? Une
+  désignation lue sans assurance se montre aussi, au statut `incertain`. Rien n'en est
+  affirmé ; la lecture de nuit les reprendra. Sur le banc : 811 cellules de lignes passent
+  du silence au signalé — 366 justes, 445 fausses. C'est pourquoi elles restent à vérifier.
+
+|                                 | juste | faux | inventé | à travailler | signalé |
+| ------------------------------- | ----: | ---: | ------: | -----------: | ------: |
+| banc, sens déclaré, bulletin 18 | 7 194 |    0 |       0 |        3 479 |     253 |
+| banc, sens déclaré              | 7 194 |    0 |       0 |        2 934 |   1 064 |
+| banc, sens lu                   | 6 765 |    0 |       0 |        3 424 |     997 |
+| couche de texte, sens déclaré   | 2 124 |    0 |       0 |          457 |     238 |
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

@@ -83,7 +83,11 @@ fn rien_de_faux_selon(c: &Cas, deduites: bool) -> (usize, usize) {
                 .unwrap_or_else(|| panic!("{cle} rendu, absent de la vérité : {l}"));
             assert_eq!(lu, mineures(vraie), "{cle} : {l}");
         }
-        if let Some(d) = l["designation"]["valeur"].as_str() {
+        // une désignation `incertaine` est montrée, non vérifiée : rien n'en est affirmé
+        if let Some(d) = l["designation"]["valeur"]
+            .as_str()
+            .filter(|_| l["designation"]["statut"] != "incertain")
+        {
             assert_eq!(
                 texte(d),
                 texte(v["designation"].as_str().expect("désignation")),
@@ -178,8 +182,9 @@ fn un_caractere_lu_sans_assurance_tait_la_designation() {
     // sans seuil au caractère, rien ne change
     entree["pack"]["confiance_du_caractere"] = Value::Null;
     assert!(designation(&entree).is_object());
+    // décision du 5 novembre 2026 : elle se montre, « incertaine », non vérifiée
     entree["pack"]["confiance_du_caractere"] = serde_json::json!(0.8);
-    assert!(designation(&entree).is_null());
+    assert_eq!(designation(&entree)["statut"], "incertain");
 }
 
 #[test]
@@ -194,9 +199,11 @@ fn deux_montants_empiles_dans_une_rangee_sont_deux_lignes() {
     for m in ["134454", "36555"] {
         assert!(lues.iter().any(|l| l["montant"]["valeur"] == m), "{m}");
     }
-    // la ligne de livraison de l'article d'avant n'est pas la tête de la désignation
+    // la ligne de livraison de l'article d'avant n'est pas la tête d'une désignation rendue
+    // (une désignation `incertaine` se montre non vérifiée : rien n'en est affirmé)
     assert!(lues
         .iter()
+        .filter(|l| l["designation"]["statut"] != "incertain")
         .filter_map(|l| l["designation"]["valeur"].as_str())
         .all(|d| !d.starts_with("D1")));
 }
@@ -243,5 +250,35 @@ fn une_lettre_perdue_tait_la_designation() {
         "zéro : rien ne se lit au manque"
     );
     entree["pack"]["manque_du_caractere"] = serde_json::json!(0.15);
-    assert!(designation(&entree).is_null());
+    assert_eq!(designation(&entree)["statut"], "incertain");
+}
+
+#[test]
+fn des_lignes_lues_sans_preuve_se_montrent_signalees_et_dites_completes() {
+    // algoria-053 : cinq lignes arabes, chacune q × p = m, que la somme ne prouve pas.
+    // Décision du dirigeant (5 novembre 2026) : elles se montrent « lu, non vérifié ».
+    let c = cas("algoria-053");
+    let l = &c.sortie["lignes"];
+    assert_eq!(l["statut"], "signale", "{l}");
+    assert_eq!(l["complet"], true);
+    let lues = l["instances"].as_array().expect("instances");
+    assert_eq!(lues.len(), 5);
+    assert!(lues.iter().all(|x| x["montant"]["valeur"].is_string()));
+    // une ligne sans désignation : tout n'est pas lu
+    let mut entree = c.entree.clone();
+    let premiere = lues[0]["designation"]["refs"]
+        .as_array()
+        .expect("refs")
+        .clone();
+    for j in entree["jetons"].as_array_mut().expect("jetons") {
+        if premiere
+            .iter()
+            .any(|r| r["page"] == j["page"] && r["ordinal"] == j["ordinal"])
+        {
+            j["texte"] = serde_json::json!("");
+        }
+    }
+    let l = &resoudre(&entree)["lignes"];
+    assert_eq!(l["statut"], "signale", "{l}");
+    assert_eq!(l["complet"], false, "{l}");
 }

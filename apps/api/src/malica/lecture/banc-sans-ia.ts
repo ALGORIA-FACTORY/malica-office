@@ -381,8 +381,29 @@ function mesurerLesRangees(
   const lues = sortie.lignes?.instances ?? [];
   const out: MesureDuChamp[] = [];
   const n = Math.max(lues.length, vraies.length);
-  const cellule = (champ: string, attendu: unknown, lu: string | null, juste: boolean) => {
+  // Des lignes lues sans preuve se montrent « lu, non vérifié » : signalées, comme une
+  // désignation incertaine. Le banc dit si elles étaient justes (`signaleFaux`).
+  const sansPreuve = sortie.lignes?.statut === "signale";
+  const cellule = (
+    champ: string,
+    attendu: unknown,
+    lu: string | null,
+    juste: boolean,
+    signalee = sansPreuve,
+  ) => {
     const imprime = attendu !== undefined && attendu !== null;
+    if (signalee && lu !== null) {
+      out.push({
+        champ: `lignes.${champ}`,
+        expert: "lignes",
+        type: "ligne",
+        issue: "signale",
+        attendu,
+        lu,
+        signaleFaux: !imprime || !juste,
+      });
+      return;
+    }
     const issue: Issue | null = imprime
       ? lu === null
         ? "silence"
@@ -447,6 +468,7 @@ function mesurerLesRangees(
       v.designation,
       d,
       d !== null && (sansEspace(d) === vraie || sansEspace(d) === visuelle),
+      sansPreuve || l?.designation?.statut === "incertain",
     );
   }
   return out;

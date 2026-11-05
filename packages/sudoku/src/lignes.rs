@@ -44,8 +44,9 @@ const PLAFOND_COMBINAISONS: u64 = 100_000;
 pub struct Cite {
     pub valeur: String,
     pub refs: Vec<RefJeton>,
-    /// `lu` (la valeur est celle du jeton cité) ou `deduit` (aucun jeton : la valeur est
-    /// déduite de la rangée et de la somme). Rendu par la lecture du milieu seulement ;
+    /// `lu` (la valeur est celle du jeton cité), `deduit` (aucun jeton : la valeur est
+    /// déduite de la rangée et de la somme) ou `incertain` (une désignation dont un
+    /// caractère est lu sans assurance : montrée, non vérifiée). Rendu par la lecture du milieu seulement ;
     /// absent, la cellule est lue.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub statut: Option<&'static str>,
@@ -118,6 +119,10 @@ pub struct LignesSortie {
     /// elle qui ferme le tableau : sa valeur (positive) et le jeton qui la porte.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub remise_globale: Option<Cite>,
+    /// Des lignes lues SANS preuve (statut `signale`) : chacune a-t-elle sa désignation, sa
+    /// quantité, son prix et son montant, sans rangée ambiguë laissée de côté ?
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub complet: Option<bool>,
 }
 
 /// L'op lue dans la grille.
@@ -1295,6 +1300,7 @@ pub fn prouver(
         taux_par_base: "non_evaluable".into(),
         deduites: None,
         remise_globale: None,
+        complet: None,
     };
 
     let droits = redresses(&entree.jetons);
@@ -1326,6 +1332,22 @@ pub fn prouver(
         .flatten()
         .filter_map(|c| prouvee(champs, c))
         .collect();
+    // Les rangées LUES, sans preuve : chacune ferme q × p = m d'une seule façon. Décision
+    // du dirigeant (5 novembre 2026) : les lignes qu'aucune somme ne prouve se montrent
+    // telles que l'OCR rapide les lit, SIGNALÉES (« lu, non vérifié ») ; la lecture de nuit
+    // les reprend. Rien n'en est affirmé.
+    let lues_sans_preuve = |candidates: &[(usize, Vec<Triplet>)]| -> milieu::Lu {
+        milieu::Lu {
+            instances: candidates
+                .iter()
+                .filter(|(_, ts)| ts.len() == 1)
+                .map(|(ri, ts)| ctx.sortie(&rangs[*ri], &ts[0], op.avec_taux))
+                .collect(),
+            deduites: 0,
+            remise_globale: None,
+        }
+    };
+    let mut verdict = "verifiee";
     let lu = if candidates.is_empty() {
         // aucune rangée q × p = m : seule une graine ancrée par l'en-tête peut lire le tableau
         let r = if cibles.is_empty() {
@@ -1338,8 +1360,10 @@ pub fn prouver(
             None => return (vide("absent"), "non_evaluable"),
         }
     } else if cibles.is_empty() {
-        return (vide("signale"), "non_evaluable");
+        verdict = "non_evaluable";
+        lues_sans_preuve(&candidates)
     } else {
+        let lues = lues_sans_preuve(&candidates);
         match toujours(&ctx, op, &rangs, candidates, &cibles) {
             Ok(instances) => milieu::Lu {
                 instances,
@@ -1349,10 +1373,14 @@ pub fn prouver(
             // la stratégie de toujours ne prouve pas : la lecture du milieu, sinon son verdict
             Err(st) => match milieu::prouver(&ctx, op, &entree.grille, &rangs, &cibles) {
                 Some(r) => r,
-                None => return (vide("signale"), st),
+                None => {
+                    verdict = st;
+                    lues
+                }
             },
         }
     };
+    let prouvees = verdict == "verifiee";
     let milieu::Lu {
         mut instances,
         deduites,
@@ -1377,14 +1405,75 @@ pub fn prouver(
         .filter(|j| j.incertain(pack))
         .map(|j| (j.page, j.ordinal))
         .collect();
+    // Décision du dirigeant (5 novembre 2026) : la désignation incertaine se MONTRE, au
+    // statut `incertain` (« lu, non vérifié ») ; elle n'est jamais rendue comme lue.
     for l in instances.iter_mut() {
-        if l.designation.as_ref().is_some_and(|d| {
-            d.refs
+        if let Some(d) = l.designation.as_mut() {
+            if d.refs
                 .iter()
                 .any(|r| incertains.contains(&(r.page, r.ordinal)))
-        }) {
-            l.designation = None;
+            {
+                d.statut = Some("incertain");
+            }
         }
+    }
+    if !prouvees {
+        if instances.is_empty() {
+            return (vide("signale"), verdict);
+        }
+        // Tout est-il lu ? Chaque ligne a sa désignation, sa quantité, son prix et son
+        // montant ; et, de la première à la dernière ligne lue (à une rangée près), aucune
+        // rangée qui porte deux montants n'a été laissée de côté (un chiffre perdu, des
+        // triplets ambigus). Au doute, `complet` est faux : il ne dit jamais plus que lu.
+        let cites: BTreeSet<(u32, u32)> = instances
+            .iter()
+            .flat_map(|l| l.montant.refs.iter().map(|r| (r.page, r.ordinal)))
+            .collect();
+        let mut ys: Vec<f64> = instances
+            .iter()
+            .flat_map(|l| l.montant.refs.iter())
+            .filter_map(|r| {
+                droits
+                    .iter()
+                    .find(|j| j.page == r.page && j.ordinal == r.ordinal)
+                    .map(|j| j.y0)
+            })
+            .collect();
+        ys.sort_by(f64::total_cmp);
+        // une rangée de plus au-dessus et au-dessous : le pas médian entre deux lignes lues
+        let mut pas: Vec<f64> = ys.windows(2).map(|w| w[1] - w[0]).collect();
+        pas.sort_by(f64::total_cmp);
+        let pas = pas.get(pas.len() / 2).copied().unwrap_or(0.03);
+        let (haut, bas) = (
+            ys.first().copied().unwrap_or(0.0) - 1.2 * pas,
+            ys.last().copied().unwrap_or(0.0) + 1.2 * pas,
+        );
+        let laissee = rangs.iter().any(|r| {
+            let y = droits[r[0]].y0;
+            let montants = r
+                .iter()
+                .filter(|&&k| droits[k].montants.iter().any(|m| m.forte))
+                .count();
+            y >= haut
+                && y <= bas
+                && montants >= 2
+                && !r
+                    .iter()
+                    .any(|&k| cites.contains(&(droits[k].page, droits[k].ordinal)))
+        });
+        let complet = !laissee
+            && instances
+                .iter()
+                .all(|l| l.designation.is_some() && l.quantite.is_some() && l.prix.is_some());
+        let sortie = LignesSortie {
+            statut: "signale".into(),
+            instances,
+            taux_par_base: "non_evaluable".into(),
+            deduites: None,
+            remise_globale: None,
+            complet: Some(complet),
+        };
+        return (sortie, verdict);
     }
     let nuls = op
         .bareme
@@ -1399,6 +1488,7 @@ pub fn prouver(
         taux_par_base: taux_par_base.into(),
         deduites: (deduites > 0).then_some(deduites),
         remise_globale,
+        complet: None,
     };
     (sortie, "verifiee")
 }
