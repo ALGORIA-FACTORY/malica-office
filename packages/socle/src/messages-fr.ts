@@ -3483,6 +3483,12 @@ export const fr = {
   "scan.hint.searching": "Cadrez la facture entière dans l'écran.",
   "scan.hint.closer": "Approchez : le document occupe trop peu de place.",
   "scan.hint.blurry": "Stabilisez l'appareil : l'image est floue.",
+  "scan.hint.oblique": "Mettez-vous face au document : il est pris trop de biais.",
+  "scan.hint.dark": "Trop sombre : rapprochez-vous d'une source de lumière.",
+  "scan.hint.ombre":
+    "Ne bougez plus — une ombre tombe sur le document : écartez-la si vous pouvez.",
+  "scan.reject.dark": "Photo refusée : trop sombre. Éclairez la page et reprenez.",
+  "scan.reject.oblique": "Photo refusée : prise trop de biais. Placez-vous face à la page.",
   "scan.hint.blank": "Page vierge : le document est terminé.",
   "scan.cam.contexte_non_securise":
     "Le cadrage assisté demande une connexion sécurisée, que cette adresse n'a pas. Votre caméra fonctionne : passez par l'appareil photo, la photo sera la même.",

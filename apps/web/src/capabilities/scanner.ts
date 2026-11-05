@@ -53,6 +53,30 @@ export const PAGE_BYTES_BUDGET = 340_000;
 
 /** Netteté minimale acceptée (variance du laplacien normalisée). */
 export const SHARPNESS_MIN = 0.0022;
+
+/*
+ * ============================================ LA LUMIÈRE ET L'ANGLE (5 novembre 2026)
+ *
+ * La netteté et la taille ne suffisent pas : sur le banc sans IA, les lignes des photos
+ * se taisent parce que l'OCR les lit mal, et une photo prise dans la pénombre ou très de
+ * biais se lit mal même nette. Trois mesures de plus, prises DANS le document :
+ *
+ *   CLARTE_MIN     le niveau du papier (90e centile de la luminance : le papier, pas
+ *                  l'encre) ; au-dessous, la page est trop sombre — refus.
+ *   OBLIQUITE_MIN  le plus petit rapport entre côtés opposés du document ; au-dessous,
+ *                  la photo est prise trop de biais : le bord lointain perd sa
+ *                  définition, le redressement ne la lui rend pas — refus.
+ *   OMBRE_MAX      l'écart du niveau du papier entre les quarts du document ; au-delà,
+ *                  une ombre ou un éclairage inégal — CONSEIL seulement, la prise reste
+ *                  permise (la normalisation de `preparePage` en corrige une part).
+ *
+ * Calibrage : les 96 photos et scans du jeu d'ALGORIA (papier au 90e centile ≥ 188,
+ * quarts dans un rapport ≥ 0,90) passent tous. Les seuils sont larges exprès : un refus
+ * à tort coûte une prise ; une photo illisible acceptée coûte des lignes muettes.
+ */
+export const CLARTE_MIN = 90;
+export const OBLIQUITE_MIN = 0.6;
+export const OMBRE_MAX = 0.6;
 /** Part d'encre au-dessous de laquelle une page est considérée vierge. */
 const BLANK_INK_MAX = 0.012;
 
@@ -644,8 +668,14 @@ export interface FrameAnalysis {
   blank: boolean;
   /** Petit côté du document, en pixels de la photo d'origine. */
   petitCotePx: number;
+  /** Le niveau du papier dans le document (90e centile de la luminance, 0..255). */
+  clarte: number;
+  /** Le plus petit rapport entre côtés opposés du document (1 : pris de face). */
+  obliquite: number;
+  /** Une ombre ou un éclairage inégal sur le document : un conseil, pas un refus. */
+  ombre: boolean;
   ok: boolean;
-  reason: "ok" | "no_document" | "too_small" | "blurry";
+  reason: "ok" | "no_document" | "too_small" | "oblique" | "too_dark" | "blurry";
 }
 
 function quadArea(quad: readonly Point[]): number {
@@ -668,6 +698,43 @@ function cotesDuQuad(quad: readonly Point[]): { court: number; long: number } {
   const largeur = Math.max(haut, bas);
   const hauteur = Math.max(gauche, droite);
   return { court: Math.min(largeur, hauteur), long: Math.max(largeur, hauteur) };
+}
+
+/** Le rapport le plus petit entre côtés opposés : 1 de face, moins de biais. */
+function obliquiteDuQuad(quad: readonly Point[]): number {
+  const d = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
+  const rapport = (a: number, b: number) =>
+    Math.max(a, b) > 0 ? Math.min(a, b) / Math.max(a, b) : 1;
+  return Math.min(
+    rapport(d(quad[0]!, quad[1]!), d(quad[3]!, quad[2]!)),
+    rapport(d(quad[0]!, quad[3]!), d(quad[1]!, quad[2]!)),
+  );
+}
+
+/** Le 90e centile d'une zone de luminance : le niveau du papier, pas celui de l'encre. */
+function niveauDuPapier(
+  gray: Uint8ClampedArray,
+  w: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): number {
+  const hist = new Uint32Array(256);
+  let n = 0;
+  for (let y = y0; y < y1; y += 1) {
+    for (let x = x0; x < x1; x += 1) {
+      hist[gray[y * w + x]!] = hist[gray[y * w + x]!]! + 1;
+      n += 1;
+    }
+  }
+  if (n === 0) return 0;
+  let cumul = 0;
+  for (let v = 0; v < 256; v += 1) {
+    cumul += hist[v]!;
+    if (cumul >= 0.9 * n) return v;
+  }
+  return 255;
 }
 
 /** Recadrage rectangulaire de la luminance sur l'emprise du quadrilatère. */
@@ -743,9 +810,26 @@ export function analyzeFrame(
     sourceGrandCotePx && grandCoteAnalyse > 0 ? sourceGrandCotePx / grandCoteAnalyse : 1;
   const petitCotePx = quad ? cotesDuQuad(quad).court * echelle : 0;
 
+  // La lumière, mesurée sur le papier du document (ou de l'image, sans document) ; et
+  // l'angle, sur ses côtés.
+  const z = zone ?? { gray, w: data.width, h: data.height };
+  const clarte = niveauDuPapier(z.gray, z.w, 0, 0, z.w, z.h);
+  const mx = Math.floor(z.w / 2);
+  const my = Math.floor(z.h / 2);
+  const quarts = [
+    niveauDuPapier(z.gray, z.w, 0, 0, mx, my),
+    niveauDuPapier(z.gray, z.w, mx, 0, z.w, my),
+    niveauDuPapier(z.gray, z.w, 0, my, mx, z.h),
+    niveauDuPapier(z.gray, z.w, mx, my, z.w, z.h),
+  ];
+  const ombre = Math.max(...quarts) > 0 && Math.min(...quarts) / Math.max(...quarts) < OMBRE_MAX;
+  const obliquite = quad ? obliquiteDuQuad(quad) : 1;
+
   let reason: FrameAnalysis["reason"] = "ok";
   if (!quad) reason = "no_document";
   else if (petitCotePx < PETIT_COTE_MIN_PX) reason = "too_small";
+  else if (obliquite < OBLIQUITE_MIN) reason = "oblique";
+  else if (clarte < CLARTE_MIN) reason = "too_dark";
   else if (sharp < SHARPNESS_MIN) reason = "blurry";
   return {
     quad,
@@ -754,6 +838,9 @@ export function analyzeFrame(
     inkRatio: ink,
     blank,
     petitCotePx,
+    clarte,
+    obliquite,
+    ombre,
     ok: reason === "ok",
     reason,
   };

@@ -3395,6 +3395,11 @@ export const en: Dict = {
   "scan.hint.searching": "Fit the whole invoice in the frame.",
   "scan.hint.closer": "Move closer: the document is too small.",
   "scan.hint.blurry": "Hold steady: the image is blurry.",
+  "scan.hint.oblique": "Face the document: the angle is too steep.",
+  "scan.hint.dark": "Too dark: move closer to a light source.",
+  "scan.hint.ombre": "Hold still — a shadow falls on the document: move it away if you can.",
+  "scan.reject.dark": "Photo rejected: too dark. Light the page and retake.",
+  "scan.reject.oblique": "Photo rejected: taken at too steep an angle. Face the page.",
   "scan.hint.blank": "Blank page: the document is complete.",
   "scan.cam.contexte_non_securise":
     "Guided framing needs a secure connection, which this address does not have. Your camera works fine: use the photo app, the picture will be the same.",
