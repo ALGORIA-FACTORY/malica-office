@@ -11,6 +11,8 @@
  * sections. Donc éprouvable, et rapide.
  */
 import { montantLisible } from "@malica/socle/montant-lisible";
+
+import { datesEnLettres } from "../conseil/redaction.ts";
 import { z } from "zod";
 
 const Sections = z.object({
@@ -48,9 +50,6 @@ export function lireSections(reponse: string): SectionsRedigees | null {
   return lu.success ? lu.data.sections : null;
 }
 
-/** Une date ISO du texte (« 2026-11-30 »), bornée : ni dans un nombre, ni dans un identifiant. */
-const DATE_ISO = /(?<![\d-])(\d{4}-\d{2}-\d{2})(?![\d-])/g;
-
 /**
  * Le texte relu, mis dans la langue du lecteur — après la relecture, jamais
  * avant.
@@ -79,17 +78,8 @@ export function misEnForme(
         .flatMap((c) => [c.valeur, c.valeur.replace(/^-/, "")]),
     ),
   ].sort((a, b) => b.length - a.length);
-  const jour = new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
   const formater = (texte: string) => {
-    let rendu = texte.replace(DATE_ISO, (iso) => {
-      const d = new Date(`${iso}T00:00:00Z`);
-      return Number.isNaN(d.getTime()) ? iso : jour.format(d);
-    });
+    let rendu = datesEnLettres(texte, locale);
     for (const valeur of montants) {
       const echappee = valeur.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
       rendu = rendu.replace(

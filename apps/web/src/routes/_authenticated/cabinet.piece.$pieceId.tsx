@@ -1293,7 +1293,8 @@ function EcritureDuReglement({
   return (
     <div className="mt-2 border-s-2 border-border ps-2.5">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        {t("cab.review.reglement")} · {r.ecriture.journal} · {r.ecriture.dateEcriture}
+        {t("cab.review.reglement")} · {r.ecriture.journal} ·{" "}
+        {dateEnChiffres(r.ecriture.dateEcriture, locale)}
       </p>
       <p className="mt-0.5 text-[11.5px] text-muted-foreground">{r.ecriture.libelle}</p>
       {!r.inscrite &&
