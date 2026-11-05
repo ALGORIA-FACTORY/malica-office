@@ -19,6 +19,7 @@ import {
   MoonStar,
   Receipt,
   Send,
+  ShieldCheck,
   Store,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import type { ComponentType } from "react";
 import type { MessageKey } from "@/i18n";
 
 import { ReglerLAbonnement } from "./abonnement";
+import { LAccesTotal } from "./acces-total";
 import { LeCalendrierFiscal } from "./calendrier-fiscal";
 import { DesignerLEmetteur } from "./emetteur";
 import { LaFacturationAutomatique } from "./facturation-automatique";
@@ -61,6 +63,7 @@ export const SECTIONS = {
     cartes: [LeCalendrierFiscal],
   },
   licences: { libelle: "tour.menu.licences", icone: BadgeCheck, cartes: [LesLicences] },
+  acces: { libelle: "tour.menu.acces", icone: ShieldCheck, cartes: [LAccesTotal] },
   nuit: { libelle: "tour.menu.nuit", icone: MoonStar, cartes: [LaPasseDeNuit] },
   modeles: { libelle: "tour.menu.modeles", icone: Gauge, cartes: [ReglerLePlafondIa] },
   compte: { libelle: "tour.menu.compte", icone: KeyRound, cartes: [LeCompteDeService] },
@@ -112,6 +115,7 @@ export const MENU: ReadonlyArray<{ cle: string; libelle: MessageKey; entrees: En
         "relances",
         "calendrier",
         "licences",
+        "acces",
       ] as const
     ).map(deSection),
   },

@@ -502,6 +502,37 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /**
+   * Qui a l'accès total à toutes les organisations (décision du 5 novembre
+   * 2026) : depuis quand, pourquoi, et qui l'a donné.
+   */
+  async accesTotal(db: Requete) {
+    const { rows } = await db.query(
+      // `depuis` reste un instant : il part en ISO 8601, que tout navigateur lit.
+      `select user_id, email, nom, depuis, motif, par_email, operateur
+         from plateforme.acces_total_en_vigueur()`,
+    );
+    return rows;
+  },
+
+  /** Accorder l'accès total à un autre opérateur, motif à l'appui : journalisé. */
+  async accorderAccesTotal(db: Requete, email: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.acces_total_accorder($1, $2) as r`,
+      [email, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** Retirer l'accès total, motif à l'appui : journalisé, en ajout seul. */
+  async retirerAccesTotal(db: Requete, personne: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.acces_total_retirer($1, $2) as r`,
+      [personne, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   async chercherOrganisations(db: Requete, texte: string) {
     const { rows } = await db.query(
       `select organisation_id, nom, matricule, juridiction, devise

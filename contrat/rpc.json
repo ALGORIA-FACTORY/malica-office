@@ -345,6 +345,8 @@
     "modifier"
   ],
   "tour": [
+    "accesTotal",
+    "accorderAccesTotal",
     "accorderLectures",
     "archiverOrganisation",
     "calendrier",
@@ -376,6 +378,7 @@
     "reglerRelectureNuit",
     "relecturesDeNuit",
     "reprendre",
+    "retirerAccesTotal",
     "retirerJourFerie",
     "retirerReportPublie",
     "suisJePlateforme",

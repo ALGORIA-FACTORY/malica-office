@@ -3637,6 +3637,25 @@ export const fr = {
   "tour.menu.modeles": "Plafond des modèles",
   "tour.menu.compte": "Compte de service",
   "tour.compte.aucun": "Aucun compte de service.",
+  "refus.acces_total.motif_requis":
+    "Dites pourquoi : l’accès total se donne et se retire motif à l’appui.",
+  "refus.acces_total.pas_operateur":
+    "L’accès total ne se donne qu’à un opérateur de la plateforme.",
+  "refus.acces_total.pour_soi_meme":
+    "Nul ne se donne l’accès total à lui-même : un autre opérateur l’accorde.",
+  "refus.acces_total.deja_accorde": "Ce compte a déjà l’accès total.",
+  "refus.acces_total.non_accorde": "Ce compte n’a pas l’accès total.",
+  "refus.acces_total.sans_emetteur":
+    "Désignez d’abord l’émetteur des factures : c’est sous son organisation que l’accès total se journalise.",
+  "tour.menu.acces": "Accès total",
+  "tour.acces.aide":
+    "Un opérateur qui a l’accès total agit dans toutes les sociétés et tous les cabinets comme leur rôle le plus haut — dirigeant, expert — sans y occuper de place ni paraître dans leurs équipes. Chacun de ses gestes est journalisé sous son nom. Les espaces privés des autres personnes restent fermés.",
+  "tour.acces.aucun": "Aucun compte n’a l’accès total.",
+  "tour.acces.depuis": "Depuis le {date}, accordé par {par} — {motif}",
+  "tour.acces.inactif": "N’est plus opérateur : l’accès ne s’exerce pas.",
+  "tour.acces.email": "Adresse du compte (un opérateur)",
+  "tour.acces.accorder": "Accorder l’accès total",
+  "tour.acces.retirer": "Retirer l’accès",
   "tour.etat.paye": "Payé",
   "tour.etat.a_echoir": "À échoir",
   "tour.etat.partiel": "Partiel",

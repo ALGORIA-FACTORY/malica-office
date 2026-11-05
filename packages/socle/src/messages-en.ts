@@ -3537,6 +3537,23 @@ export const en: Dict = {
   "tour.menu.modeles": "Model spending cap",
   "tour.menu.compte": "Service account",
   "tour.compte.aucun": "No service account.",
+  "refus.acces_total.motif_requis": "Say why: full access is granted and withdrawn with a reason.",
+  "refus.acces_total.pas_operateur": "Full access can only be granted to a platform operator.",
+  "refus.acces_total.pour_soi_meme":
+    "No one grants full access to themselves: another operator grants it.",
+  "refus.acces_total.deja_accorde": "This account already has full access.",
+  "refus.acces_total.non_accorde": "This account does not have full access.",
+  "refus.acces_total.sans_emetteur":
+    "Designate the invoice issuer first: full access is journaled under its organisation.",
+  "tour.menu.acces": "Full access",
+  "tour.acces.aide":
+    "An operator with full access acts in every company and every firm as their highest role — manager, expert — without taking a seat or appearing in their teams. Each of their actions is journaled under their name. Other people’s private spaces stay closed.",
+  "tour.acces.aucun": "No account has full access.",
+  "tour.acces.depuis": "Since {date}, granted by {par} — {motif}",
+  "tour.acces.inactif": "No longer an operator: the access is not exercised.",
+  "tour.acces.email": "Account address (an operator)",
+  "tour.acces.accorder": "Grant full access",
+  "tour.acces.retirer": "Withdraw access",
   "tour.etat.paye": "Paid",
   "tour.etat.a_echoir": "Due soon",
   "tour.etat.partiel": "Partly paid",

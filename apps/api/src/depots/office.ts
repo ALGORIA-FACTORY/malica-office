@@ -796,7 +796,7 @@ export const office = {
          from pieces_v p
          cross join lateral app.nature_des_comptes(
            (select g.cabinet_org_id from engagements_v g
-              join memberships_v m on m.tenant_id = g.cabinet_org_id and m.user_id = auth.uid()
+              join mes_adhesions_v m on m.tenant_id = g.cabinet_org_id
              where g.pme_org_id = p.tenant_id and g.status = 'actif' limit 1),
            p.tenant_id, $2::uuid, p.document_kind, $3::date, $4::text[]) n
         where p.id = app.version_courante($1)`,

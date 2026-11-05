@@ -580,3 +580,27 @@ périmètre PME :**
 - **Un numéro peut encore se perdre** (ligne ci-dessus) : l'émission de la PME
   vérifie tout ce qu'elle peut AVANT de tirer son numéro (déjà émise, jours de
   base déjà facturés, licence sans société, destinataire sans nom, timbre).
+
+## L'accès total (décidé par Wissem le 5 novembre 2026, livré sans aucun accord)
+
+Un opérateur qui a l'accès total agit dans toute organisation comme son rôle le
+plus haut (`ref.types_d_organisation.role_d_acces_total` : dirigeant, expert),
+sans place ni siège (`20261129090000_l_acces_total_se_donne_par_la_tour.sql`).
+La migration n'accorde rien : la Tour accorde et retire, motif à l'appui.
+Tranché par défaut, à confirmer :
+
+- **« Mon espace privé » des autres reste fermé** : données personnelles de
+  tiers (INPDP, loi 2004-63). La réquisition reste la seule exception.
+- **Quatre yeux** : un opérateur n'accorde l'accès total qu'à un AUTRE
+  opérateur. S'il n'y a qu'un opérateur en production, il faut d'abord en
+  nommer un second.
+- **Les gestes du titulaire de la licence** (payer, changer d'offre, souscrire
+  l'année, transmettre la licence, offrir une place) restent au titulaire :
+  l'accès total ne fait pas payer un client.
+- **Ouvrir sans « voir »** : une pièce ouverte sous l'accès total n'écrit pas de
+  « Vue » ; la relecture de nuit, les notifications, les destinataires du
+  circuit et la « prise en charge » suivent les adhésions réelles.
+- **Le journal** : la décision se journalise sous l'émetteur des factures en
+  vigueur (l'organisation d'ALGORIA) ; sans émetteur, elle est refusée. Les
+  gestes faits sous l'accès total portent l'acteur réel, sans marque propre :
+  on les distingue en croisant l'acteur avec `plateforme.acces_total`.

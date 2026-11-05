@@ -207,7 +207,7 @@ export const identite = {
       `select o.id, o.kind, o.name, o.legal_id, o.jurisdiction, o.currency,
               o.validation_mode, m.role
          from organizations_v o
-         join memberships_v m on m.tenant_id = o.id and m.user_id = auth.uid()
+         join mes_adhesions_v m on m.tenant_id = o.id
         order by o.name`,
     );
     return rows.map((r) => {
