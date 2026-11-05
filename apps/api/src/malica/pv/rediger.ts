@@ -31,7 +31,7 @@ import { MESSAGES, type Locale } from "@malica/socle/messages";
 import type { AppelApi } from "../appel-local.ts";
 import { debutDExercice, finDuMois } from "@malica/socle/exercice";
 import { A_TRAITER } from "@malica/socle/statut-d-envoi";
-import { lireSections, texteDesSections } from "./redaction.ts";
+import { lireSections, misEnForme, texteDesSections } from "./redaction.ts";
 import { callDeepSeek, DeepSeekError, type DeepSeekMessage } from "../conseil/deepseek.ts";
 import { nombresEtrangers } from "../conseil/redaction.ts";
 import type {
@@ -429,7 +429,7 @@ export async function redigerLePv(
     }
     const etrangers = nombresEtrangers(texteDesSections(lues), faits);
     if (etrangers.length === 0) {
-      sections = lues;
+      sections = misEnForme(lues, chiffres, input.locale);
       break;
     }
     messages.push(
