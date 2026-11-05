@@ -23,6 +23,7 @@ import { createPortal } from "react-dom";
 
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
+import { cn } from "@/lib/utils";
 
 /** Un paragraphe de la feuille ; `titre` le nomme quand la feuille en porte plusieurs. */
 export interface ParagrapheDAide {
@@ -30,7 +31,16 @@ export interface ParagrapheDAide {
   texte: ReactNode;
 }
 
-export function Aide({ titre, paragraphes }: { titre: string; paragraphes: ParagrapheDAide[] }) {
+export function Aide({
+  titre,
+  paragraphes,
+  className,
+}: {
+  titre: string;
+  paragraphes: ParagrapheDAide[];
+  /** Le ⓘ posé sur un fond d'encre, par exemple : ses couleurs, pas sa forme. */
+  className?: string | undefined;
+}) {
   const { t } = useI18n();
   const [ouverte, setOuverte] = useState(false);
   const feuille = useRef<HTMLDivElement | null>(null);
@@ -43,7 +53,10 @@ export function Aide({ titre, paragraphes }: { titre: string; paragraphes: Parag
         onClick={() => setOuverte(true)}
         aria-label={`${t("common.aide")} — ${titre}`}
         aria-haspopup="dialog"
-        className="ms-2 inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border border-line-strong align-middle text-[12px] font-semibold leading-none text-muted-foreground hover:text-foreground"
+        className={cn(
+          "ms-2 inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border border-line-strong align-middle text-[12px] font-semibold leading-none text-muted-foreground hover:text-foreground",
+          className,
+        )}
       >
         i
       </button>
