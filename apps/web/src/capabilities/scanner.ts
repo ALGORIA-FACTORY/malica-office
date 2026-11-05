@@ -23,6 +23,8 @@ export interface ScanResult {
   pageCount: number;
   /** Poids du PDF produit, en octets. */
   bytes: number;
+  /** Les défauts des pages (une page trop petite, de biais, sombre ou floue) ; vide si aucun. */
+  defauts: DefautDePhoto[];
 }
 
 export interface Point {
@@ -1395,6 +1397,23 @@ export async function preparePage(
 }
 
 /** Un seul PDF compact par pièce, quel que soit le nombre de pages. */
+/** Ce qu'une photo importée a de mauvais : une page trop petite, de biais, sombre ou floue. */
+export type DefautDePhoto = "too_small" | "oblique" | "too_dark" | "blurry";
+
+/**
+ * Les défauts des pages, sans doublon. La caméra les refuse avant la prise ; une photo
+ * IMPORTÉE (galerie, fichier) n'est pas passée par là : ses défauts se disent avant l'envoi,
+ * sans la refuser — c'est peut-être la seule copie (5 novembre 2026).
+ */
+export function defautsDesPages(pages: readonly { analysis: FrameAnalysis }[]): DefautDePhoto[] {
+  const vus = new Set<DefautDePhoto>();
+  for (const p of pages) {
+    const r = p.analysis.reason;
+    if (r !== "ok" && r !== "no_document") vus.add(r);
+  }
+  return [...vus];
+}
+
 function pagesToPdf(pages: readonly PreparedPage[], baseName = "piece"): ScanResult {
   if (pages.length === 0) throw new Error("aucune page à encoder");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -1405,6 +1424,7 @@ function pagesToPdf(pages: readonly PreparedPage[], baseName = "piece"): ScanRes
     blob,
     name,
     cropped: pages.every((p) => p.cropped),
+    defauts: defautsDesPages(pages),
     widthPx: first.widthPx,
     heightPx: first.heightPx,
     pageCount: pages.length,

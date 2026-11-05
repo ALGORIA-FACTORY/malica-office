@@ -661,6 +661,27 @@ lignes non prouvées n'était jamais relue.
 - Le banc n'en dit rien encore : il ne rejoue pas la nuit. La mesure viendra de la
   première nuit observée sur le staging, la passe étant livrée coupée.
 
+## Bulletin 21 — l'heure du dossier, l'écran de la pièce, la photo importée (6 novembre 2026)
+
+- **Les réglages d'un dossier se lisent à SON jour.** Entre minuit à Tunis et minuit UTC,
+  un réglage arrêté le jour même ne s'appliquait pas : le mode du lecteur prouvé
+  (`lecture.sudoku`) se lisait au jour UTC du serveur, et la relecture de nuit
+  (`app.relecture_de_nuit`) au `current_date` UTC. `public.jour_du_dossier` rend le jour
+  dans le fuseau du dossier ; les deux lectures s'en servent (`20261127300000`,
+  `20261127310000`). Les épreuves de la relecture de nuit échouaient toutes dans cette
+  heure-là : elles passent.
+- **L'épreuve de la passe de nuit ne dépend plus de l'historique de la base.** Le plafond de
+  la plateforme se compte sur 24 h, tous dossiers confondus : au septième passage du jour,
+  il était atteint avant l'épreuve. Elle le décale de ce que le relecteur a déjà dépensé ;
+  son cabinet est à Dakar, comme ses dossiers.
+- **L'écran de la pièce (PME) dit « Lignes lues, à vérifier »** au-dessus des articles quand
+  le lecteur prouvé a inscrit des lignes signalées ; il se tait sinon.
+- **Une photo importée (galerie, fichier) dit ses défauts avant l'envoi** — page trop
+  petite, de biais, sombre, floue —, sans la refuser : c'est peut-être la seule copie. La
+  caméra, elle, les refuse avant la prise (bulletin 19).
+- Les dépendances du poste d'essai, abîmées, ont été réinstallées : les suites web (1 076)
+  et socle (495) repassent sous vitest.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

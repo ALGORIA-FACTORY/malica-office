@@ -47,7 +47,6 @@ import {
   type ContexteDuSudokuBranche,
 } from "../malica/lecture/sudoku.ts";
 import { dateDeLaPiece } from "./dates.ts";
-import { aujourdhui } from "./decimal.ts";
 import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
 import { sensConfirme } from "./sens.ts";
 
@@ -843,9 +842,16 @@ export const capture = {
     deviseCode: string,
     jour: string,
   ): Promise<ContexteDuSudokuBranche> {
+    // Le mode se lit au jour DU DOSSIER, dans son fuseau : au jour UTC du serveur, un
+    // réglage arrêté le jour même ne valait pas entre minuit local et minuit UTC
+    // (5 novembre 2026, `20261127310000`).
+    const { rows } = await db.query<{ j: string }>(
+      `select to_char(public.jour_du_dossier($1), 'YYYY-MM-DD') as j`,
+      [dossierId],
+    );
     const [contexte, reglages] = await Promise.all([
       lireLeContexteDuSudoku(db, packId, grilleCode, deviseCode, jour),
-      lireLesReglagesComptables(db, dossierId, packId, aujourdhui()),
+      lireLesReglagesComptables(db, dossierId, packId, rows[0]!.j),
     ]);
     return { ...contexte, mode: modeDuSudoku(reglages) };
   },

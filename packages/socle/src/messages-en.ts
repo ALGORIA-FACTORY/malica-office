@@ -545,6 +545,14 @@ export const en: Dict = {
   "pme.paiement.borne": "At most {montant}: what is left to pay.",
   "pme.paiement.avantFacture": "Before the invoice date: a deposit?",
   "pme.type.titre": "What is it?",
+  "pme.photo.avis.too_small":
+    "The page is small in the photo: the reading may be incomplete. You can retake it closer.",
+  "pme.photo.avis.oblique":
+    "The photo is taken at an angle: the reading may be incomplete. You can retake it facing the page.",
+  "pme.photo.avis.too_dark":
+    "The photo is dark: the reading may be incomplete. You can retake it in better light.",
+  "pme.photo.avis.blurry":
+    "The photo is blurry: the reading may be incomplete. You can retake it holding still.",
   "pme.type.passer": "I don't know",
   "pme.type.corrigeable": "Malica checks it when reading. You can change it later.",
   "pme.piece.type.modifier": "Change type",
@@ -566,6 +574,9 @@ export const en: Dict = {
   "pme.piece.voir": "View the invoice",
   "pme.detail.voir": "View the detail",
   "pme.detail.titre": "What I read, line by line",
+  "pme.detail.lignesAVerifier": "Lines read, to check",
+  "pme.detail.lignesAVerifierAide":
+    "No sum proves these lines yet: they are shown as read. The night reading takes them up again; the entry relies only on proven totals.",
   "pme.detail.compte": "{count} lines",
   "pme.detail.compte#one": "{count} line",
   "pme.detail.compte#other": "{count} lines",

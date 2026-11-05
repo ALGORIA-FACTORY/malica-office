@@ -584,6 +584,14 @@ export const fr = {
   "pme.paiement.borne": "Au plus {montant} : ce qui reste à payer.",
   "pme.paiement.avantFacture": "Avant la date de la facture : un acompte ?",
   "pme.type.titre": "Qu'est-ce que c'est ?",
+  "pme.photo.avis.too_small":
+    "La page est petite sur la photo : la lecture risque d'être incomplète. Vous pouvez la reprendre de plus près.",
+  "pme.photo.avis.oblique":
+    "La photo est prise de biais : la lecture risque d'être incomplète. Vous pouvez la reprendre face à la page.",
+  "pme.photo.avis.too_dark":
+    "La photo est sombre : la lecture risque d'être incomplète. Vous pouvez la reprendre à la lumière.",
+  "pme.photo.avis.blurry":
+    "La photo est floue : la lecture risque d'être incomplète. Vous pouvez la reprendre, appareil immobile.",
   "pme.type.passer": "Je ne sais pas",
   "pme.type.corrigeable": "Malica le vérifie à la lecture. Vous pourrez le changer.",
   "pme.piece.type.modifier": "Modifier le type",
@@ -605,6 +613,9 @@ export const fr = {
   "pme.piece.voir": "Voir la facture",
   "pme.detail.voir": "Voir le détail",
   "pme.detail.titre": "Ce que j'ai lu, ligne par ligne",
+  "pme.detail.lignesAVerifier": "Lignes lues, à vérifier",
+  "pme.detail.lignesAVerifierAide":
+    "Aucune somme ne prouve encore ces lignes : elles sont lues telles quelles. La lecture de nuit les reprend ; l'écriture ne s'appuie que sur les totaux prouvés.",
   "pme.detail.compte": "{count} lignes",
   "pme.detail.compte#one": "{count} ligne",
   "pme.detail.compte#other": "{count} lignes",

@@ -5,6 +5,8 @@ import {
   analyzeFrame,
   candidatsDocument,
   CLARTE_MIN,
+  defautsDesPages,
+  type FrameAnalysis,
   OBLIQUITE_MIN,
   convexHull,
   detectQuad,
@@ -423,6 +425,20 @@ describe("scanner — le verdict que voit l'utilisateur", () => {
     expect(a.ombre).toBe(false);
     expect(a.obliquite).toBeGreaterThan(0.9);
     expect(a.ok).toBe(true);
+  });
+
+  it("les défauts d'une photo importée, sans doublon ni « pas de document »", () => {
+    const page = (reason: FrameAnalysis["reason"]) => ({ analysis: { reason } as FrameAnalysis });
+    expect(
+      defautsDesPages([
+        page("ok"),
+        page("blurry"),
+        page("no_document"),
+        page("blurry"),
+        page("too_dark"),
+      ]),
+    ).toEqual(["blurry", "too_dark"]);
+    expect(defautsDesPages([page("ok")])).toEqual([]);
   });
 
   it("signale la page vierge, qui ferme le document", () => {

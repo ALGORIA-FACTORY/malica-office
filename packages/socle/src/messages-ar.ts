@@ -531,6 +531,14 @@ export const ar: Dict = {
   "pme.paiement.borne": "على الأكثر {montant}: ما تبقّى للدفع.",
   "pme.paiement.avantFacture": "قبل تاريخ الفاتورة: تسبقة؟",
   "pme.type.titre": "ما هذا؟",
+  "pme.photo.avis.too_small":
+    "الصفحة صغيرة في الصورة: قد تكون القراءة ناقصة. يمكنك إعادة التصوير عن قرب.",
+  "pme.photo.avis.oblique":
+    "الصورة مائلة: قد تكون القراءة ناقصة. يمكنك إعادة التصوير مقابل الصفحة.",
+  "pme.photo.avis.too_dark":
+    "الصورة مظلمة: قد تكون القراءة ناقصة. يمكنك إعادة التصوير في ضوء أفضل.",
+  "pme.photo.avis.blurry":
+    "الصورة ضبابية: قد تكون القراءة ناقصة. يمكنك إعادة التصوير مع تثبيت الجهاز.",
   "pme.type.passer": "لا أعرف",
   "pme.type.corrigeable": "تتحقّق منه مليكة عند القراءة. يمكنك تغييره لاحقًا.",
   "pme.piece.type.modifier": "تغيير النوع",
@@ -552,6 +560,9 @@ export const ar: Dict = {
   "pme.piece.voir": "عرض الفاتورة",
   "pme.detail.voir": "عرض التفصيل",
   "pme.detail.titre": "ما قرأتُه، سطرًا سطرًا",
+  "pme.detail.lignesAVerifier": "أسطر مقروءة، للتحقق",
+  "pme.detail.lignesAVerifierAide":
+    "لا يثبت أي مجموع هذه الأسطر بعد: تُعرض كما قُرئت. تعيد القراءة الليلية قراءتها؛ ولا يعتمد القيد إلا على المجاميع المثبتة.",
   "pme.detail.compte": "{count} سطر",
   "pme.detail.compte#one": "سطر واحد",
   "pme.detail.compte#other": "{count} سطر",

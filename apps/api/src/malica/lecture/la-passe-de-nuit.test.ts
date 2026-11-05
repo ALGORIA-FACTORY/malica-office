@@ -120,8 +120,18 @@ describe("la passe de nuit", { skip: !BASE_CONFIGUREE }, () => {
   /** 05:30 UTC : la nuit de Dakar, le matin de Tunis. */
   const NUIT = prochain("05:30");
 
+  /*
+   * Les valeurs livrées, le plafond de la plateforme DÉCALÉ de ce que le relecteur a déjà
+   * dépensé sur la base d'essai : il se compte sur 24 h glissantes, pour le compte de
+   * service, tous dossiers confondus. Chaque passage de
+   * cette épreuve en dépense quelques dollars ; au septième passage du jour, le plafond de
+   * 20 $ était atteint AVANT l'épreuve, et elle échouait sans que le code soit en cause
+   * (5 novembre 2026). Les épreuves mesurent la règle, pas l'historique de la base.
+   */
+  let livre = { ...LIVRE };
+
   const regler = (r: Partial<typeof LIVRE> = {}, motif = "épreuve de la passe de nuit") => {
-    const v = { ...LIVRE, ...r };
+    const v = { ...livre, ...r };
     return sousIdentite(operateur.id, (db) =>
       db.query(
         `select plateforme.relecture_nuit_regler($1, $2::time, $3::time, $4::numeric, $5::numeric,
@@ -263,6 +273,15 @@ describe("la passe de nuit", { skip: !BASE_CONFIGUREE }, () => {
       return rows[0]!.id;
     });
     archiver.push(cabinet);
+    /*
+     * Le cabinet tient ses dossiers à Dakar, comme eux : ses réglages s'arrêtent « depuis »
+     * SON jour. À Tunis, entre minuit et une heure (UTC+1), ce jour était déjà le lendemain
+     * de celui des dossiers de Dakar : leurs réglages n'étaient pas encore en vigueur, et
+     * toute l'épreuve échouait chaque nuit pendant une heure (5 novembre 2026, 23 h UTC).
+     */
+    await admin.query(`update identity.organizations set fuseau = 'Africa/Dakar' where id = $1`, [
+      cabinet,
+    ]);
     jour = (await sousIdentite(expert.id, (db) => parametrage.fuseauDuCabinet(db, cabinet)))
       .aujourdhui!;
     packId = (
@@ -276,11 +295,23 @@ describe("la passe de nuit", { skip: !BASE_CONFIGUREE }, () => {
         `select id from identity.comptes_de_service where code = 'relecteur_de_nuit'`,
       )
     ).rows[0]!.id;
+    // Ce que le relecteur a déjà dépensé sur les 24 h qui précèdent la nuit de l'épreuve,
+    // tous dossiers confondus : la marge livrée s'y ajoute. (Le nombre de relectures et le
+    // plafond du dossier se comptent par dossier : ceux de l'épreuve sont neufs.)
+    const deja = (
+      await admin.query<{ cout: string }>(
+        `select coalesce(sum(r.cost), 0)::text as cout from agents.agent_runs r
+          where r.created_by = $1 and r.created_at > $2::timestamptz - interval '24 hours'`,
+        [service, NUIT.toISOString()],
+      )
+    ).rows[0]!;
+    livre = { ...LIVRE, plateforme: String(Number(LIVRE.plateforme) + Number(deja.cout)) };
   });
 
   after(async () => {
     try {
       // La passe repart coupée, aux valeurs livrées : la base d'essai est partagée.
+      livre = { ...LIVRE };
       await regler({ actif: false }, "fin de l'épreuve de la passe de nuit");
       await admin.query(
         `update identity.organizations set archived_at = now(),
@@ -759,9 +790,10 @@ describe("la passe de nuit", { skip: !BASE_CONFIGUREE }, () => {
       await regler();
       const s = await monterUneSociete(`nuit-privee-${Date.now()}`);
       try {
+        // le dossier ET son cabinet à Dakar : les réglages s'arrêtent au jour du dossier
         await admin.query(
-          `update identity.organizations set fuseau = 'Africa/Dakar' where id = $1`,
-          [s.pme],
+          `update identity.organizations set fuseau = 'Africa/Dakar' where id = any($1)`,
+          [[s.pme, s.cabinet]],
         );
         const jourDuCabinet = (
           await sousIdentite(s.gens.expert.id, (db) => parametrage.fuseauDuCabinet(db, s.cabinet))
