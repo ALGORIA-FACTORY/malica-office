@@ -366,10 +366,11 @@ function CabinetToday() {
             <div className="cab-tabs flex border border-border">
               {(
                 [
+                  // Les statuts se filtrent par les tuiles du haut (À traiter,
+                  // Retournées, Prises en charge) : les répéter ici en puces
+                  // doublait chaque geste (recette du 5 novembre 2026). Restent
+                  // « Tout », pour revenir, et les doublons, qu'aucune tuile ne porte.
                   ["tout", "cab.today.filter.all"],
-                  ["a_traiter", "cab.kpi.review"],
-                  ["retournee", "cab.kpi.returned"],
-                  ["prise", "cab.kpi.supervised"],
                   // Seulement s'il y en a : une puce à zéro serait du bruit.
                   ...(doublons > 0 ? [["doublons", "cab.today.filter.doublons"]] : []),
                 ] as Array<[FiltreDeLaFile, MessageKey]>

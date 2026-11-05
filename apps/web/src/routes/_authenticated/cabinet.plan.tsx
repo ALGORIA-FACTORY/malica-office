@@ -23,7 +23,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
@@ -74,6 +74,8 @@ type FiltreOrigine = "tout" | Origine;
 
 const ORIGINES: Origine[] = ["officiel", "extension", "cabinet"];
 const OU = "routes/_authenticated/cabinet.plan";
+/** Les comptes montrés d'un coup, puis à chaque « suite » : un réglage d'écran, pas une règle. */
+const TRANCHE = 60;
 
 /**
  * Le libellé d'une classe du plan.
@@ -236,6 +238,13 @@ function PlanDuCabinet({
   const [code, setCode] = useState("");
   const [libelle, setLibelle] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
+  // Le compte dont on demande la fermeture : un premier geste demande, un
+  // second ferme (recette du 5 novembre 2026 : un clic fermait sans un mot).
+  const [aFermer, setAFermer] = useState<string | null>(null);
+  // 627 comptes d'un coup faisaient une liste sans fin au téléphone : on en
+  // montre une tranche, et la suite sur demande. Filtrer ou chercher repart
+  // du début.
+  const [montres, setMontres] = useState(TRANCHE);
 
   const ouvrir = useMutation({
     mutationFn: (parent: string) =>
@@ -308,6 +317,9 @@ function PlanDuCabinet({
       .filter((c) => !q || c.code.includes(q) || c.libelle.toLocaleLowerCase().includes(q))
       .sort((a, b) => a.code.localeCompare(b.code));
   }, [deLOrigine, classe, cherche]);
+
+  useEffect(() => setMontres(TRANCHE), [origine, classe, cherche]);
+  const visibles = lignes.slice(0, montres);
 
   const filtresOrigine: Array<{ cle: FiltreOrigine; label: string; count: number }> = [
     { cle: "tout", label: t("cab.plan.filter.tout"), count: comptes.length },
@@ -396,7 +408,7 @@ function PlanDuCabinet({
               </tr>
             </thead>
             <tbody>
-              {lignes.map((c) => {
+              {visibles.map((c) => {
                 const duCabinet = c.origine === "cabinet";
                 return (
                   <tr
@@ -477,14 +489,37 @@ function PlanDuCabinet({
                     </td>
                     <td data-col="geste" className="whitespace-nowrap px-3 py-2 text-end align-top">
                       {c.collectif ? null : duCabinet ? (
-                        <button
-                          type="button"
-                          disabled={fermer.isPending}
-                          onClick={() => fermer.mutate(c.code)}
-                          className={cn(BOUTON, "text-muted-foreground")}
-                        >
-                          {t("plan.close")}
-                        </button>
+                        aFermer === c.code ? (
+                          <span className="inline-flex gap-1.5">
+                            <button
+                              type="button"
+                              disabled={fermer.isPending}
+                              onClick={() => {
+                                fermer.mutate(c.code);
+                                setAFermer(null);
+                              }}
+                              className={BOUTON_ENCRE}
+                            >
+                              {t("plan.close.confirmer")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setAFermer(null)}
+                              className={BOUTON}
+                            >
+                              {t("plan.cancel")}
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={fermer.isPending}
+                            onClick={() => setAFermer(c.code)}
+                            className={cn(BOUTON, "text-muted-foreground")}
+                          >
+                            {t("plan.close")}
+                          </button>
+                        )
                       ) : (
                         <button
                           type="button"
@@ -495,9 +530,16 @@ function PlanDuCabinet({
                             setLibelle("");
                             setCode(suivant ? prochainCode(c.code) : "");
                           }}
+                          aria-label={
+                            ouvertSous === c.code
+                              ? t("plan.cancel")
+                              : `${t("plan.subdivide")} ${c.code}`
+                          }
+                          title={ouvertSous === c.code ? undefined : t("plan.subdivide")}
                           className={BOUTON}
                         >
-                          {ouvertSous === c.code ? t("plan.cancel") : t("plan.subdivide")}
+                          {/* Un « + » discret par ligne, plutôt que 600 fois le mot. */}
+                          {ouvertSous === c.code ? t("plan.cancel") : "+"}
                         </button>
                       )}
                     </td>
@@ -506,6 +548,20 @@ function PlanDuCabinet({
               })}
             </tbody>
           </table>
+          {lignes.length > montres ? (
+            <div className="border-t border-border p-3 text-center">
+              <button
+                type="button"
+                onClick={() => setMontres((n) => n + TRANCHE)}
+                className={BOUTON}
+              >
+                {t("plan.suite", {
+                  n: Math.min(TRANCHE, lignes.length - montres),
+                  total: lignes.length,
+                })}
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
     </section>

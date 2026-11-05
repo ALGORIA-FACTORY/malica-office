@@ -263,7 +263,6 @@ function CabinetRapprochement() {
   // Le mois du cabinet, à son fuseau, tant que le comptable n'en choisit pas un autre.
   const moisDuCabinet = useMoisDuCabinet();
   const [periodeChoisie, setPeriod] = useState<string | null>(null);
-  const period = periodeChoisie ?? moisDuCabinet;
   const [csv, setCsv] = useState("");
   const [importOuvert, setImportOuvert] = useState(false);
   const [importInfo, setImportInfo] = useState<string | null>(null);
@@ -354,6 +353,19 @@ function CabinetRapprochement() {
     enabled: !!client && !!compte,
   });
 
+  // Sans choix, l'écran s'ouvre sur le plus ancien mois qui a des lignes de
+  // relevé ouvertes : il s'ouvrait sur le mois du cabinet, vide, alors que
+  // trois lignes d'octobre attendaient (recette du 5 novembre 2026). Rien
+  // d'ouvert : le mois du cabinet, comme avant.
+  const premierMoisOuvert = useMemo(
+    () =>
+      (lignes.data ?? [])
+        .filter((l) => l.status === "ouverte")
+        .map((l) => l.at.slice(0, 7))
+        .sort()[0] ?? null,
+    [lignes.data],
+  );
+  const period = periodeChoisie ?? premierMoisOuvert ?? moisDuCabinet;
   const { from, to } = monthBounds(period);
   const bookLines = useQuery({
     queryKey: ["banque-book", client?.tenantId, compte?.accountCode, from, to],
@@ -1049,6 +1061,8 @@ function CabinetRapprochement() {
                                 {motif?.requiresNote ? (
                                   <input
                                     aria-label={t("cab.banque.note")}
+                                    aria-required="true"
+                                    aria-describedby={`note-requise-${e.ligneId}`}
                                     value={unmatch!.note}
                                     onChange={(ev) =>
                                       setUnmatch({ ...unmatch!, note: ev.target.value })
@@ -1056,6 +1070,15 @@ function CabinetRapprochement() {
                                     className="w-full border border-border bg-card px-2 py-1.5 text-[12px]"
                                     placeholder={t("cab.banque.note")}
                                   />
+                                ) : null}
+                                {/* Le bouton reste inactif sans note : on dit pourquoi. */}
+                                {motif?.requiresNote && unmatch!.note.trim().length === 0 ? (
+                                  <p
+                                    id={`note-requise-${e.ligneId}`}
+                                    className="text-[11.5px] text-muted-foreground"
+                                  >
+                                    {t("cab.banque.note.requise")}
+                                  </p>
                                 ) : null}
                                 <div className="flex flex-wrap gap-1.5">
                                   <ActionButton
