@@ -89,7 +89,7 @@ export const supervision = {
     const { rows } = await db.query(
       `select o.id, o.kind, o.name, o.legal_id, o.jurisdiction, o.currency, o.validation_mode
          from organizations_v o
-         join memberships_v m on m.tenant_id = o.id and m.user_id = auth.uid()
+         join mes_adhesions_v m on m.tenant_id = o.id
         where o.kind = 'cabinet'
         order by o.name`,
     );

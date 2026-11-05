@@ -55,7 +55,16 @@ describe("les adresses de la tour", () => {
       ["clients", ["cabinets", "pme"]],
       [
         "plateforme",
-        ["grille", "paiement", "emetteur", "facturation", "relances", "calendrier", "licences"],
+        [
+          "grille",
+          "paiement",
+          "emetteur",
+          "facturation",
+          "relances",
+          "calendrier",
+          "licences",
+          "acces",
+        ],
       ],
       ["lecture", ["nuit", "modeles", "compte"]],
     ]);

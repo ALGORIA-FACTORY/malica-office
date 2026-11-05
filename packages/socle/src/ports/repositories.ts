@@ -4361,6 +4361,22 @@ export interface EtatDuPerimetreDeFacturation {
 }
 
 /** L'émission automatique : ses deux périmètres, indépendants. */
+/**
+ * Un compte qui a l'accès total : il agit dans toute organisation comme son
+ * rôle le plus haut, sans y occuper de place (décision du 5 novembre 2026).
+ * `operateur` faux : l'accès est accordé mais ne s'exerce plus, la personne
+ * n'étant plus opératrice.
+ */
+export interface AccesTotalEnVigueur {
+  user_id: string;
+  email: string;
+  nom: string | null;
+  depuis: string;
+  motif: string;
+  par_email: string | null;
+  operateur: boolean;
+}
+
 export type EtatFacturationAuto = Record<PerimetreDeFacturation, EtatDuPerimetreDeFacturation>;
 
 /** Un compte de service (le relecteur de nuit) : son état en vigueur et son nom. */
@@ -4488,6 +4504,18 @@ export interface TourRepository {
     motif: string,
   ): Promise<{ organisation_id: string; archivee_le: string }>;
   designerEmetteur(organisationId: string, valideDes: string, motif: string): Promise<unknown>;
+  /** Les comptes qui ont l'accès total à toutes les organisations (plateforme, lecture). */
+  accesTotal(): Promise<AccesTotalEnVigueur[]>;
+  /** Accorder l'accès total à un opérateur, soi compris, motif à l'appui. */
+  accorderAccesTotal(
+    email: string,
+    motif: string,
+  ): Promise<{ decision: string; personne: string; actif: true }>;
+  /** Retirer l'accès total, motif à l'appui. */
+  retirerAccesTotal(
+    personne: string,
+    motif: string,
+  ): Promise<{ decision: string; personne: string; actif: false }>;
   /** Le réglage de l'abonnement en vigueur : le report d'un mois, l'année et ses mois offerts. */
   reglageAbonnement(): Promise<ReglageAbonnement>;
   reglerAbonnement(
