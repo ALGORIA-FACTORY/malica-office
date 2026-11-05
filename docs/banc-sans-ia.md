@@ -369,6 +369,54 @@ aucune, est le client. Les indices restent tous concordants ou rien.
 **Piste suivante.** Comparer le haut des BLOCS des parties, pas celui de leurs
 matricules : sur le gabarit A, les deux blocs commencent à la même hauteur.
 
+## Bulletin 11 — le sens déclaré par la personne, et le matricule du tiers corroboré (5 novembre 2026)
+
+Le dirigeant : « tu peux vérifier la matricule de celui qui fait le scan pour identifier la
+matricule du tiers ; l'utilisateur identifie le sens (achat ou vente) et peut le corriger
+après ». Le moteur reçoit désormais ce sens comme un fait connu (`connus.sens`) :
+
+- le matricule du dossier (celui qui scanne) le place — client d'un achat, émetteur d'une
+  vente — et l'autre matricule est le TIERS ;
+- des indices de la pièce UNANIMES contre la déclaration la font signaler (« le sens
+  déclaré contredit la pièce ») : une déclaration fausse se voit, elle ne se recopie pas ;
+- en production, seul un sens CONFIRMÉ (`document_kind_statut = confirme`) est passé au
+  moteur (`depots/sens.ts`) ; un sens seulement lu ne l'est pas.
+
+Le sens résolu a montré des faiblesses qui ne se voyaient pas ; elles sont fermées :
+
+- **Le matricule du tiers n'est affirmé que corroboré** : couche de texte exacte, deux
+  occurrences qui concordent, tiers connu du dossier, ou chaque caractère lu avec
+  assurance. Sinon il est rendu à vérifier (50/02 : « 0567321M » lu « 0557321M » une seule
+  fois, par un OCR sans confiance). Le matricule du dossier est corroboré par sa fiche.
+- **Deux matricules lus à un chiffre près** sont une écriture lue deux fois, dont l'une est
+  fausse : rien n'est rendu (50/03, 50/33, 50/49 — le moteur en choisissait une).
+- **Une civilité n'est pas un nom** : « M. », repère du client, n'est plus son nom.
+- **Les morceaux latins d'une ligne mixte** (« المعرف الجبائي : 1381012E/A/M/000 ») portent
+  enfin la probabilité de leurs caractères.
+- **L'étiquette du client** (bulletin 10) ne vote plus qu'en repli : « Doit : », qui coiffe
+  le bloc du dossier, était rattachée par proximité au bloc du fournisseur (50/02, 50/04,
+  50/46, couche de texte).
+- **La ligne principale d'une désignation** reste, même quand ses mots ressemblent à un
+  libellé (« Droit de consommation 25 % », 100/B-20) — sauf un identifiant ou un repère
+  seul (« SN », algoria-032).
+
+|                               | juste | faux | dont à travailler | sens justes |
+| ----------------------------- | ----: | ---: | ----------------: | ----------: |
+| bulletin 10                   | 5 949 |    0 |             4 667 |   139 / 348 |
+| bulletin 11, sens lu          | 5 943 |    0 |             4 659 |   143 / 348 |
+| bulletin 11, sens déclaré     | 6 052 |    0 |             4 528 |   193 / 348 |
+| couche de texte, sens lu      | 1 878 |    0 |               922 |           — |
+| couche de texte, sens déclaré | 1 899 |    0 |               901 |           — |
+
+**Mesuré et écarté.** La lettre de contrôle du matricule (somme pondérée modulo 23,
+`ref.identifiant_controles`, INCERTAINE) ne peut pas servir ici : les matricules inventés
+des jeux d'essai ne la suivent pas (254 des matricules rendus justes la violent), alors que
+146 des 150 matricules publics testés la suivent. Les jeux d'essai devraient porter des
+lettres conformes.
+
+**Pas encore fait.** Une correction du sens APRÈS la lecture ne replace pas les parties :
+le jugement lit les cases émetteur / client de la lecture. Décision en attente.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

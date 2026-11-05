@@ -429,6 +429,17 @@ def _relire_en_arabe(lecteur: "_Lecteur", tableau, polygones, textes, scores):
     return sortie, True
 
 
+def _lire_en_latin(lecteur: "_Lecteur", images: list) -> tuple:
+    """La lecture latine de chaque image, dans l'ordre, et les probabilites de ses
+    caracteres (`_Caracteres`)."""
+    lecteur.caracteres.lues = []
+    lus = [r.json["res"] for r in lecteur.latin.predict(images, batch_size=LOT)]
+    probabilites = lecteur.caracteres.lues
+    if len(probabilites) != len(lus):
+        probabilites = [None] * len(lus)
+    return lus, probabilites
+
+
 def _lire_mot_par_mot(lecteur: "_Lecteur", polygones, decoupes, mixtes, sortie):
     """Chaque ligne mixte, coupee a ses blancs, lue morceau par morceau par les
     deux modeles. Une ligne qu'on ne sait pas couper (un seul morceau) garde sa
@@ -444,16 +455,18 @@ def _lire_mot_par_mot(lecteur: "_Lecteur", polygones, decoupes, mixtes, sortie):
     if not taches:
         return
     images = [t[3] for t in taches]
-    lat = [r.json["res"] for r in lecteur.latin.predict(images, batch_size=LOT)]
+    lat, probabilites = _lire_en_latin(lecteur, images)
     ara = [r.json["res"] for r in lecteur.arabe.predict(images, batch_size=LOT)]
     par_ligne: dict = {}
-    for (i, a, b, img), rl, ra in zip(taches, lat, ara):
+    for (i, a, b, img), rl, ra, pl in zip(taches, lat, ara, probabilites):
         texte, score, arabe = _choisir(
             rl.get("rec_text", ""), float(rl.get("rec_score", 0.0)),
             ra.get("rec_text", ""), float(ra.get("rec_score", 0.0)),
         )
         if texte.strip():
-            par_ligne.setdefault(i, []).append([a, b, texte, score, arabe])
+            # les probabilites des caracteres, quand le morceau garde sa lecture latine
+            latine = not arabe and texte == rl.get("rec_text", "") and pl is not None and len(pl) == len(texte)
+            par_ligne.setdefault(i, []).append([a, b, texte, score, arabe, pl if latine else None])
     # Les morceaux voisins d'une meme ecriture se rejoignent et se relisent
     # ensemble : un RIB coupe a ses blancs (« 99 | 684 | 592007571 | 5690 ») se
     # relit d'un trait, dans son ordre a lui, et le modele voit le contexte.
@@ -473,14 +486,20 @@ def _lire_mot_par_mot(lecteur: "_Lecteur", polygones, decoupes, mixtes, sortie):
         crops = [decoupes[g[0]][:, max(0, g[1] - 2):min(decoupes[g[0]].shape[1], g[2] + 2)] for g in a_relire]
         latins = [g for g, c in zip(a_relire, crops) if not g[3]]
         arabes = [g for g, c in zip(a_relire, crops) if g[3]]
-        for modele, lot in ((lecteur.latin, latins), (lecteur.arabe, arabes)):
+        for latin, lot in ((True, latins), (False, arabes)):
             if not lot:
                 continue
             images = [crops[a_relire.index(g)] for g in lot]
-            for g, r in zip(lot, (r.json["res"] for r in modele.predict(images, batch_size=LOT))):
+            if latin:
+                lus, probabilites = _lire_en_latin(lecteur, images)
+            else:
+                lus = [r.json["res"] for r in lecteur.arabe.predict(images, batch_size=LOT)]
+                probabilites = [None] * len(lus)
+            for g, r, pl in zip(lot, lus, probabilites):
                 texte = r.get("rec_text", "")
                 if texte.strip():
-                    g[4] = [[g[1], g[2], texte, float(r.get("rec_score", 0.0)), g[3]]]
+                    pl = pl if pl is not None and len(pl) == len(texte) else None
+                    g[4] = [[g[1], g[2], texte, float(r.get("rec_score", 0.0)), g[3], pl]]
     for i in par_ligne:
         xs = [float(p[0]) for p in polygones[i]]
         ys = [float(p[1]) for p in polygones[i]]
@@ -492,9 +511,9 @@ def _lire_mot_par_mot(lecteur: "_Lecteur", polygones, decoupes, mixtes, sortie):
         if any(g[3] for g in siens):
             siens.sort(key=lambda g: -g[1])
         sortie[i] = [
-            (t, s, (gauche + a * echelle, haut, gauche + b * echelle, bas))
+            (t, s, (gauche + a * echelle, haut, gauche + b * echelle, bas), pl)
             for g in siens
-            for a, b, t, s, _ in g[4]
+            for a, b, t, s, _, pl in g[4]
         ]
 
 
@@ -821,19 +840,25 @@ def _vagues(lecteur: "_Lecteur", octets: bytes):
     def temps(vague: int, lues: list, morceaux_par_ligne: list, arabe: bool, marques: list | None = None) -> dict:
         lignes = []
         for i in lues:
-            for texte, score, pixels in morceaux_par_ligne[i]:
+            for morceau in morceaux_par_ligne[i]:
+                texte, score, pixels = morceau[:3]
                 if not texte or not texte.strip():
                     continue
                 boite = boites[i] if pixels is None else _boite(
                     ((pixels[0], pixels[1]), (pixels[2], pixels[3])), largeur, hauteur)
                 # les probabilites des caracteres, quand le morceau est la lecture latine de
                 # toute la ligne (une relecture arabe ou un morceau n'en a pas)
-                latine = lus[i] if pixels is None and lus[i] is not None and lus[i][0] == texte else None
+                # (un morceau relu en latin porte les siennes)
+                if len(morceau) > 3:
+                    probabilites = morceau[3]
+                else:
+                    latine = lus[i] if pixels is None and lus[i] is not None and lus[i][0] == texte else None
+                    probabilites = latine[2] if latine else None
                 lignes.append({
                     "texte": texte,
                     "boite": boite,
                     "confiance": float(score) if score is not None else None,
-                    **({"caracteres": latine[2]} if latine and latine[2] is not None else {}),
+                    **({"caracteres": probabilites} if probabilites is not None else {}),
                 })
         return {
             "vague": vague,

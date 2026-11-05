@@ -491,6 +491,25 @@ n'est pas rendu, ou il est signalé.
 **Effet mesuré.** Les deux désignations fausses de la mesure se taisent ; 15 justes sur
 162 aussi (le prix de la règle).
 
+### I-T — Le sens déclaré par la personne, vérifié par la pièce, et le tiers par le matricule de celui qui scanne
+
+**Problème.** Une facture ne dit pas toujours qui l'émet : achat ou vente, le lecteur doit
+le deviner, et une erreur échange fournisseur et client — donc l'écriture comptable.
+
+**Ce qui est nouveau.**
+
+- Le sens est une DONNÉE de la personne (déclarée à la capture, corrigeable après), pas
+  une conclusion du lecteur. Le matricule de celui qui scanne, connu de sa fiche, place le
+  dossier ; l'autre matricule de la pièce est le tiers.
+- La pièce vérifie la déclaration : des indices unanimes contre elle (étiquettes du
+  client, grappe légale de l'émetteur) la font signaler au lieu de la recopier.
+- Le matricule du tiers n'est affirmé que corroboré (texte exact, deux occurrences, tiers
+  connu, chaque caractère lu avec assurance) ; deux lectures à un chiffre près se
+  contredisent et rien n'est affirmé.
+
+**Effet mesuré** (412 pièces, sens déclaré) : 6 052 champs justes, 0 faux ; sens des
+parties 193 justes sur 348, aucune pièce échangée.
+
 ### I-K — La lecture en deux temps : le tableau d'abord, rien de sauté
 
 **Problème.** La preuve a besoin du tableau et des totaux. Les longues mentions servent à

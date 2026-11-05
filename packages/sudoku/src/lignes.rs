@@ -493,19 +493,44 @@ struct Contexte<'a> {
     /// Les colonnes de REMISE nommées par l'en-tête du tableau : (x0, x1, bas de l'en-tête).
     colonnes_remise: Vec<(f64, f64, f64)>,
     /// Les repères (normalisés) des AUTRES champs de la parcelle de la désignation (le
-    /// numéro de série, la référence…) : une ligne de sa cellule qui en ouvre un n'est pas
-    /// la suite de la désignation (`designation`).
-    autres_champs: Vec<String>,
+    /// numéro de série, la référence…), et si ce champ est un identifiant : une ligne de sa
+    /// cellule qui en ouvre un n'est pas la suite de la désignation (`designation`).
+    autres_champs: Vec<(String, bool)>,
 }
 
-/// Les repères des autres champs répétés de la parcelle de la désignation, lus dans la grille.
-fn autres_champs(designation: &str, grille: &Grille) -> Vec<String> {
+/// Les repères des autres champs répétés de la parcelle de la désignation, lus dans la
+/// grille, et pour chacun si son champ est un identifiant (`genre`).
+fn autres_champs(designation: &str, grille: &Grille) -> Vec<(String, bool)> {
     let parcelle = grille.champs.iter().find(|c| c.code == designation).and_then(|c| c.parcelle.as_ref());
     grille
         .champs
         .iter()
         .filter(|c| c.repetee && c.code != designation && c.parcelle.is_some() && c.parcelle.as_ref() == parcelle)
-        .flat_map(crate::reperes::reperes_de)
+        .flat_map(|c| crate::reperes::reperes_de(c).into_iter().map(move |r| (r, c.genre == "identifiant")))
+        .collect()
+}
+
+/// Les lignes d'une cellule de désignation, sans celles qui ouvrent un autre champ de la
+/// parcelle — sauf la ligne PRINCIPALE, celle qui recouvre le plus la cellule chiffrée
+/// `ancre`, quand elle porte une valeur d'un champ qui n'est pas un identifiant : elle est
+/// la désignation, même quand ses mots ressemblent à un libellé (« Droit de consommation
+/// 25 % », un article ; dirigeant 100/B-20). Un identifiant (« SN : 9813… ») ou un repère
+/// seul (« SN », sa valeur perdue ; algoria-032) n'est jamais une désignation.
+fn sans_les_autres_champs(jetons: &[Jeton], lignes: Vec<Vec<usize>>, ancre: Option<usize>, autres: &[(String, bool)]) -> Vec<Vec<usize>> {
+    let recouvre = |l: &Vec<usize>, a: &Jeton| {
+        l.iter().map(|&k| (jetons[k].y1.min(a.y1) - jetons[k].y0.max(a.y0)).max(0.0)).fold(0.0, f64::max)
+    };
+    let principale = ancre.and_then(|a| {
+        (0..lignes.len()).max_by(|&x, &y| recouvre(&lignes[x], &jetons[a]).total_cmp(&recouvre(&lignes[y], &jetons[a])))
+    });
+    lignes
+        .into_iter()
+        .enumerate()
+        .filter(|(i, l)| match ouvre_un_autre_champ(jetons, l, autres) {
+            None => true,
+            Some(Ouverture { identifiant, vide }) => Some(*i) == principale && !identifiant && !vide,
+        })
+        .map(|(_, l)| l)
         .collect()
 }
 
@@ -516,14 +541,19 @@ fn autres_champs(designation: &str, grille: &Grille) -> Vec<String> {
 /// série de l'article (banc sans IA du 4 novembre 2026, algoria-018). Un mot qui ne fait
 /// que commencer comme un repère court (« U-shaped » pour l'unité « U ») ou un libellé
 /// suivi de lettres (« Réf : ABC ») reste dans la désignation.
-fn ouvre_un_autre_champ(jetons: &[Jeton], ligne: &[usize], autres: &[String]) -> bool {
+fn ouvre_un_autre_champ(jetons: &[Jeton], ligne: &[usize], autres: &[(String, bool)]) -> Option<Ouverture> {
     let texte: String = ligne.iter().map(|&k| crate::reperes::normaliser(&jetons[k].texte)).collect();
-    autres.iter().any(|r| {
-        texte.strip_prefix(r.as_str()).is_some_and(|reste| {
-            let valeur = reste.trim_start_matches(|c: char| !c.is_alphanumeric());
-            valeur.is_empty() || valeur.starts_with(|c: char| c.is_ascii_digit())
-        })
+    autres.iter().find_map(|(r, identifiant)| {
+        let valeur = texte.strip_prefix(r.as_str())?.trim_start_matches(|c: char| !c.is_alphanumeric());
+        (valeur.is_empty() || valeur.starts_with(|c: char| c.is_ascii_digit()))
+            .then_some(Ouverture { identifiant: *identifiant, vide: valeur.is_empty() })
     })
+}
+
+/// Ce qu'une ligne ouvre : le champ est-il un identifiant, et sa valeur est-elle absente ?
+struct Ouverture {
+    identifiant: bool,
+    vide: bool,
 }
 
 impl Contexte<'_> {
@@ -698,8 +728,7 @@ impl Contexte<'_> {
     /// Une ligne qui ouvre un autre champ de la parcelle (`ouvre_un_autre_champ`) n'en est
     /// pas non plus. Rien ne reste : pas de désignation.
     fn designation(&self, jetons: &[usize], ancre: Option<usize>) -> Option<Cite> {
-        let lignes: Vec<Vec<usize>> =
-            en_lignes(self.jetons, jetons).into_iter().filter(|l| !ouvre_un_autre_champ(self.jetons, l, &self.autres_champs)).collect();
+        let lignes = sans_les_autres_champs(self.jetons, en_lignes(self.jetons, jetons), ancre, &self.autres_champs);
         if lignes.is_empty() {
             return None;
         }

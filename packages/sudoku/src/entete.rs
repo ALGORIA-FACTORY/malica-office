@@ -89,6 +89,10 @@ pub struct PartiesSortie {
     pub emetteur: Cote,
     pub client: Cote,
     pub tiers: Option<TiersSortie>,
+    /// Le sens vient de la déclaration de la personne, que les indices de la pièce ne
+    /// contredisent pas.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub declare: bool,
     /// Pourquoi le sens n'est pas prouvé.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raison: Option<String>,
@@ -139,6 +143,14 @@ fn mot(s: &str) -> String {
 }
 
 /// La valeur d'un matricule : majuscules, sans espaces.
+/// Deux écritures normalisées de même forme qui ne diffèrent que par un seul chiffre.
+fn a_un_chiffre_pres(a: &str, b: &str) -> bool {
+    let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
+    a.len() == b.len()
+        && a.iter().zip(&b).filter(|(x, y)| x != y).count() == 1
+        && a.iter().zip(&b).all(|(x, y)| x == y || (x.is_ascii_digit() && y.is_ascii_digit()))
+}
+
 fn norme_matricule(s: &str) -> String {
     s.chars().filter(|c| !c.is_whitespace()).flat_map(|c| c.to_uppercase()).collect()
 }
@@ -1096,6 +1108,7 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         emetteur: Cote::default(),
         client: Cote::default(),
         tiers: None,
+        declare: false,
         raison: Some(raison.into()),
     };
     let d = norme_matricule(&dossier.matricule);
@@ -1117,6 +1130,25 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
             lus,
         };
     }
+
+    // Deux matricules lus qui ne diffèrent que d'un chiffre sont une écriture lue deux fois,
+    // dont l'une est fausse (dirigeant 50/31 : « 0745612B » en tête, « 0765612B » en pied) :
+    // rien n'est rendu — ni le sens, ni les parties.
+    let valeurs: Vec<&String> = par_valeur.keys().collect();
+    if valeurs.iter().enumerate().any(|(i, a)| valeurs[i + 1..].iter().any(|b| a_un_chiffre_pres(a, b))) {
+        return Resultat {
+            parties: Some(vide("signale", "deux lectures d'un matricule se contredisent")),
+            statut: "indeterminee",
+            lus,
+        };
+    }
+
+    // Le sens déclaré par la personne, s'il y en a un.
+    let declare_par: Option<Sens> = match connus.sens.as_deref() {
+        Some("achat") => Some(Sens::Achat),
+        Some("vente") => Some(Sens::Vente),
+        _ => None,
+    };
 
     // Les indices, tous concordants ou rien.
     let mut votes: Vec<Sens> = Vec::new();
@@ -1150,11 +1182,13 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         // que dans le bloc du destinataire ; celles de l'émetteur (RC, téléphone) se lisent
         // aussi dans le bloc d'un client qui les imprime (algoria-001 : « RC : B0128… » à
         // côté du matricule du dossier, client, sous « Livré à : »). Le bloc qui porte une
-        // étiquette du client, quand l'autre n'en porte aucune, est le client.
-        if cdo > 0 && co == 0 {
+        // étiquette du client, quand l'autre n'en porte aucune, est le client. Ce n'est
+        // qu'un REPLI : une étiquette qui coiffe un bloc (« Doit : » au-dessus du dossier) le
+        // dit déjà, et sa proximité au bloc voisin ne la lui rattache pas (dirigeant 50/02).
+        if votes.is_empty() && cdo > 0 && co == 0 {
             votes.push(Sens::Achat);
         }
-        if co > 0 && cdo == 0 {
+        if votes.is_empty() && co > 0 && cdo == 0 {
             votes.push(Sens::Vente);
         }
         // La géométrie corrobore, elle ne décide jamais seule : un émetteur peut imprimer
@@ -1170,9 +1204,12 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
     } else {
         // Plus de deux matricules : le dossier se place par ses seuls repères, et la
         // contrepartie est l'unique autre ancré au camp opposé.
-        let oppose = match (cd, ed) {
-            (true, false) => Some(Camp::Emetteur),
-            (false, true) => Some(Camp::Client),
+        // Un sens déclaré dit le camp du dossier, et donc celui de la contrepartie.
+        let oppose = match (cd, ed, declare_par) {
+            (true, false, _) => Some(Camp::Emetteur),
+            (false, true, _) => Some(Camp::Client),
+            (_, _, Some(Sens::Achat)) => Some(Camp::Emetteur),
+            (_, _, Some(Sens::Vente)) => Some(Camp::Client),
             _ => None,
         };
         oppose.and_then(|camp| {
@@ -1185,12 +1222,24 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
             }
         })
     };
-    let sens = match (votes.first(), contrepartie) {
-        (Some(&s), Some(_)) if votes.iter().all(|v| *v == s) => s,
-        (None, _) | (_, None) => {
+    let unanimes = votes.first().copied().filter(|&s| votes.iter().all(|v| *v == s));
+    // Le sens déclaré par la personne décide, sauf contre des indices UNANIMES : une
+    // déclaration que la pièce dément se signale, elle ne se recopie pas. Sans
+    // déclaration, les indices tous concordants, ou rien.
+    let (sens, declare) = match (declare_par, unanimes, votes.is_empty(), contrepartie) {
+        (_, _, _, None) => {
+            let raison = if votes.is_empty() { "aucun indice de sens" } else { "indices de sens contradictoires" };
+            return Resultat { parties: Some(vide("signale", raison)), statut: "indeterminee", lus };
+        }
+        (Some(d), Some(u), _, Some(_)) if d != u => {
+            return Resultat { parties: Some(vide("signale", "le sens déclaré contredit la pièce")), statut: "echec", lus };
+        }
+        (Some(d), _, _, Some(_)) => (d, true),
+        (None, Some(u), _, Some(_)) => (u, false),
+        (None, None, true, Some(_)) => {
             return Resultat { parties: Some(vide("signale", "aucun indice de sens")), statut: "indeterminee", lus };
         }
-        _ => {
+        (None, None, false, Some(_)) => {
             return Resultat { parties: Some(vide("signale", "indices de sens contradictoires")), statut: "echec", lus };
         }
     };
@@ -1216,8 +1265,22 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
     };
     let od = occ_de(&d, camp_dossier);
     let oa = occ_de(autre, camp_autre);
+    // Le matricule du dossier est corroboré par sa fiche. Celui du tiers l'est par la
+    // couche de texte exacte, deux occurrences qui concordent, un tiers connu du dossier,
+    // ou chaque caractère lu avec assurance ; sinon il est rendu à VÉRIFIER (dirigeant
+    // 50/02 : « 0567321M » lu « 0557321M », une seule fois, sans confiance).
+    let connu = connus.tiers.iter().any(|t| norme_matricule(&t.matricule) == autre);
+    let assure = |o: &Occ| {
+        let seuil = entree.pack.confiance_du_caractere;
+        o.jetons.iter().all(|&t| {
+            let j = &page.j[t];
+            !j.incertain(&entree.pack) && seuil.is_some_and(|s| j.faible.is_some_and(|f| f >= s))
+        })
+    };
+    let corrobore = entree.texte_exact || connu || par_valeur[autre].len() >= 2 || assure(oa);
+    let statut_autre = if corrobore { "prouve" } else { "signale" };
     let mut cote_dossier = Cote { matricule: Some(valeur(&page, &od.jetons, d.clone(), "prouve")), nom: None };
-    let mut cote_autre = Cote { matricule: Some(valeur(&page, &oa.jetons, autre.to_string(), "prouve")), nom: None };
+    let mut cote_autre = Cote { matricule: Some(valeur(&page, &oa.jetons, autre.to_string(), statut_autre)), nom: None };
 
     if let Some(rs) = dossier.raison_sociale.as_deref() {
         cote_dossier.nom = page.chercher_nom(rs, &formes).map(|j| valeur(&page, &j, page.texte(&j), "prouve"));
@@ -1256,7 +1319,10 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         let identifiant = occs.iter().any(|o| {
             o.jetons.iter().any(|&t| n.refs.iter().any(|r| r.page == page.j[t].page && r.ordinal == page.j[t].ordinal))
         });
-        if sien || meme || identifiant {
+        // Ni une étiquette : un « nom » fait du seul repère d'un champ de la grille (« M. »,
+        // la civilité qui ANNONCE le client) n'est pas un nom (algoria-115, manuscrit).
+        let etiquette = page.reperes.iter().any(|(r, _)| !r.is_empty() && *r == cle(&normaliser(&n.valeur)));
+        if sien || meme || identifiant || etiquette {
             cote_autre.nom = None;
         }
     }
@@ -1286,6 +1352,7 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         emetteur,
         client,
         tiers: tiers.map(|t| TiersSortie { code: t.code.clone(), statut: "prouve".into() }),
+        declare,
         raison: None,
     };
     Resultat { parties: Some(parties), statut: "verifiee", lus }

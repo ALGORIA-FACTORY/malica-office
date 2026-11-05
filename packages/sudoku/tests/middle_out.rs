@@ -24,7 +24,7 @@
 mod commun;
 
 use commun::donnees;
-use commun::jeux::{self, jeton, jeu, la_piece, par_variante_avec};
+use commun::jeux::{self, jeton, jeu, la_piece, par_variante_selon};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -210,7 +210,13 @@ struct Jouee {
 }
 
 fn jouer(jetons: &[Value], grille: &Value, pack: &Value, connus: &Value) -> Jouee {
-    let (variantes, us) = par_variante_avec(jetons, grille, pack, Some(connus));
+    jouer_selon(jetons, grille, pack, connus, false)
+}
+
+/// Une lecture jouée, ses jetons étant ou non le texte exact de la pièce (la lecture
+/// « texte » : la couche de texte).
+fn jouer_selon(jetons: &[Value], grille: &Value, pack: &Value, connus: &Value, exact: bool) -> Jouee {
+    let (variantes, us) = par_variante_selon(jetons, grille, pack, Some(connus), exact);
     Jouee { piece: la_piece(&variantes), variantes, us }
 }
 
@@ -237,7 +243,7 @@ fn ecrire_temoin() {
         let ps = pieces(fichier);
         let cs = connus(&ps);
         for p in &ps {
-            let j = jouer(&jetons_de(p), &grille, &pack, &cs[jeu(&p.id)]);
+            let j = jouer_selon(&jetons_de(p), &grille, &pack, &cs[jeu(&p.id)], nom == "texte");
             for (v, o) in &j.variantes {
                 let lignes = (o["lignes"]["statut"] == "prouve").then(|| empreinte(&lignes_sans_statut(o)));
                 t.insert(format!("{nom}|{}|{v}", p.id), json!({"centre": empreinte(&centre(o)), "lignes": lignes}));
@@ -281,7 +287,7 @@ fn middle_out_zero_ligne_fausse_et_centre_inchange() {
         let cs = connus(&ps);
         let mut b = Bilan::default();
         for (ip, p) in ps.iter().enumerate() {
-            let j = jouer(&jetons_de(p), &grille, &pack, &cs[jeu(&p.id)]);
+            let j = jouer_selon(&jetons_de(p), &grille, &pack, &cs[jeu(&p.id)], nom == "texte");
             lectures += 1;
             b.pieces += 1;
             b.temps.push(j.us);

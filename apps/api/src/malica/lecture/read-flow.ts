@@ -50,6 +50,8 @@ interface ContexteLecture {
     contentType: string | null;
     /** Le jour de réception (`AAAA-MM-JJ`). */
     recueLe: string;
+    /** Le sens confirmé par la personne (`sensConfirme`), s'il l'est. */
+    sens?: "achat" | "vente";
   };
   packId: string;
   /** La devise du dossier. */
@@ -240,6 +242,7 @@ async function preparer(api: AppelApi, pieceId: string, lecteurs: Lecteurs) {
       raisonSociale: contexte.dossier.raisonSociale,
     },
     tiers: contexte.tiers,
+    ...(contexte.piece.sens ? { sens: contexte.piece.sens } : {}),
   });
   const decimalesDe = (lu: Construite) =>
     (

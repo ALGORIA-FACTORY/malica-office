@@ -61,6 +61,18 @@ pub fn par_variante(jetons: &[Value], grille: &Value, pack: &Value) -> Vec<(Stri
 
 /// Les variantes, avec les `connus` de l'entrée, et le temps passé dans le moteur seul (µs).
 pub fn par_variante_avec(jetons: &[Value], grille: &Value, pack: &Value, connus: Option<&Value>) -> (Vec<(String, Value)>, u128) {
+    par_variante_selon(jetons, grille, pack, connus, false)
+}
+
+/// Les variantes, les jetons étant, ou non, le texte exact de la pièce (`texte_exact` : la
+/// couche de texte d'un PDF).
+pub fn par_variante_selon(
+    jetons: &[Value],
+    grille: &Value,
+    pack: &Value,
+    connus: Option<&Value>,
+    texte_exact: bool,
+) -> (Vec<(String, Value)>, u128) {
     let mut moteur = 0;
     let preuves = grille["preuves"].as_array().unwrap();
     let mut noms: Vec<String> = preuves.iter().filter_map(|p| p["variante"].as_str().map(String::from)).collect();
@@ -76,6 +88,9 @@ pub fn par_variante_avec(jetons: &[Value], grille: &Value, pack: &Value, connus:
             let mut e = json!({"jetons": jetons, "grille": g, "pack": pack});
             if let Some(c) = connus {
                 e["connus"] = c.clone();
+            }
+            if texte_exact {
+                e["texte_exact"] = Value::Bool(true);
             }
             let e = e.to_string();
             let t0 = Instant::now();

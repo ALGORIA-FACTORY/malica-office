@@ -510,10 +510,16 @@ export function resoudreLaPiece(
   moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
   connus?: Connus,
   marques?: readonly MarqueDuSudoku[],
+  /** Les jetons viennent de la couche de texte d'un PDF : le texte exact de la pièce. */
+  texteExact = false,
 ): SortieDuSudoku {
   const grille = contexte.grille;
   const pack = packALaPrecision(contexte.pack, jetons);
-  const avecConnus = { ...(connus ? { connus } : {}), ...(marques?.length ? { marques } : {}) };
+  const avecConnus = {
+    ...(connus ? { connus } : {}),
+    ...(marques?.length ? { marques } : {}),
+    ...(texteExact ? { texte_exact: true } : {}),
+  };
   const noms = [...new Set(grille.preuves.flatMap((p) => (p.variante ? [p.variante] : [])))].sort();
   if (noms.length === 0) return moteur({ jetons, grille, pack, ...avecConnus });
 
@@ -1032,6 +1038,11 @@ export function creerLeSudoku(
     readonly devise: DeviseLue | undefined;
     /** Le dossier et ses tiers, tels que la base les connaît (anneau 2). */
     readonly dossier: { readonly matricule: string | null; readonly raisonSociale: string };
+    /**
+     * Le sens de la pièce, quand la personne l'a confirmé (`document_kind_statut`
+     * « confirme ») ; absent, le moteur le cherche sur la pièce.
+     */
+    readonly sens?: "achat" | "vente";
     readonly tiers: readonly {
       readonly code: string;
       readonly identifiantFiscal: string | null;
@@ -1071,9 +1082,19 @@ export function creerLeSudoku(
               : [],
           ),
           formes_juridiques: ctx.formesJuridiques,
+          // Le sens que la personne a confirmé : il place le dossier, l'autre matricule
+          // est le tiers.
+          ...(piece.sens ? { sens: piece.sens } : {}),
         };
         const jetons = jetonsDuSudoku(lecture.tokens, piece.devise, ctx);
-        const sortie = resoudreLaPiece(jetons, ctx, resoudre, connus, lecture.marques);
+        const sortie = resoudreLaPiece(
+          jetons,
+          ctx,
+          resoudre,
+          connus,
+          lecture.marques,
+          lecture.lecteur === "pdf-text",
+        );
         const aInscrire = champsLusAInscrire(piece, ctx, sortie);
 
         const rendue: VisionRead =

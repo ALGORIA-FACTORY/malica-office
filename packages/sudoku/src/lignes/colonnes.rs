@@ -282,7 +282,7 @@ pub fn affiner(
         // chaque ligne est déjà dans son ordre de lecture (`en_lignes`) ; une ligne qui ouvre
         // un autre champ de la parcelle (le numéro de série) n'est pas la désignation
         let pris: Vec<usize> =
-            lignes_de_texte.into_iter().filter(|l| !super::ouvre_un_autre_champ(jetons, l, &autres)).flatten().collect();
+            super::sans_les_autres_champs(jetons, lignes_de_texte, ancre(l), &autres).into_iter().flatten().collect();
         let remise = l.remise.as_ref().and_then(|c| c.refs.first()).and_then(jeton_de);
         let pris = super::sans_la_remise(&pris, remise, jetons);
         l.designation = (!pris.is_empty()).then(|| {

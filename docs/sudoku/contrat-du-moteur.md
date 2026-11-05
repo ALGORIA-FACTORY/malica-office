@@ -578,6 +578,16 @@ rattrapage (deux lectures complètes, environ quatre minutes).
   numéro de série « SN : 9813… », `numero_serie_ligne`), suivi d'une valeur
   chiffrée ou de rien, n'en est pas la suite. Deux mots d'une même ligne de
   texte ne se recouvrent pas : un jeton posé sur un mot est d'une autre ligne.
+- **Le sens déclaré** (`connus.sens`, « achat » ou « vente ») : la personne l'a
+  confirmé. Il place le dossier ; l'autre matricule est le tiers. Des indices unanimes
+  contre lui : `parties` signalées, raison « le sens déclaré contredit la pièce ». La
+  sortie porte `declare: true` quand le sens vient de la déclaration.
+- **Le matricule du tiers corroboré.** Il est `prouve` si la lecture est le texte exact
+  de la pièce (`texte_exact`, la couche de texte d'un PDF), s'il est lu deux fois à
+  l'identique, s'il est celui d'un tiers connu, ou si chaque caractère est lu au-dessus
+  de `lecture.confiance_du_caractere` ; sinon `signale`. Deux matricules lus qui ne
+  diffèrent que d'un chiffre : rien n'est rendu (« deux lectures d'un matricule se
+  contredisent »).
 - **Le caractère le moins sûr.** Un jeton peut porter `faible`, la probabilité
   de son caractère le moins sûr (le second lecteur la donne). Sous
   `lecture.confiance_du_caractere` (0,8), le mot est incertain : un texte

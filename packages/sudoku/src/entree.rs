@@ -20,6 +20,10 @@ pub struct Entree {
     /// Les marques vues sans modèle sur la pièce (les cachets du second lecteur).
     #[serde(default)]
     pub marques: Vec<Marque>,
+    /// Les jetons sont le texte EXACT de la pièce (la couche de texte d'un PDF), pas une
+    /// lecture de l'image : un identifiant y est imprimé tel quel.
+    #[serde(default)]
+    pub texte_exact: bool,
 }
 
 /// Une marque de la page qui n'est pas un texte : un cachet d'encre. Sa page et sa boîte
@@ -41,6 +45,12 @@ pub struct Connus {
     /// sociales ignore : des mots du catalogue, fournis en entrée, jamais en dur.
     #[serde(default)]
     pub formes_juridiques: Vec<String>,
+    /// Le sens de la pièce DÉCLARÉ par la personne (« achat », « vente ») : à la capture,
+    /// ou corrigé après la lecture. Il place le dossier (client d'un achat, émetteur d'une
+    /// vente) ; l'autre matricule est le tiers. Les indices de la pièce, unanimes contre
+    /// lui, le font signaler — jamais recopier.
+    #[serde(default)]
+    pub sens: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]

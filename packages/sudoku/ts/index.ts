@@ -151,6 +151,11 @@ export interface Connus {
     readonly raison_sociale: string | null;
   }[];
   readonly formes_juridiques: readonly string[];
+  /**
+   * Le sens déclaré par la personne (à la capture, ou corrigé après la lecture). Il place
+   * le dossier ; l'autre matricule est le tiers. Absent : le moteur le cherche sur la pièce.
+   */
+  readonly sens?: "achat" | "vente";
 }
 
 /** Une marque vue sans modèle sur la page (un cachet), en coordonnées 0..1. */
@@ -171,6 +176,8 @@ export interface EntreeDuSudoku {
   readonly grille: Grille;
   readonly pack: PackDuSudoku;
   readonly plafond?: number;
+  /** Les jetons sont le texte exact de la pièce (la couche de texte d'un PDF). */
+  readonly texte_exact?: boolean;
 }
 
 /* ============================================================ LA SORTIE (§4) */
@@ -243,6 +250,8 @@ export interface SortieDuSudoku {
     readonly emetteur: { readonly matricule: ValeurLue | null; readonly nom: ValeurLue | null };
     readonly client: { readonly matricule: ValeurLue | null; readonly nom: ValeurLue | null };
     readonly tiers: { readonly code: string; readonly statut: string } | null;
+    /** Le sens vient de la déclaration de la personne, que la pièce ne contredit pas. */
+    readonly declare?: boolean;
     readonly raison?: string;
   };
   /** Les lignes d'articles, quand la grille porte une preuve `lignes`. Non bloquantes. */

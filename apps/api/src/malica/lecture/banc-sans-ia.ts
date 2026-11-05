@@ -452,6 +452,11 @@ async function mesurerLaPiece(
   /** Un dossier où garder la sortie brute du moteur et le plan, pour le diagnostic. */
   brut?: string,
   moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
+  /**
+   * La personne a déclaré le sens de la pièce (la question posée à la capture, ou sa
+   * correction après la lecture) : le banc le donne au moteur, comme la production.
+   */
+  sensDeclare = false,
 ): Promise<MesureDeLaPiece> {
   const base = {
     corpus: piece.corpus,
@@ -499,6 +504,7 @@ async function mesurerLaPiece(
     c: ContexteDuSudoku,
     d: DeviseLue,
     marques: readonly MarqueDeLaPage[] = [],
+    texteExact = false,
   ) =>
     resoudreLaPiece(
       jetonsDuSudoku(tokens, d, c),
@@ -510,8 +516,10 @@ async function mesurerLaPiece(
           : null,
         tiers: [],
         formes_juridiques: c.formesJuridiques,
+        ...(sensDeclare && piece.sens ? { sens: piece.sens } : {}),
       },
       marques,
+      texteExact,
     );
   let releve: ReleveGarde;
   try {
@@ -543,7 +551,8 @@ async function mesurerLaPiece(
   if (!contexte) return panne(commun, "contexte absent");
   const t0 = performance.now();
   let tokens = releve.tokens;
-  let sortie = resoudreSur(tokens, contexte, devise, releve.marques);
+  const exact = releve.lecteur === "pdf-text";
+  let sortie = resoudreSur(tokens, contexte, devise, releve.marques, exact);
   // La relecture guidée par la contradiction : les cellules du tableau, seules, quand le
   // centre est prouvé et que les lignes ne le sont pas (`relecture.ts`).
   const total = champsDeLaGrille(contexte.grille).ht;
@@ -554,7 +563,7 @@ async function mesurerLaPiece(
     );
     if (lues) {
       tokens = avecLesRelectures(tokens, contredites, lues);
-      sortie = resoudreSur(tokens, contexte, devise, releve.marques);
+      sortie = resoudreSur(tokens, contexte, devise, releve.marques, exact);
     }
   }
   const sudokuMs = Math.round(performance.now() - t0);
@@ -939,8 +948,12 @@ const GRILLE_DU_DIRIGEANT: Readonly<Record<string, string>> = {
   "avis de débit bancaire": "avis_debit",
 };
 
-/** Les jeux du dirigeant (100 et 50) : le plan relevé sur le staging, et leur vérité. */
-function corpusDuDirigeant(fichier: string, deviseDuPack: string): PieceDuBanc[] {
+/**
+ * Les jeux du dirigeant (100 et 50) : le plan relevé sur le staging, et leur vérité.
+ * `exact` : le plan est la couche de texte des PDF (`dirigeant-texte`), pas une lecture
+ * de l'image — un identifiant y est imprimé tel quel.
+ */
+function corpusDuDirigeant(fichier: string, deviseDuPack: string, exact = false): PieceDuBanc[] {
   interface Rangee {
     qte: number | null;
     pu_ht: number | null;
@@ -1009,7 +1022,7 @@ function corpusDuDirigeant(fichier: string, deviseDuPack: string): PieceDuBanc[]
             x1,
             y1,
           })),
-          lecteur: "plan du staging",
+          lecteur: exact ? "pdf-text" : "plan du staging",
           millisecondes: 0,
         }),
     } satisfies PieceDuBanc;
@@ -1065,6 +1078,8 @@ function chargerLeCorpus(spec: string, cache: string, deviseDuPack: string): Pie
       return corpusSynthetique(chemin, cache, deviseDuPack);
     case "dirigeant":
       return corpusDuDirigeant(chemin, deviseDuPack);
+    case "dirigeant-texte":
+      return corpusDuDirigeant(chemin, deviseDuPack, true);
     case "photo":
       return corpusPhoto(chemin, resolve(reste[1] ?? ""), cache, deviseDuPack);
     default:
@@ -1170,6 +1185,8 @@ async function principal(): Promise<void> {
       "moteur-natif": { type: "string" },
       // Garder l'entrée du moteur de chaque pièce : de quoi en faire une épreuve du moteur.
       entrees: { type: "string" },
+      // Le sens de chaque pièce déclaré par la personne, comme à la capture.
+      "sens-declare": { type: "boolean" },
       juridiction: { type: "string" },
     },
   });
@@ -1218,7 +1235,14 @@ async function principal(): Promise<void> {
           );
         return moteur(entree);
       };
-      const m = await mesurerLaPiece(db, rows[0]!.id, p, values.brut, garde);
+      const m = await mesurerLaPiece(
+        db,
+        rows[0]!.id,
+        p,
+        values.brut,
+        garde,
+        values["sens-declare"],
+      );
       mesures.push(m);
       const n = (i: Issue) => m.champs.filter((c) => c.issue === i).length;
       console.error(
@@ -1228,6 +1252,10 @@ async function principal(): Promise<void> {
     }
     if (values.sortie) writeFileSync(values.sortie, JSON.stringify(mesures));
     console.log(rapport(mesures));
+    if (values["sens-declare"])
+      console.log(
+        "\n_Le sens de chaque pièce est celui que la personne déclare (`--sens-declare`)._",
+      );
     // Le banc BLOQUE : une valeur affirmée fausse, une valeur inventée ou des parties
     // échangées font échouer la mesure. Une piste signalée ne bloque pas : elle n'est pas
     // affirmée.
