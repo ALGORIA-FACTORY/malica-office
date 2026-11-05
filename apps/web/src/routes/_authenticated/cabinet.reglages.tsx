@@ -15,6 +15,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useId, useMemo, useState } from "react";
 
 import { useMonAcces } from "@/hooks/use-mon-acces";
+import { Aide, type ParagrapheDAide } from "@/components/malica/aide";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { IntegrationsEtApi } from "@/components/malica/integrations-panel";
 import { ReglagesComptables } from "@/components/malica/reglages-comptables";
@@ -303,6 +304,8 @@ function CabinetEtEquipe() {
     Number(seuilLot) <= 100 &&
     Number(seuilRevue) <= Number(seuilLot);
 
+  const verrou = !edition || enregistrer.isPending;
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-3">
@@ -329,20 +332,25 @@ function CabinetEtEquipe() {
         </p>
       ) : null}
 
-      <fieldset
-        disabled={!edition || enregistrer.isPending}
-        className="grid min-w-0 gap-6 disabled:cursor-default xl:grid-cols-2"
-      >
+      <div className="grid min-w-0 gap-6 xl:grid-cols-2">
         {/* ---- supervision */}
-        <Groupe titre={t("cab.settings.g.supervision")} lede={t("cab.settings.g.supervision.lede")}>
-          <Ligne label={t("cab.settings.seuilLot")} hint={t("cab.settings.seuilLot.hint")}>
+        <Groupe
+          titre={t("cab.settings.g.supervision")}
+          aides={[
+            { texte: t("cab.settings.g.supervision.lede") },
+            { titre: t("cab.settings.seuilLot"), texte: t("cab.settings.seuilLot.hint") },
+            { titre: t("cab.settings.seuilRevue"), texte: t("cab.settings.seuilRevue.hint") },
+          ]}
+          verrouille={verrou}
+        >
+          <Ligne label={t("cab.settings.seuilLot")}>
             <Pourcentage
               valeur={seuilLot}
               onChange={setSeuilLot}
               label={t("cab.settings.seuilLot")}
             />
           </Ligne>
-          <Ligne label={t("cab.settings.seuilRevue")} hint={t("cab.settings.seuilRevue.hint")}>
+          <Ligne label={t("cab.settings.seuilRevue")}>
             <Pourcentage
               valeur={seuilRevue}
               onChange={setSeuilRevue}
@@ -352,22 +360,39 @@ function CabinetEtEquipe() {
         </Groupe>
 
         {/* ---- pack */}
-        <Groupe titre={t("cab.settings.g.pack")} lede={t("cab.settings.g.pack.lede")}>
-          <Ligne label={t("cab.settings.packActif")} hint={t("cab.settings.packActif.hint")}>
+        <Groupe
+          titre={t("cab.settings.g.pack")}
+          aides={[
+            { texte: t("cab.settings.g.pack.lede") },
+            { titre: t("cab.settings.packActif"), texte: t("cab.settings.packActif.hint") },
+            { titre: t("cab.settings.extensions"), texte: t("cab.settings.extensions.hint") },
+          ]}
+          verrouille={verrou}
+        >
+          <Ligne label={t("cab.settings.packActif")}>
             <span className="num text-[13px]">
               {pack.data
                 ? `${org.jurisdiction} ${pack.data.version}`
                 : t("cab.settings.packActif.absent")}
             </span>
           </Ligne>
-          <Ligne label={t("cab.settings.extensions")} hint={t("cab.settings.extensions.hint")}>
+          <Ligne label={t("cab.settings.extensions")}>
             <span className="num text-[13px]">{plan.isPending ? "…" : extensions}</span>
           </Ligne>
         </Groupe>
 
         {/* ---- Malica */}
-        <Groupe titre={t("cab.settings.g.malica")} lede={t("cab.settings.g.malica.lede")}>
-          <Ligne label={t("cab.settings.panneau")} hint={t("cab.settings.panneau.hint")}>
+        <Groupe
+          titre={t("cab.settings.g.malica")}
+          aides={[
+            { texte: t("cab.settings.g.malica.lede") },
+            { titre: t("cab.settings.panneau"), texte: t("cab.settings.panneau.hint") },
+            { titre: t("cab.settings.proactives"), texte: t("cab.settings.proactives.hint") },
+            { titre: t("cab.settings.ton"), texte: t("cab.settings.ton.hint") },
+          ]}
+          verrouille={verrou}
+        >
+          <Ligne label={t("cab.settings.panneau")}>
             <Interrupteur
               actif={panneau}
               label={t("cab.settings.panneau")}
@@ -376,14 +401,14 @@ function CabinetEtEquipe() {
               }}
             />
           </Ligne>
-          <Ligne label={t("cab.settings.proactives")} hint={t("cab.settings.proactives.hint")}>
+          <Ligne label={t("cab.settings.proactives")}>
             <Interrupteur
               actif={proactives}
               label={t("cab.settings.proactives")}
               onChange={setProactives}
             />
           </Ligne>
-          <Ligne label={t("cab.settings.ton")} hint={t("cab.settings.ton.hint")}>
+          <Ligne label={t("cab.settings.ton")}>
             <select
               value={ton}
               onChange={(e) => setTon(e.target.value)}
@@ -400,17 +425,25 @@ function CabinetEtEquipe() {
         </Groupe>
 
         {/* ---- équipe */}
-        <Groupe titre={t("cab.settings.g.equipe")} lede={t("cab.settings.g.equipe.lede")}>
+        <Groupe
+          titre={t("cab.settings.g.equipe")}
+          aides={[
+            { texte: t("cab.settings.g.equipe.lede") },
+            { titre: t("cab.settings.invitations"), texte: t("cab.settings.invitations.hint") },
+            {
+              titre: t("cab.settings.doubleValidation"),
+              texte: t("cab.settings.doubleValidation.hint"),
+            },
+            { titre: t("cab.settings.capacite"), texte: t("cab.settings.capacite.hint") },
+          ]}
+          verrouille={verrou}
+        >
           <Ligne label={t("cab.settings.collaborateurs")} hint={emails.join(" · ")}>
             <span className="num text-[13px]">{membres.isPending ? "…" : emails.length}</span>
           </Ligne>
           <Ligne
             label={t("cab.settings.invitations")}
-            hint={
-              enAttente.length > 0
-                ? enAttente.map((i) => i.email).join(" · ")
-                : t("cab.settings.invitations.hint")
-            }
+            hint={enAttente.length > 0 ? enAttente.map((i) => i.email).join(" · ") : undefined}
           >
             <span className="flex items-center gap-3">
               <span className="num text-[13px]">
@@ -425,10 +458,7 @@ function CabinetEtEquipe() {
               </Link>
             </span>
           </Ligne>
-          <Ligne
-            label={t("cab.settings.doubleValidation")}
-            hint={t("cab.settings.doubleValidation.hint")}
-          >
+          <Ligne label={t("cab.settings.doubleValidation")}>
             <span className="flex items-center gap-1.5">
               <input
                 type="number"
@@ -442,7 +472,7 @@ function CabinetEtEquipe() {
               <span className="text-[11px] text-muted-foreground">{org.currency}</span>
             </span>
           </Ligne>
-          <Ligne label={t("cab.settings.capacite")} hint={t("cab.settings.capacite.hint")}>
+          <Ligne label={t("cab.settings.capacite")}>
             <input
               type="number"
               min={1}
@@ -454,7 +484,7 @@ function CabinetEtEquipe() {
             />
           </Ligne>
         </Groupe>
-      </fieldset>
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         {edition ? (
@@ -634,42 +664,56 @@ function FuseauDuCabinet() {
   );
 }
 
+/**
+ * Un groupe de réglages. Son explication et celle de chaque réglage
+ * s'ouvrent par un seul ⓘ (Wissem, 5 novembre 2026 : « sans trop
+ * d'écriture, les explications doivent être dans le i »). Le verrou de la
+ * consultation porte sur les champs seulement : un ⓘ dans un `fieldset`
+ * désactivé ne s'ouvrirait plus.
+ */
 function Groupe({
   titre,
-  lede,
+  aides,
+  verrouille,
   children,
 }: {
   titre: string;
-  lede: string;
+  aides: ParagrapheDAide[];
+  verrouille: boolean;
   children: React.ReactNode;
 }) {
   return (
     <section className="border border-border bg-card">
-      <div className="border-b border-border px-4 py-3">
+      <div className="flex items-center border-b border-border px-4 py-3">
         <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           {titre}
         </p>
-        <p className="mt-1 text-[12px] text-text-2">{lede}</p>
+        <Aide titre={titre} paragraphes={aides} />
       </div>
-      <dl className="divide-y divide-border">{children}</dl>
+      <fieldset disabled={verrouille} className="min-w-0 disabled:cursor-default">
+        <dl className="divide-y divide-border">{children}</dl>
+      </fieldset>
     </section>
   );
 }
 
+/** Une ligne : le réglage, et dessous une donnée (les adresses), jamais une explication. */
 function Ligne({
   label,
   hint,
   children,
 }: {
   label: string;
-  hint: string;
+  hint?: string | undefined;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-3">
       <div className="min-w-0">
         <dt className="text-[13px]">{label}</dt>
-        <dd className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</dd>
+        {hint ? (
+          <dd className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</dd>
+        ) : null}
       </div>
       <dd className="shrink-0">{children}</dd>
     </div>
