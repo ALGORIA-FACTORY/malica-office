@@ -591,9 +591,10 @@ Tranché par défaut, à confirmer :
 
 - **« Mon espace privé » des autres reste fermé** : données personnelles de
   tiers (INPDP, loi 2004-63). La réquisition reste la seule exception.
-- **Quatre yeux** : un opérateur n'accorde l'accès total qu'à un AUTRE
-  opérateur. S'il n'y a qu'un opérateur en production, il faut d'abord en
-  nommer un second.
+- **S'accorder à soi-même** (tranché par Wissem le 5 novembre 2026) : un
+  opérateur peut s'accorder l'accès total à lui-même. L'accord reste motivé,
+  daté, en ajout seul, et journalisé sous son auteur (`acces_total.accorde`,
+  acteur = bénéficiaire) ; il ne se donne toujours qu'à un opérateur.
 - **Les gestes du titulaire de la licence** (payer, changer d'offre, souscrire
   l'année, transmettre la licence, offrir une place) restent au titulaire :
   l'accès total ne fait pas payer un client.

@@ -16,8 +16,9 @@
 --     l'organisation d'ALGORIA (l'émetteur des factures en vigueur) :
 --     `plateforme.acces_total_accorder(email, motif)` et
 --     `plateforme.acces_total_retirer(personne, motif)`. Seul un opérateur
---     accorde ; il n'accorde qu'à un AUTRE opérateur (quatre yeux : nul ne se
---     donne l'accès total à lui-même) ; il retire à quiconque, lui compris.
+--     accorde, et seulement à un opérateur — lui-même compris (décision du
+--     dirigeant, 5 novembre 2026 : pas de « quatre yeux ») ; l'accord reste
+--     motivé et journalisé sous son auteur. Il retire à quiconque.
 --
 --  3. L'effet, posé UNE fois, dans les prédicats dont dépendent les
 --     politiques et les portes — pas dans les ~600 politiques :
@@ -488,9 +489,6 @@ begin
   end if;
   if not exists (select 1 from app.platform_operators po where po.user_id = v_user) then
     raise exception 'refus.acces_total.pas_operateur' using errcode = '22023';
-  end if;
-  if v_user = auth.uid() then
-    raise exception 'refus.acces_total.pour_soi_meme' using errcode = '42501';
   end if;
   -- Une décision à la fois par personne : deux accords simultanés liraient le
   -- même état et s'inscriraient tous les deux.

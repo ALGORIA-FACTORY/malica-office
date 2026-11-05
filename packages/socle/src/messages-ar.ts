@@ -3398,7 +3398,6 @@ export const ar: Dict = {
   "tour.compte.aucun": "لا يوجد حساب خدمة.",
   "refus.acces_total.motif_requis": "اذكروا السبب: يُمنح الوصول الكامل ويُسحب بسبب مُعلَن.",
   "refus.acces_total.pas_operateur": "لا يُمنح الوصول الكامل إلا لمشغّل المنصة.",
-  "refus.acces_total.pour_soi_meme": "لا يمنح أحد نفسه الوصول الكامل: يمنحه مشغّل آخر.",
   "refus.acces_total.deja_accorde": "لهذا الحساب وصول كامل بالفعل.",
   "refus.acces_total.non_accorde": "ليس لهذا الحساب وصول كامل.",
   "refus.acces_total.sans_emetteur":

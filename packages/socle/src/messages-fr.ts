@@ -3641,8 +3641,6 @@ export const fr = {
     "Dites pourquoi : l’accès total se donne et se retire motif à l’appui.",
   "refus.acces_total.pas_operateur":
     "L’accès total ne se donne qu’à un opérateur de la plateforme.",
-  "refus.acces_total.pour_soi_meme":
-    "Nul ne se donne l’accès total à lui-même : un autre opérateur l’accorde.",
   "refus.acces_total.deja_accorde": "Ce compte a déjà l’accès total.",
   "refus.acces_total.non_accorde": "Ce compte n’a pas l’accès total.",
   "refus.acces_total.sans_emetteur":

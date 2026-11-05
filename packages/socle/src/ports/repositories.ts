@@ -4506,7 +4506,7 @@ export interface TourRepository {
   designerEmetteur(organisationId: string, valideDes: string, motif: string): Promise<unknown>;
   /** Les comptes qui ont l'accès total à toutes les organisations (plateforme, lecture). */
   accesTotal(): Promise<AccesTotalEnVigueur[]>;
-  /** Accorder l'accès total à un autre opérateur, motif à l'appui. */
+  /** Accorder l'accès total à un opérateur, soi compris, motif à l'appui. */
   accorderAccesTotal(
     email: string,
     motif: string,

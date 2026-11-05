@@ -3539,8 +3539,6 @@ export const en: Dict = {
   "tour.compte.aucun": "No service account.",
   "refus.acces_total.motif_requis": "Say why: full access is granted and withdrawn with a reason.",
   "refus.acces_total.pas_operateur": "Full access can only be granted to a platform operator.",
-  "refus.acces_total.pour_soi_meme":
-    "No one grants full access to themselves: another operator grants it.",
   "refus.acces_total.deja_accorde": "This account already has full access.",
   "refus.acces_total.non_accorde": "This account does not have full access.",
   "refus.acces_total.sans_emetteur":

@@ -515,7 +515,7 @@ export const tour = {
     return rows;
   },
 
-  /** Accorder l'accès total à un autre opérateur, motif à l'appui : journalisé. */
+  /** Accorder l'accès total à un opérateur (soi compris), motif à l'appui : journalisé. */
   async accorderAccesTotal(db: Requete, email: string, motif: string) {
     const { rows } = await db.query<{ r: unknown }>(
       `select plateforme.acces_total_accorder($1, $2) as r`,

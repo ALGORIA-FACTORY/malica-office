@@ -198,7 +198,7 @@ describe("l'accès total ouvre tout, sans prendre de place", { skip: !BASE_CONFI
     });
   });
 
-  it("seule la plateforme accorde, à un autre opérateur, motif à l'appui", async () => {
+  it("seule la plateforme accorde, à un opérateur, motif à l'appui", async () => {
     await aBlanc(async (db) => {
       // La Tour refuse d'abord, puis la base.
       await refuse(
@@ -216,11 +216,6 @@ describe("l'accès total ouvre tout, sans prendre de place", { skip: !BASE_CONFI
         db,
         () => rpc(db, op, "tour.accorderAccesTotal", simple.email, "essai"),
         /acces_total\.pas_operateur/,
-      );
-      await refuse(
-        db,
-        () => rpc(db, wb, "tour.accorderAccesTotal", wb.email, "essai"),
-        /acces_total\.pour_soi_meme/,
       );
       await refuse(
         db,
@@ -265,6 +260,38 @@ describe("l'accès total ouvre tout, sans prendre de place", { skip: !BASE_CONFI
         ]),
         [],
       );
+    });
+  });
+
+  it("un opérateur s'accorde l'accès total à lui-même : motivé, journalisé à son nom", async () => {
+    await aBlanc(async (db) => {
+      await refuse(
+        db,
+        () => rpc(db, wb, "tour.accorderAccesTotal", wb.email, " "),
+        /acces_total\.motif_requis/,
+      );
+      const r = (await rpc(
+        db,
+        wb,
+        "tour.accorderAccesTotal",
+        wb.email,
+        "Décision du dirigeant",
+      )) as { decision: string };
+      await db.query("reset role");
+      const { rows } = await db.query(
+        `select actor, action, payload->>'personne' as personne, payload->>'motif' as motif
+           from audit.event_log where object_table = 'acces_total' and object_id = $1`,
+        [r.decision],
+      );
+      assert.deepEqual(rows, [
+        {
+          actor: wb.id,
+          action: "acces_total.accorde",
+          personne: wb.id,
+          motif: "Décision du dirigeant",
+        },
+      ]);
+      assert.equal((await sesOrganisations(db, wb)).size, 2);
     });
   });
 

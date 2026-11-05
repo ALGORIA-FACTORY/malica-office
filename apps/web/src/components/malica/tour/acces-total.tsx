@@ -11,10 +11,10 @@ const CLE = ["tour-acces-total"] as const;
 
 /**
  * L'accès total (décision du dirigeant, 5 novembre 2026) : qui l'a, depuis
- * quand, pourquoi, et qui l'a donné. La tour l'accorde à un AUTRE opérateur,
- * motif à l'appui, et le retire de même. La base décide de tout : elle refuse
- * un compte qui n'est pas opérateur, l'accès qu'on se donnerait à soi-même,
- * un motif vide, et journalise chaque décision.
+ * quand, pourquoi, et qui l'a donné. La tour l'accorde à un opérateur — soi
+ * compris —, motif à l'appui, et le retire de même. La base décide de tout :
+ * elle refuse un compte qui n'est pas opérateur et un motif vide, et
+ * journalise chaque décision sous son auteur.
  */
 export function LAccesTotal() {
   const { t } = useI18n();
