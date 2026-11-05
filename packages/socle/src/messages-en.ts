@@ -2868,7 +2868,7 @@ export const en: Dict = {
     "Malica is not answering right now. The minutes are saved without text; try again later.",
   "cab.pv.malica.kicker": "Written by Malica",
   "cab.pv.malica.corps":
-    "The text is hers; every figure carries the engine that produced it. No amount went through a language model.",
+    "The text is hers; every figure comes from the engine that produced it, and the check rejects any number that is not among them.",
   "cab.pv.cabinet.kicker": "Revised by the firm",
   "cab.pv.cabinet.corps":
     "The text was reread and revised by the firm. The figures remain the Socle’s.",

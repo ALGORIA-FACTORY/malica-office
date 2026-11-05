@@ -30,6 +30,7 @@
 import { MESSAGES, type Locale } from "@malica/socle/messages";
 import type { AppelApi } from "../appel-local.ts";
 import { debutDExercice, finDuMois } from "@malica/socle/exercice";
+import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 import { lireSections, texteDesSections } from "./redaction.ts";
 import { callDeepSeek, DeepSeekError, type DeepSeekMessage } from "../conseil/deepseek.ts";
 import { nombresEtrangers } from "../conseil/redaction.ts";
@@ -110,6 +111,33 @@ export function chiffresDeLaTva(tva: TvaV1, extraits: number, devise: string): P
       devise: null,
     });
   return chiffres;
+}
+
+/**
+ * Les comptages de la file : les pièces du mois, ce qui attend le cabinet, ce
+ * qui est retourné. Ce qui attend se lit par la règle de la file et de tous
+ * les écrans (`A_TRAITER` du Socle, sur le statut au cabinet). Le PV comptait
+ * le statut brut « comptabilisee » : 2 pièces « en attente » pour SOTUMAG,
+ * quand la file et la synthèse du même dossier en montraient 84 (staging,
+ * 5 novembre 2026) — dans un document remis au client.
+ */
+export function chiffresDeLaFile(
+  file: ReadonlyArray<Pick<QueueItem, "createdAt" | "statut">>,
+  periode: string,
+  retournees: number,
+): PvChiffre[] {
+  const nombre = (label: string, valeur: number): PvChiffre => ({
+    label,
+    valeur: String(valeur),
+    source: "file",
+    genre: "nombre",
+    devise: null,
+  });
+  return [
+    nombre("pieces", file.filter((p) => p.createdAt.slice(0, 7) === periode).length),
+    nombre("aSuperviser", file.filter((p) => A_TRAITER.has(p.statut)).length),
+    nombre("retournees", retournees),
+  ];
 }
 
 /* ----------------------------------------------------------- les chiffres */
@@ -231,13 +259,7 @@ async function rassemblerLesChiffres(
     );
   }
 
-  const duMois = file.filter((p) => p.createdAt.slice(0, 7) === periode).length;
-  const aSuperviser = file.filter((p) => p.status === "comptabilisee").length;
-  chiffres.push(
-    nombre("pieces", duMois, "file"),
-    nombre("aSuperviser", aSuperviser, "file"),
-    nombre("retournees", client.counts.retournee ?? 0, "file"),
-  );
+  chiffres.push(...chiffresDeLaFile(file, periode, client.counts.retournee ?? 0));
 
   const jour = new Date(`${jourDuPv}T00:00:00Z`).getTime();
   const aVenir = echeances.filter((e) => {
