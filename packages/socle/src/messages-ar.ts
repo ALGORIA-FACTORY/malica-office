@@ -3380,7 +3380,6 @@ export const ar: Dict = {
   "pme.reglages.verrou.nonLu": "مقفل لأنّ الاشتراك لم يُقرأ، لا لأنّه مرفوض.",
   "pme.reglages.surTotal": "{n} من {total}",
   "tour.quitter": "مغادرة البرج",
-  "tour.menu.espace": "ALGORIA",
   "tour.menu.clients": "العملاء",
   "tour.menu.cabinets": "المكاتب",
   "tour.menu.pme": "المؤسسات والاشتراكات",

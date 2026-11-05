@@ -89,7 +89,7 @@ describe("la tour parle trois langues", () => {
       "tour.etat.suspendu",
       "tour.etat.a_echoir",
     ] as const;
-    const recopies = cles.filter((k) => k !== "tour.menu.espace" && ar[k] === fr[k]);
+    const recopies = cles.filter((k) => ar[k] === fr[k]);
     expect(recopies).toEqual([]);
   });
 });

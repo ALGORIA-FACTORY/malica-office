@@ -3621,7 +3621,6 @@ export const fr = {
     "Verrouillé parce que le forfait n’est pas lu, pas parce qu’il est refusé.",
   "pme.reglages.surTotal": "{n} sur {total}",
   "tour.quitter": "Quitter la tour",
-  "tour.menu.espace": "ALGORIA",
   "tour.menu.clients": "Clients",
   "tour.menu.cabinets": "Cabinets",
   "tour.menu.pme": "PME et abonnements",

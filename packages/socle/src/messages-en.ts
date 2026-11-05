@@ -3521,7 +3521,6 @@ export const en: Dict = {
   "pme.reglages.verrou.nonLu": "Locked because the plan was not read, not because it was refused.",
   "pme.reglages.surTotal": "{n} of {total}",
   "tour.quitter": "Leave the tower",
-  "tour.menu.espace": "ALGORIA",
   "tour.menu.clients": "Clients",
   "tour.menu.cabinets": "Firms",
   "tour.menu.pme": "SMEs and subscriptions",
