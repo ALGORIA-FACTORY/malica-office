@@ -33,7 +33,7 @@ import {
   SignalLight,
 } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
-import { montant, quantite } from "@/lib/lisible";
+import { dateEnChiffres, montant, quantite } from "@/lib/lisible";
 import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
@@ -810,7 +810,9 @@ function CabinetReviewDeLaPiece() {
                             </div>
                             <div className="mt-0.5 flex items-center justify-between gap-3">
                               <span className="text-[11.5px] text-muted-foreground">
-                                {p.payeLe ?? t("cab.review.paiement.sansDate")}
+                                {p.payeLe
+                                  ? dateEnChiffres(p.payeLe, locale)
+                                  : t("cab.review.paiement.sansDate")}
                               </span>
                               {/*
                                * La photo du talon — « le moyen de paiement, photo
