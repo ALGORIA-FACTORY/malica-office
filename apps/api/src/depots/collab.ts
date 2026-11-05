@@ -114,6 +114,18 @@ export const collab = {
     return rows[0]!.id;
   },
 
+  /** Retirer l'affectation active d'un dossier : il redevient sans collaborateur. */
+  async desaffecter(
+    db: Requete,
+    input: { cabinetTenantId: string; clientTenantId: string },
+  ): Promise<string> {
+    const { rows } = await db.query<{ id: string }>(
+      `select public.collab_desaffecter($1, $2) as id`,
+      [input.cabinetTenantId, input.clientTenantId],
+    );
+    return rows[0]!.id;
+  },
+
   async pvList(db: Requete, cabinetTenantId: string) {
     const { rows } = await db.query(
       `select ${COLONNES_PV}

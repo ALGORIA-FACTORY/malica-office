@@ -2895,6 +2895,8 @@ export interface CollabRepository {
     collaboratorId: string;
     briefing?: string | null;
   }): Promise<string>;
+  /** Retirer l'affectation active d'un dossier : il redevient sans collaborateur. */
+  desaffecter(input: { cabinetTenantId: string; clientTenantId: string }): Promise<string>;
   pvList(cabinetTenantId: string): Promise<PvReunion[]>;
   /** Seulement les PV publiés de ce client ; les brouillons ne franchissent pas la RLS. */
   pvDuClient(
