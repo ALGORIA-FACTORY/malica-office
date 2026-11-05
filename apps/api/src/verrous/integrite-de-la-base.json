@@ -115,6 +115,7 @@
     ],
     "parametrage.regles_de_change": ["app.decisions_en_vigueur", "app.regle_de_change_arreter"],
     "parametrage.role_bindings": [
+      "app.compte_du_role",
       "app.nature_des_comptes",
       "apps/api/src/depots/capture.ts",
       "apps/api/src/depots/parametrage.ts",

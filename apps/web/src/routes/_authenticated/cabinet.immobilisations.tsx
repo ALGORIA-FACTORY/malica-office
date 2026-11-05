@@ -33,7 +33,7 @@ import {
 } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { montant } from "@/lib/lisible";
+import { montant, montantSigne } from "@/lib/lisible";
 import { estNul, sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -44,6 +44,7 @@ import {
   computeCession,
   computeDepreciation,
   cumulAt,
+  sortieDuPlan,
   vncNette,
 } from "@malica/socle/engines/immo/amortissement";
 
@@ -355,6 +356,7 @@ function CabinetImmobilisations() {
   const ecritureIds = [
     ...assetDotations.map((d) => d.ecritureId),
     ...assetDepreciations.map((d) => d.ecritureId ?? null),
+    ...assetCessions.flatMap((c) => [c.ecritureId, c.ecriturePrixId]),
   ].filter((id): id is string => !!id);
 
   const ecritures = useQuery({
@@ -373,65 +375,58 @@ function CabinetImmobilisations() {
   };
 
   /*
-   * ============================================== CÉDER UNE IMMOBILISATION
+   * ======================================== FAIRE SORTIR UNE IMMOBILISATION
    *
-   * L'écran ne calcule RIEN (R2). La valeur nette comptable à la date de
-   * cession et le résultat sortent du Socle — `vncNette` puis `computeCession` —
-   * exactement comme la dépréciation juste au-dessus. La saisie se limite à
-   * la date et au prix ; le reste est lu, jamais tapé.
+   * L'écran ne calcule RIEN (R2). La dotation de l'exercice de sortie, le
+   * cumul et la VNC amortie sortent du plan du Socle (`sortieDuPlan`), la VNC
+   * nette et le résultat de `vncNette` puis `computeCession`. La saisie se
+   * limite au motif, à la date, au prix et à sa TVA. La base refait le compte
+   * sur ses livres et passe les écritures (`immo_sortir`, 20261130140000).
    */
+  const [sortMotif, setSortMotif] = useState<"cede" | "rebute">("cede");
   const [cessAt, setCessAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [cessPrix, setCessPrix] = useState("");
+  const [cessTva, setCessTva] = useState("");
 
+  const sortiePlan = (() => {
+    if (!plan || decimals === undefined || cessAt < plan.mise_en_service) return null;
+    return sortieDuPlan(plan, cessAt, decimals);
+  })();
   const vncACession =
-    plan && decimals !== undefined
-      ? vncNette({
-          decimals,
-          vncAmortie: vncAmortieAu(plan, cessAt, decimals),
-          cumulDepreciation,
-        })
+    sortiePlan && decimals !== undefined
+      ? vncNette({ decimals, vncAmortie: sortiePlan.vncAmortie, cumulDepreciation })
       : null;
-
+  const prixSaisi = sortMotif === "rebute" ? "0" : cessPrix.trim();
   const cession =
-    plan && client && decimals !== undefined && vncACession !== null && cessPrix.trim() !== ""
+    client && decimals !== undefined && vncACession !== null && prixSaisi !== ""
       ? computeCession({
           currency: client.currency,
           decimals,
           at: cessAt,
-          prix: cessPrix.trim(),
+          prix: prixSaisi,
           vnc: vncACession,
         })
       : null;
 
-  const recordCession = useMutation({
+  const sortir = useMutation({
     mutationFn: async () => {
-      if (!asset || !client || !cession) throw new Error("cession.missing");
-      const id = await office().immo.recordCession({
-        tenantId: client.tenantId,
+      if (!asset || !cession || !sortiePlan || !pack.data) throw new Error("cession.missing");
+      return office().immo.sortir({
         assetId: asset.id,
+        motif: sortMotif,
         at: cession.at,
-        prix: cession.prix,
-        vnc: cession.vnc,
-        resultat: cession.resultat,
+        exercice: sortiePlan.exercice,
+        mois: sortiePlan.mois,
+        dotation: sortiePlan.dotation,
+        cumul: sortiePlan.cumul,
+        prixHt: cession.prix,
+        tva: sortMotif === "rebute" || cessTva.trim() === "" ? "0" : cessTva.trim(),
+        packVersionId: pack.data.id,
       });
-      // Aucun déclencheur ne bascule l'actif : la base enregistre la cession,
-      // l'écran constate l'état qui en découle. Une cession sans ce passage
-      // laisserait un bien vendu figurer parmi les actifs en service.
-      await office().immo.updateAsset({
-        id: asset.id,
-        label: asset.label,
-        miseEnService: asset.miseEnService,
-        valeurBrute: asset.valeurBrute,
-        valeurResiduelle: asset.valeurResiduelle,
-        method: asset.method,
-        dureeAnnees: asset.dureeAnnees,
-        coefficient: asset.coefficient,
-        status: "cede",
-      });
-      return id;
     },
     onSuccess: () => {
       setCessPrix("");
+      setCessTva("");
       setError(null);
       invalidate();
     },
@@ -641,20 +636,15 @@ function CabinetImmobilisations() {
             onChange={(e) => setForm({ ...form, valeurResiduelle: e.target.value })}
           />
         </label>
-        {/* Un bien naît en service : l'état ne se choisit qu'à la modification. */}
+        {/* L'état ne se choisit pas : un bien sort par une cession ou une mise au
+            rebut, avec son écriture (volet « Sortie »). */}
         {form.id ? (
-          <label className="space-y-1">
+          <div className="space-y-1">
             <span className={LABEL}>{t("cab.immo.status")}</span>
-            <select
-              className={`${FIELD} w-full`}
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value as AssetForm["status"] })}
-            >
-              <option value="en_service">{t("cab.immo.status.en_service")}</option>
-              <option value="cede">{t("cab.immo.status.cede")}</option>
-              <option value="rebute">{t("cab.immo.status.rebute")}</option>
-            </select>
-          </label>
+            <span className={`${FIELD} block w-full bg-muted`}>
+              {t(`cab.immo.status.${form.status}`)}
+            </span>
+          </div>
         ) : null}
       </div>
       {form.regles ? (
@@ -1028,55 +1018,93 @@ function CabinetImmobilisations() {
                       </p>
                     </SectionRepliable>
 
-                    {/* ---- la cession */}
+                    {/* ---- la sortie : cession ou mise au rebut */}
                     <SectionRepliable
                       titre={t("cab.immo.cession.title")}
                       ouvert={volets.cession}
                       onBascule={() => basculer("cession")}
-                      resume={asset.status === "cede" ? t("cab.immo.status.cede") : undefined}
+                      resume={
+                        asset.status !== "en_service"
+                          ? t(`cab.immo.status.${asset.status}`)
+                          : undefined
+                      }
                     >
-                      {asset.status === "cede" ? (
+                      {asset.status !== "en_service" ? (
                         <p className="text-[12px] text-muted-foreground">
-                          {t("cab.immo.cession.deja")}
+                          {t(`cab.immo.cession.deja.${asset.status}`)}
                         </p>
                       ) : (
-                        <div className="flex flex-wrap items-end gap-3 border border-border p-4">
-                          <label className="space-y-1">
-                            <span className={LABEL}>{t("cab.immo.cession.at")}</span>
-                            <input
-                              type="date"
-                              className={`${FIELD} num`}
-                              value={cessAt}
-                              onChange={(e) => setCessAt(e.target.value)}
-                            />
-                          </label>
-                          <label className="space-y-1">
-                            <span className={LABEL}>{t("cab.immo.cession.vnc")}</span>
-                            <span className={`${FIELD} num block bg-muted`}>
-                              {vncACession === null ? "—" : montant(vncACession, locale)}
-                            </span>
-                          </label>
-                          <label className="space-y-1">
-                            <span className={LABEL}>{t("cab.immo.cession.prix")}</span>
-                            <input
-                              inputMode="decimal"
-                              className={`${FIELD} num`}
-                              value={cessPrix}
-                              onChange={(e) => setCessPrix(e.target.value)}
-                            />
-                          </label>
-                          <label className="space-y-1">
-                            <span className={LABEL}>{t("cab.immo.cession.resultat")}</span>
-                            <span className={`${FIELD} num block bg-muted`}>
-                              {cession ? montant(cession.resultat, locale) : "—"}
-                            </span>
-                          </label>
+                        <div className="space-y-3 border border-border p-4">
+                          <div className="flex flex-wrap items-end gap-3">
+                            <label className="space-y-1">
+                              <span className={LABEL}>{t("cab.immo.cession.motif")}</span>
+                              <select
+                                className={FIELD}
+                                value={sortMotif}
+                                onChange={(e) => setSortMotif(e.target.value as "cede" | "rebute")}
+                              >
+                                <option value="cede">{t("cab.immo.cession.motif.cede")}</option>
+                                <option value="rebute">{t("cab.immo.cession.motif.rebute")}</option>
+                              </select>
+                            </label>
+                            <label className="space-y-1">
+                              <span className={LABEL}>{t("cab.immo.cession.at")}</span>
+                              <input
+                                type="date"
+                                className={`${FIELD} num`}
+                                value={cessAt}
+                                onChange={(e) => setCessAt(e.target.value)}
+                              />
+                            </label>
+                            {sortMotif === "cede" ? (
+                              <>
+                                <label className="space-y-1">
+                                  <span className={LABEL}>{t("cab.immo.cession.prix")}</span>
+                                  <input
+                                    inputMode="decimal"
+                                    className={`${FIELD} num`}
+                                    value={cessPrix}
+                                    onChange={(e) => setCessPrix(e.target.value)}
+                                  />
+                                </label>
+                                <label className="space-y-1">
+                                  <span className={LABEL}>{t("cab.immo.cession.tva")}</span>
+                                  <input
+                                    inputMode="decimal"
+                                    className={`${FIELD} num`}
+                                    value={cessTva}
+                                    onChange={(e) => setCessTva(e.target.value)}
+                                  />
+                                </label>
+                              </>
+                            ) : null}
+                          </div>
+                          <dl className="grid grid-cols-1 gap-2 text-[12.5px] sm:grid-cols-3">
+                            <div>
+                              <dt className={LABEL}>{t("cab.immo.cession.dotation")}</dt>
+                              <dd className="num">
+                                {sortiePlan ? montant(sortiePlan.dotation, locale) : "—"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className={LABEL}>{t("cab.immo.cession.vnc")}</dt>
+                              <dd className="num">
+                                {vncACession === null ? "—" : montant(vncACession, locale)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className={LABEL}>{t("cab.immo.cession.resultat")}</dt>
+                              <dd className="num">
+                                {cession ? montantSigne(cession.resultat, locale) : "—"}
+                              </dd>
+                            </div>
+                          </dl>
                           <ActionButton
                             variant="ink"
-                            onClick={() => recordCession.mutate()}
-                            disabled={!cession || recordCession.isPending}
+                            onClick={() => sortir.mutate()}
+                            disabled={!cession || sortir.isPending}
                           >
-                            {t("cab.immo.cession.record")}
+                            {t(`cab.immo.cession.record.${sortMotif}`)}
                           </ActionButton>
                         </div>
                       )}
@@ -1085,6 +1113,7 @@ function CabinetImmobilisations() {
                           caption={t("cab.immo.cession.title")}
                           head={[
                             t("cab.immo.cession.at"),
+                            t("cab.immo.cession.motif"),
                             t("cab.immo.cession.prix"),
                             t("cab.immo.cession.vnc"),
                             t("cab.immo.cession.resultat"),
@@ -1094,6 +1123,9 @@ function CabinetImmobilisations() {
                           {assetCessions.map((c) => (
                             <InkTableRow key={c.id}>
                               <InkCell numeric>{dateLisible(c.at)}</InkCell>
+                              <InkCell label={t("cab.immo.cession.motif")}>
+                                {t(`cab.immo.cession.motif.${c.motif}`)}
+                              </InkCell>
                               <InkCell numeric label={t("cab.immo.cession.prix")}>
                                 {montant(c.prix, locale)}
                               </InkCell>
@@ -1101,7 +1133,7 @@ function CabinetImmobilisations() {
                                 {montant(c.vnc, locale)}
                               </InkCell>
                               <InkCell numeric label={t("cab.immo.cession.resultat")}>
-                                {montant(c.resultat, locale)}
+                                {montantSigne(c.resultat, locale)}
                               </InkCell>
                             </InkTableRow>
                           ))}

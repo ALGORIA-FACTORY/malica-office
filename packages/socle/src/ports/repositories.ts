@@ -2390,6 +2390,12 @@ export interface Cession {
   prix: string;
   vnc: string;
   resultat: string;
+  /** Cession (à prix) ou mise au rebut (prix nul). */
+  motif: "cede" | "rebute";
+  /** L'écriture de sortie de l'actif ; absente pour une cession d'avant le 5 novembre 2026. */
+  ecritureId: string | null;
+  /** L'écriture du prix de cession ; absente pour une mise au rebut. */
+  ecriturePrixId: string | null;
   createdAt: string;
 }
 
@@ -2434,14 +2440,28 @@ export interface ImmoRepository {
     note?: string | null;
   }): Promise<{ depreciationId: string; ecritureId: string }>;
   cessions(tenantId: string): Promise<Cession[]>;
-  recordCession(input: {
-    tenantId: string;
+  /**
+   * Geste indivisible : dotation de l'exercice de sortie, écriture de sortie,
+   * écriture du prix, sortie et état du bien (`immo_sortir`).
+   */
+  sortir(input: {
     assetId: string;
+    motif: "cede" | "rebute";
     at: string;
-    prix: string;
+    exercice: number;
+    mois: number;
+    dotation: string;
+    cumul: string;
+    prixHt: string;
+    tva: string;
+    packVersionId: string;
+  }): Promise<{
+    sortieId: string;
+    ecritureId: string;
+    ecriturePrixId: string | null;
     vnc: string;
     resultat: string;
-  }): Promise<string>;
+  }>;
 }
 
 // -------------------------------------------------------------------- stocks
