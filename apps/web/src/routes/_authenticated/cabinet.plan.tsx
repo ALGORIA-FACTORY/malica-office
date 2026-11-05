@@ -598,14 +598,13 @@ function Roles({
   return (
     <SectionRepliable
       titre={t("plan.roles.title")}
+      aide={t("plan.roles.lede")}
       ouvert={ouvert}
       onBascule={onBascule}
       resume={
         roles.data ? t("plan.summary", { surcharges, total: roles.data.length }) : t("plan.loading")
       }
     >
-      <p className="max-w-[62ch] text-[12.5px] leading-[1.5] text-text-2">{t("plan.roles.lede")}</p>
-
       <div className="flex flex-wrap border border-border">
         <button
           type="button"
@@ -853,12 +852,11 @@ function TiersDuDossier({ ouvert, onBascule }: { ouvert: boolean; onBascule: () 
   return (
     <SectionRepliable
       titre={t("plan.tiers.title")}
+      aide={t("plan.tiers.lede")}
       ouvert={ouvert}
       onBascule={onBascule}
       resume={dossier ? (clients.data ?? []).find((c) => c.tenantId === dossier)?.name : undefined}
     >
-      <p className="max-w-[62ch] text-[12.5px] leading-[1.5] text-text-2">{t("plan.tiers.lede")}</p>
-
       <label className="flex flex-wrap items-center gap-2">
         <span className={ETIQUETTE}>{t("plan.tiers.dossier")}</span>
         <select

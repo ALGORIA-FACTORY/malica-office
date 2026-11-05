@@ -9,7 +9,7 @@ import { Link } from "@tanstack/react-router";
 import marqueAlgoria from "@/assets/algoria-mark.svg";
 import marqueRg from "@/assets/rg-mark.svg";
 import malica from "@/assets/malica.webp";
-import { Aide } from "@/components/malica/aide";
+import { Aide, type ParagrapheDAide } from "@/components/malica/aide";
 import { cn } from "@/lib/utils";
 
 /** Vert pris en charge, ambre à vous, bleu chez l'autre, rouge à corriger, gris rien à faire. */
@@ -273,10 +273,30 @@ function texteDe(n: ReactNode): string {
 }
 
 /** Titre de section — filet supérieur, jamais d'ombre. */
-export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+export function SectionTitle({
+  children,
+  action,
+  aide,
+}: {
+  children: ReactNode;
+  action?: ReactNode;
+  /**
+   * L'explication de la section, derrière le ⓘ du titre plutôt qu'en
+   * paragraphe dessous : un texte, ou plusieurs paragraphes nommés.
+   */
+  aide?: ReactNode | ParagrapheDAide[];
+}) {
   return (
     <div className="cab-section-title flex items-baseline justify-between gap-3 border-b border-border pb-2">
-      <h2 className="text-[13px] font-semibold uppercase tracking-[0.16em]">{children}</h2>
+      <h2 className="flex items-center text-[13px] font-semibold uppercase tracking-[0.16em]">
+        {children}
+        {aide ? (
+          <Aide
+            titre={texteDe(children)}
+            paragraphes={Array.isArray(aide) ? (aide as ParagrapheDAide[]) : [{ texte: aide }]}
+          />
+        ) : null}
+      </h2>
       {action}
     </div>
   );
@@ -297,28 +317,34 @@ export function SectionRepliable({
   ouvert,
   onBascule,
   resume,
+  aide,
   children,
 }: {
   titre: ReactNode;
   ouvert: boolean;
   onBascule: () => void;
   resume?: ReactNode;
+  /** L'explication, derrière un ⓘ voisin du titre (jamais dans le bouton qui replie). */
+  aide?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <section className="space-y-3">
       <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
-        <button
-          type="button"
-          onClick={onBascule}
-          aria-expanded={ouvert}
-          className="flex min-h-[36px] items-baseline gap-2 text-start text-[13px] font-semibold uppercase tracking-[0.16em]"
-        >
-          <span aria-hidden className="text-[11px] opacity-60">
-            {ouvert ? "−" : "+"}
-          </span>
-          {titre}
-        </button>
+        <span className="flex items-center">
+          <button
+            type="button"
+            onClick={onBascule}
+            aria-expanded={ouvert}
+            className="flex min-h-[36px] items-baseline gap-2 text-start text-[13px] font-semibold uppercase tracking-[0.16em]"
+          >
+            <span aria-hidden className="text-[11px] opacity-60">
+              {ouvert ? "−" : "+"}
+            </span>
+            {titre}
+          </button>
+          {aide ? <Aide titre={texteDe(titre)} paragraphes={[{ texte: aide }]} /> : null}
+        </span>
         {resume ? <span className="text-[12px] text-muted-foreground">{resume}</span> : null}
       </div>
       {ouvert ? children : null}

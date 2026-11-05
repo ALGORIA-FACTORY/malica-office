@@ -20,6 +20,7 @@ import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context"
 import { ecrireDossierCourant, useDossierCourant } from "@/components/malica/dossier-courant";
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import { OrigineDEcheance } from "@/components/malica/origine-d-echeance";
+import { Aide } from "@/components/malica/aide";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -457,10 +458,13 @@ function CabinetEcheances() {
       {/* ---- les dossiers sans calendrier */}
       {manques.length > 0 ? (
         <section className="border border-s-2 border-border border-s-marigold bg-card p-4">
-          <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="flex items-center text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             {t("cab.echeances.manques.titre")}
+            <Aide
+              titre={t("cab.echeances.manques.titre")}
+              paragraphes={[{ texte: t("cab.echeances.manques.lede") }]}
+            />
           </p>
-          <p className="mt-1.5 text-[12.5px] text-text-2">{t("cab.echeances.manques.lede")}</p>
           <ul className="mt-3 divide-y divide-border">
             {manques.map((m) => (
               <li key={m.tenantId} className="flex items-baseline justify-between gap-3 py-2">

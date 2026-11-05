@@ -26,6 +26,7 @@ import {
   SectionTitle,
   EnTeteCabinet,
 } from "@/components/malica/office-ui";
+import { TexteReplie } from "@/components/malica/texte-replie";
 import { useI18n, type MessageKey } from "@/i18n";
 import { certitudeEnPourcent, messagePourLeClient, nomDeLaSource } from "@malica/socle/conseil";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -450,9 +451,10 @@ function QuestionsDesClients() {
                               </span>
                             </span>
                           </div>
-                          <p className="mt-2.5 max-w-[74ch] whitespace-pre-wrap text-[14px] leading-[1.7]">
-                            {a.reponseProposee}
-                          </p>
+                          <TexteReplie
+                            texte={a.reponseProposee}
+                            className="mt-2.5 max-w-[74ch] text-[14px] leading-[1.7]"
+                          />
                           <ul className="mt-3 flex flex-wrap gap-1.5">
                             {a.sources.length === 0 ? (
                               <li className="border border-border bg-secondary/40 px-2 py-1.5 text-[10.5px] text-muted-foreground">

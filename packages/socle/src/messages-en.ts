@@ -254,6 +254,8 @@ export const en: Dict = {
 
   "common.loading": "Loading…",
   "common.aide": "Learn more",
+  "common.lireLaSuite": "Read more",
+  "common.reduire": "Show less",
   "common.fermer": "Close",
   "pme.membres.roles.aide":
     "User: day-to-day work — submits and follows documents. Owner: runs the company, and their seat is paid.",
