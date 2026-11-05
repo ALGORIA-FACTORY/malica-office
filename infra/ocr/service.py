@@ -433,11 +433,12 @@ def _lire_en_latin(lecteur: "_Lecteur", images: list) -> tuple:
     """La lecture latine de chaque image, dans l'ordre, et les probabilites de ses
     caracteres (`_Caracteres`)."""
     lecteur.caracteres.lues = []
+    lecteur.caracteres.manques = []
     lus = [r.json["res"] for r in lecteur.latin.predict(images, batch_size=LOT)]
-    probabilites = lecteur.caracteres.lues
-    if len(probabilites) != len(lus):
-        probabilites = [None] * len(lus)
-    return lus, probabilites
+    lues, manques = lecteur.caracteres.lues, lecteur.caracteres.manques
+    if len(lues) != len(lus) or len(manques) != len(lus):
+        return lus, [None] * len(lus)
+    return lus, list(zip(lues, manques))
 
 
 def _lire_mot_par_mot(lecteur: "_Lecteur", polygones, decoupes, mixtes, sortie):
@@ -465,7 +466,7 @@ def _lire_mot_par_mot(lecteur: "_Lecteur", polygones, decoupes, mixtes, sortie):
         )
         if texte.strip():
             # les probabilites des caracteres, quand le morceau garde sa lecture latine
-            latine = not arabe and texte == rl.get("rec_text", "") and pl is not None and len(pl) == len(texte)
+            latine = not arabe and texte == rl.get("rec_text", "") and pl is not None and len(pl[0]) == len(texte)
             par_ligne.setdefault(i, []).append([a, b, texte, score, arabe, pl if latine else None])
     # Les morceaux voisins d'une meme ecriture se rejoignent et se relisent
     # ensemble : un RIB coupe a ses blancs (« 99 | 684 | 592007571 | 5690 ») se
@@ -498,7 +499,7 @@ def _lire_mot_par_mot(lecteur: "_Lecteur", polygones, decoupes, mixtes, sortie):
             for g, r, pl in zip(lot, lus, probabilites):
                 texte = r.get("rec_text", "")
                 if texte.strip():
-                    pl = pl if pl is not None and len(pl) == len(texte) else None
+                    pl = pl if pl is not None and len(pl[0]) == len(texte) else None
                     g[4] = [[g[1], g[2], texte, float(r.get("rec_score", 0.0)), g[3], pl]]
     for i in par_ligne:
         xs = [float(p[0]) for p in polygones[i]]
@@ -539,6 +540,14 @@ class _Caracteres:
     def __init__(self, decodeur) -> None:
         self.decodeur = decodeur
         self.lues: list = []
+        # Le MANQUE apres chaque caractere (`manques`) : la plus forte probabilite d'une autre
+        # lettre dans les tranches ou le blanc l'a emporte, jusqu'au caractere suivant. Une
+        # lettre perdue y laisse sa trace (« Claver » pour « Clavier » : le i a 0,20 dans le
+        # blanc ; algoria-029). L'espace et les deux lettres voisines n'y comptent pas : elles
+        # debordent toujours sur les tranches blanches.
+        self.manques: list = []
+        caracteres = list(getattr(decodeur, "character", []))
+        self._espaces = {k for k, c in enumerate(caracteres) if c == " "}
 
     def __call__(self, pred, *args, **kwargs):
         probabilites = numpy.array(pred[0])
@@ -551,6 +560,21 @@ class _Caracteres:
             for k in ignores:
                 garde &= indices[b] != k
             self.lues.append([round(float(p), 3) for p in maxima[b][garde]])
+            emis = numpy.nonzero(garde)[0]
+            manques = []
+            for n, t in enumerate(emis):
+                fin = emis[n + 1] if n + 1 < len(emis) else len(indices[b])
+                voisins = {int(indices[b][t])} | ({int(indices[b][fin])} if fin < len(indices[b]) else set())
+                exclus = list(ignores | self._espaces | voisins)
+                pire = 0.0
+                for u in range(t + 1, fin):
+                    if int(indices[b][u]) not in ignores:
+                        continue
+                    autres = probabilites[b][u].copy()
+                    autres[exclus] = 0.0
+                    pire = max(pire, float(autres.max()))
+                manques.append(round(pire, 3))
+            self.manques.append(manques)
         return self.decodeur(pred, *args, **kwargs)
 
 
@@ -812,12 +836,13 @@ def _reconnaitre(lecteur: "_Lecteur", decoupes: list) -> list:
     ordre = sorted(range(len(decoupes)), key=lambda i: decoupes[i].shape[1] / float(decoupes[i].shape[0]))
     lus: list = [None] * len(decoupes)
     lecteur.caracteres.lues = []
+    lecteur.caracteres.manques = []
     for n, (i, r) in enumerate(zip(ordre, lecteur.latin.predict([decoupes[i] for i in ordre], batch_size=LOT))):
         res = r.json["res"]  # une copie profonde a chaque lecture de `json` : une seule
         texte = res.get("rec_text", "")
-        lues = lecteur.caracteres.lues
-        probabilites = lues[n] if n < len(lues) else None
-        if probabilites is not None and len(probabilites) != len(texte):
+        lues, manques = lecteur.caracteres.lues, lecteur.caracteres.manques
+        probabilites = (lues[n], manques[n]) if n < len(lues) and n < len(manques) else None
+        if probabilites is not None and len(probabilites[0]) != len(texte):
             probabilites = None
         lus[i] = (texte, float(res.get("rec_score", 0.0)), probabilites)
     return lus
@@ -858,7 +883,7 @@ def _vagues(lecteur: "_Lecteur", octets: bytes):
                     "texte": texte,
                     "boite": boite,
                     "confiance": float(score) if score is not None else None,
-                    **({"caracteres": probabilites} if probabilites is not None else {}),
+                    **({"caracteres": probabilites[0], "manques": probabilites[1]} if probabilites is not None else {}),
                 })
         return {
             "vague": vague,

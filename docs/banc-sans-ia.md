@@ -446,6 +446,34 @@ Deux gardes l'accompagnent :
 
 Sans déclaration, rien ne change (5 943 justes, 0 faux).
 
+## Bulletin 13 — les lignes : deux articles réunis, et une lettre perdue (5 novembre 2026)
+
+Le plus gros bloc « à travailler » est celui des lignes : environ 2 200 cellules. Sur les
+pièces prouvées, les tableaux du gabarit A (scans, photos) se taisaient encore. Causes
+exactes, pièce par pièce (algoria-022, 029) :
+
+- **Deux articles dans une seule rangée.** Les rangées se forment de proche en proche ; les
+  lignes « SN » intercalées réunissaient deux articles dont la quantité était perdue
+  (« 160,000 | 134,454 » et « 43,500 | 36,555 »). Une rangée qui porte deux montants
+  EMPILÉS dans une même colonne se scinde : une bande par montant, qui garde les jetons de
+  sa ligne ; les autres lignes redeviennent des rangées à part (`scinder_les_empilees`).
+- **La ligne de livraison de l'article d'avant** (« D1 **1.00 ») devenait la tête de la
+  désignation : le centrage du texte comptait les lignes « SN » sous l'article. Elles n'en
+  comptent plus ; et une ligne de la rangée au-dessus de la ligne principale n'est gardée
+  que si elle recentre le texte sur les chiffres (`au_dessus_centrees`).
+- **Une lettre perdue.** « Claver » pour « Clavier » : chaque caractère est sûr, et
+  « claver » est un mot. Le décodeur CTC laisse la trace de la lettre perdue dans les
+  tranches où le blanc l'a emporté (le i à 0,33). Le second lecteur rend ce MANQUE après
+  chaque caractère ; au-dessus de 0,15 (`lecture.manque_du_caractere`), le mot est
+  incertain. Sur 200 désignations justes, le plus fort manque est 0,034.
+
+|                                 | juste | faux | dont à travailler |
+| ------------------------------- | ----: | ---: | ----------------: |
+| banc, sens déclaré, bulletin 12 | 6 215 |    0 |             4 347 |
+| banc, sens déclaré              | 6 410 |    0 |             4 156 |
+| banc, sens lu                   | 6 138 |    0 |             4 468 |
+| couche de texte, sens déclaré   | 1 990 |    0 |               808 |
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

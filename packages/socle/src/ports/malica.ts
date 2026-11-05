@@ -35,6 +35,12 @@ export interface PageToken {
    * caractères : un mot sous une tache s'y noie (« sans fi », le i à 0,69, la ligne à 0,98).
    */
   faible?: number;
+  /**
+   * La plus forte probabilité d'une lettre que la lecture n'a PAS émise entre deux
+   * caractères du mot, quand le lecteur la donne : une lettre perdue (« Claver » pour
+   * « Clavier », le i à 0,33 dans le blanc).
+   */
+  manque?: number;
 }
 
 /**

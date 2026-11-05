@@ -1141,7 +1141,8 @@ fn sortie(lecture: &Lecture, regle: &Regle, rang: &[usize], c: &Choix, avec_taux
         designation: if gauche.is_empty() {
             None
         } else {
-            ctx.designation(&gauche, [c.q, c.p, c.m].iter().find_map(Cellule::jeton))
+            let chiffres: Vec<usize> = [c.q, c.p, c.m].iter().filter_map(Cellule::jeton).collect();
+            ctx.designation(&gauche, chiffres.first().copied(), &chiffres)
         },
         quantite: cellule(c.q, Q),
         prix: cellule(c.p, P),

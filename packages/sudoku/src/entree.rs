@@ -96,6 +96,10 @@ pub struct Jeton {
     /// la confiance d'une ligne en est la moyenne, où un mot sous une tache se noie.
     #[serde(default)]
     pub faible: Option<f64>,
+    /// La plus forte probabilité d'une lettre que la lecture n'a pas émise entre deux
+    /// caractères du mot (une lettre perdue : « Claver » pour « Clavier »).
+    #[serde(default)]
+    pub manque: Option<f64>,
     /// Date ISO rendue par `normalizeDate`, ou `null`.
     #[serde(default)]
     pub date: Option<String>,
@@ -126,6 +130,7 @@ impl Jeton {
         self.douteux
             || pack.confiance_du_texte.is_some_and(|s| self.confiance.is_some_and(|c| c < s))
             || pack.confiance_du_caractere.is_some_and(|s| self.faible.is_some_and(|f| f < s))
+            || pack.manque_du_caractere.is_some_and(|s| s > 0.0 && self.manque.is_some_and(|m| m > s))
     }
 }
 
@@ -236,6 +241,10 @@ pub struct Pack {
     /// au caractère.
     #[serde(default)]
     pub confiance_du_caractere: Option<f64>,
+    /// Au-dessus de ce manque (`manque`), une lettre a pu se perdre dans le mot : il est
+    /// incertain (`lecture.manque_du_caractere`) ; absent, rien ne se lit au manque.
+    #[serde(default)]
+    pub manque_du_caractere: Option<f64>,
     /// Les taux nuls de chaque barème (`EXO`, `EXPORT`), par leur code. Ils ne sont pas dans
     /// `baremes` : un zéro imprimé fermerait n'importe quelle instance « 0 % ». Ils ne servent
     /// qu'à NOMMER la part exonérée d'une exonération partielle prouvée par les lignes.

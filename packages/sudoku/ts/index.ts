@@ -36,6 +36,8 @@ export interface JetonDuSudoku {
   readonly douteux?: boolean;
   /** La probabilité du caractère le moins sûr du mot, quand le lecteur la donne. */
   readonly faible?: number;
+  /** La plus forte probabilité d'une lettre non émise entre deux caractères du mot. */
+  readonly manque?: number;
   /** Date ISO, ou null. */
   readonly date: string | null;
   /**
@@ -140,6 +142,8 @@ export interface PackDuSudoku {
    * incertain (`lecture.confiance_du_caractere`).
    */
   readonly confiance_du_caractere?: number;
+  /** Au-dessus de ce manque (`manque`), une lettre a pu se perdre : le mot est incertain. */
+  readonly manque_du_caractere?: number;
 }
 
 /** Ce que la base sait du dossier et de ses tiers (anneau 2). */

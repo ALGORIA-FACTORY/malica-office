@@ -50,6 +50,8 @@ interface LignePaddle {
   confiance: number | null;
   /** La probabilité de chaque caractère du texte, quand le service la donne. */
   caracteres?: number[];
+  /** Après chaque caractère, la probabilité d'une lettre non émise (`manque`). */
+  manques?: number[];
 }
 
 export interface ReleveDuSecondLecteur {
@@ -303,12 +305,28 @@ async function* tempsDeLecture(corps: ReadableStream<Uint8Array>): AsyncGenerato
  * donne pas une probabilité par caractère.
  */
 export function plusFaibles(l: Pick<LignePaddle, "texte" | "caracteres">): number[] | undefined {
-  const p = l.caracteres;
-  if (!p || p.length !== l.texte.length) return undefined;
-  const avant = l.texte.length - l.texte.trimStart().length;
-  return [...l.texte.trim().matchAll(/\S+/gu)].map((m) => {
+  return parMot(l.texte, l.caracteres, (v) => Math.min(...v));
+}
+
+/**
+ * Pour chaque mot de la ligne, le plus fort manque entre deux de ses caractères (pas après
+ * le dernier : là commence le blanc qui sépare les mots) ; rien sans le service.
+ */
+export function plusForts(l: Pick<LignePaddle, "texte" | "manques">): number[] | undefined {
+  return parMot(l.texte, l.manques, (v) => (v.length > 1 ? Math.max(...v.slice(0, -1)) : 0));
+}
+
+/** Une valeur par mot, tirée des valeurs de ses caractères. */
+function parMot(
+  texte: string,
+  valeurs: readonly number[] | undefined,
+  tirer: (v: number[]) => number,
+): number[] | undefined {
+  if (!valeurs || valeurs.length !== texte.length) return undefined;
+  const avant = texte.length - texte.trimStart().length;
+  return [...texte.trim().matchAll(/\S+/gu)].map((m) => {
     const debut = avant + (m.index ?? 0);
-    return Math.min(...p.slice(debut, debut + m[0].length));
+    return tirer(valeurs.slice(debut, debut + m[0].length));
   });
 }
 
@@ -320,16 +338,19 @@ function jetonsDesLignes(lignes: readonly LignePaddle[], page: number): PageToke
     if (![x0, y0, x1, y1].every((n) => typeof n === "number" && Number.isFinite(n))) continue;
     const mots = decouperEnMots(l.texte, { x0, y0, x1, y1 }, page, tokens.length);
     const faibles = plusFaibles(l);
+    const manques = plusForts(l);
     // La confiance de la LIGNE vaut pour chacun de ses mots. Aucun producteur
     // ne la remplissait jusqu'ici — `confiance.ts` lisait donc toujours 1, et
     // la confiance par champ se réduisait à celle de la désignation.
     // Chaque mot garde aussi son caractère le moins sûr (`faible`).
     mots.forEach((m, k) => {
       const faible = faibles?.[k];
+      const manque = manques?.[k];
       tokens.push({
         ...m,
         ...(l.confiance === null ? {} : { confidence: l.confiance }),
         ...(faible === undefined ? {} : { faible }),
+        ...(manque === undefined ? {} : { manque }),
       });
     });
   }

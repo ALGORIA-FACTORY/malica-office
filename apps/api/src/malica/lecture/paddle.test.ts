@@ -177,6 +177,31 @@ describe("le second lecteur", () => {
     assert.equal(r!.tokens[1]!.confidence, 0.98);
   });
 
+  it("chaque mot garde son plus fort manque, entre ses caractères seulement", async () => {
+    // « Claver » pour « Clavier » : le i, perdu, à 0,33 dans le blanc après le v
+    process.env["OCR_URL"] = "http://ocr:8000";
+    serviceQuiRend({
+      lignes: [
+        {
+          texte: "Claver USB",
+          boite: [0.1, 0.2, 0.3, 0.22],
+          confiance: 0.98,
+          caracteres: [0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99],
+          manques: [0, 0, 0, 0.33, 0, 0.4, 0, 0.01, 0, 0],
+        },
+      ],
+    });
+    const r = await lireAvecPaddle(new Uint8Array([1]), 1);
+    // le manque après le dernier caractère d'un mot (le blanc entre deux mots) ne compte pas
+    assert.deepEqual(
+      r!.tokens.map((t) => [t.text, t.manque]),
+      [
+        ["Claver", 0.33],
+        ["USB", 0.01],
+      ],
+    );
+  });
+
   it("les coordonnées restent dans la page, même si le service déborde", async () => {
     process.env["OCR_URL"] = "http://ocr:8000";
     serviceQuiRend({ lignes: [{ texte: "Total", boite: [-0.5, -1, 2, 3], confiance: 1 }] });

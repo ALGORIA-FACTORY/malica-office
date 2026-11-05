@@ -213,13 +213,26 @@ pub fn affiner(
             let chiffres = chiffres_de(l);
             let (c0, c1) = etendue(&mut chiffres.iter().copied());
             let milieu_chiffres = (c0 + c1) / 2.0;
-            let texte: Vec<usize> = rangs[n].iter().copied().filter(|i| !chiffres.contains(i) && dedans(*i)).collect();
+            // le texte de la cellule, sans les lignes qui ouvrent un autre champ (un numéro de
+            // série n'allonge pas la désignation)
+            let texte: Vec<usize> = en_lignes(jetons, &rangs[n].iter().copied().filter(|i| !chiffres.contains(i) && dedans(*i)).collect::<Vec<_>>())
+                .into_iter()
+                .filter(|l| super::ouvre_un_autre_champ(jetons, l, &autres).is_none())
+                .flatten()
+                .collect();
             let (mut t0, mut t1) = if texte.is_empty() { (c0, c1) } else { etendue(&mut texte.iter().copied()) };
             // le milieu du texte compte sa suite sous la rangée (une cellule de trois lignes,
             // les chiffres sur celle du milieu)
             let derniere = en_lignes(jetons, &texte).pop().unwrap_or_default();
+            // (pas une ligne qui ouvre un autre champ : un numéro de série n'allonge pas la cellule
+            // de la désignation — algoria-022, la ligne « D1 **1.00 » de l'article d'avant en
+            // devenait la tête)
             for m in suite(n + 1, derniere, &[]) {
-                t1 = t1.max(etendue(&mut dans_la_colonne(&rangs[m]).into_iter()).1);
+                for l in en_lignes(jetons, &dans_la_colonne(&rangs[m])) {
+                    if super::ouvre_un_autre_champ(jetons, &l, &autres).is_none() {
+                        t1 = t1.max(etendue(&mut l.into_iter()).1);
+                    }
+                }
             }
             let mut prises = Vec::new();
             let mut m = n;
@@ -251,7 +264,7 @@ pub fn affiner(
         if texte.is_empty() {
             lignes_de_texte.push(texte);
         } else {
-            lignes_de_texte.extend(en_lignes(jetons, &texte));
+            lignes_de_texte.extend(au_dessus_centrees(jetons, en_lignes(jetons, &texte), &chiffres, ancre(l)));
         }
         let derniere = lignes_de_texte.last().cloned().unwrap_or_default();
         for m in suite(n + 1, derniere, &prises_en_tete) {
@@ -392,4 +405,38 @@ fn en_tete(rang: &[usize], jetons: &[Jeton], reperes: &[(usize, String)], h: f64
         })
         .collect();
     (cellules.iter().filter(|c| c.champ.is_some()).count() >= 2).then_some(cellules)
+}
+
+/// Les lignes de texte de la rangée d'une ligne d'article, sans celles qui la DÉPASSENT par
+/// le haut à tort. La rangée se forme de proche en proche : la dernière ligne de l'article
+/// d'avant (une ligne de livraison « D1 **1.00 », algoria-022) peut y entrer. Une ligne
+/// au-dessus de la ligne principale (celle qui recouvre le plus la cellule chiffrée `ancre`)
+/// n'est gardée que si elle rapproche le milieu du texte du milieu des chiffres — le critère
+/// de la tête d'une cellule (`tetes`) : un tableau qui centre ses chiffres sur deux lignes la
+/// garde, un tableau qui les aligne sur la première ligne ne la prend pas.
+pub(super) fn au_dessus_centrees(jetons: &[Jeton], lignes: Vec<Vec<usize>>, chiffres: &[usize], ancre: Option<usize>) -> Vec<Vec<usize>> {
+    let Some(a) = ancre else { return lignes };
+    let haut = |l: &Vec<usize>| l.iter().map(|&k| jetons[k].y0).fold(f64::INFINITY, f64::min);
+    let bas = |l: &Vec<usize>| l.iter().map(|&k| jetons[k].y1).fold(f64::NEG_INFINITY, f64::max);
+    let recouvre = |l: &Vec<usize>| {
+        l.iter().map(|&k| (jetons[k].y1.min(jetons[a].y1) - jetons[k].y0.max(jetons[a].y0)).max(0.0)).fold(0.0, f64::max)
+    };
+    let Some(p) = (0..lignes.len()).max_by(|&x, &y| recouvre(&lignes[x]).total_cmp(&recouvre(&lignes[y]))) else { return lignes };
+    let (c0, c1) = chiffres.iter().fold((f64::MAX, f64::MIN), |(x, y), &k| (x.min(jetons[k].y0), y.max(jetons[k].y1)));
+    let milieu = (c0 + c1) / 2.0;
+    let principale = haut(&lignes[p]);
+    let mut t0 = principale;
+    let t1 = lignes.iter().filter(|l| haut(l) >= principale).map(bas).fold(f64::NEG_INFINITY, f64::max);
+    let mut dessus: Vec<usize> = (0..lignes.len()).filter(|&i| haut(&lignes[i]) < principale).collect();
+    dessus.sort_by(|&x, &y| haut(&lignes[y]).total_cmp(&haut(&lignes[x])));
+    let mut gardees: Vec<usize> = Vec::new();
+    for i in dessus {
+        let r0 = haut(&lignes[i]);
+        if ((r0 + t1) / 2.0 - milieu).abs() >= ((t0 + t1) / 2.0 - milieu).abs() {
+            break;
+        }
+        gardees.push(i);
+        t0 = r0;
+    }
+    lignes.into_iter().enumerate().filter(|(i, l)| haut(l) >= principale || gardees.contains(i)).map(|(_, l)| l).collect()
 }

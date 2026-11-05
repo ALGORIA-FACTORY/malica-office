@@ -578,6 +578,12 @@ rattrapage (deux lectures complètes, environ quatre minutes).
   numéro de série « SN : 9813… », `numero_serie_ligne`), suivi d'une valeur
   chiffrée ou de rien, n'en est pas la suite. Deux mots d'une même ligne de
   texte ne se recouvrent pas : un jeton posé sur un mot est d'une autre ligne.
+- **Le manque.** Un jeton peut porter `manque`, la plus forte probabilité d'une lettre non
+  émise entre deux de ses caractères (le second lecteur la donne). Au-dessus de
+  `lecture.manque_du_caractere` (0,15), le mot est incertain, comme sous la confiance du
+  caractère (`Jeton::incertain`).
+- **Les montants empilés.** Une rangée qui porte deux montants empilés dans une même
+  colonne est plusieurs lignes : elle se scinde en bandes avant toute preuve.
 - **Le sens déclaré** (`connus.sens`, « achat » ou « vente ») : la personne l'a
   confirmé. Il place le dossier ; l'autre matricule est le tiers. Des indices unanimes
   contre lui : `parties` signalées, raison « le sens déclaré contredit la pièce ». La

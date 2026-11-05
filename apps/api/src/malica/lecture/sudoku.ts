@@ -164,6 +164,7 @@ export function jetonsDuSudoku(
     ...(typeof t.confidence === "number" ? { confiance: t.confidence } : {}),
     ...(jetonDouteux(t.text) ? { douteux: true } : {}),
     ...(typeof t.faible === "number" ? { faible: t.faible } : {}),
+    ...(typeof t.manque === "number" ? { manque: t.manque } : {}),
     montants: montantsDuJeton(t.text, devise),
     ...dates[i]!,
     ...(identifiants[i]!.length > 0 ? { identifiants: identifiants[i]! } : {}),
@@ -309,7 +310,7 @@ export async function lireLeContexteDuSudoku(
         `select distinct on (code) code, value_num from ref_socle_params_v
         where pack_version_id = $1
           and code in ('lecture.tolerance_arrondi_mineure', 'lecture.confiance_du_texte',
-                       'lecture.confiance_du_caractere')
+                       'lecture.confiance_du_caractere', 'lecture.manque_du_caractere')
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code, valid_from desc`,
         [packId, jour],
@@ -452,6 +453,7 @@ export async function lireLeContexteDuSudoku(
       tolerance: param("lecture.tolerance_arrondi_mineure"),
       confiance_du_texte: param("lecture.confiance_du_texte"),
       confiance_du_caractere: param("lecture.confiance_du_caractere"),
+      manque_du_caractere: param("lecture.manque_du_caractere"),
       baremes: {
         tva: taux.rows
           .filter((t) => ppm(t.rate) > 0)

@@ -122,3 +122,34 @@ fn un_caractere_lu_sans_assurance_tait_la_designation() {
     entree["pack"]["confiance_du_caractere"] = serde_json::json!(0.8);
     assert!(designation(&entree).is_null());
 }
+
+#[test]
+fn deux_montants_empiles_dans_une_rangee_sont_deux_lignes() {
+    // algoria-022 : « 160,000 | 134,454 » et « 43,500 | 36,555 », quantités perdues, que les
+    // lignes « SN » intercalées réunissaient dans une seule rangée
+    let c = cas("algoria-022");
+    rien_de_faux(&c);
+    let lues = c.sortie["lignes"]["instances"].as_array().expect("instances");
+    for m in ["134454", "36555"] {
+        assert!(lues.iter().any(|l| l["montant"]["valeur"] == m), "{m}");
+    }
+    // la ligne de livraison de l'article d'avant n'est pas la tête de la désignation
+    assert!(lues.iter().filter_map(|l| l["designation"]["valeur"].as_str()).all(|d| !d.starts_with("D1")));
+}
+
+#[test]
+fn une_lettre_perdue_tait_la_designation() {
+    let c = cas("algoria-018");
+    let premiere = c.sortie["lignes"]["instances"][0]["designation"]["refs"][0].clone();
+    let mut entree = c.entree.clone();
+    for j in entree["jetons"].as_array_mut().expect("jetons") {
+        if j["page"] == premiere["page"] && j["ordinal"] == premiere["ordinal"] {
+            j["manque"] = serde_json::json!(0.33);
+        }
+    }
+    let designation = |e: &Value| resoudre(e)["lignes"]["instances"][0]["designation"].clone();
+    entree["pack"]["manque_du_caractere"] = serde_json::json!(0.0);
+    assert!(designation(&entree).is_object(), "zéro : rien ne se lit au manque");
+    entree["pack"]["manque_du_caractere"] = serde_json::json!(0.15);
+    assert!(designation(&entree).is_null());
+}

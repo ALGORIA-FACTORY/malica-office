@@ -448,6 +448,68 @@ fn rangees(droits: &[Jeton]) -> Vec<Vec<usize>> {
     rangs
 }
 
+/// Une rangée qui porte deux montants EMPILÉS dans une même colonne (leurs boîtes se
+/// recouvrent en abscisse, pas en ordonnée) est plusieurs lignes : la fermeture de proche en
+/// proche (`rangees`) a réuni deux articles par les lignes de texte intercalées — un numéro de
+/// série, la suite d'une désignation (algoria-022, un scan : « 160,000 | 134,454 » et
+/// « 43,500 | 36,555 », quantités perdues, dans une seule rangée). Elle se scinde en bandes,
+/// une par montant de la colonne la plus empilée.
+fn scinder_les_empilees(rangs: Vec<Vec<usize>>, droits: &[Jeton]) -> Vec<Vec<usize>> {
+    let centre = |k: usize| (droits[k].y0 + droits[k].y1) / 2.0;
+    let fort = |k: usize| droits[k].montants.iter().any(|l| l.forte);
+    let empiles = |a: usize, b: usize| {
+        let (ja, jb) = (&droits[a], &droits[b]);
+        ja.x1.min(jb.x1) > ja.x0.max(jb.x0) && ja.y1.min(jb.y1) <= ja.y0.max(jb.y0)
+    };
+    let mut out = Vec::with_capacity(rangs.len());
+    for rang in rangs {
+        let forts: Vec<usize> = rang.iter().copied().filter(|&k| fort(k)).collect();
+        // la colonne la plus empilée : pour chaque montant fort, ceux qu'il empile avec lui
+        let pile: Vec<usize> = forts
+            .iter()
+            .map(|&a| {
+                let mut p: Vec<usize> = forts.iter().copied().filter(|&b| b == a || empiles(a, b)).collect();
+                p.sort_by(|&x, &y| centre(x).total_cmp(&centre(y)));
+                p.dedup_by(|x, y| !empiles(*x, *y));
+                p
+            })
+            .max_by_key(|p| p.len())
+            .unwrap_or_default();
+        if pile.len() < 2 {
+            out.push(rang);
+            continue;
+        }
+        // Chaque bande garde les jetons de la ligne de son montant ; les autres lignes de texte
+        // (un numéro de série, une ligne de livraison « D1 **1.00 », la suite d'une
+        // désignation) redeviennent des rangées à part, comme dans une rangée qui n'aurait
+        // pas été réunie : la suite d'une désignation se rattache par sa colonne (`colonnes`).
+        let recouvre = |a: usize, b: usize| {
+            let (ja, jb) = (&droits[a], &droits[b]);
+            let h = (ja.y1 - ja.y0).min(jb.y1 - jb.y0).max(f64::EPSILON);
+            (ja.y1.min(jb.y1) - ja.y0.max(jb.y0)) > 0.5 * h
+        };
+        let mut parts: Vec<Vec<usize>> = vec![Vec::new(); pile.len()];
+        let mut reste: Vec<usize> = Vec::new();
+        for &k in &rang {
+            match pile.iter().position(|&m| recouvre(m, k)) {
+                Some(b) => parts[b].push(k),
+                None => reste.push(k),
+            }
+        }
+        parts.extend(en_lignes(droits, &reste));
+        parts.retain(|p| !p.is_empty());
+        parts.sort_by(|a, b| {
+            let haut = |p: &Vec<usize>| p.iter().map(|&k| droits[k].y0).fold(f64::INFINITY, f64::min);
+            haut(a).total_cmp(&haut(b))
+        });
+        out.extend(parts);
+    }
+    for r in &mut out {
+        r.sort_by(|&a, &b| droits[a].x0.partial_cmp(&droits[b].x0).unwrap_or(std::cmp::Ordering::Equal));
+    }
+    out
+}
+
 /// Les rangées, un jeton rejoignant la bande dont le premier jeton le recouvre de plus de
 /// la moitié de `hauteur(h_premier, h_jeton)` : `f64::min` pour les lignes d'articles,
 /// `f64::max` pour l'en-tête (un grand titre ne fusionne pas deux lignes de texte).
@@ -727,8 +789,10 @@ impl Contexte<'_> {
     /// (« MATRICULE FISCAL ») que la rangée a recouvert n'en est pas.
     /// Une ligne qui ouvre un autre champ de la parcelle (`ouvre_un_autre_champ`) n'en est
     /// pas non plus. Rien ne reste : pas de désignation.
-    fn designation(&self, jetons: &[usize], ancre: Option<usize>) -> Option<Cite> {
+    fn designation(&self, jetons: &[usize], ancre: Option<usize>, chiffres: &[usize]) -> Option<Cite> {
         let lignes = sans_les_autres_champs(self.jetons, en_lignes(self.jetons, jetons), ancre, &self.autres_champs);
+        // ni une ligne au-dessus de la principale qui ne recentre pas le texte sur les chiffres
+        let lignes = colonnes::au_dessus_centrees(self.jetons, lignes, chiffres, ancre);
         if lignes.is_empty() {
             return None;
         }
@@ -793,7 +857,8 @@ impl Contexte<'_> {
 
     fn sortie(&self, rang: &[usize], t: &Triplet, avec_taux: bool) -> LigneSortie {
         let gauche = sans_la_remise(&rang[..t.q.0], t.r.map(|(k, _)| rang[k]), self.jetons);
-        let designation = if gauche.is_empty() { None } else { self.designation(&gauche, Some(rang[t.q.0])) };
+        let chiffres: Vec<usize> = [t.q.0, t.p.0, t.m.0].iter().map(|&k| rang[k]).collect();
+        let designation = if gauche.is_empty() { None } else { self.designation(&gauche, Some(rang[t.q.0]), &chiffres) };
         let un = |(k, v): (usize, i64)| Cite::lue(v.to_string(), vec![self.cite(rang[k])]);
         // Le taux : un jeton de la rangée, à droite de la quantité, hors q, p, m et remise.
         let taux = if avec_taux {
@@ -918,7 +983,7 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
     };
 
     let droits = redresses(&entree.jetons);
-    let mut rangs = rangees(&droits);
+    let mut rangs = scinder_les_empilees(rangees(&droits), &droits);
     // Une rangée de droite à gauche (un tableau arabe : « المبلغ | الأداء | سعر الوحدة |
     // الكمية | البيان ») porte ses cellules dans l'ordre inverse : montant, prix, quantité,
     // puis la désignation. Quand elle ne se lit pas de gauche à droite, elle se lit
