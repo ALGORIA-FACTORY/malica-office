@@ -21,7 +21,7 @@ import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/component
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { arreteDuCumul } from "@malica/socle/exercice";
+import { finDuMois } from "@malica/socle/exercice";
 import { montant } from "@/lib/lisible";
 import { CHIFFRES_PV as CHIFFRES, SOURCES_PV as SOURCES } from "@/lib/pv-chiffres";
 import { cn } from "@/lib/utils";
@@ -433,7 +433,9 @@ function DocumentPv({
     setDecisions(pv.decisions ?? "");
   }, [pv.id, pv.sections, pv.decisions]);
 
-  const arrete = arreteDuCumul(pv.at.slice(0, 7), pv.at);
+  // Le jour du cumul, gardé avec les chiffres ; un PV rédigé avant le 5
+  // novembre 2026 est arrêté à la fin de son mois, comme quand il a été rédigé.
+  const arrete = pv.arrete ?? finDuMois(pv.at.slice(0, 7));
   const lignesDeDecision = (pv.decisions ?? "")
     .split(/\r?\n/)
     .map((l) => l.trim())

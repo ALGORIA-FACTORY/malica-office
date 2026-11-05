@@ -2757,6 +2757,11 @@ export interface PvReunion {
   statut: string;
   envoyeLe: string | null;
   redigeParMalica: boolean;
+  /**
+   * Le jour où s'arrête le cumul des chiffres ; nul pour un PV rédigé avant
+   * le 5 novembre 2026, arrêté à la fin du mois de la réunion.
+   */
+  arrete: string | null;
 }
 
 /** Une invitation à rejoindre le cabinet, consignée en attendant d'être acceptée. */
