@@ -29,7 +29,7 @@
  */
 import { MESSAGES, type Locale } from "@malica/socle/messages";
 import type { AppelApi } from "../appel-local.ts";
-import { debutDExercice, finDuMois } from "@malica/socle/exercice";
+import { arreteDuCumul, debutDExercice } from "@malica/socle/exercice";
 import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 import { lireSections, misEnForme, texteDesSections } from "./redaction.ts";
 import { callDeepSeek, DeepSeekError, type DeepSeekMessage } from "../conseil/deepseek.ts";
@@ -154,7 +154,8 @@ async function rassemblerLesChiffres(
   jourDuPv: string,
 ): Promise<PvChiffre[]> {
   const periode = jourDuPv.slice(0, 7);
-  const fin = finDuMois(periode);
+  // Le cumul s'arrête au jour de la réunion, pas à la fin de son mois.
+  const fin = arreteDuCumul(periode, jourDuPv);
   const devise = client.currency;
 
   const [fiche, pack, plan, extraits, file, echeances] = await Promise.all([
@@ -302,7 +303,7 @@ function consigne(input: {
   cabinet: string;
   client: string;
   jour: string;
-  finDuMois: string;
+  arrete: string;
   presents: string | null;
   chiffres: string;
 }): DeepSeekMessage[] {
@@ -326,7 +327,7 @@ function consigne(input: {
     {
       role: "user",
       content: [
-        `Réunion du ${input.jour}. Point d'étape comptable, cumul au ${input.finDuMois}.`,
+        `Réunion du ${input.jour}. Point d'étape comptable, cumul au ${input.arrete}.`,
         input.presents ? `Présents : ${input.presents}.` : "Présents : non renseignés.",
         "",
         "CHIFFRES (seule source, à recopier tels quels) :",
@@ -400,7 +401,7 @@ export async function redigerLePv(
     cabinet,
     client: client.name,
     jour: pv.at,
-    finDuMois: finDuMois(pv.at.slice(0, 7)),
+    arrete: arreteDuCumul(pv.at.slice(0, 7), pv.at),
     presents: pv.participants,
     chiffres: faitsEnTexte(faits),
   });

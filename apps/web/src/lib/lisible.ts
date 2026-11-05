@@ -141,6 +141,11 @@ export function moisLocal(instant: Date): string {
   return `${instant.getFullYear()}-${String(instant.getMonth() + 1).padStart(2, "0")}`;
 }
 
+/** Le jour (`AAAA-MM-JJ`) d'un instant, à l'heure du lecteur — la même règle que son mois. */
+export function jourLocal(instant: Date): string {
+  return `${moisLocal(instant)}-${String(instant.getDate()).padStart(2, "0")}`;
+}
+
 /** Le jour et le mois, en chiffres (« 13/10 ») — d'une date du Socle ou d'un instant. */
 export function jourEtMois(iso: string, locale: string): string {
   return jourOuInstant(iso, locale);

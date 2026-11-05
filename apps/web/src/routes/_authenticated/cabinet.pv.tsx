@@ -21,7 +21,7 @@ import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/component
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { finDuMois } from "@malica/socle/exercice";
+import { arreteDuCumul } from "@malica/socle/exercice";
 import { montant } from "@/lib/lisible";
 import { CHIFFRES_PV as CHIFFRES, SOURCES_PV as SOURCES } from "@/lib/pv-chiffres";
 import { cn } from "@/lib/utils";
@@ -433,7 +433,7 @@ function DocumentPv({
     setDecisions(pv.decisions ?? "");
   }, [pv.id, pv.sections, pv.decisions]);
 
-  const finDeMois = finDuMois(pv.at.slice(0, 7));
+  const arrete = arreteDuCumul(pv.at.slice(0, 7), pv.at);
   const lignesDeDecision = (pv.decisions ?? "")
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -452,7 +452,7 @@ function DocumentPv({
           {pv.clientTenantId ? t("cab.pv.doc.kicker", { client }) : t("cab.pv.doc.sansClient")}
         </p>
         <h2 className="mt-3 text-[21px] font-semibold leading-[1.25] tracking-[-0.01em]">
-          {t("cab.pv.doc.titre", { date: dateLongue(finDeMois) })}
+          {t("cab.pv.doc.titre", { date: dateLongue(arrete) })}
         </h2>
         <p className="num mt-2.5 text-[11.5px] leading-[1.5] text-text-2">
           {t("cab.pv.doc.presents", { presents: pv.participants ?? "—" })}

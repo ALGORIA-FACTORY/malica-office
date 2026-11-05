@@ -16,7 +16,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { debutDExercice, finDuMois } from "@malica/socle/exercice";
+import { arreteDuCumul, debutDExercice } from "@malica/socle/exercice";
+import { jourLocal } from "@/lib/lisible";
 import { useI18n } from "@/i18n";
 import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
 import { useDeclarationTva } from "./use-declaration-tva";
@@ -64,7 +65,8 @@ export function useSyntheseClient(client: ClientSummary | null, periode: string)
     enabled: tenantId !== null,
   });
   const debutExercice = debutDExercice(fiche.data?.clotureExercice ?? null, periode);
-  const fin = finDuMois(periode);
+  // Le mois en cours s'arrête au jour, pas à sa fin : « cumul au 30 novembre » se lisait le 5.
+  const fin = arreteDuCumul(periode, jourLocal(new Date()));
 
   const lignes = useQuery({
     queryKey: ["synthese-lignes", tenantId, debutExercice, fin],
