@@ -23,12 +23,13 @@
  * Aucun compte, aucun mot n'est écrit ici (R4) : les natures, leurs rôles et
  * leurs motifs sont au référentiel, datés.
  */
-import { depuisUniteMineure, enUnitesExactes } from "@malica/socle/somme-decimale";
-
 import type { Requete } from "../db.ts";
 
 import { AMBIGU, compteDuRole } from "./reglement.ts";
 import type { ReglagesResolus } from "./reglages-comptables.ts";
+import { ventilerParCompte, type NatureAPreciser, type Ventilation } from "./ventilation.ts";
+
+export type { NatureAPreciser, Ventilation };
 
 /** Le réglage que ce module applique, et ses deux options. */
 const REGLAGE = "ventes.compte";
@@ -55,21 +56,6 @@ export interface VentesDuDossier {
   option: OptionDesVentes;
   natures: readonly NatureDeVente[];
 }
-
-/** La réserve que porte une vente rangée au repli faute de preuve. */
-export interface NatureAPreciser {
-  code: "nature_de_vente";
-  /**
-   * Pourquoi : un article qu'aucun motif ne reconnaît (`inconnue`), une vente
-   * sans article lu (`sans_article`), ou une facture mêlée que les montants
-   * des articles ne ventilent pas (`non_ventilable`).
-   */
-  raison: "inconnue" | "sans_article" | "non_ventilable";
-  /** Les désignations dont la nature ne se reconnaît pas. */
-  articles: string[];
-}
-
-export type Ventilation = Array<Array<{ account_code: string; montant: string | null }>>;
 
 /** L'option du dossier ; nulle quand le pack ne porte pas le réglage. */
 export function optionDesVentes(r: ReglagesResolus): OptionDesVentes | null {
@@ -188,65 +174,21 @@ export function ventilerLesVentes(p: {
   const natures = [...p.ventes.natures].sort((a, b) => a.rang - b.rang);
   const repli = natures.find((n) => n.repli);
   if (!repli) throw new Error("reglage.ventes.repli");
-  const toutAuRepli = (reserve: NatureAPreciser | null) => ({
-    ventilation: p.lignes.map(() => [{ account_code: repli.compte, montant: null }]),
-    reserve,
-  });
-  if (p.ventes.option === "unique_cabinet") return toutAuRepli(null);
-
-  const articles = p.articles.flatMap((a) =>
-    a.designation?.trim()
-      ? [{ ...a, designation: a.designation.trim(), nature: natureDe(a.designation, natures) }]
-      : [],
-  );
-  if (articles.length === 0)
-    return toutAuRepli({ code: "nature_de_vente", raison: "sans_article", articles: [] });
-  const inconnus = articles.filter((a) => a.nature === null).map((a) => a.designation);
-  if (inconnus.length > 0)
-    return toutAuRepli({ code: "nature_de_vente", raison: "inconnue", articles: inconnus });
-
-  const comptes = new Set(articles.map((a) => a.nature!.compte));
-  if (comptes.size === 1)
+  if (p.ventes.option === "unique_cabinet")
     return {
-      ventilation: p.lignes.map(() => [{ account_code: [...comptes][0]!, montant: null }]),
+      ventilation: p.lignes.map(() => [{ account_code: repli.compte, montant: null }]),
       reserve: null,
     };
-
-  // Une facture mêlée : chaque ligne par ses articles, prouvée au millime.
-  const nonVentilable = toutAuRepli({
+  return ventilerParCompte({
     code: "nature_de_vente",
-    raison: "non_ventilable",
-    articles: [],
+    lignes: p.lignes,
+    articles: p.articles.map((a) => ({
+      ...a,
+      compte: a.designation?.trim() ? (natureDe(a.designation, natures)?.compte ?? null) : null,
+    })),
+    exposant: p.exposant,
+    enDevise: p.enDevise,
+    repli: repli.compte,
+    reserverSansArticle: true,
   });
-  const codeUnique = new Set(p.lignes.map((l) => l.code)).size === 1 ? p.lignes[0]!.code : null;
-  const ventilation: Ventilation = [];
-  for (const ligne of p.lignes) {
-    const siens = articles.filter((a) => (a.tax_code ?? codeUnique) === ligne.code);
-    if (articles.some((a) => !(a.tax_code ?? codeUnique)) || siens.length === 0)
-      return nonVentilable;
-    const parCompte = new Map<string, bigint>();
-    for (const a of siens) {
-      let total: bigint;
-      try {
-        total = enUnitesExactes(a.total_ht ?? "", p.exposant);
-      } catch {
-        // Un total illisible ne prouve rien : la vente ne se ventile pas.
-        return nonVentilable;
-      }
-      parCompte.set(a.nature!.compte, (parCompte.get(a.nature!.compte) ?? 0n) + total);
-    }
-    if (parCompte.size === 1) {
-      ventilation.push([{ account_code: [...parCompte.keys()][0]!, montant: null }]);
-      continue;
-    }
-    const somme = [...parCompte.values()].reduce((s, x) => s + x, 0n);
-    if (p.enDevise || somme !== BigInt(ligne.ht)) return nonVentilable;
-    ventilation.push(
-      [...parCompte].map(([account_code, m]) => ({
-        account_code,
-        montant: depuisUniteMineure(Number(m), p.exposant),
-      })),
-    );
-  }
-  return { ventilation, reserve: null };
 }

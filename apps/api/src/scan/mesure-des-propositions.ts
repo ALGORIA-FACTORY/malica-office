@@ -1414,7 +1414,7 @@ export function jouer(cas: CasDeMesure): Issue {
       taxRates: TAUX_D_ESSAI,
       mappings: IMPUTATIONS_D_ESSAI,
       fiscalCharges: DROITS_D_ESSAI,
-      compteDeNature: null,
+      comptesDesAchats: [],
       tvaNonDeductible: false,
       // Le FODEC d'achat selon le défaut du pack (`fodec.traitement`), comme
       // la recette le propose. Forcé au compte du pack jusqu'au 1er novembre

@@ -2705,6 +2705,9 @@ export const en: Dict = {
   "cab.ecriture.illisible": "The client still sees the reading",
   "cab.ecriture.illisible.aide":
     "This entry does not read as an invoice: a counterpart sits on the document’s side, or net + VAT + duties do not equal the counterparts. No amount is shown to the client until it reads as one.",
+  "cab.ecriture.reserve.nature_de_charge": "Nature of the purchase to be specified",
+  "cab.ecriture.reserve.nature_de_charge.aide":
+    "The engine has not proved what the invoice buys (goods, services, supplies…): the purchase is proposed to the default account of your chart. Check the expense account before validating, or change the entry.",
   "cab.ecriture.reserve.nature_de_vente": "Nature of the sale to be specified",
   "cab.ecriture.reserve.nature_de_vente.aide":
     "The engine has not proved what the invoice sells (goods, services, ancillary activities): the sale is proposed to the fallback account of your chart. Check the sales account before validating, or change the entry.",
