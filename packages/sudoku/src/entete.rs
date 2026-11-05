@@ -828,6 +828,20 @@ impl<'a> Page<'a> {
 
     /// La raison sociale connue, cherchée dans les jetons : la première suite de mots
     /// égale (formes juridiques ignorées), formes qui la suivent comprises.
+    /// Le nom connu (`raison_sociale`), trouvé sur la page et imprimé FIDÈLEMENT : chaque mot
+    /// est celui de la fiche, à la casse près, ou ce mot sans ses accents (une pièce les
+    /// omet). Un accent que la fiche n'a pas est une lecture fausse (algoria-065 :
+    /// « ALGORIA FAÇTORY SARL ») : le nom ne se rend pas.
+    fn nom_connu(&self, raison_sociale: &str, formes: &BTreeSet<String>) -> Option<Vec<usize>> {
+        let jetons = self.chercher_nom(raison_sociale, formes)?;
+        let minuscules = |t: &str| -> String { t.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect() };
+        let fiche: Vec<&str> = raison_sociale.split_whitespace().filter(|m| !formes.contains(&mot(m))).collect();
+        let imprime: Vec<&str> = jetons.iter().map(|&t| self.j[t].texte.as_str()).filter(|m| !formes.contains(&mot(m))).collect();
+        let fidele = fiche.len() == imprime.len()
+            && fiche.iter().zip(&imprime).all(|(f, i)| minuscules(i) == minuscules(f) || minuscules(i) == mot(f));
+        fidele.then_some(jetons)
+    }
+
     fn chercher_nom(&self, raison_sociale: &str, formes: &BTreeSet<String>) -> Option<Vec<usize>> {
         let cherches: Vec<String> =
             raison_sociale.split_whitespace().map(mot).filter(|m| !m.is_empty() && !formes.contains(m)).collect();
@@ -1112,37 +1126,6 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         raison: Some(raison.into()),
     };
     let d = norme_matricule(&dossier.matricule);
-    if par_valeur.is_empty() {
-        return Resultat { parties: Some(vide("absent", "aucun matricule au format")), statut: "non_evaluable", lus };
-    }
-    if !par_valeur.contains_key(&d) {
-        return Resultat {
-            parties: Some(vide("signale", "le matricule du dossier n'est pas lu")),
-            statut: "indeterminee",
-            lus,
-        };
-    }
-    let autres: Vec<&str> = par_valeur.keys().map(|k| k.as_str()).filter(|k| *k != d).collect();
-    if autres.is_empty() {
-        return Resultat {
-            parties: Some(vide("signale", "seul le matricule du dossier est lu")),
-            statut: "indeterminee",
-            lus,
-        };
-    }
-
-    // Deux matricules lus qui ne diffèrent que d'un chiffre sont une écriture lue deux fois,
-    // dont l'une est fausse (dirigeant 50/31 : « 0745612B » en tête, « 0765612B » en pied) :
-    // rien n'est rendu — ni le sens, ni les parties.
-    let valeurs: Vec<&String> = par_valeur.keys().collect();
-    if valeurs.iter().enumerate().any(|(i, a)| valeurs[i + 1..].iter().any(|b| a_un_chiffre_pres(a, b))) {
-        return Resultat {
-            parties: Some(vide("signale", "deux lectures d'un matricule se contredisent")),
-            statut: "indeterminee",
-            lus,
-        };
-    }
-
     // Le sens déclaré par la personne, s'il y en a un.
     let declare_par: Option<Sens> = match connus.sens.as_deref() {
         Some("achat") => Some(Sens::Achat),
@@ -1150,16 +1133,59 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         _ => None,
     };
 
+    // Deux matricules lus qui ne diffèrent que d'un chiffre sont une écriture lue deux fois,
+    // dont l'une est fausse (dirigeant 50/31 : « 0745612B » en tête, « 0765612B » en pied) ;
+    // un matricule lu à un chiffre de celui du dossier est le sien, mal lu : rien n'est
+    // rendu — ni le sens, ni les parties.
+    let mut valeurs: Vec<&str> = par_valeur.keys().map(String::as_str).collect();
+    valeurs.push(d.as_str());
+    valeurs.sort_unstable();
+    valeurs.dedup();
+    if valeurs.iter().enumerate().any(|(i, a)| valeurs[i + 1..].iter().any(|b| a_un_chiffre_pres(a, b))) {
+        return Resultat {
+            parties: Some(vide("signale", "deux lectures d'un matricule se contredisent")),
+            statut: "indeterminee",
+            lus,
+        };
+    }
+    let d_lu = par_valeur.contains_key(&d);
+    let autres: Vec<&str> = par_valeur.keys().map(|k| k.as_str()).filter(|k| *k != d).collect();
+    // Sans déclaration, le sens se lit sur la pièce : il faut le matricule du dossier et
+    // un autre. Un sens déclaré rend ce qui est lu, même partiel : le nom du dossier ne
+    // dépend d'aucun matricule.
+    if declare_par.is_none() {
+        if par_valeur.is_empty() {
+            return Resultat { parties: Some(vide("absent", "aucun matricule au format")), statut: "non_evaluable", lus };
+        }
+        if !d_lu {
+            return Resultat {
+                parties: Some(vide("signale", "le matricule du dossier n'est pas lu")),
+                statut: "indeterminee",
+                lus,
+            };
+        }
+        if autres.is_empty() {
+            return Resultat {
+                parties: Some(vide("signale", "seul le matricule du dossier est lu")),
+                statut: "indeterminee",
+                lus,
+            };
+        }
+    }
+
     // Les indices, tous concordants ou rien.
     let mut votes: Vec<Sens> = Vec::new();
-    let (cd, ed) = (ancre(&d, Camp::Client), ancre(&d, Camp::Emetteur));
+    let (cd, ed) = (d_lu && ancre(&d, Camp::Client), d_lu && ancre(&d, Camp::Emetteur));
     if cd {
         votes.push(Sens::Achat);
     }
     if ed {
         votes.push(Sens::Vente);
     }
-    let contrepartie: Option<&str> = if autres.len() == 1 {
+    let contrepartie: Option<&str> = if autres.len() == 1 && !d_lu {
+        // le dossier n'est pas lu : le seul matricule lu est le tiers (sens déclaré)
+        Some(autres[0])
+    } else if autres.len() == 1 {
         let o = autres[0];
         if ancre(o, Camp::Emetteur) {
             votes.push(Sens::Achat);
@@ -1227,14 +1253,14 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
     // déclaration que la pièce dément se signale, elle ne se recopie pas. Sans
     // déclaration, les indices tous concordants, ou rien.
     let (sens, declare) = match (declare_par, unanimes, votes.is_empty(), contrepartie) {
-        (_, _, _, None) => {
+        (Some(d), Some(u), _, _) if d != u => {
+            return Resultat { parties: Some(vide("signale", "le sens déclaré contredit la pièce")), statut: "echec", lus };
+        }
+        (Some(d), _, _, _) => (d, true),
+        (None, _, _, None) => {
             let raison = if votes.is_empty() { "aucun indice de sens" } else { "indices de sens contradictoires" };
             return Resultat { parties: Some(vide("signale", raison)), statut: "indeterminee", lus };
         }
-        (Some(d), Some(u), _, Some(_)) if d != u => {
-            return Resultat { parties: Some(vide("signale", "le sens déclaré contredit la pièce")), statut: "echec", lus };
-        }
-        (Some(d), _, _, Some(_)) => (d, true),
         (None, Some(u), _, Some(_)) => (u, false),
         (None, None, true, Some(_)) => {
             return Resultat { parties: Some(vide("signale", "aucun indice de sens")), statut: "indeterminee", lus };
@@ -1243,7 +1269,7 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
             return Resultat { parties: Some(vide("signale", "indices de sens contradictoires")), statut: "echec", lus };
         }
     };
-    let autre = contrepartie.expect("contrepartie décidée");
+    let autre: Option<&str> = contrepartie;
     let (camp_dossier, camp_autre) = match sens {
         Sens::Achat => (Camp::Client, Camp::Emetteur),
         Sens::Vente => (Camp::Emetteur, Camp::Client),
@@ -1263,13 +1289,13 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
             })
             .expect("valeur lue")
     };
-    let od = occ_de(&d, camp_dossier);
-    let oa = occ_de(autre, camp_autre);
+    let od = d_lu.then(|| occ_de(&d, camp_dossier));
+    let oa = autre.map(|a| occ_de(a, camp_autre));
     // Le matricule du dossier est corroboré par sa fiche. Celui du tiers l'est par la
     // couche de texte exacte, deux occurrences qui concordent, un tiers connu du dossier,
     // ou chaque caractère lu avec assurance ; sinon il est rendu à VÉRIFIER (dirigeant
     // 50/02 : « 0567321M » lu « 0557321M », une seule fois, sans confiance).
-    let connu = connus.tiers.iter().any(|t| norme_matricule(&t.matricule) == autre);
+    let connu = autre.is_some_and(|a| connus.tiers.iter().any(|t| norme_matricule(&t.matricule) == a));
     let assure = |o: &Occ| {
         let seuil = entree.pack.confiance_du_caractere;
         o.jetons.iter().all(|&t| {
@@ -1277,19 +1303,23 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
             !j.incertain(&entree.pack) && seuil.is_some_and(|s| j.faible.is_some_and(|f| f >= s))
         })
     };
-    let corrobore = entree.texte_exact || connu || par_valeur[autre].len() >= 2 || assure(oa);
-    let statut_autre = if corrobore { "prouve" } else { "signale" };
-    let mut cote_dossier = Cote { matricule: Some(valeur(&page, &od.jetons, d.clone(), "prouve")), nom: None };
-    let mut cote_autre = Cote { matricule: Some(valeur(&page, &oa.jetons, autre.to_string(), statut_autre)), nom: None };
+    let mut cote_dossier = Cote { matricule: od.map(|o| valeur(&page, &o.jetons, d.clone(), "prouve")), nom: None };
+    let mut cote_autre = Cote {
+        matricule: autre.zip(oa).map(|(a, o)| {
+            let corrobore = entree.texte_exact || connu || par_valeur[a].len() >= 2 || assure(o);
+            valeur(&page, &o.jetons, a.to_string(), if corrobore { "prouve" } else { "signale" })
+        }),
+        nom: None,
+    };
 
     if let Some(rs) = dossier.raison_sociale.as_deref() {
-        cote_dossier.nom = page.chercher_nom(rs, &formes).map(|j| valeur(&page, &j, page.texte(&j), "prouve"));
+        cote_dossier.nom = page.nom_connu(rs, &formes).map(|j| valeur(&page, &j, page.texte(&j), "prouve"));
     }
-    let tiers = connus.tiers.iter().find(|t| norme_matricule(&t.matricule) == autre);
+    let tiers = autre.and_then(|a| connus.tiers.iter().find(|t| norme_matricule(&t.matricule) == a));
     if let Some(rs) = tiers.and_then(|t| t.raison_sociale.as_deref()) {
-        cote_autre.nom = page.chercher_nom(rs, &formes).map(|j| valeur(&page, &j, page.texte(&j), "prouve"));
+        cote_autre.nom = page.nom_connu(rs, &formes).map(|j| valeur(&page, &j, page.texte(&j), "prouve"));
     }
-    if cote_autre.nom.is_none() {
+    if let (None, Some(autre)) = (&cote_autre.nom, autre) {
         let occs_autre: Vec<&Occ> = {
             let mut v = par_valeur[autre].clone();
             v.sort_by(|a, b| {

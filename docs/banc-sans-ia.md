@@ -422,6 +422,30 @@ ne change pas (R7). Épreuve : une lecture qui avait rangé le dossier en émett
 en achat, n'est plus rejetée (`le-sens-corrige-replace-les-parties.test.ts`, qui échoue
 sans le correctif).
 
+## Bulletin 12 — un sens déclaré rend ce qui est lu, même partiel (5 novembre 2026)
+
+Sans déclaration, le sens se lit sur la pièce : il faut le matricule du dossier ET un
+autre. Avec un sens déclaré, rien ne justifiait de tout taire quand l'un manque : le nom
+du dossier ne dépend d'aucun matricule (sa fiche le donne, la page le porte), et le seul
+matricule lu, quand ce n'est pas celui du dossier, est le tiers. Le moteur rend donc ce
+qu'il lit — un matricule non lu n'est jamais recopié de la fiche, puisque rien ne prouve
+qu'il est imprimé.
+
+Deux gardes l'accompagnent :
+
+- un matricule lu à un chiffre de celui du dossier est le sien, mal lu : rien n'est rendu ;
+- un nom connu (du dossier, d'un tiers en base) n'est rendu que si chaque mot imprimé est
+  celui de la fiche, ou ce mot sans ses accents : « ALGORIA FAÇTORY SARL » (algoria-065,
+  une cédille que la fiche n'a pas) est une lecture fausse.
+
+|                                 | juste | faux | dont à travailler |
+| ------------------------------- | ----: | ---: | ----------------: |
+| banc, sens déclaré, bulletin 11 | 6 052 |    0 |             4 528 |
+| banc, sens déclaré              | 6 215 |    0 |             4 347 |
+| couche de texte, sens déclaré   | 1 990 |    0 |               808 |
+
+Sans déclaration, rien ne change (5 943 justes, 0 faux).
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

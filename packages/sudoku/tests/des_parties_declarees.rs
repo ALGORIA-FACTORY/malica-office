@@ -81,3 +81,26 @@ fn une_civilite_n_est_pas_le_nom_du_client() {
     assert_eq!(p["sens"], "vente");
     assert_ne!(p["client"]["nom"]["valeur"], "M.", "{p}");
 }
+
+#[test]
+fn un_sens_declare_rend_ce_qui_est_lu_meme_sans_le_matricule_du_dossier() {
+    // algoria-002 : l'OCR n'a pas lu le matricule du dossier ; le seul matricule lu est le
+    // tiers, et le nom du dossier se trouve sur la page sans aucun matricule
+    let mut e = entree("algoria-002");
+    let p = parties(&e);
+    assert_eq!((p["statut"].as_str(), p["sens"].as_str()), (Some("prouve"), Some("achat")), "{p}");
+    assert_eq!(p["client"]["nom"]["valeur"], "ALGORIA FACTORY SARL");
+    assert!(p["client"]["matricule"].is_null(), "le matricule non lu n'est pas recopié de la fiche");
+    assert_eq!(p["emetteur"]["matricule"]["valeur"], "2815004Q/A/M/000");
+    // sans déclaration, rien : le sens ne se lit pas sans le matricule du dossier
+    e["connus"].as_object_mut().expect("connus").remove("sens");
+    assert_eq!(parties(&e)["raison"], "le matricule du dossier n'est pas lu");
+}
+
+#[test]
+fn un_nom_connu_lu_avec_un_accent_qu_il_n_a_pas_ne_se_rend_pas() {
+    // algoria-065 : « ALGORIA FAÇTORY SARL » — la cédille est une lecture fausse
+    let p = parties(&entree("algoria-065"));
+    assert_eq!(p["statut"], "prouve", "{p}");
+    assert!(p["client"]["nom"].is_null(), "{p}");
+}
