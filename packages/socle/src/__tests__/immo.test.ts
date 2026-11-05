@@ -164,9 +164,22 @@ describe("sortie du plan (cession, mise au rebut)", () => {
       miseEnService: "2024-01-01",
     });
     const s = sortieDuPlan(arrondi, "2026-03-15", 3);
-    expect(s.dotation).toBe("8.333");
-    expect(s.cumul).toBe("74.999");
+    expect(s.dotation).toBe("8.334");
+    expect(s.cumul).toBe("75.000");
     expect(D_SOMME(arrondi.lignes.slice(0, 2).map((l) => l.dotation))).toBe("66.666");
+  });
+
+  it("la dernière annuité solde la base : la somme des annuités est la base, au millime", () => {
+    const tiers = computeAmortissement({
+      ...base,
+      valeurBrute: "100.000",
+      dureeAnnees: 3,
+      method: "lineaire",
+      miseEnService: "2024-01-01",
+    });
+    expect(tiers.lignes.map((l) => l.dotation)).toEqual(["33.333", "33.333", "33.334"]);
+    expect(D_SOMME(tiers.lignes.map((l) => l.dotation))).toBe("100.000");
+    expect(tiers.totals.vnc_finale).toBe("0.000");
   });
 
   it("refuse une sortie avant la mise en service", () => {
