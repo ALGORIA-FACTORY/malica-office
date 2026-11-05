@@ -159,7 +159,8 @@ function UnPerimetre({
           onChange={(e) => setMotif(e.target.value)}
           placeholder={t("common.motif")}
           aria-label={t("common.motif")}
-          className={CHAMP}
+          // Dans une colonne, `flex-1` du champ commun l'écrasait à 18 px (recette du 5 novembre).
+          className={`${CHAMP} w-full flex-none`}
         />
         <div className="flex flex-wrap gap-2">
           <button
