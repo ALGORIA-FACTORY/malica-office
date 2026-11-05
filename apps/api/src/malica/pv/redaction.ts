@@ -10,6 +10,7 @@
  * Il ne parle à personne, ne lit rien : il reçoit un texte, il rend des
  * sections. Donc éprouvable, et rapide.
  */
+import { montantLisible } from "@malica/socle/montant-lisible";
 import { z } from "zod";
 
 const Sections = z.object({
@@ -45,6 +46,60 @@ export function lireSections(reponse: string): SectionsRedigees | null {
   }
   const lu = Sections.safeParse(brut);
   return lu.success ? lu.data.sections : null;
+}
+
+/** Une date ISO du texte (« 2026-11-30 »), bornée : ni dans un nombre, ni dans un identifiant. */
+const DATE_ISO = /(?<![\d-])(\d{4}-\d{2}-\d{2})(?![\d-])/g;
+
+/**
+ * Le texte relu, mis dans la langue du lecteur — après la relecture, jamais
+ * avant.
+ *
+ * Le modèle recopie les chiffres sous leur forme brute du Socle, « 3600.000 »,
+ * et les dates sous leur forme ISO : c'est la forme que la garde « aucun
+ * nombre étranger » lit sans ambiguïté (« 3,600.000 » en anglais lui
+ * échapperait). Le PV du 5 novembre 2026, sur staging, écrivait donc
+ * « 3600.000 TND » et « 2026-11-30 » dans sa prose, sous un tableau qui disait
+ * « 3 600,000 TND ». On formate ici ce qui a déjà été vérifié : chaque montant
+ * EXACTEMENT tel qu'un chiffre le porte, chaque date ISO. Aucun nombre n'est
+ * créé — un remplacement de texte, pas un calcul.
+ */
+export function misEnForme(
+  sections: SectionsRedigees,
+  chiffres: ReadonlyArray<{ valeur: string; genre: "montant" | "nombre" }>,
+  locale: string,
+): SectionsRedigees {
+  // Un négatif se cite aussi sans son signe (« un déficit de 601.000 »).
+  // Les plus longs d'abord : « -601.000 » avant « 601.000 », et « 3600.000 »
+  // n'est pas mordu par « 600.000 ».
+  const montants = [
+    ...new Set(
+      chiffres
+        .filter((c) => c.genre === "montant")
+        .flatMap((c) => [c.valeur, c.valeur.replace(/^-/, "")]),
+    ),
+  ].sort((a, b) => b.length - a.length);
+  const jour = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  const formater = (texte: string) => {
+    let rendu = texte.replace(DATE_ISO, (iso) => {
+      const d = new Date(`${iso}T00:00:00Z`);
+      return Number.isNaN(d.getTime()) ? iso : jour.format(d);
+    });
+    for (const valeur of montants) {
+      const echappee = valeur.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
+      rendu = rendu.replace(
+        new RegExp(`(?<![\\d.,])${echappee}(?![\\d.,])`, "g"),
+        montantLisible(valeur, locale),
+      );
+    }
+    return rendu;
+  };
+  return sections.map((s) => ({ kicker: formater(s.kicker), corps: formater(s.corps) }));
 }
 
 /** Tout ce qu'un lecteur verra du texte : intitulés et corps, à la suite. */

@@ -560,6 +560,7 @@ function CabinetStocks() {
         .map((m) => (
           <p
             key={m}
+            role="alert"
             className="border border-s-2 border-border border-s-signal-stop bg-card px-3 py-2 text-[12.5px]"
           >
             {m}
