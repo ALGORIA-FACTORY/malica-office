@@ -10,6 +10,20 @@ export function finDuMois(periode: string): string {
 }
 
 /**
+ * Le jour où s'arrête un cumul du mois « YYYY-MM », lu le jour `jour` : la
+ * fin du mois quand le mois est passé, le jour même quand il est en cours.
+ *
+ * Relevé sur staging le 5 novembre 2026 : le PV et la synthèse d'un dossier
+ * titraient « cumul au 30 novembre 2026 » le 5 novembre — une date qui n'est
+ * pas encore arrivée, dans un document remis au client. Et les écritures
+ * datées après le jour entraient dans le cumul.
+ */
+export function arreteDuCumul(periode: string, jour: string): string {
+  const fin = finDuMois(periode);
+  return jour >= `${periode}-01` && jour < fin ? jour : fin;
+}
+
+/**
  * Le premier jour de l'exercice qui contient `periode`, d'après la clôture
  * de la fiche fiscale (« MM-DD » ou « YYYY-MM-DD »). Sans clôture, l'année
  * civile : le 1er janvier de l'année de la période.

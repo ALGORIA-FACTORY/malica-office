@@ -433,7 +433,9 @@ function DocumentPv({
     setDecisions(pv.decisions ?? "");
   }, [pv.id, pv.sections, pv.decisions]);
 
-  const finDeMois = finDuMois(pv.at.slice(0, 7));
+  // Le jour du cumul, gardé avec les chiffres ; un PV rédigé avant le 5
+  // novembre 2026 est arrêté à la fin de son mois, comme quand il a été rédigé.
+  const arrete = pv.arrete ?? finDuMois(pv.at.slice(0, 7));
   const lignesDeDecision = (pv.decisions ?? "")
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -452,7 +454,7 @@ function DocumentPv({
           {pv.clientTenantId ? t("cab.pv.doc.kicker", { client }) : t("cab.pv.doc.sansClient")}
         </p>
         <h2 className="mt-3 text-[21px] font-semibold leading-[1.25] tracking-[-0.01em]">
-          {t("cab.pv.doc.titre", { date: dateLongue(finDeMois) })}
+          {t("cab.pv.doc.titre", { date: dateLongue(arrete) })}
         </h2>
         <p className="num mt-2.5 text-[11.5px] leading-[1.5] text-text-2">
           {t("cab.pv.doc.presents", { presents: pv.participants ?? "—" })}

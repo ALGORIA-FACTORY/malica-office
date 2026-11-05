@@ -112,6 +112,28 @@ describe("un livrable publié appartient à son client", { skip: !BASE }, () => 
       ),
     );
   });
+  it("le cumul d'un PV se date avec ses chiffres ; sans chiffres, il ne se date pas", async () => {
+    const id = await sousIdentite(expert.id, (db) =>
+      collab.addPv(db, {
+        cabinetTenantId: cabinet,
+        clientTenantId: pme,
+        at: "2026-11-05",
+        titre: "Cumul",
+      }),
+    );
+    const texte = await sousIdentite(expert.id, (db) =>
+      collab.pvEnregistrer(db, { id, sections: [{ kicker: "Suivi", corps: "Texte." }] }),
+    );
+    assert.equal(texte.arrete, null);
+    const chiffre = await sousIdentite(expert.id, (db) =>
+      collab.pvEnregistrer(db, {
+        id,
+        chiffres: [{ label: "pieces", valeur: "3", source: "file", genre: "nombre", devise: null }],
+      }),
+    );
+    assert.equal(chiffre.arrete, "2026-11-05");
+  });
+
   it("le client conserve son livrable après la fin du mandat", async () => {
     await sousIdentite(dirigeant.id, (db) =>
       identite.revoquerMandat(db, pme, "Fin de la mission d'essai"),

@@ -30,7 +30,8 @@ function texte(v: unknown, defaut = "—"): string {
 }
 
 const COLONNES_PV = `id, cabinet_tenant_id, client_tenant_id, at, titre, participants, ordre_du_jour, decisions,
-       created_at, sections, chiffres, ton, statut, envoye_le, redige_par_malica`;
+       created_at, sections, chiffres, ton, statut, envoye_le, redige_par_malica,
+       arrete::text as arrete`;
 
 /** Un PV tel que la vue le rend. Les tableaux JSON arrivent déjà décodés par pg. */
 function versPv(p: Record<string, unknown>) {
@@ -59,6 +60,7 @@ function versPv(p: Record<string, unknown>) {
     ton: (p["ton"] as string | null) ?? null,
     statut: (p["statut"] as string) ?? "brouillon",
     envoyeLe: (p["envoye_le"] as string | null) ?? null,
+    arrete: (p["arrete"] as string | null) ?? null,
     redigeParMalica: Boolean(p["redige_par_malica"]),
   };
 }

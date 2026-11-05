@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { debutDExercice, finDuMois } from "../exercice.ts";
+import { arreteDuCumul, debutDExercice, finDuMois } from "../exercice.ts";
 
 describe("finDuMois", () => {
   it("connaît les mois courts, longs et bissextiles", () => {
@@ -26,5 +26,18 @@ describe("debutDExercice", () => {
     expect(debutDExercice("06-30", "2026-09")).toBe("2026-07-01");
     expect(debutDExercice("06-30", "2026-03")).toBe("2025-07-01");
     expect(debutDExercice("06-30", "2026-07")).toBe("2026-07-01");
+  });
+});
+
+describe("arreteDuCumul", () => {
+  it("arrête le mois en cours au jour même, pas à sa fin", () => {
+    expect(arreteDuCumul("2026-11", "2026-11-05")).toBe("2026-11-05");
+  });
+  it("arrête un mois passé à sa fin", () => {
+    expect(arreteDuCumul("2026-10", "2026-11-05")).toBe("2026-10-31");
+  });
+  it("arrête à la fin le dernier jour du mois, et un mois à venir aussi", () => {
+    expect(arreteDuCumul("2026-11", "2026-11-30")).toBe("2026-11-30");
+    expect(arreteDuCumul("2026-12", "2026-11-05")).toBe("2026-12-31");
   });
 });
