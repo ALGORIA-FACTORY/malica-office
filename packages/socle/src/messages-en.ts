@@ -2315,6 +2315,7 @@ export const en: Dict = {
   "refus.relecture_nuit.passage_ferme": "This night pass is closed.",
   "refus.facturation_auto.rattrapage_hors_bornes":
     "The catch-up covers at least one month: the month that has just closed.",
+  "refus.facturation_auto.perimetre_inconnu": "An invoicing scope is “cabinets” or “pme”.",
   "refus.facturation.premier_du_mois": "A billing period starts on the first of the month.",
   "refus.facturation.destinataire_sans_nom":
     "Recipient {destinataire} has no name: an invoice without a recipient is not an invoice.",
@@ -3762,15 +3763,24 @@ export const en: Dict = {
   "tour.menu.facturation": "Automatic invoicing",
   "tour.facturation": "Automatic invoicing",
   "tour.facturation.aide":
-    "When open, Malica issues every day the missing invoices of closed months: one per payer and per month, prorated by days, never twice. When off, no invoice goes out on its own.",
+    "Two independent scopes, each opened or turned off with a reason. When off, no invoice of that scope goes out on its own.",
   "tour.facturation.etat.ouverte": "Open since {date}.",
   "tour.facturation.etat.coupee": "Off since {date}: no invoice goes out on its own.",
   "tour.facturation.par": "Decided by {qui}.",
   "tour.facturation.parLaLivraison": "Decided at delivery.",
   "tour.facturation.motif": "Reason: {motif}",
-  "tour.facturation.rattrapage": "Closed months examined on each run",
-  "tour.facturation.rattrapage.aide":
+  "tour.facturation.cabinets": "Practices — monthly, in arrears",
+  "tour.facturation.cabinets.aide":
+    "Every day, Malica issues each practice's monthly invoice for the closed months still missing: one per practice and per month, prorated by days, never twice.",
+  "tour.facturation.cabinets.rattrapage": "Closed months examined on each run",
+  "tour.facturation.cabinets.rattrapage.aide":
     "1: the month that has just closed. Beyond that, older months never invoiced will be.",
+  "tour.facturation.pme": "SMEs — in advance, on the anniversary date",
+  "tour.facturation.pme.aide":
+    "What the SME pays is invoiced in advance, on its subscription's anniversary date, without proration. An upgrade, an extra seat or company goes out the same day on a complementary invoice; a downgrade applies at the next due date.",
+  "tour.facturation.pme.rattrapage": "Due dates examined on each run",
+  "tour.facturation.pme.rattrapage.aide":
+    "1: the current period. Beyond that, older due dates never invoiced will be.",
   "tour.facturation.invalide": "A whole number, at least 1.",
   "tour.facturation.ouvrir": "Open issuing",
   "tour.facturation.couper": "Turn issuing off",

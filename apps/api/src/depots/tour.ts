@@ -342,7 +342,10 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
-  /** L'émission automatique des factures : la décision en vigueur, qui l'a prise, le dernier passage. */
+  /**
+   * L'émission automatique : pour chaque périmètre (cabinets, PME), la décision
+   * en vigueur, qui l'a prise, le dernier passage.
+   */
   async reglageFacturationAuto(db: Requete) {
     const { rows } = await db.query<{ r: unknown }>(
       `select plateforme.facturation_auto_etat() as r`,
@@ -350,11 +353,17 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
-  /** La tour ouvre ou coupe l'émission automatique : daté, motivé, en ajout seul. */
-  async reglerFacturationAuto(db: Requete, actif: boolean, rattrapageMois: number, motif: string) {
+  /** La tour ouvre ou coupe un périmètre de l'émission : daté, motivé, en ajout seul. */
+  async reglerFacturationAuto(
+    db: Requete,
+    perimetre: string,
+    actif: boolean,
+    rattrapageMois: number,
+    motif: string,
+  ) {
     const { rows } = await db.query<{ r: unknown }>(
-      `select plateforme.facturation_auto_regler($1, $2, $3) as r`,
-      [actif, rattrapageMois, motif],
+      `select plateforme.facturation_auto_regler($1, $2, $3, $4) as r`,
+      [perimetre, actif, rattrapageMois, motif],
     );
     return rows[0]?.r ?? null;
   },

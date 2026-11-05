@@ -1,3 +1,7 @@
+import type {
+  EtatDuPerimetreDeFacturation,
+  PerimetreDeFacturation,
+} from "@malica/socle/ports/repositories";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
@@ -8,37 +12,91 @@ import { ALERTE, BOUTON, CARTE, CHAMP, TEXTE, TITRE, useRetour } from "./commun"
 
 const ENTIER = /^\d+$/;
 
+/** Ce que chaque périmètre dit de lui-même : son titre, son aide, son rattrapage. */
+const PERIMETRES: ReadonlyArray<{
+  code: PerimetreDeFacturation;
+  titre: MessageKey;
+  aide: MessageKey;
+  rattrapage: MessageKey;
+  rattrapageAide: MessageKey;
+}> = [
+  {
+    code: "cabinets",
+    titre: "tour.facturation.cabinets",
+    aide: "tour.facturation.cabinets.aide",
+    rattrapage: "tour.facturation.cabinets.rattrapage",
+    rattrapageAide: "tour.facturation.cabinets.rattrapage.aide",
+  },
+  {
+    code: "pme",
+    titre: "tour.facturation.pme",
+    aide: "tour.facturation.pme.aide",
+    rattrapage: "tour.facturation.pme.rattrapage",
+    rattrapageAide: "tour.facturation.pme.rattrapage.aide",
+  },
+];
+
 /**
- * L'émission automatique des factures mensuelles (décision du 4 novembre
- * 2026) : chaque jour, Malica émet les factures des mois clos qui manquent,
- * une par payeur et par mois, au prorata, jamais deux. La tour l'ouvre ou la
- * coupe, motif à l'appui, règle combien de mois clos chaque passage examine,
- * et voit ce que le dernier passage a fait. La base décide de tout le reste.
+ * L'émission automatique des factures (décisions du 4 novembre 2026) : deux
+ * périmètres indépendants. Les cabinets reçoivent chaque mois, à terme échu,
+ * leur facture consolidée ; les PME paient d'avance, à leur date
+ * anniversaire, et une montée ou une place de plus part le jour même sur une
+ * facture complémentaire. La tour ouvre ou coupe chacun, motif à l'appui,
+ * règle sa fenêtre de rattrapage, et voit ce que son dernier passage a fait.
+ * La base décide de tout le reste.
  */
 export function LaFacturationAutomatique() {
-  const { t, locale } = useI18n();
-  const qc = useQueryClient();
-  const { retour, setRetour, echec } = useRetour();
+  const { t } = useI18n();
   const etat = useQuery({
     queryKey: ["tour-facturation-auto"],
     queryFn: () => office().tour.reglageFacturationAuto(),
   });
+
+  return (
+    <div className={CARTE} data-facturation-auto>
+      <h2 className={TITRE}>{t("tour.facturation")}</h2>
+      <p className={TEXTE}>{t("tour.facturation.aide")}</p>
+      {etat.isPending ? <p className={TEXTE}>{t("common.loading")}</p> : null}
+      {PERIMETRES.map((p) => (
+        <UnPerimetre
+          key={p.code}
+          perimetre={p}
+          etat={etat.data?.[p.code] ?? null}
+          charge={etat.isSuccess}
+        />
+      ))}
+    </div>
+  );
+}
+
+function UnPerimetre({
+  perimetre,
+  etat,
+  charge,
+}: {
+  perimetre: (typeof PERIMETRES)[number];
+  etat: EtatDuPerimetreDeFacturation | null;
+  charge: boolean;
+}) {
+  const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const { retour, setRetour, echec } = useRetour();
   const [rattrapage, setRattrapage] = useState("");
   const [motif, setMotif] = useState("");
 
-  useEffect(() => {
-    const r = etat.data?.reglage;
-    if (r) setRattrapage(String(r.rattrapage_mois));
-  }, [etat.data]);
+  const r = etat?.reglage ?? null;
+  const dernier = etat?.dernier ?? null;
 
-  const r = etat.data?.reglage ?? null;
-  const dernier = etat.data?.dernier ?? null;
+  useEffect(() => {
+    if (r) setRattrapage(String(r.rattrapage_mois));
+  }, [r]);
+
   const valide = ENTIER.test(rattrapage.trim()) && Number(rattrapage) >= 1;
-  const pret = etat.isSuccess && valide && motif.trim() !== "";
+  const pret = charge && valide && motif.trim() !== "";
 
   const regler = useMutation({
     mutationFn: (actif: boolean) =>
-      office().tour.reglerFacturationAuto(actif, Number(rattrapage), motif),
+      office().tour.reglerFacturationAuto(perimetre.code, actif, Number(rattrapage), motif),
     onSuccess: async () => {
       setRetour(t("tour.fait"));
       setMotif("");
@@ -64,9 +122,9 @@ export function LaFacturationAutomatique() {
     : [];
 
   return (
-    <div className={CARTE} data-facturation-auto>
-      <h2 className={TITRE}>{t("tour.facturation")}</h2>
-      <p className={TEXTE}>{t("tour.facturation.aide")}</p>
+    <section className="mt-4 border-t border-border pt-4" data-perimetre={perimetre.code}>
+      <h3 className={TITRE}>{t(perimetre.titre)}</h3>
+      <p className={TEXTE}>{t(perimetre.aide)}</p>
       {r ? (
         <>
           <p className={`${TEXTE} ${r.actif ? "text-signal-ok" : ""}`} data-etat>
@@ -81,25 +139,21 @@ export function LaFacturationAutomatique() {
             {t("tour.facturation.motif", { motif: r.motif })}
           </p>
         </>
-      ) : etat.isPending ? (
-        <p className={TEXTE}>{t("common.loading")}</p>
       ) : null}
 
       <div className="mt-2 flex flex-col gap-2">
         <label className={TEXTE}>
-          {t("tour.facturation.rattrapage")}
+          {t(perimetre.rattrapage)}
           <input
             value={rattrapage}
             onChange={(e) => setRattrapage(e.target.value)}
             inputMode="numeric"
-            aria-label={t("tour.facturation.rattrapage")}
+            aria-label={t(perimetre.rattrapage)}
             className={`${CHAMP} mt-1 w-full`}
           />
         </label>
-        <p className={TEXTE}>{t("tour.facturation.rattrapage.aide")}</p>
-        {!valide && etat.isSuccess ? (
-          <p className={ALERTE}>{t("tour.facturation.invalide")}</p>
-        ) : null}
+        <p className={TEXTE}>{t(perimetre.rattrapageAide)}</p>
+        {!valide && charge ? <p className={ALERTE}>{t("tour.facturation.invalide")}</p> : null}
         <input
           value={motif}
           onChange={(e) => setMotif(e.target.value)}
@@ -135,11 +189,11 @@ export function LaFacturationAutomatique() {
         </p>
       ) : null}
 
-      <h3 className={`${TITRE} mt-4`}>
+      <h4 className={`${TITRE} mt-4`}>
         {dernier
           ? t("tour.facturation.dernier", { date: date(dernier.passee_le) })
           : t("tour.facturation.dernier.aucun")}
-      </h3>
+      </h4>
       {dernier ? (
         <>
           <ul className="grid gap-1 sm:grid-cols-4" data-compteurs>
@@ -164,6 +218,6 @@ export function LaFacturationAutomatique() {
           ) : null}
         </>
       ) : null}
-    </div>
+    </section>
   );
 }

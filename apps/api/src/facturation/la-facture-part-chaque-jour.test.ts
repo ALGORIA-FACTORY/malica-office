@@ -1,5 +1,11 @@
 /**
- * La facture part chaque jour (décision du dirigeant, 4 novembre 2026).
+ * La facture part chaque jour (décisions du dirigeant, 4 novembre 2026).
+ *
+ * Depuis 20261128090000, deux périmètres : les cabinets au mois, à terme
+ * échu (ce que ce fichier éprouvait d'abord, inchangé), et les PME d'avance,
+ * à leur date anniversaire (éprouvées en détail dans
+ * `la-pme-paie-d-avance-a-sa-date-anniversaire.test.ts`). Le titulaire monté
+ * ici n'est plus facturé au mois clos : il l'est pour sa période en cours.
  *
  * Le robot de l'API (`tourDeFacturation`) passe sous le VRAI rôle de l'API
  * (`malica_api`), l'opérateur et l'intrus sous `authenticated` avec leurs
@@ -172,15 +178,28 @@ async function monter(db: pg.PoolClient): Promise<Monde> {
   };
 }
 
-/** La tour ouvre (ou coupe) l'émission, sous l'opérateur. */
-async function regler(db: pg.PoolClient, m: Monde, actif: boolean, rattrapage = 1) {
+/** La tour ouvre (ou coupe) un périmètre — les deux par défaut —, sous l'opérateur. */
+async function regler(
+  db: pg.PoolClient,
+  m: Monde,
+  actif: boolean,
+  rattrapage = 1,
+  perimetres: Array<"cabinets" | "pme"> = ["cabinets", "pme"],
+) {
   await enPersonne(db, m.operateur);
-  await db.query("select plateforme.facturation_auto_regler($1, $2, $3)", [
-    actif,
-    rattrapage,
-    "Staging : essai de l'émission automatique",
-  ]);
+  for (const perimetre of perimetres) {
+    await db.query("select plateforme.facturation_auto_regler($1, $2, $3, $4)", [
+      perimetre,
+      actif,
+      rattrapage,
+      "Staging : essai de l'émission automatique",
+    ]);
+  }
 }
+
+/** Les compteurs des deux périmètres, additionnés. */
+const somme = (b: BilanDuJour | null, cle: "emises" | "deja_emises") =>
+  (b?.cabinets?.[cle] ?? 0) + (b?.pme?.[cle] ?? 0);
 
 /** Les factures d'un payeur, lues en administrateur. */
 async function facturesDe(db: pg.PoolClient, where: string, arg: string) {
@@ -243,22 +262,31 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
     });
   });
 
-  it("ouverte : le mois clos part, au prorata des jours, pour le titulaire et pour le cabinet", async () => {
+  it("ouverte : le cabinet a son mois clos au prorata, le titulaire sa période en cours d'avance", async () => {
     await aBlanc(async (db) => {
       const m = await monter(db);
       await regler(db, m, true);
       const bilan = await tour(db);
       assert.equal(bilan?.etat, "passee");
       assert.equal(bilan?.jour, m.jour, "le jour passé est celui de la plateforme");
+      assert.equal(bilan?.cabinets?.etat, "passee");
+      assert.equal(bilan?.pme?.etat, "passee");
 
-      // Le titulaire : une facture, du mois clos, au prorata depuis le 20.
-      const attendu = await prorata(db, "solo", m.depuis, m.mois);
+      // Le titulaire (décision B) : une facture, d'avance, pour la période
+      // anniversaire qui contient le jour — né le 20, facturé du 20 au 20 —, au
+      // prix plein, sans prorata.
+      await db.query("reset role");
+      const { rows: e } = await db.query<{ debut: string; ht: string }>(
+        `select to_char(e.debut, 'DD/MM/YYYY') as debut,
+                (ref.offre_a('solo', $1::date)).prix_mensuel_ht::text as ht
+           from facturation.echeance_de($1::date, $2::date) e`,
+        [m.depuis, m.jour],
+      );
       const [f, ...autres] = await facturesDe(db, "f.licence_id", m.licence);
-      assert.equal(autres.length, 0, "une facture par payeur et par mois");
-      assert.equal(f!.periode, m.mois);
+      assert.equal(autres.length, 0, "une facture pour la période en cours");
       assert.equal(f!.payeur_type, "titulaire");
-      assert.equal(f!.montant_ht, attendu.ht);
-      assert.ok(f!.libelle.includes(`(${attendu.jours}/${attendu.jdm} jours)`), f!.libelle);
+      assert.equal(f!.montant_ht, e[0]!.ht);
+      assert.ok(f!.libelle.includes(`du ${e[0]!.debut} au `), f!.libelle);
       assert.equal(f!.emise_le, m.jour, "datée du jour de la plateforme, pas de l'UTC");
 
       // Le cabinet : sa facture mensuelle unique, une ligne au prorata depuis le 22 ;
@@ -280,18 +308,21 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       assert.equal(journal.length, 2);
       assert.ok(journal.every((e) => e.actor === m.operateur));
 
-      // La tour lit la décision, qui l'a prise, et le dernier passage.
+      // La tour lit, pour chaque périmètre, la décision, qui l'a prise, et le dernier passage.
       await enPersonne(db, m.operateur);
-      const { rows: etat } = await db.query<{
-        r: {
-          reglage: { actif: boolean; decide_par_email: string };
-          dernier: { jour: string; emises: number };
-        };
-      }>("select plateforme.facturation_auto_etat() as r");
-      assert.equal(etat[0]!.r.reglage.actif, true);
-      assert.equal(etat[0]!.r.reglage.decide_par_email, `essai-${m.operateur}@essai.local`);
-      assert.equal(etat[0]!.r.dernier.jour, m.jour);
-      assert.ok(etat[0]!.r.dernier.emises >= 2);
+      type Etat = {
+        reglage: { actif: boolean; decide_par_email: string };
+        dernier: { jour: string; emises: number };
+      };
+      const { rows: etat } = await db.query<{ r: { cabinets: Etat; pme: Etat } }>(
+        "select plateforme.facturation_auto_etat() as r",
+      );
+      for (const p of [etat[0]!.r.cabinets, etat[0]!.r.pme]) {
+        assert.equal(p.reglage.actif, true);
+        assert.equal(p.reglage.decide_par_email, `essai-${m.operateur}@essai.local`);
+        assert.equal(p.dernier.jour, m.jour);
+        assert.ok(p.dernier.emises >= 1);
+      }
     });
   });
 
@@ -314,8 +345,8 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       );
       const troisieme = await tour(db);
       assert.equal(troisieme?.etat, "passee");
-      assert.equal(troisieme?.emises, 0, "rien de neuf");
-      assert.ok((troisieme?.deja_emises ?? 0) >= 2, "le titulaire et le cabinet sont comptés");
+      assert.equal(somme(troisieme, "emises"), 0, "rien de neuf");
+      assert.ok(somme(troisieme, "deja_emises") >= 2, "le titulaire et le cabinet sont comptés");
       await db.query("reset role");
       const { rows: apres } = await db.query<{ n: string }>(
         "select last_value::text as n from facturation.numero_facture_seq",
@@ -326,11 +357,13 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
     });
   });
 
-  it("le rattrapage facture les mois clos jamais facturés, dans la fenêtre réglée", async () => {
+  it("le rattrapage facture au cabinet les mois clos jamais facturés, dans la fenêtre réglée", async () => {
     await aBlanc(async (db) => {
-      // La grille ne commence qu'en octobre 2026 : plutôt qu'une licence née
-      // avant elle, la base passe un jour DEUX MOIS plus tard. La licence née
-      // le 20 du mois clos a alors trois mois clos : le sien et les deux suivants.
+      // La grille ne commence qu'en octobre 2026 : plutôt qu'un cabinet qui
+      // paie avant elle, la base passe un jour DEUX MOIS plus tard. Le cabinet
+      // qui paie depuis le 22 du mois clos a alors trois mois clos : le sien
+      // et les deux suivants. (Le rattrapage des PME compte des échéances :
+      // `la-pme-paie-d-avance-a-sa-date-anniversaire.test.ts`.)
       const m = await monter(db);
       await db.query("reset role");
       const { rows: d } = await db.query<{ jour: string; avant: string; dernier: string }>(
@@ -350,27 +383,35 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       };
 
       // Un mois de rattrapage : le dernier mois clos seulement, au plein mois.
-      await regler(db, m, true, 1);
+      await regler(db, m, true, 1, ["cabinets"]);
       assert.equal((await passer()).etat, "passee");
       assert.deepEqual(
-        (await facturesDe(db, "f.licence_id", m.licence)).map((f) => f.periode),
+        (await facturesDe(db, "f.payeur_tenant_id", m.cabinet)).map((f) => f.periode),
         [dernier],
       );
 
       // Trois : les deux mois plus anciens partent, le premier au prorata ; le
       // dernier, déjà facturé, ne repart pas.
-      await regler(db, m, true, 3);
+      await regler(db, m, true, 3, ["cabinets"]);
       assert.equal((await passer()).etat, "passee");
-      const factures = await facturesDe(db, "f.licence_id", m.licence);
+      const factures = await facturesDe(db, "f.payeur_tenant_id", m.cabinet);
       assert.deepEqual(
         factures.map((f) => f.periode),
         [m.mois, avant, dernier],
       );
-      assert.equal(factures[0]!.montant_ht, (await prorata(db, "solo", m.depuis, m.mois)).ht);
+      assert.equal(
+        factures[0]!.montant_ht,
+        (await prorata(db, "solo", m.depuisCabinet, m.mois)).ht,
+      );
       assert.equal(
         factures[1]!.montant_ht,
         (await prorata(db, "solo", avant, avant)).ht,
         "un mois entier, au prix plein",
+      );
+      assert.deepEqual(
+        await facturesDe(db, "f.licence_id", m.licence),
+        [],
+        "le périmètre PME est resté coupé : le titulaire n'a rien",
       );
     });
   });
@@ -385,7 +426,7 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       };
       await enPersonne(db, m.intrus);
       await refuse(
-        "select plateforme.facturation_auto_regler(true, 1, 'je me facture')",
+        "select plateforme.facturation_auto_regler('cabinets', true, 1, 'je me facture')",
         [],
         /refus\.reserve\.plateforme$/,
       );
@@ -405,12 +446,12 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       // L'opérateur règle, mais ne fait pas passer le robot à sa place.
       await enPersonne(db, m.operateur);
       await refuse(
-        "select plateforme.facturation_auto_regler(true, 0, 'aucun mois')",
+        "select plateforme.facturation_auto_regler('cabinets', true, 0, 'aucun mois')",
         [],
         /refus\.facturation_auto\.rattrapage_hors_bornes$/,
       );
       await refuse(
-        "select plateforme.facturation_auto_regler(true, 1, '  ')",
+        "select plateforme.facturation_auto_regler('pme', true, 1, '  ')",
         [],
         /refus\.saisie\.incomplete$/,
       );
@@ -424,7 +465,7 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       // L'API fait passer le robot, mais ne règle pas l'interrupteur.
       await enApi(db);
       await refuse(
-        "select plateforme.facturation_auto_regler(true, 1, 'le robot s''ouvre')",
+        "select plateforme.facturation_auto_regler('cabinets', true, 1, 'le robot s''ouvre')",
         [],
         /permission denied/,
       );
