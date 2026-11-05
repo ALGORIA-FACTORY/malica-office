@@ -3,12 +3,13 @@
  * produit, réaligné sur la doctrine Edition One : monochrome, coins nets,
  * élévation par bordures, aucune ombre. La couleur est un signal rare.
  */
-import type { ReactNode, ComponentPropsWithoutRef } from "react";
+import { Children, isValidElement, type ReactNode, type ComponentPropsWithoutRef } from "react";
 import { Link } from "@tanstack/react-router";
 
 import marqueAlgoria from "@/assets/algoria-mark.svg";
 import marqueRg from "@/assets/rg-mark.svg";
 import malica from "@/assets/malica.webp";
+import { Aide } from "@/components/malica/aide";
 import { cn } from "@/lib/utils";
 
 /** Vert pris en charge, ambre à vous, bleu chez l'autre, rouge à corriger, gris rien à faire. */
@@ -178,6 +179,11 @@ export function SignalLight({ tone, label }: { tone: Tone; label: string }) {
  * gris). Celui-ci fixe la forme : surtitre, titre, chapeau, actions à droite,
  * contenu dessous (indicateurs, onglets). `ton="encre"` est réservé à
  * l'accueil du cabinet, qui ouvre la journée.
+ *
+ * Le chapeau ne s'affiche plus sous le titre : il s'ouvre par le ⓘ posé à
+ * côté (Wissem, 5 novembre 2026 : « sans trop d'écriture, les explications
+ * doivent être dans le i » — la règle que « Mon espace » suit depuis le
+ * 23 octobre). La phrase ne se perd pas, elle se demande.
  */
 export function EnTeteCabinet({
   surtitre,
@@ -221,26 +227,29 @@ export function EnTeteCabinet({
                 {surtitre}
               </p>
             ) : null}
-            <h1
-              className={cn(
-                "mt-2.5 font-semibold tracking-[-0.025em]",
-                encre
-                  ? "text-[32px] leading-[1.02] sm:text-[42px] lg:text-[54px]"
-                  : "text-[30px] leading-[1.05] sm:text-[38px]",
-              )}
-            >
-              {titre}
-            </h1>
-            {chapeau ? (
-              <div
+            <div className="mt-2.5 flex items-center gap-1">
+              <h1
                 className={cn(
-                  "mt-3 max-w-[62ch] text-[13.5px] leading-[1.55]",
-                  encre ? "text-background/80" : "text-text-2",
+                  "min-w-0 font-semibold tracking-[-0.025em]",
+                  encre
+                    ? "text-[32px] leading-[1.02] sm:text-[42px] lg:text-[54px]"
+                    : "text-[30px] leading-[1.05] sm:text-[38px]",
                 )}
               >
-                {chapeau}
-              </div>
-            ) : null}
+                {titre}
+              </h1>
+              {chapeau ? (
+                <Aide
+                  titre={texteDe(titre)}
+                  paragraphes={[{ texte: chapeau }]}
+                  className={
+                    encre
+                      ? "border-background/40 text-background/80 hover:text-background"
+                      : undefined
+                  }
+                />
+              ) : null}
+            </div>
           </div>
         </div>
         {actions ? <div className="flex flex-wrap items-end gap-3">{actions}</div> : null}
@@ -248,6 +257,19 @@ export function EnTeteCabinet({
       {children ? <div className="mt-6">{children}</div> : null}
     </header>
   );
+}
+
+/** Le texte d'un titre composé (fragments, chaînes) : le nom que le ⓘ annonce. */
+function texteDe(n: ReactNode): string {
+  return Children.toArray(n)
+    .map((c) =>
+      typeof c === "string" || typeof c === "number"
+        ? String(c)
+        : isValidElement<{ children?: ReactNode }>(c)
+          ? texteDe(c.props.children)
+          : "",
+    )
+    .join("");
 }
 
 /** Titre de section — filet supérieur, jamais d'ombre. */
