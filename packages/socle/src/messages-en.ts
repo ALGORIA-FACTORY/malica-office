@@ -2366,6 +2366,7 @@ export const en: Dict = {
     "Asset “{bien}” already has a recorded depreciation, impairment or disposal: its value, life, method and in-service date can no longer be changed. Only the label and condition remain open.",
   "refus.stocks.article_sans_categorie":
     "This item is not found, has no pack category, or you do not have access to it.",
+  "refus.stocks.stock_insuffisant": "This issue exceeds the stock available on that date: record the receipt first.",
   "refus.stocks.inventaire_deja": "This period is already recorded for this item.",
   "refus.banque.aucun_lettrage": "No active match on this line.",
   "refus.banque.ecriture_non_lettrable":

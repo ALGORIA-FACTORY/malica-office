@@ -111,7 +111,9 @@ export const stocks = {
       `select id, item_id, sens, at, quantite, cout_unitaire, reference, piece_id
          from stocks_mouvements_v
         where tenant_id = $1 and ($2::uuid is null or item_id = $2)
-        order by at`,
+        -- L'ordre que le moteur déroule et que la porte d'inscription tient : la
+        -- date, les entrées du jour avant ses sorties, l'ordre d'inscription.
+        order by at, (sens = 'entree') desc, created_at, id`,
       [tenantId, itemId ?? null],
     );
     return (rows as Record<string, unknown>[]).map((r) => ({
@@ -210,7 +212,9 @@ export const stocks = {
               ecriture_id, created_at
          from stocks_depreciations_v
         where tenant_id = $1 and ($2::uuid is null or item_id = $2)
-        order by at`,
+        -- L'ordre que le moteur déroule et que la porte d'inscription tient : la
+        -- date, les entrées du jour avant ses sorties, l'ordre d'inscription.
+        order by at, (sens = 'entree') desc, created_at, id`,
       [tenantId, itemId ?? null],
     );
     return (rows as Record<string, unknown>[]).map((r) => ({
