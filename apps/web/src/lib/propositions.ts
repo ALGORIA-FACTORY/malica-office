@@ -48,6 +48,30 @@ export function lotDe(
   return "bas";
 }
 
+/**
+ * Ce que « Valider » d'un client valide d'un geste.
+ *
+ * Staging, 5 novembre 2026 : le bouton validait TOUTES les pièces du client —
+ * 62, dont 20 sous le seuil de revue une à une, à 20 % de confiance —, alors
+ * que le cabinet a réglé « Validation en lot au-dessus de 90 % ». Sans
+ * sélection, il ne valide donc que le lot « haut », au sens de `lotDe`. Une
+ * sélection faite par l'expert, pièce par pièce ou « tout le lot », est son
+ * choix explicite : elle part telle quelle. Seuils inconnus : rien.
+ */
+export function aValiderDUnGeste<T extends { pieceId: string; confiance: number | null }>(
+  pieces: readonly T[],
+  retenues: readonly T[],
+  seuilLot: number | null,
+  seuilRevue: number | null,
+  lueParRecette: (pieceId: string) => boolean,
+): T[] {
+  if (retenues.length > 0) return [...retenues];
+  if (seuilLot === null || seuilRevue === null) return [];
+  return pieces.filter(
+    (p) => lotDe(p.confiance, seuilLot, seuilRevue, lueParRecette(p.pieceId)) === "haut",
+  );
+}
+
 /** Une ligne de l'écriture en masse : un compte, ses pièces, ses totaux. */
 export interface LigneDeMasse {
   compte: string;
