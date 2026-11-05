@@ -232,6 +232,9 @@ export const fr = {
   "app.orgs.create": "Nouvelle organisation",
   "portal.title": "Choisissez votre espace",
   "portal.subtitle": "Deux applications, une seule base gouvernée.",
+  "portal.tour.body":
+    "L'espace des opérateurs d'ALGORIA Factory : cabinets, PME, abonnements et réglages de la plateforme.",
+  "portal.tour.cta": "Entrer",
   "portal.pme.count": "PME rattachées",
   "portal.cabinet.count": "Clients sous mandat",
   "portal.norole": "Aucun espace disponible pour ce compte.",

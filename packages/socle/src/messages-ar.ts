@@ -226,6 +226,8 @@ export const ar: Dict = {
   "app.orgs.create": "مؤسسة جديدة",
   "portal.title": "اختر فضاءك",
   "portal.subtitle": "تطبيقان، قاعدة واحدة محكومة.",
+  "portal.tour.body": "فضاء مشغّلي ALGORIA Factory: المكاتب والمؤسسات والاشتراكات وإعدادات المنصة.",
+  "portal.tour.cta": "دخول",
   "portal.pme.count": "المؤسسات المرتبطة",
   "portal.cabinet.count": "الحرفاء تحت التوكيل",
   "portal.norole": "لا يوجد فضاء متاح لهذا الحساب.",
