@@ -97,8 +97,8 @@ function CabinetEcheances() {
     staleTime: 60_000,
   });
   const echeances = useQuery({
-    queryKey: ["cab-echeances", org.id, ids],
-    queryFn: () => office().collab.echeances(ids),
+    queryKey: ["cab-echeances", org.id, ids, locale],
+    queryFn: () => office().collab.echeances(ids, locale),
     enabled: ids.length > 0 && derivation.isFetched,
   });
 

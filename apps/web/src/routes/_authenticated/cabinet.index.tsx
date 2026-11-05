@@ -104,8 +104,8 @@ function CabinetToday() {
   const actifs = useMemo(() => idsDesMandatsActifs(clients.data ?? []), [clients.data]);
   const clientIds = useMemo(() => [...actifs], [actifs]);
   const echeances = useQuery({
-    queryKey: ["cab-echeances", org.id, clientIds],
-    queryFn: () => office().collab.echeances(clientIds),
+    queryKey: ["cab-echeances", org.id, clientIds, locale],
+    queryFn: () => office().collab.echeances(clientIds, locale),
     enabled: clientIds.length > 0,
   });
 

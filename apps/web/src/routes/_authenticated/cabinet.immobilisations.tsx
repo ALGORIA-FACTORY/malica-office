@@ -195,8 +195,8 @@ function CabinetImmobilisations() {
     enabled: !!pack.data,
   });
   const categories = useQuery({
-    queryKey: ["immo-categories", pack.data?.id],
-    queryFn: () => office().immo.categories(pack.data!.id),
+    queryKey: ["immo-categories", pack.data?.id, locale],
+    queryFn: () => office().immo.categories(pack.data!.id, locale),
     enabled: !!pack.data,
   });
   const assets = useQuery({

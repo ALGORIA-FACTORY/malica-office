@@ -388,8 +388,8 @@ function PmeHome() {
     staleTime: 60_000,
   });
   const echeances = useQuery({
-    queryKey: ["echeances", ...societes],
-    queryFn: () => office().collab.echeances(societes),
+    queryKey: ["echeances", ...societes, locale],
+    queryFn: () => office().collab.echeances(societes, locale),
     enabled: derivation.isFetched,
   });
   const catalogue = useCatalogueDesOffres().data;
