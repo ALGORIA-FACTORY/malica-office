@@ -139,6 +139,62 @@ export function cumulAt(plan: AmortissementV1, at: string): string {
   return cumul;
 }
 
+/**
+ * Ce que le plan dit d'un bien qui sort (cession, mise au rebut) à une date.
+ *
+ * La dotation de l'exercice de sortie court jusqu'au mois de sortie INCLUS —
+ * le mois entamé compte, comme à la mise en service (`computeAmortissement`).
+ * Elle est la part de la dotation annuelle du plan, au prorata des mois :
+ * aucun taux n'est recalculé, la règle de l'exercice reste celle du plan.
+ * Après la fin du plan, le bien est amorti : rien à doter. Avant la mise en
+ * service, il n'existe pas.
+ *
+ * `cumul` est le cumul des dotations à la sortie, exercice par exercice
+ * arrondi — la porte `immo_sortir` le compare à ce que les livres portent, et
+ * refuse si un exercice manque.
+ *
+ * INCERTAIN (à confirmer par un expert-comptable) : le mois de sortie inclus.
+ * Certains cabinets dotent au jour près.
+ */
+export function sortieDuPlan(
+  plan: AmortissementV1,
+  at: string,
+  decimals: number,
+): { exercice: number; mois: number; dotation: string; cumul: string; vncAmortie: string } {
+  const sortie = parseDate(at);
+  if (at < plan.mise_en_service) {
+    throw new AmortissementParamsInvalid("Sortie avant la mise en service");
+  }
+  const brute = D(plan.valeur_brute);
+  const ligne = plan.lignes.find((l) => l.exercice === sortie.year);
+  // Le cumul des dotations ARRONDIES de chaque exercice — ce que les livres
+  // portent —, pas le cumul du plan, arrondi à part : 33,333 + 33,333 font
+  // 66,666 au grand livre quand le plan dit 66,667 (revue de #249).
+  const cumulAvant = plan.lignes
+    .filter((l) => l.exercice < sortie.year)
+    .reduce((t, l) => t.plus(D(l.dotation)), D(0));
+  if (!ligne) {
+    return {
+      exercice: sortie.year,
+      mois: 0,
+      dotation: toFixedStr(D(0), decimals),
+      cumul: toFixedStr(cumulAvant, decimals),
+      vncAmortie: toFixedStr(brute.minus(cumulAvant), decimals),
+    };
+  }
+  const premierMois = parseDate(ligne.from).month;
+  const mois = Math.min(ligne.months, sortie.month - premierMois + 1);
+  const dotation = D(ligne.dotation).times(mois).div(ligne.months);
+  const cumul = cumulAvant.plus(D(toFixedStr(dotation, decimals)));
+  return {
+    exercice: sortie.year,
+    mois,
+    dotation: toFixedStr(dotation, decimals),
+    cumul: toFixedStr(cumul, decimals),
+    vncAmortie: toFixedStr(brute.minus(cumul), decimals),
+  };
+}
+
 /** Dépréciation ou reprise : la VNC est comparée à la valeur recouvrable. */
 export function computeDepreciation(input: {
   currency: string;

@@ -869,13 +869,20 @@ export const fr = {
   "cab.immo.ecritures.resume#one": "{count} écriture",
   "cab.immo.ecritures.resume#other": "{count} écritures",
   "cab.immo.dep.title": "Dépréciations",
-  "cab.immo.cession.title": "Cession",
-  "cab.immo.cession.deja": "Ce bien a été cédé.",
-  "cab.immo.cession.at": "Date de cession",
+  "cab.immo.cession.title": "Sortie du bilan",
+  "cab.immo.cession.deja.cede": "Ce bien a été cédé ; sa sortie est passée en écriture.",
+  "cab.immo.cession.deja.rebute": "Ce bien a été mis au rebut ; sa sortie est passée en écriture.",
+  "cab.immo.cession.motif": "Motif",
+  "cab.immo.cession.motif.cede": "Cession",
+  "cab.immo.cession.motif.rebute": "Mise au rebut",
+  "cab.immo.cession.tva": "TVA sur le prix",
+  "cab.immo.cession.dotation": "Dotation de l’exercice de sortie",
+  "cab.immo.cession.at": "Date de sortie",
   "cab.immo.cession.vnc": "Valeur nette comptable",
-  "cab.immo.cession.prix": "Prix de cession",
-  "cab.immo.cession.resultat": "Résultat de cession",
-  "cab.immo.cession.record": "Constater la cession",
+  "cab.immo.cession.prix": "Prix de cession HT",
+  "cab.immo.cession.resultat": "Résultat de sortie",
+  "cab.immo.cession.record.cede": "Constater la cession",
+  "cab.immo.cession.record.rebute": "Constater la mise au rebut",
   "cab.immo.dep.at": "À la date",
   "cab.immo.dep.vnc": "VNC nette",
   "cab.immo.dep.recouvrable": "Valeur recouvrable",
@@ -2456,6 +2463,16 @@ export const fr = {
     "Cet article est introuvable, sans catégorie du pack, ou vous n’y avez pas accès.",
   "refus.stocks.stock_insuffisant":
     "La sortie dépasse le stock disponible à cette date : inscrivez d’abord l’entrée.",
+  "refus.immo.sortie.deja_sortie": "Ce bien est déjà sorti du bilan.",
+  "refus.immo.sortie.avant_mise_en_service":
+    "La date de sortie précède la mise en service du bien.",
+  "refus.immo.sortie.dotations_manquantes":
+    "Un exercice antérieur n’est pas doté : constatez d’abord ses amortissements.",
+  "refus.immo.sortie.prix_au_rebut": "Une mise au rebut n’a ni prix ni TVA.",
+  "refus.immo.sortie.compte_du_role":
+    "Un compte de la sortie n’est pas défini, ou l’est deux fois : vérifiez le plan comptable du cabinet.",
+  "refus.immo.statut_par_la_sortie":
+    "L’état d’un bien ne se change pas ici : faites-le sortir par une cession ou une mise au rebut.",
   "refus.stocks.inventaire_deja": "Cette période est déjà constatée pour cet article.",
   "refus.banque.aucun_lettrage": "Aucun lettrage actif sur cette ligne.",
   "refus.banque.ecriture_non_lettrable":

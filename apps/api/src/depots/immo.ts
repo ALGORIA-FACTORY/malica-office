@@ -6,9 +6,9 @@
  * écriture comptable dans la même transaction. Les `record*` de l'ancien port,
  * qui n'écrivaient que le journal, ne sont pas portées : elles sont supprimées.
  *
- * `recordCession` reste, elle : la cession n'a pas encore d'équivalent
- * indivisible. L'écran des immobilisations calcule le résultat de cession
- * par `computeCession`, enregistre la cession, puis passe le bien à « cédé ».
+ * La sortie aussi (`sortir`) : cession ou mise au rebut, avec la dotation de
+ * l'exercice de sortie et les écritures, en un geste. L'état du bien ne se
+ * change plus par la fiche (5 novembre 2026).
  *
  * Dès qu'une dotation, une dépréciation ou une cession est constatée, la base
  * refuse de modifier ce qui fonde le plan du bien (valeur, durée, méthode,
@@ -266,7 +266,8 @@ export const immo = {
 
   async cessions(db: Requete, tenantId: string) {
     const { rows } = await db.query(
-      `select id, asset_id, at, prix, vnc, resultat, created_at
+      `select id, asset_id, at, prix, vnc, resultat, motif, ecriture_id, ecriture_prix_id,
+              created_at
          from immo_cessions_v where tenant_id = $1 order by at desc`,
       [tenantId],
     );
@@ -277,25 +278,58 @@ export const immo = {
       prix: dec(r["prix"]),
       vnc: dec(r["vnc"]),
       resultat: dec(r["resultat"]),
+      motif: r["motif"] as "cede" | "rebute",
+      ecritureId: (r["ecriture_id"] as string | null) ?? null,
+      ecriturePrixId: (r["ecriture_prix_id"] as string | null) ?? null,
       createdAt: r["created_at"] as string,
     }));
   },
 
-  async recordCession(
+  /**
+   * Sortie indivisible — cession ou mise au rebut (`immo_sortir`,
+   * 20261130140000) : la dotation de l'exercice de sortie, l'écriture de
+   * sortie, celle du prix, la sortie et l'état du bien, dans une transaction.
+   * La dotation et le cumul viennent du plan du Socle (`sortieDuPlan`) ; la
+   * base les vérifie contre ses livres et calcule la VNC et le résultat.
+   */
+  async sortir(
     db: Requete,
     input: {
-      tenantId: string;
       assetId: string;
+      motif: "cede" | "rebute";
       at: string;
-      prix: string;
-      vnc: string;
-      resultat: string;
+      exercice: number;
+      mois: number;
+      dotation: string;
+      cumul: string;
+      prixHt: string;
+      tva: string;
+      packVersionId: string;
     },
-  ): Promise<string> {
-    const { rows } = await db.query<{ id: string }>(
-      `select public.immo_cession_inscrire($1, $2, $3, $4::numeric, $5::numeric, $6::numeric) as id`,
-      [input.tenantId, input.assetId, input.at, input.prix, input.vnc, input.resultat],
+  ) {
+    const { rows } = await db.query<{ r: Record<string, string | null> }>(
+      `select public.immo_sortir($1, $2, $3, $4::smallint, $5::smallint, $6::numeric,
+                                 $7::numeric, $8::numeric, $9::numeric, $10) as r`,
+      [
+        input.assetId,
+        input.motif,
+        input.at,
+        input.exercice,
+        input.mois,
+        input.dotation,
+        input.cumul,
+        input.prixHt,
+        input.tva,
+        input.packVersionId,
+      ],
     );
-    return rows[0]!.id;
+    const r = rows[0]!.r;
+    return {
+      sortieId: r["sortie_id"] as string,
+      ecritureId: r["ecriture_id"] as string,
+      ecriturePrixId: (r["ecriture_prix_id"] as string | null) ?? null,
+      vnc: dec(r["vnc"]),
+      resultat: dec(r["resultat"]),
+    };
   },
 };

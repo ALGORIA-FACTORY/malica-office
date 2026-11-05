@@ -48,6 +48,7 @@
       "chemins": [
         "app.annulation_contre_passe_le_reglement",
         "app.reglages_comptables_arreter",
+        "capture.lecture_inscrire",
         "public.api_key_creer",
         "public.api_key_revoquer",
         "public.avoir_rattacher",
@@ -60,7 +61,6 @@
         "public.cabinet_reglages_definir",
         "public.capture_piece_register",
         "public.capture_precision_persist",
-        "capture.lecture_inscrire",
         "public.capture_sceller_empreinte",
         "public.charge_question_answer",
         "public.collab_assign",
@@ -69,6 +69,7 @@
         "public.fait_consigner",
         "public.immo_depreciation_constater",
         "public.immo_dotation_constater",
+        "public.immo_sortir",
         "public.journal_export_journaliser",
         "public.justificatif_deplacer",
         "public.justificatif_remplacer",
@@ -217,9 +218,9 @@
         "updated_at"
       ],
       "chemins": [
+        "capture.lecture_inscrire",
         "public.capture_piece_register",
         "public.capture_precision_persist",
-        "capture.lecture_inscrire",
         "public.capture_sceller_empreinte",
         "public.piece_renvoyer",
         "public.socle_ecriture_book",
@@ -459,12 +460,12 @@
     {
       "objet": "immo.assets",
       "privilege": "UPDATE",
-      "chemins": ["public.immo_bien_modifier"]
+      "chemins": ["public.immo_bien_modifier", "public.immo_sortir"]
     },
     {
       "objet": "immo.cessions",
       "privilege": "INSERT",
-      "chemins": ["public.immo_cession_inscrire"]
+      "chemins": ["public.immo_sortir"]
     },
     {
       "objet": "immo.depreciations",
@@ -474,7 +475,7 @@
     {
       "objet": "immo.dotations",
       "privilege": "INSERT",
-      "chemins": ["public.immo_dotation_constater"]
+      "chemins": ["public.immo_dotation_constater", "public.immo_sortir"]
     },
     {
       "objet": "notif.preferences",
@@ -518,6 +519,7 @@
         "app.annulation_contre_passe_le_reglement",
         "public.immo_depreciation_constater",
         "public.immo_dotation_constater",
+        "public.immo_sortir",
         "public.socle_ecriture_contre_passer",
         "public.socle_ecriture_propose",
         "public.stocks_depreciation_constater",
@@ -536,6 +538,7 @@
         "app.annulation_contre_passe_le_reglement",
         "public.immo_depreciation_constater",
         "public.immo_dotation_constater",
+        "public.immo_sortir",
         "public.socle_ecriture_contre_passer",
         "public.socle_ecriture_propose",
         "public.stocks_depreciation_constater",
@@ -548,6 +551,7 @@
       "chemins": [
         "public.immo_depreciation_constater",
         "public.immo_dotation_constater",
+        "public.immo_sortir",
         "public.socle_ecriture_book",
         "public.socle_ecriture_contre_passer",
         "public.socle_ecriture_review",

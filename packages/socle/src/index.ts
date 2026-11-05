@@ -13,6 +13,7 @@ export {
   computeDepreciation,
   computeCession,
   cumulAt,
+  sortieDuPlan,
   AmortissementParamsInvalid,
 } from "./engines/immo/amortissement.ts";
 export type { AmortissementParams } from "./engines/immo/amortissement.ts";
