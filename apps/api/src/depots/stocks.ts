@@ -212,9 +212,7 @@ export const stocks = {
               ecriture_id, created_at
          from stocks_depreciations_v
         where tenant_id = $1 and ($2::uuid is null or item_id = $2)
-        -- L'ordre que le moteur déroule et que la porte d'inscription tient : la
-        -- date, les entrées du jour avant ses sorties, l'ordre d'inscription.
-        order by at, (sens = 'entree') desc, created_at, id`,
+        order by at`,
       [tenantId, itemId ?? null],
     );
     return (rows as Record<string, unknown>[]).map((r) => ({
