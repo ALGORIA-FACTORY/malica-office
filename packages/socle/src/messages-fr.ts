@@ -2601,6 +2601,8 @@ export const fr = {
     "Seul le cabinet qui tient ce dossier arrête sa règle de change ; pour tout le cabinet, l'expert-comptable.",
   "refus.role_compte.droits":
     "Seul l’expert-comptable relie un compte pour son cabinet ; pour un dossier, qui le supervise au cabinet qui le tient.",
+  "refus.change.source_hors_juridiction":
+    "Cette source de cours ne publie pas pour la juridiction du dossier : choisissez la banque centrale de son pays.",
   "refus.change.regle.saisie":
     "Une valeur choisie n'est pas au référentiel (un recul est un nombre entier de jours) : rechargez la page et choisissez à nouveau.",
   "refus.reglage_comptable.droits":

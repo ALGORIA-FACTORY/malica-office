@@ -651,7 +651,13 @@ export const office = {
     );
     const [{ rows: sources }, { rows: devises }] = await Promise.all([
       db.query<{ code: string; nom: string }>(
-        `select code, nom from ref.sources_de_cours order by code collate "C"`,
+        // Les sources de la juridiction de l'organisation, et elles seules.
+        `select s.code, s.nom from ref.sources_de_cours s
+          where exists (select 1 from ref.sources_de_cours_juridictions sj
+                          join organizations_v o on o.jurisdiction = sj.jurisdiction
+                         where sj.source = s.code and o.id = $1)
+          order by s.code collate "C"`,
+        [orgId],
       ),
       db.query<{ code: string }>(`select code from ref.devises order by code collate "C"`),
     ]);

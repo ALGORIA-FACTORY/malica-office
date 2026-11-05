@@ -2517,6 +2517,8 @@ export const en: Dict = {
     "Only the firm that keeps this client's books sets its exchange rule; for the whole firm, the chartered accountant.",
   "refus.role_compte.droits":
     "Only the chartered accountant links an account for their firm; for a client file, whoever supervises it at the firm that holds it.",
+  "refus.change.source_hors_juridiction":
+    "This rate source does not publish for the dossier's jurisdiction: choose its country's central bank.",
   "refus.change.regle.saisie":
     "A chosen value is not in the reference data (a look-back is a whole number of days): reload the page and choose again.",
   "refus.reglage_comptable.droits":

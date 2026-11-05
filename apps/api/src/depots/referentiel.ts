@@ -29,10 +29,16 @@ import { aujourdhui, dec as decStr } from "./decimal.ts";
 export async function optionsDeLaRegleDeChange(
   db: Requete,
   locale: string,
+  packId: string,
 ): Promise<Map<string, Array<{ code: string; label: string }>>> {
   const { rows } = await db.query<{ code: string; option: string; label: string }>(
     `select 'change.source' as code, s.code as option, s.nom as label
        from ref.sources_de_cours s
+      -- Les seules sources de la juridiction du pack : la BCEAO n'est pas
+      -- une source d'un dossier tunisien (staging, 5 novembre 2026).
+      where exists (select 1 from ref.sources_de_cours_juridictions sj
+                      join ref.jurisdiction_packs j on j.jurisdiction = sj.jurisdiction
+                     where sj.source = s.code and j.id = $2)
      union all
      select 'change.date_retenue', d.code, coalesce(demandee.value, francais.value, d.code)
        from ref.change_dates_retenues d
@@ -48,7 +54,7 @@ export async function optionsDeLaRegleDeChange(
        left join ref_labels_v francais on francais.ns = 'change_regle_d_ecart'
             and francais.key = e.code and francais.locale = 'fr'
      order by 1, 2`,
-    [locale],
+    [locale, packId],
   );
   const parCode = new Map<string, Array<{ code: string; label: string }>>();
   for (const o of rows)
@@ -267,7 +273,7 @@ export const referentiel = {
         packId,
         jour,
       ]),
-      optionsDeLaRegleDeChange(db, locale),
+      optionsDeLaRegleDeChange(db, locale, packId),
       nomsDesReglages(db, locale),
     ]);
     return {
