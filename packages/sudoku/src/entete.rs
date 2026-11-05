@@ -1222,44 +1222,101 @@ impl<'a> Page<'a> {
                 }
                 let fin = if r == r0 { k0 } else { rang.len() };
                 for k in (0..fin).rev() {
-                    if !formes.contains(&mot(&self.j[rang[k]].texte)) {
+                    let Some(pris) = self.nom_a_forme(rang, k, formes) else {
                         continue;
-                    }
-                    // les mots à gauche de la forme, une ponctuation sautée au plus
-                    let mut g = k;
-                    if g > 0 && self.ponct(rang[g - 1]) {
-                        g -= 1;
-                    }
-                    let mut debut = g;
-                    let mut droite = rang[g.min(k)];
-                    // la hauteur du nom lui-même : une raison sociale est souvent en grands caractères
-                    let hn = self.h(rang[k]);
-                    while debut > 0 {
-                        let t = rang[debut - 1];
-                        if self.ponct(t)
-                            || formes.contains(&mot(&self.j[t].texte))
-                            || self.ecart(t, droite) > ECART_MOT * hn
-                        {
-                            break;
-                        }
-                        debut -= 1;
-                        droite = t;
-                    }
-                    if debut == g {
-                        continue;
-                    }
-                    let (x0, x1) = (self.j[rang[debut]].x0, self.j[rang[k]].x1);
+                    };
+                    let (x0, x1) = (self.j[pris[0]].x0, self.j[rang[k]].x1);
                     if x1 < jo.x0 - BLOC_LARGEUR || x0 > self.j[*o.jetons.last()?].x1 + BLOC_LARGEUR
                     {
                         continue;
                     }
-                    let mut pris: Vec<usize> = rang[debut..g].to_vec();
-                    pris.push(rang[k]);
                     return Some(pris);
                 }
             }
         }
         None
+    }
+
+    /// Le nom qui finit par la forme juridique `rang[k]` : les mots à sa gauche, une
+    /// ponctuation sautée au plus, jusqu'à un blanc, une ponctuation ou une autre forme.
+    fn nom_a_forme(
+        &self,
+        rang: &[usize],
+        k: usize,
+        formes: &BTreeSet<String>,
+    ) -> Option<Vec<usize>> {
+        if !formes.contains(&mot(&self.j[rang[k]].texte)) {
+            return None;
+        }
+        let mut g = k;
+        if g > 0 && self.ponct(rang[g - 1]) {
+            g -= 1;
+        }
+        let mut debut = g;
+        let mut droite = rang[g.min(k)];
+        // la hauteur du nom lui-même : une raison sociale est souvent en grands caractères
+        let hn = self.h(rang[k]);
+        while debut > 0 {
+            let t = rang[debut - 1];
+            if self.ponct(t)
+                || formes.contains(&mot(&self.j[t].texte))
+                || self.ecart(t, droite) > ECART_MOT * hn
+            {
+                break;
+            }
+            debut -= 1;
+            droite = t;
+        }
+        if debut == g {
+            return None;
+        }
+        let mut pris: Vec<usize> = rang[debut..g].to_vec();
+        pris.push(rang[k]);
+        Some(pris)
+    }
+
+    /// Le SEUL nom à forme juridique de la page qui n'est pas celui du dossier : quand le
+    /// matricule du tiers est imprimé loin de son nom (en pied de page), la page qui ne
+    /// nomme que deux sociétés — le dossier et une autre — nomme le tiers. Deux autres noms
+    /// à forme juridique (un transporteur, une banque) : rien. Banc sans IA du 5 novembre
+    /// 2026 : 263 raisons sociales d'émetteur muettes, sens déclaré.
+    fn seul_autre_nom(&self, formes: &BTreeSet<String>, dossier: &str) -> Option<Vec<usize>> {
+        let siens: BTreeSet<String> = dossier
+            .split_whitespace()
+            .map(mot)
+            .filter(|m| !m.is_empty() && !formes.contains(m))
+            .collect();
+        let joint: String = dossier
+            .split_whitespace()
+            .map(mot)
+            .filter(|m| !formes.contains(m))
+            .collect();
+        let mut vus: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+        for rang in &self.rangs {
+            for k in 0..rang.len() {
+                let Some(pris) = self.nom_a_forme(rang, k, formes) else {
+                    continue;
+                };
+                let mots: Vec<String> = pris
+                    .iter()
+                    .map(|&t| mot(&self.j[t].texte))
+                    .filter(|m| !m.is_empty() && !formes.contains(m))
+                    .collect();
+                // ni un identifiant (« 1612398F/A/M/00 SARL », 50/11), ni le nom du dossier,
+                // même lu sans ses blancs (« ALGORITHMACONSULTING SARL »)
+                if pris
+                    .iter()
+                    .any(|&t| self.j[t].texte.chars().any(|c| c.is_ascii_digit()))
+                    || mots.is_empty()
+                    || mots.iter().all(|m| siens.contains(m))
+                    || joint.contains(&mots.concat())
+                {
+                    continue;
+                }
+                vus.entry(mots.join(" ")).or_insert(pris);
+            }
+        }
+        (vus.len() == 1).then(|| vus.into_values().next()).flatten()
     }
 }
 
@@ -1824,6 +1881,16 @@ pub fn prouver(
             cote_autre.nom = None;
         }
     }
+    // Le matricule du tiers imprimé loin de son nom, ou près du nom du dossier : le seul
+    // autre nom à forme juridique de la page (`Page::seul_autre_nom`).
+    if cote_autre.nom.is_none() && autre.is_some() {
+        cote_autre.nom = page
+            .seul_autre_nom(
+                &formes,
+                dossier.raison_sociale.as_deref().unwrap_or_default(),
+            )
+            .map(|j| valeur(&page, &j, page.texte(&j), "conforme"));
+    }
 
     let (emetteur, client) = match sens {
         Sens::Achat => (cote_autre, cote_dossier),
@@ -2217,7 +2284,27 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
             // Lue seulement derrière un libellé collé dans son jeton : l'OCR a pu coller autre
             // chose à la valeur (« N°DV-PX-2026-091111 », 50/48). Elle se dit, citée, et se
             // vérifie : signalée, jamais conforme. Un texte coupé aussi.
-            let statut = if detache && entier {
+            // Collée à son libellé, une valeur à chiffres qui a la FORME d'une référence —
+            // des groupes de capitales et de chiffres séparés par « - », « / » ou « . », rien
+            // d'autre — n'a rien reçu de l'OCR (« N°293/2026 ») : elle est conforme. Ce qui y
+            // est collé de plus (« MFS-FAC-2026-06129juin2026 », « Jc:H/2026/045 ») la garde
+            // signalée. Banc sans IA du 5 novembre 2026 : 109 numéros justes signalés.
+            // Le libellé collé se ferme par un signe (« N° », « Réf: ») : collé par un
+            // séparateur de référence (« BAIL-VZ-2026-013 »), il est peut-être la tête de la
+            // valeur (algoria-133).
+            let ferme = pris.first().is_some_and(|&t| {
+                let texte = page.j[t].texte.trim();
+                let fin = texte.len().saturating_sub(v.len());
+                texte
+                    .get(..fin)
+                    .and_then(|l| l.trim_end().chars().next_back())
+                    .is_some_and(|c| !c.is_alphanumeric() && !"-/.".contains(c))
+            });
+            let reference = l.chiffre
+                && ferme
+                && regex::Regex::new(r"^[A-Z0-9]+(?:[-/.][A-Z0-9]+)*$")
+                    .is_ok_and(|re| re.is_match(&v));
+            let statut = if entier && (detache || reference) {
                 "conforme"
             } else {
                 "signale"

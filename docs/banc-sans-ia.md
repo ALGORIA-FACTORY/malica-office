@@ -571,6 +571,31 @@ mention d'exonération : l'exonération n'était permise que par la mention.
 | couche de texte, sens déclaré   | 2 124 |    0 |       0 |               671 |
 | couche de texte, sens lu        | 1 983 |    0 |       0 |               814 |
 
+## Bulletin 17 — le nom du tiers, et le numéro collé à son libellé (5 novembre 2026)
+
+- **Le seul autre nom à forme juridique de la page est le tiers** (`Page::seul_autre_nom`).
+  Le matricule du fournisseur s'imprime souvent en pied de page, loin de sa raison sociale
+  en tête : la recherche autour du matricule ne la trouvait pas, ou trouvait le nom du
+  dossier, écarté. Quand la page ne nomme, à forme juridique, que le dossier et UNE autre
+  société, celle-ci est le tiers. Deux autres sociétés (un transporteur, une banque) :
+  rien. Un « nom » qui porte des chiffres (« 1612398F/A/M/00 SARL ») ou qui est le nom du
+  dossier lu sans ses blancs (« ALGORITHMACONSULTING SARL ») n'est pas candidat — deux faux
+  trouvés et corrigés en chemin.
+- **Un numéro collé à son libellé, qui a la forme d'une référence, est conforme.**
+  « N°293/2026 » était signalé par prudence (50/48 : l'OCR y avait collé autre chose).
+  Sur 118 numéros signalés, 109 étaient justes. Désormais : le libellé collé se ferme par
+  un signe (« ° », « : »), et la valeur n'est faite que de groupes de capitales et de
+  chiffres séparés par « - », « / » ou « . ». Ce qui y est collé de plus
+  (« MFS-FAC-2026-06129juin2026 », « Jc:H/2026/045 ») la garde signalée ; un libellé collé
+  par un séparateur (« BAIL-VZ-2026-013 ») aussi — un faux trouvé et corrigé en chemin.
+
+|                                 | juste | faux | inventé | à travailler | signalé |
+| ------------------------------- | ----: | ---: | ------: | -----------: | ------: |
+| banc, sens déclaré, bulletin 16 | 6 911 |    0 |       0 |        3 692 |     320 |
+| banc, sens déclaré              | 7 073 |    0 |       0 |        3 620 |     230 |
+| banc, sens lu                   | 6 732 |    0 |       0 |        4 005 |     182 |
+| couche de texte, sens déclaré   | 2 124 |    0 |       0 |          671 |       5 |
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

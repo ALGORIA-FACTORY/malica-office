@@ -195,3 +195,54 @@ fn le_matricule_du_dossier_n_est_pas_celui_d_une_partie_que_rien_ne_designe() {
         "{m}"
     );
 }
+
+#[test]
+fn le_seul_autre_nom_a_forme_juridique_est_celui_du_tiers() {
+    // synthetique-020 : « Kessira Bureautique SARL » en tête, « Client : Laboratoire Qirwane
+    // d'Essai SA » (le dossier). Le nom trouvé près du matricule du tiers était celui du
+    // dossier, écarté ; le seul autre nom à forme juridique de la page est le tiers.
+    let mut e = entree("synthetique-020");
+    let p = parties(&e);
+    assert_eq!(
+        p["emetteur"]["nom"]["valeur"], "Kessira Bureautique SARL",
+        "{p}"
+    );
+    // une troisième société à forme juridique sur la page : rien
+    let j = e["jetons"].as_array_mut().expect("jetons");
+    for (k, t) in ["Transports", "Belkadra", "SA"].iter().enumerate() {
+        let mut x = j[0].clone();
+        x["ordinal"] = json!(9100 + k);
+        x["texte"] = json!(t);
+        x["x0"] = json!(0.1 + 0.06 * k as f64);
+        x["x1"] = json!(0.158 + 0.06 * k as f64);
+        x["y0"] = json!(0.95);
+        x["y1"] = json!(0.96);
+        j.push(x);
+    }
+    let p = parties(&e);
+    assert!(p["emetteur"]["nom"].is_null(), "{p}");
+}
+
+#[test]
+fn un_numero_colle_a_son_libelle_qui_a_la_forme_d_une_reference_est_conforme() {
+    // dirigeant-100/A-01 : « N°293/2026 », un seul jeton
+    let e = entree("dirigeant-100/A-01");
+    let o: Value =
+        serde_json::from_str(&malica_sudoku::solve(&e.to_string())).expect("sortie lisible");
+    let n = &o["champs"]["numero_facture"];
+    assert_eq!(
+        (n["valeur"].as_str(), n["statut"].as_str()),
+        (Some("293/2026"), Some("conforme")),
+        "{n}"
+    );
+    // ce que l'OCR y colle de plus la garde signalée
+    let mut e = e.clone();
+    for j in e["jetons"].as_array_mut().expect("jetons") {
+        if j["texte"] == "N°293/2026" {
+            j["texte"] = json!("N°293/2026juin");
+        }
+    }
+    let o: Value =
+        serde_json::from_str(&malica_sudoku::solve(&e.to_string())).expect("sortie lisible");
+    assert_eq!(o["champs"]["numero_facture"]["statut"], "signale");
+}

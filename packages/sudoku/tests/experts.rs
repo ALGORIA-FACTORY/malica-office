@@ -108,12 +108,17 @@ fn l_anneau_3_lit_derriere_le_repere_et_signale_le_libelle_colle() {
     assert_eq!(o["champs"]["cachet"]["statut"], "signale");
     assert!(o["champs"]["cachet"]["valeur"].is_null());
 
-    // le libellé collé dans le jeton : la valeur se dit, signalée
+    // le libellé collé dans le jeton : une valeur qui a la forme d'une référence est
+    // conforme (banc du 5 novembre 2026) ; ce que l'OCR y colle de plus la garde signalée
     let mut colle = facture(1, None);
     colle.push(jeton(7, "N°FA-2026-001", 0.05, 0.05, &[]));
     let o = resoudre(colle, grille(), pack_essai());
     assert_eq!(o["champs"]["numero"]["valeur"], "FA-2026-001", "{o}");
-    assert_eq!(o["champs"]["numero"]["statut"], "signale");
+    assert_eq!(o["champs"]["numero"]["statut"], "conforme");
+    let mut colle = facture(1, None);
+    colle.push(jeton(7, "N°FA-2026-001juin", 0.05, 0.05, &[]));
+    let o = resoudre(colle, grille(), pack_essai());
+    assert_eq!(o["champs"]["numero"]["statut"], "signale", "{o}");
 
     // une liste sans domaine : « Statut » imprimé n'est pas une valeur
     let mut st = facture(1, None);
