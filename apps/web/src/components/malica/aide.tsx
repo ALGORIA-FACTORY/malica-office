@@ -54,7 +54,11 @@ export function Aide({
         aria-label={`${t("common.aide")} — ${titre}`}
         aria-haspopup="dialog"
         className={cn(
-          "ms-2 inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border border-line-strong align-middle text-[12px] font-semibold leading-none text-muted-foreground hover:text-foreground",
+          // Un cercle de 22 px, une cible de 44 px : la zone qu'on touche déborde
+          // du dessin (`before:`), et `min-h-0` soustrait le ⓘ à la règle des
+          // 44 px du cabinet (`.cab-lisible`), qui l'étirait en pilule ; `rounded-full!`
+          // tient le cercle contre l'arrondi de 8 px des boutons du cabinet.
+          "relative ms-2 inline-flex h-[22px] min-h-0 w-[22px] shrink-0 items-center justify-center rounded-full! border border-line-strong align-middle text-[12px] font-semibold leading-none text-muted-foreground before:absolute before:-inset-[11px] before:content-[''] hover:text-foreground",
           className,
         )}
       >
