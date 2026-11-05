@@ -6,7 +6,7 @@
  */
 
 import { computePivot } from "../index.ts";
-import { D, toFixedStr } from "../domain/decimal.ts";
+import { D, type Decimal, toFixedStr } from "../domain/decimal.ts";
 import {
   aSaDette,
   convertirLExtrait,
@@ -353,10 +353,41 @@ export function buildProposal(params: {
     const tva = lignes.filter((l) => comptesDeTva.has(l.account_code) && Number(l.debit) > 0);
     if (tva.length === 0) return [...lignes];
     const iCharge = lignes.findIndex((l) => l.account_code === compteDeCharge);
-    if (iCharge < 0) return [...lignes];
-    const ajout = tva.reduce((s, l) => s.plus(D(l.debit)), D(0));
+    if (iCharge >= 0) {
+      const ajout = tva.reduce((s, l) => s.plus(D(l.debit)), D(0));
+      return lignes
+        .map((l, i) => (i === iCharge ? { ...l, debit: toFixedStr(D(l.debit).plus(ajout), n) } : l))
+        .filter((l) => !tva.includes(l));
+    }
+    /*
+     * Un achat ventilé (5 novembre 2026, revue de #252) : la TVA de chaque taux
+     * rejoint les charges de ce taux, au prorata de leur base ; le reliquat
+     * d'arrondi va à la dernière, pour que la somme soit exactement la TVA.
+     * Un taux sans charge à lui ne se répartit pas : rien n'est deviné.
+     */
+    const ajouts = new Map<number, Decimal>();
+    for (const t of tva) {
+      const cibles = lignes.flatMap((l, i) =>
+        l.tax_code === t.tax_code && !comptesDeTva.has(l.account_code) && D(l.debit).gt(0)
+          ? [i]
+          : [],
+      );
+      if (cibles.length === 0) return [...lignes];
+      const bases = cibles.reduce((s, i) => s.plus(D(lignes[i]!.debit)), D(0));
+      let reste = D(t.debit);
+      cibles.forEach((i, k) => {
+        const part =
+          k === cibles.length - 1
+            ? reste
+            : D(toFixedStr(D(t.debit).times(D(lignes[i]!.debit)).div(bases), n));
+        reste = reste.minus(part);
+        ajouts.set(i, (ajouts.get(i) ?? D(0)).plus(part));
+      });
+    }
     return lignes
-      .map((l, i) => (i === iCharge ? { ...l, debit: toFixedStr(D(l.debit).plus(ajout), n) } : l))
+      .map((l, i) =>
+        ajouts.has(i) ? { ...l, debit: toFixedStr(D(l.debit).plus(ajouts.get(i)!), n) } : l,
+      )
       .filter((l) => !tva.includes(l));
   };
   const lignesDuPivot = tvaVersLaCharge(pivot.lines, decimalesDuPivot);

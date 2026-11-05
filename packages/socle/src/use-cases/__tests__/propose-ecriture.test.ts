@@ -104,6 +104,34 @@ describe("un acheteur non assujetti ne déduit pas la TVA (ANO-LIVE-001)", () =>
     expect(somme("debit")).toBeCloseTo(somme("credit"), 3);
   });
 
+  it("un achat ventilé : la TVA rejoint chaque charge au prorata, au millime près", () => {
+    // 1 000 HT à 19 % ventilés 600 / 400 : 190 de TVA, 114 et 76.
+    const r = buildProposal({
+      pieceId: "11111111-1111-1111-1111-111111111111",
+      payload: factureAchatSimple(),
+      taxRates,
+      mappings,
+      currency: "TND",
+      parametres: { decimals: 3, confianceReserve: 0.7, confianceBloquante: 0.4 },
+      tvaNonDeductible: true,
+      ventilationDesBases: [
+        [
+          { account_code: "622", montant: "600.000" },
+          { account_code: "613", montant: "400.000" },
+        ],
+      ],
+    });
+    expect(r.lignes.some((l) => l.account_code === "43661")).toBe(false);
+    expect(
+      r.lignes
+        .filter((l) => l.account_code === "622" || l.account_code === "613")
+        .map((l) => [l.account_code, l.debit]),
+    ).toEqual([
+      ["622", "714.000"],
+      ["613", "476.000"],
+    ]);
+  });
+
   it("une vente ne bouge pas : il n'y a rien à déduire", () => {
     expect(nonDeductible(factureVenteSimple()).lignes).toEqual(
       proposer(factureVenteSimple()).lignes,
