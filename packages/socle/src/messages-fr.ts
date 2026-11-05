@@ -2448,7 +2448,8 @@ export const fr = {
     "Le bien « {bien} » a déjà une dotation, une dépréciation ou une cession constatée : sa valeur, sa durée, sa méthode et sa date de mise en service ne se modifient plus. Seuls le libellé et l’état restent ouverts.",
   "refus.stocks.article_sans_categorie":
     "Cet article est introuvable, sans catégorie du pack, ou vous n’y avez pas accès.",
-  "refus.stocks.stock_insuffisant": "La sortie dépasse le stock disponible à cette date : inscrivez d’abord l’entrée.",
+  "refus.stocks.stock_insuffisant":
+    "La sortie dépasse le stock disponible à cette date : inscrivez d’abord l’entrée.",
   "refus.stocks.inventaire_deja": "Cette période est déjà constatée pour cet article.",
   "refus.banque.aucun_lettrage": "Aucun lettrage actif sur cette ligne.",
   "refus.banque.ecriture_non_lettrable":
