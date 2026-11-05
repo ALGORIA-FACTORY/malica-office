@@ -296,8 +296,16 @@ function CabinetRapprochement() {
     enabled: !!pack.data,
   });
   const motifs = useQuery({
-    queryKey: ["motifs", locale],
-    queryFn: () => office().supervision.motifs(locale),
+    // Les motifs d'un délettrage, pas ceux d'un retour de pièce.
+    queryKey: ["motifs", locale, "delettrage"],
+    queryFn: () => office().supervision.motifs(locale, "delettrage"),
+  });
+  // Le journal et l'audit nomment aussi les délettrages d'avant le
+  // 5 novembre 2026, faits avec un motif de retour : leurs libellés restent
+  // lisibles, même si ces motifs ne se proposent plus (revue de #254).
+  const motifsDeRetour = useQuery({
+    queryKey: ["motifs", locale, "retour"],
+    queryFn: () => office().supervision.motifs(locale, "retour"),
   });
   const comptes = useQuery({
     queryKey: ["banque-comptes", client?.tenantId],
@@ -529,7 +537,7 @@ function CabinetRapprochement() {
   const bookById = new Map(bookRows.map((b) => [b.id, b]));
   const bankById = new Map(lignesRows.map((b) => [b.id, b]));
   const motifRows = motifs.data ?? [];
-  const motifById = new Map(motifRows.map((m) => [m.id, m]));
+  const motifById = new Map([...(motifsDeRetour.data ?? []), ...motifRows].map((m) => [m.id, m]));
   const actifs = (etat.data ?? []).filter((e) => e.active);
   const ouvertes = lignesRows.filter((l) => l.status === "ouverte");
   const nonLettrees = bookRows.filter((b) => !b.lettree);

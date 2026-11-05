@@ -2216,7 +2216,7 @@ export interface SupervisionRepository {
   listClients(cabinetTenantId: string): Promise<ClientSummary[]>;
   /** File priorisée : corrigée, reçue, vue d'abord ; retournée ; prise en charge. */
   queue(cabinetTenantId: string, tenantId?: string): Promise<QueueItem[]>;
-  motifs(locale: string): Promise<RejetMotif[]>;
+  motifs(locale: string, usage?: "retour" | "delettrage"): Promise<RejetMotif[]>;
   review(input: {
     ecritureId: string;
     outcome: ReviewOutcome;
