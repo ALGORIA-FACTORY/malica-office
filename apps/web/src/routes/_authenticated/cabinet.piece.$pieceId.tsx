@@ -12,7 +12,7 @@ import { Download, Eye } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Aide } from "@/components/malica/aide";
-import { dansLOrdreVu } from "@/lib/ordre-de-revue";
+import { dansLOrdreVu, ordreDeLaRevue, retenirLOrdre } from "@/lib/ordre-de-revue";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { CeQueLeLecteurALu } from "@/components/malica/ce-que-le-lecteur-a-lu";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
@@ -234,14 +234,21 @@ function CabinetReviewDeLaPiece() {
     queryKey: ["cab-queue", org.id],
     queryFn: () => office().supervision.queue(org.id),
   });
-  // L'ordre montré : celui que l'expert a vu en ouvrant la revue (la file en
-  // cache), pas celui que la base rend une fois la pièce « Vue ».
-  const [ordreVu, setOrdreVu] = useState<string[] | null>(
-    () => qc.getQueryData<QueueItem[]>(["cab-queue", org.id])?.map((r) => r.pieceId) ?? null,
+  // L'ordre montré : celui que l'expert a vu en ouvrant la revue — gardé d'une
+  // pièce à l'autre, sinon la file en cache —, pas celui que la base rend une
+  // fois la pièce « Vue ».
+  const [ordreVu, setOrdreVu] = useState<readonly string[] | null>(
+    () =>
+      ordreDeLaRevue(org.id, pieceId) ??
+      qc.getQueryData<QueueItem[]>(["cab-queue", org.id])?.map((r) => r.pieceId) ??
+      null,
   );
   useEffect(() => {
     if (ordreVu === null && file.data) setOrdreVu(file.data.map((r) => r.pieceId));
   }, [ordreVu, file.data]);
+  useEffect(() => {
+    if (ordreVu) retenirLOrdre(org.id, ordreVu);
+  }, [org.id, ordreVu]);
   const fileDeRevue = useMemo(() => dansLOrdreVu(ordreVu, file.data ?? []), [ordreVu, file.data]);
   const rangDansLaFile = fileDeRevue.findIndex((r) => r.pieceId === pieceId);
   const dansLaFile = rangDansLaFile >= 0 ? (fileDeRevue[rangDansLaFile] ?? null) : null;
