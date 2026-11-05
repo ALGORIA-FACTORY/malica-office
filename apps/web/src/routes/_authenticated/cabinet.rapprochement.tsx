@@ -296,8 +296,9 @@ function CabinetRapprochement() {
     enabled: !!pack.data,
   });
   const motifs = useQuery({
-    queryKey: ["motifs", locale],
-    queryFn: () => office().supervision.motifs(locale),
+    // Les motifs d'un délettrage, pas ceux d'un retour de pièce.
+    queryKey: ["motifs", locale, "delettrage"],
+    queryFn: () => office().supervision.motifs(locale, "delettrage"),
   });
   const comptes = useQuery({
     queryKey: ["banque-comptes", client?.tenantId],

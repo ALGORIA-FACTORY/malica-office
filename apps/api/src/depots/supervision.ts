@@ -391,7 +391,11 @@ export const supervision = {
     };
   },
 
-  async motifs(db: Requete, locale: string) {
+  /**
+   * Les motifs d'un usage : rendre une pièce au client (`retour`, le défaut)
+   * ou défaire un rapprochement bancaire (`delettrage`, 5 novembre 2026).
+   */
+  async motifs(db: Requete, locale: string, usage: "retour" | "delettrage" = "retour") {
     // Le libellé vient du référentiel, jamais du code (R4). Le repli sur le
     // français est explicite : un motif sans traduction s'affiche, il ne
     // disparaît pas.
@@ -403,9 +407,9 @@ export const supervision = {
            on demandee.ns = 'rejet_motif' and demandee.key = m.code and demandee.locale = $1
          left join ref_labels_v francais
            on francais.ns = 'rejet_motif' and francais.key = m.code and francais.locale = 'fr'
-        where m.active is not false
+        where m.active is not false and m.usage = $2
         order by m.sort_order`,
-      [locale],
+      [locale, usage],
     );
     return (rows as Record<string, unknown>[]).map((m) => ({
       id: m["id"] as string,

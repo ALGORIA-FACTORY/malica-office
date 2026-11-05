@@ -540,7 +540,8 @@ const ligneVirement = miennes.find((l) => l.reference === "EPR-RAP-001");
 const dejaLettree = (await e.rpc("banque", "etat", [pmeA.id])).find(
   (s) => s.ligneId === ligneVirement.id && s.active,
 );
-const motifs = await e.rpc("supervision", "motifs", ["fr"]);
+// Un motif de délettrage, pas un motif de retour de pièce (5 novembre 2026).
+const motifs = await e.rpc("supervision", "motifs", ["fr", "delettrage"]);
 const motif = motifs.find((m) => !m.requiresNote) ?? motifs[0];
 if (dejaLettree) {
   await e.rpc("banque", "delettrer", [

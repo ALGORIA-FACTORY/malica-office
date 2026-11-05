@@ -1242,7 +1242,7 @@ export const capture = {
       ),
       db.query(
         `select code, severity, requires_note from ref_rejet_motifs_v
-            where active = true limit 40`,
+            where active = true and usage = 'retour' limit 40`,
       ),
     ]);
 
