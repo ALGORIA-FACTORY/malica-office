@@ -414,8 +414,13 @@ des jeux d'essai ne la suivent pas (254 des matricules rendus justes la violent)
 146 des 150 matricules publics testés la suivent. Les jeux d'essai devraient porter des
 lettres conformes.
 
-**Pas encore fait.** Une correction du sens APRÈS la lecture ne replace pas les parties :
-le jugement lit les cases émetteur / client de la lecture. Décision en attente.
+**La correction du sens après la lecture** (option A du dirigeant, 5 novembre 2026). Le
+jugement rejoue la lecture sur ses jetons gardés, avec le sens confirmé — aucun OCR, aucun
+modèle (`apps/api/src/scan/parties-selon-le-sens.ts`). Le dossier prend son matricule ; le
+tiers, celui que le moteur prouve, sinon celui que la lecture avait lu. La lecture inscrite
+ne change pas (R7). Épreuve : une lecture qui avait rangé le dossier en émetteur, corrigée
+en achat, n'est plus rejetée (`le-sens-corrige-replace-les-parties.test.ts`, qui échoue
+sans le correctif).
 
 ## Les corpus
 
