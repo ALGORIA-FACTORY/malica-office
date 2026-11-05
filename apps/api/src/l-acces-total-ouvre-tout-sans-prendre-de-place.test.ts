@@ -436,4 +436,58 @@ describe("l'accès total ouvre tout, sans prendre de place", { skip: !BASE_CONFI
       );
     });
   });
+
+  /*
+   * Revue Codex de #231 : le retrait d'une transaction ouverte AVANT un accord
+   * concurrent, inscrit après lui sous le verrou, porte un `le` antérieur
+   * (`now()` est figé au début de la transaction). Rangées par `le`, les
+   * décisions gardaient l'accord. Deux connexions qui valident ne se jouent
+   * pas ici — l'accord exige un émetteur validé, que la facturation veut
+   * absent — alors l'épreuve pose l'état exact que laisse le chevauchement :
+   * l'accord daté APRÈS le retrait, inscrit AVANT lui. Le chevauchement réel,
+   * à deux connexions, a été rejoué sur une base jetable (voir la PR).
+   */
+  it("un retrait inscrit après un accord l'emporte, même daté d'avant", async () => {
+    await aBlanc(async (db) => {
+      await db.query("reset role");
+      await db.query(
+        `insert into plateforme.acces_total (user_id, actif, motif, par, le)
+         values ($1, true, 'accord concurrent', $2, now() + interval '1 minute')`,
+        [wb.id, op.id],
+      );
+      const r = (await rpc(db, op, "tour.retirerAccesTotal", wb.id, "Retrait concurrent")) as {
+        actif: boolean;
+      };
+      assert.equal(r.actif, false);
+      await db.query("reset role");
+      const { rows } = await db.query<{ actif: boolean; plus_tot: boolean }>(
+        `select actif, le < max(le) over () as plus_tot from plateforme.acces_total
+          where user_id = $1 order by rang`,
+        [wb.id],
+      );
+      assert.deepEqual(
+        rows,
+        [
+          { actif: true, plus_tot: false },
+          { actif: false, plus_tot: true },
+        ],
+        "le chevauchement : le retrait, inscrit en dernier, est daté d'avant l'accord",
+      );
+
+      const [v] = await sql<{ oui: boolean }>(db, wb, "select app.a_l_acces_total() as oui");
+      assert.equal(v!.oui, false, "le retrait vaut");
+      assert.deepEqual(await sesOrganisations(db, wb), new Map());
+      const liste = (await rpc(db, op, "tour.accesTotal")) as Array<{ email: string }>;
+      assert.ok(!liste.some((a) => a.email === wb.email), "la Tour ne le liste plus");
+      // Les portes lisent le même ordre : un nouvel accord passe, un second
+      // retrait est refusé.
+      await refuse(
+        db,
+        () => rpc(db, op, "tour.retirerAccesTotal", wb.id, "encore"),
+        /acces_total\.non_accorde/,
+      );
+      await accorder(db);
+      assert.equal((await sesOrganisations(db, wb)).size, 2);
+    });
+  });
 });

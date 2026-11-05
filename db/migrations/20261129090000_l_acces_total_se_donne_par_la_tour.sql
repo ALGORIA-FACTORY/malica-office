@@ -98,12 +98,15 @@ create table plateforme.acces_total (
   motif   text not null check (length(btrim(motif)) > 0),
   par     uuid not null references auth.users (id),
   le      timestamptz not null default now(),
-  -- Départage deux décisions de même instant (`now()` est figé par
-  -- transaction) : la plus tardive vaut — forme de 20261023180000.
+  -- L'ORDRE des décisions, et lui seul (revue Codex de #231). `le` est figé au
+  -- début de la transaction : un retrait ouvert AVANT un accord, mais inscrit
+  -- après lui, portait un `le` antérieur, et l'accord restait en vigueur. Les
+  -- portes s'inscrivent sous un verrou par personne : le rang suit l'ordre
+  -- réel d'inscription. `le` ne sert qu'à l'affichage.
   rang    bigint generated always as identity
 );
 
-create index acces_total_user_id_idx on plateforme.acces_total (user_id, le desc, rang desc);
+create index acces_total_user_id_idx on plateforme.acces_total (user_id, rang desc);
 create index acces_total_par_fk_idx on plateforme.acces_total (par);
 
 comment on table plateforme.acces_total is
@@ -135,7 +138,7 @@ set search_path = ''
 as $$
   select coalesce((select a.actif from plateforme.acces_total a
                     where a.user_id = auth.uid()
-                    order by a.le desc, a.rang desc
+                    order by a.rang desc
                     limit 1), false)
      and app.is_platform()
 $$;
@@ -493,7 +496,7 @@ begin
   -- même état et s'inscriraient tous les deux.
   perform pg_advisory_xact_lock(hashtextextended('plateforme.acces_total:' || v_user::text, 0));
   if coalesce((select a.actif from plateforme.acces_total a where a.user_id = v_user
-                order by a.le desc, a.rang desc limit 1), false) then
+                order by a.rang desc limit 1), false) then
     raise exception 'refus.acces_total.deja_accorde' using errcode = '22023';
   end if;
   v_org := plateforme.organisation_de_la_plateforme();
@@ -535,7 +538,7 @@ begin
   end if;
   perform pg_advisory_xact_lock(hashtextextended('plateforme.acces_total:' || p_personne::text, 0));
   if not coalesce((select a.actif from plateforme.acces_total a where a.user_id = p_personne
-                    order by a.le desc, a.rang desc limit 1), false) then
+                    order by a.rang desc limit 1), false) then
     raise exception 'refus.acces_total.non_accorde' using errcode = '22023';
   end if;
   v_org := plateforme.organisation_de_la_plateforme();
@@ -576,7 +579,7 @@ begin
     with derniere as (
       select distinct on (a.user_id) a.user_id, a.actif, a.motif, a.par, a.le
         from plateforme.acces_total a
-       order by a.user_id, a.le desc, a.rang desc
+       order by a.user_id, a.rang desc
     )
     select d.user_id, u.email::text, pr.display_name::text, d.le, d.motif, p.email::text,
            exists (select 1 from app.platform_operators po where po.user_id = d.user_id)
