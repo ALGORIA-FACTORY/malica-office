@@ -105,7 +105,12 @@ struct Choix {
 
 impl Choix {
     fn valeurs(&self) -> (i64, i64, i64, i64) {
-        (self.q.v(), self.p.v(), self.m.v(), self.r.map_or(0, |x| x.1))
+        (
+            self.q.v(),
+            self.p.v(),
+            self.m.v(),
+            self.r.map_or(0, |x| x.1),
+        )
     }
 }
 
@@ -147,7 +152,11 @@ impl Regle {
     fn pas(&self) -> f64 {
         let mut c = self.centres.clone();
         c.sort_by(f64::total_cmp);
-        let mut d: Vec<f64> = c.windows(2).map(|w| w[1] - w[0]).filter(|x| *x > 0.0).collect();
+        let mut d: Vec<f64> = c
+            .windows(2)
+            .map(|w| w[1] - w[0])
+            .filter(|x| *x > 0.0)
+            .collect();
         if d.is_empty() {
             return PAS_EN_HAUTEURS * self.hauteur;
         }
@@ -157,9 +166,13 @@ impl Regle {
 
     /// La colonne d'une abscisse : celle qui la contient (la plus proche s'il y en a deux).
     fn colonne_x(&self, x: f64) -> Option<usize> {
-        (0..3).filter(|&k| self.cols[k].contient(x)).min_by(|&a, &b| {
-            (self.cols[a].centre() - x).abs().total_cmp(&(self.cols[b].centre() - x).abs())
-        })
+        (0..3)
+            .filter(|&k| self.cols[k].contient(x))
+            .min_by(|&a, &b| {
+                (self.cols[a].centre() - x)
+                    .abs()
+                    .total_cmp(&(self.cols[b].centre() - x).abs())
+            })
     }
 
     /// La colonne d'un jeton : celle de son centre.
@@ -245,7 +258,11 @@ impl RemiseGlobale {
             self.montants
                 .iter()
                 .find(|(_, v)| *v == d)
-                .or_else(|| self.taux.iter().find(|(_, r)| div_arrondi(somme as i128 * *r as i128, CENT * unite) == d as i128))
+                .or_else(|| {
+                    self.taux.iter().find(|(_, r)| {
+                        div_arrondi(somme as i128 * *r as i128, CENT * unite) == d as i128
+                    })
+                })
                 .map(|(k, _)| (d, *k))
         })
     }
@@ -280,7 +297,9 @@ impl Lecture<'_> {
     }
 
     fn texte(&self, rang: &[usize]) -> String {
-        rang.iter().map(|&k| normaliser(&self.jeton(k).texte)).collect()
+        rang.iter()
+            .map(|&k| normaliser(&self.jeton(k).texte))
+            .collect()
     }
 
     fn porte(&self, rang: &[usize], reperes: &[String]) -> bool {
@@ -302,7 +321,10 @@ impl Lecture<'_> {
         for r in reperes {
             for (i, _) in texte.match_indices(r.as_str()) {
                 let (a, b) = (de[i], de[i + r.len() - 1]);
-                out.push((self.jeton(a).x0.min(self.jeton(b).x0), self.jeton(a).x1.max(self.jeton(b).x1)));
+                out.push((
+                    self.jeton(a).x0.min(self.jeton(b).x0),
+                    self.jeton(a).x1.max(self.jeton(b).x1),
+                ));
             }
         }
         out
@@ -317,8 +339,14 @@ impl Lecture<'_> {
     }
 
     fn bande(&self, rang: &[usize]) -> (f64, f64) {
-        let y0 = rang.iter().map(|&k| self.jeton(k).y0).fold(f64::INFINITY, f64::min);
-        let y1 = rang.iter().map(|&k| self.jeton(k).y1).fold(f64::NEG_INFINITY, f64::max);
+        let y0 = rang
+            .iter()
+            .map(|&k| self.jeton(k).y0)
+            .fold(f64::INFINITY, f64::min);
+        let y1 = rang
+            .iter()
+            .map(|&k| self.jeton(k).y1)
+            .fold(f64::NEG_INFINITY, f64::max);
         (y0, y1)
     }
 
@@ -331,7 +359,12 @@ impl Lecture<'_> {
             if !self.ctx.marque_pourcent(rang, k) {
                 continue;
             }
-            for v in self.ctx.pourcentages(self.jeton(rang[k])).into_iter().filter(|v| *v > 0) {
+            for v in self
+                .ctx
+                .pourcentages(self.jeton(rang[k]))
+                .into_iter()
+                .filter(|v| *v > 0)
+            {
                 out.push((rang[k], v));
                 if self.ctx.taux_de(v).is_none() {
                     hors_bareme = true;
@@ -345,7 +378,13 @@ impl Lecture<'_> {
     /// colonnes quantité et prix, coupé par une coupe FOURNIE que la géométrie place à cheval
     /// sur les deux (la part gauche dans la colonne quantité, la droite dans celle du prix),
     /// avec gauche × droite = un montant lu de la rangée, exactement.
-    fn coupes(&self, regle: &Regle, rang: &[usize], ms: &[(usize, i64)], cols: &[Vec<usize>; 3]) -> Vec<Choix> {
+    fn coupes(
+        &self,
+        regle: &Regle,
+        rang: &[usize],
+        ms: &[(usize, i64)],
+        cols: &[Vec<usize>; 3],
+    ) -> Vec<Choix> {
         let unite = self.ctx.unite;
         let mut out = Vec::new();
         for &k in rang {
@@ -353,7 +392,11 @@ impl Lecture<'_> {
             if j.page != regle.page || j.decoupes.is_empty() {
                 continue;
             }
-            let (gauche, droite) = if regle.cols[Q].centre() < regle.cols[P].centre() { (Q, P) } else { (P, Q) };
+            let (gauche, droite) = if regle.cols[Q].centre() < regle.cols[P].centre() {
+                (Q, P)
+            } else {
+                (P, Q)
+            };
             if !regle.cols[Q].touche(j.x0, j.x1) || !regle.cols[P].touche(j.x0, j.x1) {
                 continue;
             }
@@ -371,14 +414,26 @@ impl Lecture<'_> {
                     continue;
                 }
                 let x = j.x0 + (j.x1 - j.x0) * d.coupe as f64 / n as f64;
-                if regle.colonne_x((j.x0 + x) / 2.0) != Some(gauche) || regle.colonne_x((x + j.x1) / 2.0) != Some(droite) {
+                if regle.colonne_x((j.x0 + x) / 2.0) != Some(gauche)
+                    || regle.colonne_x((x + j.x1) / 2.0) != Some(droite)
+                {
                     continue;
                 }
                 // la part gauche est la cellule de la colonne de gauche
                 let (lq, lp): (Vec<i64>, Vec<i64>) = if gauche == Q {
-                    (vec![d.gauche], d.droite.iter().filter(|l| l.forte).map(|l| l.v).collect())
+                    (
+                        vec![d.gauche],
+                        d.droite.iter().filter(|l| l.forte).map(|l| l.v).collect(),
+                    )
                 } else {
-                    (d.droite.iter().map(|l| l.v).collect(), if d.gauche > 0 { vec![d.gauche] } else { Vec::new() })
+                    (
+                        d.droite.iter().map(|l| l.v).collect(),
+                        if d.gauche > 0 {
+                            vec![d.gauche]
+                        } else {
+                            Vec::new()
+                        },
+                    )
                 };
                 for &q in lq.iter().filter(|q| **q > 0) {
                     for &p in lp.iter().filter(|p| **p > 0) {
@@ -421,7 +476,13 @@ impl Lecture<'_> {
         let lectures = |c: usize, garder: &dyn Fn(i64, bool) -> bool| -> Vec<(usize, i64)> {
             let mut v: Vec<(usize, i64)> = cols[c]
                 .iter()
-                .flat_map(|&k| self.jeton(k).montants.iter().filter(|l| garder(l.v, l.forte)).map(move |l| (k, l.v)))
+                .flat_map(|&k| {
+                    self.jeton(k)
+                        .montants
+                        .iter()
+                        .filter(|l| garder(l.v, l.forte))
+                        .map(move |l| (k, l.v))
+                })
                 .collect();
             v.sort();
             v.dedup();
@@ -441,11 +502,28 @@ impl Lecture<'_> {
                 for &(pk, p) in &ps {
                     for &(mk, m) in &ms {
                         let mut rs: Vec<Option<(usize, i64)>> = vec![None];
-                        rs.extend(remises.iter().filter(|(k, _)| ![qk, pk, mk].contains(k)).map(|x| Some(*x)));
+                        rs.extend(
+                            remises
+                                .iter()
+                                .filter(|(k, _)| ![qk, pk, mk].contains(k))
+                                .map(|x| Some(*x)),
+                        );
                         for r in rs {
-                            let prises: Vec<usize> = [Some(qk), Some(pk), Some(mk), r.map(|x| x.0)].into_iter().flatten().collect();
-                            if let Some(ttc) = self.ctx.fermeture((q, p, m, r.map_or(0, |x| x.1)), rang, &prises) {
-                                let c = Choix { q: Cellule::Lue(qk, q), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r, ttc };
+                            let prises: Vec<usize> = [Some(qk), Some(pk), Some(mk), r.map(|x| x.0)]
+                                .into_iter()
+                                .flatten()
+                                .collect();
+                            if let Some(ttc) =
+                                self.ctx
+                                    .fermeture((q, p, m, r.map_or(0, |x| x.1)), rang, &prises)
+                            {
+                                let c = Choix {
+                                    q: Cellule::Lue(qk, q),
+                                    p: Cellule::Lue(pk, p),
+                                    m: Cellule::Lue(mk, m),
+                                    r,
+                                    ttc,
+                                };
                                 par_valeurs.entry(c.valeurs()).or_insert(c);
                             }
                         }
@@ -473,11 +551,21 @@ impl Lecture<'_> {
             if !self.ctx.prix_ttc {
                 return Vec::new();
             }
-            let imprime = self.ctx.taux_parmi(rang.iter().copied().filter(|k| !prises.contains(k)));
-            self.ctx.bareme.iter().filter(|(c, _)| imprime.as_ref().is_none_or(|i| &i.code == c)).cloned().collect()
+            let imprime = self
+                .ctx
+                .taux_parmi(rang.iter().copied().filter(|k| !prises.contains(k)));
+            self.ctx
+                .bareme
+                .iter()
+                .filter(|(c, _)| imprime.as_ref().is_none_or(|i| &i.code == c))
+                .cloned()
+                .collect()
         };
         let ferme_ttc_a = |q: i64, p: i64, m: i64, prises: &[usize], code: &str| {
-            self.ctx.fermeture((q, p, m, 0), rang, prises).flatten().is_some_and(|c| c == code)
+            self.ctx
+                .fermeture((q, p, m, 0), rang, prises)
+                .flatten()
+                .is_some_and(|c| c == code)
         };
         if deduire && !hors_bareme {
             if absente(Q) && !ps.is_empty() && !ms.is_empty() {
@@ -488,7 +576,13 @@ impl Lecture<'_> {
                         if m > 0 && n % p as i128 == 0 {
                             if let Ok(q) = i64::try_from(n / p as i128) {
                                 if q > 0 && div_arrondi(q as i128 * p as i128, unite) == m as i128 {
-                                    choix.push(Choix { q: Cellule::Deduite(q), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r: None, ttc: None });
+                                    choix.push(Choix {
+                                        q: Cellule::Deduite(q),
+                                        p: Cellule::Lue(pk, p),
+                                        m: Cellule::Lue(mk, m),
+                                        r: None,
+                                        ttc: None,
+                                    });
                                 }
                             }
                         }
@@ -499,9 +593,17 @@ impl Lecture<'_> {
                         }
                         for (code, ppm) in taux_ttc(&[pk, mk]) {
                             let k = div_arrondi(m as i128 * (PPM + ppm as i128), PPM * p as i128);
-                            let Ok(q) = i64::try_from(k * unite) else { continue };
+                            let Ok(q) = i64::try_from(k * unite) else {
+                                continue;
+                            };
                             if k > 0 && ferme_ttc_a(q, p, m, &[pk, mk], &code) {
-                                choix.push(Choix { q: Cellule::Deduite(q), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r: None, ttc: Some(code) });
+                                choix.push(Choix {
+                                    q: Cellule::Deduite(q),
+                                    p: Cellule::Lue(pk, p),
+                                    m: Cellule::Lue(mk, m),
+                                    r: None,
+                                    ttc: Some(code),
+                                });
                             }
                         }
                     }
@@ -514,23 +616,39 @@ impl Lecture<'_> {
                         }
                         // c. le prix : le seul p > 0 tel que arrondi(q × p) = m exactement
                         let p0 = div_arrondi(m as i128 * unite, q as i128);
-                        let exacts: Vec<i128> =
-                            (p0 - 1..=p0 + 1).filter(|&p| p > 0 && div_arrondi(q as i128 * p, unite) == m as i128).collect();
+                        let exacts: Vec<i128> = (p0 - 1..=p0 + 1)
+                            .filter(|&p| p > 0 && div_arrondi(q as i128 * p, unite) == m as i128)
+                            .collect();
                         if let [p] = exacts.as_slice() {
                             if let Ok(p) = i64::try_from(*p) {
-                                choix.push(Choix { q: Cellule::Lue(qk, q), p: Cellule::Deduite(p), m: Cellule::Lue(mk, m), r: None, ttc: None });
+                                choix.push(Choix {
+                                    q: Cellule::Lue(qk, q),
+                                    p: Cellule::Deduite(p),
+                                    m: Cellule::Lue(mk, m),
+                                    r: None,
+                                    ttc: None,
+                                });
                             }
                         }
                         // c'. un prix TTC : le seul p qui ferme à ce seul taux
                         for (code, ppm) in taux_ttc(&[qk, mk]) {
-                            let p0 = div_arrondi(m as i128 * unite * (PPM + ppm as i128), q as i128 * PPM);
+                            let p0 = div_arrondi(
+                                m as i128 * unite * (PPM + ppm as i128),
+                                q as i128 * PPM,
+                            );
                             let exacts: Vec<i64> = (p0 - 2..=p0 + 2)
                                 .filter(|&p| p > 0)
                                 .filter_map(|p| i64::try_from(p).ok())
                                 .filter(|&p| ferme_ttc_a(q, p, m, &[qk, mk], &code))
                                 .collect();
                             if let [p] = exacts.as_slice() {
-                                choix.push(Choix { q: Cellule::Lue(qk, q), p: Cellule::Deduite(*p), m: Cellule::Lue(mk, m), r: None, ttc: Some(code) });
+                                choix.push(Choix {
+                                    q: Cellule::Lue(qk, q),
+                                    p: Cellule::Deduite(*p),
+                                    m: Cellule::Lue(mk, m),
+                                    r: None,
+                                    ttc: Some(code),
+                                });
                             }
                         }
                     }
@@ -544,19 +662,42 @@ impl Lecture<'_> {
                             continue;
                         }
                         if let Ok(m) = i64::try_from(div_arrondi(q as i128 * p as i128, unite)) {
-                            choix.push(Choix { q: Cellule::Lue(qk, q), p: Cellule::Lue(pk, p), m: Cellule::Deduite(m), r: None, ttc: None });
+                            choix.push(Choix {
+                                q: Cellule::Lue(qk, q),
+                                p: Cellule::Lue(pk, p),
+                                m: Cellule::Deduite(m),
+                                r: None,
+                                ttc: None,
+                            });
                         }
-                        let imprime = self.ctx.taux_parmi(rang.iter().copied().filter(|k| ![qk, pk].contains(k)));
-                        let taux = imprime.and_then(|i| self.ctx.bareme.iter().find(|(c, _)| *c == i.code).cloned());
+                        let imprime = self
+                            .ctx
+                            .taux_parmi(rang.iter().copied().filter(|k| ![qk, pk].contains(k)));
+                        let taux = imprime.and_then(|i| {
+                            self.ctx.bareme.iter().find(|(c, _)| *c == i.code).cloned()
+                        });
                         if let (true, Some((code, ppm))) = (self.ctx.prix_ttc, taux) {
-                            let m = div_arrondi(q as i128 * p as i128 * PPM, unite * (PPM + ppm as i128));
+                            let m = div_arrondi(
+                                q as i128 * p as i128 * PPM,
+                                unite * (PPM + ppm as i128),
+                            );
                             if let Ok(m) = i64::try_from(m) {
-                                choix.push(Choix { q: Cellule::Lue(qk, q), p: Cellule::Lue(pk, p), m: Cellule::Deduite(m), r: None, ttc: Some(code) });
+                                choix.push(Choix {
+                                    q: Cellule::Lue(qk, q),
+                                    p: Cellule::Lue(pk, p),
+                                    m: Cellule::Deduite(m),
+                                    r: None,
+                                    ttc: Some(code),
+                                });
                             }
                         }
                     }
                 }
-                return if choix.is_empty() { Classe::Bloque } else { Classe::SansMontant(choix) };
+                return if choix.is_empty() {
+                    Classe::Bloque
+                } else {
+                    Classe::SansMontant(choix)
+                };
             }
         }
         choix.extend(coupes);
@@ -575,7 +716,12 @@ impl Lecture<'_> {
                 if absente(Q) {
                     let cent = CENT * unite;
                     for &(pk, p) in &ps {
-                        let rs = std::iter::once(None).chain(remises.iter().filter(|(k, _)| ![pk, mk].contains(k)).map(|x| Some(*x)));
+                        let rs = std::iter::once(None).chain(
+                            remises
+                                .iter()
+                                .filter(|(k, _)| ![pk, mk].contains(k))
+                                .map(|x| Some(*x)),
+                        );
                         for r in rs {
                             let rv = r.map_or(0, |x| x.1) as i128;
                             if rv >= cent {
@@ -583,9 +729,18 @@ impl Lecture<'_> {
                             }
                             // la quantité entière que le montant permet, au plus une par voie
                             // (un prix HT, ou TTC à un taux du barème)
-                            let entiere = |ppm: i128| div_arrondi(m as i128 * (PPM + ppm) * cent, PPM * p as i128 * (cent - rv));
-                            let voies = std::iter::once(None).chain(self.ctx.bareme.iter().map(|(c, t)| Some((c.clone(), *t))));
-                            let prises: Vec<usize> = [Some(pk), Some(mk), r.map(|x| x.0)].into_iter().flatten().collect();
+                            let entiere = |ppm: i128| {
+                                div_arrondi(
+                                    m as i128 * (PPM + ppm) * cent,
+                                    PPM * p as i128 * (cent - rv),
+                                )
+                            };
+                            let voies = std::iter::once(None)
+                                .chain(self.ctx.bareme.iter().map(|(c, t)| Some((c.clone(), *t))));
+                            let prises: Vec<usize> = [Some(pk), Some(mk), r.map(|x| x.0)]
+                                .into_iter()
+                                .flatten()
+                                .collect();
                             let ferme = voies.into_iter().find_map(|v| {
                                 let k = entiere(v.as_ref().map_or(0, |x| x.1 as i128));
                                 let q = i64::try_from(k * unite).ok().filter(|_| k > 0)?;
@@ -594,13 +749,25 @@ impl Lecture<'_> {
                                     .filter(|t| t.as_deref() == v.as_ref().map(|x| x.0.as_str()))
                             });
                             if let Some(ttc) = ferme {
-                                prix.push(Choix { q: Cellule::Inconnue, p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r, ttc });
+                                prix.push(Choix {
+                                    q: Cellule::Inconnue,
+                                    p: Cellule::Lue(pk, p),
+                                    m: Cellule::Lue(mk, m),
+                                    r,
+                                    ttc,
+                                });
                             }
                         }
                     }
                 }
                 if prix.is_empty() {
-                    choix.push(Choix { q: Cellule::Inconnue, p: Cellule::Inconnue, m: Cellule::Lue(mk, m), r: None, ttc: None });
+                    choix.push(Choix {
+                        q: Cellule::Inconnue,
+                        p: Cellule::Inconnue,
+                        m: Cellule::Lue(mk, m),
+                        r: None,
+                        ttc: None,
+                    });
                 } else {
                     choix.extend(prix);
                 }
@@ -613,7 +780,11 @@ impl Lecture<'_> {
     /// La graine d'un triplet lu (positions dans la rangée).
     fn graine_lue(&self, s: usize, t: &Triplet) -> Graine {
         let rang = &self.rangs[s];
-        let js = [self.jeton(rang[t.q.0]), self.jeton(rang[t.p.0]), self.jeton(rang[t.m.0])];
+        let js = [
+            self.jeton(rang[t.q.0]),
+            self.jeton(rang[t.p.0]),
+            self.jeton(rang[t.m.0]),
+        ];
         let mut hs: Vec<f64> = js.iter().map(|j| j.y1 - j.y0).collect();
         hs.sort_by(f64::total_cmp);
         Graine {
@@ -639,7 +810,15 @@ impl Lecture<'_> {
         // l'ordre géométrique des trois colonnes, de gauche à droite
         let mut ordre = [Q, P, M];
         ordre.sort_by(|&a, &c| b[a].0.total_cmp(&b[c].0));
-        let mut cols: Vec<Colonne> = b.iter().map(|&(x0, x1)| Colonne { x0, x1, marge_g: 0.0, marge_d: 0.0 }).collect();
+        let mut cols: Vec<Colonne> = b
+            .iter()
+            .map(|&(x0, x1)| Colonne {
+                x0,
+                x1,
+                marge_g: 0.0,
+                marge_d: 0.0,
+            })
+            .collect();
         for (rangc, &c) in ordre.iter().enumerate() {
             let large = (b[c].1 - b[c].0).max(hauteur);
             let gauche = rangc.checked_sub(1).map(|r| (b[c].0 - b[ordre[r]].1) / 2.0);
@@ -649,7 +828,12 @@ impl Lecture<'_> {
         }
         let mut it = cols.into_iter();
         let cols = [it.next().unwrap(), it.next().unwrap(), it.next().unwrap()];
-        Regle { page: g.page, cols, centres: vec![g.y], hauteur }
+        Regle {
+            page: g.page,
+            cols,
+            centres: vec![g.y],
+            hauteur,
+        }
     }
 
     /// Les graines lues d'une page : un triplet q × p = m (un prix HT, ou TTC quand la grille
@@ -661,12 +845,26 @@ impl Lecture<'_> {
             if self.page(i) != page || self.porte(r, &self.arret) {
                 continue;
             }
-            out.extend(self.ctx.triplets(r, true).into_iter().map(|t| self.graine_lue(i, &t)));
+            out.extend(
+                self.ctx
+                    .triplets(r, true)
+                    .into_iter()
+                    .map(|t| self.graine_lue(i, &t)),
+            );
             let inverse: Vec<usize> = r.iter().rev().copied().collect();
             let n = r.len();
             let retour = |(k, v): (usize, i64)| (n - 1 - k, v);
             out.extend(self.ctx.triplets(&inverse, true).into_iter().map(|t| {
-                self.graine_lue(i, &Triplet { q: retour(t.q), p: retour(t.p), m: retour(t.m), r: t.r.map(retour), ttc: t.ttc.clone() })
+                self.graine_lue(
+                    i,
+                    &Triplet {
+                        q: retour(t.q),
+                        p: retour(t.p),
+                        m: retour(t.m),
+                        r: t.r.map(retour),
+                        ttc: t.ttc.clone(),
+                    },
+                )
             }));
         }
         out
@@ -686,8 +884,11 @@ impl Lecture<'_> {
                 continue;
             }
             let [eq, ep, em] = [Q, P, M].map(|c| self.etendues(entete, &self.etiquettes[c]));
-            let (Some(&bq), false, false) = (eq.first(), ep.is_empty(), em.is_empty()) else { continue };
-            let sous = |j: &Jeton, e: &[(f64, f64)]| e.iter().any(|&(x0, x1)| j.x0 <= x1 && j.x1 >= x0);
+            let (Some(&bq), false, false) = (eq.first(), ep.is_empty(), em.is_empty()) else {
+                continue;
+            };
+            let sous =
+                |j: &Jeton, e: &[(f64, f64)]| e.iter().any(|&(x0, x1)| j.x0 <= x1 && j.x1 >= x0);
             for (s, rang) in self.rangs.iter().enumerate().skip(h + 1) {
                 if self.page(s) != page || self.porte(rang, &self.arret) {
                     continue;
@@ -697,14 +898,21 @@ impl Lecture<'_> {
                     if !sous(j, e) {
                         return Vec::new();
                     }
-                    j.montants.iter().filter(|l| l.forte && l.v > 0).map(|l| l.v).collect()
+                    j.montants
+                        .iter()
+                        .filter(|l| l.forte && l.v > 0)
+                        .map(|l| l.v)
+                        .collect()
                 };
                 for &pk in rang {
                     for p in fortes(pk, &ep) {
                         for &mk in rang.iter().filter(|&&mk| mk != pk) {
                             for m in fortes(mk, &em) {
                                 let n = m as i128 * unite;
-                                if n % p as i128 != 0 || (n / p as i128) % unite != 0 || n / p as i128 <= 0 {
+                                if n % p as i128 != 0
+                                    || (n / p as i128) % unite != 0
+                                    || n / p as i128 <= 0
+                                {
                                     continue;
                                 }
                                 let (jp, jm) = (self.jeton(pk), self.jeton(mk));
@@ -714,12 +922,24 @@ impl Lecture<'_> {
                                     page,
                                     hauteur: (jp.y1 - jp.y0).max(f64::EPSILON),
                                     y: centre_y(jm),
-                                    choix: Choix { q: Cellule::Deduite(0), p: Cellule::Lue(pk, p), m: Cellule::Lue(mk, m), r: None, ttc: None },
+                                    choix: Choix {
+                                        q: Cellule::Deduite(0),
+                                        p: Cellule::Lue(pk, p),
+                                        m: Cellule::Lue(mk, m),
+                                        r: None,
+                                        ttc: None,
+                                    },
                                 };
                                 // la rangée vue par sa propre règle : quantité absente, déduite
-                                let Classe::Expliquee(choix) = self.classer(&Self::regle(&g), rang, true) else { continue };
+                                let Classe::Expliquee(choix) =
+                                    self.classer(&Self::regle(&g), rang, true)
+                                else {
+                                    continue;
+                                };
                                 if let Some(c) = choix.into_iter().find(|c| {
-                                    c.q.deduite() && c.p == Cellule::Lue(pk, p) && c.m == Cellule::Lue(mk, m)
+                                    c.q.deduite()
+                                        && c.p == Cellule::Lue(pk, p)
+                                        && c.m == Cellule::Lue(mk, m)
                                 }) {
                                     g.choix = c;
                                     out.push(g);
@@ -741,8 +961,15 @@ impl Lecture<'_> {
     fn segment(&self, g: &Graine) -> Option<Segment> {
         let seg = self.segment_selon(g, true)?;
         let partielle = |c: &Choix| c.q == Cellule::Inconnue || c.p == Cellule::Inconnue;
-        let douteux = seg.lignes.iter().any(|l| l.choix.iter().any(|c| partielle(c) || c.r.is_some()));
-        let deduit = seg.lignes.iter().any(|l| l.choix.iter().any(|c| c.q.deduite() || c.p.deduite() || c.m.deduite()));
+        let douteux = seg
+            .lignes
+            .iter()
+            .any(|l| l.choix.iter().any(|c| partielle(c) || c.r.is_some()));
+        let deduit = seg.lignes.iter().any(|l| {
+            l.choix
+                .iter()
+                .any(|c| c.q.deduite() || c.p.deduite() || c.m.deduite())
+        });
         if douteux && deduit {
             self.segment_selon(g, false)
         } else {
@@ -762,34 +989,55 @@ impl Lecture<'_> {
             .take_while(|&i| self.page(i) == regle.page)
             .filter(|&i| matches!(self.classer(&regle, &rangs[i], false), Classe::Vide))
             .collect();
-        let etiquetee = vides.iter().copied().find(|&i| self.etiquettes.iter().any(|e| self.porte(&rangs[i], e)));
+        let etiquetee = vides
+            .iter()
+            .copied()
+            .find(|&i| self.etiquettes.iter().any(|e| self.porte(&rangs[i], e)));
         let entete = etiquetee.or(vides.first().copied());
         // colonnes cohérentes : sous les étiquettes de l'en-tête, quand il en porte
         if entete.is_some_and(|i| !self.sous_l_entete(&regle, &rangs[i])) {
             return None;
         }
-        let a_remise = g.choix.r.is_some() || entete.is_some_and(|i| self.porte(&rangs[i], &self.remise));
+        let a_remise =
+            g.choix.r.is_some() || entete.is_some_and(|i| self.porte(&rangs[i], &self.remise));
         let deduire = permise && !a_remise;
         // la graine d'en-tête porte une quantité déduite : sans déduction, elle est tue
         let mut graine = g.choix.clone();
         if !permise && graine.q.deduite() {
             graine.q = Cellule::Inconnue;
         }
-        let mut lignes = vec![Ligne { rang: s, choix: vec![graine], report: Vec::new(), regle: None }];
+        let mut lignes = vec![Ligne {
+            rang: s,
+            choix: vec![graine],
+            report: Vec::new(),
+            regle: None,
+        }];
 
-        let accueillir = |regle: &mut Regle, i: usize, classe: Classe, lignes: &mut Vec<Ligne>| -> Option<bool> {
+        let accueillir = |regle: &mut Regle,
+                          i: usize,
+                          classe: Classe,
+                          lignes: &mut Vec<Ligne>|
+         -> Option<bool> {
             match classe {
                 Classe::Vide | Classe::Texte => Some(false),
                 Classe::Bloque => None,
                 Classe::Report(report) => {
-                    lignes.push(Ligne { rang: i, choix: Vec::new(), report, regle: None });
+                    lignes.push(Ligne {
+                        rang: i,
+                        choix: Vec::new(),
+                        report,
+                        regle: None,
+                    });
                     Some(true)
                 }
                 Classe::Expliquee(choix) | Classe::SansMontant(choix) => {
                     // une explication par valeurs : deux jetons de même valeur ne font
                     // pas deux affectations (la fermeture compte les affectations distinctes)
                     let mut vus = BTreeSet::new();
-                    let choix: Vec<Choix> = choix.into_iter().filter(|c| vus.insert(c.valeurs())).collect();
+                    let choix: Vec<Choix> = choix
+                        .into_iter()
+                        .filter(|c| vus.insert(c.valeurs()))
+                        .collect();
                     // une rangée lue sans ambiguïté de jetons affine les colonnes
                     if let [c] = choix.as_slice() {
                         for (col, cel) in [(Q, c.q), (P, c.p), (M, c.m)] {
@@ -800,7 +1048,12 @@ impl Lecture<'_> {
                     }
                     let (y0, y1) = self.bande(&rangs[i]);
                     regle.centres.push((y0 + y1) / 2.0);
-                    lignes.push(Ligne { rang: i, choix, report: Vec::new(), regle: None });
+                    lignes.push(Ligne {
+                        rang: i,
+                        choix,
+                        report: Vec::new(),
+                        regle: None,
+                    });
                     Some(true)
                 }
             }
@@ -862,7 +1115,15 @@ impl Lecture<'_> {
             if self.page(i) != page {
                 break;
             }
-            let fortes = || rang.iter().flat_map(|&k| self.jeton(k).montants.iter().filter(|l| l.forte && l.v != 0).map(move |l| (k, l.v)));
+            let fortes = || {
+                rang.iter().flat_map(|&k| {
+                    self.jeton(k)
+                        .montants
+                        .iter()
+                        .filter(|l| l.forte && l.v != 0)
+                        .map(move |l| (k, l.v))
+                })
+            };
             if !self.remise_globale.is_empty() && self.porte(rang, &self.remise_globale) {
                 r.montants.extend(fortes().map(|(k, v)| (k, v.abs())));
                 r.taux.extend(self.remises(rang).0);
@@ -882,7 +1143,12 @@ type Fermante = (Vec<usize>, Option<(i64, usize)>);
 /// La fermeture : les affectations (un choix par rangée, en valeurs) dont la somme des
 /// montants vaut un total prouvé, directement ou par la remise globale ; chaque report vaut
 /// la somme courante. `Err` si le plafond est dépassé.
-fn fermer(lignes: &[&Ligne], cibles: &[i64], remise: &RemiseGlobale, unite: i128) -> Result<Vec<Fermante>, ()> {
+fn fermer(
+    lignes: &[&Ligne],
+    cibles: &[i64],
+    remise: &RemiseGlobale,
+    unite: i128,
+) -> Result<Vec<Fermante>, ()> {
     struct Recherche<'a> {
         l: &'a [&'a Ligne],
         cibles: &'a [i64],
@@ -924,14 +1190,25 @@ fn fermer(lignes: &[&Ligne], cibles: &[i64], remise: &RemiseGlobale, unite: i128
         }
         Ok(())
     }
-    let mut r = Recherche { l: lignes, cibles, remise, unite, out: Vec::new(), explorees: 0 };
+    let mut r = Recherche {
+        l: lignes,
+        cibles,
+        remise,
+        unite,
+        out: Vec::new(),
+        explorees: 0,
+    };
     chercher(&mut r, 0, &mut Vec::with_capacity(lignes.len()))?;
     Ok(r.out)
 }
 
 /// Les repères des champs du centre : les champs montants nommés par les preuves de la
 /// grille autres que `lignes`, et le total des lignes. Les champs des lignes en sont exclus.
-fn reperes_d_arret(op: &OpLignes, grille: &Grille, champs_lignes: &BTreeSet<String>) -> Vec<String> {
+fn reperes_d_arret(
+    op: &OpLignes,
+    grille: &Grille,
+    champs_lignes: &BTreeSet<String>,
+) -> Vec<String> {
     fn noms(v: &serde_json::Value, out: &mut BTreeSet<String>) {
         match v {
             serde_json::Value::String(s) => {
@@ -955,7 +1232,9 @@ fn reperes_d_arret(op: &OpLignes, grille: &Grille, champs_lignes: &BTreeSet<Stri
     grille
         .champs
         .iter()
-        .filter(|c| c.genre == "montant" && codes.contains(&c.code) && !champs_lignes.contains(&c.code))
+        .filter(|c| {
+            c.genre == "montant" && codes.contains(&c.code) && !champs_lignes.contains(&c.code)
+        })
         .flat_map(reperes_de)
         .collect()
 }
@@ -968,17 +1247,29 @@ type Signature = (Vec<(usize, (i64, i64, i64, i64))>, Option<i64>);
 
 /// Les lignes lues du milieu vers les bords, ou rien (les lignes restent signalées, avec
 /// le verdict de toujours).
-pub(super) fn prouver(ctx: &Contexte, op: &OpLignes, grille: &Grille, rangs: &[Vec<usize>], cibles: &[i64]) -> Option<Lu> {
+pub(super) fn prouver(
+    ctx: &Contexte,
+    op: &OpLignes,
+    grille: &Grille,
+    rangs: &[Vec<usize>],
+    cibles: &[i64],
+) -> Option<Lu> {
     let champs_lignes: BTreeSet<String> = op.champs_lignes.iter().cloned().collect();
     let reperes = |code: Option<&String>| {
-        code.and_then(|r| grille.champs.iter().find(|c| &c.code == r)).map(reperes_de).unwrap_or_default()
+        code.and_then(|r| grille.champs.iter().find(|c| &c.code == r))
+            .map(reperes_de)
+            .unwrap_or_default()
     };
     let lecture = Lecture {
         ctx,
         rangs,
         arret: reperes_d_arret(op, grille, &champs_lignes),
         remise: reperes(op.remise.as_ref()),
-        etiquettes: [reperes(Some(&op.colonnes[Q])), reperes(Some(&op.colonnes[P])), reperes(Some(&op.colonnes[M]))],
+        etiquettes: [
+            reperes(Some(&op.colonnes[Q])),
+            reperes(Some(&op.colonnes[P])),
+            reperes(Some(&op.colonnes[M])),
+        ],
         remise_globale: reperes(op.remise_globale.as_ref()),
         brut: reperes(op.total_brut.as_ref()),
     };
@@ -996,16 +1287,31 @@ pub(super) fn prouver(ctx: &Contexte, op: &OpLignes, grille: &Grille, rangs: &[V
             continue;
         }
         let ys: Vec<f64> = graines.iter().map(|g| g.y).collect();
-        let milieu = (ys.iter().copied().fold(f64::INFINITY, f64::min) + ys.iter().copied().fold(f64::NEG_INFINITY, f64::max)) / 2.0;
+        let milieu = (ys.iter().copied().fold(f64::INFINITY, f64::min)
+            + ys.iter().copied().fold(f64::NEG_INFINITY, f64::max))
+            / 2.0;
         let mut ordre: Vec<usize> = (0..graines.len()).collect();
-        ordre.sort_by(|&a, &b| (ys[a] - milieu).abs().total_cmp(&(ys[b] - milieu).abs()).then(a.cmp(&b)));
+        ordre.sort_by(|&a, &b| {
+            (ys[a] - milieu)
+                .abs()
+                .total_cmp(&(ys[b] - milieu).abs())
+                .then(a.cmp(&b))
+        });
         let mut vus: BTreeSet<Vec<EmpreinteLigne>> = BTreeSet::new();
         for g in ordre {
-            let Some(seg) = lecture.segment(&graines[g]) else { continue };
+            let Some(seg) = lecture.segment(&graines[g]) else {
+                continue;
+            };
             let sig = seg
                 .lignes
                 .iter()
-                .map(|l| (l.rang, l.choix.iter().map(Choix::valeurs).collect(), l.report.iter().map(|x| x.1).collect()))
+                .map(|l| {
+                    (
+                        l.rang,
+                        l.choix.iter().map(Choix::valeurs).collect(),
+                        l.report.iter().map(|x| x.1).collect(),
+                    )
+                })
                 .collect();
             if vus.insert(sig) {
                 segments.entry(page).or_default().push(seg);
@@ -1051,20 +1357,34 @@ pub(super) fn prouver(ctx: &Contexte, op: &OpLignes, grille: &Grille, rangs: &[V
     for e in enchainements {
         let lignes: Vec<&Ligne> = e.iter().flat_map(|s| s.lignes.iter()).collect();
         // un seul montant déduit dans tout le tableau ; une remise lue interdit toute déduction
-        let sans_montant = lignes.iter().filter(|l| l.choix.iter().any(|c| c.m.deduite())).count();
+        let sans_montant = lignes
+            .iter()
+            .filter(|l| l.choix.iter().any(|c| c.m.deduite()))
+            .count();
         let remise_lue = lignes.iter().any(|l| l.choix.iter().any(|c| c.r.is_some()));
-        let une_deduite =
-            lignes.iter().any(|l| l.choix.iter().any(|c| c.q.deduite() || c.p.deduite() || c.m.deduite()));
-        if sans_montant > 1 || (remise_lue && une_deduite) || lignes.iter().all(|l| l.est_report()) {
+        let une_deduite = lignes.iter().any(|l| {
+            l.choix
+                .iter()
+                .any(|c| c.q.deduite() || c.p.deduite() || c.m.deduite())
+        });
+        if sans_montant > 1 || (remise_lue && une_deduite) || lignes.iter().all(|l| l.est_report())
+        {
             continue;
         }
         let derniere = lignes.iter().map(|l| l.rang).max().unwrap_or_default();
         let remise = lecture.remise_globale(derniere);
-        let Ok(fermantes) = fermer(&lignes, cibles, &remise, ctx.unite) else { return None };
+        let Ok(fermantes) = fermer(&lignes, cibles, &remise, ctx.unite) else {
+            return None;
+        };
         let mut signatures: BTreeSet<Signature> = BTreeSet::new();
         for (f, r) in &fermantes {
             signatures.insert((
-                lignes.iter().zip(f).filter(|(l, _)| !l.est_report()).map(|(l, &i)| (l.rang, l.choix[i].valeurs())).collect(),
+                lignes
+                    .iter()
+                    .zip(f)
+                    .filter(|(l, _)| !l.est_report())
+                    .map(|(l, &i)| (l.rang, l.choix[i].valeurs()))
+                    .collect(),
                 r.map(|x| x.0),
             ));
         }
@@ -1088,24 +1408,51 @@ pub(super) fn prouver(ctx: &Contexte, op: &OpLignes, grille: &Grille, rangs: &[V
         .map(|(l, &i)| {
             let c = &l.choix[i];
             deduites += [c.q, c.p, c.m].iter().filter(|x| x.deduite()).count();
-            sortie(&lecture, l.regle.as_ref().expect("règle du segment"), &rangs[l.rang], c, op.avec_taux)
+            sortie(
+                &lecture,
+                l.regle.as_ref().expect("règle du segment"),
+                &rangs[l.rang],
+                c,
+                op.avec_taux,
+            )
         })
         .collect();
     let remise_globale = remise.map(|(v, k)| Cite::lue(v.to_string(), vec![ctx.cite(k)]));
-    Some(Lu { instances, deduites, remise_globale })
+    Some(Lu {
+        instances,
+        deduites,
+        remise_globale,
+    })
 }
 
-fn sortie(lecture: &Lecture, regle: &Regle, rang: &[usize], c: &Choix, avec_taux: bool) -> LigneSortie {
+fn sortie(
+    lecture: &Lecture,
+    regle: &Regle,
+    rang: &[usize],
+    c: &Choix,
+    avec_taux: bool,
+) -> LigneSortie {
     let ctx = lecture.ctx;
     let (y0, y1) = lecture.bande(rang);
     let cellule = |cel: Cellule, col: usize| match cel {
-        Cellule::Lue(k, v) => Some(Cite { statut: Some("lu"), ..Cite::lue(v.to_string(), vec![ctx.cite(k)]) }),
-        Cellule::Coupe(k, v, coupe) => {
-            Some(Cite { statut: Some("coupe"), coupe: Some(coupe), ..Cite::lue(v.to_string(), vec![ctx.cite(k)]) })
-        }
+        Cellule::Lue(k, v) => Some(Cite {
+            statut: Some("lu"),
+            ..Cite::lue(v.to_string(), vec![ctx.cite(k)])
+        }),
+        Cellule::Coupe(k, v, coupe) => Some(Cite {
+            statut: Some("coupe"),
+            coupe: Some(coupe),
+            ..Cite::lue(v.to_string(), vec![ctx.cite(k)])
+        }),
         Cellule::Deduite(v) => Some(Cite {
             statut: Some("deduit"),
-            case_: Some(Case { page: regle.page, x0: regle.cols[col].x0, y0, x1: regle.cols[col].x1, y1 }),
+            case_: Some(Case {
+                page: regle.page,
+                x0: regle.cols[col].x0,
+                y0,
+                x1: regle.cols[col].x1,
+                y1,
+            }),
             ..Cite::lue(v.to_string(), Vec::new())
         }),
         Cellule::Inconnue => None,
@@ -1114,10 +1461,18 @@ fn sortie(lecture: &Lecture, regle: &Regle, rang: &[usize], c: &Choix, avec_taux
     let tues: BTreeSet<usize> = [(Q, c.q), (P, c.p)]
         .into_iter()
         .filter(|(_, cel)| *cel == Cellule::Inconnue)
-        .flat_map(|(col, _)| rang.iter().copied().filter(move |&k| regle.colonne(&ctx.jetons[k]) == Some(col)))
+        .flat_map(|(col, _)| {
+            rang.iter()
+                .copied()
+                .filter(move |&k| regle.colonne(&ctx.jetons[k]) == Some(col))
+        })
         .collect();
-    let lus: BTreeSet<usize> =
-        [c.q, c.p, c.m].iter().filter_map(Cellule::jeton).chain(c.r.map(|x| x.0)).chain(tues.iter().copied()).collect();
+    let lus: BTreeSet<usize> = [c.q, c.p, c.m]
+        .iter()
+        .filter_map(Cellule::jeton)
+        .chain(c.r.map(|x| x.0))
+        .chain(tues.iter().copied())
+        .collect();
     // La désignation : au-delà de la colonne des quantités, du côté opposé aux prix.
     let q = &regle.cols[Q];
     let rtl = regle.cols[P].centre() < q.centre();
@@ -1129,9 +1484,17 @@ fn sortie(lecture: &Lecture, regle: &Regle, rang: &[usize], c: &Choix, avec_taux
             x < q.x0 - q.marge_g
         }
     };
-    let gauche: Vec<usize> = rang.iter().copied().filter(|&k| !lus.contains(&k) && au_dela(&ctx.jetons[k])).collect();
+    let gauche: Vec<usize> = rang
+        .iter()
+        .copied()
+        .filter(|&k| !lus.contains(&k) && au_dela(&ctx.jetons[k]))
+        .collect();
     let taux = if avec_taux {
-        ctx.taux_parmi(rang.iter().copied().filter(|&k| !lus.contains(&k) && !au_dela(&ctx.jetons[k])))
+        ctx.taux_parmi(
+            rang.iter()
+                .copied()
+                .filter(|&k| !lus.contains(&k) && !au_dela(&ctx.jetons[k])),
+        )
     } else {
         None
     };
@@ -1146,7 +1509,10 @@ fn sortie(lecture: &Lecture, regle: &Regle, rang: &[usize], c: &Choix, avec_taux
         },
         quantite: cellule(c.q, Q),
         prix: cellule(c.p, P),
-        remise: c.r.map(|(k, v)| Cite { statut: Some("lu"), ..Cite::lue(v.to_string(), vec![ctx.cite(k)]) }),
+        remise: c.r.map(|(k, v)| Cite {
+            statut: Some("lu"),
+            ..Cite::lue(v.to_string(), vec![ctx.cite(k)])
+        }),
         montant: cellule(c.m, M).expect("le montant d'une ligne est lu ou déduit"),
         taux,
         prix_ttc: c.ttc.is_some() && c.p != Cellule::Inconnue,

@@ -23,7 +23,10 @@ fn sortie(c: &Value) -> Value {
 }
 
 fn cas_nomme(id: &str) -> Value {
-    cas().into_iter().find(|c| c["id"] == id).expect("cas présent")
+    cas()
+        .into_iter()
+        .find(|c| c["id"] == id)
+        .expect("cas présent")
 }
 
 fn parties(id: &str) -> (Value, Value) {
@@ -52,8 +55,14 @@ fn une_piece_bilingue_garde_le_sens_de_ses_lignes() {
 fn le_nom_du_dossier_n_est_jamais_celui_de_l_autre_partie() {
     for id in ["algoria-051", "algoria-036"] {
         let (p, _) = parties(id);
-        let nom = p["emetteur"]["nom"]["valeur"].as_str().unwrap_or_default().to_uppercase();
-        assert!(!nom.contains("ALGORIA"), "{id} : le fournisseur porte le nom du dossier : {p}");
+        let nom = p["emetteur"]["nom"]["valeur"]
+            .as_str()
+            .unwrap_or_default()
+            .to_uppercase();
+        assert!(
+            !nom.contains("ALGORIA"),
+            "{id} : le fournisseur porte le nom du dossier : {p}"
+        );
     }
 }
 
@@ -62,7 +71,10 @@ fn un_deux_points_seul_dit_le_cote_du_libelle() {
     let c = cas_nomme("algoria-076");
     let s = sortie(&c);
     let rc = &s["champs"]["registre_commerce_emetteur"]["valeur"];
-    assert!(rc.is_null() || *rc == c["attendu"]["rc"], "RC lu de travers : {rc}");
+    assert!(
+        rc.is_null() || *rc == c["attendu"]["rc"],
+        "RC lu de travers : {rc}"
+    );
 }
 
 #[test]

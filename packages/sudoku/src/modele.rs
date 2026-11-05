@@ -22,9 +22,18 @@ pub enum Unite {
 
 pub enum Contrainte {
     /// Σ coef × unité = 0, exactement.
-    Lin { termes: Vec<(Unite, i64)> },
-    Produit { total: usize, facteurs: Vec<usize> },
-    Taux { m: usize, b: usize, bareme: String },
+    Lin {
+        termes: Vec<(Unite, i64)>,
+    },
+    Produit {
+        total: usize,
+        facteurs: Vec<usize>,
+    },
+    Taux {
+        m: usize,
+        b: usize,
+        bareme: String,
+    },
     /// `fixe` : le montant standard du pack ; `admis` : tout montant que le pack admet au
     /// jour de la pièce (le standard et les tranches de son barème). `assiette` : le barème
     /// dont la base est majorée de cette charge — nommé par la preuve (clé `assiette`),
@@ -37,7 +46,9 @@ pub enum Contrainte {
         base: Option<usize>,
         assiette: Option<String>,
     },
-    Groupe { g: usize },
+    Groupe {
+        g: usize,
+    },
 }
 
 pub struct ContraintePreuve {
@@ -102,17 +113,28 @@ fn lire_ref(s: &str) -> Ref {
         Some(n) => (n, true),
         None => (reste, false),
     };
-    Ref { nom: nom.trim().to_string(), signe, facultatif }
+    Ref {
+        nom: nom.trim().to_string(),
+        signe,
+        facultatif,
+    }
 }
 
 fn texte(e: &Value, cle: &str) -> Result<String, String> {
-    e.get(cle).and_then(|v| v.as_str()).map(|s| s.to_string()).ok_or_else(|| format!("clé « {cle} » manquante"))
+    e.get(cle)
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| format!("clé « {cle} » manquante"))
 }
 
 fn liste(e: &Value, cle: &str) -> Result<Vec<String>, String> {
     e.get(cle)
         .and_then(|v| v.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .ok_or_else(|| format!("clé « {cle} » manquante"))
 }
 
@@ -126,7 +148,10 @@ struct Bati<'a> {
 
 impl<'a> Bati<'a> {
     fn champ(&self, nom: &str) -> Result<usize, String> {
-        self.index.get(nom).copied().ok_or_else(|| format!("champ « {nom} » absent de la grille"))
+        self.index
+            .get(nom)
+            .copied()
+            .ok_or_else(|| format!("champ « {nom} » absent de la grille"))
     }
 
     fn numerique(&self, c: usize) -> Result<(), String> {
@@ -134,20 +159,34 @@ impl<'a> Bati<'a> {
         if TYPES_NUMERIQUES.contains(&g.as_str()) {
             Ok(())
         } else {
-            Err(format!("champ « {} » de type {g}, non numérique", self.grille.champs[c].code))
+            Err(format!(
+                "champ « {} » de type {g}, non numérique",
+                self.grille.champs[c].code
+            ))
         }
     }
 
     fn var(&mut self, r: &Ref) -> Result<usize, String> {
         let c = self.champ(&r.nom)?;
         self.numerique(c)?;
-        if self.groupes.iter().any(|g| g.champ_base == c || g.champ_montant == c) {
-            return Err(format!("champ « {} » de groupe employé comme scalaire", r.nom));
+        if self
+            .groupes
+            .iter()
+            .any(|g| g.champ_base == c || g.champ_montant == c)
+        {
+            return Err(format!(
+                "champ « {} » de groupe employé comme scalaire",
+                r.nom
+            ));
         }
         let i = match self.var_de.get(&c) {
             Some(&i) => i,
             None => {
-                self.vars.push(Var { champ: c, facultatif: false, present: true });
+                self.vars.push(Var {
+                    champ: c,
+                    facultatif: false,
+                    present: true,
+                });
                 self.var_de.insert(c, self.vars.len() - 1);
                 self.vars.len() - 1
             }
@@ -174,7 +213,12 @@ pub fn construire(entree: &Entree) -> Modele {
     let grille = &entree.grille;
     let mut b = Bati {
         grille,
-        index: grille.champs.iter().enumerate().map(|(i, c)| (c.code.as_str(), i)).collect(),
+        index: grille
+            .champs
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (c.code.as_str(), i))
+            .collect(),
         vars: Vec::new(),
         var_de: HashMap::new(),
         groupes: Vec::new(),
@@ -224,9 +268,14 @@ pub fn construire(entree: &Entree) -> Modele {
             let exoneration_partielle = match e.get("exoneration_partielle") {
                 None => false,
                 Some(v) => {
-                    let oui = v.as_bool().ok_or("clé « exoneration_partielle » : booléen attendu")?;
+                    let oui = v
+                        .as_bool()
+                        .ok_or("clé « exoneration_partielle » : booléen attendu")?;
                     if oui && exoneration.is_none() {
-                        return Err("« exoneration_partielle » sans champ « exoneration » (la mention)".into());
+                        return Err(
+                            "« exoneration_partielle » sans champ « exoneration » (la mention)"
+                                .into(),
+                        );
                     }
                     oui
                 }
@@ -234,12 +283,21 @@ pub fn construire(entree: &Entree) -> Modele {
             let taux_exonere = match e.get("taux_exonere") {
                 None => None,
                 Some(v) => {
-                    let code = v.as_str().ok_or("clé « taux_exonere » : code de taux attendu")?;
+                    let code = v
+                        .as_str()
+                        .ok_or("clé « taux_exonere » : code de taux attendu")?;
                     if exoneration.is_none() {
                         return Err("« taux_exonere » sans « exoneration » (la mention)".into());
                     }
-                    if !entree.pack.taux_nuls.get(&bareme).is_some_and(|t| t.iter().any(|c| c == code)) {
-                        return Err(format!("taux « {code} » absent des taux nuls du barème « {bareme} »"));
+                    if !entree
+                        .pack
+                        .taux_nuls
+                        .get(&bareme)
+                        .is_some_and(|t| t.iter().any(|c| c == code))
+                    {
+                        return Err(format!(
+                            "taux « {code} » absent des taux nuls du barème « {bareme} »"
+                        ));
                     }
                     Some(code.to_string())
                 }
@@ -267,7 +325,10 @@ pub fn construire(entree: &Entree) -> Modele {
             if let Ok(t) = texte(e, "total_montant") {
                 b.groupes[g].total_montant = Some(b.var(&lire_ref(&t))?);
             }
-            contraintes.push(ContraintePreuve { c: Contrainte::Groupe { g }, preuve: i });
+            contraintes.push(ContraintePreuve {
+                c: Contrainte::Groupe { g },
+                preuve: i,
+            });
             Ok(())
         })();
         if let Err(m) = r {
@@ -290,12 +351,20 @@ pub fn construire(entree: &Entree) -> Modele {
                         let r = lire_ref(&p);
                         termes.push((b.unite(&r)?, -r.signe));
                     }
-                    contraintes.push(ContraintePreuve { c: Contrainte::Lin { termes }, preuve: i });
+                    contraintes.push(ContraintePreuve {
+                        c: Contrainte::Lin { termes },
+                        preuve: i,
+                    });
                 }
                 "egal" => {
                     let a = b.unite(&lire_ref(&texte(e, "a")?))?;
                     let c = b.unite(&lire_ref(&texte(e, "b")?))?;
-                    contraintes.push(ContraintePreuve { c: Contrainte::Lin { termes: vec![(a, 1), (c, -1)] }, preuve: i });
+                    contraintes.push(ContraintePreuve {
+                        c: Contrainte::Lin {
+                            termes: vec![(a, 1), (c, -1)],
+                        },
+                        preuve: i,
+                    });
                 }
                 "produit" => {
                     let total = b.var(&lire_ref(&texte(e, "total")?))?;
@@ -306,7 +375,10 @@ pub fn construire(entree: &Entree) -> Modele {
                     if facteurs.is_empty() {
                         return Err("produit sans facteur".into());
                     }
-                    contraintes.push(ContraintePreuve { c: Contrainte::Produit { total, facteurs }, preuve: i });
+                    contraintes.push(ContraintePreuve {
+                        c: Contrainte::Produit { total, facteurs },
+                        preuve: i,
+                    });
                 }
                 "taux" => {
                     let m = b.var(&lire_ref(&texte(e, "montant")?))?;
@@ -315,7 +387,10 @@ pub fn construire(entree: &Entree) -> Modele {
                     if !entree.pack.baremes.contains_key(&bareme) {
                         return Err(format!("barème « {bareme} » absent du pack"));
                     }
-                    contraintes.push(ContraintePreuve { c: Contrainte::Taux { m, b: base, bareme }, preuve: i });
+                    contraintes.push(ContraintePreuve {
+                        c: Contrainte::Taux { m, b: base, bareme },
+                        preuve: i,
+                    });
                 }
                 "charge" => {
                     let m = b.var(&lire_ref(&texte(e, "montant")?))?;
@@ -332,12 +407,17 @@ pub fn construire(entree: &Entree) -> Modele {
                     };
                     // Les montants admis : le standard, et ceux que le pack admet au jour dit
                     // (les tranches d'un barème). Triés, sans doublon.
-                    let mut admis: Vec<i64> =
-                        ch.montant_fixe.into_iter().chain(ch.montants_admis.iter().copied()).collect();
+                    let mut admis: Vec<i64> = ch
+                        .montant_fixe
+                        .into_iter()
+                        .chain(ch.montants_admis.iter().copied())
+                        .collect();
                     admis.sort_unstable();
                     admis.dedup();
                     if admis.is_empty() && ch.taux_ppm.is_none() {
-                        return Err(format!("charge « {code} » sans montant ni taux dans le pack"));
+                        return Err(format!(
+                            "charge « {code} » sans montant ni taux dans le pack"
+                        ));
                     }
                     // Une charge d'assiette majore la base d'un barème : la preuve le nomme.
                     let assiette = if ch.assiette_tva {
@@ -352,13 +432,26 @@ pub fn construire(entree: &Entree) -> Modele {
                         None
                     };
                     contraintes.push(ContraintePreuve {
-                        c: Contrainte::Charge { m, fixe: ch.montant_fixe, admis, taux_ppm: ch.taux_ppm, base, assiette },
+                        c: Contrainte::Charge {
+                            m,
+                            fixe: ch.montant_fixe,
+                            admis,
+                            taux_ppm: ch.taux_ppm,
+                            base,
+                            assiette,
+                        },
                         preuve: i,
                     });
                 }
                 "format" => {
                     let champ = b.champ(&lire_ref(&texte(e, "champ")?).nom)?;
-                    non_numeriques.push((i, NonNumerique::Format { champ, format: texte(e, "format")? }));
+                    non_numeriques.push((
+                        i,
+                        NonNumerique::Format {
+                            champ,
+                            format: texte(e, "format")?,
+                        },
+                    ));
                 }
                 "ordre" => {
                     let avant = b.champ(&lire_ref(&texte(e, "avant")?).nom)?;
@@ -374,5 +467,11 @@ pub fn construire(entree: &Entree) -> Modele {
         }
     }
 
-    Modele { vars: b.vars, groupes: b.groupes, contraintes, non_numeriques, non_traduites }
+    Modele {
+        vars: b.vars,
+        groupes: b.groupes,
+        contraintes,
+        non_numeriques,
+        non_traduites,
+    }
 }

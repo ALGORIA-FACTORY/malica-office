@@ -11,7 +11,7 @@
 
 mod commun;
 
-use commun::jeux::{self, jeu, jeton, la_piece, par_variante};
+use commun::jeux::{self, jeton, jeu, la_piece, par_variante};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -43,13 +43,20 @@ fn pieces() -> Vec<Piece> {
 fn contexte(avec_lignes: bool) -> (Value, Value) {
     let (mut grille, pack) = jeux::en_base();
     if avec_lignes {
-        grille["preuves"].as_array_mut().unwrap().push(jeux::preuve_lignes(PREUVE));
+        grille["preuves"]
+            .as_array_mut()
+            .unwrap()
+            .push(jeux::preuve_lignes(PREUVE));
     }
     (grille, pack)
 }
 
 /// Les variantes, et le temps passé dans le moteur seul (µs), hors construction du JSON d'entrée.
-fn par_variante_chrono(jetons: &[Value], grille: &Value, pack: &Value) -> (Vec<(String, Value)>, u128) {
+fn par_variante_chrono(
+    jetons: &[Value],
+    grille: &Value,
+    pack: &Value,
+) -> (Vec<(String, Value)>, u128) {
     jeux::par_variante_avec(jetons, grille, pack, None)
 }
 
@@ -59,7 +66,9 @@ fn mineures(x: f64) -> i64 {
 
 /// Les lignes prouvées sont-elles exactement les vraies ? (quantité, prix, montant ; taux s'il est rendu)
 fn justes(o: &Value, v: &Verite, ppm: &BTreeMap<String, i64>) -> bool {
-    let Some(vraies) = &v.lignes else { return false };
+    let Some(vraies) = &v.lignes else {
+        return false;
+    };
     let inst = o["lignes"]["instances"].as_array().unwrap();
     if inst.len() != vraies.len() {
         return false;
@@ -67,15 +76,31 @@ fn justes(o: &Value, v: &Verite, ppm: &BTreeMap<String, i64>) -> bool {
     let n = |x: &Value| x["valeur"].as_str().unwrap().parse::<i64>().unwrap();
     let mut lues: Vec<(i64, i64, i64, Option<i64>)> = inst
         .iter()
-        .map(|l| (n(&l["quantite"]), n(&l["prix"]), n(&l["montant"]), l["taux"]["code"].as_str().map(|c| ppm[c])))
+        .map(|l| {
+            (
+                n(&l["quantite"]),
+                n(&l["prix"]),
+                n(&l["montant"]),
+                l["taux"]["code"].as_str().map(|c| ppm[c]),
+            )
+        })
         .collect();
     let mut attendues: Vec<(i64, i64, i64, i64)> = vraies
         .iter()
-        .map(|l| (mineures(l.qte), mineures(l.pu_ht), mineures(l.montant_ht), (l.taux_tva.unwrap_or(0.0) * 10_000.0).round() as i64))
+        .map(|l| {
+            (
+                mineures(l.qte),
+                mineures(l.pu_ht),
+                mineures(l.montant_ht),
+                (l.taux_tva.unwrap_or(0.0) * 10_000.0).round() as i64,
+            )
+        })
         .collect();
     lues.sort();
     attendues.sort();
-    lues.iter().zip(&attendues).all(|(l, a)| l.0 == a.0 && l.1 == a.1 && l.2 == a.2 && l.3.is_none_or(|t| t == a.3))
+    lues.iter()
+        .zip(&attendues)
+        .all(|(l, a)| l.0 == a.0 && l.1 == a.1 && l.2 == a.2 && l.3.is_none_or(|t| t == a.3))
 }
 
 fn sans_lignes(o: &Value) -> Value {
@@ -96,10 +121,19 @@ fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {
         .as_array()
         .unwrap()
         .iter()
-        .map(|t| (t["code"].as_str().unwrap().to_string(), t["ppm"].as_i64().unwrap()))
+        .map(|t| {
+            (
+                t["code"].as_str().unwrap().to_string(),
+                t["ppm"].as_i64().unwrap(),
+            )
+        })
         .collect();
     let pieces = pieces();
-    assert_eq!(pieces.len(), 134, "150 pièces, dont 16 scans sans jetons, écartés");
+    assert_eq!(
+        pieces.len(),
+        134,
+        "150 pièces, dont 16 scans sans jetons, écartés"
+    );
 
     // (prouvées justes, prouvées fausses, signalées, absentes, temps en µs avec lignes, sans)
     let mut stats: BTreeMap<&str, Bilan> = BTreeMap::new();
@@ -148,7 +182,9 @@ fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {
         e.5.push(us_centre);
         match o["lignes"]["statut"].as_str().unwrap() {
             "prouve" => {
-                *taux_bases.entry(o["lignes"]["taux_par_base"].as_str().unwrap().to_string()).or_default() += 1;
+                *taux_bases
+                    .entry(o["lignes"]["taux_par_base"].as_str().unwrap().to_string())
+                    .or_default() += 1;
                 if justes(&o, &p.verite, &ppm) {
                     e.0 += 1;
                     prouvees.push((ip, o.clone()));
@@ -159,7 +195,11 @@ fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {
             }
             "signale" => {
                 e.2 += 1;
-                let raison = format!("{} / centre {}", o["preuves"][PREUVE].as_str().unwrap(), o["issue"].as_str().unwrap());
+                let raison = format!(
+                    "{} / centre {}",
+                    o["preuves"][PREUVE].as_str().unwrap(),
+                    o["issue"].as_str().unwrap()
+                );
                 signalees.entry(raison).or_default().push(p.id.clone());
             }
             _ => {
@@ -186,7 +226,10 @@ fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {
     }
     println!("  absentes (aucune rangée q × p = m) : {absentes:?}");
     println!("  centres promus par des lignes justes qui ferment le HT : {promues:?}");
-    assert!(centres_changes.is_empty(), "centre modifié par la preuve lignes : {centres_changes:?}");
+    assert!(
+        centres_changes.is_empty(),
+        "centre modifié par la preuve lignes : {centres_changes:?}"
+    );
     assert!(fausses.is_empty(), "lignes fausses prouvées : {fausses:#?}");
     assert!(!prouvees.is_empty(), "aucune pièce aux lignes prouvées");
 
@@ -194,16 +237,29 @@ fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {
     let (mut mutations, mut fausses_mut, mut justes_mut) = (0u32, Vec::new(), Vec::new());
     for (ip, o) in &prouvees {
         let p = &pieces[*ip];
-        for (il, l) in o["lignes"]["instances"].as_array().unwrap().iter().enumerate() {
+        for (il, l) in o["lignes"]["instances"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             let m: i64 = l["montant"]["valeur"].as_str().unwrap().parse().unwrap();
             let r = &l["montant"]["refs"][0];
             let k = p
                 .jetons
                 .iter()
-                .position(|j| j.0 as u64 == r["page"].as_u64().unwrap() && j.1 as u64 == r["ordinal"].as_u64().unwrap())
+                .position(|j| {
+                    j.0 as u64 == r["page"].as_u64().unwrap()
+                        && j.1 as u64 == r["ordinal"].as_u64().unwrap()
+                })
                 .unwrap();
             let signe = m.signum();
-            let chiffres: Vec<u32> = m.abs().to_string().chars().map(|c| c.to_digit(10).unwrap()).collect();
+            let chiffres: Vec<u32> = m
+                .abs()
+                .to_string()
+                .chars()
+                .map(|c| c.to_digit(10).unwrap())
+                .collect();
             for pos in 0..chiffres.len() {
                 let mut c = chiffres.clone();
                 c[pos] = (c[pos] + 1) % 10;
@@ -223,7 +279,10 @@ fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {
                     if justes(&om, &p.verite, &ppm) {
                         justes_mut.push(format!("{} ligne {il} chiffre {pos}", p.id));
                     } else {
-                        fausses_mut.push(format!("{} ligne {il} chiffre {pos} : {}", p.id, om["lignes"]));
+                        fausses_mut.push(format!(
+                            "{} ligne {il} chiffre {pos} : {}",
+                            p.id, om["lignes"]
+                        ));
                     }
                 }
             }
@@ -240,7 +299,10 @@ fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {
         println!("  encore prouvée juste : {j}");
     }
     assert!(mutations > 0);
-    assert!(fausses_mut.is_empty(), "fausses preuves après mutation : {fausses_mut:#?}");
+    assert!(
+        fausses_mut.is_empty(),
+        "fausses preuves après mutation : {fausses_mut:#?}"
+    );
 }
 
 /// La forme de la sortie, sur une pièce synthétique : trois lignes, une remise, un taux.
@@ -248,7 +310,10 @@ fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {
 fn lignes_forme_de_la_sortie() {
     let (grille, pack) = contexte(true);
     let j = |o: u32, t: &str, x: f64, y: f64, ms: &[(i64, bool)]| {
-        let ms: Vec<Value> = ms.iter().map(|(v, f)| json!({"v": v, "forte": f})).collect();
+        let ms: Vec<Value> = ms
+            .iter()
+            .map(|(v, f)| json!({"v": v, "forte": f}))
+            .collect();
         json!({"page": 1, "ordinal": o, "texte": t, "x0": x, "y0": y, "x1": x + 0.05, "y1": y + 0.01, "montants": ms, "date": null})
     };
     let jetons = vec![
@@ -284,14 +349,32 @@ fn lignes_forme_de_la_sortie() {
     assert_eq!(l["taux_par_base"], "verifiee");
     let i = l["instances"].as_array().unwrap();
     assert_eq!(i.len(), 2);
-    assert_eq!(i[0]["designation"], json!({"valeur": "Clavier", "refs": [{"page": 1, "ordinal": 0}]}));
-    assert_eq!(i[0]["quantite"], json!({"valeur": "2000", "refs": [{"page": 1, "ordinal": 1}]}));
+    assert_eq!(
+        i[0]["designation"],
+        json!({"valeur": "Clavier", "refs": [{"page": 1, "ordinal": 0}]})
+    );
+    assert_eq!(
+        i[0]["quantite"],
+        json!({"valeur": "2000", "refs": [{"page": 1, "ordinal": 1}]})
+    );
     assert_eq!(i[0]["remise"], Value::Null);
-    assert_eq!(i[0]["taux"], json!({"code": "TVA19", "refs": [{"page": 1, "ordinal": 3}]}));
-    assert_eq!(i[1]["remise"], json!({"valeur": "10000", "refs": [{"page": 1, "ordinal": 7}]}));
-    assert_eq!(i[1]["montant"], json!({"valeur": "450000", "refs": [{"page": 1, "ordinal": 13}]}));
+    assert_eq!(
+        i[0]["taux"],
+        json!({"code": "TVA19", "refs": [{"page": 1, "ordinal": 3}]})
+    );
+    assert_eq!(
+        i[1]["remise"],
+        json!({"valeur": "10000", "refs": [{"page": 1, "ordinal": 7}]})
+    );
+    assert_eq!(
+        i[1]["montant"],
+        json!({"valeur": "450000", "refs": [{"page": 1, "ordinal": 13}]})
+    );
     assert_eq!(i[1]["taux"]["code"], "TVA19");
-    println!("{}", serde_json::to_string(&json!({"lignes": l, "preuves": o["preuves"]})).unwrap());
+    println!(
+        "{}",
+        serde_json::to_string(&json!({"lignes": l, "preuves": o["preuves"]})).unwrap()
+    );
 
     // Un montant de ligne qui ne ferme plus la somme : les lignes sont signalées, le centre ne bouge pas.
     let mut faux = jetons.clone();

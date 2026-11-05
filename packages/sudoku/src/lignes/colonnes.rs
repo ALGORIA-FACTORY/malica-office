@@ -34,7 +34,10 @@ const SIGNES_D_UN_MOT_COUPE: f64 = 3.0;
 const EN_TETE_MAX: f64 = 6.0;
 
 fn cle(s: &str) -> String {
-    normaliser(s).chars().filter(|c| c.is_alphanumeric()).collect()
+    normaliser(s)
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .collect()
 }
 
 /// Une cellule de l'en-tête : son étendue, et le champ dont un repère l'égale.
@@ -51,8 +54,12 @@ pub fn affiner(
     grille: &Grille,
     designation: &str,
 ) {
-    let Some(d) = grille.champs.iter().position(|c| c.code == designation) else { return };
-    let Some(parcelle) = grille.champs[d].parcelle.as_deref() else { return };
+    let Some(d) = grille.champs.iter().position(|c| c.code == designation) else {
+        return;
+    };
+    let Some(parcelle) = grille.champs[d].parcelle.as_deref() else {
+        return;
+    };
     let autres = super::autres_champs(designation, grille);
     // Les repères de la parcelle des lignes, par champ.
     let reperes: Vec<(usize, String)> = grille
@@ -60,18 +67,39 @@ pub fn affiner(
         .iter()
         .enumerate()
         .filter(|(_, c)| c.parcelle.as_deref() == Some(parcelle))
-        .flat_map(|(k, c)| c.reperes_fr.iter().chain(c.reperes_ar.iter()).map(move |r| (k, cle(r))))
+        .flat_map(|(k, c)| {
+            c.reperes_fr
+                .iter()
+                .chain(c.reperes_ar.iter())
+                .map(move |r| (k, cle(r)))
+        })
         .filter(|(_, r)| !r.is_empty())
         .collect();
-    let par_ref: BTreeMap<(u32, u32), usize> =
-        jetons.iter().enumerate().map(|(i, j)| ((j.page, j.ordinal), i)).collect();
+    let par_ref: BTreeMap<(u32, u32), usize> = jetons
+        .iter()
+        .enumerate()
+        .map(|(i, j)| ((j.page, j.ordinal), i))
+        .collect();
     let jeton_de = |r: &RefJeton| par_ref.get(&(r.page, r.ordinal)).copied();
     // Le jeton qui situe une ligne : une cellule lue (une cellule déduite n'en a pas).
-    let ancre = |l: &LigneSortie| [Some(&l.montant), l.prix.as_ref(), l.quantite.as_ref()].into_iter().flatten().find_map(|c| c.refs.first().and_then(jeton_de));
-    let rang_de: BTreeMap<usize, usize> = rangs.iter().enumerate().flat_map(|(n, r)| r.iter().map(move |&i| (i, n))).collect();
+    let ancre = |l: &LigneSortie| {
+        [Some(&l.montant), l.prix.as_ref(), l.quantite.as_ref()]
+            .into_iter()
+            .flatten()
+            .find_map(|c| c.refs.first().and_then(jeton_de))
+    };
+    let rang_de: BTreeMap<usize, usize> = rangs
+        .iter()
+        .enumerate()
+        .flat_map(|(n, r)| r.iter().map(move |&i| (i, n)))
+        .collect();
 
     // La première rangée prouvée, et l'en-tête au-dessus d'elle.
-    let Some(premiere) = instances.iter().filter_map(&ancre).filter_map(|i| rang_de.get(&i).copied()).min()
+    let Some(premiere) = instances
+        .iter()
+        .filter_map(&ancre)
+        .filter_map(|i| rang_de.get(&i).copied())
+        .min()
     else {
         return;
     };
@@ -79,11 +107,49 @@ pub fn affiner(
         let j = &jetons[rangs[premiere][0]];
         (j.y1 - j.y0).max(f64::EPSILON)
     };
-    let Some(cellules) = (0..premiere).rev().take_while(|&n| {
-        let (a, b) = (&jetons[rangs[n][0]], &jetons[rangs[premiere][0]]);
-        a.page == b.page && b.y0 - a.y0 <= EN_TETE_MAX * h
-    })
-    .find_map(|n| en_tete(&rangs[n], jetons, &reperes, h))
+    // L'en-tête peut aussi être DANS la première rangée prouvée : quand l'interligne est plus
+    // serré que la hauteur des boîtes, la fermeture de proche en proche réunit l'en-tête et
+    // le premier article (algoria-014, une page photographiée). Il se cherche alors parmi
+    // les lignes de texte de cette rangée au-dessus de celle de ses chiffres.
+    let dans_la_premiere = || {
+        let a = instances
+            .iter()
+            .filter_map(&ancre)
+            .find(|i| rang_de.get(i) == Some(&premiere))?;
+        let recouvre = |l: &Vec<usize>| {
+            l.iter()
+                .map(|&k| {
+                    (jetons[k].y1.min(jetons[a].y1) - jetons[k].y0.max(jetons[a].y0)).max(0.0)
+                })
+                .fold(0.0, f64::max)
+        };
+        let lignes = en_lignes(jetons, &rangs[premiere]);
+        let p = (0..lignes.len())
+            .max_by(|&x, &y| recouvre(&lignes[x]).total_cmp(&recouvre(&lignes[y])))?;
+        let haut = |l: &Vec<usize>| {
+            l.iter()
+                .map(|&k| jetons[k].y0)
+                .fold(f64::INFINITY, f64::min)
+        };
+        let mut dessus: Vec<&Vec<usize>> = lignes
+            .iter()
+            .filter(|l| haut(l) < haut(&lignes[p]))
+            .collect();
+        dessus.sort_by(|x, y| haut(y).total_cmp(&haut(x)));
+        dessus.into_iter().find_map(|l| {
+            let mut l = l.clone();
+            l.sort_by(|&x, &y| jetons[x].x0.total_cmp(&jetons[y].x0));
+            en_tete(&l, jetons, &reperes, h)
+        })
+    };
+    let Some(cellules) = (0..premiere)
+        .rev()
+        .take_while(|&n| {
+            let (a, b) = (&jetons[rangs[n][0]], &jetons[rangs[premiere][0]]);
+            a.page == b.page && b.y0 - a.y0 <= EN_TETE_MAX * h
+        })
+        .find_map(|n| en_tete(&rangs[n], jetons, &reperes, h))
+        .or_else(dans_la_premiere)
     else {
         taire_les_coupees(instances, jetons, rangs, grille, h, &jeton_de, &rang_de);
         return;
@@ -99,7 +165,9 @@ pub fn affiner(
         .filter_map(|i| rang_de.get(&i).copied())
         .flat_map(|n| rangs[n].iter().copied())
         .collect();
-    let frontiere = |a: &Cellule, b: &Cellule| couloir(&lignes, jetons, a.x0, b.x1).unwrap_or((a.x1 + b.x0) / 2.0);
+    let frontiere = |a: &Cellule, b: &Cellule| {
+        couloir(&lignes, jetons, a.x0, b.x1).unwrap_or((a.x1 + b.x0) / 2.0)
+    };
     // La première (dernière) colonne n'a pas de voisine : sa frontière extérieure est le plus
     // large couloir blanc entre le bord de la page et son intitulé — la marge, ou le blanc qui
     // sépare le tableau d'un bloc posé à côté (« MATRICULE FISCAL » d'une colonne latérale).
@@ -124,14 +192,27 @@ pub fn affiner(
         centre >= gauche && centre < droite
     };
     // Le bord droit effectif de la colonne : le plus loin qu'un texte y va, sur les lignes.
-    let bord = lignes.iter().filter(|&&i| dedans(i)).map(|&i| jetons[i].x1).fold(f64::MIN, f64::max);
-    let debut = lignes.iter().filter(|&&i| dedans(i)).map(|&i| jetons[i].x0).fold(f64::MAX, f64::min);
+    let bord = lignes
+        .iter()
+        .filter(|&&i| dedans(i))
+        .map(|&i| jetons[i].x1)
+        .fold(f64::MIN, f64::max);
+    let debut = lignes
+        .iter()
+        .filter(|&&i| dedans(i))
+        .map(|&i| jetons[i].x0)
+        .fold(f64::MAX, f64::min);
     let chiffres_de = |l: &LigneSortie| -> Vec<usize> {
-        [l.quantite.as_ref(), l.prix.as_ref(), Some(&l.montant), l.remise.as_ref()]
-            .into_iter()
-            .flatten()
-            .flat_map(|c| c.refs.iter().filter_map(jeton_de))
-            .collect()
+        [
+            l.quantite.as_ref(),
+            l.prix.as_ref(),
+            Some(&l.montant),
+            l.remise.as_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        .flat_map(|c| c.refs.iter().filter_map(jeton_de))
+        .collect()
     };
     // une rangée qui porte une étiquette (« SN: ») ou un numéro est une autre information ;
     // un numéro est fait de chiffres (« 322911304202613 », « SN12345678 ») — une
@@ -148,12 +229,17 @@ pub fn affiner(
         })
     };
     let etendue = |ids: &mut dyn Iterator<Item = usize>| {
-        ids.fold((f64::MAX, f64::MIN), |(a, b), i| (a.min(jetons[i].y0), b.max(jetons[i].y1)))
+        ids.fold((f64::MAX, f64::MIN), |(a, b), i| {
+            (a.min(jetons[i].y0), b.max(jetons[i].y1))
+        })
     };
     // Le tableau s'étend de la marge de sa première colonne à celle de sa dernière.
     let (tableau_g, tableau_d) = (
         couloir(&lignes, jetons, 0.0, cellules[0].x1).unwrap_or(f64::MIN),
-        cellules.last().and_then(|c| couloir(&lignes, jetons, c.x0, 1.0)).unwrap_or(f64::MAX),
+        cellules
+            .last()
+            .and_then(|c| couloir(&lignes, jetons, c.x0, 1.0))
+            .unwrap_or(f64::MAX),
     );
     let dans_le_tableau = |i: usize| {
         let centre = (jetons[i].x0 + jetons[i].x1) / 2.0;
@@ -176,13 +262,21 @@ pub fn affiner(
     let coupee = |r: &[usize]| {
         let fin = r.iter().map(|&i| jetons[i].x1).fold(f64::MIN, f64::max);
         let ici = r.iter().map(|&i| jetons[i].x0).fold(f64::MAX, f64::min);
-        !r.is_empty() && (fin >= bord - 0.15 * (bord - debut) || ici <= debut + 0.15 * (bord - debut) && r.iter().any(|&i| crate::reperes::droite_a_gauche(&jetons[i].texte)))
+        !r.is_empty()
+            && (fin >= bord - 0.15 * (bord - debut)
+                || ici <= debut + 0.15 * (bord - debut)
+                    && r.iter()
+                        .any(|&i| crate::reperes::droite_a_gauche(&jetons[i].texte)))
     };
     // Les rangées de la suite d'une ligne dont `derniere` est la dernière ligne de texte,
     // à partir de la rangée `m`, hors des rangées `exclues`.
     let suite = |mut m: usize, mut derniere: Vec<usize>, exclues: &[usize]| -> Vec<usize> {
         let mut prises = Vec::new();
-        while m < rangs.len() && coupee(&derniere) && !rangs_des_lignes.contains(&m) && !exclues.contains(&m) {
+        while m < rangs.len()
+            && coupee(&derniere)
+            && !rangs_des_lignes.contains(&m)
+            && !exclues.contains(&m)
+        {
             let dans = dans_la_colonne(&rangs[m]);
             // serrée : l'écart se mesure entre les textes de la colonne, pas entre les blocs
             // voisins que les rangées recouvrent
@@ -215,12 +309,23 @@ pub fn affiner(
             let milieu_chiffres = (c0 + c1) / 2.0;
             // le texte de la cellule, sans les lignes qui ouvrent un autre champ (un numéro de
             // série n'allonge pas la désignation)
-            let texte: Vec<usize> = en_lignes(jetons, &rangs[n].iter().copied().filter(|i| !chiffres.contains(i) && dedans(*i)).collect::<Vec<_>>())
-                .into_iter()
-                .filter(|l| super::ouvre_un_autre_champ(jetons, l, &autres).is_none())
-                .flatten()
-                .collect();
-            let (mut t0, mut t1) = if texte.is_empty() { (c0, c1) } else { etendue(&mut texte.iter().copied()) };
+            let texte: Vec<usize> = en_lignes(
+                jetons,
+                &rangs[n]
+                    .iter()
+                    .copied()
+                    .filter(|i| !chiffres.contains(i) && dedans(*i))
+                    .collect::<Vec<_>>(),
+            )
+            .into_iter()
+            .filter(|l| super::ouvre_un_autre_champ(jetons, l, &autres).is_none())
+            .flatten()
+            .collect();
+            let (mut t0, mut t1) = if texte.is_empty() {
+                (c0, c1)
+            } else {
+                etendue(&mut texte.iter().copied())
+            };
             // le milieu du texte compte sa suite sous la rangée (une cellule de trois lignes,
             // les chiffres sur celle du milieu)
             let derniere = en_lignes(jetons, &texte).pop().unwrap_or_default();
@@ -241,8 +346,14 @@ pub fn affiner(
                 let r = &rangs[m];
                 let (r0, r1) = etendue(&mut r.iter().copied());
                 let proche = jetons[r[0]].page == jetons[rangs[n][0]].page && t0 - r1 <= 0.8 * h;
-                let mieux = ((r0 + t1) / 2.0 - milieu_chiffres).abs() < ((t0 + t1) / 2.0 - milieu_chiffres).abs();
-                if !proche || !mieux || rangs_des_lignes.contains(&m) || autre_information(r) || !r.iter().all(|&i| dedans(i)) {
+                let mieux = ((r0 + t1) / 2.0 - milieu_chiffres).abs()
+                    < ((t0 + t1) / 2.0 - milieu_chiffres).abs();
+                if !proche
+                    || !mieux
+                    || rangs_des_lignes.contains(&m)
+                    || autre_information(r)
+                    || !r.iter().all(|&i| dedans(i))
+                {
                     break;
                 }
                 prises.push(m);
@@ -254,17 +365,34 @@ pub fn affiner(
     let prises_en_tete: Vec<usize> = tetes.values().flatten().copied().collect();
 
     for l in instances.iter_mut() {
-        let Some(n) = ancre(l).and_then(|i| rang_de.get(&i).copied()) else { continue };
+        let Some(n) = ancre(l).and_then(|i| rang_de.get(&i).copied()) else {
+            continue;
+        };
         let chiffres = chiffres_de(l);
         let mut lignes_de_texte: Vec<Vec<usize>> = tetes
             .get(&n)
-            .map(|t| t.iter().rev().flat_map(|&m| en_lignes(jetons, &rangs[m])).collect())
+            .map(|t| {
+                t.iter()
+                    .rev()
+                    .flat_map(|&m| en_lignes(jetons, &rangs[m]))
+                    .collect()
+            })
             .unwrap_or_default();
-        let texte: Vec<usize> = rangs[n].iter().copied().filter(|i| !chiffres.contains(i)).filter(|&i| dedans(i)).collect();
+        let texte: Vec<usize> = rangs[n]
+            .iter()
+            .copied()
+            .filter(|i| !chiffres.contains(i))
+            .filter(|&i| dedans(i))
+            .collect();
         if texte.is_empty() {
             lignes_de_texte.push(texte);
         } else {
-            lignes_de_texte.extend(au_dessus_centrees(jetons, en_lignes(jetons, &texte), &chiffres, ancre(l)));
+            lignes_de_texte.extend(au_dessus_centrees(
+                jetons,
+                en_lignes(jetons, &texte),
+                &chiffres,
+                ancre(l),
+            ));
         }
         let derniere = lignes_de_texte.last().cloned().unwrap_or_default();
         for m in suite(n + 1, derniere, &prises_en_tete) {
@@ -279,7 +407,10 @@ pub fn affiner(
         // ligne, pas une coupe.
         let derniere = lignes_de_texte.iter().rev().find(|l| !l.is_empty());
         let coupe_par_la_colonne = cellules.get(k + 1).is_some_and(|suivante| {
-            lignes_de_texte.iter().flatten().any(|&i| jetons[i].x1 >= suivante.x0 - h)
+            lignes_de_texte
+                .iter()
+                .flatten()
+                .any(|&i| jetons[i].x1 >= suivante.x0 - h)
                 || derniere.is_some_and(|l| {
                     l.iter().any(|&i| {
                         let j = &jetons[i];
@@ -295,13 +426,28 @@ pub fn affiner(
         // chaque ligne est déjà dans son ordre de lecture (`en_lignes`) ; une ligne qui ouvre
         // un autre champ de la parcelle (le numéro de série) n'est pas la désignation
         let pris: Vec<usize> =
-            super::sans_les_autres_champs(jetons, lignes_de_texte, ancre(l), &autres).into_iter().flatten().collect();
-        let remise = l.remise.as_ref().and_then(|c| c.refs.first()).and_then(jeton_de);
+            super::sans_les_autres_champs(jetons, lignes_de_texte, ancre(l), &autres)
+                .into_iter()
+                .flatten()
+                .collect();
+        let remise = l
+            .remise
+            .as_ref()
+            .and_then(|c| c.refs.first())
+            .and_then(jeton_de);
         let pris = super::sans_la_remise(&pris, remise, jetons);
         l.designation = (!pris.is_empty()).then(|| {
             Cite::lue(
-                pris.iter().map(|&i| jetons[i].texte.trim()).collect::<Vec<_>>().join(" "),
-                pris.iter().map(|&i| RefJeton { page: jetons[i].page, ordinal: jetons[i].ordinal }).collect(),
+                pris.iter()
+                    .map(|&i| jetons[i].texte.trim())
+                    .collect::<Vec<_>>()
+                    .join(" "),
+                pris.iter()
+                    .map(|&i| RefJeton {
+                        page: jetons[i].page,
+                        ordinal: jetons[i].ordinal,
+                    })
+                    .collect(),
             )
         });
     }
@@ -331,22 +477,40 @@ fn taire_les_coupees(
         .filter(|r| r.chars().count() >= 2)
         .collect();
     let rang_d = |l: &LigneSortie| {
-        [Some(&l.montant), l.prix.as_ref(), l.quantite.as_ref()].into_iter().flatten().find_map(|c| c.refs.first().and_then(jeton_de)).and_then(|i| rang_de.get(&i).copied())
+        [Some(&l.montant), l.prix.as_ref(), l.quantite.as_ref()]
+            .into_iter()
+            .flatten()
+            .find_map(|c| c.refs.first().and_then(jeton_de))
+            .and_then(|i| rang_de.get(&i).copied())
     };
     let lignes: Vec<usize> = instances.iter().filter_map(rang_d).collect();
     for l in instances.iter_mut() {
-        let (Some(n), Some(d)) = (rang_d(l), l.designation.as_ref()) else { continue };
+        let (Some(n), Some(d)) = (rang_d(l), l.designation.as_ref()) else {
+            continue;
+        };
         let ids: Vec<usize> = d.refs.iter().filter_map(jeton_de).collect();
-        let (Some(&premier), Some(r)) = (ids.first(), rangs.get(n + 1)) else { continue };
+        let (Some(&premier), Some(r)) = (ids.first(), rangs.get(n + 1)) else {
+            continue;
+        };
         if lignes.contains(&(n + 1)) {
             continue;
         }
         let x0 = ids.iter().map(|&i| jetons[i].x0).fold(f64::MAX, f64::min);
         let x1 = ids.iter().map(|&i| jetons[i].x1).fold(f64::MIN, f64::max);
         let bas = ids.iter().map(|&i| jetons[i].y1).fold(f64::MIN, f64::max);
-        let dessous: Vec<usize> = r.iter().copied().filter(|&i| jetons[i].x1 > x0 && jetons[i].x0 < x1).collect();
-        let Some(haut) = dessous.iter().map(|&i| jetons[i].y0).reduce(f64::min) else { continue };
-        let texte = cle(&dessous.iter().map(|&i| jetons[i].texte.as_str()).collect::<Vec<_>>().join(" "));
+        let dessous: Vec<usize> = r
+            .iter()
+            .copied()
+            .filter(|&i| jetons[i].x1 > x0 && jetons[i].x0 < x1)
+            .collect();
+        let Some(haut) = dessous.iter().map(|&i| jetons[i].y0).reduce(f64::min) else {
+            continue;
+        };
+        let texte = cle(&dessous
+            .iter()
+            .map(|&i| jetons[i].texte.as_str())
+            .collect::<Vec<_>>()
+            .join(" "));
         let libelle = libelles.iter().any(|x| texte.starts_with(x.as_str()));
         if jetons[r[0]].page == jetons[premier].page && haut - bas <= 0.8 * h && !libelle {
             l.designation = None;
@@ -379,7 +543,12 @@ fn couloir(lignes: &[usize], jetons: &[Jeton], debut: f64, fin: f64) -> Option<f
 
 /// Les cellules d'une rangée d'en-tête, si au moins deux d'entre elles sont nommées par
 /// les repères des lignes.
-fn en_tete(rang: &[usize], jetons: &[Jeton], reperes: &[(usize, String)], h: f64) -> Option<Vec<Cellule>> {
+fn en_tete(
+    rang: &[usize],
+    jetons: &[Jeton],
+    reperes: &[(usize, String)],
+    h: f64,
+) -> Option<Vec<Cellule>> {
     let mut groupes: Vec<Vec<usize>> = Vec::new();
     for &i in rang {
         match groupes.last_mut() {
@@ -394,7 +563,9 @@ fn en_tete(rang: &[usize], jetons: &[Jeton], reperes: &[(usize, String)], h: f64
             // le plus long repère égal à la cellule, ou à son début (« Désignation article »)
             let champ = reperes
                 .iter()
-                .filter(|(_, r)| texte == *r || (r.chars().count() >= 3 && texte.starts_with(r.as_str())))
+                .filter(|(_, r)| {
+                    texte == *r || (r.chars().count() >= 3 && texte.starts_with(r.as_str()))
+                })
                 .max_by_key(|(_, r)| r.len())
                 .map(|(k, _)| *k);
             Cellule {
@@ -414,20 +585,47 @@ fn en_tete(rang: &[usize], jetons: &[Jeton], reperes: &[(usize, String)], h: f64
 /// n'est gardée que si elle rapproche le milieu du texte du milieu des chiffres — le critère
 /// de la tête d'une cellule (`tetes`) : un tableau qui centre ses chiffres sur deux lignes la
 /// garde, un tableau qui les aligne sur la première ligne ne la prend pas.
-pub(super) fn au_dessus_centrees(jetons: &[Jeton], lignes: Vec<Vec<usize>>, chiffres: &[usize], ancre: Option<usize>) -> Vec<Vec<usize>> {
+pub(super) fn au_dessus_centrees(
+    jetons: &[Jeton],
+    lignes: Vec<Vec<usize>>,
+    chiffres: &[usize],
+    ancre: Option<usize>,
+) -> Vec<Vec<usize>> {
     let Some(a) = ancre else { return lignes };
-    let haut = |l: &Vec<usize>| l.iter().map(|&k| jetons[k].y0).fold(f64::INFINITY, f64::min);
-    let bas = |l: &Vec<usize>| l.iter().map(|&k| jetons[k].y1).fold(f64::NEG_INFINITY, f64::max);
-    let recouvre = |l: &Vec<usize>| {
-        l.iter().map(|&k| (jetons[k].y1.min(jetons[a].y1) - jetons[k].y0.max(jetons[a].y0)).max(0.0)).fold(0.0, f64::max)
+    let haut = |l: &Vec<usize>| {
+        l.iter()
+            .map(|&k| jetons[k].y0)
+            .fold(f64::INFINITY, f64::min)
     };
-    let Some(p) = (0..lignes.len()).max_by(|&x, &y| recouvre(&lignes[x]).total_cmp(&recouvre(&lignes[y]))) else { return lignes };
-    let (c0, c1) = chiffres.iter().fold((f64::MAX, f64::MIN), |(x, y), &k| (x.min(jetons[k].y0), y.max(jetons[k].y1)));
+    let bas = |l: &Vec<usize>| {
+        l.iter()
+            .map(|&k| jetons[k].y1)
+            .fold(f64::NEG_INFINITY, f64::max)
+    };
+    let recouvre = |l: &Vec<usize>| {
+        l.iter()
+            .map(|&k| (jetons[k].y1.min(jetons[a].y1) - jetons[k].y0.max(jetons[a].y0)).max(0.0))
+            .fold(0.0, f64::max)
+    };
+    let Some(p) =
+        (0..lignes.len()).max_by(|&x, &y| recouvre(&lignes[x]).total_cmp(&recouvre(&lignes[y])))
+    else {
+        return lignes;
+    };
+    let (c0, c1) = chiffres.iter().fold((f64::MAX, f64::MIN), |(x, y), &k| {
+        (x.min(jetons[k].y0), y.max(jetons[k].y1))
+    });
     let milieu = (c0 + c1) / 2.0;
     let principale = haut(&lignes[p]);
     let mut t0 = principale;
-    let t1 = lignes.iter().filter(|l| haut(l) >= principale).map(bas).fold(f64::NEG_INFINITY, f64::max);
-    let mut dessus: Vec<usize> = (0..lignes.len()).filter(|&i| haut(&lignes[i]) < principale).collect();
+    let t1 = lignes
+        .iter()
+        .filter(|l| haut(l) >= principale)
+        .map(bas)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let mut dessus: Vec<usize> = (0..lignes.len())
+        .filter(|&i| haut(&lignes[i]) < principale)
+        .collect();
     dessus.sort_by(|&x, &y| haut(&lignes[y]).total_cmp(&haut(&lignes[x])));
     let mut gardees: Vec<usize> = Vec::new();
     for i in dessus {
@@ -438,5 +636,10 @@ pub(super) fn au_dessus_centrees(jetons: &[Jeton], lignes: Vec<Vec<usize>>, chif
         gardees.push(i);
         t0 = r0;
     }
-    lignes.into_iter().enumerate().filter(|(i, l)| haut(l) >= principale || gardees.contains(i)).map(|(_, l)| l).collect()
+    lignes
+        .into_iter()
+        .enumerate()
+        .filter(|(i, l)| haut(l) >= principale || gardees.contains(i))
+        .map(|(_, l)| l)
+        .collect()
 }

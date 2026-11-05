@@ -26,7 +26,12 @@ use crate::ChampSortie;
 /// Un mot comparable : sans casse, sans accents, sans ponctuation.
 fn mots(s: &str) -> Vec<String> {
     s.split(|c: char| c.is_whitespace() || ":;,/|()".contains(c))
-        .map(|m| normaliser(m).chars().filter(|c| c.is_alphanumeric()).collect::<String>())
+        .map(|m| {
+            normaliser(m)
+                .chars()
+                .filter(|c| c.is_alphanumeric())
+                .collect::<String>()
+        })
         .filter(|m| !m.is_empty())
         .collect()
 }
@@ -40,7 +45,11 @@ struct Signature {
 
 impl Signature {
     fn porte(&self, valeur: &str) -> bool {
-        let compacte: String = valeur.chars().filter(|c| c.is_alphanumeric()).flat_map(|c| c.to_uppercase()).collect();
+        let compacte: String = valeur
+            .chars()
+            .filter(|c| c.is_alphanumeric())
+            .flat_map(|c| c.to_uppercase())
+            .collect();
         if self.cle.as_deref().is_some_and(|k| compacte.contains(k)) {
             return true;
         }
@@ -53,20 +62,32 @@ impl Signature {
 }
 
 pub fn exclusive(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
-    let Some(dossier) = entree.connus.as_ref().and_then(|c| c.dossier.as_ref()) else { return };
+    let Some(dossier) = entree.connus.as_ref().and_then(|c| c.dossier.as_ref()) else {
+        return;
+    };
     let formes: BTreeSet<String> = entree
         .connus
         .as_ref()
         .map(|c| c.formes_juridiques.iter().flat_map(|f| mots(f)).collect())
         .unwrap_or_default();
     // La clé : la plus longue suite de chiffres suivie d'une lettre, en tête du matricule.
-    let compact: String = dossier.matricule.chars().filter(|c| c.is_alphanumeric()).flat_map(|c| c.to_uppercase()).collect();
+    let compact: String = dossier
+        .matricule
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(|c| c.to_uppercase())
+        .collect();
     let chiffres = compact.chars().take_while(|c| c.is_ascii_digit()).count();
     let cle = (chiffres >= 6 && compact.len() > chiffres).then(|| compact[..=chiffres].to_string());
     let nom: Vec<String> = dossier
         .raison_sociale
         .as_deref()
-        .map(|rs| mots(rs).into_iter().filter(|m| !formes.contains(m)).collect())
+        .map(|rs| {
+            mots(rs)
+                .into_iter()
+                .filter(|m| !formes.contains(m))
+                .collect()
+        })
         .unwrap_or_default();
     let sig = Signature { cle, nom };
 
@@ -81,15 +102,32 @@ pub fn exclusive(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
         .filter_map(|(code, c)| {
             let role = roles.get(code.as_str())?;
             let v = c.valeur.as_deref()?;
-            sig.porte(v).then(|| (code.clone(), *role, c.statut == "prouve"))
+            sig.porte(v)
+                .then(|| (code.clone(), *role, c.statut == "prouve"))
         })
         .collect();
-    let prouves: BTreeSet<&str> = porteurs.iter().filter(|(_, _, p)| *p).map(|(_, r, _)| *r).collect();
+    let prouves: BTreeSet<&str> = porteurs
+        .iter()
+        .filter(|(_, _, p)| *p)
+        .map(|(_, r, _)| *r)
+        .collect();
     let tous: BTreeSet<&str> = porteurs.iter().map(|(_, r, _)| *r).collect();
     for (code, role, _) in &porteurs {
-        let retirer = if prouves.is_empty() { tous.len() > 1 } else { !prouves.contains(role) };
+        let retirer = if prouves.is_empty() {
+            tous.len() > 1
+        } else {
+            !prouves.contains(role)
+        };
         if retirer {
-            champs.insert(code.clone(), ChampSortie { valeur: None, refs: Vec::new(), statut: "absent".into(), instances: None });
+            champs.insert(
+                code.clone(),
+                ChampSortie {
+                    valeur: None,
+                    refs: Vec::new(),
+                    statut: "absent".into(),
+                    instances: None,
+                },
+            );
         }
     }
 }
@@ -104,7 +142,11 @@ pub fn exclusive(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
 /// Les champs `garantis` ne passent pas par là : un calcul, une seconde écriture ou un domaine
 /// fermé les valide déjà. Une valeur qui égale l'identité du dossier non plus : la base la
 /// confirme, caractère par caractère.
-pub fn assurance(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>, garantis: &BTreeSet<&str>) {
+pub fn assurance(
+    entree: &Entree,
+    champs: &mut BTreeMap<String, ChampSortie>,
+    garantis: &BTreeSet<&str>,
+) {
     // les jetons lus sans assurance, ou dont un mot a pu être mal lu (`Jeton::incertain`)
     let incertains: BTreeSet<(u32, u32)> = entree
         .jetons
@@ -112,19 +154,36 @@ pub fn assurance(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>, ga
         .filter(|j| j.incertain(&entree.pack))
         .map(|j| (j.page, j.ordinal))
         .collect();
-    let connue = entree.connus.as_ref().and_then(|c| c.dossier.as_ref()).map(|d| {
-        let compact = |s: &str| s.chars().filter(|c| c.is_alphanumeric()).flat_map(|c| c.to_uppercase()).collect::<String>();
-        (compact(&d.matricule), compact)
-    });
+    let connue = entree
+        .connus
+        .as_ref()
+        .and_then(|c| c.dossier.as_ref())
+        .map(|d| {
+            let compact = |s: &str| {
+                s.chars()
+                    .filter(|c| c.is_alphanumeric())
+                    .flat_map(|c| c.to_uppercase())
+                    .collect::<String>()
+            };
+            (compact(&d.matricule), compact)
+        });
     for (code, c) in champs.iter_mut() {
         if garantis.contains(code.as_str()) || !matches!(c.statut.as_str(), "prouve" | "conforme") {
             continue;
         }
-        let Some(v) = c.valeur.as_deref() else { continue };
-        if connue.as_ref().is_some_and(|(m, compact)| !m.is_empty() && compact(v) == *m) {
+        let Some(v) = c.valeur.as_deref() else {
+            continue;
+        };
+        if connue
+            .as_ref()
+            .is_some_and(|(m, compact)| !m.is_empty() && compact(v) == *m)
+        {
             continue;
         }
-        if c.refs.iter().any(|r| incertains.contains(&(r.page, r.ordinal))) {
+        if c.refs
+            .iter()
+            .any(|r| incertains.contains(&(r.page, r.ordinal)))
+        {
             c.statut = "signale".into();
         }
     }

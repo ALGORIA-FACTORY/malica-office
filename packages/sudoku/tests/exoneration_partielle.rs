@@ -24,7 +24,10 @@ const ID: &str = "50/14";
 
 /// Le plan de 50/14 (couche de texte, recollage, treillis de production).
 fn plan() -> Vec<Value> {
-    let p = jeux::pieces::<SansVerite>().into_iter().find(|p| p.id == ID).expect("50/14 dans le jeu");
+    let p = jeux::pieces::<SansVerite>()
+        .into_iter()
+        .find(|p| p.id == ID)
+        .expect("50/14 dans le jeu");
     p.jetons.iter().map(jeux::jeton).collect()
 }
 
@@ -37,8 +40,18 @@ fn contexte(lignes: bool, partielle: bool) -> (Value, Value) {
     // « Exonéré », « Exonérée »…) ; la pièce imprime « exonéré de TVA. », en trois jetons.
     for c in g["champs"].as_array_mut().unwrap() {
         if c["code"] == "mention_suspension_exoneration" {
-            c["reperes_fr"] = json!(["Vente en suspension de TVA", "Exonéré de TVA", "Exonération", "Article 11",
-                                     "Suspension", "En suspension", "Exonéré", "Exonérée", "Exonérées", "Exonérés"]);
+            c["reperes_fr"] = json!([
+                "Vente en suspension de TVA",
+                "Exonéré de TVA",
+                "Exonération",
+                "Article 11",
+                "Suspension",
+                "En suspension",
+                "Exonéré",
+                "Exonérée",
+                "Exonérées",
+                "Exonérés"
+            ]);
         }
     }
     let preuves = g["preuves"].as_array_mut().unwrap();
@@ -61,7 +74,13 @@ fn jouer(jetons: &[Value], lignes: bool, partielle: bool) -> Value {
 
 /// L'indice du jeton dont le texte est `t` (le premier, ou le `n`-ième).
 fn indice(jetons: &[Value], t: &str, n: usize) -> usize {
-    jetons.iter().enumerate().filter(|(_, j)| j["texte"] == t).nth(n).map(|(i, _)| i).unwrap_or_else(|| panic!("jeton « {t} »"))
+    jetons
+        .iter()
+        .enumerate()
+        .filter(|(_, j)| j["texte"] == t)
+        .nth(n)
+        .map(|(i, _)| i)
+        .unwrap_or_else(|| panic!("jeton « {t} »"))
 }
 
 fn valeur<'a>(o: &'a Value, champ: &str) -> &'a str {
@@ -93,7 +112,13 @@ fn prouvee_juste_par_les_lignes() {
         .unwrap()
         .iter()
         .filter(|l| l["taux"].is_null())
-        .map(|l| l["montant"]["valeur"].as_str().unwrap().parse::<i64>().unwrap())
+        .map(|l| {
+            l["montant"]["valeur"]
+                .as_str()
+                .unwrap()
+                .parse::<i64>()
+                .unwrap()
+        })
         .sum();
     assert_eq!(sans_taux, 3_290_000);
 }
@@ -103,7 +128,10 @@ fn sans_taux_exonere_la_ventilation_n_est_pas_affirmee() {
     let (mut g, p) = contexte(true, true);
     for x in g["preuves"].as_array_mut().unwrap() {
         if x["code"] == "P03" {
-            x["expression"].as_object_mut().unwrap().remove("taux_exonere");
+            x["expression"]
+                .as_object_mut()
+                .unwrap()
+                .remove("taux_exonere");
         }
     }
     // la ventilation non affirmée, les lignes n'ont plus de base par taux à vérifier : la
@@ -134,7 +162,10 @@ fn la_cle_absente_rien_ne_change() {
 fn jamais_sans_les_lignes() {
     let o = jouer(&plan(), false, true);
     assert_eq!(o["issue"], "aucune", "{o}");
-    assert_eq!(o["raison"], "exonération partielle non confirmée par les lignes");
+    assert_eq!(
+        o["raison"],
+        "exonération partielle non confirmée par les lignes"
+    );
     assert_eq!(o["champs"]["total_ht"]["statut"], "signale");
     assert_eq!(o["preuves"]["P03"], "non_fermee");
 }
@@ -172,7 +203,10 @@ fn la_cle_sans_mention_declaree_n_est_pas_traduite() {
     let (mut g, p) = contexte(true, true);
     for x in g["preuves"].as_array_mut().unwrap() {
         if x["code"] == "P03" {
-            x["expression"].as_object_mut().unwrap().remove("exoneration");
+            x["expression"]
+                .as_object_mut()
+                .unwrap()
+                .remove("exoneration");
         }
     }
     assert_ne!(la_piece(&par_variante(&plan(), &g, &p))["issue"], "prouvee");

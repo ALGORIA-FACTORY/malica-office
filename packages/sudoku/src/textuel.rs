@@ -39,7 +39,9 @@ pub(crate) fn iso_valide(s: &str) -> bool {
     b.len() == 10
         && b[4] == b'-'
         && b[7] == b'-'
-        && b.iter().enumerate().all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
+        && b.iter()
+            .enumerate()
+            .all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
 }
 
 /// Les types non numériques que le moteur sait lire : la date, et l'identifiant
@@ -51,7 +53,10 @@ pub fn traite(champ: &Champ, pack: &Pack) -> bool {
     }
     match champ.genre.as_str() {
         "date" => true,
-        "identifiant" => champ.format_code.as_ref().is_some_and(|f| pack.formats.contains_key(f)),
+        "identifiant" => champ
+            .format_code
+            .as_ref()
+            .is_some_and(|f| pack.formats.contains_key(f)),
         _ => false,
     }
 }
@@ -65,23 +70,51 @@ pub fn lire(champ: &Champ, pack: &Pack, plan: &Plan) -> Result<Issue, String> {
                 if let Some(d) = &j.date {
                     if iso_valide(d) {
                         let fin = jusqua(plan.jetons, i, j.date_fin);
-                        lectures.push(Lecture { valeur: d.clone(), jeton: i, fin, ancree: plan.ancre_valeur(i, fin, &reperes, None, true, MOTS_D_UN_LIBELLE) });
+                        lectures.push(Lecture {
+                            valeur: d.clone(),
+                            jeton: i,
+                            fin,
+                            ancree: plan.ancre_valeur(
+                                i,
+                                fin,
+                                &reperes,
+                                None,
+                                true,
+                                MOTS_D_UN_LIBELLE,
+                            ),
+                        });
                     }
                 }
             }
         }
         "identifiant" => {
             let code = champ.format_code.as_deref().unwrap_or_default();
-            let motif = pack.formats.get(code).ok_or_else(|| format!("format « {code} » absent du pack"))?;
+            let motif = pack
+                .formats
+                .get(code)
+                .ok_or_else(|| format!("format « {code} » absent du pack"))?;
             let re = Regex::new(motif).map_err(|e| format!("format « {code} » invalide : {e}"))?;
             for (i, j) in plan.jetons.iter().enumerate() {
                 // Ce que le lecteur du pack a lu dans le jeton (normalisé : étiquette collée,
                 // chiffres arabes, « l » pour « 1 ») l'emporte sur le motif brut.
-                let normalises: Vec<_> = j.identifiants.iter().filter(|x| x.format == code).collect();
+                let normalises: Vec<_> =
+                    j.identifiants.iter().filter(|x| x.format == code).collect();
                 if !normalises.is_empty() {
                     for x in normalises {
                         let fin = jusqua(plan.jetons, i, Some(x.fin));
-                        lectures.push(Lecture { valeur: x.valeur.clone(), jeton: i, fin, ancree: plan.ancre_valeur(i, fin, &reperes, None, true, MOTS_D_UN_LIBELLE) });
+                        lectures.push(Lecture {
+                            valeur: x.valeur.clone(),
+                            jeton: i,
+                            fin,
+                            ancree: plan.ancre_valeur(
+                                i,
+                                fin,
+                                &reperes,
+                                None,
+                                true,
+                                MOTS_D_UN_LIBELLE,
+                            ),
+                        });
                     }
                     continue;
                 }
@@ -90,7 +123,12 @@ pub fn lire(champ: &Champ, pack: &Pack, plan: &Plan) -> Result<Issue, String> {
                         continue;
                     }
                     let ancree = plan.ancre(i, &reperes, Some(&j.texte[..m.start()]), true);
-                    lectures.push(Lecture { valeur: m.as_str().to_string(), jeton: i, fin: i, ancree });
+                    lectures.push(Lecture {
+                        valeur: m.as_str().to_string(),
+                        jeton: i,
+                        fin: i,
+                        ancree,
+                    });
                 }
             }
         }
@@ -118,12 +156,20 @@ pub fn lire(champ: &Champ, pack: &Pack, plan: &Plan) -> Result<Issue, String> {
     // libellé « matricule fiscal » ne dit pas de qui. Banc du 4 novembre 2026, bail : le
     // matricule du preneur, seul suivi de son libellé, était rendu comme celui du bailleur.
     // La partie se décide par l'identité (anneau 2), pas par le voisin.
-    if champ.genre == "identifiant" && champ.role.is_some() && distinctes(&lectures.iter().collect::<Vec<_>>()) > 1 {
+    if champ.genre == "identifiant"
+        && champ.role.is_some()
+        && distinctes(&lectures.iter().collect::<Vec<_>>()) > 1
+    {
         return Ok(Issue::Signale);
     }
     if distinctes(&ancrees) == 1 {
         let l = ancrees[0];
-        return Ok(Issue::Conforme(Lecture { valeur: l.valeur.clone(), jeton: l.jeton, fin: l.fin, ancree: l.ancree }));
+        return Ok(Issue::Conforme(Lecture {
+            valeur: l.valeur.clone(),
+            jeton: l.jeton,
+            fin: l.fin,
+            ancree: l.ancree,
+        }));
     }
     Ok(Issue::Signale)
 }

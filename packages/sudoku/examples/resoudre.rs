@@ -6,6 +6,8 @@ use std::io::Read;
 
 fn main() {
     let mut entree = String::new();
-    std::io::stdin().read_to_string(&mut entree).expect("entrée standard illisible");
+    std::io::stdin()
+        .read_to_string(&mut entree)
+        .expect("entrée standard illisible");
     print!("{}", malica_sudoku::solve(&entree));
 }

@@ -19,8 +19,18 @@ fn grille_en_base() -> (Value, Value) {
     let (mut g, p) = jeux::en_base();
     for c in g["champs"].as_array_mut().unwrap() {
         if c["code"] == "mention_suspension_exoneration" {
-            c["reperes_fr"] = json!(["Vente en suspension de TVA", "Exonéré de TVA", "Exonération", "Article 11",
-                                     "Suspension", "En suspension", "Exonéré", "Exonérée", "Exonérées", "Exonérés"]);
+            c["reperes_fr"] = json!([
+                "Vente en suspension de TVA",
+                "Exonéré de TVA",
+                "Exonération",
+                "Article 11",
+                "Suspension",
+                "En suspension",
+                "Exonéré",
+                "Exonérée",
+                "Exonérées",
+                "Exonérés"
+            ]);
         }
     }
     (g, p)
@@ -30,9 +40,15 @@ fn grille_en_base() -> (Value, Value) {
 /// 1 670,000, Total TTC 1 749,800, timbre 1,000, net 1 750,800 ; la rangée « TVA 0 % 0,000 »
 /// libellée « % (exonérée) ».
 fn b15_exoneree() -> Vec<Value> {
-    let p = jeux::pieces::<SansVerite>().into_iter().find(|p| p.id == "100/B-15").expect("100/B-15");
+    let p = jeux::pieces::<SansVerite>()
+        .into_iter()
+        .find(|p| p.id == "100/B-15")
+        .expect("100/B-15");
     let mut j: Vec<Value> = p.jetons.iter().map(jeux::jeton).collect();
-    let k = j.iter().position(|x| x["ordinal"] == 120 && x["texte"] == "%").expect("le « % » de la rangée TVA 0 %");
+    let k = j
+        .iter()
+        .position(|x| x["ordinal"] == 120 && x["texte"] == "%")
+        .expect("le « % » de la rangée TVA 0 %");
     j[k]["texte"] = json!("% (exonérée)");
     j
 }
@@ -55,8 +71,10 @@ fn le_refus_dit_sa_raison() {
     assert!(
         // le TTC pris pour le HT : refusé par son libellé, ou parce que ce TTC, imprimé une
         // fois, ne se lit pas pour deux champs
-        outs.iter().any(|(_, o)| o["raison"] == "le total HT ne porte pas son libellé"
-            || o["raison"] == "une valeur imprimée une fois est lue pour deux champs"),
+        outs.iter().any(
+            |(_, o)| o["raison"] == "le total HT ne porte pas son libellé"
+                || o["raison"] == "une valeur imprimée une fois est lue pour deux champs"
+        ),
         "{outs:?}"
     );
 }

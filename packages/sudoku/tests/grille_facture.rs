@@ -13,7 +13,12 @@ fn avec_date(mut j: Value, iso: &str) -> Value {
 }
 
 fn refs(o: &Value, champ: &str) -> Vec<u64> {
-    o["champs"][champ]["refs"].as_array().unwrap().iter().map(|r| r["ordinal"].as_u64().unwrap()).collect()
+    o["champs"][champ]["refs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["ordinal"].as_u64().unwrap())
+        .collect()
 }
 
 /// Un taux, FODEC et timbre : HT 1 000,000 ; FODEC 1 % = 10,000 ;
@@ -21,7 +26,10 @@ fn refs(o: &Value, champ: &str) -> Vec<u64> {
 fn piece_fodec() -> Vec<Value> {
     vec![
         jeton(0, "Matricule fiscal : 1234567A/A/M/000", 0.05, 0.05, &[]),
-        avec_date(jeton(1, "Tunis, le 05/04/2026", 0.6, 0.05, &[]), "2026-04-05"),
+        avec_date(
+            jeton(1, "Tunis, le 05/04/2026", 0.6, 0.05, &[]),
+            "2026-04-05",
+        ),
         jeton(2, "Qté 3", 0.05, 0.30, &[(3000, false)]),
         jeton(3, "PU 333,334", 0.30, 0.30, &[(333334, true)]),
         jeton(4, "Total HT 1 000,000", 0.6, 0.60, &[(1000000, true)]),
@@ -29,7 +37,10 @@ fn piece_fodec() -> Vec<Value> {
         jeton(6, "TVA 19% 191,900", 0.6, 0.66, &[(191900, true)]),
         jeton(7, "Timbre fiscal 1,000", 0.6, 0.69, &[(1000, true)]),
         jeton(8, "Total TTC 1 202,900", 0.6, 0.72, &[(1202900, true)]),
-        avec_date(jeton(9, "Échéance 05/05/2026", 0.05, 0.85, &[]), "2026-05-05"),
+        avec_date(
+            jeton(9, "Échéance 05/05/2026", 0.05, 0.85, &[]),
+            "2026-05-05",
+        ),
     ]
 }
 
@@ -49,17 +60,29 @@ fn un_taux_fodec_et_timbre_prouves_et_cites() {
         assert_eq!(o["champs"][champ]["statut"], "prouve", "{champ}");
     }
     let tva = &o["champs"]["montant_tva_par_taux"]["instances"];
-    assert_eq!(tva, &json!([{"taux": "TVA19", "valeur": "191900", "refs": [{"page": 1, "ordinal": 6}]}]));
+    assert_eq!(
+        tva,
+        &json!([{"taux": "TVA19", "valeur": "191900", "refs": [{"page": 1, "ordinal": 6}]}])
+    );
     // L'assiette de la TVA est le HT majoré du FODEC (1 010,000) : une somme prouvée, que
     // la pièce n'imprime pas — elle ne cite donc aucun jeton (le HT n'est pas la base).
     let base = &o["champs"]["base_tva_par_taux"]["instances"];
-    assert_eq!(base, &json!([{"taux": "TVA19", "valeur": "1010000", "refs": []}]));
+    assert_eq!(
+        base,
+        &json!([{"taux": "TVA19", "valeur": "1010000", "refs": []}])
+    );
     for p in ["ttc", "tva", "timbre", "fodec", "mf", "echeance"] {
         assert_eq!(o["preuves"][p], "verifiee", "preuve {p}");
     }
     assert_eq!(o["preuves"]["lettres"], "non_evaluable");
-    assert_eq!(o["champs"]["matricule_fiscal_emetteur"]["valeur"], "1234567A/A/M/000");
-    assert_eq!(o["champs"]["matricule_fiscal_emetteur"]["statut"], "conforme");
+    assert_eq!(
+        o["champs"]["matricule_fiscal_emetteur"]["valeur"],
+        "1234567A/A/M/000"
+    );
+    assert_eq!(
+        o["champs"]["matricule_fiscal_emetteur"]["statut"],
+        "conforme"
+    );
     assert_eq!(o["champs"]["date_emission"]["valeur"], "2026-04-05");
     assert_eq!(o["champs"]["date_echeance"]["valeur"], "2026-05-05");
 }
@@ -81,7 +104,11 @@ fn piece_deux_taux(bases: bool, ttc: i64) -> Vec<Value> {
 
 #[test]
 fn deux_taux_bases_imprimees() {
-    let o = resoudre(piece_deux_taux(true, 1142000), grille_facture(), pack_essai());
+    let o = resoudre(
+        piece_deux_taux(true, 1142000),
+        grille_facture(),
+        pack_essai(),
+    );
     assert_eq!(o["issue"], "prouvee", "{o}");
     assert_eq!(tva(&o), vec![(70, 28000), (190, 114000)]);
     let bases: Vec<&str> = o["champs"]["base_tva_par_taux"]["instances"]
@@ -101,18 +128,29 @@ fn deux_taux_bases_imprimees() {
 
 #[test]
 fn deux_taux_bases_deduites_non_citees() {
-    let o = resoudre(piece_deux_taux(false, 1142000), grille_facture(), pack_essai());
+    let o = resoudre(
+        piece_deux_taux(false, 1142000),
+        grille_facture(),
+        pack_essai(),
+    );
     assert_eq!(o["issue"], "prouvee", "{o}");
     assert_eq!(tva(&o), vec![(70, 28000), (190, 114000)]);
     // une base seulement déduite n'est jamais émise sans citation
-    for i in o["champs"]["base_tva_par_taux"]["instances"].as_array().unwrap() {
+    for i in o["champs"]["base_tva_par_taux"]["instances"]
+        .as_array()
+        .unwrap()
+    {
         assert!(i["valeur"].is_null() && i["refs"].as_array().unwrap().is_empty());
     }
 }
 
 #[test]
 fn un_chiffre_casse_signale() {
-    let o = resoudre(piece_deux_taux(true, 1142001), grille_facture(), pack_essai());
+    let o = resoudre(
+        piece_deux_taux(true, 1142001),
+        grille_facture(),
+        pack_essai(),
+    );
     assert_eq!(o["issue"], "aucune");
     assert_eq!(o["champs"]["total_ttc"]["statut"], "signale");
     assert!(o["champs"]["total_ttc"]["valeur"].is_null());
@@ -125,7 +163,10 @@ fn charge_fixe_imprimee_ne_peut_pas_etre_ecartee() {
     // qui l'ignore ne ferme plus.
     let mut j = piece_deux_taux(true, 1142000);
     j.push(jeton(6, "1,000", 0.8, 0.70, &[(1000, true)]));
-    assert_eq!(resoudre(j.clone(), grille_facture(), pack_essai())["issue"], "aucune");
+    assert_eq!(
+        resoudre(j.clone(), grille_facture(), pack_essai())["issue"],
+        "aucune"
+    );
     // avec le bon TTC, le timbre est prouvé
     j[3] = jeton(5, "Total TTC", 0.6, 0.72, &[(1143000, true)]);
     let o = resoudre(j, grille_facture(), pack_essai());
@@ -138,7 +179,10 @@ fn repere_lu_sans_montant_imprime() {
     // le libellé du timbre est lu, son montant non : le timbre est exigé, rien ne ferme
     let mut j = piece_deux_taux(true, 1142000);
     j.push(jeton(6, "Timbre fiscal", 0.05, 0.70, &[]));
-    assert_eq!(resoudre(j, grille_facture(), pack_essai())["issue"], "aucune");
+    assert_eq!(
+        resoudre(j, grille_facture(), pack_essai())["issue"],
+        "aucune"
+    );
 }
 
 #[test]
@@ -195,11 +239,17 @@ fn exoneration_seulement_avec_mention_et_zero_imprime() {
     assert_eq!(o["champs"]["montant_tva_par_taux"]["valeur"], "0");
     assert_eq!(refs(&o, "montant_tva_par_taux"), vec![2]);
     // sans la mention : aucune
-    assert_eq!(resoudre(j[1..].to_vec(), grille_facture(), pack_essai())["issue"], "aucune");
+    assert_eq!(
+        resoudre(j[1..].to_vec(), grille_facture(), pack_essai())["issue"],
+        "aucune"
+    );
     // un zéro seulement faible : aucune
     let mut faible = j.clone();
     faible[2] = jeton(2, "TVA 0", 0.6, 0.64, &[(0, false)]);
-    assert_eq!(resoudre(faible, grille_facture(), pack_essai())["issue"], "aucune");
+    assert_eq!(
+        resoudre(faible, grille_facture(), pack_essai())["issue"],
+        "aucune"
+    );
 }
 
 #[test]
@@ -230,8 +280,14 @@ fn total_seul_exige_des_lectures_fortes() {
     let o = resoudre(j.clone(), grille.clone(), pack_essai());
     assert_eq!(o["issue"], "prouvee", "{o}");
     assert_eq!(valeur(&o, "total_tva"), 166000);
-    for i in o["champs"]["montant_tva_par_taux"]["instances"].as_array().unwrap() {
-        assert!(i["valeur"].is_null(), "montant recalculé, jamais émis : {i}");
+    for i in o["champs"]["montant_tva_par_taux"]["instances"]
+        .as_array()
+        .unwrap()
+    {
+        assert!(
+            i["valeur"].is_null(),
+            "montant recalculé, jamais émis : {i}"
+        );
     }
     let mut faible = j;
     faible[1] = jeton(1, "400", 0.3, 0.64, &[(400000, false)]);
@@ -240,7 +296,8 @@ fn total_seul_exige_des_lectures_fortes() {
 
 #[test]
 fn plafond_de_combinaisons() {
-    let mut e: Value = serde_json::from_str(&entree(piece_fodec(), grille_facture(), pack_essai())).unwrap();
+    let mut e: Value =
+        serde_json::from_str(&entree(piece_fodec(), grille_facture(), pack_essai())).unwrap();
     e["plafond"] = json!(1);
     let o: Value = serde_json::from_str(&malica_sudoku::solve(&e.to_string())).unwrap();
     assert_eq!(o["issue"], "aucune");
@@ -253,8 +310,14 @@ fn entree_invalide_et_preuve_non_traduite() {
     assert_eq!(o["issue"], "aucune");
     assert!(o["raison"].as_str().unwrap().starts_with("entrée invalide"));
     let mut g = grille_facture();
-    g["preuves"].as_array_mut().unwrap().push(json!({"code": "inconnue", "expression": {"op": "racine", "x": "total_ht"}}));
-    g["preuves"].as_array_mut().unwrap().push(json!({"code": "a_traduire", "statut": "a_traduire",
+    g["preuves"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"code": "inconnue", "expression": {"op": "racine", "x": "total_ht"}}));
+    g["preuves"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"code": "a_traduire", "statut": "a_traduire",
         "expression": {"op": "egal", "a": "total_ht", "b": "total_ttc"}}));
     let o = resoudre(piece_fodec(), g, pack_essai());
     assert_eq!(o["issue"], "prouvee");
@@ -267,7 +330,13 @@ fn piece_timbre(timbre: i64, texte: &str) -> Vec<Value> {
     piece_fodec()
         .into_iter()
         .map(|j| match j["ordinal"].as_u64() {
-            Some(7) => jeton(7, &format!("Timbre fiscal {texte}"), 0.6, 0.69, &[(timbre, true)]),
+            Some(7) => jeton(
+                7,
+                &format!("Timbre fiscal {texte}"),
+                0.6,
+                0.69,
+                &[(timbre, true)],
+            ),
             Some(8) => {
                 let ttc = 1201900 + timbre;
                 jeton(8, "Total TTC", 0.6, 0.72, &[(ttc, true)])

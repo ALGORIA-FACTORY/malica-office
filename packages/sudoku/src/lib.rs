@@ -126,15 +126,25 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
     let mut egal_a: BTreeSet<String> = BTreeSet::new();
     let mut champs_lettres: BTreeSet<String> = BTreeSet::new();
     for p in &entree.grille.preuves {
-        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP)) else {
+        let Some(e) = p
+            .expression
+            .as_ref()
+            .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP))
+        else {
             continue;
         };
         if p.statut.as_deref() == Some("a_traduire") {
             continue;
         }
-        let Ok(op) = lettres::lire_op(&entree.grille, e) else { continue };
+        let Ok(op) = lettres::lire_op(&entree.grille, e) else {
+            continue;
+        };
         champs_lettres.insert(entree.grille.champs[op.champ].code.clone());
-        egal_a.extend(op.egal_a.iter().map(|&c| entree.grille.champs[c].code.clone()));
+        egal_a.extend(
+            op.egal_a
+                .iter()
+                .map(|&c| entree.grille.champs[c].code.clone()),
+        );
     }
     if egal_a.is_empty() {
         return None;
@@ -146,8 +156,12 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
         return None;
     }
     let (v, phrase) = (*v, phrase.clone());
-    let porteurs: BTreeSet<(u32, u32)> =
-        entree.jetons.iter().filter(|j| j.lettres.is_some()).map(|j| (j.page, j.ordinal)).collect();
+    let porteurs: BTreeSet<(u32, u32)> = entree
+        .jetons
+        .iter()
+        .filter(|j| j.lettres.is_some())
+        .map(|j| (j.page, j.ordinal))
+        .collect();
 
     let mut avec: Entree = serde_json::from_str(input_json).ok()?;
     for j in avec.jetons.iter_mut().filter(|j| j.lettres.is_some()) {
@@ -157,16 +171,27 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
     if s.issue != "prouvee" {
         return None;
     }
-    let cite_les_lettres =
-        |c: &ChampSortie| c.refs.iter().any(|r| porteurs.contains(&(r.page, r.ordinal)));
+    let cite_les_lettres = |c: &ChampSortie| {
+        c.refs
+            .iter()
+            .any(|r| porteurs.contains(&(r.page, r.ordinal)))
+    };
     let mut porte = None;
     for (code, c) in &s.champs {
-        let cite = cite_les_lettres(c) || c.instances.iter().flatten().any(|i| i.refs.iter().any(|r| porteurs.contains(&(r.page, r.ordinal))));
+        let cite = cite_les_lettres(c)
+            || c.instances.iter().flatten().any(|i| {
+                i.refs
+                    .iter()
+                    .any(|r| porteurs.contains(&(r.page, r.ordinal)))
+            });
         if !cite || champs_lettres.contains(code) {
             continue;
         }
         // Les lettres ne portent qu'un total qu'elles doivent égaler, et cette valeur-là.
-        if !egal_a.contains(code) || c.statut != "prouve" || c.valeur.as_deref() != Some(&v.to_string()) {
+        if !egal_a.contains(code)
+            || c.statut != "prouve"
+            || c.valeur.as_deref() != Some(&v.to_string())
+        {
             return None;
         }
         porte = Some(code.clone());
@@ -193,7 +218,12 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         .vars
         .iter()
         .map(|v| v.champ)
-        .chain(modele.groupes.iter().flat_map(|g| [g.champ_base, g.champ_montant]))
+        .chain(
+            modele
+                .groupes
+                .iter()
+                .flat_map(|g| [g.champ_base, g.champ_montant]),
+        )
         .map(|c| grille.champs[c].code.clone())
         .collect();
 
@@ -202,7 +232,9 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         .contraintes
         .iter()
         .filter_map(|cp| match cp.c {
-            Contrainte::Charge { m, fixe: Some(f), .. } => Some((m, f)),
+            Contrainte::Charge {
+                m, fixe: Some(f), ..
+            } => Some((m, f)),
             _ => None,
         })
         .collect();
@@ -223,7 +255,8 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     for (i, v) in modele.vars.iter_mut().enumerate() {
         if v.facultatif {
             let annonce = if let Some(taux) = charges.get(&i) {
-                plan.annonce(&reperes[v.champ]) || taux.is_some_and(|t| t > 0 && plan.taux_chiffre(t))
+                plan.annonce(&reperes[v.champ])
+                    || taux.is_some_and(|t| t > 0 && plan.taux_chiffre(t))
             } else {
                 plan.annonce_chiffree(&reperes[v.champ])
             };
@@ -281,13 +314,21 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
 
     // Déduplication : une même solution par deux chemins n'en fait qu'une, la plus forte —
     // et, à force égale, celle qui n'invoque pas d'exonération partielle (qui exige les lignes).
-    let partielle = |sol: &Solution| sol.etat.g.iter().any(|g| g.as_ref().is_some_and(|g| g.partielle));
+    let partielle = |sol: &Solution| {
+        sol.etat
+            .g
+            .iter()
+            .any(|g| g.as_ref().is_some_and(|g| g.partielle))
+    };
     let mut uniques: BTreeMap<_, Solution> = BTreeMap::new();
     for sol in s.solutions.drain(..) {
         let k = cle(&sol.etat);
         let remplace = match uniques.get(&k) {
             None => true,
-            Some(x) => (x.faible && !sol.faible) || (x.faible == sol.faible && partielle(x) && !partielle(&sol)),
+            Some(x) => {
+                (x.faible && !sol.faible)
+                    || (x.faible == sol.faible && partielle(x) && !partielle(&sol))
+            }
         };
         if remplace {
             uniques.insert(k, sol);
@@ -321,9 +362,14 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 }
                 let champ = modele.vars[i].champ;
                 let ancree = dom.valeurs.get(&x.v).is_some_and(|val| {
-                    val.occurrences.iter().any(|o| plan.ancre(o.jeton, &reperes[champ], None, false))
+                    val.occurrences
+                        .iter()
+                        .any(|o| plan.ancre(o.jeton, &reperes[champ], None, false))
                 });
-                par_valeur.entry(x.v).or_default().push((modele.vars[i].facultatif, !ancree, i));
+                par_valeur
+                    .entry(x.v)
+                    .or_default()
+                    .push((modele.vars[i].facultatif, !ancree, i));
             }
         }
         for (v, mut vars) in par_valeur {
@@ -332,7 +378,13 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             let jetons: BTreeSet<usize> = dom
                 .valeurs
                 .get(&v)
-                .map(|val| val.occurrences.iter().filter(|o| o.forte || faibles.contains(&v)).map(|o| o.jeton).collect())
+                .map(|val| {
+                    val.occurrences
+                        .iter()
+                        .filter(|o| o.forte || faibles.contains(&v))
+                        .map(|o| o.jeton)
+                        .collect()
+                })
                 .unwrap_or_default();
             if vars.len() <= jetons.len() {
                 continue;
@@ -340,7 +392,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             vars.sort();
             for &(_, _, i) in &vars[jetons.len()..] {
                 requis |= !modele.vars[i].facultatif;
-                e.s[i] = Some(numerique::Val { v: 0, absent: true, faible: false });
+                e.s[i] = Some(numerique::Val {
+                    v: 0,
+                    absent: true,
+                    faible: false,
+                });
             }
         }
         (e, requis)
@@ -350,7 +406,13 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     let lues: Vec<Etat> = retenues
         .iter()
         .map(|r| sans_partage(&r.etat))
-        .filter(|(e, requis)| !requis && modele.contraintes.iter().all(|cp| s.evaluer(e, &cp.c) != Eval::Echec))
+        .filter(|(e, requis)| {
+            !requis
+                && modele
+                    .contraintes
+                    .iter()
+                    .all(|cp| s.evaluer(e, &cp.c) != Eval::Echec)
+        })
         .map(|(e, _)| e)
         .collect();
     let partage_requis = !retenues.is_empty() && lues.is_empty();
@@ -375,7 +437,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
 
     // Statut de chaque contrainte dans la solution unique.
     let evals: Vec<Eval> = match unique {
-        Some(e) if !s.depasse => modele.contraintes.iter().map(|cp| s.evaluer(e, &cp.c)).collect(),
+        Some(e) if !s.depasse => modele
+            .contraintes
+            .iter()
+            .map(|cp| s.evaluer(e, &cp.c))
+            .collect(),
         _ => vec![Eval::Inconnu; modele.contraintes.len()],
     };
     // toutes les contraintes numériques sont arithmétiques : il en faut au moins une vérifiée
@@ -396,20 +462,45 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         let best = occ.iter().max_by(|a, b| {
             let ja = &entree.jetons[a.jeton];
             let jb = &entree.jetons[b.jeton];
-            let ka = (plan.ancre(a.jeton, &reperes[champ], None, false), a.forte, ja.page);
-            let kb = (plan.ancre(b.jeton, &reperes[champ], None, false), b.forte, jb.page);
+            let ka = (
+                plan.ancre(a.jeton, &reperes[champ], None, false),
+                a.forte,
+                ja.page,
+            );
+            let kb = (
+                plan.ancre(b.jeton, &reperes[champ], None, false),
+                b.forte,
+                jb.page,
+            );
             ka.cmp(&kb)
-                .then(ja.y0.partial_cmp(&jb.y0).unwrap_or(std::cmp::Ordering::Equal))
+                .then(
+                    ja.y0
+                        .partial_cmp(&jb.y0)
+                        .unwrap_or(std::cmp::Ordering::Equal),
+                )
                 .then(ja.ordinal.cmp(&jb.ordinal))
         });
         best.map(|o| {
             let j = &entree.jetons[o.jeton];
-            vec![RefJeton { page: j.page, ordinal: j.ordinal }]
+            vec![RefJeton {
+                page: j.page,
+                ordinal: j.ordinal,
+            }]
         })
         .unwrap_or_default()
     };
-    let signale = || ChampSortie { valeur: None, refs: Vec::new(), statut: "signale".into(), instances: None };
-    let absent = || ChampSortie { valeur: None, refs: Vec::new(), statut: "absent".into(), instances: None };
+    let signale = || ChampSortie {
+        valeur: None,
+        refs: Vec::new(),
+        statut: "signale".into(),
+        instances: None,
+    };
+    let absent = || ChampSortie {
+        valeur: None,
+        refs: Vec::new(),
+        statut: "absent".into(),
+        instances: None,
+    };
 
     for (i, v) in modele.vars.iter().enumerate() {
         if !s.utile(i) {
@@ -420,7 +511,8 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             Some(e) if prouvee => match e.s[i] {
                 Some(x) if !x.absent => {
                     let dans_preuve = modele.contraintes.iter().zip(&evals).any(|(cp, ev)| {
-                        *ev == Eval::Ok && numerique::unites(&cp.c, &modele).contains(&modele::Unite::S(i))
+                        *ev == Eval::Ok
+                            && numerique::unites(&cp.c, &modele).contains(&modele::Unite::S(i))
                     });
                     ChampSortie {
                         valeur: Some(x.v.to_string()),
@@ -451,7 +543,10 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                     if sol.exoneration {
                         // Exonération totale : la part exonérée est tout le total des bases,
                         // nommée par le taux nul de la grille quand elle en désigne un.
-                        let total = gr.total_base.and_then(|t| e.s[t].filter(|v| !v.absent)).map(|v| v.v);
+                        let total = gr
+                            .total_base
+                            .and_then(|t| e.s[t].filter(|v| !v.absent))
+                            .map(|v| v.v);
                         match (&gr.taux_exonere, total) {
                             (Some(code), Some(t)) => {
                                 let v = if est_base { t } else { 0 };
@@ -459,7 +554,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                                     valeur: None,
                                     refs: Vec::new(),
                                     statut: "prouve".into(),
-                                    instances: Some(vec![InstanceSortie { taux: code.clone(), valeur: Some(v.to_string()), refs: cite(v, champ) }]),
+                                    instances: Some(vec![InstanceSortie {
+                                        taux: code.clone(),
+                                        valeur: Some(v.to_string()),
+                                        refs: cite(v, champ),
+                                    }]),
                                 }
                             }
                             _ if est_base => absent(),
@@ -481,9 +580,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                             .contraintes
                             .iter()
                             .filter_map(|cp| match &cp.c {
-                                modele::Contrainte::Charge { m, assiette: Some(b), .. } if *b == gr.bareme => {
-                                    e.s[*m].filter(|x| !x.absent).map(|x| x.v)
-                                }
+                                modele::Contrainte::Charge {
+                                    m,
+                                    assiette: Some(b),
+                                    ..
+                                } if *b == gr.bareme => e.s[*m].filter(|x| !x.absent).map(|x| x.v),
                                 _ => None,
                             })
                             .collect();
@@ -521,13 +622,22 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                                 .and_then(|t| e.s[t].filter(|v| !v.absent))
                                 .map(|total| {
                                     let v = if est_base { total.v - sol.somme_b } else { 0 };
-                                    Some(InstanceSortie { taux: code.clone(), valeur: Some(v.to_string()), refs: cite(v, champ) })
+                                    Some(InstanceSortie {
+                                        taux: code.clone(),
+                                        valeur: Some(v.to_string()),
+                                        refs: cite(v, champ),
+                                    })
                                 }),
                         };
                         match exoneree {
                             Some(reste) => {
                                 inst.extend(reste);
-                                ChampSortie { valeur: None, refs: Vec::new(), statut: "prouve".into(), instances: Some(inst) }
+                                ChampSortie {
+                                    valeur: None,
+                                    refs: Vec::new(),
+                                    statut: "prouve".into(),
+                                    instances: Some(inst),
+                                }
                             }
                             None => signale(),
                         }
@@ -552,7 +662,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         // le matricule du client lu « conforme » comme celui d'un émetteur étranger).
         let partage = champ.genre == "identifiant"
             && champ.format_code.is_some()
-            && grille.champs.iter().enumerate().any(|(k, x)| k != c && x.format_code == champ.format_code);
+            && grille
+                .champs
+                .iter()
+                .enumerate()
+                .any(|(k, x)| k != c && x.format_code == champ.format_code);
         let sortie = match textuel::lire(champ, &entree.pack, &plan)? {
             Issue::Conforme(_) if partage => signale(),
             Issue::Conforme(l) => {
@@ -560,7 +674,10 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 ChampSortie {
                     valeur: Some(l.valeur),
                     refs: (l.jeton..=l.fin)
-                        .map(|k| RefJeton { page: entree.jetons[k].page, ordinal: entree.jetons[k].ordinal })
+                        .map(|k| RefJeton {
+                            page: entree.jetons[k].page,
+                            ordinal: entree.jetons[k].ordinal,
+                        })
                         .collect(),
                     statut: "conforme".into(),
                     instances: None,
@@ -578,7 +695,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     let mut statuts_parties: Vec<(String, &str)> = Vec::new();
     let mut une_preuve_parties = false;
     for p in &grille.preuves {
-        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(entete::OP)) else {
+        let Some(e) = p
+            .expression
+            .as_ref()
+            .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(entete::OP))
+        else {
             continue;
         };
         if p.statut.as_deref() == Some("a_traduire") {
@@ -628,16 +749,18 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     }
     for (p, nn) in &modele.non_numeriques {
         let st = match nn {
-            NonNumerique::Format { champ, format } => match (lus.get(champ), entree.pack.formats.get(format)) {
-                (Some(v), Some(motif)) => {
-                    if textuel::respecte(v, motif)? {
-                        "verifiee"
-                    } else {
-                        "echec"
+            NonNumerique::Format { champ, format } => {
+                match (lus.get(champ), entree.pack.formats.get(format)) {
+                    (Some(v), Some(motif)) => {
+                        if textuel::respecte(v, motif)? {
+                            "verifiee"
+                        } else {
+                            "echec"
+                        }
                     }
+                    _ => "non_evaluable",
                 }
-                _ => "non_evaluable",
-            },
+            }
             NonNumerique::Ordre { avant, apres } => match (lus.get(avant), lus.get(apres)) {
                 (Some(a), Some(b)) => {
                     if a <= b {
@@ -658,7 +781,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     // ---------- L'anneau 1 : les lignes, sur la sortie du centre, sans la modifier ----------
     let mut sortie_lignes = None;
     for p in &grille.preuves {
-        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lignes::OP)) else {
+        let Some(e) = p
+            .expression
+            .as_ref()
+            .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lignes::OP))
+        else {
             continue;
         };
         if p.statut.as_deref() == Some("a_traduire") {
@@ -703,14 +830,20 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                     && (!par_taux || l.taux_par_base == "verifiee")
                     && l.deduites.is_none()
                     && l.remise_globale.is_none()
-                    && l.instances.iter().map(|x| x.montant.valeur.parse::<i64>().ok()).sum::<Option<i64>>() == Some(total)
+                    && l.instances
+                        .iter()
+                        .map(|x| x.montant.valeur.parse::<i64>().ok())
+                        .sum::<Option<i64>>()
+                        == Some(total)
             })
         };
         let mut refus: Option<&str> = None;
         for (g, gr) in modele.groupes.iter().enumerate() {
             let Some(sol) = e.g[g].as_ref() else { continue };
             let Some(t) = gr.total_base else { continue };
-            let Some(ht) = e.s[t].filter(|v| !v.absent).map(|v| v.v) else { continue };
+            let Some(ht) = e.s[t].filter(|v| !v.absent).map(|v| v.v) else {
+                continue;
+            };
             let champ = modele.vars[t].champ;
             let ancre_par = |reperes: &[String]| {
                 dom.valeurs.get(&ht).is_some_and(|x| {
@@ -727,7 +860,8 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             // la base juste sous « Base TVA »). Jamais à zéro instance ni à plusieurs taux,
             // et jamais seule : il faut encore que le montant en lettres vérifie le total —
             // une seconde écriture de la pièce, indépendante des chiffres (plus bas).
-            let base_seule = sol.instances.len() == 1 && sol.instances[0].b == Some(ht) && !sol.partielle;
+            let base_seule =
+                sol.instances.len() == 1 && sol.instances[0].b == Some(ht) && !sol.partielle;
             let ancre = ancre_par(&reperes[champ]);
             if sol.partielle && !lignes_ferment(ht, true) {
                 refus = Some("exonération partielle non confirmée par les lignes");
@@ -741,7 +875,14 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         }
         if let Some(r) = refus {
             ht_par_la_base = false;
-            retirer_la_preuve(&mut prouvee, &mut issue, &mut raison, &mut champs, &numeriques, r);
+            retirer_la_preuve(
+                &mut prouvee,
+                &mut issue,
+                &mut raison,
+                &mut champs,
+                &numeriques,
+                r,
+            );
             for (cp, ev) in modele.contraintes.iter().zip(&evals) {
                 if *ev == Eval::Ok {
                     preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
@@ -756,7 +897,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     // ---------- Les lettres : la seconde écriture du total ----------
     let mut contredite = false;
     for p in &grille.preuves {
-        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP)) else {
+        let Some(e) = p
+            .expression
+            .as_ref()
+            .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP))
+        else {
             continue;
         };
         if p.statut.as_deref() == Some("a_traduire") {
@@ -771,7 +916,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                         .and_then(|x| x.valeur.as_deref())
                         .and_then(|v| v.parse().ok())
                 };
-                let r = lettres::prouver(&op, entree, prouvee.then_some(&valeur_prouvee as &dyn Fn(usize) -> Option<i64>));
+                let r = lettres::prouver(
+                    &op,
+                    entree,
+                    prouvee.then_some(&valeur_prouvee as &dyn Fn(usize) -> Option<i64>),
+                );
                 if let Some(c) = r.champ {
                     champs.insert(grille.champs[op.champ].code.clone(), c);
                 }
@@ -786,11 +935,23 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     let lettres_verifient = preuves.iter().any(|(code, st)| {
         st == "verifiee"
             && grille.preuves.iter().any(|p| {
-                &p.code == code && p.expression.as_ref().and_then(|e| e.get("op")).and_then(|o| o.as_str()) == Some(lettres::OP)
+                &p.code == code
+                    && p.expression
+                        .as_ref()
+                        .and_then(|e| e.get("op"))
+                        .and_then(|o| o.as_str())
+                        == Some(lettres::OP)
             })
     });
     if ht_par_la_base && prouvee && !lettres_verifient {
-        retirer_la_preuve(&mut prouvee, &mut issue, &mut raison, &mut champs, &numeriques, "le total HT ne porte pas son libellé");
+        retirer_la_preuve(
+            &mut prouvee,
+            &mut issue,
+            &mut raison,
+            &mut champs,
+            &numeriques,
+            "le total HT ne porte pas son libellé",
+        );
         for (cp, ev) in modele.contraintes.iter().zip(&evals) {
             if *ev == Eval::Ok {
                 preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
@@ -816,8 +977,16 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     // Hors de son ressort : ce que l'arithmétique prouve (les montants du centre), ce que les
     // chiffres confirment (le montant en lettres), et ce qu'un domaine fermé valide (une
     // valeur de liste n'est rendue qu'égale, forme pour forme, à un code de son domaine).
-    let mut garantis: BTreeSet<&str> = modele.vars.iter().map(|v| grille.champs[v.champ].code.as_str()).collect();
-    for p in grille.preuves.iter().filter(|p| p.statut.as_deref() != Some("a_traduire")) {
+    let mut garantis: BTreeSet<&str> = modele
+        .vars
+        .iter()
+        .map(|v| grille.champs[v.champ].code.as_str())
+        .collect();
+    for p in grille
+        .preuves
+        .iter()
+        .filter(|p| p.statut.as_deref() != Some("a_traduire"))
+    {
         if let Some(op) = p
             .expression
             .as_ref()
@@ -827,7 +996,13 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             garantis.insert(grille.champs[op.champ].code.as_str());
         }
     }
-    garantis.extend(grille.champs.iter().filter(|c| !c.valeurs.is_empty()).map(|c| c.code.as_str()));
+    garantis.extend(
+        grille
+            .champs
+            .iter()
+            .filter(|c| !c.valeurs.is_empty())
+            .map(|c| c.code.as_str()),
+    );
     identite::assurance(entree, &mut champs, &garantis);
 
     Ok(Sortie {
@@ -898,7 +1073,11 @@ mod wasm {
     /// `ptr` doit désigner `len` octets lisibles (l'entrée JSON en UTF-8).
     #[no_mangle]
     pub unsafe extern "C" fn solve_json(ptr: *const u8, len: usize) -> u64 {
-        let octets = if len == 0 { &[][..] } else { core::slice::from_raw_parts(ptr, len) };
+        let octets = if len == 0 {
+            &[][..]
+        } else {
+            core::slice::from_raw_parts(ptr, len)
+        };
         let sortie = match core::str::from_utf8(octets) {
             Ok(s) => crate::solve(s),
             Err(_) => crate::erreur("entrée non UTF-8".into()),

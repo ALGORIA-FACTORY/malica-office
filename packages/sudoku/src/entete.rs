@@ -108,14 +108,20 @@ pub struct OpParties {
 }
 
 fn cle_op(e: &Value, k: &str) -> Option<String> {
-    e.get(k).and_then(|v| v.as_str()).map(|s| s.trim_end_matches('?').trim().to_string())
+    e.get(k)
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim_end_matches('?').trim().to_string())
 }
 
 /// Lit et contrôle l'op : les champs nommés existent ; les matricules ont un format.
 pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpParties, String> {
     let champ = |k: &str| -> Result<usize, String> {
         let nom = cle_op(e, k).ok_or_else(|| format!("clé « {k} » manquante"))?;
-        grille.champs.iter().position(|c| c.code == nom).ok_or_else(|| format!("champ « {nom} » absent de la grille"))
+        grille
+            .champs
+            .iter()
+            .position(|c| c.code == nom)
+            .ok_or_else(|| format!("champ « {nom} » absent de la grille"))
     };
     let emetteur = champ("emetteur")?;
     let client = champ("client")?;
@@ -128,18 +134,28 @@ pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpParties, String> {
         Some(_) => Some(champ("numero")?),
         None => None,
     };
-    Ok(OpParties { emetteur, client, nom_emetteur: champ("nom_emetteur")?, nom_client: champ("nom_client")?, numero })
+    Ok(OpParties {
+        emetteur,
+        client,
+        nom_emetteur: champ("nom_emetteur")?,
+        nom_client: champ("nom_client")?,
+        numero,
+    })
 }
 
 /// Le texte d'un libellé, sans la ponctuation qui l'entoure (« Client : » → « client »).
 /// Le point reste : « M. » n'est pas la lettre « M » d'un texte vertical.
 fn cle(s: &str) -> String {
-    s.trim_matches(|c: char| ":,;-–—·/|()".contains(c)).to_string()
+    s.trim_matches(|c: char| ":,;-–—·/|()".contains(c))
+        .to_string()
 }
 
 /// Un mot comparable : sans casse, sans accents, sans ponctuation.
 fn mot(s: &str) -> String {
-    normaliser(s).chars().filter(|c| c.is_alphanumeric()).collect()
+    normaliser(s)
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .collect()
 }
 
 /// La valeur d'un matricule : majuscules, sans espaces.
@@ -148,11 +164,16 @@ fn a_un_chiffre_pres(a: &str, b: &str) -> bool {
     let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
     a.len() == b.len()
         && a.iter().zip(&b).filter(|(x, y)| x != y).count() == 1
-        && a.iter().zip(&b).all(|(x, y)| x == y || (x.is_ascii_digit() && y.is_ascii_digit()))
+        && a.iter()
+            .zip(&b)
+            .all(|(x, y)| x == y || (x.is_ascii_digit() && y.is_ascii_digit()))
 }
 
 fn norme_matricule(s: &str) -> String {
-    s.chars().filter(|c| !c.is_whitespace()).flat_map(|c| c.to_uppercase()).collect()
+    s.chars()
+        .filter(|c| !c.is_whitespace())
+        .flat_map(|c| c.to_uppercase())
+        .collect()
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -216,12 +237,33 @@ impl<'a> Page<'a> {
             .champs
             .iter()
             .enumerate()
-            .flat_map(|(c, ch)| ch.reperes_fr.iter().chain(ch.reperes_ar.iter()).map(move |r| (cle(&normaliser(r)), c)))
+            .flat_map(|(c, ch)| {
+                ch.reperes_fr
+                    .iter()
+                    .chain(ch.reperes_ar.iter())
+                    .map(move |r| (cle(&normaliser(r)), c))
+            })
             .filter(|(r, _): &(String, usize)| !r.is_empty())
             .collect::<Vec<_>>();
-        let repere_max = reperes.iter().map(|(r, _)| r.len()).max().unwrap_or_default();
-        let rtl = jetons.iter().map(|j| crate::reperes::droite_a_gauche(&j.texte)).collect();
-        Page { j: jetons, normes, rtl, cles, rangs, ou, reperes, repere_max }
+        let repere_max = reperes
+            .iter()
+            .map(|(r, _)| r.len())
+            .max()
+            .unwrap_or_default();
+        let rtl = jetons
+            .iter()
+            .map(|j| crate::reperes::droite_a_gauche(&j.texte))
+            .collect();
+        Page {
+            j: jetons,
+            normes,
+            rtl,
+            cles,
+            rangs,
+            ou,
+            reperes,
+            repere_max,
+        }
     }
 
     fn h(&self, i: usize) -> f64 {
@@ -277,8 +319,12 @@ impl<'a> Page<'a> {
     /// marge, ne commence pas par un libellé, et n'est pas plus longue qu'elle : une ligne
     /// renvoyée à la ligne est pleine. Une liste « Client : … / Adresse : … » n'en est pas un.
     fn se_poursuit(&self, r: usize) -> bool {
-        let (Some(rang), Some(suivante)) = (self.rangs.get(r), self.rangs.get(r + 1)) else { return false };
-        let (Some(&a), Some(&b)) = (rang.first(), suivante.first()) else { return false };
+        let (Some(rang), Some(suivante)) = (self.rangs.get(r), self.rangs.get(r + 1)) else {
+            return false;
+        };
+        let (Some(&a), Some(&b)) = (rang.first(), suivante.first()) else {
+            return false;
+        };
         let fin = |g: &[usize]| g.iter().map(|&i| self.j[i].x1).fold(f64::MIN, f64::max);
         let bas = rang.iter().map(|&i| self.j[i].y1).fold(f64::MIN, f64::max);
         self.j[a].page == self.j[b].page
@@ -289,34 +335,59 @@ impl<'a> Page<'a> {
     }
 
     fn cite(&self, jetons: &[usize]) -> Vec<RefJeton> {
-        jetons.iter().map(|&i| RefJeton { page: self.j[i].page, ordinal: self.j[i].ordinal }).collect()
+        jetons
+            .iter()
+            .map(|&i| RefJeton {
+                page: self.j[i].page,
+                ordinal: self.j[i].ordinal,
+            })
+            .collect()
     }
 
     fn texte(&self, jetons: &[usize]) -> String {
-        jetons.iter().map(|&i| self.j[i].texte.trim()).collect::<Vec<_>>().join(" ")
+        jetons
+            .iter()
+            .map(|&i| self.j[i].texte.trim())
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 
     /// Les champs dont un repère égale exactement ce libellé.
     /// Un jeton qui égale un repère du champ `n`, hors de `pris`, est-il suivi sur sa rangée
     /// d'une valeur à chiffres autre que `v` ?
     fn autre_valeur_du_libelle(&self, n: usize, pris: &[usize], v: &str) -> bool {
-        let compact = |t: &str| t.chars().filter(|c| c.is_alphanumeric()).collect::<String>();
+        let compact = |t: &str| {
+            t.chars()
+                .filter(|c| c.is_alphanumeric())
+                .collect::<String>()
+        };
         let v = compact(v);
         (0..self.j.len()).filter(|i| !pris.contains(i)).any(|i| {
-            if !self.champs_de(&self.normes[i]).is_some_and(|e| e.champs.contains(&n)) {
+            if !self
+                .champs_de(&self.normes[i])
+                .is_some_and(|e| e.champs.contains(&n))
+            {
                 return false;
             }
             let (r, k) = self.ou[i];
             self.rangs[r].get(k + 1).is_some_and(|&b| {
                 let t = compact(&self.j[b].texte);
-                !pris.contains(&b) && t.chars().any(|c| c.is_ascii_digit()) && !v.contains(&t) && !t.contains(&v)
+                !pris.contains(&b)
+                    && t.chars().any(|c| c.is_ascii_digit())
+                    && !v.contains(&t)
+                    && !t.contains(&v)
             })
         })
     }
 
     fn champs_de(&self, texte: &str) -> Option<Etiquette> {
         let k = cle(texte);
-        let champs: BTreeSet<usize> = self.reperes.iter().filter(|(r, _)| *r == k).map(|(_, c)| *c).collect();
+        let champs: BTreeSet<usize> = self
+            .reperes
+            .iter()
+            .filter(|(r, _)| *r == k)
+            .map(|(_, c)| *c)
+            .collect();
         (!champs.is_empty()).then_some(Etiquette { cle: k, champs })
     }
 
@@ -324,16 +395,31 @@ impl<'a> Page<'a> {
     /// adjacents qui finit en `e` (sans chiffre : une valeur n'est pas un libellé), dont
     /// le texte doit égaler un repère. « Payable avant le » n'est pas « Le », et
     /// « Contrat Entreprise n° » n'est pas « N° ».
-    fn libelle_entier(&self, rang: &[usize], e: usize, debut_min: usize, h: f64) -> Option<Etiquette> {
-        self.libelle_entier_ou(rang, e, debut_min, h).map(|(et, _)| et)
+    fn libelle_entier(
+        &self,
+        rang: &[usize],
+        e: usize,
+        debut_min: usize,
+        h: f64,
+    ) -> Option<Etiquette> {
+        self.libelle_entier_ou(rang, e, debut_min, h)
+            .map(|(et, _)| et)
     }
 
     /// Comme `libelle_entier`, avec le premier mot du libellé.
-    fn libelle_entier_ou(&self, rang: &[usize], e: usize, debut_min: usize, h: f64) -> Option<(Etiquette, usize)> {
+    fn libelle_entier_ou(
+        &self,
+        rang: &[usize],
+        e: usize,
+        debut_min: usize,
+        h: f64,
+    ) -> Option<(Etiquette, usize)> {
         let mut s = e - 1;
         while s > debut_min {
             let p = rang[s - 1];
-            if self.ecart(p, rang[s]) > ECART_MOT * h || self.j[p].texte.chars().any(|c| c.is_ascii_digit()) {
+            if self.ecart(p, rang[s]) > ECART_MOT * h
+                || self.j[p].texte.chars().any(|c| c.is_ascii_digit())
+            {
                 break;
             }
             s -= 1;
@@ -356,7 +442,9 @@ impl<'a> Page<'a> {
     ///   1  la valeur la plus proche, de part et d'autre ;
     ///   et, à égalité, l'écriture du libellé.
     fn vers_la_gauche(&self, mots: &[usize]) -> bool {
-        let (Some(&premier), Some(&dernier)) = (mots.first(), mots.last()) else { return false };
+        let (Some(&premier), Some(&dernier)) = (mots.first(), mots.last()) else {
+            return false;
+        };
         let h = self.h(premier);
         let libelle = |t: usize| self.ponct(t) || self.champs_de(&self.normes[t]).is_some();
         let deux_points_seul = |t: usize| self.ponct(t) && self.j[t].texte.contains(':');
@@ -367,7 +455,13 @@ impl<'a> Page<'a> {
         let cote_d: Vec<usize> = self.rangs[r2][k2 + 1..].to_vec();
         // Le vote d'un côté : séparateur vers une valeur, et la distance de cette valeur.
         let vote = |cote: &[usize], bord0: usize, vers_gauche: bool| -> (i32, Option<f64>) {
-            let ecart = |a: usize, b: usize| if vers_gauche { self.ecart(b, a) } else { self.ecart(a, b) };
+            let ecart = |a: usize, b: usize| {
+                if vers_gauche {
+                    self.ecart(b, a)
+                } else {
+                    self.ecart(a, b)
+                }
+            };
             let mut bord = bord0;
             let mut separe = false;
             for (n, &t) in cote.iter().enumerate() {
@@ -375,7 +469,11 @@ impl<'a> Page<'a> {
                     break;
                 }
                 let texte = self.j[t].texte.trim();
-                let colle = if vers_gauche { texte.ends_with(':') } else { texte.starts_with(':') };
+                let colle = if vers_gauche {
+                    texte.ends_with(':')
+                } else {
+                    texte.starts_with(':')
+                };
                 if n == 0 && ecart(bord, t) <= ECART_MOT * h && deux_points_seul(t) {
                     separe = true;
                 } else if !libelle(t) {
@@ -391,14 +489,22 @@ impl<'a> Page<'a> {
         };
         let (sep_g, dist_g) = vote(&cote_g, premier, true);
         let (sep_d, dist_d) = vote(&cote_d, dernier, false);
-        let fin = self.j[dernier].texte.trim_end_matches(|c: char| c == '/' || c.is_whitespace());
+        let fin = self.j[dernier]
+            .texte
+            .trim_end_matches(|c: char| c == '/' || c.is_whitespace());
         let debut = self.j[premier].texte.trim_start();
         let propre_g = if debut.starts_with(':') { 3 } else { 0 };
         let propre_d = if fin.ends_with(':') { 3 } else { 0 };
         let proche = match (dist_g, dist_d) {
             (Some(_), None) => (1, 0),
             (None, Some(_)) => (0, 1),
-            (Some(g), Some(d)) if (g - d).abs() > 0.25 * h => if g < d { (1, 0) } else { (0, 1) },
+            (Some(g), Some(d)) if (g - d).abs() > 0.25 * h => {
+                if g < d {
+                    (1, 0)
+                } else {
+                    (0, 1)
+                }
+            }
             _ => (0, 0),
         };
         let (g, d) = (propre_g + sep_g + proche.0, propre_d + sep_d + proche.1);
@@ -413,7 +519,10 @@ impl<'a> Page<'a> {
     /// se lit « المعرف الجبائي »).
     fn libelle_de(&self, mots: &[usize]) -> Option<Etiquette> {
         let texte: String = if mots.iter().any(|&x| self.rtl[x]) {
-            mots.iter().rev().map(|&x| self.normes[x].as_str()).collect()
+            mots.iter()
+                .rev()
+                .map(|&x| self.normes[x].as_str())
+                .collect()
         } else {
             mots.iter().map(|&x| self.normes[x].as_str()).collect()
         };
@@ -454,7 +563,9 @@ impl<'a> Page<'a> {
         if !cle(prefixe).is_empty() {
             return self.champs_de(prefixe);
         }
-        self.droite(i).or_else(|| self.gauche(i)).or_else(|| self.dessus(i))
+        self.droite(i)
+            .or_else(|| self.gauche(i))
+            .or_else(|| self.dessus(i))
     }
 
     /// Le libellé collé en tête d'un jeton (« N°IE-2026-0701 ») : le plus long début du
@@ -498,7 +609,10 @@ impl<'a> Page<'a> {
         let sur: Vec<usize> = (0..rang.len())
             .filter(|&k| {
                 let t = &self.j[rang[k]];
-                t.x1 >= j.x0 - MARGE && t.x0 <= j.x1 + MARGE && j.y0 - t.y1 <= DESSUS * h && j.y0 - t.y1 >= -0.25 * h
+                t.x1 >= j.x0 - MARGE
+                    && t.x0 <= j.x1 + MARGE
+                    && j.y0 - t.y1 <= DESSUS * h
+                    && j.y0 - t.y1 >= -0.25 * h
             })
             .collect();
         let (&premier, &dernier) = (sur.first()?, sur.last()?);
@@ -537,7 +651,11 @@ impl<'a> Page<'a> {
         for rang in &self.rangs {
             for s in 0..rang.len() {
                 let h = self.h(rang[s]);
-                if self.ponct(rang[s]) || (s > 0 && self.ecart(rang[s - 1], rang[s]) <= ECART_SEGMENT * h && !self.ponct(rang[s - 1])) {
+                if self.ponct(rang[s])
+                    || (s > 0
+                        && self.ecart(rang[s - 1], rang[s]) <= ECART_SEGMENT * h
+                        && !self.ponct(rang[s - 1]))
+                {
                     continue;
                 }
                 let mut meilleur: Option<(usize, Etiquette)> = None;
@@ -553,25 +671,36 @@ impl<'a> Page<'a> {
                         break;
                     }
                     if let Some(et) = self.libelle_de(&rang[s..e]) {
-                        if meilleur.as_ref().is_none_or(|(_, m)| et.cle.len() > m.cle.len()) {
+                        if meilleur
+                            .as_ref()
+                            .is_none_or(|(_, m)| et.cle.len() > m.cle.len())
+                        {
                             meilleur = Some((e, et));
                         }
                     }
                 }
                 let Some((e, et)) = meilleur else { continue };
-                let camp = if et.champs.contains(&op.nom_client) && camps.decide(Camp::Client, &et.cle) {
-                    Camp::Client
-                } else if et.champs.contains(&op.nom_emetteur) && camps.decide(Camp::Emetteur, &et.cle) {
-                    Camp::Emetteur
-                } else {
-                    continue;
-                };
-                out.push(Libelle { camp, jetons: rang[s..e].to_vec() });
+                let camp =
+                    if et.champs.contains(&op.nom_client) && camps.decide(Camp::Client, &et.cle) {
+                        Camp::Client
+                    } else if et.champs.contains(&op.nom_emetteur)
+                        && camps.decide(Camp::Emetteur, &et.cle)
+                    {
+                        Camp::Emetteur
+                    } else {
+                        continue;
+                    };
+                out.push(Libelle {
+                    camp,
+                    jetons: rang[s..e].to_vec(),
+                });
             }
             // Un libellé arabe ferme son segment, à droite : on le lit depuis la fin.
             for f in 0..rang.len() {
                 let h = self.h(rang[f]);
-                let fin = f + 1 == rang.len() || self.ecart(rang[f], rang[f + 1]) > ECART_SEGMENT * h || self.ponct(rang[f + 1]);
+                let fin = f + 1 == rang.len()
+                    || self.ecart(rang[f], rang[f + 1]) > ECART_SEGMENT * h
+                    || self.ponct(rang[f + 1]);
                 if !self.rtl[rang[f]] || !fin || out.iter().any(|l| l.jetons.contains(&rang[f])) {
                     continue;
                 }
@@ -586,7 +715,13 @@ impl<'a> Page<'a> {
                         break;
                     }
                     match self.libelle_de(&rang[d..=f]) {
-                        Some(et) if meilleur.as_ref().is_none_or(|(_, m)| et.cle.len() > m.cle.len()) => meilleur = Some((d, et)),
+                        Some(et)
+                            if meilleur
+                                .as_ref()
+                                .is_none_or(|(_, m)| et.cle.len() > m.cle.len()) =>
+                        {
+                            meilleur = Some((d, et))
+                        }
                         _ => {}
                     }
                 }
@@ -594,14 +729,20 @@ impl<'a> Page<'a> {
                 if !self.vers_la_gauche(&rang[d..=f]) {
                     continue;
                 }
-                let camp = if et.champs.contains(&op.nom_client) && camps.decide(Camp::Client, &et.cle) {
-                    Camp::Client
-                } else if et.champs.contains(&op.nom_emetteur) && camps.decide(Camp::Emetteur, &et.cle) {
-                    Camp::Emetteur
-                } else {
-                    continue;
-                };
-                out.push(Libelle { camp, jetons: rang[d..=f].to_vec() });
+                let camp =
+                    if et.champs.contains(&op.nom_client) && camps.decide(Camp::Client, &et.cle) {
+                        Camp::Client
+                    } else if et.champs.contains(&op.nom_emetteur)
+                        && camps.decide(Camp::Emetteur, &et.cle)
+                    {
+                        Camp::Emetteur
+                    } else {
+                        continue;
+                    };
+                out.push(Libelle {
+                    camp,
+                    jetons: rang[d..=f].to_vec(),
+                });
             }
         }
         out
@@ -621,7 +762,10 @@ impl<'a> Page<'a> {
         let suivante = self.rangs.get(r + 1)?;
         let kk = suivante.iter().position(|&t| {
             let t = &self.j[t];
-            t.page == fin.page && (t.x0 - marge).abs() <= MARGE && t.y0 >= fin.y1 && t.y0 - fin.y1 <= ECART_MOT * h
+            t.page == fin.page
+                && (t.x0 - marge).abs() <= MARGE
+                && t.y0 >= fin.y1
+                && t.y0 - fin.y1 <= ECART_MOT * h
         })?;
         Some((r + 1, kk))
     }
@@ -637,16 +781,23 @@ impl<'a> Page<'a> {
                 let h = self.h(rang[s]);
                 let mut seq = vec![rang[s]];
                 let mut k = s;
-                while k + 1 < rang.len() && seq.len() < SPAN_MAX && self.ecart(rang[k], rang[k + 1]) <= ECART_MOT * h {
+                while k + 1 < rang.len()
+                    && seq.len() < SPAN_MAX
+                    && self.ecart(rang[k], rang[k + 1]) <= ECART_MOT * h
+                {
                     k += 1;
                     seq.push(rang[k]);
                 }
-                let fin_de_segment = k + 1 == rang.len() || self.ecart(rang[k], rang[k + 1]) > ECART_SEGMENT * h;
+                let fin_de_segment =
+                    k + 1 == rang.len() || self.ecart(rang[k], rang[k + 1]) > ECART_SEGMENT * h;
                 if seq.len() < SPAN_MAX && fin_de_segment {
                     if let Some((rr, kk)) = self.suite(r, k) {
                         let rg = &self.rangs[rr];
                         let mut q = kk;
-                        while q < rg.len() && seq.len() < SPAN_MAX && (q == kk || self.ecart(rg[q - 1], rg[q]) <= ECART_MOT * h) {
+                        while q < rg.len()
+                            && seq.len() < SPAN_MAX
+                            && (q == kk || self.ecart(rg[q - 1], rg[q]) <= ECART_MOT * h)
+                        {
                             seq.push(rg[q]);
                             q += 1;
                         }
@@ -692,10 +843,16 @@ impl<'a> Page<'a> {
             .iter()
             .filter(|l| {
                 let a = &self.j[l.jetons[0]];
-                let vertical = a.page == o.page && a.y0 <= o.y0 + 0.5 * self.h(i) && o.y0 - a.y0 <= BLOC_HAUTEUR;
+                let vertical = a.page == o.page
+                    && a.y0 <= o.y0 + 0.5 * self.h(i)
+                    && o.y0 - a.y0 <= BLOC_HAUTEUR;
                 // Un bloc ouvert par un libellé arabe s'étend vers la gauche, depuis son bord droit.
                 if self.vers_la_gauche(&l.jetons) {
-                    let x1 = l.jetons.iter().map(|&t| self.j[t].x1).fold(f64::MIN, f64::max);
+                    let x1 = l
+                        .jetons
+                        .iter()
+                        .map(|&t| self.j[t].x1)
+                        .fold(f64::MIN, f64::max);
                     vertical && o.x1 <= x1 + MARGE && o.x1 >= x1 - BLOC_LARGEUR
                 } else {
                     vertical && o.x0 >= a.x0 - MARGE && o.x0 <= a.x0 + BLOC_LARGEUR
@@ -703,7 +860,9 @@ impl<'a> Page<'a> {
             })
             .max_by(|a, b| {
                 let (ja, jb) = (&self.j[a.jetons[0]], &self.j[b.jetons[0]]);
-                ja.y0.partial_cmp(&jb.y0).unwrap_or(std::cmp::Ordering::Equal)
+                ja.y0
+                    .partial_cmp(&jb.y0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
     }
 
@@ -761,11 +920,18 @@ impl<'a> Page<'a> {
         let (e, c) = (cles_de(&re), cles_de(&rc));
         let seuls_e: BTreeSet<&String> = e.iter().filter(|k| !c.contains(*k)).collect();
         let seuls_c: BTreeSet<&String> = c.iter().filter(|k| !e.contains(*k)).collect();
-        let pris: BTreeSet<usize> = a.iter().chain(b.iter()).flat_map(|o| o.jetons.iter().copied()).collect();
+        let pris: BTreeSet<usize> = a
+            .iter()
+            .chain(b.iter())
+            .flat_map(|o| o.jetons.iter().copied())
+            .collect();
         // L'écart d'un jeton à une occurrence : entre colonnes (doublé) et entre rangées.
         let ecart = |t: usize, o: &Occ| -> f64 {
             let j = &self.j[t];
-            let (x0, x1) = (self.j[o.jetons[0]].x0, self.j[*o.jetons.last().unwrap_or(&o.jetons[0])].x1);
+            let (x0, x1) = (
+                self.j[o.jetons[0]].x0,
+                self.j[*o.jetons.last().unwrap_or(&o.jetons[0])].x1,
+            );
             let (y0, y1) = (self.j[o.jetons[0]].y0, self.j[o.jetons[0]].y1);
             if j.page != self.j[o.jetons[0]].page {
                 return f64::MAX;
@@ -774,8 +940,14 @@ impl<'a> Page<'a> {
             let dy = (y0 - j.y1).max(j.y0 - y1).max(0.0);
             2.0 * dx + dy
         };
-        let plus_pres = |t: usize, occs: &[&Occ]| occs.iter().map(|o| ecart(t, o)).fold(f64::MAX, f64::min);
-        let (mut ea, mut ca, mut eb, mut cb) = (BTreeSet::new(), BTreeSet::new(), BTreeSet::new(), BTreeSet::new());
+        let plus_pres =
+            |t: usize, occs: &[&Occ]| occs.iter().map(|o| ecart(t, o)).fold(f64::MAX, f64::min);
+        let (mut ea, mut ca, mut eb, mut cb) = (
+            BTreeSet::new(),
+            BTreeSet::new(),
+            BTreeSet::new(),
+            BTreeSet::new(),
+        );
         for rang in &self.rangs {
             for (k, &t) in rang.iter().enumerate() {
                 if pris.contains(&t) {
@@ -789,7 +961,11 @@ impl<'a> Page<'a> {
                 let mut texte = String::new();
                 for &u in rang.iter().skip(k).take(3) {
                     texte.push_str(&mot(&self.j[u].texte));
-                    let (vers_e, vers_c) = if da < db { (&mut ea, &mut ca) } else { (&mut eb, &mut cb) };
+                    let (vers_e, vers_c) = if da < db {
+                        (&mut ea, &mut ca)
+                    } else {
+                        (&mut eb, &mut cb)
+                    };
                     if da == db {
                         break;
                     }
@@ -834,17 +1010,35 @@ impl<'a> Page<'a> {
     /// « ALGORIA FAÇTORY SARL ») : le nom ne se rend pas.
     fn nom_connu(&self, raison_sociale: &str, formes: &BTreeSet<String>) -> Option<Vec<usize>> {
         let jetons = self.chercher_nom(raison_sociale, formes)?;
-        let minuscules = |t: &str| -> String { t.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect() };
-        let fiche: Vec<&str> = raison_sociale.split_whitespace().filter(|m| !formes.contains(&mot(m))).collect();
-        let imprime: Vec<&str> = jetons.iter().map(|&t| self.j[t].texte.as_str()).filter(|m| !formes.contains(&mot(m))).collect();
+        let minuscules = |t: &str| -> String {
+            t.chars()
+                .filter(|c| c.is_alphanumeric())
+                .flat_map(char::to_lowercase)
+                .collect()
+        };
+        let fiche: Vec<&str> = raison_sociale
+            .split_whitespace()
+            .filter(|m| !formes.contains(&mot(m)))
+            .collect();
+        let imprime: Vec<&str> = jetons
+            .iter()
+            .map(|&t| self.j[t].texte.as_str())
+            .filter(|m| !formes.contains(&mot(m)))
+            .collect();
         let fidele = fiche.len() == imprime.len()
-            && fiche.iter().zip(&imprime).all(|(f, i)| minuscules(i) == minuscules(f) || minuscules(i) == mot(f));
+            && fiche
+                .iter()
+                .zip(&imprime)
+                .all(|(f, i)| minuscules(i) == minuscules(f) || minuscules(i) == mot(f));
         fidele.then_some(jetons)
     }
 
     fn chercher_nom(&self, raison_sociale: &str, formes: &BTreeSet<String>) -> Option<Vec<usize>> {
-        let cherches: Vec<String> =
-            raison_sociale.split_whitespace().map(mot).filter(|m| !m.is_empty() && !formes.contains(m)).collect();
+        let cherches: Vec<String> = raison_sociale
+            .split_whitespace()
+            .map(mot)
+            .filter(|m| !m.is_empty() && !formes.contains(m))
+            .collect();
         if cherches.is_empty() {
             return None;
         }
@@ -858,7 +1052,11 @@ impl<'a> Page<'a> {
                 // bordé à gauche d'un mot (hors libellé suivi de « : ») : ce n'est pas ce nom
                 if s > 0 {
                     let p = rang[s - 1];
-                    if !mots[p].is_empty() && !formes.contains(&mots[p]) && !self.j[p].texte.trim_end().ends_with(':') && adjacent(p, rang[s]) {
+                    if !mots[p].is_empty()
+                        && !formes.contains(&mots[p])
+                        && !self.j[p].texte.trim_end().ends_with(':')
+                        && adjacent(p, rang[s])
+                    {
                         continue;
                     }
                 }
@@ -871,7 +1069,10 @@ impl<'a> Page<'a> {
                     pris.push(rang[k]);
                     k += 1;
                 }
-                while k < rang.len() && formes.contains(&mots[rang[k]]) && adjacent(rang[k - 1], rang[k]) {
+                while k < rang.len()
+                    && formes.contains(&mots[rang[k]])
+                    && adjacent(rang[k - 1], rang[k])
+                {
                     pris.push(rang[k]);
                     k += 1;
                 }
@@ -886,7 +1087,12 @@ impl<'a> Page<'a> {
 
     /// Le nom d'une partie inconnue : le texte ancré par le libellé de son bloc, sinon
     /// la rangée la plus proche au-dessus de son matricule qui porte une forme juridique.
-    fn nom_inconnu(&self, occs: &[&Occ], libelle: Option<&Libelle>, formes: &BTreeSet<String>) -> Option<Vec<usize>> {
+    fn nom_inconnu(
+        &self,
+        occs: &[&Occ],
+        libelle: Option<&Libelle>,
+        formes: &BTreeSet<String>,
+    ) -> Option<Vec<usize>> {
         if let Some(l) = libelle.filter(|l| self.vers_la_gauche(&l.jetons)) {
             // Le nom se lit à GAUCHE d'un libellé arabe, sur sa rangée ; sinon juste dessous,
             // aligné sur son bord droit.
@@ -894,10 +1100,17 @@ impl<'a> Page<'a> {
             let (r, k) = self.ou[debut];
             let h = self.h(debut);
             let avant = self.mots_avant(r, k);
-            if avant.last().is_some_and(|&a| self.ecart(a, debut) <= ECART_VALEUR * h) {
+            if avant
+                .last()
+                .is_some_and(|&a| self.ecart(a, debut) <= ECART_VALEUR * h)
+            {
                 return Some(avant);
             }
-            let x1 = l.jetons.iter().map(|&t| self.j[t].x1).fold(f64::MIN, f64::max);
+            let x1 = l
+                .jetons
+                .iter()
+                .map(|&t| self.j[t].x1)
+                .fold(f64::MIN, f64::max);
             let a = &self.j[debut];
             let dessous = self.rangs.iter().enumerate().skip(r + 1).find(|(_, rg)| {
                 let b = &self.j[rg[0]];
@@ -905,7 +1118,9 @@ impl<'a> Page<'a> {
             });
             if let Some((rr, rg)) = dessous {
                 if self.j[rg[0]].y0 - a.y1 <= DESSUS * h {
-                    if let Some(k0) = rg.iter().rposition(|&t| self.j[t].x1 <= x1 + MARGE && self.j[t].x1 >= x1 - BLOC_LARGEUR) {
+                    if let Some(k0) = rg.iter().rposition(|&t| {
+                        self.j[t].x1 <= x1 + MARGE && self.j[t].x1 >= x1 - BLOC_LARGEUR
+                    }) {
                         let m = self.mots_avant(rr, k0 + 1);
                         if !m.is_empty() {
                             return Some(m);
@@ -920,7 +1135,10 @@ impl<'a> Page<'a> {
             let (r, k) = self.ou[fin];
             let h = self.h(fin);
             let apres = self.mots_depuis(r, k + 1);
-            if apres.first().is_some_and(|&a| self.ecart(fin, a) <= ECART_VALEUR * h) {
+            if apres
+                .first()
+                .is_some_and(|&a| self.ecart(fin, a) <= ECART_VALEUR * h)
+            {
                 return Some(apres);
             }
             let a = &self.j[l.jetons[0]];
@@ -930,7 +1148,9 @@ impl<'a> Page<'a> {
             });
             if let Some((rr, rg)) = dessous {
                 if self.j[rg[0]].y0 - a.y1 <= DESSUS * h {
-                    if let Some(k0) = rg.iter().position(|&t| self.j[t].x0 >= a.x0 - MARGE && self.j[t].x0 <= a.x0 + BLOC_LARGEUR) {
+                    if let Some(k0) = rg.iter().position(|&t| {
+                        self.j[t].x0 >= a.x0 - MARGE && self.j[t].x0 <= a.x0 + BLOC_LARGEUR
+                    }) {
                         let m = self.mots_depuis(rr, k0);
                         if !m.is_empty() {
                             return Some(m);
@@ -969,7 +1189,10 @@ impl<'a> Page<'a> {
                     let hn = self.h(rang[k]);
                     while debut > 0 {
                         let t = rang[debut - 1];
-                        if self.ponct(t) || formes.contains(&mot(&self.j[t].texte)) || self.ecart(t, droite) > ECART_MOT * hn {
+                        if self.ponct(t)
+                            || formes.contains(&mot(&self.j[t].texte))
+                            || self.ecart(t, droite) > ECART_MOT * hn
+                        {
                             break;
                         }
                         debut -= 1;
@@ -979,7 +1202,8 @@ impl<'a> Page<'a> {
                         continue;
                     }
                     let (x0, x1) = (self.j[rang[debut]].x0, self.j[rang[k]].x1);
-                    if x1 < jo.x0 - BLOC_LARGEUR || x0 > self.j[*o.jetons.last()?].x1 + BLOC_LARGEUR {
+                    if x1 < jo.x0 - BLOC_LARGEUR || x0 > self.j[*o.jetons.last()?].x1 + BLOC_LARGEUR
+                    {
                         continue;
                     }
                     let mut pris: Vec<usize> = rang[debut..g].to_vec();
@@ -1009,7 +1233,12 @@ impl Camps {
         let de = |champs: &[usize]| -> BTreeSet<String> {
             champs
                 .iter()
-                .flat_map(|&c| grille.champs[c].reperes_fr.iter().chain(grille.champs[c].reperes_ar.iter()))
+                .flat_map(|&c| {
+                    grille.champs[c]
+                        .reperes_fr
+                        .iter()
+                        .chain(grille.champs[c].reperes_ar.iter())
+                })
                 .map(|r| cle(&normaliser(r)))
                 .filter(|r| !r.is_empty())
                 .collect()
@@ -1028,7 +1257,10 @@ impl Camps {
             Camp::Client => &self.nom_client,
             Camp::Emetteur => &self.nom_emetteur,
         };
-        self.decide(camp, cle) && noms.iter().any(|n| cle.contains(n.as_str()) && self.decide(camp, n))
+        self.decide(camp, cle)
+            && noms
+                .iter()
+                .any(|n| cle.contains(n.as_str()) && self.decide(camp, n))
     }
 
     fn decide(&self, camp: Camp, cle: &str) -> bool {
@@ -1049,16 +1281,29 @@ pub struct Resultat {
 }
 
 fn valeur(page: &Page, jetons: &[usize], v: String, statut: &str) -> Valeur {
-    Valeur { valeur: v, refs: page.cite(jetons), statut: statut.into() }
+    Valeur {
+        valeur: v,
+        refs: page.cite(jetons),
+        statut: statut.into(),
+    }
 }
 
 fn champ_de(v: &Valeur) -> ChampSortie {
-    ChampSortie { valeur: Some(v.valeur.clone()), refs: v.refs.clone(), statut: v.statut.clone(), instances: None }
+    ChampSortie {
+        valeur: Some(v.valeur.clone()),
+        refs: v.refs.clone(),
+        statut: v.statut.clone(),
+        instances: None,
+    }
 }
 
 /// L'anneau 2, sur la pièce entière. Les champs d'en-tête de `champs` sont remplacés
 /// par ce qu'il établit ; aucun autre n'est touché.
-pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) -> Resultat {
+pub fn prouver(
+    op: &OpParties,
+    entree: &Entree,
+    champs: &mut BTreeMap<String, ChampSortie>,
+) -> Resultat {
     let grille = &entree.grille;
     let page = Page::new(&entree.jetons, grille);
     let mut lus = Vec::new();
@@ -1069,19 +1314,43 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
     }
 
     let Some(connus) = entree.connus.as_ref() else {
-        return Resultat { parties: None, statut: "non_evaluable", lus };
+        return Resultat {
+            parties: None,
+            statut: "non_evaluable",
+            lus,
+        };
     };
     let Some(dossier) = connus.dossier.as_ref() else {
-        return Resultat { parties: None, statut: "non_evaluable", lus };
+        return Resultat {
+            parties: None,
+            statut: "non_evaluable",
+            lus,
+        };
     };
-    let code_format = grille.champs[op.emetteur].format_code.clone().unwrap_or_default();
+    let code_format = grille.champs[op.emetteur]
+        .format_code
+        .clone()
+        .unwrap_or_default();
     let Some(motif) = entree.pack.formats.get(&code_format) else {
-        return Resultat { parties: None, statut: "non_evaluable", lus };
+        return Resultat {
+            parties: None,
+            statut: "non_evaluable",
+            lus,
+        };
     };
     let Ok(re) = Regex::new(&format!("(?:{motif})")) else {
-        return Resultat { parties: None, statut: "non_evaluable", lus };
+        return Resultat {
+            parties: None,
+            statut: "non_evaluable",
+            lus,
+        };
     };
-    let formes: BTreeSet<String> = connus.formes_juridiques.iter().map(|f| mot(f)).filter(|f| !f.is_empty()).collect();
+    let formes: BTreeSet<String> = connus
+        .formes_juridiques
+        .iter()
+        .map(|f| mot(f))
+        .filter(|f| !f.is_empty())
+        .collect();
     let camps = Camps::new(grille, op);
     let libelles = page.libelles(op, &camps);
 
@@ -1102,12 +1371,19 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         }
         page.bloc(o.jetons[0], &libelles).map(|l| (l.camp, Some(l)))
     };
-    let ancre = |v: &str, camp: Camp| par_valeur[v].iter().any(|o| camp_de(o).is_some_and(|(c, _)| c == camp));
+    let ancre = |v: &str, camp: Camp| {
+        par_valeur[v]
+            .iter()
+            .any(|o| camp_de(o).is_some_and(|(c, _)| c == camp))
+    };
     let haut = |v: &str| {
         par_valeur[v]
             .iter()
             .map(|o| page.haut(&o.jetons))
-            .min_by(|a, b| a.0.cmp(&b.0).then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)))
+            .min_by(|a, b| {
+                a.0.cmp(&b.0)
+                    .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            })
             .expect("valeur lue")
     };
     let au_dessus = |a: &str, b: &str| {
@@ -1141,21 +1417,36 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
     valeurs.push(d.as_str());
     valeurs.sort_unstable();
     valeurs.dedup();
-    if valeurs.iter().enumerate().any(|(i, a)| valeurs[i + 1..].iter().any(|b| a_un_chiffre_pres(a, b))) {
+    if valeurs
+        .iter()
+        .enumerate()
+        .any(|(i, a)| valeurs[i + 1..].iter().any(|b| a_un_chiffre_pres(a, b)))
+    {
         return Resultat {
-            parties: Some(vide("signale", "deux lectures d'un matricule se contredisent")),
+            parties: Some(vide(
+                "signale",
+                "deux lectures d'un matricule se contredisent",
+            )),
             statut: "indeterminee",
             lus,
         };
     }
     let d_lu = par_valeur.contains_key(&d);
-    let autres: Vec<&str> = par_valeur.keys().map(|k| k.as_str()).filter(|k| *k != d).collect();
+    let autres: Vec<&str> = par_valeur
+        .keys()
+        .map(|k| k.as_str())
+        .filter(|k| *k != d)
+        .collect();
     // Sans déclaration, le sens se lit sur la pièce : il faut le matricule du dossier et
     // un autre. Un sens déclaré rend ce qui est lu, même partiel : le nom du dossier ne
     // dépend d'aucun matricule.
     if declare_par.is_none() {
         if par_valeur.is_empty() {
-            return Resultat { parties: Some(vide("absent", "aucun matricule au format")), statut: "non_evaluable", lus };
+            return Resultat {
+                parties: Some(vide("absent", "aucun matricule au format")),
+                statut: "non_evaluable",
+                lus,
+            };
         }
         if !d_lu {
             return Resultat {
@@ -1175,7 +1466,10 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
 
     // Les indices, tous concordants ou rien.
     let mut votes: Vec<Sens> = Vec::new();
-    let (cd, ed) = (d_lu && ancre(&d, Camp::Client), d_lu && ancre(&d, Camp::Emetteur));
+    let (cd, ed) = (
+        d_lu && ancre(&d, Camp::Client),
+        d_lu && ancre(&d, Camp::Emetteur),
+    );
     if cd {
         votes.push(Sens::Achat);
     }
@@ -1197,7 +1491,8 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         // donne à UN rôle seul (registre de commerce, RIB, capital, téléphone de l'émetteur…).
         // La partie dont le bloc porte la grappe de l'émetteur, quand l'autre n'en porte
         // aucune, est l'émetteur — sans « Client : » ni « Fournisseur : » imprimés.
-        let ((eo, co), (edo, cdo)) = page.grappes(&par_valeur[o], &par_valeur[d.as_str()], grille, op, &formes);
+        let ((eo, co), (edo, cdo)) =
+            page.grappes(&par_valeur[o], &par_valeur[d.as_str()], grille, op, &formes);
         if eo > 0 && co == 0 && edo == 0 {
             votes.push(Sens::Achat);
         }
@@ -1240,33 +1535,69 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         };
         oppose.and_then(|camp| {
             let c: Vec<&str> = autres.iter().copied().filter(|o| ancre(o, camp)).collect();
-            if c.len() == 1 && !ancre(c[0], if camp == Camp::Client { Camp::Emetteur } else { Camp::Client }) {
-                votes.push(if camp == Camp::Emetteur { Sens::Achat } else { Sens::Vente });
+            if c.len() == 1
+                && !ancre(
+                    c[0],
+                    if camp == Camp::Client {
+                        Camp::Emetteur
+                    } else {
+                        Camp::Client
+                    },
+                )
+            {
+                votes.push(if camp == Camp::Emetteur {
+                    Sens::Achat
+                } else {
+                    Sens::Vente
+                });
                 Some(c[0])
             } else {
                 None
             }
         })
     };
-    let unanimes = votes.first().copied().filter(|&s| votes.iter().all(|v| *v == s));
+    let unanimes = votes
+        .first()
+        .copied()
+        .filter(|&s| votes.iter().all(|v| *v == s));
     // Le sens déclaré par la personne décide, sauf contre des indices UNANIMES : une
     // déclaration que la pièce dément se signale, elle ne se recopie pas. Sans
     // déclaration, les indices tous concordants, ou rien.
     let (sens, declare) = match (declare_par, unanimes, votes.is_empty(), contrepartie) {
         (Some(d), Some(u), _, _) if d != u => {
-            return Resultat { parties: Some(vide("signale", "le sens déclaré contredit la pièce")), statut: "echec", lus };
+            return Resultat {
+                parties: Some(vide("signale", "le sens déclaré contredit la pièce")),
+                statut: "echec",
+                lus,
+            };
         }
         (Some(d), _, _, _) => (d, true),
         (None, _, _, None) => {
-            let raison = if votes.is_empty() { "aucun indice de sens" } else { "indices de sens contradictoires" };
-            return Resultat { parties: Some(vide("signale", raison)), statut: "indeterminee", lus };
+            let raison = if votes.is_empty() {
+                "aucun indice de sens"
+            } else {
+                "indices de sens contradictoires"
+            };
+            return Resultat {
+                parties: Some(vide("signale", raison)),
+                statut: "indeterminee",
+                lus,
+            };
         }
         (None, Some(u), _, Some(_)) => (u, false),
         (None, None, true, Some(_)) => {
-            return Resultat { parties: Some(vide("signale", "aucun indice de sens")), statut: "indeterminee", lus };
+            return Resultat {
+                parties: Some(vide("signale", "aucun indice de sens")),
+                statut: "indeterminee",
+                lus,
+            };
         }
         (None, None, false, Some(_)) => {
-            return Resultat { parties: Some(vide("signale", "indices de sens contradictoires")), statut: "echec", lus };
+            return Resultat {
+                parties: Some(vide("signale", "indices de sens contradictoires")),
+                statut: "echec",
+                lus,
+            };
         }
     };
     let autre: Option<&str> = contrepartie;
@@ -1284,7 +1615,8 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
                 par_valeur[v].iter().min_by(|a, b| {
                     let (pa, ya, _) = page.haut(&a.jetons);
                     let (pb, yb, _) = page.haut(&b.jetons);
-                    pa.cmp(&pb).then(ya.partial_cmp(&yb).unwrap_or(std::cmp::Ordering::Equal))
+                    pa.cmp(&pb)
+                        .then(ya.partial_cmp(&yb).unwrap_or(std::cmp::Ordering::Equal))
                 })
             })
             .expect("valeur lue")
@@ -1295,7 +1627,12 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
     // couche de texte exacte, deux occurrences qui concordent, un tiers connu du dossier,
     // ou chaque caractère lu avec assurance ; sinon il est rendu à VÉRIFIER (dirigeant
     // 50/02 : « 0567321M » lu « 0557321M », une seule fois, sans confiance).
-    let connu = autre.is_some_and(|a| connus.tiers.iter().any(|t| norme_matricule(&t.matricule) == a));
+    let connu = autre.is_some_and(|a| {
+        connus
+            .tiers
+            .iter()
+            .any(|t| norme_matricule(&t.matricule) == a)
+    });
     let assure = |o: &Occ| {
         let seuil = entree.pack.confiance_du_caractere;
         o.jetons.iter().all(|&t| {
@@ -1303,21 +1640,38 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
             !j.incertain(&entree.pack) && seuil.is_some_and(|s| j.faible.is_some_and(|f| f >= s))
         })
     };
-    let mut cote_dossier = Cote { matricule: od.map(|o| valeur(&page, &o.jetons, d.clone(), "prouve")), nom: None };
+    let mut cote_dossier = Cote {
+        matricule: od.map(|o| valeur(&page, &o.jetons, d.clone(), "prouve")),
+        nom: None,
+    };
     let mut cote_autre = Cote {
         matricule: autre.zip(oa).map(|(a, o)| {
             let corrobore = entree.texte_exact || connu || par_valeur[a].len() >= 2 || assure(o);
-            valeur(&page, &o.jetons, a.to_string(), if corrobore { "prouve" } else { "signale" })
+            valeur(
+                &page,
+                &o.jetons,
+                a.to_string(),
+                if corrobore { "prouve" } else { "signale" },
+            )
         }),
         nom: None,
     };
 
     if let Some(rs) = dossier.raison_sociale.as_deref() {
-        cote_dossier.nom = page.nom_connu(rs, &formes).map(|j| valeur(&page, &j, page.texte(&j), "prouve"));
+        cote_dossier.nom = page
+            .nom_connu(rs, &formes)
+            .map(|j| valeur(&page, &j, page.texte(&j), "prouve"));
     }
-    let tiers = autre.and_then(|a| connus.tiers.iter().find(|t| norme_matricule(&t.matricule) == a));
+    let tiers = autre.and_then(|a| {
+        connus
+            .tiers
+            .iter()
+            .find(|t| norme_matricule(&t.matricule) == a)
+    });
     if let Some(rs) = tiers.and_then(|t| t.raison_sociale.as_deref()) {
-        cote_autre.nom = page.nom_connu(rs, &formes).map(|j| valeur(&page, &j, page.texte(&j), "prouve"));
+        cote_autre.nom = page
+            .nom_connu(rs, &formes)
+            .map(|j| valeur(&page, &j, page.texte(&j), "prouve"));
     }
     if let (None, Some(autre)) = (&cote_autre.nom, autre) {
         let occs_autre: Vec<&Occ> = {
@@ -1325,12 +1679,19 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
             v.sort_by(|a, b| {
                 let (pa, ya, _) = page.haut(&a.jetons);
                 let (pb, yb, _) = page.haut(&b.jetons);
-                pa.cmp(&pb).then(ya.partial_cmp(&yb).unwrap_or(std::cmp::Ordering::Equal))
+                pa.cmp(&pb)
+                    .then(ya.partial_cmp(&yb).unwrap_or(std::cmp::Ordering::Equal))
             });
             v
         };
-        let libelle = par_valeur[autre].iter().find_map(|o| camp_de(o).filter(|(c, _)| *c == camp_autre).and_then(|(_, l)| l));
-        cote_autre.nom = page.nom_inconnu(&occs_autre, libelle, &formes).map(|j| valeur(&page, &j, page.texte(&j), "conforme"));
+        let libelle = par_valeur[autre].iter().find_map(|o| {
+            camp_de(o)
+                .filter(|(c, _)| *c == camp_autre)
+                .and_then(|(_, l)| l)
+        });
+        cote_autre.nom = page
+            .nom_inconnu(&occs_autre, libelle, &formes)
+            .map(|j| valeur(&page, &j, page.texte(&j), "conforme"));
     }
 
     // Le nom de l'autre partie n'est JAMAIS celui du dossier : ni ses jetons, ni ses mots
@@ -1339,19 +1700,34 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
     // juridique la plus proche du matricule du fournisseur était celle du client.
     // Un nom qui ne départage pas les parties ne se rend pas.
     if let Some(n) = cote_autre.nom.as_ref() {
-        let sien = cote_dossier.nom.as_ref().is_some_and(|d| d.refs.iter().any(|r| n.refs.contains(r)));
-        let mots_de = |t: &str| -> Vec<String> { t.split_whitespace().map(mot).filter(|m| !m.is_empty() && !formes.contains(m)).collect() };
+        let sien = cote_dossier
+            .nom
+            .as_ref()
+            .is_some_and(|d| d.refs.iter().any(|r| n.refs.contains(r)));
+        let mots_de = |t: &str| -> Vec<String> {
+            t.split_whitespace()
+                .map(mot)
+                .filter(|m| !m.is_empty() && !formes.contains(m))
+                .collect()
+        };
         let meme = dossier.raison_sociale.as_deref().is_some_and(|rs| {
             let (a, b) = (mots_de(rs), mots_de(&n.valeur));
             !a.is_empty() && a == b
         });
         // Ni un identifiant : un nom qui cite les jetons d'un matricule lu n'est pas un nom.
         let identifiant = occs.iter().any(|o| {
-            o.jetons.iter().any(|&t| n.refs.iter().any(|r| r.page == page.j[t].page && r.ordinal == page.j[t].ordinal))
+            o.jetons.iter().any(|&t| {
+                n.refs
+                    .iter()
+                    .any(|r| r.page == page.j[t].page && r.ordinal == page.j[t].ordinal)
+            })
         });
         // Ni une étiquette : un « nom » fait du seul repère d'un champ de la grille (« M. »,
         // la civilité qui ANNONCE le client) n'est pas un nom (algoria-115, manuscrit).
-        let etiquette = page.reperes.iter().any(|(r, _)| !r.is_empty() && *r == cle(&normaliser(&n.valeur)));
+        let etiquette = page
+            .reperes
+            .iter()
+            .any(|(r, _)| !r.is_empty() && *r == cle(&normaliser(&n.valeur)));
         if sien || meme || identifiant || etiquette {
             cote_autre.nom = None;
         }
@@ -1373,34 +1749,58 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         }
     }
     let parties = PartiesSortie {
-        sens: Some(match sens {
-            Sens::Achat => "achat",
-            Sens::Vente => "vente",
-        }
-        .into()),
+        sens: Some(
+            match sens {
+                Sens::Achat => "achat",
+                Sens::Vente => "vente",
+            }
+            .into(),
+        ),
         statut: "prouve".into(),
         emetteur,
         client,
-        tiers: tiers.map(|t| TiersSortie { code: t.code.clone(), statut: "prouve".into() }),
+        tiers: tiers.map(|t| TiersSortie {
+            code: t.code.clone(),
+            statut: "prouve".into(),
+        }),
         declare,
         raison: None,
     };
-    Resultat { parties: Some(parties), statut: "verifiee", lus }
+    Resultat {
+        parties: Some(parties),
+        statut: "verifiee",
+        lus,
+    }
 }
 
 /// Les dates de chaque preuve `ordre` : candidates ancrées par leurs repères ; une
 /// seule valeur ancrée → `conforme`. L'échéance ≥ émission départage plusieurs
 /// candidates, et, quand la pièce ne porte que deux dates dont l'échéance ancrée,
 /// désigne l'autre comme émission si elle la précède.
-fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie>, lus: &mut Vec<(usize, String)>) {
-    let index = |nom: &str| grille.champs.iter().position(|c| c.code == nom.trim_end_matches('?'));
+fn dates(
+    page: &Page,
+    grille: &Grille,
+    champs: &mut BTreeMap<String, ChampSortie>,
+    lus: &mut Vec<(usize, String)>,
+) {
+    let index = |nom: &str| {
+        grille
+            .champs
+            .iter()
+            .position(|c| c.code == nom.trim_end_matches('?'))
+    };
     let paires: Vec<(usize, usize)> = grille
         .preuves
         .iter()
         .filter(|p| p.statut.as_deref() != Some("a_traduire"))
         .filter_map(|p| p.expression.as_ref())
         .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some("ordre"))
-        .filter_map(|e| Some((index(e.get("avant")?.as_str()?)?, index(e.get("apres")?.as_str()?)?)))
+        .filter_map(|e| {
+            Some((
+                index(e.get("avant")?.as_str()?)?,
+                index(e.get("apres")?.as_str()?)?,
+            ))
+        })
         .filter(|(a, b)| grille.champs[*a].genre == "date" && grille.champs[*b].genre == "date")
         .collect();
     if paires.is_empty() {
@@ -1413,16 +1813,30 @@ fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie
         .enumerate()
         .filter_map(|(i, j)| {
             let d = j.date.as_deref().filter(|d| iso_valide(d))?;
-            let prefixe: String = j.texte.chars().take_while(|c| !c.is_ascii_digit()).collect();
-            let champs = page.etiquette(i, &normaliser(&prefixe)).map(|e| e.champs).unwrap_or_default();
+            let prefixe: String = j
+                .texte
+                .chars()
+                .take_while(|c| !c.is_ascii_digit())
+                .collect();
+            let champs = page
+                .etiquette(i, &normaliser(&prefixe))
+                .map(|e| e.champs)
+                .unwrap_or_default();
             Some((i, d, champs))
         })
         .collect();
     let toutes: BTreeSet<&str> = lues.iter().map(|(_, d, _)| *d).collect();
     for (a, b) in paires {
-        let ancrees = |c: usize| -> BTreeSet<&str> { lues.iter().filter(|(_, _, ch)| ch.contains(&c)).map(|(_, d, _)| *d).collect() };
+        let ancrees = |c: usize| -> BTreeSet<&str> {
+            lues.iter()
+                .filter(|(_, _, ch)| ch.contains(&c))
+                .map(|(_, d, _)| *d)
+                .collect()
+        };
         let (ma, eb) = (ancrees(a), ancrees(b));
-        let unique = |s: BTreeSet<&str>| -> Option<String> { (s.len() == 1).then(|| s.into_iter().next().unwrap_or_default().to_string()) };
+        let unique = |s: BTreeSet<&str>| -> Option<String> {
+            (s.len() == 1).then(|| s.into_iter().next().unwrap_or_default().to_string())
+        };
         let mut va = unique(ma.clone());
         let mut vb = unique(eb.clone());
         if va.is_none() && ma.len() > 1 {
@@ -1437,11 +1851,17 @@ fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie
         }
         if va.is_none() && ma.is_empty() && toutes.len() == 2 {
             if let Some(e) = &vb {
-                let autre = toutes.iter().copied().find(|d| *d != e.as_str()).unwrap_or_default();
+                let autre = toutes
+                    .iter()
+                    .copied()
+                    .find(|d| *d != e.as_str())
+                    .unwrap_or_default();
                 let libres = lues
                     .iter()
                     .filter(|(_, d, _)| *d == autre)
-                    .all(|(_, _, ch)| !ch.contains(&b) && ch.iter().all(|c| grille.champs[*c].genre == "date"));
+                    .all(|(_, _, ch)| {
+                        !ch.contains(&b) && ch.iter().all(|c| grille.champs[*c].genre == "date")
+                    });
                 if libres && autre <= e.as_str() {
                     va = Some(autre.to_string());
                 }
@@ -1476,12 +1896,22 @@ fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie
                         .unwrap_or_default();
                     lus.push((c, v.clone()));
                     let plage: Vec<usize> = (i..=jusqua(page.j, i, page.j[i].date_fin)).collect();
-                    ChampSortie { valeur: Some(v), refs: page.cite(&plage), statut: "conforme".into(), instances: None }
+                    ChampSortie {
+                        valeur: Some(v),
+                        refs: page.cite(&plage),
+                        statut: "conforme".into(),
+                        instances: None,
+                    }
                 }
                 None => ChampSortie {
                     valeur: None,
                     refs: Vec::new(),
-                    statut: if candidates.is_empty() { "absent" } else { "signale" }.into(),
+                    statut: if candidates.is_empty() {
+                        "absent"
+                    } else {
+                        "signale"
+                    }
+                    .into(),
                     instances: None,
                 },
             };
@@ -1492,8 +1922,25 @@ fn dates(page: &Page, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie
 
 /// Le numéro : le jeton juste après son repère (à droite, ou dessous), qui porte au
 /// moins un chiffre, avec les morceaux qui lui sont collés. Une seule valeur → `conforme`.
-fn numero(page: &Page, n: usize, grille: &Grille, champs: &mut BTreeMap<String, ChampSortie>, lus: &mut Vec<(usize, String)>) {
-    let sortie = apres_repere(page, n, &Lecture { chiffre: true, colle_au_libelle: false, exclusif: false, motif: None, phrase: false, partie: false });
+fn numero(
+    page: &Page,
+    n: usize,
+    grille: &Grille,
+    champs: &mut BTreeMap<String, ChampSortie>,
+    lus: &mut Vec<(usize, String)>,
+) {
+    let sortie = apres_repere(
+        page,
+        n,
+        &Lecture {
+            chiffre: true,
+            colle_au_libelle: false,
+            exclusif: false,
+            motif: None,
+            phrase: false,
+            partie: false,
+        },
+    );
     if let Some(v) = &sortie.valeur {
         lus.push((n, v.clone()));
     }
@@ -1595,7 +2042,11 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
                 break;
             }
             let (a, b) = (rang[q - 1], rang[q]);
-            let suit = if l.chiffre { colle(a, b) } else { page.ecart(a, b) <= ECART_MOT * page.h(a) };
+            let suit = if l.chiffre {
+                colle(a, b)
+            } else {
+                page.ecart(a, b) <= ECART_MOT * page.h(a)
+            };
             let libelle = !l.chiffre && page.champs_de(&page.normes[b]).is_some();
             // un autre libellé commence : la valeur s'arrête
             if !suit || libelle {
@@ -1608,7 +2059,8 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
                 let code = {
                     let t = page.j[b].texte.trim();
                     t.chars().any(|c| c.is_ascii_digit())
-                        || (t.chars().all(|c| c.is_alphabetic()) && t.chars().all(|c| c.is_uppercase()))
+                        || (t.chars().all(|c| c.is_alphabetic())
+                            && t.chars().all(|c| c.is_uppercase()))
                 };
                 if touche && if l.chiffre { code } else { libelle && !separe } {
                     entier = false;
@@ -1634,7 +2086,11 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
         let v: String = if l.chiffre {
             std::iter::once(premier).chain(suite).collect()
         } else {
-            std::iter::once(premier).chain(suite).filter(|t| !t.is_empty()).collect::<Vec<_>>().join(" ")
+            std::iter::once(premier)
+                .chain(suite)
+                .filter(|t| !t.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ")
         };
         if v.is_empty() || (l.chiffre && !v.chars().any(|c| c.is_ascii_digit())) {
             continue;
@@ -1646,7 +2102,12 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
         e.1 |= debut == 0;
         e.2 &= entier;
     }
-    let rien = |statut: &str| ChampSortie { valeur: None, refs: Vec::new(), statut: statut.into(), instances: None };
+    let rien = |statut: &str| ChampSortie {
+        valeur: None,
+        refs: Vec::new(),
+        statut: statut.into(),
+        instances: None,
+    };
     match lus_n.len() {
         0 if partage => rien("signale"),
         0 => rien("absent"),
@@ -1664,8 +2125,17 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
             // Lue seulement derrière un libellé collé dans son jeton : l'OCR a pu coller autre
             // chose à la valeur (« N°DV-PX-2026-091111 », 50/48). Elle se dit, citée, et se
             // vérifie : signalée, jamais conforme. Un texte coupé aussi.
-            let statut = if detache && entier { "conforme" } else { "signale" };
-            ChampSortie { valeur: Some(v), refs: page.cite(&pris), statut: statut.into(), instances: None }
+            let statut = if detache && entier {
+                "conforme"
+            } else {
+                "signale"
+            };
+            ChampSortie {
+                valeur: Some(v),
+                refs: page.cite(&pris),
+                statut: statut.into(),
+                instances: None,
+            }
         }
         _ => rien("signale"),
     }
@@ -1678,7 +2148,9 @@ fn repere_imprime(page: &Page, n: usize) -> (Vec<Vec<usize>>, bool) {
     let mut out = Vec::new();
     let mut partage = false;
     for rang in &page.rangs {
-        let mot = |k: usize| !page.ponct(rang[k]) && !page.j[rang[k]].texte.chars().any(|c| c.is_ascii_digit());
+        let mot = |k: usize| {
+            !page.ponct(rang[k]) && !page.j[rang[k]].texte.chars().any(|c| c.is_ascii_digit())
+        };
         let lie = |a: usize, b: usize| page.ecart(rang[a], rang[b]) <= ECART_MOT * page.h(rang[a]);
         for s in 0..rang.len() {
             if !mot(s) {
@@ -1687,7 +2159,10 @@ fn repere_imprime(page: &Page, n: usize) -> (Vec<Vec<usize>>, bool) {
             if s > 0 && mot(s - 1) && lie(s - 1, s) {
                 // Au milieu d'une phrase, un jeton qui égale à lui seul un repère compte aussi
                 // (« Montant (USD) ») : sinon une devise imprimée entre parenthèses se perd.
-                if let Some(et) = page.champs_de(&page.normes[rang[s]]).filter(|et| et.champs.contains(&n)) {
+                if let Some(et) = page
+                    .champs_de(&page.normes[rang[s]])
+                    .filter(|et| et.champs.contains(&n))
+                {
                     if et.champs.len() > 1 {
                         partage = true;
                     } else {
@@ -1732,13 +2207,20 @@ fn liste_du_domaine(page: &Page, n: usize, ch: &crate::entree::Champ) -> ChampSo
     let formes: Vec<(&str, String)> = ch
         .valeurs
         .iter()
-        .flat_map(|v| v.formes.iter().map(move |f| (v.code.as_str(), f.as_str(), mot(f))))
+        .flat_map(|v| {
+            v.formes
+                .iter()
+                .map(move |f| (v.code.as_str(), f.as_str(), mot(f)))
+        })
         // Une forme qui perd son SYMBOLE (« US$ » → « US ») et devient un fragment de deux
         // lettres n'est plus elle-même : deux jetons « U | S » d'une adresse la lisaient, et
         // la devise de 22 pièces en dinars se taisait (banc sans IA du 4 novembre 2026).
         .filter(|(_, brute, f)| {
             !f.is_empty()
-                && (f.chars().count() >= 3 || brute.chars().all(|c| c.is_alphanumeric() || c == '.' || c.is_whitespace()))
+                && (f.chars().count() >= 3
+                    || brute
+                        .chars()
+                        .all(|c| c.is_alphanumeric() || c == '.' || c.is_whitespace()))
         })
         .map(|(code, _, f)| (code, f))
         .collect();
@@ -1761,19 +2243,35 @@ fn liste_du_domaine(page: &Page, n: usize, ch: &crate::entree::Champ) -> ChampSo
             // Une forme prise dans l'étiquette d'un AUTRE champ n'est pas une valeur : « Reçu
             // le » (le visa du client) ne dit pas que la pièce est un reçu.
             let dans_une_etiquette = |s: usize, e: usize| {
-                let autour = [(s.saturating_sub(2), e), (s.saturating_sub(1), e), (s, (e + 1).min(rang.len() - 1)), (s, (e + 2).min(rang.len() - 1))];
+                let autour = [
+                    (s.saturating_sub(2), e),
+                    (s.saturating_sub(1), e),
+                    (s, (e + 1).min(rang.len() - 1)),
+                    (s, (e + 2).min(rang.len() - 1)),
+                ];
                 autour.iter().any(|&(a, b)| {
-                    (a, b) != (s, e) && page.libelle_de(&rang[a..=b]).is_some_and(|et| !et.champs.contains(&n))
+                    (a, b) != (s, e)
+                        && page
+                            .libelle_de(&rang[a..=b])
+                            .is_some_and(|et| !et.champs.contains(&n))
                 })
             };
             // … sauf si la forme est elle-même un repère du champ (« FACTURE » dans « FACTURE N° »).
-            let repere_du_champ = |s: usize, e: usize| page.libelle_de(&rang[s..=e]).is_some_and(|et| et.champs.contains(&n));
-            let meilleur = meilleur.filter(|&(_, e)| repere_du_champ(s, e) || !dans_une_etiquette(s, e));
+            let repere_du_champ = |s: usize, e: usize| {
+                page.libelle_de(&rang[s..=e])
+                    .is_some_and(|et| et.champs.contains(&n))
+            };
+            let meilleur =
+                meilleur.filter(|&(_, e)| repere_du_champ(s, e) || !dans_une_etiquette(s, e));
             match meilleur {
                 Some((code, e)) => {
                     let jetons = rang[s..=e].to_vec();
-                    let ancre = page.etiquette(jetons[0], "").is_some_and(|et| et.champs.contains(&n))
-                        || page.etiquette(jetons[jetons.len() - 1], "").is_some_and(|et| et.champs.contains(&n));
+                    let ancre = page
+                        .etiquette(jetons[0], "")
+                        .is_some_and(|et| et.champs.contains(&n))
+                        || page
+                            .etiquette(jetons[jetons.len() - 1], "")
+                            .is_some_and(|et| et.champs.contains(&n));
                     vus.push((code, jetons, ancre));
                     s = e + 1;
                 }
@@ -1795,23 +2293,49 @@ fn liste_du_domaine(page: &Page, n: usize, ch: &crate::entree::Champ) -> ChampSo
         }
     }
     let ancres: Vec<&(&str, Vec<usize>, bool)> = vus.iter().filter(|v| v.2).collect();
-    let retenus: Vec<&(&str, Vec<usize>, bool)> = if ancres.is_empty() { vus.iter().collect() } else { ancres };
+    let retenus: Vec<&(&str, Vec<usize>, bool)> = if ancres.is_empty() {
+        vus.iter().collect()
+    } else {
+        ancres
+    };
     let mut codes: Vec<&str> = retenus.iter().map(|v| v.0).collect();
     codes.sort();
     codes.dedup();
     match codes.as_slice() {
-        [] => ChampSortie { valeur: None, refs: Vec::new(), statut: "absent".into(), instances: None },
+        [] => ChampSortie {
+            valeur: None,
+            refs: Vec::new(),
+            statut: "absent".into(),
+            instances: None,
+        },
         [code] => {
             let v = retenus[0];
-            ChampSortie { valeur: Some((*code).to_string()), refs: page.cite(&v.1), statut: "conforme".into(), instances: None }
+            ChampSortie {
+                valeur: Some((*code).to_string()),
+                refs: page.cite(&v.1),
+                statut: "conforme".into(),
+                instances: None,
+            }
         }
-        _ => ChampSortie { valeur: None, refs: Vec::new(), statut: "signale".into(), instances: None },
+        _ => ChampSortie {
+            valeur: None,
+            refs: Vec::new(),
+            statut: "signale".into(),
+            instances: None,
+        },
     }
 }
 
 /// Les familles d'experts que l'anneau 3 lit (`ref.experts`) : celles dont la valeur suit
 /// son repère. Le montant est au centre, la date et les parties à l'anneau 2.
-const FAMILLES_NOMMEES: [&str; 6] = ["reference", "identifiant", "libelle", "nombre", "taux", "presence"];
+const FAMILLES_NOMMEES: [&str; 6] = [
+    "reference",
+    "identifiant",
+    "libelle",
+    "nombre",
+    "taux",
+    "presence",
+];
 
 /// L'anneau 3 : les champs que nulle preuve ne lit, chacun par l'expert de sa famille,
 /// piloté par ses seuls repères (et son format, s'il en nomme un). Il ne remplace rien : un
@@ -1824,15 +2348,28 @@ const FAMILLES_NOMMEES: [&str; 6] = ["reference", "identifiant", "libelle", "nom
 /// texte : son repère imprimé la SIGNALE, à vérifier sur la pièce.
 pub fn nommes(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
     let grille = &entree.grille;
-    let index = |nom: &str| grille.champs.iter().position(|c| c.code == nom.trim_end_matches('?').trim());
+    let index = |nom: &str| {
+        grille
+            .champs
+            .iter()
+            .position(|c| c.code == nom.trim_end_matches('?').trim())
+    };
     let mut cellules: BTreeSet<&str> = BTreeSet::new();
     let mut lettres: BTreeSet<usize> = BTreeSet::new();
-    for p in grille.preuves.iter().filter(|p| p.statut.as_deref() != Some("a_traduire")) {
-        let Some(e) = p.expression.as_ref().and_then(|e| e.as_object()) else { continue };
+    for p in grille
+        .preuves
+        .iter()
+        .filter(|p| p.statut.as_deref() != Some("a_traduire"))
+    {
+        let Some(e) = p.expression.as_ref().and_then(|e| e.as_object()) else {
+            continue;
+        };
         match e.get("op").and_then(|o| o.as_str()) {
             Some(crate::lignes::OP) => {
                 // Les cellules d'une ligne d'article (pas les totaux qui ferment le tableau).
-                let Ok(op) = crate::lignes::lire_op(grille, &Value::Object(e.clone())) else { continue };
+                let Ok(op) = crate::lignes::lire_op(grille, &Value::Object(e.clone())) else {
+                    continue;
+                };
                 for c in op.champs_lignes.iter().filter_map(|n| index(n)) {
                     if let Some(parcelle) = grille.champs[c].parcelle.as_deref() {
                         cellules.insert(parcelle);
@@ -1859,26 +2396,51 @@ pub fn nommes(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
         {
             continue;
         }
-        let motif = ch.format_code.as_ref().and_then(|f| entree.pack.formats.get(f));
+        let motif = ch
+            .format_code
+            .as_ref()
+            .and_then(|f| entree.pack.formats.get(f));
         if ch.expert.as_deref() == Some("identifiant") && motif.is_some() {
             continue;
         }
-        let Ok(motif) = motif.map(|m| Regex::new(&format!("^(?:{m})$"))).transpose() else { continue };
+        let Ok(motif) = motif.map(|m| Regex::new(&format!("^(?:{m})$"))).transpose() else {
+            continue;
+        };
         let sortie = match ch.genre.as_str() {
             // Le champ qui attend une MARQUE (un cachet) la lit, vue sans modèle, quand il est
             // le seul de la grille à l'attendre : un cachet ne dit pas de qui il est quand deux
             // champs l'attendent. La marque n'est pas un jeton : rien n'est cité.
-            "booleen" if ch.marque.as_ref().is_some_and(|m| {
-                entree.marques.iter().any(|x| &x.genre == m)
-                    && grille.champs.iter().filter(|c| c.marque.as_ref() == Some(m)).count() == 1
-            }) =>
+            "booleen"
+                if ch.marque.as_ref().is_some_and(|m| {
+                    entree.marques.iter().any(|x| &x.genre == m)
+                        && grille
+                            .champs
+                            .iter()
+                            .filter(|c| c.marque.as_ref() == Some(m))
+                            .count()
+                            == 1
+                }) =>
             {
-                ChampSortie { valeur: Some("true".into()), refs: Vec::new(), statut: "conforme".into(), instances: None }
+                ChampSortie {
+                    valeur: Some("true".into()),
+                    refs: Vec::new(),
+                    statut: "conforme".into(),
+                    instances: None,
+                }
             }
             "booleen" => {
                 let (vus, partage) = repere_imprime(&page, n);
-                let statut = if vus.is_empty() && !partage { "absent" } else { "signale" };
-                ChampSortie { valeur: None, refs: Vec::new(), statut: statut.into(), instances: None }
+                let statut = if vus.is_empty() && !partage {
+                    "absent"
+                } else {
+                    "signale"
+                };
+                ChampSortie {
+                    valeur: None,
+                    refs: Vec::new(),
+                    statut: statut.into(),
+                    instances: None,
+                }
             }
             "liste" if !ch.valeurs.is_empty() => liste_du_domaine(&page, n, ch),
             // Une liste sans domaine ne se lit pas : ses repères mêlent étiquettes (« Statut »,
@@ -1887,8 +2449,17 @@ pub fn nommes(entree: &Entree, champs: &mut BTreeMap<String, ChampSortie>) {
             // son domaine (`ref.concepts.domaine`) ; il ne dit, d'ici là, que l'étiquette vue.
             "liste" => {
                 let (vus, partage) = repere_imprime(&page, n);
-                let statut = if vus.is_empty() && !partage { "absent" } else { "signale" };
-                ChampSortie { valeur: None, refs: Vec::new(), statut: statut.into(), instances: None }
+                let statut = if vus.is_empty() && !partage {
+                    "absent"
+                } else {
+                    "signale"
+                };
+                ChampSortie {
+                    valeur: None,
+                    refs: Vec::new(),
+                    statut: statut.into(),
+                    instances: None,
+                }
             }
             genre => {
                 let chiffre = matches!(genre, "identifiant" | "nombre" | "taux");

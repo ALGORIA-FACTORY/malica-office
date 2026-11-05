@@ -128,9 +128,15 @@ impl Jeton {
     /// confiance du texte, ou un caractère du mot lu sous la confiance du caractère.
     pub fn incertain(&self, pack: &Pack) -> bool {
         self.douteux
-            || pack.confiance_du_texte.is_some_and(|s| self.confiance.is_some_and(|c| c < s))
-            || pack.confiance_du_caractere.is_some_and(|s| self.faible.is_some_and(|f| f < s))
-            || pack.manque_du_caractere.is_some_and(|s| s > 0.0 && self.manque.is_some_and(|m| m > s))
+            || pack
+                .confiance_du_texte
+                .is_some_and(|s| self.confiance.is_some_and(|c| c < s))
+            || pack
+                .confiance_du_caractere
+                .is_some_and(|s| self.faible.is_some_and(|f| f < s))
+            || pack
+                .manque_du_caractere
+                .is_some_and(|s| s > 0.0 && self.manque.is_some_and(|m| m > s))
     }
 }
 

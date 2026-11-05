@@ -9,7 +9,17 @@ use serde_json::{json, Value};
 use std::time::Instant;
 
 /// Jeton compact : [page, ordinal, texte, x0, y0, x1, y1, [[v, forte]…], date].
-pub type JetonCompact = (u32, u32, String, f64, f64, f64, f64, Vec<(i64, u8)>, Option<String>);
+pub type JetonCompact = (
+    u32,
+    u32,
+    String,
+    f64,
+    f64,
+    f64,
+    f64,
+    Vec<(i64, u8)>,
+    Option<String>,
+);
 
 #[derive(Deserialize)]
 pub struct Piece<V> {
@@ -19,7 +29,10 @@ pub struct Piece<V> {
 }
 
 pub fn jeton(j: &JetonCompact) -> Value {
-    let ms: Vec<Value> = j.7.iter().map(|(v, f)| json!({"v": v, "forte": *f == 1})).collect();
+    let ms: Vec<Value> =
+        j.7.iter()
+            .map(|(v, f)| json!({"v": v, "forte": *f == 1}))
+            .collect();
     json!({"page": j.0, "ordinal": j.1, "texte": j.2, "x0": j.3, "y0": j.4, "x1": j.5, "y1": j.6,
            "montants": ms, "date": j.8})
 }
@@ -60,7 +73,12 @@ pub fn par_variante(jetons: &[Value], grille: &Value, pack: &Value) -> Vec<(Stri
 }
 
 /// Les variantes, avec les `connus` de l'entrée, et le temps passé dans le moteur seul (µs).
-pub fn par_variante_avec(jetons: &[Value], grille: &Value, pack: &Value, connus: Option<&Value>) -> (Vec<(String, Value)>, u128) {
+pub fn par_variante_avec(
+    jetons: &[Value],
+    grille: &Value,
+    pack: &Value,
+    connus: Option<&Value>,
+) -> (Vec<(String, Value)>, u128) {
     par_variante_selon(jetons, grille, pack, connus, false)
 }
 
@@ -75,7 +93,10 @@ pub fn par_variante_selon(
 ) -> (Vec<(String, Value)>, u128) {
     let mut moteur = 0;
     let preuves = grille["preuves"].as_array().unwrap();
-    let mut noms: Vec<String> = preuves.iter().filter_map(|p| p["variante"].as_str().map(String::from)).collect();
+    let mut noms: Vec<String> = preuves
+        .iter()
+        .filter_map(|p| p["variante"].as_str().map(String::from))
+        .collect();
     noms.sort();
     noms.dedup();
     let jouees = noms
@@ -83,7 +104,11 @@ pub fn par_variante_selon(
         .map(|v| {
             let mut g = grille.clone();
             g["preuves"] = Value::Array(
-                preuves.iter().filter(|p| p["variante"].is_null() || p["variante"] == v.as_str()).cloned().collect(),
+                preuves
+                    .iter()
+                    .filter(|p| p["variante"].is_null() || p["variante"] == v.as_str())
+                    .cloned()
+                    .collect(),
             );
             let mut e = json!({"jetons": jetons, "grille": g, "pack": pack});
             if let Some(c) = connus {
@@ -105,19 +130,35 @@ pub fn par_variante_selon(
 /// La combinaison des variantes, comme l'adaptateur : prouvée si toutes celles qui
 /// prouvent s'accordent sur HT et TVA par taux, ambiguë sinon.
 pub fn la_piece(jouees: &[(String, Value)]) -> Value {
-    let prouvees: Vec<&Value> = jouees.iter().map(|(_, o)| o).filter(|o| o["issue"] == "prouvee").collect();
+    let prouvees: Vec<&Value> = jouees
+        .iter()
+        .map(|(_, o)| o)
+        .filter(|o| o["issue"] == "prouvee")
+        .collect();
     if prouvees.is_empty() {
-        return jouees.iter().map(|(_, o)| o).find(|o| o["issue"] == "ambigue").unwrap_or(&jouees[0].1).clone();
+        return jouees
+            .iter()
+            .map(|(_, o)| o)
+            .find(|o| o["issue"] == "ambigue")
+            .unwrap_or(&jouees[0].1)
+            .clone();
     }
     let empreinte = |o: &Value| {
         let tva: Vec<(Value, Value)> = o["champs"]["montant_tva_par_taux"]["instances"]
             .as_array()
-            .map(|a| a.iter().map(|i| (i["taux"].clone(), i["valeur"].clone())).collect())
+            .map(|a| {
+                a.iter()
+                    .map(|i| (i["taux"].clone(), i["valeur"].clone()))
+                    .collect()
+            })
             .unwrap_or_default();
         (o["champs"]["total_ht"]["valeur"].clone(), tva)
     };
     let mut p = prouvees[0].clone();
-    if prouvees.iter().any(|o| empreinte(o) != empreinte(prouvees[0])) {
+    if prouvees
+        .iter()
+        .any(|o| empreinte(o) != empreinte(prouvees[0]))
+    {
         p["issue"] = json!("ambigue");
     }
     p

@@ -510,6 +510,19 @@ le deviner, et une erreur échange fournisseur et client — donc l'écriture co
 **Effet mesuré** (412 pièces, sens déclaré) : 6 052 champs justes, 0 faux ; sens des
 parties 193 justes sur 348, aucune pièce échangée.
 
+### I-U — Le redressement à la pente locale d'une page gauchie
+
+**Problème.** Une photo de page courbée n'a pas une pente, mais une pente qui varie du haut
+en bas. Une seule pente estimée (ou nulle, faute d'accord) coupe les rangées.
+
+**Ce qui est nouveau.** Chaque jeton se redresse à la pente que votent les paires de jetons
+voisines en hauteur (fenêtre paramétrée), retenue par le même pic d'accord que la pente de
+la page ; la pente de la page n'est qu'un repli. Aucune transformation de l'image, aucun
+modèle.
+
+**Effet mesuré** (412 pièces, sens déclaré) : 6 495 champs justes contre 6 410, 0 faux,
+0 inventé.
+
 ### I-K — La lecture en deux temps : le tableau d'abord, rien de sauté
 
 **Problème.** La preuve a besoin du tableau et des totaux. Les longues mentions servent à

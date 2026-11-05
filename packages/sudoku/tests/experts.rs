@@ -60,7 +60,10 @@ fn les_lettres_qui_valent_le_total_le_prouvent() {
     assert_eq!(o["issue"], "prouvee", "{o}");
     assert_eq!(o["preuves"]["L"], "verifiee");
     assert_eq!(o["champs"]["en_lettres"]["statut"], "prouve");
-    assert_eq!(o["champs"]["en_lettres"]["refs"], json!([{"page": 1, "ordinal": 6}]));
+    assert_eq!(
+        o["champs"]["en_lettres"]["refs"],
+        json!([{"page": 1, "ordinal": 6}])
+    );
 }
 
 #[test]
@@ -130,7 +133,13 @@ fn l_anneau_3_lit_derriere_le_repere_et_signale_le_libelle_colle() {
 #[test]
 fn deux_matricules_au_meme_format_ne_s_attribuent_pas_sans_l_anneau_2() {
     let mut j = facture(1, None);
-    j.push(jeton(7, "Matricule fiscal : 1876543W/A/M/000", 0.05, 0.10, &[]));
+    j.push(jeton(
+        7,
+        "Matricule fiscal : 1876543W/A/M/000",
+        0.05,
+        0.10,
+        &[],
+    ));
     let o = resoudre(j, grille(), pack_essai());
     // le seul matricule lu peut être celui du client : il n'est l'émetteur de personne
     assert_eq!(o["champs"]["mf_emetteur"]["statut"], "signale", "{o}");

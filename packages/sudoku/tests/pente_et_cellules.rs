@@ -11,17 +11,30 @@
 use serde_json::Value;
 
 fn lues(id: &str) -> (Vec<Option<String>>, Vec<String>) {
-    let cas: Vec<Value> = serde_json::from_str(include_str!("donnees/pente_et_cellules.json")).expect("jeu lisible");
-    let c = cas.into_iter().find(|c| c["id"] == id).expect("cas présent");
-    let s: Value = serde_json::from_str(&malica_sudoku::solve(&c["entree"].to_string())).expect("sortie lisible");
-    assert_eq!(s["lignes"]["statut"], "prouve", "{id} : lignes non prouvées");
+    let cas: Vec<Value> =
+        serde_json::from_str(include_str!("donnees/pente_et_cellules.json")).expect("jeu lisible");
+    let c = cas
+        .into_iter()
+        .find(|c| c["id"] == id)
+        .expect("cas présent");
+    let s: Value = serde_json::from_str(&malica_sudoku::solve(&c["entree"].to_string()))
+        .expect("sortie lisible");
+    assert_eq!(
+        s["lignes"]["statut"], "prouve",
+        "{id} : lignes non prouvées"
+    );
     let lues = s["lignes"]["instances"]
         .as_array()
         .expect("lignes")
         .iter()
         .map(|l| l["designation"]["valeur"].as_str().map(str::to_string))
         .collect();
-    let vraies = c["designations"].as_array().expect("vérité").iter().map(|v| v.as_str().unwrap_or_default().to_string()).collect();
+    let vraies = c["designations"]
+        .as_array()
+        .expect("vérité")
+        .iter()
+        .map(|v| v.as_str().unwrap_or_default().to_string())
+        .collect();
     (lues, vraies)
 }
 

@@ -49,12 +49,18 @@ pub const MOTS_D_UN_LIBELLE: usize = 4;
 const REPERE_COURT: usize = 4;
 
 pub fn normaliser(s: &str) -> String {
-    let s: String = s.split_whitespace().map(sans_proclitique).collect::<Vec<_>>().join(" ");
+    let s: String = s
+        .split_whitespace()
+        .map(sans_proclitique)
+        .collect::<Vec<_>>()
+        .join(" ");
     s.chars()
         .flat_map(|c| c.to_lowercase())
         // Les signes qui ne changent pas le mot arabe : voyelles brèves, chadda, soukoun,
         // alif suscrit, tatwil. « المعرّف » et « المعرف » sont un même libellé.
-        .filter(|c| !c.is_whitespace() && !matches!(c, '\u{064B}'..='\u{065F}' | '\u{0670}' | '\u{0640}'))
+        .filter(|c| {
+            !c.is_whitespace() && !matches!(c, '\u{064B}'..='\u{065F}' | '\u{0670}' | '\u{0640}')
+        })
         .map(|c| match c {
             'é' | 'è' | 'ê' | 'ë' => 'e',
             'à' | 'â' | 'ä' => 'a',
@@ -118,22 +124,31 @@ impl<'a> Plan<'a> {
                 let hb = (b.y1 - b.y0).max(f64::EPSILON);
                 let recouvre_v = (a.y1.min(b.y1) - a.y0.max(b.y0)) / ha.min(hb);
                 // juste à gauche : même ligne (recouvrement vertical majoritaire), le plus proche
-                if recouvre_v > 0.5 && b.x1 <= a.x0 + 0.25 * ha && b.x0 < a.x0
-                    && meilleur_g.is_none_or(|(_, x)| b.x1 > x) {
-                        meilleur_g = Some((k, b.x1));
-                    }
+                if recouvre_v > 0.5
+                    && b.x1 <= a.x0 + 0.25 * ha
+                    && b.x0 < a.x0
+                    && meilleur_g.is_none_or(|(_, x)| b.x1 > x)
+                {
+                    meilleur_g = Some((k, b.x1));
+                }
                 // juste à droite : même ligne, le plus proche
-                if recouvre_v > 0.5 && b.x0 >= a.x1 - 0.25 * ha && b.x1 > a.x1
-                    && meilleur_dr.is_none_or(|(_, x)| b.x0 < x) {
-                        meilleur_dr = Some((k, b.x0));
-                    }
+                if recouvre_v > 0.5
+                    && b.x0 >= a.x1 - 0.25 * ha
+                    && b.x1 > a.x1
+                    && meilleur_dr.is_none_or(|(_, x)| b.x0 < x)
+                {
+                    meilleur_dr = Some((k, b.x0));
+                }
                 // juste au-dessus : recouvrement horizontal, le plus proche verticalement
                 let lb = (b.x1 - b.x0).max(f64::EPSILON);
                 let recouvre_h = (a.x1.min(b.x1) - a.x0.max(b.x0)) / la.min(lb);
-                if recouvre_h > 0.0 && b.y1 <= a.y0 + 0.25 * ha && b.y0 < a.y0
-                    && meilleur_d.is_none_or(|(_, y)| b.y1 > y) {
-                        meilleur_d = Some((k, b.y1));
-                    }
+                if recouvre_h > 0.0
+                    && b.y1 <= a.y0 + 0.25 * ha
+                    && b.y0 < a.y0
+                    && meilleur_d.is_none_or(|(_, y)| b.y1 > y)
+                {
+                    meilleur_d = Some((k, b.y1));
+                }
             }
             gauche[i] = meilleur_g.map(|(k, _)| k);
             droite[i] = meilleur_dr.map(|(k, _)| k);
@@ -142,7 +157,16 @@ impl<'a> Plan<'a> {
         let rtl = jetons.iter().map(|j| droite_a_gauche(&j.texte)).collect();
         let paires = colonnes_de_libelles(jetons);
         let taux_chiffres = taux_sur_rangees_chiffrees(jetons);
-        Plan { jetons, normes, gauche, droite, dessus, rtl, paires, taux_chiffres }
+        Plan {
+            jetons,
+            normes,
+            gauche,
+            droite,
+            dessus,
+            rtl,
+            paires,
+            taux_chiffres,
+        }
     }
 
     /// Le taux `ppm` est-il imprimé, sans mot, sur une rangée qui porte un montant
@@ -153,7 +177,10 @@ impl<'a> Plan<'a> {
 
     /// La valeur `i` est-elle, dans l'ordre d'une colonne de libellés, celle d'un repère ?
     pub fn apparie(&self, i: usize, reperes: &[String]) -> bool {
-        self.paires.get(&i).is_some_and(|ts| ts.iter().any(|t| reperes.iter().any(|r| t.contains(r.as_str()))))
+        self.paires.get(&i).is_some_and(|ts| {
+            ts.iter()
+                .any(|t| reperes.iter().any(|r| t.contains(r.as_str())))
+        })
     }
 
     /// Un repère est-il lu sur une RANGÉE qui porte un montant, à gauche de ce montant ?
@@ -206,7 +233,11 @@ impl<'a> Plan<'a> {
             let hb = (b.y1 - b.y0).max(f64::EPSILON);
             b.page == a.page && (a.y1.min(b.y1) - a.y0.max(b.y0)) / ha.min(hb) > 0.5
         };
-        let libelle = |b: &Jeton| b.montants.is_empty() && b.date.is_none() && !b.texte.chars().any(|c| c.is_ascii_digit());
+        let libelle = |b: &Jeton| {
+            b.montants.is_empty()
+                && b.date.is_none()
+                && !b.texte.chars().any(|c| c.is_ascii_digit())
+        };
         // De la valeur vers l'extérieur, mot à mot. Les mots d'un libellé latin restent dans
         // l'ordre visuel même quand la pièce s'aligne à droite (« 178,000 | Total | HT »), et
         // une couche de texte de droite à gauche les rend en miroir (« 178,000 | HT | Total ») :
@@ -225,13 +256,22 @@ impl<'a> Plan<'a> {
             }
             false
         };
-        let ordre = |x: &usize, y: &usize| self.jetons[*x].x0.partial_cmp(&self.jetons[*y].x0).unwrap_or(std::cmp::Ordering::Equal);
+        let ordre = |x: &usize, y: &usize| {
+            self.jetons[*x]
+                .x0
+                .partial_cmp(&self.jetons[*y].x0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        };
         let mut gauche: Vec<usize> = (0..self.jetons.len())
-            .filter(|&k| k != i && meme_rangee(&self.jetons[k]) && self.jetons[k].x1 <= a.x0 + 0.25 * ha)
+            .filter(|&k| {
+                k != i && meme_rangee(&self.jetons[k]) && self.jetons[k].x1 <= a.x0 + 0.25 * ha
+            })
             .collect();
         gauche.sort_by(|x, y| ordre(y, x));
         let mut droite: Vec<usize> = (0..self.jetons.len())
-            .filter(|&k| k != i && meme_rangee(&self.jetons[k]) && self.jetons[k].x0 >= a.x1 - 0.25 * ha)
+            .filter(|&k| {
+                k != i && meme_rangee(&self.jetons[k]) && self.jetons[k].x0 >= a.x1 - 0.25 * ha
+            })
             .collect();
         droite.sort_by(ordre);
         suite_lue(gauche) || suite_lue(droite)
@@ -281,14 +321,21 @@ impl<'a> Plan<'a> {
         // l'échéance rendue comme date d'émission). Il égale le jeton entier.
         let contient = |t: &str| {
             let net = t.trim_matches(|c: char| !c.is_alphanumeric());
-            reperes.iter().any(|r| if r.chars().count() < REPERE_COURT { net == r.as_str() } else { t.contains(r.as_str()) })
+            reperes.iter().any(|r| {
+                if r.chars().count() < REPERE_COURT {
+                    net == r.as_str()
+                } else {
+                    t.contains(r.as_str())
+                }
+            })
         };
         // Sur le jeton de la valeur, un repère court se colle en TÊTE, devant ce qui n'est pas
         // une lettre (« MF0458213A/A/C/000 »).
         let en_tete = |t: &str| {
             reperes.iter().any(|r| {
                 if r.chars().count() < REPERE_COURT {
-                    t.strip_prefix(r.as_str()).is_some_and(|reste| !reste.starts_with(char::is_alphabetic))
+                    t.strip_prefix(r.as_str())
+                        .is_some_and(|reste| !reste.starts_with(char::is_alphabetic))
                 } else {
                     t.contains(r.as_str())
                 }
@@ -358,8 +405,12 @@ impl<'a> Plan<'a> {
         let g_dp = g_dp || self.jetons[i].texte.trim_start().starts_with(':');
         let d_dp = d_dp || self.jetons[fin].texte.trim_end().ends_with(':');
         propre
-            || g.is_some_and(|k| (!self.rtl[k] || g_dp) && libelle_vers(Some(k), &|x| self.gauche[x]))
-            || d.is_some_and(|k| (self.rtl[k] || d_dp) && libelle_vers(Some(k), &|x| self.droite[x]))
+            || g.is_some_and(|k| {
+                (!self.rtl[k] || g_dp) && libelle_vers(Some(k), &|x| self.gauche[x])
+            })
+            || d.is_some_and(|k| {
+                (self.rtl[k] || d_dp) && libelle_vers(Some(k), &|x| self.droite[x])
+            })
             || (dessus && self.dessus[i].is_some_and(libelle))
     }
 }
@@ -380,7 +431,9 @@ impl<'a> Plan<'a> {
 /// de libellés : rien n'est apparié.
 fn colonnes_de_libelles(jetons: &[Jeton]) -> BTreeMap<usize, Vec<String>> {
     let h = |j: &Jeton| (j.y1 - j.y0).max(f64::EPSILON);
-    let mot = |j: &Jeton| j.montants.is_empty() && j.date.is_none() && !j.texte.chars().any(|c| c.is_ascii_digit());
+    let mot = |j: &Jeton| {
+        j.montants.is_empty() && j.date.is_none() && !j.texte.chars().any(|c| c.is_ascii_digit())
+    };
     // Les rangées, ordonnées de gauche à droite (celles des lignes d'articles).
     let mut rangs = crate::lignes::rangees_selon(jetons, f64::min);
     // Les libellés : une suite de mots adjacents dont le dernier finit par « : ».
@@ -407,7 +460,12 @@ fn colonnes_de_libelles(jetons: &[Jeton]) -> BTreeMap<usize, Vec<String>> {
                 y1: js.iter().map(|q| q.y1).fold(f64::MIN, f64::max),
                 h: js.iter().map(|q| h(q)).fold(0.0, f64::max),
                 deux_points: jetons[fin].texte.trim_end().ends_with(':'),
-                texte: normaliser(&js.iter().map(|q| q.texte.as_str()).collect::<Vec<_>>().join(" ")),
+                texte: normaliser(
+                    &js.iter()
+                        .map(|q| q.texte.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                ),
             });
         }
         suite.clear();
@@ -435,7 +493,11 @@ fn colonnes_de_libelles(jetons: &[Jeton]) -> BTreeMap<usize, Vec<String>> {
         }
         clore(&mut suite, &mut libelles);
     }
-    libelles.sort_by(|a, b| a.page.cmp(&b.page).then(a.y0.partial_cmp(&b.y0).unwrap_or(std::cmp::Ordering::Equal)));
+    libelles.sort_by(|a, b| {
+        a.page
+            .cmp(&b.page)
+            .then(a.y0.partial_cmp(&b.y0).unwrap_or(std::cmp::Ordering::Equal))
+    });
     // Les colonnes : des libellés alignés à gauche, chacun juste sous le précédent.
     let mut colonnes: Vec<Vec<usize>> = Vec::new();
     for (k, l) in libelles.iter().enumerate() {
@@ -477,26 +539,42 @@ fn colonnes_de_libelles(jetons: &[Jeton]) -> BTreeMap<usize, Vec<String>> {
             .filter(|&i| {
                 let j = &jetons[i];
                 let centre = (j.y0 + j.y1) / 2.0;
-                j.page == ls[0].page && j.x0 > droite && centre >= haut && centre <= bas && j.montants.iter().any(|m| m.forte)
+                j.page == ls[0].page
+                    && j.x0 > droite
+                    && centre >= haut
+                    && centre <= bas
+                    && j.montants.iter().any(|m| m.forte)
             })
             .collect();
         if valeurs.len() < ls.len() {
             continue;
         }
         let centre = |i: usize| (jetons[i].y0 + jetons[i].y1) / 2.0;
-        valeurs.sort_by(|&a, &b| centre(a).partial_cmp(&centre(b)).unwrap_or(std::cmp::Ordering::Equal));
+        valeurs.sort_by(|&a, &b| {
+            centre(a)
+                .partial_cmp(&centre(b))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         // Une valeur de trop dans la hauteur (le montant de la dernière ligne d'articles,
         // juste au-dessus) : la suite de valeurs consécutives la plus proche, rangée par
         // rangée, des libellés ; deux suites aussi proches n'apparient rien.
         let ecart = |debut: usize| -> f64 {
-            ls.iter().enumerate().map(|(k, l)| (centre(valeurs[debut + k]) - (l.y0 + l.y1) / 2.0).abs()).sum()
+            ls.iter()
+                .enumerate()
+                .map(|(k, l)| (centre(valeurs[debut + k]) - (l.y0 + l.y1) / 2.0).abs())
+                .sum()
         };
-        let mut fenetres: Vec<(f64, usize)> = (0..=valeurs.len() - ls.len()).map(|d| (ecart(d), d)).collect();
+        let mut fenetres: Vec<(f64, usize)> = (0..=valeurs.len() - ls.len())
+            .map(|d| (ecart(d), d))
+            .collect();
         fenetres.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
         let meilleur = fenetres[0].0;
         for &(_, debut) in fenetres.iter().take_while(|(e, _)| *e - meilleur < hc) {
             for (k, l) in ls.iter().enumerate() {
-                paires.entry(valeurs[debut + k]).or_insert_with(Vec::new).push(l.texte.clone());
+                paires
+                    .entry(valeurs[debut + k])
+                    .or_insert_with(Vec::new)
+                    .push(l.texte.clone());
             }
         }
     }
@@ -514,12 +592,19 @@ fn taux_sur_rangees_chiffrees(jetons: &[Jeton]) -> BTreeSet<i64> {
     for r in crate::lignes::rangees_selon(jetons, f64::min) {
         // une rangée SANS mot : un mot y nomme une autre chose au même taux (« Retenue à la
         // source 1 % », d100/B-01)
-        if !r.iter().any(|&i| jetons[i].montants.iter().any(|m| m.forte))
-            || r.iter().any(|&i| jetons[i].texte.chars().any(char::is_alphabetic))
+        if !r
+            .iter()
+            .any(|&i| jetons[i].montants.iter().any(|m| m.forte))
+            || r.iter()
+                .any(|&i| jetons[i].texte.chars().any(char::is_alphabetic))
         {
             continue;
         }
-        let texte = r.iter().map(|&i| jetons[i].texte.as_str()).collect::<Vec<_>>().join(" ");
+        let texte = r
+            .iter()
+            .map(|&i| jetons[i].texte.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
         for c in motif.captures_iter(&texte) {
             // « 19,5 % » : 195 / 10 pour cent, en ppm (millionièmes)
             let chiffres = format!("{}{}", &c[1], c.get(2).map_or("", |d| d.as_str()));

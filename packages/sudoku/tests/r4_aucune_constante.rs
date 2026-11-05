@@ -30,7 +30,9 @@ fn sans_commentaires(src: &str) -> String {
             i += 3;
         } else if c[i] == '\'' && c.get(i + 1) == Some(&'\\') {
             // littéral échappé ('\'', '\\', '\u{..}') : jusqu'à l'apostrophe fermante
-            let fin = (i + 3..c.len()).find(|&k| c[k] == '\'').unwrap_or(c.len() - 1);
+            let fin = (i + 3..c.len())
+                .find(|&k| c[k] == '\'')
+                .unwrap_or(c.len() - 1);
             out.extend(&c[i..=fin]);
             i = fin + 1;
         } else if c[i] == '"' {
@@ -83,10 +85,19 @@ fn sources_rs(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
 #[test]
 fn le_detecteur_detecte() {
     assert_eq!(litteraux_interdits("let t = 190_000;"), vec!["190_000"]);
-    assert_eq!(litteraux_interdits("let t = 1000i64 + 10000;"), vec!["1000i64", "10000"]);
+    assert_eq!(
+        litteraux_interdits("let t = 1000i64 + 10000;"),
+        vec!["1000i64", "10000"]
+    );
     assert!(litteraux_interdits("// 190000\n/* 1000 */ let x = 1_000_000;").is_empty());
-    assert_eq!(litteraux_interdits("let q = '\"'; let t = 70000; // 130000"), vec!["70000"]);
-    assert_eq!(litteraux_interdits("let a = '\\''; let b = \"x\"; let t = 130_000;"), vec!["130_000"]);
+    assert_eq!(
+        litteraux_interdits("let q = '\"'; let t = 70000; // 130000"),
+        vec!["70000"]
+    );
+    assert_eq!(
+        litteraux_interdits("let a = '\\''; let b = \"x\"; let t = 130_000;"),
+        vec!["130_000"]
+    );
 }
 
 #[test]
@@ -95,11 +106,17 @@ fn aucun_taux_ni_montant_reglementaire_dans_src() {
     let mut fautes = Vec::new();
     let sources = sources_rs(std::path::Path::new(&dir));
     // Tous les sources, sous-dossiers compris (src/lignes/milieu.rs n'était pas lu).
-    assert!(sources.iter().any(|p| p.ends_with("lignes/milieu.rs")), "src/lignes/milieu.rs non lu");
+    assert!(
+        sources.iter().any(|p| p.ends_with("lignes/milieu.rs")),
+        "src/lignes/milieu.rs non lu"
+    );
     for p in &sources {
         for l in litteraux_interdits(&std::fs::read_to_string(p).unwrap()) {
             fautes.push(format!("{} : {l}", p.display()));
         }
     }
-    assert!(fautes.is_empty(), "littéraux réglementaires dans le code : {fautes:?}");
+    assert!(
+        fautes.is_empty(),
+        "littéraux réglementaires dans le code : {fautes:?}"
+    );
 }

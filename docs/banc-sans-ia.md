@@ -474,6 +474,32 @@ exactes, pièce par pièce (algoria-022, 029) :
 | banc, sens lu                   | 6 138 |    0 |             4 468 |
 | couche de texte, sens déclaré   | 1 990 |    0 |               808 |
 
+## Bulletin 14 — une page gauchie : la pente locale, et l'en-tête dans la première rangée (5 novembre 2026)
+
+algoria-014 est la photo d'une page gauchie, pas tournée : la pente des lignes va de 0,041
+en haut à 0,018 en bas. Deux causes exactes faisaient taire son tableau :
+
+- **Une seule pente pour la page.** Les paires de jetons votaient une pente ; trop
+  dispersés, les votes ne s'accordaient pas et la pente retenue était nulle. Les rangées
+  séparaient alors le montant de sa quantité et de son prix. Chaque jeton se redresse
+  désormais à la pente LOCALE : les votes des paires à ±0,08 de sa hauteur
+  (`FENETRE_DE_PENTE`), avec le même pic d'accord ; à défaut, la pente de la page. Une
+  correction globale de rotation avait été essayée et retirée : elle aggravait la page.
+- **L'en-tête collé au premier article.** Sans rangée d'en-tête au-dessus du tableau, les
+  colonnes de référence et d'EAN se lisaient comme la désignation. L'en-tête se cherche
+  aussi parmi les lignes de la première rangée prouvée, au-dessus de sa ligne d'ancrage
+  (`colonnes.rs`, `dans_la_premiere`).
+
+Les vingt rangées se prouvent entières (test `des_lignes_partielles`, qui échoue sans le
+correctif).
+
+|                                 | juste | faux | inventé | dont à travailler |
+| ------------------------------- | ----: | ---: | ------: | ----------------: |
+| banc, sens déclaré, bulletin 13 | 6 410 |    0 |       0 |             4 156 |
+| banc, sens déclaré              | 6 495 |    0 |       0 |             4 071 |
+| banc, sens lu                   | 6 223 |    0 |       0 |             4 383 |
+| couche de texte, sens déclaré   | 1 990 |    0 |       0 |               808 |
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |

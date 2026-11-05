@@ -71,7 +71,13 @@ pub struct Case {
 
 impl Cite {
     fn lue(valeur: String, refs: Vec<RefJeton>) -> Self {
-        Cite { valeur, refs, statut: None, case_: None, coupe: None }
+        Cite {
+            valeur,
+            refs,
+            statut: None,
+            case_: None,
+            coupe: None,
+        }
     }
 }
 
@@ -139,7 +145,9 @@ pub struct OpLignes {
 }
 
 fn cle(e: &Value, k: &str) -> Option<String> {
-    e.get(k).and_then(|v| v.as_str()).map(|s| s.trim_end_matches('?').trim().to_string())
+    e.get(k)
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim_end_matches('?').trim().to_string())
 }
 
 /// Lit et contrôle l'op : tous les champs nommés existent dans la grille, avec le bon type.
@@ -189,10 +197,15 @@ pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpLignes, String> {
         None => None,
     };
     // Le barème des taux de ligne : la clé `bareme`, sinon celui du groupe de taux de la grille.
-    let groupe = grille.preuves.iter().filter_map(|p| p.expression.as_ref()).find(|x| {
-        x.get("op").and_then(|o| o.as_str()) == Some("groupe_taux")
-            && cle(e, "bareme").is_none_or(|b| x.get("bareme").and_then(|v| v.as_str()) == Some(b.as_str()))
-    });
+    let groupe = grille
+        .preuves
+        .iter()
+        .filter_map(|p| p.expression.as_ref())
+        .find(|x| {
+            x.get("op").and_then(|o| o.as_str()) == Some("groupe_taux")
+                && cle(e, "bareme")
+                    .is_none_or(|b| x.get("bareme").and_then(|v| v.as_str()) == Some(b.as_str()))
+        });
     let bareme = cle(e, "bareme").or_else(|| groupe.and_then(|g| cle(g, "bareme")));
     let base_par_taux = groupe.and_then(|g| cle(g, "base"));
     let total_base = groupe.and_then(|g| cle(g, "total_base"));
@@ -210,10 +223,18 @@ pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpLignes, String> {
         }
         None => None,
     };
-    let champs_lignes = ["designation", "quantite", "prix", "prix_ttc", "remise", "montant", "taux"]
-        .iter()
-        .filter_map(|k| cle(e, k))
-        .collect();
+    let champs_lignes = [
+        "designation",
+        "quantite",
+        "prix",
+        "prix_ttc",
+        "remise",
+        "montant",
+        "taux",
+    ]
+    .iter()
+    .filter_map(|k| cle(e, k))
+    .collect();
     Ok(OpLignes {
         designation,
         montant_total: total,
@@ -255,7 +276,15 @@ const PAS_DE_PENTE: f64 = 0.002;
 /// Le nombre de paires d'accord en deçà duquel la page est tenue pour droite.
 const ACCORD_MIN: usize = 6;
 
-/// La pente de chaque page (dy / dx), lue sur ses jetons seuls.
+/// La demi-hauteur (fraction de page) de la fenêtre où se lit la pente LOCALE : une feuille
+/// photographiée se courbe, et sa pente change de haut en bas (algoria-014, un PDF imprimé
+/// photographié : 0,041 en haut du tableau, 0,018 en bas — aucune pente de page ne les
+/// accorde, et le vote concluait à une page droite ; les rangées du haut se coupaient en
+/// deux, le montant sous la quantité et le prix).
+const FENETRE_DE_PENTE: f64 = 0.08;
+
+/// Les votes de pente de chaque page (dy / dx), lus sur ses jetons seuls : chaque paire de
+/// boîtes d'une même rangée vote, à la hauteur de son milieu.
 ///
 /// Une page photographiée ou scannée de travers fait dériver une rangée de plusieurs
 /// hauteurs de corps entre sa marge gauche et son montant : le montant ne recouvre plus la
@@ -268,14 +297,17 @@ const ACCORD_MIN: usize = 6;
 /// Le vote se fait par BOÎTE de l'OCR, pas par mot : les mots d'une même boîte (mêmes
 /// bords, au bit près) sont horizontaux par construction, et deux longues lignes voisines
 /// voteraient autant de fois que le produit de leurs mots.
-fn pentes(jetons: &[Jeton]) -> BTreeMap<u32, f64> {
+fn votes_de_pente(jetons: &[Jeton]) -> BTreeMap<u32, Vec<(f64, f64)>> {
     // les boîtes : les jetons de mêmes bords (au bit près), recousus tant que le blanc qui
     // les sépare tient dans deux hauteurs de corps — les mots d'une boîte de l'OCR. Les
     // cellules d'une même rangée d'un PDF ont aussi les mêmes bords, mais un large blanc les
     // sépare : elles restent des boîtes distinctes, et votent pour une page droite.
     let mut memes_bords: BTreeMap<(u32, u64, u64), Vec<(f64, f64)>> = BTreeMap::new();
     for j in jetons {
-        memes_bords.entry((j.page, j.y0.to_bits(), j.y1.to_bits())).or_default().push((j.x0, j.x1));
+        memes_bords
+            .entry((j.page, j.y0.to_bits(), j.y1.to_bits()))
+            .or_default()
+            .push((j.x0, j.x1));
     }
     let mut par_page: BTreeMap<u32, Vec<(f64, f64, f64, f64)>> = BTreeMap::new();
     for ((page, y0, y1), mut xs) in memes_bords {
@@ -297,11 +329,10 @@ fn pentes(jetons: &[Jeton]) -> BTreeMap<u32, f64> {
             boites.push((a, y0, b, y1));
         }
     }
-    let classes = (2.0 * PENTE_MAX / PAS_DE_PENTE).round() as usize + 1;
     par_page
         .into_iter()
         .map(|(page, b)| {
-            let mut pentes: Vec<f64> = Vec::new();
+            let mut votes: Vec<(f64, f64)> = Vec::new();
             for (n, a) in b.iter().enumerate() {
                 for c in &b[n + 1..] {
                     let h = (a.3 - a.1).max(c.3 - c.1);
@@ -313,43 +344,88 @@ fn pentes(jetons: &[Jeton]) -> BTreeMap<u32, f64> {
                     }
                     let p = dy / dx;
                     if p.abs() <= PENTE_MAX {
-                        pentes.push(p);
+                        votes.push(((a.1 + a.3 + c.1 + c.3) / 4.0, p));
                     }
                 }
             }
-            let mut histo = vec![0usize; classes];
-            let classe = |p: f64| ((p + PENTE_MAX) / PAS_DE_PENTE).round() as usize;
-            for &p in &pentes {
-                histo[classe(p).min(classes - 1)] += 1;
-            }
-            // la classe la plus peuplée, avec ses deux voisines ; à égalité, la plus proche de zéro
-            let accord = |k: usize| histo[k] + if k > 0 { histo[k - 1] } else { 0 } + histo.get(k + 1).copied().unwrap_or(0);
-            let pic = (0..classes).max_by_key(|&k| (accord(k), std::cmp::Reverse((k as i64 - (classes / 2) as i64).abs())));
-            // Deux rangées voisines d'une page DROITE votent autant pour +p que pour −p : une
-            // pente que son miroir égale presque n'est que leur écart, pas une inclinaison.
-            let miroir = |k: usize| classes - 1 - k;
-            let pente = pic
-                .filter(|&k| accord(k) >= ACCORD_MIN && (k.abs_diff(classes / 2) <= 1 || 2 * accord(miroir(k)) <= accord(k)))
-                .map_or(0.0, |k| {
-                    let mut dans: Vec<f64> = pentes.iter().copied().filter(|&p| classe(p).abs_diff(k) <= 1).collect();
-                    dans.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-                    dans[dans.len() / 2]
-                });
-            (page, pente)
+            (page, votes)
         })
         .collect()
+}
+
+/// La pente sur laquelle des votes s'accordent : la classe la plus peuplée (avec ses deux
+/// voisines), si assez de paires s'y accordent et que son miroir ne l'égale pas presque
+/// (deux rangées voisines d'une page DROITE votent autant pour +p que pour −p) ; sinon rien.
+fn pic_de_pente(pentes: &[f64]) -> Option<f64> {
+    let classes = (2.0 * PENTE_MAX / PAS_DE_PENTE).round() as usize + 1;
+    let mut histo = vec![0usize; classes];
+    let classe = |p: f64| ((p + PENTE_MAX) / PAS_DE_PENTE).round() as usize;
+    for &p in pentes {
+        histo[classe(p).min(classes - 1)] += 1;
+    }
+    // à égalité, la plus proche de zéro
+    let accord = |k: usize| {
+        histo[k] + if k > 0 { histo[k - 1] } else { 0 } + histo.get(k + 1).copied().unwrap_or(0)
+    };
+    let pic = (0..classes).max_by_key(|&k| {
+        (
+            accord(k),
+            std::cmp::Reverse((k as i64 - (classes / 2) as i64).abs()),
+        )
+    });
+    let miroir = |k: usize| classes - 1 - k;
+    pic.filter(|&k| {
+        accord(k) >= ACCORD_MIN
+            && (k.abs_diff(classes / 2) <= 1 || 2 * accord(miroir(k)) <= accord(k))
+    })
+    .map(|k| {
+        let mut dans: Vec<f64> = pentes
+            .iter()
+            .copied()
+            .filter(|&p| classe(p).abs_diff(k) <= 1)
+            .collect();
+        dans.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        dans[dans.len() / 2]
+    })
 }
 
 /// Les jetons, leurs ordonnées redressées par la pente de leur page (`pentes`) : une ligne
 /// d'articles suit sa page, quelle que soit son inclinaison, sans redresser l'image.
 fn redresses(jetons: &[Jeton]) -> Vec<Jeton> {
-    let pente = pentes(jetons);
+    let votes = votes_de_pente(jetons);
+    let pente: BTreeMap<u32, f64> = votes
+        .iter()
+        .map(|(&page, v)| {
+            (
+                page,
+                pic_de_pente(&v.iter().map(|x| x.1).collect::<Vec<_>>()).unwrap_or(0.0),
+            )
+        })
+        .collect();
     jetons
         .iter()
         .map(|j| {
-            let p = pente.get(&j.page).copied().unwrap_or(0.0);
+            // la pente LOCALE, celle des paires voisines de la hauteur du jeton, quand elles
+            // s'accordent ; sinon celle de la page
+            let y = (j.y0 + j.y1) / 2.0;
+            let locales: Vec<f64> = votes
+                .get(&j.page)
+                .map(|v| {
+                    v.iter()
+                        .filter(|(yp, _)| (yp - y).abs() <= FENETRE_DE_PENTE)
+                        .map(|x| x.1)
+                        .collect()
+                })
+                .unwrap_or_default();
+            let p = pic_de_pente(&locales)
+                .or_else(|| pente.get(&j.page).copied())
+                .unwrap_or(0.0);
             let d = p * (j.x0 + j.x1) / 2.0;
-            Jeton { y0: j.y0 - d, y1: j.y1 - d, ..j.clone() }
+            Jeton {
+                y0: j.y0 - d,
+                y1: j.y1 - d,
+                ..j.clone()
+            }
         })
         .collect()
 }
@@ -359,7 +435,12 @@ fn redresses(jetons: &[Jeton]) -> Vec<Jeton> {
 /// désignation ne se lit pas en triant ses mots par abscisse.
 pub(crate) fn en_lignes(jetons: &[Jeton], ids: &[usize]) -> Vec<Vec<usize>> {
     let mut ordre = ids.to_vec();
-    ordre.sort_by(|&a, &b| jetons[a].y0.partial_cmp(&jetons[b].y0).unwrap_or(std::cmp::Ordering::Equal));
+    ordre.sort_by(|&a, &b| {
+        jetons[a]
+            .y0
+            .partial_cmp(&jetons[b].y0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     let mut lignes: Vec<Vec<usize>> = Vec::new();
     for i in ordre {
         let j = &jetons[i];
@@ -382,11 +463,18 @@ pub(crate) fn en_lignes(jetons: &[Jeton], ids: &[usize]) -> Vec<Vec<usize>> {
         }
     }
     for l in &mut lignes {
-        l.sort_by(|&a, &b| jetons[a].x0.partial_cmp(&jetons[b].x0).unwrap_or(std::cmp::Ordering::Equal));
+        l.sort_by(|&a, &b| {
+            jetons[a]
+                .x0
+                .partial_cmp(&jetons[b].x0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         // une ligne écrite de droite à gauche se lit depuis sa droite — mais une suite de
         // mots latins ou de nombres y garde son ordre de gauche à droite (« غمد ICTA 20 مم »,
         // pas « غمد 20 ICTA », algoria-054)
-        if l.iter().any(|&k| crate::reperes::droite_a_gauche(&jetons[k].texte)) {
+        if l.iter()
+            .any(|&k| crate::reperes::droite_a_gauche(&jetons[k].texte))
+        {
             l.reverse();
             let mut debut = 0;
             while debut < l.len() {
@@ -394,7 +482,9 @@ pub(crate) fn en_lignes(jetons: &[Jeton], ids: &[usize]) -> Vec<Vec<usize>> {
                     debut += 1;
                     continue;
                 }
-                let fin = (debut..l.len()).find(|&k| crate::reperes::droite_a_gauche(&jetons[l[k]].texte)).unwrap_or(l.len());
+                let fin = (debut..l.len())
+                    .find(|&k| crate::reperes::droite_a_gauche(&jetons[l[k]].texte))
+                    .unwrap_or(l.len());
                 l[debut..fin].reverse();
                 debut = fin;
             }
@@ -436,14 +526,25 @@ fn rangees(droits: &[Jeton]) -> Vec<Vec<usize>> {
         classes.entry(r).or_default().push(i);
     }
     let mut rangs: Vec<Vec<usize>> = classes.into_values().collect();
-    let haut = |r: &Vec<usize>| (droits[r[0]].page, r.iter().map(|&i| droits[i].y0).fold(f64::MAX, f64::min));
+    let haut = |r: &Vec<usize>| {
+        (
+            droits[r[0]].page,
+            r.iter().map(|&i| droits[i].y0).fold(f64::MAX, f64::min),
+        )
+    };
     rangs.sort_by(|a, b| {
         let (pa, ya) = haut(a);
         let (pb, yb) = haut(b);
-        pa.cmp(&pb).then(ya.partial_cmp(&yb).unwrap_or(std::cmp::Ordering::Equal))
+        pa.cmp(&pb)
+            .then(ya.partial_cmp(&yb).unwrap_or(std::cmp::Ordering::Equal))
     });
     for r in &mut rangs {
-        r.sort_by(|&a, &b| droits[a].x0.partial_cmp(&droits[b].x0).unwrap_or(std::cmp::Ordering::Equal));
+        r.sort_by(|&a, &b| {
+            droits[a]
+                .x0
+                .partial_cmp(&droits[b].x0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
     rangs
 }
@@ -468,7 +569,11 @@ fn scinder_les_empilees(rangs: Vec<Vec<usize>>, droits: &[Jeton]) -> Vec<Vec<usi
         let pile: Vec<usize> = forts
             .iter()
             .map(|&a| {
-                let mut p: Vec<usize> = forts.iter().copied().filter(|&b| b == a || empiles(a, b)).collect();
+                let mut p: Vec<usize> = forts
+                    .iter()
+                    .copied()
+                    .filter(|&b| b == a || empiles(a, b))
+                    .collect();
                 p.sort_by(|&x, &y| centre(x).total_cmp(&centre(y)));
                 p.dedup_by(|x, y| !empiles(*x, *y));
                 p
@@ -499,13 +604,22 @@ fn scinder_les_empilees(rangs: Vec<Vec<usize>>, droits: &[Jeton]) -> Vec<Vec<usi
         parts.extend(en_lignes(droits, &reste));
         parts.retain(|p| !p.is_empty());
         parts.sort_by(|a, b| {
-            let haut = |p: &Vec<usize>| p.iter().map(|&k| droits[k].y0).fold(f64::INFINITY, f64::min);
+            let haut = |p: &Vec<usize>| {
+                p.iter()
+                    .map(|&k| droits[k].y0)
+                    .fold(f64::INFINITY, f64::min)
+            };
             haut(a).total_cmp(&haut(b))
         });
         out.extend(parts);
     }
     for r in &mut out {
-        r.sort_by(|&a, &b| droits[a].x0.partial_cmp(&droits[b].x0).unwrap_or(std::cmp::Ordering::Equal));
+        r.sort_by(|&a, &b| {
+            droits[a]
+                .x0
+                .partial_cmp(&droits[b].x0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
     out
 }
@@ -519,8 +633,16 @@ pub(crate) fn rangees_selon(jetons: &[Jeton], hauteur: fn(f64, f64) -> f64) -> V
         let (ja, jb) = (&jetons[a], &jetons[b]);
         ja.page
             .cmp(&jb.page)
-            .then(ja.y0.partial_cmp(&jb.y0).unwrap_or(std::cmp::Ordering::Equal))
-            .then(ja.x0.partial_cmp(&jb.x0).unwrap_or(std::cmp::Ordering::Equal))
+            .then(
+                ja.y0
+                    .partial_cmp(&jb.y0)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+            )
+            .then(
+                ja.x0
+                    .partial_cmp(&jb.x0)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+            )
     });
     let mut rangs: Vec<Vec<usize>> = Vec::new();
     for i in ordre {
@@ -538,7 +660,12 @@ pub(crate) fn rangees_selon(jetons: &[Jeton], hauteur: fn(f64, f64) -> f64) -> V
         }
     }
     for r in &mut rangs {
-        r.sort_by(|&a, &b| jetons[a].x0.partial_cmp(&jetons[b].x0).unwrap_or(std::cmp::Ordering::Equal));
+        r.sort_by(|&a, &b| {
+            jetons[a]
+                .x0
+                .partial_cmp(&jetons[b].x0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
     rangs
 }
@@ -563,12 +690,25 @@ struct Contexte<'a> {
 /// Les repères des autres champs répétés de la parcelle de la désignation, lus dans la
 /// grille, et pour chacun si son champ est un identifiant (`genre`).
 fn autres_champs(designation: &str, grille: &Grille) -> Vec<(String, bool)> {
-    let parcelle = grille.champs.iter().find(|c| c.code == designation).and_then(|c| c.parcelle.as_ref());
+    let parcelle = grille
+        .champs
+        .iter()
+        .find(|c| c.code == designation)
+        .and_then(|c| c.parcelle.as_ref());
     grille
         .champs
         .iter()
-        .filter(|c| c.repetee && c.code != designation && c.parcelle.is_some() && c.parcelle.as_ref() == parcelle)
-        .flat_map(|c| crate::reperes::reperes_de(c).into_iter().map(move |r| (r, c.genre == "identifiant")))
+        .filter(|c| {
+            c.repetee
+                && c.code != designation
+                && c.parcelle.is_some()
+                && c.parcelle.as_ref() == parcelle
+        })
+        .flat_map(|c| {
+            crate::reperes::reperes_de(c)
+                .into_iter()
+                .map(move |r| (r, c.genre == "identifiant"))
+        })
         .collect()
 }
 
@@ -578,19 +718,30 @@ fn autres_champs(designation: &str, grille: &Grille) -> Vec<(String, bool)> {
 /// la désignation, même quand ses mots ressemblent à un libellé (« Droit de consommation
 /// 25 % », un article ; dirigeant 100/B-20). Un identifiant (« SN : 9813… ») ou un repère
 /// seul (« SN », sa valeur perdue ; algoria-032) n'est jamais une désignation.
-fn sans_les_autres_champs(jetons: &[Jeton], lignes: Vec<Vec<usize>>, ancre: Option<usize>, autres: &[(String, bool)]) -> Vec<Vec<usize>> {
+fn sans_les_autres_champs(
+    jetons: &[Jeton],
+    lignes: Vec<Vec<usize>>,
+    ancre: Option<usize>,
+    autres: &[(String, bool)],
+) -> Vec<Vec<usize>> {
     let recouvre = |l: &Vec<usize>, a: &Jeton| {
-        l.iter().map(|&k| (jetons[k].y1.min(a.y1) - jetons[k].y0.max(a.y0)).max(0.0)).fold(0.0, f64::max)
+        l.iter()
+            .map(|&k| (jetons[k].y1.min(a.y1) - jetons[k].y0.max(a.y0)).max(0.0))
+            .fold(0.0, f64::max)
     };
     let principale = ancre.and_then(|a| {
-        (0..lignes.len()).max_by(|&x, &y| recouvre(&lignes[x], &jetons[a]).total_cmp(&recouvre(&lignes[y], &jetons[a])))
+        (0..lignes.len()).max_by(|&x, &y| {
+            recouvre(&lignes[x], &jetons[a]).total_cmp(&recouvre(&lignes[y], &jetons[a]))
+        })
     });
     lignes
         .into_iter()
         .enumerate()
         .filter(|(i, l)| match ouvre_un_autre_champ(jetons, l, autres) {
             None => true,
-            Some(Ouverture { identifiant, vide }) => Some(*i) == principale && !identifiant && !vide,
+            Some(Ouverture { identifiant, vide }) => {
+                Some(*i) == principale && !identifiant && !vide
+            }
         })
         .map(|(_, l)| l)
         .collect()
@@ -603,12 +754,25 @@ fn sans_les_autres_champs(jetons: &[Jeton], lignes: Vec<Vec<usize>>, ancre: Opti
 /// série de l'article (banc sans IA du 4 novembre 2026, algoria-018). Un mot qui ne fait
 /// que commencer comme un repère court (« U-shaped » pour l'unité « U ») ou un libellé
 /// suivi de lettres (« Réf : ABC ») reste dans la désignation.
-fn ouvre_un_autre_champ(jetons: &[Jeton], ligne: &[usize], autres: &[(String, bool)]) -> Option<Ouverture> {
-    let texte: String = ligne.iter().map(|&k| crate::reperes::normaliser(&jetons[k].texte)).collect();
+fn ouvre_un_autre_champ(
+    jetons: &[Jeton],
+    ligne: &[usize],
+    autres: &[(String, bool)],
+) -> Option<Ouverture> {
+    let texte: String = ligne
+        .iter()
+        .map(|&k| crate::reperes::normaliser(&jetons[k].texte))
+        .collect();
     autres.iter().find_map(|(r, identifiant)| {
-        let valeur = texte.strip_prefix(r.as_str())?.trim_start_matches(|c: char| !c.is_alphanumeric());
-        (valeur.is_empty() || valeur.starts_with(|c: char| c.is_ascii_digit()))
-            .then_some(Ouverture { identifiant: *identifiant, vide: valeur.is_empty() })
+        let valeur = texte
+            .strip_prefix(r.as_str())?
+            .trim_start_matches(|c: char| !c.is_alphanumeric());
+        (valeur.is_empty() || valeur.starts_with(|c: char| c.is_ascii_digit())).then_some(
+            Ouverture {
+                identifiant: *identifiant,
+                vide: valeur.is_empty(),
+            },
+        )
     })
 }
 
@@ -636,13 +800,23 @@ impl Contexte<'_> {
             return j.montants.iter().map(|l| l.v).collect();
         }
         let t: String = j.texte.chars().filter(|c| !c.is_whitespace()).collect();
-        let Some(c) = self.pourcent.captures(&t) else { return Vec::new() };
-        let ent = c.name("e").or_else(|| c.name("e2")).map(|m| m.as_str()).unwrap_or("");
+        let Some(c) = self.pourcent.captures(&t) else {
+            return Vec::new();
+        };
+        let ent = c
+            .name("e")
+            .or_else(|| c.name("e2"))
+            .map(|m| m.as_str())
+            .unwrap_or("");
         let dec = c.name("d").map(|m| m.as_str()).unwrap_or("");
-        let Ok(e) = ent.parse::<i128>() else { return Vec::new() };
+        let Ok(e) = ent.parse::<i128>() else {
+            return Vec::new();
+        };
         let mut v = e * self.unite;
         if !dec.is_empty() {
-            let Ok(d) = dec.parse::<i128>() else { return Vec::new() };
+            let Ok(d) = dec.parse::<i128>() else {
+                return Vec::new();
+            };
             let echelle = 10i128.pow(dec.len() as u32);
             if self.unite % echelle != 0 {
                 return Vec::new();
@@ -661,7 +835,10 @@ impl Contexte<'_> {
             return None;
         }
         let ppm = num / den;
-        self.bareme.iter().find(|(_, t)| *t as i128 == ppm).map(|(c, _)| c.as_str())
+        self.bareme
+            .iter()
+            .find(|(_, t)| *t as i128 == ppm)
+            .map(|(c, _)| c.as_str())
     }
 
     fn ferme(&self, q: i64, p: i64, m: i64, r: i64) -> bool {
@@ -669,7 +846,10 @@ impl Contexte<'_> {
         if r < 0 || r as i128 >= cent {
             return false;
         }
-        let attendu = div_arrondi(q as i128 * p as i128 * (cent - r as i128), self.unite * cent);
+        let attendu = div_arrondi(
+            q as i128 * p as i128 * (cent - r as i128),
+            self.unite * cent,
+        );
         (attendu - m as i128).abs() <= self.tol as i128
     }
 
@@ -677,12 +857,18 @@ impl Contexte<'_> {
     /// permet, par un prix TTC (`Some(Some(code))`) au seul taux du barème qui ferme — le
     /// taux imprimé sur la rangée hors des cellules `prises`, quand elle en imprime un. La
     /// même règle pour la stratégie de toujours et pour la lecture du milieu.
-    fn fermeture(&self, (q, p, m, r): (i64, i64, i64, i64), rang: &[usize], prises: &[usize]) -> Option<Option<String>> {
+    fn fermeture(
+        &self,
+        (q, p, m, r): (i64, i64, i64, i64),
+        rang: &[usize],
+        prises: &[usize],
+    ) -> Option<Option<String>> {
         if self.ferme(q, p, m, r) {
             return Some(None);
         }
         let imprime = self.taux_parmi(rang.iter().copied().filter(|k| !prises.contains(k)));
-        self.ferme_ttc(q, p, m, r, imprime.as_ref().map(|t| t.code.as_str())).map(Some)
+        self.ferme_ttc(q, p, m, r, imprime.as_ref().map(|t| t.code.as_str()))
+            .map(Some)
     }
 
     /// Le prix TTC : m = arrondi(q × p × (1 − r) ÷ (1 + t)) pour un taux t du barème, à la
@@ -732,13 +918,22 @@ impl Contexte<'_> {
         };
         let remises: Vec<(usize, i64)> = (0..rang.len())
             .filter(|&k| self.marque_pourcent(rang, k))
-            .flat_map(|k| self.pourcentages(&self.jetons[rang[k]]).into_iter().filter(|v| *v > 0).map(move |v| (k, v)))
+            .flat_map(|k| {
+                self.pourcentages(&self.jetons[rang[k]])
+                    .into_iter()
+                    .filter(|v| *v > 0)
+                    .map(move |v| (k, v))
+            })
             .collect();
         let mut par_valeurs: BTreeMap<(i64, i64, i64, i64), Triplet> = BTreeMap::new();
         let n = rang.len();
         let fortes = |k: usize| -> Vec<i64> {
-            let mut v: Vec<i64> =
-                self.jetons[rang[k]].montants.iter().filter(|l| l.forte && l.v != 0).map(|l| l.v).collect();
+            let mut v: Vec<i64> = self.jetons[rang[k]]
+                .montants
+                .iter()
+                .filter(|l| l.forte && l.v != 0)
+                .map(|l| l.v)
+                .collect();
             v.sort();
             v.dedup();
             v
@@ -751,19 +946,32 @@ impl Contexte<'_> {
                             for m in fortes(mi) {
                                 let mut candidats: Vec<Option<(usize, i64)>> = vec![None];
                                 candidats.extend(
-                                    remises.iter().filter(|(k, _)| *k != qi && *k != pi && *k != mi).map(|x| Some(*x)),
+                                    remises
+                                        .iter()
+                                        .filter(|(k, _)| *k != qi && *k != pi && *k != mi)
+                                        .map(|x| Some(*x)),
                                 );
                                 for r in candidats {
                                     let rv = r.map_or(0, |x| x.1);
                                     // Le taux imprimé sur la rangée, hors des trois cellules.
                                     let prises: Vec<usize> =
-                                        [Some(qi), Some(pi), Some(mi), r.map(|x| x.0)].into_iter().flatten().map(|k| rang[k]).collect();
+                                        [Some(qi), Some(pi), Some(mi), r.map(|x| x.0)]
+                                            .into_iter()
+                                            .flatten()
+                                            .map(|k| rang[k])
+                                            .collect();
                                     let ttc = match self.fermeture((q, p, m, rv), rang, &prises) {
                                         Some(None) => None,
                                         Some(Some(code)) if avec_ttc => Some(code),
                                         _ => continue,
                                     };
-                                    let t = Triplet { q: (qi, q), p: (pi, p), m: (mi, m), r, ttc };
+                                    let t = Triplet {
+                                        q: (qi, q),
+                                        p: (pi, p),
+                                        m: (mi, m),
+                                        r,
+                                        ttc,
+                                    };
                                     let cle = t.valeurs();
                                     let garder = match par_valeurs.get(&cle) {
                                         None => true,
@@ -789,40 +997,71 @@ impl Contexte<'_> {
     /// (« MATRICULE FISCAL ») que la rangée a recouvert n'en est pas.
     /// Une ligne qui ouvre un autre champ de la parcelle (`ouvre_un_autre_champ`) n'en est
     /// pas non plus. Rien ne reste : pas de désignation.
-    fn designation(&self, jetons: &[usize], ancre: Option<usize>, chiffres: &[usize]) -> Option<Cite> {
-        let lignes = sans_les_autres_champs(self.jetons, en_lignes(self.jetons, jetons), ancre, &self.autres_champs);
+    fn designation(
+        &self,
+        jetons: &[usize],
+        ancre: Option<usize>,
+        chiffres: &[usize],
+    ) -> Option<Cite> {
+        let lignes = sans_les_autres_champs(
+            self.jetons,
+            en_lignes(self.jetons, jetons),
+            ancre,
+            &self.autres_champs,
+        );
         // ni une ligne au-dessus de la principale qui ne recentre pas le texte sur les chiffres
         let lignes = colonnes::au_dessus_centrees(self.jetons, lignes, chiffres, ancre);
         if lignes.is_empty() {
             return None;
         }
         let recouvre = |l: &Vec<usize>, a: &Jeton| {
-            l.iter().map(|&k| (self.jetons[k].y1.min(a.y1) - self.jetons[k].y0.max(a.y0)).max(0.0)).fold(0.0, f64::max)
+            l.iter()
+                .map(|&k| (self.jetons[k].y1.min(a.y1) - self.jetons[k].y0.max(a.y0)).max(0.0))
+                .fold(0.0, f64::max)
         };
         let principale = ancre.and_then(|a| {
             let a = &self.jetons[a];
             (0..lignes.len()).max_by(|&x, &y| {
-                recouvre(&lignes[x], a).partial_cmp(&recouvre(&lignes[y], a)).unwrap_or(std::cmp::Ordering::Equal)
+                recouvre(&lignes[x], a)
+                    .partial_cmp(&recouvre(&lignes[y], a))
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
         });
         let ordre: Vec<usize> = match principale {
             Some(m) => {
                 // l'étendue de la ligne principale, élargie d'un blanc entre deux mots
-                let h = lignes[m].iter().map(|&k| self.jetons[k].y1 - self.jetons[k].y0).fold(0.0, f64::max);
-                let x0 = lignes[m].iter().map(|&k| self.jetons[k].x0).fold(f64::MAX, f64::min) - 2.0 * h;
-                let x1 = lignes[m].iter().map(|&k| self.jetons[k].x1).fold(f64::MIN, f64::max) + 2.0 * h;
+                let h = lignes[m]
+                    .iter()
+                    .map(|&k| self.jetons[k].y1 - self.jetons[k].y0)
+                    .fold(0.0, f64::max);
+                let x0 = lignes[m]
+                    .iter()
+                    .map(|&k| self.jetons[k].x0)
+                    .fold(f64::MAX, f64::min)
+                    - 2.0 * h;
+                let x1 = lignes[m]
+                    .iter()
+                    .map(|&k| self.jetons[k].x1)
+                    .fold(f64::MIN, f64::max)
+                    + 2.0 * h;
                 lignes
                     .iter()
                     .enumerate()
                     .flat_map(|(i, l)| {
-                        l.iter().copied().filter(move |&k| i == m || self.jetons[k].x1 > x0 && self.jetons[k].x0 < x1)
+                        l.iter().copied().filter(move |&k| {
+                            i == m || self.jetons[k].x1 > x0 && self.jetons[k].x0 < x1
+                        })
                     })
                     .collect()
             }
             None => lignes.into_iter().flatten().collect(),
         };
         Some(Cite::lue(
-            ordre.iter().map(|&k| self.jetons[k].texte.trim()).collect::<Vec<_>>().join(" "),
+            ordre
+                .iter()
+                .map(|&k| self.jetons[k].texte.trim())
+                .collect::<Vec<_>>()
+                .join(" "),
             ordre.iter().map(|&k| self.cite(k)).collect(),
         ))
     }
@@ -843,7 +1082,11 @@ impl Contexte<'_> {
         codes.dedup();
         if codes.len() == 1 {
             let code = codes[0].clone();
-            let refs = trouves.iter().filter(|(c, _)| *c == code).map(|(_, k)| self.cite(*k)).collect();
+            let refs = trouves
+                .iter()
+                .filter(|(c, _)| *c == code)
+                .map(|(_, k)| self.cite(*k))
+                .collect();
             Some(TauxCite { code, refs })
         } else {
             None
@@ -852,19 +1095,30 @@ impl Contexte<'_> {
 
     fn cite(&self, k: usize) -> RefJeton {
         let j = &self.jetons[k];
-        RefJeton { page: j.page, ordinal: j.ordinal }
+        RefJeton {
+            page: j.page,
+            ordinal: j.ordinal,
+        }
     }
 
     fn sortie(&self, rang: &[usize], t: &Triplet, avec_taux: bool) -> LigneSortie {
         let gauche = sans_la_remise(&rang[..t.q.0], t.r.map(|(k, _)| rang[k]), self.jetons);
         let chiffres: Vec<usize> = [t.q.0, t.p.0, t.m.0].iter().map(|&k| rang[k]).collect();
-        let designation = if gauche.is_empty() { None } else { self.designation(&gauche, Some(rang[t.q.0]), &chiffres) };
+        let designation = if gauche.is_empty() {
+            None
+        } else {
+            self.designation(&gauche, Some(rang[t.q.0]), &chiffres)
+        };
         let un = |(k, v): (usize, i64)| Cite::lue(v.to_string(), vec![self.cite(rang[k])]);
         // Le taux : un jeton de la rangée, à droite de la quantité, hors q, p, m et remise.
         let taux = if avec_taux {
             let pris = [Some(t.q.0), Some(t.p.0), Some(t.m.0), t.r.map(|x| x.0)];
             self.taux_parmi(
-                rang.iter().enumerate().skip(t.q.0 + 1).filter(|(k, _)| !pris.contains(&Some(*k))).map(|(_, &jk)| jk),
+                rang.iter()
+                    .enumerate()
+                    .skip(t.q.0 + 1)
+                    .filter(|(k, _)| !pris.contains(&Some(*k)))
+                    .map(|(_, &jk)| jk),
             )
         } else {
             None
@@ -886,29 +1140,56 @@ impl Contexte<'_> {
 /// « (remise » et « %) » restaient dans la désignation (banc sans IA du 4 novembre 2026,
 /// 100/A-07, couche de texte). L'annotation est le groupe entre parenthèses qui contient la
 /// remise, sur sa rangée ; sans parenthèses, le « % » seul qui la suit.
-pub(crate) fn sans_la_remise(pris: &[usize], remise: Option<usize>, jetons: &[Jeton]) -> Vec<usize> {
-    let Some(r) = remise else { return pris.to_vec() };
+pub(crate) fn sans_la_remise(
+    pris: &[usize],
+    remise: Option<usize>,
+    jetons: &[Jeton],
+) -> Vec<usize> {
+    let Some(r) = remise else {
+        return pris.to_vec();
+    };
     let jr = &jetons[r];
     let rangee = |i: usize| {
         let j = &jetons[i];
-        j.page == jr.page && (j.y1.min(jr.y1) - j.y0.max(jr.y0)) > 0.5 * (j.y1 - j.y0).min(jr.y1 - jr.y0)
+        j.page == jr.page
+            && (j.y1.min(jr.y1) - j.y0.max(jr.y0)) > 0.5 * (j.y1 - j.y0).min(jr.y1 - jr.y0)
     };
     let ouvre = pris
         .iter()
         .filter(|&&i| rangee(i) && jetons[i].x1 <= jr.x0 + f64::EPSILON)
-        .max_by(|&&a, &&b| jetons[a].x0.partial_cmp(&jetons[b].x0).unwrap_or(std::cmp::Ordering::Equal))
+        .max_by(|&&a, &&b| {
+            jetons[a]
+                .x0
+                .partial_cmp(&jetons[b].x0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
         .filter(|&&i| jetons[i].texte.trim_start().starts_with('('));
     let ferme = pris
         .iter()
         .filter(|&&i| rangee(i) && jetons[i].x0 >= jr.x1 - f64::EPSILON)
-        .min_by(|&&a, &&b| jetons[a].x0.partial_cmp(&jetons[b].x0).unwrap_or(std::cmp::Ordering::Equal))
+        .min_by(|&&a, &&b| {
+            jetons[a]
+                .x0
+                .partial_cmp(&jetons[b].x0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
         .copied();
     let (x0, x1) = match (ouvre, ferme) {
-        (Some(&o), Some(f)) if jetons[f].texte.trim_end().ends_with(')') => (jetons[o].x0, jetons[f].x1),
+        (Some(&o), Some(f)) if jetons[f].texte.trim_end().ends_with(')') => {
+            (jetons[o].x0, jetons[f].x1)
+        }
         (_, Some(f)) if jetons[f].texte.trim() == "%" => (jr.x0, jetons[f].x1),
         _ => (jr.x0, jr.x1),
     };
-    pris.iter().copied().filter(|&i| i != r && !(rangee(i) && jetons[i].x0 >= x0 - f64::EPSILON && jetons[i].x1 <= x1 + f64::EPSILON)).collect()
+    pris.iter()
+        .copied()
+        .filter(|&i| {
+            i != r
+                && !(rangee(i)
+                    && jetons[i].x0 >= x0 - f64::EPSILON
+                    && jetons[i].x1 <= x1 + f64::EPSILON)
+        })
+        .collect()
 }
 
 /// Les colonnes de remise d'un tableau : sur une rangée d'en-tête — au moins deux autres
@@ -918,13 +1199,33 @@ pub(crate) fn sans_la_remise(pris: &[usize], remise: Option<usize>, jetons: &[Je
 /// fermaient pas. La colonne s'étend d'une largeur d'intitulé de part et d'autre (un nombre
 /// se cadre à droite sous un intitulé court).
 fn colonnes_de_remise(op: &OpLignes, entree: &Entree) -> Vec<(f64, f64, f64)> {
-    let cle = |s: &str| crate::reperes::normaliser(s).chars().filter(|c| c.is_alphanumeric()).collect::<String>();
+    let cle = |s: &str| {
+        crate::reperes::normaliser(s)
+            .chars()
+            .filter(|c| c.is_alphanumeric())
+            .collect::<String>()
+    };
     let grille = &entree.grille;
-    let index = |nom: &str| grille.champs.iter().position(|c| c.code == nom.trim_end_matches('?'));
-    let Some(r) = op.remise.as_deref().and_then(index) else { return Vec::new() };
-    let Some(parcelle) = index(&op.designation).and_then(|d| grille.champs[d].parcelle.clone()) else { return Vec::new() };
+    let index = |nom: &str| {
+        grille
+            .champs
+            .iter()
+            .position(|c| c.code == nom.trim_end_matches('?'))
+    };
+    let Some(r) = op.remise.as_deref().and_then(index) else {
+        return Vec::new();
+    };
+    let Some(parcelle) = index(&op.designation).and_then(|d| grille.champs[d].parcelle.clone())
+    else {
+        return Vec::new();
+    };
     let reperes = |c: &crate::entree::Champ| -> Vec<String> {
-        c.reperes_fr.iter().chain(c.reperes_ar.iter()).map(|x| cle(x)).filter(|x| !x.is_empty()).collect()
+        c.reperes_fr
+            .iter()
+            .chain(c.reperes_ar.iter())
+            .map(|x| cle(x))
+            .filter(|x| !x.is_empty())
+            .collect()
     };
     let de_la_remise = reperes(&grille.champs[r]);
     let des_lignes: Vec<String> = grille
@@ -953,22 +1254,36 @@ fn colonnes_de_remise(op: &OpLignes, entree: &Entree) -> Vec<(f64, f64, f64)> {
 
 /// La valeur prouvée d'un champ scalaire au centre.
 fn prouvee(champs: &BTreeMap<String, ChampSortie>, code: &str) -> Option<i64> {
-    champs.get(code).filter(|c| c.statut == "prouve").and_then(|c| c.valeur.as_ref()).and_then(|v| v.parse().ok())
+    champs
+        .get(code)
+        .filter(|c| c.statut == "prouve")
+        .and_then(|c| c.valeur.as_ref())
+        .and_then(|v| v.parse().ok())
 }
 
 /// Prouve les lignes. Rend la sortie `lignes` et le statut de la preuve.
-pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSortie>) -> (LignesSortie, &'static str) {
+pub fn prouver(
+    op: &OpLignes,
+    entree: &Entree,
+    champs: &BTreeMap<String, ChampSortie>,
+) -> (LignesSortie, &'static str) {
     let pack = &entree.pack;
     let ctx = Contexte {
         jetons: &entree.jetons,
         tol: pack.tolerance,
         unite: 10i128.pow(pack.decimales),
-        pourcent: Regex::new(r"^\(?(?:(?P<e>\d+)(?:[.,](?P<d>\d+))?%|%(?P<e2>\d+))\)?[.,;]?$").expect("motif"),
+        pourcent: Regex::new(r"^\(?(?:(?P<e>\d+)(?:[.,](?P<d>\d+))?%|%(?P<e2>\d+))\)?[.,;]?$")
+            .expect("motif"),
         bareme: op
             .bareme
             .as_ref()
             .and_then(|b| pack.baremes.get(b))
-            .map(|v| v.iter().filter(|t| t.ppm > 0).map(|t| (t.code.clone(), t.ppm)).collect())
+            .map(|v| {
+                v.iter()
+                    .filter(|t| t.ppm > 0)
+                    .map(|t| (t.code.clone(), t.ppm))
+                    .collect()
+            })
             .unwrap_or_default(),
         prix_ttc: op.prix_ttc.is_some(),
         colonnes_remise: colonnes_de_remise(op, entree),
@@ -990,20 +1305,34 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
     // retournée — sa désignation, alors à la suite de la quantité, reprend son ordre de
     // lecture. Banc sans IA du 4 novembre 2026 : aucune ligne d'une facture arabe n'était lue.
     for r in rangs.iter_mut() {
-        if ctx.triplets(r, true).is_empty() && r.iter().any(|&k| crate::reperes::droite_a_gauche(&droits[k].texte)) {
+        if ctx.triplets(r, true).is_empty()
+            && r.iter()
+                .any(|&k| crate::reperes::droite_a_gauche(&droits[k].texte))
+        {
             let retournee: Vec<usize> = r.iter().rev().copied().collect();
             if !ctx.triplets(&retournee, true).is_empty() {
                 *r = retournee;
             }
         }
     }
-    let candidates: Vec<(usize, Vec<Triplet>)> =
-        rangs.iter().enumerate().map(|(i, r)| (i, ctx.triplets(r, true))).filter(|(_, t)| !t.is_empty()).collect();
-    let cibles: Vec<i64> =
-        [Some(op.montant_total.as_str()), op.total_brut.as_deref()].into_iter().flatten().filter_map(|c| prouvee(champs, c)).collect();
+    let candidates: Vec<(usize, Vec<Triplet>)> = rangs
+        .iter()
+        .enumerate()
+        .map(|(i, r)| (i, ctx.triplets(r, true)))
+        .filter(|(_, t)| !t.is_empty())
+        .collect();
+    let cibles: Vec<i64> = [Some(op.montant_total.as_str()), op.total_brut.as_deref()]
+        .into_iter()
+        .flatten()
+        .filter_map(|c| prouvee(champs, c))
+        .collect();
     let lu = if candidates.is_empty() {
         // aucune rangée q × p = m : seule une graine ancrée par l'en-tête peut lire le tableau
-        let r = if cibles.is_empty() { None } else { milieu::prouver(&ctx, op, &entree.grille, &rangs, &cibles) };
+        let r = if cibles.is_empty() {
+            None
+        } else {
+            milieu::prouver(&ctx, op, &entree.grille, &rangs, &cibles)
+        };
         match r {
             Some(r) => r,
             None => return (vide("absent"), "non_evaluable"),
@@ -1012,7 +1341,11 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
         return (vide("signale"), "non_evaluable");
     } else {
         match toujours(&ctx, op, &rangs, candidates, &cibles) {
-            Ok(instances) => milieu::Lu { instances, deduites: 0, remise_globale: None },
+            Ok(instances) => milieu::Lu {
+                instances,
+                deduites: 0,
+                remise_globale: None,
+            },
             // la stratégie de toujours ne prouve pas : la lecture du milieu, sinon son verdict
             Err(st) => match milieu::prouver(&ctx, op, &entree.grille, &rangs, &cibles) {
                 Some(r) => r,
@@ -1020,8 +1353,18 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
             },
         }
     };
-    let milieu::Lu { mut instances, deduites, remise_globale } = lu;
-    colonnes::affiner(&mut instances, &droits, &rangs, &entree.grille, &op.designation);
+    let milieu::Lu {
+        mut instances,
+        deduites,
+        remise_globale,
+    } = lu;
+    colonnes::affiner(
+        &mut instances,
+        &droits,
+        &rangs,
+        &entree.grille,
+        &op.designation,
+    );
     // Les chiffres d'une ligne sont prouvés par le calcul ; sa désignation ne l'est par
     // rien. Un mot que l'OCR lit sans assurance (« كاء » pour « كراء ») ferait une
     // désignation fausse : elle est tue, la ligne reste.
@@ -1035,11 +1378,20 @@ pub fn prouver(op: &OpLignes, entree: &Entree, champs: &BTreeMap<String, ChampSo
         .map(|j| (j.page, j.ordinal))
         .collect();
     for l in instances.iter_mut() {
-        if l.designation.as_ref().is_some_and(|d| d.refs.iter().any(|r| incertains.contains(&(r.page, r.ordinal)))) {
+        if l.designation.as_ref().is_some_and(|d| {
+            d.refs
+                .iter()
+                .any(|r| incertains.contains(&(r.page, r.ordinal)))
+        }) {
             l.designation = None;
         }
     }
-    let nuls = op.bareme.as_ref().and_then(|b| pack.taux_nuls.get(b)).map(Vec::as_slice).unwrap_or_default();
+    let nuls = op
+        .bareme
+        .as_ref()
+        .and_then(|b| pack.taux_nuls.get(b))
+        .map(Vec::as_slice)
+        .unwrap_or_default();
     let taux_par_base = verifier_taux(op, champs, nuls, &mut instances);
     let sortie = LignesSortie {
         statut: "prouve".into(),
@@ -1060,7 +1412,6 @@ fn toujours(
     candidates: Vec<(usize, Vec<Triplet>)>,
     cibles: &[i64],
 ) -> Result<Vec<LigneSortie>, &'static str> {
-
     // Toutes les rangées candidates sont des lignes : une combinaison de leurs triplets
     // dont la somme des montants vaut exactement un total prouvé.
     let mut fermantes: Vec<Vec<usize>> = Vec::new();
@@ -1097,7 +1448,15 @@ fn toujours(
             choix.pop();
         }
     }
-    chercher(&candidates, cibles, 0, &mut choix, &mut fermantes, &mut explorees, &mut depasse);
+    chercher(
+        &candidates,
+        cibles,
+        0,
+        &mut choix,
+        &mut fermantes,
+        &mut explorees,
+        &mut depasse,
+    );
     if depasse {
         return Err("non_evaluable");
     }
@@ -1106,7 +1465,11 @@ fn toujours(
         1 => {}
         _ => return Err("indeterminee"),
     }
-    Ok(candidates.iter().zip(&fermantes[0]).map(|((ri, ts), &i)| ctx.sortie(&rangs[*ri], &ts[i], op.avec_taux)).collect())
+    Ok(candidates
+        .iter()
+        .zip(&fermantes[0])
+        .map(|((ri, ts), &i)| ctx.sortie(&rangs[*ri], &ts[i], op.avec_taux))
+        .collect())
 }
 
 /// Σ montants des lignes par taux = base de ce taux au centre, quand c'est évaluable :
@@ -1122,22 +1485,34 @@ fn verifier_taux(
     let mut taux_par_base = "non_evaluable";
     // Une base seulement déduite (non imprimée) n'est connue que pour un taux unique : c'est
     // alors le total des bases du groupe, prouvé au centre.
-    let bases: Option<BTreeMap<String, i64>> = op.base_par_taux.as_ref().and_then(|b| champs.get(b)).and_then(|c| {
-        if c.statut != "prouve" {
-            return None;
-        }
-        let inst = c.instances.as_ref()?;
-        let deduite = match inst.as_slice() {
-            [_] => op.total_base.as_deref().and_then(|t| prouvee(champs, t)),
-            _ => None,
-        };
-        if inst.is_empty() {
-            return None;
-        }
-        inst.iter()
-            .map(|i| Some((i.taux.clone(), i.valeur.as_ref().and_then(|v| v.parse::<i64>().ok()).or(deduite)?)))
-            .collect()
-    });
+    let bases: Option<BTreeMap<String, i64>> = op
+        .base_par_taux
+        .as_ref()
+        .and_then(|b| champs.get(b))
+        .and_then(|c| {
+            if c.statut != "prouve" {
+                return None;
+            }
+            let inst = c.instances.as_ref()?;
+            let deduite = match inst.as_slice() {
+                [_] => op.total_base.as_deref().and_then(|t| prouvee(champs, t)),
+                _ => None,
+            };
+            if inst.is_empty() {
+                return None;
+            }
+            inst.iter()
+                .map(|i| {
+                    Some((
+                        i.taux.clone(),
+                        i.valeur
+                            .as_ref()
+                            .and_then(|v| v.parse::<i64>().ok())
+                            .or(deduite)?,
+                    ))
+                })
+                .collect()
+        });
     if let Some(bases) = bases {
         if instances.iter().any(|l| l.taux.is_some()) {
             let mut sommes: BTreeMap<String, i64> = BTreeMap::new();
@@ -1148,7 +1523,8 @@ fn verifier_taux(
                     (None, Some(c)) => c,
                     (None, None) => continue,
                 };
-                *sommes.entry(code.clone()).or_default() += l.montant.valeur.parse::<i64>().unwrap_or_default();
+                *sommes.entry(code.clone()).or_default() +=
+                    l.montant.valeur.parse::<i64>().unwrap_or_default();
             }
             if sommes == bases {
                 taux_par_base = "verifiee";
