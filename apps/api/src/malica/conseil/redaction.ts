@@ -31,6 +31,28 @@ function tonEnMots(ton: string, langue: string): string {
   return ton === "chaleureux" ? "chaleureux et direct" : "sobre et précis";
 }
 
+/** Une date ISO d'un texte (« 2026-11-30 »), bornée : ni dans un nombre, ni dans un identifiant. */
+const DATE_ISO = /(?<![\d-])(\d{4}-\d{2}-\d{2})(?![\d-])/g;
+
+/**
+ * Les dates ISO d'un texte relu, dans la langue du lecteur (« 30 novembre
+ * 2026 »). Le modèle les recopie des faits sous leur forme ISO ; on les met
+ * en forme APRÈS la relecture, qui les ignore (5 novembre 2026 : le briefing
+ * et le PV écrivaient « le 2026-10-15 »). Aucun nombre n'est créé.
+ */
+export function datesEnLettres(texte: string, locale: string): string {
+  const jour = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  return texte.replace(DATE_ISO, (iso) => {
+    const d = new Date(`${iso}T00:00:00Z`);
+    return Number.isNaN(d.getTime()) ? iso : jour.format(d);
+  });
+}
+
 /** Les nombres qu'un texte a le droit de porter : ceux des faits, et eux seuls. */
 export function nombresAutorises(faits: readonly Fait[]): Set<string> {
   const autorises = new Set<string>();
@@ -95,7 +117,11 @@ export async function redigerDepuisLesFaits(params: {
     });
     dernierTexte = resultat.answer.trim();
     if (nombresEtrangers(dernierTexte, params.faits).length === 0) {
-      return { texte: dernierTexte, faits: params.faits, modele: resultat.model };
+      return {
+        texte: datesEnLettres(dernierTexte, params.langue),
+        faits: params.faits,
+        modele: resultat.model,
+      };
     }
   }
   throw new Error("redaction.chiffre_etranger");
