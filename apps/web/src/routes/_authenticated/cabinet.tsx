@@ -455,7 +455,10 @@ function Coquille({
             }
           />
         ) : null}
-        <div className="cab-content px-4 py-6 sm:px-6 lg:px-9 lg:py-7">
+        {/* `cab-lisible` sur tout l'espace : le plancher de 12 px et les cibles
+            de 44 px du téléphone ne couvraient que neuf écrans sur vingt et un
+            (mesure du 5 novembre 2026). Le bureau ne change pas (< 640 px). */}
+        <div className="cab-content cab-lisible px-4 py-6 sm:px-6 lg:px-9 lg:py-7">
           <Outlet />
           {panneauOuvert ? (
             <section className="mt-8 border border-border bg-card lg:hidden">
@@ -909,7 +912,7 @@ function BarreDuHaut({
         type="button"
         onClick={ouvrirTiroir}
         aria-label={t("cab.top.menu")}
-        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card lg:hidden"
+        className="flex h-11 w-11 lg:h-[34px] lg:w-[34px] shrink-0 items-center justify-center border border-border bg-card lg:hidden"
       >
         <Menu size={16} />
       </button>
@@ -963,7 +966,7 @@ function BarreDuHaut({
         to="/cabinet/notifications"
         aria-label={cloche}
         title={cloche}
-        className="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
+        className="relative flex h-11 w-11 lg:h-[34px] lg:w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
       >
         <Bell size={16} strokeWidth={1.9} aria-hidden />
         {nonLues > 0 ? (
@@ -984,7 +987,8 @@ function BarreDuHaut({
         aria-pressed={panneauOuvert}
         title={t("cab.top.malica")}
         className={cn(
-          "flex shrink-0 items-center justify-center border p-[3px]",
+          // 44 px au téléphone, comme toute cible du cabinet ; 34 px au bureau.
+          "flex h-11 w-11 shrink-0 items-center justify-center border p-[3px] lg:h-auto lg:w-auto",
           panneauOuvert ? "border-foreground bg-card" : "border-border bg-card hover:bg-accent",
         )}
       >
@@ -1008,15 +1012,17 @@ function BandeauDossier({
   const { t } = useI18n();
   const client = clients.find((c) => c.tenantId === clientId) ?? null;
   const classeOnglet =
-    "whitespace-nowrap border-b-2 border-transparent py-2.5 text-[12.5px] text-muted-foreground hover:text-foreground [&.active]:border-foreground [&.active]:text-foreground";
+    "cab-cible inline-flex items-center whitespace-nowrap border-b-2 border-transparent py-2.5 text-[12.5px] text-muted-foreground hover:text-foreground [&.active]:border-foreground [&.active]:text-foreground";
   return (
-    <div className="border-b border-foreground bg-sidebar">
+    // `cab-lisible` : le bandeau vit hors du contenu, ses cibles aussi doivent
+    // tenir sous le doigt (mesure du 5 novembre 2026).
+    <div className="cab-lisible border-b border-foreground bg-sidebar">
       <div className="flex flex-wrap items-center gap-3.5 px-4 pt-3 sm:px-6 lg:px-9">
         <Link
           to="/cabinet/clients"
           aria-label={t("cab.dossier.back")}
           title={t("cab.dossier.back")}
-          className="flex h-[30px] w-[30px] shrink-0 items-center justify-center border border-border bg-card"
+          className="flex h-11 w-11 shrink-0 items-center justify-center border border-border bg-card lg:h-[30px] lg:w-[30px]"
         >
           <ChevronLeft size={13} />
         </Link>

@@ -262,7 +262,10 @@ function CabinetEcheances() {
             >
               <span
                 className={cn(
-                  "num whitespace-nowrap text-[10px]",
+                  // Au téléphone, les dates de la frise se chevauchaient (mesure du
+                  // 5 novembre 2026) : les barres restent, chaque date se lit dans la
+                  // carte de son échéance, juste dessous.
+                  "num hidden whitespace-nowrap text-[10px] sm:inline",
                   // Deux repères voisins ne se lisent que si leurs étiquettes s'alternent.
                   index % 2 === 1 ? "-translate-y-3.5" : "",
                   liste.some((e) => e.status === "en_retard")
@@ -345,7 +348,9 @@ function CabinetEcheances() {
         ) : rows.length === 0 ? (
           <EmptyState>{t("cab.echeances.empty")}</EmptyState>
         ) : (
-          <div className="overflow-x-auto border border-border bg-card">
+          // Au téléphone, une carte par échéance (`cab-table-empile`) : le tableau
+          // de six colonnes défilait de côté (mesure du 5 novembre 2026).
+          <div className="cab-table-empile overflow-x-auto border border-border bg-card">
             <table className="min-w-full border-collapse text-[12.5px]">
               <caption className="sr-only">{t("cab.echeances.title")}</caption>
               <thead>
@@ -374,7 +379,7 @@ function CabinetEcheances() {
               <tbody>
                 {rows.map((e) => (
                   <tr key={e.id} className="border-b border-border hover:bg-secondary/60">
-                    <td className="whitespace-nowrap px-3 py-2 font-medium">
+                    <td className="px-3 py-2 font-medium sm:whitespace-nowrap">
                       {e.label}
                       {e.period ? (
                         <span className="num block text-[10.5px] font-normal text-muted-foreground">
@@ -382,7 +387,7 @@ function CabinetEcheances() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2">
+                    <td data-label={t("cab.queue.client")} className="px-3 py-2">
                       <Link
                         to="/cabinet/dossier/$clientId"
                         params={{ clientId: e.tenantId }}
@@ -391,7 +396,11 @@ function CabinetEcheances() {
                         {nomDe(e.tenantId)}
                       </Link>
                     </td>
-                    <td className="min-w-[240px] px-3 py-2" title={e.texteSource ?? undefined}>
+                    <td
+                      data-label={t("cab.echeances.col.legal")}
+                      className="px-3 py-2 sm:min-w-[240px]"
+                      title={e.texteSource ?? undefined}
+                    >
                       <span className="num block whitespace-nowrap text-[11px] text-signal-info">
                         {e.article ?? e.texteSource ?? "—"}
                       </span>
@@ -401,7 +410,10 @@ function CabinetEcheances() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-end">
+                    <td
+                      data-label={t("cab.echeances.col.depot")}
+                      className="whitespace-nowrap px-3 py-2 text-end"
+                    >
                       <span className="num block text-[12px]">
                         {dateEnChiffres(e.dueDate, locale)}
                       </span>
@@ -424,7 +436,10 @@ function CabinetEcheances() {
                         {compteDe(e)}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2">
+                    <td
+                      data-label={t("cab.echeances.col.state")}
+                      className="whitespace-nowrap px-3 py-2"
+                    >
                       <span className="inline-flex items-center gap-1.5">
                         <span
                           aria-hidden

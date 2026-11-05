@@ -560,7 +560,7 @@ export function EcritureDuCabinet({
                   champ: t("cab.ecriture.ligne.retirer"),
                   n: i + 1,
                 })}
-                className="col-start-3 row-start-1 flex h-8 w-8 items-center justify-center text-muted-foreground hover:text-foreground sm:col-start-5"
+                className="col-start-3 row-start-1 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground sm:col-start-5 sm:h-8 sm:w-8"
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
