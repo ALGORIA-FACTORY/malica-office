@@ -109,3 +109,25 @@ fn le_cachet_vu_sans_modele_se_lit_pour_le_seul_champ_qui_l_attend() {
     }
     assert_ne!(lire(&deux)["champs"]["cachet_emetteur"]["statut"], "conforme");
 }
+
+/// Le bloc qui porte une étiquette du client (« الحريف », le client), quand l'autre n'en
+/// porte aucune, est le client : la pièce est un achat. Sans cette étiquette, le sens se
+/// tait — il n'est jamais deviné.
+#[test]
+fn l_etiquette_du_client_dit_le_sens_de_la_piece() {
+    let cas: Vec<Value> = serde_json::from_str(include_str!("donnees/des_silences_aux_preuves.json")).expect("jeu lisible");
+    let entree = cas.iter().find(|c| c["id"] == "synthetique-055").expect("cas")["entree"].clone();
+    let lire = |e: &Value| -> Value { serde_json::from_str(&malica_sudoku::solve(&e.to_string())).expect("sortie") };
+    let o = lire(&entree);
+    assert_eq!(o["parties"]["sens"], "achat", "{}", o["parties"]);
+    assert_eq!(o["parties"]["emetteur"]["matricule"]["valeur"], "1381012E/A/M/000");
+    assert_eq!(o["parties"]["client"]["matricule"]["valeur"], "6443013U/A/M/000");
+    let mut sans = entree.clone();
+    for j in sans["jetons"].as_array_mut().expect("jetons") {
+        let t = j["texte"].as_str().unwrap_or_default().to_string();
+        if t.contains("حريف") {
+            j["texte"] = Value::from(t.replace("الحريف", "").replace("للحريف", "").replace("حريف", ""));
+        }
+    }
+    assert_ne!(lire(&sans)["parties"]["statut"], "prouve", "{}", lire(&sans)["parties"]);
+}

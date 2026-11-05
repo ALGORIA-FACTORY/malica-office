@@ -1146,6 +1146,17 @@ pub fn prouver(op: &OpParties, entree: &Entree, champs: &mut BTreeMap<String, Ch
         if edo > 0 && cdo == 0 && eo == 0 {
             votes.push(Sens::Vente);
         }
+        // Les étiquettes du CLIENT (« Client », « Facturé à », « Livré à ») ne s'impriment
+        // que dans le bloc du destinataire ; celles de l'émetteur (RC, téléphone) se lisent
+        // aussi dans le bloc d'un client qui les imprime (algoria-001 : « RC : B0128… » à
+        // côté du matricule du dossier, client, sous « Livré à : »). Le bloc qui porte une
+        // étiquette du client, quand l'autre n'en porte aucune, est le client.
+        if cdo > 0 && co == 0 {
+            votes.push(Sens::Achat);
+        }
+        if co > 0 && cdo == 0 {
+            votes.push(Sens::Vente);
+        }
         // La géométrie corrobore, elle ne décide jamais seule : un émetteur peut imprimer
         // son matricule plus bas que le bloc du client (colonne latérale).
         if !votes.is_empty() {

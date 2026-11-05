@@ -338,6 +338,37 @@ le moteur les signale au lieu de les affirmer.
 - La probabilité par caractère n'existe que pour le second lecteur ; la relecture
   arabe et les PDF n'en ont pas.
 
+## Bulletin 10 — le sens de la pièce par l'étiquette du client (5 novembre 2026)
+
+Les matricules des deux parties étaient lus, et le moteur ne les rendait pas : il ne
+savait pas laquelle émet la pièce (« aucun indice de sens », 45 pièces). La grappe
+légale ne votait que si le bloc d'une partie ne portait AUCUNE étiquette de l'émetteur ;
+or un client imprime souvent son RC et son téléphone (algoria-001 : « RC : B0128… » à
+côté du matricule du dossier, client).
+
+Les étiquettes du client (« Client », « Facturé à », « الحريف »), elles, ne s'impriment
+que dans le bloc du destinataire. Le bloc qui en porte une, quand l'autre n'en porte
+aucune, est le client. Les indices restent tous concordants ou rien.
+
+|             | juste | faux | dont à travailler | sens justes |
+| ----------- | ----: | ---: | ----------------: | ----------: |
+| bulletin 9  | 5 936 |    0 |             4 681 |   132 / 348 |
+| bulletin 10 | 5 949 |    0 |             4 667 |   139 / 348 |
+
+**Mesuré et écarté.**
+
+- Le vote de la géométrie (le matricule le plus haut est l'émetteur) contredit
+  l'étiquette sur le gabarit A, qui imprime le matricule de l'émetteur en pied de page :
+  23 pièces passent en « indices contradictoires ». Sans ce vote : 6 029 justes mais
+  9 faux, dont deux pièces aux parties échangées (50/15, 50/23). Il reste : il ne décide
+  jamais, il empêche.
+- Donner le rôle « client » à l'adresse de livraison : le dictionnaire des concepts le
+  refuse (`adresse_livraison` ne porte sur aucune partie — une livraison peut se faire
+  chez un tiers). Rien n'est forcé.
+
+**Piste suivante.** Comparer le haut des BLOCS des parties, pas celui de leurs
+matricules : sur le gabarit A, les deux blocs commencent à la même hauteur.
+
 ## Les corpus
 
 | Corpus                                     |                                        Pièces | Vérité                                | Relevé                     |
