@@ -66,6 +66,7 @@
   },
   "messages_bruts": {},
   "refus_calcules": {
+    "public.cabinet_ouvrir_dossier": "Lève v_refus, que rend public.identifiant_verifier : la clé refus.identifiant.invalide et ses valeurs (migration 20261130110000), comme public.create_organization.",
     "public.create_organization": "Lève v_refus, que rend public.identifiant_verifier : la clé refus.identifiant.invalide et ses valeurs (migration 20261110090400)."
   },
   "portes_que_personne_n_appelle": {
