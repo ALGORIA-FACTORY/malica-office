@@ -2354,6 +2354,7 @@ export const ar: Dict = {
   "refus.cle_api.par_une_personne":
     "مفتاح الواجهة البرمجية لا يُنشئ مفتاحًا آخر ولا يُلغيه: يقوم بذلك شخص.",
   "refus.cle_api.cabinet_seulement": "وحده المكتب يحمل مفتاح واجهة برمجية.",
+  "refus.cle_api.expert_membre": "وحده خبير عضو في المكتب يُنشئ مفتاح واجهة برمجية.",
   "refus.cle_api.nom_requis": "أعطِ المفتاح اسمًا.",
   "refus.cle_api.portee_requise": "يحمل المفتاح نطاقًا واحدًا على الأقل.",
   "refus.cle_api.portee_inconnue": "أحد النطاقات المطلوبة غير موجود.",

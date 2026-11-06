@@ -2443,6 +2443,8 @@ export const en: Dict = {
   "refus.cle_api.par_une_personne":
     "An API key neither creates nor revokes another key: a person does this.",
   "refus.cle_api.cabinet_seulement": "Only a practice holds an API key.",
+  "refus.cle_api.expert_membre":
+    "Only an expert who is a member of the practice creates an API key.",
   "refus.cle_api.nom_requis": "Give the key a name.",
   "refus.cle_api.portee_requise": "A key carries at least one scope.",
   "refus.cle_api.portee_inconnue": "One of the requested scopes does not exist.",

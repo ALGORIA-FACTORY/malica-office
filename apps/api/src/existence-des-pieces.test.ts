@@ -55,7 +55,7 @@ describe("D29 — l'existence d'une pièce ne se confirme pas", { skip: !BASE_CO
     const b = await creerCompte(`b-${marque}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(a && b);
     proprietaire = a.id;
-    jetonEtranger = emettreJeton(b);
+    jetonEtranger = emettreJeton(b, new Date());
     orgA = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', $1, 'autonome', null, 'TN', 'TND') as id`,

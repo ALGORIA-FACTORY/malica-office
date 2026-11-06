@@ -379,7 +379,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     try {
       const telecharger = (qui: Utilisateur) =>
         fetch(`${base}/exports/${exporte.id}/contenu`, {
-          headers: { Authorization: `Bearer ${emettreJeton(qui)}` },
+          headers: { Authorization: `Bearer ${emettreJeton(qui, new Date())}` },
         });
       const r = await telecharger(expert);
       assert.equal(r.status, 200);

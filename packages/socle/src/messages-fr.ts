@@ -2527,6 +2527,7 @@ export const fr = {
   "refus.cle_api.par_une_personne":
     "Une clé d’API ne crée ni ne révoque une autre clé : ce geste se fait par une personne.",
   "refus.cle_api.cabinet_seulement": "Seul un cabinet porte une clé d’API.",
+  "refus.cle_api.expert_membre": "Seul un expert membre du cabinet crée une clé d’API.",
   "refus.cle_api.nom_requis": "Donnez un nom à la clé.",
   "refus.cle_api.portee_requise": "Une clé porte au moins une portée.",
   "refus.cle_api.portee_inconnue": "Une des portées demandées n’existe pas.",
