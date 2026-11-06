@@ -525,7 +525,9 @@ describe("la route de la miniature", { skip: !BASE_CONFIGUREE }, () => {
     }
   };
 
-  const entetes = (qui: Utilisateur) => ({ Authorization: `Bearer ${emettreJeton(qui)}` });
+  const entetes = (qui: Utilisateur) => ({
+    Authorization: `Bearer ${emettreJeton(qui, new Date())}`,
+  });
 
   async function deposer(
     qui: Utilisateur,

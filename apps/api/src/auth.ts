@@ -61,16 +61,47 @@ function secret(): string {
   return valeur;
 }
 
-export function emettreJeton(utilisateur: Utilisateur): string {
-  // `iat` à la milliseconde (une NumericDate peut être fractionnaire) : la
-  // réinitialisation ferme les sessions puis en ouvre une, dans la même
-  // seconde — à la seconde près, la nouvelle tomberait avec les anciennes.
+/**
+ * Signe un jeton émis à `emisLe`. L'instant vient de la BASE
+ * (`auth.instant_d_emission`), jamais de l'horloge de l'API : c'est l'horloge
+ * qui pose `sessions_invalidees_le`, et deux horloges qui dérivent d'une
+ * milliseconde rendraient un jeton neuf « d'avant » une fermeture, ou l'inverse.
+ *
+ * `iat` à la milliseconde (une NumericDate peut être fractionnaire) : la
+ * réinitialisation ferme les sessions puis en ouvre une, dans la même seconde.
+ */
+export function emettreJeton(utilisateur: Utilisateur, emisLe: Date): string {
   return jwt.sign(
-    { sub: utilisateur.id, email: utilisateur.email, sid: randomUUID(), iat: Date.now() / 1000 },
+    {
+      sub: utilisateur.id,
+      email: utilisateur.email,
+      sid: randomUUID(),
+      iat: emisLe.getTime() / 1000,
+    },
     secret(),
     { expiresIn: DUREE_JETON },
   );
 }
+
+/** L'instant d'émission d'un jeton pour ce compte, lu dans la transaction donnée. */
+async function instantDEmissionDans(db: Requete, userId: string): Promise<Date> {
+  const { rows } = await db.query<{ instant: Date }>(
+    "select auth.instant_d_emission($1) as instant",
+    [userId],
+  );
+  return rows[0]!.instant;
+}
+
+/** Ouvre une session — l'inscription, la connexion : un jeton daté par la base. */
+export async function ouvrirUneSession(utilisateur: Utilisateur): Promise<string> {
+  const emisLe = await horsRlsAuthentificationSeule((db) =>
+    instantDEmissionDans(db, utilisateur.id),
+  );
+  return emettreJeton(utilisateur, emisLe);
+}
+
+/** Un `sid` est un uuid : autre chose, même signé, n'atteint pas la base. */
+const FORME_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * La signature et la forme, sans la base — `sessionEnVigueur` dit le reste.
@@ -87,6 +118,7 @@ export function lireJeton(jeton: string): JetonLu | null {
       exp?: number;
     };
     if (!charge.sub || !charge.email || !charge.sid || !charge.iat || !charge.exp) return null;
+    if (!FORME_UUID.test(charge.sid) || !FORME_UUID.test(charge.sub)) return null;
     return {
       id: charge.sub,
       email: charge.email,
@@ -138,12 +170,32 @@ export async function fermerLaSession(jeton: JetonLu): Promise<void> {
  * et ses jetons longs. Dans la transaction de l'appelant — la réinitialisation
  * le fait avec le changement de mot de passe, d'un seul geste.
  *
- * L'instant est tronqué à la milliseconde, la précision du jeton : celui
- * qu'émet ensuite le même geste n'est jamais « d'avant ».
+ * Le compte d'abord, verrouillé : `rafraichir` le verrouille aussi, AVANT le
+ * jeton long (même ordre, pas d'interblocage). Un rafraîchissement déjà parti
+ * finit donc avant ce qui suit, et un rafraîchissement qui part après attend
+ * notre fin et trouve son jeton révoqué. Sans ce verrou, le jeton long né d'un
+ * rafraîchissement concurrent échappait à la révocation (READ COMMITTED : une
+ * ligne commitée après le début de la requête n'est pas vue).
+ *
+ * Le premier ordre prend le verrou et révoque ce qu'il voit ; le second révoque
+ * ce qui a été commité pendant l'attente du verrou, que le premier ne voyait pas.
+ *
+ * L'instant de fermeture est pris APRÈS le verrou (`clock_timestamp()`, pas le
+ * début de la transaction), arrondi à la milliseconde suivante : tout jeton
+ * émis avant, à la milliseconde près, tombe ; celui qu'émet ensuite le même
+ * geste (`auth.instant_d_emission`) n'est jamais « d'avant ».
  */
 async function fermerToutesLesSessionsDans(db: Requete, userId: string): Promise<void> {
   await db.query(
-    `update auth.users set sessions_invalidees_le = date_trunc('milliseconds', now())
+    `with compte as (select u.id from auth.users u where u.id = $1 for update)
+     update auth.refresh_tokens set revoque_le = now()
+      where user_id = (select id from compte) and revoque_le is null`,
+    [userId],
+  );
+  await db.query(
+    `update auth.users
+        set sessions_invalidees_le = date_trunc('milliseconds', clock_timestamp())
+                                     + interval '1 millisecond'
       where id = $1`,
     [userId],
   );
@@ -267,28 +319,37 @@ export async function emettreJetonDeRafraichissement(
 
 /**
  * Tourne un jeton : l'ancien est révoqué, un nouveau est émis, l'identité est
- * rendue. `null` si le jeton est inconnu, expiré ou déjà tourné — on ne dit
- * pas lequel, pour la même raison qu'à la connexion.
+ * rendue, avec l'instant d'émission du jeton d'accès à signer. `null` si le
+ * jeton est inconnu, expiré ou déjà tourné — on ne dit pas lequel, pour la
+ * même raison qu'à la connexion.
+ *
+ * Le compte est verrouillé AVANT le jeton long, dans l'ordre de « partout »
+ * (`fermerToutesLesSessionsDans`) : les deux gestes se suivent, ils ne se
+ * croisent pas. L'instant d'émission est lu sous ce verrou.
  */
 export async function rafraichir(
   secret: string,
   appareil: string | null,
-): Promise<{ utilisateur: Utilisateur; jetonRafraichissement: string } | null> {
+): Promise<{ utilisateur: Utilisateur; jetonRafraichissement: string; emisLe: Date } | null> {
   const nouveau = nouveauSecret();
+  const empreinte = empreinteDe(secret);
   return horsRlsAuthentificationSeule(async (db) => {
-    const { rows } = await db.query<{
-      id: string;
-      user_id: string;
-      email: string;
-      expire_le: Date;
-      revoque_le: Date | null;
-    }>(
-      `select t.id, t.user_id, u.email, t.expire_le, t.revoque_le
+    const { rows: comptes } = await db.query<Utilisateur>(
+      `select u.id, u.email
+         from auth.users u
+        where u.id = (select t.user_id from auth.refresh_tokens t where t.empreinte = $1)
+        for update`,
+      [empreinte],
+    );
+    const compte = comptes[0];
+    if (!compte) return null;
+
+    const { rows } = await db.query<{ id: string; expire_le: Date; revoque_le: Date | null }>(
+      `select t.id, t.expire_le, t.revoque_le
          from auth.refresh_tokens t
-         join auth.users u on u.id = t.user_id
         where t.empreinte = $1
         for update of t`,
-      [empreinteDe(secret)],
+      [empreinte],
     );
     const ancien = rows[0];
     if (!ancien || ancien.revoque_le || ancien.expire_le.getTime() < Date.now()) return null;
@@ -297,20 +358,16 @@ export async function rafraichir(
       `insert into auth.refresh_tokens (user_id, empreinte, appareil, expire_le)
          values ($1, $2, $3, $4)
        returning id`,
-      [
-        ancien.user_id,
-        empreinteDe(nouveau),
-        appareil,
-        new Date(Date.now() + DUREE_RAFRAICHISSEMENT_MS),
-      ],
+      [compte.id, empreinteDe(nouveau), appareil, new Date(Date.now() + DUREE_RAFRAICHISSEMENT_MS)],
     );
     await db.query(
       `update auth.refresh_tokens set revoque_le = now(), remplace_par = $2 where id = $1`,
       [ancien.id, emis[0]!.id],
     );
     return {
-      utilisateur: { id: ancien.user_id, email: ancien.email },
+      utilisateur: { id: compte.id, email: compte.email },
       jetonRafraichissement: nouveau,
+      emisLe: await instantDEmissionDans(db, compte.id),
     };
   });
 }
@@ -351,7 +408,7 @@ export async function demanderReinitialisation(
 export async function reinitialiser(
   secret: string,
   motDePasse: string,
-): Promise<Utilisateur | null> {
+): Promise<(Utilisateur & { emisLe: Date }) | null> {
   const empreinte = await bcrypt.hash(motDePasse, COUT_BCRYPT);
   return horsRlsAuthentificationSeule(async (db) => {
     const { rows } = await db.query<{
@@ -382,7 +439,12 @@ export async function reinitialiser(
       [demande.user_id],
     );
     await fermerToutesLesSessionsDans(db, demande.user_id);
-    return { id: demande.user_id, email: demande.email };
+    // La session qu'ouvre ce geste est datée de la fermeture même : elle tient.
+    return {
+      id: demande.user_id,
+      email: demande.email,
+      emisLe: await instantDEmissionDans(db, demande.user_id),
+    };
   });
 }
 

@@ -186,6 +186,9 @@ describe("une clé d'API part avec son auteur", { skip: !BASE_CONFIGUREE }, () =
 
     assert.equal(await deposerParLaCle(deSami.cle), 401);
     assert.ok((await liste()).find((k) => k.id === deSami.id)?.revokedAt, "révoquée à l'écran");
+
+    // Collaborateur désormais : il ne crée plus de clé, et le refus se dit.
+    await assert.rejects(creerCle(sami), /refus\.cle_api\.expert_membre$/);
   });
 
   it("la résolution exige à elle seule l'adhésion de l'auteur", async () => {

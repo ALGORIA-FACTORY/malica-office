@@ -255,7 +255,7 @@ describe("la lecture d'une pièce se suit", { skip: !BASE_CONFIGUREE }, () => {
         ...init,
         headers: {
           ...(init.headers as Record<string, string>),
-          Authorization: `Bearer ${emettreJeton(u)}`,
+          Authorization: `Bearer ${emettreJeton(u, new Date())}`,
           "X-Malica-Client": "coque-android/0.2.99",
           "x-malica-trace": trace,
         },
@@ -503,7 +503,7 @@ describe("la lecture d'une pièce se suit", { skip: !BASE_CONFIGUREE }, () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${emettreJeton(u)}`,
+        Authorization: `Bearer ${emettreJeton(u, new Date())}`,
         "X-Malica-Client": "web/0.2.99",
       },
       body: JSON.stringify({ depot: "capture", methode: "analyser", args: [piece] }),
@@ -541,7 +541,7 @@ describe("la lecture d'une pièce se suit", { skip: !BASE_CONFIGUREE }, () => {
     const renvoi = await fetch(`${base}/pieces/${piece}/contenu`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${emettreJeton(u)}`,
+        Authorization: `Bearer ${emettreJeton(u, new Date())}`,
         "Content-Type": "image/jpeg",
         "X-Malica-Client": "coque-android/0.2.99",
         "x-malica-trace": trace,

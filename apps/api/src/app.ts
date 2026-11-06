@@ -27,6 +27,7 @@ import {
   demanderReinitialisation,
   emettreJeton,
   emettreJetonDeRafraichissement,
+  ouvrirUneSession,
   fermerLaSession,
   fermerToutesLesSessions,
   organisations,
@@ -235,7 +236,7 @@ app.post("/auth/inscription", limiteAuth, async (req, res, next) => {
       res.status(409).json({ erreur: "inscription impossible" });
       return;
     }
-    const jeton = emettreJeton(utilisateur);
+    const jeton = await ouvrirUneSession(utilisateur);
     poserCookie(res, jeton);
     res.status(201).json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
   } catch (erreur) {
@@ -255,7 +256,7 @@ app.post("/auth/connexion", limiteAuth, async (req, res, next) => {
       res.status(401).json({ erreur: "identifiants invalides" });
       return;
     }
-    const jeton = emettreJeton(utilisateur);
+    const jeton = await ouvrirUneSession(utilisateur);
     poserCookie(res, jeton);
     res.json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
   } catch (erreur) {
@@ -285,7 +286,7 @@ app.post("/auth/rafraichir", limiteAuth, async (req, res, next) => {
       res.status(401).json({ erreur: "jeton de rafraîchissement invalide" });
       return;
     }
-    const jeton = emettreJeton(tourne.utilisateur);
+    const jeton = emettreJeton(tourne.utilisateur, tourne.emisLe);
     poserCookie(res, jeton);
     res.json({
       utilisateur: tourne.utilisateur,
@@ -338,12 +339,13 @@ app.post("/auth/reinitialiser", limiteAuth, async (req, res, next) => {
       res.status(400).json({ erreur: saisie.error.issues[0]?.message ?? "saisie invalide" });
       return;
     }
-    const utilisateur = await reinitialiser(saisie.data.secret, saisie.data.motDePasse);
-    if (!utilisateur) {
+    const ouvert = await reinitialiser(saisie.data.secret, saisie.data.motDePasse);
+    if (!ouvert) {
       res.status(410).json({ erreur: "lien expiré ou déjà utilisé" });
       return;
     }
-    const jeton = emettreJeton(utilisateur);
+    const { emisLe, ...utilisateur } = ouvert;
+    const jeton = emettreJeton(utilisateur, emisLe);
     poserCookie(res, jeton);
     res.json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
   } catch (erreur) {

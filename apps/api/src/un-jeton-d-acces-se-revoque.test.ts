@@ -129,6 +129,37 @@ describe("le jeton d'accès se révoque", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal((await moi(jeton)).status, 200);
   });
 
+  it("un jeton signé dont la session n'est pas un uuid reçoit 401, pas 500", async () => {
+    const email = await inscrire("sid-informe");
+    const { jeton } = await connecter(email);
+    const { default: jwt } = await import("jsonwebtoken");
+    const charge = jwt.decode(jeton) as Record<string, unknown>;
+    const forge = jwt.sign({ ...charge, sid: "pas-un-uuid" }, process.env["JWT_SECRET"]!);
+    assert.equal((await moi(forge)).status, 401);
+    assert.equal(
+      (await poster("/auth/deconnexion", { partout: true }, porteur(forge))).status,
+      204,
+    );
+    assert.equal((await moi(jeton)).status, 200, "le jeton forgé n'a rien fermé");
+  });
+
+  it("après « partout », une connexion dans la même milliseconde tient", async () => {
+    // L'instant d'émission et celui de la fermeture viennent de la même horloge,
+    // celle de la base : la session ouverte juste après la fermeture n'est
+    // jamais « d'avant », quelle que soit l'heure de l'API.
+    const email = await inscrire("meme-instant");
+    for (let i = 0; i < 5; i += 1) {
+      const { jeton } = await connecter(email);
+      assert.equal(
+        (await poster("/auth/deconnexion", { partout: true }, porteur(jeton))).status,
+        204,
+      );
+      const apres = await connecter(email);
+      assert.equal((await moi(apres.jeton)).status, 200);
+      assert.equal((await moi(jeton)).status, 401);
+    }
+  });
+
   it("réinitialiser le mot de passe ferme les jetons d'avant, pas celui qu'elle rend", async () => {
     const email = await inscrire("reinitialise");
     const avant = await connecter(email);
