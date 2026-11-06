@@ -27,10 +27,13 @@ import {
   demanderReinitialisation,
   emettreJeton,
   emettreJetonDeRafraichissement,
+  fermerLaSession,
+  fermerToutesLesSessions,
   organisations,
   rafraichir,
   reinitialiser,
   revoquerJetonDeRafraichissement,
+  sessionEnVigueur,
   verifierCompte,
   type Utilisateur,
 } from "./auth.ts";
@@ -47,7 +50,13 @@ import { codeDuRefus, consigner } from "./observabilite/journal.ts";
 import { issueDuStatut, tracerLaRequete } from "./observabilite/requete.ts";
 import { traceCourante } from "./observabilite/trace.ts";
 import { executerRpc, origineDEssai, RpcIntrouvable } from "./rpc.ts";
-import { estUneCoque, exigerIdentite, NOM_COOKIE, presenterLeClient } from "./session.ts";
+import {
+  estUneCoque,
+  exigerIdentite,
+  jetonPresente,
+  NOM_COOKIE,
+  presenterLeClient,
+} from "./session.ts";
 import {
   deposerContenu,
   servirContenu,
@@ -343,20 +352,29 @@ app.post("/auth/reinitialiser", limiteAuth, async (req, res, next) => {
 });
 
 app.get("/auth/session", exigerIdentite, (req, res) => {
-  // Sans requête en base : la session est portée par le jeton. Cette route est
-  // appelée à chaque navigation, elle doit rester gratuite.
+  // Appelée à chaque navigation : rien de plus que la vérification de la
+  // session, que `exigerIdentite` fait pour toute route (une requête indexée).
   res.json({ utilisateur: req.utilisateur });
 });
 
 /**
- * Se déconnecter : le cookie tombe, et le jeton long, si la coque le rend,
- * est révoqué en base — c'est ce qui fait qu'une déconnexion sur un téléphone
- * perdu compte pour quelque chose.
+ * Se déconnecter : la session du jeton présenté est fermée en base — ce jeton
+ * ne vaut plus rien, même copié ailleurs —, le cookie tombe, et le jeton long,
+ * si la coque le rend, est révoqué. Les autres appareils restent connectés.
+ *
+ * `{ partout: true }` ferme toutes les sessions du compte, jetons d'accès et
+ * jetons longs — le téléphone perdu. Il faut pour cela une session qui tient
+ * encore : un jeton déjà fermé ne ferme rien.
  */
 app.post("/auth/deconnexion", async (req, res, next) => {
   try {
-    const secret = (req.body as { jetonRafraichissement?: unknown } | undefined)
-      ?.jetonRafraichissement;
+    const corps = req.body as { jetonRafraichissement?: unknown; partout?: unknown } | undefined;
+    const lu = jetonPresente(req);
+    if (lu && (await sessionEnVigueur(lu))) {
+      if (corps?.partout === true) await fermerToutesLesSessions(lu.id);
+      else await fermerLaSession(lu);
+    }
+    const secret = corps?.jetonRafraichissement;
     if (typeof secret === "string" && secret.length > 0) {
       await revoquerJetonDeRafraichissement(secret);
     }
