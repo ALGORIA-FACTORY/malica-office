@@ -4829,6 +4829,8 @@ export const fr = {
     "Cet établissement n’est pas celui de la société : choisissez l’un des siens.",
   "refus.saisie.mal_formee":
     "Les données envoyées sont mal formées : rechargez la page, puis recommencez.",
+  "refus.saisie.mois_entiers":
+    "Ces totaux se lisent par mois entiers : du premier jour d’un mois au dernier jour d’un mois.",
   "refus.geste.non_permis": "Ce geste ne vous est pas permis sur ce dossier.",
   "refus.banque.statut_par_le_lettrage":
     "Une ligne de relevé se rapproche par le lettrage, pas à la main : lettrez-la avec son écriture.",

@@ -73,6 +73,17 @@ d'`authenticated` : elles s'exécutent sous les mêmes politiques que leur
 appelant, et le portier ne porte que les droits que ses portes exercent. Une
 fonction nouvelle qui écrit est une porte, ou elle bute sur un droit refusé.
 
+Une seule lecture du portier dépasse celle de son appelant, et elle est
+bornée à ce que l'appelant a lui-même écrit : une écriture comptable qu'il a
+créée (`created_by`) et ses lignes, un fait du journal d'audit dont il est
+l'acteur, dans une organisation dont il est membre
+(`20261202100100_une_porte_de_la_pme_ne_lit_que_ce_qu_elle_a_ecrit`). La PME
+ne lit pas les écritures d'un dossier confié à un cabinet (lot S2), mais ses
+portes relisent ce qu'elles viennent d'écrire (`insert … returning`, une
+écriture proposée transmise avec sa pièce). Une écriture du cabinet n'est
+lisible d'aucune porte de la PME : une valeur qui en est nécessaire sort par
+une fonction qui ne rend qu'elle (son jour, son cours de change).
+
 _Vérifié par_ `apps/api/src/les-clients-n-ecrivent-que-par-les-portes.test.ts`
 (l'instantané des droits, et le contournement famille par famille) et, en CI,
 par l'absence de tout droit refusé au journal de l'API après les épreuves.

@@ -65,6 +65,45 @@ describe(
       }
     });
 
+    /*
+     * L'inventaire des portes du portier qui prennent une écriture en argument
+     * (lot S2, après la revue) : aucune ne trouve, pour une personne de la PME,
+     * l'écriture que le cabinet a inscrite. Le portier ne lit au-delà de son
+     * appelant que ce que celui-ci a écrit (`20261202100100`).
+     */
+    it("aucune porte de la PME ne trouve l'écriture du cabinet", async () => {
+      const ecriture = await s.priseEnCharge(await chezLeComptable());
+      const motif = Object.values(s.motifs)[0]!;
+      const portes: Array<[string, string, unknown[]]> = [
+        ["book", "select public.socle_ecriture_book($1)", [ecriture]],
+        ["contre_passer", "select public.socle_ecriture_contre_passer($1, $2)", [ecriture, motif]],
+        [
+          "review",
+          "select public.socle_ecriture_review($1, 'retourne', $2, 'x')",
+          [ecriture, motif],
+        ],
+        [
+          "fait_consigner · forcee",
+          "select public.fait_consigner('ecriture.forcee', $1, '{}'::jsonb)",
+          [ecriture],
+        ],
+      ];
+      for (const qui of ["amel", "bilel", "sami", "sonia"] as const)
+        for (const [nom, sql, args] of portes)
+          await assert.rejects(
+            sousIdentiteDuServeur(s.gens[qui].id, (db) => db.query(sql, args)),
+            /refus\.|permission denied|42501/,
+            `${qui} · ${nom}`,
+          );
+      // L'écriture n'a pas bougé : inscrite, ni contre-passée ni revue.
+      const { rows } = await s.admin.query<{ status: string; n: string }>(
+        `select e.status, (select count(*) from socle.ecritures r where r.reverses_id = e.id)::text as n
+           from socle.ecritures e where e.id = $1`,
+        [ecriture],
+      );
+      assert.deepEqual(rows[0], { status: "booked", n: "0" });
+    });
+
     it("les totaux par classe ne se bornent pas à un jour", async () => {
       // Le 2 octobre, par la fixture ; la seconde reprend ses comptes et sa
       // devise, au 20 octobre et pour moitié.

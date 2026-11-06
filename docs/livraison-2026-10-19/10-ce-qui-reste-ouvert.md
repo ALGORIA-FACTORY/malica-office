@@ -633,3 +633,11 @@ TVA d'une pièce prise en charge, `app.jours_des_ecritures_du_dossier`) et son
 COURS de change (`app.cours_de_l_ecriture_de_la_piece`), comme elle en lisait
 déjà les MONTANTS (`app.montants_pris_en_charge`). Sa TVA du mois et « Vos
 charges » en dépendent.
+
+**Conséquence à confirmer** (`20261202100100`) : une porte de la PME ne lit,
+au-delà de la PME, que ce qu'elle a elle-même écrit. Un dossier en
+`validation_mode = 'autonome'` AVEC un cabinet engagé ne contre-passe donc plus
+l'écriture que le cabinet a prise en charge (`refus.introuvable.ecriture`) :
+le cabinet la défait. Si le dirigeant veut rendre ce geste à la PME, il faudra
+une porte dédiée qui ne lit que ce dont elle a besoin. Reste aussi ouvert :
+après la révocation du mandat, la PME relit tout ce que le cabinet a inscrit.

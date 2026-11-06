@@ -260,7 +260,9 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
         motifId: motifs["montant_incoherent"],
         note: "x",
       }),
-      /refus\.supervision\.reservee$/,
+      // Depuis le lot S2, la PME ne lit pas l'écriture du cabinet : la porte
+      // ne la trouve pas, avant même de juger le geste.
+      /refus\.(supervision\.reservee|introuvable\.ecriture)$/,
     );
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) =>
@@ -269,7 +271,7 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
           motifs["montant_incoherent"],
         ]),
       ),
-      /refus\.supervision\.reservee$/,
+      /refus\.(supervision\.reservee|introuvable\.ecriture)$/,
     );
     assert.deepEqual(
       (await vivantes(id)).map((e) => e.id),
@@ -278,16 +280,21 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
   });
 
   it("T2 toute contre-passation d'une écriture du journal y entre aussi", async () => {
-    // Un dossier autonome tient ses livres : il peut défaire l'écriture que
-    // son cabinet a prise en charge. Le journal du cabinet doit le dire.
+    // Un dossier autonome tient ses livres. Il défaisait l'écriture que son
+    // cabinet a prise en charge ; depuis le lot S2, la PME d'un dossier où un
+    // cabinet est engagé ne lit plus l'écriture du cabinet, et ne la trouve
+    // donc plus (décision portée au dirigeant). Le cabinet, lui, la défait, et
+    // le journal du cabinet doit le dire.
     const id = await transmise("autonome");
     const ecriture = await forcer(expert, id);
-    await pmeFait("supervision.review", {
+    const retour = {
       ecritureId: ecriture,
       outcome: "retourne",
       motifId: motifs["montant_incoherent"],
       note: "Erreur de saisie.",
-    });
+    };
+    await assert.rejects(pmeFait("supervision.review", retour), /refus\.introuvable\.ecriture$/);
+    await cabinetFait("supervision.review", retour);
     const lignesDuJour = await journal(dossiers.autonome.id);
     assert.equal(lignesDuJour.filter((x) => x.id === ecriture).length, 1);
     assert.equal(
@@ -302,7 +309,7 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
     const ecriture = await forcer(expert, id);
     await assert.rejects(
       pmeFait("supervision.review", { ecritureId: ecriture, outcome: "valide" }),
-      /refus\.supervision\.reservee$/,
+      /refus\.(supervision\.reservee|introuvable\.ecriture)$/,
     );
     assert.equal(await notifications(id, "piece.validee"), 0);
   });
