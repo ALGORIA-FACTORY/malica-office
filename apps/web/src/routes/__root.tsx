@@ -15,6 +15,7 @@ import { coque, estNatif, versionClient } from "@/capabilities/coque";
 import { useApparence } from "@/components/malica/apparence";
 import { GardeDeVersion } from "@/components/malica/mise-a-jour-requise";
 import { I18nProvider } from "@/i18n";
+import { SECOURS, type LangueDeSecours } from "@/lib/error-page";
 import { installerJournalAtelier, noterAuJournal } from "@/lib/journal-atelier";
 import { rapporterPlantage } from "@/lib/rapport-plantage";
 import { fermerLaDerniereSuperposition } from "@/lib/superpositions";
@@ -122,31 +123,11 @@ function NotFoundComponent() {
  * d'erreur ne doit jamais pouvoir échouer à son tour.
  *
  * On lit donc la langue là où elle est rangée, et l'on porte les trois phrases
- * dont on a besoin. Trois phrases dupliquées valent mieux qu'un écran de
- * secours qui dépend de ce qu'il secourt.
+ * dont on a besoin. Trois phrases hors du dictionnaire valent mieux qu'un écran
+ * de secours qui dépend de ce qu'il secourt ; elles vivent dans
+ * `lib/error-page.ts`, que la page d'erreur du serveur dit aussi.
  */
-const SECOURS = {
-  fr: {
-    titre: "Cet écran n'a pas pu s'afficher.",
-    corps: "Ce n'est pas votre faute. Réessayez, ou revenez à l'accueil.",
-    reessayer: "Réessayer",
-    accueil: "Revenir à l'accueil",
-  },
-  en: {
-    titre: "This screen could not be displayed.",
-    corps: "It is not your fault. Try again, or go back home.",
-    reessayer: "Try again",
-    accueil: "Back home",
-  },
-  ar: {
-    titre: "تعذّر عرض هذه الشاشة.",
-    corps: "ليس خطأك. أعد المحاولة أو عد إلى الصفحة الرئيسية.",
-    reessayer: "أعد المحاولة",
-    accueil: "العودة إلى الرئيسية",
-  },
-} as const;
-
-function langueDeSecours(): keyof typeof SECOURS {
+function langueDeSecours(): LangueDeSecours {
   try {
     const rangee = window.localStorage.getItem("malica.locale");
     if (rangee === "en" || rangee === "ar" || rangee === "fr") return rangee;

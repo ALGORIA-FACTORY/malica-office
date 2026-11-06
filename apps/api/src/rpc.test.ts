@@ -85,4 +85,41 @@ describe("transport RPC et référentiel", { skip: !BASE_CONFIGUREE }, () => {
       );
     }
   });
+  /*
+   * Audit du 6 novembre 2026 (S6) : `{"depot":"<b>x</b>"}` rendait « dépôt
+   * inconnu : <b>x</b> » — l'écho de la saisie, HTML compris —, une méthode
+   * réservée au serveur se trahissait par son nom, et la tour répondait une
+   * phrase française brute. L'écran ne reçoit plus qu'une clé `refus.*`.
+   */
+  it("ne renvoie jamais le nom reçu : un appel introuvable se dit par une clé fixe", async () => {
+    const essais = [
+      { depot: "<b>x</b>", methode: "activePack" },
+      { depot: "referentiel", methode: "<img src=x>" },
+      // Réservée au serveur : la même réponse qu'une méthode qui n'existe pas.
+      { depot: "capture", methode: "persisterLecture" },
+      { depot: "capture", methode: "nexistePas" },
+    ];
+    for (const { depot, methode } of essais) {
+      await assert.rejects(
+        sousIdentite(identite || "00000000-0000-4000-8000-000000000000", (db) =>
+          executerRpc(db, { depot, methode, args: [] }),
+        ),
+        (e: unknown) => e instanceof RpcIntrouvable && e.message === "refus.introuvable",
+        `${depot}.${methode}`,
+      );
+    }
+  });
+
+  it("la tour refuse un non-opérateur par une clé, jamais par une phrase", async () => {
+    await appeler("activePack", ["TN"]);
+    await assert.rejects(
+      sousIdentite(identite, (db) =>
+        executerRpc(db, { depot: "tour", methode: "licences", args: [] }),
+      ),
+      (e: unknown) =>
+        e instanceof Error &&
+        e.message === "refus.reserve.plateforme" &&
+        (e as { code?: string }).code === "42501",
+    );
+  });
 });

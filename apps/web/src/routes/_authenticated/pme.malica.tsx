@@ -6,6 +6,7 @@ import { useMonAcces } from "@/hooks/use-mon-acces";
 import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { SourceCitee } from "@malica/socle/ports/repositories";
 
@@ -456,9 +457,7 @@ function PmeMalica() {
               {question.isError ? (
                 <div className="et1" role="alert">
                   <i />
-                  {question.error instanceof Error
-                    ? question.error.message
-                    : t("malica.chat.error")}
+                  {texteDeLErreur(question.error, "malica : question", t("malica.chat.error"))}
                 </div>
               ) : null}
             </div>

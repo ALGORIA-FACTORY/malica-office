@@ -232,6 +232,7 @@
   ],
   "journal": [
     "consigner",
+    "consignerHorsDossier",
     "dernieres",
     "etapes",
     "regler"

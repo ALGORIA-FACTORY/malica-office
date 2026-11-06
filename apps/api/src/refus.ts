@@ -21,6 +21,15 @@
 
 import { estUnRefusParCle, refusAvecValeurs } from "@malica/socle/refus-a-dire";
 
+/**
+ * La clé d'un refus qui n'a pas su se dire : un `raise` qui lève une phrase au
+ * lieu d'une clé `refus.*`. Règle du dirigeant (6 novembre 2026) : aucun
+ * texte technique ne part vers l'écran — ni phrase française brute (R12), ni
+ * écho de la saisie. L'écran dit cette clé dans la langue de la personne ; le
+ * détail reste au serveur (`detailTechnique`, étape `rpc` du journal).
+ */
+export const REFUS_SANS_CLE = "refus.inattendu";
+
 /** L'objet demandé n'existe pas, ou pas pour l'appelant : `refus.introuvable[.<objet>]`. */
 const CLE_D_INTROUVABLE = /^refus\.introuvable(\.[a-z_]+)?$/;
 
@@ -173,7 +182,20 @@ export function refusLisible(erreur: unknown): string | null {
   // Une règle de la base qui se nomme en tête de son message (« chk_… : »)
   // se dit par sa phrase, jamais par son nom (recette du cabinet, ANO-CAB-005).
   const regle = /^(\w+) :/.exec(message)?.[1];
-  return (regle && REGLES_NOMMEES[regle]) ?? message;
+  return (regle && REGLES_NOMMEES[regle]) ?? REFUS_SANS_CLE;
+}
+
+/**
+ * Ce que le journal garde d'une erreur que l'écran ne voit pas : son SQLSTATE
+ * et son NOM — jamais son message, qui peut citer une valeur de pièce
+ * (docs/journalisation.md). Rien n'en est rendu à l'appelant.
+ */
+export function detailTechnique(erreur: unknown): { code_pg: string | null; erreur: string } {
+  const code = (erreur as { code?: unknown } | null)?.code;
+  return {
+    code_pg: typeof code === "string" && /^[0-9A-Z]{5}$/.test(code) ? code : null,
+    erreur: erreur instanceof Error ? erreur.name : typeof erreur,
+  };
 }
 
 /**

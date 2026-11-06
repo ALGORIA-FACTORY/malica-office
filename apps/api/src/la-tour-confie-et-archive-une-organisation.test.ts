@@ -95,7 +95,10 @@ describe("la Tour confie et archive une organisation", { skip: !BASE_CONFIGUREE 
       membres.map((m) => [m.email, m.role, m.titulaire_licence]),
       [[dirigeant.email, "dirigeant", true]],
     );
-    await assert.rejects(fait(intrus, "tour.membresDeLOrganisation", org), /opérateurs/);
+    await assert.rejects(
+      fait(intrus, "tour.membresDeLOrganisation", org),
+      /refus\.reserve\.plateforme/,
+    );
     await assert.rejects(
       sousIdentiteDuServeur(intrus.id, (db) =>
         db.query(`select * from public.plateforme_organisation_membres($1)`, [org]),
@@ -112,8 +115,14 @@ describe("la Tour confie et archive une organisation", { skip: !BASE_CONFIGUREE 
   it("seule la plateforme confie et archive", async () => {
     const org = await orgSansMembre(matriculeDEssai());
     // La Tour refuse d'abord, puis la base : les deux portes tiennent.
-    await assert.rejects(fait(intrus, "tour.confierOrganisation", org, intrus.email), /opérateurs/);
-    await assert.rejects(fait(intrus, "tour.archiverOrganisation", org, "essai"), /opérateurs/);
+    await assert.rejects(
+      fait(intrus, "tour.confierOrganisation", org, intrus.email),
+      /refus\.reserve\.plateforme/,
+    );
+    await assert.rejects(
+      fait(intrus, "tour.archiverOrganisation", org, "essai"),
+      /refus\.reserve\.plateforme/,
+    );
     const base = (sql: string, args: unknown[]) =>
       sousIdentiteDuServeur(intrus.id, (db) => db.query(sql, args));
     await assert.rejects(
