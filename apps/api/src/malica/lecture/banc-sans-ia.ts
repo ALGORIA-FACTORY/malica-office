@@ -1235,6 +1235,13 @@ async function principal(): Promise<void> {
       juridiction: { type: "string" },
     },
   });
+  /*
+   * No model, ever: `relever()` falls back to the vision model when its key is set and the
+   * OCR is absent, fails or returns nothing. With a full `.env`, the bench would have
+   * called it without failing nor saying so. The keys are removed, as in
+   * `jeu-synthetique.ts`: without the OCR, a page fails instead of reaching a model.
+   */
+  for (const cle of ["QWEN_API_KEY", "DEEPSEEK_API_KEY"]) Reflect.deleteProperty(process.env, cle);
   const base = process.env["DATABASE_URL_ADMIN"];
   if (!base) throw new Error("DATABASE_URL_ADMIN absente");
   const cache = resolve(values.cache ?? ".releves");
