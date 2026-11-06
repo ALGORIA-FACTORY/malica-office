@@ -6,7 +6,7 @@
  */
 
 import { computePivot } from "../index.ts";
-import { D, type Decimal, toFixedStr } from "../domain/decimal.ts";
+import { D, type Decimal, repartir, toFixedStr } from "../domain/decimal.ts";
 import {
   aSaDette,
   convertirLExtrait,
@@ -361,8 +361,8 @@ export function buildProposal(params: {
     }
     /*
      * Un achat ventilé (5 novembre 2026, revue de #252) : la TVA de chaque taux
-     * rejoint les charges de ce taux, au prorata de leur base ; le reliquat
-     * d'arrondi va à la dernière, pour que la somme soit exactement la TVA.
+     * rejoint les charges de ce taux, au prorata de leur base, au plus fort reste
+     * (`repartir`), pour que la somme soit exactement la TVA.
      * Un taux sans charge à lui ne se répartit pas : rien n'est deviné.
      */
     const ajouts = new Map<number, Decimal>();
@@ -373,16 +373,12 @@ export function buildProposal(params: {
           : [],
       );
       if (cibles.length === 0) return [...lignes];
-      const bases = cibles.reduce((s, i) => s.plus(D(lignes[i]!.debit)), D(0));
-      let reste = D(t.debit);
-      cibles.forEach((i, k) => {
-        const part =
-          k === cibles.length - 1
-            ? reste
-            : D(toFixedStr(D(t.debit).times(D(lignes[i]!.debit)).div(bases), n));
-        reste = reste.minus(part);
-        ajouts.set(i, (ajouts.get(i) ?? D(0)).plus(part));
-      });
+      const parts = repartir(
+        t.debit,
+        cibles.map((i) => lignes[i]!.debit),
+        n,
+      );
+      cibles.forEach((i, k) => ajouts.set(i, (ajouts.get(i) ?? D(0)).plus(parts[k]!)));
     }
     return lignes
       .map((l, i) =>
@@ -390,8 +386,51 @@ export function buildProposal(params: {
       )
       .filter((l) => !tva.includes(l));
   };
-  const lignesDuPivot = tvaVersLaCharge(pivot.lines, decimalesDuPivot);
-  const lignesDOrigine = converti && origine ? tvaVersLaCharge(origine.lines, decimals) : null;
+  /*
+   * Un droit au coût (le FODEC, réglage `fodec.traitement`) sur un achat
+   * VENTILÉ (6 novembre 2026) : il allait au compte de charge du paramétrage,
+   * que la ventilation a justement remplacé — un 601 qui ne portait plus que
+   * le droit. Il suit désormais les charges qu'il grève, au prorata de leur
+   * base, au plus fort reste (`repartir`) ; chaque part garde le nom du
+   * droit, pour qu'il se retrouve. Sans ventilation, rien ne change.
+   */
+  const droitsSurLesCharges = (lignes: readonly JournalLineV1[], n: number): JournalLineV1[] => {
+    if (
+      !params.ventilationDesBases ||
+      extract.document_kind !== "facture_achat" ||
+      auCout.size === 0
+    )
+      return [...lignes];
+    const charges = lignes.filter(
+      (l) => l.tax_code && !comptesDeTva.has(l.account_code) && D(l.debit).gt(0),
+    );
+    const bases = charges.reduce((t, l) => t.plus(D(l.debit)), D(0));
+    if (charges.length === 0 || bases.isZero()) return [...lignes];
+    return lignes.flatMap((l) => {
+      // Ventilé, chaque base porte son code de taxe : une ligne de débit sans
+      // code, au compte du paramétrage, est un droit au coût.
+      const estUnDroit = !l.tax_code && l.account_code === compteDeCharge && D(l.debit).gt(0);
+      if (!estUnDroit) return [l];
+      const parts = repartir(
+        l.debit,
+        charges.map((c) => c.debit),
+        n,
+      );
+      return charges.flatMap((c, k) =>
+        parts[k]!.isZero()
+          ? []
+          : [{ ...l, account_code: c.account_code, debit: toFixedStr(parts[k]!, n) }],
+      );
+    });
+  };
+  const lignesDuPivot = tvaVersLaCharge(
+    droitsSurLesCharges(pivot.lines, decimalesDuPivot),
+    decimalesDuPivot,
+  );
+  const lignesDOrigine =
+    converti && origine
+      ? tvaVersLaCharge(droitsSurLesCharges(origine.lines, decimals), decimals)
+      : null;
   /** Le montant d'une ligne, du côté qui le porte ; null pour une ligne nulle. */
   const montantDe = (l: JournalLineV1 | undefined) =>
     !l ? null : !D(l.debit).isZero() ? l.debit : !D(l.credit).isZero() ? l.credit : null;
