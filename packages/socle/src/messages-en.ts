@@ -2428,6 +2428,8 @@ export const en: Dict = {
     "The reading cites field {champ} at a place where no word was read.",
   "refus.piece.empreinte": "This document’s fingerprint is not valid.",
   "refus.piece.scellee": "This document’s content is sealed: it cannot be replaced.",
+  "refus.piece.type_de_contenu":
+    "This file type is not a document: upload a PDF or a photo (JPEG, PNG, WebP, HEIC).",
   "refus.piece.non_partagee": "This document is not shared with the practice.",
   "refus.piece.aucune_demande": "No request is pending on this document.",
   "refus.rattachement.motif": "Say why you are detaching this document.",

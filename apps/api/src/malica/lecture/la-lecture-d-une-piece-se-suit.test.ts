@@ -180,6 +180,14 @@ const DESIGNATION_MYTEK = {
 
 const lectureMytek = (): VisionRead => lecture("qwen-vl-ocr", DESIGNATION_MYTEK, PLAN_MYTEK);
 
+/**
+ * Des octets d'essai déclarés JPEG : ils en portent la signature (FF D8 FF),
+ * que le dépôt vérifie (audit de sécurité du 6 novembre 2026, S1), puis un
+ * texte propre à chaque pièce.
+ */
+const octetsDEssai = (texte: string): Uint8Array =>
+  new Uint8Array([0xff, 0xd8, 0xff, ...new TextEncoder().encode(texte)]);
+
 describe("la lecture d'une pièce se suit", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `suivi-${Date.now()}`;
   const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"], max: 2 });
@@ -284,7 +292,7 @@ describe("la lecture d'une pièce se suit", { skip: !BASE_CONFIGUREE }, () => {
     const octets = await appeler(`/pieces/${piece}/contenu`, {
       method: "POST",
       headers: { "Content-Type": "image/jpeg", "x-malica-cle": `${cle}-octets` },
-      body: new TextEncoder().encode(`essai ${marque} ${cle}`),
+      body: octetsDEssai(`essai ${marque} ${cle}`),
     });
     assert.equal(octets.status, 201);
     return piece;
@@ -547,7 +555,7 @@ describe("la lecture d'une pièce se suit", { skip: !BASE_CONFIGUREE }, () => {
         "x-malica-trace": trace,
         "x-malica-cle": "renvoi-octets",
       },
-      body: new TextEncoder().encode(`essai ${marque} renvoi`),
+      body: octetsDEssai(`essai ${marque} renvoi`),
     });
     assert.equal(renvoi.status, 201, "les mêmes octets : sans effet");
 

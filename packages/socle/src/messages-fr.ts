@@ -2512,6 +2512,8 @@ export const fr = {
     "La lecture cite le champ {champ} à un emplacement où aucun mot n’a été lu.",
   "refus.piece.empreinte": "L’empreinte de cette pièce n’est pas valide.",
   "refus.piece.scellee": "Le contenu de cette pièce est scellé : il ne se remplace pas.",
+  "refus.piece.type_de_contenu":
+    "Ce type de fichier n’est pas une pièce : déposez un PDF ou une photo (JPEG, PNG, WebP, HEIC).",
   "refus.piece.non_partagee": "Cette pièce n’est pas partagée avec le cabinet.",
   "refus.piece.aucune_demande": "Aucune demande n’est en attente sur cette pièce.",
   "refus.rattachement.motif": "Dites pourquoi vous détachez ce document.",
