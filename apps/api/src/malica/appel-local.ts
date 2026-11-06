@@ -53,7 +53,7 @@ export function creerAppelLocal(executer: AvecBase, permises?: MethodesPermises)
   return {
     async rpc<T>(depot: string, methode: string, args: unknown[] = []): Promise<T> {
       if (permises && !permises[depot]?.has(methode)) {
-        throw new RpcIntrouvable(`méthode inconnue : ${depot}.${methode}`);
+        throw new RpcIntrouvable(`${depot}.${methode}`);
       }
       const resultat = await executer((db) => executerRpc(db, { depot, methode, args }, "serveur"));
       return (resultat === undefined ? undefined : JSON.parse(JSON.stringify(resultat))) as T;

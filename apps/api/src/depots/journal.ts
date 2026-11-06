@@ -64,6 +64,15 @@ const EtapeDeLAppareil = z.object({
     .default({}),
 });
 
+/** Une panne hors dossier : des textes courts, bornés avant même la porte. */
+const PanneHorsDossier = z.object({
+  ou: z.string().trim().min(1).max(200),
+  code: z.string().trim().min(1).max(100),
+  detail: z.string().max(500).nullish(),
+  version: z.string().max(120).nullish(),
+  plateforme: z.string().max(300).nullish(),
+});
+
 export const journal = {
   /**
    * Les étapes que l'appareil a vécues hors de toute requête : la capture, la
@@ -170,6 +179,27 @@ export const journal = {
       ],
     );
     return rows[0]!.id;
+  },
+
+  /**
+   * Inscrire une panne vue HORS de tout dossier : accepter une invitation,
+   * ouvrir le dossier d'un client depuis le cabinet, la tour. Le journal des
+   * pannes exige un dossier (sa RLS) ; celle-ci va à `app.signalements`,
+   * origine `panne`, que seul l'opérateur relit
+   * (`20261202120000_une_panne_sans_dossier_laisse_une_trace.sql`).
+   *
+   * Qui : la session, jamais la saisie. Le détail arrive expurgé par
+   * l'appareil, et la porte le coupe quand même. Elle est bornée — vingt par
+   * personne et par dix minutes — et rend `false` au-delà, sans lever :
+   * signaler une panne ne doit pas en créer une seconde.
+   */
+  async consignerHorsDossier(db: Requete, saisie: unknown): Promise<{ inscrite: boolean }> {
+    const s = PanneHorsDossier.parse(saisie);
+    const { rows } = await db.query<{ inscrite: boolean }>(
+      `select public.journal_hors_dossier_consigner($1, $2, $3, $4, $5) as inscrite`,
+      [s.ou, s.code, s.detail ?? null, s.version ?? null, s.plateforme ?? null],
+    );
+    return { inscrite: rows[0]?.inscrite === true };
   },
 
   /**

@@ -1,7 +1,7 @@
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
-import { renderErrorPage } from "./lib/error-page";
+import { referenceDePanne, renderErrorPage } from "./lib/error-page";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -28,8 +28,13 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   const body = await response.clone().text();
   if (!isH3SwallowedErrorBody(body)) return response;
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
-  return new Response(renderErrorPage(), {
+  // The reference shown on the page leads the log line: the person quotes it.
+  const ref = referenceDePanne();
+  console.error(
+    `[ssr ref ${ref}]`,
+    consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`),
+  );
+  return new Response(renderErrorPage(ref), {
     status: 500,
     headers: { "content-type": "text/html; charset=utf-8" },
   });
@@ -51,8 +56,9 @@ export default {
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
-      console.error(error);
-      return new Response(renderErrorPage(), {
+      const ref = referenceDePanne();
+      console.error(`[ssr ref ${ref}]`, error);
+      return new Response(renderErrorPage(ref), {
         status: 500,
         headers: { "content-type": "text/html; charset=utf-8" },
       });

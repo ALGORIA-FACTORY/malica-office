@@ -38,7 +38,7 @@ import { configurationCourriel } from "./courriel/brevo.ts";
 import { envoyerReinitialisation } from "./courriel/reinitialisation.ts";
 import { executerSousCle, exigerPorteeDepot, ouParCleApi, PorteeInsuffisante } from "./cles-api.ts";
 import { sonderLaBase, sousIdentite } from "./db.ts";
-import { introuvableLisible, refusLisible } from "./refus.ts";
+import { detailTechnique, introuvableLisible, REFUS_SANS_CLE, refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
 import { malica } from "./malica.ts";
 import { moteurDuSecondLecteur } from "./malica/lecture/paddle.ts";
@@ -448,6 +448,9 @@ function noterLAppel(
           methode: NOM_D_APPEL.test(appel.methode) ? appel.methode : null,
           statut: res.statusCode,
           code_refus: codeRefus,
+          // Ce que l'écran ne voit plus (un refus sans clé, une panne) : le
+          // SQLSTATE et le nom de l'erreur, jamais son message.
+          ...((res.locals["panne"] as ReturnType<typeof detailTechnique> | undefined) ?? {}),
         },
       },
       trace,
@@ -462,7 +465,7 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
   try {
     const saisie = Appel.safeParse(req.body);
     if (!saisie.success) {
-      res.status(400).json({ erreur: "appel invalide" });
+      res.status(400).json({ erreur: "refus.saisie.mal_formee" });
       return;
     }
     noterLAppel(res, saisie.data);
@@ -502,7 +505,9 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
       res.status(403).json({ erreur: erreur.message });
       return;
     }
+    // Une clé fixe : le nom reçu ne revient jamais (audit du 6 novembre 2026, S6).
     if (erreur instanceof RpcIntrouvable) {
+      res.locals["refus"] = erreur.message;
       res.status(404).json({ erreur: erreur.message });
       return;
     }
@@ -512,14 +517,21 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
       res.status(404).json({ erreur: absent });
       return;
     }
-    // Une règle métier qui refuse a écrit son message pour l'''appelant : le
-    // masquer derrière « erreur interne » lui retirerait la seule chose utile.
+    // Une règle métier qui refuse a levé sa clé pour l'appelant : le masquer
+    // derrière « erreur interne » lui retirerait la seule chose utile.
     const refus = refusLisible(erreur);
     if (refus) {
       res.locals["refus"] = refus;
+      if (refus === REFUS_SANS_CLE) {
+        // Une phrase levée sans clé ne part pas à l'écran (R12) : le détail
+        // reste au serveur, et l'étape `rpc` en garde le code.
+        res.locals["panne"] = detailTechnique(erreur);
+        console.error("[api] refus sans clé", erreur);
+      }
       res.status(400).json({ erreur: refus });
       return;
     }
+    res.locals["panne"] = detailTechnique(erreur);
     next(erreur);
   }
 });

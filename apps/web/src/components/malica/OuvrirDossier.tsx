@@ -15,6 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { useI18n, type MessageKey } from "@/i18n";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { StatutInvitation } from "@malica/socle/ports/repositories";
@@ -87,7 +88,8 @@ export function OuvrirDossier({ cabinetId }: { cabinetId: string }) {
     );
   }
 
-  const erreur = (e: unknown) => (e instanceof Error ? e.message : String(e));
+  const erreur = (e: unknown) =>
+    texteDeLErreur(e, "cabinet : ouvrir un dossier", t("common.error"));
 
   return (
     <section

@@ -3699,6 +3699,18 @@ export interface JournalRepository {
     version?: string | null;
     plateforme?: string | null;
   }): Promise<string>;
+  /**
+   * Inscrire une panne vue hors de tout dossier (invitation, cabinet, tour) :
+   * où, le code, un détail expurgé et court. Bornée par la base ; `inscrite`
+   * vaut faux au-delà de la borne, sans lever.
+   */
+  consignerHorsDossier(input: {
+    ou: string;
+    code: string;
+    detail?: string | null;
+    version?: string | null;
+    plateforme?: string | null;
+  }): Promise<{ inscrite: boolean }>;
   /** Les dernieres pannes d'un dossier, de la plus recente. */
   dernieres(tenantId: string, limite?: number): Promise<PanneConsignee[]>;
   /** « Tout est reglé » : une marque datée ; rien n'est effacé (R7). */

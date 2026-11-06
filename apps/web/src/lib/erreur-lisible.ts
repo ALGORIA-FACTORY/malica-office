@@ -1,5 +1,5 @@
 /**
- * Ce qu'on montre d'une erreur, et ce qu'on garde pour l'atelier.
+ * Ce qu'on montre d'une erreur, et ce qu'on garde pour le journal.
  *
  * ============================================== LE DÉFAUT QUI L'A FAIT NAÎTRE
  *
@@ -14,26 +14,29 @@
  *
  * Quatorze écrans affichaient `e.message` tel quel.
  *
- * ============================================ POURQUOI PAS TOUT REMPLACER
+ * ================================================== LA RÈGLE, ET UNE SEULE
  *
- * Parce que certains de ces messages sont PRÉCIEUX. Quand l'API refuse —
- * « Ce matricule appartient déjà à un autre dossier », « La période est
- * close » —, la phrase est écrite par nous, dans la langue du client, et elle
- * dit exactement quoi faire. L'écraser par « une erreur est survenue » ferait
- * perdre l'information la plus utile de l'écran.
+ * 6 novembre 2026, le dirigeant : « aucun message d'erreur technique n'arrive
+ * à l'écran. Une panne montre une phrase humaine, traduite ; le détail va au
+ * journal, en base. »
  *
- * ============================================== D'OÙ VIENT LE MESSAGE ?
+ * Un refus 4xx de notre API qui n'était pas une clé du dictionnaire passait
+ * encore « tel quel » : un message de base, de pilote, un nom renvoyé en écho
+ * (HTML compris) atteignaient l'écran (audit du 6 novembre, web constat 2).
+ * On ne devine plus « est-ce une phrase écrite pour la personne ? » :
  *
- * On tranche par l'ORIGINE, jamais par le texte. Deviner « est-ce du français
- * ou du jargon ? » à partir des caractères serait une heuristique, et elle se
- * tromperait un jour sur un nom propre ou un code de compte.
+ *   ErreurReseau                  → « pas de connexion », sans journal ;
+ *   ErreurApi 4xx, CLÉ connue     → la phrase du dictionnaire, dans la langue
+ *                                   de la personne, avec les valeurs citées ;
+ *   tout le reste                 → la phrase prévue par l'écran, suivie d'une
+ *                                   RÉFÉRENCE (« réf. 7F3A21C9 ») ; le détail
+ *                                   part au journal en base, sous la même
+ *                                   référence — c'est elle que la personne
+ *                                   cite, et elle qui retrouve la ligne.
  *
- *   ErreurApi          → notre API. On l'affiche : c'est notre phrase.
- *   tout le reste      → origine inconnue. Phrase humaine à l'écran, et le
- *                        message d'origine part au journal de l'atelier.
- *
- * Rien n'est donc perdu : ce que l'utilisateur ne voit plus, le poste le
- * reçoit avec sa pile d'appels.
+ * Rien n'est donc perdu : ce que l'utilisateur ne voit plus, le journal le
+ * garde avec sa pile d'appels. `__tests__/aucune-erreur-brute-a-l-ecran.test.ts`
+ * empêche qu'un écran contourne ce chemin.
  */
 import { remplirLeGabarit } from "@malica/socle/gabarit";
 import { lireUnRefus } from "@malica/socle/refus-a-dire";
@@ -50,52 +53,93 @@ export function vientDeNous(raison: unknown): raison is Error {
 }
 
 /**
+ * Le dictionnaire de la personne. Dire une panne ne doit jamais en lever une
+ * seconde : si la langue rangée ne se lit pas, le français la remplace.
+ */
+function dictionnaire(): Record<string, string> {
+  let charge;
+  try {
+    charge = dictionnaireCharge(localeRangee());
+  } catch {
+    charge = undefined;
+  }
+  return (charge ?? DICTIONNAIRE_DE_REPLI) as Record<string, string>;
+}
+
+/** Une référence courte, à citer : huit chiffres hexadécimaux. */
+function nouvelleReference(): string {
+  const octets = new Uint8Array(4);
+  globalThis.crypto.getRandomValues(octets);
+  return Array.from(octets, (o) => o.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
+}
+
+/** La phrase prévue, suivie de sa référence. */
+function avecReference(defaut: string, ref: string): string {
+  return `${defaut} ${remplirLeGabarit(dictionnaire()["common.erreur.reference"]!, { ref })}`;
+}
+
+/** La phrase d'une clé connue du dictionnaire, ou `null`. */
+function phraseDeLaCle(message: string): string | null {
+  const { cle, valeurs } = lireUnRefus(message);
+  const gabarit = dictionnaire()[cle];
+  return gabarit === undefined ? null : remplirLeGabarit(gabarit, valeurs);
+}
+
+/*
+ * Un écran rend `texteDeLErreur(mutation.error, …)` à CHAQUE rendu : sans
+ * mémoire, la référence changerait sous les yeux de la personne et le journal
+ * recevrait une ligne par rendu. Une erreur garde donc sa référence.
+ */
+const references = new WeakMap<object, string>();
+
+/**
  * Le texte à afficher, et le journal alimenté au passage.
  *
  * `ou` situe l'erreur — « pièce : lecture », « coffre : suppression ». C'est
  * ce qui permet, en lisant le journal, de savoir quel geste l'a produite.
  */
 export function texteDeLErreur(raison: unknown, ou: string, defaut: string): string {
-  /*
-   * 27 octobre 2026, Wissem : « pas d'erreur à l'écran, tout dans le journal,
-   * pour que tu corriges ». Une réponse 5xx de l'API n'est pas un refus rédigé
-   * pour la personne : c'est une panne — la suppression bloquée par R7 en
-   * était une, et l'écran l'affichait en texte brut, sans que personne ne la
-   * relise. Elle part au journal, et l'écran dit seulement la phrase prévue.
-   * Les refus métier (4xx) restent affichés : ils disent quoi faire.
-   */
-  if (raison instanceof ErreurApi && raison.statut >= 500) {
-    noterAuJournal(ou, raison);
-    return defaut;
-  }
-  if (vientDeNous(raison)) {
-    // Un refus de la base peut lever une CLÉ du dictionnaire (« refus.licence.
-    // transmission ») plutôt qu'une phrase française : on la dit dans la
-    // langue de la personne, avec les valeurs qu'elle cite.
-    return direUnRefus(raison.message);
-  }
   // Pas de réseau n'est pas une panne : on le dit, sans l'inscrire au journal —
   // le journal ne dirait rien qu'on ne sache déjà.
-  if (raison instanceof ErreurReseau)
-    return (dictionnaireCharge(localeRangee()) ?? DICTIONNAIRE_DE_REPLI)["common.horsLigne"];
-  noterAuJournal(ou, raison);
-  return defaut;
+  if (raison instanceof ErreurReseau) return dictionnaire()["common.horsLigne"]!;
+  /*
+   * Un refus de notre API (4xx) lève une CLÉ du dictionnaire (« refus.licence.
+   * transmission ») : on la dit dans la langue de la personne, avec les
+   * valeurs qu'elle cite. Une 5xx est une panne, quel que soit son texte.
+   */
+  if (raison instanceof ErreurApi && raison.statut < 500) {
+    const phrase = phraseDeLaCle(raison.message);
+    if (phrase !== null) return phrase;
+  }
+  if (typeof raison === "object" && raison !== null) {
+    const deja = references.get(raison);
+    if (deja !== undefined) return avecReference(defaut, deja);
+  }
+  const ref = nouvelleReference();
+  if (typeof raison === "object" && raison !== null) references.set(raison, ref);
+  noterAuJournal(ou, raison, ref);
+  return avecReference(defaut, ref);
 }
 
+/** « [ref 7F3A21C9] … » : la marque que `noterAuJournal` pose en tête d'une ligne. */
+const MARQUE_DE_REFERENCE = /^\[ref ([0-9A-F]{8})\] /;
+
 /**
- * Un refus rangé tel que la base l'a levé — une clé du dictionnaire et ses
- * valeurs (« refus.moteur.valeur_non_admise?valeur=… ») —, dit dans la langue
- * de la personne. Un texte qui n'est pas une clé connue est rendu tel quel.
- * « Ce qui n'a pas marché » (réglages) relit ainsi le journal en clair.
+ * Une ligne du journal — une clé et ses valeurs (« refus.moteur.
+ * valeur_non_admise?valeur=… »), ou un détail technique —, dite dans la
+ * langue de la personne. « Ce qui n'a pas marché » (réglages) relit ainsi le
+ * journal : une clé se dit, un détail technique devient la phrase prévue,
+ * avec la référence qui le retrouve.
  */
 export function direUnRefus(message: string): string {
-  const dict = (dictionnaireCharge(localeRangee()) ?? DICTIONNAIRE_DE_REPLI) as Record<
-    string,
-    string
-  >;
-  const { cle, valeurs } = lireUnRefus(message);
-  const gabarit = dict[cle];
-  return gabarit === undefined ? message : remplirLeGabarit(gabarit, valeurs);
+  const ref = MARQUE_DE_REFERENCE.exec(message)?.[1];
+  const reste = ref === undefined ? message : message.slice(ref.length + 7);
+  const phrase = phraseDeLaCle(reste);
+  if (phrase !== null) return phrase;
+  const defaut = dictionnaire()["common.error"]!;
+  return ref === undefined ? defaut : avecReference(defaut, ref);
 }
 
 /**

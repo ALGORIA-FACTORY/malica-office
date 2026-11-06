@@ -1,5 +1,13 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const journal = vi.hoisted(() => ({
+  notes: [] as Array<{ ou: string; raison: unknown; ref?: string }>,
+}));
+vi.mock("../journal-atelier", () => ({
+  noterAuJournal: (ou: string, raison: unknown, ref?: string) =>
+    journal.notes.push({ ou, raison, ...(ref === undefined ? {} : { ref }) }),
+}));
 
 import { direUnRefus, estIntrouvable, texteDeLErreur, vientDeNous } from "../erreur-lisible";
 import { estUnIdentifiant } from "../identifiant";
@@ -7,6 +15,12 @@ import { ErreurApi } from "../transport/erreurs";
 import { chargerLaLangue } from "@/i18n/dictionnaires";
 
 const DEFAUT = "Une erreur est survenue.";
+/** La phrase prévue, suivie de sa référence : ce que l'écran dit d'une panne. */
+const AVEC_REFERENCE = /^Une erreur est survenue\. \(réf\. ([0-9A-F]{8})\)$/;
+
+beforeEach(() => {
+  journal.notes.length = 0;
+});
 
 describe("ce qu'on montre d'une erreur", () => {
   /*
@@ -16,47 +30,71 @@ describe("ce qu'on montre d'une erreur", () => {
    * en anglais, sur le téléphone d'un dirigeant de PME. Puis un tableau JSON
    * de validation. Quatorze écrans affichaient `e.message` sans filtre.
    */
-  it("ne montre jamais le message d'un moteur", () => {
+  it("ne montre jamais le message d'un moteur : la phrase prévue, une référence, et le journal", () => {
     const moteur = new Error("Cannot transfer object of unsupported type.");
-    expect(texteDeLErreur(moteur, "épreuve", DEFAUT)).toBe(DEFAUT);
+    const texte = texteDeLErreur(moteur, "épreuve", DEFAUT);
+    const ref = AVEC_REFERENCE.exec(texte)?.[1];
+    expect(ref).toBeDefined();
+    // La même référence au journal : c'est elle qui retrouve la ligne.
+    expect(journal.notes).toEqual([{ ou: "épreuve", raison: moteur, ref }]);
   });
 
   it("une panne de l'API (5xx) part au journal, pas à l'écran", () => {
     const panne = new ErreurApi("R7 : DELETE interdit sur fabrique.executions", 500);
-    expect(texteDeLErreur(panne, "épreuve", DEFAUT)).toBe(DEFAUT);
+    expect(texteDeLErreur(panne, "épreuve", DEFAUT)).toMatch(AVEC_REFERENCE);
+    expect(journal.notes).toHaveLength(1);
   });
 
   it("ne montre jamais un tableau de validation", () => {
     const zod = new Error('[{"validation":"regex","path":["document_date"]}]');
-    expect(texteDeLErreur(zod, "épreuve", DEFAUT)).toBe(DEFAUT);
+    expect(texteDeLErreur(zod, "épreuve", DEFAUT)).toMatch(AVEC_REFERENCE);
   });
 
   /*
-   * ET CE QU'IL NE FAUT PAS PERDRE
-   *
-   * Un refus de notre API dit exactement quoi faire, dans la langue du
-   * client. L'écraser par « une erreur est survenue » ferait perdre
-   * l'information la plus utile de l'écran.
+   * Audit du 6 novembre 2026 (web, constat 2) : un refus 4xx qui n'était pas
+   * une clé du dictionnaire était « rendu tel quel » — un message de base, de
+   * pilote, du HTML renvoyé en écho atteignait l'écran. Règle du dirigeant :
+   * seule une CLÉ se dit ; tout le reste est la phrase prévue, et le journal.
    */
-  it("montre le refus de notre API, qui est notre phrase", () => {
-    const refus = new ErreurApi("Ce matricule appartient déjà à un autre dossier.", 409);
-    expect(texteDeLErreur(refus, "épreuve", DEFAUT)).toBe(
+  it("un refus de l'API qui n'est pas une clé ne s'affiche pas : il va au journal", () => {
+    for (const brut of [
       "Ce matricule appartient déjà à un autre dossier.",
-    );
+      "dépôt inconnu : <b>x</b>",
+      "La tour est réservée aux opérateurs d'ALGORIA.",
+      "refus.cle.que.personne.n.a.ecrite",
+    ]) {
+      expect(texteDeLErreur(new ErreurApi(brut, 400), "épreuve", DEFAUT), brut).toMatch(
+        AVEC_REFERENCE,
+      );
+    }
+    expect(journal.notes).toHaveLength(4);
   });
 
   it("distingue par l'origine, pas par le texte", () => {
-    // Même phrase, deux origines : seule celle qui vient de nous s'affiche.
-    const phrase = "La période est close.";
-    expect(texteDeLErreur(new ErreurApi(phrase, 409), "épreuve", DEFAUT)).toBe(phrase);
-    expect(texteDeLErreur(new Error(phrase), "épreuve", DEFAUT)).toBe(DEFAUT);
+    // Même clé, deux origines : seule celle de notre API se dit.
+    expect(texteDeLErreur(new ErreurApi("refus.introuvable", 404), "épreuve", DEFAUT)).toBe(
+      "Introuvable, ou vous n’y avez pas accès.",
+    );
+    expect(texteDeLErreur(new Error("refus.introuvable"), "épreuve", DEFAUT)).toMatch(
+      AVEC_REFERENCE,
+    );
+    // Un refus connu n'est pas une panne : rien au journal pour lui.
+    expect(journal.notes).toHaveLength(1);
+  });
+
+  it("une même erreur rendue deux fois garde sa référence, et ne s'inscrit qu'une fois", () => {
+    // Un écran rend `texteDeLErreur(mutation.error, …)` à chaque rendu.
+    const panne = new ErreurApi("erreur interne", 500);
+    const premier = texteDeLErreur(panne, "épreuve", DEFAUT);
+    expect(texteDeLErreur(panne, "épreuve", DEFAUT)).toBe(premier);
+    expect(journal.notes).toHaveLength(1);
   });
 
   it("tient devant ce qui n'est même pas une erreur", () => {
-    expect(texteDeLErreur("une chaîne", "épreuve", DEFAUT)).toBe(DEFAUT);
-    expect(texteDeLErreur(null, "épreuve", DEFAUT)).toBe(DEFAUT);
-    expect(texteDeLErreur(undefined, "épreuve", DEFAUT)).toBe(DEFAUT);
-    expect(texteDeLErreur({ erreur: "objet nu" }, "épreuve", DEFAUT)).toBe(DEFAUT);
+    expect(texteDeLErreur("une chaîne", "épreuve", DEFAUT)).toMatch(AVEC_REFERENCE);
+    expect(texteDeLErreur(null, "épreuve", DEFAUT)).toMatch(AVEC_REFERENCE);
+    expect(texteDeLErreur(undefined, "épreuve", DEFAUT)).toMatch(AVEC_REFERENCE);
+    expect(texteDeLErreur({ erreur: "objet nu" }, "épreuve", DEFAUT)).toMatch(AVEC_REFERENCE);
   });
 
   /*
@@ -131,8 +169,17 @@ describe("le journal se relit en clair", () => {
     expect(direUnRefus("refus.moteur.valeur_non_admise?valeur=829e3c34")).toBe(
       "Cette valeur n’est pas admise : « 829e3c34 ».",
     );
-    expect(direUnRefus("Texte déjà écrit pour la personne.")).toBe(
-      "Texte déjà écrit pour la personne.",
+  });
+
+  it("une ligne du journal qui n'est pas une clé se dit par la phrase prévue, avec sa référence", async () => {
+    await chargerLaLangue("fr");
+    // Le journal garde le détail ; l'écran de réglages n'en montre rien.
+    expect(direUnRefus("TypeError: Cannot read properties of undefined")).toBe(DEFAUT);
+    expect(direUnRefus("[ref 7F3A21C9] permission denied for table pieces")).toBe(
+      "Une erreur est survenue. (réf. 7F3A21C9)",
+    );
+    expect(direUnRefus("[ref 7F3A21C9] refus.introuvable")).toBe(
+      "Introuvable, ou vous n’y avez pas accès.",
     );
   });
 

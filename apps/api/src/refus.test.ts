@@ -11,7 +11,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { introuvableLisible, refusLisible } from "./refus.ts";
+import { introuvableLisible, REFUS_SANS_CLE, refusLisible } from "./refus.ts";
 
 describe("refus lisible", () => {
   it("dit deux gestes simultanés comme un refus : le nôtre tel quel, celui du moteur sans ses verrous", () => {
@@ -24,15 +24,21 @@ describe("refus lisible", () => {
     assert.equal(refusLisible(moteur), "refus.moteur.recommencez");
   });
 
-  it("rend le message d'un refus écrit par un déclencheur", () => {
-    // Ce que produit `raise exception ... using errcode = 'check_violation'` :
-    // un code, un message, et aucun champ de localisation.
+  it("ne rend jamais la phrase brute d'un déclencheur : une clé générique, le détail au journal", () => {
+    // 6 novembre 2026, règle du dirigeant : aucun texte technique à l'écran.
+    // Un `raise` qui lève une phrase au lieu d'une clé `refus.*` est une
+    // faute (R12) : l'écran ne la répète pas, il dit `refus.inattendu` dans la
+    // langue de la personne, et l'appelant garde le détail pour le journal.
     const erreur = {
       code: "23514",
       message:
         "Le compte 411 (Clients) est un compte collectif : il reçoit des TIERS, pas des sous-comptes.",
     };
-    assert.match(refusLisible(erreur) ?? "", /compte collectif/);
+    assert.equal(REFUS_SANS_CLE, "refus.inattendu");
+    assert.equal(refusLisible(erreur), REFUS_SANS_CLE);
+    // Ni du HTML, ni un message français : jamais l'écho de ce qui a été levé.
+    for (const message of ["<b>x</b>", "La tour est réservée aux opérateurs d'ALGORIA."])
+      assert.equal(refusLisible({ code: "42501", message }), REFUS_SANS_CLE, message);
   });
 
   it("tait le message d'une contrainte détectée par PostgreSQL — sans taire le refus", () => {
