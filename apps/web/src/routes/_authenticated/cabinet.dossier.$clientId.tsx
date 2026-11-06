@@ -22,9 +22,9 @@ import { useSyntheseClient } from "@/hooks/use-synthese-client";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDeLAction } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { finDuMois } from "@malica/socle/exercice";
+import { arreteDuCumul } from "@malica/socle/exercice";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
-import { montant } from "@/lib/lisible";
+import { jourLocal, montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import { useMoisDuCabinet } from "@/hooks/use-mois-du-cabinet";
@@ -88,8 +88,8 @@ function CabinetClient() {
     queryFn: () => office().supervision.queue(org.id, clientId),
   });
   const echeances = useQuery({
-    queryKey: ["cab-echeances", org.id, [clientId]],
-    queryFn: () => office().collab.echeances([clientId]),
+    queryKey: ["cab-echeances", org.id, [clientId], locale],
+    queryFn: () => office().collab.echeances([clientId], locale),
   });
   const journal = useQuery({
     queryKey: ["cab-journal", clientId],
@@ -175,7 +175,7 @@ function CabinetClient() {
       year: "numeric",
       timeZone: "UTC",
     }).format(new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso));
-  const fin = finDuMois(periode);
+  const fin = arreteDuCumul(periode, jourLocal(new Date()));
 
   if (clients.isPending) {
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;

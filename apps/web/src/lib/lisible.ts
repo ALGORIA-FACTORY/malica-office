@@ -11,46 +11,15 @@
  * pour formater perdrait de la précision au-delà de quinze chiffres, et un
  * grand livre en centimes y arrive.
  */
+import { montantLisible as montant } from "@malica/socle/montant-lisible";
 import { noterAuJournal } from "./journal-atelier";
 
 /**
- * Un montant du Socle, dans la langue du lecteur.
- *
- * Les décimales ne sont ni ajoutées ni retirées : « 1240.500 » garde ses trois
- * décimales parce que le dinar en a trois, et c'est le Socle qui l'a décidé.
+ * Un montant du Socle, dans la langue du lecteur. Le formateur vit au Socle
+ * (`montant-lisible.ts`) : le texte du procès-verbal, rédigé côté API, et ses
+ * écrans lisent les mêmes séparateurs.
  */
-export function montant(valeur: string | null | undefined, locale: string): string {
-  /*
-   * ================================================== UN MONTANT PEUT MANQUER
-   *
-   * La signature disait `string`, et elle mentait : le serveur rend du JSON,
-   * où un montant absent vaut `null`. Le 4 octobre 2026, l'écran d'une pièce
-   * a planté sur un téléphone — « Cannot read properties of null (reading
-   * 'trim') » — parce qu'un appelant se gardait de `undefined` et pas de
-   * `null`. Corriger le seul appelant aurait laissé le piège aux suivants.
-   *
-   * « Rien » se rend par RIEN, pas par « 0,000 » : un montant absent n'est pas
-   * un montant nul, et une facture sans total ne doit pas afficher zéro.
-   */
-  if (valeur === null || valeur === undefined) return "";
-  const propre = valeur.trim();
-  if (propre === "") return "";
-  const negatif = propre.startsWith("-");
-  const sansSigne = negatif ? propre.slice(1) : propre;
-  const [entiere = "0", decimale] = sansSigne.split(".");
-
-  const separateurs = new Intl.NumberFormat(locale).formatToParts(12345.6);
-  const brut = separateurs.find((p) => p.type === "group")?.value ?? "\u00a0";
-  // U+202F, l'espace fine insécable du français, s'efface dans une police
-  // proportionnelle. U+00A0 dit la même chose et se voit partout.
-  const millier = brut === "\u202f" ? "\u00a0" : brut;
-  const virgule = separateurs.find((p) => p.type === "decimal")?.value ?? ",";
-
-  // On groupe à la main : `Intl` formaterait un `Number`, donc arrondirait.
-  const groupee = entiere.replace(/\B(?=(\d{3})+(?!\d))/g, millier);
-  const corps = decimale ? `${groupee}${virgule}${decimale}` : groupee;
-  return negatif ? `−${corps}` : corps;
-}
+export { montant };
 
 /** Un montant signé — le « + » d'une progression se lit autant que le « − ». */
 export function montantSigne(valeur: string, locale: string): string {
@@ -172,6 +141,11 @@ export function moisLocal(instant: Date): string {
   return `${instant.getFullYear()}-${String(instant.getMonth() + 1).padStart(2, "0")}`;
 }
 
+/** Le jour (`AAAA-MM-JJ`) d'un instant, à l'heure du lecteur — la même règle que son mois. */
+export function jourLocal(instant: Date): string {
+  return `${moisLocal(instant)}-${String(instant.getDate()).padStart(2, "0")}`;
+}
+
 /** Le jour et le mois, en chiffres (« 13/10 ») — d'une date du Socle ou d'un instant. */
 export function jourEtMois(iso: string, locale: string): string {
   return jourOuInstant(iso, locale);
@@ -200,4 +174,31 @@ export function momentDeLEnvoi(
     aujourdhui ? { hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "2-digit" },
   ).format(d);
   return { quand, aujourdhui };
+}
+
+/**
+ * Un texte qui ouvre une phrase : sa première lettre seule passe en majuscule.
+ *
+ * Relevé sur staging le 4 novembre 2026 : l'accueil du cabinet titrait
+ * « Mercredi 4 Novembre ». Le `text-transform: capitalize` de la feuille
+ * mettait une majuscule à CHAQUE mot ; en français, le mois et le jour
+ * s'écrivent en minuscules, et seule l'initiale de la phrase se relève.
+ * L'anglais garde les majuscules qu'Intl lui donne déjà ; l'arabe n'a pas
+ * de casse, et la fonction le laisse tel quel.
+ */
+export function enDebutDePhrase(texte: string, locale: string): string {
+  const [premier] = texte;
+  if (premier === undefined) return texte;
+  return premier.toLocaleUpperCase(locale) + texte.slice(premier.length);
+}
+
+/** Au-delà de ce compte, un badge dit « 99+ » : trois chiffres débordent la pastille. */
+const PLAFOND_DU_BADGE = 99;
+
+/**
+ * Le compte qu'affiche un badge : exact jusqu'à 99, « 99+ » au-delà. Le compte
+ * exact reste dans l'étiquette lue par un lecteur d'écran, jamais tronqué.
+ */
+export function compteDuBadge(n: number): string {
+  return n > PLAFOND_DU_BADGE ? `${PLAFOND_DU_BADGE}+` : String(n);
 }

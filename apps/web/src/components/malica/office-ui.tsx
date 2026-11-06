@@ -3,12 +3,13 @@
  * produit, réaligné sur la doctrine Edition One : monochrome, coins nets,
  * élévation par bordures, aucune ombre. La couleur est un signal rare.
  */
-import type { ReactNode, ComponentPropsWithoutRef } from "react";
+import { Children, isValidElement, type ReactNode, type ComponentPropsWithoutRef } from "react";
 import { Link } from "@tanstack/react-router";
 
 import marqueAlgoria from "@/assets/algoria-mark.svg";
 import marqueRg from "@/assets/rg-mark.svg";
 import malica from "@/assets/malica.webp";
+import { Aide, type ParagrapheDAide } from "@/components/malica/aide";
 import { cn } from "@/lib/utils";
 
 /** Vert pris en charge, ambre à vous, bleu chez l'autre, rouge à corriger, gris rien à faire. */
@@ -178,6 +179,11 @@ export function SignalLight({ tone, label }: { tone: Tone; label: string }) {
  * gris). Celui-ci fixe la forme : surtitre, titre, chapeau, actions à droite,
  * contenu dessous (indicateurs, onglets). `ton="encre"` est réservé à
  * l'accueil du cabinet, qui ouvre la journée.
+ *
+ * Le chapeau ne s'affiche plus sous le titre : il s'ouvre par le ⓘ posé à
+ * côté (Wissem, 5 novembre 2026 : « sans trop d'écriture, les explications
+ * doivent être dans le i » — la règle que « Mon espace » suit depuis le
+ * 23 octobre). La phrase ne se perd pas, elle se demande.
  */
 export function EnTeteCabinet({
   surtitre,
@@ -221,26 +227,29 @@ export function EnTeteCabinet({
                 {surtitre}
               </p>
             ) : null}
-            <h1
-              className={cn(
-                "mt-2.5 font-semibold tracking-[-0.025em]",
-                encre
-                  ? "text-[32px] leading-[1.02] sm:text-[42px] lg:text-[54px]"
-                  : "text-[30px] leading-[1.05] sm:text-[38px]",
-              )}
-            >
-              {titre}
-            </h1>
-            {chapeau ? (
-              <div
+            <div className="mt-2.5 flex items-center gap-1">
+              <h1
                 className={cn(
-                  "mt-3 max-w-[62ch] text-[13.5px] leading-[1.55]",
-                  encre ? "text-background/80" : "text-text-2",
+                  "min-w-0 font-semibold tracking-[-0.025em]",
+                  encre
+                    ? "text-[32px] leading-[1.02] sm:text-[42px] lg:text-[54px]"
+                    : "text-[30px] leading-[1.05] sm:text-[38px]",
                 )}
               >
-                {chapeau}
-              </div>
-            ) : null}
+                {titre}
+              </h1>
+              {chapeau ? (
+                <Aide
+                  titre={texteDe(titre)}
+                  paragraphes={[{ texte: chapeau }]}
+                  className={
+                    encre
+                      ? "border-background/40 text-background/80 hover:text-background"
+                      : undefined
+                  }
+                />
+              ) : null}
+            </div>
           </div>
         </div>
         {actions ? <div className="flex flex-wrap items-end gap-3">{actions}</div> : null}
@@ -250,11 +259,44 @@ export function EnTeteCabinet({
   );
 }
 
+/** Le texte d'un titre composé (fragments, chaînes) : le nom que le ⓘ annonce. */
+function texteDe(n: ReactNode): string {
+  return Children.toArray(n)
+    .map((c) =>
+      typeof c === "string" || typeof c === "number"
+        ? String(c)
+        : isValidElement<{ children?: ReactNode }>(c)
+          ? texteDe(c.props.children)
+          : "",
+    )
+    .join("");
+}
+
 /** Titre de section — filet supérieur, jamais d'ombre. */
-export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+export function SectionTitle({
+  children,
+  action,
+  aide,
+}: {
+  children: ReactNode;
+  action?: ReactNode;
+  /**
+   * L'explication de la section, derrière le ⓘ du titre plutôt qu'en
+   * paragraphe dessous : un texte, ou plusieurs paragraphes nommés.
+   */
+  aide?: ReactNode | ParagrapheDAide[];
+}) {
   return (
     <div className="cab-section-title flex items-baseline justify-between gap-3 border-b border-border pb-2">
-      <h2 className="text-[13px] font-semibold uppercase tracking-[0.16em]">{children}</h2>
+      <h2 className="flex items-center text-[13px] font-semibold uppercase tracking-[0.16em]">
+        {children}
+        {aide ? (
+          <Aide
+            titre={texteDe(children)}
+            paragraphes={Array.isArray(aide) ? (aide as ParagrapheDAide[]) : [{ texte: aide }]}
+          />
+        ) : null}
+      </h2>
       {action}
     </div>
   );
@@ -275,28 +317,34 @@ export function SectionRepliable({
   ouvert,
   onBascule,
   resume,
+  aide,
   children,
 }: {
   titre: ReactNode;
   ouvert: boolean;
   onBascule: () => void;
   resume?: ReactNode;
+  /** L'explication, derrière un ⓘ voisin du titre (jamais dans le bouton qui replie). */
+  aide?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <section className="space-y-3">
       <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
-        <button
-          type="button"
-          onClick={onBascule}
-          aria-expanded={ouvert}
-          className="flex min-h-[36px] items-baseline gap-2 text-start text-[13px] font-semibold uppercase tracking-[0.16em]"
-        >
-          <span aria-hidden className="text-[11px] opacity-60">
-            {ouvert ? "−" : "+"}
-          </span>
-          {titre}
-        </button>
+        <span className="flex items-center">
+          <button
+            type="button"
+            onClick={onBascule}
+            aria-expanded={ouvert}
+            className="flex min-h-[36px] items-baseline gap-2 text-start text-[13px] font-semibold uppercase tracking-[0.16em]"
+          >
+            <span aria-hidden className="text-[11px] opacity-60">
+              {ouvert ? "−" : "+"}
+            </span>
+            {titre}
+          </button>
+          {aide ? <Aide titre={texteDe(titre)} paragraphes={[{ texte: aide }]} /> : null}
+        </span>
         {resume ? <span className="text-[12px] text-muted-foreground">{resume}</span> : null}
       </div>
       {ouvert ? children : null}
@@ -316,17 +364,21 @@ export function InkTable({
   children,
   caption,
   empile,
+  className,
 }: {
   head: ReactNode[];
   children: ReactNode;
   caption?: string;
   empile?: boolean;
+  /** Une mise en page propre à un écran (la file du cabinet en cartes, au téléphone). */
+  className?: string;
 }) {
   return (
     <div
       className={cn(
         "cab-table overflow-x-auto border border-border bg-card",
         empile && "cab-table-empile",
+        className,
       )}
     >
       <table className="min-w-full border-collapse text-[13px]">

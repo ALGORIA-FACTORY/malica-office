@@ -35,7 +35,7 @@ vi.mock("@tanstack/react-query", () => ({
       ? { isPending: false, data: dossier }
       : { isPending: false, data: undefined },
   useMutation: () => ({ mutate: vi.fn(), isPending: false }),
-  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useQueryClient: () => ({ invalidateQueries: vi.fn(), getQueryData: () => undefined }),
 }));
 vi.mock("@/components/malica/cabinet-context", () => ({
   useCabinet: () => ({ org: { id: "cabinet" } }),

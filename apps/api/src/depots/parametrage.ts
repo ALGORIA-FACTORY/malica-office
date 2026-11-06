@@ -682,7 +682,7 @@ export const parametrage = {
         [packId, jour, locale],
       ),
       nomsDesReglages(db, locale),
-      optionsDeLaRegleDeChange(db, locale),
+      optionsDeLaRegleDeChange(db, locale, packId),
       // La clôture de l'exercice du dossier (sa fiche fiscale en vigueur) :
       // une décision vaut, par défaut, depuis le début de l'exercice.
       dossierId

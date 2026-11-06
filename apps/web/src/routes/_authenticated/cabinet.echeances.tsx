@@ -20,6 +20,7 @@ import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context"
 import { ecrireDossierCourant, useDossierCourant } from "@/components/malica/dossier-courant";
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import { OrigineDEcheance } from "@/components/malica/origine-d-echeance";
+import { Aide } from "@/components/malica/aide";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -96,8 +97,8 @@ function CabinetEcheances() {
     staleTime: 60_000,
   });
   const echeances = useQuery({
-    queryKey: ["cab-echeances", org.id, ids],
-    queryFn: () => office().collab.echeances(ids),
+    queryKey: ["cab-echeances", org.id, ids, locale],
+    queryFn: () => office().collab.echeances(ids, locale),
     enabled: ids.length > 0 && derivation.isFetched,
   });
 
@@ -261,7 +262,10 @@ function CabinetEcheances() {
             >
               <span
                 className={cn(
-                  "num whitespace-nowrap text-[10px]",
+                  // Au téléphone, les dates de la frise se chevauchaient (mesure du
+                  // 5 novembre 2026) : les barres restent, chaque date se lit dans la
+                  // carte de son échéance, juste dessous.
+                  "num hidden whitespace-nowrap text-[10px] sm:inline",
                   // Deux repères voisins ne se lisent que si leurs étiquettes s'alternent.
                   index % 2 === 1 ? "-translate-y-3.5" : "",
                   liste.some((e) => e.status === "en_retard")
@@ -344,7 +348,9 @@ function CabinetEcheances() {
         ) : rows.length === 0 ? (
           <EmptyState>{t("cab.echeances.empty")}</EmptyState>
         ) : (
-          <div className="overflow-x-auto border border-border bg-card">
+          // Au téléphone, une carte par échéance (`cab-table-empile`) : le tableau
+          // de six colonnes défilait de côté (mesure du 5 novembre 2026).
+          <div className="cab-table-empile overflow-x-auto border border-border bg-card">
             <table className="min-w-full border-collapse text-[12.5px]">
               <caption className="sr-only">{t("cab.echeances.title")}</caption>
               <thead>
@@ -373,7 +379,7 @@ function CabinetEcheances() {
               <tbody>
                 {rows.map((e) => (
                   <tr key={e.id} className="border-b border-border hover:bg-secondary/60">
-                    <td className="whitespace-nowrap px-3 py-2 font-medium">
+                    <td className="px-3 py-2 font-medium sm:whitespace-nowrap">
                       {e.label}
                       {e.period ? (
                         <span className="num block text-[10.5px] font-normal text-muted-foreground">
@@ -381,7 +387,7 @@ function CabinetEcheances() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2">
+                    <td data-label={t("cab.queue.client")} className="px-3 py-2">
                       <Link
                         to="/cabinet/dossier/$clientId"
                         params={{ clientId: e.tenantId }}
@@ -390,7 +396,11 @@ function CabinetEcheances() {
                         {nomDe(e.tenantId)}
                       </Link>
                     </td>
-                    <td className="min-w-[240px] px-3 py-2" title={e.texteSource ?? undefined}>
+                    <td
+                      data-label={t("cab.echeances.col.legal")}
+                      className="px-3 py-2 sm:min-w-[240px]"
+                      title={e.texteSource ?? undefined}
+                    >
                       <span className="num block whitespace-nowrap text-[11px] text-signal-info">
                         {e.article ?? e.texteSource ?? "—"}
                       </span>
@@ -400,7 +410,10 @@ function CabinetEcheances() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-end">
+                    <td
+                      data-label={t("cab.echeances.col.depot")}
+                      className="whitespace-nowrap px-3 py-2 text-end"
+                    >
                       <span className="num block text-[12px]">
                         {dateEnChiffres(e.dueDate, locale)}
                       </span>
@@ -423,7 +436,10 @@ function CabinetEcheances() {
                         {compteDe(e)}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2">
+                    <td
+                      data-label={t("cab.echeances.col.state")}
+                      className="whitespace-nowrap px-3 py-2"
+                    >
                       <span className="inline-flex items-center gap-1.5">
                         <span
                           aria-hidden
@@ -457,10 +473,13 @@ function CabinetEcheances() {
       {/* ---- les dossiers sans calendrier */}
       {manques.length > 0 ? (
         <section className="border border-s-2 border-border border-s-marigold bg-card p-4">
-          <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="flex items-center text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             {t("cab.echeances.manques.titre")}
+            <Aide
+              titre={t("cab.echeances.manques.titre")}
+              paragraphes={[{ texte: t("cab.echeances.manques.lede") }]}
+            />
           </p>
-          <p className="mt-1.5 text-[12.5px] text-text-2">{t("cab.echeances.manques.lede")}</p>
           <ul className="mt-3 divide-y divide-border">
             {manques.map((m) => (
               <li key={m.tenantId} className="flex items-baseline justify-between gap-3 py-2">

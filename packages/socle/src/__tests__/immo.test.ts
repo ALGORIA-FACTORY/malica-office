@@ -4,6 +4,7 @@ import {
   computeAmortissement,
   computeCession,
   computeDepreciation,
+  sortieDuPlan,
   vncNette,
 } from "../engines/immo/amortissement.ts";
 
@@ -113,5 +114,75 @@ describe("vncNette", () => {
     expect(vncNette({ decimals: 3, vncAmortie: "100.000", cumulDepreciation: "250.000" })).toBe(
       "0.000",
     );
+  });
+});
+
+const D_SOMME = (xs: string[]) => xs.reduce((t, x) => t + Number(x), 0).toFixed(3);
+
+describe("sortie du plan (cession, mise au rebut)", () => {
+  // 12 000 sur 4 ans, en service le 1er janvier 2026 : 3 000 par an.
+  const plan = computeAmortissement({ ...base, method: "lineaire", miseEnService: "2026-01-01" });
+
+  it("dote l'exercice de sortie jusqu'au mois de sortie inclus", () => {
+    // Sortie le 15 mars 2027 : 2026 entier, puis 3 mois de 2027 sur 12.
+    expect(sortieDuPlan(plan, "2027-03-15", 3)).toEqual({
+      exercice: 2027,
+      mois: 3,
+      dotation: "750.000",
+      cumul: "3750.000",
+      vncAmortie: "8250.000",
+    });
+  });
+
+  it("prend le premier exercice au prorata de la mise en service", () => {
+    const tardif = computeAmortissement({
+      ...base,
+      method: "lineaire",
+      miseEnService: "2026-07-01",
+    });
+    // 2026 : 6 mois, 1 500. Sortie en septembre 2026 : 3 mois sur 6.
+    const s = sortieDuPlan(tardif, "2026-09-30", 3);
+    expect(s.mois).toBe(3);
+    expect(s.dotation).toBe("750.000");
+    expect(s.cumul).toBe("750.000");
+  });
+
+  it("ne dote rien après la fin du plan", () => {
+    const s = sortieDuPlan(plan, "2031-06-01", 3);
+    expect(s.dotation).toBe("0.000");
+    expect(s.cumul).toBe("12000.000");
+    expect(s.vncAmortie).toBe("0.000");
+  });
+
+  it("cumule les dotations arrondies que les livres portent, pas le cumul du plan", () => {
+    // 100 sur 3 ans : 33,333 par an aux livres.
+    const arrondi = computeAmortissement({
+      ...base,
+      valeurBrute: "100.000",
+      dureeAnnees: 3,
+      method: "lineaire",
+      miseEnService: "2024-01-01",
+    });
+    const s = sortieDuPlan(arrondi, "2026-03-15", 3);
+    expect(s.dotation).toBe("8.334");
+    expect(s.cumul).toBe("75.000");
+    expect(D_SOMME(arrondi.lignes.slice(0, 2).map((l) => l.dotation))).toBe("66.666");
+  });
+
+  it("la dernière annuité solde la base : la somme des annuités est la base, au millime", () => {
+    const tiers = computeAmortissement({
+      ...base,
+      valeurBrute: "100.000",
+      dureeAnnees: 3,
+      method: "lineaire",
+      miseEnService: "2024-01-01",
+    });
+    expect(tiers.lignes.map((l) => l.dotation)).toEqual(["33.333", "33.333", "33.334"]);
+    expect(D_SOMME(tiers.lignes.map((l) => l.dotation))).toBe("100.000");
+    expect(tiers.totals.vnc_finale).toBe("0.000");
+  });
+
+  it("refuse une sortie avant la mise en service", () => {
+    expect(() => sortieDuPlan(plan, "2025-12-31", 3)).toThrow();
   });
 });

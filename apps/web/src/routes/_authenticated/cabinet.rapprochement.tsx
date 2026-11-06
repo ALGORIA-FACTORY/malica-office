@@ -263,7 +263,6 @@ function CabinetRapprochement() {
   // Le mois du cabinet, à son fuseau, tant que le comptable n'en choisit pas un autre.
   const moisDuCabinet = useMoisDuCabinet();
   const [periodeChoisie, setPeriod] = useState<string | null>(null);
-  const period = periodeChoisie ?? moisDuCabinet;
   const [csv, setCsv] = useState("");
   const [importOuvert, setImportOuvert] = useState(false);
   const [importInfo, setImportInfo] = useState<string | null>(null);
@@ -297,8 +296,16 @@ function CabinetRapprochement() {
     enabled: !!pack.data,
   });
   const motifs = useQuery({
-    queryKey: ["motifs", locale],
-    queryFn: () => office().supervision.motifs(locale),
+    // Les motifs d'un délettrage, pas ceux d'un retour de pièce.
+    queryKey: ["motifs", locale, "delettrage"],
+    queryFn: () => office().supervision.motifs(locale, "delettrage"),
+  });
+  // Le journal et l'audit nomment aussi les délettrages d'avant le
+  // 5 novembre 2026, faits avec un motif de retour : leurs libellés restent
+  // lisibles, même si ces motifs ne se proposent plus (revue de #254).
+  const motifsDeRetour = useQuery({
+    queryKey: ["motifs", locale, "retour"],
+    queryFn: () => office().supervision.motifs(locale, "retour"),
   });
   const comptes = useQuery({
     queryKey: ["banque-comptes", client?.tenantId],
@@ -354,6 +361,19 @@ function CabinetRapprochement() {
     enabled: !!client && !!compte,
   });
 
+  // Sans choix, l'écran s'ouvre sur le plus ancien mois qui a des lignes de
+  // relevé ouvertes : il s'ouvrait sur le mois du cabinet, vide, alors que
+  // trois lignes d'octobre attendaient (recette du 5 novembre 2026). Rien
+  // d'ouvert : le mois du cabinet, comme avant.
+  const premierMoisOuvert = useMemo(
+    () =>
+      (lignes.data ?? [])
+        .filter((l) => l.status === "ouverte")
+        .map((l) => l.at.slice(0, 7))
+        .sort()[0] ?? null,
+    [lignes.data],
+  );
+  const period = periodeChoisie ?? premierMoisOuvert ?? moisDuCabinet;
   const { from, to } = monthBounds(period);
   const bookLines = useQuery({
     queryKey: ["banque-book", client?.tenantId, compte?.accountCode, from, to],
@@ -517,7 +537,7 @@ function CabinetRapprochement() {
   const bookById = new Map(bookRows.map((b) => [b.id, b]));
   const bankById = new Map(lignesRows.map((b) => [b.id, b]));
   const motifRows = motifs.data ?? [];
-  const motifById = new Map(motifRows.map((m) => [m.id, m]));
+  const motifById = new Map([...(motifsDeRetour.data ?? []), ...motifRows].map((m) => [m.id, m]));
   const actifs = (etat.data ?? []).filter((e) => e.active);
   const ouvertes = lignesRows.filter((l) => l.status === "ouverte");
   const nonLettrees = bookRows.filter((b) => !b.lettree);
@@ -638,7 +658,7 @@ function CabinetRapprochement() {
     "border border-border bg-card px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-accent disabled:opacity-50";
 
   return (
-    <div className="space-y-8">
+    <div className="cab-lisible space-y-8">
       {/* ---- masthead */}
       <EnTeteCabinet
         surtitre={<>{kicker}</>}
@@ -919,7 +939,7 @@ function CabinetRapprochement() {
               </section>
 
               {/* ---- ce qui reste sans vis-à-vis */}
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2 [&>*]:min-w-0">
                 <section>
                   <SectionTitle>{t("cab.banque.orphansbank")}</SectionTitle>
                   {chargement ? (
@@ -933,7 +953,7 @@ function CabinetRapprochement() {
                       {orphelinesBanque.map((l) => (
                         <li
                           key={l.id}
-                          className="flex items-baseline justify-between gap-3 bg-card px-3 py-2 text-[12.5px]"
+                          className="flex min-w-0 items-baseline justify-between gap-3 bg-card px-3 py-2 text-[12.5px]"
                         >
                           <span className="min-w-0">
                             <span className="block truncate">{l.label}</span>
@@ -977,7 +997,7 @@ function CabinetRapprochement() {
                       {orphelinesLivre.map((b) => (
                         <li
                           key={b.id}
-                          className="flex items-baseline justify-between gap-3 bg-card px-3 py-2 text-[12.5px]"
+                          className="flex min-w-0 items-baseline justify-between gap-3 bg-card px-3 py-2 text-[12.5px]"
                         >
                           <span className="min-w-0">
                             <span className="block truncate">
@@ -1049,6 +1069,8 @@ function CabinetRapprochement() {
                                 {motif?.requiresNote ? (
                                   <input
                                     aria-label={t("cab.banque.note")}
+                                    aria-required="true"
+                                    aria-describedby={`note-requise-${e.ligneId}`}
                                     value={unmatch!.note}
                                     onChange={(ev) =>
                                       setUnmatch({ ...unmatch!, note: ev.target.value })
@@ -1056,6 +1078,15 @@ function CabinetRapprochement() {
                                     className="w-full border border-border bg-card px-2 py-1.5 text-[12px]"
                                     placeholder={t("cab.banque.note")}
                                   />
+                                ) : null}
+                                {/* Le bouton reste inactif sans note : on dit pourquoi. */}
+                                {motif?.requiresNote && unmatch!.note.trim().length === 0 ? (
+                                  <p
+                                    id={`note-requise-${e.ligneId}`}
+                                    className="text-[11.5px] text-muted-foreground"
+                                  >
+                                    {t("cab.banque.note.requise")}
+                                  </p>
                                 ) : null}
                                 <div className="flex flex-wrap gap-1.5">
                                   <ActionButton
@@ -1117,14 +1148,19 @@ function CabinetRapprochement() {
                       t("cab.banque.status"),
                       "",
                     ]}
+                    empile
                   >
                     {lignesRows.map((l) => (
                       <InkTableRow key={l.id}>
                         <InkCell numeric>{dateCourte(l.at)}</InkCell>
-                        <InkCell>{l.label}</InkCell>
-                        <InkCell numeric>{montant(l.montant, locale)}</InkCell>
-                        <InkCell numeric>{l.reference ?? "—"}</InkCell>
-                        <InkCell>
+                        <InkCell label={t("cab.banque.label")}>{l.label}</InkCell>
+                        <InkCell numeric label={t("cab.banque.amount")}>
+                          {montant(l.montant, locale)}
+                        </InkCell>
+                        <InkCell numeric label={t("cab.banque.reference")}>
+                          {l.reference ?? "—"}
+                        </InkCell>
+                        <InkCell label={t("cab.banque.status")}>
                           <span
                             className={cn(
                               "border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
@@ -1175,15 +1211,18 @@ function CabinetRapprochement() {
                       t("cab.banque.piece"),
                       t("cab.banque.status"),
                     ]}
+                    empile
                   >
                     {bookRows.map((b) => (
                       <InkTableRow key={b.id}>
                         <InkCell numeric>{dateCourte(b.at)}</InkCell>
-                        <InkCell>
+                        <InkCell label={t("cab.banque.label")}>
                           <EcritureRef book={b} titre={t("cab.banque.openpiece")} />
                         </InkCell>
-                        <InkCell numeric>{montant(b.montant, locale)}</InkCell>
-                        <InkCell>
+                        <InkCell numeric label={t("cab.banque.amount")}>
+                          {montant(b.montant, locale)}
+                        </InkCell>
+                        <InkCell label={t("cab.banque.piece")}>
                           {b.pieceId ? (
                             <Link
                               to="/cabinet/piece/$pieceId"
@@ -1196,7 +1235,7 @@ function CabinetRapprochement() {
                             "—"
                           )}
                         </InkCell>
-                        <InkCell>
+                        <InkCell label={t("cab.banque.status")}>
                           {b.lettree ? (
                             <span className="border border-foreground px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                               {t("cab.banque.lettree")}
@@ -1235,22 +1274,27 @@ function CabinetRapprochement() {
                       t("cab.banque.motif"),
                       t("cab.banque.note"),
                     ]}
+                    empile
                   >
                     {(journal.data ?? []).map((l) => (
                       <InkTableRow key={l.id}>
                         <InkCell numeric>{horodatage(l.createdAt)}</InkCell>
-                        <InkCell>{t(`cab.banque.action.${l.action}`)}</InkCell>
-                        <InkCell>{bankById.get(l.ligneId)?.label ?? "—"}</InkCell>
-                        <InkCell>
+                        <InkCell label={t("cab.banque.action")}>
+                          {t(`cab.banque.action.${l.action}`)}
+                        </InkCell>
+                        <InkCell label={t("cab.banque.line")}>
+                          {bankById.get(l.ligneId)?.label ?? "—"}
+                        </InkCell>
+                        <InkCell label={t("cab.banque.book")}>
                           <EcritureRef
                             book={bookById.get(l.ecritureId)}
                             titre={t("cab.banque.openpiece")}
                           />
                         </InkCell>
-                        <InkCell>
+                        <InkCell label={t("cab.banque.motif")}>
                           {l.motifId ? (motifById.get(l.motifId)?.label ?? "—") : "—"}
                         </InkCell>
-                        <InkCell>{l.note ?? "—"}</InkCell>
+                        <InkCell label={t("cab.banque.note")}>{l.note ?? "—"}</InkCell>
                       </InkTableRow>
                     ))}
                   </InkTable>

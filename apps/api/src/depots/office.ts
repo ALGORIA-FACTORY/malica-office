@@ -651,7 +651,13 @@ export const office = {
     );
     const [{ rows: sources }, { rows: devises }] = await Promise.all([
       db.query<{ code: string; nom: string }>(
-        `select code, nom from ref.sources_de_cours order by code collate "C"`,
+        // Les sources de la juridiction de l'organisation, et elles seules.
+        `select s.code, s.nom from ref.sources_de_cours s
+          where exists (select 1 from ref.sources_de_cours_juridictions sj
+                          join organizations_v o on o.jurisdiction = sj.jurisdiction
+                         where sj.source = s.code and o.id = $1)
+          order by s.code collate "C"`,
+        [orgId],
       ),
       db.query<{ code: string }>(`select code from ref.devises order by code collate "C"`),
     ]);
@@ -796,7 +802,7 @@ export const office = {
          from pieces_v p
          cross join lateral app.nature_des_comptes(
            (select g.cabinet_org_id from engagements_v g
-              join memberships_v m on m.tenant_id = g.cabinet_org_id and m.user_id = auth.uid()
+              join mes_adhesions_v m on m.tenant_id = g.cabinet_org_id
              where g.pme_org_id = p.tenant_id and g.status = 'actif' limit 1),
            p.tenant_id, $2::uuid, p.document_kind, $3::date, $4::text[]) n
         where p.id = app.version_courante($1)`,

@@ -1,4 +1,5 @@
 import type { QualificationDeRetenue } from "@malica/socle/use-cases/retenue-au-reglement";
+import type { QueueItem } from "@malica/socle/ports/repositories";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -8,9 +9,10 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { Download, Eye } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Aide } from "@/components/malica/aide";
+import { dansLOrdreVu, ordreDeLaRevue, retenirLOrdre } from "@/lib/ordre-de-revue";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { CeQueLeLecteurALu } from "@/components/malica/ce-que-le-lecteur-a-lu";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
@@ -31,7 +33,7 @@ import {
   SignalLight,
 } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
-import { montant, quantite } from "@/lib/lisible";
+import { dateEnChiffres, montant, quantite } from "@/lib/lisible";
 import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
@@ -232,13 +234,29 @@ function CabinetReviewDeLaPiece() {
     queryKey: ["cab-queue", org.id],
     queryFn: () => office().supervision.queue(org.id),
   });
-  const rangDansLaFile = (file.data ?? []).findIndex((r) => r.pieceId === pieceId);
-  const dansLaFile = rangDansLaFile >= 0 ? ((file.data ?? [])[rangDansLaFile] ?? null) : null;
+  // L'ordre montré : celui que l'expert a vu en ouvrant la revue — gardé d'une
+  // pièce à l'autre, sinon la file en cache —, pas celui que la base rend une
+  // fois la pièce « Vue ».
+  const [ordreVu, setOrdreVu] = useState<readonly string[] | null>(
+    () =>
+      ordreDeLaRevue(org.id, pieceId) ??
+      qc.getQueryData<QueueItem[]>(["cab-queue", org.id])?.map((r) => r.pieceId) ??
+      null,
+  );
+  useEffect(() => {
+    if (ordreVu === null && file.data) setOrdreVu(file.data.map((r) => r.pieceId));
+  }, [ordreVu, file.data]);
+  useEffect(() => {
+    if (ordreVu) retenirLOrdre(org.id, ordreVu);
+  }, [org.id, ordreVu]);
+  const fileDeRevue = useMemo(() => dansLOrdreVu(ordreVu, file.data ?? []), [ordreVu, file.data]);
+  const rangDansLaFile = fileDeRevue.findIndex((r) => r.pieceId === pieceId);
+  const dansLaFile = rangDansLaFile >= 0 ? (fileDeRevue[rangDansLaFile] ?? null) : null;
   // Ce que le client attend sur cette piece, s'il attend quelque chose. La
   // file le porte deja : pas de seconde requete pour une valeur en main.
   const demandeEnAttente = dansLaFile?.demandeEnAttente ?? null;
-  const precedente = rangDansLaFile > 0 ? ((file.data ?? [])[rangDansLaFile - 1] ?? null) : null;
-  const suivante = rangDansLaFile >= 0 ? ((file.data ?? [])[rangDansLaFile + 1] ?? null) : null;
+  const precedente = rangDansLaFile > 0 ? (fileDeRevue[rangDansLaFile - 1] ?? null) : null;
+  const suivante = rangDansLaFile >= 0 ? (fileDeRevue[rangDansLaFile + 1] ?? null) : null;
   const allerA = (id: string) =>
     void navigate({ to: "/cabinet/piece/$pieceId", params: { pieceId: id }, replace: true });
 
@@ -469,7 +487,7 @@ function CabinetReviewDeLaPiece() {
             }}
             aria-label={t("cab.review.back")}
             title={t("cab.review.back")}
-            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
+            className="flex h-11 w-11 lg:h-[34px] lg:w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
           >
             ←
           </Link>
@@ -547,6 +565,14 @@ function CabinetReviewDeLaPiece() {
     piece.documentKindStatut !== "confirme" &&
     proposition.data?.ok === false &&
     ((proposition.data.controlesEnDefaut ?? []).includes("sens_de_la_piece") ||
+      /*
+       * Le Socle dit « à compléter — type » (recette du 2 novembre 2026) :
+       * la PME avait DÉCLARÉ un achat, la lecture n'a rien tranché, et le type
+       * déclaré n'est pas un type établi. Les boutons Achat / Vente restaient
+       * cachés parce qu'un type était déclaré ; c'est pourtant au cabinet de
+       * l'établir.
+       */
+      (proposition.data.aCompleter ?? []).includes("type") ||
       leSensResteADemander({ sensLu, typeDeclare: piece.documentKind }));
   /*
    * Forcer ne dépend jamais du sens : un type qui ne porte pas d'écriture (un
@@ -568,7 +594,7 @@ function CabinetReviewDeLaPiece() {
           }}
           aria-label={t("cab.review.back")}
           title={t("cab.review.back")}
-          className="flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
+          className="flex h-11 w-11 lg:h-[34px] lg:w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
         >
           ←
         </Link>
@@ -588,7 +614,7 @@ function CabinetReviewDeLaPiece() {
               <>
                 {" · "}
                 <span className="num">
-                  {t("cab.review.rank", { n: rangDansLaFile + 1, total: (file.data ?? []).length })}
+                  {t("cab.review.rank", { n: rangDansLaFile + 1, total: fileDeRevue.length })}
                 </span>
               </>
             ) : null}
@@ -631,7 +657,7 @@ function CabinetReviewDeLaPiece() {
             disabled={!precedente}
             aria-label={t("cab.review.prev")}
             title={t("cab.review.prev")}
-            className="flex h-[34px] w-[34px] items-center justify-center border border-border bg-card hover:bg-accent disabled:opacity-40"
+            className="flex h-11 w-11 lg:h-[34px] lg:w-[34px] items-center justify-center border border-border bg-card hover:bg-accent disabled:opacity-40"
           >
             ↑
           </button>
@@ -641,7 +667,7 @@ function CabinetReviewDeLaPiece() {
             disabled={!suivante}
             aria-label={t("cab.review.next")}
             title={t("cab.review.next")}
-            className="flex h-[34px] w-[34px] items-center justify-center border border-border bg-card hover:bg-accent disabled:opacity-40"
+            className="flex h-11 w-11 lg:h-[34px] lg:w-[34px] items-center justify-center border border-border bg-card hover:bg-accent disabled:opacity-40"
           >
             ↓
           </button>
@@ -791,7 +817,9 @@ function CabinetReviewDeLaPiece() {
                             </div>
                             <div className="mt-0.5 flex items-center justify-between gap-3">
                               <span className="text-[11.5px] text-muted-foreground">
-                                {p.payeLe ?? t("cab.review.paiement.sansDate")}
+                                {p.payeLe
+                                  ? dateEnChiffres(p.payeLe, locale)
+                                  : t("cab.review.paiement.sansDate")}
                               </span>
                               {/*
                                * La photo du talon — « le moyen de paiement, photo
@@ -1265,7 +1293,8 @@ function EcritureDuReglement({
   return (
     <div className="mt-2 border-s-2 border-border ps-2.5">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        {t("cab.review.reglement")} · {r.ecriture.journal} · {r.ecriture.dateEcriture}
+        {t("cab.review.reglement")} · {r.ecriture.journal} ·{" "}
+        {dateEnChiffres(r.ecriture.dateEcriture, locale)}
       </p>
       <p className="mt-0.5 text-[11.5px] text-muted-foreground">{r.ecriture.libelle}</p>
       {!r.inscrite &&

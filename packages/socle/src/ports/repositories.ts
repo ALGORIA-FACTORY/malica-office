@@ -1816,7 +1816,8 @@ export type RaisonSansEcriture =
  */
 export type ReserveDeProposition =
   | {
-      code: "nature_de_vente";
+      /** La nature de ce qu'une vente vend, ou de ce qu'un achat achète, à préciser. */
+      code: "nature_de_vente" | "nature_de_charge";
       raison: "inconnue" | "sans_article" | "non_ventilable";
       articles: string[];
     }
@@ -1875,6 +1876,12 @@ export type PropositionDePiece = (
       avoir?: FactureDOrigine;
       /** La date hors de tout pack, quand `raisonCode` vaut `date_hors_referentiel`. */
       dateHorsReferentiel?: string;
+      /**
+       * Les champs qui manquent, en clés métier (`type`, `date`…), quand
+       * `raisonCode` vaut `a_completer`. Le cabinet tranche le sens quand
+       * c'est le `type` qui manque (recette du 2 novembre 2026).
+       */
+      aCompleter?: string[];
     }
 ) & {
   /**
@@ -2144,6 +2151,12 @@ export interface QueueItem {
    * signal, jamais une suppression : la PME décide.
    */
   doublonDe: string | null;
+  /**
+   * Le fournisseur de la pièce : l'émetteur dit par une personne, sinon lu.
+   * `null` pour une facture de vente, ou quand rien n'a été lu. La file le
+   * montre quand aucune écriture ne porte encore de libellé.
+   */
+  tiers: string | null;
 }
 
 export interface AuditEntry {
@@ -2179,6 +2192,14 @@ export interface SupervisionRepository {
     clientId: string,
     periode: string | null,
   ): Promise<DocumentComptable[]>;
+  /**
+   * Le sommaire du dossier : pièces transmises par mois de classement et par
+   * type, et la borne au-delà de laquelle `documents` exige un mois.
+   */
+  moisDuDossier(
+    cabinetId: string,
+    clientId: string,
+  ): Promise<{ plafond: number; mois: Array<{ mois: string; type: string | null; n: number }> }>;
   /** Ferme les liens documentaires sous la même autorisation, sans inclure de pièce privée. */
   documentsLies(cabinetId: string, clientId: string, pieces: string[]): Promise<DossierComptable>;
   controlesPiece(cabinetId: string, pieceId: string): Promise<ControlesComptables | null>;
@@ -2195,7 +2216,7 @@ export interface SupervisionRepository {
   listClients(cabinetTenantId: string): Promise<ClientSummary[]>;
   /** File priorisée : corrigée, reçue, vue d'abord ; retournée ; prise en charge. */
   queue(cabinetTenantId: string, tenantId?: string): Promise<QueueItem[]>;
-  motifs(locale: string): Promise<RejetMotif[]>;
+  motifs(locale: string, usage?: "retour" | "delettrage"): Promise<RejetMotif[]>;
   review(input: {
     ecritureId: string;
     outcome: ReviewOutcome;
@@ -2370,11 +2391,17 @@ export interface Cession {
   prix: string;
   vnc: string;
   resultat: string;
+  /** Cession (à prix) ou mise au rebut (prix nul). */
+  motif: "cede" | "rebute";
+  /** L'écriture de sortie de l'actif ; absente pour une cession d'avant le 5 novembre 2026. */
+  ecritureId: string | null;
+  /** L'écriture du prix de cession ; absente pour une mise au rebut. */
+  ecriturePrixId: string | null;
   createdAt: string;
 }
 
 export interface ImmoRepository {
-  categories(packVersionId: string): Promise<ImmoCategory[]>;
+  categories(packVersionId: string, locale?: string): Promise<ImmoCategory[]>;
   listAssets(tenantId: string): Promise<Asset[]>;
   createAsset(input: NewAsset): Promise<string>;
   dotations(tenantId: string, assetId?: string): Promise<Dotation[]>;
@@ -2414,14 +2441,28 @@ export interface ImmoRepository {
     note?: string | null;
   }): Promise<{ depreciationId: string; ecritureId: string }>;
   cessions(tenantId: string): Promise<Cession[]>;
-  recordCession(input: {
-    tenantId: string;
+  /**
+   * Geste indivisible : dotation de l'exercice de sortie, écriture de sortie,
+   * écriture du prix, sortie et état du bien (`immo_sortir`).
+   */
+  sortir(input: {
     assetId: string;
+    motif: "cede" | "rebute";
     at: string;
-    prix: string;
+    exercice: number;
+    mois: number;
+    dotation: string;
+    cumul: string;
+    prixHt: string;
+    tva: string;
+    packVersionId: string;
+  }): Promise<{
+    sortieId: string;
+    ecritureId: string;
+    ecriturePrixId: string | null;
     vnc: string;
     resultat: string;
-  }): Promise<string>;
+  }>;
 }
 
 // -------------------------------------------------------------------- stocks
@@ -2737,6 +2778,11 @@ export interface PvReunion {
   statut: string;
   envoyeLe: string | null;
   redigeParMalica: boolean;
+  /**
+   * Le jour où s'arrête le cumul des chiffres ; nul pour un PV rédigé avant
+   * le 5 novembre 2026, arrêté à la fin du mois de la réunion.
+   */
+  arrete: string | null;
 }
 
 /** Une invitation à rejoindre le cabinet, consignée en attendant d'être acceptée. */
@@ -2850,6 +2896,8 @@ export interface CollabRepository {
     collaboratorId: string;
     briefing?: string | null;
   }): Promise<string>;
+  /** Retirer l'affectation active d'un dossier : il redevient sans collaborateur. */
+  desaffecter(input: { cabinetTenantId: string; clientTenantId: string }): Promise<string>;
   pvList(cabinetTenantId: string): Promise<PvReunion[]>;
   /** Seulement les PV publiés de ce client ; les brouillons ne franchissent pas la RLS. */
   pvDuClient(
@@ -2896,7 +2944,7 @@ export interface CollabRepository {
   stats(tenantIds: string[]): Promise<ClientStats[]>;
   notifications(tenantIds: string[]): Promise<Notification[]>;
   markRead(id: string): Promise<void>;
-  echeances(tenantIds: string[]): Promise<Echeance[]>;
+  echeances(tenantIds: string[], locale?: string): Promise<Echeance[]>;
   /** Dériver le calendrier de chaque dossier depuis le pack ; idempotent. */
   deriverEcheances(tenantIds: string[]): Promise<DerivationEcheances[]>;
   marquerEcheance(id: string, fait: boolean): Promise<{ status: string }>;
@@ -4219,6 +4267,74 @@ export interface LicenceVueDeLaTour {
   societes: string | null;
 }
 
+/**
+ * L'état d'un ensemble de factures, le pire d'abord (`facturation.encours_v`) ;
+ * `null` : aucune facture.
+ */
+export type EtatDesFactures =
+  "en_retard" | "irrecouvrable" | "partielle" | "a_echoir" | "payee" | null;
+
+/** Un cabinet, vu de la tour : son identité et l'état de ses factures consolidées. */
+export interface CabinetDeLaTour {
+  id: string;
+  nom: string;
+  matricule: string | null;
+  juridiction: string;
+  devise: string;
+  etat: EtatDesFactures;
+  /**
+   * Le reste dû, en texte décimal de la base, dans `devise_du` ; `null` quand
+   * les factures dues sont en plusieurs devises (elles ne s'additionnent pas).
+   */
+  reste_du: string | null;
+  /** La devise des factures dues (celle de l'émetteur) ; `null` sans dette. */
+  devise_du: string | null;
+  /** La première échéance non réglée, « AAAA-MM-JJ ». */
+  echeance_le: string | null;
+}
+
+/**
+ * Une PME, vue de la tour, avec ou sans cabinet : son abonnement, sa
+ * consommation, ses factures, et sa bibliothèque EN NOMBRES — jamais un papier.
+ */
+export interface PmeDeLaTour {
+  id: string;
+  nom: string;
+  matricule: string | null;
+  devise: string;
+  /** Le cabinet sous mandat actif, ou celui qui la dote ; `null` : en direct. */
+  cabinet_id: string | null;
+  cabinet_nom: string | null;
+  /** Vrai quand le cabinet paie son abonnement (accès actif du canal cabinet). */
+  paye_par_cabinet: boolean;
+  licence_id: string | null;
+  offre_code: string | null;
+  offre_libelle: string | null;
+  /** `active`, `suspendue` ou `resiliee` ; `null` sans licence. */
+  statut: string | null;
+  lectures_consommees: number | null;
+  lectures_droit: number | null;
+  documents: number;
+  transmis_mois: number;
+  dernier_depot_le: string | null;
+  etat: EtatDesFactures;
+  /** La dette PROPRE de la PME (ses factures directes) ; la consolidée reste au cabinet. */
+  reste_du: string | null;
+  devise_du: string | null;
+  echeance_le: string | null;
+}
+
+/** Un geste de la tour sur une licence (`plateforme.interventions`). */
+export interface InterventionDeLaTour {
+  id: string;
+  acte: string;
+  motif: string;
+  valeur: string | null;
+  effet_du: string | null;
+  effet_au: string | null;
+  le: string;
+}
+
 /** Le réglage de la passe de nuit en vigueur (`plateforme.reglages_relecture_nuit`). */
 export interface ReglageRelectureNuit {
   actif: boolean;
@@ -4233,6 +4349,63 @@ export interface ReglageRelectureNuit {
   motif: string;
   decide_le: string;
 }
+
+/**
+ * Les deux périmètres de l'émission automatique (4 novembre 2026) : la facture
+ * mensuelle des cabinets, à terme échu ; les échéances anniversaire et les
+ * compléments des PME, d'avance. Chacun s'ouvre et se coupe seul.
+ */
+export type PerimetreDeFacturation = "cabinets" | "pme";
+
+/**
+ * Un périmètre, tel que `plateforme.facturation_auto_etat()` le rend : la
+ * décision en vigueur, qui l'a prise (`null` pour la décision livrée), et le
+ * dernier passage du robot sous ce périmètre.
+ */
+export interface EtatDuPerimetreDeFacturation {
+  reglage: {
+    actif: boolean;
+    rattrapage_mois: number;
+    motif: string;
+    decide_le: string;
+    decide_par_email: string | null;
+    decide_par_nom: string | null;
+  } | null;
+  dernier: {
+    jour: string;
+    passee_le: string;
+    emises: number;
+    deja_emises: number;
+    rien_a_facturer: number;
+    erreurs: number;
+    detail_erreurs: Array<{
+      licence?: string;
+      cabinet?: string;
+      periode: string;
+      cle: string;
+      etat: string;
+    }>;
+  } | null;
+}
+
+/** L'émission automatique : ses deux périmètres, indépendants. */
+/**
+ * Un compte qui a l'accès total : il agit dans toute organisation comme son
+ * rôle le plus haut, sans y occuper de place (décision du 5 novembre 2026).
+ * `operateur` faux : l'accès est accordé mais ne s'exerce plus, la personne
+ * n'étant plus opératrice.
+ */
+export interface AccesTotalEnVigueur {
+  user_id: string;
+  email: string;
+  nom: string | null;
+  depuis: string;
+  motif: string;
+  par_email: string | null;
+  operateur: boolean;
+}
+
+export type EtatFacturationAuto = Record<PerimetreDeFacturation, EtatDuPerimetreDeFacturation>;
 
 /** Un compte de service (le relecteur de nuit) : son état en vigueur et son nom. */
 export interface CompteDeService {
@@ -4279,6 +4452,21 @@ export interface PassageDeNuit {
 
 export interface TourRepository {
   suisJePlateforme(): Promise<boolean>;
+  /** Tous les cabinets et toutes les PME, avec ou sans cabinet : des compteurs et des états. */
+  clients(): Promise<{ cabinets: CabinetDeLaTour[]; pme: PmeDeLaTour[] }>;
+  /** Les derniers gestes de la tour sur une licence. */
+  interventions(licenceId: string): Promise<InterventionDeLaTour[]>;
+  /** Suspendre une licence, motivé (`plateforme.suspendre`). */
+  suspendre(licenceId: string, motif: string): Promise<unknown>;
+  /** Reprendre une licence suspendue, motivé (`plateforme.reprendre`). */
+  reprendre(licenceId: string, motif: string): Promise<unknown>;
+  /** Des lectures en plus pour un mois « AAAA-MM », motivé (`plateforme.accorder_lectures`). */
+  accorderLectures(
+    licenceId: string,
+    nombre: number,
+    mois: string,
+    motif: string,
+  ): Promise<unknown>;
   /** La passe de nuit : son réglage et l'état du relecteur, libellé dans la langue demandée. */
   reglageRelectureNuit(
     locale: string,
@@ -4322,7 +4510,40 @@ export interface TourRepository {
   ): Promise<unknown>;
   emetteur(): Promise<OrganisationEmettrice | null>;
   chercherOrganisations(texte: string): Promise<OrganisationEmettrice[]>;
+  /** Les membres d'une organisation et le titulaire de sa licence (plateforme, lecture). */
+  membresDeLOrganisation(organisationId: string): Promise<
+    Array<{
+      user_id: string;
+      email: string | null;
+      nom: string | null;
+      role: string | null;
+      depuis: string | null;
+      titulaire_licence: boolean;
+    }>
+  >;
+  /** Confier une société sans membre à son premier dirigeant (un compte existant). */
+  confierOrganisation(
+    organisationId: string,
+    email: string,
+  ): Promise<{ organisation_id: string; dirigeant: string; licence: string | null }>;
+  /** Archiver une organisation, motif à l'appui ; rien ne s'efface. */
+  archiverOrganisation(
+    organisationId: string,
+    motif: string,
+  ): Promise<{ organisation_id: string; archivee_le: string }>;
   designerEmetteur(organisationId: string, valideDes: string, motif: string): Promise<unknown>;
+  /** Les comptes qui ont l'accès total à toutes les organisations (plateforme, lecture). */
+  accesTotal(): Promise<AccesTotalEnVigueur[]>;
+  /** Accorder l'accès total à un opérateur, soi compris, motif à l'appui. */
+  accorderAccesTotal(
+    email: string,
+    motif: string,
+  ): Promise<{ decision: string; personne: string; actif: true }>;
+  /** Retirer l'accès total, motif à l'appui. */
+  retirerAccesTotal(
+    personne: string,
+    motif: string,
+  ): Promise<{ decision: string; personne: string; actif: false }>;
   /** Le réglage de l'abonnement en vigueur : le report d'un mois, l'année et ses mois offerts. */
   reglageAbonnement(): Promise<ReglageAbonnement>;
   reglerAbonnement(
@@ -4349,6 +4570,15 @@ export interface TourRepository {
   } | null>;
   /** La tour ouvre ou ferme les relances d'impayé et la suspension automatique. */
   reglerRelances(actives: boolean, suspensionAutomatique: boolean, motif: string): Promise<unknown>;
+  /** L'émission automatique : pour chaque périmètre, la décision en vigueur et le dernier passage. */
+  reglageFacturationAuto(): Promise<EtatFacturationAuto>;
+  /** La tour ouvre ou coupe un périmètre de l'émission : daté, motivé, en ajout seul. */
+  reglerFacturationAuto(
+    perimetre: PerimetreDeFacturation,
+    actif: boolean,
+    rattrapageMois: number,
+    motif: string,
+  ): Promise<unknown>;
   /** Le calendrier d'une juridiction : règle de report, jours fériés, reports publiés. */
   calendrier(juridiction: string): Promise<CalendrierDeLaJuridiction>;
   poserJourFerie(input: {

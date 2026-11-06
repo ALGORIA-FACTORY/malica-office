@@ -55,6 +55,7 @@ import {
   compteDeCharge,
   ecritureEnMasse,
   estChargeOuProduit,
+  aValiderDUnGeste,
   lotDe,
   parPiece,
   type EcritureDuLot,
@@ -361,7 +362,7 @@ function CabinetPropositions() {
   }
 
   return (
-    <div className="space-y-8 pb-24">
+    <div className="cab-lisible space-y-8 pb-24">
       <EnTeteCabinet
         surtitre={<>{t("cab.prop.kicker")}</>}
         titre={<>{t("cab.prop.titre")}</>}
@@ -430,12 +431,12 @@ function CabinetPropositions() {
                   <Link
                     to="/cabinet/piece/$pieceId"
                     params={{ pieceId: premiere.pieceId }}
-                    className="inline-block border border-border bg-card px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] hover:bg-accent"
+                    className="cab-cible inline-block border border-border bg-card px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] hover:bg-accent"
                   >
                     {c.action}
                   </Link>
                 ) : (
-                  <span className="inline-block border border-border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground opacity-50">
+                  <span className="cab-cible inline-block border border-border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground opacity-50">
                     {c.action}
                   </span>
                 )}
@@ -490,6 +491,8 @@ function CabinetPropositions() {
                 retenir={retenir}
                 ecritureDe={ecritureDe}
                 lueParRecette={lueParRecette}
+                seuilLot={seuilLot}
+                seuilRevue={seuilRevue}
                 occupe={occupe || !superviseur}
                 valider={(pieces) => valider.mutate(pieces)}
                 forcer={(input) => forcer.mutate(input)}
@@ -545,6 +548,8 @@ function GroupeClient({
   retenir,
   ecritureDe,
   lueParRecette,
+  seuilLot,
+  seuilRevue,
   occupe,
   valider,
   forcer,
@@ -565,6 +570,9 @@ function GroupeClient({
   ecritureDe: Map<string, Ecriture>;
   /** Vrai quand une RECETTE a lu cette pièce : alors aucun pourcentage ne s'affiche. */
   lueParRecette: (pieceId: string) => boolean;
+  /** Les seuils du cabinet : ce que « Valider » valide sans sélection. */
+  seuilLot: number | null;
+  seuilRevue: number | null;
   occupe: boolean;
   valider: (pieces: QueueItem[]) => void;
   forcer: (input: {
@@ -578,6 +586,7 @@ function GroupeClient({
   const retenues = groupe.pieces.filter((p) => estRetenue(p.pieceId));
   const toutes = retenues.length === groupe.pieces.length;
   const retenuesOuToutes = retenues.length > 0 ? retenues : groupe.pieces;
+  const dUnGeste = aValiderDUnGeste(groupe.pieces, retenues, seuilLot, seuilRevue, lueParRecette);
 
   /*
    * L'écriture de chaque pièce : celle qu'un client inscrivait autrefois et
@@ -617,6 +626,12 @@ function GroupeClient({
   const journalDuLot = retenuesOuToutes.map(baseDe).find((b) => b !== null)?.journal ?? "";
   const masse = useMemo(() => ecritureEnMasse(ecritures), [ecritures]);
   const totalDebit = sommeDecimale(masse.map((m) => m.debit));
+  // L'en-tête au bureau, le nom de chaque valeur sur la carte du téléphone.
+  const colMasse = {
+    pieces: t("cab.prop.masse.pieces"),
+    debit: t("cab.prop.masse.debit"),
+    credit: t("cab.prop.masse.credit"),
+  };
   /*
    * La confiance minimale du lot ne se calcule que sur les pièces qui en ont
    * une. Une pièce lue par une recette porte le NEUTRE du minimum — elle ne
@@ -690,11 +705,16 @@ function GroupeClient({
           </button>
           <button
             type="button"
-            disabled={occupe}
-            onClick={() => valider(retenuesOuToutes)}
+            disabled={occupe || dUnGeste.length === 0}
+            onClick={() => valider(dUnGeste)}
             className="border border-foreground bg-foreground px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
           >
-            {t("cab.prop.groupe.valider")}
+            {retenues.length > 0
+              ? t("cab.prop.groupe.validerRetenues", { count: dUnGeste.length })
+              : t("cab.prop.groupe.validerSures", {
+                  count: dUnGeste.length,
+                  seuil: seuilLot === null ? "—" : Math.round(seuilLot * 100),
+                })}
           </button>
         </div>
       </div>
@@ -709,14 +729,15 @@ function GroupeClient({
                 </h3>
                 <span className="num text-[10.5px] text-muted-foreground">{journalDuLot}</span>
               </div>
-              <div className="mt-2 overflow-x-auto border border-border">
+              {/* Au téléphone, un compte par carte (`cab-table-empile`). */}
+              <div className="cab-table-empile mt-2 overflow-x-auto border border-border">
                 <table className="w-full text-[13px]">
                   <thead>
                     <tr className="border-b border-foreground text-start text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                       <th className="px-3 py-2 text-start">{t("cab.prop.masse.compte")}</th>
-                      <th className="px-3 py-2 text-end">{t("cab.prop.masse.pieces")}</th>
-                      <th className="px-3 py-2 text-end">{t("cab.prop.masse.debit")}</th>
-                      <th className="px-3 py-2 text-end">{t("cab.prop.masse.credit")}</th>
+                      <th className="px-3 py-2 text-end">{colMasse.pieces}</th>
+                      <th className="px-3 py-2 text-end">{colMasse.debit}</th>
+                      <th className="px-3 py-2 text-end">{colMasse.credit}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -726,18 +747,28 @@ function GroupeClient({
                           <span className="num">{m.compte}</span>{" "}
                           <span className="text-muted-foreground">{m.libelle}</span>
                         </td>
-                        <td className="num px-3 py-2 text-end">{m.pieces}</td>
-                        <td className="num px-3 py-2 text-end">{montant(m.debit, locale)}</td>
-                        <td className="num px-3 py-2 text-end">{montant(m.credit, locale)}</td>
+                        <td data-label={colMasse.pieces} className="num px-3 py-2 text-end">
+                          {m.pieces}
+                        </td>
+                        <td data-label={colMasse.debit} className="num px-3 py-2 text-end">
+                          {montant(m.debit, locale)}
+                        </td>
+                        <td data-label={colMasse.credit} className="num px-3 py-2 text-end">
+                          {montant(m.credit, locale)}
+                        </td>
                       </tr>
                     ))}
                     <tr className="font-semibold">
                       <td className="px-3 py-2">
                         {t("cab.prop.masse.equilibre", { n: retenuesOuToutes.length })}
                       </td>
-                      <td className="num px-3 py-2 text-end">{retenuesOuToutes.length}</td>
-                      <td className="num px-3 py-2 text-end">{montant(totalDebit, locale)}</td>
-                      <td className="num px-3 py-2 text-end">
+                      <td data-label={colMasse.pieces} className="num px-3 py-2 text-end">
+                        {retenuesOuToutes.length}
+                      </td>
+                      <td data-label={colMasse.debit} className="num px-3 py-2 text-end">
+                        {montant(totalDebit, locale)}
+                      </td>
+                      <td data-label={colMasse.credit} className="num px-3 py-2 text-end">
                         {montant(sommeDecimale(masse.map((m) => m.credit)), locale)}
                       </td>
                     </tr>
@@ -789,7 +820,7 @@ function GroupeClient({
                       <Link
                         to="/cabinet/piece/$pieceId"
                         params={{ pieceId: p.pieceId }}
-                        className="border border-border px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
+                        className="cab-cible border border-border px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
                       >
                         {t("cab.prop.masse.voir")}
                       </Link>

@@ -23,6 +23,7 @@ import { useNotificationsDuCabinet } from "@/hooks/use-notifications-du-cabinet"
 import { useI18n, type MessageKey } from "@/i18n";
 import { phraseDeLaDemande } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { enDebutDePhrase } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { Notification } from "@malica/socle/ports/repositories";
@@ -181,9 +182,18 @@ function CabinetNotifications() {
     return [...groupes.entries()];
   }, [liste]);
 
+  // Un titre de section ouvre une phrase : « Mercredi 4 novembre », pas
+  // « mercredi 4 novembre ». Le jour est une date UTC (`createdAt` tronqué) :
+  // il se formate en UTC, sans quoi un fuseau à l'ouest de Greenwich lirait la veille.
   const jourLisible = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(
-      new Date(`${iso}T00:00:00Z`),
+    enDebutDePhrase(
+      new Intl.DateTimeFormat(locale, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        timeZone: "UTC",
+      }).format(new Date(`${iso}T00:00:00Z`)),
+      locale,
     );
   const heureLisible = (iso: string) =>
     new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -191,7 +201,7 @@ function CabinetNotifications() {
   const erreur = marquer.error ?? toutMarquer.error;
 
   return (
-    <div className="space-y-6">
+    <div className="cab-lisible space-y-6">
       <EnTeteCabinet
         surtitre={
           <>
@@ -286,7 +296,7 @@ function CabinetNotifications() {
                           onClick={() => {
                             if (!lue) marquer.mutate(n.id);
                           }}
-                          className="border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
+                          className="cab-cible border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
                         >
                           {t("cab.notif.ouvrir")}
                         </Link>
@@ -296,7 +306,7 @@ function CabinetNotifications() {
                           onClick={() => {
                             if (!lue) marquer.mutate(n.id);
                           }}
-                          className="border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
+                          className="cab-cible border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
                         >
                           {t("cab.notif.ouvrir")}
                         </Link>

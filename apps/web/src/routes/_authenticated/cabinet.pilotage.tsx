@@ -29,6 +29,7 @@ import {
   SectionTitle,
   EnTeteCabinet,
 } from "@/components/malica/office-ui";
+import { TexteReplie } from "@/components/malica/texte-replie";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { initialesDe } from "@/lib/initiales";
@@ -155,6 +156,7 @@ function CabinetPilotage() {
   const [briefing, setBriefing] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [fait, setFait] = useState(false);
+  const [retire, setRetire] = useState(false);
   // Malica rédige le briefing depuis les faits du dossier ; l'expert relit et complète.
   const redaction = useMutation({
     mutationFn: () =>
@@ -188,8 +190,30 @@ function CabinetPilotage() {
     onSuccess: async () => {
       setErreur(null);
       setFait(true);
+      setRetire(false);
       setBriefing("");
       // La file du jour porte le collaborateur de chaque dossier : elle change aussi.
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["cab-assignments", org.id] }),
+        qc.invalidateQueries({ queryKey: ["cab-queue", org.id] }),
+      ]);
+    },
+    onError: (e: unknown) =>
+      setErreur(texteDeLErreur(e, "routes/_authenticated/cabinet.pilotage", t("common.error"))),
+  });
+
+  // Le collaborateur qui tient le dossier choisi, s'il y en a un : on peut lui
+  // retirer le dossier, qui redevient sans collaborateur.
+  const affecteA = clientId
+    ? (affectations.data ?? []).find((a) => a.active && a.clientTenantId === clientId)
+    : undefined;
+  const desaffecter = useMutation({
+    mutationFn: () =>
+      office().collab.desaffecter({ cabinetTenantId: org.id, clientTenantId: clientId }),
+    onSuccess: async () => {
+      setErreur(null);
+      setFait(false);
+      setRetire(true);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["cab-assignments", org.id] }),
         qc.invalidateQueries({ queryKey: ["cab-queue", org.id] }),
@@ -545,8 +569,28 @@ function CabinetPilotage() {
                 {t("cab.pil.affecter.submit")}
               </button>
             </form>
+            {affecteA ? (
+              <div className="flex flex-wrap items-center gap-3 text-[12.5px] text-text-2">
+                <span>
+                  {t("cab.pil.affecter.actuel", {
+                    email: emailDe.get(affecteA.collaboratorId) ?? "—",
+                  })}
+                </span>
+                <button
+                  type="button"
+                  disabled={desaffecter.isPending}
+                  onClick={() => desaffecter.mutate()}
+                  className="min-h-11 border border-border px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] hover:border-foreground disabled:opacity-40 sm:min-h-0"
+                >
+                  {t("cab.pil.affecter.retirer")}
+                </button>
+              </div>
+            ) : null}
             {fait ? (
               <p className="text-[12.5px] text-signal-ok">{t("cab.pil.affecter.fait")}</p>
+            ) : null}
+            {retire ? (
+              <p className="text-[12.5px] text-signal-ok">{t("cab.pil.affecter.retire")}</p>
             ) : null}
             {erreur ? <p className="text-[12.5px] text-signal-warn">{erreur}</p> : null}
           </section>
@@ -571,7 +615,13 @@ function CabinetPilotage() {
                     <InkCell numeric>{jour(a.createdAt)}</InkCell>
                     <InkCell>{nomDuClient(a.clientTenantId)}</InkCell>
                     <InkCell>{emailDe.get(a.collaboratorId) ?? "—"}</InkCell>
-                    <InkCell>{a.briefing ?? "—"}</InkCell>
+                    <InkCell>
+                      {a.briefing ? (
+                        <TexteReplie texte={a.briefing} lignes={3} className="max-w-[48ch]" />
+                      ) : (
+                        "—"
+                      )}
+                    </InkCell>
                     <InkCell>
                       {a.active ? t("cab.pil.journal.active") : t("cab.pil.journal.passee")}
                     </InkCell>

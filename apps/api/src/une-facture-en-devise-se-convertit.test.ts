@@ -299,6 +299,11 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
       source,
       `Source d'essai ${marque}`,
     ]);
+    // Une source sert sa juridiction : celle-ci, la Tunisie du dossier.
+    await admin.query(
+      `insert into ref.sources_de_cours_juridictions (source, jurisdiction) values ($1, 'TN')`,
+      [source],
+    );
     await cabinetFait("parametrage.arreterReglagesComptables", {
       cabinetId: cabinet,
       portee: "dossier",
@@ -462,7 +467,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     const r = (await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.3456", 1)) as Ok;
     const ecritureId = (await cabinetFait("office.valider", id, r.empreinte)) as string;
     const { rows: motifs } = await admin.query<{ id: string }>(
-      `select id from ref.rejet_motifs order by code limit 1`,
+      `select id from ref.rejet_motifs where usage = 'retour' order by code limit 1`,
     );
     await cabinetFait("supervision.retourner", {
       pieceId: id,

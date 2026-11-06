@@ -15,6 +15,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useId, useMemo, useState } from "react";
 
 import { useMonAcces } from "@/hooks/use-mon-acces";
+import { Aide, type ParagrapheDAide } from "@/components/malica/aide";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { IntegrationsEtApi } from "@/components/malica/integrations-panel";
 import { ReglagesComptables } from "@/components/malica/reglages-comptables";
@@ -106,12 +107,15 @@ function CabinetReglages() {
     );
 
   return (
-    <div className="space-y-8">
+    <div className="cab-lisible space-y-8">
       <EnTeteCabinet
         surtitre={<>{t("cab.settings.kicker", { cabinet: org.name })}</>}
         titre={<>{t("cab.settings.title")}</>}
       >
-        <nav className="mt-6 flex gap-5 overflow-x-auto" aria-label={t("cab.settings.title")}>
+        <nav
+          className="cab-defile mt-6 flex gap-5 overflow-x-auto"
+          aria-label={t("cab.settings.title")}
+        >
           <button
             type="button"
             className={classeOnglet(onglet === "cabinet")}
@@ -300,6 +304,8 @@ function CabinetEtEquipe() {
     Number(seuilLot) <= 100 &&
     Number(seuilRevue) <= Number(seuilLot);
 
+  const verrou = !edition || enregistrer.isPending;
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-3">
@@ -326,20 +332,25 @@ function CabinetEtEquipe() {
         </p>
       ) : null}
 
-      <fieldset
-        disabled={!edition || enregistrer.isPending}
-        className="grid min-w-0 gap-6 disabled:cursor-default xl:grid-cols-2"
-      >
+      <div className="grid min-w-0 gap-6 xl:grid-cols-2">
         {/* ---- supervision */}
-        <Groupe titre={t("cab.settings.g.supervision")} lede={t("cab.settings.g.supervision.lede")}>
-          <Ligne label={t("cab.settings.seuilLot")} hint={t("cab.settings.seuilLot.hint")}>
+        <Groupe
+          titre={t("cab.settings.g.supervision")}
+          aides={[
+            { texte: t("cab.settings.g.supervision.lede") },
+            { titre: t("cab.settings.seuilLot"), texte: t("cab.settings.seuilLot.hint") },
+            { titre: t("cab.settings.seuilRevue"), texte: t("cab.settings.seuilRevue.hint") },
+          ]}
+          verrouille={verrou}
+        >
+          <Ligne label={t("cab.settings.seuilLot")}>
             <Pourcentage
               valeur={seuilLot}
               onChange={setSeuilLot}
               label={t("cab.settings.seuilLot")}
             />
           </Ligne>
-          <Ligne label={t("cab.settings.seuilRevue")} hint={t("cab.settings.seuilRevue.hint")}>
+          <Ligne label={t("cab.settings.seuilRevue")}>
             <Pourcentage
               valeur={seuilRevue}
               onChange={setSeuilRevue}
@@ -349,22 +360,39 @@ function CabinetEtEquipe() {
         </Groupe>
 
         {/* ---- pack */}
-        <Groupe titre={t("cab.settings.g.pack")} lede={t("cab.settings.g.pack.lede")}>
-          <Ligne label={t("cab.settings.packActif")} hint={t("cab.settings.packActif.hint")}>
+        <Groupe
+          titre={t("cab.settings.g.pack")}
+          aides={[
+            { texte: t("cab.settings.g.pack.lede") },
+            { titre: t("cab.settings.packActif"), texte: t("cab.settings.packActif.hint") },
+            { titre: t("cab.settings.extensions"), texte: t("cab.settings.extensions.hint") },
+          ]}
+          verrouille={verrou}
+        >
+          <Ligne label={t("cab.settings.packActif")}>
             <span className="num text-[13px]">
               {pack.data
                 ? `${org.jurisdiction} ${pack.data.version}`
                 : t("cab.settings.packActif.absent")}
             </span>
           </Ligne>
-          <Ligne label={t("cab.settings.extensions")} hint={t("cab.settings.extensions.hint")}>
+          <Ligne label={t("cab.settings.extensions")}>
             <span className="num text-[13px]">{plan.isPending ? "…" : extensions}</span>
           </Ligne>
         </Groupe>
 
         {/* ---- Malica */}
-        <Groupe titre={t("cab.settings.g.malica")} lede={t("cab.settings.g.malica.lede")}>
-          <Ligne label={t("cab.settings.panneau")} hint={t("cab.settings.panneau.hint")}>
+        <Groupe
+          titre={t("cab.settings.g.malica")}
+          aides={[
+            { texte: t("cab.settings.g.malica.lede") },
+            { titre: t("cab.settings.panneau"), texte: t("cab.settings.panneau.hint") },
+            { titre: t("cab.settings.proactives"), texte: t("cab.settings.proactives.hint") },
+            { titre: t("cab.settings.ton"), texte: t("cab.settings.ton.hint") },
+          ]}
+          verrouille={verrou}
+        >
+          <Ligne label={t("cab.settings.panneau")}>
             <Interrupteur
               actif={panneau}
               label={t("cab.settings.panneau")}
@@ -373,14 +401,14 @@ function CabinetEtEquipe() {
               }}
             />
           </Ligne>
-          <Ligne label={t("cab.settings.proactives")} hint={t("cab.settings.proactives.hint")}>
+          <Ligne label={t("cab.settings.proactives")}>
             <Interrupteur
               actif={proactives}
               label={t("cab.settings.proactives")}
               onChange={setProactives}
             />
           </Ligne>
-          <Ligne label={t("cab.settings.ton")} hint={t("cab.settings.ton.hint")}>
+          <Ligne label={t("cab.settings.ton")}>
             <select
               value={ton}
               onChange={(e) => setTon(e.target.value)}
@@ -397,17 +425,25 @@ function CabinetEtEquipe() {
         </Groupe>
 
         {/* ---- équipe */}
-        <Groupe titre={t("cab.settings.g.equipe")} lede={t("cab.settings.g.equipe.lede")}>
+        <Groupe
+          titre={t("cab.settings.g.equipe")}
+          aides={[
+            { texte: t("cab.settings.g.equipe.lede") },
+            { titre: t("cab.settings.invitations"), texte: t("cab.settings.invitations.hint") },
+            {
+              titre: t("cab.settings.doubleValidation"),
+              texte: t("cab.settings.doubleValidation.hint"),
+            },
+            { titre: t("cab.settings.capacite"), texte: t("cab.settings.capacite.hint") },
+          ]}
+          verrouille={verrou}
+        >
           <Ligne label={t("cab.settings.collaborateurs")} hint={emails.join(" · ")}>
             <span className="num text-[13px]">{membres.isPending ? "…" : emails.length}</span>
           </Ligne>
           <Ligne
             label={t("cab.settings.invitations")}
-            hint={
-              enAttente.length > 0
-                ? enAttente.map((i) => i.email).join(" · ")
-                : t("cab.settings.invitations.hint")
-            }
+            hint={enAttente.length > 0 ? enAttente.map((i) => i.email).join(" · ") : undefined}
           >
             <span className="flex items-center gap-3">
               <span className="num text-[13px]">
@@ -416,16 +452,13 @@ function CabinetEtEquipe() {
               <Link
                 to="/cabinet/mise-en-route"
                 search={{ etape: 2 }}
-                className="border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground"
+                className="cab-cible border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground"
               >
                 {t("cab.settings.inviter")}
               </Link>
             </span>
           </Ligne>
-          <Ligne
-            label={t("cab.settings.doubleValidation")}
-            hint={t("cab.settings.doubleValidation.hint")}
-          >
+          <Ligne label={t("cab.settings.doubleValidation")}>
             <span className="flex items-center gap-1.5">
               <input
                 type="number"
@@ -439,7 +472,7 @@ function CabinetEtEquipe() {
               <span className="text-[11px] text-muted-foreground">{org.currency}</span>
             </span>
           </Ligne>
-          <Ligne label={t("cab.settings.capacite")} hint={t("cab.settings.capacite.hint")}>
+          <Ligne label={t("cab.settings.capacite")}>
             <input
               type="number"
               min={1}
@@ -451,7 +484,7 @@ function CabinetEtEquipe() {
             />
           </Ligne>
         </Groupe>
-      </fieldset>
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         {edition ? (
@@ -510,15 +543,16 @@ function CabinetEtEquipe() {
 
       {/* ---- le parcours de mise en route : un parcours qu'on rejoue si besoin */}
       <section className="border border-border bg-card p-4">
-        <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="flex items-center text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           {t("cab.settings.onb.titre")}
-        </p>
-        <p className="mt-1 max-w-[70ch] text-[12.5px] leading-[1.5] text-text-2">
-          {t("cab.settings.onb.lede")}
+          <Aide
+            titre={t("cab.settings.onb.titre")}
+            paragraphes={[{ texte: t("cab.settings.onb.lede") }]}
+          />
         </p>
         <Link
           to="/cabinet/mise-en-route"
-          className="mt-3 inline-block border border-foreground px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
+          className="cab-cible mt-3 inline-block border border-foreground px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
         >
           {t("cab.settings.onb.rejouer")}
         </Link>
@@ -571,11 +605,12 @@ function FuseauDuCabinet() {
 
   return (
     <section className="border border-border bg-card p-4">
-      <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="flex items-center text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         {t("cab.settings.fuseau.titre")}
-      </p>
-      <p className="mt-1 max-w-[70ch] text-[12.5px] leading-[1.5] text-text-2">
-        {t("cab.settings.fuseau.lede")}
+        <Aide
+          titre={t("cab.settings.fuseau.titre")}
+          paragraphes={[{ texte: t("cab.settings.fuseau.lede") }]}
+        />
       </p>
       {expert ? (
         <div className="mt-3 grid max-w-xl gap-2">
@@ -631,42 +666,59 @@ function FuseauDuCabinet() {
   );
 }
 
+/**
+ * Un groupe de réglages. Son explication et celle de chaque réglage
+ * s'ouvrent par un seul ⓘ (Wissem, 5 novembre 2026 : « sans trop
+ * d'écriture, les explications doivent être dans le i »). Le verrou de la
+ * consultation porte sur les champs seulement : un ⓘ dans un `fieldset`
+ * désactivé ne s'ouvrirait plus.
+ */
 function Groupe({
   titre,
-  lede,
+  aides,
+  verrouille,
   children,
 }: {
   titre: string;
-  lede: string;
+  aides: ParagrapheDAide[];
+  verrouille: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section className="border border-border bg-card">
-      <div className="border-b border-border px-4 py-3">
+    // `min-w-0` : un élément de grille ne rétrécit pas sous son contenu. Les
+    // lignes tronquées (les adresses) l'élargissaient à 686 px sur un écran
+    // de 360, et les champs sortaient de l'écran (mesure du 5 novembre 2026).
+    <section className="min-w-0 border border-border bg-card">
+      <div className="flex items-center border-b border-border px-4 py-3">
         <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           {titre}
         </p>
-        <p className="mt-1 text-[12px] text-text-2">{lede}</p>
+        <Aide titre={titre} paragraphes={aides} />
       </div>
-      <dl className="divide-y divide-border">{children}</dl>
+      <fieldset disabled={verrouille} className="min-w-0 disabled:cursor-default">
+        <dl className="divide-y divide-border">{children}</dl>
+      </fieldset>
     </section>
   );
 }
 
+/** Une ligne : le réglage, et dessous une donnée (les adresses), jamais une explication. */
 function Ligne({
   label,
   hint,
   children,
 }: {
   label: string;
-  hint: string;
+  hint?: string | undefined;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-3">
       <div className="min-w-0">
         <dt className="text-[13px]">{label}</dt>
-        <dd className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</dd>
+        {hint ? (
+          <dd className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</dd>
+        ) : null}
       </div>
       <dd className="shrink-0">{children}</dd>
     </div>
@@ -799,6 +851,18 @@ function CalendrierDesEcheances() {
       ? `${String(o.echeanceJour).padStart(2, "0")}/${String(o.echeanceMois).padStart(2, "0")}`
       : String(o.echeanceJour);
 
+  // Les colonnes : l'en-tête au bureau, le nom de chaque valeur sur la carte
+  // du téléphone.
+  const col = {
+    active: t("cab.settings.cal.col.active"),
+    obligation: t("cab.settings.cal.col.obligation"),
+    legal: t("cab.settings.cal.col.legal"),
+    periodicite: t("cab.settings.cal.col.periodicite"),
+    jour: t("cab.settings.cal.col.jour"),
+    rappel: t("cab.settings.cal.col.rappel"),
+    mandats: t("cab.settings.cal.col.mandats"),
+  };
+
   return (
     <div className="space-y-8">
       <p className="max-w-[70ch] text-[13.5px] leading-[1.55] text-text-2">
@@ -884,19 +948,20 @@ function CalendrierDesEcheances() {
           <EmptyState>{t("cab.settings.cal.vide")}</EmptyState>
         ) : (
           <fieldset disabled={lectureSeule} className="contents">
-            <div className="overflow-x-auto border border-border bg-card">
+            {/* Au téléphone, une obligation par carte (`cab-table-empile`). */}
+            <div className="cab-table-empile overflow-x-auto border border-border bg-card">
               <table className="min-w-full border-collapse text-[12.5px]">
                 <caption className="sr-only">{t("cab.settings.cal.titre")}</caption>
                 <thead>
                   <tr className="border-b border-foreground">
                     {[
-                      t("cab.settings.cal.col.active"),
-                      t("cab.settings.cal.col.obligation"),
-                      t("cab.settings.cal.col.legal"),
-                      t("cab.settings.cal.col.periodicite"),
-                      t("cab.settings.cal.col.jour"),
-                      t("cab.settings.cal.col.rappel"),
-                      t("cab.settings.cal.col.mandats"),
+                      col.active,
+                      col.obligation,
+                      col.legal,
+                      col.periodicite,
+                      col.jour,
+                      col.rappel,
+                      col.mandats,
                     ].map((h, i) => (
                       <th
                         key={h}
@@ -951,7 +1016,7 @@ function CalendrierDesEcheances() {
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2" title={o.regle}>
+                      <td data-label={col.legal} className="px-3 py-2" title={o.regle}>
                         <span className="num block text-[11px] text-signal-info">
                           {baseLegale(o)}
                         </span>
@@ -959,17 +1024,22 @@ function CalendrierDesEcheances() {
                           {o.regle}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2">
+                      <td data-label={col.periodicite} className="whitespace-nowrap px-3 py-2">
                         {PERIODICITES[o.periodicite]
                           ? t(PERIODICITES[o.periodicite]!)
                           : o.periodicite}
                       </td>
-                      <td className="num whitespace-nowrap px-3 py-2 text-end">{jourLimite(o)}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-end">
+                      <td
+                        data-label={col.jour}
+                        className="num whitespace-nowrap px-3 py-2 text-end"
+                      >
+                        {jourLimite(o)}
+                      </td>
+                      <td data-label={col.rappel} className="whitespace-nowrap px-3 py-2 text-end">
                         <select
                           value={o.rappelJours}
                           disabled={!o.active}
-                          aria-label={t("cab.settings.cal.col.rappel")}
+                          aria-label={col.rappel}
                           onChange={(e) =>
                             regler.mutate({
                               code: o.code,
@@ -988,7 +1058,12 @@ function CalendrierDesEcheances() {
                             ))}
                         </select>
                       </td>
-                      <td className="num whitespace-nowrap px-3 py-2 text-end">{o.mandats}</td>
+                      <td
+                        data-label={col.mandats}
+                        className="num whitespace-nowrap px-3 py-2 text-end"
+                      >
+                        {o.mandats}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1086,10 +1161,9 @@ function ReportsExceptionnels({
 
   return (
     <section className="space-y-3">
-      <SectionTitle>{t("cab.settings.cal.reports.titre")}</SectionTitle>
-      <p className="max-w-[70ch] text-[12.5px] leading-[1.55] text-text-2">
-        {t("cab.settings.cal.reports.lede")}
-      </p>
+      <SectionTitle aide={t("cab.settings.cal.reports.lede")}>
+        {t("cab.settings.cal.reports.titre")}
+      </SectionTitle>
 
       {reports.isError ? (
         <p role="alert" className="text-[12.5px] text-signal-stop">
@@ -1251,10 +1325,13 @@ function ObligationPropre({
 
   return (
     <section className="border border-s-2 border-border border-s-marigold bg-card p-4">
-      <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="flex items-center text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         {t("cab.settings.cal.propre.titre")}
+        <Aide
+          titre={t("cab.settings.cal.propre.titre")}
+          paragraphes={[{ texte: t("cab.settings.cal.propre.lede") }]}
+        />
       </p>
-      <p className="mt-1 text-[12px] text-text-2">{t("cab.settings.cal.propre.lede")}</p>
       <div className="mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
         <label className="flex flex-col gap-1">
           <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">

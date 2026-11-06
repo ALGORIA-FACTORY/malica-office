@@ -104,12 +104,16 @@ export async function verifierCompte(
   });
 }
 
-/** Ce que l'utilisateur voit de lui-même — lu sous la RLS, comme tout le reste. */
+/**
+ * Ce que l'utilisateur voit de lui-même — lu sous la RLS, comme tout le reste.
+ * Ses adhésions, réelles ou par l'accès total (`mes_adhesions_v`) : la table
+ * des adhésions, lue sans filtre, rendait aussi celles de ses collègues.
+ */
 export async function organisations(utilisateur: Utilisateur) {
   return sousIdentite(utilisateur.id, async (db) => {
     const { rows } = await db.query(
       `select o.id, o.name, o.kind, m.role
-         from identity.memberships m
+         from mes_adhesions_v m
          join identity.organizations o on o.id = m.tenant_id
         order by o.name`,
     );

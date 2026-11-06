@@ -30,7 +30,8 @@ function texte(v: unknown, defaut = "—"): string {
 }
 
 const COLONNES_PV = `id, cabinet_tenant_id, client_tenant_id, at, titre, participants, ordre_du_jour, decisions,
-       created_at, sections, chiffres, ton, statut, envoye_le, redige_par_malica`;
+       created_at, sections, chiffres, ton, statut, envoye_le, redige_par_malica,
+       arrete::text as arrete`;
 
 /** Un PV tel que la vue le rend. Les tableaux JSON arrivent déjà décodés par pg. */
 function versPv(p: Record<string, unknown>) {
@@ -59,6 +60,7 @@ function versPv(p: Record<string, unknown>) {
     ton: (p["ton"] as string | null) ?? null,
     statut: (p["statut"] as string) ?? "brouillon",
     envoyeLe: (p["envoye_le"] as string | null) ?? null,
+    arrete: (p["arrete"] as string | null) ?? null,
     redigeParMalica: Boolean(p["redige_par_malica"]),
   };
 }
@@ -108,6 +110,18 @@ export const collab = {
     const { rows } = await db.query<{ id: string }>(
       `select public.collab_assign($1, $2, $3, $4) as id`,
       [input.cabinetTenantId, input.clientTenantId, input.collaboratorId, input.briefing ?? null],
+    );
+    return rows[0]!.id;
+  },
+
+  /** Retirer l'affectation active d'un dossier : il redevient sans collaborateur. */
+  async desaffecter(
+    db: Requete,
+    input: { cabinetTenantId: string; clientTenantId: string },
+  ): Promise<string> {
+    const { rows } = await db.query<{ id: string }>(
+      `select public.collab_desaffecter($1, $2) as id`,
+      [input.cabinetTenantId, input.clientTenantId],
     );
     return rows[0]!.id;
   },
@@ -323,15 +337,27 @@ export const collab = {
     const { rows } = await db.query(
       // La lecture est celle de la personne (27 octobre 2026) ; le `read_at`
       // d'avant vaut encore pour les membres du dossier qui l'avaient posé.
-      `select n.id, n.tenant_id, n.kind, n.payload, n.created_at,
-              coalesce(
-                (select l.lu_le from collab.notification_lectures l
-                  where l.tenant_id = n.tenant_id and l.notification_id = n.id
-                    and l.user_id = auth.uid()),
-                case when n.tenant_id in (select app.member_orgs()) then n.read_at end
-              ) as read_at
-         from notifications_v n where n.tenant_id = any($1::uuid[])
-        order by n.created_at desc limit 100`,
+      //
+      // Toutes les non lues, et les cent dernières (staging, 5 novembre 2026) :
+      // la liste s'arrêtait aux cent plus récentes, lues ou non. Au-delà, une
+      // notification en attente disparaissait, et « en attente » se comptait
+      // sur ce qui restait — 100, puis 99 après une lecture, quel que soit le
+      // vrai nombre. Une notification non lue ne sort jamais de la liste.
+      `with lues as (
+         select n.id, n.tenant_id, n.kind, n.payload, n.created_at,
+                coalesce(
+                  (select l.lu_le from collab.notification_lectures l
+                    where l.tenant_id = n.tenant_id and l.notification_id = n.id
+                      and l.user_id = auth.uid()),
+                  case when n.tenant_id in (select app.member_orgs()) then n.read_at end
+                ) as read_at,
+                row_number() over (order by n.created_at desc, n.id) as rang
+           from notifications_v n where n.tenant_id = any($1::uuid[])
+       )
+       select id, tenant_id, kind, payload, created_at, read_at
+         from lues
+        where read_at is null or rang <= 100
+        order by created_at desc, id`,
       [tenantIds],
     );
     return (rows as Record<string, unknown>[]).map((n) => ({
@@ -355,14 +381,22 @@ export const collab = {
    * Les échéances des dossiers, avec l'obligation qui fonde chacune : sa
    * règle littérale, son texte, son article. Rien ici n'est saisi.
    */
-  async echeances(db: Requete, tenantIds: string[]) {
+  /**
+   * Les échéances des dossiers, l'intitulé d'une obligation du référentiel
+   * dans la langue demandée (`ref.labels`, `fiscal_obligation`), celui de
+   * l'échéance à défaut — une obligation propre au cabinet garde le sien.
+   */
+  async echeances(db: Requete, tenantIds: string[], locale = "fr") {
     if (tenantIds.length === 0) return [];
     const { rows } = await db.query(
-      `select id, tenant_id, kind, label, period, due_date, status, fait_le,
-              echeance_regle, texte_source, article, periodicite,
-              date_legale, date_origine, report_motif, report_source
-         from echeances_v where tenant_id = any($1::uuid[]) order by due_date, label`,
-      [tenantIds],
+      `select e.id, e.tenant_id, e.kind, coalesce(l.value, e.label) as label, e.period,
+              e.due_date, e.status, e.fait_le, e.echeance_regle, e.texte_source, e.article,
+              e.periodicite, e.date_legale, e.date_origine, e.report_motif, e.report_source
+         from echeances_v e
+         left join ref_labels_v l
+                on l.ns = 'fiscal_obligation' and l.key = e.kind and l.locale = $2
+        where e.tenant_id = any($1::uuid[]) order by e.due_date, e.label`,
+      [tenantIds, locale],
     );
     return (rows as Record<string, unknown>[]).map((e) => ({
       id: e["id"] as string,

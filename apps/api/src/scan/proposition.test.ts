@@ -47,6 +47,7 @@ type Proposition =
         }>;
         pivot: { entry_date: string; approvable: boolean };
       };
+      reserves?: Array<{ code: string; raison?: string; articles?: string[] }>;
     }
   | { ok: false; raison: string; verdict?: string };
 
@@ -350,15 +351,42 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     );
   });
 
-  it("une pièce mêlée ne se devine pas : elle garde le compte du paramétrage", async () => {
+  /*
+   * 5 novembre 2026 (staging, SOFT-INTEGRA) : une facture mêlée partait en
+   * entier au 601, sans un mot. Elle se ventile quand ses articles le
+   * prouvent ; sinon elle garde le compte du paramétrage, avec sa réserve.
+   */
+  it("une pièce mêlée se ventile quand ses articles le prouvent", async () => {
     const piece = await pieceLue("melee", lecture({ numero: "P-MELEE" }), [
       { designation: "Honoraires de conseil", total_ht: "600.000" },
       { designation: "Loyer du bureau", total_ht: "634.560" },
     ]);
-    assert.equal(
-      compteDeCharge((await rpc("office", "propositionDePiece", piece)) as Proposition),
-      "601",
+    const r = (await rpc("office", "propositionDePiece", piece)) as Proposition;
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    assert.deepEqual(
+      // Les bases ; le timbre (6654) garde sa ligne à part.
+      r.proposition.lignes
+        .filter((l) => l.account_code.startsWith("6") && l.account_code !== "6654")
+        .map((l) => [l.account_code, l.debit]),
+      [
+        ["622", "600.000"],
+        ["613", "634.560"],
+      ],
     );
+    assert.equal(r.reserves, undefined);
+  });
+
+  it("une pièce dont un article ne se reconnaît pas garde le paramétrage, avec sa réserve", async () => {
+    const piece = await pieceLue("inconnue", lecture({ numero: "P-INCONNUE" }), [
+      { designation: "Honoraires de conseil", total_ht: "600.000" },
+      { designation: "Article sans nature connue", total_ht: "634.560" },
+    ]);
+    const r = (await rpc("office", "propositionDePiece", piece)) as Proposition;
+    assert.equal(compteDeCharge(r), "601");
+    assert.ok(r.ok);
+    assert.deepEqual(r.reserves, [
+      { code: "nature_de_charge", raison: "inconnue", articles: ["Article sans nature connue"] },
+    ]);
   });
 
   /*

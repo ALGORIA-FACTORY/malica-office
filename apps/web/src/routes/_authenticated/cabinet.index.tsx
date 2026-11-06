@@ -14,7 +14,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   CheckCheck,
@@ -38,16 +38,23 @@ import {
   SignalLight,
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
-import { feuDuStatut, joursDAttente, prisesEnChargeDepuis } from "@/lib/file-cabinet";
+import {
+  dansLeFiltre,
+  feuDuStatut,
+  joursDAttente,
+  prisesEnChargeDepuis,
+  type FiltreDeLaFile,
+} from "@/lib/file-cabinet";
 import { MOT_CABINET } from "@/lib/statut";
 import { initialesDe } from "@/lib/initiales";
-import { montant } from "@/lib/lisible";
+import { enDebutDePhrase, montant } from "@/lib/lisible";
 import { idsDesMandatsActifs } from "@/lib/portefeuille-actif";
+import { oublierLOrdre } from "@/lib/ordre-de-revue";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { QueueItem } from "@malica/socle/ports/repositories";
-import { A_TRAITER, type StatutCabinet } from "@malica/socle/statut-d-envoi";
+import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 
 export const Route = createFileRoute("/_authenticated/cabinet/")({
   head: () => ({
@@ -69,24 +76,14 @@ export const Route = createFileRoute("/_authenticated/cabinet/")({
   component: CabinetToday,
 });
 
-/**
- * Les filtres de la file, dans le vocabulaire du cabinet (« Malica sans
- * blocage », §2) : à traiter (reçue, vue, corrigée), retournée au client,
- * prise en charge (validée, forcée).
- */
-type Filtre = "tout" | "a_traiter" | "retournee" | "prise";
-
-/** Le filtre où tombe une pièce de la file. */
-function filtreDe(statut: StatutCabinet): Exclude<Filtre, "tout"> {
-  if (A_TRAITER.has(statut)) return "a_traiter";
-  return statut === "retournee" ? "retournee" : "prise";
-}
-
 const JOUR_MS = 86_400_000;
 
 function CabinetToday() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
+  // Revenir à la file, c'est recommencer une revue : l'ordre gardé d'une pièce
+  // à l'autre (`ordre-de-revue.ts`) repart de la file telle qu'elle est ici.
+  useEffect(() => oublierLOrdre(org.id), [org.id]);
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
@@ -107,8 +104,8 @@ function CabinetToday() {
   const actifs = useMemo(() => idsDesMandatsActifs(clients.data ?? []), [clients.data]);
   const clientIds = useMemo(() => [...actifs], [actifs]);
   const echeances = useQuery({
-    queryKey: ["cab-echeances", org.id, clientIds],
-    queryFn: () => office().collab.echeances(clientIds),
+    queryKey: ["cab-echeances", org.id, clientIds, locale],
+    queryFn: () => office().collab.echeances(clientIds, locale),
     enabled: clientIds.length > 0,
   });
 
@@ -118,16 +115,19 @@ function CabinetToday() {
     () => (queue.data ?? []).filter((r) => actifs.has(r.tenantId)),
     [queue.data, actifs],
   );
-  const compteParFiltre = (f: Filtre) =>
-    f === "tout" ? rows.length : rows.filter((r) => filtreDe(r.statut) === f).length;
+  const compteParFiltre = (f: FiltreDeLaFile) => rows.filter((r) => dansLeFiltre(r, f)).length;
   const toReview = compteParFiltre("a_traiter");
   const returned = compteParFiltre("retournee");
   const supervised = compteParFiltre("prise");
+  const doublons = compteParFiltre("doublons");
   // Les clients mandatés : ni le mandat révoqué, ni le refusé (ANO-013).
   const clientCount = (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length;
 
   /* ---- filtres : statut, collaborateur, texte */
-  const [filtre, setFiltre] = useState<Filtre>("tout");
+  const [filtreChoisi, setFiltre] = useState<FiltreDeLaFile>("tout");
+  // La puce « Doublons probables » disparaît quand il n'en reste plus : son
+  // filtre ne doit pas survivre à sa puce et laisser une file vide sans raison.
+  const filtre = filtreChoisi === "doublons" && doublons === 0 ? "tout" : filtreChoisi;
   const [collab, setCollab] = useState<string | null>(null); // null = tout le cabinet ; "" = sans
   const [texte, setTexte] = useState("");
   const file = useRef<HTMLElement | null>(null);
@@ -142,10 +142,11 @@ function CabinetToday() {
   const visibles = useMemo(() => {
     const q = texte.trim().toLocaleLowerCase();
     return rows.filter((r) => {
-      if (filtre !== "tout" && filtreDe(r.statut) !== filtre) return false;
+      if (!dansLeFiltre(r, filtre)) return false;
       if (collab === "" && r.collaborateur) return false;
       if (collab && r.collaborateur !== collab) return false;
-      if (q && !`${r.clientName} ${r.libelle ?? ""}`.toLocaleLowerCase().includes(q)) return false;
+      const cherche = `${r.clientName} ${r.libelle ?? ""} ${r.tiers ?? ""}`;
+      if (q && !cherche.toLocaleLowerCase().includes(q)) return false;
       return true;
     });
   }, [rows, filtre, collab, texte]);
@@ -208,11 +209,15 @@ function CabinetToday() {
     },
   ];
 
-  const today = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(new Date());
+  // « Mercredi 4 novembre » : l'initiale de la phrase, pas celle de chaque mot.
+  const today = enDebutDePhrase(
+    new Intl.DateTimeFormat(locale, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }).format(new Date()),
+    locale,
+  );
   const premiere = rows.find((r) => A_TRAITER.has(r.statut)) ?? rows[0] ?? null;
 
   const sources = [clients, queue, membres, affectations];
@@ -317,7 +322,7 @@ function CabinetToday() {
             data-tone={k.tone}
             aria-pressed={filtre === k.filter}
             onClick={() => {
-              setFiltre(k.filter as Filtre);
+              setFiltre(k.filter as FiltreDeLaFile);
               file.current?.scrollIntoView({ block: "start", behavior: "smooth" });
             }}
           >
@@ -361,11 +366,14 @@ function CabinetToday() {
             <div className="cab-tabs flex border border-border">
               {(
                 [
+                  // Les statuts se filtrent par les tuiles du haut (À traiter,
+                  // Retournées, Prises en charge) : les répéter ici en puces
+                  // doublait chaque geste (recette du 5 novembre 2026). Restent
+                  // « Tout », pour revenir, et les doublons, qu'aucune tuile ne porte.
                   ["tout", "cab.today.filter.all"],
-                  ["a_traiter", "cab.kpi.review"],
-                  ["retournee", "cab.kpi.returned"],
-                  ["prise", "cab.kpi.supervised"],
-                ] as Array<[Filtre, MessageKey]>
+                  // Seulement s'il y en a : une puce à zéro serait du bruit.
+                  ...(doublons > 0 ? [["doublons", "cab.today.filter.doublons"]] : []),
+                ] as Array<[FiltreDeLaFile, MessageKey]>
               ).map(([f, cle]) => (
                 <button
                   key={f}
@@ -424,7 +432,7 @@ function CabinetToday() {
 
           {toReview > 0 ? (
             <div className="cab-batch-link">
-              <Link to="/cabinet/propositions">
+              <Link to="/cabinet/propositions" className="cab-cible">
                 {t("cab.today.bulk")}
                 <ArrowRight size={15} />
               </Link>
@@ -486,7 +494,7 @@ function CabinetToday() {
               action={
                 <Link
                   to="/cabinet/pilotage"
-                  className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground underline"
+                  className="cab-cible text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground underline"
                 >
                   {t("cab.today.charge.affecter")}
                 </Link>
@@ -526,7 +534,7 @@ function CabinetToday() {
               action={
                 <Link
                   to="/cabinet/echeances"
-                  className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground underline"
+                  className="cab-cible text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground underline"
                 >
                   {t("cab.today.echeances.all")}
                 </Link>
@@ -617,10 +625,22 @@ function jourLisible(iso: string, locale: string): string {
   }).format(d);
 }
 
+/**
+ * La file, en table au bureau et en cartes au téléphone.
+ *
+ * Relevé sur staging le 4 novembre 2026 à 375 px : les sept colonnes
+ * restaient une table dans un défilement de côté, et le libellé s'écrasait
+ * à une lettre par ligne. Sous 720 px, chaque ligne devient une carte — la
+ * vignette et le client en tête avec le statut, le libellé sur toute la
+ * largeur, puis le montant, l'attente et « Ouvrir ». Un seul balisage pour
+ * les deux : la carte est la même ligne, posée autrement par la feuille
+ * (`.cab-file`), et rien ne se dédouble au DOM.
+ */
 export function QueueTable({ rows }: { rows: QueueItem[] }) {
   const { t, locale } = useI18n();
   return (
     <InkTable
+      className="cab-file"
       caption={t("cab.queue.title")}
       head={[
         t("cab.queue.rank"),
@@ -636,8 +656,10 @@ export function QueueTable({ rows }: { rows: QueueItem[] }) {
         const jours = joursDAttente(row.envoyeeLe);
         return (
           <InkTableRow key={row.pieceId}>
-            <InkCell numeric>{i + 1}</InkCell>
-            <InkCell>
+            <InkCell numeric className="cab-file-rang">
+              {i + 1}
+            </InkCell>
+            <InkCell className="cab-file-client">
               {/* La vraie page, à gauche : le comptable reconnaît la pièce avant de l'ouvrir. */}
               <span className="flex items-center gap-3">
                 <ApercuDePiece pieceId={row.pieceId} className="vignette" />
@@ -674,7 +696,7 @@ export function QueueTable({ rows }: { rows: QueueItem[] }) {
                 </span>
               </span>
             </InkCell>
-            <InkCell>
+            <InkCell className="cab-file-libelle">
               {/*
                * « Pas encore lue » était faux, et visiblement faux.
                *
@@ -685,10 +707,18 @@ export function QueueTable({ rows }: { rows: QueueItem[] }) {
                * dont aucune écriture n'est comptabilisée n'est pas une pièce
                * non lue — c'est précisément celle que le cabinet doit
                * regarder.
+               *
+               * 4 novembre 2026 : « Lue — aucune écriture », sans un nom, ne
+               * dit pas QUELLE pièce attend. Le fournisseur lu (ou dit par une
+               * personne) s'y ajoute quand on le connaît.
                */}
               <span className="block">
                 {row.libelle ??
-                  t(row.status === "capturee" ? "cab.queue.unread" : "cab.queue.sansEcriture")}
+                  (row.status === "capturee"
+                    ? t("cab.queue.unread")
+                    : row.tiers
+                      ? t("cab.queue.sansEcriture.tiers", { tiers: row.tiers })
+                      : t("cab.queue.sansEcriture"))}
               </span>
               {row.dateEcriture ? (
                 <span className="num block text-[10.5px] text-muted-foreground">
@@ -696,14 +726,16 @@ export function QueueTable({ rows }: { rows: QueueItem[] }) {
                 </span>
               ) : null}
             </InkCell>
-            <InkCell numeric>{row.montant ? montant(row.montant, locale) : "—"}</InkCell>
-            <InkCell>
+            <InkCell numeric className="cab-file-montant" label={t("cab.queue.amount")}>
+              {row.montant ? montant(row.montant, locale) : "—"}
+            </InkCell>
+            <InkCell className="cab-file-statut">
               <SignalLight tone={feuDuStatut(row.statut)} label={t(MOT_CABINET[row.statut])} />
             </InkCell>
-            <InkCell numeric>
+            <InkCell numeric className="cab-file-attente" label={t("cab.queue.age")}>
               {jours === 0 ? t("cab.queue.age.today") : t("cab.queue.age.days", { n: jours })}
             </InkCell>
-            <InkCell>
+            <InkCell className="cab-file-ouvrir">
               <Link
                 to="/cabinet/piece/$pieceId"
                 params={{ pieceId: row.pieceId }}

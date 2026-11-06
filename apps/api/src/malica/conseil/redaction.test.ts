@@ -8,7 +8,7 @@ import { describe, it } from "node:test";
 
 import type { Fait } from "@malica/socle/ports/malica";
 
-import { nombresAutorises, nombresEtrangers } from "./redaction.ts";
+import { datesEnLettres, nombresAutorises, nombresEtrangers } from "./redaction.ts";
 
 const FAITS: Fait[] = [
   { label: "Chiffre d'affaires, cumul d'exercice", valeur: "12400.500 TND", source: "moteur P&L" },
@@ -65,5 +65,15 @@ describe("aucun nombre étranger dans le texte", () => {
       nombresEtrangers("Sept pièces, soit 7 documents, ont été transmises.", FAITS),
       [],
     );
+  });
+});
+
+describe("les dates d'un texte relu, dans la langue du lecteur", () => {
+  it("met chaque date ISO en lettres, et ne touche à rien d'autre", () => {
+    assert.equal(
+      datesEnLettres("Mandat ouvert le 2026-10-04, échéance du 2026-10-15, pièce 2026-123.", "fr"),
+      "Mandat ouvert le 4 octobre 2026, échéance du 15 octobre 2026, pièce 2026-123.",
+    );
+    assert.equal(datesEnLettres("Due 2026-10-15.", "en"), "Due October 15, 2026.");
   });
 });

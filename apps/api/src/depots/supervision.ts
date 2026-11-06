@@ -14,7 +14,13 @@ import type { Requete } from "../db.ts";
 import type { GesteDeRetour } from "@malica/socle/ports/repositories";
 import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
 import { A_TRAITER, type StatutCabinet } from "@malica/socle/statut-d-envoi";
-import { documents, documentsLies, controlesPiece } from "../bibliotheque.ts";
+import {
+  documents,
+  documentsLies,
+  controlesPiece,
+  moisDuDossier,
+  tiersDeLaPiece,
+} from "../bibliotheque.ts";
 
 import { COLONNES_DU_SUIVI, statutAuCabinet, versSuivi } from "./suivi.ts";
 
@@ -74,6 +80,7 @@ const PRIORITE: Readonly<Record<StatutCabinet, number>> = {
 
 export const supervision = {
   documents,
+  moisDuDossier,
   documentsLies,
   controlesPiece,
   async listMyCabinets(db: Requete) {
@@ -82,7 +89,7 @@ export const supervision = {
     const { rows } = await db.query(
       `select o.id, o.kind, o.name, o.legal_id, o.jurisdiction, o.currency, o.validation_mode
          from organizations_v o
-         join memberships_v m on m.tenant_id = o.id and m.user_id = auth.uid()
+         join mes_adhesions_v m on m.tenant_id = o.id
         where o.kind = 'cabinet'
         order by o.name`,
     );
@@ -175,7 +182,8 @@ export const supervision = {
               coalesce(p.transmise_le, p.created_at) as envoyee_le,
               o.name as client, e.id as ecriture_id, e.libelle, e.date_ecriture,
               m.montant, c.email as collaborateur, cf.confiance,
-              dem.objet as demande_objet, dbl.doublon_de, ${COLONNES_DU_SUIVI}
+              dem.objet as demande_objet,
+              ${tiersDeLaPiece("p", "cf.payload")} as tiers, ${COLONNES_DU_SUIVI}
          from ${PIECES_DU_CABINET}
          left join organizations_v o on o.id = p.tenant_id
          -- L'écriture VIVANTE de la pièce — celle de la facture d'abord, sinon
@@ -184,7 +192,10 @@ export const supervision = {
          left join lateral (
            select x.id, x.libelle, x.date_ecriture
              from ecritures_v x
-            where x.piece_id in (select app.versions_de_la_piece(p.id))
+            -- « = any(array(…)) » et non « in (select …) » : l'index de piece_id
+            -- sert, au lieu d'un parcours de toutes les écritures par pièce
+            -- (12 fois plus lent, mesuré le 5 novembre 2026).
+            where x.piece_id = any(array(select app.versions_de_la_piece(p.id)))
               and app.ecriture_vivante(x.id)
             order by (x.nature = 'piece') desc, x.created_at desc
             limit 1
@@ -198,12 +209,13 @@ export const supervision = {
              from ecriture_lignes_v l where l.ecriture_id = e.id
          ) m on true
          -- La confiance de la dernière lecture, telle que le désignateur l'a
-         -- rendue. Absente pour une pièce lue avant qu'on la persiste.
+         -- rendue. Absente pour une pièce lue avant qu'on la persiste. La même
+         -- lecture porte l'émetteur lu, repli du tiers quand personne ne l'a dit.
          left join lateral (
            -- La clé vient du contrat, en paramètre : la relire ici en littéral
            -- était la huitième occurrence du même défaut muet. Un renommage
            -- faisait passer cette colonne a NULL sans erreur ni drapeau.
-           select (x2.payload -> 'field_confidence' ->> $3)::numeric as confiance
+           select (x2.payload -> 'field_confidence' ->> $3)::numeric as confiance, x2.payload
              from extractions_v x2 where x2.piece_id = p.id
             order by x2.created_at desc limit 1
          ) cf on true
@@ -240,19 +252,32 @@ export const supervision = {
             order by e.objet
             limit 1
          ) dem on true
-         -- « Doublon probable » (staging, 30 octobre 2026) : deux pièces du
-         -- même émetteur et du même numéro passaient toutes deux dans la
-         -- file, sans un mot. Calculé ICI, au moment où la file est lue, sur
-         -- les derniers jugements des deux pièces (« app.doublon_probable ») :
-         -- une première pièce lue après la seconde la fait signaler, une
-         -- pièce retirée cesse de compter. Rien n'est supprimé.
-         cross join lateral (select app.doublon_probable(p.id) as doublon_de) dbl
         where ${TRANSMISE}
           and ($2::uuid is null or p.tenant_id = $2)
         order by coalesce(p.transmise_le, p.created_at) desc
         limit 200`,
       [cabinetTenantId, tenantId ?? null, CLE_CONFIANCE_GLOBALE],
     );
+
+    /*
+     * « Doublon probable » (staging, 30 octobre 2026) : deux pièces du même
+     * émetteur et du même numéro passaient toutes deux dans la file, sans un
+     * mot. Jugé au moment où la file est lue, sur les derniers jugements des
+     * deux pièces : une première pièce lue après la seconde la fait signaler,
+     * une pièce retirée cesse de compter. Rien n'est supprimé.
+     *
+     * Toutes les pièces de la file en UNE instruction (`app.doublons_probables`,
+     * 20261130200000) : appelé ligne à ligne, chaque jugement réévaluait les
+     * politiques d'accès — environ 25 ms par pièce, un tiers de la file.
+     */
+    const ids = (rows as Record<string, unknown>[]).map((p) => p["piece_id"] as string);
+    const { rows: doublons } = ids.length
+      ? await db.query<{ piece_id: string; doublon_de: string | null }>(
+          `select piece_id, doublon_de from app.doublons_probables($1::uuid[])`,
+          [ids],
+        )
+      : { rows: [] };
+    const doublonDe = new Map(doublons.map((d) => [d.piece_id, d.doublon_de]));
 
     return (rows as Record<string, unknown>[])
       .map((p) => {
@@ -274,7 +299,8 @@ export const supervision = {
           collaborateur: (p["collaborateur"] as string | null) ?? null,
           confiance: p["confiance"] == null ? null : Number(p["confiance"]),
           demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
-          doublonDe: (p["doublon_de"] as string | null) ?? null,
+          doublonDe: doublonDe.get(p["piece_id"] as string) ?? null,
+          tiers: (p["tiers"] as string | null) ?? null,
         };
       })
       .sort((a, b) => {
@@ -381,7 +407,11 @@ export const supervision = {
     };
   },
 
-  async motifs(db: Requete, locale: string) {
+  /**
+   * Les motifs d'un usage : rendre une pièce au client (`retour`, le défaut)
+   * ou défaire un rapprochement bancaire (`delettrage`, 5 novembre 2026).
+   */
+  async motifs(db: Requete, locale: string, usage: "retour" | "delettrage" = "retour") {
     // Le libellé vient du référentiel, jamais du code (R4). Le repli sur le
     // français est explicite : un motif sans traduction s'affiche, il ne
     // disparaît pas.
@@ -393,9 +423,9 @@ export const supervision = {
            on demandee.ns = 'rejet_motif' and demandee.key = m.code and demandee.locale = $1
          left join ref_labels_v francais
            on francais.ns = 'rejet_motif' and francais.key = m.code and francais.locale = 'fr'
-        where m.active is not false
+        where m.active is not false and m.usage = $2
         order by m.sort_order`,
-      [locale],
+      [locale, usage],
     );
     return (rows as Record<string, unknown>[]).map((m) => ({
       id: m["id"] as string,

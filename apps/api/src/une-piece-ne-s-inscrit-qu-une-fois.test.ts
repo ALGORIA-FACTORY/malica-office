@@ -148,7 +148,7 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       return id;
     });
     const { rows: motifs } = await admin.query<{ id: string }>(
-      `select id from ref.rejet_motifs order by requires_note limit 1`,
+      `select id from ref.rejet_motifs where usage = 'retour' order by requires_note limit 1`,
     );
     const retourner = () =>
       sousIdentite(expert.id, (db) =>
@@ -170,7 +170,7 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
   it("une contre-passation prend la date de l'écriture annulée, tant que son mois n'est pas déclaré", async () => {
     const motif = (
       await admin.query<{ id: string }>(
-        `select id from ref.rejet_motifs order by requires_note limit 1`,
+        `select id from ref.rejet_motifs where usage = 'retour' order by requires_note limit 1`,
       )
     ).rows[0]!.id;
     const retournee = async (date: string) => {

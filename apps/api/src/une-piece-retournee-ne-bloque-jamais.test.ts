@@ -1447,6 +1447,26 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     assert.equal(file.find((q) => q.pieceId === nouvelle)?.ecritureId, ecriture);
   });
 
+  it("la file du cabinet nomme le fournisseur lu d'une pièce sans écriture", async () => {
+    // Staging, 4 novembre 2026 : « Lue — aucune écriture », sans un nom.
+    const id = await privee();
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      lireLaPieceDEssai(db, id, {
+        document_kind: "facture_achat",
+        issuer: "  STE MYTEK INFORMATIQUE ",
+      }),
+    );
+    await pmeFait("collab.setPieceVis", id, "partage");
+    const file = (await cabinetFait("supervision.queue", cabinet, pme)) as Array<{
+      pieceId: string;
+      ecritureId: string | null;
+      tiers: string | null;
+    }>;
+    const ligne = file.find((q) => q.pieceId === id);
+    assert.equal(ligne?.ecritureId, null);
+    assert.equal(ligne?.tiers, "STE MYTEK INFORMATIQUE", "la dernière lecture, sans ses blancs");
+  });
+
   it("une photo reprise aux mêmes octets n'est pas le doublon de sa version précédente", async () => {
     const ancienne = await privee();
     const empreinte = "b".repeat(63) + String(n % 10);
@@ -1532,5 +1552,30 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     );
     assert.equal(rows[0]?.created_by, siege.id, "la pièce reste celle du siège");
     assert.equal(rows[0]?.auteur, dirigeant.id, "qui l'a reprise est au registre");
+  });
+
+  it("un retour refuse un motif de délettrage, à la pièce comme à l'écriture", async () => {
+    const [delettrage] = await sousIdentiteDuServeur(expert.id, (db) =>
+      supervision.motifs(db, "fr", "delettrage"),
+    );
+    assert.ok(delettrage);
+    const id = await transmiseLue();
+    await assert.rejects(
+      sousIdentiteDuServeur(expert.id, (db) =>
+        supervision.retourner(db, { pieceId: id, motifId: delettrage.id }),
+      ),
+      /refus\.motif\.inconnu/,
+    );
+    const ecriture = await priseEnCharge(id);
+    await assert.rejects(
+      sousIdentiteDuServeur(expert.id, (db) =>
+        supervision.review(db, {
+          ecritureId: ecriture,
+          outcome: "retourne",
+          motifId: delettrage.id,
+        }),
+      ),
+      /refus\.motif\.inconnu/,
+    );
   });
 });

@@ -161,8 +161,8 @@ function PmeEcheances() {
     staleTime: 60_000,
   });
   const echeances = useQuery({
-    queryKey: ["echeances", ...societes],
-    queryFn: () => office().collab.echeances(societes),
+    queryKey: ["echeances", ...societes, locale],
+    queryFn: () => office().collab.echeances(societes, locale),
     enabled: derivation.isFetched,
   });
   // La fiche ou le pack qui manque se dit pour UNE société : son lien mène à

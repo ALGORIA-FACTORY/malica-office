@@ -130,7 +130,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     );
     pack = p[0]!.id;
     const { rows: m } = await admin.query<{ id: string }>(
-      `select id from ref.rejet_motifs order by requires_note, sort_order limit 1`,
+      `select id from ref.rejet_motifs where usage = 'retour' order by requires_note, sort_order limit 1`,
     );
     motif = m[0]!.id;
     // Le jour du cabinet : celui de son fuseau, au défaut de sa juridiction.

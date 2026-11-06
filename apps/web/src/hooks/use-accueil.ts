@@ -27,12 +27,12 @@ import { useMemo } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
-import { useDecimales } from "./use-decimales";
+import { useDecimales, useDecimalesEnEchec } from "./use-decimales";
 import { usePiecesLues } from "./use-pieces-lues";
 import { avancementDeLaListe } from "@/lib/lecture";
 import { office } from "@/verticals/malica-office/composition";
 import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
-import { useDeclarationsTva } from "./use-declaration-tva";
+import { useDeclarationsTva, useDeclarationsTvaEnEchec } from "./use-declaration-tva";
 import { computePnl } from "@malica/socle";
 
 import { moisDecale, moisGlissants } from "@malica/socle/exercice";
@@ -118,6 +118,17 @@ export interface Accueil {
   /** Les pièces que le cabinet a retournées, et qui attendent le dirigeant. */
   retournees: number;
   enCours: boolean;
+  /**
+   * Vrai tant que la carte de TVA ne sait pas encore quel mois montrer.
+   *
+   * Relevé le 4 novembre 2026 : pendant le chargement, la carte disait
+   * « TVA · novembre — Solde TVA à confirmer », puis basculait sur
+   * « TVA · février 142,130 Crédit de TVA ». La série vide retombait sur le
+   * mois courant, et le dirigeant lisait une seconde un mois et un état faux.
+   * L'écran reste neutre tant que ceci est vrai. Une lecture en échec n'est
+   * plus « en cours » : la carte dit alors qu'elle ne sait pas, comme avant.
+   */
+  tvaEnCours: boolean;
 }
 
 /*
@@ -129,19 +140,16 @@ export interface Accueil {
 const moisPrecedent = moisDecale;
 
 /**
- * Le mois que la carte de TVA montre : le plus récent de la série qui a
- * quelque chose à dire — un solde, ou des pièces hors du calcul —, sinon le
- * mois courant.
- *
- * Le 1er novembre, la carte disait « TVA · novembre — » sur un dossier dont
- * les pièces étaient de septembre et d'octobre : le mois commençait, rien n'y
- * était encore rangé, et le chiffre du dirigeant paraissait vide. La même
- * règle que les cartes des dossiers (`periodeMontree`, #156). La série
- * s'arrête au mois courant : un mois à venir n'y est jamais.
+ * Le mois que la carte de TVA montre : le mois EN COURS, toujours — décision
+ * du dirigeant, 4 novembre 2026. La carte montrait jusque-là le plus récent
+ * mois « qui avait quelque chose à dire », et un dossier dont la dernière
+ * pièce était de février affichait « TVA · février » en novembre : le chiffre
+ * parlait d'un autre mois que celui qu'on vit. Un mois en cours encore vide
+ * dit « à confirmer », il ne se remplace pas par un autre. La série s'arrête
+ * au mois courant : son dernier mois est celui-là.
  */
 export function moisDeLaCarte(serie: readonly MoisDeTva[]): MoisDeTva {
-  const plein = [...serie].reverse().find((m) => m.solde !== null || m.horsDuCalcul > 0);
-  return plein ?? serie[serie.length - 1]!;
+  return serie[serie.length - 1]!;
 }
 
 export function useAccueil(periode: string): Accueil {
@@ -183,6 +191,10 @@ export function useAccueil(periode: string): Accueil {
     [periode],
   );
   const declarations = useDeclarationsTva(pme.packId, pme.tenantId, finsDeMois);
+  // Une entrée du calcul en échec : la carte quitte son attente neutre.
+  const declarationsEnEchec = useDeclarationsTvaEnEchec(pme.packId, pme.tenantId, finsDeMois);
+  const decimalesEnEchec = useDecimalesEnEchec();
+  const entreeEnEchec = declarationsEnEchec || decimalesEnEchec;
 
   const lignes = useQuery({
     queryKey: ["accueil-lignes", pme.tenantId, periode],
@@ -200,7 +212,11 @@ export function useAccueil(periode: string): Accueil {
   const pieces = usePiecesLues();
 
   // ------------------------------------------------------ la série de douze
-  const serie = useMemo<MoisDeTva[]>(() => {
+  //
+  // `lue` dit si les entrées du calcul sont TOUTES arrivées. Tant qu'elles ne
+  // le sont pas, la série est vide et `moisDeLaCarte` retomberait sur le mois
+  // courant : l'écran ne doit pas l'annoncer (voir `tvaEnCours`).
+  const { serie, lue } = useMemo<{ serie: MoisDeTva[]; lue: boolean }>(() => {
     const mois: MoisDeTva[] = moisGlissants(periode, FENETRE).map((p) => ({
       periode: p,
       recuperee: null,
@@ -208,7 +224,8 @@ export function useAccueil(periode: string): Accueil {
       solde: null,
       horsDuCalcul: 0,
     }));
-    if (!extraits.data || !taux.data || !declarations || decimalesDuPack === null) return mois;
+    if (!extraits.data || !taux.data || !declarations || decimalesDuPack === null)
+      return { serie: mois, lue: false };
     const decimales = decimalesDuPack;
     const tarifs = taux.data;
 
@@ -235,7 +252,7 @@ export function useAccueil(periode: string): Accueil {
       parMois.set(cle, [...(parMois.get(cle) ?? []), ligne]);
     }
 
-    return mois.map((m) => {
+    const calcules = mois.map((m) => {
       const dedans = parMois.get(m.periode);
       const declaration = declarations.get(monthBounds(m.periode).to);
       if (!dedans || dedans.length === 0 || !declaration) return m;
@@ -256,6 +273,7 @@ export function useAccueil(periode: string): Accueil {
         horsDuCalcul: calcul.refused.length,
       };
     });
+    return { serie: calcules, lue: true };
   }, [extraits.data, taux.data, declarations, periode, devise, decimalesDuPack]);
 
   const courant = serie[serie.length - 1]?.recuperee ?? null;
@@ -355,5 +373,6 @@ export function useAccueil(periode: string): Accueil {
     chargesEcart,
     retournees,
     enCours: extraits.isPending || taux.isPending || lignes.isPending || pieces.isPending,
+    tvaEnCours: !lue && !extraits.isError && !taux.isError && !entreeEnEchec,
   };
 }
