@@ -1,0 +1,22 @@
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+const S = `C:/Users/wisse/AppData/Local/Temp/claude/c8345b4b56cf437e/4cfa453f-7674-4c12-ac23-5141b5489d28/scratchpad/lh${process.env.LHPORT||``}`;
+mkdirSync(S, { recursive: true });
+const pages = process.argv.slice(2);
+process.env.CHROME_PATH = "C:/Program Files/Google/Chrome/Application/chrome.exe";
+for (const p of pages) {
+  const name = p === "" ? "accueil" : p.replace(/\//g, "_");
+  const out = `${S}/${name}.json`;
+  if (!existsSync(out)) {
+    try {
+      execFileSync("npx.cmd", ["-y", "lighthouse@12.8.2", `http://localhost:${process.env.LHPORT||4173}/${p}`,
+        "--only-categories=performance,accessibility,best-practices,seo",
+        "--chrome-flags=--headless=new", "--output=json", `--output-path=${out}`, "--quiet"], { stdio: "ignore", shell: true });
+    } catch (e) { console.log("fail", p); }
+  }
+  const r = JSON.parse(readFileSync(out, "utf8"));
+  const a = r.audits;
+  console.log(name, r.finalDisplayedUrl, Object.values(r.categories).map(v => v.id + "=" + Math.round(v.score * 100)).join(" "),
+    "FCP", a["first-contentful-paint"].displayValue, "LCP", a["largest-contentful-paint"].displayValue,
+    "TBT", a["total-blocking-time"].displayValue, "CLS", a["cumulative-layout-shift"].displayValue, "SI", a["speed-index"].displayValue);
+}

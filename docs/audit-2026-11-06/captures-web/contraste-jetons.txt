@@ -1,0 +1,93 @@
+### EditionOne clair  (fond --background / --muted)  — paires <7:1 : 50/108, <4.5:1 : 16
+   --foreground           #141412 17.69  15.72
+   --muted-foreground     #676663 5.51   4.89
+   --text-2               #434241 9.59   8.52
+   --primary              #141412 17.69  15.72
+   --destructive          #a12628 7.11   6.32
+   --signal-ok            #2b7440 5.46   4.85
+   --signal-warn          #b37903 3.57   3.17
+   --signal-stop          #a12628 7.11   6.32
+   --signal-info          #2a669f 5.73   5.09
+   --marigold             #ba882e 3.03   2.69
+   --card-foreground      #141412 17.69  15.72
+   --accent-foreground    #141412 17.69  15.72
+   --secondary-foreground #141412 17.69  15.72
+### EditionOne sombre  (fond --background / --muted)  — paires <7:1 : 38/108, <4.5:1 : 11
+   --foreground           #f0f0ef 17.03  14.03
+   --muted-foreground     #999895 6.74   5.55
+   --text-2               #c5c4c2 11.12  9.16
+   --primary              #f0f0ef 17.03  14.03
+   --destructive          #d24c49 4.53   3.73
+   --signal-ok            #5dad70 7.08   5.84
+   --signal-warn          #e1a447 8.88   7.32
+   --signal-stop          #da534f 4.91   4.05
+   --signal-info          #79a9db 7.87   6.49
+   --marigold             #e1b767 10.31  8.5
+   --card-foreground      #f0f0ef 17.03  14.03
+   --accent-foreground    #f0f0ef 17.03  14.03
+   --secondary-foreground #f0f0ef 17.03  14.03
+   PAIRE --destructive-foreground sur --destructive #0e0d0c #d24c49 4.53
+### Cabinet (clair, et aussi en .dark)  (fond --background / --muted)  — paires <7:1 : 56/108, <4.5:1 : 7
+   --foreground           #182230 14.95  14.01
+   --muted-foreground     #667085 4.64   4.35
+   --text-2               #475467 7.17   6.72
+   --primary              #182230 14.95  14.01
+   --destructive          #a12628 6.92   6.49
+   --signal-ok            #14745b 5.33   4.99
+   --signal-warn          #99620c 4.77   4.47
+   --signal-stop          #bb3b40 5.14   4.82
+   --signal-info          #2968a5 5.42   5.07
+   --marigold             #936600 4.73   4.43
+   --card-foreground      #182230 14.95  14.01
+   --accent-foreground    #182230 14.95  14.01
+   --secondary-foreground #344054 9.76   9.15
+### PME clair  (fond --bg / --d2)  — paires <7:1 : 173/381, <4.5:1 : 27
+   --tx                   #0a0a0a 19.8   17
+   --t2                   #3c4450 9.84   8.45
+   --t3                   #5f6673 5.78   4.96
+   --acc                  #235340 8.81   7.57
+   --am                   #8a5b00 5.87   5.04
+   --ve                   #b23a1c 5.97   5.13
+   --az                   #1f6fb2 5.28   4.54
+   --mg                   #a8481f 5.81   4.99
+   --me-tx                #163a2a 12.55  10.78
+   --foreground           #0a0a0a 19.8   17
+   --muted-foreground     #3c4450 9.84   8.45
+   --text-2               #3c4450 9.84   8.45
+   --primary              #235340 8.81   7.57
+   --destructive          #b23a1c 5.97   5.13
+   --signal-ok            #1a4533 10.81  9.28
+   --signal-warn          #8a5b00 5.87   5.04
+   --signal-stop          #b23a1c 5.97   5.13
+   --signal-info          #1f6fb2 5.28   4.54
+   --marigold             #ba882e 3.16   2.71
+   --card-foreground      #0a0a0a 19.8   17
+   --accent-foreground    #163a2a 12.55  10.78
+   --secondary-foreground #0a0a0a 19.8   17
+   PAIRE --destructive-foreground sur --destructive #ffffff #b23a1c 5.97
+### PME sombre  (fond --bg / --d2)  — paires <7:1 : 128/381, <4.5:1 : 60
+   --tx                   #ffffff 19.8   15.52
+   --t2                   #a7a7ad 8.27   6.49
+   --t3                   #8e8e97 6.1    4.78
+   --acc                  #8fe3b1 13     10.19
+   --am                   #dfc078 11.26  8.83
+   --ve                   #f08d72 8.26   6.47
+   --az                   #8cbce8 9.87   7.74
+   --mg                   #d97757 6.34   4.97
+   --me-tx                #dcefe3 16.5   12.93
+   --foreground           #ffffff 19.8   15.52
+   --muted-foreground     #a7a7ad 8.27   6.49
+   --text-2               #a7a7ad 8.27   6.49
+   --primary              #8fe3b1 13     10.19
+   --destructive          #f08d72 8.26   6.47
+   --signal-ok            #7ee2ae 12.61  9.89
+   --signal-warn          #dfc078 11.26  8.83
+   --signal-stop          #f08d72 8.26   6.47
+   --signal-info          #8cbce8 9.87   7.74
+   --marigold             #e1b767 10.52  8.25
+   --card-foreground      #ffffff 19.8   15.52
+   --accent-foreground    #dcefe3 16.5   12.93
+   --secondary-foreground #ffffff 19.8   15.52
+   PAIRE --me-tx sur --am-d #dcefe3 #8a6510 4.43
+   PAIRE --me-tx sur --az-d #dcefe3 #2968a5 4.84
+   PAIRE --me-tx sur --accs #dcefe3 #3a8f54 3.34

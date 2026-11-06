@@ -1,0 +1,86 @@
+// Responsive / touch / focus / rendered-contrast audit of public screens.
+import { chromium } from "playwright";
+import { mkdirSync, writeFileSync } from "node:fs";
+const BASE = "http://localhost:4174";
+const OUT = process.argv[2];
+mkdirSync(OUT, { recursive: true });
+const routes = ["", "auth", "confidentialite", "invitation", "reinitialiser", "pme", "cabinet"];
+const widths = [360, 390, 768, 1280];
+const variants = [
+  { id: "fr-sombre", locale: "fr", app: "ink" },
+  { id: "fr-clair", locale: "fr", app: "paper" },
+  { id: "ar-sombre", locale: "ar", app: "ink" },
+];
+const results = [];
+const browser = await chromium.launch();
+for (const v of variants) {
+  for (const w of widths) {
+    if (v.id !== "fr-sombre" && w !== 360 && w !== 1280) continue;
+    const ctx = await browser.newContext({ viewport: { width: w, height: w < 768 ? 800 : 900 }, deviceScaleFactor: 1, isMobile: w < 768, hasTouch: w < 768 });
+    await ctx.addInitScript(([l, a]) => { try { localStorage.setItem("malica.locale", l); localStorage.setItem("malica.apparence", a); } catch {} }, [v.locale, v.app]);
+    const page = await ctx.newPage();
+    for (const r of routes) {
+      await page.goto(`${BASE}/${r}`, { waitUntil: "networkidle" }).catch(() => {});
+      await page.waitForTimeout(600);
+      const name = `${r || "accueil"}-${v.id}-${w}`;
+      await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
+      const m = await page.evaluate(() => {
+        const vw = document.documentElement.clientWidth;
+        const out = { url: location.pathname, dir: document.documentElement.dir, dark: document.documentElement.classList.contains("dark"), scrollW: document.documentElement.scrollWidth, vw, overflow: [], small: [], contrast: [], unlabeled: [], landmarks: {} };
+        const desc = (e) => (e.tagName.toLowerCase() + (e.id ? "#" + e.id : "") + (e.className && typeof e.className === "string" ? "." + e.className.trim().split(/\s+/).slice(0, 3).join(".") : "") + " «" + (e.innerText || e.getAttribute("aria-label") || e.value || "").trim().slice(0, 40) + "»");
+        for (const e of document.querySelectorAll("body *")) {
+          const b = e.getBoundingClientRect();
+          if (b.width === 0 || b.height === 0) continue;
+          const cs = getComputedStyle(e);
+          if (cs.visibility === "hidden" || cs.display === "none") continue;
+          if (b.right > vw + 1 || b.left < -1) { if (!e.closest("[aria-hidden=true]") && cs.position !== "fixed") out.overflow.push(desc(e) + ` [${Math.round(b.left)}..${Math.round(b.right)}]`); }
+          if ((cs.overflow === "hidden" || cs.textOverflow === "ellipsis") && e.scrollWidth > e.clientWidth + 1 && e.children.length === 0) out.overflow.push("CLIPPED " + desc(e));
+        }
+        for (const e of document.querySelectorAll("a[href], button, input:not([type=hidden]), select, textarea, [role=button], [tabindex]:not([tabindex='-1'])")) {
+          const b = e.getBoundingClientRect();
+          if (b.width === 0) continue;
+          if (b.width < 44 || b.height < 44) out.small.push(`${desc(e)} ${Math.round(b.width)}x${Math.round(b.height)}`);
+          const name = (e.getAttribute("aria-label") || e.getAttribute("aria-labelledby") || e.innerText || e.title || (e.labels && e.labels.length ? "lab" : "") || e.getAttribute("placeholder") || "").trim();
+          if (!name && e.type !== "submit") out.unlabeled.push(desc(e));
+        }
+        // rendered text contrast (AAA)
+        const cv = document.createElement("canvas"); cv.width = cv.height = 1; const cx = cv.getContext("2d", { willReadFrequently: true });
+        const parse = (c) => { if (!c || c === "transparent") return { r: 0, g: 0, b: 0, a: 0 }; cx.clearRect(0, 0, 1, 1); cx.fillStyle = "rgba(0,0,0,0)"; cx.fillStyle = c; cx.fillRect(0, 0, 1, 1); const d = cx.getImageData(0, 0, 1, 1).data; return { r: d[0], g: d[1], b: d[2], a: d[3] / 255 }; };
+        const lin = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+        const L = (c) => 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+        const bgOf = (e) => { const stack = []; for (let n = e; n; n = n.parentElement) { const c = parse(getComputedStyle(n).backgroundColor); if (c && c.a > 0) { stack.push(c); if (c.a >= 1) break; } } let base = { r: 255, g: 255, b: 255 }; for (const c of stack.reverse()) base = { r: c.r * c.a + base.r * (1 - c.a), g: c.g * c.a + base.g * (1 - c.a), b: c.b * c.a + base.b * (1 - c.a) }; return base; };
+        const seen = new Set();
+        for (const e of document.querySelectorAll("body *")) {
+          const t = [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join("");
+          if (!t) continue;
+          const b = e.getBoundingClientRect(); if (b.width === 0) continue;
+          const cs = getComputedStyle(e); if (cs.visibility === "hidden" || +cs.opacity === 0) continue;
+          const fg = parse(cs.color); if (!fg) continue;
+          const bg = bgOf(e);
+          const f = { r: fg.r * fg.a + bg.r * (1 - fg.a), g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a) };
+          const l1 = L(f), l2 = L(bg); const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+          const size = parseFloat(cs.fontSize), bold = +cs.fontWeight >= 700;
+          const large = size >= 24 || (bold && size >= 18.66);
+          const need = large ? 4.5 : 7;
+          if (ratio < need) { const k = `${cs.color}|${Math.round(ratio * 100)}`; if (seen.has(k)) continue; seen.add(k); out.contrast.push(`${ratio.toFixed(2)}:1 (need ${need}) ${size}px ${cs.color} on rgb(${bg.r|0},${bg.g|0},${bg.b|0}) — ${desc(e)}`); }
+        }
+        for (const s of ["header", "nav", "main", "footer", "h1"]) out.landmarks[s] = document.querySelectorAll(s).length;
+        return out;
+      });
+      // focus visibility: tab 6 times, check that each focused el shows outline or box-shadow
+      const focus = [];
+      await page.mouse.click(1, 1).catch(() => {});
+      for (let i = 0; i < 8; i++) {
+        await page.keyboard.press("Tab");
+        const f = await page.evaluate(() => { const e = document.activeElement; if (!e || e === document.body) return null; const cs = getComputedStyle(e); const vis = (cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0) || (cs.boxShadow && cs.boxShadow !== "none"); return { el: e.tagName + " «" + (e.innerText || e.getAttribute("aria-label") || "").trim().slice(0, 30) + "»", outline: `${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor}`, vis }; });
+        if (f) focus.push(f);
+      }
+      m.focus = focus;
+      results.push({ name, variant: v.id, width: w, ...m });
+    }
+    await ctx.close();
+  }
+}
+await browser.close();
+writeFileSync(`${OUT}/../pw-audit.json`, JSON.stringify(results, null, 1));
+for (const r of results) console.log(r.name, r.url, "dir=" + r.dir, "dark=" + r.dark, "scrollW", r.scrollW, "/", r.vw, "overflow", r.overflow.length, "small", r.small.length, "contrastFail", r.contrast.length, "unlabeled", r.unlabeled.length, "focusInvisible", r.focus.filter((f) => !f.vis).length + "/" + r.focus.length, JSON.stringify(r.landmarks));

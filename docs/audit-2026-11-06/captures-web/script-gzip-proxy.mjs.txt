@@ -1,0 +1,18 @@
+// Mimics Caddy's `encode zstd gzip` in front of the nitro node-server (gzip only).
+import http from "node:http";
+import zlib from "node:zlib";
+const UP = 4173, PORT = 4174;
+http.createServer((req, res) => {
+  const up = http.request({ host: "127.0.0.1", port: UP, path: req.url, method: req.method, headers: { ...req.headers, "accept-encoding": "identity" } }, (r) => {
+    const type = String(r.headers["content-type"] || "");
+    const compressible = /text|javascript|json|css|svg|xml|wasm|manifest/.test(type) && !r.headers["content-encoding"];
+    const accepts = /gzip/.test(String(req.headers["accept-encoding"] || ""));
+    const h = { ...r.headers };
+    if (compressible && accepts) {
+      delete h["content-length"]; h["content-encoding"] = "gzip"; h["vary"] = "Accept-Encoding";
+      res.writeHead(r.statusCode, h); r.pipe(zlib.createGzip({ level: 6 })).pipe(res);
+    } else { res.writeHead(r.statusCode, h); r.pipe(res); }
+  });
+  up.on("error", () => { res.writeHead(502); res.end(); });
+  req.pipe(up);
+}).listen(PORT, () => console.log("gzip proxy on", PORT));

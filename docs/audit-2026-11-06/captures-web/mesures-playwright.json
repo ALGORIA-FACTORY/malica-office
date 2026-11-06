@@ -1,0 +1,3134 @@
+[
+ {
+  "name": "accueil-fr-sombre-360",
+  "variant": "fr-sombre",
+  "width": 360,
+  "url": "/",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-xs.text-muted-foreground «Comptabilité augmentée, chiffre gouverné»",
+   "6.28:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(22,22,20) — p.num.text-xs.text-muted-foreground «01»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "A «SE CONNECTER»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «Ouvrir mon espace»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «Voir la doctrine»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "auth-fr-sombre-360",
+  "variant": "fr-sombre",
+  "width": 360,
+  "url": "/auth",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "button.flex-1.px-4.py-2 «CONNEXION» 155x32",
+   "button.flex-1.px-4.py-2 «CRÉER UN ACCÈS» 155x32",
+   "input.mt-1.w-full.border «» 312x38",
+   "input.mt-1.w-full.border «» 312x38",
+   "button.text-xs.text-muted-foreground.underline «Mot de passe oublié ?» 124x16",
+   "a.mt-8.inline-block.text-xs «Retour à l'accueil» 98x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «EN»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CONNEXION»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CRÉER UN ACCÈS»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   }
+  ]
+ },
+ {
+  "name": "confidentialite-fr-sombre-360",
+  "variant": "fr-sombre",
+  "width": 360,
+  "url": "/confidentialite",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 141x40",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x28"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — span.text-xs.text-muted-foreground «Mise à jour : 6 septembre 2026»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 2
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "invitation-fr-sombre-360",
+  "variant": "fr-sombre",
+  "width": 360,
+  "url": "/invitation",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [],
+  "contrast": [],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": []
+ },
+ {
+  "name": "reinitialiser-fr-sombre-360",
+  "variant": "fr-sombre",
+  "width": 360,
+  "url": "/reinitialiser",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.mt-8.inline-block.text-xs «Retour à la connexion» 122x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «EN»",
+   "4.93:1 (need 7) 12px oklch(0.62 0.17 25) on rgb(14,13,12) — p.mt-6.border.border-signal-stop «Ce lien a expiré ou a déjà servi. Demand»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "A «Retour à la connexion»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "pme-fr-sombre-360",
+  "variant": "fr-sombre",
+  "width": 360,
+  "url": "/pme",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "cabinet-fr-sombre-360",
+  "variant": "fr-sombre",
+  "width": 360,
+  "url": "/cabinet",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "accueil-fr-sombre-390",
+  "variant": "fr-sombre",
+  "width": 390,
+  "url": "/",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 390,
+  "vw": 390,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-xs.text-muted-foreground «Comptabilité augmentée, chiffre gouverné»",
+   "6.28:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(22,22,20) — p.num.text-xs.text-muted-foreground «01»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "A «SE CONNECTER»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «Ouvrir mon espace»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «Voir la doctrine»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "auth-fr-sombre-390",
+  "variant": "fr-sombre",
+  "width": 390,
+  "url": "/auth",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 390,
+  "vw": 390,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "button.flex-1.px-4.py-2 «CONNEXION» 170x32",
+   "button.flex-1.px-4.py-2 «CRÉER UN ACCÈS» 170x32",
+   "input.mt-1.w-full.border «» 342x38",
+   "input.mt-1.w-full.border «» 342x38",
+   "button.text-xs.text-muted-foreground.underline «Mot de passe oublié ?» 124x16",
+   "a.mt-8.inline-block.text-xs «Retour à l'accueil» 98x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «EN»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CONNEXION»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CRÉER UN ACCÈS»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   }
+  ]
+ },
+ {
+  "name": "confidentialite-fr-sombre-390",
+  "variant": "fr-sombre",
+  "width": 390,
+  "url": "/confidentialite",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 390,
+  "vw": 390,
+  "overflow": [],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 145x20",
+   "a.underline «hello@algoria-factory.com» 273x43",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x28",
+   "a.underline «hello@algoria-factory.com» 188x28"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — span.text-xs.text-muted-foreground «Mise à jour : 6 septembre 2026»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 2
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "invitation-fr-sombre-390",
+  "variant": "fr-sombre",
+  "width": 390,
+  "url": "/invitation",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 390,
+  "vw": 390,
+  "overflow": [],
+  "small": [],
+  "contrast": [],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": []
+ },
+ {
+  "name": "reinitialiser-fr-sombre-390",
+  "variant": "fr-sombre",
+  "width": 390,
+  "url": "/reinitialiser",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 390,
+  "vw": 390,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.mt-8.inline-block.text-xs «Retour à la connexion» 122x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «EN»",
+   "4.93:1 (need 7) 12px oklch(0.62 0.17 25) on rgb(14,13,12) — p.mt-6.border.border-signal-stop «Ce lien a expiré ou a déjà servi. Demand»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "A «Retour à la connexion»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "pme-fr-sombre-390",
+  "variant": "fr-sombre",
+  "width": 390,
+  "url": "/pme",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 390,
+  "vw": 390,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "cabinet-fr-sombre-390",
+  "variant": "fr-sombre",
+  "width": 390,
+  "url": "/cabinet",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 390,
+  "vw": 390,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "accueil-fr-sombre-768",
+  "variant": "fr-sombre",
+  "width": 768,
+  "url": "/",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 768,
+  "vw": 768,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.border.border-foreground.bg-foreground «SE CONNECTER» 131x34"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-xs.text-muted-foreground «Comptabilité augmentée, chiffre gouverné»",
+   "6.28:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(22,22,20) — p.num.text-xs.text-muted-foreground «01»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "A «SE CONNECTER»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «Ouvrir mon espace»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «Voir la doctrine»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "auth-fr-sombre-768",
+  "variant": "fr-sombre",
+  "width": 768,
+  "url": "/auth",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 768,
+  "vw": 768,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "button.flex-1.px-4.py-2 «CONNEXION» 199x32",
+   "button.flex-1.px-4.py-2 «CRÉER UN ACCÈS» 199x32",
+   "input.mt-1.w-full.border «» 400x38",
+   "input.mt-1.w-full.border «» 400x38",
+   "button.text-xs.text-muted-foreground.underline «Mot de passe oublié ?» 124x16",
+   "a.mt-8.inline-block.text-xs «Retour à l'accueil» 98x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «EN»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CONNEXION»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CRÉER UN ACCÈS»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   }
+  ]
+ },
+ {
+  "name": "confidentialite-fr-sombre-768",
+  "variant": "fr-sombre",
+  "width": 768,
+  "url": "/confidentialite",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 768,
+  "vw": 768,
+  "overflow": [],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 145x20",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x28"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — span.text-xs.text-muted-foreground «Mise à jour : 6 septembre 2026»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 2
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "invitation-fr-sombre-768",
+  "variant": "fr-sombre",
+  "width": 768,
+  "url": "/invitation",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 768,
+  "vw": 768,
+  "overflow": [],
+  "small": [],
+  "contrast": [],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": []
+ },
+ {
+  "name": "reinitialiser-fr-sombre-768",
+  "variant": "fr-sombre",
+  "width": 768,
+  "url": "/reinitialiser",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 768,
+  "vw": 768,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.mt-8.inline-block.text-xs «Retour à la connexion» 122x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «EN»",
+   "4.93:1 (need 7) 12px oklch(0.62 0.17 25) on rgb(14,13,12) — p.mt-6.border.border-signal-stop «Ce lien a expiré ou a déjà servi. Demand»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "A «Retour à la connexion»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "pme-fr-sombre-768",
+  "variant": "fr-sombre",
+  "width": 768,
+  "url": "/pme",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 768,
+  "vw": 768,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "cabinet-fr-sombre-768",
+  "variant": "fr-sombre",
+  "width": 768,
+  "url": "/cabinet",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 768,
+  "vw": 768,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "accueil-fr-sombre-1280",
+  "variant": "fr-sombre",
+  "width": 1280,
+  "url": "/",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.border.border-foreground.bg-foreground «SE CONNECTER» 131x34"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-xs.text-muted-foreground «Comptabilité augmentée, chiffre gouverné»",
+   "6.28:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(22,22,20) — p.num.text-xs.text-muted-foreground «01»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "A «SE CONNECTER»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «Ouvrir mon espace»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «Voir la doctrine»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "auth-fr-sombre-1280",
+  "variant": "fr-sombre",
+  "width": 1280,
+  "url": "/auth",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "button.flex-1.px-4.py-2 «CONNEXION» 199x32",
+   "button.flex-1.px-4.py-2 «CRÉER UN ACCÈS» 199x32",
+   "input.mt-1.w-full.border «» 400x38",
+   "input.mt-1.w-full.border «» 400x38",
+   "button.text-xs.text-muted-foreground.underline «Mot de passe oublié ?» 124x16",
+   "a.mt-8.inline-block.text-xs «Retour à l'accueil» 98x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «EN»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CONNEXION»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CRÉER UN ACCÈS»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   }
+  ]
+ },
+ {
+  "name": "confidentialite-fr-sombre-1280",
+  "variant": "fr-sombre",
+  "width": 1280,
+  "url": "/confidentialite",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 145x20",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x28"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — span.text-xs.text-muted-foreground «Mise à jour : 6 septembre 2026»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 2
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "invitation-fr-sombre-1280",
+  "variant": "fr-sombre",
+  "width": 1280,
+  "url": "/invitation",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [],
+  "contrast": [],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": []
+ },
+ {
+  "name": "reinitialiser-fr-sombre-1280",
+  "variant": "fr-sombre",
+  "width": 1280,
+  "url": "/reinitialiser",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.mt-8.inline-block.text-xs «Retour à la connexion» 122x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «EN»",
+   "4.93:1 (need 7) 12px oklch(0.62 0.17 25) on rgb(14,13,12) — p.mt-6.border.border-signal-stop «Ce lien a expiré ou a déjà servi. Demand»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "A «Retour à la connexion»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "pme-fr-sombre-1280",
+  "variant": "fr-sombre",
+  "width": 1280,
+  "url": "/pme",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "cabinet-fr-sombre-1280",
+  "variant": "fr-sombre",
+  "width": 1280,
+  "url": "/cabinet",
+  "dir": "ltr",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "accueil-fr-clair-360",
+  "variant": "fr-clair",
+  "width": 360,
+  "url": "/",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24"
+  ],
+  "contrast": [
+   "5.50:1 (need 7) 12px oklch(0.51 0.005 90) on rgb(250,250,249) — p.text-xs.text-muted-foreground «Comptabilité augmentée, chiffre gouverné»",
+   "5.74:1 (need 7) 12px oklch(0.51 0.005 90) on rgb(255,255,255) — p.num.text-xs.text-muted-foreground «01»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "A «SE CONNECTER»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "A «Ouvrir mon espace»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "A «Voir la doctrine»",
+    "outline": "auto 1px rgb(20, 20, 18)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "auth-fr-clair-360",
+  "variant": "fr-clair",
+  "width": 360,
+  "url": "/auth",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "button.flex-1.px-4.py-2 «CONNEXION» 155x32",
+   "button.flex-1.px-4.py-2 «CRÉER UN ACCÈS» 155x32",
+   "input.mt-1.w-full.border «» 312x38",
+   "input.mt-1.w-full.border «» 312x38",
+   "button.text-xs.text-muted-foreground.underline «Mot de passe oublié ?» 124x16",
+   "a.mt-8.inline-block.text-xs «Retour à l'accueil» 98x16"
+  ],
+  "contrast": [
+   "5.50:1 (need 7) 12px oklch(0.51 0.005 90) on rgb(250,250,249) — button.px-2.py-1.text-xs «EN»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CONNEXION»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CRÉER UN ACCÈS»",
+    "outline": "auto 1px rgb(20, 20, 18)",
+    "vis": true
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   }
+  ]
+ },
+ {
+  "name": "confidentialite-fr-clair-360",
+  "variant": "fr-clair",
+  "width": 360,
+  "url": "/confidentialite",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 141x40",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x28"
+  ],
+  "contrast": [
+   "5.50:1 (need 7) 12px oklch(0.51 0.005 90) on rgb(250,250,249) — span.text-xs.text-muted-foreground «Mise à jour : 6 septembre 2026»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 2
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "invitation-fr-clair-360",
+  "variant": "fr-clair",
+  "width": 360,
+  "url": "/invitation",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [],
+  "contrast": [],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": []
+ },
+ {
+  "name": "reinitialiser-fr-clair-360",
+  "variant": "fr-clair",
+  "width": 360,
+  "url": "/reinitialiser",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.mt-8.inline-block.text-xs «Retour à la connexion» 122x16"
+  ],
+  "contrast": [
+   "5.50:1 (need 7) 12px oklch(0.51 0.005 90) on rgb(250,250,249) — button.px-2.py-1.text-xs «EN»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "A «Retour à la connexion»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "pme-fr-clair-360",
+  "variant": "fr-clair",
+  "width": 360,
+  "url": "/pme",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "5.50:1 (need 7) 14px oklch(0.51 0.005 90) on rgb(250,250,249) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "cabinet-fr-clair-360",
+  "variant": "fr-clair",
+  "width": 360,
+  "url": "/cabinet",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "5.50:1 (need 7) 14px oklch(0.51 0.005 90) on rgb(250,250,249) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "accueil-fr-clair-1280",
+  "variant": "fr-clair",
+  "width": 1280,
+  "url": "/",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.border.border-foreground.bg-foreground «SE CONNECTER» 131x34"
+  ],
+  "contrast": [
+   "5.50:1 (need 7) 12px oklch(0.51 0.005 90) on rgb(250,250,249) — p.text-xs.text-muted-foreground «Comptabilité augmentée, chiffre gouverné»",
+   "5.74:1 (need 7) 12px oklch(0.51 0.005 90) on rgb(255,255,255) — p.num.text-xs.text-muted-foreground «01»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "A «SE CONNECTER»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "A «Ouvrir mon espace»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "A «Voir la doctrine»",
+    "outline": "auto 1px rgb(20, 20, 18)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "auth-fr-clair-1280",
+  "variant": "fr-clair",
+  "width": 1280,
+  "url": "/auth",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "button.flex-1.px-4.py-2 «CONNEXION» 199x32",
+   "button.flex-1.px-4.py-2 «CRÉER UN ACCÈS» 199x32",
+   "input.mt-1.w-full.border «» 400x38",
+   "input.mt-1.w-full.border «» 400x38",
+   "button.text-xs.text-muted-foreground.underline «Mot de passe oublié ?» 124x16",
+   "a.mt-8.inline-block.text-xs «Retour à l'accueil» 98x16"
+  ],
+  "contrast": [
+   "5.50:1 (need 7) 12px oklch(0.51 0.005 90) on rgb(250,250,249) — button.px-2.py-1.text-xs «EN»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CONNEXION»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «CRÉER UN ACCÈS»",
+    "outline": "auto 1px rgb(20, 20, 18)",
+    "vis": true
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   }
+  ]
+ },
+ {
+  "name": "confidentialite-fr-clair-1280",
+  "variant": "fr-clair",
+  "width": 1280,
+  "url": "/confidentialite",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 145x20",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x19",
+   "a.underline «hello@algoria-factory.com» 188x28"
+  ],
+  "contrast": [
+   "5.50:1 (need 7) 12px oklch(0.51 0.005 90) on rgb(250,250,249) — span.text-xs.text-muted-foreground «Mise à jour : 6 septembre 2026»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 2
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "invitation-fr-clair-1280",
+  "variant": "fr-clair",
+  "width": 1280,
+  "url": "/invitation",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [],
+  "contrast": [],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": []
+ },
+ {
+  "name": "reinitialiser-fr-clair-1280",
+  "variant": "fr-clair",
+  "width": 1280,
+  "url": "/reinitialiser",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [
+   "CLIPPED span.sr-only «Langue»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 142x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.mt-8.inline-block.text-xs «Retour à la connexion» 122x16"
+  ],
+  "contrast": [
+   "5.50:1 (need 7) 12px oklch(0.51 0.005 90) on rgb(250,250,249) — button.px-2.py-1.text-xs «EN»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(103, 102, 99)",
+    "vis": true
+   },
+   {
+    "el": "A «Retour à la connexion»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(250, 250, 249)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "pme-fr-clair-1280",
+  "variant": "fr-clair",
+  "width": 1280,
+  "url": "/pme",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "5.50:1 (need 7) 14px oklch(0.51 0.005 90) on rgb(250,250,249) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "cabinet-fr-clair-1280",
+  "variant": "fr-clair",
+  "width": 1280,
+  "url": "/cabinet",
+  "dir": "ltr",
+  "dark": false,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "5.50:1 (need 7) 14px oklch(0.51 0.005 90) on rgb(250,250,249) — p.text-sm.text-muted-foreground «Pas de connexion. Ce geste sera possible»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «Réessayer»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "accueil-ar-sombre-360",
+  "variant": "ar-sombre",
+  "width": 360,
+  "url": "/",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [
+   "CLIPPED span.sr-only «اللغة»"
+  ],
+  "small": [
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.border.border-foreground.bg-foreground «الدخول» 72x34"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-xs.text-muted-foreground «محاسبة معززة، أرقام محكومة»",
+   "6.28:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(22,22,20) — p.num.text-xs.text-muted-foreground «01»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «الدخول»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «فتح مساحتي»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «قراءة المبادئ»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "auth-ar-sombre-360",
+  "variant": "ar-sombre",
+  "width": 360,
+  "url": "/auth",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [
+   "CLIPPED span.sr-only «اللغة»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «ماليكا أوفيس» 93x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "button.flex-1.px-4.py-2 «الدخول» 155x32",
+   "button.flex-1.px-4.py-2 «إنشاء حساب» 155x32",
+   "input.mt-1.w-full.border «» 312x38",
+   "input.mt-1.w-full.border «» 312x38",
+   "button.text-xs.text-muted-foreground.underline «نسيت كلمة المرور؟» 98x16",
+   "a.mt-8.inline-block.text-xs «العودة إلى الصفحة الرئيسية» 148x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «FR»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «ماليكا أوفيس»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «الدخول»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «إنشاء حساب»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   }
+  ]
+ },
+ {
+  "name": "confidentialite-ar-sombre-360",
+  "variant": "ar-sombre",
+  "width": 360,
+  "url": "/confidentialite",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 139x40",
+   "a.underline «hello@algoria-factory.com» 188x28",
+   "a.underline «hello@algoria-factory.com» 188x28",
+   "a.underline «hello@algoria-factory.com» 188x28"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — span.text-xs.text-muted-foreground «Mise à jour : 6 septembre 2026»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 2
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "invitation-ar-sombre-360",
+  "variant": "ar-sombre",
+  "width": 360,
+  "url": "/invitation",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [],
+  "contrast": [],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": []
+ },
+ {
+  "name": "reinitialiser-ar-sombre-360",
+  "variant": "ar-sombre",
+  "width": 360,
+  "url": "/reinitialiser",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [
+   "CLIPPED span.sr-only «اللغة»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «ماليكا أوفيس» 93x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.mt-8.inline-block.text-xs «العودة إلى الدخول» 97x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «FR»",
+   "4.93:1 (need 7) 12px oklch(0.62 0.17 25) on rgb(14,13,12) — p.mt-6.border.border-signal-stop «انتهت صلاحية هذا الرابط أو سبق استعماله.»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «ماليكا أوفيس»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «العودة إلى الدخول»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «ماليكا أوفيس»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "pme-ar-sombre-360",
+  "variant": "ar-sombre",
+  "width": 360,
+  "url": "/pme",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «لا يوجد اتصال. سيكون هذا ممكنًا عند عودة»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "cabinet-ar-sombre-360",
+  "variant": "ar-sombre",
+  "width": 360,
+  "url": "/cabinet",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 360,
+  "vw": 360,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «لا يوجد اتصال. سيكون هذا ممكنًا عند عودة»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "accueil-ar-sombre-1280",
+  "variant": "ar-sombre",
+  "width": 1280,
+  "url": "/",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [
+   "CLIPPED span.sr-only «اللغة»"
+  ],
+  "small": [
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.border.border-foreground.bg-foreground «الدخول» 72x34"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-xs.text-muted-foreground «محاسبة معززة، أرقام محكومة»",
+   "6.28:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(22,22,20) — p.num.text-xs.text-muted-foreground «01»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «الدخول»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «فتح مساحتي»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «قراءة المبادئ»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "auth-ar-sombre-1280",
+  "variant": "ar-sombre",
+  "width": 1280,
+  "url": "/auth",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [
+   "CLIPPED span.sr-only «اللغة»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «ماليكا أوفيس» 93x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "button.flex-1.px-4.py-2 «الدخول» 199x32",
+   "button.flex-1.px-4.py-2 «إنشاء حساب» 199x32",
+   "input.mt-1.w-full.border «» 400x38",
+   "input.mt-1.w-full.border «» 400x38",
+   "button.text-xs.text-muted-foreground.underline «نسيت كلمة المرور؟» 98x16",
+   "a.mt-8.inline-block.text-xs «العودة إلى الصفحة الرئيسية» 148x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «FR»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «ماليكا أوفيس»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «الدخول»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «إنشاء حساب»",
+    "outline": "auto 1px rgb(240, 240, 239)",
+    "vis": true
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   },
+   {
+    "el": "INPUT «»",
+    "outline": "none 1px rgb(16, 16, 16)",
+    "vis": false
+   }
+  ]
+ },
+ {
+  "name": "confidentialite-ar-sombre-1280",
+  "variant": "ar-sombre",
+  "width": 1280,
+  "url": "/confidentialite",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «MALICA OFFICE» 146x20",
+   "a.underline «hello@algoria-factory.com» 188x28",
+   "a.underline «hello@algoria-factory.com» 188x28",
+   "a.underline «hello@algoria-factory.com» 188x28"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — span.text-xs.text-muted-foreground «Mise à jour : 6 septembre 2026»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 1,
+   "h1": 2
+  },
+  "focus": [
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «MALICA OFFICE»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «hello@algoria-factory.com»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "invitation-ar-sombre-1280",
+  "variant": "ar-sombre",
+  "width": 1280,
+  "url": "/invitation",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [],
+  "contrast": [],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": []
+ },
+ {
+  "name": "reinitialiser-ar-sombre-1280",
+  "variant": "ar-sombre",
+  "width": 1280,
+  "url": "/reinitialiser",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [
+   "CLIPPED span.sr-only «اللغة»"
+  ],
+  "small": [
+   "a.text-sm.font-semibold.uppercase «ماليكا أوفيس» 93x20",
+   "button.px-2.py-1.text-xs «FR» 31x24",
+   "button.px-2.py-1.text-xs «EN» 33x24",
+   "button.px-2.py-1.text-xs «العربية» 50x24",
+   "a.mt-8.inline-block.text-xs «العودة إلى الدخول» 97x16"
+  ],
+  "contrast": [
+   "6.73:1 (need 7) 12px oklch(0.68 0.004 90) on rgb(14,13,12) — button.px-2.py-1.text-xs «FR»",
+   "4.93:1 (need 7) 12px oklch(0.62 0.17 25) on rgb(14,13,12) — p.mt-6.border.border-signal-stop «انتهت صلاحية هذا الرابط أو سبق استعماله.»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 1,
+   "nav": 0,
+   "main": 1,
+   "footer": 0,
+   "h1": 1
+  },
+  "focus": [
+   {
+    "el": "A «ماليكا أوفيس»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «EN»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «العربية»",
+    "outline": "auto 1px rgb(14, 13, 12)",
+    "vis": true
+   },
+   {
+    "el": "A «العودة إلى الدخول»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "A «ماليكا أوفيس»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «FR»",
+    "outline": "auto 1px rgb(153, 152, 149)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "pme-ar-sombre-1280",
+  "variant": "ar-sombre",
+  "width": 1280,
+  "url": "/pme",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «لا يوجد اتصال. سيكون هذا ممكنًا عند عودة»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ },
+ {
+  "name": "cabinet-ar-sombre-1280",
+  "variant": "ar-sombre",
+  "width": 1280,
+  "url": "/cabinet",
+  "dir": "rtl",
+  "dark": true,
+  "scrollW": 1280,
+  "vw": 1280,
+  "overflow": [],
+  "small": [],
+  "contrast": [
+   "6.73:1 (need 7) 14px oklch(0.68 0.004 90) on rgb(14,13,12) — p.text-sm.text-muted-foreground «لا يوجد اتصال. سيكون هذا ممكنًا عند عودة»"
+  ],
+  "unlabeled": [],
+  "landmarks": {
+   "header": 0,
+   "nav": 0,
+   "main": 0,
+   "footer": 0,
+   "h1": 0
+  },
+  "focus": [
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   },
+   {
+    "el": "BUTTON «أعد المحاولة»",
+    "outline": "auto 1px rgb(16, 16, 16)",
+    "vis": true
+   }
+  ]
+ }
+]
