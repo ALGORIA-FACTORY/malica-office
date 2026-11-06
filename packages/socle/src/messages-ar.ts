@@ -2340,6 +2340,8 @@ export const ar: Dict = {
   "refus.lecture.citation_orpheline": "تستشهد القراءة بالحقل {champ} في موضع لم تُقرأ فيه أي كلمة.",
   "refus.piece.empreinte": "بصمة هذه الوثيقة غير صالحة.",
   "refus.piece.scellee": "محتوى هذه الوثيقة مختوم: لا يُستبدل.",
+  "refus.piece.type_de_contenu":
+    "هذا النوع من الملفات ليس وثيقة: أودِع ملف PDF أو صورة (JPEG أو PNG أو WebP أو HEIC).",
   "refus.piece.non_partagee": "هذه الوثيقة غير مشتركة مع المكتب.",
   "refus.piece.aucune_demande": "لا طلب معلّقًا على هذه الوثيقة.",
   "refus.rattachement.motif": "اذكر لماذا تفصل هذه الوثيقة.",
