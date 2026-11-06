@@ -43,6 +43,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
@@ -68,7 +69,7 @@ const VERROU = JSON.parse(
   readFileSync(new URL("./verrous/integrite-de-la-base.json", import.meta.url), "utf8"),
 ) as Verrou;
 
-const RACINE = new URL("../../../", import.meta.url).pathname;
+const RACINE = fileURLToPath(new URL("../../../", import.meta.url));
 
 /* ------------------------------------------------------------------ le code */
 

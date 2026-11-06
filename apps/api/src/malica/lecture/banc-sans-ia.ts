@@ -41,6 +41,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
 import pg from "pg";
@@ -1320,4 +1321,4 @@ async function principal(): Promise<void> {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await principal();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await principal();

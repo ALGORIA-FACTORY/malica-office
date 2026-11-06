@@ -21,7 +21,10 @@ import pg from "pg";
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
+import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 import { executerRpc } from "../rpc.ts";
+import { DEVISES_LUES_D_ESSAI } from "./devise-d-essai.ts";
+import { partiesSelonLeSens } from "./parties-selon-le-sens.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
@@ -129,5 +132,51 @@ describe("le sens corrigé replace les parties", { skip: !BASE_CONFIGUREE }, () 
     const destinataire = analyse.controles.find((c) => c.code === "destinataire");
     assert.ok(destinataire, JSON.stringify(analyse.controles));
     assert.notEqual(destinataire.statut, "rejet", destinataire.motif);
+  });
+
+  /*
+   * Non-regression (CI maestro, 6 November 2026): with no engine built, `capture.analyser`
+   * answered 500 on every piece whose sens was confirmed — the call to the engine was the
+   * only one in the reading chain left unguarded. A failing engine is logged, and the
+   * reading stands.
+   */
+  it("un moteur qui tombe ne fait pas tomber le jugement : la lecture fait foi", async () => {
+    const jour = "2026-11-02";
+    const places = await sousIdentiteDuServeur(u.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `select id from ref.jurisdiction_packs
+          where jurisdiction = 'TN' and effective_from <= $1::date
+          order by effective_from desc limit 1`,
+        [jour],
+      );
+      const { matricule } = await lireLesReglesDeLecture(db, rows[0]!.id, jour);
+      return partiesSelonLeSens(
+        db,
+        {
+          tenantId: org,
+          packId: rows[0]!.id,
+          jour,
+          documentKind: "facture_achat",
+          documentKindStatut: "confirme",
+          plan: jetons.map(([text, x, y], ordinal) => ({
+            page: 1,
+            ordinal,
+            text,
+            x0: x,
+            y0: y,
+            x1: x + 0.008 * text.length,
+            y1: y + 0.012,
+          })),
+          lues: { emetteur: dossierMf, client: fournisseurMf },
+          dossier: { matricule: dossierMf, raisonSociale: "ALGORIA FACTORY SUARL" },
+          devise: DEVISES_LUES_D_ESSAI.find((d) => d.code === "TND"),
+          formatDuMatricule: matricule,
+        },
+        () => {
+          throw new Error("sudoku : moteur absent");
+        },
+      );
+    });
+    assert.equal(places, null);
   });
 });

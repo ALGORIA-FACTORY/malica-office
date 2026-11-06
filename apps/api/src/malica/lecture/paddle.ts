@@ -304,7 +304,7 @@ async function* tempsDeLecture(corps: ReadableStream<Uint8Array>): AsyncGenerato
  * texte rogné), la probabilité de son caractère le moins sûr ; rien quand le service ne
  * donne pas une probabilité par caractère.
  */
-export function plusFaibles(l: Pick<LignePaddle, "texte" | "caracteres">): number[] | undefined {
+function plusFaibles(l: Pick<LignePaddle, "texte" | "caracteres">): number[] | undefined {
   return parMot(l.texte, l.caracteres, (v) => Math.min(...v));
 }
 
@@ -312,7 +312,7 @@ export function plusFaibles(l: Pick<LignePaddle, "texte" | "caracteres">): numbe
  * Pour chaque mot de la ligne, le plus fort manque entre deux de ses caractères (pas après
  * le dernier : là commence le blanc qui sépare les mots) ; rien sans le service.
  */
-export function plusForts(l: Pick<LignePaddle, "texte" | "manques">): number[] | undefined {
+function plusForts(l: Pick<LignePaddle, "texte" | "manques">): number[] | undefined {
   return parMot(l.texte, l.manques, (v) => (v.length > 1 ? Math.max(...v.slice(0, -1)) : 0));
 }
 

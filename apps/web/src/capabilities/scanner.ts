@@ -78,7 +78,7 @@ export const SHARPNESS_MIN = 0.0022;
  */
 export const CLARTE_MIN = 90;
 export const OBLIQUITE_MIN = 0.6;
-export const OMBRE_MAX = 0.6;
+const OMBRE_MAX = 0.6;
 /** Part d'encre au-dessous de laquelle une page est considérée vierge. */
 const BLANK_INK_MAX = 0.012;
 

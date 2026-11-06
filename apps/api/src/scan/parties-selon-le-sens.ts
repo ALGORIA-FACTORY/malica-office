@@ -27,7 +27,7 @@
  */
 import { memeMatricule, type FormatDuMatricule } from "@malica/socle/matricule";
 import type { PageToken } from "@malica/socle/ports/malica";
-import { resoudre } from "@malica/sudoku";
+import { resoudre, type EntreeDuSudoku, type SortieDuSudoku } from "@malica/sudoku";
 
 import type { Requete } from "../db.ts";
 import { sensConfirme } from "../depots/sens.ts";
@@ -63,6 +63,7 @@ export async function partiesSelonLeSens(
     readonly devise: DeviseLue | undefined;
     readonly formatDuMatricule: FormatDuMatricule;
   },
+  moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
 ): Promise<MatriculesDesParties | null> {
   const sens = sensConfirme(p.documentKind, p.documentKindStatut);
   if (!sens || !p.dossier.matricule || !p.devise || p.plan.length === 0) return null;
@@ -74,16 +75,32 @@ export async function partiesSelonLeSens(
       [p.tenantId],
     ),
   ]);
-  const sortie = resoudreLaPiece(jetonsDuSudoku(p.plan, p.devise, contexte), contexte, resoudre, {
-    dossier: { matricule: p.dossier.matricule, raison_sociale: p.dossier.raisonSociale },
-    tiers: tiers.flatMap((t) =>
-      t.identifiant_fiscal
-        ? [{ code: t.code, matricule: t.identifiant_fiscal, raison_sociale: t.raison_sociale }]
-        : [],
-    ),
-    formes_juridiques: contexte.formesJuridiques,
-    sens,
-  });
+  /*
+   * A failing engine (absent, refused memory, unreadable grid) never takes the judgement
+   * down: it is logged, and the reading stands — the same rule as `sudoku.ts`. Only the
+   * engine call is guarded: a database error keeps propagating, since the transaction
+   * would be aborted anyway.
+   */
+  let sortie: SortieDuSudoku;
+  try {
+    sortie = resoudreLaPiece(jetonsDuSudoku(p.plan, p.devise, contexte), contexte, moteur, {
+      dossier: { matricule: p.dossier.matricule, raison_sociale: p.dossier.raisonSociale },
+      tiers: tiers.flatMap((t) =>
+        t.identifiant_fiscal
+          ? [{ code: t.code, matricule: t.identifiant_fiscal, raison_sociale: t.raison_sociale }]
+          : [],
+      ),
+      formes_juridiques: contexte.formesJuridiques,
+      sens,
+    });
+  } catch (e: unknown) {
+    console.error(
+      `sudoku : parties non placées selon le sens — dossier ${p.tenantId} : ${
+        e instanceof Error ? e.message : String(e)
+      }`,
+    );
+    return null;
+  }
   const parties = sortie.parties;
   if (parties?.statut !== "prouve") return null;
   const prouve = (v: { valeur: string; statut: string } | null) =>
