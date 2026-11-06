@@ -89,7 +89,12 @@ export function computeAmortissement(params: AmortissementParams): Amortissement
       taux = tauxLineaire;
     }
 
-    let dotation = base.times(taux).times(prorata);
+    // Chaque annuité est ARRONDIE à l'unité de la devise, comme elle sera
+    // passée en écriture ; le cumul est la somme des annuités arrondies, et
+    // la dernière solde ce qui reste. Arrondies une à une, trois annuités de
+    // 33,333 faisaient 99,999 pour une base de 100 : un millime jamais amorti,
+    // et une VNC finale non nulle (6 novembre 2026).
+    let dotation = D(toFixedStr(base.times(taux).times(prorata), decimals));
     if (dotation.gt(restant)) dotation = restant;
     if (i === exercices - 1) dotation = restant;
     if (dotation.lt(0)) dotation = D(0);
