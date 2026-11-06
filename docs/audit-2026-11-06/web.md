@@ -29,36 +29,36 @@ Deux passes : **brute** (le serveur nitro seul, sans compression) et
 **gzip** (un relais `script-gzip-proxy.mjs.txt` qui reproduit le `encode zstd
 gzip` de `infra/caddy/Caddyfile` — c'est la condition de production).
 
-| Écran (gzip, ≈ production) | Perf | A11y | Bonnes pratiques | SEO | FCP | LCP | CLS |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `/` | **77** | 100 | 100 | 100 | 4,1 s | 4,1 s | 0,001 |
-| `/auth` | **74** | 100 | 96 | 100 | 4,4 s | 4,4 s | 0 |
-| `/confidentialite` | **64** | 100 | 100 | 100 | 4,4 s | 4,4 s | **0,211** |
-| `/invitation` | **75** | 100 | 96 | 63 | 4,1 s | 4,4 s | 0 |
-| `/reinitialiser` | **73** | 100 | 100 | 100 | 4,1 s | 4,8 s | 0,003 |
-| `/pme` (sans API) | **73** | 100 | 96 | 100 | 3,5 s | 5,1 s | 0 |
-| `/cabinet` (sans API) | **74** | 100 | 96 | 100 | 3,8 s | 4,8 s | 0 |
+| Écran (gzip, ≈ production) | Perf   | A11y | Bonnes pratiques | SEO | FCP   | LCP   | CLS       |
+| -------------------------- | ------ | ---- | ---------------- | --- | ----- | ----- | --------- |
+| `/`                        | **77** | 100  | 100              | 100 | 4,1 s | 4,1 s | 0,001     |
+| `/auth`                    | **74** | 100  | 96               | 100 | 4,4 s | 4,4 s | 0         |
+| `/confidentialite`         | **64** | 100  | 100              | 100 | 4,4 s | 4,4 s | **0,211** |
+| `/invitation`              | **75** | 100  | 96               | 63  | 4,1 s | 4,4 s | 0         |
+| `/reinitialiser`           | **73** | 100  | 100              | 100 | 4,1 s | 4,8 s | 0,003     |
+| `/pme` (sans API)          | **73** | 100  | 96               | 100 | 3,5 s | 5,1 s | 0         |
+| `/cabinet` (sans API)      | **74** | 100  | 96               | 100 | 3,8 s | 4,8 s | 0         |
 
 Sans compression (serveur nitro nu) : 57 / 57 / 55 / 58 / 57 / 58 / 57, FCP ≈ 8 s.
 
 - **Objectif ≥ 95 : non atteint en performance, sur tous les écrans.** A11y,
   bonnes pratiques et SEO sont au plafond ou presque.
 - Les 96 en bonnes pratiques viennent de l'erreur console `EchecAuth: service
-  d'authentification injoignable` — artefact de la mesure sans API.
+d'authentification injoignable` — artefact de la mesure sans API.
 - Le SEO 63 de `/invitation` est le `noindex` voulu (`routes/invitation.tsx:16`).
 - Un 100 en accessibilité Lighthouse ne vaut que pour le sous-ensemble axe
   automatisé, niveau AA : voir §3, qui mesure AAA.
 
 **Audits qui coûtent les points** (passe gzip, `/`) :
 
-| Audit | Mesure |
-| --- | --- |
-| render-blocking | `styles-*.css` 35 Ko gz (232 Ko brut) + `index-*.css` 5 Ko : 1 050 ms estimés |
-| network-dependency-tree | 46 requêtes, 573 Ko transférés avant interactivité, dont ≈ 30 `modulepreload` JS |
-| unused-javascript | `index-*.js` 120 Ko gz, **47 % inutilisé** sur l'accueil |
-| polices | 11 fichiers woff2 chargés sur une page française : Inter latin **et** latin-ext ×3 graisses, Plex Mono ×2, **Noto Kufi Arabic** (44 Ko) |
-| layout-shift (`/confidentialite`) | 0,09 à 0,21 selon la passe : bascule de police Inter sur la section « Ce que nous collectons » |
-| uses-text-compression (passe brute) | 795–862 Ko économisables — couvert par Caddy en production, pas par nitro |
+| Audit                               | Mesure                                                                                                                                  |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| render-blocking                     | `styles-*.css` 35 Ko gz (232 Ko brut) + `index-*.css` 5 Ko : 1 050 ms estimés                                                           |
+| network-dependency-tree             | 46 requêtes, 573 Ko transférés avant interactivité, dont ≈ 30 `modulepreload` JS                                                        |
+| unused-javascript                   | `index-*.js` 120 Ko gz, **47 % inutilisé** sur l'accueil                                                                                |
+| polices                             | 11 fichiers woff2 chargés sur une page française : Inter latin **et** latin-ext ×3 graisses, Plex Mono ×2, **Noto Kufi Arabic** (44 Ko) |
+| layout-shift (`/confidentialite`)   | 0,09 à 0,21 selon la passe : bascule de police Inter sur la section « Ce que nous collectons »                                          |
+| uses-text-compression (passe brute) | 795–862 Ko économisables — couvert par Caddy en production, pas par nitro                                                               |
 
 ---
 
@@ -101,22 +101,22 @@ et croise chaque jeton de texte avec chaque surface. 1 086 paires ; **445 sous
 `contraste-jetons-toutes-paires.json`. Extrait (texte sur fond de page / sur
 fond sourd) :
 
-| Thème | Jeton | Sur fond | Sur sourd | Verdict AAA |
-| --- | --- | --- | --- | --- |
-| Edition One clair | `--muted-foreground` | 5,51 | 4,89 | échoue (574 usages `text-muted-foreground`) |
-| Edition One clair | `--signal-warn` | **3,57** | **3,17** | échoue même AA (60 usages) |
-| Edition One clair | `--marigold` | **3,03** | **2,69** | échoue même AA (31 usages) |
-| Edition One clair | `--signal-ok` / `--signal-info` | 5,46 / 5,73 | 4,85 / 5,09 | échoue |
-| Edition One sombre (défaut) | `--muted-foreground` | 6,74 | 5,55 | échoue |
-| Edition One sombre | `--destructive` / `--signal-stop` | 4,53 / 4,91 | **3,73 / 4,05** | échoue, AA aussi sur sourd |
-| Edition One sombre | `--destructive-foreground` sur `--destructive` | 4,53 | — | échoue |
-| Cabinet (clair, `color-scheme: light`, aussi en `.dark`) | `--muted-foreground` #667085 | 4,64 | **4,35** | échoue AA sur `--muted` |
-| Cabinet | `--signal-warn` / `--marigold` | 4,77 / 4,73 | **4,47 / 4,43** | échoue AA sur sourd |
-| PME clair | `--t3` | 5,78 | 4,96 | échoue |
-| PME clair | `--az` / `--am` / `--ve` / `--mg` | 5,28 / 5,87 / 5,97 / 5,81 | 4,54–5,13 | échoue |
-| PME clair | `--marigold` (pont) | **3,16** | **2,71** | échoue AA |
-| PME sombre (défaut) | `--t3` | 6,10 | 4,78 | échoue |
-| PME sombre | `--mg` | 6,34 | 4,97 | échoue |
+| Thème                                                    | Jeton                                          | Sur fond                  | Sur sourd       | Verdict AAA                                 |
+| -------------------------------------------------------- | ---------------------------------------------- | ------------------------- | --------------- | ------------------------------------------- |
+| Edition One clair                                        | `--muted-foreground`                           | 5,51                      | 4,89            | échoue (574 usages `text-muted-foreground`) |
+| Edition One clair                                        | `--signal-warn`                                | **3,57**                  | **3,17**        | échoue même AA (60 usages)                  |
+| Edition One clair                                        | `--marigold`                                   | **3,03**                  | **2,69**        | échoue même AA (31 usages)                  |
+| Edition One clair                                        | `--signal-ok` / `--signal-info`                | 5,46 / 5,73               | 4,85 / 5,09     | échoue                                      |
+| Edition One sombre (défaut)                              | `--muted-foreground`                           | 6,74                      | 5,55            | échoue                                      |
+| Edition One sombre                                       | `--destructive` / `--signal-stop`              | 4,53 / 4,91               | **3,73 / 4,05** | échoue, AA aussi sur sourd                  |
+| Edition One sombre                                       | `--destructive-foreground` sur `--destructive` | 4,53                      | —               | échoue                                      |
+| Cabinet (clair, `color-scheme: light`, aussi en `.dark`) | `--muted-foreground` #667085                   | 4,64                      | **4,35**        | échoue AA sur `--muted`                     |
+| Cabinet                                                  | `--signal-warn` / `--marigold`                 | 4,77 / 4,73               | **4,47 / 4,43** | échoue AA sur sourd                         |
+| PME clair                                                | `--t3`                                         | 5,78                      | 4,96            | échoue                                      |
+| PME clair                                                | `--az` / `--am` / `--ve` / `--mg`              | 5,28 / 5,87 / 5,97 / 5,81 | 4,54–5,13       | échoue                                      |
+| PME clair                                                | `--marigold` (pont)                            | **3,16**                  | **2,71**        | échoue AA                                   |
+| PME sombre (défaut)                                      | `--t3`                                         | 6,10                      | 4,78            | échoue                                      |
+| PME sombre                                               | `--mg`                                         | 6,34                      | 4,97            | échoue                                      |
 
 Au rendu (Playwright, contraste effectif texte/fond calculé élément par
 élément, `mesures-playwright.json`) : sur les écrans publics, seuls passent sous
@@ -137,7 +137,7 @@ Tabulation Playwright (8 pressions par écran, `outline`/`box-shadow` calculés)
 
 - **`/auth` (et `/reinitialiser`, `onboarding.tsx:133-180`,
   `OuvrirDossier.tsx:249`)** : les champs portent `outline-none
-  focus:border-foreground` (`routes/auth.tsx:264`, `routes/reinitialiser.tsx:136`).
+focus:border-foreground` (`routes/auth.tsx:264`, `routes/reinitialiser.tsx:136`).
   Mesuré : `outline: none`, aucune ombre ; le seul signe est une bordure de
   1 px qui change de teinte. Conforme 2.4.7 au mieux, **échoue 2.4.13 (AAA,
   2 px d'épaisseur)**. Correctif : retirer `outline-none` et laisser une règle
@@ -210,15 +210,15 @@ Règle produit : aucune erreur technique à l'écran. `lib/erreur-lisible.ts`
 (`texteDeLErreur`) l'applique bien et la plupart des écrans l'emploient. Restent
 (grep `\.message` rendu en JSX) :
 
-| Gravité | Lieu | Ce qui s'affiche |
-| --- | --- | --- |
-| Haute | `components/malica/MalicaChat.tsx:428` | `mutation.error.message` brut |
-| Haute | `routes/_authenticated/pme.malica.tsx:460` | `question.error.message` brut |
-| Haute | `components/malica/OuvrirDossier.tsx:90` (rendu `:114`, `:163`) | `e.message` ou `String(e)` brut, ouverture et invitation de dossier |
-| Haute | `routes/invitation.tsx:171` | `accepter.error.message` brut, écran public |
-| Moyenne | `lib/erreur-lisible.ts:71-75` → `direUnRefus` | un refus 4xx qui n'est pas une clé du dictionnaire est « rendu tel quel » : un message de base ou de pilote en 4xx atteint l'écran |
-| Basse | `lib/erreur-lisible.ts` n'est pas branché sur l'écran de connexion | `auth.tsx:224` dit bien une phrase prévue, mais n'inscrit rien au journal |
-| Basse | `lib/error-page.ts` | page d'erreur serveur en anglais seul, hors marque (system-ui, gris, coins arrondis) |
+| Gravité | Lieu                                                               | Ce qui s'affiche                                                                                                                   |
+| ------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Haute   | `components/malica/MalicaChat.tsx:428`                             | `mutation.error.message` brut                                                                                                      |
+| Haute   | `routes/_authenticated/pme.malica.tsx:460`                         | `question.error.message` brut                                                                                                      |
+| Haute   | `components/malica/OuvrirDossier.tsx:90` (rendu `:114`, `:163`)    | `e.message` ou `String(e)` brut, ouverture et invitation de dossier                                                                |
+| Haute   | `routes/invitation.tsx:171`                                        | `accepter.error.message` brut, écran public                                                                                        |
+| Moyenne | `lib/erreur-lisible.ts:71-75` → `direUnRefus`                      | un refus 4xx qui n'est pas une clé du dictionnaire est « rendu tel quel » : un message de base ou de pilote en 4xx atteint l'écran |
+| Basse   | `lib/erreur-lisible.ts` n'est pas branché sur l'écran de connexion | `auth.tsx:224` dit bien une phrase prévue, mais n'inscrit rien au journal                                                          |
+| Basse   | `lib/error-page.ts`                                                | page d'erreur serveur en anglais seul, hors marque (system-ui, gris, coins arrondis)                                               |
 
 Correctif universel : remplacer ces quatre rendus par `texteDeLErreur(e, OU,
 t(...))`, et faire de « non-clé » un cas journalisé qui rend le défaut. La
@@ -257,26 +257,26 @@ cabinet réalignée sur Ink/Paper (+ Evergreen pour l'accent) ; les séries de
   est **sombre** (`APPARENCE_AVANT_RENDU`) : barre d'état blanche au-dessus
   d'un écran noir, et écran de lancement blanc avant un écran noir — le flash
   que le script de tête existe pour éviter. Correctif : deux `<meta
-  name="theme-color" media="(prefers-color-scheme: …)">` et un
+name="theme-color" media="(prefers-color-scheme: …)">` et un
   `background_color` Ink, puis mise à jour par `apparence.ts`.
 
 ---
 
 ## Classement et correctifs
 
-| # | Gravité | Constat | Correctif universel | styles-pme ? |
-| --- | --- | --- | --- | --- |
-| 1 | **P1** | Perf mobile 64–77 (gzip), 55–58 sans compression ; FCP ≈ 4 s | sortir `@import "./styles-pme.css"` de `styles.css` vers la route PME, et la feuille cabinet vers le cabinet (232 Ko bruts bloquants sur l'accueil) ; ne précharger que Inter latin 400/600 ; dictionnaire `i18n` chargé par langue au lieu du français embarqué ; découper `index` (47 % inutilisé) | non (on déplace l'import, pas la feuille) |
-| 2 | **P1** | 4 rendus de `error.message` brut + refus 4xx « tels quels » | `texteDeLErreur` partout ; non-clé → journal + défaut | non |
-| 3 | **P2** | Contraste AAA : 445/1 086 paires < 7:1, dont 121 < 4,5:1 (`--signal-warn`, `--marigold` clairs ; muted cabinet sur sourd ; stop/destructive sombres) | réétalonner les jetons sur le fond sourd | **oui pour les jetons PME** |
-| 4 | **P2** | Cibles < 44 px sur tous les écrans publics (sélecteur de langue 24 px) | `min-h-11` sur les composants partagés | non |
-| 5 | **P2** | Focus des champs publics = bordure 1 px ; `box-shadow:none !important` tue 20 anneaux | `:focus-visible` outline 2 px global ; anneaux → outline | non |
-| 6 | **P2** | RTL : `/confidentialite` français en RTL ; 9 icônes non retournées ; un `translate-x` physique | `dir="ltr"`, `rtl:-scale-x-100`, `rtl:translate-x-1/2` | non |
-| 7 | **P3** | Palette cabinet et pilotage hors marque, ≈ 200 littéraux | jetons nommés | non |
-| 8 | **P3** | `theme-color` et manifeste blancs sur thème sombre par défaut | méta par schéma | non |
-| 9 | **P3** | 514 Ko gz de `.woff` hérités dans le bundle Capgo (21 %), jamais lus par la WebView | importer les CSS fontsource woff2 seuls, ou filtrer `*.woff` au build de coque | non |
-| 10 | **P3** | CLS 0,09–0,21 sur `/confidentialite` (bascule de police) | `size-adjust` sur la police de repli, ou préchargement d'Inter 400 | non |
-| 11 | **P3** | Import dynamique inefficace de `scanner.ts` ; écran « Pas de connexion » sans repère ; deux `h1` | nettoyage | non |
+| #   | Gravité | Constat                                                                                                                                              | Correctif universel                                                                                                                                                                                                                                                                                  | styles-pme ?                              |
+| --- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| 1   | **P1**  | Perf mobile 64–77 (gzip), 55–58 sans compression ; FCP ≈ 4 s                                                                                         | sortir `@import "./styles-pme.css"` de `styles.css` vers la route PME, et la feuille cabinet vers le cabinet (232 Ko bruts bloquants sur l'accueil) ; ne précharger que Inter latin 400/600 ; dictionnaire `i18n` chargé par langue au lieu du français embarqué ; découper `index` (47 % inutilisé) | non (on déplace l'import, pas la feuille) |
+| 2   | **P1**  | 4 rendus de `error.message` brut + refus 4xx « tels quels »                                                                                          | `texteDeLErreur` partout ; non-clé → journal + défaut                                                                                                                                                                                                                                                | non                                       |
+| 3   | **P2**  | Contraste AAA : 445/1 086 paires < 7:1, dont 121 < 4,5:1 (`--signal-warn`, `--marigold` clairs ; muted cabinet sur sourd ; stop/destructive sombres) | réétalonner les jetons sur le fond sourd                                                                                                                                                                                                                                                             | **oui pour les jetons PME**               |
+| 4   | **P2**  | Cibles < 44 px sur tous les écrans publics (sélecteur de langue 24 px)                                                                               | `min-h-11` sur les composants partagés                                                                                                                                                                                                                                                               | non                                       |
+| 5   | **P2**  | Focus des champs publics = bordure 1 px ; `box-shadow:none !important` tue 20 anneaux                                                                | `:focus-visible` outline 2 px global ; anneaux → outline                                                                                                                                                                                                                                             | non                                       |
+| 6   | **P2**  | RTL : `/confidentialite` français en RTL ; 9 icônes non retournées ; un `translate-x` physique                                                       | `dir="ltr"`, `rtl:-scale-x-100`, `rtl:translate-x-1/2`                                                                                                                                                                                                                                               | non                                       |
+| 7   | **P3**  | Palette cabinet et pilotage hors marque, ≈ 200 littéraux                                                                                             | jetons nommés                                                                                                                                                                                                                                                                                        | non                                       |
+| 8   | **P3**  | `theme-color` et manifeste blancs sur thème sombre par défaut                                                                                        | méta par schéma                                                                                                                                                                                                                                                                                      | non                                       |
+| 9   | **P3**  | 514 Ko gz de `.woff` hérités dans le bundle Capgo (21 %), jamais lus par la WebView                                                                  | importer les CSS fontsource woff2 seuls, ou filtrer `*.woff` au build de coque                                                                                                                                                                                                                       | non                                       |
+| 10  | **P3**  | CLS 0,09–0,21 sur `/confidentialite` (bascule de police)                                                                                             | `size-adjust` sur la police de repli, ou préchargement d'Inter 400                                                                                                                                                                                                                                   | non                                       |
+| 11  | **P3**  | Import dynamique inefficace de `scanner.ts` ; écran « Pas de connexion » sans repère ; deux `h1`                                                     | nettoyage                                                                                                                                                                                                                                                                                            | non                                       |
 
 Ce qui reste à mesurer : les écrans authentifiés (PME, cabinet, tour) avec
 une API et une session de test, aux mêmes quatre largeurs et en arabe.
