@@ -1,0 +1,296 @@
+{
+  "id": "093",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "capture": "photo",
+  "gabarit": "F",
+  "scenario": "taux_13",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "tampon",
+    "signature",
+    "souche_carbone",
+    "deux_ecritures"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "تازران للتكييف",
+      "nomAr": "تازران للتكييف",
+      "enseigne": null,
+      "matricule": "5327006E/A/M/000",
+      "matriculeImprime": "5327006E/A/M/000",
+      "adresse": "105، شارع الحرية، بن عروس",
+      "telephone": "00 47 567 622",
+      "fax": "00 59 488 818",
+      "email": null,
+      "site": null,
+      "rc": "B107048072016",
+      "rib": "99 124 6772274701750 16",
+      "banque": "Crédit Selvane",
+      "code": "C6961386",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "01/07/2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "إقامة بالنزل، ليلة",
+        "designationAr": "إقامة بالنزل، ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "نقل معدات، رحلة",
+        "designationAr": "نقل معدات، رحلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "تازران للتكييف",
+      "document_date": "01/07/2026",
+      "references.numero": "0530",
+      "references.matricule_fiscal": "5327006E/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "105، شارع الحرية، بن عروس",
+      "telephone_emetteur": "00 47 567 622",
+      "registre_commerce_emetteur": "B107048072016",
+      "totals.base_ht": "7 738,092",
+      "totals.vat": "1 005,952",
+      "totals.ttc": "8 745,044",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "إقامة بالنزل، ليلة",
+      "articles[0].quantity": "19",
+      "articles[0].unit_price_ht": "174,492",
+      "articles[0].total_ht": "3 315,348",
+      "articles[1].designation": "نقل معدات، رحلة",
+      "articles[1].quantity": "9",
+      "articles[1].unit_price_ht": "491,416",
+      "articles[1].total_ht": "4 422,744"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[13]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 703096834,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "تازران للتكييف",
+      "document_date": "2026-07-01",
+      "currency": "TND",
+      "references.numero": "0530",
+      "references.matricule_fiscal": "5327006E/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "7738.092",
+      "totals.vat": "1005.952",
+      "totals.ttc": "8745.044",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "7738.092",
+      "lines[0].vat_amount": "1005.952",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "19.000",
+      "articles[0].unit_price_ht": "174.492",
+      "articles[0].total_ht": "3315.348",
+      "articles[1].quantity": "9.000",
+      "articles[1].unit_price_ht": "491.416",
+      "articles[1].total_ht": "4422.744"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "7738.092",
+          "0"
+        ],
+        [
+          "4366",
+          "1005.952",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "8745.044"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "فاتورة",
+      "raison_sociale_emetteur": "تازران للتكييف",
+      "date_operation": "2026-07-01",
+      "numero_facture": "0530",
+      "matricule_fiscal_emetteur": "5327006E/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "105، شارع الحرية، بن عروس",
+      "telephone_email_emetteur": {
+        "telephone": "00 47 567 622"
+      },
+      "registre_commerce_emetteur": "B107048072016",
+      "total_ht": "7738.092",
+      "montant_tva_par_taux": {
+        "13": "1005.952"
+      },
+      "total_ttc": "8745.044",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "13": "7738.092"
+      },
+      "lignes": [
+        {
+          "designation": "إقامة بالنزل، ليلة",
+          "quantite": "19",
+          "prix_unitaire_ht": "174.492",
+          "montant_ligne_ht": "3315.348",
+          "taux_tva_ligne": "13"
+        },
+        {
+          "designation": "نقل معدات، رحلة",
+          "quantite": "9",
+          "prix_unitaire_ht": "491.416",
+          "montant_ligne_ht": "4422.744",
+          "taux_tva_ligne": "13"
+        }
+      ],
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

@@ -444,7 +444,7 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     const piece = await deposer(orgPleine, "arriere-plan", "partage");
     const attendu = await verdictDeLaBase(piece);
     assert.equal(attendu.autorisee, false);
-    const jeton = emettreJeton(u);
+    const jeton = emettreJeton(u, new Date());
 
     // Ce que fait la file hors ligne : la lecture part sans qu'on l'attende.
     const reponse = await fetch(`${base}/malica/lectures/${piece}?attendre=0`, {
@@ -518,7 +518,7 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
       const attendu = await verdictDeLaBase(piece);
       const reponse = await fetch(`${base}/malica/lectures/${piece}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${emettreJeton(u)}` },
+        headers: { Authorization: `Bearer ${emettreJeton(u, new Date())}` },
       });
       const corps = (await reponse.json()) as { erreur?: string; motif?: string };
 

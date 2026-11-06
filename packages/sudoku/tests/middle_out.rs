@@ -24,7 +24,7 @@
 mod commun;
 
 use commun::donnees;
-use commun::jeux::{self, jeton, jeu, la_piece, par_variante_avec};
+use commun::jeux::{self, jeton, jeu, la_piece, par_variante_selon};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -70,7 +70,10 @@ struct Piece {
 }
 
 /// Les deux lectures : (nom, fichier).
-const LECTURES: [(&str, &str); 2] = [("ocr", "jeux_dirigeant_ocr.json"), ("texte", "jeux_dirigeant_jetons.json")];
+const LECTURES: [(&str, &str); 2] = [
+    ("ocr", "jeux_dirigeant_ocr.json"),
+    ("texte", "jeux_dirigeant_jetons.json"),
+];
 
 fn pieces(fichier: &str) -> Vec<Piece> {
     serde_json::from_str(&donnees(fichier)).unwrap()
@@ -96,7 +99,10 @@ fn contexte() -> (Value, Value) {
 }
 
 fn norme_mf(s: &str) -> String {
-    s.chars().filter(|c| !c.is_whitespace()).flat_map(|c| c.to_uppercase()).collect()
+    s.chars()
+        .filter(|c| !c.is_whitespace())
+        .flat_map(|c| c.to_uppercase())
+        .collect()
 }
 
 /// Le dossier (client le plus fréquent du jeu) et ses tiers (un fournisseur sur deux), par jeu.
@@ -104,7 +110,11 @@ fn connus(pieces: &[Piece]) -> BTreeMap<String, Value> {
     let mut out = BTreeMap::new();
     let jeux_: BTreeSet<&str> = pieces.iter().map(|p| jeu(&p.id)).collect();
     for j in jeux_ {
-        let du_jeu: Vec<&Entete> = pieces.iter().filter(|p| jeu(&p.id) == j).map(|p| &p.verite.entete).collect();
+        let du_jeu: Vec<&Entete> = pieces
+            .iter()
+            .filter(|p| jeu(&p.id) == j)
+            .map(|p| &p.verite.entete)
+            .collect();
         let mut compte: BTreeMap<(String, String), u32> = BTreeMap::new();
         for e in &du_jeu {
             if let (Some(m), Some(c)) = (&e.mf_client, &e.client) {
@@ -168,20 +178,34 @@ fn mineures(x: f64) -> i64 {
     (x * 1000.0).round() as i64
 }
 
-/// Les lignes prouvées valent-elles la vérité (quantité, prix, montant ; cellules déduites comprises) ?
+/// Les lignes prouvées valent-elles la vérité (quantité, prix, montant ; cellules déduites
+/// comprises) ? Une ligne partielle tait sa quantité ou son prix : seules ses cellules
+/// rendues se comparent. Chaque ligne lue prend une ligne vraie distincte, les lignes
+/// complètes d'abord.
 fn justes(o: &Value, v: &Verite) -> bool {
-    let Some(vraies) = &v.lignes else { return false };
+    let Some(vraies) = &v.lignes else {
+        return false;
+    };
     let inst = o["lignes"]["instances"].as_array().unwrap();
     if inst.len() != vraies.len() {
         return false;
     }
-    let n = |x: &Value| x["valeur"].as_str().unwrap().parse::<i64>().unwrap();
-    let mut lues: Vec<(i64, i64, i64)> = inst.iter().map(|l| (n(&l["quantite"]), n(&l["prix"]), n(&l["montant"]))).collect();
-    let mut attendues: Vec<(i64, i64, i64)> =
-        vraies.iter().map(|l| (mineures(l.qte), mineures(l.pu_ht), mineures(l.montant_ht))).collect();
-    lues.sort();
-    attendues.sort();
-    lues == attendues
+    let n = |x: &Value| x["valeur"].as_str().map(|s| s.parse::<i64>().unwrap());
+    let mut lues: Vec<(Option<i64>, Option<i64>, i64)> = inst
+        .iter()
+        .map(|l| (n(&l["quantite"]), n(&l["prix"]), n(&l["montant"]).unwrap()))
+        .collect();
+    lues.sort_by_key(|(q, p, _)| (q.is_none(), p.is_none()));
+    let mut libres: Vec<(i64, i64, i64)> = vraies
+        .iter()
+        .map(|l| (mineures(l.qte), mineures(l.pu_ht), mineures(l.montant_ht)))
+        .collect();
+    lues.iter().all(|&(q, p, m)| {
+        let k = libres.iter().position(|&(vq, vp, vm)| {
+            vm == m && q.is_none_or(|q| q == vq) && p.is_none_or(|p| p == vp)
+        });
+        k.map(|k| libres.remove(k)).is_some()
+    })
 }
 
 /// Les cellules déduites d'une sortie : (champ, cellule).
@@ -204,8 +228,24 @@ struct Jouee {
 }
 
 fn jouer(jetons: &[Value], grille: &Value, pack: &Value, connus: &Value) -> Jouee {
-    let (variantes, us) = par_variante_avec(jetons, grille, pack, Some(connus));
-    Jouee { piece: la_piece(&variantes), variantes, us }
+    jouer_selon(jetons, grille, pack, connus, false)
+}
+
+/// Une lecture jouée, ses jetons étant ou non le texte exact de la pièce (la lecture
+/// « texte » : la couche de texte).
+fn jouer_selon(
+    jetons: &[Value],
+    grille: &Value,
+    pack: &Value,
+    connus: &Value,
+    exact: bool,
+) -> Jouee {
+    let (variantes, us) = par_variante_selon(jetons, grille, pack, Some(connus), exact);
+    Jouee {
+        piece: la_piece(&variantes),
+        variantes,
+        us,
+    }
 }
 
 fn jetons_de(p: &Piece) -> Vec<Value> {
@@ -214,7 +254,10 @@ fn jetons_de(p: &Piece) -> Vec<Value> {
         js[k.parse::<usize>().unwrap()]["decoupes"] = ds
             .iter()
             .map(|(coupe, gauche, droite)| {
-                let droite: Vec<Value> = droite.iter().map(|(v, f)| json!({"v": v, "forte": *f == 1})).collect();
+                let droite: Vec<Value> = droite
+                    .iter()
+                    .map(|(v, f)| json!({"v": v, "forte": *f == 1}))
+                    .collect();
                 json!({"coupe": coupe, "gauche": gauche, "droite": droite})
             })
             .collect();
@@ -231,10 +274,20 @@ fn ecrire_temoin() {
         let ps = pieces(fichier);
         let cs = connus(&ps);
         for p in &ps {
-            let j = jouer(&jetons_de(p), &grille, &pack, &cs[jeu(&p.id)]);
+            let j = jouer_selon(
+                &jetons_de(p),
+                &grille,
+                &pack,
+                &cs[jeu(&p.id)],
+                nom == "texte",
+            );
             for (v, o) in &j.variantes {
-                let lignes = (o["lignes"]["statut"] == "prouve").then(|| empreinte(&lignes_sans_statut(o)));
-                t.insert(format!("{nom}|{}|{v}", p.id), json!({"centre": empreinte(&centre(o)), "lignes": lignes}));
+                let lignes =
+                    (o["lignes"]["statut"] == "prouve").then(|| empreinte(&lignes_sans_statut(o)));
+                t.insert(
+                    format!("{nom}|{}|{v}", p.id),
+                    json!({"centre": empreinte(&centre(o)), "lignes": lignes}),
+                );
             }
         }
     }
@@ -275,7 +328,13 @@ fn middle_out_zero_ligne_fausse_et_centre_inchange() {
         let cs = connus(&ps);
         let mut b = Bilan::default();
         for (ip, p) in ps.iter().enumerate() {
-            let j = jouer(&jetons_de(p), &grille, &pack, &cs[jeu(&p.id)]);
+            let j = jouer_selon(
+                &jetons_de(p),
+                &grille,
+                &pack,
+                &cs[jeu(&p.id)],
+                nom == "texte",
+            );
             lectures += 1;
             b.pieces += 1;
             b.temps.push(j.us);
@@ -298,11 +357,23 @@ fn middle_out_zero_ligne_fausse_et_centre_inchange() {
                         let d = deduites(o);
                         if !d.is_empty() {
                             b.avec_deduites += 1;
-                            assert_eq!(o["lignes"]["deduites"], json!(d.len()), "{} : compte des déduites", p.id);
+                            assert_eq!(
+                                o["lignes"]["deduites"],
+                                json!(d.len()),
+                                "{} : compte des déduites",
+                                p.id
+                            );
                             for (k, c) in &d {
                                 *b.cellules_deduites.entry(k.clone()).or_default() += 1;
-                                assert!(c["refs"].as_array().unwrap().is_empty(), "{} : une déduite ne cite rien", p.id);
-                                assert!(c["case"]["x1"].as_f64().unwrap() > c["case"]["x0"].as_f64().unwrap());
+                                assert!(
+                                    c["refs"].as_array().unwrap().is_empty(),
+                                    "{} : une déduite ne cite rien",
+                                    p.id
+                                );
+                                assert!(
+                                    c["case"]["x1"].as_f64().unwrap()
+                                        > c["case"]["x0"].as_f64().unwrap()
+                                );
                             }
                         }
                         if nom == "ocr" {
@@ -335,11 +406,23 @@ fn middle_out_zero_ligne_fausse_et_centre_inchange() {
             b.temps[b.temps.len() / 2] as f64 / 1000.0
         );
     }
-    println!("CENTRE et ANNEAU 2 : {lectures} lectures comparées au témoin, écarts {}", ecarts_centre.len());
+    println!(
+        "CENTRE et ANNEAU 2 : {lectures} lectures comparées au témoin, écarts {}",
+        ecarts_centre.len()
+    );
     assert!(fautes.is_empty(), "lignes fausses prouvées : {fautes:#?}");
-    assert!(ecarts_centre.is_empty(), "centre ou anneau 2 modifié : {ecarts_centre:?}");
-    assert!(lignes_changees.is_empty(), "lignes de la stratégie de toujours modifiées : {lignes_changees:?}");
-    assert!(prouvees_texte >= 84, "la couche de texte régresse : {prouvees_texte} < 84");
+    assert!(
+        ecarts_centre.is_empty(),
+        "centre ou anneau 2 modifié : {ecarts_centre:?}"
+    );
+    assert!(
+        lignes_changees.is_empty(),
+        "lignes de la stratégie de toujours modifiées : {lignes_changees:?}"
+    );
+    assert!(
+        prouvees_texte >= 84,
+        "la couche de texte régresse : {prouvees_texte} < 84"
+    );
     assert!(!a_muter.is_empty(), "aucune pièce OCR aux lignes prouvées");
 
     mutations(&ocr, &a_muter, &grille, &pack);
@@ -348,7 +431,9 @@ fn middle_out_zero_ligne_fausse_et_centre_inchange() {
 /// L'indice, dans le plan, du jeton cité par une cellule.
 fn indice(p: &Piece, cellule: &Value) -> Option<usize> {
     let r = cellule["refs"].as_array()?.first()?;
-    p.jetons.iter().position(|j| j.0 as u64 == r["page"].as_u64().unwrap() && j.1 as u64 == r["ordinal"].as_u64().unwrap())
+    p.jetons.iter().position(|j| {
+        j.0 as u64 == r["page"].as_u64().unwrap() && j.1 as u64 == r["ordinal"].as_u64().unwrap()
+    })
 }
 
 fn mutations(ocr: &[Piece], a_muter: &[(usize, Value)], grille: &Value, pack: &Value) {
@@ -359,10 +444,22 @@ fn mutations(ocr: &[Piece], a_muter: &[(usize, Value)], grille: &Value, pack: &V
     let (mut n1, mut fausses1, mut encore1) = (0u32, Vec::new(), Vec::new());
     for (ip, o) in a_muter {
         let p = &ocr[*ip];
-        for (il, l) in o["lignes"]["instances"].as_array().unwrap().iter().enumerate() {
-            let Some(k) = indice(p, &l["montant"]) else { continue };
+        for (il, l) in o["lignes"]["instances"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
+            let Some(k) = indice(p, &l["montant"]) else {
+                continue;
+            };
             let m: i64 = l["montant"]["valeur"].as_str().unwrap().parse().unwrap();
-            let chiffres: Vec<u32> = m.abs().to_string().chars().map(|c| c.to_digit(10).unwrap()).collect();
+            let chiffres: Vec<u32> = m
+                .abs()
+                .to_string()
+                .chars()
+                .map(|c| c.to_digit(10).unwrap())
+                .collect();
             for pos in 0..chiffres.len() {
                 let mut c = chiffres.clone();
                 c[pos] = (c[pos] + 1) % 10;
@@ -382,7 +479,10 @@ fn mutations(ocr: &[Piece], a_muter: &[(usize, Value)], grille: &Value, pack: &V
                     if justes(&om, &p.verite) {
                         encore1.push(format!("{} ligne {il} chiffre {pos}", p.id));
                     } else {
-                        fausses1.push(format!("{} ligne {il} chiffre {pos} : {}", p.id, om["lignes"]));
+                        fausses1.push(format!(
+                            "{} ligne {il} chiffre {pos} : {}",
+                            p.id, om["lignes"]
+                        ));
                     }
                 }
             }
@@ -402,8 +502,15 @@ fn mutations(ocr: &[Piece], a_muter: &[(usize, Value)], grille: &Value, pack: &V
     let (mut n2, mut signalees2, mut deduits2, mut fausses2) = (0u32, 0u32, 0u32, Vec::new());
     for (ip, o) in a_muter {
         let p = &ocr[*ip];
-        for (il, l) in o["lignes"]["instances"].as_array().unwrap().iter().enumerate() {
-            let Some(k) = indice(p, &l["prix"]) else { continue };
+        for (il, l) in o["lignes"]["instances"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
+            let Some(k) = indice(p, &l["prix"]) else {
+                continue;
+            };
             let mut jetons = jetons_de(p);
             jetons[k]["montants"] = json!([]);
             n2 += 1;
@@ -426,7 +533,10 @@ fn mutations(ocr: &[Piece], a_muter: &[(usize, Value)], grille: &Value, pack: &V
     for (ip, o) in a_muter {
         let p = &ocr[*ip];
         let inst = o["lignes"]["instances"].as_array().unwrap();
-        let cites: Vec<usize> = inst.iter().filter_map(|l| indice(p, &l["montant"])).collect();
+        let cites: Vec<usize> = inst
+            .iter()
+            .filter_map(|l| indice(p, &l["montant"]))
+            .collect();
         for a in 0..cites.len() {
             for b in a + 1..cites.len() {
                 let mut jetons = jetons_de(p);
@@ -435,16 +545,33 @@ fn mutations(ocr: &[Piece], a_muter: &[(usize, Value)], grille: &Value, pack: &V
                 n3 += 1;
                 let om = jouer_m(p, &jetons);
                 if om["lignes"]["statut"] == "prouve" {
-                    prouvees3.push(format!("{} lignes {a},{b} : juste {} : {}", p.id, justes(&om, &p.verite), om["lignes"]));
+                    prouvees3.push(format!(
+                        "{} lignes {a},{b} : juste {} : {}",
+                        p.id,
+                        justes(&om, &p.verite),
+                        om["lignes"]
+                    ));
                 }
             }
         }
     }
-    println!("MUTATION 3 (deux montants effacés) : {n3} — encore prouvées {}", prouvees3.len());
+    println!(
+        "MUTATION 3 (deux montants effacés) : {n3} — encore prouvées {}",
+        prouvees3.len()
+    );
     assert!(n1 > 0 && n2 > 0 && n3 > 0);
-    assert!(fausses1.is_empty(), "mutation 1, fausses preuves : {fausses1:#?}");
-    assert!(fausses2.is_empty(), "mutation 2, fausses preuves : {fausses2:#?}");
-    assert!(prouvees3.is_empty(), "mutation 3, lignes encore prouvées : {prouvees3:#?}");
+    assert!(
+        fausses1.is_empty(),
+        "mutation 1, fausses preuves : {fausses1:#?}"
+    );
+    assert!(
+        fausses2.is_empty(),
+        "mutation 2, fausses preuves : {fausses2:#?}"
+    );
+    assert!(
+        prouvees3.is_empty(),
+        "mutation 3, lignes encore prouvées : {prouvees3:#?}"
+    );
 }
 
 /// La pièce 100/A-01 lue par l'OCR rapide (l'exemple du dirigeant), jouée avec une
@@ -462,7 +589,10 @@ fn a01(retouche: impl Fn(&mut Vec<Value>)) -> (Value, Vec<Value>) {
 }
 
 fn ordinal_de(jetons: &[Value], texte: &str, y: f64) -> usize {
-    jetons.iter().position(|j| j["texte"] == texte && (j["y0"].as_f64().unwrap() - y).abs() < 0.01).unwrap()
+    jetons
+        .iter()
+        .position(|j| j["texte"] == texte && (j["y0"].as_f64().unwrap() - y).abs() < 0.01)
+        .unwrap()
 }
 
 #[test]
@@ -483,8 +613,16 @@ fn middle_out_forme_d_une_cellule_deduite() {
             (v("quantite"), v("prix"), v("montant"))
         })
         .collect();
-    let attendu = [("1000", "385000", "385000"), ("20000", "260000", "5200000"), ("10000", "195000", "1950000"), ("2000", "1150000", "2300000")];
-    assert_eq!(valeurs, attendu.map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string())));
+    let attendu = [
+        ("1000", "385000", "385000"),
+        ("20000", "260000", "5200000"),
+        ("10000", "195000", "1950000"),
+        ("2000", "1150000", "2300000"),
+    ];
+    assert_eq!(
+        valeurs,
+        attendu.map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string()))
+    );
     let q = &i[0]["quantite"];
     assert_eq!(q["statut"], "deduit");
     assert_eq!(q["refs"], json!([]));
@@ -496,8 +634,14 @@ fn middle_out_forme_d_une_cellule_deduite() {
     assert_eq!(i[0]["prix"]["statut"], "lu");
     assert_eq!(i[0]["prix"]["refs"].as_array().unwrap().len(), 1);
     assert_eq!(i[1]["quantite"]["statut"], "lu");
-    assert!(i[0]["designation"]["valeur"].as_str().unwrap().contains("24"));
-    println!("{}", serde_json::to_string(&json!({"quantite": q, "prix": i[0]["prix"]})).unwrap());
+    assert!(i[0]["designation"]["valeur"]
+        .as_str()
+        .unwrap()
+        .contains("24"));
+    println!(
+        "{}",
+        serde_json::to_string(&json!({"quantite": q, "prix": i[0]["prix"]})).unwrap()
+    );
 }
 
 #[test]
@@ -511,7 +655,10 @@ fn middle_out_montant_unique_deduit_par_l_ecart_au_total() {
     assert_eq!(l["statut"], "prouve", "{l}");
     assert_eq!(l["deduites"], 3);
     let m = &l["instances"][2]["montant"];
-    assert_eq!((m["valeur"].as_str(), m["statut"].as_str()), (Some("1950000"), Some("deduit")));
+    assert_eq!(
+        (m["valeur"].as_str(), m["statut"].as_str()),
+        (Some("1950000"), Some("deduit"))
+    );
 
     // deux montants effacés (les deux rangées complètes) : rien ne se déduit, pas même la graine
     let (o, _) = a01(|j| {
@@ -532,15 +679,37 @@ fn middle_out_prix_deduit_et_tableau_a_remise() {
     });
     let p = &o["lignes"]["instances"][1]["prix"];
     assert_eq!(o["lignes"]["statut"], "prouve");
-    assert_eq!((p["valeur"].as_str(), p["statut"].as_str()), (Some("260000"), Some("deduit")));
+    assert_eq!(
+        (p["valeur"].as_str(), p["statut"].as_str()),
+        (Some("260000"), Some("deduit"))
+    );
 
     // un en-tête qui annonce une remise de ligne : une remise perdue fausserait la quantité
-    // déduite, rien ne se déduit
+    // déduite, rien ne se déduit — les deux rangées dont l'OCR n'a pas vu la quantité
+    // restent des lignes (partielles) : leur prix et leur montant lus, leur quantité tue
     let (o, _) = a01(|j| {
         let k = ordinal_de(j, "Unité", 0.246);
         j[k]["texte"] = json!("Remise");
     });
-    assert_eq!(o["lignes"]["statut"], "signale");
+    let l = &o["lignes"];
+    assert_eq!(l["statut"], "prouve", "{l}");
+    assert!(deduites(&o).is_empty() && l["deduites"].is_null(), "{l}");
+    let i = l["instances"].as_array().unwrap();
+    let tues: Vec<(&Value, &Value)> = i
+        .iter()
+        .filter(|x| x["quantite"].is_null())
+        .map(|x| (&x["prix"]["valeur"], &x["montant"]["valeur"]))
+        .collect();
+    assert_eq!(
+        tues,
+        vec![
+            (&json!("385000"), &json!("385000")),
+            (&json!("1150000"), &json!("2300000"))
+        ]
+    );
+    assert!(i
+        .iter()
+        .all(|x| x["prix"]["statut"] == "lu" && x["montant"]["statut"] == "lu"));
 }
 
 /// La pièce 100/A-02 lue par l'OCR rapide : aucune quantité vue, aucune rangée aux trois
@@ -564,7 +733,12 @@ fn middle_out_graine_ancree_par_l_en_tete() {
     let l = a02(|_| {});
     assert_eq!(l["statut"], "prouve", "{l}");
     assert_eq!(l["deduites"], 4);
-    let q: Vec<&str> = l["instances"].as_array().unwrap().iter().map(|i| i["quantite"]["valeur"].as_str().unwrap()).collect();
+    let q: Vec<&str> = l["instances"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| i["quantite"]["valeur"].as_str().unwrap())
+        .collect();
     assert_eq!(q, ["1000", "1000", "2000", "2000"]);
 
     // sans l'étiquette des quantités dans l'en-tête, pas de graine déduite
@@ -589,7 +763,10 @@ fn ocr(id: &str, retouche: impl Fn(&mut Vec<Value>)) -> (Value, Verite) {
 }
 
 fn par_ordinal(jetons: &[Value], page: u64, ordinal: u64) -> usize {
-    jetons.iter().position(|j| j["page"] == page && j["ordinal"] == ordinal).unwrap()
+    jetons
+        .iter()
+        .position(|j| j["page"] == page && j["ordinal"] == ordinal)
+        .unwrap()
 }
 
 #[test]
@@ -619,13 +796,21 @@ fn middle_out_remise_globale() {
     let l = &o["lignes"];
     assert_eq!(l["statut"], "prouve", "{l}");
     assert!(justes(&o, &v));
-    assert_eq!(l["remise_globale"], json!({"valeur": "31350", "refs": [{"page": 1, "ordinal": 81}]}));
+    assert_eq!(
+        l["remise_globale"],
+        json!({"valeur": "31350", "refs": [{"page": 1, "ordinal": 81}]})
+    );
     // la remise lue effacée : le taux de 5 % lu sur la rangée suffit (627 × 5 % = 31,350)
     let (o, _) = ocr("100/A-05", |j| {
         let k = par_ordinal(j, 1, 81);
         j[k]["montants"] = json!([]);
     });
-    assert_eq!(o["lignes"]["remise_globale"]["refs"], json!([{"page": 1, "ordinal": 79}]), "{}", o["lignes"]);
+    assert_eq!(
+        o["lignes"]["remise_globale"]["refs"],
+        json!([{"page": 1, "ordinal": 79}]),
+        "{}",
+        o["lignes"]
+    );
     // ni montant ni taux de remise lus : rien ne ferme
     let (o, _) = ocr("100/A-05", |j| {
         for ord in [79, 81] {
@@ -636,7 +821,10 @@ fn middle_out_remise_globale() {
     assert_ne!(o["lignes"]["statut"], "prouve", "{}", o["lignes"]);
     // une remise lue fausse : rien ne ferme
     let (o, _) = ocr("100/A-05", |j| {
-        for (ord, v) in [(79, json!([])), (81, json!([{"v": -31_340, "forte": true}]))] {
+        for (ord, v) in [
+            (79, json!([])),
+            (81, json!([{"v": -31_340, "forte": true}])),
+        ] {
             let k = par_ordinal(j, 1, ord);
             j[k]["montants"] = v;
         }
@@ -662,21 +850,42 @@ fn middle_out_case_collee() {
     assert!(justes(&o, &v));
     let video = &l["instances"][3];
     let cite = json!([{"page": 1, "ordinal": 88}]);
-    assert_eq!(video["quantite"], json!({"valeur": "1000", "refs": cite, "statut": "coupe", "coupe": 1}));
-    assert_eq!(video["prix"], json!({"valeur": "2400000", "refs": cite, "statut": "coupe", "coupe": 1}));
+    assert_eq!(
+        video["quantite"],
+        json!({"valeur": "1000", "refs": cite, "statut": "coupe", "coupe": 1})
+    );
+    assert_eq!(
+        video["prix"],
+        json!({"valeur": "2400000", "refs": cite, "statut": "coupe", "coupe": 1})
+    );
     assert_eq!(l["remise_globale"]["valeur"], "406000");
-    println!("{}", serde_json::to_string(&json!({"quantite": video["quantite"], "prix": video["prix"]})).unwrap());
+    println!(
+        "{}",
+        serde_json::to_string(&json!({"quantite": video["quantite"], "prix": video["prix"]}))
+            .unwrap()
+    );
 
     // Mutation : le jeton collé ramené dans la seule colonne des prix — la coupe ne sert plus.
-    let (o, _) = ocr("50/11", |j| {
+    let (o, v) = ocr("50/11", |j| {
         replacer(j);
         let k = par_ordinal(j, 1, 88);
         j[k]["x0"] = json!(0.805);
         j[k]["x1"] = json!(0.86);
     });
-    let coupes = o["lignes"]["instances"]
-        .as_array()
-        .map_or(0, |a| a.iter().filter(|i| i["quantite"]["statut"] == "coupe" || i["prix"]["statut"] == "coupe").count());
+    let coupes = o["lignes"]["instances"].as_array().map_or(0, |a| {
+        a.iter()
+            .filter(|i| i["quantite"]["statut"] == "coupe" || i["prix"]["statut"] == "coupe")
+            .count()
+    });
     assert_eq!(coupes, 0, "{}", o["lignes"]);
-    assert_ne!(o["lignes"]["statut"], "prouve", "{}", o["lignes"]);
+    // sans la coupe, les rangées du jeton collé et de la quantité perdue restent des lignes
+    // partielles : leur montant prouvé par la somme, leur quantité et leur prix tus
+    assert!(justes(&o, &v), "{}", o["lignes"]);
+    let tues = o["lignes"]["instances"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|i| i["quantite"].is_null() && i["prix"].is_null())
+        .count();
+    assert_eq!(tues, 2, "{}", o["lignes"]);
 }

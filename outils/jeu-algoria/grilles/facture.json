@@ -1,0 +1,621 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "facture",
+    "nom": "Facture (achat ou vente) et note d'honoraires",
+    "typeDeDocument": "facture_achat",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "acomptes_deduits",
+      "concept": "acomptes_deduits",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "adresse_client",
+      "concept": "adresse",
+      "role": "client",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "Destinataire (client)",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "adresse_emetteur",
+      "concept": "adresse",
+      "role": "fournisseur",
+      "type": "adresse",
+      "obligatoire": "non",
+      "parcelle": "En-tête émetteur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "adresse_livraison",
+      "concept": "adresse_livraison",
+      "role": null,
+      "type": "adresse",
+      "obligatoire": "non",
+      "parcelle": "Destinataire (client)",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "base_tva_par_taux",
+      "concept": "base_tva",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "cachet_emetteur",
+      "concept": "signature_cachet",
+      "role": "fournisseur",
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Signature et cachet",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "code_client",
+      "concept": "identifiant_client",
+      "role": "client",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Destinataire (client)",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "code_tva_categorie_etablissement",
+      "concept": "code_tva_categorie_etablissement",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "En-tête émetteur",
+      "expert": "identifiant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "conditions_generales",
+      "concept": "conditions_generales",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Mentions",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_echeance",
+      "concept": "date_echeance",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Règlement",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_emission",
+      "concept": "date_piece",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "Références",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_operation",
+      "concept": "date_operation",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Références",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "designation",
+      "concept": "designation",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Lignes",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "devise",
+      "concept": "devise",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Totaux",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "droit_consommation_ligne",
+      "concept": "droit_consommation_ligne",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "droit_timbre",
+      "concept": "droit_timbre",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "fodec_applicable_ligne",
+      "concept": "fodec_applicable_ligne",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Lignes",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "forme_juridique_capital_emetteur",
+      "concept": "forme_juridique",
+      "role": "fournisseur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "En-tête émetteur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "matricule_fiscal_client",
+      "concept": "matricule_fiscal",
+      "role": "client",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Destinataire (client)",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "matricule_fiscal_emetteur",
+      "concept": "matricule_fiscal",
+      "role": "fournisseur",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "En-tête émetteur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "mention_export",
+      "concept": "mention_export",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Mentions",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mention_regime_forfaitaire",
+      "concept": "mention_regime_forfaitaire",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Mentions",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mention_suspension_exoneration",
+      "concept": "mention_suspension_exoneration",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Mentions",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mode_reglement",
+      "concept": "mode_paiement",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Règlement",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_en_lettres",
+      "concept": "montant_en_lettres",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Totaux",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_fodec",
+      "concept": "montant_fodec",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_ligne_ht",
+      "concept": "montant_ligne_ht",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Lignes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_retenue_source",
+      "concept": "retenue_source",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_tva_par_taux",
+      "concept": "montant_tva",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_tva_suspendue",
+      "concept": "montant_tva_suspendue",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "net_a_payer",
+      "concept": "net_a_payer",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nom_client",
+      "concept": "raison_sociale",
+      "role": "client",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Destinataire (client)",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "numero_facture",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "penalites_retard",
+      "concept": "penalites_retard",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Règlement",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periode_prestation",
+      "concept": "periode",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "prix_unitaire_ht",
+      "concept": "prix_unitaire_ht",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Lignes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "prix_unitaire_ttc",
+      "concept": "prix_unitaire_ttc",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Lignes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "qr_code",
+      "concept": "cachet_electronique_visible",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Code structuré",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "quantite",
+      "concept": "quantite",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "Lignes",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "raison_sociale_emetteur",
+      "concept": "raison_sociale",
+      "role": "fournisseur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "En-tête émetteur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "ref_attestation_suspension",
+      "concept": "ref_attestation_suspension",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_bon_commande",
+      "concept": "ref_bon_commande",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_bon_livraison",
+      "concept": "ref_bon_livraison",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_devis_marche",
+      "concept": "ref_devis",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reference_article",
+      "concept": "ref_article",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Lignes",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reference_ttn",
+      "concept": "ref_ttn",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Code structuré",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "registre_commerce_emetteur",
+      "concept": "identifiant_unique_rne",
+      "role": "fournisseur",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "En-tête émetteur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "remise_globale",
+      "concept": "remise",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "remise_ligne",
+      "concept": "remise",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Lignes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "retenue_source_mention",
+      "concept": "retenue_source_mention",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Règlement",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "rib_emetteur",
+      "concept": "rib",
+      "role": "fournisseur",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "En-tête émetteur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "signature_emetteur",
+      "concept": "signature_cachet",
+      "role": "fournisseur",
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Signature et cachet",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "taux_tva_ligne",
+      "concept": "taux_tva",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "oui",
+      "parcelle": "Lignes",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "telephone_email_emetteur",
+      "concept": "telephone_email",
+      "role": "fournisseur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "En-tête émetteur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "total_brut_ht",
+      "concept": "total_brut_ht",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_ht",
+      "concept": "total_ht",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_ttc",
+      "concept": "total_ttc",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Totaux",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "type_document",
+      "concept": "type_document",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Références",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "type_identifiant_client",
+      "concept": "type_identifiant_client",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Destinataire (client)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "unite",
+      "concept": "unite",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Lignes",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "visa_client",
+      "concept": "visa_client",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Signature et cachet",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    }
+  ]
+}

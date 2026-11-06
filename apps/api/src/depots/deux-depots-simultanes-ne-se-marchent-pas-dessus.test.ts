@@ -115,7 +115,7 @@ describe("deux dépôts simultanés ne se marchent pas dessus", { skip: !BASE_CO
     const c = await creerCompte(`${marque}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(c);
     u = c;
-    jeton = emettreJeton(u);
+    jeton = emettreJeton(u, new Date());
     org = await sousIdentite(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', $1, 'autonome', null, 'TN', 'TND') as id`,

@@ -50,7 +50,7 @@
         "designation": "Farine de blé, sac 50 kg",
         "designationAr": "فارينة قمح كيس 50 كغ",
         "codeTaxe": "TVA07",
-        "tauxImprime": "7.000000000000001 %"
+        "tauxImprime": "7 %"
       },
       {
         "designation": "Formation professionnelle agréée",
@@ -67,7 +67,7 @@
       },
       {
         "code": "TVA07",
-        "tauxImprime": "7.000000000000001 %"
+        "tauxImprime": "7 %"
       },
       {
         "code": "TVA19",

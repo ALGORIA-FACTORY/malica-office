@@ -1,0 +1,120 @@
+{
+  "id": "159",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "autre_document",
+  "grille": null,
+  "langue": "fr",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "H",
+  "mise_en_page": "H",
+  "scenario": "sans_grille",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Attestation de participation",
+    "parties": [
+      {
+        "role": "organisme",
+        "nom": "Association Selvarine des Sciences des Données",
+        "matricule": null,
+        "est": "tiers"
+      },
+      {
+        "role": "participant",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "organisme",
+      "nom": "Association Selvarine des Sciences des Données",
+      "matricule": null,
+      "est": "tiers"
+    },
+    "client": {
+      "role": "participant",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "t": "Association Selvarine des Sciences des Données",
+              "cls": "gros"
+            }
+          ],
+          [
+            "Pôle Kervane, 2088 Ariana"
+          ]
+        ],
+        "droite": []
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "ATTESTATION DE PARTICIPATION"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "L'Association Selvarine des Sciences des Données atteste que M. Mehdi Varnasse, de la société ALGORIA FACTORY SARL, a participé au séminaire « Gouvernance des données et intelligence artificielle souveraine », tenu à Hammamet les 21/10/2026 et 22/10/2026, d'une durée de seize heures."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Cette attestation est délivrée pour servir et valoir ce que de droit."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "Le président de l'association"
+      }
+    ],
+    "imprime": {},
+    "versConcept": {},
+    "marques": {},
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 595635301,
+  "attendu": {
+    "concepts": {},
+    "confondus": {},
+    "notes": [
+      "Aucune grille ne lit cette pièce (grille null) : l'issue attendue est qu'AUCUN champ ne soit extrait. Le banc compte zéro valeur fausse : toute date, tout montant ou tout nom posé sur un champ est une faute.",
+      "Pièges : deux dates, un nom de société réel (ALGORIA), un nom de salarié — rien n'est à lire."
+    ],
+    "non_imprimes": []
+  }
+}

@@ -87,6 +87,10 @@ try {
   // `with (force)` ferme les connexions restantes d'une exécution précédente.
   await maintenance.query(`drop database if exists ${NOM} with (force)`);
   await maintenance.query(`create database ${NOM}`);
+  // The server's own messages in English, as in CI: a workstation installed in French
+  // answers "droit refusé" where the tests read "permission denied" (6 November 2026,
+  // about thirty failures on a Windows workstation, none in CI).
+  await maintenance.query(`alter database ${NOM} set lc_messages = 'C'`);
 } finally {
   await maintenance.end();
 }

@@ -1,0 +1,404 @@
+{
+  "id": "045",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "B",
+  "scenario": "devise_eur",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "pli",
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "EUR",
+    "exposant": 2,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Belmira Traiteur SARL",
+      "nomAr": "بلميرة للمرطبات",
+      "enseigne": null,
+      "matricule": "1487008O/A/M/000",
+      "matriculeImprime": "1487008O/A/M/000",
+      "adresse": "150, rue des Mimosas, El Menzah",
+      "telephone": "00 52 130 824",
+      "fax": "00 37 421 949",
+      "email": null,
+      "site": null,
+      "rc": "B584901592011",
+      "rib": "99 225 4420696320529 50",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C1304035",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "03/02/2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Location de salle de réunion, demi-journée",
+        "designationAr": "كراء قاعة اجتماعات، نصف يوم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Entretien climatisation, visite",
+        "designationAr": "صيانة المكيفات، زيارة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de déménagement de bureaux",
+        "designationAr": "خدمة نقل مكاتب",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Ramette papier A4 80 g",
+        "designationAr": "رزمة ورق A4 80 غ",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre couleur",
+        "designationAr": "خرطوشة حبر ملون",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Classeur à levier, dos 8 cm",
+        "designationAr": "ملف برافعة، ظهر 8 سم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": false
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Belmira Traiteur SARL",
+      "document_date": "03/02/2026",
+      "references.numero": "FA26/02836",
+      "references.matricule_fiscal": "1487008O/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "150, rue des Mimosas, El Menzah",
+      "telephone_emetteur": "00 52 130 824",
+      "registre_commerce_emetteur": "B584901592011",
+      "totals.base_ht": "7.278,81",
+      "totals.vat": "1.382,97",
+      "totals.ttc": "8.661,78",
+      "articles[0].designation": "Location de salle de réunion, demi-journée",
+      "articles[0].quantity": "3",
+      "articles[0].unit_price_ht": "484,84",
+      "articles[0].total_ht": "1.454,52",
+      "articles[1].designation": "Entretien climatisation, visite",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "217,82",
+      "articles[1].total_ht": "435,64",
+      "articles[2].designation": "Prestation de déménagement de bureaux",
+      "articles[2].quantity": "3",
+      "articles[2].unit_price_ht": "1.673,96",
+      "articles[2].total_ht": "5.021,88",
+      "articles[3].designation": "Ramette papier A4 80 g",
+      "articles[3].quantity": "7",
+      "articles[3].unit_price_ht": "12,89",
+      "articles[3].total_ht": "90,23",
+      "articles[4].designation": "Cartouche d'encre couleur",
+      "articles[4].quantity": "2",
+      "articles[4].unit_price_ht": "77,44",
+      "articles[4].total_ht": "154,88",
+      "articles[5].designation": "Classeur à levier, dos 8 cm",
+      "articles[5].quantity": "22",
+      "articles[5].unit_price_ht": "5,53",
+      "articles[5].total_ht": "121,66"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ht": "lignes[5].prix_unitaire_ht",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 1937052947,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Belmira Traiteur SARL",
+      "document_date": "2026-02-03",
+      "currency": "EUR",
+      "references.numero": "FA26/02836",
+      "references.matricule_fiscal": "1487008O/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "7278.81",
+      "totals.vat": "1382.97",
+      "totals.ttc": "8661.78",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "7278.81",
+      "lines[0].vat_amount": "1382.97",
+      "articles[0].quantity": "3.00",
+      "articles[0].unit_price_ht": "484.84",
+      "articles[0].total_ht": "1454.52",
+      "articles[1].quantity": "2.00",
+      "articles[1].unit_price_ht": "217.82",
+      "articles[1].total_ht": "435.64",
+      "articles[2].quantity": "3.00",
+      "articles[2].unit_price_ht": "1673.96",
+      "articles[2].total_ht": "5021.88",
+      "articles[3].quantity": "7.00",
+      "articles[3].unit_price_ht": "12.89",
+      "articles[3].total_ht": "90.23",
+      "articles[4].quantity": "2.00",
+      "articles[4].unit_price_ht": "77.44",
+      "articles[4].total_ht": "154.88",
+      "articles[5].quantity": "22.00",
+      "articles[5].unit_price_ht": "5.53",
+      "articles[5].total_ht": "121.66"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "24838.939",
+          "0"
+        ],
+        [
+          "4366",
+          "4719.385",
+          "0",
+          "TVA19"
+        ],
+        [
+          "401",
+          "0",
+          "29558.324"
+        ]
+      ],
+      "origines": [
+        [
+          "601",
+          "7278.81"
+        ],
+        [
+          "4366",
+          "1382.97"
+        ],
+        [
+          "401",
+          "8661.78"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "cours": {
+      "devise": "EUR",
+      "taux": "3.4125",
+      "unite": 1,
+      "date": "2026-02-03"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "converti au cours FICTIF 3.4125 TND pour 1 EUR, publié le 2026-02-03 (app.cours_applicable : date_facture, recul 5 jours)"
+    ],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Belmira Traiteur SARL",
+      "date_operation": "2026-02-03",
+      "numero_facture": "FA26/02836",
+      "matricule_fiscal_emetteur": "1487008O/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "150, rue des Mimosas, El Menzah",
+      "telephone_email_emetteur": {
+        "telephone": "00 52 130 824"
+      },
+      "registre_commerce_emetteur": "B584901592011",
+      "total_ht": "7278.81",
+      "montant_tva_par_taux": {
+        "19": "1382.97"
+      },
+      "total_ttc": "8661.78",
+      "base_tva_par_taux": {
+        "19": "7278.81"
+      },
+      "lignes": [
+        {
+          "designation": "Location de salle de réunion, demi-journée",
+          "quantite": "3",
+          "prix_unitaire_ht": "484.84",
+          "montant_ligne_ht": "1454.52",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Entretien climatisation, visite",
+          "quantite": "2",
+          "prix_unitaire_ht": "217.82",
+          "montant_ligne_ht": "435.64",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Prestation de déménagement de bureaux",
+          "quantite": "3",
+          "prix_unitaire_ht": "1673.96",
+          "montant_ligne_ht": "5021.88",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Ramette papier A4 80 g",
+          "quantite": "7",
+          "prix_unitaire_ht": "12.89",
+          "montant_ligne_ht": "90.23",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Cartouche d'encre couleur",
+          "quantite": "2",
+          "prix_unitaire_ht": "77.44",
+          "montant_ligne_ht": "154.88",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Classeur à levier, dos 8 cm",
+          "quantite": "22",
+          "prix_unitaire_ht": "5.53",
+          "montant_ligne_ht": "121.66",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "devise": "EUR",
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "droit_timbre",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

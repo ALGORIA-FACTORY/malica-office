@@ -1,0 +1,458 @@
+{
+  "id": "114",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_vente",
+  "grille": "facture",
+  "langue": "hybride",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "D",
+  "scenario": "un_taux",
+  "realisme": [
+    "biais",
+    "grain"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE / فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "client": {
+      "nom": "Clinique Tarvila SARL",
+      "nomAr": "مصحة تارفيلا",
+      "enseigne": null,
+      "matricule": "8999016I/A/M/000",
+      "matriculeImprime": "8999016I/A/M/000",
+      "adresse": "92, rue de l'Artisanat, Monastir",
+      "telephone": "00 55 262 463",
+      "fax": "00 66 401 818",
+      "email": null,
+      "site": null,
+      "rc": "B798878392016",
+      "rib": "99 750 3306873922657 48",
+      "banque": "Banque Talmira",
+      "code": "C9900872",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "client"
+    },
+    "date": "21 mai 2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Paramétrage et intégration RegFlow, jour",
+        "designationAr": "إعداد وإدماج RegFlow، يوم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Clé de sécurité matérielle FIDO2, boîte",
+        "designationAr": "مفتاح أمان مادي FIDO2، علبة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Étude de conformité réglementaire, mission",
+        "designationAr": "دراسة امتثال ترتيبي، مهمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Assistance MEL Plus Suite, forfait mensuel",
+        "designationAr": "مساعدة MEL Plus Suite، جزاف شهري",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Abonnement RegTrack — palier Compliance, 12 mois",
+        "designationAr": "اشتراك RegTrack — مستوى Compliance، 12 شهرا",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Abonnement Malica Office — palier Foundation, 12 mois",
+        "designationAr": "اشتراك Malica Office — مستوى Foundation، 12 شهرا",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Mise à disposition d'un consultant, jour",
+        "designationAr": "وضع مستشار على الذمة، يوم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": "Arrêtée la présente facture à la somme de : soixante-treize mille deux cents dinars et quatre-vingt-huit millimes.",
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "ALGORIA FACTORY SARL",
+      "document_date": "21 mai 2026",
+      "references.numero": "F-2026-1848",
+      "references.matricule_fiscal": "1958330V/A/M/000",
+      "references.matricule_fiscal_client": "8999016I/A/M/000",
+      "nom_client": "Clinique Tarvila SARL",
+      "adresse_client": "92, rue de l'Artisanat, Monastir",
+      "adresse_emetteur": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone_emetteur": "00 71 940 517",
+      "registre_commerce_emetteur": "B01283932024",
+      "rib_emetteur": "99 017 0001834526710 54",
+      "mode_reglement": "Virement",
+      "totals.base_ht": "61.511,839",
+      "totals.vat": "11.687,249",
+      "totals.ttc": "73.200,088",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Paramétrage et intégration RegFlow, jour",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "1.045,025",
+      "articles[0].total_ht": "2.090,050",
+      "articles[1].designation": "Clé de sécurité matérielle FIDO2, boîte",
+      "articles[1].quantity": "18",
+      "articles[1].unit_price_ht": "154,507",
+      "articles[1].total_ht": "2.781,126",
+      "articles[2].designation": "Étude de conformité réglementaire, mission",
+      "articles[2].quantity": "3",
+      "articles[2].unit_price_ht": "7.282,248",
+      "articles[2].total_ht": "21.846,744",
+      "articles[3].designation": "Assistance MEL Plus Suite, forfait mensuel",
+      "articles[3].quantity": "2",
+      "articles[3].unit_price_ht": "2.039,645",
+      "articles[3].total_ht": "4.079,290",
+      "articles[4].designation": "Abonnement RegTrack — palier Compliance, 12 mois",
+      "articles[4].quantity": "3",
+      "articles[4].unit_price_ht": "8.096,174",
+      "articles[4].total_ht": "24.288,522",
+      "articles[5].designation": "Abonnement Malica Office — palier Foundation, 12 mois",
+      "articles[5].quantity": "2",
+      "articles[5].unit_price_ht": "1.820,212",
+      "articles[5].total_ht": "3.640,424",
+      "articles[6].designation": "Mise à disposition d'un consultant, jour",
+      "articles[6].quantity": "3",
+      "articles[6].unit_price_ht": "928,561",
+      "articles[6].total_ht": "2.785,683",
+      "montant_en_lettres": "soixante-treize mille deux cents dinars et quatre-vingt-huit millimes"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ht": "lignes[5].prix_unitaire_ht",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht",
+      "articles[6].designation": "lignes[6].designation",
+      "articles[6].quantity": "lignes[6].quantite",
+      "articles[6].unit_price_ht": "lignes[6].prix_unitaire_ht",
+      "articles[6].total_ht": "lignes[6].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres"
+    }
+  },
+  "graineDuRendu": 230970643,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "ALGORIA FACTORY SARL",
+      "document_date": "2026-05-21",
+      "currency": "TND",
+      "references.numero": "F-2026-1848",
+      "references.matricule_fiscal": "1958330V/A/M/000",
+      "references.matricule_fiscal_client": "8999016I/A/M/000",
+      "totals.base_ht": "61511.839",
+      "totals.vat": "11687.249",
+      "totals.ttc": "73200.088",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "61511.839",
+      "lines[0].vat_amount": "11687.249",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "1045.025",
+      "articles[0].total_ht": "2090.050",
+      "articles[1].quantity": "18.000",
+      "articles[1].unit_price_ht": "154.507",
+      "articles[1].total_ht": "2781.126",
+      "articles[2].quantity": "3.000",
+      "articles[2].unit_price_ht": "7282.248",
+      "articles[2].total_ht": "21846.744",
+      "articles[3].quantity": "2.000",
+      "articles[3].unit_price_ht": "2039.645",
+      "articles[3].total_ht": "4079.290",
+      "articles[4].quantity": "3.000",
+      "articles[4].unit_price_ht": "8096.174",
+      "articles[4].total_ht": "24288.522",
+      "articles[5].quantity": "2.000",
+      "articles[5].unit_price_ht": "1820.212",
+      "articles[5].total_ht": "3640.424",
+      "articles[6].quantity": "3.000",
+      "articles[6].unit_price_ht": "928.561",
+      "articles[6].total_ht": "2785.683"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "705",
+          "0",
+          "55945.030",
+          "TVA19"
+        ],
+        [
+          "707",
+          "0",
+          "2781.126",
+          "TVA19"
+        ],
+        [
+          "706",
+          "0",
+          "2785.683",
+          "TVA19"
+        ],
+        [
+          "4367",
+          "0",
+          "11687.249",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "73200.088",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "aTrancher": {
+      "reserve": "nature_de_vente",
+      "ecriture": {
+        "journal": "VEN",
+        "lignes": [
+          [
+            "701",
+            "0",
+            "61511.839",
+            "TVA19"
+          ],
+          [
+            "4367",
+            "0",
+            "11687.249",
+            "TVA19"
+          ],
+          [
+            "4371",
+            "0",
+            "1.000"
+          ],
+          [
+            "411",
+            "73200.088",
+            "0"
+          ]
+        ]
+      }
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente par nature d'article (ventes.compte = par_nature_article, défaut du CEO du 31/10/2026) : 705 prestations, 706 annexes, 707 marchandises ; repli au compte des produits finis, avec la réserve « nature de la vente à préciser »"
+    ],
+    "concepts": {
+      "type_document": "FACTURE / فاتورة",
+      "raison_sociale_emetteur": "ALGORIA FACTORY SARL",
+      "date_operation": "2026-05-21",
+      "numero_facture": "F-2026-1848",
+      "matricule_fiscal_emetteur": "1958330V/A/M/000",
+      "matricule_fiscal_client": "8999016I/A/M/000",
+      "nom_client": "Clinique Tarvila SARL",
+      "adresse_client": "92, rue de l'Artisanat, Monastir",
+      "adresse_emetteur": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone_email_emetteur": {
+        "telephone": "00 71 940 517"
+      },
+      "registre_commerce_emetteur": "B01283932024",
+      "rib_emetteur": "99 017 0001834526710 54",
+      "mode_reglement": "Virement",
+      "total_ht": "61511.839",
+      "montant_tva_par_taux": {
+        "19": "11687.249"
+      },
+      "total_ttc": "73200.088",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "61511.839"
+      },
+      "lignes": [
+        {
+          "designation": "Paramétrage et intégration RegFlow, jour",
+          "quantite": "2",
+          "prix_unitaire_ht": "1045.025",
+          "montant_ligne_ht": "2090.050",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Clé de sécurité matérielle FIDO2, boîte",
+          "quantite": "18",
+          "prix_unitaire_ht": "154.507",
+          "montant_ligne_ht": "2781.126",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Étude de conformité réglementaire, mission",
+          "quantite": "3",
+          "prix_unitaire_ht": "7282.248",
+          "montant_ligne_ht": "21846.744",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Assistance MEL Plus Suite, forfait mensuel",
+          "quantite": "2",
+          "prix_unitaire_ht": "2039.645",
+          "montant_ligne_ht": "4079.290",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Abonnement RegTrack — palier Compliance, 12 mois",
+          "quantite": "3",
+          "prix_unitaire_ht": "8096.174",
+          "montant_ligne_ht": "24288.522",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Abonnement Malica Office — palier Foundation, 12 mois",
+          "quantite": "2",
+          "prix_unitaire_ht": "1820.212",
+          "montant_ligne_ht": "3640.424",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Mise à disposition d'un consultant, jour",
+          "quantite": "3",
+          "prix_unitaire_ht": "928.561",
+          "montant_ligne_ht": "2785.683",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "soixante-treize mille deux cents dinars et quatre-vingt-huit millimes",
+      "devise": "TND"
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

@@ -149,8 +149,8 @@ describe("PaddleOCR OCCUPÉ n'est pas PaddleOCR tombé", () => {
     }
   });
 
-  /** PaddleOCR répond `statut` ; le modèle de vision s'arrête net (hors sujet ici). */
-  async function lireAvecUnPaddleQuiRepond(statut: number): Promise<string[]> {
+  /** PaddleOCR répond `reponse` ; le modèle de vision s'arrête net (hors sujet ici). */
+  async function lireAvecUnPaddleQuiRepond(reponse: () => Response): Promise<string[]> {
     process.env["OCR_URL"] = "http://ocr.invalid";
     process.env["QWEN_API_KEY"] = "cle-d-essai";
     process.env["QWEN_BASE_URL"] = "http://vision.invalid";
@@ -158,9 +158,7 @@ describe("PaddleOCR OCCUPÉ n'est pas PaddleOCR tombé", () => {
     globalThis.fetch = (async (url: string | URL | Request) => {
       const adresse = String(url instanceof Request ? url.url : url);
       appels.push(adresse.includes("ocr.invalid") ? "paddle" : "vision");
-      if (adresse.includes("ocr.invalid")) {
-        return { ok: false, status: statut, json: async () => ({}) } as unknown as Response;
-      }
+      if (adresse.includes("ocr.invalid")) return reponse();
       throw new Error("arret du test");
     }) as typeof fetch;
     await assert.rejects(() =>
@@ -169,14 +167,16 @@ describe("PaddleOCR OCCUPÉ n'est pas PaddleOCR tombé", () => {
     return appels;
   }
 
-  it("503 : cette pièce passe à la vision, les suivantes gardent PaddleOCR", async () => {
-    const appels = await lireAvecUnPaddleQuiRepond(503);
+  it("occupé : cette pièce passe à la vision, les suivantes gardent PaddleOCR", async () => {
+    const appels = await lireAvecUnPaddleQuiRepond(
+      () => new Response(`${JSON.stringify({ occupe: true })}\n`),
+    );
     assert.deepEqual(appels.slice(0, 2), ["paddle", "vision"]);
     assert.equal(secondLecteurDisponible(), true, "un service occupé n'ouvre pas le coupe-circuit");
   });
 
   it("500 : la pièce passe à la vision, et PaddleOCR est écarté un moment", async () => {
-    const appels = await lireAvecUnPaddleQuiRepond(500);
+    const appels = await lireAvecUnPaddleQuiRepond(() => new Response("", { status: 500 }));
     assert.deepEqual(appels.slice(0, 2), ["paddle", "vision"]);
     assert.equal(secondLecteurDisponible(), false);
   });

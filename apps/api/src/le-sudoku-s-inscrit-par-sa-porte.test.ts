@@ -125,7 +125,9 @@ describe("le sudoku s'inscrit par sa porte", { skip: !BASE_CONFIGUREE }, () => {
     for (const methode of ["contexteSudoku", "inscrireChampsLus"]) {
       await assert.rejects(
         s.fait("amel", `capture.${methode}`, lecture(champs)),
-        /méthode inconnue/,
+        // Une clé fixe, sans le nom de la méthode : la taire, c'est ne pas
+        // confirmer qu'elle existe (audit du 6 novembre 2026, S6).
+        /refus\.introuvable$/,
       );
     }
   });

@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { useI18n } from "@/i18n";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 
@@ -425,7 +426,7 @@ export function MalicaChat({
         ) : null}
         {mutation.isError ? (
           <p className="border border-border px-3 py-2 text-[12px]">
-            {mutation.error instanceof Error ? mutation.error.message : t("malica.chat.error")}
+            {texteDeLErreur(mutation.error, "malica : discussion", t("malica.chat.error"))}
           </p>
         ) : null}
       </div>

@@ -19,7 +19,7 @@ import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import pg from "pg";
 
@@ -157,7 +157,8 @@ describe("le journal ne perd rien", { skip: !BASE_CONFIGUREE }, () => {
   it("arrêt brutal : ce qu'un processus tué avait déversé revient au démarrage suivant", async () => {
     const rep = path.join(dossier, "brutal");
     const trace = randomUUID();
-    const module = path.join(ICI, "journal.ts");
+    // An ESM import takes a URL: a Windows absolute path ("C:…") is refused.
+    const module = pathToFileURL(path.join(ICI, "journal.ts")).href;
     // Le processus : une base coupée, 12 événements déversés, puis il attend
     // qu'on le tue. La dernière ligne est coupée, comme par un arrêt en
     // pleine écriture.
@@ -205,56 +206,67 @@ describe("le journal ne perd rien", { skip: !BASE_CONFIGUREE }, () => {
     assert.ok(rows.length >= 1, "la ligne coupée est comptée comme perdue, et dite");
   });
 
-  it("arrêt demandé : l'API vide sa file sur SIGTERM avant de rendre la main", async () => {
-    const rep = path.join(dossier, "sigterm");
-    const pieces = path.join(dossier, "pieces");
-    const port = await new Promise<number>((resoudre) => {
-      const s = createServer().listen(0, () => {
-        const p = (s.address() as AddressInfo).port;
-        s.close(() => resoudre(p));
+  // Windows has no SIGTERM: process.kill("SIGTERM") ends the process without running its
+  // handler. The graceful drain is proven on Linux (CI, servers), where the API runs.
+  it(
+    "arrêt demandé : l'API vide sa file sur SIGTERM avant de rendre la main",
+    {
+      skip:
+        process.platform === "win32" && "SIGTERM n'existe pas sous Windows : prouvé en CI (Linux)",
+    },
+    async () => {
+      const rep = path.join(dossier, "sigterm");
+      const pieces = path.join(dossier, "pieces");
+      const port = await new Promise<number>((resoudre) => {
+        const s = createServer().listen(0, () => {
+          const p = (s.address() as AddressInfo).port;
+          s.close(() => resoudre(p));
+        });
       });
-    });
-    const api = spawn(
-      process.execPath,
-      ["--experimental-strip-types", "--no-warnings", "src/server.ts"],
-      {
-        cwd: API,
-        env: {
-          ...process.env,
-          PORT: String(port),
-          STOCKAGE_RACINE: pieces,
-          JOURNAL_ATTENTE: rep,
-          // Rien ne s'écrit avant l'arrêt : seul le vidage de SIGTERM peut écrire.
-          JOURNAL_INTERVALLE_MS: "600000",
-          JOURNAL_LOT: "1000",
+      const api = spawn(
+        process.execPath,
+        ["--experimental-strip-types", "--no-warnings", "src/server.ts"],
+        {
+          cwd: API,
+          env: {
+            ...process.env,
+            PORT: String(port),
+            STOCKAGE_RACINE: pieces,
+            JOURNAL_ATTENTE: rep,
+            // Rien ne s'écrit avant l'arrêt : seul le vidage de SIGTERM peut écrire.
+            JOURNAL_INTERVALLE_MS: "600000",
+            JOURNAL_LOT: "1000",
+          },
+          stdio: ["ignore", "pipe", "inherit"],
         },
-        stdio: ["ignore", "pipe", "inherit"],
-      },
-    );
-    const sortie = new Promise<number | null>((r) => api.once("exit", (code) => r(code)));
-    await new Promise<void>((resoudre, rejeter) => {
-      api.stdout.on("data", (d: Buffer) => {
-        if (d.toString().includes("à l'écoute")) resoudre();
+      );
+      const sortie = new Promise<number | null>((r) => api.once("exit", (code) => r(code)));
+      await new Promise<void>((resoudre, rejeter) => {
+        api.stdout.on("data", (d: Buffer) => {
+          if (d.toString().includes("à l'écoute")) resoudre();
+        });
+        void sortie.then((code) => rejeter(new Error(`l'API est sortie seule (${code})`)));
       });
-      void sortie.then((code) => rejeter(new Error(`l'API est sortie seule (${code})`)));
-    });
 
-    const trace = randomUUID();
-    const r = await fetch(`http://127.0.0.1:${port}/moi`, { headers: { "x-malica-trace": trace } });
-    assert.equal(r.status, 401);
-    assert.equal(r.headers.get("x-malica-trace"), trace);
-    assert.deepEqual(await compter(trace), { n: 0, r: 0 }, "rien n'est écrit avant l'arrêt");
+      const trace = randomUUID();
+      const r = await fetch(`http://127.0.0.1:${port}/moi`, {
+        headers: { "x-malica-trace": trace },
+      });
+      assert.equal(r.status, 401);
+      assert.equal(r.headers.get("x-malica-trace"), trace);
+      assert.deepEqual(await compter(trace), { n: 0, r: 0 }, "rien n'est écrit avant l'arrêt");
 
-    api.kill("SIGTERM");
-    assert.equal(await sortie, 0);
-    const { rows } = await admin.query<{ issue: string; statut: number }>(
-      `select issue::text, (detail ->> 'statut')::int as statut
+      api.kill("SIGTERM");
+      assert.equal(await sortie, 0);
+      const { rows } = await admin.query<{ issue: string; statut: number }>(
+        `select issue::text, (detail ->> 'statut')::int as statut
          from observabilite.evenements where trace_id = $1 and etape = 'http'`,
-      [trace],
-    );
-    assert.deepEqual(rows, [{ issue: "refus", statut: 401 }]);
-    assert.deepEqual(await fichiers(rep), [], "tout est en base, rien n'attend sur disque");
-  });
+        [trace],
+      );
+      assert.deepEqual(rows, [{ issue: "refus", statut: 401 }]);
+      assert.deepEqual(await fichiers(rep), [], "tout est en base, rien n'attend sur disque");
+    },
+  );
 
   it("disque inutilisable et base coupée : la perte est comptée, puis dite", async () => {
     // Un fichier à la place du dossier : aucun déversement ne peut réussir.
@@ -329,7 +341,7 @@ describe("le journal ne perd rien", { skip: !BASE_CONFIGUREE }, () => {
     }
     closeSync(fd);
     const script = `
-      import { Journal } from ${JSON.stringify(path.join(ICI, "journal.ts"))};
+      import { Journal } from ${JSON.stringify(pathToFileURL(path.join(ICI, "journal.ts")).href)};
       let n = 0;
       const j = new Journal({
         ecrire: async (lot) => { n += lot.length; return { rejetes: 0 }; },

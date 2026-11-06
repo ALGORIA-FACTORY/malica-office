@@ -1,0 +1,431 @@
+{
+  "id": "154",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "contrat",
+  "grille": "contrat_commercial",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "H",
+  "mise_en_page": "H",
+  "scenario": "contrat_prestation",
+  "realisme": [
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Contrat de prestation de services",
+    "parties": [
+      {
+        "role": "partie",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "partie",
+        "nom": "Clinique Tarvila SARL",
+        "matricule": "8999016I/A/M/000",
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "partie",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "partie",
+      "nom": "Clinique Tarvila SARL",
+      "matricule": "8999016I/A/M/000",
+      "est": "tiers"
+    },
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+        "telephone": "00 71 940 517",
+        "est": "dossier"
+      },
+      "code": "signatures"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "titre",
+        "texte": [
+          {
+            "c": "intitule"
+          }
+        ],
+        "sous": [
+          "Réf. ",
+          {
+            "c": "reference"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "ENTRE LES SOUSSIGNÉES :"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "lignes[0].partie_denomination"
+          },
+          ", ",
+          {
+            "c": "lignes[0].partie_forme_capital"
+          },
+          ", matricule fiscal ",
+          {
+            "c": "lignes[0].partie_matricule_fiscal"
+          },
+          ", dont le siège est au ",
+          {
+            "c": "lignes[0].partie_siege"
+          },
+          ", représentée par ",
+          {
+            "c": "lignes[0].partie_representant"
+          },
+          ", ci-après « ",
+          {
+            "c": "lignes[0].partie_role"
+          },
+          " »,"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "ET"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "lignes[1].partie_denomination"
+          },
+          ", ",
+          {
+            "c": "lignes[1].partie_forme_capital"
+          },
+          ", matricule fiscal ",
+          {
+            "c": "lignes[1].partie_matricule_fiscal"
+          },
+          ", dont le siège est au ",
+          {
+            "c": "lignes[1].partie_siege"
+          },
+          ", représentée par ",
+          {
+            "c": "lignes[1].partie_representant"
+          },
+          ", ci-après « ",
+          {
+            "c": "lignes[1].partie_role"
+          },
+          " »,"
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 1 — Objet"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "objet"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 2 — Durée"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Le contrat est conclu pour ",
+          {
+            "c": "duree"
+          },
+          " à compter du ",
+          {
+            "c": "date_effet"
+          },
+          ". ",
+          {
+            "c": "renouvellement"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 3 — Prix et paiement"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Le prix annuel de l'abonnement est de ",
+          {
+            "c": "prix_montant"
+          },
+          " ",
+          {
+            "c": "devise"
+          },
+          " hors taxes. ",
+          {
+            "c": "modalites_paiement"
+          },
+          " ",
+          {
+            "c": "retenue_source_clause"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 6 — Confidentialité et données"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "confidentialite"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 9 — Résiliation"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "resiliation"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 11 — Droit applicable et litiges"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "droit_applicable"
+          },
+          " ",
+          {
+            "c": "juridiction_arbitrage"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Fait à ",
+          {
+            "c": "lieu_signature"
+          },
+          ", le ",
+          {
+            "c": "date_signature"
+          },
+          ", en ",
+          {
+            "c": "nombre_exemplaires"
+          },
+          " exemplaires originaux."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "Pour le Client",
+        "droite": "Pour le Prestataire"
+      }
+    ],
+    "imprime": {
+      "intitule": "CONTRAT DE PRESTATION DE SERVICES ET D'ABONNEMENT",
+      "reference": "ALG-CT-2026-063",
+      "lignes[0].partie_denomination": "ALGORIA FACTORY SARL",
+      "lignes[0].partie_forme_capital": "SARL au capital de 50 000 DT",
+      "lignes[0].partie_matricule_fiscal": "1958330V/A/M/000",
+      "lignes[0].partie_siege": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "lignes[0].partie_representant": "M. Nadhem Ourvani, gérant",
+      "lignes[0].partie_role": "Le Prestataire",
+      "lignes[1].partie_denomination": "Clinique Tarvila SARL",
+      "lignes[1].partie_forme_capital": "SARL au capital de 300 000 DT",
+      "lignes[1].partie_matricule_fiscal": "8999016I/A/M/000",
+      "lignes[1].partie_siege": "92, rue de l'Artisanat, Monastir",
+      "lignes[1].partie_representant": "Mme Selma Varzouki, directrice générale",
+      "lignes[1].partie_role": "Le Client",
+      "objet": "Le Prestataire met à la disposition du Client la suite Malica Office (palier Foundation), en mode hébergé, et en assure le paramétrage, la maintenance et l'assistance.",
+      "duree": "une durée de douze (12) mois",
+      "date_effet": "1 mars 2026",
+      "renouvellement": "Il se renouvelle par tacite reconduction pour des périodes de douze mois, sauf dénonciation par lettre recommandée deux mois avant l'échéance.",
+      "prix_montant": "4 800,000",
+      "devise": "dinars tunisiens",
+      "modalites_paiement": "Il est facturé trimestriellement d'avance et payable à trente jours par virement.",
+      "retenue_source_clause": "Les retenues à la source légales sont opérées par le Client, qui en remet le certificat au Prestataire.",
+      "confidentialite": "Chaque partie garde confidentielles les informations de l'autre ; les données du Client restent sa propriété et sont hébergées en Tunisie.",
+      "resiliation": "En cas de manquement grave non réparé dans les trente jours d'une mise en demeure, l'autre partie peut résilier le contrat de plein droit.",
+      "droit_applicable": "Le présent contrat est régi par le droit tunisien.",
+      "juridiction_arbitrage": "Tout litige relève des tribunaux de Tunis.",
+      "lieu_signature": "Tunis",
+      "date_signature": "16/02/2026",
+      "nombre_exemplaires": "2"
+    },
+    "versConcept": {
+      "intitule": "intitule",
+      "reference": "reference",
+      "lignes[0].partie_denomination": "lignes[0].partie_denomination",
+      "lignes[0].partie_forme_capital": "lignes[0].partie_forme_capital",
+      "lignes[0].partie_matricule_fiscal": "lignes[0].partie_matricule_fiscal",
+      "lignes[0].partie_siege": "lignes[0].partie_siege",
+      "lignes[0].partie_representant": "lignes[0].partie_representant",
+      "lignes[0].partie_role": "lignes[0].partie_role",
+      "lignes[1].partie_denomination": "lignes[1].partie_denomination",
+      "lignes[1].partie_forme_capital": "lignes[1].partie_forme_capital",
+      "lignes[1].partie_matricule_fiscal": "lignes[1].partie_matricule_fiscal",
+      "lignes[1].partie_siege": "lignes[1].partie_siege",
+      "lignes[1].partie_representant": "lignes[1].partie_representant",
+      "lignes[1].partie_role": "lignes[1].partie_role",
+      "objet": "objet",
+      "duree": "duree",
+      "date_effet": "date_effet",
+      "renouvellement": "renouvellement",
+      "prix_montant": "prix_montant",
+      "devise": "devise",
+      "modalites_paiement": "modalites_paiement",
+      "retenue_source_clause": "retenue_source_clause",
+      "confidentialite": "confidentialite",
+      "resiliation": "resiliation",
+      "droit_applicable": "droit_applicable",
+      "juridiction_arbitrage": "juridiction_arbitrage",
+      "lieu_signature": "lieu_signature",
+      "date_signature": "date_signature",
+      "nombre_exemplaires": "nombre_exemplaires"
+    },
+    "marques": {
+      "cachet_emetteur": "signatures",
+      "signature_emetteur": "signatures"
+    },
+    "cheminsDuDossier": [
+      "lignes[0].partie_matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 1925707249,
+  "attendu": {
+    "concepts": {
+      "intitule": "prestation de services",
+      "reference": "ALG-CT-2026-063",
+      "lignes": [
+        {
+          "partie_denomination": "ALGORIA FACTORY SARL",
+          "partie_forme_capital": "SARL au capital de 50 000 DT",
+          "partie_matricule_fiscal": "1958330V/A/M/000",
+          "partie_siege": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+          "partie_representant": "M. Nadhem Ourvani, gérant",
+          "partie_role": "le prestataire"
+        },
+        {
+          "partie_denomination": "Clinique Tarvila SARL",
+          "partie_forme_capital": "SARL au capital de 300 000 DT",
+          "partie_matricule_fiscal": "8999016I/A/M/000",
+          "partie_siege": "92, rue de l'Artisanat, Monastir",
+          "partie_representant": "Mme Selma Varzouki, directrice générale",
+          "partie_role": "le client"
+        }
+      ],
+      "objet": "Le Prestataire met à la disposition du Client la suite Malica Office (palier Foundation), en mode hébergé, et en assure le paramétrage, la maintenance et l'assistance.",
+      "duree": "P12M",
+      "date_effet": "2026-03-01",
+      "renouvellement": "Il se renouvelle par tacite reconduction pour des périodes de douze mois, sauf dénonciation par lettre recommandée deux mois avant l'échéance.",
+      "prix_montant": "4800.000",
+      "devise": "TND",
+      "modalites_paiement": "Il est facturé trimestriellement d'avance et payable à trente jours par virement.",
+      "retenue_source_clause": "Les retenues à la source légales sont opérées par le Client, qui en remet le certificat au Prestataire.",
+      "confidentialite": "Chaque partie garde confidentielles les informations de l'autre ; les données du Client restent sa propriété et sont hébergées en Tunisie.",
+      "resiliation": "En cas de manquement grave non réparé dans les trente jours d'une mise en demeure, l'autre partie peut résilier le contrat de plein droit.",
+      "droit_applicable": "Le présent contrat est régi par le droit tunisien.",
+      "juridiction_arbitrage": "Tout litige relève des tribunaux de Tunis.",
+      "lieu_signature": "Tunis",
+      "date_signature": "2026-02-16",
+      "nombre_exemplaires": "2",
+      "signatures": true
+    },
+    "confondus": {},
+    "notes": [
+      "Les deux parties ont chacune leur matricule, une fois : celui d'ALGORIA dans la partie « Prestataire » (lignes[0]), celui du client dans la sienne (lignes[1])."
+    ],
+    "non_imprimes": [
+      "annexes",
+      "avenant_reference",
+      "cession_sous_traitance",
+      "donnees_personnelles",
+      "election_domicile",
+      "enregistrement",
+      "exclusivite_territoire",
+      "force_majeure",
+      "garanties_financieres",
+      "langue_faisant_foi",
+      "legalisation_signature",
+      "livrables_niveaux_service",
+      "obligations_parties",
+      "partie_identifiant_unique",
+      "partie_pouvoir_reference",
+      "preambule",
+      "propriete_intellectuelle",
+      "responsabilite_plafond",
+      "revision_prix"
+    ]
+  }
+}

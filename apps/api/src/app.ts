@@ -27,10 +27,14 @@ import {
   demanderReinitialisation,
   emettreJeton,
   emettreJetonDeRafraichissement,
+  ouvrirUneSession,
+  fermerLaSession,
+  fermerToutesLesSessions,
   organisations,
   rafraichir,
   reinitialiser,
   revoquerJetonDeRafraichissement,
+  sessionEnVigueur,
   verifierCompte,
   type Utilisateur,
 } from "./auth.ts";
@@ -38,7 +42,7 @@ import { configurationCourriel } from "./courriel/brevo.ts";
 import { envoyerReinitialisation } from "./courriel/reinitialisation.ts";
 import { executerSousCle, exigerPorteeDepot, ouParCleApi, PorteeInsuffisante } from "./cles-api.ts";
 import { sonderLaBase, sousIdentite } from "./db.ts";
-import { introuvableLisible, refusLisible } from "./refus.ts";
+import { detailTechnique, introuvableLisible, REFUS_SANS_CLE, refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
 import { malica } from "./malica.ts";
 import { moteurDuSecondLecteur } from "./malica/lecture/paddle.ts";
@@ -47,7 +51,13 @@ import { codeDuRefus, consigner } from "./observabilite/journal.ts";
 import { issueDuStatut, tracerLaRequete } from "./observabilite/requete.ts";
 import { traceCourante } from "./observabilite/trace.ts";
 import { executerRpc, origineDEssai, RpcIntrouvable } from "./rpc.ts";
-import { estUneCoque, exigerIdentite, NOM_COOKIE, presenterLeClient } from "./session.ts";
+import {
+  estUneCoque,
+  exigerIdentite,
+  jetonPresente,
+  NOM_COOKIE,
+  presenterLeClient,
+} from "./session.ts";
 import {
   deposerContenu,
   servirContenu,
@@ -226,7 +236,7 @@ app.post("/auth/inscription", limiteAuth, async (req, res, next) => {
       res.status(409).json({ erreur: "inscription impossible" });
       return;
     }
-    const jeton = emettreJeton(utilisateur);
+    const jeton = await ouvrirUneSession(utilisateur);
     poserCookie(res, jeton);
     res.status(201).json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
   } catch (erreur) {
@@ -246,7 +256,7 @@ app.post("/auth/connexion", limiteAuth, async (req, res, next) => {
       res.status(401).json({ erreur: "identifiants invalides" });
       return;
     }
-    const jeton = emettreJeton(utilisateur);
+    const jeton = await ouvrirUneSession(utilisateur);
     poserCookie(res, jeton);
     res.json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
   } catch (erreur) {
@@ -276,7 +286,7 @@ app.post("/auth/rafraichir", limiteAuth, async (req, res, next) => {
       res.status(401).json({ erreur: "jeton de rafraîchissement invalide" });
       return;
     }
-    const jeton = emettreJeton(tourne.utilisateur);
+    const jeton = emettreJeton(tourne.utilisateur, tourne.emisLe);
     poserCookie(res, jeton);
     res.json({
       utilisateur: tourne.utilisateur,
@@ -329,12 +339,13 @@ app.post("/auth/reinitialiser", limiteAuth, async (req, res, next) => {
       res.status(400).json({ erreur: saisie.error.issues[0]?.message ?? "saisie invalide" });
       return;
     }
-    const utilisateur = await reinitialiser(saisie.data.secret, saisie.data.motDePasse);
-    if (!utilisateur) {
+    const ouvert = await reinitialiser(saisie.data.secret, saisie.data.motDePasse);
+    if (!ouvert) {
       res.status(410).json({ erreur: "lien expiré ou déjà utilisé" });
       return;
     }
-    const jeton = emettreJeton(utilisateur);
+    const { emisLe, ...utilisateur } = ouvert;
+    const jeton = emettreJeton(utilisateur, emisLe);
     poserCookie(res, jeton);
     res.json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
   } catch (erreur) {
@@ -343,20 +354,29 @@ app.post("/auth/reinitialiser", limiteAuth, async (req, res, next) => {
 });
 
 app.get("/auth/session", exigerIdentite, (req, res) => {
-  // Sans requête en base : la session est portée par le jeton. Cette route est
-  // appelée à chaque navigation, elle doit rester gratuite.
+  // Appelée à chaque navigation : rien de plus que la vérification de la
+  // session, que `exigerIdentite` fait pour toute route (une requête indexée).
   res.json({ utilisateur: req.utilisateur });
 });
 
 /**
- * Se déconnecter : le cookie tombe, et le jeton long, si la coque le rend,
- * est révoqué en base — c'est ce qui fait qu'une déconnexion sur un téléphone
- * perdu compte pour quelque chose.
+ * Se déconnecter : la session du jeton présenté est fermée en base — ce jeton
+ * ne vaut plus rien, même copié ailleurs —, le cookie tombe, et le jeton long,
+ * si la coque le rend, est révoqué. Les autres appareils restent connectés.
+ *
+ * `{ partout: true }` ferme toutes les sessions du compte, jetons d'accès et
+ * jetons longs — le téléphone perdu. Il faut pour cela une session qui tient
+ * encore : un jeton déjà fermé ne ferme rien.
  */
 app.post("/auth/deconnexion", async (req, res, next) => {
   try {
-    const secret = (req.body as { jetonRafraichissement?: unknown } | undefined)
-      ?.jetonRafraichissement;
+    const corps = req.body as { jetonRafraichissement?: unknown; partout?: unknown } | undefined;
+    const lu = jetonPresente(req);
+    if (lu && (await sessionEnVigueur(lu))) {
+      if (corps?.partout === true) await fermerToutesLesSessions(lu.id);
+      else await fermerLaSession(lu);
+    }
+    const secret = corps?.jetonRafraichissement;
     if (typeof secret === "string" && secret.length > 0) {
       await revoquerJetonDeRafraichissement(secret);
     }
@@ -448,6 +468,9 @@ function noterLAppel(
           methode: NOM_D_APPEL.test(appel.methode) ? appel.methode : null,
           statut: res.statusCode,
           code_refus: codeRefus,
+          // Ce que l'écran ne voit plus (un refus sans clé, une panne) : le
+          // SQLSTATE et le nom de l'erreur, jamais son message.
+          ...((res.locals["panne"] as ReturnType<typeof detailTechnique> | undefined) ?? {}),
         },
       },
       trace,
@@ -462,7 +485,7 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
   try {
     const saisie = Appel.safeParse(req.body);
     if (!saisie.success) {
-      res.status(400).json({ erreur: "appel invalide" });
+      res.status(400).json({ erreur: "refus.saisie.mal_formee" });
       return;
     }
     noterLAppel(res, saisie.data);
@@ -502,7 +525,9 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
       res.status(403).json({ erreur: erreur.message });
       return;
     }
+    // Une clé fixe : le nom reçu ne revient jamais (audit du 6 novembre 2026, S6).
     if (erreur instanceof RpcIntrouvable) {
+      res.locals["refus"] = erreur.message;
       res.status(404).json({ erreur: erreur.message });
       return;
     }
@@ -512,14 +537,21 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
       res.status(404).json({ erreur: absent });
       return;
     }
-    // Une règle métier qui refuse a écrit son message pour l'''appelant : le
-    // masquer derrière « erreur interne » lui retirerait la seule chose utile.
+    // Une règle métier qui refuse a levé sa clé pour l'appelant : le masquer
+    // derrière « erreur interne » lui retirerait la seule chose utile.
     const refus = refusLisible(erreur);
     if (refus) {
       res.locals["refus"] = refus;
+      if (refus === REFUS_SANS_CLE) {
+        // Une phrase levée sans clé ne part pas à l'écran (R12) : le détail
+        // reste au serveur, et l'étape `rpc` en garde le code.
+        res.locals["panne"] = detailTechnique(erreur);
+        console.error("[api] refus sans clé", erreur);
+      }
       res.status(400).json({ erreur: refus });
       return;
     }
+    res.locals["panne"] = detailTechnique(erreur);
     next(erreur);
   }
 });

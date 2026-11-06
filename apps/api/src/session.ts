@@ -15,7 +15,7 @@
  */
 import type { NextFunction, Request, Response } from "express";
 
-import { lireJeton } from "./auth.ts";
+import { lireJeton, sessionEnVigueur, type JetonLu } from "./auth.ts";
 
 /** Ce que le client a dit de lui. */
 export interface Client {
@@ -44,19 +44,38 @@ declare global {
 export const NOM_COOKIE = "malica_session";
 const EN_TETE_CLIENT = "x-malica-client";
 
-export function exigerIdentite(req: Request, res: Response, next: NextFunction): void {
+/** Le jeton présenté — en porteur d'abord, par le cookie sinon —, lu sans la base. */
+export function jetonPresente(req: Request): JetonLu | null {
   const entete = req.headers.authorization;
   const jeton = entete?.startsWith("Bearer ")
     ? entete.slice(7)
     : (req.cookies as Record<string, string> | undefined)?.[NOM_COOKIE];
+  return jeton ? lireJeton(jeton) : null;
+}
 
-  const utilisateur = jeton ? lireJeton(jeton) : null;
-  if (!utilisateur) {
+/**
+ * Une identité, ou 401. La signature ne suffit pas : la session du jeton doit
+ * tenir encore en base — ni fermée par la déconnexion de cet appareil, ni émise
+ * avant une déconnexion de partout ou une réinitialisation. Une requête, à
+ * chaque appel : c'est la seule porte de toutes les routes de session, et une
+ * vérification portée par chaque route en oublierait une.
+ */
+export function exigerIdentite(req: Request, res: Response, next: NextFunction): void {
+  const lu = jetonPresente(req);
+  if (!lu) {
     res.status(401).json({ erreur: "authentification requise" });
     return;
   }
-  req.utilisateur = utilisateur;
-  next();
+  sessionEnVigueur(lu)
+    .then((tient) => {
+      if (!tient) {
+        res.status(401).json({ erreur: "authentification requise" });
+        return;
+      }
+      req.utilisateur = { id: lu.id, email: lu.email };
+      next();
+    })
+    .catch(next);
 }
 
 /** « coque-android/0.3.1+abc » → { nom: "coque-android", version: "0.3.1" }. Sinon `null`. */

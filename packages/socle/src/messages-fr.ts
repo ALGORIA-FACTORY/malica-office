@@ -591,6 +591,14 @@ export const fr = {
   "pme.paiement.borne": "Au plus {montant} : ce qui reste à payer.",
   "pme.paiement.avantFacture": "Avant la date de la facture : un acompte ?",
   "pme.type.titre": "Qu'est-ce que c'est ?",
+  "pme.photo.avis.too_small":
+    "La page est petite sur la photo : la lecture risque d'être incomplète. Vous pouvez la reprendre de plus près.",
+  "pme.photo.avis.oblique":
+    "La photo est prise de biais : la lecture risque d'être incomplète. Vous pouvez la reprendre face à la page.",
+  "pme.photo.avis.too_dark":
+    "La photo est sombre : la lecture risque d'être incomplète. Vous pouvez la reprendre à la lumière.",
+  "pme.photo.avis.blurry":
+    "La photo est floue : la lecture risque d'être incomplète. Vous pouvez la reprendre, appareil immobile.",
   "pme.type.passer": "Je ne sais pas",
   "pme.type.corrigeable": "Malica le vérifie à la lecture. Vous pourrez le changer.",
   "pme.piece.type.modifier": "Modifier le type",
@@ -612,6 +620,9 @@ export const fr = {
   "pme.piece.voir": "Voir la facture",
   "pme.detail.voir": "Voir le détail",
   "pme.detail.titre": "Ce que j'ai lu, ligne par ligne",
+  "pme.detail.lignesAVerifier": "Lignes lues, à vérifier",
+  "pme.detail.lignesAVerifierAide":
+    "Aucune somme ne prouve encore ces lignes : elles sont lues telles quelles. La lecture de nuit les reprend ; l'écriture ne s'appuie que sur les totaux prouvés.",
   "pme.detail.compte": "{count} lignes",
   "pme.detail.compte#one": "{count} ligne",
   "pme.detail.compte#other": "{count} lignes",
@@ -1684,6 +1695,7 @@ export const fr = {
   "cab.lecteur.statut.prouve": "Prouvé",
   "cab.lecteur.statut.conforme": "Conforme",
   "cab.lecteur.statut.signale": "Signalé",
+  "cab.lecteur.statut.signale_ligne": "Lu, à vérifier",
   "cab.lecteur.statut.absent": "Absent",
   "cab.lecteur.statut.deduit": "Déduit",
   "cab.lecteur.statut.coupe": "Coupé",
@@ -2144,6 +2156,7 @@ export const fr = {
   "refus.piece.archivee": "Le client a retiré cette pièce : elle est archivée.",
   "refus.introuvable": "Introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.piece": "Pièce introuvable, ou vous n’y avez pas accès.",
+  "refus.inattendu": "Ce geste n’a pas abouti. Réessayez ; si cela se répète, signalez-le.",
   "refus.introuvable.cabinet": "Cabinet introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.dossier": "Dossier introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.facture": "Facture introuvable, ou vous n’y avez pas accès.",
@@ -2500,6 +2513,8 @@ export const fr = {
     "La lecture cite le champ {champ} à un emplacement où aucun mot n’a été lu.",
   "refus.piece.empreinte": "L’empreinte de cette pièce n’est pas valide.",
   "refus.piece.scellee": "Le contenu de cette pièce est scellé : il ne se remplace pas.",
+  "refus.piece.type_de_contenu":
+    "Ce type de fichier n’est pas une pièce : déposez un PDF ou une photo (JPEG, PNG, WebP, HEIC).",
   "refus.piece.non_partagee": "Cette pièce n’est pas partagée avec le cabinet.",
   "refus.piece.aucune_demande": "Aucune demande n’est en attente sur cette pièce.",
   "refus.rattachement.motif": "Dites pourquoi vous détachez ce document.",
@@ -2512,6 +2527,7 @@ export const fr = {
   "refus.cle_api.par_une_personne":
     "Une clé d’API ne crée ni ne révoque une autre clé : ce geste se fait par une personne.",
   "refus.cle_api.cabinet_seulement": "Seul un cabinet porte une clé d’API.",
+  "refus.cle_api.expert_membre": "Seul un expert membre du cabinet crée une clé d’API.",
   "refus.cle_api.nom_requis": "Donnez un nom à la clé.",
   "refus.cle_api.portee_requise": "Une clé porte au moins une portée.",
   "refus.cle_api.portee_inconnue": "Une des portées demandées n’existe pas.",
@@ -3543,6 +3559,12 @@ export const fr = {
   "scan.hint.searching": "Cadrez la facture entière dans l'écran.",
   "scan.hint.closer": "Approchez : le document occupe trop peu de place.",
   "scan.hint.blurry": "Stabilisez l'appareil : l'image est floue.",
+  "scan.hint.oblique": "Mettez-vous face au document : il est pris trop de biais.",
+  "scan.hint.dark": "Trop sombre : rapprochez-vous d'une source de lumière.",
+  "scan.hint.ombre":
+    "Ne bougez plus — une ombre tombe sur le document : écartez-la si vous pouvez.",
+  "scan.reject.dark": "Photo refusée : trop sombre. Éclairez la page et reprenez.",
+  "scan.reject.oblique": "Photo refusée : prise trop de biais. Placez-vous face à la page.",
   "scan.hint.blank": "Page vierge : le document est terminé.",
   "scan.cam.contexte_non_securise":
     "Le cadrage assisté demande une connexion sécurisée, que cette adresse n'a pas. Votre caméra fonctionne : passez par l'appareil photo, la photo sera la même.",
@@ -3565,6 +3587,7 @@ export const fr = {
   "scan.autoclosed": "Fin de document détectée automatiquement.",
   "common.error": "Une erreur est survenue.",
   "common.horsLigne": "Pas de connexion. Ce geste sera possible au retour du réseau.",
+  "common.erreur.reference": "(réf. {ref})",
   "common.motif": "Motif",
   "common.source": "Source",
   "common.retirer": "Retirer",

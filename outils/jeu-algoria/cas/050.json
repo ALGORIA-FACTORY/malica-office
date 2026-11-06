@@ -1,0 +1,387 @@
+{
+  "id": "050",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "B",
+  "scenario": "long",
+  "realisme": [
+    "biais",
+    "grain",
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Qalmira Fournitures SARL",
+      "nomAr": "شركة قلميرة للوازم",
+      "enseigne": null,
+      "matricule": "6966005G/A/M/000",
+      "matriculeImprime": "6966005G/A/M/000",
+      "adresse": "103, rue de l'Artisanat, Mégrine",
+      "telephone": "00 59 118 736",
+      "fax": "00 63 308 619",
+      "email": null,
+      "site": null,
+      "rc": "B149444082019",
+      "rib": "99 519 6462438728885 30",
+      "banque": "Crédit Selvane",
+      "code": "C9775959",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330VAM000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "01-04-2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Ramette papier A4 80 g",
+        "designationAr": "رزمة ورق A4 80 غ",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre couleur",
+        "designationAr": "خرطوشة حبر ملون",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Classeur à levier, dos 8 cm",
+        "designationAr": "ملف برافعة، ظهر 8 سم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de salle de réunion, demi-journée",
+        "designationAr": "كراء قاعة اجتماعات، نصف يوم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de déménagement de bureaux",
+        "designationAr": "خدمة نقل مكاتب",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Entretien climatisation, visite",
+        "designationAr": "صيانة المكيفات، زيارة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": false
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Qalmira Fournitures SARL",
+      "document_date": "01-04-2026",
+      "references.numero": "F-2026-8111",
+      "references.matricule_fiscal": "6966005G/A/M/000",
+      "references.matricule_fiscal_client": "1958330VAM000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "103, rue de l'Artisanat, Mégrine",
+      "telephone_emetteur": "00 59 118 736",
+      "rib_emetteur": "99 519 6462438728885 30",
+      "totals.base_ht": "16 157,292",
+      "totals.vat": "3 069,885",
+      "totals.ttc": "19 228,177",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Ramette papier A4 80 g",
+      "articles[0].quantity": "4",
+      "articles[0].unit_price_ht": "11,799",
+      "articles[0].total_ht": "47,196",
+      "articles[1].designation": "Cartouche d'encre couleur",
+      "articles[1].quantity": "16",
+      "articles[1].unit_price_ht": "94,594",
+      "articles[1].total_ht": "1 513,504",
+      "articles[2].designation": "Classeur à levier, dos 8 cm",
+      "articles[2].quantity": "2",
+      "articles[2].unit_price_ht": "6,676",
+      "articles[2].total_ht": "13,352",
+      "articles[3].designation": "Location de salle de réunion, demi-journée",
+      "articles[3].quantity": "21",
+      "articles[3].unit_price_ht": "259,706",
+      "articles[3].total_ht": "5 453,826",
+      "articles[4].designation": "Prestation de déménagement de bureaux",
+      "articles[4].quantity": "3",
+      "articles[4].unit_price_ht": "1 105,922",
+      "articles[4].total_ht": "3 317,766",
+      "articles[5].designation": "Entretien climatisation, visite",
+      "articles[5].quantity": "16",
+      "articles[5].unit_price_ht": "363,228",
+      "articles[5].total_ht": "5 811,648"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "rib_emetteur": "rib_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ht": "lignes[5].prix_unitaire_ht",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 1960195593,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Qalmira Fournitures SARL",
+      "document_date": "2026-04-01",
+      "currency": "TND",
+      "references.numero": "F-2026-8111",
+      "references.matricule_fiscal": "6966005G/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "16157.292",
+      "totals.vat": "3069.885",
+      "totals.ttc": "19228.177",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "16157.292",
+      "lines[0].vat_amount": "3069.885",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "4.000",
+      "articles[0].unit_price_ht": "11.799",
+      "articles[0].total_ht": "47.196",
+      "articles[1].quantity": "16.000",
+      "articles[1].unit_price_ht": "94.594",
+      "articles[1].total_ht": "1513.504",
+      "articles[2].quantity": "2.000",
+      "articles[2].unit_price_ht": "6.676",
+      "articles[2].total_ht": "13.352",
+      "articles[3].quantity": "21.000",
+      "articles[3].unit_price_ht": "259.706",
+      "articles[3].total_ht": "5453.826",
+      "articles[4].quantity": "3.000",
+      "articles[4].unit_price_ht": "1105.922",
+      "articles[4].total_ht": "3317.766",
+      "articles[5].quantity": "16.000",
+      "articles[5].unit_price_ht": "363.228",
+      "articles[5].total_ht": "5811.648"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "16157.292",
+          "0"
+        ],
+        [
+          "4366",
+          "3069.885",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "19228.177"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Qalmira Fournitures SARL",
+      "date_operation": "2026-04-01",
+      "numero_facture": "F-2026-8111",
+      "matricule_fiscal_emetteur": "6966005G/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "103, rue de l'Artisanat, Mégrine",
+      "telephone_email_emetteur": {
+        "telephone": "00 59 118 736"
+      },
+      "rib_emetteur": "99 519 6462438728885 30",
+      "total_ht": "16157.292",
+      "montant_tva_par_taux": {
+        "19": "3069.885"
+      },
+      "total_ttc": "19228.177",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "16157.292"
+      },
+      "lignes": [
+        {
+          "designation": "Ramette papier A4 80 g",
+          "quantite": "4",
+          "prix_unitaire_ht": "11.799",
+          "montant_ligne_ht": "47.196",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Cartouche d'encre couleur",
+          "quantite": "16",
+          "prix_unitaire_ht": "94.594",
+          "montant_ligne_ht": "1513.504",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Classeur à levier, dos 8 cm",
+          "quantite": "2",
+          "prix_unitaire_ht": "6.676",
+          "montant_ligne_ht": "13.352",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Location de salle de réunion, demi-journée",
+          "quantite": "21",
+          "prix_unitaire_ht": "259.706",
+          "montant_ligne_ht": "5453.826",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Prestation de déménagement de bureaux",
+          "quantite": "3",
+          "prix_unitaire_ht": "1105.922",
+          "montant_ligne_ht": "3317.766",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Entretien climatisation, visite",
+          "quantite": "16",
+          "prix_unitaire_ht": "363.228",
+          "montant_ligne_ht": "5811.648",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "devise": "TND",
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "registre_commerce_emetteur",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

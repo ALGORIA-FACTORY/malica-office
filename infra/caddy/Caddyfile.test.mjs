@@ -55,6 +55,30 @@ test("le Caddyfile route vers l'API les mêmes chemins que le relais de dévelop
   );
 });
 
+/*
+ * Audit de sécurité du 6 novembre 2026, constats S1 et S12
+ * (`docs/audit-2026-11-06/securite.md`) : `/exports/:id/contenu` partait au
+ * serveur web, et la CSP de Caddy, posée sur toute réponse, aurait écrasé la
+ * CSP `sandbox` que l'API pose sur les octets d'une pièce ou d'un export.
+ */
+test("les exports gardés vont à l'API (S12)", () => {
+  assert.ok(cheminsDuCaddyfile().has("/exports/*"));
+});
+
+test("la CSP du site est un défaut : elle n'écrase pas celle que l'API pose (S1)", () => {
+  const bloc = /\n\theader\s*\{([\s\S]*?)\n\t\}/.exec(caddyfile);
+  assert.ok(bloc, "bloc header introuvable dans le Caddyfile");
+  const csp = bloc[1]
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => /^[?+]?Content-Security-Policy\b/.test(l));
+  assert.equal(csp.length, 1, "une seule ligne Content-Security-Policy");
+  assert.ok(
+    csp[0].startsWith("?Content-Security-Policy "),
+    "« ?Content-Security-Policy » : posée seulement si l'API n'en a pas posé",
+  );
+});
+
 test("l'écran de connexion /auth reste au site, ses sous-chemins vont à l'API", () => {
   const caddySet = cheminsDuCaddyfile();
   assert.ok(caddySet.has("/auth/*"));

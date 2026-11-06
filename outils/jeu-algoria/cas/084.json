@@ -1,0 +1,304 @@
+{
+  "id": "084",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "capture": "scan",
+  "gabarit": "E",
+  "scenario": "taux_13",
+  "realisme": [
+    "biais",
+    "grain",
+    "tampon",
+    "signature",
+    "souche_carbone",
+    "ratures"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Belmira Traiteur SARL",
+      "nomAr": "بلميرة للمرطبات",
+      "enseigne": null,
+      "matricule": "1487008O/A/M/000",
+      "matriculeImprime": "1487008O/A/M/000",
+      "adresse": "150, rue des Mimosas, El Menzah",
+      "telephone": "00 52 130 824",
+      "fax": "00 37 421 949",
+      "email": null,
+      "site": null,
+      "rc": "B584901592011",
+      "rib": "99 225 4420696320529 50",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C1364779",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "19/08/2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Transport de matériel, course",
+        "designationAr": "نقل معدات، رحلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل، ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [
+      {
+        "chemin": "articles[0].total_ht",
+        "barre": "10.740,642"
+      },
+      {
+        "chemin": "articles[1].quantity",
+        "barre": "22"
+      }
+    ],
+    "imprime": {
+      "issuer": "Belmira Traiteur SARL",
+      "document_date": "19/08/2026",
+      "references.numero": "0277",
+      "references.matricule_fiscal": "1487008O/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "150, rue des Mimosas, El Menzah",
+      "telephone_emetteur": "00 52 130 824",
+      "registre_commerce_emetteur": "B584901592011",
+      "totals.base_ht": "17.087,826",
+      "totals.vat": "2.221,417",
+      "totals.ttc": "19.310,243",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Transport de matériel, course",
+      "articles[0].quantity": "18",
+      "articles[0].unit_price_ht": "593,369",
+      "articles[0].total_ht": "10.680,642",
+      "articles[1].designation": "Hébergement en hôtel, nuitée",
+      "articles[1].quantity": "21",
+      "articles[1].unit_price_ht": "305,104",
+      "articles[1].total_ht": "6.407,184"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[13]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 180014259,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Belmira Traiteur SARL",
+      "document_date": "2026-08-19",
+      "currency": "TND",
+      "references.numero": "0277",
+      "references.matricule_fiscal": "1487008O/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "17087.826",
+      "totals.vat": "2221.417",
+      "totals.ttc": "19310.243",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "17087.826",
+      "lines[0].vat_amount": "2221.417",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "18.000",
+      "articles[0].unit_price_ht": "593.369",
+      "articles[0].total_ht": "10680.642",
+      "articles[1].quantity": "21.000",
+      "articles[1].unit_price_ht": "305.104",
+      "articles[1].total_ht": "6407.184"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "17087.826",
+          "0"
+        ],
+        [
+          "4366",
+          "2221.417",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "19310.243"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Ratures : la valeur barrée n'est jamais la valeur attendue ; la valeur juste est écrite à côté."
+    ],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Belmira Traiteur SARL",
+      "date_operation": "2026-08-19",
+      "numero_facture": "0277",
+      "matricule_fiscal_emetteur": "1487008O/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "150, rue des Mimosas, El Menzah",
+      "telephone_email_emetteur": {
+        "telephone": "00 52 130 824"
+      },
+      "registre_commerce_emetteur": "B584901592011",
+      "total_ht": "17087.826",
+      "montant_tva_par_taux": {
+        "13": "2221.417"
+      },
+      "total_ttc": "19310.243",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "13": "17087.826"
+      },
+      "lignes": [
+        {
+          "designation": "Transport de matériel, course",
+          "quantite": "18",
+          "prix_unitaire_ht": "593.369",
+          "montant_ligne_ht": "10680.642",
+          "taux_tva_ligne": "13"
+        },
+        {
+          "designation": "Hébergement en hôtel, nuitée",
+          "quantite": "21",
+          "prix_unitaire_ht": "305.104",
+          "montant_ligne_ht": "6407.184",
+          "taux_tva_ligne": "13"
+        }
+      ],
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

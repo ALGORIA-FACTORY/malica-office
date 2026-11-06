@@ -117,7 +117,13 @@ impl<'a> Solveur<'a> {
         // Les charges d'assiette présentes majorent la base du barème que leur preuve nomme.
         let mut assiette_ppm: BTreeMap<&str, i64> = BTreeMap::new();
         for cp in &m.contraintes {
-            if let Contrainte::Charge { m: v, taux_ppm: Some(t), assiette: Some(b), .. } = &cp.c {
+            if let Contrainte::Charge {
+                m: v,
+                taux_ppm: Some(t),
+                assiette: Some(b),
+                ..
+            } = &cp.c
+            {
                 if m.vars[*v].present {
                     *assiette_ppm.entry(b.as_str()).or_insert(0) += *t;
                 }
@@ -141,7 +147,11 @@ impl<'a> Solveur<'a> {
             .groupes
             .iter()
             .map(|g| {
-                baremes[&g.bareme].iter().filter(|(_, p, _)| *p > 0).map(|(c, _, k)| (c.clone(), *k)).collect()
+                baremes[&g.bareme]
+                    .iter()
+                    .filter(|(_, p, _)| *p > 0)
+                    .map(|(c, _, k)| (c.clone(), *k))
+                    .collect()
             })
             .collect();
         // Un champ qu'aucune contrainte n'emploie n'est pas cherché.
@@ -195,13 +205,20 @@ impl<'a> Solveur<'a> {
             .enumerate()
             .map(|(i, v)| {
                 if !v.present || !self.utiles[i] {
-                    Some(Val { v: 0, absent: true, faible: false })
+                    Some(Val {
+                        v: 0,
+                        absent: true,
+                        faible: false,
+                    })
                 } else {
                     None
                 }
             })
             .collect();
-        Etat { s, g: vec![None; self.m.groupes.len()] }
+        Etat {
+            s,
+            g: vec![None; self.m.groupes.len()],
+        }
     }
 
     fn valeur(&self, e: &Etat, u: Unite) -> Option<i64> {
@@ -255,7 +272,10 @@ impl<'a> Solveur<'a> {
                     if vm.absent || vb.absent {
                         return Eval::NonEvaluable;
                     }
-                    if self.baremes[bareme].iter().any(|(_, _, k)| (k.applique(vb.v) - vm.v).abs() <= tol) {
+                    if self.baremes[bareme]
+                        .iter()
+                        .any(|(_, _, k)| (k.applique(vb.v) - vm.v).abs() <= tol)
+                    {
                         Eval::Ok
                     } else {
                         Eval::Echec
@@ -263,7 +283,13 @@ impl<'a> Solveur<'a> {
                 }
                 _ => Eval::Inconnu,
             },
-            Contrainte::Charge { m, admis, taux_ppm, base, .. } => {
+            Contrainte::Charge {
+                m,
+                admis,
+                taux_ppm,
+                base,
+                ..
+            } => {
                 let vm = match e.s[*m] {
                     Some(v) => v,
                     None => return Eval::Inconnu,
@@ -272,7 +298,11 @@ impl<'a> Solveur<'a> {
                     return Eval::NonEvaluable;
                 }
                 if !admis.is_empty() {
-                    return if admis.contains(&vm.v) { Eval::Ok } else { Eval::Echec };
+                    return if admis.contains(&vm.v) {
+                        Eval::Ok
+                    } else {
+                        Eval::Echec
+                    };
                 }
                 match (taux_ppm, base) {
                     (Some(t), Some(b)) => match e.s[*b] {
@@ -305,7 +335,9 @@ impl<'a> Solveur<'a> {
                                 return Eval::Echec;
                             }
                         }
-                        Some(v) if !v.absent && !sol.exoneration && v.v != sol.somme_b => return Eval::Echec,
+                        Some(v) if !v.absent && !sol.exoneration && v.v != sol.somme_b => {
+                            return Eval::Echec
+                        }
                         _ => {}
                     }
                 }
@@ -330,7 +362,11 @@ impl<'a> Solveur<'a> {
         let echelle = 10i128.pow(self.decimales);
         let mut p: i128 = 1;
         for (n, x) in f.enumerate() {
-            p = if n == 0 { x as i128 } else { div_arrondi(p * x as i128, echelle) };
+            p = if n == 0 {
+                x as i128
+            } else {
+                div_arrondi(p * x as i128, echelle)
+            };
         }
         p
     }
@@ -372,7 +408,9 @@ impl<'a> Solveur<'a> {
         // Tout est affecté et aucune contrainte n'échoue : une solution.
         let faible = e.s.iter().any(|v| v.is_some_and(|v| !v.absent && v.faible))
             || e.g.iter().any(|g| g.as_ref().is_some_and(|g| g.faible));
-        let exige = e.g.iter().any(|g| g.as_ref().is_some_and(|g| g.exige_forte));
+        let exige =
+            e.g.iter()
+                .any(|g| g.as_ref().is_some_and(|g| g.exige_forte));
         if exige && faible {
             return;
         }
@@ -386,7 +424,11 @@ impl<'a> Solveur<'a> {
             .filter(|(v, _)| r.as_ref().is_none_or(|r| r.contains(v)))
             .map(|(v, faible)| {
                 let mut n = e.clone();
-                n.s[i] = Some(Val { v, absent: false, faible });
+                n.s[i] = Some(Val {
+                    v,
+                    absent: false,
+                    faible,
+                });
                 n
             })
             .collect()
@@ -407,11 +449,15 @@ impl<'a> Solveur<'a> {
     }
 
     fn somme_b_connue(&self, e: &Etat, g: usize) -> Option<i64> {
-        self.m.groupes[g].total_base.and_then(|t| self.present(e, t))
+        self.m.groupes[g]
+            .total_base
+            .and_then(|t| self.present(e, t))
     }
 
     fn somme_m_connue(&self, e: &Etat, g: usize) -> Option<i64> {
-        self.m.groupes[g].total_montant.and_then(|t| self.present(e, t))
+        self.m.groupes[g]
+            .total_montant
+            .and_then(|t| self.present(e, t))
     }
 
     /// Une variable déterminée par une contrainte dont tous les autres termes sont connus.
@@ -423,8 +469,10 @@ impl<'a> Solveur<'a> {
         for cp in &modele.contraintes {
             match &cp.c {
                 Contrainte::Lin { termes } => {
-                    let inconnues: Vec<&(Unite, i64)> =
-                        termes.iter().filter(|(u, _)| self.valeur(e, *u).is_none()).collect();
+                    let inconnues: Vec<&(Unite, i64)> = termes
+                        .iter()
+                        .filter(|(u, _)| self.valeur(e, *u).is_none())
+                        .collect();
                     if inconnues.len() != 1 {
                         continue;
                     }
@@ -435,7 +483,11 @@ impl<'a> Solveur<'a> {
                         .map(|(x, c)| self.valeur(e, *x).unwrap() as i128 * *c as i128)
                         .sum();
                     // k = ±1 : u = −reste / k ; un même terme répété se cumule
-                    let coef: i64 = termes.iter().filter(|(x, _)| *x == u).map(|(_, c)| *c).sum();
+                    let coef: i64 = termes
+                        .iter()
+                        .filter(|(x, _)| *x == u)
+                        .map(|(_, c)| *c)
+                        .sum();
                     if coef == 0 || reste % coef as i128 != 0 {
                         return Some(Vec::new());
                     }
@@ -454,7 +506,13 @@ impl<'a> Solveur<'a> {
                         }
                     }
                 }
-                Contrainte::Charge { m, admis, taux_ppm, base, .. } => {
+                Contrainte::Charge {
+                    m,
+                    admis,
+                    taux_ppm,
+                    base,
+                    ..
+                } => {
                     if e.s[*m].is_none() {
                         if !admis.is_empty() {
                             let cands = admis.iter().flat_map(|f| self.exact(*f)).collect();
@@ -464,7 +522,11 @@ impl<'a> Solveur<'a> {
                             if let Some(vb) = e.s[*b] {
                                 if !vb.absent {
                                     let c = Coef::ppm(*t).applique(vb.v);
-                                    return Some(self.avec_scalaire(e, *m, self.dom.entre(c - tol, c + tol)));
+                                    return Some(self.avec_scalaire(
+                                        e,
+                                        *m,
+                                        self.dom.entre(c - tol, c + tol),
+                                    ));
                                 }
                             }
                         }
@@ -477,8 +539,11 @@ impl<'a> Solveur<'a> {
                     }
                 }
                 Contrainte::Taux { m, b, bareme } => {
-                    let coefs: Vec<Coef> =
-                        self.baremes[bareme].iter().filter(|(_, p, _)| *p > 0).map(|(_, _, k)| *k).collect();
+                    let coefs: Vec<Coef> = self.baremes[bareme]
+                        .iter()
+                        .filter(|(_, p, _)| *p > 0)
+                        .map(|(_, _, k)| *k)
+                        .collect();
                     match (e.s[*m], e.s[*b]) {
                         (None, Some(vb)) if !vb.absent => {
                             let mut c: Vec<(i64, bool)> = Vec::new();
@@ -528,9 +593,17 @@ impl<'a> Solveur<'a> {
                     if vt.absent || facteurs.iter().any(|&f| f != i && e.s[f].unwrap().absent) {
                         continue;
                     }
-                    let autres: Vec<i64> = facteurs.iter().filter(|&&f| f != i).map(|&f| e.s[f].unwrap().v).collect();
+                    let autres: Vec<i64> = facteurs
+                        .iter()
+                        .filter(|&&f| f != i)
+                        .map(|&f| e.s[f].unwrap().v)
+                        .collect();
                     let echelle = 10i128.pow(self.decimales);
-                    let p_autres: i128 = if autres.is_empty() { echelle } else { self.produit(autres.into_iter()) };
+                    let p_autres: i128 = if autres.is_empty() {
+                        echelle
+                    } else {
+                        self.produit(autres.into_iter())
+                    };
                     if p_autres == 0 {
                         continue;
                     }
@@ -581,7 +654,10 @@ impl<'a> Solveur<'a> {
         self.m
             .contraintes
             .iter()
-            .filter(|cp| unites(&cp.c, self.m).contains(&Unite::S(i)) && self.evaluer(e, &cp.c) == Eval::Inconnu)
+            .filter(|cp| {
+                unites(&cp.c, self.m).contains(&Unite::S(i))
+                    && self.evaluer(e, &cp.c) == Eval::Inconnu
+            })
             .count()
     }
 
@@ -627,7 +703,11 @@ impl<'a> Solveur<'a> {
         let mut hi = i128::MAX;
         for cp in &self.m.contraintes {
             if let Contrainte::Lin { termes } = &cp.c {
-                let k_i: i64 = termes.iter().filter(|(u, _)| *u == Unite::S(i)).map(|(_, k)| *k).sum();
+                let k_i: i64 = termes
+                    .iter()
+                    .filter(|(u, _)| *u == Unite::S(i))
+                    .map(|(_, k)| *k)
+                    .sum();
                 if k_i == 0 {
                     continue;
                 }
@@ -654,7 +734,11 @@ impl<'a> Solveur<'a> {
                             }
                         },
                     };
-                    let (a, b) = if k > 0 { (a * k as i128, b * k as i128) } else { (b * k as i128, a * k as i128) };
+                    let (a, b) = if k > 0 {
+                        (a * k as i128, b * k as i128)
+                    } else {
+                        (b * k as i128, a * k as i128)
+                    };
                     slo += a;
                     shi += b;
                 }
@@ -698,7 +782,12 @@ impl<'a> Solveur<'a> {
 
     /// Les instances (taux distincts, montant, base) d'un groupe compatibles avec
     /// ce qu'on sait de ses sommes.
-    pub fn resoudre_groupe(&mut self, g: usize, sm: Option<i64>, sb: Option<i64>) -> Vec<SolGroupe> {
+    pub fn resoudre_groupe(
+        &mut self,
+        g: usize,
+        sm: Option<i64>,
+        sb: Option<i64>,
+    ) -> Vec<SolGroupe> {
         let mut out = Vec::new();
         let modele: &'a Modele = self.m;
         let gr: &Groupe = &modele.groupes[g];
@@ -743,11 +832,16 @@ impl<'a> Solveur<'a> {
                     }
                 }
             }
-            out.extend(partielles.into_iter().filter(|s| !s.faible && partie_stricte(s.somme_b, sb)).map(|mut s| {
-                s.partielle = true;
-                s.exige_forte = true;
-                s
-            }));
+            out.extend(
+                partielles
+                    .into_iter()
+                    .filter(|s| !s.faible && partie_stricte(s.somme_b, sb))
+                    .map(|mut s| {
+                        s.partielle = true;
+                        s.exige_forte = true;
+                        s
+                    }),
+            );
         }
         // « Total seul » : le total des montants est imprimé, pas les montants par taux ;
         // deux taux, bases imprimées, lectures fortes seulement (règle verrouillée par la mesure).
@@ -783,7 +877,11 @@ impl<'a> Solveur<'a> {
             return;
         }
         let partiel: i64 = choisis.iter().map(|(v, _)| *v).sum();
-        let base_partielle: f64 = choisis.iter().zip(ks).map(|((v, _), c)| *v as f64 / c.reel()).sum();
+        let base_partielle: f64 = choisis
+            .iter()
+            .zip(ks)
+            .map(|((v, _), c)| *v as f64 / c.reel())
+            .sum();
         let marge_tot: f64 = ks.iter().map(|c| self.marge_base(c)).sum();
         let cands: Vec<(i64, bool)> = if reste == 1 {
             if let Some(sm) = sm {
@@ -792,7 +890,8 @@ impl<'a> Solveur<'a> {
                 let c = ks[idx];
                 let centre = (sb as f64 - base_partielle) * c.reel();
                 let w = marge_tot * c.reel() + 2.0;
-                self.dom.entre((centre - w).floor() as i64, (centre + w).ceil() as i64)
+                self.dom
+                    .entre((centre - w).floor() as i64, (centre + w).ceil() as i64)
             } else {
                 self.dom.toutes()
             }
@@ -807,14 +906,18 @@ impl<'a> Solveur<'a> {
             } else {
                 let centre = (bb - r / c.reel()) / d;
                 let w = marge_tot / d.abs() + 2.0;
-                self.dom.entre((centre - w).floor() as i64, (centre + w).ceil() as i64)
+                self.dom
+                    .entre((centre - w).floor() as i64, (centre + w).ceil() as i64)
             }
         } else {
             self.dom.toutes()
         };
         // Taux encore à placer après celui-ci : bornes de leurs coefficients.
         let suivants = &ks[idx + 1..];
-        let kmin = suivants.iter().map(|c| c.reel()).fold(f64::INFINITY, f64::min);
+        let kmin = suivants
+            .iter()
+            .map(|c| c.reel())
+            .fold(f64::INFINITY, f64::min);
         let kmax = suivants.iter().map(|c| c.reel()).fold(0.0, f64::max);
         let retenus: Vec<(i64, bool)> = cands
             .into_iter()
@@ -841,7 +944,11 @@ impl<'a> Solveur<'a> {
                         return false;
                     }
                     let marge = marge_tot * kmax + 2.0 * (self.tol as f64 + 1.0) * reste as f64;
-                    let (lo, hi) = if bb >= 0.0 { (bb * kmin, bb * kmax) } else { (bb * kmax, bb * kmin) };
+                    let (lo, hi) = if bb >= 0.0 {
+                        (bb * kmin, bb * kmax)
+                    } else {
+                        (bb * kmax, bb * kmin)
+                    };
                     if r < lo - marge || r > hi + marge {
                         return false;
                     }
@@ -859,7 +966,14 @@ impl<'a> Solveur<'a> {
         }
     }
 
-    fn finaliser(&mut self, combo: &[usize], ks: &[Coef], sb: Option<i64>, vs: &[(i64, bool)], out: &mut Vec<SolGroupe>) {
+    fn finaliser(
+        &mut self,
+        combo: &[usize],
+        ks: &[Coef],
+        sb: Option<i64>,
+        vs: &[(i64, bool)],
+        out: &mut Vec<SolGroupe>,
+    ) {
         let tol = self.tol;
         let somme_m: i64 = vs.iter().map(|(v, _)| *v).sum();
         let faible_m = vs.iter().any(|(_, f)| *f);
@@ -868,7 +982,12 @@ impl<'a> Solveur<'a> {
                 .iter()
                 .zip(vs)
                 .zip(bases)
-                .map(|((&t, (v, _)), b)| Instance { taux: t, m: Some(*v), m_calcule: *v, b: *b })
+                .map(|((&t, (v, _)), b)| Instance {
+                    taux: t,
+                    m: Some(*v),
+                    m_calcule: *v,
+                    b: *b,
+                })
                 .collect()
         };
         // Un seul taux : la base est la somme des bases.
@@ -895,7 +1014,11 @@ impl<'a> Solveur<'a> {
             .zip(vs)
             .map(|(c, (v, _))| {
                 let (lo, hi) = c.bases_a_tolerance(*v, tol);
-                self.dom.entre(lo, hi).into_iter().filter(|(b, _)| *b != 0 && b.signum() == v.signum()).collect()
+                self.dom
+                    .entre(lo, hi)
+                    .into_iter()
+                    .filter(|(b, _)| *b != 0 && b.signum() == v.signum())
+                    .collect()
             })
             .collect();
         let mut combos_bases: Vec<(Vec<i64>, bool)> = Vec::new();
@@ -906,7 +1029,10 @@ impl<'a> Solveur<'a> {
         }
         match sb {
             Some(sb) => {
-                if let Some((bases, fb)) = combos_bases.iter().find(|(b, _)| b.iter().sum::<i64>() == sb) {
+                if let Some((bases, fb)) = combos_bases
+                    .iter()
+                    .find(|(b, _)| b.iter().sum::<i64>() == sb)
+                {
                     let bs: Vec<Option<i64>> = bases.iter().map(|b| Some(*b)).collect();
                     out.push(SolGroupe {
                         instances: mk(&bs),
@@ -980,8 +1106,18 @@ impl<'a> Solveur<'a> {
                 if (t1 + t2 - sm).abs() <= 2 * self.tol {
                     out.push(SolGroupe {
                         instances: vec![
-                            Instance { taux: combo[0], m: None, m_calcule: t1, b: Some(b1) },
-                            Instance { taux: combo[1], m: None, m_calcule: t2, b: Some(b2) },
+                            Instance {
+                                taux: combo[0],
+                                m: None,
+                                m_calcule: t1,
+                                b: Some(b1),
+                            },
+                            Instance {
+                                taux: combo[1],
+                                m: None,
+                                m_calcule: t2,
+                                b: Some(b2),
+                            },
                         ],
                         somme_m: sm,
                         somme_b: sb,
@@ -1001,7 +1137,13 @@ fn partie_stricte(partie: i64, total: i64) -> bool {
     partie != 0 && partie.signum() == total.signum() && partie.abs() < total.abs()
 }
 
-fn produit_cartesien(l: &[Vec<(i64, bool)>], i: usize, cur: &mut Vec<(i64, bool)>, faible: bool, out: &mut Vec<(Vec<i64>, bool)>) {
+fn produit_cartesien(
+    l: &[Vec<(i64, bool)>],
+    i: usize,
+    cur: &mut Vec<(i64, bool)>,
+    faible: bool,
+    out: &mut Vec<(Vec<i64>, bool)>,
+) {
     if i == l.len() {
         out.push((cur.iter().map(|(b, _)| *b).collect(), faible));
         return;
@@ -1017,9 +1159,9 @@ fn produit_cartesien(l: &[Vec<(i64, bool)>], i: usize, cur: &mut Vec<(i64, bool)
 pub fn unites(c: &Contrainte, m: &Modele) -> Vec<Unite> {
     match c {
         Contrainte::Lin { termes } => termes.iter().map(|(u, _)| *u).collect(),
-        Contrainte::Produit { total, facteurs } => {
-            std::iter::once(Unite::S(*total)).chain(facteurs.iter().map(|&f| Unite::S(f))).collect()
-        }
+        Contrainte::Produit { total, facteurs } => std::iter::once(Unite::S(*total))
+            .chain(facteurs.iter().map(|&f| Unite::S(f)))
+            .collect(),
         Contrainte::Taux { m, b, .. } => vec![Unite::S(*m), Unite::S(*b)],
         Contrainte::Charge { m, base, .. } => {
             let mut v = vec![Unite::S(*m)];
@@ -1047,16 +1189,20 @@ pub fn unites(c: &Contrainte, m: &Modele) -> Vec<Unite> {
 pub type Cle = (Vec<Option<i64>>, Vec<Vec<(usize, i64)>>);
 
 pub fn cle(e: &Etat) -> Cle {
-    let s = e.s.iter().map(|v| v.and_then(|v| if v.absent { None } else { Some(v.v) })).collect();
-    let g = e
-        .g
-        .iter()
-        .map(|g| {
-            let mut v: Vec<(usize, i64)> =
-                g.as_ref().map(|g| g.instances.iter().map(|i| (i.taux, i.m_calcule)).collect()).unwrap_or_default();
-            v.sort();
-            v
-        })
-        .collect();
+    let s =
+        e.s.iter()
+            .map(|v| v.and_then(|v| if v.absent { None } else { Some(v.v) }))
+            .collect();
+    let g =
+        e.g.iter()
+            .map(|g| {
+                let mut v: Vec<(usize, i64)> = g
+                    .as_ref()
+                    .map(|g| g.instances.iter().map(|i| (i.taux, i.m_calcule)).collect())
+                    .unwrap_or_default();
+                v.sort();
+                v
+            })
+            .collect();
     (s, g)
 }

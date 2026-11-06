@@ -44,6 +44,7 @@ import {
   type EntreeDuSudoku,
   type Grille,
   type JetonDuSudoku,
+  type MarqueDuSudoku,
   type PackDuSudoku,
   type RefDeJeton,
   type SortieDuSudoku,
@@ -65,6 +66,7 @@ import {
   type TokenRef,
 } from "./token-plan.ts";
 import type { VisionRead, VisionSelection } from "./vision.ts";
+import { jetonDouteux } from "./lexique.ts";
 
 /** La grille de la lecture citée : elle lit des factures (voir l'en-tête). */
 export const GRILLE_DE_LA_LECTURE_CITEE = "facture";
@@ -140,11 +142,16 @@ const SEPARATEUR = /[.,]/u;
 export function jetonsDuSudoku(
   plan: readonly PageToken[],
   devise: DeviseLue,
-  /** Les règles de lecture du pack, et la grille dont la preuve `lettres` nomme le champ. */
-  contexte: Pick<ContexteDuSudoku, "regles" | "grille">,
+  /**
+   * Les règles de lecture du pack, la grille dont la preuve `lettres` nomme le champ, et
+   * les formats d'identifiants du pack (`ref.identifiant_formats`), quand on les a.
+   */
+  contexte: Pick<ContexteDuSudoku, "regles" | "grille"> & {
+    readonly pack?: Pick<ContexteDuSudoku["pack"], "formats">;
+  },
 ): JetonDuSudoku[] {
   const dates = datesDuPlan(plan, contexte.regles);
-  const identifiants = identifiantsDuPlan(plan, contexte.regles);
+  const identifiants = identifiantsDuPlan(plan, contexte.regles, contexte.pack?.formats ?? {});
   const lettres = lettresDuPlan(plan, contexte.regles, contexte.grille, devise);
   return plan.map((t, i) => ({
     page: t.page,
@@ -154,17 +161,42 @@ export function jetonsDuSudoku(
     y0: t.y0,
     x1: t.x1,
     y1: t.y1,
-    montants: treillisMontant(t.text, devise).map((h) => ({
-      v: h.millimes,
-      // « 16000 » se lit aussi 16,000 (virgule perdue) : le treillis l'appelle
-      // décimale, mais aucun séparateur n'est imprimé. Elle reste faible.
-      forte: h.lecture === "decimale" && SEPARATEUR.test(t.text),
-    })),
+    ...(typeof t.confidence === "number" ? { confiance: t.confidence } : {}),
+    ...(jetonDouteux(t.text) ? { douteux: true } : {}),
+    ...(typeof t.faible === "number" ? { faible: t.faible } : {}),
+    ...(typeof t.manque === "number" ? { manque: t.manque } : {}),
+    montants: montantsDuJeton(t.text, devise),
     ...dates[i]!,
     ...(identifiants[i]!.length > 0 ? { identifiants: identifiants[i]! } : {}),
     ...(lettres.has(cleDeJeton(t)) ? { lettres: lettres.get(cleDeJeton(t))! } : {}),
     ...decoupesDe(t.text, devise),
   }));
+}
+
+/**
+ * Les lectures d'un jeton pour le moteur. « 16000 » se lit aussi 16,000 (virgule
+ * perdue) : le treillis l'appelle décimale, mais aucun séparateur n'est imprimé. Elle
+ * reste faible.
+ *
+ * Un point ou une virgule APRÈS des décimales complètes (« 534,443. », la ponctuation de
+ * la phrase collée par l'OCR) : le lecteur unique refuse le texte, un montant finit par
+ * un chiffre (« 8, » n'est pas fini). Ici les décimales de la devise sont toutes
+ * imprimées : le texte sans sa marque finale se lit, en lecture FAIBLE — c'est
+ * l'arithmétique de la pièce qui la retient ou non. Banc sans IA du 4 novembre 2026,
+ * algoria-018 : « 19 % 2 812,858 534,443. », la TVA d'un taux perdue, la pièce non
+ * prouvée.
+ */
+function montantsDuJeton(texte: string, devise: DeviseLue): { v: number; forte: boolean }[] {
+  const lues = treillisMontant(texte, devise).map((h) => ({
+    v: h.millimes,
+    forte: h.lecture === "decimale" && SEPARATEUR.test(texte),
+  }));
+  if (lues.length > 0 || devise.decimales === 0) return lues;
+  const complete = new RegExp(`[.,]\\d{${devise.decimales}}[.,]$`, "u");
+  if (!complete.test(texte.trim())) return lues;
+  return treillisMontant(texte.trim().slice(0, -1), devise)
+    .filter((h) => h.lecture === "decimale")
+    .map((h) => ({ v: h.millimes, forte: false }));
 }
 
 /**
@@ -258,8 +290,14 @@ export async function lireLeContexteDuSudoku(
         format_code: string | null;
         parcelle: string;
         expert: string;
+        role: string | null;
+        domaine: string | null;
+        repetee: boolean;
+        marque: string | null;
+        defaut_du_dossier: "devise" | null;
       }>(
-        `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert
+        `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert, c.role,
+                k.domaine, c.repetee, c.marque, k.defaut_du_dossier
            from ref_grille_champs_v c join ref_concepts_v k on k.id = c.concept_id
           where c.grille_id = $1 order by c.code`,
         [grilleId],
@@ -272,7 +310,8 @@ export async function lireLeContexteDuSudoku(
       db.query<{ code: string; value_num: string | null }>(
         `select distinct on (code) code, value_num from ref_socle_params_v
         where pack_version_id = $1
-          and code = 'lecture.tolerance_arrondi_mineure'
+          and code in ('lecture.tolerance_arrondi_mineure', 'lecture.confiance_du_texte',
+                       'lecture.confiance_du_caractere', 'lecture.manque_du_caractere')
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code, valid_from desc`,
         [packId, jour],
@@ -282,10 +321,11 @@ export async function lireLeContexteDuSudoku(
       ]),
       // Un taux nul n'est pas un taux du barème : l'exonération est un chemin à
       // part dans la grille (la mention lue), jamais une instance « 0 % » que
-      // n'importe quel zéro imprimé fermerait.
+      // n'importe quel zéro imprimé fermerait. Les taux nuls ne font que nommer
+      // la part exonérée d'une exonération partielle (`pack.taux_nuls`).
       db.query<{ code: string; rate: string }>(
         `select code, rate from ref_tva_rates_v
-        where pack_version_id = $1 and rate > 0
+        where pack_version_id = $1
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code`,
         [packId, jour],
@@ -314,7 +354,10 @@ export async function lireLeContexteDuSudoku(
         [packId, jour],
       ),
       db.query<{ kind: string; pattern: string }>(
-        `select distinct on (kind) kind, pattern from ref.identifiant_formats
+        // Le motif de LECTURE quand il diffère de celui de saisie (`pattern_lu`) : un
+        // matricule imprimé sans sa lettre de contrôle se lit.
+        `select distinct on (kind) kind, coalesce(pattern_lu, pattern) as pattern
+           from ref.identifiant_formats
         where pack_version_id = $1
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by kind, valid_from desc`,
@@ -367,6 +410,24 @@ export async function lireLeContexteDuSudoku(
     parCode.set(c.code, une);
   }
 
+  // Les domaines des champs « liste » : chaque code et toutes ses formes imprimables
+  // (son libellé dans les trois langues, ses marques), lus en base.
+  const domaines = [...new Set(champs.rows.flatMap((c) => (c.domaine ? [c.domaine] : [])))];
+  const { rows: formesDesDomaines } =
+    domaines.length === 0
+      ? { rows: [] as { domaine: string; code: string; forme: string }[] }
+      : await db.query<{ domaine: string; code: string; forme: string }>(
+          `select domaine, code, forme from ref_valeurs_des_domaines_v
+            where domaine = any($1::text[]) order by domaine, code, forme`,
+          [domaines],
+        );
+  const valeursDe = (domaine: string) => {
+    const parCode = new Map<string, string[]>();
+    for (const f of formesDesDomaines)
+      if (f.domaine === domaine) parCode.set(f.code, [...(parCode.get(f.code) ?? []), f.forme]);
+    return [...parCode].map(([code, f]) => ({ code, formes: f }));
+  };
+
   return {
     jour,
     grille: {
@@ -379,6 +440,11 @@ export async function lireLeContexteDuSudoku(
         format_code: c.format_code,
         parcelle: c.parcelle,
         expert: c.expert,
+        role: c.role,
+        ...(c.repetee ? { repetee: true } : {}),
+        ...(c.marque === "cachet" ? { marque: c.marque } : {}),
+        ...(c.domaine ? { valeurs: valeursDe(c.domaine) } : {}),
+        ...(c.defaut_du_dossier ? { defaut_du_dossier: c.defaut_du_dossier } : {}),
       })),
       preuves: preuves.rows.map((p) => ({
         code: p.code,
@@ -390,9 +456,28 @@ export async function lireLeContexteDuSudoku(
     pack: {
       decimales,
       tolerance: param("lecture.tolerance_arrondi_mineure"),
-      baremes: { tva: taux.rows.map((t) => ({ code: t.code, ppm: ppm(t.rate) })) },
+      confiance_du_texte: param("lecture.confiance_du_texte"),
+      confiance_du_caractere: param("lecture.confiance_du_caractere"),
+      manque_du_caractere: param("lecture.manque_du_caractere"),
+      baremes: {
+        tva: taux.rows
+          .filter((t) => ppm(t.rate) > 0)
+          .map((t) => ({ code: t.code, ppm: ppm(t.rate) })),
+      },
+      taux_nuls: { tva: taux.rows.filter((t) => ppm(t.rate) === 0).map((t) => t.code) },
       charges: [...parCode.values()],
       formats: Object.fromEntries(formats.rows.map((f) => [f.kind, f.pattern])),
+      // La lettre de contrôle du matricule, quand le pack en porte la règle : un matricule
+      // imprimé sans elle se compare par la lettre calculée.
+      controles: regles.matricule.controle
+        ? {
+            [regles.codeDuMatricule]: {
+              poids: [...regles.matricule.controle.poids],
+              modulo: regles.matricule.controle.modulo,
+              alphabet: regles.matricule.controle.alphabet,
+            },
+          }
+        : {},
     },
     formesJuridiques: formes.rows.map((f) => f.code),
     regles,
@@ -442,10 +527,17 @@ export function resoudreLaPiece(
   contexte: ContexteDuSudoku,
   moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
   connus?: Connus,
+  marques?: readonly MarqueDuSudoku[],
+  /** Les jetons viennent de la couche de texte d'un PDF : le texte exact de la pièce. */
+  texteExact = false,
 ): SortieDuSudoku {
   const grille = contexte.grille;
   const pack = packALaPrecision(contexte.pack, jetons);
-  const avecConnus = connus ? { connus } : {};
+  const avecConnus = {
+    ...(connus ? { connus } : {}),
+    ...(marques?.length ? { marques } : {}),
+    ...(texteExact ? { texte_exact: true } : {}),
+  };
   const noms = [...new Set(grille.preuves.flatMap((p) => (p.variante ? [p.variante] : [])))].sort();
   if (noms.length === 0) return moteur({ jetons, grille, pack, ...avecConnus });
 
@@ -562,8 +654,8 @@ export function selectionParLeSudoku(
   // Une cellule déduite ou lue dans une coupe ne se relit pas dans son jeton
   // (il porte deux cases, ou aucune) : elle reste nulle dans la chaîne, et ne
   // vit qu'inscrite, avec son statut (`champsLusAInscrire`).
-  const imprimee = (c: Cite) =>
-    c.statut === "deduit" || c.statut === "coupe" ? undefined : c.refs;
+  const imprimee = (c: Cite | undefined) =>
+    !c || c.statut === "deduit" || c.statut === "coupe" ? undefined : c.refs;
   const articles =
     sortie.lignes?.statut === "prouve"
       ? sortie.lignes.instances.map((l) => ({
@@ -797,8 +889,8 @@ export function champsLusAInscrire(
     lignes.instances.forEach((l, i) => {
       const cellules: Array<[string, Cite | null]> = [
         ["designation", l.designation],
-        ["quantite", l.quantite],
-        [l.prix_ttc ? "prix_ttc" : "prix", l.prix],
+        ["quantite", l.quantite ?? null],
+        [l.prix_ttc ? "prix_ttc" : "prix", l.prix ?? null],
         ["remise", l.remise],
         ["montant", l.montant],
         ["taux", l.taux ? { valeur: l.taux.code, refs: l.taux.refs } : null],
@@ -812,10 +904,13 @@ export function champsLusAInscrire(
         // la valeur n'est pas tout le texte du jeton.
         const deduite = c.statut === "deduit";
         const coupee = c.statut === "coupe";
+        // Une désignation INCERTAINE, ou une ligne lue sans preuve : signalée, « lu, non
+        // vérifié » (décision du 5 novembre 2026) — jamais inscrite comme prouvée.
+        const nonVerifiee = c.statut === "incertain" || lignes.statut === "signale";
         champs.push(
           ligne(
             champDe(cle),
-            deduite || coupee ? c.statut! : lignes.statut,
+            deduite || coupee ? c.statut! : nonVerifiee ? "signale" : lignes.statut,
             c.valeur,
             deduite && c.case
               ? [{ case: c.case }]
@@ -910,6 +1005,23 @@ export interface Sudoku {
   prouvee(lecture: VisionRead): boolean;
   /** Ce que le sudoku a rendu de cette lecture, pour le journal ; rien s'il ne l'a pas vue. */
   verdict(lecture: VisionRead): VerdictDuSudoku | null;
+  /**
+   * L'état des lignes d'articles de cette lecture : `prouvees` (la somme les prouve, chaque
+   * désignation sûre), `a_verifier` (lues sans preuve, ou une désignation incertaine :
+   * décision du 5 novembre 2026, la nuit les reprend) ou `sans` (rien à en dire).
+   */
+  lignes(lecture: VisionRead): EtatDesLignes;
+}
+
+export type EtatDesLignes = "prouvees" | "a_verifier" | "sans";
+
+/** L'état des lignes d'une sortie du moteur. */
+export function etatDesLignes(sortie: SortieDuSudoku): EtatDesLignes {
+  const l = sortie.lignes;
+  if (!l || l.instances.length === 0) return "sans";
+  const incertaine = l.instances.some((i) => i.designation?.statut === "incertain");
+  if (l.statut === "prouve" && !incertaine) return "prouvees";
+  return "a_verifier";
 }
 
 /** Le verdict d'un sudoku qui n'a pas pu juger : seule son erreur est dite. */
@@ -964,6 +1076,11 @@ export function creerLeSudoku(
     readonly devise: DeviseLue | undefined;
     /** Le dossier et ses tiers, tels que la base les connaît (anneau 2). */
     readonly dossier: { readonly matricule: string | null; readonly raisonSociale: string };
+    /**
+     * Le sens de la pièce, quand la personne l'a confirmé (`document_kind_statut`
+     * « confirme ») ; absent, le moteur le cherche sur la pièce.
+     */
+    readonly sens?: "achat" | "vente";
     readonly tiers: readonly {
       readonly code: string;
       readonly identifiantFiscal: string | null;
@@ -975,6 +1092,7 @@ export function creerLeSudoku(
   const lus = new WeakMap<VisionRead, ChampsLusAInscrire>();
   const designees = new WeakSet<VisionRead>();
   const verdicts = new WeakMap<VisionRead, VerdictDuSudoku>();
+  const lignes = new WeakMap<VisionRead, EtatDesLignes>();
   return {
     async lire(lecture) {
       let jour: string | null = null;
@@ -1003,9 +1121,21 @@ export function creerLeSudoku(
               : [],
           ),
           formes_juridiques: ctx.formesJuridiques,
+          // Le sens que la personne a confirmé : il place le dossier, l'autre matricule
+          // est le tiers.
+          ...(piece.sens ? { sens: piece.sens } : {}),
+          // La devise du dossier : celle d'une pièce qui n'en imprime aucune.
+          devise: piece.devise.code,
         };
         const jetons = jetonsDuSudoku(lecture.tokens, piece.devise, ctx);
-        const sortie = resoudreLaPiece(jetons, ctx, resoudre, connus);
+        const sortie = resoudreLaPiece(
+          jetons,
+          ctx,
+          resoudre,
+          connus,
+          lecture.marques,
+          lecture.lecteur === "pdf-text",
+        );
         const aInscrire = champsLusAInscrire(piece, ctx, sortie);
 
         const rendue: VisionRead =
@@ -1021,6 +1151,7 @@ export function creerLeSudoku(
                 ),
               };
         lus.set(rendue, aInscrire);
+        lignes.set(rendue, etatDesLignes(sortie));
         if (rendue !== lecture) designees.add(rendue);
         verdicts.set(
           rendue,
@@ -1049,6 +1180,10 @@ export function creerLeSudoku(
 
     prouvee(lecture) {
       return designees.has(lecture);
+    },
+
+    lignes(lecture) {
+      return lignes.get(lecture) ?? "sans";
     },
   };
 }

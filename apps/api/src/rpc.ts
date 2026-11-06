@@ -181,7 +181,22 @@ export interface AppelRpc {
   args: unknown[];
 }
 
-export class RpcIntrouvable extends Error {}
+/**
+ * Un appel qui ne mène à rien : dépôt ou méthode inconnus, ou réservés au
+ * serveur. Le message est une clé FIXE — jamais le nom reçu : le répéter
+ * renvoyait la saisie à l'écran (HTML compris), et distinguer « réservée » de
+ * « inexistante » confirmait qu'une méthode du serveur existe (audit du
+ * 6 novembre 2026, S6).
+ */
+export class RpcIntrouvable extends Error {
+  /** Ce qui a été appelé, pour le journal du serveur seulement — jamais rendu. */
+  readonly detail: string | null;
+  constructor(detail: string | null = null) {
+    super("refus.introuvable");
+    this.name = "RpcIntrouvable";
+    this.detail = detail;
+  }
+}
 
 /**
  * Résout un appel et l'exécute.
@@ -198,7 +213,7 @@ export async function executerRpc(
   origine: OrigineAppel = "client",
 ): Promise<unknown> {
   if (!Object.hasOwn(DEPOTS, appel.depot)) {
-    throw new RpcIntrouvable(`dépôt inconnu : ${appel.depot}`);
+    throw new RpcIntrouvable();
   }
   const depot = DEPOTS[appel.depot as NomDepot] as Record<string, unknown>;
 
@@ -207,7 +222,7 @@ export async function executerRpc(
     typeof depot[appel.methode] !== "function" ||
     (origine === "client" && reserveeAuServeur(appel.depot, appel.methode))
   ) {
-    throw new RpcIntrouvable(`méthode inconnue : ${appel.depot}.${appel.methode}`);
+    throw new RpcIntrouvable();
   }
   const methode = depot[appel.methode] as (db: Requete, ...args: unknown[]) => Promise<unknown>;
 
@@ -218,9 +233,8 @@ export async function executerRpc(
     // écritures de la tour étaient gardées par la base ; ses lectures, non.
     const { rows } = await db.query<{ ok: boolean }>("select app.is_platform() as ok");
     if (!rows[0]?.ok) {
-      throw Object.assign(new Error("La tour est réservée aux opérateurs d'ALGORIA."), {
-        code: "42501",
-      });
+      // Une clé, dite à l'écran dans la langue de la personne (R12).
+      throw Object.assign(new Error("refus.reserve.plateforme"), { code: "42501" });
     }
   }
 

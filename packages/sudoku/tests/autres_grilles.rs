@@ -36,7 +36,13 @@ fn releve(solde_final: i64) -> Vec<Value> {
     vec![
         du,
         au,
-        jeton(2, "Solde précédent 1 250,000", 0.5, 0.20, &[(1250000, true)]),
+        jeton(
+            2,
+            "Solde précédent 1 250,000",
+            0.5,
+            0.20,
+            &[(1250000, true)],
+        ),
         jeton(3, "Virement reçu 1 900,500", 0.05, 0.30, &[(1900500, true)]),
         jeton(4, "Retrait DAB 600,250", 0.05, 0.33, &[(600250, true)]),
         jeton(5, "Chèque 1 500,000", 0.05, 0.36, &[(1500000, true)]),
@@ -55,7 +61,10 @@ fn releve_bancaire_prouve_puis_signale() {
     assert_eq!(valeur(&o, "total_credits"), 3400500);
     assert_eq!(valeur(&o, "total_debits"), 2100250);
     assert_eq!(valeur(&o, "solde_final"), 2550250);
-    assert_eq!(o["champs"]["solde_final"]["refs"], json!([{"page": 1, "ordinal": 9}]));
+    assert_eq!(
+        o["champs"]["solde_final"]["refs"],
+        json!([{"page": 1, "ordinal": 9}])
+    );
     assert_eq!(o["preuves"]["soldes"], "verifiee");
     assert_eq!(o["preuves"]["periode"], "verifiee");
     // un chiffre cassé dans le nouveau solde : signalé, aucune valeur émise
@@ -83,8 +92,20 @@ fn grille_paie() -> Value {
 
 fn bulletin(net: i64) -> Vec<Value> {
     vec![
-        jeton(0, "Salaire de base 1 600,000", 0.05, 0.20, &[(1600000, true)]),
-        jeton(1, "Prime de rendement 250,000", 0.05, 0.23, &[(250000, true)]),
+        jeton(
+            0,
+            "Salaire de base 1 600,000",
+            0.05,
+            0.20,
+            &[(1600000, true)],
+        ),
+        jeton(
+            1,
+            "Prime de rendement 250,000",
+            0.05,
+            0.23,
+            &[(250000, true)],
+        ),
         jeton(2, "Salaire brut 1 850,000", 0.05, 0.30, &[(1850000, true)]),
         jeton(3, "Retenue CNSS 170,385", 0.05, 0.40, &[(170385, true)]),
         jeton(4, "IRPP 210,500", 0.05, 0.43, &[(210500, true)]),

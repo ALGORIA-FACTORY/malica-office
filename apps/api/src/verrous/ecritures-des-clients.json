@@ -40,7 +40,7 @@
     {
       "objet": "app.signalements",
       "privilege": "INSERT",
-      "chemins": ["public.signalement_deposer"]
+      "chemins": ["public.journal_hors_dossier_consigner", "public.signalement_deposer"]
     },
     {
       "objet": "audit.event_log",

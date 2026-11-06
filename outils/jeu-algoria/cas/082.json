@@ -1,0 +1,371 @@
+{
+  "id": "082",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "capture": "scan",
+  "gabarit": "E",
+  "scenario": "fodec",
+  "realisme": [
+    "biais",
+    "grain",
+    "tampon",
+    "signature",
+    "souche_carbone",
+    "ratures"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Ouzdira Câblerie SA",
+      "nomAr": "شركة وزديرة للكوابل",
+      "enseigne": null,
+      "matricule": "6228007B/A/M/000",
+      "matriculeImprime": "6228007B/A/M/000",
+      "adresse": "90, rue de l'Artisanat, Menzel Bourguiba",
+      "telephone": "00 60 976 411",
+      "fax": "00 44 125 954",
+      "email": null,
+      "site": null,
+      "rc": "B492177192012",
+      "rib": "99 763 3388660978853 03",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C3281937",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "07/07/2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Câble électrique 3 × 2,5 mm², rouleau",
+        "designationAr": "كابل كهربائي 3 × 2,5 مم²، لفة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Bac de rangement plastique 40 L",
+        "designationAr": "صندوق تخزين بلاستيكي 40 لتر",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Gaine ICTA 20 mm, couronne",
+        "designationAr": "غمد ICTA 20 مم، لفة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Impression de cartes de visite, boîte de 500",
+        "designationAr": "طباعة بطاقات زيارة، علبة 500",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "FODEC",
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": "Arrêtée la présente facture à la somme de : six mille cent dix-neuf dinars et quatre cent soixante-douze millimes.",
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [
+      {
+        "chemin": "articles[0].total_ht",
+        "barre": "1.867,360"
+      },
+      {
+        "chemin": "articles[1].quantity",
+        "barre": "14"
+      }
+    ],
+    "imprime": {
+      "issuer": "Ouzdira Câblerie SA",
+      "document_date": "07/07/2026",
+      "references.numero": "0259",
+      "references.matricule_fiscal": "6228007B/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "90, rue de l'Artisanat, Menzel Bourguiba",
+      "telephone_emetteur": "00 60 976 411",
+      "registre_commerce_emetteur": "B492177192012",
+      "mode_reglement": "Traite",
+      "totals.base_ht": "5.090,666",
+      "totals.vat": "976,899",
+      "totals.ttc": "6.119,472",
+      "other_charges[0].amount": "50,907",
+      "other_charges[1].amount": "1,000",
+      "lines[0].base_ht": "5.141,573",
+      "lines[0].vat_amount": "976,899",
+      "articles[0].designation": "Câble électrique 3 × 2,5 mm², rouleau",
+      "articles[0].quantity": "10",
+      "articles[0].unit_price_ht": "179,736",
+      "articles[0].total_ht": "1.797,360",
+      "articles[1].designation": "Bac de rangement plastique 40 L",
+      "articles[1].quantity": "13",
+      "articles[1].unit_price_ht": "30,786",
+      "articles[1].total_ht": "400,218",
+      "articles[2].designation": "Gaine ICTA 20 mm, couronne",
+      "articles[2].quantity": "15",
+      "articles[2].unit_price_ht": "55,814",
+      "articles[2].total_ht": "837,210",
+      "articles[3].designation": "Impression de cartes de visite, boîte de 500",
+      "articles[3].quantity": "22",
+      "articles[3].unit_price_ht": "93,449",
+      "articles[3].total_ht": "2.055,878",
+      "montant_en_lettres": "six mille cent dix-neuf dinars et quatre cent soixante-douze millimes"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "montant_fodec",
+      "other_charges[1].amount": "droit_timbre",
+      "lines[0].base_ht": "base_tva_par_taux[19]",
+      "lines[0].vat_amount": "montant_tva_par_taux[19]",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres"
+    }
+  },
+  "graineDuRendu": 673469729,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Ouzdira Câblerie SA",
+      "document_date": "2026-07-07",
+      "currency": "TND",
+      "references.numero": "0259",
+      "references.matricule_fiscal": "6228007B/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "5090.666",
+      "totals.vat": "976.899",
+      "totals.ttc": "6119.472",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "5141.573",
+      "lines[0].vat_amount": "976.899",
+      "other_charges[0].code": "FODEC",
+      "other_charges[0].amount": "50.907",
+      "other_charges[1].code": "DROIT_TIMBRE",
+      "other_charges[1].amount": "1.000",
+      "articles[0].quantity": "10.000",
+      "articles[0].unit_price_ht": "179.736",
+      "articles[0].total_ht": "1797.360",
+      "articles[1].quantity": "13.000",
+      "articles[1].unit_price_ht": "30.786",
+      "articles[1].total_ht": "400.218",
+      "articles[2].quantity": "15.000",
+      "articles[2].unit_price_ht": "55.814",
+      "articles[2].total_ht": "837.210",
+      "articles[3].quantity": "22.000",
+      "articles[3].unit_price_ht": "93.449",
+      "articles[3].total_ht": "2055.878"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "5090.666",
+          "0"
+        ],
+        [
+          "4366",
+          "976.899",
+          "0",
+          "TVA19"
+        ],
+        [
+          "601",
+          "50.907",
+          "0"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "6119.472"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — FODEC à l'achat incorporé au coût, sur sa ligne au compte de la charge (fodec.traitement du pack), et compris dans la base de la TVA",
+      "Ratures : la valeur barrée n'est jamais la valeur attendue ; la valeur juste est écrite à côté."
+    ],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Ouzdira Câblerie SA",
+      "date_operation": "2026-07-07",
+      "numero_facture": "0259",
+      "matricule_fiscal_emetteur": "6228007B/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "90, rue de l'Artisanat, Menzel Bourguiba",
+      "telephone_email_emetteur": {
+        "telephone": "00 60 976 411"
+      },
+      "registre_commerce_emetteur": "B492177192012",
+      "mode_reglement": "Traite",
+      "total_ht": "5090.666",
+      "montant_tva_par_taux": {
+        "19": "976.899"
+      },
+      "total_ttc": "6119.472",
+      "montant_fodec": "50.907",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "5141.573"
+      },
+      "lignes": [
+        {
+          "designation": "Câble électrique 3 × 2,5 mm², rouleau",
+          "quantite": "10",
+          "prix_unitaire_ht": "179.736",
+          "montant_ligne_ht": "1797.360",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Bac de rangement plastique 40 L",
+          "quantite": "13",
+          "prix_unitaire_ht": "30.786",
+          "montant_ligne_ht": "400.218",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Gaine ICTA 20 mm, couronne",
+          "quantite": "15",
+          "prix_unitaire_ht": "55.814",
+          "montant_ligne_ht": "837.210",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Impression de cartes de visite, boîte de 500",
+          "quantite": "22",
+          "prix_unitaire_ht": "93.449",
+          "montant_ligne_ht": "2055.878",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "six mille cent dix-neuf dinars et quatre cent soixante-douze millimes",
+      "devise": "TND",
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

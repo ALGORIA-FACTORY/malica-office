@@ -50,14 +50,13 @@ describe("une couche de texte qui a perdu ses mots", () => {
     const recues: Uint8Array[] = [];
     globalThis.fetch = (async (_url: unknown, init?: { body?: unknown }) => {
       recues.push(init?.body as Uint8Array);
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
+      return new Response(
+        `${JSON.stringify({
+          vague: 2,
           lignes: [{ texte: "إشعار دائن", boite: [0.1, 0.05, 0.4, 0.08], confiance: 0.98 }],
           modele: "paddleocr-essai",
-        }),
-      } as unknown as Response;
+        })}\n`,
+      );
     }) as typeof fetch;
 
     const pdf = octets("047.pdf");

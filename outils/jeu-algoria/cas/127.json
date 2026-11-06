@@ -1,0 +1,294 @@
+{
+  "id": "127",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "avoir",
+  "grille": "avoir",
+  "langue": "ar",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "G",
+  "mise_en_page": "G-bande",
+  "scenario": "avoir_emis",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale",
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "إشعار دائن",
+    "parties": [
+      {
+        "role": "fournisseur",
+        "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "client",
+        "nom": "مكتب غرفان للتدقيق",
+        "matricule": "9145019F/A/M/000",
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "fournisseur",
+      "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "client",
+      "nom": "مكتب غرفان للتدقيق",
+      "matricule": "9145019F/A/M/000",
+      "est": "tiers"
+    },
+    "style": "bande",
+    "police": null,
+    "couleur": "#5a2d82",
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+        "telephone": "00 71 940 517",
+        "est": "dossier",
+        "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م"
+      },
+      "code": "cachet_signature"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "raison_sociale_emetteur",
+              "cls": "gros"
+            }
+          ],
+          [
+            "14، نهج السرو، 1053 ضفاف البحيرة، تونس"
+          ],
+          [
+            "المعرف الجبائي : ",
+            {
+              "c": "matricule_fiscal_emetteur"
+            }
+          ]
+        ],
+        "droite": [
+          [
+            "الحريف : ",
+            {
+              "c": "nom_client"
+            }
+          ],
+          [
+            {
+              "c": "adresse_client"
+            }
+          ],
+          [
+            "المعرف الجبائي للحريف : ",
+            {
+              "c": "matricule_fiscal_client"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          {
+            "c": "intitule"
+          },
+          " عدد ",
+          {
+            "c": "numero_avoir"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "التاريخ :",
+            {
+              "c": "date_avoir"
+            }
+          ],
+          [
+            "مرجع الفاتورة الأصلية :",
+            {
+              "c": "ref_facture_origine"
+            }
+          ],
+          [
+            "السبب :",
+            {
+              "c": "motif"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "البيان",
+          "الكمية",
+          "سعر الوحدة",
+          "النسبة",
+          "المبلغ"
+        ],
+        "nombres": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "lignes": [
+          [
+            {
+              "c": "lignes[0].designation"
+            },
+            {
+              "c": "lignes[0].quantite"
+            },
+            {
+              "t": "141,754"
+            },
+            {
+              "c": "lignes[0].taux_tva_ligne"
+            },
+            {
+              "c": "lignes[0].montant_ligne_ht"
+            }
+          ]
+        ],
+        "pied": [
+          [
+            "المبلغ دون اعتبار الأداءات",
+            {
+              "c": "total_ht"
+            }
+          ],
+          [
+            "الأداء على القيمة المضافة",
+            {
+              "c": "montant_tva"
+            }
+          ],
+          [
+            "المجموع",
+            {
+              "c": "total_ttc"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "الختم والإمضاء"
+      }
+    ],
+    "imprime": {
+      "raison_sociale_emetteur": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule_fiscal_emetteur": "١٩٥٨٣٣٠V/A/M/٠٠٠",
+      "nom_client": "مكتب غرفان للتدقيق",
+      "adresse_client": "122، نهج الميموزا، أريانة",
+      "matricule_fiscal_client": "9145019F/A/M/000",
+      "intitule": "إشعار دائن",
+      "numero_avoir": "2026/AV/090",
+      "date_avoir": "2026/04/18",
+      "ref_facture_origine": "2026/8789",
+      "motif": "إرجاع بضاعة",
+      "lignes[0].designation": "مفتاح أمان مادي FIDO2، علبة",
+      "lignes[0].quantite": "2",
+      "lignes[0].taux_tva_ligne": "19 %",
+      "lignes[0].montant_ligne_ht": "283,508",
+      "total_ht": "283,508",
+      "montant_tva": "53,867",
+      "total_ttc": "337,375"
+    },
+    "versConcept": {
+      "raison_sociale_emetteur": "raison_sociale_emetteur",
+      "matricule_fiscal_emetteur": "matricule_fiscal_emetteur",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "matricule_fiscal_client": "matricule_fiscal_client",
+      "intitule": "intitule",
+      "numero_avoir": "numero_avoir",
+      "date_avoir": "date_avoir",
+      "ref_facture_origine": "ref_facture_origine",
+      "motif": "motif",
+      "lignes[0].designation": "lignes[0].designation",
+      "lignes[0].quantite": "lignes[0].quantite",
+      "lignes[0].taux_tva_ligne": "lignes[0].taux_tva_ligne",
+      "lignes[0].montant_ligne_ht": "lignes[0].montant_ligne_ht",
+      "total_ht": "total_ht",
+      "montant_tva": "montant_tva",
+      "total_ttc": "total_ttc"
+    },
+    "marques": {
+      "cachet_emetteur": "cachet_signature",
+      "signature_emetteur": "cachet_signature"
+    },
+    "cheminsDuDossier": [
+      "matricule_fiscal_emetteur"
+    ]
+  },
+  "graineDuRendu": 86409926,
+  "attendu": {
+    "concepts": {
+      "raison_sociale_emetteur": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule_fiscal_emetteur": "1958330V/A/M/000",
+      "nom_client": "مكتب غرفان للتدقيق",
+      "adresse_client": "122، نهج الميموزا، أريانة",
+      "matricule_fiscal_client": "9145019F/A/M/000",
+      "intitule": "avoir",
+      "numero_avoir": "2026/AV/090",
+      "date_avoir": "2026-04-18",
+      "ref_facture_origine": "2026/8789",
+      "motif": "retour de marchandise",
+      "lignes": [
+        {
+          "designation": "مفتاح أمان مادي FIDO2، علبة",
+          "quantite": "2",
+          "taux_tva_ligne": "19",
+          "montant_ligne_ht": "283.508"
+        }
+      ],
+      "total_ht": "283.508",
+      "montant_tva": "53.867",
+      "total_ttc": "337.375",
+      "cachet_signature": true
+    },
+    "confondus": {},
+    "notes": [
+      "Avoir ÉMIS par ALGORIA (le dossier est l'émetteur) : son matricule en chiffres orientaux du côté de l'émetteur ; le client est celui de la vente du cas 107.",
+      "Titre « إشعار دائن » : ref.titres_de_piece le range en anomalie (avoir) — l'issue attendue."
+    ],
+    "non_imprimes": [
+      "droit_timbre",
+      "montant_fodec",
+      "ref_bon_retour",
+      "reference_ttn"
+    ]
+  }
+}

@@ -1,0 +1,380 @@
+{
+  "id": "147",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "declaration_impot",
+  "grille": "declaration_mensuelle",
+  "langue": "fr",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "G",
+  "mise_en_page": "G-bande",
+  "scenario": "retenues_a_la_source",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale",
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Déclaration mensuelle",
+    "parties": [
+      {
+        "role": "contribuable",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "administration",
+        "nom": "Direction Générale des Impôts",
+        "matricule": null,
+        "est": "administration"
+      }
+    ],
+    "emetteur": {
+      "role": "contribuable",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "administration",
+      "nom": "Direction Générale des Impôts",
+      "matricule": null,
+      "est": "administration"
+    },
+    "style": "bande",
+    "police": null,
+    "couleur": "#4a4a4a",
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+        "telephone": "00 71 940 517",
+        "est": "dossier"
+      },
+      "code": "signature_cachet"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            "République Tunisienne"
+          ],
+          [
+            "Ministère des Finances"
+          ],
+          [
+            "Direction Générale des Impôts"
+          ]
+        ],
+        "droite": [
+          [
+            "الجمهورية التونسية"
+          ],
+          [
+            "وزارة المالية"
+          ],
+          [
+            "الإدارة العامة للأداءات"
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "DÉCLARATION MENSUELLE"
+        ],
+        "sous": [
+          "Retenues à la source et taxes sur salaires — ",
+          {
+            "c": "periode"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Raison sociale",
+            {
+              "c": "raison_sociale"
+            }
+          ],
+          [
+            "Matricule fiscal",
+            {
+              "c": "matricule_fiscal"
+            }
+          ],
+          [
+            "Adresse",
+            {
+              "c": "adresse"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Retenues à la source"
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Nature",
+          "Base",
+          "Retenue"
+        ],
+        "nombres": [
+          1,
+          2
+        ],
+        "lignes": [
+          [
+            "Traitements et salaires",
+            {
+              "c": "ras_salaires_base"
+            },
+            {
+              "c": "ras_salaires_montant"
+            }
+          ],
+          [
+            "Marchés et acquisitions (1,5 %)",
+            {
+              "t": "12 485,113"
+            },
+            {
+              "c": "ras_achats_1_5"
+            }
+          ],
+          [
+            "Honoraires, commissions et loyers (10 %)",
+            {
+              "t": "3 200,000"
+            },
+            {
+              "c": "ras_honoraires_10"
+            }
+          ]
+        ],
+        "pied": [
+          [
+            "Total des retenues",
+            {
+              "c": "total_ras"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Taxes sur les salaires"
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Taxe",
+          "Base",
+          "Taux",
+          "Montant"
+        ],
+        "nombres": [
+          1,
+          2,
+          3
+        ],
+        "lignes": [
+          [
+            "TFP",
+            {
+              "c": "tfp_base"
+            },
+            {
+              "c": "tfp_taux"
+            },
+            {
+              "c": "tfp_montant"
+            }
+          ],
+          [
+            "FOPROLOS",
+            {
+              "c": "foprolos_base"
+            },
+            {
+              "c": "foprolos_taux"
+            },
+            {
+              "c": "foprolos_montant"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "TOTAL À PAYER :",
+            {
+              "c": "total_a_payer"
+            }
+          ],
+          [
+            "Déposée le :",
+            {
+              "c": "date_depot"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "Cachet et signature"
+      }
+    ],
+    "imprime": {
+      "periode": "08/2026",
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "matricule_fiscal": "1958330 V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "ras_salaires_base": "15 600,000",
+      "ras_salaires_montant": "2 929,978",
+      "ras_achats_1_5": "187,277",
+      "ras_honoraires_10": "320,000",
+      "total_ras": "3 437,255",
+      "tfp_base": "15 600,000",
+      "tfp_taux": "2 %",
+      "tfp_montant": "312,000",
+      "foprolos_base": "15 600,000",
+      "foprolos_taux": "1 %",
+      "foprolos_montant": "156,000",
+      "total_a_payer": "3 905,255",
+      "date_depot": "21/09/2026"
+    },
+    "versConcept": {
+      "periode": "periode",
+      "raison_sociale": "raison_sociale",
+      "matricule_fiscal": "matricule_fiscal",
+      "adresse": "adresse",
+      "ras_salaires_base": "ras_salaires_base",
+      "ras_salaires_montant": "ras_salaires_montant",
+      "ras_achats_1_5": "ras_achats_1_5",
+      "ras_honoraires_10": "ras_honoraires_10",
+      "total_ras": "total_ras",
+      "tfp_base": "tfp_base",
+      "tfp_taux": "tfp_taux",
+      "tfp_montant": "tfp_montant",
+      "foprolos_base": "foprolos_base",
+      "foprolos_taux": "foprolos_taux",
+      "foprolos_montant": "foprolos_montant",
+      "total_a_payer": "total_a_payer",
+      "date_depot": "date_depot"
+    },
+    "marques": {
+      "cachet_emetteur": "signature_cachet",
+      "signature_emetteur": "signature_cachet"
+    },
+    "cheminsDuDossier": [
+      "matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 1464578142,
+  "attendu": {
+    "concepts": {
+      "periode": "2026-08-01/2026-08-31",
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "matricule_fiscal": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "ras_salaires_base": "15600.000",
+      "ras_salaires_montant": "2929.978",
+      "ras_achats_1_5": "187.277",
+      "ras_honoraires_10": "320.000",
+      "total_ras": "3437.255",
+      "tfp_base": "15600.000",
+      "tfp_taux": "2",
+      "tfp_montant": "312.000",
+      "foprolos_base": "15600.000",
+      "foprolos_taux": "1",
+      "foprolos_montant": "156.000",
+      "total_a_payer": "3905.255",
+      "date_depot": "2026-09-21",
+      "signature_cachet": true
+    },
+    "confondus": {},
+    "notes": [
+      "Total = retenues (salaires + marchés + loyer) + TFP + FOPROLOS, aux taux relevés en base. Retenue sur salaires : l'IRPP mensuel de chaque salarié présent, comme au bulletin (sans indemnités).",
+      "Type « declaration_impot » lu par la grille « declaration_mensuelle », que la base relie à ce type (ref.grilles.document_type)."
+    ],
+    "non_imprimes": [
+      "activite",
+      "autres_taxes",
+      "ca_exonere",
+      "ca_export",
+      "ca_suspension",
+      "ca_taxable_13",
+      "ca_taxable_19",
+      "ca_taxable_7",
+      "credit_a_reporter",
+      "credit_reporte_mois_precedent",
+      "css_retenue_salaires",
+      "declaration_neant",
+      "demande_restitution",
+      "mode_depot",
+      "mode_paiement",
+      "nature_depot",
+      "penalites_retard",
+      "prorata_deduction",
+      "ras_autres",
+      "ras_dividendes",
+      "ras_honoraires_3",
+      "ras_interets",
+      "ras_jetons_presence",
+      "ras_non_residents",
+      "ras_plus_value_immobiliere",
+      "ras_tva",
+      "reference_accuse",
+      "reference_quittance",
+      "tcl_ca_export",
+      "tcl_ca_local",
+      "tcl_montant",
+      "tcl_taux",
+      "tfp_avance_imputee",
+      "timbre_montant",
+      "timbre_nombre_factures",
+      "timbre_tarif",
+      "total_principal",
+      "total_tva_collectee",
+      "total_tva_deductible",
+      "tva_13",
+      "tva_19",
+      "tva_7",
+      "tva_a_payer",
+      "tva_autoliquidee",
+      "tva_ded_biens_services",
+      "tva_ded_immobilisations",
+      "tva_ded_importations",
+      "tva_retenue_subie",
+      "tva_reversements"
+    ]
+  }
+}

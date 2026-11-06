@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { MarqueRg } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/invitation")({
@@ -167,9 +168,7 @@ function Invitation() {
           <>
             {accepter.isError ? (
               <p role="alert" className="mt-6 text-[14px] text-[#E08163]">
-                {accepter.error instanceof Error
-                  ? accepter.error.message
-                  : t("invitation.plusValable")}
+                {texteDeLErreur(accepter.error, "invitation : accepter", t("common.error"))}
               </p>
             ) : null}
             <button

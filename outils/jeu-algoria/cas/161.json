@@ -1,0 +1,94 @@
+{
+  "id": "161",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "non_comptable",
+  "grille": null,
+  "langue": "ar",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "H",
+  "mise_en_page": "H",
+  "scenario": "sans_grille",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "إعلام",
+    "parties": [
+      {
+        "role": "syndic",
+        "nom": "اتحاد مالكي إقامة ورزان",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "syndic",
+      "nom": "اتحاد مالكي إقامة ورزان",
+      "matricule": null,
+      "est": "tiers"
+    },
+    "client": null,
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "titre",
+        "texte": [
+          "اتحاد مالكي إقامة ورزان"
+        ],
+        "sous": [
+          "إعلام"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "يعلم اتحاد المالكين كافة متساكني الإقامة والمكاتب أنه سيتم قطع الماء يوم 12 نوفمبر 2026 من الساعة التاسعة صباحا إلى الساعة الرابعة بعد الزوال، وذلك لإصلاح القنوات الرئيسية."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "نرجو منكم اتخاذ الاحتياطات اللازمة، ونعتذر عن الإزعاج."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "رئيس الاتحاد"
+      }
+    ],
+    "imprime": {},
+    "versConcept": {},
+    "marques": {},
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 1333491628,
+  "attendu": {
+    "concepts": {},
+    "confondus": {},
+    "notes": [
+      "Aucune grille ne lit cette pièce (grille null) : l'issue attendue est qu'AUCUN champ ne soit extrait. Le banc compte zéro valeur fausse : toute date, tout montant ou tout nom posé sur un champ est une faute.",
+      "Piège : une date et des heures, en arabe."
+    ],
+    "non_imprimes": []
+  }
+}

@@ -47,8 +47,8 @@ import {
   type ContexteDuSudokuBranche,
 } from "../malica/lecture/sudoku.ts";
 import { dateDeLaPiece } from "./dates.ts";
-import { aujourdhui } from "./decimal.ts";
 import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
+import { sensConfirme } from "./sens.ts";
 
 /** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
 interface VerdictDeLecture {
@@ -94,7 +94,7 @@ interface RelectureAFaire {
   extractionId: string;
   contract: string;
   flags: Array<{ code: string }>;
-  consigne: { lecteur: string; paddleTente: boolean };
+  consigne: { lecteur: string; paddleTente: boolean; lignes?: boolean };
   /** La raison de s'abstenir, ou nul : remplacee, lecture_depassee, correction_humaine, coupee. */
   abstention: string | null;
   /** La correction humaine trouvée (precision, ecriture, decision, retour…), ou nul. */
@@ -715,7 +715,8 @@ export const capture = {
   async contexteLecture(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
       `select id, tenant_id, storage_path, source, content_type,
-              to_char(recue_le, 'YYYY-MM-DD') as recue_le
+              to_char(recue_le, 'YYYY-MM-DD') as recue_le,
+              document_kind, document_kind_statut
          from pieces_v where id = $1`,
       [pieceId],
     );
@@ -783,6 +784,13 @@ export const capture = {
         // Le jour de sa réception : les règles du sudoku s'y lisent quand la
         // pièce n'a pas de date lue (comme le jugement, `analyse.ts`).
         recueLe: piece["recue_le"] as string,
+        // Le sens que la personne a CONFIRMÉ (à la capture, ou corrigé après la
+        // lecture) : il place le dossier, et l'autre matricule est le tiers. Un sens
+        // seulement lu (« a_confirmer ») n'est pas une déclaration.
+        sens: sensConfirme(
+          piece["document_kind"] as string | null,
+          piece["document_kind_statut"] as string | null,
+        ),
       },
       jurisdiction,
       currency: org["currency"] as string,
@@ -834,9 +842,16 @@ export const capture = {
     deviseCode: string,
     jour: string,
   ): Promise<ContexteDuSudokuBranche> {
+    // Le mode se lit au jour DU DOSSIER, dans son fuseau : au jour UTC du serveur, un
+    // réglage arrêté le jour même ne valait pas entre minuit local et minuit UTC
+    // (5 novembre 2026, `20261201092400`).
+    const { rows } = await db.query<{ j: string }>(
+      `select to_char(public.jour_du_dossier($1), 'YYYY-MM-DD') as j`,
+      [dossierId],
+    );
     const [contexte, reglages] = await Promise.all([
       lireLeContexteDuSudoku(db, packId, grilleCode, deviseCode, jour),
-      lireLesReglagesComptables(db, dossierId, packId, aujourdhui()),
+      lireLesReglagesComptables(db, dossierId, packId, rows[0]!.j),
     ]);
     return { ...contexte, mode: modeDuSudoku(reglages) };
   },
@@ -1031,7 +1046,7 @@ export const capture = {
   async inscrireRelecture(
     db: Requete,
     pieceId: string,
-    consigne: { lecteur: string; paddleTente: boolean },
+    consigne: { lecteur: string; paddleTente: boolean; lignes?: boolean },
   ): Promise<{ travailId: string; deja: boolean; pasAvant: string }> {
     const { rows } = await db.query<{
       r: { travail_id: string; deja: boolean; pas_avant: string };
@@ -1051,7 +1066,7 @@ export const capture = {
         extraction_id: string;
         contract: string;
         flags: Array<{ code: string }>;
-        consigne: { lecteur: string; paddleTente: boolean };
+        consigne: { lecteur: string; paddleTente: boolean; lignes?: boolean };
         abstention: string | null;
         trace: string | null;
       };

@@ -1,0 +1,390 @@
+{
+  "id": "042",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "pdf_image",
+  "capture": "scan",
+  "gabarit": "B",
+  "scenario": "long",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Zennara Hôtels SA",
+      "nomAr": "شركة زنارة للنزل",
+      "enseigne": null,
+      "matricule": "1399012W/A/M/000",
+      "matriculeImprime": "1399012W/A/M/000",
+      "adresse": "83, rue du Lac Ourmi, Hammamet",
+      "telephone": "00 49 600 628",
+      "fax": "00 33 710 458",
+      "email": null,
+      "site": null,
+      "rc": "B715943232016",
+      "rib": "99 684 5920075715690 51",
+      "banque": "Banque Talmira",
+      "code": "C5540803",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "3 juin 2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Entretien climatisation, visite",
+        "designationAr": "صيانة المكيفات، زيارة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Ramette papier A4 80 g",
+        "designationAr": "رزمة ورق A4 80 غ",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre couleur",
+        "designationAr": "خرطوشة حبر ملون",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de salle de réunion, demi-journée",
+        "designationAr": "كراء قاعة اجتماعات، نصف يوم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Classeur à levier, dos 8 cm",
+        "designationAr": "ملف برافعة، ظهر 8 سم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de déménagement de bureaux",
+        "designationAr": "خدمة نقل مكاتب",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": "Arrêtée la présente facture à la somme de : dix-sept mille cent soixante dinars et sept cent douze millimes.",
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Zennara Hôtels SA",
+      "document_date": "3 juin 2026",
+      "references.numero": "F-2026-1869",
+      "references.matricule_fiscal": "1399012W/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "83, rue du Lac Ourmi, Hammamet",
+      "telephone_emetteur": "00 49 600 628",
+      "registre_commerce_emetteur": "B715943232016",
+      "rib_emetteur": "99 684 5920075715690 51",
+      "mode_reglement": "Chèque",
+      "totals.base_ht": "14.419,926",
+      "totals.vat": "2.739,786",
+      "totals.ttc": "17.160,712",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Entretien climatisation, visite",
+      "articles[0].quantity": "20",
+      "articles[0].unit_price_ht": "446,421",
+      "articles[0].total_ht": "8.928,420",
+      "articles[1].designation": "Ramette papier A4 80 g",
+      "articles[1].quantity": "11",
+      "articles[1].unit_price_ht": "12,138",
+      "articles[1].total_ht": "133,518",
+      "articles[2].designation": "Cartouche d'encre couleur",
+      "articles[2].quantity": "6",
+      "articles[2].unit_price_ht": "112,298",
+      "articles[2].total_ht": "673,788",
+      "articles[3].designation": "Location de salle de réunion, demi-journée",
+      "articles[3].quantity": "1",
+      "articles[3].unit_price_ht": "626,067",
+      "articles[3].total_ht": "626,067",
+      "articles[4].designation": "Classeur à levier, dos 8 cm",
+      "articles[4].quantity": "21",
+      "articles[4].unit_price_ht": "8,807",
+      "articles[4].total_ht": "184,947",
+      "articles[5].designation": "Prestation de déménagement de bureaux",
+      "articles[5].quantity": "3",
+      "articles[5].unit_price_ht": "1.291,062",
+      "articles[5].total_ht": "3.873,186",
+      "montant_en_lettres": "dix-sept mille cent soixante dinars et sept cent douze millimes"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ht": "lignes[5].prix_unitaire_ht",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres"
+    }
+  },
+  "graineDuRendu": 1651108533,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Zennara Hôtels SA",
+      "document_date": "2026-06-03",
+      "currency": "TND",
+      "references.numero": "F-2026-1869",
+      "references.matricule_fiscal": "1399012W/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "14419.926",
+      "totals.vat": "2739.786",
+      "totals.ttc": "17160.712",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "14419.926",
+      "lines[0].vat_amount": "2739.786",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "20.000",
+      "articles[0].unit_price_ht": "446.421",
+      "articles[0].total_ht": "8928.420",
+      "articles[1].quantity": "11.000",
+      "articles[1].unit_price_ht": "12.138",
+      "articles[1].total_ht": "133.518",
+      "articles[2].quantity": "6.000",
+      "articles[2].unit_price_ht": "112.298",
+      "articles[2].total_ht": "673.788",
+      "articles[3].quantity": "1.000",
+      "articles[3].unit_price_ht": "626.067",
+      "articles[3].total_ht": "626.067",
+      "articles[4].quantity": "21.000",
+      "articles[4].unit_price_ht": "8.807",
+      "articles[4].total_ht": "184.947",
+      "articles[5].quantity": "3.000",
+      "articles[5].unit_price_ht": "1291.062",
+      "articles[5].total_ht": "3873.186"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "14419.926",
+          "0"
+        ],
+        [
+          "4366",
+          "2739.786",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "17160.712"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Zennara Hôtels SA",
+      "date_operation": "2026-06-03",
+      "numero_facture": "F-2026-1869",
+      "matricule_fiscal_emetteur": "1399012W/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "83, rue du Lac Ourmi, Hammamet",
+      "telephone_email_emetteur": {
+        "telephone": "00 49 600 628"
+      },
+      "registre_commerce_emetteur": "B715943232016",
+      "rib_emetteur": "99 684 5920075715690 51",
+      "mode_reglement": "Chèque",
+      "total_ht": "14419.926",
+      "montant_tva_par_taux": {
+        "19": "2739.786"
+      },
+      "total_ttc": "17160.712",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "14419.926"
+      },
+      "lignes": [
+        {
+          "designation": "Entretien climatisation, visite",
+          "quantite": "20",
+          "prix_unitaire_ht": "446.421",
+          "montant_ligne_ht": "8928.420",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Ramette papier A4 80 g",
+          "quantite": "11",
+          "prix_unitaire_ht": "12.138",
+          "montant_ligne_ht": "133.518",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Cartouche d'encre couleur",
+          "quantite": "6",
+          "prix_unitaire_ht": "112.298",
+          "montant_ligne_ht": "673.788",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Location de salle de réunion, demi-journée",
+          "quantite": "1",
+          "prix_unitaire_ht": "626.067",
+          "montant_ligne_ht": "626.067",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Classeur à levier, dos 8 cm",
+          "quantite": "21",
+          "prix_unitaire_ht": "8.807",
+          "montant_ligne_ht": "184.947",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Prestation de déménagement de bureaux",
+          "quantite": "3",
+          "prix_unitaire_ht": "1291.062",
+          "montant_ligne_ht": "3873.186",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "dix-sept mille cent soixante dinars et sept cent douze millimes",
+      "devise": "TND"
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

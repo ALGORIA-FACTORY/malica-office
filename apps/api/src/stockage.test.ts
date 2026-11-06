@@ -61,8 +61,8 @@ describe("la route de stockage", { skip: !BASE_CONFIGUREE }, () => {
     assert.ok(compteA && compteB);
     a = compteA;
     b = compteB;
-    jetonA = emettreJeton(a);
-    jetonB = emettreJeton(b);
+    jetonA = emettreJeton(a, new Date());
+    jetonB = emettreJeton(b, new Date());
 
     orgA = await creerOrg(a.id, `ESSAI A ${marque}`);
     orgB = await creerOrg(b.id, `ESSAI B ${marque}`);
@@ -251,7 +251,11 @@ describe("la route de stockage", { skip: !BASE_CONFIGUREE }, () => {
     const depot = await fetch(`${base}/pieces/${ancienne.id}/contenu`, {
       method: "POST",
       headers: { ...entetes(jetonA), "Content-Type": "image/jpeg" },
-      body: Buffer.from("octets arrivés trop tard"),
+      // Des octets JPEG (FF D8 FF) : le dépôt vérifie la signature avant tout.
+      body: Buffer.concat([
+        Buffer.from([0xff, 0xd8, 0xff]),
+        Buffer.from("octets arrivés trop tard"),
+      ]),
     });
     assert.equal(depot.status, 410, "ni scellée (409), ni panne : remplacée");
     assert.deepEqual(await depot.json(), { erreur: "refus.piece.remplacee" });

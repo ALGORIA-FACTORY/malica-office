@@ -1,0 +1,480 @@
+{
+  "id": "062",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "ar",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "C",
+  "scenario": "plusieurs_taux",
+  "realisme": [
+    "biais",
+    "grain",
+    "photocopie",
+    "tampon"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "تازران للتكييف",
+      "nomAr": "تازران للتكييف",
+      "enseigne": null,
+      "matricule": "5327006E/A/M/000",
+      "matriculeImprime": "5327006E/A/M/000",
+      "adresse": "105، شارع الحرية، بن عروس",
+      "telephone": "00 47 567 622",
+      "fax": "00 59 488 818",
+      "email": null,
+      "site": null,
+      "rc": "B107048072016",
+      "rib": "99 124 6772274701750 16",
+      "banque": "Crédit Selvane",
+      "code": "C1485253",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330VAM000",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "2026/05/12",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "نقل معدات، رحلة",
+        "designationAr": "نقل معدات، رحلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "صيانة المكيفات، زيارة",
+        "designationAr": "صيانة المكيفات، زيارة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "كابل كهربائي 3 × 2,5 مم²، لفة",
+        "designationAr": "كابل كهربائي 3 × 2,5 مم²، لفة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "خدمة نقل مكاتب",
+        "designationAr": "خدمة نقل مكاتب",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "إقامة بالنزل، ليلة",
+        "designationAr": "إقامة بالنزل، ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "غمد ICTA 20 مم، لفة",
+        "designationAr": "غمد ICTA 20 مم، لفة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "رزمة ورق A4 80 غ",
+        "designationAr": "رزمة ورق A4 80 غ",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "قهوة حبوب، كيس 1 كغ",
+        "designationAr": "قهوة حبوب، كيس 1 كغ",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": false
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "تازران للتكييف",
+      "document_date": "2026/05/12",
+      "references.numero": "2026/2397",
+      "references.matricule_fiscal": "5327006E/A/M/000",
+      "references.matricule_fiscal_client": "1958330VAM000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "105، شارع الحرية، بن عروس",
+      "telephone_emetteur": "00 47 567 622",
+      "registre_commerce_emetteur": "B107048072016",
+      "rib_emetteur": "99 124 6772274701750 16",
+      "mode_reglement": "بطاقة بنكية",
+      "totals.base_ht": "24.445,873",
+      "totals.vat": "3.989,151",
+      "totals.ttc": "28.436,024",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "56,171",
+      "lines[0].vat_amount": "3,932",
+      "lines[1].base_ht": "10.813,738",
+      "lines[1].vat_amount": "1.405,786",
+      "lines[2].base_ht": "13.575,964",
+      "lines[2].vat_amount": "2.579,433",
+      "articles[0].designation": "نقل معدات، رحلة",
+      "articles[0].quantity": "23",
+      "articles[0].unit_price_ht": "365,690",
+      "articles[0].total_ht": "8.410,870",
+      "articles[1].designation": "صيانة المكيفات، زيارة",
+      "articles[1].quantity": "23",
+      "articles[1].unit_price_ht": "301,065",
+      "articles[1].total_ht": "6.924,495",
+      "articles[2].designation": "كابل كهربائي 3 × 2,5 مم²، لفة",
+      "articles[2].quantity": "7",
+      "articles[2].unit_price_ht": "113,102",
+      "articles[2].total_ht": "791,714",
+      "articles[3].designation": "خدمة نقل مكاتب",
+      "articles[3].quantity": "3",
+      "articles[3].unit_price_ht": "1.650,698",
+      "articles[3].total_ht": "4.952,094",
+      "articles[4].designation": "إقامة بالنزل، ليلة",
+      "articles[4].quantity": "12",
+      "articles[4].unit_price_ht": "200,239",
+      "articles[4].total_ht": "2.402,868",
+      "articles[5].designation": "غمد ICTA 20 مم، لفة",
+      "articles[5].quantity": "18",
+      "articles[5].unit_price_ht": "37,893",
+      "articles[5].total_ht": "682,074",
+      "articles[6].designation": "رزمة ورق A4 80 غ",
+      "articles[6].quantity": "19",
+      "articles[6].unit_price_ht": "11,873",
+      "articles[6].total_ht": "225,587",
+      "articles[7].designation": "قهوة حبوب، كيس 1 كغ",
+      "articles[7].quantity": "1",
+      "articles[7].unit_price_ht": "56,171",
+      "articles[7].total_ht": "56,171"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "lines[0].base_ht": "base_tva_par_taux[7]",
+      "lines[0].vat_amount": "montant_tva_par_taux[7]",
+      "lines[1].base_ht": "base_tva_par_taux[13]",
+      "lines[1].vat_amount": "montant_tva_par_taux[13]",
+      "lines[2].base_ht": "base_tva_par_taux[19]",
+      "lines[2].vat_amount": "montant_tva_par_taux[19]",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ht": "lignes[5].prix_unitaire_ht",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht",
+      "articles[6].designation": "lignes[6].designation",
+      "articles[6].quantity": "lignes[6].quantite",
+      "articles[6].unit_price_ht": "lignes[6].prix_unitaire_ht",
+      "articles[6].total_ht": "lignes[6].montant_ligne_ht",
+      "articles[7].designation": "lignes[7].designation",
+      "articles[7].quantity": "lignes[7].quantite",
+      "articles[7].unit_price_ht": "lignes[7].prix_unitaire_ht",
+      "articles[7].total_ht": "lignes[7].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 1291658327,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "تازران للتكييف",
+      "document_date": "2026-05-12",
+      "currency": "TND",
+      "references.numero": "2026/2397",
+      "references.matricule_fiscal": "5327006E/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "24445.873",
+      "totals.vat": "3989.151",
+      "totals.ttc": "28436.024",
+      "lines[0].tax_code": "TVA07",
+      "lines[0].base_ht": "56.171",
+      "lines[0].vat_amount": "3.932",
+      "lines[1].tax_code": "TVA13",
+      "lines[1].base_ht": "10813.738",
+      "lines[1].vat_amount": "1405.786",
+      "lines[2].tax_code": "TVA19",
+      "lines[2].base_ht": "13575.964",
+      "lines[2].vat_amount": "2579.433",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "23.000",
+      "articles[0].unit_price_ht": "365.690",
+      "articles[0].total_ht": "8410.870",
+      "articles[1].quantity": "23.000",
+      "articles[1].unit_price_ht": "301.065",
+      "articles[1].total_ht": "6924.495",
+      "articles[2].quantity": "7.000",
+      "articles[2].unit_price_ht": "113.102",
+      "articles[2].total_ht": "791.714",
+      "articles[3].quantity": "3.000",
+      "articles[3].unit_price_ht": "1650.698",
+      "articles[3].total_ht": "4952.094",
+      "articles[4].quantity": "12.000",
+      "articles[4].unit_price_ht": "200.239",
+      "articles[4].total_ht": "2402.868",
+      "articles[5].quantity": "18.000",
+      "articles[5].unit_price_ht": "37.893",
+      "articles[5].total_ht": "682.074",
+      "articles[6].quantity": "19.000",
+      "articles[6].unit_price_ht": "11.873",
+      "articles[6].total_ht": "225.587",
+      "articles[7].quantity": "1.000",
+      "articles[7].unit_price_ht": "56.171",
+      "articles[7].total_ht": "56.171"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "24445.873",
+          "0"
+        ],
+        [
+          "4366",
+          "3.932",
+          "0",
+          "TVA07"
+        ],
+        [
+          "4366",
+          "1405.786",
+          "0",
+          "TVA13"
+        ],
+        [
+          "4366",
+          "2579.433",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "28436.024"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "فاتورة",
+      "raison_sociale_emetteur": "تازران للتكييف",
+      "date_operation": "2026-05-12",
+      "numero_facture": "2026/2397",
+      "matricule_fiscal_emetteur": "5327006E/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "105، شارع الحرية، بن عروس",
+      "telephone_email_emetteur": {
+        "telephone": "00 47 567 622"
+      },
+      "registre_commerce_emetteur": "B107048072016",
+      "rib_emetteur": "99 124 6772274701750 16",
+      "mode_reglement": "بطاقة بنكية",
+      "total_ht": "24445.873",
+      "total_ttc": "28436.024",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "7": "56.171",
+        "13": "10813.738",
+        "19": "13575.964"
+      },
+      "montant_tva_par_taux": {
+        "7": "3.932",
+        "13": "1405.786",
+        "19": "2579.433"
+      },
+      "lignes": [
+        {
+          "designation": "نقل معدات، رحلة",
+          "quantite": "23",
+          "prix_unitaire_ht": "365.690",
+          "montant_ligne_ht": "8410.870",
+          "taux_tva_ligne": "13"
+        },
+        {
+          "designation": "صيانة المكيفات، زيارة",
+          "quantite": "23",
+          "prix_unitaire_ht": "301.065",
+          "montant_ligne_ht": "6924.495",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "كابل كهربائي 3 × 2,5 مم²، لفة",
+          "quantite": "7",
+          "prix_unitaire_ht": "113.102",
+          "montant_ligne_ht": "791.714",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "خدمة نقل مكاتب",
+          "quantite": "3",
+          "prix_unitaire_ht": "1650.698",
+          "montant_ligne_ht": "4952.094",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "إقامة بالنزل، ليلة",
+          "quantite": "12",
+          "prix_unitaire_ht": "200.239",
+          "montant_ligne_ht": "2402.868",
+          "taux_tva_ligne": "13"
+        },
+        {
+          "designation": "غمد ICTA 20 مم، لفة",
+          "quantite": "18",
+          "prix_unitaire_ht": "37.893",
+          "montant_ligne_ht": "682.074",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "رزمة ورق A4 80 غ",
+          "quantite": "19",
+          "prix_unitaire_ht": "11.873",
+          "montant_ligne_ht": "225.587",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "قهوة حبوب، كيس 1 كغ",
+          "quantite": "1",
+          "prix_unitaire_ht": "56.171",
+          "montant_ligne_ht": "56.171",
+          "taux_tva_ligne": "7"
+        }
+      ],
+      "devise": "TND",
+      "cachet_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

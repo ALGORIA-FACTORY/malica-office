@@ -1,0 +1,460 @@
+{
+  "id": "137",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "releve_bancaire",
+  "grille": "releve_bancaire",
+  "langue": "hybride",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "G",
+  "mise_en_page": "G-bande",
+  "scenario": "releve_bilingue",
+  "realisme": [
+    "biais",
+    "grain"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Extrait de compte",
+    "parties": [
+      {
+        "role": "banque",
+        "nom": "Crédit Selvane",
+        "matricule": "3247023P/A/M/000",
+        "est": "tiers"
+      },
+      {
+        "role": "titulaire_compte",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "banque",
+      "nom": "Crédit Selvane",
+      "matricule": "3247023P/A/M/000",
+      "est": "tiers"
+    },
+    "client": {
+      "role": "titulaire_compte",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": "bande",
+    "police": null,
+    "couleur": "#14506b",
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "banque_nom",
+              "cls": "gros"
+            }
+          ],
+          [
+            {
+              "c": "banque_agence_nom"
+            }
+          ],
+          [
+            "Avenue Hedi Selvane, 2037 Ennasr"
+          ],
+          [
+            "MF : ",
+            {
+              "c": "banque_matricule_fiscal"
+            }
+          ]
+        ],
+        "droite": [
+          [
+            {
+              "c": "compte_titulaire_nom"
+            }
+          ],
+          [
+            "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis"
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "Extrait de compte / كشف حساب"
+        ],
+        "sous": [
+          {
+            "c": "periode_debut"
+          },
+          " — ",
+          {
+            "c": "periode_fin"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "RIB / المعرف البنكي",
+            {
+              "c": "compte_rib"
+            }
+          ],
+          [
+            "Devise / العملة",
+            {
+              "c": "compte_devise"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Date / التاريخ",
+          "Opération / العملية",
+          "Débit / مدين",
+          "Crédit / دائن"
+        ],
+        "nombres": [
+          2,
+          3
+        ],
+        "lignes": [
+          [
+            "",
+            [
+              "Ancien solde / الرصيد السابق",
+              " ",
+              {
+                "c": "solde_initial_sens"
+              }
+            ],
+            "",
+            {
+              "c": "solde_initial"
+            }
+          ],
+          [
+            {
+              "c": "lignes[0].ligne_date_operation"
+            },
+            {
+              "c": "lignes[0].ligne_libelle"
+            },
+            "",
+            {
+              "c": "lignes[0].ligne_credit"
+            }
+          ],
+          [
+            {
+              "c": "lignes[1].ligne_date_operation"
+            },
+            {
+              "c": "lignes[1].ligne_libelle"
+            },
+            {
+              "c": "lignes[1].ligne_debit"
+            },
+            ""
+          ],
+          [
+            {
+              "c": "lignes[2].ligne_date_operation"
+            },
+            {
+              "c": "lignes[2].ligne_libelle"
+            },
+            {
+              "c": "lignes[2].ligne_debit"
+            },
+            ""
+          ],
+          [
+            {
+              "c": "lignes[3].ligne_date_operation"
+            },
+            {
+              "c": "lignes[3].ligne_libelle"
+            },
+            "",
+            {
+              "c": "lignes[3].ligne_credit"
+            }
+          ],
+          [
+            {
+              "c": "lignes[4].ligne_date_operation"
+            },
+            {
+              "c": "lignes[4].ligne_libelle"
+            },
+            {
+              "c": "lignes[4].ligne_debit"
+            },
+            ""
+          ],
+          [
+            {
+              "c": "lignes[5].ligne_date_operation"
+            },
+            {
+              "c": "lignes[5].ligne_libelle"
+            },
+            {
+              "c": "lignes[5].ligne_debit"
+            },
+            ""
+          ],
+          [
+            {
+              "c": "lignes[6].ligne_date_operation"
+            },
+            {
+              "c": "lignes[6].ligne_libelle"
+            },
+            {
+              "c": "lignes[6].ligne_debit"
+            },
+            ""
+          ],
+          [
+            "",
+            "Totaux / المجاميع",
+            {
+              "c": "total_debits"
+            },
+            {
+              "c": "total_credits"
+            }
+          ],
+          [
+            "",
+            [
+              "Nouveau solde / الرصيد الجديد",
+              " ",
+              {
+                "c": "solde_final_sens"
+              }
+            ],
+            "",
+            {
+              "c": "solde_final"
+            }
+          ]
+        ]
+      }
+    ],
+    "imprime": {
+      "banque_nom": "CRÉDIT SELVANE",
+      "banque_agence_nom": "Agence Ennasr Kelvane",
+      "banque_matricule_fiscal": "3247023PAM000",
+      "compte_titulaire_nom": "ALGORIA FACTORY SARL",
+      "periode_debut": "01/09/2026",
+      "periode_fin": "30/09/2026",
+      "compte_rib": "99 204 8281620842224 69",
+      "compte_devise": "TND",
+      "solde_initial_sens": "créditeur / دائن",
+      "solde_initial": "8 354,947",
+      "lignes[0].ligne_date_operation": "02/09/26",
+      "lignes[0].ligne_libelle": "VIR RECU ASSURANCES KELMOUN SA",
+      "lignes[0].ligne_credit": "19 957,868",
+      "lignes[1].ligne_date_operation": "04/09/26",
+      "lignes[1].ligne_libelle": "CARTE 0417 MARVELLE PAPETERIE",
+      "lignes[1].ligne_debit": "84,745",
+      "lignes[2].ligne_date_operation": "09/09/26",
+      "lignes[2].ligne_libelle": "PRLV TELECOM ABONNEMENT FIBRE",
+      "lignes[2].ligne_debit": "193,372",
+      "lignes[3].ligne_date_operation": "12/09/26",
+      "lignes[3].ligne_libelle": "VIR RECU CABINET GHORVANE AUDIT",
+      "lignes[3].ligne_credit": "6 359,512",
+      "lignes[4].ligne_date_operation": "16/09/26",
+      "lignes[4].ligne_libelle": "RETRAIT DAB AGENCE ENNASR",
+      "lignes[4].ligne_debit": "513,547",
+      "lignes[5].ligne_date_operation": "23/09/26",
+      "lignes[5].ligne_libelle": "VIR EMIS QALMIRA FOURNITURES",
+      "lignes[5].ligne_debit": "1 322,994",
+      "lignes[6].ligne_date_operation": "29/09/26",
+      "lignes[6].ligne_libelle": "COMMISSION VIREMENTS",
+      "lignes[6].ligne_debit": "5,144",
+      "total_debits": "2 119,802",
+      "total_credits": "26 317,380",
+      "solde_final_sens": "créditeur / دائن",
+      "solde_final": "32 552,525"
+    },
+    "versConcept": {
+      "banque_nom": "banque_nom",
+      "banque_agence_nom": "banque_agence_nom",
+      "banque_matricule_fiscal": "banque_matricule_fiscal",
+      "compte_titulaire_nom": "compte_titulaire_nom",
+      "periode_debut": "periode_debut",
+      "periode_fin": "periode_fin",
+      "compte_rib": "compte_rib",
+      "compte_devise": "compte_devise",
+      "solde_initial_sens": "solde_initial_sens",
+      "solde_initial": "solde_initial",
+      "lignes[0].ligne_date_operation": "lignes[0].ligne_date_operation",
+      "lignes[0].ligne_libelle": "lignes[0].ligne_libelle",
+      "lignes[0].ligne_credit": "lignes[0].ligne_credit",
+      "lignes[1].ligne_date_operation": "lignes[1].ligne_date_operation",
+      "lignes[1].ligne_libelle": "lignes[1].ligne_libelle",
+      "lignes[1].ligne_debit": "lignes[1].ligne_debit",
+      "lignes[2].ligne_date_operation": "lignes[2].ligne_date_operation",
+      "lignes[2].ligne_libelle": "lignes[2].ligne_libelle",
+      "lignes[2].ligne_debit": "lignes[2].ligne_debit",
+      "lignes[3].ligne_date_operation": "lignes[3].ligne_date_operation",
+      "lignes[3].ligne_libelle": "lignes[3].ligne_libelle",
+      "lignes[3].ligne_credit": "lignes[3].ligne_credit",
+      "lignes[4].ligne_date_operation": "lignes[4].ligne_date_operation",
+      "lignes[4].ligne_libelle": "lignes[4].ligne_libelle",
+      "lignes[4].ligne_debit": "lignes[4].ligne_debit",
+      "lignes[5].ligne_date_operation": "lignes[5].ligne_date_operation",
+      "lignes[5].ligne_libelle": "lignes[5].ligne_libelle",
+      "lignes[5].ligne_debit": "lignes[5].ligne_debit",
+      "lignes[6].ligne_date_operation": "lignes[6].ligne_date_operation",
+      "lignes[6].ligne_libelle": "lignes[6].ligne_libelle",
+      "lignes[6].ligne_debit": "lignes[6].ligne_debit",
+      "total_debits": "total_debits",
+      "total_credits": "total_credits",
+      "solde_final_sens": "solde_final_sens",
+      "solde_final": "solde_final"
+    },
+    "marques": {},
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 1169280043,
+  "attendu": {
+    "concepts": {
+      "banque_nom": "Crédit Selvane",
+      "banque_agence_nom": "Agence Ennasr Kelvane",
+      "banque_matricule_fiscal": "3247023P/A/M/000",
+      "compte_titulaire_nom": "ALGORIA FACTORY SARL",
+      "periode_debut": "2026-09-01",
+      "periode_fin": "2026-09-30",
+      "compte_rib": "99 204 8281620842224 69",
+      "compte_devise": "TND",
+      "solde_initial_sens": "C",
+      "solde_initial": "8354.947",
+      "lignes": [
+        {
+          "ligne_sens": "credit",
+          "ligne_date_operation": "2026-09-02",
+          "ligne_libelle": "VIR RECU ASSURANCES KELMOUN SA",
+          "ligne_credit": "19957.868"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-09-04",
+          "ligne_libelle": "CARTE 0417 MARVELLE PAPETERIE",
+          "ligne_debit": "84.745"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-09-09",
+          "ligne_libelle": "PRLV TELECOM ABONNEMENT FIBRE",
+          "ligne_debit": "193.372"
+        },
+        {
+          "ligne_sens": "credit",
+          "ligne_date_operation": "2026-09-12",
+          "ligne_libelle": "VIR RECU CABINET GHORVANE AUDIT",
+          "ligne_credit": "6359.512"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-09-16",
+          "ligne_libelle": "RETRAIT DAB AGENCE ENNASR",
+          "ligne_debit": "513.547"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-09-23",
+          "ligne_libelle": "VIR EMIS QALMIRA FOURNITURES",
+          "ligne_debit": "1322.994"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-09-29",
+          "ligne_libelle": "COMMISSION VIREMENTS",
+          "ligne_debit": "5.144"
+        }
+      ],
+      "total_debits": "2119.802",
+      "total_credits": "26317.380",
+      "solde_final_sens": "C",
+      "solde_final": "32552.525"
+    },
+    "confondus": {},
+    "notes": [
+      "Ancien solde + crédits − débits = nouveau solde. Les dates des soldes ne sont pas imprimées : elles restent « non imprimées », et la période n'en tient pas lieu."
+    ],
+    "non_imprimes": [
+      "arrete_periode",
+      "autorisation_decouvert",
+      "banque_agence_adresse",
+      "banque_agence_code",
+      "banque_agence_telephone",
+      "banque_bic",
+      "banque_code",
+      "canal",
+      "commission_plus_fort_decouvert",
+      "compte_cle_rib",
+      "compte_iban",
+      "compte_numero",
+      "compte_titulaire_adresse",
+      "compte_titulaire_id_client",
+      "compte_titulaire_matricule_fiscal",
+      "compte_type",
+      "date_edition",
+      "interets_crediteurs",
+      "interets_debiteurs",
+      "ligne_code_operation",
+      "ligne_contrepartie_rib",
+      "ligne_cours_change",
+      "ligne_date_valeur",
+      "ligne_devise_origine",
+      "ligne_libelle_complementaire",
+      "ligne_lien_piece",
+      "ligne_numero_cheque",
+      "ligne_reference",
+      "ligne_solde_apres",
+      "mention_reclamation",
+      "mention_sbf",
+      "mentions_legales_banque",
+      "nombre_operations",
+      "nombres_debiteurs",
+      "recap_annuel_commissions",
+      "releve_numero",
+      "releve_page",
+      "retenue_source_interets",
+      "solde_disponible",
+      "solde_en_lettres",
+      "solde_en_valeur",
+      "solde_final_date",
+      "solde_initial_date",
+      "solde_intermediaire",
+      "taux_debiteur",
+      "tva_sur_commissions"
+    ]
+  }
+}

@@ -27,7 +27,7 @@ import { QuestionDuType } from "@/components/malica/question-du-type";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useCatalogueDesOffres } from "@/hooks/use-offres";
 import { useSuperposition } from "@/hooks/use-superposition";
-import { useI18n } from "@/i18n";
+import { useI18n, type MessageKey } from "@/i18n";
 import { ouverturesDuForfait } from "@/lib/forfait";
 import { visibiliteALaCapture } from "@/lib/visibilite-a-la-capture";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
@@ -607,6 +607,7 @@ function PmeLayout() {
         {aTyper.length > 0 ? (
           <QuestionDuType
             documents={aTyper.map((p) => p.name)}
+            avis={avisSurLesPhotos(aTyper, t)}
             mode="capture"
             onRepondre={(code) => {
               const lot = aTyper;
@@ -756,4 +757,19 @@ function NavItem({
       <span>{label}</span>
     </Link>
   );
+}
+
+/**
+ * L'avis sur des photos importées, avant l'envoi : le défaut le plus grave d'abord (une page
+ * trop petite, de biais, sombre, puis floue). Rien si aucune n'en a : pas d'alarme sans fait.
+ */
+function avisSurLesPhotos(
+  lot: readonly PickedFile[],
+  t: (cle: MessageKey) => string,
+): string | null {
+  const defauts = new Set(lot.flatMap((p) => p.defauts ?? []));
+  const premier = (["too_small", "oblique", "too_dark", "blurry"] as const).find((d) =>
+    defauts.has(d),
+  );
+  return premier ? t(`pme.photo.avis.${premier}`) : null;
 }

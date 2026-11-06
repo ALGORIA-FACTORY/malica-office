@@ -379,12 +379,16 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     try {
       const telecharger = (qui: Utilisateur) =>
         fetch(`${base}/exports/${exporte.id}/contenu`, {
-          headers: { Authorization: `Bearer ${emettreJeton(qui)}` },
+          headers: { Authorization: `Bearer ${emettreJeton(qui, new Date())}` },
         });
       const r = await telecharger(expert);
       assert.equal(r.status, 200);
       assert.equal(r.headers.get("content-type"), exporte.typeMime);
       assert.ok(r.headers.get("content-disposition")?.includes(exporte.nomDeFichier));
+      // Jamais une page active sur l'origine de l'application (audit S1).
+      assert.match(r.headers.get("content-disposition") ?? "", /^attachment\b/);
+      assert.equal(r.headers.get("x-content-type-options"), "nosniff");
+      assert.equal(r.headers.get("content-security-policy"), "sandbox; default-src 'none'");
       const octets = new Uint8Array(await r.arrayBuffer());
       assert.equal(createHash("sha256").update(octets).digest("hex"), exporte.empreinte);
       assert.equal((await telecharger(dirigeant)).status, 404);
