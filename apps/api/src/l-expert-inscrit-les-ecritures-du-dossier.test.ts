@@ -162,7 +162,10 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
       await office.book(db, n);
       return n;
     });
-    const avant = await sousIdentiteDuServeur(dirigeant.id, (db) =>
+    // Les extraits COMPTABILISÉS sont la lecture du cabinet : en mandat, la
+    // PME ne voit jamais les écritures (lot S2), et sa TVA du mois passe par
+    // `extraitsTransmis`, plus bas.
+    const avant = await sousIdentiteDuServeur(expert.id, (db) =>
       office.bookedExtracts(db, pme, "2026-10-01", "2026-10-31"),
     );
     assert.ok(
@@ -179,7 +182,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
         motifs[0]!.id,
       ]),
     );
-    const apres = await sousIdentiteDuServeur(dirigeant.id, (db) =>
+    const apres = await sousIdentiteDuServeur(expert.id, (db) =>
       office.bookedExtracts(db, pme, "2026-10-01", "2026-10-31"),
     );
     assert.ok(!apres.some((x) => x.pieceId === autre), "contre-passée : elle ne compte plus");
@@ -220,7 +223,9 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
       const pme_ = await sousIdentiteDuServeur(dirigeant.id, (db) =>
         office.extraitsTransmis(db, pme, from, to),
       );
-      const cab = await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      // Le côté du cabinet se lit sous son identité : la PME ne voit jamais
+      // les écritures (lot S2).
+      const cab = await sousIdentiteDuServeur(expert.id, (db) =>
         office.bookedExtracts(db, pme, from, to),
       );
       return [pme_.some((x) => x.pieceId === sept), cab.some((x) => x.pieceId === sept)];
