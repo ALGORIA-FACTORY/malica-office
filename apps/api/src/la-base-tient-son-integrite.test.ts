@@ -42,7 +42,7 @@
  */
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { after, before, describe, it } from "node:test";
 
@@ -90,7 +90,8 @@ function fichiersDeProduction(dossier: string, extensions: RegExp): string[] {
   return out;
 }
 
-const relatif = (chemin: string) => chemin.slice(RACINE.length);
+// The lock file names paths with "/" — on Windows, join() gives "\".
+const relatif = (chemin: string) => chemin.slice(RACINE.length).split(sep).join("/");
 
 /** Retire les commentaires : seul le code exécutable est jugé. */
 const sansCommentaires = (src: string) =>
