@@ -1553,4 +1553,29 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     assert.equal(rows[0]?.created_by, siege.id, "la pièce reste celle du siège");
     assert.equal(rows[0]?.auteur, dirigeant.id, "qui l'a reprise est au registre");
   });
+
+  it("un retour refuse un motif de délettrage, à la pièce comme à l'écriture", async () => {
+    const [delettrage] = await sousIdentiteDuServeur(expert.id, (db) =>
+      supervision.motifs(db, "fr", "delettrage"),
+    );
+    assert.ok(delettrage);
+    const id = await transmiseLue();
+    await assert.rejects(
+      sousIdentiteDuServeur(expert.id, (db) =>
+        supervision.retourner(db, { pieceId: id, motifId: delettrage.id }),
+      ),
+      /refus\.motif\.inconnu/,
+    );
+    const ecriture = await priseEnCharge(id);
+    await assert.rejects(
+      sousIdentiteDuServeur(expert.id, (db) =>
+        supervision.review(db, {
+          ecritureId: ecriture,
+          outcome: "retourne",
+          motifId: delettrage.id,
+        }),
+      ),
+      /refus\.motif\.inconnu/,
+    );
+  });
 });

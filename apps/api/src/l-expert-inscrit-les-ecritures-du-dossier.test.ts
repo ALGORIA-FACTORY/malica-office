@@ -171,7 +171,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
     );
 
     const { rows: motifs } = await admin.query<{ id: string }>(
-      `select id from ref.rejet_motifs order by requires_note limit 1`,
+      `select id from ref.rejet_motifs where usage = 'retour' order by requires_note limit 1`,
     );
     await sousIdentiteDuServeur(expert.id, (db) =>
       db.query(`select public.socle_ecriture_review($1, 'retourne', $2, 'à reprendre')`, [
