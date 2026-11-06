@@ -2,7 +2,7 @@
 --
 -- ================================================================== POURQUOI
 --
--- `20261127130000` et `20261127150000` nommaient EXO toute part exonérée, sous la seule
+-- `20261201090700` et `20261201090900` nommaient EXO toute part exonérée, sous la seule
 -- mention `mention_suspension_exoneration` — INCERTAIN fiscalement, noté alors : une vente à
 -- l'export ou en suspension serait nommée EXO. Or le barème distingue EXO (« Exonéré de
 -- TVA », Code TVA, tableau A : pas de droit à déduction) et EXPORT (« Export - taux zéro »,

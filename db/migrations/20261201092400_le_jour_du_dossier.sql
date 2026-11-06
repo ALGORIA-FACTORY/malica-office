@@ -11,9 +11,12 @@
 --
 -- ================================================================== CE QUI CHANGE
 --
--- `public.jour_du_dossier(dossier)` rend le jour courant dans le fuseau de l'organisation,
--- sinon celui de sa juridiction (la règle de `pieces_v.recue_le` et de
--- `app.fuseau_du_cabinet`) ; sans l'un ni l'autre, il refuse (`refus.fuseau.non_defini`).
+-- `public.jour_du_dossier(dossier)` rend le jour où se lisent les réglages du dossier : le
+-- jour du cabinet qui le règle (`app.cabinet_du_parametrage`), dans son fuseau — le
+-- calendrier où les réglages ont été datés —, et pour un dossier sans cabinet, son propre
+-- fuseau. C'est la règle de `app.relecture_de_nuit` (`20261130230000`, « le jour du
+-- cabinet ») : les deux réglages du lecteur, `lecture.sudoku` et `lecture.relecture_nuit`,
+-- se lisent le même jour. Sans fuseau, il refuse (`refus.fuseau.non_defini`).
 -- L'API lit les réglages du lecteur à ce jour (`contexteSudoku`).
 --
 -- REJEU (R11) : aucune horloge n'écrit dans `ref`.
@@ -25,12 +28,14 @@ stable
 security definer
 set search_path = ''
 as $$
-  select (now() at time zone app.fuseau_du_cabinet(p_dossier))::date
+  select (now() at time zone app.fuseau_du_cabinet(
+            coalesce(app.cabinet_du_parametrage(p_dossier), p_dossier)))::date
 $$;
 
 comment on function public.jour_du_dossier(uuid) is
-  'Le jour courant dans le fuseau du dossier (organisation, sinon juridiction). Les réglages '
-  'd''un dossier se lisent à ce jour, jamais au jour UTC du serveur (5 novembre 2026).';
+  'Le jour où se lisent les réglages d''un dossier : celui du cabinet qui le règle, dans son '
+  'fuseau (le dossier lui-même sans cabinet) ; jamais le jour UTC du serveur. Même règle que '
+  'app.relecture_de_nuit (6 novembre 2026).';
 
 revoke all on function public.jour_du_dossier(uuid) from public;
 grant execute on function public.jour_du_dossier(uuid) to authenticated;

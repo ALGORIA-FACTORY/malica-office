@@ -1,6 +1,6 @@
 -- Le titre d'une pièce a son domaine : le type de document se lit en un code.
 --
--- Depuis `20261126100000`, un champ « liste » sans domaine ne rend plus de valeur :
+-- Depuis `20261201090100`, un champ « liste » sans domaine ne rend plus de valeur :
 -- ses repères mêlent étiquettes et valeurs (banc sans IA du 4 novembre 2026 :
 -- « Statut », « Régime », « Motif » rendus comme valeurs). Le type de document de la
 -- facture est une liste dont les repères SONT des titres : il reçoit son domaine,

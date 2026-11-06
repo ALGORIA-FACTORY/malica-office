@@ -13,7 +13,7 @@
 -- 1. Deux repères arabes pour tous les champs du concept de la mention : « معفاة من الأداء »
 --    et « معفى من الأداء » (exonérée, exonéré de la taxe). Le moteur les compare sans
 --    signes diacritiques ni espaces.
--- 2. `taux_exonere` (`20261127130000`) vaut aussi pour l'exonération TOTALE : la part
+-- 2. `taux_exonere` (`20261201090700`) vaut aussi pour l'exonération TOTALE : la part
 --    exonérée, alors tout le total HT, est l'instance de la ventilation sous le taux nul
 --    EXO. INCERTAIN fiscalement, comme pour l'exonération partielle : une vente en
 --    suspension ou à l'export sous la même mention serait nommée EXO, et non EXPORT. Défaut
