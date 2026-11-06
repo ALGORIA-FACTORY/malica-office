@@ -300,6 +300,44 @@ describe("le relecteur de nuit est borné par la base", { skip: !BASE_CONFIGUREE
     );
   });
 
+  it("un réglage du jour se lit au jour du cabinet, pas au jour UTC du serveur", async () => {
+    // UTC+14 : le cabinet est au lendemain du serveur quatorze heures sur
+    // vingt-quatre. Lu à `current_date`, son réglage du jour n'était pas en
+    // vigueur, et la relecture se disait coupée (CI, 5 novembre 2026, 23 h 30).
+    await b.admin.query(`update identity.organizations set fuseau = $2 where id = $1`, [
+      b.cabinet,
+      "Pacific/Kiritimati",
+    ]);
+    try {
+      const jour = (
+        await sousIdentiteDuServeur(b.gens.expert.id, (db) =>
+          parametrage.fuseauDuCabinet(db, b.cabinet),
+        )
+      ).aujourdhui!;
+      await sousIdentiteDuServeur(b.gens.expert.id, (db) =>
+        parametrage.arreterReglagesComptables(db, {
+          cabinetId: b.cabinet,
+          portee: "dossier",
+          porteeId: b.pme,
+          packId: b.pack,
+          depuis: jour,
+          valeurs: [
+            { code: "lecture.relecture_nuit", valeur: "active" },
+            { code: "lecture.relecture_delai_heures", valeur: "2" },
+          ],
+        }),
+      );
+      const { rows } = await sousIdentiteDuServeur(b.gens.expert.id, (db) =>
+        db.query<{ h: string | null }>(`select app.relecture_de_nuit($1)::text as h`, [b.pme]),
+      );
+      assert.equal(rows[0]!.h, "2");
+    } finally {
+      await b.admin.query(`update identity.organizations set fuseau = null where id = $1`, [
+        b.cabinet,
+      ]);
+    }
+  });
+
   it("le verrou : chaque table de tenant est gardée, ou nommée avec sa raison", async () => {
     const sansRaison = [...Object.entries(VERROU.ecriture), ...Object.entries(VERROU.lecture)]
       .filter(([, raison]) => raison.trim().length < 20)
