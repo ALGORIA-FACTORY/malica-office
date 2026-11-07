@@ -634,8 +634,12 @@ COURS de change (`app.cours_de_l_ecriture_de_la_piece`), comme elle en lisait
 déjà les MONTANTS (`app.montants_pris_en_charge`). Sa TVA du mois et « Vos
 charges » en dépendent.
 
-**Conséquence à confirmer** (`20261202100100`) : une porte de la PME ne lit,
-au-delà de la PME, que ce qu'elle a elle-même écrit. Un dossier en
+**Conséquence à confirmer** (`20261202100100`, `20261202100200`) : une porte
+de la PME ne lit, au-delà de la PME, que sa propre proposition encore
+ouverte. Une PME peut toujours remplacer une proposition ouverte du cabinet
+sur sa pièce (comportement d'avant le lot, par
+`app.piece_oublie_ses_propositions`), mais plus proposer sur une pièce déjà
+inscrite (`refus.ecriture.reimputer`). Un dossier en
 `validation_mode = 'autonome'` AVEC un cabinet engagé ne contre-passe donc plus
 l'écriture que le cabinet a prise en charge (`refus.introuvable.ecriture`) :
 le cabinet la défait. Si le dirigeant veut rendre ce geste à la PME, il faudra

@@ -74,15 +74,20 @@ appelant, et le portier ne porte que les droits que ses portes exercent. Une
 fonction nouvelle qui écrit est une porte, ou elle bute sur un droit refusé.
 
 Une seule lecture du portier dépasse celle de son appelant, et elle est
-bornée à ce que l'appelant a lui-même écrit : une écriture comptable qu'il a
-créée (`created_by`) et ses lignes, un fait du journal d'audit dont il est
-l'acteur, dans une organisation dont il est membre
-(`20261202100100_une_porte_de_la_pme_ne_lit_que_ce_qu_elle_a_ecrit`). La PME
-ne lit pas les écritures d'un dossier confié à un cabinet (lot S2), mais ses
-portes relisent ce qu'elles viennent d'écrire (`insert … returning`, une
-écriture proposée transmise avec sa pièce). Une écriture du cabinet n'est
-lisible d'aucune porte de la PME : une valeur qui en est nécessaire sort par
-une fonction qui ne rend qu'elle (son jour, son cours de change).
+bornée à ce que l'appelant a écrit et qui est encore à LUI : une écriture
+comptable qu'il a créée (`created_by`) encore `proposee`, ou qu'il a inscrite
+lui-même (`booked_by`), vivante et que personne n'a revue — la porte
+d'inscription relit la ligne qu'elle met à jour —, ses lignes, et un fait dont
+il est l'acteur sur une telle écriture, dans une organisation dont il est
+membre
+(`20261202100200_une_porte_ne_relit_que_la_proposition_ouverte_de_son_appelant`).
+La PME ne lit pas les écritures d'un dossier confié à un cabinet (lot S2),
+mais ses portes relisent ce qu'elles viennent d'écrire (`insert … returning`,
+une écriture proposée transmise avec sa pièce). Dès qu'une écriture est
+inscrite, fût-ce depuis la proposition de la PME, c'est celle du cabinet :
+aucune porte de la PME ne la retrouve. Une valeur qui en est nécessaire sort
+par une fonction qui ne rend qu'elle (son jour, son cours de change, « la
+pièce a-t-elle déjà une écriture vivante ? »).
 
 _Vérifié par_ `apps/api/src/les-clients-n-ecrivent-que-par-les-portes.test.ts`
 (l'instantané des droits, et le contournement famille par famille) et, en CI,

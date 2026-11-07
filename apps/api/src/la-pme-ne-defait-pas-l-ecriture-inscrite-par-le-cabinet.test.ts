@@ -110,5 +110,40 @@ describe(
       );
       assert.equal(apres[0]!.n, "0", "l'écriture du cabinet n'est pas contre-passée");
     });
+
+    /*
+     * L'effet de bord relevé par la même revue : la porte de proposition ne
+     * voyait plus l'écriture inscrite par le cabinet, ne refusait plus, et
+     * laissait une proposition orpheline sur une pièce déjà inscrite.
+     */
+    it("la PME ne propose pas sur une pièce que le cabinet a inscrite", async () => {
+      const piece = await chezLeComptable();
+      await s.priseEnCharge(piece);
+      for (const qui of ["amel", "bilel", "sami"] as const)
+        await assert.rejects(
+          sousIdentiteDuServeur(s.gens[qui].id, (db) =>
+            office.propose(db, {
+              pieceId: piece,
+              journal: "ACH",
+              date: "2026-10-02",
+              libelle: "Proposée par la société",
+              packVersionId: s.pack,
+              devise: "TND",
+              lignes: [
+                { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0" },
+                { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "100.000" },
+              ],
+            }),
+          ),
+          /refus\.ecriture\.reimputer/,
+          qui,
+        );
+      const { rows } = await s.admin.query<{ n: string }>(
+        `select count(*)::text as n from socle.ecritures
+          where piece_id = $1 and status = 'proposee'`,
+        [piece],
+      );
+      assert.equal(rows[0]!.n, "0", "aucune proposition orpheline");
+    });
   },
 );
