@@ -373,6 +373,120 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
+  /**
+   * (e bis) Toute vue lit avec les droits de son lecteur, accordée ou non.
+   *
+   * L'épreuve ci-dessus ne regarde que les vues accordées. Audit du 6 novembre
+   * 2026 (docs/audit-2026-11-06/base.md, § 2) : `facturation.pieces_orphelines_v`
+   * n'était accordée à personne, appartenait à `postgres` et lisait
+   * `capture.pieces` de tous les tenants — un `grant select` de plus, et elle
+   * rendait à chaque compte les pièces de tous les clients. Une vue qui ne
+   * contourne rien aujourd'hui parce que personne ne la lit est une mine, pas
+   * une garantie (20261202150000). Une vue matérialisée ne peut pas lire pour
+   * son lecteur : il n'y en a aucune, et la première rougira ici.
+   */
+  it("toute vue lit avec les droits de son lecteur, même sans droit accordé", async () => {
+    const definer = await interroger<{ vue: string }>(`
+      select n.nspname || '.' || c.relname as vue
+        from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+       where c.relkind in ('v', 'm')
+         and n.nspname not in ('pg_catalog', 'information_schema')
+         and not (c.relkind = 'v'
+                  and coalesce(c.reloptions, '{}'::text[]) @> array['security_invoker=true'])
+       order by 1`);
+
+    assert.deepEqual(
+      definer.map((r) => r.vue),
+      [],
+      "une vue sans security_invoker lit avec les droits de son propriétaire : le premier grant contournerait la RLS",
+    );
+  });
+
+  /**
+   * (e ter) Aucun droit n'est porté par un rôle qui contourne la RLS sans être
+   * superutilisateur.
+   *
+   * `service_role` (`nologin bypassrls`, `db/local/00_compat_supabase.sql`) n'a
+   * aucun membre ; il gardait pourtant ALL sur `agents.model_pricing`, la
+   * lecture de deux vues et l'exécution de trois fonctions (audit du
+   * 6 novembre 2026, § 3.6). Personne ne les exerce — jusqu'au jour où un rôle
+   * de connexion en devient membre et lit tous les tenants. Révoqués par
+   * 20261202150300. L'usage des schémas `auth`, `storage`, `extensions`, posé
+   * par le fichier de compatibilité à chaque montée, n'ouvre aucune ligne : il
+   * n'est pas compté.
+   */
+  it("aucun rôle qui contourne la RLS ne porte de droit sur une relation ou une fonction", async () => {
+    const droits = await interroger<{ droit: string }>(`
+      with r as (select oid, rolname from pg_roles where rolbypassrls and not rolsuper)
+      select r.rolname || ' : ' || a.privilege_type || ' sur ' || n.nspname || '.' || c.relname as droit
+        from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        cross join lateral aclexplode(c.relacl) a join r on r.oid = a.grantee
+      union all
+      select r.rolname || ' : ' || a.privilege_type || ' sur ' || n.nspname || '.' || c.relname || '.' || at.attname
+        from pg_attribute at join pg_class c on c.oid = at.attrelid
+        join pg_namespace n on n.oid = c.relnamespace
+        cross join lateral aclexplode(at.attacl) a join r on r.oid = a.grantee
+      union all
+      select r.rolname || ' : ' || a.privilege_type || ' sur ' || p.oid::regprocedure::text
+        from pg_proc p cross join lateral aclexplode(p.proacl) a join r on r.oid = a.grantee
+       order by 1`);
+
+    assert.deepEqual(
+      droits.map((r) => r.droit),
+      [],
+      "un rôle bypassrls qui porte un droit le donne, sans politique, à quiconque en deviendra membre",
+    );
+  });
+
+  /**
+   * (e quater) Aucun index n'est le préfixe strict d'un autre index de la même
+   * table.
+   *
+   * Un index btree non unique, sans prédicat ni expression, dont les colonnes
+   * (même classe d'opérateurs, même collation, même ordre) ouvrent un index plus
+   * long de la même table, sans prédicat, ne sert aucune lecture que le plus
+   * long ne serve : il coûte une écriture de plus à chaque ligne. Neuf relevés
+   * (audit du 6 novembre 2026, § 3.5, et `app.signalements_user_idx` depuis),
+   * retirés par 20261202150200 ; chacun nomme dans ce fichier l'index qui le
+   * couvre.
+   */
+  it("aucun index n'est le préfixe strict d'un autre index de la même table", async () => {
+    const redondants = await interroger<{ court: string; long: string }>(`
+      with ix as (
+        select i.indexrelid, i.indrelid, i.indisunique, i.indisvalid, c.relname, n.nspname,
+               i.indpred is not null as partiel, i.indexprs is not null as expr,
+               (string_to_array(i.indkey::text, ' ')::int[])[1:i.indnkeyatts] as cols,
+               (string_to_array(i.indclass::text, ' ')::oid[])[1:i.indnkeyatts] as ops,
+               (string_to_array(i.indcollation::text, ' ')::oid[])[1:i.indnkeyatts] as colls,
+               (string_to_array(i.indoption::text, ' ')::int[])[1:i.indnkeyatts] as opts,
+               am.amname
+          from pg_index i
+          join pg_class c on c.oid = i.indexrelid
+          join pg_am am on am.oid = c.relam
+          join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname not in ('pg_catalog', 'information_schema', 'pg_toast')
+      )
+      select s.nspname || '.' || s.relname as court, l.nspname || '.' || l.relname as long
+        from ix s join ix l on l.indrelid = s.indrelid and l.indexrelid <> s.indexrelid
+       where s.amname = 'btree' and l.amname = 'btree' and l.indisvalid
+         and not s.indisunique and not s.partiel and not s.expr
+         and not l.partiel and not l.expr
+         and cardinality(l.cols) > cardinality(s.cols)
+         and l.cols[1:cardinality(s.cols)] = s.cols
+         and l.ops[1:cardinality(s.cols)] = s.ops
+         and l.colls[1:cardinality(s.cols)] = s.colls
+         and l.opts[1:cardinality(s.cols)] = s.opts
+         and not exists (select 1 from pg_constraint k where k.conindid = s.indexrelid)
+       order by 1, 2`);
+
+    assert.deepEqual(
+      redondants.map((r) => `${r.court} ⊂ ${r.long}`),
+      [],
+      "index redondant : le plus long sert déjà chacune de ses lectures",
+    );
+  });
+
   /*
    * ================================== L'ENVERS DE LA VUE QUI LIT POUR L'APPELANT
    *
