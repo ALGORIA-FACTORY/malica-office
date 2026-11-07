@@ -846,3 +846,65 @@ fermées et des violations de format, jusqu'à la preuve ou l'abstention.
    lus, ce n'est pas une donnée à corriger en silence. Il faut les relever à part.
 3. **Chaque correction passe à ce banc, avant et après.** Une correction qui fait
    apparaître un seul faux nouveau est refusée.
+
+## Bulletin — l'expert des tiers (7 novembre 2026)
+
+Demandé par le dirigeant le 7 novembre 2026 (le moteur était gelé) : faire tomber les
+silences à travailler, en gardant zéro faux. Mêmes 411 pièces, même cache OCR que le
+bulletin du 6 novembre (`r2-lu.json`), reproduit à l'identique avant toute correction.
+
+|                        |     juste |  faux | silence à travailler | sens justes | inventé |
+| ---------------------- | --------: | ----: | -------------------: | ----------: | ------: |
+| 6 novembre (référence) |     6 757 |     0 |                3 424 |         170 |       0 |
+| **7 novembre**         | **6 931** | **0** |            **3 212** |     **203** |   **0** |
+
+Aucun champ n'est passé de juste à faux, aucun sens n'est échangé ; 41 silences
+deviennent des pistes signalées (36 justes, 5 fausses), jamais affirmées.
+
+### Le diagnostic qui a orienté le travail
+
+Pour chaque silence à travailler, la valeur attendue a été cherchée dans le relevé OCR
+de la pièce (`_banc/diagnostic-silences-2026-11-07.py`, hors dépôt) : sur les pièces
+dont le relevé est gardé, **74 % des silences étaient déjà lus par l'OCR** ; le moteur
+ne les prenait pas. 5 % seulement n'étaient pas vus par l'OCR.
+
+### Ce qui change (`packages/sudoku/src/entete.rs`)
+
+- **La hauteur ne contredit plus un indice fort.** La géométrie « corrobore, elle ne
+  décide jamais seule » ; en pratique elle cassait l'unanimité et tout le bloc des
+  parties se taisait (algoria-001 : le matricule du dossier en tête sous « Livré à »,
+  celui du fournisseur en pied). Elle garde sa voix quand le dossier est imprimé deux
+  fois, quand le seul indice est un repli, ou quand la contrepartie n'a pas sa lettre de
+  contrôle. +44 justes, +13 sens.
+- **Le matricule réparé sous sa lettre de contrôle.** L'écriture sans séparateurs
+  (« 1958330VAM000 ») et la lettre lue comme un chiffre de même dessin ne sont
+  retenues que si la lettre calculée par la règle du pack les confirme. +84 justes,
+  +20 sens.
+- **Le nom par la tête du bloc.** Un émetteur sans forme juridique (« Imprimerie
+  Darvane ») : la première ligne du bloc aligné sur son matricule, suivie de son
+  écriture arabe éventuelle, d'une adresse d'une ou deux lignes qui porte un numéro,
+  puis de lignes à libellé. Affirmé par le texte exact ou une lecture assurée, sinon
+  signalé (dirigeant 50/08 : « Leïla » relu « Leila »).
+- **L'adresse alignée sous le libellé** (« Client : … », l'adresse sous « Client »),
+  et jamais à partir d'un mot qui tombe par hasard sous le nom. +18 adresses client.
+- **Le contact de l'émetteur** (`contact_emetteur`, migration
+  `20261202140000`) : les lignes « Tél », « Fax », « E-mail » de SON bloc. Jamais lu
+  avant (0 juste) : +14 justes, 13 pistes justes.
+
+### Ce que le banc a appris sur le corpus
+
+- **352 des 531 matricules attendus ont une lettre que la règle du pack refuse** (la
+  lettre « O », que l'alphabet exclut, en particulier). La règle retrouve 146 des 150
+  matricules publics réels : le corpus les invente. Les réparations gardées par la
+  lettre sont donc sous-mesurées ici ; elles serviront davantage sur des pièces réelles.
+- Les jeux du dirigeant n'ont pas de confiance OCR : leurs noms et contacts lus par la
+  structure restent des pistes, jamais des affirmations.
+
+### Ce qui reste, du plus gros au plus petit
+
+1. Les pièces où seul le matricule du dossier est lu (77, surtout des photos) : la
+   contrepartie sans lettre valide ou hors du motif.
+2. Les noms et adresses en écriture de droite à gauche (une quarantaine de raisons
+   sociales attendues en arabe).
+3. L'identifiant (registre de commerce, code TVA) hors du bloc des parties.
+4. Les pièces non prouvées (116), dont 44 sans aucune preuve exécutable dans leur grille.

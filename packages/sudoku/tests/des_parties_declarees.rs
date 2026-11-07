@@ -219,6 +219,27 @@ fn le_seul_autre_nom_a_forme_juridique_est_celui_du_tiers() {
         x["y1"] = json!(0.96);
         j.push(x);
     }
+    // La règle du seul autre nom se tait : deux autres noms. Mais l'en-tête de l'émetteur
+    // (nom, adresse, puis lignes à libellé jusqu'à son matricule) prouve le nom par sa
+    // structure (`tete_de_bloc`, 7 novembre 2026), et une société imprimée en pied de page
+    // n'y entre pas.
+    let p = parties(&e);
+    assert_eq!(
+        p["emetteur"]["nom"]["valeur"], "Kessira Bureautique SARL",
+        "{p}"
+    );
+    // Sans adresse sous le nom, l'en-tête ne prouve plus rien : la page reste ambiguë.
+    let j = e["jetons"].as_array_mut().expect("jetons");
+    let y_nom = j
+        .iter()
+        .find(|t| t["texte"] == "Kessira")
+        .and_then(|t| t["y1"].as_f64())
+        .expect("le nom");
+    j.retain(|t| {
+        let y = t["y0"].as_f64().unwrap_or(0.0);
+        let x = t["x0"].as_f64().unwrap_or(1.0);
+        !(y > y_nom && y < y_nom + 0.03 && x < 0.45)
+    });
     let p = parties(&e);
     assert!(p["emetteur"]["nom"].is_null(), "{p}");
 }
