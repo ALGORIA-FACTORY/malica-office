@@ -239,7 +239,9 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
       sousIdentiteDuServeur(dirigeant.id, (db) =>
         db.query(`select public.capture_precision_persist($1, $2, $3)`, [id, champ, valeur]),
       );
-    await preciser("document_kind", "facture_achat");
+    // Un type qui ne porte pas d'écriture : le sens (achat, vente) est l'acte du
+    // cabinet engagé, quel que soit le mode du dossier (lot S5).
+    await preciser("document_kind", "ticket_caisse");
     assert.equal((await retour(id))?.fait, false, "le type n'est pas la date");
     await preciser("document_date", "2026-10-02");
     assert.equal((await retour(id))?.fait, true);

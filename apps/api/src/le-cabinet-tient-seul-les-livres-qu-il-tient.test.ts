@@ -7,7 +7,8 @@
  *   T1  retourner une pièce prise en charge dont le règlement est inscrit
  *       laissait le règlement vivant (régression du lot 1) ;
  *   T2  la PME contre-passait l'écriture du cabinet par la revue — et le
- *       journal du jour gardait l'écriture sans son annulation ;
+ *       journal du jour gardait l'écriture sans son annulation ; en mode
+ *       autonome, elle le pouvait encore jusqu'au lot S5 ;
  *   T3  la PME « validait » l'écriture du cabinet ;
  *   T5  forcer acceptait un code de taxe inconnu ;
  *   T6  forcer une pièce en retour laissait le client devant un geste
@@ -277,12 +278,66 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
     );
   });
 
-  it("T2 toute contre-passation d'une écriture du journal y entre aussi", async () => {
-    // Un dossier autonome tient ses livres : il peut défaire l'écriture que
-    // son cabinet a prise en charge. Le journal du cabinet doit le dire.
+  it("T2 en autonome aussi, la PME ne défait pas l'écriture du cabinet engagé", async () => {
+    // Lot S5 (6 novembre 2026) : le mode `autonome` ouvrait la contre-passation
+    // à la PME dès qu'un cabinet était engagé. Un cabinet engagé tient les
+    // livres, quel que soit le mode.
     const id = await transmise("autonome");
     const ecriture = await forcer(expert, id);
-    await pmeFait("supervision.review", {
+    for (const outcome of ["retourne", "valide"] as const)
+      await assert.rejects(
+        pmeFait("supervision.review", {
+          ecritureId: ecriture,
+          outcome,
+          motifId: motifs["montant_incoherent"],
+          note: "Erreur de saisie.",
+        }),
+        /refus\.(supervision\.reservee|introuvable\.ecriture)$/,
+        outcome,
+      );
+    await assert.rejects(
+      sousIdentite(dirigeant.id, (db) =>
+        db.query(`select public.socle_ecriture_contre_passer($1, $2)`, [
+          ecriture,
+          motifs["montant_incoherent"],
+        ]),
+      ),
+      /refus\.(supervision\.reservee|introuvable\.ecriture)$/,
+    );
+    assert.deepEqual(
+      (await vivantes(id)).map((e) => e.id),
+      [ecriture],
+    );
+  });
+
+  it("T2 en autonome aussi, la PME règle la facture que le cabinet a prise en charge", async () => {
+    const id = await transmise("autonome");
+    await valider(expert, id);
+    const paiement = (await pmeFait("capture.enregistrerPaiement", {
+      pieceId: id,
+      packId,
+      moyenCode: "especes",
+      montantMineur: 1470126,
+      devise: "TND",
+      payeLe: "2026-10-03",
+    })) as string;
+    await pmeFait("office.inscrireLeReglement", paiement, {
+      codes: [],
+      baseReglee: "1470.126",
+      justification: "Fournisseur dispensé de retenue : attestation d'essai.",
+    });
+    assert.deepEqual(
+      (await vivantes(id)).map((e) => e.nature),
+      ["piece", "reglement"],
+    );
+  });
+
+  it("T2 toute contre-passation d'une écriture du journal y entre aussi", async () => {
+    // Le cabinet défait l'écriture qu'il a prise en charge (dossier autonome
+    // confié) : le journal du cabinet doit le dire.
+    const id = await transmise("autonome");
+    const ecriture = await forcer(expert, id);
+    await cabinetFait("supervision.review", {
       ecritureId: ecriture,
       outcome: "retourne",
       motifId: motifs["montant_incoherent"],

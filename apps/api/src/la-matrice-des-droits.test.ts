@@ -616,4 +616,211 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     for (const qui of ["amel", "sami"] as const)
       await assert.rejects(s.fait(qui, "journalDuJour.lire", s.cabinet, s.pme, null, "fr"));
   });
+
+  /* ======================================== 11 · LES ÉCRITURES DU CABINET */
+  //
+  // Vérification indépendante du 6 novembre 2026 (lot S5) : dans ce dossier —
+  // `autonome`, un cabinet engagé —, le propriétaire contre-passait l'écriture
+  // que le cabinet avait inscrite. Un cabinet engagé tient les livres, quel que
+  // soit le mode : personne de la PME ne propose, n'inscrit, ne revoit ni ne
+  // contre-passe une écriture. Le règlement reste son geste (T1 de
+  // `le-cabinet-tient-seul-les-livres-qu-il-tient.test.ts`).
+
+  const LA_PME = ["amel", "bilel", "sami", "sonia"] as const;
+  const LIGNES = JSON.stringify([
+    { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: "EXO" },
+    { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "100.000", tax_code: null },
+  ]);
+  const sous = (qui: Personne, sql: string, params: unknown[]) =>
+    sousIdentiteDuServeur(s.gens[qui].id, (db) => db.query(sql, params));
+  const proposer = async (qui: Personne, pieceId: string) =>
+    (
+      await sous(
+        qui,
+        `select public.socle_ecriture_propose($1, 'ACH', '2026-10-02', 'Facture essai', $2,
+                                              $3::jsonb, 'TND') as id`,
+        [pieceId, s.pack, LIGNES],
+      )
+    ).rows[0]!["id"] as string;
+  const inscrire = (qui: Personne, ecriture: string) =>
+    sous(qui, `select public.socle_ecriture_book($1)`, [ecriture]);
+  const revoir = (qui: Personne, ecriture: string, outcome: "valide" | "retourne") =>
+    sous(
+      qui,
+      `select public.socle_ecriture_review($1, $2::app.review_outcome_t, $3, 'Erreur de saisie.')`,
+      [ecriture, outcome, s.motifs["montant_incoherent"]],
+    );
+  const contrePasser = (qui: Personne, ecriture: string) =>
+    sous(qui, `select public.socle_ecriture_contre_passer($1, $2)`, [
+      ecriture,
+      s.motifs["montant_incoherent"],
+    ]);
+  /** Ce qu'une écriture est devenue, lu sans RLS. */
+  const ecriture = async (id: string) =>
+    (
+      await s.admin.query<{ status: string; revue: boolean; contre_passee: boolean }>(
+        `select e.status, e.reviewed_at is not null as revue,
+                exists (select 1 from socle.ecritures r where r.reverses_id = e.id) as contre_passee
+           from socle.ecritures e where e.id = $1`,
+        [id],
+      )
+    ).rows[0];
+  const ecrituresDe = async (table: string, colonne: string, id: string) =>
+    Number(
+      (
+        await s.admin.query<{ n: string }>(
+          `select count(*)::text as n from ${table} where ${colonne} = $1`,
+          [id],
+        )
+      ).rows[0]!.n,
+    );
+  /** Un bien partagé, et un article de stock, de la société. */
+  const unBien = async (libelle: string) => {
+    const { rows } = await s.admin.query<{ id: string }>(
+      `select id from ref.immo_categories
+        where pack_version_id = $1 and valid_to is null order by code limit 1`,
+      [s.pack],
+    );
+    return (
+      await sous(
+        "amel",
+        `select public.immo_bien_creer($1, null, 'partage', null, $2, $3, '2025-01-01',
+                                       12000, 0, 'lineaire', 4::smallint, 1, 'TND', $4) as id`,
+        [s.pme, rows[0]!.id, libelle, s.pack],
+      )
+    ).rows[0]!["id"] as string;
+  };
+  const unArticle = async (reference: string) => {
+    const { rows } = await s.admin.query<{ id: string; stock: string; variation: string }>(
+      `select id, account_stock as stock, account_variation as variation
+         from ref.stock_categories where pack_version_id = $1 and code = 'marchandises'`,
+      [s.pack],
+    );
+    const c = rows[0]!;
+    return (
+      await sous(
+        "amel",
+        `select public.stocks_article_creer($1, null, $2, $3, 'Article d''essai', 'u',
+                                            'cump', $4, $5, 'TND', $6) as id`,
+        [s.pme, c.id, reference, c.stock, c.variation, s.pack],
+      )
+    ).rows[0]!["id"] as string;
+  };
+  const doter = (qui: Personne, bien: string) =>
+    sous(
+      qui,
+      `select public.immo_dotation_constater($1, 2025::smallint, 12::smallint, 3000, 3000, 9000, $2)`,
+      [bien, s.pack],
+    );
+  const inventorier = (qui: Personne, article: string) =>
+    sous(
+      qui,
+      `select public.stocks_inventaire_constater($1, '2025', 0, 100, 100, $2, '2025-12-31')`,
+      [article, s.pack],
+    );
+  const modeDuDossier = (mode: "autonome" | "mandate") =>
+    s.admin.query(
+      `update identity.organizations set validation_mode = $2::app.validation_mode_t
+        where id = $1`,
+      [s.pme, mode],
+    );
+
+  for (const mode of ["autonome", "mandate"] as const)
+    it(`11 · Dossier confié (${mode}) — personne de la PME ne propose, n'inscrit, ne revoit ni ne contre-passe ; le comptable, si`, async () => {
+      await modeDuDossier(mode);
+      try {
+        // Une pièce dont le comptable a établi le type et PROPOSÉ l'écriture.
+        const enCours = await chezLeComptable();
+        await sous("expert", `select public.piece_type_etabli_par_le_cabinet($1)`, [enCours]);
+        const proposee = await proposer("expert", enCours);
+        // Une autre, prise en charge : son écriture est inscrite.
+        const inscrite = await s.priseEnCharge(await chezLeComptable());
+        const bien = await unBien(`Bien S5 ${mode}`);
+        const article = await unArticle(`ART-S5-${mode}`);
+
+        for (const qui of LA_PME) {
+          await assert.rejects(
+            proposer(qui, enCours),
+            /refus\.(inscription\.reservee_au_cabinet|introuvable\.piece)$/,
+            `${qui} propose`,
+          );
+          await assert.rejects(
+            inscrire(qui, proposee),
+            /refus\.(inscription\.reservee_au_cabinet|ecriture\.non_inscriptible)$/,
+            `${qui} inscrit`,
+          );
+          for (const outcome of ["valide", "retourne"] as const)
+            await assert.rejects(
+              revoir(qui, inscrite, outcome),
+              /refus\.(supervision\.reservee|introuvable\.ecriture)$/,
+              `${qui} revoit (${outcome})`,
+            );
+          await assert.rejects(
+            contrePasser(qui, inscrite),
+            /refus\.(supervision\.reservee|introuvable\.ecriture)$/,
+            `${qui} contre-passe`,
+          );
+          await assert.rejects(
+            doter(qui, bien),
+            /refus\.(inscription\.reservee_au_cabinet|introuvable\.immobilisation)$/,
+            `${qui} dote`,
+          );
+          await assert.rejects(
+            inventorier(qui, article),
+            /refus\.(inscription\.reservee_au_cabinet|introuvable\.article)$/,
+            `${qui} inventorie`,
+          );
+        }
+        assert.deepEqual(await ecriture(proposee), {
+          status: "proposee",
+          revue: false,
+          contre_passee: false,
+        });
+        assert.deepEqual(await ecriture(inscrite), {
+          status: "booked",
+          revue: false,
+          contre_passee: false,
+        });
+        assert.equal(await ecrituresDe("immo.dotations", "asset_id", bien), 0);
+        assert.equal(await ecrituresDe("stocks.inventaires", "item_id", article), 0);
+
+        // Le comptable, lui, fait chacun de ces gestes.
+        await inscrire("expert", proposee);
+        await contrePasser("expert", inscrite);
+        assert.equal((await ecriture(inscrite))?.contre_passee, true);
+        await doter("expert", bien);
+        await inventorier("expert", article);
+        assert.equal(await ecrituresDe("immo.dotations", "asset_id", bien), 1);
+        assert.equal(await ecrituresDe("stocks.inventaires", "item_id", article), 1);
+      } finally {
+        await modeDuDossier("autonome");
+      }
+    });
+
+  it("11 · Dossier autonome sans cabinet engagé — la société tient ses livres", async () => {
+    // La pièce se lit et se type pendant le mandat ; le mandat prend fin.
+    const id = await lue("amel");
+    const { rows } = await s.admin.query<{ id: string }>(
+      `update identity.engagements set status = 'termine'
+        where pme_org_id = $1 and status = 'actif' returning id`,
+      [s.pme],
+    );
+    try {
+      await s.fait("amel", "capture.preciser", id, "document_kind", "facture_achat");
+      const e = await proposer("amel", id);
+      await inscrire("amel", e);
+      await revoir("amel", e, "retourne");
+      assert.deepEqual(await ecriture(e), { status: "booked", revue: true, contre_passee: true });
+      const bien = await unBien("Bien S5 sans cabinet");
+      await doter("amel", bien);
+      const article = await unArticle("ART-S5-SANS-CABINET");
+      await inventorier("amel", article);
+      assert.equal(await ecrituresDe("immo.dotations", "asset_id", bien), 1);
+      assert.equal(await ecrituresDe("stocks.inventaires", "item_id", article), 1);
+    } finally {
+      await s.admin.query(`update identity.engagements set status = 'actif' where id = any($1)`, [
+        rows.map((r) => r.id),
+      ]);
+    }
+  });
 });

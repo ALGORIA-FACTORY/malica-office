@@ -69,8 +69,32 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       return rows[0]!.id;
     });
 
-  /** Proposer puis inscrire, sous l'identité donnée. */
+  /**
+   * La société inscrivait elle-même AVANT le lot 5. Depuis le lot S5, aucun
+   * membre de la PME n'inscrit pendant qu'un cabinet est engagé : pour rejouer
+   * cette histoire, le mandat se suspend le temps de l'inscription.
+   */
+  const commeAvant = async <T>(f: () => Promise<T>): Promise<T> => {
+    await admin.query(
+      `update identity.engagements set status = 'suspendu' where pme_org_id = $1 and status = 'actif'`,
+      [pme],
+    );
+    try {
+      return await f();
+    } finally {
+      await admin.query(
+        `update identity.engagements set status = 'actif' where pme_org_id = $1 and status = 'suspendu'`,
+        [pme],
+      );
+    }
+  };
+
+  /** Proposer puis inscrire, sous l'identité donnée (la société : comme avant le lot 5). */
   const inscrire = (qui: Utilisateur, pieceId: string, libelle: string, l: unknown) =>
+    qui === dirigeant
+      ? commeAvant(() => inscrireSous(qui, pieceId, libelle, l))
+      : inscrireSous(qui, pieceId, libelle, l);
+  const inscrireSous = (qui: Utilisateur, pieceId: string, libelle: string, l: unknown) =>
     sousIdentite(qui.id, async (db) => {
       const id = await office.propose(db, {
         pieceId,
