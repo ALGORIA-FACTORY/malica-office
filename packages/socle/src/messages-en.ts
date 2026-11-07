@@ -2167,6 +2167,8 @@ export const en: Dict = {
     "A cancellation must copy the payment of the same document.",
   "refus.ecriture.reglement_annule": "The payment is cancelled, or does not match the document.",
   "refus.ecriture.reglement_d_une_autre_piece": "This payment does not belong to this document.",
+  "refus.ecriture.reglement_hors_paiement":
+    "This payment entry does not match its payment: journal, cash account, third party or amount.",
   "refus.ecriture.deja_inscrite":
     "This document already has a recorded entry: a second one would count it twice.",
   "refus.ecriture.reimputer":

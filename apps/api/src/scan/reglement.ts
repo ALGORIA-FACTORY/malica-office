@@ -49,7 +49,9 @@ export const AMBIGU = Symbol("ambigu");
  * comptabilité qui le mandate, puis le défaut fourni (le compte du moyen de
  * paiement) ou, à défaut, le pack. Une seule lecture pour la trésorerie et
  * les retenues : deux surcharges contradictoires sont refusées, jamais
- * départagées par l'ordre d'une requête.
+ * départagées par l'ordre d'une requête. La lecture est celle de la base
+ * (`app.comptes_du_role`), que le contrôle d'un règlement inscrit relit aussi
+ * (lot S5b) : la proposition et son contrôle ne peuvent pas diverger.
  */
 export async function compteDuRole(
   db: Requete,
@@ -59,15 +61,7 @@ export async function compteDuRole(
   defaut: string | null,
 ): Promise<string | null | typeof AMBIGU> {
   const { rows } = await db.query<{ compte: string | null }>(
-    `select distinct coalesce(d.account_code, c.account_code, $4::text,
-              (select p.account_code from ref.role_bindings p
-                where p.role_code = $2 and p.pack_version_id = $3)) as compte
-       from (select 1) source
-       left join parametrage_role_bindings_v d on d.role_code = $2
-         and d.portee = 'dossier' and d.portee_id = $1
-       left join parametrage_role_bindings_v c on c.role_code = $2 and c.portee = 'cabinet'
-         and c.portee_id in (select cabinet_org_id from engagements_v
-                              where pme_org_id = $1 and status = 'actif')`,
+    `select compte from app.comptes_du_role($1, $2, $3, $4::text) as compte`,
     [tenantId, role, packVersionId, defaut],
   );
   return rows.length === 1 ? rows[0]!.compte : AMBIGU;
