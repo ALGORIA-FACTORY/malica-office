@@ -208,6 +208,69 @@ describe("un règlement ne s'invente ni retenue ni date", { skip: !BASE_CONFIGUR
     assert.deepEqual(rows, [], "une retenue de 90 inventée sur un paiement de 10 est inscrite");
   });
 
+  it("une retenue déclarée ne s'assied pas sur une assiette plus grande que la part réglée", async () => {
+    // Seconde vérification du lot S5b : la retenue se lit désormais dans la
+    // qualification (`reglement.qualifie`), mais l'assiette déclarée n'est bornée
+    // ni par la part brute que le tiers éteint, ni par la facture. Dans la même
+    // transaction que sa proposition, la PME consigne une assiette de 100 000 :
+    // 15 % font 15 000 de retenue « déclarée » pour 10 payés sur une facture de
+    // 1 470,126.
+    const piece = await priseEnCharge();
+    const paiement = await payer(piece, 10000, "2026-10-06");
+    const { journal, lignes } = await lignesDuMoteur(paiement, "10.000");
+    const tiers = lignes.find((l) => Number(l.debit) > 0)!;
+    const tresorerie = lignes.find((l) => Number(l.credit) > 0)!;
+    const retenue = (
+      await admin.query<{ a: string[] }>(
+        `select array(select app.comptes_du_role($1, 'RETENUE_SOURCE_OPEREE', $2, null)) as a`,
+        [dossier, packId],
+      )
+    ).rows[0]!.a[0]!;
+    const declarees: Ligne[] = [
+      { ...tiers, debit: "15010.000", credit: "0" },
+      { ...tresorerie, debit: "0", credit: "10.000" },
+      {
+        account_code: retenue,
+        libelle: "Retenue",
+        debit: "0",
+        credit: "15000.000",
+        tax_code: null,
+      },
+    ];
+    await sousIdentiteDuServeur(dirigeant.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `select public.socle_ecriture_propose($1, $2, '2026-10-06', 'Règlement', $3, $4::jsonb,
+                                              'TND', $5) as id`,
+        [piece, journal, packId, JSON.stringify(declarees), paiement],
+      );
+      await db.query(`select public.fait_consigner('reglement.qualifie', $1, $2::jsonb)`, [
+        rows[0]!.id,
+        JSON.stringify({
+          paiementId: paiement,
+          qualification: {
+            codes: ["RAS_NON_RESIDENTS_GENERAL"],
+            baseReglee: "100000.000",
+            justification: "Certificat d'essai.",
+          },
+        }),
+      ]);
+      await db.query(`select public.socle_ecriture_book($1)`, [rows[0]!.id]);
+    }).catch(() => undefined);
+
+    const { rows } = await admin.query(
+      `select e.status from socle.ecritures e
+        where e.paiement_id = $1
+          and exists (select 1 from socle.ecriture_lignes l
+                       where l.ecriture_id = e.id and l.account_code = $2)`,
+      [paiement, retenue],
+    );
+    assert.deepEqual(
+      rows,
+      [],
+      "une retenue de 15 000 sur un paiement de 10 (facture de 1 470,126) est inscrite",
+    );
+  });
+
   it("un règlement porte le jour de son paiement", async () => {
     const piece = await priseEnCharge();
     const paiement = await payer(piece, 10000, "2026-10-04");
