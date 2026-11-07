@@ -3,7 +3,13 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 
+import { dictionnairesParEspace } from "./dictionnaires-par-espace";
+
 export default defineConfig({
+  // Les dictionnaires en paquets, comme dans l'application (`vite.config.ts`).
+  plugins: [
+    dictionnairesParEspace(path.resolve(__dirname, "..", "..", "packages", "socle", "src")),
+  ],
   resolve: {
     alias: { "@": path.resolve(__dirname, "src") },
   },
@@ -34,6 +40,8 @@ export default defineConfig({
     // `__tests__/` à la racine : le relais du serveur de développement, qui
     // n'est pas dans `src`. Absent d'ici, son épreuve n'était jamais lancée.
     include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.ts", "__tests__/**/*.test.ts"],
+    // Le français, chargé comme l'application le charge avant son premier rendu.
+    setupFiles: ["src/i18n/__tests__/francais-charge.ts"],
     testTimeout: 30_000,
     hookTimeout: 30_000,
   },

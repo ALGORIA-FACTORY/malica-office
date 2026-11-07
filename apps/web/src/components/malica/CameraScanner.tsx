@@ -13,7 +13,7 @@ import { Check, ImageUp } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cadrer } from "@/capabilities/cadrage";
-import { analyzeFrame, type FrameAnalysis } from "@/capabilities/scanner";
+import type { FrameAnalysis } from "@/capabilities/scanner";
 import { cleDuMotif, motifCamera, type MotifCamera } from "@/capabilities/camera";
 import { useI18n, type MessageKey } from "@/i18n";
 import { noterAuJournal } from "@/lib/journal-atelier";
@@ -213,6 +213,7 @@ export function CameraScanner({ onDone, onCancel, onFallback }: CameraScannerPro
           const cadrage = await cadrer(petite);
           // La résolution VRAIE de la caméra, pas celle de la trame d'analyse :
           // c'est elle qui dit si le document sera lisible une fois pris.
+          const { analyzeFrame } = await import("@/capabilities/scanner");
           const result = analyzeFrame(petite, Math.max(vw, vh), cadrage.coins);
           analysisRef.current = result;
           setAnalysis(result);

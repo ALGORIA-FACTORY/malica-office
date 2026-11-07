@@ -1,5 +1,6 @@
 import "./lib/error-capture";
 
+import { chargerLesEspaces } from "./i18n/dictionnaires";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { referenceDePanne, renderErrorPage } from "./lib/error-page";
 
@@ -11,9 +12,13 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => (m.default ?? m) as ServerEntry,
-    );
+    // Le français se rend dès la première page : son dictionnaire — base et
+    // espaces — se charge à la demande (`i18n/dictionnaires.ts`), et le
+    // serveur l'attend avant de rendre quoi que ce soit.
+    serverEntryPromise = Promise.all([
+      import("@tanstack/react-start/server-entry"),
+      chargerLesEspaces("fr"),
+    ]).then(([m]) => (m.default ?? m) as ServerEntry);
   }
   return serverEntryPromise;
 }

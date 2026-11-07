@@ -6,33 +6,35 @@
  * Les polices, embarquées. Elles venaient d'un tiers à chaque page : rien ne
  * s'affichait dans la bonne police hors ligne, et l'arabe, chargé, n'était
  * jamais assigné. Trois graisses, celles que le produit emploie, et seuls
- * les alphabets qu'il écrit : latin et latin étendu (le français), arabe.
- * Les fichiers `400.css` de fontsource embarquaient aussi le cyrillique, le
- * grec et le vietnamien — 51 fichiers, 740 Ko qu'une mise à jour en vol
- * transportait pour rien.
+ * les alphabets qu'il écrit : latin et latin étendu (le français), arabe —
+ * chacun avec sa plage de caractères. Elles vivent dans `polices.css`, que la
+ * page ajoute après sa première image (`__root.tsx`) : ce premier rendu se
+ * fait dans la police de repli ci-dessous, aux mesures d'Inter.
+ *
+ * Arial (Roboto sur Android) agrandie et recalée pour que le texte occupe la
+ * même place avant et après l'arrivée d'Inter. Sans elle, la bascule
+ * déplaçait les blocs de `/confidentialite` (CLS 0,09 à 0,21 mesuré). Latin
+ * seulement : l'arabe ne passe pas par elle.
  */
-@import "@fontsource/inter/latin-400.css";
-@import "@fontsource/inter/latin-500.css";
-@import "@fontsource/inter/latin-600.css";
-@import "@fontsource/inter/latin-ext-400.css";
-@import "@fontsource/inter/latin-ext-500.css";
-@import "@fontsource/inter/latin-ext-600.css";
-@import "@fontsource/ibm-plex-mono/latin-400.css";
-@import "@fontsource/ibm-plex-mono/latin-500.css";
-@import "@fontsource/ibm-plex-mono/latin-600.css";
-@import "@fontsource/ibm-plex-mono/latin-ext-400.css";
-@import "@fontsource/ibm-plex-mono/latin-ext-500.css";
-@import "@fontsource/ibm-plex-mono/latin-ext-600.css";
-@import "@fontsource/noto-kufi-arabic/arabic-400.css";
-@import "@fontsource/noto-kufi-arabic/arabic-500.css";
-@import "@fontsource/noto-kufi-arabic/arabic-600.css";
+@font-face {
+  font-family: "Inter Repli";
+  src: local("Arial"), local("Roboto"), local("Helvetica");
+  size-adjust: 107.12%;
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 /*
- * Le langage de la PME, porté par `[data-surface="pme"]` et par lui seul.
- * Hors couche, donc il l'emporte sur les utilitaires : c'est ce qu'on attend
- * d'un thème de surface. Edition One n'en sait rien et n'en est pas touché.
+ * Le langage de la PME, porté par `[data-surface="pme"]` et par lui seul, ne
+ * vit plus ici : sa feuille (230 Ko bruts) bloquait le premier rendu de
+ * chaque page, vitrine et cabinet compris. Elle vient avec les écrans qui
+ * posent la surface — `components/malica/surface-pme.tsx`. De même pour le
+ * cabinet, `components/malica/surface-comptabilite.tsx`.
  */
-@import "./styles-pme.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -54,7 +56,12 @@
   --radius-3xl: 0px;
   --radius-4xl: 0px;
 
-  --font-sans: "Inter", "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
+  /*
+   * Le Kufi n'est pas dans la pile par défaut : seul `:lang(ar)` le demande
+   * (plus bas), pour que l'arabe ne se télécharge pas sur une page française.
+   * « Inter Repli » tient la place d'Inter le temps qu'il arrive (`polices.css`).
+   */
+  --font-sans: "Inter", "Inter Repli", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --color-background: var(--background);
@@ -107,6 +114,29 @@
   --color-marigold-on-ink: var(--marigold-on-ink);
   --color-text-2: var(--text-2);
   --color-line-strong: var(--line-strong);
+
+  /*
+   * Les jetons de la surface PME en utilitaires (`bg-d1 text-t2`…), repris
+   * du bloc `@theme` de `styles-pme.css` : la feuille PME ne passe plus par
+   * ici, et c'est cette compilation qui génère les utilitaires de toute
+   * l'application. Ses rayons n'y sont pas : Edition One les fixait déjà à 0
+   * après elle, et c'était sa valeur qui l'emportait.
+   */
+  --color-bg: var(--bg);
+  --color-d0: var(--d0);
+  --color-d1: var(--d1);
+  --color-d2: var(--d2);
+  --color-prive: var(--prive);
+  --color-tx: var(--tx);
+  --color-t2: var(--t2);
+  --color-t3: var(--t3);
+  --color-acc: var(--acc);
+  --color-on-acc: var(--on-acc);
+  --color-am: var(--am);
+  --color-ve: var(--ve);
+  --color-az: var(--az);
+  --color-mg: var(--mg);
+  --color-me: var(--me);
 }
 
 :root {
@@ -588,7 +618,7 @@
  * ------------------------------------------------------------- LA TECHNIQUE
  *
  * L'API View Transitions du navigateur, et rien d'autre : zéro octet ajouté
- * au bundle (budget mesuré : 350 Ko de JavaScript initial, voir
+ * au bundle (budget mesuré : 200 Ko de JavaScript initial, voir
  * `apps/web/scripts/budget-bundle.mjs`). Une bibliothèque de mouvement en
  * coûterait 15 à 40 Ko gzippés pour un résultat que le navigateur sait
  * produire tout seul, sur le compositeur, sans une ligne de JavaScript par

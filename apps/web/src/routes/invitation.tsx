@@ -9,6 +9,10 @@ import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/invitation")({
   ssr: false,
+  // Rendue sur l'appareil : le serveur n'en peint que l'attente, et le routeur
+  // la retenait 500 ms de plus après l'hydratation (son minimum anti-
+  // clignotement), avant même de demander la session. Voir `_authenticated/route.tsx`.
+  pendingMinMs: 0,
   head: () => ({
     meta: [
       { title: "Invitation — Malica Office" },

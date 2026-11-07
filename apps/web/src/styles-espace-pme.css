@@ -1,0 +1,25 @@
+/*
+ * La feuille de l'espace PME, chargée avec ses écrans (`surface-pme.ts`).
+ *
+ * `styles-pme.css` est tenue à la main par son auteur : on ne la modifie pas,
+ * on choisit seulement OÙ elle entre.
+ *
+ * Elle était importée en tête de `styles.css`, donc AVANT les règles hors
+ * couche d'Edition One. Chargée à part, elle arrive après elles : là où une
+ * règle des deux feuilles a la même spécificité sur le même élément, l'ordre
+ * s'inverserait. Une seule le fait — `:lang(ar)` contre
+ * `[data-surface="pme"]`, toutes deux (0,1,0), sur la police de la surface —
+ * et elle est rejouée ici, après, pour que l'arabe garde le Kufi comme avant.
+ *
+ * Les jetons Tailwind de la feuille (`bg-d1`, `text-t2`…) sont repris dans
+ * `styles.css`, qui génère les utilitaires pour toute l'application. La
+ * référence ci-dessous fait passer cette feuille par Tailwind sans rien en
+ * émettre : son bloc `@theme` est consommé au lieu de partir tel quel au
+ * navigateur.
+ */
+@reference "./styles.css";
+@import "./styles-pme.css";
+
+:lang(ar) {
+  font-family: "Noto Kufi Arabic", "Inter", ui-sans-serif, system-ui, sans-serif;
+}

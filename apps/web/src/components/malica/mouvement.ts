@@ -12,7 +12,7 @@
  * ============================================================= LA TECHNIQUE
  *
  * L'API View Transitions du navigateur, pilotée par TanStack Router, et zéro
- * dépendance. Le budget de la coque est de 350 Ko de JavaScript initial
+ * dépendance. Le budget de la coque est de 200 Ko de JavaScript initial
  * gzippé (`apps/web/scripts/budget-bundle.mjs`, qui fait échouer la CI
  * au-delà) : une bibliothèque de mouvement en vaudrait 15 à 40 pour un
  * résultat que le compositeur du navigateur produit seul, sans une ligne de
