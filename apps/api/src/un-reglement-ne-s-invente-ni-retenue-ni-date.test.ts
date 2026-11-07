@@ -13,7 +13,13 @@
  *   - la date : une écriture de règlement se date où l'on veut. La PME propose
  *     par le dépôt du navigateur (`office.propose`) les lignes exactes du moteur,
  *     datées de 2020, et `socle_ecriture_book` les inscrit sous son identité : le
- *     paiement d'octobre 2026 est inscrit en janvier 2020.
+ *     paiement d'octobre 2026 est inscrit en janvier 2020 ;
+ *   - le compte du tiers : le contrôle accepte le compte de l'écriture vivante
+ *     de la pièce OU celui du pack (une union, pas un « sinon »). Le cabinet
+ *     inscrit la facture au 4011 ; la PME, qui ne lit plus cette écriture (lot
+ *     S2), paie par `office.inscrireLeReglement` et le moteur solde le 401 du
+ *     pack : le 4011 reste ouvert, le 401 devient débiteur, et le contrôle laisse
+ *     passer. Le même geste fait par l'expert solde bien le 4011.
  *
  *   node --experimental-strip-types --test src/un-reglement-ne-s-invente-ni-retenue-ni-date.test.ts
  */
@@ -230,5 +236,43 @@ describe("un règlement ne s'invente ni retenue ni date", { skip: !BASE_CONFIGUR
       [paiement],
     );
     assert.deepEqual(rows, [], "le règlement du 4 octobre 2026 est daté d'un autre jour");
+  });
+
+  it("la PME solde le compte du tiers que le cabinet a inscrit, pas celui du pack", async () => {
+    const piece = await priseEnCharge();
+    // Le cabinet réimpute la facture au 4011 (un compte de tiers du plan, hors défaut du pack).
+    await rpc(expert, "office", "forcer", {
+      pieceId: piece,
+      journal: "ACH",
+      date: "2026-10-02",
+      libelle: "Facture réimputée",
+      lignes: [
+        { account_code: "601", libelle: "Achat", debit: "1470.126", credit: "0", tax_code: "EXO" },
+        {
+          account_code: "4011",
+          libelle: "FOURNISSEUR SA",
+          debit: "0",
+          credit: "1470.126",
+          tax_code: null,
+        },
+      ],
+    });
+    const paiement = await payer(piece, 1470126, "2026-10-05");
+    await rpc(dirigeant, "office", "inscrireLeReglement", paiement, {
+      codes: [],
+      baseReglee: "1470.126",
+      justification: "Fournisseur dispensé : attestation d'essai.",
+    }).catch(() => undefined);
+    const { rows } = await admin.query<{ account_code: string }>(
+      `select l.account_code from socle.ecritures e
+         join socle.ecriture_lignes l on l.ecriture_id = e.id
+        where e.paiement_id = $1 and e.status = 'booked' and l.debit > 0`,
+      [paiement],
+    );
+    assert.deepEqual(
+      rows.map((r) => r.account_code),
+      ["4011"],
+      "le règlement de la PME solde un autre compte que celui où le cabinet a inscrit la dette",
+    );
   });
 });
