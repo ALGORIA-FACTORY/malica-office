@@ -69,7 +69,7 @@ describe(
       const compte = await creerCompte(`s1-${marque}@essai.local`, "MotDePasseTresLong2026!");
       assert.ok(compte);
       qui = compte;
-      jeton = emettreJeton(qui);
+      jeton = emettreJeton(qui, new Date());
       org = await sousIdentite(qui.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
           `select public.create_organization($1, $2, $3, null, $4, $5) as id`,
