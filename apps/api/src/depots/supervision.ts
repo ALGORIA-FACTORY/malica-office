@@ -230,14 +230,18 @@ export const supervision = {
          left join lateral (
            select round(an.ttc_mineur::numeric / power(10, dv.exposant)::numeric, dv.exposant)::text
                     as montant_lu
-             from (select a.normalisation -> 'montants' ->> 'ttc' as ttc_mineur,
+             -- Le DERNIER jugement d'abord, son état ensuite (revue Codex de
+             -- #266) : un rejugement qui défait un total ne doit pas laisser
+             -- reparaître le total d'un jugement plus ancien.
+             from (select a.normalisation ->> 'etat' as etat,
+                          a.normalisation -> 'montants' ->> 'ttc' as ttc_mineur,
                           coalesce(a.normalisation ->> 'devise', o.currency) as devise
                      from capture.analyses a
                     where a.piece_id = p.id and a.extraction_id = cf.extraction_id
-                      and a.normalisation ->> 'etat' in ('tranche', 'non_verifie')
                     order by a.created_at desc, a.id desc limit 1) an
              join ref.devises dv on dv.code = an.devise
-            where an.ttc_mineur ~ '^-?[0-9]+$'
+            where an.etat in ('tranche', 'non_verifie')
+              and an.ttc_mineur ~ '^-?[0-9]+$'
          ) lu on true
          -- Le collaborateur : l'affectation active du client dans ce cabinet.
          left join lateral (
