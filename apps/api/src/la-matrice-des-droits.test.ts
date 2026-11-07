@@ -915,6 +915,8 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
         `update identity.engagements set starts_on = $2::date, ends_on = $3::date where id = $1`,
         [rows[0]!.id, debut, fin],
       );
+    // Une pièce déjà chez le comptable, avant que le mandat ne sorte de ses dates.
+    const chezLui = await chezLeComptable();
     try {
       assert.deepEqual(
         [await tenus(), await tenuParLExpert(), await supervise()],
@@ -930,6 +932,11 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
           [false, false, false],
           cas,
         );
+        // Les autres lectures du mandat disent la même chose (lot S5b) : la PME
+        // n'a pas de cabinet qui tienne ses livres, et le comptable n'ouvre plus
+        // la pièce comme la sienne.
+        assert.equal(await s.fait("amel", "identite.monCabinet", s.pme), null, cas);
+        await assert.rejects(s.fait("expert", "supervision.voir", chezLui), /refus\./, cas);
         // Personne d'autre ne les tenant, la société garde la main.
         const id = await lue("amel");
         await s.fait("amel", "capture.preciser", id, "document_kind", "facture_achat");

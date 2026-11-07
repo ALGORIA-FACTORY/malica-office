@@ -213,22 +213,16 @@ export async function propositionDeReglement(
 
   // Retrouver le tiers réellement comptabilisé, y compris un compte personnalisé.
   // Un résultat ambigu bloque : aucun « premier compte » arbitraire.
-  const { rows: comptes } = await db.query<{ compte: string }>(
-    `select distinct ll.account_code as compte
-       from ecritures_v e join ecriture_lignes_v ll on ll.ecriture_id = e.id
-      where e.piece_id = $1 and e.nature = 'piece' and app.ecriture_vivante(e.id)
-        and (($2 = 'facture_achat' and ll.credit = $3::numeric and ll.debit = 0)
-          or ($2 = 'facture_vente' and ll.debit = $3::numeric and ll.credit = 0))`,
+  // La PME ne lit pas l'écriture du cabinet (lot S2) : la base lui en rend ce
+  // seul compte (lot S5b). Null : aucune écriture vivante ; '' : ambigu.
+  const { rows: comptes } = await db.query<{ compte: string | null }>(
+    `select app.compte_du_tiers_inscrit($1, $2, $3::numeric) as compte`,
     [l.piece_courante, sens, ttc],
   );
-  let counterparty = comptes.length === 1 ? comptes[0]!.compte : "";
-  if (!comptes.length) {
-    const { rows: inscrite } = await db.query(
-      `select id from ecritures_v where piece_id = $1 and nature = 'piece' and app.ecriture_vivante(id)`,
-      [l.piece_courante],
-    );
-    if (inscrite.length)
-      return { ok: false, raison: "Le compte du tiers inscrit doit être vérifié." };
+  let counterparty = comptes[0]?.compte ?? "";
+  if (comptes[0]?.compte === "")
+    return { ok: false, raison: "Le compte du tiers inscrit doit être vérifié." };
+  if (comptes[0]?.compte == null) {
     const { rows: mapping } = await db.query<{ counterparty_account: string }>(
       `select distinct counterparty_account from ref_account_mappings_v
         where pack_version_id = $1 and document_kind = $2`,
