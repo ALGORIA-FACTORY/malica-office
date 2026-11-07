@@ -68,6 +68,15 @@ describe(
       await sousIdentiteDuServeur(s.gens.expert.id, (db) =>
         db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [piece]),
       );
+      // Since lot S5 the PME proposes nothing while a cabinet is engaged: the proposal
+      // is made while the engagement is suspended (a proposal from before the mandate),
+      // then the engagement resumes and the cabinet books it.
+      const suspendre = (de: string, a: string) =>
+        s.admin.query(
+          `update identity.engagements set status = $2 where pme_org_id = $1 and status = $3`,
+          [s.pme, a, de],
+        );
+      await suspendre("actif", "suspendu");
       const ecriture = await sousIdentiteDuServeur(s.gens.amel.id, (db) =>
         office.propose(db, {
           pieceId: piece,
@@ -84,7 +93,7 @@ describe(
             tax_code: l.tax_code,
           })),
         }),
-      );
+      ).finally(() => suspendre("suspendu", "actif"));
       // Le cabinet engagé l'inscrit : c'est désormais son écriture.
       await sousIdentiteDuServeur(s.gens.expert.id, (db) => office.book(db, ecriture));
 
