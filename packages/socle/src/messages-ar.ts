@@ -4447,6 +4447,8 @@ export const ar: Dict = {
   "refus.saisie.incomplete": "حقل إلزامي فارغ: املؤوه ثم أعيدوا المحاولة.",
   "refus.saisie.etablissement": "هذه المنشأة لا تتبع الشركة: اختاروا إحدى منشآتها.",
   "refus.saisie.mal_formee": "البيانات المرسلة غير سليمة: أعيدوا تحميل الصفحة ثم أعيدوا المحاولة.",
+  "refus.saisie.mois_entiers":
+    "تُقرأ هذه المجاميع بالأشهر الكاملة: من أول يوم في شهر إلى آخر يوم في شهر.",
   "refus.geste.non_permis": "لا يُسمح لكم بهذا الإجراء على هذا الملف.",
   "refus.banque.statut_par_le_lettrage": "يُطابَق سطر الكشف عبر الترصيد لا يدويًا: رصّدوه مع قيده.",
   "refus.etablissement.principal_deja_ouvert": "لهذه المؤسسة مقرّها الرئيسي بالفعل.",

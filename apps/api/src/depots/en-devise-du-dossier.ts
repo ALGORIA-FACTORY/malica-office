@@ -60,17 +60,11 @@ export async function conversionsDesPieces(
     db.query<{ piece_id: string; preuves: CoursDuJugement }>(
       `select x.piece_id, c -> 'preuves' as preuves
          from unnest($1::uuid[]) as x(piece_id)
-         left join lateral (
-           select l.cours_id
-             from ecritures_v e
-             join ecriture_lignes_v l on l.ecriture_id = e.id
-            where e.piece_id = x.piece_id
-              and e.nature = 'piece' and e.status = 'booked' and e.reverses_id is null
-              and not exists (select 1 from ecritures_v r
-                               where r.reverses_id = e.id and r.status = 'booked')
-              and l.cours_id is not null
-            limit 1
-         ) inscrite on true
+         -- Le cours de son écriture vivante. La PME ne lit pas l'écriture
+         -- (lot S2) : ce cours, seul, sort par la base.
+         cross join lateral (
+           select app.cours_de_l_ecriture_de_la_piece(x.piece_id) as cours_id
+         ) inscrite
          cross join lateral (
            select a.controles, a.tenant_id
              from capture.analyses a

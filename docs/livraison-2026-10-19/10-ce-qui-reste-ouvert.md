@@ -605,3 +605,43 @@ Tranché par défaut, à confirmer :
   vigueur (l'organisation d'ALGORIA) ; sans émetteur, elle est refusée. Les
   gestes faits sous l'accès total portent l'acteur réel, sans marque propre :
   on les distingue en croisant l'acteur avec `plateforme.acces_total`.
+
+## La PME ne voit jamais les écritures — et le dossier autonome ? (lot S2, 6 novembre 2026, INCERTAIN)
+
+`20261202100000_la_pme_ne_voit_jamais_les_ecritures.sql` ferme les écritures
+et leurs lignes à toute personne de la PME dès qu'un cabinet est engagé sur le
+dossier (engagement actif à la date du jour) : seuls le cabinet engagé et la
+plateforme réquisitionnée les lisent. L'accueil de la PME lit des totaux par
+mois et par classe (`office.totauxParClasse`), jamais une ligne.
+
+**Ouvert** : un dossier SANS cabinet (autonome) tient lui-même ses livres et
+inscrit ses écritures. La règle dit « jamais », mais appliquée à la lettre,
+ses écritures ne seraient lisibles de personne. Ce lot n'y change rien : le
+dirigeant (`societe.tout_voir`) et l'auteur d'une pièce les lisent comme hier.
+Conséquence à connaître : quand un engagement prend fin, le dossier redevient
+« sans cabinet » et la PME relit toutes les écritures qu'y a inscrites le
+cabinet. Le dirigeant tranche.
+
+**Ouvert aussi** : les écritures de RÈGLEMENT (`nature = 'reglement'`) restent
+lisibles de la PME en mandat. Le règlement est son geste (`pme.regler`,
+`office.inscrireLeReglement`) : elle en voit déjà la proposition ligne à ligne
+(`office.propositionDeReglement`), et l'API relit sous son identité ce qu'elle
+vient d'inscrire. Les fermer exigerait de déplacer ce geste en base.
+
+**Ce que la PME lit encore d'une écriture du cabinet** : sa DATE (le mois de
+TVA d'une pièce prise en charge, `app.jours_des_ecritures_du_dossier`) et son
+COURS de change (`app.cours_de_l_ecriture_de_la_piece`), comme elle en lisait
+déjà les MONTANTS (`app.montants_pris_en_charge`). Sa TVA du mois et « Vos
+charges » en dépendent.
+
+**Conséquence à confirmer** (`20261202100100`, `20261202100200`) : une porte
+de la PME ne lit, au-delà de la PME, que sa propre proposition encore
+ouverte. Une PME peut toujours remplacer une proposition ouverte du cabinet
+sur sa pièce (comportement d'avant le lot, par
+`app.piece_oublie_ses_propositions`), mais plus proposer sur une pièce déjà
+inscrite (`refus.ecriture.reimputer`). Un dossier en
+`validation_mode = 'autonome'` AVEC un cabinet engagé ne contre-passe donc plus
+l'écriture que le cabinet a prise en charge (`refus.introuvable.ecriture`) :
+le cabinet la défait. Si le dirigeant veut rendre ce geste à la PME, il faudra
+une porte dédiée qui ne lit que ce dont elle a besoin. Reste aussi ouvert :
+après la révocation du mandat, la PME relit tout ce que le cabinet a inscrit.

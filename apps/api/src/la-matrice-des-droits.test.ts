@@ -149,6 +149,73 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(await lit("sonia", "socle.ecriture_lignes", ecriture, "ecriture_id"), false);
   });
 
+  /*
+   * « La PME ne voit jamais les écritures » (décision du dirigeant ; audit de
+   * sécurité du 6 novembre 2026, S2). L'épreuve ci-dessus n'interrogeait que
+   * Sonia : les deux dirigeants (`societe.tout_voir`) et Sami, AUTEUR de la
+   * pièce (`piece_lisible`), lisaient l'écriture en SQL et par quatre méthodes
+   * RPC. Chacun des quatre est interrogé ici, par chaque chemin.
+   */
+  it("1 · L'écriture comptable — aucune personne de la PME ne la lit, ni en SQL ni par une méthode", async () => {
+    const id = await chezLeComptable("sami");
+    const ecriture = await s.priseEnCharge(id);
+    const exercice = [s.pme, "2026-01-01", "2026-12-31"] as const;
+
+    for (const qui of ["amel", "bilel", "sami", "sonia"] as const) {
+      assert.equal(await lit(qui, "socle.ecritures", s.pme, "tenant_id"), false, `${qui} · SQL`);
+      assert.equal(
+        await lit(qui, "socle.ecriture_lignes", s.pme, "tenant_id"),
+        false,
+        `${qui} · SQL lignes`,
+      );
+      assert.deepEqual(await s.fait(qui, "office.ecrituresForPiece", id), [], `${qui} · pièce`);
+      assert.deepEqual(await s.fait(qui, "office.ecrituresByIds", [ecriture]), [], `${qui} · ids`);
+      assert.deepEqual(
+        await s.fait(qui, "office.periodeLignes", ...exercice),
+        [],
+        `${qui} · lignes`,
+      );
+      const piste = (await s.fait(qui, "supervision.auditForPiece", id)) as { action: string }[];
+      assert.deepEqual(
+        piste.filter((e) => e.action.startsWith("ecriture.")).map((e) => e.action),
+        [],
+        `${qui} · piste`,
+      );
+    }
+
+    // Le cabinet engagé, lui, lit tout : en SQL et par les mêmes méthodes.
+    assert.equal(await lit("expert", "socle.ecritures", s.pme, "tenant_id"), true);
+    assert.equal(await lit("expert", "socle.ecriture_lignes", ecriture, "ecriture_id"), true);
+    assert.equal(((await s.fait("expert", "office.ecrituresForPiece", id)) as unknown[]).length, 1);
+    assert.equal(
+      ((await s.fait("expert", "office.ecrituresByIds", [ecriture])) as unknown[]).length,
+      1,
+    );
+    assert.ok(((await s.fait("expert", "office.periodeLignes", ...exercice)) as unknown[]).length);
+    const piste = (await s.fait("expert", "supervision.auditForPiece", id)) as { action: string }[];
+    assert.ok(piste.some((e) => e.action === "ecriture.booked"));
+  });
+
+  it("1 · L'accueil de la PME — des totaux par classe et par mois, jamais une ligne", async () => {
+    const id = await chezLeComptable("sami");
+    await s.priseEnCharge(id);
+    const mois = [s.pme, "2026-10-01", "2026-10-31"] as const;
+    for (const qui of ["amel", "bilel"] as const) {
+      const totaux = (await s.fait(qui, "office.totauxParClasse", ...mois)) as Array<
+        Record<string, unknown>
+      >;
+      // Une ligne par classe et par mois : ni compte, ni journal, ni écriture.
+      for (const t of totaux)
+        assert.deepEqual(Object.keys(t).sort(), ["classe", "credit", "debit", "mois"]);
+      const charges = totaux.find((t) => t["mois"] === "2026-10" && t["classe"] === "6");
+      assert.ok(charges, `${qui} : ${JSON.stringify(totaux)}`);
+      assert.ok(Number(charges["debit"]) >= 100, qui);
+    }
+    // Les totaux de la société se lisent de qui voit toute la société.
+    for (const qui of ["sami", "sonia"] as const)
+      assert.deepEqual(await s.fait(qui, "office.totauxParClasse", ...mois), [], qui);
+  });
+
   /* ===================================================== 2 · DÉPOSER */
 
   it("2 · Scanner — le siège et le propriétaire déposent", async () => {

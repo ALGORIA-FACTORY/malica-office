@@ -4641,6 +4641,8 @@ export const en: Dict = {
   "refus.saisie.etablissement":
     "This establishment does not belong to the company: choose one of its own.",
   "refus.saisie.mal_formee": "The data sent is malformed: reload the page, then try again.",
+  "refus.saisie.mois_entiers":
+    "These totals are read by whole months: from the first day of a month to the last day of a month.",
   "refus.geste.non_permis": "You are not allowed to do this on this file.",
   "refus.banque.statut_par_le_lettrage":
     "A statement line is reconciled by matching, not by hand: match it with its entry.",
