@@ -40,8 +40,10 @@ describe("une immobilisation sort par une écriture", { skip: !BASE_CONFIGUREE }
       return r.rows[0]!.id;
     });
 
+  // La société engage un cabinet : la dotation et la sortie écrivent au grand
+  // livre, c'est l'expert qui les constate (lot S5). La fiche reste à la société.
   const doter2025 = (bien: string) =>
-    sousIdentite(s.gens.amel.id, (db) =>
+    sousIdentite(s.gens.expert.id, (db) =>
       db.query(
         `select public.immo_dotation_constater($1, 2025::smallint, 12::smallint, 3000, 3000,
                                                9000, $2)`,
@@ -51,7 +53,7 @@ describe("une immobilisation sort par une écriture", { skip: !BASE_CONFIGUREE }
 
   const sortir = (bien: string, motif: "cede" | "rebute", at: string, prix = "0", tva = "0") => {
     const p = sortieDuPlan(plan, at, 3);
-    return sousIdentite(s.gens.amel.id, async (db) => {
+    return sousIdentite(s.gens.expert.id, async (db) => {
       const r = await db.query<{ r: Record<string, string | null> }>(
         `select public.immo_sortir($1, $2, $3::date, $4::smallint, $5::smallint, $6, $7, $8, $9,
                                    $10) as r`,
@@ -149,7 +151,7 @@ describe("une immobilisation sort par une écriture", { skip: !BASE_CONFIGUREE }
   it("reprend ce qui dépasse la sortie quand l'exercice est déjà doté en entier", async () => {
     const bien = await creer("Doté en entier");
     await doter2025(bien);
-    await sousIdentite(s.gens.amel.id, (db) =>
+    await sousIdentite(s.gens.expert.id, (db) =>
       db.query(
         `select public.immo_dotation_constater($1, 2026::smallint, 12::smallint, 3000, 6000,
                                                6000, $2)`,
