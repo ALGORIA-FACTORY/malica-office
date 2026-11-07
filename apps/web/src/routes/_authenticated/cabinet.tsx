@@ -46,7 +46,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import "@/styles-comptabilite.css";
 
 import { COMMERCE } from "@/capabilities/coque";
 import { CabinetProvider } from "@/components/malica/cabinet-context";
@@ -62,6 +61,7 @@ import {
 import { PanneauCabinet } from "@/components/malica/panneau-cabinet";
 import { usePanneauMalica } from "@/components/malica/panneau-malica";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
+import { SurfaceComptabilite } from "@/components/malica/surface-comptabilite";
 import { MalicaChat } from "@/components/malica/MalicaChat";
 import { useNotificationsDuCabinet } from "@/hooks/use-notifications-du-cabinet";
 import { useMonAcces } from "@/hooks/use-mon-acces";
@@ -415,8 +415,7 @@ function Coquille({
     : `${largeurRail} minmax(0,1fr)`;
 
   return (
-    <div
-      data-surface="comptabilite"
+    <SurfaceComptabilite
       className="cabinet-workspace min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[var(--cabinet-colonnes)]"
       style={{ "--cabinet-colonnes": colonnes } as React.CSSProperties}
     >
@@ -506,7 +505,7 @@ function Coquille({
           className="fixed bottom-5 end-5 hidden lg:flex"
         />
       )}
-    </div>
+    </SurfaceComptabilite>
   );
 }
 

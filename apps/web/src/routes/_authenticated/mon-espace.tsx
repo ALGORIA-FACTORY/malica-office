@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import { MonEspaceParti } from "@/components/malica/mon-espace-parti";
+import { SurfacePme } from "@/components/malica/surface-pme";
 import { useI18n } from "@/i18n";
 
 /**
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/mon-espace")({
 function EcranMonEspace() {
   const { t } = useI18n();
   return (
-    <div data-surface="pme">
+    <SurfacePme>
       <div className="app flex flex-col text-foreground">
         <div className="top">
           <Link
@@ -42,6 +43,6 @@ function EcranMonEspace() {
           <MonEspaceParti />
         </main>
       </div>
-    </div>
+    </SurfacePme>
   );
 }

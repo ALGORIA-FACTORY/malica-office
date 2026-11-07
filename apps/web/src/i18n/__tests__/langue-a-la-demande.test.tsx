@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const essais = vi.hoisted(() => ({ en: 0 }));
 
-vi.mock("@malica/socle/messages-en", async (original) => {
+vi.mock("virtual:dictionnaire/en/base", async (original) => {
   essais.en += 1;
   if (essais.en === 1) throw new Error("hors ligne");
   return original();

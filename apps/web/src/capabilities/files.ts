@@ -4,12 +4,13 @@
  */
 
 import { numeriseurDeLAppareil } from "./numerisation";
-import {
-  scanPagesToPdf,
-  scanToPdf,
-  type DefautDePhoto,
-  type OptionsDePreparation,
-} from "./scanner";
+/*
+ * Le cadrage (1 450 lignes de géométrie d'image) ne se charge qu'au premier
+ * geste qui l'emploie : `files` est lu par l'écran PME à son ouverture, et
+ * un import direct l'y emmenait — l'import dynamique de `cadrage.ts` et de la
+ * caméra ne découpait alors plus rien (avertissement INEFFECTIVE_DYNAMIC_IMPORT).
+ */
+import type { DefautDePhoto, OptionsDePreparation } from "./scanner";
 
 export interface PickedFile {
   blob: Blob;
@@ -128,6 +129,7 @@ async function scan(accept: string, capture: boolean, plusieurs = false): Promis
       continue;
     }
     const base = picked.name.replace(/\.[^.]+$/, "") || "piece";
+    const { scanToPdf } = await import("./scanner");
     const scanned = await scanToPdf(picked.blob, base);
     prets.push({
       blob: scanned.blob,
@@ -149,6 +151,7 @@ async function scanPages(
   baseName = "piece",
 ): Promise<PickedFile | null> {
   if (pages.length === 0) return null;
+  const { scanPagesToPdf } = await import("./scanner");
   const scanned = await scanPagesToPdf(pages, baseName, options);
   return { blob: scanned.blob, name: scanned.name, source: "photo", cropped: scanned.cropped };
 }
