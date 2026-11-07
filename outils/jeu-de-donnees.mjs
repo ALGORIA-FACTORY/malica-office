@@ -1465,6 +1465,18 @@ if (reglages) {
 e.section("Le rapprochement bancaire de SOTUMAG");
 if (PMES.sotumag.id) {
   const pme = PMES.sotumag;
+  /*
+   * The entries of an engaged dossier are the cabinet's (lot S2): the PME never reads
+   * them. The cabinet reads them to know what the bank notices of this test month must
+   * say; the PME then plays its own gestures — depositing the notice, recording the
+   * payment, importing its statement.
+   */
+  await e.connecter(LEILA);
+  const facturees = new Map();
+  for (const { ecritureId } of ECRITURES.sotumag ?? []) {
+    const [facturee] = await rpc("office", "ecrituresByIds", [[ecritureId]]);
+    if (facturee) facturees.set(ecritureId, facturee);
+  }
   await e.connecter(pme.compte);
   const LIBELLE_COMPTE = "BIAT — compte courant";
   // Le compte de banque du plan : « Banques » de préférence, sinon le plus
@@ -1525,7 +1537,7 @@ if (PMES.sotumag.id) {
       compte.accountCode.length >= banque.code.length ? compte.accountCode : banque.code;
     const lignes = [];
     for (const { ecritureId, piece } of ECRITURES.sotumag ?? []) {
-      const [facturee] = await rpc("office", "ecrituresByIds", [[ecritureId]]);
+      const facturee = facturees.get(ecritureId);
       if (!facturee) continue;
       const p = lignesDuPivot(piece);
       const contrepartie = facturee.lines.find(
