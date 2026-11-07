@@ -461,7 +461,16 @@ export function resoudreLaPiece(
       },
     }),
   }));
-  const prouvees = jouees.filter((j) => j.sortie.issue === "prouvee");
+  // Une variante prouvée par ses chiffres l'emporte sur une variante qui ne se
+  // prouve que par le montant en lettres. Le recours aux lettres ne vaut que
+  // si AUCUNE affectation des chiffres imprimés ne ferme la pièce, toutes
+  // variantes confondues (#203). 7 novembre 2026, 100/A-12 sur le staging :
+  // « TTC hors timbre » fermait par les chiffres, « TTC avec timbre » par les
+  // lettres seules, et l'ordre alphabétique faisait gagner les lettres. Le
+  // « Total TTC » imprimé disparaissait, et le net à payer prenait sa place.
+  const toutesProuvees = jouees.filter((j) => j.sortie.issue === "prouvee");
+  const parLesChiffres = toutesProuvees.filter((j) => !j.sortie.par_lettres);
+  const prouvees = parLesChiffres.length > 0 ? parLesChiffres : toutesProuvees;
   if (prouvees.length === 0) {
     // Une variante dont les chiffres ferment mais que les lettres contredisent : la pièce
     // est signalée, et c'est ce qu'on en dit d'abord.
