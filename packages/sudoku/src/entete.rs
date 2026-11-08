@@ -1574,12 +1574,22 @@ impl<'a> Page<'a> {
         None
     }
 
-    /// Le contact d'une partie : les lignes de SON bloc — alignées sur le bord gauche du
-    /// segment qui porte son matricule, à moins d'une hauteur de bloc — qui s'ouvrent sur un
-    /// repère du champ `champ` (« Tél : 00 38 356 183 », « E-mail : vente@… », « Tél:71 … »
-    /// collé). Leur reste, mis bout à bout. Une ligne du bloc du client (« Tel: » sous
-    /// « Livré à ») n'est jamais dans ce bloc. Une valeur sans chiffre ni « @ » n'en est pas une.
-    fn contact_du_bloc(&self, matricule: &[usize], champ: usize) -> Option<Vec<usize>> {
+    /// Le contact d'une partie : les lignes de SON bloc qui s'ouvrent sur un repère du champ
+    /// `champ` (« Tél : 00 38 356 183 », « E-mail : vente@… », « Tél:71 … » collé). Leur
+    /// reste, mis bout à bout. Une valeur sans chiffre ni « @ » n'en est pas une.
+    ///
+    /// Le bloc : en partant de la rangée du matricule, vers le haut puis vers le bas, les
+    /// segments alignés sur le bord gauche de celui du matricule, sans trou vertical, à moins
+    /// d'une hauteur de bloc. Il s'arrête au premier segment qui porte une `frontiere` — le
+    /// libellé d'une partie (« Client », « Livré à ») ou le matricule d'une autre — : deux
+    /// blocs empilés à la même marge ne se mêlent pas (revue Codex de #268 : le téléphone
+    /// du client, sous l'émetteur, était pris pour le sien).
+    fn contact_du_bloc(
+        &self,
+        matricule: &[usize],
+        champ: usize,
+        frontieres: &BTreeSet<usize>,
+    ) -> Option<Vec<usize>> {
         let i = *matricule.first()?;
         let (r0, k0) = self.ou[i];
         let rang = &self.rangs[r0];
@@ -1589,15 +1599,36 @@ impl<'a> Page<'a> {
         }
         let x0 = self.j[rang[d]].x0;
         let jo = &self.j[i];
-        let mut pris: Vec<usize> = Vec::new();
-        for r in 0..self.rangs.len() {
-            let a = &self.j[self.rangs[r][0]];
-            if a.page != jo.page || (a.y0 - jo.y0).abs() > BLOC_HAUTEUR {
-                continue;
+        let h = self.h(i);
+        // les segments du bloc, rangée par rangée, du matricule vers le haut puis vers le bas
+        let mut bloc: Vec<Vec<usize>> = Vec::new();
+        let haut: Vec<usize> = (0..r0).rev().collect();
+        let bas: Vec<usize> = (r0 + 1..self.rangs.len()).collect();
+        for sens in [haut, bas] {
+            let (mut y_haut, mut y_bas) = (jo.y0, jo.y1);
+            for r in sens {
+                let a = &self.j[self.rangs[r][0]];
+                if a.page != jo.page || (a.y0 - jo.y0).abs() > BLOC_HAUTEUR {
+                    break;
+                }
+                let Some(seg) = self.segment_a(r, x0) else {
+                    continue;
+                };
+                if seg.iter().any(|t| frontieres.contains(t)) {
+                    break;
+                }
+                let y0 = seg.iter().map(|&t| self.j[t].y0).fold(f64::MAX, f64::min);
+                let y1 = seg.iter().map(|&t| self.j[t].y1).fold(f64::MIN, f64::max);
+                if y0 - y_bas > DESSUS * h || y_haut - y1 > DESSUS * h {
+                    break;
+                }
+                y_haut = y_haut.min(y0);
+                y_bas = y_bas.max(y1);
+                bloc.push(seg);
             }
-            let Some(seg) = self.segment_a(r, x0) else {
-                continue;
-            };
+        }
+        let mut pris: Vec<usize> = Vec::new();
+        for seg in bloc {
             let t0 = seg[0];
             // « Tél. » : le point d'abréviation ne fait pas partie du repère (« Tél »). Il
             // reste partout ailleurs, où « M. » n'est pas la lettre « M ».
@@ -2506,7 +2537,17 @@ pub fn prouver(
                     .position(|j| j.page == r.page && j.ordinal == r.ordinal)
             })
             .collect();
-        if let Some(a) = page.contact_du_bloc(&jetons, c) {
+        // les frontières du bloc : les libellés des parties, et les matricules des autres
+        let frontieres: BTreeSet<usize> = libelles
+            .iter()
+            .flat_map(|l| l.jetons.iter().copied())
+            .chain(
+                occs.iter()
+                    .filter(|o| o.valeur != m.valeur)
+                    .flat_map(|o| o.jetons.iter().copied()),
+            )
+            .collect();
+        if let Some(a) = page.contact_du_bloc(&jetons, c, &frontieres) {
             let seuil = entree.pack.confiance_du_caractere;
             let assure = entree.texte_exact
                 || a.iter().all(|&t| {
