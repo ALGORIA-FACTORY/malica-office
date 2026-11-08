@@ -2,7 +2,7 @@
  * L'expert-comptable, sur un bureau : le cabinet s'ouvre, ses dossiers sont
  * là, un dossier client s'ouvre.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { DIRIGEANT, ETAT_DIRIGEANT, preparerLAppareil } from "./comptes";
 
@@ -574,6 +574,14 @@ const pile = (page: Page, nom: RegExp) =>
     .locator("section:not(.cab-worklist)")
     .filter({ has: page.getByRole("button", { name: nom }) });
 
+/** Plusieurs pièces d'un même tiers se rangent dans un groupe plié. */
+const ouvrirUnGroupe = async (dansLaPile: Locator, nom?: RegExp) => {
+  const groupe = dansLaPile
+    .locator('li button[aria-expanded="false"]')
+    .filter({ hasText: nom ?? /./ });
+  if (await groupe.count()) await groupe.first().click();
+};
+
 for (const largeur of [320, 375, 768, 1024, 1280, 1440]) {
   for (const chemin of ["", "/notifications", "/echeances", "/clients", "/propositions"]) {
     test(`au clic : ${chemin || "/aujourd'hui"} à ${largeur} px`, async ({ page }, testInfo) => {
@@ -617,6 +625,7 @@ test("au clic : l'écriture proposée se lit, se modifie, se valide et passe à 
   await expect(page.locator("[data-pile]").first()).toBeVisible({ timeout: 20_000 });
   const pretes = pile(page, /Prêtes à valider/);
   await expect(pretes).toBeVisible();
+  await ouvrirUnGroupe(pretes);
   const lien = pretes.locator('a[href*="/cabinet/piece/"]').first();
   await lien.click();
   await expect(page.getByText("Malica propose")).toBeVisible({ timeout: 20_000 });
@@ -648,26 +657,23 @@ test("au clic : une demande de la société se refuse avec un motif", async ({
 }, testInfo) => {
   await page.goto("/cabinet");
   await expect(page.locator("[data-pile]").first()).toBeVisible({ timeout: 20_000 });
-  // La société demande le retour d'une de SES pièces encore chez le cabinet.
+  // La société demande le retour d'une de SES pièces, envoyée au cabinet.
+  const lecture = pile(page, /Lecture en cours/);
+  const entete = lecture.getByRole("button", { name: /Lecture en cours/ });
+  if ((await entete.getAttribute("aria-expanded")) === "false") await entete.click();
+  await ouvrirUnGroupe(lecture, new RegExp(DIRIGEANT.dossier));
+  const lienDeLaSociete = lecture
+    .locator("li", { hasText: DIRIGEANT.dossier })
+    .locator('a[href*="/cabinet/piece/"]')
+    .first();
+  await expect(lienDeLaSociete).toBeVisible();
+  const aRappeler = ((await lienDeLaSociete.getAttribute("href")) ?? "").split("/").pop();
   const societe = await browser.newContext({ storageState: ETAT_DIRIGEANT });
-  const appel = async <T>(depot: string, methode: string, args: unknown[]): Promise<T> => {
+  const appel = async (depot: string, methode: string, args: unknown[]) => {
     const r = await societe.request.post("/rpc", { data: { depot, methode, args } });
     expect(r.ok(), await r.text()).toBeTruthy();
-    return ((await r.json()) as { resultat: T }).resultat;
   };
-  const orgs = await appel<Array<{ id: string; name: string }>>(
-    "identite",
-    "listMyOrganizations",
-    [],
-  );
-  const org = orgs.find((o) => o.name.includes(DIRIGEANT.dossier));
-  expect(org, "le dossier du dirigeant").toBeTruthy();
-  const pieces = await appel<Array<{ id: string; status: string }>>("capture", "listAvecLecture", [
-    org!.id,
-  ]);
-  const aRappeler = pieces.find((p) => p.status === "capturee");
-  expect(aRappeler, "une pièce encore chez le cabinet").toBeTruthy();
-  await appel("collab", "demanderSurPiece", [aRappeler!.id, "rappel"]);
+  await appel("collab", "demanderSurPiece", [aRappeler, "rappel"]);
   await societe.close();
 
   await page.reload();
