@@ -92,3 +92,4 @@ apps/web/e2e/sortie-rapport/
 # La recette sur une instance réelle : journaux locaux, jamais versionnés.
 outils/recette/dernier-passage.json
 outils/recette/passage-*.log
+__pycache__/
