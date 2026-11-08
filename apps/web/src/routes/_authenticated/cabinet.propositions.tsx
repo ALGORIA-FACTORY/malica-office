@@ -66,7 +66,7 @@ import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { CompteDuPlan, Ecriture, QueueItem } from "@malica/socle/ports/repositories";
-import { A_TRAITER } from "@malica/socle/statut-d-envoi";
+import { pileDe } from "@/lib/file-cabinet";
 
 export const Route = createFileRoute("/_authenticated/cabinet/propositions")({
   head: () => ({
@@ -125,7 +125,9 @@ function CabinetPropositions() {
     () =>
       (queue.data ?? []).filter(
         // À traiter, et lue : le Socle a de quoi proposer.
-        (r) => actifs.has(r.tenantId) && A_TRAITER.has(r.statut) && r.status !== "capturee",
+        // Relevé le 8 novembre 2026 : « Valider les 50 » portait sur des pièces
+        // sans écriture possible. Seules les prêtes entrent dans un lot.
+        (r) => actifs.has(r.tenantId) && pileDe(r) === "pretes",
       ),
     [queue.data, actifs],
   );

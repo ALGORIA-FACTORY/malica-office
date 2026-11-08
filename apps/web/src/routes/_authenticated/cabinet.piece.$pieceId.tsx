@@ -1091,6 +1091,9 @@ function CabinetReviewDeLaPiece() {
                 codesDeTaxe={codesDeTaxe.data ?? []}
                 illisible={dossier.data.ecritureIllisible ?? false}
                 onRetournee={setRetourEnvoye}
+                onInscrite={() =>
+                  suivante ? allerA(suivante.pieceId) : void navigate({ to: "/cabinet" })
+                }
               />
             )}
 

@@ -2,6 +2,7 @@
  * Ce que la file du cabinet lit dans une pièce — hors de tout écran, pour
  * que plusieurs écrans le lisent pareil et qu'une épreuve le fixe.
  */
+import { codeDuVerdict, VERDICTS_COMPTABILISABLES } from "@malica/socle/verdicts";
 import {
   A_TRAITER,
   TON_CABINET,
@@ -67,4 +68,45 @@ export function dansLeFiltre(
   if (filtre === "tout") return true;
   if (filtre === "doublons") return piece.doublonDe !== null;
   return filtreDuStatut(piece.statut) === filtre;
+}
+
+/** Les piles de la file, dans l'ordre où le travail se fait. */
+export const PILES = ["pretes", "a_completer", "retournees", "lecture", "prises"] as const;
+export type PileDeLaFile = (typeof PILES)[number];
+
+/**
+ * La pile d'une pièce. « Prête » : une écriture existe, ou la dernière analyse
+ * permet d'en proposer une sans réserve bloquante ; l'inscription reste jugée
+ * par le serveur. Une pièce d'un doublon probable reste à compléter.
+ */
+export function pileDe(p: {
+  statut: StatutCabinet;
+  status: string;
+  ecritureId: string | null;
+  doublonDe: string | null;
+  verdict?: string | null;
+}): PileDeLaFile {
+  if (!A_TRAITER.has(p.statut)) return p.statut === "retournee" ? "retournees" : "prises";
+  if (p.status === "capturee") return "lecture";
+  if (p.doublonDe !== null) return "a_completer";
+  const code = codeDuVerdict(p.verdict);
+  const pret = Boolean(p.ecritureId) || (code !== null && VERDICTS_COMPTABILISABLES.has(code));
+  return pret ? "pretes" : "a_completer";
+}
+
+/** Une pile se lit par client et par fournisseur, les plus gros groupes d'abord. */
+export function groupesDeLaPile<
+  T extends { tenantId: string; clientName: string; tiers: string | null },
+>(pieces: readonly T[]): Array<{ cle: string; client: string; tiers: string | null; pieces: T[] }> {
+  const groupes = new Map<
+    string,
+    { cle: string; client: string; tiers: string | null; pieces: T[] }
+  >();
+  for (const p of pieces) {
+    const cle = `${p.tenantId}|${(p.tiers ?? "").trim().toLocaleLowerCase("fr")}`;
+    const g = groupes.get(cle) ?? { cle, client: p.clientName, tiers: p.tiers, pieces: [] };
+    g.pieces.push(p);
+    groupes.set(cle, g);
+  }
+  return [...groupes.values()].sort((a, b) => b.pieces.length - a.pieces.length);
 }

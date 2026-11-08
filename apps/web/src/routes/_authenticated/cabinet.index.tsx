@@ -37,6 +37,7 @@ import {
   SectionTitle,
   SignalLight,
 } from "@/components/malica/office-ui";
+import { FileEnPiles } from "@/components/malica/file-en-piles";
 import { useI18n, type MessageKey } from "@/i18n";
 import {
   dansLeFiltre,
@@ -117,8 +118,6 @@ function CabinetToday() {
   );
   const compteParFiltre = (f: FiltreDeLaFile) => rows.filter((r) => dansLeFiltre(r, f)).length;
   const toReview = compteParFiltre("a_traiter");
-  const returned = compteParFiltre("retournee");
-  const supervised = compteParFiltre("prise");
   const doublons = compteParFiltre("doublons");
   // Les clients mandatés : ni le mandat révoqué, ni le refusé (ANO-013).
   const clientCount = (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length;
@@ -285,70 +284,6 @@ function CabinetToday() {
           ) : null}
         </div>
       </header>
-      <div className="cab-metrics" aria-label={t("cab.design.situation")}>
-        {[
-          {
-            key: "review",
-            label: "cab.kpi.review",
-            detail: "cab.design.revueDetail",
-            value: toReview,
-            icon: FileCheck2,
-            filter: "a_traiter",
-            tone: "review",
-          },
-          {
-            key: "returned",
-            label: "cab.kpi.returned",
-            detail: "cab.design.retoursDetail",
-            value: returned,
-            icon: MessageSquare,
-            filter: "retournee",
-            tone: "returned",
-          },
-          {
-            key: "supervised",
-            label: "cab.kpi.supervised",
-            detail: "cab.design.superviseesDetail",
-            value: supervised,
-            icon: CheckCheck,
-            filter: "prise",
-            tone: "done",
-          },
-        ].map((k) => (
-          <button
-            key={k.key}
-            type="button"
-            className="cab-metric"
-            data-tone={k.tone}
-            aria-pressed={filtre === k.filter}
-            onClick={() => {
-              setFiltre(k.filter as FiltreDeLaFile);
-              file.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-            }}
-          >
-            <span className="cab-metric-top">
-              <span>{t(k.label as MessageKey)}</span>
-              <k.icon size={19} strokeWidth={1.7} />
-            </span>
-            <span className="cab-metric-value num">{k.value}</span>
-            <span className="cab-metric-detail">
-              {t(k.detail as MessageKey)}
-              <ArrowRight size={14} />
-            </span>
-          </button>
-        ))}
-        <Link to="/cabinet/clients" className="cab-metric" data-tone="clients">
-          <span className="cab-metric-top">
-            <span>{t("cab.design.mandats")}</span>
-            <Users size={19} strokeWidth={1.7} />
-          </span>
-          <span className="cab-metric-value num">{clientCount}</span>
-          <span className="cab-metric-detail">
-            {t("cab.design.portefeuille")}
-            <ArrowRight size={14} />
-          </span>
-        </Link>
-      </div>
       <div className="cab-day-columns">
         {/* ---- la file */}
         <section ref={file} className="cab-worklist min-w-0 space-y-3">
@@ -483,12 +418,12 @@ function CabinetToday() {
               )}
             </div>
           ) : (
-            <QueueTable rows={visibles} />
+            <FileEnPiles rows={visibles} />
           )}
         </section>
 
         {/* ---- la colonne de droite */}
-        <aside className="cab-day-aside space-y-8">
+        <aside className="cab-day-aside hidden space-y-8 xl:block">
           <section className="space-y-3">
             <SectionTitle
               action={

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const donnees = vi.hoisted(() => ({ actifs: false, panne: false }));
@@ -85,19 +85,16 @@ describe("une journée de comptabilité compréhensible et actionnable", () => {
     Element.prototype.scrollIntoView = vi.fn();
   });
   afterEach(cleanup);
-  it("la carte À traiter filtre la vraie file et permet de retrouver toute la file", () => {
+  it("la file se lit en piles, et le filtre retrouve toute la file", () => {
     donnees.actifs = true;
     render(interfaceReelle());
-    const table = screen.getByRole("table", { name: "File priorisée" });
-    expect(within(table).getAllByRole("row")).toHaveLength(4);
-    fireEvent.click(screen.getByRole("button", { name: /À traiter.*Reçues, vues ou corrigées/ }));
-    expect(within(table).getAllByRole("row")).toHaveLength(2);
+    expect(screen.getAllByRole("button", { expanded: false }).length).toBeGreaterThan(0);
     fireEvent.change(screen.getByRole("textbox", { name: "Filtrer client ou libellé" }), {
       target: { value: "introuvable" },
     });
     expect(screen.getByText("Aucune pièce ne correspond")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Afficher toute la file" }));
-    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(4);
+    expect(screen.queryByText("Aucune pièce ne correspond")).toBeNull();
   });
   it("sans mandat, propose le portefeuille et ne propose aucune revue factice", () => {
     render(interfaceReelle());
