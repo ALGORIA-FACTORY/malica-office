@@ -12,6 +12,9 @@
 # à la poussée de sa branche. Chaque appel est payé : au plus 300 par passage
 # (`--plafond-appels`), au-delà la pièce est en panne, dite.
 #
+# Une poussée dont le dernier commit porte « [sans banc] » ne relance pas la
+# mesure (un correctif de la branche ne repaie pas 300 appels).
+#
 # Sortie : l'artefact `banc-ocr-qwen` (mesures JSON, rapport, journal, relevés
 # gardés — de quoi rejouer le moteur sans rappeler Alibaba).
 
@@ -29,6 +32,7 @@ jobs:
   banc:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    if: ${{ !contains(github.event.head_commit.message, '[sans banc]') }}
 
     services:
       postgres:
