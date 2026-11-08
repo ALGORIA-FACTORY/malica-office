@@ -12,7 +12,7 @@
 -- ================================================================== CE QUI EST POSÉ
 --
 -- 1. Les tarifs de Claude (R8) : ceux de la chaîne de désignation
---    (20261202090000), lus et non redéclarés.
+--    (20261205092500), lus et non redéclarés.
 -- 2. `plateforme.conseil_consignes` : le PROMPT SYSTÈME du conseil cité. Il
 --    vit en base, versionné, en ajout seul (R10) : la tour en publie une
 --    version nouvelle, datée et motivée ; la dernière vaut. Aucune consigne
@@ -37,7 +37,7 @@ begin;
 
 -- --- 1. Les tarifs de Claude ---------------------------------------------------------------------
 --
--- Posés par 20261202090000_la_designation_a_un_principal_et_un_repli (chat, cache,
+-- Posés par 20261205092500_la_designation_a_un_principal_et_un_repli (chat, cache,
 -- cache_ecriture ; contrainte `model_pricing_role_check`). Le conseil cité les lit,
 -- il ne les redéclare pas (nettoyage du 8 novembre 2026 : zéro doublon).
 
