@@ -119,6 +119,16 @@ describe("sudoku — les jetons du plan", () => {
     ]);
   });
 
+  it("chaque mot d'un lecteur génératif est douteux ; ceux de l'OCR ne le sont pas", () => {
+    const plan = [
+      { page: 1, ordinal: 0, text: "Cartouche", x0: 0, y0: 0, x1: 0.1, y1: 0.02 },
+      { page: 1, ordinal: 1, text: "12,500", x0: 0.5, y0: 0, x1: 0.6, y1: 0.02 },
+    ];
+    // banc Qwen du 8 novembre 2026 : « Cartouche d'encore » affirmé, faute de confiance
+    assert.ok(jetonsDuSudoku(plan, devise, LECTURE, true).every((j) => j.douteux === true));
+    assert.ok(jetonsDuSudoku(plan, devise, LECTURE).every((j) => j.douteux !== true));
+  });
+
   it("deux cases collées par l'OCR offrent leurs coupes, lues par le lecteur de production", () => {
     const [colle, seul] = jetonsDuSudoku(
       [

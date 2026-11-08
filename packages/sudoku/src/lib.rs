@@ -1103,6 +1103,48 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     );
     identite::assurance(entree, &mut champs, &garantis);
 
+    // ---------- Un lecteur génératif : ses chiffres ne se prouvent pas seuls ----------
+    // Une erreur de chiffre répétée par le modèle dans chaque occurrence ferme les sommes.
+    // Sans le montant en lettres qui vérifie le total, rien n'est affirmé : les valeurs
+    // restent citées, signalées, et les lignes aussi. Le matricule du dossier, que la base
+    // confirme caractère par caractère, ne dépend pas de la lecture.
+    if entree.lecteur_generatif && !lettres_verifient {
+        let compact = |s: &str| -> String {
+            s.chars()
+                .filter(|c| c.is_alphanumeric())
+                .flat_map(char::to_uppercase)
+                .collect()
+        };
+        let dossier = entree
+            .connus
+            .as_ref()
+            .and_then(|c| c.dossier.as_ref())
+            .map(|d| compact(&d.matricule));
+        let mut retiree = false;
+        for c in champs.values_mut() {
+            if !matches!(c.statut.as_str(), "prouve" | "conforme") {
+                continue;
+            }
+            let confirme = dossier.as_ref().is_some_and(|m| {
+                !m.is_empty() && c.valeur.as_deref().is_some_and(|v| compact(v) == *m)
+            });
+            if !confirme {
+                c.statut = "signale".into();
+                retiree = true;
+            }
+        }
+        if let Some(l) = sortie_lignes.as_mut() {
+            if l.statut == "prouve" {
+                l.statut = "signale".into();
+                retiree = true;
+            }
+        }
+        if retiree && issue == "prouvee" {
+            issue = "signalee".into();
+            raison = Some("lecteur génératif : le total n'est pas recoupé par ses lettres".into());
+        }
+    }
+
     Ok(Sortie {
         issue,
         solutions: retenues.len(),

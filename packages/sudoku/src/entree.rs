@@ -24,6 +24,12 @@ pub struct Entree {
     /// lecture de l'image : un identifiant y est imprimé tel quel.
     #[serde(default)]
     pub texte_exact: bool,
+    /// Les jetons viennent d'un lecteur GÉNÉRATIF (un modèle de vision) : il récrit ce qu'il
+    /// lit, et peut répéter la même erreur de chiffre partout — le HT, la TVA et le TTC lus
+    /// avec un 6 pour un 8 ferment encore (banc Qwen du 8 novembre 2026, algoria-073). Ses
+    /// sommes ne prouvent rien seules : il leur faut la seconde écriture du total.
+    #[serde(default)]
+    pub lecteur_generatif: bool,
 }
 
 /// Une marque de la page qui n'est pas un texte : un cachet d'encre. Sa page et sa boîte

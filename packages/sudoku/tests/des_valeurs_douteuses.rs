@@ -112,3 +112,30 @@ fn une_valeur_qui_porte_un_libelle_colle_n_est_pas_affirmee() {
         "{c}"
     );
 }
+
+/// Un lecteur génératif répète la même erreur de chiffre dans le HT, la TVA et le TTC : les
+/// sommes ferment sur des valeurs fausses (« 12 492,611 » pour « 12 492,811 »). Sans le
+/// montant en lettres qui vérifie le total, rien n'est affirmé ; la même entrée lue par un
+/// OCR se prouve.
+#[test]
+fn les_sommes_d_un_lecteur_generatif_ne_se_prouvent_pas_seules() {
+    let o = sortie("algoria-073-qwen");
+    assert_ne!(o["issue"], "prouvee", "{}", o["raison"]);
+    for (code, c) in o["champs"].as_object().expect("champs") {
+        assert!(
+            !matches!(c["statut"].as_str(), Some("prouve" | "conforme")),
+            "{code} : {c}"
+        );
+    }
+    let cas: Vec<Value> = serde_json::from_str(include_str!("donnees/des_valeurs_douteuses.json"))
+        .expect("jeu lisible");
+    let mut e = cas
+        .into_iter()
+        .find(|c| c["id"] == "algoria-073-qwen")
+        .expect("cas présent")["entree"]
+        .clone();
+    e["lecteur_generatif"] = Value::Bool(false);
+    let ocr: Value =
+        serde_json::from_str(&malica_sudoku::solve(&e.to_string())).expect("sortie lisible");
+    assert_eq!(ocr["issue"], "prouvee");
+}
