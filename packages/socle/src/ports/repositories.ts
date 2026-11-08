@@ -3867,6 +3867,15 @@ export interface SiegeDeLaLicence {
 }
 
 /** Une organisation de la licence, et ce qu'elle a consommé ce mois-ci. */
+/** Ce que la liste des sociétés montre de chacune (planche 4). */
+export interface FicheDeSociete {
+  tenantId: string;
+  /** Le code de l'offre, `null` sans licence lisible. */
+  offre: string | null;
+  /** Le cabinet au mandat actif, `null` s'il n'y en a pas. */
+  cabinet: string | null;
+}
+
 export interface OrganisationDeLaLicence {
   tenant_id: string;
   nom: string;
@@ -3906,6 +3915,8 @@ export interface FacturationRepository {
   organisationsDesSocietes(tenantIds: readonly string[]): Promise<OrganisationDeLaLicence[]>;
   /** Les sièges vus depuis plusieurs sociétés, en un aller-retour. Sans doublon. */
   siegesDesSocietes(tenantIds: readonly string[]): Promise<SiegeDeLaLicence[]>;
+  /** L'offre et le cabinet de chaque société, en un appel (planche 4). Ni prix ni paiement. */
+  fichesDesSocietes(tenantIds: readonly string[]): Promise<FicheDeSociete[]>;
   inviterSiege(
     email: string,
     tenantId: string,

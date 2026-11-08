@@ -25,6 +25,7 @@ import { useAccueil } from "@/hooks/use-accueil";
 import { libelleDOffre, useCatalogueDesOffres } from "@/hooks/use-offres";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod } from "@/hooks/use-tva";
+import { COMMERCE } from "@/capabilities/coque";
 import { useI18n } from "@/i18n";
 import { nombre } from "@/lib/forfait";
 import { jourOuInstant, montant, montantSigne } from "@/lib/lisible";
@@ -751,7 +752,12 @@ function PmeHome() {
         ) : null}
 
         {/* ── 7. l'abonnement, en une ligne : les trois cartes d'hier ───── */}
-        <Link to="/pme/reglages" hash="mon-abonnement" className="ligne abo">
+        {/* Planche 4 : l'abonnement a sa page ; elle n'existe pas dans la coque. */}
+        <Link
+          to="/pme/reglages"
+          search={COMMERCE ? { page: "abonnement" } : {}}
+          className="ligne abo"
+        >
           <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : "—"}</b>
           <span>
             {t("pme.home.abo.ligne", {
