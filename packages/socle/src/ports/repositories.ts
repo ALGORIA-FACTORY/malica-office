@@ -205,12 +205,19 @@ export interface IdentityRepository {
   monProfil(): Promise<MonProfil | null>;
   /** Un champ vide s'efface ; la base compose « Prénom Nom ». */
   ecrireMonProfil(prenom: string | null, nom: string | null): Promise<MonProfil | null>;
+  /** Le côté du bouton « + » (planche 5) ; il suit le compte, sur tous les appareils. */
+  ecrireCoteDuPlus(cote: CoteDuPlus): Promise<CoteDuPlus>;
 }
+
+/** Le côté du bouton « + » : sous le pouce droit (par défaut) ou gauche. */
+export type CoteDuPlus = "gauche" | "droite";
 
 export interface MonProfil {
   prenom: string | null;
   nom: string | null;
   display_name: string | null;
+  /** Le côté du « + » (planche 5, 7 novembre 2026). */
+  cote_du_plus: CoteDuPlus;
 }
 
 export type StatutInvitation = "en_attente" | "acceptee" | "expiree" | "revoquee";

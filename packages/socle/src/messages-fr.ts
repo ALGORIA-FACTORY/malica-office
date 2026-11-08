@@ -4291,10 +4291,19 @@ export const fr = {
     "{count} pièces attendent le réseau. Elles partiront seules : la photo n’est jamais à refaire.",
   "pme.capture.repondre": "Suivant ({count})",
   "pme.capture.continuer": "Continuer",
+  "pme.capture.dest.choisie": "Choisie",
+  "pme.capture.dest.ouverte": "Société ouverte",
+  "pme.capture.dest.autre": "Une autre société : nom ou matricule…",
+  "pme.capture.dest.ou": "Où la ranger",
+  "pme.boutonPlus.titre": "Bouton +",
+  "pme.boutonPlus.question": "De quel côté voulez-vous le bouton d'ajout ?",
+  "pme.boutonPlus.gauche": "À gauche",
+  "pme.boutonPlus.droite": "À droite",
+  "pme.boutonPlus.compte":
+    "Le choix suit votre compte : téléphone, ordinateur et application Android.",
   "pme.capture.plusTardCourt": "Plus tard",
   "pme.capture.dest.s":
     "Je pose la question maintenant, pas après : une pièce personnelle, je ne la lis pas, et elle ne touche jamais votre quota.",
-  "pme.capture.dest.societeLabel": "Société",
   "pme.capture.dest.societe": "La société",
   "pme.capture.dest.prive": "Pour moi",
   "pme.capture.dest.prive.flag":

@@ -196,6 +196,7 @@
     "createOrganization",
     "creerMandat",
     "definirOrganisation",
+    "ecrireCoteDuPlus",
     "ecrireMonProfil",
     "etablirFiche",
     "ficheCourante",

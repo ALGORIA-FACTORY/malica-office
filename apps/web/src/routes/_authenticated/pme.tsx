@@ -39,6 +39,7 @@ import { etiqueterLeDossier } from "@/lib/telemetrie";
 import { clePiecesLues } from "@/hooks/use-pieces-lues";
 import { attendUnGeste, seMontreIci } from "@/lib/libelle-de-notification";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
+import { useCoteDuPlus } from "@/hooks/use-cote-du-plus";
 
 /*
  * Le cadrage du navigateur — détection, redressement, et un modèle qui se
@@ -87,6 +88,19 @@ function PmeLayout() {
   // Un nouvel ajout réinitialise aussi les étapes d'un parcours déjà ouvert.
   // Les pièces déposées et la file durable ne vivent pas dans cet état de vue.
   const [numeroAjout, setNumeroAjout] = useState(0);
+  /*
+   * Le côté du « + » (planche 5) ; un appui long sur le « + » ouvre son
+   * réglage. Le toucher qui suit l'appui long n'ajoute rien.
+   */
+  const { cote: coteDuPlus } = useCoteDuPlus();
+  const appuiLong = useRef<{ minuteur: number | null; parti: boolean }>({
+    minuteur: null,
+    parti: false,
+  });
+  const lacherLAppui = () => {
+    if (appuiLong.current.minuteur !== null) window.clearTimeout(appuiLong.current.minuteur);
+    appuiLong.current.minuteur = null;
+  };
 
   const orgsQuery = useQuery({
     queryKey: ["my-organizations"],
@@ -699,7 +713,7 @@ function PmeLayout() {
          * collant de gauche : une barre d'onglets au bas d'un écran de 27
          * pouces est un portage, pas un produit.
          */}
-        <nav aria-label={t("pme.nav.aria")} className="nav">
+        <nav aria-label={t("pme.nav.aria")} className="nav" data-plus={coteDuPlus}>
           {/*
            * 1er novembre 2026, maquette validée par Wissem : Société ·
            * Bibliothèque · Privé, puis « + » à DROITE, plus grand et plein — sous
@@ -739,7 +753,24 @@ function PmeLayout() {
             <button
               type="button"
               disabled={!org || capture.isPending}
+              onPointerDown={() => {
+                lacherLAppui();
+                appuiLong.current.parti = false;
+                appuiLong.current.minuteur = window.setTimeout(() => {
+                  appuiLong.current.parti = true;
+                  appuiLong.current.minuteur = null;
+                  void navigate({ to: "/pme/bouton-plus" });
+                }, 550);
+              }}
+              onPointerUp={lacherLAppui}
+              onPointerLeave={lacherLAppui}
+              onPointerCancel={lacherLAppui}
+              onContextMenu={(e) => e.preventDefault()}
               onClick={() => {
+                if (appuiLong.current.parti) {
+                  appuiLong.current.parti = false;
+                  return;
+                }
                 setNumeroAjout((n) => n + 1);
                 void navigate({ to: "/pme/capturer", search: {} });
               }}
