@@ -496,6 +496,32 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 _ => false,
             })
     };
+    // Une exonération totale (aucun taux, HT = TTC) ne se lit que sur un HT qui porte son
+    // libellé : sans lui, n'importe quel montant imprimé deux fois « fermait ». Banc du
+    // 8 novembre 2026, factures à l'export (algoria-111, synthétique 046, 054, 070, 098) :
+    // deux lectures, le vrai total et un montant d'article, donc ambiguës. Entre plusieurs
+    // lectures, celles dont le HT exonéré ne porte pas son libellé sont écartées.
+    let exo_sans_libelle = |e: &Etat| {
+        modele.groupes.iter().enumerate().any(|(g, gr)| {
+            let (Some(sol), Some(t)) = (e.g[g].as_ref(), gr.total_base) else {
+                return false;
+            };
+            if !(sol.exoneration && sol.instances.is_empty()) {
+                return false;
+            }
+            let Some(ht) = e.s[t].filter(|v| !v.absent).map(|v| v.v) else {
+                return false;
+            };
+            let r = &reperes[modele.vars[t].champ];
+            !dom.valeurs.get(&ht).is_some_and(|x| {
+                x.occurrences.iter().any(|o| {
+                    plan.libelle_avant_a_une_lettre(o.jeton, r)
+                        || plan.ancre(o.jeton, r, None, true)
+                        || plan.apparie(o.jeton, r)
+                })
+            })
+        })
+    };
     let lues: Vec<Etat> = retenues
         .iter()
         .map(|r| sans_partage(&r.etat))
@@ -509,6 +535,22 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         })
         .map(|(e, _)| e)
         .collect();
+    // seulement pour départager : une lecture unique garde sa règle (les lignes qui
+    // ferment le HT, plus bas — synthétique-100)
+    let lues: Vec<Etat> = if lues.len() > 1 {
+        let nommees: Vec<Etat> = lues
+            .iter()
+            .filter(|e| !exo_sans_libelle(e))
+            .cloned()
+            .collect();
+        if nommees.is_empty() {
+            lues
+        } else {
+            nommees
+        }
+    } else {
+        lues
+    };
     let partage_requis = !retenues.is_empty() && lues.is_empty();
     let unique: Option<&Etat> = if lues.len() == 1 { lues.first() } else { None };
     let mut issue = match lues.len() {
@@ -963,10 +1005,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 continue;
             };
             let champ = modele.vars[t].champ;
+            // Un libellé arabe se lit à une lettre près (`libelle_avant_a_une_lettre`).
             let ancre_par = |reperes: &[String]| {
                 dom.valeurs.get(&ht).is_some_and(|x| {
                     x.occurrences.iter().any(|o| {
-                        plan.libelle_avant(o.jeton, reperes)
+                        plan.libelle_avant_a_une_lettre(o.jeton, reperes)
                             || plan.ancre(o.jeton, reperes, None, true)
                             || plan.apparie(o.jeton, reperes)
                     })

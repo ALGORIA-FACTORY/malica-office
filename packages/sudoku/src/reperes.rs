@@ -241,10 +241,30 @@ impl<'a> Plan<'a> {
     /// valeur entre le libellé et `i` coupe la suite : sur « Total HT 1 670,000 Total TTC
     /// 1 749,800 », 1 749,800 n'est pas ancré par « Total HT ».
     pub fn libelle_avant(&self, i: usize, reperes: &[String]) -> bool {
+        self.libelle_avant_selon(i, reperes, false)
+    }
+
+    /// `libelle_avant`, un libellé ARABE d'au moins huit lettres se lisant aussi à une lettre
+    /// près (une lettre perdue, ajoutée ou changée) : l'OCR rend « اعتار » pour « اعتبار »
+    /// (diagnostic des pièces non prouvées, 8 novembre 2026). Un libellé latin, ou court, se
+    /// lit toujours exactement.
+    pub fn libelle_avant_a_une_lettre(&self, i: usize, reperes: &[String]) -> bool {
+        self.libelle_avant_selon(i, reperes, true)
+    }
+
+    fn libelle_avant_selon(&self, i: usize, reperes: &[String], approche: bool) -> bool {
         if reperes.is_empty() {
             return false;
         }
-        let contient = |t: &str| reperes.iter().any(|r| t.contains(r.as_str()));
+        let contient = |t: &str| {
+            reperes.iter().any(|r| {
+                t.contains(r.as_str())
+                    || (approche
+                        && r.chars().count() >= 8
+                        && r.chars().any(|c| ('\u{0600}'..='\u{06FF}').contains(&c))
+                        && a_une_lettre_pres(t, r))
+            })
+        };
         if contient(&self.normes[i]) {
             return true;
         }
@@ -748,4 +768,55 @@ fn taux_sur_rangees_chiffrees(jetons: &[Jeton]) -> BTreeSet<i64> {
         }
     }
     taux
+}
+
+/// `motif` se lit-il dans `texte` à une lettre près (distance d'édition au plus 1, le motif
+/// pris n'importe où dans le texte) ?
+fn a_une_lettre_pres(texte: &str, motif: &str) -> bool {
+    let t: Vec<char> = texte.chars().collect();
+    let m: Vec<char> = motif.chars().collect();
+    // d[j] : la distance du préfixe m[..j] à un suffixe du texte lu jusqu'ici
+    let mut d: Vec<usize> = (0..=m.len()).collect();
+    if d[m.len()] <= 1 {
+        return true;
+    }
+    for &c in &t {
+        let mut prec = d[0];
+        d[0] = 0;
+        for j in 1..=m.len() {
+            let ancien = d[j];
+            d[j] = (prec + usize::from(m[j - 1] != c))
+                .min(d[j] + 1)
+                .min(d[j - 1] + 1);
+            prec = ancien;
+        }
+        if d[m.len()] <= 1 {
+            return true;
+        }
+    }
+    false
+}
+
+#[cfg(test)]
+mod essais {
+    use super::a_une_lettre_pres;
+
+    #[test]
+    fn un_libelle_arabe_se_lit_a_une_lettre_pres() {
+        // « اعتار » pour « اعتبار » : une lettre perdue
+        assert!(a_une_lettre_pres(
+            "المبلغدوناعتارالأداءات",
+            "المبلغدوناعتبارالأداءات"
+        ));
+        // une lettre changée, au milieu d'un texte plus long
+        assert!(a_une_lettre_pres(
+            "xxالمبلغدوناعتبارالأدادات",
+            "المبلغدوناعتبارالأداءات"
+        ));
+        // deux lettres perdues : non
+        assert!(!a_une_lettre_pres(
+            "المبلغدوناعتارالأداات",
+            "المبلغدوناعتبارالأداءات"
+        ));
+    }
 }
