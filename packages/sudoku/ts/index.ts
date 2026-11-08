@@ -190,6 +190,8 @@ export interface EntreeDuSudoku {
   readonly plafond?: number;
   /** Les jetons sont le texte exact de la pièce (la couche de texte d'un PDF). */
   readonly texte_exact?: boolean;
+  /** Les jetons viennent d'un lecteur génératif (un modèle de vision) : ses sommes ne se prouvent pas seules. */
+  readonly lecteur_generatif?: boolean;
 }
 
 /* ============================================================ LA SORTIE (§4) */

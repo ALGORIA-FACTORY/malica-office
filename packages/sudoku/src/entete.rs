@@ -1367,12 +1367,21 @@ impl<'a> Page<'a> {
             let debut = *l.jetons.first()?;
             let (r, k) = self.ou[debut];
             let h = self.h(debut);
+            // `mots_avant` rend les mots de gauche à droite ; un nom écrit de droite à gauche
+            // se lit dans l'autre sens (« للتدقيق غرفان مكتب » pour « مكتب غرفان للتدقيق »,
+            // OCR PP-OCRv6 du 8 novembre 2026, algoria-107).
+            let lecture = |mut m: Vec<usize>| {
+                if m.iter().any(|&t| self.rtl[t]) {
+                    m.reverse();
+                }
+                m
+            };
             let avant = self.mots_avant(r, k);
             if avant
                 .last()
                 .is_some_and(|&a| self.ecart(a, debut) <= ECART_VALEUR * h)
             {
-                return Some(avant);
+                return Some(lecture(avant));
             }
             let x1 = l
                 .jetons
@@ -1391,7 +1400,7 @@ impl<'a> Page<'a> {
                     }) {
                         let m = self.mots_avant(rr, k0 + 1);
                         if !m.is_empty() {
-                            return Some(m);
+                            return Some(lecture(m));
                         }
                     }
                 }
@@ -2398,9 +2407,16 @@ pub fn prouver(
                 .filter(|m| !m.is_empty() && !formes.contains(m))
                 .collect()
         };
+        // Ni un texte qui CONTIENT le nom du dossier, collé à son libellé par l'OCR :
+        // « Client :/JI:ALGORIA FACTORY SARL » (OCR PP-OCRv6 du 8 novembre 2026,
+        // algoria-066, 069, 071) n'est pas le fournisseur ; son adresse était celle du client.
         let meme = dossier.raison_sociale.as_deref().is_some_and(|rs| {
             let (a, b) = (mots_de(rs), mots_de(&n.valeur));
-            !a.is_empty() && a == b
+            let colle: String = b.concat();
+            !a.is_empty()
+                && (a == b
+                    || a.iter()
+                        .all(|m| m.chars().count() >= 3 && colle.contains(m.as_str())))
         });
         // Ni un identifiant : un nom qui cite les jetons d'un matricule lu n'est pas un nom.
         let identifiant = occs.iter().any(|o| {
@@ -2795,6 +2811,7 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
     // nommée au moins une fois.
     let mut lus_n: BTreeMap<String, (Vec<usize>, bool, bool)> = BTreeMap::new();
     let mut partage = false;
+    let libelle_court_colle = regex::Regex::new(r"^\p{L}{1,3}[°º]\s*\d").expect("motif");
     for (i, j) in page.j.iter().enumerate() {
         if l.chiffre && !j.texte.chars().any(|c| c.is_ascii_digit()) {
             continue;
@@ -2888,6 +2905,12 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
             q += 1;
         }
         if !l.chiffre && q == rang.len() && page.se_poursuit(r) {
+            entier = false;
+        }
+        // Nommée par un libellé détaché, une valeur dont le jeton s'ouvre sur un court
+        // libellé collé (« n°354642/6 » sous « Quittance », OCR PP-OCRv6 du 8 novembre 2026,
+        // algoria-148) porte autre chose que la valeur : elle n'est pas rendue entière.
+        if debut == 0 && libelle_court_colle.is_match(page.j[i].texte.trim()) {
             entier = false;
         }
         let premier = page.j[i].texte.trim();

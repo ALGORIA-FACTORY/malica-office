@@ -393,6 +393,23 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     // pièce que ses preuves tiennent n'est pas relue — c'est le gain mesuré
     // (5,8 s au lieu de 19,5 s), et la lecture reste comptée une fois.
     const piece = await deposer(orgLibre, "prouvee-sans-rattrapage", "partage");
+    // lue par l'OCR : les sommes d'un lecteur génératif ne prouvent pas seules (ci-dessous)
+    const modele = lecteurs([
+      () => lecturePartielle("PP-OCR"),
+      () => lectureComplete("qwen-vl-ocr"),
+    ]);
+
+    await readPieceFlow(apiDEssai(), piece, modele);
+
+    assert.equal(modele.appels, 1, "l'autre lecteur n'a pas été appelé");
+    assert.equal(await compter(piece), 1);
+  });
+
+  it("un lecteur génératif ne prouve pas seul : sa pièce attend l'autre lecteur", async () => {
+    // Banc Qwen du 8 novembre 2026 : un modèle de vision répète la même erreur de chiffre
+    // dans le HT, la TVA et le TTC, et les sommes ferment. Sans le montant en lettres qui
+    // vérifie le total, sa lecture n'est pas prouvée : l'OCR la reprend.
+    const piece = await deposer(orgLibre, "generatif-rattrape", "partage");
     const modele = lecteurs([
       () => lecturePartielle("qwen-vl-ocr"),
       () => lectureComplete("PP-OCR"),
@@ -400,7 +417,7 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
 
     await readPieceFlow(apiDEssai(), piece, modele);
 
-    assert.equal(modele.appels, 1, "l'autre lecteur n'a pas été appelé");
+    assert.equal(modele.appels, 2, "l'autre lecteur a été appelé");
     assert.equal(await compter(piece), 1);
   });
 

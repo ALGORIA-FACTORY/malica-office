@@ -149,6 +149,15 @@ export function jetonsDuSudoku(
   contexte: Pick<ContexteDuSudoku, "regles" | "grille"> & {
     readonly pack?: Pick<ContexteDuSudoku["pack"], "formats">;
   },
+  /**
+   * Le relevé vient d'un lecteur GÉNÉRATIF (`vision`, le modèle des cas difficiles) : il ne
+   * donne aucune confiance, et un jeton sans confiance passe pour exact (la couche de texte
+   * d'un PDF). Or un modèle récrit ce qu'il lit avec assurance — « Cartouche d'encore »,
+   * « Sismara » pour « Sidmara », une date en 2066, un nom arabe remplacé par son libellé
+   * (banc Qwen du 8 novembre 2026 : 80 valeurs fausses affirmées). Chacun de ses mots est
+   * donc DOUTEUX : un texte qu'aucun calcul ne prouve se montre, signalé, jamais affirmé.
+   */
+  lecteurGeneratif = false,
 ): JetonDuSudoku[] {
   const dates = datesDuPlan(plan, contexte.regles);
   const identifiants = identifiantsDuPlan(plan, contexte.regles, contexte.pack?.formats ?? {});
@@ -162,7 +171,7 @@ export function jetonsDuSudoku(
     x1: t.x1,
     y1: t.y1,
     ...(typeof t.confidence === "number" ? { confiance: t.confidence } : {}),
-    ...(jetonDouteux(t.text) ? { douteux: true } : {}),
+    ...(lecteurGeneratif || jetonDouteux(t.text) ? { douteux: true } : {}),
     ...(typeof t.faible === "number" ? { faible: t.faible } : {}),
     ...(typeof t.manque === "number" ? { manque: t.manque } : {}),
     montants: montantsDuJeton(t.text, devise),
@@ -530,6 +539,8 @@ export function resoudreLaPiece(
   marques?: readonly MarqueDuSudoku[],
   /** Les jetons viennent de la couche de texte d'un PDF : le texte exact de la pièce. */
   texteExact = false,
+  /** Les jetons viennent d'un lecteur génératif (`vision`) : voir `jetonsDuSudoku`. */
+  lecteurGeneratif = false,
 ): SortieDuSudoku {
   const grille = contexte.grille;
   const pack = packALaPrecision(contexte.pack, jetons);
@@ -537,6 +548,7 @@ export function resoudreLaPiece(
     ...(connus ? { connus } : {}),
     ...(marques?.length ? { marques } : {}),
     ...(texteExact ? { texte_exact: true } : {}),
+    ...(lecteurGeneratif ? { lecteur_generatif: true } : {}),
   };
   const noms = [...new Set(grille.preuves.flatMap((p) => (p.variante ? [p.variante] : [])))].sort();
   if (noms.length === 0) return moteur({ jetons, grille, pack, ...avecConnus });
@@ -1127,7 +1139,12 @@ export function creerLeSudoku(
           // La devise du dossier : celle d'une pièce qui n'en imprime aucune.
           devise: piece.devise.code,
         };
-        const jetons = jetonsDuSudoku(lecture.tokens, piece.devise, ctx);
+        const jetons = jetonsDuSudoku(
+          lecture.tokens,
+          piece.devise,
+          ctx,
+          lecture.lecteur === "vision",
+        );
         const sortie = resoudreLaPiece(
           jetons,
           ctx,
@@ -1135,6 +1152,7 @@ export function creerLeSudoku(
           connus,
           lecture.marques,
           lecture.lecteur === "pdf-text",
+          lecture.lecteur === "vision",
         );
         const aInscrire = champsLusAInscrire(piece, ctx, sortie);
 

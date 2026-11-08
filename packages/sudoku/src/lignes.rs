@@ -1417,6 +1417,7 @@ pub fn prouver(
             }
         }
     }
+    colonnes::douter_des_bords(&mut instances, &droits, &entree.grille, &op.designation);
     if !prouvees {
         if instances.is_empty() {
             return (vide("signale"), verdict);

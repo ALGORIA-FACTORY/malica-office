@@ -17,7 +17,12 @@
  *   — un petit nombre où un o, un l ou un I tient la place d'un chiffre (« 2oo », « 1o ») ;
  *   — un mot en minuscules absent des lexiques français et anglais (Hunspell et listes) ;
  *   — un mot capitalisé absent des lexiques, qu'une confusion classique de l'OCR (l↔i,
- *     o↔0, l↔1, rn↔m, c↔e) rend présent (« Iot » → « lot ») — sinon c'est un nom propre.
+ *     o↔0, l↔1, rn↔m, c↔e) rend présent (« Iot » → « lot ») — sinon c'est un nom propre ;
+ *   — un mot qui porte un signe étranger au français, inconnu tel qu'écrit et connu sans
+ *     ses accents (« Hötels » pour « Hôtels »,
+ *     OCR PP-OCRv6 du 8 novembre 2026, algoria-044) ;
+ *   — deux signes, une capitale puis une lettre qui a le dessin d'un chiffre (« As » pour
+ *     « A5 », OCR frais du staging, dirigeant 50/12 : « Flyers As recto-verso »).
  *
  * Ne sont jamais douteux : un sigle ou une marque en capitales, un terme à casse mêlée
  * (« vCPU »), un composé de deux mots connus (« autoforeuse », ou deux mots collés à
@@ -63,6 +68,8 @@ interface Lexique {
   liste(mot: string): boolean;
   /** Le mot commence-t-il un mot connu (une abréviation : « quadri », « maint ») ? */
   commence(debut: string): boolean;
+  /** Le mot est-il connu AVEC ses accents (Hunspell, ou les listes telles qu'écrites) ? */
+  accentue(mot: string): boolean;
 }
 
 let lexique: Lexique | null = null;
@@ -79,10 +86,14 @@ function lexiques(): Lexique {
     nspell({ aff: Buffer.from(d.aff), dic: Buffer.from(d.dic) }),
   );
   const listes = new Set([...motsFrancais, ...motsAnglais].map(sansAccents));
+  const exactes = new Set([...motsFrancais, ...motsAnglais].map((m) => m.toLowerCase()));
   const ordonnes = [...listes].sort();
   lexique = {
     connait: (mot) => hunspell.some((h) => h.correct(mot)) || listes.has(sansAccents(mot)),
     liste: (mot) => listes.has(sansAccents(mot)),
+    accentue: (mot) =>
+      hunspell.some((h) => h.correct(mot) || h.correct(mot.toLowerCase())) ||
+      exactes.has(mot.toLowerCase()),
     commence: (debut) => {
       const d = sansAccents(debut);
       let [bas, haut] = [0, ordonnes.length];
@@ -118,6 +129,8 @@ function motDouteux(brut: string): boolean {
     /^[\doOlI]+$/u.test(mot)
   )
     return true;
+  // deux signes : une capitale, puis une lettre au dessin d'un chiffre (« As » pour « A5 »)
+  if (/^\p{Lu}s$/u.test(mot)) return true;
   if (mot.length < LONGUEUR_MIN || !/^[\p{Script=Latin}'’]+$/u.test(mot)) return false;
   if (/^I['’]/u.test(mot)) return true;
   return mot
@@ -127,6 +140,8 @@ function motDouteux(brut: string): boolean {
       const l = lexiques();
       // un sigle (« EPSON »), un terme technique à casse mêlée (« vCPU », « iPhone »)
       if (p === p.toUpperCase() || /\p{Ll}\p{Lu}/u.test(p)) return false;
+      // un accent faux : inconnu tel qu'écrit, connu sans ses accents (« Hötels »)
+      if (/[^\p{ASCII}àâçéèêëîïôùûüÿæœ]/iu.test(p) && !l.accentue(p) && l.liste(p)) return true;
       if (l.connait(p) || l.connait(p.toLowerCase())) return false;
       const bas = p.toLowerCase();
       // un composé ou deux mots que l'impression a collés (« autoforeuse », « lotpalettisé »)
