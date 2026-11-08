@@ -28,7 +28,8 @@ function monter(over: Partial<Parameters<typeof SelecteurDeSociete>[0]> = {}) {
   render(
     createElement(SelecteurDeSociete, {
       societes,
-      affichee: "z",
+      ouverte: "z",
+      surMesSocietes: false,
       onOuvrir,
       onToutes,
       ...over,
@@ -51,7 +52,7 @@ describe("le sélecteur de société", () => {
   });
 
   it("en vue consolidée, dit « toutes » et leur nombre", () => {
-    monter({ affichee: null });
+    monter({ surMesSocietes: true });
     expect(screen.getByRole("button", { expanded: false }).textContent).toContain(
       "pme.notifs.toutesSocietes",
     );
@@ -79,7 +80,7 @@ describe("le sélecteur de société", () => {
     expect(screen.getByText("pme.societes.recentes")).toBeTruthy();
   });
 
-  it("épingler range la société en tête ; « Toutes » ouvre la vue consolidée", () => {
+  it("épingler range la société en tête ; « Toutes » ouvre « Mes sociétés »", () => {
     const { onToutes } = monter();
     fireEvent.click(screen.getByRole("button", { expanded: false }));
     fireEvent.click(screen.getAllByRole("button", { name: "pme.societes.epingler" })[0]!);
@@ -88,8 +89,8 @@ describe("le sélecteur de société", () => {
     expect(onToutes).toHaveBeenCalled();
   });
 
-  it("l'en-tête nomme la société que l'écran MONTRE, pas une autre", () => {
-    monter({ affichee: "s" });
+  it("l'en-tête nomme la société ouverte", () => {
+    monter({ ouverte: "s" });
     expect(screen.getByRole("button", { expanded: false }).textContent).toContain("Société Byrsa");
   });
 

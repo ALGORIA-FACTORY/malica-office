@@ -592,12 +592,19 @@ function PmeLayout() {
                     name: o.name,
                     matricule: o.legalId ?? null,
                   })),
-                  affichee: societeAffichee,
+                  /*
+                   * Planche 13 (approuvée le 8 novembre 2026) : choisir une
+                   * société OUVRE son accueil, le même qu'aujourd'hui ; les
+                   * filtres de la bibliothèque n'en dépendent pas.
+                   * « Toutes les sociétés » ouvre l'écran « Mes sociétés ».
+                   */
+                  ouverte: org.id,
+                  surMesSocietes: path.startsWith("/pme/societes"),
                   onOuvrir: (id: string) => {
                     if (id !== org.id) selectOrg(id);
-                    setSocieteVue(id);
+                    void navigate({ to: "/pme" });
                   },
-                  onToutes: () => setSocieteVue(null),
+                  onToutes: () => void navigate({ to: "/pme/societes" }),
                 }
               : undefined
           }

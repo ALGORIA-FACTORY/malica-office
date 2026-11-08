@@ -73,19 +73,24 @@ function initialesDe(nom: string) {
 
 export function SelecteurDeSociete({
   societes,
-  affichee,
+  ouverte,
+  surMesSocietes,
   onOuvrir,
   onToutes,
 }: {
   societes: readonly SocieteDuSelecteur[];
   /**
-   * La société que les écrans MONTRENT (`pme.societeAffichee`), `null` =
-   * toutes. C'est elle que l'en-tête nomme : les cartes de la bibliothèque
-   * et le filtre des échéances la changent aussi, et l'en-tête ne doit jamais
-   * nommer une société pendant que l'écran en montre une autre (revue de #272).
+   * La société OUVERTE — celle de l'accueil. Planche 13 (approuvée le
+   * 8 novembre 2026) : l'accueil et la bibliothèque ne changent pas ; la
+   * bibliothèque garde ses propres filtres, et l'en-tête nomme la société
+   * dont l'accueil parle.
    */
-  affichee: string | null;
+  ouverte: string;
+  /** Vrai sur l'écran « Mes sociétés » : l'en-tête dit alors « Toutes les sociétés ». */
+  surMesSocietes: boolean;
+  /** Ouvre la société et son accueil, le même qu'aujourd'hui. */
   onOuvrir: (id: string) => void;
+  /** Ouvre l'écran « Mes sociétés ». */
   onToutes: () => void;
 }) {
   const { t, locale } = useI18n();
@@ -93,7 +98,7 @@ export function SelecteurDeSociete({
   const [cherche, setCherche] = useState("");
   const [epinglees, setEpinglees] = useState<string[]>([]);
   const [recentes, setRecentes] = useState<string[]>([]);
-  const vueConsolidee = affichee === null;
+  const vueConsolidee = surMesSocietes;
   const champ = useRef<HTMLInputElement>(null);
   const feuille = useRef<HTMLDivElement>(null);
   const fermer = useCallback(() => setOuvert(false), []);
@@ -127,8 +132,33 @@ export function SelecteurDeSociete({
     [societes, locale],
   );
   const parId = useMemo(() => new Map(societes.map((s) => [s.id, s])), [societes]);
-  const rang = triees.findIndex((s) => s.id === affichee) + 1;
-  const courante = affichee ? parId.get(affichee) : undefined;
+  const rang = triees.findIndex((s) => s.id === ouverte) + 1;
+  const courante = parId.get(ouverte);
+  const nom = vueConsolidee ? t("pme.notifs.toutesSocietes") : (courante?.name ?? "");
+
+  /*
+   * UN NOM TROP LONG DÉFILE DANS LE BOUTON (dirigeant, 8 novembre 2026).
+   *
+   * « Si le nom de la société est trop long, il faut qu'il défile dans le
+   * bouton. » On mesure ce qui dépasse ; s'il dépasse, le nom glisse jusqu'à
+   * sa fin, s'y arrête, puis revient — et recommence. Sous « mouvement
+   * réduit », il ne bouge pas et se coupe en « … » (règle globale).
+   */
+  const cadre = useRef<HTMLSpanElement>(null);
+  const texte = useRef<HTMLElement>(null);
+  const [depasse, setDepasse] = useState(0);
+  useEffect(() => {
+    const mesurer = () => {
+      const c = cadre.current;
+      const x = texte.current;
+      setDepasse(c && x ? Math.max(0, Math.ceil(x.scrollWidth - c.clientWidth)) : 0);
+    };
+    mesurer();
+    if (typeof ResizeObserver === "undefined") return;
+    const obs = new ResizeObserver(mesurer);
+    if (cadre.current) obs.observe(cadre.current);
+    return () => obs.disconnect();
+  }, [nom]);
 
   const q = plier(cherche.trim());
   const trouvees = q
@@ -151,7 +181,7 @@ export function SelecteurDeSociete({
   };
 
   const ligne = (s: SocieteDuSelecteur) => {
-    const ici = s.id === affichee;
+    const ici = s.id === ouverte && !vueConsolidee;
     const epinglee = epinglees.includes(s.id);
     return (
       <li key={s.id}>
@@ -197,7 +227,19 @@ export function SelecteurDeSociete({
         aria-expanded={ouvert}
         onClick={() => setOuvert((o) => !o)}
       >
-        <b>{vueConsolidee ? t("pme.notifs.toutesSocietes") : (courante?.name ?? "")}</b>
+        <span
+          ref={cadre}
+          className="nom"
+          data-defile={depasse > 0 || undefined}
+          style={
+            {
+              "--decal": `-${depasse}px`,
+              "--duree": `${Math.max(6, 4 + depasse / 18)}s`,
+            } as React.CSSProperties
+          }
+        >
+          <b ref={texte}>{nom}</b>
+        </span>
         <span className="rg">{vueConsolidee ? societes.length : `${rang}/${societes.length}`}</span>
         <svg viewBox="0 0 24 24" className="g" aria-hidden>
           <path d="M6 9l6 6 6-6" />
@@ -264,7 +306,9 @@ export function SelecteurDeSociete({
                         </span>
                         <span className="bd">
                           <b>{t("pme.notifs.toutesSocietes")}</b>
-                          <span>{t("pme.societes.consolidee", { count: societes.length })}</span>
+                          <span>
+                            {t("pme.societes.ouvreMesSocietes", { count: societes.length })}
+                          </span>
                         </span>
                       </button>
                       {epinglees.length > 0 ? (
