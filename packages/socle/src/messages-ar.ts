@@ -1200,6 +1200,8 @@ export const ar: Dict = {
   "pme.conseil.sansCabinet": "لا مكتب يتابع هذا الملف بعد: هذه الإجابة لم يراجعها خبير محاسب.",
   "pme.conseil.relu": "راجعها محاسبكم وصادق عليها.",
   "pme.conseil.sources": "المصادر: {liste}",
+  "pme.conseil.cite.lacune":
+    "لا أجد النص الساري في {date}: تتضمن المدونة {texte}، الفصل {numero}، إلى غاية {fin}، ثم من جديد ابتداءً من {reprise}، دون أي صيغة بينهما.",
   "pme.conseil.cite.horsCorpus": "لا أجد هذا في النصوص التي بين يديّ.",
   "pme.conseil.cite.enVigueurAu": "النصوص السارية في {date}: {liste}.",
   "pme.conseil.cite.version": "{texte}، الفصل {numero} (صيغة {date})",

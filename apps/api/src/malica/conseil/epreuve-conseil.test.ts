@@ -80,6 +80,8 @@ function passageDuCas(cas: CasDEpreuve): PassageTrouve[] {
       distance: 0.2,
       parLesMots: true,
       score: 0.03,
+      lacune: false,
+      reprise: null,
     },
   ];
 }
@@ -264,7 +266,9 @@ describe("l'épreuve rejouée, sans réseau", () => {
     assert.equal(b.reponses.justes, 0);
     assert.equal(b.reponses.citationsJustes, 0);
     assert.equal(b.reponses.fauxRefus, b.reponses.total);
-    assert.ok(b.chiffresNonCites >= b.reponses.total);
+    // Ses chiffres ne sortent pas : ils sont retirés, jamais rendus sans citation.
+    assert.equal(b.chiffresNonCites, 0);
+    assert.ok(b.chiffresRetires >= b.reponses.total);
   });
 });
 
@@ -371,6 +375,100 @@ describe("le geste du conseil cité", () => {
       ),
       /juridiction_absente/,
     );
+  });
+
+  it("l'article qui répond n'a pas de version au jour dit : refus de la règle du temps, sans appel", async () => {
+    const [p] = passageDuCas(cas);
+    const lacune = {
+      ...p!,
+      validFrom: "2023-01-01",
+      validTo: "2024-01-01",
+      lacune: true,
+      reprise: "2025-01-01",
+    };
+    const autre = { ...p!, corpus: "LF-2021", numero: "14", validFrom: "2021-01-01" };
+    const { api, trace } = baseSimulee([lacune, autre]);
+    let appele = false;
+    const r = await conseilCite(
+      api,
+      { tenantId: TENANT, question: "Taux de l'IS ?", locale: "fr", jour: "2024-06-30" },
+      {
+        client: {
+          envoyer: async () => {
+            appele = true;
+            throw new Error("ne doit pas être appelé");
+          },
+        },
+        empreinte: async () => [0.1],
+      },
+    );
+    assert.equal(appele, false);
+    assert.equal(r.refus, true);
+    assert.match(
+      r.reponse,
+      /Je ne trouve pas le texte en vigueur au 30 juin 2024 : le corpus connaît CIRPPIS, art\. 52, jusqu’au 1 janvier 2024, puis de nouveau à partir du 1 janvier 2025/,
+    );
+    assert.deepEqual(r.lacunes, [
+      { corpus: "CIRPPIS", numero: "52", jusquAu: "2024-01-01", reprise: "2025-01-01" },
+    ]);
+    assert.equal(trace.journal.length, 0);
+  });
+
+  it("une lacune qui n'est pas en tête n'est jamais remise au modèle", async () => {
+    const [p] = passageDuCas(cas);
+    const lacune = { ...p!, numero: "99", lacune: true, reprise: "2027-01-01" };
+    const { api } = baseSimulee([p!, lacune]);
+    const client = lecteurFidele();
+    const r = await conseilCite(
+      api,
+      { tenantId: TENANT, question: cas.question, locale: "fr", jour: cas.jour },
+      { client, empreinte: async () => [0.1] },
+    );
+    const blocs = client.requetes[0]!.messages[0]!.content.filter(
+      (b) => b.type === "search_result",
+    );
+    assert.equal(blocs.length, 1);
+    assert.equal(r.lacunes.length, 1);
+    assert.equal(r.refus, false);
+  });
+
+  it("une réponse vide du modèle courant repasse une fois au modèle difficile", async () => {
+    const { api, trace } = baseSimulee(passageDuCas(cas));
+    const fidele = lecteurFidele();
+    const modeles: string[] = [];
+    const r = await conseilCite(
+      api,
+      { tenantId: TENANT, question: cas.question, locale: "fr", jour: cas.jour },
+      {
+        client: {
+          async envoyer(requete) {
+            modeles.push(requete.model);
+            if (modeles.length === 1) {
+              return {
+                reponse: {
+                  model: requete.model,
+                  stop_reason: "max_tokens",
+                  content: [],
+                  usage: { input_tokens: 1000, output_tokens: 4096 },
+                },
+                latencyMs: 500,
+              };
+            }
+            return fidele.envoyer(requete);
+          },
+        },
+        empreinte: async () => [0.1],
+      },
+    );
+    assert.deepEqual(modeles, ["claude-haiku-5-5", "claude-sonnet-5-5"]);
+    assert.equal(r.escalade, true);
+    assert.equal(r.refus, false);
+    assert.equal(r.modele, "claude-sonnet-5-5");
+    // Les deux appels sont journalisés, et le coût les additionne.
+    assert.equal(trace.journal.filter((l) => l["role"] === "chat").length, 2);
+    const haiku = (1000 * 0.1 + 4096 * 0.5) / 1e6;
+    const sonnet = (1200 * 2 + 150 * 10 + 800 * 0.1) / 1e6;
+    assert.ok(Math.abs((r.coutUsd ?? 0) - (haiku + sonnet)) < 1e-6);
   });
 
   it("aucune mention de vigueur sans article cité", () => {

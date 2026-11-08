@@ -1271,6 +1271,8 @@ export const fr = {
     "Aucune comptabilité ne suit encore ce dossier : cette réponse n’a pas été relue par un expert-comptable.",
   "pme.conseil.relu": "Relu et validé par votre comptable.",
   "pme.conseil.sources": "Sources : {liste}",
+  "pme.conseil.cite.lacune":
+    "Je ne trouve pas le texte en vigueur au {date} : le corpus connaît {texte}, art. {numero}, jusqu’au {fin}, puis de nouveau à partir du {reprise}, mais aucune version entre les deux.",
   "pme.conseil.cite.horsCorpus": "Je ne trouve pas cela dans les textes que j'ai sous les yeux.",
   "pme.conseil.cite.enVigueurAu": "En vigueur au {date} : {liste}.",
   "pme.conseil.cite.version": "{texte}, art. {numero} (version du {date})",

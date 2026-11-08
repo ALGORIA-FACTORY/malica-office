@@ -123,6 +123,7 @@ export interface NoteDuCas {
   latencyMs: number;
   nonCitees: number;
   chiffresNonCites: number;
+  chiffresRetires: number;
   versionsMelangees: boolean;
   citationsRejetees: number;
 }
@@ -135,6 +136,7 @@ export function noterLeCas(cas: CasDEpreuve, r: ResultatDuConseilCite): NoteDuCa
     latencyMs: r.latencyMs,
     nonCitees: r.nonCitees.length,
     chiffresNonCites: r.chiffresNonCites.length,
+    chiffresRetires: r.chiffresRetires.length,
     versionsMelangees: r.versionsMelangees,
     citationsRejetees: r.citationsRejetees,
   };
@@ -183,6 +185,7 @@ export interface BilanDeLEpreuve {
   modeles: Record<string, number>;
   affirmationsNonCitees: number;
   chiffresNonCites: number;
+  chiffresRetires: number;
   versionsMelangees: number;
   citationsRejetees: number;
 }
@@ -218,6 +221,7 @@ export function bilanDeLEpreuve(notes: readonly NoteDuCas[]): BilanDeLEpreuve {
     modeles,
     affirmationsNonCitees: notes.reduce((a, n) => a + n.nonCitees, 0),
     chiffresNonCites: notes.reduce((a, n) => a + n.chiffresNonCites, 0),
+    chiffresRetires: notes.reduce((a, n) => a + n.chiffresRetires, 0),
     versionsMelangees: notes.filter((n) => n.versionsMelangees).length,
     citationsRejetees: notes.reduce((a, n) => a + n.citationsRejetees, 0),
   };
@@ -238,7 +242,8 @@ export function bilanEnTexte(b: BilanDeLEpreuve): string {
     `Modèles : ${Object.entries(b.modeles)
       .map(([m, n]) => `${m} × ${n}`)
       .join(", ")}`,
-    `Phrases non citées : ${b.affirmationsNonCitees} (dont ${b.chiffresNonCites} portant un chiffre)`,
+    `Phrases non citées rendues : ${b.affirmationsNonCitees} (dont ${b.chiffresNonCites} portant un chiffre)`,
+    `Phrases chiffrées retirées faute de citation : ${b.chiffresRetires}`,
     `Versions mélangées : ${b.versionsMelangees} · citations rejetées : ${b.citationsRejetees}`,
   ].join("\n");
 }

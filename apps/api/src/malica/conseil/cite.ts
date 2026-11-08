@@ -517,19 +517,123 @@ export interface ReponseCitee {
   citationsRejetees: number;
   /** Phrases substantielles sans citation — la règle « chaque affirmation cite » les mesure. */
   nonCitees: string[];
-  /** Phrases non citées qui portent un chiffre : l'alerte la plus grave. */
+  /**
+   * Phrases non citées qui portent un chiffre, DANS LA RÉPONSE RENDUE. Vide
+   * par construction : une telle phrase est adossée à la citation qui porte
+   * ses chiffres, ou retirée. Le champ reste, pour que l'épreuve le vérifie.
+   */
   chiffresNonCites: string[];
+  /** Les phrases retirées parce qu'un de leurs chiffres n'est porté par aucune citation. */
+  chiffresRetires: string[];
   /** Deux versions d'un même article citées ensemble — doit rester faux. */
   versionsMelangees: boolean;
   /** La réponse a été coupée par la borne de sortie. */
   tronquee: boolean;
 }
 
-/** Une phrase porte-t-elle un chiffre engageant ? Un pourcentage, un montant, un délai. */
+/** Chiffres arabes orientaux et persans ramenés aux chiffres occidentaux. */
+function chiffresOccidentaux(texte: string): string {
+  return texte
+    .replace(/[\u0660-\u0669]/g, (c) => String(c.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (c) => String(c.charCodeAt(0) - 0x06f0));
+}
+
+/**
+ * Les nombres d'un texte, sous une forme comparable : « 5 000 », « 5.000 » et
+ * « 5000 » sont le même nombre ; « 0,3 » et « 0.3 » aussi ; « 01 » vaut « 1 ».
+ */
+export function nombresDe(texte: string): string[] {
+  const t = chiffresOccidentaux(texte).replace(/(\d)[ \u00a0\u202f](?=\d{3}\b)/g, "$1");
+  const vus = new Set<string>();
+  for (const m of t.matchAll(/\d+(?:[.,]\d+)*/g)) {
+    let n = m[0];
+    // Séparateur de milliers : un point ou une virgule suivi d'exactement trois chiffres, répété.
+    if (/^\d{1,3}([.,]\d{3})+$/.test(n) && !/^0[.,]/.test(n)) n = n.replace(/[.,]/g, "");
+    n = n.replace(",", ".").replace(/^0+(?=\d)/, "");
+    vus.add(n);
+  }
+  return [...vus];
+}
+
+/** Une phrase porte-t-elle un chiffre ? Toute phrase où figure un nombre. */
 function porteUnChiffre(phrase: string): boolean {
-  return /\d+(?:[.,]\d+)?\s*(?:%|‰|pour[- ]?cent|dinars?|dt\b|tnd|jours?|mois|ans?)|\d{2,}/iu.test(
-    phrase,
-  );
+  return nombresDe(phrase).length > 0;
+}
+
+/** Les phrases d'un bloc de texte, séparateurs compris (pour se recoller telles quelles). */
+function phrasesDe(texte: string): string[] {
+  // Une fin de phrase est suivie d'une majuscule, d'une lettre arabe ou d'un
+  // saut de ligne ; « art. 49 » et « al. 2 » ne coupent pas.
+  return texte
+    .split(/(?<=(?<!\b(?:art|al|n°|cf))[.!?؟])(?=\s+(?:\p{Lu}|[\u0600-\u06ff]|\n))/u)
+    .filter((p) => p.length > 0);
+}
+
+/**
+ * La règle « chaque affirmation porte sa citation », appliquée aux chiffres.
+ *
+ * Claude cite par blocs, et le texte qui relie deux citations — la phrase
+ * d'annonce, une transition — arrive sans citation. Ce texte ne peut pas
+ * porter un chiffre qui n'aurait pas sa source :
+ *
+ *   - chaque nombre d'une phrase non citée doit se lire dans le texte cité
+ *     de l'une des citations de la réponse, ou dans l'identité d'une source
+ *     citée (son numéro d'article, son texte, sa version) ;
+ *   - si oui, la phrase reçoit les citations qui portent ses nombres : elle
+ *     est désormais citée, et l'écran peut montrer d'où vient chaque chiffre ;
+ *   - sinon, la phrase est RETIRÉE. Un chiffre sans source ne sort jamais.
+ *
+ * C'est la règle de R2 transposée au droit : un chiffre se relit dans ce
+ * qu'on a montré, jamais dans ce que le modèle écrit.
+ */
+function adosserLesChiffres(affirmations: readonly Affirmation[]): {
+  affirmations: Affirmation[];
+  retirees: string[];
+} {
+  const citations = affirmations.flatMap((a) => a.citations);
+  const parCitation = citations.map((c) => ({ c, nombres: new Set(nombresDe(c.extrait)) }));
+  const identites = citations.map((c) => {
+    const r = c.resultat;
+    const ident = [
+      r.corpus,
+      r.type === "article" ? r.numero : `${r.code} ${r.article ?? ""}`,
+      r.validFrom ?? "",
+      r.validTo ?? "",
+    ].join(" ");
+    return { c, nombres: new Set(nombresDe(ident)) };
+  });
+
+  const sortie: Affirmation[] = [];
+  const retirees: string[] = [];
+  for (const a of affirmations) {
+    if (a.citations.length > 0 || !porteUnChiffre(a.texte)) {
+      sortie.push(a);
+      continue;
+    }
+    for (const phrase of phrasesDe(a.texte)) {
+      const nombres = nombresDe(phrase);
+      if (nombres.length === 0) {
+        sortie.push({ texte: phrase, citations: [] });
+        continue;
+      }
+      const portes = new Map<string, CitationRelue>();
+      let toutPorte = true;
+      for (const n of nombres) {
+        const porteuses = [
+          ...parCitation.filter((x) => x.nombres.has(n)),
+          ...identites.filter((x) => x.nombres.has(n)),
+        ];
+        if (porteuses.length === 0) {
+          toutPorte = false;
+          break;
+        }
+        for (const x of porteuses) portes.set(`${x.c.index}|${x.c.extrait}`, x.c);
+      }
+      if (toutPorte) sortie.push({ texte: phrase, citations: [...portes.values()] });
+      else retirees.push(phrase.replace(/\s+/g, " ").trim());
+    }
+  }
+  return { affirmations: sortie, retirees };
 }
 
 /**
@@ -546,11 +650,9 @@ export function lireLaReponseCitee(
 ): ReponseCitee {
   const affirmations: Affirmation[] = [];
   let citationsRejetees = 0;
-  let texte = "";
 
   for (const bloc of brute.content ?? []) {
     if (bloc.type !== "text" || typeof bloc.text !== "string") continue;
-    texte += bloc.text;
     const citations: CitationRelue[] = [];
     for (const c of bloc.citations ?? []) {
       const i = c.search_result_index;
@@ -564,9 +666,12 @@ export function lireLaReponseCitee(
     affirmations.push({ texte: bloc.text, citations });
   }
 
+  const adossees = adosserLesChiffres(affirmations);
+  const rendues = adossees.affirmations;
+
   const vues = new Map<string, SourceCiteeVersionnee>();
   const versionsParArticle = new Map<string, Set<string>>();
-  for (const a of affirmations) {
+  for (const a of rendues) {
     for (const c of a.citations) {
       const r = c.resultat;
       if (vues.has(r.source)) continue;
@@ -596,19 +701,27 @@ export function lireLaReponseCitee(
     }
   }
 
-  const nonCitees = affirmations
+  const nonCitees = rendues
     .filter((a) => a.citations.length === 0)
     .map((a) => a.texte.replace(/\s+/g, " ").trim())
     .filter((t) => t.length >= 40);
 
   return {
-    texte: texte.trim(),
-    affirmations,
+    texte: rendues
+      .map((a) => a.texte)
+      .join("")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim(),
+    affirmations: rendues,
     sources: [...vues.values()],
     refus: vues.size === 0,
     citationsRejetees,
     nonCitees,
-    chiffresNonCites: nonCitees.filter(porteUnChiffre),
+    chiffresNonCites: rendues
+      .filter((a) => a.citations.length === 0 && porteUnChiffre(a.texte))
+      .map((a) => a.texte.trim()),
+    chiffresRetires: adossees.retirees,
     versionsMelangees: [...versionsParArticle.values()].some((v) => v.size > 1),
     tronquee: brute.stop_reason === "max_tokens",
   };

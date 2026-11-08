@@ -114,6 +114,7 @@ for (const c of cas) {
       latencyMs: 0,
       nonCitees: 0,
       chiffresNonCites: 0,
+      chiffresRetires: 0,
       versionsMelangees: false,
       citationsRejetees: 0,
     };
@@ -143,6 +144,7 @@ if (process.argv.includes("--exiger")) {
   const fautes: string[] = [];
   if (bilan.pieges.refusCorrects < bilan.pieges.total) fautes.push("un piège a obtenu une réponse");
   if (bilan.versionsMelangees > 0) fautes.push("deux versions d'un article citées ensemble");
+  if (bilan.chiffresNonCites > 0) fautes.push("une phrase chiffrée sans citation est sortie");
   if (bilan.reponses.citationsJustes < 0.8 * bilan.reponses.total)
     fautes.push("moins de 80 % de citations justes");
   if (fautes.length > 0) {

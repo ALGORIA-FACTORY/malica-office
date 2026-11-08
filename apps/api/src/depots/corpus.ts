@@ -81,6 +81,14 @@ export interface PassageTrouve {
   parLesMots: boolean;
   /** Le score de fusion des deux classements (RRF). */
   score: number;
+  /**
+   * Aucune version de cet article n'est en vigueur au jour demandé : le
+   * corpus en connaît une avant et une après. `validFrom`/`validTo` sont
+   * alors ceux de la dernière version connue, `reprise` le début de la
+   * suivante. Un tel passage ne se remet JAMAIS au modèle.
+   */
+  lacune: boolean;
+  reprise: string | null;
 }
 
 /**
@@ -486,18 +494,42 @@ export const corpus = {
       `with derniere as (
          select distinct on (v.article_id)
                 v.id, v.article_id, v.valid_from, v.valid_to,
-                v.jort_reference, v.extraction_confiance
+                v.jort_reference, v.extraction_confiance, false as lacune,
+                null::date as reprise
            from legal.article_versions v
           where v.valid_from <= $3::date
             and (v.valid_to is null or v.valid_to > $3::date)
           order by v.article_id, v.valid_from desc nulls last, v.version_num desc
        ),
+       /*
+        * LES LACUNES : un article qui a une version AVANT le jour et une
+        * APRÈS, mais aucune qui le couvre. Le corpus ne sait pas ce qu'il
+        * disait ce jour-là. On garde sa dernière version connue — pour la
+        * classer, jamais pour la remettre au modèle : si elle est ce qui
+        * répond le mieux, la réponse est « pas de version en vigueur », et
+        * c'est le code qui le dit (règle du temps).
+        */
+       lacunes as (
+         select distinct on (v.article_id)
+                v.id, v.article_id, v.valid_from, v.valid_to,
+                v.jort_reference, v.extraction_confiance, true as lacune,
+                (select min(s.valid_from) from legal.article_versions s
+                  where s.article_id = v.article_id and s.valid_from > $3::date) as reprise
+           from legal.article_versions v
+          where v.valid_to is not null and v.valid_to <= $3::date
+            and not exists (select 1 from derniere d where d.article_id = v.article_id)
+            and exists (select 1 from legal.article_versions s
+                         where s.article_id = v.article_id and s.valid_from > $3::date)
+          order by v.article_id, v.valid_from desc, v.version_num desc
+       ),
+       versions as (select * from derniere union all select * from lacunes),
        candidats as (
-         select c.id, d.article_id, a.corpus, a.numero, d.valid_from, d.valid_to,
+         select c.id, c.article_version_id, d.article_id, a.corpus, a.numero, d.valid_from,
+                d.valid_to, d.lacune, d.reprise,
                 a.statut, a.abroge_par, s.libelle as nature, s.autorite,
                 array_to_string(s.opposable_a, ', ') as opposable_a,
                 d.jort_reference, d.extraction_confiance,
-                c.ordinal, c.langue, c.texte, c.entete,
+                c.ordinal, c.langue,
                 coalesce(
                   n.porte_le_droit,
                   exists (select 1 from legal.ingestion_queue q
@@ -511,7 +543,7 @@ export const corpus = {
                                    else 'french'::regconfig end, $2))
                 end as rang_mots
            from legal.chunks c
-           join derniere d on d.id = c.article_version_id
+           join versions d on d.id = c.article_version_id
            join legal.articles a on a.id = d.article_id
            left join legal.sources s on s.code = a.source_code
            left join legal.corpus_noms n on n.code = a.corpus
@@ -540,14 +572,30 @@ export const corpus = {
        un_par_article as (
          select distinct on (article_id) *
            from fusion order by article_id, score desc
+       ),
+       retenus as (
+         select * from un_par_article order by score desc, distance limit $4
        )
-       select corpus, numero, valid_from, valid_to, ordinal, langue, texte, entete,
-              statut, abroge_par, nature, autorite, opposable_a, jort_reference,
-              extraction_confiance, round(distance::numeric, 4) as distance,
-              par_les_mots, round(score::numeric, 6) as score
-         from un_par_article
-        order by score desc, distance
-        limit $4`,
+       /*
+        * LE TEXTE REMIS : le début de l'article (son fragment 1, qui porte
+        * d'ordinaire la règle et sa date) et le voisinage du fragment trouvé.
+        * Un seul fragment de 1 800 caractères coupait l'article : le
+        * 8 novembre 2026, « l'article 110 de la loi de finances 2026 »
+        * arrivait par un fragment de fin, sans la phrase « s'appliquent à
+        * compter du 1er janvier 2026 ».
+        */
+       select r.corpus, r.numero, r.valid_from, r.valid_to, r.ordinal, r.langue,
+              (select string_agg(x.texte, E'\n' order by x.ordinal)
+                 from legal.chunks x
+                where x.article_version_id = r.article_version_id
+                  and (x.ordinal = 1 or x.ordinal between r.ordinal - 1 and r.ordinal + 1)
+              ) as texte,
+              (select x.entete from legal.chunks x where x.id = r.id) as entete,
+              r.statut, r.abroge_par, r.nature, r.autorite, r.opposable_a, r.jort_reference,
+              r.extraction_confiance, round(r.distance::numeric, 4) as distance,
+              r.par_les_mots, round(r.score::numeric, 6) as score, r.lacune, r.reprise
+         from retenus r
+        order by r.score desc, r.distance`,
       [
         `[${vecteur.join(",")}]`,
         requeteMots,
@@ -577,6 +625,8 @@ export const corpus = {
       distance: Number(r["distance"]),
       parLesMots: Boolean(r["par_les_mots"]),
       score: Number(r["score"]),
+      lacune: Boolean(r["lacune"]),
+      reprise: enDate(r["reprise"]),
     }));
   },
 };

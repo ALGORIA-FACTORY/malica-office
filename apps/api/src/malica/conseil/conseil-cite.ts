@@ -92,6 +92,20 @@ export interface ResultatDuConseilCite {
   citationsRejetees: number;
   nonCitees: string[];
   chiffresNonCites: string[];
+  /** Phrases retirées : un de leurs chiffres n'était porté par aucune citation. */
+  chiffresRetires: string[];
+  /**
+   * Les articles qui répondaient mais n'ont AUCUNE version en vigueur au jour
+   * dit (une version avant, une après). Ils ne sont jamais remis au modèle.
+   */
+  lacunes: Array<{
+    corpus: string;
+    numero: string;
+    jusquAu: string | null;
+    reprise: string | null;
+  }>;
+  /** Le modèle courant a rendu une réponse vide : la question est repassée au modèle difficile. */
+  escalade: boolean;
   versionsMelangees: boolean;
   tronquee: boolean;
 }
@@ -166,7 +180,7 @@ export async function conseilCite(
   // L'échec de l'encodeur REMONTE : « je n'ai pas pu chercher » n'est pas
   // « le corpus ne dit rien », et les confondre ferait refuser à tort.
   const vecteur = await deps.empreinte(question);
-  const passages = await api.rpc<PassageTrouve[]>("corpus", "rechercherHybride", [
+  const trouves = await api.rpc<PassageTrouve[]>("corpus", "rechercherHybride", [
     {
       vecteur,
       mots: motsDeRecherche(question),
@@ -176,6 +190,16 @@ export async function conseilCite(
       distanceMaxMots: reglage.distance_max_mots,
     },
   ]);
+  /*
+   * LA RÈGLE DU TEMPS, MÉCANIQUE. Un article sans version en vigueur au jour
+   * dit ne se remet jamais au modèle. Et s'il est CE QUI RÉPOND LE MIEUX — le
+   * premier du classement —, on s'arrête : le droit de ce jour-là n'est pas
+   * dans le corpus, et une loi de finances qui l'aurait modifié ne dit pas,
+   * à elle seule, quel était son état. Mieux vaut le dire que transposer.
+   */
+  const lacunes = trouves.filter((p) => p.lacune);
+  const passages = trouves.filter((p) => !p.lacune);
+  const lacuneEnTete = trouves[0]?.lacune === true ? trouves[0] : null;
 
   let parametres: ParametreFiscal[] = [];
   try {
@@ -192,10 +216,11 @@ export async function conseilCite(
   }
 
   const corpusVus = [...new Set(passages.map((p) => p.corpus))];
+  const corpusANommer = [...new Set(trouves.map((p) => p.corpus))];
   const noms =
-    corpusVus.length > 0
+    corpusANommer.length > 0
       ? await api
-          .rpc<Record<string, string>>("conseil", "nomsDesCorpus", [corpusVus])
+          .rpc<Record<string, string>>("conseil", "nomsDesCorpus", [corpusANommer])
           .catch(() => ({}) as Record<string, string>)
       : {};
   const { blocs, index } = resultatsCitables(passages, parametres, noms);
@@ -209,12 +234,26 @@ export async function conseilCite(
       validFrom: p.validFrom,
     })),
     parametresRetenus: parametres.map((p) => p.code),
+    lacunes: lacunes.map((p) => ({
+      corpus: p.corpus,
+      numero: p.numero,
+      jusquAu: p.validTo,
+      reprise: p.reprise,
+    })),
   };
 
-  if (blocs.length === 0) {
+  if (blocs.length === 0 || lacuneEnTete) {
     return {
       ...base,
-      reponse: texte(input.locale, "pme.conseil.cite.horsCorpus"),
+      reponse: lacuneEnTete
+        ? texte(input.locale, "pme.conseil.cite.lacune", {
+            texte: noms[lacuneEnTete.corpus] ?? lacuneEnTete.corpus,
+            numero: lacuneEnTete.numero,
+            date: dateLisible(jour, input.locale),
+            fin: dateLisible(lacuneEnTete.validTo, input.locale),
+            reprise: dateLisible(lacuneEnTete.reprise, input.locale),
+          })
+        : texte(input.locale, "pme.conseil.cite.horsCorpus"),
       mention: null,
       refus: true,
       horsCorpus: true,
@@ -229,40 +268,75 @@ export async function conseilCite(
       citationsRejetees: 0,
       nonCitees: [],
       chiffresNonCites: [],
+      chiffresRetires: [],
+      escalade: false,
       versionsMelangees: false,
       tronquee: false,
     };
   }
 
   const choix = choisirLeModele(question, corpusVus.length, reglage);
-  const requete = construireLaRequete({
-    modele: choix.modele,
-    configuration,
-    blocs,
-    question,
-    jour,
-    locale: input.locale,
-  });
+  const appeler = async (modele: string) => {
+    const requete = construireLaRequete({
+      modele,
+      configuration,
+      blocs,
+      question,
+      jour,
+      locale: input.locale,
+    });
+    let envoi: Awaited<ReturnType<ClientClaude["envoyer"]>> | null = null;
+    let echec: Error | null = null;
+    try {
+      envoi = await deps.client.envoyer(requete);
+    } catch (err) {
+      echec = err instanceof Error ? err : new Error(String(err));
+    }
+    const usage = envoi ? usageDe(envoi.reponse) : USAGE_NUL;
+    await journaliser(api, {
+      tenantId: input.tenantId,
+      modele,
+      usage,
+      latencyMs: envoi?.latencyMs ?? 0,
+      erreur: echec?.message ?? null,
+    });
+    if (!envoi) throw echec ?? new Error("Claude indisponible");
+    return {
+      envoi,
+      usage,
+      cout: coutDeLAppel(modele, usage, configuration.tarifs),
+      lu: lireLaReponseCitee(envoi.reponse, index),
+    };
+  };
 
-  let envoi: Awaited<ReturnType<ClientClaude["envoyer"]>> | null = null;
-  let echec: Error | null = null;
-  try {
-    envoi = await deps.client.envoyer(requete);
-  } catch (err) {
-    echec = err instanceof Error ? err : new Error(String(err));
+  let modele = choix.modele;
+  let appel = await appeler(modele);
+  /*
+   * UNE RÉPONSE VIDE N'EST PAS UN REFUS. Le 8 novembre 2026, Haiku a épuisé
+   * sa borne de sortie sans écrire un mot sur « combien d'acomptes
+   * provisionnels ? » — la réponse était dans l'article 51, remis. Ce n'est
+   * pas le corpus qui se tait : c'est le modèle. On repasse alors la
+   * question, une fois, au modèle des questions difficiles.
+   */
+  let escalade = false;
+  let coutTotal = appel.cout;
+  let latence = appel.envoi.latencyMs;
+  let usage = appel.usage;
+  if (appel.lu.affirmations.length === 0 && modele !== reglage.modele_difficile) {
+    escalade = true;
+    modele = reglage.modele_difficile;
+    const second = await appeler(modele);
+    coutTotal = coutTotal === null || second.cout === null ? null : coutTotal + second.cout;
+    latence += second.envoi.latencyMs;
+    usage = {
+      entree: usage.entree + second.usage.entree,
+      sortie: usage.sortie + second.usage.sortie,
+      cacheLu: usage.cacheLu + second.usage.cacheLu,
+      cacheEcrit: usage.cacheEcrit + second.usage.cacheEcrit,
+    };
+    appel = second;
   }
-
-  const usage = envoi ? usageDe(envoi.reponse) : USAGE_NUL;
-  await journaliser(api, {
-    tenantId: input.tenantId,
-    modele: choix.modele,
-    usage,
-    latencyMs: envoi?.latencyMs ?? 0,
-    erreur: echec?.message ?? null,
-  });
-  if (!envoi) throw echec ?? new Error("Claude indisponible");
-
-  const lu = lireLaReponseCitee(envoi.reponse, index);
+  const { envoi, lu } = appel;
   const sources: SourceAffichee[] = lu.sources.map((s) => ({ ...s, nom: noms[s.corpus] ?? null }));
 
   return {
@@ -282,15 +356,17 @@ export async function conseilCite(
         extrait: c.extrait,
       })),
     })),
-    modele: envoi.reponse.model || choix.modele,
-    difficile: choix.difficile,
-    motifDifficulte: choix.motif,
+    modele: envoi.reponse.model || modele,
+    difficile: choix.difficile || escalade,
+    motifDifficulte: escalade ? "reponse_vide" : choix.motif,
     usage,
-    coutUsd: coutDeLAppel(choix.modele, usage, configuration.tarifs),
-    latencyMs: envoi.latencyMs,
+    coutUsd: coutTotal === null ? null : Math.round(coutTotal * 1_000_000) / 1_000_000,
+    latencyMs: latence,
     citationsRejetees: lu.citationsRejetees,
     nonCitees: lu.nonCitees,
     chiffresNonCites: lu.chiffresNonCites,
+    chiffresRetires: lu.chiffresRetires,
+    escalade,
     versionsMelangees: lu.versionsMelangees,
     tronquee: lu.tronquee,
   };

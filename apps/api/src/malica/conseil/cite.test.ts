@@ -14,6 +14,7 @@ import {
   lireConfiguration,
   lireLaReponseCitee,
   motsDeRecherche,
+  nombresDe,
   resultatsCitables,
   sourceDuPassage,
   type ReglageDuConseil,
@@ -53,6 +54,8 @@ function passage(p: Partial<PassageTrouve> = {}): PassageTrouve {
     distance: 0.2,
     parLesMots: true,
     score: 0.03,
+    lacune: false,
+    reprise: null,
     ...p,
   };
 }
@@ -250,8 +253,10 @@ describe("la lecture de la réponse : on relit dans ce qu'on a montré", () => {
     );
     assert.equal(lu.citationsRejetees, 2);
     assert.equal(lu.refus, true);
-    assert.equal(lu.nonCitees.length, 1);
-    assert.equal(lu.chiffresNonCites.length, 1);
+    // Le chiffre n'est porté par aucune citation : la phrase ne sort pas.
+    assert.equal(lu.texte, "");
+    assert.deepEqual(lu.chiffresRetires, ["Le taux est de 19 % depuis toujours, je le sais."]);
+    assert.deepEqual(lu.chiffresNonCites, []);
   });
 
   it("deux versions d'un même article citées ensemble se voient", () => {
@@ -277,6 +282,75 @@ describe("la lecture de la réponse : on relit dans ce qu'on a montré", () => {
 
   it("une réponse coupée par la borne de sortie le dit", () => {
     assert.equal(lireLaReponseCitee(reponse([], "max_tokens"), INDEX).tronquee, true);
+  });
+});
+
+describe("une phrase chiffrée sans citation ne sort jamais", () => {
+  const citee = (texte: string, extrait: string) => ({
+    type: "text",
+    text: texte,
+    citations: [
+      {
+        type: "search_result_location",
+        source: INDEX[0]!.source,
+        search_result_index: 0,
+        cited_text: extrait,
+      },
+    ],
+  });
+
+  it("une phrase d'annonce dont les chiffres sont portés par une citation la reçoit", () => {
+    const lu = lireLaReponseCitee(
+      reponse([
+        { type: "text", text: "Le taux est de 10 %, ramené à 3 % pour une société. " },
+        citee(
+          "Le texte dit : 10%(1) au titre des honoraires",
+          "a) 10%(1) au titre des honoraires ; réduit à 3%(1)",
+        ),
+      ]),
+      INDEX,
+    );
+    assert.deepEqual(lu.chiffresNonCites, []);
+    assert.deepEqual(lu.chiffresRetires, []);
+    assert.equal(lu.affirmations[0]!.citations.length, 1);
+    assert.match(lu.texte, /^Le taux est de 10 %, ramené à 3 %/);
+  });
+
+  it("une phrase dont un chiffre n'est porté par rien est retirée, le reste demeure", () => {
+    const lu = lireLaReponseCitee(
+      reponse([
+        { type: "text", text: "Le taux est de 10 %. Il passera à 12 % en 2030. Voici le texte. " },
+        citee(
+          "Selon l'article 52, 10%(1) au titre des honoraires.",
+          "a) 10%(1) au titre des honoraires",
+        ),
+      ]),
+      INDEX,
+    );
+    assert.deepEqual(lu.chiffresRetires, ["Il passera à 12 % en 2030."]);
+    assert.ok(!lu.texte.includes("12 %"));
+    assert.match(lu.texte, /Voici le texte\./);
+    assert.deepEqual(lu.chiffresNonCites, []);
+    assert.equal(lu.refus, false);
+  });
+
+  it("« 5 000 », « 5.000 » et « 5000 » sont le même nombre ; « 0,3 » et « 0.3 » aussi", () => {
+    assert.deepEqual(nombresDe("5 000 dinars, 5.000 DT, 5000"), ["5000"]);
+    assert.deepEqual(nombresDe("0,3 et 0.3"), ["0.3"]);
+    assert.deepEqual(nombresDe("le 01/01"), ["1"]);
+    assert.deepEqual(nombresDe("٢٠٪"), ["20"]);
+  });
+
+  it("une date que la réponse ajoute d'elle-même, sans source, est retirée", () => {
+    const lu = lireLaReponseCitee(
+      reponse([
+        citee("Le taux est de 20%.", "est fixé à 20%"),
+        { type: "text", text: " En vigueur au 2026-06-30 : art. 49." },
+      ]),
+      INDEX,
+    );
+    assert.equal(lu.chiffresRetires.length, 1);
+    assert.equal(lu.texte, "Le taux est de 20%.");
   });
 });
 

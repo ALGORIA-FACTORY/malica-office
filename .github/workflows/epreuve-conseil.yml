@@ -138,6 +138,7 @@ jobs:
         run: node outils/jeu-de-donnees.mjs http://localhost:8080
 
       - name: L'épreuve du conseil cité
+        id: epreuve
         if: steps.cles.outputs.pret == 'true'
         # `shell: bash` explicite : c'est lui qui porte `pipefail`, sans quoi
         # le `tee` masquerait l'échec de l'épreuve.
@@ -154,14 +155,46 @@ jobs:
         env:
           MALICA_API_URL: http://localhost:3000
 
+      # La comparaison : les mêmes questions, Sonnet partout. Le réglage se
+      # pose comme la tour le ferait (une décision datée, en ajout seul), ici
+      # directement sur la base jetable de la CI. Elle ne fait pas échouer le
+      # job : c'est une mesure, la première passe porte le verdict.
+      - name: La même épreuve, Sonnet sur toutes les questions
+        # Qu'elle ait réussi ou échoué, la première passe a tourné : on compare.
+        if: >-
+          !cancelled() &&
+          (steps.epreuve.outcome == 'success' || steps.epreuve.outcome == 'failure')
+        shell: bash
+        run: |
+          psql "$DATABASE_URL_ADMIN" -v ON_ERROR_STOP=1 -q -c "
+            insert into plateforme.conseil_reglages
+              (modele_courant, modele_difficile, longueur_difficile, mots_difficiles,
+               corpus_distincts_difficile, passages_max, distance_max, distance_max_mots,
+               sortie_max_jetons, motif)
+            select 'claude-sonnet-5-5', 'claude-sonnet-5-5', longueur_difficile, mots_difficiles,
+                   corpus_distincts_difficile, passages_max, distance_max, distance_max_mots,
+                   sortie_max_jetons, 'Épreuve CI : Sonnet sur toutes les questions'
+              from plateforme.conseil_reglages order by decide_le desc limit 1;"
+          node --experimental-strip-types apps/api/tests/real/conseil-cite.ts \
+            --sortie conseil-cite-sonnet.json | tee conseil-cite-sonnet.txt
+          {
+            echo '### La même épreuve, Sonnet partout'
+            echo '```'
+            tail -n 12 conseil-cite-sonnet.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        continue-on-error: true
+        env:
+          MALICA_API_URL: http://localhost:3000
+
       - name: Le détail de l'épreuve
         if: always() && steps.cles.outputs.pret == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: epreuve-conseil-cite
           path: |
-            conseil-cite.json
-            conseil-cite.txt
+            conseil-cite*.json
+            conseil-cite*.txt
           if-no-files-found: ignore
 
       - name: Journaux des serveurs

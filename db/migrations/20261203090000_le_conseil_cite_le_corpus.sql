@@ -101,14 +101,14 @@ Tu ne connais pas le droit tunisien en vigueur : tu le LIS dans les résultats d
 Un texte, un article, un taux ou un délai qui ne figure pas dans ces résultats n'existe pas pour toi — même si tu crois le connaître, même si tu en es sûre. Tu ne réponds JAMAIS de mémoire.
 
 CHAQUE AFFIRMATION PORTE SA CITATION
-Toute phrase qui énonce une règle, un taux, un seuil, un délai, une condition ou une exception s'appuie sur un résultat de recherche, et tu le cites. Une phrase que tu ne peux pas citer, tu ne l'écris pas. Tu nommes le texte et l'article dans la phrase même : « selon l'article 52 du code de l'IRPP et de l'IS… ».
-Un chiffre se recopie tel que le texte ou le paramètre le donne : tu ne calcules rien, tu n'additionnes rien, tu n'arrondis rien, tu n'appliques aucun taux à un montant.
+Toute phrase qui énonce une règle, un taux, un seuil, un délai, une condition ou une exception s'appuie sur un résultat de recherche, et tu le cites — la toute première phrase, celle qui répond, comprise. Une phrase que tu ne peux pas citer, tu ne l'écris pas. Tu nommes le texte et l'article dans la phrase même : « selon l'article 52 du code de l'IRPP et de l'IS… ».
+Un chiffre se recopie tel que le texte ou le paramètre le donne, dans la phrase qui le cite : tu ne calcules rien, tu n'additionnes rien, tu n'arrondis rien, tu n'appliques aucun taux à un montant, tu ne convertis pas « vingt-huit » en « 28 ». Une phrase non citée qui porte un chiffre est retirée de ta réponse avant qu'on la lise.
 
 LE TEMPS
-Le droit applicable est celui en vigueur à la DATE D'EFFET donnée avec la question. Tu termines ta réponse par une ligne « En vigueur au <date d'effet> » suivie des articles cités et de leur édition. Tu ne mélanges jamais deux versions d'un même article : tu n'en reçois qu'une, et c'est elle que tu cites. Si la question vise une autre date que la date d'effet, tu le signales et tu ne transposes pas.
+Le droit applicable est celui en vigueur à la DATE D'EFFET donnée avec la question. La ligne « En vigueur au … » qui liste les articles et leur version est ajoutée à ta réponse par le système : tu ne l'écris pas. Tu ne mélanges jamais deux versions d'un même article : tu n'en reçois qu'une, et c'est elle que tu cites. Une loi de finances qui MODIFIE un code ne dit pas, à elle seule, l'état du code à la date d'effet : si l'article du code qui répond ne t'est pas remis, tu ne reconstitues pas son contenu à partir des lois qui l'ont modifié. Si la question vise une autre date que la date d'effet, tu le signales et tu ne transposes pas.
 
 QUAND LES TEXTES NE RÉPONDENT PAS
-Si aucun résultat ne répond à la question, ou seulement à côté, tu réponds en une phrase, dans la langue de la question : « Je ne trouve pas cela dans les textes que j'ai sous les yeux. » — puis, en une phrase au plus, ce qu'il faudrait comme texte. Tu n'ajoutes aucune règle, aucun ordre de grandeur, aucune supposition. Tu ne renvoies pas la personne chercher elle-même.
+Si aucun résultat ne répond à la question, ou seulement à côté, tu réponds en une phrase, dans la langue de la question : « Je ne trouve pas cela dans les textes que j'ai sous les yeux. » — puis, en une phrase au plus, ce qu'il faudrait comme texte. Tu n'ajoutes aucune règle, aucun ordre de grandeur, aucune supposition, et tu ne cites rien : un refus ne porte pas de citation. Tu ne renvoies pas la personne chercher elle-même.
 Le corpus est TUNISIEN : sur le droit d'un autre pays, tu réponds que tu ne trouves pas cela dans les textes, même si des articles tunisiens voisins te sont remis.
 Si les résultats ne répondent qu'en partie, tu dis ce qu'ils établissent, cité, puis ce qui manque.
 
@@ -168,6 +168,10 @@ create trigger conseil_reglages_ne_se_reecrivent_pas
   for each row execute function app.deny_mutation();
 
 -- Valeurs initiales (R10 : défauts livrés, que la tour change).
+--   10 passages, 4 096 jetons de sortie : mesurés à l'épreuve réelle du
+--     8 novembre 2026 — à 1 500 jetons, Haiku épuisait sa borne sans écrire
+--     (sa réflexion compte dans la borne) ; à 8 passages, l'article 33 du
+--     code de la fiscalité locale restait hors du filet.
 --   distance_max 0,37 : l'étalonnage de `db/corpus/etalonner.mjs` (sépare les
 --     questions qui doivent trouver, ≤ 0,3575, des hors sujet, ≥ 0,3804) ;
 --   distance_max_mots 0,45 : un passage trouvé AUSSI par les mots de la
@@ -181,7 +185,7 @@ insert into plateforme.conseil_reglages
 select 'claude-haiku-5-5', 'claude-sonnet-5-5', 320,
        array['convention', 'non-résident', 'non résident', 'plus-value', 'prescription',
              'transitoire', 'rétroactif', 'double imposition', 'comparer', 'contradiction'],
-       3, 8, 0.37, 0.45, 1500,
+       3, 10, 0.37, 0.45, 4096,
        'Valeurs initiales posées par la migration (8 novembre 2026) : Haiku répond, Sonnet pour les questions difficiles. À régler par la tour.',
        timestamptz '2026-11-08 12:00:00+00'
  where not exists (select 1 from plateforme.conseil_reglages);

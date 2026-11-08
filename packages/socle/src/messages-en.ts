@@ -1211,6 +1211,8 @@ export const en: Dict = {
     "No practice follows this file yet: this answer has not been reviewed by a chartered accountant.",
   "pme.conseil.relu": "Reviewed and validated by your accountant.",
   "pme.conseil.sources": "Sources: {liste}",
+  "pme.conseil.cite.lacune":
+    "I cannot find the text in force on {date}: the corpus holds {texte}, art. {numero}, until {fin}, and again from {reprise}, but no version in between.",
   "pme.conseil.cite.horsCorpus": "I cannot find this in the texts I have in front of me.",
   "pme.conseil.cite.enVigueurAu": "In force on {date}: {liste}.",
   "pme.conseil.cite.version": "{texte}, art. {numero} (version of {date})",
