@@ -36,7 +36,6 @@ import { attendUnGeste, seMontreIci } from "@/lib/libelle-de-notification";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/societes")({
-  head: () => ({ meta: [{ title: "Mes sociétés — Malica Office" }] }),
   component: MesSocietes,
 });
 
