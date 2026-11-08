@@ -473,6 +473,13 @@ function PmeCapturer() {
   }, [suivre, relirePieces]);
   useEffect(() => {
     if (etape === 4) void qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
+    /*
+     * Le compteur se relit après la lecture. Recette du 7 novembre 2026 : la
+     * fin disait « Il vous reste 541 lectures », le chiffre d'AVANT, alors que
+     * la base avait décompté la lecture (540). Le forfait est gardé cinq
+     * minutes en cache ; une lecture le rend faux tout de suite.
+     */
+    if (etape >= 4) void qc.invalidateQueries({ queryKey: ["mon-forfait"] });
   }, [etape, qc, pme.tenantId]);
 
   const questions = useQuery({

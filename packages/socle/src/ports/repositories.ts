@@ -2134,6 +2134,11 @@ export interface QueueItem {
   dateEcriture: string | null;
   /** La somme des débits de l'écriture comptabilisée, posée par le Socle. */
   montant: string | null;
+  /**
+   * Le TTC de la dernière lecture jugée, tant qu'aucune écriture ne porte de
+   * montant : la file ne montre plus « — » pour une pièce lue (7 novembre 2026).
+   */
+  montantLu: string | null;
   /** L'adresse du collaborateur affecté au client, s'il y en a un. */
   collaborateur: string | null;
   /** La confiance globale de la dernière lecture (0..1), ou rien si elle n'a pas été mesurée. */
