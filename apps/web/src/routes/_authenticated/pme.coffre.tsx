@@ -21,6 +21,7 @@ import { EcranEnvoye } from "@/components/malica/envoye";
 import { office } from "@/verticals/malica-office/composition";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
+import { useReseau } from "@/hooks/use-reseau";
 import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
 import { useEnvoyerEnLot, useSupprimerEnLot } from "@/hooks/use-gestes-du-circuit";
 import { useRevenir } from "@/hooks/use-revenir";
@@ -111,6 +112,7 @@ function PmeCoffre() {
   const [transmis, setTransmis] = useState<readonly string[] | null>(null);
 
   const pieces = usePiecesLues();
+  const { enLigne } = useReseau();
   /*
    * Planche 10 (7 novembre 2026) : des rayons à soi, un nom, une recherche.
    * Le rayon et le nom viennent de la personne (`capture.rangements_prives`) :
@@ -430,17 +432,20 @@ function PmeCoffre() {
           </>
         ) : null}
 
-        {panne || pieces.fetchStatus === "paused" ? (
+        {/* Hors ligne, l'écran le dit — même quand il montre ce qu'il gardait
+            déjà : la session connue (8 novembre 2026) ne fait plus échouer
+            l'ouverture de l'écran, c'est à lui de le dire. */}
+        {panne || pieces.fetchStatus === "paused" || !enLigne ? (
           <div className="card" role="status">
             <p>
-              {pieces.fetchStatus === "paused"
+              {pieces.fetchStatus === "paused" || !enLigne
                 ? t("common.horsLigne")
                 : texteDeLErreur(panne, OU, t("common.error"))}
             </p>
             <button
               type="button"
               className="btn"
-              disabled={pieces.fetchStatus === "paused"}
+              disabled={pieces.fetchStatus === "paused" || !enLigne}
               onClick={() => void pieces.refetch()}
             >
               {t("common.reessayer")}
