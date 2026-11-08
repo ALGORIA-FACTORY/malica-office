@@ -19,6 +19,7 @@ import { installerJournalAtelier, noterAuJournal } from "@/lib/journal-atelier";
 import { rapporterPlantage } from "@/lib/rapport-plantage";
 import { fermerLaDerniereSuperposition } from "@/lib/superpositions";
 import { CANAL, demarrerLaTelemetrie } from "@/lib/telemetrie";
+import { oublierLeCache } from "@/lib/cache-de-l-appareil";
 import { ecouterLaDeconnexion } from "@/lib/transport/etat";
 
 /*
@@ -320,6 +321,8 @@ function RootComponent() {
     () =>
       ecouterLaDeconnexion(() => {
         queryClient.clear();
+        // Et sur l'appareil : rien de cette session ne doit y rester.
+        void oublierLeCache();
         void router.navigate({ to: "/auth", replace: true });
       }),
     [queryClient, router],

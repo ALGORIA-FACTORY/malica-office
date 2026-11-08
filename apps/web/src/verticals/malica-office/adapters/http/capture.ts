@@ -89,6 +89,14 @@ export function creerCaptureHttp(): CaptureRepository {
       return rpc<PieceLue[]>("capture", "listAvecLecture", [tenantId]);
     },
 
+    async listAvecLectureDesSocietes(tenantIds: readonly string[]) {
+      return rpc<Array<{ tenantId: string; pieces: PieceLue[] }>>(
+        "capture",
+        "listAvecLectureDesSocietes",
+        [tenantIds],
+      );
+    },
+
     async monEspaceHorsSociete(): Promise<PieceDeMonEspace[]> {
       return rpc<PieceDeMonEspace[]>("capture", "monEspaceHorsSociete", []);
     },
