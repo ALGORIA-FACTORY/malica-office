@@ -1,0 +1,166 @@
+# L'épreuve du conseil cité — Claude sur le corpus, mesurée.
+#
+# CE QU'ELLE ÉPROUVE : le jeu de `apps/api/src/malica/conseil/epreuve-conseil.json`
+# (questions fiscales écrites à partir du corpus, et pièges hors corpus),
+# rejoué contre la vraie API, le vrai corpus et le vrai Claude. Elle mesure
+# les réponses justes, les citations justes (article ET version), les refus
+# corrects et le coût par question (`apps/api/tests/real/conseil-cite.ts`).
+#
+# QUAND : à la demande, et chaque lundi. ELLE NE S'EXÉCUTE QUE SI LE SECRET
+# `ANTHROPIC_API_KEY` EXISTE : sans lui, elle s'arrête en vert à sa première
+# étape et le dit (« conseil cité non éprouvé : ANTHROPIC_API_KEY absente »).
+# Une fois la clé posée, il lui faut aussi `QWEN_API_KEY` et `QWEN_BASE_URL` —
+# l'encodage du corpus et des questions —, et leur absence est alors une faute.
+#
+# CE QU'ELLE COÛTE : l'encodage du corpus de l'archive (3 110 articles,
+# 4 902 versions) à l'encodeur Qwen, de l'ordre de quelques dizaines de
+# centimes ; puis 19 réponses de Claude (Haiku, Sonnet pour les questions
+# difficiles), de l'ordre du centime chacune au tarif d'`agents.model_pricing` ;
+# les pièges hors corpus ne coûtent rien (aucun appel).
+
+name: Épreuve du conseil cité
+
+on:
+  schedule:
+    - cron: "23 3 * * 1" # le lundi, 03:23 UTC
+  workflow_dispatch:
+  # Sur une PR, à la demande seulement : poser l'étiquette `epreuve-conseil`.
+  # (Un `workflow_dispatch` ne se lance que depuis un fichier présent sur la
+  # branche par défaut ; l'étiquette permet d'éprouver une branche avant.)
+  pull_request:
+    types: [labeled]
+
+jobs:
+  conseil-cite:
+    runs-on: ubuntu-latest
+    if: >-
+      github.repository_owner != '' &&
+      (github.event_name != 'pull_request' || github.event.label.name == 'epreuve-conseil')
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: malica
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgres://malica_api:ci@localhost:5432/malica
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/malica
+      JWT_SECRET: integration_continue_seulement_32_caracteres
+      AUTH_ESSAIS_PAR_MINUTE: "1000"
+      STOCKAGE_RACINE: /tmp/malica-pieces
+      JOURNAL_ATTENTE: /tmp/malica-journal
+      CORS_ORIGINS: http://localhost:8080
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      QWEN_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
+
+    steps:
+      - name: Les clés
+        id: cles
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::notice title=Conseil cité non éprouvé::ANTHROPIC_API_KEY absente — l'épreuve s'exécutera dès que le secret sera posé."
+            echo "pret=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          manquantes=""
+          [ -n "$QWEN_API_KEY" ] || manquantes="$manquantes QWEN_API_KEY"
+          [ -n "$QWEN_BASE_URL" ] || manquantes="$manquantes QWEN_BASE_URL"
+          if [ -n "$manquantes" ]; then
+            echo "::error title=Conseil cité non éprouvé::encodeur du corpus non configuré :$manquantes"
+            exit 1
+          fi
+          echo "pret=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.cles.outputs.pret == 'true'
+
+      - uses: actions/setup-node@v7
+        if: steps.cles.outputs.pret == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.cles.outputs.pret == 'true'
+
+      - name: Installer
+        if: steps.cles.outputs.pret == 'true'
+        run: npm ci
+
+      - name: Monter le schéma
+        if: steps.cles.outputs.pret == 'true'
+        run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
+        env:
+          MALICA_API_PASSWORD: ci
+
+      - name: Charger le corpus de l'archive
+        if: steps.cles.outputs.pret == 'true'
+        run: node db/corpus/charger-depuis-l-archive.mjs "$DATABASE_URL_ADMIN"
+
+      # Les scripts du corpus lisent leurs adresses et leurs clés dans les .env
+      # du dépôt (ils tournent hors de tout bundler) : on les écrit ici, sur
+      # le poste jetable de la CI, et nulle part ailleurs.
+      - name: Fragmenter et encoder le corpus
+        if: steps.cles.outputs.pret == 'true'
+        run: |
+          umask 077
+          printf 'DATABASE_URL_ADMIN=%s\n' "$DATABASE_URL_ADMIN" > apps/api/.env
+          printf 'QWEN_BASE_URL=%s\nQWEN_API_KEY=%s\n' "$QWEN_BASE_URL" "$QWEN_API_KEY" > apps/web/.env
+          bun db/corpus/vectoriser.mjs
+          rm -f apps/api/.env apps/web/.env
+
+      - name: Démarrer l'API et le site
+        if: steps.cles.outputs.pret == 'true'
+        run: |
+          (npm run start -w @malica/api > api.log 2>&1 &)
+          (npm run dev -w @malica/web > web.log 2>&1 &)
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:8080/sante >/dev/null 2>&1 && break
+            sleep 2
+          done
+          curl -fsS http://localhost:8080/sante
+
+      - name: Peupler le jeu de données
+        if: steps.cles.outputs.pret == 'true'
+        run: node outils/jeu-de-donnees.mjs http://localhost:8080
+
+      - name: L'épreuve du conseil cité
+        if: steps.cles.outputs.pret == 'true'
+        # `shell: bash` explicite : c'est lui qui porte `pipefail`, sans quoi
+        # le `tee` masquerait l'échec de l'épreuve.
+        shell: bash
+        run: |
+          node --experimental-strip-types apps/api/tests/real/conseil-cite.ts \
+            --sortie conseil-cite.json --exiger | tee conseil-cite.txt
+          {
+            echo '### Épreuve du conseil cité'
+            echo '```'
+            tail -n 12 conseil-cite.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          MALICA_API_URL: http://localhost:3000
+
+      - name: Le détail de l'épreuve
+        if: always() && steps.cles.outputs.pret == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: epreuve-conseil-cite
+          path: |
+            conseil-cite.json
+            conseil-cite.txt
+          if-no-files-found: ignore
+
+      - name: Journaux des serveurs
+        if: failure() && steps.cles.outputs.pret == 'true'
+        run: |
+          echo "::group::api"; tail -200 api.log; echo "::endgroup::"
+          echo "::group::web"; tail -100 web.log; echo "::endgroup::"

@@ -1271,6 +1271,9 @@ export const fr = {
     "Aucune comptabilité ne suit encore ce dossier : cette réponse n’a pas été relue par un expert-comptable.",
   "pme.conseil.relu": "Relu et validé par votre comptable.",
   "pme.conseil.sources": "Sources : {liste}",
+  "pme.conseil.cite.horsCorpus": "Je ne trouve pas cela dans les textes que j'ai sous les yeux.",
+  "pme.conseil.cite.enVigueurAu": "En vigueur au {date} : {liste}.",
+  "pme.conseil.cite.version": "{texte}, art. {numero} (version du {date})",
   "pme.conseil.duCabinet": "La réponse de votre comptable :",
   "pme.conseil.correction": "Votre comptable a relu ma réponse et la corrige :",
   "pme.conseil.articleInvoque": "Fondement : {article}",
@@ -2188,6 +2191,8 @@ export const fr = {
   "refus.introuvable.etablissement": "Établissement introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.conversation": "Conversation introuvable, ou vous n’y avez pas accès.",
   "refus.authentification_requise": "Connectez-vous pour faire ce geste.",
+  "refus.conseil.modele_sans_tarif":
+    "Ce modèle n’a pas de tarif en vigueur : il ne peut pas répondre, son coût ne serait pas compté.",
   "refus.reserve.plateforme": "Ce geste est réservé aux opérateurs de la plateforme.",
   "refus.reserve.serveur": "Ce geste est réservé au serveur : il ne se fait pas depuis un écran.",
   "refus.reserve.proprietaire_principal":
@@ -3919,6 +3924,31 @@ export const fr = {
   "tour.ia.enVigueur": "En vigueur : {plafond} $ par organisation et par mois, depuis le {date}.",
   "tour.ia.plafond": "Plafond mensuel (dollars)",
   "tour.ia.plafond.borne": "Un nombre positif, quatre décimales au plus.",
+  "tour.menu.conseil": "Conseil cité",
+  "tour.conseilCite.consigne": "Consigne du conseil cité",
+  "tour.conseilCite.consigne.aide":
+    "Le prompt système que Claude reçoit avant les passages du corpus. Il ne contient aucun chiffre fiscal : les taux, seuils et délais viennent du référentiel et des textes, cités. Publier crée une version nouvelle ; la précédente reste au registre.",
+  "tour.conseilCite.consigne.enVigueur":
+    "En vigueur depuis le {date} ({versions} version(s) au registre).",
+  "tour.conseilCite.consigne.borne": "Deux cents caractères au moins.",
+  "tour.conseilCite.publier": "Publier cette version",
+  "tour.conseilCite.reglage": "Réglage du conseil cité",
+  "tour.conseilCite.reglage.aide":
+    "Le modèle courant répond à toutes les questions ; le modèle des questions difficiles prend le relais quand la question dépasse la longueur, contient l'un des mots, ou mobilise plusieurs textes distincts.",
+  "tour.conseilCite.mois": "Ce mois : {appels} réponse(s), {cout} $.",
+  "tour.conseilCite.modeleCourant": "Modèle courant",
+  "tour.conseilCite.modeleDifficile": "Modèle des questions difficiles",
+  "tour.conseilCite.longueurDifficile":
+    "Longueur à partir de laquelle une question est difficile (caractères)",
+  "tour.conseilCite.motsDifficiles":
+    "Mots qui rendent une question difficile (séparés par des virgules)",
+  "tour.conseilCite.corpusDistincts": "Nombre de textes distincts qui rend une question difficile",
+  "tour.conseilCite.passagesMax": "Passages du corpus remis à Claude",
+  "tour.conseilCite.distanceMax": "Distance maximale d'un passage trouvé par le sens",
+  "tour.conseilCite.distanceMaxMots": "Distance maximale d'un passage trouvé aussi par les mots",
+  "tour.conseilCite.sortieMax": "Longueur maximale de la réponse (jetons)",
+  "tour.conseilCite.borne":
+    "Des entiers, et des distances entre 0 et 1 (quatre décimales au plus).",
   "tour.relances": "Relances d'impayé",
   "tour.relances.aide":
     "Quand elles sont ouvertes, Malica écrit au titulaire d'une facture en retard : un rappel, une relance, un avis, puis l'annonce de la suspension. Un seul courriel par facture et par palier. Fermées, rien ne part.",

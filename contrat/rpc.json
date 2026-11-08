@@ -1,7 +1,5 @@
 {
-  "acces": [
-    "monAcces"
-  ],
+  "acces": ["monAcces"],
   "banque": [
     "audit",
     "bookLines",
@@ -87,6 +85,7 @@
     "transmettreLesPieces"
   ],
   "conseil": [
+    "configurationCitee",
     "contexte",
     "creer",
     "decider",
@@ -111,14 +110,10 @@
     "editionsPlusRecentes",
     "modeleEmpreinte",
     "parametresPour",
-    "rechercher"
+    "rechercher",
+    "rechercherHybride"
   ],
-  "exports": [
-    "estimer",
-    "exercices",
-    "generer",
-    "historique"
-  ],
+  "exports": ["estimer", "exercices", "generer", "historique"],
   "fabrique": [
     "codesDuReferentiel",
     "contexteDeDesignation",
@@ -227,22 +222,9 @@
     "sortir",
     "updateAsset"
   ],
-  "integrations": [
-    "cles",
-    "creerCle",
-    "etat",
-    "revoquerCle"
-  ],
-  "journal": [
-    "consigner",
-    "dernieres",
-    "etapes",
-    "regler"
-  ],
-  "journalDuJour": [
-    "exporter",
-    "lire"
-  ],
+  "integrations": ["cles", "creerCle", "etat", "revoquerCle"],
+  "journal": ["consigner", "dernieres", "etapes", "regler"],
+  "journalDuJour": ["exporter", "lire"],
   "office": [
     "book",
     "bookedExtracts",
@@ -308,9 +290,7 @@
     "taxRates",
     "typesDeDocument"
   ],
-  "signalements": [
-    "deposer"
-  ],
+  "signalements": ["deposer"],
   "stocks": [
     "addMouvement",
     "categories",
@@ -357,6 +337,7 @@
     "chercherOrganisations",
     "clients",
     "confierOrganisation",
+    "conseilCiteEtat",
     "designerEmetteur",
     "emetteur",
     "grilleEnVigueur",
@@ -365,6 +346,7 @@
     "membresDeLOrganisation",
     "poserJourFerie",
     "prestatairesDePaiement",
+    "publierConsigneDuConseil",
     "publierGrille",
     "publierReport",
     "reglageAbonnement",
@@ -375,6 +357,7 @@
     "reglageRelectureNuit",
     "reglerAbonnement",
     "reglerCompteDeService",
+    "reglerConseilCite",
     "reglerFacturationAuto",
     "reglerIa",
     "reglerPaiement",

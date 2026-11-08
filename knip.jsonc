@@ -11,8 +11,9 @@
         "infra/**/*.mjs",
         "android/maestro-diagnostic/*.mjs",
       ],
-      // Le certificat de développement se génère avec l'openssl du poste.
-      "ignoreBinaries": ["openssl"],
+      // Le certificat de développement se génère avec l'openssl du poste ; le
+      // corpus se charge avec le psql du poste (db/corpus/charger-depuis-l-archive.mjs).
+      "ignoreBinaries": ["openssl", "psql"],
     },
     "apps/api": {
       "entry": ["src/**/*.test.ts", "tests/real/*.ts"],
