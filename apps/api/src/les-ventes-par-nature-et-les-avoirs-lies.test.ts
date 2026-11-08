@@ -224,6 +224,13 @@ describe("les ventes par nature, les avoirs liés", { skip: !BASE_CONFIGUREE }, 
       compte[`${x.document_kind}.tva`] = x.vat_account;
       compte[`${x.document_kind}.tiers`] = x.counterparty_account;
     }
+    // La TVA d'un achat proposé va au sous-compte que son rôle désigne.
+    const { rows: role } = await admin.query<{ account_code: string }>(
+      `select account_code from ref.role_bindings
+        where pack_version_id = $1 and role_code = 'TVA_DEDUCTIBLE_AUTRES_BIENS'`,
+      [packId],
+    );
+    compte["facture_achat.tva"] = role[0]!.account_code;
     const { rows: t } = await admin.query<{ document_kind: string; account_code: string }>(
       `select document_kind, account_code from ref.fiscal_charges
         where pack_version_id = $1 and code = 'DROIT_TIMBRE' and valid_to is null`,

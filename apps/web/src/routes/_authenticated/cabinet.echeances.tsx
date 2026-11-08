@@ -75,6 +75,8 @@ function CabinetEcheances() {
   const qc = useQueryClient();
   const dossierCourant = useDossierCourant();
   const [dossier, setDossier] = useState<string>(() => dossierCourant?.id ?? "");
+  const [toutVoir, setToutVoir] = useState(false);
+  const [touchees, setTouchees] = useState<ReadonlySet<string>>(() => new Set());
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
@@ -139,6 +141,25 @@ function CabinetEcheances() {
   const sousSept = rows.filter((e) => e.status === "a_venir" && jours(e.dueDate) <= 7);
   const faites = rows.filter((e) => e.status === "fait");
   const manques = (derivation.data ?? []).filter((d) => d.raison !== null);
+
+  /*
+   * L'agenda montre ce qui presse : le retard, les sept jours, à défaut la
+   * prochaine date. Le reste se déplie (maquette du 8 novembre) : 126 lignes
+   * faisaient 12 000 px au téléphone. Une ligne cochée reste sous les yeux.
+   */
+  const prochaine = rows.find((e) => e.dueDate >= today)?.dueDate ?? null;
+  const proches = rows.filter(
+    (e) =>
+      touchees.has(e.id) ||
+      e.status === "en_retard" ||
+      (e.dueDate >= today && (jours(e.dueDate) <= 7 || e.dueDate === prochaine)),
+  );
+  const affichees = toutVoir ? rows : proches;
+  const derniere = rows.at(-1)?.dueDate ?? null;
+  const basculer = (id: string, fait: boolean) => {
+    setTouchees((avant) => new Set(avant).add(id));
+    marquer.mutate({ id, fait });
+  };
 
   /*
    * La frise : du début du mois à l'horizon dérivé.
@@ -306,7 +327,7 @@ function CabinetEcheances() {
       <section className="space-y-3">
         <SectionTitle
           action={
-            <label className="flex items-center gap-2">
+            <label className="flex min-w-0 max-w-full items-center gap-2">
               <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {t("cab.echeances.dossier")}
               </span>
@@ -318,7 +339,7 @@ function CabinetEcheances() {
                   if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
                 }}
                 aria-label={t("cab.echeances.dossier")}
-                className="max-w-[240px] border border-border bg-card px-2.5 py-1.5 text-[12px]"
+                className="min-w-0 max-w-[240px] border border-border bg-card px-2.5 py-1.5 text-[12px]"
               >
                 <option value="">{t("cab.echeances.tous")}</option>
                 {(clients.data ?? []).map((c) => (
@@ -355,7 +376,7 @@ function CabinetEcheances() {
             {/* Téléphone, tablette, portable : les échéances par date (maquette du 8 novembre). */}
             <div className="space-y-3 xl:hidden">
               {[
-                ...rows
+                ...affichees
                   .reduce(
                     (m, e) => m.set(e.dueDate, [...(m.get(e.dueDate) ?? []), e]),
                     new Map<string, typeof rows>(),
@@ -409,7 +430,7 @@ function CabinetEcheances() {
                               : t("cab.echeances.marquer")
                           }
                           disabled={marquer.isPending}
-                          onClick={() => marquer.mutate({ id: e.id, fait: e.status !== "fait" })}
+                          onClick={() => basculer(e.id, e.status !== "fait")}
                           className={cn(
                             "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border disabled:opacity-40",
                             e.status === "fait" ? "bg-foreground text-background" : "bg-card",
@@ -452,7 +473,7 @@ function CabinetEcheances() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((e) => (
+                  {affichees.map((e) => (
                     <tr key={e.id} className="border-b border-border hover:bg-secondary/60">
                       <td className="px-3 py-2 font-medium sm:whitespace-nowrap">
                         {e.label}
@@ -529,7 +550,7 @@ function CabinetEcheances() {
                         <button
                           type="button"
                           disabled={marquer.isPending}
-                          onClick={() => marquer.mutate({ id: e.id, fait: e.status !== "fait" })}
+                          onClick={() => basculer(e.id, e.status !== "fait")}
                           className="border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground disabled:opacity-40"
                         >
                           {e.status === "fait"
@@ -542,6 +563,21 @@ function CabinetEcheances() {
                 </tbody>
               </table>
             </div>
+            {rows.length > proches.length ? (
+              <button
+                type="button"
+                aria-expanded={toutVoir}
+                onClick={() => setToutVoir((v) => !v)}
+                className="min-h-11 text-start text-[14px] font-semibold text-foreground underline underline-offset-4"
+              >
+                {toutVoir
+                  ? t("cab.echeances.reduire")
+                  : t("cab.echeances.voirSuite", {
+                      count: rows.length - proches.length,
+                      date: derniere ? dateEnChiffres(derniere, locale) : "",
+                    })}
+              </button>
+            ) : null}
           </>
         )}
       </section>
