@@ -895,6 +895,10 @@ function PmeCapturer() {
     setTransmis(null);
     setEnvoiDuLot(null);
     setPlusTard(false);
+    // Le passage suivant repart de « Pour qui ? » : l'URL n'a plus « pour moi »
+    // (revue de #281).
+    setRayonner(false);
+    setOu("societe");
   }
 
   const jour = (iso: string | null) =>
