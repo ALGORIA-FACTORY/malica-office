@@ -1,0 +1,176 @@
+# La relecture ciblée par Claude — une mesure, pas une garde (8 novembre 2026).
+#
+# PROPOSITION au dirigeant (elle touche R2) : sur les pièces que le Sudoku ne
+# prouve pas faute de solution, Claude relit les CASES de montant découpées de
+# l'image (la ligne pour le contexte, la case agrandie). Sa lecture n'est qu'un
+# candidat : la pièce n'est prouvée que si le moteur referme toutes ses
+# contraintes avec elle. Script et consigne versionnés : `outils/relecture-claude/`.
+#
+# Les relevés OCR sont ceux du passage 3 de « Mesure Claude » (run 42477888334,
+# artefact `mesure-claude`) : aucune image n'est relue par l'OCR, sauf si
+# l'artefact a disparu (le banc relit alors ce qui manque).
+#
+# Les noms des modèles sont des paramètres (R8 : leur prix se lit dans
+# `agents.model_pricing`, sinon la mesure ne part pas). Plafond : 30 $ au total
+# (15 $ par modèle, au tarif en base). « [sans banc] » dans le message du
+# dernier commit ne relance pas la mesure.
+
+name: Relecture Claude
+
+on:
+  push:
+    branches: [claude/diagnostic-non-prouvees]
+
+concurrency:
+  group: relecture-claude
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  mesure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    if: ${{ !contains(github.event.head_commit.message, '[sans banc]') }}
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: banc
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/banc
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OCR_URL: http://127.0.0.1:8095
+      RELECTEURS: claude-sonnet-5-5 claude-haiku-5-5
+      PLAFOND_PAR_MODELE: "15"
+
+    steps:
+      - name: La clé
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error title=Mesure non faite::ANTHROPIC_API_KEY absente"
+            exit 1
+          fi
+          echo "ANTHROPIC_API_KEY : présente"
+
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Le service OCR (infra/ocr), construit
+        uses: docker/build-push-action@v7
+        with:
+          context: infra/ocr
+          file: infra/ocr/Dockerfile
+          tags: malica-ocr:mesure
+          load: true
+          cache-from: type=gha,scope=malica-ocr
+          cache-to: type=gha,mode=max,scope=malica-ocr
+
+      - name: Le service OCR, démarré (relecture des cellules du banc)
+        run: |
+          docker run -d --name ocr -p 8095:8000 \
+            -e OMP_NUM_THREADS=2 -e OCR_LECTEURS=2 \
+            -e OCR_MODELE_RECONNAISSANCE_ARABE=arabic_PP-OCRv5_mobile_rec \
+            malica-ocr:mesure
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8095/sante && break
+            sleep 5
+          done
+          curl -fsS http://127.0.0.1:8095/sante
+
+      - name: Les relevés OCR du passage 3 de « Mesure Claude »
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: mesure-claude
+          path: precedent
+          run-id: 42477888334
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer
+        run: |
+          npm ci
+          python -m pip install --quiet pillow==11.3.0
+
+      - name: Le moteur du sudoku
+        run: |
+          rustup target add wasm32-unknown-unknown
+          npm run build --workspace @malica/sudoku
+
+      - name: Monter le schéma
+        run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
+        env:
+          MALICA_API_PASSWORD: ci
+
+      - name: Les tarifs (agents.model_pricing)
+        run: |
+          mkdir -p sortie
+          psql "$DATABASE_URL_ADMIN" -Atc "with t as (select distinct on (model, role) model, role, price_in_per_mtok::float8 pi, price_out_per_mtok::float8 po from agents.model_pricing where model = any(string_to_array('$RELECTEURS', ' ')) and effective_from <= current_date order by model, role, effective_from desc) select coalesce(json_object_agg(model, j), '{}') from (select model, json_build_object('entree', max(pi) filter (where role = 'chat'), 'sortie', max(po) filter (where role = 'chat'), 'cache', coalesce(max(pi) filter (where role = 'cache'), max(pi) filter (where role = 'chat')), 'cache_ecriture', coalesce(max(pi) filter (where role = 'cache_ecriture'), max(pi) filter (where role = 'chat'))) j from t group by model having max(pi) filter (where role = 'chat') is not null) x" > sortie/tarifs.json
+          cat sortie/tarifs.json
+
+      - name: La référence (moteur seul, relevé PaddleOCR v5)
+        run: |
+          mkdir -p sortie/releves
+          [ -d precedent/releves ] && cp -r precedent/releves/. sortie/releves/ || true
+          echo "relevés repris : $(ls sortie/releves | wc -l)"
+          set +e
+          node --experimental-strip-types --no-warnings apps/api/src/malica/lecture/banc-sans-ia.ts \
+            --corpus algoria:outils/jeu-algoria --corpus synthetique:outils/jeu-synthetique \
+            --corpus dirigeant:packages/sudoku/tests/donnees/jeux_dirigeant_ocr.json \
+            --cache sortie/releves --sortie sortie/base.json > sortie/base.md 2> sortie/base.err
+          echo "code : $?"; head -4 sortie/base.md
+
+      - name: La relecture, puis le moteur rejoué sur chaque relevé candidat
+        run: |
+          set +e
+          relus=""; journaux=""
+          for m in $RELECTEURS; do
+            python outils/relecture-claude/relire.py relire --base sortie/base.json \
+              --cache sortie/releves --racine . --modele "$m" --tarifs sortie/tarifs.json \
+              --plafond "$PLAFOND_PAR_MODELE" --sortie "sortie/releves-$m" \
+              --journal "sortie/journal-$m.json" 2> "sortie/relecture-$m.err"
+            echo "relecture $m : $?"; tail -3 "sortie/relecture-$m.err"
+            node --experimental-strip-types --no-warnings apps/api/src/malica/lecture/banc-sans-ia.ts \
+              --corpus algoria:outils/jeu-algoria --corpus synthetique:outils/jeu-synthetique \
+              --corpus dirigeant:packages/sudoku/tests/donnees/jeux_dirigeant_ocr.json \
+              --cache "sortie/releves-$m" --sortie "sortie/relu-$m.json" > "sortie/relu-$m.md" 2> "sortie/relu-$m.err"
+            echo "banc $m : $?"; head -3 "sortie/relu-$m.md"
+            relus="$relus sortie/relu-$m.json"; journaux="$journaux sortie/journal-$m.json"
+          done
+          python outils/relecture-claude/relire.py bilan --base sortie/base.json \
+            --journaux $journaux --relus $relus --sortie sortie/bilan.md
+          cat sortie/bilan.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Le journal du service OCR
+        if: always()
+        run: docker logs ocr > sortie/ocr.log 2>&1 || true
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: relecture-claude
+          path: |
+            sortie/
+            !sortie/releves/
+            !sortie/releves-*/
+          retention-days: 30
