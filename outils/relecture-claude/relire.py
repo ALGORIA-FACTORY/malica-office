@@ -72,10 +72,23 @@ def est_une_case_de_montant(texte: str) -> bool:
     t = re.sub(r"\s", "", texte)
     if not 2 <= len(t) <= 22 or not any(c in SEPARATEURS for c in t):
         return False
-    if not re.search(f"[{re.escape(SEPARATEURS)}][{CHIFFRES}{SOSIES}]{{1,4}}[.*]?$", t):
+    # « 1,... » ou « 1,.* » : un timbre dont les zéros sont perdus reste une case de montant.
+    if not re.search(f"[{re.escape(SEPARATEURS)}][{CHIFFRES}{SOSIES}.…]{{1,4}}[.*]?$", t):
         return False
-    proches = sum(c in CHIFFRES or c in SOSIES or c in SEPARATEURS for c in t)
+    proches = sum(c in CHIFFRES or c in SOSIES or c in SEPARATEURS or c in ".…" for c in t)
     return proches / len(t) >= 0.8 and sum(c in CHIFFRES for c in t) >= 1
+
+
+MONTANT = re.compile(f"[{CHIFFRES}](?:[{CHIFFRES} {re.escape(SEPARATEURS)}]*[{CHIFFRES}])?")
+
+
+def le_montant(texte: str) -> str | None:
+    """La lecture réduite à son montant : la case relue peut porter un voisin (« % 2 245,018 »,
+    « 5.780,238 س », « 2 723,477 D »). Un seul nombre, sinon rien : deux nombres dans une
+    case ne se départagent pas ici."""
+    trouves = [m.group(0).strip() for m in MONTANT.finditer(texte)]
+    trouves = [t for t in trouves if len(re.sub(r"\D", "", translitterer(t))) >= 2]
+    return trouves[0] if len(trouves) == 1 else None
 
 
 def translitterer(texte: str) -> str:
@@ -88,7 +101,7 @@ def translitterer(texte: str) -> str:
 
 def png(img: Image.Image) -> str:
     b = io.BytesIO()
-    img.save(b, format="PNG", optimize=True)
+    img.save(b, format="JPEG", quality=92)
     return base64.b64encode(b.getvalue()).decode()
 
 
@@ -118,9 +131,9 @@ def appeler(modele: str, consigne: str, lot: list, cle: str):
     for c in lot:
         contenu += [
             {"type": "text", "text": f"{c['id']} — la ligne (contexte) :"},
-            {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": c["ligne"]}},
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": c["ligne"]}},
             {"type": "text", "text": f"{c['id']} — la case à transcrire :"},
-            {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": c["case"]}},
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": c["case"]}},
         ]
     contenu.append({"type": "text", "text": "Rends le JSON des cases " + ", ".join(c["id"] for c in lot) + "."})
     corps = json.dumps({
@@ -209,7 +222,10 @@ def relire(a):
             r = lus.get(c["id"])
             if not r or not r["lisible"] or not r["texte"].strip():
                 continue
-            candidat = translitterer(r["texte"].strip())
+            montant = le_montant(r["texte"])
+            if montant is None:
+                continue
+            candidat = translitterer(montant)
             if re.sub(r"\s", "", candidat) != re.sub(r"\s", "", c["jeton"]["text"]):
                 changes.append({"ocr": c["jeton"]["text"], "claude": r["texte"], "candidat": candidat})
                 c["jeton"]["text"] = candidat
