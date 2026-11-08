@@ -41,7 +41,7 @@ import { attendUnGeste, seMontreIci } from "@/lib/libelle-de-notification";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useCoteDuPlus } from "@/hooks/use-cote-du-plus";
 import { useDossiers } from "@/hooks/use-dossiers";
-import { lireLotDeCapture } from "@/lib/lot-de-capture";
+import { lireLotDeCapture, suiteDuPassage } from "@/lib/lot-de-capture";
 
 /*
  * Le cadrage du navigateur — détection, redressement, et un modèle qui se
@@ -380,14 +380,15 @@ function PmeLayout() {
         );
         return;
       }
-      // Venu de Privé, « Pour moi » reste pré-choisi à l'étape « Pour qui ? ».
-      const pour = contexteDeCapture?.pour;
+      /*
+       * Le contexte suit tout le passage (revue de #277) : venu d'un dossier,
+       * la photo suivante du même lot y entre aussi sans question ; venu de
+       * Privé, « Pour moi » reste pré-choisi. « Capturer la suivante »
+       * (`recommencer`) repart d'une URL vide.
+       */
       await navigate({
         to: "/pme/capturer",
-        search: {
-          ...(identifiants.length > 0 ? { pieces: identifiants.join(",") } : {}),
-          ...(pour ? { pour } : {}),
-        },
+        search: suiteDuPassage(identifiants, contexteDeCapture),
       });
     },
     onError: (e: unknown) =>

@@ -74,6 +74,22 @@ export function lireLotDeCapture(search: Record<string, unknown>): LotDeCapture 
   return lot;
 }
 
+/**
+ * L'URL après un dépôt : les pièces qu'on vient de prendre, et le contexte
+ * d'où l'on vient (dossier, « pour moi »), gardé pour la photo suivante.
+ * L'échéance n'est qu'une ligne d'en-tête : elle ne suit pas.
+ */
+export function suiteDuPassage(
+  identifiants: readonly string[],
+  contexte: LotDeCapture | null,
+): LotDeCapture {
+  return {
+    ...(identifiants.length > 0 ? { pieces: identifiants.join(",") } : {}),
+    ...(contexte?.dossier ? { dossier: contexte.dossier } : {}),
+    ...(contexte?.pour ? { pour: contexte.pour } : {}),
+  };
+}
+
 /** Les identifiants d'un lot, dans l'ordre reçu, sans doublon ni intrus. */
 export function identifiantsDuLot(brut: string | undefined): string[] {
   if (!brut) return [];
