@@ -411,7 +411,15 @@ export function EcritureDuCabinet({
           className="flex items-center border border-signal-warn bg-card px-3.5 py-2.5 text-[13px]"
         >
           {t("cab.ecriture.aRevoir")}
-          <Aide titre={t("cab.ecriture.aRevoir")} paragraphes={[{ texte: proposition.raison }]} />
+          {/* Les codes des contrôles, traduits : `raison` est une phrase française (R12). */}
+          {(proposition.controlesEnDefaut ?? []).length > 0 ? (
+            <Aide
+              titre={t("cab.ecriture.aRevoir")}
+              paragraphes={(proposition.controlesEnDefaut ?? []).map((code) => ({
+                texte: t(`cab.controle.${code}`),
+              }))}
+            />
+          ) : null}
         </p>
       ) : null}
 
