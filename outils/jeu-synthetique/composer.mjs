@@ -89,6 +89,21 @@ const exposantDe = (devise) => {
 };
 const DEVISE_DU_DOSSIER = REFERENTIEL.devise;
 const coursDe = (devise) => COMPLEMENT.cours.find((c) => c.devise === devise);
+/*
+ * Le compte d'une NATURE d'article vendu (`ref.natures_de_vente`, relevé au
+ * pack) : le défaut du CEO (`ventes.compte` = `par_nature_article`, 31 octobre
+ * 2026). Le repli est le compte d'une vente dont le Socle ne prouve pas la
+ * nature. Seuls les comptes viennent du référentiel ; la nature de chaque
+ * article est celle de la SPÉCIFICATION (le catalogue ci-dessous), jamais
+ * celle que les motifs du Socle reconnaîtraient.
+ */
+const compteDeLaNature = (code) => {
+  const n = REFERENTIEL.naturesDeVente.find((x) => x.code === code);
+  if (!n) throw new Error(`nature de vente ${code} absente du référentiel`);
+  return n.compte;
+};
+const COMPTE_DE_REPLI = REFERENTIEL.naturesDeVente.find((x) => x.repli)?.compte;
+if (!COMPTE_DE_REPLI) throw new Error("aucune nature de vente de repli au référentiel");
 
 /* --------------------------------------------------------- les noms inventés */
 
@@ -156,19 +171,96 @@ const LES_DOSSIERS = DOSSIERS.map(avecMatricule);
 
 /* ----------------------------------------------------------- les articles */
 
+/*
+ * `nature` : ce que l'article EST, quand le dossier le vend — la vérité de la
+ * spécification, d'où l'écriture attendue d'une vente se compose (705, 706,
+ * 707). Un négoce : un bien se vend en marchandise.
+ */
 const ARTICLES = [
-  { fr: "Papier A4 80 g, ramette", ar: "ورق طباعة A4 رزمة", code: "TVA19", pu: [8, 15] },
-  { fr: "Cartouche d'encre noire", ar: "خرطوشة حبر أسود", code: "TVA19", pu: [60, 180] },
-  { fr: "Prestation de maintenance", ar: "خدمات صيانة", code: "TVA19", pu: [250, 1800] },
-  { fr: "Location de chariot élévateur", ar: "كراء رافعة شوكية", code: "TVA19", pu: [400, 2600] },
-  { fr: "Tôle galvanisée 2 mm", ar: "صفائح مجلفنة 2 مم", code: "TVA19", pu: [90, 450] },
-  { fr: "Huile d'olive vierge, bidon 5 L", ar: "زيت زيتون بكر 5 لتر", code: "TVA07", pu: [45, 95] },
-  { fr: "Farine de blé, sac 50 kg", ar: "فارينة قمح كيس 50 كغ", code: "TVA07", pu: [38, 70] },
-  { fr: "Médicament vétérinaire", ar: "دواء بيطري", code: "TVA07", pu: [20, 260] },
-  { fr: "Hébergement en hôtel, nuitée", ar: "إقامة بالنزل ليلة", code: "TVA13", pu: [120, 380] },
-  { fr: "Transport de marchandises", ar: "نقل البضائع", code: "TVA13", pu: [300, 1500] },
-  { fr: "Formation professionnelle agréée", ar: "تكوين مهني معتمد", code: "EXO", pu: [500, 3200] },
-  { fr: "Pain et viennoiseries", ar: "خبز ومعجنات", code: "EXO", pu: [2, 9] },
+  {
+    fr: "Papier A4 80 g, ramette",
+    ar: "ورق طباعة A4 رزمة",
+    code: "TVA19",
+    pu: [8, 15],
+    nature: "marchandises",
+  },
+  {
+    fr: "Cartouche d'encre noire",
+    ar: "خرطوشة حبر أسود",
+    code: "TVA19",
+    pu: [60, 180],
+    nature: "marchandises",
+  },
+  {
+    fr: "Prestation de maintenance",
+    ar: "خدمات صيانة",
+    code: "TVA19",
+    pu: [250, 1800],
+    nature: "prestations",
+  },
+  {
+    fr: "Location de chariot élévateur",
+    ar: "كراء رافعة شوكية",
+    code: "TVA19",
+    pu: [400, 2600],
+    nature: "annexes",
+  },
+  {
+    fr: "Tôle galvanisée 2 mm",
+    ar: "صفائح مجلفنة 2 مم",
+    code: "TVA19",
+    pu: [90, 450],
+    nature: "marchandises",
+  },
+  {
+    fr: "Huile d'olive vierge, bidon 5 L",
+    ar: "زيت زيتون بكر 5 لتر",
+    code: "TVA07",
+    pu: [45, 95],
+    nature: "marchandises",
+  },
+  {
+    fr: "Farine de blé, sac 50 kg",
+    ar: "فارينة قمح كيس 50 كغ",
+    code: "TVA07",
+    pu: [38, 70],
+    nature: "marchandises",
+  },
+  {
+    fr: "Médicament vétérinaire",
+    ar: "دواء بيطري",
+    code: "TVA07",
+    pu: [20, 260],
+    nature: "marchandises",
+  },
+  {
+    fr: "Hébergement en hôtel, nuitée",
+    ar: "إقامة بالنزل ليلة",
+    code: "TVA13",
+    pu: [120, 380],
+    nature: "prestations",
+  },
+  {
+    fr: "Transport de marchandises",
+    ar: "نقل البضائع",
+    code: "TVA13",
+    pu: [300, 1500],
+    nature: "prestations",
+  },
+  {
+    fr: "Formation professionnelle agréée",
+    ar: "تكوين مهني معتمد",
+    code: "EXO",
+    pu: [500, 3200],
+    nature: "prestations",
+  },
+  {
+    fr: "Pain et viennoiseries",
+    ar: "خبز ومعجنات",
+    code: "EXO",
+    pu: [2, 9],
+    nature: "marchandises",
+  },
 ];
 const IMMOBILISATIONS = [
   { fr: "Serveur de stockage en baie", ar: "خادم تخزين في خزانة", code: "TVA19", pu: [4200, 9800] },
@@ -185,8 +277,15 @@ const EXPORT = [
     ar: "زيت زيتون سائب، طن",
     code: "EXPORT",
     pu: [3800, 5200],
+    nature: "marchandises",
   },
-  { fr: "Dattes Deglet Nour, carton", ar: "تمور دقلة نور، صندوق", code: "EXPORT", pu: [40, 85] },
+  {
+    fr: "Dattes Deglet Nour, carton",
+    ar: "تمور دقلة نور، صندوق",
+    code: "EXPORT",
+    pu: [40, 85],
+    nature: "marchandises",
+  },
 ];
 
 /* --------------------------------------------------- la matrice des 100 cas */
@@ -328,6 +427,7 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
       designation: langue === "ar" ? a.ar : a.fr,
       designationAr: a.ar,
       codeTaxe: a.code,
+      nature: a.nature,
       quantite,
       pu,
       total: pu * BigInt(quantite),
@@ -481,7 +581,9 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
   // `enCharge` : l'écriture du paramétrage, la base au compte de l'imputation
   // — celle que le Socle propose à une immobilisation, avec la réserve qui
   // dit la question (`aTrancher`, plus bas).
-  const ecritureDe = (enCharge = false) => {
+  // `enCharge` : l'imputation du paramétrage pour une immobilisation ; `auRepli` :
+  // une vente au compte de repli, toutes natures confondues, par taux.
+  const ecritureDe = (enCharge = false, auRepli = false) => {
     const lignes = [];
     const debit = sens === "facture_achat";
     const cours = devise === DEVISE_DU_DOSSIER ? null : coursDe(devise);
@@ -494,18 +596,36 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
         : m;
     const decD = (m) => versDecimal(m, exposantDossier);
     // Les bases, par compte principal ; la TVA, par code ; les droits, par compte.
+    // Une vente : par compte de sa NATURE et par taux, chaque base avec son code
+    // (`ventes.compte`) ; une nature par article, ventilée par leurs totaux.
     const bases = new Map();
     // Le régime de chaque base : une base sans TVA (exonérée, export) dit son
     // code, sans quoi elle manque à la déclaration — la règle du forçage
     // (`refus.ecriture.taxe_sans_tva`, revue de #140) ; découvert par la
     // recette sur le staging (1er novembre 2026).
     const codesDesBases = new Map();
+    const ajouter = (cle, m) => bases.set(cle, (bases.get(cle) ?? 0n) + m);
     for (const l of parTaux) {
+      if (sens === "facture_vente") {
+        const siens = articles.filter((a) => a.codeTaxe === l.code);
+        const natures = [...new Set(siens.map((a) => a.nature))];
+        if (auRepli || natures.length === 1) {
+          ajouter(
+            `${auRepli ? COMPTE_DE_REPLI : compteDeLaNature(natures[0])}|${l.code}`,
+            conv(l.baseHt),
+          );
+          continue;
+        }
+        // Une ventilation en devise demanderait un arrondi : le jeu n'en compose pas.
+        if (cours) throw new Error("vente mêlée en devise : non composée");
+        for (const a of siens) ajouter(`${compteDeLaNature(a.nature)}|${l.code}`, a.total);
+        continue;
+      }
       const compte =
         scenario === "achat_immobilisation" && !enCharge
           ? COMPLEMENT.immobilisation.compte
           : imputation(sens, l.code).mainAccount;
-      bases.set(compte, (bases.get(compte) ?? 0n) + conv(l.baseHt));
+      ajouter(compte, conv(l.baseHt));
       codesDesBases.set(compte, [...(codesDesBases.get(compte) ?? []), l.code]);
     }
     const tvas = parTaux.map((l) => ({
@@ -537,10 +657,12 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
       if (m === 0n) return;
       lignes.push(debit ? [compte, decD(m), "0", code] : [compte, "0", decD(m), code]);
     };
+    // La clé d'une base : son compte, et son code de taux pour une vente.
     const sansTva = tvas.every((t) => t.m === 0n);
-    for (const [compte, m] of bases) {
-      const codes = [...new Set(codesDesBases.get(compte))];
-      posePiece(compte, m, sansTva && codes.length === 1 ? codes[0] : undefined);
+    for (const [cle, m] of bases) {
+      const [compte, code] = cle.split("|");
+      const codes = [...new Set(codesDesBases.get(cle) ?? [])];
+      posePiece(compte, m, code ?? (sansTva && codes.length === 1 ? codes[0] : undefined));
     }
     for (const t of tvas) posePiece(t.compte, t.m, t.code);
     for (const d of lesDroits) posePiece(d.compte, d.m);
@@ -559,7 +681,7 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
       );
       if (parTaux.length === 1 && droits.length === 0) {
         ecriture.origines = [
-          [[...bases.keys()][0], dec(parTaux[0].baseHt)],
+          [[...bases.keys()][0].split("|")[0], dec(parTaux[0].baseHt)],
           ...(tva === 0n ? [] : [[tvas[0].compte, dec(tva)]]),
           [imp.counterpartyAccount, dec(ttc)],
         ];
@@ -580,7 +702,11 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
     // (`ref.titres_de_piece`, statut « anomalie ») : l'issue juste est ce
     // refus nommé. L'écriture du comptable — l'achat contre-passé — est notée
     // pour le jour où le Socle proposera les avoirs.
-    issue = { type: "refus", motifs: ["nature_piece"] };
+    // Lié à sa facture (`avoirs.traitement`, défaut du CEO) : le jeu n'a pas
+    // de base, aucune facture ne se rattache — la proposition le dit
+    // (« facture d'origine à rattacher »). Un titre PERDU reste un refus de
+    // la nature : facture ou avoir, le cabinet tranche.
+    issue = { type: "refus", motifs: ["proposition/facture_d_origine", "nature_piece"] };
     const e = ecritureDe();
     ecritureDuComptable = {
       journal: e.journal,
@@ -601,13 +727,18 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
     // elle n'est pas fausse non plus : elle est à trancher, et se compte à part.
     if (!defaut) aTrancher = { reserve: "immobilisation_a_trancher", ecriture: ecritureDe(true) };
   }
+  // Une vente dont le Socle ne prouve pas la nature (un mot qu'il ne
+  // reconnaît pas, une désignation perdue) : le compte de repli, avec la
+  // réserve qui le dit. Ni exacte, ni fausse : à trancher.
+  if (sens === "facture_vente" && !defaut && ecriture)
+    aTrancher = { reserve: "nature_de_vente", ecriture: ecritureDe(false, true) };
   if (fodec > 0n)
     notes.push(
       "INCERTAIN — FODEC à l'achat imputé au compte du pack, et compris dans la base de la TVA",
     );
   if (sens === "facture_vente")
     notes.push(
-      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services",
+      "INCERTAIN — compte de vente par nature d'article (ventes.compte = par_nature_article, défaut du CEO du 31/10/2026) : 705 prestations, 706 annexes, 707 marchandises ; repli au compte des produits finis, avec la réserve « nature de la vente à préciser »",
     );
 
   const cours = devise === DEVISE_DU_DOSSIER ? null : coursDe(devise);

@@ -108,9 +108,16 @@
       "journal": "VEN",
       "lignes": [
         [
-          "701",
+          "707",
           "0",
-          "4686.241"
+          "2958.840",
+          "TVA19"
+        ],
+        [
+          "705",
+          "0",
+          "1727.401",
+          "TVA19"
         ],
         [
           "4367",
@@ -133,9 +140,39 @@
     "issue": {
       "type": "ecriture"
     },
+    "aTrancher": {
+      "reserve": "nature_de_vente",
+      "ecriture": {
+        "journal": "VEN",
+        "lignes": [
+          [
+            "701",
+            "0",
+            "4686.241",
+            "TVA19"
+          ],
+          [
+            "4367",
+            "0",
+            "890.386",
+            "TVA19"
+          ],
+          [
+            "4371",
+            "0",
+            "1.000"
+          ],
+          [
+            "411",
+            "5577.627",
+            "0"
+          ]
+        ]
+      }
+    },
     "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
     "notes": [
-      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+      "INCERTAIN — compte de vente par nature d'article (ventes.compte = par_nature_article, défaut du CEO du 31/10/2026) : 705 prestations, 706 annexes, 707 marchandises ; repli au compte des produits finis, avec la réserve « nature de la vente à préciser »"
     ]
   }
 }
