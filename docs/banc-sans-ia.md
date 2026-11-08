@@ -968,3 +968,31 @@ manuscrits 31 / 56, photos 145 / 181), 12 dont le HT ne porte pas son libellé, 
 4 exonérations partielles non confirmées. Les silences à travailler les plus fréquents
 sont les cellules des lignes (quantité 314, prix 237, montant 225), puis les parties
 (raison sociale de l'émetteur 207, nom du client 158, matricules 146 et 132).
+
+## Bulletin — les gains du Sudoku, par lots mesurés (8 novembre 2026, soir)
+
+Branche `claude/sudoku-gains`. Le plan, l'analyse à 360° et ce qui reste :
+`docs/plan-gains-sudoku-2026-11-08.md`. Quatre bancs à chaque lot, caches seulement.
+
+| pièces prouvées               |  référence (411) | v6 small (261) | staging (69) | Qwen (261) |
+| ----------------------------- | ---------------: | -------------: | -----------: | ---------: |
+| `claude/sudoku-vers-90`       |     283 (68,9 %) |            169 |           50 |         90 |
+| lot 1 — pièces non factures   |              295 |            176 |           50 |         95 |
+| lot 2 — formes de facture     |              304 |            181 |           50 |         95 |
+| lot 3 — temps (même résultat) | **304 (74,0 %)** |        **181** |       **50** |     **95** |
+
+Valeurs fausses ou inventées affirmées : 0 / 6 (+ 1 échange, les mêmes qu'au départ) / 0 /
+0 à chaque lot. Aucun juste perdu sur aucun banc ; aucune des 32 pièces F et G du
+diagnostic n'est prouvée. Justes de la référence : 6 935 → 7 028.
+
+- **Lot 1** (migrations `20261208090000`, `20261208090100`, et le moteur pour les grilles
+  sans groupe de taux) : relevé, bulletin, quittance, BL / ticket / reçu / bon de
+  commande valorisés, déclaration d'IS, acompte provisionnel, avis d'assurance. Un faux
+  trouvé et fermé avant d'entrer : 50/05, ticket à deux taux, prouvait un article
+  (« 13.322 ») pour le total TTC ; désormais le total porte son libellé, ou la base de
+  chaque taux le sien, ou il est le plus grand montant de la pièce.
+- **Lot 2** : le libellé arabe du HT à une lettre près (algoria-062, 064, 090, synthétique 068) ; l'export (HT = TTC) départagé par le libellé du HT (algoria-111, synthétique 046,
+  054, 070, 098).
+- **Lot 3** : `normaliser` et `entete::mot` mémorisés le temps d'une résolution (60 % du
+  temps du moteur au profileur). Sorties identiques sur les 800 entrées du banc ; médiane
+  84,5 → 61,5 ms, p95 269 → 158 ms.

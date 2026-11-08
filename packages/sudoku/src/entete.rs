@@ -175,12 +175,29 @@ fn cle(s: &str) -> String {
         .to_string()
 }
 
-/// Un mot comparable : sans casse, sans accents, sans ponctuation.
+thread_local! {
+    /// Les mots déjà lus (`mot`), le temps d'une résolution (`oublier_les_mots`).
+    static MOTS: std::cell::RefCell<std::collections::HashMap<String, String>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// Vide la mémoire de `mot`, à la fin de chaque résolution.
+pub(crate) fn oublier_les_mots() {
+    MOTS.with(|m| m.borrow_mut().clear());
+}
+
+/// Un mot comparable : sans casse, sans accents, sans ponctuation. Mémorisé le temps d'une
+/// résolution (une fonction pure : le résultat est le même).
 fn mot(s: &str) -> String {
-    normaliser(s)
+    if let Some(m) = MOTS.with(|m| m.borrow().get(s).cloned()) {
+        return m;
+    }
+    let m: String = normaliser(s)
         .chars()
         .filter(|c| c.is_alphanumeric())
-        .collect()
+        .collect();
+    MOTS.with(|x| x.borrow_mut().insert(s.to_string(), m.clone()));
+    m
 }
 
 /// La valeur d'un matricule : majuscules, sans espaces.

@@ -96,7 +96,7 @@ pub fn solve(input_json: &str) -> String {
         Ok(e) => e,
         Err(e) => return erreur(format!("entrée invalide : {e}")),
     };
-    let sortie = resoudre(&entree).map(|s| {
+    let sortie = resoudre_et_oublier(&entree).map(|s| {
         if s.issue == "aucune" && s.solutions == 0 {
             par_les_lettres(input_json, &entree).unwrap_or(s)
         } else {
@@ -167,7 +167,7 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
     for j in avec.jetons.iter_mut().filter(|j| j.lettres.is_some()) {
         j.montants.push(entree::Lecture { v, forte: true });
     }
-    let mut s = resoudre(&avec).ok()?;
+    let mut s = resoudre_et_oublier(&avec).ok()?;
     if s.issue != "prouvee" {
         return None;
     }
@@ -205,6 +205,15 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
     s.raison = Some(format!("le total en chiffres ne ferme pas : le montant en lettres donne {porte}, et la pièce se prouve par lui"));
     s.par_lettres = Some(porte);
     Some(s)
+}
+
+/// `resoudre`, puis les mémoires des textes normalisés vidées (`reperes::oublier_les_normes`,
+/// `entete::oublier_les_mots`) : rien ne passe d'une pièce à l'autre.
+fn resoudre_et_oublier(entree: &Entree) -> Result<Sortie, String> {
+    let s = resoudre(entree);
+    reperes::oublier_les_normes();
+    entete::oublier_les_mots();
+    s
 }
 
 fn resoudre(entree: &Entree) -> Result<Sortie, String> {
@@ -252,13 +261,27 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             _ => None,
         })
         .collect();
+    // Sans groupe de taux (bulletin, quittance, déclaration…), un libellé de plusieurs mots
+    // que l'OCR rend mot à mot (« Indemnité | de | transport | 89,000 ») annonce aussi son
+    // champ (`annonce_en_mots`) : `annonce_chiffree` ne lit le repère que sur un seul jeton.
+    // La facture garde sa règle.
+    // Une grille SANS groupe de taux dans ses preuves (et non une facture dont le groupe ne
+    // se traduit pas : elle garde ses règles).
+    let sans_groupe = !grille.preuves.iter().any(|p| {
+        p.expression
+            .as_ref()
+            .and_then(|e| e.get("op"))
+            .and_then(|o| o.as_str())
+            == Some("groupe_taux")
+    });
+    let annonce_par_rangee = |r: &[String]| sans_groupe && plan.annonce_en_mots(r);
     for (i, v) in modele.vars.iter_mut().enumerate() {
         if v.facultatif {
             let annonce = if let Some(taux) = charges.get(&i) {
                 plan.annonce(&reperes[v.champ])
                     || taux.is_some_and(|t| t > 0 && plan.taux_chiffre(t))
             } else {
-                plan.annonce_chiffree(&reperes[v.champ])
+                plan.annonce_chiffree(&reperes[v.champ]) || annonce_par_rangee(&reperes[v.champ])
             };
             let fixe_imprime = fixes.get(&i).is_some_and(|f| dom.forte(*f));
             v.present = annonce || fixe_imprime;
@@ -335,6 +358,13 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                         plan.ancre(o.jeton, &reperes[champ], None, false)
                             || plan.apparie(o.jeton, &reperes[champ])
                             || entree.jetons[o.jeton].lettres.is_some()
+                            // sans groupe de taux (bulletin, déclaration…) : le montant d'une
+                            // rubrique, au bout de sa rangée (`fin_de_rangee_libellee`)
+                            || (sans_groupe
+                                && (plan.fin_de_rangee_libellee(o.jeton, &reperes[champ])
+                                    // ou en tête de sa colonne (« Net servi » sur le
+                                    // tableau d'un certificat de retenue)
+                                    || plan.ancre(o.jeton, &reperes[champ], None, true)))
                     })
                 })
                 .map(|(v, _)| *v)
@@ -445,11 +475,68 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     };
     // Nettoyée, la solution doit encore tenir : une contrainte qui échoue sans le champ
     // retiré (le TTC qui ne tenait que par le « 1,000 » du timbre) la disqualifie.
+    // Sans groupe de taux, une somme dont les termes s'annulent deux à deux ne prouve rien :
+    // elle tient quelles que soient les valeurs. Banc du 8 novembre 2026, algoria-136 (relevé) :
+    // « solde final = solde initial + crédits − débits » fermait sur 199 049,541 pris pour les
+    // deux soldes et 3,610 (imprimé deux fois) pour les deux totaux. Une telle lecture n'est
+    // pas une solution.
+    let s_annule = |e: &Etat| {
+        sans_groupe
+            && modele.contraintes.iter().any(|cp| match &cp.c {
+                Contrainte::Lin { termes } => {
+                    let (mut plus, mut moins) = (Vec::new(), Vec::new());
+                    for (u, coef) in termes {
+                        if let modele::Unite::S(i) = u {
+                            if let Some(x) = e.s[*i].filter(|x| !x.absent) {
+                                if *coef > 0 {
+                                    plus.push(x.v);
+                                } else {
+                                    moins.push(x.v);
+                                }
+                            }
+                        }
+                    }
+                    plus.sort_unstable();
+                    moins.sort_unstable();
+                    // deux paires au moins : « total = une partie » (deux jetons égaux sous
+                    // deux libellés) reste une lecture ; la garde du partage juge le jeton seul
+                    plus.len() >= 2 && plus == moins
+                }
+                _ => false,
+            })
+    };
+    // Une exonération totale (aucun taux, HT = TTC) ne se lit que sur un HT qui porte son
+    // libellé : sans lui, n'importe quel montant imprimé deux fois « fermait ». Banc du
+    // 8 novembre 2026, factures à l'export (algoria-111, synthétique 046, 054, 070, 098) :
+    // deux lectures, le vrai total et un montant d'article, donc ambiguës. Entre plusieurs
+    // lectures, celles dont le HT exonéré ne porte pas son libellé sont écartées.
+    let exo_sans_libelle = |e: &Etat| {
+        modele.groupes.iter().enumerate().any(|(g, gr)| {
+            let (Some(sol), Some(t)) = (e.g[g].as_ref(), gr.total_base) else {
+                return false;
+            };
+            if !(sol.exoneration && sol.instances.is_empty()) {
+                return false;
+            }
+            let Some(ht) = e.s[t].filter(|v| !v.absent).map(|v| v.v) else {
+                return false;
+            };
+            let r = &reperes[modele.vars[t].champ];
+            !dom.valeurs.get(&ht).is_some_and(|x| {
+                x.occurrences.iter().any(|o| {
+                    plan.libelle_avant_a_une_lettre(o.jeton, r)
+                        || plan.ancre(o.jeton, r, None, true)
+                        || plan.apparie(o.jeton, r)
+                })
+            })
+        })
+    };
     let lues: Vec<Etat> = retenues
         .iter()
         .map(|r| sans_partage(&r.etat))
         .filter(|(e, requis)| {
             !requis
+                && !s_annule(e)
                 && modele
                     .contraintes
                     .iter()
@@ -457,6 +544,22 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         })
         .map(|(e, _)| e)
         .collect();
+    // seulement pour départager : une lecture unique garde sa règle (les lignes qui
+    // ferment le HT, plus bas — synthétique-100)
+    let lues: Vec<Etat> = if lues.len() > 1 {
+        let nommees: Vec<Etat> = lues
+            .iter()
+            .filter(|e| !exo_sans_libelle(e))
+            .cloned()
+            .collect();
+        if nommees.is_empty() {
+            lues
+        } else {
+            nommees
+        }
+    } else {
+        lues
+    };
     let partage_requis = !retenues.is_empty() && lues.is_empty();
     let unique: Option<&Etat> = if lues.len() == 1 { lues.first() } else { None };
     let mut issue = match lues.len() {
@@ -911,10 +1014,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 continue;
             };
             let champ = modele.vars[t].champ;
+            // Un libellé arabe se lit à une lettre près (`libelle_avant_a_une_lettre`).
             let ancre_par = |reperes: &[String]| {
                 dom.valeurs.get(&ht).is_some_and(|x| {
                     x.occurrences.iter().any(|o| {
-                        plan.libelle_avant(o.jeton, reperes)
+                        plan.libelle_avant_a_une_lettre(o.jeton, reperes)
                             || plan.ancre(o.jeton, reperes, None, true)
                             || plan.apparie(o.jeton, reperes)
                     })
@@ -948,6 +1052,85 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 &mut champs,
                 &numeriques,
                 r,
+            );
+            for (cp, ev) in modele.contraintes.iter().zip(&evals) {
+                if *ev == Eval::Ok {
+                    preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
+                }
+            }
+        }
+    }
+
+    // ---------- Sans groupe de taux : chaque total et chaque base portent leur libellé ----------
+    // Les pièces autres que la facture (ticket, BL, reçu, bon de commande, relevé, bulletin…)
+    // se prouvent par `somme` et `taux` seuls, sans le groupe de taux et ses garde-fous (le HT
+    // qui porte son libellé, plus haut). Banc sans IA du 8 novembre 2026, 50/05 (ticket à deux
+    // taux) : la base à 7 % (« HT 12.450 ») prise pour le total HT, sa TVA « 0.872 », et le
+    // montant d'un article (« 13.322 ») pour le total TTC — une somme et un taux qui ferment,
+    // trois valeurs fausses. Ici, sans groupe, la valeur prise pour le TOTAL d'une somme doit
+    // porter son libellé (repères du champ, sur le jeton ou dans la suite de purs mots à sa
+    // gauche) — ou, quand la pièce a un taux, la base de chaque taux porte le sien ; sinon la
+    // pièce n'est pas prouvée.
+    if let (true, Some(e), true) = (prouvee, unique, sans_groupe) {
+        let porte_son_libelle = |i: usize| {
+            let Some(v) = e.s[i].filter(|v| !v.absent).map(|v| v.v) else {
+                return true;
+            };
+            let reperes = &reperes[modele.vars[i].champ];
+            dom.valeurs.get(&v).is_some_and(|x| {
+                x.occurrences.iter().any(|o| {
+                    plan.libelle_avant(o.jeton, reperes)
+                        || plan.ancre(o.jeton, reperes, None, true)
+                        || plan.apparie(o.jeton, reperes)
+                        || plan.fin_de_rangee_libellee(o.jeton, reperes)
+                })
+            })
+        };
+        let a_juger: BTreeSet<usize> = modele
+            .contraintes
+            .iter()
+            .filter_map(|cp| match &cp.c {
+                Contrainte::Lin { termes } => match termes.first() {
+                    Some((modele::Unite::S(i), _)) => Some(*i),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect();
+        // Ou la base de chaque taux porte le sien : le total HT nommé, la TVA qui en est le
+        // taux et la somme déterminent le TTC (algoria-127 sous PP-OCRv6, avoir arabe :
+        // « المجموع » lu « Egaall », le HT sous « المبلغ دون اعتبار الأداءات »).
+        let bases: Vec<usize> = modele
+            .contraintes
+            .iter()
+            .filter_map(|cp| match &cp.c {
+                Contrainte::Taux { b, .. } => Some(*b),
+                _ => None,
+            })
+            .collect();
+        let bases_nommees = !bases.is_empty() && bases.iter().all(|&b| porte_son_libelle(b));
+        // Ou le total est le plus grand montant lu fort de la pièce : un TTC l'est. Sur 50/05,
+        // le « 13.322 » d'un article ne l'est pas (le TOTAL TTC imprime 99.404).
+        let plus_grand = dom
+            .valeurs
+            .iter()
+            .filter(|(_, x)| x.forte)
+            .map(|(v, _)| *v)
+            .max();
+        let total_ou_maximum = |i: usize| {
+            porte_son_libelle(i)
+                || e.s[i]
+                    .filter(|v| !v.absent && !v.faible)
+                    .is_some_and(|v| Some(v.v) == plus_grand)
+        };
+        if !bases_nommees && !a_juger.into_iter().all(total_ou_maximum) {
+            retirer_la_preuve(
+                &mut prouvee,
+                &mut issue,
+                &mut raison,
+                &mut champs,
+                &numeriques,
+                "un total ne porte pas son libellé",
             );
             for (cp, ev) in modele.contraintes.iter().zip(&evals) {
                 if *ev == Eval::Ok {
