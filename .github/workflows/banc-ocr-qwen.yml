@@ -1,0 +1,105 @@
+# Le banc sans IA, relu par Qwen — une mesure, pas une garde.
+#
+# CE QU'IL MESURE : le banc sans IA (`banc-sans-ia.ts`) sur les corpus du dépôt
+# (ALGORIA, synthétique), avec le relevé d'Alibaba `qwen-vl-ocr` (le millésime de
+# `apps/api/src/malica/modeles.ts`) À LA PLACE de PaddleOCR (`--lecteur qwen`).
+# La couche de texte d'un PDF reste première et ne part jamais chez Alibaba.
+# Décision du 8 novembre 2026 : Qwen est le second lecteur des pièces que le
+# Sudoku n'a pas prouvées ; ce banc dit ce qu'il ferait prouver, et avec combien
+# de faux.
+#
+# Les clés n'existent que dans GitHub : la mesure tourne donc ici, et seulement
+# à la poussée de sa branche. Chaque appel est payé : au plus 300 par passage
+# (`--plafond-appels`), au-delà la pièce est en panne, dite.
+#
+# Sortie : l'artefact `banc-ocr-qwen` (mesures JSON, rapport, journal, relevés
+# gardés — de quoi rejouer le moteur sans rappeler Alibaba).
+
+name: Banc OCR Qwen
+
+on:
+  push:
+    branches: [claude/banc-ocr-qwen]
+
+concurrency:
+  group: banc-ocr-qwen
+  cancel-in-progress: false
+
+jobs:
+  banc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: banc
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/banc
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      QWEN_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
+
+    steps:
+      - name: Les clés de Qwen
+        run: |
+          manquantes=""
+          [ -n "$QWEN_API_KEY" ] || manquantes="$manquantes QWEN_API_KEY"
+          [ -n "$QWEN_BASE_URL" ] || manquantes="$manquantes QWEN_BASE_URL"
+          if [ -n "$manquantes" ]; then
+            echo "::error title=Banc non mesuré::clés absentes :$manquantes"
+            exit 1
+          fi
+          echo "clés présentes : QWEN_API_KEY, QWEN_BASE_URL"
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer
+        run: npm ci
+
+      - name: Le moteur du sudoku
+        run: |
+          rustup target add wasm32-unknown-unknown
+          npm run build --workspace @malica/sudoku
+
+      - name: Monter le schéma
+        run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
+        env:
+          MALICA_API_PASSWORD: ci
+
+      # Le banc échoue (code 1) dès qu'une valeur est fausse ou inventée : c'est
+      # une mesure, son code est rapporté, et l'artefact part quoi qu'il dise.
+      - name: Le banc, relu par Qwen
+        run: |
+          mkdir -p sortie/releves sortie/brut
+          set +e
+          node --experimental-strip-types --no-warnings \
+            apps/api/src/malica/lecture/banc-sans-ia.ts \
+            --lecteur qwen --plafond-appels 300 \
+            --corpus algoria:outils/jeu-algoria \
+            --corpus synthetique:outils/jeu-synthetique \
+            --cache sortie/releves --brut sortie/brut \
+            --sortie sortie/qwen.json > sortie/qwen.md 2> sortie/qwen.err
+          code=$?
+          echo "code de sortie du banc : $code" | tee sortie/code.txt
+          cat sortie/qwen.md >> "$GITHUB_STEP_SUMMARY"
+          tail -40 sortie/qwen.err
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: banc-ocr-qwen
+          path: sortie/
+          retention-days: 30
