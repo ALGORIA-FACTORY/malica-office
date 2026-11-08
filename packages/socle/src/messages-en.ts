@@ -1215,6 +1215,11 @@ export const en: Dict = {
     "No practice follows this file yet: this answer has not been reviewed by a chartered accountant.",
   "pme.conseil.relu": "Reviewed and validated by your accountant.",
   "pme.conseil.sources": "Sources: {liste}",
+  "pme.conseil.cite.lacune":
+    "I cannot find the text in force on {date}: the corpus holds {texte}, art. {numero}, until {fin}, and again from {reprise}, but no version in between.",
+  "pme.conseil.cite.horsCorpus": "I cannot find this in the texts I have in front of me.",
+  "pme.conseil.cite.enVigueurAu": "In force on {date}: {liste}.",
+  "pme.conseil.cite.version": "{texte}, art. {numero} (version of {date})",
   "pme.conseil.duCabinet": "Your accountant’s answer:",
   "pme.conseil.correction": "Your accountant reviewed my answer and corrects it:",
   "pme.conseil.articleInvoque": "Basis: {article}",
@@ -2127,6 +2132,8 @@ export const en: Dict = {
   "refus.introuvable.etablissement": "Establishment not found, or you do not have access to it.",
   "refus.introuvable.conversation": "Conversation not found, or you do not have access to it.",
   "refus.authentification_requise": "Sign in to do this.",
+  "refus.conseil.modele_sans_tarif":
+    "This model has no price in force: it cannot answer, as its cost would not be counted.",
   "refus.reserve.plateforme": "This action is reserved for platform operators.",
   "refus.reserve.serveur":
     "This action is reserved for the server: it cannot be done from a screen.",
@@ -3948,6 +3955,27 @@ export const en: Dict = {
   "tour.designation.motif.arret.budgets_epuises":
     "stopped: both budgets spent, read by the Sudoku alone",
   "tour.designation.motif.arret.chaine_vide": "stopped: no chain set",
+  "tour.menu.conseil": "Cited advice",
+  "tour.conseilCite.consigne": "Cited advice instructions",
+  "tour.conseilCite.consigne.aide":
+    "The system prompt Claude receives before the corpus passages. It holds no tax figure: rates, thresholds and deadlines come from the reference data and the texts, cited. Publishing creates a new version; the previous one stays on record.",
+  "tour.conseilCite.consigne.enVigueur": "In force since {date}. Versions on record: {versions}.",
+  "tour.conseilCite.consigne.borne": "At least two hundred characters.",
+  "tour.conseilCite.publier": "Publish this version",
+  "tour.conseilCite.reglage": "Cited advice settings",
+  "tour.conseilCite.reglage.aide":
+    "The standard model answers every question; the model for difficult questions takes over when the question exceeds the length, contains one of the words, or draws on several distinct texts.",
+  "tour.conseilCite.mois": "This month: answers given, {appels}; cost, ${cout}.",
+  "tour.conseilCite.modeleCourant": "Standard model",
+  "tour.conseilCite.modeleDifficile": "Model for difficult questions",
+  "tour.conseilCite.longueurDifficile": "Length from which a question is difficult (characters)",
+  "tour.conseilCite.motsDifficiles": "Words that make a question difficult (comma-separated)",
+  "tour.conseilCite.corpusDistincts": "Number of distinct texts that makes a question difficult",
+  "tour.conseilCite.passagesMax": "Corpus passages given to Claude",
+  "tour.conseilCite.distanceMax": "Maximum distance of a passage found by meaning",
+  "tour.conseilCite.distanceMaxMots": "Maximum distance of a passage also found by words",
+  "tour.conseilCite.sortieMax": "Maximum answer length (tokens)",
+  "tour.conseilCite.borne": "Whole numbers, and distances between 0 and 1 (at most four decimals).",
   "tour.relances": "Overdue reminders",
   "tour.relances.aide":
     "When enabled, Malica writes to the holder of an overdue invoice: a reminder, a follow-up, a notice, then the suspension notice. One email per invoice and per step. Disabled, nothing is sent.",

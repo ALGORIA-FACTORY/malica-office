@@ -135,6 +135,16 @@ async function encoder(question: string, modele: ModeleEmpreinte): Promise<numbe
 }
 
 /**
+ * L'empreinte d'une question, par le modèle que la base désigne pour le
+ * corpus. Partagée par la recherche vectorielle et la recherche hybride du
+ * conseil cité : une seule façon d'encoder une question.
+ */
+export async function empreinteDeLaQuestion(api: AppelApi, question: string): Promise<number[]> {
+  const modele = await api.rpc<ModeleEmpreinte>("corpus", "modeleEmpreinte", []);
+  return encoder(question, modele);
+}
+
+/**
  * Ce que le droit dit, sur cette question, à cette date.
  *
  * @param jour  L'état du droit à cette date. Une facture de mars 2025 se juge
@@ -149,8 +159,7 @@ export async function chercherDansLeDroit(
   const propre = question.trim();
   if (propre.length < 3) return [];
 
-  const modele = await api.rpc<ModeleEmpreinte>("corpus", "modeleEmpreinte", []);
-  const vecteur = await encoder(propre, modele);
+  const vecteur = await empreinteDeLaQuestion(api, propre);
 
   const fragments = await api.rpc<FragmentDeDroit[]>("corpus", "rechercher", [
     {
@@ -257,7 +266,7 @@ export async function parametresPour(
   input: {
     jurisdiction: string;
     question: string;
-    fragments: readonly FragmentDeDroit[];
+    fragments: ReadonlyArray<Pick<FragmentDeDroit, "corpus" | "numero">>;
     jour?: string | null;
   },
 ): Promise<ParametreFiscal[]> {
