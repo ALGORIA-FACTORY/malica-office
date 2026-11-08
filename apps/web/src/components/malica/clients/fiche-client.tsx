@@ -58,7 +58,7 @@ const AIDE = "mt-1 block text-[11.5px] leading-[1.45] text-muted-foreground";
 
 /* ------------------------------------------------------------------ tiroir */
 
-export function Tiroir({
+function Tiroir({
   titre,
   sousTitre,
   fermer,

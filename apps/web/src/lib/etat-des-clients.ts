@@ -26,15 +26,12 @@ export function ficheComplete(f: FicheCourante | null | undefined): boolean {
 }
 
 /** Le dirigeant n'est pas venu : invitation en attente, expirée, ou jamais envoyée. */
-export function aRelancer(e: EtatDuClient | undefined): boolean {
+function aRelancer(e: EtatDuClient | undefined): boolean {
   return Boolean(e && !e.dirigeantPresent);
 }
 
 /** Aucun abonnement que la comptabilité paie ou propose, ni par la licence partagée. */
-export function sansAbonnementCouvert(
-  e: EtatDuClient | undefined,
-  parLaLicence?: string | null,
-): boolean {
+function sansAbonnementCouvert(e: EtatDuClient | undefined, parLaLicence?: string | null): boolean {
   return !e?.accesStatut && !parLaLicence;
 }
 
@@ -103,7 +100,7 @@ export function regrouperParProprietaire(lignes: readonly LigneClient[]): Groupe
 }
 
 /** Ce que la comptabilité règle chaque mois : les seuls abonnements actifs. */
-export function rangDe(
+function rangDe(
   code: string | null | undefined,
   offres: ReadonlyArray<{ code: string; rang: number }>,
 ) {

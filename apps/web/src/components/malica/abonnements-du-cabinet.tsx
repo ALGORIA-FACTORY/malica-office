@@ -26,13 +26,11 @@ import { useState } from "react";
 import { Users } from "lucide-react";
 
 import { useMonAcces } from "@/hooks/use-mon-acces";
-import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
   EmptyState,
   InkCell,
   InkTable,
   InkTableRow,
-  MalicaNote,
   SectionTitle,
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
@@ -57,14 +55,6 @@ const TON: Record<string, string> = {
   suspendu: "text-signal-warn",
   termine: "text-muted-foreground",
 };
-
-/** L'écran chez le cabinet : son organisation, et la parole de Malica dans la colonne. */
-export function AbonnementsDeMonCabinet() {
-  const { t, locale } = useI18n();
-  const { org } = useCabinet();
-  useMalicaPanel(<MalicaNote>{t("cab.abo.panel")}</MalicaNote>, [locale]);
-  return <AbonnementsDuCabinet cabinet={org} />;
-}
 
 /**
  * L'écran des abonnements d'un cabinet. Le cabinet le lit chez lui
