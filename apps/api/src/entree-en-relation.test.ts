@@ -415,14 +415,10 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
     } | null;
     assert.equal(profil?.display_name, "Leila Ben Salah");
 
-    // Sans nom, le compte a quand même son profil : rien ne manque plus.
+    // Sans nom, rien n'est inventé : le profil naîtra quand la personne l'écrira.
     const anonyme = await creerCompte(`anonyme-${marque}@essai.local`, MDP);
     assert.ok(anonyme);
-    const vide = (await rpc(anonyme, "identite", "monProfil")) as {
-      display_name: string | null;
-    } | null;
-    assert.ok(vide, "le profil existe dès l'inscription");
-    assert.equal(vide.display_name, null);
+    assert.equal(await rpc(anonyme, "identite", "monProfil"), null);
   });
 
   it("un lien déjà servi ne sert plus", async () => {

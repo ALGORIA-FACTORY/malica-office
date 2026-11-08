@@ -7,10 +7,12 @@
 -- l'adresse e-mail, ou une initiale tirée de l'adresse, à quelqu'un qui venait
 -- de taper son nom.
 --
--- Le profil naît donc avec le compte, dans la même transaction, depuis ce que
--- l'inscription a reçu. Rien n'est deviné : « Nom et prénom » est un seul
--- champ, dont l'ordre n'est pas sûr — il va dans `display_name`, tel quel.
--- `prenom` et `nom` ne sont remplis que s'ils arrivent séparés.
+-- Le profil naît donc avec le compte, dans la même transaction, dès que
+-- l'inscription a reçu un nom. Rien n'est deviné : « Nom et prénom » est un
+-- seul champ, dont l'ordre n'est pas sûr — il va dans `display_name`, tel
+-- quel. `prenom` et `nom` ne sont remplis que s'ils arrivent séparés. Sans
+-- aucun nom, rien n'est créé : le profil naîtra quand la personne l'écrira
+-- (`mon_profil_ecrire`), comme avant.
 create or replace function identity.profil_naissant()
 returns trigger
 language plpgsql
@@ -18,6 +20,11 @@ security definer
 set search_path = pg_catalog, identity
 as $$
 begin
+  if coalesce(nullif(btrim(new.raw_user_meta_data ->> 'display_name'), ''),
+              nullif(btrim(new.raw_user_meta_data ->> 'prenom'), ''),
+              nullif(btrim(new.raw_user_meta_data ->> 'nom'), '')) is null then
+    return new;
+  end if;
   insert into identity.profiles (user_id, display_name, prenom, nom)
   values (
     new.id,
