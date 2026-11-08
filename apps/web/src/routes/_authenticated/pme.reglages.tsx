@@ -132,7 +132,9 @@ function PmeReglages() {
   const ids = pme.dossiers.length > 0 ? pme.dossiers.map((d) => d.id) : [pme.tenantId];
   /** L'offre et le cabinet de chaque société, en un appel (planche 4). */
   const fiches = useQuery({
-    queryKey: ["fiches-des-societes", ...ids],
+    // Sous `mon-forfait` : tout geste qui change une offre ou un mandat relit
+    // aussi cette liste (revue de #284).
+    queryKey: [CLE_FORFAIT, "fiches-des-societes", ...ids],
     queryFn: () => office().facturation.fichesDesSocietes(ids),
     staleTime: 5 * 60 * 1000,
   });
@@ -1099,7 +1101,10 @@ function ListeDesSocietes({
                 aria-label={org.nom}
                 onClick={(e) => e.stopPropagation()}
               >
-                <Organisation org={org} titulaire={titulaire.get(org.tenantId)} />
+                {/* Dans le portail, la portée des Réglages garde à la carte ses styles (revue de #284). */}
+                <div data-ecran="parametres">
+                  <Organisation org={org} titulaire={titulaire.get(org.tenantId)} />
+                </div>
               </div>
             </div>,
             document.querySelector('[data-surface="pme"]') ?? document.body,
@@ -1373,6 +1378,7 @@ function LeMandat({
         qc.invalidateQueries({ queryKey: cleMonCabinet(tenantId) }),
         qc.invalidateQueries({ queryKey: ["abonnements-pour-moi", tenantId] }),
         qc.invalidateQueries({ queryKey: [CLE_FORFAIT, tenantId] }),
+        qc.invalidateQueries({ queryKey: [CLE_FORFAIT, "fiches-des-societes"] }),
       ]);
     },
     onError: (e: unknown) => {
