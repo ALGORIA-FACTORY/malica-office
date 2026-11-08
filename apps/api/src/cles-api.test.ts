@@ -223,7 +223,7 @@ describe("les clés d'API du cabinet", { skip: !BASE_CONFIGUREE }, () => {
 
     // La personne, elle, relit ce que la clé a déposé : même cabinet, même RLS.
     const parLaSession = await fetch(`${base}/pieces/${id}/contenu`, {
-      headers: { authorization: `Bearer ${emettreJeton(personne)}` },
+      headers: { authorization: `Bearer ${emettreJeton(personne, new Date())}` },
     });
     assert.equal(parLaSession.status, 200);
     assert.deepEqual(Buffer.from(await parLaSession.arrayBuffer()), OCTETS);

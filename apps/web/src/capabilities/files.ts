@@ -4,7 +4,12 @@
  */
 
 import { numeriseurDeLAppareil } from "./numerisation";
-import { scanPagesToPdf, scanToPdf, type OptionsDePreparation } from "./scanner";
+import {
+  scanPagesToPdf,
+  scanToPdf,
+  type DefautDePhoto,
+  type OptionsDePreparation,
+} from "./scanner";
 
 export interface PickedFile {
   blob: Blob;
@@ -13,6 +18,12 @@ export interface PickedFile {
   source: "photo" | "pdf";
   /** Vrai si le document a été détecté et redressé avant l'encodage PDF. */
   cropped?: boolean;
+  /**
+   * Une photo IMPORTÉE (galerie, fichier) que la caméra n'a pas jugée : ses défauts,
+   * dits avant l'envoi sans la refuser. Absent pour un PDF et pour les pages du scanner,
+   * que la caméra a déjà refusées si elles étaient mauvaises.
+   */
+  defauts?: readonly DefautDePhoto[];
 }
 
 const IMAGE_ACCEPT = "image/*";
@@ -123,6 +134,7 @@ async function scan(accept: string, capture: boolean, plusieurs = false): Promis
       name: scanned.name,
       source: "photo",
       cropped: scanned.cropped,
+      defauts: scanned.defauts,
     });
   }
   return prets;

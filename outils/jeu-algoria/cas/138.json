@@ -1,0 +1,307 @@
+{
+  "id": "138",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "ticket_caisse",
+  "grille": "ticket_caisse",
+  "langue": "fr",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "I",
+  "mise_en_page": "I",
+  "scenario": "ticket_especes",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "pli"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Ticket de caisse",
+    "parties": [
+      {
+        "role": "fournisseur",
+        "nom": "MARVELLE PAPETERIE",
+        "matricule": "5728028D/A/M/000",
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "fournisseur",
+      "nom": "MARVELLE PAPETERIE",
+      "matricule": "5728028D/A/M/000",
+      "est": "tiers"
+    },
+    "client": null,
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "rouleau",
+        "blocs": [
+          {
+            "k": "titre",
+            "texte": [
+              {
+                "c": "enseigne"
+              }
+            ]
+          },
+          {
+            "k": "texte",
+            "classe": "centre",
+            "morceaux": [
+              {
+                "c": "adresse_magasin"
+              },
+              {
+                "br": true
+              },
+              "MF ",
+              {
+                "c": "matricule_fiscal_emetteur"
+              }
+            ]
+          },
+          {
+            "k": "texte",
+            "classe": "centre",
+            "morceaux": [
+              "Ticket ",
+              {
+                "c": "numero_ticket"
+              },
+              {
+                "br": true
+              },
+              {
+                "c": "date_heure"
+              },
+              "  ",
+              {
+                "c": "caisse_caissier"
+              }
+            ]
+          },
+          {
+            "k": "tableau",
+            "entetes": [
+              "Article",
+              "Qté",
+              "Montant"
+            ],
+            "nombres": [
+              1,
+              2
+            ],
+            "lignes": [
+              [
+                {
+                  "c": "lignes[0].designation"
+                },
+                {
+                  "c": "lignes[0].quantite"
+                },
+                {
+                  "c": "lignes[0].prix_ttc_ligne"
+                }
+              ],
+              [
+                {
+                  "c": "lignes[1].designation"
+                },
+                {
+                  "c": "lignes[1].quantite"
+                },
+                {
+                  "c": "lignes[1].prix_ttc_ligne"
+                }
+              ],
+              [
+                {
+                  "c": "lignes[2].designation"
+                },
+                {
+                  "c": "lignes[2].quantite"
+                },
+                {
+                  "c": "lignes[2].prix_ttc_ligne"
+                }
+              ],
+              [
+                {
+                  "c": "lignes[3].designation"
+                },
+                {
+                  "c": "lignes[3].quantite"
+                },
+                {
+                  "c": "lignes[3].prix_ttc_ligne"
+                }
+              ]
+            ]
+          },
+          {
+            "k": "section",
+            "texte": [
+              "TOTAL TTC   ",
+              {
+                "c": "total_ttc"
+              }
+            ]
+          },
+          {
+            "k": "champs",
+            "lignes": [
+              [
+                {
+                  "c": "mode_reglement"
+                },
+                {
+                  "c": "montant_recu_rendu.recu"
+                }
+              ],
+              [
+                "RENDU",
+                {
+                  "c": "montant_recu_rendu.rendu"
+                }
+              ],
+              [
+                "TVA 19 % sur 82,269",
+                {
+                  "c": "ventilation_tva.19"
+                }
+              ]
+            ]
+          },
+          {
+            "k": "texte",
+            "classe": "centre",
+            "morceaux": [
+              "Merci de votre visite — ni repris ni échangé sans ce ticket"
+            ]
+          }
+        ]
+      }
+    ],
+    "imprime": {
+      "enseigne": "MARVELLE PAPETERIE",
+      "adresse_magasin": "Centre Orzane, local 4, 1053 Les Berges du Lac",
+      "matricule_fiscal_emetteur": "5728028DAM000",
+      "numero_ticket": "T597796",
+      "date_heure": "09/10/2026 11:01",
+      "caisse_caissier": "Caisse 02 / Rania",
+      "lignes[0].designation": "Ramette papier A4 80 g",
+      "lignes[0].quantite": "4",
+      "lignes[0].prix_ttc_ligne": "46,000",
+      "lignes[1].designation": "Piles alcalines AA, lot de 4",
+      "lignes[1].quantite": "1",
+      "lignes[1].prix_ttc_ligne": "10,900",
+      "lignes[2].designation": "Clé USB 3.2 64 Go",
+      "lignes[2].quantite": "1",
+      "lignes[2].prix_ttc_ligne": "27,500",
+      "lignes[3].designation": "Câble réseau Cat6 3 m",
+      "lignes[3].quantite": "1",
+      "lignes[3].prix_ttc_ligne": "13,500",
+      "total_ttc": "97,900",
+      "mode_reglement": "ESPECES",
+      "montant_recu_rendu.recu": "100,000",
+      "montant_recu_rendu.rendu": "2,100",
+      "ventilation_tva.19": "15,631"
+    },
+    "versConcept": {
+      "enseigne": "enseigne",
+      "adresse_magasin": "adresse_magasin",
+      "matricule_fiscal_emetteur": "matricule_fiscal_emetteur",
+      "numero_ticket": "numero_ticket",
+      "date_heure": "date_heure",
+      "caisse_caissier": "caisse_caissier",
+      "lignes[0].designation": "lignes[0].designation",
+      "lignes[0].quantite": "lignes[0].quantite",
+      "lignes[0].prix_ttc_ligne": "lignes[0].prix_ttc_ligne",
+      "lignes[1].designation": "lignes[1].designation",
+      "lignes[1].quantite": "lignes[1].quantite",
+      "lignes[1].prix_ttc_ligne": "lignes[1].prix_ttc_ligne",
+      "lignes[2].designation": "lignes[2].designation",
+      "lignes[2].quantite": "lignes[2].quantite",
+      "lignes[2].prix_ttc_ligne": "lignes[2].prix_ttc_ligne",
+      "lignes[3].designation": "lignes[3].designation",
+      "lignes[3].quantite": "lignes[3].quantite",
+      "lignes[3].prix_ttc_ligne": "lignes[3].prix_ttc_ligne",
+      "total_ttc": "total_ttc",
+      "mode_reglement": "mode_reglement",
+      "montant_recu_rendu.recu": "montant_recu_rendu[recu]",
+      "montant_recu_rendu.rendu": "montant_recu_rendu[rendu]",
+      "ventilation_tva.19": "ventilation_tva[19]"
+    },
+    "marques": {},
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 575633201,
+  "attendu": {
+    "concepts": {
+      "enseigne": "MARVELLE PAPETERIE",
+      "adresse_magasin": "Centre Orzane, local 4, 1053 Les Berges du Lac",
+      "matricule_fiscal_emetteur": "5728028D/A/M/000",
+      "numero_ticket": "T597796",
+      "date_heure": "2026-10-09T11:01",
+      "caisse_caissier": "Caisse 02 / Rania",
+      "lignes": [
+        {
+          "designation": "Ramette papier A4 80 g",
+          "quantite": "4",
+          "prix_ttc_ligne": "46.000"
+        },
+        {
+          "designation": "Piles alcalines AA, lot de 4",
+          "quantite": "1",
+          "prix_ttc_ligne": "10.900"
+        },
+        {
+          "designation": "Clé USB 3.2 64 Go",
+          "quantite": "1",
+          "prix_ttc_ligne": "27.500"
+        },
+        {
+          "designation": "Câble réseau Cat6 3 m",
+          "quantite": "1",
+          "prix_ttc_ligne": "13.500"
+        }
+      ],
+      "total_ttc": "97.900",
+      "mode_reglement": "especes",
+      "montant_recu_rendu": {
+        "recu": "100.000",
+        "rendu": "2.100"
+      },
+      "ventilation_tva": {
+        "19": "15.631"
+      }
+    },
+    "confondus": {},
+    "notes": [
+      "Ticket anonyme : ALGORIA (l'acheteur) n'y figure pas. Reçu − total = rendu ; TVA par taux = TTC − HT (`ventilation_tva` par taux, comme `montant_tva_par_taux` d'une facture ; `montant_recu_rendu` en { recu, rendu })."
+    ],
+    "non_imprimes": [
+      "droit_timbre",
+      "ref_transaction_carte"
+    ]
+  }
+}

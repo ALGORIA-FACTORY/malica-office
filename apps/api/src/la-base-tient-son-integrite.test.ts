@@ -42,14 +42,15 @@
  */
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
 
 import { MESSAGES } from "@malica/socle/messages";
 
-import { introuvableLisible, refusLisible } from "./refus.ts";
+import { introuvableLisible, REFUS_SANS_CLE, refusLisible } from "./refus.ts";
 
 interface Verrou {
   colonnes_sans_cle_etrangere: Record<string, string>;
@@ -68,7 +69,7 @@ const VERROU = JSON.parse(
   readFileSync(new URL("./verrous/integrite-de-la-base.json", import.meta.url), "utf8"),
 ) as Verrou;
 
-const RACINE = new URL("../../../", import.meta.url).pathname;
+const RACINE = fileURLToPath(new URL("../../../", import.meta.url));
 
 /* ------------------------------------------------------------------ le code */
 
@@ -89,7 +90,8 @@ function fichiersDeProduction(dossier: string, extensions: RegExp): string[] {
   return out;
 }
 
-const relatif = (chemin: string) => chemin.slice(RACINE.length);
+// The lock file names paths with "/" — on Windows, join() gives "\".
+const relatif = (chemin: string) => chemin.slice(RACINE.length).split(sep).join("/");
 
 /** Retire les commentaires : seul le code exécutable est jugé. */
 const sansCommentaires = (src: string) =>
@@ -432,7 +434,9 @@ describe("l'intégrité de la base", { skip: !BASE_CONFIGUREE }, () => {
       }
       const erreur = Object.assign(new Error(message), { code });
       if (introuvableLisible(erreur) !== null) continue;
-      if (refusLisible(erreur) !== message.trim()) continue;
+      // Un message qui ne se dit ni par sa clé ni par une traduction tombe sur la
+      // clé générique : il ne part plus à l'écran, mais R12 veut sa clé.
+      if (refusLisible(erreur) !== REFUS_SANS_CLE) continue;
       parMessage.set(message, (parMessage.get(message) ?? new Set()).add(fn));
     }
     assert.deepEqual(inconnus, [], "condition PL/pgSQL inconnue de l'audit");

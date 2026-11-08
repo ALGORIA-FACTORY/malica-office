@@ -1,0 +1,322 @@
+{
+  "id": "139",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "ticket_caisse",
+  "grille": "ticket_caisse",
+  "langue": "ar",
+  "rendu": "pdf_image",
+  "capture": "scan",
+  "gabarit": "I",
+  "mise_en_page": "I",
+  "scenario": "ticket_carte",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "تذكرة صندوق",
+    "parties": [
+      {
+        "role": "fournisseur",
+        "nom": "مغازة زيروان",
+        "matricule": "5707029Z/A/M/000",
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "fournisseur",
+      "nom": "مغازة زيروان",
+      "matricule": "5707029Z/A/M/000",
+      "est": "tiers"
+    },
+    "client": null,
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "rouleau",
+        "blocs": [
+          {
+            "k": "titre",
+            "texte": [
+              {
+                "c": "enseigne"
+              }
+            ]
+          },
+          {
+            "k": "texte",
+            "classe": "centre",
+            "morceaux": [
+              {
+                "c": "adresse_magasin"
+              },
+              {
+                "br": true
+              },
+              "م.ج ",
+              {
+                "c": "matricule_fiscal_emetteur"
+              }
+            ]
+          },
+          {
+            "k": "texte",
+            "classe": "centre",
+            "morceaux": [
+              "تذكرة عدد ",
+              {
+                "c": "numero_ticket"
+              },
+              {
+                "br": true
+              },
+              {
+                "c": "date_heure"
+              }
+            ]
+          },
+          {
+            "k": "tableau",
+            "entetes": [
+              "البيان",
+              "الكمية",
+              "المبلغ"
+            ],
+            "nombres": [
+              1,
+              2
+            ],
+            "lignes": [
+              [
+                {
+                  "c": "lignes[0].designation"
+                },
+                {
+                  "c": "lignes[0].quantite"
+                },
+                {
+                  "c": "lignes[0].prix_ttc_ligne"
+                }
+              ],
+              [
+                {
+                  "c": "lignes[1].designation"
+                },
+                {
+                  "c": "lignes[1].quantite"
+                },
+                {
+                  "c": "lignes[1].prix_ttc_ligne"
+                }
+              ],
+              [
+                {
+                  "c": "lignes[2].designation"
+                },
+                {
+                  "c": "lignes[2].quantite"
+                },
+                {
+                  "c": "lignes[2].prix_ttc_ligne"
+                }
+              ],
+              [
+                {
+                  "c": "lignes[3].designation"
+                },
+                {
+                  "c": "lignes[3].quantite"
+                },
+                {
+                  "c": "lignes[3].prix_ttc_ligne"
+                }
+              ],
+              [
+                {
+                  "c": "lignes[4].designation"
+                },
+                {
+                  "c": "lignes[4].quantite"
+                },
+                {
+                  "c": "lignes[4].prix_ttc_ligne"
+                }
+              ]
+            ]
+          },
+          {
+            "k": "section",
+            "texte": [
+              "المجموع   ",
+              {
+                "c": "total_ttc"
+              }
+            ]
+          },
+          {
+            "k": "champs",
+            "lignes": [
+              [
+                "أ.ق.م 7 %",
+                {
+                  "c": "ventilation_tva.7"
+                }
+              ],
+              [
+                "أ.ق.م 19 %",
+                {
+                  "c": "ventilation_tva.19"
+                }
+              ],
+              [
+                "طريقة الدفع",
+                {
+                  "c": "mode_reglement"
+                }
+              ],
+              [
+                "مرجع العملية",
+                {
+                  "c": "ref_transaction_carte"
+                }
+              ]
+            ]
+          },
+          {
+            "k": "texte",
+            "classe": "centre",
+            "morceaux": [
+              "شكرا على زيارتكم"
+            ]
+          }
+        ]
+      }
+    ],
+    "imprime": {
+      "enseigne": "مغازة زيروان",
+      "adresse_magasin": "شارع الأرز 56، 2045 العوينة",
+      "matricule_fiscal_emetteur": "5707029Z/A/M/000",
+      "numero_ticket": "50724",
+      "date_heure": "07/10/2026 09:36",
+      "lignes[0].designation": "قهوة حبوب، كيس 1 كغ",
+      "lignes[0].quantite": "1",
+      "lignes[0].prix_ttc_ligne": "43,450",
+      "lignes[1].designation": "مياه معدنية، حزمة 6 × 1,5 لتر",
+      "lignes[1].quantite": "2",
+      "lignes[1].prix_ttc_ligne": "8,000",
+      "lignes[2].designation": "أكواب ورقية، 50 قطعة",
+      "lignes[2].quantite": "1",
+      "lignes[2].prix_ttc_ligne": "4,250",
+      "lignes[3].designation": "مناديل ورقية، علبة",
+      "lignes[3].quantite": "1",
+      "lignes[3].prix_ttc_ligne": "3,250",
+      "lignes[4].designation": "سكر، كيس 1 كغ",
+      "lignes[4].quantite": "3",
+      "lignes[4].prix_ttc_ligne": "7,350",
+      "total_ttc": "66,300",
+      "ventilation_tva.7": "3,847",
+      "ventilation_tva.19": "1,197",
+      "mode_reglement": "بطاقة بنكية",
+      "ref_transaction_carte": "500267"
+    },
+    "versConcept": {
+      "enseigne": "enseigne",
+      "adresse_magasin": "adresse_magasin",
+      "matricule_fiscal_emetteur": "matricule_fiscal_emetteur",
+      "numero_ticket": "numero_ticket",
+      "date_heure": "date_heure",
+      "lignes[0].designation": "lignes[0].designation",
+      "lignes[0].quantite": "lignes[0].quantite",
+      "lignes[0].prix_ttc_ligne": "lignes[0].prix_ttc_ligne",
+      "lignes[1].designation": "lignes[1].designation",
+      "lignes[1].quantite": "lignes[1].quantite",
+      "lignes[1].prix_ttc_ligne": "lignes[1].prix_ttc_ligne",
+      "lignes[2].designation": "lignes[2].designation",
+      "lignes[2].quantite": "lignes[2].quantite",
+      "lignes[2].prix_ttc_ligne": "lignes[2].prix_ttc_ligne",
+      "lignes[3].designation": "lignes[3].designation",
+      "lignes[3].quantite": "lignes[3].quantite",
+      "lignes[3].prix_ttc_ligne": "lignes[3].prix_ttc_ligne",
+      "lignes[4].designation": "lignes[4].designation",
+      "lignes[4].quantite": "lignes[4].quantite",
+      "lignes[4].prix_ttc_ligne": "lignes[4].prix_ttc_ligne",
+      "total_ttc": "total_ttc",
+      "ventilation_tva.7": "ventilation_tva[7]",
+      "ventilation_tva.19": "ventilation_tva[19]",
+      "mode_reglement": "mode_reglement",
+      "ref_transaction_carte": "ref_transaction_carte"
+    },
+    "marques": {},
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 1618919722,
+  "attendu": {
+    "concepts": {
+      "enseigne": "مغازة زيروان",
+      "adresse_magasin": "شارع الأرز 56، 2045 العوينة",
+      "matricule_fiscal_emetteur": "5707029Z/A/M/000",
+      "numero_ticket": "50724",
+      "date_heure": "2026-10-07T09:36",
+      "lignes": [
+        {
+          "designation": "قهوة حبوب، كيس 1 كغ",
+          "quantite": "1",
+          "prix_ttc_ligne": "43.450"
+        },
+        {
+          "designation": "مياه معدنية، حزمة 6 × 1,5 لتر",
+          "quantite": "2",
+          "prix_ttc_ligne": "8.000"
+        },
+        {
+          "designation": "أكواب ورقية، 50 قطعة",
+          "quantite": "1",
+          "prix_ttc_ligne": "4.250"
+        },
+        {
+          "designation": "مناديل ورقية، علبة",
+          "quantite": "1",
+          "prix_ttc_ligne": "3.250"
+        },
+        {
+          "designation": "سكر، كيس 1 كغ",
+          "quantite": "3",
+          "prix_ttc_ligne": "7.350"
+        }
+      ],
+      "total_ttc": "66.300",
+      "ventilation_tva": {
+        "7": "3.847",
+        "19": "1.197"
+      },
+      "mode_reglement": "carte",
+      "ref_transaction_carte": "500267"
+    },
+    "confondus": {},
+    "notes": [
+      "Ticket anonyme, deux taux (7 % et 19 %, choix du banc comme pour les factures) : TVA de chaque taux = TTC − HT."
+    ],
+    "non_imprimes": [
+      "caisse_caissier",
+      "droit_timbre",
+      "montant_recu_rendu"
+    ]
+  }
+}

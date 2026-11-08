@@ -44,7 +44,7 @@
         "designation": "فارينة قمح كيس 50 كغ",
         "designationAr": "فارينة قمح كيس 50 كغ",
         "codeTaxe": "TVA07",
-        "tauxImprime": "7.000000000000001 %"
+        "tauxImprime": "7 %"
       },
       {
         "designation": "خدمات صيانة",
@@ -57,7 +57,7 @@
     "parTaux": [
       {
         "code": "TVA07",
-        "tauxImprime": "7.000000000000001 %"
+        "tauxImprime": "7 %"
       },
       {
         "code": "TVA13",

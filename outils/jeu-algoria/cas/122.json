@@ -1,0 +1,538 @@
+{
+  "id": "122",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "pv_age",
+  "grille": "pv_age",
+  "langue": "fr",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "H",
+  "mise_en_page": "H-machine",
+  "scenario": "pv_age",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Procès-verbal de l'assemblée générale extraordinaire",
+    "parties": [
+      {
+        "role": "entreprise",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "entreprise",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": null,
+    "style": null,
+    "police": "machine",
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "denomination"
+            }
+          ],
+          [
+            "S.A.R.L. au capital de 50 000 DT"
+          ],
+          [
+            "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis"
+          ]
+        ],
+        "droite": []
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "PROCÈS-VERBAL DE L'",
+          {
+            "c": "type_assemblee"
+          }
+        ],
+        "sous": [
+          "DU ",
+          "12/09/2026"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Le ",
+          {
+            "c": "date_assemblee"
+          },
+          ", les associés de la société se sont réunis en assemblée générale extraordinaire ",
+          {
+            "c": "lieu_assemblee"
+          },
+          ", ",
+          {
+            "c": "numero_convocation"
+          },
+          " du gérant en date du ",
+          {
+            "c": "date_convocation"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Les associés présents ou représentés détiennent ",
+          {
+            "c": "titres_presents_representes"
+          },
+          " parts sur ",
+          {
+            "c": "total_titres_droit_vote"
+          },
+          ", soit ",
+          {
+            "c": "quorum_taux"
+          },
+          ". La séance est présidée par M. ",
+          {
+            "c": "president_seance"
+          },
+          ", gérant ; ",
+          {
+            "c": "scrutateurs_secretaire.0"
+          },
+          " est désignée secrétaire."
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "ORDRE DU JOUR"
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "ordre_du_jour.0"
+          },
+          {
+            "br": true
+          },
+          {
+            "c": "ordre_du_jour.1"
+          },
+          {
+            "br": true
+          },
+          {
+            "c": "ordre_du_jour.2"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "rapport_gerant_conseil"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "lignes[0].resolution_numero"
+          },
+          " — ",
+          {
+            "c": "lignes[0].resolution_objet"
+          },
+          " (article ",
+          {
+            "c": "lignes[0].articles_statuts_modifies"
+          },
+          ")"
+        ],
+        "classe": "gras"
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "lignes[0].resolution_texte"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "objet_modifie"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Cette résolution, soumise à la ",
+          {
+            "c": "lignes[0].majorite_requise"
+          },
+          ", est ",
+          {
+            "c": "lignes[0].resultat"
+          },
+          " (pour : ",
+          {
+            "c": "lignes[0].votes_pour"
+          },
+          " ; contre : ",
+          {
+            "c": "lignes[0].votes_contre"
+          },
+          " ; abstention : ",
+          {
+            "c": "lignes[0].abstentions"
+          },
+          ")."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "lignes[1].resolution_numero"
+          },
+          " — ",
+          {
+            "c": "lignes[1].resolution_objet"
+          },
+          " (article ",
+          {
+            "c": "lignes[1].articles_statuts_modifies"
+          },
+          ")"
+        ],
+        "classe": "gras"
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "lignes[1].resolution_texte"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "statuts_refondus_adoptes"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Cette résolution, soumise à la ",
+          {
+            "c": "lignes[1].majorite_requise"
+          },
+          ", est ",
+          {
+            "c": "lignes[1].resultat"
+          },
+          " (pour : ",
+          {
+            "c": "lignes[1].votes_pour"
+          },
+          " ; contre : ",
+          {
+            "c": "lignes[1].votes_contre"
+          },
+          " ; abstention : ",
+          {
+            "c": "lignes[1].abstentions"
+          },
+          ")."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "lignes[2].resolution_numero"
+          },
+          " — ",
+          {
+            "c": "lignes[2].resolution_objet"
+          }
+        ],
+        "classe": "gras"
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "pouvoirs_formalites"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Cette résolution, soumise à la ",
+          {
+            "c": "lignes[2].majorite_requise"
+          },
+          ", est ",
+          {
+            "c": "lignes[2].resultat"
+          },
+          " (pour : ",
+          {
+            "c": "lignes[2].votes_pour"
+          },
+          " ; contre : ",
+          {
+            "c": "lignes[2].votes_contre"
+          },
+          " ; abstention : ",
+          {
+            "c": "lignes[2].abstentions"
+          },
+          ")."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": {
+          "c": "signataires.0"
+        },
+        "droite": {
+          "c": "signataires.1"
+        }
+      }
+    ],
+    "imprime": {
+      "denomination": "ALGORIA FACTORY SARL",
+      "type_assemblee": "ASSEMBLÉE GÉNÉRALE EXTRAORDINAIRE",
+      "date_assemblee": "12/09/2026",
+      "lieu_assemblee": "au siège social",
+      "numero_convocation": "sur première convocation",
+      "date_convocation": "27/08/2026",
+      "titres_presents_representes": "5000",
+      "total_titres_droit_vote": "5000",
+      "quorum_taux": "la totalité du capital",
+      "president_seance": "Nadhem Ourvani",
+      "scrutateurs_secretaire.0": "Mme Lyna Tazerouit",
+      "ordre_du_jour.0": "— Extension de l'objet social",
+      "ordre_du_jour.1": "— Adoption des statuts mis à jour",
+      "ordre_du_jour.2": "— Pouvoirs pour les formalités",
+      "rapport_gerant_conseil": "Le président donne lecture du rapport du gérant exposant les motifs de l'extension de l'objet social.",
+      "objet_modifie": "« La société a pour objet la conception, l'édition, l'hébergement et la commercialisation de logiciels de gestion, de conformité et d'intelligence artificielle pour la finance, ainsi que la formation professionnelle, le conseil et l'assistance à la mise en conformité réglementaire. »",
+      "statuts_refondus_adoptes": "Les statuts mis à jour sont annexés au présent procès-verbal.",
+      "pouvoirs_formalites": "Tous pouvoirs sont conférés au gérant pour accomplir les formalités de dépôt et de publicité au Registre national des entreprises.",
+      "lignes[0].resolution_numero": "PREMIÈRE RÉSOLUTION",
+      "lignes[0].resolution_objet": "Modification de l'objet social",
+      "lignes[0].articles_statuts_modifies": "2",
+      "lignes[0].resolution_texte": "L'assemblée générale décide d'étendre l'objet social, qui sera désormais :",
+      "lignes[0].majorite_requise": "majorité des trois quarts du capital",
+      "lignes[0].resultat": "adoptée à l'unanimité",
+      "lignes[0].votes_pour": "5000",
+      "lignes[0].votes_contre": "0",
+      "lignes[0].abstentions": "0",
+      "lignes[1].resolution_numero": "DEUXIÈME RÉSOLUTION",
+      "lignes[1].resolution_objet": "Adoption des statuts mis à jour",
+      "lignes[1].articles_statuts_modifies": "2",
+      "lignes[1].resolution_texte": "En conséquence, l'assemblée générale modifie l'article 2 des statuts et adopte article par article le texte des statuts mis à jour.",
+      "lignes[1].majorite_requise": "majorité des trois quarts du capital",
+      "lignes[1].resultat": "adoptée à l'unanimité",
+      "lignes[1].votes_pour": "5000",
+      "lignes[1].votes_contre": "0",
+      "lignes[1].abstentions": "0",
+      "lignes[2].resolution_numero": "TROISIÈME RÉSOLUTION",
+      "lignes[2].resolution_objet": "Pouvoirs",
+      "lignes[2].majorite_requise": "majorité des trois quarts du capital",
+      "lignes[2].resultat": "adoptée à l'unanimité",
+      "lignes[2].votes_pour": "5000",
+      "lignes[2].votes_contre": "0",
+      "lignes[2].abstentions": "0",
+      "signataires.0": "Le Président : Nadhem Ourvani",
+      "signataires.1": "La Secrétaire : Lyna Tazerouit"
+    },
+    "versConcept": {
+      "denomination": "denomination",
+      "type_assemblee": "type_assemblee",
+      "date_assemblee": "date_assemblee",
+      "lieu_assemblee": "lieu_assemblee",
+      "numero_convocation": "numero_convocation",
+      "date_convocation": "date_convocation",
+      "titres_presents_representes": "titres_presents_representes",
+      "total_titres_droit_vote": "total_titres_droit_vote",
+      "quorum_taux": "quorum_taux",
+      "president_seance": "president_seance",
+      "scrutateurs_secretaire.0": "scrutateurs_secretaire",
+      "ordre_du_jour.0": "ordre_du_jour",
+      "ordre_du_jour.1": "ordre_du_jour",
+      "ordre_du_jour.2": "ordre_du_jour",
+      "rapport_gerant_conseil": "rapport_gerant_conseil",
+      "objet_modifie": "objet_modifie",
+      "statuts_refondus_adoptes": "statuts_refondus_adoptes",
+      "pouvoirs_formalites": "pouvoirs_formalites",
+      "lignes[0].resolution_numero": "lignes[0].resolution_numero",
+      "lignes[0].resolution_objet": "lignes[0].resolution_objet",
+      "lignes[0].articles_statuts_modifies": "lignes[0].articles_statuts_modifies",
+      "lignes[0].resolution_texte": "lignes[0].resolution_texte",
+      "lignes[0].majorite_requise": "lignes[0].majorite_requise",
+      "lignes[0].resultat": "lignes[0].resultat",
+      "lignes[0].votes_pour": "lignes[0].votes_pour",
+      "lignes[0].votes_contre": "lignes[0].votes_contre",
+      "lignes[0].abstentions": "lignes[0].abstentions",
+      "lignes[1].resolution_numero": "lignes[1].resolution_numero",
+      "lignes[1].resolution_objet": "lignes[1].resolution_objet",
+      "lignes[1].articles_statuts_modifies": "lignes[1].articles_statuts_modifies",
+      "lignes[1].resolution_texte": "lignes[1].resolution_texte",
+      "lignes[1].majorite_requise": "lignes[1].majorite_requise",
+      "lignes[1].resultat": "lignes[1].resultat",
+      "lignes[1].votes_pour": "lignes[1].votes_pour",
+      "lignes[1].votes_contre": "lignes[1].votes_contre",
+      "lignes[1].abstentions": "lignes[1].abstentions",
+      "lignes[2].resolution_numero": "lignes[2].resolution_numero",
+      "lignes[2].resolution_objet": "lignes[2].resolution_objet",
+      "lignes[2].majorite_requise": "lignes[2].majorite_requise",
+      "lignes[2].resultat": "lignes[2].resultat",
+      "lignes[2].votes_pour": "lignes[2].votes_pour",
+      "lignes[2].votes_contre": "lignes[2].votes_contre",
+      "lignes[2].abstentions": "lignes[2].abstentions",
+      "signataires.0": "signataires",
+      "signataires.1": "signataires"
+    },
+    "marques": {},
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 1837043829,
+  "attendu": {
+    "concepts": {
+      "denomination": "ALGORIA FACTORY SARL",
+      "type_assemblee": "Assemblée générale extraordinaire",
+      "date_assemblee": "2026-09-12",
+      "lieu_assemblee": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "numero_convocation": "première convocation",
+      "date_convocation": "2026-08-27",
+      "titres_presents_representes": "5000",
+      "total_titres_droit_vote": "5000",
+      "quorum_taux": "100",
+      "president_seance": "Nadhem Ourvani",
+      "scrutateurs_secretaire": [
+        "Lyna Tazerouit"
+      ],
+      "ordre_du_jour": [
+        "Extension de l'objet social",
+        "Adoption des statuts mis à jour",
+        "Pouvoirs pour les formalités"
+      ],
+      "rapport_gerant_conseil": "Le président donne lecture du rapport du gérant exposant les motifs de l'extension de l'objet social.",
+      "objet_modifie": "la conception, l'édition, l'hébergement et la commercialisation de logiciels de gestion, de conformité et d'intelligence artificielle pour la finance, ainsi que la formation professionnelle, le conseil et l'assistance à la mise en conformité réglementaire",
+      "statuts_refondus_adoptes": true,
+      "pouvoirs_formalites": "Tous pouvoirs sont conférés au gérant pour accomplir les formalités de dépôt et de publicité au Registre national des entreprises.",
+      "lignes": [
+        {
+          "resolution_numero": "1",
+          "resolution_objet": "Modification de l'objet social",
+          "articles_statuts_modifies": [
+            "2"
+          ],
+          "resolution_texte": "L'assemblée générale décide d'étendre l'objet social, qui sera désormais :",
+          "majorite_requise": "trois quarts du capital",
+          "resultat": "adoptée",
+          "votes_pour": "5000",
+          "votes_contre": "0",
+          "abstentions": "0"
+        },
+        {
+          "resolution_numero": "2",
+          "resolution_objet": "Adoption des statuts mis à jour",
+          "articles_statuts_modifies": [
+            "2"
+          ],
+          "resolution_texte": "En conséquence, l'assemblée générale modifie l'article 2 des statuts et adopte article par article le texte des statuts mis à jour.",
+          "majorite_requise": "trois quarts du capital",
+          "resultat": "adoptée",
+          "votes_pour": "5000",
+          "votes_contre": "0",
+          "abstentions": "0"
+        },
+        {
+          "resolution_numero": "3",
+          "resolution_objet": "Pouvoirs",
+          "majorite_requise": "trois quarts du capital",
+          "resultat": "adoptée",
+          "votes_pour": "5000",
+          "votes_contre": "0",
+          "abstentions": "0"
+        }
+      ],
+      "signataires": [
+        "Nadhem Ourvani",
+        "Lyna Tazerouit"
+      ]
+    },
+    "confondus": {},
+    "notes": [
+      "INCERTAIN — la majorité des trois quarts du capital pour modifier les statuts d'une SARL (art. 131 CSC) n'a pas été relue ; c'est la mention de la page, et la valeur attendue est celle imprimée."
+    ],
+    "non_imprimes": [
+      "ancien_siege",
+      "ancienne_nouvelle_denomination",
+      "cac_present",
+      "capital_apres",
+      "capital_avant",
+      "certificat_depot_fonds",
+      "constat_realisation",
+      "continuite_exploitation",
+      "date_premiere_assemblee",
+      "dissolution_anticipee",
+      "droit_preferentiel_souscription",
+      "mention_enregistrement",
+      "mode_operation",
+      "montant_variation",
+      "motif_reduction",
+      "nb_titres_crees_annules",
+      "nouveau_siege",
+      "nouvelle_repartition_capital",
+      "prime_emission",
+      "prorogation_duree",
+      "rapport_cac_special",
+      "rapport_commissaire_apports",
+      "ref_feuille_presence",
+      "reserves_incorporees",
+      "souscription_par_associe",
+      "transformation_forme",
+      "valeur_nominale_avant_apres"
+    ]
+  }
+}

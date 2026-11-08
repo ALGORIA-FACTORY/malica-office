@@ -1,0 +1,850 @@
+{
+  "id": "136",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "releve_bancaire",
+  "grille": "releve_bancaire",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-encadre",
+  "scenario": "releve_mensuel",
+  "realisme": [],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Relevé de compte",
+    "parties": [
+      {
+        "role": "banque",
+        "nom": "Banque Ouzrane de Développement",
+        "matricule": "8120022O/A/M/000",
+        "est": "tiers"
+      },
+      {
+        "role": "titulaire_compte",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "banque",
+      "nom": "Banque Ouzrane de Développement",
+      "matricule": "8120022O/A/M/000",
+      "est": "tiers"
+    },
+    "client": {
+      "role": "titulaire_compte",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": "encadre",
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "banque_nom",
+              "cls": "gros"
+            }
+          ],
+          [
+            {
+              "c": "banque_agence_nom"
+            },
+            " — code agence ",
+            {
+              "c": "banque_agence_code"
+            }
+          ],
+          [
+            {
+              "c": "banque_agence_adresse"
+            }
+          ],
+          [
+            "Tél. ",
+            {
+              "c": "banque_agence_telephone"
+            },
+            " — BIC ",
+            {
+              "c": "banque_bic"
+            }
+          ],
+          [
+            "MF : ",
+            {
+              "c": "banque_matricule_fiscal"
+            }
+          ]
+        ],
+        "droite": [
+          [
+            {
+              "c": "compte_titulaire_nom"
+            }
+          ],
+          [
+            {
+              "c": "compte_titulaire_adresse"
+            }
+          ],
+          [
+            "MF : ",
+            {
+              "c": "compte_titulaire_matricule_fiscal"
+            }
+          ],
+          [
+            "Client n° ",
+            {
+              "c": "compte_titulaire_id_client"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "RELEVÉ DE COMPTE N° ",
+          {
+            "c": "releve_numero"
+          }
+        ],
+        "sous": [
+          "Période du ",
+          {
+            "c": "periode_debut"
+          },
+          " au ",
+          {
+            "c": "periode_fin"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 3,
+        "lignes": [
+          [
+            "Compte :",
+            {
+              "c": "compte_numero"
+            }
+          ],
+          [
+            "RIB :",
+            {
+              "c": "compte_rib"
+            }
+          ],
+          [
+            "Clé :",
+            {
+              "c": "compte_cle_rib"
+            }
+          ],
+          [
+            "Type :",
+            {
+              "c": "compte_type"
+            }
+          ],
+          [
+            "Devise :",
+            {
+              "c": "compte_devise"
+            }
+          ],
+          [
+            "Édité le :",
+            {
+              "c": "date_edition"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Date",
+          "Valeur",
+          "Libellé",
+          "Débit",
+          "Crédit",
+          "Solde"
+        ],
+        "nombres": [
+          3,
+          4,
+          5
+        ],
+        "lignes": [
+          [
+            {
+              "t": "01/10/2026"
+            },
+            "",
+            [
+              "SOLDE AU ",
+              {
+                "c": "solde_initial_date"
+              },
+              " (",
+              {
+                "c": "solde_initial_sens"
+              },
+              ")"
+            ],
+            "",
+            "",
+            {
+              "c": "solde_initial"
+            }
+          ],
+          [
+            {
+              "c": "lignes[0].ligne_date_operation"
+            },
+            {
+              "c": "lignes[0].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[0].ligne_libelle"
+              },
+              {
+                "br": true
+              },
+              {
+                "c": "lignes[0].ligne_libelle_complementaire"
+              }
+            ],
+            "",
+            {
+              "c": "lignes[0].ligne_credit"
+            },
+            {
+              "c": "lignes[0].ligne_solde_apres"
+            }
+          ],
+          [
+            {
+              "c": "lignes[1].ligne_date_operation"
+            },
+            {
+              "c": "lignes[1].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[1].ligne_libelle"
+              }
+            ],
+            {
+              "c": "lignes[1].ligne_debit"
+            },
+            "",
+            {
+              "c": "lignes[1].ligne_solde_apres"
+            }
+          ],
+          [
+            {
+              "c": "lignes[2].ligne_date_operation"
+            },
+            {
+              "c": "lignes[2].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[2].ligne_libelle"
+              },
+              " ",
+              {
+                "c": "lignes[2].ligne_reference"
+              }
+            ],
+            {
+              "c": "lignes[2].ligne_debit"
+            },
+            "",
+            {
+              "c": "lignes[2].ligne_solde_apres"
+            }
+          ],
+          [
+            {
+              "c": "lignes[3].ligne_date_operation"
+            },
+            {
+              "c": "lignes[3].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[3].ligne_libelle"
+              }
+            ],
+            "",
+            {
+              "c": "lignes[3].ligne_credit"
+            },
+            {
+              "c": "lignes[3].ligne_solde_apres"
+            }
+          ],
+          [
+            {
+              "c": "lignes[4].ligne_date_operation"
+            },
+            {
+              "c": "lignes[4].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[4].ligne_libelle"
+              }
+            ],
+            {
+              "c": "lignes[4].ligne_debit"
+            },
+            "",
+            {
+              "c": "lignes[4].ligne_solde_apres"
+            }
+          ],
+          [
+            {
+              "c": "lignes[5].ligne_date_operation"
+            },
+            {
+              "c": "lignes[5].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[5].ligne_libelle"
+              }
+            ],
+            {
+              "c": "lignes[5].ligne_debit"
+            },
+            "",
+            {
+              "c": "lignes[5].ligne_solde_apres"
+            }
+          ],
+          [
+            {
+              "c": "lignes[6].ligne_date_operation"
+            },
+            {
+              "c": "lignes[6].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[6].ligne_libelle"
+              }
+            ],
+            {
+              "c": "lignes[6].ligne_debit"
+            },
+            "",
+            {
+              "c": "lignes[6].ligne_solde_apres"
+            }
+          ],
+          [
+            {
+              "c": "lignes[7].ligne_date_operation"
+            },
+            {
+              "c": "lignes[7].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[7].ligne_libelle"
+              }
+            ],
+            "",
+            {
+              "c": "lignes[7].ligne_credit"
+            },
+            {
+              "c": "lignes[7].ligne_solde_apres"
+            }
+          ],
+          [
+            {
+              "c": "lignes[8].ligne_date_operation"
+            },
+            {
+              "c": "lignes[8].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[8].ligne_libelle"
+              }
+            ],
+            {
+              "c": "lignes[8].ligne_debit"
+            },
+            "",
+            {
+              "c": "lignes[8].ligne_solde_apres"
+            }
+          ],
+          [
+            {
+              "c": "lignes[9].ligne_date_operation"
+            },
+            {
+              "c": "lignes[9].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[9].ligne_libelle"
+              }
+            ],
+            {
+              "c": "lignes[9].ligne_debit"
+            },
+            "",
+            {
+              "c": "lignes[9].ligne_solde_apres"
+            }
+          ],
+          [
+            {
+              "c": "lignes[10].ligne_date_operation"
+            },
+            {
+              "c": "lignes[10].ligne_date_valeur"
+            },
+            [
+              {
+                "c": "lignes[10].ligne_libelle"
+              }
+            ],
+            {
+              "c": "lignes[10].ligne_debit"
+            },
+            "",
+            {
+              "c": "lignes[10].ligne_solde_apres"
+            }
+          ]
+        ],
+        "pied": [
+          [
+            "Total des débits",
+            {
+              "c": "total_debits"
+            }
+          ],
+          [
+            "Total des crédits",
+            {
+              "c": "total_credits"
+            }
+          ],
+          [
+            [
+              "Solde au ",
+              {
+                "c": "solde_final_date"
+              },
+              " (",
+              {
+                "c": "solde_final_sens"
+              },
+              ")"
+            ],
+            {
+              "c": "solde_final"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "petit",
+        "morceaux": [
+          "Nombre d'opérations : ",
+          {
+            "c": "nombre_operations"
+          },
+          ". Dont TVA sur commissions : ",
+          {
+            "c": "tva_sur_commissions"
+          },
+          " DT. ",
+          {
+            "c": "mention_reclamation"
+          }
+        ]
+      }
+    ],
+    "imprime": {
+      "banque_nom": "BANQUE OUZRANE DE DÉVELOPPEMENT",
+      "banque_agence_nom": "Agence Lac Morvane",
+      "banque_agence_code": "017",
+      "banque_agence_adresse": "Rue du Lac Morvane, 1053 Les Berges du Lac",
+      "banque_agence_telephone": "00 71 962 330",
+      "banque_bic": "OUZDTNT1XXX",
+      "banque_matricule_fiscal": "8120022O/A/M/000",
+      "compte_titulaire_nom": "ALGORIA FACTORY SARL",
+      "compte_titulaire_adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "compte_titulaire_matricule_fiscal": "1958330VAM000",
+      "compte_titulaire_id_client": "C793233",
+      "releve_numero": "10/2026",
+      "periode_debut": "01/10/2026",
+      "periode_fin": "31/10/2026",
+      "compte_numero": "0001834526710",
+      "compte_rib": "99 017 0001834526710 54",
+      "compte_cle_rib": "54",
+      "compte_type": "Compte courant",
+      "compte_devise": "TND",
+      "date_edition": "02/11/2026",
+      "solde_initial_date": "30/09/2026",
+      "solde_initial_sens": "C",
+      "solde_initial": "138.862,485",
+      "lignes[0].ligne_date_operation": "01.10.2026",
+      "lignes[0].ligne_date_valeur": "02.10.2026",
+      "lignes[0].ligne_libelle": "VIR RECU GROUPE MEDRANE DISTRIBUTION SA",
+      "lignes[0].ligne_libelle_complementaire": "FACT F-2026-2452",
+      "lignes[0].ligne_credit": "75.336,383",
+      "lignes[0].ligne_solde_apres": "214.198,868",
+      "lignes[1].ligne_date_operation": "02.10.2026",
+      "lignes[1].ligne_date_valeur": "02.10.2026",
+      "lignes[1].ligne_libelle": "VIR EMIS LOYER OCT 2026 VARZANE",
+      "lignes[1].ligne_debit": "3.695,000",
+      "lignes[1].ligne_solde_apres": "210.503,868",
+      "lignes[2].ligne_date_operation": "09.10.2026",
+      "lignes[2].ligne_date_valeur": "09.10.2026",
+      "lignes[2].ligne_libelle": "VIR EMIS TAZRANE CLIMATISATION SUARL",
+      "lignes[2].ligne_reference": "OV-2026-182",
+      "lignes[2].ligne_debit": "15.456,142",
+      "lignes[2].ligne_solde_apres": "195.047,726",
+      "lignes[3].ligne_date_operation": "09.10.2026",
+      "lignes[3].ligne_date_valeur": "10.10.2026",
+      "lignes[3].ligne_libelle": "VIR RECU CLINIQUE TARVILA SARL",
+      "lignes[3].ligne_credit": "13.811,987",
+      "lignes[3].ligne_solde_apres": "208.859,713",
+      "lignes[4].ligne_date_operation": "13.10.2026",
+      "lignes[4].ligne_date_valeur": "13.10.2026",
+      "lignes[4].ligne_libelle": "PRLV CNSS COTISATIONS T3 2026",
+      "lignes[4].ligne_debit": "12.112,028",
+      "lignes[4].ligne_solde_apres": "196.747,685",
+      "lignes[5].ligne_date_operation": "17.10.2026",
+      "lignes[5].ligne_date_valeur": "17.10.2026",
+      "lignes[5].ligne_libelle": "PAIEMENT TELEDECLARATION DGI 09/2026",
+      "lignes[5].ligne_debit": "6.007,856",
+      "lignes[5].ligne_solde_apres": "190.739,829",
+      "lignes[6].ligne_date_operation": "18.10.2026",
+      "lignes[6].ligne_date_valeur": "18.10.2026",
+      "lignes[6].ligne_libelle": "CHEQUE N° 9806667",
+      "lignes[6].ligne_debit": "3.408,153",
+      "lignes[6].ligne_solde_apres": "187.331,676",
+      "lignes[7].ligne_date_operation": "22.10.2026",
+      "lignes[7].ligne_date_valeur": "23.10.2026",
+      "lignes[7].ligne_libelle": "VIR RECU BANQUE REZVANE D'ESSAI",
+      "lignes[7].ligne_credit": "25.967,585",
+      "lignes[7].ligne_solde_apres": "213.299,261",
+      "lignes[8].ligne_date_operation": "27.10.2026",
+      "lignes[8].ligne_date_valeur": "27.10.2026",
+      "lignes[8].ligne_libelle": "VIR EMIS SALAIRES OCTOBRE 2026",
+      "lignes[8].ligne_debit": "14.227,110",
+      "lignes[8].ligne_solde_apres": "199.072,151",
+      "lignes[9].ligne_date_operation": "31.10.2026",
+      "lignes[9].ligne_date_valeur": "31.10.2026",
+      "lignes[9].ligne_libelle": "FRAIS TENUE DE COMPTE T4",
+      "lignes[9].ligne_debit": "19,000",
+      "lignes[9].ligne_solde_apres": "199.053,151",
+      "lignes[10].ligne_date_operation": "31.10.2026",
+      "lignes[10].ligne_date_valeur": "31.10.2026",
+      "lignes[10].ligne_libelle": "TVA SUR COMMISSIONS",
+      "lignes[10].ligne_debit": "3,610",
+      "lignes[10].ligne_solde_apres": "199.049,541",
+      "total_debits": "54.928,899",
+      "total_credits": "115.115,955",
+      "solde_final_date": "31/10/2026",
+      "solde_final_sens": "C",
+      "solde_final": "199.049,541",
+      "nombre_operations": "11",
+      "tva_sur_commissions": "3,610",
+      "mention_reclamation": "Toute réclamation doit nous parvenir dans un délai de 30 jours à compter de la date d'édition du présent relevé."
+    },
+    "versConcept": {
+      "banque_nom": "banque_nom",
+      "banque_agence_nom": "banque_agence_nom",
+      "banque_agence_code": "banque_agence_code",
+      "banque_agence_adresse": "banque_agence_adresse",
+      "banque_agence_telephone": "banque_agence_telephone",
+      "banque_bic": "banque_bic",
+      "banque_matricule_fiscal": "banque_matricule_fiscal",
+      "compte_titulaire_nom": "compte_titulaire_nom",
+      "compte_titulaire_adresse": "compte_titulaire_adresse",
+      "compte_titulaire_matricule_fiscal": "compte_titulaire_matricule_fiscal",
+      "compte_titulaire_id_client": "compte_titulaire_id_client",
+      "releve_numero": "releve_numero",
+      "periode_debut": "periode_debut",
+      "periode_fin": "periode_fin",
+      "compte_numero": "compte_numero",
+      "compte_rib": "compte_rib",
+      "compte_cle_rib": "compte_cle_rib",
+      "compte_type": "compte_type",
+      "compte_devise": "compte_devise",
+      "date_edition": "date_edition",
+      "solde_initial_date": "solde_initial_date",
+      "solde_initial_sens": "solde_initial_sens",
+      "solde_initial": "solde_initial",
+      "lignes[0].ligne_date_operation": "lignes[0].ligne_date_operation",
+      "lignes[0].ligne_date_valeur": "lignes[0].ligne_date_valeur",
+      "lignes[0].ligne_libelle": "lignes[0].ligne_libelle",
+      "lignes[0].ligne_libelle_complementaire": "lignes[0].ligne_libelle_complementaire",
+      "lignes[0].ligne_credit": "lignes[0].ligne_credit",
+      "lignes[0].ligne_solde_apres": "lignes[0].ligne_solde_apres",
+      "lignes[1].ligne_date_operation": "lignes[1].ligne_date_operation",
+      "lignes[1].ligne_date_valeur": "lignes[1].ligne_date_valeur",
+      "lignes[1].ligne_libelle": "lignes[1].ligne_libelle",
+      "lignes[1].ligne_debit": "lignes[1].ligne_debit",
+      "lignes[1].ligne_solde_apres": "lignes[1].ligne_solde_apres",
+      "lignes[2].ligne_date_operation": "lignes[2].ligne_date_operation",
+      "lignes[2].ligne_date_valeur": "lignes[2].ligne_date_valeur",
+      "lignes[2].ligne_libelle": "lignes[2].ligne_libelle",
+      "lignes[2].ligne_reference": "lignes[2].ligne_reference",
+      "lignes[2].ligne_debit": "lignes[2].ligne_debit",
+      "lignes[2].ligne_solde_apres": "lignes[2].ligne_solde_apres",
+      "lignes[3].ligne_date_operation": "lignes[3].ligne_date_operation",
+      "lignes[3].ligne_date_valeur": "lignes[3].ligne_date_valeur",
+      "lignes[3].ligne_libelle": "lignes[3].ligne_libelle",
+      "lignes[3].ligne_credit": "lignes[3].ligne_credit",
+      "lignes[3].ligne_solde_apres": "lignes[3].ligne_solde_apres",
+      "lignes[4].ligne_date_operation": "lignes[4].ligne_date_operation",
+      "lignes[4].ligne_date_valeur": "lignes[4].ligne_date_valeur",
+      "lignes[4].ligne_libelle": "lignes[4].ligne_libelle",
+      "lignes[4].ligne_debit": "lignes[4].ligne_debit",
+      "lignes[4].ligne_solde_apres": "lignes[4].ligne_solde_apres",
+      "lignes[5].ligne_date_operation": "lignes[5].ligne_date_operation",
+      "lignes[5].ligne_date_valeur": "lignes[5].ligne_date_valeur",
+      "lignes[5].ligne_libelle": "lignes[5].ligne_libelle",
+      "lignes[5].ligne_debit": "lignes[5].ligne_debit",
+      "lignes[5].ligne_solde_apres": "lignes[5].ligne_solde_apres",
+      "lignes[6].ligne_date_operation": "lignes[6].ligne_date_operation",
+      "lignes[6].ligne_date_valeur": "lignes[6].ligne_date_valeur",
+      "lignes[6].ligne_libelle": "lignes[6].ligne_libelle",
+      "lignes[6].ligne_debit": "lignes[6].ligne_debit",
+      "lignes[6].ligne_solde_apres": "lignes[6].ligne_solde_apres",
+      "lignes[7].ligne_date_operation": "lignes[7].ligne_date_operation",
+      "lignes[7].ligne_date_valeur": "lignes[7].ligne_date_valeur",
+      "lignes[7].ligne_libelle": "lignes[7].ligne_libelle",
+      "lignes[7].ligne_credit": "lignes[7].ligne_credit",
+      "lignes[7].ligne_solde_apres": "lignes[7].ligne_solde_apres",
+      "lignes[8].ligne_date_operation": "lignes[8].ligne_date_operation",
+      "lignes[8].ligne_date_valeur": "lignes[8].ligne_date_valeur",
+      "lignes[8].ligne_libelle": "lignes[8].ligne_libelle",
+      "lignes[8].ligne_debit": "lignes[8].ligne_debit",
+      "lignes[8].ligne_solde_apres": "lignes[8].ligne_solde_apres",
+      "lignes[9].ligne_date_operation": "lignes[9].ligne_date_operation",
+      "lignes[9].ligne_date_valeur": "lignes[9].ligne_date_valeur",
+      "lignes[9].ligne_libelle": "lignes[9].ligne_libelle",
+      "lignes[9].ligne_debit": "lignes[9].ligne_debit",
+      "lignes[9].ligne_solde_apres": "lignes[9].ligne_solde_apres",
+      "lignes[10].ligne_date_operation": "lignes[10].ligne_date_operation",
+      "lignes[10].ligne_date_valeur": "lignes[10].ligne_date_valeur",
+      "lignes[10].ligne_libelle": "lignes[10].ligne_libelle",
+      "lignes[10].ligne_debit": "lignes[10].ligne_debit",
+      "lignes[10].ligne_solde_apres": "lignes[10].ligne_solde_apres",
+      "total_debits": "total_debits",
+      "total_credits": "total_credits",
+      "solde_final_date": "solde_final_date",
+      "solde_final_sens": "solde_final_sens",
+      "solde_final": "solde_final",
+      "nombre_operations": "nombre_operations",
+      "tva_sur_commissions": "tva_sur_commissions",
+      "mention_reclamation": "mention_reclamation"
+    },
+    "marques": {},
+    "cheminsDuDossier": [
+      "compte_titulaire_matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 282211712,
+  "attendu": {
+    "concepts": {
+      "banque_nom": "Banque Ouzrane de Développement",
+      "banque_agence_nom": "Agence Lac Morvane",
+      "banque_agence_code": "017",
+      "banque_agence_adresse": "Rue du Lac Morvane, 1053 Les Berges du Lac",
+      "banque_agence_telephone": "00 71 962 330",
+      "banque_bic": "OUZDTNT1XXX",
+      "banque_matricule_fiscal": "8120022O/A/M/000",
+      "compte_titulaire_nom": "ALGORIA FACTORY SARL",
+      "compte_titulaire_adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "compte_titulaire_matricule_fiscal": "1958330V/A/M/000",
+      "compte_titulaire_id_client": "C793233",
+      "releve_numero": "10/2026",
+      "periode_debut": "2026-10-01",
+      "periode_fin": "2026-10-31",
+      "compte_numero": "0001834526710",
+      "compte_rib": "99 017 0001834526710 54",
+      "compte_cle_rib": "54",
+      "compte_type": "courant",
+      "compte_devise": "TND",
+      "date_edition": "2026-11-02",
+      "solde_initial_date": "2026-09-30",
+      "solde_initial_sens": "C",
+      "solde_initial": "138862.485",
+      "lignes": [
+        {
+          "ligne_sens": "credit",
+          "ligne_date_operation": "2026-10-01",
+          "ligne_date_valeur": "2026-10-02",
+          "ligne_libelle": "VIR RECU GROUPE MEDRANE DISTRIBUTION SA",
+          "ligne_libelle_complementaire": "FACT F-2026-2452",
+          "ligne_credit": "75336.383",
+          "ligne_solde_apres": "214198.868"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-10-02",
+          "ligne_date_valeur": "2026-10-02",
+          "ligne_libelle": "VIR EMIS LOYER OCT 2026 VARZANE",
+          "ligne_debit": "3695.000",
+          "ligne_solde_apres": "210503.868"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-10-09",
+          "ligne_date_valeur": "2026-10-09",
+          "ligne_libelle": "VIR EMIS TAZRANE CLIMATISATION SUARL",
+          "ligne_reference": "OV-2026-182",
+          "ligne_debit": "15456.142",
+          "ligne_solde_apres": "195047.726"
+        },
+        {
+          "ligne_sens": "credit",
+          "ligne_date_operation": "2026-10-09",
+          "ligne_date_valeur": "2026-10-10",
+          "ligne_libelle": "VIR RECU CLINIQUE TARVILA SARL",
+          "ligne_credit": "13811.987",
+          "ligne_solde_apres": "208859.713"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-10-13",
+          "ligne_date_valeur": "2026-10-13",
+          "ligne_libelle": "PRLV CNSS COTISATIONS T3 2026",
+          "ligne_debit": "12112.028",
+          "ligne_solde_apres": "196747.685"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-10-17",
+          "ligne_date_valeur": "2026-10-17",
+          "ligne_libelle": "PAIEMENT TELEDECLARATION DGI 09/2026",
+          "ligne_debit": "6007.856",
+          "ligne_solde_apres": "190739.829"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-10-18",
+          "ligne_date_valeur": "2026-10-18",
+          "ligne_libelle": "CHEQUE N° 9806667",
+          "ligne_debit": "3408.153",
+          "ligne_solde_apres": "187331.676",
+          "ligne_numero_cheque": "9806667"
+        },
+        {
+          "ligne_sens": "credit",
+          "ligne_date_operation": "2026-10-22",
+          "ligne_date_valeur": "2026-10-23",
+          "ligne_libelle": "VIR RECU BANQUE REZVANE D'ESSAI",
+          "ligne_credit": "25967.585",
+          "ligne_solde_apres": "213299.261"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-10-27",
+          "ligne_date_valeur": "2026-10-27",
+          "ligne_libelle": "VIR EMIS SALAIRES OCTOBRE 2026",
+          "ligne_debit": "14227.110",
+          "ligne_solde_apres": "199072.151"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-10-31",
+          "ligne_date_valeur": "2026-10-31",
+          "ligne_libelle": "FRAIS TENUE DE COMPTE T4",
+          "ligne_debit": "19.000",
+          "ligne_solde_apres": "199053.151"
+        },
+        {
+          "ligne_sens": "debit",
+          "ligne_date_operation": "2026-10-31",
+          "ligne_date_valeur": "2026-10-31",
+          "ligne_libelle": "TVA SUR COMMISSIONS",
+          "ligne_debit": "3.610",
+          "ligne_solde_apres": "199049.541"
+        }
+      ],
+      "total_debits": "54928.899",
+      "total_credits": "115115.955",
+      "solde_final_date": "2026-10-31",
+      "solde_final_sens": "C",
+      "solde_final": "199049.541",
+      "nombre_operations": "11",
+      "tva_sur_commissions": "3.610",
+      "mention_reclamation": "Toute réclamation doit nous parvenir dans un délai de 30 jours à compter de la date d'édition du présent relevé."
+    },
+    "confondus": {},
+    "notes": [
+      "Solde initial + total des crédits − total des débits = solde final ; le solde après chaque ligne se recalcule.",
+      "Lignes liées : virement reçu du cas 152 (net servi après retenue), loyer du cas 133, virement du cas 130, cotisations CNSS du cas 144, chèque du cas 131, paiement de la déclaration du cas 142.",
+      "Le numéro du chèque est imprimé dans le libellé « CHEQUE N° … » : ligne_numero_cheque se lit dans ligne_libelle."
+    ],
+    "non_imprimes": [
+      "arrete_periode",
+      "autorisation_decouvert",
+      "banque_code",
+      "canal",
+      "commission_plus_fort_decouvert",
+      "compte_iban",
+      "interets_crediteurs",
+      "interets_debiteurs",
+      "ligne_code_operation",
+      "ligne_contrepartie_rib",
+      "ligne_cours_change",
+      "ligne_devise_origine",
+      "ligne_lien_piece",
+      "mention_sbf",
+      "mentions_legales_banque",
+      "nombres_debiteurs",
+      "recap_annuel_commissions",
+      "releve_page",
+      "retenue_source_interets",
+      "solde_disponible",
+      "solde_en_lettres",
+      "solde_en_valeur",
+      "solde_intermediaire",
+      "taux_debiteur"
+    ]
+  }
+}

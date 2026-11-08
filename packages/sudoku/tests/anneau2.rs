@@ -72,7 +72,17 @@ fn preuves_entete() -> [Value; 2] {
 /// que les jeux impriment et que la grille ne porte pas.
 const REPERES_ESSAI: [(&str, &[&str]); 2] = [
     ("date_emission", &["Date"]),
-    ("nom_client", &["Adressé à", "Adressée à", "Acheteur", "Acquéreur", "Bill to", "Titulaire"]),
+    (
+        "nom_client",
+        &[
+            "Adressé à",
+            "Adressée à",
+            "Acheteur",
+            "Acquéreur",
+            "Bill to",
+            "Titulaire",
+        ],
+    ),
 ];
 
 /// La grille en base, avec L01 ; `entete` ajoute E01 et E02 ; `essai` ajoute les repères
@@ -88,7 +98,10 @@ fn grille(entete: bool, essai: bool) -> Value {
         for c in g["champs"].as_array_mut().unwrap() {
             for (code, reperes) in REPERES_ESSAI {
                 if c["code"] == code {
-                    c["reperes_fr"].as_array_mut().unwrap().extend(reperes.iter().map(|r| json!(r)));
+                    c["reperes_fr"]
+                        .as_array_mut()
+                        .unwrap()
+                        .extend(reperes.iter().map(|r| json!(r)));
                 }
             }
         }
@@ -107,7 +120,10 @@ fn pack(format_large: bool) -> Value {
 }
 
 fn norme_mf(s: &str) -> String {
-    s.chars().filter(|c| !c.is_whitespace()).flat_map(|c| c.to_uppercase()).collect()
+    s.chars()
+        .filter(|c| !c.is_whitespace())
+        .flat_map(|c| c.to_uppercase())
+        .collect()
 }
 
 /// Un nom comparable : sans casse, sans accents, sans ponctuation, sans forme juridique.
@@ -135,7 +151,10 @@ fn norme_nom(s: &str) -> String {
 }
 
 fn norme_numero(s: &str) -> String {
-    s.chars().filter(|c| !c.is_whitespace()).flat_map(|c| c.to_uppercase()).collect()
+    s.chars()
+        .filter(|c| !c.is_whitespace())
+        .flat_map(|c| c.to_uppercase())
+        .collect()
 }
 
 /// La date de la vérité en ISO (elle est parfois écrite jj/mm/aaaa).
@@ -153,7 +172,11 @@ fn connus(pieces: &[Piece]) -> BTreeMap<String, Value> {
     let mut out = BTreeMap::new();
     let jeux_: BTreeSet<&str> = pieces.iter().map(|p| jeu(&p.id)).collect();
     for j in jeux_ {
-        let du_jeu: Vec<&Entete> = pieces.iter().filter(|p| jeu(&p.id) == j).map(|p| &p.verite.entete).collect();
+        let du_jeu: Vec<&Entete> = pieces
+            .iter()
+            .filter(|p| jeu(&p.id) == j)
+            .map(|p| &p.verite.entete)
+            .collect();
         // le dossier : le client le plus fréquent du jeu
         let mut compte: BTreeMap<(String, String), u32> = BTreeMap::new();
         for e in &du_jeu {
@@ -191,9 +214,17 @@ fn jouer(p: &Piece, grille: &Value, pack: &Value, connus: Option<&Value>) -> Val
     let jetons: Vec<Value> = p.jetons.iter().map(jeton).collect();
     let (jouees, _) = par_variante_avec(&jetons, grille, pack, connus);
     for (v, o) in &jouees[1..] {
-        assert_eq!(o["parties"], jouees[0].1["parties"], "{} : parties différentes selon la variante {v}", p.id);
+        assert_eq!(
+            o["parties"], jouees[0].1["parties"],
+            "{} : parties différentes selon la variante {v}",
+            p.id
+        );
         for c in CHAMPS_ENTETE {
-            assert_eq!(o["champs"][c], jouees[0].1["champs"][c], "{} : {c} différent selon la variante {v}", p.id);
+            assert_eq!(
+                o["champs"][c], jouees[0].1["champs"][c],
+                "{} : {c} différent selon la variante {v}",
+                p.id
+            );
         }
     }
     la_piece(&jouees)
@@ -239,7 +270,13 @@ struct Bilan {
 }
 
 /// Mesure un essai ; rend les fautes (toute faute fait échouer le test).
-fn mesurer(titre: &str, pieces: &[Piece], grille_: &Value, pack_: &Value, connus_: &BTreeMap<String, Value>) -> Vec<String> {
+fn mesurer(
+    titre: &str,
+    pieces: &[Piece],
+    grille_: &Value,
+    pack_: &Value,
+    connus_: &BTreeMap<String, Value>,
+) -> Vec<String> {
     let mut fautes = Vec::new();
     let mut bilans: BTreeMap<&str, Bilan> = BTreeMap::new();
     let mut raisons: BTreeMap<String, u32> = BTreeMap::new();
@@ -251,14 +288,23 @@ fn mesurer(titre: &str, pieces: &[Piece], grille_: &Value, pack_: &Value, connus
             .unwrap()
             .iter()
             .map(|t| {
-                (t["matricule"].as_str().unwrap().to_string(), (t["code"].as_str().unwrap().to_string(), t["raison_sociale"].as_str().unwrap().to_string()))
+                (
+                    t["matricule"].as_str().unwrap().to_string(),
+                    (
+                        t["code"].as_str().unwrap().to_string(),
+                        t["raison_sociale"].as_str().unwrap().to_string(),
+                    ),
+                )
             })
             .collect();
         let v = &p.verite.entete;
         let o = jouer(p, grille_, pack_, Some(c));
         let b = bilans.entry(jeu(&p.id)).or_default();
         b.pieces += 1;
-        let (mf_f, mf_c) = (v.mf_fournisseur.as_deref().map(norme_mf), v.mf_client.as_deref().map(norme_mf));
+        let (mf_f, mf_c) = (
+            v.mf_fournisseur.as_deref().map(norme_mf),
+            v.mf_client.as_deref().map(norme_mf),
+        );
         let attendu = if mf_c.as_deref() == Some(d.as_str()) {
             Some("achat")
         } else if mf_f.as_deref() == Some(d.as_str()) {
@@ -273,14 +319,23 @@ fn mesurer(titre: &str, pieces: &[Piece], grille_: &Value, pack_: &Value, connus
         match pa["statut"].as_str().unwrap_or("") {
             "prouve" => {
                 if pa["sens"].as_str() != attendu {
-                    fautes.push(format!("{titre} {} : sens {} prouvé, attendu {attendu:?}", p.id, pa["sens"]));
+                    fautes.push(format!(
+                        "{titre} {} : sens {} prouvé, attendu {attendu:?}",
+                        p.id, pa["sens"]
+                    ));
                     continue;
                 }
                 b.sens_prouve += 1;
-                for (cote, vrai, champ) in [("emetteur", &mf_f, "matricule_fiscal_emetteur"), ("client", &mf_c, "matricule_fiscal_client")] {
+                for (cote, vrai, champ) in [
+                    ("emetteur", &mf_f, "matricule_fiscal_emetteur"),
+                    ("client", &mf_c, "matricule_fiscal_client"),
+                ] {
                     let lu = pa[cote]["matricule"]["valeur"].as_str();
                     if lu != vrai.as_deref() || o["champs"][champ]["valeur"].as_str() != lu {
-                        fautes.push(format!("{titre} {} : matricule {cote} {lu:?} prouvé, vrai {vrai:?}", p.id));
+                        fautes.push(format!(
+                            "{titre} {} : matricule {cote} {lu:?} prouvé, vrai {vrai:?}",
+                            p.id
+                        ));
                     } else if cote == "emetteur" {
                         b.mf_emetteur += 1;
                     } else {
@@ -288,15 +343,26 @@ fn mesurer(titre: &str, pieces: &[Piece], grille_: &Value, pack_: &Value, connus
                     }
                 }
                 // le tiers : celui du matricule de la contrepartie, s'il est connu
-                let contrepartie = if attendu == Some("achat") { &mf_f } else { &mf_c };
+                let contrepartie = if attendu == Some("achat") {
+                    &mf_f
+                } else {
+                    &mf_c
+                };
                 let tiers_vrai = contrepartie.as_ref().and_then(|m| tiers.get(m));
                 if tiers_vrai.is_some() {
                     b.tiers_attendu += 1;
                 }
                 match (&pa["tiers"], tiers_vrai) {
                     (Value::Null, None) => {}
-                    (t, Some((code, _))) if t["code"] == code.as_str() && t["statut"] == "prouve" => b.tiers_prouve += 1,
-                    (t, _) => fautes.push(format!("{titre} {} : tiers {t} prouvé, vrai {tiers_vrai:?}", p.id)),
+                    (t, Some((code, _)))
+                        if t["code"] == code.as_str() && t["statut"] == "prouve" =>
+                    {
+                        b.tiers_prouve += 1
+                    }
+                    (t, _) => fautes.push(format!(
+                        "{titre} {} : tiers {t} prouvé, vrai {tiers_vrai:?}",
+                        p.id
+                    )),
                 }
                 // un nom prouvé est celui de la partie connue (tiers ou dossier)
                 for cote in ["emetteur", "client"] {
@@ -311,14 +377,20 @@ fn mesurer(titre: &str, pieces: &[Piece], grille_: &Value, pack_: &Value, connus
                         tiers_vrai.map(|t| t.1.clone()).unwrap_or_default()
                     };
                     if norme_nom(nom["valeur"].as_str().unwrap()) != norme_nom(&connu) {
-                        fautes.push(format!("{titre} {} : nom {cote} {} prouvé, connu {connu:?}", p.id, nom["valeur"]));
+                        fautes.push(format!(
+                            "{titre} {} : nom {cote} {} prouvé, connu {connu:?}",
+                            p.id, nom["valeur"]
+                        ));
                     }
                     if cote == "emetteur" {
                         b.nom_emetteur_prouve += 1;
                     }
                 }
                 let juste = |cote: &str, vrai: &Option<String>| {
-                    pa[cote]["nom"]["valeur"].as_str().is_some_and(|n| vrai.as_deref().is_some_and(|v| norme_nom(n) == norme_nom(v)))
+                    pa[cote]["nom"]["valeur"].as_str().is_some_and(|n| {
+                        vrai.as_deref()
+                            .is_some_and(|v| norme_nom(n) == norme_nom(v))
+                    })
                 };
                 if pa["emetteur"]["nom"].is_object() {
                     b.nom_emetteur_emis += 1;
@@ -332,11 +404,31 @@ fn mesurer(titre: &str, pieces: &[Piece], grille_: &Value, pack_: &Value, connus
             }
             "signale" => {
                 b.sens_signale += 1;
-                *raisons.entry(format!("{} ({})", pa["raison"].as_str().unwrap_or(""), if attendu.is_some() { "attendu" } else { "hors dossier" })).or_default() += 1;
+                *raisons
+                    .entry(format!(
+                        "{} ({})",
+                        pa["raison"].as_str().unwrap_or(""),
+                        if attendu.is_some() {
+                            "attendu"
+                        } else {
+                            "hors dossier"
+                        }
+                    ))
+                    .or_default() += 1;
             }
             _ => {
                 b.sens_absent += 1;
-                *raisons.entry(format!("{} ({})", pa["raison"].as_str().unwrap_or("pas de sortie"), if attendu.is_some() { "attendu" } else { "hors dossier" })).or_default() += 1;
+                *raisons
+                    .entry(format!(
+                        "{} ({})",
+                        pa["raison"].as_str().unwrap_or("pas de sortie"),
+                        if attendu.is_some() {
+                            "attendu"
+                        } else {
+                            "hors dossier"
+                        }
+                    ))
+                    .or_default() += 1;
             }
         }
         // dates et numéro (statut conforme : mesurés, pas exigés)
@@ -411,10 +503,20 @@ fn anneau2_parties_prouvees_sans_faux() {
     assert_eq!(pieces.len(), 134);
     let connus_ = connus(&pieces);
     for (j, c) in &connus_ {
-        println!("dossier du jeu {j} : {} ; {} tiers connus", c["dossier"], c["tiers"].as_array().unwrap().len());
+        println!(
+            "dossier du jeu {j} : {} ; {} tiers connus",
+            c["dossier"],
+            c["tiers"].as_array().unwrap().len()
+        );
     }
     let mut fautes = Vec::new();
-    fautes.extend(mesurer("grille et pack en base", &pieces, &grille(true, false), &pack(false), &connus_));
+    fautes.extend(mesurer(
+        "grille et pack en base",
+        &pieces,
+        &grille(true, false),
+        &pack(false),
+        &connus_,
+    ));
     fautes.extend(mesurer(
         "ESSAI — matricule sans lettre de clé admis, repères d'essai ajoutés à la grille",
         &pieces,
@@ -448,7 +550,10 @@ fn anneau2_ne_touche_ni_le_centre_ni_les_lignes() {
             assert_eq!(o["preuves"][PREUVE_PARTIES], "non_evaluable");
         }
     }
-    assert!(changes.is_empty(), "centre ou lignes modifiés par l'anneau 2 : {changes:?}");
+    assert!(
+        changes.is_empty(),
+        "centre ou lignes modifiés par l'anneau 2 : {changes:?}"
+    );
 }
 
 /// Mutations du dossier : un matricule absent de la pièce ne prouve plus aucun sens ; le
@@ -458,8 +563,12 @@ fn anneau2_mutations_du_dossier() {
     let pieces: Vec<Piece> = jeux::pieces();
     let connus_ = connus(&pieces);
     let (g, pk) = (grille(true, true), pack(true));
-    let dossiers: Vec<String> = connus_.values().map(|c| c["dossier"]["matricule"].as_str().unwrap().to_string()).collect();
-    let (mut prouves_avant, mut encore, mut ventes, mut ventes_justes, mut fautes) = (0, 0, 0, 0, Vec::new());
+    let dossiers: Vec<String> = connus_
+        .values()
+        .map(|c| c["dossier"]["matricule"].as_str().unwrap().to_string())
+        .collect();
+    let (mut prouves_avant, mut encore, mut ventes, mut ventes_justes, mut fautes) =
+        (0, 0, 0, 0, Vec::new());
     for p in &pieces {
         let c = &connus_[jeu(&p.id)];
         if jouer(p, &g, &pk, Some(c))["parties"]["statut"] != "prouve" {
@@ -468,17 +577,25 @@ fn anneau2_mutations_du_dossier() {
         prouves_avant += 1;
         // 1. le matricule d'un autre dossier, absent de la pièce
         let texte: String = p.jetons.iter().map(|j| norme_mf(&j.2)).collect();
-        let autre = dossiers.iter().find(|d| **d != c["dossier"]["matricule"] && !texte.contains(d.as_str())).unwrap();
+        let autre = dossiers
+            .iter()
+            .find(|d| **d != c["dossier"]["matricule"] && !texte.contains(d.as_str()))
+            .unwrap();
         let mut m = c.clone();
         m["dossier"]["matricule"] = json!(autre);
         let o = jouer(p, &g, &pk, Some(&m));
         if o["parties"]["statut"] == "prouve" {
             encore += 1;
-            fautes.push(format!("{} : sens {} prouvé avec un dossier absent de la pièce", p.id, o["parties"]["sens"]));
+            fautes.push(format!(
+                "{} : sens {} prouvé avec un dossier absent de la pièce",
+                p.id, o["parties"]["sens"]
+            ));
         }
         // 2. le dossier est le fournisseur : c'est une vente, au client ALGORIA FACTORY
         let v = &p.verite.entete;
-        let (Some(mf_f), Some(f)) = (&v.mf_fournisseur, &v.fournisseur) else { continue };
+        let (Some(mf_f), Some(f)) = (&v.mf_fournisseur, &v.fournisseur) else {
+            continue;
+        };
         let mut m = c.clone();
         m["dossier"] = json!({"matricule": norme_mf(mf_f), "raison_sociale": f});
         m["tiers"] = json!([{"code": "411001", "matricule": c["dossier"]["matricule"], "raison_sociale": c["dossier"]["raison_sociale"]}]);
@@ -508,9 +625,7 @@ fn anneau2_mutations_du_dossier() {
 /// La forme de la sortie, sur une pièce synthétique : un achat à un tiers connu.
 #[test]
 fn anneau2_forme_de_la_sortie() {
-    let j = |o: u32, t: &str, x: f64, y: f64, w: f64| {
-        json!({"page": 1, "ordinal": o, "texte": t, "x0": x, "y0": y, "x1": x + w, "y1": y + 0.01, "montants": [], "date": null})
-    };
+    let j = |o: u32, t: &str, x: f64, y: f64, w: f64| json!({"page": 1, "ordinal": o, "texte": t, "x0": x, "y0": y, "x1": x + w, "y1": y + 0.01, "montants": [], "date": null});
     let mut jetons = vec![
         j(0, "INFOTECH", 0.10, 0.05, 0.10),
         j(1, "SOLUTIONS", 0.21, 0.05, 0.10),
@@ -548,8 +663,14 @@ fn anneau2_forme_de_la_sortie() {
     let pa = &o["parties"];
     assert_eq!(pa["sens"], "achat", "{pa}");
     assert_eq!(pa["statut"], "prouve");
-    assert_eq!(pa["emetteur"]["matricule"], json!({"valeur": "1245789K/A/M/000", "refs": [{"page": 1, "ordinal": 5}], "statut": "prouve"}));
-    assert_eq!(pa["emetteur"]["nom"], json!({"valeur": "INFOTECH SOLUTIONS SARL", "refs": [{"page": 1, "ordinal": 0}, {"page": 1, "ordinal": 1}, {"page": 1, "ordinal": 2}], "statut": "prouve"}));
+    assert_eq!(
+        pa["emetteur"]["matricule"],
+        json!({"valeur": "1245789K/A/M/000", "refs": [{"page": 1, "ordinal": 5}], "statut": "prouve"})
+    );
+    assert_eq!(
+        pa["emetteur"]["nom"],
+        json!({"valeur": "INFOTECH SOLUTIONS SARL", "refs": [{"page": 1, "ordinal": 0}, {"page": 1, "ordinal": 1}, {"page": 1, "ordinal": 2}], "statut": "prouve"})
+    );
     assert_eq!(pa["client"]["matricule"]["valeur"], "1876543W/A/M/000");
     assert_eq!(pa["client"]["nom"]["valeur"], "ALGORIA FACTORY SUARL");
     assert_eq!(pa["tiers"], json!({"code": "401002", "statut": "prouve"}));
@@ -558,16 +679,23 @@ fn anneau2_forme_de_la_sortie() {
     assert_eq!(o["preuves"]["P05"], "verifiee");
     assert_eq!(o["champs"]["date_emission"]["valeur"], "2026-01-12");
     assert_eq!(o["champs"]["date_echeance"]["valeur"], "2026-02-11");
-    assert_eq!(o["champs"]["numero_facture"], json!({"valeur": "FA-2026-00412", "refs": [{"page": 1, "ordinal": 8}], "statut": "conforme"}));
+    assert_eq!(
+        o["champs"]["numero_facture"],
+        json!({"valeur": "FA-2026-00412", "refs": [{"page": 1, "ordinal": 8}], "statut": "conforme"})
+    );
     assert_eq!(o["champs"]["raison_sociale_emetteur"]["statut"], "prouve");
     println!("{}", serde_json::to_string(&json!({"parties": pa, "preuves": {PREUVE_PARTIES: o["preuves"][PREUVE_PARTIES], PREUVE_ORDRE: o["preuves"][PREUVE_ORDRE]}})).unwrap());
 
     // Tiers inconnu : le nom est la rangée au-dessus du matricule qui porte une forme, `conforme`.
     let mut inconnu = connus_.clone();
     inconnu["tiers"] = json!([]);
-    let o = la_piece(&par_variante_avec(&jetons, &grille(true, true), &pack(false), Some(&inconnu)).0);
+    let o =
+        la_piece(&par_variante_avec(&jetons, &grille(true, true), &pack(false), Some(&inconnu)).0);
     assert_eq!(o["parties"]["tiers"], Value::Null);
-    assert_eq!(o["parties"]["emetteur"]["nom"]["valeur"], "INFOTECH SOLUTIONS SARL");
+    assert_eq!(
+        o["parties"]["emetteur"]["nom"]["valeur"],
+        "INFOTECH SOLUTIONS SARL"
+    );
     assert_eq!(o["parties"]["emetteur"]["nom"]["statut"], "conforme");
 
     // Le dossier des deux côtés (dans l'en-tête de l'émetteur et dans le bloc du client),
@@ -575,9 +703,13 @@ fn anneau2_forme_de_la_sortie() {
     let mut deux = jetons.clone();
     deux[5]["texte"] = json!("1876543W/A/M/000");
     deux.push(j(23, "1245789K/A/M/000", 0.40, 0.90, 0.12));
-    let o = la_piece(&par_variante_avec(&deux, &grille(true, true), &pack(false), Some(&connus_)).0);
+    let o =
+        la_piece(&par_variante_avec(&deux, &grille(true, true), &pack(false), Some(&connus_)).0);
     assert_eq!(o["parties"]["statut"], "signale", "{}", o["parties"]);
     assert_eq!(o["parties"]["raison"], "indices de sens contradictoires");
     assert_eq!(o["parties"]["sens"], Value::Null);
-    assert_eq!(o["champs"]["matricule_fiscal_emetteur"]["statut"], "signale");
+    assert_eq!(
+        o["champs"]["matricule_fiscal_emetteur"]["statut"],
+        "signale"
+    );
 }

@@ -1,0 +1,245 @@
+{
+  "id": "135",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "note_frais",
+  "grille": "note_frais",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "capture": "photo",
+  "gabarit": "J",
+  "mise_en_page": "J",
+  "scenario": "note_frais_manuscrite",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "froisse",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Note de frais",
+    "parties": [
+      {
+        "role": "employeur",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "salarie",
+        "nom": "Mehdi Varnasse",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "employeur",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "salarie",
+      "nom": "Mehdi Varnasse",
+      "matricule": null,
+      "est": "tiers"
+    },
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": true,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "t": "ALGORIA FACTORY SARL",
+              "cls": "gros"
+            }
+          ],
+          [
+            "Formulaire RH-07 — note de frais"
+          ]
+        ],
+        "droite": [
+          [
+            "Date : ",
+            {
+              "c": "date_note"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "NOTE DE FRAIS"
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Nom et prénom :",
+            {
+              "c": "nom_salarie"
+            }
+          ],
+          [
+            "Mission :",
+            {
+              "c": "objet_professionnel"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Date",
+          "Nature",
+          "Km",
+          "Montant"
+        ],
+        "nombres": [
+          2,
+          3
+        ],
+        "minimum": 6,
+        "lignes": [
+          [
+            {
+              "c": "lignes[0].date_depense"
+            },
+            "Déplacement — véhicule personnel",
+            {
+              "c": "lignes[0].kilometrage"
+            },
+            {
+              "c": "lignes[0].montant_ttc_ligne"
+            }
+          ],
+          [
+            {
+              "c": "lignes[1].date_depense"
+            },
+            "Inscription au salon",
+            "",
+            {
+              "c": "lignes[1].montant_ttc_ligne"
+            }
+          ],
+          [
+            {
+              "c": "lignes[2].date_depense"
+            },
+            "Déjeuner",
+            "",
+            {
+              "c": "lignes[2].montant_ttc_ligne"
+            }
+          ]
+        ],
+        "pied": [
+          [
+            "Total",
+            {
+              "c": "total_frais"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "Visa du responsable",
+        "droite": "Signature du salarié"
+      }
+    ],
+    "imprime": {
+      "date_note": "20/10/26",
+      "nom_salarie": "Mehdi Varnasse",
+      "objet_professionnel": "Salon Selvarine des données, Hammamet",
+      "lignes[0].date_depense": "14/10/26",
+      "lignes[0].kilometrage": "170",
+      "lignes[0].montant_ttc_ligne": "83,000",
+      "lignes[1].date_depense": "15/10/26",
+      "lignes[1].montant_ttc_ligne": "177,000",
+      "lignes[2].date_depense": "15/10/26",
+      "lignes[2].montant_ttc_ligne": "44,000",
+      "total_frais": "304,000"
+    },
+    "versConcept": {
+      "date_note": "date_note",
+      "nom_salarie": "nom_salarie",
+      "objet_professionnel": "objet_professionnel",
+      "lignes[0].date_depense": "lignes[0].date_depense",
+      "lignes[0].kilometrage": "lignes[0].kilometrage",
+      "lignes[0].montant_ttc_ligne": "lignes[0].montant_ttc_ligne",
+      "lignes[1].date_depense": "lignes[1].date_depense",
+      "lignes[1].montant_ttc_ligne": "lignes[1].montant_ttc_ligne",
+      "lignes[2].date_depense": "lignes[2].date_depense",
+      "lignes[2].montant_ttc_ligne": "lignes[2].montant_ttc_ligne",
+      "total_frais": "total_frais"
+    },
+    "marques": {
+      "signature_emetteur": "signature_salarie"
+    },
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 302262344,
+  "attendu": {
+    "concepts": {
+      "date_note": "2026-10-20",
+      "nom_salarie": "Mehdi Varnasse",
+      "objet_professionnel": "Salon Selvarine des données, Hammamet",
+      "lignes": [
+        {
+          "date_depense": "2026-10-14",
+          "kilometrage": "170",
+          "montant_ttc_ligne": "83.000"
+        },
+        {
+          "date_depense": "2026-10-15",
+          "montant_ttc_ligne": "177.000"
+        },
+        {
+          "date_depense": "2026-10-15",
+          "montant_ttc_ligne": "44.000"
+        }
+      ],
+      "total_frais": "304.000",
+      "signature_salarie": true
+    },
+    "confondus": {},
+    "notes": [
+      "Formulaire pré-imprimé : en-tête et libellés imprimés, valeurs écrites à la main ; pas d'avance, le total vaut le net (non imprimé)."
+    ],
+    "non_imprimes": [
+      "avance_recue",
+      "categorie_depense",
+      "devise_taux_change",
+      "justificatif_joint",
+      "matricule_salarie",
+      "net_a_rembourser",
+      "periode_ou_mission",
+      "tva_recuperable_ligne",
+      "visa_responsable"
+    ]
+  }
+}

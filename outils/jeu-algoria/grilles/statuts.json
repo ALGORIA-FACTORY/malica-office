@@ -1,0 +1,771 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "statuts",
+    "nom": "Statuts (acte constitutif) - SARL, SUARL, SA - version initiale ou mise à jour",
+    "typeDeDocument": "statuts",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "ag_convocation_modalites",
+      "concept": "ag_convocation_modalites",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Assemblées et décisions collectives",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ag_quorum_majorite_statutaires",
+      "concept": "ag_quorum_majorite_statutaires",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Assemblées et décisions collectives",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ag_representation",
+      "concept": "ag_representation",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Assemblées et décisions collectives",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ag_seuil_admission_actions",
+      "concept": "ag_seuil_admission_actions",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "Assemblées et décisions collectives",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "annexes",
+      "concept": "annexes",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Dissolution, litiges, formalités",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "apport_industrie",
+      "concept": "apport_industrie",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Capital, apports et titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "apport_nature_description",
+      "concept": "apport_nature_description",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Capital, apports et titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "apport_nature_evaluation",
+      "concept": "apport_nature_evaluation",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Capital, apports et titres",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "apport_numeraire_par_associe",
+      "concept": "apport_numeraire_par_associe",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Capital, apports et titres",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "associe_pm_denomination",
+      "concept": "raison_sociale",
+      "role": "associe",
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "associe_pm_identifiant",
+      "concept": "identifiant_partie",
+      "role": "associe",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "associe_pm_nationalite",
+      "concept": "nationalite",
+      "role": "associe",
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "associe_pm_representant",
+      "concept": "representant",
+      "role": "associe",
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "associe_pm_siege",
+      "concept": "adresse",
+      "role": "associe",
+      "type": "adresse",
+      "obligatoire": "selon_cas",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "associe_pp_domicile",
+      "concept": "adresse",
+      "role": "associe",
+      "type": "adresse",
+      "obligatoire": "selon_cas",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "associe_pp_etat_civil",
+      "concept": "associe_pp_etat_civil",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "associe_pp_nationalite",
+      "concept": "nationalite",
+      "role": "associe",
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "associe_pp_nom_prenom",
+      "concept": "nom_prenom",
+      "role": "associe",
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "associe_pp_piece_identite",
+      "concept": "cin",
+      "role": "associe",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "associe_type",
+      "concept": "associe_type",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_duree_mandat",
+      "concept": "duree_mandat",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "selon_cas",
+      "parcelle": "Direction et administration",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_nombre_administrateurs",
+      "concept": "ca_nombre_administrateurs",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "selon_cas",
+      "parcelle": "Direction et administration",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_premiers_administrateurs",
+      "concept": "ca_premiers_administrateurs",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Direction et administration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_quorum_majorite",
+      "concept": "ca_quorum_majorite",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Direction et administration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "capital_devise",
+      "concept": "devise",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Capital, apports et titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "capital_montant",
+      "concept": "capital_social",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Capital, apports et titres",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "categories_actions",
+      "concept": "categories_actions",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Capital, apports et titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "clause_agrement",
+      "concept": "clause_agrement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Cession et transmission des titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "clause_dissolution_liquidation",
+      "concept": "clause_dissolution_liquidation",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Dissolution, litiges, formalités",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "clause_litiges",
+      "concept": "clause_litiges",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Dissolution, litiges, formalités",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "clause_preemption",
+      "concept": "clause_preemption",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Cession et transmission des titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "clause_transfert_siege",
+      "concept": "clause_transfert_siege",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Caractéristiques de la société",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "commissaire_aux_apports",
+      "concept": "commissaire_aux_apports",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Capital, apports et titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "commissaire_aux_comptes_clause",
+      "concept": "commissaire_aux_comptes_clause",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Contrôle des comptes",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "conventions_reglementees",
+      "concept": "conventions_reglementees",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Direction et administration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_acte",
+      "concept": "date_signature",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "En-tête et nature de l'acte",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_mise_a_jour",
+      "concept": "date_mise_a_jour",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "En-tête et nature de l'acte",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "decisions_associe_unique_registre",
+      "concept": "decisions_associe_unique_registre",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Assemblées et décisions collectives",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "declaration_liberation_integrale",
+      "concept": "declaration_liberation_integrale",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Capital, apports et titres",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "denomination",
+      "concept": "raison_sociale",
+      "role": "entreprise",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Caractéristiques de la société",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "depositaire_fonds",
+      "concept": "depositaire_fonds",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Capital, apports et titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "direction_generale",
+      "concept": "direction_generale",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Direction et administration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "duree_annees",
+      "concept": "duree_annees",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "oui",
+      "parcelle": "Caractéristiques de la société",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "enregistrement_recette",
+      "concept": "enregistrement_recette",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "En-tête et nature de l'acte",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "exercice_cloture",
+      "concept": "date_cloture",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Exercice social et résultat",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "exercice_debut",
+      "concept": "date_debut",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Exercice social et résultat",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "forme_acte",
+      "concept": "forme_acte",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "En-tête et nature de l'acte",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "forme_juridique",
+      "concept": "forme_juridique",
+      "role": "entreprise",
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Caractéristiques de la société",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "forme_titres",
+      "concept": "forme_titres",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Capital, apports et titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "frais_constitution",
+      "concept": "frais_constitution",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Dissolution, litiges, formalités",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "gerant_duree_mandat",
+      "concept": "duree_mandat",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "non",
+      "parcelle": "Direction et administration",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "gerant_pouvoirs_limitations",
+      "concept": "gerant_pouvoirs_limitations",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Direction et administration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "gerant_remuneration",
+      "concept": "gerant_remuneration",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Direction et administration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "gerant_revocation",
+      "concept": "gerant_revocation",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Direction et administration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "gerants_designes",
+      "concept": "gerants_designes",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Direction et administration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "jetons_presence",
+      "concept": "jetons_presence",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Direction et administration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "lieu_acte",
+      "concept": "lieu_signature",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "En-tête et nature de l'acte",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "modalites_liberation",
+      "concept": "modalites_liberation",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Capital, apports et titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mode_direction",
+      "concept": "mode_direction",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Direction et administration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nationalite_societe",
+      "concept": "nationalite_societe",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Caractéristiques de la société",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nombre_associes",
+      "concept": "nombre_associes",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "oui",
+      "parcelle": "Identité des associés / fondateurs",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nombre_titres",
+      "concept": "nombre_titres",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "oui",
+      "parcelle": "Capital, apports et titres",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "objet_social",
+      "concept": "objet_social",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Caractéristiques de la société",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "point_depart_duree",
+      "concept": "point_depart_duree",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Caractéristiques de la société",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "pouvoirs_formalites",
+      "concept": "pouvoirs_formalites",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Dissolution, litiges, formalités",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "premier_exercice",
+      "concept": "premier_exercice",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "non",
+      "parcelle": "Exercice social et résultat",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "registre_associes",
+      "concept": "registre_associes",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Cession et transmission des titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "repartition_titres",
+      "concept": "repartition_titres",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Capital, apports et titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reserve_legale_clause",
+      "concept": "reserve_legale_clause",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "non",
+      "parcelle": "Exercice social et résultat",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reserves_statutaires",
+      "concept": "reserves_statutaires",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Exercice social et résultat",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "siege_social",
+      "concept": "adresse",
+      "role": "entreprise",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "Caractéristiques de la société",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "sigle",
+      "concept": "sigle",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Caractéristiques de la société",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signatures",
+      "concept": "signature_cachet",
+      "role": "associe",
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "Dissolution, litiges, formalités",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "transmission_deces",
+      "concept": "transmission_deces",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Cession et transmission des titres",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "type_acte",
+      "concept": "type_acte",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "En-tête et nature de l'acte",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "valeur_nominale",
+      "concept": "valeur_nominale",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Capital, apports et titres",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    }
+  ]
+}

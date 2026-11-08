@@ -18,7 +18,7 @@
 
 	@api {
 		path /rpc /rpc/* /moi /moi/* /sante /sante/* /pieces /pieces/*
-		path /journal-atelier /journal-atelier/* /malica/* /auth/*
+		path /journal-atelier /journal-atelier/* /malica/* /auth/* /exports/*
 	}
 
 	# Une lecture par Malica peut durer des minutes.
@@ -38,12 +38,17 @@
 	# politique ci-dessous ne touche pas aux scripts (le rendu serveur en pose
 	# en ligne) : elle interdit d'encadrer l'application, d'y changer la base
 	# des liens, d'y charger un objet, et d'envoyer un formulaire ailleurs.
+	#
+	# `?` : la politique n'est qu'un défaut. Les octets d'une pièce ou d'un
+	# export portent la leur, posée par l'API (`sandbox; default-src 'none'`,
+	# audit du 6 novembre 2026, S1) ; ce bloc est différé (il retire `Server`)
+	# et, sans `?`, il l'écraserait.
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
 		X-Frame-Options DENY
-		Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
+		?Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
 		Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=()"
 		-Server
 	}

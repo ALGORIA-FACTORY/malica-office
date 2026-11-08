@@ -121,6 +121,16 @@ Deux clés facultatives de `groupe_taux`, ajoutées à l'exécution :
   fictives, couche de texte et OCR rapide, 0 fausse preuve. Banc adverse (mention
   « Exonéré » injectée sur toutes, puis un chiffre de montant changé : 9 381 et
   9 474 lectures) : aucune fausse preuve par l'exonération partielle.
+- `taux_exonere` (code, avec `exoneration` ; 4 novembre 2026, `20261127130000` et
+  `20261127150000`) : le taux nul du barème (`pack.taux_nuls`, jamais dans
+  `pack.baremes`) qui **nomme** la part exonérée. Elle devient une instance de la
+  ventilation : base = `total_base` − Σ bases imprimées (tout le `total_base` sous une
+  exonération totale), montant nul ; sous une exonération partielle, l'anneau 1 la
+  vérifie par la somme des lignes sans taux. Un code absent des taux nuls du pack est
+  une grille invalide. Sans `taux_exonere`, la ventilation d'une exonération partielle
+  est incomplète : elle est `signale`, jamais affirmée. Mesure : algoria-102 (deux
+  formations exonérées, sept lignes à 19 %), ventilation rendue juste au lieu de deux
+  faux.
 
 **Le total HT porte son libellé** (décision du dirigeant, 2 novembre 2026 : zéro
 fausse preuve l'emporte sur les pièces gagnées). Toute preuve exige que la valeur
@@ -186,6 +196,16 @@ ont leur propre statut, et l'issue de la pièce reste celle du centre.
   5. Le tableau doit fermer exactement sur le total HT prouvé.
 
   Une cellule déduite ne remplace jamais une désignation de la chaîne.
+
+  **Rangée partielle** (4 novembre 2026). Une rangée dont le montant est lu en
+  lecture forte, avec un nombre dans la colonne des quantités ou un prix lu, et
+  qu'aucune cellule déduite n'explique, reste une ligne : la somme exacte au
+  total prouvé confirme son montant. Sa cellule absente ou illisible est **tue** :
+  `quantite` ou `prix` est absent de la ligne, jamais inventé. Le prix (et une
+  remise lue sur la rangée) n'est rendu que si une quantité entière le ferme
+  avec le montant ; la quantité absente ne l'est jamais. Un tableau qui porte une
+  rangée partielle ou une remise lue ne déduit rien : il se relit sans
+  déduction.
 
   Trois cas s'ajoutent (1er novembre 2026) :
 
@@ -550,8 +570,54 @@ rattrapage (deux lectures complètes, environ quatre minutes).
   `prix_ttc` (`prix_unitaire_ttc?`, migration 20261118120000). Une rangée ferme
   alors aussi par m = arrondi(q × p × (1 − r) ÷ (1 + t)), t un taux du barème de
   la grille, à la tolérance du pack. La ligne rend `prix_ttc: true` ;
-  l'adaptateur range le prix dans `unit_price_ttc`. Stratégie de toujours
-  seulement : la lecture du milieu déduit par m / p, qui suppose un prix HT.
+  l'adaptateur range le prix dans `unit_price_ttc`. La lecture du milieu ferme
+  ses rangées par la même règle (`Contexte::fermeture`) ; elle ne déduit une
+  quantité TTC qu'entière, et un montant TTC qu'au taux imprimé sur la rangée.
+- **Ce qui n'est pas la désignation.** Une ligne de la cellule de la désignation
+  qui commence par le repère d'un autre champ de la parcelle des lignes (le
+  numéro de série « SN : 9813… », `numero_serie_ligne`), suivi d'une valeur
+  chiffrée ou de rien, n'en est pas la suite. Deux mots d'une même ligne de
+  texte ne se recouvrent pas : un jeton posé sur un mot est d'une autre ligne.
+- **Le manque.** Un jeton peut porter `manque`, la plus forte probabilité d'une lettre non
+  émise entre deux de ses caractères (le second lecteur la donne). Au-dessus de
+  `lecture.manque_du_caractere` (0,15), le mot est incertain, comme sous la confiance du
+  caractère (`Jeton::incertain`).
+- **Les montants empilés.** Une rangée qui porte deux montants empilés dans une même
+  colonne est plusieurs lignes : elle se scinde en bandes avant toute preuve.
+- **Le sens déclaré** (`connus.sens`, « achat » ou « vente ») : la personne l'a
+  confirmé. Il place le dossier ; l'autre matricule est le tiers. Des indices unanimes
+  contre lui : `parties` signalées, raison « le sens déclaré contredit la pièce ». La
+  sortie porte `declare: true` quand le sens vient de la déclaration.
+- **Le matricule du tiers corroboré.** Il est `prouve` si la lecture est le texte exact
+  de la pièce (`texte_exact`, la couche de texte d'un PDF), s'il est lu deux fois à
+  l'identique, s'il est celui d'un tiers connu, ou si chaque caractère est lu au-dessus
+  de `lecture.confiance_du_caractere` ; sinon `signale`. Deux matricules lus qui ne
+  diffèrent que d'un chiffre : rien n'est rendu (« deux lectures d'un matricule se
+  contredisent »).
+- **Le matricule sans sa lettre** (`pack.controles`, par code de format : `poids`,
+  `modulo`, `alphabet`, depuis `ref.identifiant_controles`). Une écriture imprimée sans sa
+  lettre de contrôle se compare par la lettre calculée ; la valeur rendue reste
+  l'imprimée. Ses écritures avec et sans lettre sont un seul matricule. Même noyau, lettre
+  calculée différente : « deux lectures d'un matricule se contredisent ». Le motif reçu
+  dans `pack.formats` est celui de LECTURE (`coalesce(pattern_lu, pattern)`).
+- **Le dossier dans une partie que rien ne désigne.** Un champ d'identifiant d'une partie
+  (`role`), lu égal au matricule du dossier quand la page imprime un autre identifiant de
+  même noyau, est `signale`.
+- **Ce que le dossier dit quand la pièce n'imprime rien** (`champ.defaut_du_dossier`,
+  `connus.devise`). Un champ dont le concept porte `defaut_du_dossier = devise`, que rien
+  n'a lu, reçoit la devise du dossier au statut `deduit`, sans référence.
+- **Le taux nul de la part exonérée** (`groupe_taux.autres_exonerations`, `{mention:
+  taux}`) : la part exonérée prend le taux de la mention imprimée (`taux_exonere` pour la
+  mention `exoneration`) ; deux mentions de taux différents imprimées, elle n'est pas
+  nommée.
+- **Le taux nul imprimé.** Un « 0 % » sur une rangée qui porte un montant non nul permet
+  l'exonération comme la mention ; sans mention qui nomme son taux, la part exonérée se
+  prouve et la ventilation se signale.
+- **Le caractère le moins sûr.** Un jeton peut porter `faible`, la probabilité
+  de son caractère le moins sûr (le second lecteur la donne). Sous
+  `lecture.confiance_du_caractere` (0,8), le mot est incertain : un texte
+  qu'aucun calcul ne prouve (une désignation, un nom) qui le porte n'est pas
+  rendu (`Jeton::incertain`).
 - **Le libellé de la base pour le HT.** À un seul taux, une valeur imprimée sous
   le libellé de la base, que base × taux = TVA vérifie, tient lieu du libellé du
   HT — **seulement si la preuve `lettres` vérifie le total** (une seconde

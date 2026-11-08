@@ -1,0 +1,461 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "contrat_cdi",
+    "nom": "Contrat de travail à durée indéterminée (CDI)",
+    "typeDeDocument": "contrat",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "anciennete_reprise",
+      "concept": "anciennete_reprise",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "conversion",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "avenant_numero",
+      "concept": "avenant_numero",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "selon_cas",
+      "parcelle": "en_tete",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "categorie_echelon",
+      "concept": "categorie_echelon",
+      "role": "salarie",
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "objet_et_poste",
+      "expert": "libelle",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "clause_confidentialite",
+      "concept": "clause_confidentialite",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "clauses",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "clause_mobilite",
+      "concept": "clause_mobilite",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "clauses",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "clause_non_concurrence",
+      "concept": "clause_non_concurrence",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "clauses",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "conges",
+      "concept": "conges",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "clauses",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "convention_collective",
+      "concept": "convention_collective",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "objet_et_poste",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_debut",
+      "concept": "date_effet",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "objet_et_poste",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "duree_hebdo",
+      "concept": "duree_hebdo",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "temps_de_travail",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "emploi_poste",
+      "concept": "emploi",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "objet_et_poste",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "employeur_activite",
+      "concept": "activite",
+      "role": "employeur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "parties_employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_adresse",
+      "concept": "adresse",
+      "role": "employeur",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "parties_employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "employeur",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "parties_employeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_numero_cnss",
+      "concept": "numero_cnss",
+      "role": "employeur",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "parties_employeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_raison_sociale",
+      "concept": "raison_sociale",
+      "role": "employeur",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "parties_employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_rne",
+      "concept": "identifiant_unique_rne",
+      "role": "employeur",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "parties_employeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_signature_cachet",
+      "concept": "signature_cachet",
+      "role": "employeur",
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "parties_employeur",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_telephone_email",
+      "concept": "telephone_email",
+      "role": "employeur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "parties_employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "intitule",
+      "concept": "intitule",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "en_tete",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "issu_conversion_cdd",
+      "concept": "issu_conversion_cdd",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "conversion",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "legalisation_signature",
+      "concept": "legalisation_signature",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "signatures",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "lieu_date_signature",
+      "concept": "date_signature",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "signatures",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "lieu_travail",
+      "concept": "lieu_travail",
+      "role": null,
+      "type": "adresse",
+      "obligatoire": "non",
+      "parcelle": "objet_et_poste",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nombre_exemplaires",
+      "concept": "nombre_exemplaires",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "signatures",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periode_essai_duree",
+      "concept": "periode_essai_duree",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "periode_essai",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periode_essai_renouvellement",
+      "concept": "periode_essai_renouvellement",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "periode_essai",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periodicite_paie",
+      "concept": "periodicite_paie",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "remuneration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "preavis",
+      "concept": "preavis",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "clauses",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "primes_contractuelles",
+      "concept": "primes_contractuelles",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "remuneration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reference_contrat",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "en_tete",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "salaire_base",
+      "concept": "salaire_base",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "remuneration",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "salaire_brut_ou_net",
+      "concept": "salaire_brut_ou_net",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "remuneration",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "salarie_adresse",
+      "concept": "adresse",
+      "role": "salarie",
+      "type": "adresse",
+      "obligatoire": "non",
+      "parcelle": "parties_salarie",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_cin",
+      "concept": "cin",
+      "role": "salarie",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "parties_salarie",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_date_naissance",
+      "concept": "date_naissance",
+      "role": "salarie",
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "parties_salarie",
+      "expert": "date",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_diplome_qualification",
+      "concept": "salarie_diplome_qualification",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "parties_salarie",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "salarie_matricule_cnss",
+      "concept": "numero_cnss",
+      "role": "salarie",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "parties_salarie",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_matricule_interne",
+      "concept": "matricule_interne",
+      "role": "salarie",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "parties_salarie",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_nationalite",
+      "concept": "nationalite",
+      "role": "salarie",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "parties_salarie",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_nom_prenom",
+      "concept": "nom_prenom",
+      "role": "salarie",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "parties_salarie",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "signature_employeur",
+      "concept": "signature_cachet",
+      "role": "employeur",
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "signatures",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "signature_salarie",
+      "concept": "signature_cachet",
+      "role": "salarie",
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "signatures",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "temps_partiel",
+      "concept": "temps_partiel",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "temps_de_travail",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "visa_ministere_etranger",
+      "concept": "visa_ministere_etranger",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "signatures",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    }
+  ]
+}

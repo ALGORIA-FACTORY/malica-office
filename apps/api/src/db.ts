@@ -209,6 +209,19 @@ export async function horsRlsAuthentificationSeule<T>(
 }
 
 /**
+ * Le même chemin, pour UNE requête de lecture hors transaction : la vérification
+ * d'une session, faite à chaque requête authentifiée. Un aller-retour au lieu de
+ * trois (`begin`, la requête, `commit`) — c'est le prix de la révocation des
+ * jetons, payé partout, et il doit rester le plus bas possible.
+ */
+export async function horsRlsAuthentificationEnUneRequete<R extends pg.QueryResultRow>(
+  texte: string,
+  valeurs: unknown[],
+): Promise<pg.QueryResult<R>> {
+  return pool.query<R>(texte, valeurs);
+}
+
+/**
  * Tient un verrou consultatif de SESSION (sa clé, un `bigint` dit par la base)
  * le temps d'un travail, ou rend `null`
  * s'il est déjà tenu ailleurs — par ce processus ou par une autre API.

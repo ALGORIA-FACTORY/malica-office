@@ -1,0 +1,265 @@
+{
+  "id": "151",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "carte_identification_fiscale",
+  "grille": "carte_identification_fiscale",
+  "langue": "fr",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "G",
+  "mise_en_page": "G-encadre",
+  "scenario": "attestation_immatriculation",
+  "realisme": [
+    "biais",
+    "grain",
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Attestation d'immatriculation fiscale",
+    "parties": [
+      {
+        "role": "administration",
+        "nom": "Direction Générale des Impôts",
+        "matricule": null,
+        "est": "administration"
+      },
+      {
+        "role": "contribuable",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "administration",
+      "nom": "Direction Générale des Impôts",
+      "matricule": null,
+      "est": "administration"
+    },
+    "client": {
+      "role": "contribuable",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": "encadre",
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "DIRECTION GÉNÉRALE DES IMPÔTS",
+        "adresse": "Tunis",
+        "telephone": null
+      },
+      "centre": "SPÉCIMEN",
+      "code": "cachet_signature"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            "République Tunisienne"
+          ],
+          [
+            "Ministère des Finances"
+          ],
+          [
+            "Direction Générale des Impôts"
+          ]
+        ],
+        "droite": [
+          [
+            "الجمهورية التونسية"
+          ],
+          [
+            "وزارة المالية"
+          ],
+          [
+            "الإدارة العامة للأداءات"
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "ATTESTATION D'IMMATRICULATION FISCALE"
+        ],
+        "sous": [
+          "tenant lieu de carte d'identification fiscale"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Le chef du service soussigné atteste que la société ",
+          {
+            "c": "raison_sociale"
+          },
+          ", ",
+          {
+            "c": "forme_juridique"
+          },
+          ", sise ",
+          {
+            "c": "adresse"
+          },
+          ", exerçant l'activité de « ",
+          {
+            "c": "activite"
+          },
+          " », est immatriculée au registre des contribuables sous l'identifiant suivant :"
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Identifiant",
+          "Clé",
+          "Code TVA",
+          "Catégorie",
+          "Établissement"
+        ],
+        "lignes": [
+          [
+            {
+              "c": "identifiant_unique"
+            },
+            {
+              "c": "cle_controle"
+            },
+            {
+              "c": "code_tva"
+            },
+            {
+              "c": "code_categorie"
+            },
+            {
+              "c": "numero_etablissement"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Régime d'imposition :",
+            {
+              "c": "regime_fiscal"
+            }
+          ],
+          [
+            "Date de début d'activité :",
+            {
+              "c": "date_debut_activite"
+            }
+          ],
+          [
+            "Délivrée à Tunis le :",
+            {
+              "c": "date_delivrance"
+            }
+          ],
+          [
+            "Service :",
+            {
+              "c": "service_emetteur"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "petit",
+        "morceaux": [
+          "Spécimen fictif — jeu d'essai du banc de lecture, sans valeur."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "Le chef de service"
+      }
+    ],
+    "imprime": {
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "forme_juridique": "société à responsabilité limitée",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "activite": "édition de logiciels applicatifs",
+      "identifiant_unique": "1958330",
+      "cle_controle": "V",
+      "code_tva": "A",
+      "code_categorie": "M",
+      "numero_etablissement": "000",
+      "regime_fiscal": "réel",
+      "date_debut_activite": "11 mars 2024",
+      "date_delivrance": "6 octobre 2026",
+      "service_emetteur": "Bureau de contrôle des impôts de Tunis — service fictif du banc"
+    },
+    "versConcept": {
+      "raison_sociale": "raison_sociale",
+      "forme_juridique": "forme_juridique",
+      "adresse": "adresse",
+      "activite": "activite",
+      "identifiant_unique": "identifiant_unique",
+      "cle_controle": "cle_controle",
+      "code_tva": "code_tva",
+      "code_categorie": "code_categorie",
+      "numero_etablissement": "numero_etablissement",
+      "regime_fiscal": "regime_fiscal",
+      "date_debut_activite": "date_debut_activite",
+      "date_delivrance": "date_delivrance",
+      "service_emetteur": "service_emetteur"
+    },
+    "marques": {
+      "cachet_emetteur": "cachet_signature",
+      "signature_emetteur": "cachet_signature"
+    },
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 1231601861,
+  "attendu": {
+    "concepts": {
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "forme_juridique": "SARL",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "activite": "édition de logiciels applicatifs",
+      "identifiant_unique": "1958330",
+      "cle_controle": "V",
+      "code_tva": "A",
+      "code_categorie": "M",
+      "numero_etablissement": "000",
+      "regime_fiscal": "reel",
+      "date_debut_activite": "2024-03-11",
+      "date_delivrance": "2026-10-06",
+      "service_emetteur": "Bureau de contrôle des impôts de Tunis — service fictif du banc",
+      "matricule_fiscal_complet": "1958330V/A/M/000",
+      "cachet_signature": true
+    },
+    "confondus": {
+      "matricule_fiscal_complet": "identifiant_unique"
+    },
+    "notes": [
+      "Le matricule s'imprime en cinq cases (identifiant, clé, code TVA, catégorie, établissement) et nulle part en clair : le matricule complet se reconstitue des cases (`confondus`). Aucune case ne porte à elle seule le matricule."
+    ],
+    "non_imprimes": [
+      "identifiant_unique_rne",
+      "nom_commercial"
+    ]
+  }
+}

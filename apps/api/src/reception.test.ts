@@ -107,7 +107,7 @@ describe(
       const cb = await creerCompte(`b-${marque}@essai.local`, "MotDePasseTresLong2026!");
       assert.ok(ca && cb);
       [a, b] = [ca, cb];
-      [jetonA, jetonB] = [emettreJeton(a), emettreJeton(b)];
+      [jetonA, jetonB] = [emettreJeton(a, new Date()), emettreJeton(b, new Date())];
       orgA = await creerOrg(a, `RECEPTION A ${marque}`);
       orgB = await creerOrg(b, `RECEPTION B ${marque}`);
     });

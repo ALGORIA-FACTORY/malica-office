@@ -1,0 +1,311 @@
+{
+  "id": "130",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "justificatif_paiement",
+  "grille": "virement",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-encadre",
+  "scenario": "virement_emis",
+  "realisme": [
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Ordre de virement",
+    "parties": [
+      {
+        "role": "donneur_ordre",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "beneficiaire",
+        "nom": "Tazrane Climatisation SUARL",
+        "matricule": "5327006E/A/M/000",
+        "est": "tiers"
+      },
+      {
+        "role": "banque",
+        "nom": "Banque Ouzrane de Développement",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "donneur_ordre",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "beneficiaire",
+      "nom": "Tazrane Climatisation SUARL",
+      "matricule": "5327006E/A/M/000",
+      "est": "tiers"
+    },
+    "style": "encadre",
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "Banque Ouzrane de Développement",
+        "adresse": "Agence Lac Morvane, Tunis",
+        "telephone": "00 71 962 330"
+      },
+      "centre": "REÇU",
+      "code": "cachet_banque"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "t": "ALGORIA FACTORY SARL",
+              "cls": "gros"
+            }
+          ],
+          [
+            "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis"
+          ],
+          [
+            "Tél. : ",
+            "00 71 940 517"
+          ]
+        ],
+        "droite": [
+          [
+            "À l'attention de"
+          ],
+          [
+            {
+              "c": "donneur_banque"
+            }
+          ],
+          [
+            "Agence Lac Morvane"
+          ],
+          [
+            "Rue du Lac Morvane, 1053 Les Berges du Lac"
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "ORDRE DE VIREMENT"
+        ],
+        "sous": [
+          "Réf. ",
+          {
+            "c": "reference_virement"
+          }
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Donneur d'ordre"
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Raison sociale :",
+            {
+              "c": "donneur_nom"
+            }
+          ],
+          [
+            "RIB à débiter :",
+            {
+              "c": "donneur_rib"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Bénéficiaire"
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Nom :",
+            {
+              "c": "beneficiaire_nom"
+            }
+          ],
+          [
+            "Adresse :",
+            {
+              "c": "beneficiaire_adresse"
+            }
+          ],
+          [
+            "Banque :",
+            {
+              "c": "beneficiaire_banque"
+            }
+          ],
+          [
+            "RIB :",
+            {
+              "c": "beneficiaire_rib"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Opération"
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Montant :",
+            [
+              {
+                "c": "montant"
+              },
+              " ",
+              {
+                "c": "devise"
+              }
+            ]
+          ],
+          [
+            "Type :",
+            {
+              "c": "type_virement"
+            }
+          ],
+          [
+            "Date de l'ordre :",
+            {
+              "c": "date_ordre"
+            }
+          ],
+          [
+            "Date d'exécution souhaitée :",
+            {
+              "c": "date_execution"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "En lettres :",
+            {
+              "c": "montant_lettres"
+            }
+          ],
+          [
+            "Motif :",
+            {
+              "c": "motif"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "Cachet de la banque — reçu le",
+        "droite": "Signature autorisée du donneur d'ordre"
+      }
+    ],
+    "imprime": {
+      "donneur_banque": "Banque Ouzrane de Développement",
+      "reference_virement": "OV-2026-182",
+      "donneur_nom": "ALGORIA FACTORY SARL",
+      "donneur_rib": "99 017 0001834526710 54",
+      "beneficiaire_nom": "Tazrane Climatisation SUARL",
+      "beneficiaire_adresse": "105, avenue de la Liberté, Ben Arous",
+      "beneficiaire_banque": "Crédit Selvane",
+      "beneficiaire_rib": "99 124 6772274701750 16",
+      "montant": "15 456,142",
+      "devise": "TND",
+      "type_virement": "Virement ordinaire",
+      "date_ordre": "08/10/2026",
+      "date_execution": "09/10/2026",
+      "montant_lettres": "quinze mille quatre cent cinquante-six dinars et cent quarante-deux millimes",
+      "motif": "Règlement facture FA26/05124"
+    },
+    "versConcept": {
+      "donneur_banque": "donneur_banque",
+      "reference_virement": "reference_virement",
+      "donneur_nom": "donneur_nom",
+      "donneur_rib": "donneur_rib",
+      "beneficiaire_nom": "beneficiaire_nom",
+      "beneficiaire_adresse": "beneficiaire_adresse",
+      "beneficiaire_banque": "beneficiaire_banque",
+      "beneficiaire_rib": "beneficiaire_rib",
+      "montant": "montant",
+      "devise": "devise",
+      "type_virement": "type_virement",
+      "date_ordre": "date_ordre",
+      "date_execution": "date_execution",
+      "montant_lettres": "montant_lettres",
+      "motif": "motif"
+    },
+    "marques": {
+      "cachet_emetteur": "cachet_banque",
+      "signature_emetteur": "signature_donneur"
+    },
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 519047538,
+  "attendu": {
+    "concepts": {
+      "donneur_banque": "Banque Ouzrane de Développement",
+      "reference_virement": "OV-2026-182",
+      "donneur_nom": "ALGORIA FACTORY SARL",
+      "donneur_rib": "99 017 0001834526710 54",
+      "beneficiaire_nom": "Tazrane Climatisation SUARL",
+      "beneficiaire_adresse": "105, avenue de la Liberté, Ben Arous",
+      "beneficiaire_banque": "Crédit Selvane",
+      "beneficiaire_rib": "99 124 6772274701750 16",
+      "montant": "15456.142",
+      "devise": "TND",
+      "type_virement": "ordinaire",
+      "date_ordre": "2026-10-08",
+      "date_execution": "2026-10-09",
+      "montant_lettres": "quinze mille quatre cent cinquante-six dinars et cent quarante-deux millimes",
+      "motif": "Règlement facture FA26/05124",
+      "cachet_banque": true,
+      "signature_donneur": true
+    },
+    "confondus": {},
+    "notes": [
+      "Règle la facture du cas 041 (FA26/05124, TTC 15456.142) ; le débit se retrouve au relevé du cas 136. Aucun matricule sur la page."
+    ],
+    "non_imprimes": [
+      "cours_change",
+      "date_valeur",
+      "frais",
+      "references_change"
+    ]
+  }
+}

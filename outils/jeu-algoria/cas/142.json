@@ -1,0 +1,435 @@
+{
+  "id": "142",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "declaration_tva",
+  "grille": "declaration_mensuelle",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-encadre",
+  "scenario": "tva_a_payer",
+  "realisme": [
+    "tampon"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Déclaration mensuelle des impôts",
+    "parties": [
+      {
+        "role": "contribuable",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "administration",
+        "nom": "Direction Générale des Impôts",
+        "matricule": null,
+        "est": "administration"
+      }
+    ],
+    "emetteur": {
+      "role": "contribuable",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "administration",
+      "nom": "Direction Générale des Impôts",
+      "matricule": null,
+      "est": "administration"
+    },
+    "style": "encadre",
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+        "telephone": "00 71 940 517",
+        "est": "dossier"
+      },
+      "code": "signature_cachet"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            "République Tunisienne"
+          ],
+          [
+            "Ministère des Finances"
+          ],
+          [
+            "Direction Générale des Impôts"
+          ]
+        ],
+        "droite": [
+          [
+            "الجمهورية التونسية"
+          ],
+          [
+            "وزارة المالية"
+          ],
+          [
+            "الإدارة العامة للأداءات"
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "DÉCLARATION MENSUELLE DES IMPÔTS"
+        ],
+        "sous": [
+          "Mois de ",
+          {
+            "c": "periode"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Raison sociale",
+            {
+              "c": "raison_sociale"
+            }
+          ],
+          [
+            "Matricule fiscal",
+            {
+              "c": "matricule_fiscal"
+            }
+          ],
+          [
+            "Adresse",
+            {
+              "c": "adresse"
+            }
+          ],
+          [
+            "Activité",
+            {
+              "c": "activite"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 3,
+        "lignes": [
+          [
+            "Nature :",
+            {
+              "c": "nature_depot"
+            }
+          ],
+          [
+            "Dépôt :",
+            {
+              "c": "mode_depot"
+            }
+          ],
+          [
+            "Déposée le :",
+            {
+              "c": "date_depot"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "I — TVA collectée"
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "01",
+            "Chiffre d'affaires taxable à 19 %",
+            {
+              "c": "ca_taxable_19"
+            }
+          ],
+          [
+            "02",
+            "TVA au taux de 19 %",
+            {
+              "c": "tva_19"
+            }
+          ],
+          [
+            "05",
+            "Chiffre d'affaires exonéré",
+            {
+              "c": "ca_exonere"
+            }
+          ],
+          [
+            "08",
+            "Total TVA collectée",
+            {
+              "c": "total_tva_collectee"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "II — TVA déductible"
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "10",
+            "TVA sur achats de biens et services",
+            {
+              "c": "tva_ded_biens_services"
+            }
+          ],
+          [
+            "14",
+            "Total TVA déductible",
+            {
+              "c": "total_tva_deductible"
+            }
+          ],
+          [
+            "15",
+            "TVA à payer (08 − 14)",
+            {
+              "c": "tva_a_payer"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "III — Droit de timbre sur les factures"
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "30",
+            "Nombre de factures émises",
+            {
+              "c": "timbre_nombre_factures"
+            }
+          ],
+          [
+            "31",
+            "Tarif unitaire",
+            {
+              "c": "timbre_tarif"
+            }
+          ],
+          [
+            "32",
+            "Droit de timbre dû",
+            {
+              "c": "timbre_montant"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "IV — Total"
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "40",
+            "Total des impôts dus",
+            {
+              "c": "total_principal"
+            }
+          ],
+          [
+            "42",
+            "Total à payer",
+            {
+              "c": "total_a_payer"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "petit",
+        "morceaux": [
+          "Accusé de dépôt n° ",
+          {
+            "c": "reference_accuse"
+          },
+          " — paiement : ",
+          {
+            "c": "mode_paiement"
+          }
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "Cachet et signature du contribuable"
+      }
+    ],
+    "imprime": {
+      "periode": "septembre 2026",
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "matricule_fiscal": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "activite": "Édition de logiciels",
+      "nature_depot": "Initiale",
+      "mode_depot": "Télédéclaration",
+      "date_depot": "17/10/2026",
+      "ca_taxable_19": "44 528,979",
+      "tva_19": "8 460,506",
+      "ca_exonere": "5 753,000",
+      "total_tva_collectee": "8 460,506",
+      "tva_ded_biens_services": "2 466,650",
+      "total_tva_deductible": "2 466,650",
+      "tva_a_payer": "5 993,856",
+      "timbre_nombre_factures": "14",
+      "timbre_tarif": "1,000",
+      "timbre_montant": "14,000",
+      "total_principal": "6 007,856",
+      "total_a_payer": "6 007,856",
+      "reference_accuse": "TD-2026-09-8934866",
+      "mode_paiement": "prélèvement bancaire"
+    },
+    "versConcept": {
+      "periode": "periode",
+      "raison_sociale": "raison_sociale",
+      "matricule_fiscal": "matricule_fiscal",
+      "adresse": "adresse",
+      "activite": "activite",
+      "nature_depot": "nature_depot",
+      "mode_depot": "mode_depot",
+      "date_depot": "date_depot",
+      "ca_taxable_19": "ca_taxable_19",
+      "tva_19": "tva_19",
+      "ca_exonere": "ca_exonere",
+      "total_tva_collectee": "total_tva_collectee",
+      "tva_ded_biens_services": "tva_ded_biens_services",
+      "total_tva_deductible": "total_tva_deductible",
+      "tva_a_payer": "tva_a_payer",
+      "timbre_nombre_factures": "timbre_nombre_factures",
+      "timbre_tarif": "timbre_tarif",
+      "timbre_montant": "timbre_montant",
+      "total_principal": "total_principal",
+      "total_a_payer": "total_a_payer",
+      "reference_accuse": "reference_accuse",
+      "mode_paiement": "mode_paiement"
+    },
+    "marques": {
+      "cachet_emetteur": "signature_cachet"
+    },
+    "cheminsDuDossier": [
+      "matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 1766082213,
+  "attendu": {
+    "concepts": {
+      "periode": "2026-09-01/2026-09-30",
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "matricule_fiscal": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "activite": "Édition de logiciels",
+      "nature_depot": "initiale",
+      "mode_depot": "teledeclaration",
+      "date_depot": "2026-10-17",
+      "ca_taxable_19": "44528.979",
+      "tva_19": "8460.506",
+      "ca_exonere": "5753.000",
+      "total_tva_collectee": "8460.506",
+      "tva_ded_biens_services": "2466.650",
+      "total_tva_deductible": "2466.650",
+      "tva_a_payer": "5993.856",
+      "timbre_nombre_factures": "14",
+      "timbre_tarif": "1.000",
+      "timbre_montant": "14.000",
+      "total_principal": "6007.856",
+      "total_a_payer": "6007.856",
+      "reference_accuse": "TD-2026-09-8934866",
+      "mode_paiement": "prelevement",
+      "signature_cachet": true
+    },
+    "confondus": {},
+    "notes": [
+      "TVA à payer = TVA collectée − TVA déductible ; timbre = nombre de factures × tarif du référentiel ; total = TVA à payer + timbre. Le paiement se retrouve au relevé du cas 136.",
+      "Type « declaration_tva » lu par la grille « declaration_mensuelle » : la base ne relie aucune grille au type declaration_tva (ref.grilles.document_type), et la déclaration mensuelle tunisienne porte la TVA."
+    ],
+    "non_imprimes": [
+      "autres_taxes",
+      "ca_export",
+      "ca_suspension",
+      "ca_taxable_13",
+      "ca_taxable_7",
+      "credit_a_reporter",
+      "credit_reporte_mois_precedent",
+      "css_retenue_salaires",
+      "declaration_neant",
+      "demande_restitution",
+      "foprolos_base",
+      "foprolos_montant",
+      "foprolos_taux",
+      "penalites_retard",
+      "prorata_deduction",
+      "ras_achats_1_5",
+      "ras_autres",
+      "ras_dividendes",
+      "ras_honoraires_10",
+      "ras_honoraires_3",
+      "ras_interets",
+      "ras_jetons_presence",
+      "ras_non_residents",
+      "ras_plus_value_immobiliere",
+      "ras_salaires_base",
+      "ras_salaires_montant",
+      "ras_tva",
+      "reference_quittance",
+      "tcl_ca_export",
+      "tcl_ca_local",
+      "tcl_montant",
+      "tcl_taux",
+      "tfp_avance_imputee",
+      "tfp_base",
+      "tfp_montant",
+      "tfp_taux",
+      "total_ras",
+      "tva_13",
+      "tva_7",
+      "tva_autoliquidee",
+      "tva_ded_immobilisations",
+      "tva_ded_importations",
+      "tva_retenue_subie",
+      "tva_reversements"
+    ]
+  }
+}

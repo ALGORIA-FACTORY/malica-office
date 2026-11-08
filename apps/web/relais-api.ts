@@ -60,6 +60,8 @@ const CHEMINS: ReadonlyArray<{ base: string; exact: boolean }> = [
   { base: "/malica", exact: false },
   // Seuls les sous-chemins : /auth est l'écran de connexion.
   { base: "/auth", exact: false },
+  // Les exports gardés du journal du jour (`/exports/:id/contenu`).
+  { base: "/exports", exact: false },
 ];
 
 export function estPourLApi(url: string): boolean {

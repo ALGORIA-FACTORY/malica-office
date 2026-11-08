@@ -33,9 +33,17 @@ fn nom(v: &Value) -> Option<&str> {
 
 pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpLettres, String> {
     let index = |n: &str| {
-        grille.champs.iter().position(|c| c.code == n).ok_or_else(|| format!("champ « {n} » absent de la grille"))
+        grille
+            .champs
+            .iter()
+            .position(|c| c.code == n)
+            .ok_or_else(|| format!("champ « {n} » absent de la grille"))
     };
-    let champ = index(e.get("champ").and_then(nom).ok_or("clé « champ » manquante")?)?;
+    let champ = index(
+        e.get("champ")
+            .and_then(nom)
+            .ok_or("clé « champ » manquante")?,
+    )?;
     let egal_a = e
         .get("egal_a")
         .and_then(|v| v.as_array())
@@ -59,7 +67,10 @@ pub(crate) fn lus(entree: &Entree) -> Vec<(i64, Vec<RefJeton>)> {
             let l = j.lettres?;
             let fin = jusqua(&entree.jetons, i, Some(l.fin));
             let refs = (i..=fin)
-                .map(|k| RefJeton { page: entree.jetons[k].page, ordinal: entree.jetons[k].ordinal })
+                .map(|k| RefJeton {
+                    page: entree.jetons[k].page,
+                    ordinal: entree.jetons[k].ordinal,
+                })
                 .collect();
             Some((l.v, refs))
         })
@@ -73,31 +84,65 @@ pub struct Resultat {
 }
 
 /// `prouves` : la valeur prouvée de chaque champ de la grille, quand la pièce est prouvée.
-pub fn prouver(op: &OpLettres, entree: &Entree, prouves: Option<&dyn Fn(usize) -> Option<i64>>) -> Resultat {
+pub fn prouver(
+    op: &OpLettres,
+    entree: &Entree,
+    prouves: Option<&dyn Fn(usize) -> Option<i64>>,
+) -> Resultat {
     let lus = lus(entree);
     let Some((v0, refs0)) = lus.first() else {
-        return Resultat { statut: "non_evaluable", champ: None };
+        return Resultat {
+            statut: "non_evaluable",
+            champ: None,
+        };
     };
     let uniques = lus.iter().all(|(v, _)| v == v0);
     let champ = |statut: &str| {
         if uniques {
-            ChampSortie { valeur: Some(v0.to_string()), refs: refs0.clone(), statut: statut.into(), instances: None }
+            ChampSortie {
+                valeur: Some(v0.to_string()),
+                refs: refs0.clone(),
+                statut: statut.into(),
+                instances: None,
+            }
         } else {
-            ChampSortie { valeur: None, refs: Vec::new(), statut: "signale".into(), instances: None }
+            ChampSortie {
+                valeur: None,
+                refs: Vec::new(),
+                statut: "signale".into(),
+                instances: None,
+            }
         }
     };
     let Some(prouves) = prouves else {
-        return Resultat { statut: "non_evaluable", champ: Some(champ("conforme")) };
+        return Resultat {
+            statut: "non_evaluable",
+            champ: Some(champ("conforme")),
+        };
     };
     // Les lettres ne portent pas de signe : un avoir imprime « −1 856,400 » et écrit « mille
     // huit cent cinquante-six dinars et quatre cents millimes » (100/B-13).
-    let attendus: Vec<i64> = op.egal_a.iter().filter_map(|&c| prouves(c)).map(i64::abs).collect();
+    let attendus: Vec<i64> = op
+        .egal_a
+        .iter()
+        .filter_map(|&c| prouves(c))
+        .map(i64::abs)
+        .collect();
     if attendus.is_empty() {
-        return Resultat { statut: "non_evaluable", champ: Some(champ("conforme")) };
+        return Resultat {
+            statut: "non_evaluable",
+            champ: Some(champ("conforme")),
+        };
     }
     if lus.iter().all(|(v, _)| attendus.contains(v)) {
-        Resultat { statut: "verifiee", champ: Some(champ("prouve")) }
+        Resultat {
+            statut: "verifiee",
+            champ: Some(champ("prouve")),
+        }
     } else {
-        Resultat { statut: "echec", champ: Some(champ("signale")) }
+        Resultat {
+            statut: "echec",
+            champ: Some(champ("signale")),
+        }
     }
 }

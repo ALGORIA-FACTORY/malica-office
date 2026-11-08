@@ -1,0 +1,390 @@
+{
+  "id": "028",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "A",
+  "scenario": "un_taux",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "froisse",
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "Bon de Livraison/Facture",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Tixora Informatique SARL",
+      "nomAr": null,
+      "enseigne": "TIXORA INFORMATIQUE",
+      "matricule": "3184001O/A/M/000",
+      "matriculeImprime": "3184001O/A/M/000",
+      "adresse": "Route de la Marsa, km 9, résidence Ennour, 2046 Sidi Daoud",
+      "telephone": "00 74 117 488",
+      "fax": "00 69 286 795",
+      "email": "service.client@tixora-info.example",
+      "site": "www.tixora-info.example",
+      "rc": "B795416542016",
+      "rib": "99 155 7620585496592 48",
+      "banque": "Crédit Selvane",
+      "code": "C9178555",
+      "couleur": "#0b5aa6",
+      "slogan": "matériel & solutions",
+      "magasin": "01",
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330 V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "21/07/2026",
+    "chargee": "Yassine Mrabta",
+    "votreReference": "Vente comptoir",
+    "articles": [
+      {
+        "designation": "Barrette mémoire DDR4 16 Go",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "RAM-D4-16",
+        "codeBarre": "6192198859769",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "S N : 131271753138084"
+        ]
+      },
+      {
+        "designation": "Clavier AZERTY USB",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "CLV-AZ105",
+        "codeBarre": "6199712560613",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Souris optique sans fil",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "SOU-WL220",
+        "codeBarre": "6192775504846",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "SN:"
+        ]
+      },
+      {
+        "designation": "Support double écran",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "SUP-ECR2",
+        "codeBarre": "6199863918806",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": "401,757",
+    "enLettres": "Arrêtée la présente pièce à la somme de: quatre cent soixante-dix-sept dinars et neuf cent un millimes",
+    "tampon": {
+      "porteLeMatricule": false
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Tixora Informatique SARL",
+      "document_date": "21/07/2026",
+      "references.numero": "FAC-26M01LIV-266990",
+      "references.matricule_fiscal": "3184001O/A/M/000",
+      "references.matricule_fiscal_client": "1958330 V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Route de la Marsa, km 9, résidence Ennour, 2046 Sidi Daoud",
+      "telephone_emetteur": "00 74 117 488",
+      "registre_commerce_emetteur": "B795416542016",
+      "rib_emetteur": "99 155 7620585496592 48",
+      "mode_reglement": "TRAITE",
+      "code_client": "C4416371",
+      "totals.base_ht": "400,757",
+      "totals.vat": "76,144",
+      "totals.ttc": "477,901",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Barrette mémoire DDR4 16 Go",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ttc": "121,900",
+      "articles[0].reference": "RAM-D4-16",
+      "articles[0].total_ht": "102,437",
+      "articles[1].designation": "Clavier AZERTY USB",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ttc": "44,000",
+      "articles[1].reference": "CLV-AZ105",
+      "articles[1].total_ht": "73,950",
+      "articles[2].designation": "Souris optique sans fil",
+      "articles[2].quantity": "1",
+      "articles[2].unit_price_ttc": "38,000",
+      "articles[2].reference": "SOU-WL220",
+      "articles[2].total_ht": "31,933",
+      "articles[3].designation": "Support double écran",
+      "articles[3].quantity": "1",
+      "articles[3].unit_price_ttc": "229,000",
+      "articles[3].reference": "SUP-ECR2",
+      "articles[3].total_ht": "192,437",
+      "montant_en_lettres": "quatre cent soixante-dix-sept dinars et neuf cent un millimes",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce."
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "code_client": "code_client",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ttc": "lignes[0].prix_unitaire_ttc",
+      "articles[0].reference": "lignes[0].reference_article",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ttc": "lignes[1].prix_unitaire_ttc",
+      "articles[1].reference": "lignes[1].reference_article",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ttc": "lignes[2].prix_unitaire_ttc",
+      "articles[2].reference": "lignes[2].reference_article",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ttc": "lignes[3].prix_unitaire_ttc",
+      "articles[3].reference": "lignes[3].reference_article",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres",
+      "conditions_generales": "conditions_generales"
+    }
+  },
+  "graineDuRendu": 1407799721,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Tixora Informatique SARL",
+      "document_date": "2026-07-21",
+      "currency": "TND",
+      "references.numero": "FAC-26M01LIV-266990",
+      "references.matricule_fiscal": "3184001O/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "400.757",
+      "totals.vat": "76.144",
+      "totals.ttc": "477.901",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "400.757",
+      "lines[0].vat_amount": "76.144",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].total_ht": "102.437",
+      "articles[1].quantity": "2.000",
+      "articles[1].total_ht": "73.950",
+      "articles[2].quantity": "1.000",
+      "articles[2].total_ht": "31.933",
+      "articles[3].quantity": "1.000",
+      "articles[3].total_ht": "192.437"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "400.757",
+          "0"
+        ],
+        [
+          "4366",
+          "76.144",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "477.901"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Piège : le titre « Bon de Livraison/Facture » contient « bon de livraison », que ref.titres_de_piece refuse (rejet) — la pièce EST une facture (TVA, timbre, matricules) : l'issue juste est une écriture ; un refus sur le titre est un refus injuste. « Total avec Timbre » vaut HT + timbre, jamais le TTC.",
+      "INCERTAIN — timbre de 1,000 DT (droit fixe du référentiel) : le barème des grandes surfaces (1,500 / 2,000 DT, ref.baremes_des_droits) ne s'applique pas à ces enseignes fictives."
+    ],
+    "concepts": {
+      "type_document": "Bon de Livraison/Facture",
+      "raison_sociale_emetteur": "Tixora Informatique SARL",
+      "date_operation": "2026-07-21",
+      "numero_facture": "FAC-26M01LIV-266990",
+      "matricule_fiscal_emetteur": "3184001O/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Route de la Marsa, km 9, résidence Ennour, 2046 Sidi Daoud",
+      "telephone_email_emetteur": {
+        "telephone": "00 74 117 488",
+        "fax": "00 69 286 795",
+        "email": "service.client@tixora-info.example",
+        "site": "www.tixora-info.example"
+      },
+      "registre_commerce_emetteur": "B795416542016",
+      "rib_emetteur": "99 155 7620585496592 48",
+      "mode_reglement": "TRAITE",
+      "total_ht": "400.757",
+      "montant_tva_par_taux": {
+        "19": "76.144"
+      },
+      "total_ttc": "477.901",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "400.757"
+      },
+      "lignes": [
+        {
+          "designation": "Barrette mémoire DDR4 16 Go",
+          "quantite": "1",
+          "prix_unitaire_ttc": "121.900",
+          "reference_article": "RAM-D4-16",
+          "montant_ligne_ht": "102.437",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Clavier AZERTY USB",
+          "quantite": "2",
+          "prix_unitaire_ttc": "44.000",
+          "reference_article": "CLV-AZ105",
+          "montant_ligne_ht": "73.950",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Souris optique sans fil",
+          "quantite": "1",
+          "prix_unitaire_ttc": "38.000",
+          "reference_article": "SOU-WL220",
+          "montant_ligne_ht": "31.933",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Support double écran",
+          "quantite": "1",
+          "prix_unitaire_ttc": "229.000",
+          "reference_article": "SUP-ECR2",
+          "montant_ligne_ht": "192.437",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "quatre cent soixante-dix-sept dinars et neuf cent un millimes",
+      "devise": "TND",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce.",
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "adresse_livraison": "adresse_client",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ht",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

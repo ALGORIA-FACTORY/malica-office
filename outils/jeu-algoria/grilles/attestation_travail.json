@@ -1,0 +1,271 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "attestation_travail",
+    "nom": "Attestation de travail / certificat de travail",
+    "typeDeDocument": "document_fiscal_social",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "date_entree",
+      "concept": "date_entree",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "contenu",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_sortie",
+      "concept": "date_sortie",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "contenu",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "emploi_poste",
+      "concept": "emploi",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "contenu",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "employeur_activite",
+      "concept": "activite",
+      "role": "employeur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_adresse",
+      "concept": "adresse",
+      "role": "employeur",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "employeur",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "employeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_numero_cnss",
+      "concept": "numero_cnss",
+      "role": "employeur",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "employeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_raison_sociale",
+      "concept": "raison_sociale",
+      "role": "employeur",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_rne",
+      "concept": "identifiant_unique_rne",
+      "role": "employeur",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "employeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_signature_cachet",
+      "concept": "signature_cachet",
+      "role": "employeur",
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "employeur",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_telephone_email",
+      "concept": "telephone_email",
+      "role": "employeur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "encore_en_fonction",
+      "concept": "encore_en_fonction",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "contenu",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "formule_atteste",
+      "concept": "formule_atteste",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "contenu",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "intitule",
+      "concept": "intitule",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "contenu",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "libre_de_tout_engagement",
+      "concept": "libre_de_tout_engagement",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "contenu",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "lieu_date",
+      "concept": "date_piece",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "contenu",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "objet_remise",
+      "concept": "objet_remise",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "contenu",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "salarie_adresse",
+      "concept": "adresse",
+      "role": "salarie",
+      "type": "adresse",
+      "obligatoire": "non",
+      "parcelle": "salarie",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_cin",
+      "concept": "cin",
+      "role": "salarie",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "salarie",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_date_naissance",
+      "concept": "date_naissance",
+      "role": "salarie",
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "salarie",
+      "expert": "date",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_matricule_cnss",
+      "concept": "numero_cnss",
+      "role": "salarie",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "salarie",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_matricule_interne",
+      "concept": "matricule_interne",
+      "role": "salarie",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "salarie",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_nationalite",
+      "concept": "nationalite",
+      "role": "salarie",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "salarie",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "salarie_nom_prenom",
+      "concept": "nom_prenom",
+      "role": "salarie",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "salarie",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "signataire_qualite",
+      "concept": "signataire_qualite",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "contenu",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "type_contrat",
+      "concept": "type_contrat",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "contenu",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    }
+  ]
+}

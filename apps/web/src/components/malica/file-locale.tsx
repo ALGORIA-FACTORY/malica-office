@@ -12,6 +12,7 @@ import { useState } from "react";
 import { Aide } from "@/components/malica/aide";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
+import { direUnRefus } from "@/lib/erreur-lisible";
 import { CODE_DEJA_REMPLACEE, repriseRefusee, type ElementDeFile } from "@/lib/hors-ligne/file";
 import { office } from "@/verticals/malica-office/composition";
 
@@ -111,7 +112,9 @@ function Ligne({ e }: { e: ElementDeFile }) {
 function LigneDEnvoi({ e }: { e: ElementDeFile }) {
   const { t, locale } = useI18n();
   const { file } = usePme();
-  const etat = t(`pme.file.etat.${e.etat}` as MessageKey, { raison: e.derniereErreur ?? "" });
+  const etat = t(`pme.file.etat.${e.etat}` as MessageKey, {
+    raison: direUnRefus(e.derniereErreur ?? ""),
+  });
   const jour = new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit" }).format(
     new Date(e.creeLe),
   );

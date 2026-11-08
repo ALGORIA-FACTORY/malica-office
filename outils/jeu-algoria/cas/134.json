@@ -1,0 +1,344 @@
+{
+  "id": "134",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "note_frais",
+  "grille": "note_frais",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-bande",
+  "scenario": "note_frais",
+  "realisme": [
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Note de frais",
+    "parties": [
+      {
+        "role": "employeur",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "salarie",
+        "nom": "Oussama Trezini",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "employeur",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "salarie",
+      "nom": "Oussama Trezini",
+      "matricule": null,
+      "est": "tiers"
+    },
+    "style": "bande",
+    "police": null,
+    "couleur": "#0a0a0a",
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+        "telephone": "00 71 940 517",
+        "est": "dossier"
+      },
+      "code": "visa_responsable"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "t": "ALGORIA FACTORY SARL",
+              "cls": "gros"
+            }
+          ],
+          [
+            "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis"
+          ]
+        ],
+        "droite": [
+          [
+            "Date : ",
+            {
+              "c": "date_note"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "NOTE DE FRAIS"
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Salarié :",
+            {
+              "c": "nom_salarie"
+            }
+          ],
+          [
+            "Matricule :",
+            {
+              "c": "matricule_salarie"
+            }
+          ],
+          [
+            "Mission :",
+            {
+              "c": "periode_ou_mission"
+            }
+          ],
+          [
+            "Objet :",
+            {
+              "c": "objet_professionnel"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Date",
+          "Catégorie",
+          "Détail",
+          "Montant TTC",
+          "dont TVA"
+        ],
+        "nombres": [
+          3,
+          4
+        ],
+        "lignes": [
+          [
+            {
+              "c": "lignes[0].date_depense"
+            },
+            {
+              "c": "lignes[0].categorie_depense"
+            },
+            "Louage Tunis — Sfax, aller-retour",
+            {
+              "c": "lignes[0].montant_ttc_ligne"
+            },
+            "—"
+          ],
+          [
+            {
+              "c": "lignes[1].date_depense"
+            },
+            {
+              "c": "lignes[1].categorie_depense"
+            },
+            "Hôtel, 2 nuitées",
+            {
+              "c": "lignes[1].montant_ttc_ligne"
+            },
+            {
+              "c": "lignes[1].tva_recuperable_ligne"
+            }
+          ],
+          [
+            {
+              "c": "lignes[2].date_depense"
+            },
+            {
+              "c": "lignes[2].categorie_depense"
+            },
+            "Repas d'affaires avec le client",
+            {
+              "c": "lignes[2].montant_ttc_ligne"
+            },
+            {
+              "c": "lignes[2].tva_recuperable_ligne"
+            }
+          ],
+          [
+            {
+              "c": "lignes[3].date_depense"
+            },
+            {
+              "c": "lignes[3].categorie_depense"
+            },
+            "Parking aéroport",
+            {
+              "c": "lignes[3].montant_ttc_ligne"
+            },
+            {
+              "c": "lignes[3].tva_recuperable_ligne"
+            }
+          ]
+        ],
+        "pied": [
+          [
+            "Total des frais",
+            {
+              "c": "total_frais"
+            }
+          ],
+          [
+            "Avance reçue",
+            {
+              "c": "avance_recue"
+            }
+          ],
+          [
+            "Net à rembourser",
+            {
+              "c": "net_a_rembourser"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "justificatif_joint"
+          }
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "Signature du salarié",
+        "droite": "Visa du responsable"
+      }
+    ],
+    "imprime": {
+      "date_note": "11/10/2026",
+      "nom_salarie": "Oussama Trezini",
+      "matricule_salarie": "ALG-0024",
+      "periode_ou_mission": "Sfax, du 07/10/2026 au 09/10/2026",
+      "objet_professionnel": "Déploiement de RegFlow chez un client",
+      "lignes[0].date_depense": "07/10/2026",
+      "lignes[0].categorie_depense": "Transport",
+      "lignes[0].montant_ttc_ligne": "45,000",
+      "lignes[1].date_depense": "08/10/2026",
+      "lignes[1].categorie_depense": "Hébergement",
+      "lignes[1].montant_ttc_ligne": "401,000",
+      "lignes[1].tva_recuperable_ligne": "46,133",
+      "lignes[2].date_depense": "09/10/2026",
+      "lignes[2].categorie_depense": "Restauration",
+      "lignes[2].montant_ttc_ligne": "89,500",
+      "lignes[2].tva_recuperable_ligne": "5,855",
+      "lignes[3].date_depense": "09/10/2026",
+      "lignes[3].categorie_depense": "Stationnement",
+      "lignes[3].montant_ttc_ligne": "13,000",
+      "lignes[3].tva_recuperable_ligne": "2,076",
+      "total_frais": "548,500",
+      "avance_recue": "200,000",
+      "net_a_rembourser": "348,500",
+      "justificatif_joint": "Justificatifs joints : 4 pièces"
+    },
+    "versConcept": {
+      "date_note": "date_note",
+      "nom_salarie": "nom_salarie",
+      "matricule_salarie": "matricule_salarie",
+      "periode_ou_mission": "periode_ou_mission",
+      "objet_professionnel": "objet_professionnel",
+      "lignes[0].date_depense": "lignes[0].date_depense",
+      "lignes[0].categorie_depense": "lignes[0].categorie_depense",
+      "lignes[0].montant_ttc_ligne": "lignes[0].montant_ttc_ligne",
+      "lignes[1].date_depense": "lignes[1].date_depense",
+      "lignes[1].categorie_depense": "lignes[1].categorie_depense",
+      "lignes[1].montant_ttc_ligne": "lignes[1].montant_ttc_ligne",
+      "lignes[1].tva_recuperable_ligne": "lignes[1].tva_recuperable_ligne",
+      "lignes[2].date_depense": "lignes[2].date_depense",
+      "lignes[2].categorie_depense": "lignes[2].categorie_depense",
+      "lignes[2].montant_ttc_ligne": "lignes[2].montant_ttc_ligne",
+      "lignes[2].tva_recuperable_ligne": "lignes[2].tva_recuperable_ligne",
+      "lignes[3].date_depense": "lignes[3].date_depense",
+      "lignes[3].categorie_depense": "lignes[3].categorie_depense",
+      "lignes[3].montant_ttc_ligne": "lignes[3].montant_ttc_ligne",
+      "lignes[3].tva_recuperable_ligne": "lignes[3].tva_recuperable_ligne",
+      "total_frais": "total_frais",
+      "avance_recue": "avance_recue",
+      "net_a_rembourser": "net_a_rembourser",
+      "justificatif_joint": "justificatif_joint"
+    },
+    "marques": {
+      "cachet_emetteur": "visa_responsable",
+      "signature_emetteur": "signature_salarie"
+    },
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 555979016,
+  "attendu": {
+    "concepts": {
+      "date_note": "2026-10-11",
+      "nom_salarie": "Oussama Trezini",
+      "matricule_salarie": "ALG-0024",
+      "periode_ou_mission": "2026-10-07/2026-10-09",
+      "objet_professionnel": "Déploiement de RegFlow chez un client",
+      "lignes": [
+        {
+          "date_depense": "2026-10-07",
+          "categorie_depense": "transport",
+          "montant_ttc_ligne": "45.000"
+        },
+        {
+          "date_depense": "2026-10-08",
+          "categorie_depense": "hébergement",
+          "montant_ttc_ligne": "401.000",
+          "tva_recuperable_ligne": "46.133"
+        },
+        {
+          "date_depense": "2026-10-09",
+          "categorie_depense": "restauration",
+          "montant_ttc_ligne": "89.500",
+          "tva_recuperable_ligne": "5.855"
+        },
+        {
+          "date_depense": "2026-10-09",
+          "categorie_depense": "stationnement",
+          "montant_ttc_ligne": "13.000",
+          "tva_recuperable_ligne": "2.076"
+        }
+      ],
+      "total_frais": "548.500",
+      "avance_recue": "200.000",
+      "net_a_rembourser": "348.500",
+      "justificatif_joint": true,
+      "visa_responsable": true,
+      "signature_salarie": true
+    },
+    "confondus": {},
+    "notes": [
+      "Net à rembourser = total des frais − avance. La TVA de chaque ligne est le TTC moins son HT au taux du référentiel (hébergement 13 %, repas 7 %, parking 19 % : choix du banc, comme pour les factures)."
+    ],
+    "non_imprimes": [
+      "devise_taux_change",
+      "kilometrage"
+    ]
+  }
+}

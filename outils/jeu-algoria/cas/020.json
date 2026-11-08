@@ -1,0 +1,384 @@
+{
+  "id": "020",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "A",
+  "scenario": "remise_ligne",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "Bon de Livraison/Facture",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Tixora Informatique SARL",
+      "nomAr": null,
+      "enseigne": "TIXORA INFORMATIQUE",
+      "matricule": "3184001O/A/M/000",
+      "matriculeImprime": "3184001O/A/M/000",
+      "adresse": "Route de la Marsa, km 9, résidence Ennour, 2046 Sidi Daoud",
+      "telephone": "00 74 117 488",
+      "fax": "00 69 286 795",
+      "email": "service.client@tixora-info.example",
+      "site": "www.tixora-info.example",
+      "rc": "B795416542016",
+      "rib": "99 155 7620585496592 48",
+      "banque": "Crédit Selvane",
+      "code": "C1877474",
+      "couleur": "#0b5aa6",
+      "slogan": "matériel & solutions",
+      "magasin": "01",
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330VAM000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "13/10/2026",
+    "chargee": "Sirine Ouarda",
+    "votreReference": "Vente comptoir",
+    "articles": [
+      {
+        "designation": "Webcam HD 1080p",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "WCM-1080",
+        "codeBarre": "6194917668225",
+        "remise": "5,00",
+        "taux": "19",
+        "sousLignes": [
+          "S N : 436826828826706"
+        ]
+      },
+      {
+        "designation": "Support double écran",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "SUP-ECR2",
+        "codeBarre": "6196078198207",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Chargeur USB-C 65 W",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "CHG-C65W",
+        "codeBarre": "6195964827672",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "SN:"
+        ]
+      },
+      {
+        "designation": "Cartouche toner noir",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "TNR-N26A",
+        "codeBarre": "6192572347776",
+        "remise": "5,00",
+        "taux": "19",
+        "sousLignes": [
+          "SN:"
+        ]
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": "802,617",
+    "enLettres": null,
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Tixora Informatique SARL",
+      "document_date": "13/10/2026",
+      "references.numero": "FAC-26M01LIV-263313",
+      "references.matricule_fiscal": "3184001O/A/M/000",
+      "references.matricule_fiscal_client": "1958330VAM000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Route de la Marsa, km 9, résidence Ennour, 2046 Sidi Daoud",
+      "telephone_emetteur": "00 74 117 488",
+      "registre_commerce_emetteur": "B795416542016",
+      "rib_emetteur": "99 155 7620585496592 48",
+      "mode_reglement": "CHEQUE",
+      "code_client": "C7589409",
+      "totals.base_ht": "801,617",
+      "totals.vat": "152,307",
+      "totals.ttc": "954,924",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Webcam HD 1080p",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ttc": "158,000",
+      "articles[0].reference": "WCM-1080",
+      "articles[0].total_ht": "126,134",
+      "articles[1].designation": "Support double écran",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ttc": "229,000",
+      "articles[1].reference": "SUP-ECR2",
+      "articles[1].total_ht": "384,874",
+      "articles[2].designation": "Chargeur USB-C 65 W",
+      "articles[2].quantity": "2",
+      "articles[2].unit_price_ttc": "100,000",
+      "articles[2].reference": "CHG-C65W",
+      "articles[2].total_ht": "168,067",
+      "articles[3].designation": "Cartouche toner noir",
+      "articles[3].quantity": "1",
+      "articles[3].unit_price_ttc": "153,500",
+      "articles[3].reference": "TNR-N26A",
+      "articles[3].total_ht": "122,542",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce."
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "code_client": "code_client",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ttc": "lignes[0].prix_unitaire_ttc",
+      "articles[0].reference": "lignes[0].reference_article",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ttc": "lignes[1].prix_unitaire_ttc",
+      "articles[1].reference": "lignes[1].reference_article",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ttc": "lignes[2].prix_unitaire_ttc",
+      "articles[2].reference": "lignes[2].reference_article",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ttc": "lignes[3].prix_unitaire_ttc",
+      "articles[3].reference": "lignes[3].reference_article",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "conditions_generales": "conditions_generales"
+    }
+  },
+  "graineDuRendu": 1417425702,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Tixora Informatique SARL",
+      "document_date": "2026-10-13",
+      "currency": "TND",
+      "references.numero": "FAC-26M01LIV-263313",
+      "references.matricule_fiscal": "3184001O/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "801.617",
+      "totals.vat": "152.307",
+      "totals.ttc": "954.924",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "801.617",
+      "lines[0].vat_amount": "152.307",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].total_ht": "126.134",
+      "articles[1].quantity": "2.000",
+      "articles[1].total_ht": "384.874",
+      "articles[2].quantity": "2.000",
+      "articles[2].total_ht": "168.067",
+      "articles[3].quantity": "1.000",
+      "articles[3].total_ht": "122.542"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "801.617",
+          "0"
+        ],
+        [
+          "4366",
+          "152.307",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "954.924"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Piège : le titre « Bon de Livraison/Facture » contient « bon de livraison », que ref.titres_de_piece refuse (rejet) — la pièce EST une facture (TVA, timbre, matricules) : l'issue juste est une écriture ; un refus sur le titre est un refus injuste. « Total avec Timbre » vaut HT + timbre, jamais le TTC.",
+      "INCERTAIN — timbre de 1,000 DT (droit fixe du référentiel) : le barème des grandes surfaces (1,500 / 2,000 DT, ref.baremes_des_droits) ne s'applique pas à ces enseignes fictives."
+    ],
+    "concepts": {
+      "type_document": "Bon de Livraison/Facture",
+      "raison_sociale_emetteur": "Tixora Informatique SARL",
+      "date_operation": "2026-10-13",
+      "numero_facture": "FAC-26M01LIV-263313",
+      "matricule_fiscal_emetteur": "3184001O/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Route de la Marsa, km 9, résidence Ennour, 2046 Sidi Daoud",
+      "telephone_email_emetteur": {
+        "telephone": "00 74 117 488",
+        "fax": "00 69 286 795",
+        "email": "service.client@tixora-info.example",
+        "site": "www.tixora-info.example"
+      },
+      "registre_commerce_emetteur": "B795416542016",
+      "rib_emetteur": "99 155 7620585496592 48",
+      "mode_reglement": "CHEQUE",
+      "total_ht": "801.617",
+      "montant_tva_par_taux": {
+        "19": "152.307"
+      },
+      "total_ttc": "954.924",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "801.617"
+      },
+      "lignes": [
+        {
+          "designation": "Webcam HD 1080p",
+          "quantite": "1",
+          "prix_unitaire_ttc": "158.000",
+          "reference_article": "WCM-1080",
+          "remise_ligne": "5",
+          "montant_ligne_ht": "126.134",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Support double écran",
+          "quantite": "2",
+          "prix_unitaire_ttc": "229.000",
+          "reference_article": "SUP-ECR2",
+          "montant_ligne_ht": "384.874",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Chargeur USB-C 65 W",
+          "quantite": "2",
+          "prix_unitaire_ttc": "100.000",
+          "reference_article": "CHG-C65W",
+          "montant_ligne_ht": "168.067",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Cartouche toner noir",
+          "quantite": "1",
+          "prix_unitaire_ttc": "153.500",
+          "reference_article": "TNR-N26A",
+          "remise_ligne": "5",
+          "montant_ligne_ht": "122.542",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "devise": "TND",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce.",
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "adresse_livraison": "adresse_client",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "cachet_emetteur",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ht",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_ttn",
+      "remise_globale",
+      "retenue_source_mention",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

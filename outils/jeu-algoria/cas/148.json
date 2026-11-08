@@ -1,0 +1,251 @@
+{
+  "id": "148",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "acompte_provisionnel",
+  "grille": "acompte_provisionnel",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-encadre",
+  "scenario": "acompte_1",
+  "realisme": [],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Acompte provisionnel",
+    "parties": [
+      {
+        "role": "contribuable",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "administration",
+        "nom": "Direction Générale des Impôts",
+        "matricule": null,
+        "est": "administration"
+      }
+    ],
+    "emetteur": {
+      "role": "contribuable",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "administration",
+      "nom": "Direction Générale des Impôts",
+      "matricule": null,
+      "est": "administration"
+    },
+    "style": "encadre",
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            "République Tunisienne"
+          ],
+          [
+            "Ministère des Finances"
+          ],
+          [
+            "Direction Générale des Impôts"
+          ]
+        ],
+        "droite": [
+          [
+            "الجمهورية التونسية"
+          ],
+          [
+            "وزارة المالية"
+          ],
+          [
+            "الإدارة العامة للأداءات"
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "DÉCLARATION DE L'ACOMPTE PROVISIONNEL"
+        ],
+        "sous": [
+          {
+            "c": "numero_acompte"
+          },
+          " — ",
+          {
+            "c": "nature_impot"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Raison sociale",
+            {
+              "c": "raison_sociale"
+            }
+          ],
+          [
+            "Matricule fiscal",
+            {
+              "c": "matricule_fiscal"
+            }
+          ],
+          [
+            "Exercice de référence",
+            {
+              "c": "exercice_reference"
+            }
+          ],
+          [
+            "Exercice d'imputation",
+            {
+              "c": "exercice_imputation"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "1",
+            "Impôt dû au titre de l'exercice 2025",
+            {
+              "c": "impot_base_n_1"
+            }
+          ],
+          [
+            "2",
+            [
+              "Taux de l'acompte",
+              " ",
+              {
+                "c": "taux_acompte"
+              }
+            ],
+            {
+              "c": "montant_brut_acompte"
+            }
+          ],
+          [
+            "3",
+            "Retenues à la source imputées",
+            {
+              "c": "retenues_imputees"
+            }
+          ],
+          [
+            "4",
+            "Net à payer (2 − 3)",
+            {
+              "c": "net_a_payer"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Date de dépôt",
+            {
+              "c": "date_depot"
+            }
+          ],
+          [
+            "Quittance n°",
+            {
+              "c": "reference_quittance"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "Signature"
+      }
+    ],
+    "imprime": {
+      "numero_acompte": "1er acompte",
+      "nature_impot": "Impôt sur les sociétés",
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "matricule_fiscal": "1958330VAM000",
+      "exercice_reference": "2025",
+      "exercice_imputation": "2026",
+      "impot_base_n_1": "20 618,249",
+      "taux_acompte": "30 %",
+      "montant_brut_acompte": "6 185,475",
+      "retenues_imputees": "1 210,717",
+      "net_a_payer": "4 974,758",
+      "date_depot": "23/06/2026",
+      "reference_quittance": "354642/6"
+    },
+    "versConcept": {
+      "numero_acompte": "numero_acompte",
+      "nature_impot": "nature_impot",
+      "raison_sociale": "raison_sociale",
+      "matricule_fiscal": "matricule_fiscal",
+      "exercice_reference": "exercice_reference",
+      "exercice_imputation": "exercice_imputation",
+      "impot_base_n_1": "impot_base_n_1",
+      "taux_acompte": "taux_acompte",
+      "montant_brut_acompte": "montant_brut_acompte",
+      "retenues_imputees": "retenues_imputees",
+      "net_a_payer": "net_a_payer",
+      "date_depot": "date_depot",
+      "reference_quittance": "reference_quittance"
+    },
+    "marques": {},
+    "cheminsDuDossier": [
+      "matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 1834279681,
+  "attendu": {
+    "concepts": {
+      "numero_acompte": "1",
+      "nature_impot": "IS",
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "matricule_fiscal": "1958330V/A/M/000",
+      "exercice_reference": "2025-01-01/2025-12-31",
+      "exercice_imputation": "2026-01-01/2026-12-31",
+      "impot_base_n_1": "20618.249",
+      "taux_acompte": "30",
+      "montant_brut_acompte": "6185.475",
+      "retenues_imputees": "1210.717",
+      "net_a_payer": "4974.758",
+      "date_depot": "2026-06-23",
+      "reference_quittance": "354642/6"
+    },
+    "confondus": {},
+    "notes": [
+      "Acompte = impôt dû de 2025 (cas 146) × 30 % (ACOMPTES_TAUX relevé) ; net = acompte − retenues imputées."
+    ],
+    "non_imprimes": [
+      "excedent_impot_impute",
+      "penalites"
+    ]
+  }
+}

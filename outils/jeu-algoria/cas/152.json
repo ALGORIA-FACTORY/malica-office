@@ -1,0 +1,321 @@
+{
+  "id": "152",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "document_fiscal_social",
+  "grille": "certificat_retenue_source",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-encadre",
+  "scenario": "certificat_ras",
+  "realisme": [
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Certificat de retenue à la source",
+    "parties": [
+      {
+        "role": "payeur",
+        "nom": "Groupe Medrane Distribution SA",
+        "matricule": "6886015Q/A/M/000",
+        "est": "tiers"
+      },
+      {
+        "role": "beneficiaire",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "payeur",
+      "nom": "Groupe Medrane Distribution SA",
+      "matricule": "6886015Q/A/M/000",
+      "est": "tiers"
+    },
+    "client": {
+      "role": "beneficiaire",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": "encadre",
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "Groupe Medrane Distribution SA",
+        "nomAr": "مجمع مدران للتوزيع",
+        "enseigne": null,
+        "matricule": "6886015Q/A/M/000",
+        "matriculeImprime": "6886015Q/A/M/000",
+        "adresse": "139, rue de l'Artisanat, Sfax",
+        "telephone": "00 58 474 836",
+        "fax": "00 58 932 959",
+        "email": null,
+        "site": null,
+        "rc": "B743986072014",
+        "rib": "99 968 6180529450080 33",
+        "banque": "Banque Ouzrane de Développement",
+        "code": "C5207511",
+        "couleur": null,
+        "slogan": null,
+        "magasin": null,
+        "role": "client"
+      },
+      "code": "signature_cachet"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "titre",
+        "texte": [
+          "CERTIFICAT DE RETENUE D'IMPÔT À LA SOURCE"
+        ],
+        "sous": [
+          "N° ",
+          {
+            "c": "numero_certificat"
+          }
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "A — Personne ou organisme payeur"
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Nom :",
+            {
+              "c": "payeur_nom"
+            }
+          ],
+          [
+            "Adresse :",
+            {
+              "c": "payeur_adresse"
+            }
+          ],
+          [
+            "Matricule fiscal :",
+            {
+              "c": "payeur_matricule"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "B — Bénéficiaire"
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Nom :",
+            {
+              "c": "beneficiaire_nom"
+            }
+          ],
+          [
+            "Adresse :",
+            {
+              "c": "beneficiaire_adresse"
+            }
+          ],
+          [
+            "Matricule fiscal :",
+            {
+              "c": "beneficiaire_identifiant"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "C — Retenues effectuées"
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Nature",
+          "Montant brut",
+          "Taux",
+          "Retenue",
+          "Net servi"
+        ],
+        "nombres": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "lignes": [
+          [
+            {
+              "c": "nature_montant"
+            },
+            {
+              "c": "montant_brut"
+            },
+            {
+              "c": "taux_retenue"
+            },
+            {
+              "c": "montant_retenue"
+            },
+            {
+              "c": "net_servi"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Factures :",
+            {
+              "c": "references_factures.0"
+            }
+          ],
+          [
+            "Exercice :",
+            {
+              "c": "exercice_facturation"
+            }
+          ],
+          [
+            "Payé le :",
+            {
+              "c": "date_paiement"
+            }
+          ],
+          [
+            "Paiement :",
+            {
+              "c": "reference_paiement"
+            }
+          ],
+          [
+            "Délivré le :",
+            {
+              "c": "date_emission"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "petit",
+        "morceaux": [
+          "Je soussigné certifie exactes les informations figurant sur le présent certificat."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "Cachet et signature du payeur"
+      }
+    ],
+    "imprime": {
+      "numero_certificat": "CRS-2026-4549",
+      "payeur_nom": "Groupe Medrane Distribution SA",
+      "payeur_adresse": "139, rue de l'Artisanat, Sfax",
+      "payeur_matricule": "6886015Q/A/M/000",
+      "beneficiaire_nom": "ALGORIA FACTORY SARL",
+      "beneficiaire_adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "beneficiaire_identifiant": "1958330V/A/M/000",
+      "nature_montant": "Marchés et acquisitions de biens et services",
+      "montant_brut": "76 483,638",
+      "taux_retenue": "1,5 %",
+      "montant_retenue": "1 147,255",
+      "net_servi": "75 336,383",
+      "references_factures.0": "F-2026-2452",
+      "exercice_facturation": "2026",
+      "date_paiement": "01/10/2026",
+      "reference_paiement": "VIR 397682",
+      "date_emission": "02/10/2026"
+    },
+    "versConcept": {
+      "numero_certificat": "numero_certificat",
+      "payeur_nom": "payeur_nom",
+      "payeur_adresse": "payeur_adresse",
+      "payeur_matricule": "payeur_matricule",
+      "beneficiaire_nom": "beneficiaire_nom",
+      "beneficiaire_adresse": "beneficiaire_adresse",
+      "beneficiaire_identifiant": "beneficiaire_identifiant",
+      "nature_montant": "nature_montant",
+      "montant_brut": "montant_brut",
+      "taux_retenue": "taux_retenue",
+      "montant_retenue": "montant_retenue",
+      "net_servi": "net_servi",
+      "references_factures.0": "references_factures",
+      "exercice_facturation": "exercice_facturation",
+      "date_paiement": "date_paiement",
+      "reference_paiement": "reference_paiement",
+      "date_emission": "date_emission"
+    },
+    "marques": {
+      "cachet_emetteur": "signature_cachet",
+      "signature_emetteur": "signature_cachet"
+    },
+    "cheminsDuDossier": [
+      "beneficiaire_identifiant"
+    ]
+  },
+  "graineDuRendu": 1945404240,
+  "attendu": {
+    "concepts": {
+      "numero_certificat": "CRS-2026-4549",
+      "payeur_nom": "Groupe Medrane Distribution SA",
+      "payeur_adresse": "139, rue de l'Artisanat, Sfax",
+      "payeur_matricule": "6886015Q/A/M/000",
+      "beneficiaire_nom": "ALGORIA FACTORY SARL",
+      "beneficiaire_adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "beneficiaire_identifiant": "1958330V/A/M/000",
+      "nature_montant": "marches",
+      "montant_brut": "76483.638",
+      "taux_retenue": "1.5",
+      "montant_retenue": "1147.255",
+      "net_servi": "75336.383",
+      "references_factures": [
+        "F-2026-2452"
+      ],
+      "exercice_facturation": "2026-01-01/2026-12-31",
+      "date_paiement": "2026-10-01",
+      "reference_paiement": "VIR 397682",
+      "date_emission": "2026-10-02",
+      "signature_cachet": true
+    },
+    "confondus": {},
+    "notes": [
+      "Se rapporte à la vente du cas 103 (F-2026-2452) : brut = son TTC ; retenue = brut × 1.5 % (RAS_MARCHES_ACQUISITIONS relevé, assiette TTC) ; net servi = brut − retenue, crédité au relevé du cas 136.",
+      "ALGORIA est la BÉNÉFICIAIRE (son matricule du côté du bénéficiaire) ; le payeur est son client inventé."
+    ],
+    "non_imprimes": [
+      "debiteur_effectif",
+      "mode_emission",
+      "retenue_css",
+      "retenue_tva",
+      "statut_correction"
+    ]
+  }
+}

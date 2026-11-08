@@ -589,9 +589,9 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
       pmeFait("capture.preciser", id, "document_kind", "facture_achat"),
       /refus\.sens\.reserve_au_cabinet/,
     );
-    const ecriture = (await pmeFait("office.proposerDepuisPiece", id)) as string;
+    // Ni ne la propose (lot S5) : la proposition aussi est l'acte du cabinet.
     await assert.rejects(
-      pmeFait("office.book", ecriture),
+      pmeFait("office.proposerDepuisPiece", id),
       /refus\.inscription\.reservee_au_cabinet/,
     );
     assert.deepEqual(await ecrituresVivantes(id), []);

@@ -1,0 +1,761 @@
+{
+  "id": "121",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "pv_ago",
+  "grille": "pv_ago",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "H",
+  "mise_en_page": "H",
+  "scenario": "pv_ago",
+  "realisme": [
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Procès-verbal de l'assemblée générale ordinaire",
+    "parties": [
+      {
+        "role": "entreprise",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "entreprise",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": null,
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "denomination",
+              "cls": "gros"
+            }
+          ],
+          [
+            "Société à responsabilité limitée au capital de 50 000 dinars"
+          ],
+          [
+            "Siège social : ",
+            "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis"
+          ],
+          [
+            "Identifiant unique : ",
+            {
+              "c": "identifiant_unique"
+            }
+          ]
+        ],
+        "droite": []
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "PROCÈS-VERBAL DE L'",
+          {
+            "c": "type_assemblee"
+          }
+        ],
+        "sous": [
+          "du ",
+          "22 juin 2026"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "L'an deux mille vingt-six, le ",
+          {
+            "c": "date_assemblee"
+          },
+          ", à ",
+          {
+            "c": "heure_assemblee"
+          },
+          ", les associés de la société se sont réunis en assemblée générale ordinaire annuelle, ",
+          {
+            "c": "lieu_assemblee"
+          },
+          ", ",
+          {
+            "c": "auteur_convocation"
+          },
+          " adressée à chaque associé ",
+          {
+            "c": "mode_convocation"
+          },
+          " le ",
+          {
+            "c": "date_convocation"
+          },
+          ", ",
+          {
+            "c": "numero_convocation"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Sont présents ",
+          {
+            "c": "nb_associes_presents"
+          },
+          " associés ; est représenté ",
+          {
+            "c": "nb_associes_representes"
+          },
+          " associé, par pouvoir déposé sur le bureau. Les associés présents ou représentés détiennent ensemble ",
+          {
+            "c": "titres_presents_representes"
+          },
+          " parts sociales sur les ",
+          {
+            "c": "total_titres_droit_vote"
+          },
+          " parts composant le capital, soit ",
+          {
+            "c": "quorum_taux"
+          },
+          " du capital : le quorum étant atteint, ",
+          {
+            "c": "constat_validite"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "L'assemblée est présidée par M. ",
+          {
+            "c": "president_seance"
+          },
+          ", gérant. Mme ",
+          {
+            "c": "secretaire"
+          },
+          " est désignée secrétaire de séance. Le président rappelle que le rapport de gestion et les états financiers de l'exercice ",
+          {
+            "c": "exercice_concerne"
+          },
+          " ont été tenus à la disposition des associés dans les délais légaux."
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "ORDRE DU JOUR"
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "ordre_du_jour.0"
+          },
+          {
+            "br": true
+          },
+          {
+            "c": "ordre_du_jour.1"
+          },
+          {
+            "br": true
+          },
+          {
+            "c": "ordre_du_jour.2"
+          },
+          {
+            "br": true
+          },
+          {
+            "c": "ordre_du_jour.3"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          {
+            "c": "lignes[0].resolution_numero"
+          },
+          " RÉSOLUTION — ",
+          {
+            "c": "lignes[0].resolution_objet"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "lignes[0].resolution_texte"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Ils font apparaître un total du bilan de ",
+          {
+            "c": "total_bilan"
+          },
+          " DT, des capitaux propres de ",
+          {
+            "c": "capitaux_propres"
+          },
+          " DT et un bénéfice net de ",
+          {
+            "c": "resultat_exercice"
+          },
+          " DT."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Mise aux voix, cette résolution est ",
+          {
+            "c": "lignes[0].resultat"
+          },
+          " : pour ",
+          {
+            "c": "lignes[0].votes_pour"
+          },
+          " parts, contre ",
+          {
+            "c": "lignes[0].votes_contre"
+          },
+          ", abstention ",
+          {
+            "c": "lignes[0].abstentions"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          {
+            "c": "lignes[1].resolution_numero"
+          },
+          " RÉSOLUTION — ",
+          {
+            "c": "lignes[1].resolution_objet"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "quitus"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Mise aux voix, cette résolution est ",
+          {
+            "c": "lignes[1].resultat"
+          },
+          " : pour ",
+          {
+            "c": "lignes[1].votes_pour"
+          },
+          " parts, contre ",
+          {
+            "c": "lignes[1].votes_contre"
+          },
+          ", abstention ",
+          {
+            "c": "lignes[1].abstentions"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          {
+            "c": "lignes[2].resolution_numero"
+          },
+          " RÉSOLUTION — ",
+          {
+            "c": "lignes[2].resolution_objet"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "lignes[2].resolution_texte"
+          }
+        ]
+      },
+      {
+        "k": "tableau",
+        "classe": "affectation",
+        "entetes": [
+          "",
+          "Montant (DT)"
+        ],
+        "nombres": [
+          1
+        ],
+        "lignes": [
+          [
+            "Bénéfice de l'exercice 2025",
+            {
+              "t": "90 222,319"
+            }
+          ],
+          [
+            "Report à nouveau antérieur",
+            {
+              "c": "report_a_nouveau_anterieur"
+            }
+          ],
+          [
+            "Résultat à affecter",
+            {
+              "c": "resultat_a_affecter"
+            }
+          ],
+          [
+            "Réserve légale (5 %)",
+            {
+              "c": "dotation_reserve_legale"
+            }
+          ],
+          [
+            [
+              "Dividendes, soit ",
+              {
+                "c": "dividende_par_titre"
+              },
+              " DT par part"
+            ],
+            {
+              "c": "dividendes_total"
+            }
+          ],
+          [
+            "Report à nouveau",
+            {
+              "c": "report_a_nouveau_nouveau"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Mise aux voix, cette résolution est ",
+          {
+            "c": "lignes[2].resultat"
+          },
+          " : pour ",
+          {
+            "c": "lignes[2].votes_pour"
+          },
+          " parts, contre ",
+          {
+            "c": "lignes[2].votes_contre"
+          },
+          ", abstention ",
+          {
+            "c": "lignes[2].abstentions"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          {
+            "c": "lignes[3].resolution_numero"
+          },
+          " RÉSOLUTION — ",
+          {
+            "c": "lignes[3].resolution_objet"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "lignes[3].resolution_texte"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "M. ",
+          {
+            "c": "nomination_personne"
+          },
+          ", ",
+          {
+            "c": "nomination_fonction"
+          },
+          ", ",
+          {
+            "c": "nomination_type"
+          },
+          ", ",
+          {
+            "c": "nomination_duree"
+          },
+          ". M. ",
+          "Nadhem Ourvani",
+          " déclare ",
+          {
+            "c": "acceptation_fonction"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Mise aux voix, cette résolution est ",
+          {
+            "c": "lignes[3].resultat"
+          },
+          " : pour ",
+          {
+            "c": "lignes[3].votes_pour"
+          },
+          " parts, contre ",
+          {
+            "c": "lignes[3].votes_contre"
+          },
+          ", abstention ",
+          {
+            "c": "lignes[3].abstentions"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "pouvoirs_formalites"
+          },
+          " Plus rien n'étant à l'ordre du jour, la séance est levée à ",
+          {
+            "c": "heure_cloture"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": {
+          "c": "signataires.0"
+        },
+        "droite": {
+          "c": "signataires.1"
+        }
+      }
+    ],
+    "imprime": {
+      "denomination": "ALGORIA FACTORY SARL",
+      "identifiant_unique": "1958330V",
+      "type_assemblee": "ASSEMBLÉE GÉNÉRALE ORDINAIRE",
+      "date_assemblee": "22 juin 2026",
+      "heure_assemblee": "10 h 00",
+      "lieu_assemblee": "au siège social, 14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "auteur_convocation": "sur convocation du gérant",
+      "mode_convocation": "par lettre recommandée avec accusé de réception",
+      "date_convocation": "04/06/2026",
+      "numero_convocation": "sur première convocation",
+      "nb_associes_presents": "2",
+      "nb_associes_representes": "1",
+      "titres_presents_representes": "5000",
+      "total_titres_droit_vote": "5000",
+      "quorum_taux": "100 %",
+      "constat_validite": "l'assemblée peut valablement délibérer",
+      "president_seance": "Nadhem Ourvani",
+      "secretaire": "Lyna Tazerouit",
+      "exercice_concerne": "clos le 31 décembre 2025",
+      "ordre_du_jour.0": "1. Approbation des états financiers de l'exercice 2025",
+      "ordre_du_jour.1": "2. Quitus au gérant",
+      "ordre_du_jour.2": "3. Affectation du résultat",
+      "ordre_du_jour.3": "4. Renouvellement du mandat du gérant",
+      "total_bilan": "295 573,041",
+      "capitaux_propres": "147 652,041",
+      "resultat_exercice": "90 222,319",
+      "quitus": "L'assemblée générale donne au gérant quitus entier et sans réserve de l'exécution de son mandat pour l'exercice 2025.",
+      "nomination_personne": "Nadhem Ourvani",
+      "nomination_fonction": "gérant",
+      "nomination_type": "renouvellement de mandat",
+      "nomination_duree": "pour une durée de trois ans",
+      "acceptation_fonction": "accepter ces fonctions",
+      "lignes[0].resolution_numero": "PREMIÈRE",
+      "lignes[0].resolution_objet": "Approbation des états financiers",
+      "lignes[0].resolution_texte": "L'assemblée générale, après avoir entendu la lecture du rapport de gestion du gérant, approuve les états financiers de l'exercice 2025 tels qu'ils lui ont été présentés.",
+      "lignes[0].resultat": "adoptée à l'unanimité",
+      "lignes[0].votes_pour": "5000",
+      "lignes[0].votes_contre": "0",
+      "lignes[0].abstentions": "0",
+      "lignes[1].resolution_numero": "DEUXIÈME",
+      "lignes[1].resolution_objet": "Quitus au gérant",
+      "lignes[1].resultat": "adoptée à l'unanimité",
+      "lignes[1].votes_pour": "5000",
+      "lignes[1].votes_contre": "0",
+      "lignes[1].abstentions": "0",
+      "lignes[2].resolution_numero": "TROISIÈME",
+      "lignes[2].resolution_objet": "Affectation du résultat",
+      "lignes[2].resolution_texte": "L'assemblée générale décide d'affecter le résultat comme suit :",
+      "report_a_nouveau_anterieur": "5 143,722",
+      "resultat_a_affecter": "95 366,041",
+      "dotation_reserve_legale": "4 511,116",
+      "dividende_par_titre": "8,000",
+      "dividendes_total": "40 000,000",
+      "report_a_nouveau_nouveau": "50 854,925",
+      "lignes[2].resultat": "adoptée à l'unanimité",
+      "lignes[2].votes_pour": "5000",
+      "lignes[2].votes_contre": "0",
+      "lignes[2].abstentions": "0",
+      "lignes[3].resolution_numero": "QUATRIÈME",
+      "lignes[3].resolution_objet": "Renouvellement du mandat du gérant",
+      "lignes[3].resolution_texte": "L'assemblée générale renouvelle le mandat du gérant :",
+      "lignes[3].resultat": "adoptée à l'unanimité",
+      "lignes[3].votes_pour": "5000",
+      "lignes[3].votes_contre": "0",
+      "lignes[3].abstentions": "0",
+      "pouvoirs_formalites": "Tous pouvoirs sont donnés au porteur d'une copie ou d'un extrait du présent procès-verbal pour accomplir les formalités légales de dépôt et de publicité.",
+      "heure_cloture": "11 h 40",
+      "signataires.0": "Le Président — Nadhem Ourvani",
+      "signataires.1": "La Secrétaire — Lyna Tazerouit"
+    },
+    "versConcept": {
+      "denomination": "denomination",
+      "identifiant_unique": "identifiant_unique",
+      "type_assemblee": "type_assemblee",
+      "date_assemblee": "date_assemblee",
+      "heure_assemblee": "heure_assemblee",
+      "lieu_assemblee": "lieu_assemblee",
+      "auteur_convocation": "auteur_convocation",
+      "mode_convocation": "mode_convocation",
+      "date_convocation": "date_convocation",
+      "numero_convocation": "numero_convocation",
+      "nb_associes_presents": "nb_associes_presents",
+      "nb_associes_representes": "nb_associes_representes",
+      "titres_presents_representes": "titres_presents_representes",
+      "total_titres_droit_vote": "total_titres_droit_vote",
+      "quorum_taux": "quorum_taux",
+      "constat_validite": "constat_validite",
+      "president_seance": "president_seance",
+      "secretaire": "secretaire",
+      "exercice_concerne": "exercice_concerne",
+      "ordre_du_jour.0": "ordre_du_jour",
+      "ordre_du_jour.1": "ordre_du_jour",
+      "ordre_du_jour.2": "ordre_du_jour",
+      "ordre_du_jour.3": "ordre_du_jour",
+      "total_bilan": "total_bilan",
+      "capitaux_propres": "capitaux_propres",
+      "resultat_exercice": "resultat_exercice",
+      "quitus": "quitus",
+      "nomination_personne": "nomination_personne",
+      "nomination_fonction": "nomination_fonction",
+      "nomination_type": "nomination_type",
+      "nomination_duree": "nomination_duree",
+      "acceptation_fonction": "acceptation_fonction",
+      "lignes[0].resolution_numero": "lignes[0].resolution_numero",
+      "lignes[0].resolution_objet": "lignes[0].resolution_objet",
+      "lignes[0].resolution_texte": "lignes[0].resolution_texte",
+      "lignes[0].resultat": "lignes[0].resultat",
+      "lignes[0].votes_pour": "lignes[0].votes_pour",
+      "lignes[0].votes_contre": "lignes[0].votes_contre",
+      "lignes[0].abstentions": "lignes[0].abstentions",
+      "lignes[1].resolution_numero": "lignes[1].resolution_numero",
+      "lignes[1].resolution_objet": "lignes[1].resolution_objet",
+      "lignes[1].resultat": "lignes[1].resultat",
+      "lignes[1].votes_pour": "lignes[1].votes_pour",
+      "lignes[1].votes_contre": "lignes[1].votes_contre",
+      "lignes[1].abstentions": "lignes[1].abstentions",
+      "lignes[2].resolution_numero": "lignes[2].resolution_numero",
+      "lignes[2].resolution_objet": "lignes[2].resolution_objet",
+      "lignes[2].resolution_texte": "lignes[2].resolution_texte",
+      "report_a_nouveau_anterieur": "report_a_nouveau_anterieur",
+      "resultat_a_affecter": "resultat_a_affecter",
+      "dotation_reserve_legale": "dotation_reserve_legale",
+      "dividende_par_titre": "dividende_par_titre",
+      "dividendes_total": "dividendes_total",
+      "report_a_nouveau_nouveau": "report_a_nouveau_nouveau",
+      "lignes[2].resultat": "lignes[2].resultat",
+      "lignes[2].votes_pour": "lignes[2].votes_pour",
+      "lignes[2].votes_contre": "lignes[2].votes_contre",
+      "lignes[2].abstentions": "lignes[2].abstentions",
+      "lignes[3].resolution_numero": "lignes[3].resolution_numero",
+      "lignes[3].resolution_objet": "lignes[3].resolution_objet",
+      "lignes[3].resolution_texte": "lignes[3].resolution_texte",
+      "lignes[3].resultat": "lignes[3].resultat",
+      "lignes[3].votes_pour": "lignes[3].votes_pour",
+      "lignes[3].votes_contre": "lignes[3].votes_contre",
+      "lignes[3].abstentions": "lignes[3].abstentions",
+      "pouvoirs_formalites": "pouvoirs_formalites",
+      "heure_cloture": "heure_cloture",
+      "signataires.0": "signataires",
+      "signataires.1": "signataires"
+    },
+    "marques": {},
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 524983655,
+  "attendu": {
+    "concepts": {
+      "denomination": "ALGORIA FACTORY SARL",
+      "identifiant_unique": "1958330V",
+      "type_assemblee": "Assemblée générale ordinaire",
+      "date_assemblee": "2026-06-22",
+      "heure_assemblee": "10:00",
+      "lieu_assemblee": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "auteur_convocation": "gérant",
+      "mode_convocation": "lettre recommandée",
+      "date_convocation": "2026-06-04",
+      "numero_convocation": "première convocation",
+      "nb_associes_presents": "2",
+      "nb_associes_representes": "1",
+      "titres_presents_representes": "5000",
+      "total_titres_droit_vote": "5000",
+      "quorum_taux": "100",
+      "constat_validite": true,
+      "president_seance": "Nadhem Ourvani",
+      "secretaire": "Lyna Tazerouit",
+      "exercice_concerne": "2025-01-01/2025-12-31",
+      "ordre_du_jour": [
+        "Approbation des états financiers de l'exercice 2025",
+        "Quitus au gérant",
+        "Affectation du résultat",
+        "Renouvellement du mandat du gérant"
+      ],
+      "total_bilan": "295573.041",
+      "capitaux_propres": "147652.041",
+      "resultat_exercice": "90222.319",
+      "quitus": "L'assemblée générale donne au gérant quitus entier et sans réserve de l'exécution de son mandat pour l'exercice 2025.",
+      "nomination_personne": "Nadhem Ourvani",
+      "nomination_fonction": "gérant",
+      "nomination_type": "renouvellement",
+      "nomination_duree": "P3Y",
+      "acceptation_fonction": true,
+      "comptes_approuves": true,
+      "lignes": [
+        {
+          "resolution_numero": "1",
+          "resolution_objet": "Approbation des états financiers",
+          "resolution_texte": "L'assemblée générale, après avoir entendu la lecture du rapport de gestion du gérant, approuve les états financiers de l'exercice 2025 tels qu'ils lui ont été présentés.",
+          "resultat": "adoptée",
+          "votes_pour": "5000",
+          "votes_contre": "0",
+          "abstentions": "0"
+        },
+        {
+          "resolution_numero": "2",
+          "resolution_objet": "Quitus au gérant",
+          "resultat": "adoptée",
+          "votes_pour": "5000",
+          "votes_contre": "0",
+          "abstentions": "0"
+        },
+        {
+          "resolution_numero": "3",
+          "resolution_objet": "Affectation du résultat",
+          "resolution_texte": "L'assemblée générale décide d'affecter le résultat comme suit :",
+          "resultat": "adoptée",
+          "votes_pour": "5000",
+          "votes_contre": "0",
+          "abstentions": "0"
+        },
+        {
+          "resolution_numero": "4",
+          "resolution_objet": "Renouvellement du mandat du gérant",
+          "resolution_texte": "L'assemblée générale renouvelle le mandat du gérant :",
+          "resultat": "adoptée",
+          "votes_pour": "5000",
+          "votes_contre": "0",
+          "abstentions": "0"
+        }
+      ],
+      "report_a_nouveau_anterieur": "5143.722",
+      "resultat_a_affecter": "95366.041",
+      "dotation_reserve_legale": "4511.116",
+      "dividende_par_titre": "8.000",
+      "dividendes_total": "40000.000",
+      "report_a_nouveau_nouveau": "50854.925",
+      "pouvoirs_formalites": "Tous pouvoirs sont donnés au porteur d'une copie ou d'un extrait du présent procès-verbal pour accomplir les formalités légales de dépôt et de publicité.",
+      "heure_cloture": "11:40",
+      "signataires": [
+        "Nadhem Ourvani",
+        "Lyna Tazerouit"
+      ]
+    },
+    "confondus": {},
+    "notes": [
+      "INCERTAIN — la réserve légale à 5 % du bénéfice (art. 287 du CSC) est un choix du banc : le taux n'est pas relevé en base. Affectation : résultat à affecter = bénéfice + report antérieur ; report à nouveau = à affecter − réserve − dividendes.",
+      "Associés inventés : Nadhem Ourvani (2500 parts), Lyna Tazerouit (1500 parts), Faycel Morbane (1000 parts) — ce ne sont pas les associés réels d'ALGORIA."
+    ],
+    "non_imprimes": [
+      "approbation_conventions",
+      "assemblee_universelle",
+      "autres_presents",
+      "cac_present",
+      "copie_certifiee",
+      "date_mise_en_paiement",
+      "date_premiere_assemblee",
+      "documents_communiques",
+      "documents_presentes",
+      "dotation_reserve_reinvestissement",
+      "dotation_reserves_statutaires",
+      "fonds_social",
+      "imputation_perte",
+      "majorite_requise",
+      "mention_enregistrement",
+      "pouvoirs_deposes",
+      "questions_ecrites",
+      "ref_feuille_presence",
+      "remuneration_dirigeants",
+      "resultats_reportes_autres",
+      "resume_debats",
+      "scrutateurs",
+      "total_distribuable",
+      "voix_exclues"
+    ]
+  }
+}

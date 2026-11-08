@@ -1,0 +1,221 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "recu_quittance",
+    "nom": "Reçu et quittance (dont quittance de loyer)",
+    "typeDeDocument": "recu_de_paiement",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "adresse_bien_loue",
+      "concept": "adresse_local",
+      "role": null,
+      "type": "adresse",
+      "obligatoire": "non",
+      "parcelle": "Objet et références",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "charges",
+      "concept": "charges",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_paiement",
+      "concept": "date_paiement",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Objet et références",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "droit_timbre",
+      "concept": "droit_timbre",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "identifiant_bailleur_personne_physique",
+      "concept": "cin",
+      "role": "creancier",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Créancier (bailleur)",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "intitule",
+      "concept": "intitule",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Objet et références",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "matricule_fiscal_creancier",
+      "concept": "matricule_fiscal",
+      "role": "creancier",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Créancier (bailleur)",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "matricule_fiscal_debiteur",
+      "concept": "matricule_fiscal",
+      "role": "debiteur",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Débiteur (locataire)",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "mode_reglement",
+      "concept": "mode_paiement",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Montants",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_loyer_principal",
+      "concept": "montant_loyer_principal",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_recu",
+      "concept": "montant_paye",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nom_creancier",
+      "concept": "raison_sociale",
+      "role": "creancier",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Créancier (bailleur)",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "nom_debiteur",
+      "concept": "raison_sociale",
+      "role": "debiteur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Débiteur (locataire)",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "numero_recu",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Objet et références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "objet_paiement",
+      "concept": "objet_paiement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Objet et références",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periode_loyer",
+      "concept": "periode",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "non",
+      "parcelle": "Objet et références",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_contrat_bail",
+      "concept": "ref_contrat",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Objet et références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_facture_reglee",
+      "concept": "ref_facture",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Objet et références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "retenue_source_loyer",
+      "concept": "retenue_source",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signature_creancier",
+      "concept": "signature_cachet",
+      "role": "creancier",
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Signature",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "tva_loyer",
+      "concept": "montant_tva",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    }
+  ]
+}

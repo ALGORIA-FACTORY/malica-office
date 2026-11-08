@@ -1,0 +1,161 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "avis_echeance_assurance",
+    "nom": "Avis d'échéance / quittance de prime d'assurance",
+    "typeDeDocument": "autre_document",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "accessoires",
+      "concept": "accessoires",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "periode_montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "assureur",
+      "concept": "raison_sociale",
+      "role": "assureur",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "date_echeance",
+      "concept": "date_echeance",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "periode_montants",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_limite_paiement",
+      "concept": "date_echeance",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "periode_montants",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mention_non_paiement",
+      "concept": "mention_non_paiement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "periode_montants",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "modes_paiement",
+      "concept": "mode_paiement",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "periode_montants",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_ttc",
+      "concept": "total_ttc",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "periode_montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "numero_avis",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "numero_police",
+      "concept": "numero_police",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periode_couverte",
+      "concept": "periode",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "oui",
+      "parcelle": "periode_montants",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "prime_nette",
+      "concept": "prime_nette",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "periode_montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "risque_concerne",
+      "concept": "risque_concerne",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "identification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "souscripteur",
+      "concept": "raison_sociale",
+      "role": "souscripteur",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "statut_paiement",
+      "concept": "statut_paiement",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "periode_montants",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "taxes",
+      "concept": "taxes",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "periode_montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    }
+  ]
+}

@@ -69,8 +69,32 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       return rows[0]!.id;
     });
 
-  /** Proposer puis inscrire, sous l'identité donnée. */
+  /**
+   * La société inscrivait elle-même AVANT le lot 5. Depuis le lot S5, aucun
+   * membre de la PME n'inscrit pendant qu'un cabinet est engagé : pour rejouer
+   * cette histoire, le mandat se suspend le temps de l'inscription.
+   */
+  const commeAvant = async <T>(f: () => Promise<T>): Promise<T> => {
+    await admin.query(
+      `update identity.engagements set status = 'suspendu' where pme_org_id = $1 and status = 'actif'`,
+      [pme],
+    );
+    try {
+      return await f();
+    } finally {
+      await admin.query(
+        `update identity.engagements set status = 'actif' where pme_org_id = $1 and status = 'suspendu'`,
+        [pme],
+      );
+    }
+  };
+
+  /** Proposer puis inscrire, sous l'identité donnée (la société : comme avant le lot 5). */
   const inscrire = (qui: Utilisateur, pieceId: string, libelle: string, l: unknown) =>
+    qui === dirigeant
+      ? commeAvant(() => inscrireSous(qui, pieceId, libelle, l))
+      : inscrireSous(qui, pieceId, libelle, l);
+  const inscrireSous = (qui: Utilisateur, pieceId: string, libelle: string, l: unknown) =>
     sousIdentite(qui.id, async (db) => {
       const id = await office.propose(db, {
         pieceId,
@@ -379,12 +403,16 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     try {
       const telecharger = (qui: Utilisateur) =>
         fetch(`${base}/exports/${exporte.id}/contenu`, {
-          headers: { Authorization: `Bearer ${emettreJeton(qui)}` },
+          headers: { Authorization: `Bearer ${emettreJeton(qui, new Date())}` },
         });
       const r = await telecharger(expert);
       assert.equal(r.status, 200);
       assert.equal(r.headers.get("content-type"), exporte.typeMime);
       assert.ok(r.headers.get("content-disposition")?.includes(exporte.nomDeFichier));
+      // Jamais une page active sur l'origine de l'application (audit S1).
+      assert.match(r.headers.get("content-disposition") ?? "", /^attachment\b/);
+      assert.equal(r.headers.get("x-content-type-options"), "nosniff");
+      assert.equal(r.headers.get("content-security-policy"), "sandbox; default-src 'none'");
       const octets = new Uint8Array(await r.arrayBuffer());
       assert.equal(createHash("sha256").update(octets).digest("hex"), exporte.empreinte);
       assert.equal((await telecharger(dirigeant)).status, 404);

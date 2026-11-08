@@ -29,6 +29,32 @@ export interface PageToken {
   x1: number;
   y1: number;
   confidence?: number | null;
+  /**
+   * La probabilité du caractère le MOINS sûr du mot, quand le lecteur la donne (le second
+   * lecteur, `infra/ocr/service.py`). La confiance d'une ligne est la moyenne de ses
+   * caractères : un mot sous une tache s'y noie (« sans fi », le i à 0,69, la ligne à 0,98).
+   */
+  faible?: number;
+  /**
+   * La plus forte probabilité d'une lettre que la lecture n'a PAS émise entre deux
+   * caractères du mot, quand le lecteur la donne : une lettre perdue (« Claver » pour
+   * « Clavier », le i à 0,33 dans le blanc).
+   */
+  manque?: number;
+}
+
+/**
+ * Une marque vue sur la page sans être un texte : un cachet d'encre de couleur, relevé sans
+ * modèle par le second lecteur (`infra/ocr/service.py`, `_cachets`). Coordonnées
+ * normalisées 0..1 dans la page.
+ */
+export interface MarqueDeLaPage {
+  page: number;
+  type: "cachet";
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
 }
 
 export interface TokenRef {

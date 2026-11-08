@@ -1,0 +1,358 @@
+{
+  "id": "126",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "avoir",
+  "grille": "avoir",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-encadre",
+  "scenario": "avoir_recu",
+  "realisme": [
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Avoir",
+    "parties": [
+      {
+        "role": "fournisseur",
+        "nom": "Qalmira Fournitures SARL",
+        "matricule": "6966005G/A/M/000",
+        "est": "tiers"
+      },
+      {
+        "role": "client",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "fournisseur",
+      "nom": "Qalmira Fournitures SARL",
+      "matricule": "6966005G/A/M/000",
+      "est": "tiers"
+    },
+    "client": {
+      "role": "client",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": "encadre",
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "Qalmira Fournitures SARL",
+        "nomAr": "شركة قلميرة للوازم",
+        "enseigne": null,
+        "matricule": "6966005G/A/M/000",
+        "matriculeImprime": "6966005G/A/M/000",
+        "adresse": "103, rue de l'Artisanat, Mégrine",
+        "telephone": "00 59 118 736",
+        "fax": "00 63 308 619",
+        "email": null,
+        "site": null,
+        "rc": "B149444082019",
+        "rib": "99 519 6462438728885 30",
+        "banque": "Crédit Selvane",
+        "code": "C9775959",
+        "couleur": null,
+        "slogan": null,
+        "magasin": null,
+        "role": "fournisseur"
+      },
+      "code": "cachet_signature"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "raison_sociale_emetteur",
+              "cls": "gros"
+            }
+          ],
+          [
+            "103, rue de l'Artisanat, Mégrine"
+          ],
+          [
+            "Tél. : ",
+            "00 59 118 736"
+          ],
+          [
+            "MF : ",
+            {
+              "c": "matricule_fiscal_emetteur"
+            }
+          ]
+        ],
+        "droite": [
+          [
+            {
+              "t": "Client",
+              "cls": "petit"
+            }
+          ],
+          [
+            {
+              "c": "nom_client"
+            }
+          ],
+          [
+            {
+              "c": "adresse_client"
+            }
+          ],
+          [
+            "MF : ",
+            {
+              "c": "matricule_fiscal_client"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          {
+            "c": "intitule"
+          },
+          " N° ",
+          {
+            "c": "numero_avoir"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Date :",
+            {
+              "c": "date_avoir"
+            }
+          ],
+          [
+            "Facture d'origine :",
+            {
+              "c": "ref_facture_origine"
+            }
+          ],
+          [
+            "Motif :",
+            {
+              "c": "motif"
+            }
+          ],
+          [
+            "Bon de retour :",
+            {
+              "c": "ref_bon_retour"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Désignation",
+          "Qté",
+          "P.U. HT",
+          "TVA",
+          "Montant HT"
+        ],
+        "nombres": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "lignes": [
+          [
+            {
+              "c": "lignes[0].designation"
+            },
+            {
+              "c": "lignes[0].quantite"
+            },
+            {
+              "t": "11,799"
+            },
+            {
+              "c": "lignes[0].taux_tva_ligne"
+            },
+            {
+              "c": "lignes[0].montant_ligne_ht"
+            }
+          ],
+          [
+            {
+              "c": "lignes[1].designation"
+            },
+            {
+              "c": "lignes[1].quantite"
+            },
+            {
+              "t": "94,594"
+            },
+            {
+              "c": "lignes[1].taux_tva_ligne"
+            },
+            {
+              "c": "lignes[1].montant_ligne_ht"
+            }
+          ]
+        ],
+        "pied": [
+          [
+            "Total HT",
+            {
+              "c": "total_ht"
+            }
+          ],
+          [
+            "TVA",
+            {
+              "c": "montant_tva"
+            }
+          ],
+          [
+            "Total TTC à déduire",
+            {
+              "c": "total_ttc"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Arrêté le présent avoir à la somme de cinq cent quatre-vingt-dix dinars et neuf cent seize millimes."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "Cachet et signature"
+      }
+    ],
+    "imprime": {
+      "raison_sociale_emetteur": "Qalmira Fournitures SARL",
+      "matricule_fiscal_emetteur": "6966005G/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "matricule_fiscal_client": "1958330VAM000",
+      "intitule": "AVOIR",
+      "numero_avoir": "AV-2026-0027",
+      "date_avoir": "19/04/2026",
+      "ref_facture_origine": "F-2026-8111",
+      "motif": "Retour de marchandise non conforme",
+      "ref_bon_retour": "BR-4867",
+      "lignes[0].designation": "Ramette papier A4 80 g",
+      "lignes[0].quantite": "2",
+      "lignes[0].taux_tva_ligne": "19 %",
+      "lignes[0].montant_ligne_ht": "23,598",
+      "lignes[1].designation": "Cartouche d'encre couleur",
+      "lignes[1].quantite": "5",
+      "lignes[1].taux_tva_ligne": "19 %",
+      "lignes[1].montant_ligne_ht": "472,970",
+      "total_ht": "496,568",
+      "montant_tva": "94,348",
+      "total_ttc": "590,916"
+    },
+    "versConcept": {
+      "raison_sociale_emetteur": "raison_sociale_emetteur",
+      "matricule_fiscal_emetteur": "matricule_fiscal_emetteur",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "matricule_fiscal_client": "matricule_fiscal_client",
+      "intitule": "intitule",
+      "numero_avoir": "numero_avoir",
+      "date_avoir": "date_avoir",
+      "ref_facture_origine": "ref_facture_origine",
+      "motif": "motif",
+      "ref_bon_retour": "ref_bon_retour",
+      "lignes[0].designation": "lignes[0].designation",
+      "lignes[0].quantite": "lignes[0].quantite",
+      "lignes[0].taux_tva_ligne": "lignes[0].taux_tva_ligne",
+      "lignes[0].montant_ligne_ht": "lignes[0].montant_ligne_ht",
+      "lignes[1].designation": "lignes[1].designation",
+      "lignes[1].quantite": "lignes[1].quantite",
+      "lignes[1].taux_tva_ligne": "lignes[1].taux_tva_ligne",
+      "lignes[1].montant_ligne_ht": "lignes[1].montant_ligne_ht",
+      "total_ht": "total_ht",
+      "montant_tva": "montant_tva",
+      "total_ttc": "total_ttc"
+    },
+    "marques": {
+      "cachet_emetteur": "cachet_signature",
+      "signature_emetteur": "cachet_signature"
+    },
+    "cheminsDuDossier": [
+      "matricule_fiscal_client"
+    ]
+  },
+  "graineDuRendu": 1745575488,
+  "attendu": {
+    "concepts": {
+      "raison_sociale_emetteur": "Qalmira Fournitures SARL",
+      "matricule_fiscal_emetteur": "6966005G/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "intitule": "avoir",
+      "numero_avoir": "AV-2026-0027",
+      "date_avoir": "2026-04-19",
+      "ref_facture_origine": "F-2026-8111",
+      "motif": "retour de marchandise",
+      "ref_bon_retour": "BR-4867",
+      "lignes": [
+        {
+          "designation": "Ramette papier A4 80 g",
+          "quantite": "2",
+          "taux_tva_ligne": "19",
+          "montant_ligne_ht": "23.598"
+        },
+        {
+          "designation": "Cartouche d'encre couleur",
+          "quantite": "5",
+          "taux_tva_ligne": "19",
+          "montant_ligne_ht": "472.970"
+        }
+      ],
+      "total_ht": "496.568",
+      "montant_tva": "94.348",
+      "total_ttc": "590.916",
+      "cachet_signature": true
+    },
+    "confondus": {},
+    "notes": [
+      "Titre « AVOIR » : ref.titres_de_piece le range en anomalie (« Avoir : à saisir par le cabinet ») — c'est l'issue attendue, pas un refus.",
+      "Se rapporte à la facture du cas 050 (F-2026-8111) : mêmes désignations et mêmes prix unitaires."
+    ],
+    "non_imprimes": [
+      "droit_timbre",
+      "montant_fodec",
+      "reference_ttn"
+    ]
+  }
+}

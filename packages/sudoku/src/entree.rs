@@ -17,6 +17,21 @@ pub struct Entree {
     /// se lit par le format et les repères seuls.
     #[serde(default)]
     pub connus: Option<Connus>,
+    /// Les marques vues sans modèle sur la pièce (les cachets du second lecteur).
+    #[serde(default)]
+    pub marques: Vec<Marque>,
+    /// Les jetons sont le texte EXACT de la pièce (la couche de texte d'un PDF), pas une
+    /// lecture de l'image : un identifiant y est imprimé tel quel.
+    #[serde(default)]
+    pub texte_exact: bool,
+}
+
+/// Une marque de la page qui n'est pas un texte : un cachet d'encre. Sa page et sa boîte
+/// sont dans l'entrée ; le moteur n'en lit que le genre.
+#[derive(Deserialize)]
+pub struct Marque {
+    #[serde(rename = "type")]
+    pub genre: String,
 }
 
 /// Les données du dossier et de ses tiers, lues en base par l'adaptateur.
@@ -30,6 +45,25 @@ pub struct Connus {
     /// sociales ignore : des mots du catalogue, fournis en entrée, jamais en dur.
     #[serde(default)]
     pub formes_juridiques: Vec<String>,
+    /// Le sens de la pièce DÉCLARÉ par la personne (« achat », « vente ») : à la capture,
+    /// ou corrigé après la lecture. Il place le dossier (client d'un achat, émetteur d'une
+    /// vente) ; l'autre matricule est le tiers. Les indices de la pièce, unanimes contre
+    /// lui, le font signaler — jamais recopier.
+    #[serde(default)]
+    pub sens: Option<String>,
+    /// La devise du dossier : celle d'une pièce qui n'en imprime aucune.
+    #[serde(default)]
+    pub devise: Option<String>,
+}
+
+impl Connus {
+    /// La donnée du dossier qu'un concept nomme (`ref.concepts.defaut_du_dossier`).
+    pub fn defaut(&self, donnee: &str) -> Option<&str> {
+        match donnee {
+            "devise" => self.devise.as_deref(),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Deserialize, Clone)]
@@ -64,6 +98,21 @@ pub struct Jeton {
     /// Lectures du treillis, en unités mineures. Le moteur ne relit jamais le texte.
     #[serde(default)]
     pub montants: Vec<Lecture>,
+    /// La confiance de l'OCR dans ce jeton (0..1) ; absente, il est exact (couche de
+    /// texte d'un PDF).
+    #[serde(default)]
+    pub confiance: Option<f64>,
+    /// Le jeton porte un mot que l'OCR a pu mal lire (le lexique de l'adaptateur le dit).
+    #[serde(default)]
+    pub douteux: bool,
+    /// La probabilité du caractère le MOINS sûr du mot (0..1), quand le lecteur la donne :
+    /// la confiance d'une ligne en est la moyenne, où un mot sous une tache se noie.
+    #[serde(default)]
+    pub faible: Option<f64>,
+    /// La plus forte probabilité d'une lettre que la lecture n'a pas émise entre deux
+    /// caractères du mot (une lettre perdue : « Claver » pour « Clavier »).
+    #[serde(default)]
+    pub manque: Option<f64>,
     /// Date ISO rendue par `normalizeDate`, ou `null`.
     #[serde(default)]
     pub date: Option<String>,
@@ -84,6 +133,24 @@ pub struct Jeton {
     /// ne fait que choisir une coupe fournie ; il ne relit jamais le texte.
     #[serde(default)]
     pub decoupes: Vec<Decoupe>,
+}
+
+impl Jeton {
+    /// Un texte qu'aucun calcul ne prouve (une désignation, un nom) ne se rend pas lu par ce
+    /// jeton : un mot que le lexique de l'adaptateur dit douteux, une ligne lue sous la
+    /// confiance du texte, ou un caractère du mot lu sous la confiance du caractère.
+    pub fn incertain(&self, pack: &Pack) -> bool {
+        self.douteux
+            || pack
+                .confiance_du_texte
+                .is_some_and(|s| self.confiance.is_some_and(|c| c < s))
+            || pack
+                .confiance_du_caractere
+                .is_some_and(|s| self.faible.is_some_and(|f| f < s))
+            || pack
+                .manque_du_caractere
+                .is_some_and(|s| s > 0.0 && self.manque.is_some_and(|m| m > s))
+    }
 }
 
 /// Un identifiant lu par l'adaptateur (`normaliserMatricule`, forme du pack).
@@ -141,6 +208,31 @@ pub struct Champ {
     /// La parcelle de la grille où le champ s'imprime.
     #[serde(default)]
     pub parcelle: Option<String>,
+    /// La partie que le champ décrit (`ref.grille_champs.role`), s'il en décrit une.
+    #[serde(default)]
+    pub role: Option<String>,
+    /// Le champ appartient à une parcelle répétée (une occurrence par ligne) : il ne se lit
+    /// pas comme un champ unique de la pièce.
+    #[serde(default)]
+    pub repetee: bool,
+    /// La marque qu'un champ de présence attend (« cachet », `ref.grille_champs.marque`).
+    #[serde(default)]
+    pub marque: Option<String>,
+    /// Le domaine d'un champ « liste » : chaque code et ses formes imprimables (le libellé du
+    /// code dans les trois langues, ses marques). Présent, le champ ne se lit qu'en un code.
+    #[serde(default)]
+    pub valeurs: Vec<ValeurDuDomaine>,
+    /// La donnée du dossier qui vaut quand la pièce n'imprime rien
+    /// (`ref.concepts.defaut_du_dossier` : `devise`).
+    #[serde(default)]
+    pub defaut_du_dossier: Option<String>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct ValeurDuDomaine {
+    pub code: String,
+    #[serde(default)]
+    pub formes: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -150,6 +242,44 @@ pub struct Preuve {
     pub expression: Option<serde_json::Value>,
     #[serde(default)]
     pub statut: Option<String>,
+}
+
+/// La lettre attendue : `alphabet[(Σ poids[i] × chiffre[i]) mod modulo]`.
+#[derive(Deserialize, Clone, Debug)]
+pub struct Controle {
+    pub poids: Vec<u32>,
+    pub modulo: u32,
+    pub alphabet: String,
+}
+
+impl Controle {
+    /// La lettre de contrôle d'un noyau de chiffres, s'il a la longueur des poids.
+    pub fn lettre(&self, chiffres: &str) -> Option<char> {
+        let d: Vec<u32> = chiffres
+            .chars()
+            .map(|c| c.to_digit(10))
+            .collect::<Option<_>>()?;
+        if d.len() != self.poids.len() || self.modulo == 0 {
+            return None;
+        }
+        let somme: u32 = d.iter().zip(&self.poids).map(|(c, p)| c * p).sum();
+        self.alphabet.chars().nth((somme % self.modulo) as usize)
+    }
+
+    /// La forme de comparaison d'un identifiant : imprimé sans sa lettre (le noyau de
+    /// chiffres suivi d'un séparateur ou de rien), la lettre calculée s'insère après le
+    /// noyau ; sinon il est rendu tel quel.
+    pub fn complete(&self, v: &str) -> String {
+        let n = self.poids.len();
+        let noyau: String = v.chars().take(n).collect();
+        let reste: String = v.chars().skip(n).collect();
+        let sans_lettre =
+            noyau.chars().count() == n && !reste.starts_with(|c: char| c.is_alphanumeric());
+        match (sans_lettre, self.lettre(&noyau)) {
+            (true, Some(l)) => format!("{noyau}{l}{reste}"),
+            _ => v.to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -162,6 +292,30 @@ pub struct Pack {
     pub charges: Vec<ChargePack>,
     #[serde(default)]
     pub formats: HashMap<String, String>,
+    /// La règle de la lettre de contrôle d'un format (`ref.identifiant_controles`), par
+    /// code de format : un identifiant imprimé SANS sa lettre se compare par la lettre
+    /// calculée. Absente, il ne se compare qu'à l'identique.
+    #[serde(default)]
+    pub controles: HashMap<String, Controle>,
+    /// La confiance de lecture au-dessous de laquelle un TEXTE qu'aucun calcul ne prouve
+    /// (une désignation) n'est pas rendu (`lecture.confiance_du_texte`) ; absente, tout
+    /// texte lu est rendu.
+    #[serde(default)]
+    pub confiance_du_texte: Option<f64>,
+    /// La probabilité au-dessous de laquelle le caractère le moins sûr d'un mot (`faible`)
+    /// rend ce mot incertain (`lecture.confiance_du_caractere`) ; absente, rien n'est lu
+    /// au caractère.
+    #[serde(default)]
+    pub confiance_du_caractere: Option<f64>,
+    /// Au-dessus de ce manque (`manque`), une lettre a pu se perdre dans le mot : il est
+    /// incertain (`lecture.manque_du_caractere`) ; absent, rien ne se lit au manque.
+    #[serde(default)]
+    pub manque_du_caractere: Option<f64>,
+    /// Les taux nuls de chaque barème (`EXO`, `EXPORT`), par leur code. Ils ne sont pas dans
+    /// `baremes` : un zéro imprimé fermerait n'importe quelle instance « 0 % ». Ils ne servent
+    /// qu'à NOMMER la part exonérée d'une exonération partielle prouvée par les lignes.
+    #[serde(default)]
+    pub taux_nuls: HashMap<String, Vec<String>>,
 }
 
 #[derive(Deserialize, Clone)]

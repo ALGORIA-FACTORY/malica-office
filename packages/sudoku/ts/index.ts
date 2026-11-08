@@ -30,6 +30,14 @@ export interface JetonDuSudoku {
   readonly x1: number;
   readonly y1: number;
   readonly montants: readonly LectureDeMontant[];
+  /** La confiance de l'OCR dans ce jeton (0..1) ; absente, il est exact. */
+  readonly confiance?: number;
+  /** Le jeton porte un mot que l'OCR a pu mal lire (`lexique.ts` de l'API). */
+  readonly douteux?: boolean;
+  /** La probabilité du caractère le moins sûr du mot, quand le lecteur la donne. */
+  readonly faible?: number;
+  /** La plus forte probabilité d'une lettre non émise entre deux caractères du mot. */
+  readonly manque?: number;
   /** Date ISO, ou null. */
   readonly date: string | null;
   /**
@@ -75,6 +83,25 @@ export interface ChampDeGrille {
   readonly expert?: string;
   /** La parcelle de la grille où le champ s'imprime (`ref.grille_champs.parcelle`). */
   readonly parcelle?: string;
+  /**
+   * La partie que le champ décrit (`ref.grille_champs.role` : fournisseur, client,
+   * employeur…), ou `null` : l'identité du dossier ne remplit qu'un seul rôle par pièce.
+   */
+  readonly role?: string | null;
+  /**
+   * Le champ appartient à une parcelle répétée (une occurrence par ligne, par résolution,
+   * par mouvement : `ref.grille_champs.repetee`) : il ne se lit pas comme un champ unique.
+   */
+  readonly repetee?: boolean;
+  /** La marque qu'un champ de présence attend (`ref.grille_champs.marque` : « cachet »). */
+  readonly marque?: "cachet";
+  /**
+   * Le domaine d'un champ « liste » (`ref_valeurs_des_domaines_v`) : chaque code et ses
+   * formes imprimables. Présent, le champ ne se lit qu'en un code de ce domaine.
+   */
+  readonly valeurs?: readonly { readonly code: string; readonly formes: readonly string[] }[];
+  /** La donnée du dossier qui vaut quand la pièce n'imprime rien (`devise`). */
+  readonly defaut_du_dossier?: "devise";
 }
 
 export interface PreuveDeGrille {
@@ -95,6 +122,8 @@ export interface PackDuSudoku {
   readonly decimales: number;
   readonly tolerance: number;
   readonly baremes: Readonly<Record<string, readonly { code: string; ppm: number }[]>>;
+  /** Les codes des taux nuls de chaque barème : ils nomment la part exonérée, jamais un calcul. */
+  readonly taux_nuls?: Readonly<Record<string, readonly string[]>>;
   readonly charges: readonly {
     code: string;
     /** Le montant standard ; gardé pour compatibilité, il compte parmi les admis. */
@@ -105,6 +134,22 @@ export interface PackDuSudoku {
     assiette_tva: boolean;
   }[];
   readonly formats: Readonly<Record<string, string>>;
+  /** La règle de la lettre de contrôle, par code de format (`ref.identifiant_controles`). */
+  readonly controles?: Readonly<
+    Record<string, { poids: readonly number[]; modulo: number; alphabet: string }>
+  >;
+  /**
+   * Sous cette confiance de lecture, un texte qu'aucun calcul ne prouve (une
+   * désignation) n'est pas rendu (`lecture.confiance_du_texte`).
+   */
+  readonly confiance_du_texte?: number;
+  /**
+   * Sous cette probabilité, le caractère le moins sûr d'un mot (`faible`) le rend
+   * incertain (`lecture.confiance_du_caractere`).
+   */
+  readonly confiance_du_caractere?: number;
+  /** Au-dessus de ce manque (`manque`), une lettre a pu se perdre : le mot est incertain. */
+  readonly manque_du_caractere?: number;
 }
 
 /** Ce que la base sait du dossier et de ses tiers (anneau 2). */
@@ -116,14 +161,35 @@ export interface Connus {
     readonly raison_sociale: string | null;
   }[];
   readonly formes_juridiques: readonly string[];
+  /**
+   * Le sens déclaré par la personne (à la capture, ou corrigé après la lecture). Il place
+   * le dossier ; l'autre matricule est le tiers. Absent : le moteur le cherche sur la pièce.
+   */
+  readonly sens?: "achat" | "vente";
+  /** La devise du dossier : celle d'une pièce qui n'en imprime aucune. */
+  readonly devise?: string;
+}
+
+/** Une marque vue sans modèle sur la page (un cachet), en coordonnées 0..1. */
+export interface MarqueDuSudoku {
+  readonly page: number;
+  readonly type: "cachet";
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
 }
 
 export interface EntreeDuSudoku {
   readonly connus?: Connus;
   readonly jetons: readonly JetonDuSudoku[];
+  /** Les marques de la pièce (les cachets) : un champ de présence qui en attend une la lit. */
+  readonly marques?: readonly MarqueDuSudoku[];
   readonly grille: Grille;
   readonly pack: PackDuSudoku;
   readonly plafond?: number;
+  /** Les jetons sont le texte exact de la pièce (la couche de texte d'un PDF). */
+  readonly texte_exact?: boolean;
 }
 
 /* ============================================================ LA SORTIE (§4) */
@@ -143,7 +209,7 @@ export interface InstanceLue {
 export interface ChampLu {
   readonly valeur: string | null;
   readonly refs: readonly RefDeJeton[];
-  readonly statut: "prouve" | "conforme" | "signale" | "absent";
+  readonly statut: "prouve" | "conforme" | "deduit" | "signale" | "absent";
   readonly instances?: readonly InstanceLue[];
 }
 
@@ -153,9 +219,11 @@ export interface Cite {
   readonly refs: readonly RefDeJeton[];
   /**
    * « deduit » : trouvée par le calcul du tableau, pas lue ; « coupe » : lue dans
-   * un jeton où l'OCR a collé deux cases, à la coupe `coupe` ; absente, elle est lue.
+   * un jeton où l'OCR a collé deux cases, à la coupe `coupe` ; « incertain » : une
+   * désignation dont un caractère est lu sans assurance, montrée non vérifiée ; absente,
+   * elle est lue.
    */
-  readonly statut?: "lu" | "deduit" | "coupe";
+  readonly statut?: "lu" | "deduit" | "coupe" | "incertain";
   /** Pour une cellule « coupe » : la coupe retenue parmi les `decoupes` du jeton. */
   readonly coupe?: number;
   /** Pour une cellule déduite : là où elle devrait être imprimée (relecture ciblée). */
@@ -171,8 +239,9 @@ export interface Cite {
 /** Une ligne d'article (anneau 1). */
 export interface LigneLue {
   readonly designation: Cite | null;
-  readonly quantite: Cite;
-  readonly prix: Cite;
+  /** Absente : une ligne partielle (lecture du milieu) tait la cellule qu'elle ne prouve pas. */
+  readonly quantite?: Cite;
+  readonly prix?: Cite;
   readonly remise: Cite | null;
   readonly montant: Cite;
   readonly taux: { readonly code: string; readonly refs: readonly RefDeJeton[] } | null;
@@ -195,6 +264,8 @@ export interface SortieDuSudoku {
     readonly emetteur: { readonly matricule: ValeurLue | null; readonly nom: ValeurLue | null };
     readonly client: { readonly matricule: ValeurLue | null; readonly nom: ValeurLue | null };
     readonly tiers: { readonly code: string; readonly statut: string } | null;
+    /** Le sens vient de la déclaration de la personne, que la pièce ne contredit pas. */
+    readonly declare?: boolean;
     readonly raison?: string;
   };
   /** Les lignes d'articles, quand la grille porte une preuve `lignes`. Non bloquantes. */
@@ -206,6 +277,12 @@ export interface SortieDuSudoku {
     readonly deduites?: number;
     /** La remise globale lue qui ferme les lignes sur le total HT, quand le total brut n'est pas prouvé. */
     readonly remise_globale?: Cite | null;
+    /**
+     * Des lignes lues SANS preuve (`statut` « signale ») : chacune a-t-elle sa désignation,
+     * sa quantité, son prix et son montant ? Décision du 5 novembre 2026 : elles se montrent
+     * « lu, non vérifié », la lecture de nuit les reprend.
+     */
+    readonly complet?: boolean;
   } | null;
   /**
    * `signalee` : une seule affectation ferme l'arithmétique, mais une preuve de

@@ -537,6 +537,14 @@ export const ar: Dict = {
   "pme.paiement.borne": "على الأكثر {montant}: ما تبقّى للدفع.",
   "pme.paiement.avantFacture": "قبل تاريخ الفاتورة: تسبقة؟",
   "pme.type.titre": "ما هذا؟",
+  "pme.photo.avis.too_small":
+    "الصفحة صغيرة في الصورة: قد تكون القراءة ناقصة. يمكنك إعادة التصوير عن قرب.",
+  "pme.photo.avis.oblique":
+    "الصورة مائلة: قد تكون القراءة ناقصة. يمكنك إعادة التصوير مقابل الصفحة.",
+  "pme.photo.avis.too_dark":
+    "الصورة مظلمة: قد تكون القراءة ناقصة. يمكنك إعادة التصوير في ضوء أفضل.",
+  "pme.photo.avis.blurry":
+    "الصورة ضبابية: قد تكون القراءة ناقصة. يمكنك إعادة التصوير مع تثبيت الجهاز.",
   "pme.type.passer": "لا أعرف",
   "pme.type.corrigeable": "تتحقّق منه مليكة عند القراءة. يمكنك تغييره لاحقًا.",
   "pme.piece.type.modifier": "تغيير النوع",
@@ -558,6 +566,9 @@ export const ar: Dict = {
   "pme.piece.voir": "عرض الفاتورة",
   "pme.detail.voir": "عرض التفصيل",
   "pme.detail.titre": "ما قرأتُه، سطرًا سطرًا",
+  "pme.detail.lignesAVerifier": "أسطر مقروءة، للتحقق",
+  "pme.detail.lignesAVerifierAide":
+    "لا يثبت أي مجموع هذه الأسطر بعد: تُعرض كما قُرئت. تعيد القراءة الليلية قراءتها؛ ولا يعتمد القيد إلا على المجاميع المثبتة.",
   "pme.detail.compte": "{count} سطر",
   "pme.detail.compte#one": "سطر واحد",
   "pme.detail.compte#other": "{count} سطر",
@@ -1590,6 +1601,7 @@ export const ar: Dict = {
   "cab.lecteur.statut.prouve": "مُثبَت",
   "cab.lecteur.statut.conforme": "مطابق",
   "cab.lecteur.statut.signale": "مُنبَّه عليه",
+  "cab.lecteur.statut.signale_ligne": "مقروء، للتحقق",
   "cab.lecteur.statut.absent": "غائب",
   "cab.lecteur.statut.deduit": "مُستنتَج",
   "cab.lecteur.statut.coupe": "مُجزَّأ",
@@ -2029,6 +2041,7 @@ export const ar: Dict = {
   "refus.piece.archivee": "سحب الحريف هذه الوثيقة: هي مؤرشفة.",
   "refus.introuvable": "غير موجود، أو ليس لك حق الوصول إليه.",
   "refus.introuvable.piece": "الوثيقة غير موجودة، أو ليس لك حق الوصول إليها.",
+  "refus.inattendu": "لم يكتمل هذا الإجراء. أعيدوا المحاولة، وإن تكرّر ذلك فأبلغوا عنه.",
   "refus.introuvable.cabinet": "المكتب غير موجود، أو ليس لك حق الوصول إليه.",
   "refus.introuvable.dossier": "الملف غير موجود، أو ليس لك حق الوصول إليه.",
   "refus.introuvable.facture": "الفاتورة غير موجودة، أو ليس لك حق الوصول إليها.",
@@ -2337,6 +2350,8 @@ export const ar: Dict = {
   "refus.lecture.citation_orpheline": "تستشهد القراءة بالحقل {champ} في موضع لم تُقرأ فيه أي كلمة.",
   "refus.piece.empreinte": "بصمة هذه الوثيقة غير صالحة.",
   "refus.piece.scellee": "محتوى هذه الوثيقة مختوم: لا يُستبدل.",
+  "refus.piece.type_de_contenu":
+    "هذا النوع من الملفات ليس وثيقة: أودِع ملف PDF أو صورة (JPEG أو PNG أو WebP أو HEIC).",
   "refus.piece.non_partagee": "هذه الوثيقة غير مشتركة مع المكتب.",
   "refus.piece.aucune_demande": "لا طلب معلّقًا على هذه الوثيقة.",
   "refus.rattachement.motif": "اذكر لماذا تفصل هذه الوثيقة.",
@@ -2348,6 +2363,7 @@ export const ar: Dict = {
   "refus.cle_api.par_une_personne":
     "مفتاح الواجهة البرمجية لا يُنشئ مفتاحًا آخر ولا يُلغيه: يقوم بذلك شخص.",
   "refus.cle_api.cabinet_seulement": "وحده المكتب يحمل مفتاح واجهة برمجية.",
+  "refus.cle_api.expert_membre": "وحده خبير عضو في المكتب يُنشئ مفتاح واجهة برمجية.",
   "refus.cle_api.nom_requis": "أعطِ المفتاح اسمًا.",
   "refus.cle_api.portee_requise": "يحمل المفتاح نطاقًا واحدًا على الأقل.",
   "refus.cle_api.portee_inconnue": "أحد النطاقات المطلوبة غير موجود.",
@@ -3327,6 +3343,11 @@ export const ar: Dict = {
   "scan.hint.searching": "ضع الفاتورة كاملة داخل الإطار.",
   "scan.hint.closer": "اقترب: المستند صغير جدًا.",
   "scan.hint.blurry": "ثبّت الجهاز: الصورة غير واضحة.",
+  "scan.hint.oblique": "قف مقابل المستند: الزاوية مائلة جدًا.",
+  "scan.hint.dark": "الصورة مظلمة جدًا: اقترب من مصدر ضوء.",
+  "scan.hint.ombre": "لا تتحرك — يقع ظل على المستند: أبعده إن أمكن.",
+  "scan.reject.dark": "تم رفض الصورة: مظلمة جدًا. أضئ الصفحة وأعد التصوير.",
+  "scan.reject.oblique": "تم رفض الصورة: مائلة جدًا. قف مقابل الصفحة.",
   "scan.hint.blank": "صفحة فارغة: انتهى المستند.",
   "scan.cam.contexte_non_securise":
     "التأطير الموجّه يتطلّب اتصالًا آمنًا، وهذا العنوان لا يوفّره. كاميرتك تعمل: استعمل تطبيق التصوير، والصورة ستكون نفسها.",
@@ -3346,6 +3367,7 @@ export const ar: Dict = {
   "scan.autoclosed": "تم اكتشاف نهاية المستند تلقائيًا.",
   "common.error": "حدث خطأ.",
   "common.horsLigne": "لا يوجد اتصال. سيكون هذا ممكنًا عند عودة الشبكة.",
+  "common.erreur.reference": "(المرجع {ref})",
   "common.motif": "السبب",
   "common.source": "المصدر",
   "common.retirer": "سحب",
@@ -4460,6 +4482,8 @@ export const ar: Dict = {
   "refus.saisie.incomplete": "حقل إلزامي فارغ: املؤوه ثم أعيدوا المحاولة.",
   "refus.saisie.etablissement": "هذه المنشأة لا تتبع الشركة: اختاروا إحدى منشآتها.",
   "refus.saisie.mal_formee": "البيانات المرسلة غير سليمة: أعيدوا تحميل الصفحة ثم أعيدوا المحاولة.",
+  "refus.saisie.mois_entiers":
+    "تُقرأ هذه المجاميع بالأشهر الكاملة: من أول يوم في شهر إلى آخر يوم في شهر.",
   "refus.geste.non_permis": "لا يُسمح لكم بهذا الإجراء على هذا الملف.",
   "refus.banque.statut_par_le_lettrage": "يُطابَق سطر الكشف عبر الترصيد لا يدويًا: رصّدوه مع قيده.",
   "refus.etablissement.principal_deja_ouvert": "لهذه المؤسسة مقرّها الرئيسي بالفعل.",

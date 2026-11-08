@@ -1,0 +1,80 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans ref.fiscal_parameters (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "parametres": {
+    "ACOMPTES_TAUX": {
+      "valeur": "30",
+      "confiance": "confirme",
+      "article": "Article 51-II"
+    },
+    "CNSS_RSNA_TAUX_GLOBAL": {
+      "valeur": "25,75",
+      "confiance": "a_confirmer",
+      "article": "-"
+    },
+    "CNSS_RSNA_TAUX_PATRONAL": {
+      "valeur": "16,57",
+      "confiance": "a_confirmer",
+      "article": "-"
+    },
+    "CNSS_RSNA_TAUX_SALARIAL": {
+      "valeur": "9,18",
+      "confiance": "a_confirmer",
+      "article": "-"
+    },
+    "FOPROLOS_TAUX": {
+      "valeur": "1",
+      "confiance": "confirme",
+      "article": "Art. 2"
+    },
+    "IRPP_BAREME": {
+      "valeur": "0:5000:0;5000.001:10000:15;10000.001:20000:25;20000.001:30000:30;30000.001:40000:33;40000.001:50000:36;50000.001:70000:38;70000.001:null:40",
+      "confiance": "confirme",
+      "article": "Article 44-I"
+    },
+    "IS_MIN_IMPOT_PLANCHER_NORMAL": {
+      "valeur": "500",
+      "confiance": "confirme",
+      "article": "Article 49-II"
+    },
+    "IS_MIN_IMPOT_TAUX_NORMAL": {
+      "valeur": "0.2",
+      "confiance": "confirme",
+      "article": "Article 49-II"
+    },
+    "IS_TAUX_DROIT_COMMUN": {
+      "valeur": "20",
+      "confiance": "confirme",
+      "article": "Article 49-I"
+    },
+    "RAS_HONORAIRES_COMMISSIONS_COURTAGES_LOYERS": {
+      "valeur": "10",
+      "confiance": "confirme",
+      "article": "Article 52-I-a"
+    },
+    "RAS_MARCHES_ACQUISITIONS": {
+      "valeur": "1.5",
+      "confiance": "confirme",
+      "article": "Article 52-I-g"
+    },
+    "RAS_MARCHES_SEUIL": {
+      "valeur": "1000",
+      "confiance": "confirme",
+      "article": "Article 52-I-g"
+    },
+    "SALAIRES_FRAIS_PROFESSIONNELS_PLAFOND": {
+      "valeur": "2000",
+      "confiance": "confirme",
+      "article": "Article 26-I"
+    },
+    "SALAIRES_FRAIS_PROFESSIONNELS_TAUX": {
+      "valeur": "10",
+      "confiance": "confirme",
+      "article": "Article 26-I"
+    },
+    "TFP_TAUX_GENERAL": {
+      "valeur": "2",
+      "confiance": "confirme",
+      "article": "Art. 30"
+    }
+  }
+}

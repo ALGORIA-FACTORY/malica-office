@@ -1,0 +1,294 @@
+{
+  "id": "047",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "B",
+  "scenario": "taux_13",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "froisse"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Orvane Électricité SARL",
+      "nomAr": "أورفان للكهرباء",
+      "enseigne": null,
+      "matricule": "9249014H/A/M/000",
+      "matriculeImprime": "9249014H/A/M/000",
+      "adresse": "92, rue du Lac Ourmi, Nabeul",
+      "telephone": "00 78 277 472",
+      "fax": "00 55 249 441",
+      "email": null,
+      "site": null,
+      "rc": "B379580182014",
+      "rib": "99 579 5925573564547 19",
+      "banque": "Banque Talmira",
+      "code": "C8929240",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330VAM000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "1 juin 2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل، ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Transport de matériel, course",
+        "designationAr": "نقل معدات، رحلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Orvane Électricité SARL",
+      "document_date": "1 juin 2026",
+      "references.numero": "FA26/08595",
+      "references.matricule_fiscal": "9249014H/A/M/000",
+      "references.matricule_fiscal_client": "1958330VAM000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "92, rue du Lac Ourmi, Nabeul",
+      "telephone_emetteur": "00 78 277 472",
+      "registre_commerce_emetteur": "B379580182014",
+      "mode_reglement": "Chèque",
+      "totals.base_ht": "3.015,180",
+      "totals.vat": "391,973",
+      "totals.ttc": "3.408,153",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Hébergement en hôtel, nuitée",
+      "articles[0].quantity": "3",
+      "articles[0].unit_price_ht": "329,436",
+      "articles[0].total_ht": "988,308",
+      "articles[1].designation": "Transport de matériel, course",
+      "articles[1].quantity": "24",
+      "articles[1].unit_price_ht": "84,453",
+      "articles[1].total_ht": "2.026,872"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[13]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 1099526692,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Orvane Électricité SARL",
+      "document_date": "2026-06-01",
+      "currency": "TND",
+      "references.numero": "FA26/08595",
+      "references.matricule_fiscal": "9249014H/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "3015.180",
+      "totals.vat": "391.973",
+      "totals.ttc": "3408.153",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "3015.180",
+      "lines[0].vat_amount": "391.973",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "3.000",
+      "articles[0].unit_price_ht": "329.436",
+      "articles[0].total_ht": "988.308",
+      "articles[1].quantity": "24.000",
+      "articles[1].unit_price_ht": "84.453",
+      "articles[1].total_ht": "2026.872"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "3015.180",
+          "0"
+        ],
+        [
+          "4366",
+          "391.973",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "3408.153"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Orvane Électricité SARL",
+      "date_operation": "2026-06-01",
+      "numero_facture": "FA26/08595",
+      "matricule_fiscal_emetteur": "9249014H/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "92, rue du Lac Ourmi, Nabeul",
+      "telephone_email_emetteur": {
+        "telephone": "00 78 277 472"
+      },
+      "registre_commerce_emetteur": "B379580182014",
+      "mode_reglement": "Chèque",
+      "total_ht": "3015.180",
+      "montant_tva_par_taux": {
+        "13": "391.973"
+      },
+      "total_ttc": "3408.153",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "13": "3015.180"
+      },
+      "lignes": [
+        {
+          "designation": "Hébergement en hôtel, nuitée",
+          "quantite": "3",
+          "prix_unitaire_ht": "329.436",
+          "montant_ligne_ht": "988.308",
+          "taux_tva_ligne": "13"
+        },
+        {
+          "designation": "Transport de matériel, course",
+          "quantite": "24",
+          "prix_unitaire_ht": "84.453",
+          "montant_ligne_ht": "2026.872",
+          "taux_tva_ligne": "13"
+        }
+      ],
+      "devise": "TND"
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

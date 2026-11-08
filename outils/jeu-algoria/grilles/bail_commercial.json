@@ -1,0 +1,341 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "bail_commercial",
+    "nom": "Bail commercial ou professionnel (location de locaux)",
+    "typeDeDocument": "bail",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "adresse_local",
+      "concept": "adresse_local",
+      "role": null,
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "Local",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "assurance",
+      "concept": "assurance_clause",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "augmentation_loyer",
+      "concept": "augmentation_loyer",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "avance_loyers",
+      "concept": "avance_loyers",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "bailleur_identite",
+      "concept": "raison_sociale",
+      "role": "bailleur",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Parties",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "bailleur_matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "bailleur",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Parties",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "cession_sous_location",
+      "concept": "cession_sous_location",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "charges_impots",
+      "concept": "charges_impots",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "clause_resolutoire",
+      "concept": "clause_resolutoire",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_effet",
+      "concept": "date_effet",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Durée",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_signature",
+      "concept": "date_signature",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Identification",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "depot_garantie",
+      "concept": "depot_garantie",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "description_local",
+      "concept": "description_local",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Local",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "destination",
+      "concept": "destination",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Local",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "duree",
+      "concept": "duree",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "oui",
+      "parcelle": "Durée",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "enregistrement",
+      "concept": "mention_enregistrement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Signatures et formalités",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "etat_des_lieux",
+      "concept": "etat_des_lieux",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Local",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "forme_acte",
+      "concept": "forme_acte",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Identification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "juridiction",
+      "concept": "juridiction",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "loyer_montant",
+      "concept": "loyer_montant",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Conditions financières",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "modalites_paiement",
+      "concept": "mode_paiement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periodicite",
+      "concept": "periodicite",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Conditions financières",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "preavis_conge",
+      "concept": "preavis_conge",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Durée",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "preneur_identite",
+      "concept": "raison_sociale",
+      "role": "preneur",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Parties",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "renouvellement",
+      "concept": "renouvellement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Durée",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "retenue_source_loyer",
+      "concept": "retenue_source_loyer",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signatures",
+      "concept": "signature_cachet",
+      "role": "partie",
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "Signatures et formalités",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "titre_bailleur",
+      "concept": "titre_bailleur",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Parties",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "titre_foncier_reference",
+      "concept": "titre_foncier",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Local",
+      "expert": "identifiant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "travaux_entretien",
+      "concept": "travaux_entretien",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_loyer",
+      "concept": "tva_loyer_applicable",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "type_bail",
+      "concept": "type_bail",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Identification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "usage_siege_social",
+      "concept": "usage_siege_social",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Local",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    }
+  ]
+}

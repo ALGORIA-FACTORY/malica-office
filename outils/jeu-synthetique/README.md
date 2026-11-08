@@ -24,6 +24,11 @@ réelles ; celui-ci complète ce qu'elles ne couvrent pas encore, et chaque cas 
   rendu dessiné par Chromium, dates du PDF figées. Deux passes successives donnent des
   fichiers identiques à l'octet (vérifié le 31 octobre 2026 : `cas/` et `rendus/`).
 
+Les modules partagés avec le jeu d'ALGORIA (`outils/jeu-algoria/`) vivent ici, une fois :
+`hasard.mjs` (mulberry32), `montants.mjs`, `referentiel.mjs` (le référentiel, le pied et
+l'écriture attendue) et `page.mjs` (polices, facture classique, boîtes, PDF figé). Les
+extraire n'a changé aucun octet de `cas/` ni de `rendus/` (vérifié le 3 novembre 2026).
+
 ## Les commandes
 
 ```sh

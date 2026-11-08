@@ -1,0 +1,221 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "virement",
+    "nom": "Ordre de virement (émis) et avis de virement reçu",
+    "typeDeDocument": "justificatif_paiement",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "beneficiaire_adresse",
+      "concept": "adresse",
+      "role": "beneficiaire",
+      "type": "adresse",
+      "obligatoire": "selon_cas",
+      "parcelle": "Bénéficiaire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "beneficiaire_banque",
+      "concept": "nom_banque",
+      "role": "beneficiaire",
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Bénéficiaire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "beneficiaire_nom",
+      "concept": "raison_sociale",
+      "role": "beneficiaire",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Bénéficiaire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "beneficiaire_rib",
+      "concept": "rib",
+      "role": "beneficiaire",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "Bénéficiaire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "cachet_banque",
+      "concept": "signature_cachet",
+      "role": "banque",
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Opération",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "cours_change",
+      "concept": "cours_change",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opération",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_execution",
+      "concept": "date_execution",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opération",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_ordre",
+      "concept": "date_piece",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Opération",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_valeur",
+      "concept": "date_valeur",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opération",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "devise",
+      "concept": "devise",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Opération",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "donneur_banque",
+      "concept": "nom_banque",
+      "role": "donneur_ordre",
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Donneur d'ordre",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "donneur_nom",
+      "concept": "raison_sociale",
+      "role": "donneur_ordre",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Donneur d'ordre",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "donneur_rib",
+      "concept": "rib",
+      "role": "donneur_ordre",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "Donneur d'ordre",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "frais",
+      "concept": "frais",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Opération",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant",
+      "concept": "montant",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Opération",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_lettres",
+      "concept": "montant_en_lettres",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Opération",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "motif",
+      "concept": "libelle_virement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Opération",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reference_virement",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opération",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "references_change",
+      "concept": "references_change",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opération",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signature_donneur",
+      "concept": "signature_cachet",
+      "role": "donneur_ordre",
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opération",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "type_virement",
+      "concept": "type_virement",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Opération",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    }
+  ]
+}

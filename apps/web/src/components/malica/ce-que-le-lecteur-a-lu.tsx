@@ -129,7 +129,19 @@ export function CeQueLeLecteurALu({ pieceId }: { pieceId: string }) {
                     )}
                   </InkCell>
                   <InkCell label={colStatut}>
-                    <SignalLight tone={TON_DU_STATUT[c.statut]} label={statut(c.statut)} />
+                    <SignalLight
+                      tone={TON_DU_STATUT[c.statut]}
+                      label={
+                        /*
+                         * Une cellule d'une ligne d'article SIGNALÉE est lue, non vérifiée :
+                         * aucune somme ne l'a prouvée (décision du 5 novembre 2026). Elle se
+                         * dit telle, pour qu'on la vérifie — la lecture de nuit la reprend.
+                         */
+                        c.rang !== null && c.statut === "signale"
+                          ? t("cab.lecteur.statut.signale_ligne")
+                          : statut(c.statut)
+                      }
+                    />
                   </InkCell>
                   <InkCell label={colRole}>{c.role ? c.role.libelle : "—"}</InkCell>
                 </InkTableRow>
