@@ -1627,6 +1627,8 @@ export const en: Dict = {
   "cab.echeances.title": "Deadlines",
   "cab.echeances.empty": "No deadline derived from the pack yet.",
   "cab.echeances.calendar": "File calendar",
+  "cab.echeances.voirSuite": "See the next {count} deadlines, through {date}",
+  "cab.echeances.reduire": "Show only what is due soon",
   "cab.echeances.kpi.total": "Deadlines",
   "cab.echeances.kpi.late": "Overdue",
   "cab.echeances.kpi.week": "Within 7 days",

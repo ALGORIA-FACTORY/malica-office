@@ -1596,6 +1596,8 @@ export const ar: Dict = {
   "cab.echeances.title": "الآجال",
   "cab.echeances.empty": "لا يوجد أجل مستخرج من الحزمة حتى الآن.",
   "cab.echeances.calendar": "رُوزنامة الملفات",
+  "cab.echeances.voirSuite": "عرض الآجال الـ{count} التالية، إلى غاية {date}",
+  "cab.echeances.reduire": "الاكتفاء بما هو عاجل",
   "cab.echeances.kpi.total": "الآجال",
   "cab.echeances.kpi.late": "متأخرة",
   "cab.echeances.kpi.week": "خلال 7 أيام",

@@ -558,6 +558,17 @@ const sansDebordement = async (page: Page) =>
     ),
   ).toBeLessThanOrEqual(1);
 
+/** Une page peut ne pas défiler et couper quand même un bouton au bord. */
+const rienHorsDeLEcran = async (page: Page) =>
+  expect(
+    await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>("main a, main button, main select, main input")]
+        .filter((el) => el.offsetParent !== null && !el.closest(".overflow-x-auto"))
+        .filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)
+        .map((el) => el.textContent?.trim() || el.getAttribute("aria-label") || el.tagName),
+    ),
+  ).toEqual([]);
+
 const pile = (page: Page, nom: RegExp) =>
   page
     .locator("section:not(.cab-worklist)")
@@ -573,6 +584,7 @@ for (const largeur of [320, 375, 768, 1024, 1280, 1440]) {
       await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
       await page.waitForLoadState("networkidle");
       await sansDebordement(page);
+      await rienHorsDeLEcran(page);
       expect(plantages).toEqual([]);
       await testInfo.attach(`clic${chemin.replace("/", "-")}-${largeur}`, {
         body: await page.screenshot({ fullPage: true }),
@@ -687,6 +699,17 @@ test("au clic : une échéance se coche par date sur un téléphone", async ({ p
     .first()
     .click();
   await expect(page.getByRole("button", { name: "Marquer faite" }).first()).toBeVisible();
+});
+
+test("au clic : les échéances lointaines se déplient", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/cabinet/echeances");
+  const suite = page.getByRole("button", { name: /Voir les \d+ échéances suivantes/ });
+  await expect(suite).toBeVisible({ timeout: 20_000 });
+  const avant = await page.getByRole("button", { name: "Marquer faite" }).count();
+  await suite.click();
+  await expect(page.getByRole("button", { name: "Ne garder que ce qui presse" })).toBeVisible();
+  expect(await page.getByRole("button", { name: "Marquer faite" }).count()).toBeGreaterThan(avant);
 });
 
 test("au clic : les notifications se regroupent et les informations se déplient", async ({

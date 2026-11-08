@@ -404,7 +404,7 @@ function LigneClient({
       </InkCell>
       <InkCell label={t("cab.clients.col.collab")}>
         {collab ? (
-          <span className="flex items-center gap-1.5 text-[12px]">
+          <span className="flex min-w-0 items-center gap-1.5 text-[12px]">
             <span className="num bg-foreground px-1 text-[9px] text-background">
               {initialesDe(collab)}
             </span>

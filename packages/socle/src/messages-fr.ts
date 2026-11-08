@@ -1691,6 +1691,8 @@ export const fr = {
   "cab.echeances.title": "Échéances",
   "cab.echeances.empty": "Aucune échéance dérivée du pack pour l'instant.",
   "cab.echeances.calendar": "Calendrier des dossiers",
+  "cab.echeances.voirSuite": "Voir les {count} échéances suivantes, jusqu’au {date}",
+  "cab.echeances.reduire": "Ne garder que ce qui presse",
   "cab.echeances.kpi.total": "Échéances",
   "cab.echeances.kpi.late": "En retard",
   "cab.echeances.kpi.week": "Sous 7 jours",
