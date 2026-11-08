@@ -5,6 +5,9 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import portraitMalica from "@/assets/malica.webp";
 import { LectureEnCours, ValeursTrouvees } from "@/components/malica/pendant-la-lecture";
 import { PourQuiSociete } from "@/components/malica/pour-qui";
+import { RayonsPrives } from "@/components/malica/rayons-prives";
+import { useRangementsPrives } from "@/hooks/use-rangements-prives";
+import { rayonsASoi } from "@/lib/rayons-prives";
 import { Aide } from "@/components/malica/aide";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
@@ -312,6 +315,12 @@ function PmeCapturer() {
   const [etape, setEtape] = useState(0);
   const [dest, setDest] = useState<Destination | null>(null);
   /** « Où la ranger », à l'étape « Pour qui ? » : la société, sauf choix contraire. */
+  /*
+   * « Dans quel rayon ? » (planche 10) : un papier gardé pour soi se range
+   * avant d'être gardé. Venu de Privé, la question se pose tout de suite.
+   */
+  const [rayonner, setRayonner] = useState(lotDemande.pour === "moi");
+  const rangements = useRangementsPrives(pme.tenantId);
   const [ou, setOu] = useState<"societe" | "prive">(
     lotDemande.pour === "moi" ? "prive" : "societe",
   );
@@ -845,6 +854,10 @@ function PmeCapturer() {
       void navigate({ to: "/pme" });
       return;
     }
+    if (etape === 1 && rayonner && lotDemande.pour !== "moi") {
+      setRayonner(false);
+      return;
+    }
     // La fin privée vient de la destination, pas du règlement.
     if (finPrivee && etape === 8) {
       setEtape(1);
@@ -1115,7 +1128,34 @@ function PmeCapturer() {
             B6 : une pièce personnelle n'est jamais lue. La question se pose donc
             avant : la poser après, c'était débiter le quota de la société pour
             un papier qui ne la regarde pas. Un toucher répond et avance. */}
-        {!plusTard && etape === 1 ? (
+        {!plusTard && etape === 1 && rayonner ? (
+          <RayonsPrives
+            aSoi={rayonsASoi(
+              (rangements.lecture.data ?? []).map((r) => r.rayon),
+              locale,
+            )}
+            occupe={garder.isPending || rangements.ranger.isPending}
+            onChoisir={(rayon, nom) => {
+              setDest("prive");
+              rangements.ranger.mutate(
+                { ids: lot.map((p) => p.id), rayon, nom },
+                {
+                  onSuccess: () => garder.mutate(lot, { onSuccess: () => setEtape(8) }),
+                  onError: (e) =>
+                    setErreur(
+                      texteDeLErreur(e, "routes/_authenticated/pme.capturer", t("common.error")),
+                    ),
+                },
+              );
+            }}
+            onSociete={() => {
+              setRayonner(false);
+              setOu("societe");
+            }}
+          />
+        ) : null}
+
+        {!plusTard && etape === 1 && !rayonner ? (
           <>
             <div className="c-tete">
               <h1 className="c-titre">{t("pme.capture.dest.titre")}</h1>
@@ -1174,8 +1214,7 @@ function PmeCapturer() {
                         setDest("societe");
                         setEtape(2);
                       } else {
-                        setDest("prive");
-                        garder.mutate(lot, { onSuccess: () => setEtape(8) });
+                        setRayonner(true);
                       }
                     }}
                   >
@@ -1203,10 +1242,7 @@ function PmeCapturer() {
                   type="button"
                   className={lotDemande.pour === "moi" ? "c-carte acc" : "c-carte"}
                   disabled={garder.isPending}
-                  onClick={() => {
-                    setDest("prive");
-                    garder.mutate(lot, { onSuccess: () => setEtape(8) });
-                  }}
+                  onClick={() => setRayonner(true)}
                 >
                   <Icone d={G.prive} />
                   <b>{t("pme.capture.dest.prive")}</b>

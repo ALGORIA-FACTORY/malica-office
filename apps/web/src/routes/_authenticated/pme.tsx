@@ -300,6 +300,10 @@ function PmeLayout() {
       // question du type se repose. La lecture aura le dernier mot.
       const dossier = dossierParCode(contexteDeCapture?.dossier);
       if (dossier) capture.mutate({ lot: choisis, documentKind: dossier.typeParDefaut });
+      // Venu de Privé (planche 10) : un papier pour soi n'est ni un achat ni
+      // une vente ; il ira dans un rayon, pas dans un dossier de la société.
+      else if (contexteDeCapture?.pour === "moi")
+        capture.mutate({ lot: choisis, documentKind: null });
       else setATyper(choisis);
     },
     onError: (e: unknown) => {

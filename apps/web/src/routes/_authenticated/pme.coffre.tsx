@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { FileLocale } from "@/components/malica/file-locale";
 import {
@@ -23,6 +24,11 @@ import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDestinationDeLEnvoi } from "@/hooks/use-destination-de-l-envoi";
 import { useEnvoyerEnLot, useSupprimerEnLot } from "@/hooks/use-gestes-du-circuit";
 import { useRevenir } from "@/hooks/use-revenir";
+import { useRangementsPrives } from "@/hooks/use-rangements-prives";
+import { useSuperposition } from "@/hooks/use-superposition";
+import { RayonsPrives } from "@/components/malica/rayons-prives";
+import { libelleDuRayon, RAYONS_PROPOSES, rayonsASoi } from "@/lib/rayons-prives";
+import { plier } from "@/lib/mes-societes";
 
 export const Route = createFileRoute("/_authenticated/pme/coffre")({
   head: () => ({
@@ -105,6 +111,18 @@ function PmeCoffre() {
   const [transmis, setTransmis] = useState<readonly string[] | null>(null);
 
   const pieces = usePiecesLues();
+  /*
+   * Planche 10 (7 novembre 2026) : des rayons à soi, un nom, une recherche.
+   * Le rayon et le nom viennent de la personne (`capture.rangements_prives`) :
+   * un papier privé n'est jamais lu.
+   */
+  const rangements = useRangementsPrives(pme.tenantId);
+  const [cherche, setCherche] = useState("");
+  const [rayonVu, setRayonVu] = useState<string | null>(null);
+  const [rangerOuvert, setRangerOuvert] = useState(false);
+  const feuille = useRef<HTMLDivElement>(null);
+  const fermerRanger = useCallback(() => setRangerOuvert(false), []);
+  useSuperposition(rangerOuvert, fermerRanger, feuille);
   // Le siège envoie au propriétaire ; qui transmet, au comptable (lot 4).
   const envoi = useDestinationDeLEnvoi(pme.tenantId);
   const destination = envoi.destination;
@@ -181,15 +199,39 @@ function PmeCoffre() {
   // Seules les pièces gardées pour soi. Ce qui est dans la société se regarde
   // dans « Vos documents », avec son statut.
   const toutes = pieces.data ?? [];
-  const visibles = toutes
+  const privees = toutes
     .filter((p) => p.vis === "personnel")
     .sort((a, b) => (b.dateDocument ?? b.createdAt).localeCompare(a.dateDocument ?? a.createdAt));
+  const rangement = (p: PieceLue) => rangements.parPiece.get(p.id) ?? null;
+  const rayonDe = (p: PieceLue) => {
+    const r = rangement(p)?.rayon;
+    return r ? libelleDuRayon(r, t) : null;
+  };
 
-  // Le titre suit le STATUT : une pièce lue sans émetteur n'est pas une pièce
-  // non lue. Voir pme.list.tsx.
+  // Le nom que la personne a donné ; sinon le rayon ; sinon ce que la lecture
+  // a trouvé ; sinon « Papier » — jamais « Non lue » : un papier privé n'est
+  // pas fait pour être lu (planche 10).
   const titreDe = (p: PieceLue) =>
-    p.emetteur ?? (p.status === "capturee" ? t("pme.list.nonLue") : t("pme.list.sansEmetteur"));
+    rangement(p)?.nom ?? p.emetteur ?? rayonDe(p) ?? t("pme.prive.papier");
   const jour = (p: PieceLue) => jourEtMois(p.dateDocument ?? p.createdAt, locale);
+
+  // Les rayons qui ont des papiers, dans l'ordre proposé puis les siens.
+  const rayonsUtilises = new Set(
+    privees.map((p) => rangement(p)?.rayon).filter((r): r is string => !!r),
+  );
+  const tuilesDeRayon = [
+    ...RAYONS_PROPOSES.filter((r) => rayonsUtilises.has(r.code)).map((r) => ({
+      code: r.code as string,
+      teinte: r.teinte as string | null,
+    })),
+    ...rayonsASoi([...rayonsUtilises], locale).map((r) => ({ code: r, teinte: null })),
+  ];
+  const q = plier(cherche.trim());
+  const visibles = privees.filter((p) => {
+    if (rayonVu && rangement(p)?.rayon !== rayonVu) return false;
+    if (!q) return true;
+    return [titreDe(p), rayonDe(p) ?? "", p.emetteur ?? ""].some((x) => plier(x).includes(q));
+  });
   /**
    * Le montant, ou rien : « un montant absent n'est pas un montant nul ».
    * `montant(null)` rend la chaîne vide, et rien ne s'affiche.
@@ -345,9 +387,48 @@ function PmeCoffre() {
           />
         </h1>
 
-        <CompteDesPapiers n={visibles.length} />
+        <CompteDesPapiers n={privees.length} />
 
         <FileLocale vis="personnel" />
+
+        {privees.length > 0 ? (
+          <>
+            <label className="rp-cherche">
+              <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                type="search"
+                value={cherche}
+                placeholder={t("pme.prive.chercher")}
+                aria-label={t("pme.prive.chercher")}
+                onChange={(e) => setCherche(e.target.value)}
+              />
+            </label>
+            {tuilesDeRayon.length > 0 ? (
+              <div className="rp-grille" role="group" aria-label={t("pme.prive.rayons")}>
+                {tuilesDeRayon.map((r) => {
+                  const n = privees.filter((p) => rangement(p)?.rayon === r.code).length;
+                  return (
+                    <button
+                      key={r.code}
+                      type="button"
+                      className="rp-tt"
+                      aria-pressed={rayonVu === r.code}
+                      style={r.teinte ? { background: r.teinte } : undefined}
+                      onClick={() => setRayonVu((v) => (v === r.code ? null : r.code))}
+                    >
+                      <i aria-hidden>{libelleDuRayon(r.code, t).slice(0, 1).toLocaleUpperCase()}</i>
+                      <small>{t("pme.prive.rayon.compte", { count: n })}</small>
+                      <b>{libelleDuRayon(r.code, t)}</b>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </>
+        ) : null}
 
         {panne || pieces.fetchStatus === "paused" ? (
           <div className="card" role="status">
@@ -375,20 +456,27 @@ function PmeCoffre() {
 
         {pieces.isPending && pieces.fetchStatus !== "paused" ? (
           <p className="foot">{t("common.loading")}</p>
-        ) : !pieces.isSuccess && pieces.data === undefined ? null : visibles.length === 0 &&
+        ) : !pieces.isSuccess && pieces.data === undefined ? null : privees.length === 0 &&
           !pme.file.elements.some((e) => e.vis === "personnel") ? (
           <div className="card">
             <p>{t("pme.prive.vide")}</p>
           </div>
         ) : (
           <>
+            {visibles.length === 0 && privees.length > 0 ? (
+              <p className="foot">{t("pme.prive.aucun")}</p>
+            ) : null}
             <GrilleDesMois
               papiers={visibles}
               moisDe={moisDe}
               titreDe={titreDe}
-              ligneDe={(p) => [jour(p), somme(p)].filter(Boolean).join(" · ")}
+              ligneDe={(p) => [rayonDe(p), jour(p), somme(p)].filter(Boolean).join(" · ")}
               enPlus={(p) =>
-                p.status === "capturee" ? (
+                // Planche 10 : plus de « Non lue » en rouge sur un papier privé.
+                // Seul un refus d'une AUTRE raison se dit encore.
+                p.status === "capturee" &&
+                p.lectureRefusee &&
+                p.lectureRefusee.motif !== "piece_personnelle" ? (
                   <EtatDeLecture
                     refus={p.lectureRefusee}
                     vis={p.vis}
@@ -422,11 +510,56 @@ function PmeCoffre() {
                 >
                   {t("pme.coffre.supprimer")}
                 </button>
+                {choix.length > 0 ? (
+                  <button type="button" disabled={occupe} onClick={() => setRangerOuvert(true)}>
+                    {t("pme.prive.ranger")}
+                  </button>
+                ) : null}
               </div>
             ) : null}
           </>
         )}
       </div>
+
+      {rangerOuvert
+        ? createPortal(
+            <div className="rp-voile" onClick={fermerRanger}>
+              <div
+                ref={feuille}
+                className="rp-feuille"
+                role="dialog"
+                aria-modal="true"
+                aria-label={t("pme.prive.rayon.titre")}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <RayonsPrives
+                  aSoi={rayonsASoi(
+                    (rangements.lecture.data ?? []).map((r) => r.rayon),
+                    locale,
+                  )}
+                  occupe={rangements.ranger.isPending}
+                  onSociete={null}
+                  onChoisir={(rayon, nom) =>
+                    rangements.ranger.mutate(
+                      { ids: choix, rayon, nom },
+                      {
+                        onSuccess: () => {
+                          setRangerOuvert(false);
+                          setChoisis([]);
+                        },
+                        onError: (e) => {
+                          setRangerOuvert(false);
+                          setErreur(texteDeLErreur(e, OU, t("common.error")));
+                        },
+                      },
+                    )
+                  }
+                />
+              </div>
+            </div>,
+            document.querySelector('[data-surface="pme"]') ?? document.body,
+          )
+        : null}
 
       {confirmer ? (
         <ConfirmerLaSuppression

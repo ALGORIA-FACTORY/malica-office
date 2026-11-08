@@ -1456,9 +1456,23 @@ export interface CandidatAuJustificatif {
   tiers: string | null;
 }
 
+/**
+ * Le rangement d'un papier de l'espace privé (planche 10) : un rayon (un code
+ * proposé, ou le nom d'un rayon à soi) et, s'il y en a un, son nom.
+ */
+export interface RangementPrive {
+  pieceId: string;
+  rayon: string;
+  nom: string | null;
+}
+
 export interface CaptureRepository {
   /** Son Mon espace hors des sociétés quittées : il part avec son compte (lot 4). */
   monEspaceHorsSociete(): Promise<PieceDeMonEspace[]>;
+  /** Les rangements de son espace privé dans cette société ; à soi seul (planche 10). */
+  mesRangementsPrives(tenantId: string): Promise<RangementPrive[]>;
+  /** Ranger un papier privé dont on est l'auteur : son rayon, et son nom s'il en a un. */
+  rangerPrive(pieceId: string, rayon: string, nom: string | null): Promise<RangementPrive>;
   /**
    * Les deux pas d'un dépôt, séparés pour que la file hors ligne reprenne
    * entre les deux : la ligne d'abord (même clé → même pièce), les octets
