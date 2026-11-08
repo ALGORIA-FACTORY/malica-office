@@ -394,6 +394,13 @@ async function piecesLuesDe(
                 or exists (select 1 from capture.paiements a where a.justificatif_piece_id = p.id)
                 or exists (select 1 from capture.paiement_justificatifs j where j.piece_id = p.id))
                 as accompagne,
+              -- Un document joint à sa pièce : il part avec elle, sans lecture
+              -- (planche 3). L'index des rattachements écarte d'abord les
+              -- pièces sans lien ; la règle est celle de la base.
+              (exists (select 1 from capture.rattachements r0
+                        where r0.tenant_id = p.tenant_id
+                          and (r0.piece_id = p.id or r0.piece_liee_id = p.id))
+                and app.piece_jointe(p.id)) as jointe,
               (select valeur from precisions_v q
                 where q.piece_id = p.id and q.champ = 'document_kind'
                 order by decided_at desc limit 1) as precision_kind,
@@ -508,6 +515,7 @@ function versPieceLue(r: Record<string, unknown>) {
     gardeeLe: (r["gardee_le"] as string | null) ?? null,
     transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
     accompagne: Boolean(r["accompagne"]),
+    jointe: Boolean(r["jointe"]),
     emetteur: (r["emetteur_dit"] as string | null) ?? lu?.issuer ?? null,
     dateDocument: cab?.dateEcriture ?? lu?.document_date ?? null,
     kind:

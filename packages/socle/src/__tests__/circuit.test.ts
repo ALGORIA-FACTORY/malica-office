@@ -48,6 +48,7 @@ const piece = (
   return {
     ...base,
     accompagne: p.accompagne ?? null,
+    jointe: p.jointe ?? null,
     lectureRefusee: p.lectureRefusee ?? null,
     statut: statutDuCircuit({ ...base, suivi: null }),
   };
@@ -115,6 +116,14 @@ describe("une pièce non lue ne part pas au cabinet (3 novembre 2026)", () => {
   it("un reçu, un justificatif ne se lisent jamais : ils suivent leur pièce", () => {
     const recu = piece({ ...sienne, status: "capturee", accompagne: true });
     expect(gestesDuCircuit(recu, PROPRIETAIRE, true).envoyer).toBe("cabinet");
+  });
+
+  it("un document joint part avec sa pièce : pas d'« Envoyer » à lui seul (planche 3)", () => {
+    const bl = piece({ ...sienne, status: "lue", jointe: true });
+    expect(gestesDuCircuit(bl, PROPRIETAIRE, true).envoyer).toBeNull();
+    expect(gestesDuCircuit(piece({ ...sienne, status: "lue" }), PROPRIETAIRE, true).envoyer).toBe(
+      "cabinet",
+    );
   });
 
   it("au plafond du forfait, elle part non lue : le cabinet la saisit", () => {

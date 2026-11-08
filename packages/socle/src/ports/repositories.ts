@@ -1347,6 +1347,13 @@ export interface PieceLue {
    */
   accompagne?: boolean;
   /**
+   * Un document joint à sa pièce — un BL ou un avoir joint à sa facture, un
+   * document non lu joint à une pièce lue (`app.piece_jointe`, planche 3) :
+   * il part avec elle, sans lecture. Jamais « à lire », jamais « à envoyer »
+   * à lui seul.
+   */
+  jointe?: boolean;
+  /**
    * Où la pièce est — et c'est ce qui décide si elle peut être lue.
    *
    * Une pièce `personnel` n'est jamais lue (B6). L'écran qui l'affiche doit
