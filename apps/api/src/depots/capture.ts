@@ -390,9 +390,19 @@ async function piecesLuesDe(
      select p.tenant_id, p.id, p.status, p.created_at, p.created_by, p.vis, p.gardee_le, p.transmise_le,
               p.document_kind,
               x.payload,
+              -- Une lecture PAR PIÈCE, par l'index du justificatif (8 novembre
+              -- 2026) : écrit « or exists (…) », le planificateur en faisait une
+              -- sous-requête hachée qui parcourait TOUS les paiements visibles
+              -- en évaluant leur droit de lecture (app.piece_lisible, ~1 ms
+              -- chacun) — 374 ms sur 400 pour une société de dix pièces. Une
+              -- sous-requête scalaire ne se hache pas : elle suit l'index et
+              -- ne lit le droit que des paiements qui citent la pièce. Résultat
+              -- identique (341 pièces comparées), 400 → 17 ms.
               (p.source_piece_id is not null
-                or exists (select 1 from capture.paiements a where a.justificatif_piece_id = p.id)
-                or exists (select 1 from capture.paiement_justificatifs j where j.piece_id = p.id))
+                or (select true from capture.paiements a
+                     where a.justificatif_piece_id = p.id limit 1) is not null
+                or (select true from capture.paiement_justificatifs j
+                     where j.piece_id = p.id limit 1) is not null)
                 as accompagne,
               -- Un document joint à sa pièce : il part avec elle, sans lecture
               -- (planche 3). L'index des rattachements écarte d'abord les

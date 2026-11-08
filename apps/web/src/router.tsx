@@ -81,6 +81,13 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
+    /*
+     * Le code de l'écran suivant se prépare dès que le doigt se pose sur son
+     * lien (ou que la souris le survole), pas au relâcher : les 100 à 200 ms
+     * d'un toucher suffisent à le charger et l'évaluer. La garde de session
+     * qu'il traverse est gratuite (`adapters/http/auth.ts`, 8 novembre 2026).
+     */
+    defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
     /*
      * Une adresse inconnue SOUS un espace (/pme/…, /cabinet/…) tombait sur
