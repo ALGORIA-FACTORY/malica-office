@@ -4855,7 +4855,6 @@ export const en: Dict = {
   "pme.malica.suitePasEncore": "This request cannot be made from this screen yet",
   "pme.malica.suiteSansCabinet": "Ask a firm for advice",
   "pme.malica.suiteSansCabinetDetail": "No firm is engaged on this file",
-  "pme.malica.retenue": "Sent for review — this advice has consequences for your file",
   "pme.malica.sous": "Ask your question: I answer and cite my sources.",
   "pme.malica.salut.jour": "Hello",
   "pme.malica.salut.soir": "Good evening",

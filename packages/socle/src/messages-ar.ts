@@ -4665,7 +4665,6 @@ export const ar: Dict = {
   "pme.malica.suitePasEncore": "لا يمكن تقديم هذا الطلب من هذه الشاشة بعد",
   "pme.malica.suiteSansCabinet": "طلب رأي مكتب محاسبة",
   "pme.malica.suiteSansCabinetDetail": "لا يوجد مكتب موكَّل على هذا الملف",
-  "pme.malica.retenue": "أُرسلت للمراجعة — هذا الرأي له أثر على ملفكم",
   "pme.malica.sous": "اطرحوا سؤالكم: أجيب مع ذكر مصادري.",
   "pme.malica.salut.jour": "صباح الخير",
   "pme.malica.salut.soir": "مساء الخير",

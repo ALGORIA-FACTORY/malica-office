@@ -5058,7 +5058,6 @@ export const fr = {
   "pme.malica.suitePasEncore": "La demande n'est pas encore ouverte depuis cet écran",
   "pme.malica.suiteSansCabinet": "Demander l'avis d'un cabinet",
   "pme.malica.suiteSansCabinetDetail": "Aucun cabinet n'est mandaté sur ce dossier",
-  "pme.malica.retenue": "Envoyée en relecture — cet avis engage votre dossier",
   "pme.malica.sous": "Posez votre question : je réponds en citant mes sources.",
   "pme.malica.salut.jour": "Bonjour",
   "pme.malica.salut.soir": "Bonsoir",
