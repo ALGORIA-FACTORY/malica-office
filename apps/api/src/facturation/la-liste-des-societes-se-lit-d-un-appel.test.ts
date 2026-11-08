@@ -75,6 +75,7 @@ describe("la liste des sociétés se lit d'un appel", { skip: !BASE_CONFIGUREE }
       tenantId: string;
       offre: string | null;
       cabinet: string | null;
+      cabinetId: string | null;
     }>;
     assert.deepEqual(
       fiches.map((f) => f.tenantId),
@@ -83,6 +84,7 @@ describe("la liste des sociétés se lit d'un appel", { skip: !BASE_CONFIGUREE }
     const fa = fiches.find((f) => f.tenantId === a)!;
     assert.equal(fa.offre, "solo");
     assert.equal(fa.cabinet, `Cabinet ${marque}`);
+    assert.equal(fa.cabinetId, cabinet);
     assert.equal(fiches.find((f) => f.tenantId === b)!.cabinet, null);
   });
 });
