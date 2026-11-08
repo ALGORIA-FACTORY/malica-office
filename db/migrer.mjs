@@ -47,6 +47,7 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 
 import { decouperSql } from "./decouper-sql.mjs";
+import { migrationsEnRetard } from "./ordre-des-migrations.mjs";
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MIGRATIONS = join(RACINE, "db", "migrations");
@@ -119,6 +120,19 @@ try {
   const fichiers = readdirSync(MIGRATIONS)
     .filter((f) => f.endsWith(".sql"))
     .sort();
+
+  // Un fichier plus ancien que le dernier appliqué donnerait à cette base un autre
+  // ordre qu'à une base neuve (`ordre-des-migrations.mjs`).
+  const enRetard = migrationsEnRetard(fichiers, appliquees.keys());
+  if (enRetard.length > 0 && option("--en-retard") === null) {
+    console.error(
+      `\nMigration(s) en retard sur la base — leur nom précède la dernière appliquée :\n` +
+        enRetard.map((n) => `  ${n}\n`).join("") +
+        "Renumérotez-les après la dernière, pour que toutes les bases les jouent dans le même ordre. " +
+        "(--en-retard pour l'atelier)\n",
+    );
+    process.exit(1);
+  }
 
   let jouees = 0;
   for (const nom of fichiers) {

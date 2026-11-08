@@ -1,0 +1,441 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "contrat_commercial",
+    "nom": "Contrat commercial (vente, prestation de services, distribution, sous-traitance, partenariat, licence)",
+    "typeDeDocument": "contrat",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "annexes",
+      "concept": "annexes",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Clauses juridiques",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "avenant_reference",
+      "concept": "ref_contrat",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Signatures et formalités",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "cession_sous_traitance",
+      "concept": "cession_sous_traitance",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses juridiques",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "confidentialite",
+      "concept": "confidentialite",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses juridiques",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_effet",
+      "concept": "date_effet",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Durée et fin",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_signature",
+      "concept": "date_signature",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Identification du contrat",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "devise",
+      "concept": "devise",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Conditions financières",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "donnees_personnelles",
+      "concept": "donnees_personnelles",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses juridiques",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "droit_applicable",
+      "concept": "droit_applicable",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses juridiques",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "duree",
+      "concept": "duree",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "oui",
+      "parcelle": "Durée et fin",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "election_domicile",
+      "concept": "election_domicile",
+      "role": null,
+      "type": "adresse",
+      "obligatoire": "non",
+      "parcelle": "Clauses juridiques",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "enregistrement",
+      "concept": "mention_enregistrement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Signatures et formalités",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "exclusivite_territoire",
+      "concept": "exclusivite_territoire",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Objet et obligations",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "force_majeure",
+      "concept": "force_majeure",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses juridiques",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "garanties_financieres",
+      "concept": "garanties_financieres",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "intitule",
+      "concept": "intitule",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Identification du contrat",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "juridiction_arbitrage",
+      "concept": "juridiction_arbitrage",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses juridiques",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "langue_faisant_foi",
+      "concept": "langue_faisant_foi",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Identification du contrat",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "legalisation_signature",
+      "concept": "legalisation_signature",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Signatures et formalités",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "lieu_signature",
+      "concept": "lieu_signature",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Identification du contrat",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "livrables_niveaux_service",
+      "concept": "livrables_niveaux_service",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Objet et obligations",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "modalites_paiement",
+      "concept": "conditions_paiement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nombre_exemplaires",
+      "concept": "nombre_exemplaires",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "Identification du contrat",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "objet",
+      "concept": "objet",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Objet et obligations",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "obligations_parties",
+      "concept": "obligations_parties",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Objet et obligations",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "partie_denomination",
+      "concept": "raison_sociale",
+      "role": "partie",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Parties",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "partie_forme_capital",
+      "concept": "forme_juridique",
+      "role": "partie",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Parties",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "partie_identifiant_unique",
+      "concept": "identifiant_unique_rne",
+      "role": "partie",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Parties",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "partie_matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "partie",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Parties",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "partie_pouvoir_reference",
+      "concept": "partie_pouvoir_reference",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Parties",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "partie_representant",
+      "concept": "representant",
+      "role": "partie",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Parties",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "partie_role",
+      "concept": "partie_role",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Parties",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "partie_siege",
+      "concept": "adresse",
+      "role": "partie",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "Parties",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "preambule",
+      "concept": "preambule",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Objet et obligations",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "prix_montant",
+      "concept": "prix_montant",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Conditions financières",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "propriete_intellectuelle",
+      "concept": "propriete_intellectuelle",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clauses juridiques",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reference",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Identification du contrat",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "renouvellement",
+      "concept": "renouvellement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Durée et fin",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "resiliation",
+      "concept": "resiliation",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Durée et fin",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "responsabilite_plafond",
+      "concept": "responsabilite_plafond",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Clauses juridiques",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "retenue_source_clause",
+      "concept": "retenue_source_clause",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "revision_prix",
+      "concept": "revision_prix",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Conditions financières",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signatures",
+      "concept": "signature_cachet",
+      "role": "partie",
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "Signatures et formalités",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    }
+  ]
+}

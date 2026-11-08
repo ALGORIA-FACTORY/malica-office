@@ -213,6 +213,18 @@ async function appelerEnJson(input: {
   }
 }
 
+/**
+ * Ce que DeepSeek avait sous les yeux pour répondre : le dossier, le
+ * paramétrage fiscal en texte, les passages du droit remontés et les sources
+ * qu'il a citées. Un contrôle de la réponse (`garder`) y relit ses chiffres.
+ */
+export interface CeQueLeModeleAvaitSousLesYeux {
+  dossier: MalicaContext;
+  parametrage: string;
+  fragments: readonly FragmentDeDroit[];
+  sources: ReponseDeConseil["sources"];
+}
+
 /** Ce que le fil garde, tel que l'API le rend. */
 interface MessageDuFil {
   role: "user" | "assistant";
@@ -341,6 +353,14 @@ export async function askMalica(
     conversationId?: string | null;
     /** Le raisonneur pour l'analyse, la conversation pour le fil rapide. */
     mode?: DeepSeekRole;
+    /**
+     * Le contrôle de la réponse AVANT qu'elle soit rangée au fil — quand
+     * DeepSeek répond en repli de « Parler à Malica ». L'assistant y passe la
+     * réponse dans sa garde des chiffres, contre ce que DeepSeek avait sous
+     * les yeux : une phrase chiffrée sans source est retirée, et c'est la
+     * version contrôlée qui est rangée et rendue. Sans lui, rien ne change.
+     */
+    garder?: (reponse: string, vus: CeQueLeModeleAvaitSousLesYeux) => string;
   },
 ): Promise<ReponseDeMalica> {
   const apiKey = process.env["DEEPSEEK_API_KEY"];
@@ -541,13 +561,19 @@ export async function askMalica(
       ? `${lu.reponse}\n\n${texte(input.locale, "pme.conseil.sansCabinet")}`
       : lu.reponse;
 
+  // La réponse, telle qu'elle sera rangée ET rendue : contrôlée d'abord, si
+  // l'appelant le demande. Le fil ne garde jamais ce que l'écran n'a pas vu.
+  const reponseRangee = input.garder
+    ? input.garder(reponseRendue, { dossier, parametrage, fragments, sources: lu.sources })
+    : reponseRendue;
+
   // Le fil garde l'échange. La question et la réponse partent ensemble : une
   // question rangée seule laisserait un fil qui interroge sans jamais répondre.
   await api.rpc<void>("conversations", "ajouter", [
     {
       conversationId,
       question: input.question,
-      reponse: reponseRendue,
+      reponse: reponseRangee,
       raisonnement: result.reasoning,
       model: result.model,
       tokensIn: result.tokensIn,
@@ -629,7 +655,7 @@ export async function askMalica(
   }
 
   return {
-    answer: reponseRendue,
+    answer: reponseRangee,
     // Le raisonnement du modèle ne part pas au navigateur (ANO-023, 21 octobre
     // 2026) : il est au journal des agents, lisible de la tour. Montré au
     // client, il exposait la mécanique interne — et parfois des doutes que la

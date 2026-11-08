@@ -1,0 +1,349 @@
+{
+  "id": "001",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "A",
+  "scenario": "un_taux",
+  "realisme": [],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "Bon de Livraison/Facture",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Sirvane Store SARL",
+      "nomAr": null,
+      "enseigne": "SIRVANE STORE",
+      "matricule": "2815004Q/A/M/000",
+      "matriculeImprime": "2815004Q/A/M/000",
+      "adresse": "Zone commerciale Ezzahra, bloc C, 2034 Ezzahra",
+      "telephone": "00 56 632 441",
+      "fax": "00 35 266 611",
+      "email": "vente@sirvane-store.example",
+      "site": "www.sirvane-store.example",
+      "rc": "B494067962022",
+      "rib": "99 340 9403398267119 10",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C2644347",
+      "couleur": "#6b2fa0",
+      "slogan": "informatique · bureautique · réseau",
+      "magasin": "12",
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "09/08/2026",
+    "chargee": "Hedi Belkhouja",
+    "votreReference": "Commande téléphonique",
+    "articles": [
+      {
+        "designation": "Écran 24 pouces IPS",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "ECR-24IPS",
+        "codeBarre": "6198052301238",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "S N : 181541693118196",
+          "D1 **1.00"
+        ]
+      },
+      {
+        "designation": "Cartouche toner noir",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "TNR-N26A",
+        "codeBarre": "6196905431040",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Barrette mémoire DDR4 16 Go",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "RAM-D4-16",
+        "codeBarre": "6195135685285",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "S N : 883355992619284",
+          "D1 **1.00"
+        ]
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": "842,849",
+    "enLettres": "Arrêtée la présente pièce à la somme de: mille deux dinars et huit cents millimes",
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Sirvane Store SARL",
+      "document_date": "09/08/2026",
+      "references.numero": "FAC-26M12LIV-268173",
+      "references.matricule_fiscal": "2815004Q/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Zone commerciale Ezzahra, bloc C, 2034 Ezzahra",
+      "telephone_emetteur": "00 56 632 441",
+      "registre_commerce_emetteur": "B494067962022",
+      "rib_emetteur": "99 340 9403398267119 10",
+      "mode_reglement": "CHEQUE",
+      "code_client": "C4516909",
+      "totals.base_ht": "841,849",
+      "totals.vat": "159,951",
+      "totals.ttc": "1 002,800",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Écran 24 pouces IPS",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ttc": "462,900",
+      "articles[0].reference": "ECR-24IPS",
+      "articles[0].total_ht": "388,992",
+      "articles[1].designation": "Cartouche toner noir",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ttc": "186,900",
+      "articles[1].reference": "TNR-N26A",
+      "articles[1].total_ht": "157,059",
+      "articles[2].designation": "Barrette mémoire DDR4 16 Go",
+      "articles[2].quantity": "2",
+      "articles[2].unit_price_ttc": "176,000",
+      "articles[2].reference": "RAM-D4-16",
+      "articles[2].total_ht": "295,798",
+      "montant_en_lettres": "mille deux dinars et huit cents millimes",
+      "conditions_generales": "Les marchandises restent la propriété du vendeur jusqu'au paiement intégral. Garantie selon les conditions remises avec le produit ; elle ne couvre ni la casse ni l'oxydation. Aucun échange ni remboursement au-delà de sept jours, emballage d'origine exigé."
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "code_client": "code_client",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ttc": "lignes[0].prix_unitaire_ttc",
+      "articles[0].reference": "lignes[0].reference_article",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ttc": "lignes[1].prix_unitaire_ttc",
+      "articles[1].reference": "lignes[1].reference_article",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ttc": "lignes[2].prix_unitaire_ttc",
+      "articles[2].reference": "lignes[2].reference_article",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres",
+      "conditions_generales": "conditions_generales"
+    }
+  },
+  "graineDuRendu": 723072471,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Sirvane Store SARL",
+      "document_date": "2026-08-09",
+      "currency": "TND",
+      "references.numero": "FAC-26M12LIV-268173",
+      "references.matricule_fiscal": "2815004Q/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "841.849",
+      "totals.vat": "159.951",
+      "totals.ttc": "1002.800",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "841.849",
+      "lines[0].vat_amount": "159.951",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].total_ht": "388.992",
+      "articles[1].quantity": "1.000",
+      "articles[1].total_ht": "157.059",
+      "articles[2].quantity": "2.000",
+      "articles[2].total_ht": "295.798"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "841.849",
+          "0"
+        ],
+        [
+          "4366",
+          "159.951",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "1002.800"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Piège : le titre « Bon de Livraison/Facture » contient « bon de livraison », que ref.titres_de_piece refuse (rejet) — la pièce EST une facture (TVA, timbre, matricules) : l'issue juste est une écriture ; un refus sur le titre est un refus injuste. « Total avec Timbre » vaut HT + timbre, jamais le TTC.",
+      "INCERTAIN — timbre de 1,000 DT (droit fixe du référentiel) : le barème des grandes surfaces (1,500 / 2,000 DT, ref.baremes_des_droits) ne s'applique pas à ces enseignes fictives."
+    ],
+    "concepts": {
+      "type_document": "Bon de Livraison/Facture",
+      "raison_sociale_emetteur": "Sirvane Store SARL",
+      "date_operation": "2026-08-09",
+      "numero_facture": "FAC-26M12LIV-268173",
+      "matricule_fiscal_emetteur": "2815004Q/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "Zone commerciale Ezzahra, bloc C, 2034 Ezzahra",
+      "telephone_email_emetteur": {
+        "telephone": "00 56 632 441",
+        "fax": "00 35 266 611",
+        "email": "vente@sirvane-store.example",
+        "site": "www.sirvane-store.example"
+      },
+      "registre_commerce_emetteur": "B494067962022",
+      "rib_emetteur": "99 340 9403398267119 10",
+      "mode_reglement": "CHEQUE",
+      "total_ht": "841.849",
+      "montant_tva_par_taux": {
+        "19": "159.951"
+      },
+      "total_ttc": "1002.800",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "841.849"
+      },
+      "lignes": [
+        {
+          "designation": "Écran 24 pouces IPS",
+          "quantite": "1",
+          "prix_unitaire_ttc": "462.900",
+          "reference_article": "ECR-24IPS",
+          "montant_ligne_ht": "388.992",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Cartouche toner noir",
+          "quantite": "1",
+          "prix_unitaire_ttc": "186.900",
+          "reference_article": "TNR-N26A",
+          "montant_ligne_ht": "157.059",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Barrette mémoire DDR4 16 Go",
+          "quantite": "2",
+          "prix_unitaire_ttc": "176.000",
+          "reference_article": "RAM-D4-16",
+          "montant_ligne_ht": "295.798",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "mille deux dinars et huit cents millimes",
+      "devise": "TND",
+      "conditions_generales": "Les marchandises restent la propriété du vendeur jusqu'au paiement intégral. Garantie selon les conditions remises avec le produit ; elle ne couvre ni la casse ni l'oxydation. Aucun échange ni remboursement au-delà de sept jours, emballage d'origine exigé."
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "adresse_livraison": "adresse_client",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "cachet_emetteur",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ht",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

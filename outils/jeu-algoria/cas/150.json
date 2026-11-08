@@ -1,0 +1,259 @@
+{
+  "id": "150",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "carte_identification_fiscale",
+  "grille": "carte_identification_fiscale",
+  "langue": "hybride",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "K",
+  "mise_en_page": "K",
+  "scenario": "carte_fiscale",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "froisse",
+    "tampon"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Carte d'identification fiscale",
+    "parties": [
+      {
+        "role": "administration",
+        "nom": "Direction Générale des Impôts",
+        "matricule": null,
+        "est": "administration"
+      },
+      {
+        "role": "contribuable",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "administration",
+      "nom": "Direction Générale des Impôts",
+      "matricule": null,
+      "est": "administration"
+    },
+    "client": {
+      "role": "contribuable",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "DIRECTION GÉNÉRALE DES IMPÔTS",
+        "adresse": "Tunis",
+        "telephone": null
+      },
+      "centre": "SPÉCIMEN",
+      "code": "cachet_signature"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "cadre",
+        "style": "carte",
+        "blocs": [
+          {
+            "k": "entete",
+            "gauche": [
+              [
+                "République Tunisienne"
+              ],
+              [
+                "Ministère des Finances"
+              ]
+            ],
+            "droite": [
+              [
+                "الجمهورية التونسية"
+              ],
+              [
+                "وزارة المالية"
+              ]
+            ]
+          },
+          {
+            "k": "titre",
+            "texte": [
+              "CARTE D'IDENTIFICATION FISCALE / بطاقة التعريف الجبائية"
+            ]
+          },
+          {
+            "k": "champs",
+            "lignes": [
+              [
+                "Matricule fiscal / المعرف الجبائي",
+                {
+                  "c": "matricule_fiscal_complet",
+                  "cls": "gros"
+                }
+              ],
+              [
+                "Raison sociale / الاسم الاجتماعي",
+                {
+                  "c": "raison_sociale"
+                }
+              ],
+              [
+                "Nom commercial / الاسم التجاري",
+                {
+                  "c": "nom_commercial"
+                }
+              ],
+              [
+                "Forme juridique / الشكل القانوني",
+                {
+                  "c": "forme_juridique"
+                }
+              ],
+              [
+                "Activité / النشاط",
+                {
+                  "c": "activite"
+                }
+              ],
+              [
+                "Adresse / العنوان",
+                {
+                  "c": "adresse"
+                }
+              ],
+              [
+                "Régime / النظام",
+                {
+                  "c": "regime_fiscal"
+                }
+              ],
+              [
+                "Début d'activité / بداية النشاط",
+                {
+                  "c": "date_debut_activite"
+                }
+              ],
+              [
+                "Délivrée le / سلمت في",
+                {
+                  "c": "date_delivrance"
+                }
+              ]
+            ]
+          },
+          {
+            "k": "duo",
+            "gauche": [
+              {
+                "k": "texte",
+                "classe": "petit",
+                "morceaux": [
+                  {
+                    "c": "service_emetteur"
+                  },
+                  {
+                    "br": true
+                  },
+                  "Spécimen fictif — jeu d'essai, sans valeur. / نموذج وهمي — لا قيمة له."
+                ]
+              }
+            ],
+            "droite": [
+              {
+                "k": "signatures",
+                "gauche": "",
+                "droite": "Le chef de service / رئيس المصلحة"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "imprime": {
+      "matricule_fiscal_complet": "1958330V/A/M/000",
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "nom_commercial": "ALGORIA FACTORY",
+      "forme_juridique": "SARL",
+      "activite": "Édition de logiciels applicatifs",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "regime_fiscal": "Réel / حقيقي",
+      "date_debut_activite": "11/03/2024",
+      "date_delivrance": "02/09/2026",
+      "service_emetteur": "Bureau de contrôle des impôts de Tunis — service fictif du banc"
+    },
+    "versConcept": {
+      "matricule_fiscal_complet": "matricule_fiscal_complet",
+      "raison_sociale": "raison_sociale",
+      "nom_commercial": "nom_commercial",
+      "forme_juridique": "forme_juridique",
+      "activite": "activite",
+      "adresse": "adresse",
+      "regime_fiscal": "regime_fiscal",
+      "date_debut_activite": "date_debut_activite",
+      "date_delivrance": "date_delivrance",
+      "service_emetteur": "service_emetteur"
+    },
+    "marques": {
+      "cachet_emetteur": "cachet_signature"
+    },
+    "cheminsDuDossier": [
+      "matricule_fiscal_complet"
+    ]
+  },
+  "graineDuRendu": 144275923,
+  "attendu": {
+    "concepts": {
+      "matricule_fiscal_complet": "1958330V/A/M/000",
+      "raison_sociale": "ALGORIA FACTORY SARL",
+      "nom_commercial": "ALGORIA FACTORY",
+      "forme_juridique": "SARL",
+      "activite": "Édition de logiciels applicatifs",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "regime_fiscal": "reel",
+      "date_debut_activite": "2024-03-11",
+      "date_delivrance": "2026-09-02",
+      "service_emetteur": "Bureau de contrôle des impôts de Tunis — service fictif du banc",
+      "identifiant_unique": "1958330",
+      "cle_controle": "V",
+      "code_tva": "A",
+      "code_categorie": "M",
+      "numero_etablissement": "000",
+      "cachet_signature": true
+    },
+    "confondus": {
+      "identifiant_unique": "matricule_fiscal_complet",
+      "cle_controle": "matricule_fiscal_complet",
+      "code_tva": "matricule_fiscal_complet",
+      "code_categorie": "matricule_fiscal_complet",
+      "numero_etablissement": "matricule_fiscal_complet"
+    },
+    "notes": [
+      "Le matricule s'imprime UNE fois, en clair : identifiant, clé, code TVA, catégorie et établissement se lisent dedans (`confondus`).",
+      "Pièce d'une administration : noms plains, aucun logo, mention « Spécimen fictif » imprimée. INCERTAIN — la mise en page de la carte réelle n'a pas été relue."
+    ],
+    "non_imprimes": [
+      "identifiant_unique_rne"
+    ]
+  }
+}

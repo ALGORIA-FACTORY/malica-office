@@ -56,6 +56,7 @@ import {
   type ResultatControle,
 } from "./controles.ts";
 import { lireLeChange, type ChangeDuJugement } from "./cours-de-change.ts";
+import { partiesSelonLeSens } from "./parties-selon-le-sens.ts";
 import { normaliserMontants, type ResultatNormalisation } from "./normaliser-montants.ts";
 import {
   lireLesReglagesComptables,
@@ -944,8 +945,44 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     [pieceId, HAUT_DE_PAGE, extraction.id],
   );
 
+  /*
+   * LES PARTIES SELON LE SENS CONFIRMÉ (5 novembre 2026, option A du dirigeant).
+   *
+   * Le sens corrigé après la lecture ne relit pas l'image : la lecture se rejoue sur ses
+   * jetons, avec le sens confirmé, et le matricule du dossier place les parties
+   * (`parties-selon-le-sens.ts`). Sans sens confirmé, la lecture fait foi.
+   */
+  const lues = payload.references ?? {};
+  const places = await partiesSelonLeSens(db, {
+    tenantId: piece.tenant_id,
+    packId: pack,
+    jour: dateRef,
+    documentKind: piece.document_kind,
+    documentKindStatut: piece.document_kind_statut,
+    plan,
+    lues: {
+      emetteur: lues[NOM_MATRICULE_EMETTEUR] ?? null,
+      client: lues[NOM_MATRICULE_CLIENT] ?? null,
+    },
+    dossier: { matricule: org.legal_id, raisonSociale: org.name },
+    devise: (await lireLesDevises(db)).find((d) => d.code === org.currency),
+    formatDuMatricule,
+  });
+  const payloadJuge: PayloadLu = places
+    ? {
+        ...payload,
+        references: Object.fromEntries([
+          ...Object.entries(lues).filter(
+            ([k]) => k !== NOM_MATRICULE_EMETTEUR && k !== NOM_MATRICULE_CLIENT,
+          ),
+          ...(places.emetteur ? [[NOM_MATRICULE_EMETTEUR, places.emetteur]] : []),
+          ...(places.client ? [[NOM_MATRICULE_CLIENT, places.client]] : []),
+        ]) as Record<string, string>,
+      }
+    : payload;
+
   const lecture: LectureAJuger = {
-    payload,
+    payload: payloadJuge,
     imprime: (champ) => imprime.get(champ)?.join(" ") ?? null,
     titre: haut.length > 0 ? haut.map((t) => t.text).join(" ") : null,
     sensDit,
@@ -988,7 +1025,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
   // La clé de doublon, rangée avec le jugement : la file du cabinet la relit
   // au moment où elle est lue (`app.doublon_probable`), quel que soit l'ordre
   // des lectures. Le jugement pose la même règle, avec cette clé-ci.
-  const refs = payload.references ?? {};
+  const refs = payloadJuge.references ?? {};
   const cle = cleDeDoublon(
     {
       emetteurIdentifiantFiscal: refs[NOM_MATRICULE_EMETTEUR] ?? null,

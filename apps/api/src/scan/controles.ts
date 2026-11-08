@@ -603,6 +603,25 @@ function destinataire(p: PieceAControler, ctx: ContexteControle): ResultatContro
       motif: `Le matricule fiscal de ${role} n'a pas été lu : impossible de vérifier que la pièce concerne ${ctx.tenant.nom}.`,
       preuves: { role },
     };
+  /*
+   * Une lettre CALCULÉE (matricule imprimé sans sa lettre, décision du 5 novembre
+   * 2026) qui diffère de celle du dossier, sur les mêmes chiffres, ne prouve pas
+   * une autre entreprise : la règle n'est pas publiée par la DGI et quelques
+   * matricules réels y échappent. On ne rejette pas sur ce qu'on n'a pas lu.
+   */
+  const luN = normaliserMatricule(lu, ctx.formatDuMatricule);
+  const tenantN = normaliserMatricule(tenant, ctx.formatDuMatricule);
+  if (
+    (luN.forme === "partielle" || tenantN.forme === "partielle") &&
+    luN.chiffres === tenantN.chiffres &&
+    luN.cle !== tenantN.cle
+  )
+    return {
+      code: "destinataire",
+      statut: "reserve",
+      motif: `Le matricule de ${role} est imprimé sans sa lettre de contrôle, et la lettre calculée ne confirme pas celle de ${ctx.tenant.nom} : à vérifier.`,
+      preuves: { role, lu: partie.identifiantFiscal, attendu: ctx.tenant.identifiantFiscal },
+    };
   if (!memeMatricule(lu, tenant, ctx.formatDuMatricule))
     return {
       code: "destinataire",

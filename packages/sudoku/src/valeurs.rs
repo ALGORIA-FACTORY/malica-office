@@ -8,6 +8,9 @@ use std::collections::BTreeMap;
 /// Dénominateur des parties par million : l'unité du contrat, pas un taux.
 pub const PPM: i128 = 1_000_000;
 
+/// Un pourcentage s'exprime sur cent : l'unité du symbole « % », pas un taux.
+pub const CENT: i128 = 100;
+
 /// Division arrondie au plus proche, demi loin de zéro (d > 0).
 pub fn div_arrondi(n: i128, d: i128) -> i128 {
     if n >= 0 {
@@ -26,11 +29,17 @@ pub struct Coef {
 
 impl Coef {
     pub fn ppm(ppm: i64) -> Self {
-        Coef { num: ppm as i128, den: PPM }
+        Coef {
+            num: ppm as i128,
+            den: PPM,
+        }
     }
     /// Le taux appliqué à une base majorée des charges d'assiette (ppm cumulés).
     pub fn avec_assiette(ppm: i64, assiette_ppm: i64) -> Self {
-        Coef { num: ppm as i128 * (PPM + assiette_ppm as i128), den: PPM * PPM }
+        Coef {
+            num: ppm as i128 * (PPM + assiette_ppm as i128),
+            den: PPM * PPM,
+        }
     }
     pub fn applique(&self, b: i64) -> i64 {
         div_arrondi(b as i128 * self.num, self.den) as i64
@@ -62,12 +71,18 @@ impl Coef {
     }
     /// Les bases b telles que |arrondi(b × coef) − m| ≤ tol.
     pub fn bases_a_tolerance(&self, m: i64, tol: i64) -> (i64, i64) {
-        (self.premiere_base(m - tol), self.premiere_base(m + tol + 1) - 1)
+        (
+            self.premiere_base(m - tol),
+            self.premiere_base(m + tol + 1) - 1,
+        )
     }
     /// Les bases b telles que arrondi(b × coef) = m exactement, élargies de tol unités
     /// de base : la marge des bases déduites, non imprimées.
     pub fn bases_deduites(&self, m: i64, tol: i64) -> (i64, i64) {
-        (self.premiere_base(m) - tol, self.premiere_base(m + 1) - 1 + tol)
+        (
+            self.premiere_base(m) - tol,
+            self.premiere_base(m + 1) - 1 + tol,
+        )
     }
 }
 
@@ -93,10 +108,20 @@ impl Domaine {
         let mut valeurs: BTreeMap<i64, Valeur> = BTreeMap::new();
         for (i, j) in jetons.iter().enumerate() {
             for l in &j.montants {
-                let e = valeurs.entry(l.v).or_insert(Valeur { forte: false, occurrences: Vec::new() });
+                let e = valeurs.entry(l.v).or_insert(Valeur {
+                    forte: false,
+                    occurrences: Vec::new(),
+                });
                 e.forte |= l.forte;
-                if !e.occurrences.iter().any(|o| o.jeton == i && o.forte == l.forte) {
-                    e.occurrences.push(Occurrence { jeton: i, forte: l.forte });
+                if !e
+                    .occurrences
+                    .iter()
+                    .any(|o| o.jeton == i && o.forte == l.forte)
+                {
+                    e.occurrences.push(Occurrence {
+                        jeton: i,
+                        forte: l.forte,
+                    });
                 }
             }
         }
@@ -117,7 +142,10 @@ impl Domaine {
         if lo > hi {
             return Vec::new();
         }
-        self.valeurs.range(lo..=hi).map(|(v, e)| (*v, !e.forte)).collect()
+        self.valeurs
+            .range(lo..=hi)
+            .map(|(v, e)| (*v, !e.forte))
+            .collect()
     }
 
     pub fn toutes(&self) -> Vec<(i64, bool)> {

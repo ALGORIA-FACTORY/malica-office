@@ -77,8 +77,11 @@ describe("un rappel en attente suspend l'inscription", { skip: !BASE_CONFIGUREE 
       mode: "pdf-text",
       confianceParChamp: { "totals.ttc": 0.95 },
     });
-    // Le « Oui » confirme le type avant d'inscrire (le verrou R2) : l'écran le fait.
-    await rpc("capture", "preciser", p.id, "document_kind", "facture_achat");
+    // Le type s'établit avant d'inscrire (le verrou R2) : le cabinet engagé
+    // l'établit, la PME ne pose plus le sens (lot S5).
+    await sousIdentite(expert.id, (db) =>
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [p.id]),
+    );
     await rpc("capture", "analyser", p.id);
     return p.id;
   }
@@ -138,12 +141,15 @@ describe("un rappel en attente suspend l'inscription", { skip: !BASE_CONFIGUREE 
     await fermerLePool();
   });
 
-  it("le « Oui » de la PME est refusé tant que le rappel attend, et le dit", async () => {
+  // Le cabinet est engagé : c'est lui qui propose et inscrit (lot S5 — la PME
+  // n'inscrit plus rien d'un dossier confié, quel que soit son mode).
+
+  it("la proposition est refusée tant que le rappel attend, et le dit", async () => {
     const id = await pieceTransmise("oui-sous-rappel");
     await rpc("collab", "demanderSurPiece", id, "rappel");
 
     await assert.rejects(
-      () => rpc("office", "proposerDepuisPiece", id),
+      () => rpcCab("office", "proposerDepuisPiece", id),
       /refus\.piece\.rappelEnAttente/,
     );
     assert.equal((await etatDe(id)).status, "lue", "rien n'a été proposé ni inscrit");
@@ -152,28 +158,33 @@ describe("un rappel en attente suspend l'inscription", { skip: !BASE_CONFIGUREE 
     await rpcCab("collab", "repondreSurPiece", id, "rappel", true, null);
     assert.equal((await etatDe(id)).vis, "entite");
 
-    // La demande tranchée, l'inscription redevient possible.
-    const ecriture = (await rpc("office", "proposerDepuisPiece", id)) as string;
-    await rpc("office", "book", ecriture);
-    assert.equal((await etatDe(id)).status, "comptabilisee");
+    // La demande tranchée, la pièce renvoyée : l'inscription redevient possible.
+    await rpc("collab", "setPieceVis", id, "partage");
+    const ecriture = (await rpcCab("office", "proposerDepuisPiece", id)) as string;
+    await rpcCab("office", "book", ecriture);
+    assert.equal((await etatDe(id)).status, "supervisee");
   });
 
   it("une écriture proposée AVANT la demande ne s'inscrit pas pendant qu'elle attend", async () => {
     const id = await pieceTransmise("proposee-puis-rappel");
-    const ecriture = (await rpc("office", "proposerDepuisPiece", id)) as string;
+    const ecriture = (await rpcCab("office", "proposerDepuisPiece", id)) as string;
     await rpc("collab", "demanderSurPiece", id, "rappel");
 
-    await assert.rejects(() => rpc("office", "book", ecriture), /refus\.piece\.rappelEnAttente/);
     await assert.rejects(
       () => rpcCab("office", "book", ecriture),
       /refus\.piece\.rappelEnAttente/,
-      "le cabinet non plus : il tranche d'abord la demande",
+      "le cabinet tranche d'abord la demande",
+    );
+    // La PME, elle, n'inscrit jamais l'écriture d'un dossier confié.
+    await assert.rejects(
+      () => rpc("office", "book", ecriture),
+      /refus\.(piece\.rappelEnAttente|inscription\.reservee_au_cabinet|ecriture\.non_inscriptible)$/,
     );
 
     // Refusé, le rappel ne bloque plus rien.
     await rpcCab("collab", "repondreSurPiece", id, "rappel", false, "Déjà en cours de saisie.");
-    await rpc("office", "book", ecriture);
-    assert.equal((await etatDe(id)).status, "comptabilisee");
+    await rpcCab("office", "book", ecriture);
+    assert.equal((await etatDe(id)).status, "supervisee");
   });
 
   it("la notification du refus porte le verdict ET la note du cabinet", async () => {

@@ -29,10 +29,24 @@ export interface ReglageDeLAssistant {
   tours_transmis: number;
 }
 
+/**
+ * Le plafond PROPRE à l'assistant (décision du dirigeant, 8 novembre 2026 :
+ * 150 $ par mois, livré par migration, réglable dans la tour) et ce qu'il en
+ * a déjà dépensé sur Claude. Atteint, l'assistant passe au repli de la chaîne
+ * sans appeler Claude ; la lecture des pièces n'en est pas touchée.
+ */
+interface PlafondDeLAssistant {
+  plafond: number;
+  periode: "jour" | "mois";
+  depense: number;
+  epuise: boolean;
+}
+
 export interface ConfigurationDeLAssistant {
   consigne: { id: string; texte: string; decide_le: string };
   reglage: ReglageDeLAssistant;
   tarifs: TarifDeModele[];
+  plafond: PlafondDeLAssistant;
 }
 
 const EFFORTS: readonly Effort[] = ["low", "medium", "high"];
@@ -67,7 +81,24 @@ export function lireConfigurationAssistant(brut: unknown): ConfigurationDeLAssis
       tours_transmis: Number(r.tours_transmis),
     },
     tarifs: (c.tarifs ?? []).map((t) => ({ ...t, in: Number(t.in), out: Number(t.out) })),
+    plafond: lirePlafond(c.plafond),
   };
+}
+
+/**
+ * Le plafond lu en base. Absent ou illisible, c'est une panne qui se dit
+ * (R4) : un assistant sans plafond dépenserait sans borne sur le budget de la
+ * lecture des pièces.
+ */
+function lirePlafond(brut: unknown): PlafondDeLAssistant {
+  const p = brut as Partial<Record<keyof PlafondDeLAssistant, unknown>> | null | undefined;
+  const plafond = Number(p?.plafond);
+  const depense = Number(p?.depense);
+  if (!p || !Number.isFinite(plafond) || !Number.isFinite(depense)) {
+    throw new Error("assistant.plafond_absent");
+  }
+  if (p.periode !== "jour" && p.periode !== "mois") throw new Error("assistant.plafond_absent");
+  return { plafond, periode: p.periode, depense, epuise: p.epuise === true || depense >= plafond };
 }
 
 export interface ChoixDuModele {

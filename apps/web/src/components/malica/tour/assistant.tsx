@@ -266,3 +266,107 @@ export function LeReglageDeLAssistant() {
     </div>
   );
 }
+
+/**
+ * Le plafond PROPRE de l'assistant — décision du dirigeant du 8 novembre
+ * 2026 : 150 $ par mois, livré par migration (R10). La lecture des pièces
+ * garde ainsi au moins 350 $ des 500 $ de Claude. Au-delà, l'assistant passe
+ * au repli DeepSeek de la chaîne, puis s'arrête si DeepSeek est épuisé ; la
+ * lecture des pièces n'en est pas touchée.
+ */
+export function LePlafondDeLAssistant() {
+  const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const { retour, setRetour, echec } = useRetour();
+  const etat = useQuery({ queryKey: CLE, queryFn: () => office().tour.assistantEtat() });
+  const enVigueur = etat.data?.plafond ?? null;
+  const [plafond, setPlafond] = useState("");
+  const [periode, setPeriode] = useState<"jour" | "mois">("mois");
+  const [motif, setMotif] = useState("");
+
+  useEffect(() => {
+    if (!enVigueur) return;
+    setPlafond(String(enVigueur.plafond));
+    setPeriode(enVigueur.periode);
+  }, [enVigueur]);
+
+  const valide = /^\d+(\.\d{1,2})?$/.test(plafond.trim());
+  const regler = useMutation({
+    mutationFn: () => office().tour.reglerPlafondDeLAssistant(plafond.trim(), periode, motif),
+    onSuccess: async () => {
+      setRetour(t("tour.fait"));
+      setMotif("");
+      await qc.invalidateQueries({ queryKey: CLE });
+    },
+    onError: echec,
+  });
+
+  return (
+    <div className={CARTE}>
+      <h2 className={TITRE}>{t("tour.assistant.plafond")}</h2>
+      <p className={TEXTE}>{t("tour.assistant.plafond.aide")}</p>
+      {enVigueur ? (
+        <p className={TEXTE}>
+          {t(
+            enVigueur.periode === "jour"
+              ? "tour.assistant.plafond.etatJour"
+              : "tour.assistant.plafond.etatMois",
+            {
+              depense: String(Math.round(Number(enVigueur.depense) * 100) / 100),
+              plafond: String(enVigueur.plafond),
+              date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
+                new Date(enVigueur.decide_le),
+              ),
+            },
+          )}
+        </p>
+      ) : null}
+      {enVigueur?.epuise ? <p className={ALERTE}>{t("tour.assistant.plafond.atteint")}</p> : null}
+      <div className="mt-2 flex flex-col gap-2">
+        <label className={TEXTE}>
+          {t("tour.assistant.plafond.montant")}
+          <input
+            value={plafond}
+            onChange={(e) => setPlafond(e.target.value)}
+            inputMode="decimal"
+            aria-label={t("tour.assistant.plafond.montant")}
+            className={`${CHAMP} mt-1 w-full`}
+          />
+        </label>
+        <label className={TEXTE}>
+          {t("tour.assistant.plafond.periode")}
+          <select
+            value={periode}
+            onChange={(e) => setPeriode(e.target.value === "jour" ? "jour" : "mois")}
+            aria-label={t("tour.assistant.plafond.periode")}
+            className={`${CHAMP} mt-1 w-full`}
+          >
+            <option value="mois">{t("tour.assistant.plafond.parMois")}</option>
+            <option value="jour">{t("tour.assistant.plafond.parJour")}</option>
+          </select>
+        </label>
+        {!valide ? <p className={ALERTE}>{t("tour.assistant.plafond.borne")}</p> : null}
+        <input
+          value={motif}
+          onChange={(e) => setMotif(e.target.value)}
+          placeholder={t("common.motif")}
+          aria-label={t("common.motif")}
+          className={CHAMP}
+        />
+        <button
+          type="button"
+          className={BOUTON}
+          disabled={regler.isPending || motif.trim() === "" || !valide}
+          onClick={() => regler.mutate()}
+        >
+          {t("tour.enregistrer")}
+        </button>
+      </div>
+      {retour ? (
+        <p className={TEXTE} aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
+    </div>
+  );
+}

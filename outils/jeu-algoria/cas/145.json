@@ -1,0 +1,549 @@
+{
+  "id": "145",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "declaration_cnss",
+  "grille": "declaration_cnss_trimestrielle",
+  "langue": "hybride",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "G",
+  "mise_en_page": "G-bande",
+  "scenario": "cnss_t2",
+  "realisme": [
+    "biais",
+    "grain",
+    "photocopie",
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Déclaration trimestrielle des salaires",
+    "parties": [
+      {
+        "role": "employeur",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "administration",
+        "nom": "CNSS",
+        "matricule": null,
+        "est": "administration"
+      },
+      {
+        "role": "salarie",
+        "nom": "Mehdi Varnasse",
+        "matricule": null,
+        "est": "tiers"
+      },
+      {
+        "role": "salarie",
+        "nom": "Sana Belkorvi",
+        "matricule": null,
+        "est": "tiers"
+      },
+      {
+        "role": "salarie",
+        "nom": "Oussama Trezini",
+        "matricule": null,
+        "est": "tiers"
+      },
+      {
+        "role": "salarie",
+        "nom": "Rim Zaghvani",
+        "matricule": null,
+        "est": "tiers"
+      },
+      {
+        "role": "salarie",
+        "nom": "Anis Quermadi",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "employeur",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "administration",
+      "nom": "CNSS",
+      "matricule": null,
+      "est": "administration"
+    },
+    "style": "bande",
+    "police": null,
+    "couleur": "#1f3b63",
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+        "telephone": "00 71 940 517",
+        "est": "dossier"
+      },
+      "code": "employeur_signature_cachet"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            "Caisse Nationale de Sécurité Sociale"
+          ],
+          [
+            "Déclaration des salaires / التصريح بالأجور"
+          ]
+        ],
+        "droite": [
+          [
+            "الصندوق الوطني للضمان الاجتماعي"
+          ],
+          [
+            "Trimestre / الثلاثية",
+            " ",
+            {
+              "c": "trimestre"
+            },
+            " — ",
+            {
+              "c": "annee"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "DÉCLARATION TRIMESTRIELLE DES SALAIRES / التصريح الثلاثي بالأجور"
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Employeur / المؤجر",
+            {
+              "c": "employeur_raison_sociale"
+            }
+          ],
+          [
+            "N° employeur / رقم المؤجر",
+            {
+              "c": "employeur_numero_cnss"
+            }
+          ],
+          [
+            "Matricule fiscal / المعرف الجبائي",
+            {
+              "c": "employeur_matricule_fiscal"
+            }
+          ],
+          [
+            "Régime / النظام",
+            {
+              "c": "regime"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "N°",
+          "Matricule CNSS / رقم الضمان",
+          "Nom et prénom / الاسم واللقب",
+          "أفريل",
+          "ماي",
+          "جوان",
+          "Trimestre / الثلاثية"
+        ],
+        "nombres": [
+          3,
+          4,
+          5,
+          6
+        ],
+        "lignes": [
+          [
+            {
+              "c": "lignes[0].ligne_ordre"
+            },
+            {
+              "c": "lignes[0].ligne_matricule_cnss"
+            },
+            {
+              "c": "lignes[0].ligne_nom_prenom"
+            },
+            {
+              "c": "lignes[0].ligne_salaire_mois1"
+            },
+            {
+              "c": "lignes[0].ligne_salaire_mois2"
+            },
+            {
+              "c": "lignes[0].ligne_salaire_mois3"
+            },
+            {
+              "c": "lignes[0].ligne_salaire_trimestre"
+            }
+          ],
+          [
+            {
+              "c": "lignes[1].ligne_ordre"
+            },
+            {
+              "c": "lignes[1].ligne_matricule_cnss"
+            },
+            {
+              "c": "lignes[1].ligne_nom_prenom"
+            },
+            {
+              "c": "lignes[1].ligne_salaire_mois1"
+            },
+            {
+              "c": "lignes[1].ligne_salaire_mois2"
+            },
+            {
+              "c": "lignes[1].ligne_salaire_mois3"
+            },
+            {
+              "c": "lignes[1].ligne_salaire_trimestre"
+            }
+          ],
+          [
+            {
+              "c": "lignes[2].ligne_ordre"
+            },
+            {
+              "c": "lignes[2].ligne_matricule_cnss"
+            },
+            {
+              "c": "lignes[2].ligne_nom_prenom"
+            },
+            {
+              "c": "lignes[2].ligne_salaire_mois1"
+            },
+            {
+              "c": "lignes[2].ligne_salaire_mois2"
+            },
+            {
+              "c": "lignes[2].ligne_salaire_mois3"
+            },
+            {
+              "c": "lignes[2].ligne_salaire_trimestre"
+            }
+          ],
+          [
+            {
+              "c": "lignes[3].ligne_ordre"
+            },
+            {
+              "c": "lignes[3].ligne_matricule_cnss"
+            },
+            {
+              "c": "lignes[3].ligne_nom_prenom"
+            },
+            {
+              "c": "lignes[3].ligne_salaire_mois1"
+            },
+            {
+              "c": "lignes[3].ligne_salaire_mois2"
+            },
+            {
+              "c": "lignes[3].ligne_salaire_mois3"
+            },
+            {
+              "c": "lignes[3].ligne_salaire_trimestre"
+            }
+          ],
+          [
+            {
+              "c": "lignes[4].ligne_ordre"
+            },
+            {
+              "c": "lignes[4].ligne_matricule_cnss"
+            },
+            {
+              "c": "lignes[4].ligne_nom_prenom"
+            },
+            {
+              "c": "lignes[4].ligne_salaire_mois1"
+            },
+            {
+              "c": "lignes[4].ligne_salaire_mois2"
+            },
+            {
+              "c": "lignes[4].ligne_salaire_mois3"
+            },
+            {
+              "c": "lignes[4].ligne_salaire_trimestre"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "A",
+            "Nombre de salariés / عدد الأجراء",
+            {
+              "c": "nombre_salaries"
+            }
+          ],
+          [
+            "B",
+            "Masse salariale déclarée / جملة الأجور المصرح بها",
+            {
+              "c": "masse_salariale_declaree"
+            }
+          ],
+          [
+            "C",
+            "Taux global / النسبة الجملية",
+            {
+              "c": "taux_global"
+            }
+          ],
+          [
+            "D",
+            "Cotisations dues (B × C) / الاشتراكات المستوجبة",
+            {
+              "c": "montant_cotisations"
+            }
+          ],
+          [
+            "E",
+            "Total à payer / المبلغ الجملي للدفع",
+            {
+              "c": "montant_total_a_payer"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Déposée le / أودعت في",
+          " ",
+          {
+            "c": "date_depot"
+          }
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "Cachet et signature de l'employeur / ختم وإمضاء المؤجر"
+      }
+    ],
+    "imprime": {
+      "trimestre": "2",
+      "annee": "2026",
+      "employeur_raison_sociale": "ALGORIA FACTORY SARL",
+      "employeur_numero_cnss": "99418273-06",
+      "employeur_matricule_fiscal": "1958330V/A/M/000",
+      "regime": "Salariés non agricoles / الأجراء غير الفلاحيين",
+      "lignes[0].ligne_ordre": "1",
+      "lignes[0].ligne_matricule_cnss": "99000002-11",
+      "lignes[0].ligne_nom_prenom": "مهدي فارناس",
+      "lignes[0].ligne_salaire_mois1": "4 200,000",
+      "lignes[0].ligne_salaire_mois2": "4 200,000",
+      "lignes[0].ligne_salaire_mois3": "4 200,000",
+      "lignes[0].ligne_salaire_trimestre": "12 600,000",
+      "lignes[1].ligne_ordre": "2",
+      "lignes[1].ligne_matricule_cnss": "99007921-48",
+      "lignes[1].ligne_nom_prenom": "سناء بلكورفي",
+      "lignes[1].ligne_salaire_mois1": "3 650,000",
+      "lignes[1].ligne_salaire_mois2": "3 650,000",
+      "lignes[1].ligne_salaire_mois3": "3 650,000",
+      "lignes[1].ligne_salaire_trimestre": "10 950,000",
+      "lignes[2].ligne_ordre": "3",
+      "lignes[2].ligne_matricule_cnss": "99015840-85",
+      "lignes[2].ligne_nom_prenom": "أسامة ترزيني",
+      "lignes[2].ligne_salaire_mois1": "3 100,000",
+      "lignes[2].ligne_salaire_mois2": "3 100,000",
+      "lignes[2].ligne_salaire_mois3": "3 100,000",
+      "lignes[2].ligne_salaire_trimestre": "9 300,000",
+      "lignes[3].ligne_ordre": "4",
+      "lignes[3].ligne_matricule_cnss": "99023759-25",
+      "lignes[3].ligne_nom_prenom": "ريم زغفاني",
+      "lignes[3].ligne_salaire_mois1": "1 850,000",
+      "lignes[3].ligne_salaire_mois2": "1 850,000",
+      "lignes[3].ligne_salaire_mois3": "1 850,000",
+      "lignes[3].ligne_salaire_trimestre": "5 550,000",
+      "lignes[4].ligne_ordre": "5",
+      "lignes[4].ligne_matricule_cnss": "99031678-62",
+      "lignes[4].ligne_nom_prenom": "أنيس قرمادي",
+      "lignes[4].ligne_salaire_mois1": "2 800,000",
+      "lignes[4].ligne_salaire_mois2": "2 800,000",
+      "lignes[4].ligne_salaire_mois3": "2 800,000",
+      "lignes[4].ligne_salaire_trimestre": "8 400,000",
+      "nombre_salaries": "5",
+      "masse_salariale_declaree": "46 800,000",
+      "taux_global": "25,75 %",
+      "montant_cotisations": "12 051,000",
+      "montant_total_a_payer": "12 051,000",
+      "date_depot": "09/07/2026"
+    },
+    "versConcept": {
+      "trimestre": "trimestre",
+      "annee": "annee",
+      "employeur_raison_sociale": "employeur_raison_sociale",
+      "employeur_numero_cnss": "employeur_numero_cnss",
+      "employeur_matricule_fiscal": "employeur_matricule_fiscal",
+      "regime": "regime",
+      "lignes[0].ligne_ordre": "lignes[0].ligne_ordre",
+      "lignes[0].ligne_matricule_cnss": "lignes[0].ligne_matricule_cnss",
+      "lignes[0].ligne_nom_prenom": "lignes[0].ligne_nom_prenom",
+      "lignes[0].ligne_salaire_mois1": "lignes[0].ligne_salaire_mois1",
+      "lignes[0].ligne_salaire_mois2": "lignes[0].ligne_salaire_mois2",
+      "lignes[0].ligne_salaire_mois3": "lignes[0].ligne_salaire_mois3",
+      "lignes[0].ligne_salaire_trimestre": "lignes[0].ligne_salaire_trimestre",
+      "lignes[1].ligne_ordre": "lignes[1].ligne_ordre",
+      "lignes[1].ligne_matricule_cnss": "lignes[1].ligne_matricule_cnss",
+      "lignes[1].ligne_nom_prenom": "lignes[1].ligne_nom_prenom",
+      "lignes[1].ligne_salaire_mois1": "lignes[1].ligne_salaire_mois1",
+      "lignes[1].ligne_salaire_mois2": "lignes[1].ligne_salaire_mois2",
+      "lignes[1].ligne_salaire_mois3": "lignes[1].ligne_salaire_mois3",
+      "lignes[1].ligne_salaire_trimestre": "lignes[1].ligne_salaire_trimestre",
+      "lignes[2].ligne_ordre": "lignes[2].ligne_ordre",
+      "lignes[2].ligne_matricule_cnss": "lignes[2].ligne_matricule_cnss",
+      "lignes[2].ligne_nom_prenom": "lignes[2].ligne_nom_prenom",
+      "lignes[2].ligne_salaire_mois1": "lignes[2].ligne_salaire_mois1",
+      "lignes[2].ligne_salaire_mois2": "lignes[2].ligne_salaire_mois2",
+      "lignes[2].ligne_salaire_mois3": "lignes[2].ligne_salaire_mois3",
+      "lignes[2].ligne_salaire_trimestre": "lignes[2].ligne_salaire_trimestre",
+      "lignes[3].ligne_ordre": "lignes[3].ligne_ordre",
+      "lignes[3].ligne_matricule_cnss": "lignes[3].ligne_matricule_cnss",
+      "lignes[3].ligne_nom_prenom": "lignes[3].ligne_nom_prenom",
+      "lignes[3].ligne_salaire_mois1": "lignes[3].ligne_salaire_mois1",
+      "lignes[3].ligne_salaire_mois2": "lignes[3].ligne_salaire_mois2",
+      "lignes[3].ligne_salaire_mois3": "lignes[3].ligne_salaire_mois3",
+      "lignes[3].ligne_salaire_trimestre": "lignes[3].ligne_salaire_trimestre",
+      "lignes[4].ligne_ordre": "lignes[4].ligne_ordre",
+      "lignes[4].ligne_matricule_cnss": "lignes[4].ligne_matricule_cnss",
+      "lignes[4].ligne_nom_prenom": "lignes[4].ligne_nom_prenom",
+      "lignes[4].ligne_salaire_mois1": "lignes[4].ligne_salaire_mois1",
+      "lignes[4].ligne_salaire_mois2": "lignes[4].ligne_salaire_mois2",
+      "lignes[4].ligne_salaire_mois3": "lignes[4].ligne_salaire_mois3",
+      "lignes[4].ligne_salaire_trimestre": "lignes[4].ligne_salaire_trimestre",
+      "nombre_salaries": "nombre_salaries",
+      "masse_salariale_declaree": "masse_salariale_declaree",
+      "taux_global": "taux_global",
+      "montant_cotisations": "montant_cotisations",
+      "montant_total_a_payer": "montant_total_a_payer",
+      "date_depot": "date_depot"
+    },
+    "marques": {
+      "cachet_emetteur": "employeur_signature_cachet",
+      "signature_emetteur": "signature_cachet"
+    },
+    "cheminsDuDossier": [
+      "employeur_matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 36144085,
+  "attendu": {
+    "concepts": {
+      "trimestre": "2026-04-01/2026-06-30",
+      "annee": "2026-01-01/2026-12-31",
+      "employeur_raison_sociale": "ALGORIA FACTORY SARL",
+      "employeur_numero_cnss": "99418273-06",
+      "employeur_matricule_fiscal": "1958330V/A/M/000",
+      "regime": "RSNA",
+      "lignes": [
+        {
+          "ligne_ordre": "1",
+          "ligne_matricule_cnss": "99000002-11",
+          "ligne_nom_prenom": "مهدي فارناس",
+          "ligne_salaire_mois1": "4200.000",
+          "ligne_salaire_mois2": "4200.000",
+          "ligne_salaire_mois3": "4200.000",
+          "ligne_salaire_trimestre": "12600.000"
+        },
+        {
+          "ligne_ordre": "2",
+          "ligne_matricule_cnss": "99007921-48",
+          "ligne_nom_prenom": "سناء بلكورفي",
+          "ligne_salaire_mois1": "3650.000",
+          "ligne_salaire_mois2": "3650.000",
+          "ligne_salaire_mois3": "3650.000",
+          "ligne_salaire_trimestre": "10950.000"
+        },
+        {
+          "ligne_ordre": "3",
+          "ligne_matricule_cnss": "99015840-85",
+          "ligne_nom_prenom": "أسامة ترزيني",
+          "ligne_salaire_mois1": "3100.000",
+          "ligne_salaire_mois2": "3100.000",
+          "ligne_salaire_mois3": "3100.000",
+          "ligne_salaire_trimestre": "9300.000"
+        },
+        {
+          "ligne_ordre": "4",
+          "ligne_matricule_cnss": "99023759-25",
+          "ligne_nom_prenom": "ريم زغفاني",
+          "ligne_salaire_mois1": "1850.000",
+          "ligne_salaire_mois2": "1850.000",
+          "ligne_salaire_mois3": "1850.000",
+          "ligne_salaire_trimestre": "5550.000"
+        },
+        {
+          "ligne_ordre": "5",
+          "ligne_matricule_cnss": "99031678-62",
+          "ligne_nom_prenom": "أنيس قرمادي",
+          "ligne_salaire_mois1": "2800.000",
+          "ligne_salaire_mois2": "2800.000",
+          "ligne_salaire_mois3": "2800.000",
+          "ligne_salaire_trimestre": "8400.000"
+        }
+      ],
+      "nombre_salaries": "5",
+      "masse_salariale_declaree": "46800.000",
+      "taux_global": "25.75",
+      "montant_cotisations": "12051.000",
+      "montant_total_a_payer": "12051.000",
+      "date_depot": "2026-07-09",
+      "employeur_signature_cachet": true,
+      "signature_cachet": true
+    },
+    "confondus": {},
+    "notes": [
+      "Masse = Σ des salaires du trimestre (chaque ligne = mois 1 + mois 2 + mois 3) ; cotisations = masse × taux global relevé. Les numéros CNSS des salariés sont inventés (préfixe 99) ; aucun numéro de CIN n'est imprimé.",
+      "INCERTAIN — taux global de 25,75 % relevé en base avec la confiance « a_confirmer » ; le taux d'accident du travail, propre à chaque employeur, n'y est pas distingué."
+    ],
+    "non_imprimes": [
+      "code_exploitation",
+      "employeur_activite",
+      "employeur_adresse",
+      "employeur_rne",
+      "employeur_telephone_email",
+      "ligne_cin",
+      "ligne_jours_ou_mois",
+      "nature_declaration",
+      "numero_page",
+      "penalites_retard",
+      "reference_teledeclaration",
+      "taux_accident_travail"
+    ]
+  }
+}

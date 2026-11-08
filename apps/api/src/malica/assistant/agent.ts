@@ -59,22 +59,32 @@ import { DEFINITIONS, executerOutil, type ContexteDesOutils } from "./outils.ts"
 const AGENT_ASSISTANT = "malica.assistant";
 
 interface ReponseDeRepli {
+  /** La réponse RANGÉE au fil — donc déjà passée par `garder`. */
   answer: string;
   model: string;
   conversationId: string;
   messageId: string | null;
   titre: string | null;
-  /** Ce que le repli avait sous les yeux : la garde y relit ses chiffres. */
-  sources: SourceConnue[];
 }
+
+/** Pourquoi Claude ne répond pas : le motif part dans la mesure de la réponse. */
+type MotifDuRepli = "budget_claude" | "plafond_assistant" | "cle_absente" | "panne";
 
 export interface DependancesDeLAssistant {
   /** Claude en flux ; `null` quand la clé n'est pas posée. */
   claude: ClientEnFlux | null;
   /** Le conseil cité (#278), pour l'outil `conseil_fiscal`. */
   conseil: (question: string, jour: string | null) => Promise<ResultatDuConseilCite>;
-  /** Le repli : l'ancienne conversation DeepSeek (`askMalica`). */
-  repli: (input: { question: string; conversationId: string | null }) => Promise<ReponseDeRepli>;
+  /**
+   * Le repli : l'ancienne conversation DeepSeek (`askMalica`, `repli.ts`). Il
+   * DOIT passer sa réponse par `garder` avant de la ranger au fil, avec ce
+   * que le modèle avait sous les yeux : le fil garde la version contrôlée.
+   */
+  repli: (input: {
+    question: string;
+    conversationId: string | null;
+    garder: (reponse: string, sources: SourceConnue[]) => string;
+  }) => Promise<ReponseDeRepli>;
   maintenant?: () => number;
   aujourdhui?: () => string;
   idProposition?: () => string;
@@ -273,18 +283,31 @@ async function converser(
   const chaine = lireLaChaine(await api.rpc<unknown>("capture", "chaineDeDesignation", []));
   const anthropic = chaine.find((m) => m.fournisseur === "anthropic");
   const deepseek = chaine.find((m) => m.fournisseur === "deepseek");
-  const claudePossible = Boolean(deps.claude && anthropic && !anthropic.epuise);
   const repliPossible = Boolean(deepseek && !deepseek.epuise);
 
-  if (!claudePossible) {
-    return repliPossible
-      ? repondreParLeRepli(q, deps, emettre, debut, maintenant)
-      : sArreter(api, q, emettre, debut, maintenant);
+  // Claude ne répond que si sa clé est posée, si le budget commun de la chaîne
+  // n'est pas épuisé ET si l'assistant n'a pas atteint SON plafond (décision
+  // du dirigeant, 8 novembre 2026 : la lecture des pièces garde sa part).
+  let motif: MotifDuRepli | null = !deps.claude
+    ? "cle_absente"
+    : !anthropic || anthropic.epuise
+      ? "budget_claude"
+      : null;
+  let configuration: ConfigurationDeLAssistant | null = null;
+  if (motif === null) {
+    configuration = lireConfigurationAssistant(
+      await api.rpc<unknown>("conseil", "configurationAssistant", []),
+    );
+    if (configuration.plafond.epuise) motif = "plafond_assistant";
   }
 
-  const configuration: ConfigurationDeLAssistant = lireConfigurationAssistant(
-    await api.rpc<unknown>("conseil", "configurationAssistant", []),
-  );
+  if (motif !== null || configuration === null) {
+    const m = motif ?? "budget_claude";
+    return repliPossible
+      ? repondreParLeRepli(q, deps, emettre, debut, maintenant, m)
+      : sArreter(api, q, emettre, debut, maintenant, m);
+  }
+
   const reglage = configuration.reglage;
   const choix = choisirLeModele(q.question, q.pieceIds.length, reglage);
 
@@ -489,6 +512,10 @@ async function converser(
   const reponse = [dite, ...ajouts].filter(Boolean).join("\n\n");
 
   const latenceTotale = maintenant() - debut;
+  const sourcesAffichees = garde
+    .sourcesCitees()
+    .filter((s) => !s.cle.startsWith("malica:proposition:"))
+    .map(versSourceAffichee);
   await api.rpc<void>("conversations", "ajouter", [
     {
       conversationId,
@@ -498,6 +525,10 @@ async function converser(
       tokensIn: usageTotal.entree + usageTotal.cacheLu + usageTotal.cacheEcrit,
       tokensOut: usageTotal.sortie,
       latencyMs: latenceTotale,
+      // Rangées avec la réponse : un fil rouvert réaffiche ses sources et ses
+      // propositions (le bouton se rejuge alors contre la porte du circuit).
+      sources: sourcesAffichees,
+      propositions,
     },
   ]);
   const dernierMessage = await api
@@ -516,16 +547,14 @@ async function converser(
     messageId: dernierMessage?.id ?? null,
     titre,
     reponse,
-    sources: garde
-      .sourcesCitees()
-      .filter((s) => !s.cle.startsWith("malica:proposition:"))
-      .map(versSourceAffichee),
+    sources: sourcesAffichees,
     propositions,
     suggestions: suggestionsDeSuite(outilsAppeles, q.locale),
     chiffresRetires: garde.retirees(),
     mesure: {
       modele: modeleRendu,
       repli: null,
+      motifDuRepli: null,
       latencePremierMotMs: premierMot,
       latenceTotaleMs: latenceTotale,
       coutUsd: coutTotal === null ? null : Math.round(coutTotal * 1_000_000) / 1_000_000,
@@ -559,6 +588,7 @@ export async function converserAvecRepli(
       emettre,
       maintenant(),
       maintenant,
+      "panne",
     );
   }
 }
@@ -569,18 +599,27 @@ async function repondreParLeRepli(
   emettre: (ev: EvenementDeLAssistant) => void,
   debut: number,
   maintenant: () => number,
+  motif: MotifDuRepli,
 ): Promise<FinDeLaReponse> {
-  const r = await deps.repli({ question: q.question, conversationId: q.conversationId });
-  emettre({ type: "debut", conversationId: r.conversationId, modele: r.model });
-  // Le repli ne cite pas en flux : sa réponse entière passe la même garde, contre
-  // ce qu'il avait sous les yeux.
+  // Le repli ne cite pas en flux : sa réponse entière passe la même garde,
+  // contre ce qu'il avait sous les yeux — et AVANT d'être rangée au fil.
   const garde = new GardeDesChiffres(q.question);
-  for (const s of r.sources) garde.ajouterSource(s);
-  const jugement = garde.jugerTout(r.answer);
-  const reponse = garde.texteEmis() || message(q.locale, "pme.assistant.vide");
+  let controlee: string | null = null;
+  const garder = (brute: string, sources: SourceConnue[]): string => {
+    for (const s of sources) garde.ajouterSource(s);
+    garde.jugerTout(brute);
+    controlee = garde.texteEmis() || message(q.locale, "pme.assistant.vide");
+    return controlee;
+  };
+  const r = await deps.repli({ question: q.question, conversationId: q.conversationId, garder });
+  emettre({ type: "debut", conversationId: r.conversationId, modele: r.model });
+  // Un repli qui n'aurait pas appelé `garder` ne montre rien d'incontrôlé :
+  // sa réponse passe la garde ici, sans aucune source — toute phrase chiffrée
+  // tombe.
+  const reponse = controlee ?? garder(r.answer, []);
   const premierMot = maintenant() - debut;
   emettre({ type: "texte", texte: reponse });
-  for (const phrase of jugement.retirees) emettre({ type: "retire", phrase });
+  for (const phrase of garde.retirees()) emettre({ type: "retire", phrase });
   const fin: FinDeLaReponse = {
     conversationId: r.conversationId,
     messageId: r.messageId,
@@ -593,6 +632,7 @@ async function repondreParLeRepli(
     mesure: {
       modele: r.model,
       repli: "deepseek",
+      motifDuRepli: motif,
       latencePremierMotMs: premierMot,
       latenceTotaleMs: maintenant() - debut,
       coutUsd: null,
@@ -611,6 +651,7 @@ async function sArreter(
   emettre: (ev: EvenementDeLAssistant) => void,
   debut: number,
   maintenant: () => number,
+  motif: MotifDuRepli,
 ): Promise<FinDeLaReponse> {
   const conversationId =
     q.conversationId ??
@@ -633,6 +674,7 @@ async function sArreter(
     mesure: {
       modele: null,
       repli: "arret",
+      motifDuRepli: motif,
       latencePremierMotMs: maintenant() - debut,
       latenceTotaleMs: maintenant() - debut,
       coutUsd: 0,

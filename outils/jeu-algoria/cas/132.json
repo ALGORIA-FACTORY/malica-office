@@ -1,0 +1,225 @@
+{
+  "id": "132",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "recu_de_paiement",
+  "grille": "recu_quittance",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "capture": "scan",
+  "gabarit": "J",
+  "mise_en_page": "J",
+  "scenario": "recu_manuscrit",
+  "realisme": [
+    "biais",
+    "grain",
+    "tampon",
+    "signature",
+    "souche_carbone",
+    "ratures",
+    "chiffres_orientaux"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "وصل خلاص",
+    "parties": [
+      {
+        "role": "creancier",
+        "nom": "ورشة قمران للترصيص",
+        "matricule": "1986027M/A/M/000",
+        "est": "tiers"
+      },
+      {
+        "role": "debiteur",
+        "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "creancier",
+      "nom": "ورشة قمران للترصيص",
+      "matricule": "1986027M/A/M/000",
+      "est": "tiers"
+    },
+    "client": {
+      "role": "debiteur",
+      "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": true,
+    "souche": {
+      "texte": "الأرومة",
+      "numero": "0164"
+    },
+    "tampon": {
+      "partie": {
+        "nom": "Atelier Qamrane Plomberie",
+        "nomAr": "ورشة قمران للترصيص",
+        "adresse": "نهج الزرزور 11، 2034 الزهراء",
+        "telephone": "00 60 705 519",
+        "role": "fournisseur"
+      },
+      "porteLeMatricule": true,
+      "chemin": "matricule_fiscal_creancier",
+      "code": "signature_creancier"
+    },
+    "ratures": [
+      {
+        "chemin": "montant_recu",
+        "barre": "٢٥٣,٠٠٠"
+      }
+    ],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "orientaux"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "nom_creancier",
+              "cls": "gros",
+              "imp": true
+            }
+          ],
+          [
+            "نهج الزرزور 11، 2034 الزهراء"
+          ],
+          [
+            "الهاتف : ",
+            "00 60 705 519"
+          ]
+        ],
+        "droite": []
+      },
+      {
+        "k": "titre",
+        "texte": [
+          {
+            "c": "intitule",
+            "imp": true
+          },
+          " عدد ",
+          {
+            "c": "numero_recu",
+            "cls": "rouge",
+            "imp": true
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "التاريخ :",
+            {
+              "c": "date_paiement"
+            }
+          ],
+          [
+            "وصلني من :",
+            {
+              "c": "nom_debiteur"
+            }
+          ],
+          [
+            "مبلغا قدره :",
+            [
+              {
+                "c": "montant_recu"
+              },
+              " د"
+            ]
+          ],
+          [
+            "وذلك بعنوان :",
+            {
+              "c": "objet_paiement"
+            }
+          ],
+          [
+            "طريقة الدفع :",
+            {
+              "c": "mode_reglement"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "الإمضاء"
+      }
+    ],
+    "imprime": {
+      "nom_creancier": "ورشة قمران للترصيص",
+      "intitule": "وصل خلاص",
+      "numero_recu": "0164",
+      "date_paiement": "١٣/١٠/٢٠٢٦",
+      "nom_debiteur": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "montant_recu": "١٩٤,٠٠٠",
+      "objet_paiement": "إصلاح قنوات المياه بالمكتب",
+      "mode_reglement": "نقدا",
+      "matricule_fiscal_creancier": "1986027M/A/M/000"
+    },
+    "versConcept": {
+      "nom_creancier": "nom_creancier",
+      "intitule": "intitule",
+      "numero_recu": "numero_recu",
+      "date_paiement": "date_paiement",
+      "nom_debiteur": "nom_debiteur",
+      "montant_recu": "montant_recu",
+      "objet_paiement": "objet_paiement",
+      "mode_reglement": "mode_reglement",
+      "matricule_fiscal_creancier": "matricule_fiscal_creancier"
+    },
+    "marques": {
+      "cachet_emetteur": "signature_creancier",
+      "signature_emetteur": "signature_creancier"
+    },
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 39858257,
+  "attendu": {
+    "concepts": {
+      "nom_creancier": "ورشة قمران للترصيص",
+      "intitule": "reçu",
+      "numero_recu": "0164",
+      "date_paiement": "2026-10-13",
+      "nom_debiteur": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "montant_recu": "194.000",
+      "objet_paiement": "إصلاح قنوات المياه بالمكتب",
+      "mode_reglement": "especes",
+      "matricule_fiscal_creancier": "1986027M/A/M/000",
+      "signature_creancier": true
+    },
+    "confondus": {},
+    "notes": [
+      "Reçu arabe manuscrit, chiffres orientaux : la valeur barrée du montant n'est jamais la valeur attendue. Le matricule du créancier n'est que dans son tampon."
+    ],
+    "non_imprimes": [
+      "adresse_bien_loue",
+      "charges",
+      "droit_timbre",
+      "identifiant_bailleur_personne_physique",
+      "matricule_fiscal_debiteur",
+      "montant_loyer_principal",
+      "periode_loyer",
+      "ref_contrat_bail",
+      "ref_facture_reglee",
+      "retenue_source_loyer",
+      "tva_loyer"
+    ]
+  }
+}

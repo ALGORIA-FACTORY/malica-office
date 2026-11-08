@@ -1,0 +1,241 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "certificat_retenue_source",
+    "nom": "Certificat (attestation) de retenue à la source",
+    "typeDeDocument": "document_fiscal_social",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "beneficiaire_adresse",
+      "concept": "adresse",
+      "role": "beneficiaire",
+      "type": "adresse",
+      "obligatoire": "selon_cas",
+      "parcelle": "beneficiaire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "beneficiaire_identifiant",
+      "concept": "identifiant_partie",
+      "role": "beneficiaire",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "beneficiaire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "beneficiaire_nom",
+      "concept": "raison_sociale",
+      "role": "beneficiaire",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "beneficiaire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "date_emission",
+      "concept": "date_piece",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "operation",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_paiement",
+      "concept": "date_paiement",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "operation",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "debiteur_effectif",
+      "concept": "debiteur_effectif",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "payeur",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "exercice_facturation",
+      "concept": "exercice",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "selon_cas",
+      "parcelle": "operation",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mode_emission",
+      "concept": "mode_emission",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "authentification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_brut",
+      "concept": "montant_brut",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_retenue",
+      "concept": "retenue_source",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nature_montant",
+      "concept": "nature_montant",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "operation",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "net_servi",
+      "concept": "net_servi",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "numero_certificat",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "operation",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "payeur_adresse",
+      "concept": "adresse",
+      "role": "payeur",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "payeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "payeur_matricule",
+      "concept": "matricule_fiscal",
+      "role": "payeur",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "payeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "payeur_nom",
+      "concept": "raison_sociale",
+      "role": "payeur",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "payeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "reference_paiement",
+      "concept": "ref_paiement",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "operation",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "references_factures",
+      "concept": "ref_facture",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "operation",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "retenue_css",
+      "concept": "retenue_css",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "retenue_tva",
+      "concept": "retenue_tva",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "montants",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signature_cachet",
+      "concept": "signature_cachet",
+      "role": "payeur",
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "authentification",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "statut_correction",
+      "concept": "statut_correction",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "authentification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "taux_retenue",
+      "concept": "taux_retenue",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "oui",
+      "parcelle": "montants",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    }
+  ]
+}

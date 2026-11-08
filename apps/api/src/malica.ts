@@ -20,11 +20,14 @@
  * ================================================================ CE QUI SORT
  *
  * La chaîne de lecture parle en codes (« lecture.illisible ») et l'écran les
- * traduit. Le message d'une erreur est donc rendu tel quel, comme la fonction
- * serveur le faisait — c'est la seule chose utile pour la personne qui attend.
+ * traduit. Le CODE d'une erreur de lecture est donc rendu, seul ; tout autre
+ * message reste au serveur (règle du dirigeant, 6 novembre 2026 : aucun texte
+ * technique à l'écran).
  */
 import { raw, Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
+
+import { codeDeLecture } from "@malica/socle/issue-de-lecture";
 
 import { sousIdentite } from "./db.ts";
 import { creerAppelLocal, PieceIntrouvable } from "./malica/appel-local.ts";
@@ -32,9 +35,9 @@ import type { EvenementDeLAssistant } from "@malica/socle/ports/assistant";
 
 import { converserAvecRepli, verifierLeDossier } from "./malica/assistant/agent.ts";
 import { clientClaudeEnFlux } from "./malica/assistant/claude-flux.ts";
+import { repliParDeepSeek } from "./malica/assistant/repli.ts";
 import { redigerLeBriefing } from "./malica/briefing.ts";
 import { askMalica, repondreAuCabinet } from "./malica/conseil/ask.ts";
-import { loadMalicaContext } from "./malica/conseil/context.ts";
 import { clientClaudeHttp } from "./malica/conseil/client-claude.ts";
 import { conseilCite } from "./malica/conseil/conseil-cite.ts";
 import { empreinteDeLaQuestion } from "./malica/conseil/corpus.ts";
@@ -44,7 +47,7 @@ import { lireCarteFiscale } from "./malica/lecture/lire-carte.ts";
 import type { ConventionDeDate } from "./malica/lecture/token-plan.ts";
 import { LectureRefusee, readPieceFlow } from "./malica/lecture/read-flow.ts";
 import { redigerLePv } from "./malica/pv/rediger.ts";
-import { introuvableLisible, refusLisible } from "./refus.ts";
+import { introuvableLisible, REFUS_SANS_CLE, refusLisible } from "./refus.ts";
 import { RpcIntrouvable } from "./rpc.ts";
 import { exigerIdentite } from "./session.ts";
 
@@ -91,8 +94,8 @@ async function exigerPieceVisible(req: Request, pieceId: string): Promise<void> 
 
 /**
  * Exécute un geste et répond. Les refus rédigés et les introuvables gardent
- * leur statut ; tout le reste rend son message, parce que la chaîne de
- * lecture parle en codes que l'écran sait traduire.
+ * leur statut, par leur clé ; une panne ne rend que le code de lecture
+ * qu'elle porte (que l'écran sait traduire), ou « erreur interne ».
  */
 function repondre(res: Response, next: NextFunction, travail: () => Promise<unknown>): void {
   travail()
@@ -101,14 +104,19 @@ function repondre(res: Response, next: NextFunction, travail: () => Promise<unkn
     })
     .catch((erreur: unknown) => {
       if (erreur instanceof z.ZodError) {
-        res.status(400).json({ erreur: "appel invalide" });
+        res.status(400).json({ erreur: "refus.saisie.mal_formee" });
         return;
       }
       if (erreur instanceof SaisieInvalide) {
         res.status(400).json({ erreur: erreur.message });
         return;
       }
-      if (erreur instanceof PieceIntrouvable || erreur instanceof RpcIntrouvable) {
+      // Une clé fixe : ni l'identifiant reçu, ni le nom de la méthode ne reviennent.
+      if (erreur instanceof PieceIntrouvable) {
+        res.status(404).json({ erreur: "refus.introuvable.piece" });
+        return;
+      }
+      if (erreur instanceof RpcIntrouvable) {
         res.status(404).json({ erreur: erreur.message });
         return;
       }
@@ -132,15 +140,22 @@ function repondre(res: Response, next: NextFunction, travail: () => Promise<unkn
       }
       const refus = refusLisible(erreur);
       if (refus) {
+        // Une phrase levée sans clé ne part pas à l'écran (R12) : le serveur la garde.
+        if (refus === REFUS_SANS_CLE) console.error("[malica] refus sans clé", erreur);
         res.status(400).json({ erreur: refus });
         return;
       }
-      if (erreur instanceof Error) {
-        console.error(`[malica] ${erreur.message}`);
-        res.status(500).json({ erreur: erreur.message });
+      if (!(erreur instanceof Error)) {
+        next(erreur);
         return;
       }
-      next(erreur);
+      // Une panne : le détail au journal du serveur, jamais au client — le
+      // message d'un moteur ou de la base nomme ses tables et ses fichiers.
+      // Seul le CODE d'un échec de lecture (« lecture.illisible ») passe, sans
+      // le libellé qui l'entoure : l'écran sait le dire dans la langue de la
+      // personne.
+      console.error("[malica]", erreur);
+      res.status(500).json({ erreur: codeDeLecture(erreur.message) ?? "erreur interne" });
     });
 }
 
@@ -395,42 +410,11 @@ malica.post("/assistant", (req, res, next) => {
               {
                 client: clientConseil,
                 empreinte: (texte) => empreinteDeLaQuestion(appel, texte),
+                // L'outil `conseil_fiscal` compte dans le plafond propre de l'assistant.
+                agent: "malica.assistant.conseil",
               },
             ),
-          repli: async ({ question, conversationId }) => {
-            const r = await askMalica(appel, {
-              tenantId: q.tenantId,
-              question,
-              locale: q.locale,
-              mode: "chat",
-              conversationId,
-            });
-            // Ce que le repli avait sous les yeux : la garde y relit ses chiffres.
-            const contexte = await loadMalicaContext(appel, q.tenantId, null);
-            return {
-              answer: r.answer,
-              model: r.model,
-              conversationId: r.conversationId,
-              messageId: r.messageId,
-              titre: r.titre,
-              sources: [
-                {
-                  cle: "malica:dossier",
-                  genre: "liste",
-                  titre: "Dossier",
-                  objetId: null,
-                  texte: JSON.stringify(contexte),
-                },
-                ...(r.conseil?.sources ?? []).map((s) => ({
-                  cle: `malica:article:${s.corpus}:${s.numero}`,
-                  genre: "article" as const,
-                  titre: `${s.corpus} ${s.numero}`,
-                  objetId: null,
-                  texte: `${s.corpus} ${s.numero}`,
-                })),
-              ],
-            };
-          },
+          repli: repliParDeepSeek(appel, { tenantId: q.tenantId, locale: q.locale }),
         },
         emettre,
       );

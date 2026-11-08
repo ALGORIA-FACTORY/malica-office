@@ -241,10 +241,25 @@ describe("quand le modèle est le seul recours", () => {
     expect(r.signalement).toMatch(/n'a pas de matricule fiscal enregistré/);
   });
 
-  it("le dossier avec un matricule INCOMPLET est traité comme sans", () => {
-    // Une fiche mal saisie ne doit pas produire une déduction qui a l'air sûre.
+  it("le dossier avec un matricule INCOMPLET : sa lettre se calcule, la pièce reste à confirmer", () => {
+    // DÉCISION du dirigeant (5 novembre 2026) : la lettre d'une fiche incomplète se
+    // calcule par la règle du pack. Une lecture incomplète reste une question : une
+    // fiche mal saisie ne doit pas produire une déduction qui a l'air sûre.
     const r = lireLeSens({
       format: FORMAT_D_ESSAI,
+      matriculeDossier: "1856324/A/M/000",
+      matriculeEmetteur: TIERS,
+      matriculeClient: "1856324/A/M/000",
+      sensDuModele: "facture_achat",
+    });
+    expect(r.sens).toBeNull();
+    expect(r.origine).toBe("a_confirmer");
+    expect(r.signalement).toMatch(/lettre de contrôle manque/);
+  });
+
+  it("sans règle de la lettre au pack, le dossier INCOMPLET est traité comme sans", () => {
+    const r = lireLeSens({
+      format: { ...FORMAT_D_ESSAI, controle: null },
       matriculeDossier: "1856324/A/M/000",
       matriculeEmetteur: TIERS,
       matriculeClient: "1856324/A/M/000",

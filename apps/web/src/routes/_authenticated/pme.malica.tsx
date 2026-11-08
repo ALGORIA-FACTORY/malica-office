@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { useFichesDesSocietes } from "@/hooks/use-fiches-des-societes";
 import { useMonAcces } from "@/hooks/use-mon-acces";
+import { usePiecesLuesDesSocietes } from "@/hooks/use-pieces-lues";
+import { useRevenir } from "@/hooks/use-revenir";
+import { useVoix } from "@/hooks/use-voix";
 import portraitMalica from "@/assets/malica.webp";
 import {
   ReponseDeMalica,
@@ -12,6 +16,7 @@ import {
 } from "@/components/malica/conversation-malica";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
+import { cabinetsDesSocietes } from "@/lib/votre-comptabilite";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/malica")({
@@ -36,89 +41,50 @@ export const Route = createFileRoute("/_authenticated/pme/malica")({
 });
 
 /**
- * Converser avec Malica — l'écran du dessin, et son câblage.
+ * Converser avec Malica — planche 8, approuvée le 7 novembre 2026.
  *
- * ================================================================= POURQUOI
+ * « Malica accueille, puis se range et laisse parler. » À l'ouverture, Malica
+ * en grand : son portrait dans un halo vert, un salut, trois questions toutes
+ * prêtes. À la première question, elle se replie dans l'en-tête et le fil
+ * prend la place. Sa réponse arrive EN FLUX, mot à mot, au fil de ce que
+ * Claude écrit et après la garde des chiffres (`malica/assistant/garde.ts`),
+ * avec ses sources cliquables, ses propositions d'action à confirmer et ses
+ * suggestions de suite (`conversation-malica.tsx`). Le micro ouvre la voix : on parle,
+ * la question part par le même appel que le clavier, et la réponse se lit à
+ * voix haute (`hooks/use-voix.ts`) — là où l'appareil sait le faire.
  *
- * Cet écran rendait `MalicaChat` tel quel à l'intérieur d'une coque dessinée.
- * Le résultat se voyait, et le dirigeant l'a dit : « le chat avec Malica,
- * c'est l'ancienne screen peinte ». Il avait raison — `MalicaChat` écrit son
- * propre balisage en utilitaires Edition One, et aucune classe du dessin ne
- * pouvait descendre dessus.
- *
- * La logique DESCEND donc ici, et le balisage devient celui de
- * `malica-chat.html`. Rien du câblage ne change : ce sont les MÊMES appels,
- * aux mêmes noms, dans le même ordre.
+ * Sur ordinateur, trois colonnes : les conversations et la comptabilité à
+ * gauche, le fil au centre, Malica et « Ce que j'ai utilisé » à droite.
  *
  * ============================================================== LE CÂBLAGE
  *
- * Tous vérifiés au `contrat/rpc.json` avant d'être écrits (R2 — le dépôt est
- * un `Proxy`, une méthode inventée compile et ne casse que chez le dirigeant) :
+ * Vérifiés au `contrat/rpc.json` (R2) :
+ *   `malica.converser` (la réponse en flux, par l'API et non /rpc),
+ *   `capture.register` puis `malica.demanderLaLecture` (une pièce jointe est
+ *   déposée puis confiée à la lecture Malica — le modèle n'en voit jamais
+ *   l'image), `conversations.lister`, `conversations.ouvrir` (un fil rouvert
+ *   réaffiche les sources et les propositions rangées avec chaque réponse),
+ *   `conversations.supprimer`, `acces.monAcces`, `conseil.contexte`,
+ *   `identity.monProfil` (le prénom du salut, clé partagée `mon-profil`),
+ *   et `fichesDesSocietes` + les pièces lues (le canal de la comptabilité,
+ *   mêmes clés que la bibliothèque).
  *
- *   `malica.converser`           — poser la question, réponse EN FLUX (API,
- *                                  pas /rpc ; voir `conversation-malica.tsx`)
- *   `capture.register`           — déposer une pièce jointe, puis
- *   `malica.demanderLaLecture`   — la confier à la lecture Malica (R2)
- *   `conversations.lister`       — ses fils
- *   `conversations.ouvrir`       — reprendre un fil
- *   `conversations.supprimer`    — l'effacer
- *   `acces.monAcces`             — qui je suis dans ce dossier
- *   `conseil.contexte`           — y a-t-il un cabinet, et son nom
+ * ================================================== CE QUI N'EST PAS MONTRÉ
  *
- * L'historique ne remonte pas d'ici : on envoie l'identifiant du fil, et le
- * serveur relit ce que la RLS l'autorise à relire. Un fil composé par le
- * navigateur serait un fil qu'on peut forger.
+ * Le canal « Équipe » de la maquette : aucune messagerie d'équipe n'existe
+ * dans le produit. Le canal de la comptabilité n'est pas un fil de messages
+ * non plus : il ouvre le dossier du cabinet (planche 6), avec ce qui attend
+ * un geste. « Que ce qui existe. »
  *
- * ========================================== CE QUE LE DESSIN MONTRE ET QU'ON NE SERT PAS
- *
- * Relevé, pas contourné — chacun manque d'une donnée ou d'une méthode :
- *
- *   `.cab` (la carte du cabinet dans le fil) — `MessageDuFil.role` ne connaît
- *   que `user` et `assistant`. Aucun message d'expert ne descend par ce port.
- *
- *   `.tabs` en filtre de domaine (Tout · Comptable · Fiscal · Juridique) —
- *   `ConversationResume` ne porte pas de domaine. Un filtre qui ne filtre pas
- *   est pire que son absence ; `.tabs` sert ici le passage liste/fil, qui est
- *   le seul choix que la donnée permette.
- *
- *   `.th .et` (« Avis de… », « En relecture au cabinet ») — même raison :
- *   aucun état d'arbitrage dans le résumé d'un fil.
- *
- *   `.undo` (« Fil supprimé · Annuler ») — `conversations.supprimer` est
- *   définitif, et le dictionnaire le dit déjà : « Elle ne se retrouve pas ».
- *   Offrir « Annuler » serait mentir.
- *
- *   le micro de `.comp` — aucune dictée dans le produit. Un bouton qui ne
- *   fait rien dans un composeur se tape une fois, pas deux.
- *
- *   le lien des jetons `.srcs` — `SourceCitee` donne le corpus et le numéro,
- *   pas d'adresse. Les jetons sont rendus sans `href` : ils citent, ils
- *   n'ouvrent pas. Un `href="#"` serait un lien qui ne mène nulle part.
- *
- * ================================================= L'EN-TÊTE, ET POURQUOI PAS `.top`
- *
- * `.top` n'est PAS rendu, et c'est mesuré : la feuille porte
- * `.app:has([data-ecran] .top) > header { display: none }`, donc rendre
- * `.top` ferait disparaître l'en-tête du layout — qui porte `EntetePme`, le
- * sélecteur de dossier. Le dessin n'a pas de sélecteur de dossier à mettre à
- * sa place. Les deux doivent donc changer ensemble, et `pme.tsx` n'est pas de
- * ce fichier. Le retour est celui du layout et de la barre du bas.
- *
- * ========================================================== R3, ET R-CÂBLAGE
- *
- * « Malica appelle, elle ne calcule pas. » Aucun chiffre n'est écrit ni déduit
- * ici : les seuls nombres à l'écran sont ceux du texte que le Socle a rendu,
- * et le compte de messages que `conversations.lister` renvoie.
- *
- * Et `conseil.creer` — ce que le câblage nomme pour « poser la question au
- * cabinet » — est au contrat mais ABSENT de `ConseilRepository`. L'ajouter au
- * port depuis un écran serait écrire le contrat par le haut. La carte de suite
- * reste donc VERROUILLÉE : elle dit ce qu'elle ferait, elle ne disparaît pas.
+ * R3 : aucun chiffre n'est écrit ni déduit ici ; les nombres à l'écran sont
+ * ceux du texte que le Socle a rendu et les comptes que les lectures renvoient.
  */
 function PmeMalica() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const qc = useQueryClient();
+  const revenir = useRevenir();
+  const voix = useVoix(locale);
 
   const conversation = useConversationMalica(pme.tenantId);
   const { tours, filId, enCours } = conversation;
@@ -126,20 +92,13 @@ function PmeMalica() {
   const fichier = useRef<HTMLInputElement>(null);
   const [brouillon, setBrouillon] = useState("");
   const [vue, setVue] = useState<"fil" | "liste">("fil");
-  /*
-   * Deux gestes pour effacer : les points ouvrent le panneau `.del`, le
-   * panneau exécute. Un fil supprimé ne se retrouve pas, et un seul tap n'est
-   * pas une décision.
-   */
   const [menu, setMenu] = useState<string | null>(null);
+  /** La voix est ouverte (l'écran plein du micro). */
+  const [enVoix, setEnVoix] = useState(false);
+  /** La question en cours a été posée à la voix : sa réponse se lit à haute voix. */
+  const parVoix = useRef(false);
   const champ = useRef<HTMLInputElement>(null);
 
-  /*
-   * Le fil se lit en bas : c'est la FENÊTRE qui défile, pas un conteneur.
-   * `.comp` est `position:sticky;bottom:0` dans la feuille — le dessin veut
-   * une page qui défile sous un composeur qui reste, pas une boîte à
-   * ascenseur au milieu de l'écran.
-   */
   const filerEnBas = () => {
     requestAnimationFrame(() =>
       window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" }),
@@ -150,29 +109,31 @@ function PmeMalica() {
     queryKey: ["malica-fils", pme.tenantId],
     queryFn: () => office().conversations.lister(pme.tenantId),
   });
-
-  /*
-   * Qui je suis dans ce dossier. Même clé que `pme.piece.$pieceId` — une
-   * seule lecture du rôle pour toute la navigation, et le même `staleTime` :
-   * un rôle ne change pas entre deux écrans.
-   */
   const acces = useMonAcces(pme.tenantId);
-
-  /*
-   * Y a-t-il un cabinet, et comment s'appelle-t-il. Le nom sert la carte de
-   * suite : le dirigeant connaît son cabinet par son nom, et « votre
-   * comptable » est une périphrase. Pas de repli — chargement, échec et
-   * absence de mandat se disent différemment plus bas.
-   */
   const conseil = useQuery({
     queryKey: ["conseil-contexte", pme.tenantId],
     queryFn: () => office().conseil.contexte(pme.tenantId),
     staleTime: 10 * 60 * 1000,
   });
+  const profil = useQuery({
+    queryKey: ["mon-profil"],
+    queryFn: () => office().identity.monProfil(),
+    staleTime: 5 * 60_000,
+  });
+
+  // Le canal de la comptabilité : le cabinet qui tient CETTE société.
+  const { ids, fiches } = useFichesDesSocietes();
+  const lectures = usePiecesLuesDesSocietes(ids);
+  const parSociete = new Map(ids.map((id, i) => [id, lectures[i]?.data ?? []]));
+  const cabinet =
+    cabinetsDesSocietes(fiches.data ?? [], parSociete).find((c) =>
+      c.societes.includes(pme.tenantId),
+    ) ?? null;
 
   const reprise = useMutation({
     mutationFn: (id: string) => office().conversations.ouvrir(id),
     onSuccess: (messages, id) => {
+      voix.taire();
       conversation.reprendre(id, messages);
       setVue("fil");
       filerEnBas();
@@ -188,10 +149,7 @@ function PmeMalica() {
     },
   });
 
-  /*
-   * Changer de dossier change de fils : garder l'ancien à l'écran montrerait
-   * les questions d'une société pendant qu'on en regarde une autre.
-   */
+  // Changer de dossier change de fils : l'ancien ne reste pas à l'écran.
   const { nouveau } = conversation;
   const { vider } = jointe;
   useEffect(() => {
@@ -201,24 +159,46 @@ function PmeMalica() {
     setMenu(null);
   }, [pme.tenantId, nouveau, vider]);
 
-  function envoyer() {
-    const q = brouillon.trim();
-    if (!q || enCours) return;
+  function poser(q: string) {
+    const texte = q.trim();
+    if (!texte || enCours) return;
+    voix.taire();
     setBrouillon("");
+    setVue("fil");
     const pieces = jointe.jointes.map((j) => j.id);
     jointe.vider();
-    void conversation.envoyer(q, pieces).then(() => {
+    filerEnBas();
+    void conversation.envoyer(texte, pieces).then(({ reponse }) => {
+      if (parVoix.current && reponse) voix.lire(reponse);
+      parVoix.current = false;
       void qc.invalidateQueries({ queryKey: ["malica-fils", pme.tenantId] });
       filerEnBas();
     });
-    filerEnBas();
   }
 
   function nouveauFil() {
+    voix.taire();
     conversation.nouveau();
     jointe.vider();
     setVue("fil");
     requestAnimationFrame(() => champ.current?.focus());
+  }
+
+  function ouvrirLaVoix() {
+    setEnVoix(true);
+    voix.ecouter();
+  }
+  function envoyerLaVoix() {
+    voix.arreter();
+    setEnVoix(false);
+    if (voix.entendu.trim()) {
+      parVoix.current = true;
+      poser(voix.entendu);
+    }
+  }
+  function fermerLaVoix() {
+    voix.annuler();
+    setEnVoix(false);
   }
 
   const dateCourte = (iso: string) =>
@@ -226,298 +206,451 @@ function PmeMalica() {
 
   const cabinetNom = conseil.data?.cabinetNom ?? null;
   const aUnCabinet = Boolean(conseil.data?.cabinetId);
-  /*
-   * Un siège ne transmet pas : il demande, et c'est le propriétaire qui
-   * tranche — la même règle que pour ses pièces. Le rôle décide donc de la
-   * phrase, pas seulement du droit.
-   */
   const siege = acces.data?.role === "collaborateur";
-
   const listeDesFils = fils.data ?? [];
   const filCourant = filId ? listeDesFils.find((f) => f.id === filId) : undefined;
 
-  return (
-    /*
-     * `data-ecran="chat"` : le marqueur qui fait descendre sur cet arbre les
-     * règles du dessin. Les marges négatives annulent le `px-4 py-5` du
-     * layout — `.pad` porte la sienne, et le dessin ne veut pas de double
-     * gouttière. Ce sont les deux SEULES utilitaires du fichier, et elles ne
-     * peignent rien.
-     */
-    <div data-ecran="chat" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
-      <div className="pad">
-        {vue === "liste" ? (
-          <>
-            {/*
-             * La barre d'appel du dessin. Elle ouvre un fil neuf et donne le
-             * focus au composeur — ce qu'elle ne pouvait pas faire quand le
-             * composeur appartenait à un autre composant.
-             */}
-            <button type="button" className="poser" onClick={nouveauFil}>
-              <span className="ph">
-                <img src={portraitMalica} alt="" width={620} height={620} />
-              </span>
-              <span>{t("pme.malica.poser")}</span>
-              <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                <rect x="9.2" y="3" width="5.6" height="11" rx="2.8" />
-                <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0" />
-                <path d="M12 18v3" />
-              </svg>
-            </button>
+  const parle = tours.length > 0;
+  const derniere = [...tours].reverse().find((x) => x.role === "assistant");
+  const statut =
+    enCours || voix.parle
+      ? t("pme.malica.statut.repond")
+      : derniere?.sources && derniere.sources.length > 0
+        ? t("pme.malica.statut.cite")
+        : t("pme.malica.statut.enLigne");
+  const prenom = profil.data?.prenom?.trim() ?? "";
+  const salut = `${new Date().getHours() >= 18 ? t("pme.malica.salut.soir") : t("pme.malica.salut.jour")}${prenom ? ` ${prenom}` : ""}.`;
+  const questionsPretes = [
+    t("pme.malica.pret.tva"),
+    t("pme.malica.pret.retenue"),
+    t("pme.malica.pret.garder"),
+  ];
 
-            <div className="tabs">
-              <button type="button" onClick={() => setVue("fil")}>
-                {t("malica.fils.retour")}
-              </button>
-            </div>
+  /* --------------------------------------------------------- les canaux */
+  const canaux = (
+    <>
+      <button type="button" className="cn on" onClick={nouveauFil}>
+        <span className="ph" aria-hidden>
+          <img src={portraitMalica} alt="" width={620} height={620} />
+        </span>
+        {t("malica.chat.her")}
+      </button>
+      {cabinet ? (
+        <Link className="cn" to="/pme/comptabilite/$cabinetId" params={{ cabinetId: cabinet.id }}>
+          <span className="ini" aria-hidden>
+            {cabinet.nom.slice(0, 1).toLocaleUpperCase()}
+          </span>
+          {cabinet.nom}
+          {cabinet.aRepondre > 0 ? <em>{cabinet.aRepondre}</em> : null}
+        </Link>
+      ) : null}
+    </>
+  );
 
-            <p className="lbl">
-              {t("malica.fils.titre")} · {listeDesFils.length}
-            </p>
-
-            {fils.isPending ? (
-              <p className="vide">{t("common.loading")}</p>
-            ) : listeDesFils.length === 0 ? (
-              <p className="vide">{t("malica.fils.vide")}</p>
-            ) : (
-              listeDesFils.map((f) => (
-                <div key={f.id}>
-                  <div className="th">
-                    <button type="button" className="op" onClick={() => reprise.mutate(f.id)}>
-                      <span className="hd">
-                        <b>{f.titre || t("malica.fils.sansTitre")}</b>
-                        <span className="dt">{dateCourte(f.updatedAt)}</span>
-                      </span>
-                      <span className="ex">{t("malica.fils.messages", { count: f.messages })}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="dots"
-                      aria-label={t("malica.fils.supprimer")}
-                      onClick={() => setMenu(menu === f.id ? null : f.id)}
-                    >
-                      <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                        <circle cx="12" cy="5.5" r="1.1" />
-                        <circle cx="12" cy="12" r="1.1" />
-                        <circle cx="12" cy="18.5" r="1.1" />
-                      </svg>
-                    </button>
-                  </div>
-                  {menu === f.id ? (
-                    <div className="del">
-                      <p>{t("malica.fils.confirmer")}</p>
-                      <div className="b">
-                        <button
-                          type="button"
-                          className="go"
-                          disabled={effacement.isPending}
-                          onClick={() => effacement.mutate(f.id)}
-                        >
-                          {t("malica.fils.supprimer")}
-                        </button>
-                        <button type="button" onClick={() => setMenu(null)}>
-                          {t("common.cancel")}
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ))
-            )}
-          </>
-        ) : (
-          <>
-            <div className="tabs">
-              <button type="button" onClick={() => setVue("liste")}>
-                {t("malica.fils.voir")}
-              </button>
-              {tours.length > 0 ? (
-                <button type="button" onClick={nouveauFil}>
-                  {t("malica.fils.nouveau")}
-                </button>
-              ) : null}
-            </div>
-
-            {/*
-             * ------------------------------------------------------------ le fil
-             *
-             * `aria-live="polite"` : la réponse arrive sans que personne ne
-             * l'ait demandée à l'écran. Sans annonce, un lecteur d'écran
-             * laisse le dirigeant devant un silence.
-             */}
-            <div className="msgs" aria-live="polite">
-              {filCourant ? <p className="jour">{dateCourte(filCourant.updatedAt)}</p> : null}
-
-              {tours.length === 0 ? <p className="vide">{t("malica.chat.intro")}</p> : null}
-
-              {tours.map((tour, i) =>
-                tour.role === "user" ? (
-                  <div key={i} className="moi">
-                    {tour.contenu}
-                  </div>
-                ) : (
-                  <Fragment key={i}>
-                    {/*
-                     * « Son visage n'apparaît qu'une fois, en tête du fil. »
-                     * Malica parle le plus, donc elle se montre le moins :
-                     * pas d'avatar répété, pas d'étiquette au-dessus de
-                     * chaque réponse. `alt=""` — le nom est juste à côté, en
-                     * texte ; le répéter ferait entendre « Malica Malica ».
-                     */}
-                    {i === premiereDeMalica(tours) ? (
-                      <div className="sig">
-                        <span className="ph">
-                          <img src={portraitMalica} alt="" width={620} height={620} />
-                        </span>
-                        <b>{t("malica.chat.her")}</b>
-                      </div>
-                    ) : null}
-                    <div className="mal">
-                      <ReponseDeMalica
-                        tour={tour}
-                        tenantId={pme.tenantId}
-                        espace="pme"
-                        surSuggestion={(texte) => {
-                          void conversation.envoyer(texte).then(() => {
-                            void qc.invalidateQueries({ queryKey: ["malica-fils", pme.tenantId] });
-                            filerEnBas();
-                          });
-                        }}
-                      />
-                    </div>
-                  </Fragment>
-                ),
-              )}
-            </div>
-
-            {/*
-             * ------------------------------------------------- la suite du fil
-             *
-             * « Un fil porte toujours sa suite. Le dernier état est une
-             * action, jamais un cul-de-sac. » Ici la suite est verrouillée, et
-             * une carte verrouillée dit ce qu'elle ferait — comme les cartes
-             * `.lock` de l'accueil. Ce qui manque est nommé en tête du
-             * fichier : `conseil.creer`, au contrat, absent du port.
-             *
-             * Rien n'est rendu tant qu'on ne sait pas : pendant le chargement
-             * et en cas d'échec, l'écran se tait plutôt que d'annoncer « aucun
-             * cabinet » à un dossier qui en a un.
-             */}
-            {conseil.isPending || conseil.isError || acces.isPending ? null : (
-              <div className="esc off">
-                <span className="av">{siege ? "·" : initiales(cabinetNom)}</span>
-                <span className="bd">
-                  <b>
-                    {siege
-                      ? t("pme.malica.suiteTransmission")
-                      : aUnCabinet
-                        ? cabinetNom
-                          ? t("pme.malica.suiteAvis", { cabinet: cabinetNom })
-                          : t("pme.malica.suiteAvisSansNom")
-                        : t("pme.malica.suiteSansCabinet")}
-                  </b>
-                  <span>
-                    {siege || aUnCabinet
-                      ? t("pme.malica.suitePasEncore")
-                      : t("pme.malica.suiteSansCabinetDetail")}
-                  </span>
+  /* ------------------------------------------------- la liste des fils */
+  const listeDeFils = (
+    <>
+      {fils.isPending ? (
+        <p className="vide">{t("common.loading")}</p>
+      ) : listeDesFils.length === 0 ? (
+        <p className="vide">{t("malica.fils.vide")}</p>
+      ) : (
+        listeDesFils.map((f) => (
+          <div key={f.id}>
+            <div className={f.id === filId ? "th cour" : "th"}>
+              <button type="button" className="op" onClick={() => reprise.mutate(f.id)}>
+                <span className="hd">
+                  <b>{f.titre || t("malica.fils.sansTitre")}</b>
+                  <span className="dt">{dateCourte(f.updatedAt)}</span>
                 </span>
-              </div>
-            )}
-
-            {/*
-             * Le composeur. Un `<form>` et non un `<div>` : la touche Entrée
-             * et le clavier mobile « Envoyer » marchent alors sans qu'on les
-             * écoute à la main. La feuille ne vise que `.comp`, elle ne
-             * regarde pas l'élément.
-             */}
-            {/*
-             * Les pièces jointes : déposées dans le dossier et confiées à la
-             * lecture Malica (R2) avant de partir avec la question. Le modèle
-             * n'en voit jamais l'image, seulement ce que la lecture a relevé.
-             */}
-            {jointe.jointes.length > 0 || jointe.deposer.isPending ? (
-              <div className="srcs">
-                {jointe.jointes.map((j) => (
-                  <button
-                    key={j.id}
-                    type="button"
-                    onClick={() => jointe.retirer(j.id)}
-                    aria-label={`${t("pme.assistant.jointe.retirer")} — ${j.nom}`}
-                  >
-                    {t("pme.assistant.jointe.prete")} · {j.nom} ×
-                  </button>
-                ))}
-                {jointe.deposer.isPending ? (
-                  <span role="status">{t("pme.assistant.jointe.envoi")}</span>
-                ) : null}
-                {jointe.jointes.length > 0 ? (
-                  <span>{t("pme.assistant.jointe.lecture")}</span>
-                ) : null}
-              </div>
-            ) : null}
-
-            <form
-              className="comp"
-              onSubmit={(e) => {
-                e.preventDefault();
-                envoyer();
-              }}
-            >
-              <input
-                ref={fichier}
-                type="file"
-                accept="image/*,application/pdf"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) jointe.deposer.mutate(f);
-                  e.target.value = "";
-                }}
-              />
+                <span className="ex">{t("malica.fils.messages", { count: f.messages })}</span>
+              </button>
               <button
                 type="button"
-                className="go"
-                aria-label={t("pme.assistant.joindre")}
-                title={t("pme.assistant.joindre")}
-                disabled={jointe.deposer.isPending || enCours}
-                onClick={() => fichier.current?.click()}
+                className="dots"
+                aria-label={t("malica.fils.supprimer")}
+                onClick={() => setMenu(menu === f.id ? null : f.id)}
               >
                 <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                  <path d="M20 11.5 12.5 19a5 5 0 0 1-7-7L13 4.5a3.3 3.3 0 0 1 4.7 4.7L10.2 16.7a1.7 1.7 0 0 1-2.4-2.4L14.5 7.6" />
+                  <circle cx="12" cy="5.5" r="1.1" />
+                  <circle cx="12" cy="12" r="1.1" />
+                  <circle cx="12" cy="18.5" r="1.1" />
                 </svg>
               </button>
-              <input
-                ref={champ}
-                value={brouillon}
-                onChange={(e) => setBrouillon(e.target.value)}
-                placeholder={t("pme.malica.composer")}
-                aria-label={t("pme.malica.composer")}
-              />
-              <button
-                type="submit"
-                className="go"
-                disabled={enCours || !brouillon.trim()}
-                aria-label={t("malica.chat.send")}
-              >
-                <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                  <path d="M12 19V5" />
-                  <path d="M6 11l6-6 6 6" />
-                </svg>
-              </button>
-            </form>
+            </div>
+            {menu === f.id ? (
+              <div className="del">
+                <p>{t("malica.fils.confirmer")}</p>
+                <div className="b">
+                  <button
+                    type="button"
+                    className="go"
+                    disabled={effacement.isPending}
+                    onClick={() => effacement.mutate(f.id)}
+                  >
+                    {t("malica.fils.supprimer")}
+                  </button>
+                  <button type="button" onClick={() => setMenu(null)}>
+                    {t("common.cancel")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ))
+      )}
+    </>
+  );
 
-            {/*
-             * Le pied, mot pour mot du dessin. Il ne dépend d'aucune lecture :
-             * c'est la règle du produit, et elle vaut avant la première
-             * question. Le rôle ne la change pas — elle vaut pour le dirigeant
-             * comme pour le siège.
-             */}
-            <p className="foot">{t("pme.malica.pied")}</p>
-          </>
-        )}
-      </div>
+  /* ------------------------------------------- Malica, en grand ou de côté */
+  const orbe = (
+    <div className={voix.parle || enCours ? "orbe parle" : "orbe"}>
+      <i className="b1" aria-hidden />
+      <i className="b2" aria-hidden />
+      <img src={portraitMalica} alt={t("malica.chat.her")} width={620} height={620} />
     </div>
+  );
+
+  return (
+    <div
+      data-ecran="chat"
+      data-parle={parle ? "" : undefined}
+      className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col"
+    >
+      <div className="cols">
+        {/* ------------------------------------ à gauche (ordinateur) */}
+        <aside className="gauche" aria-label={t("malica.fils.titre")}>
+          <p className="lbl">{t("pme.malica.canaux")}</p>
+          <div className="canaux">{canaux}</div>
+          <p className="lbl">
+            {t("malica.fils.titre")} · {listeDesFils.length}
+          </p>
+          <button type="button" className="nouveau" onClick={nouveauFil}>
+            <svg viewBox="0 0 24 24" className="g" aria-hidden>
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            {t("malica.fils.nouveau")}
+          </button>
+          {listeDeFils}
+        </aside>
+
+        {/* ------------------------------------------------- le centre */}
+        <section className="centre">
+          <div className="top">
+            <button
+              type="button"
+              className="bk"
+              aria-label={t("pme.regler.retour")}
+              onClick={() => (vue === "liste" ? setVue("fil") : revenir("/pme"))}
+            >
+              <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                <path d="M14.5 5.5L8 12l6.5 6.5" />
+              </svg>
+            </button>
+            <span className="mini" aria-hidden>
+              <img src={portraitMalica} alt="" width={620} height={620} />
+            </span>
+            <span className="qui">
+              <b>{t("malica.chat.her")}</b>
+              <span>{statut}</span>
+            </span>
+            <span className="chips">
+              <button
+                type="button"
+                className="chip"
+                aria-pressed={vue === "liste"}
+                onClick={() => setVue(vue === "liste" ? "fil" : "liste")}
+              >
+                {t("malica.fils.voir")}
+              </button>
+              {cabinet ? (
+                <Link
+                  className="chip"
+                  to="/pme/comptabilite/$cabinetId"
+                  params={{ cabinetId: cabinet.id }}
+                >
+                  {cabinet.nom}
+                  {cabinet.aRepondre > 0 ? <em>{cabinet.aRepondre}</em> : null}
+                </Link>
+              ) : null}
+            </span>
+          </div>
+
+          <div className="pad">
+            {vue === "liste" ? (
+              <div className="liste-fils">
+                <button type="button" className="nouveau" onClick={nouveauFil}>
+                  <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  {t("malica.fils.nouveau")}
+                </button>
+                {listeDeFils}
+              </div>
+            ) : (
+              <>
+                {/* Malica en grand, avant la première question. */}
+                <div className="hero" aria-hidden={parle || undefined}>
+                  <div className="pres">
+                    <i className="halo" aria-hidden />
+                    <img src={portraitMalica} alt="" width={620} height={620} />
+                  </div>
+                  <p className="salut">
+                    <span>{salut}</span>
+                  </p>
+                  <p className="sous">{t("pme.malica.sous")}</p>
+                  <div className="sugg">
+                    {questionsPretes.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        tabIndex={parle ? -1 : undefined}
+                        disabled={enCours}
+                        onClick={() => poser(q)}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="msgs" aria-live="polite">
+                  {filCourant ? <p className="jour">{dateCourte(filCourant.updatedAt)}</p> : null}
+                  {tours.map((tour, i) =>
+                    tour.role === "user" ? (
+                      <div key={i} className="moi">
+                        {tour.contenu}
+                      </div>
+                    ) : (
+                      <Reponse
+                        key={i}
+                        tour={tour}
+                        signe={i === premiereDeMalica(tours)}
+                        nom={t("malica.chat.her")}
+                      >
+                        <ReponseDeMalica
+                          tour={tour}
+                          tenantId={pme.tenantId}
+                          espace="pme"
+                          surSuggestion={poser}
+                        />
+                      </Reponse>
+                    ),
+                  )}
+                </div>
+
+                {parle && !(conseil.isPending || conseil.isError || acces.isPending) ? (
+                  <div className="esc off">
+                    <span className="av">{siege ? "·" : initiales(cabinetNom)}</span>
+                    <span className="bd">
+                      <b>
+                        {siege
+                          ? t("pme.malica.suiteTransmission")
+                          : aUnCabinet
+                            ? cabinetNom
+                              ? t("pme.malica.suiteAvis", { cabinet: cabinetNom })
+                              : t("pme.malica.suiteAvisSansNom")
+                            : t("pme.malica.suiteSansCabinet")}
+                      </b>
+                      <span>
+                        {siege || aUnCabinet
+                          ? t("pme.malica.suitePasEncore")
+                          : t("pme.malica.suiteSansCabinetDetail")}
+                      </span>
+                    </span>
+                  </div>
+                ) : null}
+
+                {/*
+                 * Les pièces jointes : déposées dans le dossier et confiées à
+                 * la lecture Malica (R2) avant de partir avec la question. Le
+                 * modèle n'en voit jamais l'image, seulement ce que la lecture
+                 * en a relevé.
+                 */}
+                {jointe.jointes.length > 0 || jointe.deposer.isPending ? (
+                  <div className="srcs">
+                    {jointe.jointes.map((j) => (
+                      <button
+                        key={j.id}
+                        type="button"
+                        onClick={() => jointe.retirer(j.id)}
+                        aria-label={`${t("pme.assistant.jointe.retirer")} — ${j.nom}`}
+                      >
+                        {t("pme.assistant.jointe.prete")} · {j.nom} ×
+                      </button>
+                    ))}
+                    {jointe.deposer.isPending ? (
+                      <span role="status">{t("pme.assistant.jointe.envoi")}</span>
+                    ) : null}
+                    {jointe.jointes.length > 0 ? (
+                      <span>{t("pme.assistant.jointe.lecture")}</span>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <form
+                  className="comp"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    poser(brouillon);
+                  }}
+                >
+                  <input
+                    ref={fichier}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) jointe.deposer.mutate(f);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="mic"
+                    aria-label={t("pme.assistant.joindre")}
+                    title={t("pme.assistant.joindre")}
+                    disabled={jointe.deposer.isPending || enCours}
+                    onClick={() => fichier.current?.click()}
+                  >
+                    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                      <path d="M20 11.5 12.5 19a5 5 0 0 1-7-7L13 4.5a3.3 3.3 0 0 1 4.7 4.7L10.2 16.7a1.7 1.7 0 0 1-2.4-2.4L14.5 7.6" />
+                    </svg>
+                  </button>
+                  <input
+                    ref={champ}
+                    value={brouillon}
+                    onChange={(e) => setBrouillon(e.target.value)}
+                    placeholder={t("pme.malica.composer")}
+                    aria-label={t("pme.malica.composer")}
+                  />
+                  <button
+                    type="submit"
+                    className="go"
+                    disabled={enCours || !brouillon.trim()}
+                    aria-label={t("malica.chat.send")}
+                  >
+                    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                      <path d="M12 19V5" />
+                      <path d="M6 11l6-6 6 6" />
+                    </svg>
+                  </button>
+                  {voix.disponible ? (
+                    <button
+                      type="button"
+                      className="mic"
+                      disabled={enCours}
+                      aria-label={t("pme.malica.voix.parler")}
+                      onClick={ouvrirLaVoix}
+                    >
+                      <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                        <rect x="9.2" y="3" width="5.6" height="11" rx="2.8" />
+                        <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0" />
+                        <path d="M12 18v3" />
+                      </svg>
+                    </button>
+                  ) : null}
+                </form>
+                <p className="foot">{t("pme.malica.pied")}</p>
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* -------------------------------- à droite (ordinateur) */}
+        <aside className="side" aria-label={t("malica.chat.her")}>
+          {orbe}
+          {voix.parle ? <Ondes /> : null}
+          <p className="st">{statut}</p>
+          <div className="src">
+            <b>{t("pme.malica.utilise")}</b>
+            {derniere?.sources && derniere.sources.length > 0 ? (
+              <ul>
+                {derniere.sources.map((s) => (
+                  <li key={s.cle}>{s.titre}</li>
+                ))}
+              </ul>
+            ) : (
+              <span>{t("pme.malica.rienEncore")}</span>
+            )}
+          </div>
+        </aside>
+      </div>
+
+      {/* ------------------------------------------------------ la voix */}
+      {enVoix ? (
+        <div
+          className="voix"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("pme.malica.voix.parler")}
+        >
+          {orbe}
+          {voix.ecoute ? <Ondes /> : null}
+          <p className="dit" aria-live="polite">
+            {voix.entendu ? `« ${voix.entendu} »` : t("pme.malica.voix.ecoute")}
+          </p>
+          <div className="b">
+            <button
+              type="button"
+              className="go"
+              disabled={!voix.entendu.trim()}
+              onClick={envoyerLaVoix}
+            >
+              {t("malica.chat.send")}
+            </button>
+            <button type="button" onClick={fermerLaVoix}>
+              {t("common.cancel")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Les sept barres qui bougent quand Malica écoute ou parle. */
+function Ondes() {
+  return (
+    <span className="ondes" aria-hidden>
+      {[0, 1, 2, 3, 4, 5, 6].map((k) => (
+        <i key={k} />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Une réponse de Malica dans le fil : sa signature au premier tour, puis la
+ * bulle. Le contenu (texte en flux, sources, propositions, suggestions) est
+ * celui de `ReponseDeMalica`, partagé avec le panneau du cabinet.
+ */
+function Reponse({
+  signe,
+  nom,
+  tour,
+  children,
+}: {
+  signe: boolean;
+  nom: string;
+  tour: TourDeMalica;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      {signe ? (
+        <div className="sig">
+          <span className="ph">
+            <img src={portraitMalica} alt="" width={620} height={620} />
+          </span>
+          <b>{nom}</b>
+        </div>
+      ) : null}
+      <div className="mal" aria-busy={tour.enCours || undefined}>
+        {children}
+      </div>
+    </>
   );
 }
 

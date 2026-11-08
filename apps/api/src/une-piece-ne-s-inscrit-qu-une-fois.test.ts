@@ -27,6 +27,9 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
   const legalId = `${String(Date.now()).slice(-7)}U/A/M/000`;
   let dirigeant: Utilisateur;
   let expert: Utilisateur;
+  // Le second regard d'un dossier confié : une autre personne du cabinet. Depuis le
+  // lot S2, la PME ne voit plus les écritures du cabinet et ne peut pas les valider.
+  let relecteur: Utilisateur;
   let pme = "";
   let cabinet = "";
   let pack = "";
@@ -58,6 +61,25 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       );
       return rows[0]!.id;
     });
+  /**
+   * Une écriture que la société a posée AVANT l'engagement de son cabinet :
+   * depuis le lot S5, aucun membre de la PME n'en pose pendant qu'un cabinet
+   * est engagé. Le mandat se suspend le temps de rejouer cette histoire.
+   */
+  const avantLeMandat = async <T>(f: () => Promise<T>): Promise<T> => {
+    await admin.query(
+      `update identity.engagements set status = 'suspendu' where pme_org_id = $1 and status = 'actif'`,
+      [pme],
+    );
+    try {
+      return await f();
+    } finally {
+      await admin.query(
+        `update identity.engagements set status = 'actif' where pme_org_id = $1 and status = 'suspendu'`,
+        [pme],
+      );
+    }
+  };
   const vivantes = async (pieceId: string, nature: string) =>
     (
       await admin.query<{ n: string }>(
@@ -73,6 +95,9 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
     assert.ok(d && e);
     dirigeant = d;
     expert = e;
+    const r = await creerCompte(`relecteur-${marque}@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(r);
+    relecteur = r;
     const creer = (u: Utilisateur, kind: string, nom: string, mf: string | null) =>
       sousIdentite(u.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
@@ -83,9 +108,19 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       });
     pme = await creer(dirigeant, "pme", `PME ${marque}`, legalId);
     cabinet = await creer(expert, "cabinet", `COMPTA ${marque}`, null);
+    await admin.query(
+      `insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')`,
+      [cabinet, relecteur.id],
+    );
     await sousIdentite(expert.id, (db) => identite.proposerMandat(db, cabinet, legalId));
     const [propose] = await sousIdentite(dirigeant.id, (db) => identite.mandatsProposes(db, pme));
     await sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, propose!.id, true));
+    // Le relecteur suit ce dossier : un collaborateur ne voit que les dossiers qu'on lui confie.
+    await admin.query(
+      `insert into collab.assignments (cabinet_tenant_id, client_tenant_id, collaborator_id)
+       values ($1, $2, $3)`,
+      [cabinet, pme, relecteur.id],
+    );
     const { rows } = await admin.query<{ id: string }>(
       `select id from ref.jurisdiction_packs where jurisdiction = 'TN'
         order by effective_from desc limit 1`,
@@ -104,6 +139,69 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
     } finally {
       await admin.end();
       await fermerLePool();
+    }
+  });
+
+  it("le cabinet seul valide ; le seuil active réellement le second regard", async () => {
+    const regler = (seuil: string | null) =>
+      admin.query(
+        `insert into collab.reglages_cabinet (tenant_id, double_validation_au_dela, updated_by)
+         values ($1, $2, $3) on conflict (tenant_id) do update
+         set double_validation_au_dela = excluded.double_validation_au_dela`,
+        [cabinet, seuil, expert.id],
+      );
+    const inscrire = async () => {
+      const piece = await nouvellePiece("partage");
+      return sousIdentite(expert.id, async (db) => {
+        const id = await office.propose(db, facture(piece));
+        await office.book(db, id);
+        return id;
+      });
+    };
+    const valider = (id: string, utilisateur = expert.id) =>
+      sousIdentite(utilisateur, (db) =>
+        db.query(`select public.socle_ecriture_review($1, 'valide')`, [id]),
+      );
+    await admin.query(
+      `update identity.organizations set validation_mode = 'mandate' where id = $1`,
+      [pme],
+    );
+    try {
+      // Sans ligne de réglage, le défaut livré est désactivé.
+      const seul = await inscrire();
+      await valider(seul);
+      const { rows } = await admin.query(
+        `select e.reviewed_by, e.booked_by, p.status,
+                exists (select 1 from audit.event_log a
+                         where a.object_id = e.id and a.action = 'ecriture.validee') as trace
+           from socle.ecritures e join capture.pieces p on p.id = e.piece_id where e.id = $1`,
+        [seul],
+      );
+      assert.equal(rows[0].reviewed_by, rows[0].booked_by);
+      assert.equal(rows[0].status, "supervisee");
+      assert.equal(rows[0].trace, true);
+      for (const seuil of [null, "101", "100"]) {
+        await regler(seuil);
+        await valider(await inscrire());
+      }
+      for (const seuil of ["99", "0"]) {
+        await regler(seuil);
+        const id = await inscrire();
+        await assert.rejects(valider(id), /chk_ecr_4eyes/);
+        // Le même auteur reste refusé, mais une seconde personne habilitée passe.
+        await valider(id, relecteur.id);
+      }
+      await regler("0");
+      const id = await inscrire();
+      await assert.rejects(valider(id), /chk_ecr_4eyes/);
+      await regler(null);
+      await valider(id);
+    } finally {
+      await regler(null);
+      await admin.query(
+        `update identity.organizations set validation_mode = 'autonome' where id = $1`,
+        [pme],
+      );
     }
   });
 
@@ -269,7 +367,9 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
 
   it("ANO-009 : transmettre une pièce transmet son écriture au cabinet", async () => {
     const piece = await nouvellePiece("entite");
-    const ecr = await sousIdentite(dirigeant.id, (db) => office.propose(db, facture(piece)));
+    const ecr = await avantLeMandat(() =>
+      sousIdentite(dirigeant.id, (db) => office.propose(db, facture(piece))),
+    );
     const voit = () =>
       sousIdentite(expert.id, async (db) => {
         const { rows } = await db.query(`select 1 from ecritures_v where id = $1`, [ecr]);
@@ -329,10 +429,12 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       await office.book(db, id);
       return id;
     });
-    await sousIdentite(dirigeant.id, async (db) => {
-      const id = await office.propose(db, { ...facture(gardee), libelle: `GARDEE ${marque}` });
-      await office.book(db, id);
-    });
+    await avantLeMandat(() =>
+      sousIdentite(dirigeant.id, async (db) => {
+        const id = await office.propose(db, { ...facture(gardee), libelle: `GARDEE ${marque}` });
+        await office.book(db, id);
+      }),
+    );
     const lire = () =>
       sousIdentite(expert.id, async (db) => {
         const { rows } = await db.query<{ ecriture_libelle: string; valide_le: string | null }>(

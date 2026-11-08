@@ -140,6 +140,12 @@ jobs:
       - name: Installer
         run: npm ci
 
+      # L'API lit avec le sudoku, comme en production (infra/api.Dockerfile).
+      - name: Le moteur du sudoku
+        run: |
+          rustup target add wasm32-unknown-unknown
+          npm run build --workspace @malica/sudoku
+
       - name: Monter le schéma
         run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
         env:
@@ -308,4 +314,3 @@ jobs:
             ~/.maestro/tests
             panneau-*.png
           retention-days: 7
-

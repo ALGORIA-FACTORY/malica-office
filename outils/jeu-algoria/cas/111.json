@@ -1,0 +1,323 @@
+{
+  "id": "111",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_vente",
+  "grille": "facture",
+  "langue": "hybride",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "D",
+  "scenario": "export_usd",
+  "realisme": [],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE / فاتورة",
+    "devise": "USD",
+    "exposant": 2,
+    "format": {
+      "milliers": ",",
+      "decimal": ".",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "client": {
+      "nom": "Ravelune Systems Ltd",
+      "nomAr": "رافلون سيستمز",
+      "enseigne": null,
+      "matricule": null,
+      "matriculeImprime": null,
+      "adresse": "56, rue du Lac Ourmi, Valletta",
+      "telephone": "00 33 945 563",
+      "fax": "00 30 396 119",
+      "email": null,
+      "site": null,
+      "rc": "B619445502020",
+      "rib": "99 382 9149677835002 77",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C2840959",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "client"
+    },
+    "date": "9 mars 2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Malica Office licence — Sovereign tier, 12 months",
+        "designationAr": "رخصة Malica Office",
+        "codeTaxe": "EXPORT",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "Software development services — sprint",
+        "designationAr": "خدمات تطوير البرمجيات",
+        "codeTaxe": "EXPORT",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "EXPORT",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "totalAvecTimbre": null,
+    "enLettres": "Arrêtée la présente facture à la somme de : quinze mille cent cinquante-deux dollars et cinquante-six centimes.",
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "ALGORIA FACTORY SARL",
+      "document_date": "9 mars 2026",
+      "references.numero": "F-2026-0401",
+      "references.matricule_fiscal": "1958330V/A/M/000",
+      "nom_client": "Ravelune Systems Ltd",
+      "adresse_client": "56, rue du Lac Ourmi, Valletta",
+      "adresse_emetteur": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone_emetteur": "00 71 940 517",
+      "registre_commerce_emetteur": "B01283932024",
+      "rib_emetteur": "99 017 0001834526710 54",
+      "mode_reglement": "Chèque",
+      "totals.base_ht": "15,152.56",
+      "totals.vat": "0.00",
+      "totals.ttc": "15,152.56",
+      "articles[0].designation": "Malica Office licence — Sovereign tier, 12 months",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "9,464.22",
+      "articles[0].total_ht": "9,464.22",
+      "articles[1].designation": "Software development services — sprint",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "2,844.17",
+      "articles[1].total_ht": "5,688.34",
+      "montant_en_lettres": "quinze mille cent cinquante-deux dollars et cinquante-six centimes",
+      "mention_export": "Export sale — outside the scope of Tunisian VAT / Vente à l'exportation, hors TVA"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[0]",
+      "totals.ttc": "total_ttc",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres",
+      "mention_export": "mention_export"
+    }
+  },
+  "graineDuRendu": 555673142,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "ALGORIA FACTORY SARL",
+      "document_date": "2026-03-09",
+      "currency": "USD",
+      "references.numero": "F-2026-0401",
+      "references.matricule_fiscal": "1958330V/A/M/000",
+      "references.matricule_fiscal_client": null,
+      "totals.base_ht": "15152.56",
+      "totals.vat": "0.00",
+      "totals.ttc": "15152.56",
+      "lines[0].tax_code": "EXPORT",
+      "lines[0].base_ht": "15152.56",
+      "lines[0].vat_amount": "0.00",
+      "articles[0].quantity": "1.00",
+      "articles[0].unit_price_ht": "9464.22",
+      "articles[0].total_ht": "9464.22",
+      "articles[1].quantity": "2.00",
+      "articles[1].unit_price_ht": "2844.17",
+      "articles[1].total_ht": "5688.34"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "705",
+          "0",
+          "47082.034",
+          "EXPORT"
+        ],
+        [
+          "411",
+          "47082.034",
+          "0"
+        ]
+      ],
+      "origines": [
+        [
+          "705",
+          "15152.56"
+        ],
+        [
+          "411",
+          "15152.56"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "aTrancher": {
+      "reserve": "nature_de_vente",
+      "ecriture": {
+        "journal": "VEN",
+        "lignes": [
+          [
+            "701",
+            "0",
+            "47082.034",
+            "EXPORT"
+          ],
+          [
+            "411",
+            "47082.034",
+            "0"
+          ]
+        ],
+        "origines": [
+          [
+            "701",
+            "15152.56"
+          ],
+          [
+            "411",
+            "15152.56"
+          ]
+        ]
+      }
+    },
+    "cours": {
+      "devise": "USD",
+      "taux": "3.1072",
+      "unite": 1,
+      "date": "2026-03-09"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "converti au cours FICTIF 3.1072 TND pour 1 USD, publié le 2026-03-09 (app.cours_applicable : date_facture, recul 5 jours)",
+      "INCERTAIN — compte de vente par nature d'article (ventes.compte = par_nature_article, défaut du CEO du 31/10/2026) : 705 prestations, 706 annexes, 707 marchandises ; repli au compte des produits finis, avec la réserve « nature de la vente à préciser »"
+    ],
+    "concepts": {
+      "type_document": "FACTURE / فاتورة",
+      "raison_sociale_emetteur": "ALGORIA FACTORY SARL",
+      "date_operation": "2026-03-09",
+      "numero_facture": "F-2026-0401",
+      "matricule_fiscal_emetteur": "1958330V/A/M/000",
+      "nom_client": "Ravelune Systems Ltd",
+      "adresse_client": "56, rue du Lac Ourmi, Valletta",
+      "adresse_emetteur": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone_email_emetteur": {
+        "telephone": "00 71 940 517"
+      },
+      "registre_commerce_emetteur": "B01283932024",
+      "rib_emetteur": "99 017 0001834526710 54",
+      "mode_reglement": "Chèque",
+      "total_ht": "15152.56",
+      "montant_tva_par_taux": {
+        "0": "0.00"
+      },
+      "total_ttc": "15152.56",
+      "base_tva_par_taux": {
+        "0": "15152.56"
+      },
+      "lignes": [
+        {
+          "designation": "Malica Office licence — Sovereign tier, 12 months",
+          "quantite": "1",
+          "prix_unitaire_ht": "9464.22",
+          "montant_ligne_ht": "9464.22",
+          "taux_tva_ligne": "0"
+        },
+        {
+          "designation": "Software development services — sprint",
+          "quantite": "2",
+          "prix_unitaire_ht": "2844.17",
+          "montant_ligne_ht": "5688.34",
+          "taux_tva_ligne": "0"
+        }
+      ],
+      "montant_en_lettres": "quinze mille cent cinquante-deux dollars et cinquante-six centimes",
+      "devise": "USD",
+      "mention_export": "Export sale — outside the scope of Tunisian VAT / Vente à l'exportation, hors TVA"
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "droit_timbre",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "matricule_fiscal_client",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

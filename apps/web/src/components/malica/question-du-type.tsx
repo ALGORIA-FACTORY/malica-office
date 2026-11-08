@@ -30,13 +30,23 @@
  * Si le matricule du dossier dit le contraire, c'est la comparaison qui
  * gagne — une déclaration est une intention.
  */
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { usePiegeDeFocus } from "@/hooks/use-superposition";
 
 import { useDossiers } from "@/hooks/use-dossiers";
 import { useI18n } from "@/i18n";
 import { dossierDeLaPiece, typePourLeDossier } from "@/lib/dossiers";
+
+/**
+ * Les sous-types de chaque porte (planche 3, approuvée le 7 novembre 2026) —
+ * des codes du référentiel. « Dépense sans facture » attend la règle
+ * comptable que Mondher doit valider : elle n'est pas proposée.
+ */
+const SOUS_TYPES: Record<string, readonly string[] | undefined> = {
+  achats: ["facture_achat", "avoir", "bon_livraison", "note_frais"],
+  ventes: ["facture_vente", "avoir", "bon_livraison"],
+};
 
 /**
  * ============================================ UNE QUESTION POUR TOUT LE LOT
@@ -62,6 +72,7 @@ export function QuestionDuType({
   onRepondre,
   actuel = null,
   sensAuCabinet = false,
+  avis = null,
   ...sortie
 }: {
   documents: readonly string[];
@@ -76,6 +87,11 @@ export function QuestionDuType({
    * refuse de toute façon (`refus.sens.reserve_au_cabinet`).
    */
   sensAuCabinet?: boolean;
+  /**
+   * Un avis sur la photo, avant l'envoi (une photo importée floue, sombre, de biais) : il se
+   * lit au-dessus des dossiers ; il n'empêche rien.
+   */
+  avis?: string | null;
 } & Sortie) {
   const { t } = useI18n();
   /*
@@ -86,6 +102,8 @@ export function QuestionDuType({
    */
   const feuille = useRef<HTMLDivElement | null>(null);
   usePiegeDeFocus(true, feuille);
+  /** La porte ouverte en correction (planche 3) : « achats » ou « ventes ». */
+  const [porte, setPorte] = useState<string | null>(null);
   /*
    * SEPT DOSSIERS, PAS DES TYPES (25 octobre 2026, maquette validée) : les
    * mêmes noms et les mêmes teintes que l'accueil. Le dossier choisi écrit
@@ -123,6 +141,14 @@ export function QuestionDuType({
         <p className="mt-1 truncate text-[14px] text-text-2">
           {documents.length === 1 ? documents[0] : t("pme.type.lot", { count: documents.length })}
         </p>
+        {avis ? (
+          <p
+            role="status"
+            className="mt-3 rounded-[14px] border border-border bg-card p-3 text-[13.5px] leading-[1.5] text-text-2"
+          >
+            {avis}
+          </p>
+        ) : null}
 
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           {proposes.map((d) => (
@@ -131,8 +157,19 @@ export function QuestionDuType({
               type="button"
               data-teinte={d.teinte}
               aria-pressed={sortie.mode === "correction" ? d.code === dossierActuel : undefined}
-              onClick={() => onRepondre(typePourLeDossier(d, actuel, types))}
-              className="tuile-dossier relative flex min-h-[104px] flex-col items-start justify-between gap-3 overflow-hidden rounded-[18px] p-3.5 text-start text-[16px] font-extrabold leading-tight"
+              aria-expanded={
+                SOUS_TYPES[d.code] && sortie.mode === "correction" ? porte === d.code : undefined
+              }
+              onClick={() =>
+                // Planche 3 (7 novembre 2026) : en correction, les deux portes
+                // ouvrent leurs sous-types ; à la capture, un toucher suffit.
+                sortie.mode === "correction" && SOUS_TYPES[d.code]
+                  ? setPorte((p) => (p === d.code ? null : d.code))
+                  : onRepondre(typePourLeDossier(d, actuel, types))
+              }
+              className={`tuile-dossier relative flex flex-col items-start justify-between gap-3 overflow-hidden rounded-[18px] p-3.5 text-start font-extrabold leading-tight ${
+                SOUS_TYPES[d.code] ? "porte min-h-[116px] text-[19px]" : "min-h-[96px] text-[16px]"
+              }`}
             >
               <span aria-hidden className="ini">
                 {d.libelle.slice(0, 1)}
@@ -171,6 +208,37 @@ export function QuestionDuType({
             </button>
           ) : null}
         </div>
+
+        {/*
+         * LE SECOND NIVEAU (planche 3) : n'apparaît qu'en correction, sous la
+         * porte touchée — facture, avoir, bon de livraison ; note de frais côté
+         * achats. Les types viennent du référentiel ; un code absent n'est pas
+         * proposé.
+         */}
+        {sortie.mode === "correction" && porte && SOUS_TYPES[porte] ? (
+          <div className="mt-3 rounded-[18px] border border-border bg-card p-3.5">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-text-3">
+              {t("pme.type.plutot", {
+                porte: dossiers.find((d) => d.code === porte)?.libelle ?? "",
+              })}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {SOUS_TYPES[porte]!.map((code) => types.find((x) => x.code === code))
+                .filter((x): x is NonNullable<typeof x> => !!x)
+                .map((x) => (
+                  <button
+                    key={x.code}
+                    type="button"
+                    aria-pressed={actuel?.typeDeDocument === x.code}
+                    onClick={() => onRepondre(x.code)}
+                    className="h-9 rounded-full border border-border bg-background px-3.5 text-[13.5px] font-semibold aria-pressed:border-[var(--acc)] aria-pressed:bg-[var(--acc)] aria-pressed:text-[var(--on-acc)]"
+                  >
+                    {x.libelle}
+                  </button>
+                ))}
+            </div>
+          </div>
+        ) : null}
 
         {sortie.mode === "correction" ? (
           <button

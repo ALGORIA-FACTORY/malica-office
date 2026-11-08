@@ -21,8 +21,6 @@
  * A4 à 200 dpi, comme les pages numérisées : un reçu et une facture
  * s'impriment à la même échelle, et le cabinet reçoit un lot homogène.
  */
-import { buildImagesPdf } from "./scanner";
-
 import type { Recu } from "@malica/socle/use-cases/recu-de-paiement";
 
 /** A4 à 200 dpi, en pixels. La même échelle que les pages numérisées. */
@@ -142,6 +140,7 @@ export async function rendreRecuEnPdf(recu: Recu, direction: "ltr" | "rtl"): Pro
       QUALITE,
     );
   });
+  const { buildImagesPdf } = await import("./scanner");
   const pdf = buildImagesPdf(
     [
       {

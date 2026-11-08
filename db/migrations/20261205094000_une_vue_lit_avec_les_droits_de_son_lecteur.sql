@@ -1,0 +1,33 @@
+-- La dernière vue qui lisait avec les droits de son propriétaire lit avec ceux de son lecteur.
+--
+-- ================================================================== POURQUOI
+--
+-- Audit du 6 novembre 2026 (docs/audit-2026-11-06/base.md, § 2 et constat 6) :
+-- sur 111 vues, `facturation.pieces_orphelines_v`
+-- (20261018110000_un_siege_est_une_place_et_les_places_se_comptent) est la
+-- seule sans `security_invoker`. Elle appartient à `postgres`, superutilisateur
+-- et `bypassrls` : elle lit `capture.pieces` × `identity.memberships` SANS les
+-- politiques, tous tenants confondus. Aucun droit n'y est accordé aujourd'hui
+-- (`relacl` nul : seul son propriétaire la lit) — le premier `grant select`
+-- rendrait à n'importe quel compte les pièces orphelines de tous les clients.
+--
+-- Pourquoi la corriger plutôt que la retirer : elle n'a aucun lecteur dans le
+-- dépôt (git grep : seule sa migration la nomme ; aucune fonction, vue,
+-- politique ni défaut ne la lit ; `pg_depend` : 0 dépendant), mais une base
+-- vivante peut avoir un lecteur hors dépôt — une requête d'exploitation jouée
+-- par `postgres`. Lire pour son lecteur ne retire rien à un superutilisateur
+-- (il contourne la RLS de toute façon) et ferme la mine pour tous les autres.
+-- Son retrait, avec les neuf autres vues sans lecteur (M2), attend la
+-- vérification des bases vivantes : docs/audit-2026-11-06/nettoyage-a-valider.sql.
+--
+-- _Gardé par_ apps/api/src/schema.test.ts, « toute vue lit avec les droits de
+-- son lecteur, même sans droit accordé ».
+
+alter view facturation.pieces_orphelines_v set (security_invoker = true);
+
+-- ================================================================== RETOUR
+--
+-- La migration de retour, à jouer telle quelle (sans les « -- » de tête) :
+--
+-- alter view facturation.pieces_orphelines_v reset (security_invoker);
+-- delete from app.migrations where nom = '20261205094000_une_vue_lit_avec_les_droits_de_son_lecteur.sql';

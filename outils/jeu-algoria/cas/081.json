@@ -1,0 +1,296 @@
+{
+  "id": "081",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "capture": "photo",
+  "gabarit": "E",
+  "scenario": "taux_13",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "pli",
+    "tampon",
+    "signature",
+    "souche_carbone"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Imprimerie Darvane",
+      "nomAr": "مطبعة دارفان",
+      "enseigne": null,
+      "matricule": "4369011R/A/M/000",
+      "matriculeImprime": "4369011R/A/M/000",
+      "adresse": "124, rue du Lac Ourmi, Ariana",
+      "telephone": "00 37 648 760",
+      "fax": "00 47 306 505",
+      "email": null,
+      "site": null,
+      "rc": "B701778552020",
+      "rib": "99 250 7735580665993 59",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C6514268",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "09/07/26",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل، ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Transport de matériel, course",
+        "designationAr": "نقل معدات، رحلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Imprimerie Darvane",
+      "document_date": "09/07/26",
+      "references.numero": "0821",
+      "references.matricule_fiscal": "4369011R/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "124, rue du Lac Ourmi, Ariana",
+      "telephone_emetteur": "00 37 648 760",
+      "registre_commerce_emetteur": "B701778552020",
+      "totals.base_ht": "9.393,559",
+      "totals.vat": "1.221,163",
+      "totals.ttc": "10.615,722",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Hébergement en hôtel, nuitée",
+      "articles[0].quantity": "22",
+      "articles[0].unit_price_ht": "248,120",
+      "articles[0].total_ht": "5.458,640",
+      "articles[1].designation": "Transport de matériel, course",
+      "articles[1].quantity": "19",
+      "articles[1].unit_price_ht": "207,101",
+      "articles[1].total_ht": "3.934,919"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[13]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 846991403,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Imprimerie Darvane",
+      "document_date": "2026-07-09",
+      "currency": "TND",
+      "references.numero": "0821",
+      "references.matricule_fiscal": "4369011R/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "9393.559",
+      "totals.vat": "1221.163",
+      "totals.ttc": "10615.722",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "9393.559",
+      "lines[0].vat_amount": "1221.163",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "22.000",
+      "articles[0].unit_price_ht": "248.120",
+      "articles[0].total_ht": "5458.640",
+      "articles[1].quantity": "19.000",
+      "articles[1].unit_price_ht": "207.101",
+      "articles[1].total_ht": "3934.919"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "9393.559",
+          "0"
+        ],
+        [
+          "4366",
+          "1221.163",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "10615.722"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Imprimerie Darvane",
+      "date_operation": "2026-07-09",
+      "numero_facture": "0821",
+      "matricule_fiscal_emetteur": "4369011R/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "124, rue du Lac Ourmi, Ariana",
+      "telephone_email_emetteur": {
+        "telephone": "00 37 648 760"
+      },
+      "registre_commerce_emetteur": "B701778552020",
+      "total_ht": "9393.559",
+      "montant_tva_par_taux": {
+        "13": "1221.163"
+      },
+      "total_ttc": "10615.722",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "13": "9393.559"
+      },
+      "lignes": [
+        {
+          "designation": "Hébergement en hôtel, nuitée",
+          "quantite": "22",
+          "prix_unitaire_ht": "248.120",
+          "montant_ligne_ht": "5458.640",
+          "taux_tva_ligne": "13"
+        },
+        {
+          "designation": "Transport de matériel, course",
+          "quantite": "19",
+          "prix_unitaire_ht": "207.101",
+          "montant_ligne_ht": "3934.919",
+          "taux_tva_ligne": "13"
+        }
+      ],
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

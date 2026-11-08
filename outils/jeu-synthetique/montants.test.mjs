@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { enLettres, imprimer, multiplier, versDecimal, versMineur } from "./montants.mjs";
+import { enLettres, horsTaxe, imprimer, multiplier, versDecimal, versMineur } from "./montants.mjs";
 
 describe("les montants du jeu synthétique", () => {
   it("passent du décimal à l'unité mineure et retour, sans flottant", () => {
@@ -17,6 +17,17 @@ describe("les montants du jeu synthétique", () => {
     assert.equal(versDecimal(1234567n, 3), "1234.567");
     assert.equal(versDecimal(5n, 3), "0.005");
     assert.equal(versDecimal(-1500n, 2), "-15.00");
+  });
+
+  it("rendent le hors-taxe d'un prix TTC, au plus proche", () => {
+    // Le ticket du 2 novembre 2026 : 32,000 TTC à 19 % → 26,891 HT.
+    assert.equal(horsTaxe(32000n, "0.190000"), 26891n);
+    // 107,000 à 7 % → 100,000 exactement ; 1,000 à 19 % → 0,840 (0,8403…).
+    assert.equal(horsTaxe(107000n, "0.07"), 100000n);
+    assert.equal(horsTaxe(1000n, "0.19"), 840n);
+    // Taux nul : le montant même ; le demi exact monte (5 ÷ 2 = 2,5 → 3).
+    assert.equal(horsTaxe(21n, "0"), 21n);
+    assert.equal(horsTaxe(5n, "1"), 3n);
   });
 
   it("arrondissent au plus proche, à égalité vers le haut ou au pair", () => {

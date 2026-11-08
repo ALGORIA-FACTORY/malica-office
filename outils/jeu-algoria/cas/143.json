@@ -1,0 +1,397 @@
+{
+  "id": "143",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "declaration_tva",
+  "grille": "declaration_mensuelle",
+  "langue": "ar",
+  "rendu": "pdf_image",
+  "capture": "photo",
+  "gabarit": "G",
+  "mise_en_page": "G-bande",
+  "scenario": "tva_credit",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "pli",
+    "tampon"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "التصريح الشهري بالأداءات",
+    "parties": [
+      {
+        "role": "contribuable",
+        "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "administration",
+        "nom": "الإدارة العامة للأداءات",
+        "matricule": null,
+        "est": "administration"
+      }
+    ],
+    "emetteur": {
+      "role": "contribuable",
+      "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "administration",
+      "nom": "الإدارة العامة للأداءات",
+      "matricule": null,
+      "est": "administration"
+    },
+    "style": "bande",
+    "police": null,
+    "couleur": "#333333",
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+        "telephone": "00 71 940 517",
+        "est": "dossier",
+        "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م"
+      },
+      "code": "signature_cachet"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            "République Tunisienne"
+          ],
+          [
+            "Ministère des Finances"
+          ],
+          [
+            "Direction Générale des Impôts"
+          ]
+        ],
+        "droite": [
+          [
+            "الجمهورية التونسية"
+          ],
+          [
+            "وزارة المالية"
+          ],
+          [
+            "الإدارة العامة للأداءات"
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "التصريح الشهري بالأداءات"
+        ],
+        "sous": [
+          "شهر ",
+          {
+            "c": "periode"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "الاسم الاجتماعي",
+            {
+              "c": "raison_sociale"
+            }
+          ],
+          [
+            "المعرف الجبائي",
+            {
+              "c": "matricule_fiscal"
+            }
+          ],
+          [
+            "العنوان",
+            {
+              "c": "adresse"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "الأداء على القيمة المضافة المستوجب"
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "01",
+            "رقم المعاملات الخاضع بنسبة 19 %",
+            {
+              "c": "ca_taxable_19"
+            }
+          ],
+          [
+            "02",
+            "الأداء بنسبة 19 %",
+            {
+              "c": "tva_19"
+            }
+          ],
+          [
+            "03",
+            "رقم المعاملات الخاضع بنسبة 7 %",
+            {
+              "c": "ca_taxable_7"
+            }
+          ],
+          [
+            "04",
+            "الأداء بنسبة 7 %",
+            {
+              "c": "tva_7"
+            }
+          ],
+          [
+            "08",
+            "مجموع الأداء المستوجب",
+            {
+              "c": "total_tva_collectee"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "الأداء القابل للطرح"
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "10",
+            "الأداء على الشراءات",
+            {
+              "c": "tva_ded_biens_services"
+            }
+          ],
+          [
+            "13",
+            "فائض الأداء المؤجل من الشهر السابق",
+            {
+              "c": "credit_reporte_mois_precedent"
+            }
+          ],
+          [
+            "14",
+            "مجموع الأداء القابل للطرح",
+            {
+              "c": "total_tva_deductible"
+            }
+          ],
+          [
+            "15",
+            "الأداء الواجب دفعه",
+            {
+              "c": "tva_a_payer"
+            }
+          ],
+          [
+            "16",
+            "فائض الأداء المؤجل",
+            {
+              "c": "credit_a_reporter"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "معلوم الطابع الجبائي"
+      },
+      {
+        "k": "cases",
+        "lignes": [
+          [
+            "30",
+            "عدد الفواتير",
+            {
+              "c": "timbre_nombre_factures"
+            }
+          ],
+          [
+            "32",
+            "المبلغ",
+            {
+              "c": "timbre_montant"
+            }
+          ],
+          [
+            "42",
+            "المجموع الواجب دفعه",
+            {
+              "c": "total_a_payer"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "تاريخ الإيداع : ",
+          {
+            "c": "date_depot"
+          }
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "ختم وإمضاء المطالب بالأداء"
+      }
+    ],
+    "imprime": {
+      "periode": "جويلية 2026",
+      "raison_sociale": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule_fiscal": "١٩٥٨٣٣٠V/A/M/٠٠٠",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "ca_taxable_19": "15 548,883",
+      "tva_19": "2 954,288",
+      "ca_taxable_7": "2 404,000",
+      "tva_7": "168,280",
+      "total_tva_collectee": "3 122,568",
+      "tva_ded_biens_services": "4 081,390",
+      "credit_reporte_mois_precedent": "346,555",
+      "total_tva_deductible": "4 427,945",
+      "tva_a_payer": "0,000",
+      "credit_a_reporter": "1 305,377",
+      "timbre_nombre_factures": "6",
+      "timbre_montant": "6,000",
+      "total_a_payer": "6,000",
+      "date_depot": "2026/08/20"
+    },
+    "versConcept": {
+      "periode": "periode",
+      "raison_sociale": "raison_sociale",
+      "matricule_fiscal": "matricule_fiscal",
+      "adresse": "adresse",
+      "ca_taxable_19": "ca_taxable_19",
+      "tva_19": "tva_19",
+      "ca_taxable_7": "ca_taxable_7",
+      "tva_7": "tva_7",
+      "total_tva_collectee": "total_tva_collectee",
+      "tva_ded_biens_services": "tva_ded_biens_services",
+      "credit_reporte_mois_precedent": "credit_reporte_mois_precedent",
+      "total_tva_deductible": "total_tva_deductible",
+      "tva_a_payer": "tva_a_payer",
+      "credit_a_reporter": "credit_a_reporter",
+      "timbre_nombre_factures": "timbre_nombre_factures",
+      "timbre_montant": "timbre_montant",
+      "total_a_payer": "total_a_payer",
+      "date_depot": "date_depot"
+    },
+    "marques": {
+      "cachet_emetteur": "signature_cachet"
+    },
+    "cheminsDuDossier": [
+      "matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 1165948522,
+  "attendu": {
+    "concepts": {
+      "periode": "2026-07-01/2026-07-31",
+      "raison_sociale": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule_fiscal": "1958330V/A/M/000",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "ca_taxable_19": "15548.883",
+      "tva_19": "2954.288",
+      "ca_taxable_7": "2404.000",
+      "tva_7": "168.280",
+      "total_tva_collectee": "3122.568",
+      "tva_ded_biens_services": "4081.390",
+      "credit_reporte_mois_precedent": "346.555",
+      "total_tva_deductible": "4427.945",
+      "tva_a_payer": "0.000",
+      "credit_a_reporter": "1305.377",
+      "timbre_nombre_factures": "6",
+      "timbre_montant": "6.000",
+      "total_a_payer": "6.000",
+      "date_depot": "2026-08-20",
+      "signature_cachet": true
+    },
+    "confondus": {},
+    "notes": [
+      "Crédit : TVA collectée − (TVA déductible + crédit reporté) = − crédit à reporter ; la TVA à payer est nulle et le total à payer est le seul timbre."
+    ],
+    "non_imprimes": [
+      "activite",
+      "autres_taxes",
+      "ca_exonere",
+      "ca_export",
+      "ca_suspension",
+      "ca_taxable_13",
+      "css_retenue_salaires",
+      "declaration_neant",
+      "demande_restitution",
+      "foprolos_base",
+      "foprolos_montant",
+      "foprolos_taux",
+      "mode_depot",
+      "mode_paiement",
+      "nature_depot",
+      "penalites_retard",
+      "prorata_deduction",
+      "ras_achats_1_5",
+      "ras_autres",
+      "ras_dividendes",
+      "ras_honoraires_10",
+      "ras_honoraires_3",
+      "ras_interets",
+      "ras_jetons_presence",
+      "ras_non_residents",
+      "ras_plus_value_immobiliere",
+      "ras_salaires_base",
+      "ras_salaires_montant",
+      "ras_tva",
+      "reference_accuse",
+      "reference_quittance",
+      "tcl_ca_export",
+      "tcl_ca_local",
+      "tcl_montant",
+      "tcl_taux",
+      "tfp_avance_imputee",
+      "tfp_base",
+      "tfp_montant",
+      "tfp_taux",
+      "timbre_tarif",
+      "total_principal",
+      "total_ras",
+      "tva_13",
+      "tva_autoliquidee",
+      "tva_ded_immobilisations",
+      "tva_ded_importations",
+      "tva_retenue_subie",
+      "tva_reversements"
+    ]
+  }
+}

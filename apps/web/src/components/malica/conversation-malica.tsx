@@ -35,6 +35,7 @@ import type {
 import { useEnvoyer } from "@/hooks/use-gestes-du-circuit";
 import { clePiecesLues } from "@/hooks/use-pieces-lues";
 import { useI18n, type MessageKey } from "@/i18n";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 
 export interface TourDeMalica {
@@ -49,7 +50,8 @@ export interface TourDeMalica {
   enCours?: boolean | undefined;
   /** L'outil que Malica consulte en ce moment. */
   outil?: string | null | undefined;
-  erreur?: string | null | undefined;
+  /** La panne, telle quelle : l'écran la dit par `texteDeLErreur`, jamais brute. */
+  erreur?: unknown;
   /** Le message rangé au fil : ce que le cabinet juge. */
   messageId?: string | null | undefined;
   /** Les instruments : modèle, premier mot, coût. Montrés au cabinet seulement. */
@@ -93,9 +95,12 @@ export function useConversationMalica(tenantId: string | null | undefined) {
     });
 
   const envoyer = useCallback(
-    async (question: string, pieceIds: string[] = []): Promise<string | null> => {
+    async (
+      question: string,
+      pieceIds: string[] = [],
+    ): Promise<{ conversationId: string | null; reponse: string | null }> => {
       const q = question.trim();
-      if (!q || !tenantId || enCours) return null;
+      if (!q || !tenantId || enCours) return { conversationId: null, reponse: null };
       setEnCours(true);
       setTours((prec) => [
         ...prec,
@@ -105,6 +110,7 @@ export function useConversationMalica(tenantId: string | null | undefined) {
       const controleur = new AbortController();
       arret.current = controleur;
       let nouveauFil: string | null = null;
+      let reponse: string | null = null;
       const surEvenement = (ev: EvenementDeLAssistant) => {
         switch (ev.type) {
           case "debut":
@@ -124,6 +130,7 @@ export function useConversationMalica(tenantId: string | null | undefined) {
             }));
             return;
           case "fin":
+            reponse = ev.fin.reponse;
             majDernier((t) => ({
               ...t,
               contenu: ev.fin.reponse,
@@ -159,26 +166,43 @@ export function useConversationMalica(tenantId: string | null | undefined) {
           controleur.signal,
         );
       } catch (e) {
-        majDernier((t) => ({
-          ...t,
-          enCours: false,
-          outil: null,
-          erreur: e instanceof Error ? e.message : String(e),
-        }));
+        // Un fil quitté en cours de réponse n'est pas une panne à montrer.
+        if (!controleur.signal.aborted) {
+          majDernier((t) => ({ ...t, enCours: false, outil: null, erreur: e }));
+        }
       } finally {
         setEnCours(false);
         arret.current = null;
       }
-      return nouveauFil;
+      return { conversationId: nouveauFil, reponse };
     },
     [tenantId, enCours, locale, filId],
   );
 
+  /**
+   * Reprendre un fil : chaque réponse revient avec les sources qu'elle citait
+   * et les actions qu'elle proposait, rangées avec elle.
+   */
   const reprendre = useCallback(
-    (id: string, messages: Array<{ role: "user" | "assistant"; contenu: string }>) => {
+    (
+      id: string,
+      messages: Array<{
+        role: "user" | "assistant";
+        contenu: string;
+        sources?: SourceDeLAssistant[] | null | undefined;
+        propositions?: PropositionDAction[] | null | undefined;
+      }>,
+    ) => {
       arret.current?.abort();
       setFilId(id);
-      setTours(messages.map((m) => ({ role: m.role, contenu: m.contenu })));
+      setTours(
+        messages.map((m) => ({
+          role: m.role,
+          contenu: m.contenu,
+          sources: m.sources ?? undefined,
+          propositions: m.propositions ?? undefined,
+        })),
+      );
     },
     [],
   );
@@ -299,7 +323,7 @@ export function ReponseDeMalica({
       {tour.erreur ? (
         <p className="et1" role="alert">
           <i />
-          {tour.erreur.startsWith("assistant.") ? t("pme.assistant.indisponible") : tour.erreur}
+          {texteDeLErreur(tour.erreur, "malica : assistant", t("pme.assistant.indisponible"))}
         </p>
       ) : null}
 
@@ -418,7 +442,11 @@ function PropositionAConfirmer({
           </button>
         </span>
       )}
-      {erreur instanceof Error ? <span role="alert">{erreur.message}</span> : null}
+      {erreur ? (
+        <span role="alert">
+          {texteDeLErreur(erreur, "malica : proposition", t("malica.chat.error"))}
+        </span>
+      ) : null}
     </div>
   );
 }

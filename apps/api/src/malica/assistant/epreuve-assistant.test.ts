@@ -206,6 +206,7 @@ const CONFIGURATION = {
     { model: "modele-difficile", role: "cache", in: 0.1, out: 0 },
     { model: "modele-difficile", role: "cache_ecriture", in: 2.5, out: 0 },
   ],
+  plafond: { plafond: 150, periode: "mois", depense: 0, epuise: false },
 };
 
 const chaine = (anthropicEpuise: boolean, deepseekEpuise: boolean) => [
@@ -253,9 +254,27 @@ interface Trace {
 function dossierFictif(options: { anthropicEpuise?: boolean; deepseekEpuise?: boolean } = {}): {
   api: AppelApi;
   trace: Trace;
+  /** Le fil tel que la base l'a rangé, sources et propositions comprises. */
+  fils: Map<
+    string,
+    Array<{
+      role: "user" | "assistant";
+      contenu: string;
+      sources?: unknown[] | null;
+      propositions?: unknown[] | null;
+    }>
+  >;
 } {
   const trace: Trace = { appels: [], journal: [] };
-  const fils = new Map<string, Array<{ role: "user" | "assistant"; contenu: string }>>();
+  const fils = new Map<
+    string,
+    Array<{
+      role: "user" | "assistant";
+      contenu: string;
+      sources?: unknown[] | null;
+      propositions?: unknown[] | null;
+    }>
+  >();
   let n = 0;
   const api: AppelApi = {
     async rpc<T>(depot: string, methode: string, args: unknown[] = []): Promise<T> {
@@ -283,13 +302,22 @@ function dossierFictif(options: { anthropicEpuise?: boolean; deepseekEpuise?: bo
         case "conversations.ouvrir":
           return r([...(fils.get(args[0] as string) ?? [])]);
         case "conversations.ajouter": {
-          const a = args[0] as { conversationId: string; question: string; reponse: string };
-          fils
-            .get(a.conversationId)
-            ?.push(
-              { role: "user", contenu: a.question },
-              { role: "assistant", contenu: a.reponse },
-            );
+          const a = args[0] as {
+            conversationId: string;
+            question: string;
+            reponse: string;
+            sources?: unknown[] | null;
+            propositions?: unknown[] | null;
+          };
+          fils.get(a.conversationId)?.push(
+            { role: "user", contenu: a.question },
+            {
+              role: "assistant",
+              contenu: a.reponse,
+              sources: a.sources ?? null,
+              propositions: a.propositions ?? null,
+            },
+          );
           return r(undefined);
         }
         case "conversations.dernierMessage":
@@ -479,7 +507,7 @@ function dossierFictif(options: { anthropicEpuise?: boolean; deepseekEpuise?: bo
       throw new Error("le modèle ne lit jamais les octets d'une pièce (R2)");
     },
   };
-  return { api, trace };
+  return { api, trace, fils };
 }
 
 const DOSSIER: DossierVerifie = {
@@ -752,6 +780,8 @@ const JEU = lireLeJeu(
 
 describe("l'épreuve de « Parler à Malica », sans réseau", () => {
   const notes: NoteDeConversation[] = [];
+  /** Les réponses rangées au fil AVEC leurs sources : un fil rouvert les réaffiche. */
+  let rangeesAvecSources = 0;
 
   it("le jeu porte entre 20 et 30 conversations, pièges compris", () => {
     assert.ok(JEU.length >= 20 && JEU.length <= 30, `${JEU.length} conversations`);
@@ -761,7 +791,7 @@ describe("l'épreuve de « Parler à Malica », sans réseau", () => {
 
   for (const cas of JEU.filter((c) => c.modes.includes("simule"))) {
     it(`${cas.id}`, async () => {
-      const { api, trace } = dossierFictif();
+      const { api, trace, fils } = dossierFictif();
       const fins: FinDeLaReponse[] = [];
       const questions: string[] = [];
       let conversationId: string | null = null;
@@ -786,6 +816,12 @@ describe("l'épreuve de « Parler à Malica », sans réseau", () => {
         );
         conversationId = fin.conversationId;
         fins.push(fin);
+        // Le fil range la réponse avec ses sources et ses propositions.
+        const range = fils.get(fin.conversationId)?.at(-1);
+        assert.equal(range?.contenu, fin.reponse, "le fil range ce que l'écran a vu");
+        assert.deepEqual(range?.sources ?? [], fin.sources, "les sources sont rangées");
+        assert.deepEqual(range?.propositions ?? [], fin.propositions, "les propositions aussi");
+        if (fin.sources.length > 0) rangeesAvecSources += 1;
         // Ce qui est montré au fil de l'eau est exactement la réponse finale.
         const montre = evenements.flatMap((e) => (e.type === "texte" ? [e.texte] : [])).join("");
         assert.equal(montre.trim(), fin.reponse, "le flux montre ce que la fin range");
@@ -812,6 +848,7 @@ describe("l'épreuve de « Parler à Malica », sans réseau", () => {
     assert.equal(b.justes, b.total);
     assert.equal(b.chiffresSansSource, 0);
     assert.ok(b.chiffresRetires >= 1, "le piège d'invention a bien été retiré");
+    assert.ok(rangeesAvecSources >= 5, `${rangeesAvecSources} réponses rangées avec leurs sources`);
     assert.equal(b.ecrituresConstatees, 0);
   });
 });
@@ -958,27 +995,30 @@ describe("les gardes de la boucle", () => {
           throw new Error("Claude ne devait pas être appelé");
         },
         conseil: conseilFictif,
-        repli: async () => ({
-          answer:
+        // Comme `askMalica` : la réponse passe `garder` AVANT d'être rangée.
+        repli: async ({ garder }) => ({
+          answer: garder(
             "Votre TVA à payer est de 1090.504 TND. Vous économiserez 300 dinars en déclarant tôt.",
+            [
+              {
+                cle: "malica:dossier",
+                genre: "liste",
+                titre: "Dossier",
+                objetId: null,
+                texte: '{"tva":"1090.504"}',
+              },
+            ],
+          ),
           model: "deepseek-chat",
           conversationId: "c-repli",
           messageId: null,
           titre: null,
-          sources: [
-            {
-              cle: "malica:dossier",
-              genre: "liste",
-              titre: "Dossier",
-              objetId: null,
-              texte: '{"tva":"1090.504"}',
-            },
-          ],
         }),
       },
       api,
     );
     assert.equal(fin.mesure.repli, "deepseek");
+    assert.equal(fin.mesure.motifDuRepli, "budget_claude");
     assert.equal(fin.reponse, "Votre TVA à payer est de 1090.504 TND.");
     assert.equal(fin.chiffresRetires.length, 1);
   });
@@ -994,21 +1034,21 @@ describe("les gardes de la boucle", () => {
           throw new Error("Claude 529 : Overloaded");
         },
         conseil: conseilFictif,
-        repli: async ({ conversationId }) => {
+        repli: async ({ conversationId, garder }) => {
           fil = conversationId;
           return {
-            answer: "Bonjour, que puis-je pour vous ?",
+            answer: garder("Bonjour, que puis-je pour vous ?", []),
             model: "deepseek-chat",
             conversationId: conversationId ?? "x",
             messageId: null,
             titre: null,
-            sources: [],
           };
         },
       },
       api,
     );
     assert.equal(fin.mesure.repli, "deepseek");
+    assert.equal(fin.mesure.motifDuRepli, "panne");
     assert.ok(fil, "le fil ouvert par Claude est passé au repli");
   });
 

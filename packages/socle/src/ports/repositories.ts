@@ -8,6 +8,7 @@ import type { DerniereLecture } from "../issue-de-lecture.ts";
 import type { LigneSaisie } from "../ecriture-saisie.ts";
 import type { CircuitInterne, StatutCabinet, SuiviDEnvoi } from "../statut-d-envoi.ts";
 import type { CodeVerdict } from "../verdicts.ts";
+import type { PropositionDAction, SourceDeLAssistant } from "./assistant.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 import type { SensDeTva } from "../contracts/tva.v1.ts";
 
@@ -318,6 +319,14 @@ export interface MessageDuFil {
   tokensOut: number | null;
   latencyMs: number | null;
   createdAt: string;
+  /**
+   * Les sources que la réponse de l'assistant citait, rangées avec elle : un
+   * fil rouvert les réaffiche. Nul pour une question, un fil ancien, ou une
+   * réponse sans source.
+   */
+  sources?: SourceDeLAssistant[] | null | undefined;
+  /** Les actions que la réponse proposait (boutons à confirmer) ; nul sinon. */
+  propositions?: PropositionDAction[] | null | undefined;
 }
 
 export interface JurisdictionPack {
@@ -1772,6 +1781,19 @@ export interface LigneDePeriode {
   credit: string;
 }
 
+/**
+ * Le total comptabilisé d'un mois pour une classe du plan (lot S2) : ce que
+ * l'accueil de la PME montre, sans une ligne, un compte ni une écriture.
+ */
+export interface TotalDeClasse {
+  /** « 2026-10 ». */
+  mois: string;
+  /** Le préfixe de la classe, tel que le pack le dit (`AccountClass.prefix`). */
+  classe: string;
+  debit: string;
+  credit: string;
+}
+
 /** La proposition d'écriture calculée par le serveur (3B-6), ou son refus motivé. */
 /**
  * La proposition d une piece, ou son refus.
@@ -2047,6 +2069,11 @@ export interface OfficeRepository {
    * balance ne confirmerait pas.
    */
   periodeLignes(tenantId: string, from: string, to: string): Promise<LigneDePeriode[]>;
+  /**
+   * Les totaux comptabilisés par mois et par classe du plan, entre deux dates
+   * — la porte de l'accueil de la PME, qui ne voit jamais les écritures.
+   */
+  totauxParClasse(tenantId: string, from: string, to: string): Promise<TotalDeClasse[]>;
   /**
    * Les retenues à la source d'un mois (`periode` : un jour du mois), lues
    * dans les écritures : opérées (à reverser) et subies (créances sur l'État).
@@ -3741,6 +3768,18 @@ export interface JournalRepository {
     version?: string | null;
     plateforme?: string | null;
   }): Promise<string>;
+  /**
+   * Inscrire une panne vue hors de tout dossier (invitation, cabinet, tour) :
+   * où, le code, un détail expurgé et court. Bornée par la base ; `inscrite`
+   * vaut faux au-delà de la borne, sans lever.
+   */
+  consignerHorsDossier(input: {
+    ou: string;
+    code: string;
+    detail?: string | null;
+    version?: string | null;
+    plateforme?: string | null;
+  }): Promise<{ inscrite: boolean }>;
   /** Les dernieres pannes d'un dossier, de la plus recente. */
   dernieres(tenantId: string, limite?: number): Promise<PanneConsignee[]>;
   /** « Tout est reglé » : une marque datée ; rien n'est effacé (R7). */
@@ -4512,39 +4551,6 @@ export interface PassageDeNuit {
   };
 }
 
-/** Le réglage du conseil cité, tel que la tour le saisit. */
-export interface ReglageDuConseilCite {
-  modeleCourant: string;
-  modeleDifficile: string;
-  longueurDifficile: number;
-  motsDifficiles: string[];
-  corpusDistinctsDifficile: number;
-  passagesMax: number;
-  distanceMax: string;
-  distanceMaxMots: string;
-  sortieMaxJetons: number;
-}
-
-/** Ce que la tour voit du conseil cité. */
-export interface EtatDuConseilCite {
-  consignes: Array<{ id: string; texte: string; motif: string; decide_le: string }>;
-  reglage: {
-    modele_courant: string;
-    modele_difficile: string;
-    longueur_difficile: number;
-    mots_difficiles: string[];
-    corpus_distincts_difficile: number;
-    passages_max: number;
-    distance_max: number;
-    distance_max_mots: number;
-    sortie_max_jetons: number;
-    motif: string;
-    decide_le: string;
-  } | null;
-  modeles: string[];
-  mois: { appels: number; cout: number };
-}
-
 /** Le réglage de « Parler à Malica », tel que la tour le saisit. */
 export interface ReglageDeLAssistant {
   modeleCourant: string;
@@ -4580,6 +4586,18 @@ export interface EtatDeLAssistant {
   } | null;
   modeles: string[];
   mois: { appels: number; cout: number };
+  /**
+   * Le plafond propre de l'assistant (défaut livré : 150 $ par mois), ce qu'il
+   * en a dépensé sur Claude dans sa période, et s'il est atteint.
+   */
+  plafond: {
+    plafond: number;
+    periode: "jour" | "mois";
+    depense: number;
+    epuise: boolean;
+    motif: string;
+    decide_le: string;
+  } | null;
 }
 
 /** Un maillon de la chaîne de désignation, tel que la tour le voit. */
@@ -4609,6 +4627,39 @@ export interface EtatDeLaDesignation {
   bascules: Array<{ le: string; modele: string; statut: "error" | "degraded"; motif: string }>;
   /** Le mois civil : pièces lues sans IA (le Sudoku d'abord) et pièces désignées par un modèle. */
   mois: { sans_ia: number; par_modele: number };
+}
+
+/** Le réglage du conseil cité, tel que la tour le saisit. */
+export interface ReglageDuConseilCite {
+  modeleCourant: string;
+  modeleDifficile: string;
+  longueurDifficile: number;
+  motsDifficiles: string[];
+  corpusDistinctsDifficile: number;
+  passagesMax: number;
+  distanceMax: string;
+  distanceMaxMots: string;
+  sortieMaxJetons: number;
+}
+
+/** Ce que la tour voit du conseil cité. */
+export interface EtatDuConseilCite {
+  consignes: Array<{ id: string; texte: string; motif: string; decide_le: string }>;
+  reglage: {
+    modele_courant: string;
+    modele_difficile: string;
+    longueur_difficile: number;
+    mots_difficiles: string[];
+    corpus_distincts_difficile: number;
+    passages_max: number;
+    distance_max: number;
+    distance_max_mots: number;
+    sortie_max_jetons: number;
+    motif: string;
+    decide_le: string;
+  } | null;
+  modeles: string[];
+  mois: { appels: number; cout: number };
 }
 
 export interface TourRepository {
@@ -4721,18 +4772,22 @@ export interface TourRepository {
   } | null>;
   /** La tour règle le plafond IA : daté et motivé ; rien ne se réécrit (ANO-029). */
   reglerIa(plafondUsd: string, motif: string): Promise<unknown>;
-  /** Le conseil cité (Claude sur le corpus) : consigne, ses versions, réglage, modèles, coût du mois. */
-  conseilCiteEtat(): Promise<EtatDuConseilCite | null>;
-  /** Publier une version nouvelle de la consigne du conseil cité : datée, motivée, en ajout seul. */
-  publierConsigneDuConseil(texte: string, motif: string): Promise<unknown>;
-  /** Régler le conseil cité : modèles, règle de difficulté, seuils de recherche. */
-  reglerConseilCite(reglage: ReglageDuConseilCite, motif: string): Promise<unknown>;
   /** « Parler à Malica » : consigne, ses versions, réglage, modèles, coût du mois. */
   assistantEtat(): Promise<EtatDeLAssistant | null>;
   /** Publier une version nouvelle de la consigne de l'assistant : datée, motivée, en ajout seul. */
   publierConsigneDeLAssistant(texte: string, motif: string): Promise<unknown>;
   /** Régler l'assistant : modèles, règle de difficulté, effort, réflexion, bornes. */
   reglerAssistant(reglage: ReglageDeLAssistant, motif: string): Promise<unknown>;
+  /**
+   * Régler le plafond PROPRE de l'assistant (défaut livré : 150 $ par mois) :
+   * au-delà, il passe au repli DeepSeek ; la lecture des pièces n'en est pas
+   * touchée. Daté, motivé, en ajout seul.
+   */
+  reglerPlafondDeLAssistant(
+    plafondUsd: string,
+    periode: "jour" | "mois",
+    motif: string,
+  ): Promise<unknown>;
   /**
    * La chaîne de désignation (décision du 8 novembre 2026) : Claude au rang 1,
    * DeepSeek au rang 2, leurs plafonds et dépenses de la période, les modèles
@@ -4748,6 +4803,12 @@ export interface TourRepository {
     plafondUsd: string,
     motif: string,
   ): Promise<unknown>;
+  /** Le conseil cité (Claude sur le corpus) : consigne, ses versions, réglage, modèles, coût du mois. */
+  conseilCiteEtat(): Promise<EtatDuConseilCite | null>;
+  /** Publier une version nouvelle de la consigne du conseil cité : datée, motivée, en ajout seul. */
+  publierConsigneDuConseil(texte: string, motif: string): Promise<unknown>;
+  /** Régler le conseil cité : modèles, règle de difficulté, seuils de recherche. */
+  reglerConseilCite(reglage: ReglageDuConseilCite, motif: string): Promise<unknown>;
   /** Les relances d'impayé en vigueur ; `null` tant que la tour n'a rien décidé (fermées). */
   reglageRelances(): Promise<{
     actives: boolean;

@@ -25,7 +25,16 @@
       // @capacitor/android est le projet Gradle (android/capacitor.settings.gradle
       // le désigne) ; @capacitor/keyboard est un greffon natif enregistré par
       // cap sync et configuré dans capacitor.config.ts, sans import JavaScript.
-      "ignoreDependencies": ["@capacitor/android", "@capacitor/keyboard"],
+      // Les trois @fontsource ne sont lus que par les url() de src/polices.css
+      // (les fichiers woff2 seuls, avec leur plage de caractères) : knip ne
+      // suit pas une url() de feuille de style.
+      "ignoreDependencies": [
+        "@capacitor/android",
+        "@capacitor/keyboard",
+        "@fontsource/ibm-plex-mono",
+        "@fontsource/inter",
+        "@fontsource/noto-kufi-arabic",
+      ],
     },
     "packages/socle": {
       "entry": ["src/**/*.ts"],

@@ -39,10 +39,20 @@ describe("qui relaie quoi", () => {
     // Malica : la lecture, la réponse, la rédaction — sur leurs propres routes.
     expect(estPourLApi("/malica/lectures/abc")).toBe(true);
     expect(estPourLApi("/malica/demander")).toBe(true);
+    // Les exports gardés du journal du jour (audit du 6 novembre 2026, S12).
+    expect(estPourLApi("/exports/abc/contenu")).toBe(true);
   });
 
   it("ne relaie aucune page de l application", () => {
-    for (const p of ["/", "/pme", "/pme/fiche", "/office", "/cabinet", "/onboarding"]) {
+    for (const p of [
+      "/",
+      "/pme",
+      "/pme/fiche",
+      "/office",
+      "/cabinet",
+      "/cabinet/export",
+      "/onboarding",
+    ]) {
       expect(estPourLApi(p), p).toBe(false);
     }
   });

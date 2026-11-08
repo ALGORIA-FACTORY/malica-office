@@ -33,7 +33,11 @@ struct Verite {
 
 impl Verite {
     fn tva(&self) -> Vec<(i64, i64)> {
-        let mut v: Vec<(i64, i64)> = self.tva.iter().map(|(t, m)| (t.parse().unwrap(), *m)).collect();
+        let mut v: Vec<(i64, i64)> = self
+            .tva
+            .iter()
+            .map(|(t, m)| (t.parse().unwrap(), *m))
+            .collect();
         v.sort();
         v
     }
@@ -47,7 +51,9 @@ impl Verite {
     }
     /// Le critère des mutations de la référence (eval_mut.py) : HT, TTC et TVA par taux.
     fn juste_mutation(&self, o: &Value) -> bool {
-        valeur(o, "total_ht") == self.ht && valeur(o, "total_ttc") == self.ttc && tva(o) == self.tva()
+        valeur(o, "total_ht") == self.ht
+            && valeur(o, "total_ttc") == self.ttc
+            && tva(o) == self.tva()
     }
 }
 
@@ -63,7 +69,8 @@ fn banc3_factures_et_tickets() {
     let verites = verites();
     let mut ids: Vec<&String> = releves.keys().collect();
     ids.sort();
-    let (mut justes, mut fausses, mut tickets_signales, mut factures, mut tickets) = (0, 0, 0, 0, 0);
+    let (mut justes, mut fausses, mut tickets_signales, mut factures, mut tickets) =
+        (0, 0, 0, 0, 0);
     let mut non_prouvees = Vec::new();
     let mut temps = Vec::new();
     for id in ids {
@@ -124,7 +131,8 @@ fn banc3_mutations_zero_fausse_preuve() {
     let lecteur = Lecteur::new();
     let releves = releves("banc3_releves.json");
     let verites = verites();
-    let mutations: BTreeMap<String, Mutation> = serde_json::from_str(&donnees("banc3_mutations.json")).unwrap();
+    let mutations: BTreeMap<String, Mutation> =
+        serde_json::from_str(&donnees("banc3_mutations.json")).unwrap();
     let mut par_mode: BTreeMap<String, (u32, u32, u32)> = BTreeMap::new(); // (prouvées justes, signalées, fausses)
     let mut fausses = Vec::new();
     for (mid, m) in &mutations {

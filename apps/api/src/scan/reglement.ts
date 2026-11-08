@@ -49,7 +49,9 @@ export const AMBIGU = Symbol("ambigu");
  * comptabilité qui le mandate, puis le défaut fourni (le compte du moyen de
  * paiement) ou, à défaut, le pack. Une seule lecture pour la trésorerie et
  * les retenues : deux surcharges contradictoires sont refusées, jamais
- * départagées par l'ordre d'une requête.
+ * départagées par l'ordre d'une requête. La lecture est celle de la base
+ * (`app.comptes_du_role`), que le contrôle d'un règlement inscrit relit aussi
+ * (lot S5b) : la proposition et son contrôle ne peuvent pas diverger.
  */
 export async function compteDuRole(
   db: Requete,
@@ -59,15 +61,7 @@ export async function compteDuRole(
   defaut: string | null,
 ): Promise<string | null | typeof AMBIGU> {
   const { rows } = await db.query<{ compte: string | null }>(
-    `select distinct coalesce(d.account_code, c.account_code, $4::text,
-              (select p.account_code from ref.role_bindings p
-                where p.role_code = $2 and p.pack_version_id = $3)) as compte
-       from (select 1) source
-       left join parametrage_role_bindings_v d on d.role_code = $2
-         and d.portee = 'dossier' and d.portee_id = $1
-       left join parametrage_role_bindings_v c on c.role_code = $2 and c.portee = 'cabinet'
-         and c.portee_id in (select cabinet_org_id from engagements_v
-                              where pme_org_id = $1 and status = 'actif')`,
+    `select compte from app.comptes_du_role($1, $2, $3, $4::text) as compte`,
     [tenantId, role, packVersionId, defaut],
   );
   return rows.length === 1 ? rows[0]!.compte : AMBIGU;
@@ -219,22 +213,16 @@ export async function propositionDeReglement(
 
   // Retrouver le tiers réellement comptabilisé, y compris un compte personnalisé.
   // Un résultat ambigu bloque : aucun « premier compte » arbitraire.
-  const { rows: comptes } = await db.query<{ compte: string }>(
-    `select distinct ll.account_code as compte
-       from ecritures_v e join ecriture_lignes_v ll on ll.ecriture_id = e.id
-      where e.piece_id = $1 and e.nature = 'piece' and app.ecriture_vivante(e.id)
-        and (($2 = 'facture_achat' and ll.credit = $3::numeric and ll.debit = 0)
-          or ($2 = 'facture_vente' and ll.debit = $3::numeric and ll.credit = 0))`,
+  // La PME ne lit pas l'écriture du cabinet (lot S2) : la base lui en rend ce
+  // seul compte (lot S5b). Null : aucune écriture vivante ; '' : ambigu.
+  const { rows: comptes } = await db.query<{ compte: string | null }>(
+    `select app.compte_du_tiers_inscrit($1, $2, $3::numeric) as compte`,
     [l.piece_courante, sens, ttc],
   );
-  let counterparty = comptes.length === 1 ? comptes[0]!.compte : "";
-  if (!comptes.length) {
-    const { rows: inscrite } = await db.query(
-      `select id from ecritures_v where piece_id = $1 and nature = 'piece' and app.ecriture_vivante(id)`,
-      [l.piece_courante],
-    );
-    if (inscrite.length)
-      return { ok: false, raison: "Le compte du tiers inscrit doit être vérifié." };
+  let counterparty = comptes[0]?.compte ?? "";
+  if (comptes[0]?.compte === "")
+    return { ok: false, raison: "Le compte du tiers inscrit doit être vérifié." };
+  if (comptes[0]?.compte == null) {
     const { rows: mapping } = await db.query<{ counterparty_account: string }>(
       `select distinct counterparty_account from ref_account_mappings_v
         where pack_version_id = $1 and document_kind = $2`,

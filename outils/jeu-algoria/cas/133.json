@@ -1,0 +1,284 @@
+{
+  "id": "133",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "recu_de_paiement",
+  "grille": "recu_quittance",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-bande",
+  "scenario": "quittance_loyer",
+  "realisme": [
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Quittance de loyer",
+    "parties": [
+      {
+        "role": "creancier",
+        "nom": "Société Immobilière Varzane SARL",
+        "matricule": "6220024S/A/M/000",
+        "est": "tiers"
+      },
+      {
+        "role": "debiteur",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "creancier",
+      "nom": "Société Immobilière Varzane SARL",
+      "matricule": "6220024S/A/M/000",
+      "est": "tiers"
+    },
+    "client": {
+      "role": "debiteur",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": "bande",
+    "police": null,
+    "couleur": "#7a4b16",
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "Société Immobilière Varzane SARL",
+        "adresse": "27, avenue Kelvira, 1002 Tunis Belvédère",
+        "telephone": "00 60 943 149"
+      },
+      "code": "signature_creancier"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "c": "nom_creancier",
+              "cls": "gros"
+            }
+          ],
+          [
+            "27, avenue Kelvira, 1002 Tunis Belvédère"
+          ],
+          [
+            "MF : ",
+            {
+              "c": "matricule_fiscal_creancier"
+            }
+          ]
+        ],
+        "droite": [
+          [
+            "Locataire :"
+          ],
+          [
+            {
+              "c": "nom_debiteur"
+            }
+          ],
+          [
+            "MF : ",
+            {
+              "c": "matricule_fiscal_debiteur"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          {
+            "c": "intitule"
+          },
+          " N° ",
+          {
+            "c": "numero_recu"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Local loué :",
+            {
+              "c": "adresse_bien_loue"
+            }
+          ],
+          [
+            "Contrat de bail :",
+            {
+              "c": "ref_contrat_bail"
+            }
+          ],
+          [
+            "Période :",
+            {
+              "c": "periode_loyer"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Libellé",
+          "Montant (DT)"
+        ],
+        "nombres": [
+          1
+        ],
+        "lignes": [
+          [
+            "Loyer principal HT",
+            {
+              "c": "montant_loyer_principal"
+            }
+          ],
+          [
+            "TVA 19 %",
+            {
+              "c": "tva_loyer"
+            }
+          ],
+          [
+            "Charges communes",
+            {
+              "c": "charges"
+            }
+          ],
+          [
+            "Retenue à la source 10 % (sur le loyer HT)",
+            [
+              "− ",
+              {
+                "c": "retenue_source_loyer"
+              }
+            ]
+          ]
+        ],
+        "pied": [
+          [
+            "Net reçu",
+            {
+              "c": "montant_recu"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Reçu le ",
+          {
+            "c": "date_paiement"
+          },
+          " par ",
+          {
+            "c": "mode_reglement"
+          },
+          ", pour solde du loyer et des charges de la période ci-dessus, sous réserve de tous droits."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "",
+        "droite": "Le bailleur"
+      }
+    ],
+    "imprime": {
+      "nom_creancier": "Société Immobilière Varzane SARL",
+      "matricule_fiscal_creancier": "6220024S/A/M/000",
+      "nom_debiteur": "ALGORIA FACTORY SARL",
+      "matricule_fiscal_debiteur": "1958330V/A/M/000",
+      "intitule": "QUITTANCE DE LOYER",
+      "numero_recu": "Q-2026-10-76",
+      "adresse_bien_loue": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "ref_contrat_bail": "BAIL-VZ-2026-013",
+      "periode_loyer": "octobre 2026",
+      "montant_loyer_principal": "3.200,000",
+      "tva_loyer": "608,000",
+      "charges": "207,000",
+      "retenue_source_loyer": "320,000",
+      "montant_recu": "3.695,000",
+      "date_paiement": "2 octobre 2026",
+      "mode_reglement": "virement bancaire"
+    },
+    "versConcept": {
+      "nom_creancier": "nom_creancier",
+      "matricule_fiscal_creancier": "matricule_fiscal_creancier",
+      "nom_debiteur": "nom_debiteur",
+      "matricule_fiscal_debiteur": "matricule_fiscal_debiteur",
+      "intitule": "intitule",
+      "numero_recu": "numero_recu",
+      "adresse_bien_loue": "adresse_bien_loue",
+      "ref_contrat_bail": "ref_contrat_bail",
+      "periode_loyer": "periode_loyer",
+      "montant_loyer_principal": "montant_loyer_principal",
+      "tva_loyer": "tva_loyer",
+      "charges": "charges",
+      "retenue_source_loyer": "retenue_source_loyer",
+      "montant_recu": "montant_recu",
+      "date_paiement": "date_paiement",
+      "mode_reglement": "mode_reglement"
+    },
+    "marques": {
+      "cachet_emetteur": "signature_creancier",
+      "signature_emetteur": "signature_creancier"
+    },
+    "cheminsDuDossier": [
+      "matricule_fiscal_debiteur"
+    ]
+  },
+  "graineDuRendu": 1331224758,
+  "attendu": {
+    "concepts": {
+      "nom_creancier": "Société Immobilière Varzane SARL",
+      "matricule_fiscal_creancier": "6220024S/A/M/000",
+      "nom_debiteur": "ALGORIA FACTORY SARL",
+      "matricule_fiscal_debiteur": "1958330V/A/M/000",
+      "intitule": "quittance de loyer",
+      "numero_recu": "Q-2026-10-76",
+      "adresse_bien_loue": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "ref_contrat_bail": "BAIL-VZ-2026-013",
+      "periode_loyer": "2026-10-01/2026-10-31",
+      "montant_loyer_principal": "3200.000",
+      "tva_loyer": "608.000",
+      "charges": "207.000",
+      "retenue_source_loyer": "320.000",
+      "montant_recu": "3695.000",
+      "date_paiement": "2026-10-02",
+      "mode_reglement": "virement",
+      "signature_creancier": true
+    },
+    "confondus": {},
+    "notes": [
+      "Net reçu = loyer HT + TVA + charges − retenue à la source.",
+      "INCERTAIN — retenue à la source sur loyers au taux relevé (RAS_HONORAIRES_COMMISSIONS_COURTAGES_LOYERS, 10 %), assise ici sur le loyer HT : l'assiette (HT ou TTC) n'a pas été relue."
+    ],
+    "non_imprimes": [
+      "droit_timbre",
+      "identifiant_bailleur_personne_physique",
+      "objet_paiement",
+      "ref_facture_reglee"
+    ]
+  }
+}

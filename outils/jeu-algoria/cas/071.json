@@ -1,0 +1,304 @@
+{
+  "id": "071",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "hybride",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "D",
+  "scenario": "remise",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "froisse",
+    "annotation"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Imprimerie Darvane",
+      "nomAr": "مطبعة دارفان",
+      "enseigne": null,
+      "matricule": "4369011R/A/M/000",
+      "matriculeImprime": "4369011R/A/M/000",
+      "adresse": "124, rue du Lac Ourmi, Ariana",
+      "telephone": "00 37 648 760",
+      "fax": "00 47 306 505",
+      "email": null,
+      "site": null,
+      "rc": "B701778552020",
+      "rib": "99 250 7735580665993 59",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C5607426",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330VAM000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "18 mai 2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Classeur à levier, dos 8 cm",
+        "designationAr": "ملف برافعة، ظهر 8 سم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre couleur",
+        "designationAr": "خرطوشة حبر ملون",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": {
+      "tauxImprime": "5 %",
+      "brut": "1510,026",
+      "montant": "75,501"
+    },
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": "Arrêtée la présente facture à la somme de : mille sept cent huit dinars et quatre-vingt-cinq millimes.",
+    "tampon": null,
+    "annotation": "Reçu",
+    "ratures": [],
+    "imprime": {
+      "issuer": "Imprimerie Darvane",
+      "document_date": "18 mai 2026",
+      "references.numero": "F-2026-5469",
+      "references.matricule_fiscal": "4369011R/A/M/000",
+      "references.matricule_fiscal_client": "1958330VAM000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "124, rue du Lac Ourmi, Ariana",
+      "telephone_emetteur": "00 37 648 760",
+      "registre_commerce_emetteur": "B701778552020",
+      "rib_emetteur": "99 250 7735580665993 59",
+      "mode_reglement": "Espèces",
+      "totals.base_ht": "1434,525",
+      "totals.vat": "272,560",
+      "totals.ttc": "1708,085",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Classeur à levier, dos 8 cm",
+      "articles[0].quantity": "18",
+      "articles[0].unit_price_ht": "6,090",
+      "articles[0].total_ht": "109,620",
+      "articles[1].designation": "Cartouche d'encre couleur",
+      "articles[1].quantity": "14",
+      "articles[1].unit_price_ht": "100,029",
+      "articles[1].total_ht": "1400,406",
+      "montant_en_lettres": "mille sept cent huit dinars et quatre-vingt-cinq millimes"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres"
+    }
+  },
+  "graineDuRendu": 2092372287,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Imprimerie Darvane",
+      "document_date": "2026-05-18",
+      "currency": "TND",
+      "references.numero": "F-2026-5469",
+      "references.matricule_fiscal": "4369011R/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "1434.525",
+      "totals.vat": "272.560",
+      "totals.ttc": "1708.085",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "1434.525",
+      "lines[0].vat_amount": "272.560",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "18.000",
+      "articles[0].unit_price_ht": "6.090",
+      "articles[0].total_ht": "109.620",
+      "articles[1].quantity": "14.000",
+      "articles[1].unit_price_ht": "100.029",
+      "articles[1].total_ht": "1400.406"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "1434.525",
+          "0"
+        ],
+        [
+          "4366",
+          "272.560",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "1708.085"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Annotation manuscrite « Reçu » : ni la date ni le montant de la pièce."
+    ],
+    "concepts": {
+      "type_document": "FACTURE / فاتورة",
+      "raison_sociale_emetteur": "Imprimerie Darvane",
+      "date_operation": "2026-05-18",
+      "numero_facture": "F-2026-5469",
+      "matricule_fiscal_emetteur": "4369011R/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "124, rue du Lac Ourmi, Ariana",
+      "telephone_email_emetteur": {
+        "telephone": "00 37 648 760"
+      },
+      "registre_commerce_emetteur": "B701778552020",
+      "rib_emetteur": "99 250 7735580665993 59",
+      "mode_reglement": "Espèces",
+      "total_ht": "1434.525",
+      "montant_tva_par_taux": {
+        "19": "272.560"
+      },
+      "total_ttc": "1708.085",
+      "droit_timbre": "1.000",
+      "total_brut_ht": "1510.026",
+      "remise_globale": "75.501",
+      "base_tva_par_taux": {
+        "19": "1434.525"
+      },
+      "lignes": [
+        {
+          "designation": "Classeur à levier, dos 8 cm",
+          "quantite": "18",
+          "prix_unitaire_ht": "6.090",
+          "montant_ligne_ht": "109.620",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Cartouche d'encre couleur",
+          "quantite": "14",
+          "prix_unitaire_ht": "100.029",
+          "montant_ligne_ht": "1400.406",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "mille sept cent huit dinars et quatre-vingt-cinq millimes",
+      "devise": "TND",
+      "visa_client": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_ligne",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "type_identifiant_client",
+      "unite"
+    ]
+  }
+}

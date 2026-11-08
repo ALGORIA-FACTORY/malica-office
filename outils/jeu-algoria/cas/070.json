@@ -1,0 +1,397 @@
+{
+  "id": "070",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "hybride",
+  "rendu": "pdf_image",
+  "capture": "scan",
+  "gabarit": "D",
+  "scenario": "long",
+  "realisme": [
+    "biais",
+    "grain",
+    "photocopie",
+    "tampon",
+    "signature",
+    "annotation"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Imprimerie Darvane",
+      "nomAr": "مطبعة دارفان",
+      "enseigne": null,
+      "matricule": "4369011R/A/M/000",
+      "matriculeImprime": "4369011R/A/M/000",
+      "adresse": "124, rue du Lac Ourmi, Ariana",
+      "telephone": "00 37 648 760",
+      "fax": "00 47 306 505",
+      "email": null,
+      "site": null,
+      "rc": "B701778552020",
+      "rib": "99 250 7735580665993 59",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C5108556",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "13 septembre 2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Classeur à levier, dos 8 cm",
+        "designationAr": "ملف برافعة، ظهر 8 سم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de déménagement de bureaux",
+        "designationAr": "خدمة نقل مكاتب",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre couleur",
+        "designationAr": "خرطوشة حبر ملون",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de salle de réunion, demi-journée",
+        "designationAr": "كراء قاعة اجتماعات، نصف يوم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Entretien climatisation, visite",
+        "designationAr": "صيانة المكيفات، زيارة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Ramette papier A4 80 g",
+        "designationAr": "رزمة ورق A4 80 غ",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": "Arrêtée la présente facture à la somme de : quinze mille huit cent trente-deux dinars et sept cent trois millimes.",
+    "tampon": {
+      "porteLeMatricule": false
+    },
+    "annotation": "Reçu le 21/09",
+    "ratures": [],
+    "imprime": {
+      "issuer": "Imprimerie Darvane",
+      "document_date": "13 septembre 2026",
+      "references.numero": "F-2026-3481",
+      "references.matricule_fiscal": "4369011R/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "124, rue du Lac Ourmi, Ariana",
+      "telephone_emetteur": "00 37 648 760",
+      "registre_commerce_emetteur": "B701778552020",
+      "rib_emetteur": "99 250 7735580665993 59",
+      "mode_reglement": "Chèque",
+      "totals.base_ht": "13.303,952",
+      "totals.vat": "2.527,751",
+      "totals.ttc": "15.832,703",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Classeur à levier, dos 8 cm",
+      "articles[0].quantity": "14",
+      "articles[0].unit_price_ht": "7,257",
+      "articles[0].total_ht": "101,598",
+      "articles[1].designation": "Prestation de déménagement de bureaux",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "1.457,154",
+      "articles[1].total_ht": "1.457,154",
+      "articles[2].designation": "Cartouche d'encre couleur",
+      "articles[2].quantity": "12",
+      "articles[2].unit_price_ht": "95,865",
+      "articles[2].total_ht": "1.150,380",
+      "articles[3].designation": "Location de salle de réunion, demi-journée",
+      "articles[3].quantity": "11",
+      "articles[3].unit_price_ht": "494,881",
+      "articles[3].total_ht": "5.443,691",
+      "articles[4].designation": "Entretien climatisation, visite",
+      "articles[4].quantity": "16",
+      "articles[4].unit_price_ht": "299,936",
+      "articles[4].total_ht": "4.798,976",
+      "articles[5].designation": "Ramette papier A4 80 g",
+      "articles[5].quantity": "23",
+      "articles[5].unit_price_ht": "15,311",
+      "articles[5].total_ht": "352,153",
+      "montant_en_lettres": "quinze mille huit cent trente-deux dinars et sept cent trois millimes"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ht": "lignes[5].prix_unitaire_ht",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres"
+    }
+  },
+  "graineDuRendu": 1245353592,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Imprimerie Darvane",
+      "document_date": "2026-09-13",
+      "currency": "TND",
+      "references.numero": "F-2026-3481",
+      "references.matricule_fiscal": "4369011R/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "13303.952",
+      "totals.vat": "2527.751",
+      "totals.ttc": "15832.703",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "13303.952",
+      "lines[0].vat_amount": "2527.751",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "14.000",
+      "articles[0].unit_price_ht": "7.257",
+      "articles[0].total_ht": "101.598",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "1457.154",
+      "articles[1].total_ht": "1457.154",
+      "articles[2].quantity": "12.000",
+      "articles[2].unit_price_ht": "95.865",
+      "articles[2].total_ht": "1150.380",
+      "articles[3].quantity": "11.000",
+      "articles[3].unit_price_ht": "494.881",
+      "articles[3].total_ht": "5443.691",
+      "articles[4].quantity": "16.000",
+      "articles[4].unit_price_ht": "299.936",
+      "articles[4].total_ht": "4798.976",
+      "articles[5].quantity": "23.000",
+      "articles[5].unit_price_ht": "15.311",
+      "articles[5].total_ht": "352.153"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "13303.952",
+          "0"
+        ],
+        [
+          "4366",
+          "2527.751",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "15832.703"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Annotation manuscrite « Reçu le 21/09 » : ni la date ni le montant de la pièce."
+    ],
+    "concepts": {
+      "type_document": "FACTURE / فاتورة",
+      "raison_sociale_emetteur": "Imprimerie Darvane",
+      "date_operation": "2026-09-13",
+      "numero_facture": "F-2026-3481",
+      "matricule_fiscal_emetteur": "4369011R/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "124, rue du Lac Ourmi, Ariana",
+      "telephone_email_emetteur": {
+        "telephone": "00 37 648 760"
+      },
+      "registre_commerce_emetteur": "B701778552020",
+      "rib_emetteur": "99 250 7735580665993 59",
+      "mode_reglement": "Chèque",
+      "total_ht": "13303.952",
+      "montant_tva_par_taux": {
+        "19": "2527.751"
+      },
+      "total_ttc": "15832.703",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "13303.952"
+      },
+      "lignes": [
+        {
+          "designation": "Classeur à levier, dos 8 cm",
+          "quantite": "14",
+          "prix_unitaire_ht": "7.257",
+          "montant_ligne_ht": "101.598",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Prestation de déménagement de bureaux",
+          "quantite": "1",
+          "prix_unitaire_ht": "1457.154",
+          "montant_ligne_ht": "1457.154",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Cartouche d'encre couleur",
+          "quantite": "12",
+          "prix_unitaire_ht": "95.865",
+          "montant_ligne_ht": "1150.380",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Location de salle de réunion, demi-journée",
+          "quantite": "11",
+          "prix_unitaire_ht": "494.881",
+          "montant_ligne_ht": "5443.691",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Entretien climatisation, visite",
+          "quantite": "16",
+          "prix_unitaire_ht": "299.936",
+          "montant_ligne_ht": "4798.976",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Ramette papier A4 80 g",
+          "quantite": "23",
+          "prix_unitaire_ht": "15.311",
+          "montant_ligne_ht": "352.153",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "quinze mille huit cent trente-deux dinars et sept cent trois millimes",
+      "devise": "TND",
+      "cachet_emetteur": true,
+      "signature_emetteur": true,
+      "visa_client": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite"
+    ]
+  }
+}

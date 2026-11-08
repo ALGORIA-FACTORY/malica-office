@@ -1,0 +1,620 @@
+{
+  "id": "123",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "statuts",
+  "grille": "statuts",
+  "langue": "fr",
+  "rendu": "pdf_image",
+  "capture": "scan",
+  "gabarit": "H",
+  "mise_en_page": "H-machine",
+  "scenario": "statuts",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Statuts mis à jour",
+    "parties": [
+      {
+        "role": "entreprise",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "associe",
+        "nom": "Nadhem Ourvani",
+        "matricule": null,
+        "est": "tiers"
+      },
+      {
+        "role": "associe",
+        "nom": "Lyna Tazerouit",
+        "matricule": null,
+        "est": "tiers"
+      },
+      {
+        "role": "associe",
+        "nom": "Faycel Morbane",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "entreprise",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "associe",
+      "nom": "Nadhem Ourvani",
+      "matricule": null,
+      "est": "tiers"
+    },
+    "style": null,
+    "police": "machine",
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "titre",
+        "texte": [
+          {
+            "c": "denomination"
+          }
+        ],
+        "sous": [
+          {
+            "c": "forme_juridique"
+          },
+          " au capital de ",
+          {
+            "c": "capital_montant"
+          },
+          " ",
+          {
+            "c": "capital_devise"
+          }
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          {
+            "c": "type_acte"
+          }
+        ],
+        "sous": [
+          "suite à l'assemblée générale extraordinaire — mise à jour du ",
+          {
+            "c": "date_mise_a_jour"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Entre les soussignés, associés de la société, ",
+          {
+            "c": "forme_acte"
+          },
+          " :"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "1) ",
+          {
+            "c": "lignes[0].associe_pp_nom_prenom"
+          },
+          ", de nationalité ",
+          {
+            "c": "lignes[0].associe_pp_nationalite"
+          },
+          ", demeurant ",
+          {
+            "c": "lignes[0].associe_pp_domicile"
+          },
+          " ;"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "2) ",
+          {
+            "c": "lignes[1].associe_pp_nom_prenom"
+          },
+          ", de nationalité ",
+          {
+            "c": "lignes[1].associe_pp_nationalite"
+          },
+          ", demeurant ",
+          {
+            "c": "lignes[1].associe_pp_domicile"
+          },
+          " ;"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "3) ",
+          {
+            "c": "lignes[2].associe_pp_nom_prenom"
+          },
+          ", de nationalité ",
+          {
+            "c": "lignes[2].associe_pp_nationalite"
+          },
+          ", demeurant ",
+          {
+            "c": "lignes[2].associe_pp_domicile"
+          },
+          " ;"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "soit ",
+          {
+            "c": "nombre_associes"
+          },
+          " associés, il a été établi ainsi qu'il suit les statuts de la société."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 1 — Forme et dénomination"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Il est formé une société à responsabilité limitée régie par le Code des sociétés commerciales et par les présents statuts, dénommée « ALGORIA FACTORY SARL »."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 2 — Objet"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "La société a pour objet ",
+          {
+            "c": "objet_social"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 3 — Siège social"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Le siège social est fixé au ",
+          {
+            "c": "siege_social"
+          },
+          ". ",
+          {
+            "c": "clause_transfert_siege"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 4 — Durée"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "La durée de la société est fixée à ",
+          {
+            "c": "duree_annees"
+          },
+          " années à compter ",
+          {
+            "c": "point_depart_duree"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 6 — Capital social"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Le capital social est fixé à cinquante mille dinars. Il est divisé en ",
+          {
+            "c": "nombre_titres"
+          },
+          " parts sociales de ",
+          {
+            "c": "valeur_nominale"
+          },
+          " dinars chacune, ",
+          {
+            "c": "declaration_liberation_integrale"
+          },
+          " et réparties comme suit :"
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Associé",
+          "Parts",
+          "Apport en numéraire (DT)"
+        ],
+        "nombres": [
+          1,
+          2
+        ],
+        "lignes": [
+          [
+            "Nadhem Ourvani",
+            {
+              "t": "2500"
+            },
+            {
+              "c": "lignes[0].apport_numeraire_par_associe"
+            }
+          ],
+          [
+            "Lyna Tazerouit",
+            {
+              "t": "1500"
+            },
+            {
+              "c": "lignes[1].apport_numeraire_par_associe"
+            }
+          ],
+          [
+            "Faycel Morbane",
+            {
+              "t": "1000"
+            },
+            {
+              "c": "lignes[2].apport_numeraire_par_associe"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Les fonds ont été déposés auprès de la ",
+          {
+            "c": "depositaire_fonds"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 9 — Cession des parts"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "clause_agrement"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 14 — Gérance"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "La société est gérée par un gérant, associé ou non. Est nommé gérant : M. ",
+          {
+            "c": "gerants_designes.0"
+          },
+          ", ",
+          {
+            "c": "gerant_duree_mandat"
+          },
+          ". ",
+          {
+            "c": "gerant_pouvoirs_limitations"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 17 — Exercice social"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "L'exercice social commence le 1er janvier et se termine ",
+          {
+            "c": "exercice_cloture"
+          },
+          ". ",
+          {
+            "c": "reserve_legale_clause"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "Article 22 — Contestations"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "clause_litiges"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "Fait à ",
+          {
+            "c": "lieu_acte"
+          },
+          ", le ",
+          {
+            "c": "date_acte"
+          },
+          ", en quatre originaux."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "Les associés",
+        "droite": "Nadhem Ourvani — Lyna Tazerouit — Faycel Morbane"
+      }
+    ],
+    "imprime": {
+      "denomination": "ALGORIA FACTORY SARL",
+      "forme_juridique": "Société à responsabilité limitée",
+      "capital_montant": "50 000,000",
+      "capital_devise": "dinars",
+      "type_acte": "STATUTS MIS À JOUR",
+      "date_mise_a_jour": "26 septembre 2026",
+      "forme_acte": "par acte sous seing privé",
+      "lignes[0].associe_pp_nom_prenom": "Nadhem Ourvani",
+      "lignes[0].associe_pp_nationalite": "tunisienne",
+      "lignes[0].associe_pp_domicile": "7, rue des Glycines Selvanes, 2092 El Manar",
+      "lignes[1].associe_pp_nom_prenom": "Lyna Tazerouit",
+      "lignes[1].associe_pp_nationalite": "tunisienne",
+      "lignes[1].associe_pp_domicile": "22, avenue Kerzane, 2045 L'Aouina",
+      "lignes[2].associe_pp_nom_prenom": "Faycel Morbane",
+      "lignes[2].associe_pp_nationalite": "tunisienne",
+      "lignes[2].associe_pp_domicile": "3, impasse des Orvales, 4000 Sousse",
+      "nombre_associes": "3",
+      "objet_social": "la conception, l'édition, l'hébergement et la commercialisation de logiciels de gestion, de conformité et d'intelligence artificielle pour la finance, ainsi que la formation professionnelle, le conseil et l'assistance à la mise en conformité réglementaire",
+      "siege_social": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "clause_transfert_siege": "Il peut être transféré en tout autre lieu par décision collective extraordinaire des associés.",
+      "duree_annees": "99",
+      "point_depart_duree": "de son immatriculation au Registre national des entreprises",
+      "nombre_titres": "5000",
+      "valeur_nominale": "10,000",
+      "declaration_liberation_integrale": "entièrement libérées",
+      "lignes[0].apport_numeraire_par_associe": "25 000,000",
+      "lignes[1].apport_numeraire_par_associe": "15 000,000",
+      "lignes[2].apport_numeraire_par_associe": "10 000,000",
+      "depositaire_fonds": "Banque Ouzrane de Développement, agence Lac Morvane",
+      "clause_agrement": "Les parts ne peuvent être cédées à des tiers étrangers à la société qu'avec le consentement de la majorité des associés représentant au moins les trois quarts du capital.",
+      "gerants_designes.0": "Nadhem Ourvani",
+      "gerant_duree_mandat": "pour une durée de trois ans",
+      "gerant_pouvoirs_limitations": "Le gérant a les pouvoirs les plus étendus pour agir au nom de la société ; toute acquisition ou cession d'immeuble requiert l'accord préalable des associés.",
+      "exercice_cloture": "le 31 décembre de chaque année",
+      "reserve_legale_clause": "Il est prélevé cinq pour cent du bénéfice pour constituer la réserve légale, jusqu'à ce qu'elle atteigne le dixième du capital.",
+      "clause_litiges": "Toute contestation relative aux affaires sociales est soumise aux tribunaux compétents du siège social.",
+      "lieu_acte": "Tunis",
+      "date_acte": "26/09/2026"
+    },
+    "versConcept": {
+      "denomination": "denomination",
+      "forme_juridique": "forme_juridique",
+      "capital_montant": "capital_montant",
+      "capital_devise": "capital_devise",
+      "type_acte": "type_acte",
+      "date_mise_a_jour": "date_mise_a_jour",
+      "forme_acte": "forme_acte",
+      "lignes[0].associe_pp_nom_prenom": "lignes[0].associe_pp_nom_prenom",
+      "lignes[0].associe_pp_nationalite": "lignes[0].associe_pp_nationalite",
+      "lignes[0].associe_pp_domicile": "lignes[0].associe_pp_domicile",
+      "lignes[1].associe_pp_nom_prenom": "lignes[1].associe_pp_nom_prenom",
+      "lignes[1].associe_pp_nationalite": "lignes[1].associe_pp_nationalite",
+      "lignes[1].associe_pp_domicile": "lignes[1].associe_pp_domicile",
+      "lignes[2].associe_pp_nom_prenom": "lignes[2].associe_pp_nom_prenom",
+      "lignes[2].associe_pp_nationalite": "lignes[2].associe_pp_nationalite",
+      "lignes[2].associe_pp_domicile": "lignes[2].associe_pp_domicile",
+      "nombre_associes": "nombre_associes",
+      "objet_social": "objet_social",
+      "siege_social": "siege_social",
+      "clause_transfert_siege": "clause_transfert_siege",
+      "duree_annees": "duree_annees",
+      "point_depart_duree": "point_depart_duree",
+      "nombre_titres": "nombre_titres",
+      "valeur_nominale": "valeur_nominale",
+      "declaration_liberation_integrale": "declaration_liberation_integrale",
+      "lignes[0].apport_numeraire_par_associe": "lignes[0].apport_numeraire_par_associe",
+      "lignes[1].apport_numeraire_par_associe": "lignes[1].apport_numeraire_par_associe",
+      "lignes[2].apport_numeraire_par_associe": "lignes[2].apport_numeraire_par_associe",
+      "depositaire_fonds": "depositaire_fonds",
+      "clause_agrement": "clause_agrement",
+      "gerants_designes.0": "gerants_designes",
+      "gerant_duree_mandat": "gerant_duree_mandat",
+      "gerant_pouvoirs_limitations": "gerant_pouvoirs_limitations",
+      "exercice_cloture": "exercice_cloture",
+      "reserve_legale_clause": "reserve_legale_clause",
+      "clause_litiges": "clause_litiges",
+      "lieu_acte": "lieu_acte",
+      "date_acte": "date_acte"
+    },
+    "marques": {
+      "signature_emetteur": "signatures"
+    },
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 824473554,
+  "attendu": {
+    "concepts": {
+      "denomination": "ALGORIA FACTORY SARL",
+      "forme_juridique": "SARL",
+      "capital_montant": "50000.000",
+      "capital_devise": "TND",
+      "type_acte": "statuts mis à jour",
+      "date_mise_a_jour": "2026-09-26",
+      "forme_acte": "sous seing privé",
+      "lignes": [
+        {
+          "associe_pp_nom_prenom": "Nadhem Ourvani",
+          "associe_pp_nationalite": "tunisienne",
+          "associe_pp_domicile": "7, rue des Glycines Selvanes, 2092 El Manar",
+          "associe_type": "personne physique",
+          "apport_numeraire_par_associe": "25000.000"
+        },
+        {
+          "associe_pp_nom_prenom": "Lyna Tazerouit",
+          "associe_pp_nationalite": "tunisienne",
+          "associe_pp_domicile": "22, avenue Kerzane, 2045 L'Aouina",
+          "associe_type": "personne physique",
+          "apport_numeraire_par_associe": "15000.000"
+        },
+        {
+          "associe_pp_nom_prenom": "Faycel Morbane",
+          "associe_pp_nationalite": "tunisienne",
+          "associe_pp_domicile": "3, impasse des Orvales, 4000 Sousse",
+          "associe_type": "personne physique",
+          "apport_numeraire_par_associe": "10000.000"
+        }
+      ],
+      "nombre_associes": "3",
+      "objet_social": "la conception, l'édition, l'hébergement et la commercialisation de logiciels de gestion, de conformité et d'intelligence artificielle pour la finance, ainsi que la formation professionnelle, le conseil et l'assistance à la mise en conformité réglementaire",
+      "siege_social": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "clause_transfert_siege": "Il peut être transféré en tout autre lieu par décision collective extraordinaire des associés.",
+      "duree_annees": "99",
+      "point_depart_duree": "de son immatriculation au Registre national des entreprises",
+      "nombre_titres": "5000",
+      "valeur_nominale": "10.000",
+      "declaration_liberation_integrale": true,
+      "repartition_titres": [
+        "Nadhem Ourvani : 2500",
+        "Lyna Tazerouit : 1500",
+        "Faycel Morbane : 1000"
+      ],
+      "depositaire_fonds": "Banque Ouzrane de Développement",
+      "clause_agrement": "Les parts ne peuvent être cédées à des tiers étrangers à la société qu'avec le consentement de la majorité des associés représentant au moins les trois quarts du capital.",
+      "gerants_designes": [
+        "Nadhem Ourvani"
+      ],
+      "gerant_duree_mandat": "P3Y",
+      "gerant_pouvoirs_limitations": "Le gérant a les pouvoirs les plus étendus pour agir au nom de la société ; toute acquisition ou cession d'immeuble requiert l'accord préalable des associés.",
+      "exercice_cloture": "--12-31",
+      "reserve_legale_clause": "Il est prélevé cinq pour cent du bénéfice pour constituer la réserve légale, jusqu'à ce qu'elle atteigne le dixième du capital.",
+      "clause_litiges": "Toute contestation relative aux affaires sociales est soumise aux tribunaux compétents du siège social.",
+      "lieu_acte": "Tunis",
+      "date_acte": "2026-09-26",
+      "signatures": true
+    },
+    "confondus": {},
+    "notes": [],
+    "non_imprimes": [
+      "ag_convocation_modalites",
+      "ag_quorum_majorite_statutaires",
+      "ag_representation",
+      "ag_seuil_admission_actions",
+      "annexes",
+      "apport_industrie",
+      "apport_nature_description",
+      "apport_nature_evaluation",
+      "associe_pm_denomination",
+      "associe_pm_identifiant",
+      "associe_pm_nationalite",
+      "associe_pm_representant",
+      "associe_pm_siege",
+      "associe_pp_etat_civil",
+      "associe_pp_piece_identite",
+      "ca_duree_mandat",
+      "ca_nombre_administrateurs",
+      "ca_premiers_administrateurs",
+      "ca_quorum_majorite",
+      "categories_actions",
+      "clause_dissolution_liquidation",
+      "clause_preemption",
+      "commissaire_aux_apports",
+      "commissaire_aux_comptes_clause",
+      "conventions_reglementees",
+      "decisions_associe_unique_registre",
+      "direction_generale",
+      "enregistrement_recette",
+      "exercice_debut",
+      "forme_titres",
+      "frais_constitution",
+      "gerant_remuneration",
+      "gerant_revocation",
+      "jetons_presence",
+      "modalites_liberation",
+      "mode_direction",
+      "nationalite_societe",
+      "pouvoirs_formalites",
+      "premier_exercice",
+      "registre_associes",
+      "reserves_statutaires",
+      "sigle",
+      "transmission_deces"
+    ]
+  }
+}

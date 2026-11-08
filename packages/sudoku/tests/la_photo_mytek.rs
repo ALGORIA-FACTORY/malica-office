@@ -17,12 +17,15 @@ use serde_json::{json, Value};
 fn grille(prix_ttc: bool) -> Value {
     let mut g = grille_facture();
     let champs = g["champs"].as_array_mut().unwrap();
-    champs.push(json!({"code": "montant_en_lettres", "type": "texte", "reperes_fr": ["à la somme de"]}));
+    champs.push(
+        json!({"code": "montant_en_lettres", "type": "texte", "reperes_fr": ["à la somme de"]}),
+    );
     champs.push(json!({"code": "designation", "type": "texte", "reperes_fr": ["Désignation"]}));
     champs.push(json!({"code": "quantite", "type": "nombre", "reperes_fr": ["Qté"]}));
     champs.push(json!({"code": "prix_unitaire_ht", "type": "montant", "reperes_fr": ["P.U. HT"]}));
     champs.push(json!({"code": "prix_unitaire_ttc", "type": "montant", "reperes_fr": ["PU TTC"]}));
-    champs.push(json!({"code": "montant_ligne_ht", "type": "montant", "reperes_fr": ["Montant HT"]}));
+    champs
+        .push(json!({"code": "montant_ligne_ht", "type": "montant", "reperes_fr": ["Montant HT"]}));
     let preuves = g["preuves"].as_array_mut().unwrap();
     preuves.retain(|p| p["code"] != "lettres");
     preuves.push(json!({"code": "lettres", "expression": {"op": "lettres", "champ": "montant_en_lettres", "egal_a": ["total_ttc"]}}));
@@ -45,10 +48,22 @@ fn pied(ttc: i64, lettres: Option<i64>) -> Vec<Value> {
         jeton(24, "427,731", 0.30, 0.63, &[(427_731, true)]),
         jeton(25, "81,269", 0.55, 0.63, &[(81_269, true)]),
         jeton(26, "Timbre fiscal: 1,000", 0.80, 0.66, &[(1_000, true)]),
-        jeton(27, "Total avec Timbre:428,731", 0.80, 0.69, &[(428_731, true)]),
+        jeton(
+            27,
+            "Total avec Timbre:428,731",
+            0.80,
+            0.69,
+            &[(428_731, true)],
+        ),
         jeton(28, "TTC:", 0.80, 0.75, &[]),
         jeton(29, "810,000", 1.01, 0.75, &[(ttc, true)]),
-        jeton(30, "Arrêtée la présente pièce à la somme de:", 0.05, 0.80, &[]),
+        jeton(
+            30,
+            "Arrêtée la présente pièce à la somme de:",
+            0.05,
+            0.80,
+            &[],
+        ),
         jeton(31, "Cinq", 0.26, 0.80, &[]),
         jeton(32, "Cent", 0.37, 0.80, &[]),
         jeton(33, "Dix", 0.48, 0.80, &[]),
@@ -87,7 +102,12 @@ fn tableau(office: i64) -> Vec<Value> {
 }
 
 fn ordinaux(o: &Value, champ: &str) -> Vec<u64> {
-    o["champs"][champ]["refs"].as_array().unwrap().iter().map(|r| r["ordinal"].as_u64().unwrap()).collect()
+    o["champs"][champ]["refs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["ordinal"].as_u64().unwrap())
+        .collect()
 }
 
 #[test]
@@ -96,8 +116,16 @@ fn le_ttc_mal_releve_se_lit_dans_les_lettres() {
     assert_eq!(o["issue"], "prouvee", "{o}");
     assert_eq!(o["par_lettres"], "total_ttc");
     assert_eq!(valeur(&o, "total_ttc"), 510_000);
-    assert_eq!(ordinaux(&o, "total_ttc"), vec![31, 32, 33, 34], "le total cite toute la phrase en lettres");
-    assert_eq!(valeur(&o, "total_ht"), 427_731, "la base juste, pas le « Total HT » timbre compris");
+    assert_eq!(
+        ordinaux(&o, "total_ttc"),
+        vec![31, 32, 33, 34],
+        "le total cite toute la phrase en lettres"
+    );
+    assert_eq!(
+        valeur(&o, "total_ht"),
+        427_731,
+        "la base juste, pas le « Total HT » timbre compris"
+    );
     assert_eq!(valeur(&o, "droit_timbre"), 1_000);
     assert_eq!(o["preuves"]["lettres"], "verifiee");
 }
@@ -138,7 +166,10 @@ fn les_prix_ttc_prouvent_les_lignes_quand_la_grille_les_declare() {
     assert_eq!(inst[1]["quantite"]["valeur"], "2000");
     assert_eq!(inst[1]["prix"]["valeur"], "32000");
     assert_eq!(inst[1]["prix_ttc"], true, "le prix lu est TTC");
-    assert_eq!(inst[0]["montant"]["valeur"], "293276", "349 ÷ 1,19 = 293,277, imprimé 293,276 : au millime près");
+    assert_eq!(
+        inst[0]["montant"]["valeur"], "293276",
+        "349 ÷ 1,19 = 293,277, imprimé 293,276 : au millime près"
+    );
 
     // Sans la déclaration, la grille ne lit que des prix HT : les lignes ne se prouvent pas.
     let o = resoudre(j, grille(false), pack_essai());

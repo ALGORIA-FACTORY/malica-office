@@ -1,0 +1,400 @@
+{
+  "id": "124",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "extrait_rne",
+  "grille": "extrait_rne",
+  "langue": "hybride",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-encadre",
+  "scenario": "extrait_rne",
+  "realisme": [
+    "tampon"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Extrait du Registre national des entreprises",
+    "parties": [
+      {
+        "role": "administration",
+        "nom": "Registre National des Entreprises",
+        "matricule": null,
+        "est": "administration"
+      },
+      {
+        "role": "entreprise",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "dirigeant",
+        "nom": "Nadhem Ourvani",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "administration",
+      "nom": "Registre National des Entreprises",
+      "matricule": null,
+      "est": "administration"
+    },
+    "client": {
+      "role": "entreprise",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": "encadre",
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "REGISTRE NATIONAL DES ENTREPRISES",
+        "adresse": "Tunis",
+        "telephone": null
+      },
+      "centre": "SPÉCIMEN",
+      "code": null
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            "République Tunisienne"
+          ],
+          [
+            "Registre National des Entreprises"
+          ]
+        ],
+        "droite": [
+          [
+            "الجمهورية التونسية"
+          ],
+          [
+            "السجل الوطني للمؤسسات"
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          {
+            "c": "type_extrait"
+          }
+        ],
+        "sous": [
+          "N° d'extrait / عدد المضمون",
+          " : ",
+          {
+            "c": "numero_extrait"
+          },
+          " — ",
+          "Délivré le / سلّم في",
+          " ",
+          {
+            "c": "date_delivrance"
+          }
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Identification de l'entreprise / تعريف المؤسسة"
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Identifiant unique / المعرف الوحيد",
+            {
+              "c": "identifiant_unique"
+            }
+          ],
+          [
+            "Dénomination / التسمية",
+            {
+              "c": "denomination"
+            }
+          ],
+          [
+            "Forme juridique / الشكل القانوني",
+            {
+              "c": "forme_juridique"
+            }
+          ],
+          [
+            "Capital / رأس المال",
+            [
+              {
+                "c": "capital"
+              },
+              " DT"
+            ]
+          ],
+          [
+            "Siège social / المقر الاجتماعي",
+            {
+              "c": "siege"
+            }
+          ],
+          [
+            "Matricule fiscal / المعرف الجبائي",
+            {
+              "c": "matricule_fiscal"
+            }
+          ],
+          [
+            "Date d'immatriculation / تاريخ الترسيم",
+            {
+              "c": "date_immatriculation"
+            }
+          ],
+          [
+            "Ancien n° RC / عدد السجل التجاري القديم",
+            {
+              "c": "ancien_numero_rc"
+            }
+          ],
+          [
+            "Statut / الوضعية",
+            {
+              "c": "statut_entreprise"
+            }
+          ],
+          [
+            "Clôture de l'exercice / ختم السنة المحاسبية",
+            {
+              "c": "exercice_cloture"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "champs",
+        "lignes": [
+          [
+            "Activité principale / النشاط الرئيسي",
+            {
+              "c": "activite_principale"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Dirigeants / المسيرون"
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Nom et prénom / الاسم واللقب",
+          "Qualité / الصفة",
+          "Nationalité / الجنسية",
+          "Nommé le / تاريخ التعيين"
+        ],
+        "lignes": [
+          [
+            {
+              "c": "dirigeant_nom"
+            },
+            {
+              "c": "dirigeant_qualite"
+            },
+            {
+              "c": "dirigeant_nationalite"
+            },
+            {
+              "c": "dirigeant_date_nomination"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Associés / الشركاء"
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "associes_liste.0"
+          },
+          {
+            "br": true
+          },
+          {
+            "c": "associes_liste.1"
+          },
+          {
+            "br": true
+          },
+          {
+            "c": "associes_liste.2"
+          }
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Inscriptions modificatives / الترسيمات التعديلية"
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          {
+            "c": "inscriptions_modificatives.0"
+          }
+        ]
+      },
+      {
+        "k": "duo",
+        "gauche": [
+          {
+            "k": "texte",
+            "classe": "petit",
+            "morceaux": [
+              "Code de vérification / رمز التثبت",
+              " : ",
+              {
+                "c": "qr_code_verification"
+              },
+              {
+                "br": true
+              },
+              "Spécimen fictif — jeu d'essai du banc de lecture, sans valeur. / نموذج وهمي — مجموعة اختبار، لا قيمة له."
+            ]
+          }
+        ],
+        "droite": [
+          {
+            "k": "signatures",
+            "gauche": {
+              "qr": "RNE598756208885"
+            },
+            "droite": "Le Registre / السجل"
+          }
+        ]
+      }
+    ],
+    "imprime": {
+      "type_extrait": "Extrait du registre — personne morale / مضمون من السجل — شخص معنوي",
+      "numero_extrait": "RNE-2026-823082",
+      "date_delivrance": "21/10/2026",
+      "identifiant_unique": "1958330V",
+      "denomination": "ALGORIA FACTORY SARL",
+      "forme_juridique": "SARL / ش.ذ.م.م",
+      "capital": "50 000,000",
+      "siege": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "matricule_fiscal": "1958330V/A/M/000",
+      "date_immatriculation": "11/03/2024",
+      "ancien_numero_rc": "B01283932024",
+      "statut_entreprise": "Active / نشطة",
+      "exercice_cloture": "31/12",
+      "activite_principale": "Édition de logiciels applicatifs",
+      "dirigeant_nom": "Nadhem Ourvani",
+      "dirigeant_qualite": "Gérant / مسير",
+      "dirigeant_nationalite": "Tunisienne / تونسية",
+      "dirigeant_date_nomination": "22/06/2026",
+      "associes_liste.0": "Nadhem Ourvani — 2500 parts / حصة",
+      "associes_liste.1": "Lyna Tazerouit — 1500 parts / حصة",
+      "associes_liste.2": "Faycel Morbane — 1000 parts / حصة",
+      "inscriptions_modificatives.0": "Extension de l'objet social — AGE de septembre 2026 / توسيع الغرض الاجتماعي — جلسة عامة خارقة للعادة، سبتمبر 2026",
+      "qr_code_verification": "RNE598756208885"
+    },
+    "versConcept": {
+      "type_extrait": "type_extrait",
+      "numero_extrait": "numero_extrait",
+      "date_delivrance": "date_delivrance",
+      "identifiant_unique": "identifiant_unique",
+      "denomination": "denomination",
+      "forme_juridique": "forme_juridique",
+      "capital": "capital",
+      "siege": "siege",
+      "matricule_fiscal": "matricule_fiscal",
+      "date_immatriculation": "date_immatriculation",
+      "ancien_numero_rc": "ancien_numero_rc",
+      "statut_entreprise": "statut_entreprise",
+      "exercice_cloture": "exercice_cloture",
+      "activite_principale": "activite_principale",
+      "dirigeant_nom": "dirigeant_nom",
+      "dirigeant_qualite": "dirigeant_qualite",
+      "dirigeant_nationalite": "dirigeant_nationalite",
+      "dirigeant_date_nomination": "dirigeant_date_nomination",
+      "associes_liste.0": "associes_liste",
+      "associes_liste.1": "associes_liste",
+      "associes_liste.2": "associes_liste",
+      "inscriptions_modificatives.0": "inscriptions_modificatives",
+      "qr_code_verification": "qr_code_verification"
+    },
+    "marques": {},
+    "cheminsDuDossier": [
+      "matricule_fiscal"
+    ]
+  },
+  "graineDuRendu": 553256451,
+  "attendu": {
+    "concepts": {
+      "type_extrait": "extrait personne morale",
+      "numero_extrait": "RNE-2026-823082",
+      "date_delivrance": "2026-10-21",
+      "identifiant_unique": "1958330V",
+      "denomination": "ALGORIA FACTORY SARL",
+      "forme_juridique": "SARL",
+      "capital": "50000.000",
+      "siege": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "matricule_fiscal": "1958330V/A/M/000",
+      "date_immatriculation": "2024-03-11",
+      "ancien_numero_rc": "B01283932024",
+      "statut_entreprise": "active",
+      "exercice_cloture": "--12-31",
+      "activite_principale": "Édition de logiciels applicatifs",
+      "dirigeant_nom": "Nadhem Ourvani",
+      "dirigeant_qualite": "gérant",
+      "dirigeant_nationalite": "tunisienne",
+      "dirigeant_date_nomination": "2026-06-22",
+      "associes_liste": [
+        "Nadhem Ourvani",
+        "Lyna Tazerouit",
+        "Faycel Morbane"
+      ],
+      "inscriptions_modificatives": [
+        "Extension de l'objet social — AGE de septembre 2026 / توسيع الغرض الاجتماعي — جلسة عامة خارقة للعادة، سبتمبر 2026"
+      ],
+      "qr_code_verification": "RNE598756208885",
+      "langue_extrait": "bilingue"
+    },
+    "confondus": {},
+    "notes": [
+      "Pièce d'une administration (RNE) : nom plain, aucun logo, mention « Spécimen fictif » imprimée — elle ne doit servir à rien d'autre qu'au banc.",
+      "INCERTAIN — l'identifiant unique du RNE tenu pour les huit premiers caractères du matricule (1958330V), la date d'immatriculation et l'ancien RC sont inventés."
+    ],
+    "non_imprimes": [
+      "activites_secondaires",
+      "be_pourcentage",
+      "beneficiaires_effectifs",
+      "commissaire_aux_comptes",
+      "date_debut_activite",
+      "depot_etats_financiers",
+      "dirigeant_identifiant",
+      "duree",
+      "etablissements_secondaires",
+      "nom_commercial_enseigne",
+      "suretes_nantissements"
+    ]
+  }
+}

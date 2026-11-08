@@ -106,13 +106,17 @@ p = Image.new('RGB', (900, 300), 'white'); d = ImageDraw.Draw(p);\
 d.text((40, 60), 'TOTAL TTC 1 234,500', fill='black', font=ImageFont.load_default(size=48));\
 d.text((40, 170), 'Facture 293/2026', fill='black', font=ImageFont.load_default(size=48));\
 b = io.BytesIO(); p.save(b, 'PNG');\
-import service; r = service._lire(b.getvalue());\
-assert set(r) == {'lignes', 'millisecondes', 'modele'}, r;\
+import service; temps = list(service._vagues(service._libres.get(), b.getvalue()));\
+assert [t['vague'] for t in temps] == [1, 2], temps;\
+r = temps[-1];\
+assert {'vague', 'lignes', 'millisecondes', 'modele'} <= set(r) <= {'vague', 'lignes', 'millisecondes', 'modele', 'marques'}, r;\
 assert r['modele'] in (service.MODELE, service.MODELE_LATIN), r['modele'];\
-assert not service._a_relire_en_arabe('1 234,500', 0.10) and service._a_relire_en_arabe('Gill', 0.40)\
-  and not service._a_relire_en_arabe('Facture', 0.99), 'portes de la relecture arabe';\
-assert r['lignes'] and all(set(l) == {'texte', 'boite', 'confiance'} and len(l['boite']) == 4\
-  and all(0.0 <= v <= 1.0 for v in l['boite']) for l in r['lignes']), r;\
+assert service._a_relire_en_arabe('1 234,500', 0.10) and service._a_relire_en_arabe('Gill', 0.40)\
+  and not service._a_relire_en_arabe('Facture', 0.99) and not service._a_relire_en_arabe('1 234,500', 0.99)\
+  and not service._garder_l_arabe('1 234,500', '١ ٢٣٤', 0.10, 0.99)\
+  and not service._choisir('1 234,500', 0.10, '١ ٢٣٤', 0.99)[2], 'portes de la relecture arabe';\
+assert r['lignes'] and all({'texte', 'boite', 'confiance'} <= set(l) <= {'texte', 'boite', 'confiance', 'caracteres', 'manques'}\
+  and len(l['boite']) == 4 and all(0.0 <= v <= 1.0 for v in l['boite']) for l in r['lignes']), r;\
 assert any('234' in l['texte'] for l in r['lignes']), r;\
 print(service.MODELE, [l['texte'] for l in r['lignes']])" || exit 1; \
     done

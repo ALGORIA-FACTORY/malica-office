@@ -218,7 +218,7 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
     for (const methode of ["licences", "reglagePaiement", "reglageAbonnement"]) {
       await assert.rejects(
         sousIdentite(expert.id, (db) => executerRpc(db, { depot: "tour", methode, args: [] })),
-        /réservée aux opérateurs/,
+        /refus\.reserve\.plateforme/,
         `tour.${methode}`,
       );
     }

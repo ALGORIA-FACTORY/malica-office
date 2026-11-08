@@ -1,0 +1,140 @@
+{
+  "id": "160",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "non_comptable",
+  "grille": null,
+  "langue": "fr",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "G",
+  "mise_en_page": "G-bande",
+  "scenario": "sans_grille",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "pli"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Menu du jour",
+    "parties": [
+      {
+        "role": "restaurant",
+        "nom": "Le Comptoir Olvane",
+        "matricule": null,
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "restaurant",
+      "nom": "Le Comptoir Olvane",
+      "matricule": null,
+      "est": "tiers"
+    },
+    "client": null,
+    "style": "bande",
+    "police": null,
+    "couleur": "#6b2fa0",
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "titre",
+        "texte": [
+          "Le Comptoir Olvane"
+        ],
+        "sous": [
+          "6, rue du Lac Ermane, 1053 Les Berges du Lac"
+        ]
+      },
+      {
+        "k": "section",
+        "texte": "Menu du jour — 6 octobre 2026"
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Plat",
+          "Prix (DT)"
+        ],
+        "nombres": [
+          1
+        ],
+        "lignes": [
+          [
+            "Brik à l'œuf",
+            {
+              "t": "7,000"
+            }
+          ],
+          [
+            "Salade méchouia",
+            {
+              "t": "7,500"
+            }
+          ],
+          [
+            "Couscous au mérou",
+            {
+              "t": "25,000"
+            }
+          ],
+          [
+            "Ojja aux merguez",
+            {
+              "t": "18,000"
+            }
+          ],
+          [
+            "Poisson grillé du jour",
+            {
+              "t": "29,000"
+            }
+          ],
+          [
+            "Makroudh et thé à la menthe",
+            {
+              "t": "8,000"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "centre",
+        "morceaux": [
+          "Service compris — réservations au 00 71 845 210"
+        ]
+      }
+    ],
+    "imprime": {},
+    "versConcept": {},
+    "marques": {},
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 1044022585,
+  "attendu": {
+    "concepts": {},
+    "confondus": {},
+    "notes": [
+      "Aucune grille ne lit cette pièce (grille null) : l'issue attendue est qu'AUCUN champ ne soit extrait. Le banc compte zéro valeur fausse : toute date, tout montant ou tout nom posé sur un champ est une faute.",
+      "Piège : des prix et une date imprimés, qui ne sont ni des montants ni une date de pièce."
+    ],
+    "non_imprimes": []
+  }
+}

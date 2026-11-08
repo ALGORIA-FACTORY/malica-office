@@ -606,6 +606,45 @@ Tranché par défaut, à confirmer :
   gestes faits sous l'accès total portent l'acteur réel, sans marque propre :
   on les distingue en croisant l'acteur avec `plateforme.acces_total`.
 
+## La PME ne voit jamais les écritures — et le dossier autonome ? (lot S2, 6 novembre 2026, INCERTAIN)
+
+`20261202100000_la_pme_ne_voit_jamais_les_ecritures.sql` ferme les écritures
+et leurs lignes à toute personne de la PME dès qu'un cabinet est engagé sur le
+dossier (engagement actif à la date du jour) : seuls le cabinet engagé et la
+plateforme réquisitionnée les lisent. L'accueil de la PME lit des totaux par
+mois et par classe (`office.totauxParClasse`), jamais une ligne.
+
+**Ouvert** : un dossier SANS cabinet (autonome) tient lui-même ses livres et
+inscrit ses écritures. La règle dit « jamais », mais appliquée à la lettre,
+ses écritures ne seraient lisibles de personne. Ce lot n'y change rien : le
+dirigeant (`societe.tout_voir`) et l'auteur d'une pièce les lisent comme hier.
+Conséquence à connaître : quand un engagement prend fin, le dossier redevient
+« sans cabinet » et la PME relit toutes les écritures qu'y a inscrites le
+cabinet. Le dirigeant tranche.
+
+**Ouvert aussi** : les écritures de RÈGLEMENT (`nature = 'reglement'`) restent
+lisibles de la PME en mandat. Le règlement est son geste (`pme.regler`,
+`office.inscrireLeReglement`) : elle en voit déjà la proposition ligne à ligne
+(`office.propositionDeReglement`), et l'API relit sous son identité ce qu'elle
+vient d'inscrire. Les fermer exigerait de déplacer ce geste en base.
+
+**Ce que la PME lit encore d'une écriture du cabinet** : sa DATE (le mois de
+TVA d'une pièce prise en charge, `app.jours_des_ecritures_du_dossier`) et son
+COURS de change (`app.cours_de_l_ecriture_de_la_piece`), comme elle en lisait
+déjà les MONTANTS (`app.montants_pris_en_charge`). Sa TVA du mois et « Vos
+charges » en dépendent.
+
+**Conséquence à confirmer** (`20261202100100`, `20261202100200`) : une porte
+de la PME ne lit, au-delà de la PME, que sa propre proposition encore
+ouverte. Une PME peut toujours remplacer une proposition ouverte du cabinet
+sur sa pièce (comportement d'avant le lot, par
+`app.piece_oublie_ses_propositions`), mais plus proposer sur une pièce déjà
+inscrite (`refus.ecriture.reimputer`). Un dossier en
+`validation_mode = 'autonome'` AVEC un cabinet engagé ne contre-passe donc plus
+l'écriture que le cabinet a prise en charge (`refus.introuvable.ecriture`) :
+le cabinet la défait. Si le dirigeant veut rendre ce geste à la PME, il faudra
+une porte dédiée qui ne lit que ce dont elle a besoin. Reste aussi ouvert :
+après la révocation du mandat, la PME relit tout ce que le cabinet a inscrit.
 ## La chaîne de désignation (décidée par Wissem le 8 novembre 2026)
 
 Claude désigne, DeepSeek prend la main en cas de panne ou de budget épuisé, et
@@ -627,6 +666,10 @@ les deux budgets épuisés la pièce est lue par le moteur Sudoku seul
   choisit dans la tour. À mesurer sur nos vraies pièces avec la clé (banc
   `tests/real/designation-cout.ts`). Un « second avis » Sonnet sur les pièces
   non prouvées n'est PAS câblé : c'est un troisième appel, à décider.
+  Mesuré le 8 novembre 2026 en mode « Sudoku d'abord » sur 411 pièces
+  (`docs/mesure-claude-2026-11-08.md`) : ni Haiku, ni Sonnet, ni DeepSeek ne
+  font prouver une pièce de plus que le moteur seul (283), et aucun faux n'est
+  affirmé ; les valeurs non prouvées du modèle seraient fausses 7 à 15 fois sur 100. Le second avis Sonnet n'apporte rien au taux de pièces prouvées.
 - **Les sorties structurées (`output_config.format`) ne sont PAS activées.** Leur
   limite (24 paramètres facultatifs et 16 unions par requête) ne tient pas le
   contrat de désignation R2 tel qu'il est : une trentaine de pointeurs
@@ -671,16 +714,19 @@ la pièce n'appelle aucun modèle (`20261202100000_le_sudoku_d_abord.sql`,
 
 Tranché par défaut, à confirmer :
 
-- **Le budget de l'assistant est celui de la chaîne #274**, par fournisseur : la
-  conversation et la lecture des pièces dépensent les mêmes 500 $ Claude du mois.
-  Aucun plafond propre à l'assistant n'est posé ; le plafond mensuel par
+- ~~Le budget de l'assistant est celui de la chaîne #274~~ — **tranché par le
+  dirigeant le 8 novembre 2026 : plafond propre de 150 $ par mois** pour
+  l'assistant (migration `20261209090000`, réglable dans la tour, section
+  « Parler à Malica »). Au-delà : repli DeepSeek, puis arrêt ; la lecture des
+  pièces garde au moins 350 $ des 500 $ de Claude. Le plafond mensuel par
   organisation (`conseil.exigerBudget`, ANO-029) reste exigé avant chaque question.
-- **Le repli DeepSeek range sa réponse brute au fil** (`askMalica`) avant que la
-  garde ne la relise : l'écran ne montre que la version gardée, mais un fil
-  rouvert relit la réponse brute. À corriger si le repli sert souvent.
-- **Les sources ne sont pas rangées avec le message** : un fil rouvert montre le
-  texte, pas les jetons de sources ni les propositions. Il faudrait une colonne au
-  message (`agents.conversation_messages`).
+- ~~Le repli DeepSeek range sa réponse brute au fil~~ — corrigé : la garde passe
+  AVANT le rangement (`askMalica` reçoit `garder`), le fil garde la version
+  contrôlée.
+- ~~Les sources ne sont pas rangées avec le message~~ — corrigé : colonnes
+  `sources` et `propositions` sur `agents.conversation_messages`, réaffichées à
+  la réouverture d'un fil. Une proposition rouverte se rejuge contre la porte du
+  circuit : si la pièce est déjà partie, le bouton n'existe plus.
 - **« Valider l'écriture » proposé à un dirigeant** : la base refuse (seul le
   cabinet valide) et l'écran affiche le refus. La consigne le dit au modèle.
 - **Plafond de l'épreuve réelle : 15 $** par lancement (`--plafond 15`).

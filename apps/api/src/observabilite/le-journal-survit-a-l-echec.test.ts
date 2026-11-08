@@ -337,7 +337,7 @@ describe("le journal survit à l'échec métier", { skip: !BASE_CONFIGUREE }, ()
 
   it("l'en-tête de trace se propage, et l'étape rpc référence l'audit sans le recopier", async () => {
     const trace = randomUUID();
-    const jeton = emettreJeton(a);
+    const jeton = emettreJeton(a, new Date());
     const appeler = (args: unknown[], cle: string) =>
       fetch(`${base}/rpc`, {
         method: "POST",

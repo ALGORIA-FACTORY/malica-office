@@ -51,7 +51,9 @@ export interface RenduDePage {
  * une adresse que le PDF ou le réseau fournirait.
  */
 const paquet = path.dirname(createRequire(import.meta.url).resolve("pdfjs-dist/package.json"));
-const dossier = (nom: string) => `${path.join(paquet, nom)}${path.sep}`;
+// pdf.js demands a trailing "/" (not path.sep: on Windows it is "\" and every page fails);
+// it then reads with fs.readFile, which takes a Windows path ending in "/".
+const dossier = (nom: string) => `${path.join(paquet, nom)}/`;
 
 interface ImageDecodee {
   data?: Uint8Array | Uint8ClampedArray;

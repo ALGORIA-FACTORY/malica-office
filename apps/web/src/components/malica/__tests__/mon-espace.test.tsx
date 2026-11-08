@@ -219,7 +219,7 @@ describe("Mon espace", () => {
 
   it("un lot arrêté en route dit ce qui est passé, et garde le reste choisi", async () => {
     api.setPieceVis.mockImplementation(async (id: string, vis: PieceLue["vis"]) => {
-      if (id === "b") throw new ErreurApi("REFUS_DE_LA_BASE", 409);
+      if (id === "b") throw new ErreurApi("refus.introuvable", 409);
       base.pieces.find((x) => x.id === id)!.vis = vis;
       return true;
     });
@@ -231,9 +231,10 @@ describe("Mon espace", () => {
     fireEvent.click(screen.getByRole("button", { name: "pme.coffre.mettre" }));
 
     const alerte = await screen.findByRole("alert");
-    // « 1 sur 2 sont dans la société ; 1 reste choisi », puis la raison.
+    // « 1 sur 2 sont dans la société ; 1 reste choisi », puis la raison — une
+    // clé de refus, dite par sa phrase (un texte brut ne s'affiche plus).
     expect(alerte.textContent).toContain("pme.coffre.partiel.mis:1");
-    expect(alerte.textContent).toContain("REFUS_DE_LA_BASE");
+    expect(alerte.textContent).toContain("Introuvable, ou vous n’y avez pas accès.");
     await screen.findByText("pme.coffre.compte:2");
     const restant = screen.getAllByRole("button", { name: "pme.coffre.choisir" });
     expect(restant.filter((b) => b.getAttribute("aria-pressed") === "true")).toHaveLength(1);

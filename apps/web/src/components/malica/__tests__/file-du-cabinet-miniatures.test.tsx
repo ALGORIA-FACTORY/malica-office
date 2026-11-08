@@ -47,7 +47,8 @@ vi.mock("@/verticals/malica-office/composition", () => ({
   }),
 }));
 
-import { QueueTable, Route } from "@/routes/_authenticated/cabinet.index";
+import { QueueTable } from "@/components/malica/file-du-cabinet";
+import { Route } from "@/routes/_authenticated/cabinet.index";
 
 const ligne = (pieceId: string, extra: Partial<QueueItem> = {}): QueueItem =>
   ({

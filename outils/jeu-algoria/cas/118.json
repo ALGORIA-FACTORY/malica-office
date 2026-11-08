@@ -1,0 +1,343 @@
+{
+  "id": "118",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_vente",
+  "grille": "facture",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "capture": "photo",
+  "gabarit": "F",
+  "scenario": "un_taux",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "pli",
+    "tampon",
+    "signature",
+    "souche_carbone",
+    "ratures",
+    "chiffres_orientaux"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "orientaux"
+    },
+    "emetteur": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "١٩٥٨٣٣٠V/A/M/٠٠٠",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "client": {
+      "nom": "بنك رزفان التجريبي",
+      "nomAr": "بنك رزفان التجريبي",
+      "enseigne": null,
+      "matricule": "4323018S/A/M/000",
+      "matriculeImprime": "4323018S/A/M/000",
+      "adresse": "52، نهج الميموزا، المرسى",
+      "telephone": "00 47 752 722",
+      "fax": "00 74 701 929",
+      "email": null,
+      "site": null,
+      "rc": "B627743142021",
+      "rib": "99 623 7800706234116 69",
+      "banque": "Banque Talmira",
+      "code": "C2122485",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "client"
+    },
+    "date": "٢٠٢٦/٠٦/٠٢",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "اشتراك Malica Office — مستوى Foundation، 12 شهرا",
+        "designationAr": "اشتراك Malica Office — مستوى Foundation، 12 شهرا",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "اشتراك RegTrack — مستوى Compliance، 12 شهرا",
+        "designationAr": "اشتراك RegTrack — مستوى Compliance، 12 شهرا",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [
+      {
+        "chemin": "articles[0].total_ht",
+        "barre": "٦.٠٤٢,٤٤٦"
+      },
+      {
+        "chemin": "articles[1].quantity",
+        "barre": "٤"
+      }
+    ],
+    "imprime": {
+      "issuer": "ALGORIA FACTORY SARL",
+      "document_date": "٢٠٢٦/٠٦/٠٢",
+      "references.numero": "٠٨٦٢",
+      "references.matricule_fiscal": "١٩٥٨٣٣٠V/A/M/٠٠٠",
+      "references.matricule_fiscal_client": "4323018S/A/M/000",
+      "nom_client": "بنك رزفان التجريبي",
+      "adresse_client": "52، نهج الميموزا، المرسى",
+      "adresse_emetteur": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone_emetteur": "00 71 940 517",
+      "registre_commerce_emetteur": "B01283932024",
+      "mode_reglement": "بطاقة بنكية",
+      "totals.base_ht": "١٨.١٩٨,٠٧٨",
+      "totals.vat": "٣.٤٥٧,٦٣٥",
+      "totals.ttc": "٢١.٦٥٦,٧١٣",
+      "other_charges[0].amount": "١,٠٠٠",
+      "articles[0].designation": "اشتراك Malica Office — مستوى Foundation، 12 شهرا",
+      "articles[0].quantity": "٢",
+      "articles[0].unit_price_ht": "٢.٩٩١,٢٢٣",
+      "articles[0].total_ht": "٥.٩٨٢,٤٤٦",
+      "articles[1].designation": "اشتراك RegTrack — مستوى Compliance، 12 شهرا",
+      "articles[1].quantity": "١",
+      "articles[1].unit_price_ht": "١٢.٢١٥,٦٣٢",
+      "articles[1].total_ht": "١٢.٢١٥,٦٣٢"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 455018534,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "ALGORIA FACTORY SARL",
+      "document_date": "2026-06-02",
+      "currency": "TND",
+      "references.numero": "0862",
+      "references.matricule_fiscal": "1958330V/A/M/000",
+      "references.matricule_fiscal_client": "4323018S/A/M/000",
+      "totals.base_ht": "18198.078",
+      "totals.vat": "3457.635",
+      "totals.ttc": "21656.713",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "18198.078",
+      "lines[0].vat_amount": "3457.635",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "2991.223",
+      "articles[0].total_ht": "5982.446",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "12215.632",
+      "articles[1].total_ht": "12215.632"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "705",
+          "0",
+          "18198.078",
+          "TVA19"
+        ],
+        [
+          "4367",
+          "0",
+          "3457.635",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "21656.713",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "aTrancher": {
+      "reserve": "nature_de_vente",
+      "ecriture": {
+        "journal": "VEN",
+        "lignes": [
+          [
+            "701",
+            "0",
+            "18198.078",
+            "TVA19"
+          ],
+          [
+            "4367",
+            "0",
+            "3457.635",
+            "TVA19"
+          ],
+          [
+            "4371",
+            "0",
+            "1.000"
+          ],
+          [
+            "411",
+            "21656.713",
+            "0"
+          ]
+        ]
+      }
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente par nature d'article (ventes.compte = par_nature_article, défaut du CEO du 31/10/2026) : 705 prestations, 706 annexes, 707 marchandises ; repli au compte des produits finis, avec la réserve « nature de la vente à préciser »",
+      "Ratures : la valeur barrée n'est jamais la valeur attendue ; la valeur juste est écrite à côté."
+    ],
+    "concepts": {
+      "type_document": "فاتورة",
+      "raison_sociale_emetteur": "ALGORIA FACTORY SARL",
+      "date_operation": "2026-06-02",
+      "numero_facture": "0862",
+      "matricule_fiscal_emetteur": "1958330V/A/M/000",
+      "matricule_fiscal_client": "4323018S/A/M/000",
+      "nom_client": "بنك رزفان التجريبي",
+      "adresse_client": "52، نهج الميموزا، المرسى",
+      "adresse_emetteur": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone_email_emetteur": {
+        "telephone": "00 71 940 517"
+      },
+      "registre_commerce_emetteur": "B01283932024",
+      "mode_reglement": "بطاقة بنكية",
+      "total_ht": "18198.078",
+      "montant_tva_par_taux": {
+        "19": "3457.635"
+      },
+      "total_ttc": "21656.713",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "18198.078"
+      },
+      "lignes": [
+        {
+          "designation": "اشتراك Malica Office — مستوى Foundation، 12 شهرا",
+          "quantite": "2",
+          "prix_unitaire_ht": "2991.223",
+          "montant_ligne_ht": "5982.446",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "اشتراك RegTrack — مستوى Compliance، 12 شهرا",
+          "quantite": "1",
+          "prix_unitaire_ht": "12215.632",
+          "montant_ligne_ht": "12215.632",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

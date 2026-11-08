@@ -55,6 +55,12 @@ export interface DependancesDuConseilCite {
   empreinte: (question: string) => Promise<number[]>;
   /** Aujourd'hui à Tunis, AAAA-MM-JJ : la date d'effet par défaut. */
   aujourdhui?: () => string;
+  /**
+   * L'organe sous lequel l'appel se journalise. « Parler à Malica » passe le
+   * sien (`malica.assistant.conseil`) : ce que coûte son outil `conseil_fiscal`
+   * compte alors dans le plafond propre de l'assistant.
+   */
+  agent?: string;
 }
 
 export interface SourceAffichee extends SourceCiteeVersionnee {
@@ -295,6 +301,7 @@ export async function conseilCite(
     const usage = envoi ? usageDe(envoi.reponse) : USAGE_NUL;
     await journaliser(api, {
       tenantId: input.tenantId,
+      agent: deps.agent ?? AGENT_CONSEIL_CITE,
       modele,
       usage,
       latencyMs: envoi?.latencyMs ?? 0,
@@ -384,6 +391,7 @@ async function journaliser(
   api: AppelApi,
   input: {
     tenantId: string;
+    agent: string;
     modele: string;
     usage: UsageDeLAppel;
     latencyMs: number;
@@ -403,7 +411,7 @@ async function journaliser(
       .rpc<string | null>("capture", "journaliserAgent", [
         {
           tenantId: input.tenantId,
-          agent: AGENT_CONSEIL_CITE,
+          agent: input.agent,
           model: input.modele,
           role: l.role,
           status: input.erreur ? "error" : "ok",

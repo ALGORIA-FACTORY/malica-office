@@ -1,0 +1,381 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "declaration_annuelle_is_irpp",
+    "nom": "Déclaration annuelle de l'impôt sur les sociétés (et de l'IRPP pour les personnes physiques)",
+    "typeDeDocument": "declaration_impot",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "acomptes_payes",
+      "concept": "acomptes_payes",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "liquidation",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "amortissements_differes",
+      "concept": "amortissements_differes",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "resultat_fiscal",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "bareme_irpp",
+      "concept": "bareme_irpp",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "specifique_irpp",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "benefice_imposable",
+      "concept": "benefice_imposable",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "resultat_fiscal",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_export",
+      "concept": "ca_export",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "chiffre_affaires",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_local_ttc",
+      "concept": "ca_local_ttc",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "chiffre_affaires",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ca_total_brut",
+      "concept": "ca_total_brut",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "chiffre_affaires",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "categories_revenus",
+      "concept": "categories_revenus",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "specifique_irpp",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "commissaire_aux_comptes",
+      "concept": "commissaire_aux_comptes",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "identification",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "contribution_conjoncturelle",
+      "concept": "contribution_conjoncturelle",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "liquidation",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "css",
+      "concept": "css",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "liquidation",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_depot",
+      "concept": "date_depot",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "depot",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "deductions",
+      "concept": "deductions",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "resultat_fiscal",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "deductions_avantages",
+      "concept": "deductions_avantages",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "resultat_fiscal",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "deductions_familiales",
+      "concept": "deductions_familiales",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "specifique_irpp",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "deficits_reportes",
+      "concept": "deficits_reportes",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "resultat_fiscal",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "documentation_prix_transfert",
+      "concept": "documentation_prix_transfert",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "annexes_jointes",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "etats_financiers",
+      "concept": "etats_financiers",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "annexes_jointes",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "excedent_a_reporter",
+      "concept": "excedent_a_reporter",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "liquidation",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "excedent_anterieur",
+      "concept": "excedent_anterieur",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "liquidation",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "exercice",
+      "concept": "exercice",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "forme_juridique",
+      "concept": "forme_juridique",
+      "role": "contribuable",
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "identification",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "is_calcule",
+      "concept": "is_calcule",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "liquidation",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "is_du",
+      "concept": "is_du",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "liquidation",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "contribuable",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "minimum_impot",
+      "concept": "minimum_impot",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "liquidation",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nature_declaration",
+      "concept": "nature_declaration",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "identification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "raison_sociale",
+      "concept": "raison_sociale",
+      "role": "contribuable",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "reference_accuse",
+      "concept": "ref_accuse",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "depot",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "regime_fiscal",
+      "concept": "regime_fiscal",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reintegrations",
+      "concept": "reintegrations",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "resultat_fiscal",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reste_a_payer",
+      "concept": "net_a_payer",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "liquidation",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "resultat_comptable",
+      "concept": "resultat_comptable",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "resultat_fiscal",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "resultat_fiscal_avant_deficits",
+      "concept": "resultat_fiscal_avant_deficits",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "resultat_fiscal",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "retenues_subies",
+      "concept": "retenues_subies",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "liquidation",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tableau_amortissements",
+      "concept": "tableau_amortissements",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "annexes_jointes",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "taux_is",
+      "concept": "taux_is",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "oui",
+      "parcelle": "liquidation",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    }
+  ]
+}

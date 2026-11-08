@@ -546,6 +546,14 @@ export const en: Dict = {
   "pme.paiement.borne": "At most {montant}: what is left to pay.",
   "pme.paiement.avantFacture": "Before the invoice date: a deposit?",
   "pme.type.titre": "What is it?",
+  "pme.photo.avis.too_small":
+    "The page is small in the photo: the reading may be incomplete. You can retake it closer.",
+  "pme.photo.avis.oblique":
+    "The photo is taken at an angle: the reading may be incomplete. You can retake it facing the page.",
+  "pme.photo.avis.too_dark":
+    "The photo is dark: the reading may be incomplete. You can retake it in better light.",
+  "pme.photo.avis.blurry":
+    "The photo is blurry: the reading may be incomplete. You can retake it holding still.",
   "pme.type.passer": "I don't know",
   "pme.type.corrigeable": "Malica checks it when reading. You can change it later.",
   "pme.piece.type.modifier": "Change type",
@@ -567,6 +575,9 @@ export const en: Dict = {
   "pme.piece.voir": "View the invoice",
   "pme.detail.voir": "View the detail",
   "pme.detail.titre": "What I read, line by line",
+  "pme.detail.lignesAVerifier": "Lines read, to check",
+  "pme.detail.lignesAVerifierAide":
+    "No sum proves these lines yet: they are shown as read. The night reading takes them up again; the entry relies only on proven totals.",
   "pme.detail.compte": "{count} lines",
   "pme.detail.compte#one": "{count} line",
   "pme.detail.compte#other": "{count} lines",
@@ -1244,9 +1255,22 @@ export const en: Dict = {
   "tour.assistant.consigne.enVigueur": "In force since {date}; versions on record: {versions}.",
   "tour.assistant.consigne.borne": "At least two hundred characters.",
   "tour.assistant.publier": "Publish this version",
+  "tour.assistant.plafond": "Assistant spending cap",
+  "tour.assistant.plafond.aide":
+    "What “Talk to Malica” may spend on Claude. Beyond it, the assistant answers with the backup model (DeepSeek), then stops if that is exhausted too. Document reading is not affected: it keeps the rest of the Claude budget.",
+  "tour.assistant.plafond.etatMois":
+    "This month: ${depense} spent out of ${plafond} — decided on {date}.",
+  "tour.assistant.plafond.etatJour":
+    "Today: ${depense} spent out of ${plafond} — decided on {date}.",
+  "tour.assistant.plafond.atteint": "Cap reached: the assistant answers with the backup model.",
+  "tour.assistant.plafond.montant": "Cap, in dollars",
+  "tour.assistant.plafond.periode": "Period",
+  "tour.assistant.plafond.parMois": "Per calendar month",
+  "tour.assistant.plafond.parJour": "Per day",
+  "tour.assistant.plafond.borne": "A positive amount, at most two decimals.",
   "tour.assistant.reglage": "Assistant settings",
   "tour.assistant.reglage.aide":
-    "The standard model answers everything; the model for hard questions takes over when a question exceeds the set length, contains one of the words, or attaches several documents. The budget remains that of the model chain.",
+    "The standard model answers everything; the model for hard questions takes over when a question exceeds the set length, contains one of the words, or attaches several documents. Spending is bounded by the assistant cap (card above), itself under the model chain's cap.",
   "tour.assistant.mois": "This month: answers given, {appels}; cost, ${cout}.",
   "tour.assistant.modeleCourant": "Standard model",
   "tour.assistant.modeleDifficile": "Model for hard questions",
@@ -1676,6 +1700,7 @@ export const en: Dict = {
   "cab.lecteur.statut.prouve": "Proven",
   "cab.lecteur.statut.conforme": "Conforming",
   "cab.lecteur.statut.signale": "Flagged",
+  "cab.lecteur.statut.signale_ligne": "Read, to check",
   "cab.lecteur.statut.absent": "Missing",
   "cab.lecteur.statut.deduit": "Inferred",
   "cab.lecteur.statut.coupe": "Split",
@@ -2135,6 +2160,7 @@ export const en: Dict = {
   "refus.piece.archivee": "The client withdrew this document: it is archived.",
   "refus.introuvable": "Not found, or you do not have access to it.",
   "refus.introuvable.piece": "Document not found, or you do not have access to it.",
+  "refus.inattendu": "This could not be completed. Try again; if it happens again, report it.",
   "refus.introuvable.cabinet": "Practice not found, or you do not have access to it.",
   "refus.introuvable.dossier": "File not found, or you do not have access to it.",
   "refus.introuvable.facture": "Invoice not found, or you do not have access to it.",
@@ -2223,6 +2249,8 @@ export const en: Dict = {
     "A cancellation must copy the payment of the same document.",
   "refus.ecriture.reglement_annule": "The payment is cancelled, or does not match the document.",
   "refus.ecriture.reglement_d_une_autre_piece": "This payment does not belong to this document.",
+  "refus.ecriture.reglement_hors_paiement":
+    "This payment entry does not match its payment: journal, cash account, third party or amount.",
   "refus.ecriture.deja_inscrite":
     "This document already has a recorded entry: a second one would count it twice.",
   "cab.ecriture.malica_propose": "Malica suggests",
@@ -2525,6 +2553,8 @@ export const en: Dict = {
     "The reading cites field {champ} at a place where no word was read.",
   "refus.piece.empreinte": "This document’s fingerprint is not valid.",
   "refus.piece.scellee": "This document’s content is sealed: it cannot be replaced.",
+  "refus.piece.type_de_contenu":
+    "This file type is not a document: upload a PDF or a photo (JPEG, PNG, WebP, HEIC).",
   "refus.piece.non_partagee": "This document is not shared with the practice.",
   "refus.piece.aucune_demande": "No request is pending on this document.",
   "refus.rattachement.motif": "Say why you are detaching this document.",
@@ -2537,6 +2567,8 @@ export const en: Dict = {
   "refus.cle_api.par_une_personne":
     "An API key neither creates nor revokes another key: a person does this.",
   "refus.cle_api.cabinet_seulement": "Only a practice holds an API key.",
+  "refus.cle_api.expert_membre":
+    "Only an expert who is a member of the practice creates an API key.",
   "refus.cle_api.nom_requis": "Give the key a name.",
   "refus.cle_api.portee_requise": "A key carries at least one scope.",
   "refus.cle_api.portee_inconnue": "One of the requested scopes does not exist.",
@@ -3609,6 +3641,11 @@ export const en: Dict = {
   "scan.hint.searching": "Fit the whole invoice in the frame.",
   "scan.hint.closer": "Move closer: the document is too small.",
   "scan.hint.blurry": "Hold steady: the image is blurry.",
+  "scan.hint.oblique": "Face the document: the angle is too steep.",
+  "scan.hint.dark": "Too dark: move closer to a light source.",
+  "scan.hint.ombre": "Hold still — a shadow falls on the document: move it away if you can.",
+  "scan.reject.dark": "Photo rejected: too dark. Light the page and retake.",
+  "scan.reject.oblique": "Photo rejected: taken at too steep an angle. Face the page.",
   "scan.hint.blank": "Blank page: the document is complete.",
   "scan.cam.contexte_non_securise":
     "Guided framing needs a secure connection, which this address does not have. Your camera works fine: use the photo app, the picture will be the same.",
@@ -3629,6 +3666,7 @@ export const en: Dict = {
   "scan.autoclosed": "End of document detected automatically.",
   "common.error": "Something went wrong.",
   "common.horsLigne": "No connection. This will be possible once the network is back.",
+  "common.erreur.reference": "(ref. {ref})",
   "common.motif": "Reason",
   "common.source": "Source",
   "common.retirer": "Withdraw",
@@ -4319,6 +4357,9 @@ export const en: Dict = {
     "{count} documents are waiting for the network. They will go on their own: the photo never has to be taken again.",
   "pme.capture.repondre": "Next ({count})",
   "pme.capture.continuer": "Continue",
+  "pme.compta.voirPlus": "{count} more",
+  "pme.compta.voirPlus#one": "One more",
+  "pme.compta.voirPlus#other": "{count} more",
   "pme.reglages.personnes.societes": "{count} companies",
   "pme.reglages.personnes.societes#one": "{count} company",
   "pme.reglages.personnes.societes#other": "{count} companies",
@@ -4342,6 +4383,7 @@ export const en: Dict = {
   "pme.compta.rienARepondre": "Nothing to answer.",
   "pme.compta.rienTransmis": "Nothing sent yet.",
   "pme.compta.mandatActif": "Active mandate",
+  "pme.type.plutot": "{porte} · it is rather",
   "pme.reglages.sommaire.avecCompta": "{count} with an accountant",
   "pme.reglages.sommaire.avecCompta#one": "{count} with an accountant",
   "pme.reglages.sommaire.avecCompta#other": "{count} with accountants",
@@ -4807,13 +4849,27 @@ export const en: Dict = {
   "pme.list.voirTout": "See all {n}",
   "pme.list.replier": "Collapse",
   "pme.malica.composer": "Write to Malica…",
-  "pme.malica.poser": "Ask your question…",
   "pme.malica.suiteAvis": "Ask {cabinet} for advice",
   "pme.malica.suiteAvisSansNom": "Ask your firm for advice",
   "pme.malica.suiteTransmission": "Ask the file owner to send it",
   "pme.malica.suitePasEncore": "This request cannot be made from this screen yet",
   "pme.malica.suiteSansCabinet": "Ask a firm for advice",
   "pme.malica.suiteSansCabinetDetail": "No firm is engaged on this file",
+  "pme.malica.retenue": "Sent for review — this advice has consequences for your file",
+  "pme.malica.sous": "Ask your question: I answer and cite my sources.",
+  "pme.malica.salut.jour": "Hello",
+  "pme.malica.salut.soir": "Good evening",
+  "pme.malica.pret.tva": "When do I file my VAT?",
+  "pme.malica.pret.retenue": "What withholding tax rate applies?",
+  "pme.malica.pret.garder": "How long must I keep my invoices?",
+  "pme.malica.statut.enLigne": "online",
+  "pme.malica.statut.repond": "is answering…",
+  "pme.malica.statut.cite": "online · cites her sources",
+  "pme.malica.canaux": "Channels",
+  "pme.malica.utilise": "What I used",
+  "pme.malica.rienEncore": "Nothing yet: ask a question.",
+  "pme.malica.voix.parler": "Talk to Malica",
+  "pme.malica.voix.ecoute": "I'm listening…",
   "pme.malica.pied":
     "I cite the article and the version in force on the date. I do not decide in place of your accountant on what has consequences for your file.",
   // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).
@@ -4888,6 +4944,8 @@ export const en: Dict = {
   "refus.saisie.etablissement":
     "This establishment does not belong to the company: choose one of its own.",
   "refus.saisie.mal_formee": "The data sent is malformed: reload the page, then try again.",
+  "refus.saisie.mois_entiers":
+    "These totals are read by whole months: from the first day of a month to the last day of a month.",
   "refus.geste.non_permis": "You are not allowed to do this on this file.",
   "refus.banque.statut_par_le_lettrage":
     "A statement line is reconciled by matching, not by hand: match it with its entry.",

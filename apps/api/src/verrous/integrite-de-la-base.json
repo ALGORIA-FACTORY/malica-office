@@ -8,6 +8,8 @@
     "refus_calcules": "Fonctions qui lèvent un message calculé (raise exception '%', <expression>) dont l'expression ne nomme pas de clé refus.* : chacune dit d'où vient sa clé.",
     "portes_que_personne_n_appelle": "Fonctions security definer qu'aucun client ni l'API ne peut exécuter, et que rien n'appelle dans la base.",
     "portes_sans_appel": "Portes qu'un client peut exécuter, que ni la base, ni l'API, ni les outils n'appellent.",
+    "fonctions_publiques_sans_appel": "Fonctions sans security definer, exécutables par PUBLIC, qu'aucune autre définition de la base ni le code n'appellent (audit du 6 novembre 2026, § 3.3).",
+    "cascades_sans_index": "Clés étrangères on delete cascade / set null / set default sans index menant par leurs colonnes : chaque suppression de la ligne visée parcourt la table entière (audit du 6 novembre 2026, § 3.5).",
     "lecteurs_du_parametrage": "Chaque fonction et chaque fichier qui nomme une table de paramétrage (ce que le cabinet a arrêté au-dessus du pack, R10). Un lecteur de plus passe par la revue : la même résolution écrite deux fois diverge un jour.",
     "litteraux_metier": "Fichiers de production qui écrivent un compte, une devise ou un taux du référentiel : des jeux d'essai et le banc de mesure, jamais une règle.",
     "titres_de_page_figes": "DETTE NOMMÉE. Titres de page en français dans head() : le rendu serveur (TanStack Start) produit la tête avant que la langue choisie, rangée dans le navigateur, ne soit connue ; traduire dans head() ferait différer serveur et hydratation. À régler par une langue connue du serveur (cookie). Aucun titre figé de plus."
@@ -83,6 +85,15 @@
     "public.etablissement_archiver": "DETTE : l'archivage d'un établissement (20261018130000) n'a pas d'écran.",
     "public.set_engagement_status": "DETTE : porte de statut de mandat de l'amorçage ; les mandats passent par les portes du cabinet. Retrait à trancher."
   },
+  "fonctions_publiques_sans_appel": {},
+  "cascades_sans_index": {
+    "banque.lettrage_etat.lettrage_etat_tenant_id_fkey": "DETTE (lot D, hors périmètre) : le seul index menant par tenant_id est partiel (where active). Cascade depuis identity.organizations, qu'aucun chemin ne supprime (R7 : une organisation s'archive). À indexer avant toute purge d'organisation.",
+    "collab.assignments.assignments_cabinet_tenant_id_fkey": "DETTE (lot D, hors périmètre) : l'index menant par cabinet_tenant_id est partiel (where active). Cascade depuis identity.organizations, qu'aucun chemin ne supprime (R7). À indexer avant toute purge d'organisation.",
+    "collab.assignments.assignments_collaborator_id_fkey": "DETTE (lot D, hors périmètre) : l'index menant par collaborator_id est partiel (where active). Cascade depuis auth.users, qu'aucun chemin de production ne supprime (seul un test le fait). À indexer avant tout effacement de compte.",
+    "collab.notification_lectures.notification_lectures_notification_id_fkey": "DETTE (lot D, hors périmètre) : la clé primaire (tenant_id, notification_id, user_id) ne mène pas par notification_id. Cascade depuis collab.notifications, qu'aucun chemin ne supprime à ce jour. À indexer avant toute purge des notifications.",
+    "collab.notification_lectures.notification_lectures_user_id_fkey": "DETTE (lot D, hors périmètre) : l'index (tenant_id, user_id) ne mène pas par user_id. Cascade depuis auth.users, qu'aucun chemin de production ne supprime (seul un test le fait). À indexer avant tout effacement de compte.",
+    "collab.push_devices.push_devices_user_id_fkey": "DETTE (lot D, hors périmètre) : l'index (tenant_id, user_id) ne mène pas par user_id. Cascade depuis auth.users, qu'aucun chemin de production ne supprime (seul un test le fait). À indexer avant tout effacement de compte."
+  },
   "lecteurs_du_parametrage": {
     "parametrage.accounts": [
       "app.ecriture_inscrite_dans_son_plan",
@@ -117,11 +128,10 @@
     ],
     "parametrage.regles_de_change": ["app.decisions_en_vigueur", "app.regle_de_change_arreter"],
     "parametrage.role_bindings": [
-      "app.compte_du_role",
+      "app.comptes_du_role",
       "app.nature_des_comptes",
       "apps/api/src/depots/capture.ts",
       "apps/api/src/depots/parametrage.ts",
-      "apps/api/src/scan/reglement.ts",
       "public.retenues_du_mois",
       "public.role_compte_definir",
       "public.role_compte_rendre_au_pack"

@@ -479,21 +479,25 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
       { account_code: "532", libelle: "Banque", debit: "0.000", credit: "1970.000" },
       { account_code: "432", libelle: "Retenue devinée", debit: "0.000", credit: "30.000" },
     ];
-    const id = (await rpc("office", "propose", {
-      pieceId: f,
-      journal: r.ecriture.journal,
-      date: r.ecriture.dateEcriture,
-      libelle: r.ecriture.libelle,
-      packVersionId: pack,
-      devise: "TND",
-      lignes: devinee,
-      paiementId: p,
-    })) as string;
-    await assert.rejects(rpc("office", "book", id), /Confirmez|ne correspond plus/);
-    const { rows } = await admin((db) =>
-      db.query(`select status from socle.ecritures where id = $1`, [id]),
+    // Depuis le lot S5b, la base ne l'enregistre même plus : une retenue que le
+    // paiement ne déclare pas n'est pas une écriture de règlement.
+    await assert.rejects(
+      rpc("office", "propose", {
+        pieceId: f,
+        journal: r.ecriture.journal,
+        date: r.ecriture.dateEcriture,
+        libelle: r.ecriture.libelle,
+        packVersionId: pack,
+        devise: "TND",
+        lignes: devinee,
+        paiementId: p,
+      }),
+      /refus\.ecriture\.reglement_hors_paiement$/,
     );
-    assert.equal(rows[0]!.status, "proposee");
+    const { rows } = await admin((db) =>
+      db.query(`select 1 from socle.ecritures where paiement_id = $1`, [p]),
+    );
+    assert.deepEqual(rows, []);
   });
 
   it("redemander la proposition rend la même, sans en empiler une seconde", async () => {

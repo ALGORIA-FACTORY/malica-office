@@ -1,0 +1,541 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "pv_age",
+    "nom": "Procès-verbal d'assemblée générale extraordinaire",
+    "typeDeDocument": "pv_age",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "abstentions",
+      "concept": "abstentions",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "Résolutions (une occurrence par résolution)",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ancien_siege",
+      "concept": "ancien_siege",
+      "role": null,
+      "type": "adresse",
+      "obligatoire": "selon_cas",
+      "parcelle": "Autres modifications statutaires",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ancienne_nouvelle_denomination",
+      "concept": "ancienne_nouvelle_denomination",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Autres modifications statutaires",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "articles_statuts_modifies",
+      "concept": "articles_statuts_modifies",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Résolutions (une occurrence par résolution)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "cac_present",
+      "concept": "cac_present",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Bureau, présence et quorum",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "capital_apres",
+      "concept": "capital_apres",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "capital_avant",
+      "concept": "capital_avant",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "certificat_depot_fonds",
+      "concept": "certificat_depot_fonds",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "constat_realisation",
+      "concept": "constat_realisation",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "continuite_exploitation",
+      "concept": "continuite_exploitation",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Autres modifications statutaires",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_assemblee",
+      "concept": "date_assemblee",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Identification de la société et de la séance",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_convocation",
+      "concept": "date_convocation",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Identification de la société et de la séance",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_premiere_assemblee",
+      "concept": "date_premiere_assemblee",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "Identification de la société et de la séance",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "denomination",
+      "concept": "raison_sociale",
+      "role": "entreprise",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Identification de la société et de la séance",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "dissolution_anticipee",
+      "concept": "dissolution_anticipee",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Autres modifications statutaires",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "droit_preferentiel_souscription",
+      "concept": "droit_preferentiel_souscription",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "lieu_assemblee",
+      "concept": "lieu_assemblee",
+      "role": null,
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "Identification de la société et de la séance",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "majorite_requise",
+      "concept": "majorite_requise",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "non",
+      "parcelle": "Résolutions (une occurrence par résolution)",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mention_enregistrement",
+      "concept": "mention_enregistrement",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Clôture et formalités",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mode_operation",
+      "concept": "mode_operation",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_variation",
+      "concept": "montant_variation",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "motif_reduction",
+      "concept": "motif_reduction",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nb_titres_crees_annules",
+      "concept": "nb_titres_crees_annules",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nouveau_siege",
+      "concept": "nouveau_siege",
+      "role": null,
+      "type": "adresse",
+      "obligatoire": "selon_cas",
+      "parcelle": "Autres modifications statutaires",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nouvelle_repartition_capital",
+      "concept": "nouvelle_repartition_capital",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "numero_convocation",
+      "concept": "numero_convocation",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Identification de la société et de la séance",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "objet_modifie",
+      "concept": "objet_modifie",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Autres modifications statutaires",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ordre_du_jour",
+      "concept": "ordre_du_jour",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Ordre du jour et rapports",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "pouvoirs_formalites",
+      "concept": "pouvoirs_formalites",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Clôture et formalités",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "president_seance",
+      "concept": "president_seance",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Bureau, présence et quorum",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "prime_emission",
+      "concept": "prime_emission",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Opérations sur le capital",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "prorogation_duree",
+      "concept": "prorogation_duree",
+      "role": null,
+      "type": "date",
+      "obligatoire": "selon_cas",
+      "parcelle": "Autres modifications statutaires",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "quorum_taux",
+      "concept": "quorum_taux",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "oui",
+      "parcelle": "Bureau, présence et quorum",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "rapport_cac_special",
+      "concept": "rapport_cac_special",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Ordre du jour et rapports",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "rapport_commissaire_apports",
+      "concept": "rapport_commissaire_apports",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Ordre du jour et rapports",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "rapport_gerant_conseil",
+      "concept": "rapport_gerant_conseil",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Ordre du jour et rapports",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_feuille_presence",
+      "concept": "ref_feuille_presence",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Bureau, présence et quorum",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reserves_incorporees",
+      "concept": "reserves_incorporees",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "resolution_numero",
+      "concept": "resolution_numero",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "oui",
+      "parcelle": "Résolutions (une occurrence par résolution)",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "resolution_objet",
+      "concept": "resolution_objet",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Résolutions (une occurrence par résolution)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "resolution_texte",
+      "concept": "resolution_texte",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Résolutions (une occurrence par résolution)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "resultat",
+      "concept": "resultat",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Résolutions (une occurrence par résolution)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "scrutateurs_secretaire",
+      "concept": "scrutateurs_secretaire",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Bureau, présence et quorum",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signataires",
+      "concept": "signataires",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Clôture et formalités",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "souscription_par_associe",
+      "concept": "souscription_par_associe",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "statuts_refondus_adoptes",
+      "concept": "statuts_refondus_adoptes",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Autres modifications statutaires",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "titres_presents_representes",
+      "concept": "titres_presents_representes",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "oui",
+      "parcelle": "Bureau, présence et quorum",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_titres_droit_vote",
+      "concept": "total_titres_droit_vote",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "oui",
+      "parcelle": "Bureau, présence et quorum",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "transformation_forme",
+      "concept": "transformation_forme",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "Autres modifications statutaires",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "type_assemblee",
+      "concept": "type_assemblee",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Identification de la société et de la séance",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "valeur_nominale_avant_apres",
+      "concept": "valeur_nominale_avant_apres",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Opérations sur le capital",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "votes_contre",
+      "concept": "votes_contre",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "oui",
+      "parcelle": "Résolutions (une occurrence par résolution)",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "votes_pour",
+      "concept": "votes_pour",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "oui",
+      "parcelle": "Résolutions (une occurrence par résolution)",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    }
+  ]
+}

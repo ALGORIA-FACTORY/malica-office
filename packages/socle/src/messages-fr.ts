@@ -585,6 +585,14 @@ export const fr = {
   "pme.paiement.borne": "Au plus {montant} : ce qui reste à payer.",
   "pme.paiement.avantFacture": "Avant la date de la facture : un acompte ?",
   "pme.type.titre": "Qu'est-ce que c'est ?",
+  "pme.photo.avis.too_small":
+    "La page est petite sur la photo : la lecture risque d'être incomplète. Vous pouvez la reprendre de plus près.",
+  "pme.photo.avis.oblique":
+    "La photo est prise de biais : la lecture risque d'être incomplète. Vous pouvez la reprendre face à la page.",
+  "pme.photo.avis.too_dark":
+    "La photo est sombre : la lecture risque d'être incomplète. Vous pouvez la reprendre à la lumière.",
+  "pme.photo.avis.blurry":
+    "La photo est floue : la lecture risque d'être incomplète. Vous pouvez la reprendre, appareil immobile.",
   "pme.type.passer": "Je ne sais pas",
   "pme.type.corrigeable": "Malica le vérifie à la lecture. Vous pourrez le changer.",
   "pme.piece.type.modifier": "Modifier le type",
@@ -606,6 +614,9 @@ export const fr = {
   "pme.piece.voir": "Voir la facture",
   "pme.detail.voir": "Voir le détail",
   "pme.detail.titre": "Ce que j'ai lu, ligne par ligne",
+  "pme.detail.lignesAVerifier": "Lignes lues, à vérifier",
+  "pme.detail.lignesAVerifierAide":
+    "Aucune somme ne prouve encore ces lignes : elles sont lues telles quelles. La lecture de nuit les reprend ; l'écriture ne s'appuie que sur les totaux prouvés.",
   "pme.detail.compte": "{count} lignes",
   "pme.detail.compte#one": "{count} ligne",
   "pme.detail.compte#other": "{count} lignes",
@@ -1307,9 +1318,23 @@ export const fr = {
     "En vigueur depuis le {date} ; versions au registre : {versions}.",
   "tour.assistant.consigne.borne": "Deux cents caractères au moins.",
   "tour.assistant.publier": "Publier cette version",
+  "tour.assistant.plafond": "Plafond de l'assistant",
+  "tour.assistant.plafond.aide":
+    "Ce que « Parler à Malica » peut dépenser sur Claude. Au-delà, l'assistant répond avec le modèle de secours (DeepSeek), puis s'arrête si celui-ci est épuisé. La lecture des pièces n'en est pas touchée : elle garde le reste du budget Claude.",
+  "tour.assistant.plafond.etatMois":
+    "Ce mois : {depense} $ dépensés sur {plafond} $ — décidé le {date}.",
+  "tour.assistant.plafond.etatJour":
+    "Aujourd'hui : {depense} $ dépensés sur {plafond} $ — décidé le {date}.",
+  "tour.assistant.plafond.atteint":
+    "Plafond atteint : l'assistant répond avec le modèle de secours.",
+  "tour.assistant.plafond.montant": "Plafond, en dollars",
+  "tour.assistant.plafond.periode": "Période",
+  "tour.assistant.plafond.parMois": "Par mois civil",
+  "tour.assistant.plafond.parJour": "Par jour",
+  "tour.assistant.plafond.borne": "Un montant positif, deux décimales au plus.",
   "tour.assistant.reglage": "Réglage de l'assistant",
   "tour.assistant.reglage.aide":
-    "Le modèle courant répond à tout ; le modèle des questions difficiles prend la main quand la question dépasse la longueur réglée, contient l'un des mots, ou joint plusieurs pièces. Le budget reste celui de la chaîne des modèles.",
+    "Le modèle courant répond à tout ; le modèle des questions difficiles prend la main quand la question dépasse la longueur réglée, contient l'un des mots, ou joint plusieurs pièces. La dépense est bornée par le plafond de l'assistant (carte ci-dessus), lui-même sous le plafond de la chaîne des modèles.",
   "tour.assistant.mois": "Ce mois : réponses données, {appels} ; coût, {cout} $.",
   "tour.assistant.modeleCourant": "Modèle courant",
   "tour.assistant.modeleDifficile": "Modèle des questions difficiles",
@@ -1745,6 +1770,7 @@ export const fr = {
   "cab.lecteur.statut.prouve": "Prouvé",
   "cab.lecteur.statut.conforme": "Conforme",
   "cab.lecteur.statut.signale": "Signalé",
+  "cab.lecteur.statut.signale_ligne": "Lu, à vérifier",
   "cab.lecteur.statut.absent": "Absent",
   "cab.lecteur.statut.deduit": "Déduit",
   "cab.lecteur.statut.coupe": "Coupé",
@@ -2210,6 +2236,7 @@ export const fr = {
   "refus.piece.archivee": "Le client a retiré cette pièce : elle est archivée.",
   "refus.introuvable": "Introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.piece": "Pièce introuvable, ou vous n’y avez pas accès.",
+  "refus.inattendu": "Ce geste n’a pas abouti. Réessayez ; si cela se répète, signalez-le.",
   "refus.introuvable.cabinet": "Cabinet introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.dossier": "Dossier introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.facture": "Facture introuvable, ou vous n’y avez pas accès.",
@@ -2299,6 +2326,8 @@ export const fr = {
     "Une annulation doit recopier le paiement de la même pièce.",
   "refus.ecriture.reglement_annule": "Le règlement est annulé, ou ne correspond pas à la pièce.",
   "refus.ecriture.reglement_d_une_autre_piece": "Ce règlement n’appartient pas à cette pièce.",
+  "refus.ecriture.reglement_hors_paiement":
+    "Cette écriture de règlement ne correspond pas à son paiement : journal, trésorerie, tiers ou montant.",
   "refus.ecriture.deja_inscrite":
     "Cette pièce porte déjà une écriture inscrite : une seconde la compterait deux fois.",
   "cab.ecriture.malica_propose": "Malica propose",
@@ -2615,6 +2644,8 @@ export const fr = {
     "La lecture cite le champ {champ} à un emplacement où aucun mot n’a été lu.",
   "refus.piece.empreinte": "L’empreinte de cette pièce n’est pas valide.",
   "refus.piece.scellee": "Le contenu de cette pièce est scellé : il ne se remplace pas.",
+  "refus.piece.type_de_contenu":
+    "Ce type de fichier n’est pas une pièce : déposez un PDF ou une photo (JPEG, PNG, WebP, HEIC).",
   "refus.piece.non_partagee": "Cette pièce n’est pas partagée avec le cabinet.",
   "refus.piece.aucune_demande": "Aucune demande n’est en attente sur cette pièce.",
   "refus.rattachement.motif": "Dites pourquoi vous détachez ce document.",
@@ -2627,6 +2658,7 @@ export const fr = {
   "refus.cle_api.par_une_personne":
     "Une clé d’API ne crée ni ne révoque une autre clé : ce geste se fait par une personne.",
   "refus.cle_api.cabinet_seulement": "Seul un cabinet porte une clé d’API.",
+  "refus.cle_api.expert_membre": "Seul un expert membre du cabinet crée une clé d’API.",
   "refus.cle_api.nom_requis": "Donnez un nom à la clé.",
   "refus.cle_api.portee_requise": "Une clé porte au moins une portée.",
   "refus.cle_api.portee_inconnue": "Une des portées demandées n’existe pas.",
@@ -3706,6 +3738,12 @@ export const fr = {
   "scan.hint.searching": "Cadrez la facture entière dans l'écran.",
   "scan.hint.closer": "Approchez : le document occupe trop peu de place.",
   "scan.hint.blurry": "Stabilisez l'appareil : l'image est floue.",
+  "scan.hint.oblique": "Mettez-vous face au document : il est pris trop de biais.",
+  "scan.hint.dark": "Trop sombre : rapprochez-vous d'une source de lumière.",
+  "scan.hint.ombre":
+    "Ne bougez plus — une ombre tombe sur le document : écartez-la si vous pouvez.",
+  "scan.reject.dark": "Photo refusée : trop sombre. Éclairez la page et reprenez.",
+  "scan.reject.oblique": "Photo refusée : prise trop de biais. Placez-vous face à la page.",
   "scan.hint.blank": "Page vierge : le document est terminé.",
   "scan.cam.contexte_non_securise":
     "Le cadrage assisté demande une connexion sécurisée, que cette adresse n'a pas. Votre caméra fonctionne : passez par l'appareil photo, la photo sera la même.",
@@ -3728,6 +3766,7 @@ export const fr = {
   "scan.autoclosed": "Fin de document détectée automatiquement.",
   "common.error": "Une erreur est survenue.",
   "common.horsLigne": "Pas de connexion. Ce geste sera possible au retour du réseau.",
+  "common.erreur.reference": "(réf. {ref})",
   "common.motif": "Motif",
   "common.source": "Source",
   "common.retirer": "Retirer",
@@ -4444,6 +4483,9 @@ export const fr = {
     "{count} pièces attendent le réseau. Elles partiront seules : la photo n’est jamais à refaire.",
   "pme.capture.repondre": "Suivant ({count})",
   "pme.capture.continuer": "Continuer",
+  "pme.compta.voirPlus": "Encore {count}",
+  "pme.compta.voirPlus#one": "Encore une",
+  "pme.compta.voirPlus#other": "Encore {count}",
   "pme.reglages.personnes.societes": "{count} sociétés",
   "pme.reglages.personnes.societes#one": "{count} société",
   "pme.reglages.personnes.societes#other": "{count} sociétés",
@@ -4467,6 +4509,7 @@ export const fr = {
   "pme.compta.rienARepondre": "Rien à répondre.",
   "pme.compta.rienTransmis": "Rien de transmis pour l'instant.",
   "pme.compta.mandatActif": "Mandat actif",
+  "pme.type.plutot": "{porte} · c'est plutôt",
   "pme.reglages.sommaire.avecCompta": "{count} sociétés avec une comptabilité",
   "pme.reglages.sommaire.avecCompta#one": "{count} société avec une comptabilité",
   "pme.reglages.sommaire.avecCompta#other": "{count} sociétés avec une comptabilité",
@@ -5009,13 +5052,27 @@ export const fr = {
   "pme.list.voirTout": "Voir les {n}",
   "pme.list.replier": "Replier",
   "pme.malica.composer": "Écrivez à Malica…",
-  "pme.malica.poser": "Posez votre question…",
   "pme.malica.suiteAvis": "Demander l'avis de {cabinet}",
   "pme.malica.suiteAvisSansNom": "Demander l'avis de votre cabinet",
   "pme.malica.suiteTransmission": "Demander la transmission au propriétaire du dossier",
   "pme.malica.suitePasEncore": "La demande n'est pas encore ouverte depuis cet écran",
   "pme.malica.suiteSansCabinet": "Demander l'avis d'un cabinet",
   "pme.malica.suiteSansCabinetDetail": "Aucun cabinet n'est mandaté sur ce dossier",
+  "pme.malica.retenue": "Envoyée en relecture — cet avis engage votre dossier",
+  "pme.malica.sous": "Posez votre question : je réponds en citant mes sources.",
+  "pme.malica.salut.jour": "Bonjour",
+  "pme.malica.salut.soir": "Bonsoir",
+  "pme.malica.pret.tva": "Quand déclarer ma TVA ?",
+  "pme.malica.pret.retenue": "Quel taux de retenue à la source ?",
+  "pme.malica.pret.garder": "Combien de temps garder mes factures ?",
+  "pme.malica.statut.enLigne": "en ligne",
+  "pme.malica.statut.repond": "vous répond…",
+  "pme.malica.statut.cite": "en ligne · cite ses sources",
+  "pme.malica.canaux": "Canaux",
+  "pme.malica.utilise": "Ce que j'ai utilisé",
+  "pme.malica.rienEncore": "Rien encore : posez une question.",
+  "pme.malica.voix.parler": "Parler à Malica",
+  "pme.malica.voix.ecoute": "Je vous écoute…",
   "pme.malica.pied":
     "Je cite l'article et sa version en vigueur à la date. Je ne tranche pas à la place de votre expert-comptable sur ce qui engage votre dossier.",
   // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).
@@ -5093,6 +5150,8 @@ export const fr = {
     "Cet établissement n’est pas celui de la société : choisissez l’un des siens.",
   "refus.saisie.mal_formee":
     "Les données envoyées sont mal formées : rechargez la page, puis recommencez.",
+  "refus.saisie.mois_entiers":
+    "Ces totaux se lisent par mois entiers : du premier jour d’un mois au dernier jour d’un mois.",
   "refus.geste.non_permis": "Ce geste ne vous est pas permis sur ce dossier.",
   "refus.banque.statut_par_le_lettrage":
     "Une ligne de relevé se rapproche par le lettrage, pas à la main : lettrez-la avec son écriture.",

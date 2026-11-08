@@ -1,0 +1,161 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "acompte_provisionnel",
+    "nom": "Déclaration et paiement de l'acompte provisionnel",
+    "typeDeDocument": "acompte_provisionnel",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "date_depot",
+      "concept": "date_depot",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "depot_paiement",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "excedent_impot_impute",
+      "concept": "excedent_impot_impute",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "calcul",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "exercice_imputation",
+      "concept": "exercice",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "exercice_reference",
+      "concept": "exercice_reference_n_1",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "impot_base_n_1",
+      "concept": "impot_base_n_1",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "calcul",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "contribuable",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "montant_brut_acompte",
+      "concept": "montant_brut_acompte",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "calcul",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nature_impot",
+      "concept": "nature_impot",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "net_a_payer",
+      "concept": "net_a_payer",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "calcul",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "numero_acompte",
+      "concept": "numero_acompte",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "penalites",
+      "concept": "penalites",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "calcul",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "raison_sociale",
+      "concept": "raison_sociale",
+      "role": "contribuable",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "identification",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "reference_quittance",
+      "concept": "ref_quittance",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "depot_paiement",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "retenues_imputees",
+      "concept": "retenues_imputees",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "calcul",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "taux_acompte",
+      "concept": "taux_acompte",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "oui",
+      "parcelle": "calcul",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    }
+  ]
+}

@@ -64,6 +64,12 @@ export interface MesureDeLaReponse {
   modele: string | null;
   /** Le modèle de repli a répondu (`deepseek`), ou l'on s'est arrêté (`arret`). */
   repli: "deepseek" | "arret" | null;
+  /**
+   * Pourquoi Claude n'a pas répondu : son budget commun (#274), le plafond
+   * propre de l'assistant, sa clé absente, ou une panne avant le premier mot.
+   * `null` quand Claude a répondu.
+   */
+  motifDuRepli?: "budget_claude" | "plafond_assistant" | "cle_absente" | "panne" | null;
   latencePremierMotMs: number | null;
   latenceTotaleMs: number;
   /** Au tarif de la base (R8) ; `null` si un tarif manque. */

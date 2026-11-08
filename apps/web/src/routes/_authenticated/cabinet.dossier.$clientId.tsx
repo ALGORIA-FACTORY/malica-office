@@ -31,7 +31,7 @@ import { useMoisDuCabinet } from "@/hooks/use-mois-du-cabinet";
 import type { ChargeQuestionRow } from "@malica/socle/ports/repositories";
 import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 
-import { QueueTable } from "./cabinet.index";
+import { QueueTable } from "@/components/malica/file-du-cabinet";
 
 export const Route = createFileRoute("/_authenticated/cabinet/dossier/$clientId")({
   head: () => ({

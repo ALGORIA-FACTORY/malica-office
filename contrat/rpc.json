@@ -1,5 +1,7 @@
 {
-  "acces": ["monAcces"],
+  "acces": [
+    "monAcces"
+  ],
   "banque": [
     "audit",
     "bookLines",
@@ -88,7 +90,6 @@
     "transmettreLesPieces"
   ],
   "conseil": [
-    "configurationAssistant",
     "configurationCitee",
     "contexte",
     "creer",
@@ -117,7 +118,12 @@
     "rechercher",
     "rechercherHybride"
   ],
-  "exports": ["estimer", "exercices", "generer", "historique"],
+  "exports": [
+    "estimer",
+    "exercices",
+    "generer",
+    "historique"
+  ],
   "fabrique": [
     "codesDuReferentiel",
     "contexteDeDesignation",
@@ -228,9 +234,23 @@
     "sortir",
     "updateAsset"
   ],
-  "integrations": ["cles", "creerCle", "etat", "revoquerCle"],
-  "journal": ["consigner", "dernieres", "etapes", "regler"],
-  "journalDuJour": ["exporter", "lire"],
+  "integrations": [
+    "cles",
+    "creerCle",
+    "etat",
+    "revoquerCle"
+  ],
+  "journal": [
+    "consigner",
+    "consignerHorsDossier",
+    "dernieres",
+    "etapes",
+    "regler"
+  ],
+  "journalDuJour": [
+    "exporter",
+    "lire"
+  ],
   "office": [
     "book",
     "bookedExtracts",
@@ -253,6 +273,7 @@
     "retenuesDuMois",
     "saisirLeCoursDeLaPiece",
     "saisirUnCours",
+    "totauxParClasse",
     "trancherLeSens",
     "transmisesSansDate",
     "valider"
@@ -297,7 +318,9 @@
     "taxRates",
     "typesDeDocument"
   ],
-  "signalements": ["deposer"],
+  "signalements": [
+    "deposer"
+  ],
   "stocks": [
     "addMouvement",
     "categories",
@@ -373,6 +396,7 @@
     "reglerFacturationAuto",
     "reglerIa",
     "reglerPaiement",
+    "reglerPlafondDeLAssistant",
     "reglerRelances",
     "reglerRelectureNuit",
     "relecturesDeNuit",

@@ -1,0 +1,411 @@
+{
+  "id": "128",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "bon_livraison",
+  "grille": "bon_livraison",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "G",
+  "mise_en_page": "G-bande",
+  "scenario": "bl_valorise",
+  "realisme": [
+    "tampon",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Bon de livraison",
+    "parties": [
+      {
+        "role": "emetteur",
+        "nom": "Kordane Digital SUARL",
+        "matricule": "2653003L/A/M/000",
+        "est": "tiers"
+      },
+      {
+        "role": "destinataire",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "emetteur",
+      "nom": "Kordane Digital SUARL",
+      "matricule": "2653003L/A/M/000",
+      "est": "tiers"
+    },
+    "client": {
+      "role": "destinataire",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": "bande",
+    "police": null,
+    "couleur": "#1e7f4f",
+    "main": false,
+    "souche": null,
+    "tampon": {
+      "partie": {
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+        "telephone": "00 71 940 517",
+        "est": "dossier"
+      },
+      "centre": "REÇU",
+      "code": "signature_cachet_receptionnaire"
+    },
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "entete",
+        "gauche": [
+          [
+            {
+              "t": "KORDANE DIGITAL",
+              "cls": "gros"
+            }
+          ],
+          [
+            {
+              "c": "nom_expediteur"
+            }
+          ],
+          [
+            {
+              "c": "adresse_expediteur"
+            }
+          ],
+          [
+            "MF : ",
+            {
+              "c": "matricule_fiscal_expediteur"
+            }
+          ]
+        ],
+        "droite": [
+          [
+            "Destinataire :"
+          ],
+          [
+            {
+              "c": "nom_destinataire"
+            }
+          ],
+          [
+            {
+              "c": "adresse_destinataire"
+            }
+          ],
+          [
+            "MF : ",
+            {
+              "c": "matricule_fiscal_destinataire"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "titre",
+        "texte": [
+          "BON DE LIVRAISON N° ",
+          {
+            "c": "numero_bl"
+          }
+        ]
+      },
+      {
+        "k": "champs",
+        "colonnes": 2,
+        "lignes": [
+          [
+            "Date de livraison :",
+            {
+              "c": "date_bl"
+            }
+          ],
+          [
+            "Votre commande :",
+            {
+              "c": "ref_commande"
+            }
+          ],
+          [
+            "Transporteur :",
+            {
+              "c": "transporteur_chauffeur"
+            }
+          ],
+          [
+            "Véhicule :",
+            {
+              "c": "immatriculation_vehicule"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "tableau",
+        "entetes": [
+          "Référence",
+          "Désignation",
+          "N° de série",
+          "Unité",
+          "Qté livrée",
+          "P.U. HT"
+        ],
+        "nombres": [
+          4,
+          5
+        ],
+        "lignes": [
+          [
+            "SOU-WL220",
+            {
+              "c": "lignes[0].designation"
+            },
+            "",
+            {
+              "c": "lignes[0].unite"
+            },
+            {
+              "c": "lignes[0].quantite_livree"
+            },
+            {
+              "c": "lignes[0].prix_ht"
+            }
+          ],
+          [
+            "RTR-AX18",
+            {
+              "c": "lignes[1].designation"
+            },
+            {
+              "c": "lignes[1].numero_lot_serie"
+            },
+            {
+              "c": "lignes[1].unite"
+            },
+            {
+              "c": "lignes[1].quantite_livree"
+            },
+            {
+              "c": "lignes[1].prix_ht"
+            }
+          ],
+          [
+            "SUP-ECR2",
+            {
+              "c": "lignes[2].designation"
+            },
+            "",
+            {
+              "c": "lignes[2].unite"
+            },
+            {
+              "c": "lignes[2].quantite_livree"
+            },
+            {
+              "c": "lignes[2].prix_ht"
+            }
+          ],
+          [
+            "CBL-C6-3M",
+            {
+              "c": "lignes[3].designation"
+            },
+            "",
+            {
+              "c": "lignes[3].unite"
+            },
+            {
+              "c": "lignes[3].quantite_livree"
+            },
+            {
+              "c": "lignes[3].prix_ht"
+            }
+          ],
+          [
+            "SWT-8G",
+            {
+              "c": "lignes[4].designation"
+            },
+            {
+              "c": "lignes[4].numero_lot_serie"
+            },
+            {
+              "c": "lignes[4].unite"
+            },
+            {
+              "c": "lignes[4].quantite_livree"
+            },
+            {
+              "c": "lignes[4].prix_ht"
+            }
+          ]
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "petit",
+        "morceaux": [
+          "Marchandise voyageant aux risques du destinataire. Toute réserve doit être portée sur le présent bon à la réception. La facture suit."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "Le livreur",
+        "droite": "Reçu le — cachet et signature du destinataire"
+      }
+    ],
+    "imprime": {
+      "nom_expediteur": "Kordane Digital SUARL",
+      "adresse_expediteur": "Rue Ibn Khaldoun, centre Zitouna, local B12, 3027 Sfax El Jadida",
+      "matricule_fiscal_expediteur": "2653003L/A/M/000",
+      "nom_destinataire": "ALGORIA FACTORY SARL",
+      "adresse_destinataire": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "matricule_fiscal_destinataire": "1958330 V/A/M/000",
+      "numero_bl": "BL03-26-48533",
+      "date_bl": "14-10-2026",
+      "ref_commande": "BC-ALG-2026-934",
+      "transporteur_chauffeur": "Kessarine Transports — Walid Fenzari",
+      "immatriculation_vehicule": "239 TU 4170",
+      "lignes[0].designation": "Souris optique sans fil",
+      "lignes[0].unite": "pièce",
+      "lignes[0].quantite_livree": "6",
+      "lignes[0].prix_ht": "52,101",
+      "lignes[1].designation": "Routeur Wi-Fi 6 AX1800",
+      "lignes[1].numero_lot_serie": "SN68552570",
+      "lignes[1].unite": "pièce",
+      "lignes[1].quantite_livree": "1",
+      "lignes[1].prix_ht": "275,630",
+      "lignes[2].designation": "Support double écran",
+      "lignes[2].unite": "pièce",
+      "lignes[2].quantite_livree": "7",
+      "lignes[2].prix_ht": "115,126",
+      "lignes[3].designation": "Câble réseau Cat6 3 m",
+      "lignes[3].unite": "pièce",
+      "lignes[3].quantite_livree": "5",
+      "lignes[3].prix_ht": "10,924",
+      "lignes[4].designation": "Switch 8 ports Gigabit",
+      "lignes[4].numero_lot_serie": "SN89245199",
+      "lignes[4].unite": "pièce",
+      "lignes[4].quantite_livree": "2",
+      "lignes[4].prix_ht": "140,336"
+    },
+    "versConcept": {
+      "nom_expediteur": "nom_expediteur",
+      "adresse_expediteur": "adresse_expediteur",
+      "matricule_fiscal_expediteur": "matricule_fiscal_expediteur",
+      "nom_destinataire": "nom_destinataire",
+      "adresse_destinataire": "adresse_destinataire",
+      "matricule_fiscal_destinataire": "matricule_fiscal_destinataire",
+      "numero_bl": "numero_bl",
+      "date_bl": "date_bl",
+      "ref_commande": "ref_commande",
+      "transporteur_chauffeur": "transporteur_chauffeur",
+      "immatriculation_vehicule": "immatriculation_vehicule",
+      "lignes[0].designation": "lignes[0].designation",
+      "lignes[0].unite": "lignes[0].unite",
+      "lignes[0].quantite_livree": "lignes[0].quantite_livree",
+      "lignes[0].prix_ht": "lignes[0].prix_ht",
+      "lignes[1].designation": "lignes[1].designation",
+      "lignes[1].numero_lot_serie": "lignes[1].numero_lot_serie",
+      "lignes[1].unite": "lignes[1].unite",
+      "lignes[1].quantite_livree": "lignes[1].quantite_livree",
+      "lignes[1].prix_ht": "lignes[1].prix_ht",
+      "lignes[2].designation": "lignes[2].designation",
+      "lignes[2].unite": "lignes[2].unite",
+      "lignes[2].quantite_livree": "lignes[2].quantite_livree",
+      "lignes[2].prix_ht": "lignes[2].prix_ht",
+      "lignes[3].designation": "lignes[3].designation",
+      "lignes[3].unite": "lignes[3].unite",
+      "lignes[3].quantite_livree": "lignes[3].quantite_livree",
+      "lignes[3].prix_ht": "lignes[3].prix_ht",
+      "lignes[4].designation": "lignes[4].designation",
+      "lignes[4].numero_lot_serie": "lignes[4].numero_lot_serie",
+      "lignes[4].unite": "lignes[4].unite",
+      "lignes[4].quantite_livree": "lignes[4].quantite_livree",
+      "lignes[4].prix_ht": "lignes[4].prix_ht"
+    },
+    "marques": {
+      "cachet_emetteur": "signature_cachet_receptionnaire",
+      "signature_emetteur": "signature_livreur"
+    },
+    "cheminsDuDossier": [
+      "matricule_fiscal_destinataire"
+    ]
+  },
+  "graineDuRendu": 1204398510,
+  "attendu": {
+    "concepts": {
+      "nom_expediteur": "Kordane Digital SUARL",
+      "adresse_expediteur": "Rue Ibn Khaldoun, centre Zitouna, local B12, 3027 Sfax El Jadida",
+      "matricule_fiscal_expediteur": "2653003L/A/M/000",
+      "nom_destinataire": "ALGORIA FACTORY SARL",
+      "adresse_destinataire": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "matricule_fiscal_destinataire": "1958330V/A/M/000",
+      "numero_bl": "BL03-26-48533",
+      "date_bl": "2026-10-14",
+      "ref_commande": "BC-ALG-2026-934",
+      "transporteur_chauffeur": "Kessarine Transports — Walid Fenzari",
+      "immatriculation_vehicule": "239 TU 4170",
+      "lignes": [
+        {
+          "designation": "Souris optique sans fil",
+          "unite": "pièce",
+          "quantite_livree": "6",
+          "prix_ht": "52.101"
+        },
+        {
+          "designation": "Routeur Wi-Fi 6 AX1800",
+          "numero_lot_serie": "SN68552570",
+          "unite": "pièce",
+          "quantite_livree": "1",
+          "prix_ht": "275.630"
+        },
+        {
+          "designation": "Support double écran",
+          "unite": "pièce",
+          "quantite_livree": "7",
+          "prix_ht": "115.126"
+        },
+        {
+          "designation": "Câble réseau Cat6 3 m",
+          "unite": "pièce",
+          "quantite_livree": "5",
+          "prix_ht": "10.924"
+        },
+        {
+          "designation": "Switch 8 ports Gigabit",
+          "numero_lot_serie": "SN89245199",
+          "unite": "pièce",
+          "quantite_livree": "2",
+          "prix_ht": "140.336"
+        }
+      ],
+      "signature_cachet_receptionnaire": true,
+      "signature_livreur": true
+    },
+    "confondus": {},
+    "notes": [
+      "Piège : le titre « BON DE LIVRAISON » est rangé en rejet par ref.titres_de_piece (« ce n'est pas une pièce comptable ») — et c'est juste : la pièce EST un bon de livraison, sans TVA ni total. Le refus est l'issue attendue ; les champs de la grille bon_livraison restent à lire."
+    ],
+    "non_imprimes": [
+      "ref_facture",
+      "ref_facture_electronique_transport"
+    ]
+  }
+}

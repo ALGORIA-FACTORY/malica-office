@@ -1,0 +1,430 @@
+{
+  "id": "061",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "ar",
+  "rendu": "photo",
+  "capture": "photo",
+  "gabarit": "C",
+  "scenario": "plusieurs_taux",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "froisse"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "بلميرة للمرطبات",
+      "nomAr": "بلميرة للمرطبات",
+      "enseigne": null,
+      "matricule": "1487008O/A/M/000",
+      "matriculeImprime": "1487008O/A/M/000",
+      "adresse": "150، نهج الميموزا، المنزه",
+      "telephone": "00 52 130 824",
+      "fax": "00 37 421 949",
+      "email": null,
+      "site": null,
+      "rc": "B584901592011",
+      "rib": "99 225 4420696320529 50",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C5296514",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330 V/A/M/000",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "2026/06/17",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "طباعة بطاقات زيارة، علبة 500",
+        "designationAr": "طباعة بطاقات زيارة، علبة 500",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "وجبة ندوة",
+        "designationAr": "وجبة ندوة",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "designation": "إقامة بالنزل، ليلة",
+        "designationAr": "إقامة بالنزل، ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "قهوة حبوب، كيس 1 كغ",
+        "designationAr": "قهوة حبوب، كيس 1 كغ",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "designation": "نقل معدات، رحلة",
+        "designationAr": "نقل معدات، رحلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "مياه معدنية، حزمة 6 × 1,5 لتر",
+        "designationAr": "مياه معدنية، حزمة 6 × 1,5 لتر",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "بلميرة للمرطبات",
+      "document_date": "2026/06/17",
+      "references.numero": "2026/2197",
+      "references.matricule_fiscal": "1487008O/A/M/000",
+      "references.matricule_fiscal_client": "1958330 V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "150، نهج الميموزا، المنزه",
+      "telephone_emetteur": "00 52 130 824",
+      "registre_commerce_emetteur": "B584901592011",
+      "mode_reglement": "بطاقة بنكية",
+      "totals.base_ht": "7 874,313",
+      "totals.vat": "1 097,136",
+      "totals.ttc": "8 972,449",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "795,025",
+      "lines[0].vat_amount": "55,652",
+      "lines[1].base_ht": "5 059,676",
+      "lines[1].vat_amount": "657,758",
+      "lines[2].base_ht": "2 019,612",
+      "lines[2].vat_amount": "383,726",
+      "articles[0].designation": "طباعة بطاقات زيارة، علبة 500",
+      "articles[0].quantity": "21",
+      "articles[0].unit_price_ht": "96,172",
+      "articles[0].total_ht": "2 019,612",
+      "articles[1].designation": "وجبة ندوة",
+      "articles[1].quantity": "23",
+      "articles[1].unit_price_ht": "24,376",
+      "articles[1].total_ht": "560,648",
+      "articles[2].designation": "إقامة بالنزل، ليلة",
+      "articles[2].quantity": "13",
+      "articles[2].unit_price_ht": "296,084",
+      "articles[2].total_ht": "3 849,092",
+      "articles[3].designation": "قهوة حبوب، كيس 1 كغ",
+      "articles[3].quantity": "4",
+      "articles[3].unit_price_ht": "42,702",
+      "articles[3].total_ht": "170,808",
+      "articles[4].designation": "نقل معدات، رحلة",
+      "articles[4].quantity": "3",
+      "articles[4].unit_price_ht": "403,528",
+      "articles[4].total_ht": "1 210,584",
+      "articles[5].designation": "مياه معدنية، حزمة 6 × 1,5 لتر",
+      "articles[5].quantity": "11",
+      "articles[5].unit_price_ht": "5,779",
+      "articles[5].total_ht": "63,569"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "lines[0].base_ht": "base_tva_par_taux[7]",
+      "lines[0].vat_amount": "montant_tva_par_taux[7]",
+      "lines[1].base_ht": "base_tva_par_taux[13]",
+      "lines[1].vat_amount": "montant_tva_par_taux[13]",
+      "lines[2].base_ht": "base_tva_par_taux[19]",
+      "lines[2].vat_amount": "montant_tva_par_taux[19]",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ht": "lignes[5].prix_unitaire_ht",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 1887671646,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "بلميرة للمرطبات",
+      "document_date": "2026-06-17",
+      "currency": "TND",
+      "references.numero": "2026/2197",
+      "references.matricule_fiscal": "1487008O/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "7874.313",
+      "totals.vat": "1097.136",
+      "totals.ttc": "8972.449",
+      "lines[0].tax_code": "TVA07",
+      "lines[0].base_ht": "795.025",
+      "lines[0].vat_amount": "55.652",
+      "lines[1].tax_code": "TVA13",
+      "lines[1].base_ht": "5059.676",
+      "lines[1].vat_amount": "657.758",
+      "lines[2].tax_code": "TVA19",
+      "lines[2].base_ht": "2019.612",
+      "lines[2].vat_amount": "383.726",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "21.000",
+      "articles[0].unit_price_ht": "96.172",
+      "articles[0].total_ht": "2019.612",
+      "articles[1].quantity": "23.000",
+      "articles[1].unit_price_ht": "24.376",
+      "articles[1].total_ht": "560.648",
+      "articles[2].quantity": "13.000",
+      "articles[2].unit_price_ht": "296.084",
+      "articles[2].total_ht": "3849.092",
+      "articles[3].quantity": "4.000",
+      "articles[3].unit_price_ht": "42.702",
+      "articles[3].total_ht": "170.808",
+      "articles[4].quantity": "3.000",
+      "articles[4].unit_price_ht": "403.528",
+      "articles[4].total_ht": "1210.584",
+      "articles[5].quantity": "11.000",
+      "articles[5].unit_price_ht": "5.779",
+      "articles[5].total_ht": "63.569"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "7874.313",
+          "0"
+        ],
+        [
+          "4366",
+          "55.652",
+          "0",
+          "TVA07"
+        ],
+        [
+          "4366",
+          "657.758",
+          "0",
+          "TVA13"
+        ],
+        [
+          "4366",
+          "383.726",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "8972.449"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "فاتورة",
+      "raison_sociale_emetteur": "بلميرة للمرطبات",
+      "date_operation": "2026-06-17",
+      "numero_facture": "2026/2197",
+      "matricule_fiscal_emetteur": "1487008O/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "150، نهج الميموزا، المنزه",
+      "telephone_email_emetteur": {
+        "telephone": "00 52 130 824"
+      },
+      "registre_commerce_emetteur": "B584901592011",
+      "mode_reglement": "بطاقة بنكية",
+      "total_ht": "7874.313",
+      "total_ttc": "8972.449",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "7": "795.025",
+        "13": "5059.676",
+        "19": "2019.612"
+      },
+      "montant_tva_par_taux": {
+        "7": "55.652",
+        "13": "657.758",
+        "19": "383.726"
+      },
+      "lignes": [
+        {
+          "designation": "طباعة بطاقات زيارة، علبة 500",
+          "quantite": "21",
+          "prix_unitaire_ht": "96.172",
+          "montant_ligne_ht": "2019.612",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "وجبة ندوة",
+          "quantite": "23",
+          "prix_unitaire_ht": "24.376",
+          "montant_ligne_ht": "560.648",
+          "taux_tva_ligne": "7"
+        },
+        {
+          "designation": "إقامة بالنزل، ليلة",
+          "quantite": "13",
+          "prix_unitaire_ht": "296.084",
+          "montant_ligne_ht": "3849.092",
+          "taux_tva_ligne": "13"
+        },
+        {
+          "designation": "قهوة حبوب، كيس 1 كغ",
+          "quantite": "4",
+          "prix_unitaire_ht": "42.702",
+          "montant_ligne_ht": "170.808",
+          "taux_tva_ligne": "7"
+        },
+        {
+          "designation": "نقل معدات، رحلة",
+          "quantite": "3",
+          "prix_unitaire_ht": "403.528",
+          "montant_ligne_ht": "1210.584",
+          "taux_tva_ligne": "13"
+        },
+        {
+          "designation": "مياه معدنية، حزمة 6 × 1,5 لتر",
+          "quantite": "11",
+          "prix_unitaire_ht": "5.779",
+          "montant_ligne_ht": "63.569",
+          "taux_tva_ligne": "7"
+        }
+      ],
+      "devise": "TND"
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

@@ -45,6 +45,21 @@ export function multiplier(mineur, taux, { pair = false } = {}) {
   return quotient % 2n === 0n ? quotient : quotient + (num < 0n ? -1n : 1n);
 }
 
+/**
+ * Le hors-taxe d'un montant TTC : mineur ÷ (1 + taux), arrondi au plus proche,
+ * à égalité vers le haut — la ligne d'un ticket de détail, qui imprime son
+ * prix TTC et son montant HT (« PU TTC » × quantité ÷ 1,19).
+ */
+export function horsTaxe(mineur, taux) {
+  const [e, f = ""] = String(taux).split(".");
+  const echelle = 10n ** BigInt(f.length);
+  const diviseur = echelle + BigInt(e + f);
+  const num = mineur * echelle;
+  const quotient = num / diviseur;
+  const reste = num - quotient * diviseur;
+  return 2n * reste >= diviseur ? quotient + 1n : quotient;
+}
+
 const ORIENTAUX = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
 
 /** Des chiffres latins en chiffres arabes orientaux (٠١٢٣…). */

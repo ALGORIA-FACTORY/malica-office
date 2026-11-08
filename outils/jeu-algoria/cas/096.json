@@ -1,0 +1,394 @@
+{
+  "id": "096",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "capture": "scan",
+  "gabarit": "F",
+  "scenario": "remise",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale",
+    "tampon",
+    "signature",
+    "souche_carbone",
+    "deux_ecritures"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "شركة زنارة للنزل",
+      "nomAr": "شركة زنارة للنزل",
+      "enseigne": null,
+      "matricule": "1399012W/A/M/000",
+      "matriculeImprime": "1399012W/A/M/000",
+      "adresse": "83، نهج بحيرة أورمي، الحمامات",
+      "telephone": "00 49 600 628",
+      "fax": "00 33 710 458",
+      "email": null,
+      "site": null,
+      "rc": "B715943232016",
+      "rib": "99 684 5920075715690 51",
+      "banque": "Banque Talmira",
+      "code": "C8826280",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "27/01/2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "ملف برافعة، ظهر 8 سم",
+        "designationAr": "ملف برافعة، ظهر 8 سم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "خرطوشة حبر ملون",
+        "designationAr": "خرطوشة حبر ملون",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "خدمة نقل مكاتب",
+        "designationAr": "خدمة نقل مكاتب",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "كراء قاعة اجتماعات، نصف يوم",
+        "designationAr": "كراء قاعة اجتماعات، نصف يوم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "صيانة المكيفات، زيارة",
+        "designationAr": "صيانة المكيفات، زيارة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "رزمة ورق A4 80 غ",
+        "designationAr": "رزمة ورق A4 80 غ",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": {
+      "tauxImprime": "3 %",
+      "brut": "21 016,260",
+      "montant": "630,488"
+    },
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "شركة زنارة للنزل",
+      "document_date": "27/01/2026",
+      "references.numero": "0688",
+      "references.matricule_fiscal": "1399012W/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "83، نهج بحيرة أورمي، الحمامات",
+      "telephone_emetteur": "00 49 600 628",
+      "registre_commerce_emetteur": "B715943232016",
+      "totals.base_ht": "20 385,772",
+      "totals.vat": "3 873,297",
+      "totals.ttc": "24 260,069",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "ملف برافعة، ظهر 8 سم",
+      "articles[0].quantity": "24",
+      "articles[0].unit_price_ht": "7,878",
+      "articles[0].total_ht": "189,072",
+      "articles[1].designation": "خرطوشة حبر ملون",
+      "articles[1].quantity": "7",
+      "articles[1].unit_price_ht": "82,661",
+      "articles[1].total_ht": "578,627",
+      "articles[2].designation": "خدمة نقل مكاتب",
+      "articles[2].quantity": "2",
+      "articles[2].unit_price_ht": "755,835",
+      "articles[2].total_ht": "1 511,670",
+      "articles[3].designation": "كراء قاعة اجتماعات، نصف يوم",
+      "articles[3].quantity": "21",
+      "articles[3].unit_price_ht": "635,781",
+      "articles[3].total_ht": "13 351,401",
+      "articles[4].designation": "صيانة المكيفات، زيارة",
+      "articles[4].quantity": "14",
+      "articles[4].unit_price_ht": "374,249",
+      "articles[4].total_ht": "5 239,486",
+      "articles[5].designation": "رزمة ورق A4 80 غ",
+      "articles[5].quantity": "12",
+      "articles[5].unit_price_ht": "12,167",
+      "articles[5].total_ht": "146,004"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ht": "lignes[5].prix_unitaire_ht",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 572355260,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "شركة زنارة للنزل",
+      "document_date": "2026-01-27",
+      "currency": "TND",
+      "references.numero": "0688",
+      "references.matricule_fiscal": "1399012W/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "20385.772",
+      "totals.vat": "3873.297",
+      "totals.ttc": "24260.069",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "20385.772",
+      "lines[0].vat_amount": "3873.297",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "24.000",
+      "articles[0].unit_price_ht": "7.878",
+      "articles[0].total_ht": "189.072",
+      "articles[1].quantity": "7.000",
+      "articles[1].unit_price_ht": "82.661",
+      "articles[1].total_ht": "578.627",
+      "articles[2].quantity": "2.000",
+      "articles[2].unit_price_ht": "755.835",
+      "articles[2].total_ht": "1511.670",
+      "articles[3].quantity": "21.000",
+      "articles[3].unit_price_ht": "635.781",
+      "articles[3].total_ht": "13351.401",
+      "articles[4].quantity": "14.000",
+      "articles[4].unit_price_ht": "374.249",
+      "articles[4].total_ht": "5239.486",
+      "articles[5].quantity": "12.000",
+      "articles[5].unit_price_ht": "12.167",
+      "articles[5].total_ht": "146.004"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "20385.772",
+          "0"
+        ],
+        [
+          "4366",
+          "3873.297",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "24260.069"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "فاتورة",
+      "raison_sociale_emetteur": "شركة زنارة للنزل",
+      "date_operation": "2026-01-27",
+      "numero_facture": "0688",
+      "matricule_fiscal_emetteur": "1399012W/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "83، نهج بحيرة أورمي، الحمامات",
+      "telephone_email_emetteur": {
+        "telephone": "00 49 600 628"
+      },
+      "registre_commerce_emetteur": "B715943232016",
+      "total_ht": "20385.772",
+      "montant_tva_par_taux": {
+        "19": "3873.297"
+      },
+      "total_ttc": "24260.069",
+      "droit_timbre": "1.000",
+      "total_brut_ht": "21016.260",
+      "remise_globale": "630.488",
+      "base_tva_par_taux": {
+        "19": "20385.772"
+      },
+      "lignes": [
+        {
+          "designation": "ملف برافعة، ظهر 8 سم",
+          "quantite": "24",
+          "prix_unitaire_ht": "7.878",
+          "montant_ligne_ht": "189.072",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "خرطوشة حبر ملون",
+          "quantite": "7",
+          "prix_unitaire_ht": "82.661",
+          "montant_ligne_ht": "578.627",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "خدمة نقل مكاتب",
+          "quantite": "2",
+          "prix_unitaire_ht": "755.835",
+          "montant_ligne_ht": "1511.670",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "كراء قاعة اجتماعات، نصف يوم",
+          "quantite": "21",
+          "prix_unitaire_ht": "635.781",
+          "montant_ligne_ht": "13351.401",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "صيانة المكيفات، زيارة",
+          "quantite": "14",
+          "prix_unitaire_ht": "374.249",
+          "montant_ligne_ht": "5239.486",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "رزمة ورق A4 80 غ",
+          "quantite": "12",
+          "prix_unitaire_ht": "12.167",
+          "montant_ligne_ht": "146.004",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

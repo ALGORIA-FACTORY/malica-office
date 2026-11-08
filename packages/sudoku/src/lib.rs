@@ -9,6 +9,7 @@
 
 mod entete;
 mod entree;
+mod identite;
 mod lettres;
 mod lignes;
 mod modele;
@@ -29,7 +30,7 @@ use valeurs::Domaine;
 /// Plafond de combinaisons par défaut, quand l'entrée n'en fixe pas.
 const PLAFOND_DEFAUT: u64 = 200_000;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, PartialEq, Eq)]
 pub struct RefJeton {
     pub page: u32,
     pub ordinal: u32,
@@ -125,15 +126,25 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
     let mut egal_a: BTreeSet<String> = BTreeSet::new();
     let mut champs_lettres: BTreeSet<String> = BTreeSet::new();
     for p in &entree.grille.preuves {
-        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP)) else {
+        let Some(e) = p
+            .expression
+            .as_ref()
+            .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP))
+        else {
             continue;
         };
         if p.statut.as_deref() == Some("a_traduire") {
             continue;
         }
-        let Ok(op) = lettres::lire_op(&entree.grille, e) else { continue };
+        let Ok(op) = lettres::lire_op(&entree.grille, e) else {
+            continue;
+        };
         champs_lettres.insert(entree.grille.champs[op.champ].code.clone());
-        egal_a.extend(op.egal_a.iter().map(|&c| entree.grille.champs[c].code.clone()));
+        egal_a.extend(
+            op.egal_a
+                .iter()
+                .map(|&c| entree.grille.champs[c].code.clone()),
+        );
     }
     if egal_a.is_empty() {
         return None;
@@ -145,8 +156,12 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
         return None;
     }
     let (v, phrase) = (*v, phrase.clone());
-    let porteurs: BTreeSet<(u32, u32)> =
-        entree.jetons.iter().filter(|j| j.lettres.is_some()).map(|j| (j.page, j.ordinal)).collect();
+    let porteurs: BTreeSet<(u32, u32)> = entree
+        .jetons
+        .iter()
+        .filter(|j| j.lettres.is_some())
+        .map(|j| (j.page, j.ordinal))
+        .collect();
 
     let mut avec: Entree = serde_json::from_str(input_json).ok()?;
     for j in avec.jetons.iter_mut().filter(|j| j.lettres.is_some()) {
@@ -156,16 +171,27 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
     if s.issue != "prouvee" {
         return None;
     }
-    let cite_les_lettres =
-        |c: &ChampSortie| c.refs.iter().any(|r| porteurs.contains(&(r.page, r.ordinal)));
+    let cite_les_lettres = |c: &ChampSortie| {
+        c.refs
+            .iter()
+            .any(|r| porteurs.contains(&(r.page, r.ordinal)))
+    };
     let mut porte = None;
     for (code, c) in &s.champs {
-        let cite = cite_les_lettres(c) || c.instances.iter().flatten().any(|i| i.refs.iter().any(|r| porteurs.contains(&(r.page, r.ordinal))));
+        let cite = cite_les_lettres(c)
+            || c.instances.iter().flatten().any(|i| {
+                i.refs
+                    .iter()
+                    .any(|r| porteurs.contains(&(r.page, r.ordinal)))
+            });
         if !cite || champs_lettres.contains(code) {
             continue;
         }
         // Les lettres ne portent qu'un total qu'elles doivent égaler, et cette valeur-là.
-        if !egal_a.contains(code) || c.statut != "prouve" || c.valeur.as_deref() != Some(&v.to_string()) {
+        if !egal_a.contains(code)
+            || c.statut != "prouve"
+            || c.valeur.as_deref() != Some(&v.to_string())
+        {
             return None;
         }
         porte = Some(code.clone());
@@ -187,13 +213,28 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     let dom = Domaine::new(&entree.jetons);
     let mut modele: Modele = modele::construire(entree);
     let reperes: Vec<Vec<String>> = grille.champs.iter().map(reperes_de).collect();
+    // Les champs de la preuve arithmétique : ceux que son retrait fait passer à signalés.
+    let numeriques: BTreeSet<String> = modele
+        .vars
+        .iter()
+        .map(|v| v.champ)
+        .chain(
+            modele
+                .groupes
+                .iter()
+                .flat_map(|g| [g.champ_base, g.champ_montant]),
+        )
+        .map(|c| grille.champs[c].code.clone())
+        .collect();
 
     // Présence des champs facultatifs, décidée avant la recherche.
     let fixes: BTreeMap<usize, i64> = modele
         .contraintes
         .iter()
         .filter_map(|cp| match cp.c {
-            Contrainte::Charge { m, fixe: Some(f), .. } => Some((m, f)),
+            Contrainte::Charge {
+                m, fixe: Some(f), ..
+            } => Some((m, f)),
             _ => None,
         })
         .collect();
@@ -201,18 +242,21 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     // sans montant à côté : c'est ce qui empêche un TTC de « fermer » sans le timbre
     // imprimé que l'OCR a manqué. Les autres champs facultatifs (retenue, acompte…)
     // ne le sont que sur une rangée chiffrée.
-    let charges: BTreeSet<usize> = modele
+    // Une charge PROPORTIONNELLE l'est aussi par son taux, imprimé sur une rangée chiffrée
+    // (« 31,675 1 % ») : son libellé perdu ne l'efface pas.
+    let charges: BTreeMap<usize, Option<i64>> = modele
         .contraintes
         .iter()
         .filter_map(|cp| match cp.c {
-            Contrainte::Charge { m, .. } => Some(m),
+            Contrainte::Charge { m, taux_ppm, .. } => Some((m, taux_ppm)),
             _ => None,
         })
         .collect();
     for (i, v) in modele.vars.iter_mut().enumerate() {
         if v.facultatif {
-            let annonce = if charges.contains(&i) {
+            let annonce = if let Some(taux) = charges.get(&i) {
                 plan.annonce(&reperes[v.champ])
+                    || taux.is_some_and(|t| t > 0 && plan.taux_chiffre(t))
             } else {
                 plan.annonce_chiffree(&reperes[v.champ])
             };
@@ -220,10 +264,52 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             v.present = annonce || fixe_imprime;
         }
     }
-    let exo: Vec<bool> = modele
+    // Les mentions d'exonération imprimées, et le taux nul que chacune nomme : la part
+    // exonérée prend le taux de LA mention imprimée ; deux mentions de taux différents, ou
+    // une mention sans taux, et elle n'est pas nommée.
+    let mentions: Vec<Vec<Option<&String>>> = modele
         .groupes
         .iter()
-        .map(|g| g.exoneration.is_some_and(|c| plan.annonce(&reperes[c])))
+        .map(|g| {
+            g.exoneration
+                .map(|c| (c, g.taux_exonere.as_ref()))
+                .into_iter()
+                .chain(g.autres_exonerations.iter().map(|(c, t)| (*c, Some(t))))
+                .filter(|(c, _)| plan.annonce(&reperes[*c]))
+                .map(|(_, t)| t)
+                .collect()
+        })
+        .collect();
+    // Sans mention, une ventilation qui imprime son taux nul (« TVA 0 % — Base … ») permet
+    // l'exonération ; elle ne nomme pas son taux (EXO ou EXPORT) : décision du dirigeant
+    // (5 novembre 2026), sans mention rien n'est affirmé — la part se prouve, son code se tait.
+    let nul_imprime: Vec<bool> = modele
+        .groupes
+        .iter()
+        .map(|g| {
+            g.exoneration.is_some()
+                && entree
+                    .pack
+                    .taux_nuls
+                    .get(&g.bareme)
+                    .is_some_and(|t| !t.is_empty())
+                && plan.taux_nul_imprime()
+        })
+        .collect();
+    let exo: Vec<bool> = mentions
+        .iter()
+        .zip(&nul_imprime)
+        .map(|(m, n)| !m.is_empty() || *n)
+        .collect();
+    let taux_nomme: Vec<Option<String>> = mentions
+        .iter()
+        .map(|m| {
+            let codes: BTreeSet<Option<&String>> = m.iter().copied().collect();
+            match codes.into_iter().collect::<Vec<_>>().as_slice() {
+                [Some(code)] => Some((*code).clone()),
+                _ => None,
+            }
+        })
         .collect();
 
     // Un champ que seules des sommes exactes contraignent peut prendre n'importe quel
@@ -246,7 +332,9 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 // candidat (`par_les_lettres`), est ancré par sa propre phrase : il compte.
                 .filter(|(_, val)| {
                     val.occurrences.iter().any(|o| {
-                        plan.ancre(o.jeton, &reperes[champ], None, false) || entree.jetons[o.jeton].lettres.is_some()
+                        plan.ancre(o.jeton, &reperes[champ], None, false)
+                            || plan.apparie(o.jeton, &reperes[champ])
+                            || entree.jetons[o.jeton].lettres.is_some()
                     })
                 })
                 .map(|(v, _)| *v)
@@ -268,13 +356,21 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
 
     // Déduplication : une même solution par deux chemins n'en fait qu'une, la plus forte —
     // et, à force égale, celle qui n'invoque pas d'exonération partielle (qui exige les lignes).
-    let partielle = |sol: &Solution| sol.etat.g.iter().any(|g| g.as_ref().is_some_and(|g| g.partielle));
+    let partielle = |sol: &Solution| {
+        sol.etat
+            .g
+            .iter()
+            .any(|g| g.as_ref().is_some_and(|g| g.partielle))
+    };
     let mut uniques: BTreeMap<_, Solution> = BTreeMap::new();
     for sol in s.solutions.drain(..) {
         let k = cle(&sol.etat);
         let remplace = match uniques.get(&k) {
             None => true,
-            Some(x) => (x.faible && !sol.faible) || (x.faible == sol.faible && partielle(x) && !partielle(&sol)),
+            Some(x) => {
+                (x.faible && !sol.faible)
+                    || (x.faible == sol.faible && partielle(x) && !partielle(&sol))
+            }
         };
         if remplace {
             uniques.insert(k, sol);
@@ -285,14 +381,95 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     let fortes: Vec<Solution> = toutes.iter().filter(|x| !x.faible).cloned().collect();
     let retenues = if fortes.is_empty() { toutes } else { fortes };
 
-    let unique: Option<&Etat> = if retenues.len() == 1 { Some(&retenues[0].etat) } else { None };
-    let mut issue = match retenues.len() {
+    // Une valeur imprimée une fois n'est lue que pour UN champ. Banc sans IA du 4 novembre
+    // 2026, algoria-135 : « Total 304,000 », seul ; net à rembourser = total − avance
+    // (absente) fermait sur ce même jeton, et le net, jamais imprimé, était rendu prouvé —
+    // une preuve qui ne compare un jeton qu'à lui-même. Les champs en surnombre (d'abord les
+    // facultatifs, puis ceux dont le libellé n'ancre aucune occurrence) sont absents — un net
+    // à payer sans timbre n'est pas imprimé à part du TTC —, puis les contraintes se
+    // réévaluent : une preuve qui ne tenait que par ce partage tombe. Un champ OBLIGATOIRE
+    // en surnombre invalide la solution : elle lisait un champ requis là où il n'est pas.
+    // Ce partage se juge sur CHAQUE solution retenue, avant l'unicité : une solution qui lit
+    // un champ requis sur le jeton d'un autre (le HT à 0 sur « 0 % », le TTC sur le seul
+    // « 1,000 » du timbre, algoria-055) n'est pas une seconde lecture de la pièce.
+    let sans_partage = |etat: &Etat| -> (Etat, bool) {
+        let mut e = etat.clone();
+        let mut requis = false;
+        let mut par_valeur: BTreeMap<i64, Vec<(bool, bool, usize)>> = BTreeMap::new();
+        let mut faibles: BTreeSet<i64> = BTreeSet::new();
+        for (i, x) in e.s.iter().enumerate() {
+            if let Some(x) = x.filter(|x| !x.absent) {
+                if x.faible {
+                    faibles.insert(x.v);
+                }
+                let champ = modele.vars[i].champ;
+                let ancree = dom.valeurs.get(&x.v).is_some_and(|val| {
+                    val.occurrences
+                        .iter()
+                        .any(|o| plan.ancre(o.jeton, &reperes[champ], None, false))
+                });
+                par_valeur
+                    .entry(x.v)
+                    .or_default()
+                    .push((modele.vars[i].facultatif, !ancree, i));
+            }
+        }
+        for (v, mut vars) in par_valeur {
+            // lue forte, une valeur ne compte que ses occurrences fortes : le « 1 » d'une
+            // adresse n'est pas un second « 1,000 »
+            let jetons: BTreeSet<usize> = dom
+                .valeurs
+                .get(&v)
+                .map(|val| {
+                    val.occurrences
+                        .iter()
+                        .filter(|o| o.forte || faibles.contains(&v))
+                        .map(|o| o.jeton)
+                        .collect()
+                })
+                .unwrap_or_default();
+            if vars.len() <= jetons.len() {
+                continue;
+            }
+            vars.sort();
+            for &(_, _, i) in &vars[jetons.len()..] {
+                requis |= !modele.vars[i].facultatif;
+                e.s[i] = Some(numerique::Val {
+                    v: 0,
+                    absent: true,
+                    faible: false,
+                });
+            }
+        }
+        (e, requis)
+    };
+    // Nettoyée, la solution doit encore tenir : une contrainte qui échoue sans le champ
+    // retiré (le TTC qui ne tenait que par le « 1,000 » du timbre) la disqualifie.
+    let lues: Vec<Etat> = retenues
+        .iter()
+        .map(|r| sans_partage(&r.etat))
+        .filter(|(e, requis)| {
+            !requis
+                && modele
+                    .contraintes
+                    .iter()
+                    .all(|cp| s.evaluer(e, &cp.c) != Eval::Echec)
+        })
+        .map(|(e, _)| e)
+        .collect();
+    let partage_requis = !retenues.is_empty() && lues.is_empty();
+    let unique: Option<&Etat> = if lues.len() == 1 { lues.first() } else { None };
+    let mut issue = match lues.len() {
         0 => "aucune",
         1 => "prouvee",
         _ => "ambigue",
     }
     .to_string();
     let mut raison = None;
+    if partage_requis {
+        issue = "aucune".into();
+        raison = Some("une valeur imprimée une fois est lue pour deux champs".into());
+    }
     if s.depasse {
         issue = "aucune".into();
         raison = Some(format!("plafond de {plafond} combinaisons atteint"));
@@ -302,7 +479,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
 
     // Statut de chaque contrainte dans la solution unique.
     let evals: Vec<Eval> = match unique {
-        Some(e) if !s.depasse => modele.contraintes.iter().map(|cp| s.evaluer(e, &cp.c)).collect(),
+        Some(e) if !s.depasse => modele
+            .contraintes
+            .iter()
+            .map(|cp| s.evaluer(e, &cp.c))
+            .collect(),
         _ => vec![Eval::Inconnu; modele.contraintes.len()],
     };
     // toutes les contraintes numériques sont arithmétiques : il en faut au moins une vérifiée
@@ -323,20 +504,45 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         let best = occ.iter().max_by(|a, b| {
             let ja = &entree.jetons[a.jeton];
             let jb = &entree.jetons[b.jeton];
-            let ka = (plan.ancre(a.jeton, &reperes[champ], None, false), a.forte, ja.page);
-            let kb = (plan.ancre(b.jeton, &reperes[champ], None, false), b.forte, jb.page);
+            let ka = (
+                plan.ancre(a.jeton, &reperes[champ], None, false),
+                a.forte,
+                ja.page,
+            );
+            let kb = (
+                plan.ancre(b.jeton, &reperes[champ], None, false),
+                b.forte,
+                jb.page,
+            );
             ka.cmp(&kb)
-                .then(ja.y0.partial_cmp(&jb.y0).unwrap_or(std::cmp::Ordering::Equal))
+                .then(
+                    ja.y0
+                        .partial_cmp(&jb.y0)
+                        .unwrap_or(std::cmp::Ordering::Equal),
+                )
                 .then(ja.ordinal.cmp(&jb.ordinal))
         });
         best.map(|o| {
             let j = &entree.jetons[o.jeton];
-            vec![RefJeton { page: j.page, ordinal: j.ordinal }]
+            vec![RefJeton {
+                page: j.page,
+                ordinal: j.ordinal,
+            }]
         })
         .unwrap_or_default()
     };
-    let signale = || ChampSortie { valeur: None, refs: Vec::new(), statut: "signale".into(), instances: None };
-    let absent = || ChampSortie { valeur: None, refs: Vec::new(), statut: "absent".into(), instances: None };
+    let signale = || ChampSortie {
+        valeur: None,
+        refs: Vec::new(),
+        statut: "signale".into(),
+        instances: None,
+    };
+    let absent = || ChampSortie {
+        valeur: None,
+        refs: Vec::new(),
+        statut: "absent".into(),
+        instances: None,
+    };
 
     for (i, v) in modele.vars.iter().enumerate() {
         if !s.utile(i) {
@@ -347,7 +553,8 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             Some(e) if prouvee => match e.s[i] {
                 Some(x) if !x.absent => {
                     let dans_preuve = modele.contraintes.iter().zip(&evals).any(|(cp, ev)| {
-                        *ev == Eval::Ok && numerique::unites(&cp.c, &modele).contains(&modele::Unite::S(i))
+                        *ev == Eval::Ok
+                            && numerique::unites(&cp.c, &modele).contains(&modele::Unite::S(i))
                     });
                     ChampSortie {
                         valeur: Some(x.v.to_string()),
@@ -368,6 +575,9 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         };
         champs.insert(code, sortie);
     }
+    // Les ventilations dont la part exonérée n'est nommée que provisoirement (un taux nul
+    // imprimé sans mention) : tues après la vérification des lignes.
+    let mut a_taire: Vec<String> = Vec::new();
     for (g, gr) in modele.groupes.iter().enumerate() {
         let coefs = s.coefs_groupe(g);
         for (champ, est_base) in [(gr.champ_base, true), (gr.champ_montant, false)] {
@@ -376,22 +586,65 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                 Some(e) if prouvee => {
                     let sol = e.g[g].as_ref().expect("groupe résolu");
                     if sol.exoneration {
-                        if est_base {
-                            absent()
-                        } else {
-                            ChampSortie {
+                        // Exonération totale : la part exonérée est tout le total des bases,
+                        // nommée par le taux nul de la grille quand elle en désigne un.
+                        let total = gr
+                            .total_base
+                            .and_then(|t| e.s[t].filter(|v| !v.absent))
+                            .map(|v| v.v);
+                        match (&taux_nomme[g], total) {
+                            (Some(code), Some(t)) => {
+                                let v = if est_base { t } else { 0 };
+                                ChampSortie {
+                                    valeur: None,
+                                    refs: Vec::new(),
+                                    statut: "prouve".into(),
+                                    instances: Some(vec![InstanceSortie {
+                                        taux: code.clone(),
+                                        valeur: Some(v.to_string()),
+                                        refs: cite(v, champ),
+                                    }]),
+                                }
+                            }
+                            _ if est_base => absent(),
+                            _ => ChampSortie {
                                 valeur: Some("0".into()),
                                 refs: cite(0, champ),
                                 statut: "prouve".into(),
                                 instances: Some(Vec::new()),
-                            }
+                            },
                         }
                     } else {
-                        let inst = sol
+                        // L'assiette PROUVÉE : la base d'un taux est la somme de tout ce que le
+                        // pack met dans l'assiette de son barème — la base des lignes et les
+                        // charges d'assiette présentes (le FODEC) —, jamais un jeton choisi. Banc
+                        // sans IA du 4 novembre 2026 : la base rendue était le HT sur 10 pièces
+                        // « prouvées » à FODEC. À plusieurs taux, la charge ne se répartit pas
+                        // sans les lignes : la base n'est pas rendue.
+                        let charges: Vec<i64> = modele
+                            .contraintes
+                            .iter()
+                            .filter_map(|cp| match &cp.c {
+                                modele::Contrainte::Charge {
+                                    m,
+                                    assiette: Some(b),
+                                    ..
+                                } if *b == gr.bareme => e.s[*m].filter(|x| !x.absent).map(|x| x.v),
+                                _ => None,
+                            })
+                            .collect();
+                        let majoration: i64 = charges.iter().sum();
+                        let mut inst: Vec<InstanceSortie> = sol
                             .instances
                             .iter()
                             .map(|it| {
                                 let v = if est_base { it.b } else { it.m };
+                                let v = match v {
+                                    Some(b) if est_base && majoration != 0 => {
+                                        (sol.instances.len() == 1).then_some(b + majoration)
+                                    }
+                                    autre => autre,
+                                };
                                 InstanceSortie {
                                     taux: coefs[it.taux].0.clone(),
                                     valeur: v.map(|x| x.to_string()),
@@ -399,7 +652,58 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                                 }
                             })
                             .collect();
-                        ChampSortie { valeur: None, refs: Vec::new(), statut: "prouve".into(), instances: Some(inst) }
+                        // Exonération partielle : la part exonérée est une instance de la
+                        // ventilation — base = total des bases − Σ bases imprimées, montant nul —,
+                        // nommée par le taux nul que la grille désigne. Sans ce taux, la
+                        // ventilation est incomplète et n'est pas affirmée. Banc sans IA du
+                        // 4 novembre 2026 : « 0 % 4 032,000 0,000 » imprimé, la ventilation
+                        // rendue ne portait que le 19 %. Les lignes confirment le reste
+                        // (contrôle plus bas), sinon la preuve est retirée.
+                        // Un taux nul imprimé sans mention : la part se nomme, le temps que
+                        // les lignes la vérifient, par un taux nul du barème ; son code est tu
+                        // ensuite (`a_taire`).
+                        let provisoire = (taux_nomme[g].is_none() && nul_imprime[g])
+                            .then(|| {
+                                entree
+                                    .pack
+                                    .taux_nuls
+                                    .get(&gr.bareme)
+                                    .and_then(|t| t.first().cloned())
+                            })
+                            .flatten();
+                        if sol.partielle && provisoire.is_some() {
+                            a_taire.push(code.clone());
+                        }
+                        let exoneree = match (
+                            sol.partielle,
+                            taux_nomme[g].as_ref().or(provisoire.as_ref()),
+                        ) {
+                            (false, _) => Some(None),
+                            (true, None) => None,
+                            (true, Some(code)) => gr
+                                .total_base
+                                .and_then(|t| e.s[t].filter(|v| !v.absent))
+                                .map(|total| {
+                                    let v = if est_base { total.v - sol.somme_b } else { 0 };
+                                    Some(InstanceSortie {
+                                        taux: code.clone(),
+                                        valeur: Some(v.to_string()),
+                                        refs: cite(v, champ),
+                                    })
+                                }),
+                        };
+                        match exoneree {
+                            Some(reste) => {
+                                inst.extend(reste);
+                                ChampSortie {
+                                    valeur: None,
+                                    refs: Vec::new(),
+                                    statut: "prouve".into(),
+                                    instances: Some(inst),
+                                }
+                            }
+                            None => signale(),
+                        }
                     }
                 }
                 _ => signale(),
@@ -421,15 +725,25 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         // le matricule du client lu « conforme » comme celui d'un émetteur étranger).
         let partage = champ.genre == "identifiant"
             && champ.format_code.is_some()
-            && grille.champs.iter().enumerate().any(|(k, x)| k != c && x.format_code == champ.format_code);
+            && grille
+                .champs
+                .iter()
+                .enumerate()
+                .any(|(k, x)| k != c && x.format_code == champ.format_code);
         let sortie = match textuel::lire(champ, &entree.pack, &plan)? {
             Issue::Conforme(_) if partage => signale(),
+            Issue::Conforme(l) if entete::le_dossier_parmi_d_autres(champ, entree, &l.valeur) => {
+                signale()
+            }
             Issue::Conforme(l) => {
                 lus.insert(c, l.valeur.clone());
                 ChampSortie {
                     valeur: Some(l.valeur),
                     refs: (l.jeton..=l.fin)
-                        .map(|k| RefJeton { page: entree.jetons[k].page, ordinal: entree.jetons[k].ordinal })
+                        .map(|k| RefJeton {
+                            page: entree.jetons[k].page,
+                            ordinal: entree.jetons[k].ordinal,
+                        })
                         .collect(),
                     statut: "conforme".into(),
                     instances: None,
@@ -447,7 +761,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     let mut statuts_parties: Vec<(String, &str)> = Vec::new();
     let mut une_preuve_parties = false;
     for p in &grille.preuves {
-        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(entete::OP)) else {
+        let Some(e) = p
+            .expression
+            .as_ref()
+            .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(entete::OP))
+        else {
             continue;
         };
         if p.statut.as_deref() == Some("a_traduire") {
@@ -497,16 +815,18 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     }
     for (p, nn) in &modele.non_numeriques {
         let st = match nn {
-            NonNumerique::Format { champ, format } => match (lus.get(champ), entree.pack.formats.get(format)) {
-                (Some(v), Some(motif)) => {
-                    if textuel::respecte(v, motif)? {
-                        "verifiee"
-                    } else {
-                        "echec"
+            NonNumerique::Format { champ, format } => {
+                match (lus.get(champ), entree.pack.formats.get(format)) {
+                    (Some(v), Some(motif)) => {
+                        if textuel::respecte(v, motif)? {
+                            "verifiee"
+                        } else {
+                            "echec"
+                        }
                     }
+                    _ => "non_evaluable",
                 }
-                _ => "non_evaluable",
-            },
+            }
             NonNumerique::Ordre { avant, apres } => match (lus.get(avant), lus.get(apres)) {
                 (Some(a), Some(b)) => {
                     if a <= b {
@@ -527,7 +847,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     // ---------- L'anneau 1 : les lignes, sur la sortie du centre, sans la modifier ----------
     let mut sortie_lignes = None;
     for p in &grille.preuves {
-        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lignes::OP)) else {
+        let Some(e) = p
+            .expression
+            .as_ref()
+            .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lignes::OP))
+        else {
             continue;
         };
         if p.statut.as_deref() == Some("a_traduire") {
@@ -559,8 +883,8 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     //   « 0,000 » et « exonérée » imprimés) ;
     // - deux taux sur un ticket, un chiffre du TTC mal lu : la base à 7 % passait pour le HT,
     //   et un montant d'article pour le TTC (50/05, OCR).
-    // Exonération partielle, en plus : le reste, exonéré, n'est imprimé nulle part ; les lignes
-    // seules l'établissent, chaque taux y valant sa base imprimée (`taux_par_base`).
+    // Exonération partielle, en plus : le reste, exonéré, n'est pas une base qu'un calcul de
+    // taux prouve (le montant nul ferme n'importe quel zéro) ; les lignes seules l'établissent, chaque taux y valant sa base imprimée (`taux_par_base`).
     // Sinon la pièce n'est pas prouvée : rendue à la chaîne, valeurs gardées au statut signalé.
     // Un HT accepté par le seul libellé de la base, en attente des lettres (voir plus bas).
     let mut ht_par_la_base = false;
@@ -572,18 +896,28 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                     && (!par_taux || l.taux_par_base == "verifiee")
                     && l.deduites.is_none()
                     && l.remise_globale.is_none()
-                    && l.instances.iter().map(|x| x.montant.valeur.parse::<i64>().ok()).sum::<Option<i64>>() == Some(total)
+                    && l.instances
+                        .iter()
+                        .map(|x| x.montant.valeur.parse::<i64>().ok())
+                        .sum::<Option<i64>>()
+                        == Some(total)
             })
         };
         let mut refus: Option<&str> = None;
         for (g, gr) in modele.groupes.iter().enumerate() {
             let Some(sol) = e.g[g].as_ref() else { continue };
             let Some(t) = gr.total_base else { continue };
-            let Some(ht) = e.s[t].filter(|v| !v.absent).map(|v| v.v) else { continue };
+            let Some(ht) = e.s[t].filter(|v| !v.absent).map(|v| v.v) else {
+                continue;
+            };
             let champ = modele.vars[t].champ;
             let ancre_par = |reperes: &[String]| {
                 dom.valeurs.get(&ht).is_some_and(|x| {
-                    x.occurrences.iter().any(|o| plan.libelle_avant(o.jeton, reperes) || plan.ancre(o.jeton, reperes, None, true))
+                    x.occurrences.iter().any(|o| {
+                        plan.libelle_avant(o.jeton, reperes)
+                            || plan.ancre(o.jeton, reperes, None, true)
+                            || plan.apparie(o.jeton, reperes)
+                    })
                 })
             };
             // À un seul taux, la base imprimée EST le total HT : une valeur imprimée sous le
@@ -592,7 +926,8 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             // la base juste sous « Base TVA »). Jamais à zéro instance ni à plusieurs taux,
             // et jamais seule : il faut encore que le montant en lettres vérifie le total —
             // une seconde écriture de la pièce, indépendante des chiffres (plus bas).
-            let base_seule = sol.instances.len() == 1 && sol.instances[0].b == Some(ht) && !sol.partielle;
+            let base_seule =
+                sol.instances.len() == 1 && sol.instances[0].b == Some(ht) && !sol.partielle;
             let ancre = ancre_par(&reperes[champ]);
             if sol.partielle && !lignes_ferment(ht, true) {
                 refus = Some("exonération partielle non confirmée par les lignes");
@@ -606,7 +941,14 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         }
         if let Some(r) = refus {
             ht_par_la_base = false;
-            retirer_la_preuve(&mut prouvee, &mut issue, &mut raison, &mut champs, r);
+            retirer_la_preuve(
+                &mut prouvee,
+                &mut issue,
+                &mut raison,
+                &mut champs,
+                &numeriques,
+                r,
+            );
             for (cp, ev) in modele.contraintes.iter().zip(&evals) {
                 if *ev == Eval::Ok {
                     preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
@@ -615,13 +957,49 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         }
     }
 
+    // La part exonérée prouvée, son taux non nommé : la ventilation se signale (EXO ou
+    // EXPORT, la pièce ne le dit pas : le comptable choisit). Le reste de la preuve tient.
+    for code in &a_taire {
+        champs.insert(code.clone(), signale());
+    }
+
     // ---------- L'anneau 3 : les champs nommés, que nulle preuve ne lit ----------
     entete::nommes(entree, &mut champs);
+
+    // ---------- Ce que le dossier dit quand la pièce n'imprime rien ----------
+    // Décision du dirigeant (5 novembre 2026) : une pièce sans devise imprimée est dans la
+    // devise du dossier. Le champ dont le concept le porte (`ref.concepts.defaut_du_dossier`)
+    // et que rien n'a lu — pas même son étiquette — la reçoit, DÉDUITE, sans référence.
+    for ch in grille.champs.iter().filter(|c| !c.repetee) {
+        let Some(valeur) = ch
+            .defaut_du_dossier
+            .as_deref()
+            .and_then(|d| entree.connus.as_ref().and_then(|c| c.defaut(d)))
+        else {
+            continue;
+        };
+        let dans_le_domaine = ch.valeurs.is_empty() || ch.valeurs.iter().any(|v| v.code == valeur);
+        if dans_le_domaine && champs.get(&ch.code).is_none_or(|c| c.statut == "absent") {
+            champs.insert(
+                ch.code.clone(),
+                ChampSortie {
+                    valeur: Some(valeur.to_string()),
+                    refs: Vec::new(),
+                    statut: "deduit".into(),
+                    instances: None,
+                },
+            );
+        }
+    }
 
     // ---------- Les lettres : la seconde écriture du total ----------
     let mut contredite = false;
     for p in &grille.preuves {
-        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP)) else {
+        let Some(e) = p
+            .expression
+            .as_ref()
+            .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP))
+        else {
             continue;
         };
         if p.statut.as_deref() == Some("a_traduire") {
@@ -636,7 +1014,11 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
                         .and_then(|x| x.valeur.as_deref())
                         .and_then(|v| v.parse().ok())
                 };
-                let r = lettres::prouver(&op, entree, prouvee.then_some(&valeur_prouvee as &dyn Fn(usize) -> Option<i64>));
+                let r = lettres::prouver(
+                    &op,
+                    entree,
+                    prouvee.then_some(&valeur_prouvee as &dyn Fn(usize) -> Option<i64>),
+                );
                 if let Some(c) = r.champ {
                     champs.insert(grille.champs[op.champ].code.clone(), c);
                 }
@@ -651,11 +1033,23 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
     let lettres_verifient = preuves.iter().any(|(code, st)| {
         st == "verifiee"
             && grille.preuves.iter().any(|p| {
-                &p.code == code && p.expression.as_ref().and_then(|e| e.get("op")).and_then(|o| o.as_str()) == Some(lettres::OP)
+                &p.code == code
+                    && p.expression
+                        .as_ref()
+                        .and_then(|e| e.get("op"))
+                        .and_then(|o| o.as_str())
+                        == Some(lettres::OP)
             })
     });
     if ht_par_la_base && prouvee && !lettres_verifient {
-        retirer_la_preuve(&mut prouvee, &mut issue, &mut raison, &mut champs, "le total HT ne porte pas son libellé");
+        retirer_la_preuve(
+            &mut prouvee,
+            &mut issue,
+            &mut raison,
+            &mut champs,
+            &numeriques,
+            "le total HT ne porte pas son libellé",
+        );
         for (cp, ev) in modele.contraintes.iter().zip(&evals) {
             if *ev == Eval::Ok {
                 preuves.insert(grille.preuves[cp.preuve].code.clone(), "non_fermee".into());
@@ -674,6 +1068,83 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         }
     }
 
+    // ---------- L'identité du dossier : un seul rôle par pièce ----------
+    identite::exclusive(entree, &mut champs);
+
+    // ---------- Ce qu'aucun calcul ne prouve se lit avec assurance ----------
+    // Hors de son ressort : ce que l'arithmétique prouve (les montants du centre), ce que les
+    // chiffres confirment (le montant en lettres), et ce qu'un domaine fermé valide (une
+    // valeur de liste n'est rendue qu'égale, forme pour forme, à un code de son domaine).
+    let mut garantis: BTreeSet<&str> = modele
+        .vars
+        .iter()
+        .map(|v| grille.champs[v.champ].code.as_str())
+        .collect();
+    for p in grille
+        .preuves
+        .iter()
+        .filter(|p| p.statut.as_deref() != Some("a_traduire"))
+    {
+        if let Some(op) = p
+            .expression
+            .as_ref()
+            .filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(lettres::OP))
+            .and_then(|e| lettres::lire_op(grille, e).ok())
+        {
+            garantis.insert(grille.champs[op.champ].code.as_str());
+        }
+    }
+    garantis.extend(
+        grille
+            .champs
+            .iter()
+            .filter(|c| !c.valeurs.is_empty())
+            .map(|c| c.code.as_str()),
+    );
+    identite::assurance(entree, &mut champs, &garantis);
+
+    // ---------- Un lecteur génératif : ses chiffres ne se prouvent pas seuls ----------
+    // Une erreur de chiffre répétée par le modèle dans chaque occurrence ferme les sommes.
+    // Sans le montant en lettres qui vérifie le total, rien n'est affirmé : les valeurs
+    // restent citées, signalées, et les lignes aussi. Le matricule du dossier, que la base
+    // confirme caractère par caractère, ne dépend pas de la lecture.
+    if entree.lecteur_generatif && !lettres_verifient {
+        let compact = |s: &str| -> String {
+            s.chars()
+                .filter(|c| c.is_alphanumeric())
+                .flat_map(char::to_uppercase)
+                .collect()
+        };
+        let dossier = entree
+            .connus
+            .as_ref()
+            .and_then(|c| c.dossier.as_ref())
+            .map(|d| compact(&d.matricule));
+        let mut retiree = false;
+        for c in champs.values_mut() {
+            if !matches!(c.statut.as_str(), "prouve" | "conforme") {
+                continue;
+            }
+            let confirme = dossier.as_ref().is_some_and(|m| {
+                !m.is_empty() && c.valeur.as_deref().is_some_and(|v| compact(v) == *m)
+            });
+            if !confirme {
+                c.statut = "signale".into();
+                retiree = true;
+            }
+        }
+        if let Some(l) = sortie_lignes.as_mut() {
+            if l.statut == "prouve" {
+                l.statut = "signale".into();
+                retiree = true;
+            }
+        }
+        if retiree && issue == "prouvee" {
+            issue = "signalee".into();
+            raison = Some("lecteur génératif : le total n'est pas recoupé par ses lettres".into());
+        }
+    }
+
     Ok(Sortie {
         issue,
         solutions: retenues.len(),
@@ -688,18 +1159,22 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
 }
 
 /// Une preuve retirée : la pièce rendue à la chaîne, ses valeurs gardées au statut signalé.
+/// La preuve arithmétique retirée : ses champs (`numeriques`) passent de prouvés à signalés.
+/// Ceux que l'anneau 2 a établis par l'identité (les matricules des parties) ne dépendent
+/// pas d'elle et restent : sinon l'en-tête changerait avec la variante de la grille.
 fn retirer_la_preuve(
     prouvee: &mut bool,
     issue: &mut String,
     raison: &mut Option<String>,
     champs: &mut BTreeMap<String, ChampSortie>,
+    numeriques: &BTreeSet<String>,
     r: &str,
 ) {
     *prouvee = false;
     *issue = "aucune".into();
     *raison = Some(r.into());
-    for c in champs.values_mut() {
-        if c.statut == "prouve" {
+    for (code, c) in champs.iter_mut() {
+        if c.statut == "prouve" && numeriques.contains(code) {
             c.statut = "signale".into();
         }
     }
@@ -738,7 +1213,11 @@ mod wasm {
     /// `ptr` doit désigner `len` octets lisibles (l'entrée JSON en UTF-8).
     #[no_mangle]
     pub unsafe extern "C" fn solve_json(ptr: *const u8, len: usize) -> u64 {
-        let octets = if len == 0 { &[][..] } else { core::slice::from_raw_parts(ptr, len) };
+        let octets = if len == 0 {
+            &[][..]
+        } else {
+            core::slice::from_raw_parts(ptr, len)
+        };
         let sortie = match core::str::from_utf8(octets) {
             Ok(s) => crate::solve(s),
             Err(_) => crate::erreur("entrée non UTF-8".into()),
