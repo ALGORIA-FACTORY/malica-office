@@ -11,7 +11,7 @@
 import { describe, expect, it } from "vitest";
 
 import { PLAFOND_ELEMENTS } from "@/lib/hors-ligne/file";
-import { identifiantsDuLot, lireLotDeCapture } from "@/lib/lot-de-capture";
+import { identifiantsDuLot, lireLotDeCapture, suiteDuPassage } from "@/lib/lot-de-capture";
 
 const UN = "0b6f1d2e-3c4a-4b5c-8d9e-0f1a2b3c4d5e";
 const DEUX = "11111111-2222-4333-8444-555555555555";
@@ -70,5 +70,14 @@ describe("le lot passé dans l'URL", () => {
     });
     expect(lireLotDeCapture({ pour: "lui", depuis: "ailleurs" })).toEqual({});
     expect(lireLotDeCapture({ pieces: UN, pour: "moi" })).toEqual({ pieces: UN, pour: "moi" });
+  });
+
+  it("après un dépôt, le dossier et « pour moi » suivent la photo suivante (revue de #277)", () => {
+    expect(suiteDuPassage([UN], { dossier: "banque", depuis: "echeance" })).toEqual({
+      pieces: UN,
+      dossier: "banque",
+    });
+    expect(suiteDuPassage([], { pour: "moi" })).toEqual({ pour: "moi" });
+    expect(suiteDuPassage([UN, DEUX], null)).toEqual({ pieces: `${UN},${DEUX}` });
   });
 });
