@@ -1095,6 +1095,13 @@ async function proposerDepuisLeJugement(
     pack,
     null,
   );
+  if (compteDeTvaDesAchats === AMBIGU)
+    return {
+      ok: false,
+      raison:
+        "Deux cabinets désignent des comptes de TVA différents pour ce dossier : arrêtez-le au niveau du dossier.",
+      raisonCode: "compte_manquant",
+    };
   const [taxRates, tousLesComptes, tousLesDroits] = await Promise.all([
     referentiel.taxRates(db, pack, ligne.jurisdiction),
     referentiel.accountMappings(db, pack),
@@ -1143,7 +1150,7 @@ async function proposerDepuisLeJugement(
     mappings: tousLesComptes
       .filter((c): c is typeof c & SensConnu => sensConnu(c.documentKind))
       .map((c) =>
-        c.documentKind === "facture_achat" && typeof compteDeTvaDesAchats === "string"
+        c.documentKind === "facture_achat" && compteDeTvaDesAchats
           ? { ...c, vatAccount: compteDeTvaDesAchats }
           : c,
       ),
