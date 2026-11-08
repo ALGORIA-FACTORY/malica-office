@@ -59,7 +59,9 @@ jobs:
       PRINCIPAL: anthropic:claude-haiku-5-5
       SECOND_AVIS: anthropic:claude-sonnet-5-5
       REPLI: deepseek:deepseek-chat
-      PLAFOND_DOLLARS: "45"
+      # Le plafond de l'ensemble des passages est de 60 $ ; le premier (run
+      # 42475726319) a tenu 25,28 $ au prix de garde : ce passage a le reste.
+      PLAFOND_DOLLARS: "34"
       SANS_REPLI: ${{ contains(github.event.head_commit.message, '[sans repli]') }}
 
     steps:
