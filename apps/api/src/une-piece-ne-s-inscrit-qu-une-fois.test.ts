@@ -27,6 +27,9 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
   const legalId = `${String(Date.now()).slice(-7)}U/A/M/000`;
   let dirigeant: Utilisateur;
   let expert: Utilisateur;
+  // Le second regard d'un dossier confié : une autre personne du cabinet. Depuis le
+  // lot S2, la PME ne voit plus les écritures du cabinet et ne peut pas les valider.
+  let relecteur: Utilisateur;
   let pme = "";
   let cabinet = "";
   let pack = "";
@@ -92,6 +95,7 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
     assert.ok(d && e);
     dirigeant = d;
     expert = e;
+    relecteur = await creerCompte(`relecteur-${marque}@essai.local`, "MotDePasseTresLong2026!");
     const creer = (u: Utilisateur, kind: string, nom: string, mf: string | null) =>
       sousIdentite(u.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
@@ -102,9 +106,19 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       });
     pme = await creer(dirigeant, "pme", `PME ${marque}`, legalId);
     cabinet = await creer(expert, "cabinet", `COMPTA ${marque}`, null);
+    await admin.query(
+      `insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')`,
+      [cabinet, relecteur.id],
+    );
     await sousIdentite(expert.id, (db) => identite.proposerMandat(db, cabinet, legalId));
     const [propose] = await sousIdentite(dirigeant.id, (db) => identite.mandatsProposes(db, pme));
     await sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, propose!.id, true));
+    // Le relecteur suit ce dossier : un collaborateur ne voit que les dossiers qu'on lui confie.
+    await admin.query(
+      `insert into collab.assignments (cabinet_tenant_id, client_tenant_id, collaborator_id)
+       values ($1, $2, $3)`,
+      [cabinet, pme, relecteur.id],
+    );
     const { rows } = await admin.query<{ id: string }>(
       `select id from ref.jurisdiction_packs where jurisdiction = 'TN'
         order by effective_from desc limit 1`,
@@ -173,7 +187,7 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
         const id = await inscrire();
         await assert.rejects(valider(id), /chk_ecr_4eyes/);
         // Le même auteur reste refusé, mais une seconde personne habilitée passe.
-        await valider(id, dirigeant.id);
+        await valider(id, relecteur.id);
       }
       await regler("0");
       const id = await inscrire();
