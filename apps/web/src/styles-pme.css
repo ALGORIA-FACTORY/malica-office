@@ -1273,12 +1273,20 @@
  * defaut. Le fond et le flou partent pour la meme raison — rien ne passe plus
  * derriere elle, donc il n'y a plus rien a masquer. */
 [data-surface="pme"] [data-ecran="capture"] .prog{display:flex;align-items:center;gap:.75rem;padding:.5rem 1.25rem .6875rem}
-[data-surface="pme"] [data-ecran="capture"] .prog .x{width:44px;height:44px;border-radius:50%;border:0;background:none;color:var(--t2); display:grid;place-items:center;cursor:pointer;flex:none;margin-inline-start:-.6875rem}
+[data-surface="pme"] [data-ecran="capture"] .prog .x{width:40px;height:40px;border-radius:50%;border:0;background:var(--d2);color:var(--tx); display:grid;place-items:center;cursor:pointer;flex:none}
+/* Planche 9 (7 novembre 2026) : le nom de l'étape et « n sur m », à la place des neuf traits. */
+[data-surface="pme"] [data-ecran="capture"] .prog .ttl{flex:1;min-width:0;font-size:.9375rem;font-weight:650;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-surface="pme"] [data-ecran="capture"] .prog .rang{flex:none;font-size:.8125rem;color:var(--t2);font-variant-numeric:tabular-nums}
+[data-surface="pme"] [data-ecran="capture"] .avance{height:3px;margin:0 1.25rem .5rem;border-radius:999px;background:var(--d2);overflow:hidden}
+[data-surface="pme"] [data-ecran="capture"] .avance i{display:block;height:100%;border-radius:inherit;background:var(--acc);transition:width .45s var(--e-entre)}
+[data-surface="pme"] [data-ecran="capture"] .c-ctx{margin-top:.5rem;display:flex;align-items:center;gap:.75rem;padding:.625rem .75rem;border-radius:14px;background:var(--d1);border:1px solid var(--hr);animation:pq-entre .32s var(--e-entre) both}
+[data-surface="pme"] [data-ecran="capture"] .c-ctx .ini{width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;background:var(--accs);color:var(--acc);font-weight:800;font-size:.875rem}
+[data-surface="pme"] [data-ecran="capture"] .c-ctx .bd{min-width:0;display:grid;gap:.125rem}
+[data-surface="pme"] [data-ecran="capture"] .c-ctx b{font-size:.875rem;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-surface="pme"] [data-ecran="capture"] .c-ctx span{font-size:.8125rem;color:var(--t2)}
+@media (prefers-reduced-motion: reduce){[data-surface="pme"] [data-ecran="capture"] .avance i{transition:none}}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="capture"] .prog .x:hover{background:var(--s2);color:var(--tx)}}
 [data-surface="pme"] [data-ecran="capture"] .prog .x svg{width:18px;height:18px;stroke-width:2}
-[data-surface="pme"] [data-ecran="capture"] .prog .tr{flex:1;display:flex;gap:4px}
-[data-surface="pme"] [data-ecran="capture"] .prog .tr i{flex:1;height:3px;border-radius:999px;background:rgba(0,0,0,.12)}
-[data-surface="pme"] [data-ecran="capture"] .prog .tr i.on{background:var(--acc)}
 /* OMBRE DE PAPIER — pas une ombre d'interface.
  * L'interdit n° 4 (« deux ombres portées, pas une troisième ») compte les
  * plans d'INTERFACE : ce qui passe devant autre chose, et que seul le menu
@@ -2632,7 +2640,6 @@ html.dark:has([data-surface="pme"]),
 .dark [data-surface="pme"] [data-ecran="accueil"] .hero .stack{position:absolute;z-index:2;inset-inline-end:.5rem;bottom:.4375rem;width:72px;height:72px; display:grid;place-items:center;color:rgba(214,230,220,.34)}
 /* `.prog` n'a plus de jumeau sombre : rendue au flux, elle ne porte plus ni
  * fond ni flou a elle, et prend celui de la page. Seul `.tr i` reste. */
-.dark [data-surface="pme"] [data-ecran="capture"] .prog .tr i{flex:1;height:3px;border-radius:999px;background:rgba(255,255,255,.12)}
 .dark [data-surface="pme"] [data-ecran="capture"] .dit{background:#131316;border-radius:20px 20px 20px 6px;padding:.9375rem 1rem;margin-top:.5rem; font-size:1rem;line-height:1.5;letter-spacing:-.016em}
 .dark [data-surface="pme"] [data-ecran="capture"] .opt i{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center;color:var(--t2)}
 .dark [data-surface="pme"] [data-ecran="capture"] .opt button.on i{background:rgba(143,227,177,.18);color:var(--acc)}
