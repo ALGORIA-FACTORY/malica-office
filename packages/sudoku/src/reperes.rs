@@ -48,7 +48,32 @@ pub const MOTS_D_UN_LIBELLE: usize = 4;
 /// En deçà de tant de lettres, un repère n'est reconnu que comme un mot entier.
 const REPERE_COURT: usize = 4;
 
+thread_local! {
+    /// Les textes déjà normalisés, le temps d'une résolution (`oublier_les_normes`). Un
+    /// même texte de jeton se normalise des milliers de fois par pièce (l'en-tête, les
+    /// lignes) : banc du 8 novembre 2026, 60 % du temps du moteur sur algoria-018.
+    static NORMES: std::cell::RefCell<std::collections::HashMap<String, String>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// Vide la mémoire de `normaliser` : appelé à la fin de chaque résolution, pour qu'un
+/// moteur qui vit longtemps (le WebAssembly de l'API) ne garde rien d'une pièce à l'autre.
+pub fn oublier_les_normes() {
+    NORMES.with(|m| m.borrow_mut().clear());
+}
+
+/// Le texte normalisé (`normaliser_sans_memoire`), mémorisé le temps d'une résolution :
+/// une fonction pure, le résultat est le même.
 pub fn normaliser(s: &str) -> String {
+    if let Some(n) = NORMES.with(|m| m.borrow().get(s).cloned()) {
+        return n;
+    }
+    let n = normaliser_sans_memoire(s);
+    NORMES.with(|m| m.borrow_mut().insert(s.to_string(), n.clone()));
+    n
+}
+
+fn normaliser_sans_memoire(s: &str) -> String {
     let s: String = s
         .split_whitespace()
         .map(sans_proclitique)

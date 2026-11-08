@@ -96,7 +96,7 @@ pub fn solve(input_json: &str) -> String {
         Ok(e) => e,
         Err(e) => return erreur(format!("entrée invalide : {e}")),
     };
-    let sortie = resoudre(&entree).map(|s| {
+    let sortie = resoudre_et_oublier(&entree).map(|s| {
         if s.issue == "aucune" && s.solutions == 0 {
             par_les_lettres(input_json, &entree).unwrap_or(s)
         } else {
@@ -167,7 +167,7 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
     for j in avec.jetons.iter_mut().filter(|j| j.lettres.is_some()) {
         j.montants.push(entree::Lecture { v, forte: true });
     }
-    let mut s = resoudre(&avec).ok()?;
+    let mut s = resoudre_et_oublier(&avec).ok()?;
     if s.issue != "prouvee" {
         return None;
     }
@@ -205,6 +205,15 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
     s.raison = Some(format!("le total en chiffres ne ferme pas : le montant en lettres donne {porte}, et la pièce se prouve par lui"));
     s.par_lettres = Some(porte);
     Some(s)
+}
+
+/// `resoudre`, puis les mémoires des textes normalisés vidées (`reperes::oublier_les_normes`,
+/// `entete::oublier_les_mots`) : rien ne passe d'une pièce à l'autre.
+fn resoudre_et_oublier(entree: &Entree) -> Result<Sortie, String> {
+    let s = resoudre(entree);
+    reperes::oublier_les_normes();
+    entete::oublier_les_mots();
+    s
 }
 
 fn resoudre(entree: &Entree) -> Result<Sortie, String> {
