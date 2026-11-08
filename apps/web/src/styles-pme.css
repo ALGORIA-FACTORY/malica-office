@@ -940,6 +940,64 @@
  * `text-decoration:none`. */
 [data-surface="pme"] .appbar .me{width:44px;height:44px;border-radius:50%;background:var(--acc);color:var(--on-acc);flex:none; display:grid;place-items:center;font-size:1rem;font-weight:700;letter-spacing:-.02em;text-decoration:none}
 
+/* ---------- LA CLOCHE (planche 12, approuvée le 7 novembre 2026) ----------
+ * 44 px de cible comme l'initiale, à sa gauche. Au repos et non lue : une
+ * aura qui respire et un tintement toutes les cinq secondes. Une arrivée :
+ * balancement en perspective, battant, trois ondes, huit éclats, pastille qui
+ * surgit et chiffre qui tombe. Tout lu : la pastille n'est plus, une coche
+ * passe. Le mouvement réduit du système retire tout cela (règle plus haut). */
+[data-surface="pme"] .appbar .cloche{position:relative;width:44px;height:44px;flex:none}
+[data-surface="pme"] .cloche .cl{position:relative;z-index:1;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--d2);color:var(--tx);text-decoration:none;box-shadow:inset 0 0 0 1px var(--hr);transition:transform .2s cubic-bezier(.2,1.4,.4,1)}
+[data-surface="pme"] .cloche .cl:active{transform:scale(.92)}
+[data-surface="pme"] .cloche svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transform-origin:50% 8%;overflow:visible}
+[data-surface="pme"] .cloche:not([data-calme]) svg{animation:cloche-repos 5s ease-in-out infinite}
+[data-surface="pme"] .cloche .cl[data-sonne] svg{animation:cloche-balance 1.2s cubic-bezier(.3,0,.3,1)}
+[data-surface="pme"] .cloche .cl[data-sonne] .bat{animation:cloche-battant 1.2s}
+[data-surface="pme"] .cloche .aura{position:absolute;inset:-6px;border-radius:50%;background:radial-gradient(circle,rgba(240,80,106,.38),transparent 70%);animation:cloche-aura 2.4s ease-in-out infinite;pointer-events:none}
+[data-surface="pme"] .cloche[data-calme] .aura{display:none}
+[data-surface="pme"] .cloche .ondes i{position:absolute;inset:0;border-radius:50%;border:2px solid var(--acc);opacity:0;pointer-events:none}
+[data-surface="pme"] .cloche .ondes[data-on] i{animation:cloche-onde 1.3s ease-out}
+[data-surface="pme"] .cloche .ondes[data-on] i:nth-child(2){animation-delay:.22s}
+[data-surface="pme"] .cloche .ondes[data-on] i:nth-child(3){animation-delay:.44s;border-color:#F0506A}
+[data-surface="pme"] .cloche .eclats{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
+[data-surface="pme"] .cloche .eclats i{position:absolute;left:-3px;top:-3px;width:6px;height:6px;border-radius:50%;background:var(--acc);opacity:0}
+[data-surface="pme"] .cloche .eclats i:nth-child(2n){background:#E9B44C}
+[data-surface="pme"] .cloche .eclats i:nth-child(3n){background:#86BDF2}
+[data-surface="pme"] .cloche .eclats[data-on] i{animation:cloche-eclat .8s cubic-bezier(.2,.8,.3,1) both}
+[data-surface="pme"] .cloche .pas{position:absolute;z-index:2;top:-5px;inset-inline-end:-7px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:linear-gradient(135deg,#FF8A6B,#E0405A);color:#fff;font-size:.71875rem;font-weight:800;display:flex;align-items:center;justify-content:center;border:2.5px solid var(--bg);overflow:hidden;box-shadow:0 6px 14px -4px rgba(224,64,90,.7);perspective:80px;pointer-events:none;font-variant-numeric:tabular-nums}
+[data-surface="pme"] .cloche .pas[data-pop]{animation:cloche-pastille .7s cubic-bezier(.2,1.5,.3,1)}
+[data-surface="pme"] .cloche .pas b{display:block;animation:cloche-chiffre .5s .12s cubic-bezier(.2,1,.3,1) both}
+[data-surface="pme"] .cloche .vu{position:absolute;z-index:2;top:-5px;inset-inline-end:-7px;width:22px;height:22px;border-radius:50%;background:var(--accs);color:var(--acc);display:grid;place-items:center;border:2.5px solid var(--bg);animation:cloche-vu 2.2s cubic-bezier(.2,1.5,.3,1) both;pointer-events:none}
+[data-surface="pme"] .cloche .vu svg{width:12px;height:12px;stroke-width:3.5;animation:none}
+
+/* L'île : en haut, au centre, sur le téléphone ; une carte en bas à droite
+ * sur l'ordinateur. Elle dit ce qui arrive, puis se replie dans la barre. */
+[data-surface="pme"] .ile-notif{position:fixed;z-index:40;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;width:min(346px,calc(100vw - 32px));display:grid;grid-template-columns:1fr;gap:2px;padding:12px 16px 16px;border-radius:28px;background:#0A0A0A;color:#fff;text-decoration:none;box-shadow:0 20px 50px -10px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.1);overflow:hidden;transform:translateX(-50%);animation:cloche-ile 4s cubic-bezier(.3,1.15,.3,1) both}
+[data-surface="pme"] .ile-notif .pt{font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#A8E0B8}
+[data-surface="pme"] .ile-notif b{font-size:.875rem;font-weight:600;line-height:1.3}
+[data-surface="pme"] .ile-notif span:not(.pt){font-size:.78125rem;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-surface="pme"] .ile-notif .temps{position:absolute;left:16px;right:16px;bottom:8px;height:3px;border-radius:9px;background:#A8E0B8;transform-origin:left;animation:cloche-compte 3s .9s linear both}
+@media (min-width:1024px){
+  [data-surface="pme"] .ile-notif{top:auto;left:auto;right:24px;bottom:24px;width:360px;border-radius:22px;background:var(--d0);color:var(--tx);box-shadow:0 30px 70px -20px rgba(0,0,0,.35),inset 0 0 0 1px var(--dl);transform:none;animation:cloche-carte .5s cubic-bezier(.2,1.2,.3,1) both}
+  [data-surface="pme"] .ile-notif .pt{color:var(--acc)}
+  [data-surface="pme"] .ile-notif span:not(.pt){color:var(--t2)}
+  [data-surface="pme"] .ile-notif .temps{background:var(--acc)}
+}
+[dir="rtl"] [data-surface="pme"] .ile-notif .temps{transform-origin:right}
+
+@keyframes cloche-repos{0%,90%,100%{transform:rotate(0)}92%{transform:rotate(10deg)}94%{transform:rotate(-8deg)}96%{transform:rotate(4deg)}98%{transform:rotate(-2deg)}}
+@keyframes cloche-balance{0%{transform:perspective(200px) rotate(0) rotateY(0)}10%{transform:perspective(200px) rotate(26deg) rotateY(18deg)}22%{transform:perspective(200px) rotate(-22deg) rotateY(-16deg)}34%{transform:perspective(200px) rotate(16deg) rotateY(10deg)}46%{transform:perspective(200px) rotate(-11deg)}58%{transform:rotate(6deg)}70%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
+@keyframes cloche-battant{0%,100%{transform:translateX(0)}15%{transform:translateX(-4px)}30%{transform:translateX(4px)}45%{transform:translateX(-3px)}60%{transform:translateX(2px)}}
+@keyframes cloche-aura{0%,100%{opacity:.3;transform:scale(.9)}50%{opacity:.75;transform:scale(1.2)}}
+@keyframes cloche-onde{0%{transform:scale(.7);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+@keyframes cloche-eclat{0%{transform:rotate(var(--a)) translateY(0) scale(1);opacity:1}100%{transform:rotate(var(--a)) translateY(-38px) scale(.2);opacity:0}}
+@keyframes cloche-pastille{0%{transform:scale(0) rotate(-30deg)}55%{transform:scale(1.45) rotate(8deg)}75%{transform:scale(.88)}100%{transform:scale(1)}}
+@keyframes cloche-chiffre{from{transform:translateY(110%) rotateX(-80deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes cloche-vu{0%{transform:scale(0)}15%{transform:scale(1.3)}25%,80%{transform:scale(1);opacity:1}100%{transform:scale(.6);opacity:0}}
+@keyframes cloche-ile{0%{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.4,.6);filter:blur(4px)}12%{opacity:1;filter:none}30%{transform:translateX(-50%) scale(1)}84%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.4,.6)}}
+@keyframes cloche-carte{from{opacity:0;transform:translateY(14px) scale(.96);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+@keyframes cloche-compte{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
 /* ---------- LE RETOUR ET LE TITRE : SOUS LA BARRE, UNE SEULE GEOMETRIE ----
  *
  * Deux vivaient ici : celle-ci (bouton rond PLEIN de 40 px, titre de 15 px,

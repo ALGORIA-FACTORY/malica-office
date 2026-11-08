@@ -480,6 +480,35 @@ function PmeLayout() {
   const { user } = useRouteContext({ from: "/_authenticated" });
   const initiale = (user.email.trim().charAt(0) || "·").toLocaleUpperCase(locale);
 
+  /*
+   * LA CLOCHE (planche 12, 7 novembre 2026) : les alertes non lues de TOUTES
+   * les sociétés de la personne, en un appel — la route prend une liste.
+   * Relue chaque minute tant que l'écran est visible, et au retour sur
+   * l'application : une alerte arrive sans qu'on recharge.
+   */
+  const idsDesSocietes = pmeOrgs.map((o) => o.id);
+  const alertes = useQuery({
+    queryKey: ["notifications", "cloche", ...idsDesSocietes],
+    queryFn: () => office().collab.notifications(idsDesSocietes),
+    enabled: idsDesSocietes.length > 0,
+    refetchInterval: 60_000,
+  });
+  const nonLues = alertes.data ? alertes.data.filter((n) => !n.readAt) : null;
+  const plusRecente = nonLues?.reduce<(typeof nonLues)[number] | null>(
+    (r, n) => (!r || n.createdAt > r.createdAt ? n : r),
+    null,
+  );
+  const cloche = {
+    nonLues: nonLues ? nonLues.length : null,
+    derniere: plusRecente
+      ? {
+          id: plusRecente.id,
+          kind: plusRecente.kind,
+          payload: (plusRecente.payload ?? {}) as Record<string, unknown>,
+        }
+      : null,
+  };
+
   const navItems = [
     { to: "/pme", icon: HomeIcon, label: t("pme.nav.home"), active: path === "/pme" },
     {
@@ -548,7 +577,7 @@ function PmeLayout() {
          * `header` et la feuille porte `.appbar` — le collage, l'encoche, le
          * filet, le fond.
          */}
-        <EntetePme initiale={initiale} />
+        <EntetePme initiale={initiale} cloche={cloche} />
 
         <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
           {orgsQuery.isPending ? (
