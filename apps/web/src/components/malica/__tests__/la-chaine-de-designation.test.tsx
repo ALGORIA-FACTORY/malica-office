@@ -68,6 +68,7 @@ const ETAT: EtatDeLaDesignation = {
       prix_sortie: 1.1,
     },
   ],
+  mois: { sans_ia: 175, par_modele: 86 },
   bascules: [
     {
       le: "2026-11-08T09:00:00.000Z",
@@ -120,6 +121,7 @@ describe("la carte de la chaîne de désignation", () => {
     expect(repli.textContent).toContain("deepseek-chat");
     expect(repli.textContent).toContain("tour.designation.disponible");
     expect(c.textContent).toContain("tour.designation.motif.bascule.budget");
+    expect(c.querySelector("[data-sans-ia]")?.textContent).toContain('"sansIa":"175"');
   });
 
   it("transmet le réglage d'un rang tel quel, motif à l'appui", async () => {

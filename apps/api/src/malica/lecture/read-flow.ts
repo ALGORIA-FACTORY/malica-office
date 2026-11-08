@@ -40,6 +40,7 @@ import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import type { ReglesDeLecture } from "./regles-de-lecture.ts";
 import { secondLecteurDisponible } from "./paddle.ts";
 import { creerLeSudoku } from "./sudoku.ts";
+import type { PageToken } from "./token-plan.ts";
 import { runVisionRead, type VisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
 
@@ -182,6 +183,14 @@ async function preparer(api: AppelApi, pieceId: string, lecteurs: Lecteurs) {
   // Les paramètres de lecture ne s'écrivent qu'une fois : la première lecture
   // et le rattrapage lisent la même pièce, dans le même dossier.
   const parametres = {
+    /*
+     * LE SUDOKU D'ABORD (8 novembre 2026, « minimiser au maximum le GPU et
+     * l'IA ») : le moteur seul, avant toute désignation. Prouvée pour tout ce
+     * que l'écriture exige (`ref.lecture_sans_ia`), la pièce n'appelle aucun
+     * modèle ; sinon la recette puis la chaîne partent, et le Sudoku revérifie.
+     * `sudoku` est créé plus bas : la fermeture ne l'appelle qu'à la lecture.
+     */
+    sudokuDAbord: (plan: readonly PageToken[]) => sudoku.sansIa(plan),
     parRecette,
     /*
      * La chaîne de désignation (Claude, puis DeepSeek, puis l'arrêt), relue
@@ -654,7 +663,9 @@ export function entreesDuJournal(read: VisionRead): EntreeDuJournal[] {
   )
     .filter(([, n]) => n > 0 && designation)
     .map(([role, n]) => ({
-      agent: designation?.agent ?? "",
+      // Un agent à part : la dépense compte (par modèle), mais une ligne de
+      // cache n'est pas une pièce désignée de plus au compteur de la tour.
+      agent: `${designation?.agent ?? ""}.cache`,
       model: read.selectModel,
       role,
       passe: { latencyMs: 0, tokensIn: n, tokensOut: null },

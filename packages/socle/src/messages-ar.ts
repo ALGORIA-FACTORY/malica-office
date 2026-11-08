@@ -3683,6 +3683,8 @@ export const ar: Dict = {
   "tour.designation.periode.mois": "في الشهر",
   "tour.designation.plafond": "السقف (بالدولار)",
   "tour.designation.bascules": "آخر التحويلات (30 يومًا)",
+  "tour.designation.sansIa":
+    "الوثائق المقروءة دون ذكاء اصطناعي هذا الشهر: {sansIa}؛ المعيّنة بنموذج: {parModele}.",
   "tour.designation.aucuneBascule": "لا تحويل.",
   "tour.designation.motif.bascule.technique": "عطل، تولّت الحلقة التالية المهمة",
   "tour.designation.motif.bascule.budget": "نفدت الميزانية، تولّت الحلقة التالية المهمة",

@@ -644,3 +644,25 @@ les deux budgets épuisés la pièce est lue par le moteur Sudoku seul
 - **Hors de la chaîne, pour l'instant** : la carte d'identification fiscale
   (`lire-carte.ts`), le conseil, les procès-verbaux et le générateur de
   recettes restent sur DeepSeek seul.
+
+## Le Sudoku d'abord (décidé par Wissem le 8 novembre 2026)
+
+« J'ai fait le Sudoku pour minimiser au maximum le GPU et l'IA. » Le relevé
+passe d'abord par le moteur seul ; prouvée pour tout ce que l'écriture exige,
+la pièce n'appelle aucun modèle (`20261202100000_le_sudoku_d_abord.sql`,
+`ref.lecture_sans_ia`). Tranché par défaut, à confirmer :
+
+- **Le niveau exigé du numéro et de la date est `conforme`, pas `prouve`.** Le
+  moteur ne les rend jamais « prouvés » : aucune arithmétique ne prouve un
+  numéro ou une date. Ils sont lus derrière leur repère, une seule valeur, au
+  format du pack. Exiger `prouve` fermerait la porte sur toutes les pièces.
+  Montants, sens et matricule de l'émetteur restent exigés `prouve` (la base
+  refuse moins). Le nom d'un fournisseur nouveau est `conforme` (il n'est dans
+  aucun tiers) ; un fournisseur connu est `prouve`.
+- **La porte s'ouvre quel que soit le mode du dossier** (`lecture.sudoku`
+  `observe` ou `designe`) : c'est le principe du dirigeant. Une pièce lue sans
+  IA a donc ses montants désignés par la preuve même dans un dossier « en
+  observation ».
+- **Le chiffre du banc (175 pièces sur 261) n'est pas celui de cette porte** :
+  la porte exige aussi le sens, l'émetteur, le numéro et la date. Le compteur de
+  la tour (« pièces lues sans IA ce mois ») dira le vrai taux en production.

@@ -3940,6 +3940,8 @@ export const fr = {
   "tour.designation.periode.mois": "par mois",
   "tour.designation.plafond": "Plafond (dollars)",
   "tour.designation.bascules": "Dernières bascules (30 jours)",
+  "tour.designation.sansIa":
+    "Pièces lues sans IA ce mois : {sansIa} ; désignées par un modèle : {parModele}.",
   "tour.designation.aucuneBascule": "Aucune bascule.",
   "tour.designation.motif.bascule.technique": "panne, le maillon suivant a pris la main",
   "tour.designation.motif.bascule.budget": "budget épuisé, le maillon suivant a pris la main",

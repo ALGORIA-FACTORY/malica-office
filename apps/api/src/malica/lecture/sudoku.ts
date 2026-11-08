@@ -209,6 +209,19 @@ export interface ContexteDuSudoku {
   readonly formesJuridiques: readonly string[];
   /** Comment le pack écrit une date, un matricule et un montant en lettres. */
   readonly regles: ReglesDeLecture;
+  /**
+   * Ce que l'écriture exige de prouvé pour lire la pièce SANS AUCUN MODÈLE
+   * (`ref.lecture_sans_ia`). Absent ou vide : la porte ne s'ouvre jamais.
+   */
+  readonly exigencesSansIa?: readonly ExigenceSansIa[];
+}
+
+/** Une exigence de la lecture sans IA, telle que le pack la porte. */
+export interface ExigenceSansIa {
+  readonly exigence:
+    "montants" | "sens" | "emetteur_matricule" | "emetteur_nom" | "numero" | "date";
+  readonly champ: string | null;
+  readonly minimum: "prouve" | "conforme";
 }
 
 /** Un nombre de la base en parties par million, sans flottant au bout. */
@@ -246,89 +259,107 @@ export async function lireLeContexteDuSudoku(
   }
   const grilleId = grilles[0]!.id;
 
-  const [champs, preuves, params, devises, taux, charges, tranches, formats, formes, regles] =
-    await Promise.all([
-      // Chaque champ avec la famille d'experts de son concept, et sa parcelle : l'anneau 3
-      // lit les champs que nulle preuve ne lit, par leur famille (`ref.concepts.expert`).
-      db.query<{
-        code: string;
-        type: string;
-        reperes_fr: string[] | null;
-        reperes_ar: string[] | null;
-        format_code: string | null;
-        parcelle: string;
-        expert: string;
-      }>(
-        `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert
+  const [
+    champs,
+    preuves,
+    params,
+    devises,
+    taux,
+    charges,
+    tranches,
+    formats,
+    formes,
+    regles,
+    sansIa,
+  ] = await Promise.all([
+    // Chaque champ avec la famille d'experts de son concept, et sa parcelle : l'anneau 3
+    // lit les champs que nulle preuve ne lit, par leur famille (`ref.concepts.expert`).
+    db.query<{
+      code: string;
+      type: string;
+      reperes_fr: string[] | null;
+      reperes_ar: string[] | null;
+      format_code: string | null;
+      parcelle: string;
+      expert: string;
+    }>(
+      `select c.code, c.type, c.reperes_fr, c.reperes_ar, c.format_code, c.parcelle, k.expert
            from ref_grille_champs_v c join ref_concepts_v k on k.id = c.concept_id
           where c.grille_id = $1 order by c.code`,
-        [grilleId],
-      ),
-      db.query<{ code: string; expression: unknown; statut: string; variante: string | null }>(
-        `select code, expression, statut, variante from ref_grille_preuves_v
+      [grilleId],
+    ),
+    db.query<{ code: string; expression: unknown; statut: string; variante: string | null }>(
+      `select code, expression, statut, variante from ref_grille_preuves_v
         where grille_id = $1 and expression is not null order by code`,
-        [grilleId],
-      ),
-      db.query<{ code: string; value_num: string | null }>(
-        `select distinct on (code) code, value_num from ref_socle_params_v
+      [grilleId],
+    ),
+    db.query<{ code: string; value_num: string | null }>(
+      `select distinct on (code) code, value_num from ref_socle_params_v
         where pack_version_id = $1
           and code = 'lecture.tolerance_arrondi_mineure'
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code, valid_from desc`,
-        [packId, jour],
-      ),
-      db.query<{ exposant: number }>(`select exposant from ref.devises where code = $1`, [
-        deviseCode,
-      ]),
-      // Un taux nul n'est pas un taux du barème : l'exonération est un chemin à
-      // part dans la grille (la mention lue), jamais une instance « 0 % » que
-      // n'importe quel zéro imprimé fermerait.
-      db.query<{ code: string; rate: string }>(
-        `select code, rate from ref_tva_rates_v
+      [packId, jour],
+    ),
+    db.query<{ exposant: number }>(`select exposant from ref.devises where code = $1`, [
+      deviseCode,
+    ]),
+    // Un taux nul n'est pas un taux du barème : l'exonération est un chemin à
+    // part dans la grille (la mention lue), jamais une instance « 0 % » que
+    // n'importe quel zéro imprimé fermerait.
+    db.query<{ code: string; rate: string }>(
+      `select code, rate from ref_tva_rates_v
         where pack_version_id = $1 and rate > 0
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code`,
-        [packId, jour],
-      ),
-      db.query<{
-        code: string;
-        fixed_amount: string | null;
-        rate: string | null;
-        taxable: boolean;
-      }>(
-        `select code, fixed_amount, rate, taxable from ref_fiscal_charges_v
+      [packId, jour],
+    ),
+    db.query<{
+      code: string;
+      fixed_amount: string | null;
+      rate: string | null;
+      taxable: boolean;
+    }>(
+      `select code, fixed_amount, rate, taxable from ref_fiscal_charges_v
         where pack_version_id = $1
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code`,
-        [packId, jour],
-      ),
-      // Les montants qu'un barème admet pour un droit au jour dit, TOUTES
-      // catégories d'émetteur (`ref.baremes_des_droits`) : le lecteur reconnaît
-      // un montant admis ; il ne juge pas si c'est celui de l'émetteur — le
-      // Socle le fait ensuite (`bareme-du-timbre.ts`).
-      db.query<{ droit: string; montant: string }>(
-        `select distinct droit, montant_du_droit::text as montant from ref.baremes_des_droits
+      [packId, jour],
+    ),
+    // Les montants qu'un barème admet pour un droit au jour dit, TOUTES
+    // catégories d'émetteur (`ref.baremes_des_droits`) : le lecteur reconnaît
+    // un montant admis ; il ne juge pas si c'est celui de l'émetteur — le
+    // Socle le fait ensuite (`bareme-du-timbre.ts`).
+    db.query<{ droit: string; montant: string }>(
+      `select distinct droit, montant_du_droit::text as montant from ref.baremes_des_droits
         where pack_version_id = $1
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by droit, montant`,
-        [packId, jour],
-      ),
-      db.query<{ kind: string; pattern: string }>(
-        `select distinct on (kind) kind, pattern from ref.identifiant_formats
+      [packId, jour],
+    ),
+    db.query<{ kind: string; pattern: string }>(
+      `select distinct on (kind) kind, pattern from ref.identifiant_formats
         where pack_version_id = $1
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by kind, valid_from desc`,
-        [packId, jour],
-      ),
-      db.query<{ code: string }>(
-        `select distinct code from ref.formes_juridiques
+      [packId, jour],
+    ),
+    db.query<{ code: string }>(
+      `select distinct code from ref.formes_juridiques
         where pack_version_id = $1
           and valid_from <= $2::date and (valid_to is null or valid_to >= $2::date)
         order by code`,
-        [packId, jour],
-      ),
-      lireLesReglesDeLecture(db, packId, jour),
-    ]);
+      [packId, jour],
+    ),
+    lireLesReglesDeLecture(db, packId, jour),
+    db.query<ExigenceSansIa>(
+      `select exigence, champ, statut_minimum as minimum from ref.lecture_sans_ia
+        where pack_version_id = $1 and grille_code = $2
+          and valid_from <= $3::date and (valid_to is null or valid_to >= $3::date)
+        order by exigence, champ`,
+      [packId, grilleCode, jour],
+    ),
+  ]);
 
   const param = (code: string): number => {
     const v = params.rows.find((r) => r.code === code)?.value_num;
@@ -396,6 +427,119 @@ export async function lireLeContexteDuSudoku(
     },
     formesJuridiques: formes.rows.map((f) => f.code),
     regles,
+    exigencesSansIa: sansIa.rows,
+  };
+}
+
+/* ============================================== LE SUDOKU D'ABORD (8 nov.) === */
+
+const RANG_DU_STATUT: Readonly<Record<string, number>> = {
+  prouve: 3,
+  conforme: 2,
+  signale: 1,
+  absent: 0,
+};
+
+/**
+ * La pièce est-elle prouvée pour TOUT ce que l'écriture exige ?
+ *
+ * Chaque exigence du pack (`ref.lecture_sans_ia`) doit être tenue au niveau
+ * qu'elle demande ; plusieurs lignes pour une même exigence : l'une suffit.
+ * Aucune exigence : faux — la porte ne s'ouvre pas sur un référentiel muet.
+ */
+export function prouveePourLEcriture(
+  sortie: SortieDuSudoku,
+  exigences: readonly ExigenceSansIa[],
+): boolean {
+  if (exigences.length === 0) return false;
+  const parties = sortie.parties?.statut === "prouve" ? sortie.parties : null;
+  const statutDe = (e: ExigenceSansIa): string => {
+    switch (e.exigence) {
+      case "montants":
+        return sortie.issue === "prouvee" ? "prouve" : "absent";
+      case "sens":
+        return parties && parties.sens !== null ? "prouve" : "absent";
+      case "emetteur_matricule":
+        return parties?.emetteur.matricule?.statut ?? "absent";
+      case "emetteur_nom":
+        return parties?.emetteur.nom?.statut ?? "absent";
+      case "numero":
+      case "date":
+        return e.champ ? (sortie.champs[e.champ]?.statut ?? "absent") : "absent";
+    }
+  };
+  const tenue = (e: ExigenceSansIa) =>
+    (RANG_DU_STATUT[statutDe(e)] ?? 0) >= (RANG_DU_STATUT[e.minimum] ?? 99);
+  const parExigence = new Map<string, boolean>();
+  for (const e of exigences)
+    parExigence.set(e.exigence, (parExigence.get(e.exigence) ?? false) || tenue(e));
+  return [...parExigence.values()].every(Boolean);
+}
+
+/** Une sélection vide : aucune désignation, aucune valeur. */
+function selectionVide(): VisionSelection {
+  return {
+    document_kind: null,
+    currency: null,
+    issuer: null,
+    document_date: null,
+    lines: [],
+    articles: [],
+    other_charges: [],
+    totals: { base_ht: null, vat: null, ttc: null },
+    references: {},
+    overall_confidence: 0.5,
+  };
+}
+
+/**
+ * La sélection d'une pièce lue SANS MODÈLE : rien que ce que le moteur a lu au
+ * niveau que le pack exige. Les montants par la preuve (`selectionParLeSudoku`),
+ * le sens et l'émetteur par l'anneau 2, le numéro et la date par leurs champs.
+ */
+export function selectionSansIa(
+  sortie: SortieDuSudoku,
+  grille: Grille,
+  codesDeCharges: readonly string[],
+  exigences: readonly ExigenceSansIa[],
+): VisionSelection {
+  const s = selectionParLeSudoku(selectionVide(), sortie, grille, codesDeCharges);
+  const parties = sortie.parties?.statut === "prouve" ? sortie.parties : null;
+  const suffit = (statut: string | undefined, exigence: ExigenceSansIa["exigence"]) =>
+    exigences.some(
+      (e) =>
+        e.exigence === exigence &&
+        (RANG_DU_STATUT[statut ?? "absent"] ?? 0) >= (RANG_DU_STATUT[e.minimum] ?? 99),
+    );
+  const nom = parties?.emetteur.nom;
+  const champTenu = (exigence: "numero" | "date") =>
+    exigences
+      .filter((e) => e.exigence === exigence && e.champ)
+      .map((e) => sortie.champs[e.champ!])
+      .find(
+        (lu) =>
+          lu &&
+          lu.refs.length > 0 &&
+          (RANG_DU_STATUT[lu.statut] ?? 0) >=
+            Math.min(
+              ...exigences
+                .filter((x) => x.exigence === exigence)
+                .map((x) => RANG_DU_STATUT[x.minimum] ?? 99),
+            ),
+      );
+  const numero = champTenu("numero");
+  const date = champTenu("date");
+  return {
+    ...s,
+    document_kind:
+      parties?.sens === "achat"
+        ? "facture_achat"
+        : parties?.sens === "vente"
+          ? "facture_vente"
+          : null,
+    issuer: s.issuer ?? (nom && suffit(nom.statut, "emetteur_nom") ? plage(nom.refs) : null),
+    document_date: date ? plage(date.refs) : null,
+    references: { ...s.references, ...(numero ? { numero: plage(numero.refs) } : {}) },
   };
 }
 
@@ -904,6 +1048,14 @@ export interface Sudoku {
   /** La lecture, dont les montants sont désignés par la preuve quand elle est prouvée. */
   lire(lecture: VisionRead): Promise<VisionRead>;
   /**
+   * Le Sudoku d'abord : le plan de jetons, par le moteur seul. Rend la
+   * sélection quand la pièce est prouvée pour TOUT ce que l'écriture exige
+   * (`ref.lecture_sans_ia`) — aucun modèle ne sera appelé ; `null` sinon, et
+   * la chaîne de désignation part comme avant. Ne lève jamais : une panne du
+   * moteur rend `null`.
+   */
+  sansIa(tokens: readonly PageToken[]): Promise<VisionSelection | null>;
+  /**
    * Inscrire ce que le sudoku a lu sur la lecture RETENUE — après sa
    * persistance, jamais avant : un rattrapage écarté ne laisse pas de champs
    * dont les citations pointeraient dans un plan de jetons qui n'est pas
@@ -984,37 +1136,79 @@ export function creerLeSudoku(
   const lus = new WeakMap<VisionRead, ChampsLusAInscrire>();
   const designees = new WeakSet<VisionRead>();
   const verdicts = new WeakMap<VisionRead, VerdictDuSudoku>();
+  /** Le contexte du jour, gardé : la même pièce se rejoue au même jour sans relire la base. */
+  const contexteDuJour = (jour: string, devise: DeviseLue): Promise<ContexteDuSudokuBranche> => {
+    let contexte = contextes.get(jour);
+    if (!contexte) {
+      contexte = api.rpc<ContexteDuSudokuBranche>("capture", "contexteSudoku", [
+        piece.dossierId,
+        piece.packId,
+        GRILLE_DE_LA_LECTURE_CITEE,
+        devise.code,
+        jour,
+      ]);
+      contextes.set(jour, contexte);
+    }
+    return contexte;
+  };
+  /** Le moteur, sur un plan, aux règles d'un jour. */
+  const resoudreAuJour = async (tokens: readonly PageToken[], jour: string, devise: DeviseLue) => {
+    const ctx = await contexteDuJour(jour, devise);
+    const connus: Connus = {
+      dossier: piece.dossier.matricule
+        ? { matricule: piece.dossier.matricule, raison_sociale: piece.dossier.raisonSociale }
+        : null,
+      tiers: piece.tiers.flatMap((t) =>
+        t.identifiantFiscal
+          ? [{ code: t.code, matricule: t.identifiantFiscal, raison_sociale: t.raisonSociale }]
+          : [],
+      ),
+      formes_juridiques: ctx.formesJuridiques,
+    };
+    const jetons = jetonsDuSudoku(tokens, devise, ctx);
+    return { ctx, jetons, sortie: resoudreLaPiece(jetons, ctx, resoudre, connus) };
+  };
   return {
+    async sansIa(tokens) {
+      let jour: string | null = null;
+      try {
+        if (!piece.devise) return null;
+        // Sans désignation, le jour des règles est celui de la réception ; une
+        // date lue autre se rejoue à son propre jour — une facture de 2025 se
+        // prouve aux taux de 2025, jamais à ceux du jour où elle arrive.
+        jour = piece.recueLe;
+        let r = await resoudreAuJour(tokens, jour, piece.devise);
+        const exigences = r.ctx.exigencesSansIa ?? [];
+        const champsDeDate = exigences.filter((e) => e.exigence === "date" && e.champ);
+        const lue = champsDeDate
+          .map((e) => r.sortie.champs[e.champ!]?.valeur ?? null)
+          .map((v) => dateDeLaPiece(v, null))
+          .find((d): d is string => d !== null);
+        if (lue && lue !== jour) {
+          jour = lue;
+          r = await resoudreAuJour(tokens, jour, piece.devise);
+        }
+        const ex = r.ctx.exigencesSansIa ?? [];
+        if (!prouveePourLEcriture(r.sortie, ex)) return null;
+        return selectionSansIa(
+          r.sortie,
+          r.ctx.grille,
+          r.ctx.pack.charges.map((ch) => ch.code),
+          ex,
+        );
+      } catch (e: unknown) {
+        if (jour !== null) contextes.delete(jour);
+        console.error(`sudoku d'abord : pas de preuve — pièce ${piece.pieceId} : ${message(e)}`);
+        return null;
+      }
+    },
+
     async lire(lecture) {
       let jour: string | null = null;
       try {
         if (!piece.devise) throw new Error("la devise du dossier est absente du référentiel");
         jour = jourDeLaLecture(lecture, piece.recueLe, piece.dates);
-        let contexte = contextes.get(jour);
-        if (!contexte) {
-          contexte = api.rpc<ContexteDuSudokuBranche>("capture", "contexteSudoku", [
-            piece.dossierId,
-            piece.packId,
-            GRILLE_DE_LA_LECTURE_CITEE,
-            piece.devise.code,
-            jour,
-          ]);
-          contextes.set(jour, contexte);
-        }
-        const ctx = await contexte;
-        const connus: Connus = {
-          dossier: piece.dossier.matricule
-            ? { matricule: piece.dossier.matricule, raison_sociale: piece.dossier.raisonSociale }
-            : null,
-          tiers: piece.tiers.flatMap((t) =>
-            t.identifiantFiscal
-              ? [{ code: t.code, matricule: t.identifiantFiscal, raison_sociale: t.raisonSociale }]
-              : [],
-          ),
-          formes_juridiques: ctx.formesJuridiques,
-        };
-        const jetons = jetonsDuSudoku(lecture.tokens, piece.devise, ctx);
-        const sortie = resoudreLaPiece(jetons, ctx, resoudre, connus);
+        const { ctx, jetons, sortie } = await resoudreAuJour(lecture.tokens, jour, piece.devise);
         const aInscrire = champsLusAInscrire(piece, ctx, sortie);
 
         /*
@@ -1024,7 +1218,10 @@ export function creerLeSudoku(
          * puisse affirmer est celle que l'arithmétique prouve. Non prouvée,
          * la pièce reste vide et drapée — jamais devinée.
          */
-        const designe = ctx.mode === "designe" || lecture.sansModele !== undefined;
+        const designe =
+          ctx.mode === "designe" ||
+          lecture.sansModele !== undefined ||
+          lecture.prouveeSansIa === true;
         const rendue: VisionRead =
           !designe || sortie.issue !== "prouvee"
             ? lecture

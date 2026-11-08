@@ -49,7 +49,7 @@ import type { PageToken, TokenRef } from "./token-plan.ts";
  */
 // Les noms viennent de `../modeles.ts` ; celui du désignateur, de la chaîne
 // réglée par la tour (`designation.ts`).
-import { MODELE_RECETTE, ROLE_RECETTE, modeleOcr } from "../modeles.ts";
+import { MODELE_RECETTE, MODELE_SUDOKU, ROLE_RECETTE, ROLE_SUDOKU, modeleOcr } from "../modeles.ts";
 // Les deux noms que l'invite IMPOSE au modèle : ils viennent de la liste que
 // la relecture attend, et non plus d'une saisie à la main. Voir SYSTEM_SELECT.
 import {
@@ -261,6 +261,11 @@ export interface VisionRead {
    * la sélection est vide, et seul le moteur Sudoku désigne ce qu'il prouve.
    */
   sansModele?: MotifDArret;
+  /**
+   * Le Sudoku d'abord : le moteur seul a prouvé tout ce que l'écriture exige,
+   * et AUCUN modèle n'a été appelé. La sélection est la sienne.
+   */
+  prouveeSansIa?: boolean;
 }
 
 /** Le libellé de ligne est relu dans le plan quand le modèle l'a désigné. */
@@ -959,6 +964,14 @@ export async function runVisionRead(params: {
    *
    * `appeler` est injectable : une épreuve fait tomber un maillon sans réseau.
    */
+  /**
+   * LE SUDOKU D'ABORD (décision du dirigeant, 8 novembre 2026) : appelé sur le
+   * plan de jetons AVANT toute désignation. S'il rend une sélection, la pièce
+   * est prouvée pour tout ce que l'écriture exige et aucun modèle n'est
+   * appelé ; `null`, et la recette puis la chaîne partent comme avant.
+   * Injecté, comme la recette : `vision.ts` ne connaît ni la base ni le moteur.
+   */
+  sudokuDAbord?: (plan: readonly PageToken[]) => Promise<VisionSelection | null>;
   designation?: {
     chaine: () => Promise<readonly MaillonDeDesignation[]>;
     appeler?: (
@@ -1010,6 +1023,35 @@ export async function runVisionRead(params: {
    * « l'amputation change de côté, elle ne disparaît pas ». Le désignateur le
    * vérifie lui-même et refuse — il ne le suppose pas.
    */
+  if (params.sudokuDAbord) {
+    const debut = Date.now();
+    const prouvee = await params.sudokuDAbord(tokens);
+    if (prouvee) {
+      return {
+        tokens,
+        selection: prouvee,
+        model: `${pass1.source}+${MODELE_SUDOKU}`,
+        readModel: pass1.source,
+        lecteur: pass1.lecteur,
+        paddleTente: pass1.paddleTente,
+        // Son couple tarifé, à zéro et souverain : la pièce lue sans IA se
+        // compte au journal, et la tour la compte.
+        selectModel: MODELE_SUDOKU,
+        selectRole: ROLE_SUDOKU,
+        latencyMs: Date.now() - started,
+        tokensIn: pass1.tokensIn,
+        tokensOut: pass1.tokensOut,
+        releve: {
+          latencyMs: finReleve - started,
+          tokensIn: pass1.tokensIn ?? null,
+          tokensOut: pass1.tokensOut ?? null,
+        },
+        designation: { latencyMs: Date.now() - debut, tokensIn: null, tokensOut: null },
+        prouveeSansIa: true,
+      };
+    }
+  }
+
   if (params.parRecette) {
     const parRecette = await params.parRecette(tokens);
     if (parRecette) {

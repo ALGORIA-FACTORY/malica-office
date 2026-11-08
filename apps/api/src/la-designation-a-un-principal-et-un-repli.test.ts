@@ -259,6 +259,50 @@ describe("la chaîne de désignation, en base", { skip: !ADMIN }, () => {
     });
   });
 
+  it("une pièce lue sans IA se compte dans la tour, au mois civil", async () => {
+    await aBlanc(async (db, m) => {
+      await sous(db, m.operateur);
+      const avant = (await tour.designation(db)) as {
+        mois: { sans_ia: number; par_modele: number };
+      };
+      await sous(db, m.dirigeant, true);
+      await capture.journaliserAgent(db, {
+        tenantId: m.pme,
+        agent: "malica.lecture.designation",
+        model: "sudoku",
+        role: "sudoku",
+        status: "ok",
+        latencyMs: 30,
+      });
+      await capture.journaliserAgent(db, {
+        tenantId: m.pme,
+        agent: "malica.lecture.designation",
+        model: "claude-haiku-5-5",
+        role: "chat",
+        status: "ok",
+        latencyMs: 900,
+        tokensIn: 1000,
+        tokensOut: 100,
+      });
+      // Une ligne de cache n'est pas une pièce de plus.
+      await capture.journaliserAgent(db, {
+        tenantId: m.pme,
+        agent: "malica.lecture.designation.cache",
+        model: "claude-haiku-5-5",
+        role: "cache",
+        status: "ok",
+        latencyMs: 0,
+        tokensIn: 1500,
+      });
+      await sous(db, m.operateur);
+      const apres = (await tour.designation(db)) as {
+        mois: { sans_ia: number; par_modele: number };
+      };
+      assert.equal(apres.mois.sans_ia - avant.mois.sans_ia, 1, "une pièce lue sans IA");
+      assert.equal(apres.mois.par_modele - avant.mois.par_modele, 1, "une pièce par un modèle");
+    });
+  });
+
   it("une bascule inscrite au journal se voit dans la tour, avec son motif", async () => {
     await aBlanc(async (db, m) => {
       await sous(db, m.dirigeant, true);

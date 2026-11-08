@@ -149,3 +149,18 @@ export const ROLE_RECETTE = "recette";
 export const ROLE_DEEPSEEK_DE_GENERATION: DeepSeekRole = "reasoner";
 export const MODELE_GENERATION = DEEPSEEK_MODELS[ROLE_DEEPSEEK_DE_GENERATION];
 export const ROLE_GENERATION = "generateur";
+
+/* ------------------------------------------- LE SUDOKU QUI DÉSIGNE SEUL -- */
+
+/**
+ * Le moteur Sudoku, quand il a tout prouvé et qu'aucun modèle n'est appelé
+ * (« le Sudoku d'abord », décision du dirigeant du 8 novembre 2026).
+ *
+ * Même raison que la recette : `agents.model_pricing` cherche un tarif par le
+ * COUPLE (modèle, rôle), et une désignation sans ligne de tarif ne se
+ * journalise pas. Sans elle, le compteur de la tour (« pièces lues sans IA ce
+ * mois ») ne compterait rien. Tarif à zéro, souverain : le moteur tourne chez
+ * nous et ne consomme aucun jeton.
+ */
+export const MODELE_SUDOKU = "sudoku";
+export const ROLE_SUDOKU = "sudoku";

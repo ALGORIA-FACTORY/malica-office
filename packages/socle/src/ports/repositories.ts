@@ -4495,6 +4495,8 @@ export interface EtatDeLaDesignation {
     prix_sortie: number;
   }>;
   bascules: Array<{ le: string; modele: string; statut: "error" | "degraded"; motif: string }>;
+  /** Le mois civil : pièces lues sans IA (le Sudoku d'abord) et pièces désignées par un modèle. */
+  mois: { sans_ia: number; par_modele: number };
 }
 
 export interface TourRepository {

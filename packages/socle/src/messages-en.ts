@@ -3834,6 +3834,8 @@ export const en: Dict = {
   "tour.designation.periode.mois": "per month",
   "tour.designation.plafond": "Cap (dollars)",
   "tour.designation.bascules": "Latest switches (30 days)",
+  "tour.designation.sansIa":
+    "Documents read without AI this month: {sansIa}; designated by a model: {parModele}.",
   "tour.designation.aucuneBascule": "No switch.",
   "tour.designation.motif.bascule.technique": "failure, the next link took over",
   "tour.designation.motif.bascule.budget": "budget spent, the next link took over",

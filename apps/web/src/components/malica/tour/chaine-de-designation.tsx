@@ -42,6 +42,14 @@ export function LaChaineDeDesignation() {
     <div className={CARTE} data-chaine-de-designation>
       <h2 className={TITRE}>{t("tour.designation")}</h2>
       <p className={TEXTE}>{t("tour.designation.aide")}</p>
+      {etat.data?.mois ? (
+        <p className="text-[13px] font-semibold" data-sans-ia>
+          {t("tour.designation.sansIa", {
+            sansIa: String(etat.data.mois.sans_ia),
+            parModele: String(etat.data.mois.par_modele),
+          })}
+        </p>
+      ) : null}
       {(etat.data?.maillons ?? []).map((m) => (
         <UnMaillon key={m.rang} maillon={m} modeles={etat.data?.modeles ?? []} />
       ))}
