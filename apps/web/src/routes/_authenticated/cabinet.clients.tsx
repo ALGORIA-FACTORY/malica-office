@@ -299,6 +299,7 @@ function CabinetClients() {
           <EmptyState>{t("cab.clients.empty")}</EmptyState>
         ) : (
           <InkTable
+            empile
             caption={t("cab.clients.title")}
             head={[
               t("cab.clients.mandate"),
@@ -398,12 +399,12 @@ function LigneClient({
           {engagement && client.engagementStatus !== "actif" ? ` · ${t(engagement)}` : ""}
         </span>
       </InkCell>
-      <InkCell>
+      <InkCell label={t("cab.clients.col.regime")}>
         <span className="text-[12px]">{regime}</span>
       </InkCell>
-      <InkCell>
+      <InkCell label={t("cab.clients.col.collab")}>
         {collab ? (
-          <span className="flex items-center gap-1.5 text-[12px]">
+          <span className="flex min-w-0 items-center gap-1.5 text-[12px]">
             <span className="num bg-foreground px-1 text-[9px] text-background">
               {initialesDe(collab)}
             </span>
@@ -413,20 +414,22 @@ function LigneClient({
           <span className="text-[12px] text-signal-warn">{t("cab.clients.collab.aucun")}</span>
         )}
       </InkCell>
-      <InkCell numeric>
+      <InkCell label={t("cab.kpi.review")} numeric>
         <span className={cn(client.aTraiter ? "text-marigold" : "text-muted-foreground")}>
           {client.aTraiter}
         </span>
       </InkCell>
-      <InkCell numeric>{mois}</InkCell>
-      <InkCell numeric>
+      <InkCell label={t("cab.clients.col.mois")} numeric>
+        {mois}
+      </InkCell>
+      <InkCell label={t("cab.kpi.returned")} numeric>
         <span
           className={cn(client.parStatut.retournee ? "text-signal-info" : "text-muted-foreground")}
         >
           {client.parStatut.retournee}
         </span>
       </InkCell>
-      <InkCell>
+      <InkCell label={t("cab.clients.mode")}>
         <span className="border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]">
           {t(MODE[client.validationMode] ?? "cab.mode.mandate")}
         </span>

@@ -192,8 +192,8 @@ describe("revue d'une pièce", () => {
     // L'écriture s'édite sur place : l'intitulé du compte s'affiche sous le
     // code (et dans la liste du plan), le libellé de la ligne est la valeur
     // de son champ.
+    fireEvent.click(await screen.findByRole("button", { name: /Retenue 1,5 % \/ tiers/ }));
     expect((await screen.findAllByText("Fournisseurs")).length).toBeGreaterThan(0);
-    expect(screen.getByDisplayValue("Retenue 1,5 % / tiers")).toBeTruthy();
   });
 
   describe("le traitement fiscal du règlement", () => {

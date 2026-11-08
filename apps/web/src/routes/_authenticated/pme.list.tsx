@@ -13,6 +13,7 @@ import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
+import { VotreComptabilite } from "@/components/malica/votre-comptabilite";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
 import { piecesALire, statutDeLaPieceLue } from "@/lib/lecture";
@@ -483,6 +484,9 @@ function Bibliotheque() {
           </>
         ) : (
           <>
+            {/* --------------------- votre comptabilité (planche 6, 7 novembre 2026) */}
+            <VotreComptabilite />
+
             {/* ------------------------------------------------ les dossiers */}
             {sept.dossiers.length > 0 ? (
               <>

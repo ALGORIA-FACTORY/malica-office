@@ -287,7 +287,7 @@ export function SectionTitle({
   aide?: ReactNode | ParagrapheDAide[];
 }) {
   return (
-    <div className="cab-section-title flex items-baseline justify-between gap-3 border-b border-border pb-2">
+    <div className="cab-section-title flex flex-wrap items-baseline justify-between gap-3 border-b border-border pb-2">
       <h2 className="flex items-center text-[13px] font-semibold uppercase tracking-[0.16em]">
         {children}
         {aide ? (

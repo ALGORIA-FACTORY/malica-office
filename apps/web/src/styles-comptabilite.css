@@ -1581,7 +1581,7 @@
  * conteneur et on nomme les cellules (`data-label`). Les sélecteurs doublés
  * gardent à InkTable la spécificité qui la fait passer devant `.cab-table td`.
  */
-@media (max-width: 640px) {
+@media (max-width: 1180px) {
   .cab-table-empile {
     overflow-x: visible;
   }
@@ -2013,5 +2013,103 @@
   }
   .cabinet-workspace .cab-table.cab-file .cab-file-ouvrir a {
     min-height: 44px;
+  }
+}
+
+/* L'écriture proposée (maquette du 8 novembre 2026). */
+@keyframes cab-monte {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cab-ligne {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cab-preuve {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes cab-tampon {
+  0% {
+    opacity: 0;
+    transform: scale(2.1) rotate(-14deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.94) rotate(-7deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-7deg);
+  }
+}
+@keyframes cab-lit {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+.cabinet-workspace .cab-lit {
+  animation: cab-lit 1.8s ease-in-out infinite;
+}
+.cabinet-workspace [data-pile="pretes"] {
+  color: var(--signal-ok);
+}
+.cabinet-workspace [data-pile="a_completer"] {
+  color: var(--signal-warn);
+}
+.cabinet-workspace .cab-monte {
+  animation: cab-monte 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.cabinet-workspace .cab-ligne {
+  animation: cab-ligne 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.cabinet-workspace .cab-preuve {
+  animation: cab-preuve 0.32s both;
+}
+.cabinet-workspace .cab-tampon {
+  animation: cab-tampon 0.46s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (max-width: 639px) {
+  .cabinet-workspace .cab-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin-inline: -12px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--background);
+    border-top: 1px solid var(--border);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cabinet-workspace .cab-monte,
+  .cabinet-workspace .cab-ligne,
+  .cabinet-workspace .cab-preuve,
+  .cabinet-workspace .cab-tampon,
+  .cabinet-workspace .cab-lit {
+    animation: none;
   }
 }
