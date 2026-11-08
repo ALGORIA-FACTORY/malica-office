@@ -30,9 +30,12 @@ export function aRelancer(e: EtatDuClient | undefined): boolean {
   return Boolean(e && !e.dirigeantPresent);
 }
 
-/** Aucun abonnement que la comptabilité paie ou propose. */
-export function sansAbonnementCouvert(e: EtatDuClient | undefined): boolean {
-  return !e?.accesStatut;
+/** Aucun abonnement que la comptabilité paie ou propose, ni par la licence partagée. */
+export function sansAbonnementCouvert(
+  e: EtatDuClient | undefined,
+  parLaLicence?: string | null,
+): boolean {
+  return !e?.accesStatut && !parLaLicence;
 }
 
 export interface LigneClient {
@@ -40,6 +43,11 @@ export interface LigneClient {
   etat: EtatDuClient | undefined;
   fiche: FicheCourante | null | undefined;
   mandat: MandatHonoraires | undefined;
+  /**
+   * L'offre qui couvre déjà la licence partagée, payée par la comptabilité
+   * pour une autre société du même dirigeant ; `null` sinon.
+   */
+  parLaLicence?: string | null;
 }
 
 export function correspond(l: LigneClient, filtre: FiltreClients): boolean {
@@ -51,7 +59,7 @@ export function correspond(l: LigneClient, filtre: FiltreClients): boolean {
     case "sansmandat":
       return !l.mandat;
     case "sansabo":
-      return sansAbonnementCouvert(l.etat);
+      return sansAbonnementCouvert(l.etat, l.parLaLicence);
     default:
       return true;
   }
@@ -115,4 +123,19 @@ export function effetDuChoix(
   if (e.accesStatut === "propose") return "attente_dirigeant";
   if (choix === e.accesOffre) return "actuelle";
   return rangDe(choix, offres) > rangDe(e.accesOffre, offres) ? "montee" : "descente";
+}
+
+/** Pour chaque société sans abonnement à elle : l'offre payée sur sa licence partagée. */
+export function couverturesParLicence(lignes: readonly LigneClient[]): LigneClient[] {
+  const payee = new Map<string, string>();
+  for (const l of lignes) {
+    if (l.etat?.licenceId && l.etat.accesStatut === "actif" && l.etat.accesOffre) {
+      payee.set(l.etat.licenceId, l.etat.accesOffre);
+    }
+  }
+  return lignes.map((l) =>
+    !l.etat?.accesStatut && l.etat?.licenceId && payee.has(l.etat.licenceId)
+      ? { ...l, parLaLicence: payee.get(l.etat.licenceId)! }
+      : l,
+  );
 }

@@ -41,6 +41,14 @@ const OngletAbonnement = __COMMERCE__
   ? lazy(() => import("./abonnement-du-client").then((m) => ({ default: m.OngletAbonnement })))
   : null;
 
+/**
+ * Le lien d'invitation n'est rendu qu'une fois, à l'envoi. Gardé ici le temps
+ * de la session, pour que la fiche le montre juste après l'ajout du client.
+ */
+const liensRecents = new Map<string, string>();
+const lienDe = (r: { lien: string | null; jeton: string }) =>
+  r.lien ?? `${window.location.origin}/invitation#${r.jeton}`;
+
 export type OngletFiche = "societe" | "acces" | "mandat" | "abo" | "factures";
 
 export const CHAMP =
@@ -199,6 +207,7 @@ export function NouveauClient({
       if (email.trim()) {
         const inv = await office().identity.inviterContact(d.id, email.trim());
         courriel = inv.courriel;
+        liensRecents.set(d.id, lienDe(inv));
       }
       return { id: d.id, courriel };
     },
@@ -211,7 +220,8 @@ export function NouveauClient({
             ? t("cab.cli.nouveau.ok")
             : t("cab.cli.nouveau.ok.lien"),
       );
-      ouvrir(r.id, "mandat");
+      // Sans courriel parti, le lien est à transmettre : la fiche l'ouvre.
+      ouvrir(r.id, r.courriel === null || r.courriel === "envoye" ? "mandat" : "acces");
     },
     onError: (e: unknown) => {
       const texte = texteDeLErreur(e, OU, t("common.error"));
@@ -339,7 +349,10 @@ export function FicheClient({
   fermer,
   annoncer,
   societesDeLaLicence,
+  parLaLicence = null,
 }: {
+  /** L'offre payée sur la licence partagée, quand la société n'a pas d'abonnement à elle. */
+  parLaLicence?: string | null;
   client: ClientSummary;
   etat: EtatDuClient | undefined;
   mandat: MandatHonoraires | undefined;
@@ -352,7 +365,6 @@ export function FicheClient({
 }) {
   const { t } = useI18n();
   const [onglet, setOnglet] = useState<OngletFiche>(ongletInitial);
-  useEffect(() => setOnglet(ongletInitial), [ongletInitial, client.tenantId]);
 
   const fiche = useQuery({
     queryKey: ["fiche", client.tenantId],
@@ -401,7 +413,11 @@ export function FicheClient({
           },
           { id: "acces", titre: t("cab.cli.onglet.acces"), alerte: !etat?.dirigeantPresent },
           { id: "mandat", titre: t("cab.cli.onglet.mandat"), alerte: !mandat },
-          { id: "abo", titre: t("cab.cli.onglet.abo"), alerte: !etat?.accesStatut },
+          {
+            id: "abo",
+            titre: t("cab.cli.onglet.abo"),
+            alerte: !etat?.accesStatut && !parLaLicence,
+          },
           { id: "factures", titre: t("cab.cli.onglet.factures") },
         ]}
       />
@@ -436,6 +452,7 @@ export function FicheClient({
                 client={client}
                 etat={etat}
                 catalogue={offres}
+                parLaLicence={parLaLicence}
                 expert={expert}
                 annoncer={annoncer}
               />
@@ -698,7 +715,7 @@ function OngletAcces({
   const [email, setEmail] = useState(etat?.invitationEmail ?? "");
   const [place, setPlace] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
-  const [lien, setLien] = useState<string | null>(null);
+  const [lien, setLien] = useState<string | null>(liensRecents.get(client.tenantId) ?? null);
   const paye = etat?.accesStatut === "actif";
 
   const rafraichir = () => qc.invalidateQueries({ queryKey: ["cab-etat-clients", org.id] });
@@ -707,7 +724,9 @@ function OngletAcces({
     mutationFn: () => office().identity.inviterContact(client.tenantId, email.trim()),
     onSuccess: async (r) => {
       setErreur(null);
-      setLien(r.courriel === "envoye" ? null : r.lien);
+      const l = lienDe(r);
+      liensRecents.set(client.tenantId, l);
+      setLien(l);
       await rafraichir();
       annoncer(
         r.courriel === "envoye"
@@ -834,6 +853,9 @@ function OngletAcces({
             ) : null}
           </h3>
           <span className="text-[12px] text-muted-foreground">
+            {etat?.placesEnAttente
+              ? `${t("cab.cli.acces.places.attente.n", { count: etat.placesEnAttente })} · `
+              : ""}
             {paye ? t("cab.cli.acces.places.paye") : t("cab.cli.acces.places.propose")}
           </span>
         </div>

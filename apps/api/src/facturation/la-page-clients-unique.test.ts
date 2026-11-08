@@ -157,11 +157,42 @@ describe("la page Clients unique de la comptabilité", { skip: !BASE_CONFIGUREE 
 
   it("les sociétés d'un même dirigeant se regroupent sous sa licence", async () => {
     pme2 = await ouvrir(`Librairie ${marque}`, mf2);
-    await inviterEtRejoindre(pme2);
+    await commeExpert((db) => facturation.proposerAbonnement(db, cabinet, pme2, "premium"));
+    // Cette fois par l'invitation reçue dans l'application, pas par le lien.
+    await commeExpert((db) =>
+      db.query(`select public.dossier_inviter_contact($1, $2)`, [pme2, dirigeant.email]),
+    );
+    const { rows } = await admin.query<{ id: string }>(
+      `select id from identity.invitations where tenant_id = $1 and accepted_at is null
+          and revoked_at is null order by created_at desc limit 1`,
+      [pme2],
+    );
+    await commeDirigeant((db) =>
+      db.query(`select public.invitation_repondre($1, true)`, [rows[0]!.id]),
+    );
     const a = await etat(pme);
     const b = await etat(pme2);
     assert.equal(b.licenceId, a.licenceId);
     assert.equal(b.organisations, 2);
+  });
+
+  it("une société couverte par la licence partagée ne reçoit pas un second abonnement", async () => {
+    await assert.rejects(
+      commeExpert((db) => facturation.proposerAbonnement(db, cabinet, pme2, "solo")),
+      /refus\.abonnement\.couvert_par_la_licence$/,
+    );
+    // Sa proposition d'avant l'arrivée s'est retirée : pas de double facture.
+    const b = await etat(pme2);
+    assert.equal(b.accesId, null);
+  });
+
+  it("une proposition tranchée ne reste pas à traiter", async () => {
+    const { rows } = await admin.query(
+      `select 1 from collab.notifications
+        where tenant_id = $1 and kind = 'acces.propose' and read_at is null`,
+      [pme],
+    );
+    assert.equal(rows.length, 0);
   });
 
   it("une descente qui ne tient pas dans ce qui est utilisé est refusée", async () => {

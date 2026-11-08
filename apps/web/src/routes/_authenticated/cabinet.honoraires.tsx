@@ -3,10 +3,10 @@
  * chaque client dans sa fiche, les factures et la trésorerie dans la vue
  * Facturation. L'ancienne adresse y mène.
  */
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/cabinet/honoraires")({
-  beforeLoad: () => {
-    throw redirect({ to: "/cabinet/clients", search: { vue: "facturation" }, replace: true });
-  },
+  // Une redirection rendue, pas levée : au chargement direct de l'adresse,
+  // une redirection levée pendant le rendu serveur laissait une erreur vide.
+  component: () => <Navigate to="/cabinet/clients" search={{ vue: "facturation" }} replace />,
 });

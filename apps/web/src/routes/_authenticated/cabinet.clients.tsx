@@ -40,6 +40,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import {
   correspond,
+  couverturesParLicence,
   ficheComplete,
   FILTRES,
   regrouperParProprietaire,
@@ -168,12 +169,14 @@ function CabinetClients() {
   const lignes: LigneClient[] = useMemo(() => {
     const etatDe = new Map((etats.data ?? []).map((e) => [e.tenantId, e]));
     const mandatDe = new Map((mandats.data ?? []).map((m) => [m.clientTenantId, m]));
-    return actifs.map((c, i) => ({
-      client: c,
-      etat: etatDe.get(c.tenantId),
-      fiche: fiches[i]?.isSuccess ? (fiches[i]!.data ?? null) : undefined,
-      mandat: mandatDe.get(c.tenantId),
-    }));
+    return couverturesParLicence(
+      actifs.map((c, i) => ({
+        client: c,
+        etat: etatDe.get(c.tenantId),
+        fiche: fiches[i]?.isSuccess ? (fiches[i]!.data ?? null) : undefined,
+        mandat: mandatDe.get(c.tenantId),
+      })),
+    );
   }, [actifs, etats.data, mandats.data, fiches]);
 
   const collabDe = useMemo(() => {
@@ -364,6 +367,7 @@ function CabinetClients() {
                         collab={collabDe.get(l.client.tenantId) ?? null}
                         regime={libelleRegime(l.fiche?.regimeImposition)}
                         offre={libelleOffre(l.etat?.accesOffre ?? null)}
+                        libelleOffre={libelleOffre}
                         coche={choisis.has(l.client.tenantId)}
                         cocher={() => {
                           const s = new Set(choisis);
@@ -418,6 +422,7 @@ function CabinetClients() {
 
       {ouvert ? (
         <FicheClient
+          key={ouvert.client.tenantId}
           client={ouvert.client}
           etat={ouvert.etat}
           mandat={ouvert.mandat}
@@ -429,6 +434,7 @@ function CabinetClients() {
           }
           fermer={fermerFiche}
           annoncer={annoncer}
+          parLaLicence={ouvert.parLaLicence ?? null}
           societesDeLaLicence={
             ouvert.etat?.licenceId
               ? lignes
@@ -459,7 +465,7 @@ function CabinetClients() {
       {annonce ? (
         <div
           role="status"
-          className="cab-monte fixed start-1/2 top-20 z-[60] -translate-x-1/2 rounded-xl bg-[#17231c] px-4 py-3 text-[13px] text-white shadow-[0_12px_32px_rgba(16,24,40,0.25)]"
+          className="cab-monte fixed bottom-6 start-6 z-[60] max-w-[min(520px,calc(100vw-48px))] rounded-xl bg-[#17231c] px-4 py-3 text-[13px] text-white shadow-[0_12px_32px_rgba(16,24,40,0.25)]"
         >
           {annonce}
         </div>
@@ -537,6 +543,7 @@ function Ligne({
   collab,
   regime,
   offre,
+  libelleOffre,
   coche,
   cocher,
   ouvrir,
@@ -546,6 +553,7 @@ function Ligne({
   collab: string | null;
   regime: string;
   offre: string;
+  libelleOffre: (code: string | null) => string;
   coche: boolean;
   cocher: () => void;
   ouvrir: (onglet?: OngletFiche) => void;
@@ -589,29 +597,37 @@ function Ligne({
           montant: `${montant(mandat.tauxHoraire ?? "0", locale)} ${org.currency}`,
         })
     : t("cab.cli.mandat.aucun");
-  const abo = !etat?.accesStatut
+  const abo = l.parLaLicence
     ? {
-        texte: t("cab.cli.abo.ligne.aucun"),
-        sous: t("cab.cli.abo.ligne.proposer"),
-        ton: "text-muted-foreground",
+        texte: t("cab.cli.abo.ligne.licence", { offre: libelleOffre(l.parLaLicence) }),
+        sous: t("cab.cli.abo.ligne.licence.sous"),
+        ton: "",
       }
-    : etat.accesStatut === "propose"
+    : !etat?.accesStatut
       ? {
-          texte: t("cab.cli.abo.ligne.propose", { offre }),
-          sous: etat.dirigeantPresent
-            ? t("cab.cli.abo.ligne.reponse")
-            : t("cab.cli.abo.ligne.rien"),
-          ton: "text-marigold",
+          texte: t("cab.cli.abo.ligne.aucun"),
+          sous: t("cab.cli.abo.ligne.proposer"),
+          ton: "text-muted-foreground",
         }
-      : {
-          texte: t("cab.cli.abo.ligne.paye", { offre }),
-          sous: etat.descenteOffre
-            ? t("cab.cli.abo.ligne.descente")
-            : t("cab.cli.abo.ligne.places", {
-                places: `${etat.siegesOccupes ?? 0} / ${etat.siegesInclus ?? 0}`,
-              }),
-          ton: "",
-        };
+      : etat.accesStatut === "propose"
+        ? {
+            texte: t("cab.cli.abo.ligne.propose", { offre }),
+            sous: etat.dirigeantPresent
+              ? t("cab.cli.abo.ligne.reponse")
+              : t("cab.cli.abo.ligne.rien"),
+            ton: "text-marigold",
+          }
+        : {
+            texte: t("cab.cli.abo.ligne.paye", { offre }),
+            sous: etat.descenteOffre
+              ? t("cab.cli.abo.ligne.descente")
+              : (etat.siegesInclus ?? 0) === 0
+                ? t("cab.cli.places.seul")
+                : t("cab.cli.abo.ligne.places", {
+                    places: `${etat.siegesOccupes ?? 0} / ${etat.siegesInclus ?? 0}`,
+                  }),
+            ton: "",
+          };
 
   return (
     <div className="cab-ligne grid grid-cols-[34px_1fr_auto] items-center gap-x-2 gap-y-1 border-b border-[#eef0f3] px-4 py-3 text-[13px] lg:grid-cols-[34px_2fr_1.6fr_1.1fr_1.3fr_1.6fr_84px]">

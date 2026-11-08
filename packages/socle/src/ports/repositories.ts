@@ -294,6 +294,8 @@ export interface EtatDuClient {
   organisationsIncluses: number | null;
   siegesOccupes: number | null;
   siegesInclus: number | null;
+  /** Les invitations à une place, envoyées et pas encore acceptées. */
+  placesEnAttente: number;
 }
 
 /** Le résultat de la vérification d'une ligne à importer. */

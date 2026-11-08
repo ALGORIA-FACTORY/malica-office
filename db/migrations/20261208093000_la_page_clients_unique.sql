@@ -646,6 +646,7 @@ grant execute on function public.dossiers_verifier(uuid, jsonb) to authenticated
 
 -- ------------------------------------------- l'état de chaque client
 
+drop function if exists public.clients_du_cabinet_etat(uuid);
 create or replace function public.clients_du_cabinet_etat(p_cabinet uuid)
 returns table (
   tenant_id uuid,
@@ -664,7 +665,8 @@ returns table (
   organisations integer,
   organisations_incluses integer,
   sieges_occupes integer,
-  sieges_inclus integer
+  sieges_inclus integer,
+  places_en_attente integer
 )
 language sql
 stable
@@ -685,7 +687,10 @@ as $$
          coalesce(nullif(trim(p.display_name), ''), u.email::text),
          dv.offre_code,
          dv.organisations::int, dv.organisations_incluses::int,
-         dv.sieges_occupes::int, dv.sieges_inclus::int
+         dv.sieges_occupes::int, dv.sieges_inclus::int,
+         (select count(*)::int from identity.invitations i
+           where i.tenant_id = o.id and i.role <> 'dirigeant'
+             and i.accepted_at is null and i.revoked_at is null and i.expires_at > now())
     from identity.engagements e
     join identity.organizations o on o.id = e.pme_org_id and o.archived_at is null
     left join lateral (
@@ -717,6 +722,60 @@ grant execute on function public.clients_du_cabinet_etat(uuid) to authenticated;
 
 -- ---------------------------- le dirigeant rejoint : licence et offre
 
+-- Ce qui se passe quand le dirigeant arrive, par le lien ou par l'invitation
+-- reçue dans l'application : sa société rejoint sa licence s'il en a une qui
+-- l'inclut encore, sinon une licence naît ; puis l'offre que la comptabilité
+-- avait choisie démarre (A2) — c'est elle qui paie, il n'a rien à accepter.
+create or replace function facturation.dirigeant_arrive(p_tenant uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_lic   uuid;
+  v_acces uuid;
+begin
+  if not exists (select 1 from facturation.licence_organisations lo
+                  where lo.tenant_id = p_tenant) then
+    select dv.licence_id into v_lic
+      from facturation.droits_v dv
+     where dv.titulaire = auth.uid()
+       and dv.organisations < dv.organisations_incluses
+     order by dv.offre_rang desc nulls last
+     limit 1;
+    if v_lic is not null then
+      insert into facturation.licence_organisations (licence_id, tenant_id)
+      values (v_lic, p_tenant);
+      insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                                   object_id, payload)
+      values (p_tenant, auth.uid(), 'licence.rattachee', 'facturation', 'licences', v_lic,
+              jsonb_build_object('par', 'meme_dirigeant'));
+    end if;
+  end if;
+  v_lic := facturation.licence_naitre(p_tenant, auth.uid(), null, current_date);
+  select a.id into v_acces
+    from facturation.acces a
+   where a.tenant_id = p_tenant and a.canal = 'cabinet' and a.statut = 'propose';
+  if v_acces is null then
+    return;
+  end if;
+  -- Rattachée à une licence qu'une comptabilité paie déjà : la société est
+  -- couverte par elle, la proposition à part se retire (pas de double facture).
+  if exists (select 1 from facturation.acces a
+              where a.licence_id = v_lic and a.statut = 'actif' and a.canal = 'cabinet') then
+    update facturation.acces
+       set statut = 'termine', effet_du = current_date, effet_au = current_date,
+           motif_fin = 'retrait_cabinet'
+     where id = v_acces;
+    return;
+  end if;
+  perform public.acces_repondre(v_acces, true);
+end
+$$;
+
+revoke all on function facturation.dirigeant_arrive(uuid) from public;
+
 create or replace function public.invitation_par_lien_accepter(p_jeton text)
 returns jsonb
 language plpgsql
@@ -724,9 +783,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  v        record;
-  v_lic    uuid;
-  v_acces  uuid;
+  v record;
 begin
   if auth.uid() is null then
     raise exception 'refus.authentification_requise' using errcode = '42501';
@@ -744,33 +801,7 @@ begin
   values (v.tenant_id, auth.uid(), v.role)
   on conflict (tenant_id, user_id) do nothing;
   if v.role = 'dirigeant' then
-    -- Même dirigeant, même licence : tant que son offre inclut une société de
-    -- plus, celle-ci la rejoint, sans supplément.
-    if not exists (select 1 from facturation.licence_organisations lo
-                    where lo.tenant_id = v.tenant_id) then
-      select dv.licence_id into v_lic
-        from facturation.droits_v dv
-       where dv.titulaire = auth.uid()
-         and dv.organisations < dv.organisations_incluses
-       order by dv.offre_rang desc nulls last
-       limit 1;
-      if v_lic is not null then
-        insert into facturation.licence_organisations (licence_id, tenant_id)
-        values (v_lic, v.tenant_id);
-        insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
-                                     object_id, payload)
-        values (v.tenant_id, auth.uid(), 'licence.rattachee', 'facturation', 'licences', v_lic,
-                jsonb_build_object('par', 'meme_dirigeant'));
-      end if;
-    end if;
-    perform facturation.licence_naitre(v.tenant_id, auth.uid(), null, current_date);
-    -- L'offre que la comptabilité avait choisie démarre : elle paie (A2).
-    select a.id into v_acces
-      from facturation.acces a
-     where a.tenant_id = v.tenant_id and a.canal = 'cabinet' and a.statut = 'propose';
-    if v_acces is not null then
-      perform public.acces_repondre(v_acces, true);
-    end if;
+    perform facturation.dirigeant_arrive(v.tenant_id);
   end if;
   update identity.invitations
      set accepted_at = now(), accepted_by = auth.uid()
@@ -782,3 +813,134 @@ begin
   return jsonb_build_object('tenantId', v.tenant_id, 'role', v.role);
 end
 $$;
+
+create or replace function public.invitation_repondre(p_id uuid, p_accepte boolean)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v record;
+begin
+  select id, tenant_id, email, role, expires_at, accepted_at, revoked_at into v
+    from identity.invitations where id = p_id;
+  if v.id is null
+     or lower(v.email) <> lower(coalesce(app.mon_email(), '')) then
+    raise exception 'refus.introuvable.invitation' using errcode = '42501';
+  end if;
+  if v.accepted_at is not null or v.revoked_at is not null or v.expires_at <= now() then
+    raise exception 'refus.invitation.expiree' using errcode = '22023';
+  end if;
+  if p_accepte then
+    insert into identity.memberships (tenant_id, user_id, role)
+    values (v.tenant_id, auth.uid(), v.role)
+    on conflict (tenant_id, user_id) do nothing;
+    if v.role = 'dirigeant' then
+      perform facturation.dirigeant_arrive(v.tenant_id);
+    end if;
+    update identity.invitations
+       set accepted_at = now(), accepted_by = auth.uid()
+     where id = p_id;
+    insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
+    values (v.tenant_id, auth.uid(), 'membre.rejoint', 'identity', 'memberships', p_id,
+            jsonb_build_object('role', v.role));
+    return jsonb_build_object('id', p_id, 'tenantId', v.tenant_id, 'role', v.role, 'rejoint', true);
+  end if;
+  update identity.invitations set expires_at = now() where id = p_id;
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
+  values (v.tenant_id, auth.uid(), 'membre.decline', 'identity', 'invitations', p_id,
+          jsonb_build_object('role', v.role));
+  return jsonb_build_object('id', p_id, 'tenantId', v.tenant_id, 'role', v.role, 'rejoint', false);
+end
+$$;
+
+-- Proposer : refusé à une société déjà couverte par sa licence partagée.
+create or replace function public.acces_proposer(p_cabinet uuid, p_client uuid, p_offre text)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id    uuid;
+  v_grille ref.offres;
+begin
+  if not app.has_org_role(p_cabinet, array['expert']) then
+    raise exception 'refus.reserve.expert'
+      using errcode = '42501';
+  end if;
+  if not exists (select 1 from identity.engagements e
+                  where e.cabinet_org_id = p_cabinet and e.pme_org_id = p_client
+                    and e.status = 'actif') then
+    raise exception 'refus.mandat.hors_cabinet' using errcode = '42501';
+  end if;
+  if exists (select 1 from facturation.acces a
+              where a.tenant_id = p_client and a.statut in ('propose', 'actif', 'suspendu')) then
+    raise exception 'refus.abonnement.deja_propose'
+      using errcode = 'check_violation';
+  end if;
+  -- Une société rattachée à une licence que la comptabilité paie déjà est
+  -- couverte : un second abonnement la ferait payer deux fois.
+  if exists (select 1 from facturation.licence_organisations lo
+               join facturation.acces a on a.licence_id = lo.licence_id
+              where lo.tenant_id = p_client and a.statut = 'actif' and a.canal = 'cabinet') then
+    raise exception 'refus.abonnement.couvert_par_la_licence' using errcode = 'check_violation';
+  end if;
+  v_grille := ref.offre_a(p_offre, current_date);
+  if v_grille.code is null then
+    raise exception 'refus.offre.hors_grille' using errcode = '22023';
+  end if;
+  insert into facturation.acces
+    (tenant_id, canal, cabinet_tenant_id, offre_code, offre_depuis, statut, propose_le, propose_par)
+  values
+    (p_client, 'cabinet', p_cabinet, v_grille.code, v_grille.effective_from, 'propose',
+     current_date, auth.uid())
+  returning id into v_id;
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
+  values (p_client, auth.uid(), 'acces.propose', 'facturation', 'acces', v_id,
+          jsonb_build_object('cabinet', p_cabinet, 'offre', v_grille.code));
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
+  values (p_cabinet, auth.uid(), 'acces.propose', 'facturation', 'acces', v_id,
+          jsonb_build_object('client', p_client, 'offre', v_grille.code,
+                             'prix_mensuel_ht', v_grille.prix_mensuel_ht));
+  insert into collab.notifications (tenant_id, kind, payload)
+  values (p_client, 'acces.propose',
+          jsonb_build_object('acces_id', v_id, 'offre', v_grille.code,
+                             'cabinet', (select name from identity.organizations where id = p_cabinet)));
+  return v_id;
+end
+$$;
+
+-- Une question tranchée ne reste pas « à traiter » : quand une proposition
+-- d'abonnement ou une descente reçoit sa réponse (ou démarre d'elle-même à
+-- l'arrivée du dirigeant), sa notification passe lue pour tout le dossier.
+create or replace function collab.question_tranchee()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if old.statut = 'propose' and new.statut <> 'propose' then
+    update collab.notifications n
+       set read_at = coalesce(n.read_at, now())
+     where n.tenant_id = new.tenant_id
+       and n.read_at is null
+       and ((tg_table_name = 'acces' and n.kind = 'acces.propose'
+             and n.payload ->> 'acces_id' = new.id::text)
+         or (tg_table_name = 'acces_descentes' and n.kind = 'acces.descente_demandee'
+             and n.payload ->> 'descente_id' = new.id::text));
+  end if;
+  return new;
+end
+$$;
+
+revoke all on function collab.question_tranchee() from public;
+
+drop trigger if exists question_tranchee on facturation.acces;
+create trigger question_tranchee after update of statut on facturation.acces
+  for each row execute function collab.question_tranchee();
+drop trigger if exists question_tranchee on facturation.acces_descentes;
+create trigger question_tranchee after update of statut on facturation.acces_descentes
+  for each row execute function collab.question_tranchee();

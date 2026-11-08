@@ -1282,7 +1282,8 @@ function AbonnementDeLaComptabilite({
   );
   if (lignes.length === 0 && !d && !retour) return null;
   return (
-    <div className="mt-3">
+    // `.org` porte la typographie des propositions (`.mn`) et leurs boutons (`.acts`).
+    <div className="org mt-3">
       {d ? (
         <div>
           <p className="mn">

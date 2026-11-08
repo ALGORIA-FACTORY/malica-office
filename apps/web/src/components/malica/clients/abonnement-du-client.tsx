@@ -47,9 +47,11 @@ export function OngletAbonnement({
   client,
   etat,
   catalogue,
+  parLaLicence = null,
   expert,
   annoncer,
 }: {
+  parLaLicence?: string | null;
   client: ClientSummary;
   etat: EtatDuClient | undefined;
   /** Les noms des offres, sans prix ; les prix viennent de `offresDuCabinet`. */
@@ -98,12 +100,19 @@ export function OngletAbonnement({
       };
       annoncer(t(cles[effet] ?? "cab.cli.enregistre"));
     },
-    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
+    onError: (e: unknown) => {
+      // Une descente qui ne tient pas : dire pourquoi, avec les chiffres.
+      const m = String((e as { message?: string })?.message ?? "");
+      if (m.includes("motif=organisations")) setErreur(t("cab.cli.abo.refus.organisations"));
+      else if (m.includes("motif=sieges_occupes")) setErreur(t("cab.cli.abo.refus.sieges"));
+      else setErreur(texteDeLErreur(e, OU, t("common.error")));
+    },
   });
   const arreter = useMutation({
     mutationFn: () => office().facturation.arreterAbonnement(etat!.accesId!),
     onSuccess: async (r) => {
       setArret(false);
+      setErreur(null);
       await rafraichir();
       annoncer(r.effet === "retiree" ? t("cab.cli.abo.ok.retiree") : t("cab.cli.abo.ok.arrete"));
     },
@@ -141,6 +150,18 @@ export function OngletAbonnement({
         };
   const effet = choix ? effetDuChoix(etat, choix, offres) : null;
 
+  // Couverte par la licence de son dirigeant, que la comptabilité paie déjà.
+  if (parLaLicence && !etat?.accesStatut) {
+    return (
+      <section className="rounded-xl border border-border p-4 text-[13px]">
+        <strong className="block">
+          {t("cab.cli.abo.licence", { offre: libelle(parLaLicence) })}
+        </strong>
+        <span className="text-muted-foreground">{t("cab.cli.abo.licence.detail")}</span>
+      </section>
+    );
+  }
+
   return (
     <div className="space-y-4 text-[13px]">
       <section className="flex items-center justify-between gap-3 rounded-xl border border-border p-4">
@@ -170,7 +191,10 @@ export function OngletAbonnement({
                 type="button"
                 role="radio"
                 aria-checked={choix === o.code}
-                onClick={() => setChoix(o.code)}
+                onClick={() => {
+                  setChoix(o.code);
+                  setErreur(null);
+                }}
                 className={cn(
                   "flex flex-col gap-0.5 rounded-xl border-[1.5px] p-3 text-start",
                   choix === o.code
@@ -211,7 +235,7 @@ export function OngletAbonnement({
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              disabled={!choix || effet === "actuelle" || enregistrer.isPending}
+              disabled={!choix || choix === etat?.accesOffre || enregistrer.isPending}
               onClick={() => enregistrer.mutate()}
               className="cab-button cab-button-primary"
             >

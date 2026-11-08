@@ -3,10 +3,10 @@
  * étapes vivait déjà ailleurs. La carte « Mise en route » d'Aujourd'hui mène
  * aux pages où chaque geste se fait (Réglages · Équipe, Clients).
  */
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/cabinet/mise-en-route")({
-  beforeLoad: () => {
-    throw redirect({ to: "/cabinet", replace: true });
-  },
+  // Une redirection rendue, pas levée : au chargement direct de l'adresse,
+  // une redirection levée pendant le rendu serveur laissait une erreur vide.
+  component: () => <Navigate to="/cabinet" replace />,
 });

@@ -2139,9 +2139,11 @@
   70% { opacity: 1; transform: scale(1.08); }
   100% { transform: scale(1); }
 }
+/* `transform`, pas `translate` : les utilitaires de position (Tailwind 4)
+ * posent déjà `translate` pour centrer, l'animation ne doit pas l'écraser. */
 @keyframes cab-monte {
-  from { opacity: 0; translate: 0 24px; }
-  to { opacity: 1; translate: 0 0; }
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes cab-remplit {
   from { width: 0; }

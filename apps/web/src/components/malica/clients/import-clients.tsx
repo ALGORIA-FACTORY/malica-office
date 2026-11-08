@@ -16,7 +16,7 @@ import { useCabinet } from "@/components/malica/cabinet-context";
 import { CHAMP } from "@/components/malica/clients/fiche-client";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n, type MessageKey } from "@/i18n";
-import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
 import {
   lignesDuTableur,
   lireTexte,
@@ -111,11 +111,11 @@ export function ImportClients({
 
   const nb = (s: LigneVerifiee["statut"]) => verifs.filter((v) => v.statut === s).length;
   const aCorriger = nb("a_corriger");
+  // Le motif est une clé de refus, parfois avec ses valeurs : dite comme partout.
   const motif = (m: string | null) => {
     if (!m) return "";
-    const cle = m as MessageKey;
-    const v = t(cle);
-    return v === cle ? t("cab.cli.import.ligne.fausse") : v;
+    const v = direUnRefus(m);
+    return v === t("common.error") ? t("cab.cli.import.ligne.fausse") : v;
   };
 
   const modifier = (i: number, champ: keyof LigneImport, valeur: string) =>

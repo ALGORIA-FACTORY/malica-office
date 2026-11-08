@@ -200,7 +200,8 @@ export const identite = {
       `select tenant_id, adresse, dirigeant_present, invitation_email,
               invitation_envoyee::text, invitation_expiree, acces_id, acces_statut,
               acces_offre, descente_offre, licence_id, titulaire_nom, forfait_offre,
-              organisations, organisations_incluses, sieges_occupes, sieges_inclus
+              organisations, organisations_incluses, sieges_occupes, sieges_inclus,
+              places_en_attente
          from public.clients_du_cabinet_etat($1)`,
       [cabinetId],
     );
@@ -222,6 +223,7 @@ export const identite = {
       organisationsIncluses: (r["organisations_incluses"] as number | null) ?? null,
       siegesOccupes: (r["sieges_occupes"] as number | null) ?? null,
       siegesInclus: (r["sieges_inclus"] as number | null) ?? null,
+      placesEnAttente: (r["places_en_attente"] as number | null) ?? 0,
     }));
   },
 

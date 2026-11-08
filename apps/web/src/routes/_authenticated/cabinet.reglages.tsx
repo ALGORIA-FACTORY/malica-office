@@ -429,6 +429,13 @@ function CabinetEtEquipe() {
         {/* ---- équipe */}
         <Groupe
           titre={t("cab.settings.g.equipe")}
+          apres={
+            invitation ? (
+              <div id="inviter-l-equipe">
+                <InviterLEquipe fermer={() => setInvitation(false)} />
+              </div>
+            ) : undefined
+          }
           aides={[
             { texte: t("cab.settings.g.equipe.lede") },
             { titre: t("cab.settings.invitations"), texte: t("cab.settings.invitations.hint") },
@@ -451,17 +458,24 @@ function CabinetEtEquipe() {
               <span className="num text-[13px]">
                 {invitations.isPending ? "…" : enAttente.length}
               </span>
-              <button
-                type="button"
+              {/*
+               * Un lien, pas un bouton : inviter ne règle rien, et le verrou
+               * des réglages (un `fieldset` désactivé) ne doit pas l'empêcher.
+               */}
+              <a
+                href="#inviter-l-equipe"
+                role="button"
                 aria-expanded={invitation}
-                onClick={() => setInvitation(!invitation)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setInvitation(!invitation);
+                }}
                 className="cab-cible border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground"
               >
                 {t("cab.settings.inviter")}
-              </button>
+              </a>
             </span>
           </Ligne>
-          {invitation ? <InviterLEquipe fermer={() => setInvitation(false)} /> : null}
           <Ligne label={t("cab.settings.doubleValidation")}>
             <span className="flex items-center gap-1.5">
               <input
@@ -665,11 +679,14 @@ function Groupe({
   aides,
   verrouille,
   children,
+  apres,
 }: {
   titre: string;
   aides: ParagrapheDAide[];
   verrouille: boolean;
   children: React.ReactNode;
+  /** Un geste qui ne règle rien (inviter) : hors du verrou des réglages. */
+  apres?: React.ReactNode;
 }) {
   return (
     // `min-w-0` : un élément de grille ne rétrécit pas sous son contenu. Les
@@ -685,6 +702,7 @@ function Groupe({
       <fieldset disabled={verrouille} className="min-w-0 disabled:cursor-default">
         <dl className="divide-y divide-border">{children}</dl>
       </fieldset>
+      {apres ? <div className="border-t border-border p-3">{apres}</div> : null}
     </section>
   );
 }

@@ -860,6 +860,7 @@ export function MandatDuClient({
       dateLongue={dateLongue}
       compteADate={compteADate}
       somme={somme}
+      dansLaFiche
     />
   );
 }
@@ -871,10 +872,13 @@ function FormulaireMandat({
   dateLongue,
   compteADate,
   somme,
+  dansLaFiche = false,
 }: {
   clientTenantId: string;
   clientName: string;
   mandat: MandatHonoraires | null;
+  /** Dans la fiche du client, son nom est déjà en tête. */
+  dansLaFiche?: boolean;
   dateLongue: (iso: string) => string;
   compteADate: (iso: string) => string;
   somme: (valeur: string, devise: string) => string;
@@ -947,9 +951,11 @@ function FormulaireMandat({
       <div className="border border-foreground bg-card">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border p-4">
           <div className="min-w-0">
-            <h2 className="text-[21px] font-semibold leading-tight tracking-[-0.02em]">
-              {clientName}
-            </h2>
+            {dansLaFiche ? null : (
+              <h2 className="text-[21px] font-semibold leading-tight tracking-[-0.02em]">
+                {clientName}
+              </h2>
+            )}
             <p className="num mt-1.5 text-[11px] text-muted-foreground">
               {mandat
                 ? t("cab.hono.mandat.depuis", { date: dateLongue(mandat.validFrom) })

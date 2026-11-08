@@ -1,3 +1,4 @@
+import { InvitationsPourMoi } from "@/components/malica/InvitationsPourMoi";
 import { sensDuSolde } from "@/lib/sens-du-solde";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -448,6 +449,12 @@ function PmeHome() {
     <div data-ecran="accueil" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
       {/* Un cabinet propose ? Le dirigeant répond avant tout le reste. */}
       <div className="px-5 pt-3">
+        {/*
+         * Une autre société l'attend (8 novembre 2026) : un dirigeant déjà
+         * installé ne repasse plus par « Choisissez votre espace », et
+         * l'invitation de sa deuxième société restait introuvable.
+         */}
+        <InvitationsPourMoi />
         {/*
          * Chaque société de la personne (3 novembre 2026) : sans sélecteur
          * dans l'en-tête, une proposition faite à une autre société que celle
