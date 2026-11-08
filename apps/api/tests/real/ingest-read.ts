@@ -12,6 +12,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 import { buildExtractFromTokenPlan } from "../../src/malica/lecture/read-piece.ts";
+import { chaineDeBanc } from "../../src/malica/lecture/designation.ts";
 import { runVisionRead } from "../../src/malica/lecture/vision.ts";
 import { devisesDEssai } from "../../src/scan/devise-d-essai.ts";
 
@@ -48,7 +49,11 @@ async function main() {
     try {
       const bytes = readFileSync(raster);
       const dataUrl = `data:image/jpeg;base64,${bytes.toString("base64")}`;
-      const read = await runVisionRead({ dataUrl, taxCodes });
+      const read = await runVisionRead({
+        dataUrl,
+        taxCodes,
+        designation: { chaine: async () => chaineDeBanc("deepseek", "deepseek-chat") },
+      });
       const built = buildExtractFromTokenPlan({
         tokens: read.tokens,
         selection: read.selection,

@@ -3881,6 +3881,15 @@ export interface SiegeDeLaLicence {
 }
 
 /** Une organisation de la licence, et ce qu'elle a consommé ce mois-ci. */
+/** Ce que la liste des sociétés montre de chacune (planche 4). */
+export interface FicheDeSociete {
+  tenantId: string;
+  /** Le code de l'offre, `null` sans licence lisible. */
+  offre: string | null;
+  /** Le cabinet au mandat actif, `null` s'il n'y en a pas. */
+  cabinet: string | null;
+}
+
 export interface OrganisationDeLaLicence {
   tenant_id: string;
   nom: string;
@@ -3920,6 +3929,8 @@ export interface FacturationRepository {
   organisationsDesSocietes(tenantIds: readonly string[]): Promise<OrganisationDeLaLicence[]>;
   /** Les sièges vus depuis plusieurs sociétés, en un aller-retour. Sans doublon. */
   siegesDesSocietes(tenantIds: readonly string[]): Promise<SiegeDeLaLicence[]>;
+  /** L'offre et le cabinet de chaque société, en un appel (planche 4). Ni prix ni paiement. */
+  fichesDesSocietes(tenantIds: readonly string[]): Promise<FicheDeSociete[]>;
   inviterSiege(
     email: string,
     tenantId: string,
@@ -4493,6 +4504,35 @@ export interface PassageDeNuit {
   };
 }
 
+/** Un maillon de la chaîne de désignation, tel que la tour le voit. */
+export interface MaillonDeLaDesignation {
+  rang: 1 | 2;
+  fournisseur: "anthropic" | "deepseek";
+  modele: string;
+  role: string;
+  periode: "jour" | "mois";
+  plafond: number;
+  depense: number;
+  epuise: boolean;
+  motif: string;
+  decide_le: string;
+}
+
+/** La chaîne de désignation, ses choix possibles et ses dernières bascules. */
+export interface EtatDeLaDesignation {
+  maillons: MaillonDeLaDesignation[];
+  modeles: Array<{
+    fournisseur: "anthropic" | "deepseek";
+    modele: string;
+    role: string;
+    prix_entree: number;
+    prix_sortie: number;
+  }>;
+  bascules: Array<{ le: string; modele: string; statut: "error" | "degraded"; motif: string }>;
+  /** Le mois civil : pièces lues sans IA (le Sudoku d'abord) et pièces désignées par un modèle. */
+  mois: { sans_ia: number; par_modele: number };
+}
+
 export interface TourRepository {
   suisJePlateforme(): Promise<boolean>;
   /** Tous les cabinets et toutes les PME, avec ou sans cabinet : des compteurs et des états. */
@@ -4603,6 +4643,21 @@ export interface TourRepository {
   } | null>;
   /** La tour règle le plafond IA : daté et motivé ; rien ne se réécrit (ANO-029). */
   reglerIa(plafondUsd: string, motif: string): Promise<unknown>;
+  /**
+   * La chaîne de désignation (décision du 8 novembre 2026) : Claude au rang 1,
+   * DeepSeek au rang 2, leurs plafonds et dépenses de la période, les modèles
+   * tarifés qu'on peut y mettre, et les dernières bascules.
+   */
+  designation(): Promise<EtatDeLaDesignation>;
+  /** La tour règle un rang de la chaîne : modèle, période, plafond. Daté, motivé, en ajout seul. */
+  reglerDesignation(
+    rang: 1 | 2,
+    modele: string,
+    role: string,
+    periode: "jour" | "mois",
+    plafondUsd: string,
+    motif: string,
+  ): Promise<unknown>;
   /** Les relances d'impayé en vigueur ; `null` tant que la tour n'a rien décidé (fermées). */
   reglageRelances(): Promise<{
     actives: boolean;

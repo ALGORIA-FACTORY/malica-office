@@ -34,11 +34,13 @@ import {
   type Passe,
   type RaisonDuRattrapage,
 } from "./etapes-de-lecture.ts";
+import { erreurAuJournal, lireLaChaine } from "./designation.ts";
 import { creerDesignateurDeRecette } from "./par-recette.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import type { ReglesDeLecture } from "./regles-de-lecture.ts";
 import { secondLecteurDisponible } from "./paddle.ts";
 import { creerLeSudoku } from "./sudoku.ts";
+import type { PageToken } from "./token-plan.ts";
 import { runVisionRead, type VisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
 
@@ -181,7 +183,24 @@ async function preparer(api: AppelApi, pieceId: string, lecteurs: Lecteurs) {
   // Les paramètres de lecture ne s'écrivent qu'une fois : la première lecture
   // et le rattrapage lisent la même pièce, dans le même dossier.
   const parametres = {
+    /*
+     * LE SUDOKU D'ABORD (8 novembre 2026, « minimiser au maximum le GPU et
+     * l'IA ») : le moteur seul, avant toute désignation. Prouvée pour tout ce
+     * que l'écriture exige (`ref.lecture_sans_ia`), la pièce n'appelle aucun
+     * modèle ; sinon la recette puis la chaîne partent, et le Sudoku revérifie.
+     * `sudoku` est créé plus bas : la fermeture ne l'appelle qu'à la lecture.
+     */
+    sudokuDAbord: (plan: readonly PageToken[]) => sudoku.sansIa(plan),
     parRecette,
+    /*
+     * La chaîne de désignation (Claude, puis DeepSeek, puis l'arrêt), relue
+     * en base à CHAQUE désignation : un budget atteint par une autre pièce
+     * entre-temps fait basculer celle-ci. La base décide, ce fichier appelle.
+     */
+    designation: {
+      chaine: async () =>
+        lireLaChaine(await api.rpc<unknown>("capture", "chaineDeDesignation", [])),
+    },
     dataUrl,
     mime,
     // Les octets bruts servent au PDF : sa couche de texte se lit sans modèle.
@@ -362,8 +381,15 @@ export async function readPieceFlow(
     autre !== null,
     sudoku.prouvee(premiereLecture),
   );
+  /*
+   * Une lecture ARRÊTÉE faute de budget ne se rattrape pas : un second lecteur
+   * se paierait, et sa désignation s'arrêterait au même endroit.
+   */
   const aRattraper =
-    qualiteAvant < QUALITE_PARFAITE && autre !== null && !sudoku.prouvee(premiereLecture);
+    qualiteAvant < QUALITE_PARFAITE &&
+    autre !== null &&
+    !sudoku.prouvee(premiereLecture) &&
+    premiereLecture.sansModele === undefined;
   /*
    * ======================================== LA RELECTURE DE NUIT (17 novembre 2026)
    *
@@ -582,15 +608,89 @@ function lectureAPersister(pieceId: string, packId: string, read: VisionRead, bu
  * Il ne fait toujours pas échouer la lecture : la pièce est lue, et une
  * dépense non mesurée ne doit pas priver la personne de son résultat.
  */
+/** Une ligne du journal des exécutions (`agents_run_log`), avant son envoi. */
+interface EntreeDuJournal {
+  agent: string;
+  model: string;
+  role: string;
+  passe: { latencyMs: number; tokensIn: number | null; tokensOut: number | null };
+  status: "ok" | "degraded" | "error";
+  erreur: string | null;
+}
+
+/** Ce qu'une lecture inscrit au journal : le relevé, la désignation, chaque bascule. */
+export function entreesDuJournal(read: VisionRead): EntreeDuJournal[] {
+  const [releve, designation] = (
+    [
+      ["malica.lecture.releve", read.readModel, "vision", read.releve],
+      // Le role vient de la MEME source que le modele : voir `selectRole`.
+      ["malica.lecture.designation", read.selectModel, read.selectRole, read.designation],
+    ] as const
+  ).map(([agent, model, role, passe]) => ({
+    agent,
+    model,
+    role,
+    passe,
+    status: "ok" as EntreeDuJournal["status"],
+    erreur: null as string | null,
+  }));
+  /*
+   * ======================================= LA CHAÎNE DE DÉSIGNATION AU JOURNAL
+   *
+   * Un repli a désigné : sa ligne dit `degraded`, et le motif de la première
+   * bascule. Chaque maillon sauté a SA ligne, sous son propre couple (modèle,
+   * rôle), sans jetons — donc à coût nul —, avec son motif. Un arrêt n'a pas
+   * de ligne de désignation (aucun modèle n'a désigné) : ses maillons disent
+   * `arret.budgets_epuises`. La tour lit ces lignes (`designation_etat`).
+   */
+  const bascules = read.bascules ?? [];
+  const premiere = bascules[0];
+  if (premiere && designation) {
+    designation.status = "degraded";
+    designation.erreur = `repli.${premiere.motif}`;
+  }
+  /*
+   * Le cache du prompt système de Claude se facture à part : sa lecture et
+   * son écriture ont chacune leur ligne, sous leur rôle tarifé (`cache`,
+   * `cache_ecriture`), pour que le plafond morde sur la facture exacte.
+   */
+  const cache = read.sansModele === undefined ? read.designation.cache : undefined;
+  const lignesDuCache = (
+    [
+      ["cache", cache?.lus ?? 0],
+      ["cache_ecriture", cache?.ecrits ?? 0],
+    ] as const
+  )
+    .filter(([, n]) => n > 0 && designation)
+    .map(([role, n]) => ({
+      // Un agent à part : la dépense compte (par modèle), mais une ligne de
+      // cache n'est pas une pièce désignée de plus au compteur de la tour.
+      agent: `${designation?.agent ?? ""}.cache`,
+      model: read.selectModel,
+      role,
+      passe: { latencyMs: 0, tokensIn: n, tokensOut: null },
+      status: "ok" as const,
+      erreur: null,
+    }));
+  return [
+    ...(releve ? [releve] : []),
+    ...(designation && read.sansModele === undefined ? [designation] : []),
+    ...lignesDuCache,
+    ...bascules.map((b) => ({
+      agent: designation?.agent ?? "",
+      model: b.modele,
+      role: b.role,
+      passe: { latencyMs: 0, tokensIn: null, tokensOut: null },
+      status: "error" as const,
+      erreur: erreurAuJournal(b, read.sansModele ?? null),
+    })),
+  ];
+}
+
 async function journaliser(api: AppelApi, tenantId: string, pieceId: string, read: VisionRead) {
+  const entrees = entreesDuJournal(read);
   return Promise.all(
-    (
-      [
-        ["malica.lecture.releve", read.readModel, "vision", read.releve],
-        // Le role vient de la MEME source que le modele : voir `selectRole`.
-        ["malica.lecture.designation", read.selectModel, read.selectRole, read.designation],
-      ] as const
-    ).map(([agent, model, role, passe]) =>
+    entrees.map(({ agent, model, role, passe, status, erreur }) =>
       api
         .rpc<string | null>("capture", "journaliserAgent", [
           {
@@ -598,11 +698,12 @@ async function journaliser(api: AppelApi, tenantId: string, pieceId: string, rea
             agent,
             model,
             role,
-            status: "ok",
+            status,
             latencyMs: passe.latencyMs,
             tokensIn: passe.tokensIn,
             tokensOut: passe.tokensOut,
             pieceId,
+            erreur,
           },
         ])
         .then(
