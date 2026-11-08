@@ -113,6 +113,9 @@ pub struct OpParties {
     /// sous leur nom, dans leur bloc.
     adresse_emetteur: Option<usize>,
     adresse_client: Option<usize>,
+    /// Le contact de l'émetteur (`telephone_email_emetteur`) : les lignes de son bloc qui
+    /// s'ouvrent sur un repère de ce champ (« Tél : », « Fax : », « E-mail : »).
+    contact_emetteur: Option<usize>,
 }
 
 fn cle_op(e: &Value, k: &str) -> Option<String> {
@@ -161,6 +164,7 @@ pub fn lire_op(grille: &Grille, e: &Value) -> Result<OpParties, String> {
         groupes_emetteur,
         adresse_emetteur: facultatif("adresse_emetteur")?,
         adresse_client: facultatif("adresse_client")?,
+        contact_emetteur: facultatif("contact_emetteur")?,
     })
 }
 
@@ -188,6 +192,159 @@ fn a_un_chiffre_pres(a: &str, b: &str) -> bool {
         && a.iter()
             .zip(&b)
             .all(|(x, y)| x == y || (x.is_ascii_digit() && y.is_ascii_digit()))
+}
+
+/// Les chiffres qu'un OCR rend à la place d'une lettre de même dessin. Ce n'est pas une
+/// règle d'un pays (R4) : c'est la forme des glyphes, la même pour tout alphabet latin.
+const GLYPHES_CONFONDUS: [(char, char); 6] = [
+    ('0', 'O'),
+    ('1', 'I'),
+    ('2', 'Z'),
+    ('5', 'S'),
+    ('6', 'G'),
+    ('8', 'B'),
+];
+
+/// Deux réparations d'une lecture d'identifiant, toutes deux sous la lettre de contrôle
+/// du pack (`ref.identifiant_controles`) : une valeur réparée n'est retenue que si la
+/// lettre calculée sur son noyau est celle qu'elle porte. Sans règle de contrôle, rien
+/// ne se répare.
+///
+/// - **La lettre lue comme un chiffre.** Banc du 6 novembre 2026, algoria-015 :
+///   « 3184001O/A/M/000 » relu « 31840010/A/M/000 ». Le noyau a la longueur des poids ;
+///   le caractère suivant est un chiffre qui ressemble à la lettre calculée.
+/// - **L'écriture sans séparateurs.** algoria-002 : « 1958330VAM000 », le matricule du
+///   dossier imprimé collé. Le motif du pack, ses séparateurs rendus facultatifs, le
+///   trouve ; il est rendu dans la forme du motif.
+pub(crate) struct Reparations<'c> {
+    controle: &'c crate::entree::Controle,
+    /// Le motif du pack dont chaque séparateur est facultatif, un groupe par segment.
+    souple: Option<Regex>,
+    /// Les séparateurs du motif, dans l'ordre : de quoi rendre la forme imprimée.
+    separateurs: Vec<char>,
+}
+
+impl<'c> Reparations<'c> {
+    pub(crate) fn nouvelles(motif: &str, controle: &'c crate::entree::Controle) -> Self {
+        let (souple, separateurs) =
+            motif_souple(motif).map_or((None, Vec::new()), |(r, s)| (Some(r), s));
+        Reparations {
+            controle,
+            souple,
+            separateurs,
+        }
+    }
+
+    /// La lettre que porte la valeur après son noyau est celle que la règle calcule.
+    fn confirmee(&self, valeur: &str) -> bool {
+        let n = self.controle.poids.len();
+        let noyau: String = valeur.chars().take(n).collect();
+        let lettre = valeur.chars().nth(n);
+        matches!((self.controle.lettre(&noyau), lettre), (Some(a), Some(b)) if a == b)
+    }
+
+    /// Le texte où un chiffre qui suit un noyau complet, et qui ressemble à la lettre que
+    /// ce noyau appelle, est remplacé par elle. `None` s'il n'y a rien à réparer.
+    fn lettre_lue_en_chiffre(&self, texte: &str) -> Option<String> {
+        let n = self.controle.poids.len();
+        let c: Vec<char> = texte.chars().collect();
+        let mut sortie = c.clone();
+        let mut repare = false;
+        for i in n..c.len() {
+            let debut = i - n;
+            let noyau_isole = debut == 0 || !c[debut - 1].is_ascii_digit();
+            if !noyau_isole || !c[debut..i].iter().all(char::is_ascii_digit) {
+                continue;
+            }
+            let noyau: String = c[debut..i].iter().collect();
+            let Some(attendue) = self.controle.lettre(&noyau) else {
+                continue;
+            };
+            if GLYPHES_CONFONDUS
+                .iter()
+                .any(|&(chiffre, lettre)| c[i] == chiffre && lettre == attendue)
+            {
+                sortie[i] = attendue;
+                repare = true;
+            }
+        }
+        repare.then(|| sortie.into_iter().collect())
+    }
+
+    /// La valeur trouvée par le motif souple, rendue avec les séparateurs du motif.
+    fn recompose(&self, c: &regex::Captures) -> String {
+        let mut v = String::new();
+        for (i, g) in c.iter().skip(1).enumerate() {
+            if let Some(g) = g {
+                v.push_str(g.as_str());
+            }
+            if let Some(s) = self.separateurs.get(i) {
+                v.push(*s);
+            }
+        }
+        v
+    }
+}
+
+/// Le motif du pack, chaque séparateur littéral de premier niveau rendu facultatif, et ses
+/// segments capturés. `None` si le motif n'a pas de séparateur, ou porte une alternative ou
+/// un groupe de premier niveau (il ne se découpe pas sans risque).
+fn motif_souple(motif: &str) -> Option<(Regex, Vec<char>)> {
+    let mut segments: Vec<String> = vec![String::new()];
+    let mut separateurs: Vec<char> = Vec::new();
+    let (mut crochets, mut accolades, mut echappe) = (0i32, 0i32, false);
+    for ch in motif.chars() {
+        if echappe {
+            segments.last_mut()?.push(ch);
+            echappe = false;
+            continue;
+        }
+        match ch {
+            '\\' => {
+                echappe = true;
+                segments.last_mut()?.push(ch);
+            }
+            '[' => {
+                crochets += 1;
+                segments.last_mut()?.push(ch);
+            }
+            ']' => {
+                crochets -= 1;
+                segments.last_mut()?.push(ch);
+            }
+            '{' => {
+                accolades += 1;
+                segments.last_mut()?.push(ch);
+            }
+            '}' => {
+                accolades -= 1;
+                segments.last_mut()?.push(ch);
+            }
+            '|' | '(' | ')' if crochets == 0 => return None,
+            _ if crochets == 0
+                && accolades == 0
+                && !ch.is_alphanumeric()
+                && !"?*+.^$".contains(ch) =>
+            {
+                separateurs.push(ch);
+                segments.push(String::new());
+            }
+            _ => segments.last_mut()?.push(ch),
+        }
+    }
+    if separateurs.is_empty() || segments.iter().any(String::is_empty) {
+        return None;
+    }
+    let mut r = String::new();
+    for (i, s) in segments.iter().enumerate() {
+        r.push('(');
+        r.push_str(s);
+        r.push(')');
+        if let Some(sep) = separateurs.get(i) {
+            r.push_str(&format!("{}?", regex::escape(&sep.to_string())));
+        }
+    }
+    Regex::new(&r).ok().map(|re| (re, separateurs))
 }
 
 fn norme_matricule(s: &str) -> String {
@@ -842,8 +999,8 @@ impl<'a> Page<'a> {
     /// suite quand le segment est coupé en fin de ligne), recollés sans espaces ; la
     /// valeur touche le premier et le dernier jeton, et n'est bordée d'aucun caractère
     /// alphanumérique.
-    fn matricules(&self, re: &Regex) -> Vec<Occ> {
-        let mut out = Vec::new();
+    fn matricules(&self, re: &Regex, rep: Option<&Reparations>) -> Vec<Occ> {
+        let mut out: Vec<Occ> = Vec::new();
         for (r, rang) in self.rangs.iter().enumerate() {
             for s in 0..rang.len() {
                 let h = self.h(rang[s]);
@@ -877,19 +1034,62 @@ impl<'a> Page<'a> {
                     let tout: String = morceaux.concat();
                     let premier = morceaux[0].len();
                     let dernier = tout.len() - morceaux.last().map_or(0, |m| m.len());
-                    for m in re.find_iter(&tout) {
-                        let avant = tout[..m.start()].chars().next_back();
-                        let apres = tout[m.end()..].chars().next();
-                        if m.start() < premier
-                            && m.end() > dernier
+                    // Une valeur touche le premier et le dernier jeton, sans être bordée
+                    // d'un caractère alphanumérique.
+                    let borne = |texte: &str, debut: usize, fin: usize| {
+                        let avant = texte[..debut].chars().next_back();
+                        let apres = texte[fin..].chars().next();
+                        debut < premier
+                            && fin > dernier
                             && !avant.is_some_and(|c| c.is_alphanumeric())
                             && !apres.is_some_and(|c| c.is_alphanumeric())
-                        {
+                    };
+                    let mut pousser = |valeur: String, debut: usize| {
+                        let jetons = seq[..=e].to_vec();
+                        if !out.iter().any(|o| o.valeur == valeur && o.jetons == jetons) {
                             out.push(Occ {
-                                valeur: m.as_str().to_string(),
-                                jetons: seq[..=e].to_vec(),
-                                prefixe: tout[..m.start()].to_string(),
+                                valeur,
+                                jetons,
+                                prefixe: tout[..debut].to_string(),
                             });
+                        }
+                    };
+                    for m in re.find_iter(&tout) {
+                        if borne(&tout, m.start(), m.end()) {
+                            pousser(m.as_str().to_string(), m.start());
+                        }
+                    }
+                    let Some(rep) = rep else { continue };
+                    // Les réparations : la lettre de contrôle lue comme un chiffre, et
+                    // l'écriture sans séparateurs. Chacune n'est retenue que si la lettre
+                    // calculée par la règle du pack la confirme.
+                    let lettre_reparee = rep.lettre_lue_en_chiffre(&tout);
+                    let textes: Vec<&str> = match lettre_reparee.as_deref() {
+                        Some(t) => vec![tout.as_str(), t],
+                        None => vec![tout.as_str()],
+                    };
+                    for (k, texte) in textes.iter().enumerate() {
+                        if k > 0 {
+                            for m in re.find_iter(texte) {
+                                if borne(texte, m.start(), m.end()) && rep.confirmee(m.as_str()) {
+                                    pousser(m.as_str().to_string(), m.start());
+                                }
+                            }
+                        }
+                        if let Some(souple) = &rep.souple {
+                            for c in souple.captures_iter(texte) {
+                                let m = c.get(0).expect("le motif entier");
+                                if !borne(texte, m.start(), m.end()) {
+                                    continue;
+                                }
+                                let valeur = rep.recompose(&c);
+                                if valeur != m.as_str()
+                                    && re.is_match(&valeur)
+                                    && rep.confirmee(&valeur)
+                                {
+                                    pousser(valeur, m.start());
+                                }
+                            }
                         }
                     }
                 }
@@ -1167,12 +1367,21 @@ impl<'a> Page<'a> {
             let debut = *l.jetons.first()?;
             let (r, k) = self.ou[debut];
             let h = self.h(debut);
+            // `mots_avant` rend les mots de gauche à droite ; un nom écrit de droite à gauche
+            // se lit dans l'autre sens (« للتدقيق غرفان مكتب » pour « مكتب غرفان للتدقيق »,
+            // OCR PP-OCRv6 du 8 novembre 2026, algoria-107).
+            let lecture = |mut m: Vec<usize>| {
+                if m.iter().any(|&t| self.rtl[t]) {
+                    m.reverse();
+                }
+                m
+            };
             let avant = self.mots_avant(r, k);
             if avant
                 .last()
                 .is_some_and(|&a| self.ecart(a, debut) <= ECART_VALEUR * h)
             {
-                return Some(avant);
+                return Some(lecture(avant));
             }
             let x1 = l
                 .jetons
@@ -1191,7 +1400,7 @@ impl<'a> Page<'a> {
                     }) {
                         let m = self.mots_avant(rr, k0 + 1);
                         if !m.is_empty() {
-                            return Some(m);
+                            return Some(lecture(m));
                         }
                     }
                 }
@@ -1258,6 +1467,215 @@ impl<'a> Page<'a> {
         None
     }
 
+    /// Le segment de la rangée `r` qui s'ouvre au bord gauche `x0` (à `MARGE` près) : ses
+    /// mots contigus, sans mot collé à sa gauche.
+    fn segment_a(&self, r: usize, x0: f64) -> Option<Vec<usize>> {
+        let rg = &self.rangs[r];
+        let k0 = rg
+            .iter()
+            .position(|&t| (self.j[t].x0 - x0).abs() <= MARGE)?;
+        if k0 > 0 && self.ecart(rg[k0 - 1], rg[k0]) <= ECART_SEGMENT * self.h(rg[k0]) {
+            return None;
+        }
+        let mut pris = vec![rg[k0]];
+        for w in rg[k0..].windows(2) {
+            if self.ecart(w[0], w[1]) > ECART_SEGMENT * self.h(w[0]) {
+                break;
+            }
+            pris.push(w[1]);
+        }
+        Some(pris)
+    }
+
+    /// Le nom d'une partie sans libellé ni forme juridique : la TÊTE du bloc aligné sur son
+    /// matricule. Banc du 7 novembre 2026 : « Imprimerie Darvane », « Centre Felmane de
+    /// Formation » — un en-tête d'émetteur classique, nom, adresse, « MF : », « Tél : » —
+    /// se taisaient, faute de « SARL » à lire. Rendu seulement quand la structure le
+    /// prouve, sinon rien :
+    /// - le bloc est la suite des rangées, au-dessus du matricule, dont un segment s'ouvre
+    ///   au même bord gauche que celui de la rangée du matricule, sans trou entre elles ;
+    /// - le nom est la PREMIÈRE de ces rangées : rien d'aligné au-dessus (une enseigne, un
+    ///   slogan rendraient le choix ambigu) ;
+    /// - il est fait de mots, sans chiffre, sans libellé, sans deux-points, pas en
+    ///   écriture de droite à gauche ;
+    /// - dessous, dans l'ordre et sans rien d'autre : son écriture arabe s'il y en a une,
+    ///   une adresse d'une ou deux lignes de mots qui porte un numéro, puis des lignes à
+    ///   libellé (« MF : », « Tél : », « RC : ») jusqu'au matricule.
+    fn tete_de_bloc(&self, occs: &[&Occ]) -> Option<Vec<usize>> {
+        for o in occs {
+            let i = o.jetons[0];
+            let (r0, k0) = self.ou[i];
+            let rang = &self.rangs[r0];
+            // le bord gauche du segment qui porte le matricule (« MF : 1234567A/… »)
+            let mut d = k0;
+            while d > 0 && self.ecart(rang[d - 1], rang[d]) <= ECART_SEGMENT * self.h(rang[d]) {
+                d -= 1;
+            }
+            let x0 = self.j[rang[d]].x0;
+            let jo = &self.j[i];
+            let h = self.h(i);
+            // remonter le bloc, rangée par rangée, tant qu'un segment s'ouvre à `x0`
+            let mut bloc: Vec<Vec<usize>> = Vec::new();
+            let mut bas = jo.y0;
+            for r in (0..r0).rev() {
+                let a = &self.j[self.rangs[r][0]];
+                if a.page != jo.page || jo.y0 - a.y0 > BLOC_HAUTEUR {
+                    break;
+                }
+                let Some(seg) = self.segment_a(r, x0) else {
+                    continue;
+                };
+                let y1 = seg.iter().map(|&t| self.j[t].y1).fold(f64::MIN, f64::max);
+                if bas - y1 > DESSUS * h {
+                    break;
+                }
+                bas = self.j[seg[0]].y0;
+                bloc.push(seg);
+            }
+            // de haut en bas : le nom, puis son écriture arabe s'il y en a une, puis
+            // l'adresse (une ou deux lignes), puis des lignes à libellé jusqu'au matricule
+            bloc.reverse();
+            let Some(nom) = bloc.first() else {
+                continue;
+            };
+            let arabe = |l: &[usize]| {
+                l.iter().all(|&t| {
+                    self.j[t]
+                        .texte
+                        .chars()
+                        .any(|c| ('\u{0600}'..='\u{06FF}').contains(&c))
+                })
+            };
+            let libelle = |l: &[usize]| {
+                l.iter()
+                    .any(|&t| self.etiquette(t, "").is_some() || self.j[t].texte.contains(':'))
+            };
+            let chiffre = |l: &[usize]| {
+                l.iter()
+                    .any(|&t| self.j[t].texte.chars().any(|c| c.is_ascii_digit()))
+            };
+            let mots = |l: &[usize]| {
+                l.iter()
+                    .any(|&t| self.j[t].texte.chars().any(char::is_alphabetic))
+            };
+            if arabe(nom) || libelle(nom) || chiffre(nom) || !mots(nom) {
+                continue;
+            }
+            let mut k = 1;
+            while k < bloc.len() && arabe(&bloc[k]) && !libelle(&bloc[k]) {
+                k += 1;
+            }
+            let debut_adresse = k;
+            while k < bloc.len() && k - debut_adresse < 2 && !libelle(&bloc[k]) && !arabe(&bloc[k])
+            {
+                k += 1;
+            }
+            let adresse = &bloc[debut_adresse..k];
+            if adresse.is_empty()
+                || !adresse.iter().any(|l| chiffre(l))
+                || !adresse.iter().all(|l| mots(l))
+                || !bloc[k..].iter().all(|l| libelle(l))
+            {
+                continue;
+            }
+            return Some(nom.clone());
+        }
+        None
+    }
+
+    /// Le contact d'une partie : les lignes de SON bloc qui s'ouvrent sur un repère du champ
+    /// `champ` (« Tél : 00 38 356 183 », « E-mail : vente@… », « Tél:71 … » collé). Leur
+    /// reste, mis bout à bout. Une valeur sans chiffre ni « @ » n'en est pas une.
+    ///
+    /// Le bloc : en partant de la rangée du matricule, vers le haut puis vers le bas, les
+    /// segments alignés sur le bord gauche de celui du matricule, sans trou vertical, à moins
+    /// d'une hauteur de bloc. Il s'arrête au premier segment qui porte une `frontiere` — le
+    /// libellé d'une partie (« Client », « Livré à ») ou le matricule d'une autre — : deux
+    /// blocs empilés à la même marge ne se mêlent pas (revue Codex de #268 : le téléphone
+    /// du client, sous l'émetteur, était pris pour le sien).
+    fn contact_du_bloc(
+        &self,
+        matricule: &[usize],
+        champ: usize,
+        frontieres: &BTreeSet<usize>,
+    ) -> Option<Vec<usize>> {
+        let i = *matricule.first()?;
+        let (r0, k0) = self.ou[i];
+        let rang = &self.rangs[r0];
+        let mut d = k0;
+        while d > 0 && self.ecart(rang[d - 1], rang[d]) <= ECART_SEGMENT * self.h(rang[d]) {
+            d -= 1;
+        }
+        let x0 = self.j[rang[d]].x0;
+        let jo = &self.j[i];
+        let h = self.h(i);
+        // les segments du bloc, rangée par rangée, du matricule vers le haut puis vers le bas
+        let mut bloc: Vec<Vec<usize>> = Vec::new();
+        let haut: Vec<usize> = (0..r0).rev().collect();
+        let bas: Vec<usize> = (r0 + 1..self.rangs.len()).collect();
+        for sens in [haut, bas] {
+            let (mut y_haut, mut y_bas) = (jo.y0, jo.y1);
+            for r in sens {
+                let a = &self.j[self.rangs[r][0]];
+                if a.page != jo.page || (a.y0 - jo.y0).abs() > BLOC_HAUTEUR {
+                    break;
+                }
+                let Some(seg) = self.segment_a(r, x0) else {
+                    continue;
+                };
+                if seg.iter().any(|t| frontieres.contains(t)) {
+                    break;
+                }
+                let y0 = seg.iter().map(|&t| self.j[t].y0).fold(f64::MAX, f64::min);
+                let y1 = seg.iter().map(|&t| self.j[t].y1).fold(f64::MIN, f64::max);
+                if y0 - y_bas > DESSUS * h || y_haut - y1 > DESSUS * h {
+                    break;
+                }
+                y_haut = y_haut.min(y0);
+                y_bas = y_bas.max(y1);
+                bloc.push(seg);
+            }
+        }
+        let mut pris: Vec<usize> = Vec::new();
+        for seg in bloc {
+            let t0 = seg[0];
+            // « Tél. » : le point d'abréviation ne fait pas partie du repère (« Tél »). Il
+            // reste partout ailleurs, où « M. » n'est pas la lettre « M ».
+            let entier = [
+                self.normes[t0].as_str(),
+                self.normes[t0].trim_end_matches(['.', ':']),
+            ]
+            .iter()
+            .any(|n| self.champs_de(n).is_some_and(|e| e.champs.contains(&champ)));
+            let colle = !entier
+                && self
+                    .libelle_colle(t0)
+                    .is_some_and(|(e, _)| e.champs.contains(&champ));
+            if !entier && !colle {
+                continue;
+            }
+            let reste: Vec<usize> = if colle {
+                seg.clone()
+            } else {
+                seg[1..]
+                    .iter()
+                    .copied()
+                    .skip_while(|&t| self.ponct(t))
+                    .collect()
+            };
+            let utile = reste.iter().any(|&t| {
+                self.j[t]
+                    .texte
+                    .chars()
+                    .any(|c| c.is_ascii_digit() || c == '@')
+            });
+            if utile {
+                pris.extend(reste);
+            }
+        }
+        (!pris.is_empty()).then_some(pris)
+    }
+
     /// L'adresse imprimée sous un nom, dans son bloc : la ligne qui suit, alignée sur le
     /// bord gauche du nom, faite de mots (pas d'un libellé). Rendue seulement ENTIÈRE : la
     /// ligne d'après, dans le bloc, s'ouvre sur un libellé (« Tél : », « MF : ») ou le bloc
@@ -1274,6 +1692,18 @@ impl<'a> Page<'a> {
         let x0 = nom.iter().map(|&t| self.j[t].x0).fold(f64::MAX, f64::min);
         let y1 = nom.iter().map(|&t| self.j[t].y1).fold(f64::MIN, f64::max);
         let h = self.h(premier);
+        // Le bord du bloc peut être celui du libellé qui ouvre la rangée du nom (« Client :
+        // ALGORIA FACTORY SARL », l'adresse alignée sous « Client », algoria-036) : le
+        // début du segment du nom.
+        let bord = {
+            let (r, k) = self.ou[premier];
+            let rg = &self.rangs[r];
+            let mut d = k;
+            while d > 0 && self.ecart(rg[d - 1], rg[d]) <= ECART_SEGMENT * self.h(rg[d]) {
+                d -= 1;
+            }
+            self.j[rg[d]].x0
+        };
         // la ligne du bloc sous `y`, alignée sur `x0` : ses mots contigus
         let ligne_sous = |y: f64| -> Option<Vec<usize>> {
             let rg = self.rangs.iter().find(|rg| {
@@ -1283,13 +1713,16 @@ impl<'a> Page<'a> {
             if self.j[rg[0]].y0 - y > DESSUS * h {
                 return None;
             }
-            let k0 = rg
-                .iter()
-                .position(|&t| (self.j[t].x0 - x0).abs() <= MARGE)?;
-            // le début d'un segment : aucun mot collé à sa gauche
-            if k0 > 0 && self.ecart(rg[k0 - 1], rg[k0]) <= ECART_SEGMENT * self.h(rg[k0]) {
-                return None;
-            }
+            // le début d'un segment (aucun mot collé à sa gauche), aligné sur le nom ou sur
+            // le bord de sa rangée : un mot qui tombe par hasard sous le nom, au milieu d'une
+            // ligne (« Cyprès, »), n'en est pas un
+            let debut =
+                |k: usize| k == 0 || self.ecart(rg[k - 1], rg[k]) > ECART_SEGMENT * self.h(rg[k]);
+            let k0 = (0..rg.len())
+                .find(|&k| (self.j[rg[k]].x0 - x0).abs() <= MARGE && debut(k))
+                .or_else(|| {
+                    (0..rg.len()).find(|&k| (self.j[rg[k]].x0 - bord).abs() <= MARGE && debut(k))
+                })?;
             let mut pris = vec![rg[k0]];
             for w in rg[k0..].windows(2) {
                 if self.ecart(w[0], w[1]) > ECART_SEGMENT * self.h(w[0]) {
@@ -1555,7 +1988,12 @@ pub fn prouver(
     let camps = Camps::new(grille, op);
     let libelles = page.libelles(op, &camps);
 
-    let occs = page.matricules(&re);
+    let reparations = entree
+        .pack
+        .controles
+        .get(&code_format)
+        .map(|c| Reparations::nouvelles(motif, c));
+    let occs = page.matricules(&re, reparations.as_ref());
     let mut par_valeur: BTreeMap<String, Vec<&Occ>> = BTreeMap::new();
     for o in &occs {
         par_valeur.entry(o.valeur.clone()).or_default().push(o);
@@ -1745,6 +2183,8 @@ pub fn prouver(
         if edo > 0 && cdo == 0 && eo == 0 {
             votes.push(Sens::Vente);
         }
+        // Les indices FORTS : un matricule ancré à son camp, ou la grappe légale d'un rôle.
+        let forts = !votes.is_empty();
         // Les étiquettes du CLIENT (« Client », « Facturé à », « Livré à ») ne s'impriment
         // que dans le bloc du destinataire ; celles de l'émetteur (RC, téléphone) se lisent
         // aussi dans le bloc d'un client qui les imprime (algoria-001 : « RC : B0128… » à
@@ -1759,8 +2199,19 @@ pub fn prouver(
             votes.push(Sens::Vente);
         }
         // La géométrie corrobore, elle ne décide jamais seule : un émetteur peut imprimer
-        // son matricule plus bas que le bloc du client (colonne latérale).
-        if !votes.is_empty() {
+        // son matricule plus bas que le bloc du client (colonne latérale, pied de page).
+        // Elle ne s'oppose donc qu'à un REPLI (l'étiquette du client), jamais à un indice
+        // fort : algoria-001 imprime le matricule du dossier sous « Livré à », en tête, et
+        // celui du fournisseur en pied ; la hauteur votait contre l'ancre, et tout le bloc
+        // des parties (matricules, noms, adresses) se taisait.
+        // Le matricule du dossier imprimé plus d'une fois (dans l'en-tête ET sous « Client »)
+        // laisse la hauteur voter : c'est elle qui dit qu'il est aussi en tête.
+        let dossier_une_fois = par_valeur.get(d.as_str()).is_some_and(|v| v.len() == 1);
+        // Et la contrepartie doit porter sa lettre de contrôle : un « matricule » sans lettre
+        // (« 0334991/T/S/000 », dirigeant 100/C-10, admis par un pack d'essai) peut être un
+        // autre identifiant ; la hauteur garde alors sa voix.
+        let o_a_sa_lettre = controle.is_some() && sans_lettre(o) != o;
+        if !votes.is_empty() && !(forts && dossier_une_fois && o_a_sa_lettre) {
             if au_dessus(o, &d) {
                 votes.push(Sens::Achat);
             } else if au_dessus(&d, o) {
@@ -1945,7 +2396,7 @@ pub fn prouver(
     // raison sociale d'ALGORIA sortait comme celle du fournisseur — la rangée à forme
     // juridique la plus proche du matricule du fournisseur était celle du client.
     // Un nom qui ne départage pas les parties ne se rend pas.
-    if let Some(n) = cote_autre.nom.as_ref() {
+    let rejete = |n: &Valeur| -> bool {
         let sien = cote_dossier
             .nom
             .as_ref()
@@ -1956,9 +2407,16 @@ pub fn prouver(
                 .filter(|m| !m.is_empty() && !formes.contains(m))
                 .collect()
         };
+        // Ni un texte qui CONTIENT le nom du dossier, collé à son libellé par l'OCR :
+        // « Client :/JI:ALGORIA FACTORY SARL » (OCR PP-OCRv6 du 8 novembre 2026,
+        // algoria-066, 069, 071) n'est pas le fournisseur ; son adresse était celle du client.
         let meme = dossier.raison_sociale.as_deref().is_some_and(|rs| {
             let (a, b) = (mots_de(rs), mots_de(&n.valeur));
-            !a.is_empty() && a == b
+            let colle: String = b.concat();
+            !a.is_empty()
+                && (a == b
+                    || a.iter()
+                        .all(|m| m.chars().count() >= 3 && colle.contains(m.as_str())))
         });
         // Ni un identifiant : un nom qui cite les jetons d'un matricule lu n'est pas un nom.
         let identifiant = occs.iter().any(|o| {
@@ -1974,9 +2432,42 @@ pub fn prouver(
             .reperes
             .iter()
             .any(|(r, _)| !r.is_empty() && *r == cle(&normaliser(&n.valeur)));
-        if sien || meme || identifiant || etiquette {
-            cote_autre.nom = None;
-        }
+        sien || meme || identifiant || etiquette
+    };
+    if cote_autre.nom.as_ref().is_some_and(&rejete) {
+        cote_autre.nom = None;
+    }
+    // La tête du bloc de l'autre partie, prouvée par sa structure : la règle de la forme
+    // juridique a pu prendre le nom du dossier, imprimé près du matricule du tiers, et il
+    // vient d'être écarté (algoria-036 : « Client : ALGORIA FACTORY SARL » à droite de
+    // l'en-tête de « Centre Felmane de Formation »).
+    if let (None, Some(autre)) = (&cote_autre.nom, autre) {
+        let mut occs_autre: Vec<&Occ> = par_valeur[autre].clone();
+        occs_autre.sort_by(|a, b| {
+            let (pa, ya, _) = page.haut(&a.jetons);
+            let (pb, yb, _) = page.haut(&b.jetons);
+            pa.cmp(&pb)
+                .then(ya.partial_cmp(&yb).unwrap_or(std::cmp::Ordering::Equal))
+        });
+        // Affirmé comme le matricule d'un tiers : par la couche de texte exacte, ou chaque
+        // caractère lu avec assurance ; sinon une piste, SIGNALÉE (dirigeant 50/08 : « Mme
+        // Leïla BEN SALEM » relu « Leila », sans confiance mesurée).
+        let seuil = entree.pack.confiance_du_caractere;
+        let assure = |jetons: &[usize]| {
+            entree.texte_exact
+                || jetons.iter().all(|&t| {
+                    let j = &page.j[t];
+                    !j.incertain(&entree.pack)
+                        && seuil.is_some_and(|s| j.faible.is_some_and(|f| f >= s))
+                })
+        };
+        cote_autre.nom = page
+            .tete_de_bloc(&occs_autre)
+            .map(|j| {
+                let statut = if assure(&j) { "conforme" } else { "signale" };
+                valeur(&page, &j, page.texte(&j), statut)
+            })
+            .filter(|v| !rejete(v));
     }
     // Le matricule du tiers imprimé loin de son nom, ou près du nom du dossier : le seul
     // autre nom à forme juridique de la page (`Page::seul_autre_nom`).
@@ -2046,6 +2537,46 @@ pub fn prouver(
             .collect();
         if let Some(a) = page.adresse_sous(&jetons) {
             let v = valeur(&page, &a, page.texte(&a), "conforme");
+            champs.insert(grille.champs[c].code.clone(), champ_de(&v));
+            lus.push((c, v.valeur.clone()));
+        }
+    }
+    // Le contact de l'émetteur, dans son bloc : affirmé par la couche de texte exacte ou
+    // chaque caractère lu avec assurance, sinon une piste.
+    if let (Some(c), Some(m)) = (op.contact_emetteur, emetteur.matricule.as_ref()) {
+        let jetons: Vec<usize> = m
+            .refs
+            .iter()
+            .filter_map(|r| {
+                page.j
+                    .iter()
+                    .position(|j| j.page == r.page && j.ordinal == r.ordinal)
+            })
+            .collect();
+        // les frontières du bloc : les libellés des parties, et les matricules des autres
+        let frontieres: BTreeSet<usize> = libelles
+            .iter()
+            .flat_map(|l| l.jetons.iter().copied())
+            .chain(
+                occs.iter()
+                    .filter(|o| o.valeur != m.valeur)
+                    .flat_map(|o| o.jetons.iter().copied()),
+            )
+            .collect();
+        if let Some(a) = page.contact_du_bloc(&jetons, c, &frontieres) {
+            let seuil = entree.pack.confiance_du_caractere;
+            let assure = entree.texte_exact
+                || a.iter().all(|&t| {
+                    let j = &page.j[t];
+                    !j.incertain(&entree.pack)
+                        && seuil.is_some_and(|s| j.faible.is_some_and(|f| f >= s))
+                });
+            let v = valeur(
+                &page,
+                &a,
+                page.texte(&a),
+                if assure { "conforme" } else { "signale" },
+            );
             champs.insert(grille.champs[c].code.clone(), champ_de(&v));
             lus.push((c, v.valeur.clone()));
         }
@@ -2280,6 +2811,7 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
     // nommée au moins une fois.
     let mut lus_n: BTreeMap<String, (Vec<usize>, bool, bool)> = BTreeMap::new();
     let mut partage = false;
+    let libelle_court_colle = regex::Regex::new(r"^\p{L}{1,3}[°º]\s*\d").expect("motif");
     for (i, j) in page.j.iter().enumerate() {
         if l.chiffre && !j.texte.chars().any(|c| c.is_ascii_digit()) {
             continue;
@@ -2373,6 +2905,12 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
             q += 1;
         }
         if !l.chiffre && q == rang.len() && page.se_poursuit(r) {
+            entier = false;
+        }
+        // Nommée par un libellé détaché, une valeur dont le jeton s'ouvre sur un court
+        // libellé collé (« n°354642/6 » sous « Quittance », OCR PP-OCRv6 du 8 novembre 2026,
+        // algoria-148) porte autre chose que la valeur : elle n'est pas rendue entière.
+        if debut == 0 && libelle_court_colle.is_match(page.j[i].texte.trim()) {
             entier = false;
         }
         let premier = page.j[i].texte.trim();

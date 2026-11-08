@@ -539,7 +539,7 @@ async function mesurerLaPiece(
     texteExact = false,
   ) =>
     resoudreLaPiece(
-      jetonsDuSudoku(tokens, d, c),
+      jetonsDuSudoku(tokens, d, c, releve.lecteur === "vision"),
       c,
       moteur,
       {
@@ -554,6 +554,7 @@ async function mesurerLaPiece(
       },
       marques,
       texteExact,
+      releve.lecteur === "vision",
     );
   let releve: ReleveGarde;
   try {

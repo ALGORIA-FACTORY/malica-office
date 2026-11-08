@@ -219,6 +219,27 @@ fn le_seul_autre_nom_a_forme_juridique_est_celui_du_tiers() {
         x["y1"] = json!(0.96);
         j.push(x);
     }
+    // La règle du seul autre nom se tait : deux autres noms. Mais l'en-tête de l'émetteur
+    // (nom, adresse, puis lignes à libellé jusqu'à son matricule) prouve le nom par sa
+    // structure (`tete_de_bloc`, 7 novembre 2026), et une société imprimée en pied de page
+    // n'y entre pas.
+    let p = parties(&e);
+    assert_eq!(
+        p["emetteur"]["nom"]["valeur"], "Kessira Bureautique SARL",
+        "{p}"
+    );
+    // Sans adresse sous le nom, l'en-tête ne prouve plus rien : la page reste ambiguë.
+    let j = e["jetons"].as_array_mut().expect("jetons");
+    let y_nom = j
+        .iter()
+        .find(|t| t["texte"] == "Kessira")
+        .and_then(|t| t["y1"].as_f64())
+        .expect("le nom");
+    j.retain(|t| {
+        let y = t["y0"].as_f64().unwrap_or(0.0);
+        let x = t["x0"].as_f64().unwrap_or(1.0);
+        !(y > y_nom && y < y_nom + 0.03 && x < 0.45)
+    });
     let p = parties(&e);
     assert!(p["emetteur"]["nom"].is_null(), "{p}");
 }
@@ -299,4 +320,54 @@ fn l_adresse_d_une_partie_est_la_ligne_sous_son_nom() {
     let o: Value = serde_json::from_str(&malica_sudoku::solve(&entree("algoria-001").to_string()))
         .expect("sortie lisible");
     assert!(o["champs"]["adresse_emetteur"]["valeur"].is_null());
+}
+
+#[test]
+fn le_contact_de_l_emetteur_s_arrete_au_bloc_du_client() {
+    // algoria-001, sens déclaré : sous « MF: 2815004Q/A/M/000 » (émetteur, x ≈ 0,805), on
+    // empile à la même marge le téléphone de l'émetteur, puis le bloc du client avec le sien.
+    // Revue Codex de #268 : le téléphone du client était pris pour celui de l'émetteur.
+    let mut e = entree("algoria-001");
+    e["connus"]["sens"] = json!("achat");
+    for p in e["grille"]["preuves"].as_array_mut().expect("preuves") {
+        if p["expression"]["op"] == "parties" {
+            p["expression"]["contact_emetteur"] = json!("telephone_email_emetteur");
+        }
+    }
+    let jetons = e["jetons"].as_array_mut().expect("jetons");
+    let mf = jetons
+        .iter()
+        .find(|t| t["texte"] == "MF:")
+        .expect("le libellé du matricule de l'émetteur")
+        .clone();
+    let (x, y) = (mf["x0"].as_f64().unwrap(), mf["y0"].as_f64().unwrap());
+    let mut ordinal = jetons.len() as i64;
+    let mut poser = |dy: f64, mots: &[&str]| {
+        let mut x0 = x;
+        for m in mots {
+            let x1 = x0 + 0.012 * m.chars().count() as f64;
+            jetons.push(json!({
+                "page": 1, "ordinal": ordinal, "texte": m,
+                "x0": x0, "y0": y + dy, "x1": x1, "y1": y + dy + 0.009,
+                "montants": [], "date": null
+            }));
+            ordinal += 1;
+            x0 = x1 + 0.004;
+        }
+    };
+    poser(0.015, &["Tél", ":", "72", "111", "111"]);
+    poser(0.03, &["Client", ":"]);
+    poser(0.045, &["Tél", ":", "71", "000", "000"]);
+    let o: Value =
+        serde_json::from_str(&malica_sudoku::solve(&e.to_string())).expect("sortie lisible");
+    let contact = o["champs"]["telephone_email_emetteur"]["valeur"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+    assert!(
+        contact.contains("72 111 111"),
+        "{contact} / {}",
+        o["parties"]
+    );
+    assert!(!contact.contains("71 000 000"), "{contact}");
 }
