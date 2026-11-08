@@ -86,7 +86,7 @@ function BoutonPlus() {
             </button>
           ))}
         </div>
-        <p className="note">{t("pme.boutonPlus.compte")}</p>
+        <p className="nt">{t("pme.boutonPlus.compte")}</p>
       </div>
     </div>
   );
