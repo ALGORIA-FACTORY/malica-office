@@ -26,7 +26,9 @@ import {
   type Personne,
   type SocieteDEssai,
 } from "./circuit-d-essai.ts";
-import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
+import pg from "pg";
+
+import { fermerLePool } from "./db.ts";
 import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./depots/suivi.ts";
 
 /** Ce que les fonctions d'origine disent de chaque pièce que `qui` voit. */
@@ -43,8 +45,38 @@ const ORACLE = `
     left join lateral app.circuit_de_la_piece(p.id) c on true
    where p.tenant_id = any($1::uuid[]) and p.remplacee_par is null and p.archivee_le is null`;
 
+/*
+ * LES DEUX LECTURES DANS LE MÊME INSTANTANÉ.
+ *
+ * Sous la lecture par défaut (`read committed`), chaque requête voit la base
+ * à son propre instant : une autre épreuve qui envoie une pièce ENTRE la
+ * liste et l'oracle les faisait diverger (CI de #284, 8 novembre 2026 :
+ * « envoyée » d'un côté, pas de l'autre — la même pièce, deux instants).
+ * `repeatable read` les fige au même instant ; le reste est l'identité du
+ * serveur, comme `sousIdentiteDuServeur`.
+ */
+const pool = new pg.Pool({ connectionString: process.env["DATABASE_URL"], max: 2 });
+
+async function auMemeInstant<T>(utilisateur: string, travail: (db: pg.PoolClient) => Promise<T>) {
+  const client = await pool.connect();
+  try {
+    await client.query("begin isolation level repeatable read");
+    await client.query("set local role authenticated");
+    await client.query("select set_config('request.jwt.claim.sub', $1, true)", [utilisateur]);
+    await client.query("select set_config('malica.origine', 'serveur', true)");
+    const r = await travail(client);
+    await client.query("commit");
+    return r;
+  } catch (e) {
+    await client.query("rollback").catch(() => undefined);
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 async function comparer(utilisateur: string, societes: string[], etiquette: string) {
-  const { liste, oracle } = await sousIdentiteDuServeur(utilisateur, async (db) => {
+  const { liste, oracle } = await auMemeInstant(utilisateur, async (db) => {
     const { executerRpc } = await import("./rpc.ts");
     const lots = (await executerRpc(db, {
       depot: "capture",
@@ -110,6 +142,7 @@ describe("la liste des pièces dit la même chose, d'un trait", { skip: !BASE_CO
     try {
       await s?.fermer();
     } finally {
+      await pool.end();
       await fermerLePool();
     }
   });
