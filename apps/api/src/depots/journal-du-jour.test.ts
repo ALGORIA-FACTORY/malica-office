@@ -131,7 +131,7 @@ describe("une ligne convertie d'une pièce en devise", () => {
           date_du_cours: "2026-09-10",
           source_du_cours: "SRC",
           origine_du_cours: "derogation_cabinet",
-          libelle_origine_du_cours: "Dérogation du cabinet",
+          libelle_origine_du_cours: "Dérogation de la comptabilité",
           motif_du_cours: "Cours de la banque du client",
         }),
         ligne({ ordinal: 2, compte: "B", credit: "3345.6" }),
@@ -146,7 +146,7 @@ describe("une ligne convertie d'une pièce en devise", () => {
       dateDuCours: "2026-09-10",
       source: "SRC",
       origineDuCours: "derogation_cabinet",
-      libelleOrigineDuCours: "Dérogation du cabinet",
+      libelleOrigineDuCours: "Dérogation de la comptabilité",
       motifDuCours: "Cours de la banque du client",
     });
     const { entete, lignes } = contenuDuFichier(journaux, null, EXPOSANTS);
