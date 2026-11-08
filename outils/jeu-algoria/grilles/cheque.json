@@ -1,0 +1,291 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "cheque",
+    "nom": "Chèque (formule) et son talon (souche)",
+    "typeDeDocument": "justificatif_paiement",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "barrement",
+      "concept": "barrement",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "Mentions issues de la loi n°2024-41",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "beneficiaire",
+      "concept": "raison_sociale",
+      "role": "beneficiaire",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Mentions issues de la loi n°2024-41",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "date_emission",
+      "concept": "date_piece",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Mentions de l'art. 346 (liste exacte à vérifier sur le texte officiel)",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_presentation",
+      "concept": "date_presentation",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Zones bancaires (pratique)",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_validite",
+      "concept": "date_validite",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Mentions issues de la loi n°2024-41",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "denomination_cheque",
+      "concept": "denomination_cheque",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "Mentions de l'art. 346 (liste exacte à vérifier sur le texte officiel)",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "endos_banque",
+      "concept": "endos_banque",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Zones bancaires (pratique)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "lieu_emission",
+      "concept": "lieu_signature",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Mentions de l'art. 346 (liste exacte à vérifier sur le texte officiel)",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "lieu_paiement",
+      "concept": "lieu_paiement",
+      "role": null,
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "Mentions de l'art. 346 (liste exacte à vérifier sur le texte officiel)",
+      "expert": "tiers",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_codage",
+      "concept": "ligne_codage",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Zones bancaires (pratique)",
+      "expert": "identifiant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "mandat_payer",
+      "concept": "mandat_payer",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "Mentions de l'art. 346 (liste exacte à vérifier sur le texte officiel)",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_chiffres",
+      "concept": "montant",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Mentions de l'art. 346 (liste exacte à vérifier sur le texte officiel)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_lettres",
+      "concept": "montant_en_lettres",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Mentions de l'art. 346 (liste exacte à vérifier sur le texte officiel)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "non_endossable",
+      "concept": "non_endossable",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "Mentions issues de la loi n°2024-41",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "numero_cheque",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "Zones bancaires (pratique)",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "plafond_chequier",
+      "concept": "plafond_chequier",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Mentions issues de la loi n°2024-41",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "plafond_formule",
+      "concept": "plafond_formule",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Mentions issues de la loi n°2024-41",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "qr_code",
+      "concept": "qr_code",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "Mentions issues de la loi n°2024-41",
+      "expert": "identifiant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "rib_tireur",
+      "concept": "rib",
+      "role": "tireur",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Zones bancaires (pratique)",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "signature_tireur",
+      "concept": "signature_cachet",
+      "role": "tireur",
+      "type": "booleen",
+      "obligatoire": "oui",
+      "parcelle": "Mentions de l'art. 346 (liste exacte à vérifier sur le texte officiel)",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "talon_beneficiaire",
+      "concept": "talon_beneficiaire",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Talon / souche (pratique, aucune valeur légale identifiée)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "talon_date",
+      "concept": "talon_date",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Talon / souche (pratique, aucune valeur légale identifiée)",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "talon_montant",
+      "concept": "talon_montant",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Talon / souche (pratique, aucune valeur légale identifiée)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "talon_numero",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Talon / souche (pratique, aucune valeur légale identifiée)",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "talon_objet",
+      "concept": "talon_objet",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Talon / souche (pratique, aucune valeur légale identifiée)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "talon_solde_avant_apres",
+      "concept": "talon_solde_avant_apres",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Talon / souche (pratique, aucune valeur légale identifiée)",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tire_banque",
+      "concept": "tire_banque",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Mentions de l'art. 346 (liste exacte à vérifier sur le texte officiel)",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tireur_nom",
+      "concept": "raison_sociale",
+      "role": "tireur",
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "Mentions de l'art. 346 (liste exacte à vérifier sur le texte officiel)",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    }
+  ]
+}

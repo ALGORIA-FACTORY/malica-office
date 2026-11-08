@@ -1,0 +1,284 @@
+{
+  "id": "037",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "B",
+  "scenario": "taux_13",
+  "realisme": [],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Qalmira Fournitures SARL",
+      "nomAr": "شركة قلميرة للوازم",
+      "enseigne": null,
+      "matricule": "6966005G/A/M/000",
+      "matriculeImprime": "6966005G/A/M/000",
+      "adresse": "103, rue de l'Artisanat, Mégrine",
+      "telephone": "00 59 118 736",
+      "fax": "00 63 308 619",
+      "email": null,
+      "site": null,
+      "rc": "B149444082019",
+      "rib": "99 519 6462438728885 30",
+      "banque": "Crédit Selvane",
+      "code": "C5861048",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "05/04/2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل، ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Transport de matériel, course",
+        "designationAr": "نقل معدات، رحلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Qalmira Fournitures SARL",
+      "document_date": "05/04/2026",
+      "references.numero": "FA26/07967",
+      "references.matricule_fiscal": "6966005G/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "103, rue de l'Artisanat, Mégrine",
+      "telephone_emetteur": "00 59 118 736",
+      "registre_commerce_emetteur": "B149444082019",
+      "totals.base_ht": "6.365,904",
+      "totals.vat": "827,568",
+      "totals.ttc": "7.194,472",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Hébergement en hôtel, nuitée",
+      "articles[0].quantity": "4",
+      "articles[0].unit_price_ht": "385,856",
+      "articles[0].total_ht": "1.543,424",
+      "articles[1].designation": "Transport de matériel, course",
+      "articles[1].quantity": "16",
+      "articles[1].unit_price_ht": "301,405",
+      "articles[1].total_ht": "4.822,480"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[13]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 1801380638,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Qalmira Fournitures SARL",
+      "document_date": "2026-04-05",
+      "currency": "TND",
+      "references.numero": "FA26/07967",
+      "references.matricule_fiscal": "6966005G/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "6365.904",
+      "totals.vat": "827.568",
+      "totals.ttc": "7194.472",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "6365.904",
+      "lines[0].vat_amount": "827.568",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "4.000",
+      "articles[0].unit_price_ht": "385.856",
+      "articles[0].total_ht": "1543.424",
+      "articles[1].quantity": "16.000",
+      "articles[1].unit_price_ht": "301.405",
+      "articles[1].total_ht": "4822.480"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "6365.904",
+          "0"
+        ],
+        [
+          "4366",
+          "827.568",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "7194.472"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Qalmira Fournitures SARL",
+      "date_operation": "2026-04-05",
+      "numero_facture": "FA26/07967",
+      "matricule_fiscal_emetteur": "6966005G/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "103, rue de l'Artisanat, Mégrine",
+      "telephone_email_emetteur": {
+        "telephone": "00 59 118 736"
+      },
+      "registre_commerce_emetteur": "B149444082019",
+      "total_ht": "6365.904",
+      "montant_tva_par_taux": {
+        "13": "827.568"
+      },
+      "total_ttc": "7194.472",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "13": "6365.904"
+      },
+      "lignes": [
+        {
+          "designation": "Hébergement en hôtel, nuitée",
+          "quantite": "4",
+          "prix_unitaire_ht": "385.856",
+          "montant_ligne_ht": "1543.424",
+          "taux_tva_ligne": "13"
+        },
+        {
+          "designation": "Transport de matériel, course",
+          "quantite": "16",
+          "prix_unitaire_ht": "301.405",
+          "montant_ligne_ht": "4822.480",
+          "taux_tva_ligne": "13"
+        }
+      ],
+      "devise": "TND"
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

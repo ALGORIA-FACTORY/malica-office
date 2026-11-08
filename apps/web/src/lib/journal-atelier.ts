@@ -21,6 +21,10 @@
  */
 import { versionClient } from "@/capabilities/coque";
 
+// Statique : la racine l'importe déjà pour la frontière d'erreur, un import
+// à la demande ne découpait rien (avertissement INEFFECTIVE_DYNAMIC_IMPORT).
+import { expurger } from "./rapport-plantage";
+
 /** Ce qu'on a déjà rapporté : une boucle de rendu ne doit pas noyer le journal. */
 const dejaVu = new Set<string>();
 
@@ -98,8 +102,11 @@ export function dossierDuJournal(tenantId: string | null): void {
  * l'envoi est ignoré, délibérément, et c'est le seul `catch` muet que ce
  * dépôt s'autorise — il n'avale rien d'autre que son propre échec.
  */
-function consignerEnBase(ou: string, message: string, pile: string): void {
-  if (dossierCourant === null) return;
+function consignerEnBase(ou: string, message: string, pile: string, code: string): void {
+  if (dossierCourant === null) {
+    consignerHorsDossier(ou, message, code);
+    return;
+  }
   void import("@/verticals/malica-office/composition")
     .then(({ office }) =>
       office().journal.consigner({
@@ -116,12 +123,54 @@ function consignerEnBase(ou: string, message: string, pile: string): void {
     .catch(() => undefined);
 }
 
-/** À appeler depuis un `catch` qui, autrement, avalerait la trace. */
-export function noterAuJournal(ou: string, raison: unknown): void {
+/*
+ * ========================================= ET QUAND AUCUN DOSSIER N'EST OUVERT
+ *
+ * 6 novembre 2026. Accepter une invitation, ouvrir le dossier d'un client
+ * depuis le cabinet, la tour : ces écrans échouent sans dossier ouvert, et
+ * leur panne n'allait nulle part. Elle part désormais par la porte hors
+ * dossier (`journal.consignerHorsDossier`, bornée par la base) : qui (la
+ * session), où, le code, et un détail EXPURGÉ et court — un message peut
+ * citer un matricule, une adresse ou un montant, et cette trace-là n'est
+ * rattachée à aucun dossier qui la protégerait.
+ *
+ * Sans session, la porte refuse : l'écran de connexion ne lit aucune donnée
+ * de client, et c'est la limite connue de `rapport-plantage.ts`.
+ */
+function consignerHorsDossier(ou: string, message: string, code: string): void {
+  void import("@/verticals/malica-office/composition")
+    .then(({ office }) =>
+      office().journal.consignerHorsDossier({
+        ou: expurger(ou).slice(0, 200) || "inconnu",
+        code: code.slice(0, 100),
+        detail: expurger(message).slice(0, 500) || null,
+        version: versionClient().slice(0, 120),
+        plateforme: typeof navigator === "undefined" ? null : navigator.userAgent.slice(0, 300),
+      }),
+    )
+    .catch(() => undefined);
+}
+
+/** Ce qu'une erreur dit d'elle-même sans son message : son nom, et un statut d'API. */
+function codeDe(raison: unknown): string {
+  if (!(raison instanceof Error)) return typeof raison;
+  const statut = (raison as { statut?: unknown }).statut;
+  return typeof statut === "number" ? `${raison.name} ${statut}` : raison.name;
+}
+
+/**
+ * À appeler depuis un `catch` qui, autrement, avalerait la trace.
+ *
+ * `ref` est la référence que l'écran a montrée (`texteDeLErreur`) : elle
+ * mène la ligne (« [ref 7F3A21C9] … »), pour qu'on la retrouve quand la
+ * personne la cite.
+ */
+export function noterAuJournal(ou: string, raison: unknown, ref?: string): void {
   if (typeof window === "undefined") return;
   const { message, pile } = texteEtPile(raison);
+  const marque = ref === undefined ? "" : `[ref ${ref}] `;
   // La base, toujours : c'est elle qui se relit.
-  consignerEnBase(ou, message, pile);
+  consignerEnBase(ou, `${marque}${message}`, pile, `${marque}${codeDe(raison)}`);
   // Le serveur d'atelier, en développement seulement.
   if (import.meta.env.DEV) rapporter(ou, message, pile);
 }

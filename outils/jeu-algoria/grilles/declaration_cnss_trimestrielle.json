@@ -1,0 +1,341 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "declaration_cnss_trimestrielle",
+    "nom": "Déclaration trimestrielle des salaires à la CNSS (DS)",
+    "typeDeDocument": "declaration_cnss",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "annee",
+      "concept": "annee",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "oui",
+      "parcelle": "periode",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "code_exploitation",
+      "concept": "code_exploitation",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "identification_employeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_depot",
+      "concept": "date_depot",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "validation",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "employeur_activite",
+      "concept": "activite",
+      "role": "employeur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "identification_employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_adresse",
+      "concept": "adresse",
+      "role": "employeur",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "identification_employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_matricule_fiscal",
+      "concept": "matricule_fiscal",
+      "role": "employeur",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "identification_employeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_numero_cnss",
+      "concept": "numero_cnss",
+      "role": "employeur",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "identification_employeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_raison_sociale",
+      "concept": "raison_sociale",
+      "role": "employeur",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "identification_employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_rne",
+      "concept": "identifiant_unique_rne",
+      "role": "employeur",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "identification_employeur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_signature_cachet",
+      "concept": "signature_cachet",
+      "role": "employeur",
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "identification_employeur",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "employeur_telephone_email",
+      "concept": "telephone_email",
+      "role": "employeur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "identification_employeur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "ligne_cin",
+      "concept": "cin",
+      "role": "salarie",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "lignes_salaries",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "ligne_jours_ou_mois",
+      "concept": "ligne_jours_ou_mois",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "selon_cas",
+      "parcelle": "lignes_salaries",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_matricule_cnss",
+      "concept": "numero_cnss",
+      "role": "salarie",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "lignes_salaries",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "ligne_nom_prenom",
+      "concept": "nom_prenom",
+      "role": "salarie",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "lignes_salaries",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "ligne_ordre",
+      "concept": "ligne_ordre",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "lignes_salaries",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_salaire_mois1",
+      "concept": "ligne_salaire_mois1",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "lignes_salaries",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_salaire_mois2",
+      "concept": "ligne_salaire_mois2",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "lignes_salaries",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_salaire_mois3",
+      "concept": "ligne_salaire_mois3",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "lignes_salaries",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ligne_salaire_trimestre",
+      "concept": "ligne_salaire_trimestre",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "lignes_salaries",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "masse_salariale_declaree",
+      "concept": "masse_salariale_declaree",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "totaux_et_cotisations",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_cotisations",
+      "concept": "montant_cotisations",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "totaux_et_cotisations",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_total_a_payer",
+      "concept": "net_a_payer",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "totaux_et_cotisations",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nature_declaration",
+      "concept": "nature_declaration",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "selon_cas",
+      "parcelle": "periode",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nombre_salaries",
+      "concept": "nombre_salaries",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "oui",
+      "parcelle": "totaux_et_cotisations",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "numero_page",
+      "concept": "numero_page",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "periode",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "penalites_retard",
+      "concept": "penalites",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "totaux_et_cotisations",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reference_teledeclaration",
+      "concept": "ref_accuse",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "validation",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "regime",
+      "concept": "regime",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "identification_employeur",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signature_cachet",
+      "concept": "signature_cachet",
+      "role": "employeur",
+      "type": "booleen",
+      "obligatoire": "selon_cas",
+      "parcelle": "validation",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "taux_accident_travail",
+      "concept": "taux_accident_travail",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "oui",
+      "parcelle": "totaux_et_cotisations",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "taux_global",
+      "concept": "taux_global",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "oui",
+      "parcelle": "totaux_et_cotisations",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "trimestre",
+      "concept": "periode",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "oui",
+      "parcelle": "periode",
+      "expert": "date",
+      "porteSurUnePartie": false
+    }
+  ]
+}

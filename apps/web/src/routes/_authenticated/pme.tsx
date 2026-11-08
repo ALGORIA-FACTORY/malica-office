@@ -1,5 +1,4 @@
 import { LienMonEspaceParti } from "@/components/malica/mon-espace-parti";
-import { fr } from "@malica/socle/messages-fr";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -24,10 +23,12 @@ import {
   type PieceARemplacer,
 } from "@/components/malica/pme-context";
 import { QuestionDuType } from "@/components/malica/question-du-type";
+import { SurfacePme } from "@/components/malica/surface-pme";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useCatalogueDesOffres } from "@/hooks/use-offres";
 import { useSuperposition } from "@/hooks/use-superposition";
-import { useI18n } from "@/i18n";
+import { useI18n, type MessageKey } from "@/i18n";
+import { libelleHorsArbre } from "@/i18n/dictionnaires";
 import { ouverturesDuForfait } from "@/lib/forfait";
 import { visibiliteALaCapture } from "@/lib/visibilite-a-la-capture";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
@@ -54,10 +55,10 @@ const CameraScanner = lazy(() =>
 
 /**
  * L'en-tête se rend avant que la langue de la personne soit connue : il se lit
- * dans la langue par défaut du dictionnaire, jamais en dur dans le code.
+ * dans la langue par défaut du dictionnaire, jamais en dur dans le code. Il le
+ * lit au dictionnaire CHARGÉ (`libelleHorsArbre`) : importer `messages-fr` ici
+ * le faisait entrer dans le premier écran de toutes les pages.
  */
-const META = fr;
-
 /** Un lot à joindre qui n'est pas tout parti : le message, la pièce, et si une partie s'est jointe. */
 class ErreurDeJointure extends Error {
   constructor(
@@ -72,10 +73,10 @@ class ErreurDeJointure extends Error {
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
     meta: [
-      { title: META["meta.pme.titre"] },
-      { name: "description", content: META["meta.pme.description"] },
-      { property: "og:title", content: META["meta.pme.titre"] },
-      { property: "og:description", content: META["meta.pme.og"] },
+      { title: libelleHorsArbre("meta.pme.titre") },
+      { name: "description", content: libelleHorsArbre("meta.pme.description") },
+      { property: "og:title", content: libelleHorsArbre("meta.pme.titre") },
+      { property: "og:description", content: libelleHorsArbre("meta.pme.og") },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -451,7 +452,7 @@ function PmeLayout() {
         e instanceof FilePleine
           ? t("pme.file.pleine")
           : e instanceof ErreurDeJointure
-            ? e.message
+            ? t("pme.joindre.horsLigne")
             : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
       );
       // Ce qui s'est joint avant l'arrêt se voit sur la pièce.
@@ -668,7 +669,7 @@ function PmeLayout() {
      * dedans — c'est aussi ce que font les maquettes, où l'attribut est sur
      * `body`.
      */
-    <div data-surface="pme">
+    <SurfacePme>
       <div className="app flex flex-col text-foreground">
         {/*
          * La barre d'état, peinte : sous Android 15 l'écran passe dessous, et ce
@@ -785,6 +786,7 @@ function PmeLayout() {
         {aTyper.length > 0 ? (
           <QuestionDuType
             documents={aTyper.map((p) => p.name)}
+            avis={avisSurLesPhotos(aTyper, t)}
             mode="capture"
             onRepondre={(code) => {
               const lot = aTyper;
@@ -922,7 +924,7 @@ function PmeLayout() {
           </Suspense>
         ) : null}
       </div>
-    </div>
+    </SurfacePme>
   );
 }
 
@@ -955,4 +957,19 @@ function NavItem({
       <span>{label}</span>
     </Link>
   );
+}
+
+/**
+ * L'avis sur des photos importées, avant l'envoi : le défaut le plus grave d'abord (une page
+ * trop petite, de biais, sombre, puis floue). Rien si aucune n'en a : pas d'alarme sans fait.
+ */
+function avisSurLesPhotos(
+  lot: readonly PickedFile[],
+  t: (cle: MessageKey) => string,
+): string | null {
+  const defauts = new Set(lot.flatMap((p) => p.defauts ?? []));
+  const premier = (["too_small", "oblique", "too_dark", "blurry"] as const).find((d) =>
+    defauts.has(d),
+  );
+  return premier ? t(`pme.photo.avis.${premier}`) : null;
 }

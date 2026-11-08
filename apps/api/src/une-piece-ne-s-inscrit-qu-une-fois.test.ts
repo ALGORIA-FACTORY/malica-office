@@ -58,6 +58,25 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       );
       return rows[0]!.id;
     });
+  /**
+   * Une écriture que la société a posée AVANT l'engagement de son cabinet :
+   * depuis le lot S5, aucun membre de la PME n'en pose pendant qu'un cabinet
+   * est engagé. Le mandat se suspend le temps de rejouer cette histoire.
+   */
+  const avantLeMandat = async <T>(f: () => Promise<T>): Promise<T> => {
+    await admin.query(
+      `update identity.engagements set status = 'suspendu' where pme_org_id = $1 and status = 'actif'`,
+      [pme],
+    );
+    try {
+      return await f();
+    } finally {
+      await admin.query(
+        `update identity.engagements set status = 'actif' where pme_org_id = $1 and status = 'suspendu'`,
+        [pme],
+      );
+    }
+  };
   const vivantes = async (pieceId: string, nature: string) =>
     (
       await admin.query<{ n: string }>(
@@ -269,7 +288,9 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
 
   it("ANO-009 : transmettre une pièce transmet son écriture au cabinet", async () => {
     const piece = await nouvellePiece("entite");
-    const ecr = await sousIdentite(dirigeant.id, (db) => office.propose(db, facture(piece)));
+    const ecr = await avantLeMandat(() =>
+      sousIdentite(dirigeant.id, (db) => office.propose(db, facture(piece))),
+    );
     const voit = () =>
       sousIdentite(expert.id, async (db) => {
         const { rows } = await db.query(`select 1 from ecritures_v where id = $1`, [ecr]);
@@ -329,10 +350,12 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       await office.book(db, id);
       return id;
     });
-    await sousIdentite(dirigeant.id, async (db) => {
-      const id = await office.propose(db, { ...facture(gardee), libelle: `GARDEE ${marque}` });
-      await office.book(db, id);
-    });
+    await avantLeMandat(() =>
+      sousIdentite(dirigeant.id, async (db) => {
+        const id = await office.propose(db, { ...facture(gardee), libelle: `GARDEE ${marque}` });
+        await office.book(db, id);
+      }),
+    );
     const lire = () =>
       sousIdentite(expert.id, async (db) => {
         const { rows } = await db.query<{ ecriture_libelle: string; valide_le: string | null }>(

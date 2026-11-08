@@ -13,7 +13,7 @@ import { Check, ImageUp } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cadrer } from "@/capabilities/cadrage";
-import { analyzeFrame, type FrameAnalysis } from "@/capabilities/scanner";
+import type { FrameAnalysis } from "@/capabilities/scanner";
 import { cleDuMotif, motifCamera, type MotifCamera } from "@/capabilities/camera";
 import { useI18n, type MessageKey } from "@/i18n";
 import { noterAuJournal } from "@/lib/journal-atelier";
@@ -213,6 +213,7 @@ export function CameraScanner({ onDone, onCancel, onFallback }: CameraScannerPro
           const cadrage = await cadrer(petite);
           // La résolution VRAIE de la caméra, pas celle de la trame d'analyse :
           // c'est elle qui dit si le document sera lisible une fois pris.
+          const { analyzeFrame } = await import("@/capabilities/scanner");
           const result = analyzeFrame(petite, Math.max(vw, vh), cadrage.coins);
           analysisRef.current = result;
           setAnalysis(result);
@@ -428,17 +429,27 @@ export function CameraScanner({ onDone, onCancel, onFallback }: CameraScannerPro
         ? { texte: t("scan.hint.searching"), bon: false }
         : analysis?.reason === "too_small"
           ? { texte: t("scan.hint.closer"), bon: false }
-          : analysis?.reason === "blurry"
-            ? { texte: t("scan.hint.blurry"), bon: false }
-            : analysis?.ok
-              ? /*
-                 * Quand c'est bon, l'écran ne dit plus « c'est bon » : il dit
-                 * ce qui va se passer. « Ne bougez plus » demande un geste
-                 * précis ; « cadrage correct » n'en demande aucun, et laisse
-                 * l'utilisateur se demander s'il doit appuyer.
-                 */
-                { texte: t("scan.verdict.tenez"), bon: true }
-              : { texte: t("scan.hint.searching"), bon: false };
+          : analysis?.reason === "oblique"
+            ? { texte: t("scan.hint.oblique"), bon: false }
+            : analysis?.reason === "too_dark"
+              ? { texte: t("scan.hint.dark"), bon: false }
+              : analysis?.reason === "blurry"
+                ? { texte: t("scan.hint.blurry"), bon: false }
+                : analysis?.ok && analysis.ombre
+                  ? /*
+                     * Une ombre ou une lumière inégale : la prise reste permise, mais
+                     * l'écran le dit — c'est le conseil qui évite des lignes muettes.
+                     */
+                    { texte: t("scan.hint.ombre"), bon: true }
+                  : analysis?.ok
+                    ? /*
+                       * Quand c'est bon, l'écran ne dit plus « c'est bon » : il dit
+                       * ce qui va se passer. « Ne bougez plus » demande un geste
+                       * précis ; « cadrage correct » n'en demande aucun, et laisse
+                       * l'utilisateur se demander s'il doit appuyer.
+                       */
+                      { texte: t("scan.verdict.tenez"), bon: true }
+                    : { texte: t("scan.hint.searching"), bon: false };
 
   /** La prise automatique approche : 0, puis 1, puis 2 sur trois. */
   const compteARebours = analysis?.ok ? Math.min(stable, STABLE_POUR_PRENDRE) : 0;
@@ -621,11 +632,15 @@ export function CameraScanner({ onDone, onCancel, onFallback }: CameraScannerPro
         >
           {rejected === "blurry"
             ? t("scan.reject.blurry")
-            : rejected === "attente"
-              ? t("scan.reject.attente")
-              : rejected === "image"
-                ? t("scan.reject.image")
-                : t("scan.reject.frame")}
+            : rejected === "too_dark"
+              ? t("scan.reject.dark")
+              : rejected === "oblique"
+                ? t("scan.reject.oblique")
+                : rejected === "attente"
+                  ? t("scan.reject.attente")
+                  : rejected === "image"
+                    ? t("scan.reject.image")
+                    : t("scan.reject.frame")}
         </p>
       ) : null}
 

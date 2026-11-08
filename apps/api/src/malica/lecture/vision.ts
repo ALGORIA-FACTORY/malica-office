@@ -28,6 +28,7 @@ import { repairArticles } from "./article-repair.ts";
 import { extrairePagesScannees, pagesDessineesDuPdf } from "./pdf-image.ts";
 import {
   SecondLecteurOccupe,
+  lecteursDuSecondLecteur,
   lireAvecPaddle,
   ouvrirLeCoupeCircuit,
   secondLecteurDisponible,
@@ -37,6 +38,8 @@ import { BANDES_MAX, decouperEnBandes, fusionnerBandes } from "./bandes.ts";
 import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
 import { lireAvecQwen, QwenError } from "./qwen.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
+import type { MarqueDeLaPage } from "@malica/socle/ports/malica";
+
 import type { PageToken, TokenRef } from "./token-plan.ts";
 
 /**
@@ -209,6 +212,11 @@ export type Lecteur = "pdf-text" | "paddle" | "vision" | "fourni";
 
 export interface VisionRead {
   tokens: PageToken[];
+  /**
+   * Les marques vues sans modèle (les cachets) par le relevé qui a produit `tokens` ;
+   * absentes d'une lecture rejouée ou fournie, qui ne les a pas vues.
+   */
+  marques?: MarqueDeLaPage[];
   selection: VisionSelection;
   lecteur: Lecteur;
   /** PaddleOCR a-t-il été essayé sur cette pièce (même sans rien rendre) ? */
@@ -613,42 +621,71 @@ function octetsDuDataUrl(dataUrl: string): Uint8Array {
 async function releverDesPages(
   pages: ReadonlyArray<{ dataUrl: string; page: number }>,
   sansPaddle: boolean,
+  surLeTableau?: (tokens: PageToken[]) => void,
 ): Promise<{ releve: Releve | null; tente: boolean }> {
   if (sansPaddle || !secondLecteurDisponible()) return { releve: null, tente: false };
 
-  const tokens: PageToken[] = [];
-  let modele = "paddleocr";
-  for (const image of pages) {
-    let lu: Awaited<ReturnType<typeof lireAvecPaddle>>;
-    try {
-      lu = await lireAvecPaddle(octetsDuDataUrl(image.dataUrl), image.page);
-    } catch (e) {
-      /*
-       * PADDLEOCR TOMBÉ NE REND PLUS LA PIÈCE ILLISIBLE.
-       *
-       * Quand le modèle de vision est là, la pièce bascule sur lui, et le
-       * coupe-circuit écarte PaddleOCR des pièces suivantes. Sans modèle de
-       * vision, la panne remonte telle quelle : la file durable la rejouera,
-       * et c'est le seul recours qui reste.
-       */
-      if (!(e instanceof PanneFournisseur) || !visionDisponible()) throw e;
-      // Occupé n'est pas tombé : cette pièce seule change de lecteur.
-      if (!(e instanceof SecondLecteurOccupe)) ouvrirLeCoupeCircuit();
-      console.error(
-        `[lecture] PaddleOCR indisponible (${e.message}) : bascule sur le modèle de vision`,
-      );
-      return { releve: null, tente: true };
-    }
-    // Une seule page muette et on renonce : un plan de jetons incomplet
-    // ferait désigner sur une pièce amputée, ce qui est pire que de la
-    // relire entièrement avec l'autre lecteur.
-    if (!lu || lu.tokens.length === 0) return { releve: null, tente: true };
-    tokens.push(...lu.tokens);
-    modele = lu.modele;
+  // Les pages d'une pièce, autant à la fois que le service a de lecteurs ; chacune
+  // garde sa place dans le plan.
+  const lues: Array<Awaited<ReturnType<typeof lireAvecPaddle>>> = [];
+  const enParallele = pages.length > 1 ? await lecteursDuSecondLecteur() : 1;
+  let suivante = 0;
+  const arret: { echec: { erreur: unknown } | null; muette: boolean } = {
+    echec: null,
+    muette: false,
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(enParallele, pages.length) }, async () => {
+      while (!arret.echec && !arret.muette && suivante < pages.length) {
+        const k = suivante++;
+        const image = pages[k]!;
+        try {
+          // Le tableau d'abord, quand la pièce tient sur une page : une page d'une
+          // pièce plus longue n'en porte qu'une partie.
+          lues[k] = await lireAvecPaddle(
+            octetsDuDataUrl(image.dataUrl),
+            image.page,
+            undefined,
+            surLeTableau && pages.length === 1
+              ? (t) => surLeTableau(recollerLesMilliers(t))
+              : undefined,
+          );
+        } catch (erreur) {
+          arret.echec ??= { erreur };
+          return;
+        }
+        // Une seule page muette et on renonce : un plan de jetons incomplet
+        // ferait désigner sur une pièce amputée, ce qui est pire que de la
+        // relire entièrement avec l'autre lecteur.
+        if (!lues[k] || lues[k].tokens.length === 0) arret.muette = true;
+      }
+    }),
+  );
+  if (arret.echec) {
+    const e = arret.echec.erreur;
+    /*
+     * PADDLEOCR TOMBÉ NE REND PLUS LA PIÈCE ILLISIBLE.
+     *
+     * Quand le modèle de vision est là, la pièce bascule sur lui, et le
+     * coupe-circuit écarte PaddleOCR des pièces suivantes. Sans modèle de
+     * vision, la panne remonte telle quelle : la file durable la rejouera,
+     * et c'est le seul recours qui reste.
+     */
+    if (!(e instanceof PanneFournisseur) || !visionDisponible()) throw e;
+    // Occupé n'est pas tombé : cette pièce seule change de lecteur.
+    if (!(e instanceof SecondLecteurOccupe)) ouvrirLeCoupeCircuit();
+    console.error(
+      `[lecture] PaddleOCR indisponible (${e.message}) : bascule sur le modèle de vision`,
+    );
+    return { releve: null, tente: true };
   }
+  if (arret.muette) return { releve: null, tente: true };
+  const tokens: PageToken[] = lues.flatMap((lu) => lu!.tokens);
+  const modele = lues.at(-1)?.modele ?? "paddleocr";
   return {
     releve: {
       tokens,
+      marques: lues.flatMap((lu) => lu!.marques),
       source: modele,
       lecteur: "paddle",
       paddleTente: true,
@@ -678,6 +715,8 @@ function visionDisponible(): boolean {
 
 export interface Releve {
   tokens: PageToken[];
+  /** Les marques vues sans modèle (les cachets) ; seul le second lecteur en relève. */
+  marques: MarqueDeLaPage[];
   source: string;
   lecteur: Lecteur;
   paddleTente: boolean;
@@ -698,6 +737,12 @@ export interface ParamsDeReleve {
    * faisait que repayer la désignation.
    */
   sansCoucheTexte?: boolean;
+  /**
+   * Les jetons du TABLEAU d'une image d'une page, dès que le second lecteur les a
+   * lus (`lireAvecPaddle`) : de quoi prouver les totaux et les articles pendant
+   * que le reste de la page se lit. Le relevé rendu reste la lecture complète.
+   */
+  surLeTableau?: (tokens: PageToken[]) => void;
 }
 
 /**
@@ -738,6 +783,7 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
     if (laCoucheSeCroit(couche) && !params.sansCoucheTexte) {
       return {
         tokens: couche.tokens,
+        marques: [],
         source: "pdf-text",
         lecteur: "pdf-text",
         paddleTente: false,
@@ -761,7 +807,7 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
     }
 
     // Le second lecteur passe DEVANT, quand il est là.
-    const parPaddle = await releverDesPages(pages, params.sansPaddle ?? false);
+    const parPaddle = await releverDesPages(pages, params.sansPaddle ?? false, params.surLeTableau);
     /*
      * LE NOM DU MODELE, SANS LE CHEMIN QUI L'A APPELE.
      *
@@ -791,6 +837,7 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
     }
     return {
       tokens,
+      marques: [],
       source: modeleOcr(),
       lecteur: "vision",
       paddleTente: parPaddle.tente,
@@ -802,12 +849,14 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
   const parPaddle = await releverDesPages(
     [{ dataUrl: params.dataUrl, page: 1 }],
     params.sansPaddle ?? false,
+    params.surLeTableau,
   );
   if (parPaddle.releve) return parPaddle.releve;
 
   const lecture = await lireUnePage({ dataUrl: params.dataUrl, page: 1 });
   return {
     tokens: lecture.tokens,
+    marques: [],
     source: modeleOcr(),
     lecteur: "vision",
     paddleTente: parPaddle.tente,
@@ -989,6 +1038,7 @@ export async function runVisionRead(params: {
   const pass1: Releve = params.tokens
     ? {
         tokens: params.tokens as PageToken[],
+        marques: [],
         source: params.releveur ?? "fourni",
         lecteur: "fourni",
         paddleTente: false,
@@ -1057,6 +1107,7 @@ export async function runVisionRead(params: {
     if (parRecette) {
       return {
         tokens,
+        marques: pass1.marques,
         selection: parRecette.selection,
         model: `${pass1.source}+${MODELE_RECETTE}`,
         readModel: pass1.source,
@@ -1157,6 +1208,7 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
 
   return {
     tokens,
+    marques: pass1.marques,
     selection,
     // La lecture a deux auteurs : le journal doit nommer les deux, sinon un
     // coût ou une régression de qualité devient impossible à imputer.

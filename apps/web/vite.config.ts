@@ -20,9 +20,12 @@ import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
+import { dictionnairesParEspace } from "./dictionnaires-par-espace";
 import { relaisApi } from "./relais-api";
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+/** Les dictionnaires du Socle, que `dictionnairesParEspace` coupe en paquets. */
+const SOURCES_DU_SOCLE = join(RACINE, "packages", "socle", "src");
 /**
  * La version que le client déclare à l'API — celle du dépôt, une seule pour
  * le site et pour la coque. C'est elle que `CLIENT_MIN_VERSION` compare.
@@ -88,6 +91,8 @@ export default defineConfig(({ mode }) => {
       // Avant tout le reste : le relais doit voir la requête avant la chaîne de
       // rendu, qui répondrait sinon par la page 404 de l'application.
       ...(coque ? [] : [relaisApi()]),
+      // Les dictionnaires en deux paquets par langue, base et espaces.
+      dictionnairesParEspace(SOURCES_DU_SOCLE),
       tailwindcss(),
       // `server.entry` renvoie l'entrée serveur vers src/server.ts, qui enveloppe
       // les erreurs de rendu côté serveur.
@@ -136,6 +141,48 @@ export default defineConfig(({ mode }) => {
         config: () => ({ preview: { port: 4177, strictPort: false } }),
       },
     ],
+
+    /*
+     * Le socle du navigateur — React, le routeur, React Query, et ce que
+     * l'application en tire d'emblée (la racine, l'arbre des routes, les
+     * gardes) — en UN fichier.
+     *
+     * Rolldown découpait ces modules en une douzaine de fichiers de quelques
+     * centaines d'octets (`useRouter`, `jsx-runtime`, `matchContext`…), parce
+     * que l'entrée et les écrans paresseux les partagent. Tous sont chargés
+     * au premier écran de toute façon : douze requêtes au lieu d'une, et sur
+     * un téléphone en 4G chaque requête coûte un aller-retour (mesuré :
+     * 30 fichiers préchargés sur l'accueil, audit web du 6 novembre 2026 ;
+     * 3 désormais). Le groupe tire les dépendances de ses modules, donc ce
+     * que le démarrage de Start importe de l'application ; les écrans, eux,
+     * restent découpés et paresseux.
+     */
+    environments: {
+      client: {
+        build: {
+          rolldownOptions: {
+            output: {
+              codeSplitting: {
+                groups: [
+                  /*
+                   * L'aide au préchargement de Vite, à part : le socle tire ses
+                   * dépendances avec lui, elle comprise, et l'entrée — qui
+                   * s'en sert pour importer le socle APRÈS la première image
+                   * (`client.tsx`) — n'aurait rien pu importer sans le charger.
+                   */
+                  { name: "prechargement", test: /preload-helper/, priority: 2 },
+                  {
+                    name: "socle-du-navigateur",
+                    priority: 1,
+                    test: /node_modules[\\/](react|react-dom|scheduler|use-sync-external-store|seroval|seroval-plugins|@tanstack[\\/](react-router|router-core|history|store|react-store|react-query|query-core|start-client-core|react-start-client|react-start))[\\/]/,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
 
     resolve: {
       // Résolution native des alias du tsconfig — Vite la fournit désormais, le

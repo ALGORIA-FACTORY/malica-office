@@ -106,7 +106,7 @@ describe("chaque parcours se suit", { skip: !BASE_CONFIGUREE }, () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${emettreJeton(qui)}`,
+        Authorization: `Bearer ${emettreJeton(qui, new Date())}`,
         "X-Malica-Client": "coque-android/9.9.9",
         ...entetes,
       },

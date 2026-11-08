@@ -1,7 +1,8 @@
 import "./lib/error-capture";
 
+import { chargerLesEspaces } from "./i18n/dictionnaires";
 import { consumeLastCapturedError } from "./lib/error-capture";
-import { renderErrorPage } from "./lib/error-page";
+import { referenceDePanne, renderErrorPage } from "./lib/error-page";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -11,9 +12,13 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => (m.default ?? m) as ServerEntry,
-    );
+    // Le français se rend dès la première page : son dictionnaire — base et
+    // espaces — se charge à la demande (`i18n/dictionnaires.ts`), et le
+    // serveur l'attend avant de rendre quoi que ce soit.
+    serverEntryPromise = Promise.all([
+      import("@tanstack/react-start/server-entry"),
+      chargerLesEspaces("fr"),
+    ]).then(([m]) => (m.default ?? m) as ServerEntry);
   }
   return serverEntryPromise;
 }
@@ -28,8 +33,13 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   const body = await response.clone().text();
   if (!isH3SwallowedErrorBody(body)) return response;
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
-  return new Response(renderErrorPage(), {
+  // The reference shown on the page leads the log line: the person quotes it.
+  const ref = referenceDePanne();
+  console.error(
+    `[ssr ref ${ref}]`,
+    consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`),
+  );
+  return new Response(renderErrorPage(ref), {
     status: 500,
     headers: { "content-type": "text/html; charset=utf-8" },
   });
@@ -51,8 +61,9 @@ export default {
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
-      console.error(error);
-      return new Response(renderErrorPage(), {
+      const ref = referenceDePanne();
+      console.error(`[ssr ref ${ref}]`, error);
+      return new Response(renderErrorPage(ref), {
         status: 500,
         headers: { "content-type": "text/html; charset=utf-8" },
       });

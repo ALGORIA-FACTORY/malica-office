@@ -10,6 +10,7 @@ import { useVoix } from "@/hooks/use-voix";
 import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { PAS_MS, morceaux, motsParPas, texteMontre } from "@/lib/mot-a-mot";
 import { cabinetsDesSocietes } from "@/lib/votre-comptabilite";
 import { office } from "@/verticals/malica-office/composition";
@@ -481,9 +482,7 @@ function PmeMalica() {
                   {question.isError ? (
                     <div className="et1" role="alert">
                       <i />
-                      {question.error instanceof Error
-                        ? question.error.message
-                        : t("malica.chat.error")}
+                      {texteDeLErreur(question.error, "malica : question", t("malica.chat.error"))}
                     </div>
                   ) : null}
                 </div>

@@ -21,7 +21,10 @@ fn grille() -> Value {
             {"code": "total_ttc", "type": "montant", "reperes_fr": ["Total TTC"], "expert": "montant", "parcelle": "Totaux"},
             {"code": "en_lettres", "type": "texte", "reperes_fr": ["à la somme de"], "expert": "libelle", "parcelle": "Totaux"},
             {"code": "numero", "type": "identifiant", "reperes_fr": ["Facture N°", "N°"], "expert": "reference", "parcelle": "Références"},
-            {"code": "devise", "type": "liste", "reperes_fr": ["DT", "TND", "USD"], "expert": "libelle", "parcelle": "Totaux"},
+            {"code": "devise", "type": "liste", "reperes_fr": ["DT", "TND", "USD"], "expert": "libelle", "parcelle": "Totaux",
+             "valeurs": [{"code": "TND", "formes": ["TND", "DT", "Dinar"]}, {"code": "USD", "formes": ["USD", "$"]}]},
+            // une liste sans domaine : son repère vu se signale, aucune valeur ne se rend
+            {"code": "statut", "type": "liste", "reperes_fr": ["Statut"], "expert": "libelle", "parcelle": "En-tête"},
             {"code": "cachet", "type": "booleen", "reperes_fr": ["Cachet"], "expert": "presence", "parcelle": "Signature"},
             {"code": "mf_emetteur", "type": "identifiant", "reperes_fr": ["Matricule fiscal"], "format_code": "matricule_fiscal", "expert": "identifiant", "parcelle": "En-tête"},
             {"code": "mf_client", "type": "identifiant", "reperes_fr": ["Matricule fiscal"], "format_code": "matricule_fiscal", "expert": "identifiant", "parcelle": "Client"}
@@ -57,7 +60,10 @@ fn les_lettres_qui_valent_le_total_le_prouvent() {
     assert_eq!(o["issue"], "prouvee", "{o}");
     assert_eq!(o["preuves"]["L"], "verifiee");
     assert_eq!(o["champs"]["en_lettres"]["statut"], "prouve");
-    assert_eq!(o["champs"]["en_lettres"]["refs"], json!([{"page": 1, "ordinal": 6}]));
+    assert_eq!(
+        o["champs"]["en_lettres"]["refs"],
+        json!([{"page": 1, "ordinal": 6}])
+    );
 }
 
 #[test]
@@ -95,18 +101,33 @@ fn l_anneau_3_lit_derriere_le_repere_et_signale_le_libelle_colle() {
     let o = resoudre(j.clone(), grille(), pack_essai());
     assert_eq!(o["champs"]["numero"]["valeur"], "FA-2026-001", "{o}");
     assert_eq!(o["champs"]["numero"]["statut"], "conforme");
-    assert_eq!(o["champs"]["devise"]["valeur"], "DT");
+    // une liste à domaine rend un CODE de son domaine, jamais le mot imprimé
+    assert_eq!(o["champs"]["devise"]["valeur"], "TND");
     assert_eq!(o["champs"]["devise"]["statut"], "conforme");
     // un cachet ne se constate pas dans un texte : son repère le signale
     assert_eq!(o["champs"]["cachet"]["statut"], "signale");
     assert!(o["champs"]["cachet"]["valeur"].is_null());
 
-    // le libellé collé dans le jeton : la valeur se dit, signalée
+    // le libellé collé dans le jeton : une valeur qui a la forme d'une référence est
+    // conforme (banc du 5 novembre 2026) ; ce que l'OCR y colle de plus la garde signalée
     let mut colle = facture(1, None);
     colle.push(jeton(7, "N°FA-2026-001", 0.05, 0.05, &[]));
     let o = resoudre(colle, grille(), pack_essai());
     assert_eq!(o["champs"]["numero"]["valeur"], "FA-2026-001", "{o}");
-    assert_eq!(o["champs"]["numero"]["statut"], "signale");
+    assert_eq!(o["champs"]["numero"]["statut"], "conforme");
+    let mut colle = facture(1, None);
+    colle.push(jeton(7, "N°FA-2026-001juin", 0.05, 0.05, &[]));
+    let o = resoudre(colle, grille(), pack_essai());
+    assert_eq!(o["champs"]["numero"]["statut"], "signale", "{o}");
+
+    // une liste sans domaine : « Statut » imprimé n'est pas une valeur
+    let mut st = facture(1, None);
+    st.push(jeton(7, "Statut", 0.05, 0.05, &[]));
+    st.push(jeton(8, ":", 0.12, 0.05, &[]));
+    st.push(jeton(9, "active", 0.14, 0.05, &[]));
+    let o = resoudre(st, grille(), pack_essai());
+    assert!(o["champs"]["statut"]["valeur"].is_null(), "{o}");
+    assert_eq!(o["champs"]["statut"]["statut"], "signale");
 
     // deux devises imprimées : signalée
     j.push(jeton(11, "(USD)", 0.6, 0.70, &[]));
@@ -117,7 +138,13 @@ fn l_anneau_3_lit_derriere_le_repere_et_signale_le_libelle_colle() {
 #[test]
 fn deux_matricules_au_meme_format_ne_s_attribuent_pas_sans_l_anneau_2() {
     let mut j = facture(1, None);
-    j.push(jeton(7, "Matricule fiscal : 1876543W/A/M/000", 0.05, 0.10, &[]));
+    j.push(jeton(
+        7,
+        "Matricule fiscal : 1876543W/A/M/000",
+        0.05,
+        0.10,
+        &[],
+    ));
     let o = resoudre(j, grille(), pack_essai());
     // le seul matricule lu peut être celui du client : il n'est l'émetteur de personne
     assert_eq!(o["champs"]["mf_emetteur"]["statut"], "signale", "{o}");

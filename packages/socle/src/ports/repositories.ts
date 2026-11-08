@@ -1772,6 +1772,19 @@ export interface LigneDePeriode {
   credit: string;
 }
 
+/**
+ * Le total comptabilisé d'un mois pour une classe du plan (lot S2) : ce que
+ * l'accueil de la PME montre, sans une ligne, un compte ni une écriture.
+ */
+export interface TotalDeClasse {
+  /** « 2026-10 ». */
+  mois: string;
+  /** Le préfixe de la classe, tel que le pack le dit (`AccountClass.prefix`). */
+  classe: string;
+  debit: string;
+  credit: string;
+}
+
 /** La proposition d'écriture calculée par le serveur (3B-6), ou son refus motivé. */
 /**
  * La proposition d une piece, ou son refus.
@@ -2047,6 +2060,11 @@ export interface OfficeRepository {
    * balance ne confirmerait pas.
    */
   periodeLignes(tenantId: string, from: string, to: string): Promise<LigneDePeriode[]>;
+  /**
+   * Les totaux comptabilisés par mois et par classe du plan, entre deux dates
+   * — la porte de l'accueil de la PME, qui ne voit jamais les écritures.
+   */
+  totauxParClasse(tenantId: string, from: string, to: string): Promise<TotalDeClasse[]>;
   /**
    * Les retenues à la source d'un mois (`periode` : un jour du mois), lues
    * dans les écritures : opérées (à reverser) et subies (créances sur l'État).
@@ -3741,6 +3759,18 @@ export interface JournalRepository {
     version?: string | null;
     plateforme?: string | null;
   }): Promise<string>;
+  /**
+   * Inscrire une panne vue hors de tout dossier (invitation, cabinet, tour) :
+   * où, le code, un détail expurgé et court. Bornée par la base ; `inscrite`
+   * vaut faux au-delà de la borne, sans lever.
+   */
+  consignerHorsDossier(input: {
+    ou: string;
+    code: string;
+    detail?: string | null;
+    version?: string | null;
+    plateforme?: string | null;
+  }): Promise<{ inscrite: boolean }>;
   /** Les dernieres pannes d'un dossier, de la plus recente. */
   dernieres(tenantId: string, limite?: number): Promise<PanneConsignee[]>;
   /** « Tout est reglé » : une marque datée ; rien n'est effacé (R7). */

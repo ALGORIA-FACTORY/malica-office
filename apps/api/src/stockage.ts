@@ -60,6 +60,103 @@ export function racine(): string {
 /** Le type par défaut n'est pas une devinette : c'est l'aveu qu'on ne sait pas. */
 const TYPE_INCONNU = "application/octet-stream";
 
+/*
+ * ============================================ UNE PIÈCE N'EST JAMAIS UNE PAGE
+ *
+ * Audit de sécurité du 6 novembre 2026, constat S1 : une « pièce » déclarée
+ * `text/html` était rendue comme une page, sur l'origine de l'application —
+ * son script s'exécutait avec la session de qui l'ouvrait.
+ *
+ * Les types admis sont ceux que produisent le scanner, l'import d'images et
+ * le dépôt de PDF ; la porte de la base tient la même liste
+ * (`capture_piece_poser_chemin`, migration `20261205092500`). Chacun se
+ * reconnaît à ses premiers octets : un type déclaré que les octets démentent
+ * est refusé au dépôt.
+ */
+
+/** Ce qu'il faut lire du début d'un fichier pour le reconnaître : un PDF peut tarder. */
+const TETE = 1024;
+
+const latin1 = (tete: Buffer, debut: number, fin: number) =>
+  tete.subarray(debut, fin).toString("latin1");
+
+/** Les marques ISO-BMFF d'une image HEIF/HEIC (`ftyp` à l'octet 4). */
+const MARQUES_HEIF = new Set(["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1"]);
+
+const SIGNATURES: Readonly<Record<string, (tete: Buffer) => boolean>> = {
+  // La norme tolère quelques octets avant l'en-tête : on le cherche dans le
+  // premier kilo, comme l'écran (`capabilities/files.ts`).
+  "application/pdf": (t) => latin1(t, 0, TETE).includes("%PDF-"),
+  "image/jpeg": (t) => t[0] === 0xff && t[1] === 0xd8 && t[2] === 0xff,
+  "image/png": (t) => latin1(t, 0, 8) === "\x89PNG\r\n\x1a\n",
+  "image/webp": (t) => latin1(t, 0, 4) === "RIFF" && latin1(t, 8, 12) === "WEBP",
+  "image/heic": (t) => latin1(t, 4, 8) === "ftyp" && MARQUES_HEIF.has(latin1(t, 8, 12)),
+};
+
+/** Le type est-il de la liste fermée ? */
+function typeAdmis(type: string | null): type is string {
+  return type !== null && Object.hasOwn(SIGNATURES, type);
+}
+
+/**
+ * Les octets disent-ils le type déclaré ? Sans type déclaré (un client
+ * ancien), ils doivent au moins être l'un des types admis.
+ */
+function octetsConformes(type: string | null, tete: Buffer): boolean {
+  if (type === null) return Object.values(SIGNATURES).some((reconnait) => reconnait(tete));
+  return typeAdmis(type) && SIGNATURES[type]!(tete);
+}
+
+class TypeRefuse extends Error {}
+
+/**
+ * Un passe-plat qui retient le début du flux, le juge, puis le laisse passer
+ * — ou coupe le flux avant qu'un octet ne soit écrit.
+ */
+function signatureAttendue(type: string | null): Transform {
+  const tete: Buffer[] = [];
+  let lus = 0;
+  let jugee = false;
+  const juger = (): Buffer | null => {
+    jugee = true;
+    const debut = Buffer.concat(tete);
+    return octetsConformes(type, debut) ? debut : null;
+  };
+  return new Transform({
+    transform(morceau: Buffer, _encodage, suite) {
+      if (jugee) {
+        suite(null, morceau);
+        return;
+      }
+      tete.push(morceau);
+      lus += morceau.length;
+      if (lus < TETE) {
+        suite();
+        return;
+      }
+      const debut = juger();
+      suite(debut ? null : new TypeRefuse(), debut ?? undefined);
+    },
+    flush(suite) {
+      if (jugee) {
+        suite();
+        return;
+      }
+      const debut = juger();
+      suite(debut ? null : new TypeRefuse(), debut ?? undefined);
+    },
+  });
+}
+
+/**
+ * Ce qui accompagne tout contenu servi — une pièce, un export : jamais une
+ * page active sur l'origine de l'application. Pièce jointe (l'écran lit les
+ * octets par `fetch`, il ne navigue jamais vers cette route), aucun reniflage
+ * du type, et une CSP qui ôte au document tout script, toute origine, toute
+ * ressource, s'il venait malgré tout à s'afficher.
+ */
+const CSP_DU_CONTENU = "sandbox; default-src 'none'";
+
 /**
  * Un identifiant de pièce est un uuid, et rien d'autre.
  *
@@ -301,7 +398,13 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
   const hache = hacheur();
   let scelle: { sha256: string; doublonDe: string | null };
   try {
-    await pipeline(req, borneDeTaille(TAILLE_MAX_PIECE), hache.flux, createWriteStream(provisoire));
+    await pipeline(
+      req,
+      borneDeTaille(TAILLE_MAX_PIECE),
+      signatureAttendue(piece.content_type),
+      hache.flux,
+      createWriteStream(provisoire),
+    );
     // La base d'abord, le renommage ensuite : un contenu refusé ne remplace
     // jamais les octets scellés.
     const sha256 = hache.empreinte();
@@ -318,6 +421,13 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
     if (erreur instanceof PieceTropGrosse) {
       etape("refus", { statut: "trop_grosse" });
       res.status(413).json({ erreur: "pièce trop volumineuse" });
+      return;
+    }
+    // Des octets qui démentent le type de la pièce, ou un type hors liste :
+    // rien n'est écrit, rien n'est scellé (audit S1).
+    if (erreur instanceof TypeRefuse) {
+      etape("refus", { statut: "type_refuse" });
+      res.status(415).json({ erreur: "refus.piece.type_de_contenu" });
       return;
     }
     // Remplacée pendant que ses octets voyageaient : ils arrivent trop tard.
@@ -353,7 +463,12 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
   });
 }
 
-/** Rend les octets d'une pièce, avec le type que porte la base. */
+/**
+ * Rend les octets d'une pièce, avec le type que porte la base — s'il est de
+ * la liste fermée. Une ligne ancienne d'un autre type (d'avant l'audit S1) se
+ * rend en `application/octet-stream` : jamais comme une page ni une image
+ * vectorielle.
+ */
 export async function servirContenu(req: Request, res: Response): Promise<void> {
   const piece = await pieceAutorisee(req, req.params["id"]);
   if (!piece) {
@@ -361,7 +476,8 @@ export async function servirContenu(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  await envoyerLesOctets(res, cheminAbsolu(piece.tenant_id, piece.id), piece.content_type, null);
+  const type = typeAdmis(piece.content_type) ? piece.content_type : null;
+  await envoyerLesOctets(res, cheminAbsolu(piece.tenant_id, piece.id), type, null);
 }
 
 /**
@@ -391,12 +507,14 @@ async function envoyerLesOctets(
   res.setHeader("Content-Length", String(taille));
   // Les pièces ne sont pas publiques : aucun cache partagé ne doit les garder.
   res.setHeader("Cache-Control", "private, no-store");
-  if (nomDeFichier) {
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename*=UTF-8''${encodeURIComponent(nomDeFichier)}`,
-    );
-  }
+  res.setHeader(
+    "Content-Disposition",
+    nomDeFichier
+      ? `attachment; filename*=UTF-8''${encodeURIComponent(nomDeFichier)}`
+      : "attachment",
+  );
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Security-Policy", CSP_DU_CONTENU);
   await pipeline(createReadStream(source), res);
 }
 

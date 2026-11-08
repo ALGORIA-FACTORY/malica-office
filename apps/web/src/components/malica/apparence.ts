@@ -43,6 +43,14 @@ const CLE = "malica.apparence";
 /** Servi quand rien n'a été choisi. Le script d'avant-rendu dit la même chose. */
 const DEFAUT: Apparence = "ink";
 
+/**
+ * Le fond de page de chaque apparence (`--background` de `styles.css`, en
+ * hexadécimal) : la couleur que prennent la barre du navigateur
+ * (`theme-color`) et l'écran de lancement de l'application installée
+ * (`public/manifest.webmanifest`, sur le défaut).
+ */
+export const COULEUR_DE_FOND = { ink: "#0E0D0C", paper: "#FAFAF9" } as const;
+
 function lue(): Apparence {
   if (typeof window === "undefined") return DEFAUT;
   try {
@@ -61,6 +69,9 @@ function appliquer(a: Apparence) {
   const sombre =
     a === "ink" || (a === "systeme" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.classList.toggle("dark", sombre);
+  // La barre du navigateur aussi (`theme-color`, `__root.tsx`).
+  for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'))
+    meta.content = sombre ? COULEUR_DE_FOND.ink : COULEUR_DE_FOND.paper;
   // La barre d'état du téléphone suit : icônes claires sur Ink, sombres sur Paper.
   coque().apparence.appliquer(sombre);
 }

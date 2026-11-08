@@ -29,7 +29,7 @@ import type {
   LigneHonorairesSaisie,
 } from "@malica/socle/ports/repositories";
 
-import { LignesEditables } from "./cabinet.honoraires";
+import { LignesEditables } from "@/components/malica/lignes-d-honoraires";
 
 export const Route = createFileRoute("/_authenticated/cabinet/facture/$factureId")({
   head: () => ({

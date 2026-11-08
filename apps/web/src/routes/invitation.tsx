@@ -4,10 +4,15 @@ import { useEffect, useState } from "react";
 
 import { MarqueRg } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/invitation")({
   ssr: false,
+  // Rendue sur l'appareil : le serveur n'en peint que l'attente, et le routeur
+  // la retenait 500 ms de plus après l'hydratation (son minimum anti-
+  // clignotement), avant même de demander la session. Voir `_authenticated/route.tsx`.
+  pendingMinMs: 0,
   head: () => ({
     meta: [
       { title: "Invitation — Malica Office" },
@@ -167,9 +172,7 @@ function Invitation() {
           <>
             {accepter.isError ? (
               <p role="alert" className="mt-6 text-[14px] text-[#E08163]">
-                {accepter.error instanceof Error
-                  ? accepter.error.message
-                  : t("invitation.plusValable")}
+                {texteDeLErreur(accepter.error, "invitation : accepter", t("common.error"))}
               </p>
             ) : null}
             <button

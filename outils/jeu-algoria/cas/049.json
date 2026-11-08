@@ -1,0 +1,313 @@
+{
+  "id": "049",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "B",
+  "scenario": "taux_7",
+  "realisme": [
+    "biais",
+    "grain",
+    "pale",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Zennara Hôtels SA",
+      "nomAr": "شركة زنارة للنزل",
+      "enseigne": null,
+      "matricule": "1399012W/A/M/000",
+      "matriculeImprime": "1399012W/A/M/000",
+      "adresse": "83, rue du Lac Ourmi, Hammamet",
+      "telephone": "00 49 600 628",
+      "fax": "00 33 710 458",
+      "email": null,
+      "site": null,
+      "rc": "B715943232016",
+      "rib": "99 684 5920075715690 51",
+      "banque": "Banque Talmira",
+      "code": "C4968068",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "18/01/2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Café en grains, sac 1 kg",
+        "designationAr": "قهوة حبوب، كيس 1 كغ",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "designation": "Eau minérale, pack 6 × 1,5 L",
+        "designationAr": "مياه معدنية، حزمة 6 × 1,5 لتر",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "designation": "Plateau repas séminaire",
+        "designationAr": "وجبة ندوة",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA07",
+        "tauxImprime": "7 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Zennara Hôtels SA",
+      "document_date": "18/01/2026",
+      "references.numero": "FA26/08460",
+      "references.matricule_fiscal": "1399012W/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "83, rue du Lac Ourmi, Hammamet",
+      "telephone_emetteur": "00 49 600 628",
+      "registre_commerce_emetteur": "B715943232016",
+      "totals.base_ht": "1.273,732",
+      "totals.vat": "89,161",
+      "totals.ttc": "1.363,893",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Café en grains, sac 1 kg",
+      "articles[0].quantity": "22",
+      "articles[0].unit_price_ht": "48,544",
+      "articles[0].total_ht": "1.067,968",
+      "articles[1].designation": "Eau minérale, pack 6 × 1,5 L",
+      "articles[1].quantity": "22",
+      "articles[1].unit_price_ht": "4,666",
+      "articles[1].total_ht": "102,652",
+      "articles[2].designation": "Plateau repas séminaire",
+      "articles[2].quantity": "4",
+      "articles[2].unit_price_ht": "25,778",
+      "articles[2].total_ht": "103,112"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[7]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 331548812,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Zennara Hôtels SA",
+      "document_date": "2026-01-18",
+      "currency": "TND",
+      "references.numero": "FA26/08460",
+      "references.matricule_fiscal": "1399012W/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "1273.732",
+      "totals.vat": "89.161",
+      "totals.ttc": "1363.893",
+      "lines[0].tax_code": "TVA07",
+      "lines[0].base_ht": "1273.732",
+      "lines[0].vat_amount": "89.161",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "22.000",
+      "articles[0].unit_price_ht": "48.544",
+      "articles[0].total_ht": "1067.968",
+      "articles[1].quantity": "22.000",
+      "articles[1].unit_price_ht": "4.666",
+      "articles[1].total_ht": "102.652",
+      "articles[2].quantity": "4.000",
+      "articles[2].unit_price_ht": "25.778",
+      "articles[2].total_ht": "103.112"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "1273.732",
+          "0"
+        ],
+        [
+          "4366",
+          "89.161",
+          "0",
+          "TVA07"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "1363.893"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Zennara Hôtels SA",
+      "date_operation": "2026-01-18",
+      "numero_facture": "FA26/08460",
+      "matricule_fiscal_emetteur": "1399012W/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "83, rue du Lac Ourmi, Hammamet",
+      "telephone_email_emetteur": {
+        "telephone": "00 49 600 628"
+      },
+      "registre_commerce_emetteur": "B715943232016",
+      "total_ht": "1273.732",
+      "montant_tva_par_taux": {
+        "7": "89.161"
+      },
+      "total_ttc": "1363.893",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "7": "1273.732"
+      },
+      "lignes": [
+        {
+          "designation": "Café en grains, sac 1 kg",
+          "quantite": "22",
+          "prix_unitaire_ht": "48.544",
+          "montant_ligne_ht": "1067.968",
+          "taux_tva_ligne": "7"
+        },
+        {
+          "designation": "Eau minérale, pack 6 × 1,5 L",
+          "quantite": "22",
+          "prix_unitaire_ht": "4.666",
+          "montant_ligne_ht": "102.652",
+          "taux_tva_ligne": "7"
+        },
+        {
+          "designation": "Plateau repas séminaire",
+          "quantite": "4",
+          "prix_unitaire_ht": "25.778",
+          "montant_ligne_ht": "103.112",
+          "taux_tva_ligne": "7"
+        }
+      ],
+      "devise": "TND",
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

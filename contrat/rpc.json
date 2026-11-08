@@ -240,6 +240,7 @@
   ],
   "journal": [
     "consigner",
+    "consignerHorsDossier",
     "dernieres",
     "etapes",
     "regler"
@@ -270,6 +271,7 @@
     "retenuesDuMois",
     "saisirLeCoursDeLaPiece",
     "saisirUnCours",
+    "totauxParClasse",
     "trancherLeSens",
     "transmisesSansDate",
     "valider"

@@ -33,7 +33,15 @@ pub fn pack_essai() -> Value {
 /// Le taux d'un code du barème d'essai, en pour mille (l'unité de la vérité des bancs).
 pub fn pour_mille(code: &str) -> i64 {
     let p = pack_essai();
-    p["baremes"]["tva"].as_array().unwrap().iter().find(|t| t["code"] == code).unwrap()["ppm"].as_i64().unwrap() / 1000
+    p["baremes"]["tva"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["code"] == code)
+        .unwrap()["ppm"]
+        .as_i64()
+        .unwrap()
+        / 1000
 }
 
 /// La grille facture d'essai : codes et repères du catalogue `grille_tunisie.json`,
@@ -171,8 +179,12 @@ impl Lecteur {
         let groupes: Vec<&str> = s.split(' ').filter(|g| !g.is_empty()).collect();
         for k in 0..groupes.len() {
             let suffixe = &groupes[k..];
-            let ok = suffixe.iter().skip(1).all(|g| g.chars().take_while(|c| c.is_ascii_digit()).count() == 3)
-                && (suffixe.len() == 1 || suffixe[0].chars().all(|c| c.is_ascii_digit()) && suffixe[0].len() <= 3);
+            let ok = suffixe
+                .iter()
+                .skip(1)
+                .all(|g| g.chars().take_while(|c| c.is_ascii_digit()).count() == 3)
+                && (suffixe.len() == 1
+                    || suffixe[0].chars().all(|c| c.is_ascii_digit()) && suffixe[0].len() <= 3);
             if ok {
                 v.extend(self.un_bloc(&suffixe.concat()));
             }
@@ -193,7 +205,9 @@ impl Lecteur {
         for m in self.re_nombre.find_iter(t) {
             let avant = t[..m.start()].chars().last();
             let apres = t[m.end()..].trim_start().chars().next();
-            let colle = |ch: Option<char>| ch.is_some_and(|c| c.is_alphabetic() || c == '/' || c == '-' || c == '°');
+            let colle = |ch: Option<char>| {
+                ch.is_some_and(|c| c.is_alphabetic() || c == '/' || c == '-' || c == '°')
+            };
             if colle(avant) || colle(t[m.end()..].chars().next()) {
                 continue;
             }
@@ -211,7 +225,8 @@ impl Lecteur {
 
     fn date(&self, t: &str) -> Option<String> {
         let c = self.re_date.captures(t)?;
-        let (j, m, a): (u32, u32, u32) = (c[1].parse().ok()?, c[2].parse().ok()?, c[3].parse().ok()?);
+        let (j, m, a): (u32, u32, u32) =
+            (c[1].parse().ok()?, c[2].parse().ok()?, c[3].parse().ok()?);
         if !(1..=12).contains(&m) || !(1..=31).contains(&j) {
             return None;
         }
@@ -220,7 +235,8 @@ impl Lecteur {
 
     /// Un relevé OCR devient un plan de jetons : une ligne, un jeton.
     pub fn jetons(&self, lignes: &[Ligne]) -> Vec<Value> {
-        let mut montants: Vec<Vec<(i64, bool)>> = lignes.iter().map(|l| self.montants(&l.text)).collect();
+        let mut montants: Vec<Vec<(i64, bool)>> =
+            lignes.iter().map(|l| self.montants(&l.text)).collect();
         // Un montant coupé en deux boîtes sur la même ligne : « 5 » puis « 650,000 » ;
         // la lecture recollée, faible, est portée par la seconde boîte.
         for a in lignes {
@@ -229,7 +245,10 @@ impl Lecteur {
                 let recouvre = (a.y1.min(b.y1) - a.y0.max(b.y0)) / h;
                 let ecart = b.x0 - a.x1;
                 if recouvre > 0.5 && ecart > 0.0 && ecart < 2.0 * h {
-                    if let (Some(ca), Some(cb)) = (self.re_fin.captures(a.text.trim()), self.re_debut.captures(b.text.trim())) {
+                    if let (Some(ca), Some(cb)) = (
+                        self.re_fin.captures(a.text.trim()),
+                        self.re_debut.captures(b.text.trim()),
+                    ) {
                         for (val, _) in self.un_bloc(&format!("{}{}", &ca[1], &cb[1])) {
                             if val > 0 {
                                 montants[ib].push((val, false));
@@ -261,13 +280,20 @@ pub fn resoudre(jetons: Vec<Value>, grille: Value, pack: Value) -> Value {
 
 /// Un jeton synthétique : un libellé suivi d'un montant, à la ligne y.
 pub fn jeton(ordinal: u32, texte: &str, x0: f64, y: f64, montants: &[(i64, bool)]) -> Value {
-    let ms: Vec<Value> = montants.iter().map(|(v, f)| json!({"v": v, "forte": f})).collect();
+    let ms: Vec<Value> = montants
+        .iter()
+        .map(|(v, f)| json!({"v": v, "forte": f}))
+        .collect();
     json!({"page": 1, "ordinal": ordinal, "texte": texte, "x0": x0, "y0": y, "x1": x0 + 0.2, "y1": y + 0.02,
            "montants": ms, "date": null})
 }
 
 pub fn donnees(nom: &str) -> String {
-    std::fs::read_to_string(format!("{}/tests/donnees/{nom}", env!("CARGO_MANIFEST_DIR"))).unwrap()
+    std::fs::read_to_string(format!(
+        "{}/tests/donnees/{nom}",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap()
 }
 
 pub fn releves(nom: &str) -> HashMap<String, Releve> {
@@ -276,7 +302,9 @@ pub fn releves(nom: &str) -> HashMap<String, Releve> {
 
 /// La valeur rendue d'un champ, en entier ; 0 si absent.
 pub fn valeur(o: &Value, champ: &str) -> i64 {
-    o["champs"][champ]["valeur"].as_str().map_or(0, |s| s.parse().unwrap())
+    o["champs"][champ]["valeur"]
+        .as_str()
+        .map_or(0, |s| s.parse().unwrap())
 }
 
 /// Les montants de TVA rendus, en (taux pour mille, montant), triés.
@@ -285,7 +313,12 @@ pub fn tva(o: &Value) -> Vec<(i64, i64)> {
         .as_array()
         .map(|a| {
             a.iter()
-                .map(|i| (pour_mille(i["taux"].as_str().unwrap()), i["valeur"].as_str().map_or(0, |s| s.parse().unwrap())))
+                .map(|i| {
+                    (
+                        pour_mille(i["taux"].as_str().unwrap()),
+                        i["valeur"].as_str().map_or(0, |s| s.parse().unwrap()),
+                    )
+                })
                 .collect()
         })
         .unwrap_or_default();

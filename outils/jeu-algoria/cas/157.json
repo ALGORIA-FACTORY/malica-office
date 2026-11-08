@@ -1,0 +1,267 @@
+{
+  "id": "157",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "bail",
+  "grille": "bail_commercial",
+  "langue": "ar",
+  "rendu": "scan",
+  "capture": "scan",
+  "gabarit": "H",
+  "mise_en_page": "H",
+  "scenario": "bail_depot",
+  "realisme": [
+    "biais",
+    "grain",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "عقد كراء",
+    "parties": [
+      {
+        "role": "bailleur",
+        "nom": "شركة بلخيرة العقارية",
+        "matricule": "8808025T/A/M/000",
+        "est": "tiers"
+      },
+      {
+        "role": "preneur",
+        "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      }
+    ],
+    "emetteur": {
+      "role": "bailleur",
+      "nom": "شركة بلخيرة العقارية",
+      "matricule": "8808025T/A/M/000",
+      "est": "tiers"
+    },
+    "client": {
+      "role": "preneur",
+      "nom": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": false,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "titre",
+        "texte": [
+          {
+            "c": "type_bail"
+          }
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "بين الممضين أسفله : ",
+          {
+            "c": "bailleur_identite"
+          },
+          "، المعرف الجبائي ",
+          {
+            "c": "bailleur_matricule_fiscal"
+          },
+          "، بصفتها ",
+          {
+            "c": "titre_bailleur"
+          },
+          "، ويشار إليها فيما يلي بالمسوّغ،"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "و ",
+          {
+            "c": "preneur_identite"
+          },
+          "، ويشار إليها فيما يلي بالمتسوّغ."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "الفصل الأول : موضوع الكراء"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "يسوّغ المسوّغ للمتسوّغ ",
+          {
+            "c": "description_local"
+          },
+          " كائنا ب",
+          {
+            "c": "adresse_local"
+          },
+          "، معدا ل",
+          {
+            "c": "destination"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "الفصل الثاني : المدة"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "أبرم هذا العقد ",
+          {
+            "c": "duree"
+          },
+          " تبتدئ من ",
+          {
+            "c": "date_effet"
+          },
+          "."
+        ]
+      },
+      {
+        "k": "texte",
+        "classe": "gras",
+        "morceaux": [
+          "الفصل الثالث : معين الكراء"
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "حدد معين الكراء الشهري بـ ",
+          {
+            "c": "loyer_montant"
+          },
+          " دينارا دون اعتبار الأداء على القيمة المضافة، يدفع ",
+          {
+            "c": "periodicite"
+          },
+          " مسبقا. ويدفع المتسوّغ ضمانا قدره ",
+          {
+            "c": "depot_garantie"
+          },
+          " دينارا."
+        ]
+      },
+      {
+        "k": "texte",
+        "morceaux": [
+          "حرر بصفاقس في ",
+          {
+            "c": "date_signature"
+          },
+          " في نظيرين."
+        ]
+      },
+      {
+        "k": "signatures",
+        "gauche": "المسوّغ",
+        "droite": "المتسوّغ"
+      }
+    ],
+    "imprime": {
+      "type_bail": "عقد كراء محل للاستعمال المهني",
+      "bailleur_identite": "شركة بلخيرة العقارية، في شخص ممثلها القانوني السيد عادل بلخيرة",
+      "bailleur_matricule_fiscal": "8808025T/A/M/000",
+      "titre_bailleur": "مالكة",
+      "preneur_identite": "شركة ألغوريا فاكتوري ش.ذ.م.م، في شخص مسيرها",
+      "description_local": "مستودعا مساحته 420 م² مع مكتب",
+      "adresse_local": "المنطقة الصناعية بوديان، مقسم 31، 3064 صفاقس",
+      "destination": "خزن المعدات الإعلامية",
+      "duree": "لمدة سنتين",
+      "date_effet": "1 نوفمبر 2026",
+      "loyer_montant": "1 000,000",
+      "periodicite": "شهريا",
+      "depot_garantie": "3 000,000",
+      "date_signature": "23 أكتوبر 2026"
+    },
+    "versConcept": {
+      "type_bail": "type_bail",
+      "bailleur_identite": "bailleur_identite",
+      "bailleur_matricule_fiscal": "bailleur_matricule_fiscal",
+      "titre_bailleur": "titre_bailleur",
+      "preneur_identite": "preneur_identite",
+      "description_local": "description_local",
+      "adresse_local": "adresse_local",
+      "destination": "destination",
+      "duree": "duree",
+      "date_effet": "date_effet",
+      "loyer_montant": "loyer_montant",
+      "periodicite": "periodicite",
+      "depot_garantie": "depot_garantie",
+      "date_signature": "date_signature"
+    },
+    "marques": {
+      "signature_emetteur": "signatures"
+    },
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 2073275216,
+  "attendu": {
+    "concepts": {
+      "type_bail": "professionnel",
+      "bailleur_identite": "شركة بلخيرة العقارية، في شخص ممثلها القانوني السيد عادل بلخيرة",
+      "bailleur_matricule_fiscal": "8808025T/A/M/000",
+      "titre_bailleur": "propriétaire",
+      "preneur_identite": "شركة ألغوريا فاكتوري ش.ذ.م.م، في شخص مسيرها",
+      "description_local": "مستودعا مساحته 420 م² مع مكتب",
+      "adresse_local": "المنطقة الصناعية بوديان، مقسم 31، 3064 صفاقس",
+      "destination": "خزن المعدات الإعلامية",
+      "duree": "P2Y",
+      "date_effet": "2026-11-01",
+      "loyer_montant": "1000.000",
+      "periodicite": "mensuelle",
+      "depot_garantie": "3000.000",
+      "date_signature": "2026-10-23",
+      "signatures": true
+    },
+    "confondus": {},
+    "notes": [
+      "Bail arabe : ALGORIA preneuse, sans son matricule ; le dépôt de Sfax est l'établissement secondaire ouvert par la décision du cas 125."
+    ],
+    "non_imprimes": [
+      "assurance",
+      "augmentation_loyer",
+      "avance_loyers",
+      "cession_sous_location",
+      "charges_impots",
+      "clause_resolutoire",
+      "enregistrement",
+      "etat_des_lieux",
+      "forme_acte",
+      "juridiction",
+      "modalites_paiement",
+      "preavis_conge",
+      "renouvellement",
+      "retenue_source_loyer",
+      "titre_foncier_reference",
+      "travaux_entretien",
+      "tva_loyer",
+      "usage_siege_social"
+    ]
+  }
+}

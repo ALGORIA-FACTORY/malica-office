@@ -110,11 +110,24 @@ describe("sudoku — les jetons du plan", () => {
     assert.equal(jour!.date_fin, 3);
     assert.equal(mois!.date, null);
     assert.equal(annee!.date, null);
+    // Le mois collé à l'année par l'OCR (« 04 | février2026 », 100/C-05).
+    const [colle] = jetonsDuSudoku(rangee(["04", "février2026"]), devise, LECTURE);
+    assert.equal(colle!.date, "2026-02-04");
     // L'étiquette collée, le « l » pour « 1 » : le lecteur du pack le rend normalisé.
     const [mf] = jetonsDuSudoku(rangee(["MF:l876543W/A/M/000"]), devise, LECTURE);
     assert.deepEqual(mf!.identifiants, [
       { format: REGLES_DE_LECTURE_D_ESSAI.codeDuMatricule, valeur: "1876543W/A/M/000", fin: 0 },
     ]);
+  });
+
+  it("chaque mot d'un lecteur génératif est douteux ; ceux de l'OCR ne le sont pas", () => {
+    const plan = [
+      { page: 1, ordinal: 0, text: "Cartouche", x0: 0, y0: 0, x1: 0.1, y1: 0.02 },
+      { page: 1, ordinal: 1, text: "12,500", x0: 0.5, y0: 0, x1: 0.6, y1: 0.02 },
+    ];
+    // banc Qwen du 8 novembre 2026 : « Cartouche d'encore » affirmé, faute de confiance
+    assert.ok(jetonsDuSudoku(plan, devise, LECTURE, true).every((j) => j.douteux === true));
+    assert.ok(jetonsDuSudoku(plan, devise, LECTURE).every((j) => j.douteux !== true));
   });
 
   it("deux cases collées par l'OCR offrent leurs coupes, lues par le lecteur de production", () => {
@@ -132,6 +145,27 @@ describe("sudoku — les jetons du plan", () => {
     ]);
     // Un montant à espace de milliers n'est pas une case collée.
     assert.equal(seul!.decoupes, undefined);
+  });
+
+  it("un point collé après des décimales complètes laisse une lecture faible (algoria-018)", () => {
+    const jeton = (ordinal: number, text: string) => ({
+      page: 1,
+      ordinal,
+      text,
+      x0: 0,
+      y0: 0,
+      x1: 1,
+      y1: 1,
+    });
+    const [ponctue, coupe, entier] = jetonsDuSudoku(
+      [jeton(0, "534,443."), jeton(1, "8,"), jeton(2, "534,443")],
+      devise,
+      LECTURE,
+    );
+    assert.deepEqual(ponctue!.montants, [{ v: 534_443, forte: false }]);
+    // Des décimales incomplètes : un montant peut-être coupé, rien n'est lu.
+    assert.deepEqual(coupe!.montants, []);
+    assert.deepEqual(entier!.montants, [{ v: 534_443, forte: true }]);
   });
 });
 

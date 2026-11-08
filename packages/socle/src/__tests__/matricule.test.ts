@@ -18,7 +18,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { memeMatricule, normaliserMatricule } from "../matricule.ts";
+import { lettreDeControle, memeMatricule, normaliserMatricule } from "../matricule.ts";
 
 import { FORMAT_D_ESSAI } from "./regles-de-lecture-d-essai.ts";
 
@@ -150,24 +150,33 @@ describe("la lettre de contrôle séparée par un séparateur — vraie facture 
 });
 
 describe("ce que le normaliseur refuse de deviner", () => {
-  it("sept chiffres sans lettre de contrôle : une QUESTION, pas un rejet", () => {
+  it("sept chiffres sans lettre de contrôle : une forme partielle, dont la lettre se calcule", () => {
     /*
      * C'est l'ancienne fiche du staging, et c'est la forme qu'une pièce peut
-     * porter. Sur une pièce lue, elle doit produire une question — jamais le
-     * rejet du document, qui n'y est pour rien.
+     * porter. Jamais le rejet du document, qui n'y est pour rien.
      *
-     * La clé reste nulle : comparer sur les sept chiffres seuls ferait
-     * coïncider deux entreprises, et une coïncidence silencieuse est pire
-     * qu'une question.
+     * DÉCISION du dirigeant (5 novembre 2026) : la lettre se CALCULE par la règle
+     * du pack (somme pondérée 7..1, modulo 23 : 1·7+8·6+5·5+6·4+3·3+2·2+4·1 = 121,
+     * 121 mod 23 = 6, « G »). Elle sert à comparer ; elle n'est pas affichée.
      */
     const lu = normaliserMatricule("1856324/A/M/000", FORMAT_D_ESSAI);
     expect(lu.forme).toBe("partielle");
-    expect(lu.cle).toBeNull();
+    expect(lu.cle).toBe("1856324G");
+    expect(lu.complet).toBeNull();
     expect(lu.chiffres).toBe("1856324");
+    expect(lu.corrections).toContain("lettre de contrôle calculée : G");
+    expect(lettreDeControle(lu, FORMAT_D_ESSAI)).toBeNull();
   });
 
-  it("et une forme partielle n'égale rien, pas même elle-même", () => {
-    expect(memeMatricule("1856324/A/M/000", "1856324/A/M/000", FORMAT_D_ESSAI)).toBe(false);
+  it("sans règle au pack, une forme partielle n'égale rien, pas même elle-même", () => {
+    const sansRegle = { ...FORMAT_D_ESSAI, controle: null };
+    expect(normaliserMatricule("1856324/A/M/000", sansRegle).cle).toBeNull();
+    expect(memeMatricule("1856324/A/M/000", "1856324/A/M/000", sansRegle)).toBe(false);
+  });
+
+  it("avec la règle, elle égale l'écriture dont la lettre est la lettre calculée, et aucune autre", () => {
+    expect(memeMatricule("1856324/A/M/000", "1856324/A/M/000", FORMAT_D_ESSAI)).toBe(true);
+    expect(memeMatricule("1856324/A/M/000", "1856324G/A/M/000", FORMAT_D_ESSAI)).toBe(true);
     expect(memeMatricule("1856324/A/M/000", "1856324K/A/M/000", FORMAT_D_ESSAI)).toBe(false);
   });
 
@@ -222,5 +231,30 @@ describe("ce que le normaliseur refuse de deviner", () => {
     // Le siège et sa succursale portent le même noyau : la pièce adressée à
     // l'un concerne bien le dossier.
     expect(memeMatricule("1876543W/A/M/000", "1876543W/A/E/042", FORMAT_D_ESSAI)).toBe(true);
+  });
+});
+
+/**
+ * ===================== LA FORME COLLÉE, RELEVÉE LE 3 NOVEMBRE 2026
+ *
+ * « 1958330VAM000 » : aucun séparateur. Le jeu d'ALGORIA l'imprime sur 35
+ * factures ; le normaliseur la rendait illisible, et le sens de la pièce ne se
+ * déduisait plus (« le matricule du dossier n'est pas lu »).
+ */
+describe("la forme collée, sans un séparateur", () => {
+  it("se lit pleine, et égale la forme barrée", () => {
+    const lu = normaliserMatricule("1876543WAM000", FORMAT_D_ESSAI);
+    expect(lu.forme).toBe("complete");
+    expect(lu.complet).toBe(COMPLET);
+    expect(memeMatricule("MF/CIN: 1876543WAM000", COMPLET, FORMAT_D_ESSAI)).toBe(true);
+  });
+
+  it("une lettre de moins ne se devine pas : on ne saurait pas laquelle manque", () => {
+    expect(normaliserMatricule("1876543AM000", FORMAT_D_ESSAI).cle).toBeNull();
+  });
+
+  it("un numéro plus long ne s'y découpe pas", () => {
+    expect(normaliserMatricule("91876543WAM000", FORMAT_D_ESSAI).forme).toBe("illisible");
+    expect(normaliserMatricule("1876543WAM0001", FORMAT_D_ESSAI).forme).not.toBe("complete");
   });
 });

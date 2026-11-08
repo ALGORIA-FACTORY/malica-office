@@ -1251,6 +1251,29 @@ export const office = {
     }));
   },
 
+  /**
+   * Les totaux comptabilisés d'une période, par mois et par classe du plan —
+   * ce que l'accueil de la PME montre, et rien de plus.
+   *
+   * La PME ne voit jamais les écritures (lot S2) : `periodeLignes` lui rend
+   * désormais zéro ligne dans un dossier confié à un cabinet. Ces totaux ne
+   * nomment ni compte, ni journal, ni écriture ; la base les somme avec la
+   * même définition de « comptabilisé » que `socle_periode_lignes`.
+   */
+  async totauxParClasse(db: Requete, tenantId: string, from: string, to: string) {
+    const { rows } = await db.query(
+      `select mois, classe, debit, credit
+         from public.socle_totaux_par_classe($1, $2, $3)`,
+      [tenantId, from, to],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      mois: r["mois"] as string,
+      classe: r["classe"] as string,
+      debit: dec(r["debit"]),
+      credit: dec(r["credit"]),
+    }));
+  },
+
   async bookedExtracts(db: Requete, tenantId: string, from: string, to: string) {
     // Une seule requête là où l'adaptateur en faisait deux puis dédoublonnait
     // en JavaScript : `distinct on` rend la dernière extraction de chaque pièce,
@@ -1379,7 +1402,9 @@ export const office = {
                   -- Son écriture vivante, si le cabinet l'a déjà inscrite : sa
                   -- date est la date de la facture. Pas encore inscrite
                   -- (confirmée, chez le cabinet), c'est la date du document.
-                  coalesce(e.date_ecriture,
+                  -- La PME ne lit pas l'écriture (lot S2) : sa date, seule,
+                  -- sort par la base.
+                  coalesce(j.jour,
                            case when x.payload ->> 'document_date' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
                                 then (x.payload ->> 'document_date')::date end,
                            p.transmise_le::date) as jour
@@ -1389,17 +1414,7 @@ export const office = {
              -- elle n'y est pas tant qu'elle n'est pas reprise ; transmise sans
              -- avoir été confirmée, non plus.
              join pieces_qui_comptent_v p on p.id = x.piece_id
-             left join lateral (
-               select e.date_ecriture
-                 from ecritures_v e
-                where e.piece_id = p.id
-                  and e.nature = 'piece' and e.status = 'booked'
-                  and e.reverses_id is null
-                  and not exists (select 1 from ecritures_v r
-                                   where r.reverses_id = e.id and r.status = 'booked')
-                order by e.created_at desc
-                limit 1
-             ) e on true
+             left join app.jours_des_ecritures_du_dossier($1) j on j.piece_id = p.id
             where p.tenant_id = $1
               and p.transmise_le is not null
               and x.contract = 'extract.v1'

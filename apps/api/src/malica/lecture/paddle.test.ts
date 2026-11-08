@@ -15,6 +15,7 @@ import { PanneFournisseur, qualifierEchec } from "../../fabrique/travaux-executi
 
 import {
   SecondLecteurOccupe,
+  lecteursDuSecondLecteur,
   lireAvecPaddle,
   moteurDuSecondLecteur,
   secondLecteurDisponible,
@@ -23,14 +24,24 @@ import {
 const vraiFetch = globalThis.fetch;
 const ancienneUrl = process.env["OCR_URL"];
 
-/** Un service qui répond ce qu'on lui dit, sans réseau. */
-function serviceQuiRend(corps: unknown, ok = true, status = ok ? 200 : 500) {
+/**
+ * Un service qui répond ce qu'on lui dit, sans réseau : `/lire` en deux temps
+ * (une ligne JSON chacun), `corps` étant la lecture complète ; `/sante` en JSON.
+ */
+function serviceQuiRend(corps: object, ok = true, status = ok ? 200 : 500) {
+  globalThis.fetch = (async (url: string) =>
+    new Response(
+      String(url).endsWith("/lire")
+        ? `${JSON.stringify({ vague: 1, lignes: [] })}\n${JSON.stringify({ vague: 2, ...corps })}\n`
+        : JSON.stringify(corps),
+      { status },
+    )) as typeof fetch;
+}
+
+/** Un service qui rend ces lignes JSON, telles quelles. */
+function serviceQuiDit(...lignes: object[]) {
   globalThis.fetch = (async () =>
-    ({
-      ok,
-      status,
-      json: async () => corps,
-    }) as unknown as Response) as typeof fetch;
+    new Response(lignes.map((l) => JSON.stringify(l)).join("\n") + "\n")) as typeof fetch;
 }
 
 afterEach(() => {
@@ -50,6 +61,18 @@ describe("le second lecteur", () => {
     assert.equal(await moteurDuSecondLecteur(), "inconnu");
     serviceQuiRend({}, false);
     assert.equal(await moteurDuSecondLecteur(), "hs");
+  });
+
+  it("dit combien de pages il lit à la fois ; un, s'il ne le dit pas", async () => {
+    process.env["OCR_URL"] = "http://ocr:8000";
+    serviceQuiRend({ ok: true, moteur: "onnx", lecteurs: 2 });
+    assert.equal(await lecteursDuSecondLecteur(), 2);
+    serviceQuiRend({ ok: true, moteur: "onnx" });
+    assert.equal(await lecteursDuSecondLecteur(), 1);
+    serviceQuiRend({ ok: true, lecteurs: 0 });
+    assert.equal(await lecteursDuSecondLecteur(), 1);
+    serviceQuiRend({}, false);
+    assert.equal(await lecteursDuSecondLecteur(), 1);
   });
 
   it("sans OCR_URL, il n'existe pas — et ce n'est pas une panne", async () => {
@@ -121,6 +144,61 @@ describe("le second lecteur", () => {
     assert.equal(
       r!.tokens.every((t) => t.confidence === 0.93),
       true,
+    );
+  });
+
+  it("chaque mot garde son caractère le moins sûr, que la moyenne de la ligne noie", async () => {
+    // « sans fil » sous une tache, lu « sans fi » : la ligne à 0,98, le i à 0,69
+    process.env["OCR_URL"] = "http://ocr:8000";
+    serviceQuiRend({
+      lignes: [
+        {
+          texte: " sans fi",
+          boite: [0.1, 0.2, 0.3, 0.22],
+          confiance: 0.98,
+          caracteres: [0.99, 0.995, 0.99, 0.98, 0.97, 0.99, 0.99, 0.69],
+        },
+        // sans probabilité par caractère (une relecture arabe), ou une de moins que le texte
+        { texte: "Total HT", boite: [0.1, 0.3, 0.3, 0.32], confiance: 0.97 },
+        { texte: "TVA", boite: [0.1, 0.4, 0.3, 0.42], confiance: 0.97, caracteres: [0.9, 0.9] },
+      ],
+    });
+    const r = await lireAvecPaddle(new Uint8Array([1]), 1);
+    assert.deepEqual(
+      r!.tokens.map((t) => [t.text, t.faible]),
+      [
+        ["sans", 0.97],
+        ["fi", 0.69],
+        ["Total", undefined],
+        ["HT", undefined],
+        ["TVA", undefined],
+      ],
+    );
+    assert.equal(r!.tokens[1]!.confidence, 0.98);
+  });
+
+  it("chaque mot garde son plus fort manque, entre ses caractères seulement", async () => {
+    // « Claver » pour « Clavier » : le i, perdu, à 0,33 dans le blanc après le v
+    process.env["OCR_URL"] = "http://ocr:8000";
+    serviceQuiRend({
+      lignes: [
+        {
+          texte: "Claver USB",
+          boite: [0.1, 0.2, 0.3, 0.22],
+          confiance: 0.98,
+          caracteres: [0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99],
+          manques: [0, 0, 0, 0.33, 0, 0.4, 0, 0.01, 0, 0],
+        },
+      ],
+    });
+    const r = await lireAvecPaddle(new Uint8Array([1]), 1);
+    // le manque après le dernier caractère d'un mot (le blanc entre deux mots) ne compte pas
+    assert.deepEqual(
+      r!.tokens.map((t) => [t.text, t.manque]),
+      [
+        ["Claver", 0.33],
+        ["USB", 0.01],
+      ],
     );
   });
 
@@ -214,12 +292,40 @@ describe("le second lecteur", () => {
     assert.equal(await lireAvecPaddle(new Uint8Array([1]), 1), null);
   });
 
-  it("un service OCCUPÉ (503) est une panne d'un instant, nommée à part", async () => {
+  it("un service OCCUPÉ est une panne d'un instant, nommée à part", async () => {
     process.env["OCR_URL"] = "http://ocr:8000";
-    serviceQuiRend({}, false, 503);
+    serviceQuiDit({ occupe: true });
     const echec = await lireAvecPaddle(new Uint8Array([1]), 1).catch((e: unknown) => e);
     assert.ok(echec instanceof SecondLecteurOccupe);
     // Sans autre lecteur, la file durable doit pouvoir la rejouer.
     assert.ok(echec instanceof PanneFournisseur);
+  });
+
+  it("le tableau arrive d'abord ; la lecture rendue est la complète", async () => {
+    process.env["OCR_URL"] = "http://ocr:8000";
+    const ligne = (texte: string, y: number) => ({
+      texte,
+      boite: [0.1, y, 0.5, y + 0.02],
+      confiance: 0.99,
+    });
+    serviceQuiDit(
+      { vague: 1, lignes: [ligne("TOTAL 1,000", 0.5)] },
+      { vague: 2, lignes: [ligne("TOTAL 1,000", 0.5), ligne("Conditions", 0.9)], modele: "m" },
+    );
+    const tableaux: string[][] = [];
+    const r = await lireAvecPaddle(new Uint8Array([1]), 1, undefined, (t) =>
+      tableaux.push(t.map((j) => j.text)),
+    );
+    assert.deepEqual(tableaux, [["TOTAL", "1,000"]]);
+    assert.deepEqual(
+      r?.tokens.map((j) => j.text),
+      ["TOTAL", "1,000", "Conditions"],
+    );
+  });
+
+  it("un flux coupé avant la lecture complète est une panne, pas une lecture", async () => {
+    process.env["OCR_URL"] = "http://ocr:8000";
+    serviceQuiDit({ vague: 1, lignes: [{ texte: "TOTAL", boite: [0, 0, 1, 1], confiance: 1 }] });
+    await assert.rejects(() => lireAvecPaddle(new Uint8Array([1]), 1), PanneFournisseur);
   });
 });

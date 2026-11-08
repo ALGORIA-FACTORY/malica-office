@@ -7,7 +7,8 @@
  */
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { estUneSection, SECTIONS } from "@/components/malica/tour/sections";
+import { estUneSection } from "@/components/malica/tour/cles-des-sections";
+import { SECTIONS } from "@/components/malica/tour/sections";
 import { EnTeteDeLaTour } from "@/components/malica/tour/ui";
 import { useI18n } from "@/i18n";
 

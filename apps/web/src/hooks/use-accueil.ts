@@ -196,14 +196,17 @@ export function useAccueil(periode: string): Accueil {
   const decimalesEnEchec = useDecimalesEnEchec();
   const entreeEnEchec = declarationsEnEchec || decimalesEnEchec;
 
+  // La PME ne voit jamais les écritures (lot S2) : l'accueil lit des TOTAUX
+  // par mois et par classe du plan, jamais une ligne ni un compte. C'est tout
+  // ce que la carte des charges montre — un pourcentage.
   const lignes = useQuery({
-    queryKey: ["accueil-lignes", pme.tenantId, periode],
+    queryKey: ["accueil-totaux", pme.tenantId, periode],
     queryFn: () => {
       // Deux mois d'un coup : la carte des charges compare, et une seconde
       // requête pour un seul pourcentage ne se justifie pas.
       const debut = monthBounds(moisPrecedent(periode, 1));
       const fin = monthBounds(periode);
-      return office().office.periodeLignes(pme.tenantId, debut.from, fin.to);
+      return office().office.totauxParClasse(pme.tenantId, debut.from, fin.to);
     },
   });
 
@@ -308,19 +311,20 @@ export function useAccueil(periode: string): Accueil {
     if (!lignes.data || lignes.data.length === 0) return null;
     const avant = moisPrecedent(periode, 1);
     const chargesDe = (mois: string): number | null => {
-      const duMois = lignes.data!.filter((l) => l.dateEcriture.slice(0, 7) === mois);
+      const duMois = lignes.data!.filter((l) => l.mois === mois);
       if (duMois.length === 0 || decimalesDuPack === null) return null;
       const pnl = computePnl({
         period: mois,
         currency: { code: devise, decimals: decimalesDuPack },
+        // Une entrée par classe : son préfixe tient lieu de code, et le
+        // moteur y reconnaît la classe elle-même (préfixe le plus long).
         entries: duMois.map((l) => ({
-          account_code: l.accountCode,
+          account_code: l.classe,
           debit: l.debit,
           credit: l.credit,
         })),
         // Les libellés ne servent qu'au détail par compte, que l'accueil
-        // n'affiche pas : on ne charge pas six cent vingt-six lignes pour un
-        // seul pourcentage.
+        // n'affiche pas — et qu'il ne reçoit plus.
         coa: [],
         // La nature des classes, elle, décide de ce qui EST une charge : sans
         // elle le pourcentage serait calculé sur un total vide (R4).

@@ -4,6 +4,10 @@ import {
   affinerLesCoins,
   analyzeFrame,
   candidatsDocument,
+  CLARTE_MIN,
+  defautsDesPages,
+  type FrameAnalysis,
+  OBLIQUITE_MIN,
   convexHull,
   detectQuad,
   maxAreaQuad,
@@ -368,6 +372,73 @@ describe("scanner — le verdict que voit l'utilisateur", () => {
     const a = analyzeFrame(trame(documentFlou, L2, H2), 4000);
     expect(a.reason).toBe("blurry");
     expect(a.ok).toBe(false);
+  });
+
+  /*
+   * LA LUMIÈRE ET L'ANGLE (5 novembre 2026)
+   *
+   * Une photo nette mais sombre, ou prise très de biais, se lit mal : les lignes de la
+   * facture se taisent ensuite. Le verdict le dit AVANT la prise.
+   */
+  it("dit « trop sombre » quand le papier du document est sombre, même net", () => {
+    const sombre = ecrire(
+      poser(fond(L, H, 10), L, H, rectangle(120, 60, 180, 340), 70),
+      L,
+      H,
+      120,
+      60,
+      180,
+      340,
+    );
+    const a = analyzeFrame(trame(sombre, L, H), 4000);
+    expect(a.clarte).toBeLessThan(CLARTE_MIN);
+    expect(a.reason).toBe("too_dark");
+    expect(a.ok).toBe(false);
+  });
+
+  it("dit « de biais » quand un côté du document est bien plus court que l'autre", () => {
+    const coins: Point[] = [
+      { x: 60, y: 60 },
+      { x: 240, y: 60 },
+      { x: 180, y: 340 },
+      { x: 120, y: 340 },
+    ];
+    const biais = ecrire(poser(fond(L, H), L, H, coins), L, H, 125, 70, 175, 330);
+    const a = analyzeFrame(trame(biais, L, H), 4000, coins);
+    expect(a.obliquite).toBeLessThan(OBLIQUITE_MIN);
+    expect(a.reason).toBe("oblique");
+  });
+
+  it("conseille d'écarter une ombre sans refuser la prise", () => {
+    const g = ticket();
+    // la moitié basse du document, assombrie
+    for (let y = 200; y < 340; y += 1) {
+      for (let x = 120; x < 180; x += 1) g[y * L + x] = Math.round(g[y * L + x]! * 0.45);
+    }
+    const a = analyzeFrame(trame(g, L, H), 4000, rectangle(120, 60, 180, 340));
+    expect(a.ombre).toBe(true);
+    expect(a.reason).not.toBe("too_dark");
+  });
+
+  it("ne refuse ni ne conseille rien sur le ticket bien éclairé, pris de face", () => {
+    const a = analyzeFrame(trame(ticket(), L, H), 4000);
+    expect(a.ombre).toBe(false);
+    expect(a.obliquite).toBeGreaterThan(0.9);
+    expect(a.ok).toBe(true);
+  });
+
+  it("les défauts d'une photo importée, sans doublon ni « pas de document »", () => {
+    const page = (reason: FrameAnalysis["reason"]) => ({ analysis: { reason } as FrameAnalysis });
+    expect(
+      defautsDesPages([
+        page("ok"),
+        page("blurry"),
+        page("no_document"),
+        page("blurry"),
+        page("too_dark"),
+      ]),
+    ).toEqual(["blurry", "too_dark"]);
+    expect(defautsDesPages([page("ok")])).toEqual([]);
   });
 
   it("signale la page vierge, qui ferme le document", () => {

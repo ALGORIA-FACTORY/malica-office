@@ -204,7 +204,7 @@ describe("l'accès total ouvre tout, sans prendre de place", { skip: !BASE_CONFI
       await refuse(
         db,
         () => rpc(db, intrus, "tour.accorderAccesTotal", intrus.email, "essai"),
-        /opérateurs/,
+        /refus\.reserve\.plateforme/,
       );
       await refuse(
         db,

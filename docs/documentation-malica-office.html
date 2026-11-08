@@ -1,0 +1,1616 @@
+<title>Documentation Malica Office</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
+<style>
+  /* Layout: a fixed index rail beside one reading column, like a ledger and its contents page. */
+  :root {
+    /* ALGORIA Factory brand: Ink and Paper, four functional colours that only ever say a state. */
+    --ink: #0e0d0c;
+    --paper: #fafaf9;
+    --bg: #0e0d0c;
+    --surface: #171615;
+    --surface-2: #1f1e1c;
+    --fg: #f2f1ef;
+    --fg-2: #b9b7b2;
+    --fg-3: #8a8782;
+    --line: #2a2926;
+    --line-strong: #3a3834;
+    --mark: #e07a57; /* the rg mark on Ink */
+    --evergreen: #4fa86a; /* ok */
+    --amber: #d7a53a; /* to check */
+    --vermilion: #e0613f; /* stop */
+    --azure: #5b93cf; /* link, source */
+    --evergreen-bg: rgba(58, 143, 84, 0.14);
+    --amber-bg: rgba(181, 134, 20, 0.16);
+    --vermilion-bg: rgba(191, 68, 36, 0.16);
+    --azure-bg: rgba(41, 104, 165, 0.18);
+    --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --step--1: 0.8125rem;
+    --step-0: 1rem;
+    --step-1: 1.1875rem;
+    --step-2: 1.5rem;
+    --step-3: 2.25rem;
+    --step-4: clamp(2.5rem, 6vw, 3.75rem);
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #fafaf9;
+      --surface: #ffffff;
+      --surface-2: #f2f1ee;
+      --fg: #0e0d0c;
+      --fg-2: #48484a;
+      --fg-3: #6e6c68;
+      --line: #e4e2de;
+      --line-strong: #d0cdc7;
+      --mark: #bf4424;
+      --evergreen: #2b6b3f;
+      --amber: #7a5a0d;
+      --vermilion: #a63a1e;
+      --azure: #2968a5;
+      --evergreen-bg: rgba(58, 143, 84, 0.1);
+      --amber-bg: rgba(181, 134, 20, 0.12);
+      --vermilion-bg: rgba(191, 68, 36, 0.1);
+      --azure-bg: rgba(41, 104, 165, 0.1);
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-2: #f2f1ee;
+    --fg: #0e0d0c;
+    --fg-2: #48484a;
+    --fg-3: #6e6c68;
+    --line: #e4e2de;
+    --line-strong: #d0cdc7;
+    --mark: #bf4424;
+    --evergreen: #2b6b3f;
+    --amber: #7a5a0d;
+    --vermilion: #a63a1e;
+    --azure: #2968a5;
+    --evergreen-bg: rgba(58, 143, 84, 0.1);
+    --amber-bg: rgba(181, 134, 20, 0.12);
+    --vermilion-bg: rgba(191, 68, 36, 0.1);
+    --azure-bg: rgba(41, 104, 165, 0.1);
+    color-scheme: light;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: var(--step-0);
+    line-height: 1.6;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: var(--azure);
+    text-underline-offset: 3px;
+  }
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--azure);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  code,
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
+  code {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    padding: 0.05em 0.35em;
+    border-radius: 3px;
+    overflow-wrap: anywhere;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    margin: 0;
+  }
+  p {
+    margin: 0;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 15.5rem minmax(0, 1fr);
+    gap: 3.5rem;
+    max-width: 76rem;
+    margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 2.5rem 5rem;
+  }
+  @media (max-width: 900px) {
+    .shell {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2rem;
+    }
+  }
+
+  /* index rail */
+  .rail {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+  @media (max-width: 900px) {
+    .rail {
+      position: static;
+    }
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    color: var(--fg);
+    text-decoration: none;
+  }
+  .brand svg {
+    width: 30px;
+    height: 30px;
+    color: var(--mark);
+    flex: none;
+  }
+  .brand .word {
+    font-size: 0.78rem;
+    letter-spacing: 0.22em;
+    font-weight: 400;
+  }
+  .brand .word b {
+    font-weight: 600;
+    padding-left: 0.55em;
+    margin-left: 0.45em;
+    border-left: 1px solid var(--fg-2);
+  }
+  .toc {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    font-size: var(--step--1);
+  }
+  .toc a {
+    color: var(--fg-2);
+    text-decoration: none;
+    padding: 0.32rem 0.6rem;
+    border-left: 1px solid var(--line);
+    display: flex;
+    gap: 0.7rem;
+  }
+  .toc a:hover {
+    color: var(--fg);
+    border-left-color: var(--fg-3);
+  }
+  .toc a span.n {
+    font-family: var(--font-mono);
+    color: var(--fg-3);
+    width: 1.4rem;
+    flex: none;
+  }
+  @media (max-width: 900px) {
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    }
+  }
+  .theme {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .theme button {
+    font: inherit;
+    font-size: 0.75rem;
+    color: var(--fg-2);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .theme button[aria-pressed="true"] {
+    color: var(--bg);
+    background: var(--fg);
+    border-color: var(--fg);
+  }
+
+  /* main column */
+  main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4.5rem;
+  }
+  .hero {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero h1 {
+    font-size: var(--step-4);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  .hero .lede {
+    font-size: var(--step-1);
+    color: var(--fg-2);
+    font-weight: 300;
+    max-width: 42rem;
+  }
+  .signature {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    color: var(--fg-2);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .signature::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--mark);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    font-size: var(--step--1);
+    color: var(--fg-3);
+    font-family: var(--font-mono);
+  }
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    scroll-margin-top: 1.5rem;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+  }
+  section > h2 {
+    font-size: var(--step-3);
+    font-weight: 300;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+  }
+  h3 {
+    font-size: var(--step-1);
+    font-weight: 500;
+  }
+  .prose {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    max-width: 44rem;
+    color: var(--fg-2);
+  }
+  .prose strong {
+    color: var(--fg);
+    font-weight: 500;
+  }
+
+  /* three spaces / surfaces */
+  .trio {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  @media (max-width: 720px) {
+    .trio {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .trio > div {
+    background: var(--surface);
+    padding: 1.25rem 1.25rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+  .trio .k {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+  }
+  .trio h3 {
+    font-weight: 400;
+    font-size: var(--step-2);
+    letter-spacing: -0.01em;
+  }
+  .trio p {
+    color: var(--fg-2);
+    font-size: 0.9375rem;
+  }
+  .trio ul {
+    margin: 0;
+    padding-left: 1.05rem;
+    color: var(--fg-2);
+    font-size: 0.9375rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  /* the piece's journey */
+  .journey {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    counter-reset: etape;
+  }
+  .journey li {
+    display: grid;
+    grid-template-columns: 2.6rem minmax(0, 1fr);
+    gap: 1rem;
+    position: relative;
+    padding-bottom: 1.35rem;
+  }
+  .journey li::before {
+    counter-increment: etape;
+    content: counter(etape, decimal-leading-zero);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--fg-2);
+    width: 2.6rem;
+    height: 2.6rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--bg);
+    position: relative;
+    z-index: 1;
+  }
+  .journey li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 1.3rem;
+    top: 2.6rem;
+    bottom: 0;
+    width: 1px;
+    background: var(--line-strong);
+  }
+  .journey .body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding-top: 0.45rem;
+    min-width: 0;
+  }
+  .journey .who {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+  }
+  .journey h3 {
+    font-weight: 500;
+    font-size: 1.0625rem;
+  }
+  .journey p {
+    color: var(--fg-2);
+    font-size: 0.9375rem;
+    max-width: 44rem;
+  }
+
+  /* state chips */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 0.12rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    vertical-align: 0.1em;
+  }
+  .chip::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .ok {
+    color: var(--evergreen);
+    background: var(--evergreen-bg);
+  }
+  .warn {
+    color: var(--amber);
+    background: var(--amber-bg);
+  }
+  .stop {
+    color: var(--vermilion);
+    background: var(--vermilion-bg);
+  }
+  .info {
+    color: var(--azure);
+    background: var(--azure-bg);
+  }
+
+  /* architecture map */
+  .map {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  @media (max-width: 820px) {
+    .map {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 460px) {
+    .map {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .box {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    padding: 0.9rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+  .box .path {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--azure);
+    overflow-wrap: anywhere;
+  }
+  .box h3 {
+    font-size: 0.98rem;
+    font-weight: 500;
+  }
+  .box p {
+    font-size: 0.875rem;
+    color: var(--fg-2);
+  }
+  .band {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px dashed var(--line-strong);
+    color: var(--fg-2);
+    font-size: 0.875rem;
+  }
+  .band .lbl {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+  }
+
+  /* rules */
+  .rules {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 2.5rem;
+    border-top: 1px solid var(--line);
+  }
+  @media (max-width: 720px) {
+    .rules {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .rule {
+    display: grid;
+    grid-template-columns: 2.6rem minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.95rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .rule .id {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--mark);
+    padding-top: 0.15rem;
+  }
+  .rule h3 {
+    font-size: 0.98rem;
+    font-weight: 500;
+  }
+  .rule p {
+    font-size: 0.875rem;
+    color: var(--fg-2);
+    margin-top: 0.2rem;
+  }
+
+  /* tables */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.9rem;
+    min-width: 34rem;
+  }
+  th,
+  td {
+    text-align: left;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    font-weight: 400;
+    background: var(--surface);
+  }
+  td {
+    color: var(--fg-2);
+  }
+  td.num,
+  th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+  }
+  tr:last-child td {
+    border-bottom: 0;
+  }
+  td strong {
+    color: var(--fg);
+    font-weight: 500;
+  }
+
+  /* commands */
+  pre.cmd {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--fg);
+  }
+  pre.cmd .c {
+    color: var(--fg-3);
+  }
+
+  /* figures */
+  .figures {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  @media (max-width: 720px) {
+    .figures {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .figures > div {
+    background: var(--surface);
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .figures .v {
+    font-size: 1.75rem;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .figures .l {
+    font-size: 0.8rem;
+    color: var(--fg-3);
+  }
+
+  .two {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+  @media (max-width: 720px) {
+    .two {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .two > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+  ul.plain {
+    margin: 0;
+    padding-left: 1.05rem;
+    color: var(--fg-2);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.9375rem;
+  }
+  ul.plain strong {
+    color: var(--fg);
+    font-weight: 500;
+  }
+
+  .note {
+    border-left: 2px solid var(--amber);
+    background: var(--amber-bg);
+    padding: 0.8rem 1rem;
+    color: var(--fg);
+    font-size: 0.9rem;
+    max-width: 46rem;
+  }
+  .note.stop {
+    border-left-color: var(--vermilion);
+    background: var(--vermilion-bg);
+  }
+  .note.ok {
+    border-left-color: var(--evergreen);
+    background: var(--evergreen-bg);
+  }
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--fg-3);
+    font-size: var(--step--1);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail" aria-label="Sommaire">
+    <a class="brand" href="#debut" aria-label="ALGORIA Factory">
+      <svg viewBox="0 0 1024 1024" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M535.4,974.6 C555.7,971.4 573.2,968.9 586.0,967.5 C595.1,966.5 603.1,964.9 610.5,962.6 C616.5,960.8 626.2,958.5 632.0,957.6 C638.8,956.5 644.8,954.9 649.0,952.9 C652.6,951.2 659.3,949.0 663.9,947.9 C668.5,946.8 675.0,944.4 678.4,942.5 C681.8,940.6 686.4,938.8 688.8,938.4 C691.1,938.0 695.6,936.2 698.8,934.3 C701.9,932.3 706.9,929.9 709.9,928.9 C712.8,927.9 717.5,925.6 720.2,923.9 C723.0,922.2 727.8,919.8 730.8,918.4 C733.9,917.0 737.9,914.8 739.7,913.4 C741.6,912.0 745.0,910.2 747.5,909.4 C749.9,908.5 753.8,906.1 756.2,904.0 C758.6,901.9 762.1,899.5 764.0,898.7 C765.9,897.9 769.5,895.6 771.8,893.6 C774.2,891.6 776.8,890.0 777.5,890.0 C778.2,890.0 781.0,888.1 783.6,885.7 C789.4,880.6 798.5,873.7 805.1,869.3 C807.7,867.6 810.2,865.5 810.7,864.7 C811.1,863.9 812.9,862.5 814.5,861.4 C817.7,859.4 858.5,818.6 863.5,812.4 C865.1,810.4 867.9,806.8 869.5,804.5 C874.7,797.2 881.3,788.7 885.7,783.6 C888.1,781.0 890.0,778.3 890.0,777.7 C890.0,777.2 891.8,774.4 894.0,771.5 C896.1,768.7 898.6,764.8 899.4,762.9 C900.2,761.1 902.4,757.7 904.4,755.5 C906.4,753.3 908.6,749.5 909.5,747.1 C910.3,744.7 912.1,741.2 913.5,739.4 C914.9,737.6 917.4,733.1 919.0,729.4 C920.7,725.8 922.9,721.7 923.9,720.4 C925.0,719.0 927.1,714.7 928.5,710.9 C930.0,707.0 932.7,701.4 934.5,698.4 C936.4,695.3 938.1,691.0 938.5,688.7 C938.9,686.4 940.7,681.7 942.6,678.4 C944.4,675.0 946.8,668.5 947.9,663.9 C949.0,659.3 951.2,652.6 952.9,649.0 C954.8,644.9 956.5,638.9 957.5,632.5 C958.3,627.0 960.6,617.3 962.5,610.9 C965.1,602.3 966.7,594.0 968.5,578.8 C969.8,567.5 971.4,556.3 971.9,553.8 C972.5,551.4 973.6,541.1 974.6,530.9 C976.1,513.8 976.1,511.0 974.6,494.0 C973.7,483.8 972.1,470.3 971.0,464.0 C969.9,457.7 968.6,447.4 968.0,441.3 C966.8,428.5 966.1,425.8 962.8,423.6 C960.8,422.1 940.5,422.0 738.9,422.0 L517.3,422.0 L514.6,424.1 C511.7,426.3 511.1,431.5 513.0,436.6 C513.7,438.3 514.1,464.7 514.1,512.0 C514.1,559.3 513.7,585.7 513.0,587.4 C511.2,592.2 511.8,596.9 514.5,599.5 L516.9,602.0 L643.5,602.0 C738.7,601.9 770.5,602.2 771.6,603.1 C774.7,605.6 772.5,618.8 767.6,626.8 C765.7,629.9 763.5,634.8 762.6,637.6 C761.6,640.6 759.5,644.0 757.4,646.1 C755.2,648.3 753.4,651.3 752.4,654.7 C751.6,657.6 749.3,661.9 747.4,664.2 C745.5,666.5 743.3,669.5 742.5,671.0 C741.7,672.5 740.0,674.5 738.6,675.4 C737.2,676.3 734.9,679.2 733.6,681.8 C727.5,693.7 691.9,729.5 682.0,733.6 C680.1,734.4 676.9,736.8 674.9,738.8 C668.8,745.1 656.8,753.0 653.2,753.0 C652.0,753.0 649.0,754.8 646.6,757.0 C644.0,759.4 639.9,761.8 636.5,763.0 C633.3,764.1 628.7,766.3 626.2,768.0 C623.7,769.6 620.1,771.2 618.1,771.6 C612.4,772.5 608.8,773.9 604.9,776.6 C602.5,778.3 598.4,779.6 592.9,780.6 C588.3,781.4 580.5,783.4 575.5,785.0 C562.4,789.2 557.2,790.0 540.5,790.6 C522.4,791.2 517.8,791.7 515.6,793.3 C514.0,794.5 513.9,800.9 513.9,882.8 C513.9,931.4 514.2,971.6 514.6,972.1 C515.5,973.6 521.1,975.9 523.9,976.0 C525.3,976.0 530.5,975.4 535.4,974.6 Z M228.7,510.0 C231.3,510.0 232.2,505.1 233.0,487.1 C234.0,466.7 235.6,456.7 239.3,447.5 C240.7,444.2 242.1,439.0 242.5,436.0 C243.6,427.4 244.9,422.9 248.0,418.0 C249.6,415.5 251.6,410.4 252.4,406.7 C253.3,402.9 255.1,398.4 256.5,396.6 C257.9,394.8 259.9,390.7 261.0,387.4 C262.1,384.2 264.4,380.2 266.0,378.5 C267.6,376.8 270.1,372.5 271.5,369.0 C272.9,365.5 275.1,361.5 276.4,360.1 C277.7,358.6 279.9,355.7 281.3,353.5 C282.6,351.3 285.0,348.4 286.5,347.0 C288.0,345.6 290.1,342.8 291.2,340.6 C293.7,335.6 305.7,321.6 315.7,311.9 C325.3,302.5 339.0,291.0 340.7,291.0 C341.4,291.0 344.7,288.5 348.1,285.5 C351.5,282.5 354.6,280.0 355.0,280.0 C355.4,280.0 357.9,278.2 360.5,276.1 C363.1,273.9 367.2,271.7 369.6,271.1 C372.0,270.5 375.9,268.3 378.5,266.0 C381.2,263.7 385.0,261.5 387.6,260.9 C390.0,260.3 393.7,258.5 395.8,257.1 C400.2,253.9 402.0,253.2 408.3,251.9 C411.0,251.4 415.7,249.5 418.8,247.5 C423.4,244.7 426.4,243.8 434.2,242.6 C439.5,241.8 446.0,240.2 448.7,239.0 C456.1,235.7 466.1,234.1 483.0,233.5 C501.7,232.8 506.2,232.3 508.4,230.7 C510.0,229.5 510.1,222.9 510.1,141.1 C510.1,42.8 510.6,49.9 503.3,48.5 C499.7,47.9 486.2,49.4 463.5,53.1 C456.9,54.2 445.4,55.7 438.0,56.4 C428.7,57.4 421.6,58.8 415.0,60.9 C409.8,62.6 400.0,64.9 393.2,66.0 C384.3,67.5 379.2,68.9 374.8,71.1 C371.5,72.8 364.7,75.0 359.7,76.1 C353.7,77.4 348.8,79.2 345.1,81.5 C342.0,83.4 337.6,85.2 335.2,85.6 C332.9,86.0 328.4,87.8 325.2,89.7 C322.1,91.7 317.0,94.1 314.0,95.1 C311.0,96.2 305.6,98.8 302.0,100.9 C298.4,103.1 294.4,105.1 293.0,105.5 C291.6,105.9 288.3,107.8 285.7,109.7 C283.1,111.5 278.5,114.0 275.6,115.0 C272.7,116.1 269.2,118.2 267.9,119.6 C266.6,121.1 263.2,123.3 260.3,124.6 C257.5,125.8 253.7,128.2 251.8,129.9 C246.4,134.6 238.0,140.0 236.0,140.0 C234.9,140.0 233.8,139.4 233.3,138.7 C232.9,138.1 232.5,118.2 232.5,94.6 L232.4,51.7 L230.2,49.9 C228.1,48.3 223.0,48.1 140.3,48.0 L52.7,47.9 L50.3,50.2 L48.0,52.4 L48.0,276.5 C48.0,425.4 48.4,501.8 49.1,504.3 C49.6,506.3 50.9,508.5 51.9,509.2 C53.4,510.2 71.4,510.5 140.6,510.3 C188.4,510.2 228.0,510.0 228.7,510.0 Z"
+        />
+      </svg>
+      <span class="word">ALGORIA<b>FACTORY</b></span>
+    </a>
+    <nav class="toc">
+      <a href="#produit"><span class="n">01</span>Le produit</a>
+      <a href="#parcours"><span class="n">02</span>Le parcours d'une pièce</a>
+      <a href="#architecture"><span class="n">03</span>Architecture</a>
+      <a href="#regles"><span class="n">04</span>Les douze règles</a>
+      <a href="#droits"><span class="n">05</span>Droits et isolation</a>
+      <a href="#base"><span class="n">06</span>Base de données</a>
+      <a href="#lecture"><span class="n">07</span>La lecture prouvée</a>
+      <a href="#developper"><span class="n">08</span>Développer</a>
+      <a href="#exploiter"><span class="n">09</span>Exploiter</a>
+      <a href="#etat"><span class="n">10</span>État au 8 novembre</a>
+    </nav>
+    <div class="theme" role="group" aria-label="Thème">
+      <button type="button" id="th-ink" data-t="dark">Ink</button>
+      <button type="button" id="th-paper" data-t="light">Paper</button>
+      <button type="button" id="th-sys" data-t="">Système</button>
+    </div>
+  </aside>
+
+  <main>
+    <header class="hero" id="debut">
+      <span class="eyebrow">Documentation technique et produit</span>
+      <h1>Malica Office</h1>
+      <p class="lede">
+        Comptabilité augmentée pour PME et cabinets. Une pièce entre par un téléphone ou un PDF ;
+        elle ressort en écriture comptable proposée, dont chaque montant renvoie au mot imprimé qui
+        le porte.
+      </p>
+      <p class="signature">algoria-factory.com · Chaque chiffre a sa source.</p>
+      <div class="meta">
+        <span>version 0.2.101</span><span>branche claude/mission-production-ready</span
+        ><span>394 migrations</span><span>relevé du 8 novembre 2026</span>
+      </div>
+    </header>
+
+    <section id="produit" aria-labelledby="t-produit">
+      <span class="eyebrow">01 · Le produit</span>
+      <h2 id="t-produit">Trois espaces, trois surfaces, une seule base</h2>
+      <div class="prose">
+        <p>
+          Malica Office sert trois publics qui ne voient pas la même chose.
+          <strong>La PME</strong> dépose ses pièces et paie ses fournisseurs.
+          <strong>Le cabinet</strong> tranche le sens de chaque pièce et tient les livres.
+          <strong>La Tour</strong>, chez ALGORIA Factory, voit les deux et gère les abonnements.
+        </p>
+      </div>
+      <div class="trio">
+        <div>
+          <span class="k">Espace PME</span>
+          <h3>La société</h3>
+          <p>
+            Le dirigeant et ses collaborateurs. Ils scannent, transmettent, suivent leur TVA du mois
+            et règlent.
+          </p>
+          <ul>
+            <li>Scan d'une pièce, d'un lot, ou « plus tard »</li>
+            <li>Envoi au cabinet et rappel</li>
+            <li>Règlements, relevé bancaire</li>
+            <li>Ne voit jamais les écritures d'un dossier confié</li>
+          </ul>
+        </div>
+        <div>
+          <span class="k">Espace Comptabilité</span>
+          <h3>Le cabinet</h3>
+          <p>
+            L'expert, ses collaborateurs et assistants. Ils tiennent les livres des dossiers qui
+            leur sont confiés.
+          </p>
+          <ul>
+            <li>Sens de la pièce (achat ou vente)</li>
+            <li>Proposition, inscription, revue, contre-passation</li>
+            <li>Journal du jour, exports CSV et Excel</li>
+            <li>Paramétrage des comptes par dossier</li>
+          </ul>
+        </div>
+        <div>
+          <span class="k">La Tour</span>
+          <h3>ALGORIA Factory</h3>
+          <p>
+            Les opérateurs de la plateforme. Ils voient cabinets et PME, sans lire leurs pièces sauf
+            réquisition.
+          </p>
+          <ul>
+            <li>Abonnements, licences, facturation</li>
+            <li>Accès total, tracé et borné</li>
+            <li>Suivi de la lecture et de ses coûts</li>
+            <li>Organisations confiées, archivées</li>
+          </ul>
+        </div>
+      </div>
+      <div class="two">
+        <div>
+          <h3>Les surfaces</h3>
+          <ul class="plain">
+            <li>
+              <strong>Web</strong> : React 19, TanStack Router, Vite. Rendu serveur des écrans
+              publics.
+            </li>
+            <li><strong>PWA</strong> : le même bundle, installable, avec une page hors ligne.</li>
+            <li>
+              <strong>Android</strong> : une coque Capacitor qui embarque le bundle. Aucun paiement
+              dans l'app Play ; un garde de build le vérifie.
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3>Les langues</h3>
+          <ul class="plain">
+            <li>
+              <strong>Français, anglais, arabe</strong> : trois dictionnaires, chargés par langue et
+              par espace.
+            </li>
+            <li>
+              <strong>Arabe</strong> en écriture de droite à gauche, propriétés CSS logiques, police
+              Noto Kufi Arabic.
+            </li>
+            <li>
+              Chaque clé de refus <code>refus.*</code> a son message dans les trois langues (R12).
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="parcours" aria-labelledby="t-parcours">
+      <span class="eyebrow">02 · Le parcours d'une pièce</span>
+      <h2 id="t-parcours">Du papier à l'écriture, étape par étape</h2>
+      <div class="prose">
+        <p>
+          Une facture fournisseur, dans un dossier confié à un cabinet. Chaque étape dit qui agit.
+          Les étiquettes de couleur disent un état, jamais une décoration.
+        </p>
+      </div>
+      <ol class="journey">
+        <li>
+          <div class="body">
+            <span class="who">PME · téléphone ou poste</span>
+            <h3>La prise de vue</h3>
+            <p>
+              La caméra mesure en direct la netteté, la taille, le niveau du papier et le biais. Une
+              photo trop sombre ou trop de travers est refusée avant la prise ; une ombre donne un
+              conseil. Une photo importée de la galerie dit ses défauts sans être refusée. Les
+              pièces se scannent seules, en lot, ou se gardent pour plus tard.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="body">
+            <span class="who">API · <code>capture.enregistrer</code></span>
+            <h3>Le dépôt</h3>
+            <p>
+              La pièce est enregistrée par une porte de la base. Seuls cinq types sont acceptés
+              (PDF, JPEG, PNG, WebP, HEIC), et les premiers octets doivent correspondre au type
+              annoncé. Une pièce se sert toujours en téléchargement, dans un cadre où aucun script
+              ne s'exécute.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="body">
+            <span class="who">Service OCR · <code>infra/ocr</code></span>
+            <h3>Le relevé</h3>
+            <p>
+              Un PDF qui porte sa couche de texte est lu tel quel. Sinon, PaddleOCR PP-OCRv5 sur CPU
+              (moteur ONNX) lit la page en deux vagues : le tableau et les boîtes courtes d'abord,
+              la page entière ensuite, relue en arabe là où il le faut. Chaque mot garde sa
+              position.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="body">
+            <span class="who">Moteur Rust / WebAssembly · <code>packages/sudoku</code></span>
+            <h3>La preuve</h3>
+            <p>
+              Le « sudoku » croise les relations de la grille du type de pièce : HT + TVA + droits =
+              TTC, quantité × prix = montant, le total en lettres, le matricule et sa lettre de
+              contrôle. Ce qui ferme est <span class="chip ok">prouvé</span>. Une ligne lue mais non
+              prouvée s'affiche <span class="chip warn">lu, à vérifier</span>. Ce qui ne se lit pas
+              reste tu.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="body">
+            <span class="who">Aujourd'hui · modèle désignateur</span>
+            <h3>La désignation</h3>
+            <p>
+              Pour les champs que le moteur ne prouve pas, un modèle reçoit le plan de mots, sans
+              voir la pièce, et désigne des positions. Les valeurs sont relues dans le plan, jamais
+              dans sa réponse (R2). Le retrait de cette étape est planifié : voir la section 07.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="body">
+            <span class="who">Base · <code>capture.analyser</code></span>
+            <h3>Le jugement</h3>
+            <p>
+              Les contrôles de forme et de fond donnent un verdict motivé : destinataire, mentions
+              obligatoires, cohérence des montants, doublon. Une panne du moteur ne fait jamais
+              tomber le jugement : elle va au journal, et la lecture fait foi.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="body">
+            <span class="who">PME · « Envoyer au cabinet »</span>
+            <h3>La transmission</h3>
+            <p>
+              La PME envoie la pièce, ou la rappelle tant qu'elle n'est pas inscrite. Un rappel en
+              attente suspend l'inscription.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="body">
+            <span class="who">Cabinet · expert</span>
+            <h3>Le sens et l'écriture</h3>
+            <p>
+              Le comptable tranche le sens (achat ou vente). Le Socle propose l'écriture : comptes,
+              TVA, FODEC, droit de timbre, à partir du pack de juridiction et du paramétrage du
+              cabinet. L'expert inscrit, revoit ou contre-passe. Une correction est toujours une
+              écriture nouvelle (R7).
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="body">
+            <span class="who">PME · règlement</span>
+            <h3>Le paiement</h3>
+            <p>
+              La PME déclare son paiement : moyen, montant, date, retenues à la source. L'écriture
+              de règlement se compose depuis ce fait, sur le compte du tiers où le cabinet a inscrit
+              la dette. La base vérifie qu'un règlement est exactement ce que son paiement dit.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="body">
+            <span class="who">Cabinet et PME</span>
+            <h3>Banque, TVA, journal</h3>
+            <p>
+              Le relevé bancaire s'importe et se rapproche des écritures de banque. La TVA du mois
+              se calcule au mois de l'envoi. Le journal du jour s'exporte en CSV et en Excel.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div class="body">
+            <span class="who">La nuit · éteinte</span>
+            <h3>La relecture de nuit</h3>
+            <p>
+              Entre 01:00 et 06:00, une passe peut relire avec un OCR lourd et un modèle de vision
+              ce que le jour n'a pas prouvé, sous plafonds en base. Elle est livrée
+              <span class="chip stop">coupée</span> : la région Alibaba de Francfort reste à
+              confirmer.
+            </p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="architecture" aria-labelledby="t-archi">
+      <span class="eyebrow">03 · Architecture</span>
+      <h2 id="t-archi">Un dépôt, quatre paquets, un service de lecture</h2>
+      <div class="map">
+        <div class="box">
+          <span class="path">apps/web</span>
+          <h3>Les écrans</h3>
+          <p>
+            React 19, TanStack Router, Vite 8. Feuilles de style par espace, dictionnaires par
+            langue. Capacitor 8 pour Android.
+          </p>
+        </div>
+        <div class="box">
+          <span class="path">apps/api</span>
+          <h3>L'API</h3>
+          <p>
+            Node 22, Express 4, TypeScript exécuté sans compilation. <code>/rpc</code>,
+            <code>/malica</code>, <code>/pieces</code>, <code>/exports</code>.
+          </p>
+        </div>
+        <div class="box">
+          <span class="path">packages/socle</span>
+          <h3>Le domaine</h3>
+          <p>
+            Moteurs purs : montants, TVA, propositions d'écriture, messages fr/en/ar. Aucun réseau,
+            aucune base (R1).
+          </p>
+        </div>
+        <div class="box">
+          <span class="path">packages/sudoku</span>
+          <h3>La preuve</h3>
+          <p>
+            Moteur Rust compilé en WebAssembly, servi dans Node et dans la WebView. Grilles et packs
+            lus en base.
+          </p>
+        </div>
+        <div class="box">
+          <span class="path">infra/ocr</span>
+          <h3>L'OCR</h3>
+          <p>
+            Python, FastAPI, PaddleOCR 3.7. Poids épinglés par empreinte SHA-256. Moteur ONNX le
+            jour, Paddle pour la nuit.
+          </p>
+        </div>
+        <div class="box">
+          <span class="path">db/migrations</span>
+          <h3>La base</h3>
+          <p>
+            PostgreSQL 17 avec pgvector. 394 migrations jouées par <code>db/migrer.mjs</code>, dans
+            l'ordre des noms.
+          </p>
+        </div>
+        <div class="box">
+          <span class="path">infra/</span>
+          <h3>Le déploiement</h3>
+          <p>
+            Docker Compose : <code>caddy</code>, <code>migrer</code>, <code>ocr</code>,
+            <code>api</code>, <code>web</code>, <code>postgres</code>, <code>sauvegarde</code>.
+          </p>
+        </div>
+        <div class="box">
+          <span class="path">outils/</span>
+          <h3>Les épreuves</h3>
+          <p>Jeu de données, parcours de bout en bout, banc sans IA, jeux de factures fictives.</p>
+        </div>
+        <div class="band">
+          <span class="lbl">Hors du dépôt</span>Hetzner (Allemagne) · Storage Box chiffrée · Sentry
+          (UE) · Capgo (UE) · Google Play · Model Studio Alibaba (Singapour) et DeepSeek pour la
+          lecture assistée
+        </div>
+      </div>
+    </section>
+
+    <section id="regles" aria-labelledby="t-regles">
+      <span class="eyebrow">04 · Les douze règles</span>
+      <h2 id="t-regles">Des règles qu'une commande vérifie</h2>
+      <div class="prose">
+        <p>
+          Chaque règle de <code>AGENTS.md</code> est exécutable : la CI échoue si elle est violée.
+          Une règle qu'aucune commande ne vérifie n'est qu'un souhait.
+        </p>
+      </div>
+      <div class="rules">
+        <div class="rule">
+          <span class="id">R1</span>
+          <div>
+            <h3>Le domaine ne connaît pas le monde</h3>
+            <p>
+              Le Socle reçoit des valeurs et rend des valeurs ; les dépendances sortent par des
+              ports.
+            </p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R2</span>
+          <div>
+            <h3>Zéro hallucination, dès la lecture</h3>
+            <p>Tout montant pointe vers le jeton qui le porte, ou vaut null avec un drapeau.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R3</span>
+          <div>
+            <h3>Malica appelle, ne calcule pas</h3>
+            <p>La couche agentique n'émet aucune valeur liante ; un moteur du Socle calcule.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R4</span>
+          <div>
+            <h3>Zéro constante réglementaire dans le code</h3>
+            <p>Taux, comptes, seuils, devises vivent en base, datés. Aucun repli implicite.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R5</span>
+          <div>
+            <h3>Un seul moteur, N juridictions</h3>
+            <p>Passer de la Tunisie à l'UEMOA active un pack, sans forker le code.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R6</span>
+          <div>
+            <h3>L'isolation est portée par la base</h3>
+            <p>RLS sur chaque table de tenant ; l'écriture passe par une porte.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R7</span>
+          <div>
+            <h3>Une correction est une écriture nouvelle</h3>
+            <p>Les tables d'écriture refusent toute mise à jour, par déclencheur.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R8</span>
+          <div>
+            <h3>Le modèle est une donnée</h3>
+            <p>Les noms de modèles viennent de la table qui les tarife.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R9</span>
+          <div>
+            <h3>Rien de mort dans le dépôt</h3>
+            <p>Aucun fichier non importé, aucun stub ; knip en CI.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R10</span>
+          <div>
+            <h3>Malica propose, l'expert arrête</h3>
+            <p>Des défauts livrés, visibles, surchargeables par cabinet sans migration.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R11</span>
+          <div>
+            <h3>Même référentiel, quel que soit le jour</h3>
+            <p>Aucune horloge ni hasard dans les données de référence d'une migration.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <span class="id">R12</span>
+          <div>
+            <h3>Ni orphelin, ni doublon, ni littéral</h3>
+            <p>Clés étrangères, libellés en trois langues, aucun message brut vers l'écran.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="droits" aria-labelledby="t-droits">
+      <span class="eyebrow">05 · Droits et isolation</span>
+      <h2 id="t-droits">Qui lit quoi, et qui écrit où</h2>
+      <div class="prose">
+        <p>
+          Le cloisonnement tient dans PostgreSQL. Un filtre oublié dans le code ouvrirait l'accès ;
+          une politique RLS oubliée le refuse. Aucun client n'écrit directement une table : il
+          appelle une <strong>porte</strong>, une fonction <code>security definer</code> qui
+          contrôle les droits et la saisie. Les portes des clients appartiennent au rôle sans
+          connexion <code>portier</code>.
+        </p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Règle</th>
+              <th>Ce qu'elle garantit</th>
+              <th>Prouvée par</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>La PME ne voit jamais les écritures</strong></td>
+              <td>
+                Dans un dossier confié à un cabinet, aucun membre de la PME ne lit les écritures, ni
+                en SQL, ni par une route, ni par une porte. L'accueil reçoit des totaux par classe
+                et par mois entiers.
+              </td>
+              <td>
+                <code>la-matrice-des-droits</code>,
+                <code>la-pme-ne-lit-pas-l-ecriture-par-une-porte</code>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Le cabinet engagé tient les livres</strong></td>
+              <td>
+                Tant qu'un mandat est en vigueur, la PME ne propose, n'inscrit, ne revoit ni ne
+                contre-passe ; seuls ses règlements restent à elle.
+              </td>
+              <td>matrice, section 11</td>
+            </tr>
+            <tr>
+              <td><strong>Un règlement est ce que son paiement dit</strong></td>
+              <td>
+                Journal du moyen, compte de trésorerie, montant, date du paiement, compte du tiers
+                inscrit, retenues déclarées.
+              </td>
+              <td>
+                <code>un-reglement-ne-deguise-pas-une-ecriture</code>
+                <span class="chip warn">lot S5b en cours</span>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Une clé part avec son auteur</strong></td>
+              <td>
+                Une clé d'API ne se résout que pour un expert encore membre ; elle est révoquée à
+                son départ.
+              </td>
+              <td><code>une-cle-part-avec-son-auteur</code></td>
+            </tr>
+            <tr>
+              <td><strong>Une session se ferme</strong></td>
+              <td>
+                La déconnexion coupe le jeton présenté ; « partout » et la réinitialisation coupent
+                tout, à l'horloge de la base.
+              </td>
+              <td><code>un-jeton-d-acces-se-revoque</code></td>
+            </tr>
+            <tr>
+              <td><strong>Une pièce se lit, ne s'exécute pas</strong></td>
+              <td>
+                Types fermés, signature des octets, <code>attachment</code>, <code>nosniff</code>,
+                CSP <code>sandbox</code>.
+              </td>
+              <td><code>une-piece-ne-s-execute-jamais</code></td>
+            </tr>
+            <tr>
+              <td><strong>Aucun texte technique à l'écran</strong></td>
+              <td>Une phrase traduite et une référence ; le détail va au journal en base.</td>
+              <td><code>aucune-erreur-brute-a-l-ecran</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="base" aria-labelledby="t-base">
+      <span class="eyebrow">06 · Base de données</span>
+      <h2 id="t-base">PostgreSQL 17, organisée par schémas</h2>
+      <div class="two">
+        <div>
+          <h3>Les schémas qui portent le métier</h3>
+          <ul class="plain">
+            <li>
+              <code>capture</code> : pièces, plan de jetons, lectures, analyses, citations,
+              paiements
+            </li>
+            <li><code>socle</code> : écritures et lignes, immuables</li>
+            <li><code>identity</code> : organisations, adhésions, mandats, clés d'API</li>
+            <li><code>ref</code> : packs de juridiction datés, grilles, concepts, taux</li>
+            <li><code>parametrage</code> : ce que le cabinet a arrêté, au-dessus du pack</li>
+            <li>
+              <code>banque</code>, <code>immo</code>, <code>stocks</code>, <code>tiers</code>,
+              <code>facturation</code>, <code>collab</code>
+            </li>
+            <li>
+              <code>agents</code>, <code>legal</code> (corpus juridique, 96 % du volume),
+              <code>observabilite</code>, <code>audit</code>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3>Les migrations</h3>
+          <ul class="plain">
+            <li>
+              Une migration est un fichier SQL, jamais réécrit une fois appliqué : son empreinte est
+              gardée dans <code>app.migrations</code>.
+            </li>
+            <li>
+              <strong>Une migration en retard est refusée</strong> : un fichier dont le nom précède
+              le dernier appliqué ne se joue pas. Il se renumérote après, pour que toutes les bases
+              aient le même ordre.
+            </li>
+            <li>
+              Chaque nettoyage est réversible : son retour est écrit dans le fichier, et
+              l'aller-retour se prouve sur une copie.
+            </li>
+            <li>
+              Les suppressions qui touchent des données attendent un comptage sur la production :
+              <code>docs/audit-2026-11-06/nettoyage-a-valider.sql</code>.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="lecture" aria-labelledby="t-lecture">
+      <span class="eyebrow">07 · La lecture prouvée</span>
+      <h2 id="t-lecture">Ce que le moteur lit seul, sans aucun modèle</h2>
+      <div class="prose">
+        <p>
+          Le banc sans IA lit 411 pièces fictives par la chaîne de production, sans modèle ni carte
+          graphique, et compte chaque champ contre la vérité du corpus. Une valeur fausse ou
+          inventée fait échouer le banc : zéro est la seule mesure acceptée.
+        </p>
+      </div>
+      <div class="figures">
+        <div><span class="v mono">7 186</span><span class="l">justes, sens déclaré</span></div>
+        <div><span class="v mono">6 757</span><span class="l">justes, sens lu</span></div>
+        <div>
+          <span class="v mono" style="color: var(--evergreen)">0</span
+          ><span class="l">valeur fausse</span>
+        </div>
+        <div>
+          <span class="v mono" style="color: var(--evergreen)">0</span
+          ><span class="l">valeur inventée</span>
+        </div>
+      </div>
+      <div class="note">
+        Le plancher des bulletins est de 7 194 et 6 765. L'écart de 8 vient de l'OCR du poste de
+        mesure (Paddle au lieu d'ONNX) : le code fusionné rend, pièce par pièce, exactement ce que
+        rendait le code d'origine. Retrouver le plancher exact demande de rejouer l'OCR sous Linux.
+      </div>
+      <div class="two">
+        <div>
+          <h3>Ce qui est prouvé</h3>
+          <ul class="plain">
+            <li>Totaux, TVA, droits et taxes des factures</li>
+            <li>Matricule fiscal et sa lettre de contrôle, calculée</li>
+            <li>Devise : TND quand aucune n'est imprimée</li>
+            <li>Taux nul : EXO ou EXPORT selon la mention imprimée</li>
+            <li>Devis et avoirs par leurs totaux</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Ce qui reste à faire</h3>
+          <ul class="plain">
+            <li>Les lignes d'articles restent « lu, à vérifier »</li>
+            <li>Les pièces autres que les factures, les tickets, le manuscrit</li>
+            <li>La séparation de plusieurs factures scannées d'affilée</li>
+            <li>Le retrait du modèle désignateur, par lots, après la preuve champ par champ</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="developper" aria-labelledby="t-dev">
+      <span class="eyebrow">08 · Développer</span>
+      <h2 id="t-dev">Monter le poste, lancer les épreuves</h2>
+      <div class="prose">
+        <p>
+          Node 24, Rust stable avec la cible <code>wasm32-unknown-unknown</code>, PostgreSQL 17. Le
+          fichier <code>apps/api/.env</code> n'est jamais affiché ni commité.
+        </p>
+      </div>
+      <pre class="cmd"><span class="c"># dépendances et moteur de preuve</span>
+npm ci
+rustup target add wasm32-unknown-unknown
+npm run build --workspace @malica/sudoku
+
+<span class="c"># une base de test neuve, messages du serveur en anglais comme en CI</span>
+npm run base-de-test
+
+<span class="c"># les suites</span>
+npm run test --workspace @malica/sudoku    <span class="c"># cargo test --release</span>
+npm test                                   <span class="c"># socle, web, API, db, outils</span>
+npm run typecheck
+npm run code-mort                          <span class="c"># knip (R9)</span></pre>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Job CI</th>
+              <th>Ce qu'il éprouve</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>atelier</code></td>
+              <td>Style, typage, infra, code mort</td>
+            </tr>
+            <tr>
+              <td><code>web</code></td>
+              <td>Socle, écrans, budget du bundle de la coque, « la coque ne vend rien »</td>
+            </tr>
+            <tr>
+              <td><code>api</code></td>
+              <td>Moteur Rust et WASM, migrations sur une base neuve, isolation</td>
+            </tr>
+            <tr>
+              <td><code>epreuves</code></td>
+              <td>L'application vivante, le jeu de données, Playwright en téléphone</td>
+            </tr>
+            <tr>
+              <td><code>image-ocr</code></td>
+              <td>L'image OCR et son contrat, sur les deux moteurs</td>
+            </tr>
+            <tr>
+              <td><code>maestro</code></td>
+              <td>L'app Android sur émulateur</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="two">
+        <div>
+          <h3>Conventions</h3>
+          <ul class="plain">
+            <li>Code et commits en anglais ; documentation et commentaires en français.</li>
+            <li>
+              Travail sur une branche, jamais sur <code>main</code> ; une PR fait passer la CI.
+            </li>
+            <li>Chaque lot est relu et rejoué par un vérificateur qui ne l'a pas écrit.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Interdits</h3>
+          <ul class="plain">
+            <li><code>styles-pme.css</code> se modifie à la main uniquement.</li>
+            <li>Ne jamais lancer <code>node outils/captures.mjs</code>.</li>
+            <li>Aucune donnée client réelle ; seule ALGORIA FACTORY SARL, en données fictives.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="exploiter" aria-labelledby="t-exploit">
+      <span class="eyebrow">09 · Exploiter</span>
+      <h2 id="t-exploit">Staging, production, sauvegardes</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Environnement</th>
+              <th>Données</th>
+              <th>Déploiement</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>staging</strong></td>
+              <td>Synthétiques</td>
+              <td>À chaque poussée sur <code>main</code>, par la CI seule</td>
+            </tr>
+            <tr>
+              <td><strong>production</strong></td>
+              <td>Clients</td>
+              <td>À la main, sur une étiquette poussée depuis le poste du dirigeant</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="plain">
+        <li>
+          <strong>Sauvegardes</strong> : chiffrées avant de quitter la machine, vers une Storage Box
+          en Allemagne.
+        </li>
+        <li>
+          <strong>Accès serveur</strong> : clé de déploiement limitée par une porte SSH qui
+          n'accepte que deux commandes. Le diagnostic se fait en lecture seule, dans une transaction
+          <code>read only</code>.
+        </li>
+        <li>
+          <strong>Observabilité</strong> : étapes de lecture, coûts des modèles et pannes au journal
+          en base, lisibles par la Tour.
+        </li>
+        <li>
+          <strong>OCR</strong> : 1 600 px sur le grand côté, une lecture à la fois, bascule sur le
+          modèle de vision au-delà de 45 s d'attente.
+        </li>
+      </ul>
+    </section>
+
+    <section id="etat" aria-labelledby="t-etat">
+      <span class="eyebrow">10 · État au 8 novembre 2026</span>
+      <h2 id="t-etat">Ce qui est livré, ce qui reste ouvert</h2>
+      <div class="prose">
+        <p>
+          Tout est sur la branche <code>claude/mission-production-ready</code>, en PR brouillon n°
+          263. Rien n'est déployé.
+        </p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Lot</th>
+              <th>Objet</th>
+              <th>État</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>CI</td>
+              <td>Moteur protégé, code mort, image OCR, job Android</td>
+              <td><span class="chip ok">fusionné</span></td>
+            </tr>
+            <tr>
+              <td>Migrations</td>
+              <td>Même base quel que soit son historique ; migration en retard refusée</td>
+              <td><span class="chip ok">fusionné</span></td>
+            </tr>
+            <tr>
+              <td>S1</td>
+              <td>Une pièce ne s'exécute jamais</td>
+              <td><span class="chip ok">fusionné</span></td>
+            </tr>
+            <tr>
+              <td>E</td>
+              <td>Aucune erreur technique à l'écran</td>
+              <td><span class="chip ok">fusionné</span></td>
+            </tr>
+            <tr>
+              <td>S3</td>
+              <td>Clés d'API et sessions révocables</td>
+              <td><span class="chip ok">fusionné</span></td>
+            </tr>
+            <tr>
+              <td>S2</td>
+              <td>La PME ne voit jamais les écritures</td>
+              <td><span class="chip ok">fusionné</span></td>
+            </tr>
+            <tr>
+              <td>S5</td>
+              <td>Le cabinet engagé tient les livres</td>
+              <td><span class="chip ok">fusionné</span></td>
+            </tr>
+            <tr>
+              <td>D</td>
+              <td>Nettoyage sûr de la base</td>
+              <td><span class="chip ok">fusionné</span></td>
+            </tr>
+            <tr>
+              <td>P</td>
+              <td>Lighthouse mobile 97 à 99 sur les écrans publics</td>
+              <td><span class="chip ok">fusionné</span></td>
+            </tr>
+            <tr>
+              <td>S5b</td>
+              <td>Règlements : compte du tiers, retenues, date</td>
+              <td><span class="chip warn">en correction</span></td>
+            </tr>
+            <tr>
+              <td>Nuit</td>
+              <td>Relecture lourde, plafonds, région Francfort</td>
+              <td><span class="chip stop">suspendu</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note stop">
+        À trancher par le dirigeant : la règle des dossiers autonomes, la lecture après révocation
+        du mandat, les droits pendant une suspension, le contrôle strict des règlements pour le
+        cabinet, et les suppressions en base après comptage sur la production. Le détail est dans
+        <code>docs/livraison-2026-10-19/10-ce-qui-reste-ouvert.md</code>.
+      </div>
+      <div class="two">
+        <div>
+          <h3>Pour aller plus loin</h3>
+          <ul class="plain">
+            <li><code>AGENTS.md</code> : les règles, et le protocole entre agents</li>
+            <li><code>docs/banc-sans-ia.md</code> : les 21 bulletins du banc</li>
+            <li>
+              <code>docs/sudoku/contrat-du-moteur.md</code> : grilles, preuves, entrée et sortie
+            </li>
+            <li><code>docs/exploitation.md</code> : machines, OCR, mesures</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Les audits du 6 novembre</h3>
+          <ul class="plain">
+            <li><code>docs/audit-2026-11-06/base.md</code></li>
+            <li><code>docs/audit-2026-11-06/securite.md</code></li>
+            <li><code>docs/audit-2026-11-06/web.md</code></li>
+            <li><code>docs/audit-2026-11-06/lecture.md</code></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>ALGORIA Factory · Malica Office</span
+      ><span class="mono">Chaque chiffre a sa source.</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var buttons = document.querySelectorAll(".theme button");
+    function apply(t) {
+      if (t) root.setAttribute("data-theme", t);
+      else root.removeAttribute("data-theme");
+      buttons.forEach(function (b) {
+        b.setAttribute("aria-pressed", String((b.getAttribute("data-t") || "") === (t || "")));
+      });
+      try {
+        localStorage.setItem("malica-doc-theme", t || "");
+      } catch (e) {}
+    }
+    var saved = "";
+    try {
+      saved = localStorage.getItem("malica-doc-theme") || "";
+    } catch (e) {}
+    apply(saved);
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        apply(b.getAttribute("data-t") || "");
+      });
+    });
+  })();
+</script>

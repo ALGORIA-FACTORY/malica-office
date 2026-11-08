@@ -1,0 +1,231 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "avoir",
+    "nom": "Facture rectificative ou facture d'avoir",
+    "typeDeDocument": "avoir",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "adresse_client",
+      "concept": "adresse",
+      "role": "client",
+      "type": "adresse",
+      "obligatoire": "oui",
+      "parcelle": "Destinataire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "cachet_signature",
+      "concept": "signature_cachet",
+      "role": "fournisseur",
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Code structuré et signature",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "date_avoir",
+      "concept": "date_piece",
+      "role": null,
+      "type": "date",
+      "obligatoire": "oui",
+      "parcelle": "Références",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "designation",
+      "concept": "designation",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Lignes",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "droit_timbre",
+      "concept": "droit_timbre",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Totaux et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "intitule",
+      "concept": "intitule",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "oui",
+      "parcelle": "Références",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "matricule_fiscal_client",
+      "concept": "matricule_fiscal",
+      "role": "client",
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Destinataire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "matricule_fiscal_emetteur",
+      "concept": "matricule_fiscal",
+      "role": "fournisseur",
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "En-tête émetteur",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "montant_fodec",
+      "concept": "montant_fodec",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Totaux et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_ligne_ht",
+      "concept": "montant_ligne_ht",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Lignes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "montant_tva",
+      "concept": "montant_tva",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Totaux et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "motif",
+      "concept": "motif",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nom_client",
+      "concept": "raison_sociale",
+      "role": "client",
+      "type": "texte",
+      "obligatoire": "oui",
+      "parcelle": "Destinataire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "numero_avoir",
+      "concept": "numero_piece",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "quantite",
+      "concept": "quantite",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "Lignes",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "raison_sociale_emetteur",
+      "concept": "raison_sociale",
+      "role": "fournisseur",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "En-tête émetteur",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "ref_bon_retour",
+      "concept": "ref_bon_retour",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "ref_facture_origine",
+      "concept": "ref_facture",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "oui",
+      "parcelle": "Références",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "reference_ttn",
+      "concept": "ref_ttn",
+      "role": null,
+      "type": "identifiant",
+      "obligatoire": "selon_cas",
+      "parcelle": "Code structuré et signature",
+      "expert": "reference",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "taux_tva_ligne",
+      "concept": "taux_tva",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "oui",
+      "parcelle": "Lignes",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_ht",
+      "concept": "total_ht",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "oui",
+      "parcelle": "Totaux et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "total_ttc",
+      "concept": "total_ttc",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Totaux et taxes",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    }
+  ]
+}

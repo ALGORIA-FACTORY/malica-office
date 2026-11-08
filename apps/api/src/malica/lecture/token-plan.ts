@@ -154,23 +154,36 @@ export function normalizeDate(text: string, convention: ConventionDeDate): strin
    * la plage désignée se relit espacée (jeu synthétique, 31 octobre 2026). Le
    * séparateur reste exigé : l'espace seul ne fait pas une date.
    */
-  const iso = s.match(/(\d{4})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})/);
-  if (iso) return rendre(iso[1]!, iso[2]!, iso[3]!);
+  /*
+   * Une date est un TOUT : ni morceau d'une référence (« CEV-26-04-0778 », lue
+   * 0778-04-26), ni d'une période (« 05/05-15/05 », lue 2015-05-05) — banc sans IA
+   * du 4 novembre 2026, 50/14. Aucun chiffre ne la précède, ni un séparateur collé à
+   * une lettre ou un chiffre (« /02/09/2026 », la barre seule d'un « le / », se lit) ;
+   * rien ne la prolonge ; ses deux séparateurs sont de la même espèce.
+   */
+  const iso = s.match(
+    /(?<!\d)(?<![\p{L}\d][-/.])(\d{4})\s*([-/.])\s*(\d{1,2})\s*\2\s*(\d{1,2})(?!\d|[-/.]\d)/u,
+  );
+  if (iso) return rendre(iso[1]!, iso[3]!, iso[4]!);
 
   // L'ordre est celui du pack. On ne bascule PAS sur mois/jour quand le premier
   // nombre dépasse 12 — ce serait deviner la provenance du document, et une
   // écriture datée au jugé est une écriture fausse. Une date qui n'existe pas
   // est rendue absente, et demandée.
   if (convention.ordre === "amj") {
-    const amj = s.match(/(\d{2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})/);
+    const amj = s.match(
+      /(?<!\d)(?<![\p{L}\d][-/.])(\d{2})\s*([-/.])\s*(\d{1,2})\s*\2\s*(\d{1,2})(?!\d|[-/.]\d)/u,
+    );
     const y = amj ? anneeComplete(amj[1]!, convention) : null;
-    return amj && y ? rendre(y, amj[2]!, amj[3]!) : null;
+    return amj && y ? rendre(y, amj[3]!, amj[4]!) : null;
   }
-  const num = s.match(/(\d{1,2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{2,4})/);
+  const num = s.match(
+    /(?<!\d)(?<![\p{L}\d][-/.])(\d{1,2})\s*([-/.])\s*(\d{1,2})\s*\2\s*(\d{4}|\d{2})(?!\d|[-/.]\d)/u,
+  );
   if (num) {
-    const y = anneeComplete(num[3]!, convention);
+    const y = anneeComplete(num[4]!, convention);
     if (y === null) return null;
-    return convention.ordre === "jma" ? rendre(y, num[2]!, num[1]!) : rendre(y, num[1]!, num[2]!);
+    return convention.ordre === "jma" ? rendre(y, num[3]!, num[1]!) : rendre(y, num[1]!, num[3]!);
   }
 
   const motifs = motifsDe(convention);

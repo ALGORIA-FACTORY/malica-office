@@ -9,16 +9,24 @@ import {
 import { useEffect, useState } from "react";
 
 import { versionClient } from "@/capabilities/coque";
-import { useI18n } from "@/i18n";
+import { localeRangee, useI18n } from "@/i18n";
+import { chargerLesEspaces } from "@/i18n/dictionnaires";
 import { garderLeCache, restaurerLeCache } from "@/lib/cache-de-l-appareil";
 import { EchecAuth } from "@malica/socle/ports/auth";
-import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
     // `session()` ne touche pas la base : elle ne fait que lire le jeton. Cette
     // garde s'exécute à chaque navigation, elle doit rester gratuite.
+    // La composition est importée ici, à la demande : cette garde part avec le
+    // premier écran de toutes les pages, et la vitrine n'en a pas l'usage.
+    // Les libellés des espaces (cabinet, PME, tour) arrivent avant leur
+    // premier écran, en même temps que la session : `i18n/dictionnaires.ts`.
+    const [{ office }] = await Promise.all([
+      import("@/verticals/malica-office/composition"),
+      chargerLesEspaces(localeRangee()),
+    ]);
     const compte = await office().auth.session();
     if (!compte) throw redirect({ to: "/auth" });
     return { user: compte };
@@ -27,6 +35,12 @@ export const Route = createFileRoute("/_authenticated")({
   // avant que l'hôte soit déclaré injoignable. Une page vide pendant ce temps
   // ressemble à une panne ; une ligne dit ce qui se passe.
   pendingMs: 300,
+  // Le routeur garde un écran d'attente au moins 500 ms une fois montré, pour
+  // qu'il ne clignote pas. Ici, il est déjà peint par le serveur (la route ne
+  // se rend pas côté serveur, son attente si) : le retenir n'évitait aucun
+  // clignotement et retardait d'autant le premier écran réel (mesuré : la
+  // session répondait à 0,2 s, l'écran venait à 0,7 s).
+  pendingMinMs: 0,
   pendingComponent: Ouverture,
   errorComponent: Refus,
   component: AvecLeCacheDeLAppareil,

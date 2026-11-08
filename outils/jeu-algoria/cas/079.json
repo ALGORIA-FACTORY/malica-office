@@ -1,0 +1,363 @@
+{
+  "id": "079",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "capture": "photo",
+  "gabarit": "E",
+  "scenario": "fodec",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "pli",
+    "tampon",
+    "signature",
+    "souche_carbone"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Sidmara Plasturgie SA",
+      "nomAr": "سيدمارة للبلاستيك",
+      "enseigne": null,
+      "matricule": "8911010A/A/M/000",
+      "matriculeImprime": "8911010A/A/M/000",
+      "adresse": "40, rue des Mimosas, Sousse",
+      "telephone": "00 49 905 271",
+      "fax": "00 30 114 631",
+      "email": null,
+      "site": null,
+      "rc": "B448475742022",
+      "rib": "99 240 8955450458323 82",
+      "banque": "Banque Talmira",
+      "code": "C8893967",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330V/A/M/000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "28/01/26",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Bac de rangement plastique 40 L",
+        "designationAr": "صندوق تخزين بلاستيكي 40 لتر",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Impression de cartes de visite, boîte de 500",
+        "designationAr": "طباعة بطاقات زيارة، علبة 500",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Gaine ICTA 20 mm, couronne",
+        "designationAr": "غمد ICTA 20 مم، لفة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Câble électrique 3 × 2,5 mm², rouleau",
+        "designationAr": "كابل كهربائي 3 × 2,5 مم²، لفة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "FODEC",
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Sidmara Plasturgie SA",
+      "document_date": "28/01/26",
+      "references.numero": "0788",
+      "references.matricule_fiscal": "8911010A/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "40, rue des Mimosas, Sousse",
+      "telephone_emetteur": "00 49 905 271",
+      "registre_commerce_emetteur": "B448475742022",
+      "mode_reglement": "Traite",
+      "totals.base_ht": "2.913,589",
+      "totals.vat": "559,118",
+      "totals.ttc": "3.502,843",
+      "other_charges[0].amount": "29,136",
+      "other_charges[1].amount": "1,000",
+      "lines[0].base_ht": "2.942,725",
+      "lines[0].vat_amount": "559,118",
+      "articles[0].designation": "Bac de rangement plastique 40 L",
+      "articles[0].quantity": "16",
+      "articles[0].unit_price_ht": "26,165",
+      "articles[0].total_ht": "418,640",
+      "articles[1].designation": "Impression de cartes de visite, boîte de 500",
+      "articles[1].quantity": "22",
+      "articles[1].unit_price_ht": "65,086",
+      "articles[1].total_ht": "1.431,892",
+      "articles[2].designation": "Gaine ICTA 20 mm, couronne",
+      "articles[2].quantity": "11",
+      "articles[2].unit_price_ht": "40,019",
+      "articles[2].total_ht": "440,209",
+      "articles[3].designation": "Câble électrique 3 × 2,5 mm², rouleau",
+      "articles[3].quantity": "6",
+      "articles[3].unit_price_ht": "103,808",
+      "articles[3].total_ht": "622,848"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "montant_fodec",
+      "other_charges[1].amount": "droit_timbre",
+      "lines[0].base_ht": "base_tva_par_taux[19]",
+      "lines[0].vat_amount": "montant_tva_par_taux[19]",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 561778905,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Sidmara Plasturgie SA",
+      "document_date": "2026-01-28",
+      "currency": "TND",
+      "references.numero": "0788",
+      "references.matricule_fiscal": "8911010A/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "2913.589",
+      "totals.vat": "559.118",
+      "totals.ttc": "3502.843",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "2942.725",
+      "lines[0].vat_amount": "559.118",
+      "other_charges[0].code": "FODEC",
+      "other_charges[0].amount": "29.136",
+      "other_charges[1].code": "DROIT_TIMBRE",
+      "other_charges[1].amount": "1.000",
+      "articles[0].quantity": "16.000",
+      "articles[0].unit_price_ht": "26.165",
+      "articles[0].total_ht": "418.640",
+      "articles[1].quantity": "22.000",
+      "articles[1].unit_price_ht": "65.086",
+      "articles[1].total_ht": "1431.892",
+      "articles[2].quantity": "11.000",
+      "articles[2].unit_price_ht": "40.019",
+      "articles[2].total_ht": "440.209",
+      "articles[3].quantity": "6.000",
+      "articles[3].unit_price_ht": "103.808",
+      "articles[3].total_ht": "622.848"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "2913.589",
+          "0"
+        ],
+        [
+          "4366",
+          "559.118",
+          "0",
+          "TVA19"
+        ],
+        [
+          "601",
+          "29.136",
+          "0"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "3502.843"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — FODEC à l'achat incorporé au coût, sur sa ligne au compte de la charge (fodec.traitement du pack), et compris dans la base de la TVA"
+    ],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Sidmara Plasturgie SA",
+      "date_operation": "2026-01-28",
+      "numero_facture": "0788",
+      "matricule_fiscal_emetteur": "8911010A/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "40, rue des Mimosas, Sousse",
+      "telephone_email_emetteur": {
+        "telephone": "00 49 905 271"
+      },
+      "registre_commerce_emetteur": "B448475742022",
+      "mode_reglement": "Traite",
+      "total_ht": "2913.589",
+      "montant_tva_par_taux": {
+        "19": "559.118"
+      },
+      "total_ttc": "3502.843",
+      "montant_fodec": "29.136",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "2942.725"
+      },
+      "lignes": [
+        {
+          "designation": "Bac de rangement plastique 40 L",
+          "quantite": "16",
+          "prix_unitaire_ht": "26.165",
+          "montant_ligne_ht": "418.640",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Impression de cartes de visite, boîte de 500",
+          "quantite": "22",
+          "prix_unitaire_ht": "65.086",
+          "montant_ligne_ht": "1431.892",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Gaine ICTA 20 mm, couronne",
+          "quantite": "11",
+          "prix_unitaire_ht": "40.019",
+          "montant_ligne_ht": "440.209",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Câble électrique 3 × 2,5 mm², rouleau",
+          "quantite": "6",
+          "prix_unitaire_ht": "103.808",
+          "montant_ligne_ht": "622.848",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_en_lettres",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

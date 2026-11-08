@@ -1,0 +1,307 @@
+{
+  "id": "131",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : pièce inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "justificatif_paiement",
+  "grille": "cheque",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "capture": "photo",
+  "gabarit": "K",
+  "mise_en_page": "K",
+  "scenario": "cheque_emis",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "ombre_main",
+    "pli",
+    "signature"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "titre": "Chèque",
+    "parties": [
+      {
+        "role": "tireur",
+        "nom": "ALGORIA FACTORY SARL",
+        "matricule": "1958330V/A/M/000",
+        "est": "dossier"
+      },
+      {
+        "role": "beneficiaire",
+        "nom": "Orvane Électricité SARL",
+        "matricule": "9249014H/A/M/000",
+        "est": "tiers"
+      }
+    ],
+    "emetteur": {
+      "role": "tireur",
+      "nom": "ALGORIA FACTORY SARL",
+      "matricule": "1958330V/A/M/000",
+      "est": "dossier"
+    },
+    "client": {
+      "role": "beneficiaire",
+      "nom": "Orvane Électricité SARL",
+      "matricule": "9249014H/A/M/000",
+      "est": "tiers"
+    },
+    "style": null,
+    "police": null,
+    "couleur": null,
+    "main": true,
+    "souche": null,
+    "tampon": null,
+    "ratures": [],
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "blocs": [
+      {
+        "k": "cadre",
+        "style": "cheque",
+        "blocs": [
+          {
+            "k": "entete",
+            "gauche": [
+              [
+                {
+                  "c": "tire_banque",
+                  "cls": "gros",
+                  "imp": true
+                }
+              ],
+              [
+                {
+                  "c": "lieu_paiement",
+                  "imp": true
+                }
+              ]
+            ],
+            "droite": [
+              [
+                {
+                  "c": "denomination_cheque",
+                  "cls": "gros",
+                  "imp": true
+                },
+                " N° ",
+                {
+                  "c": "numero_cheque",
+                  "imp": true
+                }
+              ],
+              [
+                "B.P.D. ",
+                {
+                  "c": "montant_chiffres"
+                },
+                " DT"
+              ]
+            ]
+          },
+          {
+            "k": "texte",
+            "morceaux": [
+              {
+                "c": "mandat_payer",
+                "imp": true
+              },
+              " ",
+              {
+                "c": "montant_lettres"
+              }
+            ]
+          },
+          {
+            "k": "texte",
+            "morceaux": [
+              "à l'ordre de ",
+              {
+                "c": "beneficiaire"
+              }
+            ]
+          },
+          {
+            "k": "duo",
+            "gauche": [
+              {
+                "k": "texte",
+                "classe": "petit",
+                "morceaux": [
+                  {
+                    "barres": "barrement"
+                  },
+                  " ",
+                  {
+                    "c": "non_endossable",
+                    "imp": true
+                  },
+                  {
+                    "br": true
+                  },
+                  {
+                    "c": "tireur_nom",
+                    "imp": true
+                  },
+                  {
+                    "br": true
+                  },
+                  "RIB ",
+                  {
+                    "c": "rib_tireur",
+                    "imp": true
+                  },
+                  {
+                    "br": true
+                  },
+                  "Valable jusqu'au ",
+                  {
+                    "c": "date_validite",
+                    "imp": true
+                  },
+                  " — montant maximal de la formule : ",
+                  {
+                    "c": "plafond_formule",
+                    "imp": true
+                  },
+                  " DT"
+                ]
+              }
+            ],
+            "droite": [
+              {
+                "k": "texte",
+                "morceaux": [
+                  "À ",
+                  {
+                    "c": "lieu_emission"
+                  },
+                  ", le ",
+                  {
+                    "c": "date_emission"
+                  }
+                ]
+              },
+              {
+                "k": "signatures",
+                "gauche": {
+                  "qr": "CHQ990179806667213599"
+                },
+                "droite": ""
+              }
+            ]
+          },
+          {
+            "k": "texte",
+            "classe": "petit",
+            "morceaux": [
+              {
+                "c": "qr_code",
+                "imp": true
+              },
+              "   ",
+              {
+                "c": "ligne_codage",
+                "imp": true,
+                "cls": "codage"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "imprime": {
+      "tire_banque": "BANQUE OUZRANE DE DÉVELOPPEMENT",
+      "lieu_paiement": "Agence Lac Morvane — Rue du Lac Morvane, 1053 Les Berges du Lac",
+      "denomination_cheque": "CHÈQUE",
+      "numero_cheque": "9806667",
+      "montant_chiffres": "3 408,153",
+      "mandat_payer": "Payez contre ce chèque",
+      "montant_lettres": "trois mille quatre cent huit dinars et cent cinquante-trois millimes",
+      "beneficiaire": "Orvane Électricité SARL",
+      "non_endossable": "Non endossable sauf au profit d'une banque",
+      "tireur_nom": "ALGORIA FACTORY SARL",
+      "rib_tireur": "99 017 0001834526710 54",
+      "date_validite": "31/12/2026",
+      "plafond_formule": "5 000,000",
+      "lieu_emission": "Tunis",
+      "date_emission": "15/10/26",
+      "qr_code": "CHQ990179806667213599",
+      "ligne_codage": "9806667 99017 0001834526710 54",
+      "barrement": ""
+    },
+    "versConcept": {
+      "tire_banque": "tire_banque",
+      "lieu_paiement": "lieu_paiement",
+      "denomination_cheque": "denomination_cheque",
+      "numero_cheque": "numero_cheque",
+      "montant_chiffres": "montant_chiffres",
+      "mandat_payer": "mandat_payer",
+      "montant_lettres": "montant_lettres",
+      "beneficiaire": "beneficiaire",
+      "non_endossable": "non_endossable",
+      "tireur_nom": "tireur_nom",
+      "rib_tireur": "rib_tireur",
+      "date_validite": "date_validite",
+      "plafond_formule": "plafond_formule",
+      "lieu_emission": "lieu_emission",
+      "date_emission": "date_emission",
+      "qr_code": "qr_code",
+      "ligne_codage": "ligne_codage",
+      "barrement": "barrement"
+    },
+    "marques": {
+      "signature_emetteur": "signature_tireur"
+    },
+    "cheminsDuDossier": []
+  },
+  "graineDuRendu": 530446929,
+  "attendu": {
+    "concepts": {
+      "tire_banque": "Banque Ouzrane de Développement",
+      "lieu_paiement": "Rue du Lac Morvane, 1053 Les Berges du Lac",
+      "denomination_cheque": true,
+      "numero_cheque": "9806667",
+      "montant_chiffres": "3408.153",
+      "mandat_payer": true,
+      "montant_lettres": "trois mille quatre cent huit dinars et cent cinquante-trois millimes",
+      "beneficiaire": "Orvane Électricité SARL",
+      "non_endossable": true,
+      "tireur_nom": "ALGORIA FACTORY SARL",
+      "rib_tireur": "99 017 0001834526710 54",
+      "date_validite": "2026-12-31",
+      "plafond_formule": "5000.000",
+      "lieu_emission": "Tunis",
+      "date_emission": "2026-10-15",
+      "qr_code": "CHQ990179806667213599",
+      "ligne_codage": "9806667 99017 0001834526710 54",
+      "barrement": true,
+      "signature_tireur": true
+    },
+    "confondus": {},
+    "notes": [
+      "Règle la facture du cas 047 (FA26/08595). Montant, lettres, bénéficiaire, lieu et date écrits à la main ; le reste pré-imprimé.",
+      "INCERTAIN — la formule du chèque (date de validité, plafond de la formule, code QR) suit la grille ref.grilles « cheque » ; sa conformité au modèle de la BCT n'a pas été relue. Le plafond de 5 000 DT et le code QR sont inventés."
+    ],
+    "non_imprimes": [
+      "date_presentation",
+      "endos_banque",
+      "plafond_chequier",
+      "talon_beneficiaire",
+      "talon_date",
+      "talon_montant",
+      "talon_numero",
+      "talon_objet",
+      "talon_solde_avant_apres"
+    ]
+  }
+}

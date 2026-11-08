@@ -48,7 +48,10 @@ describe("les portes du serveur", { skip: !BASE_CONFIGUREE }, () => {
   const appeler = async (u: Utilisateur, depot: string, methode: string, args: unknown[]) => {
     const r = await fetch(`${base}/rpc`, {
       method: "POST",
-      headers: { authorization: `Bearer ${emettreJeton(u)}`, "content-type": "application/json" },
+      headers: {
+        authorization: `Bearer ${emettreJeton(u, new Date())}`,
+        "content-type": "application/json",
+      },
       body: JSON.stringify({ depot, methode, args }),
     });
     return { statut: r.status, corps: (await r.json()) as Record<string, unknown> };
@@ -207,7 +210,10 @@ describe("les portes du serveur", { skip: !BASE_CONFIGUREE }, () => {
       const vue = (jeton: Utilisateur, init: RequestInit = {}) =>
         fetch(`${base}/malica/lectures/${piece}`, {
           ...init,
-          headers: { authorization: `Bearer ${emettreJeton(jeton)}`, ...(init.headers ?? {}) },
+          headers: {
+            authorization: `Bearer ${emettreJeton(jeton, new Date())}`,
+            ...(init.headers ?? {}),
+          },
         });
       const parLeProprietaire = await vue(dirigeant);
       assert.equal(parLeProprietaire.status, 200);

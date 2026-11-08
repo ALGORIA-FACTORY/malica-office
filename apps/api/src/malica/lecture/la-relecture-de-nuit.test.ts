@@ -292,7 +292,9 @@ describe("la relecture de nuit", { skip: !BASE_CONFIGUREE }, () => {
   it("branché (le défaut du pack) : une pièce prouvée n'est ni rattrapée ni relue la nuit", async () => {
     const { u, pme } = await dossier({ nuit: "active", delai: "12" }, "designe");
     const piece = await deposer(u, pme, "prouvee");
-    const modele = lecteurs([() => partielle("qwen-vl-ocr")]);
+    // lue par l'OCR : les sommes d'un lecteur génératif ne prouvent pas seules
+    // (`lecteur_generatif`, banc Qwen du 8 novembre 2026)
+    const modele = lecteurs([() => partielle("PP-OCR")]);
 
     await readPieceFlow(apiDe(u), piece, modele);
 

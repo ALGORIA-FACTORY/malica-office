@@ -1,0 +1,181 @@
+{
+  "note": "Relevé par outils/jeu-algoria/relever-les-grilles.mjs dans une base migrée (pack TN au 2026-10-01). Ne pas éditer à la main : relancer.",
+  "grille": {
+    "code": "note_frais",
+    "nom": "Note de frais",
+    "typeDeDocument": "note_frais",
+    "valideDu": "2026-01-01"
+  },
+  "champs": [
+    {
+      "code": "avance_recue",
+      "concept": "avance_recue",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Totaux et règlement",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "categorie_depense",
+      "concept": "categorie_depense",
+      "role": null,
+      "type": "liste",
+      "obligatoire": "non",
+      "parcelle": "Lignes de dépense",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_depense",
+      "concept": "date_operation",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Lignes de dépense",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "date_note",
+      "concept": "date_piece",
+      "role": null,
+      "type": "date",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "devise_taux_change",
+      "concept": "cours_change",
+      "role": null,
+      "type": "taux",
+      "obligatoire": "non",
+      "parcelle": "Lignes de dépense",
+      "expert": "taux",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "justificatif_joint",
+      "concept": "justificatif_joint",
+      "role": null,
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Lignes de dépense",
+      "expert": "presence",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "kilometrage",
+      "concept": "kilometrage",
+      "role": null,
+      "type": "nombre",
+      "obligatoire": "non",
+      "parcelle": "Lignes de dépense",
+      "expert": "nombre",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "matricule_salarie",
+      "concept": "matricule_interne",
+      "role": "salarie",
+      "type": "identifiant",
+      "obligatoire": "non",
+      "parcelle": "Bénéficiaire",
+      "expert": "identifiant",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "montant_ttc_ligne",
+      "concept": "montant_ttc_ligne",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Lignes de dépense",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "net_a_rembourser",
+      "concept": "net_a_payer",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Totaux et règlement",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "nom_salarie",
+      "concept": "nom_prenom",
+      "role": "salarie",
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Bénéficiaire",
+      "expert": "tiers",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "objet_professionnel",
+      "concept": "objet_professionnel",
+      "role": null,
+      "type": "texte",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "libelle",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "periode_ou_mission",
+      "concept": "periode",
+      "role": null,
+      "type": "periode",
+      "obligatoire": "non",
+      "parcelle": "Références",
+      "expert": "date",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "signature_salarie",
+      "concept": "signature_cachet",
+      "role": "salarie",
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Signatures",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    },
+    {
+      "code": "total_frais",
+      "concept": "total_frais",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Totaux et règlement",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "tva_recuperable_ligne",
+      "concept": "montant_tva",
+      "role": null,
+      "type": "montant",
+      "obligatoire": "non",
+      "parcelle": "Lignes de dépense",
+      "expert": "montant",
+      "porteSurUnePartie": false
+    },
+    {
+      "code": "visa_responsable",
+      "concept": "signature_cachet",
+      "role": "employeur",
+      "type": "booleen",
+      "obligatoire": "non",
+      "parcelle": "Signatures",
+      "expert": "presence",
+      "porteSurUnePartie": true
+    }
+  ]
+}

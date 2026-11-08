@@ -1,0 +1,512 @@
+{
+  "id": "101",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_vente",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "A",
+  "scenario": "un_taux",
+  "realisme": [],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "Bon de Livraison/Facture",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330VAM000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "client": {
+      "nom": "Groupe Medrane Distribution SA",
+      "nomAr": "مجمع مدران للتوزيع",
+      "enseigne": null,
+      "matricule": "6886015Q/A/M/000",
+      "matriculeImprime": "6886015Q/A/M/000",
+      "adresse": "139, rue de l'Artisanat, Sfax",
+      "telephone": "00 58 474 836",
+      "fax": "00 58 932 959",
+      "email": null,
+      "site": null,
+      "rc": "B743986072014",
+      "rib": "99 968 6180529450080 33",
+      "banque": "Banque Ouzrane de Développement",
+      "code": "C5207511",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "client"
+    },
+    "date": "14/08/2026",
+    "chargee": "Karim Dhouibi",
+    "votreReference": "Facture Vente en ligne",
+    "articles": [
+      {
+        "designation": "Étude de conformité réglementaire, mission",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "ALG-001",
+        "codeBarre": "",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Clé de sécurité matérielle FIDO2, boîte",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "ALG-002",
+        "codeBarre": "",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Abonnement Malica Office — palier Foundation, 12 mois",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "ALG-003",
+        "codeBarre": "",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Mise à disposition d'un consultant, jour",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "ALG-004",
+        "codeBarre": "",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Paramétrage et intégration RegFlow, jour",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "ALG-005",
+        "codeBarre": "",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      },
+      {
+        "designation": "Assistance MEL Plus Suite, forfait mensuel",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "ALG-006",
+        "codeBarre": "",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": [
+          "SN:"
+        ]
+      },
+      {
+        "designation": "Abonnement RegTrack — palier Compliance, 12 mois",
+        "designationAr": null,
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %",
+        "reference": "ALG-007",
+        "codeBarre": "",
+        "remise": "",
+        "taux": "19",
+        "sousLignes": []
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": "30 212,000",
+    "enLettres": "Arrêtée la présente pièce à la somme de: trente-cinq mille neuf cent cinquante-deux dinars et quatre-vingt-dix millimes",
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "ALGORIA FACTORY SARL",
+      "document_date": "14/08/2026",
+      "references.numero": "FAC-26M02LIV-267314",
+      "references.matricule_fiscal": "1958330VAM000",
+      "references.matricule_fiscal_client": "6886015Q/A/M/000",
+      "nom_client": "Groupe Medrane Distribution SA",
+      "adresse_client": "139, rue de l'Artisanat, Sfax",
+      "adresse_emetteur": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone_emetteur": "00 71 940 517",
+      "registre_commerce_emetteur": "B01283932024",
+      "rib_emetteur": "99 017 0001834526710 54",
+      "mode_reglement": "ESPECES",
+      "code_client": "C5207511",
+      "totals.base_ht": "30 211,000",
+      "totals.vat": "5 740,090",
+      "totals.ttc": "35 952,090",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Étude de conformité réglementaire, mission",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ttc": "5 838,140",
+      "articles[0].reference": "ALG-001",
+      "articles[0].total_ht": "9 812,000",
+      "articles[1].designation": "Clé de sécurité matérielle FIDO2, boîte",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ttc": "126,140",
+      "articles[1].reference": "ALG-002",
+      "articles[1].total_ht": "106,000",
+      "articles[2].designation": "Abonnement Malica Office — palier Foundation, 12 mois",
+      "articles[2].quantity": "2",
+      "articles[2].unit_price_ttc": "3 149,930",
+      "articles[2].reference": "ALG-003",
+      "articles[2].total_ht": "5 294,000",
+      "articles[3].designation": "Mise à disposition d'un consultant, jour",
+      "articles[3].quantity": "2",
+      "articles[3].unit_price_ttc": "1 007,930",
+      "articles[3].reference": "ALG-004",
+      "articles[3].total_ht": "1 694,000",
+      "articles[4].designation": "Paramétrage et intégration RegFlow, jour",
+      "articles[4].quantity": "2",
+      "articles[4].unit_price_ttc": "1 048,390",
+      "articles[4].reference": "ALG-005",
+      "articles[4].total_ht": "1 762,000",
+      "articles[5].designation": "Assistance MEL Plus Suite, forfait mensuel",
+      "articles[5].quantity": "1",
+      "articles[5].unit_price_ttc": "1 291,150",
+      "articles[5].reference": "ALG-006",
+      "articles[5].total_ht": "1 085,000",
+      "articles[6].designation": "Abonnement RegTrack — palier Compliance, 12 mois",
+      "articles[6].quantity": "1",
+      "articles[6].unit_price_ttc": "12 445,020",
+      "articles[6].reference": "ALG-007",
+      "articles[6].total_ht": "10 458,000",
+      "montant_en_lettres": "trente-cinq mille neuf cent cinquante-deux dinars et quatre-vingt-dix millimes",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce."
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "rib_emetteur": "rib_emetteur",
+      "mode_reglement": "mode_reglement",
+      "code_client": "code_client",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[19]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ttc": "lignes[0].prix_unitaire_ttc",
+      "articles[0].reference": "lignes[0].reference_article",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ttc": "lignes[1].prix_unitaire_ttc",
+      "articles[1].reference": "lignes[1].reference_article",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ttc": "lignes[2].prix_unitaire_ttc",
+      "articles[2].reference": "lignes[2].reference_article",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ttc": "lignes[3].prix_unitaire_ttc",
+      "articles[3].reference": "lignes[3].reference_article",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ttc": "lignes[4].prix_unitaire_ttc",
+      "articles[4].reference": "lignes[4].reference_article",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ttc": "lignes[5].prix_unitaire_ttc",
+      "articles[5].reference": "lignes[5].reference_article",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht",
+      "articles[6].designation": "lignes[6].designation",
+      "articles[6].quantity": "lignes[6].quantite",
+      "articles[6].unit_price_ttc": "lignes[6].prix_unitaire_ttc",
+      "articles[6].reference": "lignes[6].reference_article",
+      "articles[6].total_ht": "lignes[6].montant_ligne_ht",
+      "montant_en_lettres": "montant_en_lettres",
+      "conditions_generales": "conditions_generales"
+    }
+  },
+  "graineDuRendu": 1608768708,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "ALGORIA FACTORY SARL",
+      "document_date": "2026-08-14",
+      "currency": "TND",
+      "references.numero": "FAC-26M02LIV-267314",
+      "references.matricule_fiscal": "1958330V/A/M/000",
+      "references.matricule_fiscal_client": "6886015Q/A/M/000",
+      "totals.base_ht": "30211.000",
+      "totals.vat": "5740.090",
+      "totals.ttc": "35952.090",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "30211.000",
+      "lines[0].vat_amount": "5740.090",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].total_ht": "9812.000",
+      "articles[1].quantity": "1.000",
+      "articles[1].total_ht": "106.000",
+      "articles[2].quantity": "2.000",
+      "articles[2].total_ht": "5294.000",
+      "articles[3].quantity": "2.000",
+      "articles[3].total_ht": "1694.000",
+      "articles[4].quantity": "2.000",
+      "articles[4].total_ht": "1762.000",
+      "articles[5].quantity": "1.000",
+      "articles[5].total_ht": "1085.000",
+      "articles[6].quantity": "1.000",
+      "articles[6].total_ht": "10458.000"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "705",
+          "0",
+          "28411.000",
+          "TVA19"
+        ],
+        [
+          "707",
+          "0",
+          "106.000",
+          "TVA19"
+        ],
+        [
+          "706",
+          "0",
+          "1694.000",
+          "TVA19"
+        ],
+        [
+          "4367",
+          "0",
+          "5740.090",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "35952.090",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "aTrancher": {
+      "reserve": "nature_de_vente",
+      "ecriture": {
+        "journal": "VEN",
+        "lignes": [
+          [
+            "701",
+            "0",
+            "30211.000",
+            "TVA19"
+          ],
+          [
+            "4367",
+            "0",
+            "5740.090",
+            "TVA19"
+          ],
+          [
+            "4371",
+            "0",
+            "1.000"
+          ],
+          [
+            "411",
+            "35952.090",
+            "0"
+          ]
+        ]
+      }
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente par nature d'article (ventes.compte = par_nature_article, défaut du CEO du 31/10/2026) : 705 prestations, 706 annexes, 707 marchandises ; repli au compte des produits finis, avec la réserve « nature de la vente à préciser »",
+      "Piège : le titre « Bon de Livraison/Facture » contient « bon de livraison », que ref.titres_de_piece refuse (rejet) — la pièce EST une facture (TVA, timbre, matricules) : l'issue juste est une écriture ; un refus sur le titre est un refus injuste. « Total avec Timbre » vaut HT + timbre, jamais le TTC.",
+      "INCERTAIN — timbre de 1,000 DT (droit fixe du référentiel) : le barème des grandes surfaces (1,500 / 2,000 DT, ref.baremes_des_droits) ne s'applique pas à ces enseignes fictives."
+    ],
+    "concepts": {
+      "type_document": "Bon de Livraison/Facture",
+      "raison_sociale_emetteur": "ALGORIA FACTORY SARL",
+      "date_operation": "2026-08-14",
+      "numero_facture": "FAC-26M02LIV-267314",
+      "matricule_fiscal_emetteur": "1958330V/A/M/000",
+      "matricule_fiscal_client": "6886015Q/A/M/000",
+      "nom_client": "Groupe Medrane Distribution SA",
+      "adresse_client": "139, rue de l'Artisanat, Sfax",
+      "adresse_emetteur": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone_email_emetteur": {
+        "telephone": "00 71 940 517",
+        "email": "facturation@algoria-factory.example"
+      },
+      "registre_commerce_emetteur": "B01283932024",
+      "rib_emetteur": "99 017 0001834526710 54",
+      "mode_reglement": "ESPECES",
+      "code_client": "C5207511",
+      "total_ht": "30211.000",
+      "montant_tva_par_taux": {
+        "19": "5740.090"
+      },
+      "total_ttc": "35952.090",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "19": "30211.000"
+      },
+      "lignes": [
+        {
+          "designation": "Étude de conformité réglementaire, mission",
+          "quantite": "2",
+          "prix_unitaire_ttc": "5838.140",
+          "reference_article": "ALG-001",
+          "montant_ligne_ht": "9812.000",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Clé de sécurité matérielle FIDO2, boîte",
+          "quantite": "1",
+          "prix_unitaire_ttc": "126.140",
+          "reference_article": "ALG-002",
+          "montant_ligne_ht": "106.000",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Abonnement Malica Office — palier Foundation, 12 mois",
+          "quantite": "2",
+          "prix_unitaire_ttc": "3149.930",
+          "reference_article": "ALG-003",
+          "montant_ligne_ht": "5294.000",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Mise à disposition d'un consultant, jour",
+          "quantite": "2",
+          "prix_unitaire_ttc": "1007.930",
+          "reference_article": "ALG-004",
+          "montant_ligne_ht": "1694.000",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Paramétrage et intégration RegFlow, jour",
+          "quantite": "2",
+          "prix_unitaire_ttc": "1048.390",
+          "reference_article": "ALG-005",
+          "montant_ligne_ht": "1762.000",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Assistance MEL Plus Suite, forfait mensuel",
+          "quantite": "1",
+          "prix_unitaire_ttc": "1291.150",
+          "reference_article": "ALG-006",
+          "montant_ligne_ht": "1085.000",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Abonnement RegTrack — palier Compliance, 12 mois",
+          "quantite": "1",
+          "prix_unitaire_ttc": "12445.020",
+          "reference_article": "ALG-007",
+          "montant_ligne_ht": "10458.000",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "montant_en_lettres": "trente-cinq mille neuf cent cinquante-deux dinars et quatre-vingt-dix millimes",
+      "devise": "TND",
+      "conditions_generales": "Réserve de propriété : le transfert de propriété n'intervient qu'après encaissement du prix. Toute réclamation doit être formulée à la livraison. Les produits sous garantie sont repris sur présentation de la présente pièce."
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "adresse_livraison": "adresse_client",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "cachet_emetteur",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ht",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

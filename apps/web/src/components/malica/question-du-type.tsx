@@ -72,6 +72,7 @@ export function QuestionDuType({
   onRepondre,
   actuel = null,
   sensAuCabinet = false,
+  avis = null,
   ...sortie
 }: {
   documents: readonly string[];
@@ -86,6 +87,11 @@ export function QuestionDuType({
    * refuse de toute façon (`refus.sens.reserve_au_cabinet`).
    */
   sensAuCabinet?: boolean;
+  /**
+   * Un avis sur la photo, avant l'envoi (une photo importée floue, sombre, de biais) : il se
+   * lit au-dessus des dossiers ; il n'empêche rien.
+   */
+  avis?: string | null;
 } & Sortie) {
   const { t } = useI18n();
   /*
@@ -135,6 +141,14 @@ export function QuestionDuType({
         <p className="mt-1 truncate text-[14px] text-text-2">
           {documents.length === 1 ? documents[0] : t("pme.type.lot", { count: documents.length })}
         </p>
+        {avis ? (
+          <p
+            role="status"
+            className="mt-3 rounded-[14px] border border-border bg-card p-3 text-[13.5px] leading-[1.5] text-text-2"
+          >
+            {avis}
+          </p>
+        ) : null}
 
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           {proposes.map((d) => (

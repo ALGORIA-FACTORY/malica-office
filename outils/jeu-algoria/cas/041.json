@@ -1,0 +1,424 @@
+{
+  "id": "041",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "fr",
+  "rendu": "pdf",
+  "capture": null,
+  "gabarit": "B",
+  "scenario": "plusieurs_taux",
+  "realisme": [],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Tazrane Climatisation SUARL",
+      "nomAr": "تازران للتكييف",
+      "enseigne": null,
+      "matricule": "5327006E/A/M/000",
+      "matriculeImprime": "5327006E/A/M/000",
+      "adresse": "105, avenue de la Liberté, Ben Arous",
+      "telephone": "00 47 567 622",
+      "fax": "00 59 488 818",
+      "email": null,
+      "site": null,
+      "rc": "B107048072016",
+      "rib": "99 124 6772274701750 16",
+      "banque": "Crédit Selvane",
+      "code": "C1816047",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "1958330VAM000",
+      "adresse": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "25-04-2026",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "Cartouche d'encre couleur",
+        "designationAr": "خرطوشة حبر ملون",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Classeur à levier, dos 8 cm",
+        "designationAr": "ملف برافعة، ظهر 8 سم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Entretien climatisation, visite",
+        "designationAr": "صيانة المكيفات، زيارة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Gaine ICTA 20 mm, couronne",
+        "designationAr": "غمد ICTA 20 مم، لفة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Eau minérale, pack 6 × 1,5 L",
+        "designationAr": "مياه معدنية، حزمة 6 × 1,5 لتر",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "designation": "Bac de rangement plastique 40 L",
+        "designationAr": "صندوق تخزين بلاستيكي 40 لتر",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Câble électrique 3 × 2,5 mm², rouleau",
+        "designationAr": "كابل كهربائي 3 × 2,5 مم²، لفة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": null,
+    "annotation": null,
+    "ratures": [],
+    "imprime": {
+      "issuer": "Tazrane Climatisation SUARL",
+      "document_date": "25-04-2026",
+      "references.numero": "FA26/05124",
+      "references.matricule_fiscal": "5327006E/A/M/000",
+      "references.matricule_fiscal_client": "1958330VAM000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "105, avenue de la Liberté, Ben Arous",
+      "telephone_emetteur": "00 47 567 622",
+      "totals.base_ht": "12.999,489",
+      "totals.vat": "2.455,653",
+      "totals.ttc": "15.456,142",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "118,745",
+      "lines[0].vat_amount": "8,312",
+      "lines[1].base_ht": "12.880,744",
+      "lines[1].vat_amount": "2.447,341",
+      "articles[0].designation": "Cartouche d'encre couleur",
+      "articles[0].quantity": "21",
+      "articles[0].unit_price_ht": "149,052",
+      "articles[0].total_ht": "3.130,092",
+      "articles[1].designation": "Classeur à levier, dos 8 cm",
+      "articles[1].quantity": "10",
+      "articles[1].unit_price_ht": "8,963",
+      "articles[1].total_ht": "89,630",
+      "articles[2].designation": "Entretien climatisation, visite",
+      "articles[2].quantity": "22",
+      "articles[2].unit_price_ht": "208,864",
+      "articles[2].total_ht": "4.595,008",
+      "articles[3].designation": "Gaine ICTA 20 mm, couronne",
+      "articles[3].quantity": "24",
+      "articles[3].unit_price_ht": "56,686",
+      "articles[3].total_ht": "1.360,464",
+      "articles[4].designation": "Eau minérale, pack 6 × 1,5 L",
+      "articles[4].quantity": "17",
+      "articles[4].unit_price_ht": "6,985",
+      "articles[4].total_ht": "118,745",
+      "articles[5].designation": "Bac de rangement plastique 40 L",
+      "articles[5].quantity": "1",
+      "articles[5].unit_price_ht": "30,311",
+      "articles[5].total_ht": "30,311",
+      "articles[6].designation": "Câble électrique 3 × 2,5 mm², rouleau",
+      "articles[6].quantity": "23",
+      "articles[6].unit_price_ht": "159,793",
+      "articles[6].total_ht": "3.675,239"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "totals.base_ht": "total_ht",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "lines[0].base_ht": "base_tva_par_taux[7]",
+      "lines[0].vat_amount": "montant_tva_par_taux[7]",
+      "lines[1].base_ht": "base_tva_par_taux[19]",
+      "lines[1].vat_amount": "montant_tva_par_taux[19]",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht",
+      "articles[3].designation": "lignes[3].designation",
+      "articles[3].quantity": "lignes[3].quantite",
+      "articles[3].unit_price_ht": "lignes[3].prix_unitaire_ht",
+      "articles[3].total_ht": "lignes[3].montant_ligne_ht",
+      "articles[4].designation": "lignes[4].designation",
+      "articles[4].quantity": "lignes[4].quantite",
+      "articles[4].unit_price_ht": "lignes[4].prix_unitaire_ht",
+      "articles[4].total_ht": "lignes[4].montant_ligne_ht",
+      "articles[5].designation": "lignes[5].designation",
+      "articles[5].quantity": "lignes[5].quantite",
+      "articles[5].unit_price_ht": "lignes[5].prix_unitaire_ht",
+      "articles[5].total_ht": "lignes[5].montant_ligne_ht",
+      "articles[6].designation": "lignes[6].designation",
+      "articles[6].quantity": "lignes[6].quantite",
+      "articles[6].unit_price_ht": "lignes[6].prix_unitaire_ht",
+      "articles[6].total_ht": "lignes[6].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 1979520650,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Tazrane Climatisation SUARL",
+      "document_date": "2026-04-25",
+      "currency": "TND",
+      "references.numero": "FA26/05124",
+      "references.matricule_fiscal": "5327006E/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "12999.489",
+      "totals.vat": "2455.653",
+      "totals.ttc": "15456.142",
+      "lines[0].tax_code": "TVA07",
+      "lines[0].base_ht": "118.745",
+      "lines[0].vat_amount": "8.312",
+      "lines[1].tax_code": "TVA19",
+      "lines[1].base_ht": "12880.744",
+      "lines[1].vat_amount": "2447.341",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "21.000",
+      "articles[0].unit_price_ht": "149.052",
+      "articles[0].total_ht": "3130.092",
+      "articles[1].quantity": "10.000",
+      "articles[1].unit_price_ht": "8.963",
+      "articles[1].total_ht": "89.630",
+      "articles[2].quantity": "22.000",
+      "articles[2].unit_price_ht": "208.864",
+      "articles[2].total_ht": "4595.008",
+      "articles[3].quantity": "24.000",
+      "articles[3].unit_price_ht": "56.686",
+      "articles[3].total_ht": "1360.464",
+      "articles[4].quantity": "17.000",
+      "articles[4].unit_price_ht": "6.985",
+      "articles[4].total_ht": "118.745",
+      "articles[5].quantity": "1.000",
+      "articles[5].unit_price_ht": "30.311",
+      "articles[5].total_ht": "30.311",
+      "articles[6].quantity": "23.000",
+      "articles[6].unit_price_ht": "159.793",
+      "articles[6].total_ht": "3675.239"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "12999.489",
+          "0"
+        ],
+        [
+          "4366",
+          "8.312",
+          "0",
+          "TVA07"
+        ],
+        [
+          "4366",
+          "2447.341",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "15456.142"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [],
+    "concepts": {
+      "type_document": "FACTURE",
+      "raison_sociale_emetteur": "Tazrane Climatisation SUARL",
+      "date_operation": "2026-04-25",
+      "numero_facture": "FA26/05124",
+      "matricule_fiscal_emetteur": "5327006E/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+      "adresse_emetteur": "105, avenue de la Liberté, Ben Arous",
+      "telephone_email_emetteur": {
+        "telephone": "00 47 567 622"
+      },
+      "total_ht": "12999.489",
+      "total_ttc": "15456.142",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "7": "118.745",
+        "19": "12880.744"
+      },
+      "montant_tva_par_taux": {
+        "7": "8.312",
+        "19": "2447.341"
+      },
+      "lignes": [
+        {
+          "designation": "Cartouche d'encre couleur",
+          "quantite": "21",
+          "prix_unitaire_ht": "149.052",
+          "montant_ligne_ht": "3130.092",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Classeur à levier, dos 8 cm",
+          "quantite": "10",
+          "prix_unitaire_ht": "8.963",
+          "montant_ligne_ht": "89.630",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Entretien climatisation, visite",
+          "quantite": "22",
+          "prix_unitaire_ht": "208.864",
+          "montant_ligne_ht": "4595.008",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Gaine ICTA 20 mm, couronne",
+          "quantite": "24",
+          "prix_unitaire_ht": "56.686",
+          "montant_ligne_ht": "1360.464",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Eau minérale, pack 6 × 1,5 L",
+          "quantite": "17",
+          "prix_unitaire_ht": "6.985",
+          "montant_ligne_ht": "118.745",
+          "taux_tva_ligne": "7"
+        },
+        {
+          "designation": "Bac de rangement plastique 40 L",
+          "quantite": "1",
+          "prix_unitaire_ht": "30.311",
+          "montant_ligne_ht": "30.311",
+          "taux_tva_ligne": "19"
+        },
+        {
+          "designation": "Câble électrique 3 × 2,5 mm², rouleau",
+          "quantite": "23",
+          "prix_unitaire_ht": "159.793",
+          "montant_ligne_ht": "3675.239",
+          "taux_tva_ligne": "19"
+        }
+      ],
+      "devise": "TND"
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "cachet_emetteur",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "mode_reglement",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "registre_commerce_emetteur",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "signature_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

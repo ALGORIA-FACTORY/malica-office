@@ -149,6 +149,73 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(await lit("sonia", "socle.ecriture_lignes", ecriture, "ecriture_id"), false);
   });
 
+  /*
+   * « La PME ne voit jamais les écritures » (décision du dirigeant ; audit de
+   * sécurité du 6 novembre 2026, S2). L'épreuve ci-dessus n'interrogeait que
+   * Sonia : les deux dirigeants (`societe.tout_voir`) et Sami, AUTEUR de la
+   * pièce (`piece_lisible`), lisaient l'écriture en SQL et par quatre méthodes
+   * RPC. Chacun des quatre est interrogé ici, par chaque chemin.
+   */
+  it("1 · L'écriture comptable — aucune personne de la PME ne la lit, ni en SQL ni par une méthode", async () => {
+    const id = await chezLeComptable("sami");
+    const ecriture = await s.priseEnCharge(id);
+    const exercice = [s.pme, "2026-01-01", "2026-12-31"] as const;
+
+    for (const qui of ["amel", "bilel", "sami", "sonia"] as const) {
+      assert.equal(await lit(qui, "socle.ecritures", s.pme, "tenant_id"), false, `${qui} · SQL`);
+      assert.equal(
+        await lit(qui, "socle.ecriture_lignes", s.pme, "tenant_id"),
+        false,
+        `${qui} · SQL lignes`,
+      );
+      assert.deepEqual(await s.fait(qui, "office.ecrituresForPiece", id), [], `${qui} · pièce`);
+      assert.deepEqual(await s.fait(qui, "office.ecrituresByIds", [ecriture]), [], `${qui} · ids`);
+      assert.deepEqual(
+        await s.fait(qui, "office.periodeLignes", ...exercice),
+        [],
+        `${qui} · lignes`,
+      );
+      const piste = (await s.fait(qui, "supervision.auditForPiece", id)) as { action: string }[];
+      assert.deepEqual(
+        piste.filter((e) => e.action.startsWith("ecriture.")).map((e) => e.action),
+        [],
+        `${qui} · piste`,
+      );
+    }
+
+    // Le cabinet engagé, lui, lit tout : en SQL et par les mêmes méthodes.
+    assert.equal(await lit("expert", "socle.ecritures", s.pme, "tenant_id"), true);
+    assert.equal(await lit("expert", "socle.ecriture_lignes", ecriture, "ecriture_id"), true);
+    assert.equal(((await s.fait("expert", "office.ecrituresForPiece", id)) as unknown[]).length, 1);
+    assert.equal(
+      ((await s.fait("expert", "office.ecrituresByIds", [ecriture])) as unknown[]).length,
+      1,
+    );
+    assert.ok(((await s.fait("expert", "office.periodeLignes", ...exercice)) as unknown[]).length);
+    const piste = (await s.fait("expert", "supervision.auditForPiece", id)) as { action: string }[];
+    assert.ok(piste.some((e) => e.action === "ecriture.booked"));
+  });
+
+  it("1 · L'accueil de la PME — des totaux par classe et par mois, jamais une ligne", async () => {
+    const id = await chezLeComptable("sami");
+    await s.priseEnCharge(id);
+    const mois = [s.pme, "2026-10-01", "2026-10-31"] as const;
+    for (const qui of ["amel", "bilel"] as const) {
+      const totaux = (await s.fait(qui, "office.totauxParClasse", ...mois)) as Array<
+        Record<string, unknown>
+      >;
+      // Une ligne par classe et par mois : ni compte, ni journal, ni écriture.
+      for (const t of totaux)
+        assert.deepEqual(Object.keys(t).sort(), ["classe", "credit", "debit", "mois"]);
+      const charges = totaux.find((t) => t["mois"] === "2026-10" && t["classe"] === "6");
+      assert.ok(charges, `${qui} : ${JSON.stringify(totaux)}`);
+      assert.ok(Number(charges["debit"]) >= 100, qui);
+    }
+    // Les totaux de la société se lisent de qui voit toute la société.
+    for (const qui of ["sami", "sonia"] as const)
+      assert.deepEqual(await s.fait(qui, "office.totauxParClasse", ...mois), [], qui);
+  });
+
   /* ===================================================== 2 · DÉPOSER */
 
   it("2 · Scanner — le siège et le propriétaire déposent", async () => {
@@ -615,5 +682,268 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     assert.ok(j.jour);
     for (const qui of ["amel", "sami"] as const)
       await assert.rejects(s.fait(qui, "journalDuJour.lire", s.cabinet, s.pme, null, "fr"));
+  });
+
+  /* ======================================== 11 · LES ÉCRITURES DU CABINET */
+  //
+  // Vérification indépendante du 6 novembre 2026 (lot S5) : dans ce dossier —
+  // `autonome`, un cabinet engagé —, le propriétaire contre-passait l'écriture
+  // que le cabinet avait inscrite. Un cabinet engagé tient les livres, quel que
+  // soit le mode : personne de la PME ne propose, n'inscrit, ne revoit ni ne
+  // contre-passe une écriture. Le règlement reste son geste (T1 de
+  // `le-cabinet-tient-seul-les-livres-qu-il-tient.test.ts`).
+
+  const LA_PME = ["amel", "bilel", "sami", "sonia"] as const;
+  const LIGNES = JSON.stringify([
+    { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: "EXO" },
+    { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "100.000", tax_code: null },
+  ]);
+  const sous = (qui: Personne, sql: string, params: unknown[]) =>
+    sousIdentiteDuServeur(s.gens[qui].id, (db) => db.query(sql, params));
+  const proposer = async (qui: Personne, pieceId: string) =>
+    (
+      await sous(
+        qui,
+        `select public.socle_ecriture_propose($1, 'ACH', '2026-10-02', 'Facture essai', $2,
+                                              $3::jsonb, 'TND') as id`,
+        [pieceId, s.pack, LIGNES],
+      )
+    ).rows[0]!["id"] as string;
+  const inscrire = (qui: Personne, ecriture: string) =>
+    sous(qui, `select public.socle_ecriture_book($1)`, [ecriture]);
+  const revoir = (qui: Personne, ecriture: string, outcome: "valide" | "retourne") =>
+    sous(
+      qui,
+      `select public.socle_ecriture_review($1, $2::app.review_outcome_t, $3, 'Erreur de saisie.')`,
+      [ecriture, outcome, s.motifs["montant_incoherent"]],
+    );
+  const contrePasser = (qui: Personne, ecriture: string) =>
+    sous(qui, `select public.socle_ecriture_contre_passer($1, $2)`, [
+      ecriture,
+      s.motifs["montant_incoherent"],
+    ]);
+  /** Ce qu'une écriture est devenue, lu sans RLS. */
+  const ecriture = async (id: string) =>
+    (
+      await s.admin.query<{ status: string; revue: boolean; contre_passee: boolean }>(
+        `select e.status, e.reviewed_at is not null as revue,
+                exists (select 1 from socle.ecritures r where r.reverses_id = e.id) as contre_passee
+           from socle.ecritures e where e.id = $1`,
+        [id],
+      )
+    ).rows[0];
+  const ecrituresDe = async (table: string, colonne: string, id: string) =>
+    Number(
+      (
+        await s.admin.query<{ n: string }>(
+          `select count(*)::text as n from ${table} where ${colonne} = $1`,
+          [id],
+        )
+      ).rows[0]!.n,
+    );
+  /** Un bien partagé, et un article de stock, de la société. */
+  const unBien = async (libelle: string) => {
+    const { rows } = await s.admin.query<{ id: string }>(
+      `select id from ref.immo_categories
+        where pack_version_id = $1 and valid_to is null order by code limit 1`,
+      [s.pack],
+    );
+    return (
+      await sous(
+        "amel",
+        `select public.immo_bien_creer($1, null, 'partage', null, $2, $3, '2025-01-01',
+                                       12000, 0, 'lineaire', 4::smallint, 1, 'TND', $4) as id`,
+        [s.pme, rows[0]!.id, libelle, s.pack],
+      )
+    ).rows[0]!["id"] as string;
+  };
+  const unArticle = async (reference: string) => {
+    const { rows } = await s.admin.query<{ id: string; stock: string; variation: string }>(
+      `select id, account_stock as stock, account_variation as variation
+         from ref.stock_categories where pack_version_id = $1 and code = 'marchandises'`,
+      [s.pack],
+    );
+    const c = rows[0]!;
+    return (
+      await sous(
+        "amel",
+        `select public.stocks_article_creer($1, null, $2, $3, 'Article d''essai', 'u',
+                                            'cump', $4, $5, 'TND', $6) as id`,
+        [s.pme, c.id, reference, c.stock, c.variation, s.pack],
+      )
+    ).rows[0]!["id"] as string;
+  };
+  const doter = (qui: Personne, bien: string) =>
+    sous(
+      qui,
+      `select public.immo_dotation_constater($1, 2025::smallint, 12::smallint, 3000, 3000, 9000, $2)`,
+      [bien, s.pack],
+    );
+  const inventorier = (qui: Personne, article: string) =>
+    sous(
+      qui,
+      `select public.stocks_inventaire_constater($1, '2025', 0, 100, 100, $2, '2025-12-31')`,
+      [article, s.pack],
+    );
+  const modeDuDossier = (mode: "autonome" | "mandate") =>
+    s.admin.query(
+      `update identity.organizations set validation_mode = $2::app.validation_mode_t
+        where id = $1`,
+      [s.pme, mode],
+    );
+
+  for (const mode of ["autonome", "mandate"] as const)
+    it(`11 · Dossier confié (${mode}) — personne de la PME ne propose, n'inscrit, ne revoit ni ne contre-passe ; le comptable, si`, async () => {
+      await modeDuDossier(mode);
+      try {
+        // Une pièce dont le comptable a établi le type et PROPOSÉ l'écriture.
+        const enCours = await chezLeComptable();
+        await sous("expert", `select public.piece_type_etabli_par_le_cabinet($1)`, [enCours]);
+        const proposee = await proposer("expert", enCours);
+        // Une autre, prise en charge : son écriture est inscrite.
+        const inscrite = await s.priseEnCharge(await chezLeComptable());
+        const bien = await unBien(`Bien S5 ${mode}`);
+        const article = await unArticle(`ART-S5-${mode}`);
+
+        for (const qui of LA_PME) {
+          await assert.rejects(
+            proposer(qui, enCours),
+            /refus\.(inscription\.reservee_au_cabinet|introuvable\.piece)$/,
+            `${qui} propose`,
+          );
+          await assert.rejects(
+            inscrire(qui, proposee),
+            /refus\.(inscription\.reservee_au_cabinet|ecriture\.non_inscriptible)$/,
+            `${qui} inscrit`,
+          );
+          for (const outcome of ["valide", "retourne"] as const)
+            await assert.rejects(
+              revoir(qui, inscrite, outcome),
+              /refus\.(supervision\.reservee|introuvable\.ecriture)$/,
+              `${qui} revoit (${outcome})`,
+            );
+          await assert.rejects(
+            contrePasser(qui, inscrite),
+            /refus\.(supervision\.reservee|introuvable\.ecriture)$/,
+            `${qui} contre-passe`,
+          );
+          await assert.rejects(
+            doter(qui, bien),
+            /refus\.(inscription\.reservee_au_cabinet|introuvable\.immobilisation)$/,
+            `${qui} dote`,
+          );
+          await assert.rejects(
+            inventorier(qui, article),
+            /refus\.(inscription\.reservee_au_cabinet|introuvable\.article)$/,
+            `${qui} inventorie`,
+          );
+        }
+        assert.deepEqual(await ecriture(proposee), {
+          status: "proposee",
+          revue: false,
+          contre_passee: false,
+        });
+        assert.deepEqual(await ecriture(inscrite), {
+          status: "booked",
+          revue: false,
+          contre_passee: false,
+        });
+        assert.equal(await ecrituresDe("immo.dotations", "asset_id", bien), 0);
+        assert.equal(await ecrituresDe("stocks.inventaires", "item_id", article), 0);
+
+        // Le comptable, lui, fait chacun de ces gestes.
+        await inscrire("expert", proposee);
+        await contrePasser("expert", inscrite);
+        assert.equal((await ecriture(inscrite))?.contre_passee, true);
+        await doter("expert", bien);
+        await inventorier("expert", article);
+        assert.equal(await ecrituresDe("immo.dotations", "asset_id", bien), 1);
+        assert.equal(await ecrituresDe("stocks.inventaires", "item_id", article), 1);
+      } finally {
+        await modeDuDossier("autonome");
+      }
+    });
+
+  it("11 · Dossier autonome sans cabinet engagé — la société tient ses livres", async () => {
+    // La pièce se lit et se type pendant le mandat ; le mandat prend fin.
+    const id = await lue("amel");
+    const { rows } = await s.admin.query<{ id: string }>(
+      `update identity.engagements set status = 'termine'
+        where pme_org_id = $1 and status = 'actif' returning id`,
+      [s.pme],
+    );
+    try {
+      await s.fait("amel", "capture.preciser", id, "document_kind", "facture_achat");
+      const e = await proposer("amel", id);
+      await inscrire("amel", e);
+      await revoir("amel", e, "retourne");
+      assert.deepEqual(await ecriture(e), { status: "booked", revue: true, contre_passee: true });
+      const bien = await unBien("Bien S5 sans cabinet");
+      await doter("amel", bien);
+      const article = await unArticle("ART-S5-SANS-CABINET");
+      await inventorier("amel", article);
+      assert.equal(await ecrituresDe("immo.dotations", "asset_id", bien), 1);
+      assert.equal(await ecrituresDe("stocks.inventaires", "item_id", article), 1);
+    } finally {
+      await s.admin.query(`update identity.engagements set status = 'actif' where id = any($1)`, [
+        rows.map((r) => r.id),
+      ]);
+    }
+  });
+
+  it("11 · Un mandat « actif » hors de ses dates ne tient pas les livres — et la société les garde", async () => {
+    // Lot S5b : `livres_tenus_par_le_cabinet` lisait le statut seul, `engaged_orgs`
+    // aussi les dates. Hors de ses dates, personne ne tenait les livres.
+    const tenus = async () =>
+      (await sous("amel", `select app.livres_tenus_par_le_cabinet($1) as v`, [s.pme])).rows[0]![
+        "v"
+      ] as boolean;
+    const tenuParLExpert = async () =>
+      (await sous("expert", `select $1::uuid in (select app.engaged_orgs()) as v`, [s.pme]))
+        .rows[0]!["v"] as boolean;
+    const supervise = async () =>
+      (await sous("expert", `select app.supervise_le_dossier($1) as v`, [s.pme])).rows[0]![
+        "v"
+      ] as boolean;
+    const { rows } = await s.admin.query<{ id: string; starts_on: string; ends_on: string | null }>(
+      `select id, starts_on::text, ends_on::text from identity.engagements
+        where pme_org_id = $1 and status = 'actif'`,
+      [s.pme],
+    );
+    const dates = (debut: string, fin: string | null) =>
+      s.admin.query(
+        `update identity.engagements set starts_on = $2::date, ends_on = $3::date where id = $1`,
+        [rows[0]!.id, debut, fin],
+      );
+    // Une pièce déjà chez le comptable, avant que le mandat ne sorte de ses dates.
+    const chezLui = await chezLeComptable();
+    try {
+      assert.deepEqual(
+        [await tenus(), await tenuParLExpert(), await supervise()],
+        [true, true, true],
+      );
+      for (const [debut, fin, cas] of [
+        ["2999-01-01", null, "il commence demain"],
+        ["2020-01-01", "2020-12-31", "il a pris fin"],
+      ] as const) {
+        await dates(debut, fin);
+        assert.deepEqual(
+          [await tenus(), await tenuParLExpert(), await supervise()],
+          [false, false, false],
+          cas,
+        );
+        // Les autres lectures du mandat disent la même chose (lot S5b) : la PME
+        // n'a pas de cabinet qui tienne ses livres, et le comptable n'ouvre plus
+        // la pièce comme la sienne.
+        assert.equal(await s.fait("amel", "identite.monCabinet", s.pme), null, cas);
+        await assert.rejects(s.fait("expert", "supervision.voir", chezLui), /refus\./, cas);
+        // Personne d'autre ne les tenant, la société garde la main.
+        const id = await lue("amel");
+        await s.fait("amel", "capture.preciser", id, "document_kind", "facture_achat");
+        await inscrire("amel", await proposer("amel", id));
+      }
+    } finally {
+      await dates(rows[0]!.starts_on, rows[0]!.ends_on);
+    }
   });
 });

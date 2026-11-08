@@ -27,6 +27,8 @@ import type { ComponentType } from "react";
 
 import type { MessageKey } from "@/i18n";
 
+import type { CleDeSection } from "./cles-des-sections";
+
 import { ReglerLAbonnement } from "./abonnement";
 import { LAccesTotal } from "./acces-total";
 import { LeCalendrierFiscal } from "./calendrier-fiscal";
@@ -72,13 +74,7 @@ export const SECTIONS = {
     cartes: [LaChaineDeDesignation, ReglerLePlafondIa],
   },
   compte: { libelle: "tour.menu.compte", icone: KeyRound, cartes: [LeCompteDeService] },
-} as const satisfies Record<string, Section>;
-
-export type CleDeSection = keyof typeof SECTIONS;
-
-export function estUneSection(s: string): s is CleDeSection {
-  return Object.hasOwn(SECTIONS, s);
-}
+} as const satisfies Record<CleDeSection, Section>;
 
 /** Une entrée du menu : une adresse de la tour, son libellé, son icône. */
 export interface EntreeDuMenu {

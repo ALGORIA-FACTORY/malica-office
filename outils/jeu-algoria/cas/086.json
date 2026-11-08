@@ -1,0 +1,335 @@
+{
+  "id": "086",
+  "synthetique": true,
+  "provenance": "jeu d'ALGORIA, composé par outils/jeu-algoria/composer.mjs (graine 20261103) : facture inventée ; seule partie réelle, ALGORIA FACTORY SARL et son matricule (à la demande du dirigeant)",
+  "type": "facture_achat",
+  "grille": "facture",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "capture": "photo",
+  "gabarit": "F",
+  "scenario": "taux_7",
+  "realisme": [
+    "fond_bureau",
+    "perspective",
+    "rotation",
+    "eclairage_inegal",
+    "flou",
+    "froisse",
+    "tampon",
+    "signature",
+    "souche_carbone",
+    "ratures",
+    "chiffres_orientaux"
+  ],
+  "dossier": {
+    "nom": "ALGORIA FACTORY SARL",
+    "identifiantFiscal": "1958330V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "orientaux"
+    },
+    "emetteur": {
+      "nom": "أورفان للكهرباء",
+      "nomAr": "أورفان للكهرباء",
+      "enseigne": null,
+      "matricule": "9249014H/A/M/000",
+      "matriculeImprime": "9249014H/A/M/000",
+      "adresse": "92، نهج بحيرة أورمي، نابل",
+      "telephone": "00 78 277 472",
+      "fax": "00 55 249 441",
+      "email": null,
+      "site": null,
+      "rc": "B379580182014",
+      "rib": "99 579 5925573564547 19",
+      "banque": "Banque Talmira",
+      "code": "C7569785",
+      "couleur": null,
+      "slogan": null,
+      "magasin": null,
+      "role": "fournisseur"
+    },
+    "client": {
+      "nom": "ALGORIA FACTORY SARL",
+      "nomAr": "شركة ألغوريا فاكتوري ش.ذ.م.م",
+      "matricule": "1958330V/A/M/000",
+      "matriculeImprime": "١٩٥٨٣٣٠V/A/M/٠٠٠",
+      "adresse": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "telephone": "00 71 940 517",
+      "email": "facturation@algoria-factory.example",
+      "rc": "B01283932024",
+      "rib": "99 017 0001834526710 54",
+      "banque": "Banque Ouzrane de Développement",
+      "forme": "SARL au capital de 50 000 DT",
+      "role": "dossier"
+    },
+    "date": "٢٠٢٦/١٠/٠٥",
+    "chargee": null,
+    "votreReference": null,
+    "articles": [
+      {
+        "designation": "وجبة ندوة",
+        "designationAr": "وجبة ندوة",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "designation": "قهوة حبوب، كيس 1 كغ",
+        "designationAr": "قهوة حبوب، كيس 1 كغ",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      },
+      {
+        "designation": "مياه معدنية، حزمة 6 × 1,5 لتر",
+        "designationAr": "مياه معدنية، حزمة 6 × 1,5 لتر",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA07",
+        "tauxImprime": "7 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "totalAvecTimbre": null,
+    "enLettres": null,
+    "tampon": {
+      "porteLeMatricule": true
+    },
+    "annotation": null,
+    "ratures": [
+      {
+        "chemin": "articles[0].total_ht",
+        "barre": "٤٢٥,٦٢٠"
+      },
+      {
+        "chemin": "articles[1].quantity",
+        "barre": "٢٣"
+      }
+    ],
+    "imprime": {
+      "issuer": "أورفان للكهرباء",
+      "document_date": "٢٠٢٦/١٠/٠٥",
+      "references.numero": "٠٣٧٢",
+      "references.matricule_fiscal": "9249014H/A/M/000",
+      "references.matricule_fiscal_client": "١٩٥٨٣٣٠V/A/M/٠٠٠",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "92، نهج بحيرة أورمي، نابل",
+      "telephone_emetteur": "00 78 277 472",
+      "registre_commerce_emetteur": "B379580182014",
+      "mode_reglement": "نقدا",
+      "totals.base_ht": "١.١١٧,٦٥٨",
+      "totals.vat": "٧٨,٢٣٦",
+      "totals.ttc": "١.١٩٦,٨٩٤",
+      "other_charges[0].amount": "١,٠٠٠",
+      "articles[0].designation": "وجبة ندوة",
+      "articles[0].quantity": "١٠",
+      "articles[0].unit_price_ht": "٣٤,٥٦٢",
+      "articles[0].total_ht": "٣٤٥,٦٢٠",
+      "articles[1].designation": "قهوة حبوب، كيس 1 كغ",
+      "articles[1].quantity": "٢٠",
+      "articles[1].unit_price_ht": "٣٣,٢٢٨",
+      "articles[1].total_ht": "٦٦٤,٥٦٠",
+      "articles[2].designation": "مياه معدنية، حزمة 6 × 1,5 لتر",
+      "articles[2].quantity": "١٨",
+      "articles[2].unit_price_ht": "٥,٩٧١",
+      "articles[2].total_ht": "١٠٧,٤٧٨"
+    },
+    "versConcept": {
+      "issuer": "raison_sociale_emetteur",
+      "document_date": "date_operation",
+      "references.numero": "numero_facture",
+      "references.matricule_fiscal": "matricule_fiscal_emetteur",
+      "references.matricule_fiscal_client": "matricule_fiscal_client",
+      "nom_client": "nom_client",
+      "adresse_client": "adresse_client",
+      "adresse_emetteur": "adresse_emetteur",
+      "telephone_emetteur": "telephone_email_emetteur.telephone",
+      "registre_commerce_emetteur": "registre_commerce_emetteur",
+      "mode_reglement": "mode_reglement",
+      "totals.base_ht": "total_ht",
+      "totals.vat": "montant_tva_par_taux[7]",
+      "totals.ttc": "total_ttc",
+      "other_charges[0].amount": "droit_timbre",
+      "articles[0].designation": "lignes[0].designation",
+      "articles[0].quantity": "lignes[0].quantite",
+      "articles[0].unit_price_ht": "lignes[0].prix_unitaire_ht",
+      "articles[0].total_ht": "lignes[0].montant_ligne_ht",
+      "articles[1].designation": "lignes[1].designation",
+      "articles[1].quantity": "lignes[1].quantite",
+      "articles[1].unit_price_ht": "lignes[1].prix_unitaire_ht",
+      "articles[1].total_ht": "lignes[1].montant_ligne_ht",
+      "articles[2].designation": "lignes[2].designation",
+      "articles[2].quantity": "lignes[2].quantite",
+      "articles[2].unit_price_ht": "lignes[2].prix_unitaire_ht",
+      "articles[2].total_ht": "lignes[2].montant_ligne_ht"
+    }
+  },
+  "graineDuRendu": 95895127,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "أورفان للكهرباء",
+      "document_date": "2026-10-05",
+      "currency": "TND",
+      "references.numero": "0372",
+      "references.matricule_fiscal": "9249014H/A/M/000",
+      "references.matricule_fiscal_client": "1958330V/A/M/000",
+      "totals.base_ht": "1117.658",
+      "totals.vat": "78.236",
+      "totals.ttc": "1196.894",
+      "lines[0].tax_code": "TVA07",
+      "lines[0].base_ht": "1117.658",
+      "lines[0].vat_amount": "78.236",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "10.000",
+      "articles[0].unit_price_ht": "34.562",
+      "articles[0].total_ht": "345.620",
+      "articles[1].quantity": "20.000",
+      "articles[1].unit_price_ht": "33.228",
+      "articles[1].total_ht": "664.560",
+      "articles[2].quantity": "18.000",
+      "articles[2].unit_price_ht": "5.971",
+      "articles[2].total_ht": "107.478"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "1117.658",
+          "0"
+        ],
+        [
+          "4366",
+          "78.236",
+          "0",
+          "TVA07"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "1196.894"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "Ratures : la valeur barrée n'est jamais la valeur attendue ; la valeur juste est écrite à côté."
+    ],
+    "concepts": {
+      "type_document": "فاتورة",
+      "raison_sociale_emetteur": "أورفان للكهرباء",
+      "date_operation": "2026-10-05",
+      "numero_facture": "0372",
+      "matricule_fiscal_emetteur": "9249014H/A/M/000",
+      "matricule_fiscal_client": "1958330V/A/M/000",
+      "nom_client": "ALGORIA FACTORY SARL",
+      "adresse_client": "14، نهج السرو، 1053 ضفاف البحيرة، تونس",
+      "adresse_emetteur": "92، نهج بحيرة أورمي، نابل",
+      "telephone_email_emetteur": {
+        "telephone": "00 78 277 472"
+      },
+      "registre_commerce_emetteur": "B379580182014",
+      "mode_reglement": "نقدا",
+      "total_ht": "1117.658",
+      "montant_tva_par_taux": {
+        "7": "78.236"
+      },
+      "total_ttc": "1196.894",
+      "droit_timbre": "1.000",
+      "base_tva_par_taux": {
+        "7": "1117.658"
+      },
+      "lignes": [
+        {
+          "designation": "وجبة ندوة",
+          "quantite": "10",
+          "prix_unitaire_ht": "34.562",
+          "montant_ligne_ht": "345.620",
+          "taux_tva_ligne": "7"
+        },
+        {
+          "designation": "قهوة حبوب، كيس 1 كغ",
+          "quantite": "20",
+          "prix_unitaire_ht": "33.228",
+          "montant_ligne_ht": "664.560",
+          "taux_tva_ligne": "7"
+        },
+        {
+          "designation": "مياه معدنية، حزمة 6 × 1,5 لتر",
+          "quantite": "18",
+          "prix_unitaire_ht": "5.971",
+          "montant_ligne_ht": "107.478",
+          "taux_tva_ligne": "7"
+        }
+      ],
+      "cachet_emetteur": true,
+      "signature_emetteur": true
+    },
+    "confondus": {
+      "date_emission": "date_operation",
+      "code_tva_categorie_etablissement": "matricule_fiscal_emetteur"
+    },
+    "non_imprimes": [
+      "acomptes_deduits",
+      "adresse_livraison",
+      "code_client",
+      "conditions_generales",
+      "date_echeance",
+      "devise",
+      "droit_consommation_ligne",
+      "fodec_applicable_ligne",
+      "forme_juridique_capital_emetteur",
+      "mention_export",
+      "mention_regime_forfaitaire",
+      "mention_suspension_exoneration",
+      "montant_en_lettres",
+      "montant_fodec",
+      "montant_retenue_source",
+      "montant_tva_suspendue",
+      "net_a_payer",
+      "penalites_retard",
+      "periode_prestation",
+      "prix_unitaire_ttc",
+      "qr_code",
+      "ref_attestation_suspension",
+      "ref_bon_commande",
+      "ref_bon_livraison",
+      "ref_devis_marche",
+      "reference_article",
+      "reference_ttn",
+      "remise_globale",
+      "remise_ligne",
+      "retenue_source_mention",
+      "rib_emetteur",
+      "total_brut_ht",
+      "type_identifiant_client",
+      "unite",
+      "visa_client"
+    ]
+  }
+}

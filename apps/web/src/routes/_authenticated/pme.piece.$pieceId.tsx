@@ -25,6 +25,7 @@ import { DemandeDuSiege } from "@/components/malica/demande-du-siege";
 import { RetournerAuClient } from "@/components/malica/retourner-au-client";
 import { ConfirmationSurPlace, EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
+import { LignesAVerifier } from "@/components/malica/lignes-a-verifier";
 import { VersionPrecedente } from "@/components/malica/version-precedente";
 import {
   libelleDuChamp,
@@ -1326,6 +1327,7 @@ function PieceScreen() {
           <p className="text-[24px] font-semibold leading-[1.15] tracking-[-0.025em]">
             {t("pme.detail.titre")}
           </p>
+          <LignesAVerifier pieceId={pieceId} />
           {articles.length === 0 ? (
             <p className="mt-4 border border-border bg-card p-4 text-[13.5px] leading-[1.55] text-text-2">
               {t("pme.detail.aucun")}
