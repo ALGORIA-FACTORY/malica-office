@@ -75,3 +75,40 @@ fn une_designation_dont_la_ligne_continue_est_incertaine() {
         assert_eq!(statut.as_deref(), Some("incertain"), "{coupee}");
     }
 }
+
+/// Le nom du dossier collé à son libellé par l'OCR (« Client :/JI:ALGORIA FACTORY SARL »)
+/// n'est pas le nom du fournisseur, et l'adresse imprimée dessous n'est pas la sienne.
+#[test]
+fn le_nom_du_dossier_colle_a_son_libelle_n_est_pas_le_fournisseur() {
+    let o = sortie("algoria-066");
+    let nom = &o["parties"]["emetteur"]["nom"];
+    assert!(
+        !nom["valeur"].as_str().unwrap_or("").contains("ALGORIA"),
+        "{nom}"
+    );
+    let a = &o["champs"]["adresse_emetteur"];
+    assert_ne!(
+        a["valeur"], "14, rue des Cyprès, 1053 Les Berges du Lac, Tunis",
+        "{a}"
+    );
+}
+
+/// Un nom arabe lu à gauche de son libellé se rend dans son ordre de lecture, de droite à
+/// gauche.
+#[test]
+fn un_nom_arabe_se_lit_de_droite_a_gauche() {
+    let o = sortie("algoria-107");
+    assert_eq!(o["champs"]["nom_client"]["valeur"], "مكتب غرفان للتدقيق");
+}
+
+/// « n°354642/6 » sous le libellé « Quittance » : la valeur porte un libellé collé, elle
+/// n'est pas affirmée.
+#[test]
+fn une_valeur_qui_porte_un_libelle_colle_n_est_pas_affirmee() {
+    let o = sortie("algoria-148");
+    let c = &o["champs"]["reference_quittance"];
+    assert!(
+        !matches!(c["statut"].as_str(), Some("prouve" | "conforme")),
+        "{c}"
+    );
+}
