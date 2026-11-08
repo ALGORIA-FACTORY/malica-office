@@ -298,6 +298,118 @@ impl<'a> Plan<'a> {
         suite_lue(gauche) || suite_lue(droite)
     }
 
+    /// Un repère est-il imprimé, MOT POUR MOT, comme libellé d'un montant ? Les mots entiers
+    /// (purs mots : ni montant, ni date, ni chiffre) qui précèdent un montant sur sa rangée, de
+    /// gauche à droite, contiennent une suite de mots consécutifs qui EST le repère
+    /// (« Indemnité | de | transport | 89,000 »). Contrairement à `annonce_chiffree`, le
+    /// libellé peut s'étendre sur plusieurs jetons ; contrairement à un simple « contient »,
+    /// un repère court ne se lit pas à cheval sur deux mots (« Prêt » n'est pas dans
+    /// « … présent »). Une pièce de droite à gauche n'est pas lue ainsi.
+    pub fn annonce_en_mots(&self, reperes: &[String]) -> bool {
+        if reperes.is_empty() {
+            return false;
+        }
+        (0..self.jetons.len()).any(|i| {
+            let a = &self.jetons[i];
+            if a.montants.is_empty() || self.rtl[i] {
+                return false;
+            }
+            let ha = (a.y1 - a.y0).max(f64::EPSILON);
+            let mut gauche: Vec<usize> = (0..self.jetons.len())
+                .filter(|&k| {
+                    let b = &self.jetons[k];
+                    let hb = (b.y1 - b.y0).max(f64::EPSILON);
+                    k != i
+                        && b.page == a.page
+                        && (a.y1.min(b.y1) - a.y0.max(b.y0)) / ha.min(hb) > 0.5
+                        && b.x1 <= a.x0 + 0.25 * ha
+                })
+                .collect();
+            gauche.sort_by(|x, y| {
+                self.jetons[*x]
+                    .x0
+                    .partial_cmp(&self.jetons[*y].x0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+            // les mots qui précèdent le montant sans interruption, dans l'ordre de lecture
+            let mut mots: Vec<&str> = Vec::new();
+            for &k in gauche.iter().rev() {
+                let b = &self.jetons[k];
+                if !b.montants.is_empty()
+                    || b.date.is_some()
+                    || b.texte.chars().any(|c| c.is_ascii_digit())
+                {
+                    break;
+                }
+                mots.insert(0, self.normes[k].as_str());
+            }
+            (0..mots.len()).any(|d| {
+                let mut suite = String::new();
+                mots[d..].iter().any(|m| {
+                    suite.push_str(m);
+                    reperes.iter().any(|r| !r.is_empty() && suite == *r)
+                })
+            })
+        })
+    }
+
+    /// Le jeton `i` est-il la DERNIÈRE valeur d'une rangée que son libellé ouvre ? Le libellé
+    /// est la suite de purs mots (ni montant, ni date, ni chiffre) qui commence la rangée, de
+    /// gauche à droite ; il doit contenir l'un des repères. Une rubrique de bulletin de paie
+    /// imprime sa base et son taux entre son libellé et son montant (« Cotisation CNSS |
+    /// 4 200,000 | 9,18 % | 385,560 ») : `ancre` ne voit que la base, voisine du libellé.
+    /// Une pièce de droite à gauche n'est pas lue ainsi.
+    pub fn fin_de_rangee_libellee(&self, i: usize, reperes: &[String]) -> bool {
+        if reperes.is_empty() || self.rtl[i] || self.jetons[i].montants.is_empty() {
+            return false;
+        }
+        let a = &self.jetons[i];
+        let ha = (a.y1 - a.y0).max(f64::EPSILON);
+        let mut rangee: Vec<usize> = (0..self.jetons.len())
+            .filter(|&k| {
+                let b = &self.jetons[k];
+                let hb = (b.y1 - b.y0).max(f64::EPSILON);
+                b.page == a.page && (a.y1.min(b.y1) - a.y0.max(b.y0)) / ha.min(hb) > 0.5
+            })
+            .collect();
+        rangee.sort_by(|x, y| {
+            self.jetons[*x]
+                .x0
+                .partial_cmp(&self.jetons[*y].x0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        // la dernière valeur de la rangée
+        if rangee
+            .iter()
+            .rev()
+            .find(|&&k| !self.jetons[k].montants.is_empty())
+            != Some(&i)
+        {
+            return false;
+        }
+        // Une rangée de relevé s'ouvre sur sa date (« 01/10/2026 | SOLDE AU 30/09/2026 | (C) |
+        // 138.862,485 ») : les dates de tête ne coupent pas le libellé qui les suit.
+        let mut libelle = String::new();
+        // Le numéro de rubrique d'un formulaire (« 350 | Reste à payer | 7.739,058 ») non plus :
+        // un nombre entier d'au plus trois chiffres en tête de rangée.
+        let numero = |t: &str| t.len() <= 3 && t.chars().all(|c| c.is_ascii_digit());
+        let tete = rangee
+            .iter()
+            .take_while(|&&k| self.jetons[k].date.is_some() || numero(&self.jetons[k].texte))
+            .count();
+        for &k in &rangee[tete..] {
+            let b = &self.jetons[k];
+            if !b.montants.is_empty()
+                || b.date.is_some()
+                || b.texte.chars().any(|c| c.is_ascii_digit())
+            {
+                break;
+            }
+            libelle.push_str(&self.normes[k]);
+        }
+        reperes.iter().any(|r| libelle.contains(r.as_str()))
+    }
+
     /// Un repère est-il lu quelque part sur la pièce ? Sur un jeton, ou sur une suite d'au
     /// plus `MOTS_D_UN_LIBELLE` jetons consécutifs de la même page : l'OCR rend un mot par
     /// jeton (« معفاة | من | الأداء », la mention d'exonération d'une facture arabe).
