@@ -58,6 +58,17 @@ const CameraScanner = lazy(() =>
  */
 const META = fr;
 
+/** Un lot à joindre qui n'est pas tout parti : le message, la pièce, et si une partie s'est jointe. */
+class ErreurDeJointure extends Error {
+  constructor(
+    message: string,
+    readonly pieceId: string,
+    readonly enPartie: boolean,
+  ) {
+    super(message);
+  }
+}
+
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
     meta: [
@@ -361,11 +372,18 @@ function PmeLayout() {
        * (le BL sans lecture viendra avec la planche 3).
        */
       if (input.joindre) {
-        if (identifiants.length === 0) throw new Error(t("pme.joindre.horsLigne"));
         for (const id of identifiants) {
           await office().collab.setPieceVis(id, "entite");
           await office().capture.rattacher(input.joindre.id, id);
         }
+        // Un lot à moitié parti (réseau lent) le DIT : ce qui attend encore
+        // sera à joindre depuis la pièce au retour du réseau (revue de #286).
+        if (identifiants.length < input.lot.length)
+          throw new ErreurDeJointure(
+            t("pme.joindre.horsLigne"),
+            input.joindre.id,
+            identifiants.length > 0,
+          );
       }
       return identifiants;
     },
@@ -428,12 +446,20 @@ function PmeLayout() {
         search: suiteDuPassage(identifiants, contexteDeCapture),
       });
     },
-    onError: (e: unknown) =>
+    onError: async (e: unknown) => {
       setCaptureError(
         e instanceof FilePleine
           ? t("pme.file.pleine")
-          : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
-      ),
+          : e instanceof ErreurDeJointure
+            ? e.message
+            : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
+      );
+      // Ce qui s'est joint avant l'arrêt se voit sur la pièce.
+      if (e instanceof ErreurDeJointure && e.enPartie) {
+        await qc.invalidateQueries({ queryKey: ["rattachees", e.pieceId] });
+        await qc.invalidateQueries({ queryKey: ["piece", e.pieceId] });
+      }
+    },
   });
 
   async function deposerUnePiece(

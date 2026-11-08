@@ -2866,6 +2866,16 @@ function PieceScreen() {
             </button>
           </div>
 
+          {/*
+           * Joindre par photo ou import (planche 6) passe par la coque : ce
+           * qui échoue — sélection, dépôt, rattachement, réseau — se dit ICI,
+           * sur la pièce où l'on est revenu (revue de #286).
+           */}
+          {pme.captureError ? (
+            <p role="alert" className="mt-3 text-[13px] leading-snug text-signal-warn">
+              {pme.captureError}
+            </p>
+          ) : null}
           <RattacherUnDocument
             pieceId={pieceId}
             vis={piece.vis}
