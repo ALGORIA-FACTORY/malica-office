@@ -1325,7 +1325,7 @@ export const fr = {
   "cab.abo.propose.prix": "{prix} HT par mois",
   "cab.abo.propose.bouton": "Proposer",
   "cab.abo.propose.ok":
-    "Proposition envoyée à {client}. Elle apparaît dans ses réglages, à accepter ou refuser.",
+    "Proposition envoyée à {client}. Son dirigeant la trouve dans Réglages › Abonnement, à accepter ou refuser.",
   "cab.abo.liste.titre": "Ce que vous proposez ou couvrez",
   "cab.abo.liste.count": "{count} abonnements",
   "cab.abo.liste.count#one": "{count} abonnement",
@@ -4308,6 +4308,14 @@ export const fr = {
   "pme.reglages.abo.report": "Dont {n} lectures reportées du mois dernier.",
   "pme.reglages.abo.report#one": "Dont {n} lecture reportée du mois dernier.",
   "pme.reglages.abo.report#other": "Dont {n} lectures reportées du mois dernier.",
+  "pme.reglages.offres.empechement.choisi_par_la_comptabilite":
+    "Votre comptabilité a choisi votre abonnement : on ne descend pas sous son offre.",
+  "pme.reglages.offres.complement":
+    "Votre abonnement est choisi et réglé par {comptabilite}. Vous pouvez monter d'offre : vous ne payez alors que la différence, indiquée ci-dessous.",
+  "pme.reglages.abo.priseEnCharge": "Choisi et réglé par votre comptabilité, {comptabilite}.",
+  "pme.reglages.abo.priseEnChargeEtComplement":
+    "Choisi et réglé par votre comptabilité, {comptabilite}. Vous payez la différence : {prix} {devise} HT / mois.",
+  "pme.notifs.voirProposition": "Voir la proposition",
   "pme.reglages.offres.empechement.engagement_annuel":
     "Votre abonnement est à l'année : l'offre ne change pas avant la fin de l'engagement.",
   "pme.reglages.annuel.detail":

@@ -1265,7 +1265,7 @@ export const en: Dict = {
   "cab.abo.propose.prix": "{prix} excl. tax per month",
   "cab.abo.propose.bouton": "Send the offer",
   "cab.abo.propose.ok":
-    "Offer sent to {client}. It appears in their settings, to accept or decline.",
+    "Offer sent to {client}. Their owner finds it in Settings › Plan, to accept or decline.",
   "cab.abo.liste.titre": "What you offer or cover",
   "cab.abo.liste.count": "{count} subscriptions",
   "cab.abo.liste.count#one": "{count} subscription",
@@ -4189,6 +4189,14 @@ export const en: Dict = {
   "pme.reglages.abo.report": "Including {n} reads carried over from last month.",
   "pme.reglages.abo.report#one": "Including {n} read carried over from last month.",
   "pme.reglages.abo.report#other": "Including {n} reads carried over from last month.",
+  "pme.reglages.offres.empechement.choisi_par_la_comptabilite":
+    "Your accountant chose your plan: you cannot go below it.",
+  "pme.reglages.offres.complement":
+    "Your plan is chosen and paid for by {comptabilite}. You can move up: you then pay only the difference, shown below.",
+  "pme.reglages.abo.priseEnCharge": "Chosen and paid for by your accountant, {comptabilite}.",
+  "pme.reglages.abo.priseEnChargeEtComplement":
+    "Chosen and paid for by your accountant, {comptabilite}. You pay the difference: {prix} {devise} excl. tax / month.",
+  "pme.notifs.voirProposition": "See the offer",
   "pme.reglages.offres.empechement.engagement_annuel":
     "Your subscription is yearly: the plan stays the same until the commitment ends.",
   "pme.reglages.annuel.detail":

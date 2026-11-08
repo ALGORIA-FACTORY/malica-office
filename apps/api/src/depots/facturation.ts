@@ -170,7 +170,8 @@ export const facturation = {
   async monForfait(db: Requete, tenantId?: string | null) {
     const { rows } = await db.query(
       `select offre, statut, lectures_droit, lectures_consommees, lectures_restantes,
-              organisations, sieges_occupes, sieges_inclus, sieges_max, prix_mensuel_ht
+              organisations, sieges_occupes, sieges_inclus, sieges_max, prix_mensuel_ht,
+              titulaire, pris_en_charge_par
          from public.mon_forfait($1::uuid)`,
       [tenantId ?? null],
     );

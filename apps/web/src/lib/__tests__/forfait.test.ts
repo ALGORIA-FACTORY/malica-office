@@ -45,6 +45,8 @@ function forfait(offre: string, sieges_max: number): MonForfait {
     sieges_inclus: 0,
     sieges_max,
     prix_mensuel_ht: "9.000",
+    titulaire: true,
+    pris_en_charge_par: null,
   };
 }
 
