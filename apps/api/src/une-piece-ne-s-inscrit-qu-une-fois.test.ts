@@ -95,7 +95,9 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
     assert.ok(d && e);
     dirigeant = d;
     expert = e;
-    relecteur = await creerCompte(`relecteur-${marque}@essai.local`, "MotDePasseTresLong2026!");
+    const r = await creerCompte(`relecteur-${marque}@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(r);
+    relecteur = r;
     const creer = (u: Utilisateur, kind: string, nom: string, mf: string | null) =>
       sousIdentite(u.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
