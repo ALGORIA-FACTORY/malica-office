@@ -2817,3 +2817,99 @@ html.dark:has([data-surface="pme"]),
   [data-surface="pme"] [data-ecran="notifications"] .seg.ong button{padding:.5rem .5625rem;font-size:.78125rem;gap:.25rem}
   [data-surface="pme"] [data-ecran="notifications"] .seg.ong em{min-width:1.125rem;padding:0 .3125rem}
 }
+
+/* ---------- LE SÉLECTEUR DE SOCIÉTÉ (planche 2, approuvée le 7 novembre 2026) ----------
+ * Une puce dans la barre : le nom, la place, le chevron. Une feuille qui
+ * monte du bas sur le téléphone, un panneau sous la puce sur l'ordinateur. */
+[data-surface="pme"] .appbar .selsoc{flex:1;min-width:0;display:flex;justify-content:center}
+[data-surface="pme"] .selsoc .puce{max-width:100%;min-width:0;display:inline-flex;align-items:center;gap:.4375rem;height:40px;padding:0 .75rem 0 .875rem;border:0;border-radius:999px;background:var(--d2);box-shadow:inset 0 0 0 1px var(--hr);color:var(--tx);font:inherit;cursor:pointer;transition:transform .15s}
+[data-surface="pme"] .selsoc .puce:active{transform:scale(.97)}
+[data-surface="pme"] .selsoc .puce .nom{display:block;min-width:0;overflow:hidden}
+[data-surface="pme"] .selsoc .puce .nom b{display:block;font-size:.8125rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Un nom trop long défile : il glisse jusqu'à sa fin, s'y arrête, revient.
+ * Les bords s'estompent pour dire qu'il continue. */
+[data-surface="pme"] .selsoc .puce .nom[data-defile]{-webkit-mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent);mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent)}
+[data-surface="pme"] .selsoc .puce .nom[data-defile] b{display:inline-block;overflow:visible;text-overflow:clip;padding-inline:10px 0;animation:selsoc-defile var(--duree,8s) ease-in-out infinite}
+[dir="rtl"] [data-surface="pme"] .selsoc .puce .nom[data-defile] b{animation-name:selsoc-defile-rtl}
+@keyframes selsoc-defile{0%,18%{transform:translateX(0)}50%,68%{transform:translateX(calc(var(--decal) - 20px))}100%{transform:translateX(0)}}
+@keyframes selsoc-defile-rtl{0%,18%{transform:translateX(0)}50%,68%{transform:translateX(calc(var(--decal) * -1 + 20px))}100%{transform:translateX(0)}}
+@media (prefers-reduced-motion: reduce){
+  [data-surface="pme"] .selsoc .puce .nom[data-defile]{-webkit-mask-image:none;mask-image:none}
+  [data-surface="pme"] .selsoc .puce .nom[data-defile] b{display:block;overflow:hidden;text-overflow:ellipsis;padding:0}
+}
+[data-surface="pme"] .selsoc .puce .rg{flex:none;font-family:var(--mono);font-size:.6875rem;font-weight:600;color:var(--t3)}
+[data-surface="pme"] .selsoc .puce svg{flex:none;width:14px;height:14px;color:var(--t3);transition:transform .2s}
+[data-surface="pme"] .selsoc .puce[aria-expanded="true"] svg{transform:rotate(180deg)}
+[data-surface="pme"] .selsoc .voile{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);animation:selsoc-voile .2s ease both}
+[data-surface="pme"] .selsoc .feuille{position:fixed;z-index:81;left:0;right:0;bottom:0;max-height:min(80vh,640px);display:flex;flex-direction:column;padding:.5rem 1rem calc(1rem + env(safe-area-inset-bottom,0px));border-radius:28px 28px 0 0;background:var(--d0);color:var(--tx);box-shadow:0 -20px 60px -20px rgba(0,0,0,.5);animation:selsoc-monte .32s cubic-bezier(.2,1,.3,1) both}
+[data-surface="pme"] .selsoc .poignee{align-self:center;width:40px;height:4px;border-radius:9px;background:var(--hr);margin-bottom:.75rem}
+[data-surface="pme"] .selsoc h2{margin:0 0 .75rem;font-size:1.125rem;font-weight:700;letter-spacing:-.025em}
+[data-surface="pme"] .selsoc .cherche{display:flex;align-items:center;gap:.5rem;height:44px;padding:0 .875rem;border-radius:14px;background:var(--s1);color:var(--t3)}
+[data-surface="pme"] .selsoc .cherche svg{width:18px;height:18px;flex:none}
+[data-surface="pme"] .selsoc .cherche input{flex:1;min-width:0;border:0;background:none;color:var(--tx);font:inherit;font-size:.9375rem;outline:none}
+[data-surface="pme"] .selsoc .defile{overflow-y:auto;margin-top:.5rem;overscroll-behavior:contain}
+[data-surface="pme"] .selsoc ul{list-style:none;margin:0;padding:0}
+[data-surface="pme"] .selsoc li{display:flex;align-items:center}
+[data-surface="pme"] .selsoc .grp{margin:1rem 0 .25rem;font-family:var(--mono);font-size:.625rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
+[data-surface="pme"] .selsoc .so{flex:1;min-width:0;display:flex;align-items:center;gap:.75rem;padding:.625rem .375rem;border:0;border-radius:14px;background:none;color:var(--tx);font:inherit;text-align:start;cursor:pointer}
+[data-surface="pme"] .selsoc .so:hover{background:var(--s1)}
+[data-surface="pme"] .selsoc .so[aria-current]{background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--acc)}
+[data-surface="pme"] .selsoc .so.toutes{width:100%;margin-top:.5rem}
+[data-surface="pme"] .selsoc .ini{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;background:var(--d2);font-size:.75rem;font-weight:800;letter-spacing:.02em;color:var(--t2)}
+[data-surface="pme"] .selsoc .so[aria-current] .ini{background:var(--acc);color:var(--on-acc)}
+[data-surface="pme"] .selsoc .bd{flex:1;min-width:0;display:grid;gap:.125rem}
+[data-surface="pme"] .selsoc .bd b{font-size:.875rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-surface="pme"] .selsoc .bd span{font-size:.75rem;color:var(--t3);font-family:var(--mono)}
+[data-surface="pme"] .selsoc .so em{flex:none;font-style:normal;font-size:.6875rem;font-weight:700;color:var(--acc)}
+[data-surface="pme"] .selsoc .ep{flex:none;width:36px;height:36px;border:0;border-radius:50%;background:none;color:var(--t3);display:grid;place-items:center;cursor:pointer}
+[data-surface="pme"] .selsoc .ep svg{width:17px;height:17px}
+[data-surface="pme"] .selsoc .ep[aria-pressed="true"]{color:var(--acc)}
+[data-surface="pme"] .selsoc .ep[aria-pressed="true"] svg{fill:currentColor}
+[data-surface="pme"] .selsoc .rien{margin:1.5rem 0;text-align:center;color:var(--t3);font-size:.875rem}
+@keyframes selsoc-voile{from{opacity:0}to{opacity:1}}
+@keyframes selsoc-monte{from{transform:translateY(100%)}to{transform:none}}
+@media (min-width:1024px){
+  [data-surface="pme"] .appbar .selsoc{justify-content:flex-start;padding-inline-start:1rem}
+  [data-surface="pme"] .selsoc .voile{background:transparent}
+  [data-surface="pme"] .selsoc .feuille{position:fixed;top:var(--haut);bottom:auto;left:var(--gauche);right:auto;width:400px;max-height:520px;border-radius:20px;padding:.75rem;box-shadow:0 30px 70px -20px rgba(0,0,0,.45),inset 0 0 0 1px var(--hr);animation:selsoc-tombe .22s cubic-bezier(.2,1,.3,1) both}
+  [data-surface="pme"] .selsoc .poignee{display:none}
+}
+@keyframes selsoc-tombe{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+
+/* ---------- « MES SOCIÉTÉS » (planche 13, approuvée le 8 novembre 2026) ----------
+ * Les totaux, la recherche, trois tris, une ligne par société (téléphone) ou
+ * un tableau (ordinateur). Un toucher ouvre l'accueil de la société. */
+[data-surface="pme"] [data-ecran="mes-societes"] .tot{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;margin-top:.25rem}
+[data-surface="pme"] [data-ecran="mes-societes"] .tot > div{padding:.75rem .875rem;border-radius:16px;background:var(--d0);box-shadow:inset 0 0 0 1px var(--hr)}
+[data-surface="pme"] [data-ecran="mes-societes"] .tot small{display:block;font-family:var(--mono);font-size:.625rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+[data-surface="pme"] [data-ecran="mes-societes"] .tot b{display:block;margin-top:.25rem;font-size:1.5rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+[data-surface="pme"] [data-ecran="mes-societes"] .tot > div[data-alerte] b{color:var(--am)}
+[data-surface="pme"] [data-ecran="mes-societes"] .cherche{display:flex;align-items:center;gap:.5rem;height:44px;margin-top:.875rem;padding:0 .875rem;border-radius:14px;background:var(--s1);color:var(--t3)}
+[data-surface="pme"] [data-ecran="mes-societes"] .cherche svg{width:18px;height:18px;flex:none}
+[data-surface="pme"] [data-ecran="mes-societes"] .cherche input{flex:1;min-width:0;border:0;background:none;color:var(--tx);font:inherit;font-size:.9375rem;outline:none}
+[data-surface="pme"] [data-ecran="mes-societes"] .tris{display:flex;gap:.5rem;margin:.75rem 0 .5rem;overflow-x:auto;scrollbar-width:none}
+[data-surface="pme"] [data-ecran="mes-societes"] .tris button{flex:none;border:1px solid var(--hr);border-radius:999px;background:var(--d0);color:var(--t2);font:inherit;font-size:.8125rem;font-weight:600;padding:.4375rem .875rem;cursor:pointer}
+[data-surface="pme"] [data-ecran="mes-societes"] .tris button[aria-pressed="true"]{background:var(--tx);border-color:var(--tx);color:var(--bg)}
+[data-surface="pme"] [data-ecran="mes-societes"] .rien{margin:2rem 0;text-align:center;color:var(--t3);font-size:.875rem}
+[data-surface="pme"] [data-ecran="mes-societes"] .lignes{list-style:none;margin:0;padding:0;display:grid;gap:.5rem}
+[data-surface="pme"] [data-ecran="mes-societes"] .lignes button{width:100%;display:flex;align-items:center;gap:.75rem;padding:.75rem .875rem;border:0;border-radius:16px;background:var(--d0);box-shadow:inset 0 0 0 1px var(--hr);color:var(--tx);font:inherit;text-align:start;cursor:pointer;transition:transform .15s}
+[data-surface="pme"] [data-ecran="mes-societes"] .lignes button:active{transform:scale(.985)}
+[data-surface="pme"] [data-ecran="mes-societes"] .lignes .ini{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;background:var(--d2);font-size:.75rem;font-weight:800;color:var(--t2)}
+[data-surface="pme"] [data-ecran="mes-societes"] .lignes .bd{flex:1;min-width:0;display:grid;gap:.125rem}
+[data-surface="pme"] [data-ecran="mes-societes"] .lignes .bd b{font-size:.875rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-surface="pme"] [data-ecran="mes-societes"] .lignes .bd span{font-size:.75rem;color:var(--t3)}
+[data-surface="pme"] [data-ecran="mes-societes"] .lignes em{flex:none;font-style:normal;font-family:var(--mono);font-size:.625rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.25rem .5rem;border-radius:999px;background:rgba(138,91,0,.13);color:var(--am)}
+[data-surface="pme"] [data-ecran="mes-societes"] .lignes svg{width:16px;height:16px;flex:none;color:var(--t3)}
+[dir="rtl"] [data-surface="pme"] [data-ecran="mes-societes"] .lignes svg{transform:scaleX(-1)}
+[data-surface="pme"] [data-ecran="mes-societes"] .tableau{display:none;width:100%;border-collapse:collapse;font-size:.875rem}
+[data-surface="pme"] [data-ecran="mes-societes"] .tableau th,[data-surface="pme"] [data-ecran="mes-societes"] .tableau td{padding:.75rem .625rem;border-top:1px solid var(--hr);text-align:start;font-variant-numeric:tabular-nums}
+[data-surface="pme"] [data-ecran="mes-societes"] .tableau thead th{border-top:0;font-family:var(--mono);font-size:.625rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+[data-surface="pme"] [data-ecran="mes-societes"] .tableau tbody th button{border:0;background:none;padding:0;color:var(--tx);font:inherit;font-weight:600;cursor:pointer;text-align:start}
+[data-surface="pme"] [data-ecran="mes-societes"] .tableau tbody th button:hover{color:var(--acc)}
+[data-surface="pme"] [data-ecran="mes-societes"] .tableau td{color:var(--t2)}
+[data-surface="pme"] [data-ecran="mes-societes"] .tableau td[data-alerte]{color:var(--am);font-weight:700}
+@media (min-width:1024px){
+  [data-surface="pme"] [data-ecran="mes-societes"] .pad{max-width:960px;margin-inline:auto;width:100%}
+  [data-surface="pme"] [data-ecran="mes-societes"] .lignes{display:none}
+  [data-surface="pme"] [data-ecran="mes-societes"] .tableau{display:table}
+}

@@ -581,7 +581,34 @@ function PmeLayout() {
          * `header` et la feuille porte `.appbar` — le collage, l'encoche, le
          * filet, le fond.
          */}
-        <EntetePme initiale={initiale} cloche={cloche} />
+        <EntetePme
+          initiale={initiale}
+          cloche={cloche}
+          societe={
+            org && pmeOrgs.length > 1
+              ? {
+                  societes: pmeOrgs.map((o) => ({
+                    id: o.id,
+                    name: o.name,
+                    matricule: o.legalId ?? null,
+                  })),
+                  /*
+                   * Planche 13 (approuvée le 8 novembre 2026) : choisir une
+                   * société OUVRE son accueil, le même qu'aujourd'hui ; les
+                   * filtres de la bibliothèque n'en dépendent pas.
+                   * « Toutes les sociétés » ouvre l'écran « Mes sociétés ».
+                   */
+                  ouverte: org.id,
+                  surMesSocietes: path.startsWith("/pme/societes"),
+                  onOuvrir: (id: string) => {
+                    if (id !== org.id) selectOrg(id);
+                    void navigate({ to: "/pme" });
+                  },
+                  onToutes: () => void navigate({ to: "/pme/societes" }),
+                }
+              : undefined
+          }
+        />
 
         <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
           {orgsQuery.isPending ? (
