@@ -47,6 +47,7 @@ import {
   type EcritureEnSaisie,
 } from "@/lib/ecriture-du-cabinet";
 import { AffichageSignale } from "@/components/malica/affichage-signale";
+import { libelleDuControle } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnChiffres, montant } from "@/lib/lisible";
 import { MOT_CABINET } from "@/lib/statut";
@@ -416,7 +417,7 @@ export function EcritureDuCabinet({
             <Aide
               titre={t("cab.ecriture.aRevoir")}
               paragraphes={(proposition.controlesEnDefaut ?? []).map((code) => ({
-                texte: t(`cab.controle.${code}`),
+                texte: libelleDuControle(code, t),
               }))}
             />
           ) : null}
