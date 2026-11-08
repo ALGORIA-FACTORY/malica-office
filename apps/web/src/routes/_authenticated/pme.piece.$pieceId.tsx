@@ -86,13 +86,13 @@ export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
       {
         name: "description",
         content:
-          "Lecture citée d'une pièce : chaque montant ouvre sa zone source ; où elle en est chez le cabinet.",
+          "Lecture citée d'une pièce : chaque montant ouvre sa zone source ; où elle en est chez votre comptabilité.",
       },
       { property: "og:title", content: "Ma pièce — Malica Office" },
       {
         property: "og:description",
         content:
-          "Lecture citée d'une pièce : chaque montant ouvre sa zone source ; où elle en est chez le cabinet.",
+          "Lecture citée d'une pièce : chaque montant ouvre sa zone source ; où elle en est chez votre comptabilité.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

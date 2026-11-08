@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/onboarding")({
       {
         name: "description",
         content:
-          "Créez votre organisation Malica Office : nature PME ou cabinet, mode de validation, établissement principal.",
+          "Créez votre organisation Malica Office : nature PME ou comptabilité, mode de validation, établissement principal.",
       },
       { property: "og:title", content: "Créer une organisation — Malica Office" },
       {

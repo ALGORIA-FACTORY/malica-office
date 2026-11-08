@@ -405,7 +405,7 @@ export const identite = {
     const noms = config ? await identite.lireInvitationParLien(db, r.jeton) : null;
     const envoi = await envoyerInvitation(
       {
-        cabinet: noms?.cabinet ?? "Votre cabinet",
+        cabinet: noms?.cabinet ?? "Votre comptabilité",
         pme: noms?.pme ?? "",
         email: r.email,
         jeton: r.jeton,

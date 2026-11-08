@@ -31,12 +31,12 @@ export const Route = createFileRoute("/_authenticated/cabinet/mise-en-route")({
       {
         name: "description",
         content:
-          "Les quatre étapes de mise en route d'un cabinet : le cabinet, l'équipe, les premiers mandats, le seuil de délégation.",
+          "Les quatre étapes de mise en route d'une comptabilité : la comptabilité, l'équipe, les premiers mandats, le seuil de délégation.",
       },
       { property: "og:title", content: "Mise en route — Malica Office" },
       {
         property: "og:description",
-        content: "Le cabinet, l'équipe, les premiers mandats, le seuil de délégation.",
+        content: "La comptabilité, l'équipe, les premiers mandats, le seuil de délégation.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
