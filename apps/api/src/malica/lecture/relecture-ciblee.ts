@@ -162,7 +162,7 @@ export interface CaseRelue {
 }
 
 /** Le schéma strict de la réponse (`output_config.format`) : un tableau de cases. */
-export const SCHEMA_DE_LA_REPONSE = {
+const SCHEMA_DE_LA_REPONSE = {
   type: "object",
   properties: {
     cellules: {
@@ -354,7 +354,7 @@ export function positionDe(t: Pick<PageToken, "x0" | "x1" | "y0" | "y1">): Posit
  * plus proche jeton qui porte des lettres et n'est pas un montant. Rien quand la ligne n'en
  * porte pas — l'écran dit alors la position.
  */
-export function libelleDeLaLigne(tokens: readonly PageToken[], kase: PageToken): string | null {
+function libelleDeLaLigne(tokens: readonly PageToken[], kase: PageToken): string | null {
   const recouvre = (t: PageToken) =>
     t.page === kase.page &&
     Math.min(t.y1, kase.y1) - Math.max(t.y0, kase.y0) >
