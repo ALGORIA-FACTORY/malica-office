@@ -563,13 +563,13 @@ mention d'exonération : l'exonération n'était permise que par la mention.
 - **Le numéro de facture a son repère arabe court** « رقم » (et « فاتورة رقم ») : les
   factures arabes impriment « فاتورة رقم », l'ordre inverse de « رقم الفاتورة ».
 
-|                                 | juste | faux | inventé | dont à travailler |
-| ------------------------------- | ----: | ---: | ------: | ----------------: |
-| banc, sens lu, bulletin 15      | 6 353 |    0 |       0 |             4 266 |
-| banc, sens lu                   | 6 609 |    0 |       0 |             4 034 |
-| banc, sens déclaré              | 6 911 |    0 |       0 |             3 692 |
-| couche de texte, sens déclaré   | 2 124 |    0 |       0 |               671 |
-| couche de texte, sens lu        | 1 983 |    0 |       0 |               814 |
+|                               | juste | faux | inventé | dont à travailler |
+| ----------------------------- | ----: | ---: | ------: | ----------------: |
+| banc, sens lu, bulletin 15    | 6 353 |    0 |       0 |             4 266 |
+| banc, sens lu                 | 6 609 |    0 |       0 |             4 034 |
+| banc, sens déclaré            | 6 911 |    0 |       0 |             3 692 |
+| couche de texte, sens déclaré | 2 124 |    0 |       0 |               671 |
+| couche de texte, sens lu      | 1 983 |    0 |       0 |               814 |
 
 ## Bulletin 17 — le nom du tiers, et le numéro collé à son libellé (5 novembre 2026)
 
@@ -996,3 +996,48 @@ diagnostic n'est prouvée. Justes de la référence : 6 935 → 7 028.
 - **Lot 3** : `normaliser` et `entete::mot` mémorisés le temps d'une résolution (60 % du
   temps du moteur au profileur). Sorties identiques sur les 800 entrées du banc ; médiane
   84,5 → 61,5 ms, p95 269 → 158 ms.
+
+## Bulletin — la relecture ciblée en production, et les valeurs lues sûres (8 novembre 2026, nuit)
+
+Deux décisions du dirigeant du 8 novembre 2026, mises en production
+(branche `claude/lecture-relecture-et-valeurs-sures`).
+
+**1. La relecture ciblée par Claude, activée, Haiku, en arrière-plan.** Une pièce lue par
+l'OCR que le Sudoku laisse « aucune solution » est rendue tout de suite, « en
+vérification » ; un travail `relecture_cases` de la file découpe ses cases de montant (le
+choix est celui de l'outil mesuré, vérifié identique sur les 261 relevés), Claude les
+transcrit ou dit « illisible », et la transcription n'est qu'un candidat : la pièce n'est
+prouvée que si `sudoku.sansIa` referme tout ce que l'écriture exige. Sinon la lecture reste
+et l'écran dit la case (« « Total TTC » (en bas à droite) ne se lit pas : vérifiez cette
+case »). Modèle, consigne, cases au plus et par appel en base, réglables dans la tour
+(R8, R10) ; budget : celui de Claude dans la chaîne de désignation — épuisé, absent, clé
+absente ou Claude en panne, rien n'est appelé et le motif reste. Exception à R2 décidée par
+le dirigeant, écrite dans `relecture-ciblee.ts`.
+
+Mesure réelle en CI, sur le code de production (run 42513826636, plafond 5 $) :
+
+|                    | pièces prouvées | faux affirmés | coût                                        | appel méd. / p95 | découpe | re-preuve |
+| ------------------ | --------------: | ------------: | ------------------------------------------- | ---------------- | ------- | --------- |
+| référence          |             304 |             0 | —                                           | —                | —       | —         |
+| + relecture ciblée |   **310** (+ 6) |         **0** | 0,03 $ en tout, 0,0006 $ / pièce relue (47) | 2,7 s / 6,6 s    | 0,02 s  | 0,04 s    |
+
+Gagnées : algoria 023, 083, 088, synthétique 057, 094, 099 (057 : les chiffres orientaux
+relus justes, avec le libellé arabe tolérant de #300).
+
+**2. Les valeurs « à vérifier » sans faute au banc s'affichent sûres**, au statut `lu`
+(« Lu, non prouvé par calcul »), par un réglage par champ en base
+(`plateforme.lecture_valeurs_sures`), réversible dans la tour, jamais un montant (refusé par
+la base et par l'adaptateur). Défaut livré : les champs qu'AUCUN des quatre bancs ne montre
+faux — `telephone_email_emetteur`, `code_tva_categorie_etablissement`, `rib_emetteur`,
+`type_document`, `devise`, `mode_reglement`. **Exclus** : la date d'émission et la date
+d'opération (Qwen : 9 fausses chacune, « 2059-06-02 », « 0606-05-27 »), le matricule de
+l'émetteur et du client, le numéro de facture, la raison sociale, le nom du client, le
+registre de commerce, l'adresse de l'émetteur ; et faute de mesure (moins de 5 pistes,
+famille fautive) les autres dates, identifiants et l'adresse du client.
+
+| banc      | prouvées |    faux affirmés avant → après | valeurs devenues affirmées (toutes justes) |
+| --------- | -------: | -----------------------------: | -----------------------------------------: |
+| référence |      304 |                          0 → 0 |                                         26 |
+| v6 small  |      181 | 6 → 6 (les mêmes, + 1 échange) |                                         24 |
+| staging   |       50 |                          0 → 0 |                                          0 |
+| Qwen      |       95 |                          0 → 0 |                                        182 |
