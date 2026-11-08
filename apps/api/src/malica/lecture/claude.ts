@@ -45,8 +45,11 @@ export class ClaudeError extends Error {
 export interface ClaudeResult {
   model: string;
   answer: string;
+  /** Les jetons d'entrée HORS cache (après le point de cache) : le tarif `chat`. */
   tokensIn: number | null;
   tokensOut: number | null;
+  /** Le cache du prompt système : lu (tarif `cache`) et écrit (tarif `cache_ecriture`). */
+  cache: { lus: number | null; ecrits: number | null };
   latencyMs: number;
 }
 
@@ -76,7 +79,14 @@ export async function callClaude(input: {
         model: input.model,
         max_tokens: SORTIE_MAX_JETONS,
         output_config: { effort: EFFORT },
-        system: input.system,
+        /*
+         * LE PROMPT SYSTÈME SE MET EN CACHE. Il est le même pour chaque pièce
+         * (le dossier, les tiers et le plan voyagent dans le message) : lu en
+         * cache, il coûte 0,05 à 0,1 fois le prix d'entrée. Le point de cache
+         * est posé à sa fin ; le cache vit cinq minutes, renouvelé à chaque
+         * lecture. Trop court, il n'est simplement pas mis en cache.
+         */
+        system: [{ type: "text", text: input.system, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: input.user }],
       }),
       ...(input.signal ? { signal: input.signal } : {}),
@@ -103,7 +113,12 @@ export async function callClaude(input: {
   let parsed: {
     content?: Array<{ type?: string; text?: string }>;
     stop_reason?: string;
-    usage?: { input_tokens?: number; output_tokens?: number };
+    usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+      cache_creation_input_tokens?: number;
+      cache_read_input_tokens?: number;
+    };
   };
   try {
     parsed = JSON.parse(text) as typeof parsed;
@@ -124,6 +139,10 @@ export async function callClaude(input: {
     answer,
     tokensIn: parsed.usage?.input_tokens ?? null,
     tokensOut: parsed.usage?.output_tokens ?? null,
+    cache: {
+      lus: parsed.usage?.cache_read_input_tokens ?? null,
+      ecrits: parsed.usage?.cache_creation_input_tokens ?? null,
+    },
     latencyMs,
   };
 }

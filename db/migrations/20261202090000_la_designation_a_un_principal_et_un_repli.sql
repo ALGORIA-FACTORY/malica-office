@@ -26,6 +26,10 @@
 --    de 100 000 jetons — le plan de la désignation est borné à 60 000
 --    caractères, `planBorne`). Chaque identifiant est un instantané figé chez
 --    le fournisseur : aucun « -latest ».
+--    Le modèle livré au rang 1 est `claude-haiku-5-5` : essai de l'expert
+--    plateforme sur la console Claude le 8 novembre 2026 (facture fictive
+--    désignée sans faute, 0,0006 $, 4 s). `claude-sonnet-5-5` reste tarifé et
+--    se choisit dans la tour.
 -- 2. `plateforme.reglages_designation` : la chaîne, rang par rang (1 le
 --    principal, 2 le repli), en ajout seul. La dernière décision d'un rang vaut.
 -- 3. `app.chaine_de_designation()` : la chaîne en vigueur, avec, pour chaque
@@ -37,9 +41,19 @@
 -- 5. `plateforme.designation_regler(…)` et `plateforme.designation_etat()` :
 --    la tour règle et voit (maillons, dépenses, dernières bascules).
 --
--- Valeurs initiales volontairement prudentes : 50 $ par mois pour Claude,
--- 20 $ par mois pour DeepSeek. Un arbitrage commercial : la tour les règle
--- (docs/livraison-2026-10-19/10-ce-qui-reste-ouvert.md).
+-- Valeurs initiales (R10, défauts livrés que la tour change) : 500 $ par mois
+-- civil pour Claude — les crédits de l'offre startup d'ALGORIA Factory, dit
+-- par le dirigeant le 8 novembre 2026 : DeepSeek ne prend la main qu'au-delà,
+-- ou en panne — et 20 $ par mois pour DeepSeek. La période « mois » est le
+-- mois CIVIL (`date_trunc('month', now())`) : le compteur repart de zéro le
+-- 1er de chaque mois, sans geste ni tâche planifiée.
+--
+-- La MISE EN CACHE du prompt système de Claude (`cache_control`) se paie à
+-- part : l'écriture à 1,25 fois le prix d'entrée, la lecture à 0,05 fois
+-- (Sonnet 5.5) ou 0,1 fois (Haiku 5.5), selon la même documentation. Deux
+-- rôles tarifés la portent, pour que le journal compte la facture exacte et
+-- que le plafond morde dessus : `cache` (lecture, rôle déjà connu) et
+-- `cache_ecriture` (nouveau).
 --
 -- REJEU (R11) : dates en littéral, `if not exists`, `create or replace`,
 -- `on conflict do nothing`, semences gardées par `where not exists`.
@@ -53,6 +67,23 @@ insert into agents.model_pricing
 values
   ('anthropic', 'claude-sonnet-5-5', 'chat', 2.00, 10.00, 'USD', false, date '2026-11-01'),
   ('anthropic', 'claude-haiku-5-5',  'chat', 0.10,  0.50, 'USD', false, date '2026-11-01')
+on conflict do nothing;
+
+alter table agents.model_pricing
+  drop constraint if exists model_pricing_role_check;
+alter table agents.model_pricing
+  add constraint model_pricing_role_check
+  check (role in ('reasoner', 'chat', 'vision', 'cache', 'cache_ecriture', 'embedding', 'recette',
+                  'generateur'));
+
+-- Le cache du prompt : lecture (`cache`) et écriture (`cache_ecriture`), à l'entrée seule.
+insert into agents.model_pricing
+  (provider, model, role, price_in_per_mtok, price_out_per_mtok, currency, sovereign, effective_from)
+values
+  ('anthropic', 'claude-sonnet-5-5', 'cache',          0.10,  0, 'USD', false, date '2026-11-01'),
+  ('anthropic', 'claude-sonnet-5-5', 'cache_ecriture', 2.50,  0, 'USD', false, date '2026-11-01'),
+  ('anthropic', 'claude-haiku-5-5',  'cache',          0.01,  0, 'USD', false, date '2026-11-01'),
+  ('anthropic', 'claude-haiku-5-5',  'cache_ecriture', 0.125, 0, 'USD', false, date '2026-11-01')
 on conflict do nothing;
 
 -- --- 2. La chaîne, rang par rang -----------------------------------------------------------------
@@ -95,8 +126,8 @@ create trigger reglages_designation_ne_se_reecrivent_pas
 
 insert into plateforme.reglages_designation
   (rang, fournisseur, modele, role, periode, plafond_usd, motif, decide_le)
-select 1, 'anthropic', 'claude-sonnet-5-5', 'chat', 'mois', 50,
-       'Décision du dirigeant du 8 novembre 2026 : Claude désigne. Valeur initiale à régler par la tour.',
+select 1, 'anthropic', 'claude-haiku-5-5', 'chat', 'mois', 500,
+       'Décision du dirigeant du 8 novembre 2026 : Claude désigne, dans les 500 $ de crédits mensuels de l''offre startup. Valeur initiale à régler par la tour.',
        timestamptz '2026-11-08 00:00:00+00'
  where not exists (select 1 from plateforme.reglages_designation where rang = 1);
 

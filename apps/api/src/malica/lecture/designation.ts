@@ -67,6 +67,8 @@ export interface ReponseDeDesignation {
   tokensIn: number | null;
   tokensOut: number | null;
   latencyMs: number;
+  /** Le cache du prompt système (Claude) : jetons lus et écrits, tarifés à part. */
+  cache?: { lus: number | null; ecrits: number | null };
 }
 
 export type IssueDeLaChaine =

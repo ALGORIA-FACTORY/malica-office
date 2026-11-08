@@ -243,7 +243,13 @@ export interface VisionRead {
   tokensOut: number | null;
   /** Chaque passe séparément, pour le journal des exécutions (`agents.agent_runs`). */
   releve: { latencyMs: number; tokensIn: number | null; tokensOut: number | null };
-  designation: { latencyMs: number; tokensIn: number | null; tokensOut: number | null };
+  designation: {
+    latencyMs: number;
+    tokensIn: number | null;
+    tokensOut: number | null;
+    /** Le cache du prompt système, quand le désignateur en a un (Claude). */
+    cache?: { lus: number | null; ecrits: number | null };
+  };
   /**
    * Les maillons de la chaîne de désignation SAUTÉS avant celui qui a désigné
    * — ou tous, si la chaîne s'est arrêtée —, avec leur motif (`technique`,
@@ -1132,6 +1138,7 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
       latencyMs: Date.now() - finReleve,
       tokensIn: pass2.tokensIn ?? null,
       tokensOut: pass2.tokensOut ?? null,
+      ...(pass2.cache ? { cache: pass2.cache } : {}),
     },
     bascules: issue.bascules,
   };

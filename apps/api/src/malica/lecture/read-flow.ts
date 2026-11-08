@@ -640,9 +640,31 @@ export function entreesDuJournal(read: VisionRead): EntreeDuJournal[] {
     designation.status = "degraded";
     designation.erreur = `repli.${premiere.motif}`;
   }
+  /*
+   * Le cache du prompt système de Claude se facture à part : sa lecture et
+   * son écriture ont chacune leur ligne, sous leur rôle tarifé (`cache`,
+   * `cache_ecriture`), pour que le plafond morde sur la facture exacte.
+   */
+  const cache = read.sansModele === undefined ? read.designation.cache : undefined;
+  const lignesDuCache = (
+    [
+      ["cache", cache?.lus ?? 0],
+      ["cache_ecriture", cache?.ecrits ?? 0],
+    ] as const
+  )
+    .filter(([, n]) => n > 0 && designation)
+    .map(([role, n]) => ({
+      agent: designation?.agent ?? "",
+      model: read.selectModel,
+      role,
+      passe: { latencyMs: 0, tokensIn: n, tokensOut: null },
+      status: "ok" as const,
+      erreur: null,
+    }));
   return [
     ...(releve ? [releve] : []),
     ...(designation && read.sansModele === undefined ? [designation] : []),
+    ...lignesDuCache,
     ...bascules.map((b) => ({
       agent: designation?.agent ?? "",
       model: b.modele,

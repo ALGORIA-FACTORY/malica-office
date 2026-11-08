@@ -613,12 +613,28 @@ les deux budgets épuisés la pièce est lue par le moteur Sudoku seul
 (`20261202090000_la_designation_a_un_principal_et_un_repli.sql`,
 `apps/api/src/malica/lecture/designation.ts`). Tranché par défaut, à confirmer :
 
-- **Les plafonds de départ** : 50 $ par mois pour Claude, 20 $ par mois pour
-  DeepSeek. La tour les règle (section « Modèles »), datés et motivés.
-- **Le modèle Claude de départ** : `claude-sonnet-5-5` (2 $ / 10 $ par million
-  de jetons). `claude-haiku-5-5` (0,10 $ / 0,50 $) est tarifé et se choisit dans
-  la tour ; aucune mesure de qualité n'a encore départagé les deux sur nos
-  pièces (banc `tests/real/designation-cout.ts` à rejouer avec la clé).
+- **Les plafonds de départ** : 500 $ par mois civil pour Claude (les crédits
+  mensuels de l'offre startup, dit par le dirigeant le 8 novembre 2026 : le
+  compteur repart de zéro le 1er du mois), 20 $ par mois pour DeepSeek. La tour
+  les règle (section « Modèles »), datés et motivés.
+- **Le cache du prompt système de Claude** est posé : sa lecture et son écriture
+  se journalisent sous leurs rôles tarifés (`cache`, `cache_ecriture`). Les
+  crédits startup sont supposés couvrir ces mêmes prix ; si l'offre les compte
+  autrement, seul le plafond est à régler.
+- **Le modèle Claude de départ** : `claude-haiku-5-5` (0,10 $ / 0,50 $ par
+  million de jetons), sur l'essai de l'expert plateforme du 8 novembre 2026
+  (une facture fictive). `claude-sonnet-5-5` (2 $ / 10 $) est tarifé et se
+  choisit dans la tour. À mesurer sur nos vraies pièces avec la clé (banc
+  `tests/real/designation-cout.ts`). Un « second avis » Sonnet sur les pièces
+  non prouvées n'est PAS câblé : c'est un troisième appel, à décider.
+- **Les sorties structurées (`output_config.format`) ne sont PAS activées.** Leur
+  limite (24 paramètres facultatifs et 16 unions par requête) ne tient pas le
+  contrat de désignation R2 tel qu'il est : une trentaine de pointeurs
+  `page/ordinal` facultatifs et des références à clés libres. Les activer
+  demande de remodeler ce contrat (champs requis avec « non désigné » explicite,
+  références en liste), puis un appel réel pour valider le schéma — rien de cela
+  ne se fait sans clé ni à l'aveugle. D'ici là : réessai sur JSON illisible, puis
+  repli DeepSeek, journalisé.
 - **Ce que compte le budget** : la facture du FOURNISSEUR, tous organes
   confondus. Le conseil, les procès-verbaux et le générateur de recettes
   appellent aussi DeepSeek : leur dépense entame le budget du repli.

@@ -219,7 +219,12 @@ describe("le client Claude", () => {
               { type: "text", text: "null}" },
             ],
             stop_reason: "end_turn",
-            usage: { input_tokens: 1234, output_tokens: 56 },
+            usage: {
+              input_tokens: 1234,
+              output_tokens: 56,
+              cache_read_input_tokens: 1500,
+              cache_creation_input_tokens: 0,
+            },
           }),
         );
       }) as unknown as typeof fetch,
@@ -235,7 +240,12 @@ describe("le client Claude", () => {
     assert.ok(entetes["anthropic-version"]);
     const corps = JSON.parse(String(init.body)) as Record<string, unknown>;
     assert.equal(corps["model"], "claude-haiku-5-5", "le modèle vient de la chaîne");
-    assert.equal(corps["system"], "le système");
+    assert.deepEqual(
+      corps["system"],
+      [{ type: "text", text: "le système", cache_control: { type: "ephemeral" } }],
+      "le prompt système se met en cache",
+    );
+    assert.deepEqual(r.cache, { lus: 1500, ecrits: 0 });
     assert.deepEqual(corps["messages"], [{ role: "user", content: "le plan" }]);
   });
 
@@ -361,6 +371,25 @@ describe("la chaîne au journal des exécutions", () => {
       ],
     );
     assert.equal(lignes[2]!.passe.tokensIn, null, "aucun jeton : coût nul au tarif");
+  });
+
+  it("le cache du prompt de Claude a ses lignes, sous ses rôles tarifés", async () => {
+    const lu = await runVisionRead({
+      dataUrl: "data:,",
+      tokens: PLAN,
+      releveur: "pdf-text",
+      taxCodes: [],
+      designation: {
+        chaine: async () => [maillon(1, "anthropic"), maillon(2, "deepseek")],
+        appeler: async () => ({ ...REPONSE, cache: { lus: 1500, ecrits: 0 } }),
+      },
+    });
+    const cache = entreesDuJournal(lu).filter((e) => e.role.startsWith("cache"));
+    assert.deepEqual(
+      cache.map((e) => [e.model, e.role, e.passe.tokensIn]),
+      [["claude-sonnet-5-5", "cache", 1500]],
+      "une lecture de cache, aucune écriture (zéro jeton : pas de ligne)",
+    );
   });
 
   it("arrêt : aucune ligne de désignation, chaque maillon dit l'arrêt", async () => {
