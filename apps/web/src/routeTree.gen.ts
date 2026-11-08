@@ -45,6 +45,7 @@ import { Route as AuthenticatedCabinetStocksRouteImport } from './routes/_authen
 import { Route as AuthenticatedPmeIndexRouteImport } from './routes/_authenticated/pme.index'
 import { Route as AuthenticatedPmeALireRouteImport } from './routes/_authenticated/pme.a-lire'
 import { Route as AuthenticatedPmeBienvenueRouteImport } from './routes/_authenticated/pme.bienvenue'
+import { Route as AuthenticatedPmeBoutonPlusRouteImport } from './routes/_authenticated/pme.bouton-plus'
 import { Route as AuthenticatedPmeCapturerRouteImport } from './routes/_authenticated/pme.capturer'
 import { Route as AuthenticatedPmeChargesRouteImport } from './routes/_authenticated/pme.charges'
 import { Route as AuthenticatedPmeCoffreRouteImport } from './routes/_authenticated/pme.coffre'
@@ -270,6 +271,12 @@ const AuthenticatedPmeBienvenueRoute =
     path: '/bienvenue',
     getParentRoute: () => AuthenticatedPmeRoute,
   } as any)
+const AuthenticatedPmeBoutonPlusRoute =
+  AuthenticatedPmeBoutonPlusRouteImport.update({
+    id: '/bouton-plus',
+    path: '/bouton-plus',
+    getParentRoute: () => AuthenticatedPmeRoute,
+  } as any)
 const AuthenticatedPmeCapturerRoute =
   AuthenticatedPmeCapturerRouteImport.update({
     id: '/capturer',
@@ -440,6 +447,7 @@ export interface FileRoutesByFullPath {
   '/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/pme/a-lire': typeof AuthenticatedPmeALireRoute
   '/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
+  '/pme/bouton-plus': typeof AuthenticatedPmeBoutonPlusRoute
   '/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/pme/coffre': typeof AuthenticatedPmeCoffreRoute
@@ -498,6 +506,7 @@ export interface FileRoutesByTo {
   '/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/pme/a-lire': typeof AuthenticatedPmeALireRoute
   '/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
+  '/pme/bouton-plus': typeof AuthenticatedPmeBoutonPlusRoute
   '/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/pme/coffre': typeof AuthenticatedPmeCoffreRoute
@@ -561,6 +570,7 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/_authenticated/pme/a-lire': typeof AuthenticatedPmeALireRoute
   '/_authenticated/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
+  '/_authenticated/pme/bouton-plus': typeof AuthenticatedPmeBoutonPlusRoute
   '/_authenticated/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/_authenticated/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/_authenticated/pme/coffre': typeof AuthenticatedPmeCoffreRoute
@@ -624,6 +634,7 @@ export interface FileRouteTypes {
     | '/cabinet/stocks'
     | '/pme/a-lire'
     | '/pme/bienvenue'
+    | '/pme/bouton-plus'
     | '/pme/capturer'
     | '/pme/charges'
     | '/pme/coffre'
@@ -682,6 +693,7 @@ export interface FileRouteTypes {
     | '/cabinet/stocks'
     | '/pme/a-lire'
     | '/pme/bienvenue'
+    | '/pme/bouton-plus'
     | '/pme/capturer'
     | '/pme/charges'
     | '/pme/coffre'
@@ -744,6 +756,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/stocks'
     | '/_authenticated/pme/a-lire'
     | '/_authenticated/pme/bienvenue'
+    | '/_authenticated/pme/bouton-plus'
     | '/_authenticated/pme/capturer'
     | '/_authenticated/pme/charges'
     | '/_authenticated/pme/coffre'
@@ -1035,6 +1048,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPmeBienvenueRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
     }
+    '/_authenticated/pme/bouton-plus': {
+      id: '/_authenticated/pme/bouton-plus'
+      path: '/bouton-plus'
+      fullPath: '/pme/bouton-plus'
+      preLoaderRoute: typeof AuthenticatedPmeBoutonPlusRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
+    }
     '/_authenticated/pme/capturer': {
       id: '/_authenticated/pme/capturer'
       path: '/capturer'
@@ -1274,6 +1294,7 @@ const AuthenticatedCabinetRouteWithChildren =
 interface AuthenticatedPmeRouteChildren {
   AuthenticatedPmeALireRoute: typeof AuthenticatedPmeALireRoute
   AuthenticatedPmeBienvenueRoute: typeof AuthenticatedPmeBienvenueRoute
+  AuthenticatedPmeBoutonPlusRoute: typeof AuthenticatedPmeBoutonPlusRoute
   AuthenticatedPmeCapturerRoute: typeof AuthenticatedPmeCapturerRoute
   AuthenticatedPmeChargesRoute: typeof AuthenticatedPmeChargesRoute
   AuthenticatedPmeCoffreRoute: typeof AuthenticatedPmeCoffreRoute
@@ -1295,6 +1316,7 @@ interface AuthenticatedPmeRouteChildren {
 const AuthenticatedPmeRouteChildren: AuthenticatedPmeRouteChildren = {
   AuthenticatedPmeALireRoute: AuthenticatedPmeALireRoute,
   AuthenticatedPmeBienvenueRoute: AuthenticatedPmeBienvenueRoute,
+  AuthenticatedPmeBoutonPlusRoute: AuthenticatedPmeBoutonPlusRoute,
   AuthenticatedPmeCapturerRoute: AuthenticatedPmeCapturerRoute,
   AuthenticatedPmeChargesRoute: AuthenticatedPmeChargesRoute,
   AuthenticatedPmeCoffreRoute: AuthenticatedPmeCoffreRoute,

@@ -25,6 +25,42 @@ export function epinglees(): string[] {
   }
 }
 
+const CLE_RECENTES = "malica.societes.recentes";
+const RECENTES_MAX = 5;
+
+/** Les dernières sociétés ouvertes sur CET appareil, la plus récente d'abord. */
+export function recentes(): string[] {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(CLE_RECENTES) ?? "[]") as unknown;
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Note une société comme ouverte à l'instant : le sélecteur de l'en-tête et
+ * l'étape « Pour qui ? » lisent la même liste.
+ */
+export function noterRecente(id: string) {
+  const r = [id, ...recentes().filter((x) => x !== id)].slice(0, RECENTES_MAX);
+  try {
+    window.localStorage.setItem(CLE_RECENTES, JSON.stringify(r));
+  } catch {
+    /* stockage plein ou refusé : la commodité se perd, rien d'autre */
+  }
+}
+
+/** Deux initiales pour la pastille d'une société. */
+export function initialesDe(nom: string) {
+  const mots = nom
+    .replace(/[^\p{L}\p{N} ]/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  return ((mots[0]?.[0] ?? "") + (mots[1]?.[0] ?? "")).toLocaleUpperCase() || "·";
+}
+
 export function plier(s: string) {
   return s.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase();
 }

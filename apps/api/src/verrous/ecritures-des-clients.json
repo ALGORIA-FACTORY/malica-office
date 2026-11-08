@@ -446,12 +446,12 @@
     {
       "objet": "identity.profiles",
       "privilege": "INSERT",
-      "chemins": ["public.mon_profil_ecrire"]
+      "chemins": ["public.mon_cote_du_plus_ecrire", "public.mon_profil_ecrire"]
     },
     {
       "objet": "identity.profiles",
       "privilege": "UPDATE",
-      "chemins": ["public.mon_profil_ecrire"]
+      "chemins": ["public.mon_cote_du_plus_ecrire", "public.mon_profil_ecrire"]
     },
     {
       "objet": "immo.assets",

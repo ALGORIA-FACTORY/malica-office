@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
+import { PourQuiSociete } from "@/components/malica/pour-qui";
 import { Aide } from "@/components/malica/aide";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
@@ -287,6 +288,8 @@ function PmeCapturer() {
 
   const [etape, setEtape] = useState(0);
   const [dest, setDest] = useState<Destination | null>(null);
+  /** « Où la ranger », à l'étape « Pour qui ? » : la société, sauf choix contraire. */
+  const [ou, setOu] = useState<"societe" | "prive">("societe");
   /** Les pièces décochées à l'étape 2 : gardées pour soi, non lues. */
   const [exclues, setExclues] = useState<readonly string[]>([]);
   /** La vignette ouverte dans la bande, et son petit menu. */
@@ -1063,51 +1066,91 @@ function PmeCapturer() {
             </div>
             <p className="c-sous">{t("pme.capture.lot.nonLues", { count: lot.length })}</p>
 
-            {/* Le sélecteur de société n'apparaît que s'il y a plusieurs
-                dossiers — et il vient du layout, qui les a déjà. */}
+            {/*
+             * Planche 5 (7 novembre 2026) : avec plusieurs sociétés, la société
+             * ouverte est déjà choisie, les autres se cherchent (nom ou
+             * matricule) ou se reprennent dans les récentes ; puis « Où la
+             * ranger » et « Continuer ». Avec une seule société, rien ne
+             * change : les deux grandes cartes, un toucher.
+             */}
             {pme.dossiers.length > 1 ? (
-              <div className="ch">
-                <span className="t">{t("pme.capture.dest.societeLabel")}</span>
-                {pme.dossiers.map((d) => (
+              <>
+                <PourQuiSociete
+                  societes={pme.dossiers}
+                  ouverte={pme.tenantId}
+                  onChoisir={(id) => pme.choisirDossier(id)}
+                />
+                <p className="pq-grp">{t("pme.capture.dest.ou")}</p>
+                <div className="pq-ou" role="radiogroup" aria-label={t("pme.capture.dest.ou")}>
                   <button
                     type="button"
-                    key={d.id}
-                    className={d.id === pme.tenantId ? "on" : ""}
-                    onClick={() => pme.choisirDossier(d.id)}
+                    role="radio"
+                    aria-checked={ou === "societe"}
+                    onClick={() => setOu("societe")}
                   >
-                    {d.name}
+                    <b>{t("pme.capture.dest.societe")}</b>
+                    <span>{t("pme.capture.dest.societe.court")}</span>
                   </button>
-                ))}
-              </div>
-            ) : null}
-
-            <button
-              type="button"
-              className="c-carte acc"
-              onClick={() => {
-                setDest("societe");
-                setEtape(2);
-              }}
-            >
-              <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                <path d="M4 21V7l8-4 8 4v14M9 21v-5h6v5M8 10h1M15 10h1M8 13.5h1M15 13.5h1" />
-              </svg>
-              <b>{t("pme.capture.dest.societe")}</b>
-              <span>{t("pme.capture.dest.societe.court")}</span>
-            </button>
-            <button
-              type="button"
-              className="c-carte"
-              disabled={garder.isPending}
-              onClick={() => {
-                setDest("prive");
-                garder.mutate(lot, { onSuccess: () => setEtape(8) });
-              }}
-            >
-              <Icone d={G.prive} />
-              <b>{t("pme.capture.dest.prive")}</b>
-              <span>{t("pme.capture.dest.prive.court")}</span>
-            </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={ou === "prive"}
+                    onClick={() => setOu("prive")}
+                  >
+                    <b>{t("pme.capture.dest.prive")}</b>
+                    <span>{t("pme.capture.dest.prive.court")}</span>
+                  </button>
+                </div>
+                <div className="go">
+                  <button
+                    type="button"
+                    className="pr"
+                    disabled={garder.isPending}
+                    onClick={() => {
+                      if (ou === "societe") {
+                        setDest("societe");
+                        setEtape(2);
+                      } else {
+                        setDest("prive");
+                        garder.mutate(lot, { onSuccess: () => setEtape(8) });
+                      }
+                    }}
+                  >
+                    {t("pme.capture.continuer")}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="c-carte acc"
+                  onClick={() => {
+                    setDest("societe");
+                    setEtape(2);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                    <path d="M4 21V7l8-4 8 4v14M9 21v-5h6v5M8 10h1M15 10h1M8 13.5h1M15 13.5h1" />
+                  </svg>
+                  <b>{t("pme.capture.dest.societe")}</b>
+                  <span>{t("pme.capture.dest.societe.court")}</span>
+                </button>
+                <button
+                  type="button"
+                  className="c-carte"
+                  disabled={garder.isPending}
+                  onClick={() => {
+                    setDest("prive");
+                    garder.mutate(lot, { onSuccess: () => setEtape(8) });
+                  }}
+                >
+                  <Icone d={G.prive} />
+                  <b>{t("pme.capture.dest.prive")}</b>
+                  <span>{t("pme.capture.dest.prive.court")}</span>
+                </button>
+              </>
+            )}
           </>
         ) : null}
 

@@ -29,6 +29,7 @@ import { createPortal } from "react-dom";
 
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
+import { initialesDe, noterRecente, plier, recentes as lireRecentes } from "@/lib/mes-societes";
 
 export interface SocieteDuSelecteur {
   id: string;
@@ -37,8 +38,6 @@ export interface SocieteDuSelecteur {
 }
 
 const CLE_EPINGLEES = "malica.societes.epinglees";
-const CLE_RECENTES = "malica.societes.recentes";
-const RECENTES_MAX = 5;
 
 function lire(cle: string): string[] {
   try {
@@ -55,20 +54,6 @@ function ecrire(cle: string, ids: string[]) {
   } catch {
     /* stockage plein ou refusé : la commodité se perd, rien d'autre */
   }
-}
-
-/** Sans accents ni casse : « societe » trouve « Société ». */
-function plier(s: string) {
-  return s.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase();
-}
-
-function initialesDe(nom: string) {
-  const mots = nom
-    .replace(/[^\p{L}\p{N} ]/gu, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  return ((mots[0]?.[0] ?? "") + (mots[1]?.[0] ?? "")).toLocaleUpperCase() || "·";
 }
 
 export function SelecteurDeSociete({
@@ -112,7 +97,7 @@ export function SelecteurDeSociete({
   useEffect(() => {
     if (!ouvert) return;
     setEpinglees(lire(CLE_EPINGLEES));
-    setRecentes(lire(CLE_RECENTES));
+    setRecentes(lireRecentes());
     setCherche("");
     const r = puce.current?.getBoundingClientRect();
     setAncre(r ? { top: r.bottom + 8, left: r.left } : null);
@@ -168,8 +153,7 @@ export function SelecteurDeSociete({
     ids.map((id) => parId.get(id)).filter((s): s is SocieteDuSelecteur => !!s);
 
   const choisir = (id: string) => {
-    const r = [id, ...lire(CLE_RECENTES).filter((x) => x !== id)].slice(0, RECENTES_MAX);
-    ecrire(CLE_RECENTES, r);
+    noterRecente(id);
     onOuvrir(id);
     setOuvert(false);
   };

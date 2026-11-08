@@ -23,6 +23,7 @@ import { usePrixEnPlus } from "@/hooks/use-prix-en-plus";
 import { libelleDOffre, offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/use-offres";
 import { cleMonCabinet, useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useMonAcces } from "@/hooks/use-mon-acces";
+import { useCoteDuPlus } from "@/hooks/use-cote-du-plus";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres } from "@/lib/lisible";
@@ -112,6 +113,7 @@ export const Route = createFileRoute("/_authenticated/pme/reglages")({
 function PmeReglages() {
   const { t, locale, setLocale } = useI18n();
   const { apparence, choisir } = useApparence();
+  const { cote: coteDuPlus } = useCoteDuPlus();
   const pme = usePme();
   const aLEchelle = usePrix();
   const catalogue = useCatalogueDesOffres().data;
@@ -534,6 +536,18 @@ function PmeReglages() {
             {a.label}
           </button>
         ))}
+      </div>
+      {/* Planche 5 (7 novembre 2026) : le côté du « + », pour la main qui tient le téléphone. */}
+      <div className="rows">
+        <Link to="/pme/bouton-plus" className="rw">
+          <span className="bd">
+            <b>{t("pme.boutonPlus.titre")}</b>
+            <span>
+              {coteDuPlus === "gauche" ? t("pme.boutonPlus.gauche") : t("pme.boutonPlus.droite")}
+            </span>
+          </span>
+          <IcChevron />
+        </Link>
       </div>
 
       {/* ───────────────────────────────────────────────── vos données */}
