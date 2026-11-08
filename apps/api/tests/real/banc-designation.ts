@@ -429,6 +429,7 @@ async function principal(): Promise<void> {
     let reserve = 0;
     const tarif = async (d: Designateur) => tarifs.get(nom(d)) ?? null;
 
+    const clesRefusees = new Map<Fournisseur, string>();
     const appeler = async (l: PieceLue, d: Designateur): Promise<AppelMesure> => {
       const etat = l.etat!;
       const commun = {
@@ -449,6 +450,9 @@ async function principal(): Promise<void> {
         fauxAffirmes: [],
         proposes: { juste: 0, faux: 0, detail: [] },
       };
+      // Une clé refusée (401) ne se réessaie pas pièce par pièce : le désignateur est arrêté.
+      const refus = clesRefusees.get(d.fournisseur);
+      if (refus) return { ...vide, appel: "panne", erreur: refus };
       const g = garde(d);
       const pire = (jetonsInvite(l) * 2 * g.entree + sortieMax * g.sortie) / 1e6;
       if (depenseDeGarde + reserve + pire > plafond) return { ...vide, appel: "plafond" };
@@ -474,13 +478,12 @@ async function principal(): Promise<void> {
         });
       } catch (e) {
         reserve -= pire;
-        // Une panne peut avoir été facturée (un réessai) : on garde la réserve comme dépense.
-        depenseDeGarde += pire;
-        return {
-          ...vide,
-          appel: "panne",
-          erreur: (e instanceof Error ? e.message : String(e)).slice(0, 200),
-        };
+        const erreur = (e instanceof Error ? e.message : String(e)).slice(0, 200);
+        // Un refus d'authentification n'est pas facturé ; toute autre panne peut l'avoir été
+        // (un réessai) : sa réserve est gardée comme dépense.
+        if (/\b401\b/u.test(erreur)) clesRefusees.set(d.fournisseur, `clé refusée : ${erreur}`);
+        else depenseDeGarde += pire;
+        return { ...vide, appel: "panne", erreur };
       }
       const des = lecture.designation;
       const jetons = {
