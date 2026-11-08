@@ -1,6 +1,6 @@
 /**
  * Une écriture que le CABINET a inscrite n'est lisible d'aucune porte de la
- * PME (lot S2, `20261202100100`) — y compris quand la PME en avait posé la
+ * PME (lot S2, `20261205092700`) — y compris quand la PME en avait posé la
  * proposition.
  *
  * Le portier lit, au-delà de son appelant, toute écriture que celui-ci a

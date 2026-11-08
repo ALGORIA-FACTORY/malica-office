@@ -37,7 +37,7 @@ drop function if exists ref.appliquer_bareme(text, text, date, numeric);
 --
 -- La migration de retour, à jouer telle quelle (sans les « -- » de tête). Les
 -- définitions sont celles que rend pg_get_functiondef sur une base montée
--- jusqu'à 20261202130000, octet pour octet ; leur droit d'exécution redevient
+-- jusqu'à 20261205093600, octet pour octet ; leur droit d'exécution redevient
 -- le défaut (PUBLIC), comme avant.
 --
 -- CREATE OR REPLACE FUNCTION ref.parametre_fiscal(p_jurisdiction text, p_code text, p_date date)
@@ -118,4 +118,4 @@ drop function if exists ref.appliquer_bareme(text, text, date, numeric);
 -- ;
 -- comment on function ref.appliquer_bareme(text,text,date,numeric) is
 --   'Barème progressif par tranches. N''applique aucun arrondi : la règle d''arrondi est un paramètre distinct (IRPP_ARRONDI), parce qu''elle peut changer sans que le barème change.';
--- delete from app.migrations where nom = '20261202150400_les_fonctions_fiscales_sans_appelant_se_retirent.sql';
+-- delete from app.migrations where nom = '20261205094400_les_fonctions_fiscales_sans_appelant_se_retirent.sql';

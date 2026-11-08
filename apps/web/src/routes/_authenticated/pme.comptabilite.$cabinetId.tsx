@@ -28,6 +28,8 @@ export const Route = createFileRoute("/_authenticated/pme/comptabilite/$cabinetI
 
 type Onglet = "repondre" | "transmis" | "mandat";
 
+const TRANCHE = 200;
+
 function DossierDeLaComptabilite() {
   const { cabinetId } = Route.useParams();
   const { t, locale } = useI18n();
@@ -37,6 +39,8 @@ function DossierDeLaComptabilite() {
   const { fiches } = useFichesDesSocietes();
   const [onglet, setOnglet] = useState<Onglet>("repondre");
   const [societe, setSociete] = useState<string>("toutes");
+  /** Transmis se montre par tranches : rien n'est perdu au-delà de la première. */
+  const [montres, setMontres] = useState(TRANCHE);
 
   const siennes = (fiches.data ?? []).filter((f) => f.cabinetId === cabinetId);
   const nom = siennes[0]?.cabinet ?? "";
@@ -58,6 +62,12 @@ function DossierDeLaComptabilite() {
     void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
   };
   const charge = fiches.isPending || lectures.some((q) => q.isPending);
+  // Une lecture en échec n'est jamais une liste vide : on le dit, et on relance.
+  const enEchec = fiches.isError || lectures.some((q) => q.isError);
+  const relancer = () => {
+    if (fiches.isError) void fiches.refetch();
+    for (const q of lectures) if (q.isError) void q.refetch();
+  };
 
   const ligne = ({ p, tenantId }: { p: (typeof pieces)[number]["p"]; tenantId: string }) => (
     <li key={p.id}>
@@ -127,7 +137,10 @@ function DossierDeLaComptabilite() {
             className="choix"
             value={societe}
             aria-label={t("pme.compta.societes")}
-            onChange={(e) => setSociete(e.target.value)}
+            onChange={(e) => {
+              setSociete(e.target.value);
+              setMontres(TRANCHE);
+            }}
           >
             <option value="toutes">{t("pme.compta.toutes")}</option>
             {ids.map((id) => (
@@ -140,6 +153,13 @@ function DossierDeLaComptabilite() {
 
         {charge ? (
           <p className="foot">{t("common.loading")}</p>
+        ) : enEchec ? (
+          <div className="foot" role="alert">
+            <p>{t("common.error")}</p>
+            <button type="button" className="plus" onClick={relancer}>
+              {t("common.reessayer")}
+            </button>
+          </div>
         ) : onglet === "repondre" ? (
           aRepondre.length > 0 ? (
             <ul className="liste">{aRepondre.map(ligne)}</ul>
@@ -148,7 +168,18 @@ function DossierDeLaComptabilite() {
           )
         ) : onglet === "transmis" ? (
           transmis.length > 0 ? (
-            <ul className="liste">{transmis.slice(0, 200).map(ligne)}</ul>
+            <>
+              <ul className="liste">{transmis.slice(0, montres).map(ligne)}</ul>
+              {transmis.length > montres ? (
+                <button
+                  type="button"
+                  className="plus"
+                  onClick={() => setMontres((n) => n + TRANCHE)}
+                >
+                  {t("pme.compta.voirPlus", { count: transmis.length - montres })}
+                </button>
+              ) : null}
+            </>
           ) : (
             <p className="foot">{t("pme.compta.rienTransmis")}</p>
           )

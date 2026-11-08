@@ -993,7 +993,7 @@ export const capture = {
   ): Promise<ContexteDuSudokuBranche> {
     // Le mode se lit au jour DU DOSSIER, dans son fuseau : au jour UTC du serveur, un
     // réglage arrêté le jour même ne valait pas entre minuit local et minuit UTC
-    // (5 novembre 2026, `20261201092400`).
+    // (5 novembre 2026, `20261205092400`).
     const { rows } = await db.query<{ j: string }>(
       `select to_char(public.jour_du_dossier($1), 'YYYY-MM-DD') as j`,
       [dossierId],

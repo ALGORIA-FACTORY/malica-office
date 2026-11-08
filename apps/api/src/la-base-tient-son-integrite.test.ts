@@ -518,7 +518,7 @@ describe("l'intégrité de la base", { skip: !BASE_CONFIGUREE }, () => {
      * tout rôle (droit par défaut de PUBLIC), sans un seul appelant — et la
      * première renvoyait vers une fonction qui n'a jamais existé. Une fonction
      * que tout le monde peut appeler et que personne n'appelle est une surface
-     * sans usage ; retirée par 20261202150400.
+     * sans usage ; retirée par 20261205094400.
      *
      * Un appel se reconnaît à « nom( » dans une AUTRE définition de la base
      * (corps de fonction, politique, vue, défaut, contrainte), ou au nom seul
@@ -567,7 +567,7 @@ describe("l'intégrité de la base", { skip: !BASE_CONFIGUREE }, () => {
      * confondus, sous le verrou de la suppression. Audit du 6 novembre 2026
      * (§ 3.5) : `capture.rattachements.piece_id` et `.piece_liee_id`, deux
      * cascades depuis `capture.pieces`, n'avaient qu'un index menant par
-     * `tenant_id` ; indexées par 20261202150100. Un index menant par les mêmes
+     * `tenant_id` ; indexées par 20261205094100. Un index menant par les mêmes
      * colonnes, dans n'importe quel ordre, sert la recherche — partiel aussi,
      * si son seul prédicat est « la colonne n'est pas nulle », que la recherche
      * par égalité implique ; pas un index partiel sur `active`, qui ignore les
