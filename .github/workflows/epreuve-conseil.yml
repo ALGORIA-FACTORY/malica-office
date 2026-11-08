@@ -51,6 +51,11 @@ jobs:
 
     env:
       DATABASE_URL: postgres://malica_api:ci@localhost:5432/malica
+      # Le jeu de données dépose des lectures toutes faites par les portes
+      # d'essai (base jetable seulement), comme l'épreuve de nuit : sans elles,
+      # `capture.persisterLecture` n'existe pas (404) et le jeu s'arrête. Il
+      # fournit ici le compte du dirigeant et sa société à juridiction TN.
+      MALICA_PORTES_D_ESSAI: "1"
       DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/malica
       JWT_SECRET: integration_continue_seulement_32_caracteres
       AUTH_ESSAIS_PAR_MINUTE: "1000"
