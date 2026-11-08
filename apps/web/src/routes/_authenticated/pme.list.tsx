@@ -14,6 +14,7 @@ import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
 import { VotreComptabilite } from "@/components/malica/votre-comptabilite";
+import { useFichesDesSocietes } from "@/hooks/use-fiches-des-societes";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
 import { piecesALire, statutDeLaPieceLue } from "@/lib/lecture";
@@ -241,6 +242,10 @@ function Bibliotheque() {
   const lues = usePiecesLues();
   const brutes = useMemo(() => lues.data ?? [], [lues.data]);
   const aLire = useMemo(() => piecesALire(brutes), [brutes]);
+  // « Votre comptabilité » ne se montre qu'une fois les pièces là : sa lecture
+  // part dès maintenant, en même temps qu'elles, et non après (mesuré le
+  // 8 novembre 2026 : un aller-retour de plus à l'ouverture de l'écran).
+  useFichesDesSocietes();
 
   const { toutes, parSociete, parSiege, chargement, nomDeSociete, parSieges, ouvrirSaSociete } =
     usePiecesDesSocietes();
