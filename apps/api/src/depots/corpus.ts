@@ -55,6 +55,53 @@ export interface FragmentTrouve {
   distance: number;
 }
 
+/**
+ * Un passage du corpus, tel que le conseil cité le remet à Claude : le texte
+ * ENTIER du fragment (pas un extrait de 320 caractères), son en-tête, et de
+ * quoi le peser. Une seule version par article, celle en vigueur au jour dit.
+ */
+export interface PassageTrouve {
+  corpus: string;
+  numero: string;
+  validFrom: string | null;
+  validTo: string | null;
+  ordinal: number;
+  langue: string;
+  texte: string;
+  entete: string | null;
+  statut: string;
+  abrogePar: string | null;
+  nature: string | null;
+  autorite: string | null;
+  opposableA: string | null;
+  jortReference: string | null;
+  provenance: string;
+  distance: number;
+  /** Trouvé aussi par les mots de la question (index lexical). */
+  parLesMots: boolean;
+  /** Le score de fusion des deux classements (RRF). */
+  score: number;
+  /**
+   * Aucune version de cet article n'est en vigueur au jour demandé : le
+   * corpus en connaît une avant et une après. `validFrom`/`validTo` sont
+   * alors ceux de la dernière version connue, `reprise` le début de la
+   * suivante. Un tel passage ne se remet JAMAIS au modèle.
+   */
+  lacune: boolean;
+  reprise: string | null;
+}
+
+/**
+ * La constante de la fusion par rangs réciproques. 60 est la valeur de
+ * l'article qui l'a introduite (Cormack et al., 2009) : elle aplatit l'écart
+ * entre les premiers rangs, pour qu'aucun des deux classements n'écrase
+ * l'autre. Un réglage de recherche, pas une règle fiscale : R4 ne s'y applique
+ * pas.
+ */
+const RRF_K = 60;
+/** Combien de candidats chaque classement verse à la fusion. */
+const CANDIDATS_PAR_CLASSEMENT = 60;
+
 /** pg rend une date SQL comme un Date à minuit LOCALE : `toISOString` la
  *  ramènerait en UTC et afficherait la veille. On la rend telle qu'elle est. */
 
@@ -383,6 +430,203 @@ export const corpus = {
       jortReference: (r["jort_reference"] as string | null) ?? null,
       provenance: r["extraction_confiance"] as string,
       distance: Number(r["distance"]),
+    }));
+  },
+
+  /**
+   * La recherche HYBRIDE du conseil cité : les vecteurs ET les mots.
+   *
+   * ====================================================== POURQUOI LES DEUX
+   *
+   * Le vecteur saisit le sens (« ce que je retiens sur un loyer » trouve la
+   * retenue à la source sur les loyers) ; il dilue les signaux exacts — un
+   * numéro d'article, « acompte provisionnel », « 51 ter ». L'index lexical
+   * (`legal.chunks.recherche`, en-tête en poids A) fait l'inverse. On fusionne
+   * les deux classements par rangs réciproques (RRF) : aucun score à
+   * calibrer, seuls les rangs comptent.
+   *
+   * ====================================================== CE QUI NE CHANGE PAS
+   *
+   * La règle du temps : UNE version par article, celle en vigueur au jour
+   * demandé. Deux versions d'un même article ne peuvent jamais arriver
+   * ensemble — c'est la base qui le garantit, pas la consigne.
+   *
+   * Le seuil : un passage trouvé par le seul vecteur doit être à moins de
+   * `distanceMax` ; un passage trouvé AUSSI par les mots garde sa place
+   * jusqu'à `distanceMaxMots`. Au-delà, il parle d'autre chose, et il n'entre
+   * pas — un article réel cité à l'appui d'une réponse fausse la rendrait
+   * crédible.
+   *
+   * Les lois de finances et la doctrine entrent : la date fait le tri. Le
+   * texte consolidé passe devant à score voisin, par un léger avantage.
+   */
+  async rechercherHybride(
+    db: Requete,
+    input: {
+      vecteur: number[];
+      /** Les mots de la question, déjà réduits (voir `motsDeRecherche`). */
+      mots: string[];
+      jour: string;
+      nb: number;
+      distanceMax: number;
+      distanceMaxMots: number;
+    },
+  ): Promise<PassageTrouve[]> {
+    const vecteur = input.vecteur;
+    if (!Array.isArray(vecteur) || vecteur.length === 0) {
+      throw new Error("corpus.empreinte_absente");
+    }
+    if (vecteur.some((n) => typeof n !== "number" || !Number.isFinite(n))) {
+      throw new Error("corpus.empreinte_invalide");
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.jour ?? "")) throw new Error("corpus.jour_invalide");
+    const nb = Math.min(Math.max(Math.trunc(input.nb ?? 8), 1), 20);
+    const mots = (Array.isArray(input.mots) ? input.mots : [])
+      .filter((m) => typeof m === "string" && m.trim().length > 0)
+      .map((m) => m.replace(/["'():&|!<>*]/g, " ").trim())
+      .filter((m) => m.length > 0)
+      .slice(0, 16);
+    // « a or b or c » : websearch_to_tsquery sait l'union, et une question
+    // entière ne contient jamais TOUS ses mots dans un même fragment.
+    const requeteMots = mots.join(" or ");
+
+    const { rows } = await db.query<Record<string, unknown>>(
+      `with derniere as (
+         select distinct on (v.article_id)
+                v.id, v.article_id, v.valid_from, v.valid_to,
+                v.jort_reference, v.extraction_confiance, false as lacune,
+                null::date as reprise
+           from legal.article_versions v
+          where v.valid_from <= $3::date
+            and (v.valid_to is null or v.valid_to > $3::date)
+          order by v.article_id, v.valid_from desc nulls last, v.version_num desc
+       ),
+       /*
+        * LES LACUNES : un article qui a une version AVANT le jour et une
+        * APRÈS, mais aucune qui le couvre. Le corpus ne sait pas ce qu'il
+        * disait ce jour-là. On garde sa dernière version connue — pour la
+        * classer, jamais pour la remettre au modèle : si elle est ce qui
+        * répond le mieux, la réponse est « pas de version en vigueur », et
+        * c'est le code qui le dit (règle du temps).
+        */
+       lacunes as (
+         select distinct on (v.article_id)
+                v.id, v.article_id, v.valid_from, v.valid_to,
+                v.jort_reference, v.extraction_confiance, true as lacune,
+                (select min(s.valid_from) from legal.article_versions s
+                  where s.article_id = v.article_id and s.valid_from > $3::date) as reprise
+           from legal.article_versions v
+          where v.valid_to is not null and v.valid_to <= $3::date
+            and not exists (select 1 from derniere d where d.article_id = v.article_id)
+            and exists (select 1 from legal.article_versions s
+                         where s.article_id = v.article_id and s.valid_from > $3::date)
+          order by v.article_id, v.valid_from desc, v.version_num desc
+       ),
+       versions as (select * from derniere union all select * from lacunes),
+       candidats as (
+         select c.id, c.article_version_id, d.article_id, a.corpus, a.numero, d.valid_from,
+                d.valid_to, d.lacune, d.reprise,
+                a.statut, a.abroge_par, s.libelle as nature, s.autorite,
+                array_to_string(s.opposable_a, ', ') as opposable_a,
+                d.jort_reference, d.extraction_confiance,
+                c.ordinal, c.langue,
+                coalesce(
+                  n.porte_le_droit,
+                  exists (select 1 from legal.ingestion_queue q
+                           where q.corpus = a.corpus and q.type_document = 'CODE_CONSOLIDE')
+                ) as consolide,
+                c.embedding operator(extensions.<=>) $1::extensions.vector as distance,
+                case when $2 = '' then 0
+                     else ts_rank_cd('{0.1, 0.2, 0.4, 1.0}', c.recherche,
+                            websearch_to_tsquery(
+                              case when c.langue = 'ar' then 'simple'::regconfig
+                                   else 'french'::regconfig end, $2))
+                end as rang_mots
+           from legal.chunks c
+           join versions d on d.id = c.article_version_id
+           join legal.articles a on a.id = d.article_id
+           left join legal.sources s on s.code = a.source_code
+           left join legal.corpus_noms n on n.code = a.corpus
+          where c.embedding is not null
+       ),
+       par_vecteur as (
+         select id, row_number() over (order by distance) as rang
+           from candidats order by distance limit ${CANDIDATS_PAR_CLASSEMENT}
+       ),
+       par_mots as (
+         select id, row_number() over (order by rang_mots desc) as rang
+           from candidats where rang_mots > 0
+          order by rang_mots desc limit ${CANDIDATS_PAR_CLASSEMENT}
+       ),
+       fusion as (
+         select k.*, pm.rang is not null as par_les_mots,
+                coalesce(1.0 / (${RRF_K} + pv.rang), 0)
+                  + coalesce(1.0 / (${RRF_K} + pm.rang), 0)
+                  + case when k.consolide then 0.002 else 0 end as score
+           from candidats k
+           left join par_vecteur pv on pv.id = k.id
+           left join par_mots pm on pm.id = k.id
+          where (pv.rang is not null or pm.rang is not null)
+            and (k.distance <= $5 or (pm.rang is not null and k.distance <= $6))
+       ),
+       un_par_article as (
+         select distinct on (article_id) *
+           from fusion order by article_id, score desc
+       ),
+       retenus as (
+         select * from un_par_article order by score desc, distance limit $4
+       )
+       /*
+        * LE TEXTE REMIS : le début de l'article (son fragment 1, qui porte
+        * d'ordinaire la règle et sa date) et le voisinage du fragment trouvé.
+        * Un seul fragment de 1 800 caractères coupait l'article : le
+        * 8 novembre 2026, « l'article 110 de la loi de finances 2026 »
+        * arrivait par un fragment de fin, sans la phrase « s'appliquent à
+        * compter du 1er janvier 2026 ».
+        */
+       select r.corpus, r.numero, r.valid_from, r.valid_to, r.ordinal, r.langue,
+              (select string_agg(x.texte, E'\n' order by x.ordinal)
+                 from legal.chunks x
+                where x.article_version_id = r.article_version_id
+                  and (x.ordinal = 1 or x.ordinal between r.ordinal - 1 and r.ordinal + 1)
+              ) as texte,
+              (select x.entete from legal.chunks x where x.id = r.id) as entete,
+              r.statut, r.abroge_par, r.nature, r.autorite, r.opposable_a, r.jort_reference,
+              r.extraction_confiance, round(r.distance::numeric, 4) as distance,
+              r.par_les_mots, round(r.score::numeric, 6) as score, r.lacune, r.reprise
+         from retenus r
+        order by r.score desc, r.distance`,
+      [
+        `[${vecteur.join(",")}]`,
+        requeteMots,
+        input.jour,
+        nb,
+        input.distanceMax,
+        input.distanceMaxMots,
+      ],
+    );
+
+    return rows.map((r) => ({
+      corpus: r["corpus"] as string,
+      numero: r["numero"] as string,
+      validFrom: enDate(r["valid_from"]),
+      validTo: enDate(r["valid_to"]),
+      ordinal: Number(r["ordinal"]),
+      langue: r["langue"] as string,
+      texte: r["texte"] as string,
+      entete: (r["entete"] as string | null) ?? null,
+      statut: r["statut"] as string,
+      abrogePar: (r["abroge_par"] as string | null) ?? null,
+      nature: (r["nature"] as string | null) ?? null,
+      autorite: (r["autorite"] as string | null) ?? null,
+      opposableA: (r["opposable_a"] as string | null) || null,
+      jortReference: (r["jort_reference"] as string | null) ?? null,
+      provenance: r["extraction_confiance"] as string,
+      distance: Number(r["distance"]),
+      parLesMots: Boolean(r["par_les_mots"]),
+      score: Number(r["score"]),
+      lacune: Boolean(r["lacune"]),
+      reprise: enDate(r["reprise"]),
     }));
   },
 };

@@ -186,7 +186,7 @@ export const journal = {
    * ouvrir le dossier d'un client depuis le cabinet, la tour. Le journal des
    * pannes exige un dossier (sa RLS) ; celle-ci va à `app.signalements`,
    * origine `panne`, que seul l'opérateur relit
-   * (`20261202120000_une_panne_sans_dossier_laisse_une_trace.sql`).
+   * (`20261205093300_une_panne_sans_dossier_laisse_une_trace.sql`).
    *
    * Qui : la session, jamais la saisie. Le détail arrive expurgé par
    * l'appareil, et la porte le coupe quand même. Elle est bornée — vingt par

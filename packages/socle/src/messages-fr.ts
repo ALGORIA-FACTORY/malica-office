@@ -1275,6 +1275,11 @@ export const fr = {
     "Aucune comptabilité ne suit encore ce dossier : cette réponse n’a pas été relue par un expert-comptable.",
   "pme.conseil.relu": "Relu et validé par votre comptable.",
   "pme.conseil.sources": "Sources : {liste}",
+  "pme.conseil.cite.lacune":
+    "Je ne trouve pas le texte en vigueur au {date} : le corpus connaît {texte}, art. {numero}, jusqu’au {fin}, puis de nouveau à partir du {reprise}, mais aucune version entre les deux.",
+  "pme.conseil.cite.horsCorpus": "Je ne trouve pas cela dans les textes que j'ai sous les yeux.",
+  "pme.conseil.cite.enVigueurAu": "En vigueur au {date} : {liste}.",
+  "pme.conseil.cite.version": "{texte}, art. {numero} (version du {date})",
   "pme.conseil.duCabinet": "La réponse de votre comptable :",
   "pme.conseil.correction": "Votre comptable a relu ma réponse et la corrige :",
   "pme.conseil.articleInvoque": "Fondement : {article}",
@@ -2197,6 +2202,8 @@ export const fr = {
   "refus.introuvable.etablissement": "Établissement introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.conversation": "Conversation introuvable, ou vous n’y avez pas accès.",
   "refus.authentification_requise": "Connectez-vous pour faire ce geste.",
+  "refus.conseil.modele_sans_tarif":
+    "Ce modèle n’a pas de tarif en vigueur : il ne peut pas répondre, son coût ne serait pas compté.",
   "refus.reserve.plateforme": "Ce geste est réservé aux opérateurs de la plateforme.",
   "refus.reserve.serveur": "Ce geste est réservé au serveur : il ne se fait pas depuis un écran.",
   "refus.reserve.proprietaire_principal":
@@ -4056,6 +4063,31 @@ export const fr = {
   "tour.designation.motif.arret.budgets_epuises":
     "arrêt : les deux budgets sont épuisés, lecture par le Sudoku seul",
   "tour.designation.motif.arret.chaine_vide": "arrêt : aucune chaîne réglée",
+  "tour.menu.conseil": "Conseil cité",
+  "tour.conseilCite.consigne": "Consigne du conseil cité",
+  "tour.conseilCite.consigne.aide":
+    "Le prompt système que Claude reçoit avant les passages du corpus. Il ne contient aucun chiffre fiscal : les taux, seuils et délais viennent du référentiel et des textes, cités. Publier crée une version nouvelle ; la précédente reste au registre.",
+  "tour.conseilCite.consigne.enVigueur":
+    "En vigueur depuis le {date}. Versions au registre : {versions}.",
+  "tour.conseilCite.consigne.borne": "Deux cents caractères au moins.",
+  "tour.conseilCite.publier": "Publier cette version",
+  "tour.conseilCite.reglage": "Réglage du conseil cité",
+  "tour.conseilCite.reglage.aide":
+    "Le modèle courant répond à toutes les questions ; le modèle des questions difficiles prend le relais quand la question dépasse la longueur, contient l'un des mots, ou mobilise plusieurs textes distincts.",
+  "tour.conseilCite.mois": "Ce mois : réponses données, {appels} ; coût, {cout} $.",
+  "tour.conseilCite.modeleCourant": "Modèle courant",
+  "tour.conseilCite.modeleDifficile": "Modèle des questions difficiles",
+  "tour.conseilCite.longueurDifficile":
+    "Longueur à partir de laquelle une question est difficile (caractères)",
+  "tour.conseilCite.motsDifficiles":
+    "Mots qui rendent une question difficile (séparés par des virgules)",
+  "tour.conseilCite.corpusDistincts": "Nombre de textes distincts qui rend une question difficile",
+  "tour.conseilCite.passagesMax": "Passages du corpus remis à Claude",
+  "tour.conseilCite.distanceMax": "Distance maximale d'un passage trouvé par le sens",
+  "tour.conseilCite.distanceMaxMots": "Distance maximale d'un passage trouvé aussi par les mots",
+  "tour.conseilCite.sortieMax": "Longueur maximale de la réponse (jetons)",
+  "tour.conseilCite.borne":
+    "Des entiers, et des distances entre 0 et 1 (quatre décimales au plus).",
   "tour.relances": "Relances d'impayé",
   "tour.relances.aide":
     "Quand elles sont ouvertes, Malica écrit au titulaire d'une facture en retard : un rappel, une relance, un avis, puis l'annonce de la suspension. Un seul courriel par facture et par palier. Fermées, rien ne part.",
@@ -4375,6 +4407,9 @@ export const fr = {
     "{count} pièces attendent le réseau. Elles partiront seules : la photo n’est jamais à refaire.",
   "pme.capture.repondre": "Suivant ({count})",
   "pme.capture.continuer": "Continuer",
+  "pme.compta.voirPlus": "Encore {count}",
+  "pme.compta.voirPlus#one": "Encore une",
+  "pme.compta.voirPlus#other": "Encore {count}",
   "pme.reglages.personnes.societes": "{count} sociétés",
   "pme.reglages.personnes.societes#one": "{count} société",
   "pme.reglages.personnes.societes#other": "{count} sociétés",
@@ -4398,6 +4433,7 @@ export const fr = {
   "pme.compta.rienARepondre": "Rien à répondre.",
   "pme.compta.rienTransmis": "Rien de transmis pour l'instant.",
   "pme.compta.mandatActif": "Mandat actif",
+  "pme.type.plutot": "{porte} · c'est plutôt",
   "pme.reglages.sommaire.avecCompta": "{count} sociétés avec une comptabilité",
   "pme.reglages.sommaire.avecCompta#one": "{count} société avec une comptabilité",
   "pme.reglages.sommaire.avecCompta#other": "{count} sociétés avec une comptabilité",
@@ -4940,7 +4976,6 @@ export const fr = {
   "pme.list.voirTout": "Voir les {n}",
   "pme.list.replier": "Replier",
   "pme.malica.composer": "Écrivez à Malica…",
-  "pme.malica.poser": "Posez votre question…",
   "pme.malica.suiteAvis": "Demander l'avis de {cabinet}",
   "pme.malica.suiteAvisSansNom": "Demander l'avis de votre cabinet",
   "pme.malica.suiteTransmission": "Demander la transmission au propriétaire du dossier",
@@ -4948,6 +4983,20 @@ export const fr = {
   "pme.malica.suiteSansCabinet": "Demander l'avis d'un cabinet",
   "pme.malica.suiteSansCabinetDetail": "Aucun cabinet n'est mandaté sur ce dossier",
   "pme.malica.retenue": "Envoyée en relecture — cet avis engage votre dossier",
+  "pme.malica.sous": "Posez votre question : je réponds en citant mes sources.",
+  "pme.malica.salut.jour": "Bonjour",
+  "pme.malica.salut.soir": "Bonsoir",
+  "pme.malica.pret.tva": "Quand déclarer ma TVA ?",
+  "pme.malica.pret.retenue": "Quel taux de retenue à la source ?",
+  "pme.malica.pret.garder": "Combien de temps garder mes factures ?",
+  "pme.malica.statut.enLigne": "en ligne",
+  "pme.malica.statut.repond": "vous répond…",
+  "pme.malica.statut.cite": "en ligne · cite ses sources",
+  "pme.malica.canaux": "Canaux",
+  "pme.malica.utilise": "Ce que j'ai utilisé",
+  "pme.malica.rienEncore": "Rien encore : posez une question.",
+  "pme.malica.voix.parler": "Parler à Malica",
+  "pme.malica.voix.ecoute": "Je vous écoute…",
   "pme.malica.pied":
     "Je cite l'article et sa version en vigueur à la date. Je ne tranche pas à la place de votre expert-comptable sur ce qui engage votre dossier.",
   // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).

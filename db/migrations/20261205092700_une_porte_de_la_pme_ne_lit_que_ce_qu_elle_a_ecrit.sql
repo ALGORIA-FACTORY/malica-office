@@ -1,7 +1,7 @@
 -- Une porte de la PME ne lit que ce qu'elle a écrit (lot S2, revue
 -- indépendante du 6 novembre 2026).
 --
--- `20261202100000` rendait au PORTIER, dans un dossier confié, les branches
+-- `20261205092600` rendait au PORTIER, dans un dossier confié, les branches
 -- de lecture de la PME d'avant le lot : toute écriture, toute ligne et tout
 -- fait du dossier pour qui voit toute la société. Une porte s'exécute « sous
 -- les mêmes politiques que son appelant » (R6) ; celles-là la rendaient plus
@@ -18,10 +18,10 @@
 --    lignes, et un fait dont il est l'acteur. C'est ce que ses portes relisent
 --    — `insert … returning`, la transmission d'une écriture proposée avec sa
 --    pièce, la ligne qu'une porte vient de poser. Le règlement, geste de la
---    PME, est déjà lisible de l'appelant (`20261202100000`, §2). Une écriture
+--    PME, est déjà lisible de l'appelant (`20261205092600`, §2). Une écriture
 --    du CABINET n'est lisible d'aucune porte de la PME : une porte qui en a
 --    besoin d'une valeur passe par une fonction qui ne rend que cette valeur
---    (le jour, le cours : `20261202100000`, §4).
+--    (le jour, le cours : `20261205092600`, §4).
 --
 -- 2. `fait_consigner` exige en outre qu'un fait `reglement.*` porte sur une
 --    écriture de RÈGLEMENT.

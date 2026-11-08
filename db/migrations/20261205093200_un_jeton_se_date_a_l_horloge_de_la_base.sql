@@ -2,7 +2,7 @@
 --
 -- ================================================================== POURQUOI
 --
--- `20261202110100` compare la date d'émission d'un jeton (`iat`) à l'instant où
+-- `20261205093000` compare la date d'émission d'un jeton (`iat`) à l'instant où
 -- toutes les sessions du compte ont été fermées (`sessions_invalidees_le`). La
 -- fermeture était datée par la base, l'émission par l'API : deux horloges. Qu'elles
 -- dérivent d'une milliseconde, et le jeton qu'ouvre une réinitialisation naît

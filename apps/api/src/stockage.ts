@@ -69,7 +69,7 @@ const TYPE_INCONNU = "application/octet-stream";
  *
  * Les types admis sont ceux que produisent le scanner, l'import d'images et
  * le dépôt de PDF ; la porte de la base tient la même liste
- * (`capture_piece_poser_chemin`, migration `20261202090000`). Chacun se
+ * (`capture_piece_poser_chemin`, migration `20261205092500`). Chacun se
  * reconnaît à ses premiers octets : un type déclaré que les octets démentent
  * est refusé au dépôt.
  */

@@ -1,7 +1,7 @@
 -- ======================================================================
 --  La borne des pannes tient quand elles arrivent ensemble (6 novembre 2026).
 --
---  `public.journal_hors_dossier_consigner` (20261202120000) compte les pannes
+--  `public.journal_hors_dossier_consigner` (20261205093300) compte les pannes
 --  de la personne sur dix minutes, puis en inscrit une. Sans verrou, deux
 --  appels simultanés comptent tous deux moins de vingt et inscrivent tous
 --  deux : soixante appels en parallèle en écrivaient 22 ou 23 (relevé par la

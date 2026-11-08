@@ -53,15 +53,19 @@ export interface ClaudeResult {
   latencyMs: number;
 }
 
-export async function callClaude(input: {
+/**
+ * L'appel HTTP à l'API Messages, et rien d'autre : la clé, l'envoi, les pannes
+ * classées (passagère ou non), la réponse lue. Un seul transport pour tout ce
+ * qui parle à Claude — la désignation (`callClaude`) et le conseil cité
+ * (`malica/conseil/client-claude.ts`) : le corps de la requête est à eux.
+ */
+export async function envoyerAClaude<R extends { stop_reason?: string | null }>(input: {
   apiKey: string | undefined;
-  model: string;
-  system: string;
-  user: string;
+  corps: unknown;
   signal?: AbortSignal;
   /** Injectable pour les épreuves : aucune épreuve n'appelle le réseau. */
   fetch?: typeof fetch;
-}): Promise<ClaudeResult> {
+}): Promise<{ reponse: R; latencyMs: number }> {
   const cle = input.apiKey?.trim();
   if (!cle) throw new ClaudeError("ANTHROPIC_API_KEY absente", 401, false);
 
@@ -75,20 +79,7 @@ export async function callClaude(input: {
         "x-api-key": cle,
         "anthropic-version": ANTHROPIC_VERSION,
       },
-      body: JSON.stringify({
-        model: input.model,
-        max_tokens: SORTIE_MAX_JETONS,
-        output_config: { effort: EFFORT },
-        /*
-         * LE PROMPT SYSTÈME SE MET EN CACHE. Il est le même pour chaque pièce
-         * (le dossier, les tiers et le plan voyagent dans le message) : lu en
-         * cache, il coûte 0,05 à 0,1 fois le prix d'entrée. Le point de cache
-         * est posé à sa fin ; le cache vit cinq minutes, renouvelé à chaque
-         * lecture. Trop court, il n'est simplement pas mis en cache.
-         */
-        system: [{ type: "text", text: input.system, cache_control: { type: "ephemeral" } }],
-        messages: [{ role: "user", content: input.user }],
-      }),
+      body: JSON.stringify(input.corps),
       ...(input.signal ? { signal: input.signal } : {}),
     });
   } catch (cause) {
@@ -110,7 +101,26 @@ export async function callClaude(input: {
     throw new ClaudeError(`Claude ${res.status} : ${text.slice(0, 300)}`, res.status, retryable);
   }
 
-  let parsed: {
+  let reponse: R;
+  try {
+    reponse = JSON.parse(text) as R;
+  } catch {
+    throw new ClaudeError("réponse Claude illisible", 502, true);
+  }
+  if (reponse.stop_reason === "refusal") throw new ClaudeError("Claude a refusé", 502, false);
+  return { reponse, latencyMs };
+}
+
+export async function callClaude(input: {
+  apiKey: string | undefined;
+  model: string;
+  system: string;
+  user: string;
+  signal?: AbortSignal;
+  /** Injectable pour les épreuves : aucune épreuve n'appelle le réseau. */
+  fetch?: typeof fetch;
+}): Promise<ClaudeResult> {
+  const { reponse: parsed, latencyMs } = await envoyerAClaude<{
     content?: Array<{ type?: string; text?: string }>;
     stop_reason?: string;
     usage?: {
@@ -119,13 +129,25 @@ export async function callClaude(input: {
       cache_creation_input_tokens?: number;
       cache_read_input_tokens?: number;
     };
-  };
-  try {
-    parsed = JSON.parse(text) as typeof parsed;
-  } catch {
-    throw new ClaudeError("réponse Claude illisible", 502, true);
-  }
-  if (parsed.stop_reason === "refusal") throw new ClaudeError("Claude a refusé", 502, false);
+  }>({
+    apiKey: input.apiKey,
+    corps: {
+      model: input.model,
+      max_tokens: SORTIE_MAX_JETONS,
+      output_config: { effort: EFFORT },
+      /*
+       * LE PROMPT SYSTÈME SE MET EN CACHE. Il est le même pour chaque pièce
+       * (le dossier, les tiers et le plan voyagent dans le message) : lu en
+       * cache, il coûte 0,05 à 0,1 fois le prix d'entrée. Le point de cache
+       * est posé à sa fin ; le cache vit cinq minutes, renouvelé à chaque
+       * lecture. Trop court, il n'est simplement pas mis en cache.
+       */
+      system: [{ type: "text", text: input.system, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: input.user }],
+    },
+    ...(input.signal ? { signal: input.signal } : {}),
+    ...(input.fetch ? { fetch: input.fetch } : {}),
+  });
 
   const answer = (parsed.content ?? [])
     .filter((b) => b.type === "text" && typeof b.text === "string")

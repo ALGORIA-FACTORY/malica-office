@@ -33,6 +33,9 @@ import { sousIdentite } from "./db.ts";
 import { creerAppelLocal, PieceIntrouvable } from "./malica/appel-local.ts";
 import { redigerLeBriefing } from "./malica/briefing.ts";
 import { askMalica, repondreAuCabinet } from "./malica/conseil/ask.ts";
+import { clientClaudeHttp } from "./malica/conseil/client-claude.ts";
+import { conseilCite } from "./malica/conseil/conseil-cite.ts";
+import { empreinteDeLaQuestion } from "./malica/conseil/corpus.ts";
 import { coureurDeLectures } from "./malica/lecture/coureur.ts";
 import { registre } from "./malica/lecture/lectures-en-cours.ts";
 import { lireCarteFiscale } from "./malica/lecture/lire-carte.ts";
@@ -314,6 +317,32 @@ malica.post("/conseil", (req, res, next) => {
   repondre(res, next, async () => {
     const q = QuestionDuCabinet.parse(req.body);
     return repondreAuCabinet(api(req), q);
+  });
+});
+
+const QuestionCitee = z.object({
+  tenantId: Uuid,
+  question: z.string().trim().min(3).max(2000),
+  locale: Locale,
+  /** La date d'effet : l'état du droit à ce jour. Absente : aujourd'hui à Tunis. */
+  jour: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullish(),
+});
+
+/**
+ * Le conseil CITÉ : Claude répond sur les passages du corpus, chaque
+ * affirmation avec sa citation, et dit ce que les textes ne disent pas.
+ */
+malica.post("/conseil-cite", (req, res, next) => {
+  repondre(res, next, async () => {
+    const q = QuestionCitee.parse(req.body);
+    const appel = api(req);
+    return conseilCite(appel, q, {
+      client: clientClaudeHttp({ apiKey: process.env["ANTHROPIC_API_KEY"] }),
+      empreinte: (question) => empreinteDeLaQuestion(appel, question),
+    });
   });
 });
 

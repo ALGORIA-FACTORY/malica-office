@@ -4571,6 +4571,39 @@ export interface EtatDeLaDesignation {
   mois: { sans_ia: number; par_modele: number };
 }
 
+/** Le réglage du conseil cité, tel que la tour le saisit. */
+export interface ReglageDuConseilCite {
+  modeleCourant: string;
+  modeleDifficile: string;
+  longueurDifficile: number;
+  motsDifficiles: string[];
+  corpusDistinctsDifficile: number;
+  passagesMax: number;
+  distanceMax: string;
+  distanceMaxMots: string;
+  sortieMaxJetons: number;
+}
+
+/** Ce que la tour voit du conseil cité. */
+export interface EtatDuConseilCite {
+  consignes: Array<{ id: string; texte: string; motif: string; decide_le: string }>;
+  reglage: {
+    modele_courant: string;
+    modele_difficile: string;
+    longueur_difficile: number;
+    mots_difficiles: string[];
+    corpus_distincts_difficile: number;
+    passages_max: number;
+    distance_max: number;
+    distance_max_mots: number;
+    sortie_max_jetons: number;
+    motif: string;
+    decide_le: string;
+  } | null;
+  modeles: string[];
+  mois: { appels: number; cout: number };
+}
+
 export interface TourRepository {
   suisJePlateforme(): Promise<boolean>;
   /** Tous les cabinets et toutes les PME, avec ou sans cabinet : des compteurs et des états. */
@@ -4696,6 +4729,12 @@ export interface TourRepository {
     plafondUsd: string,
     motif: string,
   ): Promise<unknown>;
+  /** Le conseil cité (Claude sur le corpus) : consigne, ses versions, réglage, modèles, coût du mois. */
+  conseilCiteEtat(): Promise<EtatDuConseilCite | null>;
+  /** Publier une version nouvelle de la consigne du conseil cité : datée, motivée, en ajout seul. */
+  publierConsigneDuConseil(texte: string, motif: string): Promise<unknown>;
+  /** Régler le conseil cité : modèles, règle de difficulté, seuils de recherche. */
+  reglerConseilCite(reglage: ReglageDuConseilCite, motif: string): Promise<unknown>;
   /** Les relances d'impayé en vigueur ; `null` tant que la tour n'a rien décidé (fermées). */
   reglageRelances(): Promise<{
     actives: boolean;

@@ -2,7 +2,7 @@
 --
 -- ================================================================== POURQUOI
 --
--- `20261202110000` exige, pour qu'une clé résolve, que son auteur soit expert du
+-- `20261205092900` exige, pour qu'une clé résolve, que son auteur soit expert du
 -- cabinet par une adhésion RÉELLE : l'accès total ne vaut que pour la session de
 -- l'opérateur. Mais la porte de création, elle, laissait passer l'opérateur sous
 -- l'accès total (`api_keys_insert_expert` lit `app.has_org_role`, qui compte
