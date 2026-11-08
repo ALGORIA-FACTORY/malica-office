@@ -648,7 +648,8 @@ function PmeHome() {
                   type="button"
                   className="cta"
                   disabled={pme.capturing}
-                  onClick={() => pme.ouvrirScanner()}
+                  // Planche 9 : « Ajouter des pièces », pas l'appareil directement.
+                  onClick={() => void navigate({ to: "/pme/capturer" })}
                 >
                   {t("pme.capture.photo")}
                   <FlecheDroite />

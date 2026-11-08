@@ -59,4 +59,16 @@ describe("le lot passé dans l'URL", () => {
   it("un lot lisible ressort normalisé, jamais tel qu'il est arrivé", () => {
     expect(lireLotDeCapture({ pieces: `${UN.toUpperCase()} , bruit` })).toEqual({ pieces: UN });
   });
+
+  it("le contexte d'où l'on vient : seulement les valeurs admises", () => {
+    expect(lireLotDeCapture({ dossier: "achats" })).toEqual({ dossier: "achats" });
+    expect(lireLotDeCapture({ dossier: "../x" })).toEqual({});
+    expect(lireLotDeCapture({ dossier: "A".repeat(3) })).toEqual({});
+    expect(lireLotDeCapture({ pour: "moi", depuis: "echeance" })).toEqual({
+      pour: "moi",
+      depuis: "echeance",
+    });
+    expect(lireLotDeCapture({ pour: "lui", depuis: "ailleurs" })).toEqual({});
+    expect(lireLotDeCapture({ pieces: UN, pour: "moi" })).toEqual({ pieces: UN, pour: "moi" });
+  });
 });

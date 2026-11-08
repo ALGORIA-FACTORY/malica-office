@@ -238,7 +238,7 @@ function Dossier() {
             className="plus"
             aria-label={t("pme.nav.add")}
             disabled={pme.capturing}
-            onClick={() => void navigate({ to: "/pme/capturer", search: {} })}
+            onClick={() => void navigate({ to: "/pme/capturer", search: { dossier: type } })}
           >
             <svg viewBox="0 0 24 24" className="g" aria-hidden>
               <path d="M12 5v14M5 12h14" />

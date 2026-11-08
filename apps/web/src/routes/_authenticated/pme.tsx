@@ -40,6 +40,8 @@ import { clePiecesLues } from "@/hooks/use-pieces-lues";
 import { attendUnGeste, seMontreIci } from "@/lib/libelle-de-notification";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useCoteDuPlus } from "@/hooks/use-cote-du-plus";
+import { useDossiers } from "@/hooks/use-dossiers";
+import { lireLotDeCapture } from "@/lib/lot-de-capture";
 
 /*
  * Le cadrage du navigateur — détection, redressement, et un modèle qui se
@@ -83,6 +85,18 @@ function PmeLayout() {
   useTransitionDEcran();
   const qc = useQueryClient();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  /*
+   * Le contexte de l'écran « Ajouter des pièces » (planche 9) : d'où l'on
+   * vient. Lu ici parce que c'est la coque qui reçoit les fichiers choisis.
+   */
+  const contexteDeCapture = useRouterState({
+    select: (s) =>
+      s.location.pathname === "/pme/capturer"
+        ? lireLotDeCapture(s.location.search as Record<string, unknown>)
+        : null,
+    structuralSharing: true,
+  });
+  const { parCode: dossierParCode } = useDossiers();
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   // Un nouvel ajout réinitialise aussi les étapes d'un parcours déjà ouvert.
@@ -278,7 +292,14 @@ function PmeLayout() {
       if (choisis.length === 0) return;
       // La photo qui remplace garde le type de l'ancienne : la question ne se
       // repose pas, la lecture aura le dernier mot.
-      if (remplace) capture.mutate({ lot: choisis, documentKind: null, remplace });
+      if (remplace) {
+        capture.mutate({ lot: choisis, documentKind: null, remplace });
+        return;
+      }
+      // Ouvert depuis un dossier (planche 9) : la pièce y entre, sans que la
+      // question du type se repose. La lecture aura le dernier mot.
+      const dossier = dossierParCode(contexteDeCapture?.dossier);
+      if (dossier) capture.mutate({ lot: choisis, documentKind: dossier.typeParDefaut });
       else setATyper(choisis);
     },
     onError: (e: unknown) => {
@@ -359,9 +380,14 @@ function PmeLayout() {
         );
         return;
       }
+      // Venu de Privé, « Pour moi » reste pré-choisi à l'étape « Pour qui ? ».
+      const pour = contexteDeCapture?.pour;
       await navigate({
         to: "/pme/capturer",
-        search: identifiants.length > 0 ? { pieces: identifiants.join(",") } : {},
+        search: {
+          ...(identifiants.length > 0 ? { pieces: identifiants.join(",") } : {}),
+          ...(pour ? { pour } : {}),
+        },
       });
     },
     onError: (e: unknown) =>
@@ -772,7 +798,11 @@ function PmeLayout() {
                   return;
                 }
                 setNumeroAjout((n) => n + 1);
-                void navigate({ to: "/pme/capturer", search: {} });
+                // Depuis Privé, « Pour moi » sera pré-choisi (planche 9).
+                void navigate({
+                  to: "/pme/capturer",
+                  search: path.startsWith("/pme/coffre") ? { pour: "moi" } : {},
+                });
               }}
               aria-label={t("pme.nav.add")}
               className="obtur grid h-16 w-16 place-items-center"

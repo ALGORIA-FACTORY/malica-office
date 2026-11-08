@@ -55,10 +55,16 @@ export function RailDesDossiers({ pieces }: { pieces: readonly PieceLue[] }) {
   return (
     <div className="rail">
       {dossiers.map((d) => (
+        /*
+         * Planche 9 (7 novembre 2026) : une tuile VIDE dit « + Ajouter » — elle
+         * ouvre donc « Ajouter des pièces », dans ce dossier. Une tuile qui a
+         * des pièces ouvre le dossier, comme avant.
+         */
         <Link
           key={d.code}
-          to="/pme/dossier/$type"
-          params={{ type: d.code }}
+          {...(d.total === 0
+            ? { to: "/pme/capturer" as const, search: { dossier: d.code } }
+            : { to: "/pme/dossier/$type" as const, params: { type: d.code } })}
           data-teinte={d.teinte}
           className="poch"
         >

@@ -116,8 +116,8 @@ function Bienvenue() {
   /** « C'est exact » : on entre dans le produit, l'obturateur ouvert. */
   const commencer = () => {
     marquerBienvenueVue();
-    pme.ouvrirScanner();
-    void navigate({ to: "/pme" });
+    // Planche 9 : « Ajouter des pièces », le même écran que le « + ».
+    void navigate({ to: "/pme/capturer" });
   };
 
   /** « Corriger » : la fiche, seul écran qui écrit ces champs. */

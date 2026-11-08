@@ -37,16 +37,41 @@ export interface LotDeCapture {
    * rien à destiner, et le paramètre est jeté.
    */
   depart?: "destination";
+  /*
+   * ====================================== D'OÙ L'ON VIENT (planche 9, 7 novembre 2026)
+   *
+   * « Ajouter des pièces », tel qu'il existe, derrière chaque bouton — avec une
+   * ligne qui dit d'où l'on vient. Trois contextes, et rien d'autre :
+   *   - `dossier` : le code d'un des sept dossiers (tuile vide de l'accueil,
+   *     « + » d'un dossier). La pièce y entre sans qu'on repose la question
+   *     du type ; le code n'est retenu que s'il a la forme d'un code, et
+   *     l'écran ne s'en sert que s'il est au référentiel ;
+   *   - `pour=moi` : on vient de Privé, « Pour moi » est pré-choisi ;
+   *   - `depuis=echeance` : on vient d'une échéance en retard (l'avis).
+   */
+  dossier?: string;
+  pour?: "moi";
+  depuis?: "echeance";
 }
 
+/** Un code de dossier du référentiel : des minuscules et des soulignés. */
+const CODE_DE_DOSSIER = /^[a-z][a-z_]{0,39}$/;
+
 export function lireLotDeCapture(search: Record<string, unknown>): LotDeCapture {
+  const lot: LotDeCapture = {};
   const brut = search["pieces"];
-  if (typeof brut !== "string") return {};
-  const retenus = identifiantsDuLot(brut);
-  if (retenus.length === 0) return {};
-  return search["depart"] === "destination"
-    ? { pieces: retenus.join(","), depart: "destination" }
-    : { pieces: retenus.join(",") };
+  if (typeof brut === "string") {
+    const retenus = identifiantsDuLot(brut);
+    if (retenus.length > 0) {
+      lot.pieces = retenus.join(",");
+      if (search["depart"] === "destination") lot.depart = "destination";
+    }
+  }
+  const dossier = search["dossier"];
+  if (typeof dossier === "string" && CODE_DE_DOSSIER.test(dossier)) lot.dossier = dossier;
+  if (search["pour"] === "moi") lot.pour = "moi";
+  if (search["depuis"] === "echeance") lot.depuis = "echeance";
+  return lot;
 }
 
 /** Les identifiants d'un lot, dans l'ordre reçu, sans doublon ni intrus. */

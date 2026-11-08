@@ -7,6 +7,7 @@ import { PourQuiSociete } from "@/components/malica/pour-qui";
 import { Aide } from "@/components/malica/aide";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
+import { useDossiers } from "@/hooks/use-dossiers";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDuRefus } from "@/lib/champ-lisible";
 import { texteDeLErreur, vientDeNous } from "@/lib/erreur-lisible";
@@ -14,6 +15,7 @@ import { nombre } from "@/lib/forfait";
 import { jourEtMois, jourOuInstant, momentDeLEnvoi, montant } from "@/lib/lisible";
 import { lectureEnSuspens, presentation, SUIVI_DE_LECTURE_MS } from "@/lib/lecture";
 import { identifiantsDuLot, lireLotDeCapture, type LotDeCapture } from "@/lib/lot-de-capture";
+import { etapesVisibles } from "@/lib/etapes-de-capture";
 import { office } from "@/verticals/malica-office/composition";
 import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import type { PieceLue } from "@malica/socle/ports/repositories";
@@ -102,20 +104,22 @@ export const Route = createFileRoute("/_authenticated/pme/capturer")({
   component: PmeCapturer,
 });
 
-/** Les neuf étapes du câblage. La dixième case réemploie la neuvième : la fin
- *  privée est une fin, pas une étape de plus. Des CLÉS, pas des mots : la
- *  barre se lit dans les trois langues. */
-const ETAPES = [
-  "pme.capture.etape.capturer",
-  "pme.capture.etape.destination",
-  "pme.capture.etape.lectures",
-  "pme.capture.etape.lecture",
-  "pme.capture.etape.lu",
-  "pme.capture.etape.questions",
-  "pme.capture.etape.dates",
-  "pme.capture.etape.reglement",
-  "pme.capture.etape.fait",
-] as const satisfies readonly MessageKey[];
+/**
+ * Le nom de chaque étape, en tête d'écran (planche 9, 7 novembre 2026) : les
+ * neuf traits ont disparu — « un pas sur neuf ne se compte pas » se lisait
+ * mal. Le haut dit désormais l'étape et « n sur m ». Des CLÉS : la tête se
+ * lit dans les trois langues. L'étape 0 est « Ajouter des pièces ».
+ */
+const PAS: Record<number, MessageKey> = {
+  1: "pme.capture.pas.destination",
+  2: "pme.capture.pas.lectures",
+  3: "pme.capture.pas.lecture",
+  4: "pme.capture.pas.verifier",
+  5: "pme.capture.pas.questions",
+  6: "pme.capture.pas.dates",
+  7: "pme.capture.pas.reglement",
+  8: "pme.capture.pas.fait",
+};
 
 /* Les tracés viennent du dessin, à l'identique : l'écran n'a pas de
  * bibliothèque d'icônes à lui, et `.g` porte déjà le trait. */
@@ -285,11 +289,31 @@ function PmeCapturer() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const lotDemande = Route.useSearch();
+  const { parCode: dossierParCode } = useDossiers();
+  /** La ligne « d'où l'on vient » (planche 9) ; `null` depuis la barre du bas. */
+  const contexte = (() => {
+    const d = dossierParCode(lotDemande.dossier);
+    if (d)
+      return {
+        initiale: d.libelle.slice(0, 1),
+        titre: t("pme.capture.contexte.dossier", { dossier: d.libelle }),
+        sous: t("pme.capture.contexte.dossier.sous"),
+      };
+    if (lotDemande.depuis === "echeance")
+      return {
+        initiale: "!",
+        titre: t("pme.capture.contexte.echeance"),
+        sous: t("pme.capture.contexte.echeance.sous"),
+      };
+    return null;
+  })();
 
   const [etape, setEtape] = useState(0);
   const [dest, setDest] = useState<Destination | null>(null);
   /** « Où la ranger », à l'étape « Pour qui ? » : la société, sauf choix contraire. */
-  const [ou, setOu] = useState<"societe" | "prive">("societe");
+  const [ou, setOu] = useState<"societe" | "prive">(
+    lotDemande.pour === "moi" ? "prive" : "societe",
+  );
   /** Les pièces décochées à l'étape 2 : gardées pour soi, non lues. */
   const [exclues, setExclues] = useState<readonly string[]>([]);
   /** La vignette ouverte dans la bande, et son petit menu. */
@@ -869,29 +893,50 @@ function PmeCapturer() {
   const plusTardPossible =
     !plusTard && (etape === 1 || etape === 2 || (etape === 0 && lot.length > 0));
 
+  const visibles = etapesVisibles(finPrivee, vide5, vide6);
+  const rangVisible =
+    visibles.indexOf(etape) >= 0
+      ? visibles.indexOf(etape) + 1
+      : Math.max(1, visibles.filter((e) => e <= etape).length);
+
   /* ── l'écran ─────────────────────────────────────────────────────────── */
 
   return (
     <div data-ecran="capture" className="rg-rise">
       {/*
-       * La barre : des traits, pas des chiffres. Un pas sur neuf ne se compte
-       * pas, il se voit. Le retour est TOUJOURS là, à gauche.
+       * Le haut de l'écran (planche 9) : à l'ouverture, une croix et le titre ;
+       * ensuite, le retour, le nom de l'étape, « n sur m » et un trait qui
+       * avance. Le retour est TOUJOURS là, à gauche.
        */}
       <div className="prog">
         <button type="button" className="x" onClick={reculer} aria-label={t("pme.capture.revenir")}>
           <Icone d={etape === 0 && !plusTard ? G.x : G.back} />
         </button>
-        <span className="tr" aria-hidden>
-          {ETAPES.map((cle, i) => (
-            <i key={cle} className={i < etape || (plusTard && i === 0) ? "on" : ""} />
-          ))}
+        <span className="ttl">
+          {plusTard
+            ? t("pme.capture.plusTardCourt")
+            : etape === 0
+              ? lotDemande.dossier || lotDemande.depuis
+                ? t("pme.capture.contexte.titre")
+                : t("pme.capture.ajouter.titre")
+              : t(PAS[etape] ?? "pme.capture.pas.fait")}
         </span>
+        {!plusTard && etape > 0 ? (
+          <span className="rang">
+            {t("pme.capture.rang", { n: rangVisible, m: visibles.length })}
+          </span>
+        ) : null}
         {plusTardPossible ? (
           <button type="button" className="tard" onClick={() => setPlusTard(true)}>
             {t("pme.capture.plusTardCourt")}
           </button>
         ) : null}
       </div>
+      {!plusTard && etape > 0 ? (
+        <div className="avance" aria-hidden>
+          <i style={{ width: `${Math.round((rangVisible / visibles.length) * 100)}%` }} />
+        </div>
+      ) : null}
 
       <div className="pad">
         {(erreur ?? pme.captureError) ? (
@@ -929,7 +974,24 @@ function PmeCapturer() {
             on ne lit pas. Le geste appartient au layout ; cet écran l'appelle. */}
         {!plusTard && etape === 0 ? (
           <>
-            <h1 className="c-titre">{t("pme.capture.ajouter.titre")}</h1>
+            {/*
+             * D'où l'on vient (planche 9) : une ligne, puis le même écran. Sans
+             * contexte, la tête porte déjà « Ajouter des pièces ».
+             */}
+            {contexte ? (
+              <>
+                <div className="c-ctx">
+                  <span className="ini" aria-hidden>
+                    {contexte.initiale}
+                  </span>
+                  <span className="bd">
+                    <b>{contexte.titre}</b>
+                    <span>{contexte.sous}</span>
+                  </span>
+                </div>
+                <h1 className="c-titre">{t("pme.capture.ajouter.titre")}</h1>
+              </>
+            ) : null}
             <button
               type="button"
               className="c-photo"
@@ -1124,7 +1186,7 @@ function PmeCapturer() {
               <>
                 <button
                   type="button"
-                  className="c-carte acc"
+                  className={lotDemande.pour === "moi" ? "c-carte" : "c-carte acc"}
                   onClick={() => {
                     setDest("societe");
                     setEtape(2);
@@ -1138,7 +1200,7 @@ function PmeCapturer() {
                 </button>
                 <button
                   type="button"
-                  className="c-carte"
+                  className={lotDemande.pour === "moi" ? "c-carte acc" : "c-carte"}
                   disabled={garder.isPending}
                   onClick={() => {
                     setDest("prive");

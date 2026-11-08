@@ -375,7 +375,12 @@ function PmeEcheances() {
               {t("pme.echeances.retardTexte")}
             </p>
             <div className="b">
-              <button type="button" onClick={() => void navigate({ to: "/pme/capturer" })}>
+              <button
+                type="button"
+                onClick={() =>
+                  void navigate({ to: "/pme/capturer", search: { depuis: "echeance" } })
+                }
+              >
                 {t("pme.echeances.retardGeste")}
               </button>
             </div>
