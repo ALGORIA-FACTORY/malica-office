@@ -4373,6 +4373,7 @@ export const fr = {
   "pme.compta.rienARepondre": "Rien à répondre.",
   "pme.compta.rienTransmis": "Rien de transmis pour l'instant.",
   "pme.compta.mandatActif": "Mandat actif",
+  "pme.type.plutot": "{porte} · c'est plutôt",
   "pme.reglages.sommaire.avecCompta": "{count} sociétés avec une comptabilité",
   "pme.reglages.sommaire.avecCompta#one": "{count} société avec une comptabilité",
   "pme.reglages.sommaire.avecCompta#other": "{count} sociétés avec une comptabilité",

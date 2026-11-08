@@ -4084,6 +4084,7 @@ export const ar: Dict = {
   "pme.compta.rienARepondre": "لا شيء للرد.",
   "pme.compta.rienTransmis": "لم يُرسل شيء بعد.",
   "pme.compta.mandatActif": "تفويض ساري",
+  "pme.type.plutot": "{porte} · هي بالأحرى",
   "pme.reglages.sommaire.avecCompta": "{count} مع محاسب",
   "pme.reglages.sommaire.avecCompta#one": "شركة واحدة مع محاسب",
   "pme.reglages.sommaire.avecCompta#other": "{count} مع محاسب",
