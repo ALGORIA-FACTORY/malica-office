@@ -2965,7 +2965,8 @@ export const fr = {
   "pme.mesSocietes.trier": "Trier",
   "pme.mesSocietes.triAttend": "Ce qui attend",
   "pme.mesSocietes.triAZ": "A → Z",
-  "pme.mesSocietes.aucuneEpinglee": "Aucune société épinglée : l'épingle se pose dans le choix de l'en-tête.",
+  "pme.mesSocietes.aucuneEpinglee":
+    "Aucune société épinglée : l'épingle se pose dans le choix de l'en-tête.",
   "pme.mesSocietes.retard": "retard",
   "pme.mesSocietes.aJour": "À jour",
   "pme.mesSocietes.enRetardN": "{count} échéances en retard",
