@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
+import { LectureEnCours, ValeursTrouvees } from "@/components/malica/pendant-la-lecture";
 import { PourQuiSociete } from "@/components/malica/pour-qui";
 import { Aide } from "@/components/malica/aide";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
@@ -1291,8 +1292,11 @@ function PmeCapturer() {
             autres, ou revenir à l'accueil : la lecture continue. */}
         {!plusTard && etape === 3 ? (
           <>
-            <div className="c-malica">
-              <img src={portraitMalica} alt="Malica" width={620} height={620} />
+            {/* Planche 11 : l'anneau tourne tant qu'elle lit, se pose quand c'est lu. */}
+            <div className="c-malica" data-lit={retenues.some(lectureEnSuspens) || undefined}>
+              <span className="anneau">
+                <img src={portraitMalica} alt="Malica" width={620} height={620} />
+              </span>
               <h1>
                 {retenues.some(lectureEnSuspens)
                   ? t("pme.capture.lire.q", { count: retenues.length })
@@ -1319,13 +1323,44 @@ function PmeCapturer() {
                 return (
                   <div key={p.id} className={vue.ton}>
                     <div className="ligne">
-                      <ApercuDePiece pieceId={p.id} className="vignette" />
-                      <span className="nom">
-                        <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
-                        {raison ? <small>{raison}</small> : null}
+                      <span className="vg-lit" data-lit={issue.kind === "en_cours" || undefined}>
+                        <ApercuDePiece pieceId={p.id} className="vignette" />
                       </span>
-                      <span className="et">{t(vue.mot)}</span>
+                      <span className="nom">
+                        {issue.kind === "en_cours" ? (
+                          // Planche 11 : ce qu'elle fait, au lieu de « non lue · en cours ».
+                          <LectureEnCours demandeLe={p.lecture?.demandeLe ?? p.createdAt} />
+                        ) : (
+                          <>
+                            <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
+                            {raison ? <small>{raison}</small> : null}
+                          </>
+                        )}
+                      </span>
+                      {issue.kind === "en_cours" ? null : <span className="et">{t(vue.mot)}</span>}
                     </div>
+                    {issue.kind === "lue" ? (
+                      <ValeursTrouvees
+                        valeurs={[
+                          ...(p.dateDocument
+                            ? [
+                                {
+                                  cle: t("pme.lecture.trouve.date"),
+                                  v: jourEtMois(p.dateDocument, locale),
+                                },
+                              ]
+                            : []),
+                          ...(p.total !== null
+                            ? [
+                                {
+                                  cle: t("pme.lecture.trouve.total"),
+                                  v: `${montant(p.total, locale)} ${p.devise ?? pme.currency}`,
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
+                    ) : null}
                     {vue.geste ? (
                       <div className="gestes">
                         {vue.geste === "relire" ? (
