@@ -102,10 +102,11 @@ import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
-import type { MessageKey } from "@/i18n";
-import { laReponseAEffaceLaPiece, phraseDeLaReponse } from "@/lib/demande-sur-piece";
+import { laReponseAEffaceLaPiece } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { jourOuInstant } from "@/lib/lisible";
+import { chaine, cleDuGenre, detailDe, seMontreIci } from "@/lib/libelle-de-notification";
+import { CIBLE_COQUE } from "@/capabilities/coque";
 import { office } from "@/verticals/malica-office/composition";
 import { useRevenir } from "@/hooks/use-revenir";
 
@@ -130,62 +131,7 @@ export const Route = createFileRoute("/_authenticated/pme/notifications")({
   component: PmeNotifications,
 });
 
-/** Les genres que la base pose sur le dossier d'une PME, et leur phrase. */
-const GENRES: Record<string, MessageKey> = {
-  "piece.retournee": "notif.kind.piece.retournee",
-  "piece.validee": "notif.kind.piece.validee",
-  "piece.partagee": "notif.kind.piece.partagee",
-  "pv.envoye": "notif.kind.pv.envoye",
-  "mandat.propose": "notif.kind.mandat.propose",
-  "mandat.accepte": "notif.kind.mandat.accepte",
-  "mandat.refuse": "notif.kind.mandat.refuse",
-  // ANO-037 : ces genres arrivent aussi sur le dossier de la PME, et
-  // tombaient sous « Un événement du dossier. ».
-  "mandat.revoque": "notif.kind.mandat.revoque",
-  "piece.a_valider": "notif.kind.piece.a_valider",
-  "piece.a_revalider": "notif.kind.piece.a_revalider",
-  "piece.demande_tranchee": "notif.kind.piece.demande_tranchee",
-  "acces.propose": "notif.kind.acces.propose",
-  "acces.accepte": "notif.kind.acces.accepte",
-  "acces.repris": "notif.kind.acces.repris",
-  "conseil.arbitrage": "notif.kind.conseil.arbitrage",
-  "conseil.repondu": "notif.kind.conseil.repondu",
-  "conseil.decide": "notif.kind.conseil.decide",
-  "piece.reponse_client": "notif.kind.piece.reponse_client",
-  "piece.renvoyee": "notif.kind.piece.renvoyee",
-  "piece.remplacee": "notif.kind.piece.remplacee",
-  "piece.gardee": "notif.kind.piece.gardee",
-  "piece.supprimee": "notif.kind.piece.supprimee",
-  "piece.archivee": "notif.kind.piece.archivee",
-  // Le circuit siège → propriétaire (lot 4) : adressées à la personne.
-  "piece.recue_du_siege": "notif.kind.piece.recue_du_siege",
-  "piece.retournee_par_le_proprietaire": "notif.kind.piece.retournee_par_le_proprietaire",
-  "piece.supprimee_par_le_proprietaire": "notif.kind.piece.supprimee_par_le_proprietaire",
-  "piece.demande": "notif.kind.piece.demande",
-};
-
 const OU = "routes/_authenticated/pme.notifications";
-
-function chaine(payload: Record<string, unknown>, cle: string): string | null {
-  const v = payload[cle];
-  return typeof v === "string" && v.trim().length > 0 ? v : null;
-}
-
-/**
- * Ce que la notification porte en plus de son genre : un titre de PV et le
- * cabinet qui l'envoie, le cabinet qui propose, le sujet d'une question, la
- * note d'un retour. Tel que range, jamais recompose.
- */
-function detailDe(kind: string, payload: Record<string, unknown>): string | null {
-  if (kind === "pv.envoye") {
-    return (
-      [chaine(payload, "titre"), chaine(payload, "cabinet")].filter(Boolean).join(" · ") || null
-    );
-  }
-  if (kind.startsWith("mandat.")) return chaine(payload, "cabinet");
-  if (kind.startsWith("conseil.")) return chaine(payload, "theme");
-  return chaine(payload, "note");
-}
 
 function PmeNotifications() {
   const { t, locale } = useI18n();
@@ -197,14 +143,21 @@ function PmeNotifications() {
   /** Les deux faces de la boite : ce qui attend un geste, et tout. */
   const [onglet, setOnglet] = useState<"attente" | "tout">("attente");
 
+  const societes = pme.dossiers.length > 0 ? pme.dossiers.map((d) => d.id) : [pme.tenantId];
   const notifs = useQuery({
-    queryKey: ["notifications", pme.tenantId],
-    queryFn: () => office().collab.notifications([pme.tenantId]),
+    /*
+     * TOUTES les sociétés de la personne, comme la cloche qui mène ici : une
+     * alerte de B annoncée pendant que A est ouverte se trouve sur cet écran,
+     * et la lire éteint la pastille (revue de #270).
+     */
+    queryKey: ["notifications", "toutes", ...societes],
+    queryFn: () => office().collab.notifications(societes),
   });
 
   const read = useMutation({
     mutationFn: (id: string) => office().collab.markRead(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", pme.tenantId] }),
+    // Le préfixe : la liste de cet écran ET la cloche de l'en-tête.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
   /*
@@ -212,13 +165,10 @@ function PmeNotifications() {
    * (audit du 25 octobre 2026) : « a répondu » seul ne disait ni oui ni non.
    */
   const kindLabel = (kind: string, payload: Record<string, unknown> = {}) =>
-    t(
-      kind === "piece.demande_tranchee"
-        ? phraseDeLaReponse(payload)
-        : (GENRES[kind] ?? "cab.notif.kind.autre"),
-    );
+    t(cleDuGenre(kind, payload));
 
-  const rows = notifs.data ?? [];
+  // Dans la coque, rien ne parle d'abonnement (`seMontreIci`).
+  const rows = (notifs.data ?? []).filter((n) => seMontreIci(n.kind, CIBLE_COQUE));
   /** Non lue : elle demande encore quelque chose. C'est une carte. */
   const attente = rows.filter((n) => !n.readAt);
   /** Lues, et ce sont des avis : le volet que le dessin appelle « Ses avis ». */
@@ -256,18 +206,32 @@ function PmeNotifications() {
   const gesteDe = (
     kind: string,
     payload: Record<string, unknown>,
+    societe: string,
   ): { libelle: string; aller: () => void } | null => {
+    /*
+     * La fiche d'une pièce et le mandat se lisent sur la société OUVERTE :
+     * une alerte d'une autre société ouvre d'abord la sienne.
+     */
+    const dabord = () => {
+      if (societe !== pme.tenantId) pme.choisirDossier(societe);
+    };
     const pieceId = pieceDe(kind, payload);
     if (pieceId) {
       return {
         libelle: t("pme.notifs.open"),
-        aller: () => void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } }),
+        aller: () => {
+          dabord();
+          void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
+        },
       };
     }
     if (kind === "mandat.propose") {
       return {
         libelle: t("pme.mandat.accepter"),
-        aller: () => void navigate({ to: "/pme" }),
+        aller: () => {
+          dabord();
+          void navigate({ to: "/pme" });
+        },
       };
     }
     return null;
@@ -366,7 +330,7 @@ function PmeNotifications() {
                 {attente.map((n) => {
                   const payload = (n.payload ?? {}) as Record<string, unknown>;
                   const detail = detailDe(n.kind, payload);
-                  const geste = gesteDe(n.kind, payload);
+                  const geste = gesteDe(n.kind, payload, n.tenantId);
                   const piece = pieceDe(n.kind, payload);
                   /*
                    * Sur un retour de piece, le detail EST la parole du
@@ -469,7 +433,7 @@ function PmeNotifications() {
                     {classees.map((n) => {
                       const payload = (n.payload ?? {}) as Record<string, unknown>;
                       const detail = detailDe(n.kind, payload);
-                      const geste = gesteDe(n.kind, payload);
+                      const geste = gesteDe(n.kind, payload, n.tenantId);
                       const corps = (
                         <>
                           <i>

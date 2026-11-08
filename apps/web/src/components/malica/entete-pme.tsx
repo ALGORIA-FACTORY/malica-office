@@ -3,9 +3,10 @@
  *
  * =========================================================== CE QU'ELLE PORTE
  *
- *   [ logo ALGORIA ]                                     [ W ]
+ *   [ logo ALGORIA ]                              [ cloche ] [ W ]
  *
- * Et rien d'autre. Le logo à gauche, l'initiale de la personne à droite (le
+ * La cloche est revenue le 7 novembre 2026 (planche 12, approuvée) : les
+ * alertes de toutes les sociétés, sur tous les écrans. Et rien d'autre. Le logo à gauche, l'initiale de la personne à droite (le
  * nom du dossier ouvert est parti le 3 novembre 2026, voir plus bas). Le retour et le titre d'un écran vivent SOUS elle,
  * dans `.top` — jamais dedans.
  *
@@ -43,14 +44,17 @@ import { Link } from "@tanstack/react-router";
 
 import { useI18n } from "@/i18n";
 
+import { ClocheDeLEntete, type ClocheProps } from "./cloche-de-l-entete";
 import { MarqueAlgoria } from "./office-ui";
 
 export interface EntetePmeProps {
   /** L'initiale du compte ouvert — la PERSONNE, jamais Malica. */
   initiale: string;
+  /** Les alertes non lues de toutes les sociétés, et la plus récente. */
+  cloche: ClocheProps;
 }
 
-export function EntetePme({ initiale }: EntetePmeProps) {
+export function EntetePme({ initiale, cloche }: EntetePmeProps) {
   const { t } = useI18n();
 
   return (
@@ -73,6 +77,7 @@ export function EntetePme({ initiale }: EntetePmeProps) {
        * le lien dit où il mène, et la lettre reste `aria-hidden` de fait
        * puisque l'étiquette la remplace.
        */}
+      <ClocheDeLEntete {...cloche} />
       <Link to="/pme/reglages" aria-label={t("pme.reglages.titre")} className="me">
         {initiale}
       </Link>
