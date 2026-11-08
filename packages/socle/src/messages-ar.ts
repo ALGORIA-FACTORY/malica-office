@@ -1459,6 +1459,7 @@ export const ar: Dict = {
   "cab.controle.coherence_dates": "اتساق التواريخ",
   "cab.controle.confiance_lecture": "موثوقية القراءة",
   "cab.controle.cours_de_change": "سعر الصرف",
+  "cab.controle.tva_exclue_a_trancher": "أداء قد لا يُطرح: للحسم",
   "cab.controle.immobilisation_a_trancher": "أصل ثابت أم أعباء: للحسم",
   "cab.controle.immobilisation_faible_valeur": "أصل ذو قيمة ضعيفة (عتبة المكتب)",
   "cab.audit.extract": "قراءة مُستشهَدة، عقد الإصدار 1.",

@@ -1549,6 +1549,7 @@ export const fr = {
   "cab.controle.coherence_dates": "Cohérence des dates",
   "cab.controle.confiance_lecture": "Confiance de lecture",
   "cab.controle.cours_de_change": "Cours de change",
+  "cab.controle.tva_exclue_a_trancher": "TVA peut-être non déductible : à trancher",
   "cab.controle.immobilisation_a_trancher": "Immobilisation ou charge : à trancher",
   "cab.controle.immobilisation_faible_valeur": "Bien de faible valeur (seuil du cabinet)",
   "cab.audit.extract": "Lecture citée, contrat v1.",

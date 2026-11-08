@@ -1487,6 +1487,7 @@ export const en: Dict = {
   "cab.controle.coherence_dates": "Date consistency",
   "cab.controle.confiance_lecture": "Reading confidence",
   "cab.controle.cours_de_change": "Exchange rate",
+  "cab.controle.tva_exclue_a_trancher": "VAT possibly non-deductible: to decide",
   "cab.controle.immobilisation_a_trancher": "Fixed asset or expense: to decide",
   "cab.controle.immobilisation_faible_valeur": "Low-value asset (firm threshold)",
   "cab.audit.extract": "Cited reading, contract v1.",

@@ -1087,6 +1087,14 @@ async function proposerDepuisLeJugement(
       raisonCode: "devise",
     };
 
+  // Le sous-compte du plan pour la TVA d'un achat : le rôle, que le cabinet peut surcharger.
+  const compteDeTvaDesAchats = await compteDuRole(
+    db,
+    ligne.tenant_id,
+    "TVA_DEDUCTIBLE_AUTRES_BIENS",
+    pack,
+    null,
+  );
   const [taxRates, tousLesComptes, tousLesDroits] = await Promise.all([
     referentiel.taxRates(db, pack, ligne.jurisdiction),
     referentiel.accountMappings(db, pack),
@@ -1132,7 +1140,13 @@ async function proposerDepuisLeJugement(
     confianceBloquante: p["lecture.confiance_bloquante"],
     taxRates,
     // Le moteur ne connaît que l'achat et la vente : le reste n'y entre pas.
-    mappings: tousLesComptes.filter((c): c is typeof c & SensConnu => sensConnu(c.documentKind)),
+    mappings: tousLesComptes
+      .filter((c): c is typeof c & SensConnu => sensConnu(c.documentKind))
+      .map((c) =>
+        c.documentKind === "facture_achat" && typeof compteDeTvaDesAchats === "string"
+          ? { ...c, vatAccount: compteDeTvaDesAchats }
+          : c,
+      ),
     fiscalCharges: tousLesDroits.filter((c): c is typeof c & SensConnu =>
       sensConnu(c.documentKind),
     ),
