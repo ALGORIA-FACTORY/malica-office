@@ -370,6 +370,33 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /**
+   * La chaîne de désignation : ses maillons (modèle, plafond, dépense de la
+   * période, épuisé ou non), les modèles tarifés qu'on peut y mettre, et les
+   * dernières bascules (`plateforme.designation_etat`).
+   */
+  async designation(db: Requete) {
+    const { rows } = await db.query<{ r: unknown }>(`select plateforme.designation_etat() as r`);
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour règle un rang de la chaîne : modèle, période, plafond. Daté, motivé, en ajout seul. */
+  async reglerDesignation(
+    db: Requete,
+    rang: number,
+    modele: string,
+    role: string,
+    periode: string,
+    plafondUsd: string,
+    motif: string,
+  ) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.designation_regler($1::smallint, $2, $3, $4, $5::numeric, $6) as r`,
+      [rang, modele, role, periode, plafondUsd, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /** Les relances d'impayé : la dernière décision de la tour, ou `null` (fermées). */
   async reglageRelances(db: Requete) {
     const { rows } = await db.query<{ r: Record<string, unknown> | null }>(

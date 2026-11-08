@@ -31,6 +31,7 @@ import type { MessageKey } from "@/i18n";
 import { ReglerLAbonnement } from "./abonnement";
 import { LAccesTotal } from "./acces-total";
 import { LeCalendrierFiscal } from "./calendrier-fiscal";
+import { LaChaineDeDesignation } from "./chaine-de-designation";
 import { LaConsigneDuConseil, LeReglageDuConseil } from "./conseil-cite";
 import { DesignerLEmetteur } from "./emetteur";
 import { LaFacturationAutomatique } from "./facturation-automatique";
@@ -67,7 +68,11 @@ export const SECTIONS = {
   licences: { libelle: "tour.menu.licences", icone: BadgeCheck, cartes: [LesLicences] },
   acces: { libelle: "tour.menu.acces", icone: ShieldCheck, cartes: [LAccesTotal] },
   nuit: { libelle: "tour.menu.nuit", icone: MoonStar, cartes: [LaPasseDeNuit] },
-  modeles: { libelle: "tour.menu.modeles", icone: Gauge, cartes: [ReglerLePlafondIa] },
+  modeles: {
+    libelle: "tour.menu.modeles",
+    icone: Gauge,
+    cartes: [LaChaineDeDesignation, ReglerLePlafondIa],
+  },
   conseil: {
     libelle: "tour.menu.conseil",
     icone: Scale,

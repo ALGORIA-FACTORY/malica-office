@@ -2154,6 +2154,12 @@ export const en: Dict = {
   "refus.arbitrage.reponse_envoyee": "An answer already sent cannot be dismissed.",
   "refus.charge.reponse_invalide": "This answer is not allowed for this question.",
   "refus.ia.tarif_absent": "No current price for model {modele} (role {role}).",
+  "refus.designation.saisie":
+    "Incomplete setting: a rank (primary or fallback), a role, a period (day or month), a positive cap and a reason.",
+  "refus.designation.modele_sans_tarif":
+    "This model has no current price at Anthropic or DeepSeek: its cost could not be counted.",
+  "refus.designation.meme_fournisseur":
+    "The primary and the fallback must come from two different providers.",
   "refus.ecriture.desequilibree":
     "The entry is unbalanced: debit {debit} against credit {credit}. Balance it before saving.",
   "refus.ecriture.sans_ligne": "An entry without lines cannot be posted.",
@@ -3841,6 +3847,31 @@ export const en: Dict = {
   "tour.conseilCite.distanceMaxMots": "Maximum distance of a passage also found by words",
   "tour.conseilCite.sortieMax": "Maximum answer length (tokens)",
   "tour.conseilCite.borne": "Whole numbers, and distances between 0 and 1 (at most four decimals).",
+  "tour.designation": "Designation chain",
+  "tour.designation.aide":
+    "Claude designates documents. DeepSeek takes over when Claude fails or its budget is spent. When both budgets are spent, no model is called: the document is read by the Sudoku engine alone, and the reason is logged.",
+  "tour.designation.rang.1": "Primary",
+  "tour.designation.rang.2": "Fallback",
+  "tour.designation.depense": "${depense} spent of ${plafond} {periode}",
+  "tour.designation.epuise": "Budget spent",
+  "tour.designation.disponible": "Available",
+  "tour.designation.decide": "Decided on {date}: {motif}",
+  "tour.designation.modele": "Model",
+  "tour.designation.periode": "Cap period",
+  "tour.designation.periode.jour": "per day",
+  "tour.designation.periode.mois": "per month",
+  "tour.designation.plafond": "Cap (dollars)",
+  "tour.designation.bascules": "Latest switches (30 days)",
+  "tour.designation.sansIa":
+    "Documents read without AI this month: {sansIa}; designated by a model: {parModele}.",
+  "tour.designation.aucuneBascule": "No switch.",
+  "tour.designation.motif.bascule.technique": "failure, the next link took over",
+  "tour.designation.motif.bascule.budget": "budget spent, the next link took over",
+  "tour.designation.motif.repli.technique": "designated instead of the failing primary",
+  "tour.designation.motif.repli.budget": "designated instead of the primary out of budget",
+  "tour.designation.motif.arret.budgets_epuises":
+    "stopped: both budgets spent, read by the Sudoku alone",
+  "tour.designation.motif.arret.chaine_vide": "stopped: no chain set",
   "tour.relances": "Overdue reminders",
   "tour.relances.aide":
     "When enabled, Malica writes to the holder of an overdue invoice: a reminder, a follow-up, a notice, then the suspension notice. One email per invoice and per step. Disabled, nothing is sent.",

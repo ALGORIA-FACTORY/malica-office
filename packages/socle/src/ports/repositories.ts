@@ -4503,6 +4503,35 @@ export interface EtatDuConseilCite {
   mois: { appels: number; cout: number };
 }
 
+/** Un maillon de la chaîne de désignation, tel que la tour le voit. */
+export interface MaillonDeLaDesignation {
+  rang: 1 | 2;
+  fournisseur: "anthropic" | "deepseek";
+  modele: string;
+  role: string;
+  periode: "jour" | "mois";
+  plafond: number;
+  depense: number;
+  epuise: boolean;
+  motif: string;
+  decide_le: string;
+}
+
+/** La chaîne de désignation, ses choix possibles et ses dernières bascules. */
+export interface EtatDeLaDesignation {
+  maillons: MaillonDeLaDesignation[];
+  modeles: Array<{
+    fournisseur: "anthropic" | "deepseek";
+    modele: string;
+    role: string;
+    prix_entree: number;
+    prix_sortie: number;
+  }>;
+  bascules: Array<{ le: string; modele: string; statut: "error" | "degraded"; motif: string }>;
+  /** Le mois civil : pièces lues sans IA (le Sudoku d'abord) et pièces désignées par un modèle. */
+  mois: { sans_ia: number; par_modele: number };
+}
+
 export interface TourRepository {
   suisJePlateforme(): Promise<boolean>;
   /** Tous les cabinets et toutes les PME, avec ou sans cabinet : des compteurs et des états. */
@@ -4619,6 +4648,21 @@ export interface TourRepository {
   publierConsigneDuConseil(texte: string, motif: string): Promise<unknown>;
   /** Régler le conseil cité : modèles, règle de difficulté, seuils de recherche. */
   reglerConseilCite(reglage: ReglageDuConseilCite, motif: string): Promise<unknown>;
+  /**
+   * La chaîne de désignation (décision du 8 novembre 2026) : Claude au rang 1,
+   * DeepSeek au rang 2, leurs plafonds et dépenses de la période, les modèles
+   * tarifés qu'on peut y mettre, et les dernières bascules.
+   */
+  designation(): Promise<EtatDeLaDesignation>;
+  /** La tour règle un rang de la chaîne : modèle, période, plafond. Daté, motivé, en ajout seul. */
+  reglerDesignation(
+    rang: 1 | 2,
+    modele: string,
+    role: string,
+    periode: "jour" | "mois",
+    plafondUsd: string,
+    motif: string,
+  ): Promise<unknown>;
   /** Les relances d'impayé en vigueur ; `null` tant que la tour n'a rien décidé (fermées). */
   reglageRelances(): Promise<{
     actives: boolean;

@@ -2097,6 +2097,12 @@ export const ar: Dict = {
   "refus.arbitrage.reponse_envoyee": "الجواب المُرسَل لا يُستبعد.",
   "refus.charge.reponse_invalide": "هذا الجواب غير مقبول لهذا السؤال.",
   "refus.ia.tarif_absent": "لا تسعيرة سارية للنموذج {modele} (الدور {role}).",
+  "refus.designation.saisie":
+    "إعداد غير مكتمل: رتبة (رئيسي أو احتياطي)، ودور، وفترة (يوم أو شهر)، وسقف موجب، وسبب.",
+  "refus.designation.modele_sans_tarif":
+    "لا تسعيرة سارية لهذا النموذج لدى Anthropic أو DeepSeek: لا يمكن احتساب كلفته.",
+  "refus.designation.meme_fournisseur":
+    "يجب أن يأتي النموذج الرئيسي والاحتياطي من مزوّدين مختلفين.",
   "refus.ecriture.desequilibree":
     "القيد غير متوازن: مدين {debit} مقابل دائن {credit}. وازنه قبل تسجيله.",
   "refus.ecriture.sans_ligne": "القيد بلا أسطر لا يُرحَّل.",
@@ -3690,6 +3696,30 @@ export const ar: Dict = {
   "tour.conseilCite.distanceMaxMots": "أقصى مسافة لمقتطف وُجد أيضًا بالكلمات",
   "tour.conseilCite.sortieMax": "أقصى طول للإجابة (رموز)",
   "tour.conseilCite.borne": "أعداد صحيحة، ومسافات بين 0 و1 (أربعة أرقام عشرية على الأكثر).",
+  "tour.designation": "سلسلة التعيين",
+  "tour.designation.aide":
+    "يعيّن Claude حقول الوثائق. ويتولّى DeepSeek المهمة عند تعطّل Claude أو نفاد ميزانيته. وعند نفاد الميزانيتين لا يُستدعى أي نموذج: تُقرأ الوثيقة بمحرّك السودوكو وحده ويُسجَّل السبب.",
+  "tour.designation.rang.1": "رئيسي",
+  "tour.designation.rang.2": "احتياطي",
+  "tour.designation.depense": "أُنفق {depense} $ من {plafond} $ {periode}",
+  "tour.designation.epuise": "الميزانية نفدت",
+  "tour.designation.disponible": "متاح",
+  "tour.designation.decide": "تقرّر في {date}: {motif}",
+  "tour.designation.modele": "النموذج",
+  "tour.designation.periode": "فترة السقف",
+  "tour.designation.periode.jour": "في اليوم",
+  "tour.designation.periode.mois": "في الشهر",
+  "tour.designation.plafond": "السقف (بالدولار)",
+  "tour.designation.bascules": "آخر التحويلات (30 يومًا)",
+  "tour.designation.sansIa":
+    "الوثائق المقروءة دون ذكاء اصطناعي هذا الشهر: {sansIa}؛ المعيّنة بنموذج: {parModele}.",
+  "tour.designation.aucuneBascule": "لا تحويل.",
+  "tour.designation.motif.bascule.technique": "عطل، تولّت الحلقة التالية المهمة",
+  "tour.designation.motif.bascule.budget": "نفدت الميزانية، تولّت الحلقة التالية المهمة",
+  "tour.designation.motif.repli.technique": "عيّن بدل النموذج الرئيسي المعطّل",
+  "tour.designation.motif.repli.budget": "عيّن بدل النموذج الرئيسي بلا ميزانية",
+  "tour.designation.motif.arret.budgets_epuises": "توقّف: نفدت الميزانيتان، قراءة بالسودوكو وحده",
+  "tour.designation.motif.arret.chaine_vide": "توقّف: لا سلسلة مضبوطة",
   "tour.relances": "تذكيرات الفواتير غير المسددة",
   "tour.relances.aide":
     "عند تفعيلها، تراسل Malica صاحب الفاتورة المتأخرة: تذكير، ثم متابعة، ثم إشعار، ثم إعلان التعليق. رسالة واحدة لكل فاتورة ولكل مرحلة. عند إيقافها، لا يُرسل شيء.",
