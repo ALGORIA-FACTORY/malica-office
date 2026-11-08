@@ -5093,14 +5093,18 @@ export const fr = {
   "cab.cli.acces.places.attente.n": "{count} invitations en attente",
   "cab.cli.acces.places.attente.n#one": "{count} invitation en attente",
   "cab.cli.acces.places.attente.n#other": "{count} invitations en attente",
-  "cab.cli.abo.refus.organisations": "Impossible : ce dirigeant a plus de sociétés sous sa licence que cette offre n'en inclut.",
-  "cab.cli.abo.refus.sieges": "Impossible : plus de places sont occupées que cette offre n'en permet.",
+  "cab.cli.abo.refus.organisations":
+    "Impossible : ce dirigeant a plus de sociétés sous sa licence que cette offre n'en inclut.",
+  "cab.cli.abo.refus.sieges":
+    "Impossible : plus de places sont occupées que cette offre n'en permet.",
   "cab.cli.places.seul": "le dirigeant seul",
   "cab.cli.abo.ligne.licence": "{offre} · même licence",
   "cab.cli.abo.ligne.licence.sous": "incluse dans l'abonnement de son dirigeant",
   "cab.cli.abo.licence": "Couverte par la licence de son dirigeant · {offre}",
-  "cab.cli.abo.licence.detail": "Vous payez déjà cette licence pour une autre de ses sociétés : rien de plus à régler.",
-  "refus.abonnement.couvert_par_la_licence": "Cette société est déjà couverte par la licence de son dirigeant, que vous payez.",
+  "cab.cli.abo.licence.detail":
+    "Vous payez déjà cette licence pour une autre de ses sociétés : rien de plus à régler.",
+  "refus.abonnement.couvert_par_la_licence":
+    "Cette société est déjà couverte par la licence de son dirigeant, que vous payez.",
   "pme.notifs.voirEquipe": "Voir mon équipe",
   "cab.cli.kicker": "Portefeuille",
   "cab.cli.titre": "Clients",

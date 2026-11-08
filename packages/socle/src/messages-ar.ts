@@ -4698,7 +4698,8 @@ export const ar: Dict = {
   "cab.cli.acces.places.attente.n": "{count} دعوات في الانتظار",
   "cab.cli.acces.places.attente.n#one": "دعوة واحدة في الانتظار",
   "cab.cli.acces.places.attente.n#other": "{count} دعوات في الانتظار",
-  "cab.cli.abo.refus.organisations": "غير ممكن: لدى هذا المسيّر شركات تحت رخصته أكثر مما يشمله هذا العرض.",
+  "cab.cli.abo.refus.organisations":
+    "غير ممكن: لدى هذا المسيّر شركات تحت رخصته أكثر مما يشمله هذا العرض.",
   "cab.cli.abo.refus.sieges": "غير ممكن: المقاعد المشغولة أكثر مما يسمح به هذا العرض.",
   "cab.cli.places.seul": "المسيّر وحده",
   "cab.cli.abo.ligne.licence": "{offre} · الرخصة نفسها",

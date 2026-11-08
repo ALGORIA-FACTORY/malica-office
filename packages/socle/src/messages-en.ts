@@ -4892,14 +4892,17 @@ export const en: Dict = {
   "cab.cli.acces.places.attente.n": "{count} invitations pending",
   "cab.cli.acces.places.attente.n#one": "{count} invitation pending",
   "cab.cli.acces.places.attente.n#other": "{count} invitations pending",
-  "cab.cli.abo.refus.organisations": "Not possible: this owner has more companies on the licence than this plan includes.",
+  "cab.cli.abo.refus.organisations":
+    "Not possible: this owner has more companies on the licence than this plan includes.",
   "cab.cli.abo.refus.sieges": "Not possible: more seats are taken than this plan allows.",
   "cab.cli.places.seul": "owner only",
   "cab.cli.abo.ligne.licence": "{offre} · same licence",
   "cab.cli.abo.ligne.licence.sous": "included in the owner's subscription",
   "cab.cli.abo.licence": "Covered by the owner's licence · {offre}",
-  "cab.cli.abo.licence.detail": "You already pay this licence for another of their companies: nothing more to pay.",
-  "refus.abonnement.couvert_par_la_licence": "This company is already covered by its owner's licence, which you pay.",
+  "cab.cli.abo.licence.detail":
+    "You already pay this licence for another of their companies: nothing more to pay.",
+  "refus.abonnement.couvert_par_la_licence":
+    "This company is already covered by its owner's licence, which you pay.",
   "pme.notifs.voirEquipe": "See my team",
   "cab.cli.kicker": "Portfolio",
   "cab.cli.titre": "Clients",
