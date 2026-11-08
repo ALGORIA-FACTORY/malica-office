@@ -14,6 +14,7 @@
 import { EchecAuth, type AuthPort, type Compte } from "@malica/socle/ports/auth";
 import { transport } from "@/lib/transport";
 import { ErreurReseau } from "@/lib/transport/erreurs";
+import { ecouterLaDeconnexion } from "@/lib/transport/etat";
 
 async function appeler(
   chemin: string,
@@ -71,6 +72,14 @@ let enVol: Promise<Compte | null> | null = null;
 function connaitre(compte: Compte | null) {
   connue = compte ? { compte, le: Date.now() } : null;
 }
+
+// Toute fin de session passe par le même signal — le bouton « Se
+// déconnecter », un jeton long refusé, une relance encore en 401 (transport) :
+// le compte gardé en mémoire s'oublie avec elle, sans quoi la page de
+// connexion le reprendrait et renverrait à l'intérieur (relu par Codex, #309).
+ecouterLaDeconnexion(() => {
+  connaitre(null);
+});
 
 /** La session a pris fin ailleurs : l'écran retourne à la connexion. */
 export const SESSION_PERDUE = "malica:session-perdue";

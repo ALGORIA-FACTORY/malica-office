@@ -27,6 +27,7 @@ vi.mock("@/lib/transport", () => ({
   }),
 }));
 
+import { ecouterLaDeconnexion, signalerLaDeconnexion } from "@/lib/transport/etat";
 import { SESSION_PERDUE, creerAuthHttp } from "../auth";
 
 describe("la session, connue une fois", () => {
@@ -69,6 +70,25 @@ describe("la session, connue une fois", () => {
     reseau.statut = 200;
     await auth.session();
     await auth.deconnexion();
+    reseau.appels = 0;
+    reseau.statut = 401;
+    expect(await auth.session()).toBeNull();
+    expect(reseau.appels).toBe(1);
+  });
+
+  it("une fin de session signalée par le transport oublie aussi le compte", async () => {
+    const auth = creerAuthHttp();
+    await auth.deconnexion();
+    reseau.statut = 200;
+    await auth.session();
+    // La racine écoute aussi (elle se monte après l'adaptateur) : les deux
+    // entendent le signal, aucune n'efface l'autre.
+    const racine = vi.fn();
+    const retirer = ecouterLaDeconnexion(racine);
+    // Jeton long refusé, relance encore en 401 : le transport le signale.
+    signalerLaDeconnexion();
+    expect(racine).toHaveBeenCalledTimes(1);
+    retirer();
     reseau.appels = 0;
     reseau.statut = 401;
     expect(await auth.session()).toBeNull();
