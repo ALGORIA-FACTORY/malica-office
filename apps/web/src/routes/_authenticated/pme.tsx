@@ -371,7 +371,7 @@ function PmeLayout() {
        * pièce de l'espace privé ne se rattache pas (`piece_rattacher`) — et
        * se rattache. Il part au cabinet AVEC sa pièce, sans lecture : la base
        * l'envoie avec elle, ou aussitôt si elle y est déjà (planche 3,
-       * `20261205090000_un_document_joint_part_avec_sa_piece`).
+       * `20261208090200_un_document_joint_part_avec_sa_piece`).
        */
       if (input.joindre) {
         for (const id of identifiants) {
