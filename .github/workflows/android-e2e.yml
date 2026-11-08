@@ -178,9 +178,21 @@ jobs:
           ./gradlew --stop || true
           pkill -f KotlinCompileDaemon || true
 
+      # Le script d'installation télécharge une archive qui peut répondre 504
+      # (8 novembre 2026, deux fois de suite) : il ne s'arrête pas pour autant,
+      # et chaque flux tombait ensuite en « code 127 », Maestro absent, sans
+      # qu'aucun test n'ait tourné. On réessaie, et l'étape échoue d'elle-même,
+      # avec sa vraie raison, si Maestro n'est toujours pas là.
       - name: Installer Maestro
         run: |
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          for essai in 1 2 3 4 5; do
+            curl -fsSL "https://get.maestro.mobile.dev" | bash || true
+            if "$HOME/.maestro/bin/maestro" --version >/dev/null 2>&1; then break; fi
+            echo "Maestro absent après l'essai $essai ; nouvel essai dans $((essai * 15)) s"
+            rm -rf "$HOME/.maestro"
+            sleep $((essai * 15))
+          done
+          "$HOME/.maestro/bin/maestro" --version
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
       # L'émulateur n'a jamais démarré ici : « Not enough space to create

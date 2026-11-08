@@ -65,6 +65,8 @@ function versPv(p: Record<string, unknown>) {
   };
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const collab = {
   async members(db: Requete, cabinetTenantId: string) {
     const { rows } = await db.query(
@@ -375,6 +377,19 @@ export const collab = {
     // dateraient la même lecture à des heures différentes.
     // Chacun sa lecture : celle du cabinet ne lit pas à la place du dirigeant.
     await db.query(`select public.notification_marquer_lue($1)`, [id]);
+  },
+
+  /**
+   * « Tout lire » (planche 2, approuvée le 7 novembre 2026) : la même porte
+   * que `markRead`, pour une liste, en un appel — cent alertes ne font pas
+   * cent allers-retours. Bornée : au-delà, l'écran envoie par tranches.
+   */
+  async markAllRead(db: Requete, ids: unknown): Promise<void> {
+    if (!Array.isArray(ids) || ids.length > 500) throw new Error("notifications.invalides");
+    if (!ids.every((id) => typeof id === "string" && UUID.test(id)))
+      throw new Error("notifications.invalides");
+    if (ids.length === 0) return;
+    await db.query(`select public.notification_marquer_lue(i) from unnest($1::uuid[]) i`, [ids]);
   },
 
   /**

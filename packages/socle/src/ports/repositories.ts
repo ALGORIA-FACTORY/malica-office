@@ -205,12 +205,19 @@ export interface IdentityRepository {
   monProfil(): Promise<MonProfil | null>;
   /** Un champ vide s'efface ; la base compose « Prénom Nom ». */
   ecrireMonProfil(prenom: string | null, nom: string | null): Promise<MonProfil | null>;
+  /** Le côté du bouton « + » (planche 5) ; il suit le compte, sur tous les appareils. */
+  ecrireCoteDuPlus(cote: CoteDuPlus): Promise<CoteDuPlus>;
 }
+
+/** Le côté du bouton « + » : sous le pouce droit (par défaut) ou gauche. */
+export type CoteDuPlus = "gauche" | "droite";
 
 export interface MonProfil {
   prenom: string | null;
   nom: string | null;
   display_name: string | null;
+  /** Le côté du « + » (planche 5, 7 novembre 2026). */
+  cote_du_plus: CoteDuPlus;
 }
 
 export type StatutInvitation = "en_attente" | "acceptee" | "expiree" | "revoquee";
@@ -1449,9 +1456,23 @@ export interface CandidatAuJustificatif {
   tiers: string | null;
 }
 
+/**
+ * Le rangement d'un papier de l'espace privé (planche 10) : un rayon (un code
+ * proposé, ou le nom d'un rayon à soi) et, s'il y en a un, son nom.
+ */
+export interface RangementPrive {
+  pieceId: string;
+  rayon: string;
+  nom: string | null;
+}
+
 export interface CaptureRepository {
   /** Son Mon espace hors des sociétés quittées : il part avec son compte (lot 4). */
   monEspaceHorsSociete(): Promise<PieceDeMonEspace[]>;
+  /** Les rangements de son espace privé dans cette société ; à soi seul (planche 10). */
+  mesRangementsPrives(tenantId: string): Promise<RangementPrive[]>;
+  /** Ranger un papier privé dont on est l'auteur : son rayon, et son nom s'il en a un. */
+  rangerPrive(pieceId: string, rayon: string, nom: string | null): Promise<RangementPrive>;
   /**
    * Les deux pas d'un dépôt, séparés pour que la file hors ligne reprenne
    * entre les deux : la ligne d'abord (même clé → même pièce), les octets
@@ -1944,6 +1965,10 @@ export interface OfficeRepository {
   rattacherLaFacture(pieceId: string, factureId: string): Promise<PropositionDePiece>;
   /** Les factures comptabilisées du même dossier et du même sens, pour un avoir. */
   facturesARattacher(pieceId: string): Promise<FactureARattacher[]>;
+  /** La facture identique déjà comptabilisée dans le dossier, ou rien. */
+  dejaComptabilisee(
+    pieceId: string,
+  ): Promise<{ pieceId: string; numero: string; ttc: string | null } | null>;
   /**
    * SAISIR LE COURS d'une pièce en devise, en un geste : le cours que son
    * jugement demande (ou sa correction au même jour), pour l'organisation
@@ -2151,6 +2176,8 @@ export interface QueueItem {
   collaborateur: string | null;
   /** La confiance globale de la dernière lecture (0..1), ou rien si elle n'a pas été mesurée. */
   confiance: number | null;
+  /** Le verdict de la dernière analyse : il dit si une écriture peut se proposer. */
+  verdict?: string | null;
   /**
    * Ce que la PME demande sur cette pièce, et qui attend le cabinet.
    *
@@ -2957,6 +2984,8 @@ export interface CollabRepository {
   stats(tenantIds: string[]): Promise<ClientStats[]>;
   notifications(tenantIds: string[]): Promise<Notification[]>;
   markRead(id: string): Promise<void>;
+  /** « Tout lire » : la même lecture, pour une liste (500 au plus). */
+  markAllRead(ids: string[]): Promise<void>;
   echeances(tenantIds: string[], locale?: string): Promise<Echeance[]>;
   /** Dériver le calendrier de chaque dossier depuis le pack ; idempotent. */
   deriverEcheances(tenantIds: string[]): Promise<DerivationEcheances[]>;
@@ -3858,6 +3887,17 @@ export interface SiegeDeLaLicence {
 }
 
 /** Une organisation de la licence, et ce qu'elle a consommé ce mois-ci. */
+/** Ce que la liste des sociétés montre de chacune (planche 4). */
+export interface FicheDeSociete {
+  tenantId: string;
+  /** Le code de l'offre, `null` sans licence lisible. */
+  offre: string | null;
+  /** Le cabinet au mandat actif, `null` s'il n'y en a pas. */
+  cabinet: string | null;
+  /** Son identifiant : le dossier « Votre comptabilité » (planche 6) le regroupe. */
+  cabinetId: string | null;
+}
+
 export interface OrganisationDeLaLicence {
   tenant_id: string;
   nom: string;
@@ -3897,6 +3937,8 @@ export interface FacturationRepository {
   organisationsDesSocietes(tenantIds: readonly string[]): Promise<OrganisationDeLaLicence[]>;
   /** Les sièges vus depuis plusieurs sociétés, en un aller-retour. Sans doublon. */
   siegesDesSocietes(tenantIds: readonly string[]): Promise<SiegeDeLaLicence[]>;
+  /** L'offre et le cabinet de chaque société, en un appel (planche 4). Ni prix ni paiement. */
+  fichesDesSocietes(tenantIds: readonly string[]): Promise<FicheDeSociete[]>;
   inviterSiege(
     email: string,
     tenantId: string,

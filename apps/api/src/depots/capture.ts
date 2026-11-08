@@ -26,6 +26,7 @@ import { enUnitesExactes } from "@malica/socle/somme-decimale";
 import { codeDeLecture } from "@malica/socle/issue-de-lecture";
 import { refusAvecValeurs } from "@malica/socle/refus-a-dire";
 import type {
+  RangementPrive,
   ChampObserve,
   EtatDUnTravail,
   GesteDeRetour,
@@ -657,6 +658,37 @@ export const capture = {
       contentType: (r["content_type"] as string | null) ?? null,
       documentKind: (r["document_kind"] as string | null) ?? null,
     }));
+  },
+
+  /**
+   * Les rangements de SON espace privé dans une société (planche 10) : le
+   * rayon et le nom de chaque papier. La base ne rend que ceux de l'appelant.
+   */
+  async mesRangementsPrives(db: Requete, tenantId: string): Promise<RangementPrive[]> {
+    const { rows } = await db.query<{ piece_id: string; rayon: string; nom: string | null }>(
+      `select piece_id, rayon, nom from capture.rangements_prives where tenant_id = $1`,
+      [tenantId],
+    );
+    return rows.map((r) => ({ pieceId: r.piece_id, rayon: r.rayon, nom: r.nom }));
+  },
+
+  /** Ranger un papier privé : son rayon, et son nom s'il en a un. Pour soi seul. */
+  async rangerPrive(
+    db: Requete,
+    pieceId: string,
+    rayon: string,
+    nom: string | null,
+  ): Promise<RangementPrive> {
+    if (typeof rayon !== "string" || rayon.trim().length === 0 || rayon.length > 40)
+      throw new Error("rangement.invalide");
+    if (nom !== null && (typeof nom !== "string" || nom.length > 80))
+      throw new Error("rangement.invalide");
+    const { rows } = await db.query<{ r: { piece_id: string; rayon: string; nom: string | null } }>(
+      `select public.piece_privee_ranger($1, $2, $3) as r`,
+      [pieceId, rayon, nom],
+    );
+    const r = rows[0]!.r;
+    return { pieceId: r.piece_id, rayon: r.rayon, nom: r.nom };
   },
 
   async lister(db: Requete, tenantId: string) {

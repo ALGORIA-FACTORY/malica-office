@@ -18,6 +18,7 @@
 
 import type {
   MotifDAnnulation,
+  RangementPrive,
   CaptureRepository,
   Citation,
   Extraction,
@@ -87,6 +88,15 @@ export function creerCaptureHttp(): CaptureRepository {
     // L'API rend déjà la forme du port : rien à transposer ici.
     async listAvecLecture(tenantId: string): Promise<PieceLue[]> {
       return rpc<PieceLue[]>("capture", "listAvecLecture", [tenantId]);
+    },
+
+    // Planche 10 : le rayon et le nom des papiers privés — à soi seul.
+    async mesRangementsPrives(tenantId: string) {
+      return rpc<RangementPrive[]>("capture", "mesRangementsPrives", [tenantId]);
+    },
+
+    async rangerPrive(pieceId: string, rayon: string, nom: string | null) {
+      return rpc<RangementPrive>("capture", "rangerPrive", [pieceId, rayon, nom]);
     },
 
     async listAvecLectureDesSocietes(tenantIds: readonly string[]) {

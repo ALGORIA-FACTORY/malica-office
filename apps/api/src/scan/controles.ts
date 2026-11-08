@@ -57,6 +57,7 @@ export interface ResultatControle {
     | "cours_de_change"
     /** Un achat qui désigne un bien susceptible d'être immobilisé : le cabinet tranche (31 octobre 2026). */
     | "immobilisation_a_trancher"
+    | "tva_exclue_a_trancher"
     /** Un bien reconnu sous le seuil du cabinet : à l'actif, amorti à 100 % (31 octobre 2026). */
     | "immobilisation_faible_valeur";
   statut: Statut;
@@ -117,6 +118,8 @@ export interface ContexteControle {
    * sans casse et en Unicode) et la famille de biens qu'il reconnaît.
    */
   biensImmobilisables: Array<{ motif: string; famille: string }>;
+  /** Les mots d'un achat dont la TVA peut être exclue (`ref.exclusions_de_deduction`). */
+  exclusionsDeDeduction: Array<{ motif: string; famille: string; base_legale: string }>;
   /**
    * Le seuil et le traitement d'un bien de faible valeur que le cabinet a
    * arrêtés (`app.reglage_comptable`) ; nul quand le pack n'en porte aucun.
@@ -1041,6 +1044,37 @@ function coursDeChange(p: PieceAControler, ctx: ContexteControle): ResultatContr
 }
 
 /**
+ * La TVA d'un achat que la loi peut exclure du droit à déduction (voiture de
+ * tourisme, sa location, sa marche et son entretien). Le mot ne décide pas : un
+ * plein peut servir un camion. La réserve nomme les articles et l'article de loi.
+ */
+function tvaExclueATrancher(p: PieceAControler, ctx: ContexteControle): ResultatControle[] {
+  if (p.documentKind !== "facture_achat") return [];
+  const motifs = ctx.exclusionsDeDeduction.map((m) => ({
+    ...m,
+    expression: new RegExp(m.motif, "iu"),
+  }));
+  const reconnus = (p.articles ?? []).flatMap((article) => {
+    const trouves = motifs.filter((m) => m.expression.test(article.designation));
+    return trouves.length > 0 ? [{ designation: article.designation, trouves }] : [];
+  });
+  if (reconnus.length === 0) return [];
+  const bases = [...new Set(reconnus.flatMap((r) => r.trouves.map((m) => m.base_legale)))].sort();
+  return [
+    {
+      code: "tva_exclue_a_trancher",
+      statut: "reserve",
+      motif: `TVA peut-être non déductible (${bases.join(", ")}) : ${reconnus.map((r) => `« ${r.designation} »`).join(", ")}. L'écriture proposée la déduit ; le cabinet tranche selon le véhicule et son usage.`,
+      preuves: {
+        articles: reconnus.map((r) => r.designation),
+        familles: [...new Set(reconnus.flatMap((r) => r.trouves.map((m) => m.famille)))].sort(),
+        bases,
+      },
+    },
+  ];
+}
+
+/**
  * Un achat désigne-t-il un bien susceptible d'être immobilisé ?
  *
  * ================================================================= POURQUOI
@@ -1188,6 +1222,7 @@ function valeurUnitaireAuPlus(a: ArticleAControler, seuil: string, base: "ht" | 
 export function controlerPiece(p: PieceAControler, ctx: ContexteControle): ResultatControle[] {
   const change = coursDeChange(p, ctx);
   const immobilisation = immobilisationATrancher(p, ctx);
+  const tvaExclue = tvaExclueATrancher(p, ctx);
   return [
     arithmetique(p),
     mentions(p, ctx),
@@ -1199,6 +1234,7 @@ export function controlerPiece(p: PieceAControler, ctx: ContexteControle): Resul
     confiance(p, ctx),
     ...(change ? [change] : []),
     ...immobilisation,
+    ...tvaExclue,
   ];
 }
 

@@ -45,6 +45,7 @@ import { Route as AuthenticatedCabinetStocksRouteImport } from './routes/_authen
 import { Route as AuthenticatedPmeIndexRouteImport } from './routes/_authenticated/pme.index'
 import { Route as AuthenticatedPmeALireRouteImport } from './routes/_authenticated/pme.a-lire'
 import { Route as AuthenticatedPmeBienvenueRouteImport } from './routes/_authenticated/pme.bienvenue'
+import { Route as AuthenticatedPmeBoutonPlusRouteImport } from './routes/_authenticated/pme.bouton-plus'
 import { Route as AuthenticatedPmeCapturerRouteImport } from './routes/_authenticated/pme.capturer'
 import { Route as AuthenticatedPmeChargesRouteImport } from './routes/_authenticated/pme.charges'
 import { Route as AuthenticatedPmeCoffreRouteImport } from './routes/_authenticated/pme.coffre'
@@ -55,6 +56,7 @@ import { Route as AuthenticatedPmeMalicaRouteImport } from './routes/_authentica
 import { Route as AuthenticatedPmeNotificationsRouteImport } from './routes/_authenticated/pme.notifications'
 import { Route as AuthenticatedPmeReglagesRouteImport } from './routes/_authenticated/pme.reglages'
 import { Route as AuthenticatedPmeReglerRouteImport } from './routes/_authenticated/pme.regler'
+import { Route as AuthenticatedPmeSocietesRouteImport } from './routes/_authenticated/pme.societes'
 import { Route as AuthenticatedPmeTvaRouteImport } from './routes/_authenticated/pme.tva'
 import { Route as AuthenticatedTourIndexRouteImport } from './routes/_authenticated/tour.index'
 import { Route as AuthenticatedTourSectionRouteImport } from './routes/_authenticated/tour.$section'
@@ -63,6 +65,7 @@ import { Route as AuthenticatedCabinetDossierClientIdRouteImport } from './route
 import { Route as AuthenticatedCabinetFactureFactureIdRouteImport } from './routes/_authenticated/cabinet.facture.$factureId'
 import { Route as AuthenticatedCabinetPayerPaiementIdRouteImport } from './routes/_authenticated/cabinet.payer.$paiementId'
 import { Route as AuthenticatedCabinetPiecePieceIdRouteImport } from './routes/_authenticated/cabinet.piece.$pieceId'
+import { Route as AuthenticatedPmeComptabiliteCabinetIdRouteImport } from './routes/_authenticated/pme.comptabilite.$cabinetId'
 import { Route as AuthenticatedPmeDossierTypeRouteImport } from './routes/_authenticated/pme.dossier.$type'
 import { Route as AuthenticatedPmePayerPaiementIdRouteImport } from './routes/_authenticated/pme.payer.$paiementId'
 import { Route as AuthenticatedPmePiecePieceIdRouteImport } from './routes/_authenticated/pme.piece.$pieceId'
@@ -269,6 +272,12 @@ const AuthenticatedPmeBienvenueRoute =
     path: '/bienvenue',
     getParentRoute: () => AuthenticatedPmeRoute,
   } as any)
+const AuthenticatedPmeBoutonPlusRoute =
+  AuthenticatedPmeBoutonPlusRouteImport.update({
+    id: '/bouton-plus',
+    path: '/bouton-plus',
+    getParentRoute: () => AuthenticatedPmeRoute,
+  } as any)
 const AuthenticatedPmeCapturerRoute =
   AuthenticatedPmeCapturerRouteImport.update({
     id: '/capturer',
@@ -323,6 +332,12 @@ const AuthenticatedPmeReglerRoute = AuthenticatedPmeReglerRouteImport.update({
   path: '/regler',
   getParentRoute: () => AuthenticatedPmeRoute,
 } as any)
+const AuthenticatedPmeSocietesRoute =
+  AuthenticatedPmeSocietesRouteImport.update({
+    id: '/societes',
+    path: '/societes',
+    getParentRoute: () => AuthenticatedPmeRoute,
+  } as any)
 const AuthenticatedPmeTvaRoute = AuthenticatedPmeTvaRouteImport.update({
   id: '/tva',
   path: '/tva',
@@ -367,6 +382,12 @@ const AuthenticatedCabinetPiecePieceIdRoute =
     id: '/piece/$pieceId',
     path: '/piece/$pieceId',
     getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
+const AuthenticatedPmeComptabiliteCabinetIdRoute =
+  AuthenticatedPmeComptabiliteCabinetIdRouteImport.update({
+    id: '/comptabilite/$cabinetId',
+    path: '/comptabilite/$cabinetId',
+    getParentRoute: () => AuthenticatedPmeRoute,
   } as any)
 const AuthenticatedPmeDossierTypeRoute =
   AuthenticatedPmeDossierTypeRouteImport.update({
@@ -433,6 +454,7 @@ export interface FileRoutesByFullPath {
   '/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/pme/a-lire': typeof AuthenticatedPmeALireRoute
   '/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
+  '/pme/bouton-plus': typeof AuthenticatedPmeBoutonPlusRoute
   '/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/pme/coffre': typeof AuthenticatedPmeCoffreRoute
@@ -443,6 +465,7 @@ export interface FileRoutesByFullPath {
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
+  '/pme/societes': typeof AuthenticatedPmeSocietesRoute
   '/pme/tva': typeof AuthenticatedPmeTvaRoute
   '/tour/$section': typeof AuthenticatedTourSectionRoute
   '/tour/pme': typeof AuthenticatedTourPmeRoute
@@ -453,6 +476,7 @@ export interface FileRoutesByFullPath {
   '/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
   '/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
+  '/pme/comptabilite/$cabinetId': typeof AuthenticatedPmeComptabiliteCabinetIdRoute
   '/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
   '/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
@@ -490,6 +514,7 @@ export interface FileRoutesByTo {
   '/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/pme/a-lire': typeof AuthenticatedPmeALireRoute
   '/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
+  '/pme/bouton-plus': typeof AuthenticatedPmeBoutonPlusRoute
   '/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/pme/coffre': typeof AuthenticatedPmeCoffreRoute
@@ -500,6 +525,7 @@ export interface FileRoutesByTo {
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
+  '/pme/societes': typeof AuthenticatedPmeSocietesRoute
   '/pme/tva': typeof AuthenticatedPmeTvaRoute
   '/tour/$section': typeof AuthenticatedTourSectionRoute
   '/tour/pme': typeof AuthenticatedTourPmeRoute
@@ -510,6 +536,7 @@ export interface FileRoutesByTo {
   '/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
   '/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
+  '/pme/comptabilite/$cabinetId': typeof AuthenticatedPmeComptabiliteCabinetIdRoute
   '/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
   '/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
@@ -552,6 +579,7 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/_authenticated/pme/a-lire': typeof AuthenticatedPmeALireRoute
   '/_authenticated/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
+  '/_authenticated/pme/bouton-plus': typeof AuthenticatedPmeBoutonPlusRoute
   '/_authenticated/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/_authenticated/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/_authenticated/pme/coffre': typeof AuthenticatedPmeCoffreRoute
@@ -562,6 +590,7 @@ export interface FileRoutesById {
   '/_authenticated/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/_authenticated/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/_authenticated/pme/regler': typeof AuthenticatedPmeReglerRoute
+  '/_authenticated/pme/societes': typeof AuthenticatedPmeSocietesRoute
   '/_authenticated/pme/tva': typeof AuthenticatedPmeTvaRoute
   '/_authenticated/tour/$section': typeof AuthenticatedTourSectionRoute
   '/_authenticated/tour/pme': typeof AuthenticatedTourPmeRoute
@@ -572,6 +601,7 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/_authenticated/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
   '/_authenticated/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
+  '/_authenticated/pme/comptabilite/$cabinetId': typeof AuthenticatedPmeComptabiliteCabinetIdRoute
   '/_authenticated/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/_authenticated/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
   '/_authenticated/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
@@ -614,6 +644,7 @@ export interface FileRouteTypes {
     | '/cabinet/stocks'
     | '/pme/a-lire'
     | '/pme/bienvenue'
+    | '/pme/bouton-plus'
     | '/pme/capturer'
     | '/pme/charges'
     | '/pme/coffre'
@@ -624,6 +655,7 @@ export interface FileRouteTypes {
     | '/pme/notifications'
     | '/pme/reglages'
     | '/pme/regler'
+    | '/pme/societes'
     | '/pme/tva'
     | '/tour/$section'
     | '/tour/pme'
@@ -634,6 +666,7 @@ export interface FileRouteTypes {
     | '/cabinet/facture/$factureId'
     | '/cabinet/payer/$paiementId'
     | '/cabinet/piece/$pieceId'
+    | '/pme/comptabilite/$cabinetId'
     | '/pme/dossier/$type'
     | '/pme/payer/$paiementId'
     | '/pme/piece/$pieceId'
@@ -671,6 +704,7 @@ export interface FileRouteTypes {
     | '/cabinet/stocks'
     | '/pme/a-lire'
     | '/pme/bienvenue'
+    | '/pme/bouton-plus'
     | '/pme/capturer'
     | '/pme/charges'
     | '/pme/coffre'
@@ -681,6 +715,7 @@ export interface FileRouteTypes {
     | '/pme/notifications'
     | '/pme/reglages'
     | '/pme/regler'
+    | '/pme/societes'
     | '/pme/tva'
     | '/tour/$section'
     | '/tour/pme'
@@ -691,6 +726,7 @@ export interface FileRouteTypes {
     | '/cabinet/facture/$factureId'
     | '/cabinet/payer/$paiementId'
     | '/cabinet/piece/$pieceId'
+    | '/pme/comptabilite/$cabinetId'
     | '/pme/dossier/$type'
     | '/pme/payer/$paiementId'
     | '/pme/piece/$pieceId'
@@ -732,6 +768,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/stocks'
     | '/_authenticated/pme/a-lire'
     | '/_authenticated/pme/bienvenue'
+    | '/_authenticated/pme/bouton-plus'
     | '/_authenticated/pme/capturer'
     | '/_authenticated/pme/charges'
     | '/_authenticated/pme/coffre'
@@ -742,6 +779,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pme/notifications'
     | '/_authenticated/pme/reglages'
     | '/_authenticated/pme/regler'
+    | '/_authenticated/pme/societes'
     | '/_authenticated/pme/tva'
     | '/_authenticated/tour/$section'
     | '/_authenticated/tour/pme'
@@ -752,6 +790,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/facture/$factureId'
     | '/_authenticated/cabinet/payer/$paiementId'
     | '/_authenticated/cabinet/piece/$pieceId'
+    | '/_authenticated/pme/comptabilite/$cabinetId'
     | '/_authenticated/pme/dossier/$type'
     | '/_authenticated/pme/payer/$paiementId'
     | '/_authenticated/pme/piece/$pieceId'
@@ -1022,6 +1061,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPmeBienvenueRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
     }
+    '/_authenticated/pme/bouton-plus': {
+      id: '/_authenticated/pme/bouton-plus'
+      path: '/bouton-plus'
+      fullPath: '/pme/bouton-plus'
+      preLoaderRoute: typeof AuthenticatedPmeBoutonPlusRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
+    }
     '/_authenticated/pme/capturer': {
       id: '/_authenticated/pme/capturer'
       path: '/capturer'
@@ -1092,6 +1138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPmeReglerRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
     }
+    '/_authenticated/pme/societes': {
+      id: '/_authenticated/pme/societes'
+      path: '/societes'
+      fullPath: '/pme/societes'
+      preLoaderRoute: typeof AuthenticatedPmeSocietesRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
+    }
     '/_authenticated/pme/tva': {
       id: '/_authenticated/pme/tva'
       path: '/tva'
@@ -1147,6 +1200,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/cabinet/piece/$pieceId'
       preLoaderRoute: typeof AuthenticatedCabinetPiecePieceIdRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
+    }
+    '/_authenticated/pme/comptabilite/$cabinetId': {
+      id: '/_authenticated/pme/comptabilite/$cabinetId'
+      path: '/comptabilite/$cabinetId'
+      fullPath: '/pme/comptabilite/$cabinetId'
+      preLoaderRoute: typeof AuthenticatedPmeComptabiliteCabinetIdRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
     }
     '/_authenticated/pme/dossier/$type': {
       id: '/_authenticated/pme/dossier/$type'
@@ -1254,6 +1314,7 @@ const AuthenticatedCabinetRouteWithChildren =
 interface AuthenticatedPmeRouteChildren {
   AuthenticatedPmeALireRoute: typeof AuthenticatedPmeALireRoute
   AuthenticatedPmeBienvenueRoute: typeof AuthenticatedPmeBienvenueRoute
+  AuthenticatedPmeBoutonPlusRoute: typeof AuthenticatedPmeBoutonPlusRoute
   AuthenticatedPmeCapturerRoute: typeof AuthenticatedPmeCapturerRoute
   AuthenticatedPmeChargesRoute: typeof AuthenticatedPmeChargesRoute
   AuthenticatedPmeCoffreRoute: typeof AuthenticatedPmeCoffreRoute
@@ -1264,8 +1325,10 @@ interface AuthenticatedPmeRouteChildren {
   AuthenticatedPmeNotificationsRoute: typeof AuthenticatedPmeNotificationsRoute
   AuthenticatedPmeReglagesRoute: typeof AuthenticatedPmeReglagesRoute
   AuthenticatedPmeReglerRoute: typeof AuthenticatedPmeReglerRoute
+  AuthenticatedPmeSocietesRoute: typeof AuthenticatedPmeSocietesRoute
   AuthenticatedPmeTvaRoute: typeof AuthenticatedPmeTvaRoute
   AuthenticatedPmeIndexRoute: typeof AuthenticatedPmeIndexRoute
+  AuthenticatedPmeComptabiliteCabinetIdRoute: typeof AuthenticatedPmeComptabiliteCabinetIdRoute
   AuthenticatedPmeDossierTypeRoute: typeof AuthenticatedPmeDossierTypeRoute
   AuthenticatedPmePayerPaiementIdRoute: typeof AuthenticatedPmePayerPaiementIdRoute
   AuthenticatedPmePiecePieceIdRoute: typeof AuthenticatedPmePiecePieceIdRoute
@@ -1274,6 +1337,7 @@ interface AuthenticatedPmeRouteChildren {
 const AuthenticatedPmeRouteChildren: AuthenticatedPmeRouteChildren = {
   AuthenticatedPmeALireRoute: AuthenticatedPmeALireRoute,
   AuthenticatedPmeBienvenueRoute: AuthenticatedPmeBienvenueRoute,
+  AuthenticatedPmeBoutonPlusRoute: AuthenticatedPmeBoutonPlusRoute,
   AuthenticatedPmeCapturerRoute: AuthenticatedPmeCapturerRoute,
   AuthenticatedPmeChargesRoute: AuthenticatedPmeChargesRoute,
   AuthenticatedPmeCoffreRoute: AuthenticatedPmeCoffreRoute,
@@ -1284,8 +1348,11 @@ const AuthenticatedPmeRouteChildren: AuthenticatedPmeRouteChildren = {
   AuthenticatedPmeNotificationsRoute: AuthenticatedPmeNotificationsRoute,
   AuthenticatedPmeReglagesRoute: AuthenticatedPmeReglagesRoute,
   AuthenticatedPmeReglerRoute: AuthenticatedPmeReglerRoute,
+  AuthenticatedPmeSocietesRoute: AuthenticatedPmeSocietesRoute,
   AuthenticatedPmeTvaRoute: AuthenticatedPmeTvaRoute,
   AuthenticatedPmeIndexRoute: AuthenticatedPmeIndexRoute,
+  AuthenticatedPmeComptabiliteCabinetIdRoute:
+    AuthenticatedPmeComptabiliteCabinetIdRoute,
   AuthenticatedPmeDossierTypeRoute: AuthenticatedPmeDossierTypeRoute,
   AuthenticatedPmePayerPaiementIdRoute: AuthenticatedPmePayerPaiementIdRoute,
   AuthenticatedPmePiecePieceIdRoute: AuthenticatedPmePiecePieceIdRoute,

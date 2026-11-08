@@ -272,6 +272,43 @@
       "famille": "VEHICULE"
     }
   ],
+  "exclusionsDeDeduction": [
+    {
+      "motif": "(?<!\\p{L})(carburants?|gasoil|gazole|essence\\s+sans\\s+plomb)(?!\\p{L})",
+      "famille": "FRAIS_DE_VEHICULE",
+      "base_legale": "Code de la TVA, art. 10-1"
+    },
+    {
+      "motif": "(?<!\\p{L})(entretien|r[ée]paration|vidange)\\s+(de\\s+|d['’]une?\\s+|du\\s+)?(voitures?|v[ée]hicules?)(?!\\p{L})",
+      "famille": "FRAIS_DE_VEHICULE",
+      "base_legale": "Code de la TVA, art. 10-1"
+    },
+    {
+      "motif": "(ال)?وقود|(ال)?مازوط",
+      "famille": "FRAIS_DE_VEHICULE",
+      "base_legale": "Code de la TVA, art. 10-1"
+    },
+    {
+      "motif": "(?<!\\p{L})(voitures?|v[ée]hicules?)\\s+(de\\s+tourisme|particuli[èe]re?s?)(?!\\p{L})",
+      "famille": "VOITURE_TOURISME",
+      "base_legale": "Code de la TVA, art. 10-1"
+    },
+    {
+      "motif": "(?<!\\p{L})location\\s+(de\\s+|d['’]une?\\s+)?(voitures?|v[ée]hicules?)(?!\\p{L})",
+      "famille": "VOITURE_TOURISME",
+      "base_legale": "Code de la TVA, art. 10-1"
+    },
+    {
+      "motif": "سيار(ة|ات)\\s+(ال)?سياحية",
+      "famille": "VOITURE_TOURISME",
+      "base_legale": "Code de la TVA, art. 10-1"
+    },
+    {
+      "motif": "كراء\\s+(ال)?سيار(ة|ات)",
+      "famille": "VOITURE_TOURISME",
+      "base_legale": "Code de la TVA, art. 10-1"
+    }
+  ],
   "naturesDeVente": [
     {
       "code": "annexes",

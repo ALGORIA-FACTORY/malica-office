@@ -105,6 +105,12 @@ export interface PmeContextValue {
    * précédente. Une photo sans lien, c'est `ouvrirScanner`.
    */
   reprendreLaPhoto: (piece: PieceARemplacer) => void;
+  /**
+   * « Joindre la pièce » par une photo ou un fichier (planche 6, 7 novembre
+   * 2026) : le document pris est rattaché à la pièce, sans repasser par le
+   * « + ».
+   */
+  joindreA: (piece: { id: string; vis: string }, moyen: "photo" | "images" | "pdf") => void;
   capturing: boolean;
   captureError: string | null;
   /** La file hors ligne de ce dossier : ce que la liste et l'accueil montrent. */

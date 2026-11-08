@@ -291,6 +291,46 @@ export const facturation = {
    * société dont l'appelant n'est pas membre est ignorée au lieu de tout
    * faire échouer. Rendu sans doublon, dans l'ordre des sociétés demandées.
    */
+  /**
+   * La fiche courte de chaque société, pour la liste des Réglages (planche 4,
+   * 7 novembre 2026) : son offre et le cabinet qui la tient, en UN appel.
+   * Avant, chaque carte lisait les deux pour elle-même — deux cents appels
+   * pour cent sociétés. Ni prix ni paiement : la coque peut la lire.
+   */
+  async fichesDesSocietes(db: Requete, tenantIds: string[]) {
+    const ids = await societesDeLAppelant(db, tenantIds);
+    if (ids.length === 0) return [];
+    const { rows: cabinets } = await db.query<{ pme: string; id: string; nom: string }>(
+      `select distinct on (e.pme_org_id) e.pme_org_id as pme, o.id, o.name as nom
+         from engagements_v e
+         join organizations_v o on o.id = e.cabinet_org_id
+        where e.pme_org_id = any($1::uuid[]) and e.status = 'actif'
+        order by e.pme_org_id, o.name`,
+      [ids],
+    );
+    const cabinetDe = new Map(cabinets.map((c) => [c.pme, c]));
+    const fiches: Array<{
+      tenantId: string;
+      offre: string | null;
+      cabinet: string | null;
+      cabinetId: string | null;
+    }> = [];
+    for (const id of ids) {
+      const { rows } = await db.query<{ offre: string | null }>(
+        `select offre from public.mon_forfait($1::uuid)`,
+        [id],
+      );
+      const c = cabinetDe.get(id);
+      fiches.push({
+        tenantId: id,
+        offre: rows[0]?.offre ?? null,
+        cabinet: c?.nom ?? null,
+        cabinetId: c?.id ?? null,
+      });
+    }
+    return fiches;
+  },
+
   async organisationsDesSocietes(db: Requete, tenantIds: string[]) {
     const ids = await societesDeLAppelant(db, tenantIds);
     const vues = new Map<string, Record<string, unknown>>();

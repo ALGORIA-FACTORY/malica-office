@@ -54,6 +54,8 @@ export const TITRES_D_ESSAI = RELEVE_D_ESSAI.titres;
 
 /** Les mots d'un bien susceptible d'être immobilisé (`ref.biens_immobilisables`). */
 export const BIENS_IMMOBILISABLES_D_ESSAI = RELEVE_D_ESSAI.biensImmobilisables;
+/** Les mots d'un achat dont la TVA peut être exclue (`ref.exclusions_de_deduction`). */
+export const EXCLUSIONS_DE_DEDUCTION_D_ESSAI = RELEVE_D_ESSAI.exclusionsDeDeduction;
 
 /** Les natures d'un article vendu, leur compte au pack et leurs motifs (`ref.natures_de_vente`). */
 export const NATURES_DE_VENTE_D_ESSAI = RELEVE_D_ESSAI.naturesDeVente;

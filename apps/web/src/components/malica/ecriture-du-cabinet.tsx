@@ -26,8 +26,10 @@ import type {
 import type { StatutCabinet, SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Plus, X } from "lucide-react";
+import { Check, ChevronDown, Plus, X } from "lucide-react";
 import { useState } from "react";
+
+import portraitMalica from "@/assets/malica.webp";
 
 import { Aide } from "@/components/malica/aide";
 import { AvoirARattacher } from "@/components/malica/avoir-a-rattacher";
@@ -77,6 +79,7 @@ export function EcritureDuCabinet({
   codesDeTaxe,
   illisible,
   onRetournee,
+  onInscrite,
 }: {
   pieceId: string;
   /** Le dossier du client : le journal du jour s'ouvre sur lui. */
@@ -111,6 +114,8 @@ export function EcritureDuCabinet({
    */
   illisible: boolean;
   onRetournee: (r: RetourEnvoye) => void;
+  /** L'écriture vient d'être inscrite : la revue passe à la suite. */
+  onInscrite?: () => void;
 }) {
   const { t, locale } = useI18n();
   const qc = useQueryClient();
@@ -143,6 +148,14 @@ export function EcritureDuCabinet({
   const [type, setType] = useState("");
   const [feuille, setFeuille] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  /*
+   * Maquette « Malica Comptabilité », approuvée le 8 novembre 2026 : ce que
+   * Malica propose se lit d'abord en une phrase et quelques lignes ; le
+   * formulaire complet s'ouvre sur « Modifier ». Rien n'est retiré.
+   */
+  const [modifier, setModifier] = useState(false);
+  const [ligneOuverte, setLigneOuverte] = useState<number | null>(null);
+  const [tampon, setTampon] = useState(false);
 
   const journaux = useQuery({
     queryKey: ["journaux", locale],
@@ -168,21 +181,30 @@ export function EcritureDuCabinet({
   const controle = decimales === null ? null : controlerLaSaisie(lignes, decimales);
   const telleQuelle = decimales !== null && inchangee({ ...saisie, lignes }, depart, decimales);
   const prise = statut === "validee" || statut === "forcee";
+  const deja = useQuery({
+    queryKey: ["deja-comptabilisee", pieceId],
+    queryFn: () => office().office.dejaComptabilisee(pieceId),
+    enabled: !prise,
+  });
+  const doublon = prise ? null : (deja.data ?? null);
+  const resume = !modifier && depart.depart !== "rien" && telleQuelle;
   /** Ce qui manque avant d'inscrire, dit par la même phrase que le refus du serveur. */
   const manque: string | null =
     controle === null
       ? t("common.loading")
-      : !saisie.journal
-        ? t("refus.ecriture.journal")
-        : !saisie.date
-          ? t("cab.ecriture.date.manque")
-          : !saisie.libelle.trim()
-            ? t("cab.ecriture.libelle.manque")
-            : typeAEtablir && !type
-              ? t("refus.inscription.type_inconnu")
-              : controle.defaut
-                ? t(`refus.ecriture.${controle.defaut}`)
-                : null;
+      : doublon
+        ? t("refus.ecriture.doublon")
+        : !saisie.journal
+          ? t("refus.ecriture.journal")
+          : !saisie.date
+            ? t("cab.ecriture.date.manque")
+            : !saisie.libelle.trim()
+              ? t("cab.ecriture.libelle.manque")
+              : typeAEtablir && !type
+                ? t("refus.inscription.type_inconnu")
+                : controle.defaut
+                  ? t(`refus.ecriture.${controle.defaut}`)
+                  : null;
 
   const relire = () =>
     Promise.all([
@@ -220,7 +242,13 @@ export function EcritureDuCabinet({
             typeDeDocument: typeAEtablir ? type : null,
           }),
     onMutate: () => setErreur(null),
-    onSuccess: relire,
+    onSuccess: async () => {
+      setTampon(true);
+      await new Promise((fin) => setTimeout(fin, 700));
+      setTampon(false);
+      await relire();
+      onInscrite?.();
+    },
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
 
@@ -444,284 +472,464 @@ export function EcritureDuCabinet({
         </p>
       ) : null}
 
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
-        <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
-          {t("cab.ecriture.journal")}
-          <select
-            value={saisie.journal}
-            onChange={(e) => setSaisie((s) => ({ ...s, journal: e.target.value }))}
-            className="h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
-          >
-            <option value="">{t("cab.ecriture.journal.choisir")}</option>
-            {(journaux.data ?? []).map((j) => (
-              <option key={j.code} value={j.code}>
-                {j.code} — {j.libelle}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
-          {t("cab.ecriture.date")}
-          <input
-            type="date"
-            value={saisie.date}
-            onChange={(e) => setSaisie((s) => ({ ...s, date: e.target.value }))}
-            className="num h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
-          {t("cab.ecriture.libelle")}
-          <input
-            type="text"
-            value={saisie.libelle}
-            onChange={(e) => setSaisie((s) => ({ ...s, libelle: e.target.value }))}
-            className="h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
-          />
-        </label>
-      </div>
-      {remarques.length > 0 ? (
-        // Les remarques ne bloquent pas : l'expert reste maître de ce qu'il
-        // écrit, mais il voit ce qu'un contrôleur verra.
-        <ul className="space-y-0.5 text-[11px] text-signal-warn">
-          {remarques.map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
-      ) : null}
-      {typeAEtablir ? (
-        <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
-          {t("cab.ecriture.type")}
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
-          >
-            <option value="">{t("cab.ecriture.type.choisir")}</option>
-            {(types.data ?? [])
-              .filter((d) => d.porteEcriture)
-              .map((d) => (
-                <option key={d.code} value={d.code}>
-                  {d.libelle}
-                </option>
-              ))}
-          </select>
-        </label>
+      {doublon ? (
+        <div className="cab-monte space-y-2 rounded-xl border border-signal-warn bg-card px-4 py-3">
+          <p className="text-[15px] font-semibold">{t("cab.ecriture.doublon.titre")}</p>
+          <p className="text-[14px] leading-snug">
+            {t("cab.ecriture.doublon.texte", {
+              numero: doublon.numero,
+              montant: doublon.ttc ? montant(doublon.ttc, locale) : "—",
+            })}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setFeuille(true)}
+              disabled={statut === "retournee"}
+              className="min-h-[44px] rounded-full bg-foreground px-4 text-[14px] font-semibold text-background disabled:opacity-50"
+            >
+              {t("cab.ecriture.doublon.ecarter")}
+            </button>
+            <Link
+              to="/cabinet/piece/$pieceId"
+              params={{ pieceId: doublon.pieceId }}
+              className="inline-flex min-h-[44px] items-center rounded-full border border-border bg-card px-4 text-[14px]"
+            >
+              {t("cab.ecriture.doublon.comparer")}
+            </Link>
+          </div>
+        </div>
       ) : null}
 
-      <ListeDesComptes id={LISTE_DES_COMPTES} plan={plan} />
-      {/*
-       * Les lignes, sans défilement horizontal : sur un téléphone, une carte par
-       * ligne (compte, libellé, puis débit et crédit côte à côte) ; dès « sm »,
-       * la grille d'un tableau. Les intitulés de colonne ne s'affichent qu'en
-       * grille ; en carte, chaque champ porte le sien.
-       */}
-      <div className="border border-border bg-card text-[13px]">
-        <div
-          aria-hidden
-          className="hidden bg-muted px-2.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:grid sm:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_2.25rem] sm:gap-2"
-        >
-          <span>{t("pme.journal.account")}</span>
-          <span>{t("cab.ecriture.ligne.libelle")}</span>
-          <span className="text-end">{t("pme.journal.debit")}</span>
-          <span className="text-end">{t("pme.journal.credit")}</span>
-          <span />
-        </div>
-        <ul>
-          {saisie.lignes.map((l, i) => (
-            <li
-              key={i}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.25rem] gap-2 border-t border-border px-2.5 py-2 first:border-t-0 sm:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_2.25rem] sm:items-start sm:first:border-t"
-            >
-              <div className="col-span-2 sm:col-span-1">
-                <SaisieDeCompte
-                  valeur={l.account_code}
-                  onChange={(code) => changerLigne(i, { account_code: code })}
-                  plan={plan}
-                  label={t("cab.ecriture.ligne.champ", {
-                    champ: t("pme.journal.account"),
-                    n: i + 1,
-                  })}
-                  inconnuLabel={t("cab.ecriture.compte.inconnu")}
-                  listeId={LISTE_DES_COMPTES}
-                  collectifLabel={t("plan.collectif.court")}
-                  originesLabels={{
-                    officiel: t("plan.origin.officiel"),
-                    extension: t("plan.origin.extension"),
-                    cabinet: t("plan.origin.cabinet"),
-                  }}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setSaisie((s) => ({ ...s, lignes: s.lignes.filter((_, j) => j !== i) }))
-                }
-                aria-label={t("cab.ecriture.ligne.champ", {
-                  champ: t("cab.ecriture.ligne.retirer"),
-                  n: i + 1,
-                })}
-                className="col-start-3 row-start-1 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground sm:col-start-5 sm:h-8 sm:w-8"
-              >
-                <X className="h-4 w-4" aria-hidden />
-              </button>
-              <label className="col-span-3 flex flex-col gap-1 sm:col-span-1 sm:row-start-1 sm:col-start-2">
-                <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:sr-only">
-                  {t("cab.ecriture.ligne.libelle")}
-                </span>
-                {/*
-                 * Un nom par champ ET par ligne : « Débit » dix fois ne dit
-                 * pas lequel (lecteur d'écran, staging du 30 octobre 2026).
-                 */}
-                <input
-                  type="text"
-                  aria-label={t("cab.ecriture.ligne.champ", {
-                    champ: t("cab.ecriture.ligne.libelle"),
-                    n: i + 1,
-                  })}
-                  value={l.libelle}
-                  onChange={(e) => changerLigne(i, { libelle: e.target.value })}
-                  className="w-full border border-border bg-background px-2 py-1 text-[13px]"
-                />
-              </label>
-              {(["debit", "credit"] as const).map((cote) => (
-                <label
-                  key={cote}
-                  className={
-                    cote === "debit"
-                      ? "flex flex-col gap-1 sm:row-start-1 sm:col-start-3"
-                      : "flex flex-col gap-1 sm:row-start-1 sm:col-start-4"
-                  }
+      {resume ? (
+        <div className="cab-monte space-y-3">
+          <div className="flex items-start gap-3">
+            <img
+              src={portraitMalica}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded-full object-cover"
+            />
+            <div className="min-w-0">
+              <p className="text-[12px] text-muted-foreground">
+                {t(
+                  depart.depart === "proposee"
+                    ? "cab.ecriture.malica_propose"
+                    : "cab.ecriture.inscrite",
+                )}
+              </p>
+              <p className="text-[17px] font-semibold leading-snug [overflow-wrap:anywhere]">
+                {saisie.libelle}
+              </p>
+            </div>
+          </div>
+          {controle && !controle.defaut ? (
+            <ul className="flex flex-wrap gap-1.5" aria-label={t("cab.ecriture.preuves")}>
+              {[
+                t("cab.ecriture.equilibree"),
+                ...[...new Set(lignes.map((l) => l.tax_code).filter((c): c is string => !!c))].map(
+                  (c) => codesDeTaxe.find((x) => x.code === c)?.label ?? c,
+                ),
+                ...(deja.isSuccess && !doublon ? [t("cab.ecriture.preuve.sans_doublon")] : []),
+              ].map((preuve, i) => (
+                <li
+                  key={preuve}
+                  style={{ animationDelay: `${120 + i * 90}ms` }}
+                  className="cab-preuve inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[12px] font-medium"
                 >
-                  <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:sr-only">
-                    {t(cote === "debit" ? "pme.journal.debit" : "pme.journal.credit")}
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    dir="ltr"
-                    aria-label={t("cab.ecriture.ligne.champ", {
-                      champ: t(cote === "debit" ? "pme.journal.debit" : "pme.journal.credit"),
-                      n: i + 1,
-                    })}
-                    value={l[cote]}
-                    onChange={(e) => changerLigne(i, { [cote]: e.target.value })}
-                    className="num w-full border border-border bg-background px-2 py-1 text-end text-[13px]"
-                  />
-                </label>
+                  <Check className="h-3 w-3 text-signal-ok" aria-hidden />
+                  {preuve}
+                </li>
               ))}
-              {/*
-               * Le taux de la ligne, choisi au référentiel du pack : une ligne
-               * de TVA le dit toujours (le serveur refuse sinon) ; une base
-               * aussi quand la facture porte plusieurs taux. Jamais deviné
-               * (revue de #140). La proposition du Socle le pré-remplit.
-               */}
-              <label className="col-span-3 flex items-center gap-2 sm:col-span-2 sm:col-start-1 sm:row-start-2">
-                <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                  {t("cab.ecriture.ligne.taxe")}
+            </ul>
+          ) : null}
+          <div className="relative overflow-hidden rounded-xl border border-border bg-card">
+            <ul>
+              {lignes.map((l, i) => {
+                const auCredit = Number(l.credit || "0") > 0;
+                const ouverte = ligneOuverte === i;
+                const nom = l.libelle || libelleDuPlan(plan, l.account_code) || "";
+                return (
+                  <li
+                    key={i}
+                    className="cab-ligne border-b border-border last:border-b-0"
+                    style={{ animationDelay: `${60 + i * 70}ms` }}
+                  >
+                    <button
+                      type="button"
+                      aria-expanded={ouverte}
+                      onClick={() => setLigneOuverte(ouverte ? null : i)}
+                      className="flex min-h-[56px] w-full items-center gap-3 py-2.5 pe-3 text-start hover:bg-accent"
+                      style={{ paddingInlineStart: auCredit ? 32 : 14 }}
+                    >
+                      <span className="num w-[52px] shrink-0 text-[13px] text-muted-foreground">
+                        {l.account_code}
+                      </span>
+                      <span className="min-w-0 flex-1 text-[14px] leading-tight [overflow-wrap:anywhere]">
+                        {nom}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {t(auCredit ? "cab.ecriture.credit_court" : "cab.ecriture.debit_court")}
+                      </span>
+                      <span
+                        className="num w-[92px] shrink-0 text-end text-[14px] font-medium"
+                        dir="ltr"
+                      >
+                        {montant(auCredit ? l.credit : l.debit, locale)}
+                      </span>
+                      <ChevronDown
+                        className={
+                          ouverte
+                            ? "h-4 w-4 shrink-0 rotate-180 text-muted-foreground transition-transform"
+                            : "h-4 w-4 shrink-0 text-muted-foreground transition-transform"
+                        }
+                        aria-hidden
+                      />
+                    </button>
+                    {ouverte ? (
+                      <div className="cab-monte flex flex-wrap items-center gap-x-4 gap-y-1 bg-muted px-4 py-2.5 text-[13px]">
+                        <span>
+                          {libelleDuPlan(plan, l.account_code) ?? t("cab.ecriture.compte.inconnu")}
+                        </span>
+                        {l.tax_code ? (
+                          <span className="text-muted-foreground">
+                            {codesDeTaxe.find((c) => c.code === l.tax_code)?.label ?? l.tax_code}
+                          </span>
+                        ) : null}
+                        {origines[i] ? (
+                          <span className="num text-muted-foreground" dir="ltr">
+                            {montant(origines[i]!.montant, locale)} {origines[i]!.devise} ×{" "}
+                            {montant(origines[i]!.taux, locale)}
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => setModifier(true)}
+                          className="min-h-[36px] font-semibold underline-offset-4 hover:underline"
+                        >
+                          {t("cab.ecriture.changer_compte")}
+                        </button>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+            {controle?.totalDebit ? (
+              <p className="flex justify-between bg-muted px-4 py-2.5 text-[13px]">
+                <span className="font-semibold">{t("cab.ecriture.debit_egal_credit")}</span>
+                <span className="num font-medium" dir="ltr">
+                  {montant(controle.totalDebit, locale)}
                 </span>
-                <select
-                  aria-label={t("cab.ecriture.ligne.champ", {
-                    champ: t("cab.ecriture.ligne.taxe"),
-                    n: i + 1,
-                  })}
-                  value={l.tax_code ?? ""}
-                  onChange={(e) => changerLigne(i, { tax_code: e.target.value || null })}
-                  className="h-8 min-w-0 flex-1 border border-border bg-background px-2 text-[12.5px]"
-                >
-                  <option value="">—</option>
-                  {codesDeTaxe.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.label}
+              </p>
+            ) : null}
+            {controle ? (
+              <AffichageSignale
+                pieceId={pieceId}
+                ecran="comptabilite"
+                source={depart.depart}
+                valeurs={{ total_debit: controle.totalDebit, total_credit: controle.totalCredit }}
+              />
+            ) : null}
+            {tampon ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/70">
+                <span className="cab-tampon rounded-lg border-[3px] border-foreground px-6 py-2 text-[24px] font-bold tracking-[0.12em]">
+                  {t("cab.ecriture.tampon")}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
+            <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+              {t("cab.ecriture.journal")}
+              <select
+                value={saisie.journal}
+                onChange={(e) => setSaisie((s) => ({ ...s, journal: e.target.value }))}
+                className="h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
+              >
+                <option value="">{t("cab.ecriture.journal.choisir")}</option>
+                {(journaux.data ?? []).map((j) => (
+                  <option key={j.code} value={j.code}>
+                    {j.code} — {j.libelle}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+              {t("cab.ecriture.date")}
+              <input
+                type="date"
+                value={saisie.date}
+                onChange={(e) => setSaisie((s) => ({ ...s, date: e.target.value }))}
+                className="num h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+              {t("cab.ecriture.libelle")}
+              <input
+                type="text"
+                value={saisie.libelle}
+                onChange={(e) => setSaisie((s) => ({ ...s, libelle: e.target.value }))}
+                className="h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
+              />
+            </label>
+          </div>
+          {remarques.length > 0 ? (
+            // Les remarques ne bloquent pas : l'expert reste maître de ce qu'il
+            // écrit, mais il voit ce qu'un contrôleur verra.
+            <ul className="space-y-0.5 text-[11px] text-signal-warn">
+              {remarques.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          ) : null}
+          {typeAEtablir ? (
+            <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+              {t("cab.ecriture.type")}
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                className="h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
+              >
+                <option value="">{t("cab.ecriture.type.choisir")}</option>
+                {(types.data ?? [])
+                  .filter((d) => d.porteEcriture)
+                  .map((d) => (
+                    <option key={d.code} value={d.code}>
+                      {d.libelle}
                     </option>
                   ))}
-                </select>
-              </label>
-              {/*
-               * Ce que la ligne vaut dans la devise de la pièce, et au cours de
-               * quel taux — tant que la saisie dit l'écriture de départ.
-               */}
-              {telleQuelle && origines[i] ? (
-                <p
-                  className="num col-span-3 text-end text-[11.5px] text-muted-foreground sm:col-span-2 sm:col-start-3 sm:row-start-2"
-                  dir="ltr"
-                >
-                  {montant(origines[i]!.montant, locale)} {origines[i]!.devise} ×{" "}
-                  {montant(origines[i]!.taux, locale)}
-                </p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-        <div className="grid grid-cols-2 gap-2 border-t border-border bg-muted px-2.5 py-2 font-semibold sm:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_2.25rem]">
-          <button
-            type="button"
-            onClick={() => setSaisie((s) => ({ ...s, lignes: [...s.lignes, LIGNE_VIDE] }))}
-            className="col-span-2 inline-flex min-h-[32px] items-center gap-1.5 justify-self-start text-[12.5px] font-semibold underline-offset-4 hover:underline sm:col-span-1"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden />
-            {t("cab.ecriture.ligne.ajouter")}
-          </button>
-          <p
-            className={
-              controle && !controle.defaut
-                ? "col-span-2 text-signal-ok sm:col-span-1"
-                : "col-span-2 text-signal-stop sm:col-span-1"
-            }
-            aria-live="polite"
-          >
-            {controle && !controle.defaut ? t("cab.ecriture.equilibree") : manque}
-          </p>
-          {/*
-           * Ce que l'écran montre de la lecture ou de l'écriture, tel quel :
-           * une saisie en cours n'est pas un résultat affiché.
-           */}
-          {telleQuelle && controle ? (
-            <AffichageSignale
-              pieceId={pieceId}
-              ecran="comptabilite"
-              source={depart.depart}
-              valeurs={{ total_debit: controle.totalDebit, total_credit: controle.totalCredit }}
-            />
+              </select>
+            </label>
           ) : null}
-          <p className="num text-end">
-            <span className="sr-only">{t("pme.journal.debit")} </span>
-            {controle?.totalDebit ? montant(controle.totalDebit, locale) : "—"}
-          </p>
-          <p className="num text-end">
-            <span className="sr-only">{t("pme.journal.credit")} </span>
-            {controle?.totalCredit ? montant(controle.totalCredit, locale) : "—"}
-          </p>
-        </div>
-      </div>
+
+          <ListeDesComptes id={LISTE_DES_COMPTES} plan={plan} />
+          {/*
+           * Les lignes, sans défilement horizontal : sur un téléphone, une carte par
+           * ligne (compte, libellé, puis débit et crédit côte à côte) ; dès « sm »,
+           * la grille d'un tableau. Les intitulés de colonne ne s'affichent qu'en
+           * grille ; en carte, chaque champ porte le sien.
+           */}
+          <div className="border border-border bg-card text-[13px]">
+            <div
+              aria-hidden
+              className="hidden bg-muted px-2.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:grid sm:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_2.25rem] sm:gap-2"
+            >
+              <span>{t("pme.journal.account")}</span>
+              <span>{t("cab.ecriture.ligne.libelle")}</span>
+              <span className="text-end">{t("pme.journal.debit")}</span>
+              <span className="text-end">{t("pme.journal.credit")}</span>
+              <span />
+            </div>
+            <ul>
+              {saisie.lignes.map((l, i) => (
+                <li
+                  key={i}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.25rem] gap-2 border-t border-border px-2.5 py-2 first:border-t-0 sm:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_2.25rem] sm:items-start sm:first:border-t"
+                >
+                  <div className="col-span-2 sm:col-span-1">
+                    <SaisieDeCompte
+                      valeur={l.account_code}
+                      onChange={(code) => changerLigne(i, { account_code: code })}
+                      plan={plan}
+                      label={t("cab.ecriture.ligne.champ", {
+                        champ: t("pme.journal.account"),
+                        n: i + 1,
+                      })}
+                      inconnuLabel={t("cab.ecriture.compte.inconnu")}
+                      listeId={LISTE_DES_COMPTES}
+                      collectifLabel={t("plan.collectif.court")}
+                      originesLabels={{
+                        officiel: t("plan.origin.officiel"),
+                        extension: t("plan.origin.extension"),
+                        cabinet: t("plan.origin.cabinet"),
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSaisie((s) => ({ ...s, lignes: s.lignes.filter((_, j) => j !== i) }))
+                    }
+                    aria-label={t("cab.ecriture.ligne.champ", {
+                      champ: t("cab.ecriture.ligne.retirer"),
+                      n: i + 1,
+                    })}
+                    className="col-start-3 row-start-1 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground sm:col-start-5 sm:h-8 sm:w-8"
+                  >
+                    <X className="h-4 w-4" aria-hidden />
+                  </button>
+                  <label className="col-span-3 flex flex-col gap-1 sm:col-span-1 sm:row-start-1 sm:col-start-2">
+                    <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:sr-only">
+                      {t("cab.ecriture.ligne.libelle")}
+                    </span>
+                    {/*
+                     * Un nom par champ ET par ligne : « Débit » dix fois ne dit
+                     * pas lequel (lecteur d'écran, staging du 30 octobre 2026).
+                     */}
+                    <input
+                      type="text"
+                      aria-label={t("cab.ecriture.ligne.champ", {
+                        champ: t("cab.ecriture.ligne.libelle"),
+                        n: i + 1,
+                      })}
+                      value={l.libelle}
+                      onChange={(e) => changerLigne(i, { libelle: e.target.value })}
+                      className="w-full border border-border bg-background px-2 py-1 text-[13px]"
+                    />
+                  </label>
+                  {(["debit", "credit"] as const).map((cote) => (
+                    <label
+                      key={cote}
+                      className={
+                        cote === "debit"
+                          ? "flex flex-col gap-1 sm:row-start-1 sm:col-start-3"
+                          : "flex flex-col gap-1 sm:row-start-1 sm:col-start-4"
+                      }
+                    >
+                      <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:sr-only">
+                        {t(cote === "debit" ? "pme.journal.debit" : "pme.journal.credit")}
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        dir="ltr"
+                        aria-label={t("cab.ecriture.ligne.champ", {
+                          champ: t(cote === "debit" ? "pme.journal.debit" : "pme.journal.credit"),
+                          n: i + 1,
+                        })}
+                        value={l[cote]}
+                        onChange={(e) => changerLigne(i, { [cote]: e.target.value })}
+                        className="num w-full border border-border bg-background px-2 py-1 text-end text-[13px]"
+                      />
+                    </label>
+                  ))}
+                  {/*
+                   * Le taux de la ligne, choisi au référentiel du pack : une ligne
+                   * de TVA le dit toujours (le serveur refuse sinon) ; une base
+                   * aussi quand la facture porte plusieurs taux. Jamais deviné
+                   * (revue de #140). La proposition du Socle le pré-remplit.
+                   */}
+                  <label className="col-span-3 flex items-center gap-2 sm:col-span-2 sm:col-start-1 sm:row-start-2">
+                    <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                      {t("cab.ecriture.ligne.taxe")}
+                    </span>
+                    <select
+                      aria-label={t("cab.ecriture.ligne.champ", {
+                        champ: t("cab.ecriture.ligne.taxe"),
+                        n: i + 1,
+                      })}
+                      value={l.tax_code ?? ""}
+                      onChange={(e) => changerLigne(i, { tax_code: e.target.value || null })}
+                      className="h-8 min-w-0 flex-1 border border-border bg-background px-2 text-[12.5px]"
+                    >
+                      <option value="">—</option>
+                      {codesDeTaxe.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {/*
+                   * Ce que la ligne vaut dans la devise de la pièce, et au cours de
+                   * quel taux — tant que la saisie dit l'écriture de départ.
+                   */}
+                  {telleQuelle && origines[i] ? (
+                    <p
+                      className="num col-span-3 text-end text-[11.5px] text-muted-foreground sm:col-span-2 sm:col-start-3 sm:row-start-2"
+                      dir="ltr"
+                    >
+                      {montant(origines[i]!.montant, locale)} {origines[i]!.devise} ×{" "}
+                      {montant(origines[i]!.taux, locale)}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <div className="grid grid-cols-2 gap-2 border-t border-border bg-muted px-2.5 py-2 font-semibold sm:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_2.25rem]">
+              <button
+                type="button"
+                onClick={() => setSaisie((s) => ({ ...s, lignes: [...s.lignes, LIGNE_VIDE] }))}
+                className="col-span-2 inline-flex min-h-[32px] items-center gap-1.5 justify-self-start text-[12.5px] font-semibold underline-offset-4 hover:underline sm:col-span-1"
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+                {t("cab.ecriture.ligne.ajouter")}
+              </button>
+              <p
+                className={
+                  controle && !controle.defaut
+                    ? "col-span-2 text-signal-ok sm:col-span-1"
+                    : "col-span-2 text-signal-stop sm:col-span-1"
+                }
+                aria-live="polite"
+              >
+                {controle && !controle.defaut ? t("cab.ecriture.equilibree") : manque}
+              </p>
+              {/*
+               * Ce que l'écran montre de la lecture ou de l'écriture, tel quel :
+               * une saisie en cours n'est pas un résultat affiché.
+               */}
+              {telleQuelle && controle ? (
+                <AffichageSignale
+                  pieceId={pieceId}
+                  ecran="comptabilite"
+                  source={depart.depart}
+                  valeurs={{ total_debit: controle.totalDebit, total_credit: controle.totalCredit }}
+                />
+              ) : null}
+              <p className="num text-end">
+                <span className="sr-only">{t("pme.journal.debit")} </span>
+                {controle?.totalDebit ? montant(controle.totalDebit, locale) : "—"}
+              </p>
+              <p className="num text-end">
+                <span className="sr-only">{t("pme.journal.credit")} </span>
+                {controle?.totalCredit ? montant(controle.totalCredit, locale) : "—"}
+              </p>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Deux gestes, même hauteur, même largeur ; aucun n'attend le client. */}
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="cab-actions flex flex-wrap items-center gap-2.5">
+        <button
+          type="button"
+          disabled={inscrire.isPending || statut === "retournee"}
+          onClick={() => setFeuille(true)}
+          className="min-h-[48px] rounded-full border border-border bg-card px-4 text-[14px] font-medium hover:bg-accent disabled:opacity-50"
+        >
+          {t("cab.ecriture.retourner")}
+        </button>
+        {resume ? (
+          <button
+            type="button"
+            onClick={() => setModifier(true)}
+            className="min-h-[48px] rounded-full border border-border bg-card px-4 text-[14px] font-medium hover:bg-accent"
+          >
+            {t("cab.ecriture.modifier")}
+          </button>
+        ) : null}
         {prise && telleQuelle ? (
           <Link
             to="/cabinet/journal"
             search={{ client: clientId }}
-            className="flex min-h-[48px] items-center justify-center border border-foreground bg-foreground px-4 text-center text-[14px] font-semibold text-background hover:bg-background hover:text-foreground"
+            className="flex min-h-[48px] flex-1 basis-40 items-center justify-center rounded-full bg-foreground px-4 text-center text-[15px] font-semibold text-background"
           >
             {t("cab.nav.journal")}
           </Link>
         ) : (
           <button
             type="button"
-            disabled={inscrire.isPending || manque !== null}
+            disabled={inscrire.isPending || tampon || manque !== null}
             onClick={() => inscrire.mutate()}
-            className="min-h-[48px] border border-foreground bg-foreground px-4 text-[14px] font-semibold text-background hover:bg-background hover:text-foreground disabled:opacity-50"
+            className="min-h-[48px] flex-1 basis-40 rounded-full bg-foreground px-4 text-[15px] font-semibold text-background disabled:opacity-40"
           >
             {inscrire.isPending ? t("common.loading") : principal}
           </button>
         )}
-        <button
-          type="button"
-          disabled={inscrire.isPending || statut === "retournee"}
-          onClick={() => setFeuille(true)}
-          className="min-h-[48px] border border-border bg-card px-4 text-[14px] font-semibold hover:bg-accent disabled:opacity-50"
-        >
-          {t("cab.ecriture.retourner")}
-        </button>
       </div>
       {erreur ? (
         <p role="alert" className="text-[12.5px] text-signal-stop">
