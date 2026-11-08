@@ -354,17 +354,53 @@ async function piecesLuesDe(
    * Cette liste ne promet nulle part d'être complète : elle montre ce qu'on
    * sait. Le préfixe couvre donc les deux contrats.
    */
+  /*
+   * LE CIRCUIT ET LE SUIVI, D'UN TRAIT (7 novembre 2026).
+   *
+   * Appeler `app.circuit_de_la_piece` et `app.suivi_de_la_piece` sur chaque
+   * ligne coûtait 3,5 ms par pièce : 10 000 pièces ne se lisaient pas en
+   * trente secondes. Une pièce sans historique (`app.pieces_avec_historique`)
+   * a un circuit et un suivi qui se déduisent de sa ligne et de deux faits
+   * par société : on les calcule ici. Les autres gardent les deux fonctions,
+   * telles quelles — `limit 0` n'exécute pas la fonction quand elle ne sert
+   * pas (un `where` ne l'empêchait pas : le suivi tournait aussi sur les
+   * pièces privées, pour rien). Même résultat, pièce par pièce : voir
+   * `la-liste-des-pieces-dit-la-meme-chose.test.ts`.
+   *
+   * `piece_accompagne` et `emetteur_dit` sont écrites en ligne : appelées
+   * comme fonctions (avec leur `search_path`), elles ne s'inlinaient pas.
+   */
   const { rows } = await db.query(
-    `select p.tenant_id, p.id, p.status, p.created_at, p.created_by, p.vis, p.gardee_le, p.transmise_le,
+    `with droits as materialized (
+       -- Une fois par appel, pas une fois par pièce : « materialized », sans
+       -- quoi le planificateur recopie le calcul dans la jointure.
+       select t.id as tenant_id,
+              t.id in (select app.member_orgs()) as membre,
+              -- app.a_le_droit, dont l'ensemble se lit une seule fois.
+              coalesce(t.id in (select app.orgs_avec_droit('circuit.recevoir')), false) as recoit
+         from unnest($1::uuid[]) t(id)
+     ),
+     historique as materialized (
+       select h as id from app.pieces_avec_historique($1::uuid[]) h
+     ),
+     prenoms as materialized (
+       select a.user_id, a.prenom from app.prenoms_des_auteurs($1::uuid[]) a
+     )
+     select p.tenant_id, p.id, p.status, p.created_at, p.created_by, p.vis, p.gardee_le, p.transmise_le,
               p.document_kind,
               x.payload,
-              app.piece_accompagne(p.id) as accompagne,
+              (p.source_piece_id is not null
+                or exists (select 1 from capture.paiements a where a.justificatif_piece_id = p.id)
+                or exists (select 1 from capture.paiement_justificatifs j where j.piece_id = p.id))
+                as accompagne,
               (select valeur from precisions_v q
                 where q.piece_id = p.id and q.champ = 'document_kind'
                 order by decided_at desc limit 1) as precision_kind,
               -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
               -- reste telle quelle), que la liste préfère au nom lu.
-              app.emetteur_dit(p.id) as emetteur_dit,
+              (select q.valeur from capture.precisions q
+                where q.piece_id = p.id and q.champ = 'issuer'
+                order by q.decided_at desc limit 1) as emetteur_dit,
               ${REFUS_DE_LECTURE} as lecture_refusee,
               w.etat as lecture_etat, w.dernier_motif as lecture_motif,
               w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le,
@@ -383,12 +419,40 @@ async function piecesLuesDe(
             order by e.created_at desc
             limit 1
          ) x on true
-         -- Où en est la pièce chez le cabinet : seulement si elle y est partie.
+         left join historique h on h.id = p.id
+         left join droits d on d.tenant_id = p.tenant_id
+         left join prenoms pr on pr.user_id = p.created_by
+         -- Les deux fonctions, pour les seules pièces qui ont une histoire.
          left join lateral (
-           select * from app.suivi_de_la_piece(p.id) where p.vis = 'partage'
-         ) s on true
-         -- Le passage siège → propriétaire, et le côté de qui regarde.
-         left join lateral app.circuit_de_la_piece(p.id) c on true
+           select * from app.suivi_de_la_piece(p.id)
+            limit case when p.vis = 'partage' and h.id is not null then null else 0 end
+         ) sl on true
+         left join lateral (
+           select * from app.circuit_de_la_piece(p.id)
+            limit case when h.id is not null then null else 0 end
+         ) cl on true
+         -- Où en est la pièce chez le cabinet : seulement si elle y est partie.
+         -- Sans histoire, elle y est partie à sa transmission, et rien d'autre.
+         cross join lateral (
+           select case when p.vis <> 'partage' then null
+                       when h.id is not null then sl.envoyee_le
+                       else coalesce(p.transmise_le, p.created_at) end as envoyee_le,
+                  sl.vue_le, sl.vue_par, sl.corrigee_le, sl.prise_le, sl.prise, sl.prise_par
+         ) s
+         -- Le passage siège → propriétaire, et le côté de qui regarde. Sans
+         -- histoire : rien n'est passé ; qui reçoit et qui en est l'auteur se
+         -- lisent une fois par société et par personne. Le comptable, qui
+         -- n'est pas membre, n'en lit rien.
+         cross join lateral (
+           select case when h.id is not null then cl.recoit
+                       when d.membre then d.recoit end as recoit,
+                  cl.dernier, cl.envoyee_le, cl.vue_le, cl.vue_par, cl.retournee_le,
+                  cl.retour_par, cl.corrigee_le,
+                  case when h.id is not null then cl.auteur
+                       when d.membre then pr.prenom end as auteur,
+                  case when h.id is not null then cl.mienne
+                       when d.membre then p.created_by is not distinct from auth.uid() end as mienne
+         ) c
          /*
           * LE DERNIER TRAVAIL DE LECTURE, POUR QUE L'ÉCHEC SE VOIE.
           *
