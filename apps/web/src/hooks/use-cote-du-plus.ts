@@ -61,15 +61,27 @@ export function useCoteDuPlus() {
       const avant = qc.getQueryData<MonProfil | null>(["mon-profil"]);
       garderSurLAppareil(cote);
       setLocal(cote);
-      if (avant) qc.setQueryData<MonProfil>(["mon-profil"], { ...avant, cote_du_plus: cote });
+      /*
+       * Le cache partagé porte le choix même quand le profil n'existe pas
+       * encore (nom jamais écrit) : la barre du bas et ce réglage ont chacun
+       * leur instance du crochet, et c'est ce cache qui les accorde (revue de
+       * #275). L'écriture crée le profil ; la relecture suit.
+       */
+      qc.setQueryData<MonProfil>(["mon-profil"], {
+        prenom: avant?.prenom ?? null,
+        nom: avant?.nom ?? null,
+        display_name: avant?.display_name ?? null,
+        cote_du_plus: cote,
+      });
       return { avant };
     },
     onError: (_e, _cote, ctx) => {
       const avant = ctx?.avant?.cote_du_plus ?? "droite";
       garderSurLAppareil(avant);
       setLocal(avant);
-      if (ctx?.avant) qc.setQueryData(["mon-profil"], ctx.avant);
+      qc.setQueryData(["mon-profil"], ctx?.avant ?? null);
     },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["mon-profil"] }),
   });
 
   return { cote: local, choisir: (cote: CoteDuPlus) => ecrire.mutate(cote) };
