@@ -37,6 +37,18 @@
  *
  * Le banc échoue (code 1) dès qu'une valeur affirmée est fausse, qu'une valeur est
  * inventée ou que les parties sont échangées : zéro est la seule mesure acceptée.
+ *
+ * ============================================================ LE LECTEUR
+ *
+ * `--lecteur paddle` (le défaut) : le relevé de production, PaddleOCR sur CPU, aucun
+ * modèle. `--lecteur qwen` : le second lecteur des cas difficiles, Alibaba
+ * `qwen-vl-ocr` (le millésime de `modeles.ts`), À LA PLACE de PaddleOCR — pour mesurer
+ * ce qu'il ferait prouver au Sudoku. C'est un choix explicite, jamais un repli :
+ * sans `QWEN_API_KEY` et `QWEN_BASE_URL`, le banc refuse de partir ; un relevé qui
+ * reviendrait d'un autre lecteur est une panne de la pièce. La couche de texte d'un PDF
+ * reste première, comme en production : elle ne part jamais chez Alibaba. Chaque appel
+ * réseau est compté, et `--plafond-appels` (300 par défaut) les borne : au-delà, la
+ * pièce est en panne, dite. Le coût s'estime au tarif de `agents.model_pricing`.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -69,6 +81,7 @@ import { relireDesCellules } from "./paddle.ts";
 import { avecLesRelectures, cellulesContredites, type LectureDeCellule } from "./relecture.ts";
 import type { PageToken } from "./token-plan.ts";
 import { relever } from "./vision.ts";
+import { modeleOcr } from "../modeles.ts";
 
 /* ============================================================ LES DONNÉES == */
 
@@ -93,6 +106,10 @@ interface ReleveGarde {
   readonly millisecondes: number;
   /** Le premier temps d'une image (le tableau) : quand il est arrivé, et s'il a prouvé. */
   readonly tableau?: { readonly millisecondes: number; readonly prouve: boolean };
+  /** Les appels réseau du relevé (`--lecteur qwen`) : une page, ou une bande. */
+  readonly appels?: number;
+  /** Les jetons facturés du relevé (`--lecteur qwen`). */
+  readonly jetons?: { readonly entree: number; readonly sortie: number };
 }
 
 /** Une pièce du banc, quel que soit son corpus. */
@@ -171,6 +188,9 @@ export interface MesureDeLaPiece {
   readonly gabarit: string | null;
   readonly lecteur: string | null;
   readonly releveMs: number | null;
+  /** Les appels réseau du relevé et ses jetons (`--lecteur qwen`). */
+  readonly appels?: number | null;
+  readonly jetons?: ReleveGarde["jetons"] | null;
   /** Le premier temps de l'image : ses millisecondes, et s'il prouvait déjà la pièce. */
   readonly tableau?: ReleveGarde["tableau"] | null;
   readonly sudokuMs: number | null;
@@ -570,6 +590,8 @@ async function mesurerLaPiece(
     lecteur: releve.lecteur,
     releveMs: releve.millisecondes,
     tableau: releve.tableau ?? null,
+    appels: releve.appels ?? null,
+    jetons: releve.jetons ?? null,
   };
   if (!piece.grille) {
     return {
@@ -760,23 +782,88 @@ function relireDuFichier(chemin: string, garde: string): NonNullable<PieceDuBanc
   };
 }
 
+/* ============================================================ LE LECTEUR == */
+
+/** Qui relève les images du banc : PaddleOCR (la production), ou Qwen à sa place. */
+export type LecteurDuBanc = "paddle" | "qwen";
+
+/**
+ * Le lecteur demandé, ou une erreur : jamais un repli. Qwen sans ses clés ne retombe pas
+ * sur PaddleOCR — il refuse, et le dit.
+ */
+export function lecteurDuBanc(
+  valeur: string | undefined,
+  env: Readonly<Record<string, string | undefined>>,
+): LecteurDuBanc {
+  if (valeur === undefined || valeur === "paddle") return "paddle";
+  if (valeur !== "qwen") throw new Error(`lecteur inconnu : ${valeur} (paddle ou qwen)`);
+  const manquantes = ["QWEN_API_KEY", "QWEN_BASE_URL"].filter((k) => !env[k]?.trim());
+  if (manquantes.length > 0)
+    throw new Error(`--lecteur qwen sans ${manquantes.join(", ")} : le banc ne part pas`);
+  return "qwen";
+}
+
+/** Les lecteurs dont un relevé est accepté quand le banc lit avec `lecteur`. */
+export function releveAccepte(lecteurDuReleve: string, lecteur: LecteurDuBanc): boolean {
+  // La couche de texte d'un PDF passe devant les deux, comme en production.
+  if (lecteurDuReleve === "pdf-text") return true;
+  return lecteur === "qwen" ? lecteurDuReleve === "vision" : lecteurDuReleve !== "vision";
+}
+
+/** Le fichier où un relevé se garde : ceux de Qwen ne se mêlent pas à ceux de PaddleOCR. */
+export const gardeDuReleve = (cache: string, nom: string, lecteur: LecteurDuBanc) =>
+  join(cache, lecteur === "qwen" ? `${nom}.qwen.json` : `${nom}.json`);
+
+/**
+ * Le compteur d'appels réseau, et sa borne : au-delà de `plafond`, l'appel n'est PAS
+ * émis, il lève. En `--lecteur qwen`, le seul réseau du banc est Alibaba (la base parle
+ * par son socket, pas par `fetch`) : chaque appel compté est un appel payé.
+ */
+export function plafonnerLesAppels(
+  plafond: number,
+  origine: typeof fetch,
+): { readonly fetch: typeof fetch; readonly appels: () => number } {
+  let n = 0;
+  const borne: typeof fetch = (entree, init) => {
+    if (n >= plafond)
+      return Promise.reject(new Error(`plafond d'appels atteint (${plafond}) : appel non émis`));
+    n += 1;
+    return origine(entree, init);
+  };
+  return { fetch: borne, appels: () => n };
+}
+
+/** Le compteur du passage (posé par `principal` en `--lecteur qwen`). */
+let appelsEmis: () => number = () => 0;
+
 /** Le relevé de production d'un fichier, gardé en cache. */
-function releveDuFichier(chemin: string, garde: string): PieceDuBanc["releve"] {
+function releveDuFichier(
+  chemin: string,
+  garde: string,
+  lecteur: LecteurDuBanc = "paddle",
+): PieceDuBanc["releve"] {
   return async (prouve) => {
-    if (existsSync(garde)) return JSON.parse(readFileSync(garde, "utf8")) as ReleveGarde;
+    if (existsSync(garde)) {
+      const g = JSON.parse(readFileSync(garde, "utf8")) as ReleveGarde;
+      if (!releveAccepte(g.lecteur, lecteur))
+        throw new Error(`relevé gardé par ${g.lecteur}, le banc lit avec ${lecteur} : ${garde}`);
+      return g;
+    }
     const mime = chemin.endsWith(".pdf")
       ? "application/pdf"
       : chemin.endsWith(".png")
         ? "image/png"
         : "image/jpeg";
     const octets = new Uint8Array(readFileSync(chemin));
+    const avant = appelsEmis();
     const t0 = performance.now();
     let tableau: ReleveGarde["tableau"];
     const r = await relever({
       dataUrl: `data:${mime};base64,${Buffer.from(octets).toString("base64")}`,
       mime,
       bytes: octets,
-      ...(prouve
+      ...(lecteur === "qwen" ? { sansPaddle: true } : {}),
+      ...(prouve && lecteur === "paddle"
         ? {
             surLeTableau: (tokens: PageToken[]) => {
               const prouveAuTableau = prouve(tokens);
@@ -788,12 +875,20 @@ function releveDuFichier(chemin: string, garde: string): PieceDuBanc["releve"] {
           }
         : {}),
     });
+    if (!releveAccepte(r.lecteur, lecteur))
+      throw new Error(`relevé rendu par ${r.lecteur}, le banc lit avec ${lecteur}`);
     const g: ReleveGarde = {
       tokens: r.tokens,
       marques: r.marques,
       lecteur: r.lecteur,
       millisecondes: Math.round(performance.now() - t0),
       ...(tableau ? { tableau } : {}),
+      ...(lecteur === "qwen"
+        ? {
+            appels: appelsEmis() - avant,
+            jetons: { entree: r.tokensIn ?? 0, sortie: r.tokensOut ?? 0 },
+          }
+        : {}),
     };
     writeFileSync(garde, JSON.stringify(g));
     return g;
@@ -811,7 +906,12 @@ function rendu(dossier: string, id: string): string | null {
 const lireJson = <T>(f: string): T => JSON.parse(readFileSync(f, "utf8")) as T;
 
 /** Le jeu d'ALGORIA : la vérité couvre toute la grille de chaque pièce. */
-function corpusAlgoria(dossier: string, cache: string, deviseDuPack: string): PieceDuBanc[] {
+function corpusAlgoria(
+  dossier: string,
+  cache: string,
+  deviseDuPack: string,
+  lecteur: LecteurDuBanc,
+): PieceDuBanc[] {
   interface Cas {
     id: string;
     type: string;
@@ -859,9 +959,10 @@ function corpusAlgoria(dossier: string, cache: string, deviseDuPack: string): Pi
         confondus: cas.attendu.confondus ?? {},
         verite: "complete",
         releve: fichier
-          ? releveDuFichier(fichier, join(cache, `algoria-${cas.id}.json`))
+          ? releveDuFichier(fichier, gardeDuReleve(cache, `algoria-${cas.id}`, lecteur), lecteur)
           : () => Promise.reject(new Error("rendu absent")),
-        ...(fichier && !fichier.endsWith(".pdf")
+        // La relecture des cellules est un appel à PaddleOCR : pas en `--lecteur qwen`.
+        ...(fichier && !fichier.endsWith(".pdf") && lecteur === "paddle"
           ? { relire: relireDuFichier(fichier, join(cache, `algoria-${cas.id}.relu.json`)) }
           : {}),
       } satisfies PieceDuBanc;
@@ -881,7 +982,12 @@ const INTERDITS_DU_DEFAUT: Readonly<Record<string, readonly string[]>> = {
 };
 
 /** Le jeu synthétique : sa vérité nomme les chemins de la lecture, traduits en champs. */
-function corpusSynthetique(dossier: string, cache: string, deviseDuPack: string): PieceDuBanc[] {
+function corpusSynthetique(
+  dossier: string,
+  cache: string,
+  deviseDuPack: string,
+  lecteur: LecteurDuBanc,
+): PieceDuBanc[] {
   interface Cas {
     id: string;
     rendu: string;
@@ -964,9 +1070,13 @@ function corpusSynthetique(dossier: string, cache: string, deviseDuPack: string)
         verite: "partielle",
         ...(cas.defaut ? { interdits: INTERDITS_DU_DEFAUT[cas.defaut] ?? [] } : {}),
         releve: fichier
-          ? releveDuFichier(fichier, join(cache, `synthetique-${cas.id}.json`))
+          ? releveDuFichier(
+              fichier,
+              gardeDuReleve(cache, `synthetique-${cas.id}`, lecteur),
+              lecteur,
+            )
           : () => Promise.reject(new Error("rendu absent")),
-        ...(fichier && !fichier.endsWith(".pdf")
+        ...(fichier && !fichier.endsWith(".pdf") && lecteur === "paddle"
           ? { relire: relireDuFichier(fichier, join(cache, `synthetique-${cas.id}.relu.json`)) }
           : {}),
       } satisfies PieceDuBanc;
@@ -1083,6 +1193,7 @@ function corpusPhoto(
   verite: string,
   cache: string,
   deviseDuPack: string,
+  lecteur: LecteurDuBanc,
 ): PieceDuBanc[] {
   const v = lireJson<{
     type: string;
@@ -1108,26 +1219,40 @@ function corpusPhoto(
       concepts: v.concepts,
       confondus: { date_emission: "date_operation" },
       verite: "partielle",
-      releve: releveDuFichier(image, join(cache, `reel-${basename(image)}.json`)),
-      relire: relireDuFichier(image, join(cache, `reel-${basename(image)}.relu.json`)),
+      releve: releveDuFichier(
+        image,
+        gardeDuReleve(cache, `reel-${basename(image)}`, lecteur),
+        lecteur,
+      ),
+      ...(lecteur === "paddle"
+        ? { relire: relireDuFichier(image, join(cache, `reel-${basename(image)}.relu.json`)) }
+        : {}),
     },
   ];
 }
 
-function chargerLeCorpus(spec: string, cache: string, deviseDuPack: string): PieceDuBanc[] {
+function chargerLeCorpus(
+  spec: string,
+  cache: string,
+  deviseDuPack: string,
+  lecteur: LecteurDuBanc,
+): PieceDuBanc[] {
   const [genre, ...reste] = spec.split(":");
   const chemin = resolve(reste[0] ?? "");
+  // Les jeux du dirigeant portent un plan déjà relevé : aucun lecteur ne s'y substitue.
+  if (lecteur === "qwen" && genre?.startsWith("dirigeant"))
+    throw new Error(`--lecteur qwen : le corpus ${genre} porte déjà son relevé`);
   switch (genre) {
     case "algoria":
-      return corpusAlgoria(chemin, cache, deviseDuPack);
+      return corpusAlgoria(chemin, cache, deviseDuPack, lecteur);
     case "synthetique":
-      return corpusSynthetique(chemin, cache, deviseDuPack);
+      return corpusSynthetique(chemin, cache, deviseDuPack, lecteur);
     case "dirigeant":
       return corpusDuDirigeant(chemin, deviseDuPack);
     case "dirigeant-texte":
       return corpusDuDirigeant(chemin, deviseDuPack, true);
     case "photo":
-      return corpusPhoto(chemin, resolve(reste[1] ?? ""), cache, deviseDuPack);
+      return corpusPhoto(chemin, resolve(reste[1] ?? ""), cache, deviseDuPack, lecteur);
     default:
       throw new Error(`corpus inconnu : ${spec}`);
   }
@@ -1218,6 +1343,44 @@ export function rapport(mesures: readonly MesureDeLaPiece[]): string {
   ].join("\n");
 }
 
+/**
+ * Ce que le relevé de Qwen a coûté et pris : appels, jetons, secondes par appel, et le
+ * prix au tarif en vigueur de `agents.model_pricing` (R8 : le modèle et son prix sont la
+ * même lecture), celui en vigueur le jour du passage. Sans tarif, le coût n'est pas estimé, et le rapport le dit.
+ */
+async function lePrixDuLecteur(
+  db: pg.Pool,
+  mesures: readonly MesureDeLaPiece[],
+  appels: number,
+): Promise<string> {
+  const lues = mesures.filter((m) => m.lecteur === "vision" && m.appels);
+  const entree = lues.reduce((s, m) => s + (m.jetons?.entree ?? 0), 0);
+  const sortie = lues.reduce((s, m) => s + (m.jetons?.sortie ?? 0), 0);
+  const parAppel = lues.map((m) => m.releveMs! / m.appels! / 1000).sort((a, b) => a - b);
+  const quantile = (q: number) =>
+    parAppel.length ? parAppel[Math.min(parAppel.length - 1, Math.floor(q * parAppel.length))]! : 0;
+  const modele = modeleOcr();
+  const { rows } = await db.query<{ e: string; s: string; currency: string }>(
+    `select price_in_per_mtok::text e, price_out_per_mtok::text s, currency
+       from agents.model_pricing where model = $1 and role = 'vision'
+        and effective_from <= current_date order by effective_from desc limit 1`,
+    [modele],
+  );
+  const tarif = rows[0];
+  const cout = tarif
+    ? `${((entree * Number(tarif.e) + sortie * Number(tarif.s)) / 1e6).toFixed(4)} ${tarif.currency} (tarif ${tarif.e} / ${tarif.s} par million de jetons)`
+    : `non estimé : aucun tarif en vigueur pour ${modele}`;
+  return [
+    "",
+    `### Le lecteur Qwen — ${modele}`,
+    "",
+    `- Appels émis : ${appels} ; pièces relues par Qwen : ${lues.length} ; pannes : ${mesures.filter((m) => m.issue === "panne").length}`,
+    `- Jetons : ${entree} en entrée, ${sortie} en sortie`,
+    `- Secondes par appel (page ou bande) : médiane ${quantile(0.5).toFixed(2)}, p95 ${quantile(0.95).toFixed(2)}`,
+    `- Coût estimé : ${cout}`,
+  ].join("\n");
+}
+
 /* ============================================================== L'ENTRÉE == */
 
 async function principal(): Promise<void> {
@@ -1234,15 +1397,30 @@ async function principal(): Promise<void> {
       // Le sens de chaque pièce déclaré par la personne, comme à la capture.
       "sens-declare": { type: "boolean" },
       juridiction: { type: "string" },
+      // `paddle` (défaut) ou `qwen` : voir l'en-tête.
+      lecteur: { type: "string" },
+      "plafond-appels": { type: "string" },
     },
   });
+  const lecteur = lecteurDuBanc(values.lecteur, process.env);
   /*
    * No model, ever: `relever()` falls back to the vision model when its key is set and the
    * OCR is absent, fails or returns nothing. With a full `.env`, the bench would have
    * called it without failing nor saying so. The keys are removed, as in
    * `jeu-synthetique.ts`: without the OCR, a page fails instead of reaching a model.
    */
-  for (const cle of ["QWEN_API_KEY", "DEEPSEEK_API_KEY"]) Reflect.deleteProperty(process.env, cle);
+  for (const cle of lecteur === "qwen"
+    ? ["DEEPSEEK_API_KEY"]
+    : ["QWEN_API_KEY", "DEEPSEEK_API_KEY"])
+    Reflect.deleteProperty(process.env, cle);
+  if (lecteur === "qwen") {
+    const plafond = Number(values["plafond-appels"] ?? "300");
+    if (!Number.isInteger(plafond) || plafond < 1)
+      throw new Error(`--plafond-appels invalide : ${values["plafond-appels"]}`);
+    const p = plafonnerLesAppels(plafond, globalThis.fetch.bind(globalThis));
+    globalThis.fetch = p.fetch;
+    appelsEmis = p.appels;
+  }
   const base = process.env["DATABASE_URL_ADMIN"];
   if (!base) throw new Error("DATABASE_URL_ADMIN absente");
   const cache = resolve(values.cache ?? ".releves");
@@ -1275,7 +1453,7 @@ async function principal(): Promise<void> {
     );
     if (rows.length !== 1) throw new Error(`aucun pack ${juridiction} en vigueur`);
     const pieces = (values.corpus ?? [])
-      .flatMap((s) => chargerLeCorpus(s, cache, rows[0]!.currency))
+      .flatMap((s) => chargerLeCorpus(s, cache, rows[0]!.currency, lecteur))
       .filter((p) => !voulus || voulus.has(p.id));
     const mesures: MesureDeLaPiece[] = [];
     for (const p of pieces) {
@@ -1305,6 +1483,7 @@ async function principal(): Promise<void> {
     }
     if (values.sortie) writeFileSync(values.sortie, JSON.stringify(mesures));
     console.log(rapport(mesures));
+    if (lecteur === "qwen") console.log(await lePrixDuLecteur(db, mesures, appelsEmis()));
     if (values["sens-declare"])
       console.log(
         "\n_Le sens de chaque pièce est celui que la personne déclare (`--sens-declare`)._",
