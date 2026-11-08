@@ -2973,12 +2973,6 @@ export const fr = {
   "pme.cloche.nonLues#one": "Alertes : {count} chose à traiter",
   "pme.cloche.nonLues#other": "Alertes : {count} choses à traiter",
   "pme.cloche.nouvelle": "Nouvelle alerte",
-  "pme.notifs.list": "Derniers retours",
-  "pme.notifs.voice.empty": "Aucune alerte.",
-  "pme.notifs.voice.clear": "Tout est lu.",
-  "pme.notifs.voice.unread": "{count} alertes non lues.",
-  "pme.notifs.voice.unread#one": "{count} alerte non lue.",
-  "pme.notifs.voice.unread#other": "{count} alertes non lues.",
   "pme.notifs.empty": "Aucune alerte pour l'instant.",
   "pme.notifs.open": "Ouvrir la pièce",
   "pme.notifs.markRead": "Lu",
@@ -4713,9 +4707,6 @@ export const fr = {
     "L'enregistrer clôture la fiche en place et en ouvre une autre, datée d'aujourd'hui.",
   "pme.fiche.fixeSourceCarte": "source : carte lue",
   "pme.fiche.fixeSourceSaisie": "source : saisie au clavier",
-  "pme.notifications.sous":
-    "Tout ce que votre cabinet vous dit arrive ici. Ce qui attend un geste est en haut.",
-  "pme.notifications.ongletAttente": "À traiter",
   "pme.notifications.videSous":
     "Rien n'est caché : quand votre cabinet vous écrit, c'est ici que ça arrive.",
   /**
