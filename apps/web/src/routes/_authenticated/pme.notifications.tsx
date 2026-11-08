@@ -143,9 +143,15 @@ function PmeNotifications() {
   /** Les deux faces de la boite : ce qui attend un geste, et tout. */
   const [onglet, setOnglet] = useState<"attente" | "tout">("attente");
 
+  const societes = pme.dossiers.length > 0 ? pme.dossiers.map((d) => d.id) : [pme.tenantId];
   const notifs = useQuery({
-    queryKey: ["notifications", pme.tenantId],
-    queryFn: () => office().collab.notifications([pme.tenantId]),
+    /*
+     * TOUTES les sociétés de la personne, comme la cloche qui mène ici : une
+     * alerte de B annoncée pendant que A est ouverte se trouve sur cet écran,
+     * et la lire éteint la pastille (revue de #270).
+     */
+    queryKey: ["notifications", "toutes", ...societes],
+    queryFn: () => office().collab.notifications(societes),
   });
 
   const read = useMutation({
@@ -200,18 +206,32 @@ function PmeNotifications() {
   const gesteDe = (
     kind: string,
     payload: Record<string, unknown>,
+    societe: string,
   ): { libelle: string; aller: () => void } | null => {
+    /*
+     * La fiche d'une pièce et le mandat se lisent sur la société OUVERTE :
+     * une alerte d'une autre société ouvre d'abord la sienne.
+     */
+    const dabord = () => {
+      if (societe !== pme.tenantId) pme.choisirDossier(societe);
+    };
     const pieceId = pieceDe(kind, payload);
     if (pieceId) {
       return {
         libelle: t("pme.notifs.open"),
-        aller: () => void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } }),
+        aller: () => {
+          dabord();
+          void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
+        },
       };
     }
     if (kind === "mandat.propose") {
       return {
         libelle: t("pme.mandat.accepter"),
-        aller: () => void navigate({ to: "/pme" }),
+        aller: () => {
+          dabord();
+          void navigate({ to: "/pme" });
+        },
       };
     }
     return null;
@@ -310,7 +330,7 @@ function PmeNotifications() {
                 {attente.map((n) => {
                   const payload = (n.payload ?? {}) as Record<string, unknown>;
                   const detail = detailDe(n.kind, payload);
-                  const geste = gesteDe(n.kind, payload);
+                  const geste = gesteDe(n.kind, payload, n.tenantId);
                   const piece = pieceDe(n.kind, payload);
                   /*
                    * Sur un retour de piece, le detail EST la parole du
@@ -413,7 +433,7 @@ function PmeNotifications() {
                     {classees.map((n) => {
                       const payload = (n.payload ?? {}) as Record<string, unknown>;
                       const detail = detailDe(n.kind, payload);
-                      const geste = gesteDe(n.kind, payload);
+                      const geste = gesteDe(n.kind, payload, n.tenantId);
                       const corps = (
                         <>
                           <i>
