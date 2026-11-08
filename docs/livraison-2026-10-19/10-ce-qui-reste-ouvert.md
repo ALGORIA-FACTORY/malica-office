@@ -627,6 +627,10 @@ les deux budgets épuisés la pièce est lue par le moteur Sudoku seul
   choisit dans la tour. À mesurer sur nos vraies pièces avec la clé (banc
   `tests/real/designation-cout.ts`). Un « second avis » Sonnet sur les pièces
   non prouvées n'est PAS câblé : c'est un troisième appel, à décider.
+  Mesuré le 8 novembre 2026 en mode « Sudoku d'abord » sur 411 pièces
+  (`docs/mesure-claude-2026-11-08.md`) : ni Haiku, ni Sonnet, ni DeepSeek ne
+  font prouver une pièce de plus que le moteur seul (283), et aucun faux n'est
+  affirmé ; les valeurs non prouvées du modèle seraient fausses 7 à 15 fois sur 100. Le second avis Sonnet n'apporte rien au taux de pièces prouvées.
 - **Les sorties structurées (`output_config.format`) ne sont PAS activées.** Leur
   limite (24 paramètres facultatifs et 16 unions par requête) ne tient pas le
   contrat de désignation R2 tel qu'il est : une trentaine de pointeurs
