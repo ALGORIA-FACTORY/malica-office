@@ -75,8 +75,11 @@ export function AbonnementsDeMonCabinet() {
 export function AbonnementsDuCabinet({
   cabinet: org,
   lecture = false,
+  facturesSeules = false,
 }: {
   cabinet: Pick<Organization, "id" | "name" | "currency">;
+  /** La page Clients, vue Facturation : seulement les factures Malica. */
+  facturesSeules?: boolean;
   /** La tour regarde : aucun geste, et le client mène à sa fiche dans la tour. */
   lecture?: boolean;
 }) {
@@ -164,6 +167,90 @@ export function AbonnementsDuCabinet({
       (!statut || a.statut === statut) &&
       a.client_nom.toLocaleLowerCase(locale).includes(recherche.toLocaleLowerCase(locale)),
   );
+
+  /* Les factures que la comptabilité règle à Malica. */
+  const sectionFactures = (
+    <section className="space-y-3">
+      <SectionTitle>{t("cab.abo.factures.titre")}</SectionTitle>
+      {refusDePaiement ? (
+        <p role="alert" className="text-[12.5px] text-signal-stop">
+          {refusDePaiement}
+        </p>
+      ) : null}
+      {factures.isPending ? (
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+      ) : factures.isError ? (
+        <p role="alert" className="text-signal-stop">
+          {texteDeLErreur(factures.error, OU, t("common.error"))}
+        </p>
+      ) : (factures.data ?? []).length === 0 ? (
+        <EmptyState>{t("cab.abo.factures.vide")}</EmptyState>
+      ) : (
+        <InkTable
+          caption={t("cab.abo.factures.titre")}
+          head={[
+            t("cab.abo.fac.numero"),
+            t("cab.abo.fac.periode"),
+            t("cab.abo.fac.societes"),
+            t("cab.abo.fac.ttc"),
+            t("cab.abo.fac.echeance"),
+            t("cab.abo.fac.statut"),
+            t("cab.abo.fac.reste"),
+          ]}
+        >
+          {(factures.data ?? []).map((f) => (
+            <InkTableRow key={f.id}>
+              <InkCell>
+                <span className="num font-medium">{f.numero}</span>
+              </InkCell>
+              <InkCell>
+                <span className="num">{f.periode.slice(0, 7)}</span>
+              </InkCell>
+              <InkCell numeric>{f.organisations}</InkCell>
+              <InkCell numeric>{montant(f.montant_ttc, f.devise)}</InkCell>
+              <InkCell>
+                <span className="num">{date(f.echeance_le)}</span>
+              </InkCell>
+              <InkCell>
+                <span
+                  className={cn(
+                    "text-[12px]",
+                    f.etat === "en_retard" && "text-signal-warn",
+                    f.etat === "payee" && "text-signal-ok",
+                  )}
+                >
+                  {t(ETAT_DE_FACTURE[f.etat])}
+                </span>
+              </InkCell>
+              <InkCell numeric>
+                {Number(f.reste_du) > 0 &&
+                (f.etat === "a_echoir" || f.etat === "en_retard" || f.etat === "partielle") ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="num">{montant(f.reste_du, f.devise)}</span>
+                    {peutPayer ? (
+                      <button
+                        type="button"
+                        className="rounded-md border border-foreground px-2.5 py-1 text-[12px] font-medium hover:bg-foreground hover:text-background disabled:opacity-40"
+                        disabled={payerFacture.isPending}
+                        onClick={() => payerFacture.mutate(f.id)}
+                      >
+                        {t("pme.reglages.paiement.payer")}
+                      </button>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span className="num text-muted-foreground">—</span>
+                )}
+              </InkCell>
+            </InkTableRow>
+          ))}
+        </InkTable>
+      )}
+    </section>
+  );
+
+  // La page Clients montre seulement les factures, dans sa vue Facturation.
+  if (facturesSeules) return <div className="space-y-6">{sectionFactures}</div>;
 
   return (
     <div className="cab-library space-y-6">
@@ -471,84 +558,7 @@ export function AbonnementsDuCabinet({
           )}
         </section>
       ) : (
-        /* Les factures restent dans une vue dédiée. */
-        <section className="space-y-3">
-          <SectionTitle>{t("cab.abo.factures.titre")}</SectionTitle>
-          {refusDePaiement ? (
-            <p role="alert" className="text-[12.5px] text-signal-stop">
-              {refusDePaiement}
-            </p>
-          ) : null}
-          {factures.isPending ? (
-            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : factures.isError ? (
-            <p role="alert" className="text-signal-stop">
-              {texteDeLErreur(factures.error, OU, t("common.error"))}
-            </p>
-          ) : (factures.data ?? []).length === 0 ? (
-            <EmptyState>{t("cab.abo.factures.vide")}</EmptyState>
-          ) : (
-            <InkTable
-              caption={t("cab.abo.factures.titre")}
-              head={[
-                t("cab.abo.fac.numero"),
-                t("cab.abo.fac.periode"),
-                t("cab.abo.fac.societes"),
-                t("cab.abo.fac.ttc"),
-                t("cab.abo.fac.echeance"),
-                t("cab.abo.fac.statut"),
-                t("cab.abo.fac.reste"),
-              ]}
-            >
-              {(factures.data ?? []).map((f) => (
-                <InkTableRow key={f.id}>
-                  <InkCell>
-                    <span className="num font-medium">{f.numero}</span>
-                  </InkCell>
-                  <InkCell>
-                    <span className="num">{f.periode.slice(0, 7)}</span>
-                  </InkCell>
-                  <InkCell numeric>{f.organisations}</InkCell>
-                  <InkCell numeric>{montant(f.montant_ttc, f.devise)}</InkCell>
-                  <InkCell>
-                    <span className="num">{date(f.echeance_le)}</span>
-                  </InkCell>
-                  <InkCell>
-                    <span
-                      className={cn(
-                        "text-[12px]",
-                        f.etat === "en_retard" && "text-signal-warn",
-                        f.etat === "payee" && "text-signal-ok",
-                      )}
-                    >
-                      {t(ETAT_DE_FACTURE[f.etat])}
-                    </span>
-                  </InkCell>
-                  <InkCell numeric>
-                    {Number(f.reste_du) > 0 &&
-                    (f.etat === "a_echoir" || f.etat === "en_retard" || f.etat === "partielle") ? (
-                      <span className="inline-flex items-center gap-2">
-                        <span className="num">{montant(f.reste_du, f.devise)}</span>
-                        {peutPayer ? (
-                          <button
-                            type="button"
-                            className="rounded-md border border-foreground px-2.5 py-1 text-[12px] font-medium hover:bg-foreground hover:text-background disabled:opacity-40"
-                            disabled={payerFacture.isPending}
-                            onClick={() => payerFacture.mutate(f.id)}
-                          >
-                            {t("pme.reglages.paiement.payer")}
-                          </button>
-                        ) : null}
-                      </span>
-                    ) : (
-                      <span className="num text-muted-foreground">—</span>
-                    )}
-                  </InkCell>
-                </InkTableRow>
-              ))}
-            </InkTable>
-          )}
-        </section>
+        sectionFactures
       )}
     </div>
   );

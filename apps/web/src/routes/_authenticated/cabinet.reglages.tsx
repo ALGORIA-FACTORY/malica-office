@@ -11,13 +11,14 @@
  * ses mandats. Le nombre de mandats concernés se compte depuis les fiches.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useId, useMemo, useState } from "react";
 
 import { useMonAcces } from "@/hooks/use-mon-acces";
 import { Aide, type ParagrapheDAide } from "@/components/malica/aide";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { IntegrationsEtApi } from "@/components/malica/integrations-panel";
+import { InviterLEquipe } from "@/components/malica/inviter-l-equipe";
 import { ReglagesComptables } from "@/components/malica/reglages-comptables";
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import {
@@ -229,6 +230,7 @@ function CabinetEtEquipe() {
   );
 
   /* ---- le formulaire, semé une fois depuis la base */
+  const [invitation, setInvitation] = useState(false);
   const [seuilLot, setSeuilLot] = useState("");
   const [seuilRevue, setSeuilRevue] = useState("");
   const [doubleValidation, setDoubleValidation] = useState("");
@@ -449,15 +451,17 @@ function CabinetEtEquipe() {
               <span className="num text-[13px]">
                 {invitations.isPending ? "…" : enAttente.length}
               </span>
-              <Link
-                to="/cabinet/mise-en-route"
-                search={{ etape: 2 }}
+              <button
+                type="button"
+                aria-expanded={invitation}
+                onClick={() => setInvitation(!invitation)}
                 className="cab-cible border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground"
               >
                 {t("cab.settings.inviter")}
-              </Link>
+              </button>
             </span>
           </Ligne>
+          {invitation ? <InviterLEquipe fermer={() => setInvitation(false)} /> : null}
           <Ligne label={t("cab.settings.doubleValidation")}>
             <span className="flex items-center gap-1.5">
               <input
@@ -540,23 +544,6 @@ function CabinetEtEquipe() {
       </div>
 
       <FuseauDuCabinet />
-
-      {/* ---- le parcours de mise en route : un parcours qu'on rejoue si besoin */}
-      <section className="border border-border bg-card p-4">
-        <p className="flex items-center text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          {t("cab.settings.onb.titre")}
-          <Aide
-            titre={t("cab.settings.onb.titre")}
-            paragraphes={[{ texte: t("cab.settings.onb.lede") }]}
-          />
-        </p>
-        <Link
-          to="/cabinet/mise-en-route"
-          className="cab-cible mt-3 inline-block border border-foreground px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
-        >
-          {t("cab.settings.onb.rejouer")}
-        </Link>
-      </section>
     </div>
   );
 }

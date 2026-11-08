@@ -181,7 +181,7 @@ function CabinetFacture() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["cab-hono-factures"] });
       void qc.invalidateQueries({ queryKey: ["cab-hono-synthese"] });
-      void navigate({ to: "/cabinet/honoraires" });
+      void navigate({ to: "/cabinet/clients", search: { vue: "facturation" } });
     },
     onError: surErreur,
   });
@@ -258,7 +258,8 @@ function CabinetFacture() {
       <div className="border-b border-foreground bg-background pb-3">
         <div className="flex flex-wrap items-center gap-3">
           <Link
-            to="/cabinet/honoraires"
+            to="/cabinet/clients"
+            search={{ vue: "facturation" }}
             aria-label={t("cab.hono.facture.retour")}
             className="flex h-8 w-8 shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
           >

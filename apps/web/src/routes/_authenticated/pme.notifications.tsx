@@ -243,12 +243,26 @@ function PmeNotifications() {
         },
       };
     }
-    if (kind === "acces.propose") {
+    if (
+      kind === "acces.propose" ||
+      kind === "acces.descente_demandee" ||
+      kind === "acces.monte" ||
+      kind === "acces.arrete"
+    ) {
       return {
         libelle: t("pme.notifs.voirProposition"),
         aller: () => {
           dabord();
           void navigate({ to: "/pme/reglages", search: { page: "abonnement" } });
+        },
+      };
+    }
+    if (kind === "place.suggeree" || kind === "place.donnee") {
+      return {
+        libelle: t("pme.notifs.voirEquipe"),
+        aller: () => {
+          dabord();
+          void navigate({ to: "/pme/reglages", search: { page: "utilisateurs" } });
         },
       };
     }
