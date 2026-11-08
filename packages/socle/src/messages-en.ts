@@ -4257,6 +4257,7 @@ export const en: Dict = {
   "pme.compta.rienARepondre": "Nothing to answer.",
   "pme.compta.rienTransmis": "Nothing sent yet.",
   "pme.compta.mandatActif": "Active mandate",
+  "pme.type.plutot": "{porte} · it is rather",
   "pme.reglages.sommaire.avecCompta": "{count} with an accountant",
   "pme.reglages.sommaire.avecCompta#one": "{count} with an accountant",
   "pme.reglages.sommaire.avecCompta#other": "{count} with accountants",
