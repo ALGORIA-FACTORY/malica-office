@@ -188,6 +188,9 @@ function dossierFictif(options: {
           throw new Error(`appel non prévu par l'épreuve : ${nom}`);
       }
     },
+    async contenu() {
+      throw new Error("le modèle ne lit jamais les octets d'une pièce (R2)");
+    },
   };
   return { api, fils, appels };
 }
@@ -444,6 +447,7 @@ describe("le fil garde les sources et les propositions de la réponse", () => {
         }
         return api.rpc<T>(depot, methode, args);
       },
+      contenu: (pieceId) => api.contenu(pieceId),
     };
     const { fin } = await rejouer(avecPiece, {
       claude: claudeQuiDit("Confirmez avec le bouton ci-dessous si vous le souhaitez.", [
