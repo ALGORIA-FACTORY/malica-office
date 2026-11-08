@@ -1,6 +1,6 @@
 /**
  * La liste des pièces, lue d'un trait, dit la même chose que pièce par pièce
- * (migration 20261205090000, 7 novembre 2026).
+ * (migration 20261208090200, 7 novembre 2026).
  *
  * La liste ne rappelle plus `app.circuit_de_la_piece` et
  * `app.suivi_de_la_piece` que pour les pièces qui ont une histoire ; pour les
