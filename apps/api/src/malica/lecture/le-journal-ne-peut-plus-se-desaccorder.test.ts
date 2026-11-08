@@ -39,8 +39,6 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it } from "node:test";
 
-import { MODELE_DESIGNATION, ROLE_DESIGNATION } from "../modeles.ts";
-
 /** Le code de production, commentaires retirés — un exemple ne prouve rien. */
 function sansCommentaires(chemin: string): string {
   return readFileSync(resolve(process.cwd(), chemin), "utf8")
@@ -51,11 +49,18 @@ function sansCommentaires(chemin: string): string {
 }
 
 describe("le journal ne peut plus se désaccorder du modèle appelé", () => {
-  it("le couple (modèle, rôle) est celui du paramétrage", () => {
-    // Le tarif se cherche par le couple. S'ils divergent, l'appel s'exécute et
-    // son coût n'est pas inscrit — ce qui ne casse rien, et c'est le pire.
-    assert.equal(MODELE_DESIGNATION, "deepseek-chat");
-    assert.equal(ROLE_DESIGNATION, "chat");
+  it("le couple (modèle, rôle) est celui du maillon qui a désigné", () => {
+    /*
+     * Le tarif se cherche par le couple. S'ils divergent, l'appel s'exécute et
+     * son coût n'est pas inscrit — ce qui ne casse rien, et c'est le pire.
+     * Depuis le 8 novembre 2026, le couple vient de la chaîne réglée par la
+     * tour (`designation.ts`) : vision.ts le reprend du maillon, sans le
+     * réécrire.
+     */
+    const code = sansCommentaires("src/malica/lecture/vision.ts");
+    assert.match(code, /selectModel: issue\.maillon\.modele/);
+    assert.match(code, /selectRole: issue\.maillon\.role/);
+    assert.ok(!/["']deepseek-chat["']/.test(code), "aucun modèle de désignation écrit en dur");
   });
 
   it("le journal n'écrit AUCUN rôle en dur pour la désignation", () => {
