@@ -357,7 +357,7 @@ function PmeMalica() {
     >
       <div className="cols">
         {/* ------------------------------------ à gauche (ordinateur) */}
-        <aside className="nav" aria-label={t("malica.fils.titre")}>
+        <aside className="gauche" aria-label={t("malica.fils.titre")}>
           <p className="lbl">{t("pme.malica.canaux")}</p>
           <div className="canaux">{canaux}</div>
           <p className="lbl">
