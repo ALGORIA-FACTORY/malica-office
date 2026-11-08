@@ -2628,6 +2628,7 @@ export const ar: Dict = {
   "cab.ecriture.ligne.champ": "{champ}، السطر {n}",
   "cab.ecriture.ligne.taxe": "الأداء",
   "cab.ecriture.illisible": "الحريف ما زال يرى القراءة",
+  "cab.ecriture.aRevoir": "تشير مليكة إلى نقطة تجب مراجعتها قبل المصادقة",
   "cab.ecriture.illisible.aide":
     "هذا القيد لا يُقرأ كفاتورة: طرف مقابل في جهة الوثيقة، أو المبلغ دون أداء مع الأداء والمعاليم لا يساوي مجموع الأطراف المقابلة. لا يُنشر أي مبلغ للحريف ما دام لا يُقرأ.",
   "cab.ecriture.reserve.nature_de_charge": "طبيعة الشراء يجب تحديدها",

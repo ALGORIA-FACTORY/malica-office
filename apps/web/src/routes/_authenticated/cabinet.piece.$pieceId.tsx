@@ -611,7 +611,7 @@ function CabinetReviewDeLaPiece() {
         >
           ←
         </Link>
-        <div className="min-w-0 flex-1">
+        <div className="order-last min-w-0 basis-full sm:order-none sm:basis-0 sm:flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
             {t("cab.review.ref")}
             {/*
@@ -632,7 +632,7 @@ function CabinetReviewDeLaPiece() {
               </>
             ) : null}
           </p>
-          <h1 className="mt-1 truncate text-[22px] font-semibold leading-tight tracking-[-0.02em]">
+          <h1 className="mt-1 line-clamp-2 text-[22px] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
             {dansLaFile?.clientName ?? t("cab.review.title")}
             {dansLaFile?.libelle ? (
               <span className="text-text-2"> — {dansLaFile.libelle}</span>
@@ -663,7 +663,7 @@ function CabinetReviewDeLaPiece() {
           ) : null}
         </div>
         <SignalLight tone={feuDuStatut(statut)} label={t(MOT_CABINET[statut])} />
-        <span className="flex shrink-0 gap-1">
+        <span className="ms-auto flex shrink-0 gap-1 sm:ms-0">
           <button
             type="button"
             onClick={() => precedente && allerA(precedente.pieceId)}

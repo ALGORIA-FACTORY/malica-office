@@ -2748,6 +2748,7 @@ export const en: Dict = {
   "cab.ecriture.ligne.champ": "{champ}, line {n}",
   "cab.ecriture.ligne.taxe": "Tax",
   "cab.ecriture.illisible": "The client still sees the reading",
+  "cab.ecriture.aRevoir": "Malica flags a point to review before validating",
   "cab.ecriture.illisible.aide":
     "This entry does not read as an invoice: a counterpart sits on the document’s side, or net + VAT + duties do not equal the counterparts. No amount is shown to the client until it reads as one.",
   "cab.ecriture.reserve.nature_de_charge": "Nature of the purchase to be specified",

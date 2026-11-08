@@ -2178,6 +2178,8 @@ export interface QueueItem {
   confiance: number | null;
   /** Le verdict de la dernière analyse : il dit si une écriture peut se proposer. */
   verdict?: string | null;
+  /** Le sens de la pièce est connu : sans lui, aucune écriture ne se propose. */
+  sensEtabli?: boolean;
   /**
    * Ce que la PME demande sur cette pièce, et qui attend le cabinet.
    *

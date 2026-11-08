@@ -184,6 +184,10 @@ export const supervision = {
               m.montant, lu.montant_lu, c.email as collaborateur, cf.confiance,
               (select an2.verdict from capture.analyses an2 where an2.piece_id = p.id
                 order by an2.created_at desc limit 1) as verdict,
+              ((p.document_kind_statut = 'confirme' and p.document_kind is not null)
+                or exists (select 1 from ref.document_types dt
+                            where dt.code = cf.payload->>'document_kind' and dt.porte_ecriture)
+              ) as sens_etabli,
               dem.objet as demande_objet,
               ${tiersDeLaPiece("p", "cf.payload")} as tiers, ${COLONNES_DU_SUIVI}
          from ${PIECES_DU_CABINET}
@@ -326,6 +330,7 @@ export const supervision = {
           collaborateur: (p["collaborateur"] as string | null) ?? null,
           confiance: p["confiance"] == null ? null : Number(p["confiance"]),
           verdict: (p["verdict"] as string | null) ?? null,
+          sensEtabli: p["sens_etabli"] === true,
           demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
           doublonDe: doublonDe.get(p["piece_id"] as string) ?? null,
           tiers: (p["tiers"] as string | null) ?? null,

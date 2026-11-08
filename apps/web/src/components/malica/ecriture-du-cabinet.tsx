@@ -401,6 +401,20 @@ export function EcritureDuCabinet({
         />
       </h2>
 
+      {/* Une écriture ancienne que le dernier jugement met en défaut : on le dit avant Valider. */}
+      {vivante !== null &&
+      !prise &&
+      proposition?.ok === false &&
+      (proposition.verdictCode === "anomalie" || proposition.verdictCode === "rejet") ? (
+        <p
+          role="status"
+          className="flex items-center border border-signal-warn bg-card px-3.5 py-2.5 text-[13px]"
+        >
+          {t("cab.ecriture.aRevoir")}
+          <Aide titre={t("cab.ecriture.aRevoir")} paragraphes={[{ texte: proposition.raison }]} />
+        </p>
+      ) : null}
+
       {illisible ? (
         <p
           role="status"
