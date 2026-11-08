@@ -727,7 +727,12 @@ export function QueueTable({ rows }: { rows: QueueItem[] }) {
               ) : null}
             </InkCell>
             <InkCell numeric className="cab-file-montant" label={t("cab.queue.amount")}>
-              {row.montant ? montant(row.montant, locale) : "—"}
+              {/* L'écriture d'abord ; sinon le TTC lu ; sinon rien (7 novembre 2026). */}
+              {row.montant
+                ? montant(row.montant, locale)
+                : row.montantLu
+                  ? montant(row.montantLu, locale)
+                  : "—"}
             </InkCell>
             <InkCell className="cab-file-statut">
               <SignalLight tone={feuDuStatut(row.statut)} label={t(MOT_CABINET[row.statut])} />

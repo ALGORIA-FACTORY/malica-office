@@ -578,15 +578,36 @@ export const identite = {
       prenom: string | null;
       nom: string | null;
       display_name: string | null;
-    }>(`select prenom, nom, display_name from identity.profiles where user_id = auth.uid()`);
+      cote_du_plus: "gauche" | "droite";
+    }>(
+      `select prenom, nom, display_name, cote_du_plus from identity.profiles where user_id = auth.uid()`,
+    );
     return rows[0] ?? null;
   },
 
   /** Écrire son prénom et son nom. Un champ vide s'efface. */
   async ecrireMonProfil(db: Requete, prenom: string | null, nom: string | null) {
     const { rows } = await db.query<{
-      r: { prenom: string | null; nom: string | null; display_name: string | null };
+      r: {
+        prenom: string | null;
+        nom: string | null;
+        display_name: string | null;
+        cote_du_plus: "gauche" | "droite";
+      };
     }>(`select public.mon_profil_ecrire($1, $2) as r`, [prenom, nom]);
     return rows[0]?.r ?? null;
+  },
+
+  /**
+   * Le côté du bouton « + » (planche 5) : à droite par défaut, à gauche pour
+   * qui tient son téléphone de la main gauche. Il suit le compte.
+   */
+  async ecrireCoteDuPlus(db: Requete, cote: string) {
+    if (cote !== "gauche" && cote !== "droite") throw new Error("profil.cote_invalide");
+    const { rows } = await db.query<{ r: "gauche" | "droite" }>(
+      `select public.mon_cote_du_plus_ecrire($1) as r`,
+      [cote],
+    );
+    return rows[0]?.r ?? cote;
   },
 };

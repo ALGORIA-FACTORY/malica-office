@@ -8,6 +8,7 @@ import { moteurDisponible, type Grille, type SortieDuSudoku } from "@malica/sudo
 import { deviseDEssai, devisesDEssai } from "../../scan/devise-d-essai.ts";
 import { REGLES_DE_LECTURE_D_ESSAI } from "../../scan/referentiel-d-essai.ts";
 import { JEU_D_OR } from "./jeu-d-or.ts";
+import { decouperEnMots } from "./mots.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import {
@@ -863,6 +864,47 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       contexte.pack.charges.map((c) => c.code),
     );
     assert.deepEqual(sel.totals.ttc, { page: 1, ordinal: 14 }, "la chaîne reçoit le net à payer");
+  });
+
+  it("les chiffres qui ferment l'emportent sur les lettres : le TTC imprimé reste, le net aussi", () => {
+    // Les lignes réelles de l'OCR du staging, 7 novembre 2026, sur la facture
+    // fictive 100/A-12 : « Total TTC » sans le timbre, « NET À PAYER » avec
+    // lui, et le net écrit en lettres. « TTC hors timbre » ferme par les
+    // chiffres ; « TTC avec timbre » ne ferme que par les lettres. Avant le
+    // correctif, l'ordre alphabétique retenait la seconde.
+    const lignes: [number, number, string][] = [
+      [0.341, 0.535, "Total HT"],
+      [0.341, 0.84, "2 375,000"],
+      [0.361, 0.535, "TVA 19 %"],
+      [0.361, 0.855, "451,250"],
+      [0.381, 0.535, "Total TTC"],
+      [0.381, 0.84, "2 826,250"],
+      [0.401, 0.535, "Timbre fiscal"],
+      [0.401, 0.87, "1,000"],
+      [0.421, 0.535, "NET À PAYER (DT)"],
+      [0.421, 0.84, "2 827,250"],
+      [
+        0.481,
+        0.085,
+        "Arrêtée la présente pièce à la somme de : Deux mille huit cent vingt-sept dinars et deux cent cinquante millimes.",
+      ],
+    ];
+    const plan: PageToken[] = [];
+    for (const [y, x, texte] of lignes) {
+      plan.push(
+        ...decouperEnMots(texte, { x0: x, y0: y, x1: x + 0.1, y1: y + 0.015 }, 1, plan.length),
+      );
+    }
+    const o = resoudreLaPiece(
+      jetonsDuSudoku(recollerLesMilliers(plan), devise, contexte),
+      contexte,
+    );
+    assert.equal(o.issue, "prouvee", o.raison ?? "");
+    assert.equal(o.variante, "ttc_hors_timbre", "la variante prouvée par les chiffres");
+    assert.equal(o.par_lettres, undefined, "aucun total pris dans les lettres");
+    assert.equal(valeur(o, "total_ttc"), 2_826_250, "le Total TTC imprimé");
+    assert.equal(valeur(o, "net_a_payer"), 2_827_250, "le net à payer imprimé");
+    assert.equal(valeur(o, "droit_timbre"), 1_000);
   });
 
   it("les rôles des champs se déduisent des preuves de la grille en base", () => {
