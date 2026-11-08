@@ -1599,6 +1599,17 @@ export const capture = {
   },
 
   /** Journal d'un appel d'agent. Rend l'identifiant de la trace, ou null. */
+  /**
+   * La chaîne de désignation en vigueur (Claude, puis DeepSeek), maillon par
+   * maillon, avec la dépense de la période et le verdict `epuise` calculés par
+   * la base. Réservée au serveur : la dépense d'un fournisseur est celle de
+   * toute la plateforme.
+   */
+  async chaineDeDesignation(db: Requete): Promise<unknown> {
+    const { rows } = await db.query<{ c: unknown }>("select public.designation_chaine() as c");
+    return rows[0]?.c ?? [];
+  },
+
   async journaliserAgent(
     db: Requete,
     input: {

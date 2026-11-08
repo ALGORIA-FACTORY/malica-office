@@ -22,8 +22,10 @@ import {
   DEEPSEEK_MODELS,
   MODELE_GENERATION,
   MODELE_RECETTE,
+  MODELE_SUDOKU,
   ROLE_GENERATION,
   ROLE_RECETTE,
+  ROLE_SUDOKU,
   modeleOcr,
 } from "./modeles.ts";
 
@@ -51,6 +53,8 @@ const ATTENDUS: Array<{ modele: string; role: string; quoi: string }> = [
    * deux dépenses logées dans la même case ne s'attribuent plus.
    */
   { modele: MODELE_GENERATION, role: ROLE_GENERATION, quoi: "le générateur de recettes" },
+  // Le Sudoku qui désigne seul : à zéro, mais compté (« pièces lues sans IA »).
+  { modele: MODELE_SUDOKU, role: ROLE_SUDOKU, quoi: "le Sudoku qui désigne sans IA" },
 ];
 
 /**
