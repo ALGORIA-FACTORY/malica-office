@@ -3105,3 +3105,31 @@ html.dark:has([data-surface="pme"]),
 [data-surface="pme"] [data-ecran="parametres"] .personnes .bd span{font-size:.75rem;color:var(--t3)}
 [data-surface="pme"] [data-ecran="parametres"] .personnes em{flex:none;font-style:normal;font-size:.75rem;font-weight:700;padding:.1875rem .5625rem;border-radius:999px;background:var(--accs);color:var(--acc)}
 [data-surface="pme"] .fiche-feuille .fiche-titre{margin:0 0 .5rem;font-size:1.125rem;font-weight:700}
+/* ======================================================== VOTRE COMPTABILITÉ
+ * Planche 6, approuvée le 7 novembre 2026 : chaque cabinet mandaté a son
+ * dossier, en tête de la bibliothèque, puis son écran. */
+[data-surface="pme"] .comptas{display:grid;gap:.5rem;margin-top:.5rem}
+[data-surface="pme"] .compta{display:flex;align-items:center;gap:.75rem;padding:.75rem .875rem;border-radius:18px;background:var(--d1);border:1px solid var(--hr);color:var(--tx);text-decoration:none}
+[data-surface="pme"] .compta.une{padding:1rem;background:color-mix(in srgb, #86BDF2 12%, var(--d1));border-color:color-mix(in srgb, #86BDF2 35%, transparent)}
+[data-surface="pme"] .compta .av{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb, #86BDF2 25%, transparent);color:#86BDF2;font-weight:800}
+[data-surface="pme"] .compta .bd{flex:1;min-width:0;display:grid;gap:.125rem}
+[data-surface="pme"] .compta .bd b{font-size:1rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-surface="pme"] .compta.une .bd b{font-size:1.125rem}
+[data-surface="pme"] .compta .bd span{font-size:.8125rem;color:var(--t2)}
+[data-surface="pme"] .compta em{flex:none;font-style:normal;font-family:var(--mono);font-size:.6875rem;padding:.3125rem .5625rem;border-radius:999px;background:color-mix(in srgb, var(--am) 20%, transparent);color:var(--am)}
+[data-surface="pme"] [data-ecran="comptabilite"] .top .av{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb, #86BDF2 25%, transparent);color:#86BDF2;font-weight:800;font-size:.875rem}
+[data-surface="pme"] [data-ecran="comptabilite"] .pad{display:grid;gap:.75rem;padding-top:.75rem;padding-bottom:2rem;max-width:760px;margin-inline:auto;width:100%}
+[data-surface="pme"] [data-ecran="comptabilite"] .puces{display:flex;gap:.5rem;overflow-x:auto;scrollbar-width:none}
+[data-surface="pme"] [data-ecran="comptabilite"] .puces button{flex:none;border:1px solid var(--hr);border-radius:999px;background:none;color:var(--t2);font:inherit;font-size:.8125rem;font-weight:600;padding:.4375rem .75rem;cursor:pointer}
+[data-surface="pme"] [data-ecran="comptabilite"] .puces button[aria-selected="true"]{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+[data-surface="pme"] [data-ecran="comptabilite"] .puces i{font-style:normal;font-family:var(--mono);font-size:.6875rem;opacity:.75;margin-inline-start:.25rem}
+[data-surface="pme"] [data-ecran="comptabilite"] .choix{justify-self:start;height:34px;padding:0 .75rem;border-radius:999px;border:1px solid var(--hr);background:var(--d1);color:var(--tx);font:inherit;font-size:.8125rem}
+[data-surface="pme"] [data-ecran="comptabilite"] .liste{list-style:none;margin:0;padding:0;border-radius:16px;background:var(--d1);border:1px solid var(--hr);overflow:hidden}
+[data-surface="pme"] [data-ecran="comptabilite"] .liste li + li{box-shadow:inset 0 1px 0 var(--hr)}
+[data-surface="pme"] [data-ecran="comptabilite"] .pc{width:100%;display:flex;align-items:center;gap:.75rem;padding:.625rem .875rem;border:0;background:none;color:var(--tx);font:inherit;text-align:start;cursor:pointer}
+[data-surface="pme"] [data-ecran="comptabilite"] .pc .vignette{width:40px;height:52px;flex:none;border-radius:6px}
+[data-surface="pme"] [data-ecran="comptabilite"] .pc .ini{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;background:var(--d2);font-weight:800;font-size:.8125rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="comptabilite"] .pc .bd{flex:1;min-width:0;display:grid;gap:.125rem}
+[data-surface="pme"] [data-ecran="comptabilite"] .pc .bd b{font-size:.9375rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-surface="pme"] [data-ecran="comptabilite"] .pc .bd span{font-size:.75rem;color:var(--t3)}
+[data-surface="pme"] [data-ecran="comptabilite"] .pc em{flex:none;font-style:normal;font-size:.75rem;font-weight:700;padding:.1875rem .5625rem;border-radius:999px;background:color-mix(in srgb, var(--am) 20%, transparent);color:var(--am)}

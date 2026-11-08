@@ -3894,6 +3894,8 @@ export interface FicheDeSociete {
   offre: string | null;
   /** Le cabinet au mandat actif, `null` s'il n'y en a pas. */
   cabinet: string | null;
+  /** Son identifiant : le dossier « Votre comptabilité » (planche 6) le regroupe. */
+  cabinetId: string | null;
 }
 
 export interface OrganisationDeLaLicence {
