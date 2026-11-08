@@ -5,7 +5,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { dateIso, enUnites, rapport, type MesureDeLaPiece } from "./banc-sans-ia.ts";
+import {
+  dateIso,
+  enUnites,
+  gardeDuReleve,
+  lecteurDuBanc,
+  plafonnerLesAppels,
+  rapport,
+  releveAccepte,
+  type MesureDeLaPiece,
+} from "./banc-sans-ia.ts";
 
 describe("banc sans IA — la vérité, convertie sans flottant", () => {
   it("un montant décimal en unités de l'exposant, chiffres orientaux compris", () => {
@@ -60,5 +69,46 @@ describe("banc sans IA — le rapport", () => {
     ]);
     assert.match(r, /\| tous les champs \| 1 \| 1 \| 1 \| 0 \| 1 \| 0 \| 0 \| 33\.3 % \|/u);
     assert.match(r, /échangés : 1/u);
+  });
+});
+
+describe("banc sans IA — le lecteur Qwen, choisi et jamais par repli", () => {
+  const cles = { QWEN_API_KEY: "k", QWEN_BASE_URL: "https://exemple.invalid" };
+
+  it("PaddleOCR par défaut ; Qwen seulement demandé, et avec ses deux clés", () => {
+    assert.equal(lecteurDuBanc(undefined, {}), "paddle");
+    assert.equal(lecteurDuBanc("paddle", cles), "paddle");
+    assert.equal(lecteurDuBanc("qwen", cles), "qwen");
+    assert.throws(() => lecteurDuBanc("qwen", {}), /QWEN_API_KEY, QWEN_BASE_URL/u);
+    assert.throws(() => lecteurDuBanc("qwen", { ...cles, QWEN_BASE_URL: " " }), /QWEN_BASE_URL/u);
+    assert.throws(() => lecteurDuBanc("mistral", cles), /lecteur inconnu/u);
+  });
+
+  it("un relevé d'un autre lecteur est refusé ; la couche de texte passe devant les deux", () => {
+    assert.equal(releveAccepte("vision", "qwen"), true);
+    assert.equal(releveAccepte("paddle", "qwen"), false, "Qwen demandé, PaddleOCR rendu : panne");
+    assert.equal(releveAccepte("vision", "paddle"), false);
+    assert.equal(releveAccepte("paddle", "paddle"), true);
+    assert.equal(releveAccepte("pdf-text", "qwen"), true);
+    assert.equal(releveAccepte("pdf-text", "paddle"), true);
+  });
+
+  it("les relevés de Qwen se gardent à part de ceux de PaddleOCR", () => {
+    assert.equal(gardeDuReleve("/c", "algoria-001", "paddle"), "/c/algoria-001.json");
+    assert.equal(gardeDuReleve("/c", "algoria-001", "qwen"), "/c/algoria-001.qwen.json");
+  });
+
+  it("au-delà du plafond, l'appel n'est pas émis", async () => {
+    let emis = 0;
+    const origine = (() => {
+      emis += 1;
+      return Promise.resolve(new Response("{}"));
+    }) as typeof fetch;
+    const p = plafonnerLesAppels(2, origine);
+    await p.fetch("https://exemple.invalid/1");
+    await p.fetch("https://exemple.invalid/2");
+    await assert.rejects(p.fetch("https://exemple.invalid/3"), /plafond d'appels atteint \(2\)/u);
+    assert.equal(emis, 2);
+    assert.equal(p.appels(), 2);
   });
 });

@@ -1,0 +1,164 @@
+# Ce que Claude apporte au Sudoku — une mesure, pas une garde.
+#
+# CE QU'IL MESURE (`apps/api/tests/real/banc-designation.ts`), mode « Sudoku
+# d'abord » (le Sudoku existe pour minimiser l'IA) :
+#   1. le moteur seul lit toutes les pièces des corpus du dépôt (relevé
+#      PaddleOCR du service `infra/ocr/`, construit ici, sur CPU) ;
+#   2. Haiku n'est appelé QUE sur les pièces que le moteur n'a pas prouvées ;
+#   3. Sonnet (second avis) QUE sur celles qui restent non prouvées après Haiku ;
+#   4. DeepSeek (le repli de production) sur les mêmes pièces que Haiku, si sa
+#      clé est posée ;
+#   5. en comparaison secondaire, Haiku aussi sur les pièces déjà prouvées.
+# Une valeur du modèle n'est affirmée que si le moteur la prouve.
+#
+# Les clés n'existent que dans GitHub : la mesure tourne ici, à la poussée de
+# sa branche seulement. Plafond de dépense par passage : `--plafond-dollars`
+# (estimé avant le premier appel, tenu pendant). Une poussée dont le dernier
+# commit porte « [sans banc] » ne relance pas la mesure ; « [sans repli] » ne
+# remesure pas DeepSeek.
+#
+# Les noms des modèles sont des paramètres de la mesure (R8 : leur prix se lit
+# dans `agents.model_pricing`) ; ils ne sont écrits dans aucun code.
+#
+# Sortie : l'artefact `mesure-claude` (mesures JSON, bulletin, journal, relevés
+# OCR gardés — de quoi rejouer le moteur sans relire les images).
+
+name: Mesure Claude
+
+on:
+  # Mesure payante : lancée à la main seulement (Actions › Run workflow),
+  # jamais par une poussée — depuis le nettoyage du 8 novembre 2026, le banc vit sur main.
+  workflow_dispatch:
+
+concurrency:
+  group: mesure-claude
+  cancel-in-progress: false
+
+jobs:
+  mesure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    if: ${{ !contains(github.event.head_commit.message, '[sans banc]') }}
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: banc
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/banc
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      OCR_URL: http://127.0.0.1:8095
+      PRINCIPAL: anthropic:claude-haiku-5-5
+      SECOND_AVIS: anthropic:claude-sonnet-5-5
+      REPLI: deepseek:deepseek-chat
+      # Le plafond de l'ensemble des passages est de 60 $ ; le premier (run
+      # 42475726319) a tenu 25,28 $ au prix de garde, le deuxième (42477555120)
+      # n'a rien payé (clé refusée, 401) : ce passage a le reste.
+      PLAFOND_DOLLARS: "34"
+      SANS_REPLI: ${{ contains(github.event.head_commit.message, '[sans repli]') }}
+
+    steps:
+      - name: Les clés
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error title=Mesure non faite::ANTHROPIC_API_KEY absente"
+            exit 1
+          fi
+          echo "ANTHROPIC_API_KEY : présente"
+          if [ -n "$DEEPSEEK_API_KEY" ]; then echo "DEEPSEEK_API_KEY : présente";
+          else echo "DEEPSEEK_API_KEY : absente — le repli ne sera pas mesuré"; fi
+
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Le service OCR (infra/ocr), construit
+        uses: docker/build-push-action@v7
+        with:
+          context: infra/ocr
+          file: infra/ocr/Dockerfile
+          tags: malica-ocr:mesure
+          load: true
+          cache-from: type=gha,scope=malica-ocr
+          cache-to: type=gha,mode=max,scope=malica-ocr
+
+      - name: Le service OCR, démarré
+        run: |
+          docker run -d --name ocr -p 8095:8000 \
+            -e OMP_NUM_THREADS=2 -e OCR_LECTEURS=2 \
+            -e OCR_MODELE_RECONNAISSANCE_ARABE=arabic_PP-OCRv5_mobile_rec \
+            malica-ocr:mesure
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8095/sante && break
+            sleep 5
+          done
+          curl -fsS http://127.0.0.1:8095/sante
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer
+        run: npm ci
+
+      - name: Le moteur du sudoku
+        run: |
+          rustup target add wasm32-unknown-unknown
+          npm run build --workspace @malica/sudoku
+
+      - name: Monter le schéma
+        run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
+        env:
+          MALICA_API_PASSWORD: ci
+
+      # Les relevés OCR d'un passage précédent (même service OCR, mêmes corpus) :
+      # une relance ne relit pas les images.
+      - uses: actions/cache@v4
+        with:
+          path: sortie/releves
+          key: releves-${{ hashFiles('infra/ocr/**', 'outils/jeu-algoria/**', 'outils/jeu-synthetique/**') }}
+
+      # Le banc échoue (code 1) dès qu'une valeur affirmée est fausse, (2) si
+      # l'estimation dépasse le plafond : c'est une mesure, son code est
+      # rapporté, et l'artefact part quoi qu'il dise.
+      - name: La mesure
+        run: |
+          mkdir -p sortie/releves
+          repli=""
+          # « [sans repli] » dans le message du commit : DeepSeek déjà mesuré, on ne le repaie pas.
+          [ -n "$DEEPSEEK_API_KEY" ] && [ "$SANS_REPLI" != "true" ] && repli="--repli $REPLI"
+          set +e
+          node --experimental-strip-types --no-warnings \
+            apps/api/tests/real/banc-designation.ts \
+            --corpus algoria:outils/jeu-algoria \
+            --corpus synthetique:outils/jeu-synthetique \
+            --corpus dirigeant:packages/sudoku/tests/donnees/jeux_dirigeant_ocr.json \
+            --cache sortie/releves \
+            --designateur "$PRINCIPAL" --second-avis "$SECOND_AVIS" $repli \
+            --aussi-prouvees --concurrence 4 --plafond-dollars "$PLAFOND_DOLLARS" \
+            --sortie sortie/mesure.json > sortie/mesure.md 2> sortie/mesure.err
+          code=$?
+          echo "code de sortie : $code" | tee sortie/code.txt
+          cat sortie/mesure.md >> "$GITHUB_STEP_SUMMARY"
+          grep -v "^moteur " sortie/mesure.err | tail -60
+
+      - name: Le journal du service OCR
+        if: always()
+        run: docker logs ocr > sortie/ocr.log 2>&1 || true
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: mesure-claude
+          path: sortie/
+          retention-days: 30
