@@ -35,6 +35,7 @@ import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "
 const ORACLE = `
   select p.id,
          app.piece_accompagne(p.id) as accompagne,
+         app.piece_jointe(p.id) as jointe,
          app.emetteur_dit(p.id) as emetteur_dit,
          ${COLONNES_DU_SUIVI},
          ${COLONNES_DU_CIRCUIT}
@@ -94,6 +95,7 @@ async function comparer(utilisateur: string, societes: string[], etiquette: stri
     assert.deepEqual(p.circuit, versCircuit(r), `${etiquette} : circuit de ${p.id}`);
     assert.deepEqual(p.suivi, versSuivi(r), `${etiquette} : suivi de ${p.id}`);
     assert.equal(p.accompagne, Boolean(r["accompagne"]), `${etiquette} : accompagne ${p.id}`);
+    assert.equal(p.jointe, Boolean(r["jointe"]), `${etiquette} : jointe ${p.id}`);
     if (r["emetteur_dit"] != null) assert.equal(p.emetteur, r["emetteur_dit"]);
   }
   return oracle.length;

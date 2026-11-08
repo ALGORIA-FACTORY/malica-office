@@ -40,6 +40,8 @@ export interface PieceDuCircuit {
    * (`app.piece_accompagne`). Absent : une pièce ordinaire.
    */
   accompagne?: boolean | null;
+  /** Un document joint à sa pièce : il part avec elle (`app.piece_jointe`, planche 3). */
+  jointe?: boolean | null;
   /** Le dernier refus de lecture inscrit, tant qu'elle n'est pas lue (`PieceLue.lectureRefusee`). */
   lectureRefusee?: LectureRefusee | null;
 }
@@ -126,8 +128,10 @@ export function gestesDuCircuit(
   const nonLue =
     p.status === "capturee" && !p.accompagne && p.lectureRefusee?.motif !== MOTIF_DU_PLAFOND;
 
+  // Un document joint part avec sa pièce, par l'envoi de celle-ci (planche 3) :
+  // il n'a pas de geste « Envoyer » à lui (la base le fait suivre).
   const envoyer: EtapeDeDemande | null =
-    p.vis !== "entite" || chezLeSiege
+    p.vis !== "entite" || chezLeSiege || (p.jointe && versOu === "cabinet")
       ? null
       : versOu === "cabinet"
         ? nonLue

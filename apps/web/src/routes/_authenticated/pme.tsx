@@ -368,8 +368,9 @@ function PmeLayout() {
       /*
        * JOINDRE (planche 6) : le document pris entre dans la société — une
        * pièce de l'espace privé ne se rattache pas (`piece_rattacher`) — et
-       * se rattache. Il part au cabinet comme toute pièce : lue, puis envoyée
-       * (le BL sans lecture viendra avec la planche 3).
+       * se rattache. Il part au cabinet AVEC sa pièce, sans lecture : la base
+       * l'envoie avec elle, ou aussitôt si elle y est déjà (planche 3,
+       * `20261205090000_un_document_joint_part_avec_sa_piece`).
        */
       if (input.joindre) {
         for (const id of identifiants) {

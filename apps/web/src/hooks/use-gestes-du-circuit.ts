@@ -64,6 +64,7 @@ function useLeCircuit(tenantId: string | null | undefined) {
     suivi: f.suivi ?? null,
     circuit: f.circuit ?? null,
     accompagne: f.accompagne ?? null,
+    jointe: f.jointe ?? null,
     lectureRefusee: f.lectureRefusee ?? null,
   });
   return {

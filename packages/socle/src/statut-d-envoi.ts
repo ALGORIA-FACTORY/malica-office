@@ -142,6 +142,8 @@ export interface FaitsDeLaPiece {
   circuit?: CircuitInterne | null;
   /** Un reçu ou un justificatif, qui suit sa pièce (`PieceLue.accompagne`). */
   accompagne?: boolean | null;
+  /** Un document joint à sa pièce, qui part avec elle (`PieceLue.jointe`). */
+  jointe?: boolean | null;
   /** Le dernier refus de lecture inscrit (`PieceLue.lectureRefusee`). */
   lectureRefusee?: LectureRefusee | null;
 }
