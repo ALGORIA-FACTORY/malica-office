@@ -47,4 +47,4 @@ revoke all on function
 --   public.charge_famille_resolve(uuid, text, text, date),
 --   public.charge_question_answer(uuid, text, text, numeric, numeric, numeric, text, uuid, text)
 --   to service_role;
--- delete from app.migrations where nom = '20261202150300_service_role_ne_garde_aucun_droit.sql';
+-- delete from app.migrations where nom = '20261205094300_service_role_ne_garde_aucun_droit.sql';

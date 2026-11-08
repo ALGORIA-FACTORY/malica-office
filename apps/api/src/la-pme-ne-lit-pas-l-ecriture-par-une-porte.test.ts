@@ -69,7 +69,7 @@ describe(
      * L'inventaire des portes du portier qui prennent une écriture en argument
      * (lot S2, après la revue) : aucune ne trouve, pour une personne de la PME,
      * l'écriture que le cabinet a inscrite. Le portier ne lit au-delà de son
-     * appelant que ce que celui-ci a écrit (`20261202100100`).
+     * appelant que ce que celui-ci a écrit (`20261205092700`).
      */
     it("aucune porte de la PME ne trouve l'écriture du cabinet", async () => {
       const ecriture = await s.priseEnCharge(await chezLeComptable());
