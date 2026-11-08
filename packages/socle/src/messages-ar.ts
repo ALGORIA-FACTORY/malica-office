@@ -1252,7 +1252,8 @@ export const ar: Dict = {
   "cab.abo.propose.offre": "العرض",
   "cab.abo.propose.prix": "{prix} دون أداءات شهريًّا",
   "cab.abo.propose.bouton": "اقتراح",
-  "cab.abo.propose.ok": "أُرسل الاقتراح إلى {client}. يظهر في إعداداته ليقبله أو يرفضه.",
+  "cab.abo.propose.ok":
+    "أُرسل الاقتراح إلى {client}. يجده المسيّر في الإعدادات › الاشتراك ليقبله أو يرفضه.",
   "cab.abo.liste.titre": "ما تقترحه أو تتكفّل به",
   "cab.abo.liste.count": "{count} اشتراكات",
   "cab.abo.liste.count#one": "{count} اشتراك",
@@ -4025,6 +4026,13 @@ export const ar: Dict = {
   "pme.reglages.abo.report": "منها {n} قراءة مُرحَّلة من الشهر الماضي.",
   "pme.reglages.abo.report#one": "منها قراءة واحدة مُرحَّلة من الشهر الماضي.",
   "pme.reglages.abo.report#other": "منها {n} قراءة مُرحَّلة من الشهر الماضي.",
+  "pme.reglages.offres.empechement.choisi_par_la_comptabilite": "اختاره محاسبكم.",
+  "pme.reglages.offres.complement":
+    "يختار {comptabilite} اشتراككم ويسدّده. يمكنكم الترقية: تدفعون حينها الفرق فقط، المبيّن أدناه.",
+  "pme.reglages.abo.priseEnCharge": "يختاره ويسدّده محاسبكم، {comptabilite}.",
+  "pme.reglages.abo.priseEnChargeEtComplement":
+    "يختاره ويسدّده محاسبكم، {comptabilite}. تدفعون الفرق: {prix} {devise} دون احتساب الأداء / شهريًا.",
+  "pme.notifs.voirProposition": "عرض الاقتراح",
   "pme.reglages.offres.empechement.engagement_annuel":
     "اشتراكك سنوي: لا تتغيّر الباقة قبل نهاية الالتزام.",
   "pme.reglages.annuel.detail":

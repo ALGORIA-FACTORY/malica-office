@@ -3913,7 +3913,16 @@ export interface MonForfait {
   sieges_occupes: number | string | null;
   sieges_inclus: number | string | null;
   sieges_max: number | string | null;
+  /**
+   * Ce que la société paie elle-même. Quand sa comptabilité a choisi
+   * l'abonnement, c'est le seul complément d'une offre plus haute — `null`
+   * s'il n'y en a pas : la société ne voit jamais ce que paie la comptabilité.
+   */
   prix_mensuel_ht: string | null;
+  /** Vrai pour le propriétaire principal, qu'un prix soit montré ou non. */
+  titulaire: boolean | null;
+  /** Le nom de la comptabilité qui a choisi l'abonnement ; `null` si la société paie seule. */
+  pris_en_charge_par: string | null;
 }
 
 /** Un siège occupé — une personne, sur une organisation de la licence. */
@@ -4148,7 +4157,12 @@ export interface OffreDeLaGrille {
   code: string;
   libelle: string;
   rang: number;
-  prix_mensuel_ht: string;
+  /**
+   * Ce que la société paierait par mois. Quand sa comptabilité a choisi
+   * l'abonnement : le complément au-dessus de l'offre choisie, et `null` pour
+   * l'offre choisie et celles d'en dessous — jamais le prix que paie la comptabilité.
+   */
+  prix_mensuel_ht: string | null;
   lectures_par_organisation: number;
   /** Les lectures que l'offre garantit, sociétés incluses comprises. */
   lectures_incluses: number;
