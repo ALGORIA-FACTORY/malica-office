@@ -235,6 +235,16 @@
       "chemins": ["public.capture_precision_persist"]
     },
     {
+      "objet": "capture.rangements_prives",
+      "privilege": "INSERT",
+      "chemins": ["public.piece_privee_ranger"]
+    },
+    {
+      "objet": "capture.rangements_prives",
+      "privilege": "UPDATE",
+      "chemins": ["public.piece_privee_ranger"]
+    },
+    {
       "objet": "capture.rattachements",
       "privilege": "INSERT",
       "chemins": ["public.piece_detacher", "public.piece_rattacher"]
