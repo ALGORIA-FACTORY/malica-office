@@ -47,6 +47,7 @@ import {
   type ContexteDuSudokuBranche,
 } from "../malica/lecture/sudoku.ts";
 import { dateDeLaPiece } from "./dates.ts";
+import { idsDeSocietes } from "./societes.ts";
 import { aujourdhui } from "./decimal.ts";
 import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
 
@@ -321,6 +322,149 @@ function colonnesDeLaPiece(alias?: string): string {
     .join(", ");
 }
 
+/**
+ * Les pièces de sociétés données, chacune avec sa dernière lecture — la
+ * requête de `listAvecLecture` et de `listAvecLectureDesSocietes`, écrite une
+ * fois.
+ *
+ * `left join lateral` plutôt qu'une seconde requête recollée en mémoire :
+ * la dernière extraction de chaque pièce se choisit là où sont les lignes.
+ * Les pièces jamais lues restent dans le résultat, avec des colonnes nulles
+ * — les cacher reviendrait à nier qu'elles ont été déposées.
+ */
+type PieceDeLaListe = ReturnType<typeof versPieceLue>;
+
+async function piecesLuesDe(
+  db: Requete,
+  tenantIds: readonly string[],
+): Promise<Array<{ tenantId: string; pieces: PieceDeLaListe[] }>> {
+  if (tenantIds.length === 0) return [];
+
+  /*
+   * UNE LECTURE PARTIELLE EST UNE LECTURE.
+   *
+   * 13 octobre 2026. Cinq pièces de suite affichaient « Émetteur non
+   * trouvé », sans date et sans total, alors que la lecture AVAIT trouvé
+   * « ALGORIA », « COMPTOIR », « ORBIS ». La cause tient en une ligne :
+   * read-piece.ts range sous le contrat « extract.v1.partiel » toute lecture
+   * qui ne valide pas le schéma entier, et cette liste ne demandait que
+   * « extract.v1 ». Tout ce qui avait été lu devenait invisible parce
+   * qu'il manquait autre chose.
+   *
+   * Cette liste ne promet nulle part d'être complète : elle montre ce qu'on
+   * sait. Le préfixe couvre donc les deux contrats.
+   */
+  const { rows } = await db.query(
+    `select p.tenant_id, p.id, p.status, p.created_at, p.created_by, p.vis, p.gardee_le, p.transmise_le,
+              p.document_kind,
+              x.payload,
+              app.piece_accompagne(p.id) as accompagne,
+              (select valeur from precisions_v q
+                where q.piece_id = p.id and q.champ = 'document_kind'
+                order by decided_at desc limit 1) as precision_kind,
+              -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
+              -- reste telle quelle), que la liste préfère au nom lu.
+              app.emetteur_dit(p.id) as emetteur_dit,
+              ${REFUS_DE_LECTURE} as lecture_refusee,
+              w.etat as lecture_etat, w.dernier_motif as lecture_motif,
+              w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le,
+              -- Forcée, le total, le sens et la date sont ceux du
+              -- cabinet : il décide.
+              case when s.prise is not null
+                   then app.montants_pris_en_charge(p.id) end as du_cabinet,
+              ${COLONNES_DU_SUIVI},
+              ${COLONNES_DU_CIRCUIT}
+         from pieces_v p
+         left join lateral (
+           select e.payload
+             from extractions_v e
+            -- extract.v1 ET extract.v1.partiel : voir le commentaire au-dessus.
+            where e.piece_id = p.id and e.contract like 'extract.v1%'
+            order by e.created_at desc
+            limit 1
+         ) x on true
+         -- Où en est la pièce chez le cabinet : seulement si elle y est partie.
+         left join lateral (
+           select * from app.suivi_de_la_piece(p.id) where p.vis = 'partage'
+         ) s on true
+         -- Le passage siège → propriétaire, et le côté de qui regarde.
+         left join lateral app.circuit_de_la_piece(p.id) c on true
+         /*
+          * LE DERNIER TRAVAIL DE LECTURE, POUR QUE L'ÉCHEC SE VOIE.
+          *
+          * 24 octobre 2026, Wissem : « rien ne dit que la lecture casse ».
+          * L'état est DÉRIVÉ par la vue (rien n'est stocké), une fois pour
+          * tout le dossier — pas une sous-requête par pièce.
+          */
+         left join (
+           select distinct on (t.piece_id) t.piece_id, t.etat, t.dernier_motif, t.prenable_a,
+                  t.demande_le
+             from fabrique.etat_des_travaux_v t
+            where t.tenant_id = any($1::uuid[]) and t.nature = 'lecture_piece'
+            order by t.piece_id, t.demande_le desc
+         ) w on w.piece_id = p.id
+        -- Une version précédente n'est pas une pièce de plus (« Reprendre la photo »).
+        -- Une pièce archivée a quitté la société : la RLS la laisse lire au
+        -- cabinet engagé, et le dirigeant qui est aussi son propre comptable
+        -- la revoyait ici, « à reprendre » (recette du 1er novembre 2026).
+        where p.tenant_id = any($1::uuid[]) and p.remplacee_par is null and p.archivee_le is null
+        order by p.created_at desc`,
+    [tenantIds],
+  );
+  const parSociete = new Map<string, PieceDeLaListe[]>(tenantIds.map((id) => [id, []]));
+  for (const r of rows as Record<string, unknown>[]) {
+    parSociete.get(r["tenant_id"] as string)?.push(versPieceLue(r));
+  }
+  return tenantIds.map((tenantId) => ({ tenantId, pieces: parSociete.get(tenantId) ?? [] }));
+}
+
+function versPieceLue(r: Record<string, unknown>) {
+  const lu = (r["payload"] ?? null) as {
+    issuer?: string;
+    document_date?: string;
+    document_kind?: string;
+    currency?: string;
+    totals?: { ttc?: string };
+  } | null;
+  const cab = versMontantsDuCabinet(r["du_cabinet"]);
+  return {
+    id: r["id"] as string,
+    status: r["status"] as string,
+    createdAt: r["created_at"] as string,
+    auteurId: (r["created_by"] as string | null) ?? null,
+    vis: r["vis"] as string,
+    gardeeLe: (r["gardee_le"] as string | null) ?? null,
+    transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
+    accompagne: Boolean(r["accompagne"]),
+    emetteur: (r["emetteur_dit"] as string | null) ?? lu?.issuer ?? null,
+    dateDocument: cab?.dateEcriture ?? lu?.document_date ?? null,
+    kind:
+      cab?.documentKind ??
+      (lu?.document_kind as string | undefined) ??
+      (r["precision_kind"] as string | null) ??
+      null,
+    total: cab?.ttc ?? lu?.totals?.ttc ?? null,
+    devise: cab?.devise ?? lu?.currency ?? null,
+    typeDeDocument: (r["document_kind"] as string | null) ?? null,
+    suivi: versSuivi(r),
+    circuit: versCircuit(r),
+    lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
+    // Le motif brut ne quitte jamais le serveur : il peut porter un message
+    // technique. Seul son code `lecture.*` reconnu voyage.
+    lecture: r["lecture_etat"]
+      ? {
+          etat: r["lecture_etat"] as EtatDUnTravail,
+          demandeLe: new Date(r["lecture_demande_le"] as string | Date).toISOString(),
+          code: codeDeLecture(r["lecture_motif"] as string | null),
+          reessaieLe:
+            r["lecture_reessaie_le"] == null
+              ? null
+              : new Date(r["lecture_reessaie_le"] as string | Date).toISOString(),
+        }
+      : null,
+  };
+}
+
 export const capture = {
   /**
    * Ouvre la ligne d'une pièce et rend son identifiant.
@@ -469,123 +613,25 @@ export const capture = {
    * — les cacher reviendrait à nier qu'elles ont été déposées.
    */
   async listAvecLecture(db: Requete, tenantId: string) {
-    /*
-     * UNE LECTURE PARTIELLE EST UNE LECTURE.
-     *
-     * 13 octobre 2026. Cinq pièces de suite affichaient « Émetteur non
-     * trouvé », sans date et sans total, alors que la lecture AVAIT trouvé
-     * « ALGORIA », « COMPTOIR », « ORBIS ». La cause tient en une ligne :
-     * read-piece.ts range sous le contrat « extract.v1.partiel » toute lecture
-     * qui ne valide pas le schéma entier, et cette liste ne demandait que
-     * « extract.v1 ». Tout ce qui avait été lu devenait invisible parce
-     * qu'il manquait autre chose.
-     *
-     * Cette liste ne promet nulle part d'être complète : elle montre ce qu'on
-     * sait. Le préfixe couvre donc les deux contrats.
-     */
-    const { rows } = await db.query(
-      `select p.id, p.status, p.created_at, p.created_by, p.vis, p.gardee_le, p.transmise_le,
-              p.document_kind,
-              x.payload,
-              app.piece_accompagne(p.id) as accompagne,
-              (select valeur from precisions_v q
-                where q.piece_id = p.id and q.champ = 'document_kind'
-                order by decided_at desc limit 1) as precision_kind,
-              -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
-              -- reste telle quelle), que la liste préfère au nom lu.
-              app.emetteur_dit(p.id) as emetteur_dit,
-              ${REFUS_DE_LECTURE} as lecture_refusee,
-              w.etat as lecture_etat, w.dernier_motif as lecture_motif,
-              w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le,
-              -- Forcée, le total, le sens et la date sont ceux du
-              -- cabinet : il décide.
-              case when s.prise is not null
-                   then app.montants_pris_en_charge(p.id) end as du_cabinet,
-              ${COLONNES_DU_SUIVI},
-              ${COLONNES_DU_CIRCUIT}
-         from pieces_v p
-         left join lateral (
-           select e.payload
-             from extractions_v e
-            -- extract.v1 ET extract.v1.partiel : voir le commentaire au-dessus.
-            where e.piece_id = p.id and e.contract like 'extract.v1%'
-            order by e.created_at desc
-            limit 1
-         ) x on true
-         -- Où en est la pièce chez le cabinet : seulement si elle y est partie.
-         left join lateral (
-           select * from app.suivi_de_la_piece(p.id) where p.vis = 'partage'
-         ) s on true
-         -- Le passage siège → propriétaire, et le côté de qui regarde.
-         left join lateral app.circuit_de_la_piece(p.id) c on true
-         /*
-          * LE DERNIER TRAVAIL DE LECTURE, POUR QUE L'ÉCHEC SE VOIE.
-          *
-          * 24 octobre 2026, Wissem : « rien ne dit que la lecture casse ».
-          * L'état est DÉRIVÉ par la vue (rien n'est stocké), une fois pour
-          * tout le dossier — pas une sous-requête par pièce.
-          */
-         left join (
-           select distinct on (t.piece_id) t.piece_id, t.etat, t.dernier_motif, t.prenable_a,
-                  t.demande_le
-             from fabrique.etat_des_travaux_v t
-            where t.tenant_id = $1 and t.nature = 'lecture_piece'
-            order by t.piece_id, t.demande_le desc
-         ) w on w.piece_id = p.id
-        -- Une version précédente n'est pas une pièce de plus (« Reprendre la photo »).
-        -- Une pièce archivée a quitté la société : la RLS la laisse lire au
-        -- cabinet engagé, et le dirigeant qui est aussi son propre comptable
-        -- la revoyait ici, « à reprendre » (recette du 1er novembre 2026).
-        where p.tenant_id = $1 and p.remplacee_par is null and p.archivee_le is null
-        order by p.created_at desc`,
-      [tenantId],
-    );
-    return (rows as Record<string, unknown>[]).map((r) => {
-      const lu = (r["payload"] ?? null) as {
-        issuer?: string;
-        document_date?: string;
-        document_kind?: string;
-        currency?: string;
-        totals?: { ttc?: string };
-      } | null;
-      const cab = versMontantsDuCabinet(r["du_cabinet"]);
-      return {
-        id: r["id"] as string,
-        status: r["status"] as string,
-        createdAt: r["created_at"] as string,
-        auteurId: (r["created_by"] as string | null) ?? null,
-        vis: r["vis"] as string,
-        gardeeLe: (r["gardee_le"] as string | null) ?? null,
-        transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
-        accompagne: Boolean(r["accompagne"]),
-        emetteur: (r["emetteur_dit"] as string | null) ?? lu?.issuer ?? null,
-        dateDocument: cab?.dateEcriture ?? lu?.document_date ?? null,
-        kind:
-          cab?.documentKind ??
-          (lu?.document_kind as string | undefined) ??
-          (r["precision_kind"] as string | null) ??
-          null,
-        total: cab?.ttc ?? lu?.totals?.ttc ?? null,
-        devise: cab?.devise ?? lu?.currency ?? null,
-        typeDeDocument: (r["document_kind"] as string | null) ?? null,
-        suivi: versSuivi(r),
-        circuit: versCircuit(r),
-        lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
-        // Le motif brut ne quitte jamais le serveur : il peut porter un message
-        // technique. Seul son code `lecture.*` reconnu voyage.
-        lecture: r["lecture_etat"]
-          ? {
-              etat: r["lecture_etat"] as EtatDUnTravail,
-              demandeLe: new Date(r["lecture_demande_le"] as string | Date).toISOString(),
-              code: codeDeLecture(r["lecture_motif"] as string | null),
-              reessaieLe:
-                r["lecture_reessaie_le"] == null
-                  ? null
-                  : new Date(r["lecture_reessaie_le"] as string | Date).toISOString(),
-            }
-          : null,
-      };
-    });
+    const [lot] = await piecesLuesDe(db, [tenantId]);
+    return lot?.pieces ?? [];
+  },
+
+  /**
+   * Les pièces de PLUSIEURS sociétés, chacune avec sa dernière lecture — UN
+   * aller-retour, UNE requête, quel que soit le nombre de sociétés.
+   *
+   * 7 novembre 2026, recette d'un propriétaire de nombreuses sociétés : la
+   * bibliothèque appelait `listAvecLecture` une fois par société. Cent
+   * sociétés, cent transactions, cent fois le même plan — l'écran attendait
+   * la plus lente. La base filtre toujours (RLS) : une société où l'appelant
+   * n'est pas membre revient vide, jamais en erreur.
+   *
+   * Rendu dans l'ordre demandé, une entrée par société, même vide : l'écran
+   * range chaque lot sous la clé de sa société.
+   */
+  async listAvecLectureDesSocietes(db: Requete, tenantIds: string[]) {
+    return piecesLuesDe(db, idsDeSocietes(tenantIds));
   },
 
   async dossier(db: Requete, pieceId: string) {
