@@ -4167,6 +4167,9 @@ export const en: Dict = {
     "{count} documents are waiting for the network. They will go on their own: the photo never has to be taken again.",
   "pme.capture.repondre": "Next ({count})",
   "pme.capture.continuer": "Continue",
+  "pme.joindre.horsLigne":
+    "No network: the document is kept and will be sent when you are back online. Attach it from the document afterwards.",
+  "pme.joindre.dejaLa": "Or a document already here",
   "pme.prive.pourMoi": "For me · private",
   "pme.prive.rayon.titre": "Which shelf?",
   "pme.prive.nom": "Name of the paper (optional)",

@@ -2868,6 +2868,7 @@ function PieceScreen() {
 
           <RattacherUnDocument
             pieceId={pieceId}
+            vis={piece.vis}
             dejaLiees={new Set([...nes, ...lesRattachees].map((p) => p.id))}
             ouvert={rattacherOuvert}
             onFermer={() => setRattacherOuvert(false)}

@@ -4282,6 +4282,9 @@ export const fr = {
     "{count} pièces attendent le réseau. Elles partiront seules : la photo n’est jamais à refaire.",
   "pme.capture.repondre": "Suivant ({count})",
   "pme.capture.continuer": "Continuer",
+  "pme.joindre.horsLigne":
+    "Pas de réseau : le document est gardé et partira au retour du réseau. Joignez-le ensuite depuis la pièce.",
+  "pme.joindre.dejaLa": "Ou un document déjà là",
   "pme.prive.pourMoi": "Pour moi · privé",
   "pme.prive.rayon.titre": "Dans quel rayon ?",
   "pme.prive.nom": "Nom du papier (facultatif)",

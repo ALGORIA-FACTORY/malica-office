@@ -3995,6 +3995,9 @@ export const ar: Dict = {
     "{count} وثيقة تنتظر الشبكة. ستُرسل من تلقاء نفسها: لا حاجة لإعادة الصورة أبدًا.",
   "pme.capture.repondre": "التالي ({count})",
   "pme.capture.continuer": "متابعة",
+  "pme.joindre.horsLigne":
+    "لا توجد شبكة: الوثيقة محفوظة وستُرسل عند عودة الشبكة. أرفقوها بعد ذلك من الوثيقة.",
+  "pme.joindre.dejaLa": "أو وثيقة موجودة",
   "pme.prive.pourMoi": "لي · خاص",
   "pme.prive.rayon.titre": "في أي رف؟",
   "pme.prive.nom": "اسم الوثيقة (اختياري)",

@@ -17,7 +17,7 @@
  * Rendue dans `document.body`, comme l'aide ⓘ et la feuille de règlement.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Camera, Search, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
@@ -32,11 +32,14 @@ import { usePiecesLues } from "@/hooks/use-pieces-lues";
 
 export function RattacherUnDocument({
   pieceId,
+  vis,
   dejaLiees,
   ouvert,
   onFermer,
 }: {
   pieceId: string;
+  /** Où est la pièce : la coque garde la pièce à joindre avec son lieu (planche 6). */
+  vis: string;
   /** Les pièces déjà liées (nées de celle-ci ou rattachées) : on ne les repropose pas. */
   dejaLiees: ReadonlySet<string>;
   ouvert: boolean;
@@ -98,6 +101,45 @@ export function RattacherUnDocument({
       feuilleRef={feuille}
       disposition="flex flex-col gap-4"
     >
+      {/*
+       * Planche 6 (7 novembre 2026) : photographier ou importer sans quitter
+       * la pièce. Le document pris est rattaché ; « ou un document déjà là »
+       * reste en dessous.
+       */}
+      <div className="grid gap-2">
+        <button
+          type="button"
+          disabled={pme.capturing}
+          onClick={() => {
+            onFermer();
+            pme.joindreA({ id: pieceId, vis }, "photo");
+          }}
+          className="flex min-h-[56px] items-center justify-center gap-2 rounded-[16px] bg-[var(--acc)] px-4 text-[15px] font-bold text-[var(--on-acc)] disabled:opacity-40"
+        >
+          <Camera className="h-5 w-5" aria-hidden />
+          {t("pme.capture.photo")}
+        </button>
+        <div className="grid grid-cols-2 gap-2">
+          {(["images", "pdf"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              disabled={pme.capturing}
+              onClick={() => {
+                onFermer();
+                pme.joindreA({ id: pieceId, vis }, m);
+              }}
+              className="flex min-h-[48px] items-center justify-center gap-2 rounded-[14px] border border-border bg-card px-3 text-[14px] font-semibold disabled:opacity-40"
+            >
+              <Upload className="h-[18px] w-[18px]" aria-hidden />
+              {t(m === "images" ? "pme.capture.galerie" : "pme.doc.importer")}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-text-3">
+        {t("pme.joindre.dejaLa")}
+      </p>
       <label className="flex min-h-[48px] items-center gap-2 rounded-[14px] border border-border bg-card px-3">
         <Search className="h-[18px] w-[18px] shrink-0 text-muted-foreground" aria-hidden />
         <span className="sr-only">{t("pme.rattacher.chercher")}</span>
