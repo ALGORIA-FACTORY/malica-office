@@ -68,3 +68,34 @@ export function cleDuGenre(kind: string, payload: Record<string, unknown> = {}):
     ? phraseDeLaReponse(payload)
     : (GENRES[kind] ?? "cab.notif.kind.autre");
 }
+
+/**
+ * Ce qui attend un GESTE de la personne : un retour, une demande, une
+ * validation, une proposition. C'est ce que la cloche compte — pas tout le
+ * non lu (planche 2, option A, approuvée le 7 novembre 2026) : 34 choses à
+ * faire se lisent, 108 alertes non lues se subissent.
+ */
+const ATTENDENT_UN_GESTE: ReadonlySet<string> = new Set([
+  "piece.retournee",
+  "piece.demande",
+  "piece.a_valider",
+  "piece.a_revalider",
+  "piece.recue_du_siege",
+  "piece.retournee_par_le_proprietaire",
+  "mandat.propose",
+  "acces.propose",
+]);
+
+export function attendUnGeste(n: { kind: string; readAt: string | null }): boolean {
+  return n.readAt === null && ATTENDENT_UN_GESTE.has(n.kind);
+}
+
+/**
+ * Dans l'application installée depuis un store, rien ne parle d'abonnement
+ * (décisions des 20 et 22 octobre, rappelées le 7 novembre 2026) : les
+ * alertes `acces.*` — « votre comptabilité prend votre abonnement en charge »
+ * — ne s'y montrent pas, ni à la cloche ni à l'écran.
+ */
+export function seMontreIci(kind: string, coque: boolean): boolean {
+  return !(coque && kind.startsWith("acces."));
+}

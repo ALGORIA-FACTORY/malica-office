@@ -35,7 +35,7 @@ export interface DerniereNotification {
 }
 
 export interface ClocheProps {
-  /** Le nombre de notifications non lues, toutes sociétés ; `null` tant qu'on ne sait pas. */
+  /** Le nombre d'alertes à traiter, toutes sociétés ; `null` tant qu'on ne sait pas. */
   nonLues: number | null;
   /** La plus récente des non lues : ce que l'île annonce quand elle arrive. */
   derniere: DerniereNotification | null;

@@ -105,7 +105,8 @@ import { useI18n } from "@/i18n";
 import { laReponseAEffaceLaPiece } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { jourOuInstant } from "@/lib/lisible";
-import { chaine, cleDuGenre, detailDe } from "@/lib/libelle-de-notification";
+import { chaine, cleDuGenre, detailDe, seMontreIci } from "@/lib/libelle-de-notification";
+import { CIBLE_COQUE } from "@/capabilities/coque";
 import { office } from "@/verticals/malica-office/composition";
 import { useRevenir } from "@/hooks/use-revenir";
 
@@ -160,7 +161,8 @@ function PmeNotifications() {
   const kindLabel = (kind: string, payload: Record<string, unknown> = {}) =>
     t(cleDuGenre(kind, payload));
 
-  const rows = notifs.data ?? [];
+  // Dans la coque, rien ne parle d'abonnement (`seMontreIci`).
+  const rows = (notifs.data ?? []).filter((n) => seMontreIci(n.kind, CIBLE_COQUE));
   /** Non lue : elle demande encore quelque chose. C'est une carte. */
   const attente = rows.filter((n) => !n.readAt);
   /** Lues, et ce sont des avis : le volet que le dessin appelle « Ses avis ». */
