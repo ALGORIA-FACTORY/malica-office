@@ -346,6 +346,57 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /** Le conseil cité : consigne en vigueur et ses versions, réglage, modèles, coût du mois. */
+  async conseilCiteEtat(db: Requete) {
+    const { rows } = await db.query<{ r: unknown }>(`select plateforme.conseil_cite_etat() as r`);
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour publie une version nouvelle de la consigne du conseil cité : datée, motivée. */
+  async publierConsigneDuConseil(db: Requete, texte: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.conseil_consigne_publier($1, $2) as r`,
+      [texte, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour règle le conseil cité : modèles, règle de difficulté, seuils. */
+  async reglerConseilCite(
+    db: Requete,
+    reglage: {
+      modeleCourant: string;
+      modeleDifficile: string;
+      longueurDifficile: number;
+      motsDifficiles: string[];
+      corpusDistinctsDifficile: number;
+      passagesMax: number;
+      distanceMax: string;
+      distanceMaxMots: string;
+      sortieMaxJetons: number;
+    },
+    motif: string,
+  ) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.conseil_cite_regler($1, $2, $3::integer, $4::text[], $5::integer,
+                                             $6::integer, $7::numeric, $8::numeric, $9::integer,
+                                             $10) as r`,
+      [
+        reglage.modeleCourant,
+        reglage.modeleDifficile,
+        reglage.longueurDifficile,
+        reglage.motsDifficiles,
+        reglage.corpusDistinctsDifficile,
+        reglage.passagesMax,
+        reglage.distanceMax,
+        reglage.distanceMaxMots,
+        reglage.sortieMaxJetons,
+        motif,
+      ],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /** Les relances d'impayé : la dernière décision de la tour, ou `null` (fermées). */
   async reglageRelances(db: Requete) {
     const { rows } = await db.query<{ r: Record<string, unknown> | null }>(

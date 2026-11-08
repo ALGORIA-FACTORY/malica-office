@@ -3,7 +3,7 @@
  *
  * La garde d'adresse de `tour.$section.tsx` (`beforeLoad`) reste dans la
  * partie du fichier de route que le routeur charge d'emblée, sur TOUTES les
- * pages. Elle lisait `SECTIONS`, qui importe les onze cartes : 40 Ko de la
+ * pages. Elle lisait `SECTIONS`, qui importe toutes les cartes : 40 Ko de la
  * tour partaient avec la vitrine (mesuré le 7 novembre 2026). Elle ne lit
  * plus que ces noms ; `sections.ts` vérifie, à la compilation, qu'il a une
  * section pour chacun et pas une de plus.
@@ -19,6 +19,7 @@ const CLES_DES_SECTIONS = [
   "acces",
   "nuit",
   "modeles",
+  "conseil",
   "compte",
 ] as const;
 
