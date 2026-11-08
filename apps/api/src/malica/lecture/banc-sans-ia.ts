@@ -1320,4 +1320,4 @@ async function principal(): Promise<void> {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await principal();
+await principal(); // local Windows run only: the original entry guard never matches a Windows path
