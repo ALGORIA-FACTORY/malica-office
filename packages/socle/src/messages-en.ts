@@ -2899,12 +2899,6 @@ export const en: Dict = {
   "pme.cloche.nonLues#one": "Alerts: {count} item to handle",
   "pme.cloche.nonLues#other": "Alerts: {count} items to handle",
   "pme.cloche.nouvelle": "New alert",
-  "pme.notifs.list": "Latest feedback",
-  "pme.notifs.voice.empty": "No alerts.",
-  "pme.notifs.voice.clear": "All read.",
-  "pme.notifs.voice.unread": "{count} unread alerts.",
-  "pme.notifs.voice.unread#one": "{count} unread alert.",
-  "pme.notifs.voice.unread#other": "{count} unread alerts.",
   "pme.notifs.empty": "No alerts yet.",
   "pme.notifs.open": "Open document",
   "pme.notifs.markRead": "Read",
@@ -4541,9 +4535,6 @@ export const en: Dict = {
   "pme.fiche.bilRemplace": "Saving it closes the current profile and opens a new one, dated today.",
   "pme.fiche.fixeSourceCarte": "source: card read",
   "pme.fiche.fixeSourceSaisie": "source: typed in",
-  "pme.notifications.sous":
-    "Everything your firm tells you arrives here. What needs an action is at the top.",
-  "pme.notifications.ongletAttente": "To handle",
   "pme.notifications.videSous":
     "Nothing is hidden: when your firm writes to you, this is where it arrives.",
   "pme.charges.classes": "{count} CLASSES",
