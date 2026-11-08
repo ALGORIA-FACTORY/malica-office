@@ -47,6 +47,13 @@ create policy rangements_prives_ins on capture.rangements_prives
 create policy rangements_prives_upd on capture.rangements_prives
   for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+-- Le relecteur de nuit (compte de service) n'y écrit ni n'y lit : un papier
+-- privé n'est jamais relu (`20261118100000_le_relecteur_de_nuit`).
+create trigger service_hors_perimetre before insert or update or delete on capture.rangements_prives
+  for each statement execute function app.service_hors_perimetre();
+create policy service_hors_perimetre on capture.rangements_prives as restrictive for select
+  to authenticated using ((select app.service()) is null);
+
 -- Ranger un papier privé : son rayon, et son nom s'il en a un. Pour soi seul.
 create or replace function public.piece_privee_ranger(p_piece uuid, p_rayon text, p_nom text)
 returns jsonb
