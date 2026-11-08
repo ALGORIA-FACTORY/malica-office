@@ -14,6 +14,9 @@
 # Coût mesuré sur les appels journalisés : de l'ordre de 0,05 $ par nuit au
 # plus, soit environ 1,50 $ par mois.
 #
+# Secret recommandé : ANTHROPIC_API_KEY — Claude désigne les pièces depuis le
+# 8 novembre 2026 ; absent, la désignation passe au repli DeepSeek (avertissement).
+#
 # Secrets attendus : DEEPSEEK_API_KEY, QWEN_API_KEY, QWEN_BASE_URL — la lecture
 # d'une photo et l'encodage des questions passent aujourd'hui par Qwen, la
 # désignation et le conseil par DeepSeek. SANS EUX, L'ÉPREUVE S'ARRÊTE dès sa
@@ -61,6 +64,7 @@ jobs:
       # Le fichier d'attente du journal d'observabilité, exigé au démarrage.
       JOURNAL_ATTENTE: /tmp/malica-journal
       CORS_ORIGINS: http://localhost:8080
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
       QWEN_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
@@ -79,6 +83,11 @@ jobs:
             exit 1
           fi
           echo "clés présentes : DEEPSEEK_API_KEY, QWEN_API_KEY, QWEN_BASE_URL"
+          # Claude est le désignateur principal ; sans sa clé, la chaîne passe
+          # au repli DeepSeek. L'épreuve reste vraie sur le repli, et le dit.
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning title=Désignation par le repli::ANTHROPIC_API_KEY absente : chaque pièce sera désignée par DeepSeek (repli technique)"
+          fi
 
       - uses: actions/checkout@v7
 

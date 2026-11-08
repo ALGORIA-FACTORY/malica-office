@@ -2218,6 +2218,12 @@ export const fr = {
   "refus.arbitrage.reponse_envoyee": "Une réponse déjà envoyée ne s’écarte pas.",
   "refus.charge.reponse_invalide": "Cette réponse n’est pas admise pour cette question.",
   "refus.ia.tarif_absent": "Aucun tarif en vigueur pour le modèle {modele} (rôle {role}).",
+  "refus.designation.saisie":
+    "Réglage incomplet : un rang (principal ou repli), un rôle, une période (jour ou mois), un plafond positif et un motif.",
+  "refus.designation.modele_sans_tarif":
+    "Ce modèle n'a pas de tarif en vigueur chez Anthropic ou DeepSeek : son coût ne pourrait pas être compté.",
+  "refus.designation.meme_fournisseur":
+    "Le principal et le repli doivent venir de deux fournisseurs différents.",
   "refus.ecriture.desequilibree":
     "L’écriture est déséquilibrée : débit {debit} pour crédit {credit}. Équilibrez-la avant de l’enregistrer.",
   "refus.ecriture.sans_ligne": "Une écriture sans ligne ne se comptabilise pas.",
@@ -3919,6 +3925,29 @@ export const fr = {
   "tour.ia.enVigueur": "En vigueur : {plafond} $ par organisation et par mois, depuis le {date}.",
   "tour.ia.plafond": "Plafond mensuel (dollars)",
   "tour.ia.plafond.borne": "Un nombre positif, quatre décimales au plus.",
+  "tour.designation": "Chaîne de désignation",
+  "tour.designation.aide":
+    "Claude désigne les pièces. DeepSeek prend la main quand Claude est en panne ou que son budget est épuisé. Les deux budgets épuisés, aucun modèle n'est appelé : la pièce est lue par le moteur Sudoku seul, et le motif est journalisé.",
+  "tour.designation.rang.1": "Principal",
+  "tour.designation.rang.2": "Repli",
+  "tour.designation.depense": "{depense} $ dépensés sur {plafond} $ {periode}",
+  "tour.designation.epuise": "Budget épuisé",
+  "tour.designation.disponible": "Disponible",
+  "tour.designation.decide": "Décidé le {date} : {motif}",
+  "tour.designation.modele": "Modèle",
+  "tour.designation.periode": "Période du plafond",
+  "tour.designation.periode.jour": "par jour",
+  "tour.designation.periode.mois": "par mois",
+  "tour.designation.plafond": "Plafond (dollars)",
+  "tour.designation.bascules": "Dernières bascules (30 jours)",
+  "tour.designation.aucuneBascule": "Aucune bascule.",
+  "tour.designation.motif.bascule.technique": "panne, le maillon suivant a pris la main",
+  "tour.designation.motif.bascule.budget": "budget épuisé, le maillon suivant a pris la main",
+  "tour.designation.motif.repli.technique": "a désigné à la place du principal en panne",
+  "tour.designation.motif.repli.budget": "a désigné à la place du principal sans budget",
+  "tour.designation.motif.arret.budgets_epuises":
+    "arrêt : les deux budgets sont épuisés, lecture par le Sudoku seul",
+  "tour.designation.motif.arret.chaine_vide": "arrêt : aucune chaîne réglée",
   "tour.relances": "Relances d'impayé",
   "tour.relances.aide":
     "Quand elles sont ouvertes, Malica écrit au titulaire d'une facture en retard : un rappel, une relance, un avis, puis l'annonce de la suspension. Un seul courriel par facture et par palier. Fermées, rien ne part.",

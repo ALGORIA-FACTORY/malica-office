@@ -12,6 +12,7 @@
 import { readFileSync } from "node:fs";
 
 import { buildExtractFromTokenPlan } from "../../src/malica/lecture/read-piece.ts";
+import { chaineDeBanc } from "../../src/malica/lecture/designation.ts";
 import { runVisionRead } from "../../src/malica/lecture/vision.ts";
 import { devisesDEssai } from "../../src/scan/devise-d-essai.ts";
 
@@ -73,6 +74,7 @@ async function main() {
       { code: "TVA_7", label: "TVA 7 %", rate: "0.07" },
       { code: "TVA_0", label: "Exonéré", rate: "0" },
     ],
+    designation: { chaine: async () => chaineDeBanc("deepseek", "deepseek-chat") },
   });
   console.log(
     `plan de tokens : ${read.tokens.length} tokens — ${read.model}, ${read.latencyMs} ms, ` +

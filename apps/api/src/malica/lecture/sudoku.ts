@@ -1017,8 +1017,16 @@ export function creerLeSudoku(
         const sortie = resoudreLaPiece(jetons, ctx, resoudre, connus);
         const aInscrire = champsLusAInscrire(piece, ctx, sortie);
 
+        /*
+         * SANS MODÈLE, LA PREUVE DÉSIGNE, quel que soit le mode du dossier.
+         * Les deux budgets épuisés (`designation.ts`), la chaîne n'a rien
+         * désigné : il n'y a rien à observer à côté, et la seule valeur qu'on
+         * puisse affirmer est celle que l'arithmétique prouve. Non prouvée,
+         * la pièce reste vide et drapée — jamais devinée.
+         */
+        const designe = ctx.mode === "designe" || lecture.sansModele !== undefined;
         const rendue: VisionRead =
-          ctx.mode !== "designe" || sortie.issue !== "prouvee"
+          !designe || sortie.issue !== "prouvee"
             ? lecture
             : {
                 ...lecture,

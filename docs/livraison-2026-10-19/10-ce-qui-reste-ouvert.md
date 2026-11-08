@@ -605,3 +605,26 @@ Tranché par défaut, à confirmer :
   vigueur (l'organisation d'ALGORIA) ; sans émetteur, elle est refusée. Les
   gestes faits sous l'accès total portent l'acteur réel, sans marque propre :
   on les distingue en croisant l'acteur avec `plateforme.acces_total`.
+
+## La chaîne de désignation (décidée par Wissem le 8 novembre 2026)
+
+Claude désigne, DeepSeek prend la main en cas de panne ou de budget épuisé, et
+les deux budgets épuisés la pièce est lue par le moteur Sudoku seul
+(`20261202090000_la_designation_a_un_principal_et_un_repli.sql`,
+`apps/api/src/malica/lecture/designation.ts`). Tranché par défaut, à confirmer :
+
+- **Les plafonds de départ** : 50 $ par mois pour Claude, 20 $ par mois pour
+  DeepSeek. La tour les règle (section « Modèles »), datés et motivés.
+- **Le modèle Claude de départ** : `claude-sonnet-5-5` (2 $ / 10 $ par million
+  de jetons). `claude-haiku-5-5` (0,10 $ / 0,50 $) est tarifé et se choisit dans
+  la tour ; aucune mesure de qualité n'a encore départagé les deux sur nos
+  pièces (banc `tests/real/designation-cout.ts` à rejouer avec la clé).
+- **Ce que compte le budget** : la facture du FOURNISSEUR, tous organes
+  confondus. Le conseil, les procès-verbaux et le générateur de recettes
+  appellent aussi DeepSeek : leur dépense entame le budget du repli.
+- **Deux pannes de suite ne sont pas un arrêt** : Claude en panne puis DeepSeek
+  en panne, la lecture échoue comme avant et la file la rejoue. Seuls deux
+  budgets épuisés arrêtent la désignation par modèle.
+- **Hors de la chaîne, pour l'instant** : la carte d'identification fiscale
+  (`lire-carte.ts`), le conseil, les procès-verbaux et le générateur de
+  recettes restent sur DeepSeek seul.
