@@ -26,6 +26,8 @@ vi.mock("@tanstack/react-router", () => ({
   Outlet: () => createElement(Journee.options.component!),
 }));
 vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useMutation: () => ({ isPending: false, mutate: vi.fn() }),
   useQuery: ({ queryKey }: { queryKey: string[] }) => {
     const k = queryKey[0];
     let data: unknown = [];

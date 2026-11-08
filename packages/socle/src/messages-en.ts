@@ -2190,6 +2190,13 @@ export const en: Dict = {
   "cab.notif.a_traiter": "To handle",
   "cab.notif.infos.voir": "Show {count} updates",
   "cab.notif.infos.masquer": "Hide updates",
+  "cab.pile.demandes": "Company requests",
+  "cab.pile.demandes.aide": "Return or deletion: approve or refuse",
+  "cab.pile.telecharger": "Download this folder ({count} documents, receipts and attachments)",
+  "cab.review.contenu": "What this document holds",
+  "cab.review.contenu.articles": "Invoice detail",
+  "cab.review.contenu.paiements": "Payments and receipts",
+  "cab.review.contenu.joints": "Attachments",
   "refus.ecriture.doublon":
     "This invoice is already recorded: same supplier, number and amount. A second entry would count it twice.",
   "refus.ecriture.reimputer":

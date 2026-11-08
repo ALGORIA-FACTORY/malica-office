@@ -2130,6 +2130,13 @@ export const ar: Dict = {
   "cab.notif.a_traiter": "للمعالجة",
   "cab.notif.infos.voir": "عرض {count} معلومات",
   "cab.notif.infos.masquer": "إخفاء المعلومات",
+  "cab.pile.demandes": "طلبات الشركة",
+  "cab.pile.demandes.aide": "إرجاع أو حذف: قبول أو رفض",
+  "cab.pile.telecharger": "تنزيل هذا الملف ({count} وثائق، مع المؤيدات والمرفقات)",
+  "cab.review.contenu": "محتوى ملف هذه الوثيقة",
+  "cab.review.contenu.articles": "تفاصيل الفاتورة",
+  "cab.review.contenu.paiements": "الخلاصات والمؤيدات",
+  "cab.review.contenu.joints": "الوثائق المرفقة",
   "refus.ecriture.doublon":
     "هذه الفاتورة مسجَّلة محاسبيًا: نفس المورد ونفس الرقم ونفس المبلغ. قيد ثانٍ سيحتسبها مرتين.",
   "refus.ecriture.reimputer":

@@ -96,6 +96,10 @@ describe("les piles de la file", () => {
       "a_completer",
     );
   });
+  it("une demande de la société passe avant tout, même sur une pièce prise en charge", () => {
+    expect(pileDe({ ...base, statut: "validee", demandeEnAttente: "rappel" })).toBe("demandes");
+    expect(pileDe({ ...base, statut: "recue", demandeEnAttente: "suppression" })).toBe("demandes");
+  });
   it("une pièce non lue attend ; une pièce prise en charge sort du travail", () => {
     expect(pileDe({ ...base, statut: "recue", status: "capturee" })).toBe("lecture");
     expect(pileDe({ ...base, statut: "validee" })).toBe("prises");

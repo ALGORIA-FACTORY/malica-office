@@ -2261,6 +2261,14 @@ export const fr = {
   "cab.notif.a_traiter": "À traiter",
   "cab.notif.infos.voir": "Voir les {count} informations",
   "cab.notif.infos.masquer": "Masquer les informations",
+  "cab.pile.demandes": "Demandes de la société",
+  "cab.pile.demandes.aide": "Retour ou suppression : à accorder ou refuser",
+  "cab.pile.telecharger":
+    "Télécharger ce dossier ({count} pièces, justificatifs et documents joints)",
+  "cab.review.contenu": "Le dossier de cette pièce",
+  "cab.review.contenu.articles": "Détail de la facture",
+  "cab.review.contenu.paiements": "Règlements et justificatifs",
+  "cab.review.contenu.joints": "Documents joints",
   "refus.ecriture.doublon":
     "Cette facture est déjà comptabilisée : même fournisseur, même numéro, même montant. Une seconde écriture la compterait deux fois.",
   "refus.ecriture.reimputer":

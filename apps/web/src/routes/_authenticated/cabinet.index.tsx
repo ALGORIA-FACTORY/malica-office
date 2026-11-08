@@ -418,7 +418,7 @@ function CabinetToday() {
               )}
             </div>
           ) : (
-            <FileEnPiles rows={visibles} />
+            <FileEnPiles rows={visibles} cabinetId={org.id} />
           )}
         </section>
 

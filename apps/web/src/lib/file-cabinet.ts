@@ -71,7 +71,14 @@ export function dansLeFiltre(
 }
 
 /** Les piles de la file, dans l'ordre où le travail se fait. */
-export const PILES = ["pretes", "a_completer", "retournees", "lecture", "prises"] as const;
+export const PILES = [
+  "demandes",
+  "pretes",
+  "a_completer",
+  "retournees",
+  "lecture",
+  "prises",
+] as const;
 export type PileDeLaFile = (typeof PILES)[number];
 
 /**
@@ -85,7 +92,10 @@ export function pileDe(p: {
   ecritureId: string | null;
   doublonDe: string | null;
   verdict?: string | null;
+  demandeEnAttente?: "rappel" | "suppression" | null;
 }): PileDeLaFile {
+  // Une société qui attend une réponse passe avant tout, quel que soit le statut.
+  if (p.demandeEnAttente) return "demandes";
   if (!A_TRAITER.has(p.statut)) return p.statut === "retournee" ? "retournees" : "prises";
   if (p.status === "capturee") return "lecture";
   if (p.doublonDe !== null) return "a_completer";
