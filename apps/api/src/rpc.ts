@@ -111,6 +111,7 @@ const RESERVEES_AU_SERVEUR: Readonly<Partial<Record<NomDepot, ReadonlySet<string
     "inscrireRefusDeLecture",
     "consommerLecture",
     "journaliserAgent",
+    "chaineDeDesignation",
   ]),
   conversations: new Set(["ajouter", "journaliserControles"]),
   fabrique: new Set([

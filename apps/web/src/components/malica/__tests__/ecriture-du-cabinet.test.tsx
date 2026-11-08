@@ -21,6 +21,7 @@ const api = vi.hoisted(() => ({
   saisirLeCoursDeLaPiece: vi.fn(),
   rattacherLaFacture: vi.fn(),
   facturesARattacher: vi.fn(),
+  dejaComptabilisee: vi.fn().mockResolvedValue(null),
   journal: vi.fn(),
 }));
 vi.mock("@/i18n", () => ({
@@ -36,6 +37,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({
     office: {
       valider: api.valider,
+      dejaComptabilisee: api.dejaComptabilisee,
       forcer: api.forcer,
       trancherLeSens: api.trancherLeSens,
       saisirLeCoursDeLaPiece: api.saisirLeCoursDeLaPiece,
@@ -246,6 +248,7 @@ describe("une pièce en devise, côté comptable", () => {
 
   it("convertie : le cours appliqué se lit, et chaque ligne dit son montant d'origine", () => {
     monter(CONVERTIE);
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.modifier" }));
     expect(screen.getByText(/^cab\.cours\.applique/).textContent).toContain('"source":"BCT"');
     expect(screen.getAllByText(/EUR ×/)).toHaveLength(2);
     // Corriger le taux ouvre le même formulaire.
@@ -297,6 +300,7 @@ describe("une pièce en devise, côté comptable", () => {
       },
     } as unknown as PropositionDePiece;
     relire(RECONVERTIE);
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.modifier" }));
     expect(screen.getAllByDisplayValue(/^3\s?400[,.]000$/).length).toBeGreaterThan(0);
     expect(screen.queryAllByDisplayValue(/^3\s?345[,.]600$/)).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.valider" }));
@@ -308,6 +312,7 @@ describe("une pièce en devise, côté comptable", () => {
 
   it("une ligne changée n'est plus celle de la pièce en devise : son origine ne s'affiche plus", () => {
     monter(CONVERTIE);
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.modifier" }));
     saisir("pme.journal.account", "622", 0);
     expect(screen.queryAllByText(/EUR ×/)).toHaveLength(0);
   });
@@ -383,6 +388,7 @@ describe("la pièce côté comptable", () => {
   it("proposée puis modifiée : le bouton dit « Forcer l'écriture », et force", async () => {
     api.forcer.mockResolvedValue("e1");
     monter(PROPOSITION);
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.modifier" }));
     saisir("pme.journal.account", "622", 0);
     expect(screen.queryByRole("button", { name: "cab.ecriture.valider" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.forcer" }));
@@ -400,6 +406,7 @@ describe("la pièce côté comptable", () => {
    */
   it("libellé, débit, crédit : un nom accessible par champ et par ligne", () => {
     monter(PROPOSITION);
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.modifier" }));
     for (const champ of ["cab.ecriture.ligne.libelle", "pme.journal.debit", "pme.journal.credit"])
       for (const rang of [0, 1])
         expect(screen.getByRole("textbox", { name: nomDuChamp(champ, rang) })).toBeTruthy();
@@ -435,6 +442,7 @@ describe("la pièce côté comptable", () => {
       },
     } as unknown as PropositionDePiece;
     monter(proposition);
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.modifier" }));
     const taux = screen.getByRole("combobox", { name: nomDuChamp("cab.ecriture.ligne.taxe", 0) });
     expect((taux as HTMLSelectElement).value).toBe("TVA19");
     expect(screen.getAllByRole("option", { name: "TVA 7 %" })).toHaveLength(2);
@@ -456,7 +464,7 @@ describe("la pièce côté comptable", () => {
       screen.getByRole("button", { name: "cab.ecriture.retourner" }),
     ];
     expect(boutons[0]!.parentElement).toBe(boutons[1]!.parentElement);
-    expect(boutons[0]!.parentElement!.className).toContain("grid-cols-2");
+    expect(boutons[0]!.parentElement!.className).toContain("cab-actions");
     expect(document.body.textContent).not.toMatch(/confirm/i);
   });
 

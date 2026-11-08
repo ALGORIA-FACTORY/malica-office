@@ -82,9 +82,9 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
    * recoupent et le Socle propose une écriture ; sinon la lecture n'a relevé
    * que le type, et le Socle ne propose rien — le cas qui bloquait.
    */
-  const transmise = async (lisible: boolean) => {
+  const transmise = async (lisible: boolean, numero?: string) => {
     n += 1;
-    const l = lectureDEssai({ clientMf: mfDossier, numero: `PEC-${n}` });
+    const l = lectureDEssai({ clientMf: mfDossier, numero: numero ?? `PEC-${n}` });
     const p = (await pmeFait("capture.enregistrer", {
       tenantId: pme,
       source: "pdf",
@@ -653,5 +653,18 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
         [autonome],
       );
     }
+  });
+
+  it("une même facture ne se comptabilise pas deux fois", async () => {
+    const numero = `DOUBLE-${marque}`;
+    const premiere = await transmise(true, numero);
+    const seconde = await transmise(true, numero);
+    await valider(premiere);
+    const trouvee = (await cabinetFait("office.dejaComptabilisee", seconde)) as {
+      pieceId: string;
+    } | null;
+    assert.equal(trouvee?.pieceId, premiere);
+    await assert.rejects(() => valider(seconde), /refus\.ecriture\.doublon/);
+    assert.equal((await ecrituresVivantes(seconde)).length, 0);
   });
 });

@@ -145,6 +145,10 @@ services:
       # comporte exactement comme avant : une lecture partielle reste une
       # lecture partielle, jamais une panne.
       OCR_URL: ${OCR_URL:-}
+      # Le désignateur principal (décision du 8 novembre 2026). ABSENTE, la
+      # désignation passe au repli DeepSeek à chaque pièce : un défaut
+      # technique, journalisé, jamais un arrêt.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       QWEN_API_KEY: ${QWEN_API_KEY}
       QWEN_BASE_URL: ${QWEN_BASE_URL}

@@ -13,3 +13,12 @@ interface ImportMetaEnv {
 
 /** Vrai hors de l'application Android : remplacé par Vite à la compilation (`vite.config.ts`). */
 declare const __COMMERCE__: boolean;
+
+/**
+ * Un paquet de dictionnaire — la base ou les espaces d'une langue —, coupé à
+ * la compilation par `dictionnaires-par-espace.ts`.
+ */
+declare module "virtual:dictionnaire/*" {
+  const paquet: Partial<import("@malica/socle/messages-fr").Dict>;
+  export default paquet;
+}

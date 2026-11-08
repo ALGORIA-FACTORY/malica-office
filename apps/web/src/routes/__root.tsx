@@ -10,9 +10,10 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
+import policesCss from "../polices.css?url";
 import appCss from "../styles.css?url";
 import { coque, estNatif, versionClient } from "@/capabilities/coque";
-import { useApparence } from "@/components/malica/apparence";
+import { COULEUR_DE_FOND, useApparence } from "@/components/malica/apparence";
 import { GardeDeVersion } from "@/components/malica/mise-a-jour-requise";
 import { I18nProvider } from "@/i18n";
 import { SECOURS, type LangueDeSecours } from "@/lib/error-page";
@@ -20,6 +21,7 @@ import { installerJournalAtelier, noterAuJournal } from "@/lib/journal-atelier";
 import { rapporterPlantage } from "@/lib/rapport-plantage";
 import { fermerLaDerniereSuperposition } from "@/lib/superpositions";
 import { CANAL, demarrerLaTelemetrie } from "@/lib/telemetrie";
+import { oublierLeCache } from "@/lib/cache-de-l-appareil";
 import { ecouterLaDeconnexion } from "@/lib/transport/etat";
 
 /*
@@ -52,7 +54,24 @@ const APPARENCE_AVANT_RENDU =
   'var a=localStorage.getItem("malica.apparence");' +
   'if(a!=="paper"&&a!=="ink"&&a!=="systeme")a="ink";' +
   'if(a==="ink"||(a==="systeme"&&window.matchMedia("(prefers-color-scheme: dark)").matches))' +
-  'd.classList.add("dark")}catch(e){d.classList.add("dark")}})();';
+  'd.classList.add("dark")}catch(e){d.classList.add("dark")}' +
+  // La barre du navigateur suit le fond choisi, avant le premier rendu aussi.
+  `var c=d.classList.contains("dark")?"${COULEUR_DE_FOND.ink}":"${COULEUR_DE_FOND.paper}";` +
+  "document.querySelectorAll('meta[name=\"theme-color\"]').forEach(function(m){m.content=c})})();";
+
+/*
+ * Les polices web, APRÈS la première image (`polices.css` dit pourquoi) : le
+ * texte se peint d'abord dans « Inter Repli », aux mesures d'Inter, et rien ne
+ * bouge quand Inter arrive. En arabe, la feuille part tout de suite : le Kufi
+ * n'a pas les mesures de la police du système, et une page arabe sauterait.
+ * Dans un onglet ouvert en fond, où l'image ne vient pas, au plus tard 1 s.
+ * Après `LANGUE_AVANT_RENDU`, qui a posé la langue.
+ */
+const POLICES_APRES_RENDU =
+  "(function(){var f=0,d=document,a=function(){if(f)return;f=1;" +
+  `var l=d.createElement("link");l.rel="stylesheet";l.href=${JSON.stringify(policesCss)};` +
+  'd.head.appendChild(l)};if(d.documentElement.lang==="ar"){a();return}' +
+  "requestAnimationFrame(function(){setTimeout(a,0)});setTimeout(a,1000)})();";
 
 /*
  * Comme la frontière d'erreur : ce composant se rend HORS du fournisseur de
@@ -213,7 +232,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Suite comptable augmentée : lecture citée des pièces, écritures déterministes, supervision par expert-comptable.",
       },
       { name: "author", content: "Algoria Factory" },
-      { name: "theme-color", content: "#FFFFFF" },
+      // `theme-color` est écrit dans `RootShell` : voir pourquoi là-bas.
       { property: "og:title", content: "Malica Office" },
       {
         property: "og:description",
@@ -223,8 +242,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
-      // Les polices sont embarquées avec la feuille de style : rien ne se
-      // charge depuis un tiers, et l'arabe s'affiche hors ligne aussi.
+      /*
+       * La feuille commune, et elle seule : celles de la PME et du cabinet
+       * viennent avec leurs écrans (`components/malica/surface-*.tsx`). Les
+       * polices sont embarquées avec elle : rien ne se charge depuis un tiers,
+       * et l'arabe s'affiche hors ligne aussi. Aucune n'est préchargée :
+       * mesuré, précharger Inter n'avançait pas le premier rendu et prenait de
+       * la bande à la feuille ; la police de repli aux mesures d'Inter
+       * (`polices.css`) empêche le texte de bouger quand elle arrive.
+       */
       {
         rel: "stylesheet",
         href: appCss,
@@ -247,7 +273,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // dit son nom, ses icônes et qu'elle s'ouvre en plein écran.
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
-    scripts: [{ children: LANGUE_AVANT_RENDU }, { children: APPARENCE_AVANT_RENDU }],
+    scripts: [
+      { children: LANGUE_AVANT_RENDU },
+      { children: APPARENCE_AVANT_RENDU },
+      { children: POLICES_APRES_RENDU },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -261,6 +291,28 @@ function RootShell({ children }: { children: ReactNode }) {
     // l'hydratation : l'écart sur ces attributs et sur `class` est voulu.
     <html lang="fr" dir="ltr" suppressHydrationWarning>
       <head>
+        {/*
+         * La barre du navigateur (et l'écran de lancement de l'application
+         * installée) prend la couleur du fond. Elle était blanche au-dessus
+         * d'un écran Ink — le défaut — : le flash que `APPARENCE_AVANT_RENDU`
+         * existe pour éviter. Une entrée par schéma du système, toutes deux
+         * sur le DÉFAUT (Ink, quel que soit le système : voir `apparence.ts`) ;
+         * le script de tête puis `appliquer` les recalent sur le choix de la
+         * personne. Ici et non dans `head()` : le routeur n'y garde qu'une
+         * balise par `name`, et la seconde disparaissait.
+         */}
+        <meta
+          name="theme-color"
+          content={COULEUR_DE_FOND.ink}
+          media="(prefers-color-scheme: light)"
+          suppressHydrationWarning
+        />
+        <meta
+          name="theme-color"
+          content={COULEUR_DE_FOND.ink}
+          media="(prefers-color-scheme: dark)"
+          suppressHydrationWarning
+        />
         <HeadContent />
       </head>
       <body>
@@ -301,6 +353,8 @@ function RootComponent() {
     () =>
       ecouterLaDeconnexion(() => {
         queryClient.clear();
+        // Et sur l'appareil : rien de cette session ne doit y rester.
+        void oublierLeCache();
         void router.navigate({ to: "/auth", replace: true });
       }),
     [queryClient, router],

@@ -13,6 +13,7 @@ import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
+import { VotreComptabilite } from "@/components/malica/votre-comptabilite";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
 import { piecesALire, statutDeLaPieceLue } from "@/lib/lecture";
@@ -27,6 +28,7 @@ import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { usePiecesDesSocietes } from "@/hooks/use-pieces-des-societes";
 import { useDossiers } from "@/hooks/use-dossiers";
+import { useParTranches } from "@/hooks/use-par-tranches";
 import { useRevenir } from "@/hooks/use-revenir";
 import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
 import { partieLeVers, partieVers } from "@/lib/envoi";
@@ -326,6 +328,12 @@ function Bibliotheque() {
             titre: sieges.get(ouvert.cle)?.nom ?? "",
             pieces: sieges.get(ouvert.cle)?.pieces ?? [],
           };
+  // Un mois de cent cinquante sociétés se dessine par tranches (planche 1).
+  const tranches = useParTranches(
+    groupeOuvert?.pieces ?? [],
+    60,
+    ouvert === null ? null : `${ouvert.genre}:${ouvert.cle}`,
+  );
   const ouvrir = (suivant: Ouvert) => {
     setOuvert(suivant);
     window.scrollTo(0, 0);
@@ -424,7 +432,7 @@ function Bibliotheque() {
               {sommes(groupeOuvert.pieces)}
             </p>
             <div className="lines">
-              {groupeOuvert.pieces.map((p) => (
+              {tranches.visibles.map((p) => (
                 <Link
                   key={p.id}
                   to="/pme/piece/$pieceId"
@@ -471,10 +479,14 @@ function Bibliotheque() {
                   </span>
                 </Link>
               ))}
+              {tranches.reste ? <span ref={tranches.sentinelle} aria-hidden /> : null}
             </div>
           </>
         ) : (
           <>
+            {/* --------------------- votre comptabilité (planche 6, 7 novembre 2026) */}
+            <VotreComptabilite />
+
             {/* ------------------------------------------------ les dossiers */}
             {sept.dossiers.length > 0 ? (
               <>

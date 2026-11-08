@@ -25,6 +25,7 @@ import {
   prestataireDuReglage,
   type ReglagePaiement,
 } from "../paiement/prestataires.ts";
+import { idsDeSocietes } from "./societes.ts";
 
 /** Un paiement en ligne, tel que `facturation.paiements_en_ligne_v` le rend. */
 interface PaiementLu {
@@ -107,6 +108,25 @@ async function inscrire(
     moyen,
   ]);
   return lirePaiement(db, paiementId);
+}
+
+/**
+ * Les sociétés demandées où l'appelant est membre, dans l'ordre demandé.
+ * Les fonctions de licence refusent une société étrangère en levant une
+ * erreur, ce qui annulerait toute la transaction de l'appel groupé : on la
+ * retire avant, par la même règle (`app.member_orgs`).
+ */
+async function societesDeLAppelant(db: Requete, tenantIds: string[]): Promise<string[]> {
+  const ids = idsDeSocietes(tenantIds);
+  if (ids.length === 0) return [];
+  const { rows } = await db.query<{ id: string }>(
+    `select t.id::text as id
+       from unnest($1::uuid[]) with ordinality t(id, rang)
+      where t.id in (select app.member_orgs())
+      order by t.rang`,
+    [ids],
+  );
+  return rows.map((r) => r.id);
 }
 
 export const facturation = {
@@ -256,6 +276,110 @@ export const facturation = {
              from licence_organisations_v order by nom, tenant_id`,
         );
     return rows;
+  },
+
+  /**
+   * Les sociétés des licences qui couvrent PLUSIEURS sociétés de l'appelant,
+   * en un aller-retour (7 novembre 2026).
+   *
+   * Les réglages appelaient `organisations` une fois par société. Or le
+   * titulaire reçoit, à chaque appel, TOUTE sa licence : cent sociétés dans
+   * une licence faisaient cent appels qui rendaient chacun les cent mêmes
+   * lignes — dix mille lignes pour en montrer cent. Ici, une licence n'est lue
+   * qu'une fois : une société déjà rendue par la lecture d'une autre n'est pas
+   * relue. Mêmes fonctions de la base, même règle de qui voit quoi ; une
+   * société dont l'appelant n'est pas membre est ignorée au lieu de tout
+   * faire échouer. Rendu sans doublon, dans l'ordre des sociétés demandées.
+   */
+  /**
+   * La fiche courte de chaque société, pour la liste des Réglages (planche 4,
+   * 7 novembre 2026) : son offre et le cabinet qui la tient, en UN appel.
+   * Avant, chaque carte lisait les deux pour elle-même — deux cents appels
+   * pour cent sociétés. Ni prix ni paiement : la coque peut la lire.
+   */
+  async fichesDesSocietes(db: Requete, tenantIds: string[]) {
+    const ids = await societesDeLAppelant(db, tenantIds);
+    if (ids.length === 0) return [];
+    const { rows: cabinets } = await db.query<{ pme: string; id: string; nom: string }>(
+      `select distinct on (e.pme_org_id) e.pme_org_id as pme, o.id, o.name as nom
+         from engagements_v e
+         join organizations_v o on o.id = e.cabinet_org_id
+        where e.pme_org_id = any($1::uuid[]) and e.status = 'actif'
+        order by e.pme_org_id, o.name`,
+      [ids],
+    );
+    const cabinetDe = new Map(cabinets.map((c) => [c.pme, c]));
+    const fiches: Array<{
+      tenantId: string;
+      offre: string | null;
+      cabinet: string | null;
+      cabinetId: string | null;
+    }> = [];
+    for (const id of ids) {
+      const { rows } = await db.query<{ offre: string | null }>(
+        `select offre from public.mon_forfait($1::uuid)`,
+        [id],
+      );
+      const c = cabinetDe.get(id);
+      fiches.push({
+        tenantId: id,
+        offre: rows[0]?.offre ?? null,
+        cabinet: c?.nom ?? null,
+        cabinetId: c?.id ?? null,
+      });
+    }
+    return fiches;
+  },
+
+  async organisationsDesSocietes(db: Requete, tenantIds: string[]) {
+    const ids = await societesDeLAppelant(db, tenantIds);
+    const vues = new Map<string, Record<string, unknown>>();
+    for (const id of ids) {
+      if (vues.has(id)) continue;
+      const { rows } = await db.query(
+        `select tenant_id, nom, lectures_consommees, titulaire
+           from public.licence_organisations_de($1)`,
+        [id],
+      );
+      for (const r of rows as Record<string, unknown>[]) {
+        const t = r["tenant_id"] as string;
+        if (!vues.has(t)) vues.set(t, r);
+      }
+    }
+    const rang = new Map(ids.map((id, i) => [id, i]));
+    return [...vues.values()].sort(
+      (a, b) =>
+        (rang.get(a["tenant_id"] as string) ?? ids.length) -
+        (rang.get(b["tenant_id"] as string) ?? ids.length),
+    );
+  },
+
+  /**
+   * Les sièges vus depuis PLUSIEURS sociétés, en un aller-retour — même
+   * raison que `organisationsDesSocietes` : une licence lue une fois. Une
+   * société dont un siège a déjà été rendu par la licence d'une autre n'est
+   * pas relue. Sans doublon (une personne, une société).
+   */
+  async siegesDesSocietes(db: Requete, tenantIds: string[]) {
+    const ids = await societesDeLAppelant(db, tenantIds);
+    const couvertes = new Set<string>();
+    const lignes = new Map<string, Record<string, unknown>>();
+    for (const id of ids) {
+      if (couvertes.has(id)) continue;
+      const { rows } = await db.query(
+        `select user_id, nom, role, tenant_id, organisation, email
+           from public.licence_sieges_de($1)`,
+        [id],
+      );
+      couvertes.add(id);
+      for (const r of rows as Record<string, unknown>[]) {
+        const t = r["tenant_id"] as string;
+        couvertes.add(t);
+        const cle = `${t}:${r["user_id"] as string}`;
+        if (!lignes.has(cle)) lignes.set(cle, r);
+      }
+    }
+    return [...lignes.values()];
   },
 
   /**

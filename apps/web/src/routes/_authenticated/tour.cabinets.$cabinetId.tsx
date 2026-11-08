@@ -11,9 +11,9 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useMemo } from "react";
-import "@/styles-comptabilite.css";
 
 import { AbonnementsDuCabinet } from "@/components/malica/abonnements-du-cabinet";
+import { SurfaceComptabilite } from "@/components/malica/surface-comptabilite";
 import { dateCourte, useClientsDeLaTour } from "@/components/malica/tour/donnees";
 import { TableDesPme } from "@/components/malica/tour/table-des-pme";
 import {
@@ -190,18 +190,18 @@ function UnCabinet() {
         {onglet === "bibliotheque" ? (
           <Bibliotheque fiche={fiche} />
         ) : commeLeCabinet ? (
-          <section
+          <SurfaceComptabilite
+            as="section"
             aria-label={t("tour.cabinet.voirComme")}
             data-vue-du-cabinet
             className="cabinet-workspace border border-dashed border-border p-4 sm:p-6"
-            data-surface="comptabilite"
           >
             <p className="mb-4 text-[11.5px] text-muted-foreground">{t("tour.cabinet.lecture")}</p>
             <AbonnementsDuCabinet
               cabinet={{ id: cabinet.id, name: cabinet.nom, currency: cabinet.devise }}
               lecture
             />
-          </section>
+          </SurfaceComptabilite>
         ) : (
           <Abonnements fiche={fiche} />
         )}

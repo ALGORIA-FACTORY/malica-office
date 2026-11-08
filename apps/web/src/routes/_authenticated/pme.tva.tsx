@@ -9,7 +9,7 @@ import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod, useTvaPeriod } from "@/hooks/use-tva";
 import { Aide } from "@/components/malica/aide";
 import { useI18n } from "@/i18n";
-import { montant } from "@/lib/lisible";
+import { moisLocal, montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import { useRevenir } from "@/hooks/use-revenir";
 
@@ -32,11 +32,14 @@ export const Route = createFileRoute("/_authenticated/pme/tva")({
   }),
   // Le mois que la carte de l'accueil montrait (`moisDeLaCarte`) : la page
   // s'ouvre sur le même chiffre. Un mois mal formé ou à venir est ignoré.
+  // `moisLocal` et non `currentPeriod` (la même chose) : cette garde part avec
+  // le premier écran de toutes les pages, et `hooks/use-tva` y emmenait le
+  // moteur de TVA, decimal.js et zod.
   validateSearch: (s: Record<string, unknown>): { mois?: string } => {
     const mois = s["mois"];
     return typeof mois === "string" &&
       /^\d{4}-(0[1-9]|1[0-2])$/.test(mois) &&
-      mois <= currentPeriod()
+      mois <= moisLocal(new Date())
       ? { mois }
       : {};
   },

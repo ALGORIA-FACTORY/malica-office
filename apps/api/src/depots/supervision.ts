@@ -181,7 +181,9 @@ export const supervision = {
               -- (piece_remplacer), et garde ainsi sa place dans la file.
               coalesce(p.transmise_le, p.created_at) as envoyee_le,
               o.name as client, e.id as ecriture_id, e.libelle, e.date_ecriture,
-              m.montant, c.email as collaborateur, cf.confiance,
+              m.montant, lu.montant_lu, c.email as collaborateur, cf.confiance,
+              (select an2.verdict from capture.analyses an2 where an2.piece_id = p.id
+                order by an2.created_at desc limit 1) as verdict,
               dem.objet as demande_objet,
               ${tiersDeLaPiece("p", "cf.payload")} as tiers, ${COLONNES_DU_SUIVI}
          from ${PIECES_DU_CABINET}
@@ -215,10 +217,34 @@ export const supervision = {
            -- La clé vient du contrat, en paramètre : la relire ici en littéral
            -- était la huitième occurrence du même défaut muet. Un renommage
            -- faisait passer cette colonne a NULL sans erreur ni drapeau.
-           select (x2.payload -> 'field_confidence' ->> $3)::numeric as confiance, x2.payload
+           select (x2.payload -> 'field_confidence' ->> $3)::numeric as confiance, x2.payload,
+                  x2.id as extraction_id
              from extractions_v x2 where x2.piece_id = p.id
             order by x2.created_at desc limit 1
          ) cf on true
+         -- Le TTC LU, tant qu'aucune écriture ne porte de montant.
+         --
+         -- Recette du 7 novembre 2026 : une facture lue à 750,700 arrivait dans
+         -- la file avec « — » en colonne Montant, parce que la colonne ne lisait
+         -- que l'écriture comptabilisée. Le chiffre vient du jugement de la
+         -- DERNIÈRE lecture, en unités mineures, à l'exposant de sa devise —
+         -- la même règle que la bibliothèque (bibliotheque.ts). Jamais additionné ici.
+         left join lateral (
+           select round(an.ttc_mineur::numeric / power(10, dv.exposant)::numeric, dv.exposant)::text
+                    as montant_lu
+             -- Le DERNIER jugement d'abord, son état ensuite (revue Codex de
+             -- #266) : un rejugement qui défait un total ne doit pas laisser
+             -- reparaître le total d'un jugement plus ancien.
+             from (select a.normalisation ->> 'etat' as etat,
+                          a.normalisation -> 'montants' ->> 'ttc' as ttc_mineur,
+                          coalesce(a.normalisation ->> 'devise', o.currency) as devise
+                     from capture.analyses a
+                    where a.piece_id = p.id and a.extraction_id = cf.extraction_id
+                    order by a.created_at desc, a.id desc limit 1) an
+             join ref.devises dv on dv.code = an.devise
+            where an.etat in ('tranche', 'non_verifie')
+              and an.ttc_mineur ~ '^-?[0-9]+$'
+         ) lu on true
          -- Le collaborateur : l'affectation active du client dans ce cabinet.
          left join lateral (
            select mb.email
@@ -296,8 +322,10 @@ export const supervision = {
           libelle: (p["libelle"] as string | null) ?? null,
           dateEcriture: (p["date_ecriture"] as string | null) ?? null,
           montant: (p["montant"] as string | null) ?? null,
+          montantLu: (p["montant_lu"] as string | null) ?? null,
           collaborateur: (p["collaborateur"] as string | null) ?? null,
           confiance: p["confiance"] == null ? null : Number(p["confiance"]),
+          verdict: (p["verdict"] as string | null) ?? null,
           demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
           doublonDe: doublonDe.get(p["piece_id"] as string) ?? null,
           tiers: (p["tiers"] as string | null) ?? null,

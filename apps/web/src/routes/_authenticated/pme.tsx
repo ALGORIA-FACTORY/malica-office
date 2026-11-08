@@ -1,5 +1,4 @@
 import { LienMonEspaceParti } from "@/components/malica/mon-espace-parti";
-import { fr } from "@malica/socle/messages-fr";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -24,10 +23,12 @@ import {
   type PieceARemplacer,
 } from "@/components/malica/pme-context";
 import { QuestionDuType } from "@/components/malica/question-du-type";
+import { SurfacePme } from "@/components/malica/surface-pme";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useCatalogueDesOffres } from "@/hooks/use-offres";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n, type MessageKey } from "@/i18n";
+import { libelleHorsArbre } from "@/i18n/dictionnaires";
 import { ouverturesDuForfait } from "@/lib/forfait";
 import { visibiliteALaCapture } from "@/lib/visibilite-a-la-capture";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
@@ -37,7 +38,11 @@ import { office } from "@/verticals/malica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { etiqueterLeDossier } from "@/lib/telemetrie";
 import { clePiecesLues } from "@/hooks/use-pieces-lues";
+import { attendUnGeste, seMontreIci } from "@/lib/libelle-de-notification";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
+import { useCoteDuPlus } from "@/hooks/use-cote-du-plus";
+import { useDossiers } from "@/hooks/use-dossiers";
+import { lireLotDeCapture, suiteDuPassage } from "@/lib/lot-de-capture";
 
 /*
  * Le cadrage du navigateur — détection, redressement, et un modèle qui se
@@ -50,17 +55,28 @@ const CameraScanner = lazy(() =>
 
 /**
  * L'en-tête se rend avant que la langue de la personne soit connue : il se lit
- * dans la langue par défaut du dictionnaire, jamais en dur dans le code.
+ * dans la langue par défaut du dictionnaire, jamais en dur dans le code. Il le
+ * lit au dictionnaire CHARGÉ (`libelleHorsArbre`) : importer `messages-fr` ici
+ * le faisait entrer dans le premier écran de toutes les pages.
  */
-const META = fr;
+/** Un lot à joindre qui n'est pas tout parti : le message, la pièce, et si une partie s'est jointe. */
+class ErreurDeJointure extends Error {
+  constructor(
+    message: string,
+    readonly pieceId: string,
+    readonly enPartie: boolean,
+  ) {
+    super(message);
+  }
+}
 
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
     meta: [
-      { title: META["meta.pme.titre"] },
-      { name: "description", content: META["meta.pme.description"] },
-      { property: "og:title", content: META["meta.pme.titre"] },
-      { property: "og:description", content: META["meta.pme.og"] },
+      { title: libelleHorsArbre("meta.pme.titre") },
+      { name: "description", content: libelleHorsArbre("meta.pme.description") },
+      { property: "og:title", content: libelleHorsArbre("meta.pme.titre") },
+      { property: "og:description", content: libelleHorsArbre("meta.pme.og") },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -81,11 +97,36 @@ function PmeLayout() {
   useTransitionDEcran();
   const qc = useQueryClient();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  /*
+   * Le contexte de l'écran « Ajouter des pièces » (planche 9) : d'où l'on
+   * vient. Lu ici parce que c'est la coque qui reçoit les fichiers choisis.
+   */
+  const contexteDeCapture = useRouterState({
+    select: (s) =>
+      s.location.pathname === "/pme/capturer"
+        ? lireLotDeCapture(s.location.search as Record<string, unknown>)
+        : null,
+    structuralSharing: true,
+  });
+  const { parCode: dossierParCode } = useDossiers();
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   // Un nouvel ajout réinitialise aussi les étapes d'un parcours déjà ouvert.
   // Les pièces déposées et la file durable ne vivent pas dans cet état de vue.
   const [numeroAjout, setNumeroAjout] = useState(0);
+  /*
+   * Le côté du « + » (planche 5) ; un appui long sur le « + » ouvre son
+   * réglage. Le toucher qui suit l'appui long n'ajoute rien.
+   */
+  const { cote: coteDuPlus } = useCoteDuPlus();
+  const appuiLong = useRef<{ minuteur: number | null; parti: boolean }>({
+    minuteur: null,
+    parti: false,
+  });
+  const lacherLAppui = () => {
+    if (appuiLong.current.minuteur !== null) window.clearTimeout(appuiLong.current.minuteur);
+    appuiLong.current.minuteur = null;
+  };
 
   const orgsQuery = useQuery({
     queryKey: ["my-organizations"],
@@ -243,6 +284,8 @@ function PmeLayout() {
    * remplacerait une pièce sans qu'on l'ait demandé.
    */
   const aRemplacer = useRef<PieceARemplacer | null>(null);
+  /** La pièce à laquelle joindre ce que le scanner ou le sélecteur rendra (planche 6). */
+  const aJoindre = useRef<{ id: string; vis: string } | null>(null);
 
   const choisir = useMutation({
     mutationFn: async (input: CaptureKind | { pages: Blob[]; dejaCadrees?: boolean }) => {
@@ -260,14 +303,32 @@ function PmeLayout() {
       setCaptureError(null);
       const remplace = aRemplacer.current;
       aRemplacer.current = null;
+      const joindre = aJoindre.current;
+      aJoindre.current = null;
       if (choisis.length === 0) return;
+      if (joindre) {
+        capture.mutate({ lot: choisis, documentKind: null, joindre });
+        return;
+      }
       // La photo qui remplace garde le type de l'ancienne : la question ne se
       // repose pas, la lecture aura le dernier mot.
-      if (remplace) capture.mutate({ lot: choisis, documentKind: null, remplace });
+      if (remplace) {
+        capture.mutate({ lot: choisis, documentKind: null, remplace });
+        return;
+      }
+      // Ouvert depuis un dossier (planche 9) : la pièce y entre, sans que la
+      // question du type se repose. La lecture aura le dernier mot.
+      const dossier = dossierParCode(contexteDeCapture?.dossier);
+      if (dossier) capture.mutate({ lot: choisis, documentKind: dossier.typeParDefaut });
+      // Venu de Privé (planche 10) : un papier pour soi n'est ni un achat ni
+      // une vente ; il ira dans un rayon, pas dans un dossier de la société.
+      else if (contexteDeCapture?.pour === "moi")
+        capture.mutate({ lot: choisis, documentKind: null });
       else setATyper(choisis);
     },
     onError: (e: unknown) => {
       aRemplacer.current = null;
+      aJoindre.current = null;
       setCaptureError(
         e instanceof FilePleine
           ? t("pme.file.pleine")
@@ -292,6 +353,7 @@ function PmeLayout() {
       lot: readonly PickedFile[];
       documentKind: string | null;
       remplace?: PieceARemplacer;
+      joindre?: { id: string; vis: string };
     }) => {
       if (!org) return [];
       const identifiants: string[] = [];
@@ -303,6 +365,26 @@ function PmeLayout() {
           i === 0 ? (input.remplace ?? null) : null,
         );
         if (id) identifiants.push(id);
+      }
+      /*
+       * JOINDRE (planche 6) : le document pris entre dans la société — une
+       * pièce de l'espace privé ne se rattache pas (`piece_rattacher`) — et
+       * se rattache. Il part au cabinet comme toute pièce : lue, puis envoyée
+       * (le BL sans lecture viendra avec la planche 3).
+       */
+      if (input.joindre) {
+        for (const id of identifiants) {
+          await office().collab.setPieceVis(id, "entite");
+          await office().capture.rattacher(input.joindre.id, id);
+        }
+        // Un lot à moitié parti (réseau lent) le DIT : ce qui attend encore
+        // sera à joindre depuis la pièce au retour du réseau (revue de #286).
+        if (identifiants.length < input.lot.length)
+          throw new ErreurDeJointure(
+            t("pme.joindre.horsLigne"),
+            input.joindre.id,
+            identifiants.length > 0,
+          );
       }
       return identifiants;
     },
@@ -335,6 +417,16 @@ function PmeLayout() {
       // La photo qui remplace a déjà sa destination : celle de l'ancienne.
       // Depuis une fiche, on l'ouvre à la place de l'ancienne ; hors ligne, la
       // liste la montre. Depuis le lot de la capture, elle y revient.
+      if (input.joindre) {
+        await qc.invalidateQueries({ queryKey: ["rattachees", input.joindre.id] });
+        await qc.invalidateQueries({ queryKey: ["piece", input.joindre.id] });
+        await navigate({
+          to: "/pme/piece/$pieceId",
+          params: { pieceId: input.joindre.id },
+          replace: true,
+        });
+        return;
+      }
       const nouvelle = input.remplace ? identifiants[0] : undefined;
       if (input.remplace?.ensuite === "fiche") {
         await navigate(
@@ -344,17 +436,31 @@ function PmeLayout() {
         );
         return;
       }
+      /*
+       * Le contexte suit tout le passage (revue de #277) : venu d'un dossier,
+       * la photo suivante du même lot y entre aussi sans question ; venu de
+       * Privé, « Pour moi » reste pré-choisi. « Capturer la suivante »
+       * (`recommencer`) repart d'une URL vide.
+       */
       await navigate({
         to: "/pme/capturer",
-        search: identifiants.length > 0 ? { pieces: identifiants.join(",") } : {},
+        search: suiteDuPassage(identifiants, contexteDeCapture),
       });
     },
-    onError: (e: unknown) =>
+    onError: async (e: unknown) => {
       setCaptureError(
         e instanceof FilePleine
           ? t("pme.file.pleine")
-          : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
-      ),
+          : e instanceof ErreurDeJointure
+            ? t("pme.joindre.horsLigne")
+            : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
+      );
+      // Ce qui s'est joint avant l'arrêt se voit sur la pièce.
+      if (e instanceof ErreurDeJointure && e.enPartie) {
+        await qc.invalidateQueries({ queryKey: ["rattachees", e.pieceId] });
+        await qc.invalidateQueries({ queryKey: ["piece", e.pieceId] });
+      }
+    },
   });
 
   async function deposerUnePiece(
@@ -444,7 +550,10 @@ function PmeLayout() {
       }
       // Déjà cadrées par l'appareil : on ne refait pas le travail.
       if (pages.length > 0) choisir.mutate({ pages, dejaCadrees: true });
-      else aRemplacer.current = null;
+      else {
+        aRemplacer.current = null;
+        aJoindre.current = null;
+      }
     })();
   }, [choisir]);
 
@@ -460,9 +569,19 @@ function PmeLayout() {
     },
     [ouvrirCapture],
   );
+  const joindreA = useCallback(
+    (piece: { id: string; vis: string }, moyen: "photo" | "images" | "pdf") => {
+      aRemplacer.current = null;
+      aJoindre.current = piece;
+      if (moyen === "photo") ouvrirCapture();
+      else choisir.mutate(moyen);
+    },
+    [ouvrirCapture, choisir],
+  );
   /** Le scanner fermé sans photo : rien n'est remplacé. */
   const abandonnerLeScanner = useCallback(() => {
     aRemplacer.current = null;
+    aJoindre.current = null;
     setScanning(false);
   }, []);
 
@@ -479,6 +598,38 @@ function PmeLayout() {
    */
   const { user } = useRouteContext({ from: "/_authenticated" });
   const initiale = (user.email.trim().charAt(0) || "·").toLocaleUpperCase(locale);
+
+  /*
+   * LA CLOCHE (planche 12, 7 novembre 2026) : les alertes à traiter de TOUTES
+   * les sociétés de la personne, en un appel — la route prend une liste.
+   * Relue chaque minute tant que l'écran est visible, et au retour sur
+   * l'application : une alerte arrive sans qu'on recharge.
+   */
+  const idsDesSocietes = pmeOrgs.map((o) => o.id);
+  const alertes = useQuery({
+    queryKey: ["notifications", "cloche", ...idsDesSocietes],
+    queryFn: () => office().collab.notifications(idsDesSocietes),
+    enabled: idsDesSocietes.length > 0,
+    refetchInterval: 60_000,
+  });
+  // La pastille compte ce qui attend un geste (planche 2, option A).
+  const nonLues = alertes.data
+    ? alertes.data.filter((n) => attendUnGeste(n) && seMontreIci(n.kind, CIBLE_COQUE))
+    : null;
+  const plusRecente = nonLues?.reduce<(typeof nonLues)[number] | null>(
+    (r, n) => (!r || n.createdAt > r.createdAt ? n : r),
+    null,
+  );
+  const cloche = {
+    nonLues: nonLues ? nonLues.length : null,
+    derniere: plusRecente
+      ? {
+          id: plusRecente.id,
+          kind: plusRecente.kind,
+          payload: (plusRecente.payload ?? {}) as Record<string, unknown>,
+        }
+      : null,
+  };
 
   const navItems = [
     { to: "/pme", icon: HomeIcon, label: t("pme.nav.home"), active: path === "/pme" },
@@ -518,7 +669,7 @@ function PmeLayout() {
      * dedans — c'est aussi ce que font les maquettes, où l'attribut est sur
      * `body`.
      */
-    <div data-surface="pme">
+    <SurfacePme>
       <div className="app flex flex-col text-foreground">
         {/*
          * La barre d'état, peinte : sous Android 15 l'écran passe dessous, et ce
@@ -548,7 +699,34 @@ function PmeLayout() {
          * `header` et la feuille porte `.appbar` — le collage, l'encoche, le
          * filet, le fond.
          */}
-        <EntetePme initiale={initiale} />
+        <EntetePme
+          initiale={initiale}
+          cloche={cloche}
+          societe={
+            org && pmeOrgs.length > 1
+              ? {
+                  societes: pmeOrgs.map((o) => ({
+                    id: o.id,
+                    name: o.name,
+                    matricule: o.legalId ?? null,
+                  })),
+                  /*
+                   * Planche 13 (approuvée le 8 novembre 2026) : choisir une
+                   * société OUVRE son accueil, le même qu'aujourd'hui ; les
+                   * filtres de la bibliothèque n'en dépendent pas.
+                   * « Toutes les sociétés » ouvre l'écran « Mes sociétés ».
+                   */
+                  ouverte: org.id,
+                  surMesSocietes: path.startsWith("/pme/societes"),
+                  onOuvrir: (id: string) => {
+                    if (id !== org.id) selectOrg(id);
+                    void navigate({ to: "/pme" });
+                  },
+                  onToutes: () => void navigate({ to: "/pme/societes" }),
+                }
+              : undefined
+          }
+        />
 
         <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
           {orgsQuery.isPending ? (
@@ -588,6 +766,7 @@ function PmeLayout() {
                 capture: (kind) => choisir.mutate(kind),
                 ouvrirScanner,
                 reprendreLaPhoto,
+                joindreA,
                 capturing: capture.isPending || choisir.isPending,
                 captureError,
                 file,
@@ -640,7 +819,7 @@ function PmeLayout() {
          * collant de gauche : une barre d'onglets au bas d'un écran de 27
          * pouces est un portage, pas un produit.
          */}
-        <nav aria-label={t("pme.nav.aria")} className="nav">
+        <nav aria-label={t("pme.nav.aria")} className="nav" data-plus={coteDuPlus}>
           {/*
            * 1er novembre 2026, maquette validée par Wissem : Société ·
            * Bibliothèque · Privé, puis « + » à DROITE, plus grand et plein — sous
@@ -680,9 +859,30 @@ function PmeLayout() {
             <button
               type="button"
               disabled={!org || capture.isPending}
+              onPointerDown={() => {
+                lacherLAppui();
+                appuiLong.current.parti = false;
+                appuiLong.current.minuteur = window.setTimeout(() => {
+                  appuiLong.current.parti = true;
+                  appuiLong.current.minuteur = null;
+                  void navigate({ to: "/pme/bouton-plus" });
+                }, 550);
+              }}
+              onPointerUp={lacherLAppui}
+              onPointerLeave={lacherLAppui}
+              onPointerCancel={lacherLAppui}
+              onContextMenu={(e) => e.preventDefault()}
               onClick={() => {
+                if (appuiLong.current.parti) {
+                  appuiLong.current.parti = false;
+                  return;
+                }
                 setNumeroAjout((n) => n + 1);
-                void navigate({ to: "/pme/capturer", search: {} });
+                // Depuis Privé, « Pour moi » sera pré-choisi (planche 9).
+                void navigate({
+                  to: "/pme/capturer",
+                  search: path.startsWith("/pme/coffre") ? { pour: "moi" } : {},
+                });
               }}
               aria-label={t("pme.nav.add")}
               className="obtur grid h-16 w-16 place-items-center"
@@ -724,7 +924,7 @@ function PmeLayout() {
           </Suspense>
         ) : null}
       </div>
-    </div>
+    </SurfacePme>
   );
 }
 

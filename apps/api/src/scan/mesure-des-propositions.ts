@@ -41,6 +41,7 @@ import { optionDuTimbre } from "./bareme-du-timbre.ts";
 import {
   BAREME_DES_DROITS_D_ESSAI,
   BIENS_IMMOBILISABLES_D_ESSAI,
+  EXCLUSIONS_DE_DEDUCTION_D_ESSAI,
   DROITS_AU_COUT_D_ESSAI,
   DROITS_D_ESSAI,
   DEVISE_D_ESSAI,
@@ -1356,6 +1357,7 @@ export function juger(cas: CasDeMesure) {
     typesDocument: TYPES_D_ESSAI,
     titres: TITRES_D_ESSAI,
     biensImmobilisables: BIENS_IMMOBILISABLES_D_ESSAI,
+    exclusionsDeDeduction: EXCLUSIONS_DE_DEDUCTION_D_ESSAI,
     // Les réglages du pack d'essai (`ref.socle_params`, relevés) : le seuil et
     // le traitement d'un bien de faible valeur entrent dans l'empreinte du
     // jugement, donc dans `REGLES_DU_JUGEMENT`.

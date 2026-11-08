@@ -890,4 +890,60 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
       ]);
     }
   });
+
+  it("11 · Un mandat « actif » hors de ses dates ne tient pas les livres — et la société les garde", async () => {
+    // Lot S5b : `livres_tenus_par_le_cabinet` lisait le statut seul, `engaged_orgs`
+    // aussi les dates. Hors de ses dates, personne ne tenait les livres.
+    const tenus = async () =>
+      (await sous("amel", `select app.livres_tenus_par_le_cabinet($1) as v`, [s.pme])).rows[0]![
+        "v"
+      ] as boolean;
+    const tenuParLExpert = async () =>
+      (await sous("expert", `select $1::uuid in (select app.engaged_orgs()) as v`, [s.pme]))
+        .rows[0]!["v"] as boolean;
+    const supervise = async () =>
+      (await sous("expert", `select app.supervise_le_dossier($1) as v`, [s.pme])).rows[0]![
+        "v"
+      ] as boolean;
+    const { rows } = await s.admin.query<{ id: string; starts_on: string; ends_on: string | null }>(
+      `select id, starts_on::text, ends_on::text from identity.engagements
+        where pme_org_id = $1 and status = 'actif'`,
+      [s.pme],
+    );
+    const dates = (debut: string, fin: string | null) =>
+      s.admin.query(
+        `update identity.engagements set starts_on = $2::date, ends_on = $3::date where id = $1`,
+        [rows[0]!.id, debut, fin],
+      );
+    // Une pièce déjà chez le comptable, avant que le mandat ne sorte de ses dates.
+    const chezLui = await chezLeComptable();
+    try {
+      assert.deepEqual(
+        [await tenus(), await tenuParLExpert(), await supervise()],
+        [true, true, true],
+      );
+      for (const [debut, fin, cas] of [
+        ["2999-01-01", null, "il commence demain"],
+        ["2020-01-01", "2020-12-31", "il a pris fin"],
+      ] as const) {
+        await dates(debut, fin);
+        assert.deepEqual(
+          [await tenus(), await tenuParLExpert(), await supervise()],
+          [false, false, false],
+          cas,
+        );
+        // Les autres lectures du mandat disent la même chose (lot S5b) : la PME
+        // n'a pas de cabinet qui tienne ses livres, et le comptable n'ouvre plus
+        // la pièce comme la sienne.
+        assert.equal(await s.fait("amel", "identite.monCabinet", s.pme), null, cas);
+        await assert.rejects(s.fait("expert", "supervision.voir", chezLui), /refus\./, cas);
+        // Personne d'autre ne les tenant, la société garde la main.
+        const id = await lue("amel");
+        await s.fait("amel", "capture.preciser", id, "document_kind", "facture_achat");
+        await inscrire("amel", await proposer("amel", id));
+      }
+    } finally {
+      await dates(rows[0]!.starts_on, rows[0]!.ends_on);
+    }
+  });
 });

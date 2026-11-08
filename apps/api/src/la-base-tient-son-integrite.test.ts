@@ -60,6 +60,8 @@ interface Verrou {
   refus_calcules: Record<string, string>;
   portes_que_personne_n_appelle: Record<string, string>;
   portes_sans_appel: Record<string, string>;
+  fonctions_publiques_sans_appel: Record<string, string>;
+  cascades_sans_index: Record<string, string>;
   lecteurs_du_parametrage: Record<string, string[]>;
   litteraux_metier: Record<string, { raison: string; litteraux: Record<string, number> }>;
   titres_de_page_figes: Record<string, string>;
@@ -140,6 +142,8 @@ describe("l'intégrité du code qui parle à la base", () => {
       ...Object.entries(VERROU.refus_calcules),
       ...Object.entries(VERROU.portes_que_personne_n_appelle),
       ...Object.entries(VERROU.portes_sans_appel),
+      ...Object.entries(VERROU.fonctions_publiques_sans_appel),
+      ...Object.entries(VERROU.cascades_sans_index),
       ...Object.entries(VERROU.litteraux_metier).map(([f, v]) => [f, v.raison] as const),
     ]
       .filter(([, raison]) => raison.trim().length < 20)
@@ -503,6 +507,94 @@ describe("l'intégrité de la base", { skip: !BASE_CONFIGUREE }, () => {
       "portes qu'un client peut appeler mais que rien n'appelle",
       sansAppel,
       Object.keys(VERROU.portes_sans_appel),
+    );
+  });
+
+  it("aucune fonction exécutable par PUBLIC que rien n'appelle", async () => {
+    /*
+     * Le pendant des portes mortes, hors `security definer`. Audit du
+     * 6 novembre 2026 (docs/audit-2026-11-06/base.md, § 3.3) :
+     * `ref.parametre_fiscal` et `ref.appliquer_bareme` étaient exécutables par
+     * tout rôle (droit par défaut de PUBLIC), sans un seul appelant — et la
+     * première renvoyait vers une fonction qui n'a jamais existé. Une fonction
+     * que tout le monde peut appeler et que personne n'appelle est une surface
+     * sans usage ; retirée par 20261202150400.
+     *
+     * Un appel se reconnaît à « nom( » dans une AUTRE définition de la base
+     * (corps de fonction, politique, vue, défaut, contrainte), ou au nom seul
+     * dans le code (API, écran, socle, outils).
+     */
+    const rows = await q<{ fn: string }>(`
+      with f as (${NOS_FONCTIONS}),
+      textes as (
+        select p.oid, p.prosrc as t from pg_proc p
+        union all
+        select null, coalesce(pg_get_expr(pol.polqual, pol.polrelid), '') || ' ' ||
+               coalesce(pg_get_expr(pol.polwithcheck, pol.polrelid), '') from pg_policy pol
+        union all
+        select null, pg_get_viewdef(c.oid) from pg_class c
+         where c.relkind in ('v', 'm')
+           and c.relnamespace not in ('pg_catalog'::regnamespace, 'information_schema'::regnamespace)
+        union all select null, pg_get_expr(d.adbin, d.adrelid) from pg_attrdef d
+        union all select null, pg_get_constraintdef(k.oid) from pg_constraint k where k.contype = 'c'
+      )
+      select f.fn from f join pg_proc p on p.oid = f.oid
+       where not f.prosecdef
+         and f.prorettype not in ('trigger'::regtype, 'event_trigger'::regtype)
+         and exists (select 1 from aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                      where a.grantee = 0 and a.privilege_type = 'EXECUTE')
+         and not exists (select 1 from textes
+                          where textes.oid is distinct from f.oid
+                            and textes.t ~* ('\\m' || split_part(f.fn, '.', 2) || '\\s*\\('))
+       order by 1`);
+    const outils = [
+      ...fichiersDeProduction("outils", /\.mjs$/),
+      ...fichiersDeProduction("db", /\.mjs$/).filter((f) => !f.includes("/migrations/")),
+    ].map((f) => readFileSync(f, "utf8"));
+    const code = [...TEXTES.values(), ...outils].map(sansCommentaires).join("\n");
+    egalALInstantane(
+      "fonctions exécutables par PUBLIC que rien n'appelle",
+      rows.map((r) => r.fn).filter((fn) => !new RegExp(`\\b${fn.split(".")[1]}\\b`).test(code)),
+      Object.keys(VERROU.fonctions_publiques_sans_appel),
+    );
+  });
+
+  it("chaque clé étrangère qui efface en cascade a un index menant par ses colonnes", async () => {
+    /*
+     * `on delete cascade` (ou `set null`, `set default`) fait chercher, à chaque
+     * suppression de la ligne visée, les lignes qui la nomment. Sans index menant
+     * par la colonne, la recherche parcourt la table entière — tous tenants
+     * confondus, sous le verrou de la suppression. Audit du 6 novembre 2026
+     * (§ 3.5) : `capture.rattachements.piece_id` et `.piece_liee_id`, deux
+     * cascades depuis `capture.pieces`, n'avaient qu'un index menant par
+     * `tenant_id` ; indexées par 20261202150100. Un index menant par les mêmes
+     * colonnes, dans n'importe quel ordre, sert la recherche — partiel aussi,
+     * si son seul prédicat est « la colonne n'est pas nulle », que la recherche
+     * par égalité implique ; pas un index partiel sur `active`, qui ignore les
+     * lignes qu'on efface aussi.
+     */
+    const rows = await q<{ fk: string }>(`
+      select n.nspname || '.' || c.relname || '.' || k.conname as fk
+        from pg_constraint k
+        join pg_class c on c.oid = k.conrelid
+        join pg_namespace n on n.oid = c.relnamespace
+       where k.contype = 'f' and k.confdeltype in ('c', 'n', 'd')
+         and not exists (
+               select 1 from pg_index i
+                where i.indrelid = k.conrelid and i.indisvalid
+                  and (i.indpred is null
+                       or (cardinality(k.conkey) = 1
+                           and pg_get_expr(i.indpred, i.indrelid) =
+                               '(' || (select quote_ident(a.attname) from pg_attribute a
+                                        where a.attrelid = k.conrelid and a.attnum = k.conkey[1])
+                                   || ' IS NOT NULL)'))
+                  and (string_to_array(i.indkey::text, ' ')::int2[])[1:cardinality(k.conkey)] @> k.conkey
+                  and (string_to_array(i.indkey::text, ' ')::int2[])[1:cardinality(k.conkey)] <@ k.conkey)
+       order by 1`);
+    egalALInstantane(
+      "clés étrangères en cascade sans index menant par leurs colonnes",
+      rows.map((r) => r.fk),
+      Object.keys(VERROU.cascades_sans_index),
     );
   });
 

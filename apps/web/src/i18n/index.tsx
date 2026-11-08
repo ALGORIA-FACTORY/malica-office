@@ -8,13 +8,13 @@ import {
   type ReactNode,
 } from "react";
 
-import type { MessageKey } from "@malica/socle/messages-fr";
+import type { Dict, MessageKey } from "@malica/socle/messages-fr";
 import { remplirLeGabarit } from "@malica/socle/gabarit";
 import { LOCALES, RTL_LOCALES, type Locale } from "@malica/socle/messages-langues";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
 
-import { chargerLaLangue, dictionnaireCharge, DICTIONNAIRE_DE_REPLI } from "./dictionnaires";
+import { chargerLaLangue, dictionnaireCharge, dictionnaireDeRepli } from "./dictionnaires";
 
 export { LOCALES, LOCALE_NAMES } from "@malica/socle/messages-langues";
 export type { Locale } from "@malica/socle/messages-langues";
@@ -128,13 +128,16 @@ function Traductions({
   children: ReactNode;
 }) {
   const value = useMemo<I18nValue>(() => {
-    const dict = dictionnaireCharge(locale) ?? DICTIONNAIRE_DE_REPLI;
+    // Le repli (le français) n'est là que s'il a été chargé : l'anglais et
+    // l'arabe sont complets et n'en ont pas besoin (`dictionnaires.ts`).
+    const repli: Partial<Dict> = dictionnaireDeRepli() ?? {};
+    const dict: Partial<Dict> = dictionnaireCharge(locale) ?? repli;
     return {
       locale,
       dir: dirFor(locale),
       setLocale,
       t: (key, vars) => {
-        let raw = dict[key] ?? DICTIONNAIRE_DE_REPLI[key] ?? key;
+        let raw = dict[key] ?? repli[key] ?? key;
 
         /*
          * Le pluriel se choisit, il ne s'écrit pas entre parenthèses.
@@ -155,7 +158,7 @@ function Traductions({
           const formes = [new Intl.PluralRules(locale).select(n), "other"];
           for (const forme of formes) {
             const variante = `${key}#${forme}` as MessageKey;
-            const trouvee = dict[variante] ?? DICTIONNAIRE_DE_REPLI[variante];
+            const trouvee = dict[variante] ?? repli[variante];
             if (trouvee !== undefined) {
               raw = trouvee;
               break;

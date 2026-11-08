@@ -58,7 +58,7 @@ select ecriture_id, ordinal, account_code, libelle, debit, credit, tax_code
 
 \echo ''
 \echo '=========== 4. TOUTES LES LIGNES DU LOCATAIRE (seul filtre : la RLS) ==========='
--- La lecture précédente est déjà servie par `lignes_ecriture_idx`. Celle-ci est
+-- La lecture précédente est déjà servie par `ecriture_lignes_ecriture_id_ordinal_key`. Celle-ci est
 -- celle que l'index menant par tenant_id doit changer : elle n'a AUCUN autre
 -- filtre que celui posé par la politique.
 explain (analyze, buffers, costs off, timing off)

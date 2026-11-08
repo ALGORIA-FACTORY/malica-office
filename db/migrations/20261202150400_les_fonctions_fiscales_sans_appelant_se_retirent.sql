@@ -1,0 +1,121 @@
+-- Deux fonctions fiscales que tout le monde pouvait appeler et que personne n'appelle se retirent.
+--
+-- ================================================================== POURQUOI
+--
+-- Audit du 6 novembre 2026 (docs/audit-2026-11-06/base.md, § 3.3, M3) :
+-- `ref.parametre_fiscal(text, text, date)` et
+-- `ref.appliquer_bareme(text, text, date, numeric)`, posées par
+-- 20260831120500_socle_fiscal et redéfinies en dernier par
+-- 20261110090300_les_refus_se_disent_par_une_cle_socle, n'ont aucun appelant :
+--
+--   - code : `git grep -w` sur tout le dépôt hors `db/migrations/` et `docs/`
+--     (API, écran web, Android, socle, outils, db/*.mjs) — 0 ligne ;
+--   - base : aucun corps de fonction, aucune politique, aucune vue, aucun
+--     défaut de colonne, aucune contrainte ne les nomme ; aucun déclencheur ne
+--     les porte ; `pg_depend` vers elles : 0 ;
+--   - le web : elles vivent dans `ref`, que rien n'expose par HTTP ; l'API est
+--     le seul client SQL, et elle ne les nomme pas.
+--
+-- Elles n'étaient pas `security definer`, mais leur droit d'exécution était le
+-- défaut de PUBLIC (`proacl` nul) : tout rôle, `anon` compris, pouvait les
+-- appeler. La première renvoie encore, dans un message français brut, vers
+-- `ref.parametre_fiscal_texte`, qui n'a jamais existé.
+--
+-- Le moteur fiscal lit `ref.fiscal_parameters` et `ref.fiscal_scale_brackets`
+-- par le socle (@malica/socle), pas par ces deux fonctions ; les tables restent.
+-- Les clés `refus.referentiel.parametre_fiscal_absent`, `…_non_etabli` et
+-- `refus.referentiel.bareme_absent` restent dans les messages : la migration de
+-- retour ci-dessous les lève de nouveau.
+--
+-- _Gardé par_ apps/api/src/la-base-tient-son-integrite.test.ts, « aucune
+-- fonction exécutable par PUBLIC que rien n'appelle ».
+
+drop function if exists ref.parametre_fiscal(text, text, date);
+drop function if exists ref.appliquer_bareme(text, text, date, numeric);
+
+-- ================================================================== RETOUR
+--
+-- La migration de retour, à jouer telle quelle (sans les « -- » de tête). Les
+-- définitions sont celles que rend pg_get_functiondef sur une base montée
+-- jusqu'à 20261202130000, octet pour octet ; leur droit d'exécution redevient
+-- le défaut (PUBLIC), comme avant.
+--
+-- CREATE OR REPLACE FUNCTION ref.parametre_fiscal(p_jurisdiction text, p_code text, p_date date)
+--  RETURNS numeric
+--  LANGUAGE plpgsql
+--  STABLE
+-- AS $function$
+-- declare r record;
+-- begin
+--   select * into r from ref.fiscal_parameters
+--    where jurisdiction = p_jurisdiction and code = p_code
+--      and valid_from <= p_date and (valid_to is null or valid_to > p_date);
+--
+--   if not found then
+--     raise exception
+--       '%', app.refus_avec_valeurs('refus.referentiel.parametre_fiscal_absent', 'code', (p_code)::text, 'juridiction', (p_jurisdiction)::text, 'date', (p_date)::text)
+--       using errcode = 'no_data_found';
+--   end if;
+--
+--   if r.confiance = 'non_trouve' then
+--     raise exception
+--       '%', app.refus_avec_valeurs('refus.referentiel.parametre_fiscal_non_etabli', 'code', (p_code)::text, 'note', (coalesce(r.note,''))::text)
+--       using errcode = 'no_data_found';
+--   end if;
+--
+--   if r.valeur_num is null then
+--     raise exception
+--       'Paramètre fiscal % n''est pas une valeur calculable (forme = %). Utilisez ref.parametre_fiscal_texte.',
+--       p_code, r.forme
+--       using errcode = 'wrong_object_type';
+--   end if;
+--
+--   return r.valeur_num;
+-- end $function$
+-- ;
+-- comment on function ref.parametre_fiscal(text,text,date) is
+--   'Résout un paramètre à la DATE DE LA PIÈCE, jamais à la date du jour. Une facture du 15 janvier est jugée par la règle en vigueur le 15 janvier, même si le paramètre a été chargé en mars.';
+--
+-- CREATE OR REPLACE FUNCTION ref.appliquer_bareme(p_jurisdiction text, p_code text, p_date date, p_base numeric)
+--  RETURNS numeric
+--  LANGUAGE plpgsql
+--  STABLE
+-- AS $function$
+-- declare n int; bas numeric; total numeric;
+-- begin
+--
+--   with tr as (
+--     select b.ordre, b.taux, b.borne_max,
+--            coalesce(lag(b.borne_max) over (order by b.ordre), 0) as seuil_bas
+--     from ref.fiscal_scale_brackets b
+--     join ref.fiscal_parameters p
+--       on p.code = b.parameter_code and p.jurisdiction = b.jurisdiction
+--      and p.valid_from = b.valid_from
+--     where b.jurisdiction = p_jurisdiction and b.parameter_code = p_code
+--       and p.valid_from <= p_date and (p.valid_to is null or p.valid_to > p_date)
+--   )
+--   select count(*), min(seuil_bas),
+--          coalesce(sum(greatest(0, least(p_base, coalesce(borne_max, p_base)) - seuil_bas) * taux), 0)
+--     into n, bas, total
+--   from tr;
+--
+--   if n = 0 then
+--     raise exception '%', app.refus_avec_valeurs('refus.referentiel.bareme_absent', 'code', (p_code)::text, 'date', (p_date)::text, 'juridiction', (p_jurisdiction)::text)
+--       using errcode = 'no_data_found';
+--   end if;
+--
+--   -- Un barème dont la première tranche ne part pas de zéro est incomplet.
+--   -- Calculer dessus produirait un impôt faux, et personne ne le verrait.
+--   if bas <> 0 then
+--     raise exception
+--       'Barème % incomplet : la première tranche démarre à % au lieu de 0. Aucun calcul n''est effectué.',
+--       p_code, bas
+--       using errcode = 'data_exception';
+--   end if;
+--
+--   return total;
+-- end $function$
+-- ;
+-- comment on function ref.appliquer_bareme(text,text,date,numeric) is
+--   'Barème progressif par tranches. N''applique aucun arrondi : la règle d''arrondi est un paramètre distinct (IRPP_ARRONDI), parce qu''elle peut changer sans que le barème change.';
+-- delete from app.migrations where nom = '20261202150400_les_fonctions_fiscales_sans_appelant_se_retirent.sql';

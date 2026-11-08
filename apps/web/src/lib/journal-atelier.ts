@@ -21,6 +21,10 @@
  */
 import { versionClient } from "@/capabilities/coque";
 
+// Statique : la racine l'importe déjà pour la frontière d'erreur, un import
+// à la demande ne découpait rien (avertissement INEFFECTIVE_DYNAMIC_IMPORT).
+import { expurger } from "./rapport-plantage";
+
 /** Ce qu'on a déjà rapporté : une boucle de rendu ne doit pas noyer le journal. */
 const dejaVu = new Set<string>();
 
@@ -134,8 +138,8 @@ function consignerEnBase(ou: string, message: string, pile: string, code: string
  * de client, et c'est la limite connue de `rapport-plantage.ts`.
  */
 function consignerHorsDossier(ou: string, message: string, code: string): void {
-  void Promise.all([import("@/verticals/malica-office/composition"), import("./rapport-plantage")])
-    .then(([{ office }, { expurger }]) =>
+  void import("@/verticals/malica-office/composition")
+    .then(({ office }) =>
       office().journal.consignerHorsDossier({
         ou: expurger(ou).slice(0, 200) || "inconnu",
         code: code.slice(0, 100),

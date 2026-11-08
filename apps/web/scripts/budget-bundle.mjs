@@ -6,9 +6,17 @@
  *
  * Deux nombres, deux plafonds :
  *   - le JavaScript initial (l'entrée et ce que index.html précharge), gzippé :
- *     350 Ko — au-delà, le démarrage à froid sur un Tecno dépasse 3,5 s ;
+ *     200 Ko. Le démarrage à froid sur un Tecno dépasse 3,5 s au-delà de
+ *     350 Ko ; le lot P (7 novembre 2026) l'a ramené de 250 à 132 Ko — le
+ *     dictionnaire français et les feuilles des espaces n'y sont plus. Les
+ *     deux paquets de dictionnaire de la langue (base et espaces, 70 à 80 Ko,
+ *     `i18n/dictionnaires.ts`) se chargent au démarrage sans être préchargés
+ *     ici : 200 Ko laissent leur place sous l'ancien plafond, et un retour en
+ *     arrière se voit ;
  *   - le bundle entier tel que Capgo l'envoie (tout .output/public, gzippé
- *     fichier par fichier) : 3 Mo — au-delà, une mise à jour en 3G se coupe.
+ *     fichier par fichier) : 2,5 Mo — au-delà, une mise à jour en 3G se coupe
+ *     à 3 Mo ; le lot P l'a ramené de 2 459 à 2 193 Ko (les `.woff` hérités,
+ *     jamais lus par la WebView, n'y sont plus).
  *
  * Le script échoue si un plafond est dépassé : la CI le dit avant Play.
  */
@@ -19,8 +27,8 @@ import { join, relative } from "node:path";
 const RACINE = new URL("../.output/public/", import.meta.url);
 const PUBLIC = decodeURIComponent(RACINE.pathname.replace(/^\/([A-Za-z]:)/, "$1"));
 
-const PLAFOND_INITIAL = 350 * 1024;
-const PLAFOND_BUNDLE = 3 * 1024 * 1024;
+const PLAFOND_INITIAL = 200 * 1024;
+const PLAFOND_BUNDLE = 2.5 * 1024 * 1024;
 
 const gz = (chemin) => gzipSync(readFileSync(chemin)).length;
 const ko = (n) => `${(n / 1024).toFixed(0)} Ko`;

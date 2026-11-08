@@ -205,12 +205,19 @@ export interface IdentityRepository {
   monProfil(): Promise<MonProfil | null>;
   /** Un champ vide s'efface ; la base compose « Prénom Nom ». */
   ecrireMonProfil(prenom: string | null, nom: string | null): Promise<MonProfil | null>;
+  /** Le côté du bouton « + » (planche 5) ; il suit le compte, sur tous les appareils. */
+  ecrireCoteDuPlus(cote: CoteDuPlus): Promise<CoteDuPlus>;
 }
+
+/** Le côté du bouton « + » : sous le pouce droit (par défaut) ou gauche. */
+export type CoteDuPlus = "gauche" | "droite";
 
 export interface MonProfil {
   prenom: string | null;
   nom: string | null;
   display_name: string | null;
+  /** Le côté du « + » (planche 5, 7 novembre 2026). */
+  cote_du_plus: CoteDuPlus;
 }
 
 export type StatutInvitation = "en_attente" | "acceptee" | "expiree" | "revoquee";
@@ -1449,9 +1456,23 @@ export interface CandidatAuJustificatif {
   tiers: string | null;
 }
 
+/**
+ * Le rangement d'un papier de l'espace privé (planche 10) : un rayon (un code
+ * proposé, ou le nom d'un rayon à soi) et, s'il y en a un, son nom.
+ */
+export interface RangementPrive {
+  pieceId: string;
+  rayon: string;
+  nom: string | null;
+}
+
 export interface CaptureRepository {
   /** Son Mon espace hors des sociétés quittées : il part avec son compte (lot 4). */
   monEspaceHorsSociete(): Promise<PieceDeMonEspace[]>;
+  /** Les rangements de son espace privé dans cette société ; à soi seul (planche 10). */
+  mesRangementsPrives(tenantId: string): Promise<RangementPrive[]>;
+  /** Ranger un papier privé dont on est l'auteur : son rayon, et son nom s'il en a un. */
+  rangerPrive(pieceId: string, rayon: string, nom: string | null): Promise<RangementPrive>;
   /**
    * Les deux pas d'un dépôt, séparés pour que la file hors ligne reprenne
    * entre les deux : la ligne d'abord (même clé → même pièce), les octets
@@ -1476,6 +1497,14 @@ export interface CaptureRepository {
    * un mois qui peut en compter cinquante.
    */
   listAvecLecture(tenantId: string): Promise<PieceLue[]>;
+  /**
+   * Les pièces de PLUSIEURS sociétés en un aller-retour, une entrée par
+   * société demandée (vide si l'appelant n'y voit rien), dans l'ordre demandé.
+   * La bibliothèque d'un propriétaire de cent sociétés faisait cent appels.
+   */
+  listAvecLectureDesSocietes(
+    tenantIds: readonly string[],
+  ): Promise<Array<{ tenantId: string; pieces: PieceLue[] }>>;
   /**
    * Inscrire un paiement sur une pièce. Append-only (R7).
    *
@@ -1949,6 +1978,10 @@ export interface OfficeRepository {
   rattacherLaFacture(pieceId: string, factureId: string): Promise<PropositionDePiece>;
   /** Les factures comptabilisées du même dossier et du même sens, pour un avoir. */
   facturesARattacher(pieceId: string): Promise<FactureARattacher[]>;
+  /** La facture identique déjà comptabilisée dans le dossier, ou rien. */
+  dejaComptabilisee(
+    pieceId: string,
+  ): Promise<{ pieceId: string; numero: string; ttc: string | null } | null>;
   /**
    * SAISIR LE COURS d'une pièce en devise, en un geste : le cours que son
    * jugement demande (ou sa correction au même jour), pour l'organisation
@@ -2152,10 +2185,17 @@ export interface QueueItem {
   dateEcriture: string | null;
   /** La somme des débits de l'écriture comptabilisée, posée par le Socle. */
   montant: string | null;
+  /**
+   * Le TTC de la dernière lecture jugée, tant qu'aucune écriture ne porte de
+   * montant : la file ne montre plus « — » pour une pièce lue (7 novembre 2026).
+   */
+  montantLu: string | null;
   /** L'adresse du collaborateur affecté au client, s'il y en a un. */
   collaborateur: string | null;
   /** La confiance globale de la dernière lecture (0..1), ou rien si elle n'a pas été mesurée. */
   confiance: number | null;
+  /** Le verdict de la dernière analyse : il dit si une écriture peut se proposer. */
+  verdict?: string | null;
   /**
    * Ce que la PME demande sur cette pièce, et qui attend le cabinet.
    *
@@ -2962,6 +3002,8 @@ export interface CollabRepository {
   stats(tenantIds: string[]): Promise<ClientStats[]>;
   notifications(tenantIds: string[]): Promise<Notification[]>;
   markRead(id: string): Promise<void>;
+  /** « Tout lire » : la même lecture, pour une liste (500 au plus). */
+  markAllRead(ids: string[]): Promise<void>;
   echeances(tenantIds: string[], locale?: string): Promise<Echeance[]>;
   /** Dériver le calendrier de chaque dossier depuis le pack ; idempotent. */
   deriverEcheances(tenantIds: string[]): Promise<DerivationEcheances[]>;
@@ -3875,6 +3917,17 @@ export interface SiegeDeLaLicence {
 }
 
 /** Une organisation de la licence, et ce qu'elle a consommé ce mois-ci. */
+/** Ce que la liste des sociétés montre de chacune (planche 4). */
+export interface FicheDeSociete {
+  tenantId: string;
+  /** Le code de l'offre, `null` sans licence lisible. */
+  offre: string | null;
+  /** Le cabinet au mandat actif, `null` s'il n'y en a pas. */
+  cabinet: string | null;
+  /** Son identifiant : le dossier « Votre comptabilité » (planche 6) le regroupe. */
+  cabinetId: string | null;
+}
+
 export interface OrganisationDeLaLicence {
   tenant_id: string;
   nom: string;
@@ -3907,6 +3960,15 @@ export interface FacturationRepository {
   sieges(tenantId?: string): Promise<SiegeDeLaLicence[]>;
   /** Les sociétés de la licence qui couvre la société ouverte, elle en tête. */
   organisations(tenantId?: string): Promise<OrganisationDeLaLicence[]>;
+  /**
+   * Les sociétés des licences qui couvrent plusieurs sociétés de l'appelant,
+   * en un aller-retour : une licence n'est lue qu'une fois. Sans doublon.
+   */
+  organisationsDesSocietes(tenantIds: readonly string[]): Promise<OrganisationDeLaLicence[]>;
+  /** Les sièges vus depuis plusieurs sociétés, en un aller-retour. Sans doublon. */
+  siegesDesSocietes(tenantIds: readonly string[]): Promise<SiegeDeLaLicence[]>;
+  /** L'offre et le cabinet de chaque société, en un appel (planche 4). Ni prix ni paiement. */
+  fichesDesSocietes(tenantIds: readonly string[]): Promise<FicheDeSociete[]>;
   inviterSiege(
     email: string,
     tenantId: string,
@@ -4480,6 +4542,35 @@ export interface PassageDeNuit {
   };
 }
 
+/** Un maillon de la chaîne de désignation, tel que la tour le voit. */
+export interface MaillonDeLaDesignation {
+  rang: 1 | 2;
+  fournisseur: "anthropic" | "deepseek";
+  modele: string;
+  role: string;
+  periode: "jour" | "mois";
+  plafond: number;
+  depense: number;
+  epuise: boolean;
+  motif: string;
+  decide_le: string;
+}
+
+/** La chaîne de désignation, ses choix possibles et ses dernières bascules. */
+export interface EtatDeLaDesignation {
+  maillons: MaillonDeLaDesignation[];
+  modeles: Array<{
+    fournisseur: "anthropic" | "deepseek";
+    modele: string;
+    role: string;
+    prix_entree: number;
+    prix_sortie: number;
+  }>;
+  bascules: Array<{ le: string; modele: string; statut: "error" | "degraded"; motif: string }>;
+  /** Le mois civil : pièces lues sans IA (le Sudoku d'abord) et pièces désignées par un modèle. */
+  mois: { sans_ia: number; par_modele: number };
+}
+
 export interface TourRepository {
   suisJePlateforme(): Promise<boolean>;
   /** Tous les cabinets et toutes les PME, avec ou sans cabinet : des compteurs et des états. */
@@ -4590,6 +4681,21 @@ export interface TourRepository {
   } | null>;
   /** La tour règle le plafond IA : daté et motivé ; rien ne se réécrit (ANO-029). */
   reglerIa(plafondUsd: string, motif: string): Promise<unknown>;
+  /**
+   * La chaîne de désignation (décision du 8 novembre 2026) : Claude au rang 1,
+   * DeepSeek au rang 2, leurs plafonds et dépenses de la période, les modèles
+   * tarifés qu'on peut y mettre, et les dernières bascules.
+   */
+  designation(): Promise<EtatDeLaDesignation>;
+  /** La tour règle un rang de la chaîne : modèle, période, plafond. Daté, motivé, en ajout seul. */
+  reglerDesignation(
+    rang: 1 | 2,
+    modele: string,
+    role: string,
+    periode: "jour" | "mois",
+    plafondUsd: string,
+    motif: string,
+  ): Promise<unknown>;
   /** Les relances d'impayé en vigueur ; `null` tant que la tour n'a rien décidé (fermées). */
   reglageRelances(): Promise<{
     actives: boolean;

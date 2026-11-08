@@ -42,7 +42,7 @@ import { remplirLeGabarit } from "@malica/socle/gabarit";
 import { lireUnRefus } from "@malica/socle/refus-a-dire";
 
 import { localeRangee } from "@/i18n";
-import { dictionnaireCharge, DICTIONNAIRE_DE_REPLI } from "@/i18n/dictionnaires";
+import { dictionnaireCharge, dictionnaireDeRepli } from "@/i18n/dictionnaires";
 
 import { noterAuJournal } from "./journal-atelier";
 import { ErreurApi, ErreurReseau } from "./transport/erreurs";
@@ -63,7 +63,10 @@ function dictionnaire(): Record<string, string> {
   } catch {
     charge = undefined;
   }
-  return (charge ?? DICTIONNAIRE_DE_REPLI) as Record<string, string>;
+  // Le français n'est plus dans le paquet initial (`i18n/dictionnaires.ts`),
+  // mais l'écran ne s'hydrate qu'une fois une langue chargée : le dictionnaire
+  // vide n'est qu'une garde : on y dit la clé plutôt que de lever.
+  return (charge ?? dictionnaireDeRepli() ?? {}) as Record<string, string>;
 }
 
 /** Une référence courte, à citer : huit chiffres hexadécimaux. */
@@ -77,7 +80,7 @@ function nouvelleReference(): string {
 
 /** La phrase prévue, suivie de sa référence. */
 function avecReference(defaut: string, ref: string): string {
-  return `${defaut} ${remplirLeGabarit(dictionnaire()["common.erreur.reference"]!, { ref })}`;
+  return `${defaut} ${remplirLeGabarit(dictionnaire()["common.erreur.reference"] ?? "common.erreur.reference", { ref })}`;
 }
 
 /** La phrase d'une clé connue du dictionnaire, ou `null`. */
@@ -103,7 +106,8 @@ const references = new WeakMap<object, string>();
 export function texteDeLErreur(raison: unknown, ou: string, defaut: string): string {
   // Pas de réseau n'est pas une panne : on le dit, sans l'inscrire au journal —
   // le journal ne dirait rien qu'on ne sache déjà.
-  if (raison instanceof ErreurReseau) return dictionnaire()["common.horsLigne"]!;
+  if (raison instanceof ErreurReseau)
+    return dictionnaire()["common.horsLigne"] ?? "common.horsLigne";
   /*
    * Un refus de notre API (4xx) lève une CLÉ du dictionnaire (« refus.licence.
    * transmission ») : on la dit dans la langue de la personne, avec les
@@ -138,7 +142,7 @@ export function direUnRefus(message: string): string {
   const reste = ref === undefined ? message : message.slice(ref.length + 7);
   const phrase = phraseDeLaCle(reste);
   if (phrase !== null) return phrase;
-  const defaut = dictionnaire()["common.error"]!;
+  const defaut = dictionnaire()["common.error"] ?? "common.error";
   return ref === undefined ? defaut : avecReference(defaut, ref);
 }
 
