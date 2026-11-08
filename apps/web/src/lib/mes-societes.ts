@@ -14,7 +14,7 @@ export interface Ligne {
   enRetard: number;
 }
 
-export const CLE_EPINGLEES = "malica.societes.epinglees";
+const CLE_EPINGLEES = "malica.societes.epinglees";
 
 export function epinglees(): string[] {
   try {
