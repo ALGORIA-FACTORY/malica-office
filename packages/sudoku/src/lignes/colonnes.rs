@@ -695,12 +695,17 @@ pub(super) fn douter_des_bords(
     let mot = Regex::new(r"\p{L}{3,}").expect("motif");
     let hauteur = |i: usize| (jetons[i].y1 - jetons[i].y0).max(f64::EPSILON);
     let chiffres_de = |l: &LigneSortie| -> Vec<usize> {
-        [l.quantite.as_ref(), l.prix.as_ref(), l.remise.as_ref(), Some(&l.montant)]
-            .into_iter()
-            .flatten()
-            .flat_map(|c| c.refs.iter())
-            .filter_map(jeton_de)
-            .collect()
+        [
+            l.quantite.as_ref(),
+            l.prix.as_ref(),
+            l.remise.as_ref(),
+            Some(&l.montant),
+        ]
+        .into_iter()
+        .flatten()
+        .flat_map(|c| c.refs.iter())
+        .filter_map(jeton_de)
+        .collect()
     };
     let chiffres: Vec<Vec<usize>> = instances.iter().map(chiffres_de).collect();
     let centre = |i: usize| (jetons[i].y0 + jetons[i].y1) / 2.0;
@@ -725,17 +730,20 @@ pub(super) fn douter_des_bords(
             .enumerate()
             .filter(|(m, _)| *m != n)
             .flat_map(|(_, c)| c.iter().copied())
-            .chain(fortes.iter().copied().filter(|&i| {
-                !propres.contains(&i) && !(centre(i) >= c0 && centre(i) <= c1)
-            }))
+            .chain(
+                fortes
+                    .iter()
+                    .copied()
+                    .filter(|&i| !propres.contains(&i) && !(centre(i) >= c0 && centre(i) <= c1)),
+            )
             .collect();
         // un texte plus proche des chiffres d'une autre rangée que des siens est à elle
         let a_une_autre_rangee = |i: usize| {
             let soi = ((c0 + c1) / 2.0 - centre(i)).abs();
             !propres.is_empty()
-                && ailleurs
-                    .iter()
-                    .any(|&k| jetons[k].page == jetons[i].page && (centre(k) - centre(i)).abs() < soi)
+                && ailleurs.iter().any(|&k| {
+                    jetons[k].page == jetons[i].page && (centre(k) - centre(i)).abs() < soi
+                })
         };
         let ids: Vec<usize> = d.refs.iter().filter_map(jeton_de).collect();
         let Some(&premier) = ids.first() else {
@@ -756,29 +764,31 @@ pub(super) fn douter_des_bords(
                 && j.x1.min(x1) - j.x0.max(x0) > 0.0
                 && (centre < y0 && y0 - j.y1 <= 0.5 * h || centre > y1 && j.y0 - y1 <= 0.5 * h)
         };
-        let bord = (0..jetons.len()).filter(|&i| !cites.contains(&i) && colle(i)).any(|i| {
-            if jetons[i].montants.iter().any(|m| m.forte)
-                || !mot.is_match(&jetons[i].texte)
-                || a_une_autre_rangee(i)
-            {
-                return false;
-            }
-            // la ligne du jeton : les jetons non cités de la page qui la recouvrent
-            let j = &jetons[i];
-            let mut ligne: Vec<usize> = (0..jetons.len())
-                .filter(|&k| {
-                    let t = &jetons[k];
-                    t.page == j.page
-                        && !cites.contains(&k)
-                        && t.y1.min(j.y1) - t.y0.max(j.y0) > 0.5 * hauteur(k).min(hauteur(i))
-                })
-                .collect();
-            ligne.sort_by(|&a, &b| jetons[a].x0.total_cmp(&jetons[b].x0));
-            let libelle = ligne
-                .iter()
-                .any(|&k| libelles.contains(&cle(&jetons[k].texte)));
-            !libelle && super::ouvre_un_autre_champ(jetons, &ligne, &autres).is_none()
-        });
+        let bord = (0..jetons.len())
+            .filter(|&i| !cites.contains(&i) && colle(i))
+            .any(|i| {
+                if jetons[i].montants.iter().any(|m| m.forte)
+                    || !mot.is_match(&jetons[i].texte)
+                    || a_une_autre_rangee(i)
+                {
+                    return false;
+                }
+                // la ligne du jeton : les jetons non cités de la page qui la recouvrent
+                let j = &jetons[i];
+                let mut ligne: Vec<usize> = (0..jetons.len())
+                    .filter(|&k| {
+                        let t = &jetons[k];
+                        t.page == j.page
+                            && !cites.contains(&k)
+                            && t.y1.min(j.y1) - t.y0.max(j.y0) > 0.5 * hauteur(k).min(hauteur(i))
+                    })
+                    .collect();
+                ligne.sort_by(|&a, &b| jetons[a].x0.total_cmp(&jetons[b].x0));
+                let libelle = ligne
+                    .iter()
+                    .any(|&k| libelles.contains(&cle(&jetons[k].texte)));
+                !libelle && super::ouvre_un_autre_champ(jetons, &ligne, &autres).is_none()
+            });
         // la ligne qui CONTINUE à côté d'un mot de la désignation : des mots laissés hors
         // de l'étendue de la ligne principale (« Location de salle [de réunion, demi-]
         // journée », algoria-069, la ligne principale étant la plus courte)
@@ -789,7 +799,9 @@ pub(super) fn douter_des_bords(
                     && t.page == page
                     && !t.montants.iter().any(|m| m.forte)
                     && t.texte.chars().filter(|c| c.is_alphabetic()).count() >= 2
-                    && !libelles.iter().any(|x| cle(&t.texte).starts_with(x.as_str()))
+                    && !libelles
+                        .iter()
+                        .any(|x| cle(&t.texte).starts_with(x.as_str()))
                     && ids.iter().any(|&i| {
                         let j = &jetons[i];
                         t.y1.min(j.y1) - t.y0.max(j.y0) > 0.5 * hauteur(k).min(hauteur(i))
