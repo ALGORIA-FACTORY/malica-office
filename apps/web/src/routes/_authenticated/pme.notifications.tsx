@@ -96,7 +96,9 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
+
+import type { Notification } from "@malica/socle/ports/repositories";
 
 import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
@@ -105,6 +107,7 @@ import { useI18n } from "@/i18n";
 import { laReponseAEffaceLaPiece } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { jourOuInstant } from "@/lib/lisible";
+import { compteurs, sourceDe, trier, type Onglet } from "@/lib/tri-des-notifications";
 import { chaine, cleDuGenre, detailDe, seMontreIci } from "@/lib/libelle-de-notification";
 import { CIBLE_COQUE } from "@/capabilities/coque";
 import { office } from "@/verticals/malica-office/composition";
@@ -140,10 +143,20 @@ function PmeNotifications() {
   const navigate = useNavigate();
   const revenir = useRevenir();
 
-  /** Les deux faces de la boite : ce qui attend un geste, et tout. */
-  const [onglet, setOnglet] = useState<"attente" | "tout">("attente");
+  /*
+   * PLANCHE 2 (approuvée le 7 novembre 2026) : quatre onglets, une société ou
+   * toutes, les non lues seules si l'on veut. Par défaut : ce qui attend un
+   * geste, toutes sociétés — ce que compte la pastille de la cloche.
+   */
+  const [onglet, setOnglet] = useState<Onglet>("aTraiter");
+  const [societe, setSociete] = useState<string | null>(null);
+  const [nonLuesSeulement, setNonLuesSeulement] = useState(false);
+  const [ouverts, setOuverts] = useState<ReadonlySet<string>>(new Set());
 
   const societes = pme.dossiers.length > 0 ? pme.dossiers.map((d) => d.id) : [pme.tenantId];
+  const plusieurs = pme.dossiers.length > 1;
+  const nomDe = (id: string) => pme.dossiers.find((d) => d.id === id)?.name ?? null;
+
   const notifs = useQuery({
     /*
      * TOUTES les sociétés de la personne, comme la cloche qui mène ici : une
@@ -154,39 +167,46 @@ function PmeNotifications() {
     queryFn: () => office().collab.notifications(societes),
   });
 
-  const read = useMutation({
-    mutationFn: (id: string) => office().collab.markRead(id),
-    // Le préfixe : la liste de cet écran ET la cloche de l'en-tête.
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  /*
+   * Lire se voit AUSSITÔT : la ligne passe en lue avant la réponse du
+   * serveur, et revient si le serveur refuse. Le préfixe `notifications`
+   * rafraîchit ensuite cet écran ET la cloche.
+   */
+  const cle = ["notifications", "toutes", ...societes];
+  const lire = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (let i = 0; i < ids.length; i += 500)
+        await office().collab.markAllRead(ids.slice(i, i + 500));
+    },
+    onMutate: async (ids) => {
+      await qc.cancelQueries({ queryKey: cle });
+      const avant = qc.getQueryData<Notification[]>(cle);
+      const maintenant = new Date().toISOString();
+      const lues = new Set(ids);
+      qc.setQueryData<Notification[]>(cle, (l) =>
+        l?.map((n) => (lues.has(n.id) && !n.readAt ? { ...n, readAt: maintenant } : n)),
+      );
+      return { avant };
+    },
+    onError: (_e, _ids, ctx) => {
+      if (ctx?.avant) qc.setQueryData(cle, ctx.avant);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
-  /*
-   * La réponse du cabinet à une demande se dit avec son objet et son verdict
-   * (audit du 25 octobre 2026) : « a répondu » seul ne disait ni oui ni non.
-   */
   const kindLabel = (kind: string, payload: Record<string, unknown> = {}) =>
     t(cleDuGenre(kind, payload));
 
   // Dans la coque, rien ne parle d'abonnement (`seMontreIci`).
   const rows = (notifs.data ?? []).filter((n) => seMontreIci(n.kind, CIBLE_COQUE));
-  /** Non lue : elle demande encore quelque chose. C'est une carte. */
-  const attente = rows.filter((n) => !n.readAt);
-  /** Lues, et ce sont des avis : le volet que le dessin appelle « Ses avis ». */
-  const avis = rows.filter((n) => n.readAt !== null && n.kind.startsWith("conseil."));
-  /** Lues, et ce ne sont pas des avis : elles ne demandent plus rien. */
-  const classees = rows.filter((n) => n.readAt !== null && !n.kind.startsWith("conseil."));
-  const panne = notifs.error ?? read.error;
+  const nombres = compteurs(rows, societe);
+  const sections = trier(rows, { onglet, societe, nonLuesSeulement });
+  const nonLuesIci = sections.flatMap((s) =>
+    s.groupes.flatMap((g) => g.elements.filter((n) => !n.readAt).map((n) => n.id)),
+  );
+  const panne = notifs.error ?? lire.error;
 
-  /** L'instant, pour l'en-tete d'une carte : le mono du dessin le porte. */
-  const instant = (iso: string) =>
-    new Intl.DateTimeFormat(locale, {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(iso));
-
-  /** Le jour seul, pour la colonne de droite d'une ligne. */
+  /** Le jour, ou l'heure si c'est aujourd'hui. */
   const jour = (iso: string) => jourOuInstant(iso, locale, { day: "2-digit", month: "short" });
 
   /**
@@ -199,26 +219,24 @@ function PmeNotifications() {
   };
 
   /**
-   * Le geste que le CABINET demande, et rien d'autre : ouvrir la piece dont
-   * il parle, ou aller repondre au mandat qu'il propose. Sans destination,
-   * `null` - la carte garde son seul accuse de lecture.
+   * Le geste que l'alerte demande, et rien d'autre : ouvrir la pièce dont
+   * elle parle, ou aller répondre au mandat proposé. Sans destination,
+   * `null` — la ligne garde son seul « Lu ».
    */
   const gesteDe = (
     kind: string,
     payload: Record<string, unknown>,
-    societe: string,
+    tenantId: string,
   ): { libelle: string; aller: () => void } | null => {
-    /*
-     * La fiche d'une pièce et le mandat se lisent sur la société OUVERTE :
-     * une alerte d'une autre société ouvre d'abord la sienne.
-     */
+    // La fiche d'une pièce et le mandat se lisent sur la société OUVERTE :
+    // une alerte d'une autre société ouvre d'abord la sienne.
     const dabord = () => {
-      if (societe !== pme.tenantId) pme.choisirDossier(societe);
+      if (tenantId !== pme.tenantId) pme.choisirDossier(tenantId);
     };
     const pieceId = pieceDe(kind, payload);
     if (pieceId) {
       return {
-        libelle: t("pme.notifs.open"),
+        libelle: kind === "piece.demande" ? t("pme.notifs.repondre") : t("pme.notifs.open"),
         aller: () => {
           dabord();
           void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
@@ -237,13 +255,78 @@ function PmeNotifications() {
     return null;
   };
 
+  /** Ce qui se lit sous le titre : le détail, la société si on les voit toutes, le jour. */
+  const sousTitre = (n: Notification) => {
+    const payload = (n.payload ?? {}) as Record<string, unknown>;
+    const detail = detailDe(n.kind, payload);
+    const cite = n.kind === "piece.retournee" || n.kind === "piece.demande_tranchee";
+    return [
+      detail ? (cite ? `« ${detail} »` : detail) : null,
+      plusieurs && societe === null ? nomDe(n.tenantId) : null,
+      jour(n.createdAt),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  };
+
+  const basculer = (cleGroupe: string) =>
+    setOuverts((o) => {
+      const n = new Set(o);
+      if (n.has(cleGroupe)) n.delete(cleGroupe);
+      else n.add(cleGroupe);
+      return n;
+    });
+
+  /** Une alerte : son signe, son titre, ce qu'elle dit, ses gestes. */
+  const ligne = (n: Notification) => {
+    const payload = (n.payload ?? {}) as Record<string, unknown>;
+    const geste = gesteDe(n.kind, payload, n.tenantId);
+    const piece = pieceDe(n.kind, payload);
+    return (
+      <Glissable key={n.id} actif={!n.readAt} onLu={() => lire.mutate([n.id])}>
+        <div className="nt" data-lue={n.readAt ? "" : undefined}>
+          <span className="sg" data-source={sourceDe(n.kind)} aria-hidden>
+            {piece ? (
+              <ApercuDePiece pieceId={piece} className="vignette" />
+            ) : (
+              <IconeDe kind={n.kind} />
+            )}
+          </span>
+          <span className="bd">
+            <b>{kindLabel(n.kind, payload)}</b>
+            <span>{sousTitre(n)}</span>
+          </span>
+          <span className="ac">
+            {geste ? (
+              <button type="button" onClick={geste.aller}>
+                {geste.libelle}
+              </button>
+            ) : null}
+            {!n.readAt ? (
+              <button
+                type="button"
+                className="lu"
+                aria-label={t("pme.notifs.markRead")}
+                onClick={() => lire.mutate([n.id])}
+              >
+                <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                  <path d="M5 12.5l4.5 4.5L19 7.5" />
+                </svg>
+              </button>
+            ) : null}
+          </span>
+        </div>
+      </Glissable>
+    );
+  };
+
   return (
     <div
       data-ecran="notifications"
       data-famille="papiers"
       className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col"
     >
-      {/* ── la barre du haut ───────────────────────────────────────────── */}
+      {/* ── la barre du haut : retour, titre, « Tout lire » ─────────────── */}
       <div className="top">
         <button
           type="button"
@@ -256,42 +339,70 @@ function PmeNotifications() {
           </svg>
         </button>
         <span className="ttl">{t("pme.notifs.title")}</span>
-        <span className="ic" aria-hidden>
-          <IconeCabinet />
-        </span>
+        <button
+          type="button"
+          className="tl"
+          disabled={nonLuesIci.length === 0 || lire.isPending}
+          onClick={() => lire.mutate(nonLuesIci)}
+        >
+          {t("pme.notifs.toutLire")}
+        </button>
       </div>
 
       <div className="pad">
-        {/*
-         * Le titre dit ou l'on en est - c'est la phrase que la voix de Malica
-         * portait avant, au mot pres. Le sous-titre dit ce qu'est la boite.
-         */}
-        <h1>
-          {rows.length === 0
-            ? t("pme.notifs.voice.empty")
-            : attente.length === 0
-              ? t("pme.notifs.voice.clear")
-              : t("pme.notifs.voice.unread", { count: attente.length })}
-        </h1>
-        <p className="sub">{t("pme.notifications.sous")}</p>
+        {/* ── les quatre onglets ─────────────────────────────────────── */}
+        <div className="seg ong" role="tablist">
+          {(
+            [
+              ["aTraiter", t("pme.notifs.onglet.aTraiter")],
+              ["comptabilite", t("pme.notifs.onglet.comptabilite")],
+              ["malica", t("pme.notifs.onglet.malica")],
+              ["tout", t("cab.plan.filter.tout")],
+            ] as const
+          ).map(([cleOnglet, libelle]) => (
+            <button
+              key={cleOnglet}
+              type="button"
+              role="tab"
+              className={onglet === cleOnglet ? "on" : undefined}
+              aria-selected={onglet === cleOnglet}
+              onClick={() => setOnglet(cleOnglet)}
+            >
+              {libelle}
+              {(cleOnglet === "aTraiter" || cleOnglet === "tout") && nombres[cleOnglet] > 0 ? (
+                <em>{nombres[cleOnglet] > 99 ? "99+" : nombres[cleOnglet]}</em>
+              ) : null}
+            </button>
+          ))}
+        </div>
 
-        {/* ── les deux faces ─────────────────────────────────────────── */}
-        <div className="seg">
+        {/* ── la société, et les non lues seules ─────────────────────── */}
+        <div className="flt">
+          {plusieurs ? (
+            <label className="soc">
+              <span className="sr-only">{t("pme.notifs.societe")}</span>
+              <select
+                value={societe ?? ""}
+                onChange={(e) => setSociete(e.target.value === "" ? null : e.target.value)}
+              >
+                <option value="">{t("pme.notifs.toutesSocietes")}</option>
+                {[...pme.dossiers]
+                  .sort((a, b) => a.name.localeCompare(b.name, locale))
+                  .map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          ) : null}
           <button
             type="button"
-            className={onglet === "attente" ? "on" : undefined}
-            aria-pressed={onglet === "attente"}
-            onClick={() => setOnglet("attente")}
+            className="chip"
+            aria-pressed={nonLuesSeulement}
+            onClick={() => setNonLuesSeulement((v) => !v)}
           >
-            {t("pme.notifications.ongletAttente")}
-          </button>
-          <button
-            type="button"
-            className={onglet === "tout" ? "on" : undefined}
-            aria-pressed={onglet === "tout"}
-            onClick={() => setOnglet("tout")}
-          >
-            {t("cab.plan.filter.tout")}
+            {t("pme.notifs.nonLues")}
           </button>
         </div>
 
@@ -302,9 +413,13 @@ function PmeNotifications() {
         ) : null}
 
         {notifs.isPending ? (
-          <p className="sub">{t("common.loading")}</p>
+          <div className="squel" aria-busy="true" aria-label={t("common.loading")}>
+            <i />
+            <i />
+            <i />
+          </div>
         ) : notifs.isError ? null : rows.length === 0 ? (
-          /* La boite est vide, et c'est elle qui le dit - sans rien promettre. */
+          /* La boîte est vide, et c'est elle qui le dit — sans rien promettre. */
           <>
             <div className="sgn">
               <span className="ph">
@@ -317,159 +432,150 @@ function PmeNotifications() {
               <em>{t("pme.notifications.videSous")}</em>
             </div>
           </>
+        ) : sections.length === 0 ? (
+          <p className="rien">{t("pme.notifs.rienIci")}</p>
         ) : (
-          <>
-            {/* ── il vous attend : les non lues, en cartes ───────────── */}
-            {attente.length > 0 ? (
-              <>
-                <div className="sec">
-                  <h2>{t("pme.regler.ilVousAttend")}</h2>
-                  <span>{attente.length}</span>
-                </div>
-
-                {attente.map((n) => {
-                  const payload = (n.payload ?? {}) as Record<string, unknown>;
-                  const detail = detailDe(n.kind, payload);
-                  const geste = gesteDe(n.kind, payload, n.tenantId);
-                  const piece = pieceDe(n.kind, payload);
-                  /*
-                   * Sur un retour de piece, le detail EST la parole du
-                   * cabinet - la note qu'il a ecrite. Elle se cite, entre
-                   * guillemets, comme le dessin la cite. Ailleurs c'est un
-                   * sujet ou un nom : il se lit tel quel.
-                   */
-                  const cite = n.kind === "piece.retournee" || n.kind === "piece.demande_tranchee";
-                  return (
-                    <div key={n.id} className="card">
-                      <div className="hd">
-                        {piece ? <ApercuDePiece pieceId={piece} className="vignette" /> : null}
-                        <b>{kindLabel(n.kind, payload)}</b>
-                        <span>{instant(n.createdAt)}</span>
-                      </div>
-                      {detail ? <p>{cite ? `« ${detail} »` : detail}</p> : null}
-                      <div className="b">
-                        {/*
-                         * R10 : le geste que le cabinet demande est le
-                         * principal. Il n'est la que s'il mene quelque part.
-                         */}
-                        {geste ? (
-                          <button type="button" onClick={geste.aller}>
-                            {geste.libelle}
+          sections.map((section) => (
+            <section key={section.periode}>
+              <div className="sec">
+                <h2>
+                  {section.periode === "semaine"
+                    ? t("pme.notifs.cetteSemaine")
+                    : t("pme.notifs.plusTot")}
+                </h2>
+              </div>
+              {section.groupes.map((g) => {
+                if (g.elements.length === 1) return ligne(g.elements[0]!);
+                /*
+                 * LE REGROUPEMENT : neuf retours du cabinet sont UNE ligne,
+                 * avec leur nombre, un exemple, et de quoi les voir ou les
+                 * lire d'un coup.
+                 */
+                const premier = g.elements[0]!;
+                const payload = (premier.payload ?? {}) as Record<string, unknown>;
+                const ouvert = ouverts.has(g.cle);
+                const aLire = g.elements.filter((n) => !n.readAt).map((n) => n.id);
+                return (
+                  <div key={g.cle} className="grp" data-ouvert={ouvert || undefined}>
+                    <Glissable actif={aLire.length > 0} onLu={() => lire.mutate(aLire)}>
+                      <div className="nt" data-lue={aLire.length === 0 ? "" : undefined}>
+                        <span className="sg" data-source={sourceDe(g.kind)} aria-hidden>
+                          <b className="nb">{g.elements.length}</b>
+                        </span>
+                        <span className="bd">
+                          <b>{kindLabel(g.kind, payload)}</b>
+                          <span>
+                            {[t("pme.notifs.regroupees"), sousTitre(premier)].join(" · ")}
+                          </span>
+                        </span>
+                        <span className="ac">
+                          <button
+                            type="button"
+                            aria-expanded={ouvert}
+                            onClick={() => basculer(g.cle)}
+                          >
+                            {ouvert
+                              ? t("pme.notifs.replier")
+                              : t("pme.notifs.voirLes", { count: g.elements.length })}
                           </button>
-                        ) : null}
-                        {/*
-                         * R7 : un accuse de lecture, pas une reecriture du
-                         * fait notifie. Secondaire quand le cabinet demande
-                         * autre chose ; principal quand il ne demande rien,
-                         * parce qu'alors c'est le seul geste de la carte.
-                         */}
-                        <button
-                          type="button"
-                          className={geste ? "sec" : undefined}
-                          disabled={read.isPending}
-                          onClick={() => read.mutate(n.id)}
-                        >
-                          {t("pme.notifs.markRead")}
-                        </button>
+                          {aLire.length > 0 ? (
+                            <button
+                              type="button"
+                              className="lu"
+                              aria-label={t("pme.notifs.markRead")}
+                              onClick={() => lire.mutate(aLire)}
+                            >
+                              <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                                <path d="M5 12.5l4.5 4.5L19 7.5" />
+                              </svg>
+                            </button>
+                          ) : null}
+                        </span>
                       </div>
-                    </div>
-                  );
-                })}
-              </>
-            ) : null}
-
-            {onglet === "tout" ? (
-              <>
-                {/* ── ses avis ────────────────────────────────────────── */}
-                {avis.length > 0 ? (
-                  <>
-                    <div className="sec">
-                      <h2>{t("pme.regler.sesAvis")}</h2>
-                      <span>{avis.length}</span>
-                    </div>
-                    {avis.map((n) => {
-                      const payload = (n.payload ?? {}) as Record<string, unknown>;
-                      const theme = chaine(payload, "theme");
-                      const etat = kindLabel(n.kind);
-                      /*
-                       * R10 : seul `conseil.decide` est ce que l'expert a
-                       * arrete - accent, on peut s'en prevaloir. Les deux
-                       * autres genres sont une proposition de Malica en cours
-                       * de relecture : ambre, et jamais autre chose.
-                       */
-                      const arrete = n.kind === "conseil.decide";
-                      return (
-                        /*
-                         * Une `<div>`, pas un `<button>` : le dessin fait de
-                         * cette ligne un bouton, mais `conseil.lire` n'est
-                         * jamais appele en PME et aucun ecran ne porte le fil
-                         * du conseil. Un bouton qui ne mene nulle part est
-                         * pire qu'une ligne qui se lit.
-                         */
-                        <div key={n.id} className="rw">
-                          <i className={arrete ? undefined : "am"}>
-                            <IconePiece />
-                          </i>
-                          <span className="bd">
-                            <b>{theme ?? etat}</b>
-                            {theme ? <span className={arrete ? "acc" : "am"}>{etat}</span> : null}
-                          </span>
-                          <span className="rt">
-                            <span className="dt">{jour(n.createdAt)}</span>
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </>
-                ) : null}
-
-                {/* ── ce qui ne demande plus rien ─────────────────────── */}
-                {classees.length > 0 ? (
-                  <>
-                    <div className="sec">
-                      <h2>{t("pme.notifs.list")}</h2>
-                      <span>{classees.length}</span>
-                    </div>
-                    {classees.map((n) => {
-                      const payload = (n.payload ?? {}) as Record<string, unknown>;
-                      const detail = detailDe(n.kind, payload);
-                      const geste = gesteDe(n.kind, payload, n.tenantId);
-                      const corps = (
-                        <>
-                          <i>
-                            <IconePiece />
-                          </i>
-                          <span className="bd">
-                            <b>{kindLabel(n.kind, payload)}</b>
-                            {detail ? <span>{detail}</span> : null}
-                          </span>
-                          <span className="rt">
-                            <span className="dt">{jour(n.createdAt)}</span>
-                          </span>
-                        </>
-                      );
-                      /* Un bouton seulement s'il mene quelque part. */
-                      return geste ? (
-                        <button key={n.id} type="button" className="rw" onClick={geste.aller}>
-                          {corps}
-                        </button>
-                      ) : (
-                        <div key={n.id} className="rw">
-                          {corps}
-                        </div>
-                      );
-                    })}
-                  </>
-                ) : null}
-              </>
-            ) : null}
-
-            <p className="foot">{t("pme.regler.pied")}</p>
-          </>
+                    </Glissable>
+                    {ouvert ? <div className="sous">{g.elements.map(ligne)}</div> : null}
+                  </div>
+                );
+              })}
+            </section>
+          ))
         )}
+
+        <p className="foot">{t("pme.regler.pied")}</p>
       </div>
     </div>
   );
+}
+
+/**
+ * GLISSER POUR LIRE (planche 2) : sur le téléphone, une ligne poussée de côté
+ * au-delà de 88 px se marque lue — la coche qui apparaît derrière le dit.
+ * En deçà, elle revient. Le bouton « Lu » reste : le geste n'est qu'un
+ * raccourci, et le clavier ou un lecteur d'écran n'en dépendent pas.
+ */
+function Glissable({
+  actif,
+  onLu,
+  children,
+}: {
+  actif: boolean;
+  onLu: () => void;
+  children: React.ReactNode;
+}) {
+  const [dx, setDx] = useState(0);
+  const depart = useRef<{ x: number; y: number; id: number } | null>(null);
+  const SEUIL = 88;
+  if (!actif) return <>{children}</>;
+  return (
+    <div
+      className="gl"
+      style={{ "--dx": `${dx}px` } as React.CSSProperties}
+      data-pret={Math.abs(dx) >= SEUIL || undefined}
+      data-glisse={dx !== 0 || undefined}
+      onPointerDown={(e) => {
+        if (e.pointerType === "mouse") return;
+        depart.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      }}
+      onPointerMove={(e) => {
+        const d = depart.current;
+        if (!d || d.id !== e.pointerId) return;
+        const ex = e.clientX - d.x;
+        // Un défilement vertical n'est pas un glissement.
+        if (Math.abs(e.clientY - d.y) > Math.abs(ex) && Math.abs(ex) < 12) return;
+        setDx(ex);
+      }}
+      onPointerUp={() => {
+        if (Math.abs(dx) >= SEUIL) onLu();
+        depart.current = null;
+        setDx(0);
+      }}
+      onPointerCancel={() => {
+        depart.current = null;
+        setDx(0);
+      }}
+    >
+      <span className="fond" aria-hidden>
+        <svg viewBox="0 0 24 24" className="g">
+          <path d="M5 12.5l4.5 4.5L19 7.5" />
+        </svg>
+      </span>
+      {children}
+    </div>
+  );
+}
+
+/** Le signe d'une alerte sans pièce : le cabinet, Malica, ou une feuille. */
+function IconeDe({ kind }: { kind: string }) {
+  const source = sourceDe(kind);
+  if (source === "comptabilite") return <IconeCabinet />;
+  if (source === "malica")
+    return (
+      <svg viewBox="0 0 24 24" className="g">
+        <path d="M12 3.5l1.9 4.6 4.6 1.9-4.6 1.9L12 16.5l-1.9-4.6L5.5 10l4.6-1.9z" />
+        <path d="M18.5 15.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z" />
+      </svg>
+    );
+  return <IconePiece />;
 }
 
 /* ===========================================================================

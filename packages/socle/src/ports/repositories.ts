@@ -2957,6 +2957,8 @@ export interface CollabRepository {
   stats(tenantIds: string[]): Promise<ClientStats[]>;
   notifications(tenantIds: string[]): Promise<Notification[]>;
   markRead(id: string): Promise<void>;
+  /** « Tout lire » : la même lecture, pour une liste (500 au plus). */
+  markAllRead(ids: string[]): Promise<void>;
   echeances(tenantIds: string[], locale?: string): Promise<Echeance[]>;
   /** Dériver le calendrier de chaque dossier depuis le pack ; idempotent. */
   deriverEcheances(tenantIds: string[]): Promise<DerivationEcheances[]>;
