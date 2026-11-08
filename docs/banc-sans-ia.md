@@ -908,3 +908,63 @@ ne les prenait pas. 5 % seulement n'étaient pas vus par l'OCR.
    sociales attendues en arabe).
 3. L'identifiant (registre de commerce, code TVA) hors du bloc des parties.
 4. Les pièces non prouvées (116), dont 44 sans aucune preuve exécutable dans leur grille.
+
+## Bulletin — le zéro faux tient sous trois autres lecteurs (8 novembre 2026)
+
+Demandé par le dirigeant : le Sudoku seul doit prouver 90 % des pièces, avec zéro valeur
+fausse ; le zéro faux passe avant. Les faux d'abord, mesurés sur quatre bancs (aucun relevé
+neuf, caches seulement) : la référence (411 pièces, cache du 7 novembre), PP-OCRv6 small
+(261 pièces), l'OCR frais du staging (69 pièces du jeu du dirigeant) et Qwen (261 pièces,
+relevés du lecteur génératif).
+
+| Valeurs fausses ou inventées affirmées | référence | v6 small | staging |  Qwen |
+| -------------------------------------- | --------: | -------: | ------: | ----: |
+| `claude/expert-des-tiers` (1f9d682d)   |         0 |       17 |       4 |    86 |
+| **`claude/sudoku-vers-90`**            |     **0** |    **6** |   **0** | **0** |
+
+Sur la référence : 6 935 justes contre 6 931, aucun juste perdu, aucun sens échangé.
+
+### Les causes, et ce qui les ferme
+
+| Cause                                                                                                       | Correction                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Le motif du matricule trouvé au milieu d'un jeton : « 01122338/A/M/014 » rendait « 1122338/A/M/014 »        | bordé d'un chiffre ou d'une lettre, il n'est jamais rendu et fait taire le champ (`textuel.rs`)                     |
+| Des lignes serrées : la seconde ligne devient la principale et la tête se perd (« Compliance, 12 mois »)    | une désignation collée à un texte que personne ne cite, ou dont la ligne continue à côté, est `incertain`           |
+| Le nom du dossier collé à son libellé (« Client :/JI:ALGORIA FACTORY SARL ») pris pour le fournisseur       | un nom qui contient les mots du dossier est rejeté ; l'adresse qu'il portait n'est plus prise                       |
+| Un nom arabe lu à gauche de son libellé, rendu de gauche à droite                                           | il se rend dans son ordre de lecture                                                                                |
+| « n°354642/6 » sous « Quittance »                                                                           | une valeur qui porte un court libellé collé n'est pas entière : signalée                                            |
+| « Hötels », « Flyers As » (pour A5)                                                                         | lexique : un signe étranger au français sur un mot connu sans accents, une capitale suivie d'un « s », sont douteux |
+| Qwen ne donne aucune confiance : ses jetons passaient pour le texte exact d'un PDF                          | chaque jeton d'un relevé `vision` est douteux                                                                       |
+| Qwen répète une erreur de chiffre partout (algoria-073 : un 8 lu 6 dans HT, TVA et TTC, les sommes ferment) | `lecteur_generatif` : sans le montant en lettres qui vérifie le total, rien n'est affirmé, la pièce est signalée    |
+
+Le prix de la dernière ligne, sur Qwen seulement : 90 pièces restent prouvées au lieu de
+156, et 1 576 valeurs justes passent en pistes signalées. C'est une décision de produit :
+elle se retire seule (commit `feat(lecture): un lecteur génératif ne prouve rien seul`).
+
+### Les six faux qui restent sous PP-OCRv6 small
+
+- algoria-013 : « RC:8795416542016 » pour « B795416542016 », lu à 0,98 — le pack n'a pas
+  de format de registre de commerce qui refuserait le 8 de tête ;
+- algoria-022 « Cartouche toner no » et algoria-077 « dos 8 m » : l'OCR a perdu des lettres
+  avec assurance, sans aucun signal ;
+- algoria-062 : un mot arabe perdu dans une désignation (pas de lexique arabe) ;
+- synthétique-096 : parties échangées (matricule et raison sociale de l'émetteur).
+
+### La couverture : 68,9 %, et pourquoi 90 % ne s'atteint pas par les factures seules
+
+|             |        pièces prouvées |
+| ----------- | ---------------------: |
+| algoria     |      98 / 161 (60,9 %) |
+| synthétique |      77 / 100 (77,0 %) |
+| dirigeant   |     108 / 150 (72,0 %) |
+| **total**   | **283 / 411 (68,9 %)** |
+
+Les factures (347 pièces) sont prouvées à 78,7 %. Les 64 autres pièces (bons de livraison,
+tickets, reçus, relevés, déclarations, bulletins, contrats…) le sont 9 fois : la plupart
+n'ont aucune preuve exécutable dans leur grille. Même à 100 % des factures, le banc
+plafonnerait à 84 % : 90 % exige des preuves pour ces types. Sur les factures non
+prouvées : 50 sans aucune preuve qui ferme (surtout des photos et des manuscrits :
+manuscrits 31 / 56, photos 145 / 181), 12 dont le HT ne porte pas son libellé, 5 ambiguës,
+4 exonérations partielles non confirmées. Les silences à travailler les plus fréquents
+sont les cellules des lignes (quantité 314, prix 237, montant 225), puis les parties
+(raison sociale de l'émetteur 207, nom du client 158, matricules 146 et 132).
