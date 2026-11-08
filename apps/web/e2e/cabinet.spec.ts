@@ -616,6 +616,13 @@ test("au clic : chaque pile s'ouvre et mène à une pièce", async ({ page }) =>
   await page.locator('a[href*="/cabinet/piece/"]').first().click();
   await expect(page).toHaveURL(/\/cabinet\/piece\//);
   await expect(page.getByRole("tab", { name: "Écritures" })).toBeVisible({ timeout: 20_000 });
+  // Le journal de la pièce se replie et se déplie.
+  const journal = page.getByRole("button", { name: "Journal de la pièce" });
+  await expect(journal).toHaveAttribute("aria-expanded", "false");
+  await journal.click();
+  await expect(journal).toHaveAttribute("aria-expanded", "true");
+  await journal.click();
+  await expect(journal).toHaveAttribute("aria-expanded", "false");
 });
 
 test("au clic : l'écriture proposée se lit, se modifie, se valide et passe à la suite", async ({

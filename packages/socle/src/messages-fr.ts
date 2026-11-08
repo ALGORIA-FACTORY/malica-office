@@ -2858,6 +2858,7 @@ export const fr = {
   "cab.ecriture.ligne.champ": "{champ}, ligne {n}",
   "cab.ecriture.ligne.taxe": "Taxe",
   "cab.ecriture.illisible": "Le client voit encore la lecture",
+  "cab.ecriture.aRevoir": "Malica signale un point à revoir avant de valider",
   "cab.ecriture.illisible.aide":
     "Cette écriture ne se lit pas comme une facture : une contrepartie est du côté de la pièce, ou HT + TVA + droits ne font pas le total des contreparties. Aucun montant n’est publié au client tant qu’elle ne se lit pas.",
   "cab.ecriture.reserve.nature_de_charge": "Nature de l’achat à préciser",

@@ -93,6 +93,7 @@ export function pileDe(p: {
   doublonDe: string | null;
   verdict?: string | null;
   demandeEnAttente?: "rappel" | "suppression" | null;
+  sensEtabli?: boolean;
 }): PileDeLaFile {
   // Une société qui attend une réponse passe avant tout, quel que soit le statut.
   if (p.demandeEnAttente) return "demandes";
@@ -100,7 +101,13 @@ export function pileDe(p: {
   if (p.status === "capturee") return "lecture";
   if (p.doublonDe !== null) return "a_completer";
   const code = codeDuVerdict(p.verdict);
-  const pret = Boolean(p.ecritureId) || (code !== null && VERDICTS_COMPTABILISABLES.has(code));
+  const jugeeBonne = code !== null && VERDICTS_COMPTABILISABLES.has(code);
+  /*
+   * « Prête » est une promesse : une écriture s'inscrit d'un geste. Une pièce
+   * dont ni le dirigeant ni la lecture n'ont dit le sens attend Achat / Vente ;
+   * une écriture ancienne que le dernier jugement met en anomalie se revoit.
+   */
+  const pret = p.ecritureId ? code === null || jugeeBonne : jugeeBonne && p.sensEtabli !== false;
   return pret ? "pretes" : "a_completer";
 }
 
