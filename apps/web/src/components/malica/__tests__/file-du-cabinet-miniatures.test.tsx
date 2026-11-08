@@ -150,11 +150,10 @@ describe("la puce « Doublons probables »", () => {
     const { container } = rendre(createElement(Accueil));
     const puce = (await screen.findByText(/cab\.today\.filter\.doublons/)).closest("button")!;
     expect(puce.textContent).toContain("1");
-    expect(container.querySelectorAll(".cab-file tbody tr")).toHaveLength(3);
+    expect(container.querySelector("[data-pile]")?.textContent).toBe("3");
     fireEvent.click(puce);
     expect(puce.getAttribute("aria-pressed")).toBe("true");
-    const restantes = container.querySelectorAll(".cab-file tbody tr");
-    expect(restantes).toHaveLength(1);
-    expect(restantes[0]!.textContent).toContain("CLIENT p1");
+    expect(container.querySelector("[data-pile]")?.textContent).toBe("1");
+    expect(container.textContent).toContain("CLIENT p1");
   });
 });

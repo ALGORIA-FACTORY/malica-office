@@ -32,7 +32,7 @@ import {
   SectionTitle,
   SignalLight,
 } from "@/components/malica/office-ui";
-import { useI18n } from "@/i18n";
+import { useI18n, type MessageKey } from "@/i18n";
 import { dateEnChiffres, montant, quantite } from "@/lib/lisible";
 import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
@@ -728,7 +728,46 @@ function CabinetReviewDeLaPiece() {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap justify-end gap-3">
+      {/*
+       * Rien ne se perd dans l'écran résumé : ce que la pièce porte se voit
+       * d'un coup d'œil, et chaque pastille mène à son détail (8 novembre 2026).
+       */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <nav
+          aria-label={t("cab.review.contenu")}
+          className="me-auto flex flex-wrap items-center gap-1.5"
+        >
+          {[
+            { id: "dossier-articles", cle: "cab.review.contenu.articles", n: articles.length },
+            {
+              id: "dossier-paiements",
+              cle: "cab.review.contenu.paiements",
+              n: (paiements.data ?? []).length,
+            },
+            {
+              id: "dossier-joints",
+              cle: "cab.review.contenu.joints",
+              n: (joints.data ?? []).length,
+            },
+          ]
+            .filter((c) => c.n > 0)
+            .map((c) => (
+              <a
+                key={c.id}
+                href={`#${c.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  document
+                    .getElementById(c.id)
+                    ?.scrollIntoView({ block: "start", behavior: "smooth" });
+                }}
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-border bg-card px-3 text-[13px] hover:bg-accent"
+              >
+                {t(c.cle as MessageKey)}
+                <span className="num text-muted-foreground">{c.n}</span>
+              </a>
+            ))}
+        </nav>
         <TelechargerDossierComptable
           cabinetId={org.id}
           clientId={piece.tenantId}
@@ -793,6 +832,7 @@ function CabinetReviewDeLaPiece() {
                */}
               {(paiements.data ?? []).length > 0 ? (
                 <>
+                  <span id="dossier-paiements" />
                   <SectionTitle>{t("cab.review.paiements")}</SectionTitle>
                   {/*
                    * Relevé sur staging le 29 octobre 2026 : six règlements
@@ -928,6 +968,7 @@ function CabinetReviewDeLaPiece() {
                */}
               {(joints.data ?? []).length > 0 ? (
                 <>
+                  <span id="dossier-joints" />
                   <SectionTitle>{t("cab.review.joints")}</SectionTitle>
                   <ul className="grid gap-px border border-border bg-border">
                     {(joints.data ?? []).map((j) => (
@@ -970,6 +1011,7 @@ function CabinetReviewDeLaPiece() {
 
           {articles.length > 0 ? (
             <>
+              <span id="dossier-articles" />
               <SectionTitle>{t("pme.extract.articles")}</SectionTitle>
               <InkTable
                 empile
@@ -1091,6 +1133,9 @@ function CabinetReviewDeLaPiece() {
                 codesDeTaxe={codesDeTaxe.data ?? []}
                 illisible={dossier.data.ecritureIllisible ?? false}
                 onRetournee={setRetourEnvoye}
+                onInscrite={() =>
+                  suivante ? allerA(suivante.pieceId) : void navigate({ to: "/cabinet" })
+                }
               />
             )}
 

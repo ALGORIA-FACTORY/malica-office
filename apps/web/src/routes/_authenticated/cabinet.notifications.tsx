@@ -15,7 +15,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
@@ -165,6 +165,8 @@ function CabinetNotifications() {
   });
 
   const liste = useMemo(() => notifications.data ?? [], [notifications.data]);
+  const [groupeOuvert, setGroupeOuvert] = useState<string | null>(null);
+  const [infosOuvertes, setInfosOuvertes] = useState(false);
   const nonLues = liste.filter((n) => !n.readAt);
   // Une notification inscrite chez le cabinet nomme le client dans sa charge.
   const nomDuClient = (n: Notification) =>
@@ -197,6 +199,100 @@ function CabinetNotifications() {
     );
   const heureLisible = (iso: string) =>
     new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+
+  const ligneDe = (n: Notification) => {
+    const piece = pieceDe(n);
+    const attend = ATTEND_LE_CABINET.has(n.kind);
+    const lue = n.readAt !== null;
+    const ailleurs = MENE_AU_CONSEIL.has(n.kind)
+      ? "/cabinet/conseil"
+      : MENE_AUX_CLIENTS.has(n.kind)
+        ? "/cabinet/clients"
+        : MENE_AUX_PV.has(n.kind)
+          ? "/cabinet/pv"
+          : null;
+    return (
+      <li
+        key={n.id}
+        className={cn("flex flex-wrap items-start gap-3 px-4 py-3", lue ? "opacity-70" : "")}
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "mt-1.5 h-[7px] w-[7px] shrink-0",
+            lue ? "bg-border" : attend ? "bg-marigold" : "bg-foreground",
+          )}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13.5px]">
+            {t(
+              // Retour ou suppression : l'objet de la demande se dit
+              // (audit du 25 octobre 2026), jamais « retour » pour tout.
+              n.kind === "piece.demande"
+                ? phraseDeLaDemande((n.payload ?? {}) as Record<string, unknown>)
+                : (PHRASE_DU_GENRE[n.kind] ?? "cab.notif.kind.autre"),
+            )}
+          </span>
+          <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
+            {nomDuClient(n)} · <span className="num">{heureLisible(n.createdAt)}</span>
+          </span>
+          {texteDuPayload(n, "motif") ? (
+            <span className="mt-1 block text-[12px] text-text-2">
+              {t("cab.notif.motif", { motif: texteDuPayload(n, "motif") ?? "" })}
+            </span>
+          ) : null}
+        </span>
+        <span className="flex shrink-0 gap-1.5">
+          {piece ? (
+            <Link
+              to="/cabinet/piece/$pieceId"
+              params={{ pieceId: piece }}
+              onClick={() => {
+                if (!lue) marquer.mutate(n.id);
+              }}
+              className="cab-cible border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
+            >
+              {t("cab.notif.ouvrir")}
+            </Link>
+          ) : ailleurs ? (
+            <Link
+              to={ailleurs}
+              onClick={() => {
+                if (!lue) marquer.mutate(n.id);
+              }}
+              className="cab-cible border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
+            >
+              {t("cab.notif.ouvrir")}
+            </Link>
+          ) : null}
+          {!lue ? (
+            <button
+              type="button"
+              onClick={() => marquer.mutate(n.id)}
+              disabled={marquer.isPending}
+              className="border border-border bg-card px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] hover:bg-accent disabled:opacity-40"
+            >
+              {t("cab.notif.marquerLu")}
+            </button>
+          ) : null}
+        </span>
+      </li>
+    );
+  };
+  const phraseDe = (n: Notification) =>
+    n.kind === "piece.demande"
+      ? phraseDeLaDemande((n.payload ?? {}) as Record<string, unknown>)
+      : (PHRASE_DU_GENRE[n.kind] ?? "cab.notif.kind.autre");
+  const aFaire = nonLues.filter((n) => ATTEND_LE_CABINET.has(n.kind));
+  const groupesAFaire = [
+    ...aFaire
+      .reduce((m, n) => {
+        const cle = `${n.tenantId}|${phraseDe(n)}`;
+        return m.set(cle, [...(m.get(cle) ?? []), n]);
+      }, new Map<string, Notification[]>())
+      .entries(),
+  ].sort((a, b) => b[1].length - a[1].length);
+  const informations = liste.length - aFaire.length;
 
   const erreur = marquer.error ?? toutMarquer.error;
 
@@ -239,95 +335,66 @@ function CabinetNotifications() {
       ) : liste.length === 0 ? (
         <EmptyState>{t("cab.notif.vide")}</EmptyState>
       ) : (
-        parJour.map(([jour, items]) => (
-          <section key={jour} className="space-y-2">
-            <SectionTitle>{jourLisible(jour)}</SectionTitle>
-            <ul className="divide-y divide-border border border-border bg-card">
-              {items.map((n) => {
-                const piece = pieceDe(n);
-                const attend = ATTEND_LE_CABINET.has(n.kind);
-                const lue = n.readAt !== null;
-                const ailleurs = MENE_AU_CONSEIL.has(n.kind)
-                  ? "/cabinet/conseil"
-                  : MENE_AUX_CLIENTS.has(n.kind)
-                    ? "/cabinet/clients"
-                    : MENE_AUX_PV.has(n.kind)
-                      ? "/cabinet/pv"
-                      : null;
-                return (
-                  <li
-                    key={n.id}
-                    className={cn(
-                      "flex flex-wrap items-start gap-3 px-4 py-3",
-                      lue ? "opacity-70" : "",
-                    )}
+        <>
+          {groupesAFaire.length > 0 ? (
+            <section className="space-y-2.5">
+              <SectionTitle>{t("cab.notif.a_traiter")}</SectionTitle>
+              {groupesAFaire.map(([cle, items], i) => (
+                <div
+                  key={cle}
+                  className="cab-monte overflow-hidden rounded-xl border border-border bg-card"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
+                  <button
+                    type="button"
+                    aria-expanded={groupeOuvert === cle}
+                    onClick={() => setGroupeOuvert(groupeOuvert === cle ? null : cle)}
+                    className="flex min-h-[60px] w-full items-center gap-3 px-4 py-2.5 text-start hover:bg-accent"
                   >
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "mt-1.5 h-[7px] w-[7px] shrink-0",
-                        lue ? "bg-border" : attend ? "bg-marigold" : "bg-foreground",
-                      )}
-                    />
+                    <span className="num min-w-[34px] text-[22px] text-signal-warn">
+                      {items.length}
+                    </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px]">
-                        {t(
-                          // Retour ou suppression : l'objet de la demande se dit
-                          // (audit du 25 octobre 2026), jamais « retour » pour tout.
-                          n.kind === "piece.demande"
-                            ? phraseDeLaDemande((n.payload ?? {}) as Record<string, unknown>)
-                            : (PHRASE_DU_GENRE[n.kind] ?? "cab.notif.kind.autre"),
-                        )}
+                      <span className="block text-[15px] font-medium">
+                        {t(phraseDe(items[0]!))}
                       </span>
-                      <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
-                        {nomDuClient(n)} · <span className="num">{heureLisible(n.createdAt)}</span>
+                      <span className="block text-[13px] text-muted-foreground">
+                        {nomDuClient(items[0]!)}
                       </span>
-                      {texteDuPayload(n, "motif") ? (
-                        <span className="mt-1 block text-[12px] text-text-2">
-                          {t("cab.notif.motif", { motif: texteDuPayload(n, "motif") ?? "" })}
-                        </span>
-                      ) : null}
                     </span>
-                    <span className="flex shrink-0 gap-1.5">
-                      {piece ? (
-                        <Link
-                          to="/cabinet/piece/$pieceId"
-                          params={{ pieceId: piece }}
-                          onClick={() => {
-                            if (!lue) marquer.mutate(n.id);
-                          }}
-                          className="cab-cible border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
-                        >
-                          {t("cab.notif.ouvrir")}
-                        </Link>
-                      ) : ailleurs ? (
-                        <Link
-                          to={ailleurs}
-                          onClick={() => {
-                            if (!lue) marquer.mutate(n.id);
-                          }}
-                          className="cab-cible border border-foreground bg-foreground px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-background"
-                        >
-                          {t("cab.notif.ouvrir")}
-                        </Link>
-                      ) : null}
-                      {!lue ? (
-                        <button
-                          type="button"
-                          onClick={() => marquer.mutate(n.id)}
-                          disabled={marquer.isPending}
-                          className="border border-border bg-card px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] hover:bg-accent disabled:opacity-40"
-                        >
-                          {t("cab.notif.marquerLu")}
-                        </button>
-                      ) : null}
-                    </span>
-                  </li>
-                );
+                  </button>
+                  {groupeOuvert === cle ? (
+                    <ul className="divide-y divide-border border-t border-border">
+                      {items.map(ligneDe)}
+                    </ul>
+                  ) : null}
+                </div>
+              ))}
+            </section>
+          ) : null}
+          {informations > 0 ? (
+            <button
+              type="button"
+              aria-expanded={infosOuvertes}
+              onClick={() => setInfosOuvertes((o) => !o)}
+              className="min-h-[48px] text-[14px] font-semibold underline-offset-4 hover:underline"
+            >
+              {t(infosOuvertes ? "cab.notif.infos.masquer" : "cab.notif.infos.voir", {
+                count: informations,
               })}
-            </ul>
-          </section>
-        ))
+            </button>
+          ) : null}
+          {infosOuvertes
+            ? parJour.map(([jour, items]) => (
+                <section key={jour} className="space-y-2">
+                  <SectionTitle>{jourLisible(jour)}</SectionTitle>
+                  <ul className="divide-y divide-border border border-border bg-card">
+                    {items.map(ligneDe)}
+                  </ul>
+                </section>
+              ))
+            : null}
+        </>
       )}
     </div>
   );

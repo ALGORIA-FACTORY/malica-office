@@ -182,6 +182,8 @@ export const supervision = {
               coalesce(p.transmise_le, p.created_at) as envoyee_le,
               o.name as client, e.id as ecriture_id, e.libelle, e.date_ecriture,
               m.montant, lu.montant_lu, c.email as collaborateur, cf.confiance,
+              (select an2.verdict from capture.analyses an2 where an2.piece_id = p.id
+                order by an2.created_at desc limit 1) as verdict,
               dem.objet as demande_objet,
               ${tiersDeLaPiece("p", "cf.payload")} as tiers, ${COLONNES_DU_SUIVI}
          from ${PIECES_DU_CABINET}
@@ -323,6 +325,7 @@ export const supervision = {
           montantLu: (p["montant_lu"] as string | null) ?? null,
           collaborateur: (p["collaborateur"] as string | null) ?? null,
           confiance: p["confiance"] == null ? null : Number(p["confiance"]),
+          verdict: (p["verdict"] as string | null) ?? null,
           demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
           doublonDe: doublonDe.get(p["piece_id"] as string) ?? null,
           tiers: (p["tiers"] as string | null) ?? null,
