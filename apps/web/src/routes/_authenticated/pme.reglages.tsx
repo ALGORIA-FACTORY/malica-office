@@ -180,13 +180,6 @@ function PmeReglages() {
               <path d="M14.5 5.5L8 12l6.5 6.5" />
             </svg>
           </button>
-          <span className="ttl">
-            {page === "abonnement"
-              ? t("pme.reglages.abo")
-              : page === "societes"
-                ? `${t("pme.reglages.orgs")} · ${nombre(abo.organisations.length, locale)}`
-                : t("pme.reglages.sieges")}
-          </span>
         </div>
       ) : (
         <h1>{t("pme.reglages.titre")}</h1>
@@ -1067,7 +1060,7 @@ function ListeDesSocietes({
                         <span>
                           {[
                             matriculeDe.get(o.tenantId),
-                            f ? (f.cabinet ?? t("pme.reglages.org.cabinet.aucun")) : null,
+                            f ? (f.cabinet ?? t("pme.reglages.sommaire.sansCompta")) : null,
                           ]
                             .filter(Boolean)
                             .join(" · ")}
@@ -1097,10 +1090,10 @@ function ListeDesSocietes({
       ) : null}
       {org
         ? createPortal(
-            <div className="rp-voile" onClick={fermer}>
+            <div className="fiche-voile" onClick={fermer}>
               <div
                 ref={feuille}
-                className="rp-feuille"
+                className="fiche-feuille"
                 role="dialog"
                 aria-modal="true"
                 aria-label={org.nom}

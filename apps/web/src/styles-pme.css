@@ -3058,3 +3058,8 @@ html.dark:has([data-surface="pme"]),
 [data-surface="pme"] [data-ecran="parametres"] .societes .az{position:fixed;inset-inline-end:.25rem;top:50%;transform:translateY(-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:.125rem}
 [data-surface="pme"] [data-ecran="parametres"] .societes .az a{font-family:var(--mono);font-size:.625rem;font-weight:600;color:var(--acc);text-decoration:none;padding:.0625rem .25rem}
 @media (min-width:1024px){[data-surface="pme"] [data-ecran="parametres"] .societes .az{position:sticky;top:6rem;transform:none;float:right}}
+[data-surface="pme"] .fiche-voile{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.5)}
+[data-surface="pme"] .fiche-feuille{width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:1rem 1rem max(1rem, env(safe-area-inset-bottom, 0px));border-radius:28px 28px 0 0;background:var(--bg);animation:pq-entre .28s var(--e-entre) both}
+[data-surface="pme"] .fiche-feuille .card{margin:0}
+@media (min-width:768px){[data-surface="pme"] .fiche-voile{align-items:center}[data-surface="pme"] .fiche-feuille{border-radius:28px}}
+@media (prefers-reduced-motion: reduce){[data-surface="pme"] .fiche-feuille{animation:none}}
