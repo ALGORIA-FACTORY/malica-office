@@ -26,8 +26,9 @@
 name: Mesure Claude
 
 on:
-  push:
-    branches: [claude/mesure-claude]
+  # Mesure payante : lancée à la main seulement (Actions › Run workflow),
+  # jamais par une poussée — depuis le nettoyage du 8 novembre 2026, le banc vit sur main.
+  workflow_dispatch:
 
 concurrency:
   group: mesure-claude
