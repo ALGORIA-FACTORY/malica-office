@@ -1,4 +1,4 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -694,42 +694,32 @@ function useLAbonnement(): LAbonnement {
    * personne — un siège n'appartient qu'à une société.
    */
   const ids = pme.dossiers.length > 0 ? pme.dossiers.map((d) => d.id) : [pme.tenantId];
-  const lectures = useQueries({
-    queries: ids.map((id) => ({
-      queryKey: [CLE_ORGANISATIONS, id],
-      queryFn: () => office().facturation.organisations(id),
-      retry: false,
-    })),
+  /*
+   * UN APPEL POUR TOUTES (7 novembre 2026). Une requête par société faisait,
+   * pour un titulaire de cent sociétés, cent appels qui rendaient chacun la
+   * licence entière. L'API lit chaque licence une fois et rend l'union, sans
+   * doublon, dans l'ordre des sociétés. Les clés gardent leur préfixe : ce
+   * qui invalidait `[CLE_SIEGES]` les rafraîchit toujours.
+   */
+  const lectures = useQuery({
+    queryKey: [CLE_ORGANISATIONS, "societes", ...ids],
+    queryFn: () => office().facturation.organisationsDesSocietes(ids),
+    retry: false,
   });
-  const places = useQueries({
-    queries: ids.map((id) => ({
-      queryKey: [CLE_SIEGES, id],
-      queryFn: () => office().facturation.sieges(id),
-      retry: false,
-    })),
+  const places = useQuery({
+    queryKey: [CLE_SIEGES, "societes", ...ids],
+    queryFn: () => office().facturation.siegesDesSocietes(ids),
+    retry: false,
   });
-  const unique = <T,>(lignes: T[], cle: (l: T) => string) => [
-    ...new Map(lignes.map((l) => [cle(l), l])).values(),
-  ];
   const organisations = {
-    data: lectures.every((q) => q.data)
-      ? unique(
-          lectures.flatMap((q) => q.data ?? []),
-          (o) => o.tenant_id,
-        ).sort((a, b) => ids.indexOf(a.tenant_id) - ids.indexOf(b.tenant_id))
-      : undefined,
-    error: lectures.find((q) => q.error)?.error ?? null,
-    isPending: lectures.some((q) => q.isPending),
+    data: lectures.data,
+    error: lectures.error ?? null,
+    isPending: lectures.isPending,
   };
   const sieges = {
-    data: places.every((q) => q.data)
-      ? unique(
-          places.flatMap((q) => q.data ?? []),
-          (s) => `${s.tenant_id}:${s.user_id}`,
-        )
-      : undefined,
-    error: places.find((q) => q.error)?.error ?? null,
-    isPending: places.some((q) => q.isPending),
+    data: places.data,
+    error: places.error ?? null,
+    isPending: places.isPending,
   };
 
   const panne = organisations.error ?? sieges.error ?? null;

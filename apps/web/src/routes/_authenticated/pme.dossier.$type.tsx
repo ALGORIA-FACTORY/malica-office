@@ -16,6 +16,7 @@ import { TON_PME, type StatutPme } from "@malica/socle/statut-d-envoi";
 import { attendLaPersonne, statutDeLaPieceLue } from "@/lib/lecture";
 import { MOT_PME } from "@/lib/statut";
 import { usePiecesDesSocietes } from "@/hooks/use-pieces-des-societes";
+import { ParTranches } from "@/components/malica/par-tranches";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { currentPeriod } from "@/hooks/use-tva";
 import { dossierDeLaPiece, moisDeLaPiece, periodeMontree } from "@/lib/dossiers";
@@ -338,30 +339,33 @@ function Dossier() {
                   />
                   {ouvert ? (
                     <div className="liste">
-                      {ps.map((p) => {
-                        const e = etatDe(p);
-                        const nom = ETATS.find((x) => x.etat === e);
-                        return (
-                          <Link
-                            key={p.id}
-                            to="/pme/piece/$pieceId"
-                            params={{ pieceId: p.id }}
-                            onClick={() => ouvrirSaSociete(p.id)}
-                          >
-                            <ApercuDePiece pieceId={p.id} className="vignette" />
-                            <span className="bd">
-                              <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
-                              <span>
-                                <i data-ton={tonDe(e)} />
-                                {[nom ? t(nom.cle) : null, jour(p.dateDocument ?? p.createdAt)]
-                                  .filter(Boolean)
-                                  .join(" · ")}
+                      <ParTranches
+                        elements={ps}
+                        rendre={(p) => {
+                          const e = etatDe(p);
+                          const nom = ETATS.find((x) => x.etat === e);
+                          return (
+                            <Link
+                              key={p.id}
+                              to="/pme/piece/$pieceId"
+                              params={{ pieceId: p.id }}
+                              onClick={() => ouvrirSaSociete(p.id)}
+                            >
+                              <ApercuDePiece pieceId={p.id} className="vignette" />
+                              <span className="bd">
+                                <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
+                                <span>
+                                  <i data-ton={tonDe(e)} />
+                                  {[nom ? t(nom.cle) : null, jour(p.dateDocument ?? p.createdAt)]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </span>
                               </span>
-                            </span>
-                            {p.total ? <em>{montant(p.total, locale)}</em> : null}
-                          </Link>
-                        );
-                      })}
+                              {p.total ? <em>{montant(p.total, locale)}</em> : null}
+                            </Link>
+                          );
+                        }}
+                      />
                     </div>
                   ) : null}
                 </Fragment>

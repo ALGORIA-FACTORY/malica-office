@@ -212,7 +212,11 @@ function AccessCard({
   return (
     <Link
       to={to}
-      className="group flex min-h-[180px] flex-col justify-between bg-card p-5 transition-colors hover:bg-accent sm:p-6"
+      // `min-w-0` : dans la grille, une carte prend sinon la largeur de sa plus
+      // longue ligne. Recette du 7 novembre 2026 : avec 113 sociétés et des
+      // dizaines de cabinets, la liste tronquée poussait la carte hors de
+      // l'écran et cachait son bouton.
+      className="group flex min-h-[180px] min-w-0 flex-col justify-between bg-card p-5 transition-colors hover:bg-accent sm:p-6"
     >
       <div>
         <div className="flex items-center justify-between gap-3">

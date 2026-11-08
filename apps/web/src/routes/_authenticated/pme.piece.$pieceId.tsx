@@ -1209,13 +1209,21 @@ function PieceScreen() {
   if (montrerPiece) {
     return (
       <div className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col bg-background">
-        <div className="flex items-center gap-3 border-b border-border px-[22px] py-3">
+        {/*
+         * Le retour est le bouton rond du produit, comme partout ailleurs
+         * (7 novembre 2026, demande du dirigeant) : plus de « ‹ Vos documents »
+         * en texte.
+         */}
+        <div className="top border-b border-border">
           <button
             type="button"
+            className="bk"
+            aria-label={t("pme.piece.retour")}
             onClick={() => setPiece(false)}
-            className="text-[13px] font-medium text-text-2"
           >
-            ‹ {t("pme.piece.retour")}
+            <svg viewBox="0 0 24 24" className="g" aria-hidden>
+              <path d="M14.5 5.5L8 12l6.5 6.5" />
+            </svg>
           </button>
           {/*
            * Le NOM du champ, pas son chemin. Cette ligne rendait `zoom.field`
@@ -1294,13 +1302,21 @@ function PieceScreen() {
   if (montrerDetail) {
     return (
       <div className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col bg-background">
-        <div className="flex items-center gap-3 border-b border-border px-[22px] py-3">
+        {/*
+         * Le retour est le bouton rond du produit, comme partout ailleurs
+         * (7 novembre 2026, demande du dirigeant) : plus de « ‹ Vos documents »
+         * en texte.
+         */}
+        <div className="top border-b border-border">
           <button
             type="button"
+            className="bk"
+            aria-label={t("pme.piece.retour")}
             onClick={() => setDetail(false)}
-            className="text-[13px] font-medium text-text-2"
           >
-            ‹ {t("pme.piece.retour")}
+            <svg viewBox="0 0 24 24" className="g" aria-hidden>
+              <path d="M14.5 5.5L8 12l6.5 6.5" />
+            </svg>
           </button>
           <span className="num ms-auto text-[11px] uppercase tracking-wide text-muted-foreground">
             {t("pme.detail.compte", { count: articles.length })}

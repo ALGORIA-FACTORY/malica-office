@@ -1477,6 +1477,14 @@ export interface CaptureRepository {
    */
   listAvecLecture(tenantId: string): Promise<PieceLue[]>;
   /**
+   * Les pièces de PLUSIEURS sociétés en un aller-retour, une entrée par
+   * société demandée (vide si l'appelant n'y voit rien), dans l'ordre demandé.
+   * La bibliothèque d'un propriétaire de cent sociétés faisait cent appels.
+   */
+  listAvecLectureDesSocietes(
+    tenantIds: readonly string[],
+  ): Promise<Array<{ tenantId: string; pieces: PieceLue[] }>>;
+  /**
    * Inscrire un paiement sur une pièce. Append-only (R7).
    *
    * Un acompte puis un solde font DEUX lignes : une colonne sur la pièce
@@ -2134,6 +2142,11 @@ export interface QueueItem {
   dateEcriture: string | null;
   /** La somme des débits de l'écriture comptabilisée, posée par le Socle. */
   montant: string | null;
+  /**
+   * Le TTC de la dernière lecture jugée, tant qu'aucune écriture ne porte de
+   * montant : la file ne montre plus « — » pour une pièce lue (7 novembre 2026).
+   */
+  montantLu: string | null;
   /** L'adresse du collaborateur affecté au client, s'il y en a un. */
   collaborateur: string | null;
   /** La confiance globale de la dernière lecture (0..1), ou rien si elle n'a pas été mesurée. */
@@ -3879,6 +3892,13 @@ export interface FacturationRepository {
   sieges(tenantId?: string): Promise<SiegeDeLaLicence[]>;
   /** Les sociétés de la licence qui couvre la société ouverte, elle en tête. */
   organisations(tenantId?: string): Promise<OrganisationDeLaLicence[]>;
+  /**
+   * Les sociétés des licences qui couvrent plusieurs sociétés de l'appelant,
+   * en un aller-retour : une licence n'est lue qu'une fois. Sans doublon.
+   */
+  organisationsDesSocietes(tenantIds: readonly string[]): Promise<OrganisationDeLaLicence[]>;
+  /** Les sièges vus depuis plusieurs sociétés, en un aller-retour. Sans doublon. */
+  siegesDesSocietes(tenantIds: readonly string[]): Promise<SiegeDeLaLicence[]>;
   inviterSiege(
     email: string,
     tenantId: string,
