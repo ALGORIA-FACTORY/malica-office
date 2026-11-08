@@ -3133,3 +3133,5 @@ html.dark:has([data-surface="pme"]),
 [data-surface="pme"] [data-ecran="comptabilite"] .pc .bd b{font-size:.9375rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 [data-surface="pme"] [data-ecran="comptabilite"] .pc .bd span{font-size:.75rem;color:var(--t3)}
 [data-surface="pme"] [data-ecran="comptabilite"] .pc em{flex:none;font-style:normal;font-size:.75rem;font-weight:700;padding:.1875rem .5625rem;border-radius:999px;background:color-mix(in srgb, var(--am) 20%, transparent);color:var(--am)}
+[data-surface="pme"] [data-ecran="comptabilite"] .plus{justify-self:center;height:40px;padding:0 1.125rem;border-radius:999px;border:1px solid var(--hr);background:var(--d1);color:var(--tx);font:inherit;font-size:.875rem;font-weight:600;cursor:pointer}
+[data-surface="pme"] [data-ecran="comptabilite"] div.foot{display:grid;gap:.625rem;justify-items:center}
