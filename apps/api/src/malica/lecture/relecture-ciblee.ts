@@ -68,7 +68,8 @@ export function estUneCaseDeMontant(texte: string): boolean {
   if (t.length < 2 || t.length > 22 || !t.some((c) => SEPARATEURS.includes(c))) return false;
   if (!FIN_DE_MONTANT.test(t.join(""))) return false;
   const proches = t.filter(
-    (c) => CHIFFRES.includes(c) || SOSIES.includes(c) || SEPARATEURS.includes(c) || ".…".includes(c),
+    (c) =>
+      CHIFFRES.includes(c) || SOSIES.includes(c) || SEPARATEURS.includes(c) || ".…".includes(c),
   ).length;
   const chiffres = t.filter((c) => CHIFFRES.includes(c)).length;
   const sosies = t.filter((c) => SOSIES.includes(c)).length;
@@ -349,19 +350,18 @@ export function positionDe(t: Pick<PageToken, "x0" | "x1" | "y0" | "y1">): Posit
 }
 
 /**
- * Le libellé imprimé à gauche de la case, sur sa ligne (« Total TTC ») : le plus proche
- * jeton sans chiffre. Rien quand la ligne n'en porte pas — l'écran dit alors la position.
+ * Le libellé imprimé à gauche de la case, sur sa ligne (« Total TTC », « TVA 19% ») : le
+ * plus proche jeton qui porte des lettres et n'est pas un montant. Rien quand la ligne n'en
+ * porte pas — l'écran dit alors la position.
  */
-export function libelleDeLaLigne(
-  tokens: readonly PageToken[],
-  kase: PageToken,
-): string | null {
+export function libelleDeLaLigne(tokens: readonly PageToken[], kase: PageToken): string | null {
   const recouvre = (t: PageToken) =>
     t.page === kase.page &&
-    Math.min(t.y1, kase.y1) - Math.max(t.y0, kase.y0) > 0.5 * Math.min(t.y1 - t.y0, kase.y1 - kase.y0);
+    Math.min(t.y1, kase.y1) - Math.max(t.y0, kase.y0) >
+      0.5 * Math.min(t.y1 - t.y0, kase.y1 - kase.y0);
   const voisins = tokens
     .filter((t) => t !== kase && recouvre(t) && t.x1 <= kase.x0 + 1e-6)
-    .filter((t) => /\p{L}{2,}/u.test(t.text) && !/\d/u.test(t.text))
+    .filter((t) => /\p{L}{2,}/u.test(t.text) && !estUneCaseDeMontant(t.text))
     .sort((a, b) => b.x1 - a.x1);
   const l = voisins[0]?.text.trim();
   return l ? l.slice(0, 60) : null;

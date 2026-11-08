@@ -43,7 +43,11 @@ import type { Requete } from "../db.ts";
  * (`lecture.relecture_nuit`). Elle s'inscrit par sa porte
  * (`fabrique.relecture_inscrire`), jamais par `enregistrerTravail`.
  */
-export type NatureDeTravail = "lecture_piece" | "generation_recette" | "relecture_piece";
+export type NatureDeTravail =
+  | "lecture_piece"
+  | "generation_recette"
+  | "relecture_piece"
+  | "relecture_cases";
 
 /** Les issues qu'une tentative peut inscrire. « pris » n'en est pas une. */
 export type IssueDeTentative =

@@ -575,6 +575,45 @@ export const en: Dict = {
   "pme.piece.voir": "View the invoice",
   "pme.detail.voir": "View the detail",
   "pme.detail.titre": "What I read, line by line",
+  "pme.verification.enCours":
+    "Being checked: the amounts are being re-read, result in a few seconds",
+  "pme.verification.prouvee": "Checked: the amounts add up",
+  "pme.verification.caseIllisible": "“{case}” ({position}) cannot be read: please check this box",
+  "pme.verification.neFermePas": "The amounts do not add up: please check “{case}” ({position})",
+  "pme.verification.nonRelue": "Cannot be checked for now: please check the amounts",
+  "pme.verification.position.haut_gauche": "top left",
+  "pme.verification.position.haut_centre": "top centre",
+  "pme.verification.position.haut_droite": "top right",
+  "pme.verification.position.milieu_gauche": "middle left",
+  "pme.verification.position.milieu_centre": "middle",
+  "pme.verification.position.milieu_droite": "middle right",
+  "pme.verification.position.bas_gauche": "bottom left",
+  "pme.verification.position.bas_centre": "bottom centre",
+  "pme.verification.position.bas_droite": "bottom right",
+  "refus.valeurs_sures.champ_calcule":
+    "This field is calculated (amount, rate, number or amount in words): it is never shown as certain without proof.",
+  "refus.valeurs_sures.champ_inconnu": "No grid knows this field.",
+  "refus.valeurs_sures.saisie": "The field, the state and the reason are required.",
+  "refus.relecture_ciblee.saisie":
+    "Incomplete setting: state, number of boxes (1 to 80), boxes per call (1 to 20) and reason.",
+  "refus.relecture_ciblee.modele_sans_tarif":
+    "This Claude model has no price in force: its cost would not be recorded.",
+  "tour.relectureCiblee.reglage": "Targeted re-reading by Claude",
+  "tour.relectureCiblee.reglage.aide":
+    "When the Sudoku does not prove a document, Claude re-reads its amount boxes in the background. Its reading is only a candidate: the document is proven only if the calculation closes. Budget: Claude's, in the designation chain.",
+  "tour.relectureCiblee.actif": "Active",
+  "tour.relectureCiblee.modele": "Model",
+  "tour.relectureCiblee.casesMax": "Boxes re-read at most per document",
+  "tour.relectureCiblee.lot": "Boxes per call",
+  "tour.relectureCiblee.mois":
+    "This month: {relues} documents re-read, {prouvees} proven, {cout} $",
+  "tour.relectureCiblee.consigne": "Targeted re-reading instruction",
+  "tour.relectureCiblee.consigne.aide":
+    "The system prompt Claude receives with the boxes. Publishing creates a new version, dated and justified.",
+  "tour.relectureCiblee.borne": "Boxes: 1 to 80; per call: 1 to 20.",
+  "tour.valeursSures.titre": "Read values shown as certain",
+  "tour.valeursSures.aide":
+    "A value read without calculation proof is shown “to check”. Ticked, it is shown as certain, marked “read, not proven by calculation”. Never an amount.",
   "pme.detail.lignesAVerifier": "Lines read, to check",
   "pme.detail.lignesAVerifierAide":
     "No sum proves these lines yet: they are shown as read. The night reading takes them up again; the entry relies only on proven totals.",

@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""La relecture ciblée par Claude — une MESURE, pas un chemin de production (8 novembre 2026).
+"""La relecture ciblée par Claude — l'outil de la première mesure (8 novembre 2026).
 
-Proposition au dirigeant, qui décidera : elle touche la règle R2 (« le modèle qui désigne ne
-voit jamais la pièce »). Ici le modèle ne désigne pas : il RELIT une case découpée de l'image,
-et sa lecture n'est qu'un CANDIDAT. La pièce n'est prouvée que si le Sudoku referme toutes ses
+Le dirigeant l'a décidée le 8 novembre 2026 : elle tourne désormais en production
+(`apps/api/src/malica/lecture/relecture-ciblee.ts`, `verification.ts`), et le workflow
+« Relecture Claude » la mesure sur ce code-là (`apps/api/tests/real/banc-relecture-ciblee.ts`).
+Le temps `relire` reste la référence Python du portage — le choix des cases est vérifié
+identique sur les 261 relevés du banc ; le temps `bilan` sert au workflow.
+
+C'est l'exception à la règle R2 (« le modèle qui désigne ne voit jamais la pièce »). Ici le
+modèle ne désigne pas : il RELIT une case découpée de l'image, et sa lecture n'est qu'un CANDIDAT. La pièce n'est prouvée que si le Sudoku referme toutes ses
 contraintes avec elle ; sinon rien ne change.
 
 Deux temps :

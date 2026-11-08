@@ -42,6 +42,11 @@ import { LesLicences } from "./licences";
 import { ReglerLePaiement } from "./paiement";
 import { LaPasseDeNuit, LeCompteDeService } from "./passe-de-nuit";
 import { ReglerLePlafondIa } from "./plafond-des-modeles";
+import {
+  LaConsigneDeLaRelecture,
+  LeReglageDeLaRelectureCiblee,
+  LesValeursSures,
+} from "./relecture-ciblee";
 import { ReglerLesRelances } from "./relances";
 
 /** Une section de réglage : son libellé de menu, son icône, ses cartes. */
@@ -73,7 +78,13 @@ export const SECTIONS = {
   modeles: {
     libelle: "tour.menu.modeles",
     icone: Gauge,
-    cartes: [LaChaineDeDesignation, ReglerLePlafondIa],
+    cartes: [
+      LaChaineDeDesignation,
+      ReglerLePlafondIa,
+      LeReglageDeLaRelectureCiblee,
+      LaConsigneDeLaRelecture,
+      LesValeursSures,
+    ],
   },
   conseil: {
     libelle: "tour.menu.conseil",

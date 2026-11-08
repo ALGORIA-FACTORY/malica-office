@@ -4572,6 +4572,30 @@ export interface EtatDeLaDesignation {
   mois: { sans_ia: number; par_modele: number };
 }
 
+/** Ce que la tour voit de la relecture ciblée par Claude. */
+export interface EtatDeLaRelectureCiblee {
+  reglage: {
+    actif: boolean;
+    modele: string;
+    cases_max: number;
+    lot: number;
+    motif: string;
+    decide_le: string;
+  } | null;
+  consignes: Array<{ id: string; texte: string; motif: string; decide_le: string }>;
+  modeles: string[];
+  mois: { relues: number; prouvees: number; non_relues: number; cout: number };
+}
+
+/** Un champ qu'une valeur lue sans preuve peut afficher sûr (jamais un montant). */
+export interface ValeurSure {
+  champ: string;
+  type: string;
+  sure: boolean;
+  motif: string | null;
+  decide_le: string | null;
+}
+
 /** Le réglage du conseil cité, tel que la tour le saisit. */
 export interface ReglageDuConseilCite {
   modeleCourant: string;
@@ -4732,6 +4756,19 @@ export interface TourRepository {
   ): Promise<unknown>;
   /** Le conseil cité (Claude sur le corpus) : consigne, ses versions, réglage, modèles, coût du mois. */
   conseilCiteEtat(): Promise<EtatDuConseilCite | null>;
+  /** La relecture ciblée par Claude : réglage, consigne et ses versions, modèles, le mois. */
+  relectureCibleeEtat(): Promise<EtatDeLaRelectureCiblee | null>;
+  /** Régler la relecture ciblée : active, modèle tarifé, cases au plus, cases par appel. */
+  reglerRelectureCiblee(
+    reglage: { actif: boolean; modele: string; casesMax: number; lot: number },
+    motif: string,
+  ): Promise<unknown>;
+  /** Publier une version nouvelle de la consigne de la relecture ciblée. */
+  publierConsigneDeRelecture(texte: string, motif: string): Promise<unknown>;
+  /** Les champs qu'une valeur lue sans preuve peut afficher sûrs, et leur état. */
+  valeursSuresEtat(): Promise<ValeurSure[]>;
+  /** Afficher sûr (ou non) un champ lu sans preuve : daté, motivé, réversible. */
+  reglerValeursSures(champ: string, sure: boolean, motif: string): Promise<unknown>;
   /** Publier une version nouvelle de la consigne du conseil cité : datée, motivée, en ajout seul. */
   publierConsigneDuConseil(texte: string, motif: string): Promise<unknown>;
   /** Régler le conseil cité : modèles, règle de difficulté, seuils de recherche. */

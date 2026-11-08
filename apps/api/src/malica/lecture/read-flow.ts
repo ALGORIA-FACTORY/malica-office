@@ -39,8 +39,10 @@ import { creerDesignateurDeRecette } from "./par-recette.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import type { ReglesDeLecture } from "./regles-de-lecture.ts";
 import { secondLecteurDisponible } from "./paddle.ts";
+import { casesARelire } from "./relecture-ciblee.ts";
 import { creerLeSudoku } from "./sudoku.ts";
 import type { PageToken } from "./token-plan.ts";
+import type { VerdictDuSudoku } from "./etapes-de-lecture.ts";
 import { runVisionRead, type VisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
 
@@ -104,7 +106,7 @@ interface Lecteurs {
   secondLecteurDisponible: () => boolean;
 }
 
-const LECTEURS: Lecteurs = { lire: runVisionRead, secondLecteurDisponible };
+export const LECTEURS: Lecteurs = { lire: runVisionRead, secondLecteurDisponible };
 
 /*
  * La qualite d'une lecture, en preuves et non en impression : le contrat
@@ -156,7 +158,7 @@ export function autreLecteur(
  * lisent la même pièce, dans le même dossier : elles partagent ceci, à
  * l'instruction près.
  */
-async function preparer(api: AppelApi, pieceId: string, lecteurs: Lecteurs) {
+export async function preparer(api: AppelApi, pieceId: string, lecteurs: Lecteurs) {
   // La pièce, son organisation, le pack en vigueur, les taux et les charges :
   // un appel là où il en fallait cinq, mêmes requêtes côté base.
   const contexte = await api.rpc<ContexteLecture>("capture", "contexteLecture", [pieceId]);
@@ -294,7 +296,7 @@ async function preparer(api: AppelApi, pieceId: string, lecteurs: Lecteurs) {
     tracerLeSudoku(pieceId, passe, sudoku.verdict(lecture), proposee, decimales);
     return { lecture, construite: lecture === brute ? proposee : construire(lecture) };
   };
-  return { contexte, parametres, sudoku, lire, decimalesDe };
+  return { contexte, parametres, sudoku, lire, decimalesDe, construire };
 }
 
 export async function readPieceFlow(
@@ -480,6 +482,13 @@ export async function readPieceFlow(
   await sudoku.inscrire(read);
 
   /*
+   * LA RELECTURE CIBLÉE (décision du 8 novembre 2026) : la pièce que le Sudoku n'a pas
+   * prouvée est rendue tout de suite, « en vérification », et ses cases de montant partent
+   * en arrière-plan chez Claude — un travail de la file, que le coureur prend juste après.
+   */
+  await inscrireLaVerification(api, pieceId, read, sudoku.verdict(read));
+
+  /*
    * La relecture s'inscrit APRÈS la lecture qu'elle relit : la base en tire
    * l'heure (la lecture + le délai) et l'identité de la lecture à relire. Un
    * échec ne prive pas la personne de sa lecture — elle est persistée — mais
@@ -559,7 +568,12 @@ type Construite = ReturnType<typeof buildExtractFromTokenPlan>;
  * La lecture telle que la base la persiste, et ses drapeaux — la première
  * comme une relecture retenue : un seul endroit pour le dire.
  */
-function lectureAPersister(pieceId: string, packId: string, read: VisionRead, built: Construite) {
+export function lectureAPersister(
+  pieceId: string,
+  packId: string,
+  read: VisionRead,
+  built: Construite,
+) {
   // Projection des articles cités pour l'analyse par famille (PME).
   // La famille est résolue par le pack (compte, puis motif de désignation) —
   // aucune famille en dur ici, et aucun article sans citation persistée.
@@ -744,6 +758,35 @@ async function journaliser(api: AppelApi, tenantId: string, pieceId: string, rea
         ),
     ),
   );
+}
+
+/**
+ * Inscrire la relecture ciblée d'une lecture que le Sudoku n'a pas prouvée — « aucune
+ * solution », comme au banc qui l'a mesurée —, relevée par l'OCR (les cases se découpent
+ * dans l'image qu'il a lue), et qui porte au moins une case de montant. La base décide si
+ * la relecture est active (nul sinon, rien d'inscrit). Un échec ne prive pas la personne de
+ * sa lecture, déjà persistée : il se crie.
+ */
+async function inscrireLaVerification(
+  api: AppelApi,
+  pieceId: string,
+  read: VisionRead,
+  verdict: VerdictDuSudoku | null,
+): Promise<void> {
+  if (verdict?.issue !== "aucune" || read.lecteur !== "paddle") return;
+  if (casesARelire(read.tokens, 1).length === 0) return;
+  await api
+    .rpc("capture", "inscrireVerification", [
+      pieceId,
+      { lecteur: read.lecteur, paddleTente: read.paddleTente, plan: read.tokens },
+    ])
+    .catch((e: unknown) => {
+      console.error(
+        `[lecture] relecture ciblée NON inscrite — pièce ${pieceId} : ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+      );
+    });
 }
 
 /** La base dit si la relecture de nuit est active ; une réponse impossible se crie. */

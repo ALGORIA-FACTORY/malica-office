@@ -18,6 +18,7 @@
   "capture": [
     "analyser",
     "annulerPaiement",
+    "configurationRelectureCiblee",
     "corrigerPaiement",
     "daterLaPiece",
     "deplacerJustificatif",
@@ -25,6 +26,7 @@
     "dossier",
     "enregistrer",
     "enregistrerPaiement",
+    "inscrireVerification",
     "lectureObservee",
     "listAvecLecture",
     "listAvecLectureDesSocietes",
@@ -45,7 +47,9 @@
     "repondreAuCabinet",
     "retourDeLaPiece",
     "supprimer",
-    "supprimerPieceQuiAccompagne"
+    "supprimerPieceQuiAccompagne",
+    "verificationAFaire",
+    "verificationDeLaPiece"
   ],
   "charges": [
     "anomalyThreshold",
@@ -377,6 +381,7 @@
     "membresDeLOrganisation",
     "poserJourFerie",
     "prestatairesDePaiement",
+    "publierConsigneDeRelecture",
     "publierConsigneDuConseil",
     "publierGrille",
     "publierReport",
@@ -394,7 +399,10 @@
     "reglerIa",
     "reglerPaiement",
     "reglerRelances",
+    "reglerRelectureCiblee",
     "reglerRelectureNuit",
+    "reglerValeursSures",
+    "relectureCibleeEtat",
     "relecturesDeNuit",
     "reprendre",
     "retirerAccesTotal",
@@ -402,6 +410,7 @@
     "retirerReportPublie",
     "suisJePlateforme",
     "suspendre",
-    "trousDeLaGrille"
+    "trousDeLaGrille",
+    "valeursSuresEtat"
   ]
 }

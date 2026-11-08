@@ -212,6 +212,8 @@ malica.post("/lectures/:pieceId", (req, res, next) => {
       () => readPieceFlow(api(req), pieceId),
     );
     const resultat = await lecture;
+    // La relecture ciblée inscrite par cette lecture se prend tout de suite, en arrière-plan.
+    coureurDeLectures(req.utilisateur!.id, pieceId);
     // La durée réelle d'une lecture, mesurée côté serveur : c'est elle qui
     // dit si la personne attend dix secondes ou quatre minutes. Atelier
     // seulement — en service, cette mesure appartient à la télémétrie.
@@ -237,7 +239,9 @@ malica.get("/lectures/:pieceId", (req, res, next) => {
     // qu'elle existe ailleurs (ANO-003).
     if (!(await pieceVisible(req, pieceId))) return { enCours: false, depuisMs: null };
     const l = registre().etat(pieceId);
-    return { enCours: l !== null, depuisMs: l ? Date.now() - l.depuis : null };
+    // La relecture ciblée de la dernière lecture : « en vérification », puis son motif.
+    const verification = await api(req).rpc<unknown>("capture", "verificationDeLaPiece", [pieceId]);
+    return { enCours: l !== null, depuisMs: l ? Date.now() - l.depuis : null, verification };
   });
 });
 

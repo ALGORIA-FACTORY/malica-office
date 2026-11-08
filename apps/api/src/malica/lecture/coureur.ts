@@ -56,6 +56,7 @@ import { traceCourante } from "../../observabilite/trace.ts";
 
 import { registre } from "./lectures-en-cours.ts";
 import { readPieceFlow } from "./read-flow.ts";
+import { verifierLesCases } from "./verification.ts";
 
 /**
  * Combien de travaux un seul appel accepte d'enchaîner.
@@ -81,8 +82,10 @@ const enCours = new Set<string>();
 export function naturesDuCoureur(
   env: Record<string, string | undefined> = process.env,
 ): NatureDeTravail[] {
-  // Pas de relecture : elle est à la passe de nuit, jamais en journée.
-  const natures: NatureDeTravail[] = ["lecture_piece"];
+  // Pas de relecture DE NUIT : elle est à la passe de nuit, jamais en journée.
+  // La relecture ciblée (décision du 8 novembre 2026) se prend juste après la lecture : la
+  // base dit si elle est active, et la vérification n'appelle rien sans budget ni clé.
+  const natures: NatureDeTravail[] = ["lecture_piece", "relecture_cases"];
   if (env["DEEPSEEK_API_KEY"]) natures.push("generation_recette");
   return natures;
 }
@@ -152,6 +155,14 @@ async function courir(utilisateurId: string, pieceId: string): Promise<void> {
               `pour « ${t.signatureCle} »`,
           );
           return undefined;
+        }
+
+        if (t.nature === "relecture_cases") {
+          return verifierLesCases(api, {
+            travailId: t.travailId,
+            pieceId: t.pieceId,
+            tentative: t.tentative,
+          });
         }
 
         /*

@@ -614,6 +614,45 @@ export const fr = {
   "pme.piece.voir": "Voir la facture",
   "pme.detail.voir": "Voir le détail",
   "pme.detail.titre": "Ce que j'ai lu, ligne par ligne",
+  "pme.verification.enCours":
+    "En vérification : les montants sont relus, résultat dans quelques secondes",
+  "pme.verification.prouvee": "Vérifiée : les montants se tiennent",
+  "pme.verification.caseIllisible": "« {case} » ({position}) ne se lit pas : vérifiez cette case",
+  "pme.verification.neFermePas":
+    "Les montants ne se tiennent pas : vérifiez « {case} » ({position})",
+  "pme.verification.nonRelue": "Vérification impossible pour l'instant : vérifiez les montants",
+  "pme.verification.position.haut_gauche": "en haut à gauche",
+  "pme.verification.position.haut_centre": "en haut au centre",
+  "pme.verification.position.haut_droite": "en haut à droite",
+  "pme.verification.position.milieu_gauche": "au milieu à gauche",
+  "pme.verification.position.milieu_centre": "au milieu",
+  "pme.verification.position.milieu_droite": "au milieu à droite",
+  "pme.verification.position.bas_gauche": "en bas à gauche",
+  "pme.verification.position.bas_centre": "en bas au centre",
+  "pme.verification.position.bas_droite": "en bas à droite",
+  "refus.valeurs_sures.champ_calcule":
+    "Ce champ se calcule (montant, taux, nombre ou montant en lettres) : il ne s'affiche jamais sûr sans preuve.",
+  "refus.valeurs_sures.champ_inconnu": "Aucune grille ne connaît ce champ.",
+  "refus.valeurs_sures.saisie": "Le champ, l'état et le motif sont requis.",
+  "refus.relecture_ciblee.saisie":
+    "Réglage incomplet : état, nombre de cases (1 à 80), cases par appel (1 à 20) et motif.",
+  "refus.relecture_ciblee.modele_sans_tarif":
+    "Ce modèle de Claude n'a pas de tarif en vigueur : son coût ne s'inscrirait pas.",
+  "tour.relectureCiblee.reglage": "Relecture ciblée par Claude",
+  "tour.relectureCiblee.reglage.aide":
+    "Quand le Sudoku ne prouve pas une pièce, Claude relit ses cases de montant en arrière-plan. Sa lecture n'est qu'un candidat : la pièce n'est prouvée que si le calcul se referme. Budget : celui de Claude dans la chaîne de désignation.",
+  "tour.relectureCiblee.actif": "Active",
+  "tour.relectureCiblee.modele": "Modèle",
+  "tour.relectureCiblee.casesMax": "Cases relues au plus par pièce",
+  "tour.relectureCiblee.lot": "Cases par appel",
+  "tour.relectureCiblee.mois": "Ce mois : {relues} pièces relues, {prouvees} prouvées, {cout} $",
+  "tour.relectureCiblee.consigne": "Consigne de la relecture ciblée",
+  "tour.relectureCiblee.consigne.aide":
+    "Le prompt système que Claude reçoit avec les cases. Publier en crée une version nouvelle, datée et motivée.",
+  "tour.relectureCiblee.borne": "Cases : 1 à 80 ; par appel : 1 à 20.",
+  "tour.valeursSures.titre": "Valeurs lues affichées sûres",
+  "tour.valeursSures.aide":
+    "Une valeur lue sans preuve de calcul s'affiche « à vérifier ». Cochée, elle s'affiche sûre, marquée « lu, non prouvé par calcul ». Jamais un montant.",
   "pme.detail.lignesAVerifier": "Lignes lues, à vérifier",
   "pme.detail.lignesAVerifierAide":
     "Aucune somme ne prouve encore ces lignes : elles sont lues telles quelles. La lecture de nuit les reprend ; l'écriture ne s'appuie que sur les totaux prouvés.",

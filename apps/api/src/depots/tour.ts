@@ -346,6 +346,51 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /** La relecture ciblée par Claude : réglage, consigne et ses versions, modèles, le mois. */
+  async relectureCibleeEtat(db: Requete) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.relecture_ciblee_etat() as r`,
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour règle la relecture ciblée : active ou non, modèle (tarifé, R8), cases. */
+  async reglerRelectureCiblee(
+    db: Requete,
+    reglage: { actif: boolean; modele: string; casesMax: number; lot: number },
+    motif: string,
+  ) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.relecture_ciblee_regler($1, $2, $3::integer, $4::integer, $5) as r`,
+      [reglage.actif, reglage.modele, reglage.casesMax, reglage.lot, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour publie une version nouvelle de la consigne de la relecture ciblée. */
+  async publierConsigneDeRelecture(db: Requete, texte: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.relecture_ciblee_consigne_publier($1, $2) as r`,
+      [texte, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** Les champs dont une valeur lue sans preuve peut s'afficher sûre, et leur état. */
+  async valeursSuresEtat(db: Requete) {
+    const { rows } = await db.query<{ r: unknown }>(`select plateforme.valeurs_sures_etat() as r`);
+    return rows[0]?.r ?? [];
+  },
+
+  /** Afficher sûr (ou non) un champ lu sans preuve : daté, motivé, réversible. Jamais un montant. */
+  async reglerValeursSures(db: Requete, champ: string, sure: boolean, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.valeurs_sures_regler($1, $2, $3) as r`,
+      [champ, sure, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /** Le conseil cité : consigne en vigueur et ses versions, réglage, modèles, coût du mois. */
   async conseilCiteEtat(db: Requete) {
     const { rows } = await db.query<{ r: unknown }>(`select plateforme.conseil_cite_etat() as r`);

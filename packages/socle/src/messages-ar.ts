@@ -560,6 +560,44 @@ export const ar: Dict = {
   "pme.piece.voir": "عرض الفاتورة",
   "pme.detail.voir": "عرض التفصيل",
   "pme.detail.titre": "ما قرأتُه، سطرًا سطرًا",
+  "pme.verification.enCours": "قيد التحقق: تُعاد قراءة المبالغ، والنتيجة خلال ثوانٍ",
+  "pme.verification.prouvee": "تم التحقق: المبالغ متّسقة",
+  "pme.verification.caseIllisible": "«{case}» ({position}) غير مقروءة: تحقّق من هذه الخانة",
+  "pme.verification.neFermePas": "المبالغ غير متّسقة: تحقّق من «{case}» ({position})",
+  "pme.verification.nonRelue": "التحقق غير ممكن حاليا: تحقّق من المبالغ",
+  "pme.verification.position.haut_gauche": "أعلى اليسار",
+  "pme.verification.position.haut_centre": "أعلى الوسط",
+  "pme.verification.position.haut_droite": "أعلى اليمين",
+  "pme.verification.position.milieu_gauche": "الوسط يسارا",
+  "pme.verification.position.milieu_centre": "الوسط",
+  "pme.verification.position.milieu_droite": "الوسط يمينا",
+  "pme.verification.position.bas_gauche": "أسفل اليسار",
+  "pme.verification.position.bas_centre": "أسفل الوسط",
+  "pme.verification.position.bas_droite": "أسفل اليمين",
+  "refus.valeurs_sures.champ_calcule":
+    "هذا الحقل يُحسب (مبلغ أو نسبة أو عدد أو مبلغ بالأحرف): لا يُعرض مؤكَّدا دون إثبات.",
+  "refus.valeurs_sures.champ_inconnu": "لا توجد شبكة تعرف هذا الحقل.",
+  "refus.valeurs_sures.saisie": "الحقل والحالة والسبب مطلوبة.",
+  "refus.relecture_ciblee.saisie":
+    "ضبط غير مكتمل: الحالة، عدد الخانات (1 إلى 80)، الخانات لكل طلب (1 إلى 20) والسبب.",
+  "refus.relecture_ciblee.modele_sans_tarif":
+    "ليس لنموذج Claude هذا سعر ساري المفعول: لن تُسجَّل تكلفته.",
+  "tour.relectureCiblee.reglage": "إعادة القراءة المستهدفة بواسطة Claude",
+  "tour.relectureCiblee.reglage.aide":
+    "عندما لا يُثبت السودوكو وثيقة، يعيد Claude قراءة خانات مبالغها في الخلفية. قراءته مجرّد مرشَّح: لا تُثبَت الوثيقة إلا إذا انغلق الحساب. الميزانية: ميزانية Claude في سلسلة التعيين.",
+  "tour.relectureCiblee.actif": "مفعّلة",
+  "tour.relectureCiblee.modele": "النموذج",
+  "tour.relectureCiblee.casesMax": "أقصى عدد خانات يُعاد قراءتها لكل وثيقة",
+  "tour.relectureCiblee.lot": "خانات لكل طلب",
+  "tour.relectureCiblee.mois":
+    "هذا الشهر: {relues} وثيقة أُعيدت قراءتها، {prouvees} مُثبَتة، {cout} $",
+  "tour.relectureCiblee.consigne": "تعليمة إعادة القراءة المستهدفة",
+  "tour.relectureCiblee.consigne.aide":
+    "التعليمة النظامية التي يتلقاها Claude مع الخانات. النشر ينشئ نسخة جديدة مؤرّخة ومعلّلة.",
+  "tour.relectureCiblee.borne": "الخانات: 1 إلى 80؛ لكل طلب: 1 إلى 20.",
+  "tour.valeursSures.titre": "قيم مقروءة تُعرض مؤكَّدة",
+  "tour.valeursSures.aide":
+    "تُعرض القيمة المقروءة دون إثبات حسابي «للتحقق». إذا حُدّدت، تُعرض مؤكَّدة مع علامة «مقروء، غير مُثبَت بالحساب». أبدا ليس مبلغا.",
   "pme.detail.lignesAVerifier": "أسطر مقروءة، للتحقق",
   "pme.detail.lignesAVerifierAide":
     "لا يثبت أي مجموع هذه الأسطر بعد: تُعرض كما قُرئت. تعيد القراءة الليلية قراءتها؛ ولا يعتمد القيد إلا على المجاميع المثبتة.",

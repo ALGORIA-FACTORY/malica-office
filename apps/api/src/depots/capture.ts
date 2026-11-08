@@ -103,6 +103,17 @@ interface RelectureAFaire {
   trace: string | null;
 }
 
+/** Ce qu'une relecture ciblée doit savoir avant d'appeler Claude. */
+interface VerificationAFaire {
+  pieceId: string;
+  extractionId: string;
+  /** Comment la lecture relue a été relevée (`capture.extractions.mode_lecture`). */
+  mode: string | null;
+  consigne: { lecteur: string; paddleTente: boolean; plan: unknown[] };
+  /** remplacee, lecture_depassee, correction_humaine, coupee — ou nul. */
+  abstention: string | null;
+}
+
 /** Les arguments de lecture communs aux deux portes, dans leur ordre. */
 function argumentsDeLecture(input: LectureAPersister): unknown[] {
   return [
@@ -1205,6 +1216,62 @@ export const capture = {
     ]);
     const r = rows[0]!.r;
     return { travailId: r.travail_id, deja: r.deja, pasAvant: r.pas_avant };
+  },
+
+  /**
+   * Inscrire la relecture ciblée par Claude de la lecture qui fait foi (décision du
+   * 8 novembre 2026). Nul quand la tour l'a coupée : rien n'est inscrit, ce n'est pas un
+   * refus. La consigne porte le plan de jetons tel que le lecteur l'a rendu.
+   */
+  async inscrireVerification(
+    db: Requete,
+    pieceId: string,
+    consigne: { lecteur: string; paddleTente: boolean; plan: unknown[] },
+  ): Promise<{ travailId: string; deja: boolean } | null> {
+    const { rows } = await db.query<{ r: { travail_id: string; deja: boolean } | null }>(
+      `select fabrique.verification_inscrire($1, $2::jsonb) as r`,
+      [pieceId, JSON.stringify(consigne)],
+    );
+    const r = rows[0]?.r;
+    return r ? { travailId: r.travail_id, deja: r.deja } : null;
+  },
+
+  /** Ce qu'une relecture ciblée doit savoir avant d'appeler (`fabrique.verification_a_faire`). */
+  async verificationAFaire(db: Requete, travailId: string): Promise<VerificationAFaire> {
+    const { rows } = await db.query<{
+      r: {
+        piece_id: string;
+        extraction_id: string;
+        mode: string | null;
+        consigne: VerificationAFaire["consigne"];
+        abstention: string | null;
+      };
+    }>(`select fabrique.verification_a_faire($1) as r`, [travailId]);
+    const r = rows[0]!.r;
+    return {
+      pieceId: r.piece_id,
+      extractionId: r.extraction_id,
+      mode: r.mode,
+      consigne: r.consigne,
+      abstention: r.abstention,
+    };
+  },
+
+  /** Le réglage, la consigne et le budget de la relecture ciblée, réservés au serveur. */
+  async configurationRelectureCiblee(db: Requete): Promise<unknown> {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select public.relecture_ciblee_configuration() as r`,
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** Où en est la relecture ciblée de la dernière lecture d'une pièce ; nul sans relecture. */
+  async verificationDeLaPiece(db: Requete, pieceId: string): Promise<unknown> {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select capture.verification_de_la_piece($1) as r`,
+      [pieceId],
+    );
+    return rows[0]?.r ?? null;
   },
 
   /** Ce qu'une relecture doit savoir avant de payer un modèle (`fabrique.relecture_a_faire`). */

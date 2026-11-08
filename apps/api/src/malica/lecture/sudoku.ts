@@ -697,15 +697,7 @@ export function resoudreLaPiece(
   lecteurGeneratif = false,
 ): SortieDuSudoku {
   return afficherLesValeursSures(
-    resoudreLesVariantes(
-      jetons,
-      contexte,
-      moteur,
-      connus,
-      marques,
-      texteExact,
-      lecteurGeneratif,
-    ),
+    resoudreLesVariantes(jetons, contexte, moteur, connus, marques, texteExact, lecteurGeneratif),
     contexte,
   );
 }

@@ -1,19 +1,19 @@
-# La relecture ciblée par Claude — une mesure, pas une garde (8 novembre 2026).
+# La relecture ciblée par Claude — la mesure réelle, sur le code de production.
 #
-# PROPOSITION au dirigeant (elle touche R2) : sur les pièces que le Sudoku ne
-# prouve pas faute de solution, Claude relit les CASES de montant découpées de
-# l'image (la ligne pour le contexte, la case agrandie). Sa lecture n'est qu'un
-# candidat : la pièce n'est prouvée que si le moteur referme toutes ses
-# contraintes avec elle. Script et consigne versionnés : `outils/relecture-claude/`.
+# DÉCISION du dirigeant (8 novembre 2026) : activée, avec Haiku, en arrière-plan.
+# Sur les pièces que le Sudoku ne prouve pas faute de solution, Claude relit
+# les CASES de montant découpées de l'image (la ligne pour le contexte, la case
+# agrandie). Sa lecture n'est qu'un candidat : la pièce n'est prouvée que si le
+# moteur referme toutes ses contraintes avec elle — l'exception à R2, bornée.
+#
+# Ce workflow mesure ce qui TOURNE : le banc `apps/api/tests/real/
+# banc-relecture-ciblee.ts` appelle les modules de production (cases, découpe,
+# requête, plan candidat), avec le modèle et la consigne EN BASE
+# (`public.relecture_ciblee_configuration`, R8, R10), puis le banc sans IA est
+# rejoué sur les relevés candidats, et `relire.py bilan` compare.
 #
 # Les relevés OCR sont ceux du passage 3 de « Mesure Claude » (run 42477888334,
-# artefact `mesure-claude`) : aucune image n'est relue par l'OCR, sauf si
-# l'artefact a disparu (le banc relit alors ce qui manque).
-#
-# Les noms des modèles sont des paramètres (R8 : leur prix se lit dans
-# `agents.model_pricing`, sinon la mesure ne part pas). Plafond : 30 $ au total
-# (15 $ par modèle, au tarif en base). « [sans banc] » dans le message du
-# dernier commit ne relance pas la mesure.
+# artefact `mesure-claude`). Plafond : 5 $ au tarif en base.
 
 name: Relecture Claude
 
@@ -52,8 +52,8 @@ jobs:
       DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/banc
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       OCR_URL: http://127.0.0.1:8095
-      RELECTEURS: claude-sonnet-5-5 claude-haiku-5-5
-      PLAFOND_PAR_MODELE: "15"
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/banc
+      PLAFOND: "5"
 
     steps:
       - name: La clé
@@ -123,12 +123,6 @@ jobs:
         env:
           MALICA_API_PASSWORD: ci
 
-      - name: Les tarifs (agents.model_pricing)
-        run: |
-          mkdir -p sortie
-          psql "$DATABASE_URL_ADMIN" -Atc "with t as (select distinct on (model, role) model, role, price_in_per_mtok::float8 pi, price_out_per_mtok::float8 po from agents.model_pricing where model = any(string_to_array('$RELECTEURS', ' ')) and effective_from <= current_date order by model, role, effective_from desc) select coalesce(json_object_agg(model, j), '{}') from (select model, json_build_object('entree', max(pi) filter (where role = 'chat'), 'sortie', max(po) filter (where role = 'chat'), 'cache', coalesce(max(pi) filter (where role = 'cache'), max(pi) filter (where role = 'chat')), 'cache_ecriture', coalesce(max(pi) filter (where role = 'cache_ecriture'), max(pi) filter (where role = 'chat'))) j from t group by model having max(pi) filter (where role = 'chat') is not null) x" > sortie/tarifs.json
-          cat sortie/tarifs.json
-
       - name: La référence (moteur seul, relevé PaddleOCR v5)
         run: |
           mkdir -p sortie/releves
@@ -141,25 +135,21 @@ jobs:
             --cache sortie/releves --sortie sortie/base.json > sortie/base.md 2> sortie/base.err
           echo "code : $?"; head -4 sortie/base.md
 
-      - name: La relecture, puis le moteur rejoué sur chaque relevé candidat
+      - name: La relecture (code de production), puis le moteur rejoué sur les relevés candidats
         run: |
           set +e
-          relus=""; journaux=""
-          for m in $RELECTEURS; do
-            python outils/relecture-claude/relire.py relire --base sortie/base.json \
-              --cache sortie/releves --racine . --modele "$m" --tarifs sortie/tarifs.json \
-              --plafond "$PLAFOND_PAR_MODELE" --sortie "sortie/releves-$m" \
-              --journal "sortie/journal-$m.json" 2> "sortie/relecture-$m.err"
-            echo "relecture $m : $?"; tail -3 "sortie/relecture-$m.err"
-            node --experimental-strip-types --no-warnings apps/api/src/malica/lecture/banc-sans-ia.ts \
-              --corpus algoria:outils/jeu-algoria --corpus synthetique:outils/jeu-synthetique \
-              --corpus dirigeant:packages/sudoku/tests/donnees/jeux_dirigeant_ocr.json \
-              --cache "sortie/releves-$m" --sortie "sortie/relu-$m.json" > "sortie/relu-$m.md" 2> "sortie/relu-$m.err"
-            echo "banc $m : $?"; head -3 "sortie/relu-$m.md"
-            relus="$relus sortie/relu-$m.json"; journaux="$journaux sortie/journal-$m.json"
-          done
+          node --experimental-strip-types --no-warnings apps/api/tests/real/banc-relecture-ciblee.ts \
+            --base sortie/base.json --cache sortie/releves --racine . \
+            --sortie sortie/releves-relus --journal sortie/journal.json \
+            --plafond "$PLAFOND" 2> sortie/relecture.err
+          echo "relecture : $?"; tail -3 sortie/relecture.err
+          node --experimental-strip-types --no-warnings apps/api/src/malica/lecture/banc-sans-ia.ts \
+            --corpus algoria:outils/jeu-algoria --corpus synthetique:outils/jeu-synthetique \
+            --corpus dirigeant:packages/sudoku/tests/donnees/jeux_dirigeant_ocr.json \
+            --cache sortie/releves-relus --sortie sortie/relu.json > sortie/relu.md 2> sortie/relu.err
+          echo "banc : $?"; head -3 sortie/relu.md; grep -h "valeur(s) affirmée" sortie/relu.err || echo "0 faux affirmé"
           python outils/relecture-claude/relire.py bilan --base sortie/base.json \
-            --journaux $journaux --relus $relus --sortie sortie/bilan.md
+            --journaux sortie/journal.json --relus sortie/relu.json --sortie sortie/bilan.md
           cat sortie/bilan.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Le journal du service OCR

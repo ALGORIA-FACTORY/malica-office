@@ -189,6 +189,24 @@ export interface LectureDePiece {
 export interface EtatDeLecture {
   enCours: boolean;
   depuisMs: number | null;
+  /**
+   * La relecture ciblée de la dernière lecture (décision du 8 novembre 2026) : la pièce est
+   * « en vérification » le temps que Claude relise ses cases et que le Sudoku rejoue ; puis
+   * le motif. Nul (ou absent) : aucune vérification n'a été demandée.
+   */
+  verification?: VerificationDeLaPiece | null;
+}
+
+/** Où en est la relecture ciblée d'une pièce, telle que la base la dérive. */
+export interface VerificationDeLaPiece {
+  etat: "en_verification" | "terminee";
+  /** `verification.prouvee`, `verification.non_prouvee`, `verification.non_relue.*`… */
+  motif: string | null;
+  /** Pour `verification.non_prouvee` : la case à vérifier, son libellé et sa place. */
+  detail: {
+    code?: "case_illisible" | "ne_ferme_pas";
+    kase?: { texte: string; libelle: string | null; position: string } | null;
+  } | null;
 }
 
 /* --------------------------------------------- lire la carte fiscale */
