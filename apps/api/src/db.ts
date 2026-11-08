@@ -57,6 +57,25 @@ const pool = new Pool({
   options: "-c jit=off",
 });
 
+/*
+ * ==================================== UNE CONNEXION TUÉE NE TUE PAS L'API
+ *
+ * PostgreSQL coupe une transaction restée muette plus de dix secondes (FATAL
+ * 25P03). Sur une connexion prise au pool, `pg` émet alors « error » sur le
+ * client ; sans écouteur, Node arrête le processus : toute l'API tombait, et
+ * la lecture en cours restait « en cours » pour toujours (recette du
+ * 8 novembre 2026). La requête touchée échoue d'elle-même ; les autres
+ * continuent.
+ */
+pool.on("error", (erreur) => {
+  console.error(`[db] connexion au repos perdue : ${erreur.message}`);
+});
+pool.on("connect", (client) => {
+  client.on("error", (erreur) => {
+    console.error(`[db] connexion perdue en cours de travail : ${erreur.message}`);
+  });
+});
+
 function url(): string {
   const valeur = process.env["DATABASE_URL"];
   if (!valeur) throw new Error("DATABASE_URL absente");
