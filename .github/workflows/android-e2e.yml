@@ -180,7 +180,13 @@ jobs:
 
       - name: Installer Maestro
         run: |
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          # Le serveur de téléchargement répond parfois 503 : on réessaie, et on
+          # s'arrête ici s'il reste muet plutôt que sur un « command not found ».
+          for essai in 1 2 3 4 5; do
+            curl -fsSL "https://get.maestro.mobile.dev" | bash && [ -x "$HOME/.maestro/bin/maestro" ] && break
+            sleep $((essai * 20))
+          done
+          test -x "$HOME/.maestro/bin/maestro"
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
       # L'émulateur n'a jamais démarré ici : « Not enough space to create
