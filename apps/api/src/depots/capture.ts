@@ -475,11 +475,18 @@ async function piecesLuesDe(
         order by p.created_at desc`,
     [tenantIds],
   );
-  const parSociete = new Map<string, PieceDeLaListe[]>(tenantIds.map((id) => [id, []]));
+  // La base rend les uuid en minuscules ; l'appelant retrouve l'identifiant
+  // qu'il a demandé, quelle que soit sa casse.
+  const parSociete = new Map<string, PieceDeLaListe[]>(
+    tenantIds.map((id) => [id.toLowerCase(), []]),
+  );
   for (const r of rows as Record<string, unknown>[]) {
-    parSociete.get(r["tenant_id"] as string)?.push(versPieceLue(r));
+    parSociete.get((r["tenant_id"] as string).toLowerCase())?.push(versPieceLue(r));
   }
-  return tenantIds.map((tenantId) => ({ tenantId, pieces: parSociete.get(tenantId) ?? [] }));
+  return tenantIds.map((tenantId) => ({
+    tenantId,
+    pieces: parSociete.get(tenantId.toLowerCase()) ?? [],
+  }));
 }
 
 function versPieceLue(r: Record<string, unknown>) {

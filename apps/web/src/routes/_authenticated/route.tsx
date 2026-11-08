@@ -50,7 +50,7 @@ function AvecLeCacheDeLAppareil() {
     let vivant = true;
     const version = versionClient();
     const fin = setTimeout(() => vivant && setPret(true), ATTENTE_MAX_MS);
-    void restaurerLeCache(qc, user.id, version).finally(() => {
+    void restaurerLeCache(qc, user.id, version, Date.now(), () => vivant).finally(() => {
       clearTimeout(fin);
       if (vivant) setPret(true);
     });

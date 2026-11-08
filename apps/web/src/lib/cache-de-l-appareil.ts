@@ -103,6 +103,12 @@ export async function restaurerLeCache(
   compte: string,
   version: string,
   maintenant = Date.now(),
+  /**
+   * Faux dès que la session qui a demandé la restauration est finie. Lu JUSTE
+   * avant de remettre les données : un stockage lent qui répondrait après une
+   * déconnexion ne doit rien reverser dans le cache d'une autre session.
+   */
+  encoreValide: () => boolean = () => true,
 ): Promise<boolean> {
   if (!disponible()) return false;
   try {
@@ -113,6 +119,7 @@ export async function restaurerLeCache(
       await db.delete("comptes", compte);
       return false;
     }
+    if (!encoreValide()) return false;
     hydrate(qc, entree.etat);
     return true;
   } catch {

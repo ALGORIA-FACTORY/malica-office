@@ -15,5 +15,6 @@ export function idsDeSocietes(entree: unknown): string[] {
   if (ids.length > SOCIETES_PAR_APPEL) throw new Error("societes.trop_nombreuses");
   if (!ids.every((id): id is string => typeof id === "string" && UUID.test(id)))
     throw new Error("societes.invalides");
-  return ids;
+  // La base rend les uuid en minuscules : les clés aussi, sans doublon.
+  return [...new Set(ids.map((id) => id.toLowerCase()))];
 }

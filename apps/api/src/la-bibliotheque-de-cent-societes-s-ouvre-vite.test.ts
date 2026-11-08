@@ -129,6 +129,20 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     assert.deepEqual(lot!.pieces, seule);
   });
 
+  it("une société écrite en majuscules rend les mêmes pièces", async () => {
+    const seule = (await s.fait("amel", "capture.listAvecLecture", s.pme)) as PieceLue[];
+    const enCapitales = (await s.fait(
+      "amel",
+      "capture.listAvecLecture",
+      s.pme.toUpperCase(),
+    )) as PieceLue[];
+    assert.deepEqual(enCapitales, seule);
+    const [lot] = (await s.fait("amel", "capture.listAvecLectureDesSocietes", [
+      s.pme.toUpperCase(),
+    ])) as Lot[];
+    assert.deepEqual(lot!.pieces, seule);
+  });
+
   it("refuse ce qui n'est pas une liste bornée de sociétés", async () => {
     await assert.rejects(s.fait("amel", "capture.listAvecLectureDesSocietes", "pas-une-liste"));
     await assert.rejects(s.fait("amel", "capture.listAvecLectureDesSocietes", ["pas-un-uuid"]));

@@ -70,6 +70,13 @@ describe("le cache de l'appareil", () => {
     expect(await restaurerLeCache(client(), "amel", "1.0.0")).toBe(false);
   });
 
+  it("une session finie avant la fin de la lecture ne reçoit rien", async () => {
+    await remplir(client(), "amel");
+    const qc = client();
+    expect(await restaurerLeCache(qc, "amel", "1.0.0", Date.now(), () => false)).toBe(false);
+    expect(qc.getQueryData(["pieces-lues", "societe-a"])).toBeUndefined();
+  });
+
   it("ce qui est déjà en mémoire, plus récent, n'est jamais écrasé", async () => {
     await remplir(client(), "amel");
     const qc = client();
