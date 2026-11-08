@@ -4238,6 +4238,9 @@ export const en: Dict = {
   "pme.reglages.personnes.societes#one": "{count} company",
   "pme.reglages.personnes.societes#other": "{count} companies",
   "pme.reglages.personnes.vous": "You",
+  "pme.joindre.horsLigne":
+    "No network: the document is kept and will be sent when you are back online. Attach it from the document afterwards.",
+  "pme.joindre.dejaLa": "Or a document already here",
   "pme.reglages.sommaire.avecCompta": "{count} with an accountant",
   "pme.reglages.sommaire.avecCompta#one": "{count} with an accountant",
   "pme.reglages.sommaire.avecCompta#other": "{count} with accountants",

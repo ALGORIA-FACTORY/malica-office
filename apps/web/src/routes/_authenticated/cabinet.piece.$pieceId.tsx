@@ -281,6 +281,19 @@ function CabinetReviewDeLaPiece() {
     queryKey: ["pieces-issues", pieceId],
     queryFn: () => office().capture.piecesIssuesDe(pieceId),
   });
+  /*
+   * Les documents que la PME a JOINTS à la pièce (un bon de livraison
+   * demandé, planche 6) : à côté de la facture, sans télécharger l'archive.
+   * La base ne rend que ceux qui sont transmis au cabinet.
+   */
+  const rattachees = useQuery({
+    queryKey: ["rattachees", pieceId],
+    queryFn: () => office().capture.piecesRattachees(pieceId),
+  });
+  const tousLesJoints = [
+    ...(joints.data ?? []),
+    ...(rattachees.data ?? []).filter((r) => !(joints.data ?? []).some((j) => j.id === r.id)),
+  ];
 
   /**
    * COMMENT LA PIÈCE A ÉTÉ PAYÉE — ce que la PME transmet au cabinet.
@@ -966,12 +979,12 @@ function CabinetReviewDeLaPiece() {
                * avec la facture et étaient introuvables depuis elle : le lien
                * existait en base, aucun écran ne le suivait.
                */}
-              {(joints.data ?? []).length > 0 ? (
+              {tousLesJoints.length > 0 ? (
                 <>
                   <span id="dossier-joints" />
                   <SectionTitle>{t("cab.review.joints")}</SectionTitle>
                   <ul className="grid gap-px border border-border bg-border">
-                    {(joints.data ?? []).map((j) => (
+                    {tousLesJoints.map((j) => (
                       <li
                         key={j.id}
                         className="flex items-center justify-between gap-3 bg-card px-3 py-2"

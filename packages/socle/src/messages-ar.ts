@@ -4065,6 +4065,9 @@ export const ar: Dict = {
   "pme.reglages.personnes.societes#one": "شركة واحدة",
   "pme.reglages.personnes.societes#other": "{count} شركة",
   "pme.reglages.personnes.vous": "أنتم",
+  "pme.joindre.horsLigne":
+    "لا توجد شبكة: الوثيقة محفوظة وستُرسل عند عودة الشبكة. أرفقوها بعد ذلك من الوثيقة.",
+  "pme.joindre.dejaLa": "أو وثيقة موجودة",
   "pme.reglages.sommaire.avecCompta": "{count} مع محاسب",
   "pme.reglages.sommaire.avecCompta#one": "شركة واحدة مع محاسب",
   "pme.reglages.sommaire.avecCompta#other": "{count} مع محاسب",

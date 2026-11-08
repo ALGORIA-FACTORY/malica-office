@@ -4354,6 +4354,9 @@ export const fr = {
   "pme.reglages.personnes.societes#one": "{count} société",
   "pme.reglages.personnes.societes#other": "{count} sociétés",
   "pme.reglages.personnes.vous": "Vous",
+  "pme.joindre.horsLigne":
+    "Pas de réseau : le document est gardé et partira au retour du réseau. Joignez-le ensuite depuis la pièce.",
+  "pme.joindre.dejaLa": "Ou un document déjà là",
   "pme.reglages.sommaire.avecCompta": "{count} sociétés avec une comptabilité",
   "pme.reglages.sommaire.avecCompta#one": "{count} société avec une comptabilité",
   "pme.reglages.sommaire.avecCompta#other": "{count} sociétés avec une comptabilité",
