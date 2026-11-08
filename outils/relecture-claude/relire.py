@@ -76,7 +76,8 @@ def est_une_case_de_montant(texte: str) -> bool:
     if not re.search(f"[{re.escape(SEPARATEURS)}][{CHIFFRES}{SOSIES}.…]{{1,4}}[.*]?$", t):
         return False
     proches = sum(c in CHIFFRES or c in SOSIES or c in SEPARATEURS or c in ".…" for c in t)
-    return proches / len(t) >= 0.8 and sum(c in CHIFFRES for c in t) >= 1
+    # « .VA » pour « ٩٨٠,٧٠٨ » : le modèle latin ne rend parfois AUCUN chiffre d'un montant oriental.
+    return proches / len(t) >= 0.8 and (sum(c in CHIFFRES for c in t) >= 1 or sum(c in SOSIES for c in t) >= 2)
 
 
 MONTANT = re.compile(f"[{CHIFFRES}](?:[{CHIFFRES} {re.escape(SEPARATEURS)}]*[{CHIFFRES}])?")
