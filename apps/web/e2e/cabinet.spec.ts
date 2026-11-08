@@ -4,7 +4,7 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 
-import { ETAT_DIRIGEANT, preparerLAppareil } from "./comptes";
+import { DIRIGEANT, ETAT_DIRIGEANT, preparerLAppareil } from "./comptes";
 
 test.beforeEach(async ({ page }) => {
   await preparerLAppareil(page, "fr");
@@ -559,7 +559,9 @@ const sansDebordement = async (page: Page) =>
   ).toBeLessThanOrEqual(1);
 
 const pile = (page: Page, nom: RegExp) =>
-  page.locator("section").filter({ has: page.getByRole("button", { name: nom }) });
+  page
+    .locator("section:not(.cab-worklist)")
+    .filter({ has: page.getByRole("button", { name: nom }) });
 
 for (const largeur of [320, 375, 768, 1024, 1280, 1440]) {
   for (const chemin of ["", "/notifications", "/echeances", "/clients", "/propositions"]) {
@@ -593,9 +595,7 @@ test("au clic : chaque pile s'ouvre et mène à une pièce", async ({ page }) =>
   }
   await page.locator('a[href*="/cabinet/piece/"]').first().click();
   await expect(page).toHaveURL(/\/cabinet\/piece\//);
-  await expect(
-    page.getByRole("heading", { name: "Écritures" }).or(page.getByText("Écritures").first()),
-  ).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Écritures" })).toBeVisible({ timeout: 20_000 });
 });
 
 test("au clic : l'écriture proposée se lit, se modifie, se valide et passe à la suite", async ({
@@ -636,17 +636,26 @@ test("au clic : une demande de la société se refuse avec un motif", async ({
 }, testInfo) => {
   await page.goto("/cabinet");
   await expect(page.locator("[data-pile]").first()).toBeVisible({ timeout: 20_000 });
-  const ids = await page.evaluate(() =>
-    [...document.querySelectorAll('a[href*="/cabinet/piece/"]')].map((a) =>
-      (a.getAttribute("href") ?? "").split("/").pop(),
-    ),
-  );
-  expect(ids.length).toBeGreaterThanOrEqual(1);
+  // La société demande le retour d'une de SES pièces encore chez le cabinet.
   const societe = await browser.newContext({ storageState: ETAT_DIRIGEANT });
-  const demande = await societe.request.post("/rpc", {
-    data: { depot: "collab", methode: "demanderSurPiece", args: [ids[0], "rappel"] },
-  });
-  expect(demande.ok(), await demande.text()).toBeTruthy();
+  const appel = async <T>(depot: string, methode: string, args: unknown[]): Promise<T> => {
+    const r = await societe.request.post("/rpc", { data: { depot, methode, args } });
+    expect(r.ok(), await r.text()).toBeTruthy();
+    return ((await r.json()) as { resultat: T }).resultat;
+  };
+  const orgs = await appel<Array<{ id: string; name: string }>>(
+    "identite",
+    "listMyOrganizations",
+    [],
+  );
+  const org = orgs.find((o) => o.name.includes(DIRIGEANT.dossier));
+  expect(org, "le dossier du dirigeant").toBeTruthy();
+  const pieces = await appel<Array<{ id: string; status: string }>>("capture", "listAvecLecture", [
+    org!.id,
+  ]);
+  const aRappeler = pieces.find((p) => p.status === "capturee");
+  expect(aRappeler, "une pièce encore chez le cabinet").toBeTruthy();
+  await appel("collab", "demanderSurPiece", [aRappeler!.id, "rappel"]);
   await societe.close();
 
   await page.reload();
