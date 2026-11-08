@@ -4026,8 +4026,7 @@ export const ar: Dict = {
   "pme.reglages.abo.report": "منها {n} قراءة مُرحَّلة من الشهر الماضي.",
   "pme.reglages.abo.report#one": "منها قراءة واحدة مُرحَّلة من الشهر الماضي.",
   "pme.reglages.abo.report#other": "منها {n} قراءة مُرحَّلة من الشهر الماضي.",
-  "pme.reglages.offres.empechement.choisi_par_la_comptabilite":
-    "اختار محاسبكم اشتراككم: لا يمكن النزول دون عرضه.",
+  "pme.reglages.offres.empechement.choisi_par_la_comptabilite": "اختاره محاسبكم.",
   "pme.reglages.offres.complement":
     "يختار {comptabilite} اشتراككم ويسدّده. يمكنكم الترقية: تدفعون حينها الفرق فقط، المبيّن أدناه.",
   "pme.reglages.abo.priseEnCharge": "يختاره ويسدّده محاسبكم، {comptabilite}.",

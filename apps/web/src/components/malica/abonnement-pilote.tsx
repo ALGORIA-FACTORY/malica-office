@@ -280,7 +280,10 @@ export function ChangerDOffre() {
        * fois la même carte sur le même écran (relevé le 19 octobre).
        */}
       {(offres.data ?? [])
-        .filter((o) => !o.courant)
+        // Sous l'offre que la comptabilité a choisie, rien ne se propose : ces
+        // offres ne s'affichent pas (décision du 8 novembre 2026), plutôt qu'une
+        // phrase qui dirait pourquoi on ne peut pas les prendre.
+        .filter((o) => !o.courant && o.empechement !== "choisi_par_la_comptabilite")
         .map((o) => {
           const bloque = o.empechement ? EMPECHEMENTS[o.empechement] : undefined;
           return (

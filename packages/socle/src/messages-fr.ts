@@ -4308,8 +4308,7 @@ export const fr = {
   "pme.reglages.abo.report": "Dont {n} lectures reportées du mois dernier.",
   "pme.reglages.abo.report#one": "Dont {n} lecture reportée du mois dernier.",
   "pme.reglages.abo.report#other": "Dont {n} lectures reportées du mois dernier.",
-  "pme.reglages.offres.empechement.choisi_par_la_comptabilite":
-    "Votre comptabilité a choisi votre abonnement : on ne descend pas sous son offre.",
+  "pme.reglages.offres.empechement.choisi_par_la_comptabilite": "Choisi par votre comptabilité.",
   "pme.reglages.offres.complement":
     "Votre abonnement est choisi et réglé par {comptabilite}. Vous pouvez monter d'offre : vous ne payez alors que la différence, indiquée ci-dessous.",
   "pme.reglages.abo.priseEnCharge": "Choisi et réglé par votre comptabilité, {comptabilite}.",

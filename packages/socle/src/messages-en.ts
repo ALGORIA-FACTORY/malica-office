@@ -4189,8 +4189,7 @@ export const en: Dict = {
   "pme.reglages.abo.report": "Including {n} reads carried over from last month.",
   "pme.reglages.abo.report#one": "Including {n} read carried over from last month.",
   "pme.reglages.abo.report#other": "Including {n} reads carried over from last month.",
-  "pme.reglages.offres.empechement.choisi_par_la_comptabilite":
-    "Your accountant chose your plan: you cannot go below it.",
+  "pme.reglages.offres.empechement.choisi_par_la_comptabilite": "Chosen by your accountant.",
   "pme.reglages.offres.complement":
     "Your plan is chosen and paid for by {comptabilite}. You can move up: you then pay only the difference, shown below.",
   "pme.reglages.abo.priseEnCharge": "Chosen and paid for by your accountant, {comptabilite}.",
