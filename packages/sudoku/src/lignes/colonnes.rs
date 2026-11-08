@@ -19,7 +19,8 @@
 //! tableau arabe la porte à droite). Sans en-tête lisible, rien ne change ; une colonne
 //! vide rend une désignation absente — jamais celle d'une autre colonne.
 
-use std::collections::BTreeMap;
+use regex::Regex;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::{en_lignes, Cite, LigneSortie};
 use crate::entree::{Grille, Jeton};
@@ -642,4 +643,177 @@ pub(super) fn au_dessus_centrees(
         .filter(|(i, l)| haut(l) >= principale || gardees.contains(i))
         .map(|(_, l)| l)
         .collect()
+}
+
+/// Le bord d'une désignation : un texte que personne ne cite, collé à sa première ou à sa
+/// dernière ligne et dans son étendue, en est peut-être la tête ou la suite. La désignation
+/// n'est alors pas prouvée entière : elle se montre `incertain`, jamais affirmée. Un OCR
+/// qui serre ses lignes (PP-OCRv6, 8 novembre 2026) faisait de la seconde ligne la ligne
+/// principale et perdait la tête : « Compliance, 12 mois » pour « Abonnement RegTrack —
+/// palier Compliance, 12 mois » (algoria-113), « bureaux » (algoria-069).
+/// Ne sont pas une tête ni une suite : une ligne qui porte un libellé de la grille
+/// (l'en-tête du tableau, « Total HT »), une ligne qui ouvre un autre champ de la parcelle
+/// (« SN : … »), un montant, un texte sans mot d'au moins trois lettres (« D1 **1.00 »).
+pub(super) fn douter_des_bords(
+    instances: &mut [LigneSortie],
+    jetons: &[Jeton],
+    grille: &Grille,
+    designation: &str,
+) {
+    let par_ref: BTreeMap<(u32, u32), usize> = jetons
+        .iter()
+        .enumerate()
+        .map(|(i, j)| ((j.page, j.ordinal), i))
+        .collect();
+    let jeton_de = |r: &RefJeton| par_ref.get(&(r.page, r.ordinal)).copied();
+    let cites: BTreeSet<usize> = instances
+        .iter()
+        .flat_map(|l| {
+            [
+                l.designation.as_ref(),
+                l.quantite.as_ref(),
+                l.prix.as_ref(),
+                l.remise.as_ref(),
+                Some(&l.montant),
+            ]
+            .into_iter()
+            .flatten()
+            .flat_map(|c| c.refs.iter())
+            .chain(l.taux.iter().flat_map(|t| t.refs.iter()))
+            .filter_map(jeton_de)
+            .collect::<Vec<_>>()
+        })
+        .collect();
+    let libelles: BTreeSet<String> = grille
+        .champs
+        .iter()
+        .flat_map(|c| c.reperes_fr.iter().chain(c.reperes_ar.iter()))
+        .map(|r| cle(r))
+        .filter(|r| r.chars().count() >= 3)
+        .collect();
+    let autres = super::autres_champs(designation, grille);
+    let mot = Regex::new(r"\p{L}{3,}").expect("motif");
+    let hauteur = |i: usize| (jetons[i].y1 - jetons[i].y0).max(f64::EPSILON);
+    let chiffres_de = |l: &LigneSortie| -> Vec<usize> {
+        [l.quantite.as_ref(), l.prix.as_ref(), l.remise.as_ref(), Some(&l.montant)]
+            .into_iter()
+            .flatten()
+            .flat_map(|c| c.refs.iter())
+            .filter_map(jeton_de)
+            .collect()
+    };
+    let chiffres: Vec<Vec<usize>> = instances.iter().map(chiffres_de).collect();
+    let centre = |i: usize| (jetons[i].y0 + jetons[i].y1) / 2.0;
+    let fortes: Vec<usize> = (0..jetons.len())
+        .filter(|&i| jetons[i].montants.iter().any(|m| m.forte))
+        .collect();
+    for (n, l) in instances.iter_mut().enumerate() {
+        let Some(d) = l.designation.as_mut() else {
+            continue;
+        };
+        if d.statut.is_some() {
+            continue;
+        }
+        let propres = &chiffres[n];
+        let (c0, c1) = propres.iter().fold((f64::MAX, f64::MIN), |(a, b), &i| {
+            (a.min(jetons[i].y0), b.max(jetons[i].y1))
+        });
+        // les chiffres des AUTRES rangées : ceux des autres lignes, et les montants de la page
+        // hors de la bande des siens
+        let ailleurs: Vec<usize> = chiffres
+            .iter()
+            .enumerate()
+            .filter(|(m, _)| *m != n)
+            .flat_map(|(_, c)| c.iter().copied())
+            .chain(fortes.iter().copied().filter(|&i| {
+                !propres.contains(&i) && !(centre(i) >= c0 && centre(i) <= c1)
+            }))
+            .collect();
+        // un texte plus proche des chiffres d'une autre rangée que des siens est à elle
+        let a_une_autre_rangee = |i: usize| {
+            let soi = ((c0 + c1) / 2.0 - centre(i)).abs();
+            !propres.is_empty()
+                && ailleurs
+                    .iter()
+                    .any(|&k| jetons[k].page == jetons[i].page && (centre(k) - centre(i)).abs() < soi)
+        };
+        let ids: Vec<usize> = d.refs.iter().filter_map(jeton_de).collect();
+        let Some(&premier) = ids.first() else {
+            continue;
+        };
+        let page = jetons[premier].page;
+        let x0 = ids.iter().map(|&i| jetons[i].x0).fold(f64::MAX, f64::min);
+        let x1 = ids.iter().map(|&i| jetons[i].x1).fold(f64::MIN, f64::max);
+        let y0 = ids.iter().map(|&i| jetons[i].y0).fold(f64::MAX, f64::min);
+        let y1 = ids.iter().map(|&i| jetons[i].y1).fold(f64::MIN, f64::max);
+        let mut hs: Vec<f64> = ids.iter().map(|&i| hauteur(i)).collect();
+        hs.sort_by(f64::total_cmp);
+        let h = hs[hs.len() / 2];
+        let colle = |i: usize| {
+            let j = &jetons[i];
+            let centre = (j.y0 + j.y1) / 2.0;
+            j.page == page
+                && j.x1.min(x1) - j.x0.max(x0) > 0.0
+                && (centre < y0 && y0 - j.y1 <= 0.5 * h || centre > y1 && j.y0 - y1 <= 0.5 * h)
+        };
+        let bord = (0..jetons.len()).filter(|&i| !cites.contains(&i) && colle(i)).any(|i| {
+            if jetons[i].montants.iter().any(|m| m.forte)
+                || !mot.is_match(&jetons[i].texte)
+                || a_une_autre_rangee(i)
+            {
+                return false;
+            }
+            // la ligne du jeton : les jetons non cités de la page qui la recouvrent
+            let j = &jetons[i];
+            let mut ligne: Vec<usize> = (0..jetons.len())
+                .filter(|&k| {
+                    let t = &jetons[k];
+                    t.page == j.page
+                        && !cites.contains(&k)
+                        && t.y1.min(j.y1) - t.y0.max(j.y0) > 0.5 * hauteur(k).min(hauteur(i))
+                })
+                .collect();
+            ligne.sort_by(|&a, &b| jetons[a].x0.total_cmp(&jetons[b].x0));
+            let libelle = ligne
+                .iter()
+                .any(|&k| libelles.contains(&cle(&jetons[k].texte)));
+            !libelle && super::ouvre_un_autre_champ(jetons, &ligne, &autres).is_none()
+        });
+        // la ligne qui CONTINUE à côté d'un mot de la désignation : des mots laissés hors
+        // de l'étendue de la ligne principale (« Location de salle [de réunion, demi-]
+        // journée », algoria-069, la ligne principale étant la plus courte)
+        let continue_a_cote = || {
+            (0..jetons.len()).any(|k| {
+                let t = &jetons[k];
+                !cites.contains(&k)
+                    && t.page == page
+                    && !t.montants.iter().any(|m| m.forte)
+                    && t.texte.chars().filter(|c| c.is_alphabetic()).count() >= 2
+                    && !libelles.iter().any(|x| cle(&t.texte).starts_with(x.as_str()))
+                    && ids.iter().any(|&i| {
+                        let j = &jetons[i];
+                        t.y1.min(j.y1) - t.y0.max(j.y0) > 0.5 * hauteur(k).min(hauteur(i))
+                            && (t.x0 - j.x1).max(j.x0 - t.x1) <= 1.5 * hauteur(i)
+                    })
+                    && {
+                        // pas un autre champ de la parcelle qui commence là (« SN: 3711… »)
+                        let mut suite: Vec<usize> = (0..jetons.len())
+                            .filter(|&q| {
+                                let u = &jetons[q];
+                                u.page == t.page
+                                    && !cites.contains(&q)
+                                    && u.x0 >= t.x0
+                                    && u.y1.min(t.y1) - u.y0.max(t.y0)
+                                        > 0.5 * hauteur(q).min(hauteur(k))
+                            })
+                            .collect();
+                        suite.sort_by(|&a, &b| jetons[a].x0.total_cmp(&jetons[b].x0));
+                        super::ouvre_un_autre_champ(jetons, &suite, &autres).is_none()
+                    }
+            })
+        };
+        if bord || continue_a_cote() {
+            d.statut = Some("incertain");
+        }
+    }
 }

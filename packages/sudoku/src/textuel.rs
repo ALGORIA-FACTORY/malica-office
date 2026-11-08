@@ -64,6 +64,9 @@ pub fn traite(champ: &Champ, pack: &Pack) -> bool {
 pub fn lire(champ: &Champ, pack: &Pack, plan: &Plan) -> Result<Issue, String> {
     let reperes = reperes_de(champ);
     let mut lectures: Vec<Lecture> = Vec::new();
+    // Les valeurs au format trouvées au milieu d'un texte plus long : elles ne sont jamais
+    // rendues, et leur seule présence fait taire une valeur qui serait sinon affirmée.
+    let mut tronquees = 0usize;
     match champ.genre.as_str() {
         "date" => {
             for (i, j) in plan.jetons.iter().enumerate() {
@@ -122,6 +125,20 @@ pub fn lire(champ: &Champ, pack: &Pack, plan: &Plan) -> Result<Issue, String> {
                     if m.as_str().is_empty() {
                         continue;
                     }
+                    // Le motif trouvé DANS un texte plus long n'est pas ce que la page
+                    // imprime : « 01122338/A/M/014 » (la lettre B lue 8) contient
+                    // « 1122338/A/M/014 », un matricule bien formé et faux. Bordé d'un
+                    // chiffre avant, ou d'une lettre ou d'un chiffre après, il est
+                    // douteux : le champ se signale (OCR frais du staging, 8 novembre 2026,
+                    // dirigeant 50/05).
+                    let avant = j.texte[..m.start()].chars().next_back();
+                    let apres = j.texte[m.end()..].chars().next();
+                    if avant.is_some_and(|c| c.is_ascii_digit())
+                        || apres.is_some_and(char::is_alphanumeric)
+                    {
+                        tronquees += 1;
+                        continue;
+                    }
                     let ancree = plan.ancre(i, &reperes, Some(&j.texte[..m.start()]), true);
                     lectures.push(Lecture {
                         valeur: m.as_str().to_string(),
@@ -135,7 +152,11 @@ pub fn lire(champ: &Champ, pack: &Pack, plan: &Plan) -> Result<Issue, String> {
         _ => return Ok(Issue::Absent),
     }
     if lectures.is_empty() {
-        return Ok(Issue::Absent);
+        return Ok(if tronquees > 0 {
+            Issue::Signale
+        } else {
+            Issue::Absent
+        });
     }
     let distinctes = |l: &[&Lecture]| {
         let mut v: Vec<&str> = l.iter().map(|x| x.valeur.as_str()).collect();
@@ -162,7 +183,7 @@ pub fn lire(champ: &Champ, pack: &Pack, plan: &Plan) -> Result<Issue, String> {
     {
         return Ok(Issue::Signale);
     }
-    if distinctes(&ancrees) == 1 {
+    if distinctes(&ancrees) == 1 && tronquees == 0 {
         let l = ancrees[0];
         return Ok(Issue::Conforme(Lecture {
             valeur: l.valeur.clone(),
