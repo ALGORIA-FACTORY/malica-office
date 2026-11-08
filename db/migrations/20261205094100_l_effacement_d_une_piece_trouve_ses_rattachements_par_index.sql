@@ -28,4 +28,4 @@ create index if not exists rattachements_piece_liee_idx on capture.rattachements
 --
 -- drop index if exists capture.rattachements_piece_idx;
 -- drop index if exists capture.rattachements_piece_liee_idx;
--- delete from app.migrations where nom = '20261202150100_l_effacement_d_une_piece_trouve_ses_rattachements_par_index.sql';
+-- delete from app.migrations where nom = '20261205094100_l_effacement_d_une_piece_trouve_ses_rattachements_par_index.sql';

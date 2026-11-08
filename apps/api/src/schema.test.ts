@@ -382,7 +382,7 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
    * `capture.pieces` de tous les tenants — un `grant select` de plus, et elle
    * rendait à chaque compte les pièces de tous les clients. Une vue qui ne
    * contourne rien aujourd'hui parce que personne ne la lit est une mine, pas
-   * une garantie (20261202150000). Une vue matérialisée ne peut pas lire pour
+   * une garantie (20261205094000). Une vue matérialisée ne peut pas lire pour
    * son lecteur : il n'y en a aucune, et la première rougira ici.
    */
   it("toute vue lit avec les droits de son lecteur, même sans droit accordé", async () => {
@@ -412,7 +412,7 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
    * lecture de deux vues et l'exécution de trois fonctions (audit du
    * 6 novembre 2026, § 3.6). Personne ne les exerce — jusqu'au jour où un rôle
    * de connexion en devient membre et lit tous les tenants. Révoqués par
-   * 20261202150300. L'usage des schémas `auth`, `storage`, `extensions`, posé
+   * 20261205094300. L'usage des schémas `auth`, `storage`, `extensions`, posé
    * par le fichier de compatibilité à chaque montée, n'ouvre aucune ligne : il
    * n'est pas compté.
    */
@@ -448,7 +448,7 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
    * long de la même table, sans prédicat, ne sert aucune lecture que le plus
    * long ne serve : il coûte une écriture de plus à chaque ligne. Neuf relevés
    * (audit du 6 novembre 2026, § 3.5, et `app.signalements_user_idx` depuis),
-   * retirés par 20261202150200 ; chacun nomme dans ce fichier l'index qui le
+   * retirés par 20261205094200 ; chacun nomme dans ce fichier l'index qui le
    * couvre.
    */
   it("aucun index n'est le préfixe strict d'un autre index de la même table", async () => {

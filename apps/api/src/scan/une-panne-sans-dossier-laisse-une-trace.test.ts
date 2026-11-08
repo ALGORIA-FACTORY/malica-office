@@ -6,7 +6,7 @@
  * détail va au journal EN BASE. Le journal des pannes exige un dossier ;
  * accepter une invitation, ouvrir un dossier depuis le cabinet, la tour n'en
  * ont pas. Leur panne va donc à `app.signalements`, origine `panne`
- * (`20261202120000_une_panne_sans_dossier_laisse_une_trace.sql`).
+ * (`20261205093300_une_panne_sans_dossier_laisse_une_trace.sql`).
  */
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

@@ -1,7 +1,7 @@
 -- Une porte ne relit que la proposition OUVERTE de son appelant (lot S2,
 -- seconde revue indépendante, 7 novembre 2026).
 --
--- `20261202100100` bornait la lecture du portier à « ce que l'appelant a
+-- `20261205092700` bornait la lecture du portier à « ce que l'appelant a
 -- écrit » : une écriture qu'il a créée (`created_by`). La revue l'a pris en
 -- défaut : la PME propose l'écriture d'une pièce transmise, le cabinet engagé
 -- l'INSCRIT telle quelle, et l'écriture inscrite garde `created_by` = la PME.
@@ -31,7 +31,7 @@
 --    a déjà une écriture vivante de cette nature : un booléen, rien d'autre.
 --    Si oui, elle refuse comme avant (`refus.ecriture.reimputer`). La
 --    proposition ouverte qu'elle remplace s'efface par
---    `app.piece_oublie_ses_propositions` (`20261202100100`), comme avant le
+--    `app.piece_oublie_ses_propositions` (`20261205092700`), comme avant le
 --    lot : la porte ne la lit pas, et ne laisse pas deux propositions.
 --
 -- REJEU (R11) : `drop policy if exists`, `create or replace` ; aucune donnée

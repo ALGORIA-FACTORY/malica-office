@@ -18,7 +18,7 @@
 --     tiers (le payé plus les retenues) ;
 --   - une part brute éteinte plus grande que ce que l'écriture vivante de la pièce porte
 --     au tiers (la facture), quand la pièce en a une.
--- Corps repris de 20261202140100 ; seules ces deux bornes s'ajoutent, juste avant la fin.
+-- Corps repris de 20261205093900 ; seules ces deux bornes s'ajoutent, juste avant la fin.
 --
 -- REJEU (R11) : aucune donnée de référence n'est écrite ; `create or replace`.
 

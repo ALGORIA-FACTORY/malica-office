@@ -1,6 +1,6 @@
 /**
  * The out-of-dossier fault door (`public.journal_hors_dossier_consigner`,
- * 20261202120000) promises "twenty per person per ten minutes", enforced in
+ * 20261205093300) promises "twenty per person per ten minutes", enforced in
  * the database. It counts the caller's rows, then inserts — with no lock. Two
  * transactions that count at the same time both see fewer than twenty and
  * both insert, so parallel calls (a render loop of distinct errors, fired

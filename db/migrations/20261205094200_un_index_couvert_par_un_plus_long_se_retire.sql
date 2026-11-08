@@ -5,13 +5,13 @@
 -- Audit du 6 novembre 2026 (docs/audit-2026-11-06/base.md, § 3.5, M4) : huit
 -- index btree non uniques sont le préfixe strict d'un autre index de leur
 -- table ; un neuvième est apparu depuis (`app.signalements_user_idx`, que
--- 20261202120000 a couvert en posant `signalements_user_origine_idx`). Chacun
+-- 20261205093300 a couvert en posant `signalements_user_origine_idx`). Chacun
 -- coûte une écriture à chaque ligne et ne sert aucune lecture que le plus long
 -- ne serve.
 --
 -- Preuve par le catalogue (requête de apps/api/src/schema.test.ts, « aucun
 -- index n'est le préfixe strict d'un autre index de la même table »), sur une
--- base montée jusqu'à 20261202130000. Pour chaque paire : le court est btree,
+-- base montée jusqu'à 20261205093600. Pour chaque paire : le court est btree,
 -- non unique, sans prédicat ni expression, ne porte aucune contrainte
 -- (`pg_constraint.conindid`) ; le long est btree, valide, sans prédicat ni
 -- expression ; leurs premières colonnes sont les mêmes, dans le même ordre,
@@ -98,4 +98,4 @@ drop index if exists socle.lignes_ecriture_idx;
 -- create index if not exists concepts_pack_idx on ref.concepts (pack_version_id, code);
 -- create index if not exists formes_juridiques_pack_idx on ref.formes_juridiques (pack_version_id, code);
 -- create index if not exists lignes_ecriture_idx on socle.ecriture_lignes (ecriture_id);
--- delete from app.migrations where nom = '20261202150200_un_index_couvert_par_un_plus_long_se_retire.sql';
+-- delete from app.migrations where nom = '20261205094200_un_index_couvert_par_un_plus_long_se_retire.sql';
