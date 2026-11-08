@@ -3822,13 +3822,13 @@ export const en: Dict = {
   "tour.conseilCite.consigne": "Cited advice instructions",
   "tour.conseilCite.consigne.aide":
     "The system prompt Claude receives before the corpus passages. It holds no tax figure: rates, thresholds and deadlines come from the reference data and the texts, cited. Publishing creates a new version; the previous one stays on record.",
-  "tour.conseilCite.consigne.enVigueur": "In force since {date} ({versions} version(s) on record).",
+  "tour.conseilCite.consigne.enVigueur": "In force since {date}. Versions on record: {versions}.",
   "tour.conseilCite.consigne.borne": "At least two hundred characters.",
   "tour.conseilCite.publier": "Publish this version",
   "tour.conseilCite.reglage": "Cited advice settings",
   "tour.conseilCite.reglage.aide":
     "The standard model answers every question; the model for difficult questions takes over when the question exceeds the length, contains one of the words, or draws on several distinct texts.",
-  "tour.conseilCite.mois": "This month: {appels} answer(s), ${cout}.",
+  "tour.conseilCite.mois": "This month: answers given, {appels}; cost, ${cout}.",
   "tour.conseilCite.modeleCourant": "Standard model",
   "tour.conseilCite.modeleDifficile": "Model for difficult questions",
   "tour.conseilCite.longueurDifficile": "Length from which a question is difficult (characters)",

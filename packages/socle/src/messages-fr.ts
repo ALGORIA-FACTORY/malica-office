@@ -3929,13 +3929,13 @@ export const fr = {
   "tour.conseilCite.consigne.aide":
     "Le prompt système que Claude reçoit avant les passages du corpus. Il ne contient aucun chiffre fiscal : les taux, seuils et délais viennent du référentiel et des textes, cités. Publier crée une version nouvelle ; la précédente reste au registre.",
   "tour.conseilCite.consigne.enVigueur":
-    "En vigueur depuis le {date} ({versions} version(s) au registre).",
+    "En vigueur depuis le {date}. Versions au registre : {versions}.",
   "tour.conseilCite.consigne.borne": "Deux cents caractères au moins.",
   "tour.conseilCite.publier": "Publier cette version",
   "tour.conseilCite.reglage": "Réglage du conseil cité",
   "tour.conseilCite.reglage.aide":
     "Le modèle courant répond à toutes les questions ; le modèle des questions difficiles prend le relais quand la question dépasse la longueur, contient l'un des mots, ou mobilise plusieurs textes distincts.",
-  "tour.conseilCite.mois": "Ce mois : {appels} réponse(s), {cout} $.",
+  "tour.conseilCite.mois": "Ce mois : réponses données, {appels} ; coût, {cout} $.",
   "tour.conseilCite.modeleCourant": "Modèle courant",
   "tour.conseilCite.modeleDifficile": "Modèle des questions difficiles",
   "tour.conseilCite.longueurDifficile":
