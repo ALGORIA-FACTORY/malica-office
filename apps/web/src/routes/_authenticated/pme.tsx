@@ -581,7 +581,28 @@ function PmeLayout() {
          * `header` et la feuille porte `.appbar` — le collage, l'encoche, le
          * filet, le fond.
          */}
-        <EntetePme initiale={initiale} cloche={cloche} />
+        <EntetePme
+          initiale={initiale}
+          cloche={cloche}
+          societe={
+            org && pmeOrgs.length > 1
+              ? {
+                  societes: pmeOrgs.map((o) => ({
+                    id: o.id,
+                    name: o.name,
+                    matricule: o.legalId ?? null,
+                  })),
+                  ouverte: org.id,
+                  vueConsolidee: societeAffichee === null,
+                  onOuvrir: (id: string) => {
+                    if (id !== org.id) selectOrg(id);
+                    setSocieteVue(id);
+                  },
+                  onToutes: () => setSocieteVue(null),
+                }
+              : undefined
+          }
+        />
 
         <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
           {orgsQuery.isPending ? (

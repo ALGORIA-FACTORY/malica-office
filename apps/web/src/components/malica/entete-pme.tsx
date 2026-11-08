@@ -46,32 +46,38 @@ import { useI18n } from "@/i18n";
 
 import { ClocheDeLEntete, type ClocheProps } from "./cloche-de-l-entete";
 import { MarqueAlgoria } from "./office-ui";
+import { SelecteurDeSociete } from "./selecteur-de-societe";
 
 export interface EntetePmeProps {
   /** L'initiale du compte ouvert — la PERSONNE, jamais Malica. */
   initiale: string;
   /** Les alertes non lues de toutes les sociétés, et la plus récente. */
   cloche: ClocheProps;
+  /**
+   * La société ouverte et de quoi en changer (planche 2, approuvée le
+   * 7 novembre 2026) — seulement quand il y en a plusieurs.
+   */
+  societe?: React.ComponentProps<typeof SelecteurDeSociete> | undefined;
 }
 
-export function EntetePme({ initiale, cloche }: EntetePmeProps) {
+export function EntetePme({ initiale, cloche, societe }: EntetePmeProps) {
   const { t } = useI18n();
 
   return (
     <header className="appbar">
       <MarqueAlgoria aria-hidden className="mk" />
       {/*
-       * PLUS DE SÉLECTEUR DE SOCIÉTÉ (décision du dirigeant, 3 novembre 2026).
+       * LE SÉLECTEUR REVIENT, MAIS IL PARLE (planche 2, approuvée le 7 novembre
+       * 2026, qui reprend la décision du 3 novembre).
        *
-       * Le nom au centre décidait en silence de ce que montraient l'accueil, la
-       * bibliothèque, les échéances et les réglages : SOTUMAG ouverte, les
-       * réglages montraient la licence d'ALGORIA. Le choix d'une société vit
-       * désormais là où l'on travaille — la bibliothèque et les échéances, qui
-       * montrent toutes les sociétés par défaut — et la capture demande « pour
-       * quelle société ». La case reste, vide, pour que la barre garde son
-       * dessin.
+       * Le 3 novembre, le nom au centre décidait EN SILENCE de ce que
+       * montraient l'accueil, la bibliothèque et les réglages. Le dessin
+       * approuvé le remet, mais visible : la société ouverte et sa place
+       * (« 1/113 »), ou « Toutes les sociétés » quand la vue est consolidée.
+       * La touche ouvre la recherche, les épinglées et les récentes. Avec une
+       * seule société, la case reste vide.
        */}
-      <span className="org" aria-hidden />
+      {societe ? <SelecteurDeSociete {...societe} /> : <span className="org" aria-hidden />}
       {/*
        * L'initiale mène aux réglages. Le lecteur d'écran annonçait « W » seul :
        * le lien dit où il mène, et la lettre reste `aria-hidden` de fait
