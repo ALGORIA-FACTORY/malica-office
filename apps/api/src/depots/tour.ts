@@ -370,6 +370,60 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /** « Parler à Malica » : consigne en vigueur et ses versions, réglage, modèles, coût du mois. */
+  async assistantEtat(db: Requete) {
+    const { rows } = await db.query<{ r: unknown }>(`select plateforme.assistant_etat() as r`);
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour publie une version nouvelle de la consigne de l'assistant : datée, motivée. */
+  async publierConsigneDeLAssistant(db: Requete, texte: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.assistant_consigne_publier($1, $2) as r`,
+      [texte, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour règle l'assistant : modèles, règle de difficulté, effort, réflexion, bornes. */
+  async reglerAssistant(
+    db: Requete,
+    reglage: {
+      modeleCourant: string;
+      modeleDifficile: string;
+      longueurDifficile: number;
+      motsDifficiles: string[];
+      effortCourant: string;
+      effortDifficile: string;
+      reflexionCourant: string;
+      reflexionDifficile: string;
+      iterationsMax: number;
+      sortieMaxJetons: number;
+      toursTransmis: number;
+    },
+    motif: string,
+  ) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.assistant_regler($1, $2, $3::integer, $4::text[], $5, $6, $7, $8,
+                                          $9::integer, $10::integer, $11::integer, $12) as r`,
+      [
+        reglage.modeleCourant,
+        reglage.modeleDifficile,
+        reglage.longueurDifficile,
+        reglage.motsDifficiles,
+        reglage.effortCourant,
+        reglage.effortDifficile,
+        reglage.reflexionCourant,
+        reglage.reflexionDifficile,
+        reglage.iterationsMax,
+        reglage.sortieMaxJetons,
+        reglage.toursTransmis,
+        motif,
+      ],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /**
    * La chaîne de désignation : ses maillons (modèle, plafond, dépense de la
    * période, épuisé ou non), les modèles tarifés qu'on peut y mettre, et les

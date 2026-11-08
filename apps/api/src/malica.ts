@@ -28,8 +28,13 @@ import { z } from "zod";
 
 import { sousIdentite } from "./db.ts";
 import { creerAppelLocal, PieceIntrouvable } from "./malica/appel-local.ts";
+import type { EvenementDeLAssistant } from "@malica/socle/ports/assistant";
+
+import { converserAvecRepli, verifierLeDossier } from "./malica/assistant/agent.ts";
+import { clientClaudeEnFlux } from "./malica/assistant/claude-flux.ts";
 import { redigerLeBriefing } from "./malica/briefing.ts";
 import { askMalica, repondreAuCabinet } from "./malica/conseil/ask.ts";
+import { loadMalicaContext } from "./malica/conseil/context.ts";
 import { clientClaudeHttp } from "./malica/conseil/client-claude.ts";
 import { conseilCite } from "./malica/conseil/conseil-cite.ts";
 import { empreinteDeLaQuestion } from "./malica/conseil/corpus.ts";
@@ -328,6 +333,121 @@ malica.post("/conseil-cite", (req, res, next) => {
       client: clientClaudeHttp({ apiKey: process.env["ANTHROPIC_API_KEY"] }),
       empreinte: (question) => empreinteDeLaQuestion(appel, question),
     });
+  });
+});
+
+/* --------------------------------------------------- Parler à Malica */
+
+const QuestionALAssistant = z.object({
+  tenantId: Uuid,
+  question: z.string().trim().min(1).max(4000),
+  locale: Locale,
+  conversationId: Uuid.nullish(),
+  /** Les pièces jointes, déjà déposées et confiées à la lecture Malica (R2). */
+  pieceIds: z.array(Uuid).max(5).default([]),
+});
+
+/**
+ * « Parler à Malica » — l'assistant conversationnel, en flux.
+ *
+ * Ce qui peut refuser refuse AVANT le flux, en 4xx ordinaire : saisie, dossier
+ * hors des droits, juridiction absente, plafond du mois. Ensuite seulement la
+ * réponse passe en `text/event-stream`, un événement par ligne `data:` (voir
+ * `@malica/socle/ports/assistant`). Une panne en cours de flux devient un
+ * événement `erreur` : les en-têtes sont partis, le statut ne change plus.
+ */
+malica.post("/assistant", (req, res, next) => {
+  let fluxOuvert = false;
+  const emettre = (ev: EvenementDeLAssistant) => {
+    if (!res.writableEnded) res.write(`event: ${ev.type}\ndata: ${JSON.stringify(ev)}\n\n`);
+  };
+  const travail = async () => {
+    const q = QuestionALAssistant.parse(req.body);
+    const appel = api(req);
+    const dossier = await verifierLeDossier(appel, q.tenantId);
+
+    res.status(200);
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+    fluxOuvert = true;
+
+    const cleClaude = process.env["ANTHROPIC_API_KEY"]?.trim();
+    const clientConseil = clientClaudeHttp({ apiKey: cleClaude });
+    try {
+      await converserAvecRepli(
+        appel,
+        dossier,
+        {
+          tenantId: q.tenantId,
+          question: q.question,
+          locale: q.locale,
+          conversationId: q.conversationId ?? null,
+          pieceIds: q.pieceIds,
+        },
+        {
+          claude: cleClaude ? clientClaudeEnFlux({ apiKey: cleClaude }) : null,
+          conseil: (question, jour) =>
+            conseilCite(
+              appel,
+              { tenantId: q.tenantId, question, locale: q.locale, jour },
+              {
+                client: clientConseil,
+                empreinte: (texte) => empreinteDeLaQuestion(appel, texte),
+              },
+            ),
+          repli: async ({ question, conversationId }) => {
+            const r = await askMalica(appel, {
+              tenantId: q.tenantId,
+              question,
+              locale: q.locale,
+              mode: "chat",
+              conversationId,
+            });
+            // Ce que le repli avait sous les yeux : la garde y relit ses chiffres.
+            const contexte = await loadMalicaContext(appel, q.tenantId, null);
+            return {
+              answer: r.answer,
+              model: r.model,
+              conversationId: r.conversationId,
+              messageId: r.messageId,
+              titre: r.titre,
+              sources: [
+                {
+                  cle: "malica:dossier",
+                  genre: "liste",
+                  titre: "Dossier",
+                  objetId: null,
+                  texte: JSON.stringify(contexte),
+                },
+                ...(r.conseil?.sources ?? []).map((s) => ({
+                  cle: `malica:article:${s.corpus}:${s.numero}`,
+                  genre: "article" as const,
+                  titre: `${s.corpus} ${s.numero}`,
+                  objetId: null,
+                  texte: `${s.corpus} ${s.numero}`,
+                })),
+              ],
+            };
+          },
+        },
+        emettre,
+      );
+    } catch (e) {
+      console.error(`[assistant] ${e instanceof Error ? e.message : String(e)}`);
+      emettre({ type: "erreur", erreur: refusLisible(e) ?? "assistant.indisponible" });
+    }
+    res.end();
+  };
+  travail().catch((erreur: unknown) => {
+    if (fluxOuvert) {
+      emettre({ type: "erreur", erreur: "assistant.indisponible" });
+      res.end();
+      return;
+    }
+    // Avant le flux : le même traitement que toute route de Malica.
+    repondre(res, next, () => Promise.reject(erreur));
   });
 });
 

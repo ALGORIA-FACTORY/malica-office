@@ -85,6 +85,7 @@
     "transmettreLesPieces"
   ],
   "conseil": [
+    "configurationAssistant",
     "configurationCitee",
     "contexte",
     "creer",
@@ -333,6 +334,7 @@
     "accorderAccesTotal",
     "accorderLectures",
     "archiverOrganisation",
+    "assistantEtat",
     "calendrier",
     "chercherOrganisations",
     "clients",
@@ -347,6 +349,7 @@
     "membresDeLOrganisation",
     "poserJourFerie",
     "prestatairesDePaiement",
+    "publierConsigneDeLAssistant",
     "publierConsigneDuConseil",
     "publierGrille",
     "publierReport",
@@ -357,6 +360,7 @@
     "reglageRelances",
     "reglageRelectureNuit",
     "reglerAbonnement",
+    "reglerAssistant",
     "reglerCompteDeService",
     "reglerConseilCite",
     "reglerDesignation",

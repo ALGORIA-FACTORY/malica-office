@@ -400,4 +400,15 @@ export const conseil = {
     );
     return rows[0]?.r ?? null;
   },
+
+  /**
+   * La configuration de « Parler à Malica » : la consigne en vigueur, le
+   * réglage (modèles, règle de difficulté, effort, réflexion, tours d'outils)
+   * et les tarifs des deux modèles. Rien de tout cela n'est écrit dans le code
+   * (R4, R8, R10).
+   */
+  async configurationAssistant(db: Requete): Promise<unknown> {
+    const { rows } = await db.query<{ r: unknown }>(`select public.assistant_configuration() as r`);
+    return rows[0]?.r ?? null;
+  },
 };
