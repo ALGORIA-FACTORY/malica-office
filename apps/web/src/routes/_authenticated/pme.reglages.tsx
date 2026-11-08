@@ -1480,38 +1480,85 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
   const acces = useMonAcces(pme.tenantId);
   const dirigeant = acces.data?.role === "dirigeant";
 
-  const groupes = grouperParOrganisation(abo.sieges);
+  // Aucune place lue : la carte d'attente ou d'ennui, plus bas.
+  const aucune = abo.sieges.length === 0;
+  /*
+   * PAR PERSONNE (planche 4, 7 novembre 2026) : « une ligne par personne, pas
+   * par société ». Un propriétaire de cent sociétés se voyait cent fois. Ses
+   * places, société par société — et « Reprendre la place » — s'ouvrent dans
+   * sa fiche, en feuille.
+   */
+  const personnes = grouperParPersonne(abo.sieges, locale);
+  const [ouverte, setOuverte] = useState<string | null>(null);
+  const feuille = useRef<HTMLDivElement>(null);
+  const fermer = useCallback(() => setOuverte(null), []);
+  useSuperposition(ouverte !== null, fermer, feuille);
+  const personne = personnes.find((x) => x.userId === ouverte);
+  const peutReprendre = (tenantId: string) =>
+    abo.titulaire.get(tenantId) === true &&
+    ((pme.dossiers.find((d) => d.id === tenantId)?.role ?? null) === "dirigeant" ||
+      (tenantId === pme.tenantId && dirigeant));
 
   return (
     <>
-      {groupes.map((g) => (
-        <div className="grp" key={g.tenantId}>
-          <div className="t">
-            <b>{g.organisation}</b>
-            {/* Le plafond se lit en tête de section ; ici, qui est là. */}
-            <span>{nombre(g.lignes.length, locale)}</span>
-          </div>
-          {g.lignes.map((s) => (
-            <Siege
-              key={`${s.tenant_id}:${s.user_id}`}
-              siege={s}
-              moi={s.user_id === compte.data?.id}
-              // Le rôle dans la société du groupe, pas dans le dossier ouvert :
-              // les réglages montrent toutes les sociétés (3 novembre 2026).
-              // Reprendre une place est l'acte du titulaire de la licence : sur
-              // la licence d'un autre, l'écran ne le propose pas (staging, 3
-              // novembre 2026 — il le proposait sur le propriétaire principal).
-              dirigeant={
-                abo.titulaire.get(g.tenantId) === true &&
-                ((pme.dossiers.find((d) => d.id === g.tenantId)?.role ?? null) === "dirigeant" ||
-                  (g.tenantId === pme.tenantId && dirigeant))
-              }
-            />
-          ))}
-        </div>
-      ))}
+      <div className="personnes">
+        {personnes.map((x) => {
+          const moi = x.userId === compte.data?.id;
+          return (
+            <button
+              key={x.userId}
+              type="button"
+              className="pe"
+              onClick={() => setOuverte(x.userId)}
+            >
+              <span className={cn("av", moi && "me")} aria-hidden>
+                {initiale(x.nom ?? x.email)}
+              </span>
+              <span className="bd">
+                <b>{x.nom ?? x.email ?? ABSENT}</b>
+                <span>
+                  {roleLisible(x.rolePrincipal, t)} ·{" "}
+                  {t("pme.reglages.personnes.societes", { count: x.places.length })}
+                </span>
+              </span>
+              {moi ? <em>{t("pme.reglages.personnes.vous")}</em> : null}
+            </button>
+          );
+        })}
+      </div>
+      {personne
+        ? createPortal(
+            <div className="fiche-voile" onClick={fermer}>
+              <div
+                ref={feuille}
+                className="fiche-feuille"
+                role="dialog"
+                aria-modal="true"
+                aria-label={personne.nom ?? personne.email ?? ""}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div data-ecran="parametres">
+                  <p className="fiche-titre">{personne.nom ?? personne.email}</p>
+                  {personne.places.map((s) => (
+                    <div className="grp" key={s.tenant_id}>
+                      <div className="t">
+                        <b>{s.organisation}</b>
+                      </div>
+                      <Siege
+                        siege={s}
+                        moi={s.user_id === compte.data?.id}
+                        dirigeant={peutReprendre(s.tenant_id)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>,
+            document.querySelector('[data-surface="pme"]') ?? document.body,
+          )
+        : null}
 
-      {groupes.length === 0 ? (
+      {aucune ? (
         <div className="card">
           <p className="t-body">
             {abo.enCours ? t("common.loading") : (abo.ennui ?? t("pme.reglages.sieges.aucun"))}
@@ -1911,19 +1958,33 @@ function roleLisible(
  * nom, et les fondre en un groupe donnerait un plafond de sièges faux. Le nom
  * ne sert qu'à l'affichage, et l'identifiant à l'invitation.
  */
-function grouperParOrganisation(
+/** Les places d'une personne, toutes sociétés : une ligne par personne. */
+function grouperParPersonne(
   sieges: readonly SiegeDeLaLicence[],
-): Array<{ tenantId: string; organisation: string; lignes: SiegeDeLaLicence[] }> {
-  const par = new Map<
-    string,
-    { tenantId: string; organisation: string; lignes: SiegeDeLaLicence[] }
-  >();
-  for (const s of sieges) {
-    const groupe = par.get(s.tenant_id);
-    if (groupe) groupe.lignes.push(s);
-    else par.set(s.tenant_id, { tenantId: s.tenant_id, organisation: s.organisation, lignes: [s] });
-  }
-  return [...par.values()];
+  locale: string,
+): Array<{
+  userId: string;
+  nom: string | null;
+  email: string | null;
+  rolePrincipal: string;
+  places: SiegeDeLaLicence[];
+}> {
+  const par = new Map<string, SiegeDeLaLicence[]>();
+  for (const s of sieges) par.set(s.user_id, [...(par.get(s.user_id) ?? []), s]);
+  return [...par.entries()]
+    .map(([userId, places]) => {
+      places.sort((a, b) => a.organisation.localeCompare(b.organisation, locale));
+      const roles = places.map((p) => p.role);
+      return {
+        userId,
+        nom: places.find((p) => p.nom)?.nom ?? null,
+        email: places.find((p) => p.email)?.email ?? null,
+        // Le rôle le plus fort qu'elle tient quelque part : propriétaire d'abord.
+        rolePrincipal: roles.includes("dirigeant") ? "dirigeant" : (roles[0] ?? "collaborateur"),
+        places,
+      };
+    })
+    .sort((a, b) => b.places.length - a.places.length);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

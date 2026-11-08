@@ -3093,3 +3093,15 @@ html.dark:has([data-surface="pme"]),
 [data-surface="pme"] .rp-feuille{width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:1.25rem 1.25rem max(1.25rem, env(safe-area-inset-bottom, 0px));border-radius:28px 28px 0 0;background:var(--bg);animation:pq-entre .28s var(--e-entre) both}
 @media (min-width:768px){[data-surface="pme"] .rp-voile{align-items:center}[data-surface="pme"] .rp-feuille{border-radius:28px}}
 @media (prefers-reduced-motion: reduce){[data-surface="pme"] .rp,[data-surface="pme"] .rp-feuille{animation:none}}
+
+/* Réglages › Utilisateurs, une ligne par personne (planche 4). */
+[data-surface="pme"] [data-ecran="parametres"] .personnes{margin-top:.75rem;border-radius:16px;background:var(--d1);border:1px solid var(--hr);overflow:hidden}
+[data-surface="pme"] [data-ecran="parametres"] .personnes .pe{width:100%;display:flex;align-items:center;gap:.75rem;padding:.6875rem .875rem;border:0;background:none;color:var(--tx);font:inherit;text-align:start;cursor:pointer}
+[data-surface="pme"] [data-ecran="parametres"] .personnes .pe + .pe{box-shadow:inset 0 1px 0 var(--hr)}
+[data-surface="pme"] [data-ecran="parametres"] .personnes .av{width:38px;height:38px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--d2);font-weight:800;font-size:.875rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="parametres"] .personnes .av.me{background:var(--acc);color:var(--on-acc)}
+[data-surface="pme"] [data-ecran="parametres"] .personnes .bd{flex:1;min-width:0;display:grid;gap:.125rem}
+[data-surface="pme"] [data-ecran="parametres"] .personnes .bd b{font-size:.9375rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-surface="pme"] [data-ecran="parametres"] .personnes .bd span{font-size:.75rem;color:var(--t3)}
+[data-surface="pme"] [data-ecran="parametres"] .personnes em{flex:none;font-style:normal;font-size:.75rem;font-weight:700;padding:.1875rem .5625rem;border-radius:999px;background:var(--accs);color:var(--acc)}
+[data-surface="pme"] .fiche-feuille .fiche-titre{margin:0 0 .5rem;font-size:1.125rem;font-weight:700}
