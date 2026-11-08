@@ -592,8 +592,7 @@ function PmeLayout() {
                     name: o.name,
                     matricule: o.legalId ?? null,
                   })),
-                  ouverte: org.id,
-                  vueConsolidee: societeAffichee === null,
+                  affichee: societeAffichee,
                   onOuvrir: (id: string) => {
                     if (id !== org.id) selectOrg(id);
                     setSocieteVue(id);

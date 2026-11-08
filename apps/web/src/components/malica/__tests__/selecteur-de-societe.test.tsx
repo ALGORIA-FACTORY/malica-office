@@ -28,8 +28,7 @@ function monter(over: Partial<Parameters<typeof SelecteurDeSociete>[0]> = {}) {
   render(
     createElement(SelecteurDeSociete, {
       societes,
-      ouverte: "z",
-      vueConsolidee: false,
+      affichee: "z",
       onOuvrir,
       onToutes,
       ...over,
@@ -52,7 +51,7 @@ describe("le sélecteur de société", () => {
   });
 
   it("en vue consolidée, dit « toutes » et leur nombre", () => {
-    monter({ vueConsolidee: true });
+    monter({ affichee: null });
     expect(screen.getByRole("button", { expanded: false }).textContent).toContain(
       "pme.notifs.toutesSocietes",
     );
@@ -87,6 +86,11 @@ describe("le sélecteur de société", () => {
     expect(screen.getByText("pme.societes.epinglees")).toBeTruthy();
     fireEvent.click(screen.getByText("pme.notifs.toutesSocietes"));
     expect(onToutes).toHaveBeenCalled();
+  });
+
+  it("l'en-tête nomme la société que l'écran MONTRE, pas une autre", () => {
+    monter({ affichee: "s" });
+    expect(screen.getByRole("button", { expanded: false }).textContent).toContain("Société Byrsa");
   });
 
   it("Échap ferme", () => {

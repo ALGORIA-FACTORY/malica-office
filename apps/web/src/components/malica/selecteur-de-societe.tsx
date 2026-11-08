@@ -24,9 +24,10 @@
  * Rien de commercial : la ligne d'une société dit son matricule, jamais son
  * offre ni son prix (coque Android, décisions des 20 et 22 octobre 2026).
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
 
 export interface SocieteDuSelecteur {
@@ -72,16 +73,18 @@ function initialesDe(nom: string) {
 
 export function SelecteurDeSociete({
   societes,
-  ouverte,
-  vueConsolidee,
+  affichee,
   onOuvrir,
   onToutes,
 }: {
   societes: readonly SocieteDuSelecteur[];
-  /** Le dossier ouvert. */
-  ouverte: string;
-  /** Vrai quand la bibliothèque montre toutes les sociétés. */
-  vueConsolidee: boolean;
+  /**
+   * La société que les écrans MONTRENT (`pme.societeAffichee`), `null` =
+   * toutes. C'est elle que l'en-tête nomme : les cartes de la bibliothèque
+   * et le filtre des échéances la changent aussi, et l'en-tête ne doit jamais
+   * nommer une société pendant que l'écran en montre une autre (revue de #272).
+   */
+  affichee: string | null;
   onOuvrir: (id: string) => void;
   onToutes: () => void;
 }) {
@@ -90,7 +93,13 @@ export function SelecteurDeSociete({
   const [cherche, setCherche] = useState("");
   const [epinglees, setEpinglees] = useState<string[]>([]);
   const [recentes, setRecentes] = useState<string[]>([]);
+  const vueConsolidee = affichee === null;
   const champ = useRef<HTMLInputElement>(null);
+  const feuille = useRef<HTMLDivElement>(null);
+  const fermer = useCallback(() => setOuvert(false), []);
+  // La pile des superpositions : le bouton Retour d'Android ferme la feuille
+  // au lieu de quitter l'écran, et le focus y reste piégé (revue de #272).
+  useSuperposition(ouvert, fermer, feuille);
   const puce = useRef<HTMLButtonElement>(null);
   /** Sur l'ordinateur, le panneau s'ancre sous la puce. */
   const [ancre, setAncre] = useState<{ top: number; left: number } | null>(null);
@@ -118,8 +127,8 @@ export function SelecteurDeSociete({
     [societes, locale],
   );
   const parId = useMemo(() => new Map(societes.map((s) => [s.id, s])), [societes]);
-  const rang = triees.findIndex((s) => s.id === ouverte) + 1;
-  const courante = parId.get(ouverte);
+  const rang = triees.findIndex((s) => s.id === affichee) + 1;
+  const courante = affichee ? parId.get(affichee) : undefined;
 
   const q = plier(cherche.trim());
   const trouvees = q
@@ -142,7 +151,7 @@ export function SelecteurDeSociete({
   };
 
   const ligne = (s: SocieteDuSelecteur) => {
-    const ici = s.id === ouverte && !vueConsolidee;
+    const ici = s.id === affichee;
     const epinglee = epinglees.includes(s.id);
     return (
       <li key={s.id}>
@@ -204,6 +213,7 @@ export function SelecteurDeSociete({
             <div className="selsoc">
               <div className="voile" aria-hidden onClick={() => setOuvert(false)} />
               <div
+                ref={feuille}
                 className="feuille"
                 style={
                   {
