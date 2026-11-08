@@ -60,51 +60,24 @@ export function modeleOcr(): string {
   return process.env["QWEN_OCR_MODEL"]?.trim() || MODELE_OCR_PAR_DEFAUT;
 }
 
-/**
- * Celui qui désigne les champs : il ne voit jamais la pièce, seulement les tokens.
- *
- * ========================================== POURQUOI LE CHAT, ET PLUS LE RAISONNEUR
- *
- * Mesuré le 5 octobre 2026 sur le journal de production, puis au banc
- * (`tests/real/designation-cout.ts`, trois passages par modèle) :
- *
- *                      champs justes  valeurs fausses  sortie   coût/appel
- *   deepseek-reasoner      27/28            0          3 792      0,0097 $
- *   deepseek-chat        23 à 25/28         1          414        0,0020 $
- *
- * En production, le raisonneur rendait 9 022 jetons de raisonnement et prenait
- * 36 472 ms — pour produire une vingtaine de `page/ordinal`. Trente-six
- * secondes d'attente pour quelqu'un qui tient son téléphone, et quatre fois le
- * budget visé.
- *
- * Le chat est 4,7 fois moins cher et rend neuf fois moins de jetons. Il est
- * aussi moins précis, et sa seule VALEUR fausse était un `document_kind` lu
- * « vente » sur un achat — l'erreur la plus grave possible, qu'aucune
- * arithmétique ne rattrape.
- *
- * On ne bascule donc PAS pour économiser : on bascule parce que cette erreur
- * est désormais attrapée. Le contrôle `sens_de_la_piece` (`scan/controles.ts`)
- * confronte le sens lu au NOM de l'émetteur, et refuse la contradiction. Il a
- * été écrit avant cette bascule, exprès.
- *
- * Reste à mesurer sur les onze factures du prototype, puis à comparer à
- * `qwen3.8-flash`, qui voit l'image — il entrera quand son tarif sera en base
- * (R8) et que le client saura l'appeler.
- */
-export const ROLE_DESIGNATION: DeepSeekRole = "chat";
-
 /*
- * Le modèle est DÉRIVÉ du rôle, et non écrit à côté de lui.
+ * ==================================== CELUI QUI DÉSIGNE N'EST PLUS NOMMÉ ICI
  *
- * L'appel de `vision.ts` forçait `role: "reasoner"` en dur pendant que cette
- * constante nommait le modèle. Changer l'un sans l'autre désaccordait le couple,
- * et `agents_run_log` ne trouve alors AUCUN tarif pour (modèle, rôle) : l'appel
- * s'exécute, et son coût n'est pas journalisé. C'est exactement par là que le
- * coût de l'œil a disparu du journal (D47).
+ * Jusqu'au 8 novembre 2026, `ROLE_DESIGNATION` (« chat ») et
+ * `MODELE_DESIGNATION` (« deepseek-chat ») vivaient ici. La bascule du
+ * 5 octobre — du raisonneur au chat, mesurée sur le journal de production
+ * (27/28 champs justes et 36 s pour le raisonneur, 23 à 25/28 et 4,7 fois
+ * moins cher pour le chat) — reste valable pour DeepSeek.
  *
- * Dériver rend la désynchronisation impossible, plutôt qu'interdite.
+ * Décision du dirigeant du 8 novembre 2026 : Claude désigne, DeepSeek prend
+ * la main en cas de panne ou de budget épuisé, et les deux budgets épuisés on
+ * s'arrête. Le modèle de chaque rang se RÈGLE depuis la tour
+ * (`plateforme.reglages_designation`), parmi les modèles tarifés de
+ * `agents.model_pricing` : R8 devient littérale pour la désignation — choisir
+ * le modèle et savoir ce qu'il coûte sont la même lecture, et le millésime est
+ * figé chez le fournisseur (un identifiant Claude est un instantané). Voir
+ * `lecture/designation.ts`.
  */
-export const MODELE_DESIGNATION = DEEPSEEK_MODELS[ROLE_DESIGNATION];
 
 /* ------------------------------------------- L'ORGANE QUI NE COÛTE RIEN -- */
 
@@ -176,3 +149,18 @@ export const ROLE_RECETTE = "recette";
 export const ROLE_DEEPSEEK_DE_GENERATION: DeepSeekRole = "reasoner";
 export const MODELE_GENERATION = DEEPSEEK_MODELS[ROLE_DEEPSEEK_DE_GENERATION];
 export const ROLE_GENERATION = "generateur";
+
+/* ------------------------------------------- LE SUDOKU QUI DÉSIGNE SEUL -- */
+
+/**
+ * Le moteur Sudoku, quand il a tout prouvé et qu'aucun modèle n'est appelé
+ * (« le Sudoku d'abord », décision du dirigeant du 8 novembre 2026).
+ *
+ * Même raison que la recette : `agents.model_pricing` cherche un tarif par le
+ * COUPLE (modèle, rôle), et une désignation sans ligne de tarif ne se
+ * journalise pas. Sans elle, le compteur de la tour (« pièces lues sans IA ce
+ * mois ») ne compterait rien. Tarif à zéro, souverain : le moteur tourne chez
+ * nous et ne consomme aucun jeton.
+ */
+export const MODELE_SUDOKU = "sudoku";
+export const ROLE_SUDOKU = "sudoku";

@@ -170,6 +170,7 @@ describe("les portes du serveur", { skip: !BASE_CONFIGUREE }, () => {
       ["capture", "persisterLecture", [{ pieceId: piece }]],
       ["capture", "consommerLecture", [piece]],
       ["capture", "journaliserAgent", [{}]],
+      ["capture", "chaineDeDesignation", []],
       ["capture", "contexteLecture", [piece]],
       ["conversations", "ajouter", [{}]],
       ["fabrique", "inscrireExecution", [{}]],

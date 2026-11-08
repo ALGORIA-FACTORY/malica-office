@@ -645,3 +645,63 @@ l'écriture que le cabinet a prise en charge (`refus.introuvable.ecriture`) :
 le cabinet la défait. Si le dirigeant veut rendre ce geste à la PME, il faudra
 une porte dédiée qui ne lit que ce dont elle a besoin. Reste aussi ouvert :
 après la révocation du mandat, la PME relit tout ce que le cabinet a inscrit.
+## La chaîne de désignation (décidée par Wissem le 8 novembre 2026)
+
+Claude désigne, DeepSeek prend la main en cas de panne ou de budget épuisé, et
+les deux budgets épuisés la pièce est lue par le moteur Sudoku seul
+(`20261202090000_la_designation_a_un_principal_et_un_repli.sql`,
+`apps/api/src/malica/lecture/designation.ts`). Tranché par défaut, à confirmer :
+
+- **Les plafonds de départ** : 500 $ par mois civil pour Claude (les crédits
+  mensuels de l'offre startup, dit par le dirigeant le 8 novembre 2026 : le
+  compteur repart de zéro le 1er du mois), 20 $ par mois pour DeepSeek. La tour
+  les règle (section « Modèles »), datés et motivés.
+- **Le cache du prompt système de Claude** est posé : sa lecture et son écriture
+  se journalisent sous leurs rôles tarifés (`cache`, `cache_ecriture`). Les
+  crédits startup sont supposés couvrir ces mêmes prix ; si l'offre les compte
+  autrement, seul le plafond est à régler.
+- **Le modèle Claude de départ** : `claude-haiku-5-5` (0,10 $ / 0,50 $ par
+  million de jetons), sur l'essai de l'expert plateforme du 8 novembre 2026
+  (une facture fictive). `claude-sonnet-5-5` (2 $ / 10 $) est tarifé et se
+  choisit dans la tour. À mesurer sur nos vraies pièces avec la clé (banc
+  `tests/real/designation-cout.ts`). Un « second avis » Sonnet sur les pièces
+  non prouvées n'est PAS câblé : c'est un troisième appel, à décider.
+- **Les sorties structurées (`output_config.format`) ne sont PAS activées.** Leur
+  limite (24 paramètres facultatifs et 16 unions par requête) ne tient pas le
+  contrat de désignation R2 tel qu'il est : une trentaine de pointeurs
+  `page/ordinal` facultatifs et des références à clés libres. Les activer
+  demande de remodeler ce contrat (champs requis avec « non désigné » explicite,
+  références en liste), puis un appel réel pour valider le schéma — rien de cela
+  ne se fait sans clé ni à l'aveugle. D'ici là : réessai sur JSON illisible, puis
+  repli DeepSeek, journalisé.
+- **Ce que compte le budget** : la facture du FOURNISSEUR, tous organes
+  confondus. Le conseil, les procès-verbaux et le générateur de recettes
+  appellent aussi DeepSeek : leur dépense entame le budget du repli.
+- **Deux pannes de suite ne sont pas un arrêt** : Claude en panne puis DeepSeek
+  en panne, la lecture échoue comme avant et la file la rejoue. Seuls deux
+  budgets épuisés arrêtent la désignation par modèle.
+- **Hors de la chaîne, pour l'instant** : la carte d'identification fiscale
+  (`lire-carte.ts`), le conseil, les procès-verbaux et le générateur de
+  recettes restent sur DeepSeek seul.
+
+## Le Sudoku d'abord (décidé par Wissem le 8 novembre 2026)
+
+« J'ai fait le Sudoku pour minimiser au maximum le GPU et l'IA. » Le relevé
+passe d'abord par le moteur seul ; prouvée pour tout ce que l'écriture exige,
+la pièce n'appelle aucun modèle (`20261202100000_le_sudoku_d_abord.sql`,
+`ref.lecture_sans_ia`). Tranché par défaut, à confirmer :
+
+- **Le niveau exigé du numéro et de la date est `conforme`, pas `prouve`.** Le
+  moteur ne les rend jamais « prouvés » : aucune arithmétique ne prouve un
+  numéro ou une date. Ils sont lus derrière leur repère, une seule valeur, au
+  format du pack. Exiger `prouve` fermerait la porte sur toutes les pièces.
+  Montants, sens et matricule de l'émetteur restent exigés `prouve` (la base
+  refuse moins). Le nom d'un fournisseur nouveau est `conforme` (il n'est dans
+  aucun tiers) ; un fournisseur connu est `prouve`.
+- **La porte s'ouvre quel que soit le mode du dossier** (`lecture.sudoku`
+  `observe` ou `designe`) : c'est le principe du dirigeant. Une pièce lue sans
+  IA a donc ses montants désignés par la preuve même dans un dossier « en
+  observation ».
+- **Le chiffre du banc (175 pièces sur 261) n'est pas celui de cette porte** :
+  la porte exige aussi le sens, l'émetteur, le numéro et la date. Le compteur de
+  la tour (« pièces lues sans IA ce mois ») dira le vrai taux en production.

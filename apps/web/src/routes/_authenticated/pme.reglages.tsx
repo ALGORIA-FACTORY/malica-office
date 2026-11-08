@@ -1,6 +1,7 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { coque, COMMERCE, versionClient } from "@/capabilities/coque";
 import {
@@ -23,6 +24,9 @@ import { usePrixEnPlus } from "@/hooks/use-prix-en-plus";
 import { libelleDOffre, offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/use-offres";
 import { cleMonCabinet, useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useMonAcces } from "@/hooks/use-mon-acces";
+import { useCoteDuPlus } from "@/hooks/use-cote-du-plus";
+import { useSuperposition } from "@/hooks/use-superposition";
+import { plier } from "@/lib/mes-societes";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres } from "@/lib/lisible";
@@ -31,13 +35,20 @@ import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type {
+  FicheDeSociete,
   MonForfait,
   OffreAuCatalogue,
   OrganisationDeLaLicence,
   SiegeDeLaLicence,
 } from "@malica/socle/ports/repositories";
 
+/** Les pages des Réglages (planche 4) : sans page, le sommaire. */
+type PageDesReglages = "abonnement" | "societes" | "utilisateurs";
+const PAGES: readonly PageDesReglages[] = ["abonnement", "societes", "utilisateurs"];
+
 export const Route = createFileRoute("/_authenticated/pme/reglages")({
+  validateSearch: (s: Record<string, unknown>): { page?: PageDesReglages } =>
+    PAGES.includes(s["page"] as PageDesReglages) ? { page: s["page"] as PageDesReglages } : {},
   head: () => ({
     meta: [
       { title: "Réglages — Malica Office" },
@@ -112,9 +123,30 @@ export const Route = createFileRoute("/_authenticated/pme/reglages")({
 function PmeReglages() {
   const { t, locale, setLocale } = useI18n();
   const { apparence, choisir } = useApparence();
+  const { cote: coteDuPlus } = useCoteDuPlus();
+  const { page } = Route.useSearch();
+  const navigate = useNavigate();
   const pme = usePme();
   const aLEchelle = usePrix();
   const catalogue = useCatalogueDesOffres().data;
+  const ids = pme.dossiers.length > 0 ? pme.dossiers.map((d) => d.id) : [pme.tenantId];
+  /** L'offre et le cabinet de chaque société, en un appel (planche 4). */
+  const fiches = useQuery({
+    // Sous `mon-forfait` : tout geste qui change une offre ou un mandat relit
+    // aussi cette liste (revue de #284).
+    queryKey: [CLE_FORFAIT, "fiches-des-societes", ...ids],
+    queryFn: () => office().facturation.fichesDesSocietes(ids),
+    staleTime: 5 * 60 * 1000,
+  });
+  /** « 100 Basic · 4 Team · 2 Premium » : les offres des sociétés, les plus nombreuses d'abord. */
+  const resumeDesOffres = (() => {
+    const n = new Map<string, number>();
+    for (const x of fiches.data ?? []) if (x.offre) n.set(x.offre, (n.get(x.offre) ?? 0) + 1);
+    return [...n.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([o, k]) => `${nombre(k, locale)} ${libelleDOffre(catalogue, o)}`)
+      .join(" · ");
+  })();
 
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
   // La même lecture que « Mon nom » (`["mon-profil"]`) : une seule requête.
@@ -138,473 +170,578 @@ function PmeReglages() {
 
   return (
     <div data-ecran="parametres" className="rg-rise">
-      <h1>{t("pme.reglages.titre")}</h1>
+      {page ? (
+        <div className="top">
+          <button
+            type="button"
+            className="bk"
+            aria-label={t("pme.regler.retour")}
+            onClick={() => void navigate({ to: "/pme/reglages", search: {} })}
+          >
+            <svg viewBox="0 0 24 24" className="g" aria-hidden>
+              <path d="M14.5 5.5L8 12l6.5 6.5" />
+            </svg>
+          </button>
+        </div>
+      ) : (
+        <h1>{t("pme.reglages.titre")}</h1>
+      )}
 
       {/* ─────────────────────────────────────────────────── le compte */}
-      {/*
-       * 23 octobre 2026 (« trop d'écriture, simplifier sans rien perdre ») :
-       * chaque phrase d'explication de cet écran est passée derrière le ⓘ de
-       * son titre (`components/malica/aide.tsx`). Rien n'est supprimé.
-       */}
-      <div className="sec">
-        <h2>
-          {t("pme.reglages.compte")}
-          <Aide
-            titre={t("pme.reglages.compte")}
-            paragraphes={[{ texte: t("pme.reglages.profil.aide") }]}
-          />
-        </h2>
-      </div>
-      {/*
-       * Le profil en tête (maquette du 1er novembre 2026) : l'initiale en grand,
-       * le nom que la personne a écrit (`identity.profiles`), son adresse, son
-       * rôle et sa société. Aucun nom n'est inventé : sans prénom, l'adresse.
-       */}
-      <div className="card profil">
-        <span className="av" aria-hidden>
-          {initiale(profil.data?.prenom || compte.data?.email || null)}
-        </span>
-        <b>
-          {[profil.data?.prenom, profil.data?.nom].filter(Boolean).join(" ") ||
-            (compte.data?.email ?? ABSENT)}
-        </b>
-        {profil.data?.prenom ? <span className="ml">{compte.data?.email}</span> : null}
-        <span className="pills">
-          {acces.data?.role ? (
-            <span className="pill">
-              {t(
-                acces.data.role === "dirigeant"
-                  ? "pme.membres.role.dirigeant"
-                  : "pme.membres.role.collaborateur",
-              )}
-            </span>
-          ) : null}
-          {/* Plusieurs sociétés : chacune a sa carte plus bas, aucune n'est « la » société. */}
-          {pme.dossiers.length <= 1 ? <span className="pill neutre">{pme.orgName}</span> : null}
-        </span>
-        {/*
-         * Le pluriel passe par `count` : « 1 organisation(s) » n'existe dans
-         * aucune langue, et l'arabe ne s'accorde pas comme le français.
-         */}
-        <span className="ro">{t("pme.reglages.compte.orgs", { count: pme.dossiers.length })}</span>
-        <MonNom />
-        {/* Son Mon espace des sociétés quittées : il part avec le compte (lot 4). */}
-        <LienMonEspaceParti className="btn btn-sec mt-2" />
-        <SeDeconnecter className="btn btn-sec mt-2" />
-      </div>
-
-      {/* ─────────────────────────────────────────────── l'abonnement */}
-      {/* « Mon abonnement » s'ouvre ici depuis l'accueil (`#mon-abonnement`). */}
-      <div className="sec" id="mon-abonnement">
-        <h2>
-          {t("pme.reglages.abo")}
-          <Aide
-            titre={t("pme.reglages.abo")}
-            paragraphes={[
-              { texte: t("pme.reglages.abo.sous") },
-              ...(COMMERCE ? [{ texte: t("pme.reglages.abo.facture") }] : []),
-            ]}
-          />
-        </h2>
-      </div>
-      {/*
-       * L'offre en cours, en carte de tête (maquette du 1er novembre 2026) :
-       * son nom en grand, son état en pastille, le prix et ce qu'il comprend.
-       */}
-      <div className="card abo hero">
-        <div className="kick">
-          {/* Plusieurs sociétés : la carte dit de laquelle est cette offre. */}
-          <u>
-            {pme.dossiers.length > 1
-              ? `${t("pme.reglages.abo.kicker")} · ${pme.orgName}`
-              : t("pme.reglages.abo.kicker")}
-          </u>
-          {f?.statut ? (
-            <span className={cn("pill", f.statut !== "active" && "am")}>
-              <i aria-hidden />
-              {etatDeLicence(f.statut, t)}
-            </span>
-          ) : null}
-        </div>
-        <div className="nm">
-          <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : ABSENT}</b>
-          {COMMERCE ? (
-            <span className="px">
-              {f?.prix_mensuel_ht ? aLEchelle(f.prix_mensuel_ht) : ABSENT}
-              <small>{t("pme.reglages.abo.parMois", { devise: pme.currency })}</small>
-            </span>
-          ) : null}
-        </div>
-        {COMMERCE ? <TtcEtReport ht={f?.prix_mensuel_ht ?? null} /> : null}
-
-        <div className="det">
-          <div>
-            <u>{t("pme.reglages.abo.organisations")}</u>
-            <b>{nombre(f?.organisations, locale)}</b>
-          </div>
-          <div>
-            <u>{t("pme.reglages.abo.siegesOccupes")}</u>
-            <b>
-              {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
-            </b>
-          </div>
-          <div>
-            <u>{t("pme.reglages.abo.siegesMax")}</u>
-            <b>{plafond(f, locale, t)}</b>
-          </div>
-          <div>
-            <u>{t("pme.reglages.abo.lectures")}</u>
-            <b>{nombre(f?.lectures_droit, locale)}</b>
-          </div>
-        </div>
-
-        <div className="q">
-          <span className="hd">
-            <u>{t("pme.reglages.abo.consommees")}</u>
-            <b>
-              {nombre(f?.lectures_consommees, locale)} / {nombre(f?.lectures_droit, locale)}
-            </b>
-          </span>
-          {/*
-           * La barre ne se remplit que si les deux nombres existent. Une barre
-           * vide se lit « zéro lecture ce mois » — un fait, et il serait faux.
-           * Sans la ligne, on montre la piste nue et on dit pourquoi.
-           */}
-          {f ? (
-            <span className={cn("bar", bientot !== null && "hot")}>
-              <i style={{ width: `${remplissage(f)}%` }} />
-            </span>
-          ) : (
-            <span className="bar" aria-hidden />
-          )}
-          {bientot !== null ? (
-            <p className="warn">{t("pme.reglages.abo.bientot", { count: bientot })}</p>
-          ) : null}
-          {abo.ennui ? <p className="warn">{abo.ennui}</p> : null}
-        </div>
-      </div>
-
-      {/* ──────────────────────────── changer d'offre, et les recharges */}
-      {/*
-       * Le `<span>` d'un `.sec` est une ÉTIQUETTE courte (« Licence en
-       * direct ») : une phrase y écrasait le titre en colonne d'une lettre,
-       * relevé sur l'appareil le 19 octobre. La phrase va dessous.
-       */}
-      {COMMERCE ? (
+      {!page ? (
         <>
-          {/* Ce qui reste à payer, juste sous l'offre : c'est le geste qui attend. */}
-          <ARegler />
+          {/*
+           * 23 octobre 2026 (« trop d'écriture, simplifier sans rien perdre ») :
+           * chaque phrase d'explication de cet écran est passée derrière le ⓘ de
+           * son titre (`components/malica/aide.tsx`). Rien n'est supprimé.
+           */}
           <div className="sec">
             <h2>
-              {t("pme.reglages.offres")}
+              {t("pme.reglages.compte")}
               <Aide
-                titre={t("pme.reglages.offres")}
-                paragraphes={[{ texte: t("pme.reglages.offres.sous") }]}
+                titre={t("pme.reglages.compte")}
+                paragraphes={[{ texte: t("pme.reglages.profil.aide") }]}
               />
             </h2>
           </div>
-          <ChangerDOffre />
-          <PayerALAnnee />
-          <MesFactures />
-
-          <div className="sec">
-            <h2>
-              {t("pme.reglages.recharges")}
-              <Aide
-                titre={t("pme.reglages.recharges")}
-                paragraphes={[{ texte: t("pme.reglages.recharges.sous") }]}
-              />
-            </h2>
-          </div>
-          <MesRecharges />
-        </>
-      ) : null}
-
-      {/* ───────────────────────────────────────────── les organisations */}
-      <div className="sec">
-        <h2>
-          {t("pme.reglages.orgs")}
-          <Aide
-            titre={t("pme.reglages.orgs")}
-            paragraphes={[
-              {
-                texte: `${t("pme.reglages.org.matricule")} ${t("pme.reglages.org.matricule.fort")}`,
-              },
-              { texte: t("pme.reglages.orgs.ajouter.sous") },
-            ]}
-          />
-        </h2>
-        {/*
-         * « n sur m » ne vaut que pour UNE licence : avec des sociétés sur
-         * plusieurs licences, « 2 sur 1 » mêlait la mienne et celle d'un autre
-         * titulaire (staging, 3 novembre 2026). Le nombre seul, alors.
-         */}
-        <span>
-          {[...abo.titulaire.values()].every(Boolean)
-            ? t("pme.reglages.surTotal", {
-                n: abo.organisations.length,
-                total: nombre(f?.organisations, locale),
-              })
-            : nombre(abo.organisations.length, locale)}
-        </span>
-      </div>
-      {/*
-       * Toutes les sociétés, sans sélection (3 novembre 2026) : chacune sa
-       * carte, son offre, son cabinet, son mandat.
-       */}
-      {abo.organisations.map((o) => (
-        <Organisation key={o.tenantId} org={o} titulaire={abo.titulaire.get(o.tenantId)} />
-      ))}
-      {abo.organisations.length === 0 ? (
-        <div className="card">
-          <p className="t-body">{abo.ennui ?? t("pme.reglages.orgs.aucune")}</p>
-        </div>
-      ) : null}
-      {/*
-       * « Une deuxième société ». Ouverte, elle ajoute une organisation à la
-       * licence ; verrouillée, elle dit sous quelle offre elle s'ouvre. Elle ne
-       * disparaît dans aucun des deux cas.
-       */}
-      <div className="grp">
-        {verrous.societes.ouvert ? (
-          <Link to="/onboarding" className="inv">
-            <i>
-              <IcPlus />
-            </i>
-            <span className="bd">
-              <b>{t("pme.reglages.orgs.ajouter")}</b>
-              {/* Le prix est lu dans la grille, et dit au web et à la PWA seulement. */}
-              {prixEnPlus.data && Number(prixEnPlus.data.prix_organisation_sup) > 0 ? (
-                <span>
-                  {t("pme.reglages.orgs.prix", {
-                    inclus: String(prixEnPlus.data.organisations_incluses),
-                    prix: aLEchelle(prixEnPlus.data.prix_organisation_sup),
-                    devise: pme.currency,
-                  })}
+          {/*
+           * Le profil en tête (maquette du 1er novembre 2026) : l'initiale en grand,
+           * le nom que la personne a écrit (`identity.profiles`), son adresse, son
+           * rôle et sa société. Aucun nom n'est inventé : sans prénom, l'adresse.
+           */}
+          <div className="card profil">
+            <span className="av" aria-hidden>
+              {initiale(profil.data?.prenom || compte.data?.email || null)}
+            </span>
+            <b>
+              {[profil.data?.prenom, profil.data?.nom].filter(Boolean).join(" ") ||
+                (compte.data?.email ?? ABSENT)}
+            </b>
+            {profil.data?.prenom ? <span className="ml">{compte.data?.email}</span> : null}
+            <span className="pills">
+              {acces.data?.role ? (
+                <span className="pill">
+                  {t(
+                    acces.data.role === "dirigeant"
+                      ? "pme.membres.role.dirigeant"
+                      : "pme.membres.role.collaborateur",
+                  )}
                 </span>
               ) : null}
+              {/* Plusieurs sociétés : chacune a sa carte plus bas, aucune n'est « la » société. */}
+              {pme.dossiers.length <= 1 ? <span className="pill neutre">{pme.orgName}</span> : null}
             </span>
-          </Link>
-        ) : COMMERCE ? (
-          /*
-           * `data-verrou` est la marque commune des cartes verrouillées : elle
-           * les rend repérables d'un écran à l'autre, et c'est elle qu'une
-           * épreuve peut interroger pour vérifier qu'aucune n'a été masquée.
-           */
-          <div className="inv off" data-verrou={verrous.societes.offre}>
-            <i>
-              <IcCadenas />
-            </i>
-            <span className="bd">
-              <b>{t("pme.home.societes")}</b>
-              <span>{t("pme.reglages.societes.verrou")}</span>
-              <em>{verrous.societes.offre}</em>
-              {verrous.societes.raison ? <span>{verrous.societes.raison}</span> : null}
+            {/*
+             * Le pluriel passe par `count` : « 1 organisation(s) » n'existe dans
+             * aucune langue, et l'arabe ne s'accorde pas comme le français.
+             */}
+            <span className="ro">
+              {t("pme.reglages.compte.orgs", { count: pme.dossiers.length })}
             </span>
+            <MonNom />
+            {/* Son Mon espace des sociétés quittées : il part avec le compte (lot 4). */}
+            <LienMonEspaceParti className="btn btn-sec mt-2" />
+            <SeDeconnecter className="btn btn-sec mt-2" />
           </div>
-        ) : null}
-      </div>
 
-      {/* ───────────────────────────────────────────────────── les sièges */}
-      <div className="sec">
-        <h2>
-          {t("pme.reglages.sieges")}
-          <Aide
-            titre={t("pme.reglages.sieges")}
-            paragraphes={[
-              { texte: t("pme.reglages.sieges.sous") },
-              { texte: t("pme.membres.roles.aide") },
-              { texte: t("pme.membres.lede") },
-            ]}
-          />
-        </h2>
-        {/* Le même compte que la ligne de l'abonnement : occupés sur inclus. */}
-        <span>
-          {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
-        </span>
-      </div>
-      <Sieges abo={abo} verrou={verrous.sieges} />
-
-      {/*
-       * ============================================= UNE SEULE INVITATION
-       *
-       * L'écran en portait trois le 19 octobre — « Qui entre dans ce
-       * dossier », « Inviter un siège » sous chaque société, « Inviter un
-       * propriétaire ». Il n'en reste qu'une, qui choisit le rôle
-       * (`inviter-dans-mon-dossier.tsx`), et elle n'apparaît que si l'offre
-       * porte des places : sinon c'est la carte verrouillée, plus haut, qui
-       * parle. La transmission de la licence suit, seulement quand il y a un
-       * autre propriétaire à qui la transmettre.
-       */}
-      {verrous.sieges.ouvert ? (
-        <>
-          {/* Dans l'application Android, la base n'offre que les places
-              incluses (`facturation.place_offrir`, 20261023120000) : une place
-              qui serait facturée est un achat, et reste au web et à la PWA. */}
-          <InviterDansMonDossier
-            occupes={f?.sieges_occupes == null ? null : Number(f.sieges_occupes)}
-          />
-          <MesProprietaires />
+          {/*
+           * ============================================ LE SOMMAIRE (planche 4)
+           *
+           * 7 novembre 2026, approuvé : « un sommaire court, puis une liste qu'on
+           * cherche ». Les Réglages d'un compte de cent sociétés faisaient 55 000
+           * pixels — une carte par société, une carte de sièges par société.
+           * Chaque thème a désormais sa page ; ce sommaire en dit l'essentiel en
+           * chiffres. L'abonnement n'existe pas dans la coque Android.
+           */}
+          <div className="sommaire">
+            {COMMERCE ? (
+              <Link to="/pme/reglages" search={{ page: "abonnement" }} className="it">
+                <span className="ic acc" aria-hidden>
+                  <IcCarte />
+                </span>
+                <span className="t">
+                  <b>{t("pme.reglages.abo")}</b>
+                  <span>
+                    {resumeDesOffres || (f?.offre ? libelleDOffre(catalogue, f.offre) : ABSENT)}
+                  </span>
+                </span>
+                <IcChevron />
+              </Link>
+            ) : null}
+            <Link to="/pme/reglages" search={{ page: "societes" }} className="it">
+              <span className="ic az" aria-hidden>
+                <IcImmeuble />
+              </span>
+              <span className="t">
+                <b>{t("pme.reglages.orgs")}</b>
+                <span>
+                  {fiches.data
+                    ? t("pme.reglages.sommaire.avecCompta", {
+                        count: fiches.data.filter((x) => x.cabinet).length,
+                      })
+                    : "\u00a0"}
+                </span>
+              </span>
+              <span className="v">{nombre(abo.organisations.length, locale)}</span>
+              <IcChevron />
+            </Link>
+            <Link to="/pme/reglages" search={{ page: "utilisateurs" }} className="it">
+              <span className="ic am" aria-hidden>
+                <IcPersonnes />
+              </span>
+              <span className="t">
+                <b>{t("pme.reglages.sieges")}</b>
+                <span>{t("pme.reglages.abo.siegesOccupes")}</span>
+              </span>
+              <span className="v">
+                {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
+              </span>
+              <IcChevron />
+            </Link>
+          </div>
         </>
       ) : null}
 
-      {/* ──────────────────────── la fiche, les alertes, les échéances */}
-      <div className="sec">
-        <h2>
-          {t("fiche.titre")}
-          <Aide
-            titre={t("fiche.titre")}
-            paragraphes={[
-              { titre: t("fiche.champ.imposition"), texte: t("fiche.sous") },
-              { titre: t("pme.nav.notifs"), texte: t("pme.reglages.alertes.sous") },
-              { titre: t("pme.nav.echeances"), texte: t("pme.reglages.echeances.sous") },
-            ]}
+      {page === "abonnement" && COMMERCE ? (
+        <>
+          {/* ─────────────────────────────────────────────── l'abonnement */}
+          {/* « Mon abonnement » s'ouvre ici depuis l'accueil (`#mon-abonnement`). */}
+          <div className="sec" id="mon-abonnement">
+            <h2>
+              {t("pme.reglages.abo")}
+              <Aide
+                titre={t("pme.reglages.abo")}
+                paragraphes={[
+                  { texte: t("pme.reglages.abo.sous") },
+                  ...(COMMERCE ? [{ texte: t("pme.reglages.abo.facture") }] : []),
+                ]}
+              />
+            </h2>
+          </div>
+          {/*
+           * L'offre en cours, en carte de tête (maquette du 1er novembre 2026) :
+           * son nom en grand, son état en pastille, le prix et ce qu'il comprend.
+           */}
+          <div className="card abo hero">
+            <div className="kick">
+              {/* Plusieurs sociétés : la carte dit de laquelle est cette offre. */}
+              <u>
+                {pme.dossiers.length > 1
+                  ? `${t("pme.reglages.abo.kicker")} · ${pme.orgName}`
+                  : t("pme.reglages.abo.kicker")}
+              </u>
+              {f?.statut ? (
+                <span className={cn("pill", f.statut !== "active" && "am")}>
+                  <i aria-hidden />
+                  {etatDeLicence(f.statut, t)}
+                </span>
+              ) : null}
+            </div>
+            <div className="nm">
+              <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : ABSENT}</b>
+              {COMMERCE ? (
+                <span className="px">
+                  {f?.prix_mensuel_ht ? aLEchelle(f.prix_mensuel_ht) : ABSENT}
+                  <small>{t("pme.reglages.abo.parMois", { devise: pme.currency })}</small>
+                </span>
+              ) : null}
+            </div>
+            {COMMERCE ? <TtcEtReport ht={f?.prix_mensuel_ht ?? null} /> : null}
+
+            <div className="det">
+              <div>
+                <u>{t("pme.reglages.abo.organisations")}</u>
+                <b>{nombre(f?.organisations, locale)}</b>
+              </div>
+              <div>
+                <u>{t("pme.reglages.abo.siegesOccupes")}</u>
+                <b>
+                  {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
+                </b>
+              </div>
+              <div>
+                <u>{t("pme.reglages.abo.siegesMax")}</u>
+                <b>{plafond(f, locale, t)}</b>
+              </div>
+              <div>
+                <u>{t("pme.reglages.abo.lectures")}</u>
+                <b>{nombre(f?.lectures_droit, locale)}</b>
+              </div>
+            </div>
+
+            <div className="q">
+              <span className="hd">
+                <u>{t("pme.reglages.abo.consommees")}</u>
+                <b>
+                  {nombre(f?.lectures_consommees, locale)} / {nombre(f?.lectures_droit, locale)}
+                </b>
+              </span>
+              {/*
+               * La barre ne se remplit que si les deux nombres existent. Une barre
+               * vide se lit « zéro lecture ce mois » — un fait, et il serait faux.
+               * Sans la ligne, on montre la piste nue et on dit pourquoi.
+               */}
+              {f ? (
+                <span className={cn("bar", bientot !== null && "hot")}>
+                  <i style={{ width: `${remplissage(f)}%` }} />
+                </span>
+              ) : (
+                <span className="bar" aria-hidden />
+              )}
+              {bientot !== null ? (
+                <p className="warn">{t("pme.reglages.abo.bientot", { count: bientot })}</p>
+              ) : null}
+              {abo.ennui ? <p className="warn">{abo.ennui}</p> : null}
+            </div>
+          </div>
+
+          {/* ──────────────────────────── changer d'offre, et les recharges */}
+          {/*
+           * Le `<span>` d'un `.sec` est une ÉTIQUETTE courte (« Licence en
+           * direct ») : une phrase y écrasait le titre en colonne d'une lettre,
+           * relevé sur l'appareil le 19 octobre. La phrase va dessous.
+           */}
+          {COMMERCE ? (
+            <>
+              {/* Ce qui reste à payer, juste sous l'offre : c'est le geste qui attend. */}
+              <ARegler />
+              <div className="sec">
+                <h2>
+                  {t("pme.reglages.offres")}
+                  <Aide
+                    titre={t("pme.reglages.offres")}
+                    paragraphes={[{ texte: t("pme.reglages.offres.sous") }]}
+                  />
+                </h2>
+              </div>
+              <ChangerDOffre />
+              <PayerALAnnee />
+              <MesFactures />
+
+              <div className="sec">
+                <h2>
+                  {t("pme.reglages.recharges")}
+                  <Aide
+                    titre={t("pme.reglages.recharges")}
+                    paragraphes={[{ texte: t("pme.reglages.recharges.sous") }]}
+                  />
+                </h2>
+              </div>
+              <MesRecharges />
+            </>
+          ) : null}
+        </>
+      ) : null}
+
+      {page === "societes" ? (
+        <>
+          {/* ───────────────────────────────────────────── les organisations */}
+          <div className="sec">
+            <h2>
+              {t("pme.reglages.orgs")}
+              <Aide
+                titre={t("pme.reglages.orgs")}
+                paragraphes={[
+                  {
+                    texte: `${t("pme.reglages.org.matricule")} ${t("pme.reglages.org.matricule.fort")}`,
+                  },
+                  { texte: t("pme.reglages.orgs.ajouter.sous") },
+                ]}
+              />
+            </h2>
+            {/*
+             * « n sur m » ne vaut que pour UNE licence : avec des sociétés sur
+             * plusieurs licences, « 2 sur 1 » mêlait la mienne et celle d'un autre
+             * titulaire (staging, 3 novembre 2026). Le nombre seul, alors.
+             */}
+            <span>
+              {[...abo.titulaire.values()].every(Boolean)
+                ? t("pme.reglages.surTotal", {
+                    n: abo.organisations.length,
+                    total: nombre(f?.organisations, locale),
+                  })
+                : nombre(abo.organisations.length, locale)}
+            </span>
+          </div>
+          <ListeDesSocietes
+            organisations={abo.organisations}
+            titulaire={abo.titulaire}
+            fiches={fiches.data ?? null}
           />
-        </h2>
-      </div>
-      <div className="rows">
-        {/*
-         * La porte vers la situation fiscale. Elle est ici et non sur
-         * l'accueil : ce réglage se fait une fois puis se revisite rarement.
-         * Mais il commande la moitié des réponses de Malica — sans régime
-         * connu, elle ne peut ni qualifier une opération ni répondre sur une
-         * déduction.
-         */}
-        <Link to="/pme/fiche" className="rw">
-          <span className="bd">
-            <b>{t("fiche.champ.imposition")}</b>
-          </span>
-          <IcChevron />
-        </Link>
-        {/*
-         * Pas d'interrupteurs de notification : rien n'envoie encore. On mène
-         * là où les alertes existent réellement plutôt que de faire basculer
-         * trois boutons qui ne changeraient rien. Ils reviendront avec l'envoi.
-         */}
-        <Link to="/pme/notifications" className="rw">
-          <span className="bd">
-            <b>{t("pme.nav.notifs")}</b>
-          </span>
-          <IcChevron />
-        </Link>
-        <Link to="/pme/echeances" className="rw">
-          <span className="bd">
-            <b>{t("pme.nav.echeances")}</b>
-          </span>
-          <IcChevron />
-        </Link>
-      </div>
+          {abo.organisations.length === 0 ? (
+            <div className="card">
+              <p className="t-body">{abo.ennui ?? t("pme.reglages.orgs.aucune")}</p>
+            </div>
+          ) : null}
+          {/*
+           * « Une deuxième société ». Ouverte, elle ajoute une organisation à la
+           * licence ; verrouillée, elle dit sous quelle offre elle s'ouvre. Elle ne
+           * disparaît dans aucun des deux cas.
+           */}
+          <div className="grp">
+            {verrous.societes.ouvert ? (
+              <Link to="/onboarding" className="inv">
+                <i>
+                  <IcPlus />
+                </i>
+                <span className="bd">
+                  <b>{t("pme.reglages.orgs.ajouter")}</b>
+                  {/* Le prix est lu dans la grille, et dit au web et à la PWA seulement. */}
+                  {prixEnPlus.data && Number(prixEnPlus.data.prix_organisation_sup) > 0 ? (
+                    <span>
+                      {t("pme.reglages.orgs.prix", {
+                        inclus: String(prixEnPlus.data.organisations_incluses),
+                        prix: aLEchelle(prixEnPlus.data.prix_organisation_sup),
+                        devise: pme.currency,
+                      })}
+                    </span>
+                  ) : null}
+                </span>
+              </Link>
+            ) : COMMERCE ? (
+              /*
+               * `data-verrou` est la marque commune des cartes verrouillées : elle
+               * les rend repérables d'un écran à l'autre, et c'est elle qu'une
+               * épreuve peut interroger pour vérifier qu'aucune n'a été masquée.
+               */
+              <div className="inv off" data-verrou={verrous.societes.offre}>
+                <i>
+                  <IcCadenas />
+                </i>
+                <span className="bd">
+                  <b>{t("pme.home.societes")}</b>
+                  <span>{t("pme.reglages.societes.verrou")}</span>
+                  <em>{verrous.societes.offre}</em>
+                  {verrous.societes.raison ? <span>{verrous.societes.raison}</span> : null}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </>
+      ) : null}
 
-      {/* ───────────────────────────────── la langue et l'apparence */}
-      <div className="sec">
-        <h2>{t("pme.reglages.langue")}</h2>
-      </div>
-      <div className="seg">
-        {LOCALES.map((l) => (
-          <button
-            key={l}
-            type="button"
-            onClick={() => setLocale(l)}
-            aria-pressed={l === locale}
-            className={cn(l === locale && "on")}
-          >
-            {LOCALE_NAMES[l]}
-          </button>
-        ))}
-      </div>
+      {page === "utilisateurs" ? (
+        <>
+          {/* ───────────────────────────────────────────────────── les sièges */}
+          <div className="sec">
+            <h2>
+              {t("pme.reglages.sieges")}
+              <Aide
+                titre={t("pme.reglages.sieges")}
+                paragraphes={[
+                  { texte: t("pme.reglages.sieges.sous") },
+                  { texte: t("pme.membres.roles.aide") },
+                  { texte: t("pme.membres.lede") },
+                ]}
+              />
+            </h2>
+            {/* Le même compte que la ligne de l'abonnement : occupés sur inclus. */}
+            <span>
+              {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
+            </span>
+          </div>
+          <Sieges abo={abo} verrou={verrous.sieges} />
 
-      <div className="sec">
-        <h2>
-          {t("pme.reglages.apparence")}
-          <Aide
-            titre={t("pme.reglages.apparence")}
-            paragraphes={[{ texte: t("pme.reglages.apparence.note") }]}
-          />
-        </h2>
-      </div>
-      <div className="seg">
-        {apparences.map((a) => (
-          <button
-            key={a.cle}
-            type="button"
-            onClick={() => choisir(a.cle)}
-            aria-pressed={a.cle === apparence}
-            className={cn(a.cle === apparence && "on")}
-          >
-            {a.label}
-          </button>
-        ))}
-      </div>
+          {/*
+           * ============================================= UNE SEULE INVITATION
+           *
+           * L'écran en portait trois le 19 octobre — « Qui entre dans ce
+           * dossier », « Inviter un siège » sous chaque société, « Inviter un
+           * propriétaire ». Il n'en reste qu'une, qui choisit le rôle
+           * (`inviter-dans-mon-dossier.tsx`), et elle n'apparaît que si l'offre
+           * porte des places : sinon c'est la carte verrouillée, plus haut, qui
+           * parle. La transmission de la licence suit, seulement quand il y a un
+           * autre propriétaire à qui la transmettre.
+           */}
+          {verrous.sieges.ouvert ? (
+            <>
+              {/* Dans l'application Android, la base n'offre que les places
+              incluses (`facturation.place_offrir`, 20261023120000) : une place
+              qui serait facturée est un achat, et reste au web et à la PWA. */}
+              <InviterDansMonDossier
+                occupes={f?.sieges_occupes == null ? null : Number(f.sieges_occupes)}
+              />
+              <MesProprietaires />
+            </>
+          ) : null}
+        </>
+      ) : null}
 
-      {/* ───────────────────────────────────────────────── vos données */}
-      <div className="sec">
-        <h2>
-          {t("pme.reglages.donnees")}
-          <Aide
-            titre={t("pme.reglages.donnees")}
-            paragraphes={[
-              { texte: t("pme.reglages.note") },
-              {
-                titre: t("pme.reglages.donnees.espace"),
-                texte: t("pme.reglages.donnees.espace.sous"),
-              },
-              {
-                titre: t("pme.reglages.donnees.biblio"),
-                texte: t("pme.reglages.donnees.biblio.sous"),
-              },
-              {
-                titre: t("pme.reglages.donnees.conservation"),
-                texte: t("pme.reglages.donnees.conservation.sous"),
-              },
-            ]}
-          />
-        </h2>
-      </div>
-      <div className="rows">
-        <Link to="/pme/coffre" className="rw">
-          <span className="bd">
-            <b>{t("pme.reglages.donnees.espace")}</b>
-          </span>
-          <IcChevron />
-        </Link>
-        <Link to="/pme/list" className="rw">
-          <span className="bd">
-            <b>{t("pme.reglages.donnees.biblio")}</b>
-          </span>
-          <IcChevron />
-        </Link>
-        <div className="rw">
-          <span className="bd">
-            <b>{t("pme.reglages.donnees.conservation")}</b>
-          </span>
-          <span className="vl">{t("pme.reglages.donnees.conservation.valeur")}</span>
-        </div>
-        {/*
-         * Le bouton éteint « Changer de forfait » est parti le 19 octobre :
-         * l'offre se change pour de bon dans « Changer d'offre », plus haut.
-         * Un second geste, mort, au même écran, se lisait « pas encore ».
-         */}
-      </div>
+      {!page ? (
+        <>
+          {/* ──────────────────────── la fiche, les alertes, les échéances */}
+          <div className="sec">
+            <h2>
+              {t("fiche.titre")}
+              <Aide
+                titre={t("fiche.titre")}
+                paragraphes={[
+                  { titre: t("fiche.champ.imposition"), texte: t("fiche.sous") },
+                  { titre: t("pme.nav.notifs"), texte: t("pme.reglages.alertes.sous") },
+                  { titre: t("pme.nav.echeances"), texte: t("pme.reglages.echeances.sous") },
+                ]}
+              />
+            </h2>
+          </div>
+          <div className="rows">
+            {/*
+             * La porte vers la situation fiscale. Elle est ici et non sur
+             * l'accueil : ce réglage se fait une fois puis se revisite rarement.
+             * Mais il commande la moitié des réponses de Malica — sans régime
+             * connu, elle ne peut ni qualifier une opération ni répondre sur une
+             * déduction.
+             */}
+            <Link to="/pme/fiche" className="rw">
+              <span className="bd">
+                <b>{t("fiche.champ.imposition")}</b>
+              </span>
+              <IcChevron />
+            </Link>
+            {/*
+             * Pas d'interrupteurs de notification : rien n'envoie encore. On mène
+             * là où les alertes existent réellement plutôt que de faire basculer
+             * trois boutons qui ne changeraient rien. Ils reviendront avec l'envoi.
+             */}
+            <Link to="/pme/notifications" className="rw">
+              <span className="bd">
+                <b>{t("pme.nav.notifs")}</b>
+              </span>
+              <IcChevron />
+            </Link>
+            <Link to="/pme/echeances" className="rw">
+              <span className="bd">
+                <b>{t("pme.nav.echeances")}</b>
+              </span>
+              <IcChevron />
+            </Link>
+          </div>
 
-      {/* ───────────────────────── signaler, les pannes, la version */}
-      <div className="sec">
-        <h2>
-          {t("pme.reglages.signaler")}
-          <Aide
-            titre={t("pme.reglages.signaler")}
-            paragraphes={[{ texte: t("pme.reglages.signaler.sous") }]}
-          />
-        </h2>
-      </div>
-      <Signalement />
-      <PannesConstatees />
+          {/* ───────────────────────────────── la langue et l'apparence */}
+          <div className="sec">
+            <h2>{t("pme.reglages.langue")}</h2>
+          </div>
+          <div className="seg">
+            {LOCALES.map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLocale(l)}
+                aria-pressed={l === locale}
+                className={cn(l === locale && "on")}
+              >
+                {LOCALE_NAMES[l]}
+              </button>
+            ))}
+          </div>
 
-      <div className="sec">
-        <h2>{t("pme.reglages.version")}</h2>
-      </div>
-      <Versions />
+          <div className="sec">
+            <h2>
+              {t("pme.reglages.apparence")}
+              <Aide
+                titre={t("pme.reglages.apparence")}
+                paragraphes={[{ texte: t("pme.reglages.apparence.note") }]}
+              />
+            </h2>
+          </div>
+          <div className="seg">
+            {apparences.map((a) => (
+              <button
+                key={a.cle}
+                type="button"
+                onClick={() => choisir(a.cle)}
+                aria-pressed={a.cle === apparence}
+                className={cn(a.cle === apparence && "on")}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+          {/* Planche 5 (7 novembre 2026) : le côté du « + », pour la main qui tient le téléphone. */}
+          <div className="rows">
+            <Link to="/pme/bouton-plus" className="rw">
+              <span className="bd">
+                <b>{t("pme.boutonPlus.titre")}</b>
+                <span>
+                  {coteDuPlus === "gauche"
+                    ? t("pme.boutonPlus.gauche")
+                    : t("pme.boutonPlus.droite")}
+                </span>
+              </span>
+              <IcChevron />
+            </Link>
+          </div>
 
-      <p className="foot">{t("pme.reglages.pied")}</p>
+          {/* ───────────────────────────────────────────────── vos données */}
+          <div className="sec">
+            <h2>
+              {t("pme.reglages.donnees")}
+              <Aide
+                titre={t("pme.reglages.donnees")}
+                paragraphes={[
+                  { texte: t("pme.reglages.note") },
+                  {
+                    titre: t("pme.reglages.donnees.espace"),
+                    texte: t("pme.reglages.donnees.espace.sous"),
+                  },
+                  {
+                    titre: t("pme.reglages.donnees.biblio"),
+                    texte: t("pme.reglages.donnees.biblio.sous"),
+                  },
+                  {
+                    titre: t("pme.reglages.donnees.conservation"),
+                    texte: t("pme.reglages.donnees.conservation.sous"),
+                  },
+                ]}
+              />
+            </h2>
+          </div>
+          <div className="rows">
+            <Link to="/pme/coffre" className="rw">
+              <span className="bd">
+                <b>{t("pme.reglages.donnees.espace")}</b>
+              </span>
+              <IcChevron />
+            </Link>
+            <Link to="/pme/list" className="rw">
+              <span className="bd">
+                <b>{t("pme.reglages.donnees.biblio")}</b>
+              </span>
+              <IcChevron />
+            </Link>
+            <div className="rw">
+              <span className="bd">
+                <b>{t("pme.reglages.donnees.conservation")}</b>
+              </span>
+              <span className="vl">{t("pme.reglages.donnees.conservation.valeur")}</span>
+            </div>
+            {/*
+             * Le bouton éteint « Changer de forfait » est parti le 19 octobre :
+             * l'offre se change pour de bon dans « Changer d'offre », plus haut.
+             * Un second geste, mort, au même écran, se lisait « pas encore ».
+             */}
+          </div>
+
+          {/* ───────────────────────── signaler, les pannes, la version */}
+          <div className="sec">
+            <h2>
+              {t("pme.reglages.signaler")}
+              <Aide
+                titre={t("pme.reglages.signaler")}
+                paragraphes={[{ texte: t("pme.reglages.signaler.sous") }]}
+              />
+            </h2>
+          </div>
+          <Signalement />
+          <PannesConstatees />
+
+          <div className="sec">
+            <h2>{t("pme.reglages.version")}</h2>
+          </div>
+          <Versions />
+
+          <p className="foot">{t("pme.reglages.pied")}</p>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -694,42 +831,32 @@ function useLAbonnement(): LAbonnement {
    * personne — un siège n'appartient qu'à une société.
    */
   const ids = pme.dossiers.length > 0 ? pme.dossiers.map((d) => d.id) : [pme.tenantId];
-  const lectures = useQueries({
-    queries: ids.map((id) => ({
-      queryKey: [CLE_ORGANISATIONS, id],
-      queryFn: () => office().facturation.organisations(id),
-      retry: false,
-    })),
+  /*
+   * UN APPEL POUR TOUTES (7 novembre 2026). Une requête par société faisait,
+   * pour un titulaire de cent sociétés, cent appels qui rendaient chacun la
+   * licence entière. L'API lit chaque licence une fois et rend l'union, sans
+   * doublon, dans l'ordre des sociétés. Les clés gardent leur préfixe : ce
+   * qui invalidait `[CLE_SIEGES]` les rafraîchit toujours.
+   */
+  const lectures = useQuery({
+    queryKey: [CLE_ORGANISATIONS, "societes", ...ids],
+    queryFn: () => office().facturation.organisationsDesSocietes(ids),
+    retry: false,
   });
-  const places = useQueries({
-    queries: ids.map((id) => ({
-      queryKey: [CLE_SIEGES, id],
-      queryFn: () => office().facturation.sieges(id),
-      retry: false,
-    })),
+  const places = useQuery({
+    queryKey: [CLE_SIEGES, "societes", ...ids],
+    queryFn: () => office().facturation.siegesDesSocietes(ids),
+    retry: false,
   });
-  const unique = <T,>(lignes: T[], cle: (l: T) => string) => [
-    ...new Map(lignes.map((l) => [cle(l), l])).values(),
-  ];
   const organisations = {
-    data: lectures.every((q) => q.data)
-      ? unique(
-          lectures.flatMap((q) => q.data ?? []),
-          (o) => o.tenant_id,
-        ).sort((a, b) => ids.indexOf(a.tenant_id) - ids.indexOf(b.tenant_id))
-      : undefined,
-    error: lectures.find((q) => q.error)?.error ?? null,
-    isPending: lectures.some((q) => q.isPending),
+    data: lectures.data,
+    error: lectures.error ?? null,
+    isPending: lectures.isPending,
   };
   const sieges = {
-    data: places.every((q) => q.data)
-      ? unique(
-          places.flatMap((q) => q.data ?? []),
-          (s) => `${s.tenant_id}:${s.user_id}`,
-        )
-      : undefined,
-    error: places.find((q) => q.error)?.error ?? null,
-    isPending: places.some((q) => q.isPending),
+    data: places.data,
+    error: places.error ?? null,
+    isPending: places.isPending,
   };
 
   const panne = organisations.error ?? sieges.error ?? null;
@@ -824,6 +951,168 @@ function degradation(
 /* ══════════════════════════════════════════════════════════════════════════
  * LES BLOCS
  * ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * La liste des sociétés — planche 4, approuvée le 7 novembre 2026.
+ *
+ * Avant : une grande carte par société, cent treize à faire défiler. Ici :
+ * une recherche (nom ou matricule), des filtres (par offre, sans
+ * comptabilité), les sociétés de A à Z avec un index pour sauter, et la fiche
+ * de la société — la même carte qu'avant — dans une feuille, au toucher.
+ *
+ * L'offre et le cabinet viennent d'UN appel (`fichesDesSocietes`) ; la carte
+ * détaillée ne se lit qu'à l'ouverture de sa feuille.
+ */
+function ListeDesSocietes({
+  organisations,
+  titulaire,
+  fiches,
+}: {
+  organisations: ReadonlyArray<{ tenantId: string; nom: string; lectures: number | null }>;
+  titulaire: ReadonlyMap<string, boolean>;
+  fiches: readonly FicheDeSociete[] | null;
+}) {
+  const { t, locale } = useI18n();
+  const pme = usePme();
+  const catalogue = useCatalogueDesOffres().data;
+  const [cherche, setCherche] = useState("");
+  const [filtre, setFiltre] = useState<string>("toutes");
+  const [ouverte, setOuverte] = useState<string | null>(null);
+  const feuille = useRef<HTMLDivElement>(null);
+  const fermer = useCallback(() => setOuverte(null), []);
+  useSuperposition(ouverte !== null, fermer, feuille);
+
+  const ficheDe = new Map((fiches ?? []).map((f) => [f.tenantId, f]));
+  const matriculeDe = new Map(pme.dossiers.map((d) => [d.id, d.matricule ?? null]));
+  const offres = new Map<string, number>();
+  for (const f of fiches ?? []) if (f.offre) offres.set(f.offre, (offres.get(f.offre) ?? 0) + 1);
+  const sansCompta = (fiches ?? []).filter((f) => !f.cabinet).length;
+
+  const q = plier(cherche.trim());
+  const retenues = organisations
+    .filter((o) => {
+      const f = ficheDe.get(o.tenantId);
+      if (filtre === "sansCompta" && f?.cabinet) return false;
+      if (filtre !== "toutes" && filtre !== "sansCompta" && f?.offre !== filtre) return false;
+      if (!q) return true;
+      return plier(o.nom).includes(q) || plier(matriculeDe.get(o.tenantId) ?? "").includes(q);
+    })
+    .sort((a, b) => a.nom.localeCompare(b.nom, locale));
+  const lettreDe = (nom: string) => plier(nom).slice(0, 1).toLocaleUpperCase() || "#";
+  const groupes = new Map<string, typeof retenues>();
+  for (const o of retenues) {
+    const l = lettreDe(o.nom);
+    groupes.set(l, [...(groupes.get(l) ?? []), o]);
+  }
+  const org = ouverte ? organisations.find((o) => o.tenantId === ouverte) : undefined;
+
+  return (
+    <div className="societes">
+      <label className="cherche">
+        <svg viewBox="0 0 24 24" className="g" aria-hidden>
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <input
+          type="search"
+          value={cherche}
+          placeholder={t("pme.societes.chercher")}
+          aria-label={t("pme.societes.chercher")}
+          onChange={(e) => setCherche(e.target.value)}
+        />
+      </label>
+      <div className="puces" role="group" aria-label={t("pme.reglages.orgs")}>
+        <button
+          type="button"
+          aria-pressed={filtre === "toutes"}
+          onClick={() => setFiltre("toutes")}
+        >
+          {t("pme.notifs.toutesSocietes")} <i>{nombre(organisations.length, locale)}</i>
+        </button>
+        {[...offres.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([o, n]) => (
+            <button key={o} type="button" aria-pressed={filtre === o} onClick={() => setFiltre(o)}>
+              {libelleDOffre(catalogue, o)} <i>{nombre(n, locale)}</i>
+            </button>
+          ))}
+        {sansCompta > 0 ? (
+          <button
+            type="button"
+            aria-pressed={filtre === "sansCompta"}
+            onClick={() => setFiltre("sansCompta")}
+          >
+            {t("pme.reglages.sommaire.sansCompta")} <i>{nombre(sansCompta, locale)}</i>
+          </button>
+        ) : null}
+      </div>
+      {retenues.length === 0 ? <p className="t-body">{t("pme.societes.aucune")}</p> : null}
+      <div className="az-liste">
+        {[...groupes.entries()].map(([l, liste]) => (
+          <section key={l} id={`societes-${l}`}>
+            <p className="lettre">{l}</p>
+            <ul>
+              {liste.map((o) => {
+                const f = ficheDe.get(o.tenantId);
+                return (
+                  <li key={o.tenantId}>
+                    <button type="button" className="so" onClick={() => setOuverte(o.tenantId)}>
+                      <span className="bd">
+                        <b>{o.nom}</b>
+                        <span>
+                          {[
+                            matriculeDe.get(o.tenantId),
+                            f ? (f.cabinet ?? t("pme.reglages.sommaire.sansCompta")) : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </span>
+                      {f?.offre ? (
+                        <em className={titulaire.get(o.tenantId) ? "acc" : undefined}>
+                          {libelleDOffre(catalogue, f.offre)}
+                        </em>
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+      {groupes.size > 6 ? (
+        <nav className="az" aria-label={t("pme.reglages.sommaire.index")}>
+          {[...groupes.keys()].map((l) => (
+            <a key={l} href={`#societes-${l}`}>
+              {l}
+            </a>
+          ))}
+        </nav>
+      ) : null}
+      {org
+        ? createPortal(
+            <div className="fiche-voile" onClick={fermer}>
+              <div
+                ref={feuille}
+                className="fiche-feuille"
+                role="dialog"
+                aria-modal="true"
+                aria-label={org.nom}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Dans le portail, la portée des Réglages garde à la carte ses styles (revue de #284). */}
+                <div data-ecran="parametres">
+                  <Organisation org={org} titulaire={titulaire.get(org.tenantId)} />
+                </div>
+              </div>
+            </div>,
+            document.querySelector('[data-surface="pme"]') ?? document.body,
+          )
+        : null}
+    </div>
+  );
+}
 
 /**
  * Une organisation, et son mandat.
@@ -1089,6 +1378,7 @@ function LeMandat({
         qc.invalidateQueries({ queryKey: cleMonCabinet(tenantId) }),
         qc.invalidateQueries({ queryKey: ["abonnements-pour-moi", tenantId] }),
         qc.invalidateQueries({ queryKey: [CLE_FORFAIT, tenantId] }),
+        qc.invalidateQueries({ queryKey: [CLE_FORFAIT, "fiches-des-societes"] }),
       ]);
     },
     onError: (e: unknown) => {
@@ -1665,6 +1955,32 @@ function IcChevron() {
   return (
     <svg viewBox="0 0 24 24" className="g ar" aria-hidden>
       <path d="M9.5 5.5L16 12l-6.5 6.5" />
+    </svg>
+  );
+}
+
+function IcCarte() {
+  return (
+    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+      <rect x="3" y="6" width="18" height="13" rx="2" />
+      <path d="M3 10h18" />
+    </svg>
+  );
+}
+
+function IcImmeuble() {
+  return (
+    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+      <path d="M4 21V5l8-2v18M12 9h8v12" />
+    </svg>
+  );
+}
+
+function IcPersonnes() {
+  return (
+    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" />
     </svg>
   );
 }

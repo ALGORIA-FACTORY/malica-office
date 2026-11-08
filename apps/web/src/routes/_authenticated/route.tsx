@@ -1,7 +1,17 @@
-import { createFileRoute, Outlet, redirect, useRouter } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useRouteContext,
+  useRouter,
+} from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
+import { versionClient } from "@/capabilities/coque";
 import { localeRangee, useI18n } from "@/i18n";
 import { chargerLesEspaces } from "@/i18n/dictionnaires";
+import { garderLeCache, restaurerLeCache } from "@/lib/cache-de-l-appareil";
 import { EchecAuth } from "@malica/socle/ports/auth";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -33,8 +43,41 @@ export const Route = createFileRoute("/_authenticated")({
   pendingMinMs: 0,
   pendingComponent: Ouverture,
   errorComponent: Refus,
-  component: () => <Outlet />,
+  component: AvecLeCacheDeLAppareil,
 });
+
+/**
+ * Ce que l'appareil gardait de cette session est remis AVANT le premier
+ * écran : il s'affiche aussitôt, puis se relit en arrière-plan
+ * (`lib/cache-de-l-appareil`). L'attente est bornée : un stockage lent ne
+ * retient jamais l'ouverture plus de 250 ms — l'écran part alors du réseau,
+ * comme avant.
+ */
+const ATTENTE_MAX_MS = 250;
+
+function AvecLeCacheDeLAppareil() {
+  const qc = useQueryClient();
+  const { user } = useRouteContext({ from: "/_authenticated" });
+  const [pret, setPret] = useState(false);
+
+  useEffect(() => {
+    let vivant = true;
+    const version = versionClient();
+    const fin = setTimeout(() => vivant && setPret(true), ATTENTE_MAX_MS);
+    void restaurerLeCache(qc, user.id, version, Date.now(), () => vivant).finally(() => {
+      clearTimeout(fin);
+      if (vivant) setPret(true);
+    });
+    const arreter = garderLeCache(qc, user.id, version);
+    return () => {
+      vivant = false;
+      clearTimeout(fin);
+      arreter();
+    };
+  }, [qc, user.id]);
+
+  return pret ? <Outlet /> : null;
+}
 
 function Ouverture() {
   const { t } = useI18n();

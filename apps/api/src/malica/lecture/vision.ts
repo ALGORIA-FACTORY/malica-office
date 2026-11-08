@@ -16,6 +16,14 @@
 import { z } from "zod";
 
 import { callDeepSeek } from "../conseil/deepseek.ts";
+import { callClaude } from "./claude.ts";
+import {
+  designerEnChaine,
+  type Bascule,
+  type MaillonDeDesignation,
+  type MotifDArret,
+  type ReponseDeDesignation,
+} from "./designation.ts";
 import { repairArticles } from "./article-repair.ts";
 import { extrairePagesScannees, pagesDessineesDuPdf } from "./pdf-image.ts";
 import {
@@ -42,14 +50,9 @@ import type { PageToken, TokenRef } from "./token-plan.ts";
  * reçoit que le plan de tokens, et ne peut donc rien lire qui n'y figure pas.
  * C'est la garantie R2 rendue structurelle, et non plus seulement demandée.
  */
-// Le nom vient de `../modeles.ts` : il était écrit une seconde fois ici.
-import {
-  MODELE_DESIGNATION,
-  MODELE_RECETTE,
-  ROLE_DESIGNATION,
-  ROLE_RECETTE,
-  modeleOcr,
-} from "../modeles.ts";
+// Les noms viennent de `../modeles.ts` ; celui du désignateur, de la chaîne
+// réglée par la tour (`designation.ts`).
+import { MODELE_RECETTE, MODELE_SUDOKU, ROLE_RECETTE, ROLE_SUDOKU, modeleOcr } from "../modeles.ts";
 // Les deux noms que l'invite IMPOSE au modèle : ils viennent de la liste que
 // la relecture attend, et non plus d'une saisie à la main. Voir SYSTEM_SELECT.
 import {
@@ -64,7 +67,16 @@ import {
  * dense — d'où sa marge.
  */
 const DELAI_RELEVE_MS = 120_000;
-const DELAI_DESIGNATION_MS = 300_000;
+/*
+ * Par fournisseur, parce que le délai est aussi un DÉCLENCHEUR DE BASCULE :
+ * Claude, principal, répond en quelques secondes à l'effort bas ; l'attendre
+ * cinq minutes avant de passer au repli ferait attendre la personne pour rien.
+ * DeepSeek garde sa marge d'avant. Plafonds techniques, pas des règles (R4).
+ */
+const DELAI_DESIGNATION_MS: Readonly<Record<MaillonDeDesignation["fournisseur"], number>> = {
+  anthropic: 90_000,
+  deepseek: 300_000,
+};
 
 function delaiDepasse(e: unknown): boolean {
   return e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
@@ -239,7 +251,29 @@ export interface VisionRead {
   tokensOut: number | null;
   /** Chaque passe séparément, pour le journal des exécutions (`agents.agent_runs`). */
   releve: { latencyMs: number; tokensIn: number | null; tokensOut: number | null };
-  designation: { latencyMs: number; tokensIn: number | null; tokensOut: number | null };
+  designation: {
+    latencyMs: number;
+    tokensIn: number | null;
+    tokensOut: number | null;
+    /** Le cache du prompt système, quand le désignateur en a un (Claude). */
+    cache?: { lus: number | null; ecrits: number | null };
+  };
+  /**
+   * Les maillons de la chaîne de désignation SAUTÉS avant celui qui a désigné
+   * — ou tous, si la chaîne s'est arrêtée —, avec leur motif (`technique`,
+   * `budget`). Le journal les inscrit un par un (`read-flow.ts`).
+   */
+  bascules?: readonly Bascule[];
+  /**
+   * Posé quand AUCUN modèle n'a désigné parce que les budgets sont épuisés :
+   * la sélection est vide, et seul le moteur Sudoku désigne ce qu'il prouve.
+   */
+  sansModele?: MotifDArret;
+  /**
+   * Le Sudoku d'abord : le moteur seul a prouvé tout ce que l'écriture exige,
+   * et AUCUN modèle n'a été appelé. La sélection est la sienne.
+   */
+  prouveeSansIa?: boolean;
 }
 
 /** Le libellé de ligne est relu dans le plan quand le modèle l'a désigné. */
@@ -972,6 +1006,28 @@ export async function runVisionRead(params: {
     selection: VisionSelection;
     dureeMs: number;
   } | null>;
+  /**
+   * La chaîne de désignation (Claude, puis DeepSeek, puis l'arrêt), lue en
+   * base au moment de désigner — pas avant : une recette qui désigne n'en a
+   * pas besoin, et le budget peut avoir bougé pendant le relevé.
+   *
+   * `appeler` est injectable : une épreuve fait tomber un maillon sans réseau.
+   */
+  /**
+   * LE SUDOKU D'ABORD (décision du dirigeant, 8 novembre 2026) : appelé sur le
+   * plan de jetons AVANT toute désignation. S'il rend une sélection, la pièce
+   * est prouvée pour tout ce que l'écriture exige et aucun modèle n'est
+   * appelé ; `null`, et la recette puis la chaîne partent comme avant.
+   * Injecté, comme la recette : `vision.ts` ne connaît ni la base ni le moteur.
+   */
+  sudokuDAbord?: (plan: readonly PageToken[]) => Promise<VisionSelection | null>;
+  designation?: {
+    chaine: () => Promise<readonly MaillonDeDesignation[]>;
+    appeler?: (
+      maillon: MaillonDeDesignation,
+      invite: InviteDeDesignation,
+    ) => Promise<ReponseDeDesignation>;
+  };
 }): Promise<VisionRead> {
   const started = Date.now();
 
@@ -1017,6 +1073,35 @@ export async function runVisionRead(params: {
    * « l'amputation change de côté, elle ne disparaît pas ». Le désignateur le
    * vérifie lui-même et refuse — il ne le suppose pas.
    */
+  if (params.sudokuDAbord) {
+    const debut = Date.now();
+    const prouvee = await params.sudokuDAbord(tokens);
+    if (prouvee) {
+      return {
+        tokens,
+        selection: prouvee,
+        model: `${pass1.source}+${MODELE_SUDOKU}`,
+        readModel: pass1.source,
+        lecteur: pass1.lecteur,
+        paddleTente: pass1.paddleTente,
+        // Son couple tarifé, à zéro et souverain : la pièce lue sans IA se
+        // compte au journal, et la tour la compte.
+        selectModel: MODELE_SUDOKU,
+        selectRole: ROLE_SUDOKU,
+        latencyMs: Date.now() - started,
+        tokensIn: pass1.tokensIn,
+        tokensOut: pass1.tokensOut,
+        releve: {
+          latencyMs: finReleve - started,
+          tokensIn: pass1.tokensIn ?? null,
+          tokensOut: pass1.tokensOut ?? null,
+        },
+        designation: { latencyMs: Date.now() - debut, tokensIn: null, tokensOut: null },
+        prouveeSansIa: true,
+      };
+    }
+  }
+
   if (params.parRecette) {
     const parRecette = await params.parRecette(tokens);
     if (parRecette) {
@@ -1050,9 +1135,8 @@ export async function runVisionRead(params: {
     }
   }
 
-  const cleDeepSeek = process.env["DEEPSEEK_API_KEY"];
-  if (!cleDeepSeek)
-    throw new Error("DEEPSEEK_API_KEY absente : la pièce ne peut pas être désignée");
+  if (!params.designation)
+    throw new Error("designation.chaine_absente : la pièce ne peut pas être désignée");
 
   // ---- Passe 2 : désignation, sans aucune valeur.
   // Le désignateur ne voit pas la pièce : la géométrie voyage donc dans le plan.
@@ -1075,24 +1159,51 @@ export async function runVisionRead(params: {
       .slice(0, 300)
       .map((x) => `${x.code} — ${x.raisonSociale} (${x.nature})`)
       .join("\n") || "(aucun)";
-  const pass2 = await withRetry("désignation", async () => {
-    const res = await callDeepSeek({
-      apiKey: cleDeepSeek,
-      role: ROLE_DESIGNATION,
-      signal: AbortSignal.timeout(DELAI_DESIGNATION_MS),
-      messages: [
-        { role: "system", content: SYSTEM_SELECT },
-        {
-          role: "user",
-          content: `DOSSIER : ${params.dossier?.raisonSociale || "(inconnu)"} — matricule fiscal ${params.dossier?.identifiantFiscal || "(inconnu)"}.
+  const invite: InviteDeDesignation = {
+    system: SYSTEM_SELECT,
+    user: `DOSSIER : ${params.dossier?.raisonSociale || "(inconnu)"} — matricule fiscal ${params.dossier?.identifiantFiscal || "(inconnu)"}.
 
 Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raison sociale que le relevé a pu abîmer — « REAM OPTI » pour « DREAM OPTIC ». Tu désignes toujours un token du plan, jamais une entrée de cette liste : elle aide à lire, elle ne remplace pas ce qui est imprimé.\n${tiersText}\n\nCodes de taux autorisés :\n${ratesText}\n\nCodes de droits hors TVA autorisés :\n${chargesText}\n\nPlan de tokens — une ligne par mot, colonnes séparées par une tabulation :\npage.ordinal\tx0,y0,x1,y1\ttexte\nLes coordonnées sont normalisées entre 0 et 1, l'origine en haut à gauche : deux mots de même y appartiennent à la même ligne imprimée, et x croît de gauche à droite.\n\n${planText}`,
-        },
-      ],
-    });
-    parseJsonLoose(res.answer);
-    return res;
+  };
+  const appeler = params.designation.appeler ?? appelerUnMaillon;
+  const issue = await designerEnChaine({
+    chaine: await params.designation.chaine(),
+    appeler: (m) => appeler(m, invite),
   });
+
+  /*
+   * ============================================== LES DEUX BUDGETS SONT ÉPUISÉS
+   *
+   * On s'arrête : aucun modèle n'est appelé. La sélection est VIDE — aucune
+   * valeur n'est affirmée sans preuve —, et le Sudoku, en aval, désigne ce
+   * que l'arithmétique de la pièce prouve (`sudoku.ts`, `sansModele`). Le
+   * motif voyage avec la lecture : le journal l'inscrit, la trace le montre.
+   */
+  if (issue.issue === "arretee") {
+    return {
+      tokens,
+      selection: selectionDepuisReponse({}, tokens),
+      model: `${pass1.source}+${issue.motif}`,
+      readModel: pass1.source,
+      lecteur: pass1.lecteur,
+      paddleTente: pass1.paddleTente,
+      selectModel: issue.motif,
+      selectRole: issue.motif,
+      latencyMs: Date.now() - started,
+      tokensIn: pass1.tokensIn,
+      tokensOut: pass1.tokensOut,
+      releve: {
+        latencyMs: finReleve - started,
+        tokensIn: pass1.tokensIn ?? null,
+        tokensOut: pass1.tokensOut ?? null,
+      },
+      designation: { latencyMs: 0, tokensIn: null, tokensOut: null },
+      bascules: issue.bascules,
+      sansModele: issue.motif,
+    };
+  }
+
+  const pass2 = issue.reponse;
   const selection = selectionDepuisReponse(parseJsonLoose(pass2.answer), tokens);
 
   return {
@@ -1101,12 +1212,14 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
     selection,
     // La lecture a deux auteurs : le journal doit nommer les deux, sinon un
     // coût ou une régression de qualité devient impossible à imputer.
-    model: `${pass1.source}+${MODELE_DESIGNATION}`,
+    model: `${pass1.source}+${issue.maillon.modele}`,
     readModel: pass1.source,
     lecteur: pass1.lecteur,
     paddleTente: pass1.paddleTente,
-    selectModel: MODELE_DESIGNATION,
-    selectRole: ROLE_DESIGNATION,
+    // Le couple (modèle, rôle) du maillon qui a RÉELLEMENT désigné : c'est
+    // celui que le journal tarife.
+    selectModel: issue.maillon.modele,
+    selectRole: issue.maillon.role,
     latencyMs: Date.now() - started,
     tokensIn: (pass1.tokensIn ?? 0) + (pass2.tokensIn ?? 0) || null,
     tokensOut: (pass1.tokensOut ?? 0) + (pass2.tokensOut ?? 0) || null,
@@ -1119,6 +1232,55 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
       latencyMs: Date.now() - finReleve,
       tokensIn: pass2.tokensIn ?? null,
       tokensOut: pass2.tokensOut ?? null,
+      ...(pass2.cache ? { cache: pass2.cache } : {}),
     },
+    bascules: issue.bascules,
   };
+}
+
+/** Ce que reçoit le désignateur, quel qu'il soit : le même système, le même plan. */
+export interface InviteDeDesignation {
+  system: string;
+  user: string;
+}
+
+/**
+ * Appeler UN maillon de la chaîne, par son fournisseur. Les réessais
+ * passagers (429, 5xx, JSON illisible) restent ceux d'avant ; ce qui sort
+ * d'ici en erreur est une PANNE du maillon, et la chaîne passe au suivant.
+ */
+async function appelerUnMaillon(
+  m: MaillonDeDesignation,
+  invite: InviteDeDesignation,
+): Promise<ReponseDeDesignation> {
+  const delai = DELAI_DESIGNATION_MS[m.fournisseur];
+  return withRetry(`désignation ${m.modele}`, async () => {
+    let res: ReponseDeDesignation;
+    if (m.fournisseur === "anthropic") {
+      res = await callClaude({
+        apiKey: process.env["ANTHROPIC_API_KEY"],
+        model: m.modele,
+        system: invite.system,
+        user: invite.user,
+        signal: AbortSignal.timeout(delai),
+      });
+    } else {
+      const cle = process.env["DEEPSEEK_API_KEY"]?.trim();
+      if (!cle) throw new Error("DEEPSEEK_API_KEY absente");
+      if (m.role !== "chat" && m.role !== "reasoner")
+        throw new Error(`rôle DeepSeek inconnu : ${m.role}`);
+      res = await callDeepSeek({
+        apiKey: cle,
+        role: m.role,
+        model: m.modele,
+        signal: AbortSignal.timeout(delai),
+        messages: [
+          { role: "system", content: invite.system },
+          { role: "user", content: invite.user },
+        ],
+      });
+    }
+    parseJsonLoose(res.answer);
+    return res;
+  });
 }

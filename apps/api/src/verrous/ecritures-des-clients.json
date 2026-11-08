@@ -235,6 +235,16 @@
       "chemins": ["public.capture_precision_persist"]
     },
     {
+      "objet": "capture.rangements_prives",
+      "privilege": "INSERT",
+      "chemins": ["public.piece_privee_ranger"]
+    },
+    {
+      "objet": "capture.rangements_prives",
+      "privilege": "UPDATE",
+      "chemins": ["public.piece_privee_ranger"]
+    },
+    {
       "objet": "capture.rattachements",
       "privilege": "INSERT",
       "chemins": ["public.piece_detacher", "public.piece_rattacher"]
@@ -446,12 +456,12 @@
     {
       "objet": "identity.profiles",
       "privilege": "INSERT",
-      "chemins": ["public.mon_profil_ecrire"]
+      "chemins": ["public.mon_cote_du_plus_ecrire", "public.mon_profil_ecrire"]
     },
     {
       "objet": "identity.profiles",
       "privilege": "UPDATE",
-      "chemins": ["public.mon_profil_ecrire"]
+      "chemins": ["public.mon_cote_du_plus_ecrire", "public.mon_profil_ecrire"]
     },
     {
       "objet": "immo.assets",

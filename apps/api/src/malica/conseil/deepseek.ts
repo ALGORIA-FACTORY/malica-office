@@ -46,6 +46,11 @@ export class DeepSeekError extends Error {
 export async function callDeepSeek(input: {
   apiKey: string;
   role: DeepSeekRole;
+  /**
+   * Le modèle, quand il vient d'un réglage de la tour (la chaîne de
+   * désignation) ; à défaut, celui que `modeles.ts` attache au rôle.
+   */
+  model?: string;
   messages: DeepSeekMessage[];
   /** Le raisonneur n'accepte ni température ni pénalités : on ne les envoie pas. */
   temperature?: number;
@@ -56,7 +61,7 @@ export async function callDeepSeek(input: {
    */
   format?: "json";
 }): Promise<DeepSeekResult> {
-  const model = DEEPSEEK_MODELS[input.role];
+  const model = input.model ?? DEEPSEEK_MODELS[input.role];
   const body: Record<string, unknown> = {
     model,
     messages: input.messages,
