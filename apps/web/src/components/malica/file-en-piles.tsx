@@ -204,6 +204,15 @@ export function FileEnPiles({ rows, cabinetId }: { rows: QueueItem[]; cabinetId:
                       : t(AIDE[code])}
                   </span>
                 </span>
+                {/* Le chevron est DANS le bouton : c'est lui qu'on vise. */}
+                <ChevronDown
+                  aria-hidden
+                  className={
+                    estOuverte
+                      ? "ms-auto h-5 w-5 shrink-0 rotate-180 text-muted-foreground transition-transform"
+                      : "ms-auto h-5 w-5 shrink-0 text-muted-foreground transition-transform"
+                  }
+                />
               </button>
               {code === "pretes" ? (
                 <Link
@@ -212,16 +221,7 @@ export function FileEnPiles({ rows, cabinetId }: { rows: QueueItem[]; cabinetId:
                 >
                   {t("cab.pile.valider")}
                 </Link>
-              ) : (
-                <ChevronDown
-                  aria-hidden
-                  className={
-                    estOuverte
-                      ? "h-5 w-5 shrink-0 rotate-180 text-muted-foreground transition-transform"
-                      : "h-5 w-5 shrink-0 text-muted-foreground transition-transform"
-                  }
-                />
-              )}
+              ) : null}
               {code === "lecture" ? (
                 <span className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden">
                   <span className="cab-lit block h-0.5 w-[30%] bg-foreground" />
