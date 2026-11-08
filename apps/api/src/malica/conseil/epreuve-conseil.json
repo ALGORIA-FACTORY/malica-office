@@ -1,0 +1,398 @@
+{
+  "corpus": "referentielmalica20260831 (docs/Base de connaissance), 3 110 articles, 4 902 versions",
+  "ecrit_le": "2026-11-08",
+  "cas": [
+    {
+      "id": "is-taux-2026",
+      "question": "Quel est le taux de l'impôt sur les sociétés de droit commun ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "49",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["20 ?%"],
+        "extrait": "Le taux de l’impôt sur les sociétés, appliqué au bénéfice imposable arrondi au dinar inférieur, est fixé à 20%"
+      }
+    },
+    {
+      "id": "is-taux-2023",
+      "question": "Quel était le taux de l'impôt sur les sociétés de droit commun ?",
+      "jour": "2023-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "49",
+            "validFrom": "2023-01-01"
+          }
+        ],
+        "marqueurs": ["15 ?%"],
+        "extrait": "Le taux de l’impôt sur les sociétés, appliqué au bénéfice imposable arrondi au dinar inférieur, est fixé à 15%"
+      }
+    },
+    {
+      "id": "is-taux-2019",
+      "question": "Quel était le taux de l'impôt sur les sociétés de droit commun ?",
+      "jour": "2019-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "49",
+            "validFrom": "2019-01-01"
+          }
+        ],
+        "marqueurs": ["25 ?%"],
+        "extrait": "Le taux de l’impôt sur les sociétés, appliqué au bénéfice imposable arrondi au dinar inférieur, est fixé à 25%"
+      }
+    },
+    {
+      "id": "is-plus-value-option",
+      "question": "Une société qui réalise la plus-value visée au paragraphe II de l'article 45 peut-elle opter pour un impôt calculé sur le prix de cession, et à quel taux ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "49",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["15 ?%", "prix de cession"],
+        "extrait": "Toutefois, les intéressés peuvent opter pour le paiement de l’impôt sur les sociétés au titre de ladite plus-value au taux de 15% du prix de cession"
+      }
+    },
+    {
+      "id": "is-taux-arabe",
+      "question": "ما هي نسبة الضريبة على الشركات في القانون العام؟",
+      "jour": "2026-06-30",
+      "locale": "ar",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "49",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["20"],
+        "extrait": "Le taux de l’impôt sur les sociétés, appliqué au bénéfice imposable arrondi au dinar inférieur, est fixé à 20%"
+      }
+    },
+    {
+      "id": "acomptes-taux",
+      "question": "Combien d'acomptes provisionnels une société doit-elle payer, et quel pourcentage de l'impôt de l'année précédente représente chacun ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "51",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["30 ?%", "trois|3"],
+        "extrait": "chacune à 30% de l'impôt dû au titre des revenus ou bénéfices de l'année précédente"
+      }
+    },
+    {
+      "id": "acomptes-delai-pm",
+      "question": "Dans quel délai une personne morale déclare-t-elle et paie-t-elle ses acomptes provisionnels ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "51",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["vingt[- ]huit|28", "sixième|6e|6ème"],
+        "extrait": "pendant les vingt huit premiers jours du sixième, neuvième et douzième mois"
+      }
+    },
+    {
+      "id": "ras-honoraires",
+      "question": "Quel est le taux de la retenue à la source sur les honoraires payés par une société à un prestataire ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "52",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["10 ?%"],
+        "extrait": "a) 10%(1) au titre des honoraires, commissions, courtages, loyers"
+      }
+    },
+    {
+      "id": "ras-honoraires-pm",
+      "question": "Quel taux de retenue à la source s'applique aux honoraires servis à une personne morale soumise à l'impôt sur les sociétés ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "52",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["3 ?%"],
+        "extrait": "3%(1) au titre des honoraires et 5% au titre des loyers d’hôtels"
+      }
+    },
+    {
+      "id": "ras-loyers-hotels",
+      "question": "Quel est le taux de la retenue à la source sur les loyers d'hôtels servis à une société soumise à l'IS ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "52",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["5 ?%"],
+        "extrait": "5% au titre des loyers d’hôtels"
+      }
+    },
+    {
+      "id": "ras-retribution-accidentelle",
+      "question": "Quelle retenue s'applique à une prime accidentelle versée en plus du salaire par le même employeur ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "53",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["20 ?%"],
+        "extrait": "soumise à une retenue, de son montant net au taux de 20%"
+      }
+    },
+    {
+      "id": "ras-retribution-seuil",
+      "question": "En dessous de quel salaire annuel une rétribution accidentelle n'est-elle pas soumise à la retenue à la source ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "53",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["5[ .]?000"],
+        "extrait": "lorsque le salaire annuel global net ne dépasse pas 5.000 dinars"
+      }
+    },
+    {
+      "id": "ras-travail-occasionnel",
+      "question": "Quelle retenue à la source s'applique à la rémunération d'un travail occasionnel effectué en dehors de l'activité principale ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "53",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["15 ?%"],
+        "extrait": "sont soumises à une retenue à la source de 15% de leur montant total"
+      }
+    },
+    {
+      "id": "ras-salaries-non-residents",
+      "question": "Comment sont imposés les salaires des salariés non-résidents qui travaillent en Tunisie moins de six mois ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CIRPPIS",
+            "numero": "53",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["20 ?%", "libératoire"],
+        "extrait": "soumis à une retenue à la source libératoire au taux de 20%"
+      }
+    },
+    {
+      "id": "cfl-terrains",
+      "question": "Quel est le taux de la taxe sur les terrains non bâtis ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CFL",
+            "numero": "33",
+            "validFrom": "2018-01-01"
+          }
+        ],
+        "marqueurs": ["0[.,]3"],
+        "extrait": "La taxe est due au taux de 0.3 pour-cent de la valeur vénale réelle des terrains"
+      }
+    },
+    {
+      "id": "cfl-penalite-tib",
+      "question": "Quelle pénalité de retard s'applique aux sommes dues au titre de la taxe sur les immeubles bâtis ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "CFL",
+            "numero": "19",
+            "validFrom": "2023-01-01"
+          }
+        ],
+        "marqueurs": ["1[,.]25"],
+        "extrait": "pénalité égale à 1,25%"
+      }
+    },
+    {
+      "id": "lf2026-inscription-fonciere",
+      "question": "Quel est le droit d'inscription foncière sur une donation d'immeuble entre parents et enfants depuis la loi de finances 2026 ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "LF-2026",
+            "numero": "20",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["deux cents|200"],
+        "extrait": "Est relevé de \"cent dinars\" à \"deux cents dinars\" le droit d'inscription foncière"
+      }
+    },
+    {
+      "id": "lf2026-facture-electronique",
+      "question": "La loi de finances 2026 étend-elle la facture électronique aux prestations de services ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "LF-2026",
+            "numero": "53",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["prestations? de services?"],
+        "extrait": "Est ajoutée l’expression « les opérations de prestations de service ainsi que »"
+      }
+    },
+    {
+      "id": "lf2026-entree-en-vigueur",
+      "question": "À partir de quand s'appliquent les dispositions de la loi de finances pour 2026 ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "reponse",
+        "articles": [
+          {
+            "corpus": "LF-2026",
+            "numero": "110",
+            "validFrom": "2026-01-01"
+          }
+        ],
+        "marqueurs": ["1(er)? janvier 2026"],
+        "extrait": "Les dispositions de la présente loi s’appliquent à compter du 1er janvier 2026"
+      }
+    },
+    {
+      "id": "piege-tva-france",
+      "question": "Quel est le taux normal de la TVA en France ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "refus",
+        "raison": "droit étranger : même matière, pas même droit"
+      }
+    },
+    {
+      "id": "piege-is-maroc",
+      "question": "Quel est le taux de l'impôt sur les sociétés au Maroc ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "refus",
+        "raison": "droit étranger"
+      }
+    },
+    {
+      "id": "piege-trou-d-edition",
+      "question": "Quel était le taux de l'impôt sur les sociétés de droit commun ?",
+      "jour": "2024-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "refus",
+        "raison": "aucune édition du code de l'IRPP et de l'IS n'est en vigueur au 30 juin 2024 dans le corpus (édition 2023 close au 1er janvier 2024, édition 2025 ouverte au 1er janvier 2025) : ne pas transposer"
+      }
+    },
+    {
+      "id": "piege-couscous",
+      "question": "Quelle est la recette du couscous au poisson de Sfax ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "refus",
+        "raison": "hors sujet"
+      }
+    },
+    {
+      "id": "piege-algerie",
+      "question": "Quel est le barème de l'impôt sur le revenu en Algérie pour 2026 ?",
+      "jour": "2026-06-30",
+      "locale": "fr",
+      "attendu": {
+        "type": "refus",
+        "raison": "droit étranger"
+      }
+    }
+  ]
+}
