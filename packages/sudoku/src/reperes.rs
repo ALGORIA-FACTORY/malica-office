@@ -48,7 +48,32 @@ pub const MOTS_D_UN_LIBELLE: usize = 4;
 /// En deçà de tant de lettres, un repère n'est reconnu que comme un mot entier.
 const REPERE_COURT: usize = 4;
 
+thread_local! {
+    /// Les textes déjà normalisés, le temps d'une résolution (`oublier_les_normes`). Un
+    /// même texte de jeton se normalise des milliers de fois par pièce (l'en-tête, les
+    /// lignes) : banc du 8 novembre 2026, 60 % du temps du moteur sur algoria-018.
+    static NORMES: std::cell::RefCell<std::collections::HashMap<String, String>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// Vide la mémoire de `normaliser` : appelé à la fin de chaque résolution, pour qu'un
+/// moteur qui vit longtemps (le WebAssembly de l'API) ne garde rien d'une pièce à l'autre.
+pub fn oublier_les_normes() {
+    NORMES.with(|m| m.borrow_mut().clear());
+}
+
+/// Le texte normalisé (`normaliser_sans_memoire`), mémorisé le temps d'une résolution :
+/// une fonction pure, le résultat est le même.
 pub fn normaliser(s: &str) -> String {
+    if let Some(n) = NORMES.with(|m| m.borrow().get(s).cloned()) {
+        return n;
+    }
+    let n = normaliser_sans_memoire(s);
+    NORMES.with(|m| m.borrow_mut().insert(s.to_string(), n.clone()));
+    n
+}
+
+fn normaliser_sans_memoire(s: &str) -> String {
     let s: String = s
         .split_whitespace()
         .map(sans_proclitique)
@@ -241,10 +266,30 @@ impl<'a> Plan<'a> {
     /// valeur entre le libellé et `i` coupe la suite : sur « Total HT 1 670,000 Total TTC
     /// 1 749,800 », 1 749,800 n'est pas ancré par « Total HT ».
     pub fn libelle_avant(&self, i: usize, reperes: &[String]) -> bool {
+        self.libelle_avant_selon(i, reperes, false)
+    }
+
+    /// `libelle_avant`, un libellé ARABE d'au moins huit lettres se lisant aussi à une lettre
+    /// près (une lettre perdue, ajoutée ou changée) : l'OCR rend « اعتار » pour « اعتبار »
+    /// (diagnostic des pièces non prouvées, 8 novembre 2026). Un libellé latin, ou court, se
+    /// lit toujours exactement.
+    pub fn libelle_avant_a_une_lettre(&self, i: usize, reperes: &[String]) -> bool {
+        self.libelle_avant_selon(i, reperes, true)
+    }
+
+    fn libelle_avant_selon(&self, i: usize, reperes: &[String], approche: bool) -> bool {
         if reperes.is_empty() {
             return false;
         }
-        let contient = |t: &str| reperes.iter().any(|r| t.contains(r.as_str()));
+        let contient = |t: &str| {
+            reperes.iter().any(|r| {
+                t.contains(r.as_str())
+                    || (approche
+                        && r.chars().count() >= 8
+                        && r.chars().any(|c| ('\u{0600}'..='\u{06FF}').contains(&c))
+                        && a_une_lettre_pres(t, r))
+            })
+        };
         if contient(&self.normes[i]) {
             return true;
         }
@@ -296,6 +341,118 @@ impl<'a> Plan<'a> {
             .collect();
         droite.sort_by(ordre);
         suite_lue(gauche) || suite_lue(droite)
+    }
+
+    /// Un repère est-il imprimé, MOT POUR MOT, comme libellé d'un montant ? Les mots entiers
+    /// (purs mots : ni montant, ni date, ni chiffre) qui précèdent un montant sur sa rangée, de
+    /// gauche à droite, contiennent une suite de mots consécutifs qui EST le repère
+    /// (« Indemnité | de | transport | 89,000 »). Contrairement à `annonce_chiffree`, le
+    /// libellé peut s'étendre sur plusieurs jetons ; contrairement à un simple « contient »,
+    /// un repère court ne se lit pas à cheval sur deux mots (« Prêt » n'est pas dans
+    /// « … présent »). Une pièce de droite à gauche n'est pas lue ainsi.
+    pub fn annonce_en_mots(&self, reperes: &[String]) -> bool {
+        if reperes.is_empty() {
+            return false;
+        }
+        (0..self.jetons.len()).any(|i| {
+            let a = &self.jetons[i];
+            if a.montants.is_empty() || self.rtl[i] {
+                return false;
+            }
+            let ha = (a.y1 - a.y0).max(f64::EPSILON);
+            let mut gauche: Vec<usize> = (0..self.jetons.len())
+                .filter(|&k| {
+                    let b = &self.jetons[k];
+                    let hb = (b.y1 - b.y0).max(f64::EPSILON);
+                    k != i
+                        && b.page == a.page
+                        && (a.y1.min(b.y1) - a.y0.max(b.y0)) / ha.min(hb) > 0.5
+                        && b.x1 <= a.x0 + 0.25 * ha
+                })
+                .collect();
+            gauche.sort_by(|x, y| {
+                self.jetons[*x]
+                    .x0
+                    .partial_cmp(&self.jetons[*y].x0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+            // les mots qui précèdent le montant sans interruption, dans l'ordre de lecture
+            let mut mots: Vec<&str> = Vec::new();
+            for &k in gauche.iter().rev() {
+                let b = &self.jetons[k];
+                if !b.montants.is_empty()
+                    || b.date.is_some()
+                    || b.texte.chars().any(|c| c.is_ascii_digit())
+                {
+                    break;
+                }
+                mots.insert(0, self.normes[k].as_str());
+            }
+            (0..mots.len()).any(|d| {
+                let mut suite = String::new();
+                mots[d..].iter().any(|m| {
+                    suite.push_str(m);
+                    reperes.iter().any(|r| !r.is_empty() && suite == *r)
+                })
+            })
+        })
+    }
+
+    /// Le jeton `i` est-il la DERNIÈRE valeur d'une rangée que son libellé ouvre ? Le libellé
+    /// est la suite de purs mots (ni montant, ni date, ni chiffre) qui commence la rangée, de
+    /// gauche à droite ; il doit contenir l'un des repères. Une rubrique de bulletin de paie
+    /// imprime sa base et son taux entre son libellé et son montant (« Cotisation CNSS |
+    /// 4 200,000 | 9,18 % | 385,560 ») : `ancre` ne voit que la base, voisine du libellé.
+    /// Une pièce de droite à gauche n'est pas lue ainsi.
+    pub fn fin_de_rangee_libellee(&self, i: usize, reperes: &[String]) -> bool {
+        if reperes.is_empty() || self.rtl[i] || self.jetons[i].montants.is_empty() {
+            return false;
+        }
+        let a = &self.jetons[i];
+        let ha = (a.y1 - a.y0).max(f64::EPSILON);
+        let mut rangee: Vec<usize> = (0..self.jetons.len())
+            .filter(|&k| {
+                let b = &self.jetons[k];
+                let hb = (b.y1 - b.y0).max(f64::EPSILON);
+                b.page == a.page && (a.y1.min(b.y1) - a.y0.max(b.y0)) / ha.min(hb) > 0.5
+            })
+            .collect();
+        rangee.sort_by(|x, y| {
+            self.jetons[*x]
+                .x0
+                .partial_cmp(&self.jetons[*y].x0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        // la dernière valeur de la rangée
+        if rangee
+            .iter()
+            .rev()
+            .find(|&&k| !self.jetons[k].montants.is_empty())
+            != Some(&i)
+        {
+            return false;
+        }
+        // Une rangée de relevé s'ouvre sur sa date (« 01/10/2026 | SOLDE AU 30/09/2026 | (C) |
+        // 138.862,485 ») : les dates de tête ne coupent pas le libellé qui les suit.
+        let mut libelle = String::new();
+        // Le numéro de rubrique d'un formulaire (« 350 | Reste à payer | 7.739,058 ») non plus :
+        // un nombre entier d'au plus trois chiffres en tête de rangée.
+        let numero = |t: &str| t.len() <= 3 && t.chars().all(|c| c.is_ascii_digit());
+        let tete = rangee
+            .iter()
+            .take_while(|&&k| self.jetons[k].date.is_some() || numero(&self.jetons[k].texte))
+            .count();
+        for &k in &rangee[tete..] {
+            let b = &self.jetons[k];
+            if !b.montants.is_empty()
+                || b.date.is_some()
+                || b.texte.chars().any(|c| c.is_ascii_digit())
+            {
+                break;
+            }
+            libelle.push_str(&self.normes[k]);
+        }
+        reperes.iter().any(|r| libelle.contains(r.as_str()))
     }
 
     /// Un repère est-il lu quelque part sur la pièce ? Sur un jeton, ou sur une suite d'au
@@ -636,4 +793,55 @@ fn taux_sur_rangees_chiffrees(jetons: &[Jeton]) -> BTreeSet<i64> {
         }
     }
     taux
+}
+
+/// `motif` se lit-il dans `texte` à une lettre près (distance d'édition au plus 1, le motif
+/// pris n'importe où dans le texte) ?
+fn a_une_lettre_pres(texte: &str, motif: &str) -> bool {
+    let t: Vec<char> = texte.chars().collect();
+    let m: Vec<char> = motif.chars().collect();
+    // d[j] : la distance du préfixe m[..j] à un suffixe du texte lu jusqu'ici
+    let mut d: Vec<usize> = (0..=m.len()).collect();
+    if d[m.len()] <= 1 {
+        return true;
+    }
+    for &c in &t {
+        let mut prec = d[0];
+        d[0] = 0;
+        for j in 1..=m.len() {
+            let ancien = d[j];
+            d[j] = (prec + usize::from(m[j - 1] != c))
+                .min(d[j] + 1)
+                .min(d[j - 1] + 1);
+            prec = ancien;
+        }
+        if d[m.len()] <= 1 {
+            return true;
+        }
+    }
+    false
+}
+
+#[cfg(test)]
+mod essais {
+    use super::a_une_lettre_pres;
+
+    #[test]
+    fn un_libelle_arabe_se_lit_a_une_lettre_pres() {
+        // « اعتار » pour « اعتبار » : une lettre perdue
+        assert!(a_une_lettre_pres(
+            "المبلغدوناعتارالأداءات",
+            "المبلغدوناعتبارالأداءات"
+        ));
+        // une lettre changée, au milieu d'un texte plus long
+        assert!(a_une_lettre_pres(
+            "xxالمبلغدوناعتبارالأدادات",
+            "المبلغدوناعتبارالأداءات"
+        ));
+        // deux lettres perdues : non
+        assert!(!a_une_lettre_pres(
+            "المبلغدوناعتارالأداات",
+            "المبلغدوناعتبارالأداءات"
+        ));
+    }
 }
