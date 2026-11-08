@@ -75,7 +75,7 @@ export const en: Dict = {
     "Rates, accounts, mandatory statements, thresholds and deadlines live in the database, versioned by effective date. No fiscal constant in code.",
   "landing.pillar.4.title": "Privacy is a wall",
   "landing.pillar.4.body":
-    "The company's personal space is invisible to the firm through database isolation, never through a display filter.",
+    "The company's personal space is invisible to the accountant through database isolation, never through a display filter.",
 
   "landing.surfaces.title": "Two surfaces, one brain",
   "landing.surfaces.pme.title": "Company workspace",
@@ -87,11 +87,11 @@ export const en: Dict = {
 
   "landing.cycle.title": "The life of a document",
   "landing.cycle.steps":
-    "photographed · read by Malica · sent · seen by the firm · validated or forced, or returned with a reason",
+    "photographed · read by Malica · sent · seen by the accountant · validated or forced, or returned with a reason",
   "landing.footer": "Algoria Factory · Tunisian accounting system · extensible to UEMOA / OHADA",
 
   "auth.title": "Malica Office workspace",
-  "auth.subtitle": "Reserved for organisations and their mandated firms.",
+  "auth.subtitle": "Reserved for organisations and their mandated accountants.",
   "auth.tab.signin": "Sign in",
   "auth.tab.signup": "Create access",
   "auth.email": "Email address",
@@ -149,11 +149,12 @@ export const en: Dict = {
   "plan.collectif.court": "Control account",
   "plan.tiers.title": "Parties of the file",
   "plan.tiers.lede":
-    "Customers, suppliers, employees, partners, banks. A party is an auxiliary of its control account — never an account of the chart. It belongs to the file, not to the firm.",
+    "Customers, suppliers, employees, partners, banks. A party is an auxiliary of its control account — never an account of the chart. It belongs to the file, not to the accountant.",
   "plan.tiers.empty": "No party of this kind in this file.",
   "plan.tiers.dossier": "File",
   "plan.tiers.chooseDossier": "Choose a file",
-  "plan.tiers.noDossier": "Choose a file: parties belong to a company’s books, not to the firm’s.",
+  "plan.tiers.noDossier":
+    "Choose a file: parties belong to a company’s books, not to the accountant’s.",
   "plan.tiers.raison": "Legal name",
   "plan.tiers.matricule": "Tax ID",
   "plan.tiers.collectif": "Control account",
@@ -180,7 +181,7 @@ export const en: Dict = {
   "plan.col.code": "Code",
   "plan.col.libelle": "Label",
   "plan.origin.pack": "Shipped",
-  "plan.origin.cabinet": "Your firm",
+  "plan.origin.cabinet": "Your accountant",
   "plan.origin.dossier": "This file",
   "plan.origin.aucun": "Undecided",
   "plan.wasDefault": "The pack proposed {compte}.",
@@ -199,13 +200,13 @@ export const en: Dict = {
   "plan.field.libelle": "Label",
   "plan.malica.kicker": "Parameters",
   "cab.plan.principe":
-    "The chart shipped with the pack, the extensions Malica opened, and the subdivisions your firm has set. What the firm sets prevails over the pack default.",
+    "The chart shipped with the pack, the extensions Malica opened, and the subdivisions your accountant has set. What the accountant sets prevails over the pack default.",
   "cab.plan.comptes": "{count} accounts",
   "cab.plan.comptes#one": "{count} account",
   "cab.plan.comptes#other": "{count} accounts",
-  "cab.plan.extensions": "{count} firm extensions",
-  "cab.plan.extensions#one": "{count} firm extension",
-  "cab.plan.extensions#other": "{count} firm extensions",
+  "cab.plan.extensions": "{count} accountant extensions",
+  "cab.plan.extensions#one": "{count} accountant extension",
+  "cab.plan.extensions#other": "{count} accountant extensions",
   "cab.plan.filter.tout": "All",
   "plan.malica":
     "An entry template never cites an account number: it cites a role. Rebinding a role here changes every entry that uses it, without touching a single template.",
@@ -216,7 +217,7 @@ export const en: Dict = {
   "onboarding.jurisdiction.required": "Choose a jurisdiction before continuing.",
   "onboarding.legalId": "Tax identification number (optional)",
   "onboarding.mode": "Validation mode",
-  "onboarding.mode.mandate": "Under mandate — the firm reviews (four eyes)",
+  "onboarding.mode.mandate": "Under mandate — the accountant reviews (four eyes)",
   "onboarding.mode.autonome": "Autonomous — self-validation, recorded in the audit log",
   "onboarding.entity": "Main establishment",
   "onboarding.submit": "Create organisation",
@@ -227,7 +228,7 @@ export const en: Dict = {
   "portal.title": "Choose your workspace",
   "portal.subtitle": "Two applications, one governed ledger.",
   "portal.tour.body":
-    "The ALGORIA Factory operators' space: firms, SMEs, subscriptions and platform settings.",
+    "The ALGORIA Factory operators' space: accountants, SMEs, subscriptions and platform settings.",
   "portal.tour.cta": "Enter",
   "portal.pme.count": "Companies linked",
   "portal.cabinet.count": "Clients under mandate",
@@ -323,7 +324,7 @@ export const en: Dict = {
   "pme.refus.piece_personnelle":
     "This document is private. Add it to the company to allow reading; sending it to the accountant is a separate action.",
   "refus.piece.rappelEnAttente":
-    "A return of this document has been requested from the accounting firm: wait for its answer.",
+    "A return of this document has been requested from the accountant: wait for their answer.",
   "refus.licence.transmission": "Sending suspended: a payment on your subscription is overdue.",
   "refus.licence.export": "Export suspended: this client's subscription is not up to date.",
   "refus.place.incluses_prises": "All the places included in the subscription are taken.",
@@ -383,7 +384,7 @@ export const en: Dict = {
   "pme.inviter.utilisateur.droit1": "Uploads and tracks their own documents",
   "pme.inviter.utilisateur.droit2": "Sends them to the owner",
   "pme.inviter.proprietaire.droit1": "Sees every document of the company",
-  "pme.inviter.proprietaire.droit2": "Sends to the firm, receives users' documents",
+  "pme.inviter.proprietaire.droit2": "Sends to the accountant, receives users' documents",
   "pme.inviter.proprietaire.droit3": "Keeps or deletes any document",
   "pme.inviter.envoyer": "Send the invitation",
   "pme.inviter.cout.compris":
@@ -677,13 +678,13 @@ export const en: Dict = {
   "pme.charges.sansCours.titre#other":
     "{count} foreign-currency documents are waiting for their rate",
   "pme.charges.sansCours.detail":
-    "They count towards no total until your firm enters the rate ({devises}).",
+    "They count towards no total until your accountant enters the rate ({devises}).",
   "pme.charges.question":
     "{famille}: {observed} this month versus {baseline} usually ({value}). Is this exceptional?",
   "pme.charges.answer.exceptionnel": "Yes, exceptional",
   "pme.charges.answer.verifier": "To be checked",
   "pme.charges.answered": "Your answer is recorded and kept in the log.",
-  "pme.charges.answered.cabinet": "Your firm answered. Their answer is kept in the log.",
+  "pme.charges.answered.cabinet": "Your accountant answered. Their answer is kept in the log.",
   "pme.charges.disclaimer": "I flag and I ask; I never change an entry.",
   "pme.home.card.charges": "Your expenses",
   "pme.nav.home": "Company",
@@ -1007,7 +1008,7 @@ export const en: Dict = {
   "cab.banque.when": "Timestamp",
   "cab.banque.orphansbank": "Statement lines without entry",
   "cab.banque.orphansbook": "Entries without statement line",
-  "cab.noorg": "No practice organization yet. Create one to supervise your clients.",
+  "cab.noorg": "No accounting organization yet. Create one to supervise your clients.",
   "cab.today.title": "Today",
   "cab.nav.group.cabinet": "Tools and settings",
   "cab.search": "Search everything",
@@ -1093,7 +1094,7 @@ export const en: Dict = {
   "cab.conseil.kicker": "Arbitration · what Malica dares not send alone",
   "cab.conseil.h1": "Tax advice",
   "cab.conseil.lede":
-    "When a client asks a question, Malica composes a cited answer. Above her certainty threshold she answers alone; below it she hands it to you. You give a thumbs up, or write the right answer — and she learns what the practice says.",
+    "When a client asks a question, Malica composes a cited answer. Above her certainty threshold she answers alone; below it she hands it to you. You give a thumbs up, or write the right answer — and she learns what the accountant says.",
   "cab.conseil.panel":
     "I hand you what I dare not send alone: each question carries my answer, its articles and my certainty. Your thumbs up or your correction goes to the client, in their language.",
   "cab.conseil.kpi.attente": "Awaiting arbitration",
@@ -1101,13 +1102,13 @@ export const en: Dict = {
   "cab.conseil.kpi.attente.vide": "nothing is waiting for you",
   "cab.conseil.kpi.pouce": "Thumbs up",
   "cab.conseil.kpi.pouce.ctx": "answers validated as they were",
-  "cab.conseil.kpi.corrigees": "Corrected by the practice",
+  "cab.conseil.kpi.corrigees": "Corrected by the accountant",
   "cab.conseil.kpi.corrigees.ctx": "wordings Malica keeps",
   "cab.conseil.kpi.justesse": "Approved without changes",
   "cab.conseil.kpi.justesse.ctx": "over {count} arbitrated questions",
   "cab.conseil.kpi.justesse.ctx#one": "over {count} arbitrated question",
   "cab.conseil.kpi.justesse.ctx#other": "over {count} arbitrated questions",
-  "cab.conseil.kpi.justesse.sans": "no response assessed by the firm",
+  "cab.conseil.kpi.justesse.sans": "no response assessed by the accountant",
   "cab.conseil.file.titre": "Arbitration queue",
   "cab.conseil.file.compte": "{n} / {total}",
   "cab.conseil.file.vide":
@@ -1131,7 +1132,7 @@ export const en: Dict = {
   "cab.conseil.approuver.apres": "Thumbs up",
   "cab.conseil.corriger": "Give the right answer",
   "cab.conseil.ecarter": "Set aside",
-  "cab.conseil.correction.titre": "The practice’s answer",
+  "cab.conseil.correction.titre": "The accountant’s answer",
   "cab.conseil.correction.placeholder":
     "Write what the client should read. Malica will reuse your wording for similar cases.",
   "cab.conseil.correction.article": "Article invoked",
@@ -1140,7 +1141,7 @@ export const en: Dict = {
   "cab.conseil.regle.approuvee":
     "Thumbs up — Malica’s answer went to the client as it was, with its citations.",
   "cab.conseil.regle.corrigee":
-    "The practice’s answer was sent. Malica keeps your wording for similar cases.",
+    "The accountant’s answer was sent. Malica keeps your wording for similar cases.",
   "cab.conseil.regle.ecartee": "Set aside — the client is invited to talk it over in person.",
   "cab.conseil.regle.repondue": "Sent alone, above your threshold. You can still correct it.",
   "cab.conseil.regle.le": "on {date}",
@@ -1203,16 +1204,16 @@ export const en: Dict = {
   "cab.notif.kind.conseil.arbitrage":
     "A client asked an advice question: Malica hands you her answer.",
   "cab.notif.kind.conseil.repondu": "Malica answered an advice question alone, with her citations.",
-  "cab.notif.kind.conseil.decide": "The practice’s answer went to the client.",
-  "cab.journal.conseil.retenu": "Advice answer handed to the practice",
+  "cab.notif.kind.conseil.decide": "The accountant’s answer went to the client.",
+  "cab.journal.conseil.retenu": "Advice answer handed to the accountant",
   "cab.journal.conseil.repondu": "Advice answer sent alone",
   "cab.journal.conseil.approuve": "Advice answer approved",
-  "cab.journal.conseil.corrige": "Advice answer corrected by the practice",
+  "cab.journal.conseil.corrige": "Advice answer corrected by the accountant",
   "cab.journal.conseil.ecarte": "Advice question set aside",
   "pme.conseil.relecture":
     "Your accountant is reviewing my answer: I will pass it on as soon as they have validated it.",
   "pme.conseil.sansCabinet":
-    "No practice follows this file yet: this answer has not been reviewed by a chartered accountant.",
+    "No accountant follows this file yet: this answer has not been reviewed by a chartered accountant.",
   "pme.conseil.relu": "Reviewed and validated by your accountant.",
   "pme.conseil.sources": "Sources: {liste}",
   "pme.conseil.cite.lacune":
@@ -1238,7 +1239,7 @@ export const en: Dict = {
   "cab.today.charge.pieces#one": "{count} document waiting",
   "cab.today.charge.pieces#other": "{count} documents waiting",
   "cab.rail.role": "Accounting",
-  "cab.rail.role.expert": "Head of practice",
+  "cab.rail.role.expert": "Head of accounting",
   "cab.rail.role.dirigeant": "Owner",
   "cab.rail.role.collaborateur": "Staff member",
   "cab.rail.role.assistant": "Assistant",
@@ -1295,10 +1296,10 @@ export const en: Dict = {
   "cab.abo.fac.statut.irrecouvrable": "Uncollectable",
   "pme.abo.cabinet.propose": "{cabinet} offers you the {offre} plan, at its expense.",
   "pme.abo.cabinet.effet":
-    "If you accept, the subscription you pay for yourself stops today; your accounting firm is invoiced instead.",
+    "If you accept, the subscription you pay for yourself stops today; your accountant is invoiced instead.",
   "pme.abo.cabinet.accepter": "Accept",
   "pme.abo.cabinet.refuser": "Decline",
-  "pme.abo.cabinet.accepte": "Done: your accounting firm now pays for your subscription.",
+  "pme.abo.cabinet.accepte": "Done: your accountant now pays for your subscription.",
   "pme.abo.cabinet.refuse": "Offer declined. Your subscription continues as before.",
   "pme.abo.cabinet.couvert": "Your {offre} subscription has been paid by {cabinet} since {date}.",
   "cab.malica.vois": "What I see",
@@ -1335,12 +1336,12 @@ export const en: Dict = {
   "cab.malica.prop.sansMain": "{count} mandates have no staff member.",
   "cab.malica.prop.sansMain#one": "{count} mandate has no staff member.",
   "cab.malica.prop.sansMain#other": "{count} mandates have no staff member.",
-  "cab.malica.prop.sansMain.source": "assignments · practice",
+  "cab.malica.prop.sansMain.source": "assignments · accounting",
   "cab.malica.prop.sansMain.cta": "Assign",
   "cab.malica.prop.dormant": "{count} files sent no document this month.",
   "cab.malica.prop.dormant#one": "{count} file sent no document this month.",
   "cab.malica.prop.dormant#other": "{count} files sent no document this month.",
-  "cab.malica.prop.dormant.source": "practice queue · the month",
+  "cab.malica.prop.dormant.source": "accounting queue · the month",
   "cab.malica.prop.dormant.cta": "See the clients",
   "cab.malica.agent.lecture": "Document reading",
   "cab.malica.agent.lecture.file": "{count} queued",
@@ -1390,7 +1391,7 @@ export const en: Dict = {
   "cab.today.filter.doublons": "Probable duplicates",
   "cab.today.search": "Filter client or description",
   "cab.today.affectation": "Assignment",
-  "cab.today.allcabinet": "Whole practice",
+  "cab.today.allcabinet": "Whole accounting team",
   "cab.today.unassigned": "Unassigned",
   "cab.queue.rank": "#",
   "cab.queue.amount": "Amount",
@@ -1400,7 +1401,7 @@ export const en: Dict = {
   "cab.queue.unread": "Not read yet",
   "cab.queue.sansEcriture": "Read — no entry",
   "cab.queue.sansEcriture.tiers": "Read — {tiers} — no entry",
-  "cab.today.charge": "Practice workload",
+  "cab.today.charge": "Accounting workload",
   "cab.today.charge.affecter": "Assign",
   "cab.today.echeances": "Upcoming deadlines",
   "cab.today.echeances.all": "See all",
@@ -1416,7 +1417,7 @@ export const en: Dict = {
   "cab.notif.kicker.attente": "{n} waiting",
   "cab.notif.kicker.rien": "Nothing waiting",
   "cab.notif.lede":
-    "What the mandated files have told the practice, day by day. Nothing is deleted: marking as read says you have seen it.",
+    "What the mandated files have told the accountant, day by day. Nothing is deleted: marking as read says you have seen it.",
   "cab.notif.toutLu": "Mark all as read",
   "cab.notif.marquerLu": "Mark as read",
   "cab.notif.ouvrir": "Open",
@@ -1435,9 +1436,9 @@ export const en: Dict = {
   "cab.notif.kind.ecriture.retournee": "An entry was returned.",
   "cab.notif.kind.autre": "An event on the file.",
   "cab.notif.kind.mandat.propose": "A mandate was proposed to the file.",
-  "cab.notif.kind.mandat.accepte": "The file accepted the practice’s mandate.",
+  "cab.notif.kind.mandat.accepte": "The file accepted the accountant’s mandate.",
   "cab.notif.kind.mandat.revoque": "The file ended the engagement.",
-  "cab.notif.kind.mandat.refuse": "The file declined the practice’s mandate.",
+  "cab.notif.kind.mandat.refuse": "The file declined the accountant’s mandate.",
   "cab.notif.kind.pv.envoye": "Minutes were sent to the client.",
   "cab.review.rank": "{n} of {total}",
   "cab.review.ref": "Document",
@@ -1505,12 +1506,12 @@ export const en: Dict = {
   "cab.controle.cours_de_change": "Exchange rate",
   "cab.controle.tva_exclue_a_trancher": "VAT possibly non-deductible: to decide",
   "cab.controle.immobilisation_a_trancher": "Fixed asset or expense: to decide",
-  "cab.controle.immobilisation_faible_valeur": "Low-value asset (firm threshold)",
+  "cab.controle.immobilisation_faible_valeur": "Low-value asset (accountant threshold)",
   "cab.audit.extract": "Cited reading, contract v1.",
   "cab.audit.autre": "Event on the file.",
   "cab.audit.service.relecteur_de_nuit": "by the night re-reader",
   "cab.audit.service.autre": "by a service",
-  "cab.clients.kicker": "Practice portfolio",
+  "cab.clients.kicker": "Accounting portfolio",
   "cab.clients.kpi.mandats": "Active mandates",
   "cab.clients.kpi.attente": "Documents waiting",
   "cab.clients.kpi.sans": "Unassigned",
@@ -1544,7 +1545,7 @@ export const en: Dict = {
   "invitation.titre": "Your space is ready.",
   "invitation.titreLienMort": "This link opens nothing.",
   "invitation.anonyme":
-    "To join your file, create your access — or sign in — with the address your firm invited.",
+    "To join your file, create your access — or sign in — with the address your accountant invited.",
   "invitation.creer": "Create my access",
   "invitation.connecter": "I already have access",
   "invitation.dossier": "{cabinet} opened the file of {pme} and invites you to join it.",
@@ -1552,8 +1553,9 @@ export const en: Dict = {
   "invitation.mauvaiseAdresse":
     "You are signed in with another address. Sign out, then sign in with {email}.",
   "invitation.rejoindre": "Join my space",
-  "invitation.plusValable": "This link is no longer valid. Ask your firm for a new one.",
-  "invitation.introuvable": "This link opens no file. Check it, or ask your firm for a new one.",
+  "invitation.plusValable": "This link is no longer valid. Ask your accountant for a new one.",
+  "invitation.introuvable":
+    "This link opens no file. Check it, or ask your accountant for a new one.",
   "cab.clients.count#one": "{count} mandate",
   "cab.clients.count#other": "{count} mandates",
   "cab.clients.col.regime": "Regime",
@@ -1655,7 +1657,7 @@ export const en: Dict = {
   "cab.echeances.panel.kicker": "Reading",
   "cab.echeances.panel": "Overdue: {late} · within seven days: {week}.",
   "cab.clients.lede": "Mandated files, their validation mode and the volume to supervise.",
-  "cab.settings.title": "Practice settings",
+  "cab.settings.title": "Accounting settings",
   "cab.export.kicker": "Data out · no lock-in",
   "cab.export.title": "FEC and CSV export",
   "cab.export.lede":
@@ -1673,7 +1675,7 @@ export const en: Dict = {
   "cab.export.format.csv_ecritures": "Entries CSV",
   "cab.export.format.csv_ecritures.hint": "general ledger · tabular",
   "cab.export.format.csv_plan": "Chart CSV",
-  "cab.export.format.csv_plan.hint": "chart of accounts · pack and practice",
+  "cab.export.format.csv_plan.hint": "chart of accounts · pack and accountant",
   "cab.export.format.fec.unDossier": "The FEC is produced one file at a time: choose a client.",
   "cab.export.taille": "{lignes} rows · {taille}",
   "cab.export.taille#one": "{lignes} row · {taille}",
@@ -1692,7 +1694,7 @@ export const en: Dict = {
   "cab.export.recents.auteur.inconnu": "unknown author",
   "cab.export.panel.kicker": "What I guarantee",
   "cab.export.panel":
-    "I invent no row: the file carries the booked entries exactly as the Socle holds them, with the precision and currency of pack {pack}. Every export is timestamped, measured and fingerprinted in the practice log — and nobody can erase it.",
+    "I invent no row: the file carries the booked entries exactly as the Socle holds them, with the precision and currency of pack {pack}. Every export is timestamped, measured and fingerprinted in the accounting log — and nobody can erase it.",
   "cab.export.panel.sansPack":
     "No pack in force for this jurisdiction: I cannot produce a file until the monetary precision is known.",
   "cab.export.source":
@@ -1700,12 +1702,12 @@ export const en: Dict = {
   "cab.export.format.journal_csv": "Daily journal (CSV)",
   "cab.export.format.journal_xlsx": "Daily journal (Excel)",
   "cab.nav.journal": "Daily journal",
-  "cab.journal.ecriture.forcee": "The practice forced the entry.",
-  "cab.journal.piece.type_etabli": "Document type set by the practice.",
+  "cab.journal.ecriture.forcee": "The accountant forced the entry.",
+  "cab.journal.piece.type_etabli": "Document type set by the accountant.",
   "cab.journal.piece.type_corrige": "The client corrected the document type.",
   "cab.journal.piece.date_corrigee": "The client corrected the document date.",
   "cab.journal.piece.nom_corrige": "The client corrected the issuer’s name.",
-  "cab.journal.piece.vers_cabinet": "Document sent to the practice.",
+  "cab.journal.piece.vers_cabinet": "Document sent to the accountant.",
   "cab.journal.piece.rendue": "Document handed back to the client, at their request.",
   "cab.journal.piece.vers_societe": "Document back in the company.",
   "cab.journal.piece.rangee_societe": "Document filed in the company.",
@@ -1714,7 +1716,7 @@ export const en: Dict = {
   "cab.journal.piece.vers_mon_espace": "Document moved to My space.",
   "cab.journal.piece.demande_accordee": "Client request granted.",
   "cab.journal.piece.demande_refusee": "Client request declined.",
-  "cab.settings.fuseau.titre": "Practice time zone",
+  "cab.settings.fuseau.titre": "Accounting time zone",
   "cab.settings.fuseau.lede":
     "The day of the journal, the number of its exports and their comparison are read in this time zone.",
   "cab.settings.fuseau.defaut": "The jurisdiction's: {fuseau}",
@@ -1769,26 +1771,26 @@ export const en: Dict = {
   "cab.jdj.origine.contre_passation": "Reversal",
   "cab.jdj.contrePassee": "reversed",
   "cab.jdj.aide.contenu":
-    "Every entry the practice took on that day: approved (proposed by Malica), forced (changed or entered by an accountant, with their name and the time kept) and reversals.",
+    "Every entry the accountant took on that day: approved (proposed by Malica), forced (changed or entered by an accountant, with their name and the time kept) and reversals.",
   "cab.jdj.aide.modifier":
     "The journal stays open to corrections: a correction never rewrites an entry. It reverses it and records a new one, from the document; both appear in the journal of the day they are made.",
   "cab.jdj.aide.export":
-    "Each export is numbered and kept, file and fingerprint: it can be downloaded again from the list of the day's exports. The next one says what changed since — entries added, reversed — or that the practice time zone changed.",
+    "Each export is numbered and kept, file and fingerprint: it can be downloaded again from the list of the day's exports. The next one says what changed since — entries added, reversed — or that the accounting time zone changed.",
   "cab.settings.kicker": "Settings · {cabinet}",
-  "cab.settings.tab.cabinet": "Practice and team",
+  "cab.settings.tab.cabinet": "Accounting and team",
   "cab.settings.tab.calendrier": "Deadline calendar",
   "cab.settings.onb.titre": "Getting-started path",
   "cab.settings.onb.lede":
-    "The four steps a new practice goes through once: the practice, the team, the first mandates, the delegation threshold. Not a section — a path you can replay when needed.",
+    "The four steps a new accountant goes through once: the accounting identity, the team, the first mandates, the delegation threshold. Not a section — a path you can replay when needed.",
   "cab.settings.onb.rejouer": "Replay the getting-started path",
   "cab.settings.tab.integrations": "Integrations and API",
   "cab.settings.tab.comptabilite": "Accounting",
   "reglages.compta.portee": "View and set for",
-  "reglages.compta.portee.cabinet": "The whole firm",
+  "reglages.compta.portee.cabinet": "The whole accounting team",
   "reglages.compta.aConfirmer": "Default to be confirmed by a chartered accountant",
   "reglages.compta.nonApplique": "Saved — not yet applied by the engine",
   "reglages.compta.aide.texte": "What the text says",
-  "reglages.compta.aide.pratique": "Firms’ practice",
+  "reglages.compta.aide.pratique": "Accountants’ practice",
   "reglages.compta.aide.risque": "Risk in a tax audit",
   "reglages.compta.aide.incertain": "UNCERTAIN",
   "reglages.compta.aide.defaut": "Pack default",
@@ -1807,7 +1809,7 @@ export const en: Dict = {
   "reglages.compta.categorie.depasse": "Exceeds the maximum rate of decree 2008-492",
   "reglages.compta.nature_de_vente": "{libelle}: account {compte}",
   "reglages.compta.nature_de_vente.repli":
-    "fallback for a sale whose nature is not proved, and single account at the firm’s choice",
+    "fallback for a sale whose nature is not proved, and single account at the accountant’s choice",
   "reglages.compta.depuis.champ": "Decisions apply from",
   "reglages.compta.depuis": "From {date}",
   "reglages.compta.option.nonAppliquee": "not yet applied by the engine",
@@ -1818,7 +1820,7 @@ export const en: Dict = {
   "cab.integ.app.nom": "SME app",
   "cab.integ.app.nature": "Inbound · Android and iOS",
   "cab.integ.app.note":
-    "The SME photographs its document; it lands in the practice queue with its reading and citations.",
+    "The SME photographs its document; it lands in the accounting queue with its reading and citations.",
   "cab.integ.app.action": "Open the queue",
   "cab.integ.releves.nom": "Bank statements",
   "cab.integ.releves.nature": "Inbound · manual import (CSV)",
@@ -1830,10 +1832,10 @@ export const en: Dict = {
   "cab.integ.exports.note":
     "A client’s booked entries, in a file the tax administration or another application can read. Every export is logged with its fingerprint.",
   "cab.integ.exports.action": "Produce an export",
-  "cab.integ.api.nom": "Practice API",
-  "cab.integ.api.nature": "Inbound and outbound · practice key",
+  "cab.integ.api.nom": "Accounting API",
+  "cab.integ.api.nature": "Inbound and outbound · accounting key",
   "cab.integ.api.note":
-    "A third-party tool reads the clients’ entries and files documents, with a key the practice creates and revokes here.",
+    "A third-party tool reads the clients’ entries and files documents, with a key the accountant creates and revokes here.",
   "cab.integ.api.action": "Manage the key",
   "cab.integ.etat.pieces": "{count} documents received in thirty days",
   "cab.integ.etat.pieces#one": "{count} document received in thirty days",
@@ -1856,9 +1858,9 @@ export const en: Dict = {
   "cab.integ.etat.aucuneCle": "No key",
   "cab.integ.etat.dernierAppel": "last call on {date}",
   "cab.integ.etat.jamaisAppelee": "never called",
-  "cab.integ.cle.titre": "Practice key",
+  "cab.integ.cle.titre": "Accounting key",
   "cab.integ.cle.portee":
-    "Scope: reading entries and filing documents, on the practice’s clients only. Tenant isolation is enforced by the database, not by the key.",
+    "Scope: reading entries and filing documents, on the accountant’s clients only. Tenant isolation is enforced by the database, not by the key.",
   "cab.integ.cle.nouvelle":
     "Here is your key. It will never be shown again: copy it now and store it in the tool that will use it.",
   "cab.integ.cle.copier": "Copy",
@@ -1881,13 +1883,13 @@ export const en: Dict = {
   "cab.integ.cle.libelle": "Key name",
   "cab.integ.cle.libelle.hint": "The name of the tool that will use it.",
   "cab.integ.portee.lire": "Read entries",
-  "cab.integ.portee.lire.hint": "The booked lines of a period, on the practice’s clients.",
+  "cab.integ.portee.lire.hint": "The booked lines of a period, on the accountant’s clients.",
   "cab.integ.portee.deposer": "File documents",
   "cab.integ.portee.deposer.hint": "Register a document and upload its content.",
   "cab.integ.cle.creer": "Create a key",
   "cab.settings.g.supervision": "Supervision",
   "cab.settings.g.supervision.lede":
-    "What the practice delegates to the Socle, and what it keeps by hand.",
+    "What the accountant delegates to the Socle, and what they keep by hand.",
   "cab.settings.seuilLot": "Batch validation above",
   "cab.settings.seuilLot.hint":
     "Reading confidence above which a batch is validated in one gesture.",
@@ -1895,11 +1897,11 @@ export const en: Dict = {
   "cab.settings.seuilRevue.hint":
     "Below, each document opens alone. In between: a proposal to confirm.",
   "cab.settings.g.pack": "Jurisdiction pack",
-  "cab.settings.g.pack.lede": "The tax reference applied to the practice’s files.",
+  "cab.settings.g.pack.lede": "The tax reference applied to the accountant’s files.",
   "cab.settings.packActif": "Active pack",
   "cab.settings.packActif.hint": "It carries the rates, the accounts and the obligations.",
   "cab.settings.packActif.absent": "no pack in force",
-  "cab.settings.extensions": "Practice extensions",
+  "cab.settings.extensions": "Accounting extensions",
   "cab.settings.extensions.hint": "Accounts opened beyond the reference chart.",
   "cab.settings.g.malica": "Malica",
   "cab.settings.g.malica.lede": "She perceives, reminds and explains. She never computes.",
@@ -1913,7 +1915,7 @@ export const en: Dict = {
   "cab.settings.ton.chaleureux": "Warm",
   "cab.settings.g.equipe": "Team and access",
   "cab.settings.g.equipe.lede":
-    "The practice’s staff, and the thresholds that call for a second look.",
+    "The accounting team’s staff, and the thresholds that call for a second look.",
   "cab.settings.collaborateurs": "Staff",
   "cab.settings.doubleValidation": "Double validation above",
   "cab.settings.doubleValidation.hint": "A second look at large amounts. Empty: never.",
@@ -1921,11 +1923,11 @@ export const en: Dict = {
   "cab.settings.capacite.hint": "In active files. Steering measures load against it.",
   "cab.settings.enregistrer": "Save settings",
   "cab.settings.enregistre": "Settings saved.",
-  "cab.settings.defauts": "These are the Socle defaults: the practice has not set anything yet.",
+  "cab.settings.defauts": "These are the Socle defaults: the accountant has not set anything yet.",
   "cab.settings.cal.lede":
     "Dates come from the jurisdiction pack. This table says which apply to which sector, and for which year — it feeds the Deadlines tab of every file.",
   "cab.settings.cal.lectureSeule":
-    "The firm's calendar is set by the chartered accountant. You can consult it; for a change or an extension, ask them.",
+    "The accounting calendar is set by the chartered accountant. You can consult it; for a change or an extension, ask them.",
   "cab.settings.cal.exercice": "Year",
   "cab.settings.cal.secteur": "Business sector",
   "cab.settings.cal.general": "All activities",
@@ -1943,7 +1945,7 @@ export const en: Dict = {
   "cab.settings.cal.col.mandats": "Mandates",
   "cab.settings.cal.scope.toutes": "All activities",
   "cab.settings.cal.scope.secteur": "Sector-specific",
-  "cab.settings.cal.scope.propre": "Practice-specific",
+  "cab.settings.cal.scope.propre": "Accountant-specific",
   "cab.settings.cal.periodicite.mensuelle": "Monthly",
   "cab.settings.cal.periodicite.trimestrielle": "Quarterly",
   "cab.settings.cal.periodicite.annuelle": "Yearly",
@@ -1958,7 +1960,7 @@ export const en: Dict = {
   "cab.settings.cal.resume#one": "{actives} active obligation out of {total} · year {exercice}",
   "cab.settings.cal.resume#other": "{actives} active obligations out of {total} · year {exercice}",
   "cab.settings.cal.vide": "No periodic obligation in the pack for this year.",
-  "cab.settings.cal.propre.titre": "Practice-specific obligation",
+  "cab.settings.cal.propre.titre": "Accountant-specific obligation",
   "cab.settings.cal.propre.lede": "It will exist only for your mandates, never in the pack.",
   "cab.settings.cal.propre.libelle": "Label",
   "cab.settings.cal.propre.regle": "Rule, in plain words",
@@ -1975,18 +1977,18 @@ export const en: Dict = {
   "cab.settings.cal.reports.poser": "Extend the deadline",
   "cab.settings.cal.reports.pose": "Extension recorded: your clients' calendars follow it.",
   "cab.settings.cal.reports.vide": "No extension in force.",
-  "cab.settings.cal.reports.origine.report_cabinet": "Your firm",
+  "cab.settings.cal.reports.origine.report_cabinet": "Your accountant",
   "cab.settings.cal.reports.origine.report_algoria": "ALGORIA, for the whole jurisdiction",
   "echeance.origine.jour_ouvrable": "Legal date {date}, moved to the next working day",
   "echeance.origine.report_algoria": "Legal date {date}, extended for everyone: {motif}",
-  "echeance.origine.report_cabinet": "Legal date {date}, extended by the firm: {motif}",
+  "echeance.origine.report_cabinet": "Legal date {date}, extended by the accountant: {motif}",
   "cab.settings.cal.propre.ajoutee":
     "Obligation added: it enters the calendar of the mandates concerned.",
   "cab.settings.panel":
-    "I read the practice’s thresholds from the database; absent, I show the Socle defaults. The calendar counts the mandates concerned from their records, never from memory.",
-  "cab.journal.cabinet.reglages": "Practice settings changed",
+    "I read the accountant’s thresholds from the database; absent, I show the Socle defaults. The calendar counts the mandates concerned from their records, never from memory.",
+  "cab.journal.cabinet.reglages": "Accounting settings changed",
   "cab.journal.cabinet.obligation_reglee": "Calendar obligation set",
-  "cab.journal.cabinet.obligation_propre": "Practice-specific obligation added",
+  "cab.journal.cabinet.obligation_propre": "Accountant-specific obligation added",
   "cab.retour.titre": "Return to the client",
   "cab.retour.lede":
     "The reason tells the client what to do; your note, how. They will read it as written on their document.",
@@ -2091,7 +2093,7 @@ export const en: Dict = {
   "refus.introuvable": "Not found, or you do not have access to it.",
   "refus.introuvable.piece": "Document not found, or you do not have access to it.",
   "refus.inattendu": "This could not be completed. Try again; if it happens again, report it.",
-  "refus.introuvable.cabinet": "Practice not found, or you do not have access to it.",
+  "refus.introuvable.cabinet": "Accountant not found, or you do not have access to it.",
   "refus.introuvable.dossier": "File not found, or you do not have access to it.",
   "refus.introuvable.facture": "Invoice not found, or you do not have access to it.",
   "refus.introuvable.immobilisation": "Fixed asset not found, or you do not have access to it.",
@@ -2142,12 +2144,13 @@ export const en: Dict = {
   "refus.reserve.dirigeant_ou_plateforme":
     "Only the company’s manager, or the platform, can create a licence.",
   "refus.reserve.proprietaire": "This action is reserved for the company’s owner.",
-  "refus.reserve.expert": "This action is reserved for the practice’s chartered accountant.",
+  "refus.reserve.expert": "This action is reserved for the accounting team’s chartered accountant.",
   "refus.reserve.expert_mandate":
-    "This action is reserved for the chartered accountant of the practice engaged on this file.",
+    "This action is reserved for the chartered accountant of the accounting team engaged on this file.",
   "refus.reserve.cabinet_mandate":
-    "Only the practice engaged on this file decides a request about a document.",
-  "refus.supervision.reservee": "Supervision belongs to the practice’s accountant or staff member.",
+    "Only the accountant engaged on this file decides a request about a document.",
+  "refus.supervision.reservee":
+    "Supervision belongs to the accounting team’s expert or staff member.",
   "refus.ecriture.contre_passee":
     "This entry has already been reversed: it can no longer be supervised.",
   "refus.conversation.auteur_fixe": "A conversation keeps its author.",
@@ -2155,7 +2158,7 @@ export const en: Dict = {
   "refus.conversation.question_vide": "Write your question before sending it.",
   "refus.conseil.plafond":
     "Malica’s advice has reached its monthly cap for this file; it resumes next month.",
-  "refus.conseil.sans_cabinet": "This file has no engaged practice: no one to arbitrate.",
+  "refus.conseil.sans_cabinet": "This file has no engaged accountant: no one to arbitrate.",
   "refus.arbitrage.etat_initial": "An arbitration starts pending, or already answered.",
   "refus.arbitrage.decision_inconnue": "This decision does not exist: approve, correct or dismiss.",
   "refus.arbitrage.deja_decide":
@@ -2271,7 +2274,7 @@ export const en: Dict = {
     "This currency does not exist in the reference data: {devise}.",
   "refus.referentiel.taux_tva_hors_pack": "This VAT rate does not exist in the pack in force.",
   "refus.fuseau.non_defini":
-    "The practice’s time zone is not set: set it in the practice settings.",
+    "The accounting time zone is not set: set it in the accounting settings.",
   "refus.fuseau.dossier_non_defini":
     "This file’s time zone is not set, neither by the file nor by its jurisdiction: the day its documents were received cannot be read. Report it to support.",
   "refus.fuseau.inconnu": "This time zone does not exist: {fuseau}.",
@@ -2284,16 +2287,16 @@ export const en: Dict = {
   "refus.report.date_requise": "Enter the new date.",
   "refus.motif.a_dire": "Say why: a reason is required.",
   "refus.report.periode_illisible": "Unreadable period: YYYY-MM, YYYY-Qn or YYYY.",
-  "refus.report.obligation_inconnue": "This obligation does not exist for this practice.",
+  "refus.report.obligation_inconnue": "This obligation does not exist for this accountant.",
   "refus.report.obligation_hors_pack": "This obligation does not exist in the pack.",
   "refus.report.avant_l_echeance":
     "A deferral pushes the deadline back: {date} is before its legal date, {legale}.",
   "refus.report.source_et_motif": "A published deferral needs a reason and a source.",
   "refus.jour_ferie.source": "A public holiday needs a source.",
   "refus.collab.aucune_affectation": "This file is not assigned to anyone.",
-  "refus.collab.hors_cabinet": "This staff member is not a member of the practice.",
+  "refus.collab.hors_cabinet": "This staff member is not a member of the accounting team.",
   "refus.mandat.aucun_actif": "No active engagement on this file.",
-  "refus.mandat.hors_cabinet": "This file is not engaged with your practice.",
+  "refus.mandat.hors_cabinet": "This file is not engaged with your accounting team.",
   "refus.mandat.deja_repondu": "This engagement has already been answered.",
   "refus.mandat.motif_de_revocation": "Say why: the accountant will read this reason.",
   "refus.mandat.un_seul_actif":
@@ -2347,10 +2350,10 @@ export const en: Dict = {
   "refus.acces.termine": "A closed access does not reopen: another one is opened.",
   "refus.acces.activation_figee": "The activation day cannot be rewritten.",
   "refus.acces.licence_figee": "An access does not change licence.",
-  "refus.acces.pour_un_autre": "Only a practice opens an access for another organisation.",
+  "refus.acces.pour_un_autre": "Only an accountant opens an access for another organisation.",
   "refus.offre.canal_sans_regle":
     "This plan ({offre}) is not offered on channel {canal} on {date}.",
-  "refus.offre.pas_par_un_cabinet": "A practice does not open a {offre} access.",
+  "refus.offre.pas_par_un_cabinet": "An accountant does not open a {offre} access.",
   "refus.offre.pas_en_direct": "Plan {offre} is not sold directly.",
   "refus.offre.hors_grille": "This plan does not exist in the current price list.",
   "refus.offre.naissance_absente": "No starter plan is in force on {date} on the direct channel.",
@@ -2366,7 +2369,7 @@ export const en: Dict = {
   "refus.licence.a_un_proprietaire": "The licence can only be passed to an owner of the company.",
   "refus.place.offre_pleine": "All the seats of this plan are taken ({places} in total).",
   "refus.abonnement.deja_propose":
-    "A subscription is already offered to or assigned to this file by a practice.",
+    "A subscription is already offered to or assigned to this file by an accountant.",
   "refus.abonnement.plus_en_attente": "This offer is no longer pending.",
   "refus.forfait.periode_figee": "A plan period cannot be rewritten: only its closing is recorded.",
   "refus.forfait.periode_ouverte":
@@ -2404,7 +2407,7 @@ export const en: Dict = {
   "refus.facturation.destinataire_sans_nom":
     "Recipient {destinataire} has no name: an invoice without a recipient is not an invoice.",
   "refus.facturation.rien_a_facturer": "Nothing to invoice for {periode}.",
-  "refus.facturation.deja_emise": "This practice’s invoice for {periode} already exists.",
+  "refus.facturation.deja_emise": "This accountant’s invoice for {periode} already exists.",
   "refus.facturation.payeur_introuvable":
     "Licence {licence} not found: an invoice’s payer is never guessed.",
   "refus.facturation.format_de_reference": "No subscriber reference format is in force on {date}.",
@@ -2455,7 +2458,7 @@ export const en: Dict = {
   "refus.immo.sortie.dotations_manquantes": "An earlier year has no depreciation: book it first.",
   "refus.immo.sortie.prix_au_rebut": "Scrapping has no price and no VAT.",
   "refus.immo.sortie.compte_du_role":
-    "An account of the disposal is missing or defined twice: check the firm's chart of accounts.",
+    "An account of the disposal is missing or defined twice: check the accountant's chart of accounts.",
   "refus.immo.statut_par_la_sortie":
     "An asset's status is not changed here: dispose of it by a sale or by scrapping.",
   "refus.stocks.inventaire_deja": "This period is already recorded for this item.",
@@ -2465,7 +2468,7 @@ export const en: Dict = {
   "refus.banque.ligne_deja_lettree": "This line is already matched.",
   "refus.banque.ecriture_deja_lettree": "This entry is already matched to another line.",
   "refus.piece.transmise_au_cabinet":
-    "This document was sent to your practice: it only comes back with its agreement.",
+    "This document was sent to your accountant: it only comes back with their agreement.",
   "refus.piece.comptabilisee_dans_la_societe": "A posted document stays in the company.",
   "refus.piece.comptabilisee_partagee": "A posted document stays shared.",
   "refus.suppression.engagee":
@@ -2485,7 +2488,7 @@ export const en: Dict = {
   "refus.piece.scellee": "This document’s content is sealed: it cannot be replaced.",
   "refus.piece.type_de_contenu":
     "This file type is not a document: upload a PDF or a photo (JPEG, PNG, WebP, HEIC).",
-  "refus.piece.non_partagee": "This document is not shared with the practice.",
+  "refus.piece.non_partagee": "This document is not shared with the accountant.",
   "refus.piece.aucune_demande": "No request is pending on this document.",
   "refus.rattachement.motif": "Say why you are detaching this document.",
   "refus.rattachement.absent": "This document is not attached to this document.",
@@ -2496,9 +2499,9 @@ export const en: Dict = {
   "refus.cle_api.revoquer": "An API key is neither deleted nor changed: it is revoked.",
   "refus.cle_api.par_une_personne":
     "An API key neither creates nor revokes another key: a person does this.",
-  "refus.cle_api.cabinet_seulement": "Only a practice holds an API key.",
+  "refus.cle_api.cabinet_seulement": "Only an accountant holds an API key.",
   "refus.cle_api.expert_membre":
-    "Only an expert who is a member of the practice creates an API key.",
+    "Only an expert who is a member of the accounting team creates an API key.",
   "refus.cle_api.nom_requis": "Give the key a name.",
   "refus.cle_api.portee_requise": "A key carries at least one scope.",
   "refus.cle_api.portee_inconnue": "One of the requested scopes does not exist.",
@@ -2507,7 +2510,7 @@ export const en: Dict = {
   "refus.requisition.expiree": "Requisition expired on {date}.",
   "refus.export.format_inconnu": "This format is not a journal export.",
   "refus.export.jour_a_venir": "This day is still to come: it has no journal to export yet.",
-  "refus.export.fuseau": "The export’s time zone is not the practice’s.",
+  "refus.export.fuseau": "The export’s time zone is not the accountant’s.",
   "refus.export.concurrent": "Another export of this journal has just been produced: try again.",
   "refus.export.format_absent": "This export format does not exist.",
   "refus.export.fec_par_dossier": "The FEC is produced file by file: choose a client.",
@@ -2569,13 +2572,13 @@ export const en: Dict = {
   "refus.inscription.type_sans_ecriture":
     "This type of document carries no accounting entry: choose another one.",
   "refus.inscription.reservee_au_cabinet":
-    "This file is entrusted to your accounting firm: it records the entry for a document. Send the document to it.",
+    "This file is entrusted to your accountant: they record the entry for a document. Send the document to them.",
   "refus.retour.deja":
     "This document is already with the client: it comes back when they send it again.",
   "refus.prise_en_charge.deja":
     "This document is already taken up: edit its entry to force it, or return it.",
   "refus.sens.reserve_au_cabinet":
-    "This file is entrusted to your firm: it decides whether the document is a purchase or a sale. Send it the document.",
+    "This file is entrusted to your accountant: they decide whether the document is a purchase or a sale. Send them the document.",
   "refus.sens.ecriture_vivante":
     "This document already carries an entry: edit the entry to force it, or return the document.",
   "refus.ecriture.lignes": "An entry has at least two lines.",
@@ -2596,21 +2599,21 @@ export const en: Dict = {
     "The invoice has several rates: choose the tax code of each base line.",
   "refus.ecriture.taxe_sans_tva":
     "No VAT line: choose the tax code of each base line (exempt, export…).",
-  "refus.cours.supervision": "A rate is entered by the firm that supervises the file.",
+  "refus.cours.supervision": "A rate is entered by the accountant who supervises the file.",
   "refus.cours.correction_sans_motif":
     "This rate already exists with another value: a correction states why. Enter the reason.",
   "refus.cours.derogation_sans_motif":
     "An override of the official rate states why: enter the reason.",
   "refus.change.regle.droits":
-    "Only the firm that keeps this client's books sets its exchange rule; for the whole firm, the chartered accountant.",
+    "Only the accountant who keeps this client's books sets its exchange rule; for the whole accounting team, the chartered accountant.",
   "refus.role_compte.droits":
-    "Only the chartered accountant links an account for their firm; for a client file, whoever supervises it at the firm that holds it.",
+    "Only the chartered accountant links an account for their whole accounting team; for a client file, whoever supervises it in the accounting team that holds it.",
   "refus.change.source_hors_juridiction":
     "This rate source does not publish for the dossier's jurisdiction: choose its country's central bank.",
   "refus.change.regle.saisie":
     "A chosen value is not in the reference data (a look-back is a whole number of days): reload the page and choose again.",
   "refus.reglage_comptable.droits":
-    "Only the chartered accountant sets a setting for the whole firm; for a file, whoever supervises it at the firm that holds it.",
+    "Only the chartered accountant sets a setting for the whole accounting team; for a file, whoever supervises it in the accounting team that holds it.",
   "refus.reglage_comptable.saisie":
     "A chosen value is not in the reference data (a threshold is a positive number): reload the page and choose again.",
   "refus.cours.invalide":
@@ -2625,7 +2628,7 @@ export const en: Dict = {
     "This plan change was replaced by a later one: it is no longer payable. The monthly invoice counts the days actually spent on each plan.",
   "refus.journal.droits": "Only a member of this company can clear its log.",
   "refus.avoir.droits":
-    "Only the firm that supervises this file links a credit note to its invoice.",
+    "Only the accountant who supervises this file links a credit note to its invoice.",
   "refus.avoir.facture":
     "This invoice is not from the same file, or not in the same direction as the credit note: choose another one.",
   "refus.avoir.ecriture_vivante":
@@ -2744,7 +2747,7 @@ export const en: Dict = {
   "cab.cours.aide.regle":
     "The exchange rule (the day used, how far back to the last published rate, the rounding gap) is a default shipped by Malica, to be confirmed by a chartered accountant.",
   "cab.cours.aide.trace":
-    "The rate you enter is dated and kept in your name; it applies to your firm’s files. A correction is added, with its reason; nothing is erased, and the document is judged again at once.",
+    "The rate you enter is dated and kept in your name; it applies to your accounting team’s files. A correction is added, with its reason; nothing is erased, and the document is judged again at once.",
   "cab.cours.taux": "{vers} for {unite} {devise}",
   "cab.cours.unite": "Unit ({devise})",
   "cab.cours.enregistrer": "Save the rate",
@@ -2754,7 +2757,7 @@ export const en: Dict = {
   "cab.cours.titre": "Exchange rates",
   "cab.cours.surtitre": "The rates your files read",
   "cab.cours.malica":
-    "A rate is data: it comes from the official source, imported by operations or entered by you. The imported official rate prevails; yours goes first only through a reasoned override, for one file or for the whole firm.",
+    "A rate is data: it comes from the official source, imported by operations or entered by you. The imported official rate prevails; yours goes first only through a reasoned override, for one file or for the whole accounting team.",
   "cab.cours.vide": "No rate yet.",
   "cab.cours.date": "Rate date",
   "cab.cours.devise": "Currency",
@@ -2765,9 +2768,9 @@ export const en: Dict = {
   "cab.cours.motif": "Reason for an override (optional)",
   "cab.cours.motif.exige": "Reason for the correction",
   "cab.cours.portee": "The override applies",
-  "change.regle.titre": "Exchange rule set by the firm",
+  "change.regle.titre": "Exchange rule set by the accountant",
   "change.regle.aide":
-    "The rate source, the day used, how far back to the last published rate, and the rounding-difference rule. Malica ships a default, to be confirmed by a chartered accountant; the firm sets it. Foreign-currency documents are judged again when opened.",
+    "The rate source, the day used, how far back to the last published rate, and the rounding-difference rule. Malica ships a default, to be confirmed by a chartered accountant; the accountant sets it. Foreign-currency documents are judged again when opened.",
   "change.regle.arretee": "Exchange rule set.",
   "change.regle.arretee.detail": "Foreign-currency documents are judged again when opened.",
   "cab.ecriture.ligne.libelle": "Label",
@@ -2802,7 +2805,7 @@ export const en: Dict = {
   "cab.avoir.titre": "Original invoice to link",
   "cab.avoir.non_comptabilisee": "Original invoice not yet recorded",
   "cab.avoir.aide":
-    "A credit note is linked to its invoice (“Credit notes” setting, VAT Code art. 9). It is proposed as a reversal of the invoice entry, at the amounts it prints: as a reversal, or to the discounts account, according to the firm’s setting.",
+    "A credit note is linked to its invoice (“Credit notes” setting, VAT Code art. 9). It is proposed as a reversal of the invoice entry, at the amounts it prints: as a reversal, or to the discounts account, according to the accountant’s setting.",
   "cab.avoir.manque.introuvable":
     "The number printed on the credit note matches no invoice in this file, or several: choose it below.",
   "cab.avoir.manque.non_comptabilisee":
@@ -2875,7 +2878,7 @@ export const en: Dict = {
   "pme.prive.vide":
     "Nothing here yet. What you keep in your private space is seen by you alone: neither the company nor your accountant, until you send it.",
   "pme.coffre.wall":
-    "The wall is enforced by the database: your private space is invisible to the practice, not merely hidden.",
+    "The wall is enforced by the database: your private space is invisible to the accountant, not merely hidden.",
   "pme.echeances.title": "Deadlines",
   "pme.echeances.voice.empty": "No deadline derived from the pack yet.",
   "pme.echeances.voice.late": "{count} overdue deadlines.",
@@ -2906,8 +2909,8 @@ export const en: Dict = {
   "pme.echeances.fiche.lien": "Complete the record",
   "pme.echeances.pack.absent":
     "No jurisdiction pack is in force for your file; your accountant has been informed.",
-  "cab.echeances.kicker": "Practice calendar · pack {pack}",
-  "cab.echeances.kicker.sansPack": "Practice calendar",
+  "cab.echeances.kicker": "Accounting calendar · pack {pack}",
+  "cab.echeances.kicker.sansPack": "Accounting calendar",
   "cab.echeances.principe":
     "Dates come from the jurisdiction pack, never from a keyboard. A deadline does not move: it is prepared or it is missed.",
   "cab.echeances.horizon": "{debut} — {fin}",
@@ -2992,9 +2995,9 @@ export const en: Dict = {
   "pme.notifs.empty": "No alerts yet.",
   "pme.notifs.open": "Open document",
   "pme.notifs.markRead": "Read",
-  "notif.kind.piece.retournee": "Document returned by the practice",
+  "notif.kind.piece.retournee": "Document returned by the accountant",
   "notif.kind.piece.validee": "Document taken up by your accountant",
-  "notif.kind.piece.partagee": "Document shared with the practice",
+  "notif.kind.piece.partagee": "Document shared with the accountant",
   "cab.nav.propositions": "Proposals",
   "cab.nav.pv": "Minutes",
   "cab.pv.kicker": "Review of {date}",
@@ -3018,9 +3021,9 @@ export const en: Dict = {
   "cab.pv.malica.kicker": "Written by Malica",
   "cab.pv.malica.corps":
     "The text is hers; every figure comes from the engine that produced it, and the check rejects any number that is not among them.",
-  "cab.pv.cabinet.kicker": "Revised by the firm",
+  "cab.pv.cabinet.kicker": "Revised by the accountant",
   "cab.pv.cabinet.corps":
-    "The text was reread and revised by the firm. The figures remain the Socle’s.",
+    "The text was reread and revised by the accountant. The figures remain the Socle’s.",
   "cab.pv.envoyer": "Send to the client",
   "cab.pv.envoye": "Sent to the client on {date}",
   "cab.pv.exporter": "Export PDF",
@@ -3067,8 +3070,8 @@ export const en: Dict = {
   "cab.journal.membre.invite": "Team member invited",
   "cab.journal.organization.updated": "Organisation updated",
   "cab.journal.cabinet.mise_en_route": "Setup completed",
-  "notif.kind.pv.envoye": "Review minutes received from your firm",
-  "notif.kind.mandat.propose": "A firm proposes an engagement",
+  "notif.kind.pv.envoye": "Review minutes received from your accountant",
+  "notif.kind.mandat.propose": "An accountant proposes an engagement",
   "notif.kind.mandat.accepte": "The engagement was accepted",
   "notif.kind.mandat.revoque": "The engagement was ended",
   "notif.kind.mandat.refuse": "The engagement was declined",
@@ -3086,17 +3089,17 @@ export const en: Dict = {
   "notif.kind.acces.propose": "Your accountant offers to cover your subscription",
   "notif.kind.acces.accepte": "Your subscription is now covered by your accountant",
   "notif.kind.acces.repris": "Your subscription continues, now at your own charge",
-  "pme.mandat.kicker": "A firm proposes an engagement",
+  "pme.mandat.kicker": "An accountant proposes an engagement",
   "pme.mandat.texte":
-    "{cabinet} offers to keep your books. By accepting, the documents you send become visible to that firm, and to it alone.",
+    "{cabinet} offers to keep your books. By accepting, the documents you send become visible to that accountant, and to them alone.",
   "pme.mandat.accepter": "Accept the engagement",
   "pme.mandat.refuser": "Decline",
   "pme.mandat.accepte": "Engagement accepted: {cabinet} now follows your file.",
-  "pme.mandat.refuse": "Engagement declined. The firm has been told.",
+  "pme.mandat.refuse": "Engagement declined. The accountant has been told.",
   "pme.mandat.erreur": "I could not record your answer.",
   "portal.invitations.titre": "You are expected",
   "portal.invitations.texte": "{cabinet} invites you to join as {role}.",
-  "portal.invitations.rejoindre": "Join the practice",
+  "portal.invitations.rejoindre": "Join the accounting team",
   "portal.invitations.decliner": "Decline",
   "portal.invitations.rejoint": "You are now part of {cabinet}.",
   "portal.invitations.decline": "Invitation declined.",
@@ -3104,11 +3107,11 @@ export const en: Dict = {
   "portal.invitations.expire": "valid until {date}",
   "cab.settings.invitations": "Pending invitations",
   "cab.settings.invitations.hint":
-    "A person joins the practice by signing in with the invited address.",
+    "A person joins the accounting team by signing in with the invited address.",
   "cab.settings.inviter": "Invite a staff member",
   "cab.journal.engagement.accepte": "Engagement accepted by the client",
   "cab.journal.engagement.refuse": "Engagement declined by the client",
-  "cab.journal.membre.rejoint": "A staff member joined the practice",
+  "cab.journal.membre.rejoint": "A staff member joined the accounting team",
   "cab.journal.membre.decline": "An invitation was declined",
   "cab.onb.kicker": "Setup · step {n} of 4",
   "cab.onb.terminee": "Setup completed on {date}. You can replay it: nothing is final.",
@@ -3118,18 +3121,18 @@ export const en: Dict = {
   "cab.onb.terminer": "Finish setup",
   "cab.onb.enregistre": "Saved.",
   "cab.onb.panel":
-    "Four steps, replayable. Everything you enter here is found again in the firm’s settings.",
-  "cab.onb.1.titre": "Your firm",
-  "cab.onb.1.nom": "Firm name",
+    "Four steps, replayable. Everything you enter here is found again in the accounting settings.",
+  "cab.onb.1.titre": "Your accounting",
+  "cab.onb.1.nom": "Accounting name",
   "cab.onb.1.nom.hint": "As it appears on your documents.",
   "cab.onb.1.identifiant": "Tax identifier",
   "cab.onb.1.identifiant.hint": "Optional. It completes your printouts.",
   "cab.onb.1.juridiction": "Jurisdiction",
   "cab.onb.1.juridiction.hint":
     "This jurisdiction’s pack sets the rates, accounts and deadlines of your files. The currency follows it.",
-  "cab.onb.1.enregistrer": "Save the firm",
+  "cab.onb.1.enregistrer": "Save accounting details",
   "cab.onb.2.titre": "Your team",
-  "cab.onb.2.membres": "Firm members",
+  "cab.onb.2.membres": "Accounting team members",
   "cab.onb.2.invitations": "Pending invitations",
   "cab.onb.2.email": "E-mail address",
   "cab.onb.2.email.hint": "The invitation is recorded under this address.",
@@ -3159,7 +3162,7 @@ export const en: Dict = {
   "cab.onb.4.seuil": "Batch validation above",
   "cab.onb.4.seuil.hint":
     "As a percentage of reading confidence. The review threshold stays as set, and cannot exceed it.",
-  "cab.onb.4.defaut": "Value proposed by Malica, not yet set by the firm.",
+  "cab.onb.4.defaut": "Value proposed by Malica, not yet set by the accountant.",
   "cab.onb.4.enregistrer": "Save the threshold",
   "cab.prop.empty": "Nothing to approve.",
   "cab.prop.done": "{count} entries approved.",
@@ -3195,7 +3198,7 @@ export const en: Dict = {
   "cab.prop.groupes.doctrine":
     "One lot per client: the scope of a mandate, and of a readable audit trail. Open the bulk entry to see what will be booked — and on which account.",
   "cab.prop.preparer":
-    "Your role prepares entries. Validating or overriding them is for the firm's expert or associate.",
+    "Your role prepares entries. Validating or overriding them is for the accounting team's expert or associate.",
   "cab.prop.groupe.tout": "Select the whole lot {client}",
   "cab.prop.groupe.pieces": "Documents",
   "cab.prop.groupe.total": "Total",
@@ -3247,7 +3250,7 @@ export const en: Dict = {
   "cab.pil.kpi.ecart.ctx": "between the most and the least loaded",
   "cab.pil.kpi.sans": "Unassigned",
   "cab.pil.kpi.sans.ctx": "mandates to assign",
-  "cab.pil.kpi.delai": "Practice median delay",
+  "cab.pil.kpi.delai": "Accounting median delay",
   "cab.pil.kpi.delai.ctx": "from reading to booking, thirty days",
   "cab.pil.charge.titre": "Workload and throughput per collaborator",
   "cab.pil.charge.capacite": "Reference capacity: {count} active files",
@@ -3264,7 +3267,7 @@ export const en: Dict = {
   "cab.pil.m.retour": "Return rate",
   "cab.pil.charge.jauge": "{pct} % of capacity",
   "cab.pil.charge.affecter": "Assign a file",
-  "cab.pil.charge.aucun": "No collaborator in this practice.",
+  "cab.pil.charge.aucun": "No collaborator in this accounting team.",
   "cab.pil.matrice.titre": "Clients by collaborator",
   "cab.pil.matrice.hint": "Click a mandate to open its file",
   "cab.pil.matrice.collab": "Collaborator",
@@ -3310,7 +3313,7 @@ export const en: Dict = {
   "cab.hono.lede":
     "What each engagement should produce, what is billed, what is collected. An amount is never guessed: it comes from the engagement’s rate or from the issued invoice.",
   "cab.hono.panel":
-    "I read the practice’s engagements and invoices; totals, due dates and overdue amounts are computed in the database, never here. An issued invoice no longer changes: it is cancelled by a credit note.",
+    "I read the accountant’s engagements and invoices; totals, due dates and overdue amounts are computed in the database, never here. An issued invoice no longer changes: it is cancelled by a credit note.",
   "cab.hono.kpi.facture": "Billed this month",
   "cab.hono.kpi.facture.ctx": "{devise} excl. tax · {count} invoices issued",
   "cab.hono.kpi.facture.ctx#one": "{devise} excl. tax · {count} invoice issued",
@@ -3435,7 +3438,7 @@ export const en: Dict = {
   "cab.hono.facture.panel":
     "Totals come from the database at each save: I multiply nothing. Once issued, the invoice is frozen; it is collected, or cancelled by a credit note.",
   "cab.hono.facture.introuvable":
-    "This invoice does not exist, or does not belong to this practice.",
+    "This invoice does not exist, or does not belong to this accountant.",
   "cab.hono.facture.retour": "Back to fees",
   "cab.hono.facture.kicker.brouillon": "Draft · editable",
   "cab.hono.facture.titre": "Invoice {numero}",
@@ -3466,8 +3469,8 @@ export const en: Dict = {
   "cab.hono.facture.parametres": "Invoice settings",
   "cab.hono.facture.ajouterForfait": "Add the engagement’s retainer ({montant})",
   "cab.hono.verif.titre": "What I check",
-  "cab.hono.verif.cabinet.ok": "The practice’s tax ID is filled in.",
-  "cab.hono.verif.cabinet.manque": "The practice has no tax ID filled in.",
+  "cab.hono.verif.cabinet.ok": "The accountant’s tax ID is filled in.",
+  "cab.hono.verif.cabinet.manque": "The accountant has no tax ID filled in.",
   "cab.hono.verif.client.ok": "The client’s tax ID is filled in.",
   "cab.hono.verif.client.manque": "The client has no tax ID filled in.",
   "cab.hono.verif.lignes.ok": "The invoice carries at least one service.",
@@ -3501,7 +3504,7 @@ export const en: Dict = {
   "cab.dos.kpi.tva": "VAT this month",
   "cab.dos.kpi.tva.ctx": "collected minus deductible; positive: payable",
   "cab.dos.kpi.pieces": "Documents this month",
-  "cab.dos.kpi.pieces.ctx": "sent to the practice this month",
+  "cab.dos.kpi.pieces.ctx": "sent to the accountant this month",
   "cab.dos.pnl.titre": "Income statement — year to {date}",
   "cab.dos.pnl.source": "P&L engine · Socle",
   "cab.dos.pnl.vide": "No entry booked in the year.",
@@ -3546,7 +3549,7 @@ export const en: Dict = {
   "cab.dos.panel":
     "I read this file through its booked entries: the income statement and VAT come from the Socle engines, with their period. I compute nothing myself.",
   "cab.pil.panel":
-    "I read the practice’s workload in its assignments and delays. I assign nobody: I show where the queue piles up.",
+    "I read the accounting team’s workload in its assignments and delays. I assign nobody: I show where the queue piles up.",
   "cab.pv.title": "Meeting minutes",
   "cab.pv.client": "Client",
   "cab.pv.date": "Date",
@@ -3620,7 +3623,7 @@ export const en: Dict = {
   "pme.file.reprise.pourquoi.remplacee":
     "The old photo was already replaced in the meantime — from another device, or by someone else.",
   "pme.file.reprise.pourquoi.inscrite":
-    "The firm took up the document in the meantime: it can no longer be replaced.",
+    "The accountant took up the document in the meantime: it can no longer be replaced.",
   "pme.file.reprise.pourquoi.introuvable": "The old document was removed in the meantime.",
   "pme.file.reprise.pourquoi.autre": "This photo cannot replace the old document.",
   "pme.file.reprise.libre": "Keep as a new document",
@@ -3636,7 +3639,7 @@ export const en: Dict = {
   "pme.lecture.arrierePlan": "Continue in the background",
   "piece.date.duScan": "Not readable on the document — scan day proposed",
   "pme.transmettre.question": "Send this document to {cabinet}?",
-  "pme.transmettre.chezvous": "Otherwise it stays with you, and your firm cannot see it.",
+  "pme.transmettre.chezvous": "Otherwise it stays with you, and your accountant cannot see it.",
   "pme.transmettre.action": "Send it",
   "pme.garder.action": "Keep it private",
   "pme.garder.faite": "Kept in your private space.",
@@ -3688,7 +3691,7 @@ export const en: Dict = {
   "pme.reglages.surTotal": "{n} of {total}",
   "tour.quitter": "Leave the tower",
   "tour.menu.clients": "Clients",
-  "tour.menu.cabinets": "Firms",
+  "tour.menu.cabinets": "Accountants",
   "tour.menu.pme": "SMEs and subscriptions",
   "tour.menu.plateforme": "Platform",
   "tour.menu.grille": "Price grid and plans",
@@ -3710,7 +3713,7 @@ export const en: Dict = {
     "Designate the invoice issuer first: full access is journaled under its organisation.",
   "tour.menu.acces": "Full access",
   "tour.acces.aide":
-    "An operator with full access acts in every company and every firm as their highest role — manager, expert — without taking a seat or appearing in their teams. Each of their actions is journaled under their name. Other people’s private spaces stay closed.",
+    "An operator with full access acts in every company and every accountant as their highest role — manager, expert — without taking a seat or appearing in their teams. Each of their actions is journaled under their name. Other people’s private spaces stay closed.",
   "tour.acces.aucun": "No account has full access.",
   "tour.acces.depuis": "Since {date}, granted by {par} — {motif}",
   "tour.acces.inactif": "No longer an operator: the access is not exercised.",
@@ -3727,10 +3730,10 @@ export const en: Dict = {
   "tour.legende.sansFacture":
     "“No invoice”: no subscription invoice has been issued for this licence yet, or all were cancelled.",
   "tour.legende.echeance":
-    "“Due date”: the nearest deadline of an invoice still due on the licence; “—” when there is none. An invoice a firm pays for its clients shows on the firm’s page.",
+    "“Due date”: the nearest deadline of an invoice still due on the licence; “—” when there is none. An invoice an accountant pays for its clients shows on the accountant’s page.",
   "tour.etat.sans_licence": "No licence",
   "tour.col.pme": "SME",
-  "tour.col.cabinet": "Firm",
+  "tour.col.cabinet": "Accountant",
   "tour.col.offre": "Plan",
   "tour.col.lectures": "Reads",
   "tour.col.echeance": "Due date",
@@ -3745,18 +3748,18 @@ export const en: Dict = {
   "tour.sansOffre": "No plan",
   "tour.echeanceLe": "Due {date}",
   "tour.fiche.payeur": "Paid by",
-  "tour.fiche.payeur.cabinet": "The firm",
+  "tour.fiche.payeur.cabinet": "The accountant",
   "tour.fiche.payeur.direct": "The SME",
   "tour.fiche.reste": "Amount due",
   "tour.fiche.sansLicence": "No licence: nothing to manage.",
   "tour.fermer": "Close",
   "tour.filtre.tous": "All",
-  "tour.filtre.sans_cabinet": "No firm",
+  "tour.filtre.sans_cabinet": "No accountant",
   "tour.filtre.impayes": "Unpaid",
   "tour.filtre.au_quota": "At quota",
   "tour.filtre.suspendus": "Suspended",
-  "tour.filtre.cabinet": "Firm",
-  "tour.filtre.tousCabinets": "All firms",
+  "tour.filtre.cabinet": "Accountant",
+  "tour.filtre.tousCabinets": "All accountants",
   "tour.filtre.rien.titre": "Nothing matches",
   "tour.filtre.rien.texte": "Change the search or the filter.",
   "tour.acte.suspension": "Suspension",
@@ -3776,30 +3779,31 @@ export const en: Dict = {
   "tour.gerer": "Manage",
   "tour.historique": "History",
   "tour.historique.vide": "No action by the tower yet.",
-  "tour.chercher.pme": "Search an SME, a tax ID, a firm",
-  "tour.chercher.cabinet": "Search a firm",
+  "tour.chercher.pme": "Search an SME, a tax ID, an accountant",
+  "tour.chercher.cabinet": "Search an accountant",
   "tour.pme.vide.titre": "No SME yet",
   "tour.pme.vide.texte":
-    "Every registered SME will appear here, with or without a firm, as soon as it is created.",
+    "Every registered SME will appear here, with or without an accountant, as soon as it is created.",
   "tour.decompte": "{n} of {total}",
   "tour.kpi.pme": "SMEs",
   "tour.kpi.actifs": "Active subscriptions",
   "tour.kpi.transmisMois": "Sent this month",
-  "tour.cabinets.vide.titre": "No firm yet",
+  "tour.cabinets.vide.titre": "No accountant yet",
   "tour.cabinets.vide.texte":
-    "Every registered firm will appear here, with its SMEs and their plans.",
+    "Every registered accountant will appear here, with its SMEs and their plans.",
   "tour.cabinet.ligne": "SMEs {pme} · active {actifs} · this month {mois}",
-  "tour.cabinet.introuvable": "Firm not found",
-  "tour.cabinet.introuvable.texte": "It may have been archived. Go back to the list of firms.",
+  "tour.cabinet.introuvable": "Accountant not found",
+  "tour.cabinet.introuvable.texte":
+    "It may have been archived. Go back to the list of accountants.",
   "tour.cabinet.vueTour": "Tower view",
-  "tour.cabinet.voirComme": "View as the firm",
-  "tour.cabinet.lecture": "What the firm sees, read-only: no action is taken from here.",
+  "tour.cabinet.voirComme": "View as the accountant",
+  "tour.cabinet.lecture": "What the accountant sees, read-only: no action is taken from here.",
   "tour.cabinet.factures": "Consolidated invoices",
   "tour.cabinet.factures.vide": "The monthly invoice will appear here once issued.",
   "tour.cabinet.societes": "companies: {n}",
   "tour.cabinet.sansPme.titre": "No SME",
   "tour.cabinet.sansPme.texte":
-    "SMEs under this firm's mandate, or that it pays for, will appear here.",
+    "SMEs under this accountant's mandate, or that it pays for, will appear here.",
   "tour.onglet.abonnements": "Subscriptions",
   "tour.onglet.bibliotheque": "Library",
   "tour.biblio.regle": "In numbers: the tower counts documents, it never reads them.",
@@ -3995,9 +3999,9 @@ export const en: Dict = {
   "tour.facturation.par": "Decided by {qui}.",
   "tour.facturation.parLaLivraison": "Decided at delivery.",
   "tour.facturation.motif": "Reason: {motif}",
-  "tour.facturation.cabinets": "Practices — monthly, in arrears",
+  "tour.facturation.cabinets": "Accountants — monthly, in arrears",
   "tour.facturation.cabinets.aide":
-    "Every day, Malica issues each practice's monthly invoice for the closed months still missing: one per practice and per month, prorated by days, never twice.",
+    "Every day, Malica issues each accountant's monthly invoice for the closed months still missing: one per accountant and per month, prorated by days, never twice.",
   "tour.facturation.cabinets.rattrapage": "Closed months examined on each run",
   "tour.facturation.cabinets.rattrapage.aide":
     "1: the month that has just closed. Beyond that, older months never invoiced will be.",
@@ -4162,15 +4166,15 @@ export const en: Dict = {
   "pme.reglages.sieges.sous":
     "A seat is a licence for one person in one organisation — never a branch. Each seat sees only its own documents; you see everything.",
   "pme.reglages.sieges.verrou":
-    "Isolated seats — each one sees only its own documents — and you confirm before anything reaches the firm.",
+    "Isolated seats — each one sees only its own documents — and you confirm before anything reaches the accountant.",
   "pme.reglages.sieges.aucun": "No seat has come back for this licence yet, not even yours.",
   "pme.reglages.org.surLicence": "On the licence",
   "pme.reglages.org.principal": "Principal owner",
   "pme.reglages.org.offre": "Plan:",
   "pme.reglages.org.matricule": "Tax number established by reading the tax identification card.",
   "pme.reglages.org.matricule.fort": "Immutable from the first document received.",
-  "pme.reglages.org.cabinet": "Firm:",
-  "pme.reglages.org.cabinet.aucun": "no firm",
+  "pme.reglages.org.cabinet": "Accountant:",
+  "pme.reglages.org.cabinet.aucun": "no accountant",
   "pme.reglages.org.lectures": "Reads this month:",
   "pme.reglages.org.revocation":
     "Only you can end this engagement. It ends the same day, and the accountant is informed.",
@@ -4262,12 +4266,12 @@ export const en: Dict = {
     "Until they decide, correct whatever you like: it is your entry. Deleting it is theirs to do — I pass the request on and I let you know.",
   "pme.piece.elleEstPartie": "It has gone",
   "pme.piece.elleEstPartie.texte":
-    "A correction sends it back to your firm as “to re-approve” — they do their work again, and that is normal. A deletion asks for their agreement, under their duty to retain: the decision is recorded in the log, whatever it is.",
+    "A correction sends it back to your accountant as “to re-approve” — they do their work again, and that is normal. A deletion asks for their agreement, under their duty to retain: the decision is recorded in the log, whatever it is.",
   "pme.piece.demanderSuppression": "Request deletion",
   "pme.piece.mettreAuPrive": "Move it to my private space",
-  "pme.piece.suppressionRefusee": "Deletion refused by your firm.",
+  "pme.piece.suppressionRefusee": "Deletion refused by your accountant.",
   "pme.piece.siege":
-    "You see this file because you put a document into it. It is the owner who sends documents to the firm.",
+    "You see this file because you put a document into it. It is the owner who sends documents to the accountant.",
 
   /* ────────────────────────────── capture: the nine steps, and their wording */
   "pme.capture.revenir": "Back",
@@ -4402,7 +4406,7 @@ export const en: Dict = {
   "pme.capture.q.exceptionnel": "Exceptional",
   "pme.capture.q.exceptionnel.sous": "Normal for that month, and I will not ask again",
   "pme.capture.q.aVerifier": "To check",
-  "pme.capture.q.aVerifier.sous": "I keep it open, and the firm sees it too",
+  "pme.capture.q.aVerifier.sous": "I keep it open, and the accountant sees it too",
   "pme.capture.q.position": "Question {n} of {total}.",
   "pme.capture.q.jeRegarde": "I am looking.",
   "pme.capture.dates.q": "{count} documents are waiting for their dates.",
@@ -4432,9 +4436,9 @@ export const en: Dict = {
   "pme.capture.fin.questions": "{count} questions still open",
   "pme.capture.fin.questions#one": "{count} question still open",
   "pme.capture.fin.questions#other": "{count} questions still open",
-  "pme.capture.fin.transmises": "Sent to the firm — the invoice date files the VAT",
-  "pme.capture.fin.transmises#one": "Sent to the firm — the invoice date files the VAT",
-  "pme.capture.fin.transmises#other": "Sent to the firm — the invoice date files the VAT",
+  "pme.capture.fin.transmises": "Sent to the accountant — the invoice date files the VAT",
+  "pme.capture.fin.transmises#one": "Sent to the accountant — the invoice date files the VAT",
+  "pme.capture.fin.transmises#other": "Sent to the accountant — the invoice date files the VAT",
   "pme.capture.fin.conservees": "Kept — nothing has left",
   "pme.capture.fin.conservees#one": "Kept — nothing has left",
   "pme.capture.fin.conservees#other": "Kept — nothing has left",
@@ -4629,7 +4633,7 @@ export const en: Dict = {
   "pme.regler.ilVousAttend": "Waiting on you",
   "pme.regler.sesAvis": "Their advice",
   "pme.regler.pied":
-    "Feedback on documents and advice come from the same firm, so from the same inbox. What sets them apart is not the screen: it is what they ask you to do.",
+    "Feedback on documents and advice come from the same accountant, so from the same inbox. What sets them apart is not the screen: it is what they ask you to do.",
   "pme.coffre.titre": "My private space",
   "pme.coffre.compte": "My space · {count} papers",
   "pme.coffre.compte#one": "My space · {count} paper",
@@ -4657,7 +4661,7 @@ export const en: Dict = {
   "pme.coffre.partiel.supprimes#one": "{faits} of {total} deleted; {count} still selected.",
   "pme.coffre.partiel.supprimes#other": "{faits} of {total} deleted; {count} still selected.",
   "pme.coffre.pied":
-    "A document already sent does not come back silently: its return needs your firm's approval, and every move is logged.",
+    "A document already sent does not come back silently: its return needs your accountant's approval, and every move is logged.",
   "pme.echeances.titre": "What's due",
   "pme.echeances.sansMontant": "The amounts have not reached me yet",
   "pme.echeances.aVenir": "Upcoming",
@@ -4669,7 +4673,7 @@ export const en: Dict = {
   "pme.bienvenue.carteBandeau": "Republic of Tunisia · Tax identification card",
   "pme.bienvenue.ditTitre": "Here is your tax ID.",
   "pme.bienvenue.ditSous":
-    "I record it only once. As soon as your first document is received, it will no longer change — not by you, not by me, not by your firm. Check it now.",
+    "I record it only once. As soon as your first document is received, it will no longer change — not by you, not by me, not by your accountant. Check it now.",
   "pme.bienvenue.secEtat": "to confirm",
   "pme.bienvenue.champAdresse": "Registered address",
   "pme.bienvenue.regle":
@@ -4677,9 +4681,9 @@ export const en: Dict = {
   "pme.bienvenue.exact": "That's right — get started",
   "pme.bienvenue.corriger": "Edit · type it in",
   "pme.bienvenue.pied":
-    "Next: choose your plan, then invite your firm — or not. A company without an engagement works: you capture, you read, you export.",
+    "Next: choose your plan, then invite your accountant — or not. A company without an engagement works: you capture, you read, you export.",
   "pme.tva.barreGroupe": "Group VAT",
-  "pme.tva.sous": "Your firm files this return.",
+  "pme.tva.sous": "Your accountant files this return.",
   "pme.tva.sousGroupe": "{count} companies — each files for itself.",
   "pme.tva.sousGroupe#one": "{count} company — it files for itself.",
   "pme.tva.sousGroupe#other": "{count} companies — each files for itself.",
@@ -4697,16 +4701,16 @@ export const en: Dict = {
   "pme.tva.parSociete": "By company",
   "pme.tva.enAttenteDeCours": "Awaiting exchange rate",
   "pme.tva.enAttenteDeCours.aide":
-    "These invoices are in a currency other than your file's. Their VAT counts as soon as the day's exchange rate is known: imported, or entered by your firm.",
+    "These invoices are in a currency other than your file's. Their VAT counts as soon as the day's exchange rate is known: imported, or entered by your accountant.",
   "pme.tva.conversionARevoir": "Conversion to review",
   "pme.tva.conversionARevoir.aide":
-    "These foreign-currency invoices cannot be converted as they are (their amounts do not add up). Your firm reviews them; their VAT will count afterwards.",
+    "These foreign-currency invoices cannot be converted as they are (their amounts do not add up). Your accountant reviews them; their VAT will count afterwards.",
   "pme.tva.piecesEnDevise": "{count} foreign-currency documents",
   "pme.tva.piecesEnDevise#one": "{count} foreign-currency document",
   "pme.tva.piecesEnDevise#other": "{count} foreign-currency documents",
   "tva.declaration.titre": "The return",
   "tva.declaration.aide":
-    "Each line of the monthly return takes the VAT of its kind: VAT on fixed assets (an asset booked in class 2) is declared apart from VAT on other goods and services. The kind is read from the firm's entry, or from the invoice items mapped to the chart of accounts.",
+    "Each line of the monthly return takes the VAT of its kind: VAT on fixed assets (an asset booked in class 2) is declared apart from VAT on other goods and services. The kind is read from the accountant's entry, or from the invoice items mapped to the chart of accounts.",
   "tva.declaration.aConfirmer":
     "These lines are a Malica default: how exactly they match the form in force is to be confirmed by a chartered accountant.",
   "tva.declaration.parDefaut": "{count} lines placed by default",
@@ -4717,24 +4721,24 @@ export const en: Dict = {
   "tva.declaration.sansLigne#other": "{count} amounts with no return line",
   "tva.declaration.sansLigne.aide":
     "The return referential has no line for these amounts: they count in the totals, but no line of the return carries them. This is not a document to rework; report it to the Malica team.",
-  "tva.affectation.titre": "Lines set by the firm",
+  "tva.affectation.titre": "Lines set by the accountant",
   "tva.affectation.aide":
-    'For each kind of VAT, the return line that receives it. Malica ships a default; the firm sets it. Setting it unchanged confirms it: the line is no longer "to confirm", for you and for the client.',
+    'For each kind of VAT, the return line that receives it. Malica ships a default; the accountant sets it. Setting it unchanged confirms it: the line is no longer "to confirm", for you and for the client.',
   "tva.affectation.aide.portee":
-    '"For this client" applies to this client only. "For the whole firm" applies to every client without its own choice, and is for the chartered accountant. Each decision is dated and signed, and applies from the month shown.',
+    '"For this client" applies to this client only. "For the whole accounting team" applies to every client without its own choice, and is for the chartered accountant. Each decision is dated and signed, and applies from the month shown.',
   "tva.affectation.origine.pack": "Malica default, to confirm",
-  "tva.affectation.origine.cabinet": "Set by the firm",
+  "tva.affectation.origine.cabinet": "Set by the accountant",
   "tva.affectation.origine.dossier": "Set for this client",
   "tva.affectation.pourLeDossier": "For this client",
-  "tva.affectation.pourLeCabinet": "For the whole firm",
+  "tva.affectation.pourLeCabinet": "For the whole accounting team",
   "tva.affectation.arretee": "Lines set.",
   "tva.affectation.arretee.detail": "This month's VAT follows them, here and at the client's.",
   "refus.tva.affectation.droits":
-    "Only the firm that keeps this client's books sets its VAT lines; for the whole firm, the chartered accountant.",
+    "Only the accountant who keeps this client's books sets its VAT lines; for the whole accounting team, the chartered accountant.",
   "refus.tva.affectation.saisie":
     "A chosen line is not in this month's return: reload the page and choose again.",
   "tva.declaration.parDefaut.aide":
-    "Malica could not tell which part of these invoices is a fixed asset: their VAT sits on the return's default line, and is counted. The firm reclassifies it by forcing the entry.",
+    "Malica could not tell which part of these invoices is a fixed asset: their VAT sits on the return's default line, and is counted. The accountant reclassifies it by forcing the entry.",
   "pme.fiche.barre": "Your tax profile",
   "pme.fiche.secCarte": "Your card",
   "pme.fiche.cartePasLue": "not read yet",
@@ -4754,7 +4758,7 @@ export const en: Dict = {
   "pme.fiche.fixeSourceCarte": "source: card read",
   "pme.fiche.fixeSourceSaisie": "source: typed in",
   "pme.notifications.videSous":
-    "Nothing is hidden: when your firm writes to you, this is where it arrives.",
+    "Nothing is hidden: when your accountant writes to you, this is where it arrives.",
   "pme.charges.classes": "{count} CLASSES",
   "pme.charges.classes#one": "{count} CLASS",
   "pme.charges.classes#other": "{count} CLASSES",
@@ -4781,11 +4785,11 @@ export const en: Dict = {
   "pme.list.replier": "Collapse",
   "pme.malica.composer": "Write to Malica…",
   "pme.malica.suiteAvis": "Ask {cabinet} for advice",
-  "pme.malica.suiteAvisSansNom": "Ask your firm for advice",
+  "pme.malica.suiteAvisSansNom": "Ask your accountant for advice",
   "pme.malica.suiteTransmission": "Ask the file owner to send it",
   "pme.malica.suitePasEncore": "This request cannot be made from this screen yet",
-  "pme.malica.suiteSansCabinet": "Ask a firm for advice",
-  "pme.malica.suiteSansCabinetDetail": "No firm is engaged on this file",
+  "pme.malica.suiteSansCabinet": "Ask an accountant for advice",
+  "pme.malica.suiteSansCabinetDetail": "No accountant is engaged on this file",
   "pme.malica.retenue": "Sent for review — this advice has consequences for your file",
   "pme.malica.sous": "Ask your question: I answer and cite my sources.",
   "pme.malica.salut.jour": "Hello",

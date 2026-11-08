@@ -35,16 +35,16 @@ import type { ObligationDuCalendrier, ReglagesCabinet } from "@malica/socle/port
 export const Route = createFileRoute("/_authenticated/cabinet/reglages")({
   head: () => ({
     meta: [
-      { title: "Réglages du cabinet — Malica Office" },
+      { title: "Réglages de la comptabilité — Malica Office" },
       {
         name: "description",
         content:
-          "Seuils de supervision, pack de juridiction, ton de Malica, équipe et calendrier des obligations du cabinet.",
+          "Seuils de supervision, pack de juridiction, ton de Malica, équipe et calendrier des obligations de la comptabilité.",
       },
-      { property: "og:title", content: "Réglages du cabinet — Malica Office" },
+      { property: "og:title", content: "Réglages de la comptabilité — Malica Office" },
       {
         property: "og:description",
-        content: "Seuils, pack, équipe et calendrier des obligations du cabinet.",
+        content: "Seuils, pack, équipe et calendrier des obligations de la comptabilité.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/cabinet/abonnements")({
       {
         name: "description",
         content:
-          "Les abonnements que le cabinet attribue à ses clients, leur état et ses factures mensuelles.",
+          "Les abonnements que la comptabilité attribue à ses clients, leur état et ses factures mensuelles.",
       },
       { property: "og:title", content: "Abonnements des clients — Malica Office" },
       { property: "og:type", content: "website" },

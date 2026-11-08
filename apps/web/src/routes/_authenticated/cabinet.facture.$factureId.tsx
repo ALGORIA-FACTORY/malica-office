@@ -38,13 +38,13 @@ export const Route = createFileRoute("/_authenticated/cabinet/facture/$factureId
       {
         name: "description",
         content:
-          "Une facture d'honoraires du cabinet : brouillon modifiable, puis pièce numérotée et figée, encaissée ou annulée par avoir.",
+          "Une facture d'honoraires de la comptabilité : brouillon modifiable, puis pièce numérotée et figée, encaissée ou annulée par avoir.",
       },
       { property: "og:title", content: "Facture d'honoraires — Malica Office" },
       {
         property: "og:description",
         content:
-          "Une facture d'honoraires du cabinet : brouillon modifiable, puis pièce numérotée et figée, encaissée ou annulée par avoir.",
+          "Une facture d'honoraires de la comptabilité : brouillon modifiable, puis pièce numérotée et figée, encaissée ou annulée par avoir.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

@@ -36,12 +36,12 @@ export const Route = createFileRoute("/_authenticated/pme/coffre")({
       { title: "Mon espace privé — Malica Office" },
       {
         name: "description",
-        content: "Ce que vous gardez pour vous seul, invisible au cabinet mandaté.",
+        content: "Ce que vous gardez pour vous seul, invisible à la comptabilité mandatée.",
       },
       { property: "og:title", content: "Mon espace privé — Malica Office" },
       {
         property: "og:description",
-        content: "Ce que vous gardez pour vous seul, invisible au cabinet mandaté.",
+        content: "Ce que vous gardez pour vous seul, invisible à la comptabilité mandatée.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

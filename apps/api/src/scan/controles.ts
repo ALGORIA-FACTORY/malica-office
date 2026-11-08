@@ -403,7 +403,7 @@ function arithmetique(p: PieceAControler): ResultatControle {
       return {
         code: "coherence_arithmetique",
         statut: "anomalie",
-        motif: "Avoir : à saisir par le cabinet (montants imprimés en négatif).",
+        motif: "Avoir : à saisir par la comptabilité (montants imprimés en négatif).",
         preuves,
       };
     default:
@@ -481,7 +481,7 @@ function nature(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   /*
    * ============================================ L'AVOIR LIÉ À SA FACTURE (1er novembre 2026)
    *
-   * Le réglage du cabinet (`avoirs.traitement`, défaut du CEO : `lie_facture`)
+   * Le réglage de la comptabilité (`avoirs.traitement`, défaut du CEO : `lie_facture`)
    * : un avoir titré se comptabilise, en réserve, par la contre-passation de
    * sa facture d'origine (`proposition.ts`) ; sans elle, rien ne se propose.
    * Refusé par le réglage, il reste à saisir. Dans les deux cas le jugement
@@ -526,7 +526,7 @@ function nature(p: PieceAControler, ctx: ContexteControle): ResultatControle {
       code: "nature_piece",
       statut: "anomalie",
       motif:
-        "Le haut de la pièce ne se lit pas (texte sans correspondance Unicode) : on ne peut pas dire si c'est une facture ou un avoir. Le cabinet tranche.",
+        "Le haut de la pièce ne se lit pas (texte sans correspondance Unicode) : on ne peut pas dire si c'est une facture ou un avoir. La comptabilité tranche.",
       preuves: { titre, documentKind: p.documentKind },
     };
   if (!p.documentKind)
@@ -1083,7 +1083,7 @@ function tvaExclueATrancher(p: PieceAControler, ctx: ContexteControle): Resultat
     {
       code: "tva_exclue_a_trancher",
       statut: "reserve",
-      motif: `TVA peut-être non déductible (${bases.join(", ")}) : ${reconnus.map((r) => `« ${r.designation} »`).join(", ")}. L'écriture proposée la déduit ; le cabinet tranche selon le véhicule et son usage.`,
+      motif: `TVA peut-être non déductible (${bases.join(", ")}) : ${reconnus.map((r) => `« ${r.designation} »`).join(", ")}. L'écriture proposée la déduit ; la comptabilité tranche selon le véhicule et son usage.`,
       preuves: {
         articles: reconnus.map((r) => r.designation),
         familles: [...new Set(reconnus.flatMap((r) => r.trouves.map((m) => m.famille)))].sort(),
@@ -1176,7 +1176,7 @@ function immobilisationATrancher(p: PieceAControler, ctx: ContexteControle): Res
     controles.push({
       code: "immobilisation_a_trancher",
       statut: "reserve",
-      motif: `${phrases.join(" ")} L'écriture proposée l'impute au compte du paramétrage (une charge) : immobilisation ou charge, le cabinet tranche.`,
+      motif: `${phrases.join(" ")} L'écriture proposée l'impute au compte du paramétrage (une charge) : immobilisation ou charge, la comptabilité tranche.`,
       preuves: {
         articles: aTrancher.map((r) => r.designation),
         familles: [...new Set(aTrancher.flatMap((r) => r.familles))].sort(),
@@ -1199,8 +1199,8 @@ function immobilisationATrancher(p: PieceAControler, ctx: ContexteControle): Res
       statut: reglage.traitement === "actif_amorti" ? "reserve" : "conforme",
       motif:
         reglage.traitement === "actif_amorti"
-          ? `Bien de faible valeur (au plus ${reglage.seuil} ${base}) : ${articles}. Le réglage du cabinet l'inscrit à l'actif et l'amortit à 100 % l'année d'utilisation ; l'écriture proposée l'impute au compte du paramétrage.`
-          : `Bien de faible valeur (au plus ${reglage.seuil} ${base}) : ${articles}. Le réglage du cabinet le passe en charge.`,
+          ? `Bien de faible valeur (au plus ${reglage.seuil} ${base}) : ${articles}. Le réglage de la comptabilité l'inscrit à l'actif et l'amortit à 100 % l'année d'utilisation ; l'écriture proposée l'impute au compte du paramétrage.`
+          : `Bien de faible valeur (au plus ${reglage.seuil} ${base}) : ${articles}. Le réglage de la comptabilité le passe en charge.`,
       preuves: {
         articles: faibleValeur.map((r) => r.designation),
         familles: [...new Set(faibleValeur.flatMap((r) => r.familles))].sort(),

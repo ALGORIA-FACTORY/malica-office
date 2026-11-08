@@ -105,8 +105,8 @@ for (const largeur of [390, 1440]) {
  * des boutons de 48 px, et le ⓘ qui dit l'INCERTAIN.
  */
 for (const [locale, onglet, pourLeCabinet, incertain] of [
-  ["fr", "Comptabilité", "Pour tout le cabinet", "INCERTAIN"],
-  ["ar", "المحاسبة", "لكامل المكتب", "غير مؤكد"],
+  ["fr", "Comptabilité", "Pour toute la comptabilité", "INCERTAIN"],
+  ["ar", "المحاسبة", "لكامل المحاسبة", "غير مؤكد"],
 ] as const) {
   test(`réglages comptabilité : douze sujets à 390 px, en ${locale}`, async ({ page }) => {
     const plantages: string[] = [];

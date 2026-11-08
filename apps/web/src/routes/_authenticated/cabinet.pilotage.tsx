@@ -41,16 +41,16 @@ import type { ClientStats, ClientSummary } from "@malica/socle/ports/repositorie
 export const Route = createFileRoute("/_authenticated/cabinet/pilotage")({
   head: () => ({
     meta: [
-      { title: "Pilotage — cabinet — Malica Office" },
+      { title: "Pilotage — comptabilité — Malica Office" },
       {
         name: "description",
         content:
-          "La charge et le rendement du cabinet : qui porte quoi, ce que le Socle produit, où la file s'accumule.",
+          "La charge et le rendement de la comptabilité : qui porte quoi, ce que le Socle produit, où la file s'accumule.",
       },
-      { property: "og:title", content: "Pilotage — cabinet — Malica Office" },
+      { property: "og:title", content: "Pilotage — comptabilité — Malica Office" },
       {
         property: "og:description",
-        content: "Charge par collaborateur, affectations, statistiques du cabinet.",
+        content: "Charge par collaborateur, affectations, statistiques de la comptabilité.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
