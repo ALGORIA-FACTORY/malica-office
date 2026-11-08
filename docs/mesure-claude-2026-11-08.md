@@ -1,6 +1,6 @@
 # Ce que Claude apporte au Sudoku — bulletin du 8 novembre 2026
 
-Passage : [Mesure Claude, run 42475726319](https://github.com/ALGORIA-FACTORY/malica-office/actions/runs/42475726319)
+Passage 1 : [Mesure Claude, run 42475726319](https://github.com/ALGORIA-FACTORY/malica-office/actions/runs/42475726319)
 (artefact `mesure-claude` : mesures JSON, bulletin, journal, relevés OCR gardés).
 Données : `docs/mesure-claude-2026-11-08.json`. Banc : `apps/api/tests/real/banc-designation.ts`.
 
@@ -82,13 +82,35 @@ Sudoku les arrête justement parce que l'arithmétique ne ferme pas.
   (`output_config.format`) supprimeraient ces deux classes de pannes ; elles demandent de
   remodeler le contrat de désignation (voir « ce qui reste ouvert »).
 
-## Non mesuré
+## Passage 3 : la nouvelle clé, et la comparaison « IA partout »
 
-- **La comparaison « IA sur toutes les pièces »** (Haiku aussi sur les 283 pièces déjà
-  prouvées) : la clé Anthropic a été désactivée pendant le passage, après les étapes « Sudoku
-  d'abord ». Les 283 appels sont revenus en 401. Ils ne sont pas comptés, et rien n'a été
-  facturé. À relancer quand le secret sera renouvelé : pousser sur `claude/mesure-claude` un
-  commit portant « [sans repli] », pour ne pas remesurer DeepSeek.
+Passage : [run 42477888334](https://github.com/ALGORIA-FACTORY/malica-office/actions/runs/42477888334),
+avec la clé renouvelée. Données : `docs/mesure-claude-2026-11-08-passage-3.json`. DeepSeek n'a
+pas été rappelé. Le passage 2 ([run 42477555120](https://github.com/ALGORIA-FACTORY/malica-office/actions/runs/42477555120))
+est parti avant que la nouvelle clé soit posée. Ses 219 appels ont reçu un 401 et ne sont ni
+facturés ni comptés.
+
+- **Le mode « Sudoku d'abord » se reproduit à l'identique.** Le moteur seul prouve 283 pièces,
+  Haiku et Sonnet n'en ajoutent aucune, et aucun faux n'est affirmé. Les mêmes 9 pièces
+  ambiguës ou signalées restent non prouvées, avec Haiku comme avec Sonnet. Pannes : Haiku 0
+  sur 125, Sonnet 6 sur 125 (une phrase autour du JSON). Valeurs non affirmées : Haiku 88
+  justes et 10 faux, Sonnet 83 justes et 5 faux.
+- **Sonnet « directement » sur les non prouvées** est déjà mesuré. Haiku n'a gagné aucune pièce,
+  donc Sonnet a reçu exactement les 125 pièces non prouvées par le moteur. Il n'en a gagné
+  aucune, pour 0,0118 $ par appel.
+- **La comparaison « IA sur toutes les pièces »** : Haiku a été appelé aussi sur les 283 pièces
+  déjà prouvées (275 réponses, 8 pannes). Sa désignation brute des totaux contredit la preuve
+  **7 fois sur 529** (1,3 %), par exemple un HT de 5 165,958 là où la pièce prouve 5 114,810.
+  Le moteur les lit justes. Appeler l'IA sur toutes les pièces coûterait 275 appels de plus
+  (0,55 $ ici), pour aucune pièce gagnée et 7 contradictions à arbitrer.
+- **Opus 5.5 n'est pas essayé.** Le seul gain encore possible pour un désignateur, ce sont les
+  7 pièces ambiguës (1,7 point), et Haiku comme Sonnet n'en tranchent aucune. Opus n'a pas non
+  plus de tarif dans `agents.model_pricing` (R8) : sa dépense ne serait ni bornée ni comptée.
+  Les 116 autres pièces ne ferment pas avec tous les jetons du relevé, et un désignateur ne peut
+  pas en ajouter.
+- Dépense du passage 3 : **2,14 $ au tarif en base** (16,73 $ au prix de garde).
+- **Dépense totale des trois passages : 3,93 $ au tarif en base.** La borne haute au prix de
+  garde est de 42,01 $, sous le plafond de 80 $.
 
 ## Conclusion vers l'objectif de 90 %
 
@@ -100,3 +122,7 @@ experts** du moteur, par exemple le second lecteur Qwen sur les pièces non prou
 `banc-ocr-qwen`). Changer de désignateur ne suffira pas. En mode « Sudoku d'abord », le rôle de
 Claude est de proposer, pour les pièces non prouvées, des valeurs à vérifier, jamais affirmées.
 Haiku le fait pour 0,0015 $ par appel, avec deux fois moins de faux que DeepSeek.
+
+**Meilleure configuration mesurée** : moteur d'abord, puis Haiku 5.5 seul sur les pièces non
+prouvées, pour proposer des valeurs à vérifier. Le second avis Sonnet coûte 8 fois plus par
+appel et n'apporte aucune pièce prouvée. Il ne réduit les faux proposés que de quelques unités.
