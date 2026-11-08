@@ -113,7 +113,7 @@ interface ReleveGarde {
 }
 
 /** Une pièce du banc, quel que soit son corpus. */
-interface PieceDuBanc {
+export interface PieceDuBanc {
   readonly corpus: string;
   readonly id: string;
   readonly type: string;
@@ -160,7 +160,7 @@ interface PieceDuBanc {
  */
 type Issue = "juste" | "faux" | "silence" | "invente" | "signale";
 
-interface MesureDuChamp {
+export interface MesureDuChamp {
   readonly champ: string;
   readonly expert: string;
   /** Le type du champ de la grille (`ligne` pour une cellule du tableau). */
@@ -497,7 +497,7 @@ function mesurerLesRangees(
 
 /* ========================================================= UNE PIÈCE ====== */
 
-async function mesurerLaPiece(
+export async function mesurerLaPiece(
   db: pg.Pool,
   packId: string,
   piece: PieceDuBanc,
@@ -509,6 +509,12 @@ async function mesurerLaPiece(
    * correction après la lecture) : le banc le donne au moteur, comme la production.
    */
   sensDeclare = false,
+  /**
+   * Ce que la pièce a donné au moteur, rendu à l'appelant : le banc avec désignateur
+   * (`tests/real/banc-designation.ts`) rejoue le moteur sur les montants qu'un modèle a
+   * désignés, sur le MÊME relevé, dans le MÊME contexte.
+   */
+  garder?: (etat: EtatDeLaPiece) => void,
 ): Promise<MesureDeLaPiece> {
   const base = {
     corpus: piece.corpus,
@@ -629,6 +635,72 @@ async function mesurerLaPiece(
       JSON.stringify({ sortie, tokens }),
     );
 
+  const champs = mesurerLesChamps(piece, contexte, devise.decimales, sortie);
+  garder?.({
+    contexte,
+    devise,
+    tokens,
+    sortie,
+    resoudre: (jetons) =>
+      resoudreLaPiece(
+        jetons,
+        contexte,
+        moteur,
+        {
+          dossier: piece.dossier
+            ? { matricule: piece.dossier.matricule, raison_sociale: piece.dossier.raison }
+            : null,
+          tiers: [],
+          formes_juridiques: contexte.formesJuridiques,
+          ...(sensDeclare && piece.sens ? { sens: piece.sens } : {}),
+          devise: piece.deviseDuDossier,
+        },
+        releve.marques ?? [],
+        exact,
+      ),
+  });
+  const sensLu = sortie.parties?.sens ?? null;
+  return {
+    ...base,
+    ...commun,
+    sudokuMs,
+    issue: sortie.issue,
+    raison: sortie.raison ?? null,
+    sens: {
+      attendu: piece.sens,
+      lu: sensLu,
+      juste: piece.sens === null || sensLu === null ? null : piece.sens === sensLu,
+      raison: sortie.parties?.raison ?? null,
+    },
+    champs: champs.map((c) =>
+      c.issue === "silence"
+        ? { ...c, normal: absenteDeLaLecture(c.attendu, c.type ?? "", tokens) }
+        : c,
+    ),
+  };
+}
+
+/** Ce que la pièce a donné au moteur : de quoi le rejouer sur d'autres jetons. */
+export interface EtatDeLaPiece {
+  readonly contexte: ContexteDuSudoku;
+  readonly devise: DeviseLue;
+  readonly tokens: readonly PageToken[];
+  readonly sortie: SortieDuSudoku;
+  readonly resoudre: (jetons: ReturnType<typeof jetonsDuSudoku>) => SortieDuSudoku;
+}
+
+/**
+ * Chaque champ de la grille d'une sortie du moteur, jugé contre la vérité de la pièce
+ * (sans le silence « normal », qui se juge sur le relevé). Une seule mesure, quel que
+ * soit le chemin qui a produit la sortie : le moteur seul, ou le moteur rejoué sur ce
+ * qu'un désignateur a choisi.
+ */
+export function mesurerLesChamps(
+  piece: PieceDuBanc,
+  contexte: ContexteDuSudoku,
+  decimales: number,
+  sortie: SortieDuSudoku,
+): MesureDuChamp[] {
   const { concepts, confondus } = piece;
   const lettres = champsDeLaGrille(contexte.grille).lettres;
   const champs: MesureDuChamp[] = [];
@@ -636,7 +708,7 @@ async function mesurerLaPiece(
   for (const champ of contexte.grille.champs) {
     if (champ.code === "lignes") continue;
     if (interdits.has(champ.code)) {
-      const r = comparer(champ, null, sortie, contexte, devise.decimales);
+      const r = comparer(champ, null, sortie, contexte, decimales);
       champs.push({
         champ: champ.code,
         expert: champ.expert ?? "?",
@@ -659,9 +731,9 @@ async function mesurerLaPiece(
     const attendu = imprime ? concepts[source] : (vraiDuDeduit ?? null);
     let r: Lecture;
     if (champ.code === lettres && imprime)
-      r = montantDesLettres(sortie, champ.code, concepts, devise.decimales);
+      r = montantDesLettres(sortie, champ.code, concepts, decimales);
     else {
-      r = comparer(champ, attendu, sortie, contexte, devise.decimales);
+      r = comparer(champ, attendu, sortie, contexte, decimales);
       // Un champ confondu dont la valeur est une partie de son jumeau (le code TVA dans le matricule).
       if (source !== champ.code && !r.juste && r.lu !== null && champ.type !== "date")
         r = { lu: r.lu, juste: identifiantNormal(attendu).includes(identifiantNormal(r.lu)) };
@@ -694,28 +766,10 @@ async function mesurerLaPiece(
       sortie,
       concepts["lignes"] as RangeeVraie[] | undefined,
       contexte,
-      devise.decimales,
+      decimales,
     ).filter((c) => piece.verite === "complete" || c.issue !== "invente"),
   );
-  const sensLu = sortie.parties?.sens ?? null;
-  return {
-    ...base,
-    ...commun,
-    sudokuMs,
-    issue: sortie.issue,
-    raison: sortie.raison ?? null,
-    sens: {
-      attendu: piece.sens,
-      lu: sensLu,
-      juste: piece.sens === null || sensLu === null ? null : piece.sens === sensLu,
-      raison: sortie.parties?.raison ?? null,
-    },
-    champs: champs.map((c) =>
-      c.issue === "silence"
-        ? { ...c, normal: absenteDeLaLecture(c.attendu, c.type ?? "", tokens) }
-        : c,
-    ),
-  };
+  return champs;
 }
 
 /**
@@ -763,7 +817,7 @@ function absenteDeLaLecture(attendu: unknown, type: string, tokens: readonly Pag
 
 /* ========================================================== LES CORPUS ==== */
 
-const JOUR_PAR_DEFAUT = "2026-10-01";
+export const JOUR_PAR_DEFAUT = "2026-10-01";
 const jourDe = (v: unknown) =>
   typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/u.test(v) ? v : JOUR_PAR_DEFAUT;
 
@@ -1230,7 +1284,7 @@ function corpusPhoto(
   ];
 }
 
-function chargerLeCorpus(
+export function chargerLeCorpus(
   spec: string,
   cache: string,
   deviseDuPack: string,
