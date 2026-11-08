@@ -2238,6 +2238,8 @@ export const fr = {
     "Une annulation doit recopier le paiement de la même pièce.",
   "refus.ecriture.reglement_annule": "Le règlement est annulé, ou ne correspond pas à la pièce.",
   "refus.ecriture.reglement_d_une_autre_piece": "Ce règlement n’appartient pas à cette pièce.",
+  "refus.ecriture.reglement_hors_paiement":
+    "Cette écriture de règlement ne correspond pas à son paiement : journal, trésorerie, tiers ou montant.",
   "refus.ecriture.deja_inscrite":
     "Cette pièce porte déjà une écriture inscrite : une seconde la compterait deux fois.",
   "refus.ecriture.reimputer":

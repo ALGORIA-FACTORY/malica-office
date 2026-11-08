@@ -265,7 +265,8 @@ export const identite = {
       `select o.id, o.name, app.livres_tenus_par_le_cabinet($1) as livres
          from engagements_v e
          join organizations_v o on o.id = e.cabinet_org_id
-        where e.pme_org_id = $1 and e.status = 'actif'
+        where e.pme_org_id = $1
+          and app.engagement_en_vigueur(e.status, e.starts_on, e.ends_on)
         order by o.name
         limit 1`,
       [pmeTenantId],

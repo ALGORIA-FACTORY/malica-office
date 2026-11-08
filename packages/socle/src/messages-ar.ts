@@ -2108,6 +2108,8 @@ export const ar: Dict = {
   "refus.ecriture.annulation_du_reglement": "يجب أن ينسخ الإلغاء دفعة الوثيقة نفسها.",
   "refus.ecriture.reglement_annule": "الدفعة ملغاة، أو لا تطابق الوثيقة.",
   "refus.ecriture.reglement_d_une_autre_piece": "هذه الدفعة لا تخصّ هذه الوثيقة.",
+  "refus.ecriture.reglement_hors_paiement":
+    "قيد التسوية هذا لا يطابق دفعته: اليومية أو حساب الخزينة أو الطرف أو المبلغ.",
   "refus.ecriture.deja_inscrite": "تحمل هذه الوثيقة قيدًا مسجَّلًا: قيد ثانٍ سيحتسبها مرتين.",
   "refus.ecriture.reimputer":
     "هذه الوثيقة مسجَّلة مسبقًا. لإعادة ترحيلها، أرجع قيدها أولًا: سيُعكس.",
