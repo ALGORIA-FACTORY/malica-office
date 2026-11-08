@@ -181,6 +181,22 @@ export async function lireLesTitres(db: Requete): Promise<ContexteControle["titr
   return rows;
 }
 
+/** Les mots d'un achat dont la TVA peut être exclue, au jour de la pièce. */
+export async function lireLesExclusionsDeDeduction(
+  db: Requete,
+  pack: string,
+  jour: string,
+): Promise<ContexteControle["exclusionsDeDeduction"]> {
+  const { rows } = await db.query<ContexteControle["exclusionsDeDeduction"][number]>(
+    `select motif, famille, base_legale from ref.exclusions_de_deduction
+      where pack_version_id = $1 and valid_from <= $2::date
+        and (valid_to is null or valid_to >= $2::date)
+      order by famille collate "C", motif collate "C"`,
+    [pack, jour],
+  );
+  return rows;
+}
+
 /**
  * Les mots qui désignent un bien SUSCEPTIBLE d'être immobilisé
  * (`ref.biens_immobilisables`), en vigueur au jour de la pièce, dans un ordre
@@ -274,6 +290,7 @@ export interface ReferentielDuJugement {
   titres: ContexteControle["titres"];
   /** Les mots d'un bien susceptible d'être immobilisé (`lireLesBiensImmobilisables`). */
   biensImmobilisables: ContexteControle["biensImmobilisables"];
+  exclusionsDeDeduction: ContexteControle["exclusionsDeDeduction"];
   /** Le seuil et le traitement d'un bien de faible valeur, arrêtés pour le dossier. */
   immobilisation: ContexteControle["immobilisation"];
   /** Le traitement d'un avoir, arrêté pour le dossier (`reglageDesAvoirs`). */
@@ -594,6 +611,7 @@ export function jugerLaLecture(
     typesDocument: r.typesDocument,
     titres: r.titres,
     biensImmobilisables: r.biensImmobilisables,
+    exclusionsDeDeduction: r.exclusionsDeDeduction,
     immobilisation: r.immobilisation,
     avoirs: r.avoirs,
     mentionsObligatoires: r.mentionsObligatoires,
@@ -654,7 +672,11 @@ export const REGLES_DU_JUGEMENT = "2026-11-01.447e5ce908be";
  * propre preuve (`app.reglages_du_jugement_a_jour`, `app.cours_du_jugement_a_jour`) ;
  * les natures de vente se lisent à la proposition, jamais figées au jugement.
  */
-const REFERENTIELS_DU_JUGEMENT = ["ref.biens_immobilisables", "ref.titres_de_piece"] as const;
+const REFERENTIELS_DU_JUGEMENT = [
+  "ref.biens_immobilisables",
+  "ref.exclusions_de_deduction",
+  "ref.titres_de_piece",
+] as const;
 
 /**
  * La version d'un jugement, en SQL, à partir d'un paramètre qui porte
@@ -1040,6 +1062,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     devises: await lireLesDevises(db),
     titres: await lireLesTitres(db),
     biensImmobilisables: await lireLesBiensImmobilisables(db, pack, dateRef),
+    exclusionsDeDeduction: await lireLesExclusionsDeDeduction(db, pack, dateRef),
     // Le seuil du cabinet, au jour de la pièce : le dossier, son cabinet, le
     // pack ; TTC pour un dossier non assujetti, dont la TVA est un coût.
     immobilisation: reglageDImmobilisation(reglages, {

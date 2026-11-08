@@ -62,15 +62,18 @@ describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
   /** Une pièce lue (TVA19 : HT 1 234,560, TVA 234,566, timbre 1,000), ni jugée ni transmise. */
   const lue = async (extrait?: (e: Record<string, unknown>) => Record<string, unknown>) => {
     n += 1;
+    // Les dépôts vont par dix, en parallèle : le rang se lit avant d'attendre,
+    // sinon dix factures porteraient le même numéro.
+    const rang = n;
     const { id } = (await pmeFait("capture.enregistrer", {
       tenantId: pme,
       source: "pdf",
       vis: "entite",
-      idempotencyKey: `${marque}-${n}`,
+      idempotencyKey: `${marque}-${rang}`,
       contentType: "application/pdf",
       pageCount: 1,
     })) as { id: string };
-    const l = lectureDEssai({ clientMf: mfDossier, numero: `IMMO-${marque}-${n}` });
+    const l = lectureDEssai({ clientMf: mfDossier, numero: `IMMO-${marque}-${rang}` });
     const extract = extrait ? extrait(l.extract) : l.extract;
     await sousIdentiteDuServeur(dirigeant.id, (db) =>
       executerRpc(

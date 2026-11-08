@@ -94,6 +94,62 @@ function refusMetier(message: string): Error {
   return Object.assign(new Error(message), { code: "22023" });
 }
 
+/** La facture identique déjà prise en charge dans le dossier, s'il y en a une. */
+interface MemeFactureInscrite {
+  pieceId: string;
+  numero: string;
+  ttc: string | null;
+}
+
+/**
+ * Une même facture ne s'inscrit pas deux fois (recette du 8 novembre 2026 :
+ * SOFT-INTEGRA SI-26-0045 était validée deux fois, sa TVA déduite deux fois).
+ * Même dossier, même sens, même émetteur, même numéro, même TTC, sur une AUTRE
+ * pièce dont l'écriture est prise en charge. Les versions d'une même pièce ne
+ * comptent pas, une pièce archivée non plus. Sans numéro lu, rien n'est jugé.
+ * Les candidates se bornent par le numéro AVANT `app.version_courante`, qui
+ * coûte une instruction par ligne.
+ */
+async function memeFactureInscrite(
+  db: Requete,
+  pieceId: string,
+): Promise<MemeFactureInscrite | null> {
+  const { rows } = await db.query<MemeFactureInscrite>(
+    `with elle as materialized (
+       select p.tenant_id, p.document_kind, x.payload,
+              lower(regexp_replace(coalesce(x.payload -> 'references' ->> 'numero', ''), '[^[:alnum:]]', '', 'g')) as numero,
+              lower(regexp_replace(coalesce(x.payload ->> 'issuer', ''), '[^[:alnum:]]', '', 'g')) as emetteur,
+              (x.payload -> 'totals' ->> 'ttc')::numeric as ttc
+         from pieces_v p
+         join lateral (select e.payload from capture.extractions e
+                        where e.piece_id = p.id order by e.created_at desc limit 1) x on true
+        where p.id = app.version_courante($1)
+     ), candidates as materialized (
+       select q.id, q.created_at, y.payload
+         from elle
+         join pieces_v q on q.tenant_id = elle.tenant_id
+                        and q.document_kind is not distinct from elle.document_kind
+                        and q.archivee_le is null
+         join lateral (select e.payload from capture.extractions e
+                        where e.piece_id = q.id order by e.created_at desc limit 1) y on true
+        where elle.numero <> ''
+          and lower(regexp_replace(coalesce(y.payload -> 'references' ->> 'numero', ''), '[^[:alnum:]]', '', 'g')) = elle.numero
+          and lower(regexp_replace(coalesce(y.payload ->> 'issuer', ''), '[^[:alnum:]]', '', 'g')) = elle.emetteur
+          and (y.payload -> 'totals' ->> 'ttc')::numeric = elle.ttc
+          and q.id not in (select app.versions_de_la_piece($1))
+     )
+     select c.id as "pieceId", c.payload -> 'references' ->> 'numero' as numero,
+            c.payload -> 'totals' ->> 'ttc' as ttc
+       from candidates c
+      where c.id = app.version_courante(c.id)
+        and app.ecriture_prise_en_charge_de(c.id) is not null
+      order by c.created_at, c.id
+      limit 1`,
+    [pieceId],
+  );
+  return rows[0] ?? null;
+}
+
 /**
  * La qualification reçue du navigateur est relue avant tout usage : seuls ses
  * champs connus entrent dans le calcul et dans l'audit.
@@ -429,6 +485,7 @@ export const office = {
     await db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [pieceId]);
     const vivante = await ecritureVivante(db, pieceId);
     if (vivante?.prise) throw refusMetier("refus.prise_en_charge.deja");
+    if (await memeFactureInscrite(db, pieceId)) throw refusMetier("refus.ecriture.doublon");
     if (vivante) {
       await db.query(`select public.socle_ecriture_review($1, 'valide')`, [vivante.id]);
       return vivante.id;
@@ -460,6 +517,12 @@ export const office = {
     await office.book(db, id);
     if (etaitEnRetour) await closLeRetour(db, pieceId, id);
     return id;
+  },
+
+  /** La facture identique déjà comptabilisée : l'écran le dit avant le geste. */
+  async dejaComptabilisee(db: Requete, pieceId: string): Promise<MemeFactureInscrite | null> {
+    if (!ID.safeParse(pieceId).success) throw refusMetier("refus.avoir.saisie");
+    return memeFactureInscrite(db, pieceId);
   },
 
   /**
@@ -755,6 +818,10 @@ export const office = {
       input.typeDeDocument ?? null,
     ]);
     const vivante = await ecritureVivante(db, input.pieceId);
+    // Corriger une écriture déjà prise en charge reste possible : seule une
+    // PREMIÈRE inscription compterait la facture deux fois.
+    if (!vivante?.prise && (await memeFactureInscrite(db, input.pieceId)))
+      throw refusMetier("refus.ecriture.doublon");
     const etaitEnRetour = await enRetour(db, input.pieceId);
     /*
      * La devise est celle des LIVRES du dossier, toujours (31 octobre 2026).

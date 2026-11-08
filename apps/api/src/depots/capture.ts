@@ -49,7 +49,6 @@ import {
 } from "../malica/lecture/sudoku.ts";
 import { dateDeLaPiece } from "./dates.ts";
 import { idsDeSocietes } from "./societes.ts";
-import { aujourdhui } from "./decimal.ts";
 import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
 import { sensConfirme } from "./sens.ts";
 

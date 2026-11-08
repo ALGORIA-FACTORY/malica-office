@@ -2,9 +2,9 @@
  * L'expert-comptable, sur un bureau : le cabinet s'ouvre, ses dossiers sont
  * là, un dossier client s'ouvre.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { preparerLAppareil } from "./comptes";
+import { DIRIGEANT, ETAT_DIRIGEANT, preparerLAppareil } from "./comptes";
 
 test.beforeEach(async ({ page }) => {
   await preparerLAppareil(page, "fr");
@@ -546,3 +546,186 @@ for (const [locale, titre, observation, avertissement] of [
     });
   });
 }
+
+/*
+ * La comptabilité au clic (maquette du 8 novembre 2026) : la file en piles,
+ * l'écriture proposée, les demandes de la société, à toutes les tailles.
+ */
+const sansDebordement = async (page: Page) =>
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    ),
+  ).toBeLessThanOrEqual(1);
+
+/** Une page peut ne pas défiler et couper quand même un bouton au bord. */
+const rienHorsDeLEcran = async (page: Page) =>
+  expect(
+    await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>("main a, main button, main select, main input")]
+        .filter((el) => el.offsetParent !== null && !el.closest(".overflow-x-auto"))
+        .filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)
+        .map((el) => el.textContent?.trim() || el.getAttribute("aria-label") || el.tagName),
+    ),
+  ).toEqual([]);
+
+const pile = (page: Page, nom: RegExp) =>
+  page
+    .locator("section:not(.cab-worklist)")
+    .filter({ has: page.getByRole("button", { name: nom }) });
+
+/** Plusieurs pièces d'un même tiers se rangent dans un groupe plié. */
+const ouvrirUnGroupe = async (dansLaPile: Locator, nom?: RegExp) => {
+  const groupe = dansLaPile
+    .locator('li button[aria-expanded="false"]')
+    .filter({ hasText: nom ?? /./ });
+  if (await groupe.count()) await groupe.first().click();
+};
+
+for (const largeur of [320, 375, 768, 1024, 1280, 1440]) {
+  for (const chemin of ["", "/notifications", "/echeances", "/clients", "/propositions"]) {
+    test(`au clic : ${chemin || "/aujourd'hui"} à ${largeur} px`, async ({ page }, testInfo) => {
+      const plantages: string[] = [];
+      page.on("pageerror", (e) => plantages.push(e.message));
+      await page.setViewportSize({ width: largeur, height: 900 });
+      await page.goto(`/cabinet${chemin}`);
+      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await sansDebordement(page);
+      await rienHorsDeLEcran(page);
+      expect(plantages).toEqual([]);
+      await testInfo.attach(`clic${chemin.replace("/", "-")}-${largeur}`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
+    });
+  }
+}
+
+test("au clic : chaque pile s'ouvre et mène à une pièce", async ({ page }) => {
+  await page.goto("/cabinet");
+  const compteurs = page.locator("[data-pile]");
+  await expect(compteurs.first()).toBeVisible({ timeout: 20_000 });
+  const n = await compteurs.count();
+  expect(n).toBeGreaterThan(0);
+  for (let i = 0; i < n; i++) {
+    const bouton = compteurs.nth(i).locator("xpath=ancestor::button[1]");
+    if ((await bouton.getAttribute("aria-expanded")) === "false") await bouton.click();
+    await expect(bouton).toHaveAttribute("aria-expanded", "true");
+  }
+  await page.locator('a[href*="/cabinet/piece/"]').first().click();
+  await expect(page).toHaveURL(/\/cabinet\/piece\//);
+  await expect(page.getByRole("tab", { name: "Écritures" })).toBeVisible({ timeout: 20_000 });
+});
+
+test("au clic : l'écriture proposée se lit, se modifie, se valide et passe à la suite", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/cabinet");
+  await expect(page.locator("[data-pile]").first()).toBeVisible({ timeout: 20_000 });
+  const pretes = pile(page, /Prêtes à valider/);
+  await expect(pretes).toBeVisible();
+  await ouvrirUnGroupe(pretes);
+  const lien = pretes.locator('a[href*="/cabinet/piece/"]').first();
+  await lien.click();
+  await expect(page.getByText("Malica propose")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Débit = crédit")).toBeVisible();
+  await testInfo.attach("ecriture-resume", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+  const adresse = page.url();
+  // Une ligne se déplie, le formulaire d'avant reste là derrière « Modifier ».
+  await page.locator(".cab-ligne button").first().click();
+  await expect(page.getByRole("button", { name: "Changer de compte" })).toBeVisible();
+  await page.getByRole("button", { name: "Modifier", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: /Journal/ }).first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Malica propose")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Valider", exact: false }).last().click();
+  await expect(page).not.toHaveURL(adresse, { timeout: 20_000 });
+  // Rouverte, elle est prise en charge et se corrige encore.
+  await page.goto(adresse);
+  await expect(page.getByRole("button", { name: "Modifier", exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+});
+
+test("au clic : une demande de la société se refuse avec un motif", async ({
+  page,
+  browser,
+}, testInfo) => {
+  await page.goto("/cabinet");
+  await expect(page.locator("[data-pile]").first()).toBeVisible({ timeout: 20_000 });
+  // La société demande le retour d'une de SES pièces, envoyée au cabinet.
+  const lecture = pile(page, /Lecture en cours/);
+  const entete = lecture.getByRole("button", { name: /Lecture en cours/ });
+  if ((await entete.getAttribute("aria-expanded")) === "false") await entete.click();
+  await ouvrirUnGroupe(lecture, new RegExp(DIRIGEANT.dossier));
+  const lienDeLaSociete = lecture
+    .locator("li", { hasText: DIRIGEANT.dossier })
+    .locator('a[href*="/cabinet/piece/"]')
+    .first();
+  await expect(lienDeLaSociete).toBeVisible();
+  const aRappeler = ((await lienDeLaSociete.getAttribute("href")) ?? "").split("/").pop();
+  const societe = await browser.newContext({ storageState: ETAT_DIRIGEANT });
+  const appel = async (depot: string, methode: string, args: unknown[]) => {
+    const r = await societe.request.post("/rpc", { data: { depot, methode, args } });
+    expect(r.ok(), await r.text()).toBeTruthy();
+  };
+  await appel("collab", "demanderSurPiece", [aRappeler, "rappel"]);
+  await societe.close();
+
+  await page.reload();
+  const demandes = pile(page, /Demandes de la société/);
+  await expect(demandes).toBeVisible({ timeout: 20_000 });
+  await testInfo.attach("demande", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+  await demandes.getByRole("button", { name: "Refuser", exact: true }).click();
+  const envoyer = demandes.getByRole("button", { name: "Refuser", exact: true });
+  await expect(envoyer).toBeDisabled();
+  await demandes.getByRole("textbox").fill("La pièce est déjà comptabilisée.");
+  await envoyer.click();
+  await expect(demandes).toHaveCount(0, { timeout: 20_000 });
+});
+
+test("au clic : une échéance se coche par date sur un téléphone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/cabinet/echeances");
+  const coche = page.getByRole("button", { name: "Marquer faite" }).first();
+  await expect(coche).toBeVisible({ timeout: 20_000 });
+  await coche.click();
+  await expect(page.getByRole("button", { name: /Rouvrir/ }).first()).toBeVisible({
+    timeout: 20_000,
+  });
+  await page
+    .getByRole("button", { name: /Rouvrir/ })
+    .first()
+    .click();
+  await expect(page.getByRole("button", { name: "Marquer faite" }).first()).toBeVisible();
+});
+
+test("au clic : les échéances lointaines se déplient", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/cabinet/echeances");
+  const suite = page.getByRole("button", { name: /Voir les \d+ échéances suivantes/ });
+  await expect(suite).toBeVisible({ timeout: 20_000 });
+  const avant = await page.getByRole("button", { name: "Marquer faite" }).count();
+  await suite.click();
+  await expect(page.getByRole("button", { name: "Ne garder que ce qui presse" })).toBeVisible();
+  expect(await page.getByRole("button", { name: "Marquer faite" }).count()).toBeGreaterThan(avant);
+});
+
+test("au clic : les notifications se regroupent et les informations se déplient", async ({
+  page,
+}) => {
+  await page.goto("/cabinet/notifications");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  const infos = page.getByRole("button", { name: /Voir les \d+ informations/ });
+  if (await infos.count()) {
+    await infos.click();
+    await expect(page.getByRole("button", { name: "Masquer les informations" })).toBeVisible();
+  }
+});

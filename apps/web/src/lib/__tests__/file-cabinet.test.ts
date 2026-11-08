@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type { SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
 
-import { dansLeFiltre, feuDuStatut, joursDAttente, prisesEnChargeDepuis } from "../file-cabinet";
+import {
+  dansLeFiltre,
+  feuDuStatut,
+  joursDAttente,
+  prisesEnChargeDepuis,
+  groupesDeLaPile,
+  pileDe,
+} from "../file-cabinet";
 
 describe("joursDAttente", () => {
   const maintenant = Date.parse("2026-09-04T10:00:00Z");
@@ -77,5 +84,34 @@ describe("dansLeFiltre", () => {
     expect(dansLeFiltre(piece("recue", "p0"), "doublons")).toBe(true);
     expect(dansLeFiltre(piece("validee", "p0"), "doublons")).toBe(true);
     expect(dansLeFiltre(piece("recue"), "doublons")).toBe(false);
+  });
+});
+
+describe("les piles de la file", () => {
+  const base = { status: "lue", ecritureId: null, doublonDe: null, verdict: null };
+  it("une pièce jugée comptabilisable est prête ; un doublon reste à compléter", () => {
+    expect(pileDe({ ...base, statut: "recue", verdict: "à comptabiliser" })).toBe("pretes");
+    expect(pileDe({ ...base, statut: "recue", verdict: "à rapprocher" })).toBe("a_completer");
+    expect(pileDe({ ...base, statut: "recue", verdict: "à comptabiliser", doublonDe: "x" })).toBe(
+      "a_completer",
+    );
+  });
+  it("une demande de la société passe avant tout, même sur une pièce prise en charge", () => {
+    expect(pileDe({ ...base, statut: "validee", demandeEnAttente: "rappel" })).toBe("demandes");
+    expect(pileDe({ ...base, statut: "recue", demandeEnAttente: "suppression" })).toBe("demandes");
+  });
+  it("une pièce non lue attend ; une pièce prise en charge sort du travail", () => {
+    expect(pileDe({ ...base, statut: "recue", status: "capturee" })).toBe("lecture");
+    expect(pileDe({ ...base, statut: "validee" })).toBe("prises");
+    expect(pileDe({ ...base, statut: "retournee" })).toBe("retournees");
+  });
+  it("une pile se groupe par client et fournisseur, sans distinguer la casse", () => {
+    const p = (tenantId: string, tiers: string | null) => ({
+      tenantId,
+      clientName: tenantId,
+      tiers,
+    });
+    const g = groupesDeLaPile([p("a", "Soft"), p("a", "SOFT "), p("b", "Soft"), p("a", null)]);
+    expect(g.map((x) => x.pieces.length)).toEqual([2, 1, 1]);
   });
 });

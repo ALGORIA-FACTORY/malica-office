@@ -59,6 +59,17 @@ const CameraScanner = lazy(() =>
  * lit au dictionnaire CHARGÉ (`libelleHorsArbre`) : importer `messages-fr` ici
  * le faisait entrer dans le premier écran de toutes les pages.
  */
+/** Un lot à joindre qui n'est pas tout parti : le message, la pièce, et si une partie s'est jointe. */
+class ErreurDeJointure extends Error {
+  constructor(
+    message: string,
+    readonly pieceId: string,
+    readonly enPartie: boolean,
+  ) {
+    super(message);
+  }
+}
+
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
     meta: [
@@ -273,6 +284,8 @@ function PmeLayout() {
    * remplacerait une pièce sans qu'on l'ait demandé.
    */
   const aRemplacer = useRef<PieceARemplacer | null>(null);
+  /** La pièce à laquelle joindre ce que le scanner ou le sélecteur rendra (planche 6). */
+  const aJoindre = useRef<{ id: string; vis: string } | null>(null);
 
   const choisir = useMutation({
     mutationFn: async (input: CaptureKind | { pages: Blob[]; dejaCadrees?: boolean }) => {
@@ -290,7 +303,13 @@ function PmeLayout() {
       setCaptureError(null);
       const remplace = aRemplacer.current;
       aRemplacer.current = null;
+      const joindre = aJoindre.current;
+      aJoindre.current = null;
       if (choisis.length === 0) return;
+      if (joindre) {
+        capture.mutate({ lot: choisis, documentKind: null, joindre });
+        return;
+      }
       // La photo qui remplace garde le type de l'ancienne : la question ne se
       // repose pas, la lecture aura le dernier mot.
       if (remplace) {
@@ -309,6 +328,7 @@ function PmeLayout() {
     },
     onError: (e: unknown) => {
       aRemplacer.current = null;
+      aJoindre.current = null;
       setCaptureError(
         e instanceof FilePleine
           ? t("pme.file.pleine")
@@ -333,6 +353,7 @@ function PmeLayout() {
       lot: readonly PickedFile[];
       documentKind: string | null;
       remplace?: PieceARemplacer;
+      joindre?: { id: string; vis: string };
     }) => {
       if (!org) return [];
       const identifiants: string[] = [];
@@ -344,6 +365,26 @@ function PmeLayout() {
           i === 0 ? (input.remplace ?? null) : null,
         );
         if (id) identifiants.push(id);
+      }
+      /*
+       * JOINDRE (planche 6) : le document pris entre dans la société — une
+       * pièce de l'espace privé ne se rattache pas (`piece_rattacher`) — et
+       * se rattache. Il part au cabinet comme toute pièce : lue, puis envoyée
+       * (le BL sans lecture viendra avec la planche 3).
+       */
+      if (input.joindre) {
+        for (const id of identifiants) {
+          await office().collab.setPieceVis(id, "entite");
+          await office().capture.rattacher(input.joindre.id, id);
+        }
+        // Un lot à moitié parti (réseau lent) le DIT : ce qui attend encore
+        // sera à joindre depuis la pièce au retour du réseau (revue de #286).
+        if (identifiants.length < input.lot.length)
+          throw new ErreurDeJointure(
+            t("pme.joindre.horsLigne"),
+            input.joindre.id,
+            identifiants.length > 0,
+          );
       }
       return identifiants;
     },
@@ -376,6 +417,16 @@ function PmeLayout() {
       // La photo qui remplace a déjà sa destination : celle de l'ancienne.
       // Depuis une fiche, on l'ouvre à la place de l'ancienne ; hors ligne, la
       // liste la montre. Depuis le lot de la capture, elle y revient.
+      if (input.joindre) {
+        await qc.invalidateQueries({ queryKey: ["rattachees", input.joindre.id] });
+        await qc.invalidateQueries({ queryKey: ["piece", input.joindre.id] });
+        await navigate({
+          to: "/pme/piece/$pieceId",
+          params: { pieceId: input.joindre.id },
+          replace: true,
+        });
+        return;
+      }
       const nouvelle = input.remplace ? identifiants[0] : undefined;
       if (input.remplace?.ensuite === "fiche") {
         await navigate(
@@ -396,12 +447,20 @@ function PmeLayout() {
         search: suiteDuPassage(identifiants, contexteDeCapture),
       });
     },
-    onError: (e: unknown) =>
+    onError: async (e: unknown) => {
       setCaptureError(
         e instanceof FilePleine
           ? t("pme.file.pleine")
-          : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
-      ),
+          : e instanceof ErreurDeJointure
+            ? t("pme.joindre.horsLigne")
+            : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
+      );
+      // Ce qui s'est joint avant l'arrêt se voit sur la pièce.
+      if (e instanceof ErreurDeJointure && e.enPartie) {
+        await qc.invalidateQueries({ queryKey: ["rattachees", e.pieceId] });
+        await qc.invalidateQueries({ queryKey: ["piece", e.pieceId] });
+      }
+    },
   });
 
   async function deposerUnePiece(
@@ -491,7 +550,10 @@ function PmeLayout() {
       }
       // Déjà cadrées par l'appareil : on ne refait pas le travail.
       if (pages.length > 0) choisir.mutate({ pages, dejaCadrees: true });
-      else aRemplacer.current = null;
+      else {
+        aRemplacer.current = null;
+        aJoindre.current = null;
+      }
     })();
   }, [choisir]);
 
@@ -507,9 +569,19 @@ function PmeLayout() {
     },
     [ouvrirCapture],
   );
+  const joindreA = useCallback(
+    (piece: { id: string; vis: string }, moyen: "photo" | "images" | "pdf") => {
+      aRemplacer.current = null;
+      aJoindre.current = piece;
+      if (moyen === "photo") ouvrirCapture();
+      else choisir.mutate(moyen);
+    },
+    [ouvrirCapture, choisir],
+  );
   /** Le scanner fermé sans photo : rien n'est remplacé. */
   const abandonnerLeScanner = useCallback(() => {
     aRemplacer.current = null;
+    aJoindre.current = null;
     setScanning(false);
   }, []);
 
@@ -694,6 +766,7 @@ function PmeLayout() {
                 capture: (kind) => choisir.mutate(kind),
                 ouvrirScanner,
                 reprendreLaPhoto,
+                joindreA,
                 capturing: capture.isPending || choisir.isPending,
                 captureError,
                 file,

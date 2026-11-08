@@ -66,7 +66,7 @@ import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { CompteDuPlan, Ecriture, QueueItem } from "@malica/socle/ports/repositories";
-import { A_TRAITER } from "@malica/socle/statut-d-envoi";
+import { pileDe } from "@/lib/file-cabinet";
 
 export const Route = createFileRoute("/_authenticated/cabinet/propositions")({
   head: () => ({
@@ -125,7 +125,9 @@ function CabinetPropositions() {
     () =>
       (queue.data ?? []).filter(
         // À traiter, et lue : le Socle a de quoi proposer.
-        (r) => actifs.has(r.tenantId) && A_TRAITER.has(r.statut) && r.status !== "capturee",
+        // Relevé le 8 novembre 2026 : « Valider les 50 » portait sur des pièces
+        // sans écriture possible. Seules les prêtes entrent dans un lot.
+        (r) => actifs.has(r.tenantId) && pileDe(r) === "pretes",
       ),
     [queue.data, actifs],
   );
@@ -393,58 +395,60 @@ function CabinetPropositions() {
         </div>
       ) : null}
 
-      {/* ---- les lots par confiance */}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {cartesDeLot.map((c) => {
-          const pieces = lots[c.lot];
-          const premiere = pieces[0] ?? null;
-          return (
-            <div key={c.lot} className="flex flex-col border border-border bg-card p-4">
-              <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {c.label}
-              </p>
-              <p
-                className={cn(
-                  "num mt-2 text-[30px] leading-none",
-                  pieces.length === 0 ? "text-muted-foreground" : "",
-                )}
-              >
-                {pieces.length}
-              </p>
-              <p className="mt-1.5 text-[11.5px] text-muted-foreground">{c.note}</p>
-              <div className="mt-3">
-                {c.lot === "haut" ? (
-                  <button
-                    type="button"
-                    disabled={pieces.length === 0}
-                    onClick={() =>
-                      retenir(
-                        pieces.map((p) => p.pieceId),
-                        true,
-                      )
-                    }
-                    className="border border-foreground bg-foreground px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
-                  >
-                    {c.action}
-                  </button>
-                ) : premiere ? (
-                  <Link
-                    to="/cabinet/piece/$pieceId"
-                    params={{ pieceId: premiere.pieceId }}
-                    className="cab-cible inline-block border border-border bg-card px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] hover:bg-accent"
-                  >
-                    {c.action}
-                  </Link>
-                ) : (
-                  <span className="cab-cible inline-block border border-border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground opacity-50">
-                    {c.action}
-                  </span>
-                )}
+      {/* ---- les lots par confiance : rien à valider, rien à afficher */}
+      {rows.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {cartesDeLot.map((c) => {
+            const pieces = lots[c.lot];
+            const premiere = pieces[0] ?? null;
+            return (
+              <div key={c.lot} className="flex flex-col border border-border bg-card p-4">
+                <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  {c.label}
+                </p>
+                <p
+                  className={cn(
+                    "num mt-2 text-[30px] leading-none",
+                    pieces.length === 0 ? "text-muted-foreground" : "",
+                  )}
+                >
+                  {pieces.length}
+                </p>
+                <p className="mt-1.5 text-[11.5px] text-muted-foreground">{c.note}</p>
+                <div className="mt-3">
+                  {c.lot === "haut" ? (
+                    <button
+                      type="button"
+                      disabled={pieces.length === 0}
+                      onClick={() =>
+                        retenir(
+                          pieces.map((p) => p.pieceId),
+                          true,
+                        )
+                      }
+                      className="border border-foreground bg-foreground px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
+                    >
+                      {c.action}
+                    </button>
+                  ) : premiere ? (
+                    <Link
+                      to="/cabinet/piece/$pieceId"
+                      params={{ pieceId: premiere.pieceId }}
+                      className="cab-cible inline-block border border-border bg-card px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] hover:bg-accent"
+                    >
+                      {c.action}
+                    </Link>
+                  ) : (
+                    <span className="cab-cible inline-block border border-border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground opacity-50">
+                      {c.action}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : null}
 
       {/* La phrase qui remplace le pourcentage, en toutes lettres. Elle ne
           paraît que s'il y a de telles pièces : une doctrine affichée dans le
@@ -456,53 +460,55 @@ function CabinetPropositions() {
       ) : null}
 
       {/* ---- les groupes par client */}
-      <section className="space-y-3">
-        <SectionTitle
-          action={
-            <span className="num text-[11px] text-muted-foreground">
-              {t("cab.prop.groupes.compte", { clients: groupes.length, pieces: rows.length })}
-            </span>
-          }
-        >
-          {t("cab.prop.groupes.titre")}
-        </SectionTitle>
-        <p className="max-w-[70ch] text-[12.5px] leading-[1.5] text-text-2">
-          {t("cab.prop.groupes.doctrine")}
-        </p>
-        {acces.isSuccess && !superviseur ? (
-          <p className="max-w-[70ch] border border-border bg-card px-3 py-2 text-[12.5px] leading-[1.5]">
-            {t("cab.prop.preparer")}
+      {rows.length > 0 ? (
+        <section className="space-y-3">
+          <SectionTitle
+            action={
+              <span className="num text-[11px] text-muted-foreground">
+                {t("cab.prop.groupes.compte", { clients: groupes.length, pieces: rows.length })}
+              </span>
+            }
+          >
+            {t("cab.prop.groupes.titre")}
+          </SectionTitle>
+          <p className="max-w-[70ch] text-[12.5px] leading-[1.5] text-text-2">
+            {t("cab.prop.groupes.doctrine")}
           </p>
-        ) : null}
+          {acces.isSuccess && !superviseur ? (
+            <p className="max-w-[70ch] border border-border bg-card px-3 py-2 text-[12.5px] leading-[1.5]">
+              {t("cab.prop.preparer")}
+            </p>
+          ) : null}
 
-        {queue.isPending ? (
-          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-        ) : groupes.length === 0 ? (
-          <EmptyState>{t("cab.prop.empty")}</EmptyState>
-        ) : (
-          <ul className="space-y-3">
-            {groupes.map((g) => (
-              <GroupeClient
-                key={g.tenantId}
-                groupe={g}
-                ouvert={Boolean(ouverts[g.tenantId])}
-                basculer={() => setOuverts((o) => ({ ...o, [g.tenantId]: !o[g.tenantId] }))}
-                estRetenue={estRetenue}
-                retenir={retenir}
-                ecritureDe={ecritureDe}
-                lueParRecette={lueParRecette}
-                seuilLot={seuilLot}
-                seuilRevue={seuilRevue}
-                occupe={occupe || !superviseur}
-                valider={(pieces) => valider.mutate(pieces)}
-                forcer={(input) => forcer.mutate(input)}
-                totalDe={totalDe}
-                locale={locale}
-              />
-            ))}
-          </ul>
-        )}
-      </section>
+          {queue.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : groupes.length === 0 ? (
+            <EmptyState>{t("cab.prop.empty")}</EmptyState>
+          ) : (
+            <ul className="space-y-3">
+              {groupes.map((g) => (
+                <GroupeClient
+                  key={g.tenantId}
+                  groupe={g}
+                  ouvert={Boolean(ouverts[g.tenantId])}
+                  basculer={() => setOuverts((o) => ({ ...o, [g.tenantId]: !o[g.tenantId] }))}
+                  estRetenue={estRetenue}
+                  retenir={retenir}
+                  ecritureDe={ecritureDe}
+                  lueParRecette={lueParRecette}
+                  seuilLot={seuilLot}
+                  seuilRevue={seuilRevue}
+                  occupe={occupe || !superviseur}
+                  valider={(pieces) => valider.mutate(pieces)}
+                  forcer={(input) => forcer.mutate(input)}
+                  totalDe={totalDe}
+                  locale={locale}
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
 
       {/* ---- le pied : la sélection, tous clients confondus */}
       {selection.length > 0 ? (

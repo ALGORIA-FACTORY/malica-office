@@ -13,6 +13,7 @@
  * constate en base et ne se saisit pas.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check } from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
@@ -74,6 +75,8 @@ function CabinetEcheances() {
   const qc = useQueryClient();
   const dossierCourant = useDossierCourant();
   const [dossier, setDossier] = useState<string>(() => dossierCourant?.id ?? "");
+  const [toutVoir, setToutVoir] = useState(false);
+  const [touchees, setTouchees] = useState<ReadonlySet<string>>(() => new Set());
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
@@ -138,6 +141,25 @@ function CabinetEcheances() {
   const sousSept = rows.filter((e) => e.status === "a_venir" && jours(e.dueDate) <= 7);
   const faites = rows.filter((e) => e.status === "fait");
   const manques = (derivation.data ?? []).filter((d) => d.raison !== null);
+
+  /*
+   * L'agenda montre ce qui presse : le retard, les sept jours, à défaut la
+   * prochaine date. Le reste se déplie (maquette du 8 novembre) : 126 lignes
+   * faisaient 12 000 px au téléphone. Une ligne cochée reste sous les yeux.
+   */
+  const prochaine = rows.find((e) => e.dueDate >= today)?.dueDate ?? null;
+  const proches = rows.filter(
+    (e) =>
+      touchees.has(e.id) ||
+      e.status === "en_retard" ||
+      (e.dueDate >= today && (jours(e.dueDate) <= 7 || e.dueDate === prochaine)),
+  );
+  const affichees = toutVoir ? rows : proches;
+  const derniere = rows.at(-1)?.dueDate ?? null;
+  const basculer = (id: string, fait: boolean) => {
+    setTouchees((avant) => new Set(avant).add(id));
+    marquer.mutate({ id, fait });
+  };
 
   /*
    * La frise : du début du mois à l'horizon dérivé.
@@ -305,7 +327,7 @@ function CabinetEcheances() {
       <section className="space-y-3">
         <SectionTitle
           action={
-            <label className="flex items-center gap-2">
+            <label className="flex min-w-0 max-w-full items-center gap-2">
               <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {t("cab.echeances.dossier")}
               </span>
@@ -317,7 +339,7 @@ function CabinetEcheances() {
                   if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
                 }}
                 aria-label={t("cab.echeances.dossier")}
-                className="max-w-[240px] border border-border bg-card px-2.5 py-1.5 text-[12px]"
+                className="min-w-0 max-w-[240px] border border-border bg-card px-2.5 py-1.5 text-[12px]"
               >
                 <option value="">{t("cab.echeances.tous")}</option>
                 {(clients.data ?? []).map((c) => (
@@ -350,123 +372,213 @@ function CabinetEcheances() {
         ) : (
           // Au téléphone, une carte par échéance (`cab-table-empile`) : le tableau
           // de six colonnes défilait de côté (mesure du 5 novembre 2026).
-          <div className="cab-table-empile overflow-x-auto border border-border bg-card">
-            <table className="min-w-full border-collapse text-[12.5px]">
-              <caption className="sr-only">{t("cab.echeances.title")}</caption>
-              <thead>
-                <tr className="border-b border-foreground">
-                  {[
-                    t("cab.echeances.col.obligation"),
-                    t("cab.queue.client"),
-                    t("cab.echeances.col.legal"),
-                    t("cab.echeances.col.depot"),
-                    t("cab.echeances.col.state"),
-                    t("cab.echeances.col.action"),
-                  ].map((h, i) => (
-                    <th
-                      key={h}
-                      scope="col"
-                      className={cn(
-                        "px-3 py-2 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
-                        i === 3 ? "text-end" : "text-start",
-                      )}
+          <>
+            {/* Téléphone, tablette, portable : les échéances par date (maquette du 8 novembre). */}
+            <div className="space-y-3 xl:hidden">
+              {[
+                ...affichees
+                  .reduce(
+                    (m, e) => m.set(e.dueDate, [...(m.get(e.dueDate) ?? []), e]),
+                    new Map<string, typeof rows>(),
+                  )
+                  .entries(),
+              ].map(([date, liste], i) => (
+                <section
+                  key={date}
+                  className="cab-monte overflow-hidden rounded-xl border border-border bg-card"
+                  style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
+                >
+                  <h3 className="flex justify-between gap-3 bg-muted px-4 py-2.5 text-[13px]">
+                    <strong className="num font-semibold">{dateEnChiffres(date, locale)}</strong>
+                    <span
+                      className={
+                        urgenteDe(liste).status === "en_retard"
+                          ? "text-signal-stop"
+                          : "text-muted-foreground"
+                      }
                     >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((e) => (
-                  <tr key={e.id} className="border-b border-border hover:bg-secondary/60">
-                    <td className="px-3 py-2 font-medium sm:whitespace-nowrap">
-                      {e.label}
-                      {e.period ? (
-                        <span className="num block text-[10.5px] font-normal text-muted-foreground">
-                          {t("cab.echeances.periode", { period: e.period })}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td data-label={t("cab.queue.client")} className="px-3 py-2">
-                      <Link
-                        to="/cabinet/dossier/$clientId"
-                        params={{ clientId: e.tenantId }}
-                        className="hover:underline"
+                      {compteDe(urgenteDe(liste))}
+                    </span>
+                  </h3>
+                  <ul>
+                    {liste.map((e) => (
+                      <li
+                        key={e.id}
+                        className="flex min-h-[60px] items-center gap-3 border-t border-border px-4 py-2"
                       >
-                        {nomDe(e.tenantId)}
-                      </Link>
-                    </td>
-                    <td
-                      data-label={t("cab.echeances.col.legal")}
-                      className="px-3 py-2 sm:min-w-[240px]"
-                      title={e.texteSource ?? undefined}
-                    >
-                      <span className="num block whitespace-nowrap text-[11px] text-signal-info">
-                        {e.article ?? e.texteSource ?? "—"}
-                      </span>
-                      {e.regle ? (
-                        <span className="mt-0.5 block max-w-[34ch] text-[10.5px] leading-[1.35] text-muted-foreground">
-                          {e.regle}
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[15px] [overflow-wrap:anywhere]">
+                            {e.label}
+                            {e.article ? (
+                              <Aide
+                                titre={e.label}
+                                paragraphes={[{ texte: e.regle ?? e.article }]}
+                              />
+                            ) : null}
+                          </span>
+                          <span className="block text-[13px] text-muted-foreground">
+                            {nomDe(e.tenantId)}
+                            {e.period ? ` · ${e.period}` : ""}
+                          </span>
                         </span>
-                      ) : null}
-                    </td>
-                    <td
-                      data-label={t("cab.echeances.col.depot")}
-                      className="whitespace-nowrap px-3 py-2 text-end"
-                    >
-                      <span className="num block text-[12px]">
-                        {dateEnChiffres(e.dueDate, locale)}
-                      </span>
-                      <OrigineDEcheance
-                        echeance={e}
-                        className="ms-auto max-w-[30ch] whitespace-normal"
-                      />
-                      <span
+                        <button
+                          type="button"
+                          aria-pressed={e.status === "fait"}
+                          aria-label={
+                            e.status === "fait"
+                              ? t("cab.echeances.rouvrir")
+                              : t("cab.echeances.marquer")
+                          }
+                          disabled={marquer.isPending}
+                          onClick={() => basculer(e.id, e.status !== "fait")}
+                          className={cn(
+                            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border disabled:opacity-40",
+                            e.status === "fait" ? "bg-foreground text-background" : "bg-card",
+                          )}
+                        >
+                          {e.status === "fait" ? (
+                            <Check className="cab-preuve h-5 w-5" aria-hidden />
+                          ) : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto border border-border bg-card xl:block">
+              <table className="min-w-full border-collapse text-[12.5px]">
+                <caption className="sr-only">{t("cab.echeances.title")}</caption>
+                <thead>
+                  <tr className="border-b border-foreground">
+                    {[
+                      t("cab.echeances.col.obligation"),
+                      t("cab.queue.client"),
+                      t("cab.echeances.col.legal"),
+                      t("cab.echeances.col.depot"),
+                      t("cab.echeances.col.state"),
+                      t("cab.echeances.col.action"),
+                    ].map((h, i) => (
+                      <th
+                        key={h}
+                        scope="col"
                         className={cn(
-                          "mt-0.5 block text-[10px] font-semibold tracking-[0.06em]",
-                          e.status === "en_retard"
-                            ? "text-signal-stop"
-                            : e.status === "fait"
-                              ? "text-signal-ok"
-                              : jours(e.dueDate) <= 7
-                                ? "text-marigold-on-paper"
-                                : "text-muted-foreground",
+                          "px-3 py-2 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                          i === 3 ? "text-end" : "text-start",
                         )}
                       >
-                        {compteDe(e)}
-                      </span>
-                    </td>
-                    <td
-                      data-label={t("cab.echeances.col.state")}
-                      className="whitespace-nowrap px-3 py-2"
-                    >
-                      <span className="inline-flex items-center gap-1.5">
-                        <span
-                          aria-hidden
-                          className={cn("inline-block h-[7px] w-[7px]", tonDe(e))}
-                        />
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.1em]">
-                          {etatDe(e)}
-                        </span>
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      <button
-                        type="button"
-                        disabled={marquer.isPending}
-                        onClick={() => marquer.mutate({ id: e.id, fait: e.status !== "fait" })}
-                        className="border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground disabled:opacity-40"
-                      >
-                        {e.status === "fait"
-                          ? t("cab.echeances.rouvrir")
-                          : t("cab.echeances.marquer")}
-                      </button>
-                    </td>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {affichees.map((e) => (
+                    <tr key={e.id} className="border-b border-border hover:bg-secondary/60">
+                      <td className="px-3 py-2 font-medium sm:whitespace-nowrap">
+                        {e.label}
+                        {e.period ? (
+                          <span className="num block text-[10.5px] font-normal text-muted-foreground">
+                            {t("cab.echeances.periode", { period: e.period })}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td data-label={t("cab.queue.client")} className="px-3 py-2">
+                        <Link
+                          to="/cabinet/dossier/$clientId"
+                          params={{ clientId: e.tenantId }}
+                          className="hover:underline"
+                        >
+                          {nomDe(e.tenantId)}
+                        </Link>
+                      </td>
+                      <td
+                        data-label={t("cab.echeances.col.legal")}
+                        className="px-3 py-2 sm:min-w-[240px]"
+                        title={e.texteSource ?? undefined}
+                      >
+                        <span className="num block whitespace-nowrap text-[11px] text-signal-info">
+                          {e.article ?? e.texteSource ?? "—"}
+                        </span>
+                        {e.regle ? (
+                          <span className="mt-0.5 block max-w-[34ch] text-[10.5px] leading-[1.35] text-muted-foreground">
+                            {e.regle}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td
+                        data-label={t("cab.echeances.col.depot")}
+                        className="whitespace-nowrap px-3 py-2 text-end"
+                      >
+                        <span className="num block text-[12px]">
+                          {dateEnChiffres(e.dueDate, locale)}
+                        </span>
+                        <OrigineDEcheance
+                          echeance={e}
+                          className="ms-auto max-w-[30ch] whitespace-normal"
+                        />
+                        <span
+                          className={cn(
+                            "mt-0.5 block text-[10px] font-semibold tracking-[0.06em]",
+                            e.status === "en_retard"
+                              ? "text-signal-stop"
+                              : e.status === "fait"
+                                ? "text-signal-ok"
+                                : jours(e.dueDate) <= 7
+                                  ? "text-marigold-on-paper"
+                                  : "text-muted-foreground",
+                          )}
+                        >
+                          {compteDe(e)}
+                        </span>
+                      </td>
+                      <td
+                        data-label={t("cab.echeances.col.state")}
+                        className="whitespace-nowrap px-3 py-2"
+                      >
+                        <span className="inline-flex items-center gap-1.5">
+                          <span
+                            aria-hidden
+                            className={cn("inline-block h-[7px] w-[7px]", tonDe(e))}
+                          />
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.1em]">
+                            {etatDe(e)}
+                          </span>
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2">
+                        <button
+                          type="button"
+                          disabled={marquer.isPending}
+                          onClick={() => basculer(e.id, e.status !== "fait")}
+                          className="border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground disabled:opacity-40"
+                        >
+                          {e.status === "fait"
+                            ? t("cab.echeances.rouvrir")
+                            : t("cab.echeances.marquer")}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {rows.length > proches.length ? (
+              <button
+                type="button"
+                aria-expanded={toutVoir}
+                onClick={() => setToutVoir((v) => !v)}
+                className="min-h-11 text-start text-[14px] font-semibold text-foreground underline underline-offset-4"
+              >
+                {toutVoir
+                  ? t("cab.echeances.reduire")
+                  : t("cab.echeances.voirSuite", {
+                      count: rows.length - proches.length,
+                      date: derniere ? dateEnChiffres(derniere, locale) : "",
+                    })}
+              </button>
+            ) : null}
+          </>
         )}
       </section>
 
@@ -505,6 +617,15 @@ function CabinetEcheances() {
 }
 
 /** La raison pour laquelle rien n'a été dérivé, dans la langue de la personne. */
+/** L'échéance qui dit l'urgence d'une date : en retard d'abord, faite en dernier. */
+function urgenteDe<T extends { status: string }>(liste: readonly T[]): T {
+  return (
+    liste.find((e) => e.status === "en_retard") ??
+    liste.find((e) => e.status !== "fait") ??
+    liste[0]!
+  );
+}
+
 function libelleDeLaRaison(raison: string | null, t: (k: MessageKey) => string): string {
   const cle = raison ? RAISONS[raison] : undefined;
   return cle ? t(cle) : "";

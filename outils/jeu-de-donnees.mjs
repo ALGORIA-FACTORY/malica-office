@@ -634,7 +634,8 @@ const tauxNormal =
 
 /**
  * Une pièce décrite une seule fois : le PDF, la lecture et l'écriture lisent
- * la même description. `lue: false` dépose seulement les octets.
+ * la même description. `lue: false` dépose seulement les octets ;
+ * `enAttente: true` lit la pièce et la laisse au cabinet, proposée et non validée.
  */
 function facture({
   kind,
@@ -646,6 +647,7 @@ function facture({
   avecTimbre,
   articles,
   lue = true,
+  enAttente = false,
 }) {
   const taux = tauxParCode(taxCode);
   if (!taux) throw new Error(`taux ${taxCode} absent du pack`);
@@ -689,7 +691,7 @@ function facture({
         field_confidence: { issuer: 0.98, document_date: 0.97, overall: 0.96, "totals.ttc": 0.99 },
       }
     : null;
-  return { kind, issuer, reference, date, titre, lignes, extrait, taxCode, droit, lue };
+  return { kind, issuer, reference, date, titre, lignes, extrait, taxCode, droit, lue, enAttente };
 }
 
 /** Les lignes de l'écriture, telles que le pivot du Socle les compose. */
@@ -907,7 +909,10 @@ async function comptabiliser(pieceId, piece) {
       typeDeDocument: piece.kind,
     },
   ]);
-  return { id, detail: `forcée · ${p.journal} · ${p.lignes.length} lignes` };
+  return {
+    id,
+    detail: `forcée · ${p.journal} · ${p.lignes.length} lignes · ${proposition.raisonCode ?? proposition.raison}`,
+  };
 }
 
 /** Les tiers d'un dossier, pour que la lecture et le plan les connaissent. */
@@ -1008,6 +1013,27 @@ const PIECES = {
         taxCode: tauxNormal.code,
         avecTimbre: false,
         lue: false,
+      }),
+      // Lues et jugées, elles attendent le cabinet : la pile « Prêtes à valider ».
+      facture({
+        kind: "facture_achat",
+        issuer: "ELECTRO IMPORT TUNISIE",
+        ref: "EI-2026-0431",
+        date: jourDuMois(12),
+        ht: "1850.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: true,
+        enAttente: true,
+      }),
+      facture({
+        kind: "facture_achat",
+        issuer: "ELECTRO IMPORT TUNISIE",
+        ref: "EI-2026-0432",
+        date: jourDuMois(13),
+        ht: "2640.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: true,
+        enAttente: true,
       }),
     ],
   },
@@ -1176,7 +1202,7 @@ for (const [cle, jeu] of Object.entries(PIECES)) {
     // Comme la lecture réelle (`read-flow.ts`), le jugement suit la lecture,
     // dans la session de la PME : c'est sur lui que le cabinet valide.
     await etape(`jugement ${marque}`, () => rpc("capture", "analyser", [pieceId]));
-    lues.push({ marque, pieceId, piece });
+    if (!piece.enAttente) lues.push({ marque, pieceId, piece });
   }
   // Le cabinet prend en charge ce que la PME a envoyé.
   await e.connecter(LEILA);

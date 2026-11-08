@@ -26,6 +26,7 @@ import { normaliserMontants } from "./normaliser-montants.ts";
 import { deviseDEssai } from "./devise-d-essai.ts";
 import {
   BIENS_IMMOBILISABLES_D_ESSAI,
+  EXCLUSIONS_DE_DEDUCTION_D_ESSAI,
   DEVISE_D_ESSAI,
   DEVISES_D_ESSAI,
   REGLAGES_D_ESSAI,
@@ -104,6 +105,7 @@ const CONTEXTE: ContexteControle = {
   ],
   titres: TITRES_D_ESSAI,
   biensImmobilisables: BIENS_IMMOBILISABLES_D_ESSAI,
+  exclusionsDeDeduction: EXCLUSIONS_DE_DEDUCTION_D_ESSAI,
   // Sans réglage d'immobilisation : tout bien reconnu est à trancher. Le seuil
   // du cabinet s'éprouve plus bas.
   immobilisation: null,
@@ -1131,5 +1133,21 @@ describe("l'écart entre la date de la pièce et sa réception", () => {
       );
       assert.equal(c.statut, "anomalie");
     }
+  });
+});
+
+describe("la TVA d'une voiture de tourisme", () => {
+  const verdicts = (designation: string) =>
+    controlerPiece(facture({ articles: articles(designation) }), CONTEXTE)
+      .filter((c) => c.code === "tva_exclue_a_trancher")
+      .map((c) => c.code);
+  it("signale la voiture, sa location et son carburant", () => {
+    assert.deepEqual(verdicts("Voiture de tourisme 5 places"), ["tva_exclue_a_trancher"]);
+    assert.deepEqual(verdicts("Location de voiture 3 jours"), ["tva_exclue_a_trancher"]);
+    assert.deepEqual(verdicts("Gasoil"), ["tva_exclue_a_trancher"]);
+  });
+  it("ne dit rien d'un camion ni d'un achat ordinaire", () => {
+    assert.deepEqual(verdicts("Camion benne"), []);
+    assert.deepEqual(verdicts("Ramettes de papier"), []);
   });
 });

@@ -1978,6 +1978,10 @@ export interface OfficeRepository {
   rattacherLaFacture(pieceId: string, factureId: string): Promise<PropositionDePiece>;
   /** Les factures comptabilisées du même dossier et du même sens, pour un avoir. */
   facturesARattacher(pieceId: string): Promise<FactureARattacher[]>;
+  /** La facture identique déjà comptabilisée dans le dossier, ou rien. */
+  dejaComptabilisee(
+    pieceId: string,
+  ): Promise<{ pieceId: string; numero: string; ttc: string | null } | null>;
   /**
    * SAISIR LE COURS d'une pièce en devise, en un geste : le cours que son
    * jugement demande (ou sa correction au même jour), pour l'organisation
@@ -2190,6 +2194,8 @@ export interface QueueItem {
   collaborateur: string | null;
   /** La confiance globale de la dernière lecture (0..1), ou rien si elle n'a pas été mesurée. */
   confiance: number | null;
+  /** Le verdict de la dernière analyse : il dit si une écriture peut se proposer. */
+  verdict?: string | null;
   /**
    * Ce que la PME demande sur cette pièce, et qui attend le cabinet.
    *
@@ -3918,6 +3924,8 @@ export interface FicheDeSociete {
   offre: string | null;
   /** Le cabinet au mandat actif, `null` s'il n'y en a pas. */
   cabinet: string | null;
+  /** Son identifiant : le dossier « Votre comptabilité » (planche 6) le regroupe. */
+  cabinetId: string | null;
 }
 
 export interface OrganisationDeLaLicence {
