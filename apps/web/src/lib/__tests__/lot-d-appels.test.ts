@@ -10,7 +10,7 @@ import { creerLotDAppels } from "../lot-d-appels";
 function banc(taille = 200) {
   const une = vi.fn(async (cle: string) => [`seule:${cle}`]);
   const plusieurs = vi.fn(
-    async (cles: string[]) => new Map(cles.map((c) => [c, [`lot:${c}`]] as const)),
+    async (cles: string[]) => new Map(cles.map((c): [string, string[]] => [c, [`lot:${c}`]])),
   );
   const charger = creerLotDAppels<string[]>({ une, plusieurs, taille, absente: [] });
   return { une, plusieurs, charger };
