@@ -30,7 +30,15 @@ const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
 async function aBlanc<T>(corps: (db: pg.PoolClient) => Promise<T>): Promise<T> {
   const db = await pool!.connect();
   try {
-    await db.query("begin");
+    /*
+     * Un instantané fixe : les autres fichiers de la suite tournent en même
+     * temps et créent des PME (chacune naît avec sa licence). En lecture
+     * validée, une licence née entre deux passages du robot était facturée
+     * au troisième, et « aucun numéro tiré » tombait sans que ce fichier y
+     * soit pour rien (CI de #269, 8 novembre 2026). Ce fichier juge SES
+     * licences ; il ne voit plus que le monde tel qu'il était à son début.
+     */
+    await db.query("begin isolation level repeatable read");
     return await corps(db);
   } finally {
     await db.query("rollback");

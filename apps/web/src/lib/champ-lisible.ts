@@ -332,8 +332,13 @@ function libelleDuPayload(action: string, payload: Payload): MessageKey | null {
     if (vers === "partage") return "cab.journal.piece.vers_cabinet";
     if (vers === "personnel") return "cab.journal.piece.vers_mon_espace";
     if (vers === "entite") {
-      return payload["from"] === "partage" && payload["par_accord"] === true
-        ? "cab.journal.piece.rendue"
+      if (payload["from"] === "partage" && payload["par_accord"] === true) {
+        return "cab.journal.piece.rendue";
+      }
+      // Depuis l'espace personnel, c'est le choix « La société » du dépôt :
+      // la pièce n'en « revient » pas, elle y est rangée (recette du 7 novembre 2026).
+      return payload["from"] === "personnel"
+        ? "cab.journal.piece.rangee_societe"
         : "cab.journal.piece.vers_societe";
     }
     return null;
@@ -363,6 +368,9 @@ export function libelleDeLAction(action: string, t: T, payload?: unknown): strin
   if (precis) return t(precis);
   const ACTIONS: Record<string, MessageKey> = {
     "piece.captured": "cab.notif.kind.piece.captured",
+    // Recette du 7 novembre 2026 : ces deux faits s'affichaient « Événement du dossier. »
+    "piece.recue": "cab.journal.piece.recue",
+    "lecture.consommee": "cab.journal.lecture.consommee",
     "piece.read": "cab.notif.kind.piece.read",
     "piece.partagee": "cab.notif.kind.piece.partagee",
     "piece.validee": "cab.notif.kind.piece.validee",

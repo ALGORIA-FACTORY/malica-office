@@ -111,6 +111,9 @@ describe("codes et actions", () => {
     expect(libelleDeLAction("extract.v1", t as never)).toBe("cab.audit.extract");
     expect(libelleDeLAction("ecriture.booked", t as never)).toBe("cab.notif.kind.ecriture.booked");
     expect(libelleDeLAction("immo.prorata", t as never)).toBe("cab.audit.autre");
+    // Le dépôt et la lecture décomptée se disent : plus d'« Événement du dossier ».
+    expect(libelleDeLAction("piece.recue", t as never)).toBe("cab.journal.piece.recue");
+    expect(libelleDeLAction("lecture.consommee", t as never)).toBe("cab.journal.lecture.consommee");
   });
 
   it("dit où la pièce est allée, et qui l'a précisée, quand le payload le porte", () => {
@@ -122,6 +125,9 @@ describe("codes et actions", () => {
       "cab.journal.piece.rendue",
     );
     expect(lit("piece.vis_changed", { from: "personnel", to: "entite" })).toBe(
+      "cab.journal.piece.rangee_societe",
+    );
+    expect(lit("piece.vis_changed", { from: "partage", to: "entite" })).toBe(
       "cab.journal.piece.vers_societe",
     );
     expect(lit("piece.vis_changed", { from: "entite", to: "personnel" })).toBe(

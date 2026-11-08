@@ -62,6 +62,13 @@ export const getRouter = () => {
          */
         staleTime: 30_000,
         /*
+         * Trente minutes en mémoire (cinq par défaut) : une société quittée
+         * puis rouverte s'affiche aussitôt, et ce que le cache de l'appareil
+         * a remis à l'ouverture (`lib/cache-de-l-appareil`) ne s'efface pas
+         * avant que l'écran qui le montre soit ouvert.
+         */
+        gcTime: 30 * 60 * 1000,
+        /*
          * Hors ligne, on sert ce qu'on a et on n'annonce pas une panne :
          * la requête part si le réseau est là, et attend sinon.
          */
