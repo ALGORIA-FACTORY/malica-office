@@ -204,7 +204,7 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
 ];
 
 /** Les noms, pour le journal et l'épreuve. */
-export const NOMS_DES_OUTILS = DEFINITIONS.map((d) => d.name);
+const NOMS_DES_OUTILS = DEFINITIONS.map((d) => d.name);
 
 /**
  * Les méthodes de dépôt que les outils appellent — toutes des LECTURES.
@@ -239,12 +239,10 @@ export interface ContexteDesOutils {
   idProposition: () => string;
 }
 
-export type SourceSansIndex = SourceConnue;
-
 export type ResultatDOutil =
   | {
       ok: true;
-      sources: SourceSansIndex[];
+      sources: SourceConnue[];
       propositions?: PropositionDAction[];
       /** Le conseil cité : ce qu'il a coûté, et la mention « En vigueur au » composée par le code. */
       coutUsd?: number | null;
@@ -295,7 +293,7 @@ function aTraiter(p: PieceDeLaListe): boolean {
   return p.status === "lue" && !p.transmiseLe;
 }
 
-function sourceDeLaPiece(p: PieceDeLaListe): SourceSansIndex {
+function sourceDeLaPiece(p: PieceDeLaListe): SourceConnue {
   const type = p.typeDeDocument ?? p.kind ?? "pièce";
   const titre = `${p.emetteur ?? "Émetteur non lu"} — ${type}${p.dateDocument ? ` du ${p.dateDocument}` : ""}`;
   const lignes = [
@@ -348,7 +346,7 @@ async function piecesChercher(ctx: ContexteDesOutils, brut: unknown): Promise<Re
   ]
     .filter(Boolean)
     .join(", ");
-  const bilan: SourceSansIndex = {
+  const bilan: SourceConnue = {
     cle: `malica:liste:pieces:${critere || "toutes"}`,
     genre: "liste",
     titre: `Recherche de pièces${critere ? ` (${critere})` : ""}`,
@@ -631,7 +629,7 @@ interface Ecriture {
   lignes: Array<{ compte: string; libelle: string; debit: string; credit: string }>;
 }
 
-function sourceDeLEcriture(e: Ecriture): SourceSansIndex {
+function sourceDeLEcriture(e: Ecriture): SourceConnue {
   return {
     cle: `malica:ecriture:${e.id}`,
     genre: "ecriture",
@@ -777,7 +775,7 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
   }
   // Chaque texte cité devient une source citable, avec les extraits que le
   // conseil cité a relus : l'article ET sa version (la règle du temps).
-  const parTexte = new Map<string, SourceSansIndex>();
+  const parTexte = new Map<string, SourceConnue>();
   for (const a of r.affirmations) {
     for (const c of a.citations) {
       const cle = `malica:article:${c.corpus}:${c.code ?? c.numero ?? "?"}@${c.validFrom ?? "?"}`;
@@ -797,7 +795,7 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
       });
     }
   }
-  const synthese: SourceSansIndex = {
+  const synthese: SourceConnue = {
     cle: `malica:conseil:${plat(e.data.question).slice(0, 60)}@${r.enVigueurAu}`,
     genre: "article",
     titre: `Conseil cité — droit en vigueur au ${r.enVigueurAu}`,

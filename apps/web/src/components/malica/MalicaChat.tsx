@@ -17,20 +17,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
+import { ReponseDeMalica, useConversationMalica } from "@/components/malica/conversation-malica";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
-
-interface Turn {
-  role: "user" | "assistant";
-  content: string;
-  reasoning?: string | null;
-  meta?: string;
-  /** Ce que le cabinet juge. Absent sur les tours repris d'un fil ancien. */
-  messageId?: string | null;
-  /** Ce que les contrôles ont laissé passer, et ce qu'ils ont signalé. */
-  signale?: string[];
-}
 
 export function MalicaChat({
   tenantId,
@@ -58,10 +48,9 @@ export function MalicaChat({
   const { t, locale } = useI18n();
   const qc = useQueryClient();
 
-  const [turns, setTurns] = useState<Turn[]>([]);
+  const conversation = useConversationMalica(tenantId);
+  const { tours: turns, filId, enCours } = conversation;
   const [draft, setDraft] = useState("");
-  const [open, setOpen] = useState<number | null>(null);
-  const [filId, setFilId] = useState<string | null>(null);
   const [vue, setVue] = useState<"fil" | "liste">("fil");
   // Deux gestes pour effacer : le premier demande, le second exécute. Un fil
   // supprimé ne se retrouve pas, et un seul tap n'est pas une décision.
@@ -80,53 +69,10 @@ export function MalicaChat({
 
   const titreCourant = fils.data?.find((f) => f.id === filId)?.titre ?? "";
 
-  const mutation = useMutation({
-    mutationFn: async (question: string) => {
-      if (!tenantId) throw new Error(t("malica.chat.noTenant"));
-      return office().malica.demander({
-        tenantId,
-        pieceId: pieceId ?? null,
-        question,
-        locale,
-        mode: "reasoner",
-        conversationId: filId,
-      });
-    },
-    onSuccess: (res) => {
-      setFilId(res.conversationId);
-      setTurns((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: res.answer,
-          reasoning: res.reasoning,
-          meta: `${res.model} · ${(res.latencyMs / 1000).toFixed(1)} s · ${res.tokensIn ?? 0}/${res.tokensOut ?? 0} jetons`,
-          messageId: res.messageId,
-          // Seuls les « signaler » remontent : ils portent sur NOTRE corpus,
-          // pas sur la réponse. Le client n'a rien à en faire ; le cabinet, si.
-          signale: res.controles.filter((c) => c.suite === "signaler").map((c) => c.detail),
-        },
-      ]);
-      void qc.invalidateQueries({ queryKey: ["malica-fils", tenantId] });
-      requestAnimationFrame(() => listRef.current?.scrollTo({ top: 1e6 }));
-    },
-  });
-
   const reprise = useMutation({
     mutationFn: (id: string) => office().conversations.ouvrir(id),
     onSuccess: (messages, id) => {
-      setFilId(id);
-      setTurns(
-        messages.map((m) => {
-          // `meta` reste ABSENT quand le message n'en porte pas : le poser à
-          // `undefined` n'est pas la même chose, et le typage strict le refuse.
-          const tour: Turn = { role: m.role, content: m.contenu, reasoning: m.raisonnement };
-          if (m.model && m.latencyMs !== null) {
-            tour.meta = `${m.model} · ${(m.latencyMs / 1000).toFixed(1)} s · ${m.tokensIn ?? 0}/${m.tokensOut ?? 0} jetons`;
-          }
-          return tour;
-        }),
-      );
+      conversation.reprendre(id, messages);
       setVue("fil");
       requestAnimationFrame(() => listRef.current?.scrollTo({ top: 1e6 }));
     },
@@ -145,21 +91,18 @@ export function MalicaChat({
     mutationFn: (id: string) => office().conversations.supprimer(id),
     onSuccess: (_r, id) => {
       setAEffacer(null);
-      if (id === filId) {
-        setFilId(null);
-        setTurns([]);
-      }
+      if (id === filId) conversation.nouveau();
       void qc.invalidateQueries({ queryKey: ["malica-fils", tenantId] });
     },
   });
 
   // Changer de dossier change de fils : garder l'ancien à l'écran montrerait
   // les questions d'une société pendant qu'on en regarde une autre.
+  const { nouveau } = conversation;
   useEffect(() => {
-    setFilId(null);
-    setTurns([]);
+    nouveau();
     setVue("fil");
-  }, [tenantId]);
+  }, [tenantId, nouveau]);
 
   function marquer(messageId: string, verdict: "juste" | "faux") {
     if (!tenantId) return;
@@ -169,16 +112,20 @@ export function MalicaChat({
 
   function submit() {
     const q = draft.trim();
-    if (!q || mutation.isPending) return;
-    setTurns((prev) => [...prev, { role: "user", content: q }]);
+    if (!q || enCours) return;
     setDraft("");
-    mutation.mutate(q);
+    poser(q);
+  }
+
+  function poser(q: string) {
+    void conversation.envoyer(q, pieceId ? [pieceId] : []).then(() => {
+      void qc.invalidateQueries({ queryKey: ["malica-fils", tenantId] });
+      requestAnimationFrame(() => listRef.current?.scrollTo({ top: 1e6 }));
+    });
   }
 
   function nouveauFil() {
-    setFilId(null);
-    setTurns([]);
-    setOpen(null);
+    conversation.nouveau();
     setVue("fil");
   }
 
@@ -355,36 +302,22 @@ export function MalicaChat({
             <p className="mb-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
               {turn.role === "user" ? t("malica.chat.you") : t("malica.chat.her")}
             </p>
-            <p className="whitespace-pre-wrap">{turn.content}</p>
-            {technique && turn.reasoning ? (
-              <button
-                type="button"
-                onClick={() => setOpen(open === i ? null : i)}
-                className="mt-2 text-[11px] underline decoration-dotted underline-offset-4 text-muted-foreground"
-              >
-                {open === i ? t("malica.chat.hideThinking") : t("malica.chat.showThinking")}
-              </button>
-            ) : null}
-            {technique && open === i && turn.reasoning ? (
-              <p className="mt-2 whitespace-pre-wrap border-s-2 border-border ps-3 font-mono text-[11px] text-muted-foreground">
-                {turn.reasoning}
-              </p>
-            ) : null}
-            {technique && turn.signale && turn.signale.length > 0 ? (
-              <ul className="mt-2 border-s-2 border-signal-warn ps-3 text-[11px] text-muted-foreground">
-                {turn.signale.map((d, k) => (
-                  <li key={k}>{d}</li>
-                ))}
-              </ul>
-            ) : null}
+            {turn.role === "user" ? (
+              <p className="whitespace-pre-wrap">{turn.contenu}</p>
+            ) : (
+              <ReponseDeMalica
+                tour={turn}
+                tenantId={tenantId ?? ""}
+                espace="cabinet"
+                surSuggestion={poser}
+              />
+            )}
             {/*
-             * Le pouce du comptable.
-             *
-             * C'est lui qui construit la banque de cas : en quelques semaines
-             * d'usage réel, on a cinquante cas — les vrais, ceux qu'on pose —
-             * sans avoir écrit une question à froid.
+             * Le pouce du comptable. C'est lui qui construit la banque de cas :
+             * en quelques semaines d'usage réel, on a les vrais cas — ceux
+             * qu'on pose — sans avoir écrit une question à froid.
              */}
-            {technique && turn.role === "assistant" && turn.messageId ? (
+            {technique && turn.role === "assistant" && turn.messageId && !turn.enCours ? (
               <div className="mt-2.5 flex items-center gap-2 border-t border-border pt-2">
                 {juges[turn.messageId] ? (
                   <span className="text-[11px] text-muted-foreground">
@@ -420,14 +353,6 @@ export function MalicaChat({
             ) : null}
           </div>
         ))}
-        {mutation.isPending ? (
-          <p className="font-mono text-[11px] text-muted-foreground">{t("malica.chat.thinking")}</p>
-        ) : null}
-        {mutation.isError ? (
-          <p className="border border-border px-3 py-2 text-[12px]">
-            {mutation.error instanceof Error ? mutation.error.message : t("malica.chat.error")}
-          </p>
-        ) : null}
       </div>
 
       <div className="flex items-center gap-2 border border-border px-2 py-1.5">
@@ -447,7 +372,7 @@ export function MalicaChat({
         <button
           type="button"
           onClick={submit}
-          disabled={mutation.isPending || !draft.trim()}
+          disabled={enCours || !draft.trim()}
           className="min-h-[32px] border border-border px-2 text-[12px] disabled:opacity-40"
         >
           {t("malica.chat.send")}

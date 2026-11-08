@@ -11,10 +11,8 @@
 --
 -- ================================================================== CE QUI EST POSÉ
 --
--- 1. Les tarifs de Claude (R8). Mêmes lignes, mêmes valeurs que la branche
---    `claude/chaine-claude-deepseek` (relevées le 8 novembre 2026 sur la
---    documentation officielle) : `on conflict do nothing`, et la même liste de
---    rôles. Les deux migrations se jouent dans n'importe quel ordre.
+-- 1. Les tarifs de Claude (R8) : ceux de la chaîne de désignation
+--    (20261202090000), lus et non redéclarés.
 -- 2. `plateforme.conseil_consignes` : le PROMPT SYSTÈME du conseil cité. Il
 --    vit en base, versionné, en ajout seul (R10) : la tour en publie une
 --    version nouvelle, datée et motivée ; la dernière vaut. Aucune consigne
@@ -38,29 +36,10 @@
 begin;
 
 -- --- 1. Les tarifs de Claude ---------------------------------------------------------------------
-
-insert into agents.model_pricing
-  (provider, model, role, price_in_per_mtok, price_out_per_mtok, currency, sovereign, effective_from)
-values
-  ('anthropic', 'claude-sonnet-5-5', 'chat', 2.00, 10.00, 'USD', false, date '2026-11-01'),
-  ('anthropic', 'claude-haiku-5-5',  'chat', 0.10,  0.50, 'USD', false, date '2026-11-01')
-on conflict do nothing;
-
-alter table agents.model_pricing
-  drop constraint if exists model_pricing_role_check;
-alter table agents.model_pricing
-  add constraint model_pricing_role_check
-  check (role in ('reasoner', 'chat', 'vision', 'cache', 'cache_ecriture', 'embedding', 'recette',
-                  'generateur'));
-
-insert into agents.model_pricing
-  (provider, model, role, price_in_per_mtok, price_out_per_mtok, currency, sovereign, effective_from)
-values
-  ('anthropic', 'claude-sonnet-5-5', 'cache',          0.10,  0, 'USD', false, date '2026-11-01'),
-  ('anthropic', 'claude-sonnet-5-5', 'cache_ecriture', 2.50,  0, 'USD', false, date '2026-11-01'),
-  ('anthropic', 'claude-haiku-5-5',  'cache',          0.01,  0, 'USD', false, date '2026-11-01'),
-  ('anthropic', 'claude-haiku-5-5',  'cache_ecriture', 0.125, 0, 'USD', false, date '2026-11-01')
-on conflict do nothing;
+--
+-- Posés par 20261202090000_la_designation_a_un_principal_et_un_repli (chat, cache,
+-- cache_ecriture ; contrainte `model_pricing_role_check`). Le conseil cité les lit,
+-- il ne les redéclare pas (nettoyage du 8 novembre 2026 : zéro doublon).
 
 -- --- 2. La consigne, versionnée ------------------------------------------------------------------
 

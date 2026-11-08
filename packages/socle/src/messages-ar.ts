@@ -1055,10 +1055,7 @@ export const ar: Dict = {
   "malica.chat.you": "أنت",
   "malica.chat.her": "ماليكا",
   "malica.chat.thinking": "ماليكا تفكّر…",
-  "malica.chat.showThinking": "عرض الاستدلال",
-  "malica.chat.hideThinking": "إخفاء الاستدلال",
   "malica.chat.error": "لم تستطع ماليكا الإجابة.",
-  "malica.chat.noTenant": "اختر مؤسسة قبل سؤال ماليكا.",
   "malica.panneau.ouvrir": "تحدّث إلى ماليكا",
   "malica.panneau.fermer": "إغلاق محادثة ماليكا",
   "cab.kpi.review": "للمعالجة",
@@ -4629,7 +4626,6 @@ export const ar: Dict = {
   "pme.malica.suitePasEncore": "لا يمكن تقديم هذا الطلب من هذه الشاشة بعد",
   "pme.malica.suiteSansCabinet": "طلب رأي مكتب محاسبة",
   "pme.malica.suiteSansCabinetDetail": "لا يوجد مكتب موكَّل على هذا الملف",
-  "pme.malica.retenue": "أُرسلت للمراجعة — هذا الرأي له أثر على ملفكم",
   "pme.malica.pied":
     "أستشهد بالفصل وبنسخته السارية في التاريخ المعني. لا أحسم بدلًا من خبيركم المحاسب فيما له أثر على ملفكم.",
   // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).

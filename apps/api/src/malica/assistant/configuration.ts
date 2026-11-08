@@ -12,8 +12,8 @@
 
 import type { TarifDeModele } from "../conseil/cite.ts";
 
-export type Effort = "low" | "medium" | "high";
-export type Reflexion = "disabled" | "between_tools" | "adaptive";
+type Effort = "low" | "medium" | "high";
+type Reflexion = "disabled" | "between_tools" | "adaptive";
 
 export interface ReglageDeLAssistant {
   modele_courant: string;

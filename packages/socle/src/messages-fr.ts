@@ -1115,10 +1115,7 @@ export const fr = {
   "malica.chat.you": "Vous",
   "malica.chat.her": "Malica",
   "malica.chat.thinking": "Malica réfléchit…",
-  "malica.chat.showThinking": "Voir le raisonnement",
-  "malica.chat.hideThinking": "Masquer le raisonnement",
   "malica.chat.error": "Malica n'a pas pu répondre.",
-  "malica.chat.noTenant": "Sélectionnez une organisation avant d'interroger Malica.",
   "malica.panneau.ouvrir": "Parler à Malica",
   "malica.panneau.fermer": "Fermer le fil de Malica",
   "cab.kpi.review": "À traiter",
@@ -5019,7 +5016,6 @@ export const fr = {
   "pme.malica.suitePasEncore": "La demande n'est pas encore ouverte depuis cet écran",
   "pme.malica.suiteSansCabinet": "Demander l'avis d'un cabinet",
   "pme.malica.suiteSansCabinetDetail": "Aucun cabinet n'est mandaté sur ce dossier",
-  "pme.malica.retenue": "Envoyée en relecture — cet avis engage votre dossier",
   "pme.malica.pied":
     "Je cite l'article et sa version en vigueur à la date. Je ne tranche pas à la place de votre expert-comptable sur ce qui engage votre dossier.",
   // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).

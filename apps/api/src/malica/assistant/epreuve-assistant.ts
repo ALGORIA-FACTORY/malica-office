@@ -108,7 +108,7 @@ const REFUS =
  * « En vigueur au … », composée par le code du conseil cité, n'est pas une
  * phrase du modèle : ses lignes (en italique) sont exclues.
  */
-export function chiffresSansSource(fin: FinDeLaReponse, question: string): string[] {
+function chiffresSansSource(fin: FinDeLaReponse, question: string): string[] {
   const portes = new Set([
     ...chiffresDe(question),
     ...fin.sources.flatMap((s) => chiffresDe(`${s.titre}\n${s.extrait ?? ""}`)),

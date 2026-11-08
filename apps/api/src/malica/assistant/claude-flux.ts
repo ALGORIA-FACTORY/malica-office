@@ -27,7 +27,7 @@ const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 /** La version de l'API Messages : un en-tête stable, documenté par le fournisseur. */
 const ANTHROPIC_VERSION = "2023-06-01";
 
-export class ErreurDeFlux extends Error {
+class ErreurDeFlux extends Error {
   readonly status: number;
   readonly retryable: boolean;
   constructor(message: string, status: number, retryable: boolean) {

@@ -1057,10 +1057,7 @@ export const en: Dict = {
   "malica.chat.you": "You",
   "malica.chat.her": "Malica",
   "malica.chat.thinking": "Malica is thinking…",
-  "malica.chat.showThinking": "Show reasoning",
-  "malica.chat.hideThinking": "Hide reasoning",
   "malica.chat.error": "Malica could not answer.",
-  "malica.chat.noTenant": "Select an organisation before asking Malica.",
   "malica.panneau.ouvrir": "Talk to Malica",
   "malica.panneau.fermer": "Close Malica’s thread",
   "cab.kpi.review": "To handle",
@@ -4817,7 +4814,6 @@ export const en: Dict = {
   "pme.malica.suitePasEncore": "This request cannot be made from this screen yet",
   "pme.malica.suiteSansCabinet": "Ask a firm for advice",
   "pme.malica.suiteSansCabinetDetail": "No firm is engaged on this file",
-  "pme.malica.retenue": "Sent for review — this advice has consequences for your file",
   "pme.malica.pied":
     "I cite the article and the version in force on the date. I do not decide in place of your accountant on what has consequences for your file.",
   // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).

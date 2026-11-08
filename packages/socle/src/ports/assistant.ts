@@ -103,3 +103,32 @@ export interface QuestionALAssistant {
   /** Les pièces jointes, DÉJÀ déposées et confiées à la lecture Malica (R2). */
   pieceIds: string[];
 }
+
+/**
+ * Découpe un tampon de flux SSE en événements de l'assistant. Rend les
+ * événements complets et ce qui reste à compléter par le morceau suivant —
+ * un octet peut arriver coupé n'importe où. Pur : l'écran l'appelle sur ce que
+ * le réseau lui donne.
+ */
+export function decouperLeFlux(tampon: string): {
+  evenements: EvenementDeLAssistant[];
+  reste: string;
+} {
+  const evenements: EvenementDeLAssistant[] = [];
+  const blocs = tampon.split(/\r?\n\r?\n/);
+  const reste = blocs.pop() ?? "";
+  for (const bloc of blocs) {
+    const donnees = bloc
+      .split(/\r?\n/)
+      .filter((l) => l.startsWith("data:"))
+      .map((l) => l.slice(5).trimStart())
+      .join("\n");
+    if (!donnees) continue;
+    try {
+      evenements.push(JSON.parse(donnees) as EvenementDeLAssistant);
+    } catch {
+      // Une ligne illisible ne casse pas la conversation.
+    }
+  }
+  return { evenements, reste };
+}

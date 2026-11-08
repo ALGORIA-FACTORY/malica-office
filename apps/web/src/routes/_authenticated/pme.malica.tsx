@@ -4,10 +4,15 @@ import { Fragment, useEffect, useRef, useState } from "react";
 
 import { useMonAcces } from "@/hooks/use-mon-acces";
 import portraitMalica from "@/assets/malica.webp";
+import {
+  ReponseDeMalica,
+  useConversationMalica,
+  useJointe,
+  type TourDeMalica,
+} from "@/components/malica/conversation-malica";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
-import type { SourceCitee } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/pme/malica")({
   head: () => ({
@@ -31,25 +36,6 @@ export const Route = createFileRoute("/_authenticated/pme/malica")({
 });
 
 /**
- * Un tour du fil, tel que CET écran l'affiche.
- *
- * `sources` et `retenue` ne descendent QUE d'une réponse fraîche
- * (`ReponseDeMalica`) : un fil repris par `conversations.ouvrir` rend des
- * `MessageDuFil`, qui ne portent ni l'un ni l'autre. Les deux sont donc
- * facultatifs — et déclarés `| undefined`, parce que
- * `exactOptionalPropertyTypes` est vrai et qu'un `sources?: SourceCitee[]`
- * refuse qu'on y pose `undefined`.
- */
-interface Tour {
-  role: "user" | "assistant";
-  contenu: string;
-  /** Les articles cités, pour les jetons `.srcs`. Absents sur un tour relu. */
-  sources?: SourceCitee[] | undefined;
-  /** Malica a remis sa réponse au cabinet : l'état `.et1` du dessin le dit. */
-  retenue?: boolean | undefined;
-}
-
-/**
  * Converser avec Malica — l'écran du dessin, et son câblage.
  *
  * ================================================================= POURQUOI
@@ -69,8 +55,10 @@ interface Tour {
  * Tous vérifiés au `contrat/rpc.json` avant d'être écrits (R2 — le dépôt est
  * un `Proxy`, une méthode inventée compile et ne casse que chez le dirigeant) :
  *
- *   `malica.demander`            — poser la question (API, pas /rpc : un appel
- *                                  de modèle dure plus que la transaction)
+ *   `malica.converser`           — poser la question, réponse EN FLUX (API,
+ *                                  pas /rpc ; voir `conversation-malica.tsx`)
+ *   `capture.register`           — déposer une pièce jointe, puis
+ *   `malica.demanderLaLecture`   — la confier à la lecture Malica (R2)
  *   `conversations.lister`       — ses fils
  *   `conversations.ouvrir`       — reprendre un fil
  *   `conversations.supprimer`    — l'effacer
@@ -132,9 +120,11 @@ function PmeMalica() {
   const pme = usePme();
   const qc = useQueryClient();
 
-  const [tours, setTours] = useState<Tour[]>([]);
+  const conversation = useConversationMalica(pme.tenantId);
+  const { tours, filId, enCours } = conversation;
+  const jointe = useJointe(pme.tenantId);
+  const fichier = useRef<HTMLInputElement>(null);
   const [brouillon, setBrouillon] = useState("");
-  const [filId, setFilId] = useState<string | null>(null);
   const [vue, setVue] = useState<"fil" | "liste">("fil");
   /*
    * Deux gestes pour effacer : les points ouvrent le panneau `.del`, le
@@ -180,37 +170,10 @@ function PmeMalica() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const question = useMutation({
-    mutationFn: async (q: string) =>
-      office().malica.demander({
-        tenantId: pme.tenantId,
-        pieceId: null,
-        question: q,
-        locale,
-        mode: "reasoner",
-        conversationId: filId,
-      }),
-    onSuccess: (res) => {
-      setFilId(res.conversationId);
-      setTours((prec) => [
-        ...prec,
-        {
-          role: "assistant",
-          contenu: res.answer,
-          sources: res.conseil?.sources,
-          retenue: res.retenue,
-        },
-      ]);
-      void qc.invalidateQueries({ queryKey: ["malica-fils", pme.tenantId] });
-      filerEnBas();
-    },
-  });
-
   const reprise = useMutation({
     mutationFn: (id: string) => office().conversations.ouvrir(id),
     onSuccess: (messages, id) => {
-      setFilId(id);
-      setTours(messages.map((m) => ({ role: m.role, contenu: m.contenu })));
+      conversation.reprendre(id, messages);
       setVue("fil");
       filerEnBas();
     },
@@ -220,10 +183,7 @@ function PmeMalica() {
     mutationFn: (id: string) => office().conversations.supprimer(id),
     onSuccess: (_r, id) => {
       setMenu(null);
-      if (id === filId) {
-        setFilId(null);
-        setTours([]);
-      }
+      if (id === filId) conversation.nouveau();
       void qc.invalidateQueries({ queryKey: ["malica-fils", pme.tenantId] });
     },
   });
@@ -232,25 +192,31 @@ function PmeMalica() {
    * Changer de dossier change de fils : garder l'ancien à l'écran montrerait
    * les questions d'une société pendant qu'on en regarde une autre.
    */
+  const { nouveau } = conversation;
+  const { vider } = jointe;
   useEffect(() => {
-    setFilId(null);
-    setTours([]);
+    nouveau();
+    vider();
     setVue("fil");
     setMenu(null);
-  }, [pme.tenantId]);
+  }, [pme.tenantId, nouveau, vider]);
 
   function envoyer() {
     const q = brouillon.trim();
-    if (!q || question.isPending) return;
-    setTours((prec) => [...prec, { role: "user", contenu: q }]);
+    if (!q || enCours) return;
     setBrouillon("");
-    question.mutate(q);
+    const pieces = jointe.jointes.map((j) => j.id);
+    jointe.vider();
+    void conversation.envoyer(q, pieces).then(() => {
+      void qc.invalidateQueries({ queryKey: ["malica-fils", pme.tenantId] });
+      filerEnBas();
+    });
     filerEnBas();
   }
 
   function nouveauFil() {
-    setFilId(null);
-    setTours([]);
+    conversation.nouveau();
+    jointe.vider();
     setVue("fil");
     requestAnimationFrame(() => champ.current?.focus());
   }
@@ -407,60 +373,21 @@ function PmeMalica() {
                       </div>
                     ) : null}
                     <div className="mal">
-                      {/*
-                       * Un `<p>` par paragraphe, parce que c'est ce que le
-                       * dessin peint : `.mal p+p` porte l'interligne entre
-                       * deux paragraphes. Une seule balise aurait aplati la
-                       * réponse du modèle en un bloc. Les retours simples
-                       * restent tenus par `white-space` dans la feuille.
-                       */}
-                      {paragraphes(tour.contenu).map((para, k) => (
-                        <p key={k}>{para}</p>
-                      ))}
-                      {tour.sources && tour.sources.length > 0 ? (
-                        <div className="srcs">
-                          {tour.sources.map((s, k) => (
-                            /*
-                             * Sans `href` : `SourceCitee` donne le corpus et
-                             * le numéro, aucune adresse. Le jeton cite, il
-                             * n'ouvre pas.
-                             */
-                            <a key={k}>
-                              <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                                <path d="M6 3h8l4 4v14H6z" />
-                                <path d="M14 3v4h4" />
-                              </svg>
-                              {s.corpus} <em>{s.numero || "—"}</em>
-                            </a>
-                          ))}
-                        </div>
-                      ) : null}
-                      {tour.retenue ? (
-                        <div className="et1">
-                          <i />
-                          {t("pme.malica.retenue")}
-                        </div>
-                      ) : null}
+                      <ReponseDeMalica
+                        tour={tour}
+                        tenantId={pme.tenantId}
+                        espace="pme"
+                        surSuggestion={(texte) => {
+                          void conversation.envoyer(texte).then(() => {
+                            void qc.invalidateQueries({ queryKey: ["malica-fils", pme.tenantId] });
+                            filerEnBas();
+                          });
+                        }}
+                      />
                     </div>
                   </Fragment>
                 ),
               )}
-
-              {question.isPending ? (
-                <div className="et1" role="status">
-                  <i />
-                  {t("malica.chat.thinking")}
-                </div>
-              ) : null}
-
-              {question.isError ? (
-                <div className="et1" role="alert">
-                  <i />
-                  {question.error instanceof Error
-                    ? question.error.message
-                    : t("malica.chat.error")}
-                </div>
-              ) : null}
             </div>
 
             {/*
@@ -504,6 +431,32 @@ function PmeMalica() {
              * écoute à la main. La feuille ne vise que `.comp`, elle ne
              * regarde pas l'élément.
              */}
+            {/*
+             * Les pièces jointes : déposées dans le dossier et confiées à la
+             * lecture Malica (R2) avant de partir avec la question. Le modèle
+             * n'en voit jamais l'image, seulement ce que la lecture a relevé.
+             */}
+            {jointe.jointes.length > 0 || jointe.deposer.isPending ? (
+              <div className="srcs">
+                {jointe.jointes.map((j) => (
+                  <button
+                    key={j.id}
+                    type="button"
+                    onClick={() => jointe.retirer(j.id)}
+                    aria-label={`${t("pme.assistant.jointe.retirer")} — ${j.nom}`}
+                  >
+                    {t("pme.assistant.jointe.prete")} · {j.nom} ×
+                  </button>
+                ))}
+                {jointe.deposer.isPending ? (
+                  <span role="status">{t("pme.assistant.jointe.envoi")}</span>
+                ) : null}
+                {jointe.jointes.length > 0 ? (
+                  <span>{t("pme.assistant.jointe.lecture")}</span>
+                ) : null}
+              </div>
+            ) : null}
+
             <form
               className="comp"
               onSubmit={(e) => {
@@ -511,6 +464,29 @@ function PmeMalica() {
                 envoyer();
               }}
             >
+              <input
+                ref={fichier}
+                type="file"
+                accept="image/*,application/pdf"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) jointe.deposer.mutate(f);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                className="go"
+                aria-label={t("pme.assistant.joindre")}
+                title={t("pme.assistant.joindre")}
+                disabled={jointe.deposer.isPending || enCours}
+                onClick={() => fichier.current?.click()}
+              >
+                <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                  <path d="M20 11.5 12.5 19a5 5 0 0 1-7-7L13 4.5a3.3 3.3 0 0 1 4.7 4.7L10.2 16.7a1.7 1.7 0 0 1-2.4-2.4L14.5 7.6" />
+                </svg>
+              </button>
               <input
                 ref={champ}
                 value={brouillon}
@@ -521,7 +497,7 @@ function PmeMalica() {
               <button
                 type="submit"
                 className="go"
-                disabled={question.isPending || !brouillon.trim()}
+                disabled={enCours || !brouillon.trim()}
                 aria-label={t("malica.chat.send")}
               >
                 <svg viewBox="0 0 24 24" className="g" aria-hidden>
@@ -546,29 +522,13 @@ function PmeMalica() {
 }
 
 /**
- * Le texte d'une réponse, coupé en paragraphes.
- *
- * Coupé sur la LIGNE VIDE, qui est ce qu'un modèle écrit pour séparer deux
- * paragraphes. Les retours simples ne coupent pas : ils appartiennent à une
- * énumération, et la feuille les tient (`white-space`). Un texte sans ligne
- * vide rend un seul paragraphe, et un texte vide n'en rend aucun plutôt qu'une
- * bulle vide.
- */
-function paragraphes(texte: string): string[] {
-  return texte
-    .split(/\n{2,}/)
-    .map((x) => x.trim())
-    .filter((x) => x.length > 0);
-}
-
-/**
  * L'indice du premier tour de Malica — celui qui porte sa signature.
  *
  * Calculé, et non mémorisé dans le tour : un tour est ce que le serveur a
  * rendu, pas une place dans une liste. Si le premier tour de Malica est
  * effacé par une reprise de fil, la signature suit sans qu'on y pense.
  */
-function premiereDeMalica(tours: Tour[]): number {
+function premiereDeMalica(tours: TourDeMalica[]): number {
   return tours.findIndex((x) => x.role === "assistant");
 }
 

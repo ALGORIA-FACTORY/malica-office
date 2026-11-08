@@ -56,9 +56,9 @@ import { GardeDesChiffres, type SourceConnue } from "./garde.ts";
 import { DEFINITIONS, executerOutil, type ContexteDesOutils } from "./outils.ts";
 
 /** Le nom de l'organe au journal des agents. */
-export const AGENT_ASSISTANT = "malica.assistant";
+const AGENT_ASSISTANT = "malica.assistant";
 
-export interface ReponseDeRepli {
+interface ReponseDeRepli {
   answer: string;
   model: string;
   conversationId: string;
@@ -100,7 +100,7 @@ export interface DossierVerifie {
   };
 }
 
-export function aujourdhuiATunis(maintenant: Date = new Date()): string {
+function aujourdhuiATunis(maintenant: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Tunis",
     year: "numeric",
@@ -157,7 +157,7 @@ const SUITES: ReadonlyArray<{ cle: MessageKey; outil: string }> = [
  * Les suggestions de suite : déterministes, sans appel ni chiffre — ce que
  * Malica n'a pas encore regardé dans ce tour, dans la langue de la personne.
  */
-export function suggestionsDeSuite(outils: readonly string[], locale: string): SuggestionDeSuite[] {
+function suggestionsDeSuite(outils: readonly string[], locale: string): SuggestionDeSuite[] {
   return SUITES.filter((s) => !outils.includes(s.outil))
     .slice(0, 3)
     .map((s) => ({ texte: message(locale, s.cle) }));
@@ -258,7 +258,7 @@ class PanneAvantLePremierMot extends Error {
  * La conversation, de la question à la fin. `emettre` reçoit chaque
  * événement au fil de l'eau ; la fin est aussi rendue.
  */
-export async function converser(
+async function converser(
   api: AppelApi,
   dossier: DossierVerifie,
   q: QuestionPosee,
