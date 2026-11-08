@@ -14,7 +14,8 @@
 # Les clés n'existent que dans GitHub : la mesure tourne ici, à la poussée de
 # sa branche seulement. Plafond de dépense par passage : `--plafond-dollars`
 # (estimé avant le premier appel, tenu pendant). Une poussée dont le dernier
-# commit porte « [sans banc] » ne relance pas la mesure.
+# commit porte « [sans banc] » ne relance pas la mesure ; « [sans repli] » ne
+# remesure pas DeepSeek.
 #
 # Les noms des modèles sont des paramètres de la mesure (R8 : leur prix se lit
 # dans `agents.model_pricing`) ; ils ne sont écrits dans aucun code.
@@ -59,6 +60,7 @@ jobs:
       SECOND_AVIS: anthropic:claude-sonnet-5-5
       REPLI: deepseek:deepseek-chat
       PLAFOND_DOLLARS: "45"
+      SANS_REPLI: ${{ contains(github.event.head_commit.message, '[sans repli]') }}
 
     steps:
       - name: Les clés
@@ -129,7 +131,8 @@ jobs:
         run: |
           mkdir -p sortie/releves
           repli=""
-          [ -n "$DEEPSEEK_API_KEY" ] && repli="--repli $REPLI"
+          # « [sans repli] » dans le message du commit : DeepSeek déjà mesuré, on ne le repaie pas.
+          [ -n "$DEEPSEEK_API_KEY" ] && [ "$SANS_REPLI" != "true" ] && repli="--repli $REPLI"
           set +e
           node --experimental-strip-types --no-warnings \
             apps/api/tests/real/banc-designation.ts \

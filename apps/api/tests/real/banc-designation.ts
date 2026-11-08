@@ -614,10 +614,14 @@ async function principal(): Promise<void> {
     const rR = resume(parRepli);
     const rT = resume(surProuvees);
 
+    // Un désignateur dont aucun appel n'a abouti n'est pas mesuré : ses pannes ne sont pas un résultat.
+    const nonMesure = (r: ReturnType<typeof resume>) =>
+      r.appels > 0 && r.reussis === 0 ? " — NON MESURÉ (toutes les pannes)" : "";
     const final = moteurProuvees + rP.gagnees + rS.gagnees;
     const coutFinal = rP.cout + rS.cout;
     const appelsIa = rP.reussis + rP.pannes + rS.reussis + rS.pannes;
-    const evites = total - appelsIa;
+    // Les pièces qui n'ont appelé AUCUN modèle (prouvées par le moteur, ou sans grille).
+    const evites = total - nonProuvees.length;
     const ligne = (
       nomL: string,
       prouveesN: number,
@@ -640,7 +644,7 @@ async function principal(): Promise<void> {
       "|---|--:|--:|--:|--:|--:|--:|",
       ligne("Moteur seul", moteurProuvees, fauxDuMoteur, 0, 0, sMoyMoteur),
       ligne(
-        `Moteur + ${principalD.modele}`,
+        `Moteur + ${principalD.modele}${nonMesure(rP)}`,
         moteurProuvees + rP.gagnees,
         fauxDuMoteur + rP.faux,
         rP.reussis + rP.pannes,
@@ -650,7 +654,7 @@ async function principal(): Promise<void> {
       ...(repliD
         ? [
             ligne(
-              `Moteur + ${repliD.modele} (repli)`,
+              `Moteur + ${repliD.modele} (repli)${nonMesure(rR)}`,
               moteurProuvees + rR.gagnees,
               fauxDuMoteur + rR.faux,
               rR.reussis + rR.pannes,
@@ -662,7 +666,7 @@ async function principal(): Promise<void> {
       ...(secondD
         ? [
             ligne(
-              `Moteur + ${principalD.modele} + ${secondD.modele} (second avis)`,
+              `Moteur + ${principalD.modele} + ${secondD.modele} (second avis)${nonMesure(rS)}`,
               final,
               fauxDuMoteur + rP.faux + rS.faux,
               appelsIa,
