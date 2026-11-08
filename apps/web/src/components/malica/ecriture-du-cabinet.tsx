@@ -601,15 +601,13 @@ export function EcritureDuCabinet({
                             {montant(origines[i]!.taux, locale)}
                           </span>
                         ) : null}
-                        {prise ? null : (
-                          <button
-                            type="button"
-                            onClick={() => setModifier(true)}
-                            className="min-h-[36px] font-semibold underline-offset-4 hover:underline"
-                          >
-                            {t("cab.ecriture.changer_compte")}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => setModifier(true)}
+                          className="min-h-[36px] font-semibold underline-offset-4 hover:underline"
+                        >
+                          {t("cab.ecriture.changer_compte")}
+                        </button>
                       </div>
                     ) : null}
                   </li>
@@ -623,6 +621,14 @@ export function EcritureDuCabinet({
                   {montant(controle.totalDebit, locale)}
                 </span>
               </p>
+            ) : null}
+            {controle ? (
+              <AffichageSignale
+                pieceId={pieceId}
+                ecran="comptabilite"
+                source={depart.depart}
+                valeurs={{ total_debit: controle.totalDebit, total_credit: controle.totalCredit }}
+              />
             ) : null}
             {tampon ? (
               <div className="absolute inset-0 flex items-center justify-center bg-background/70">
@@ -897,7 +903,7 @@ export function EcritureDuCabinet({
         >
           {t("cab.ecriture.retourner")}
         </button>
-        {resume && !prise ? (
+        {resume ? (
           <button
             type="button"
             onClick={() => setModifier(true)}

@@ -371,12 +371,12 @@ function CabinetEcheances() {
                     <strong className="num font-semibold">{dateEnChiffres(date, locale)}</strong>
                     <span
                       className={
-                        liste[0]!.status === "en_retard"
+                        urgenteDe(liste).status === "en_retard"
                           ? "text-signal-stop"
                           : "text-muted-foreground"
                       }
                     >
-                      {compteDe(liste[0]!)}
+                      {compteDe(urgenteDe(liste))}
                     </span>
                   </h3>
                   <ul>
@@ -581,6 +581,15 @@ function CabinetEcheances() {
 }
 
 /** La raison pour laquelle rien n'a été dérivé, dans la langue de la personne. */
+/** L'échéance qui dit l'urgence d'une date : en retard d'abord, faite en dernier. */
+function urgenteDe<T extends { status: string }>(liste: readonly T[]): T {
+  return (
+    liste.find((e) => e.status === "en_retard") ??
+    liste.find((e) => e.status !== "fait") ??
+    liste[0]!
+  );
+}
+
 function libelleDeLaRaison(raison: string | null, t: (k: MessageKey) => string): string {
   const cle = raison ? RAISONS[raison] : undefined;
   return cle ? t(cle) : "";
