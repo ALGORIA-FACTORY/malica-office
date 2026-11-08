@@ -211,7 +211,12 @@ export interface InstanceLue {
 export interface ChampLu {
   readonly valeur: string | null;
   readonly refs: readonly RefDeJeton[];
-  readonly statut: "prouve" | "conforme" | "deduit" | "signale" | "absent";
+  /**
+   * « lu » n'est jamais rendu par le moteur : l'adaptateur de l'API le pose sur une valeur
+   * signalée d'un champ que la tour affiche comme sûr (`afficherLesValeursSures`) — lue,
+   * non prouvée par calcul. Jamais un montant.
+   */
+  readonly statut: "prouve" | "conforme" | "deduit" | "signale" | "lu" | "absent";
   readonly instances?: readonly InstanceLue[];
 }
 

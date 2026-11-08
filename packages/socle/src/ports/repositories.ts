@@ -1141,7 +1141,8 @@ export interface ChampObserve {
   role: CodeLibelle | null;
   /** La famille d'experts qui lit ce champ. */
   expert: CodeLibelle | null;
-  statut: "prouve" | "conforme" | "signale" | "absent" | "deduit" | "coupe";
+  /** `lu` : lu sans preuve, affiché sûr par réglage de la tour — « lu, non prouvé par calcul ». */
+  statut: "prouve" | "conforme" | "signale" | "lu" | "absent" | "deduit" | "coupe";
   /** La valeur lue, telle que le moteur l'a inscrite ; nulle sans citation (R2). */
   valeur: string | null;
   /** La n-ième ligne d'un tableau, à partir de 1 ; nul hors tableau. */

@@ -33,6 +33,8 @@ const TON_DU_STATUT: Record<ChampObserve["statut"], Tone> = {
   prouve: "ok",
   conforme: "neutral",
   signale: "warn",
+  // Lu sans preuve, affiché sûr (décision du 8 novembre 2026) : la marque le dit en toutes lettres.
+  lu: "ok",
   absent: "neutral",
   deduit: "info",
   coupe: "info",

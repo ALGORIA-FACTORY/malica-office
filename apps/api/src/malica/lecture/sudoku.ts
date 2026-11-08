@@ -255,6 +255,12 @@ export interface ContexteDuSudoku {
    * (`ref.lecture_sans_ia`). Absent ou vide : la porte ne s'ouvre jamais.
    */
   readonly exigencesSansIa?: readonly ExigenceSansIa[];
+  /**
+   * Les champs dont une valeur SIGNALÉE s'affiche comme sûre, au statut `lu` — « lu, non
+   * prouvé par calcul » (décision du dirigeant du 8 novembre 2026, réglée par la tour :
+   * `app.champs_affiches_surs`). Absent ou vide : rien ne change.
+   */
+  readonly champsSurs?: readonly string[];
 }
 
 /** Une exigence de la lecture sans IA, telle que le pack la porte. */
@@ -312,6 +318,7 @@ export async function lireLeContexteDuSudoku(
     formes,
     regles,
     sansIa,
+    surs,
   ] = await Promise.all([
     // Chaque champ avec la famille d'experts de son concept, et sa parcelle : l'anneau 3
     // lit les champs que nulle preuve ne lit, par leur famille (`ref.concepts.expert`).
@@ -411,6 +418,7 @@ export async function lireLeContexteDuSudoku(
         order by exigence, champ`,
       [packId, grilleCode, jour],
     ),
+    db.query<{ champs: string[] }>(`select app.champs_affiches_surs() as champs`),
   ]);
 
   const param = (code: string): number => {
@@ -522,6 +530,7 @@ export async function lireLeContexteDuSudoku(
     formesJuridiques: formes.rows.map((f) => f.code),
     regles,
     exigencesSansIa: sansIa.rows,
+    champsSurs: surs.rows[0]?.champs ?? [],
   };
 }
 
@@ -530,6 +539,9 @@ export async function lireLeContexteDuSudoku(
 const RANG_DU_STATUT: Readonly<Record<string, number>> = {
   prouve: 3,
   conforme: 2,
+  // Lu sans preuve, affiché sûr par la tour : jamais plus qu'une valeur signalée pour
+  // l'écriture — aucune exigence du pack (`ref.lecture_sans_ia`) ne s'en contente.
+  lu: 1,
   signale: 1,
   absent: 0,
 };
@@ -676,6 +688,68 @@ function packALaPrecision(pack: PackDuSudoku, jetons: readonly JetonDuSudoku[]):
 }
 
 export function resoudreLaPiece(
+  jetons: readonly JetonDuSudoku[],
+  contexte: ContexteDuSudoku,
+  moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
+  connus?: Connus,
+  marques?: readonly MarqueDuSudoku[],
+  texteExact = false,
+  lecteurGeneratif = false,
+): SortieDuSudoku {
+  return afficherLesValeursSures(
+    resoudreLesVariantes(
+      jetons,
+      contexte,
+      moteur,
+      connus,
+      marques,
+      texteExact,
+      lecteurGeneratif,
+    ),
+    contexte,
+  );
+}
+
+/**
+ * LES VALEURS SÛRES (décision du dirigeant, 8 novembre 2026).
+ *
+ * Une valeur que le moteur rend SIGNALÉE — lue, mais la pièce n'est pas prouvée, ou sa
+ * lecture n'est pas assez sûre — passe au statut `lu` quand la tour affiche son champ comme
+ * sûr (`plateforme.lecture_valeurs_sures`). Elle s'affiche alors sans l'avertissement « à
+ * vérifier », marquée « lu, non prouvé par calcul ». Le défaut livré ne porte que les
+ * champs que les quatre bancs n'ont jamais vus faux.
+ *
+ * JAMAIS UN MONTANT : un champ montant, taux ou nombre, et le montant en lettres d'une
+ * preuve `lettres`, restent signalés quel que soit le réglage (la base refuse aussi de les
+ * régler). Les lignes d'articles ne sont pas des champs de la pièce : elles ne passent
+ * jamais ici. Le moteur, lui, ne sait rien de ce réglage.
+ */
+export function afficherLesValeursSures(
+  sortie: SortieDuSudoku,
+  contexte: Pick<ContexteDuSudoku, "grille" | "champsSurs">,
+): SortieDuSudoku {
+  const surs = contexte.champsSurs ?? [];
+  if (surs.length === 0) return sortie;
+  const lettres = champsDeLaGrille(contexte.grille).lettres;
+  const calcule = (code: string) => {
+    const type = contexte.grille.champs.find((c) => c.code === code)?.type;
+    return type === undefined || CALCULES.has(type) || code === lettres;
+  };
+  let change = false;
+  const champs = Object.fromEntries(
+    Object.entries(sortie.champs).map(([code, lu]) => {
+      if (lu.statut !== "signale" || !surs.includes(code) || calcule(code)) return [code, lu];
+      change = true;
+      return [code, { ...lu, statut: "lu" as const }];
+    }),
+  );
+  return change ? { ...sortie, champs } : sortie;
+}
+
+/** Les types de champ qu'aucun réglage n'affiche sûrs sans preuve : ils se calculent. */
+const CALCULES: ReadonlySet<string> = new Set(["montant", "taux", "nombre"]);
+
+function resoudreLesVariantes(
   jetons: readonly JetonDuSudoku[],
   contexte: ContexteDuSudoku,
   moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
