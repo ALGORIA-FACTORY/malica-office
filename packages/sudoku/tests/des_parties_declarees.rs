@@ -268,8 +268,8 @@ fn un_numero_colle_a_son_libelle_qui_a_la_forme_d_une_reference_est_conforme() {
     assert_eq!(o["champs"]["numero_facture"]["statut"], "signale");
 }
 
-/// L'entrée, sa preuve des parties complétée des clés de 20261201092100 et 20261201092200, et la
-/// règle de la lettre du pack (20261201091700).
+/// L'entrée, sa preuve des parties complétée des clés de 20261205092100 et 20261205092200, et la
+/// règle de la lettre du pack (20261205091700).
 fn avec_groupes_et_adresses(id: &str) -> Value {
     let mut e = entree(id);
     e["pack"]["controles"] = json!({"matricule_fiscal": {

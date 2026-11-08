@@ -30,4 +30,4 @@ alter view facturation.pieces_orphelines_v set (security_invoker = true);
 -- La migration de retour, à jouer telle quelle (sans les « -- » de tête) :
 --
 -- alter view facturation.pieces_orphelines_v reset (security_invoker);
--- delete from app.migrations where nom = '20261202150000_une_vue_lit_avec_les_droits_de_son_lecteur.sql';
+-- delete from app.migrations where nom = '20261205094000_une_vue_lit_avec_les_droits_de_son_lecteur.sql';

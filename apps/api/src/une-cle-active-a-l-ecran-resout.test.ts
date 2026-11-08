@@ -2,7 +2,7 @@
  * Une clé que l'écran montre active résout (vérification indépendante de
  * c9c3d9ad, « une clé part avec son auteur »).
  *
- * Depuis 20261202110000, `api_key_resoudre` exige une adhésion RÉELLE d'expert
+ * Depuis 20261205092900, `api_key_resoudre` exige une adhésion RÉELLE d'expert
  * de l'auteur. Or un opérateur sous l'accès total crée une clé dans un cabinet
  * dont il n'est pas membre (`api_keys_insert_expert` lit `app.has_org_role`,
  * qui compte l'adhésion virtuelle) : la porte rend une clé, l'écran

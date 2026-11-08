@@ -11,7 +11,7 @@
  * identifiant de session (`sid`) et sa date d'émission à la milliseconde
  * (`iat`), confrontés à chaque requête à ce que la base tient — les sessions
  * fermées une à une, et l'instant avant lequel toutes les sessions du compte
- * sont closes (`20261202110100_le_jeton_d_acces_se_revoque`).
+ * sont closes (`20261205093000_le_jeton_d_acces_se_revoque`).
  */
 
 import { createHash, randomBytes, randomUUID } from "node:crypto";
