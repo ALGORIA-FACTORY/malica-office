@@ -239,7 +239,6 @@
     "apps/web/src/routes/_authenticated/pme.tva.tsx": "Votre TVA — Malica Office",
     "apps/web/src/routes/auth.tsx": "Connexion — Malica Office",
     "apps/web/src/routes/confidentialite.tsx": "Politique de confidentialité — Malica Office",
-    "apps/web/src/routes/index.tsx": "Malica Office — comptabilité augmentée, chiffre gouverné",
     "apps/web/src/routes/invitation.tsx": "Invitation — Malica Office",
     "apps/web/src/routes/reinitialiser.tsx": "Nouveau mot de passe — Malica Office"
   }
