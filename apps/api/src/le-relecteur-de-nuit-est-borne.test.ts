@@ -231,6 +231,24 @@ describe("le relecteur de nuit est borné par la base", { skip: !BASE_CONFIGUREE
     assert.equal(acteur?.created_by, service, "le relecteur est l'acteur");
   });
 
+  it("il ne lit pas la cloche du dossier, ni par la lecture d'un trait", async () => {
+    await a.admin.query(
+      `insert into collab.notifications (tenant_id, kind, payload)
+       values ($1, 'piece.retournee', '{"note":"sans pièce"}'::jsonb)`,
+      [a.pme],
+    );
+    const parLaVue = await sous(a.pme, `select id from notifications_v where tenant_id = $1`, [
+      a.pme,
+    ]);
+    const dUnTrait = await sous(
+      a.pme,
+      `select id from app.notifications_des_societes($1::uuid[])`,
+      [[a.pme]],
+    );
+    assert.deepEqual(parLaVue, []);
+    assert.deepEqual(dUnTrait, []);
+  });
+
   it("sans relecture due, il ne voit rien du dossier", async () => {
     const rows = await sous(b.pme, `select 1 from capture.pieces`);
     assert.equal(rows.length, 0);
