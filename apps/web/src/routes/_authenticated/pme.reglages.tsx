@@ -1256,12 +1256,59 @@ function AbonnementDeLaComptabilite({
     onError: (e: unknown) =>
       setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error"))),
   });
+  // La comptabilité qui paie propose une offre plus légère : rien ne change
+  // sans l'accord du dirigeant (décision du 8 novembre 2026).
+  const descente = useQuery({
+    queryKey: ["descente-pour-moi", tenantId],
+    queryFn: () => office().facturation.descentePourMoi(tenantId),
+  });
+  const trancher = useMutation({
+    mutationFn: (v: { id: string; accepte: boolean }) =>
+      office().facturation.repondreDescente(v.id, v.accepte),
+    onSuccess: async () => {
+      setRetour(t("pme.descente.ok"));
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["descente-pour-moi", tenantId] }),
+        qc.invalidateQueries({ queryKey: ["abonnements-pour-moi", tenantId] }),
+        qc.invalidateQueries({ queryKey: ["mon-forfait"] }),
+      ]);
+    },
+    onError: (e: unknown) =>
+      setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error"))),
+  });
+  const d = descente.data ?? null;
   const lignes = (propositions.data ?? []).filter(
     (a) => a.statut === "propose" || (a.statut === "actif" && !propositionsSeules),
   );
-  if (lignes.length === 0 && !retour) return null;
+  if (lignes.length === 0 && !d && !retour) return null;
   return (
-    <div className="mt-3">
+    // `.org` porte la typographie des propositions (`.mn`) et leurs boutons (`.acts`).
+    <div className="org mt-3">
+      {d ? (
+        <div>
+          <p className="mn">
+            {t("pme.descente.titre", { offre: libelleDOffre(catalogue, d.offre_code) })}
+          </p>
+          <p className="mn">{t("pme.descente.lede")}</p>
+          <div className="acts">
+            <button
+              type="button"
+              disabled={trancher.isPending}
+              onClick={() => trancher.mutate({ id: d.descente_id, accepte: true })}
+            >
+              {t("pme.descente.accepter")}
+            </button>
+            <button
+              type="button"
+              className="cut"
+              disabled={trancher.isPending}
+              onClick={() => trancher.mutate({ id: d.descente_id, accepte: false })}
+            >
+              {t("pme.descente.refuser")}
+            </button>
+          </div>
+        </div>
+      ) : null}
       {lignes.map((a) =>
         a.statut === "actif" ? (
           <p key={a.acces_id} className="mn">

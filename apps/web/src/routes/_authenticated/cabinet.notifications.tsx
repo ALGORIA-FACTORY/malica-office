@@ -86,6 +86,8 @@ const PHRASE_DU_GENRE: Record<string, MessageKey> = {
   "acces.propose": "cab.notif.kind.acces.propose",
   "acces.accepte": "cab.notif.kind.acces.accepte",
   "acces.repris": "cab.notif.kind.acces.repris",
+  "acces.descente_acceptee": "cab.notif.kind.acces.descente_acceptee",
+  "acces.descente_refusee": "cab.notif.kind.acces.descente_refusee",
   "facture.emise": "cab.notif.kind.facture.emise",
   // Retours du cabinet (25 octobre 2026) : la relance, et la réponse du client.
   "piece.confirmation_demandee": "cab.notif.kind.piece.confirmation_demandee",

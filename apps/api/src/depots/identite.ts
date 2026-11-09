@@ -152,6 +152,96 @@ export const identite = {
     };
   },
 
+  /** La comptabilité corrige le nom, le matricule (avant toute pièce) ou l'adresse. */
+  async modifierDossier(
+    db: Requete,
+    input: {
+      cabinetId: string;
+      pmeId: string;
+      nom: string;
+      legalId: string;
+      adresse: string | null;
+    },
+  ): Promise<{ id: string; name: string; legalId: string; adresse: string | null }> {
+    const { rows } = await db.query<{
+      r: { id: string; name: string; legalId: string; adresse: string | null };
+    }>(`select public.cabinet_modifier_dossier($1, $2, $3, $4, $5) as r`, [
+      input.cabinetId,
+      input.pmeId,
+      input.nom,
+      input.legalId,
+      input.adresse,
+    ]);
+    return rows[0]!.r;
+  },
+
+  /** Une liste à importer, vérifiée ligne par ligne. Rien n'est créé. */
+  async verifierDossiers(
+    db: Requete,
+    cabinetId: string,
+    lignes: Array<{ matricule: string; raison_sociale: string; email: string }>,
+  ): Promise<
+    Array<{
+      ligne: number;
+      statut: "pret" | "existant" | "deja_client" | "a_corriger";
+      motif: string | null;
+      organisation: string | null;
+    }>
+  > {
+    const { rows } = await db.query(
+      `select ligne, statut, motif, organisation from public.dossiers_verifier($1, $2::jsonb)`,
+      [cabinetId, JSON.stringify(lignes)],
+    );
+    return rows as never;
+  },
+
+  /** L'état de chaque client : dirigeant, invitation, abonnement, licence et places. */
+  async etatDesClients(db: Requete, cabinetId: string) {
+    const { rows } = await db.query(
+      `select tenant_id, adresse, dirigeant_present, invitation_email,
+              invitation_envoyee::text, invitation_expiree, acces_id, acces_statut,
+              acces_offre, descente_offre, licence_id, titulaire_nom, forfait_offre,
+              organisations, organisations_incluses, sieges_occupes, sieges_inclus,
+              places_en_attente
+         from public.clients_du_cabinet_etat($1)`,
+      [cabinetId],
+    );
+    return rows.map((r) => ({
+      tenantId: r["tenant_id"] as string,
+      adresse: (r["adresse"] as string | null) ?? null,
+      dirigeantPresent: Boolean(r["dirigeant_present"]),
+      invitationEmail: (r["invitation_email"] as string | null) ?? null,
+      invitationEnvoyee: (r["invitation_envoyee"] as string | null) ?? null,
+      invitationExpiree: Boolean(r["invitation_expiree"]),
+      accesId: (r["acces_id"] as string | null) ?? null,
+      accesStatut: (r["acces_statut"] as string | null) ?? null,
+      accesOffre: (r["acces_offre"] as string | null) ?? null,
+      descenteOffre: (r["descente_offre"] as string | null) ?? null,
+      licenceId: (r["licence_id"] as string | null) ?? null,
+      titulaireNom: (r["titulaire_nom"] as string | null) ?? null,
+      forfaitOffre: (r["forfait_offre"] as string | null) ?? null,
+      organisations: (r["organisations"] as number | null) ?? null,
+      organisationsIncluses: (r["organisations_incluses"] as number | null) ?? null,
+      siegesOccupes: (r["sieges_occupes"] as number | null) ?? null,
+      siegesInclus: (r["sieges_inclus"] as number | null) ?? null,
+      placesEnAttente: (r["places_en_attente"] as number | null) ?? 0,
+    }));
+  },
+
+  /** Une place : donnée si la comptabilité paie, suggérée au propriétaire sinon. */
+  async placePourLeClient(
+    db: Requete,
+    cabinetId: string,
+    pmeId: string,
+    email: string,
+  ): Promise<{ mode: "donnee" | "suggeree" }> {
+    const { rows } = await db.query<{ r: { mode: "donnee" | "suggeree" } }>(
+      `select public.cabinet_place_pour_le_client($1, $2, $3) as r`,
+      [cabinetId, pmeId, email],
+    );
+    return { mode: rows[0]!.r.mode };
+  },
+
   /**
    * Établir une fiche : clôturer celle qui court, en ouvrir une neuve.
    *

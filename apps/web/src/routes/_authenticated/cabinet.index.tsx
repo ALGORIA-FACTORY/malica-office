@@ -26,6 +26,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { MiseEnRouteDuJour } from "@/components/malica/mise-en-route-du-jour";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { FileEnPiles } from "@/components/malica/file-en-piles";
@@ -270,6 +271,7 @@ function CabinetToday() {
           ) : null}
         </div>
       </header>
+      <MiseEnRouteDuJour />
       <div className="cab-day-columns">
         {/* ---- la file */}
         <section ref={file} className="cab-worklist min-w-0 space-y-3">

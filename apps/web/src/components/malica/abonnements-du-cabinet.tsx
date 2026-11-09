@@ -26,13 +26,11 @@ import { useState } from "react";
 import { Users } from "lucide-react";
 
 import { useMonAcces } from "@/hooks/use-mon-acces";
-import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
   EmptyState,
   InkCell,
   InkTable,
   InkTableRow,
-  MalicaNote,
   SectionTitle,
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
@@ -58,14 +56,6 @@ const TON: Record<string, string> = {
   termine: "text-muted-foreground",
 };
 
-/** L'écran chez le cabinet : son organisation, et la parole de Malica dans la colonne. */
-export function AbonnementsDeMonCabinet() {
-  const { t, locale } = useI18n();
-  const { org } = useCabinet();
-  useMalicaPanel(<MalicaNote>{t("cab.abo.panel")}</MalicaNote>, [locale]);
-  return <AbonnementsDuCabinet cabinet={org} />;
-}
-
 /**
  * L'écran des abonnements d'un cabinet. Le cabinet le lit chez lui
  * (`/cabinet/abonnements`) ; la tour le lit tel quel, en LECTURE, quand elle
@@ -75,8 +65,11 @@ export function AbonnementsDeMonCabinet() {
 export function AbonnementsDuCabinet({
   cabinet: org,
   lecture = false,
+  facturesSeules = false,
 }: {
   cabinet: Pick<Organization, "id" | "name" | "currency">;
+  /** La page Clients, vue Facturation : seulement les factures Malica. */
+  facturesSeules?: boolean;
   /** La tour regarde : aucun geste, et le client mène à sa fiche dans la tour. */
   lecture?: boolean;
 }) {
@@ -164,6 +157,90 @@ export function AbonnementsDuCabinet({
       (!statut || a.statut === statut) &&
       a.client_nom.toLocaleLowerCase(locale).includes(recherche.toLocaleLowerCase(locale)),
   );
+
+  /* Les factures que la comptabilité règle à Malica. */
+  const sectionFactures = (
+    <section className="space-y-3">
+      <SectionTitle>{t("cab.abo.factures.titre")}</SectionTitle>
+      {refusDePaiement ? (
+        <p role="alert" className="text-[12.5px] text-signal-stop">
+          {refusDePaiement}
+        </p>
+      ) : null}
+      {factures.isPending ? (
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+      ) : factures.isError ? (
+        <p role="alert" className="text-signal-stop">
+          {texteDeLErreur(factures.error, OU, t("common.error"))}
+        </p>
+      ) : (factures.data ?? []).length === 0 ? (
+        <EmptyState>{t("cab.abo.factures.vide")}</EmptyState>
+      ) : (
+        <InkTable
+          caption={t("cab.abo.factures.titre")}
+          head={[
+            t("cab.abo.fac.numero"),
+            t("cab.abo.fac.periode"),
+            t("cab.abo.fac.societes"),
+            t("cab.abo.fac.ttc"),
+            t("cab.abo.fac.echeance"),
+            t("cab.abo.fac.statut"),
+            t("cab.abo.fac.reste"),
+          ]}
+        >
+          {(factures.data ?? []).map((f) => (
+            <InkTableRow key={f.id}>
+              <InkCell>
+                <span className="num font-medium">{f.numero}</span>
+              </InkCell>
+              <InkCell>
+                <span className="num">{f.periode.slice(0, 7)}</span>
+              </InkCell>
+              <InkCell numeric>{f.organisations}</InkCell>
+              <InkCell numeric>{montant(f.montant_ttc, f.devise)}</InkCell>
+              <InkCell>
+                <span className="num">{date(f.echeance_le)}</span>
+              </InkCell>
+              <InkCell>
+                <span
+                  className={cn(
+                    "text-[12px]",
+                    f.etat === "en_retard" && "text-signal-warn",
+                    f.etat === "payee" && "text-signal-ok",
+                  )}
+                >
+                  {t(ETAT_DE_FACTURE[f.etat])}
+                </span>
+              </InkCell>
+              <InkCell numeric>
+                {Number(f.reste_du) > 0 &&
+                (f.etat === "a_echoir" || f.etat === "en_retard" || f.etat === "partielle") ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="num">{montant(f.reste_du, f.devise)}</span>
+                    {peutPayer ? (
+                      <button
+                        type="button"
+                        className="rounded-md border border-foreground px-2.5 py-1 text-[12px] font-medium hover:bg-foreground hover:text-background disabled:opacity-40"
+                        disabled={payerFacture.isPending}
+                        onClick={() => payerFacture.mutate(f.id)}
+                      >
+                        {t("pme.reglages.paiement.payer")}
+                      </button>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span className="num text-muted-foreground">—</span>
+                )}
+              </InkCell>
+            </InkTableRow>
+          ))}
+        </InkTable>
+      )}
+    </section>
+  );
+
+  // La page Clients montre seulement les factures, dans sa vue Facturation.
+  if (facturesSeules) return <div className="space-y-6">{sectionFactures}</div>;
 
   return (
     <div className="cab-library space-y-6">
@@ -471,84 +548,7 @@ export function AbonnementsDuCabinet({
           )}
         </section>
       ) : (
-        /* Les factures restent dans une vue dédiée. */
-        <section className="space-y-3">
-          <SectionTitle>{t("cab.abo.factures.titre")}</SectionTitle>
-          {refusDePaiement ? (
-            <p role="alert" className="text-[12.5px] text-signal-stop">
-              {refusDePaiement}
-            </p>
-          ) : null}
-          {factures.isPending ? (
-            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : factures.isError ? (
-            <p role="alert" className="text-signal-stop">
-              {texteDeLErreur(factures.error, OU, t("common.error"))}
-            </p>
-          ) : (factures.data ?? []).length === 0 ? (
-            <EmptyState>{t("cab.abo.factures.vide")}</EmptyState>
-          ) : (
-            <InkTable
-              caption={t("cab.abo.factures.titre")}
-              head={[
-                t("cab.abo.fac.numero"),
-                t("cab.abo.fac.periode"),
-                t("cab.abo.fac.societes"),
-                t("cab.abo.fac.ttc"),
-                t("cab.abo.fac.echeance"),
-                t("cab.abo.fac.statut"),
-                t("cab.abo.fac.reste"),
-              ]}
-            >
-              {(factures.data ?? []).map((f) => (
-                <InkTableRow key={f.id}>
-                  <InkCell>
-                    <span className="num font-medium">{f.numero}</span>
-                  </InkCell>
-                  <InkCell>
-                    <span className="num">{f.periode.slice(0, 7)}</span>
-                  </InkCell>
-                  <InkCell numeric>{f.organisations}</InkCell>
-                  <InkCell numeric>{montant(f.montant_ttc, f.devise)}</InkCell>
-                  <InkCell>
-                    <span className="num">{date(f.echeance_le)}</span>
-                  </InkCell>
-                  <InkCell>
-                    <span
-                      className={cn(
-                        "text-[12px]",
-                        f.etat === "en_retard" && "text-signal-warn",
-                        f.etat === "payee" && "text-signal-ok",
-                      )}
-                    >
-                      {t(ETAT_DE_FACTURE[f.etat])}
-                    </span>
-                  </InkCell>
-                  <InkCell numeric>
-                    {Number(f.reste_du) > 0 &&
-                    (f.etat === "a_echoir" || f.etat === "en_retard" || f.etat === "partielle") ? (
-                      <span className="inline-flex items-center gap-2">
-                        <span className="num">{montant(f.reste_du, f.devise)}</span>
-                        {peutPayer ? (
-                          <button
-                            type="button"
-                            className="rounded-md border border-foreground px-2.5 py-1 text-[12px] font-medium hover:bg-foreground hover:text-background disabled:opacity-40"
-                            disabled={payerFacture.isPending}
-                            onClick={() => payerFacture.mutate(f.id)}
-                          >
-                            {t("pme.reglages.paiement.payer")}
-                          </button>
-                        ) : null}
-                      </span>
-                    ) : (
-                      <span className="num text-muted-foreground">—</span>
-                    )}
-                  </InkCell>
-                </InkTableRow>
-              ))}
-            </InkTable>
-          )}
-        </section>
+        sectionFactures
       )}
     </div>
   );

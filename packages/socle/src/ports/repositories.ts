@@ -205,6 +205,26 @@ export interface IdentityRepository {
    * carte n'établit rien — c'est ce geste-ci, et lui seul, qui fait foi.
    */
   etablirFiche(input: NouvelleFiche): Promise<{ id: string }>;
+  /** La comptabilité corrige le nom, le matricule (avant toute pièce) ou l'adresse. */
+  modifierDossier(input: {
+    cabinetId: string;
+    pmeId: string;
+    nom: string;
+    legalId: string;
+    adresse: string | null;
+  }): Promise<{ id: string; name: string; legalId: string; adresse: string | null }>;
+  /** Une liste à importer, vérifiée ligne par ligne ; rien n'est créé. */
+  verifierDossiers(
+    cabinetId: string,
+    lignes: Array<{ matricule: string; raison_sociale: string; email: string }>,
+  ): Promise<LigneVerifiee[]>;
+  etatDesClients(cabinetId: string): Promise<EtatDuClient[]>;
+  /** Donnée si la comptabilité paie l'abonnement, suggérée au propriétaire sinon. */
+  placePourLeClient(
+    cabinetId: string,
+    pmeId: string,
+    email: string,
+  ): Promise<{ mode: "donnee" | "suggeree" }>;
   /** Le prénom salue, le nom complet facture. `null` tant que rien n'est écrit. */
   monProfil(): Promise<MonProfil | null>;
   /** Un champ vide s'efface ; la base compose « Prénom Nom ». */
@@ -247,6 +267,45 @@ export interface RegimeDisponible {
 export interface FormeDisponible {
   axe: "forme" | "mode";
   code: string;
+}
+
+/** Une descente d'offre que la comptabilité qui paie demande au dirigeant. */
+export interface DescenteDemandee {
+  descente_id: string;
+  offre_code: string;
+  comptabilite: string;
+  propose_le: string;
+}
+
+/** Ce que la page Clients sait de chaque client, en un appel. */
+export interface EtatDuClient {
+  tenantId: string;
+  adresse: string | null;
+  dirigeantPresent: boolean;
+  invitationEmail: string | null;
+  invitationEnvoyee: string | null;
+  invitationExpiree: boolean;
+  accesId: string | null;
+  accesStatut: string | null;
+  accesOffre: string | null;
+  descenteOffre: string | null;
+  licenceId: string | null;
+  titulaireNom: string | null;
+  forfaitOffre: string | null;
+  organisations: number | null;
+  organisationsIncluses: number | null;
+  siegesOccupes: number | null;
+  siegesInclus: number | null;
+  /** Les invitations à une place, envoyées et pas encore acceptées. */
+  placesEnAttente: number;
+}
+
+/** Le résultat de la vérification d'une ligne à importer. */
+export interface LigneVerifiee {
+  ligne: number;
+  statut: "pret" | "existant" | "deja_client" | "a_corriger";
+  motif: string | null;
+  organisation: string | null;
 }
 
 export interface FicheCourante {
@@ -4082,6 +4141,23 @@ export interface FacturationRepository {
   abonnementsDuCabinet(cabinetId: string): Promise<AbonnementAttribue[]>;
   abonnementsPourMoi(tenantId: string): Promise<AbonnementPropose[]>;
   facturesDuCabinet(cabinetId: string): Promise<FactureDuCabinet[]>;
+  /** Montée sur-le-champ, descente à l'accord du dirigeant, proposition changée avant son arrivée. */
+  changerOffreAbonnement(
+    accesId: string,
+    offre: string,
+  ): Promise<{
+    acces_id: string;
+    effet: "immediat" | "accord_attendu" | "proposition" | "inchange";
+    descente_id?: string;
+  }>;
+  /** La comptabilité arrête de payer : l'abonnement revient au dirigeant, prévenu. */
+  arreterAbonnement(accesId: string): Promise<{ acces_id: string; effet: string }>;
+  /** La descente demandée par la comptabilité, à trancher ; `null` s'il n'y en a pas. */
+  descentePourMoi(tenantId: string): Promise<DescenteDemandee | null>;
+  repondreDescente(
+    descenteId: string,
+    accepte: boolean,
+  ): Promise<{ descente_id: string; statut: string }>;
   lignesDeFacture(factureId: string): Promise<LigneDeFacture[]>;
 }
 
