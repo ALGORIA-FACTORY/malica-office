@@ -1,0 +1,4 @@
+# Les valeurs réelles (mots de passe, clés) ne sont jamais suivies : seuls les
+# modèles *.env.example le sont. init-env.sh crée les .env depuis eux.
+env/*.env
+!env/*.env.example
