@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -34,6 +35,7 @@ type Mode = "signin" | "signup" | "forgot";
 function AuthPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { suite, mode: modeInitial } = Route.useSearch();
   const destination = suite ?? "/office";
   const [mode, setMode] = useState<Mode>(modeInitial ?? "signin");
@@ -79,6 +81,11 @@ function AuthPage() {
       } else {
         await office().auth.connexion(email, password);
       }
+      // La session lue avant l'inscription est en cache, et elle dit
+      // « personne » : sans ceci, la page d'invitation où l'on revient
+      // redemandait de créer un accès qu'on venait de créer (recette du
+      // 8 novembre 2026). On l'oublie, la page suivante la relit.
+      queryClient.removeQueries({ queryKey: ["compte"] });
       await navigate({ to: destination, replace: true });
     } catch (err) {
       setError(explain(err, t));

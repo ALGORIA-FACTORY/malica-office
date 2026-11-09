@@ -26,6 +26,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { MiseEnRouteDuJour } from "@/components/malica/mise-en-route-du-jour";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { FileEnPiles } from "@/components/malica/file-en-piles";
@@ -44,15 +45,17 @@ import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 export const Route = createFileRoute("/_authenticated/cabinet/")({
   head: () => ({
     meta: [
-      { title: "Aujourd'hui — cabinet — Malica Office" },
+      { title: "Aujourd'hui — comptabilité — Malica Office" },
       {
         name: "description",
-        content: "La file priorisée du jour, la charge du cabinet et les échéances proches.",
+        content:
+          "La file priorisée du jour, la charge de la comptabilité et les échéances proches.",
       },
-      { property: "og:title", content: "Aujourd'hui — cabinet — Malica Office" },
+      { property: "og:title", content: "Aujourd'hui — comptabilité — Malica Office" },
       {
         property: "og:description",
-        content: "La file priorisée du jour, la charge du cabinet et les échéances proches.",
+        content:
+          "La file priorisée du jour, la charge de la comptabilité et les échéances proches.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -268,6 +271,7 @@ function CabinetToday() {
           ) : null}
         </div>
       </header>
+      <MiseEnRouteDuJour />
       <div className="cab-day-columns">
         {/* ---- la file */}
         <section ref={file} className="cab-worklist min-w-0 space-y-3">

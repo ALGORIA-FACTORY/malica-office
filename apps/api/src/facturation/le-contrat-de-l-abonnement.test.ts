@@ -142,7 +142,9 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
     const attendu = await admin.query(
       `select offre_code as offre, statut, lectures_droit, lectures_consommees,
               lectures_restantes, organisations, sieges_occupes, sieges_inclus, sieges_max,
-              prix_mensuel_ht
+              prix_mensuel_ht,
+              -- Il paie seul : il est titulaire, et aucune comptabilité ne l'a pris en charge.
+              true as titulaire, null::text as pris_en_charge_par
          from facturation.consommation_v where licence_id = $1`,
       [a.licence],
     );

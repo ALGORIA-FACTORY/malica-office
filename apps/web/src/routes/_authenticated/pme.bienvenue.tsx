@@ -79,9 +79,10 @@ function ouAbsent(valeur: string | null): string {
  * qu'il montre descendent du shell, qui les a déjà — `pme.matricule` et
  * `pme.orgName` ne coûtent pas une requête.
  *
- * - « Adresse du siège » : rien ne la sert. Le contexte PME ne la porte pas,
- *   et la lire voudrait `identite.ficheCourante` — un appel. Le champ dit
- *   donc `—`, et la rangée reste : elle mène à l'écran qui l'écrira.
+ * - « Adresse du siège » : elle descend du shell avec le dossier (la vue des
+ *   organisations la porte depuis la recette du 8 novembre 2026). Le cabinet
+ *   la saisit en ouvrant le dossier ; sans elle, le champ dit `—`, et la
+ *   rangée mène à l'écran qui l'écrira.
  * - « créer la société » ne crée rien ici, et ne peut pas : le dossier est
  *   déjà ouvert AVANT que cet écran ne s'affiche — c'est son `tenantId` et
  *   son `orgName` qui remplissent la carte qu'on voit. `identite.
@@ -128,6 +129,7 @@ function Bienvenue() {
 
   const matricule = ouAbsent(pme.matricule);
   const raison = ouAbsent(pme.orgName);
+  const adresse = ouAbsent(pme.adresse);
 
   return (
     <div
@@ -204,13 +206,13 @@ function Bienvenue() {
           </span>
         </button>
 
-        {/* Rien ne sert l'adresse du siège : le trait, pas une valeur. */}
+        {/* L'adresse que le cabinet a saisie ; le trait seulement quand personne ne l'a donnée. */}
         <button type="button" className="rw" onClick={corriger}>
           <i aria-hidden>
             <IconeSiege />
           </i>
           <span className="bd">
-            <b>{ABSENT}</b>
+            <b>{adresse}</b>
             <span>{t("pme.bienvenue.champAdresse")}</span>
           </span>
         </button>

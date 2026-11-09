@@ -51,7 +51,7 @@ export function courrielInvitation(i: InvitationCourriel): {
     ``,
     `${i.cabinet} a ouvert le dossier de ${i.pme} sur Malica Office, et vous invite à le rejoindre.`,
     ``,
-    `Photographiez vos factures : Malica les lit, les classe, et les transmet à votre cabinet.`,
+    `Photographiez vos factures : Malica les lit, les classe, et les transmet à votre comptabilité.`,
     ``,
     `Rejoindre mon espace :`,
     i.lien,
@@ -91,7 +91,7 @@ export function courrielInvitation(i: InvitationCourriel): {
 <p style="margin:0 0 14px 0;font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:${SOUCI};">Invitation</p>
 <h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;color:${ENCRE};">Votre espace est prêt.</h1>
 <p style="margin:20px 0 0 0;font-size:17px;line-height:1.6;color:${ENCRE};"><strong style="font-weight:600;">${cabinet}</strong> a ouvert le dossier de <strong style="font-weight:600;">${pme}</strong> sur Malica Office, et vous invite à le rejoindre.</p>
-<p style="margin:14px 0 0 0;font-size:16px;line-height:1.6;color:${GRIS};">Photographiez vos factures : Malica les lit, les classe, et les transmet à votre cabinet.</p>
+<p style="margin:14px 0 0 0;font-size:16px;line-height:1.6;color:${GRIS};">Photographiez vos factures : Malica les lit, les classe, et les transmet à votre comptabilité.</p>
 </td></tr>
 
 <tr><td style="padding:32px 40px 8px 40px;">

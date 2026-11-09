@@ -2113,3 +2113,57 @@
     animation: none;
   }
 }
+
+/* ------------------------------------------------ la page Clients unique
+ * (8 novembre 2026) : le tiroir glisse, la fenêtre d'import entre, l'annonce
+ * monte, la jauge se remplit. Rien ne bouge pour qui demande moins de
+ * mouvement. */
+@keyframes cab-entre {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cab-glisse {
+  from { opacity: 0; transform: translateX(48px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cab-glisse-rtl {
+  from { opacity: 0; transform: translateX(-48px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cab-fond {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes cab-pop {
+  0% { opacity: 0; transform: scale(0.6); }
+  70% { opacity: 1; transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+/* `transform`, pas `translate` : les utilitaires de position (Tailwind 4)
+ * posent déjà `translate` pour centrer, l'animation ne doit pas l'écraser. */
+@keyframes cab-monte {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cab-remplit {
+  from { width: 0; }
+}
+@keyframes cab-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 139, 80, 0.35); }
+  50% { box-shadow: 0 0 0 8px rgba(22, 139, 80, 0); }
+}
+.cab-entre { animation: cab-entre 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.cab-tiroir { animation: cab-glisse 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+[dir="rtl"] .cab-tiroir { animation-name: cab-glisse-rtl; }
+.cab-voile { animation: cab-fond 0.25s both; }
+.cab-pop { animation: cab-pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.cab-monte { animation: cab-monte 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.cab-jauge { animation: cab-remplit 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.cab-pulse { animation: cab-pulse 2.2s infinite; }
+.cab-ligne { transition: background 0.15s; }
+.cab-ligne:hover { background: #f7f8f7; }
+@media (prefers-reduced-motion: reduce) {
+  .cab-entre, .cab-tiroir, .cab-voile, .cab-pop, .cab-monte, .cab-jauge, .cab-pulse {
+    animation: none;
+  }
+}

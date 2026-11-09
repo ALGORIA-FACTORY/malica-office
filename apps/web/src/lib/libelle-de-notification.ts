@@ -25,6 +25,12 @@ const GENRES: Record<string, MessageKey> = {
   "acces.propose": "notif.kind.acces.propose",
   "acces.accepte": "notif.kind.acces.accepte",
   "acces.repris": "notif.kind.acces.repris",
+  // La page Clients unique (8 novembre 2026).
+  "acces.monte": "notif.kind.acces.monte",
+  "acces.arrete": "notif.kind.acces.arrete",
+  "acces.descente_demandee": "notif.kind.acces.descente_demandee",
+  "place.donnee": "notif.kind.place.donnee",
+  "place.suggeree": "notif.kind.place.suggeree",
   "conseil.arbitrage": "notif.kind.conseil.arbitrage",
   "conseil.repondu": "notif.kind.conseil.repondu",
   "conseil.decide": "notif.kind.conseil.decide",
@@ -58,6 +64,20 @@ export function detailDe(kind: string, payload: Record<string, unknown>): string
     );
   }
   if (kind.startsWith("mandat.")) return chaine(payload, "cabinet");
+  // L'offre proposée et la comptabilité qui la propose — jamais un prix.
+  if (kind.startsWith("place.")) {
+    return (
+      [chaine(payload, "email"), chaine(payload, "cabinet")].filter(Boolean).join(" · ") || null
+    );
+  }
+  if (kind.startsWith("acces.") && kind !== "acces.accepte" && kind !== "acces.repris") {
+    const offre = chaine(payload, "offre");
+    return (
+      [offre ? offre.charAt(0).toUpperCase() + offre.slice(1) : null, chaine(payload, "cabinet")]
+        .filter(Boolean)
+        .join(" · ") || null
+    );
+  }
   if (kind.startsWith("conseil.")) return chaine(payload, "theme");
   return chaine(payload, "note");
 }
@@ -84,6 +104,8 @@ const ATTENDENT_UN_GESTE: ReadonlySet<string> = new Set([
   "piece.retournee_par_le_proprietaire",
   "mandat.propose",
   "acces.propose",
+  "acces.descente_demandee",
+  "place.suggeree",
 ]);
 
 export function attendUnGeste(n: { kind: string; readAt: string | null }): boolean {

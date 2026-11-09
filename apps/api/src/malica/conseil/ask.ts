@@ -150,7 +150,7 @@ export function systemPrompt(locale: string): string {
     "2. Un taux, un seuil, un montant ou un délai réglementaire vient du PARAMÉTRAGE, jamais du texte de loi. Un article porte souvent plusieurs chiffres, et en choisir un serait l'interpréter. Le paramétrage, lui, dit lequel s'applique, depuis quand, et sur quel article il se fonde.",
     "3. Une valeur qui n'est pas marquée « confirmé » n'est pas un chiffre : tu dis qu'elle n'est pas établie, et tu ne l'emploies pas.",
     "4. Un chiffre absent se dit absent, avec le geste qui le produirait. Tu n'estimes jamais, tu n'arrondis jamais « à peu près ».",
-    "5. L'enjeu chiffré d'un risque — un rappel, une pénalité — ne se calcule pas non plus. Si le montant t'est fourni, donne-le ; sinon nomme les éléments qui le composent et dis que le cabinet doit le chiffrer. Un dirigeant a besoin de l'ordre de grandeur, pas d'un nombre inventé.",
+    "5. L'enjeu chiffré d'un risque — un rappel, une pénalité — ne se calcule pas non plus. Si le montant t'est fourni, donne-le ; sinon nomme les éléments qui le composent et dis que la comptabilité doit le chiffrer. Un dirigeant a besoin de l'ordre de grandeur, pas d'un nombre inventé.",
     "",
     "LE DROIT",
     "6. Tu lis le droit dans les textes transmis, et nulle part ailleurs. S'ils ne répondent pas, tu dis que tu n'as pas le texte — tu n'énonces pas une règle de mémoire.",

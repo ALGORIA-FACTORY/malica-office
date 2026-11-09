@@ -6,7 +6,7 @@ export const Route = createFileRoute("/_authenticated/cabinet/payer/$paiementId"
   head: () => ({
     meta: [
       { title: "Moyen de paiement — Malica Office" },
-      { name: "description", content: "Choisir comment régler une facture du cabinet." },
+      { name: "description", content: "Choisir comment régler une facture de la comptabilité." },
       { property: "og:title", content: "Moyen de paiement — Malica Office" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

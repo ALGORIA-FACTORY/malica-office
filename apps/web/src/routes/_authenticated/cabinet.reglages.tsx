@@ -11,13 +11,14 @@
  * ses mandats. Le nombre de mandats concernés se compte depuis les fiches.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useId, useMemo, useState } from "react";
 
 import { useMonAcces } from "@/hooks/use-mon-acces";
 import { Aide, type ParagrapheDAide } from "@/components/malica/aide";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { IntegrationsEtApi } from "@/components/malica/integrations-panel";
+import { InviterLEquipe } from "@/components/malica/inviter-l-equipe";
 import { ReglagesComptables } from "@/components/malica/reglages-comptables";
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import {
@@ -35,16 +36,16 @@ import type { ObligationDuCalendrier, ReglagesCabinet } from "@malica/socle/port
 export const Route = createFileRoute("/_authenticated/cabinet/reglages")({
   head: () => ({
     meta: [
-      { title: "Réglages du cabinet — Malica Office" },
+      { title: "Réglages de la comptabilité — Malica Office" },
       {
         name: "description",
         content:
-          "Seuils de supervision, pack de juridiction, ton de Malica, équipe et calendrier des obligations du cabinet.",
+          "Seuils de supervision, pack de juridiction, ton de Malica, équipe et calendrier des obligations de la comptabilité.",
       },
-      { property: "og:title", content: "Réglages du cabinet — Malica Office" },
+      { property: "og:title", content: "Réglages de la comptabilité — Malica Office" },
       {
         property: "og:description",
-        content: "Seuils, pack, équipe et calendrier des obligations du cabinet.",
+        content: "Seuils, pack, équipe et calendrier des obligations de la comptabilité.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -229,6 +230,7 @@ function CabinetEtEquipe() {
   );
 
   /* ---- le formulaire, semé une fois depuis la base */
+  const [invitation, setInvitation] = useState(false);
   const [seuilLot, setSeuilLot] = useState("");
   const [seuilRevue, setSeuilRevue] = useState("");
   const [doubleValidation, setDoubleValidation] = useState("");
@@ -427,6 +429,13 @@ function CabinetEtEquipe() {
         {/* ---- équipe */}
         <Groupe
           titre={t("cab.settings.g.equipe")}
+          apres={
+            invitation ? (
+              <div id="inviter-l-equipe">
+                <InviterLEquipe fermer={() => setInvitation(false)} />
+              </div>
+            ) : undefined
+          }
           aides={[
             { texte: t("cab.settings.g.equipe.lede") },
             { titre: t("cab.settings.invitations"), texte: t("cab.settings.invitations.hint") },
@@ -449,13 +458,22 @@ function CabinetEtEquipe() {
               <span className="num text-[13px]">
                 {invitations.isPending ? "…" : enAttente.length}
               </span>
-              <Link
-                to="/cabinet/mise-en-route"
-                search={{ etape: 2 }}
+              {/*
+               * Un lien, pas un bouton : inviter ne règle rien, et le verrou
+               * des réglages (un `fieldset` désactivé) ne doit pas l'empêcher.
+               */}
+              <a
+                href="#inviter-l-equipe"
+                role="button"
+                aria-expanded={invitation}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setInvitation(!invitation);
+                }}
                 className="cab-cible border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground"
               >
                 {t("cab.settings.inviter")}
-              </Link>
+              </a>
             </span>
           </Ligne>
           <Ligne label={t("cab.settings.doubleValidation")}>
@@ -540,23 +558,6 @@ function CabinetEtEquipe() {
       </div>
 
       <FuseauDuCabinet />
-
-      {/* ---- le parcours de mise en route : un parcours qu'on rejoue si besoin */}
-      <section className="border border-border bg-card p-4">
-        <p className="flex items-center text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          {t("cab.settings.onb.titre")}
-          <Aide
-            titre={t("cab.settings.onb.titre")}
-            paragraphes={[{ texte: t("cab.settings.onb.lede") }]}
-          />
-        </p>
-        <Link
-          to="/cabinet/mise-en-route"
-          className="cab-cible mt-3 inline-block border border-foreground px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
-        >
-          {t("cab.settings.onb.rejouer")}
-        </Link>
-      </section>
     </div>
   );
 }
@@ -678,11 +679,14 @@ function Groupe({
   aides,
   verrouille,
   children,
+  apres,
 }: {
   titre: string;
   aides: ParagrapheDAide[];
   verrouille: boolean;
   children: React.ReactNode;
+  /** Un geste qui ne règle rien (inviter) : hors du verrou des réglages. */
+  apres?: React.ReactNode;
 }) {
   return (
     // `min-w-0` : un élément de grille ne rétrécit pas sous son contenu. Les
@@ -698,6 +702,7 @@ function Groupe({
       <fieldset disabled={verrouille} className="min-w-0 disabled:cursor-default">
         <dl className="divide-y divide-border">{children}</dl>
       </fieldset>
+      {apres ? <div className="border-t border-border p-3">{apres}</div> : null}
     </section>
   );
 }

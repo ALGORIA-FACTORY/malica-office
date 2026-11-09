@@ -167,7 +167,8 @@ export function PayerEnLigneCabinet() {
         titre={<>{t("pme.payer.titre")}</>}
         retour={
           <Link
-            to="/cabinet/abonnements"
+            to="/cabinet/clients"
+            search={{ vue: "facturation" }}
             aria-label={t("pme.regler.retour")}
             className="mt-1 grid h-8 w-8 place-items-center rounded-full border border-border hover:bg-muted"
           >

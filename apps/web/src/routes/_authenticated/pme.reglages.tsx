@@ -339,14 +339,31 @@ function PmeReglages() {
             </div>
             <div className="nm">
               <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : ABSENT}</b>
-              {COMMERCE ? (
+              {/*
+               * La comptabilité a choisi l'abonnement : aucun prix, son nom
+               * (décision du 8 novembre 2026). Un complément payé par la
+               * société, s'il y en a un, se lit en plus.
+               */}
+              {COMMERCE && !f?.pris_en_charge_par ? (
                 <span className="px">
                   {f?.prix_mensuel_ht ? aLEchelle(f.prix_mensuel_ht) : ABSENT}
                   <small>{t("pme.reglages.abo.parMois", { devise: pme.currency })}</small>
                 </span>
               ) : null}
             </div>
-            {COMMERCE ? <TtcEtReport ht={f?.prix_mensuel_ht ?? null} /> : null}
+            {f?.pris_en_charge_par ? (
+              <p className="mn">
+                {f.prix_mensuel_ht
+                  ? t("pme.reglages.abo.priseEnChargeEtComplement", {
+                      comptabilite: f.pris_en_charge_par,
+                      prix: aLEchelle(f.prix_mensuel_ht),
+                      devise: pme.currency,
+                    })
+                  : t("pme.reglages.abo.priseEnCharge", { comptabilite: f.pris_en_charge_par })}
+              </p>
+            ) : COMMERCE ? (
+              <TtcEtReport ht={f?.prix_mensuel_ht ?? null} />
+            ) : null}
 
             <div className="det">
               <div>
@@ -405,6 +422,8 @@ function PmeReglages() {
             <>
               {/* Ce qui reste à payer, juste sous l'offre : c'est le geste qui attend. */}
               <ARegler />
+              {/* La proposition de la comptabilité, là où l'on regarde son abonnement. */}
+              <AbonnementDeLaComptabilite tenantId={pme.tenantId} propositionsSeules />
               <div className="sec">
                 <h2>
                   {t("pme.reglages.offres")}
@@ -1208,7 +1227,14 @@ function Organisation({
  * jour même : c'est la comptabilité qui est facturée, au prix public. Rien ne
  * s'affiche quand il n'y a rien à dire.
  */
-function AbonnementDeLaComptabilite({ tenantId }: { tenantId: string }) {
+function AbonnementDeLaComptabilite({
+  tenantId,
+  propositionsSeules = false,
+}: {
+  tenantId: string;
+  /** La page Abonnement dit déjà qui paie, dans sa carte : elle ne montre que ce qui attend une réponse. */
+  propositionsSeules?: boolean;
+}) {
   const { t, locale } = useI18n();
   const catalogue = useCatalogueDesOffres().data;
   const qc = useQueryClient();
@@ -1230,12 +1256,59 @@ function AbonnementDeLaComptabilite({ tenantId }: { tenantId: string }) {
     onError: (e: unknown) =>
       setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error"))),
   });
+  // La comptabilité qui paie propose une offre plus légère : rien ne change
+  // sans l'accord du dirigeant (décision du 8 novembre 2026).
+  const descente = useQuery({
+    queryKey: ["descente-pour-moi", tenantId],
+    queryFn: () => office().facturation.descentePourMoi(tenantId),
+  });
+  const trancher = useMutation({
+    mutationFn: (v: { id: string; accepte: boolean }) =>
+      office().facturation.repondreDescente(v.id, v.accepte),
+    onSuccess: async () => {
+      setRetour(t("pme.descente.ok"));
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["descente-pour-moi", tenantId] }),
+        qc.invalidateQueries({ queryKey: ["abonnements-pour-moi", tenantId] }),
+        qc.invalidateQueries({ queryKey: ["mon-forfait"] }),
+      ]);
+    },
+    onError: (e: unknown) =>
+      setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error"))),
+  });
+  const d = descente.data ?? null;
   const lignes = (propositions.data ?? []).filter(
-    (a) => a.statut === "propose" || a.statut === "actif",
+    (a) => a.statut === "propose" || (a.statut === "actif" && !propositionsSeules),
   );
-  if (lignes.length === 0 && !retour) return null;
+  if (lignes.length === 0 && !d && !retour) return null;
   return (
-    <div className="mt-3">
+    // `.org` porte la typographie des propositions (`.mn`) et leurs boutons (`.acts`).
+    <div className="org mt-3">
+      {d ? (
+        <div>
+          <p className="mn">
+            {t("pme.descente.titre", { offre: libelleDOffre(catalogue, d.offre_code) })}
+          </p>
+          <p className="mn">{t("pme.descente.lede")}</p>
+          <div className="acts">
+            <button
+              type="button"
+              disabled={trancher.isPending}
+              onClick={() => trancher.mutate({ id: d.descente_id, accepte: true })}
+            >
+              {t("pme.descente.accepter")}
+            </button>
+            <button
+              type="button"
+              className="cut"
+              disabled={trancher.isPending}
+              onClick={() => trancher.mutate({ id: d.descente_id, accepte: false })}
+            >
+              {t("pme.descente.refuser")}
+            </button>
+          </div>
+        </div>
+      ) : null}
       {lignes.map((a) =>
         a.statut === "actif" ? (
           <p key={a.acces_id} className="mn">

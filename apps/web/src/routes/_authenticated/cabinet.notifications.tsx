@@ -31,12 +31,15 @@ import type { Notification } from "@malica/socle/ports/repositories";
 export const Route = createFileRoute("/_authenticated/cabinet/notifications")({
   head: () => ({
     meta: [
-      { title: "Notifications — cabinet — Malica Office" },
-      { name: "description", content: "Ce que les dossiers mandatés ont fait savoir au cabinet." },
-      { property: "og:title", content: "Notifications — cabinet — Malica Office" },
+      { title: "Notifications — comptabilité — Malica Office" },
+      {
+        name: "description",
+        content: "Ce que les dossiers mandatés ont fait savoir à la comptabilité.",
+      },
+      { property: "og:title", content: "Notifications — comptabilité — Malica Office" },
       {
         property: "og:description",
-        content: "Ce que les dossiers mandatés ont fait savoir au cabinet.",
+        content: "Ce que les dossiers mandatés ont fait savoir à la comptabilité.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -83,6 +86,8 @@ const PHRASE_DU_GENRE: Record<string, MessageKey> = {
   "acces.propose": "cab.notif.kind.acces.propose",
   "acces.accepte": "cab.notif.kind.acces.accepte",
   "acces.repris": "cab.notif.kind.acces.repris",
+  "acces.descente_acceptee": "cab.notif.kind.acces.descente_acceptee",
+  "acces.descente_refusee": "cab.notif.kind.acces.descente_refusee",
   "facture.emise": "cab.notif.kind.facture.emise",
   // Retours du cabinet (25 octobre 2026) : la relance, et la réponse du client.
   "piece.confirmation_demandee": "cab.notif.kind.piece.confirmation_demandee",

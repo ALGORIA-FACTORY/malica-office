@@ -22,8 +22,6 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import {
   Bell,
   BookOpen,
-  Coins,
-  CreditCard,
   MessageSquare,
   Boxes,
   Building2,
@@ -47,9 +45,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { COMMERCE } from "@/capabilities/coque";
 import { CabinetProvider } from "@/components/malica/cabinet-context";
-import { useMoisDuCabinet } from "@/hooks/use-mois-du-cabinet";
 import { useDossierCourant } from "@/components/malica/dossier-courant";
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import {
@@ -76,13 +72,13 @@ import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 export const Route = createFileRoute("/_authenticated/cabinet")({
   head: () => ({
     meta: [
-      { title: "Supervision cabinet — Malica Office" },
+      { title: "Supervision comptabilité — Malica Office" },
       {
         name: "description",
         content:
           "File priorisée, écran côte-à-côte pièce et écriture, retour avec motif gouverné et contre-passation datée.",
       },
-      { property: "og:title", content: "Supervision cabinet — Malica Office" },
+      { property: "og:title", content: "Supervision comptabilité — Malica Office" },
       {
         property: "og:description",
         content: "File priorisée, revue côte-à-côte, retour avec motif gouverné.",
@@ -265,16 +261,10 @@ function Coquille({
     queryFn: () => office().supervision.queue(org.id),
   });
   const notifications = useNotificationsDuCabinet(org.id, clients.data);
-  // Les badges du conseil et des honoraires : des comptes réels, comme les autres.
+  // Le badge du conseil : un compte réel, comme les autres.
   const conseil = useQuery({
     queryKey: ["cab-conseil-stats", org.id],
     queryFn: () => office().conseil.statistiques(org.id),
-  });
-  // Le mois du cabinet, à son fuseau : pas celui du poste.
-  const moisDuCabinet = useMoisDuCabinet();
-  const honoraires = useQuery({
-    queryKey: ["cab-honoraires-synthese", org.id, moisDuCabinet],
-    queryFn: () => office().honoraires.synthese(org.id, moisDuCabinet),
   });
   const mandatsActifs = new Set(
     (clients.data ?? []).filter((c) => c.engagementStatus === "actif").map((c) => c.tenantId),
@@ -325,7 +315,8 @@ function Coquille({
       key: "portefeuille",
       label: t("cab.nav.group.portefeuille"),
       items: [
-        { to: "/cabinet/bibliotheque", label: t("cab.biblio.title"), icon: Library, exact: false },
+        // Une seule page pour le client, son mandat, ses honoraires, son
+        // abonnement et sa facturation (8 novembre 2026).
         {
           to: "/cabinet/clients",
           label: t("cab.nav.clients"),
@@ -333,25 +324,7 @@ function Coquille({
           exact: true,
           badge: nbClients,
         },
-        {
-          to: "/cabinet/honoraires",
-          label: t("cab.nav.honoraires"),
-          icon: Coins,
-          exact: false,
-          badge: honoraires.data?.nbRetard ?? 0,
-          attente: true,
-        },
-        // Les abonnements des clients se vendent sur le web, pas dans l'application Android.
-        ...(COMMERCE
-          ? [
-              {
-                to: "/cabinet/abonnements" as const,
-                label: t("cab.nav.abonnements"),
-                icon: CreditCard,
-                exact: false,
-              },
-            ]
-          : []),
+        { to: "/cabinet/bibliotheque", label: t("cab.biblio.title"), icon: Library, exact: false },
       ],
     },
     {

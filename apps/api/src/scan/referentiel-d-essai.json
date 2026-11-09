@@ -197,13 +197,13 @@
       "motif": "\\bavoir\\b",
       "documentType": "avoir",
       "statut": "anomalie",
-      "refus": "Avoir : à saisir par le cabinet (titre « {titre} »)."
+      "refus": "Avoir : à saisir par la comptabilité (titre « {titre} »)."
     },
     {
       "motif": "إشعار\\s+دائن",
       "documentType": "avoir",
       "statut": "anomalie",
-      "refus": "Avoir : à saisir par le cabinet (titre « {titre} »)."
+      "refus": "Avoir : à saisir par la comptabilité (titre « {titre} »)."
     }
   ],
   "biensImmobilisables": [

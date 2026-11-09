@@ -4,56 +4,65 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const etat = vi.hoisted(() => ({ cle: "", pending: false, error: false }));
 vi.mock("@tanstack/react-router", () => ({
-  createFileRoute: () => (options: unknown) => ({ options }),
+  createFileRoute: () => (options: unknown) => ({ options, useSearch: () => ({}) }),
+  useNavigate: () => vi.fn(),
   Link: () => null,
 }));
 vi.mock("@tanstack/react-query", () => ({
   useQuery: ({ queryKey }: { queryKey: string[] }) => {
     const cible = queryKey[0] === etat.cle;
     return {
-      data: queryKey[0] === "compte" ? { email: "expert@example.test" } : [],
+      data: [],
       isPending: cible && etat.pending,
+      isSuccess: !(cible && (etat.pending || etat.error)),
       error: cible && etat.error ? new Error("Réseau indisponible") : null,
       refetch: vi.fn(),
     };
   },
   useQueries: () => [],
+  useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
 vi.mock("@/components/malica/cabinet-context", () => ({
-  useCabinet: () => ({ org: { id: "cabinet", jurisdiction: "pack" } }),
+  useCabinet: () => ({ org: { id: "cabinet", jurisdiction: "pack", currency: "TND" } }),
   useMalicaPanel: vi.fn(),
 }));
-vi.mock("@/components/malica/OuvrirDossier", () => ({ OuvrirDossier: () => null }));
+vi.mock("@/hooks/use-mon-acces", () => ({ useMonAcces: () => ({ data: { role: "expert" } }) }));
 vi.mock("@/i18n", () => ({ useI18n: () => ({ t: (cle: string) => cle, locale: "fr" }) }));
 vi.mock("@/verticals/malica-office/composition", () => ({ office: vi.fn() }));
 
 import { Route } from "@/routes/_authenticated/cabinet.clients";
 
-describe("le portefeuille indisponible du cabinet", () => {
+const rendre = () =>
+  renderToStaticMarkup(
+    createElement((Route as unknown as { options: { component: () => null } }).options.component),
+  );
+
+describe("la page Clients indisponible", () => {
   beforeEach(() => Object.assign(etat, { cle: "", pending: false, error: false }));
 
-  for (const cle of ["cab-clients", "cab-queue", "cab-members", "cab-assignments", "compte"]) {
+  for (const cle of ["cab-clients", "cab-etat-clients", "cab-hono-mandats"]) {
     it(`ne présente pas un portefeuille vide quand ${cle} échoue`, () => {
       Object.assign(etat, { cle, error: true });
-      const html = renderToStaticMarkup(createElement(Route.options.component!));
+      const html = rendre();
       expect(html).toContain('role="alert"');
       expect(html).toContain("doc.retry");
-      expect(html).not.toContain("cab.clients.empty");
-      expect(html).not.toContain("cab.clients.kpi.mandats");
+      expect(html).not.toContain("cab.cli.vide.titre");
     });
   }
 
-  it("attend les affectations avant d'annoncer des dossiers sans collaborateur", () => {
-    Object.assign(etat, { cle: "cab-assignments", pending: true });
-    const html = renderToStaticMarkup(createElement(Route.options.component!));
+  it("attend l'état des clients avant de dire quoi que ce soit", () => {
+    Object.assign(etat, { cle: "cab-etat-clients", pending: true });
+    const html = rendre();
     expect(html).toContain("common.loading");
-    expect(html).not.toContain("cab.clients.kpi.sans");
-    expect(html).not.toContain("cab.clients.empty");
+    expect(html).not.toContain("cab.cli.vide.titre");
   });
 
-  it("annonce le vrai vide après les lectures réussies", () => {
-    const html = renderToStaticMarkup(createElement(Route.options.component!));
-    expect(html).toContain("cab.clients.empty");
+  it("le tout premier jour propose d'importer ou d'ajouter, rien d'autre", () => {
+    const html = rendre();
+    expect(html).toContain("cab.cli.vide.titre");
+    expect(html).toContain("cab.cli.importer");
+    expect(html).toContain("cab.cli.ajouter");
     expect(html).not.toContain('role="alert"');
   });
 });

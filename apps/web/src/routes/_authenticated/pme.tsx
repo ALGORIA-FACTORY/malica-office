@@ -754,6 +754,7 @@ function PmeLayout() {
                 packId: packQuery.data?.id ?? null,
                 orgName: org.name,
                 matricule: org.legalId,
+                adresse: org.adresse ?? null,
                 dossiers: pmeOrgs.map((o) => ({
                   id: o.id,
                   name: o.name,

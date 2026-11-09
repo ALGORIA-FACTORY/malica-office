@@ -120,12 +120,12 @@ export const Route = createFileRoute("/_authenticated/pme/notifications")({
       {
         name: "description",
         content:
-          "Les retours du cabinet et les validations, avec le motif gouverné et le lien vers la pièce concernée. Aucune notification-appât.",
+          "Les retours de votre comptabilité et les validations, avec le motif gouverné et le lien vers la pièce concernée. Aucune notification-appât.",
       },
       { property: "og:title", content: "Notifications — Malica Office" },
       {
         property: "og:description",
-        content: "Retours motivés du cabinet et validations, rien d'autre.",
+        content: "Retours motivés de votre comptabilité et validations, rien d'autre.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -240,6 +240,29 @@ function PmeNotifications() {
         aller: () => {
           dabord();
           void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
+        },
+      };
+    }
+    if (
+      kind === "acces.propose" ||
+      kind === "acces.descente_demandee" ||
+      kind === "acces.monte" ||
+      kind === "acces.arrete"
+    ) {
+      return {
+        libelle: t("pme.notifs.voirProposition"),
+        aller: () => {
+          dabord();
+          void navigate({ to: "/pme/reglages", search: { page: "abonnement" } });
+        },
+      };
+    }
+    if (kind === "place.suggeree" || kind === "place.donnee") {
+      return {
+        libelle: t("pme.notifs.voirEquipe"),
+        aller: () => {
+          dabord();
+          void navigate({ to: "/pme/reglages", search: { page: "utilisateurs" } });
         },
       };
     }

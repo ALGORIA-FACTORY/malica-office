@@ -88,7 +88,7 @@ export const fr = {
 
   "landing.cycle.title": "Le cycle d'une pièce",
   "landing.cycle.steps":
-    "photographiée · lue par Malica · envoyée · vue par le cabinet · validée ou forcée, ou retournée avec un motif",
+    "photographiée · lue par Malica · envoyée · vue par la comptabilité · validée ou forcée, ou retournée avec un motif",
   "landing.footer": "Algoria Factory · Système Comptable Tunisien · extensible UEMOA / OHADA",
 
   "auth.title": "Espace Malica Office",
@@ -150,12 +150,12 @@ export const fr = {
   "plan.collectif.court": "Collectif",
   "plan.tiers.title": "Tiers du dossier",
   "plan.tiers.lede":
-    "Clients, fournisseurs, salariés, associés, banques. Un tiers est l’auxiliaire de son compte collectif — jamais un compte du plan. Il appartient au dossier, pas au cabinet.",
+    "Clients, fournisseurs, salariés, associés, banques. Un tiers est l’auxiliaire de son compte collectif — jamais un compte du plan. Il appartient au dossier, pas à la comptabilité.",
   "plan.tiers.empty": "Aucun tiers de cette nature dans ce dossier.",
   "plan.tiers.dossier": "Dossier",
   "plan.tiers.chooseDossier": "Choisissez un dossier",
   "plan.tiers.noDossier":
-    "Choisissez un dossier : les tiers appartiennent aux livres d’une entreprise, pas à ceux du cabinet.",
+    "Choisissez un dossier : les tiers appartiennent aux livres d’une entreprise, pas à ceux de la comptabilité.",
   "plan.tiers.raison": "Raison sociale",
   "plan.tiers.matricule": "Matricule fiscal",
   "plan.tiers.collectif": "Compte collectif",
@@ -182,7 +182,7 @@ export const fr = {
   "plan.col.code": "Code",
   "plan.col.libelle": "Libellé",
   "plan.origin.pack": "Livré",
-  "plan.origin.cabinet": "Votre cabinet",
+  "plan.origin.cabinet": "Votre comptabilité",
   "plan.origin.dossier": "Ce dossier",
   "plan.origin.aucun": "À trancher",
   "plan.wasDefault": "Le pack proposait {compte}.",
@@ -201,13 +201,13 @@ export const fr = {
   "plan.field.libelle": "Libellé",
   "plan.malica.kicker": "Paramétrage",
   "cab.plan.principe":
-    "La norme livrée par le pack, les extensions ouvertes par Malica et les subdivisions que votre cabinet a arrêtées. Ce que le cabinet arrête prime sur le défaut du pack.",
+    "La norme livrée par le pack, les extensions ouvertes par Malica et les subdivisions que votre comptabilité a arrêtées. Ce que la comptabilité arrête prime sur le défaut du pack.",
   "cab.plan.comptes": "{count} comptes",
   "cab.plan.comptes#one": "{count} compte",
   "cab.plan.comptes#other": "{count} comptes",
-  "cab.plan.extensions": "{count} extensions du cabinet",
-  "cab.plan.extensions#one": "{count} extension du cabinet",
-  "cab.plan.extensions#other": "{count} extensions du cabinet",
+  "cab.plan.extensions": "{count} extensions de la comptabilité",
+  "cab.plan.extensions#one": "{count} extension de la comptabilité",
+  "cab.plan.extensions#other": "{count} extensions de la comptabilité",
   "cab.plan.filter.tout": "Tout",
   "plan.malica":
     "Un schéma d’écriture ne cite jamais un numéro de compte : il cite un rôle. Rebrancher un rôle ici change toutes les écritures qui l’emploient, sans qu’aucun schéma ne bouge.",
@@ -229,7 +229,7 @@ export const fr = {
   "portal.title": "Choisissez votre espace",
   "portal.subtitle": "Deux applications, une seule base gouvernée.",
   "portal.tour.body":
-    "L'espace des opérateurs d'ALGORIA Factory : cabinets, PME, abonnements et réglages de la plateforme.",
+    "L'espace des opérateurs d'ALGORIA Factory : comptabilités, PME, abonnements et réglages de la plateforme.",
   "portal.tour.cta": "Entrer",
   "portal.pme.count": "PME rattachées",
   "portal.cabinet.count": "Clients sous mandat",
@@ -340,7 +340,7 @@ export const fr = {
   "pme.refus.piece_personnelle":
     "Cette pièce est privée. Ajoutez-la à la société pour permettre sa lecture ; l’envoi à la comptabilité est une action distincte.",
   "refus.piece.rappelEnAttente":
-    "Le retour de cette pièce est demandé au cabinet : attendez sa réponse.",
+    "Le retour de cette pièce est demandé à la comptabilité : attendez sa réponse.",
   "refus.licence.transmission":
     "Transmission suspendue : un paiement de votre abonnement est en retard.",
   "refus.licence.export": "Export suspendu : l'abonnement de ce dossier n'est pas à jour.",
@@ -421,7 +421,7 @@ export const fr = {
   "pme.inviter.utilisateur.droit1": "Dépose et suit ses propres pièces",
   "pme.inviter.utilisateur.droit2": "Les envoie au propriétaire",
   "pme.inviter.proprietaire.droit1": "Voit toutes les pièces de la société",
-  "pme.inviter.proprietaire.droit2": "Envoie au cabinet, reçoit les pièces des utilisateurs",
+  "pme.inviter.proprietaire.droit2": "Envoie à la comptabilité, reçoit les pièces des utilisateurs",
   "pme.inviter.proprietaire.droit3": "Garde ou supprime toute pièce",
   "pme.inviter.envoyer": "Envoyer l'invitation",
   "pme.inviter.cout.compris":
@@ -476,9 +476,9 @@ export const fr = {
   "pme.capture.fin.envoyer.q.proprietaire": "Les envoyer à votre propriétaire ?",
   "pme.capture.fin.envoyer.q.proprietaire#one": "L’envoyer à votre propriétaire ?",
   "pme.capture.fin.envoyer.q.proprietaire#other": "Les envoyer à votre propriétaire ?",
-  "pme.capture.fin.envoyer.q#one": "L’envoyer à votre cabinet ?",
-  "pme.capture.fin.envoyer.q": "Les envoyer à votre cabinet ?",
-  "pme.capture.fin.envoyer.q#other": "Les envoyer à votre cabinet ?",
+  "pme.capture.fin.envoyer.q#one": "L’envoyer à votre comptabilité ?",
+  "pme.capture.fin.envoyer.q": "Les envoyer à votre comptabilité ?",
+  "pme.capture.fin.envoyer.q#other": "Les envoyer à votre comptabilité ?",
   "pme.capture.fin.envoyer": "Envoyer",
   "pme.capture.fin.terminer": "Terminer",
   "pme.capture.plusTard.titre": "Gardées, pas encore lues",
@@ -731,7 +731,7 @@ export const fr = {
   "pme.charges.sansCours.titre#one": "1 pièce en devise attend son cours",
   "pme.charges.sansCours.titre#other": "{count} pièces en devise attendent leur cours",
   "pme.charges.sansCours.detail":
-    "Elles n’entrent dans aucun total tant que votre cabinet n’a pas saisi le cours ({devises}).",
+    "Elles n’entrent dans aucun total tant que votre comptabilité n’a pas saisi le cours ({devises}).",
   "pme.charges.question":
     "{famille} : {observed} ce mois, contre {baseline} habituellement ({value}). Est-ce exceptionnel ?",
   "pme.charges.answer.exceptionnel": "Oui, exceptionnel",
@@ -1064,7 +1064,7 @@ export const fr = {
   "cab.banque.when": "Horodatage",
   "cab.banque.orphansbank": "Lignes de relev\u00e9 sans \u00e9criture",
   "cab.banque.orphansbook": "\u00c9critures sans ligne de relev\u00e9",
-  "cab.noorg": "Aucune organisation cabinet. Créez-en une pour superviser vos clients.",
+  "cab.noorg": "Aucune organisation de comptabilité. Créez-en une pour superviser vos clients.",
   "cab.today.title": "Aujourd'hui",
   "cab.nav.group.cabinet": "Outils et réglages",
   "cab.search": "Tout chercher",
@@ -1132,8 +1132,6 @@ export const fr = {
   "malica.chat.noTenant": "Sélectionnez une organisation avant d'interroger Malica.",
   "malica.panneau.ouvrir": "Parler à Malica",
   "malica.panneau.fermer": "Fermer le fil de Malica",
-  "cab.kpi.review": "À traiter",
-  "cab.kpi.returned": "Retournées",
   "cab.queue.title": "File priorisée",
   "cab.queue.empty": "Rien à superviser. La file est vide.",
   "cab.queue.client": "Client",
@@ -1151,7 +1149,7 @@ export const fr = {
   "cab.conseil.kicker": "Arbitrage · ce que Malica n’ose pas envoyer seule",
   "cab.conseil.h1": "Conseil fiscal",
   "cab.conseil.lede":
-    "Quand un client pose une question, Malica compose une réponse citée. Au-dessus de son seuil de certitude elle répond seule ; en dessous elle vous la remet. Vous levez le pouce, ou vous écrivez la bonne réponse — et elle apprend ce que le cabinet dit.",
+    "Quand un client pose une question, Malica compose une réponse citée. Au-dessus de son seuil de certitude elle répond seule ; en dessous elle vous la remet. Vous levez le pouce, ou vous écrivez la bonne réponse — et elle apprend ce que la comptabilité dit.",
   "cab.conseil.panel":
     "Je vous remets ce que je n’ose pas envoyer seule : chaque question porte ma réponse, ses articles et ma certitude. Votre pouce ou votre correction part au client, dans sa langue.",
   "cab.conseil.kpi.attente": "En attente d’arbitrage",
@@ -1159,13 +1157,13 @@ export const fr = {
   "cab.conseil.kpi.attente.vide": "rien ne vous attend",
   "cab.conseil.kpi.pouce": "Pouce levé",
   "cab.conseil.kpi.pouce.ctx": "réponses validées telles quelles",
-  "cab.conseil.kpi.corrigees": "Corrigées par le cabinet",
+  "cab.conseil.kpi.corrigees": "Corrigées par la comptabilité",
   "cab.conseil.kpi.corrigees.ctx": "formulations retenues par Malica",
   "cab.conseil.kpi.justesse": "Approuvées sans modification",
   "cab.conseil.kpi.justesse.ctx": "sur {count} questions arbitrées",
   "cab.conseil.kpi.justesse.ctx#one": "sur {count} question arbitrée",
   "cab.conseil.kpi.justesse.ctx#other": "sur {count} questions arbitrées",
-  "cab.conseil.kpi.justesse.sans": "aucune réponse évaluée par le cabinet",
+  "cab.conseil.kpi.justesse.sans": "aucune réponse évaluée par la comptabilité",
   "cab.conseil.file.titre": "File d’arbitrage",
   "cab.conseil.file.compte": "{n} / {total}",
   "cab.conseil.file.vide":
@@ -1189,7 +1187,7 @@ export const fr = {
   "cab.conseil.approuver.apres": "Pouce levé",
   "cab.conseil.corriger": "Donner la bonne réponse",
   "cab.conseil.ecarter": "Écarter",
-  "cab.conseil.correction.titre": "La réponse du cabinet",
+  "cab.conseil.correction.titre": "La réponse de la comptabilité",
   "cab.conseil.correction.placeholder":
     "Écrivez ce que le client doit lire. Malica reprendra votre formulation pour les cas semblables.",
   "cab.conseil.correction.article": "Article invoqué",
@@ -1198,7 +1196,7 @@ export const fr = {
   "cab.conseil.regle.approuvee":
     "Pouce levé — la réponse de Malica est partie au client, telle quelle, avec ses citations.",
   "cab.conseil.regle.corrigee":
-    "Réponse du cabinet envoyée. Malica retient votre formulation pour les cas semblables.",
+    "Réponse de la comptabilité envoyée. Malica retient votre formulation pour les cas semblables.",
   "cab.conseil.regle.ecartee": "Écartée — le client est invité à en parler de vive voix.",
   "cab.conseil.regle.repondue":
     "Envoyée seule, au-dessus de votre seuil. Vous pouvez encore la corriger.",
@@ -1263,11 +1261,11 @@ export const fr = {
     "Un client a posé une question de conseil : Malica vous remet sa réponse.",
   "cab.notif.kind.conseil.repondu":
     "Malica a répondu seule à une question de conseil, avec ses citations.",
-  "cab.notif.kind.conseil.decide": "La réponse du cabinet est partie au client.",
-  "cab.journal.conseil.retenu": "Réponse de conseil remise au cabinet",
+  "cab.notif.kind.conseil.decide": "La réponse de la comptabilité est partie au client.",
+  "cab.journal.conseil.retenu": "Réponse de conseil remise à la comptabilité",
   "cab.journal.conseil.repondu": "Réponse de conseil envoyée seule",
   "cab.journal.conseil.approuve": "Réponse de conseil approuvée",
-  "cab.journal.conseil.corrige": "Réponse de conseil corrigée par le cabinet",
+  "cab.journal.conseil.corrige": "Réponse de conseil corrigée par la comptabilité",
   "cab.journal.conseil.ecarte": "Question de conseil écartée",
   "pme.conseil.relecture":
     "Votre comptable relit ma réponse : je vous la transmets dès qu’il l’a validée.",
@@ -1298,7 +1296,7 @@ export const fr = {
   "cab.today.charge.pieces#one": "{count} pièce en attente",
   "cab.today.charge.pieces#other": "{count} pièces en attente",
   "cab.rail.role": "Comptabilité",
-  "cab.rail.role.expert": "Chef de cabinet",
+  "cab.rail.role.expert": "Responsable de la comptabilité",
   "cab.rail.role.dirigeant": "Dirigeant",
   "cab.rail.role.collaborateur": "Collaborateur",
   "cab.rail.role.assistant": "Assistant",
@@ -1306,11 +1304,7 @@ export const fr = {
   "cab.rail.role.aucun": "Sans rôle ici",
   "cab.nav.export": "Export FEC / CSV",
   "cab.nav.conseil": "Conseil",
-  "cab.nav.honoraires": "Honoraires et mandats",
-  "cab.nav.abonnements": "Abonnements des clients",
   "cab.abo.title": "Abonnements des clients",
-  "cab.abo.panel":
-    "Le prix est le prix public, sans remise : votre marge se fait sur vos honoraires. Une société qui payait déjà elle-même choisit : son abonnement s'arrête le jour où elle accepte le vôtre.",
   "cab.abo.kpi.couverts": "Sociétés couvertes",
   "cab.abo.kpi.attente": "En attente de réponse",
   "cab.abo.kpi.derniere": "Dernière facture TTC",
@@ -1325,7 +1319,7 @@ export const fr = {
   "cab.abo.propose.prix": "{prix} HT par mois",
   "cab.abo.propose.bouton": "Proposer",
   "cab.abo.propose.ok":
-    "Proposition envoyée à {client}. Elle apparaît dans ses réglages, à accepter ou refuser.",
+    "Proposition envoyée à {client}. Son dirigeant la trouve dans Réglages › Abonnement, à accepter ou refuser.",
   "cab.abo.liste.titre": "Ce que vous proposez ou couvrez",
   "cab.abo.liste.count": "{count} abonnements",
   "cab.abo.liste.count#one": "{count} abonnement",
@@ -1396,12 +1390,12 @@ export const fr = {
   "cab.malica.prop.sansMain": "{count} mandats n’ont pas de collaborateur.",
   "cab.malica.prop.sansMain#one": "{count} mandat n’a pas de collaborateur.",
   "cab.malica.prop.sansMain#other": "{count} mandats n’ont pas de collaborateur.",
-  "cab.malica.prop.sansMain.source": "affectations · cabinet",
+  "cab.malica.prop.sansMain.source": "affectations · comptabilité",
   "cab.malica.prop.sansMain.cta": "Affecter",
   "cab.malica.prop.dormant": "{count} dossiers n’ont transmis aucune pièce ce mois-ci.",
   "cab.malica.prop.dormant#one": "{count} dossier n’a transmis aucune pièce ce mois-ci.",
   "cab.malica.prop.dormant#other": "{count} dossiers n’ont transmis aucune pièce ce mois-ci.",
-  "cab.malica.prop.dormant.source": "file du cabinet · le mois",
+  "cab.malica.prop.dormant.source": "file de la comptabilité · le mois",
   "cab.malica.prop.dormant.cta": "Voir les clients",
   "cab.malica.agent.lecture": "Lecture de pièces",
   "cab.malica.agent.lecture.file": "{count} en file",
@@ -1451,7 +1445,7 @@ export const fr = {
   "cab.today.filter.doublons": "Doublons probables",
   "cab.today.search": "Filtrer client ou libellé",
   "cab.today.affectation": "Affectation",
-  "cab.today.allcabinet": "Tout le cabinet",
+  "cab.today.allcabinet": "Toute la comptabilité",
   "cab.today.unassigned": "Sans collaborateur",
   "cab.queue.rank": "#",
   "cab.queue.amount": "Montant",
@@ -1461,7 +1455,7 @@ export const fr = {
   "cab.queue.unread": "Pas encore lue",
   "cab.queue.sansEcriture": "Lue — aucune écriture",
   "cab.queue.sansEcriture.tiers": "Lue — {tiers} — aucune écriture",
-  "cab.today.charge": "Charge du cabinet",
+  "cab.today.charge": "Charge de la comptabilité",
   "cab.today.charge.affecter": "Affecter",
   "cab.today.echeances": "Échéances proches",
   "cab.today.echeances.all": "Tout voir",
@@ -1477,7 +1471,7 @@ export const fr = {
   "cab.notif.kicker.attente": "{n} en attente",
   "cab.notif.kicker.rien": "Rien en attente",
   "cab.notif.lede":
-    "Ce que les dossiers mandatés ont fait savoir au cabinet, jour par jour. Rien ne s’efface : marquer lu, c’est dire que vous avez vu.",
+    "Ce que les dossiers mandatés ont fait savoir à la comptabilité, jour par jour. Rien ne s’efface : marquer lu, c’est dire que vous avez vu.",
   "cab.notif.toutLu": "Tout marquer lu",
   "cab.notif.marquerLu": "Marquer lu",
   "cab.notif.ouvrir": "Ouvrir",
@@ -1496,9 +1490,9 @@ export const fr = {
   "cab.notif.kind.ecriture.retournee": "Une écriture a été retournée.",
   "cab.notif.kind.autre": "Un événement du dossier.",
   "cab.notif.kind.mandat.propose": "Un mandat a été proposé au dossier.",
-  "cab.notif.kind.mandat.accepte": "Le dossier a accepté le mandat du cabinet.",
+  "cab.notif.kind.mandat.accepte": "Le dossier a accepté le mandat de la comptabilité.",
   "cab.notif.kind.mandat.revoque": "Le dossier a mis fin au mandat.",
-  "cab.notif.kind.mandat.refuse": "Le dossier a décliné le mandat du cabinet.",
+  "cab.notif.kind.mandat.refuse": "Le dossier a décliné le mandat de la comptabilité.",
   "cab.notif.kind.pv.envoye": "Un procès-verbal a été envoyé au client.",
   "cab.review.rank": "{n} sur {total}",
   "cab.review.ref": "Pièce",
@@ -1567,41 +1561,11 @@ export const fr = {
   "cab.controle.cours_de_change": "Cours de change",
   "cab.controle.tva_exclue_a_trancher": "TVA peut-être non déductible : à trancher",
   "cab.controle.immobilisation_a_trancher": "Immobilisation ou charge : à trancher",
-  "cab.controle.immobilisation_faible_valeur": "Bien de faible valeur (seuil du cabinet)",
+  "cab.controle.immobilisation_faible_valeur": "Bien de faible valeur (seuil de la comptabilité)",
   "cab.audit.extract": "Lecture citée, contrat v1.",
   "cab.audit.autre": "Événement du dossier.",
   "cab.audit.service.relecteur_de_nuit": "par le relecteur de nuit",
   "cab.audit.service.autre": "par un service",
-  "cab.clients.kicker": "Portefeuille du cabinet",
-  "cab.clients.kpi.mandats": "Mandats actifs",
-  "cab.clients.kpi.attente": "Pièces en attente",
-  "cab.clients.kpi.sans": "Sans collaborateur",
-  "cab.clients.filter.tous": "Tous",
-  "cab.clients.filter.attente": "En attente",
-  "cab.clients.filter.sans": "Sans collaborateur",
-  "cab.clients.filter.miens": "Mes mandats",
-  "cab.clients.count": "{count} mandats",
-  "cab.dossier.ouvrir": "Créer un dossier client",
-  "cab.dossier.titre": "Créer un dossier client",
-  "cab.dossier.nom": "Raison sociale",
-  "cab.dossier.mf": "Matricule fiscal",
-  "cab.dossier.adresse": "Adresse",
-  "cab.dossier.valider": "Créer le dossier",
-  "cab.dossier.ouvert":
-    "Le dossier est ouvert. Invitez maintenant la personne qui le tiendra côté entreprise.",
-  "cab.dossier.contact": "Adresse e-mail du contact",
-  "cab.dossier.inviter": "Inviter",
-  "cab.dossier.lien.titre": "Le lien d'invitation — il ne s'affichera qu'une fois",
-  "cab.dossier.lien.aide":
-    "Transmettez-le vous-même à votre contact. Il vaut sept jours, une seule fois, avec l'adresse invitée.",
-  "cab.dossier.lien.copier": "Copier",
-  "cab.dossier.lien.copie": "Copié",
-  "cab.dossier.invitations": "Invitations du dossier",
-  "cab.dossier.statut.en_attente": "En attente",
-  "cab.dossier.statut.acceptee": "Acceptée",
-  "cab.dossier.statut.expiree": "Expirée",
-  "cab.dossier.statut.revoquee": "Révoquée",
-  "cab.dossier.revoquer": "Révoquer",
   "invitation.kicker": "Invitation",
   "invitation.titre": "Votre espace est prêt.",
   "invitation.titreLienMort": "Ce lien n'ouvre rien.",
@@ -1618,29 +1582,11 @@ export const fr = {
     "Ce lien n'est plus valable. Demandez-en un nouveau à votre comptabilité.",
   "invitation.introuvable":
     "Ce lien n'ouvre aucun dossier. Vérifiez-le, ou demandez-en un nouveau à votre comptabilité.",
-  "cab.clients.count#one": "{count} mandat",
-  "cab.clients.count#other": "{count} mandats",
-  "cab.clients.col.regime": "Régime",
-  "cab.clients.col.collab": "Collaborateur",
-  "cab.clients.col.mois": "Ce mois",
-  "cab.clients.regime.inconnu": "Non renseigné",
-  "cab.clients.collab.aucun": "Personne",
-  "cab.mode.autonome": "Auto",
-  "cab.mode.mandate": "Comptabilité",
-  "cab.engagement.propose": "Proposé",
-  "cab.engagement.actif": "Actif",
-  "cab.engagement.suspendu": "Suspendu",
-  "cab.engagement.termine": "Terminé",
-  "cab.clients.title": "Clients",
   "cab.clients.termines.titre": "Mandats terminés",
-  "cab.clients.termines.sous":
-    "Le client a repris son dossier : il ne s'ouvre plus d'ici et ne compte plus dans le portefeuille.",
   "cab.clients.termines.periode": "Du {debut} au {fin}",
   "cab.clients.termines.refuse": "Proposition refusée",
   "cab.notif.motif": "Motif : {motif}",
   "cab.clients.empty": "Aucun mandat actif.",
-  "cab.clients.mandate": "Mandat",
-  "cab.clients.mode": "Validation",
   "cab.review.title": "Pièce et écriture, côte à côte",
   "cab.review.document": "La pièce",
   "cab.review.nodoc": "Pièce indisponible.",
@@ -1718,8 +1664,7 @@ export const fr = {
   "cab.echeances.source": "Dates dérivées du pack de juridiction, jamais écrites en dur.",
   "cab.echeances.panel.kicker": "Lecture",
   "cab.echeances.panel": "En retard : {late} · sous sept jours : {week}.",
-  "cab.clients.lede": "Les dossiers mandatés, leur mode de validation et le volume à superviser.",
-  "cab.settings.title": "Réglages du cabinet",
+  "cab.settings.title": "Réglages de la comptabilité",
   "cab.export.kicker": "Sortie de données · aucun verrou",
   "cab.export.title": "Export FEC et CSV",
   "cab.export.lede":
@@ -1737,7 +1682,7 @@ export const fr = {
   "cab.export.format.csv_ecritures": "CSV des écritures",
   "cab.export.format.csv_ecritures.hint": "grand livre · tabulé",
   "cab.export.format.csv_plan": "CSV du plan",
-  "cab.export.format.csv_plan.hint": "plan comptable · pack et cabinet",
+  "cab.export.format.csv_plan.hint": "plan comptable · pack et comptabilité",
   "cab.export.format.fec.unDossier":
     "Le FEC se produit dossier par dossier : choisissez un client.",
   "cab.export.taille": "{lignes} lignes · {taille}",
@@ -1757,7 +1702,7 @@ export const fr = {
   "cab.export.recents.auteur.inconnu": "auteur inconnu",
   "cab.export.panel.kicker": "Ce que je garantis",
   "cab.export.panel":
-    "Je n’invente aucune ligne : le fichier reprend les écritures comptabilisées telles que le Socle les tient, avec la précision et la devise du pack {pack}. Chaque export est horodaté, mesuré et empreint au journal du cabinet — et personne ne peut l’en effacer.",
+    "Je n’invente aucune ligne : le fichier reprend les écritures comptabilisées telles que le Socle les tient, avec la précision et la devise du pack {pack}. Chaque export est horodaté, mesuré et empreint au journal de la comptabilité — et personne ne peut l’en effacer.",
   "cab.export.panel.sansPack":
     "Aucun pack en vigueur pour cette juridiction : je ne peux pas produire de fichier tant que la précision monétaire n’est pas connue.",
   "cab.export.source":
@@ -1765,12 +1710,12 @@ export const fr = {
   "cab.export.format.journal_csv": "Journal du jour (CSV)",
   "cab.export.format.journal_xlsx": "Journal du jour (Excel)",
   "cab.nav.journal": "Journal du jour",
-  "cab.journal.ecriture.forcee": "Le cabinet a forcé l’écriture.",
-  "cab.journal.piece.type_etabli": "Type de pièce établi par le cabinet.",
+  "cab.journal.ecriture.forcee": "La comptabilité a forcé l’écriture.",
+  "cab.journal.piece.type_etabli": "Type de pièce établi par la comptabilité.",
   "cab.journal.piece.type_corrige": "Le client a corrigé le type de la pièce.",
   "cab.journal.piece.date_corrigee": "Le client a corrigé la date de la pièce.",
   "cab.journal.piece.nom_corrige": "Le client a corrigé le nom de l’émetteur.",
-  "cab.journal.piece.vers_cabinet": "Pièce envoyée au cabinet.",
+  "cab.journal.piece.vers_cabinet": "Pièce envoyée à la comptabilité.",
   "cab.journal.piece.rendue": "Pièce rendue au client, à sa demande.",
   "cab.journal.piece.vers_societe": "Pièce revenue dans la société.",
   "cab.journal.piece.rangee_societe": "Pièce rangée dans la société.",
@@ -1779,7 +1724,7 @@ export const fr = {
   "cab.journal.piece.vers_mon_espace": "Pièce passée dans Mon espace.",
   "cab.journal.piece.demande_accordee": "Demande du client accordée.",
   "cab.journal.piece.demande_refusee": "Demande du client refusée.",
-  "cab.settings.fuseau.titre": "Fuseau horaire du cabinet",
+  "cab.settings.fuseau.titre": "Fuseau horaire de la comptabilité",
   "cab.settings.fuseau.lede":
     "Le jour du journal, le numéro de ses exports et leur comparaison se lisent dans ce fuseau.",
   "cab.settings.fuseau.defaut": "Celui de la juridiction : {fuseau}",
@@ -1834,26 +1779,22 @@ export const fr = {
   "cab.jdj.origine.contre_passation": "Contre-passation",
   "cab.jdj.contrePassee": "contre-passée",
   "cab.jdj.aide.contenu":
-    "Toutes les écritures que le cabinet a prises en charge ce jour-là : validées (proposées par Malica), forcées (modifiées ou saisies par un comptable, son nom et l’heure gardés) et les contre-passations.",
+    "Toutes les écritures que la comptabilité a prises en charge ce jour-là : validées (proposées par Malica), forcées (modifiées ou saisies par un comptable, son nom et l’heure gardés) et les contre-passations.",
   "cab.jdj.aide.modifier":
     "Le journal reste modifiable : une correction ne réécrit jamais une écriture. Elle la contre-passe et en inscrit une nouvelle, depuis la pièce ; les deux paraissent au journal du jour où elles sont faites.",
   "cab.jdj.aide.export":
-    "Chaque export est numéroté et gardé, fichier et empreinte : il se télécharge à nouveau depuis la liste des exports du jour. Le suivant dit ce qui a changé depuis — écritures ajoutées, contre-passées — ou que le fuseau du cabinet a changé.",
+    "Chaque export est numéroté et gardé, fichier et empreinte : il se télécharge à nouveau depuis la liste des exports du jour. Le suivant dit ce qui a changé depuis — écritures ajoutées, contre-passées — ou que le fuseau de la comptabilité a changé.",
   "cab.settings.kicker": "Réglages · {cabinet}",
-  "cab.settings.tab.cabinet": "Cabinet et équipe",
+  "cab.settings.tab.cabinet": "Comptabilité et équipe",
   "cab.settings.tab.calendrier": "Calendrier des échéances",
-  "cab.settings.onb.titre": "Parcours de mise en route",
-  "cab.settings.onb.lede":
-    "Les quatre étapes qu’un nouveau cabinet traverse une fois : le cabinet, l’équipe, les premiers mandats, le seuil de délégation. Ce n’est pas une rubrique — c’est un parcours qu’on rejoue si besoin.",
-  "cab.settings.onb.rejouer": "Rejouer la mise en route",
   "cab.settings.tab.integrations": "Intégrations et API",
   "cab.settings.tab.comptabilite": "Comptabilité",
   "reglages.compta.portee": "Voir et arrêter pour",
-  "reglages.compta.portee.cabinet": "Tout le cabinet",
+  "reglages.compta.portee.cabinet": "Toute la comptabilité",
   "reglages.compta.aConfirmer": "Défaut à confirmer par un expert-comptable",
   "reglages.compta.nonApplique": "Enregistré — pas encore appliqué par le Socle",
   "reglages.compta.aide.texte": "Ce que dit le texte",
-  "reglages.compta.aide.pratique": "Pratique des cabinets",
+  "reglages.compta.aide.pratique": "Pratique des comptabilités",
   "reglages.compta.aide.risque": "Risque en cas de contrôle",
   "reglages.compta.aide.incertain": "INCERTAIN",
   "reglages.compta.aide.defaut": "Défaut du pack",
@@ -1872,7 +1813,7 @@ export const fr = {
   "reglages.compta.categorie.depasse": "Dépasse le taux maximal du décret 2008-492",
   "reglages.compta.nature_de_vente": "{libelle} : compte {compte}",
   "reglages.compta.nature_de_vente.repli":
-    "repli d’une vente dont la nature ne se prouve pas, et compte unique au choix du cabinet",
+    "repli d’une vente dont la nature ne se prouve pas, et compte unique au choix de la comptabilité",
   "reglages.compta.depuis.champ": "Les décisions valent à partir du",
   "reglages.compta.depuis": "Depuis le {date}",
   "reglages.compta.option.nonAppliquee": "pas encore appliqué par le Socle",
@@ -1895,10 +1836,10 @@ export const fr = {
   "cab.integ.exports.note":
     "Les écritures comptabilisées d’un mandat, dans un fichier que l’administration ou un autre logiciel sait lire. Chaque export est journalisé avec son empreinte.",
   "cab.integ.exports.action": "Produire un export",
-  "cab.integ.api.nom": "API du cabinet",
-  "cab.integ.api.nature": "Entrée et sortie · clé du cabinet",
+  "cab.integ.api.nom": "API de la comptabilité",
+  "cab.integ.api.nature": "Entrée et sortie · clé de la comptabilité",
   "cab.integ.api.note":
-    "Un outil tiers lit les écritures des mandats et dépose des pièces, avec une clé que le cabinet crée et révoque ici.",
+    "Un outil tiers lit les écritures des mandats et dépose des pièces, avec une clé que la comptabilité crée et révoque ici.",
   "cab.integ.api.action": "Gérer la clé",
   "cab.integ.etat.pieces": "{count} pièces reçues sur trente jours",
   "cab.integ.etat.pieces#one": "{count} pièce reçue sur trente jours",
@@ -1921,9 +1862,9 @@ export const fr = {
   "cab.integ.etat.aucuneCle": "Aucune clé",
   "cab.integ.etat.dernierAppel": "dernier appel le {date}",
   "cab.integ.etat.jamaisAppelee": "jamais appelée",
-  "cab.integ.cle.titre": "Clé du cabinet",
+  "cab.integ.cle.titre": "Clé de la comptabilité",
   "cab.integ.cle.portee":
-    "Portée : lecture des écritures et dépôt de pièces, sur les mandats du cabinet uniquement. L’isolation du tenant est appliquée par la base, pas par la clé.",
+    "Portée : lecture des écritures et dépôt de pièces, sur les mandats de la comptabilité uniquement. L’isolation du tenant est appliquée par la base, pas par la clé.",
   "cab.integ.cle.nouvelle":
     "Voici votre clé. Elle ne sera plus jamais affichée : copiez-la maintenant et rangez-la dans l’outil qui l’utilisera.",
   "cab.integ.cle.copier": "Copier",
@@ -1949,13 +1890,13 @@ export const fr = {
   "cab.integ.cle.libelle.hint": "Le nom de l’outil qui l’utilisera.",
   "cab.integ.portee.lire": "Lecture des écritures",
   "cab.integ.portee.lire.hint":
-    "Les lignes comptabilisées d’une période, sur les mandats du cabinet.",
+    "Les lignes comptabilisées d’une période, sur les mandats de la comptabilité.",
   "cab.integ.portee.deposer": "Dépôt de pièces",
   "cab.integ.portee.deposer.hint": "Enregistrer une pièce et en déposer le contenu.",
   "cab.integ.cle.creer": "Créer une clé",
   "cab.settings.g.supervision": "Supervision",
   "cab.settings.g.supervision.lede":
-    "Ce que le cabinet délègue au Socle, et ce qu’il garde à la main.",
+    "Ce que la comptabilité délègue au Socle, et ce qu’elle garde à la main.",
   "cab.settings.seuilLot": "Validation en lot au-dessus de",
   "cab.settings.seuilLot.hint":
     "Confiance de lecture au-dessus de laquelle un lot se valide d’un geste.",
@@ -1963,11 +1904,11 @@ export const fr = {
   "cab.settings.seuilRevue.hint":
     "En dessous, chaque pièce s’ouvre seule. Entre les deux : proposition à confirmer.",
   "cab.settings.g.pack": "Pack de juridiction",
-  "cab.settings.g.pack.lede": "Le référentiel fiscal appliqué aux dossiers du cabinet.",
+  "cab.settings.g.pack.lede": "Le référentiel fiscal appliqué aux dossiers de la comptabilité.",
   "cab.settings.packActif": "Pack actif",
   "cab.settings.packActif.hint": "Il porte les taux, les comptes et les obligations.",
   "cab.settings.packActif.absent": "aucun pack en vigueur",
-  "cab.settings.extensions": "Extensions du cabinet",
+  "cab.settings.extensions": "Extensions de la comptabilité",
   "cab.settings.extensions.hint": "Comptes ouverts au-delà du plan de référence.",
   "cab.settings.g.malica": "Malica",
   "cab.settings.g.malica.lede": "Elle perçoit, rappelle et explique. Elle ne calcule jamais.",
@@ -1981,7 +1922,7 @@ export const fr = {
   "cab.settings.ton.chaleureux": "Chaleureux",
   "cab.settings.g.equipe": "Équipe et accès",
   "cab.settings.g.equipe.lede":
-    "Les collaborateurs du cabinet, et les seuils qui appellent un second regard.",
+    "Les collaborateurs de la comptabilité, et les seuils qui appellent un second regard.",
   "cab.settings.collaborateurs": "Collaborateurs",
   "cab.settings.doubleValidation": "Double validation au-delà de",
   "cab.settings.doubleValidation.hint": "Un second regard sur les gros montants. Vide : jamais.",
@@ -1989,11 +1930,11 @@ export const fr = {
   "cab.settings.capacite.hint": "En dossiers actifs. Le pilotage mesure la charge contre elle.",
   "cab.settings.enregistrer": "Enregistrer les réglages",
   "cab.settings.enregistre": "Réglages enregistrés.",
-  "cab.settings.defauts": "Ce sont les défauts du Socle : le cabinet n’a encore rien réglé.",
+  "cab.settings.defauts": "Ce sont les défauts du Socle : la comptabilité n’a encore rien réglé.",
   "cab.settings.cal.lede":
     "Les dates viennent du pack de juridiction. Ce tableau dit lesquelles s’appliquent à quel secteur, et pour quelle année — c’est ce qui alimente l’onglet Échéances de chaque dossier.",
   "cab.settings.cal.lectureSeule":
-    "Le calendrier du cabinet est réglé par l'expert. Vous le consultez ; pour un changement ou un report, adressez-vous à lui.",
+    "Le calendrier de la comptabilité est réglé par l'expert. Vous le consultez ; pour un changement ou un report, adressez-vous à lui.",
   "cab.settings.cal.exercice": "Exercice",
   "cab.settings.cal.secteur": "Secteur d’activité",
   "cab.settings.cal.general": "Toutes activités",
@@ -2011,7 +1952,7 @@ export const fr = {
   "cab.settings.cal.col.mandats": "Mandats",
   "cab.settings.cal.scope.toutes": "Toutes activités",
   "cab.settings.cal.scope.secteur": "Propre à ce secteur",
-  "cab.settings.cal.scope.propre": "Propre au cabinet",
+  "cab.settings.cal.scope.propre": "Propre à la comptabilité",
   "cab.settings.cal.periodicite.mensuelle": "Mensuelle",
   "cab.settings.cal.periodicite.trimestrielle": "Trimestrielle",
   "cab.settings.cal.periodicite.annuelle": "Annuelle",
@@ -2027,7 +1968,7 @@ export const fr = {
   "cab.settings.cal.resume#other":
     "{actives} obligations actives sur {total} · exercice {exercice}",
   "cab.settings.cal.vide": "Aucune obligation périodique dans le pack pour cet exercice.",
-  "cab.settings.cal.propre.titre": "Obligation propre au cabinet",
+  "cab.settings.cal.propre.titre": "Obligation propre à la comptabilité",
   "cab.settings.cal.propre.lede": "Elle n’existera que pour vos mandats, jamais dans le pack.",
   "cab.settings.cal.propre.libelle": "Libellé",
   "cab.settings.cal.propre.regle": "Règle, en toutes lettres",
@@ -2044,16 +1985,16 @@ export const fr = {
   "cab.settings.cal.reports.poser": "Reporter l'échéance",
   "cab.settings.cal.reports.pose": "Report inscrit : le calendrier des dossiers le suit.",
   "cab.settings.cal.reports.vide": "Aucun report en cours.",
-  "cab.settings.cal.reports.origine.report_cabinet": "Votre cabinet",
+  "cab.settings.cal.reports.origine.report_cabinet": "Votre comptabilité",
   "cab.settings.cal.reports.origine.report_algoria": "ALGORIA, pour toute la juridiction",
   "echeance.origine.jour_ouvrable": "Date légale {date}, reportée au premier jour ouvrable",
   "echeance.origine.report_algoria": "Date légale {date}, prorogée pour tous : {motif}",
-  "echeance.origine.report_cabinet": "Date légale {date}, reportée par le cabinet : {motif}",
+  "echeance.origine.report_cabinet": "Date légale {date}, reportée par la comptabilité : {motif}",
   "cab.settings.cal.propre.ajoutee":
     "Obligation ajoutée : elle entre au calendrier des mandats concernés.",
   "cab.settings.panel":
-    "Je lis les seuils du cabinet en base ; absents, je montre les défauts du Socle. Le calendrier compte les mandats concernés depuis leurs fiches, jamais de tête.",
-  "cab.journal.cabinet.reglages": "Réglages du cabinet modifiés",
+    "Je lis les seuils de la comptabilité en base ; absents, je montre les défauts du Socle. Le calendrier compte les mandats concernés depuis leurs fiches, jamais de tête.",
+  "cab.journal.cabinet.reglages": "Réglages de la comptabilité modifiés",
   "cab.journal.cabinet.obligation_reglee": "Obligation du calendrier réglée",
   "cab.journal.cabinet.obligation_propre": "Obligation propre ajoutée",
   "cab.retour.titre": "Retourner au client",
@@ -2161,7 +2102,7 @@ export const fr = {
   "refus.introuvable": "Introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.piece": "Pièce introuvable, ou vous n’y avez pas accès.",
   "refus.inattendu": "Ce geste n’a pas abouti. Réessayez ; si cela se répète, signalez-le.",
-  "refus.introuvable.cabinet": "Cabinet introuvable, ou vous n’y avez pas accès.",
+  "refus.introuvable.cabinet": "Comptabilité introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.dossier": "Dossier introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.facture": "Facture introuvable, ou vous n’y avez pas accès.",
   "refus.introuvable.immobilisation": "Immobilisation introuvable, ou vous n’y avez pas accès.",
@@ -2212,12 +2153,13 @@ export const fr = {
   "refus.reserve.dirigeant_ou_plateforme":
     "Seul le dirigeant de la société, ou la plateforme, fait naître une licence.",
   "refus.reserve.proprietaire": "Ce geste est réservé au propriétaire de la société.",
-  "refus.reserve.expert": "Ce geste est réservé à l’expert-comptable du cabinet.",
+  "refus.reserve.expert": "Ce geste est réservé à l’expert-comptable de la comptabilité.",
   "refus.reserve.expert_mandate":
-    "Ce geste est réservé à l’expert-comptable du cabinet mandaté sur ce dossier.",
+    "Ce geste est réservé à l’expert-comptable de la comptabilité mandatée sur ce dossier.",
   "refus.reserve.cabinet_mandate":
-    "Seul le cabinet mandaté sur ce dossier tranche une demande sur une pièce.",
-  "refus.supervision.reservee": "La supervision revient à l’expert ou au collaborateur du cabinet.",
+    "Seule la comptabilité mandatée sur ce dossier tranche une demande sur une pièce.",
+  "refus.supervision.reservee":
+    "La supervision revient à l’expert ou au collaborateur de la comptabilité.",
   "refus.ecriture.contre_passee":
     "Cette écriture est déjà contre-passée : elle ne se supervise plus.",
   "refus.conversation.auteur_fixe": "Une conversation garde son auteur.",
@@ -2225,7 +2167,8 @@ export const fr = {
   "refus.conversation.question_vide": "Écrivez votre question avant de l’envoyer.",
   "refus.conseil.plafond":
     "Le conseil de Malica a atteint son plafond du mois pour ce dossier ; il reprend le mois prochain.",
-  "refus.conseil.sans_cabinet": "Ce dossier n’a pas de cabinet mandaté : personne pour arbitrer.",
+  "refus.conseil.sans_cabinet":
+    "Ce dossier n’a pas de comptabilité mandatée : personne pour arbitrer.",
   "refus.arbitrage.etat_initial": "Un arbitrage naît en attente, ou déjà répondu.",
   "refus.arbitrage.decision_inconnue":
     "Cette décision n’existe pas : accordez, corrigez ou écartez.",
@@ -2340,7 +2283,7 @@ export const fr = {
   "refus.referentiel.devise_inconnue": "Cette devise n’existe pas au référentiel : {devise}.",
   "refus.referentiel.taux_tva_hors_pack": "Ce taux de TVA n’existe pas dans le pack en vigueur.",
   "refus.fuseau.non_defini":
-    "Le fuseau horaire du cabinet n’est pas défini : réglez-le dans les réglages du cabinet.",
+    "Le fuseau horaire de la comptabilité n’est pas défini : réglez-le dans les réglages de la comptabilité.",
   "refus.fuseau.dossier_non_defini":
     "Le fuseau horaire de ce dossier n’est pas défini, ni par lui ni par sa juridiction : le jour de réception de ses pièces ne peut pas se lire. Signalez-le au support.",
   "refus.fuseau.inconnu": "Ce fuseau horaire n’existe pas : {fuseau}.",
@@ -2354,16 +2297,16 @@ export const fr = {
   "refus.report.date_requise": "Indiquez la nouvelle date.",
   "refus.motif.a_dire": "Dites pourquoi : un motif est requis.",
   "refus.report.periode_illisible": "Période illisible : AAAA-MM, AAAA-Tn ou AAAA.",
-  "refus.report.obligation_inconnue": "Cette obligation n’existe pas pour ce cabinet.",
+  "refus.report.obligation_inconnue": "Cette obligation n’existe pas pour cette comptabilité.",
   "refus.report.obligation_hors_pack": "Cette obligation n’existe pas dans le pack.",
   "refus.report.avant_l_echeance":
     "Un report repousse l’échéance : le {date} est avant sa date légale, le {legale}.",
   "refus.report.source_et_motif": "Un report publié se motive et se source.",
   "refus.jour_ferie.source": "Un jour férié se source.",
   "refus.collab.aucune_affectation": "Ce dossier n’est affecté à personne.",
-  "refus.collab.hors_cabinet": "Ce collaborateur n’est pas membre du cabinet.",
+  "refus.collab.hors_cabinet": "Ce collaborateur n’est pas membre de la comptabilité.",
   "refus.mandat.aucun_actif": "Aucun mandat actif sur ce dossier.",
-  "refus.mandat.hors_cabinet": "Ce dossier n’est pas mandaté par votre cabinet.",
+  "refus.mandat.hors_cabinet": "Ce dossier n’est pas mandaté par votre comptabilité.",
   "refus.mandat.deja_repondu": "Ce mandat a déjà reçu une réponse.",
   "refus.mandat.motif_de_revocation": "Dites pourquoi : la comptabilité lira ce motif.",
   "refus.mandat.un_seul_actif":
@@ -2420,10 +2363,10 @@ export const fr = {
   "refus.acces.termine": "Un accès terminé ne se rouvre pas : un autre s’ouvre.",
   "refus.acces.activation_figee": "Le jour d’activation ne se réécrit pas.",
   "refus.acces.licence_figee": "Un accès ne change pas de licence.",
-  "refus.acces.pour_un_autre": "Seul un cabinet ouvre un accès pour une autre organisation.",
+  "refus.acces.pour_un_autre": "Seule une comptabilité ouvre un accès pour une autre organisation.",
   "refus.offre.canal_sans_regle":
     "Cette offre ({offre}) n’est pas proposée sur le canal {canal} au {date}.",
-  "refus.offre.pas_par_un_cabinet": "Un cabinet n’ouvre pas un accès {offre}.",
+  "refus.offre.pas_par_un_cabinet": "Une comptabilité n’ouvre pas un accès {offre}.",
   "refus.offre.pas_en_direct": "L’offre {offre} n’est pas vendue en direct.",
   "refus.offre.hors_grille": "Cette offre n’existe pas dans la grille en vigueur.",
   "refus.offre.naissance_absente":
@@ -2442,7 +2385,7 @@ export const fr = {
     "La licence ne se transmet qu’à un propriétaire de la société.",
   "refus.place.offre_pleine": "Toutes les places de cette offre sont prises ({places} au total).",
   "refus.abonnement.deja_propose":
-    "Un abonnement est déjà proposé ou attribué à ce dossier par un cabinet.",
+    "Un abonnement est déjà proposé ou attribué à ce dossier par une comptabilité.",
   "refus.abonnement.plus_en_attente": "Cette proposition n’est plus en attente.",
   "refus.forfait.periode_figee":
     "Une période de forfait ne se réécrit pas : seule sa fermeture s’inscrit.",
@@ -2484,7 +2427,7 @@ export const fr = {
   "refus.facturation.destinataire_sans_nom":
     "Le destinataire {destinataire} n’a pas de nom : une facture sans destinataire n’est pas une facture.",
   "refus.facturation.rien_a_facturer": "Rien à facturer pour {periode}.",
-  "refus.facturation.deja_emise": "La facture de ce cabinet pour {periode} existe déjà.",
+  "refus.facturation.deja_emise": "La facture de cette comptabilité pour {periode} existe déjà.",
   "refus.facturation.payeur_introuvable":
     "La licence {licence} est introuvable : le payeur d’une facture ne se devine pas.",
   "refus.facturation.format_de_reference":
@@ -2539,7 +2482,7 @@ export const fr = {
     "Un exercice antérieur n’est pas doté : constatez d’abord ses amortissements.",
   "refus.immo.sortie.prix_au_rebut": "Une mise au rebut n’a ni prix ni TVA.",
   "refus.immo.sortie.compte_du_role":
-    "Un compte de la sortie n’est pas défini, ou l’est deux fois : vérifiez le plan comptable du cabinet.",
+    "Un compte de la sortie n’est pas défini, ou l’est deux fois : vérifiez le plan comptable de la comptabilité.",
   "refus.immo.statut_par_la_sortie":
     "L’état d’un bien ne se change pas ici : faites-le sortir par une cession ou une mise au rebut.",
   "refus.stocks.inventaire_deja": "Cette période est déjà constatée pour cet article.",
@@ -2549,7 +2492,7 @@ export const fr = {
   "refus.banque.ligne_deja_lettree": "Cette ligne est déjà lettrée.",
   "refus.banque.ecriture_deja_lettree": "Cette écriture est déjà lettrée à une autre ligne.",
   "refus.piece.transmise_au_cabinet":
-    "Cette pièce a été transmise à votre cabinet : elle ne revient que par son accord.",
+    "Cette pièce a été transmise à votre comptabilité : elle ne revient que par son accord.",
   "refus.piece.comptabilisee_dans_la_societe": "Une pièce comptabilisée reste dans la société.",
   "refus.piece.comptabilisee_partagee": "Une pièce comptabilisée reste partagée.",
   "refus.suppression.engagee":
@@ -2570,7 +2513,7 @@ export const fr = {
   "refus.piece.scellee": "Le contenu de cette pièce est scellé : il ne se remplace pas.",
   "refus.piece.type_de_contenu":
     "Ce type de fichier n’est pas une pièce : déposez un PDF ou une photo (JPEG, PNG, WebP, HEIC).",
-  "refus.piece.non_partagee": "Cette pièce n’est pas partagée avec le cabinet.",
+  "refus.piece.non_partagee": "Cette pièce n’est pas partagée avec la comptabilité.",
   "refus.piece.aucune_demande": "Aucune demande n’est en attente sur cette pièce.",
   "refus.rattachement.motif": "Dites pourquoi vous détachez ce document.",
   "refus.rattachement.absent": "Ce document n’est pas rattaché à cette pièce.",
@@ -2581,8 +2524,8 @@ export const fr = {
   "refus.cle_api.revoquer": "Une clé d’API ne s’efface ni ne se modifie : elle se révoque.",
   "refus.cle_api.par_une_personne":
     "Une clé d’API ne crée ni ne révoque une autre clé : ce geste se fait par une personne.",
-  "refus.cle_api.cabinet_seulement": "Seul un cabinet porte une clé d’API.",
-  "refus.cle_api.expert_membre": "Seul un expert membre du cabinet crée une clé d’API.",
+  "refus.cle_api.cabinet_seulement": "Seule une comptabilité porte une clé d’API.",
+  "refus.cle_api.expert_membre": "Seul un expert membre de la comptabilité crée une clé d’API.",
   "refus.cle_api.nom_requis": "Donnez un nom à la clé.",
   "refus.cle_api.portee_requise": "Une clé porte au moins une portée.",
   "refus.cle_api.portee_inconnue": "Une des portées demandées n’existe pas.",
@@ -2592,7 +2535,7 @@ export const fr = {
   "refus.requisition.expiree": "Réquisition expirée le {date}.",
   "refus.export.format_inconnu": "Ce format n’est pas un export du journal.",
   "refus.export.jour_a_venir": "Ce jour est à venir : il n’a pas encore de journal à exporter.",
-  "refus.export.fuseau": "Le fuseau de l’export n’est pas celui du cabinet.",
+  "refus.export.fuseau": "Le fuseau de l’export n’est pas celui de la comptabilité.",
   "refus.export.concurrent": "Un autre export de ce journal vient d’être produit : recommencez.",
   "refus.export.format_absent": "Ce format d’export n’existe pas.",
   "refus.export.fec_par_dossier": "Le FEC se produit dossier par dossier : choisissez un client.",
@@ -2655,12 +2598,12 @@ export const fr = {
   "refus.inscription.type_sans_ecriture":
     "Ce type de document ne porte pas d’écriture comptable : choisissez-en un autre.",
   "refus.inscription.reservee_au_cabinet":
-    "Ce dossier est confié à votre cabinet : c'est lui qui inscrit l'écriture d'une pièce. Envoyez-lui la pièce.",
+    "Ce dossier est confié à votre comptabilité : c'est elle qui inscrit l'écriture d'une pièce. Envoyez-lui la pièce.",
   "refus.retour.deja": "Cette pièce est déjà chez le client : elle reviendra quand il la renverra.",
   "refus.prise_en_charge.deja":
     "Cette pièce est déjà prise en charge : modifiez son écriture pour la forcer, ou retournez-la.",
   "refus.sens.reserve_au_cabinet":
-    "Ce dossier est confié à votre cabinet : c'est lui qui dit si la pièce est un achat ou une vente. Envoyez-lui la pièce.",
+    "Ce dossier est confié à votre comptabilité : c'est elle qui dit si la pièce est un achat ou une vente. Envoyez-lui la pièce.",
   "refus.sens.ecriture_vivante":
     "Cette pièce porte déjà une écriture : modifiez l'écriture pour la forcer, ou retournez la pièce.",
   "refus.ecriture.lignes": "Une écriture a au moins deux lignes.",
@@ -2681,21 +2624,21 @@ export const fr = {
     "La facture porte plusieurs taux : choisissez le code de taxe de chaque ligne de base.",
   "refus.ecriture.taxe_sans_tva":
     "Aucune ligne de TVA : choisissez le code de taxe de chaque ligne de base (exonérée, export…).",
-  "refus.cours.supervision": "Un cours se saisit par le cabinet qui supervise le dossier.",
+  "refus.cours.supervision": "Un cours se saisit par la comptabilité qui supervise le dossier.",
   "refus.cours.correction_sans_motif":
     "Ce cours existe déjà, avec un autre taux : une correction dit pourquoi. Indiquez le motif.",
   "refus.cours.derogation_sans_motif":
     "Une dérogation au cours officiel dit pourquoi : indiquez le motif.",
   "refus.change.regle.droits":
-    "Seul le cabinet qui tient ce dossier arrête sa règle de change ; pour tout le cabinet, l'expert-comptable.",
+    "Seule la comptabilité qui tient ce dossier arrête sa règle de change ; pour toute la comptabilité, l'expert-comptable.",
   "refus.role_compte.droits":
-    "Seul l’expert-comptable relie un compte pour son cabinet ; pour un dossier, qui le supervise au cabinet qui le tient.",
+    "Seul l’expert-comptable relie un compte pour toute sa comptabilité ; pour un dossier, qui le supervise dans la comptabilité qui le tient.",
   "refus.change.source_hors_juridiction":
     "Cette source de cours ne publie pas pour la juridiction du dossier : choisissez la banque centrale de son pays.",
   "refus.change.regle.saisie":
     "Une valeur choisie n'est pas au référentiel (un recul est un nombre entier de jours) : rechargez la page et choisissez à nouveau.",
   "refus.reglage_comptable.droits":
-    "Seul l’expert-comptable arrête un réglage pour tout le cabinet ; pour un dossier, qui le supervise au cabinet qui le tient.",
+    "Seul l’expert-comptable arrête un réglage pour toute la comptabilité ; pour un dossier, qui le supervise dans la comptabilité qui le tient.",
   "refus.reglage_comptable.saisie":
     "Une valeur choisie n’est pas au référentiel (un seuil est un nombre positif) : rechargez la page et choisissez à nouveau.",
   "refus.cours.invalide":
@@ -2709,7 +2652,8 @@ export const fr = {
   "refus.paiement.remplace":
     "Ce changement d'offre a été remplacé par un autre : il ne se paie plus. La facture du mois compte les jours réellement passés à chaque offre.",
   "refus.journal.droits": "Seul un membre de cette société peut régler son journal.",
-  "refus.avoir.droits": "Seul le cabinet qui supervise ce dossier rattache un avoir à sa facture.",
+  "refus.avoir.droits":
+    "Seule la comptabilité qui supervise ce dossier rattache un avoir à sa facture.",
   "refus.avoir.facture":
     "Cette facture n’est pas du même dossier, ou pas du même sens que l’avoir : choisissez-en une autre.",
   "refus.avoir.ecriture_vivante":
@@ -2828,7 +2772,7 @@ export const fr = {
   "cab.cours.aide.regle":
     "La règle de change (le jour retenu, le recul jusqu’au dernier cours publié, l’écart d’arrondi) est un défaut livré par Malica, à confirmer par un expert-comptable.",
   "cab.cours.aide.trace":
-    "Le cours saisi est daté et gardé à votre nom ; il vaut pour les dossiers de votre cabinet. Une correction s’ajoute, motivée ; rien n’est effacé, et la pièce est rejugée aussitôt.",
+    "Le cours saisi est daté et gardé à votre nom ; il vaut pour les dossiers de votre comptabilité. Une correction s’ajoute, motivée ; rien n’est effacé, et la pièce est rejugée aussitôt.",
   "cab.cours.taux": "{vers} pour {unite} {devise}",
   "cab.cours.unite": "Unité ({devise})",
   "cab.cours.enregistrer": "Enregistrer le taux",
@@ -2838,7 +2782,7 @@ export const fr = {
   "cab.cours.titre": "Cours de change",
   "cab.cours.surtitre": "Les cours que vos dossiers lisent",
   "cab.cours.malica":
-    "Un cours est une donnée : il vient de la source officielle, importé par l’exploitation ou saisi par vous. Le cours officiel importé fait foi ; le vôtre ne passe devant que par une dérogation motivée, pour un dossier ou pour tout le cabinet.",
+    "Un cours est une donnée : il vient de la source officielle, importé par l’exploitation ou saisi par vous. Le cours officiel importé fait foi ; le vôtre ne passe devant que par une dérogation motivée, pour un dossier ou pour toute la comptabilité.",
   "cab.cours.vide": "Aucun cours pour l’instant.",
   "cab.cours.date": "Date du cours",
   "cab.cours.devise": "Devise",
@@ -2849,9 +2793,9 @@ export const fr = {
   "cab.cours.motif": "Motif d’une dérogation (facultatif)",
   "cab.cours.motif.exige": "Motif de la correction",
   "cab.cours.portee": "La dérogation vaut",
-  "change.regle.titre": "Règle de change arrêtée par le cabinet",
+  "change.regle.titre": "Règle de change arrêtée par la comptabilité",
   "change.regle.aide":
-    "La source du cours, le jour retenu, le recul jusqu’au dernier cours publié et la règle d’écart d’arrondi. Malica livre un défaut, à confirmer par un expert-comptable ; le cabinet l’arrête. Les pièces en devise se rejugent à leur ouverture.",
+    "La source du cours, le jour retenu, le recul jusqu’au dernier cours publié et la règle d’écart d’arrondi. Malica livre un défaut, à confirmer par un expert-comptable ; la comptabilité l’arrête. Les pièces en devise se rejugent à leur ouverture.",
   "change.regle.arretee": "Règle de change arrêtée.",
   "change.regle.arretee.detail": "Les pièces en devise se rejugent à leur ouverture.",
   "cab.ecriture.ligne.libelle": "Libellé",
@@ -2886,7 +2830,7 @@ export const fr = {
   "cab.avoir.titre": "Facture d’origine à rattacher",
   "cab.avoir.non_comptabilisee": "Facture d’origine pas encore comptabilisée",
   "cab.avoir.aide":
-    "Un avoir se lie à sa facture (réglage « Avoirs », Code TVA art. 9). Il se propose en contre-passation de l’écriture de la facture, aux montants qu’il imprime : en extourne, ou au compte des rabais, selon le réglage du cabinet.",
+    "Un avoir se lie à sa facture (réglage « Avoirs », Code TVA art. 9). Il se propose en contre-passation de l’écriture de la facture, aux montants qu’il imprime : en extourne, ou au compte des rabais, selon le réglage de la comptabilité.",
   "cab.avoir.manque.introuvable":
     "Le numéro imprimé sur l’avoir ne désigne aucune facture du dossier, ou en désigne plusieurs : choisissez-la ci-dessous.",
   "cab.avoir.manque.non_comptabilisee":
@@ -2992,8 +2936,8 @@ export const fr = {
   "pme.echeances.fiche.lien": "Compléter la fiche",
   "pme.echeances.pack.absent":
     "Aucun pack de juridiction n’est en vigueur pour votre dossier ; votre comptable en est informé.",
-  "cab.echeances.kicker": "Calendrier du cabinet · pack {pack}",
-  "cab.echeances.kicker.sansPack": "Calendrier du cabinet",
+  "cab.echeances.kicker": "Calendrier de la comptabilité · pack {pack}",
+  "cab.echeances.kicker.sansPack": "Calendrier de la comptabilité",
   "cab.echeances.principe":
     "Les dates viennent du pack de juridiction, jamais d’une saisie. Une échéance ne se déplace pas : elle se prépare ou elle se manque.",
   "cab.echeances.horizon": "{debut} — {fin}",
@@ -3105,9 +3049,9 @@ export const fr = {
   "cab.pv.malica.kicker": "Rédigé par Malica",
   "cab.pv.malica.corps":
     "Le texte est d’elle ; chaque chiffre vient du moteur qui l’a produit, et la relecture refuse tout nombre qui n’y figure pas.",
-  "cab.pv.cabinet.kicker": "Repris par le cabinet",
+  "cab.pv.cabinet.kicker": "Repris par la comptabilité",
   "cab.pv.cabinet.corps":
-    "Le texte a été relu et repris par le cabinet. Les chiffres restent ceux du Socle.",
+    "Le texte a été relu et repris par la comptabilité. Les chiffres restent ceux du Socle.",
   "cab.pv.envoyer": "Envoyer au client",
   "cab.pv.envoye": "Envoyé au client le {date}",
   "cab.pv.exporter": "Exporter PDF",
@@ -3184,8 +3128,8 @@ export const fr = {
   "pme.mandat.refuse": "Mandat refusé. La comptabilité en est informée.",
   "pme.mandat.erreur": "Je n’ai pas pu enregistrer votre réponse.",
   "portal.invitations.titre": "On vous attend",
-  "portal.invitations.texte": "{cabinet} vous invite à le rejoindre comme {role}.",
-  "portal.invitations.rejoindre": "Rejoindre le cabinet",
+  "portal.invitations.texte": "{cabinet} vous attend comme {role}.",
+  "portal.invitations.rejoindre": "Rejoindre",
   "portal.invitations.decliner": "Décliner",
   "portal.invitations.rejoint": "Vous faites partie de {cabinet}.",
   "portal.invitations.decline": "Invitation déclinée.",
@@ -3193,64 +3137,21 @@ export const fr = {
   "portal.invitations.expire": "valable jusqu’au {date}",
   "cab.settings.invitations": "Invitations en attente",
   "cab.settings.invitations.hint":
-    "Une personne rejoint le cabinet en se connectant avec l’adresse invitée.",
+    "Une personne rejoint la comptabilité en se connectant avec l’adresse invitée.",
   "cab.settings.inviter": "Inviter un collaborateur",
   "cab.journal.engagement.accepte": "Mandat accepté par le client",
   "cab.journal.engagement.refuse": "Mandat refusé par le client",
-  "cab.journal.membre.rejoint": "Un collaborateur a rejoint le cabinet",
+  "cab.journal.membre.rejoint": "Un collaborateur a rejoint la comptabilité",
   "cab.journal.membre.decline": "Une invitation a été déclinée",
-  "cab.onb.kicker": "Mise en route · étape {n} sur 4",
-  "cab.onb.terminee":
-    "Mise en route terminée le {date}. Vous pouvez la rejouer : rien n’est définitif.",
-  "cab.onb.etapes": "Les quatre étapes",
-  "cab.onb.precedent": "Précédent",
-  "cab.onb.suivant": "Continuer",
-  "cab.onb.terminer": "Terminer la mise en route",
-  "cab.onb.enregistre": "Enregistré.",
-  "cab.onb.panel":
-    "Quatre étapes, rejouables. Tout ce que vous saisissez ici se retrouve dans les réglages du cabinet.",
-  "cab.onb.1.titre": "Votre cabinet",
-  "cab.onb.1.nom": "Nom du cabinet",
-  "cab.onb.1.nom.hint": "Tel qu’il figure sur vos documents.",
-  "cab.onb.1.identifiant": "Identifiant fiscal",
-  "cab.onb.1.identifiant.hint": "Facultatif. Il complètera vos éditions.",
-  "cab.onb.1.juridiction": "Juridiction",
-  "cab.onb.1.juridiction.hint":
-    "Le pack de cette juridiction fixe les taux, les comptes et les échéances de vos dossiers. La devise le suit.",
-  "cab.onb.1.enregistrer": "Enregistrer le cabinet",
-  "cab.onb.2.titre": "Votre équipe",
-  "cab.onb.2.membres": "Membres du cabinet",
-  "cab.onb.2.invitations": "Invitations en attente",
   "cab.onb.2.email": "Adresse e-mail",
   "cab.onb.2.email.hint": "L’invitation est consignée au nom de cette adresse.",
   "cab.onb.2.role": "Rôle",
   "cab.onb.2.inviter": "Inviter",
   "cab.onb.2.invitee": "Invitation enregistrée pour {email}.",
   "cab.onb.2.deja": "Une invitation attend déjà {email}.",
-  "cab.onb.2.expire": "expire le {date}",
-  "cab.onb.2.aucune": "Aucune invitation en attente.",
   "cab.onb.role.expert": "Expert-comptable",
   "cab.onb.role.collaborateur": "Collaborateur",
   "cab.onb.role.assistant": "Assistant",
-  "cab.onb.role.dirigeant": "Dirigeant",
-  "cab.onb.3.titre": "Vos premiers mandats",
-  "cab.onb.3.identifiant": "Identifiant fiscal de la PME",
-  "cab.onb.3.identifiant.hint": "Tel que la PME l’a saisi à son inscription.",
-  "cab.onb.3.proposer": "Proposer le mandat",
-  "cab.onb.3.propose": "Mandat proposé à {pme}.",
-  "cab.onb.3.deja": "Un mandat existe déjà avec {pme} : {status}.",
-  "cab.onb.3.mandats": "Vos mandats",
-  "cab.onb.3.aucun": "Aucun mandat pour l’instant.",
-  "cab.onb.mandat.propose": "proposé",
-  "cab.onb.mandat.actif": "actif",
-  "cab.onb.mandat.suspendu": "suspendu",
-  "cab.onb.mandat.termine": "terminé",
-  "cab.onb.4.titre": "Votre seuil de délégation",
-  "cab.onb.4.seuil": "Validation en lot au-dessus de",
-  "cab.onb.4.seuil.hint":
-    "En pourcentage de confiance de lecture. Le seuil de revue reste tel qu’il est réglé, et ne peut pas le dépasser.",
-  "cab.onb.4.defaut": "Valeur proposée par Malica, pas encore arrêtée par le cabinet.",
-  "cab.onb.4.enregistrer": "Enregistrer le seuil",
   "cab.prop.empty": "Rien à valider.",
   "cab.prop.done": "{count} écritures validées.",
   "cab.prop.done#one": "{count} écriture validée.",
@@ -3285,7 +3186,7 @@ export const fr = {
   "cab.prop.groupes.doctrine":
     "Un lot par client : c’est le périmètre d’un mandat, et celui d’une piste d’audit lisible. Ouvrez l’écriture en masse pour voir ce qui sera comptabilisé — et sur quel compte.",
   "cab.prop.preparer":
-    "Votre rôle prépare les écritures. Les valider ou les forcer revient à l'expert ou au collaborateur du cabinet.",
+    "Votre rôle prépare les écritures. Les valider ou les forcer revient à l'expert ou au collaborateur de la comptabilité.",
   "cab.prop.groupe.tout": "Retenir tout le lot {client}",
   "cab.prop.groupe.pieces": "Pièces",
   "cab.prop.groupe.total": "Total",
@@ -3337,7 +3238,7 @@ export const fr = {
   "cab.pil.kpi.ecart.ctx": "entre le plus et le moins chargé",
   "cab.pil.kpi.sans": "Sans collaborateur",
   "cab.pil.kpi.sans.ctx": "mandats à affecter",
-  "cab.pil.kpi.delai": "Délai médian cabinet",
+  "cab.pil.kpi.delai": "Délai médian de la comptabilité",
   "cab.pil.kpi.delai.ctx": "de la lecture à la comptabilisation, trente jours",
   "cab.pil.charge.titre": "Charge et rendement par collaborateur",
   "cab.pil.charge.capacite": "Capacité de référence : {count} dossiers actifs",
@@ -3354,7 +3255,7 @@ export const fr = {
   "cab.pil.m.retour": "Taux de retour",
   "cab.pil.charge.jauge": "{pct} % de la capacité",
   "cab.pil.charge.affecter": "Affecter un dossier",
-  "cab.pil.charge.aucun": "Aucun collaborateur dans ce cabinet.",
+  "cab.pil.charge.aucun": "Aucun collaborateur dans cette comptabilité.",
   "cab.pil.matrice.titre": "Les clients par l’axe collaborateur",
   "cab.pil.matrice.hint": "Cliquez un mandat pour ouvrir son dossier",
   "cab.pil.matrice.collab": "Collaborateur",
@@ -3394,13 +3295,9 @@ export const fr = {
   "cab.pil.stats.moinsUneHeure": "moins d’une heure",
   "cab.hono.tab.facturation": "Facturation",
   "cab.hono.tab.tresorerie": "Trésorerie",
-  "cab.hono.tab.mandats": "Mandats",
-  "cab.hono.kicker": "{cabinet} · exercice {exercice}",
   "cab.hono.title": "Honoraires et mandats",
   "cab.hono.lede":
     "Ce que chaque mandat doit produire, ce qui est facturé, ce qui est encaissé. Un montant n’est jamais deviné : il vient du barème du mandat ou de la facture émise.",
-  "cab.hono.panel":
-    "Je lis les mandats et les factures du cabinet ; les totaux, les échéances et les retards se calculent en base, jamais ici. Une facture émise ne se modifie plus : elle s’annule par un avoir.",
   "cab.hono.kpi.facture": "Facturé ce mois",
   "cab.hono.kpi.facture.ctx": "{devise} HT · {count} factures émises",
   "cab.hono.kpi.facture.ctx#one": "{devise} HT · {count} facture émise",
@@ -3473,10 +3370,6 @@ export const fr = {
   "cab.hono.moyen.especes": "Espèces",
   "cab.hono.moyen.carte": "Carte",
   "cab.hono.moyen.autre": "Autre",
-  "cab.hono.mandats.titre": "Mandats",
-  "cab.hono.mandats.compte": "{count} mandats sur {total} clients",
-  "cab.hono.mandats.compte#one": "{count} mandat sur {total} clients",
-  "cab.hono.mandats.compte#other": "{count} mandats sur {total} clients",
   "cab.hono.mandat.aucun": "Aucun mandat",
   "cab.hono.mandat.aucun.lede": "Aucun mandat d’honoraires : définissez-en un ci-dessous.",
   "cab.hono.mandat.depuis": "Mandat en vigueur depuis le {date}",
@@ -3525,7 +3418,8 @@ export const fr = {
     "Un mandat ne se corrige pas : l’enregistrer clôt le précédent et en ouvre un nouveau, daté.",
   "cab.hono.facture.panel":
     "Les totaux viennent de la base à chaque enregistrement : je ne multiplie rien. Émise, la facture est figée ; elle s’encaisse, ou s’annule par un avoir.",
-  "cab.hono.facture.introuvable": "Cette facture n’existe pas, ou n’appartient pas à ce cabinet.",
+  "cab.hono.facture.introuvable":
+    "Cette facture n’existe pas, ou n’appartient pas à cette comptabilité.",
   "cab.hono.facture.retour": "Retour aux honoraires",
   "cab.hono.facture.kicker.brouillon": "Brouillon · modifiable",
   "cab.hono.facture.titre": "Facture {numero}",
@@ -3557,8 +3451,8 @@ export const fr = {
   "cab.hono.facture.parametres": "Paramètres de la facture",
   "cab.hono.facture.ajouterForfait": "Ajouter le forfait du mandat ({montant})",
   "cab.hono.verif.titre": "Ce que je vérifie",
-  "cab.hono.verif.cabinet.ok": "L’identifiant fiscal du cabinet est renseigné.",
-  "cab.hono.verif.cabinet.manque": "Le cabinet n’a pas d’identifiant fiscal renseigné.",
+  "cab.hono.verif.cabinet.ok": "L’identifiant fiscal de la comptabilité est renseigné.",
+  "cab.hono.verif.cabinet.manque": "La comptabilité n’a pas d’identifiant fiscal renseigné.",
   "cab.hono.verif.client.ok": "L’identifiant fiscal du client est renseigné.",
   "cab.hono.verif.client.manque": "Le client n’a pas d’identifiant fiscal renseigné.",
   "cab.hono.verif.lignes.ok": "La facture porte au moins une prestation.",
@@ -3592,7 +3486,7 @@ export const fr = {
   "cab.dos.kpi.tva": "TVA du mois",
   "cab.dos.kpi.tva.ctx": "collectée moins déductible ; positif : à payer",
   "cab.dos.kpi.pieces": "Pièces du mois",
-  "cab.dos.kpi.pieces.ctx": "transmises au cabinet ce mois",
+  "cab.dos.kpi.pieces.ctx": "transmises à la comptabilité ce mois",
   "cab.dos.pnl.titre": "Compte de résultat — cumul au {date}",
   "cab.dos.pnl.source": "moteur P&L · Socle",
   "cab.dos.pnl.vide": "Aucune écriture comptabilisée sur l’exercice.",
@@ -3637,7 +3531,7 @@ export const fr = {
   "cab.dos.panel":
     "Je lis ce dossier dans ses écritures comptabilisées : le compte de résultat et la TVA viennent des moteurs du Socle, avec leur période. Je ne calcule rien moi-même.",
   "cab.pil.panel":
-    "Je lis la charge du cabinet dans ses affectations et ses délais. Je n’affecte personne : je montre où la file s’accumule.",
+    "Je lis la charge de la comptabilité dans ses affectations et ses délais. Je n’affecte personne : je montre où la file s’accumule.",
   "cab.pv.title": "PV de réunion",
   "cab.pv.client": "Client",
   "cab.pv.date": "Date",
@@ -3714,7 +3608,7 @@ export const fr = {
   "pme.file.reprise.pourquoi.remplacee":
     "L'ancienne photo a déjà été remplacée entre-temps — depuis un autre appareil, ou par une autre personne.",
   "pme.file.reprise.pourquoi.inscrite":
-    "Le cabinet a pris la pièce en charge entre-temps : elle ne se remplace plus.",
+    "La comptabilité a pris la pièce en charge entre-temps : elle ne se remplace plus.",
   "pme.file.reprise.pourquoi.introuvable": "L'ancienne pièce a été retirée entre-temps.",
   "pme.file.reprise.pourquoi.autre": "Cette photo ne peut pas remplacer l'ancienne pièce.",
   "pme.file.reprise.libre": "Garder comme nouvelle pièce",
@@ -3791,7 +3685,7 @@ export const fr = {
   "pme.reglages.surTotal": "{n} sur {total}",
   "tour.quitter": "Quitter la tour",
   "tour.menu.clients": "Clients",
-  "tour.menu.cabinets": "Cabinets",
+  "tour.menu.cabinets": "Comptabilités",
   "tour.menu.pme": "PME et abonnements",
   "tour.menu.plateforme": "Plateforme",
   "tour.menu.grille": "Grille et offres",
@@ -3815,7 +3709,7 @@ export const fr = {
     "Désignez d’abord l’émetteur des factures : c’est sous son organisation que l’accès total se journalise.",
   "tour.menu.acces": "Accès total",
   "tour.acces.aide":
-    "Un opérateur qui a l’accès total agit dans toutes les sociétés et tous les cabinets comme leur rôle le plus haut — dirigeant, expert — sans y occuper de place ni paraître dans leurs équipes. Chacun de ses gestes est journalisé sous son nom. Les espaces privés des autres personnes restent fermés.",
+    "Un opérateur qui a l’accès total agit dans toutes les sociétés et toutes les comptabilités comme leur rôle le plus haut — dirigeant, expert — sans y occuper de place ni paraître dans leurs équipes. Chacun de ses gestes est journalisé sous son nom. Les espaces privés des autres personnes restent fermés.",
   "tour.acces.aucun": "Aucun compte n’a l’accès total.",
   "tour.acces.depuis": "Depuis le {date}, accordé par {par} — {motif}",
   "tour.acces.inactif": "N’est plus opérateur : l’accès ne s’exerce pas.",
@@ -3832,10 +3726,10 @@ export const fr = {
   "tour.legende.sansFacture":
     "« Sans facture » : aucune facture d’abonnement n’a encore été émise pour cette licence, ou toutes ont été annulées.",
   "tour.legende.echeance":
-    "« Échéance » : la date limite la plus proche d’une facture encore due au nom de la licence ; « — » s’il n’y en a aucune. Celle qu’un cabinet paie pour ses clients se lit sur sa fiche.",
+    "« Échéance » : la date limite la plus proche d’une facture encore due au nom de la licence ; « — » s’il n’y en a aucune. Celle qu’une comptabilité paie pour ses clients se lit sur sa fiche.",
   "tour.etat.sans_licence": "Sans licence",
   "tour.col.pme": "PME",
-  "tour.col.cabinet": "Cabinet",
+  "tour.col.cabinet": "Comptabilité",
   "tour.col.offre": "Offre",
   "tour.col.lectures": "Lectures",
   "tour.col.echeance": "Échéance",
@@ -3850,18 +3744,18 @@ export const fr = {
   "tour.sansOffre": "Sans offre",
   "tour.echeanceLe": "Échéance {date}",
   "tour.fiche.payeur": "Payé par",
-  "tour.fiche.payeur.cabinet": "Le cabinet",
+  "tour.fiche.payeur.cabinet": "La comptabilité",
   "tour.fiche.payeur.direct": "La PME",
   "tour.fiche.reste": "Reste dû",
   "tour.fiche.sansLicence": "Aucune licence : rien à gérer.",
   "tour.fermer": "Fermer",
   "tour.filtre.tous": "Toutes",
-  "tour.filtre.sans_cabinet": "Sans cabinet",
+  "tour.filtre.sans_cabinet": "Sans comptabilité",
   "tour.filtre.impayes": "Impayés",
   "tour.filtre.au_quota": "Au quota",
   "tour.filtre.suspendus": "Suspendues",
-  "tour.filtre.cabinet": "Cabinet",
-  "tour.filtre.tousCabinets": "Tous les cabinets",
+  "tour.filtre.cabinet": "Comptabilité",
+  "tour.filtre.tousCabinets": "Toutes les comptabilités",
   "tour.filtre.rien.titre": "Rien ne correspond",
   "tour.filtre.rien.texte": "Changez la recherche ou le filtre.",
   "tour.acte.suspension": "Suspension",
@@ -3881,30 +3775,31 @@ export const fr = {
   "tour.gerer": "Gérer",
   "tour.historique": "Historique",
   "tour.historique.vide": "Aucun geste de la tour.",
-  "tour.chercher.pme": "Chercher une PME, un matricule, un cabinet",
-  "tour.chercher.cabinet": "Chercher un cabinet",
+  "tour.chercher.pme": "Chercher une PME, un matricule, une comptabilité",
+  "tour.chercher.cabinet": "Chercher une comptabilité",
   "tour.pme.vide.titre": "Aucune PME",
   "tour.pme.vide.texte":
-    "Chaque PME inscrite apparaîtra ici, avec ou sans cabinet, dès sa création.",
+    "Chaque PME inscrite apparaîtra ici, avec ou sans comptabilité, dès sa création.",
   "tour.decompte": "{n} sur {total}",
   "tour.kpi.pme": "PME",
   "tour.kpi.actifs": "Abonnements actifs",
   "tour.kpi.transmisMois": "Transmises ce mois",
-  "tour.cabinets.vide.titre": "Aucun cabinet",
+  "tour.cabinets.vide.titre": "Aucune comptabilité",
   "tour.cabinets.vide.texte":
-    "Chaque cabinet inscrit apparaîtra ici, avec ses PME et leurs offres.",
+    "Chaque comptabilité inscrite apparaîtra ici, avec ses PME et leurs offres.",
   "tour.cabinet.ligne": "PME {pme} · actifs {actifs} · ce mois {mois}",
-  "tour.cabinet.introuvable": "Cabinet introuvable",
-  "tour.cabinet.introuvable.texte": "Il a peut-être été archivé. Revenez à la liste des cabinets.",
+  "tour.cabinet.introuvable": "Comptabilité introuvable",
+  "tour.cabinet.introuvable.texte":
+    "Elle a peut-être été archivée. Revenez à la liste des comptabilités.",
   "tour.cabinet.vueTour": "Vue de la tour",
-  "tour.cabinet.voirComme": "Voir comme le cabinet",
-  "tour.cabinet.lecture": "Ce que le cabinet voit, en lecture : aucun geste ne part d'ici.",
+  "tour.cabinet.voirComme": "Voir comme la comptabilité",
+  "tour.cabinet.lecture": "Ce que la comptabilité voit, en lecture : aucun geste ne part d'ici.",
   "tour.cabinet.factures": "Factures consolidées",
   "tour.cabinet.factures.vide": "La facture du mois apparaîtra ici dès son émission.",
   "tour.cabinet.societes": "sociétés : {n}",
   "tour.cabinet.sansPme.titre": "Aucune PME",
   "tour.cabinet.sansPme.texte":
-    "Les PME sous mandat de ce cabinet, ou qu'il dote, apparaîtront ici.",
+    "Les PME sous mandat de cette comptabilité, ou qu'elle dote, apparaîtront ici.",
   "tour.onglet.abonnements": "Abonnements",
   "tour.onglet.bibliotheque": "Bibliothèque",
   "tour.biblio.regle": "En nombres : la tour compte les documents, elle ne les lit pas.",
@@ -4108,9 +4003,9 @@ export const fr = {
   "tour.facturation.par": "Décidé par {qui}.",
   "tour.facturation.parLaLivraison": "Décidé à la livraison.",
   "tour.facturation.motif": "Motif : {motif}",
-  "tour.facturation.cabinets": "Cabinets — au mois, à terme échu",
+  "tour.facturation.cabinets": "Comptabilités — au mois, à terme échu",
   "tour.facturation.cabinets.aide":
-    "Chaque jour, Malica émet la facture mensuelle de chaque cabinet pour les mois clos qui manquent : une par cabinet et par mois, au prorata des jours, jamais deux.",
+    "Chaque jour, Malica émet la facture mensuelle de chaque comptabilité pour les mois clos qui manquent : une par comptabilité et par mois, au prorata des jours, jamais deux.",
   "tour.facturation.cabinets.rattrapage": "Mois clos examinés à chaque passage",
   "tour.facturation.cabinets.rattrapage.aide":
     "1 : le mois qui vient de se clore. Au-delà, des mois plus anciens jamais facturés le seront.",
@@ -4288,7 +4183,7 @@ export const fr = {
   "pme.reglages.org.matricule":
     "Matricule établi par lecture de la carte d’identification fiscale.",
   "pme.reglages.org.matricule.fort": "Immuable dès la première pièce reçue.",
-  "pme.reglages.org.cabinet": "Cabinet :",
+  "pme.reglages.org.cabinet": "Comptabilité :",
   "pme.reglages.org.cabinet.aucun": "aucun",
   "pme.reglages.org.lectures": "Lectures ce mois :",
   "pme.reglages.org.revocation":
@@ -4308,6 +4203,13 @@ export const fr = {
   "pme.reglages.abo.report": "Dont {n} lectures reportées du mois dernier.",
   "pme.reglages.abo.report#one": "Dont {n} lecture reportée du mois dernier.",
   "pme.reglages.abo.report#other": "Dont {n} lectures reportées du mois dernier.",
+  "pme.reglages.offres.empechement.choisi_par_la_comptabilite": "Choisi par votre comptabilité.",
+  "pme.reglages.offres.complement":
+    "Votre abonnement est choisi et réglé par {comptabilite}. Vous pouvez monter d'offre : vous ne payez alors que la différence, indiquée ci-dessous.",
+  "pme.reglages.abo.priseEnCharge": "Choisi et réglé par votre comptabilité, {comptabilite}.",
+  "pme.reglages.abo.priseEnChargeEtComplement":
+    "Choisi et réglé par votre comptabilité, {comptabilite}. Vous payez la différence : {prix} {devise} HT / mois.",
+  "pme.notifs.voirProposition": "Voir la proposition",
   "pme.reglages.offres.empechement.engagement_annuel":
     "Votre abonnement est à l'année : l'offre ne change pas avant la fin de l'engagement.",
   "pme.reglages.annuel.detail":
@@ -4765,7 +4667,7 @@ export const fr = {
    * n'existe pas (ni `cabinet.documents` ni `cabinet.accuserReception` au contrat).
    */
   "pme.regler.pied":
-    "Les retours sur pièces et les avis arrivent du même cabinet, donc de la même boîte. Ce qui les sépare n'est pas l'écran : c'est ce qu'ils vous demandent de faire.",
+    "Les retours sur pièces et les avis arrivent de la même comptabilité, donc de la même boîte. Ce qui les sépare n'est pas l'écran : c'est ce qu'ils vous demandent de faire.",
   /**
    * « Mon espace » (maquette « Malica sans blocage », 28 octobre 2026) : une
    * grille de miniatures par mois, et deux gestes sur les papiers choisis —
@@ -4804,7 +4706,7 @@ export const fr = {
    * le journal.
    */
   "pme.coffre.pied":
-    "Une pièce transmise ne revient pas en silence : son retour demande l'accord de votre cabinet, et chaque passage s'inscrit au journal.",
+    "Une pièce transmise ne revient pas en silence : son retour demande l'accord de votre comptabilité, et chaque passage s'inscrit au journal.",
   "pme.echeances.titre": "Ce qui tombe",
   "pme.echeances.sansMontant": "Les montants ne me sont pas encore remontés",
   "pme.echeances.aVenir": "À venir",
@@ -4816,7 +4718,7 @@ export const fr = {
   "pme.bienvenue.carteBandeau": "République Tunisienne · Carte d'identification fiscale",
   "pme.bienvenue.ditTitre": "Voici votre matricule fiscal.",
   "pme.bienvenue.ditSous":
-    "Je l'inscris une seule fois. Dès que votre première pièce sera reçue, il ne changera plus — ni par vous, ni par moi, ni par votre cabinet. Vérifiez-le maintenant.",
+    "Je l'inscris une seule fois. Dès que votre première pièce sera reçue, il ne changera plus — ni par vous, ni par moi, ni par votre comptabilité. Vérifiez-le maintenant.",
   "pme.bienvenue.secEtat": "à confirmer",
   "pme.bienvenue.champAdresse": "Adresse du siège",
   /**
@@ -4829,7 +4731,7 @@ export const fr = {
   "pme.bienvenue.exact": "C'est exact — commencer",
   "pme.bienvenue.corriger": "Corriger · saisie au clavier",
   "pme.bienvenue.pied":
-    "Ensuite : choisir votre forfait, puis inviter votre cabinet — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
+    "Ensuite : choisir votre forfait, puis inviter votre comptabilité — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
   "pme.tva.barreGroupe": "TVA du groupe",
   /**
    * Le dessin écrit « Déclaration à déposer le 28. » — et le 28 est une
@@ -4838,7 +4740,7 @@ export const fr = {
    * `referentiel.fiscalCharges` ne sont pas câblés ici). La phrase dit ce qui est
    * vrai, sans la date.
    */
-  "pme.tva.sous": "C'est votre cabinet qui dépose cette déclaration.",
+  "pme.tva.sous": "C'est votre comptabilité qui dépose cette déclaration.",
   /**
    * Le nombre vient de `pme.dossiers`, jamais d'un littéral. En arabe, la
    * formulation « عدد الشركات: {count} » évite l'accord du nom (duel, 3-10,
@@ -4871,10 +4773,10 @@ export const fr = {
   "pme.tva.parSociete": "Par société",
   "pme.tva.enAttenteDeCours": "En attente de cours",
   "pme.tva.enAttenteDeCours.aide":
-    "Ces factures sont dans une autre devise que celle de votre dossier. Leur TVA compte dès que le cours de change du jour est connu : importé, ou saisi par votre cabinet.",
+    "Ces factures sont dans une autre devise que celle de votre dossier. Leur TVA compte dès que le cours de change du jour est connu : importé, ou saisi par votre comptabilité.",
   "pme.tva.conversionARevoir": "Conversion à revoir",
   "pme.tva.conversionARevoir.aide":
-    "Ces factures en devise ne se convertissent pas telles quelles (leurs montants ne tiennent pas ensemble). Votre cabinet les reprend ; leur TVA comptera ensuite.",
+    "Ces factures en devise ne se convertissent pas telles quelles (leurs montants ne tiennent pas ensemble). Votre comptabilité les reprend ; leur TVA comptera ensuite.",
   "pme.tva.piecesEnDevise": "{count} pièces en devise",
   "pme.tva.piecesEnDevise#one": "{count} pièce en devise",
   "pme.tva.piecesEnDevise#other": "{count} pièces en devise",
@@ -4885,7 +4787,7 @@ export const fr = {
    */
   "tva.declaration.titre": "La déclaration",
   "tva.declaration.aide":
-    "Chaque ligne de la déclaration mensuelle reçoit la TVA de sa nature : celle des immobilisations (un bien porté en classe 2) se déclare à part de celle des autres biens et services. La nature se lit sur l'écriture du cabinet, ou sur les articles de la facture rangés au plan comptable.",
+    "Chaque ligne de la déclaration mensuelle reçoit la TVA de sa nature : celle des immobilisations (un bien porté en classe 2) se déclare à part de celle des autres biens et services. La nature se lit sur l'écriture de la comptabilité, ou sur les articles de la facture rangés au plan comptable.",
   "tva.declaration.aConfirmer":
     "Ces lignes sont un défaut de Malica : leur correspondance exacte avec le formulaire en vigueur est à confirmer par un expert-comptable.",
   "tva.declaration.parDefaut": "{count} lignes rangées par défaut",
@@ -4896,24 +4798,24 @@ export const fr = {
   "tva.declaration.sansLigne#other": "{count} montants sans ligne de déclaration",
   "tva.declaration.sansLigne.aide":
     "Le référentiel de la déclaration n'a pas de ligne pour ces montants : ils comptent dans les totaux, mais aucune ligne de la déclaration ne les porte. Ce n'est pas une pièce à reprendre ; signalez-le à l'équipe Malica.",
-  "tva.affectation.titre": "Lignes arrêtées par le cabinet",
+  "tva.affectation.titre": "Lignes arrêtées par la comptabilité",
   "tva.affectation.aide":
-    "Pour chaque nature de TVA, la ligne de la déclaration qui la reçoit. Malica livre un défaut ; le cabinet l'arrête. Arrêter sans rien changer, c'est confirmer : la ligne n'est plus « à confirmer », pour vous comme pour le client.",
+    "Pour chaque nature de TVA, la ligne de la déclaration qui la reçoit. Malica livre un défaut ; la comptabilité l'arrête. Arrêter sans rien changer, c'est confirmer : la ligne n'est plus « à confirmer », pour vous comme pour le client.",
   "tva.affectation.aide.portee":
-    "« Pour ce dossier » ne vaut que pour ce client. « Pour tout le cabinet » vaut pour tous vos dossiers qui n'ont pas leur propre choix ; il est réservé à l'expert-comptable. Chaque décision est datée et signée ; elle vaut à partir du mois affiché.",
+    "« Pour ce dossier » ne vaut que pour ce client. « Pour toute la comptabilité » vaut pour tous vos dossiers qui n'ont pas leur propre choix ; il est réservé à l'expert-comptable. Chaque décision est datée et signée ; elle vaut à partir du mois affiché.",
   "tva.affectation.origine.pack": "Défaut de Malica, à confirmer",
-  "tva.affectation.origine.cabinet": "Arrêtée par le cabinet",
+  "tva.affectation.origine.cabinet": "Arrêtée par la comptabilité",
   "tva.affectation.origine.dossier": "Arrêtée pour ce dossier",
   "tva.affectation.pourLeDossier": "Pour ce dossier",
-  "tva.affectation.pourLeCabinet": "Pour tout le cabinet",
+  "tva.affectation.pourLeCabinet": "Pour toute la comptabilité",
   "tva.affectation.arretee": "Lignes arrêtées.",
   "tva.affectation.arretee.detail": "La TVA du mois les suit, ici et chez le client.",
   "refus.tva.affectation.droits":
-    "Seul le cabinet qui tient ce dossier arrête ses lignes de TVA ; pour tout le cabinet, l'expert-comptable.",
+    "Seule la comptabilité qui tient ce dossier arrête ses lignes de TVA ; pour toute la comptabilité, l'expert-comptable.",
   "refus.tva.affectation.saisie":
     "Une ligne choisie n'existe pas dans la déclaration de ce mois : rechargez la page et choisissez à nouveau.",
   "tva.declaration.parDefaut.aide":
-    "Malica n'a pas pu dire quelle part de ces factures est une immobilisation : leur TVA est rangée sur la ligne par défaut de la déclaration, et comptée. Le cabinet la reclasse en forçant l'écriture.",
+    "Malica n'a pas pu dire quelle part de ces factures est une immobilisation : leur TVA est rangée sur la ligne par défaut de la déclaration, et comptée. La comptabilité la reclasse en forçant l'écriture.",
   /**
    * Le solde par société n'est pas servi : le moteur tourne sur UN dossier.
    */
@@ -4945,7 +4847,7 @@ export const fr = {
   "pme.fiche.fixeSourceCarte": "source : carte lue",
   "pme.fiche.fixeSourceSaisie": "source : saisie au clavier",
   "pme.notifications.videSous":
-    "Rien n'est caché : quand votre cabinet vous écrit, c'est ici que ça arrive.",
+    "Rien n'est caché : quand votre comptabilité vous écrit, c'est ici que ça arrive.",
   /**
    * Le dessin écrit « Par classe » ; le titre lit `pme.charges.byFamille`
    * (« Par famille ») : deux mots pour une seule chose, le dictionnaire tranche.
@@ -4978,11 +4880,11 @@ export const fr = {
   "pme.list.replier": "Replier",
   "pme.malica.composer": "Écrivez à Malica…",
   "pme.malica.suiteAvis": "Demander l'avis de {cabinet}",
-  "pme.malica.suiteAvisSansNom": "Demander l'avis de votre cabinet",
+  "pme.malica.suiteAvisSansNom": "Demander l'avis de votre comptabilité",
   "pme.malica.suiteTransmission": "Demander la transmission au propriétaire du dossier",
   "pme.malica.suitePasEncore": "La demande n'est pas encore ouverte depuis cet écran",
-  "pme.malica.suiteSansCabinet": "Demander l'avis d'un cabinet",
-  "pme.malica.suiteSansCabinetDetail": "Aucun cabinet n'est mandaté sur ce dossier",
+  "pme.malica.suiteSansCabinet": "Demander l'avis d'une comptabilité",
+  "pme.malica.suiteSansCabinetDetail": "Aucune comptabilité n'est mandatée sur ce dossier",
   "pme.malica.retenue": "Envoyée en relecture — cet avis engage votre dossier",
   "pme.malica.sous": "Posez votre question : je réponds en citant mes sources.",
   "pme.malica.salut.jour": "Bonjour",
@@ -5083,6 +4985,312 @@ export const fr = {
   "refus.etablissement.principal_deja_ouvert":
     "Cette organisation a déjà son établissement principal.",
   "pme.verifie.confirme": "saisie",
+  // La page Clients unique de la comptabilité (8 novembre 2026).
+  "cab.cli.acces.places.attente.n": "{count} invitations en attente",
+  "cab.cli.acces.places.attente.n#one": "{count} invitation en attente",
+  "cab.cli.acces.places.attente.n#other": "{count} invitations en attente",
+  "cab.cli.abo.refus.organisations":
+    "Impossible : ce dirigeant a plus de sociétés sous sa licence que cette offre n'en inclut.",
+  "cab.cli.abo.refus.sieges":
+    "Impossible : plus de places sont occupées que cette offre n'en permet.",
+  "cab.cli.places.seul": "le dirigeant seul",
+  "cab.cli.abo.ligne.licence": "{offre} · même licence",
+  "cab.cli.abo.ligne.licence.sous": "incluse dans l'abonnement de son dirigeant",
+  "cab.cli.abo.licence": "Couverte par la licence de son dirigeant · {offre}",
+  "cab.cli.abo.licence.detail":
+    "Vous payez déjà cette licence pour une autre de ses sociétés : rien de plus à régler.",
+  "refus.abonnement.couvert_par_la_licence":
+    "Cette société est déjà couverte par la licence de son dirigeant, que vous payez.",
+  "pme.notifs.voirEquipe": "Voir mon équipe",
+  "cab.cli.kicker": "Portefeuille",
+  "cab.cli.titre": "Clients",
+  "cab.cli.panel":
+    "Une seule page pour chaque client : sa fiche fiscale, son dirigeant et ses places, son mandat et ses honoraires, son abonnement. Rien n'est facturé tant que le dirigeant n'a pas rejoint.",
+  "cab.cli.importer": "Importer une liste",
+  "cab.cli.ajouter": "Ajouter un client",
+  "cab.cli.vue.clients": "Clients",
+  "cab.cli.vue.facturation": "Facturation",
+  "cab.cli.filtres": "Ce qui reste à faire",
+  "cab.cli.filtre.tous": "Tous",
+  "cab.cli.filtre.relancer": "Dirigeants à relancer",
+  "cab.cli.filtre.fiche": "Fiches à compléter",
+  "cab.cli.filtre.sansmandat": "Sans mandat",
+  "cab.cli.filtre.sansabo": "Sans abonnement couvert",
+  "cab.cli.filtre.vide": "Rien à faire ici. Tout est en ordre.",
+  "cab.cli.col.societe": "Société",
+  "cab.cli.col.dirigeant": "Dirigeant",
+  "cab.cli.col.fiche": "Fiche fiscale",
+  "cab.cli.col.mandat": "Mandat · honoraires",
+  "cab.cli.col.abo": "Abonnement · places",
+  "cab.cli.ouvrir": "Ouvrir",
+  "cab.cli.choisir": "Choisir {client}",
+  "cab.cli.groupe.proprietaire": "propriétaire principal",
+  "cab.cli.groupe.detail": "{offre} · {societes} sociétés · places en plus {places}",
+  "cab.cli.a.superviser": "{count} à superviser",
+  "cab.cli.mandat.demande": "mandat demandé",
+  "cab.cli.dir.present": "A rejoint",
+  "cab.cli.dir.rejoint": "a rejoint",
+  "cab.cli.dir.invite": "Invité · pas encore venu",
+  "cab.cli.dir.envoyee": "envoyée le {date} · relancer",
+  "cab.cli.dir.expiree": "invitation expirée · relancer",
+  "cab.cli.dir.personne": "Personne d'invité",
+  "cab.cli.dir.inviter": "inviter le dirigeant",
+  "cab.cli.fiche.complete": "Complète",
+  "cab.cli.fiche.completer": "À compléter",
+  "cab.cli.mandat.forfait": "Forfait · {montant}",
+  "cab.cli.mandat.temps": "Temps passé · {montant} / h",
+  "cab.cli.mandat.aucun": "Aucun mandat",
+  "cab.cli.abo.ligne.aucun": "Aucun",
+  "cab.cli.abo.ligne.proposer": "à proposer",
+  "cab.cli.abo.ligne.propose": "{offre} · proposé",
+  "cab.cli.abo.ligne.rien": "rien facturé avant son arrivée",
+  "cab.cli.abo.ligne.reponse": "sa réponse attendue",
+  "cab.cli.abo.ligne.paye": "{offre} · payé par vous",
+  "cab.cli.abo.ligne.places": "{places} places en plus",
+  "cab.cli.abo.ligne.descente": "descente en attente du dirigeant",
+  "cab.cli.vide.titre": "Faites entrer vos clients",
+  "cab.cli.vide.lede":
+    "Chaque client arrive avec son dirigeant invité, son mandat et son abonnement. Rien n'est facturé tant que le dirigeant n'a pas rejoint.",
+  "cab.cli.vide.importer":
+    "Votre tableur, tel quel. Malica vérifie chaque ligne avant de créer quoi que ce soit.",
+  "cab.cli.vide.ajouter": "Un matricule, une raison sociale. Le reste peut attendre.",
+  "cab.cli.reserve.expert": "Seul l'expert-comptable de la comptabilité fait ce geste.",
+  "cab.cli.malica.titre": "Ce que vous réglez à Malica",
+  "cab.cli.malica.lede":
+    "Les abonnements que vous couvrez, au prix public, sur une facture par mois, au prorata des jours. Un dossier dont le dirigeant n'a pas rejoint ne compte pas.",
+  "cab.cli.fermer": "Fermer",
+  "cab.cli.nouveau.titre": "Ajouter un client",
+  "cab.cli.nouveau.lede":
+    "Le dossier s'ouvre tout de suite ; vous complétez le reste quand vous voulez.",
+  "cab.cli.nouveau.requis": "Seuls les champs * sont obligatoires.",
+  "cab.cli.nouveau.creer": "Ajouter et inviter le dirigeant",
+  "cab.cli.nouveau.creer.sans": "Ajouter le client",
+  "cab.cli.nouveau.note":
+    "Le dossier s'ouvre, le dirigeant reçoit son invitation, et rien n'est facturé tant qu'il n'a pas rejoint. Ensuite : son mandat et son abonnement, sur la même fiche.",
+  "cab.cli.nouveau.ok": "Client ajouté · invitation envoyée au dirigeant",
+  "cab.cli.nouveau.ok.lien":
+    "Client ajouté · copiez le lien d'invitation dans l'onglet Propriétaire et places",
+  "cab.cli.nouveau.ok.sans": "Client ajouté · invitez son dirigeant quand vous voulez",
+  "cab.cli.nouveau.existant":
+    "Cette société est déjà dans Malica. Envoyez-lui une demande de mandat : elle l'accepte, et son dossier vous rejoint.",
+  "cab.cli.nouveau.demander": "Envoyer une demande de mandat",
+  "cab.cli.nouveau.mandat.ok": "Demande de mandat envoyée à {client}",
+  "cab.cli.champ.mf": "Matricule fiscal",
+  "cab.cli.champ.mf.aide": "Sept chiffres, une lettre, puis A/M/000 — comme sur la carte fiscale.",
+  "cab.cli.champ.mf.fige": "Modifiable jusqu'à la première pièce reçue, puis figé.",
+  "cab.cli.champ.nom": "Raison sociale",
+  "cab.cli.champ.email": "E-mail du dirigeant",
+  "cab.cli.champ.email.aide":
+    "Il reçoit son invitation. Facultatif : vous pourrez l'inviter plus tard.",
+  "cab.cli.champ.adresse": "Adresse du siège",
+  "cab.cli.a.completer": "À compléter",
+  "cab.cli.bandeau.attente": "Dossier actif · en attente du dirigeant · rien n'est facturé",
+  "cab.cli.bandeau.mandat": "Mandat demandé · la société doit accepter",
+  "cab.cli.bandeau.actif": "mandat actif",
+  "cab.cli.ouvrir.dossier": "Ouvrir son dossier comptable",
+  "cab.cli.pied": "Chaque modification s'inscrit au journal ; rien ne s'efface.",
+  "cab.cli.onglet.societe": "Société et fiche",
+  "cab.cli.onglet.acces": "Propriétaire et places",
+  "cab.cli.onglet.mandat": "Mandat et honoraires",
+  "cab.cli.onglet.abo": "Abonnement",
+  "cab.cli.onglet.factures": "Factures",
+  "cab.cli.societe.note":
+    "Le régime alimente les échéances du client dès qu'il est enregistré. Une fiche nouvelle prend effet aujourd'hui ; l'ancienne reste au journal.",
+  "cab.cli.enregistrer": "Enregistrer",
+  "cab.cli.enregistre": "Modifications enregistrées",
+  "cab.cli.rien.change": "Rien n'a changé",
+  "cab.cli.acces.proprietaire": "Propriétaire principal",
+  "cab.cli.acces.rejoint": "{nom} · a rejoint",
+  "cab.cli.acces.invite": "Invitation envoyée à {email} le {date}",
+  "cab.cli.acces.expiree": "L'invitation envoyée à {email} a expiré",
+  "cab.cli.acces.personne": "Personne n'est encore invité.",
+  "cab.cli.inviter": "Inviter",
+  "cab.cli.relancer": "Relancer",
+  "cab.cli.relance.ok": "Invitation renvoyée à {email}",
+  "cab.cli.relance.lien": "Invitation prête · copiez le lien et transmettez-le",
+  "cab.cli.lien": "Lien d'invitation",
+  "cab.cli.copier": "Copier",
+  "cab.cli.acces.societes": "Sociétés sous sa licence",
+  "cab.cli.acces.regroupement":
+    "Les sociétés d'un même dirigeant se regroupent d'elles-mêmes sous sa licence, dans la limite de son offre, sans supplément.",
+  "cab.cli.acces.places": "Places en plus",
+  "cab.cli.acces.places.paye": "vous payez : vous donnez les places",
+  "cab.cli.acces.places.propose": "vous suggérez, le propriétaire décide",
+  "cab.cli.acces.places.attente": "Les places s'ouvrent quand le dirigeant a rejoint.",
+  "cab.cli.acces.place.email": "E-mail de la personne",
+  "cab.cli.acces.donner": "Donner une place",
+  "cab.cli.acces.suggerer": "Suggérer au propriétaire",
+  "cab.cli.place.donnee": "Place donnée · la personne voit son invitation en se connectant",
+  "cab.cli.place.suggeree": "Suggestion envoyée au propriétaire",
+  "cab.cli.abo.web": "L'abonnement de vos clients se règle sur le web.",
+  "cab.cli.abo.aucun": "Aucun abonnement couvert",
+  "cab.cli.abo.aucun.detail":
+    "Choisissez une offre : vous la réglez au prix public, sur votre facture mensuelle.",
+  "cab.cli.abo.propose": "{offre} · proposé",
+  "cab.cli.abo.propose.detail": "Le dirigeant doit accepter ; rien n'est facturé avant.",
+  "cab.cli.abo.attente.detail":
+    "En attente du dirigeant · rien n'est facturé. L'offre démarre à son arrivée.",
+  "cab.cli.abo.paye": "{offre} · payé par vous",
+  "cab.cli.abo.paye.detail": "Sur votre facture Malica, au prorata des jours.",
+  "cab.cli.abo.descente.attente": "Descente vers {offre} en attente de l'accord du dirigeant",
+  "cab.cli.abo.ton.actif": "Actif",
+  "cab.cli.abo.ton.attente": "En attente",
+  "cab.cli.abo.ton.gris": "Aucun",
+  "cab.cli.abo.choisir": "Choisir l'offre",
+  "cab.cli.abo.prix": "{prix} HT / mois",
+  "cab.cli.abo.inclus": "+{places} places · {lectures} lectures",
+  "cab.cli.abo.effet.a_proposer":
+    "Proposée au dirigeant à son arrivée ; elle démarre alors d'elle-même. Rien n'est facturé avant.",
+  "cab.cli.abo.effet.attente":
+    "Le dirigeant n'a pas encore rejoint : l'offre l'attend, rien n'est facturé.",
+  "cab.cli.abo.effet.montee":
+    "Montée immédiate : le dirigeant est seulement prévenu. Votre facture passe à {prix} HT par mois, au prorata dès aujourd'hui.",
+  "cab.cli.abo.effet.descente":
+    "Descente : le dirigeant doit l'accepter. Rien ne change tant qu'il n'a pas répondu.",
+  "cab.cli.abo.effet.actuelle":
+    "C'est son offre actuelle. Au-dessus, vous montez ; en dessous, vous demandez une descente.",
+  "cab.cli.abo.effet.couvrir":
+    "Il paie lui-même aujourd'hui. Proposez de le couvrir : il accepte, et l'abonnement passe à votre charge le jour même.",
+  "cab.cli.abo.regle":
+    "Le dirigeant ne voit jamais le prix. Il peut monter à sa charge, jamais descendre sous votre choix.",
+  "cab.cli.abo.proposer": "Proposer cette offre",
+  "cab.cli.abo.appliquer": "Appliquer",
+  "cab.cli.abo.demander": "Demander la descente",
+  "cab.cli.abo.retirer": "Retirer la proposition",
+  "cab.cli.abo.arreter": "Arrêter la prise en charge",
+  "cab.cli.abo.retirer.q": "Retirer cette proposition ?",
+  "cab.cli.abo.retirer.lede": "Rien n'a été facturé. Vous pourrez en proposer une autre.",
+  "cab.cli.abo.arreter.q": "Arrêter de payer l'abonnement de ce client ?",
+  "cab.cli.abo.arreter.lede":
+    "Il repasse au dirigeant, prévenu dès aujourd'hui : il garde son offre au prix public, ou redescend. Votre facture s'arrête au prorata.",
+  "cab.cli.abo.confirmer": "Confirmer",
+  "cab.cli.abo.garder": "Garder",
+  "cab.cli.abo.ok.propose": "Offre proposée · le dirigeant répond",
+  "cab.cli.abo.ok.attente": "Offre prête · elle démarre à l'arrivée du dirigeant",
+  "cab.cli.abo.ok.montee": "Offre montée · le dirigeant est prévenu",
+  "cab.cli.abo.ok.descente": "Descente demandée · le dirigeant doit accepter",
+  "cab.cli.abo.ok.retiree": "Proposition retirée",
+  "cab.cli.abo.ok.arrete": "Prise en charge arrêtée · le dirigeant est prévenu",
+  "cab.cli.factures.vide": "Aucune facture d'honoraires pour ce client.",
+  "cab.cli.factures.note":
+    "Les factures naissent du mandat ; la vue Facturation les émet toutes ensemble.",
+  "cab.cli.import.titre": "Importer vos clients",
+  "cab.cli.import.e1": "Fichier",
+  "cab.cli.import.e2": "Vérification",
+  "cab.cli.import.e3": "Réglages communs",
+  "cab.cli.import.e4": "C'est fait",
+  "cab.cli.import.deposer": "Déposez votre fichier Excel ou CSV",
+  "cab.cli.import.deposer.aide":
+    "ou cliquez pour le choisir · les noms de colonnes sont reconnus seuls",
+  "cab.cli.import.coller": "Ou collez les lignes copiées de votre tableur",
+  "cab.cli.import.obligatoire": "Obligatoire",
+  "cab.cli.import.obligatoire.liste": "Matricule fiscal · raison sociale · e-mail du dirigeant",
+  "cab.cli.import.utile": "Utile",
+  "cab.cli.import.utile.liste": "Adresse · offre Malica · honoraires mensuels",
+  "cab.cli.import.plusieurs": "Plusieurs sociétés ?",
+  "cab.cli.import.plusieurs.lede":
+    "Même e-mail de dirigeant sur plusieurs lignes : un seul propriétaire, une seule licence.",
+  "cab.cli.import.modele": "Télécharger le modèle (colonnes déjà nommées)",
+  "cab.cli.import.lire": "Lire les lignes collées",
+  "cab.cli.import.vide": "Aucune ligne n'a été trouvée.",
+  "cab.cli.import.illisible":
+    "Ce fichier ne se lit pas. Enregistrez-le en .xlsx ou en .csv, ou collez les lignes.",
+  "cab.cli.import.pretes": "{count} prêtes",
+  "cab.cli.import.pretes#one": "{count} prête",
+  "cab.cli.import.pretes#other": "{count} prêtes",
+  "cab.cli.import.existantes": "{count} déjà dans Malica → demande de mandat",
+  "cab.cli.import.deja": "{count} déjà vos clients",
+  "cab.cli.import.deja#one": "{count} déjà votre client",
+  "cab.cli.import.deja#other": "{count} déjà vos clients",
+  "cab.cli.import.corriger": "{count} à corriger",
+  "cab.cli.import.corriger.aide":
+    "Corrigez les lignes en rouge ici même, puis revérifiez — ou continuez sans elles.",
+  "cab.cli.import.resultat": "Résultat",
+  "cab.cli.import.r.pret": "Prête",
+  "cab.cli.import.r.existant": "Déjà dans Malica ({nom}) → demande de mandat",
+  "cab.cli.import.r.deja": "Déjà votre client · ignorée",
+  "cab.cli.import.ligne.fausse": "Ligne à corriger",
+  "cab.cli.import.reverifier": "Revérifier",
+  "cab.cli.import.sans": "Continuer sans elles ({count})",
+  "cab.cli.import.continuer": "Continuer avec {count} lignes",
+  "cab.cli.import.continuer#one": "Continuer avec {count} ligne",
+  "cab.cli.import.continuer#other": "Continuer avec {count} lignes",
+  "cab.cli.import.retour": "Retour",
+  "cab.cli.import.communs.lede":
+    "Ce que le fichier ne dit pas, une fois pour toutes les lignes. Chaque client reste modifiable ensuite, un par un.",
+  "cab.cli.import.collaborateur": "Collaborateur par défaut",
+  "cab.cli.import.personne": "Personne pour l'instant",
+  "cab.cli.import.forfait": "Honoraires mensuels par défaut (HT)",
+  "cab.cli.import.forfait.aide": "Vide : pas de mandat pour l'instant",
+  "cab.cli.import.offre": "Abonnement Malica",
+  "cab.cli.import.offre.aucune": "Celui du fichier, sinon aucun",
+  "cab.cli.import.b.ouverts": "dossiers ouverts",
+  "cab.cli.import.b.mandats": "demandes de mandat",
+  "cab.cli.import.b.invites": "dirigeants invités",
+  "cab.cli.import.b.rien": "facturé avant leur arrivée",
+  "cab.cli.import.creer": "Créer et inviter ({count})",
+  "cab.cli.import.fin": "{count} clients sont dans votre portefeuille.",
+  "cab.cli.import.fin#one": "{count} client est dans votre portefeuille.",
+  "cab.cli.import.fin#other": "{count} clients sont dans votre portefeuille.",
+  "cab.cli.import.fin.lede":
+    "{invites} dirigeants ont reçu leur invitation et {mandats} sociétés votre demande de mandat. Vous verrez chacun passer à « a rejoint » dans la liste.",
+  "cab.cli.import.voir": "Voir mes clients",
+  "cab.cli.lot.choisis": "{count} sélectionnés",
+  "cab.cli.lot.choisis#one": "{count} sélectionné",
+  "cab.cli.lot.choisis#other": "{count} sélectionnés",
+  "cab.cli.lot.collab": "Affecter un collaborateur",
+  "cab.cli.lot.collab.choisir": "Choisir la personne",
+  "cab.cli.lot.collab.note": "Remplace l'affectation actuelle.",
+  "cab.cli.lot.mandat": "Appliquer un mandat type",
+  "cab.cli.lot.mandat.montant": "Forfait mensuel HT",
+  "cab.cli.lot.mandat.note": "Forfait mensuel, facturé le 1er ; chaque mandat reste modifiable.",
+  "cab.cli.lot.abo": "Proposer un abonnement",
+  "cab.cli.lot.abo.choisir": "Choisir l'offre",
+  "cab.cli.lot.abo.note": "Les clients qui en ont déjà un sont laissés tels quels.",
+  "cab.cli.lot.relancer": "Relancer les dirigeants",
+  "cab.cli.lot.relancer.lede":
+    "Une nouvelle invitation part à chaque dirigeant qui n'est pas venu.",
+  "cab.cli.lot.relancer.note": "Ceux qui ont rejoint sont laissés tels quels.",
+  "cab.cli.lot.appliquer": "Appliquer aux {count}",
+  "cab.cli.lot.appliquer#one": "Appliquer",
+  "cab.cli.lot.appliquer#other": "Appliquer aux {count}",
+  "cab.cli.lot.ok": "Fait pour {faits} · laissés tels quels : {passes}",
+  "cab.cli.lot.vider": "Tout désélectionner",
+  "cab.mer.titre": "Mise en route",
+  "cab.mer.lede": "Trois gestes pour démarrer. Chacun ouvre la page où il se fait.",
+  "cab.mer.equipe": "Invitez votre équipe",
+  "cab.mer.equipe.lede": "Vos collaborateurs reçoivent une invitation.",
+  "cab.mer.equipe.fait": "{count} personnes invitées ou présentes",
+  "cab.mer.equipe.fait#one": "{count} personne invitée ou présente",
+  "cab.mer.equipe.fait#other": "{count} personnes invitées ou présentes",
+  "cab.mer.equipe.lien": "Réglages · Équipe",
+  "cab.mer.clients": "Ajoutez vos clients",
+  "cab.mer.clients.lede": "Importez votre liste ou ajoutez un client.",
+  "cab.mer.clients.fait": "{count} dossiers · {rejoints} dirigeants ont rejoint",
+  "cab.mer.abo": "Proposez leurs abonnements",
+  "cab.mer.abo.lede": "Facultatif — sur la même page, ligne par ligne ou en lot.",
+  "cab.mer.fait": "fait",
+  "cab.mer.a_faire": "à faire",
+  "refus.dossier.matricule_fige":
+    "Le matricule ne se change plus : une pièce est déjà arrivée dans ce dossier.",
+  "refus.dossier.dirigeant_attendu": "Les places s'ouvrent quand le dirigeant a rejoint.",
+  "refus.import.trop_de_lignes": "Une liste se vérifie par 500 lignes au plus : découpez-la.",
+  "refus.import.matricule_en_double": "Ce matricule figure déjà plus haut dans la liste.",
+  "notif.kind.acces.monte": "Votre comptabilité a monté votre abonnement",
+  "notif.kind.acces.arrete":
+    "Votre comptabilité ne prend plus votre abonnement en charge : il continue, à votre charge",
+  "notif.kind.acces.descente_demandee":
+    "Votre comptabilité propose une offre plus légère : à vous d'accepter",
+  "notif.kind.place.donnee": "Votre comptabilité a ouvert une place dans votre équipe",
+  "notif.kind.place.suggeree": "Votre comptabilité suggère d'inviter quelqu'un dans votre équipe",
+  "cab.notif.kind.acces.descente_acceptee": "Le client a accepté la descente de son abonnement.",
+  "cab.notif.kind.acces.descente_refusee": "Le client a refusé la descente de son abonnement.",
+  "pme.descente.titre": "Votre comptabilité propose {offre}",
+  "pme.descente.lede":
+    "Une offre plus légère, toujours réglée par votre comptabilité. Rien ne change sans votre accord.",
+  "pme.descente.accepter": "Accepter",
+  "pme.descente.refuser": "Garder mon offre",
+  "pme.descente.ok": "Réponse envoyée à votre comptabilité",
 } as const;
 
 export type MessageKey = keyof typeof fr;

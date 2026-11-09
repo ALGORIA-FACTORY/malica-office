@@ -22,12 +22,12 @@ import { useRevenir } from "@/hooks/use-revenir";
 export const Route = createFileRoute("/_authenticated/pme/regler")({
   head: () => ({
     meta: [
-      { title: "Mon cabinet — Malica Office" },
+      { title: "Ma comptabilité — Malica Office" },
       {
         name: "description",
         content: "Ce que votre comptable vous a retourné, ce qu'il vous a répondu, et pourquoi.",
       },
-      { property: "og:title", content: "Mon cabinet — Malica Office" },
+      { property: "og:title", content: "Ma comptabilité — Malica Office" },
       {
         property: "og:description",
         content: "Ce que votre comptable vous a retourné, ce qu'il vous a répondu, et pourquoi.",
