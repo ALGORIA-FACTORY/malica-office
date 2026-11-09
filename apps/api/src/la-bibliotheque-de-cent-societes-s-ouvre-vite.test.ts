@@ -25,8 +25,87 @@ import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 const SOCIETES = 150;
 const PIECES = 10_000;
 const BUDGET_MS = 1500;
+/** Les pièces qui ont vécu : lues, envoyées, vues, précisées, prises en charge. */
+const AVEC_HISTOIRE = 800;
+const BUDGET_HISTOIRE_MS = 1500;
 
 type Lot = { tenantId: string; pieces: PieceLue[] };
+
+/**
+ * Recopie `vecue` et ses lignes (lecture, vues, circuit, précisions, écriture,
+ * prise en charge) sur `AVEC_HISTOIRE` pièces. Déclencheurs coupés pour cette
+ * seule connexion : ce banc pose des faits déjà passés par la vraie porte.
+ */
+async function recopierLaPieceVecue(s: SocieteDEssai, vecue: string, societes: string[]) {
+  const c = await s.admin.connect();
+  const cible = `($2::uuid[])[1 + (g % array_length($2::uuid[], 1))]`;
+  const piece = `md5('banc-histoire-' || g)::uuid`;
+  const ecriture = `md5('banc-ecriture-' || g)::uuid`;
+  const recopier = async (table: string, ou: string, champs: string) => {
+    const avecId = await c.query(
+      `select 1 from information_schema.columns
+        where table_schema || '.' || table_name = $1 and column_name = 'id'`,
+      [table],
+    );
+    const id = avecId.rowCount ? `'id', gen_random_uuid(),` : "";
+    await c.query(
+      `insert into ${table}
+       select (jsonb_populate_record(null::${table},
+                 to_jsonb(x) || jsonb_build_object(${id} ${champs}))).*
+         from ${table} x, generate_series(1, $3::int) g
+        where ${ou}`,
+      [vecue, societes, AVEC_HISTOIRE],
+    );
+  };
+  try {
+    await c.query("set session_replication_role = replica");
+    await c.query(
+      `insert into capture.pieces
+       select (jsonb_populate_record(null::capture.pieces,
+                 to_jsonb(p) || jsonb_build_object(
+                   'id', ${piece}, 'tenant_id', ${cible},
+                   'idempotency_key', 'banc-histoire-' || g,
+                   'storage_path', 'banc-histoire/' || g, 'sha256', null,
+                   'created_at', now() - make_interval(hours => g)))).*
+         from capture.pieces p, generate_series(1, $3::int) g
+        where p.id = $1`,
+      [vecue, societes, AVEC_HISTOIRE],
+    );
+    const parPiece = `'piece_id', ${piece}, 'tenant_id', ${cible}`;
+    for (const t of ["capture.extractions", "capture.circuit", "capture.precisions"]) {
+      await recopier(t, "x.piece_id = $1", parPiece);
+    }
+    await recopier(
+      "capture.vues",
+      "x.piece_id = $1",
+      `${parPiece}, 'cabinet_org_id',
+       case when x.cabinet_org_id = x.tenant_id then ${cible} else x.cabinet_org_id end`,
+    );
+    await c.query(
+      `insert into socle.ecritures
+       select (jsonb_populate_record(null::socle.ecritures,
+                 to_jsonb(x) || jsonb_build_object(
+                   'id', ${ecriture}, 'piece_id', ${piece}, 'tenant_id', ${cible}))).*
+         from socle.ecritures x, generate_series(1, $3::int) g
+        where x.piece_id = $1`,
+      [vecue, societes, AVEC_HISTOIRE],
+    );
+    await c.query(
+      `insert into socle.prises_en_charge
+       select (jsonb_populate_record(null::socle.prises_en_charge,
+                 to_jsonb(x) || jsonb_build_object(
+                   'ecriture_id', ${ecriture}, 'client_tenant_id', ${cible}))).*
+         from socle.prises_en_charge x
+         join socle.ecritures e on e.id = x.ecriture_id,
+              generate_series(1, $3::int) g
+        where e.piece_id = $1`,
+      [vecue, societes, AVEC_HISTOIRE],
+    );
+  } finally {
+    await c.query("set session_replication_role = origin").catch(() => undefined);
+    c.release();
+  }
+}
 
 describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFIGUREE }, () => {
   let s: SocieteDEssai;
@@ -79,6 +158,23 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
         where p.id = $1`,
       [modele, societes, PIECES],
     );
+
+    /*
+     * ET DES PIÈCES QUI ONT VÉCU (recette du 8 novembre 2026). Les 10 000
+     * ci-dessus n'ont aucune histoire : elles passent par le chemin court. En
+     * vrai, une pièce est lue, envoyée, vue, précisée, prise en charge — 761
+     * pièces réelles coûtaient 14 s. Une pièce qui a fait tout le chemin, par
+     * la vraie porte, recopiée avec toutes ses lignes.
+     */
+    const vecue = await s.deposer("sami", "entite");
+    await s.lire("sami", vecue);
+    await s.fait("sami", "collab.envoyer", vecue);
+    await s.fait("amel", "supervision.voir", vecue);
+    await s.fait("sami", "capture.preciser", vecue, "document_date", "2026-10-01");
+    await s.fait("amel", "collab.envoyer", vecue);
+    await s.fait("expert", "supervision.voir", vecue);
+    await s.priseEnCharge(vecue);
+    await recopierLaPieceVecue(s, vecue, societes.slice(0, 60));
   });
 
   after(async () => {
@@ -166,5 +262,45 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     assert.equal(lots.length, SOCIETES);
     assert.ok(total >= PIECES, `${total} pièces rendues`);
     assert.ok(mediane < BUDGET_MS, `${Math.round(mediane)} ms, budget ${BUDGET_MS} ms`);
+  });
+
+  it("DIAGNOSTIC (temporaire) : où part le temps d'une pièce qui a vécu", async () => {
+    const ids = `(select id from capture.pieces where idempotency_key like 'banc-histoire-%')`;
+    const essais: Record<string, string> = {
+      piece_lisible: `select count(app.piece_lisible(id)) from ${ids} i`,
+      version_courante: `select count(app.version_courante(id)) from ${ids} i`,
+      versions: `select count(*) from ${ids} i, lateral app.versions_de_la_piece(i.id)`,
+      dernier_fait: `select count(*) from ${ids} i, lateral app.dernier_fait_du_circuit(i.id)`,
+      dernier_envoi_proprio: `select count(app.dernier_envoi_au_proprietaire(id)) from ${ids} i`,
+      corrigee_auteur: `select count(app.corrigee_par_l_auteur(id)) from ${ids} i`,
+      corrigee_client: `select count(app.corrigee_par_le_client(id)) from ${ids} i`,
+      dernier_envoi: `select count(app.dernier_envoi(id)) from ${ids} i`,
+      ecriture_prise: `select count(app.ecriture_prise_en_charge_de(id)) from ${ids} i`,
+      montants: `select count(app.montants_pris_en_charge(id)) from ${ids} i`,
+      circuit: `select count(*) from ${ids} i, lateral app.circuit_de_la_piece(i.id)`,
+      suivi: `select count(*) from ${ids} i, lateral app.suivi_de_la_piece(i.id)`,
+      member_orgs_x800: `select count((select count(*) from app.member_orgs() m where i.id is not null)) from ${ids} i`,
+      version: `select version()`,
+    };
+    const res: Record<string, string | number> = {};
+    for (const [nom, sql] of Object.entries(essais)) {
+      const debut = performance.now();
+      try {
+        await sousIdentiteDuServeur(s.gens.amel.id, (db) => db.query(sql));
+        res[nom] = Math.round(performance.now() - debut);
+      } catch (e) {
+        res[nom] = `erreur ${(e as Error).message}`;
+      }
+    }
+    const debut = performance.now();
+    const lots = (await s.fait(
+      "amel",
+      "capture.listAvecLectureDesSocietes",
+      societes.slice(0, 60),
+    )) as Lot[];
+    res["liste"] = Math.round(performance.now() - debut);
+    res["pieces"] = lots.reduce((n, l) => n + l.pieces.length, 0);
+    res["prises"] = lots.flatMap((l) => l.pieces).filter((p) => p.suivi?.priseLe).length;
+    console.log("DIAGNOSTIC " + JSON.stringify(res));
   });
 });
