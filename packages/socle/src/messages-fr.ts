@@ -58,26 +58,6 @@ export const fr = {
   "nav.signin": "Se connecter",
   "nav.language": "Langue",
 
-  "landing.hero.title": "Une photo. Une écriture. Une preuve.",
-  "landing.hero.lede":
-    "La PME photographie sa facture, Malica la lit avec citation de la zone source, le Socle en tire l'écriture, la TVA et l'échéance. L'expert-comptable supervise et tranche.",
-  "landing.hero.cta": "Ouvrir mon espace",
-  "landing.hero.secondary": "Voir la doctrine",
-
-  "landing.pillars.title": "Quatre garanties, pas des promesses",
-  "landing.pillar.1.title": "Le chiffre vient du moteur",
-  "landing.pillar.1.body":
-    "Toute valeur liante — lecture, écriture, TVA, échéance, change — sort d'un moteur déterministe. Jamais d'un modèle de langage.",
-  "landing.pillar.2.title": "Zéro montant orphelin",
-  "landing.pillar.2.body":
-    "Chaque montant porte sa citation : page, zone, token lu. Sans citation, la valeur reste vide et signalée.",
-  "landing.pillar.3.title": "Un moteur, N juridictions",
-  "landing.pillar.3.body":
-    "Taux, comptes, mentions, seuils et échéances vivent en base, versionnés par date d'effet. Aucune constante fiscale dans le code.",
-  "landing.pillar.4.title": "La confidentialité est un mur",
-  "landing.pillar.4.body":
-    "L'espace personnel de la PME est invisible pour la comptabilité par isolation base de données, jamais par filtre d'affichage.",
-
   "landing.surfaces.title": "Deux surfaces, un seul cerveau",
   "landing.surfaces.pme.title": "Espace PME",
   "landing.surfaces.pme.body":
@@ -85,11 +65,6 @@ export const fr = {
   "landing.surfaces.cabinet.title": "Espace comptabilité",
   "landing.surfaces.cabinet.body":
     "File priorisée, écran côte-à-côte pièce/écriture, retour motivé par référentiel gouverné, contre-passation datée.",
-
-  "landing.cycle.title": "Le cycle d'une pièce",
-  "landing.cycle.steps":
-    "photographiée · lue par Malica · envoyée · vue par la comptabilité · validée ou forcée, ou retournée avec un motif",
-  "landing.footer": "Algoria Factory · Système Comptable Tunisien · extensible UEMOA / OHADA",
 
   "auth.title": "Espace Malica Office",
   "auth.subtitle": "Accès réservé aux organisations et à leur comptabilité mandatée.",

@@ -27,7 +27,7 @@ sauvegarder() {
   local dump="$DUMPS/malica-$horodatage.dump"
 
   echo "[$(maintenant)] dump → $dump"
-  pg_dump -h postgres -U postgres -d malica -Fc --no-owner -f "$dump.tmp"
+  pg_dump -h "${PGHOST:-postgres}" -U "${PGUSER:-postgres}" -d "${PGDATABASE:-malica}" -Fc --no-owner -f "$dump.tmp"
   mv "$dump.tmp" "$dump"
   ls -1t "$DUMPS"/malica-*.dump | tail -n +3 | xargs -r rm -f
 

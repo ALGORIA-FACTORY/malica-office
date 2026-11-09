@@ -57,26 +57,6 @@ export const en: Dict = {
   "nav.signin": "Sign in",
   "nav.language": "Language",
 
-  "landing.hero.title": "One photo. One entry. One proof.",
-  "landing.hero.lede":
-    "The company photographs its invoice, Malica reads it and cites the source area, the deterministic core derives the entry, the VAT and the deadline. The accountant reviews and decides.",
-  "landing.hero.cta": "Open my workspace",
-  "landing.hero.secondary": "Read the doctrine",
-
-  "landing.pillars.title": "Four guarantees, not promises",
-  "landing.pillar.1.title": "Figures come from the engine",
-  "landing.pillar.1.body":
-    "Every binding value — reading, entry, VAT, deadline, FX — comes from a deterministic engine. Never from a language model.",
-  "landing.pillar.2.title": "No orphan amount",
-  "landing.pillar.2.body":
-    "Every amount carries its citation: page, area, token read. Without a citation the value stays empty and flagged.",
-  "landing.pillar.3.title": "One engine, N jurisdictions",
-  "landing.pillar.3.body":
-    "Rates, accounts, mandatory statements, thresholds and deadlines live in the database, versioned by effective date. No fiscal constant in code.",
-  "landing.pillar.4.title": "Privacy is a wall",
-  "landing.pillar.4.body":
-    "The company's personal space is invisible to the accountant through database isolation, never through a display filter.",
-
   "landing.surfaces.title": "Two surfaces, one brain",
   "landing.surfaces.pme.title": "Company workspace",
   "landing.surfaces.pme.body":
@@ -84,11 +64,6 @@ export const en: Dict = {
   "landing.surfaces.cabinet.title": "Accounting workspace",
   "landing.surfaces.cabinet.body":
     "Prioritised queue, side-by-side document and entry, governed rejection reasons, dated reversal.",
-
-  "landing.cycle.title": "The life of a document",
-  "landing.cycle.steps":
-    "photographed · read by Malica · sent · seen by the accountant · validated or forced, or returned with a reason",
-  "landing.footer": "Algoria Factory · Tunisian accounting system · extensible to UEMOA / OHADA",
 
   "auth.title": "Malica Office workspace",
   "auth.subtitle": "Reserved for organisations and their mandated accountants.",
