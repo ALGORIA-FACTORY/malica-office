@@ -394,13 +394,21 @@ function PmeMalica() {
               <span>{statut}</span>
             </span>
             <span className="chips">
+              {/*
+               * Une icône, pas un mot (9 novembre 2026) : « Mes conversations »
+               * écrasait « Malica · en ligne » sur le téléphone.
+               */}
               <button
                 type="button"
-                className="chip"
+                className="chip ico"
                 aria-pressed={vue === "liste"}
+                aria-label={t("malica.fils.voir")}
+                title={t("malica.fils.voir")}
                 onClick={() => setVue(vue === "liste" ? "fil" : "liste")}
               >
-                {t("malica.fils.voir")}
+                <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                  <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />
+                </svg>
               </button>
               {cabinet ? (
                 <Link
