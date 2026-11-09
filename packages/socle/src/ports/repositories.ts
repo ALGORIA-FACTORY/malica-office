@@ -22,6 +22,8 @@ export interface Organization {
   jurisdiction: string;
   currency: string;
   validationMode: ValidationMode;
+  /** L'adresse du siège, quand elle a été saisie (par le cabinet à l'ouverture du dossier). */
+  adresse: string | null;
 }
 
 export interface Membership {

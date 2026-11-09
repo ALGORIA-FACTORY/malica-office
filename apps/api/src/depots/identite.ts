@@ -206,7 +206,7 @@ export const identite = {
   async listMyOrganizations(db: Requete) {
     const { rows } = await db.query(
       `select o.id, o.kind, o.name, o.legal_id, o.jurisdiction, o.currency,
-              o.validation_mode, m.role
+              o.validation_mode, o.adresse, m.role
          from organizations_v o
          join mes_adhesions_v m on m.tenant_id = o.id
         order by o.name`,
@@ -221,6 +221,7 @@ export const identite = {
         jurisdiction: row["jurisdiction"] as string,
         currency: row["currency"] as string,
         validationMode: row["validation_mode"] as string,
+        adresse: (row["adresse"] as string | null) ?? null,
         role: (row["role"] as string) ?? "membre",
       };
     });

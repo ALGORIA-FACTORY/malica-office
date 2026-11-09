@@ -399,6 +399,28 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
     assert.deepEqual(pieces, []);
   });
 
+  it("le contact retrouve l'adresse du siège que le cabinet a saisie (recette du 8 novembre 2026)", async () => {
+    const orgs = (await rpc(contact, "identite", "listMyOrganizations")) as {
+      id: string;
+      adresse: string | null;
+    }[];
+    assert.equal(orgs.find((o) => o.id === dossier)?.adresse, adresse);
+  });
+
+  it("le nom tapé à l'inscription devient le profil du compte (recette du 8 novembre 2026)", async () => {
+    const nomme = await creerCompte(`nomme-${marque}@essai.local`, MDP, "Leila Ben Salah");
+    assert.ok(nomme);
+    const profil = (await rpc(nomme, "identite", "monProfil")) as {
+      display_name: string | null;
+    } | null;
+    assert.equal(profil?.display_name, "Leila Ben Salah");
+
+    // Sans nom, rien n'est inventé : le profil naîtra quand la personne l'écrira.
+    const anonyme = await creerCompte(`anonyme-${marque}@essai.local`, MDP);
+    assert.ok(anonyme);
+    assert.equal(await rpc(anonyme, "identite", "monProfil"), null);
+  });
+
   it("un lien déjà servi ne sert plus", async () => {
     await assert.rejects(
       rpc(contact, "identite", "accepterInvitationParLien", jeton),
