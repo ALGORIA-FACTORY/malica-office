@@ -264,6 +264,18 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     assert.ok(mediane < BUDGET_MS, `${Math.round(mediane)} ms, budget ${BUDGET_MS} ms`);
   });
 
+  it(`${AVEC_HISTOIRE} pièces qui ont vécu : un appel, sous ${BUDGET_HISTOIRE_MS} ms`, async () => {
+    const dossiers = societes.slice(0, 60);
+    await s.fait("amel", "capture.listAvecLectureDesSocietes", dossiers);
+    const debut = performance.now();
+    const lots = (await s.fait("amel", "capture.listAvecLectureDesSocietes", dossiers)) as Lot[];
+    const duree = performance.now() - debut;
+    const vecues = lots.flatMap((l) => l.pieces).filter((p) => p.suivi?.priseLe);
+    console.log(`  ${vecues.length} pièces prises en charge : ${Math.round(duree)} ms`);
+    assert.ok(vecues.length >= AVEC_HISTOIRE, `${vecues.length} pièces qui ont vécu`);
+    assert.ok(duree < BUDGET_HISTOIRE_MS, `${Math.round(duree)} ms, budget ${BUDGET_HISTOIRE_MS}`);
+  });
+
   it("DIAGNOSTIC (temporaire) : où part le temps d'une pièce qui a vécu", async () => {
     const ids = `(select id from capture.pieces where idempotency_key like 'banc-histoire-%')`;
     const essais: Record<string, string> = {
