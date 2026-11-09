@@ -37,7 +37,8 @@ as $$
   with moi as materialized (
     select auth.uid() as uid,
            app.dossier_du_service() as service,
-           coalesce(app.is_platform(), false) as plateforme
+           coalesce(app.is_platform(), false) as plateforme,
+           app.service() as compte_de_service
   ),
   membres as materialized (select m as org from app.member_orgs() m),
   engagees as materialized (select e as org from app.engaged_orgs() e),
@@ -50,6 +51,10 @@ as $$
            n.tenant_id in (select org from membres) as membre
       from collab.notifications n, moi
      where n.tenant_id = any(p_tenants)
+       -- Un compte de service ne lit pas la cloche : `security definer` passe
+       -- outre la politique restrictive `service_hors_perimetre`, qui le dit
+       -- pour la table (20261118100000).
+       and moi.compte_de_service is null
        and (moi.plateforme
             or n.tenant_id in (select org from membres)
             or n.tenant_id in (select org from engagees))
