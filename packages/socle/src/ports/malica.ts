@@ -14,6 +14,7 @@
  * des moteurs du Socle ou des tokens relus dans le plan — jamais d'un modèle
  * seul (R2).
  */
+import type { EvenementDeLAssistant, FinDeLaReponse, QuestionALAssistant } from "./assistant.ts";
 import type { Locale } from "../messages.ts";
 import type { PvReunion, SourceCitee, SuiviDeTrace } from "./repositories.ts";
 
@@ -337,6 +338,18 @@ export type ResultatRedaction =
 /* ------------------------------------------------------------- le port */
 
 export interface MalicaPort {
+  /**
+   * « Parler à Malica » : la question part, la réponse revient EN FLUX —
+   * chaque événement est remis à `surEvenement` dès qu'il arrive (voir
+   * `./assistant`). Rend la fin. Un refus avant le flux (dossier, plafond)
+   * lève comme toute route.
+   */
+  converser(
+    question: QuestionALAssistant,
+    surEvenement: (ev: EvenementDeLAssistant) => void,
+    signal?: AbortSignal,
+  ): Promise<FinDeLaReponse>;
+
   /**
    * Lire une pièce — ou rejoindre la lecture qui tourne déjà pour elle. La
    * requête peut mourir en route ; la lecture, non : un second appel attend

@@ -21,6 +21,42 @@ import { fr } from "@malica/socle/messages-fr";
 import type { ReponseDeMalica } from "@malica/socle/ports/malica";
 
 const demander = vi.fn<(q: Record<string, unknown>) => Promise<ReponseDeMalica>>();
+
+/*
+ * Since PR #298 the screen asks through the streamed agent port (`malica.converser`):
+ * the same canned answers are replayed as its events — debut, texte, fin with sources.
+ * What these tests freeze (greeting, ready questions, "Ce que j'ai utilisé", voice,
+ * the thread) is unchanged; only the transport is.
+ */
+function enFlux(
+  ask: (q: Record<string, unknown>) => Promise<ReponseDeMalica>,
+): (q: Record<string, unknown>, on: (ev: Record<string, unknown>) => void) => Promise<void> {
+  return async (q, on) => {
+    const r = await ask(q);
+    on({ type: "debut", conversationId: r.conversationId });
+    on({ type: "texte", texte: r.answer });
+    on({
+      type: "fin",
+      fin: {
+        conversationId: r.conversationId,
+        messageId: r.messageId,
+        titre: r.titre,
+        reponse: r.answer,
+        sources: (r.conseil?.sources ?? []).map((s) => ({
+          cle: `malica:article:${s.corpus}:${s.numero}`,
+          genre: "article",
+          titre: `${s.corpus} ${s.numero}`,
+          objetId: null,
+          article: { corpus: s.corpus, numero: s.numero, validFrom: s.validFrom },
+        })),
+        propositions: [],
+        suggestions: [],
+        chiffresRetires: 0,
+        sansCitations: false,
+      },
+    });
+  };
+}
 const juger = vi.fn<(v: Record<string, unknown>) => Promise<void>>();
 
 vi.mock("@/verticals/malica-office/composition", () => ({
@@ -32,7 +68,11 @@ vi.mock("@/verticals/malica-office/composition", () => ({
       supprimer: async () => undefined,
       juger: (v: Record<string, unknown>) => juger(v),
     },
-    malica: { demander: (q: Record<string, unknown>) => demander(q) },
+    malica: {
+      demander: (q: Record<string, unknown>) => demander(q),
+      converser: (q: Record<string, unknown>, on: (ev: Record<string, unknown>) => void) =>
+        enFlux(demander)(q, on),
+    },
   }),
 }));
 
@@ -112,10 +152,9 @@ describe("le fil de Malica, dans les trois langues", () => {
       await poser(d, "Quel est mon crédit de TVA ?");
       expect(demander).toHaveBeenCalledWith({
         tenantId: "client-1",
-        pieceId: null,
+        pieceIds: [],
         question: "Quel est mon crédit de TVA ?",
         locale: langue,
-        mode: "reasoner",
         conversationId: null,
       });
       expect(screen.getByText(d["malica.chat.you"])).toBeTruthy();
@@ -143,8 +182,9 @@ describe("le pouce du comptable", () => {
     });
     expect(screen.getByText(d["malica.juge.merci.faux"])).toBeTruthy();
     expect(screen.queryByText(d["malica.juge.juste"])).toBeNull();
-    // La ligne technique du modèle, telle qu'elle s'écrit aujourd'hui.
-    expect(screen.getByText("deepseek-reasoner · 1.5 s · 100/20 jetons")).toBeTruthy();
+    // Since PR #298 the technical line (model, duration, tokens) is gone: technical
+    // secrets never reach the screen (the director's rule). Only the thumb stays.
+    expect(screen.queryByText(/deepseek|claude|jetons|tokens/i)).toBeNull();
   });
 
   it("hors mode technique, ni pouce, ni modèle, ni raisonnement", async () => {
@@ -153,13 +193,17 @@ describe("le pouce du comptable", () => {
     await poser(d, "Quel est mon crédit de TVA ?");
     expect(screen.queryByText(d["malica.juge.invite"])).toBeNull();
     expect(screen.queryByText(/deepseek-reasoner/)).toBeNull();
-    expect(screen.queryByText(d["malica.chat.showThinking"])).toBeNull();
+    // The reasoning toggle no longer exists at all (PR #298): the reasoning never shows.
+    expect((d as Record<string, string | undefined>)["malica.chat.showThinking"]).toBeUndefined();
+    expect(screen.queryByText("ne doit pas s'afficher")).toBeNull();
     expect(juger).not.toHaveBeenCalled();
   });
 
   it("en mode technique, sans raisonnement rendu (l'API le rend nul), rien à déplier", async () => {
     const d = await ouvrir("fr", true);
     await poser(d, "Quel est mon crédit de TVA ?");
-    expect(screen.queryByText(d["malica.chat.showThinking"])).toBeNull();
+    // No reasoning toggle exists any more (PR #298), even in technical mode.
+    expect((d as Record<string, string | undefined>)["malica.chat.showThinking"]).toBeUndefined();
+    expect(screen.queryByText(/raisonnement|reasoning|التفكير/i)).toBeNull();
   });
 });

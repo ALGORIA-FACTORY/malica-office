@@ -171,6 +171,8 @@ describe("les portes du serveur", { skip: !BASE_CONFIGUREE }, () => {
       ["capture", "consommerLecture", [piece]],
       ["capture", "journaliserAgent", [{}]],
       ["capture", "chaineDeDesignation", []],
+      // La consigne et la dépense de « Parler à Malica » (plafond propre).
+      ["conseil", "configurationAssistant", []],
       ["capture", "contexteLecture", [piece]],
       ["conversations", "ajouter", [{}]],
       ["fabrique", "inscrireExecution", [{}]],

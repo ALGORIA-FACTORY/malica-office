@@ -66,7 +66,7 @@ describe("les adresses de la tour", () => {
           "acces",
         ],
       ],
-      ["lecture", ["nuit", "modeles", "conseil", "compte"]],
+      ["lecture", ["nuit", "modeles", "conseil", "assistant", "compte"]],
     ]);
   });
 

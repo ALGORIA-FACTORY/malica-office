@@ -1,0 +1,165 @@
+# L'épreuve de « Parler à Malica » — l'assistant, mesuré contre le vrai Claude.
+#
+# CE QU'ELLE ÉPROUVE : les conversations de
+# `apps/api/src/malica/assistant/epreuve-assistant.json` (mode `reel`), rejouées
+# contre la vraie API, le jeu de données de la CI (SOTUMAG SARL), le corpus et
+# le vrai Claude (`apps/api/tests/real/assistant.ts`). Elle mesure les
+# conversations justes, les outils bien utilisés, les pièges tenus, les
+# chiffres sans source (objectif 0), les écritures constatées (objectif 0), la
+# latence du premier mot et le coût par conversation.
+#
+# QUAND : à la demande seulement — l'étiquette `epreuve-assistant` sur une PR,
+# ou `workflow_dispatch`. ELLE NE S'EXÉCUTE QUE SI LE SECRET `ANTHROPIC_API_KEY`
+# EXISTE : sans lui, elle s'arrête en vert à sa première étape et le dit. Il
+# lui faut aussi `QWEN_API_KEY` et `QWEN_BASE_URL` (l'encodeur du corpus, pour
+# l'outil `conseil_fiscal`).
+#
+# CE QU'ELLE COÛTE : PLAFOND 15 $ — l'épreuve s'arrête d'elle-même dès que la
+# dépense cumulée l'atteint (`--plafond 15`), au tarif d'`agents.model_pricing`.
+
+name: Épreuve de l'assistant
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  assistant:
+    runs-on: ubuntu-latest
+    if: >-
+      github.repository_owner != '' &&
+      (github.event_name != 'pull_request' || github.event.label.name == 'epreuve-assistant')
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: malica
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgres://malica_api:ci@localhost:5432/malica
+      # Le jeu de données dépose des lectures toutes faites par les portes
+      # d'essai (base jetable seulement), comme l'épreuve de nuit : sans elles,
+      # `capture.persisterLecture` n'existe pas (404) et le jeu s'arrête. Il
+      # fournit ici le compte du dirigeant et sa société à juridiction TN.
+      MALICA_PORTES_D_ESSAI: "1"
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/malica
+      JWT_SECRET: integration_continue_seulement_32_caracteres
+      AUTH_ESSAIS_PAR_MINUTE: "1000"
+      STOCKAGE_RACINE: /tmp/malica-pieces
+      JOURNAL_ATTENTE: /tmp/malica-journal
+      CORS_ORIGINS: http://localhost:8080
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      QWEN_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
+
+    steps:
+      - name: Les clés
+        id: cles
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::notice title=Assistant non éprouvé::ANTHROPIC_API_KEY absente — l'épreuve s'exécutera dès que le secret sera posé."
+            echo "pret=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          manquantes=""
+          [ -n "$QWEN_API_KEY" ] || manquantes="$manquantes QWEN_API_KEY"
+          [ -n "$QWEN_BASE_URL" ] || manquantes="$manquantes QWEN_BASE_URL"
+          if [ -n "$manquantes" ]; then
+            echo "::error title=Assistant non éprouvé::encodeur du corpus non configuré :$manquantes"
+            exit 1
+          fi
+          echo "pret=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.cles.outputs.pret == 'true'
+
+      - uses: actions/setup-node@v7
+        if: steps.cles.outputs.pret == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.cles.outputs.pret == 'true'
+
+      - name: Installer
+        if: steps.cles.outputs.pret == 'true'
+        run: npm ci
+
+      - name: Monter le schéma
+        if: steps.cles.outputs.pret == 'true'
+        run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
+        env:
+          MALICA_API_PASSWORD: ci
+
+      - name: Charger le corpus de l'archive
+        if: steps.cles.outputs.pret == 'true'
+        run: node db/corpus/charger-depuis-l-archive.mjs "$DATABASE_URL_ADMIN"
+
+      # Les scripts du corpus lisent leurs adresses et leurs clés dans les .env
+      # du dépôt (ils tournent hors de tout bundler) : on les écrit ici, sur
+      # le poste jetable de la CI, et nulle part ailleurs.
+      - name: Fragmenter et encoder le corpus
+        if: steps.cles.outputs.pret == 'true'
+        run: |
+          umask 077
+          printf 'DATABASE_URL_ADMIN=%s\n' "$DATABASE_URL_ADMIN" > apps/api/.env
+          printf 'QWEN_BASE_URL=%s\nQWEN_API_KEY=%s\n' "$QWEN_BASE_URL" "$QWEN_API_KEY" > apps/web/.env
+          bun db/corpus/vectoriser.mjs
+          rm -f apps/api/.env apps/web/.env
+
+      - name: Démarrer l'API et le site
+        if: steps.cles.outputs.pret == 'true'
+        run: |
+          (npm run start -w @malica/api > api.log 2>&1 &)
+          (npm run dev -w @malica/web > web.log 2>&1 &)
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:8080/sante >/dev/null 2>&1 && break
+            sleep 2
+          done
+          curl -fsS http://localhost:8080/sante
+
+      - name: Peupler le jeu de données
+        if: steps.cles.outputs.pret == 'true'
+        run: node outils/jeu-de-donnees.mjs http://localhost:8080
+
+      - name: L'épreuve de l'assistant
+        if: steps.cles.outputs.pret == 'true'
+        # `shell: bash` explicite : c'est lui qui porte `pipefail`, sans quoi
+        # le `tee` masquerait l'échec de l'épreuve.
+        shell: bash
+        run: |
+          node --experimental-strip-types apps/api/tests/real/assistant.ts \
+            --plafond 15 --sortie assistant.json --exiger | tee assistant.txt
+          {
+            echo "### Épreuve de l'assistant"
+            echo '```'
+            tail -n 12 assistant.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          MALICA_API_URL: http://localhost:3000
+
+      - name: Le détail de l'épreuve
+        if: always() && steps.cles.outputs.pret == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: epreuve-assistant
+          path: |
+            assistant.json
+            assistant.txt
+          if-no-files-found: ignore
+
+      - name: Journaux des serveurs
+        if: failure() && steps.cles.outputs.pret == 'true'
+        run: |
+          echo "::group::api"; tail -200 api.log; echo "::endgroup::"
+          echo "::group::web"; tail -100 web.log; echo "::endgroup::"

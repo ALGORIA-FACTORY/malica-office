@@ -709,3 +709,24 @@ la pièce n'appelle aucun modèle (`20261202100000_le_sudoku_d_abord.sql`,
 - **Le chiffre du banc (175 pièces sur 261) n'est pas celui de cette porte** :
   la porte exige aussi le sens, l'émetteur, le numéro et la date. Le compteur de
   la tour (« pièces lues sans IA ce mois ») dira le vrai taux en production.
+
+## « Parler à Malica » comme Claude (8 novembre 2026)
+
+Tranché par défaut, à confirmer :
+
+- ~~Le budget de l'assistant est celui de la chaîne #274~~ — **tranché par le
+  dirigeant le 8 novembre 2026 : plafond propre de 150 $ par mois** pour
+  l'assistant (migration `20261209090000`, réglable dans la tour, section
+  « Parler à Malica »). Au-delà : repli DeepSeek, puis arrêt ; la lecture des
+  pièces garde au moins 350 $ des 500 $ de Claude. Le plafond mensuel par
+  organisation (`conseil.exigerBudget`, ANO-029) reste exigé avant chaque question.
+- ~~Le repli DeepSeek range sa réponse brute au fil~~ — corrigé : la garde passe
+  AVANT le rangement (`askMalica` reçoit `garder`), le fil garde la version
+  contrôlée.
+- ~~Les sources ne sont pas rangées avec le message~~ — corrigé : colonnes
+  `sources` et `propositions` sur `agents.conversation_messages`, réaffichées à
+  la réouverture d'un fil. Une proposition rouverte se rejuge contre la porte du
+  circuit : si la pièce est déjà partie, le bouton n'existe plus.
+- **« Valider l'écriture » proposé à un dirigeant** : la base refuse (seul le
+  cabinet valide) et l'écran affiche le refus. La consigne le dit au modèle.
+- **Plafond de l'épreuve réelle : 15 $** par lancement (`--plafond 15`).

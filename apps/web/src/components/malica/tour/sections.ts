@@ -18,6 +18,7 @@ import {
   LayoutGrid,
   MoonStar,
   Receipt,
+  MessagesSquare,
   Scale,
   Send,
   ShieldCheck,
@@ -33,6 +34,7 @@ import type { CleDeSection } from "./cles-des-sections";
 import { ReglerLAbonnement } from "./abonnement";
 import { LAccesTotal } from "./acces-total";
 import { LeCalendrierFiscal } from "./calendrier-fiscal";
+import { LaConsigneDeLAssistant, LePlafondDeLAssistant, LeReglageDeLAssistant } from "./assistant";
 import { LaChaineDeDesignation } from "./chaine-de-designation";
 import { LaConsigneDuConseil, LeReglageDuConseil } from "./conseil-cite";
 import { DesignerLEmetteur } from "./emetteur";
@@ -79,6 +81,11 @@ export const SECTIONS = {
     libelle: "tour.menu.conseil",
     icone: Scale,
     cartes: [LaConsigneDuConseil, LeReglageDuConseil],
+  },
+  assistant: {
+    libelle: "tour.menu.assistant",
+    icone: MessagesSquare,
+    cartes: [LePlafondDeLAssistant, LaConsigneDeLAssistant, LeReglageDeLAssistant],
   },
   compte: { libelle: "tour.menu.compte", icone: KeyRound, cartes: [LeCompteDeService] },
 } as const satisfies Record<CleDeSection, Section>;
@@ -130,7 +137,7 @@ export const MENU: ReadonlyArray<{ cle: string; libelle: MessageKey; entrees: En
   {
     cle: "lecture",
     libelle: "tour.menu.lecture",
-    entrees: (["nuit", "modeles", "conseil", "compte"] as const).map(deSection),
+    entrees: (["nuit", "modeles", "conseil", "assistant", "compte"] as const).map(deSection),
   },
 ];
 

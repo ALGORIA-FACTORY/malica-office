@@ -1,0 +1,138 @@
+/**
+ * « Parler à Malica » — ce que l'assistant envoie à l'écran, événement par
+ * événement.
+ *
+ * ================================================================ LE FLUX
+ *
+ * La route `POST /malica/assistant` répond en `text/event-stream`. Chaque
+ * événement est l'un de ceux-ci, sérialisé en JSON sous son nom :
+ *
+ *   debut        le fil est ouvert
+ *   texte        un morceau de la réponse, DÉJÀ GARDÉ : une phrase qui porte un
+ *                chiffre ne part qu'une fois sa source établie (voir `retire`)
+ *   outil        Malica consulte le dossier : une étape dite en première
+ *                personne, traduite par le serveur (« Je regarde vos pièces… »)
+ *   retire       des phrases chiffrées sans source ont été retirées — jamais
+ *                montrées : seul leur nombre part
+ *   proposition  une action qui MODIFIE le dossier, proposée, jamais exécutée :
+ *                l'écran montre un bouton, la personne confirme
+ *   fin          la réponse entière, ses sources, ses suggestions
+ *   erreur       un code que l'écran traduit
+ *
+ * ============================================================ CE QUI NE PART PAS
+ *
+ * Rien de la mécanique : ni modèle, ni fournisseur, ni jetons, ni coût, ni
+ * durée, ni cache, ni nom d'outil, ni motif de repli, ni identifiant interne
+ * autre que ceux du fil et des objets que l'écran ouvre. La mesure d'une
+ * réponse reste au serveur, dans le journal des coûts (décision du dirigeant).
+ *
+ * Quand la réponse doit être relue par le cabinet (une PME sous mandat, une
+ * question de conseil qui engage son dossier), RIEN n'en est diffusé : le
+ * serveur la retient jusqu'à la conclusion du modèle, ne montre que le message
+ * de relecture, et remet la réponse à la file du cabinet.
+ *
+ * Le Socle ne fait que déclarer ces formes (R1) : l'API les produit, l'écran
+ * les lit, et les deux compilent contre la même définition.
+ */
+
+/** Une source que l'écran sait ouvrir : une pièce, un article, une échéance… */
+export interface SourceDeLAssistant {
+  /** La clé stable remise au modèle (`malica:piece:<uuid>`). */
+  cle: string;
+  genre:
+    | "piece"
+    | "liste"
+    | "tva"
+    | "echeance"
+    | "ecriture"
+    | "tiers"
+    | "article"
+    | "parametre"
+    | "question";
+  titre: string;
+  /** L'identifiant de l'objet ouvert par un clic (pièce, écriture) ; `null` sinon. */
+  objetId: string | null;
+  /** Pour un article : le texte, l'article et sa version. */
+  article?: { corpus: string; numero: string | null; validFrom: string | null } | null;
+  /** Pour un article ou un paramètre : le passage remis au modèle, que l'écran déplie. */
+  extrait?: string;
+}
+
+/** Une action que Malica propose et que seule la personne peut exécuter. */
+export interface PropositionDAction {
+  id: string;
+  action: "envoyer_au_cabinet" | "valider_ecriture";
+  pieceId: string;
+  /** Ce que la pièce est, en clair (émetteur, date) : la personne sait ce qu'elle confirme. */
+  libelle: string;
+  /** Pourquoi Malica le propose, dans ses mots. */
+  raison: string;
+}
+
+/** Une suggestion de suite : une question que la personne peut poser d'un tap. */
+export interface SuggestionDeSuite {
+  texte: string;
+}
+
+export interface FinDeLaReponse {
+  conversationId: string;
+  messageId: string | null;
+  titre: string | null;
+  reponse: string;
+  sources: SourceDeLAssistant[];
+  propositions: PropositionDAction[];
+  suggestions: SuggestionDeSuite[];
+  /** Le nombre de phrases retirées faute de source : jamais montrées, comptées. */
+  chiffresRetires: number;
+  /** Le modèle de secours a répondu : sa réponse ne porte pas de citations. */
+  sansCitations: boolean;
+}
+
+export type EvenementDeLAssistant =
+  | { type: "debut"; conversationId: string }
+  | { type: "texte"; texte: string }
+  /** L'étape, déjà traduite ; un outil inconnu n'en a pas, et rien ne part. */
+  | { type: "outil"; etiquette: string; etat: "debut" | "fin" }
+  | { type: "retire"; nombre: number }
+  | { type: "proposition"; proposition: PropositionDAction }
+  | { type: "fin"; fin: FinDeLaReponse }
+  | { type: "erreur"; erreur: string };
+
+/** Ce que l'écran envoie. Le fil voyage par son identifiant, jamais par son contenu. */
+export interface QuestionALAssistant {
+  tenantId: string;
+  question: string;
+  locale: "fr" | "en" | "ar";
+  conversationId: string | null;
+  /** Les pièces jointes, DÉJÀ déposées et confiées à la lecture Malica (R2). */
+  pieceIds: string[];
+}
+
+/**
+ * Découpe un tampon de flux SSE en événements de l'assistant. Rend les
+ * événements complets et ce qui reste à compléter par le morceau suivant —
+ * un octet peut arriver coupé n'importe où. Pur : l'écran l'appelle sur ce que
+ * le réseau lui donne.
+ */
+export function decouperLeFlux(tampon: string): {
+  evenements: EvenementDeLAssistant[];
+  reste: string;
+} {
+  const evenements: EvenementDeLAssistant[] = [];
+  const blocs = tampon.split(/\r?\n\r?\n/);
+  const reste = blocs.pop() ?? "";
+  for (const bloc of blocs) {
+    const donnees = bloc
+      .split(/\r?\n/)
+      .filter((l) => l.startsWith("data:"))
+      .map((l) => l.slice(5).trimStart())
+      .join("\n");
+    if (!donnees) continue;
+    try {
+      evenements.push(JSON.parse(donnees) as EvenementDeLAssistant);
+    } catch {
+      // Une ligne illisible ne casse pas la conversation.
+    }
+  }
+  return { evenements, reste };
+}

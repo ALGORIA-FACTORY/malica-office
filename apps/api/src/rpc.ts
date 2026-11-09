@@ -113,6 +113,9 @@ const RESERVEES_AU_SERVEUR: Readonly<Partial<Record<NomDepot, ReadonlySet<string
     "journaliserAgent",
     "chaineDeDesignation",
   ]),
+  // La consigne et la dépense de « Parler à Malica » ne regardent pas un
+  // client : la base exige aussi `malica.origine = 'serveur'`.
+  conseil: new Set(["configurationAssistant"]),
   conversations: new Set(["ajouter", "journaliserControles"]),
   fabrique: new Set([
     "enregistrerLecture",

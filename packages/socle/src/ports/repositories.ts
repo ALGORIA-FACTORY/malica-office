@@ -8,6 +8,7 @@ import type { DerniereLecture } from "../issue-de-lecture.ts";
 import type { LigneSaisie } from "../ecriture-saisie.ts";
 import type { CircuitInterne, StatutCabinet, SuiviDEnvoi } from "../statut-d-envoi.ts";
 import type { CodeVerdict } from "../verdicts.ts";
+import type { PropositionDAction, SourceDeLAssistant } from "./assistant.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 import type { SensDeTva } from "../contracts/tva.v1.ts";
 
@@ -381,6 +382,14 @@ export interface MessageDuFil {
   tokensOut: number | null;
   latencyMs: number | null;
   createdAt: string;
+  /**
+   * Les sources que la réponse de l'assistant citait, rangées avec elle : un
+   * fil rouvert les réaffiche. Nul pour une question, un fil ancien, ou une
+   * réponse sans source.
+   */
+  sources?: SourceDeLAssistant[] | null | undefined;
+  /** Les actions que la réponse proposait (boutons à confirmer) ; nul sinon. */
+  propositions?: PropositionDAction[] | null | undefined;
 }
 
 export interface JurisdictionPack {
@@ -4652,6 +4661,55 @@ export interface PassageDeNuit {
   };
 }
 
+/** Le réglage de « Parler à Malica », tel que la tour le saisit. */
+export interface ReglageDeLAssistant {
+  modeleCourant: string;
+  modeleDifficile: string;
+  longueurDifficile: number;
+  motsDifficiles: string[];
+  effortCourant: "low" | "medium" | "high";
+  effortDifficile: "low" | "medium" | "high";
+  reflexionCourant: "disabled" | "between_tools" | "adaptive";
+  reflexionDifficile: "disabled" | "between_tools" | "adaptive";
+  iterationsMax: number;
+  sortieMaxJetons: number;
+  toursTransmis: number;
+}
+
+/** Ce que la tour voit de « Parler à Malica ». */
+export interface EtatDeLAssistant {
+  consignes: Array<{ id: string; texte: string; motif: string; decide_le: string }>;
+  reglage: {
+    modele_courant: string;
+    modele_difficile: string;
+    longueur_difficile: number;
+    mots_difficiles: string[];
+    effort_courant: "low" | "medium" | "high";
+    effort_difficile: "low" | "medium" | "high";
+    reflexion_courant: "disabled" | "between_tools" | "adaptive";
+    reflexion_difficile: "disabled" | "between_tools" | "adaptive";
+    iterations_max: number;
+    sortie_max_jetons: number;
+    tours_transmis: number;
+    motif: string;
+    decide_le: string;
+  } | null;
+  modeles: string[];
+  mois: { appels: number; cout: number };
+  /**
+   * Le plafond propre de l'assistant (défaut livré : 150 $ par mois), ce qu'il
+   * en a dépensé sur Claude dans sa période, et s'il est atteint.
+   */
+  plafond: {
+    plafond: number;
+    periode: "jour" | "mois";
+    depense: number;
+    epuise: boolean;
+    motif: string;
+    decide_le: string;
+  } | null;
+}
+
 /** Un maillon de la chaîne de désignation, tel que la tour le voit. */
 export interface MaillonDeLaDesignation {
   rang: 1 | 2;
@@ -4824,6 +4882,22 @@ export interface TourRepository {
   } | null>;
   /** La tour règle le plafond IA : daté et motivé ; rien ne se réécrit (ANO-029). */
   reglerIa(plafondUsd: string, motif: string): Promise<unknown>;
+  /** « Parler à Malica » : consigne, ses versions, réglage, modèles, coût du mois. */
+  assistantEtat(): Promise<EtatDeLAssistant | null>;
+  /** Publier une version nouvelle de la consigne de l'assistant : datée, motivée, en ajout seul. */
+  publierConsigneDeLAssistant(texte: string, motif: string): Promise<unknown>;
+  /** Régler l'assistant : modèles, règle de difficulté, effort, réflexion, bornes. */
+  reglerAssistant(reglage: ReglageDeLAssistant, motif: string): Promise<unknown>;
+  /**
+   * Régler le plafond PROPRE de l'assistant (défaut livré : 150 $ par mois) :
+   * au-delà, il passe au repli DeepSeek ; la lecture des pièces n'en est pas
+   * touchée. Daté, motivé, en ajout seul.
+   */
+  reglerPlafondDeLAssistant(
+    plafondUsd: string,
+    periode: "jour" | "mois",
+    motif: string,
+  ): Promise<unknown>;
   /**
    * La chaîne de désignation (décision du 8 novembre 2026) : Claude au rang 1,
    * DeepSeek au rang 2, leurs plafonds et dépenses de la période, les modèles

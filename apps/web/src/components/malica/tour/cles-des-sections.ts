@@ -20,6 +20,7 @@ const CLES_DES_SECTIONS = [
   "nuit",
   "modeles",
   "conseil",
+  "assistant",
   "compte",
 ] as const;
 

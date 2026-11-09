@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useFichesDesSocietes } from "@/hooks/use-fiches-des-societes";
 import { useMonAcces } from "@/hooks/use-mon-acces";
@@ -8,13 +8,16 @@ import { usePiecesLuesDesSocietes } from "@/hooks/use-pieces-lues";
 import { useRevenir } from "@/hooks/use-revenir";
 import { useVoix } from "@/hooks/use-voix";
 import portraitMalica from "@/assets/malica.webp";
+import {
+  ReponseDeMalica,
+  useConversationMalica,
+  useJointe,
+  type TourDeMalica,
+} from "@/components/malica/conversation-malica";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
-import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { PAS_MS, morceaux, motsParPas, texteMontre } from "@/lib/mot-a-mot";
 import { cabinetsDesSocietes } from "@/lib/votre-comptabilite";
 import { office } from "@/verticals/malica-office/composition";
-import type { SourceCitee } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/pme/malica")({
   head: () => ({
@@ -38,32 +41,15 @@ export const Route = createFileRoute("/_authenticated/pme/malica")({
 });
 
 /**
- * Un tour du fil, tel que CET écran l'affiche.
- *
- * `sources` et `retenue` ne descendent QUE d'une réponse fraîche
- * (`ReponseDeMalica`) : un fil repris par `conversations.ouvrir` rend des
- * `MessageDuFil`, qui ne portent ni l'un ni l'autre. Les deux sont donc
- * facultatifs — et déclarés `| undefined`, parce que
- * `exactOptionalPropertyTypes` est vrai et qu'un `sources?: SourceCitee[]`
- * refuse qu'on y pose `undefined`.
- */
-interface Tour {
-  role: "user" | "assistant";
-  contenu: string;
-  /** Les articles cités, pour les jetons `.srcs`. Absents sur un tour relu. */
-  sources?: SourceCitee[] | undefined;
-  /** Malica a remis sa réponse au cabinet : l'état `.et1` du dessin le dit. */
-  retenue?: boolean | undefined;
-}
-
-/**
  * Converser avec Malica — planche 8, approuvée le 7 novembre 2026.
  *
  * « Malica accueille, puis se range et laisse parler. » À l'ouverture, Malica
  * en grand : son portrait dans un halo vert, un salut, trois questions toutes
  * prêtes. À la première question, elle se replie dans l'en-tête et le fil
- * prend la place. Sa réponse s'écrit mot à mot (la vraie, déjà reçue :
- * `lib/mot-a-mot.ts`), avec ses sources. Le micro ouvre la voix : on parle,
+ * prend la place. Sa réponse arrive EN FLUX, mot à mot, au fil de ce que
+ * Claude écrit et après la garde des chiffres (`malica/assistant/garde.ts`),
+ * avec ses sources cliquables, ses propositions d'action à confirmer et ses
+ * suggestions de suite (`conversation-malica.tsx`). Le micro ouvre la voix : on parle,
  * la question part par le même appel que le clavier, et la réponse se lit à
  * voix haute (`hooks/use-voix.ts`) — là où l'appareil sait le faire.
  *
@@ -72,8 +58,12 @@ interface Tour {
  *
  * ============================================================== LE CÂBLAGE
  *
- * Les mêmes appels, vérifiés au `contrat/rpc.json` (R2) :
- *   `malica.demander`, `conversations.lister`, `conversations.ouvrir`,
+ * Vérifiés au `contrat/rpc.json` (R2) :
+ *   `malica.converser` (la réponse en flux, par l'API et non /rpc),
+ *   `capture.register` puis `malica.demanderLaLecture` (une pièce jointe est
+ *   déposée puis confiée à la lecture Malica — le modèle n'en voit jamais
+ *   l'image), `conversations.lister`, `conversations.ouvrir` (un fil rouvert
+ *   réaffiche les sources et les propositions rangées avec chaque réponse),
  *   `conversations.supprimer`, `acces.monAcces`, `conseil.contexte`,
  *   `identity.monProfil` (le prénom du salut, clé partagée `mon-profil`),
  *   et `fichesDesSocietes` + les pièces lues (le canal de la comptabilité,
@@ -96,17 +86,17 @@ function PmeMalica() {
   const revenir = useRevenir();
   const voix = useVoix(locale);
 
-  const [tours, setTours] = useState<Tour[]>([]);
+  const conversation = useConversationMalica(pme.tenantId);
+  const { tours, filId, enCours } = conversation;
+  const jointe = useJointe(pme.tenantId);
+  const fichier = useRef<HTMLInputElement>(null);
   const [brouillon, setBrouillon] = useState("");
-  const [filId, setFilId] = useState<string | null>(null);
   const [vue, setVue] = useState<"fil" | "liste">("fil");
   const [menu, setMenu] = useState<string | null>(null);
   /** La voix est ouverte (l'écran plein du micro). */
   const [enVoix, setEnVoix] = useState(false);
   /** La question en cours a été posée à la voix : sa réponse se lit à haute voix. */
   const parVoix = useRef(false);
-  /** La dernière réponse reçue s'écrit mot à mot, une seule fois. */
-  const [frais, setFrais] = useState(false);
   const champ = useRef<HTMLInputElement>(null);
 
   const filerEnBas = () => {
@@ -140,44 +130,11 @@ function PmeMalica() {
       c.societes.includes(pme.tenantId),
     ) ?? null;
 
-  const question = useMutation({
-    mutationFn: async (q: string) =>
-      office().malica.demander({
-        tenantId: pme.tenantId,
-        pieceId: null,
-        question: q,
-        locale,
-        mode: "reasoner",
-        conversationId: filId,
-      }),
-    onSuccess: (res) => {
-      setFilId(res.conversationId);
-      setFrais(true);
-      setTours((prec) => [
-        ...prec,
-        {
-          role: "assistant",
-          contenu: res.answer,
-          sources: res.conseil?.sources,
-          retenue: res.retenue,
-        },
-      ]);
-      if (parVoix.current) voix.lire(res.answer);
-      parVoix.current = false;
-      void qc.invalidateQueries({ queryKey: ["malica-fils", pme.tenantId] });
-      filerEnBas();
-    },
-    onError: () => {
-      parVoix.current = false;
-    },
-  });
-
   const reprise = useMutation({
     mutationFn: (id: string) => office().conversations.ouvrir(id),
     onSuccess: (messages, id) => {
-      setFilId(id);
-      setFrais(false);
-      setTours(messages.map((m) => ({ role: m.role, contenu: m.contenu })));
+      voix.taire();
+      conversation.reprendre(id, messages);
       setVue("fil");
       filerEnBas();
     },
@@ -187,38 +144,42 @@ function PmeMalica() {
     mutationFn: (id: string) => office().conversations.supprimer(id),
     onSuccess: (_r, id) => {
       setMenu(null);
-      if (id === filId) {
-        setFilId(null);
-        setTours([]);
-      }
+      if (id === filId) conversation.nouveau();
       void qc.invalidateQueries({ queryKey: ["malica-fils", pme.tenantId] });
     },
   });
 
+  // Changer de dossier change de fils : l'ancien ne reste pas à l'écran.
+  const { nouveau } = conversation;
+  const { vider } = jointe;
   useEffect(() => {
-    setFilId(null);
-    setTours([]);
+    nouveau();
+    vider();
     setVue("fil");
     setMenu(null);
-    setFrais(false);
-  }, [pme.tenantId]);
+  }, [pme.tenantId, nouveau, vider]);
 
   function poser(q: string) {
     const texte = q.trim();
-    if (!texte || question.isPending) return;
+    if (!texte || enCours) return;
     voix.taire();
-    setTours((prec) => [...prec, { role: "user", contenu: texte }]);
     setBrouillon("");
     setVue("fil");
-    question.mutate(texte);
+    const pieces = jointe.jointes.map((j) => j.id);
+    jointe.vider();
     filerEnBas();
+    void conversation.envoyer(texte, pieces).then(({ reponse }) => {
+      if (parVoix.current && reponse) voix.lire(reponse);
+      parVoix.current = false;
+      void qc.invalidateQueries({ queryKey: ["malica-fils", pme.tenantId] });
+      filerEnBas();
+    });
   }
 
   function nouveauFil() {
     voix.taire();
-    setFilId(null);
-    setTours([]);
-    setFrais(false);
+    conversation.nouveau();
+    jointe.vider();
     setVue("fil");
     requestAnimationFrame(() => champ.current?.focus());
   }
@@ -252,7 +213,7 @@ function PmeMalica() {
   const parle = tours.length > 0;
   const derniere = [...tours].reverse().find((x) => x.role === "assistant");
   const statut =
-    question.isPending || voix.parle
+    enCours || voix.parle
       ? t("pme.malica.statut.repond")
       : derniere?.sources && derniere.sources.length > 0
         ? t("pme.malica.statut.cite")
@@ -343,7 +304,7 @@ function PmeMalica() {
 
   /* ------------------------------------------- Malica, en grand ou de côté */
   const orbe = (
-    <div className={voix.parle || question.isPending ? "orbe parle" : "orbe"}>
+    <div className={voix.parle || enCours ? "orbe parle" : "orbe"}>
       <i className="b1" aria-hidden />
       <i className="b2" aria-hidden />
       <img src={portraitMalica} alt={t("malica.chat.her")} width={620} height={620} />
@@ -452,7 +413,7 @@ function PmeMalica() {
                         key={q}
                         type="button"
                         tabIndex={parle ? -1 : undefined}
-                        disabled={question.isPending}
+                        disabled={enCours}
                         onClick={() => poser(q)}
                       >
                         {q}
@@ -473,26 +434,17 @@ function PmeMalica() {
                         key={i}
                         tour={tour}
                         signe={i === premiereDeMalica(tours)}
-                        motAMot={frais && i === tours.length - 1}
-                        onEcrite={() => setFrais(false)}
-                        retenue={t("pme.malica.retenue")}
                         nom={t("malica.chat.her")}
-                      />
+                      >
+                        <ReponseDeMalica
+                          tour={tour}
+                          tenantId={pme.tenantId}
+                          espace="pme"
+                          surSuggestion={poser}
+                        />
+                      </Reponse>
                     ),
                   )}
-                  {question.isPending ? (
-                    <div className="ecrit" role="status" aria-label={t("malica.chat.thinking")}>
-                      <i />
-                      <i />
-                      <i />
-                    </div>
-                  ) : null}
-                  {question.isError ? (
-                    <div className="et1" role="alert">
-                      <i />
-                      {texteDeLErreur(question.error, "malica : question", t("malica.chat.error"))}
-                    </div>
-                  ) : null}
                 </div>
 
                 {parle && !(conseil.isPending || conseil.isError || acces.isPending) ? (
@@ -517,6 +469,33 @@ function PmeMalica() {
                   </div>
                 ) : null}
 
+                {/*
+                 * Les pièces jointes : déposées dans le dossier et confiées à
+                 * la lecture Malica (R2) avant de partir avec la question. Le
+                 * modèle n'en voit jamais l'image, seulement ce que la lecture
+                 * en a relevé.
+                 */}
+                {jointe.jointes.length > 0 || jointe.deposer.isPending ? (
+                  <div className="srcs">
+                    {jointe.jointes.map((j) => (
+                      <button
+                        key={j.id}
+                        type="button"
+                        onClick={() => jointe.retirer(j.id)}
+                        aria-label={`${t("pme.assistant.jointe.retirer")} — ${j.nom}`}
+                      >
+                        {t("pme.assistant.jointe.prete")} · {j.nom} ×
+                      </button>
+                    ))}
+                    {jointe.deposer.isPending ? (
+                      <span role="status">{t("pme.assistant.jointe.envoi")}</span>
+                    ) : null}
+                    {jointe.jointes.length > 0 ? (
+                      <span>{t("pme.assistant.jointe.lecture")}</span>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 <form
                   className="comp"
                   onSubmit={(e) => {
@@ -524,6 +503,29 @@ function PmeMalica() {
                     poser(brouillon);
                   }}
                 >
+                  <input
+                    ref={fichier}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) jointe.deposer.mutate(f);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="mic"
+                    aria-label={t("pme.assistant.joindre")}
+                    title={t("pme.assistant.joindre")}
+                    disabled={jointe.deposer.isPending || enCours}
+                    onClick={() => fichier.current?.click()}
+                  >
+                    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                      <path d="M20 11.5 12.5 19a5 5 0 0 1-7-7L13 4.5a3.3 3.3 0 0 1 4.7 4.7L10.2 16.7a1.7 1.7 0 0 1-2.4-2.4L14.5 7.6" />
+                    </svg>
+                  </button>
                   <input
                     ref={champ}
                     value={brouillon}
@@ -534,7 +536,7 @@ function PmeMalica() {
                   <button
                     type="submit"
                     className="go"
-                    disabled={question.isPending || !brouillon.trim()}
+                    disabled={enCours || !brouillon.trim()}
                     aria-label={t("malica.chat.send")}
                   >
                     <svg viewBox="0 0 24 24" className="g" aria-hidden>
@@ -546,7 +548,7 @@ function PmeMalica() {
                     <button
                       type="button"
                       className="mic"
-                      disabled={question.isPending}
+                      disabled={enCours}
                       aria-label={t("pme.malica.voix.parler")}
                       onClick={ouvrirLaVoix}
                     >
@@ -573,10 +575,8 @@ function PmeMalica() {
             <b>{t("pme.malica.utilise")}</b>
             {derniere?.sources && derniere.sources.length > 0 ? (
               <ul>
-                {derniere.sources.map((s, k) => (
-                  <li key={k}>
-                    {s.corpus} <em>{s.numero || "—"}</em>
-                  </li>
+                {derniere.sources.map((s) => (
+                  <li key={s.cle}>{s.titre}</li>
                 ))}
               </ul>
             ) : (
@@ -630,43 +630,21 @@ function Ondes() {
 }
 
 /**
- * Une réponse de Malica. La dernière reçue s'écrit mot à mot ; ses sources et
- * l'avis de relecture n'apparaissent qu'une fois tout le texte écrit. Si
- * l'appareil demande moins de mouvement, tout s'affiche d'un coup.
+ * Une réponse de Malica dans le fil : sa signature au premier tour, puis la
+ * bulle. Le contenu (texte en flux, sources, propositions, suggestions) est
+ * celui de `ReponseDeMalica`, partagé avec le panneau du cabinet.
  */
 function Reponse({
-  tour,
   signe,
-  motAMot,
-  onEcrite,
-  retenue,
   nom,
+  tour,
+  children,
 }: {
-  tour: Tour;
   signe: boolean;
-  motAMot: boolean;
-  onEcrite: () => void;
-  retenue: string;
   nom: string;
+  tour: TourDeMalica;
+  children: ReactNode;
 }) {
-  const total = morceaux(tour.contenu).length;
-  const [n, setN] = useState(() => (motAMot ? 0 : total));
-  const fini = n >= total;
-  useEffect(() => {
-    if (!motAMot) return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setN(total);
-      return;
-    }
-    const pas = motsParPas(total);
-    const h = window.setInterval(() => setN((x) => Math.min(total, x + pas)), PAS_MS);
-    return () => window.clearInterval(h);
-  }, [motAMot, total]);
-  useEffect(() => {
-    if (fini && motAMot) onEcrite();
-  }, [fini, motAMot, onEcrite]);
-
-  const texte = fini ? tour.contenu : texteMontre(tour.contenu, n);
   return (
     <>
       {signe ? (
@@ -677,48 +655,11 @@ function Reponse({
           <b>{nom}</b>
         </div>
       ) : null}
-      <div className="mal" aria-busy={!fini || undefined}>
-        {paragraphes(texte).map((para, k) => (
-          <p key={k}>{para}</p>
-        ))}
-        {fini && tour.sources && tour.sources.length > 0 ? (
-          <div className="srcs">
-            {tour.sources.map((s, k) => (
-              <a key={k}>
-                <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                  <path d="M6 3h8l4 4v14H6z" />
-                  <path d="M14 3v4h4" />
-                </svg>
-                {s.corpus} <em>{s.numero || "—"}</em>
-              </a>
-            ))}
-          </div>
-        ) : null}
-        {fini && tour.retenue ? (
-          <div className="et1">
-            <i />
-            {retenue}
-          </div>
-        ) : null}
+      <div className="mal" aria-busy={tour.enCours || undefined}>
+        {children}
       </div>
     </>
   );
-}
-
-/**
- * Le texte d'une réponse, coupé en paragraphes.
- *
- * Coupé sur la LIGNE VIDE, qui est ce qu'un modèle écrit pour séparer deux
- * paragraphes. Les retours simples ne coupent pas : ils appartiennent à une
- * énumération, et la feuille les tient (`white-space`). Un texte sans ligne
- * vide rend un seul paragraphe, et un texte vide n'en rend aucun plutôt qu'une
- * bulle vide.
- */
-function paragraphes(texte: string): string[] {
-  return texte
-    .split(/\n{2,}/)
-    .map((x) => x.trim())
-    .filter((x) => x.length > 0);
 }
 
 /**
@@ -728,7 +669,7 @@ function paragraphes(texte: string): string[] {
  * rendu, pas une place dans une liste. Si le premier tour de Malica est
  * effacé par une reprise de fil, la signature suit sans qu'on y pense.
  */
-function premiereDeMalica(tours: Tour[]): number {
+function premiereDeMalica(tours: TourDeMalica[]): number {
   return tours.findIndex((x) => x.role === "assistant");
 }
 
