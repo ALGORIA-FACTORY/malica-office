@@ -1,0 +1,60 @@
+## C5 — qui appelle /malica/conseil-cite ?
+$ grep -rIn "/malica/conseil-cite\|\"/conseil-cite\"" apps/web/src android packages
+(code retour 1)
+$ grep -n "appelerRoute(" apps/web/src/verticals/malica-office/adapters/http/malica.ts
+95:      return appelerRoute("/demander", { corps: question });
+103:      return appelerRoute("/conseil", { corps: input });
+107:      return appelerRoute("/pv", { corps: input });
+116:      return appelerRoute("/briefing", { corps: input });
+$ grep -n "conseil-cite" apps/api/src/malica.ts
+37:import { conseilCite } from "./malica/conseil/conseil-cite.ts";
+338:malica.post("/conseil-cite", (req, res, next) => {
+
+## C12 — limiteurs de débit déclarés dans l API
+$ grep -rn "rateLimit(" apps/api/src (hors tests)
+apps/api/src/app.ts:197:const limiteAuth = rateLimit({
+$ grep -n "limiteAuth" apps/api/src/app.ts
+197:const limiteAuth = rateLimit({
+232:app.post("/auth/inscription", limiteAuth, async (req, res, next) => {
+258:app.post("/auth/connexion", limiteAuth, async (req, res, next) => {
+283:app.post("/auth/rafraichir", limiteAuth, async (req, res, next) => {
+317:app.post("/auth/mot-de-passe-oublie", limiteAuth, async (req, res, next) => {
+341:app.post("/auth/reinitialiser", limiteAuth, async (req, res, next) => {
+$ grep -rniE "quota|par_offre" db/migrations/*conseil* apps/api/src/malica (hors tests)
+apps/api/src/malica/lecture/read-flow.ts:444:     * Quelle que soit l'erreur : cle absente, quota, reponse tronquee, PDF
+(code retour 0)
+
+## C14 — ANTHROPIC_API_KEY dans les gabarits d environnement
+$ grep -c ANTHROPIC_API_KEY .env.example
+0
+$ grep -c ANTHROPIC_API_KEY infra/env.exemple
+1
+$ grep -c ANTHROPIC_API_KEY infra/compose.yml
+1
+
+## C11 — Caddy
+$ grep -n "encode\|reverse_proxy\|flush" infra/caddy/Caddyfile
+11:	encode zstd gzip
+26:		reverse_proxy api:3000 {
+34:		reverse_proxy web:8080
+$ grep -n "image: caddy" infra/compose.yml
+19:    image: caddy:2.9
+$ command -v caddy docker go
+(code retour 1 : aucun des trois)
+
+## C9 — MalicaChat.tsx (cabinet) : texte brut et méta
+126:            tour.meta = `${m.model} · ${(m.latencyMs / 1000).toFixed(1)} s · ${m.tokensIn ?? 0}/${m.tokensOut ?? 0} jetons`;
+359:            <p className="whitespace-pre-wrap">{turn.content}</p>
+370:              <p className="mt-2 whitespace-pre-wrap border-s-2 border-border ps-3 font-mono text-[11px] text-muted-foreground">
+419:            {technique && turn.meta ? (
+420:              <p className="mt-2 font-mono text-[10px] text-muted-foreground">{turn.meta}</p>
+
+## Lieux demandés
+$ ls .github/workflows/epreuve-conseil.yml apps/api/src/malica/conseil/epreuve-conseil.*
+.github/workflows/epreuve-conseil.yml
+apps/api/src/malica/conseil/epreuve-conseil.json
+apps/api/src/malica/conseil/epreuve-conseil.test.ts
+apps/api/src/malica/conseil/epreuve-conseil.ts
+epreuve-conseil.json : cas = 24
+$ règles numérotées de systemPrompt (ask.ts)
+ligne 148 : règle 1 ligne 149 : règle 1 bis ligne 150 : règle 2 ligne 151 : règle 3 ligne 152 : règle 4 ligne 153 : règle 5 ligne 156 : règle 6 ligne 157 : règle 7 ligne 158 : règle 8 ligne 159 : règle 9 ligne 160 : règle 10 ligne 161 : règle 11 ligne 162 : règle 12 ligne 163 : règle 13 ligne 164 : règle 14 ligne 165 : règle 15 ligne 166 : règle 16 ligne 169 : règle 17 ligne 170 : règle 18 ligne 171 : règle 19 ligne 172 : règle 20 ligne 173 : règle 20 bis ligne 176 : règle 21 ligne 177 : règle 22 ligne 178 : règle 23 ligne 181 : règle 24 ligne 182 : règle 25 ligne 183 : règle 26 ligne 184 : règle 27 ligne 187 : règle 28 ligne 188 : règle 29 

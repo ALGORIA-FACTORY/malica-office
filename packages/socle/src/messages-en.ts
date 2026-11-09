@@ -4270,13 +4270,6 @@ export const en: Dict = {
   "pme.joindre.horsLigne":
     "No network: the document is kept and will be sent when you are back online. Attach it from the document afterwards.",
   "pme.joindre.dejaLa": "Or a document already here",
-  "pme.compta.votre": "Your accountant",
-  "pme.compta.mandat": "Active mandate · {count} companies",
-  "pme.compta.mandat#one": "Active mandate · {count} company",
-  "pme.compta.mandat#other": "Active mandate · {count} companies",
-  "pme.compta.aRepondre": "{count} to answer",
-  "pme.compta.aRepondre#one": "{count} return to handle",
-  "pme.compta.aRepondre#other": "{count} returns to handle",
   "pme.compta.onglet.repondre": "To answer",
   "pme.compta.onglet.transmis": "Sent",
   "pme.compta.onglet.mandat": "Mandate",

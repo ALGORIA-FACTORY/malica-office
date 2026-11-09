@@ -1,0 +1,15 @@
+// Constat 12 — 30 questions en rafale sur /malica/demander (modèle simulé).
+import { session } from "./client.mjs";
+const s = await session();
+const DREAM = "cffb6a23-8c3e-4f14-b6a6-09555af92dd8";
+const t0 = performance.now();
+const rep = await Promise.all(Array.from({ length: 30 }, (_, i) =>
+  s.malica("/demander", { tenantId: DREAM, question: `Question de rafale numéro ${i + 1} sur la TVA ?`, locale: "fr", mode: "chat", conversationId: null })));
+const ms = Math.round(performance.now() - t0);
+const parStatut = {};
+for (const r of rep) parStatut[r.status] = (parStatut[r.status] ?? 0) + 1;
+console.log(`30 requêtes simultanées en ${ms} ms → statuts :`, JSON.stringify(parStatut));
+console.log("aucune 429 :", !rep.some((r) => r.status === 429));
+console.log("en-têtes RateLimit renvoyés :", rep.some((r) => r.texte.includes("RateLimit")) ? "oui" : "non (corps)");
+const budget = await s.rpc("conseil", "exigerBudget", [DREAM]).catch((e) => e.message);
+console.log("conseil.exigerBudget après la rafale :", JSON.stringify(budget));

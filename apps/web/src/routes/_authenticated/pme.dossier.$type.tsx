@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import {
@@ -112,6 +112,12 @@ function Dossier() {
   const [siege, setSiege] = useState<string | null>(null);
   /** La période déroulée ; `undefined` : la plus récente qui a des pièces. */
   const [ouverte, setOuverte] = useState<string | null | undefined>(undefined);
+  // Changer de société dans l'en-tête (9 novembre 2026) oublie le siège et
+  // la période choisis : ils étaient ceux de l'autre société (revue de #315).
+  useEffect(() => {
+    setSiege(null);
+    setOuverte(undefined);
+  }, [societe]);
 
   /*
    * Le paramètre est un DOSSIER (`ref.dossiers`) depuis le 25 octobre 2026.

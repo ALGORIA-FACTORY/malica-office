@@ -386,6 +386,14 @@ async function piecesLuesDe(
      ),
      prenoms as materialized (
        select a.user_id, a.prenom from app.prenoms_des_auteurs($1::uuid[]) a
+     ),
+     -- Les pièces visibles, lues une fois. Jointes en direct, la vue et ses
+     -- droits s'estimaient à quelques dizaines de lignes : le planificateur
+     -- les rebalayait pour CHAQUE ligne de \`vecues\` (10 805 × 10 805
+     -- comparaisons, 8 s). Posées ici, elles se joignent par hachage.
+     lignes as materialized (
+       select * from pieces_v p
+        where p.tenant_id = any($1::uuid[]) and p.remplacee_par is null and p.archivee_le is null
      )
      select p.tenant_id, p.id, p.status, p.created_at, p.created_by, p.vis, p.gardee_le, p.transmise_le,
               p.document_kind,
@@ -427,7 +435,7 @@ async function piecesLuesDe(
               ${COLONNES_DU_SUIVI},
               ${COLONNES_DU_CIRCUIT}
          from vecues h
-         join pieces_v p on p.id = h.piece_id
+         join lignes p on p.id = h.piece_id
          left join droits d on d.tenant_id = p.tenant_id
          left join prenoms pr on pr.user_id = p.created_by
          -- Où en est la pièce chez le cabinet : seulement si elle y est partie.

@@ -1,0 +1,86 @@
+// Préchargé par --import : enveloppe fetch pour JOURNALISER les appels sortants
+// (hôte, chemin, corps tronqué — jamais les en-têtes) et, en mode mock, rendre
+// une réponse fabriquée sans appel payant.
+//   INTERCEPT_LOG   fichier JSONL
+//   INTERCEPT_MODE  pass | mock      (défaut : mock)
+//   MOCK_DELAI_CORPS_MS  délai entre en-têtes et corps de la réponse DeepSeek simulée
+//   MOCK_REPONSE    fichier JSON : contenu (string) que la réponse DeepSeek simulée porte
+import { appendFileSync, readFileSync } from "node:fs";
+
+const original = globalThis.fetch;
+const LOG = process.env.INTERCEPT_LOG;
+const MODE = process.env.INTERCEPT_MODE ?? "mock";
+const DELAI = Number(process.env.MOCK_DELAI_CORPS_MS ?? 0);
+let n = 0;
+
+function noter(o) {
+  if (LOG) appendFileSync(LOG, JSON.stringify({ t: new Date().toISOString(), ...o }) + "\n");
+}
+
+function corpsLent(texte, delai) {
+  const enc = new TextEncoder();
+  return new ReadableStream({
+    async start(c) {
+      // DeepSeek envoie des lignes vides de maintien pendant qu'il calcule.
+      c.enqueue(enc.encode("\n"));
+      await new Promise((r) => setTimeout(r, delai));
+      c.enqueue(enc.encode(texte));
+      c.close();
+    },
+  });
+}
+
+globalThis.fetch = async function (input, init = {}) {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  const u = new URL(url);
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+  if (local) return original(input, init);
+  let corps = null;
+  try { corps = init.body ? JSON.parse(init.body) : null; } catch { corps = String(init.body).slice(0, 200); }
+  const id = ++n;
+  const resume = corps && typeof corps === "object"
+    ? {
+        model: corps.model, stream: corps.stream, response_format: corps.response_format,
+        dimensions: corps.dimensions, input: corps.input,
+        messages: corps.messages?.map((m) => ({ role: m.role, debut: String(m.content).slice(0, 160), longueur: String(m.content).length })),
+      }
+    : corps;
+  noter({ id, sens: "sortie", hote: u.hostname, chemin: u.pathname, mode: MODE, corps: resume });
+
+  if (MODE === "pass") {
+    const t0 = Date.now();
+    const r = await original(input, init);
+    const clone = r.clone();
+    clone.text().then((txt) => {
+      let model = null;
+      try { model = JSON.parse(txt).model ?? null; } catch {}
+      noter({ id, sens: "retour", status: r.status, modeleServi: model, msCorpsComplet: Date.now() - t0 });
+    });
+    return r;
+  }
+
+  // ---- mock
+  if (u.hostname.includes("deepseek")) {
+    let contenu = JSON.stringify({ reponse: "Réponse simulée.", conseil: false });
+    if (process.env.MOCK_REPONSE) contenu = readFileSync(process.env.MOCK_REPONSE, "utf8");
+    // Le titre du fil : un appel « chat » sans response_format.
+    if (corps?.model === "deepseek-chat" && !corps?.response_format) contenu = "Titre simulé";
+    const texte = JSON.stringify({
+      id: "mock", model: corps?.model, choices: [{ message: { content: contenu } }],
+      usage: { prompt_tokens: 100, completion_tokens: 20 },
+    });
+    noter({ id, sens: "retour-simule", delaiCorpsMs: DELAI });
+    return new Response(DELAI > 0 ? corpsLent(texte, DELAI) : texte, {
+      status: 200, headers: { "content-type": "application/json" },
+    });
+  }
+  if (u.pathname.endsWith("/embeddings")) {
+    const dim = corps?.dimensions ?? 1024;
+    const v = Array.from({ length: dim }, (_, i) => (i === 0 ? 1 : 0));
+    return new Response(JSON.stringify({ data: [{ embedding: v }] }), {
+      status: 200, headers: { "content-type": "application/json" },
+    });
+  }
+  noter({ id, sens: "refuse-hors-mock", hote: u.hostname });
+  return new Response("{}", { status: 503 });
+};

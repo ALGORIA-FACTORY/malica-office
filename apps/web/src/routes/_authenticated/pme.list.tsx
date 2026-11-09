@@ -3,18 +3,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
-import {
-  CarteDeGroupe,
-  IconeCalendrier,
-  IconeSiege,
-  IconeSociete,
-} from "@/components/malica/carte-de-groupe";
+import { CarteDeGroupe, IconeCalendrier, IconeSiege } from "@/components/malica/carte-de-groupe";
 import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
-import { VotreComptabilite } from "@/components/malica/votre-comptabilite";
-import { useFichesDesSocietes } from "@/hooks/use-fiches-des-societes";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
 import { piecesALire, statutDeLaPieceLue } from "@/lib/lecture";
@@ -242,17 +235,11 @@ function Bibliotheque() {
   const lues = usePiecesLues();
   const brutes = useMemo(() => lues.data ?? [], [lues.data]);
   const aLire = useMemo(() => piecesALire(brutes), [brutes]);
-  // « Votre comptabilité » ne se montre qu'une fois les pièces là : sa lecture
-  // part dès maintenant, en même temps qu'elles, et non après (mesuré le
-  // 8 novembre 2026 : un aller-retour de plus à l'ouverture de l'écran).
-  useFichesDesSocietes();
-
-  const { toutes, parSociete, parSiege, chargement, nomDeSociete, parSieges, ouvrirSaSociete } =
-    usePiecesDesSocietes();
+  const { toutes, parSiege, chargement, parSieges, ouvrirSaSociete } = usePiecesDesSocietes();
   /*
-   * Les pièces montrées : toutes les sociétés, ou celle des puces
-   * (`pme.societeAffichee`, 3 novembre 2026) — celles des dossiers, des sièges
-   * et des mois.
+   * Les pièces montrées : celle de l'en-tête, ou toutes les sociétés quand
+   * l'en-tête dit « Toutes » (`pme.societeAffichee`, 9 novembre 2026) —
+   * celles des dossiers, des sièges et des mois.
    */
   const ici = useMemo(
     () =>
@@ -270,12 +257,6 @@ function Bibliotheque() {
   const [tout, setTout] = useState(false);
 
   // -------------------------------------------------------------- les groupes
-  const organisations = pme.dossiers
-    .map((d) => ({
-      id: d.id,
-      pieces: toutes.filter((x) => x.societe === d.id).map((x) => x.piece),
-    }))
-    .filter((c) => c.pieces.length > 0);
   const sieges = parSieges(ici);
   const mois = useMemo(() => {
     const carte = new Map<string, PieceLue[]>();
@@ -489,9 +470,6 @@ function Bibliotheque() {
           </>
         ) : (
           <>
-            {/* --------------------- votre comptabilité (planche 6, 7 novembre 2026) */}
-            <VotreComptabilite />
-
             {/* ------------------------------------------------ les dossiers */}
             {sept.dossiers.length > 0 ? (
               <>
@@ -503,44 +481,11 @@ function Bibliotheque() {
               </>
             ) : null}
 
-            {/* ------------------------------------------- les organisations */}
             {/*
-             * LES ORGANISATIONS SONT LA SÉLECTION (Wissem, 3 novembre 2026 :
-             * « pas de doublons »). « Toutes les sociétés » en tête, puis
-             * chacune : toucher une carte montre ses dossiers, ses sièges et
-             * ses mois au-dessus et en dessous. Le choix est partagé avec les
-             * dossiers (`pme.societeAffichee`).
+             * Plus de section « Organisations » (9 novembre 2026) : la société
+             * montrée est celle de l'en-tête, et « Toutes les sociétés » s'y
+             * choisit aussi.
              */}
-            {parSociete && organisations.length > 0 ? (
-              <>
-                <div className="sec">
-                  <h2>{t("pme.dossier.organisations")}</h2>
-                  <span>{organisations.length}</span>
-                </div>
-                <CarteDeGroupe
-                  presse={pme.societeAffichee === null}
-                  accent={pme.societeAffichee === null}
-                  onClick={() => pme.afficherSociete(null)}
-                  icone={<IconeSociete />}
-                  titre={t("pme.societes.toutes")}
-                  valeur={sommes(toutes.map((x) => x.piece))}
-                  n={toutes.length}
-                />
-                {organisations.map((c) => (
-                  <CarteDeGroupe
-                    key={c.id}
-                    presse={pme.societeAffichee === c.id}
-                    accent={pme.societeAffichee === c.id}
-                    onClick={() => pme.afficherSociete(c.id)}
-                    icone={<IconeSociete />}
-                    titre={nomDeSociete(c.id)}
-                    valeur={sommes(c.pieces)}
-                    n={c.pieces.length}
-                  />
-                ))}
-              </>
-            ) : null}
-
             {/* ------------------------------------------------- les sièges */}
             {parSiege && sieges.size > 0 ? (
               <>

@@ -79,7 +79,9 @@ export const conversations = {
               latency_ms, created_at, sources, propositions
          from agents.conversation_messages
         where conversation_id = $1
-        order by created_at, id`,
+        -- A question and its answer share one transaction, hence one created_at: at
+        -- equal instants the question comes first (un-fil-se-relit-dans-l-ordre.test.ts).
+        order by created_at, (role <> 'user'), id`,
       [conversationId],
     );
     return rows.map((r) => ({

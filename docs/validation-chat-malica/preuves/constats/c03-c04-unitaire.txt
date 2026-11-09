@@ -1,0 +1,11 @@
+CONSTAT 3 — ce qui est encodé pour la recherche : [["Et pour les hôtels ?"]]
+CONSTAT 3 — arguments de corpus.rechercher (vecteur omis) : {"vecteur":"[4 nombres]","nb":6,"jour":null,"doctrine":true,"historique":false}
+CONSTAT 3 — le modèle, lui, reçoit le fil : rôles = system,system,system,system,user,assistant,user
+
+CONSTAT 4 — verdicts des contrôles rendus : [{"code":"article_non_fourni","suite":"retirer","detail":"l'article 99 est cité sans avoir été transmis ni figurer dans le texte fourni"},{"code":"chiffre_sans_source","suite":"retirer","detail":"le chiffre 37 n'est ni au dossier, ni au paramétrage, ni dans les textes fournis"}]
+CONSTAT 4 — journaliserControles appelé : true [{"code":"article_non_fourni","suite":"retirer","detail":"l'article 99 est cité sans avoir été transmis ni figurer dans le texte fourni"},{"code":"chiffre_sans_source","suite":"retirer","detail":"le chiffre 37 n'est ni au dossier, ni au paramétrage, ni dans les textes fournis"}]
+CONSTAT 4 — réponse RANGÉE dans le fil : "Le taux est de 37 %, selon l'article 99 du code de l'IRPP, depuis toujours."
+CONSTAT 4 — réponse RENDUE au navigateur : "Le taux est de 37 %, selon l'article 99 du code de l'IRPP, depuis toujours."
+CONSTAT 4 — l'ordre des RPC : conseil.exigerBudget → conversations.ouvrir → capture.contexteAssistant → corpus.modeleEmpreinte → corpus.rechercher → corpus.parametresPour → capture.journaliserAgent → conseil.contexte → conversations.ajouter → corpus.editionsPlusRecentes → conversations.dernierMessage → conversations.journaliserControles
+
+aujourd'hui (horloge du processus) : 2026-11-09

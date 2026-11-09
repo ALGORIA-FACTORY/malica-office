@@ -1,0 +1,4 @@
+30 requêtes simultanées en 586 ms → statuts : {"200":30}
+aucune 429 : true
+en-têtes RateLimit renvoyés : non (corps)
+conseil.exigerBudget après la rafale : {"depense":0.00147,"plafond":10}
