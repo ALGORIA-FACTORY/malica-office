@@ -36,4 +36,21 @@ describe("votre comptabilité", () => {
       { id: "c2", nom: "Ben Salah", societes: ["d"], aRepondre: 0 },
     ]);
   });
+
+  it("la société de l'en-tête ne montre que son cabinet, et ce qui l'attend, elle", () => {
+    const fiches = [
+      fiche("a", "c1", "AUDICORP"),
+      fiche("b", "c1", "AUDICORP"),
+      fiche("d", "c2", "Ben Salah"),
+    ];
+    const pieces = new Map([
+      ["a", [piece("retournee")]],
+      ["b", [piece("retournee")]],
+    ]);
+    expect(cabinetsDesSocietes(fiches, pieces, "a")).toEqual([
+      { id: "c1", nom: "AUDICORP", societes: ["a"], aRepondre: 1 },
+    ]);
+    expect(cabinetsDesSocietes(fiches, pieces, "z")).toEqual([]);
+    expect(cabinetsDesSocietes(fiches, pieces, null)).toHaveLength(2);
+  });
 });

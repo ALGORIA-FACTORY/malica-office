@@ -1,6 +1,6 @@
 {
   "name": "malica-office",
-  "version": "0.2.104",
+  "version": "0.2.106",
   "private": true,
   "type": "module",
   "description": "Malica Office — racine d'espace de travail",

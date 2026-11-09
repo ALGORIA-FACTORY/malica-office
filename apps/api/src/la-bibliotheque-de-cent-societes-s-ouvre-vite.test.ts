@@ -175,6 +175,19 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     await s.fait("expert", "supervision.voir", vecue);
     await s.priseEnCharge(vecue);
     await recopierLaPieceVecue(s, vecue, societes.slice(0, 60));
+
+    /*
+     * Les statistiques d'un serveur qui tourne (9 novembre 2026). Les milliers
+     * de lignes ci-dessus arrivent d'un coup : sans statistiques, le
+     * planificateur les croit vides et choisit des boucles imbriquées. Mesuré
+     * sur une base neuve : 7,1 s sans, 0,34 s avec ; en CI, 8 s, 13,5 s puis
+     * le délai de 30 s, selon que l'autovacuum était passé ou non. Un serveur
+     * a ses statistiques (l'autovacuum les tient) : c'est ce plan-là que le
+     * budget garde.
+     */
+    // Toute la base : les 150 sociétés et leurs droits comptent autant que
+    // les pièces (3,3 s en n'analysant que les tables des pièces).
+    await s.admin.query("analyze");
   });
 
   after(async () => {

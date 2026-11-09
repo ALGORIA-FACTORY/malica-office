@@ -157,7 +157,7 @@ services:
       # part et l'API le dit ; la clé arrive de la CI (secret GitHub de
       # l'environnement), jamais du dépôt.
       BREVO_API_KEY: ${BREVO_API_KEY:-}
-      MALICA_COURRIEL_EXPEDITEUR: ${MALICA_COURRIEL_EXPEDITEUR:-no-reply@algoria-factory.com}
+      MALICA_COURRIEL_EXPEDITEUR: ${MALICA_COURRIEL_EXPEDITEUR:-hello@algoria-factory.com}
       MALICA_COURRIEL_NOM: ${MALICA_COURRIEL_NOM:-Malica Office}
       MALICA_URL_PUBLIQUE: https://${DOMAINE}
     volumes:

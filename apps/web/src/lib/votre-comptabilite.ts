@@ -15,10 +15,13 @@ export interface CabinetDeLaPersonne {
 export function cabinetsDesSocietes(
   fiches: readonly FicheDeSociete[],
   piecesParSociete: ReadonlyMap<string, readonly PieceLue[]>,
+  /** La seule société dont on veut le cabinet ; `null` ou absent : toutes. */
+  seulement: string | null = null,
 ): CabinetDeLaPersonne[] {
   const par = new Map<string, CabinetDeLaPersonne>();
   for (const f of fiches) {
     if (!f.cabinetId || !f.cabinet) continue;
+    if (seulement !== null && f.tenantId !== seulement) continue;
     const c = par.get(f.cabinetId) ?? {
       id: f.cabinetId,
       nom: f.cabinet,
