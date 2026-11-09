@@ -166,7 +166,7 @@ describe("la liste des pièces dit la même chose, d'un trait", { skip: !BASE_CO
     const rendues = async (qui: string) =>
       auMemeInstant(qui, async (db) => {
         const { rows } = await db.query<{ piece_id: string }>(
-          `select piece_id from app.circuit_et_suivi_des_pieces($1::uuid[])`,
+          `select piece_id from app.pieces_de_la_liste($1::uuid[])`,
           [[s.pme]],
         );
         return rows.map((r) => r.piece_id);

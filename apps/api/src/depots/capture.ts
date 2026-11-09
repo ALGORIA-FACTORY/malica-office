@@ -362,10 +362,11 @@ async function piecesLuesDe(
    * ligne coûtait 3,5 ms par pièce : 10 000 pièces ne se lisaient pas en
    * trente secondes. Une pièce sans historique a un circuit et un suivi qui
    * se déduisent de sa ligne et de deux faits par société : on les calcule
-   * ici. Celles qui ont vécu passent par `app.circuit_et_suivi_des_pieces`
-   * (9 novembre 2026) : la même chose que les deux fonctions, en une lecture —
-   * 761 pièces réelles coûtaient 14 s. Même résultat, pièce par pièce : voir
-   * `la-liste-des-pieces-dit-la-meme-chose.test.ts`.
+   * ici. La lecture, les précisions et ce qu'ont vécu les autres viennent de
+   * `app.pieces_de_la_liste` (9 novembre 2026), qui part EN TÊTE de la jointure :
+   * les droits y sont lus une fois par société, et non par ligne de chaque
+   * vue à RLS — 761 pièces réelles coûtaient 14 s. Même résultat, pièce par
+   * pièce : voir `la-liste-des-pieces-dit-la-meme-chose.test.ts`.
    *
    * `piece_accompagne` et `emetteur_dit` sont écrites en ligne : appelées
    * comme fonctions (avec leur `search_path`), elles ne s'inlinaient pas.
@@ -381,14 +382,14 @@ async function piecesLuesDe(
          from unnest($1::uuid[]) t(id)
      ),
      vecues as materialized (
-       select * from app.circuit_et_suivi_des_pieces($1::uuid[])
+       select * from app.pieces_de_la_liste($1::uuid[])
      ),
      prenoms as materialized (
        select a.user_id, a.prenom from app.prenoms_des_auteurs($1::uuid[]) a
      )
      select p.tenant_id, p.id, p.status, p.created_at, p.created_by, p.vis, p.gardee_le, p.transmise_le,
               p.document_kind,
-              x.payload,
+              h.payload,
               -- Une lecture PAR PIÈCE, par l'index du justificatif (8 novembre
               -- 2026) : écrit « or exists (…) », le planificateur en faisait une
               -- sous-requête hachée qui parcourait TOUS les paiements visibles
@@ -410,15 +411,11 @@ async function piecesLuesDe(
                         where r0.tenant_id = p.tenant_id
                           and (r0.piece_id = p.id or r0.piece_liee_id = p.id))
                 and app.piece_jointe(p.id)) as jointe,
-              (select valeur from precisions_v q
-                where q.piece_id = p.id and q.champ = 'document_kind'
-                order by decided_at desc limit 1) as precision_kind,
+              h.precision_kind,
               -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
               -- reste telle quelle), que la liste préfère au nom lu.
-              (select q.valeur from capture.precisions q
-                where q.piece_id = p.id and q.champ = 'issuer'
-                order by q.decided_at desc limit 1) as emetteur_dit,
-              ${REFUS_DE_LECTURE} as lecture_refusee,
+              h.emetteur_dit,
+              case when h.a_une_lecture then null else ${REFUS_DE_LECTURE} end as lecture_refusee,
               w.etat as lecture_etat, w.dernier_motif as lecture_motif,
               w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le,
               -- Forcée, le total, le sens et la date sont ceux du
@@ -429,23 +426,15 @@ async function piecesLuesDe(
                    then app.montants_pris_en_charge(p.id) end as du_cabinet,
               ${COLONNES_DU_SUIVI},
               ${COLONNES_DU_CIRCUIT}
-         from pieces_v p
-         left join lateral (
-           select e.payload
-             from extractions_v e
-            -- extract.v1 ET extract.v1.partiel : voir le commentaire au-dessus.
-            where e.piece_id = p.id and e.contract like 'extract.v1%'
-            order by e.created_at desc
-            limit 1
-         ) x on true
-         left join vecues h on h.piece_id = p.id
+         from vecues h
+         join pieces_v p on p.id = h.piece_id
          left join droits d on d.tenant_id = p.tenant_id
          left join prenoms pr on pr.user_id = p.created_by
          -- Où en est la pièce chez le cabinet : seulement si elle y est partie.
          -- Sans histoire, elle y est partie à sa transmission, et rien d'autre.
          cross join lateral (
            select case when p.vis <> 'partage' then null
-                       when h.piece_id is not null then h.suivi_envoyee
+                       when h.a_une_histoire then h.suivi_envoyee
                        else coalesce(p.transmise_le, p.created_at) end as envoyee_le,
                   h.suivi_vue_le as vue_le, h.suivi_vue_par as vue_par,
                   h.suivi_corrigee as corrigee_le, h.suivi_prise_le as prise_le,
@@ -456,15 +445,15 @@ async function piecesLuesDe(
          -- lisent une fois par société et par personne. Le comptable, qui
          -- n'est pas membre, n'en lit rien.
          cross join lateral (
-           select case when h.piece_id is not null then h.circuit_recoit
+           select case when h.a_une_histoire then h.circuit_recoit
                        when d.membre then d.recoit end as recoit,
                   h.circuit_dernier as dernier, h.circuit_envoyee as envoyee_le,
                   h.circuit_vue_le as vue_le, h.circuit_vue_par as vue_par,
                   h.circuit_retournee as retournee_le, h.circuit_retour_par as retour_par,
                   h.circuit_corrigee as corrigee_le,
-                  case when h.piece_id is not null then h.circuit_auteur
+                  case when h.a_une_histoire then h.circuit_auteur
                        when d.membre then pr.prenom end as auteur,
-                  case when h.piece_id is not null then h.circuit_mienne
+                  case when h.a_une_histoire then h.circuit_mienne
                        when d.membre then p.created_by is not distinct from auth.uid() end as mienne
          ) c
          /*
