@@ -175,6 +175,19 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     await s.fait("expert", "supervision.voir", vecue);
     await s.priseEnCharge(vecue);
     await recopierLaPieceVecue(s, vecue, societes.slice(0, 60));
+
+    /*
+     * LES STATISTIQUES, COMME EN PRODUCTION (9 novembre 2026). Onze mille
+     * lignes posées d'un coup : tant que l'autovacuum n'est pas passé, le
+     * planificateur croit ces tables vides (une ligne estimée pour 10 805)
+     * et choisit des boucles imbriquées — 8 s au lieu d'une. Sur un serveur
+     * qui vit, ces tables sont analysées ; le banc mesure ce serveur-là, et
+     * non la course entre son insertion et l'autovacuum de la CI.
+     */
+    await s.admin.query(
+      `analyze capture.pieces, capture.extractions, capture.circuit, capture.precisions,
+               capture.vues, socle.ecritures, socle.prises_en_charge`,
+    );
   });
 
   after(async () => {
