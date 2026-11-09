@@ -43,19 +43,20 @@ export function useEtatTransport(): EtatTransport {
 }
 
 /*
- * La déconnexion n'est pas un état : c'est un geste, que la racine exécute —
- * vider les requêtes, aller à l'écran de connexion. Un seul auditeur, posé au
- * montage de la racine.
+ * La déconnexion n'est pas un état : c'est un geste. La racine l'exécute —
+ * vider les requêtes, aller à l'écran de connexion — et l'adaptateur
+ * d'authentification y oublie le compte qu'il gardait en mémoire (8 novembre
+ * 2026) : plusieurs auditeurs, chacun retiré par sa propre fonction.
  */
-let surDeconnexion: (() => void) | null = null;
+const surDeconnexion = new Set<() => void>();
 
 export function ecouterLaDeconnexion(auditeur: () => void): () => void {
-  surDeconnexion = auditeur;
+  surDeconnexion.add(auditeur);
   return () => {
-    if (surDeconnexion === auditeur) surDeconnexion = null;
+    surDeconnexion.delete(auditeur);
   };
 }
 
 export function signalerLaDeconnexion(): void {
-  surDeconnexion?.();
+  for (const auditeur of [...surDeconnexion]) auditeur();
 }

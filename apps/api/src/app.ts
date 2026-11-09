@@ -126,6 +126,17 @@ app.use(
       suite(null, autorisee);
     },
     credentials: true,
+    /*
+     * L'AUTORISATION SE GARDE DEUX HEURES (9 novembre 2026).
+     *
+     * La coque parle depuis `https://localhost` à un autre domaine : chaque
+     * appel portant un jeton est précédé d'une demande d'autorisation
+     * (OPTIONS). Sans `Access-Control-Max-Age`, la WebView ne la garde que
+     * CINQ SECONDES : après une pause, chaque écran payait deux allers-retours
+     * au lieu d'un — mesuré, 0,4 s de plus par appel vers staging. Deux heures
+     * est le plafond de Chromium ; l'origine reste vérifiée à chaque demande.
+     */
+    maxAge: 2 * 60 * 60,
   }),
 );
 // Qui parle — « coque-android/0.3.1 », « web/abc1234 » — et un 426 pour une

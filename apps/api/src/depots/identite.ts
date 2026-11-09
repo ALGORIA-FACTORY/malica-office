@@ -29,6 +29,7 @@ export interface MonMandat {
   revocable: boolean;
 }
 import { enDate } from "./dates.ts";
+import { idsDeSocietes } from "./societes.ts";
 
 /** Une fiche fiscale, telle que l'écran et Malica la lisent. */
 export interface FicheFiscale {
@@ -289,6 +290,22 @@ export const identite = {
       [pmeTenantId],
     );
     return rows[0]?.r ?? [];
+  },
+
+  /**
+   * Les mandats proposés à toutes les sociétés d'une personne, en un appel : à
+   * l'ouverture de l'accueil, 113 sociétés faisaient 113 requêtes (mesuré le
+   * 8 novembre 2026). Chaque société passe par la même porte que `mandatsProposes`.
+   */
+  async mandatsProposesDesSocietes(
+    db: Requete,
+    pmeTenantIds: string[],
+  ): Promise<Record<string, MandatPropose[]>> {
+    const { rows } = await db.query<{ id: string; r: MandatPropose[] | null }>(
+      `select id, public.mandats_proposes_lire(id) as r from unnest($1::uuid[]) as id`,
+      [idsDeSocietes(pmeTenantIds)],
+    );
+    return Object.fromEntries(rows.map((l) => [l.id, l.r ?? []]));
   },
 
   /**
