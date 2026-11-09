@@ -27,22 +27,22 @@ Dans le texte ci-dessous, ils sont cités sous leur nom d'origine.
 
 ## Verdicts
 
-| # | Constat | Verdict | Preuve d'exécution, en une ligne |
-|---|---------|---------|-----------------------------------|
-| 1 | Le chat passe par DeepSeek seul, sans flux ; le web simule le mot à mot | **CONFIRMÉ** | Appels sortants : `api.deepseek.com` seulement, `stream:false`. Le navigateur reçoit un seul corps JSON, puis le texte se dévoile de 3,6 s à 4,9 s |
-| 2 | La recherche rend 6 articles coupés à 320 caractères, par vecteurs seuls | **CONFIRMÉ, NUANCÉ** | Sur le vrai corpus : 6 lignes avant le seuil, **2 seulement** après le seuil de 0,37. Chaque extrait fait 320 caractères, sur des fragments de 1 790 et 1 784 |
-| 3 | Une question de suite est cherchée seule ; la date est toujours celle du jour | **CONFIRMÉ** | Encodé : `["Et pour les hôtels ?"]`. `rechercher` reçoit `jour:null`, donc `current_date`. Le contrôle compare au jour de l'horloge |
-| 4 | Les contrôles journalisent sans rien retirer | **CONFIRMÉ, NUANCÉ** | 2 verdicts `retirer` (l'article 99 et le chiffre 37 inventés), et la réponse part intacte. Les verdicts vont aussi au navigateur (`controles`), que l'écran PME n'affiche pas |
-| 5 | Aucun écran n'appelle `/malica/conseil-cite` | **CONFIRMÉ** | `grep` sur `apps/web/src`, `android` et `packages` : aucune occurrence. L'adaptateur web appelle `/demander`, `/conseil`, `/pv` et `/briefing` |
-| 6 | La latence est mesurée avant la lecture du corps, donc fausse | **CONFIRMÉ** | DeepSeek réel : 290 ms journalisées pour 889 ms réelles (`chat`), 271 pour 803 (`reasoner`). Corps simulé à 1 500 ms : 0 ms journalisée (DeepSeek), 68 ms (Claude) |
-| 7 | `contexteAssistant` prend au plus 500 pièces sans ordre, et 25 écritures | **CONFIRMÉ** | Base : 502 pièces `capturee` et 100 `lue`. Malica reçoit `{"capturee":500}`, sans aucune `lue`. Les 25 écritures, elles, sont ordonnées |
-| 8 | Le sélecteur « Toutes les sociétés » existe, mais le chat n'envoie que `pme.tenantId` | **CONFIRMÉ** | Après « Toutes » puis retour au chat, la requête porte un seul `tenantId`, celui d'ATLAS |
-| 9 | `.mal`, `.srcs` (non cliquables, absents d'un fil rouvert), `.et1`, `.chips`, aucune pièce jointe, `MalicaChat` en texte brut | **CONFIRMÉ** | `.srcs a` : `href:null`, `onclick:null`, aucun effet au clic. Après reprise du fil, aucun lien `.srcs`. Aucun `input[type=file]`. Le Markdown sort brut |
-| 10 | `/malica/demander` et `conversations.ouvrir` envoient au navigateur le modèle, les jetons et la durée | **CONFIRMÉ** | Clés reçues : `model`, `latencyMs`, `tokensIn`, `tokensOut`, et dans le fil `model`, `tokensIn`, `tokensOut`, `latencyMs` |
-| 11 | Caddy compresse (`encode zstd gzip`) : un flux serait-il retenu ? | **INCERTAIN** | `encode zstd gzip` est global et couvre `/malica/*`. Ni Caddy, ni Docker, ni Go sur ce poste : pas d'essai possible. La façon de trancher est donnée plus bas |
-| 12 | Pas de plafond de 150 $, pas de quota par offre, pas de limite de débit sur `/malica` | **NUANCÉ** | 30 requêtes simultanées : 30 × 200, aucune 429. Mais il existe un **plafond mensuel de 10 $ par organisation**, et il mord : `400 refus.conseil.plafond` une fois le plafond abaissé |
-| 13 | Le code appelle `deepseek-chat` et `deepseek-reasoner`, alors que l'API sert d'autres modèles | **CONFIRMÉ** | `/models` répond `["deepseek-flash","deepseek-v4-pro"]`. Les deux noms sont acceptés comme **alias**, et **tous deux sont servis par `deepseek-flash`**. Le code journalise le nom demandé |
-| 14 | `ANTHROPIC_API_KEY` manque à `.env.example` | **CONFIRMÉ, NUANCÉ** | Absente de `.env.example` à la racine. Présente dans `infra/env.exemple:41` et dans `infra/compose.yml:151` |
+| #   | Constat                                                                                                                       | Verdict              | Preuve d'exécution, en une ligne                                                                                                                                                           |
+| --- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Le chat passe par DeepSeek seul, sans flux ; le web simule le mot à mot                                                       | **CONFIRMÉ**         | Appels sortants : `api.deepseek.com` seulement, `stream:false`. Le navigateur reçoit un seul corps JSON, puis le texte se dévoile de 3,6 s à 4,9 s                                         |
+| 2   | La recherche rend 6 articles coupés à 320 caractères, par vecteurs seuls                                                      | **CONFIRMÉ, NUANCÉ** | Sur le vrai corpus : 6 lignes avant le seuil, **2 seulement** après le seuil de 0,37. Chaque extrait fait 320 caractères, sur des fragments de 1 790 et 1 784                              |
+| 3   | Une question de suite est cherchée seule ; la date est toujours celle du jour                                                 | **CONFIRMÉ**         | Encodé : `["Et pour les hôtels ?"]`. `rechercher` reçoit `jour:null`, donc `current_date`. Le contrôle compare au jour de l'horloge                                                        |
+| 4   | Les contrôles journalisent sans rien retirer                                                                                  | **CONFIRMÉ, NUANCÉ** | 2 verdicts `retirer` (l'article 99 et le chiffre 37 inventés), et la réponse part intacte. Les verdicts vont aussi au navigateur (`controles`), que l'écran PME n'affiche pas              |
+| 5   | Aucun écran n'appelle `/malica/conseil-cite`                                                                                  | **CONFIRMÉ**         | `grep` sur `apps/web/src`, `android` et `packages` : aucune occurrence. L'adaptateur web appelle `/demander`, `/conseil`, `/pv` et `/briefing`                                             |
+| 6   | La latence est mesurée avant la lecture du corps, donc fausse                                                                 | **CONFIRMÉ**         | DeepSeek réel : 290 ms journalisées pour 889 ms réelles (`chat`), 271 pour 803 (`reasoner`). Corps simulé à 1 500 ms : 0 ms journalisée (DeepSeek), 68 ms (Claude)                         |
+| 7   | `contexteAssistant` prend au plus 500 pièces sans ordre, et 25 écritures                                                      | **CONFIRMÉ**         | Base : 502 pièces `capturee` et 100 `lue`. Malica reçoit `{"capturee":500}`, sans aucune `lue`. Les 25 écritures, elles, sont ordonnées                                                    |
+| 8   | Le sélecteur « Toutes les sociétés » existe, mais le chat n'envoie que `pme.tenantId`                                         | **CONFIRMÉ**         | Après « Toutes » puis retour au chat, la requête porte un seul `tenantId`, celui d'ATLAS                                                                                                   |
+| 9   | `.mal`, `.srcs` (non cliquables, absents d'un fil rouvert), `.et1`, `.chips`, aucune pièce jointe, `MalicaChat` en texte brut | **CONFIRMÉ**         | `.srcs a` : `href:null`, `onclick:null`, aucun effet au clic. Après reprise du fil, aucun lien `.srcs`. Aucun `input[type=file]`. Le Markdown sort brut                                    |
+| 10  | `/malica/demander` et `conversations.ouvrir` envoient au navigateur le modèle, les jetons et la durée                         | **CONFIRMÉ**         | Clés reçues : `model`, `latencyMs`, `tokensIn`, `tokensOut`, et dans le fil `model`, `tokensIn`, `tokensOut`, `latencyMs`                                                                  |
+| 11  | Caddy compresse (`encode zstd gzip`) : un flux serait-il retenu ?                                                             | **INCERTAIN**        | `encode zstd gzip` est global et couvre `/malica/*`. Ni Caddy, ni Docker, ni Go sur ce poste : pas d'essai possible. La façon de trancher est donnée plus bas                              |
+| 12  | Pas de plafond de 150 $, pas de quota par offre, pas de limite de débit sur `/malica`                                         | **NUANCÉ**           | 30 requêtes simultanées : 30 × 200, aucune 429. Mais il existe un **plafond mensuel de 10 $ par organisation**, et il mord : `400 refus.conseil.plafond` une fois le plafond abaissé       |
+| 13  | Le code appelle `deepseek-chat` et `deepseek-reasoner`, alors que l'API sert d'autres modèles                                 | **CONFIRMÉ**         | `/models` répond `["deepseek-flash","deepseek-v4-pro"]`. Les deux noms sont acceptés comme **alias**, et **tous deux sont servis par `deepseek-flash`**. Le code journalise le nom demandé |
+| 14  | `ANTHROPIC_API_KEY` manque à `.env.example`                                                                                   | **CONFIRMÉ, NUANCÉ** | Absente de `.env.example` à la racine. Présente dans `infra/env.exemple:41` et dans `infra/compose.yml:151`                                                                                |
 
 **Constat annexe**, trouvé en jouant le constat 3 : **le fil se relit dans le désordre**. Une question et sa
 réponse sont rangées avec le même `created_at`, et `conversations.ouvrir` les trie par
@@ -251,18 +251,22 @@ désignation par Claude l'exigent.
 ## Valeurs écrites en dur sur le chemin du chat (R4 / R8)
 
 **Noms de modèles**
+
 - `deepseek-reasoner` et `deepseek-chat` : `modeles.ts:41-42`. Repris en repli dans `ask.ts:493` et `:748`.
 
 **Points d'entrée**
+
 - `DEEPSEEK_URL` : `deepseek.ts:10`.
 - `ANTHROPIC_URL` et `ANTHROPIC_VERSION = "2023-06-01"` : `lecture/claude.ts:18-20`.
 - Chemin de l'encodeur `/compatible-mode/v1/embeddings` : `corpus.ts:108`.
 
 **Appel au modèle**
+
 - `temperature: 0` pour le chat : `deepseek.ts:71`.
 - `SORTIE_MAX_JETONS = 8192` et `EFFORT = "low"` (Claude) : `lecture/claude.ts:25` et `:32`.
 
 **Recherche**
+
 - `nb: 6` pour le chat et `8` pour le cabinet : `corpus.ts:167`, `ask.ts:688`. Borne `1..20` : `depots/corpus.ts`.
 - `left(c.texte, 320)` : `depots/corpus.ts:356`.
 - `DISTANCE_MAX = 0.37` : `corpus.ts:85`.
@@ -270,6 +274,7 @@ désignation par Claude l'exigent.
 - Délai de l'encodeur `12_000` ms : `corpus.ts:118`.
 
 **Fil et contexte**
+
 - `TOURS_TRANSMIS = 16` : `ask.ts:229`.
 - Titre du fil : `reponse.slice(0, 600)`, titre coupé à 120 caractères (`ask.ts:276`, `:280`), erreur journalisée coupée à 500 (`:500`).
 - `PLAFOND_LISTE = 60` fils : `depots/conversations.ts:45`.
@@ -277,6 +282,7 @@ désignation par Claude l'exigent.
 - Contexte : `limit 500` pièces, `25` écritures, `20` échéances, `40` motifs, `80` citations (`depots/capture.ts:1397-1438`).
 
 **Écran**
+
 - Mot à mot : `PAS_MS = 45`, `DUREE_MAX = 3200` (`apps/web/src/lib/mot-a-mot.ts:11-13`).
 - `staleTime` de 10 min sur `conseil.contexte` : `pme.malica.tsx:126`.
 
@@ -298,12 +304,12 @@ les prix sont tarifés sous des noms d'alias, servis aujourd'hui par `deepseek-f
 
 ## Dépense payante (exacte)
 
-| Fournisseur | Appels | Détail |
-|-------------|--------:|--------|
-| DeepSeek | **2** | `c06-c13-deepseek-reel.mjs` : 15 jetons en entrée et 2 en sortie, puis 41 et 46 (dont 43 de raisonnement). Moins de 0,001 $ au tarif de la table |
-| DeepSeek `GET /models` | 1 | gratuit |
-| Qwen (embeddings) | **1** | `c02-recherche-reelle.mjs` : une question encodée, de l'ordre de 0,000001 $ |
-| Anthropic | **0** | |
+| Fournisseur            | Appels | Détail                                                                                                                                           |
+| ---------------------- | -----: | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| DeepSeek               |  **2** | `c06-c13-deepseek-reel.mjs` : 15 jetons en entrée et 2 en sortie, puis 41 et 46 (dont 43 de raisonnement). Moins de 0,001 $ au tarif de la table |
+| DeepSeek `GET /models` |      1 | gratuit                                                                                                                                          |
+| Qwen (embeddings)      |  **1** | `c02-recherche-reelle.mjs` : une question encodée, de l'ordre de 0,000001 $                                                                      |
+| Anthropic              |  **0** |                                                                                                                                                  |
 
 Les autres appels (`/malica/demander`, la rafale de 30, l'écran) ont tourné sur le modèle simulé, sans
 aucun appel payant.

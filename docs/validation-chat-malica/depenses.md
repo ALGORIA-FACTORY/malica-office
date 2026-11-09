@@ -9,5 +9,6 @@ le dit.
 | 2026-11-09 | Revérification des constats (n° 6 et n° 13)  | DeepSeek             |      2 |     < 0,001 $ |
 | 2026-11-09 | Revérification des constats (n° 2, encodage) | Qwen (Model Studio)  |      1 | ≈ 0,000 001 $ |
 | 2026-11-09 | Liste des modèles servis                     | DeepSeek (`/models`) |      2 |       gratuit |
+| 2026-11-09 | Mesure de référence, 24 questions (staging)  | DeepSeek             |     24 |      0,2294 $ |
 
-**Total engagé : moins de 0,01 $ sur 100 $.**
+**Total engagé : 0,23 $ sur 100 $.**
