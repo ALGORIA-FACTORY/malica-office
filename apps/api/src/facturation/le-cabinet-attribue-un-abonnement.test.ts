@@ -157,6 +157,64 @@ describe("le cabinet attribue un abonnement, la PME choisit", { skip: !BASE_CONF
     assert.ok(console.some((c) => c.statut === "actif" && c.client_nom === `PME ${marque}`));
   });
 
+  it("la comptabilité a choisi : la PME ne voit aucun prix, ne descend pas, et ne paie que la différence pour monter (décision du 8 novembre 2026)", async () => {
+    // Son forfait : le nom de la comptabilité, aucun prix — elle reste titulaire.
+    const [f] = await sous<{
+      prix_mensuel_ht: string | null;
+      titulaire: boolean;
+      pris_en_charge_par: string | null;
+    }>(
+      dirigeant,
+      `select prix_mensuel_ht, titulaire, pris_en_charge_par from public.mon_forfait($1)`,
+      [pme],
+    );
+    assert.equal(f!.prix_mensuel_ht, null, "la PME ne voit pas ce que paie la comptabilité");
+    assert.equal(f!.titulaire, true);
+    assert.equal(f!.pris_en_charge_par, `COMPTA ${marque}`);
+
+    // La grille : aucun prix pour l'offre choisie et en dessous ; au-dessus, la différence.
+    const grille = await sous<{
+      code: string;
+      prix_mensuel_ht: string | null;
+      empechement: string | null;
+    }>(dirigeant, `select code, prix_mensuel_ht, empechement from public.mes_offres($1)`, [pme]);
+    const de = (c: string) => grille.find((o) => o.code === c)!;
+    assert.equal(de("team").prix_mensuel_ht, null);
+    for (const bas of ["basic", "solo"]) {
+      assert.equal(de(bas).prix_mensuel_ht, null);
+      assert.equal(de(bas).empechement, "choisi_par_la_comptabilite");
+    }
+    const ecart = await admin.query<{ d: string }>(
+      `select ((ref.offre_a('premium', current_date)).prix_mensuel_ht
+             - (ref.offre_a('team', current_date)).prix_mensuel_ht)::numeric as d`,
+    );
+    assert.equal(Number(de("premium").prix_mensuel_ht), Number(ecart.rows[0]!.d));
+
+    // Descendre : refusé par la base, quel que soit l'écran.
+    await assert.rejects(
+      sous(dirigeant, `select public.forfait_changer('basic', $1)`, [pme]),
+      /choisi_par_la_comptabilite/,
+    );
+    assert.equal(await forfait(), "team", "la licence reste à l'offre choisie");
+
+    // L'année est fermée, et ne montre aucun prix.
+    const [annee] = await sous<{ a: { ferme: string; proposition: unknown } }>(
+      dirigeant,
+      `select public.mon_annuel($1) as a`,
+      [pme],
+    );
+    assert.equal(annee!.a.ferme, "paye_par_un_cabinet");
+    assert.equal(annee!.a.proposition, null);
+
+    // La notification reçue par la PME ne portait pas de prix.
+    const notifs = await admin.query<{ payload: Record<string, unknown> }>(
+      `select payload from collab.notifications where tenant_id = $1 and kind = 'acces.propose'`,
+      [pme],
+    );
+    assert.ok(notifs.rowCount! > 0);
+    for (const n of notifs.rows) assert.equal("prix_mensuel_ht" in n.payload, false);
+  });
+
   it("le cabinet reçoit UNE facture du mois, une ligne par client, un seul timbre", async () => {
     // Dans une transaction annulée : l'émetteur et l'opérateur posés ici ne
     // doivent pas exister pour les autres épreuves.

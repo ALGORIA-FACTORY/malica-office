@@ -66,6 +66,7 @@ const EMPECHEMENTS: Record<string, MessageKey> = {
   offre_inconnue: "pme.reglages.offres.empechement.offre_inconnue",
   pas_de_licence: "pme.reglages.offres.empechement.pas_de_licence",
   engagement_annuel: "pme.reglages.offres.empechement.engagement_annuel",
+  choisi_par_la_comptabilite: "pme.reglages.offres.empechement.choisi_par_la_comptabilite",
 };
 
 /** Ce qui ferme l'année, nommé par la base, et sa phrase. */
@@ -93,10 +94,13 @@ function refus(e: unknown, t: (k: MessageKey) => string): string {
   return texteDeLErreur(e, OU, t("common.error"));
 }
 
-/** Le propriétaire principal : celui à qui la base rend le prix de la licence. */
+/**
+ * Le propriétaire principal. La base le dit (`titulaire`) : le prix ne suffit
+ * plus, puisqu'il est nul quand la comptabilité a choisi l'abonnement.
+ */
 function useEstPrincipal(): boolean {
   const pme = usePme();
-  return Boolean(pme.forfait.ligne && pme.forfait.ligne.prix_mensuel_ht !== null);
+  return pme.forfait.ligne?.titulaire === true;
 }
 
 /* ------------------------------------------------------------------ le nom */
@@ -252,6 +256,9 @@ export function ChangerDOffre() {
   }
 
   const entier = (n: number) => new Intl.NumberFormat(locale).format(n);
+  // La comptabilité a choisi l'abonnement : les prix montrés sont le seul
+  // complément que la société paierait elle-même (décision du 8 novembre 2026).
+  const comptabilite = pme.forfait.ligne?.pris_en_charge_par ?? null;
   // Le prix est dans l'en-tête de la carte : la ligne dit ce qu'il comprend.
   const ligne = (o: OffreDeLaGrille) =>
     [
@@ -264,13 +271,19 @@ export function ChangerDOffre() {
 
   return (
     <div className="grid gap-2">
+      {comptabilite ? (
+        <p className="t-body">{t("pme.reglages.offres.complement", { comptabilite })}</p>
+      ) : null}
       {/*
        * L'offre en cours ne se répète pas ici : la carte « L'abonnement »,
        * juste au-dessus, la porte déjà avec son prix. La relister faisait deux
        * fois la même carte sur le même écran (relevé le 19 octobre).
        */}
       {(offres.data ?? [])
-        .filter((o) => !o.courant)
+        // Sous l'offre que la comptabilité a choisie, rien ne se propose : ces
+        // offres ne s'affichent pas (décision du 8 novembre 2026), plutôt qu'une
+        // phrase qui dirait pourquoi on ne peut pas les prendre.
+        .filter((o) => !o.courant && o.empechement !== "choisi_par_la_comptabilite")
         .map((o) => {
           const bloque = o.empechement ? EMPECHEMENTS[o.empechement] : undefined;
           return (
@@ -282,10 +295,13 @@ export function ChangerDOffre() {
             >
               <div className="hd">
                 <b>{o.libelle}</b>
-                <span className="px">
-                  {aLEchelle(o.prix_mensuel_ht)}
-                  <small>{t("pme.reglages.abo.parMois", { devise: pme.currency })}</small>
-                </span>
+                {o.prix_mensuel_ht !== null ? (
+                  <span className="px">
+                    {comptabilite ? "+ " : null}
+                    {aLEchelle(o.prix_mensuel_ht)}
+                    <small>{t("pme.reglages.abo.parMois", { devise: pme.currency })}</small>
+                  </span>
+                ) : null}
               </div>
               <p>{ligne(o)}</p>
               {/* Le TTC vient de la base, par la fiscalité de la facture (R4). */}

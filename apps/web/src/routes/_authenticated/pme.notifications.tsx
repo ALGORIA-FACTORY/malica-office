@@ -243,6 +243,15 @@ function PmeNotifications() {
         },
       };
     }
+    if (kind === "acces.propose") {
+      return {
+        libelle: t("pme.notifs.voirProposition"),
+        aller: () => {
+          dabord();
+          void navigate({ to: "/pme/reglages", search: { page: "abonnement" } });
+        },
+      };
+    }
     if (kind === "mandat.propose") {
       return {
         libelle: t("pme.mandat.accepter"),

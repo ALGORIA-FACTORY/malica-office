@@ -58,6 +58,15 @@ export function detailDe(kind: string, payload: Record<string, unknown>): string
     );
   }
   if (kind.startsWith("mandat.")) return chaine(payload, "cabinet");
+  // L'offre proposée et la comptabilité qui la propose — jamais un prix.
+  if (kind === "acces.propose") {
+    const offre = chaine(payload, "offre");
+    return (
+      [offre ? offre.charAt(0).toUpperCase() + offre.slice(1) : null, chaine(payload, "cabinet")]
+        .filter(Boolean)
+        .join(" · ") || null
+    );
+  }
   if (kind.startsWith("conseil.")) return chaine(payload, "theme");
   return chaine(payload, "note");
 }
