@@ -37,6 +37,7 @@ const ORACLE = `
          app.piece_accompagne(p.id) as accompagne,
          app.piece_jointe(p.id) as jointe,
          app.emetteur_dit(p.id) as emetteur_dit,
+         app.montants_pris_en_charge(p.id) as du_cabinet,
          ${COLONNES_DU_SUIVI},
          ${COLONNES_DU_CIRCUIT}
     from pieces_v p
@@ -97,6 +98,11 @@ async function comparer(utilisateur: string, societes: string[], etiquette: stri
     assert.equal(p.accompagne, Boolean(r["accompagne"]), `${etiquette} : accompagne ${p.id}`);
     assert.equal(p.jointe, Boolean(r["jointe"]), `${etiquette} : jointe ${p.id}`);
     if (r["emetteur_dit"] != null) assert.equal(p.emetteur, r["emetteur_dit"]);
+    // Une pièce forcée : le total est celui du cabinet.
+    const du = r["du_cabinet"] as { lisible?: boolean; totals?: { ttc?: string } } | null;
+    if (du?.lisible && du.totals?.ttc) {
+      assert.equal(p.total, du.totals.ttc, `${etiquette} : total du cabinet de ${p.id}`);
+    }
   }
   return oracle.length;
 }
@@ -155,6 +161,35 @@ describe("la liste des pièces dit la même chose, d'un trait", { skip: !BASE_CO
       if (qui !== "sonia") assert.ok(n > 0, `${qui} voit des pièces`);
     });
   }
+
+  it("la lecture d'un trait ne rend rien de ce que l'appelant ne lit pas", async () => {
+    const rendues = async (qui: string) =>
+      auMemeInstant(qui, async (db) => {
+        const { rows } = await db.query<{ piece_id: string }>(
+          `select piece_id from app.circuit_et_suivi_des_pieces($1::uuid[])`,
+          [[s.pme]],
+        );
+        return rows.map((r) => r.piece_id);
+      });
+    const inconnu = await monterUneSociete(`oracle-etranger-${Date.now()}`);
+    try {
+      assert.deepEqual(await rendues(inconnu.gens.amel.id), [], "une personne étrangère");
+      // Un membre sans droit de tout voir : seulement ce que la règle lui ouvre.
+      const lisibles = await auMemeInstant(s.gens.bilel.id, async (db) => {
+        const { rows } = await db.query<{ id: string }>(
+          `select p.id from capture.pieces p
+            where p.tenant_id = $1 and app.piece_lisible(p.id)`,
+          [s.pme],
+        );
+        return new Set(rows.map((r) => r.id));
+      });
+      for (const id of await rendues(s.gens.bilel.id)) {
+        assert.ok(lisibles.has(id), `bilel ne doit pas recevoir ${id}`);
+      }
+    } finally {
+      await inconnu.fermer();
+    }
+  });
 
   it("et sur toutes les pièces que la base porte, pour chaque membre", async () => {
     const { rows } = await s.admin.query<{ user_id: string; societes: string[] }>(

@@ -275,44 +275,4 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     assert.ok(vecues.length >= AVEC_HISTOIRE, `${vecues.length} pièces qui ont vécu`);
     assert.ok(duree < BUDGET_HISTOIRE_MS, `${Math.round(duree)} ms, budget ${BUDGET_HISTOIRE_MS}`);
   });
-
-  it("DIAGNOSTIC (temporaire) : où part le temps d'une pièce qui a vécu", async () => {
-    const ids = `(select id from capture.pieces where idempotency_key like 'banc-histoire-%')`;
-    const essais: Record<string, string> = {
-      piece_lisible: `select count(app.piece_lisible(id)) from ${ids} i`,
-      version_courante: `select count(app.version_courante(id)) from ${ids} i`,
-      versions: `select count(*) from ${ids} i, lateral app.versions_de_la_piece(i.id)`,
-      dernier_fait: `select count(*) from ${ids} i, lateral app.dernier_fait_du_circuit(i.id)`,
-      dernier_envoi_proprio: `select count(app.dernier_envoi_au_proprietaire(id)) from ${ids} i`,
-      corrigee_auteur: `select count(app.corrigee_par_l_auteur(id)) from ${ids} i`,
-      corrigee_client: `select count(app.corrigee_par_le_client(id)) from ${ids} i`,
-      dernier_envoi: `select count(app.dernier_envoi(id)) from ${ids} i`,
-      ecriture_prise: `select count(app.ecriture_prise_en_charge_de(id)) from ${ids} i`,
-      montants: `select count(app.montants_pris_en_charge(id)) from ${ids} i`,
-      circuit: `select count(*) from ${ids} i, lateral app.circuit_de_la_piece(i.id)`,
-      suivi: `select count(*) from ${ids} i, lateral app.suivi_de_la_piece(i.id)`,
-      member_orgs_x800: `select count((select count(*) from app.member_orgs() m where i.id is not null)) from ${ids} i`,
-      version: `select version()`,
-    };
-    const res: Record<string, string | number> = {};
-    for (const [nom, sql] of Object.entries(essais)) {
-      const debut = performance.now();
-      try {
-        await sousIdentiteDuServeur(s.gens.amel.id, (db) => db.query(sql));
-        res[nom] = Math.round(performance.now() - debut);
-      } catch (e) {
-        res[nom] = `erreur ${(e as Error).message}`;
-      }
-    }
-    const debut = performance.now();
-    const lots = (await s.fait(
-      "amel",
-      "capture.listAvecLectureDesSocietes",
-      societes.slice(0, 60),
-    )) as Lot[];
-    res["liste"] = Math.round(performance.now() - debut);
-    res["pieces"] = lots.reduce((n, l) => n + l.pieces.length, 0);
-    res["prises"] = lots.flatMap((l) => l.pieces).filter((p) => p.suivi?.priseLe).length;
-    console.log("DIAGNOSTIC " + JSON.stringify(res));
-  });
 });

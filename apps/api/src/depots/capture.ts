@@ -360,12 +360,11 @@ async function piecesLuesDe(
    *
    * Appeler `app.circuit_de_la_piece` et `app.suivi_de_la_piece` sur chaque
    * ligne coûtait 3,5 ms par pièce : 10 000 pièces ne se lisaient pas en
-   * trente secondes. Une pièce sans historique (`app.pieces_avec_historique`)
-   * a un circuit et un suivi qui se déduisent de sa ligne et de deux faits
-   * par société : on les calcule ici. Les autres gardent les deux fonctions,
-   * telles quelles — `limit 0` n'exécute pas la fonction quand elle ne sert
-   * pas (un `where` ne l'empêchait pas : le suivi tournait aussi sur les
-   * pièces privées, pour rien). Même résultat, pièce par pièce : voir
+   * trente secondes. Une pièce sans historique a un circuit et un suivi qui
+   * se déduisent de sa ligne et de deux faits par société : on les calcule
+   * ici. Celles qui ont vécu passent par `app.circuit_et_suivi_des_pieces`
+   * (9 novembre 2026) : la même chose que les deux fonctions, en une lecture —
+   * 761 pièces réelles coûtaient 14 s. Même résultat, pièce par pièce : voir
    * `la-liste-des-pieces-dit-la-meme-chose.test.ts`.
    *
    * `piece_accompagne` et `emetteur_dit` sont écrites en ligne : appelées
@@ -381,8 +380,8 @@ async function piecesLuesDe(
               coalesce(t.id in (select app.orgs_avec_droit('circuit.recevoir')), false) as recoit
          from unnest($1::uuid[]) t(id)
      ),
-     historique as materialized (
-       select h as id from app.pieces_avec_historique($1::uuid[]) h
+     vecues as materialized (
+       select * from app.circuit_et_suivi_des_pieces($1::uuid[])
      ),
      prenoms as materialized (
        select a.user_id, a.prenom from app.prenoms_des_auteurs($1::uuid[]) a
@@ -424,7 +423,9 @@ async function piecesLuesDe(
               w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le,
               -- Forcée, le total, le sens et la date sont ceux du
               -- cabinet : il décide.
-              case when s.prise is not null
+              -- Forcée seulement : validée, la fonction ne rend rien (elle ne
+              -- lit que les lignes que le cabinet a saisies ou changées).
+              case when s.prise = 'forcee'
                    then app.montants_pris_en_charge(p.id) end as du_cabinet,
               ${COLONNES_DU_SUIVI},
               ${COLONNES_DU_CIRCUIT}
@@ -437,38 +438,33 @@ async function piecesLuesDe(
             order by e.created_at desc
             limit 1
          ) x on true
-         left join historique h on h.id = p.id
+         left join vecues h on h.piece_id = p.id
          left join droits d on d.tenant_id = p.tenant_id
          left join prenoms pr on pr.user_id = p.created_by
-         -- Les deux fonctions, pour les seules pièces qui ont une histoire.
-         left join lateral (
-           select * from app.suivi_de_la_piece(p.id)
-            limit case when p.vis = 'partage' and h.id is not null then null else 0 end
-         ) sl on true
-         left join lateral (
-           select * from app.circuit_de_la_piece(p.id)
-            limit case when h.id is not null then null else 0 end
-         ) cl on true
          -- Où en est la pièce chez le cabinet : seulement si elle y est partie.
          -- Sans histoire, elle y est partie à sa transmission, et rien d'autre.
          cross join lateral (
            select case when p.vis <> 'partage' then null
-                       when h.id is not null then sl.envoyee_le
+                       when h.piece_id is not null then h.suivi_envoyee
                        else coalesce(p.transmise_le, p.created_at) end as envoyee_le,
-                  sl.vue_le, sl.vue_par, sl.corrigee_le, sl.prise_le, sl.prise, sl.prise_par
+                  h.suivi_vue_le as vue_le, h.suivi_vue_par as vue_par,
+                  h.suivi_corrigee as corrigee_le, h.suivi_prise_le as prise_le,
+                  h.suivi_prise as prise, h.suivi_prise_par as prise_par
          ) s
          -- Le passage siège → propriétaire, et le côté de qui regarde. Sans
          -- histoire : rien n'est passé ; qui reçoit et qui en est l'auteur se
          -- lisent une fois par société et par personne. Le comptable, qui
          -- n'est pas membre, n'en lit rien.
          cross join lateral (
-           select case when h.id is not null then cl.recoit
+           select case when h.piece_id is not null then h.circuit_recoit
                        when d.membre then d.recoit end as recoit,
-                  cl.dernier, cl.envoyee_le, cl.vue_le, cl.vue_par, cl.retournee_le,
-                  cl.retour_par, cl.corrigee_le,
-                  case when h.id is not null then cl.auteur
+                  h.circuit_dernier as dernier, h.circuit_envoyee as envoyee_le,
+                  h.circuit_vue_le as vue_le, h.circuit_vue_par as vue_par,
+                  h.circuit_retournee as retournee_le, h.circuit_retour_par as retour_par,
+                  h.circuit_corrigee as corrigee_le,
+                  case when h.piece_id is not null then h.circuit_auteur
                        when d.membre then pr.prenom end as auteur,
-                  case when h.id is not null then cl.mienne
+                  case when h.piece_id is not null then h.circuit_mienne
                        when d.membre then p.created_by is not distinct from auth.uid() end as mienne
          ) c
          /*
