@@ -736,3 +736,25 @@ test("au clic : les notifications se regroupent et les informations se déplient
     await expect(page.getByRole("button", { name: "Masquer les informations" })).toBeVisible();
   }
 });
+
+test("l'accueil de la société lit ses sociétés et ses mois en un appel", async ({ browser }) => {
+  const contexte = await browser.newContext({ storageState: ETAT_DIRIGEANT });
+  const page = await contexte.newPage();
+  const appels: string[] = [];
+  page.on("request", (r) => {
+    if (!r.url().endsWith("/rpc") || !r.postData()) return;
+    const { depot, methode } = JSON.parse(r.postData()!) as { depot: string; methode: string };
+    appels.push(`${depot}.${methode}`);
+  });
+  await page.goto("/pme");
+  await expect
+    .poll(() => appels.filter((a) => a === "identite.mandatsProposesDesSocietes").length, {
+      timeout: 20_000,
+    })
+    .toBe(1);
+  await page.waitForLoadState("networkidle");
+  expect(appels.filter((a) => a === "identite.mandatsProposes")).toEqual([]);
+  // Le mois affiché peut garder sa lecture ; la série de douze mois n'en fait qu'une.
+  expect(appels.filter((a) => a === "referentiel.declarationTva").length).toBeLessThanOrEqual(1);
+  await contexte.close();
+});
