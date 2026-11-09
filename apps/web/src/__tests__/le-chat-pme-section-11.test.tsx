@@ -41,6 +41,42 @@ vi.mock("@/hooks/use-mon-acces", () => ({
 vi.mock("@/hooks/use-revenir", () => ({ useRevenir: () => vi.fn() }));
 
 const demander = vi.fn<(q: Record<string, unknown>) => Promise<ReponseDeMalica>>();
+
+/*
+ * Since PR #298 the screen asks through the streamed agent port (`malica.converser`):
+ * the same canned answers are replayed as its events — debut, texte, fin with sources.
+ * What these tests freeze (greeting, ready questions, "Ce que j'ai utilisé", voice,
+ * the thread) is unchanged; only the transport is.
+ */
+function enFlux(
+  ask: (q: Record<string, unknown>) => Promise<ReponseDeMalica>,
+): (q: Record<string, unknown>, on: (ev: Record<string, unknown>) => void) => Promise<void> {
+  return async (q, on) => {
+    const r = await ask(q);
+    on({ type: "debut", conversationId: r.conversationId });
+    on({ type: "texte", texte: r.answer });
+    on({
+      type: "fin",
+      fin: {
+        conversationId: r.conversationId,
+        messageId: r.messageId,
+        titre: r.titre,
+        reponse: r.answer,
+        sources: (r.conseil?.sources ?? []).map((s) => ({
+          cle: `malica:article:${s.corpus}:${s.numero}`,
+          genre: "article",
+          titre: `${s.corpus} ${s.numero}`,
+          objetId: null,
+          article: { corpus: s.corpus, numero: s.numero, validFrom: s.validFrom },
+        })),
+        propositions: [],
+        suggestions: [],
+        chiffresRetires: 0,
+        sansCitations: false,
+      },
+    });
+  };
+}
 /** Les fils de la société, et ce que la base relit d'un fil rouvert. */
 let fils: Array<Record<string, unknown>> = [];
 const ouvrir = vi.fn<(id: string) => Promise<Array<Record<string, unknown>>>>();
@@ -61,7 +97,11 @@ vi.mock("@/verticals/malica-office/composition", () => ({
       }),
     },
     identity: { monProfil: async () => ({ prenom: "Amel" }) },
-    malica: { demander: (q: Record<string, unknown>) => demander(q) },
+    malica: {
+      demander: (q: Record<string, unknown>) => demander(q),
+      converser: (q: Record<string, unknown>, on: (ev: Record<string, unknown>) => void) =>
+        enFlux(demander)(q, on),
+    },
   }),
 }));
 
@@ -191,15 +231,14 @@ describe("le chat de la PME, dans les trois langues", () => {
       await waitFor(() => expect(demander).toHaveBeenCalledTimes(1));
       expect(demander.mock.calls[0]![0]).toEqual({
         tenantId: "pme-1",
-        pieceId: null,
+        pieceIds: [],
         question: d["pme.malica.pret.tva"],
         locale: langue,
-        mode: "reasoner",
         conversationId: null,
       });
       const cote = document.querySelector(".side .src") as HTMLElement;
       await waitFor(() => expect(cote.textContent).toContain("CTVA"));
-      expect(within(cote).getByText("18")).toBeTruthy();
+      expect(cote.textContent).toContain("18");
 
       // La question suivante part dans le fil que la réponse a rendu.
       const champ = screen.getByLabelText(d["pme.malica.composer"]);
@@ -282,7 +321,6 @@ describe("la voix (useVoix) change ce qui part", () => {
       expect(demander.mock.calls[0]![0]).toMatchObject({
         question: "quand payer la TVA",
         locale: langue,
-        mode: "reasoner",
       });
       await waitFor(() => expect(speak).toHaveBeenCalledTimes(1));
       const enonce = speak.mock.calls[0]![0] as EnonceSimule;

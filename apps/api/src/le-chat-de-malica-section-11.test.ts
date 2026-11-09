@@ -468,14 +468,19 @@ describe("le chat de Malica — section 11", { skip: !BASE_CONFIGUREE }, () => {
       relu.map((m) => m["raisonnement"]),
       [null, null],
     );
+    // PR #298 adds `sources` and `propositions` to a reopened thread: display data, so
+    // that a reopened thread shows its sources (the director's mission). Reasoning still
+    // never leaves the server (asserted above).
     assert.deepEqual(Object.keys(relu[1]!).sort(), [
       "contenu",
       "createdAt",
       "id",
       "latencyMs",
       "model",
+      "propositions",
       "raisonnement",
       "role",
+      "sources",
       "tokensIn",
       "tokensOut",
     ]);
