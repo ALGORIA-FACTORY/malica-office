@@ -1,0 +1,1 @@
+plafond abaissé à 0.001 USD (agents.budgets) puis 31e question → status 400 {"erreur":"refus.conseil.plafond"}

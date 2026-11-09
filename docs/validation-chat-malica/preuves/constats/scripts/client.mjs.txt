@@ -1,0 +1,30 @@
+// Client local : session du compte de développement (identifiants lus dans le
+// socle des épreuves du dépôt, jamais imprimés).
+const RACINE = "file:///C:/dev/05_Malica%20Office/malica-office/.claude/worktrees/agent-abc6f6d11938b9019/";
+const { COMPTE_DEV } = await import(RACINE + "outils/epreuves/socle.mjs");
+export const API = process.env.MALICA_API_URL ?? "http://localhost:3917";
+
+export async function session(compte = COMPTE_DEV) {
+  const r = await fetch(`${API}/auth/connexion`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: compte.email, motDePasse: compte.motDePasse }),
+  });
+  if (!r.ok) throw new Error(`connexion ${r.status}`);
+  const { jeton } = await r.json();
+  const h = { Authorization: `Bearer ${jeton}`, "Content-Type": "application/json" };
+  return {
+    async rpc(depot, methode, args = []) {
+      const x = await fetch(`${API}/rpc`, { method: "POST", headers: h, body: JSON.stringify({ depot, methode, args }) });
+      const j = await x.json().catch(() => null);
+      if (!x.ok) throw new Error(`${depot}.${methode} ${x.status} ${JSON.stringify(j)}`);
+      return j.resultat;
+    },
+    async malica(chemin, corps) {
+      const t0 = performance.now();
+      const x = await fetch(`${API}/malica${chemin}`, { method: "POST", headers: h, body: JSON.stringify(corps) });
+      const texte = await x.text();
+      let json = null; try { json = JSON.parse(texte); } catch {}
+      return { status: x.status, ms: Math.round(performance.now() - t0), contentType: x.headers.get("content-type"), json, texte };
+    },
+  };
+}

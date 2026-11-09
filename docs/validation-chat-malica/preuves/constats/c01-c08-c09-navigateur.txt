@@ -1,0 +1,34 @@
+Constats 1, 8, 9 — écran /pme/malica rendu par `vite dev` (port 8097, relais vers l'API locale 3000,
+base malica_constats_chat, modèle SIMULÉ par intercepter.mjs avec MOCK_REPONSE=reponse-simulee.json
+et un corps de réponse retardé de 1 200 ms ; encodeur simulé → vecteur e0 ; un article
+« CONSTAT-TEST 52 » inséré dans la base jetable avec l'empreinte e0, c09-mini-corpus.sql).
+Session : compte de développement du jeu d'essai (outils/epreuves/socle.mjs), via /auth/connexion.
+Navigateur : panneau navigateur de Claude, script exécuté dans la page (javascript_exec).
+
+--- 1. Question posée au clavier, fetch espionné, longueur du texte de la dernière bulle .mal échantillonnée toutes les 150 ms
+requête : POST /malica/demander  {"tenantId":"d2fc8356-…(ATLAS DISTRIBUTION)","pieceId":null,"question":"Quel taux de retenue sur les loyers ?","locale":"fr","mode":"reasoner","conversationId":null}
+réponse : content-type "application/json; charset=utf-8", UN corps de 672 caractères (aucun flux)
+longueur affichée (ms depuis l'envoi → caractères) :
+  153 → 0 | 3603 → 21 | 3753 → 40 | 3914 → 68 | 4070 → 94 | 4226 → 114 | 4381 → 127 | 4537 → 155 | 4692 → 164 | 4852 → 186
+  → rien pendant 3,6 s (attente du JSON entier), puis dévoilement par pas de ~150 ms d'un texte déjà reçu.
+
+--- 9. DOM après la réponse
+paragraphesMal: 2                (découpe sur ligne vide)
+texteMal: "**Réponse simulée** : la retenue suit le paramétrage, voir l'article 52.\n\nSecond…"
+balisesGras: 0                   (le Markdown sort brut : les ** restent à l'écran)
+srcs: [{ texte: "CONSTAT-TEST\n52", href: null, onclick: null, role: null, focusable: false }]
+clic sur .srcs a → url inchangée (http://localhost:8097/pme/malica), 0 dialogue ouvert
+et1: []                          (réponse non retenue dans ce scénario ; .et1 existe dans le code pour l'erreur et la relecture)
+chips: ["Mes conversations", "CABINET MALICA"]
+inputsFichier: 0 ; boutons du compositeur : ["go:Envoyer", "mic:Parler à Malica"]   (aucun bouton de pièce jointe)
+volet « Ce que j'ai utilisé » : "CONSTAT-TEST 52"
+
+--- 9. Le même fil rouvert depuis la liste (conversations.ouvrir)
+avant reprise : 1 lien .srcs ; après reprise : tours .mal = 1, liens .srcs = 0
+ordre affiché : ["moi:Quel taux de retenue sur les l", "sig:Malica", "mal:**Réponse simulée** : la reten"]
+
+--- 8. Sélecteur → « Toutes les sociétés »
+clic sur l'en-tête « ATLAS DISTRIBUTION » puis sur « Toutes les sociétés » → navigation vers /pme/societes, en-tête "Toutes les sociétés · 2"
+retour sur /pme/malica → en-tête "ATLAS DISTRIBUTION 1/2" ; question posée :
+POST /malica/demander {"tenantId":"d2fc8356-…","question":"Question posée après avoir choisi Toutes les sociétés",…}
+→ un seul tenantId, celui du dossier ouvert ; le schéma `Question` de malica.ts n'a pas d'autre champ de périmètre.

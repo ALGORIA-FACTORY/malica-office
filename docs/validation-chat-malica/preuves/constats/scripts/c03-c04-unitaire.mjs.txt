@@ -1,0 +1,68 @@
+// Constats 3 et 4 — askMalica appelé tel quel, avec une AppelApi factice qui
+// enregistre chaque RPC et un fetch simulé (aucun appel payant).
+const R = "file:///C:/dev/05_Malica%20Office/malica-office/.claude/worktrees/agent-abc6f6d11938b9019/apps/api/src/";
+process.env.DEEPSEEK_API_KEY = "factice";
+process.env.QWEN_BASE_URL = "https://encodeur.invalid";
+process.env.QWEN_API_KEY = "factice";
+
+const sortants = [];
+const REPONSE_MODELE = {
+  reponse: "Le taux est de 37 %, selon l'article 99 du code de l'IRPP, depuis toujours.",
+  conseil: true, portee: "generale", theme: "Retenue sur loyers d'hôtels",
+  certitude: 0.9, sources: [{ corpus: "CIRPPIS", numero: "52" }], doute: null,
+};
+globalThis.fetch = async (url, init) => {
+  const corps = JSON.parse(init.body);
+  sortants.push({ url: String(url), corps });
+  if (String(url).endsWith("/embeddings")) return new Response(JSON.stringify({ data: [{ embedding: [1, 0, 0, 0] }] }));
+  const contenu = corps.response_format ? JSON.stringify(REPONSE_MODELE) : "Titre";
+  return new Response(JSON.stringify({ choices: [{ message: { content: contenu } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }));
+};
+
+const appels = [];
+const FRAGMENT = {
+  corpus: "CIRPPIS", numero: "52", validFrom: "2024-01-01", validTo: null, ordinal: 1, langue: "fr",
+  extrait: "La retenue à la source est fixée à 15 % pour les loyers...", statut: "en_vigueur", abrogePar: null,
+  nature: "loi", autorite: "normative", opposableA: "tous", jortReference: null, provenance: "native", distance: 0.2,
+};
+const api = {
+  async rpc(depot, methode, args) {
+    appels.push({ rpc: `${depot}.${methode}`, args });
+    switch (`${depot}.${methode}`) {
+      case "conversations.ouvrir":
+        return [
+          { role: "user", contenu: "Quel est le taux de la retenue à la source sur les loyers ?" },
+          { role: "assistant", contenu: "15 %, article 52 du code de l'IRPP et de l'IS." },
+        ];
+      case "capture.contexteAssistant":
+        return { organisation: { name: "X", kind: "pme", jurisdiction: "TN", currency: "TND" }, pack: null, fiche: null,
+          pieces: [], ecritures: [], lignes: [], echeances: [], motifs: [], roles: [], sousComptes: [], tiers: [], piece: null };
+      case "corpus.modeleEmpreinte": return { model: "m", dimensions: 4 };
+      case "corpus.rechercher": return [FRAGMENT];
+      case "corpus.parametresPour": return [];
+      case "corpus.editionsPlusRecentes": return [];
+      case "capture.journaliserAgent": return "run-1";
+      case "conseil.contexte": return { appelantMembre: false, cabinetId: null };
+      case "conversations.dernierMessage": return { id: "msg-1" };
+      default: return null;
+    }
+  },
+};
+
+const { askMalica } = await import(R + "malica/conseil/ask.ts");
+const res = await askMalica(api, { tenantId: "t1", question: "Et pour les hôtels ?", locale: "fr", conversationId: "fil-1" });
+
+const enc = sortants.filter((s) => s.url.endsWith("/embeddings"));
+console.log("CONSTAT 3 — ce qui est encodé pour la recherche :", JSON.stringify(enc.map((e) => e.corps.input)));
+const rech = appels.find((a) => a.rpc === "corpus.rechercher");
+console.log("CONSTAT 3 — arguments de corpus.rechercher (vecteur omis) :", JSON.stringify({ ...rech.args[0], vecteur: `[${rech.args[0].vecteur.length} nombres]` }));
+const ds = sortants.find((s) => s.corps.response_format);
+console.log("CONSTAT 3 — le modèle, lui, reçoit le fil : rôles =", ds.corps.messages.map((m) => m.role).join(","));
+console.log("\nCONSTAT 4 — verdicts des contrôles rendus :", JSON.stringify(res.controles));
+const jc = appels.find((a) => a.rpc === "conversations.journaliserControles");
+console.log("CONSTAT 4 — journaliserControles appelé :", Boolean(jc), jc ? JSON.stringify(jc.args[0].verdicts) : "");
+const aj = appels.find((a) => a.rpc === "conversations.ajouter");
+console.log("CONSTAT 4 — réponse RANGÉE dans le fil :", JSON.stringify(aj.args[0].reponse));
+console.log("CONSTAT 4 — réponse RENDUE au navigateur :", JSON.stringify(res.answer));
+console.log("CONSTAT 4 — l'ordre des RPC :", appels.map((a) => a.rpc).join(" → "));
+console.log("\naujourd'hui (horloge du processus) :", new Date().toISOString().slice(0, 10));

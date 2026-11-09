@@ -1,0 +1,17 @@
+// Constat 7 — le dossier que Malica reçoit, lu par le VRAI chemin serveur :
+// creerAppelLocal(sousIdentite(utilisateur)) → capture.contexteAssistant →
+// loadMalicaContext, exactement comme `malica.ts` le compose (RLS appliquée).
+// Lancé avec --env-file=.env --env-file=.env.test (base malica_constats_chat).
+const R = "file:///C:/dev/05_Malica%20Office/malica-office/.claude/worktrees/agent-abc6f6d11938b9019/apps/api/src/";
+const { sousIdentite } = await import(R + "db.ts");
+const { creerAppelLocal } = await import(R + "malica/appel-local.ts");
+const { loadMalicaContext } = await import(R + "malica/conseil/context.ts");
+const DEV = "129cd2a5-80e6-4c21-9729-139a4df71ea2";
+const ATLAS = "d2fc8356-42af-4afe-bfca-36a43d6f2baf";
+const api = creerAppelLocal((travail) => sousIdentite(DEV, travail));
+const brut = await api.rpc("capture", "contexteAssistant", [ATLAS, null]);
+console.log("capture.contexteAssistant : pieces =", brut.pieces.length, "· ecritures =", brut.ecritures.length, "· echeances =", brut.echeances.length);
+const ctx = await loadMalicaContext(api, ATLAS, null);
+console.log("loadMalicaContext → dossier.pieces (ce que Malica lit) :", JSON.stringify(ctx.pieces));
+console.log("vérité en base (pieces_v, actives) : capturee 502, lue 100 — total 602");
+process.exit(0);

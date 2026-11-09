@@ -1,0 +1,24 @@
+// Constat 6 (bis, sans appel payant) — un fournisseur simulé qui rend ses
+// en-têtes tout de suite et son corps 1 500 ms plus tard (ce que fait une API
+// qui envoie ses en-têtes avant d'avoir fini de générer).
+const R = "file:///C:/dev/05_Malica%20Office/malica-office/.claude/worktrees/agent-abc6f6d11938b9019/apps/api/src/";
+const DELAI = 1500;
+function fournisseurLent(json) {
+  return async () => {
+    const enc = new TextEncoder();
+    const corps = new ReadableStream({
+      async start(c) { await new Promise((r) => setTimeout(r, DELAI)); c.enqueue(enc.encode(JSON.stringify(json))); c.close(); },
+    });
+    return new Response(corps, { status: 200, headers: { "content-type": "application/json" } });
+  };
+}
+const { envoyerAClaude } = await import(R + "malica/lecture/claude.ts");
+let t0 = performance.now();
+const c = await envoyerAClaude({ apiKey: "factice", corps: {}, fetch: fournisseurLent({ content: [{ type: "text", text: "ok" }], stop_reason: "end_turn" }) });
+console.log(`lecture/claude.ts envoyerAClaude : latencyMs journalisé = ${c.latencyMs} ms · durée réelle = ${Math.round(performance.now() - t0)} ms`);
+
+globalThis.fetch = fournisseurLent({ model: "x", choices: [{ message: { content: "ok" } }], usage: {} });
+const { callDeepSeek } = await import(R + "malica/conseil/deepseek.ts");
+t0 = performance.now();
+const d = await callDeepSeek({ apiKey: "factice", role: "chat", messages: [] });
+console.log(`conseil/deepseek.ts callDeepSeek   : latencyMs journalisé = ${d.latencyMs} ms · durée réelle = ${Math.round(performance.now() - t0)} ms`);

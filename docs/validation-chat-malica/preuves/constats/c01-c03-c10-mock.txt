@@ -1,0 +1,21 @@
+organisations visibles : ATLAS DISTRIBUTION (pme) · CABINET MALICA (cabinet) · DREAM OPTIC (pme)
+dossier interrogé : ATLAS DISTRIBUTION pme
+
+Q1 status 200 content-type application/json; charset=utf-8 durée client 457 ms
+Q1 clés JSON reçues : answer, reasoning, model, latencyMs, tokensIn, tokensOut, runId, conversationId, messageId, controles, titre, retenue, conseil
+Q1 model/latencyMs/tokensIn/tokensOut : deepseek-reasoner 2 100 20
+Q1 corps brut (300 premiers car.) : {"answer":"Réponse simulée.","reasoning":null,"model":"deepseek-reasoner","latencyMs":2,"tokensIn":100,"tokensOut":20,"runId":"2cb15cac-6776-4266-9ba4-ed1674b0f3eb","conversationId":"7998f7a6-be86-4288-a66d-002aa02dfe3b","messageId":"7619f61a-1341-489e-990e-921c1c454aab","controles":[],"titre":"Titr
+
+Q2 (suite du même fil) status 200 conversationId identique : true
+
+conversations.ouvrir → 4 messages ; clés du 1er message assistant : id, role, contenu, raisonnement, model, tokensIn, tokensOut, latencyMs, createdAt
+message assistant (extrait) : {"id":"7619f61a-1341-489e-990e-921c1c454aab","role":"assistant","contenu":"Réponse simulée.","raisonnement":null,"model":"deepseek-reasoner","tokensIn":100,"tokensOut":20,"latencyMs":2,"createdAt":"Mon Nov 09 2026 11:50:59 GMT+0100 (heure d’Afrique de l’Ouest)"}
+
+--- appels sortants interceptés pendant ce scénario ---
+#1 dashscope-intl.aliyuncs.com/compatible-mode/v1/embeddings ENCODE input=["Quel est le taux de la retenue à la source sur les loyers ?"]
+#2 api.deepseek.com/chat/completions model=deepseek-reasoner stream=false response_format={"type":"json_object"} messages=6 roles=[system,system,system,system,system,user] dernier="Quel est le taux de la retenue à la source sur les loyers ?"
+#3 api.deepseek.com/chat/completions model=deepseek-chat stream=false response_format=undefined messages=2 roles=[system,user] dernier="Question : Quel est le taux de la retenue à la source sur les loyers ?
+
+Réponse : Réponse simulée."
+#4 dashscope-intl.aliyuncs.com/compatible-mode/v1/embeddings ENCODE input=["Et pour les hôtels ?"]
+#5 api.deepseek.com/chat/completions model=deepseek-reasoner stream=false response_format={"type":"json_object"} messages=8 roles=[system,system,system,system,system,assistant,user,user] dernier="Et pour les hôtels ?"

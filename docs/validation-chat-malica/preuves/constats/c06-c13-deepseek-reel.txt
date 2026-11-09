@@ -1,0 +1,15 @@
+GET /models → 200 ["deepseek-flash","deepseek-v4-pro"]
+
+[chat] modèle DEMANDÉ et journalisé par le code : deepseek-chat
+[chat] modèle SERVI (champ "model" de la réponse)  : deepseek-flash
+[chat] latencyMs journalisé par callDeepSeek         : 290 ms
+[chat] sonde : en-têtes à 288 ms, corps complet à 889 ms, octets d'attente en tête du corps : 0
+[chat] durée réelle de bout en bout (mur)        : 889 ms
+[chat] jetons : {"prompt_tokens":15,"completion_tokens":2,"total_tokens":17,"prompt_tokens_details":{"cached_tokens":0},"prompt_cache_hit_tokens":0,"prompt_cache_miss_tokens":15}
+
+[reasoner] modèle DEMANDÉ et journalisé par le code : deepseek-reasoner
+[reasoner] modèle SERVI (champ "model" de la réponse)  : deepseek-flash
+[reasoner] latencyMs journalisé par callDeepSeek         : 271 ms
+[reasoner] sonde : en-têtes à 271 ms, corps complet à 803 ms, octets d'attente en tête du corps : 0
+[reasoner] durée réelle de bout en bout (mur)        : 803 ms
+[reasoner] jetons : {"prompt_tokens":41,"completion_tokens":46,"total_tokens":87,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens_details":{"reasoning_tokens":43},"prompt_cache_hit_tokens":0,"prompt_cache_miss_tokens":41}

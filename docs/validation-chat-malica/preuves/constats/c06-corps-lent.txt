@@ -1,0 +1,2 @@
+lecture/claude.ts envoyerAClaude : latencyMs journalisé = 68 ms · durée réelle = 1520 ms
+conseil/deepseek.ts callDeepSeek   : latencyMs journalisé = 0 ms · durée réelle = 1513 ms
