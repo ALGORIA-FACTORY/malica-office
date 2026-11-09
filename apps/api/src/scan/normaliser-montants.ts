@@ -491,7 +491,10 @@ export function normaliserMontants(
    */
   const signes = champs.flatMap((c, i) => (c.nom.startsWith("autre") ? [] : [brutes[i]!]));
   if (signes.length > 0 && signes.every((l) => l.length > 0 && l.every((c) => c.mineur < 0)))
-    return vide("avoir", "les montants s'impriment en négatif : un avoir, à saisir par le cabinet");
+    return vide(
+      "avoir",
+      "les montants s'impriment en négatif : un avoir, à saisir par la comptabilité",
+    );
 
   /*
    * ======================================= LE TOTAL EST UN RAPPEL, PAS UNE DONNÉE

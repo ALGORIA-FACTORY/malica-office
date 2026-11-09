@@ -47,13 +47,13 @@ export const Route = createFileRoute("/_authenticated/cabinet/honoraires")({
       {
         name: "description",
         content:
-          "Facturation, trésorerie et mandats d'honoraires du cabinet : chaque montant vient du mandat ou de la facture émise.",
+          "Facturation, trésorerie et mandats d'honoraires de la comptabilité : chaque montant vient du mandat ou de la facture émise.",
       },
       { property: "og:title", content: "Honoraires et mandats — Malica Office" },
       {
         property: "og:description",
         content:
-          "Facturation, trésorerie et mandats d'honoraires du cabinet : chaque montant vient du mandat ou de la facture émise.",
+          "Facturation, trésorerie et mandats d'honoraires de la comptabilité : chaque montant vient du mandat ou de la facture émise.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

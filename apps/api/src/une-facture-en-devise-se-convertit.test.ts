@@ -455,9 +455,9 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
         l.origine?.motifDuCours,
       ]),
       [
-        ["USD", "333.33", source, "saisie", "Saisi par le cabinet", null],
-        ["USD", "63.33", source, "saisie", "Saisi par le cabinet", null],
-        ["USD", "396.66", source, "saisie", "Saisi par le cabinet", null],
+        ["USD", "333.33", source, "saisie", "Saisi par la comptabilité", null],
+        ["USD", "63.33", source, "saisie", "Saisi par la comptabilité", null],
+        ["USD", "396.66", source, "saisie", "Saisi par la comptabilité", null],
       ],
     );
   });

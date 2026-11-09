@@ -54,13 +54,13 @@ export const Route = createFileRoute("/_authenticated/cabinet/plan")({
       {
         name: "description",
         content:
-          "Le plan de référence du pack, les extensions du cabinet, les rôles comptables et les tiers de chaque dossier.",
+          "Le plan de référence du pack, les extensions de la comptabilité, les rôles comptables et les tiers de chaque dossier.",
       },
       { property: "og:title", content: "Plan comptable — Malica Office" },
       {
         property: "og:description",
         content:
-          "Le plan de référence du pack, les extensions du cabinet, les rôles comptables et les tiers de chaque dossier.",
+          "Le plan de référence du pack, les extensions de la comptabilité, les rôles comptables et les tiers de chaque dossier.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

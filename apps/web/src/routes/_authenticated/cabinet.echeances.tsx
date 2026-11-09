@@ -34,13 +34,13 @@ import type { Echeance } from "@malica/socle/ports/repositories";
 export const Route = createFileRoute("/_authenticated/cabinet/echeances")({
   head: () => ({
     meta: [
-      { title: "Échéances du cabinet — Malica Office" },
+      { title: "Échéances de la comptabilité — Malica Office" },
       {
         name: "description",
         content:
           "Les échéances déclaratives de tous les dossiers mandatés, dérivées du pack de juridiction en vigueur.",
       },
-      { property: "og:title", content: "Échéances du cabinet — Malica Office" },
+      { property: "og:title", content: "Échéances de la comptabilité — Malica Office" },
       {
         property: "og:description",
         content:

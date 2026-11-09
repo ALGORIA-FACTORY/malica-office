@@ -55,7 +55,7 @@ export async function redigerLeBriefing(
     {
       label: "Pièces à superviser",
       valeur: String(aSuperviser.length),
-      source: "file du cabinet",
+      source: "file de la comptabilité",
     },
     {
       label: `Montant total des pièces à superviser (${client.currency})`,
@@ -65,12 +65,12 @@ export async function redigerLeBriefing(
     {
       label: "Pièces retournées au client",
       valeur: String(retournees.length),
-      source: "file du cabinet",
+      source: "file de la comptabilité",
     },
     {
       label: "Pièces déposées non lues",
       valeur: String(nonLues.length),
-      source: "file du cabinet",
+      source: "file de la comptabilité",
     },
     { label: "Échéances en retard", valeur: String(enRetard.length), source: "moteur échéances" },
     ...(prochaine

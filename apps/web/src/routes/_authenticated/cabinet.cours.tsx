@@ -28,8 +28,11 @@ import { office } from "@/verticals/malica-office/composition";
 export const Route = createFileRoute("/_authenticated/cabinet/cours")({
   head: () => ({
     meta: [
-      { title: "Cours de change — cabinet — Malica Office" },
-      { name: "description", content: "Les cours de change que lisent les dossiers du cabinet." },
+      { title: "Cours de change — comptabilité — Malica Office" },
+      {
+        name: "description",
+        content: "Les cours de change que lisent les dossiers de la comptabilité.",
+      },
     ],
   }),
   component: CabinetCours,

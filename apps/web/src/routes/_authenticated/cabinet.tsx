@@ -76,13 +76,13 @@ import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 export const Route = createFileRoute("/_authenticated/cabinet")({
   head: () => ({
     meta: [
-      { title: "Supervision cabinet — Malica Office" },
+      { title: "Supervision comptabilité — Malica Office" },
       {
         name: "description",
         content:
           "File priorisée, écran côte-à-côte pièce et écriture, retour avec motif gouverné et contre-passation datée.",
       },
-      { property: "og:title", content: "Supervision cabinet — Malica Office" },
+      { property: "og:title", content: "Supervision comptabilité — Malica Office" },
       {
         property: "og:description",
         content: "File priorisée, revue côte-à-côte, retour avec motif gouverné.",

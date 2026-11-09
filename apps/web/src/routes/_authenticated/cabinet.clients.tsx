@@ -39,17 +39,17 @@ import type { ClientSummary } from "@malica/socle/ports/repositories";
 export const Route = createFileRoute("/_authenticated/cabinet/clients")({
   head: () => ({
     meta: [
-      { title: "Clients du cabinet — Malica Office" },
+      { title: "Clients de la comptabilité — Malica Office" },
       {
         name: "description",
         content:
-          "Les dossiers mandatés du cabinet, leur régime, leur collaborateur et le volume à superviser.",
+          "Les dossiers mandatés de la comptabilité, leur régime, leur collaborateur et le volume à superviser.",
       },
-      { property: "og:title", content: "Clients du cabinet — Malica Office" },
+      { property: "og:title", content: "Clients de la comptabilité — Malica Office" },
       {
         property: "og:description",
         content:
-          "Les dossiers mandatés du cabinet, leur régime, leur collaborateur et le volume à superviser.",
+          "Les dossiers mandatés de la comptabilité, leur régime, leur collaborateur et le volume à superviser.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

@@ -31,12 +31,15 @@ import type { Notification } from "@malica/socle/ports/repositories";
 export const Route = createFileRoute("/_authenticated/cabinet/notifications")({
   head: () => ({
     meta: [
-      { title: "Notifications — cabinet — Malica Office" },
-      { name: "description", content: "Ce que les dossiers mandatés ont fait savoir au cabinet." },
-      { property: "og:title", content: "Notifications — cabinet — Malica Office" },
+      { title: "Notifications — comptabilité — Malica Office" },
+      {
+        name: "description",
+        content: "Ce que les dossiers mandatés ont fait savoir à la comptabilité.",
+      },
+      { property: "og:title", content: "Notifications — comptabilité — Malica Office" },
       {
         property: "og:description",
-        content: "Ce que les dossiers mandatés ont fait savoir au cabinet.",
+        content: "Ce que les dossiers mandatés ont fait savoir à la comptabilité.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
