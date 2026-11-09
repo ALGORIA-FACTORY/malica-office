@@ -8,8 +8,6 @@ import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
-import { VotreComptabilite } from "@/components/malica/votre-comptabilite";
-import { useFichesDesSocietes } from "@/hooks/use-fiches-des-societes";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
 import { piecesALire, statutDeLaPieceLue } from "@/lib/lecture";
@@ -237,11 +235,6 @@ function Bibliotheque() {
   const lues = usePiecesLues();
   const brutes = useMemo(() => lues.data ?? [], [lues.data]);
   const aLire = useMemo(() => piecesALire(brutes), [brutes]);
-  // « Votre comptabilité » ne se montre qu'une fois les pièces là : sa lecture
-  // part dès maintenant, en même temps qu'elles, et non après (mesuré le
-  // 8 novembre 2026 : un aller-retour de plus à l'ouverture de l'écran).
-  useFichesDesSocietes();
-
   const { toutes, parSiege, chargement, parSieges, ouvrirSaSociete } = usePiecesDesSocietes();
   /*
    * Les pièces montrées : celle de l'en-tête, ou toutes les sociétés quand
@@ -477,9 +470,6 @@ function Bibliotheque() {
           </>
         ) : (
           <>
-            {/* --------------------- votre comptabilité (planche 6, 7 novembre 2026) */}
-            <VotreComptabilite societe={pme.societeAffichee} />
-
             {/* ------------------------------------------------ les dossiers */}
             {sept.dossiers.length > 0 ? (
               <>

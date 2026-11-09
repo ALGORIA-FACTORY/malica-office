@@ -4030,13 +4030,6 @@ export const ar: Dict = {
   "pme.joindre.horsLigne":
     "لا توجد شبكة: الوثيقة محفوظة وستُرسل عند عودة الشبكة. أرفقوها بعد ذلك من الوثيقة.",
   "pme.joindre.dejaLa": "أو وثيقة موجودة",
-  "pme.compta.votre": "محاسبتكم",
-  "pme.compta.mandat": "تفويض ساري · {count} شركات",
-  "pme.compta.mandat#one": "تفويض ساري · شركة واحدة",
-  "pme.compta.mandat#other": "تفويض ساري · {count} شركة",
-  "pme.compta.aRepondre": "{count} للرد",
-  "pme.compta.aRepondre#one": "إرجاع واحد للمعالجة",
-  "pme.compta.aRepondre#other": "{count} إرجاعات للمعالجة",
   "pme.compta.onglet.repondre": "للرد",
   "pme.compta.onglet.transmis": "مُرسل",
   "pme.compta.onglet.mandat": "التفويض",

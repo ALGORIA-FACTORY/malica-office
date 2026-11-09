@@ -4320,13 +4320,6 @@ export const fr = {
   "pme.joindre.horsLigne":
     "Pas de réseau : le document est gardé et partira au retour du réseau. Joignez-le ensuite depuis la pièce.",
   "pme.joindre.dejaLa": "Ou un document déjà là",
-  "pme.compta.votre": "Votre comptabilité",
-  "pme.compta.mandat": "Mandat actif · {count} sociétés",
-  "pme.compta.mandat#one": "Mandat actif · {count} société",
-  "pme.compta.mandat#other": "Mandat actif · {count} sociétés",
-  "pme.compta.aRepondre": "{count} à répondre",
-  "pme.compta.aRepondre#one": "{count} retour à faire",
-  "pme.compta.aRepondre#other": "{count} retours à faire",
   "pme.compta.onglet.repondre": "À répondre",
   "pme.compta.onglet.transmis": "Transmis",
   "pme.compta.onglet.mandat": "Mandat",
