@@ -195,7 +195,6 @@
   },
   "titres_de_page_figes": {
     "apps/web/src/routes/__root.tsx": "Malica Office",
-    "apps/web/src/routes/_authenticated/cabinet.abonnements.tsx": "Abonnements des clients — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.clients.tsx": "Clients de la comptabilité — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.conseil.tsx": "Conseil — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.cours.tsx": "Cours de change — comptabilité — Malica Office",
@@ -207,7 +206,6 @@
     "apps/web/src/routes/_authenticated/cabinet.index.tsx": "Aujourd'hui — comptabilité — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.journal.tsx": "Journal du jour — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.lecteurs.tsx": "Lecteurs spécialisés — Malica Office",
-    "apps/web/src/routes/_authenticated/cabinet.mise-en-route.tsx": "Mise en route — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.notifications.tsx": "Notifications — comptabilité — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.payer.$paiementId.tsx": "Moyen de paiement — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.piece.$pieceId.tsx": "Revue d'une pièce — Malica Office",

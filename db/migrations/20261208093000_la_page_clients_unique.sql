@@ -62,6 +62,7 @@ create index if not exists acces_descentes_offre_idx
   on facturation.acces_descentes (offre_code);
 
 alter table facturation.acces_descentes enable row level security;
+alter table facturation.acces_descentes force row level security;
 
 drop policy if exists acces_descentes_lire on facturation.acces_descentes;
 create policy acces_descentes_lire on facturation.acces_descentes
@@ -506,6 +507,7 @@ declare
   v_paye  boolean;
   v_lic   uuid;
   v_max   smallint;
+  v_inclus smallint;
 begin
   if not app.has_org_role(p_cabinet, array['expert'])
      or not exists (select 1 from identity.engagements e
@@ -534,6 +536,17 @@ begin
                 where m.tenant_id = p_pme
                   and lower(coalesce(app.email_du_membre(m.user_id), '')) = v_email) then
       raise exception 'refus.invitation.deja_membre' using errcode = '22023';
+    end if;
+    -- Comme `place_offrir` : depuis l'application installée, une place au-delà
+    -- des places incluses se vend, et elle ne se vend pas là (Google Play).
+    select sieges_inclus into v_inclus from facturation.droits_v where licence_id = v_lic;
+    if coalesce(current_setting('malica.client_coque', true), '') = 'oui'
+       and not exists (select 1 from identity.invitations i
+                        where i.tenant_id = p_pme and lower(i.email) = v_email
+                          and i.accepted_at is null and i.revoked_at is null
+                          and i.expires_at > now())
+       and facturation.places_engagees(v_lic) >= coalesce(v_inclus, 0) then
+      raise exception 'refus.place.incluses_prises' using errcode = 'check_violation';
     end if;
     if not exists (select 1 from identity.invitations i
                     where i.tenant_id = p_pme and lower(i.email) = v_email
