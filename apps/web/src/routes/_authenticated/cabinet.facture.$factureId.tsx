@@ -38,13 +38,13 @@ export const Route = createFileRoute("/_authenticated/cabinet/facture/$factureId
       {
         name: "description",
         content:
-          "Une facture d'honoraires du cabinet : brouillon modifiable, puis pièce numérotée et figée, encaissée ou annulée par avoir.",
+          "Une facture d'honoraires de la comptabilité : brouillon modifiable, puis pièce numérotée et figée, encaissée ou annulée par avoir.",
       },
       { property: "og:title", content: "Facture d'honoraires — Malica Office" },
       {
         property: "og:description",
         content:
-          "Une facture d'honoraires du cabinet : brouillon modifiable, puis pièce numérotée et figée, encaissée ou annulée par avoir.",
+          "Une facture d'honoraires de la comptabilité : brouillon modifiable, puis pièce numérotée et figée, encaissée ou annulée par avoir.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -181,7 +181,7 @@ function CabinetFacture() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["cab-hono-factures"] });
       void qc.invalidateQueries({ queryKey: ["cab-hono-synthese"] });
-      void navigate({ to: "/cabinet/honoraires" });
+      void navigate({ to: "/cabinet/clients", search: { vue: "facturation" } });
     },
     onError: surErreur,
   });
@@ -258,7 +258,8 @@ function CabinetFacture() {
       <div className="border-b border-foreground bg-background pb-3">
         <div className="flex flex-wrap items-center gap-3">
           <Link
-            to="/cabinet/honoraires"
+            to="/cabinet/clients"
+            search={{ vue: "facturation" }}
             aria-label={t("cab.hono.facture.retour")}
             className="flex h-8 w-8 shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
           >

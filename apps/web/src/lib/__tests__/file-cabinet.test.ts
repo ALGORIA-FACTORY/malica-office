@@ -96,6 +96,17 @@ describe("les piles de la file", () => {
       "a_completer",
     );
   });
+  it("prête est une promesse : sans sens connu ou en anomalie, la pièce est à compléter", () => {
+    const vue = { statut: "vue", status: "lue", doublonDe: null } as const;
+    const reserve = { ...vue, verdict: "à comptabiliser avec réserve", ecritureId: null };
+    expect(pileDe({ ...reserve, sensEtabli: false })).toBe("a_completer");
+    expect(pileDe({ ...reserve, sensEtabli: true })).toBe("pretes");
+    expect(pileDe({ ...vue, verdict: "anomalie à signaler", ecritureId: "e1" })).toBe(
+      "a_completer",
+    );
+    expect(pileDe({ ...vue, verdict: null, ecritureId: "e1" })).toBe("pretes");
+  });
+
   it("une demande de la société passe avant tout, même sur une pièce prise en charge", () => {
     expect(pileDe({ ...base, statut: "validee", demandeEnAttente: "rappel" })).toBe("demandes");
     expect(pileDe({ ...base, statut: "recue", demandeEnAttente: "suppression" })).toBe("demandes");

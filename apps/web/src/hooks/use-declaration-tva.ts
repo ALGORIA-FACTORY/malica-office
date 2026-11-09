@@ -1,4 +1,4 @@
-import { useQueries, useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import type { DeclarationTva } from "@malica/socle/ports/repositories";
@@ -37,10 +37,24 @@ export function useDeclarationTva(
   return useQuery(lecture(packId, dossierId, jour, locale));
 }
 
+/** La série se lit en un appel : douze mois, c'était douze requêtes. */
+const serie = (
+  packId: string | null | undefined,
+  dossierId: string | null | undefined,
+  jours: readonly string[],
+  locale: string,
+) => ({
+  // Commence par la clé de la lecture simple : arrêter la déclaration invalide les deux.
+  queryKey: ["declaration-tva", "serie", packId, dossierId, jours, locale],
+  queryFn: () => office().referential.declarationsTva(packId!, dossierId!, [...jours], locale),
+  enabled: Boolean(packId) && Boolean(dossierId) && jours.length > 0,
+  staleTime: 60 * 60 * 1000,
+});
+
 /**
  * Les mêmes lignes, une fois par jour demandé : une série de mois se calcule
  * chaque mois avec la déclaration de CE mois (revue de #145), jamais avec celle
- * du dernier. Rend `null` tant qu'une lecture manque.
+ * du dernier. Rend `null` tant que la lecture manque.
  */
 export function useDeclarationsTva(
   packId: string | null | undefined,
@@ -48,20 +62,17 @@ export function useDeclarationsTva(
   jours: readonly string[],
 ) {
   const { locale } = useI18n();
-  const lues = useQueries({
-    queries: jours.map((jour) => lecture(packId, dossierId, jour, locale)),
-    combine: toutesLues,
-  });
+  const { data } = useQuery(serie(packId, dossierId, jours, locale));
   return useMemo(
-    () => (lues ? new Map(jours.map((jour, i) => [jour, lues[i]!])) : null),
-    [lues, jours],
+    () => (data ? new Map(jours.map((jour, i) => [jour, data[i]!])) : null),
+    [data, jours],
   );
 }
 
 /**
- * Vrai si l'une de ces lectures a échoué après ses reprises : l'accueil sort
- * alors de son attente neutre au lieu d'attendre une donnée qui ne viendra pas
- * (revue de #222). Mêmes clés que `useDeclarationsTva` : aucune requête de plus.
+ * Vrai si la lecture a échoué après ses reprises : l'accueil sort alors de son
+ * attente neutre au lieu d'attendre une donnée qui ne viendra pas (revue de
+ * #222). Même clé que `useDeclarationsTva` : aucune requête de plus.
  */
 export function useDeclarationsTvaEnEchec(
   packId: string | null | undefined,
@@ -69,13 +80,5 @@ export function useDeclarationsTvaEnEchec(
   jours: readonly string[],
 ): boolean {
   const { locale } = useI18n();
-  return useQueries({
-    queries: jours.map((jour) => lecture(packId, dossierId, jour, locale)),
-    combine: (lectures) => lectures.some((l) => l.isError),
-  });
-}
-
-/** Une référence stable : TanStack ne recombine que si une lecture change. */
-function toutesLues(lectures: UseQueryResult<DeclarationTva>[]) {
-  return lectures.every((l) => l.data) ? lectures.map((l) => l.data!) : null;
+  return useQuery(serie(packId, dossierId, jours, locale)).isError;
 }

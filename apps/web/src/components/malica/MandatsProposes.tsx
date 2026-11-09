@@ -11,6 +11,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import type { MandatPropose } from "@malica/socle/ports/repositories";
+
 import { cleMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -18,9 +20,37 @@ import { office } from "@/verticals/malica-office/composition";
 
 import { MalicaAvatar } from "./office-ui";
 
-export function MandatsProposes({
+/**
+ * Toutes les sociétés de la personne en un seul appel : une requête par société
+ * en faisait 113 à l'ouverture de l'accueil (mesuré le 8 novembre 2026).
+ */
+export function MandatsProposesDesSocietes({
+  societes,
+  nommer,
+}: {
+  societes: readonly { id: string; name: string }[];
+  /** Le nom de la société sur chaque carte, quand la personne en a plusieurs. */
+  nommer: boolean;
+}) {
+  const ids = societes.map((s) => s.id);
+  const proposes = useQuery({
+    queryKey: ["mandats-proposes", ids],
+    queryFn: () => office().identity.mandatsProposesDesSocietes(ids),
+  });
+  return societes.map((s) => (
+    <MandatsProposes
+      key={s.id}
+      liste={proposes.data?.[s.id] ?? []}
+      tenantId={s.id}
+      societe={nommer ? s.name : undefined}
+    />
+  ));
+}
+
+function MandatsProposes({
   tenantId,
   societe,
+  liste,
 }: {
   tenantId: string;
   /**
@@ -28,16 +58,12 @@ export function MandatsProposes({
    * plusieurs : sans en-tête qui la nomme (3 novembre 2026), la carte le dit.
    */
   societe?: string | undefined;
+  liste: readonly MandatPropose[];
 }) {
   const { t, locale } = useI18n();
   const qc = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
-
-  const proposes = useQuery({
-    queryKey: ["mandats-proposes", tenantId],
-    queryFn: () => office().identity.mandatsProposes(tenantId),
-  });
 
   const repondre = useMutation({
     mutationFn: (input: { id: string; cabinet: string; accepte: boolean }) =>
@@ -49,14 +75,13 @@ export function MandatsProposes({
           ? t("pme.mandat.accepte", { cabinet: input.cabinet })
           : t("pme.mandat.refuse"),
       );
-      await qc.invalidateQueries({ queryKey: ["mandats-proposes", tenantId] });
+      await qc.invalidateQueries({ queryKey: ["mandats-proposes"] });
       await qc.invalidateQueries({ queryKey: cleMonCabinet(tenantId) });
     },
     onError: (e: unknown) =>
       setErreur(texteDeLErreur(e, "components/malica/MandatsProposes", t("pme.mandat.erreur"))),
   });
 
-  const liste = proposes.data ?? [];
   if (liste.length === 0 && !message && !erreur) return null;
 
   const dateLisible = (iso: string) =>

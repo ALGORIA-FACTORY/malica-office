@@ -22,7 +22,7 @@ vi.mock("@/components/malica/pme-context", () => ({
   usePme: () => ({
     tenantId: "org-essai",
     currency: "TND",
-    forfait: { ligne: { offre: "solo", prix_mensuel_ht: "30.000" } },
+    forfait: { ligne: { offre: "solo", prix_mensuel_ht: "30.000", titulaire: true } },
   }),
 }));
 vi.mock("@/hooks/use-decimales", () => ({ usePrix: () => (v: unknown) => String(v ?? "") }));

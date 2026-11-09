@@ -23,6 +23,8 @@ export interface Organization {
   jurisdiction: string;
   currency: string;
   validationMode: ValidationMode;
+  /** L'adresse du siège, quand elle a été saisie (par le cabinet à l'ouverture du dossier). */
+  adresse: string | null;
 }
 
 export interface Membership {
@@ -118,6 +120,8 @@ export interface IdentityRepository {
   ): Promise<{ id: string; name: string; tientLesLivres: boolean } | null>;
   /** Les mandats proposés à cette PME, qui attendent sa réponse. */
   mandatsProposes(pmeTenantId: string): Promise<MandatPropose[]>;
+  /** Les mêmes, pour toutes les sociétés d'une personne, en un seul appel. */
+  mandatsProposesDesSocietes(pmeTenantIds: string[]): Promise<Record<string, MandatPropose[]>>;
   repondreAuMandat(engagementId: string, accepte: boolean): Promise<{ id: string; status: string }>;
   /** Le mandat en cours du dossier, lu depuis la PME ; `null` sans mandat. */
   monMandat(pmeTenantId: string): Promise<MonMandat | null>;
@@ -202,6 +206,26 @@ export interface IdentityRepository {
    * carte n'établit rien — c'est ce geste-ci, et lui seul, qui fait foi.
    */
   etablirFiche(input: NouvelleFiche): Promise<{ id: string }>;
+  /** La comptabilité corrige le nom, le matricule (avant toute pièce) ou l'adresse. */
+  modifierDossier(input: {
+    cabinetId: string;
+    pmeId: string;
+    nom: string;
+    legalId: string;
+    adresse: string | null;
+  }): Promise<{ id: string; name: string; legalId: string; adresse: string | null }>;
+  /** Une liste à importer, vérifiée ligne par ligne ; rien n'est créé. */
+  verifierDossiers(
+    cabinetId: string,
+    lignes: Array<{ matricule: string; raison_sociale: string; email: string }>,
+  ): Promise<LigneVerifiee[]>;
+  etatDesClients(cabinetId: string): Promise<EtatDuClient[]>;
+  /** Donnée si la comptabilité paie l'abonnement, suggérée au propriétaire sinon. */
+  placePourLeClient(
+    cabinetId: string,
+    pmeId: string,
+    email: string,
+  ): Promise<{ mode: "donnee" | "suggeree" }>;
   /** Le prénom salue, le nom complet facture. `null` tant que rien n'est écrit. */
   monProfil(): Promise<MonProfil | null>;
   /** Un champ vide s'efface ; la base compose « Prénom Nom ». */
@@ -244,6 +268,45 @@ export interface RegimeDisponible {
 export interface FormeDisponible {
   axe: "forme" | "mode";
   code: string;
+}
+
+/** Une descente d'offre que la comptabilité qui paie demande au dirigeant. */
+export interface DescenteDemandee {
+  descente_id: string;
+  offre_code: string;
+  comptabilite: string;
+  propose_le: string;
+}
+
+/** Ce que la page Clients sait de chaque client, en un appel. */
+export interface EtatDuClient {
+  tenantId: string;
+  adresse: string | null;
+  dirigeantPresent: boolean;
+  invitationEmail: string | null;
+  invitationEnvoyee: string | null;
+  invitationExpiree: boolean;
+  accesId: string | null;
+  accesStatut: string | null;
+  accesOffre: string | null;
+  descenteOffre: string | null;
+  licenceId: string | null;
+  titulaireNom: string | null;
+  forfaitOffre: string | null;
+  organisations: number | null;
+  organisationsIncluses: number | null;
+  siegesOccupes: number | null;
+  siegesInclus: number | null;
+  /** Les invitations à une place, envoyées et pas encore acceptées. */
+  placesEnAttente: number;
+}
+
+/** Le résultat de la vérification d'une ligne à importer. */
+export interface LigneVerifiee {
+  ligne: number;
+  statut: "pret" | "existant" | "deja_client" | "a_corriger";
+  motif: string | null;
+  organisation: string | null;
 }
 
 export interface FicheCourante {
@@ -363,6 +426,13 @@ export interface ReferentialRepository {
     jour: string,
     locale?: string,
   ): Promise<DeclarationTva>;
+  /** Les mêmes lignes pour plusieurs jours, en un seul appel, dans l'ordre des jours. */
+  declarationsTva(
+    packId: string,
+    dossierId: string,
+    jours: string[],
+    locale?: string,
+  ): Promise<DeclarationTva[]>;
   /**
    * La règle de change du dossier au jour dit, résolue (R10) : chaque code,
    * sa valeur, qui l'a décidée, et ce que le cabinet peut y choisir.
@@ -1356,6 +1426,13 @@ export interface PieceLue {
    */
   accompagne?: boolean;
   /**
+   * Un document joint à sa pièce — un BL ou un avoir joint à sa facture, un
+   * document non lu joint à une pièce lue (`app.piece_jointe`, planche 3) :
+   * il part avec elle, sans lecture. Jamais « à lire », jamais « à envoyer »
+   * à lui seul.
+   */
+  jointe?: boolean;
+  /**
    * Où la pièce est — et c'est ce qui décide si elle peut être lue.
    *
    * Une pièce `personnel` n'est jamais lue (B6). L'écran qui l'affiche doit
@@ -2205,6 +2282,8 @@ export interface QueueItem {
   confiance: number | null;
   /** Le verdict de la dernière analyse : il dit si une écriture peut se proposer. */
   verdict?: string | null;
+  /** Le sens de la pièce est connu : sans lui, aucune écriture ne se propose. */
+  sensEtabli?: boolean;
   /**
    * Ce que la PME demande sur cette pièce, et qui attend le cabinet.
    *
@@ -3911,7 +3990,16 @@ export interface MonForfait {
   sieges_occupes: number | string | null;
   sieges_inclus: number | string | null;
   sieges_max: number | string | null;
+  /**
+   * Ce que la société paie elle-même. Quand sa comptabilité a choisi
+   * l'abonnement, c'est le seul complément d'une offre plus haute — `null`
+   * s'il n'y en a pas : la société ne voit jamais ce que paie la comptabilité.
+   */
   prix_mensuel_ht: string | null;
+  /** Vrai pour le propriétaire principal, qu'un prix soit montré ou non. */
+  titulaire: boolean | null;
+  /** Le nom de la comptabilité qui a choisi l'abonnement ; `null` si la société paie seule. */
+  pris_en_charge_par: string | null;
 }
 
 /** Un siège occupé — une personne, sur une organisation de la licence. */
@@ -4062,6 +4150,23 @@ export interface FacturationRepository {
   abonnementsDuCabinet(cabinetId: string): Promise<AbonnementAttribue[]>;
   abonnementsPourMoi(tenantId: string): Promise<AbonnementPropose[]>;
   facturesDuCabinet(cabinetId: string): Promise<FactureDuCabinet[]>;
+  /** Montée sur-le-champ, descente à l'accord du dirigeant, proposition changée avant son arrivée. */
+  changerOffreAbonnement(
+    accesId: string,
+    offre: string,
+  ): Promise<{
+    acces_id: string;
+    effet: "immediat" | "accord_attendu" | "proposition" | "inchange";
+    descente_id?: string;
+  }>;
+  /** La comptabilité arrête de payer : l'abonnement revient au dirigeant, prévenu. */
+  arreterAbonnement(accesId: string): Promise<{ acces_id: string; effet: string }>;
+  /** La descente demandée par la comptabilité, à trancher ; `null` s'il n'y en a pas. */
+  descentePourMoi(tenantId: string): Promise<DescenteDemandee | null>;
+  repondreDescente(
+    descenteId: string,
+    accepte: boolean,
+  ): Promise<{ descente_id: string; statut: string }>;
   lignesDeFacture(factureId: string): Promise<LigneDeFacture[]>;
 }
 
@@ -4146,7 +4251,12 @@ export interface OffreDeLaGrille {
   code: string;
   libelle: string;
   rang: number;
-  prix_mensuel_ht: string;
+  /**
+   * Ce que la société paierait par mois. Quand sa comptabilité a choisi
+   * l'abonnement : le complément au-dessus de l'offre choisie, et `null` pour
+   * l'offre choisie et celles d'en dessous — jamais le prix que paie la comptabilité.
+   */
+  prix_mensuel_ht: string | null;
   lectures_par_organisation: number;
   /** Les lectures que l'offre garantit, sociétés incluses comprises. */
   lectures_incluses: number;

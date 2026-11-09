@@ -29,6 +29,7 @@ import {
   InkTable,
   InkTableRow,
   MalicaNote,
+  SectionRepliable,
   SectionTitle,
   SignalLight,
 } from "@/components/malica/office-ui";
@@ -325,6 +326,8 @@ function CabinetReviewDeLaPiece() {
   const vivants = (paiements.data ?? []).filter((p) => !p.eteint || p.annulationAInscrire);
   const annules = (paiements.data ?? []).filter((p) => p.eteint && !p.annulationAInscrire);
   const [annulesOuverts, setAnnulesOuverts] = useState(false);
+  const [signalementsOuverts, setSignalementsOuverts] = useState(false);
+  const [journalOuvert, setJournalOuvert] = useState(false);
 
   /**
    * Les moyens du pack, traduits, à la date de la pièce.
@@ -611,7 +614,7 @@ function CabinetReviewDeLaPiece() {
         >
           ←
         </Link>
-        <div className="min-w-0 flex-1">
+        <div className="order-last min-w-0 basis-full sm:order-none sm:basis-0 sm:flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
             {t("cab.review.ref")}
             {/*
@@ -632,7 +635,7 @@ function CabinetReviewDeLaPiece() {
               </>
             ) : null}
           </p>
-          <h1 className="mt-1 truncate text-[22px] font-semibold leading-tight tracking-[-0.02em]">
+          <h1 className="mt-1 line-clamp-2 text-[22px] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
             {dansLaFile?.clientName ?? t("cab.review.title")}
             {dansLaFile?.libelle ? (
               <span className="text-text-2"> — {dansLaFile.libelle}</span>
@@ -663,7 +666,7 @@ function CabinetReviewDeLaPiece() {
           ) : null}
         </div>
         <SignalLight tone={feuDuStatut(statut)} label={t(MOT_CABINET[statut])} />
-        <span className="flex shrink-0 gap-1">
+        <span className="ms-auto flex shrink-0 gap-1 sm:ms-0">
           <button
             type="button"
             onClick={() => precedente && allerA(precedente.pieceId)}
@@ -1060,9 +1063,20 @@ function CabinetReviewDeLaPiece() {
 
           {extraction && extraction.flags.length > 0 ? (
             <div className="border border-s-2 border-border border-s-signal-warn bg-card p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-signal-warn">
-                {t("pme.read.flags")}
-              </p>
+              <button
+                type="button"
+                aria-expanded={signalementsOuverts}
+                onClick={() => setSignalementsOuverts((o) => !o)}
+                className="flex min-h-[44px] w-full items-center justify-between gap-3 text-start text-[11px] font-semibold uppercase tracking-wide text-signal-warn"
+              >
+                <span className="flex items-baseline gap-2">
+                  <span aria-hidden className="text-[11px] opacity-60">
+                    {signalementsOuverts ? "−" : "+"}
+                  </span>
+                  {t("pme.read.flags")}
+                </span>
+                <span className="num">{grouperLesSignalements(extraction.flags).length}</span>
+              </button>
               {/*
                * Les signalements se disent UNE FOIS par cause.
                *
@@ -1071,18 +1085,20 @@ function CabinetReviewDeLaPiece() {
                * identiques. Cinq fois la même cause, sur cinq champs : c'est
                * une information, pas cinq.
                */}
-              <ul className="mt-2 space-y-1 text-[12px] text-muted-foreground">
-                {grouperLesSignalements(extraction.flags).map((g, index) => (
-                  <li key={index}>
-                    <span className="font-medium text-foreground">
-                      {g.champs.map((c) => libelleDuChamp(c, t)).join(" · ")}
-                    </span>
-                    {" — "}
-                    {libelleDuCode(g.code, t)}
-                    {g.detail ? <span className="num"> {g.detail}</span> : null}
-                  </li>
-                ))}
-              </ul>
+              {signalementsOuverts ? (
+                <ul className="mt-2 space-y-1 text-[12px] text-muted-foreground">
+                  {grouperLesSignalements(extraction.flags).map((g, index) => (
+                    <li key={index}>
+                      <span className="font-medium text-foreground">
+                        {g.champs.map((c) => libelleDuChamp(c, t)).join(" · ")}
+                      </span>
+                      {" — "}
+                      {libelleDuCode(g.code, t)}
+                      {g.detail ? <span className="num"> {g.detail}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
         </section>
@@ -1154,37 +1170,43 @@ function CabinetReviewDeLaPiece() {
 
             <CeQueLeLecteurALu pieceId={pieceId} />
 
-            <SectionTitle>{t("cab.review.audit")}</SectionTitle>
-            {(audit.data ?? []).length === 0 ? (
-              <EmptyState>{t("cab.review.audit.empty")}</EmptyState>
-            ) : (
-              <ul className="grid gap-px border border-border bg-border text-[12px]">
-                {(audit.data ?? []).map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="flex items-baseline justify-between gap-3 bg-card px-3 py-2"
-                  >
-                    <span>
-                      {libelleDeLAction(entry.action, t, entry.payload)}
-                      {entry.service ? (
-                        <span className="text-muted-foreground">
-                          {" · "}
-                          {libelleDuService(entry.service, t)}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="num shrink-0 text-muted-foreground">
-                      {new Intl.DateTimeFormat(locale, {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }).format(new Date(entry.at))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <SectionRepliable
+              titre={t("cab.review.audit")}
+              ouvert={journalOuvert}
+              onBascule={() => setJournalOuvert((o) => !o)}
+              resume={<span className="num">{(audit.data ?? []).length}</span>}
+            >
+              {(audit.data ?? []).length === 0 ? (
+                <EmptyState>{t("cab.review.audit.empty")}</EmptyState>
+              ) : (
+                <ul className="grid gap-px border border-border bg-border text-[12px]">
+                  {(audit.data ?? []).map((entry) => (
+                    <li
+                      key={entry.id}
+                      className="flex items-baseline justify-between gap-3 bg-card px-3 py-2"
+                    >
+                      <span>
+                        {libelleDeLAction(entry.action, t, entry.payload)}
+                        {entry.service ? (
+                          <span className="text-muted-foreground">
+                            {" · "}
+                            {libelleDuService(entry.service, t)}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="num shrink-0 text-muted-foreground">
+                        {new Intl.DateTimeFormat(locale, {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }).format(new Date(entry.at))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionRepliable>
           </div>
         </section>
       </div>

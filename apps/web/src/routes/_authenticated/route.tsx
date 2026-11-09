@@ -3,6 +3,7 @@ import {
   createFileRoute,
   Outlet,
   redirect,
+  useNavigate,
   useRouteContext,
   useRouter,
 } from "@tanstack/react-router";
@@ -12,13 +13,15 @@ import { versionClient } from "@/capabilities/coque";
 import { localeRangee, useI18n } from "@/i18n";
 import { chargerLesEspaces } from "@/i18n/dictionnaires";
 import { garderLeCache, restaurerLeCache } from "@/lib/cache-de-l-appareil";
+import { SESSION_PERDUE } from "@/verticals/malica-office/adapters/http/auth";
 import { EchecAuth } from "@malica/socle/ports/auth";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    // `session()` ne touche pas la base : elle ne fait que lire le jeton. Cette
-    // garde s'exécute à chaque navigation, elle doit rester gratuite.
+    // Cette garde s'exécute à chaque navigation : elle doit rester gratuite.
+    // `session()` rend le compte déjà connu sans aller au réseau, et ne le
+    // relit qu'en arrière-plan (`adapters/http/auth.ts`, 8 novembre 2026).
     // La composition est importée ici, à la demande : cette garde part avec le
     // premier écran de toutes les pages, et la vitrine n'en a pas l'usage.
     // Les libellés des espaces (cabinet, PME, tour) arrivent avant leur
@@ -57,8 +60,20 @@ const ATTENTE_MAX_MS = 250;
 
 function AvecLeCacheDeLAppareil() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { user } = useRouteContext({ from: "/_authenticated" });
   const [pret, setPret] = useState(false);
+
+  // La session a pris fin ailleurs (relue en arrière-plan) : retour à la
+  // connexion, sans rien garder de l'écran.
+  useEffect(() => {
+    const perdue = () => {
+      qc.clear();
+      void navigate({ to: "/auth" });
+    };
+    window.addEventListener(SESSION_PERDUE, perdue);
+    return () => window.removeEventListener(SESSION_PERDUE, perdue);
+  }, [qc, navigate]);
 
   useEffect(() => {
     let vivant = true;

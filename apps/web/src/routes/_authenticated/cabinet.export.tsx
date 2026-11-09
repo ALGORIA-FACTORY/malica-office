@@ -39,7 +39,7 @@ export const Route = createFileRoute("/_authenticated/cabinet/export")({
       { property: "og:title", content: "Export FEC et CSV — Malica Office" },
       {
         property: "og:description",
-        content: "Sortie de données du cabinet : FEC, CSV des écritures, CSV du plan.",
+        content: "Sortie de données de la comptabilité : FEC, CSV des écritures, CSV du plan.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

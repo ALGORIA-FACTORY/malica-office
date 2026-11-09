@@ -64,6 +64,8 @@ export interface PmeContextValue {
    * que de le fabriquer à moitié.
    */
   matricule: string | null;
+  /** L'adresse du siège, quand elle est connue — l'accueil la montre au lieu d'un trait. */
+  adresse: string | null;
   /**
    * Les dossiers de cet utilisateur, et de quoi en changer.
    *

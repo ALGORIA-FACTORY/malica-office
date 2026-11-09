@@ -170,7 +170,8 @@ export const facturation = {
   async monForfait(db: Requete, tenantId?: string | null) {
     const { rows } = await db.query(
       `select offre, statut, lectures_droit, lectures_consommees, lectures_restantes,
-              organisations, sieges_occupes, sieges_inclus, sieges_max, prix_mensuel_ht
+              organisations, sieges_occupes, sieges_inclus, sieges_max, prix_mensuel_ht,
+              titulaire, pris_en_charge_par
          from public.mon_forfait($1::uuid)`,
       [tenantId ?? null],
     );
@@ -800,6 +801,51 @@ export const facturation = {
     const { rows } = await db.query<{ r: { acces_id: string; statut: string } }>(
       `select public.acces_repondre($1, $2) as r`,
       [accesId, accepte],
+    );
+    return rows[0]!.r;
+  },
+
+  /**
+   * La comptabilité change l'offre qu'elle paie : une montée s'applique
+   * sur-le-champ (le dirigeant est prévenu), une descente attend son accord ;
+   * avant l'arrivée du dirigeant, la proposition change simplement.
+   */
+  async changerOffreAbonnement(db: Requete, accesId: string, offre: string) {
+    const { rows } = await db.query<{
+      r: { acces_id: string; effet: string; descente_id?: string };
+    }>(`select public.acces_changer_offre($1, $2) as r`, [accesId, offre]);
+    return rows[0]!.r;
+  },
+
+  /** La comptabilité arrête de payer : l'abonnement revient au dirigeant, prévenu. */
+  async arreterAbonnement(db: Requete, accesId: string) {
+    const { rows } = await db.query<{ r: { acces_id: string; effet: string } }>(
+      `select public.acces_arreter($1) as r`,
+      [accesId],
+    );
+    return rows[0]!.r;
+  },
+
+  /** La descente que la comptabilité demande, à trancher par le dirigeant. */
+  async descentePourMoi(db: Requete, tenantId: string) {
+    const { rows } = await db.query(
+      `select descente_id, offre_code, comptabilite, propose_le::text
+         from public.acces_descente_pour_moi($1)`,
+      [tenantId],
+    );
+    return (rows[0] ?? null) as {
+      descente_id: string;
+      offre_code: string;
+      comptabilite: string;
+      propose_le: string;
+    } | null;
+  },
+
+  /** Le dirigeant accepte ou refuse la descente demandée. */
+  async repondreDescente(db: Requete, descenteId: string, accepte: boolean) {
+    const { rows } = await db.query<{ r: { descente_id: string; statut: string } }>(
+      `select public.acces_descente_repondre($1, $2) as r`,
+      [descenteId, accepte],
     );
     return rows[0]!.r;
   },

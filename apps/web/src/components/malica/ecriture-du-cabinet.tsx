@@ -47,6 +47,7 @@ import {
   type EcritureEnSaisie,
 } from "@/lib/ecriture-du-cabinet";
 import { AffichageSignale } from "@/components/malica/affichage-signale";
+import { libelleDuControle } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnChiffres, montant } from "@/lib/lisible";
 import { MOT_CABINET } from "@/lib/statut";
@@ -400,6 +401,28 @@ export function EcritureDuCabinet({
           ]}
         />
       </h2>
+
+      {/* Une écriture ancienne que le dernier jugement met en défaut : on le dit avant Valider. */}
+      {vivante !== null &&
+      !prise &&
+      proposition?.ok === false &&
+      (proposition.verdictCode === "anomalie" || proposition.verdictCode === "rejet") ? (
+        <p
+          role="status"
+          className="flex items-center border border-signal-warn bg-card px-3.5 py-2.5 text-[13px]"
+        >
+          {t("cab.ecriture.aRevoir")}
+          {/* Les codes des contrôles, traduits : `raison` est une phrase française (R12). */}
+          {(proposition.controlesEnDefaut ?? []).length > 0 ? (
+            <Aide
+              titre={t("cab.ecriture.aRevoir")}
+              paragraphes={(proposition.controlesEnDefaut ?? []).map((code) => ({
+                texte: libelleDuControle(code, t),
+              }))}
+            />
+          ) : null}
+        </p>
+      ) : null}
 
       {illisible ? (
         <p

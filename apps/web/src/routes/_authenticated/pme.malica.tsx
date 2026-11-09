@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/pme/malica")({
       {
         name: "description",
         content:
-          "Posez votre question comptable, fiscale ou juridique. Malica cite l'article et sa version en vigueur, et remet au cabinet ce qui engage votre dossier.",
+          "Posez votre question comptable, fiscale ou juridique. Malica cite l'article et sa version en vigueur, et remet à votre comptabilité ce qui engage votre dossier.",
       },
       { property: "og:title", content: "Malica — Malica Office" },
       {

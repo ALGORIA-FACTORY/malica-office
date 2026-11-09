@@ -22,7 +22,23 @@ test("le cabinet liste ses dossiers et en ouvre un", async ({ page }) => {
     .getByText(/SOTUMAG/)
     .first()
     .click();
-  await expect(page).toHaveURL(/\/cabinet\/(dossier|clients)\//);
+  // La fiche du client s'ouvre sur la page Clients unique (8 novembre 2026).
+  await expect(page).toHaveURL(/\/cabinet\/clients\?client=/);
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Mandat et honoraires", exact: true })).toBeVisible();
+});
+
+test("les anciennes pages Honoraires et Abonnements mènent à la vue Facturation", async ({
+  page,
+}) => {
+  for (const chemin of ["honoraires", "abonnements"]) {
+    await page.goto(`/cabinet/${chemin}`);
+    await expect(page).toHaveURL(/\/cabinet\/clients\?vue=facturation$/);
+    await expect(page.getByRole("tab", { name: "Facturation", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  }
 });
 
 test("une panne du portefeuille ne devient pas un mandat vide et la relance retrouve les dossiers", async ({
@@ -64,8 +80,6 @@ for (const largeur of [390, 1440]) {
     "notifications",
     "conseil",
     "pilotage",
-    "honoraires",
-    "abonnements",
     "export",
     "reglages",
     "plan",
@@ -105,8 +119,8 @@ for (const largeur of [390, 1440]) {
  * des boutons de 48 px, et le ⓘ qui dit l'INCERTAIN.
  */
 for (const [locale, onglet, pourLeCabinet, incertain] of [
-  ["fr", "Comptabilité", "Pour tout le cabinet", "INCERTAIN"],
-  ["ar", "المحاسبة", "لكامل المكتب", "غير مؤكد"],
+  ["fr", "Comptabilité", "Pour toute la comptabilité", "INCERTAIN"],
+  ["ar", "المحاسبة", "لكامل المحاسبة", "غير مؤكد"],
 ] as const) {
   test(`réglages comptabilité : douze sujets à 390 px, en ${locale}`, async ({ page }) => {
     const plantages: string[] = [];
@@ -217,33 +231,34 @@ test("la bibliothèque ouvre les documents réels et prépare une sélection", a
 });
 
 for (const largeur of [390, 1440]) {
-  test(`abonnements : vues séparées et formulaire à la demande à ${largeur} px`, async ({
+  test(`clients : fiche à cinq onglets et vue Facturation à ${largeur} px`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({ width: largeur, height: 900 });
-    await page.goto("/cabinet/abonnements");
-    await expect(page.locator("#cab-abonnement-formulaire")).toHaveCount(0);
-    await page.locator(".cab-library-header > button").click();
-    await expect(page.locator("#cab-abonnement-formulaire")).toBeVisible();
-    await page.locator(".cab-library-header > button").click();
-    await expect(page.locator("#cab-abonnement-formulaire")).toHaveCount(0);
-    const vues = page.locator(".cab-view-switch button");
-    await vues.nth(1).click();
-    await expect(vues.nth(1)).toHaveAttribute("aria-pressed", "true");
-    await expect(page.locator(".cab-library-search")).toHaveCount(0);
-    await vues.nth(0).click();
-    await expect(page.locator(".cab-library-search")).toBeVisible();
-    await page.addStyleTag({
-      content:
-        "[data-repere] { outline: 2px solid #7754c4; position: relative; } [data-repere]::after { content: attr(data-repere); position: absolute; top: -10px; right: 8px; background: #7754c4; color: white; padding: 2px 8px; border-radius: 20px; font: 12px sans-serif; z-index: 5; }",
-    });
-    await page.locator(".cab-summary-grid").evaluate((el) => {
-      el.setAttribute("data-repere", "1 · Vue rapide");
-    });
-    await page.locator(".cab-library-toolbar").evaluate((el) => {
-      el.setAttribute("data-repere", "2 · Clients / factures / recherche");
-    });
-    await testInfo.attach(`abonnements-annote-${largeur}`, {
+    await page.goto("/cabinet/clients");
+    await page.getByRole("button", { name: "Ouvrir", exact: true }).first().click();
+    const fiche = page.getByRole("dialog");
+    for (const onglet of [
+      "Société et fiche",
+      "Propriétaire et places",
+      "Mandat et honoraires",
+      "Abonnement",
+      "Factures",
+    ]) {
+      await fiche.getByRole("tab", { name: onglet, exact: true }).click();
+      await expect(fiche.getByRole("tab", { name: onglet, exact: true })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    }
+    await fiche.getByRole("button", { name: "Fermer", exact: true }).first().click();
+    await page.getByRole("tab", { name: "Facturation", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Honoraires et mandats" })).toBeVisible();
+    const debordement = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(debordement).toBeLessThanOrEqual(1);
+    await testInfo.attach(`clients-facturation-${largeur}`, {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     });
@@ -273,11 +288,13 @@ test("invitation : accès direct et adresse invalide refusée sans envoi", async
     const appel = requete.postDataJSON() as { depot?: string; methode?: string };
     if (appel.depot === "collab" && appel.methode === "inviter") envois.push(requete.url());
   });
-  await page.goto("/cabinet/mise-en-route?etape=2");
-  const adresse = page.locator("#cab-inviter-equipe input[type=email]");
+  // L'invitation se fait sur place, dans Réglages · Équipe (8 novembre 2026).
+  await page.goto("/cabinet/reglages");
+  await page.getByRole("button", { name: "Inviter un collaborateur", exact: true }).click();
+  const adresse = page.locator("#inviter-l-equipe input[type=email]");
   await expect(adresse).toBeVisible();
   await adresse.fill("adresse-invalide");
-  await page.locator('button[form="cab-inviter-equipe"]').click();
+  await page.locator('#inviter-l-equipe button[type="submit"]').click();
   expect(await adresse.evaluate((el: HTMLInputElement) => el.validity.valid)).toBe(false);
   expect(envois).toEqual([]);
 });
@@ -616,6 +633,13 @@ test("au clic : chaque pile s'ouvre et mène à une pièce", async ({ page }) =>
   await page.locator('a[href*="/cabinet/piece/"]').first().click();
   await expect(page).toHaveURL(/\/cabinet\/piece\//);
   await expect(page.getByRole("tab", { name: "Écritures" })).toBeVisible({ timeout: 20_000 });
+  // Le journal de la pièce se replie et se déplie.
+  const journal = page.getByRole("button", { name: "Journal de la pièce" });
+  await expect(journal).toHaveAttribute("aria-expanded", "false");
+  await journal.click();
+  await expect(journal).toHaveAttribute("aria-expanded", "true");
+  await journal.click();
+  await expect(journal).toHaveAttribute("aria-expanded", "false");
 });
 
 test("au clic : l'écriture proposée se lit, se modifie, se valide et passe à la suite", async ({
@@ -728,4 +752,26 @@ test("au clic : les notifications se regroupent et les informations se déplient
     await infos.click();
     await expect(page.getByRole("button", { name: "Masquer les informations" })).toBeVisible();
   }
+});
+
+test("l'accueil de la société lit ses sociétés et ses mois en un appel", async ({ browser }) => {
+  const contexte = await browser.newContext({ storageState: ETAT_DIRIGEANT });
+  const page = await contexte.newPage();
+  const appels: string[] = [];
+  page.on("request", (r) => {
+    if (!r.url().endsWith("/rpc") || !r.postData()) return;
+    const { depot, methode } = JSON.parse(r.postData()!) as { depot: string; methode: string };
+    appels.push(`${depot}.${methode}`);
+  });
+  await page.goto("/pme");
+  await expect
+    .poll(() => appels.filter((a) => a === "identite.mandatsProposesDesSocietes").length, {
+      timeout: 20_000,
+    })
+    .toBe(1);
+  await page.waitForLoadState("networkidle");
+  expect(appels.filter((a) => a === "identite.mandatsProposes")).toEqual([]);
+  // Le mois affiché peut garder sa lecture ; la série de douze mois n'en fait qu'une.
+  expect(appels.filter((a) => a === "referentiel.declarationTva").length).toBeLessThanOrEqual(1);
+  await contexte.close();
 });

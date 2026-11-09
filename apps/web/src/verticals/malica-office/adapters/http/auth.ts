@@ -14,6 +14,7 @@
 import { EchecAuth, type AuthPort, type Compte } from "@malica/socle/ports/auth";
 import { transport } from "@/lib/transport";
 import { ErreurReseau } from "@/lib/transport/erreurs";
+import { ecouterLaDeconnexion } from "@/lib/transport/etat";
 
 async function appeler(
   chemin: string,
@@ -44,24 +45,95 @@ interface SessionOuverte {
 async function retenir(reponse: Response): Promise<Compte> {
   const session = (await reponse.json()) as SessionOuverte;
   await transport().retenirLaSession(session.jeton, session.jetonRafraichissement);
+  connaitre(session.utilisateur);
   return session.utilisateur;
+}
+
+/*
+ * ===================================== LA SESSION, CONNUE UNE FOIS
+ *
+ * 8 novembre 2026, mesuré sur l'application de la coque (latence 150 ms,
+ * processeur ×4) : CHAQUE changement d'écran commençait par `GET
+ * /auth/session` — la garde de `_authenticated` l'appelle à chaque
+ * navigation — et les données de l'écran ne partaient qu'à son retour. Un
+ * aller-retour entier de plus par écran, trois de plus à l'ouverture.
+ *
+ * Le compte (`id`, `email`) ne change pas pendant une session : il est connu
+ * à la connexion, ou au premier appel, et rendu aussitôt ensuite. Il se
+ * relit en arrière-plan quand il a plus de cinq minutes, sans retenir
+ * l'écran ; si la session a pris fin ailleurs (révoquée, expirée), l'événement
+ * `malica:session-perdue` ramène à la connexion. Les appels de données, eux,
+ * portent toujours leur jeton : un compte gardé en mémoire n'ouvre rien.
+ */
+const FRAICHE_MS = 5 * 60_000;
+let connue: { compte: Compte; le: number } | null = null;
+let enVol: Promise<Compte | null> | null = null;
+
+function connaitre(compte: Compte | null) {
+  connue = compte ? { compte, le: Date.now() } : null;
+}
+
+// Toute fin de session passe par le même signal — le bouton « Se
+// déconnecter », un jeton long refusé, une relance encore en 401 (transport) :
+// le compte gardé en mémoire s'oublie avec elle, sans quoi la page de
+// connexion le reprendrait et renverrait à l'intérieur (relu par Codex, #309).
+ecouterLaDeconnexion(() => {
+  connaitre(null);
+});
+
+/** La session a pris fin ailleurs : l'écran retourne à la connexion. */
+export const SESSION_PERDUE = "malica:session-perdue";
+
+/** Le compte, lu au réseau : la seule lecture qui coûte un aller-retour. */
+async function lireLaSession(): Promise<Compte | null> {
+  // La coque, au démarrage, n'a pas encore de jeton d'accès : elle le
+  // réobtient contre le jeton long, en un aller-retour, et c'est déjà la
+  // réponse. Sans jeton long, il n'y a pas de session — inutile de demander.
+  const t = transport();
+  if (!t.porteUnJeton() && (await t.jetonLong())) {
+    return t.reprendreLaSession();
+  }
+  const reponse = await appeler("/auth/session", { methode: "GET" });
+  if (reponse.status === 401) return null;
+  if (!reponse.ok) throw new EchecAuth("reseau", "session illisible");
+  const { utilisateur } = (await reponse.json()) as { utilisateur: Compte };
+  return utilisateur;
 }
 
 export function creerAuthHttp(): AuthPort {
   return {
     async session(): Promise<Compte | null> {
-      // La coque, au démarrage, n'a pas encore de jeton d'accès : elle le
-      // réobtient contre le jeton long, en un aller-retour, et c'est déjà la
-      // réponse. Sans jeton long, il n'y a pas de session — inutile de demander.
-      const t = transport();
-      if (!t.porteUnJeton() && (await t.jetonLong())) {
-        return t.reprendreLaSession();
+      if (connue) {
+        if (Date.now() - connue.le > FRAICHE_MS && !enVol) {
+          const avant = connue.compte.id;
+          enVol = lireLaSession()
+            .then((compte) => {
+              // Une déconnexion pendant la relecture a déjà tout oublié.
+              if (connue?.compte.id !== avant) return compte;
+              connaitre(compte);
+              if (!compte && typeof window !== "undefined") {
+                window.dispatchEvent(new Event(SESSION_PERDUE));
+              }
+              return compte;
+            })
+            // Hors ligne : on garde ce qu'on sait, on relira plus tard.
+            .catch(() => connue?.compte ?? null)
+            .finally(() => {
+              enVol = null;
+            });
+        }
+        return connue.compte;
       }
-      const reponse = await appeler("/auth/session", { methode: "GET" });
-      if (reponse.status === 401) return null;
-      if (!reponse.ok) throw new EchecAuth("reseau", "session illisible");
-      const { utilisateur } = (await reponse.json()) as { utilisateur: Compte };
-      return utilisateur;
+      // Plusieurs écrans qui demandent en même temps n'attendent qu'une réponse.
+      enVol ??= lireLaSession()
+        .then((compte) => {
+          connaitre(compte);
+          return compte;
+        })
+        .finally(() => {
+          enVol = null;
+        });
+      return enVol;
     },
 
     async inscription(email: string, motDePasse: string, nom?: string): Promise<Compte> {
@@ -95,6 +167,7 @@ export function creerAuthHttp(): AuthPort {
         ...(jetonRafraichissement ? { corps: { jetonRafraichissement } } : {}),
       });
       await transport().oublierLaSession();
+      connaitre(null);
     },
 
     async motDePasseOublie(email: string): Promise<void> {

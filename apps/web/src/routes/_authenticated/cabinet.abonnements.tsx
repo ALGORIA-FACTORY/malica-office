@@ -1,39 +1,13 @@
 /**
- * Abonnements — la comptabilité revendeur (règles du 20 octobre 2026).
- *
- * L'écran vit dans `components/malica/abonnements-du-cabinet.tsx` depuis le
- * 2 novembre 2026 : la tour montre le même, en lecture. Il se charge en
- * différé derrière `__COMMERCE__`, pour que la coque Android n'en garde aucun
- * morceau (`outils/coque-sans-commerce.mjs`).
+ * Les abonnements des clients vivent dans la page Clients (8 novembre 2026) :
+ * la colonne Abonnement, l'onglet Abonnement de chaque fiche, les actions en
+ * lot ; la facture Malica, dans la vue Facturation. L'ancienne adresse y mène,
+ * pour que les liens et les notifications déjà envoyés ne cassent pas.
  */
-import { createFileRoute, lazyRouteComponent, redirect } from "@tanstack/react-router";
-
-import { COMMERCE } from "@/capabilities/coque";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/cabinet/abonnements")({
-  head: () => ({
-    meta: [
-      { title: "Abonnements des clients — Malica Office" },
-      {
-        name: "description",
-        content:
-          "Les abonnements que le cabinet attribue à ses clients, leur état et ses factures mensuelles.",
-      },
-      { property: "og:title", content: "Abonnements des clients — Malica Office" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
-  // Proposer un abonnement, c'est vendre : pas dans l'application Android
-  // (`COMMERCE`). La page n'entre pas dans son paquet, et une adresse tapée
-  // ramène au cabinet.
-  beforeLoad: () => {
-    if (!COMMERCE) throw redirect({ to: "/cabinet" });
-  },
-  component: __COMMERCE__
-    ? lazyRouteComponent(
-        () => import("@/components/malica/abonnements-du-cabinet"),
-        "AbonnementsDeMonCabinet",
-      )
-    : () => null,
+  // Une redirection rendue, pas levée : au chargement direct de l'adresse,
+  // une redirection levée pendant le rendu serveur laissait une erreur vide.
+  component: () => <Navigate to="/cabinet/clients" search={{ vue: "facturation" }} replace />,
 });

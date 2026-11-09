@@ -48,6 +48,11 @@ const DE_LA_COMPTABILITE: ReadonlySet<string> = new Set([
   "acces.propose",
   "acces.accepte",
   "acces.repris",
+  "acces.monte",
+  "acces.arrete",
+  "acces.descente_demandee",
+  "place.donnee",
+  "place.suggeree",
 ]);
 
 export function sourceDe(kind: string): "comptabilite" | "malica" | "autre" {

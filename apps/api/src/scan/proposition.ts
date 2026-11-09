@@ -1045,7 +1045,7 @@ async function proposerDepuisLeJugement(
       ...(ligne.verdict ? { verdict: ligne.verdict } : {}),
       verdictCode: codeDuVerdict(ligne.verdict),
       raison:
-        "Aucune écriture ne se propose : un réglage comptable du cabinet a changé depuis le jugement de la pièce, qui attend d'être rejugée.",
+        "Aucune écriture ne se propose : un réglage comptable arrêté par la comptabilité a changé depuis le jugement de la pièce, qui attend d'être rejugée.",
       raisonCode: "reglages_perimes",
     };
   const pack = ligne.pack_version_id!;
@@ -1099,7 +1099,7 @@ async function proposerDepuisLeJugement(
     return {
       ok: false,
       raison:
-        "Deux cabinets désignent des comptes de TVA différents pour ce dossier : arrêtez-le au niveau du dossier.",
+        "Deux comptabilités désignent des comptes de TVA différents pour ce dossier : arrêtez-le au niveau du dossier.",
       raisonCode: "compte_manquant",
     };
   const [taxRates, tousLesComptes, tousLesDroits] = await Promise.all([

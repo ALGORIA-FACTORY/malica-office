@@ -491,7 +491,10 @@ export function normaliserMontants(
    */
   const signes = champs.flatMap((c, i) => (c.nom.startsWith("autre") ? [] : [brutes[i]!]));
   if (signes.length > 0 && signes.every((l) => l.length > 0 && l.every((c) => c.mineur < 0)))
-    return vide("avoir", "les montants s'impriment en négatif : un avoir, à saisir par le cabinet");
+    return vide(
+      "avoir",
+      "les montants s'impriment en négatif : un avoir, à saisir par la comptabilité",
+    );
 
   /*
    * ======================================= LE TOTAL EST UN RAPPEL, PAS UNE DONNÉE
@@ -601,6 +604,8 @@ export function normaliserMontants(
   const assiettes: Assiette[] =
     taxables.length > 0 && entree.bases.length === 1 ? ["ajoutee", "comprise", "hors"] : ["hors"];
   const tol = BigInt(p.toleranceMineure);
+  // Le TTC imprimé ne comprend pas les droits (« le TTC imprimé avant le timbre »).
+  let ttcAvantLesDroits = false;
   // Un total qu'on n'a pas su lire ne vérifie rien : il ne compte plus ici.
   const aVerifier = lu("ttc") || lu("tva");
   // L'ambiguïté se mesure sur ce qui est IMPRIMÉ : une lecture levée par
@@ -730,6 +735,45 @@ export function normaliserMontants(
         true,
       );
     }
+  }
+
+  /*
+   * ======================================= LE TTC IMPRIMÉ AVANT LE TIMBRE (8 novembre 2026)
+   *
+   * Recette au clic du staging : « Total HT 1 800,000 », « TVA 342,000 »,
+   * « Total TTC 2 142,000 », « Timbre 1,000 », « Net à payer 2 143,000 ».
+   * La mise en page la plus courante ici : le timbre vient APRÈS le TTC.
+   * L'équation l'ajoutait au TTC, la facture « ne tenait pas », et aucune
+   * écriture ne se proposait sur des montants pourtant tous prouvés.
+   *
+   * Seconde lecture, seulement quand la première n'a rien gardé, avec une TVA
+   * et un TTC lus, et aucun droit taxable : le TTC imprimé doit valoir
+   * exactement HT + TVA. Ce que le tiers doit est alors TTC + droits : deux
+   * montants imprimés et cités, rien n'est inventé.
+   */
+  if (
+    distinctes.size === 0 &&
+    (entree.autres ?? []).length > 0 &&
+    taxables.length === 0 &&
+    lu("tva") &&
+    lu("ttc") &&
+    droitsDeduits.size === 0 &&
+    tvaNonLue === null &&
+    baseDeduite === null
+  ) {
+    ttcAvantLesDroits = true;
+    const avant = combinaisonsValides(lectures);
+    if (avant.size === 1) {
+      const [retenue] = [...avant.values()];
+      return construire(
+        retenue!,
+        "tranche",
+        CONFIANCE_HT_AUTRES_COMPRIS,
+        1,
+        "le TTC imprimé précède les autres montants (timbre) : le total dû les y ajoute" + suffixe,
+      );
+    }
+    ttcAvantLesDroits = false;
   }
 
   if (distinctes.size === 0)
@@ -864,7 +908,8 @@ export function normaliserMontants(
     if (v.tva !== undefined && abs(v.tva - tvaCalculee) > tol) return false;
     if (v.ttc !== undefined) {
       const tva = v.tva ?? tvaCalculee;
-      const total = v.hts.reduce((s, h) => s + h, 0n) + tva + v.autres.reduce((s, a) => s + a, 0n);
+      const droits = ttcAvantLesDroits ? 0n : v.autres.reduce((s, a) => s + a, 0n);
+      const total = v.hts.reduce((s, h) => s + h, 0n) + tva + droits;
       // Un droit déduit vaut EXACTEMENT le reste : l'arrondi admis porte sur
       // la TVA, jamais sur un montant que le paramétrage fixe.
       if (abs(total - v.ttc) > (droitsDeduits.size > 0 ? 0n : tol)) return false;
@@ -941,7 +986,8 @@ export function normaliserMontants(
         bases: v.hts.map((h, i) => ({ ht: Number(h), taux: taux[i]! })),
         tva: tva === undefined ? null : Number(tva),
         autres: v.autres.map(Number),
-        ttc: v.ttc === undefined ? null : Number(v.ttc),
+        ttc:
+          v.ttc === undefined ? null : Number(ttcAvantLesDroits ? v.ttc + somme(v.autres) : v.ttc),
       },
       imprime,
       confiance: confianceRendue,

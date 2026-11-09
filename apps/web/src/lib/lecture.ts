@@ -61,7 +61,10 @@ export function piecesALire(pieces: readonly PieceLue[]): PieceLue[] {
     pieces
       // Un reçu ou un justificatif accompagne une pièce : la lecture le refuse,
       // l'écran ne le propose donc pas (25 octobre 2026).
-      .filter((p) => !p.gardeeLe && !p.accompagne && issueDeLecture(p).kind === "a_lire")
+      // Un document joint part avec sa pièce, sans lecture (planche 3).
+      .filter(
+        (p) => !p.gardeeLe && !p.accompagne && !p.jointe && issueDeLecture(p).kind === "a_lire",
+      )
       .sort(plusRecenteDAbord)
   );
 }
