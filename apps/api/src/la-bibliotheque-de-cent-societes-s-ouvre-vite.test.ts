@@ -275,4 +275,51 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     assert.ok(vecues.length >= AVEC_HISTOIRE, `${vecues.length} pièces qui ont vécu`);
     assert.ok(duree < BUDGET_HISTOIRE_MS, `${Math.round(duree)} ms, budget ${BUDGET_HISTOIRE_MS}`);
   });
+
+  it("DIAGNOSTIC (temporaire) : les plans", async () => {
+    const pg = (await import("pg")).default;
+    const { executerRpc } = await import("./rpc.ts");
+    for (const [nom, dossiers] of [
+      ["60", societes.slice(0, 60)],
+      ["150", societes],
+    ] as const) {
+      const c = new pg.Client({ connectionString: process.env["DATABASE_URL_ADMIN"] });
+      await c.connect();
+      const plans: string[] = [];
+      c.on("notice", (n) => {
+        if (String(n.message).includes("duration")) plans.push(String(n.message));
+      });
+      try {
+        await c.query("begin");
+        await c.query("load 'auto_explain'");
+        await c.query("set local auto_explain.log_min_duration = 100");
+        await c.query("set local auto_explain.log_analyze = on");
+        await c.query("set local auto_explain.log_nested_statements = on");
+        await c.query("set local auto_explain.log_timing = on");
+        await c.query("set local client_min_messages = log");
+        await c.query("set local role authenticated");
+        await c.query("select set_config('request.jwt.claim.sub', $1, true)", [s.gens.amel.id]);
+        await c.query("select set_config('malica.origine', 'serveur', true)");
+        const debut = performance.now();
+        await executerRpc(c as never, {
+          depot: "capture",
+          methode: "listAvecLectureDesSocietes",
+          args: [dossiers],
+        });
+        console.log(
+          `PLANS ${nom} : ${Math.round(performance.now() - debut)} ms, ${plans.length} plans`,
+        );
+        plans.forEach((p, i) => {
+          for (const morceau of p.slice(0, 40000).match(/[^\n]+/g) ?? []) {
+            console.log(`PL${nom}.${i}|${morceau}`);
+          }
+        });
+        await c.query("rollback");
+      } catch (e) {
+        console.log(`PLANS ${nom} erreur ${(e as Error).message}`);
+      } finally {
+        await c.end();
+      }
+    }
+  });
 });
