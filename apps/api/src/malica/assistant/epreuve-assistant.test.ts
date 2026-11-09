@@ -13,13 +13,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import type { EvenementDeLAssistant, FinDeLaReponse } from "@malica/socle/ports/assistant";
+import { texte as message } from "@malica/socle/conseil";
+import type { EvenementDeLAssistant } from "@malica/socle/ports/assistant";
 
 import type { AppelApi } from "../appel-local.ts";
 import type { ResultatDuConseilCite } from "../conseil/conseil-cite.ts";
 import {
   converserAvecRepli,
   type DependancesDeLAssistant,
+  type FinMesuree,
   type DossierVerifie,
   type QuestionPosee,
 } from "./agent.ts";
@@ -244,14 +246,32 @@ const INTENDANCE = new Set([
   "conversations.ajouter",
   "conversations.dernierMessage",
   "conversations.renommer",
+  // La file du cabinet : une réponse retenue y attend son comptable.
+  "conseil.creer",
 ]);
 
 interface Trace {
   appels: string[];
   journal: Array<Record<string, unknown>>;
+  /** Ce qui est parti dans la file du cabinet (`conseil.creer`). */
+  file: Array<Record<string, unknown>>;
 }
 
-function dossierFictif(options: { anthropicEpuise?: boolean; deepseekEpuise?: boolean } = {}): {
+/** Le contexte du conseil : une PME membre, sous le mandat d'un cabinet engagé. */
+const SOUS_MANDAT = {
+  cabinetId: "cab",
+  cabinetNom: "Cabinet d'essai",
+  seuil: null,
+  appelantMembre: true,
+};
+
+function dossierFictif(
+  options: {
+    anthropicEpuise?: boolean;
+    deepseekEpuise?: boolean;
+    contexte?: { cabinetId: string | null; appelantMembre: boolean } | undefined;
+  } = {},
+): {
   api: AppelApi;
   trace: Trace;
   /** Le fil tel que la base l'a rangé, sources et propositions comprises. */
@@ -265,7 +285,7 @@ function dossierFictif(options: { anthropicEpuise?: boolean; deepseekEpuise?: bo
     }>
   >;
 } {
-  const trace: Trace = { appels: [], journal: [] };
+  const trace: Trace = { appels: [], journal: [], file: [] };
   const fils = new Map<
     string,
     Array<{
@@ -371,12 +391,10 @@ function dossierFictif(options: { anthropicEpuise?: boolean; deepseekEpuise?: bo
         case "referentiel.activePack":
           return r({ id: "pack-tn" });
         case "conseil.contexte":
-          return r({
-            cabinetId: "cab",
-            cabinetNom: "Cabinet d'essai",
-            seuil: null,
-            appelantMembre: true,
-          });
+          return r(options.contexte ?? SOUS_MANDAT);
+        case "conseil.creer":
+          trace.file.push(args[0] as Record<string, unknown>);
+          return r({ id: `arbitrage-${trace.file.length}`, cabinetId: "cab" });
         case "office.extraitsTransmis":
           return r(
             [ID.P_LOYER, ID.P_VENTE].map((pieceId) => ({ pieceId, extract: EXTRAITS[pieceId] })),
@@ -649,6 +667,15 @@ function resultatsDeLaRequete(req: RequeteVue): Array<{ source: string; texte: s
   return vus;
 }
 
+/** La conclusion par défaut du Claude simulé : une règle générale, sans conseil. */
+const CONCLUSION_GENERALE = {
+  conseil: false,
+  portee: "generale",
+  certitude: 1,
+  doute: null,
+  theme: null,
+};
+
 /**
  * Un Claude qui suit le scénario du cas, étape par étape, et qui CITE comme
  * l'API : chaque phrase chiffrée part dans son bloc, accrochée au premier
@@ -736,9 +763,35 @@ function claudeSimule(etapes: EtapeSimulee[], requetes: RequeteVue[]): ClientEnF
       ev.push({ type: "content_block_stop", index });
       index += 1;
     }
+    // L'étape qui répond se conclut par l'outil final, comme la consigne le demande.
+    const conclut = !etape.outils?.length && etape.conclusion !== null;
+    if (conclut) {
+      ev.push(
+        {
+          type: "content_block_start",
+          index,
+          content_block: {
+            type: "tool_use",
+            id: `toolu_${k}_conclure`,
+            name: "conclure_reponse",
+            input: {},
+          },
+        },
+        {
+          type: "content_block_delta",
+          index,
+          delta: {
+            type: "input_json_delta",
+            partial_json: JSON.stringify(etape.conclusion ?? CONCLUSION_GENERALE),
+          },
+        },
+        { type: "content_block_stop", index },
+      );
+      index += 1;
+    }
     ev.push({
       type: "message_delta",
-      delta: { stop_reason: etape.outils?.length ? "tool_use" : "end_turn" },
+      delta: { stop_reason: etape.outils?.length || conclut ? "tool_use" : "end_turn" },
       usage: { output_tokens: 180 },
     });
     ev.push({ type: "message_stop" });
@@ -754,7 +807,7 @@ async function rejouer(
   question: QuestionPosee,
   deps: DependancesDeLAssistant,
   api: AppelApi,
-): Promise<{ fin: FinDeLaReponse; evenements: EvenementDeLAssistant[] }> {
+): Promise<{ fin: FinMesuree; evenements: EvenementDeLAssistant[] }> {
   const evenements: EvenementDeLAssistant[] = [];
   let t = 0;
   const fin = await converserAvecRepli(
@@ -792,7 +845,7 @@ describe("l'épreuve de « Parler à Malica », sans réseau", () => {
   for (const cas of JEU.filter((c) => c.modes.includes("simule"))) {
     it(`${cas.id}`, async () => {
       const { api, trace, fils } = dossierFictif();
-      const fins: FinDeLaReponse[] = [];
+      const fins: FinMesuree[] = [];
       const questions: string[] = [];
       let conversationId: string | null = null;
       for (const [k, tour] of cas.tours.entries()) {
@@ -837,6 +890,8 @@ describe("l'épreuve de « Parler à Malica », sans réseau", () => {
         note.juste,
         `${cas.id} : ${JSON.stringify(note, null, 1)}\n${fins.map((f) => f.reponse).join("\n---\n")}`,
       );
+      // Une réponse conclue « générale » part : rien n'attend le cabinet.
+      assert.equal(trace.file.length, 0, "rien ne part dans la file du cabinet");
       // Aucune écriture : le dossier fictif aurait levé « ÉCRITURE OU APPEL INATTENDU ».
       assert.ok(trace.appels.every((a) => INTENDANCE.has(a) || LECTURES_DES_OUTILS.has(a)));
     });
@@ -1020,7 +1075,7 @@ describe("les gardes de la boucle", () => {
     assert.equal(fin.mesure.repli, "deepseek");
     assert.equal(fin.mesure.motifDuRepli, "budget_claude");
     assert.equal(fin.reponse, "Votre TVA à payer est de 1090.504 TND.");
-    assert.equal(fin.chiffresRetires.length, 1);
+    assert.equal(fin.chiffresRetires, 1);
   });
 
   it("Claude en panne avant le premier mot : le repli reprend dans le même fil", async () => {
@@ -1091,5 +1146,263 @@ describe("les gardes de la boucle", () => {
     // 1200 × 0,1 + 180 × 0,5 + 3000 × 0,01 + 3000 × 0,125, par million de jetons.
     assert.equal(fin.mesure.coutUsd, 0.000615);
     assert.equal(fin.titre, "Bonjour");
+  });
+});
+
+/* ------------------------------------------------------------ la file du cabinet -- */
+
+const RELECTURE = message("fr", "pme.conseil.relecture");
+const LOYER = "Ma société doit-elle appliquer la retenue à la source sur le loyer de notre local ?";
+const REPONSE_DOSSIER = "Oui, votre société doit retenir à la source sur ce loyer.";
+const CONCLUSION_DOSSIER = {
+  conseil: true,
+  portee: "dossier",
+  certitude: 0.6,
+  doute: "Le régime du bailleur n'est pas connu.",
+  theme: "Retenue à la source sur loyer",
+};
+
+/**
+ * Un Claude qui écrit sa réponse puis, s'il y pense, la conclut par l'outil
+ * final. Il note dans `journal` quand il a fini d'envoyer chaque partie : un
+ * générateur ne reprend qu'une fois l'événement précédent traité, et l'ordre
+ * du journal dit donc si l'écran a reçu le texte AVANT la conclusion.
+ */
+function claudeQuiConclut(
+  texte: string,
+  conclusion: Record<string, unknown> | null,
+  journal: string[],
+): ClientEnFlux {
+  return async function* () {
+    yield {
+      type: "message_start",
+      message: { model: "modele-courant", usage: { input_tokens: 10, output_tokens: 1 } },
+    };
+    yield { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } };
+    yield { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: texte } };
+    yield { type: "content_block_stop", index: 0 };
+    journal.push("claude:texte");
+    if (conclusion) {
+      yield {
+        type: "content_block_start",
+        index: 1,
+        content_block: { type: "tool_use", id: "toolu_c", name: "conclure_reponse", input: {} },
+      };
+      yield {
+        type: "content_block_delta",
+        index: 1,
+        delta: { type: "input_json_delta", partial_json: JSON.stringify(conclusion) },
+      };
+      yield { type: "content_block_stop", index: 1 };
+      journal.push("claude:conclusion");
+    }
+    yield {
+      type: "message_delta",
+      delta: { stop_reason: conclusion ? "tool_use" : "end_turn" },
+      usage: { output_tokens: 5 },
+    };
+    yield { type: "message_stop" };
+  };
+}
+
+async function poserAuCabinet(
+  contexte: NonNullable<Parameters<typeof dossierFictif>[0]>["contexte"],
+  texte: string,
+  conclusion: Record<string, unknown> | null,
+) {
+  const { api, trace, fils } = dossierFictif({ contexte });
+  const journal: string[] = [];
+  const evenements: EvenementDeLAssistant[] = [];
+  let t = 0;
+  const fin = await converserAvecRepli(
+    api,
+    DOSSIER,
+    { tenantId: TENANT, question: LOYER, locale: "fr", conversationId: null, pieceIds: [] },
+    {
+      claude: claudeQuiConclut(texte, conclusion, journal),
+      conseil: conseilFictif,
+      repli: sansRepli,
+      maintenant: () => (t += 50),
+      aujourdhui: () => "2026-11-08",
+    },
+    (e) => {
+      if (e.type === "texte") journal.push("ecran:texte");
+      evenements.push(e);
+    },
+  );
+  const textes = evenements.flatMap((e) => (e.type === "texte" ? [e.texte] : [])).join("");
+  const range = fils.get(fin.conversationId)?.at(-1);
+  return { fin, evenements, textes, journal, file: trace.file, range };
+}
+
+describe("la file du cabinet reçoit ce que l'assistant retient", () => {
+  it("retenue : la PME ne lit que le message de relecture, la réponse attend le cabinet", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, CONCLUSION_DOSSIER);
+    assert.equal(r.textes, RELECTURE);
+    assert.ok(!JSON.stringify(r.evenements).includes("doit retenir"), "la réponse a été diffusée");
+    assert.equal(r.fin.reponse, RELECTURE);
+    assert.equal(r.range?.contenu, RELECTURE, "le fil garde le message de relecture");
+    assert.equal(r.file.length, 1, "la file du cabinet reçoit la réponse");
+    const remise = r.file[0]!;
+    assert.equal(remise["reponse"], REPONSE_DOSSIER);
+    assert.equal(remise["statut"], "en_attente");
+    assert.equal(remise["canal"], "conversation");
+    assert.equal(remise["langue"], "fr");
+    assert.equal(remise["question"], LOYER);
+    assert.equal(remise["conversationId"], r.fin.conversationId);
+    assert.equal(remise["theme"], "Retenue à la source sur loyer");
+    assert.equal(remise["doute"], "Le régime du bailleur n'est pas connu.");
+    assert.deepEqual(remise["sources"], []);
+    // Comme `askMalica` : un avis qui ne cite aucun article vaut zéro.
+    assert.equal(remise["certitude"], 0);
+  });
+
+  it("question générale sous mandat : la réponse part, mais seulement après la conclusion", async () => {
+    const generale = "La retenue à la source s'applique aux loyers versés par une société.";
+    const r = await poserAuCabinet(SOUS_MANDAT, generale, {
+      ...CONCLUSION_DOSSIER,
+      portee: "generale",
+    });
+    assert.equal(r.textes, generale);
+    assert.equal(r.file.length, 0);
+    assert.ok(
+      r.journal.indexOf("ecran:texte") > r.journal.indexOf("claude:conclusion"),
+      `le texte est parti avant la conclusion : ${r.journal.join(" → ")}`,
+    );
+  });
+
+  it("sans cabinet engagé : la réponse part en direct, rien n'attend", async () => {
+    const r = await poserAuCabinet(
+      { cabinetId: null, appelantMembre: true },
+      REPONSE_DOSSIER,
+      CONCLUSION_DOSSIER,
+    );
+    assert.equal(r.textes, REPONSE_DOSSIER);
+    assert.equal(r.file.length, 0);
+    assert.ok(
+      r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:texte"),
+      `le texte a attendu : ${r.journal.join(" → ")}`,
+    );
+    assert.deepEqual(r.fin.mesure.conclusion, {
+      conseil: true,
+      portee: "dossier",
+      certitude: 0.6,
+      doute: "Le régime du bailleur n'est pas connu.",
+      theme: "Retenue à la source sur loyer",
+    });
+  });
+
+  it("le cabinet qui interroge le dossier de son client : en direct, il ne se relit pas", async () => {
+    const r = await poserAuCabinet(
+      { cabinetId: "cab", appelantMembre: false },
+      REPONSE_DOSSIER,
+      CONCLUSION_DOSSIER,
+    );
+    assert.equal(r.textes, REPONSE_DOSSIER);
+    assert.equal(r.file.length, 0);
+    assert.ok(r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:texte"));
+  });
+
+  it("sans conclusion : la portée est incertaine, la réponse est retenue", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, null);
+    assert.equal(r.textes, RELECTURE);
+    assert.ok(!JSON.stringify(r.evenements).includes("doit retenir"));
+    assert.equal(r.file.length, 1);
+    assert.equal(r.file[0]!["reponse"], REPONSE_DOSSIER);
+    assert.equal(r.file[0]!["certitude"], 0);
+    assert.equal(r.file[0]!["theme"], null);
+  });
+
+  it("une conclusion mal formée ne vaut pas conclusion : retenue", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, {
+      ...CONCLUSION_DOSSIER,
+      portee: "generale",
+      conseil: "non",
+    });
+    assert.equal(r.textes, RELECTURE);
+    assert.equal(r.file.length, 1);
+  });
+
+  it("le repli DeepSeek retient seul (askMalica) : l'agent n'en dépose pas une seconde", async () => {
+    const { api, trace } = dossierFictif({ anthropicEpuise: true });
+    const { fin, evenements } = await rejouer(
+      { tenantId: TENANT, question: LOYER, locale: "fr", conversationId: null, pieceIds: [] },
+      {
+        claude: () => {
+          throw new Error("Claude ne devait pas être appelé");
+        },
+        conseil: conseilFictif,
+        // `askMalica` a déjà retenu : il rend le message de relecture.
+        repli: async ({ garder }) => ({
+          answer: garder(RELECTURE, []),
+          model: "deepseek-chat",
+          conversationId: "c-repli",
+          messageId: null,
+          titre: null,
+        }),
+      },
+      api,
+    );
+    assert.equal(fin.reponse, RELECTURE);
+    assert.equal(trace.file.length, 0, "l'agent a déposé une seconde fois");
+    assert.ok(!JSON.stringify(evenements).includes("deepseek"));
+  });
+});
+
+describe("ce qui part au navigateur", () => {
+  it("ni modèle, ni mesure, ni nom d'outil, ni phrase retirée : des étiquettes et un compte", async () => {
+    const { api } = dossierFictif({ contexte: { cabinetId: null, appelantMembre: true } });
+    const { fin, evenements } = await rejouer(
+      {
+        tenantId: TENANT,
+        question: "Mes pièces ?",
+        locale: "fr",
+        conversationId: null,
+        pieceIds: [],
+      },
+      {
+        claude: claudeSimule(
+          [
+            {
+              texte: "Je regarde.",
+              outils: [
+                { nom: "pieces_chercher", entree: {} },
+                { nom: "outil_invente", entree: {} },
+              ],
+            },
+            { texte: "Vous devrez 4321 dinars de pénalités. Voilà ce que je vois." },
+          ],
+          [],
+        ),
+        conseil: conseilFictif,
+        repli: sansRepli,
+      },
+      api,
+    );
+    const charge = JSON.stringify(evenements);
+    for (const secret of ["4321", "modele-courant", "pieces_chercher", "outil_invente", "conclure"])
+      assert.ok(!charge.includes(secret), `« ${secret} » est parti au navigateur`);
+    assert.ok(!/coutUsd|latence|mesure|"modele"|"nom"|iterations|motifDuRepli/.test(charge));
+
+    const debut = evenements.find((e) => e.type === "debut")!;
+    assert.deepEqual(Object.keys(debut).sort(), ["conversationId", "type"]);
+
+    const outils = evenements.filter((e) => e.type === "outil");
+    assert.ok(outils.length > 0);
+    for (const o of outils)
+      assert.equal(
+        (o as { etiquette: string }).etiquette,
+        message("fr", "pme.assistant.outil.pieces_chercher"),
+        "seul un outil connu a une étiquette, et c'est une phrase",
+      );
+
+    const retraits = evenements.filter((e) => e.type === "retire");
+    assert.deepEqual(retraits, [{ type: "retire", nombre: 1 }]);
+
+    const finEnvoyee = evenements.find((e) => e.type === "fin")!;
+    assert.equal("mesure" in (finEnvoyee as { fin: object }).fin, false);
+    assert.equal((finEnvoyee as { fin: { chiffresRetires: unknown } }).fin.chiffresRetires, 1);
+    // La mesure reste côté serveur, pour le journal des coûts et l'épreuve.
+    assert.ok(fin.mesure.outils.includes("pieces_chercher"));
   });
 });

@@ -30,6 +30,13 @@ import type { SourceCitee } from "@malica/socle/ports/repositories";
 
 import type { FragmentDeDroit } from "./corpus.ts";
 
+/**
+ * Les portées qu'une réponse de conseil peut déclarer — la même liste pour
+ * l'objet de DeepSeek (`askMalica`) et l'outil final de l'assistant
+ * (`conclure_reponse`) : `doitEtreRelue` les juge toutes deux.
+ */
+export const PORTEES = ["generale", "dossier", "incertaine"] as const;
+
 export interface ReponseDeConseil {
   /** La question relève-t-elle du conseil — appliquer ou interpréter une règle ? */
   conseil: boolean;
@@ -47,7 +54,7 @@ export interface ReponseDeConseil {
    * Journal officiel. Et « incertaine » est le DÉFAUT — une réponse dont on
    * ignore la nature se relit, elle ne se lâche pas.
    */
-  portee: "generale" | "dossier" | "incertaine";
+  portee: (typeof PORTEES)[number];
   /** Le sujet, en quelques mots. Sert à voir revenir les mêmes questions. */
   theme: string | null;
   /** Ce que le client lira. */
@@ -136,7 +143,7 @@ const SourceSchema = z.object({
 const ReponseSchema = z.object({
   reponse: z.coerce.string().default(""),
   conseil: z.coerce.boolean().default(false),
-  portee: z.enum(["generale", "dossier", "incertaine"]).catch("incertaine").default("incertaine"),
+  portee: z.enum(PORTEES).catch("incertaine").default("incertaine"),
   theme: z.string().nullish(),
   certitude: z.coerce.number().min(0).max(1).catch(0),
   sources: z.array(SourceSchema).catch([]),

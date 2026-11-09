@@ -17,8 +17,34 @@
  *      limite réglée ;
  *   5. chaque phrase passe la garde des chiffres (`garde.ts`) avant l'écran ;
  *   6. une action qui modifie est PROPOSÉE (bouton), jamais exécutée ;
- *   7. l'échange se range dans le fil, l'appel se journalise au tarif de la
- *      base, et la fin porte sources, suggestions, coût et latence.
+ *   7. le modèle conclut par l'outil final `conclure_reponse` : conseil ou
+ *      non, portée, certitude, doute, thème ;
+ *   8. l'échange se range dans le fil, l'appel se journalise au tarif de la
+ *      base, et la fin porte sources et suggestions. La mesure (modèle, coût,
+ *      latence, outils) reste au serveur : rien de la mécanique ne part au
+ *      navigateur.
+ *
+ * ============================================================ LA RELECTURE
+ *
+ * La conversation DeepSeek (`askMalica`) fait relire par le cabinet mandaté
+ * une réponse de conseil qui engage le dossier d'une PME : la PME lit « votre
+ * comptable relit ma réponse », et la réponse attend dans la file du cabinet.
+ * L'assistant tient la même règle, avec la même fonction (`doitEtreRelue`).
+ *
+ * Mais il parle en flux, et une réponse lâchée mot à mot ne se retient plus.
+ * Donc, quand la règle PEUT retenir — la personne est membre de la PME, un
+ * cabinet est engagé —, le texte gardé s'accumule sans partir : l'écran ne
+ * reçoit que les étapes (« Je regarde vos pièces… »). À la conclusion, la règle
+ * tranche : retenue, la PME ne lit que le message de relecture et la réponse
+ * part dans la file (`conseil.creer`) ; sinon, la réponse part d'un bloc. Un
+ * modèle qui ne conclut pas laisse une portée « incertaine » : retenue — le
+ * défaut prudent qu'`askMalica` applique déjà à une réponse illisible.
+ *
+ * Sans cabinet engagé, ou quand le cabinet interroge lui-même le dossier,
+ * rien ne peut être retenu : la réponse part en flux, comme avant.
+ *
+ * Le repli DeepSeek passe par `askMalica`, qui retient lui-même : l'agent n'y
+ * ajoute rien — une réponse n'entre qu'une fois dans la file.
  *
  * ================================================================ LE CACHE
  *
@@ -41,10 +67,12 @@ import type {
   SuggestionDeSuite,
 } from "@malica/socle/ports/assistant";
 import type { MessageKey } from "@malica/socle/messages";
+import type { ContexteConseil, SourceCitee } from "@malica/socle/ports/repositories";
 
 import type { AppelApi } from "../appel-local.ts";
 import { coutDeLAppel, type UsageDeLAppel } from "../conseil/cite.ts";
 import type { ResultatDuConseilCite } from "../conseil/conseil-cite.ts";
+import { doitEtreRelue } from "../conseil/conseil.ts";
 import { lireLaChaine } from "../lecture/designation.ts";
 import { Assembleur, type BlocBrut, type ClientEnFlux } from "./claude-flux.ts";
 import {
@@ -53,7 +81,15 @@ import {
   type ConfigurationDeLAssistant,
 } from "./configuration.ts";
 import { GardeDesChiffres, type SourceConnue } from "./garde.ts";
-import { DEFINITIONS, executerOutil, type ContexteDesOutils } from "./outils.ts";
+import {
+  CONCLURE_REPONSE,
+  DEFINITIONS,
+  etapeDeLOutil,
+  executerOutil,
+  lireLaConclusion,
+  type ConclusionDeLaReponse,
+  type ContexteDesOutils,
+} from "./outils.ts";
 
 /** Le nom de l'organe au journal des agents. */
 const AGENT_ASSISTANT = "malica.assistant";
@@ -65,10 +101,90 @@ interface ReponseDeRepli {
   conversationId: string;
   messageId: string | null;
   titre: string | null;
+  /** `askMalica` a retenu la réponse pour le cabinet : `answer` est le message de relecture. */
+  retenue?: boolean;
 }
 
-/** Pourquoi Claude ne répond pas : le motif part dans la mesure de la réponse. */
+/** Pourquoi Claude ne répond pas : le motif reste dans la mesure, au serveur. */
 type MotifDuRepli = "budget_claude" | "plafond_assistant" | "cle_absente" | "panne";
+
+/**
+ * La mesure d'une réponse — SERVEUR SEULEMENT. Elle sert le journal des coûts
+ * et l'épreuve ; elle ne part jamais au navigateur (`versLEcran`).
+ */
+interface MesureDeLaReponse {
+  modele: string | null;
+  /** Le modèle de repli a répondu (`deepseek`), ou l'on s'est arrêté (`arret`). */
+  repli: "deepseek" | "arret" | null;
+  /** Pourquoi Claude n'a pas répondu ; `null` quand il a répondu. */
+  motifDuRepli: MotifDuRepli | null;
+  latencePremierMotMs: number | null;
+  latenceTotaleMs: number;
+  /** Au tarif de la base (R8) ; `null` si un tarif manque. */
+  coutUsd: number | null;
+  outils: string[];
+  iterations: number;
+  /** Ce que le modèle a conclu de sa réponse ; `null` s'il n'a pas conclu. */
+  conclusion: ConclusionDeLaReponse | null;
+  /** La réponse a été retenue pour le cabinet (par l'agent ou par `askMalica`). */
+  retenue: boolean;
+}
+
+/** La fin telle que le serveur la connaît : ce que l'écran reçoit, plus la mesure. */
+export interface FinMesuree extends FinDeLaReponse {
+  mesure: MesureDeLaReponse;
+}
+
+/**
+ * Ce qui part au navigateur, champ par champ : une liste blanche, pour qu'un
+ * champ technique ajouté à la fin ne parte pas par mégarde.
+ */
+function versLEcran(f: FinMesuree): FinDeLaReponse {
+  return {
+    conversationId: f.conversationId,
+    messageId: f.messageId,
+    titre: f.titre,
+    reponse: f.reponse,
+    sources: f.sources,
+    propositions: f.propositions,
+    suggestions: f.suggestions,
+    chiffresRetires: f.chiffresRetires,
+    sansCitations: f.sansCitations,
+  };
+}
+
+/**
+ * Ce que l'agent tient pour conclu quand le modèle n'a rien conclu (ou mal) :
+ * du conseil à la portée incertaine, sans certitude — retenu si un cabinet
+ * peut relire, comme `askMalica` le fait d'une réponse qu'il ne sait pas lire.
+ */
+const SANS_CONCLUSION: ConclusionDeLaReponse = {
+  conseil: true,
+  portee: "incertaine",
+  certitude: 0,
+  doute: null,
+  theme: null,
+};
+
+/** Les articles que la réponse cite, sous la forme que la file du cabinet range. */
+function articlesCites(sources: readonly SourceConnue[]): SourceCitee[] {
+  const vus = new Set<string>();
+  const articles: SourceCitee[] = [];
+  for (const s of sources) {
+    if (s.genre !== "article" || !s.article?.numero) continue;
+    const cle = `${s.article.corpus}|${s.article.numero}`;
+    if (vus.has(cle)) continue;
+    vus.add(cle);
+    articles.push({
+      corpus: s.article.corpus,
+      numero: s.article.numero,
+      validFrom: s.article.validFrom,
+      validTo: null,
+      langue: null,
+    });
+  }
+  return articles;
+}
 
 export interface DependancesDeLAssistant {
   /** Claude en flux ; `null` quand la clé n'est pas posée. */
@@ -274,7 +390,7 @@ async function converser(
   q: QuestionPosee,
   deps: DependancesDeLAssistant,
   emettre: (ev: EvenementDeLAssistant) => void,
-): Promise<FinDeLaReponse> {
+): Promise<FinMesuree> {
   const maintenant = deps.maintenant ?? (() => Date.now());
   const debut = maintenant();
   const aujourdhui = (deps.aujourdhui ?? (() => aujourdhuiATunis()))();
@@ -311,6 +427,18 @@ async function converser(
   const reglage = configuration.reglage;
   const choix = choisirLeModele(q.question, q.pieceIds.length, reglage);
 
+  /*
+   * La relecture du cabinet peut-elle retenir cette réponse ? Les conditions
+   * de `doitEtreRelue` qui ne tiennent pas à la réponse elle-même — la
+   * personne est membre, un cabinet est engagé — se jugent AVANT le premier
+   * mot : une réponse de conseil à la portée incertaine serait-elle relue ?
+   * Si oui, rien ne part avant la conclusion du modèle.
+   */
+  const contexte = await api
+    .rpc<ContexteConseil>("conseil", "contexte", [q.tenantId])
+    .catch(() => null);
+  const enAttente = doitEtreRelue(SANS_CONCLUSION, contexte);
+
   const conversationId =
     q.conversationId ??
     (await api.rpc<{ id: string }>("conversations", "ouvrirNouvelle", [q.tenantId])).id;
@@ -319,14 +447,25 @@ async function converser(
     "ouvrir",
     [conversationId],
   );
-  emettre({ type: "debut", conversationId, modele: choix.modele });
+  emettre({ type: "debut", conversationId });
 
   const garde = new GardeDesChiffres(q.question);
   let premierMot: number | null = null;
-  const envoyerTexte = (t: string) => {
+  // Le texte gardé s'accumule dans la garde (`texteEmis`) ; il ne part à
+  // l'écran qu'en flux libre. En attente de la conclusion, il attend.
+  let texteMontre = false;
+  const montrer = (t: string) => {
     if (!t) return;
     if (premierMot === null && t.trim()) premierMot = maintenant() - debut;
+    texteMontre = true;
     emettre({ type: "texte", texte: t });
+  };
+  const envoyerTexte = (t: string) => {
+    if (!enAttente) montrer(t);
+  };
+  const etape = (nom: string, etat: "debut" | "fin") => {
+    const etiquette = etapeDeLOutil(nom, q.locale);
+    if (etiquette) emettre({ type: "outil", etiquette, etat });
   };
 
   const ctx: ContexteDesOutils = {
@@ -340,8 +479,10 @@ async function converser(
   };
 
   /* ------------------------------------------------------------ la requête */
-  const outils = DEFINITIONS.map((d, i) =>
-    i === DEFINITIONS.length - 1 ? { ...d, cache_control: { type: "ephemeral" as const } } : d,
+  // L'outil final vient en dernier : c'est lui qui porte le point de cache.
+  const definitions = [...DEFINITIONS, CONCLURE_REPONSE];
+  const outils = definitions.map((d, i) =>
+    i === definitions.length - 1 ? { ...d, cache_control: { type: "ephemeral" as const } } : d,
   );
   const system = [
     { type: "text", text: configuration.consigne.texte, cache_control: { type: "ephemeral" } },
@@ -361,6 +502,7 @@ async function converser(
   const outilsAppeles: string[] = [];
   const propositions: PropositionDAction[] = [];
   const mentions: string[] = [];
+  let conclusion: ConclusionDeLaReponse | null = null;
   let usageTotal: UsageDeLAppel = { ...USAGE_NUL };
   let coutTotal: number | null = 0;
   let modeleRendu: string = choix.modele;
@@ -395,11 +537,7 @@ async function converser(
             blocsDeTexte.add(i);
             garde.ouvrirBloc();
           } else if (ev.content_block?.type === "tool_use") {
-            emettre({
-              type: "outil",
-              nom: String((ev.content_block as { name?: string }).name),
-              etat: "debut",
-            });
+            etape(String((ev.content_block as { name?: string }).name), "debut");
           }
         } else if (
           ev.type === "content_block_delta" &&
@@ -418,7 +556,9 @@ async function converser(
         ) {
           const j = garde.fermerBloc();
           envoyerTexte(j.aEmettre);
-          for (const phrase of j.retirees) emettre({ type: "retire", phrase });
+          // Le nombre seulement : la phrase retirée porte le chiffre sans source.
+          if (!enAttente && j.retirees.length > 0)
+            emettre({ type: "retire", nombre: j.retirees.length });
         }
       }
     } catch (e) {
@@ -430,7 +570,7 @@ async function converser(
         latencyMs: maintenant() - debutAppel,
         erreur: e instanceof Error ? e.message : String(e),
       });
-      if (tour === 0 && garde.texteEmis() === "" && repliPossible)
+      if (tour === 0 && !texteMontre && repliPossible)
         throw new PanneAvantLePremierMot(String(e), conversationId);
       interrompue = e instanceof Error ? e.message : String(e);
       break;
@@ -462,10 +602,28 @@ async function converser(
       input: unknown;
     }>;
     const resultats: unknown[] = [];
+    let conclusionIllisible = false;
     for (const appel of appels) {
+      if (appel.name === CONCLURE_REPONSE.name) {
+        const lue = lireLaConclusion(appel.input);
+        if (lue) conclusion = lue;
+        else conclusionIllisible = true;
+        resultats.push({
+          type: "tool_result",
+          tool_use_id: appel.id,
+          ...(lue
+            ? { content: "Conclusion enregistrée." }
+            : {
+                content:
+                  "Conclusion illisible : rappelle conclure_reponse avec exactement les champs demandés.",
+                is_error: true,
+              }),
+        });
+        continue;
+      }
       outilsAppeles.push(appel.name);
       const r = await executerOutil(ctx, appel.name, appel.input);
-      emettre({ type: "outil", nom: appel.name, etat: "fin" });
+      etape(appel.name, "fin");
       if (!r.ok) {
         resultats.push({
           type: "tool_result",
@@ -483,13 +641,17 @@ async function converser(
       });
       for (const p of r.propositions ?? []) {
         propositions.push(p);
-        emettre({ type: "proposition", proposition: p });
+        // En attente de la conclusion, le bouton attend aussi : une réponse
+        // retenue ne montre rien d'autre que son message de relecture.
+        if (!enAttente) emettre({ type: "proposition", proposition: p });
       }
       if (r.mention) mentions.push(r.mention);
       if (r.coutUsd !== undefined) {
         coutTotal = coutTotal === null || r.coutUsd === null ? null : coutTotal + r.coutUsd;
       }
     }
+    // La conclusion seule, et lisible : la réponse est finie, rien à renvoyer.
+    if (appels.every((a) => a.name === CONCLURE_REPONSE.name) && !conclusionIllisible) break;
     messages.push({ role: "assistant", content: tourARenvoyer(m.content) });
     messages.push({ role: "user", content: resultats });
   }
@@ -508,18 +670,62 @@ async function converser(
   } else if (!dite) {
     ajouts.push(message(q.locale, "pme.assistant.vide"));
   }
-  for (const [k, a] of ajouts.entries()) envoyerTexte(dite || k > 0 ? `\n\n${a}` : a);
-  const reponse = [dite, ...ajouts].filter(Boolean).join("\n\n");
+  const reponseGardee = [dite, ...ajouts].filter(Boolean).join("\n\n");
+
+  /*
+   * La relecture. La règle est celle d'`askMalica`, appliquée à ce que le
+   * modèle a conclu (ou à la portée incertaine, s'il n'a pas conclu). Une
+   * réponse vide n'a rien à faire relire.
+   */
+  const retenue =
+    enAttente && dite !== "" && doitEtreRelue(conclusion ?? SANS_CONCLUSION, contexte);
+  const sourcesCitees = garde.sourcesCitees();
+  let reponse: string;
+  if (retenue) {
+    const c = conclusion ?? SANS_CONCLUSION;
+    const articles = articlesCites(sourcesCitees);
+    // Une réponse retenue qui ne pourrait pas entrer dans la file serait
+    // perdue : cet échec-là remonte, comme dans `askMalica`.
+    await api.rpc<{ id: string; cabinetId: string }>("conseil", "creer", [
+      {
+        tenantId: q.tenantId,
+        conversationId,
+        question: q.question,
+        reponse: reponseGardee,
+        sources: articles,
+        // Comme `lireReponseDeConseil` : sans article cité, un avis vaut zéro.
+        certitude: !c.conseil ? 1 : articles.length === 0 ? 0 : Math.round(c.certitude * 100) / 100,
+        doute: c.conseil ? c.doute : null,
+        canal: "conversation",
+        theme: c.conseil ? c.theme : null,
+        langue: q.locale,
+        statut: "en_attente",
+      },
+    ]);
+    reponse = message(q.locale, "pme.conseil.relecture");
+    montrer(reponse);
+  } else {
+    reponse = reponseGardee;
+    if (enAttente) {
+      // La conclusion est connue et la réponse peut partir : d'un bloc.
+      montrer(reponse);
+      for (const p of propositions) emettre({ type: "proposition", proposition: p });
+      if (garde.retirees().length > 0) emettre({ type: "retire", nombre: garde.retirees().length });
+    } else {
+      for (const [k, a] of ajouts.entries()) montrer(dite || k > 0 ? `\n\n${a}` : a);
+    }
+  }
 
   const latenceTotale = maintenant() - debut;
-  const sourcesAffichees = garde
-    .sourcesCitees()
-    .filter((s) => !s.cle.startsWith("malica:proposition:"))
-    .map(versSourceAffichee);
+  const sourcesAffichees = retenue
+    ? []
+    : sourcesCitees.filter((s) => !s.cle.startsWith("malica:proposition:")).map(versSourceAffichee);
+  const propositionsAffichees = retenue ? [] : propositions;
   await api.rpc<void>("conversations", "ajouter", [
     {
       conversationId,
       question: q.question,
+      // Retenue, le fil garde le message de relecture — ce que la PME a lu.
       reponse,
       model: modeleRendu,
       tokensIn: usageTotal.entree + usageTotal.cacheLu + usageTotal.cacheEcrit,
@@ -528,7 +734,7 @@ async function converser(
       // Rangées avec la réponse : un fil rouvert réaffiche ses sources et ses
       // propositions (le bouton se rejuge alors contre la porte du circuit).
       sources: sourcesAffichees,
-      propositions,
+      propositions: propositionsAffichees,
     },
   ]);
   const dernierMessage = await api
@@ -542,15 +748,16 @@ async function converser(
     });
   }
 
-  const fin: FinDeLaReponse = {
+  const fin: FinMesuree = {
     conversationId,
     messageId: dernierMessage?.id ?? null,
     titre,
     reponse,
     sources: sourcesAffichees,
-    propositions,
-    suggestions: suggestionsDeSuite(outilsAppeles, q.locale),
-    chiffresRetires: garde.retirees(),
+    propositions: propositionsAffichees,
+    suggestions: retenue ? [] : suggestionsDeSuite(outilsAppeles, q.locale),
+    chiffresRetires: retenue ? 0 : garde.retirees().length,
+    sansCitations: false,
     mesure: {
       modele: modeleRendu,
       repli: null,
@@ -560,9 +767,11 @@ async function converser(
       coutUsd: coutTotal === null ? null : Math.round(coutTotal * 1_000_000) / 1_000_000,
       outils: outilsAppeles,
       iterations,
+      conclusion,
+      retenue,
     },
   };
-  emettre({ type: "fin", fin });
+  emettre({ type: "fin", fin: versLEcran(fin) });
   return fin;
 }
 
@@ -576,7 +785,7 @@ export async function converserAvecRepli(
   q: QuestionPosee,
   deps: DependancesDeLAssistant,
   emettre: (ev: EvenementDeLAssistant) => void,
-): Promise<FinDeLaReponse> {
+): Promise<FinMesuree> {
   try {
     return await converser(api, dossier, q, deps, emettre);
   } catch (e) {
@@ -600,7 +809,7 @@ async function repondreParLeRepli(
   debut: number,
   maintenant: () => number,
   motif: MotifDuRepli,
-): Promise<FinDeLaReponse> {
+): Promise<FinMesuree> {
   // Le repli ne cite pas en flux : sa réponse entière passe la même garde,
   // contre ce qu'il avait sous les yeux — et AVANT d'être rangée au fil.
   const garde = new GardeDesChiffres(q.question);
@@ -611,24 +820,29 @@ async function repondreParLeRepli(
     controlee = garde.texteEmis() || message(q.locale, "pme.assistant.vide");
     return controlee;
   };
+  // `askMalica` applique lui-même la relecture du cabinet : retenue, sa réponse
+  // EST le message de relecture, et la file a déjà reçu la réponse. Rien n'est
+  // déposé une seconde fois ici.
   const r = await deps.repli({ question: q.question, conversationId: q.conversationId, garder });
-  emettre({ type: "debut", conversationId: r.conversationId, modele: r.model });
+  emettre({ type: "debut", conversationId: r.conversationId });
   // Un repli qui n'aurait pas appelé `garder` ne montre rien d'incontrôlé :
   // sa réponse passe la garde ici, sans aucune source — toute phrase chiffrée
   // tombe.
   const reponse = controlee ?? garder(r.answer, []);
   const premierMot = maintenant() - debut;
   emettre({ type: "texte", texte: reponse });
-  for (const phrase of garde.retirees()) emettre({ type: "retire", phrase });
-  const fin: FinDeLaReponse = {
+  if (garde.retirees().length > 0) emettre({ type: "retire", nombre: garde.retirees().length });
+  const retenue = r.retenue === true;
+  const fin: FinMesuree = {
     conversationId: r.conversationId,
     messageId: r.messageId,
     titre: r.titre,
     reponse,
     sources: [],
     propositions: [],
-    suggestions: suggestionsDeSuite([], q.locale),
-    chiffresRetires: garde.retirees(),
+    suggestions: retenue ? [] : suggestionsDeSuite([], q.locale),
+    chiffresRetires: garde.retirees().length,
+    sansCitations: !retenue,
     mesure: {
       modele: r.model,
       repli: "deepseek",
@@ -638,9 +852,11 @@ async function repondreParLeRepli(
       coutUsd: null,
       outils: [],
       iterations: 1,
+      conclusion: null,
+      retenue,
     },
   };
-  emettre({ type: "fin", fin });
+  emettre({ type: "fin", fin: versLEcran(fin) });
   return fin;
 }
 
@@ -652,17 +868,17 @@ async function sArreter(
   debut: number,
   maintenant: () => number,
   motif: MotifDuRepli,
-): Promise<FinDeLaReponse> {
+): Promise<FinMesuree> {
   const conversationId =
     q.conversationId ??
     (await api.rpc<{ id: string }>("conversations", "ouvrirNouvelle", [q.tenantId])).id;
-  emettre({ type: "debut", conversationId, modele: null });
+  emettre({ type: "debut", conversationId });
   const reponse = message(q.locale, "pme.assistant.arret");
   emettre({ type: "texte", texte: reponse });
   await api.rpc<void>("conversations", "ajouter", [
     { conversationId, question: q.question, reponse, model: null, latencyMs: 0 },
   ]);
-  const fin: FinDeLaReponse = {
+  const fin: FinMesuree = {
     conversationId,
     messageId: null,
     titre: null,
@@ -670,7 +886,8 @@ async function sArreter(
     sources: [],
     propositions: [],
     suggestions: [],
-    chiffresRetires: [],
+    chiffresRetires: 0,
+    sansCitations: false,
     mesure: {
       modele: null,
       repli: "arret",
@@ -680,8 +897,10 @@ async function sArreter(
       coutUsd: 0,
       outils: [],
       iterations: 0,
+      conclusion: null,
+      retenue: false,
     },
   };
-  emettre({ type: "fin", fin });
+  emettre({ type: "fin", fin: versLEcran(fin) });
   return fin;
 }

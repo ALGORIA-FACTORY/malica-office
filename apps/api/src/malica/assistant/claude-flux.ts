@@ -23,9 +23,7 @@
  * n'appelle le réseau (le `fetch` est injectable).
  */
 
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-/** La version de l'API Messages : un en-tête stable, documenté par le fournisseur. */
-const ANTHROPIC_VERSION = "2023-06-01";
+import { ANTHROPIC_URL, ANTHROPIC_VERSION } from "../lecture/claude.ts";
 
 class ErreurDeFlux extends Error {
   readonly status: number;

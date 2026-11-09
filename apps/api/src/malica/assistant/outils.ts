@@ -34,9 +34,12 @@ import { z } from "zod";
 import type { DeclarationTva, TaxRate } from "@malica/socle/ports/repositories";
 import type { PropositionDAction } from "@malica/socle/ports/assistant";
 import { HORS_DU_CALCUL, tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
+import { texte as message } from "@malica/socle/conseil";
+import type { MessageKey } from "@malica/socle/messages";
 
 import type { AppelApi } from "../appel-local.ts";
 import type { ResultatDuConseilCite } from "../conseil/conseil-cite.ts";
+import { PORTEES, type ReponseDeConseil } from "../conseil/conseil.ts";
 import { loadMalicaContext } from "../conseil/context.ts";
 import type { SourceConnue } from "./garde.ts";
 
@@ -205,6 +208,82 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
 
 /** Les noms, pour le journal et l'épreuve. */
 const NOMS_DES_OUTILS = DEFINITIONS.map((d) => d.name);
+
+/**
+ * L'étape que l'écran montre pendant qu'un outil travaille : une phrase en
+ * première personne, traduite par le serveur. Le nom de l'outil ne part
+ * jamais au navigateur ; un nom que le modèle invente n'a pas d'étape.
+ */
+const ETAPES: Readonly<Record<string, MessageKey>> = {
+  pieces_chercher: "pme.assistant.outil.pieces_chercher",
+  piece_ouvrir: "pme.assistant.outil.piece_ouvrir",
+  tva_du_mois: "pme.assistant.outil.tva_du_mois",
+  echeances_fiscales: "pme.assistant.outil.echeances_fiscales",
+  ecritures_proposees: "pme.assistant.outil.ecritures_proposees",
+  tiers_chercher: "pme.assistant.outil.tiers_chercher",
+  conseil_fiscal: "pme.assistant.outil.conseil_fiscal",
+  action_proposer: "pme.assistant.outil.action_proposer",
+};
+
+/** L'étape d'un outil, dans la langue de la personne ; `null` pour tout autre nom. */
+export function etapeDeLOutil(nom: string, locale: string): string | null {
+  const cle = Object.hasOwn(ETAPES, nom) ? ETAPES[nom] : undefined;
+  return cle ? message(locale, cle) : null;
+}
+
+/* ------------------------------------------------------------ la conclusion -- */
+
+/**
+ * L'outil FINAL : le modèle l'appelle une fois, après sa réponse, pour dire ce
+ * qu'elle est — du conseil ou non, sa portée, sa certitude, son doute, son
+ * thème. Il ne consulte rien. Le serveur s'en sert pour savoir si la réponse
+ * doit être relue par le cabinet (`doitEtreRelue`, la même règle que la
+ * conversation DeepSeek). Ce qu'il faut y mettre est dit dans la consigne
+ * versionnée en base, pas ici.
+ */
+export const CONCLURE_REPONSE: DefinitionDOutil = {
+  name: "conclure_reponse",
+  description:
+    "Outil final, appelé une seule fois après ta réponse, sans texte après lui : " +
+    "voir la consigne, section « CONCLURE TA RÉPONSE ».",
+  input_schema: {
+    type: "object",
+    properties: {
+      conseil: { type: "boolean" },
+      portee: { type: "string", enum: [...PORTEES] },
+      certitude: { type: "number", minimum: 0, maximum: 1 },
+      doute: { type: ["string", "null"] },
+      theme: { type: ["string", "null"] },
+    },
+    required: ["conseil", "portee", "certitude", "doute", "theme"],
+    additionalProperties: false,
+  },
+};
+
+/** Ce que la conclusion dit de la réponse — les champs que `askMalica` lit dans son objet. */
+export type ConclusionDeLaReponse = Pick<
+  ReponseDeConseil,
+  "conseil" | "portee" | "certitude" | "doute" | "theme"
+>;
+
+// Stricte : un champ manquant, mal typé ou en trop, et la conclusion ne vaut
+// rien — la réponse est alors traitée comme si le modèle n'avait pas conclu.
+// Les bornes du thème et du doute sont celles de `lireReponseDeConseil`.
+const ConclusionSchema = z
+  .object({
+    conseil: z.boolean(),
+    portee: z.enum(PORTEES),
+    certitude: z.number().min(0).max(1),
+    doute: z.string().trim().min(1).max(1000).nullable(),
+    theme: z.string().trim().min(1).max(120).nullable(),
+  })
+  .strict();
+
+/** La conclusion relue ; `null` si elle n'est pas exactement de la forme attendue. */
+export function lireLaConclusion(entree: unknown): ConclusionDeLaReponse | null {
+  const lu = ConclusionSchema.safeParse(entree);
+  return lu.success ? lu.data : null;
+}
 
 /**
  * Les méthodes de dépôt que les outils appellent — toutes des LECTURES.

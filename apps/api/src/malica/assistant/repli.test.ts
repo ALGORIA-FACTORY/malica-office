@@ -15,12 +15,13 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 
-import type { EvenementDeLAssistant, FinDeLaReponse } from "@malica/socle/ports/assistant";
+import type { EvenementDeLAssistant } from "@malica/socle/ports/assistant";
 
 import type { AppelApi } from "../appel-local.ts";
 import {
   converserAvecRepli,
   type DependancesDeLAssistant,
+  type FinMesuree,
   type DossierVerifie,
   type QuestionPosee,
 } from "./agent.ts";
@@ -207,7 +208,7 @@ async function rejouer(
   api: AppelApi,
   deps: DependancesDeLAssistant,
   question: QuestionPosee = QUESTION,
-): Promise<{ fin: FinDeLaReponse; evenements: EvenementDeLAssistant[] }> {
+): Promise<{ fin: FinMesuree; evenements: EvenementDeLAssistant[] }> {
   const evenements: EvenementDeLAssistant[] = [];
   let t = 0;
   const fin = await converserAvecRepli(
@@ -281,7 +282,12 @@ describe("le repli DeepSeek range la version contrôlée", () => {
     assert.equal(fin.mesure.repli, "deepseek");
     assert.equal(fin.mesure.motifDuRepli, "budget_claude");
     assert.equal(fin.reponse, CONTROLEE);
-    assert.deepEqual(fin.chiffresRetires, ["Vous économiserez 300 dinars en déclarant tôt."]);
+    // Un compte, jamais la phrase : elle porte le chiffre sans source.
+    assert.equal(fin.chiffresRetires, 1);
+    assert.ok(
+      !JSON.stringify(evenements).includes("300"),
+      "la phrase retirée est partie à l'écran",
+    );
     // Ce que le fil a rangé est exactement ce que l'écran a vu.
     const fil = fils.get(fin.conversationId)!;
     assert.equal(fil.at(-1)!.role, "assistant");
@@ -304,7 +310,7 @@ describe("le repli DeepSeek range la version contrôlée", () => {
         titre: null,
       }),
     });
-    assert.equal(fin.chiffresRetires.length, 2);
+    assert.equal(fin.chiffresRetires, 2);
     assert.doesNotMatch(fin.reponse, /\d/);
   });
 });

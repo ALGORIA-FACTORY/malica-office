@@ -46,29 +46,16 @@ export interface TourDeMalica {
   suggestions?: SuggestionDeSuite[] | undefined;
   /** Phrases chiffrées retirées faute de source : jamais montrées, comptées. */
   retirees?: number | undefined;
+  /** La réponse vient du modèle de secours : elle ne porte pas de citations. */
   repli?: boolean | undefined;
   enCours?: boolean | undefined;
-  /** L'outil que Malica consulte en ce moment. */
+  /** L'étape en cours, déjà traduite par le serveur (« Je regarde vos pièces… »). */
   outil?: string | null | undefined;
   /** La panne, telle quelle : l'écran la dit par `texteDeLErreur`, jamais brute. */
   erreur?: unknown;
   /** Le message rangé au fil : ce que le cabinet juge. */
   messageId?: string | null | undefined;
-  /** Les instruments : modèle, premier mot, coût. Montrés au cabinet seulement. */
-  meta?: string | undefined;
 }
-
-/** Les libellés de consultation, un par outil — écrits en entier pour que le dictionnaire les voie. */
-const CONSULTE: Record<string, MessageKey> = {
-  pieces_chercher: "pme.assistant.outil.pieces_chercher",
-  piece_ouvrir: "pme.assistant.outil.piece_ouvrir",
-  tva_du_mois: "pme.assistant.outil.tva_du_mois",
-  echeances_fiscales: "pme.assistant.outil.echeances_fiscales",
-  ecritures_proposees: "pme.assistant.outil.ecritures_proposees",
-  tiers_chercher: "pme.assistant.outil.tiers_chercher",
-  conseil_fiscal: "pme.assistant.outil.conseil_fiscal",
-  action_proposer: "pme.assistant.outil.action_proposer",
-};
 
 const ACTIONS: Record<PropositionDAction["action"], MessageKey> = {
   envoyer_au_cabinet: "pme.assistant.proposition.envoyer_au_cabinet",
@@ -121,7 +108,7 @@ export function useConversationMalica(tenantId: string | null | undefined) {
             majDernier((t) => ({ ...t, contenu: t.contenu + ev.texte, outil: null }));
             return;
           case "outil":
-            majDernier((t) => ({ ...t, outil: ev.etat === "debut" ? ev.nom : null }));
+            majDernier((t) => ({ ...t, outil: ev.etat === "debut" ? ev.etiquette : null }));
             return;
           case "proposition":
             majDernier((t) => ({
@@ -137,20 +124,9 @@ export function useConversationMalica(tenantId: string | null | undefined) {
               sources: ev.fin.sources,
               propositions: ev.fin.propositions,
               suggestions: ev.fin.suggestions,
-              retirees: ev.fin.chiffresRetires.length,
-              repli: ev.fin.mesure.repli === "deepseek",
+              retirees: ev.fin.chiffresRetires,
+              repli: ev.fin.sansCitations,
               messageId: ev.fin.messageId,
-              meta: [
-                ev.fin.mesure.modele ?? "—",
-                ev.fin.mesure.latencePremierMotMs === null
-                  ? null
-                  : `${(ev.fin.mesure.latencePremierMotMs / 1000).toFixed(1)} s`,
-                `${(ev.fin.mesure.latenceTotaleMs / 1000).toFixed(1)} s`,
-                ev.fin.mesure.coutUsd === null ? null : `${ev.fin.mesure.coutUsd} $`,
-                ev.fin.mesure.outils.join(", ") || null,
-              ]
-                .filter(Boolean)
-                .join(" · "),
               enCours: false,
               outil: null,
             }));
@@ -312,7 +288,7 @@ export function ReponseDeMalica({
       {tour.enCours && tour.outil ? (
         <p className="et1" role="status">
           <i />
-          {CONSULTE[tour.outil] ? t(CONSULTE[tour.outil]!) : t("malica.chat.thinking")}
+          {tour.outil}
         </p>
       ) : tour.enCours && !tour.contenu ? (
         <p className="et1" role="status">

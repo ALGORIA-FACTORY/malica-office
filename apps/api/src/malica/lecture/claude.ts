@@ -15,9 +15,10 @@
  * technique, pas une raison de s'arrêter.
  */
 
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+/** L'adresse de l'API Messages — la seule, partagée par la lecture et l'assistant. */
+export const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 /** La version de l'API Messages : un en-tête stable, documenté par le fournisseur. */
-const ANTHROPIC_VERSION = "2023-06-01";
+export const ANTHROPIC_VERSION = "2023-06-01";
 /*
  * La désignation rend une vingtaine de `page/ordinal` : une sortie courte. La
  * borne couvre la réflexion du modèle, qui compte dans `max_tokens`.

@@ -32,8 +32,7 @@
  * Pur : aucune base, aucun réseau.
  */
 
-import type { FinDeLaReponse } from "@malica/socle/ports/assistant";
-
+import type { FinMesuree } from "./agent.ts";
 import { chiffresDe, phrasesDe } from "./garde.ts";
 
 export type Mode = "simule" | "reel";
@@ -42,6 +41,12 @@ export interface EtapeSimulee {
   /** Le texte que le Claude simulé écrit à cette étape (avant ses outils, ou sa réponse finale). */
   texte?: string;
   outils?: Array<{ nom: string; entree: Record<string, unknown> }>;
+  /**
+   * La conclusion que le Claude simulé rend par l'outil final, à l'étape qui
+   * répond (sans outil). Absente : une règle générale, sans conseil. `null` :
+   * il oublie de conclure.
+   */
+  conclusion?: Record<string, unknown> | null;
 }
 
 export interface CasDeConversation {
@@ -108,7 +113,7 @@ const REFUS =
  * « En vigueur au … », composée par le code du conseil cité, n'est pas une
  * phrase du modèle : ses lignes (en italique) sont exclues.
  */
-function chiffresSansSource(fin: FinDeLaReponse, question: string): string[] {
+function chiffresSansSource(fin: FinMesuree, question: string): string[] {
   const portes = new Set([
     ...chiffresDe(question),
     ...fin.sources.flatMap((s) => chiffresDe(`${s.titre}\n${s.extrait ?? ""}`)),
@@ -160,7 +165,7 @@ export interface NoteDeConversation {
 
 export function noterLaConversation(
   cas: CasDeConversation,
-  fins: readonly FinDeLaReponse[],
+  fins: readonly FinMesuree[],
   questions: readonly string[],
   mode: Mode,
   options: { ecritureConstatee?: boolean } = {},
@@ -209,7 +214,7 @@ export function noterLaConversation(
     interditsVus,
     outilsAppeles: outils,
     chiffresSansSource: sansSource,
-    chiffresRetires: fins.reduce((t, f) => t + f.chiffresRetires.length, 0),
+    chiffresRetires: fins.reduce((t, f) => t + f.chiffresRetires, 0),
     latencePremierMotMs: fins[0]?.mesure.latencePremierMotMs ?? null,
     coutUsd: coutUsd === null ? null : Math.round(coutUsd * 1_000_000) / 1_000_000,
     repli: fins.find((f) => f.mesure.repli)?.mesure.repli ?? null,

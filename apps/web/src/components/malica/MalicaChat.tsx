@@ -1,7 +1,7 @@
 /**
  * Le fil de Malica. Aucun texte pré-écrit, aucune simulation : chaque réponse
- * vient d'un appel DeepSeek journalisé dans `agents.agent_runs`, avec son coût
- * et sa latence. Le raisonnement est affiché quand le modèle le rend.
+ * vient de l'assistant (`/malica/assistant`), journalisée dans
+ * `agents.agent_runs` avec son coût et sa latence — qui restent au serveur.
  *
  * ============================================================ LES FILS GARDÉS
  *
@@ -34,12 +34,13 @@ export function MalicaChat({
   placeholder?: string;
   className?: string;
   /**
-   * Le nom du modèle, sa latence, ses jetons, et son raisonnement déplié.
+   * Le pouce du comptable : juger une réponse juste ou fausse, pour la banque
+   * de cas.
    *
-   * Ce sont des instruments, pas une réponse. Un expert-comptable peut vouloir
-   * savoir ce qu'a coûté une question et sur quoi elle a raisonné ; un
+   * Le modèle, ses jetons, sa latence et son coût ne s'affichent plus ici : ils
+   * ne quittent pas le serveur (journal des agents, lisible de la tour). Un
    * dirigeant de PME n'a rien à faire de « deepseek-reasoner · 8609 jetons »,
-   * et le lui montrer transforme une conseillère en tableau de bord.
+   * et le cabinet le lit là où il se lit.
    *
    * Fermé par défaut : la surface qui en a besoin le demande.
    */
@@ -347,9 +348,6 @@ export function MalicaChat({
                   </>
                 )}
               </div>
-            ) : null}
-            {technique && turn.meta ? (
-              <p className="mt-2 font-mono text-[10px] text-muted-foreground">{turn.meta}</p>
             ) : null}
           </div>
         ))}

@@ -84,6 +84,7 @@ export function repliParDeepSeek(
       conversationId: r.conversationId,
       messageId: r.messageId,
       titre: r.titre,
+      retenue: r.retenue,
     };
   };
 }

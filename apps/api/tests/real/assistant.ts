@@ -8,7 +8,14 @@
  * Par conversation : juste ou non, outils bien utilisés, refus et propositions
  * des pièges, chiffres sans source (relus indépendamment de la garde, contre
  * les sources que l'écran a reçues), phrases retirées par la garde, latence du
- * premier mot, coût au tarif de la base. Et, autour de chaque conversation,
+ * premier mot, coût au tarif de la base.
+ *
+ * Le navigateur ne reçoit plus rien de la mécanique (ni modèle, ni coût, ni
+ * nom d'outil) : l'épreuve la relit comme un observateur honnête — les outils
+ * par les étapes que l'écran affiche (une étape par outil, fixée au serveur),
+ * la latence à son horloge, le modèle et le coût au journal des agents, par
+ * `DATABASE_URL_ADMIN` (sans elle, coût et modèle restent inconnus et le
+ * plafond ne peut pas être tenu : l'épreuve refuse de partir). Et, autour de chaque conversation,
  * l'état des pièces du dossier relu AVANT et APRÈS : une pièce partie au
  * cabinet ou changée de statut serait une action exécutée sans confirmation.
  *
@@ -28,8 +35,11 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 
+import pg from "pg";
+
 import type { EvenementDeLAssistant, FinDeLaReponse } from "@malica/socle/ports/assistant";
 
+import type { FinMesuree } from "../../src/malica/assistant/agent.ts";
 import { lireLeFluxSSE } from "../../src/malica/assistant/claude-flux.ts";
 import {
   bilanDeLEpreuve,
@@ -39,6 +49,7 @@ import {
   remplir,
   type NoteDeConversation,
 } from "../../src/malica/assistant/epreuve-assistant.ts";
+import { DEFINITIONS, etapeDeLOutil } from "../../src/malica/assistant/outils.ts";
 
 const COMPTES = JSON.parse(
   readFileSync(new URL("../../../../outils/comptes-de-parcours.json", import.meta.url), "utf8"),
@@ -121,7 +132,33 @@ const VALEURS: Record<string, string> = {
   PIECE_ETRANGERE: "00000000-0000-4000-8000-00000000dead",
 };
 
-async function poser(corps: Record<string, unknown>): Promise<FinDeLaReponse> {
+// Le journal des agents : seule source du modèle et du coût, que l'écran ne voit plus.
+const urlDuJournal = process.env["DATABASE_URL_ADMIN"];
+if (!urlDuJournal)
+  throw new Error("DATABASE_URL_ADMIN absente : le coût de l'épreuve est illisible");
+const journal = new pg.Pool({ connectionString: urlDuJournal, max: 1 });
+
+async function auJournal(depuis: Date): Promise<{ modele: string | null; coutUsd: number | null }> {
+  const { rows } = await journal.query<{ modele: string | null; cout: string | null }>(
+    `select (array_agg(model order by created_at desc))[1] as modele, sum(cost) as cout
+       from agents.agent_runs
+      where agent like 'malica.assistant%' and created_at >= $1`,
+    [depuis],
+  );
+  const cout = rows[0]?.cout;
+  return { modele: rows[0]?.modele ?? null, coutUsd: cout == null ? null : Number(cout) };
+}
+
+async function poser(corps: Record<string, unknown>): Promise<FinMesuree> {
+  const depuis = new Date();
+  const t0 = Date.now();
+  // Les étapes que l'écran affiche, ramenées à leur outil : une par outil.
+  const locale = String(corps["locale"] ?? "fr");
+  const outilDeLEtape = new Map(
+    DEFINITIONS.map((d) => [etapeDeLOutil(d.name, locale), d.name] as const),
+  );
+  const outils: string[] = [];
+  let premierMot: number | null = null;
   const r = await fetch(`${base}/malica/assistant`, {
     method: "POST",
     headers: entetes,
@@ -134,18 +171,38 @@ async function poser(corps: Record<string, unknown>): Promise<FinDeLaReponse> {
   let fin: FinDeLaReponse | null = null;
   for await (const brut of lireLeFluxSSE(r.body)) {
     const ev = brut as unknown as EvenementDeLAssistant;
+    if (ev.type === "texte" && premierMot === null && ev.texte.trim()) premierMot = Date.now() - t0;
+    if (ev.type === "outil" && ev.etat === "debut") {
+      const nom = outilDeLEtape.get(ev.etiquette);
+      if (nom) outils.push(nom);
+    }
     if (ev.type === "fin") fin = ev.fin;
     if (ev.type === "erreur") throw new Error(ev.erreur);
   }
   if (!fin) throw new Error("flux terminé sans fin");
-  return fin;
+  const { modele, coutUsd } = await auJournal(depuis);
+  return {
+    ...fin,
+    mesure: {
+      modele,
+      repli: fin.sansCitations ? "deepseek" : null,
+      motifDuRepli: null,
+      latencePremierMotMs: premierMot,
+      latenceTotaleMs: Date.now() - t0,
+      coutUsd,
+      outils,
+      iterations: 0,
+      conclusion: null,
+      retenue: false,
+    },
+  };
 }
 
 const notes: NoteDeConversation[] = [];
 const detail: Array<{
   id: string;
   note: NoteDeConversation | null;
-  fins: FinDeLaReponse[];
+  fins: FinMesuree[];
   erreur?: string;
 }> = [];
 let depense = 0;
@@ -156,7 +213,7 @@ for (const c of cas) {
     break;
   }
   const avant = await etatDesPieces();
-  const fins: FinDeLaReponse[] = [];
+  const fins: FinMesuree[] = [];
   const questions: string[] = [];
   let conversationId: string | null = null;
   let erreur: string | undefined;
@@ -200,6 +257,8 @@ const bilan = bilanDeLEpreuve(notes);
 console.log(
   `\n${bilanEnTexte(bilan)}\nDépense de l'épreuve           ${Math.round(depense * 10_000) / 10_000} $ (plafond ${plafond} $)`,
 );
+
+await journal.end();
 
 const sortie = argument("--sortie");
 if (sortie) writeFileSync(sortie, JSON.stringify({ bilan, depense, detail }, null, 2));
