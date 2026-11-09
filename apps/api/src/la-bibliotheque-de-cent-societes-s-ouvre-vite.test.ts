@@ -28,6 +28,9 @@ const BUDGET_MS = 1500;
 /** Les pièces qui ont vécu : lues, envoyées, vues, précisées, prises en charge. */
 const AVEC_HISTOIRE = 800;
 const BUDGET_HISTOIRE_MS = 1500;
+/** Une cloche qui n'a pas été lue depuis longtemps (846 sur le serveur d'essai). */
+const NOTIFICATIONS = 1500;
+const BUDGET_CLOCHE_MS = 500;
 
 type Lot = { tenantId: string; pieces: PieceLue[] };
 
@@ -175,6 +178,13 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     await s.fait("expert", "supervision.voir", vecue);
     await s.priseEnCharge(vecue);
     await recopierLaPieceVecue(s, vecue, societes.slice(0, 60));
+    await s.admin.query(
+      `insert into collab.notifications (tenant_id, kind, payload)
+       select ($1::uuid[])[1 + (g % array_length($1::uuid[], 1))], 'piece.retournee',
+              jsonb_build_object('piece_id', md5('banc-histoire-' || (1 + g % $2::int))::uuid)
+         from generate_series(1, $3::int) g`,
+      [societes.slice(0, 60), AVEC_HISTOIRE, NOTIFICATIONS],
+    );
 
     /*
      * Les statistiques d'un serveur qui tourne (9 novembre 2026). Les milliers
@@ -287,5 +297,16 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     console.log(`  ${vecues.length} pièces prises en charge : ${Math.round(duree)} ms`);
     assert.ok(vecues.length >= AVEC_HISTOIRE, `${vecues.length} pièces qui ont vécu`);
     assert.ok(duree < BUDGET_HISTOIRE_MS, `${Math.round(duree)} ms, budget ${BUDGET_HISTOIRE_MS}`);
+  });
+
+  it(`une cloche de ${NOTIFICATIONS} notifications : un appel, sous ${BUDGET_CLOCHE_MS} ms`, async () => {
+    const dossiers = societes.slice(0, 60);
+    await s.fait("amel", "collab.notifications", dossiers);
+    const debut = performance.now();
+    const lues = (await s.fait("amel", "collab.notifications", dossiers)) as unknown[];
+    const duree = performance.now() - debut;
+    console.log(`  ${lues.length} notifications : ${Math.round(duree)} ms`);
+    assert.ok(lues.length >= NOTIFICATIONS, `${lues.length} notifications`);
+    assert.ok(duree < BUDGET_CLOCHE_MS, `${Math.round(duree)} ms, budget ${BUDGET_CLOCHE_MS}`);
   });
 });

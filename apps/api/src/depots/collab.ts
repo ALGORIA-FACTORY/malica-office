@@ -337,28 +337,12 @@ export const collab = {
   async notifications(db: Requete, tenantIds: string[]) {
     if (tenantIds.length === 0) return [];
     const { rows } = await db.query(
-      // La lecture est celle de la personne (27 octobre 2026) ; le `read_at`
-      // d'avant vaut encore pour les membres du dossier qui l'avaient posé.
-      //
-      // Toutes les non lues, et les cent dernières (staging, 5 novembre 2026) :
-      // la liste s'arrêtait aux cent plus récentes, lues ou non. Au-delà, une
-      // notification en attente disparaissait, et « en attente » se comptait
-      // sur ce qui restait — 100, puis 99 après une lecture, quel que soit le
-      // vrai nombre. Une notification non lue ne sort jamais de la liste.
-      `with lues as (
-         select n.id, n.tenant_id, n.kind, n.payload, n.created_at,
-                coalesce(
-                  (select l.lu_le from collab.notification_lectures l
-                    where l.tenant_id = n.tenant_id and l.notification_id = n.id
-                      and l.user_id = auth.uid()),
-                  case when n.tenant_id in (select app.member_orgs()) then n.read_at end
-                ) as read_at,
-                row_number() over (order by n.created_at desc, n.id) as rang
-           from notifications_v n where n.tenant_id = any($1::uuid[])
-       )
-       select id, tenant_id, kind, payload, created_at, read_at
-         from lues
-        where read_at is null or rang <= 100
+      // La lecture est celle de la personne (27 octobre 2026). Toutes les non
+      // lues et les cent dernières (5 novembre 2026) : une notification non
+      // lue ne sort jamais de la liste. Une seule lecture (9 novembre 2026) :
+      // la règle par ligne coûtait 4,7 s pour 846 notifications.
+      `select id, tenant_id, kind, payload, created_at, read_at
+         from app.notifications_des_societes($1::uuid[])
         order by created_at desc, id`,
       [tenantIds],
     );
