@@ -194,7 +194,7 @@ describe("le pouce du comptable", () => {
     expect(screen.queryByText(d["malica.juge.invite"])).toBeNull();
     expect(screen.queryByText(/deepseek-reasoner/)).toBeNull();
     // The reasoning toggle no longer exists at all (PR #298): the reasoning never shows.
-    expect(d["malica.chat.showThinking"]).toBeUndefined();
+    expect((d as Record<string, string | undefined>)["malica.chat.showThinking"]).toBeUndefined();
     expect(screen.queryByText("ne doit pas s'afficher")).toBeNull();
     expect(juger).not.toHaveBeenCalled();
   });
@@ -203,7 +203,7 @@ describe("le pouce du comptable", () => {
     const d = await ouvrir("fr", true);
     await poser(d, "Quel est mon crédit de TVA ?");
     // No reasoning toggle exists any more (PR #298), even in technical mode.
-    expect(d["malica.chat.showThinking"]).toBeUndefined();
+    expect((d as Record<string, string | undefined>)["malica.chat.showThinking"]).toBeUndefined();
     expect(screen.queryByText(/raisonnement|reasoning|التفكير/i)).toBeNull();
   });
 });
