@@ -1,0 +1,38 @@
+// Monte malica_constats_chat (drop/create autorisé pour CE nom seulement), migre,
+// et écrit apps/api/.env.test. N'imprime aucune URL.
+import { spawnSync } from "node:child_process";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const RACINE = process.argv[2];
+const require = createRequire(join(RACINE, "apps", "api", "package.json"));
+const pg = require("pg");
+const NOM = "malica_constats_chat";
+const ENV = join(RACINE, "apps", "api", ".env");
+const lire = (cle) =>
+  readFileSync(ENV, "utf8").split(/\r?\n/).find((l) => l.startsWith(`${cle}=`))
+    .slice(cle.length + 1).trim().replace(/^"|"$/g, "");
+const surLaBase = (url, base) => { const u = new URL(url); u.pathname = `/${base}`; return u.toString(); };
+const admin = surLaBase(lire("DATABASE_URL_ADMIN"), NOM);
+const api = surLaBase(lire("DATABASE_URL"), NOM);
+if (new URL(admin).pathname !== `/${NOM}`) process.exit(2);
+
+const m = new pg.Client({ connectionString: surLaBase(admin, "postgres") });
+await m.connect();
+await m.query(`drop database if exists ${NOM} with (force)`);
+await m.query(`create database ${NOM}`);
+await m.query(`alter database ${NOM} set lc_messages = 'C'`);
+await m.end();
+console.log(`base ${NOM} recréée`);
+const r = spawnSync(process.execPath, [join(RACINE, "db", "migrer.mjs"), "--base", admin], { encoding: "utf8" });
+console.log("migrer.mjs exit", r.status, (r.stdout || "").trim().split("\n").at(-1));
+if (r.status !== 0) { console.log((r.stderr || "").slice(-2000)); process.exit(1); }
+const PIECES = join(tmpdir(), "malica-constats-chat-pieces");
+mkdirSync(PIECES, { recursive: true });
+writeFileSync(join(RACINE, "apps", "api", ".env.test"), [
+  "# base jetable de la vérification des constats du chat",
+  `DATABASE_URL=${api}`, `DATABASE_URL_ADMIN=${admin}`,
+  `STOCKAGE_RACINE=${PIECES.replace(/\\/g, "/")}`, ""].join("\n"));
+console.log(".env.test écrit");

@@ -1,0 +1,3 @@
+capture.contexteAssistant : pieces = 500 · ecritures = 0 · echeances = 0
+loadMalicaContext → dossier.pieces (ce que Malica lit) : {"capturee":500}
+vérité en base (pieces_v, actives) : capturee 502, lue 100 — total 602

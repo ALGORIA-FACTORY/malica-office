@@ -1,0 +1,8 @@
+base : malica_local (transaction read only)
+question : Quel est le taux de la retenue à la source sur les loyers ?
+appels à l'encodeur : 1
+fragments rendus au modèle : 2
+  CIRPPIS art. 52 · distance 0.2501 · extrait 320 car. (fragment entier : 1790 car.)
+  CIRPPIS art. 53 · distance 0.3182 · extrait 320 car. (fragment entier : 1784 car.)
+rechercher() brut (avant seuil) : 6 lignes, distances 0.2501, 0.3182, 0.4073, 0.416, 0.4277, 0.4312
+appels à l'encodeur au total : 1

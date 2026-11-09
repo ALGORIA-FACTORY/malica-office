@@ -1,0 +1,33 @@
+// Constats 1, 3, 10 — API locale, modèle SIMULÉ (aucun appel payant).
+import { readFileSync, writeFileSync } from "node:fs";
+import { session } from "./client.mjs";
+const LOG = "C:/Users/wisse/AppData/Local/Temp/claude/9425b3bbd09fa714/4cfa453f-7674-4c12-ac23-5141b5489d28/scratchpad/constats-chat/raw/intercept-mock.jsonl";
+writeFileSync(LOG, "");
+const s = await session();
+const orgs = await s.rpc("identite", "listMyOrganizations");
+console.log("organisations visibles :", orgs.map((o) => `${o.name} (${o.kind})`).join(" · "));
+const pme = orgs.find((o) => o.kind !== "cabinet") ?? orgs[0];
+console.log("dossier interrogé :", pme.name, pme.kind);
+
+const q1 = await s.malica("/demander", { tenantId: pme.id, question: "Quel est le taux de la retenue à la source sur les loyers ?", locale: "fr", mode: "reasoner", conversationId: null });
+console.log("\nQ1 status", q1.status, "content-type", q1.contentType, "durée client", q1.ms, "ms");
+console.log("Q1 clés JSON reçues :", Object.keys(q1.json ?? {}).join(", "));
+console.log("Q1 model/latencyMs/tokensIn/tokensOut :", q1.json?.model, q1.json?.latencyMs, q1.json?.tokensIn, q1.json?.tokensOut);
+console.log("Q1 corps brut (300 premiers car.) :", q1.texte.slice(0, 300));
+
+const q2 = await s.malica("/demander", { tenantId: pme.id, question: "Et pour les hôtels ?", locale: "fr", mode: "reasoner", conversationId: q1.json.conversationId });
+console.log("\nQ2 (suite du même fil) status", q2.status, "conversationId identique :", q2.json?.conversationId === q1.json?.conversationId);
+
+const fil = await s.rpc("conversations", "ouvrir", [q1.json.conversationId]);
+console.log("\nconversations.ouvrir →", fil.length, "messages ; clés du 1er message assistant :",
+  Object.keys(fil.find((m) => m.role === "assistant") ?? {}).join(", "));
+console.log("message assistant (extrait) :", JSON.stringify(fil.find((m) => m.role === "assistant")));
+
+const lignes = readFileSync(LOG, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+console.log("\n--- appels sortants interceptés pendant ce scénario ---");
+for (const l of lignes) {
+  if (l.sens !== "sortie") continue;
+  const c = l.corps ?? {};
+  if (l.chemin.endsWith("/embeddings")) console.log(`#${l.id} ${l.hote}${l.chemin} ENCODE input=${JSON.stringify(c.input)}`);
+  else console.log(`#${l.id} ${l.hote}${l.chemin} model=${c.model} stream=${c.stream} response_format=${JSON.stringify(c.response_format)} messages=${c.messages?.length} roles=[${c.messages?.map((m) => m.role).join(",")}] dernier="${c.messages?.at(-1)?.debut}"`);
+}

@@ -1,0 +1,49 @@
+// Constat 2 — la recherche du chat, rejouée par le VRAI code (chercherDansLeDroit
+// → corpus.rechercher) sur le corpus de malica_local, en transaction READ ONLY.
+// Un seul appel payant : l'encodage de la question (Qwen, embeddings).
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+const RAC = "C:/dev/05_Malica Office/malica-office/.claude/worktrees/agent-abc6f6d11938b9019/apps/api/";
+const R = "file:///C:/dev/05_Malica%20Office/malica-office/.claude/worktrees/agent-abc6f6d11938b9019/apps/api/src/";
+const env = Object.fromEntries(readFileSync(RAC + ".env", "utf8").split(/\r?\n/).filter((l) => /^[A-Z_]+=/.test(l)).map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).trim().replace(/^"|"$/g, "")]));
+process.env.QWEN_BASE_URL = env.QWEN_BASE_URL;
+process.env.QWEN_API_KEY = env.QWEN_API_KEY;
+const pg = createRequire(RAC + "package.json")("pg");
+const c = new pg.Client({ connectionString: env.DATABASE_URL_ADMIN });
+await c.connect();
+await c.query("begin read only");
+console.log("base :", (await c.query("select current_database() d")).rows[0].d, "(transaction read only)");
+
+let appelsEncodeur = 0;
+const f0 = globalThis.fetch;
+const cache = new Map();
+let dernierVecteur = null;
+globalThis.fetch = async (u, i) => {
+  if (!cache.has(i.body)) { appelsEncodeur++; const r = await f0(u, i); cache.set(i.body, { s: r.status, t: await r.text() }); }
+  const e = cache.get(i.body);
+  try { dernierVecteur = JSON.parse(e.t).data[0].embedding; } catch {}
+  return new Response(e.t, { status: e.s });
+};
+
+const { corpus } = await import(R + "depots/corpus.ts");
+const { chercherDansLeDroit } = await import(R + "malica/conseil/corpus.ts");
+const api = { rpc: (depot, methode, args) => corpus[methode](c, ...args) };
+
+const QUESTION = "Quel est le taux de la retenue à la source sur les loyers ?";
+const fragments = await chercherDansLeDroit(api, QUESTION);
+console.log("question :", QUESTION);
+console.log("appels à l'encodeur :", appelsEncodeur);
+console.log("fragments rendus au modèle :", fragments.length);
+for (const f of fragments) {
+  const { rows } = await c.query(
+    `select max(length(ch.texte)) l from legal.chunks ch join legal.article_versions v on v.id = ch.article_version_id
+       join legal.articles a on a.id = v.article_id where a.corpus = $1 and a.numero = $2 and ch.ordinal = $3`,
+    [f.corpus, f.numero, f.ordinal]);
+  console.log(`  ${f.corpus} art. ${f.numero} · distance ${f.distance} · extrait ${f.extrait.length} car. (fragment entier : ${rows[0].l} car.)`);
+}
+// Ce que la requête aurait rendu sans le seuil 0,37 et avec nb=6 : la borne est bien 6.
+const brut = await corpus.rechercher(c, { vecteur: dernierVecteur, nb: 6, jour: null, doctrine: true, historique: false }).catch((e) => e.message);
+console.log("rechercher() brut (avant seuil) :", Array.isArray(brut) ? `${brut.length} lignes, distances ${brut.map((b) => b.distance).join(", ")}` : brut);
+console.log("appels à l'encodeur au total :", appelsEncodeur);
+await c.query("rollback");
+await c.end();

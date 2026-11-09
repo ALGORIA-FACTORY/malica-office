@@ -1,0 +1,38 @@
+#!/bin/sh
+cd "/c/dev/05_Malica Office/malica-office/.claude/worktrees/agent-abc6f6d11938b9019" || exit 1
+echo '## C5 — qui appelle /malica/conseil-cite ?'
+echo '$ grep -rIn "/malica/conseil-cite\|\"/conseil-cite\"" apps/web/src android packages'
+grep -rIn '/malica/conseil-cite\|"/conseil-cite"' apps/web/src android packages; echo "(code retour $?)"
+echo '$ grep -n "appelerRoute(" apps/web/src/verticals/malica-office/adapters/http/malica.ts'
+grep -n 'appelerRoute("' apps/web/src/verticals/malica-office/adapters/http/malica.ts
+echo '$ grep -n "conseil-cite" apps/api/src/malica.ts'
+grep -n 'conseil-cite' apps/api/src/malica.ts
+echo
+echo '## C12 — limiteurs de débit déclarés dans l API'
+echo '$ grep -rn "rateLimit(" apps/api/src (hors tests)'
+grep -rn 'rateLimit(' apps/api/src --include=*.ts | grep -v '\.test\.'
+echo '$ grep -n "limiteAuth" apps/api/src/app.ts'
+grep -n 'limiteAuth' apps/api/src/app.ts
+echo '$ grep -rniE "quota|par_offre" db/migrations/*conseil* apps/api/src/malica (hors tests)'
+grep -rniE 'quota|par_offre' db/migrations/*conseil* apps/api/src/malica | grep -v '\.test\.'; echo "(code retour $?)"
+echo
+echo '## C14 — ANTHROPIC_API_KEY dans les gabarits d environnement'
+for f in .env.example infra/env.exemple infra/compose.yml; do echo "\$ grep -c ANTHROPIC_API_KEY $f"; grep -c ANTHROPIC_API_KEY $f; done
+echo
+echo '## C11 — Caddy'
+echo '$ grep -n "encode\|reverse_proxy\|flush" infra/caddy/Caddyfile'
+grep -n 'encode\|reverse_proxy\|flush' infra/caddy/Caddyfile
+echo '$ grep -n "image: caddy" infra/compose.yml'
+grep -n 'image: caddy' infra/compose.yml
+echo '$ command -v caddy docker go'
+command -v caddy docker go; echo "(code retour $? : aucun des trois)"
+echo
+echo '## C9 — MalicaChat.tsx (cabinet) : texte brut et méta'
+grep -n 'whitespace-pre-wrap\|tour.meta = \|turn.meta' apps/web/src/components/malica/MalicaChat.tsx
+echo
+echo '## Lieux demandés'
+echo '$ ls .github/workflows/epreuve-conseil.yml apps/api/src/malica/conseil/epreuve-conseil.*'
+ls .github/workflows/epreuve-conseil.yml apps/api/src/malica/conseil/epreuve-conseil.*
+node -e "const j=require('./apps/api/src/malica/conseil/epreuve-conseil.json'); console.log('epreuve-conseil.json : cas =', j.cas.length)"
+echo '$ règles numérotées de systemPrompt (ask.ts)'
+grep -nE '^\s*"[0-9]+( bis)?\. ' apps/api/src/malica/conseil/ask.ts | sed -E 's/^([0-9]+):\s*"([0-9]+( bis)?)\..*/ligne \1 : règle \2/' | tr '\n' ' '; echo

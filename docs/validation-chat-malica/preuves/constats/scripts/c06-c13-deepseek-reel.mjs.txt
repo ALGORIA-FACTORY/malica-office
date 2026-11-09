@@ -1,0 +1,43 @@
+// Constats 6 et 13 — appels RÉELS à DeepSeek par le VRAI callDeepSeek.
+// Appels payants : 2 (un « deepseek-chat », un « deepseek-reasoner »), invite minuscule.
+// GET /models : gratuit. Aucune clé imprimée.
+import { readFileSync } from "node:fs";
+const RAC = "C:/dev/05_Malica Office/malica-office/.claude/worktrees/agent-abc6f6d11938b9019/apps/api/";
+const R = "file:///C:/dev/05_Malica%20Office/malica-office/.claude/worktrees/agent-abc6f6d11938b9019/apps/api/src/";
+const cle = readFileSync(RAC + ".env", "utf8").split(/\r?\n/).find((l) => l.startsWith("DEEPSEEK_API_KEY=")).slice(17).trim().replace(/^"|"$/g, "");
+
+const m = await fetch("https://api.deepseek.com/models", { headers: { Authorization: `Bearer ${cle}` } });
+console.log("GET /models →", m.status, JSON.stringify((await m.json()).data?.map((d) => d.id)));
+
+// Sonde : quand les en-têtes arrivent, quand le corps finit, quel modèle répond.
+const f0 = globalThis.fetch;
+let sonde = null;
+globalThis.fetch = async (u, i) => {
+  const t0 = performance.now();
+  const r = await f0(u, i);
+  const tEntetes = performance.now() - t0;
+  // Le corps est DÉDOUBLÉ : une branche part au code tel quel (sa mesure n'est
+  // pas faussée par la sonde), l'autre est lue ici pour dater la fin du corps.
+  const [pourLeCode, pourLaSonde] = r.body.tee();
+  sonde = { status: r.status, enTetesMs: Math.round(tEntetes) };
+  sonde.fini = new Response(pourLaSonde).text().then((texte) => {
+    sonde.corpsCompletMs = Math.round(performance.now() - t0);
+    sonde.lignesVidesEnTete = texte.length - texte.trimStart().length;
+    try { const j = JSON.parse(texte); sonde.modeleServi = j.model; sonde.usage = j.usage; } catch {}
+  });
+  return new Response(pourLeCode, { status: r.status, headers: r.headers });
+};
+
+const { callDeepSeek } = await import(R + "malica/conseil/deepseek.ts");
+for (const role of ["chat", "reasoner"]) {
+  const t0 = performance.now();
+  const res = await callDeepSeek({ apiKey: cle, role, messages: [{ role: "user", content: "Réponds par un seul mot : bonjour." }] });
+  const mur = Math.round(performance.now() - t0);
+  await sonde.fini;
+  console.log(`\n[${role}] modèle DEMANDÉ et journalisé par le code : ${res.model}`);
+  console.log(`[${role}] modèle SERVI (champ "model" de la réponse)  : ${sonde.modeleServi}`);
+  console.log(`[${role}] latencyMs journalisé par callDeepSeek         : ${res.latencyMs} ms`);
+  console.log(`[${role}] sonde : en-têtes à ${sonde.enTetesMs} ms, corps complet à ${sonde.corpsCompletMs} ms, octets d'attente en tête du corps : ${sonde.lignesVidesEnTete}`);
+  console.log(`[${role}] durée réelle de bout en bout (mur)        : ${mur} ms`);
+  console.log(`[${role}] jetons : ${JSON.stringify(sonde.usage)}`);
+}
