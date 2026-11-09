@@ -24,13 +24,13 @@
 -- ===========================================================================
 
 create or replace function facturation.prise_en_charge_de(p_licence uuid)
-returns table (offre_code text, comptabilite text)
+returns table (offre_code text, comptabilite text, offre_depuis date)
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select a.offre_code, o.name
+  select a.offre_code, o.name, a.offre_depuis
     from facturation.acces a
     join identity.organizations o on o.id = a.cabinet_tenant_id
    where a.licence_id = p_licence and a.canal = 'cabinet' and a.statut = 'actif'
@@ -43,7 +43,8 @@ grant execute on function facturation.prise_en_charge_de(uuid) to authenticated;
 
 comment on function facturation.prise_en_charge_de(uuid) is
   'L''offre que la comptabilité a choisie pour cette licence, et son nom ; '
-  'aucune ligne quand la société paie seule. Jamais un prix.';
+  'aucune ligne quand la société paie seule. Jamais un prix : `offre_depuis` '
+  'est la date du tarif figé de l''accès, celle que la facturation valorise.';
 
 -- ===========================================================================
 -- 2. PAS DE DESCENTE SOUS L'OFFRE QUE LA COMPTABILITÉ A CHOISIE
@@ -185,7 +186,7 @@ begin
   end if;
 
   if v_n = 1 then
-    select p.offre_code, p.comptabilite into v_choisie
+    select p.offre_code, p.comptabilite, p.offre_depuis into v_choisie
       from facturation.prise_en_charge_de(v_licence) p;
     return query
       select v_licence, p_tenant,
@@ -196,7 +197,7 @@ begin
                when v_choisie.offre_code is null then c.prix_mensuel_ht::numeric
                else nullif(greatest(
                       c.prix_mensuel_ht::numeric
-                        - coalesce((ref.offre_a(v_choisie.offre_code, current_date)).prix_mensuel_ht::numeric, 0),
+                        - coalesce((ref.offre_a(v_choisie.offre_code, v_choisie.offre_depuis)).prix_mensuel_ht::numeric, 0),
                       0), 0)
              end,
              true,
@@ -286,7 +287,8 @@ begin
   select exists (select 1 from facturation.engagements_annuels e
                   where e.licence_id = v_licence and e.au >= p_le) into v_annuel;
   -- Ce que la comptabilité paie pour la société : la base dont on retranche.
-  select (ref.offre_a(p.offre_code, p_le)).prix_mensuel_ht::numeric into v_base
+  -- Le tarif figé de l'accès, celui que la comptabilité est facturée.
+  select (ref.offre_a(p.offre_code, p.offre_depuis)).prix_mensuel_ht::numeric into v_base
     from facturation.prise_en_charge_de(v_licence) p;
 
   return query
