@@ -52,12 +52,9 @@ export const en: Dict = {
     "No entries ready for review in active engagements. Open the queue to identify documents that need completing.",
 
   "brand.name": "Malica Office",
-  "brand.tagline": "Augmented accounting, governed figures",
 
-  "nav.signin": "Sign in",
   "nav.language": "Language",
 
-  "landing.surfaces.title": "Two surfaces, one brain",
   "landing.surfaces.pme.title": "Company workspace",
   "landing.surfaces.pme.body":
     "One photo, one gesture: Send. You follow the document: Sent · Seen · Returned · Taken up.",

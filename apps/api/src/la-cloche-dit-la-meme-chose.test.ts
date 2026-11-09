@@ -106,10 +106,15 @@ describe("la cloche dit la même chose", { skip: !BASE_CONFIGUREE }, () => {
     await noter(s.cabinet, { note: "pour le cabinet" });
     await noter(autre.pme, { note: "à côté" });
 
+    // Une notification qu'Amel LIT à coup sûr : la sienne, sans pièce ni
+    // destinataire. `limit 1` sans ordre rendait tantôt celle d'une pièce privée
+    // de Sami, que la politique lui refuse (`refus.introuvable.notification`).
     const { rows } = await s.admin.query<{ id: string }>(
-      `select id from collab.notifications where tenant_id = $1 limit 1`,
+      `select id from collab.notifications
+        where tenant_id = $1 and user_id is null and payload = '{"note":"sans pièce"}'::jsonb`,
       [s.pme],
     );
+    assert.equal(rows.length, 1, "la notification sans pièce de la PME");
     await s.fait("amel", "collab.markRead", rows[0]!.id);
   });
 

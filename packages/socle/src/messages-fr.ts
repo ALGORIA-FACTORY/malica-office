@@ -53,12 +53,9 @@ export const fr = {
     "Aucune écriture prête à superviser dans les mandats actifs. Consultez la file pour identifier les pièces à compléter.",
 
   "brand.name": "Malica Office",
-  "brand.tagline": "Comptabilité augmentée, chiffre gouverné",
 
-  "nav.signin": "Se connecter",
   "nav.language": "Langue",
 
-  "landing.surfaces.title": "Deux surfaces, un seul cerveau",
   "landing.surfaces.pme.title": "Espace PME",
   "landing.surfaces.pme.body":
     "Une photo, un geste : Envoyer. Vous suivez la pièce : Envoyée · Vue · Retour · Prise en charge.",
