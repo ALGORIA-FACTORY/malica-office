@@ -17,12 +17,16 @@ import { usePiecesLuesDesSocietes } from "@/hooks/use-pieces-lues";
 import { useI18n } from "@/i18n";
 import { cabinetsDesSocietes } from "@/lib/votre-comptabilite";
 
-export function VotreComptabilite() {
+/**
+ * `societe` : la société de l'en-tête — seul son cabinet se montre ; `null`
+ * (« Toutes les sociétés ») : ceux de toutes (9 novembre 2026).
+ */
+export function VotreComptabilite({ societe }: { societe: string | null }) {
   const { t } = useI18n();
   const { ids, fiches } = useFichesDesSocietes();
   const pieces = usePiecesLuesDesSocietes(ids);
   const parSociete = new Map(ids.map((id, i) => [id, pieces[i]?.data ?? []]));
-  const cabinets = cabinetsDesSocietes(fiches.data ?? [], parSociete);
+  const cabinets = cabinetsDesSocietes(fiches.data ?? [], parSociete, societe);
   if (cabinets.length === 0) return null;
 
   return (

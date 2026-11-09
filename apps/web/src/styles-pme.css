@@ -2527,6 +2527,11 @@ body:has([data-surface="pme"]) { background: #FFFFFF }
 [data-surface="pme"] [data-ecran="chat"][data-parle] .top .qui{opacity:1;transform:none}
 [data-surface="pme"] [data-ecran="chat"] .chips{display:flex;gap:.375rem;margin-inline-start:auto;flex:none}
 [data-surface="pme"] [data-ecran="chat"] .chip{height:32px;padding:0 .75rem;border-radius:999px;border:1px solid var(--hr);background:var(--s1);color:var(--t2);font:inherit;font-size:.75rem;font-weight:600;display:inline-flex;align-items:center;gap:.3125rem;text-decoration:none;cursor:pointer;white-space:nowrap;max-width:9.5rem;overflow:hidden;text-overflow:ellipsis}
+[data-surface="pme"] [data-ecran="chat"] .top .qui{min-width:5.5rem}
+[data-surface="pme"] [data-ecran="chat"] .top .chips{flex:0 1 auto;min-width:0}
+[data-surface="pme"] [data-ecran="chat"] .chip{min-width:0}
+[data-surface="pme"] [data-ecran="chat"] .chip.ico{width:36px;height:36px;padding:0;flex:none;justify-content:center;border-radius:50%}
+[data-surface="pme"] [data-ecran="chat"] .chip.ico svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 [data-surface="pme"] [data-ecran="chat"] .chip[aria-pressed="true"]{background:var(--tx);color:var(--bg);border-color:var(--tx)}
 [data-surface="pme"] [data-ecran="chat"] .chip em,[data-surface="pme"] [data-ecran="chat"] .cn em{font-style:normal;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:var(--am);color:#1A0905;font-size:.625rem;font-weight:700;display:inline-grid;place-items:center}
 /* Malica en grand */

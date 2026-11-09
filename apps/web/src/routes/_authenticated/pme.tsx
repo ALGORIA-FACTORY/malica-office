@@ -174,12 +174,33 @@ function PmeLayout() {
   }, [orgsQuery.isPending, pmeOrgs.length, hasCabinet, navigate]);
 
   /*
-   * La société que la bibliothèque et les échéances montrent : toutes, par
-   * défaut. Un id qui n'est plus parmi les dossiers retombe sur « toutes ».
+   * La société que la bibliothèque, ses dossiers et les échéances montrent :
+   * CELLE DE L'EN-TÊTE (Wissem, 9 novembre 2026 : « cabinet et org
+   * n'apparaissent pas dans la bibliothèque puisque le sélecteur dans
+   * l'en-tête existe »). « Toutes les sociétés », choisi dans l'en-tête, montre
+   * la vue consolidée sur ces écrans ; ailleurs, il ouvre « Mes sociétés ».
+   * `null` : toutes.
    */
-  const [societeVue, setSocieteVue] = useState<string | null>(null);
-  const societeAffichee =
-    societeVue !== null && pmeOrgs.some((o) => o.id === societeVue) ? societeVue : null;
+  const [consolidee, setConsolidee] = useState(false);
+  const societeAffichee = consolidee ? null : (org?.id ?? null);
+  /** Les écrans qui savent montrer toutes les sociétés ensemble. */
+  const ecranConsolidable =
+    path.startsWith("/pme/list") ||
+    path.startsWith("/pme/dossier") ||
+    path.startsWith("/pme/echeances") ||
+    path.startsWith("/pme/societes");
+  // L'accueil est celui d'UNE société : y revenir quitte la vue consolidée.
+  useEffect(() => {
+    if (path === "/pme" || path === "/pme/") setConsolidee(false);
+  }, [path]);
+  const afficherSociete = (id: string | null) => {
+    if (id === null) {
+      setConsolidee(true);
+      return;
+    }
+    setConsolidee(false);
+    if (id !== org?.id) selectOrg(id);
+  };
 
   function selectOrg(id: string) {
     setActiveId(id);
@@ -718,12 +739,24 @@ function PmeLayout() {
                    * « Toutes les sociétés » ouvre l'écran « Mes sociétés ».
                    */
                   ouverte: org.id,
-                  surMesSocietes: path.startsWith("/pme/societes"),
+                  surMesSocietes:
+                    path.startsWith("/pme/societes") || (consolidee && ecranConsolidable),
+                  /*
+                   * 9 novembre 2026 : sur la bibliothèque, ses dossiers et les
+                   * échéances, l'en-tête choisit ce que l'écran montre, et l'on
+                   * y reste. Ailleurs, choisir une société ouvre son accueil, et
+                   * « Toutes les sociétés » l'écran « Mes sociétés »
+                   * (planche 13).
+                   */
                   onOuvrir: (id: string) => {
-                    if (id !== org.id) selectOrg(id);
-                    void navigate({ to: "/pme" });
+                    afficherSociete(id);
+                    if (!ecranConsolidable || path.startsWith("/pme/societes"))
+                      void navigate({ to: "/pme" });
                   },
-                  onToutes: () => void navigate({ to: "/pme/societes" }),
+                  onToutes: () => {
+                    setConsolidee(true);
+                    if (!ecranConsolidable) void navigate({ to: "/pme/societes" });
+                  },
                 }
               : undefined
           }
@@ -763,7 +796,7 @@ function PmeLayout() {
                 })),
                 choisirDossier: selectOrg,
                 societeAffichee,
-                afficherSociete: setSocieteVue,
+                afficherSociete,
                 aUnCabinet,
                 capture: (kind) => choisir.mutate(kind),
                 ouvrirScanner,
