@@ -160,6 +160,23 @@ export const referentiel = {
   },
 
   /**
+   * La déclaration de plusieurs jours en un appel : la série de mois de
+   * l'accueil en faisait une requête par mois (8 novembre 2026).
+   */
+  async declarationsTva(
+    db: Requete,
+    packId: string,
+    dossierId: string,
+    jours: string[],
+    locale = "fr",
+  ) {
+    const lues = [];
+    for (const jour of jours)
+      lues.push(await referentiel.declarationTva(db, packId, dossierId, jour, locale));
+    return lues;
+  },
+
+  /**
    * Les lignes de la déclaration de TVA en vigueur au jour dit
    * (`ref.tva_declaration_lignes`), dans l'ordre du formulaire, libellés
    * traduits (`ref.labels`, espace `tva_declaration_ligne`, le français à

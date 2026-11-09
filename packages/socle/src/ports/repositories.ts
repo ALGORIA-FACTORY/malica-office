@@ -119,6 +119,8 @@ export interface IdentityRepository {
   ): Promise<{ id: string; name: string; tientLesLivres: boolean } | null>;
   /** Les mandats proposés à cette PME, qui attendent sa réponse. */
   mandatsProposes(pmeTenantId: string): Promise<MandatPropose[]>;
+  /** Les mêmes, pour toutes les sociétés d'une personne, en un seul appel. */
+  mandatsProposesDesSocietes(pmeTenantIds: string[]): Promise<Record<string, MandatPropose[]>>;
   repondreAuMandat(engagementId: string, accepte: boolean): Promise<{ id: string; status: string }>;
   /** Le mandat en cours du dossier, lu depuis la PME ; `null` sans mandat. */
   monMandat(pmeTenantId: string): Promise<MonMandat | null>;
@@ -415,6 +417,13 @@ export interface ReferentialRepository {
     jour: string,
     locale?: string,
   ): Promise<DeclarationTva>;
+  /** Les mêmes lignes pour plusieurs jours, en un seul appel, dans l'ordre des jours. */
+  declarationsTva(
+    packId: string,
+    dossierId: string,
+    jours: string[],
+    locale?: string,
+  ): Promise<DeclarationTva[]>;
   /**
    * La règle de change du dossier au jour dit, résolue (R10) : chaque code,
    * sa valeur, qui l'a décidée, et ce que le cabinet peut y choisir.
