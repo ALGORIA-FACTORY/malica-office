@@ -279,44 +279,44 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
   it("DIAGNOSTIC (temporaire) : les plans", async () => {
     const pg = (await import("pg")).default;
     const { executerRpc } = await import("./rpc.ts");
-    for (const [nom, dossiers] of [
-      ["60", societes.slice(0, 60)],
-      ["150", societes],
+    for (const [nom, dossiers, expliquer] of [
+      ["60-temps", societes.slice(0, 60), false],
+      ["60", societes.slice(0, 60), true],
     ] as const) {
-      const c = new pg.Client({ connectionString: process.env["DATABASE_URL_ADMIN"] });
+      const c = new pg.Client({ connectionString: process.env["DATABASE_URL"] });
       await c.connect();
-      const plans: string[] = [];
-      c.on("notice", (n) => {
-        if (String(n.message).includes("duration")) plans.push(String(n.message));
-      });
+      const db = {
+        query: async (sql: string, params?: unknown[]) => {
+          const debut = performance.now();
+          const liste = sql.trimStart().startsWith("with droits");
+          const r = await c.query(
+            liste && expliquer ? `explain (analyze, buffers) ${sql}` : sql,
+            params as never,
+          );
+          if (liste) {
+            console.log(`SQL ${nom} : ${Math.round(performance.now() - debut)} ms`);
+            if (expliquer) {
+              for (const l of r.rows as Array<Record<string, string>>) {
+                console.log(`PL${nom}|${l["QUERY PLAN"]}`);
+              }
+            }
+          }
+          return r;
+        },
+      };
       try {
         await c.query("begin");
-        await c.query("load 'auto_explain'");
-        await c.query("set local auto_explain.log_min_duration = 100");
-        await c.query("set local auto_explain.log_analyze = on");
-        await c.query("set local auto_explain.log_nested_statements = on");
-        await c.query("set local auto_explain.log_timing = on");
-        await c.query("set local client_min_messages = log");
         await c.query("set local role authenticated");
         await c.query("select set_config('request.jwt.claim.sub', $1, true)", [s.gens.amel.id]);
         await c.query("select set_config('malica.origine', 'serveur', true)");
         const debut = performance.now();
-        await executerRpc(c as never, {
+        await executerRpc(db as never, {
           depot: "capture",
           methode: "listAvecLectureDesSocietes",
           args: [dossiers],
-        });
-        console.log(
-          `PLANS ${nom} : ${Math.round(performance.now() - debut)} ms, ${plans.length} plans`,
-        );
-        plans.forEach((p, i) => {
-          for (const morceau of p.slice(0, 40000).match(/[^\n]+/g) ?? []) {
-            console.log(`PL${nom}.${i}|${morceau}`);
-          }
-        });
+        }).catch((e) => console.log(`RPC ${nom} : ${(e as Error).message}`));
+        console.log(`TOTAL ${nom} : ${Math.round(performance.now() - debut)} ms`);
         await c.query("rollback");
-      } catch (e) {
-        console.log(`PLANS ${nom} erreur ${(e as Error).message}`);
       } finally {
         await c.end();
       }
