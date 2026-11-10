@@ -91,7 +91,7 @@ function OfficeHome() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="rule-b">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <Link to="/" className="text-sm font-semibold uppercase tracking-[0.18em]">
             {t("brand.name")}
           </Link>
@@ -104,7 +104,7 @@ function OfficeHome() {
 
       <PackBanner jurisdiction={jurisdiction} />
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
+      <main className="w-full px-4 py-8 sm:px-6 lg:py-12">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">

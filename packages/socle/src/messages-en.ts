@@ -80,7 +80,17 @@ export const en: Dict = {
   "auth.error.invalidCredentials": "Wrong email or password.",
   "auth.error.userExists": "An access already exists for this email. Use the Sign in tab.",
   "auth.password.hint": "At least 12 characters, not reused elsewhere.",
-  "auth.back": "Back to home",
+  "auth.eyebrow": "Entry traceability",
+  "auth.hero.1": "Every entry",
+  "auth.hero.2": "traces back to its document.",
+  "auth.proof.claim":
+    "Entry proposed from the document, checked by the rules engine, validated by your accountant.",
+  "auth.proof.ref": "Document received",
+  "auth.proof.page": "Document",
+  "auth.principle": "AI proposes. A deterministic engine validates.",
+  "auth.password.show": "Show password",
+  "auth.password.hide": "Hide password",
+  "auth.caps": "Caps Lock is on",
   "auth.forgot.link": "Forgot your password?",
   "auth.forgot.hint":
     "Enter the address of your account: we will send you a link to choose a new password.",

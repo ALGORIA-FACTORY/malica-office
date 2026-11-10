@@ -698,14 +698,12 @@ function PmeLayout() {
          * qui défile s'y verrait. Au-dessus de l'en-tête collé, en dessous des
          * écrans pleins (z-30 et plus), qui peignent la leur avec `pt-safe`.
          *
-         * Elle suit la colonne (`--colonne`, 440 px) au lieu d'une mesure à
-         * elle, et elle s'arrête à 768 px : au-delà, la colonne s'élargit, il
-         * n'y a plus de barre d'état à peindre, et une bande de 440 px posée au
-         * milieu d'un écran de bureau serait un trait sans objet.
+         * Elle prend toute la largeur de l'écran et s'arrête à 768 px : au-delà,
+         * il n'y a plus de barre d'état à peindre.
          */}
         <div
           aria-hidden
-          className="h-safe-top fixed inset-x-0 top-0 z-20 mx-auto w-full max-w-[var(--colonne)] bg-background/95 backdrop-blur md:hidden print:hidden"
+          className="h-safe-top fixed inset-x-0 top-0 z-20 w-full bg-background/95 backdrop-blur md:hidden print:hidden"
         />
         <BandeauHorsLigne />
         {/*
@@ -934,7 +932,7 @@ function PmeLayout() {
          * ressemblent à une application figée.
          */}
         {capture.isPending ? (
-          <div className="rg-rise pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
+          <div className="rg-rise pt-safe fixed inset-0 z-40 flex w-full flex-col items-center justify-center bg-background px-11 text-center">
             <MalicaAvatar size={66} alt="Malica" rond />
             <p className="mt-[26px] text-[19px] leading-[1.5] tracking-[-0.01em]">
               {t("pme.capture.preparation")}

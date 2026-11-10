@@ -27,7 +27,7 @@ function SectionDeLaTour() {
   return (
     <div data-tour-section={section} className="space-y-6">
       <EnTeteDeLaTour surtitre={t("tour.sous")} titre={t(s.libelle)} />
-      <div className="grid max-w-3xl gap-6">
+      <div className="grid gap-6">
         {s.cartes.map((Carte, i) => (
           <Carte key={i} />
         ))}
