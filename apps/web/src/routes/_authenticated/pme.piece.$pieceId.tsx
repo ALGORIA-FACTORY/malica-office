@@ -1108,7 +1108,7 @@ function PieceScreen() {
    */
   if (read.isPending || attente || etat.data?.enCours) {
     return (
-      <div className="pt-safe rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
+      <div className="pt-safe rg-rise fixed inset-0 z-40 flex w-full flex-col items-center justify-center bg-background px-11 text-center">
         <MalicaAvatar size={66} alt="Malica" rond />
         <p className="mt-[26px] text-[19px] leading-[1.5] tracking-[-0.01em]">
           {t("pme.lecture.titre")}
@@ -1209,7 +1209,7 @@ function PieceScreen() {
    */
   if (montrerPiece) {
     return (
-      <div className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col bg-background">
+      <div className="pt-safe fixed inset-0 z-40 flex w-full flex-col bg-background">
         {/*
          * Le retour est le bouton rond du produit, comme partout ailleurs
          * (7 novembre 2026, demande du dirigeant) : plus de « ‹ Vos documents »
@@ -1302,7 +1302,7 @@ function PieceScreen() {
    */
   if (montrerDetail) {
     return (
-      <div className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col bg-background">
+      <div className="pt-safe fixed inset-0 z-40 flex w-full flex-col bg-background">
         {/*
          * Le retour est le bouton rond du produit, comme partout ailleurs
          * (7 novembre 2026, demande du dirigeant) : plus de « ‹ Vos documents »

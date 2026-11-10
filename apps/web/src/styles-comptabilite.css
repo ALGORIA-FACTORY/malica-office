@@ -2,8 +2,6 @@
 .cabinet-workspace .cab-doclib {
   /* Aucune couleur propre : les jetons de l'espace suivent son thème. */
   color: var(--foreground);
-  max-width: 1200px;
-  margin-inline: auto;
 }
 .cabinet-workspace .cab-doclib h1 {
   margin-top: 10px;
@@ -504,8 +502,6 @@
 }
 .cabinet-workspace .cab-content {
   width: 100%;
-  max-width: 1660px;
-  margin-inline: auto;
 }
 .cabinet-workspace .cab-topbar {
   min-height: 68px;
@@ -1135,8 +1131,6 @@
   opacity: 0.45;
 }
 .cab-library {
-  max-width: 1360px;
-  margin-inline: auto;
   min-width: 0;
 }
 .cab-library-header {

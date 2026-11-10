@@ -1,0 +1,100 @@
+/*
+ * La page de connexion : un panneau « preuve » (toujours Ink, dans les deux
+ * thèmes) et un panneau formulaire (thémé). Les couleurs sont les jetons de
+ * `styles.css` ; Ink et Paper sont posés en dur sur le seul panneau preuve, qui
+ * doit se lire pareil en clair et en sombre. Les positions sont logiques
+ * (`inset-inline-*`) : tout se retourne en arabe sans règle à part.
+ */
+.cx { display: flex; flex-wrap: wrap; min-height: 100vh; min-height: 100dvh; background: var(--background); color: var(--foreground) }
+
+/* ---- Panneau preuve ----------------------------------------------------- */
+.cx-art { position: relative; overflow: hidden; flex: 1 1 50%; min-height: 420px; display: none; flex-direction: column; justify-content: space-between; gap: 2.5rem; padding: 2.5rem 3rem 3rem; background: #0A0A0A; color: #FAFAFA }
+.cx-mark { display: block; width: 40px; height: 40px; background: currentColor; -webkit-mask: url("/rg-mark.svg") center / contain no-repeat; mask: url("/rg-mark.svg") center / contain no-repeat }
+.cx-hero { margin: 0; max-width: 35rem; font-weight: 300; font-size: clamp(2.125rem, 3.4vw, 3.125rem); line-height: 1.08; letter-spacing: -0.03em }
+.cx-hero strong { font-weight: 500 }
+:root[dir="rtl"] .cx-hero { font-weight: 400; line-height: 1.3; letter-spacing: 0 }
+:root[dir="rtl"] .cx-hero strong { font-weight: 600 }
+
+.cx-proof { position: relative; margin: 0; width: 30rem; max-width: 100%; height: 21.5rem }
+.cx-claim { position: absolute; inset-inline-start: 0; top: 7rem; width: 15rem; display: flex; flex-direction: column; gap: 1rem }
+.cx-claim p { margin: 0; font-size: 1.0625rem; line-height: 1.5; letter-spacing: -0.01em; color: #F5F5F7 }
+:root[dir="rtl"] .cx-claim p { line-height: 1.75; letter-spacing: 0 }
+.cx-ref { display: flex; align-items: center; gap: 0.625rem; font-size: 0.75rem; color: #C7C7CC }
+.cx-cite { display: inline-flex; align-items: center; height: 1.25rem; padding: 0 0.375rem; border: 1px solid color-mix(in srgb, var(--marigold-on-ink, #D97757) 55%, transparent); border-radius: 4px; font: 500 0.6875rem "IBM Plex Mono", ui-monospace, monospace; color: var(--marigold-on-ink, #D97757) }
+.cx-link { position: absolute; top: 12.1rem; inset-inline-start: 8.9rem; width: 8.25rem; height: 1px; background: rgba(250, 250, 250, 0.32) }
+.cx-dot { position: absolute; top: 11.9rem; inset-inline-start: 17.05rem; width: 7px; height: 7px; border-radius: 50%; background: #0A0A0A; border: 1px solid rgba(250, 250, 250, 0.7) }
+.cx-page { position: absolute; top: 2px; inset-inline-start: 17.5rem; width: 12.5rem; height: 21.25rem; overflow: hidden; display: flex; flex-direction: column; gap: 0.8rem; padding: 0.875rem 1rem; border: 1px solid rgba(250, 250, 250, 0.2); border-radius: 6px; background: #0F0F10 }
+.cx-page-head { display: flex; justify-content: flex-end; align-items: center; height: 1rem; font: 500 0.65625rem "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: #C7C7CC }
+.cx-page hr { margin: 0; border: 0; height: 1px; background: rgba(250, 250, 250, 0.12) }
+.cx-line { display: block; height: 1px; flex: none; background: rgba(250, 250, 250, 0.26) }
+.cx-gap { margin-top: 0.5rem }
+.cx-cited { display: flex; flex-direction: column; gap: 0.8rem; margin: 0.25rem -0.5rem 0; padding: 0.375rem 0.5rem; border-radius: 3px; border-inline-start: 2px solid var(--marigold-on-ink, #D97757); background: rgba(250, 250, 250, 0.09) }
+.cx-cited .cx-line { background: rgba(250, 250, 250, 0.6) }
+@media (max-width: 1100px) { .cx-proof { display: none } }
+
+/* ---- Panneau formulaire -------------------------------------------------- */
+.cx-panel { flex: 1 1 100%; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 2rem; padding: max(1.25rem, env(safe-area-inset-top, 0px)) 1.25rem max(1.5rem, env(safe-area-inset-bottom, 0px)) }
+.cx-top { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem }
+.cx-brand { display: flex; align-items: center; gap: 0.625rem; font-size: 0.9375rem; font-weight: 600; letter-spacing: -0.01em }
+.cx-brand .cx-mark { width: 28px; height: 28px }
+.cx-content { width: min(26.25rem, 100%); margin-inline: auto }
+.cx-foot { display: flex; flex-direction: column; align-items: center; gap: 0.625rem; text-align: center }
+.cx-principle { margin: 0; font-size: 0.78rem; line-height: 1.5; color: var(--muted-foreground) }
+.cx-copy { font: 400 0.6875rem "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.08em; color: var(--muted-foreground) }
+
+@media (min-width: 900px) {
+  .cx-art { display: flex }
+  .cx-panel { flex-basis: 50%; padding-inline: 3rem }
+}
+
+/* ---- Formulaire --------------------------------------------------------- */
+.cx-form { display: flex; flex-direction: column; gap: 1.25rem }
+.cx-head { display: flex; flex-direction: column; gap: 0.5rem }
+.cx-title { margin: 0; font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15 }
+.cx-sub { margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--muted-foreground) }
+
+.cx-seg { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--muted) }
+.cx-seg button { min-height: 40px; border: 0; border-radius: 7px; background: none; color: var(--muted-foreground); font: inherit; font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: background 0.15s, color 0.15s }
+.cx-seg button[aria-pressed="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 0 0 1px var(--border) }
+
+.cx-field { display: flex; flex-direction: column; gap: 0.375rem }
+.cx-lbl-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem }
+.cx-lbl { font-size: 0.8125rem; font-weight: 500; color: var(--muted-foreground) }
+.cx-link-btn { padding: 0; border: 0; background: none; color: var(--foreground); font: inherit; font-size: 0.8125rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer }
+.cx-input { width: 100%; height: 48px; padding: 0 0.875rem; border: 1px solid var(--input); border-radius: 8px; background: var(--card); color: var(--foreground); font: inherit; font-size: 1rem; transition: border-color 0.15s, box-shadow 0.15s }
+.cx-input:focus { outline: none; border-color: var(--signal-info); box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal-info) 24%, transparent) }
+.cx-input[aria-invalid="true"] { border-color: var(--signal-stop) }
+.cx-pwd { position: relative; display: block }
+.cx-pwd .cx-input { padding-inline-end: 3rem }
+.cx-eye { position: absolute; inset-block: 0; inset-inline-end: 2px; width: 44px; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--muted-foreground); cursor: pointer }
+.cx-eye:hover { color: var(--foreground) }
+.cx-eye:focus-visible, .cx-submit:focus-visible, .cx-seg button:focus-visible, .cx-link-btn:focus-visible { outline: 2px solid var(--signal-info); outline-offset: 2px }
+
+.cx-msg { margin: 0; display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.8125rem; line-height: 1.45 }
+.cx-msg svg { flex: none; margin-top: 1px }
+.cx-err { color: var(--signal-stop) }
+.cx-warn { color: var(--signal-warn) }
+.cx-ok { padding: 0.75rem 0.875rem; border: 1px solid var(--signal-ok); border-radius: 8px; color: var(--signal-ok) }
+.cx-hint { margin: 0; font-size: 0.78rem; line-height: 1.5; color: var(--muted-foreground) }
+
+/* Ink au repos ; Azure pendant la requête (en cours) ; rien de décoratif. */
+.cx-submit { position: relative; overflow: hidden; width: 100%; height: 50px; border: 0; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); font: inherit; font-size: 1rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s }
+.cx-submit:disabled { cursor: not-allowed; opacity: 0.5 }
+.cx-submit[aria-busy="true"] { cursor: wait; opacity: 1 }
+.cx-fill { position: absolute; inset: 0; background: var(--signal-info); transform: scaleX(0); transform-origin: left; pointer-events: none }
+:root[dir="rtl"] .cx-fill { transform-origin: right }
+.cx-submit[aria-busy="true"] .cx-fill { transform: scaleX(1); transition: transform 1.5s cubic-bezier(0.25, 0.7, 0.2, 1) }
+.cx-label { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 0.625rem; color: #FAFAFA }
+.cx-submit:not([aria-busy="true"]) .cx-label { color: inherit }
+.cx-flip { display: inline-block }
+:root[dir="rtl"] .cx-flip { transform: scaleX(-1) }
+@media (prefers-reduced-motion: reduce) { .cx-submit, .cx-input, .cx-seg button, .cx-submit[aria-busy="true"] .cx-fill { transition: none } }
+
+/* Liens et boutons secondaires des pages d'accès (invitation, réinitialisation). */
+.cx-submit { text-decoration: none }
+.cx-secondary { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--foreground); font: inherit; font-size: 0.9375rem; font-weight: 500; text-decoration: none; cursor: pointer }
+.cx-secondary:hover { border-color: var(--foreground) }
+.cx-secondary:focus-visible { outline: 2px solid var(--signal-info); outline-offset: 2px }
+.cx-alert { margin: 0; padding: 0.75rem 0.875rem; border: 1px solid var(--signal-warn); border-radius: 8px; font-size: 0.875rem; line-height: 1.45; color: var(--signal-warn) }
+.cx-kicker { font: 500 0.6875rem "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted-foreground) }
+.cx-stack { display: flex; flex-direction: column; gap: 0.5rem }

@@ -26,15 +26,15 @@ import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
-import { lecture as lectureDEssai } from "./scan/lecture-d-essai.ts";
+import { lecture as lectureDEssai, moisDEssai } from "./scan/lecture-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
 );
 
-/** La facture d'essai est du 10 septembre 2026 ; l'encaissement d'avance, d'août. */
-const FACTURE = { du: "2026-09-01", au: "2026-09-30" };
-const AVANT = { du: "2026-08-01", au: "2026-08-31", le: "2026-08-20" };
+/** La facture d'essai est du jour d'essai ; l'encaissement d'avance, du mois précédent. */
+const FACTURE = moisDEssai(0);
+const AVANT = { ...moisDEssai(-1), le: `${moisDEssai(-1).du.slice(0, 8)}20` };
 
 type Transmis = Array<{ pieceId: string; imputeeLe: string }>;
 type Inscrits = Array<{ pieceId: string }>;
