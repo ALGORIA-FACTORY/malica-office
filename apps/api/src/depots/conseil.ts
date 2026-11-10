@@ -166,7 +166,8 @@ export const conseil = {
   /**
    * Le débit de « Parler à Malica » pour la personne qui appelle : les bornes
    * réglées dans la tour, et ce qu'elle a déjà demandé aujourd'hui. Refuse
-   * au-delà du quota du jour (`refus.assistant.quota_du_jour`).
+   * au-delà du quota du jour (`refus.assistant.quota_du_jour`) ; sinon INSCRIT
+   * la question au registre du quota : l'appeler, c'est admettre une question.
    */
   async exigerDebit(db: Requete): Promise<{ parMinute: number; parJour: number; duJour: number }> {
     const { rows } = await db.query<{ r: { parMinute: number; parJour: number; duJour: number } }>(

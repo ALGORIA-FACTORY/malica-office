@@ -1,5 +1,6 @@
 /**
- * Le débit de « Parler à Malica » : le quota du jour, compté en base, par personne.
+ * Le débit de « Parler à Malica » : le quota du jour, compté en base, par personne, sur le
+ * registre des questions admises — pas sur les fils, qu'on peut supprimer.
  *
  * Les bornes sont celles de `plateforme.assistant_debits` (R4) : l'épreuve les
  * LIT, elle n'en écrit aucune — changer le réglage ici changerait celui des
@@ -29,13 +30,12 @@ describe("le débit de Malica", { skip: !BASE_CONFIGUREE }, () => {
   let fil = "";
   const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
 
-  /** `n` questions de la personne, rangées il y a `age` (un intervalle SQL). */
+  /** `n` questions admises de la personne, il y a `age` (un intervalle SQL). */
   const poser = (n: number, age: string) =>
     admin.query(
-      `insert into agents.conversation_messages (conversation_id, role, contenu, created_at)
-       select $1, 'user', 'question ' || g, now() - $3::interval
-         from generate_series(1, $2::int) g`,
-      [fil, n, age],
+      `insert into agents.assistant_questions (user_id, created_at)
+       select $1, now() - $3::interval from generate_series(1, $2::int)`,
+      [u.id, n, age],
     );
 
   before(async () => {
@@ -88,13 +88,60 @@ describe("le débit de Malica", { skip: !BASE_CONFIGUREE }, () => {
 
   it("refuse au quota du jour, par une clé — et seulement la personne qui l'a atteint", async () => {
     const avant = await sousIdentiteDuServeur(u.id, (db) => conseil.exigerDebit(db));
-    await poser(avant.parJour - avant.duJour, "10 minutes");
+    // Cet appel-là vient d'être admis, donc compté : il en reste un de moins à poser.
+    await poser(avant.parJour - avant.duJour - 1, "10 minutes");
     await assert.rejects(
       sousIdentiteDuServeur(u.id, (db) => conseil.exigerDebit(db)),
       /refus\.assistant\.quota_du_jour/,
     );
+    // Un refus ne s'inscrit pas : le compte n'a pas bougé.
+    const { rows } = await admin.query<{ n: string }>(
+      `select count(*)::text as n from agents.assistant_questions
+        where user_id = $1 and created_at > now() - interval '1 day'`,
+      [u.id],
+    );
+    assert.equal(Number(rows[0]!.n), avant.parJour);
     const voisin = await sousIdentiteDuServeur(autre.id, (db) => conseil.exigerDebit(db));
     assert.equal(voisin.duJour, 0);
+  });
+
+  it("supprimer ses conversations ne rend pas le quota : une question admise reste comptée", async () => {
+    // Revue de la PR #345 : le quota se comptait sur les messages du fil, que la
+    // suppression d'une conversation emporte en cascade.
+    const c = await creerCompte(`c-${marque}@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(c);
+    const orgC = await sousIdentiteDuServeur(c.id, async (db) => {
+      const { rows } = await db.query<{ org: string }>(
+        `select public.create_organization($1, $2, $3, null, $4, $5) as org`,
+        ["pme", `ESSAI C ${marque}`, "autonome", "TN", "TND"],
+      );
+      return rows[0]!.org;
+    });
+    try {
+      // Trois questions admises par la porte, rangées dans un fil…
+      for (let i = 0; i < 3; i += 1)
+        await sousIdentiteDuServeur(c.id, (db) => conseil.exigerDebit(db));
+      const filC = await sousIdentiteDuServeur(c.id, async (db) => {
+        const { rows } = await db.query<{ id: string }>(
+          `select public.conversation_ouvrir($1) as id`,
+          [orgC],
+        );
+        return rows[0]!.id;
+      });
+      // … puis le fil est supprimé par sa propriétaire.
+      await sousIdentiteDuServeur(c.id, (db) =>
+        db.query(`select public.conversation_supprimer($1)`, [filC]),
+      );
+      const apres = await sousIdentiteDuServeur(c.id, (db) => conseil.exigerDebit(db));
+      assert.equal(apres.duJour, 3);
+    } finally {
+      await admin.query(
+        `update identity.organizations
+            set archived_at = now(), archived_reason = 'fixture de test automatisé'
+          where id = $1 and archived_at is null`,
+        [orgC],
+      );
+    }
   });
 
   it("le réglage ne se lit pas par un client, et ne se réécrit pas", async () => {
@@ -114,5 +161,16 @@ describe("le débit de Malica", { skip: !BASE_CONFIGUREE }, () => {
       admin.query(`update plateforme.assistant_debits set par_jour = par_jour`),
       /./,
     );
+    // Le registre des questions : ni lu, ni écrit, ni effacé par un client.
+    for (const sql of [
+      `select 1 from agents.assistant_questions`,
+      `insert into agents.assistant_questions (user_id) values (auth.uid())`,
+      `delete from agents.assistant_questions`,
+    ])
+      await assert.rejects(
+        sousIdentiteDuServeur(u.id, (db) => db.query(sql)),
+        /permission denied/,
+      );
+    await assert.rejects(admin.query(`delete from agents.assistant_questions`), /./);
   });
 });
