@@ -1942,7 +1942,7 @@
  * sépare pas deux plans, elle DESSINE une feuille de papier — une feuille
  * sans ombre ne ressemble pas à une feuille. Arbitré le 17 octobre 2026,
  * au rendu : elles restent. Ne pas les retirer au décompte. */
-[data-surface="pme"] [data-famille="papiers"] .carte{margin-top:1.25rem;border-radius:18px;aspect-ratio:1.58;position:relative;overflow:hidden; background:linear-gradient(150deg,#F2F1EC,#D7D5CC);box-shadow:0 24px 50px -24px rgba(0,0,0,1)}
+[data-surface="pme"] [data-famille="papiers"] .carte{margin:1.25rem auto 0;max-width:24rem;border-radius:18px;aspect-ratio:1.58;position:relative;overflow:hidden; background:linear-gradient(150deg,#F2F1EC,#D7D5CC);box-shadow:0 24px 50px -24px rgba(0,0,0,1)}
 [data-surface="pme"] [data-famille="papiers"] .carte .ban{position:absolute;top:0;left:0;right:0;height:22%;background:#1E3A2B}
 [data-surface="pme"] [data-famille="papiers"] .carte .t{position:absolute;top:7%;inset-inline-start:6%;font-size:.625rem;font-weight:700;letter-spacing:.14em; color:#E8F0EA;text-transform:uppercase}
 [data-surface="pme"] [data-famille="papiers"] .carte .mf{position:absolute;inset-inline-start:6%;top:38%;font-family:var(--mono);font-size:1.0625rem; font-weight:600;color:#1A1A18;letter-spacing:.02em}
