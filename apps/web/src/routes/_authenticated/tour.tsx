@@ -137,7 +137,7 @@ function Coquille() {
             ) : null}
           </p>
         </div>
-        <div className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6 lg:px-9 lg:py-8">
+        <div className="w-full px-4 py-6 sm:px-6 lg:px-9 lg:py-8">
           <Outlet />
         </div>
       </main>

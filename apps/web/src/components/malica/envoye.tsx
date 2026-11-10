@@ -90,7 +90,7 @@ export function EcranEnvoye({
   return (
     <div
       role="status"
-      className="pt-safe rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center overflow-y-auto bg-background px-10 py-10 text-center"
+      className="pt-safe rg-rise fixed inset-0 z-40 flex w-full flex-col items-center justify-center overflow-y-auto bg-background px-10 py-10 text-center"
     >
       <Coche className="shrink-0 text-signal-ok" />
       <p className="mt-5 text-[27px] font-semibold tracking-[-0.03em]">{titre}</p>
