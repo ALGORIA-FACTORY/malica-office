@@ -129,6 +129,19 @@ jobs:
           echo "::group::Les pièces sans preuve"
           grep -E " (aucune|ambigue|sans_grille|signalee) — " sortie/banc.err || true
           echo "::endgroup::"
+          # Pour chacune : la raison du moteur, puis ses champs sans lecture juste, avec la
+          # valeur attendue et si elle est absente de la lecture (silence « normal », perte
+          # de l'OCR) ou présente mais non attribuée (repère non reconnu, preuve non fermée).
+          echo "::group::Les cases des pièces sans preuve"
+          node -e '
+            const m = JSON.parse(require("fs").readFileSync("sortie/banc.json", "utf8"));
+            for (const p of m.filter((x) => x.issue !== "prouvee")) {
+              console.log(`## ${p.corpus} ${p.id} [${p.type}] grille=${p.grille} issue=${p.issue} raison=${p.raison ?? "-"}`);
+              for (const c of p.champs.filter((x) => x.issue === "silence" || x.issue === "faux"))
+                console.log(`   ${c.issue}${c.normal ? " (absent de la lecture)" : " (présent, non attribué)"} ${c.champ} attendu=${JSON.stringify(c.attendu)}`);
+            }
+          ' || true
+          echo "::endgroup::"
           grep -v "^moteur " sortie/banc.err | tail -60
 
       - name: Le journal du service OCR
