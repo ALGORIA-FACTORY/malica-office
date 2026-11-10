@@ -25,11 +25,10 @@
  * offre ni son prix (coque Android, décisions des 20 et 22 octobre 2026).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
-import { useSuperposition } from "@/hooks/use-superposition";
+import { FeuilleDeChoix, type ElementDeChoix } from "@/components/malica/feuille-de-choix";
 import { useI18n } from "@/i18n";
-import { initialesDe, noterRecente, plier, recentes as lireRecentes } from "@/lib/mes-societes";
+import { noterRecente, plier, recentes as lireRecentes } from "@/lib/mes-societes";
 
 export interface SocieteDuSelecteur {
   id: string;
@@ -80,36 +79,19 @@ export function SelecteurDeSociete({
 }) {
   const { t, locale } = useI18n();
   const [ouvert, setOuvert] = useState(false);
-  const [cherche, setCherche] = useState("");
   const [epinglees, setEpinglees] = useState<string[]>([]);
   const [recentes, setRecentes] = useState<string[]>([]);
   const vueConsolidee = surMesSocietes;
-  const champ = useRef<HTMLInputElement>(null);
-  const feuille = useRef<HTMLDivElement>(null);
   const fermer = useCallback(() => setOuvert(false), []);
-  // La pile des superpositions : le bouton Retour d'Android ferme la feuille
-  // au lieu de quitter l'écran, et le focus y reste piégé (revue de #272).
-  useSuperposition(ouvert, fermer, feuille);
   const puce = useRef<HTMLButtonElement>(null);
-  /** Sur l'ordinateur, le panneau s'ancre sous la puce. */
-  const [ancre, setAncre] = useState<{ top: number; left: number } | null>(null);
+  /** Sur l'ordinateur, la feuille s'ancre sous la puce. */
+  const [ancre, setAncre] = useState<DOMRect | null>(null);
 
   useEffect(() => {
     if (!ouvert) return;
     setEpinglees(lire(CLE_EPINGLEES));
     setRecentes(lireRecentes());
-    setCherche("");
-    const r = puce.current?.getBoundingClientRect();
-    setAncre(r ? { top: r.bottom + 8, left: r.left } : null);
-    const id = window.setTimeout(() => champ.current?.focus(), 60);
-    const echap = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOuvert(false);
-    };
-    window.addEventListener("keydown", echap);
-    return () => {
-      window.clearTimeout(id);
-      window.removeEventListener("keydown", echap);
-    };
+    setAncre(puce.current?.getBoundingClientRect() ?? null);
   }, [ouvert]);
 
   const triees = useMemo(
@@ -145,57 +127,43 @@ export function SelecteurDeSociete({
     return () => obs.disconnect();
   }, [nom]);
 
-  const q = plier(cherche.trim());
-  const trouvees = q
-    ? triees.filter((s) => plier(s.name).includes(q) || plier(s.matricule ?? "").includes(q))
-    : [];
-  const deListe = (ids: string[]) =>
-    ids.map((id) => parId.get(id)).filter((s): s is SocieteDuSelecteur => !!s);
-
-  const choisir = (id: string) => {
-    noterRecente(id);
-    onOuvrir(id);
-    setOuvert(false);
+  const chercher = (texte: string) => {
+    const q = plier(texte);
+    return triees
+      .filter((x) => plier(x.name).includes(q) || plier(x.matricule ?? "").includes(q))
+      .map(element);
   };
+  const deListe = (ids: string[]) =>
+    ids.map((id) => parId.get(id)).filter((x): x is SocieteDuSelecteur => !!x);
+
+  /** Une société, telle que la feuille la montre. */
+  const element = (x: SocieteDuSelecteur): ElementDeChoix => ({
+    id: x.id,
+    nom: x.name,
+    sous: x.matricule,
+    mention: x.id === ouverte && !vueConsolidee ? t("pme.societes.ouverte") : null,
+  });
+
   const epingler = (id: string) => {
     const e = lire(CLE_EPINGLEES);
     const suivantes = e.includes(id) ? e.filter((x) => x !== id) : [id, ...e];
     ecrire(CLE_EPINGLEES, suivantes);
     setEpinglees(suivantes);
   };
-
-  const ligne = (s: SocieteDuSelecteur) => {
-    const ici = s.id === ouverte && !vueConsolidee;
-    const epinglee = epinglees.includes(s.id);
+  const epingle = (e: ElementDeChoix) => {
+    const epinglee = epinglees.includes(e.id);
     return (
-      <li key={s.id}>
-        <button
-          type="button"
-          className="so"
-          aria-current={ici || undefined}
-          onClick={() => choisir(s.id)}
-        >
-          <span className="ini" aria-hidden>
-            {initialesDe(s.name)}
-          </span>
-          <span className="bd">
-            <b>{s.name}</b>
-            {s.matricule ? <span>{s.matricule}</span> : null}
-          </span>
-          {ici ? <em>{t("pme.societes.ouverte")}</em> : null}
-        </button>
-        <button
-          type="button"
-          className="ep"
-          aria-pressed={epinglee}
-          aria-label={epinglee ? t("pme.societes.desepingler") : t("pme.societes.epingler")}
-          onClick={() => epingler(s.id)}
-        >
-          <svg viewBox="0 0 24 24" className="g" aria-hidden>
-            <path d="M9 4h6l-1 6 3 3H7l3-3zM12 13v7" />
-          </svg>
-        </button>
-      </li>
+      <button
+        type="button"
+        className="ep"
+        aria-pressed={epinglee}
+        aria-label={epinglee ? t("pme.societes.desepingler") : t("pme.societes.epingler")}
+        onClick={() => epingler(e.id)}
+      >
+        <svg viewBox="0 0 24 24" className="g" aria-hidden>
+          <path d="M9 4h6l-1 6 3 3H7l3-3zM12 13v7" />
+        </svg>
+      </button>
     );
   };
 
@@ -229,94 +197,33 @@ export function SelecteurDeSociete({
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-      {/*
-       * Dans un portail, à la racine de la surface PME : la barre du bas et
-       * l'en-tête forment chacun leur propre empilement, et la feuille passait
-       * sous la barre du bas.
-       */}
-      {ouvert
-        ? createPortal(
-            <div className="selsoc">
-              <div className="voile" aria-hidden onClick={() => setOuvert(false)} />
-              <div
-                ref={feuille}
-                className="feuille"
-                style={
-                  {
-                    "--haut": `${ancre?.top ?? 72}px`,
-                    "--gauche": `${ancre?.left ?? 16}px`,
-                  } as React.CSSProperties
-                }
-                role="dialog"
-                aria-modal="true"
-                aria-label={t("pme.societes.changer")}
-              >
-                <span className="poignee" aria-hidden />
-                <h2>{t("pme.societes.changer")}</h2>
-                <label className="cherche">
-                  <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="m20 20-3.5-3.5" />
-                  </svg>
-                  <input
-                    ref={champ}
-                    type="search"
-                    value={cherche}
-                    placeholder={t("pme.societes.chercher")}
-                    aria-label={t("pme.societes.chercher")}
-                    onChange={(e) => setCherche(e.target.value)}
-                  />
-                </label>
-                <div className="defile">
-                  {q ? (
-                    trouvees.length > 0 ? (
-                      <ul>{trouvees.slice(0, 50).map(ligne)}</ul>
-                    ) : (
-                      <p className="rien">{t("pme.societes.aucune")}</p>
-                    )
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="so toutes"
-                        aria-current={vueConsolidee || undefined}
-                        onClick={() => {
-                          onToutes();
-                          setOuvert(false);
-                        }}
-                      >
-                        <span className="ini" aria-hidden>
-                          ∑
-                        </span>
-                        <span className="bd">
-                          <b>{t("pme.notifs.toutesSocietes")}</b>
-                          <span>
-                            {t("pme.societes.ouvreMesSocietes", { count: societes.length })}
-                          </span>
-                        </span>
-                      </button>
-                      {epinglees.length > 0 ? (
-                        <>
-                          <p className="grp">{t("pme.societes.epinglees")}</p>
-                          <ul>{deListe(epinglees).map(ligne)}</ul>
-                        </>
-                      ) : null}
-                      {recentesHorsEpinglees.length > 0 ? (
-                        <>
-                          <p className="grp">{t("pme.societes.recentes")}</p>
-                          <ul>{recentesHorsEpinglees.map(ligne)}</ul>
-                        </>
-                      ) : null}
-                      <p className="grp">{t("pme.societes.toutesAZ")}</p>
-                      <ul>{triees.map(ligne)}</ul>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>,
-            document.querySelector('[data-surface="pme"]') ?? document.body,
-          )
-        : null}
+      <FeuilleDeChoix
+        ouverte={ouvert}
+        fermer={fermer}
+        ancre={ancre}
+        titre={t("pme.societes.changer")}
+        placeholder={t("pme.societes.chercher")}
+        aucun={t("pme.societes.aucune")}
+        tout={{
+          libelle: t("pme.notifs.toutesSocietes"),
+          sous: t("pme.societes.ouvreMesSocietes", { count: societes.length }),
+        }}
+        courant={vueConsolidee ? null : ouverte}
+        groupes={[
+          { titre: t("pme.societes.epinglees"), elements: deListe(epinglees).map(element) },
+          { titre: t("pme.societes.recentes"), elements: recentesHorsEpinglees.map(element) },
+          { titre: t("pme.societes.toutesAZ"), elements: triees.map(element) },
+        ]}
+        chercher={chercher}
+        choisir={(id) => {
+          if (id === null) onToutes();
+          else {
+            noterRecente(id);
+            onOuvrir(id);
+          }
+        }}
+        secondaire={epingle}
+      />
     </div>
   );
 }

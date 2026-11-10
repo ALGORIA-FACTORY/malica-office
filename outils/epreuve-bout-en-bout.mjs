@@ -520,14 +520,25 @@ if (process.argv.includes("--modeles")) {
     } else {
       console.log(`  —    la proposition d'écriture — sans objet : verdict « ${lecture.verdict} »`);
     }
+    // Le journal d'une lecture : une ligne par organe (le relevé, la
+    // désignation), plus, quand Claude a désigné avec son prompt système en
+    // cache, une ligne par usage du cache (agent `….cache`, rôles `cache` et
+    // `cache_ecriture`, `read-flow.ts`) — facturées à part, donc journalisées à
+    // part. Elles n'apparaissent que quand le cache sert : l'épreuve en exigeait
+    // exactement deux et a rougi le 10 novembre 2026 sur une ligne de cache
+    // légitime. Deux organes, ni plus ni moins ; et CHAQUE ligne journalisée —
+    // une dépense non journalisée est une dépense sans plafond.
     const journal = Array.isArray(lecture.journal) ? lecture.journal : [];
+    const organes = journal.filter((j) => !String(j.agent ?? "").endsWith(".cache"));
     verdict(
       "les deux organes de la lecture rendent compte au journal",
-      journal.length === 2,
+      organes.length === 2 && journal.every((j) => j.journalise),
       journal
         .map(
           (j) =>
-            `${j.model} : ${j.journalise ? "journalisé" : `non journalisé (${j.raison ?? "?"})`}`,
+            `${j.agent ?? "?"} · ${j.model} : ${
+              j.journalise ? "journalisé" : `non journalisé (${j.raison ?? "?"})`
+            }`,
         )
         .join(" ; ") || "rien",
     );

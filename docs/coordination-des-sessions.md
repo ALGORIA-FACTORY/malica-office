@@ -48,11 +48,25 @@ réécriture entière ; une insertion par ancre, relue juste avant d'écrire,
 et un pluriel toujours en `cle#one` / `cle#other`, l'arabe avec les mêmes
 formes que le français.
 
-## Git
+## Git et GitHub
 
-La branche est `application-android`. Aucun `checkout`, `stash`, `reset`
-ni `commit` d'un côté sans l'avoir écrit ici d'abord ; l'autre session
-commite ce qu'elle a annoncé, et rien d'autre.
+**GitHub a un seul responsable** (décision du dirigeant, 10 novembre 2026) :
+la session CAIO du projet claude.ai « Malica Office ». Elle relit, fusionne,
+suit la CI de `main` et nettoie les branches. Toute autre session — Claude
+Code sur le poste, Cowork, une conversation — travaille ainsi :
+
+1. une branche `chantier/<sujet>` partie de `main`, une PR ouverte dès le
+   premier commit poussé ; une branche sans PR n'existe pas ;
+2. jamais de push ni de fusion sur `main`, jamais de fusion de PR, même
+   verte : la fusion déploie le staging ;
+3. une PR dit ce qui a été vérifié et ce qui ne l'a pas été ;
+4. une branche fusionnée est supprimée ; une branche abandonnée devient
+   une étiquette `archive/branches/<nom>` avant d'être supprimée.
+
+Le responsable fusionne en squash, après une CI verte sur la tête de la PR
+et l'accord du dirigeant pour ce qui part en staging. Un commit qu'il ajoute
+à la branche d'une autre session est un commit de plus ou une fusion de
+`main` : jamais de réécriture ni de push forcé.
 
 ## La base
 
@@ -455,3 +469,4 @@ une base jetable.
 - 2026-11-10 - Claude Code (branche `chantier/malica-parite-et-visuels`, poussée ; pour la session CAIO) - **Débit du chat et durée vraie ; la branche attend une PR et un déploiement staging.** (1) `/malica/assistant` et `/malica/demander` passent un débit avant tout appel payant : quota du jour compté en base (`assistant_debit_exiger`, clé `refus.assistant.quota_du_jour`), rafale de la minute comptée en mémoire du serveur (`assistant/debit.ts`, clé `refus.assistant.debit`) ; bornes en base (`plateforme.assistant_debits`, défaut 10/min et 200/jour, M-3 de `10-ce-qui-reste-ouvert.md`). (2) La durée journalisée de DeepSeek et de la lecture Claude court jusqu'à la fin du corps (elle disait 463 ms de réponses de 6 à 15 s). (3) Sur le poste : la suite complète de l'API a quatre échecs qui ne viennent pas de la branche — trois de droits de rôles du serveur partagé (`permission denied to set role "malica_api"`, `session_replication_role` ; la facturation échoue pareil sans la branche), un de mesure de charge de la TVA sous machine occupée, non rejoué au calme ; `db/registre.test.mjs` ne peut pas créer sa base sur le poste. **La CI tranchera.** À faire côté CAIO : ouvrir la PR de `chantier/malica-parite-et-visuels`, lire la CI, et — après OK du dirigeant — fusionner et déployer sur le staging pour l'essai réel des deux moteurs (parité, blocs). Trois migrations : `20261210100000`, `20261210100100`, `20261210100200`.
 - 2026-11-10 - Claude Code (branche `chantier/malica-parite-et-visuels`, lot F première tranche) - **Malica classe les achats par fournisseur, et c'est un moteur du Socle qui somme.** Relevé du lot A : à « compare mes dépenses par fournisseur », Claude ne voyait que les vingt pièces les plus récentes et le disait ; DeepSeek, une seule écriture. Moteur pur `packages/socle/src/engines/achats/par-fournisseur.ts` (sommes exactes en entiers ; la casse, les accents et la ponctuation ne séparent pas un fournisseur, une forme juridique si ; ce qui est écarté — total non lu, autre devise, émetteur non lu — est compté et dit). Outil `achats_par_fournisseur` (toutes dates ou un mois), sur des lectures déjà déclarées ; tableau composé par le serveur, douze lignes puis « Autres fournisseurs », ligne de total. Éprouvé : moteur (6), outil sur dossier fictif (5), accès croisé entre sociétés sous RLS réelle (`verif-298`, 9 outils), et sur la société d'essai du poste le total de l'outil est égal à une somme SQL indépendante (10344.100 TND, 3 pièces). La mesure de charge de la TVA qui échouait sur le poste passe sur une base neuve (2/2) : elle tenait à la base de test encombrée, pas à la branche.
 
+- 2026-11-10 · CAIO (projet claude.ai « Malica Office ») · **Un seul responsable de GitHub.** Décision du dirigeant : la session CAIO relit, fusionne et nettoie ; les autres sessions ouvrent des PR et ne fusionnent plus (section « Git et GitHub », qui remplace la règle de la branche `application-android`, périmée). Contexte : quatre fusions directes sur `main` sans PR dans la nuit du 9 au 10, et deux branches poussées sans PR (`chantier/banc-preuve-du-tableau`, `chantier/carte-bienvenue-bornee`), reprises en #336 et #337.
