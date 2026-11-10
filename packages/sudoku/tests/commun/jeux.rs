@@ -67,6 +67,20 @@ pub fn preuve_lignes(code: &str) -> Value {
     })
 }
 
+/// La variante « noyau » (preuve partielle), ajoutée à la grille en attendant sa migration :
+/// le TTC hors timbre fermé par le HT et la TVA par taux, sans exiger le net à payer.
+pub fn preuve_noyau(code: &str) -> Value {
+    json!({
+        "code": code,
+        "regle": "Total TTC hors timbre = total HT + TVA par taux (+ FODEC)",
+        "genre": "arithmetique",
+        "statut": "defaut_a_valider",
+        "variante": "noyau",
+        "expression": {"op": "somme", "role": "ttc", "total": "total_ttc",
+                       "parties": ["total_ht", "montant_tva_par_taux", "montant_fodec?"]}
+    })
+}
+
 /// Chaque variante jouée seule.
 pub fn par_variante(jetons: &[Value], grille: &Value, pack: &Value) -> Vec<(String, Value)> {
     par_variante_avec(jetons, grille, pack, None).0
