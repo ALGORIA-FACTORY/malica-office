@@ -208,11 +208,18 @@ export interface MesureDeLaPiece {
 
 /* ===================================================== LA NORMALISATION === */
 
-/** Un texte comparé sans casse, voyelles courtes, ponctuation ni espaces doublés. */
+/**
+ * Un texte comparé sans casse, voyelles courtes, ponctuation ni espaces doublés. Les
+ * ligatures « œ » et « æ » valent leurs deux lettres : NFKC ne les décompose pas, et la
+ * vérité du jeu du dirigeant écrit « Main d'oeuvre » là où la pièce imprime « d'œuvre »
+ * (50/31, diagnostic du 8 novembre 2026 — le seul « faux » du treillis 1 ↔ 7 venait de là).
+ */
 function texteNormal(v: unknown): string {
   return latins(String(v))
     .normalize("NFKC")
     .toLocaleLowerCase("fr")
+    .replace(/œ/gu, "oe")
+    .replace(/æ/gu, "ae")
     .replace(/[ً-ْـ]/gu, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();

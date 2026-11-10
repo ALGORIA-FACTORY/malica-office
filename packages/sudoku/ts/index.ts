@@ -19,6 +19,11 @@ export interface LectureDeMontant {
   readonly v: number;
   /** Lecture décimale (forte), ou lecture de repli (milliers, entier). */
   readonly forte: boolean;
+  /**
+   * Obtenue en substituant un chiffre que l'OCR confond (« 1 » ↔ « 7 »). Le moteur ne la
+   * retient que pour un jeton incertain au sens du pack, et toujours faible.
+   */
+  readonly substituee?: boolean;
 }
 
 export interface JetonDuSudoku {
