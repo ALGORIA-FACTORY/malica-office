@@ -203,7 +203,9 @@ function Onboarding() {
           </fieldset>
 
           {error && (
-            <p className="border border-signal-stop px-3 py-2 text-xs text-signal-stop lg:col-span-2">{error}</p>
+            <p className="border border-signal-stop px-3 py-2 text-xs text-signal-stop lg:col-span-2">
+              {error}
+            </p>
           )}
 
           <button
