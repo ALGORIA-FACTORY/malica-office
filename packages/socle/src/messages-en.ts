@@ -539,7 +539,9 @@ export const en: Dict = {
   "pme.paiement.correction.enregistrer": "Save the correction",
   "pme.paiement.correction.retirer": "Remove this payment",
   "pme.paiement.correction.retireExplique": "This payment will be removed: nothing replaces it.",
-  "pme.paiement.borne": "At most {montant}: what is left to pay.",
+  "pme.paiement.borne": "You can enter at most {montant}: that is what is left to pay.",
+  "pme.paiement.rienARegler":
+    "The total read on this document is zero or negative: there is no payment to record on it. If that total is wrong, retake the photo.",
   "pme.paiement.avantFacture": "Before the invoice date: a deposit?",
   "pme.type.titre": "What is it?",
   "pme.photo.avis.too_small":
