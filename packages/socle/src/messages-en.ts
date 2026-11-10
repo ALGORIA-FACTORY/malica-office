@@ -2161,6 +2161,10 @@ export const en: Dict = {
   "refus.conversation.auteur_fixe": "A conversation keeps its author.",
   "refus.conversation.dossier_fixe": "A conversation keeps its file.",
   "refus.conversation.question_vide": "Write your question before sending it.",
+  "refus.assistant.debit": "You are asking very quickly: wait a minute, then carry on.",
+  "refus.assistant.quota_du_jour":
+    "You have reached today’s number of questions. Malica resumes tomorrow.",
+  "refus.assistant.debit_absent": "Malica is not set up to answer yet. Try again in a moment.",
   "refus.conseil.plafond":
     "Malica’s advice has reached its monthly cap for this file; it resumes next month.",
   "refus.conseil.sans_cabinet": "This file has no engaged accountant: no one to arbitrate.",

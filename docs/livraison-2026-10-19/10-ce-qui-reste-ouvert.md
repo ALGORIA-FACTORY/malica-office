@@ -730,3 +730,29 @@ Tranché par défaut, à confirmer :
 - **« Valider l'écriture » proposé à un dirigeant** : la base refuse (seul le
   cabinet valide) et l'écran affiche le refus. La consigne le dit au modèle.
 - **Plafond de l'épreuve réelle : 15 $** par lancement (`--plafond 15`).
+
+## Malica sur Claude et DeepSeek (10 novembre 2026)
+
+### M-3 — Le débit de « Parler à Malica » : dix questions par minute, deux cents par jour
+
+Tranché par défaut pour ne pas s'arrêter : `plateforme.assistant_debits` livre 10 questions par minute et 200 par jour,
+par personne (migration `20261210100200`). Les deux bornes se règlent en base, sans déploiement ; la carte de la tour
+qui les règle n'est pas encore écrite. **À trancher par le dirigeant :** les valeurs, et le quota **par offre** (tant de
+questions selon le forfait), qui n'existe pas : aucune notion d'offre ne borne aujourd'hui le chat.
+
+### M-4 — Les nouveaux modèles de DeepSeek n'ont pas de tarif en base
+
+Relevé le 10 novembre 2026 : `/models` de DeepSeek ne rend plus que `deepseek-flash` et `deepseek-v4-pro` ; les noms de
+la base (`deepseek-chat`, `deepseek-reasoner`) répondent encore. La page officielle des prix
+(`api-docs.deepseek.com/quick_start/pricing`) donne deux tarifs par modèle, heures pleines et heures creuses (moitié
+prix), ce que `agents.model_pricing` ne sait pas porter (un prix par modèle et par rôle). INCERTAIN : l'attribution des
+colonnes de prix à chaque modèle a été lue par un agent, pas vérifiée à l'œil. Tant qu'un tarif n'est pas en base, ces
+modèles ne sont pas sélectionnables (R8). **À trancher :** journaliser au tarif des heures pleines (prudent, surévalue
+la dépense) ou étendre la table aux deux tarifs.
+
+### M-5 — Information des clients sur les prestataires d'IA
+
+DeepSeek traite désormais les mêmes données que Claude (mêmes outils, sous les droits de la personne) quand Claude ne
+peut pas répondre. Point juridique ouvert : l'information des clients sur les prestataires, et la possibilité de
+désactiver DeepSeek par société ou par comptabilité (non construite).
+

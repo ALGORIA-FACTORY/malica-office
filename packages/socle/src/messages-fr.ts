@@ -2235,6 +2235,12 @@ export const fr = {
   "refus.conversation.auteur_fixe": "Une conversation garde son auteur.",
   "refus.conversation.dossier_fixe": "Une conversation garde son dossier.",
   "refus.conversation.question_vide": "Écrivez votre question avant de l’envoyer.",
+  "refus.assistant.debit":
+    "Vous posez vos questions très vite : attendez une minute, puis reprenez.",
+  "refus.assistant.quota_du_jour":
+    "Vous avez atteint le nombre de questions du jour. Malica reprend demain.",
+  "refus.assistant.debit_absent":
+    "Malica n'est pas encore réglée pour répondre. Réessayez dans un moment.",
   "refus.conseil.plafond":
     "Le conseil de Malica a atteint son plafond du mois pour ce dossier ; il reprend le mois prochain.",
   "refus.conseil.sans_cabinet":

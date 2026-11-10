@@ -36,6 +36,7 @@ import type { ReponseDeMalica } from "@malica/socle/ports/malica";
 
 import { converserAvecRepli, verifierLeDossier } from "./malica/assistant/agent.ts";
 import { clientClaudeEnFlux } from "./malica/assistant/claude-flux.ts";
+import { Rafale } from "./malica/assistant/debit.ts";
 import { clientDeepSeekEnFlux } from "./malica/assistant/deepseek-flux.ts";
 import { repliParDeepSeek } from "./malica/assistant/repli.ts";
 import { redigerLeBriefing } from "./malica/briefing.ts";
@@ -299,6 +300,19 @@ const Question = z.object({
   conversationId: Uuid.nullish(),
 });
 
+const rafale = new Rafale();
+
+/**
+ * Le débit d'une question à Malica, AVANT tout appel payant : le quota du jour
+ * (compté en base, qui refuse d'elle-même) puis la rafale de la minute. Les
+ * deux bornes viennent de la base, réglées dans la tour (R4).
+ */
+async function exigerLeDebit(req: Request): Promise<void> {
+  const debit = await api(req).rpc<{ parMinute: number }>("conseil", "exigerDebit", []);
+  if (!rafale.admettre(req.utilisateur!.id, debit.parMinute))
+    throw new SaisieInvalide("refus.assistant.debit");
+}
+
 /**
  * Ce que le navigateur reçoit d'une réponse : jamais la mécanique. Le modèle, les
  * jetons, la durée et l'identifiant d'exécution restent au journal des agents
@@ -320,6 +334,7 @@ function pourLeNavigateur<T extends ReponseDeMalica>(r: T): T {
 malica.post("/demander", (req, res, next) => {
   repondre(res, next, async () => {
     const q = Question.parse(req.body);
+    await exigerLeDebit(req);
     return pourLeNavigateur(
       await askMalica(api(req), {
         tenantId: q.tenantId,
@@ -402,6 +417,7 @@ malica.post("/assistant", (req, res, next) => {
     const q = QuestionALAssistant.parse(req.body);
     const appel = api(req);
     const dossier = await verifierLeDossier(appel, q.tenantId);
+    await exigerLeDebit(req);
 
     res.status(200);
     res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
