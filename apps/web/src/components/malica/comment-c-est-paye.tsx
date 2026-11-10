@@ -505,12 +505,30 @@ export function CommentCEstPaye({
   const motifQuiRetire =
     enCorrection !== null &&
     (motifs.data ?? []).find((m) => m.id === motifChoisi)?.remplace === false;
+  /** Le plafond d'un montant : ce qui reste, la ligne corrigée mise à part. */
+  const plafond =
+    ttcMineur === null || payeHorsCorrection === null
+      ? null
+      : Math.max(0, ttcMineur - payeHorsCorrection);
+  /*
+   * 10 novembre 2026 : sur une pièce dont le total lu est nul ou négatif, le
+   * reste vaut zéro sans qu'aucun règlement n'existe. « J'ai tout payé »
+   * n'avait alors rien à inscrire et « Enregistrer » restait gris sans un mot ;
+   * « Une partie seulement » annonçait un plafond de zéro et laissait partir un
+   * montant que la base refuse (`paiement.depasse_le_total`). La feuille dit
+   * donc qu'il n'y a rien à régler, et un montant au-dessus du plafond ne part
+   * plus.
+   */
+  const rienARegler = enCorrection === null && plafond !== null && plafond === 0;
+  const depasseLePlafond =
+    partiel === true && plafond !== null && montantAInscrire !== null && montantAInscrire > plafond;
   const enregistrable =
     motifQuiRetire ||
     (moyenChoisi !== null &&
       historiquePret &&
       !inscrire.isPending &&
       montantAInscrire !== null &&
+      !depasseLePlafond &&
       !(referenceExigee && referenceSaisie.trim() === "") &&
       (enCorrection === null || motifChoisi !== null));
 
@@ -520,11 +538,6 @@ export function CommentCEstPaye({
   const libelleDuMotif = (id: string | null) =>
     (motifs.data ?? []).find((m) => m.id === id)?.libelle ?? "";
   const jourCourt = (iso: string | null) => (iso ? jourEtMois(iso, locale) : "");
-  /** Le plafond d'un montant : ce qui reste, la ligne corrigée mise à part. */
-  const plafond =
-    ttcMineur === null || payeHorsCorrection === null
-      ? null
-      : Math.max(0, ttcMineur - payeHorsCorrection);
 
   const ouvrirLaCorrection = (id: string) => {
     const p = deja.find((x) => x.id === id);
@@ -961,7 +974,7 @@ export function CommentCEstPaye({
                 <button
                   type="button"
                   onClick={() => setPartiel(false)}
-                  disabled={ttcMineur === null}
+                  disabled={ttcMineur === null || rienARegler}
                   aria-pressed={partiel === false}
                   className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium disabled:opacity-40 ${
                     partiel === false ? "bg-foreground text-background shadow-sm" : "text-text-2"
@@ -972,8 +985,9 @@ export function CommentCEstPaye({
                 <button
                   type="button"
                   onClick={() => setPartiel(true)}
+                  disabled={rienARegler}
                   aria-pressed={partiel === true}
-                  className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
+                  className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium disabled:opacity-40 ${
                     partiel ? "bg-foreground text-background shadow-sm" : "text-text-2"
                   }`}
                 >
@@ -986,7 +1000,13 @@ export function CommentCEstPaye({
                 {t("pme.paiement.totalInconnu")}
               </p>
             ) : null}
-            {partiel ? (
+            {/* Rien à régler : la feuille le dit au lieu de griser sans un mot. */}
+            {rienARegler ? (
+              <p role="status" className="text-[12.5px] leading-[1.45] text-signal-warn">
+                {t("pme.paiement.rienARegler")}
+              </p>
+            ) : null}
+            {partiel && !rienARegler ? (
               <label className="grid gap-1">
                 <span className="text-[12.5px] text-text-2">{t("pme.paiement.combien")}</span>
                 <input
@@ -1005,14 +1025,11 @@ export function CommentCEstPaye({
               </p>
             ) : null}
             {/* La borne se dit AVANT d'être refusée par la base. */}
-            {partiel && plafond !== null ? (
+            {partiel && plafond !== null && !rienARegler ? (
               // Une indication tant que le montant tient ; une alerte quand il dépasse.
               <p
-                className={`text-[12.5px] ${
-                  montantAInscrire !== null && montantAInscrire > plafond
-                    ? "text-signal-warn"
-                    : "text-text-2"
-                }`}
+                role={depasseLePlafond ? "alert" : undefined}
+                className={`text-[12.5px] ${depasseLePlafond ? "text-signal-warn" : "text-text-2"}`}
               >
                 {t("pme.paiement.borne", { montant: `${lisible(plafond)} ${devise}` })}
               </p>

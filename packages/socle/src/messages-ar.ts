@@ -523,7 +523,9 @@ export const ar: Dict = {
   "pme.paiement.correction.enregistrer": "تسجيل التصحيح",
   "pme.paiement.correction.retirer": "سحب هذا الخلاص",
   "pme.paiement.correction.retireExplique": "سيُسحب هذا الخلاص: لا شيء يعوّضه.",
-  "pme.paiement.borne": "على الأكثر {montant}: ما تبقّى للدفع.",
+  "pme.paiement.borne": "يمكنك إدخال {montant} على الأكثر: هذا ما تبقّى للدفع.",
+  "pme.paiement.rienARegler":
+    "المجموع المقروء على هذا المستند صفر أو سالب: لا توجد أي دفعة لتسجيلها عليه. إن كان هذا المجموع خاطئاً، أعد تصوير المستند.",
   "pme.paiement.avantFacture": "قبل تاريخ الفاتورة: تسبقة؟",
   "pme.type.titre": "ما هذا؟",
   "pme.photo.avis.too_small":

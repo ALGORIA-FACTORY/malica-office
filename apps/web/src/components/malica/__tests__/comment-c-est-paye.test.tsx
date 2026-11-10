@@ -245,6 +245,44 @@ describe("la déclaration d'un règlement", () => {
     );
   });
 
+  /*
+   * 10 novembre 2026, relevé sur le staging : une pièce au total négatif
+   * (Base HT -1 560,000). « J'ai tout payé » restait choisi, « Enregistrer »
+   * gris sans un mot, et « Une partie seulement » annonçait « Au plus
+   * 0,000 TND » en laissant partir 1 000,000 TND.
+   */
+  it.each([0, -1856400])(
+    "dit qu'il n'y a rien à régler sur un total de %i, et ne laisse rien choisir",
+    async (ttc) => {
+      monter(ttc);
+      const { especes, enregistrer } = await ouvrirLaFeuille();
+      fireEvent.click(especes);
+      expect(screen.getByRole("status").textContent).toBe("pme.paiement.rienARegler");
+      for (const cle of ["pme.paiement.tout", "pme.paiement.partie"])
+        expect((screen.getByRole("button", { name: cle }) as HTMLButtonElement).disabled).toBe(
+          true,
+        );
+      expect(screen.queryByText("pme.paiement.borne")).toBeNull();
+      expect(enregistrer().disabled).toBe(true);
+      expect(api.inscrire).not.toHaveBeenCalled();
+    },
+  );
+
+  it("ne laisse pas partir un montant au-dessus de ce qui reste à payer", async () => {
+    monter();
+    const { especes, enregistrer } = await ouvrirLaFeuille();
+    fireEvent.click(screen.getByRole("button", { name: "pme.paiement.partie" }));
+    fireEvent.click(especes);
+    const saisie = screen.getByLabelText("pme.paiement.combien");
+    fireEvent.change(saisie, { target: { value: "120" } });
+    expect(screen.getByRole("alert").textContent).toBe("pme.paiement.borne");
+    expect(enregistrer().disabled).toBe(true);
+    // Au plafond exact, le montant part.
+    fireEvent.change(saisie, { target: { value: "119" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    await waitFor(() => expect(enregistrer().disabled).toBe(false));
+  });
+
   it("exige la référence quand le moyen en porte une, et seulement alors", async () => {
     monter();
     const { especes, enregistrer } = await ouvrirLaFeuille();

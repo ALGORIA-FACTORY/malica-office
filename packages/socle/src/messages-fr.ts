@@ -577,7 +577,9 @@ export const fr = {
   "pme.paiement.correction.enregistrer": "Enregistrer la correction",
   "pme.paiement.correction.retirer": "Retirer ce règlement",
   "pme.paiement.correction.retireExplique": "Ce règlement sera retiré : rien ne le remplace.",
-  "pme.paiement.borne": "Au plus {montant} : ce qui reste à payer.",
+  "pme.paiement.borne": "Vous pouvez saisir au plus {montant} : c’est ce qui reste à payer.",
+  "pme.paiement.rienARegler":
+    "Le total lu sur cette pièce est nul ou négatif : il n’y a aucun règlement à inscrire dessus. Si ce total est faux, reprenez la photo.",
   "pme.paiement.avantFacture": "Avant la date de la facture : un acompte ?",
   "pme.type.titre": "Qu'est-ce que c'est ?",
   "pme.photo.avis.too_small":
