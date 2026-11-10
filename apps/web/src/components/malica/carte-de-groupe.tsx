@@ -68,16 +68,6 @@ export function IconeCalendrier() {
   );
 }
 
-/** Un immeuble — une société. */
-export function IconeSociete() {
-  return (
-    <svg viewBox="0 0 24 24" className="g">
-      <path d="M5 20.5V6.5L12 4v16.5M12 9h7v11.5M3.5 20.5h17" />
-      <path d="M8 9h1M8 12.5h1M8 16h1M15 12.5h1M15 16h1" />
-    </svg>
-  );
-}
-
 /** Une silhouette — un siège, la personne qui a déposé la pièce. */
 export function IconeSiege() {
   return (
