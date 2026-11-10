@@ -256,7 +256,7 @@ describe("un seul circuit, deux fois", { skip: !BASE_CONFIGUREE }, () => {
     await s.fait("sami", "collab.demanderSurPiece", id, "suppression");
     await assert.rejects(
       s.fait("amel", "collab.repondreSurPiece", id, "suppression", false, null),
-      /demandes_refus_motive/,
+      /refus\.piece\.motif_requis/,
     );
     await s.fait("amel", "collab.repondreSurPiece", id, "suppression", false, "Gardons-la");
     const d = (await s.fait("sami", "collab.demandesDUnePiece", id)) as Array<{

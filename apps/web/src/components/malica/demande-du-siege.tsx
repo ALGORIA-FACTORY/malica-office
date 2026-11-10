@@ -2,7 +2,7 @@
  * La demande d'un siège, chez le propriétaire (« Malica sans blocage »,
  * lot 4) : le propriétaire est au siège ce que le comptable est au
  * propriétaire — il accorde ou refuse, et un refus porte sa note, ici comme
- * en base (`demandes_refus_motive`).
+ * en base (`refus.piece.motif_requis`).
  *
  * La même carte que la décision de la fiche : un mot, deux boutons de 48 px,
  * le principal plein à gauche. Ce que fait l'accord est dans le ⓘ : sur une
@@ -13,6 +13,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Aide } from "@/components/malica/aide";
+import { useLimiteDuMotif } from "@/hooks/use-limite-du-motif";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
@@ -37,6 +38,7 @@ export function DemandeDuSiege({
   const { t } = useI18n();
   const [refus, setRefus] = useState(false);
   const [note, setNote] = useState("");
+  const limiteDuMotif = useLimiteDuMotif();
   const [erreur, setErreur] = useState<string | null>(null);
   const qui = auteur ?? t("circuit.siege");
 
@@ -78,7 +80,12 @@ export function DemandeDuSiege({
       {refus ? (
         <label className="f-dec-note">
           <span>{t("circuit.demande.note")}</span>
-          <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+          <textarea
+            rows={2}
+            value={note}
+            maxLength={limiteDuMotif}
+            onChange={(e) => setNote(e.target.value)}
+          />
         </label>
       ) : null}
       <div className="f-dec-gestes deux">
