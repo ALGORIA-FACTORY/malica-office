@@ -540,7 +540,7 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     await s.fait("amel", "collab.demanderSurPiece", auComptable, "suppression");
     await assert.rejects(
       s.fait("expert", "collab.repondreSurPiece", auComptable, "suppression", false, null),
-      /demandes_refus_motive/,
+      /refus\.piece\.motif_requis/,
     );
     await s.fait(
       "expert",

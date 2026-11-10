@@ -18,12 +18,25 @@ const EDITEUR = "ALGORIA FACTORY";
 
 /** La pièce source, en largeurs de lignes (%) ; `cite` = le passage dont l'écriture dépend. */
 const LIGNES: ReadonlyArray<{ w: number; vide?: boolean; cite?: boolean }> = [
-  { w: 100 }, { w: 92 }, { w: 96 }, { w: 64 },
-  { w: 100, vide: true }, { w: 88 }, { w: 95 }, { w: 90 }, { w: 48 },
-  { w: 100, cite: true }, { w: 62, cite: true },
-  { w: 94, vide: true }, { w: 98 }, { w: 72 },
-  { w: 100, vide: true }, { w: 86 }, { w: 40 },
-  { w: 97, vide: true }, { w: 91 },
+  { w: 100 },
+  { w: 92 },
+  { w: 96 },
+  { w: 64 },
+  { w: 100, vide: true },
+  { w: 88 },
+  { w: 95 },
+  { w: 90 },
+  { w: 48 },
+  { w: 100, cite: true },
+  { w: 62, cite: true },
+  { w: 94, vide: true },
+  { w: 98 },
+  { w: 72 },
+  { w: 100, vide: true },
+  { w: 86 },
+  { w: 40 },
+  { w: 97, vide: true },
+  { w: 91 },
 ];
 
 function Preuve() {

@@ -1,0 +1,7 @@
+; Sentry — où vont les cartes de sources de la coque
+; (`outils/cartes-sources-sentry.mjs`). Des identifiants publics, suivis par
+; git ; le jeton, lui, vient de l'environnement (SENTRY_AUTH_TOKEN), jamais
+; d'ici. L'organisation est hébergée dans l'Union européenne.
+[defaults]
+org=algoria-factory-qx
+project=malica-coque

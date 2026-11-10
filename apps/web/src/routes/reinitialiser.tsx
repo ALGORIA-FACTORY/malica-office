@@ -100,7 +100,9 @@ function Reinitialiser() {
               className="cx-submit"
             >
               <span className="cx-fill" aria-hidden="true" />
-              <span className="cx-label">{pending ? t("auth.pending") : t("auth.reset.submit")}</span>
+              <span className="cx-label">
+                {pending ? t("auth.pending") : t("auth.reset.submit")}
+              </span>
             </button>
           </form>
         )}

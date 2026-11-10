@@ -68,6 +68,8 @@ jobs:
       # Le contexte secrets n'est pas lisible dans le `if` d'une étape : on
       # décide ici, au niveau du job, si la clé et le compte de service existent.
       CLE_PRESENTE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      # Les cartes de sources ne se fabriquent que si Sentry peut les recevoir.
+      CARTES: ${{ secrets.SENTRY_AUTH_TOKEN != '' && '1' || '0' }}
       PLAY_PRESENT: ${{ vars.PLAY_FOURNISSEUR_IDENTITE != '' && vars.PLAY_COMPTE_DE_SERVICE != '' }}
       # Le numéro de version : monotone, jamais réutilisé. Les deux premiers
       # (1 et 2) ont été construits sur le poste ; on décale le numéro du
@@ -95,7 +97,21 @@ jobs:
       # Le bundle web porte la cible : `.env.coque-<saveur>` — des adresses
       # publiques suivies par git, jamais une clé.
       - name: Construire le bundle de la coque
+        env:
+          MALICA_CARTES_SOURCES: ${{ env.CARTES }}
         run: npm run build:coque:$CIBLE -w @malica/web
+
+      # Même geste que `ota.yml` : les cartes vont à Sentry, puis sortent du
+      # bundle avant que Gradle ne l'embarque dans l'AAB.
+      - name: Envoyer les cartes de sources à Sentry
+        if: env.CARTES == '1'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: node outils/cartes-sources-sentry.mjs
+
+      - name: Dire que les piles seront illisibles
+        if: env.CARTES != '1'
+        run: echo "::warning::SENTRY_AUTH_TOKEN n'est pas posé — cet AAB part sans cartes de sources, ses plantages arriveront minifiés chez Sentry."
 
       # Règles de Google Play : le paquet publié ne vend rien (même garde que ci.yml).
       - name: La coque ne vend rien

@@ -4,7 +4,12 @@
  */
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { DIRIGEANT, ETAT_DIRIGEANT, preparerLAppareil } from "./comptes";
+import {
+  DIRIGEANT,
+  ETAT_DIRIGEANT,
+  oublierCeQueLAppareilAGarde,
+  preparerLAppareil,
+} from "./comptes";
 
 test.beforeEach(async ({ page }) => {
   await preparerLAppareil(page, "fr");
@@ -699,7 +704,10 @@ test("au clic : une demande de la société se refuse avec un motif", async ({
   };
   await appel("collab", "demanderSurPiece", [aRappeler, "rappel"]);
   await societe.close();
-
+  // La demande vient d'un AUTRE acteur, par l'API : aucun geste de cet écran
+  // n'invalide la file, et l'appareil la garde trente secondes (#269). Un
+  // rechargement rendrait la file d'avant la demande.
+  await oublierCeQueLAppareilAGarde(page);
   await page.reload();
   const demandes = pile(page, /Demandes de la société/);
   await expect(demandes).toBeVisible({ timeout: 20_000 });

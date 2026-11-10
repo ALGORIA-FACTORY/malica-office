@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { OrigineDEcheance } from "@/components/malica/origine-d-echeance";
-import { FiltreDesSocietes } from "@/components/malica/filtre-des-societes";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -143,8 +142,9 @@ function PmeEcheances() {
   const revenir = useRevenir();
 
   /*
-   * LES SOCIÉTÉS MONTRÉES (3 novembre 2026) : toutes, ou celle des puces
-   * (`pme.societeAffichee`). Le calendrier se dérive du pack à l'ouverture —
+   * LES SOCIÉTÉS MONTRÉES : celle de l'en-tête, ou toutes quand il dit « Toutes
+   * les sociétés » (`pme.societeAffichee`, une seule sélection pour tous les
+   * écrans — 10 novembre 2026). Le calendrier se dérive du pack à l'ouverture —
    * idempotent — puis se lit, pour chacune ; les deux appels prennent déjà une
    * liste de sociétés.
    */
@@ -247,8 +247,6 @@ function PmeEcheances() {
 
       <div className="pad">
         <h1>{t("pme.echeances.titre")}</h1>
-
-        <FiltreDesSocietes />
 
         {/*
          * Le grand chiffre du dessin somme des dinars. Aucun montant n'est au

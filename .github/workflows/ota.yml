@@ -14,6 +14,9 @@
 # `web-v<version>`, qui doit dire la même chose que package.json.
 #
 # Secret attendu : CAPGO_CLE (clé d'API Capgo, droit « upload »).
+# Secret facultatif : SENTRY_AUTH_TOKEN (jeton d'organisation Sentry) — avec
+# lui, les cartes de sources du bundle partent chez Sentry ; sans lui, le
+# bundle part quand même et le flux le dit.
 # Déclenchée par une étiquette `web-v*`, ou à la main avec le canal.
 
 name: Mise à jour en vol
@@ -83,6 +86,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CANAL: ${{ github.event.inputs.canal || 'staging' }}
+      # Les cartes de sources ne se fabriquent que si Sentry peut les recevoir.
+      CARTES: ${{ secrets.SENTRY_AUTH_TOKEN != '' && '1' || '0' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -107,7 +112,22 @@ jobs:
           fi
 
       - name: Construire le bundle de la coque
+        env:
+          MALICA_CARTES_SOURCES: ${{ env.CARTES }}
         run: npm run build:coque:${{ env.CANAL == 'production' && 'prod' || env.CANAL }} -w @malica/web
+
+      # Sans elles, une pile reçue par Sentry est illisible. Le script les
+      # envoie puis les retire du bundle : une carte porte le code source, et
+      # ne part ni chez Capgo ni sur un téléphone.
+      - name: Envoyer les cartes de sources à Sentry
+        if: env.CARTES == '1'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: node outils/cartes-sources-sentry.mjs
+
+      - name: Dire que les piles seront illisibles
+        if: env.CARTES != '1'
+        run: echo "::warning::SENTRY_AUTH_TOKEN n'est pas posé — ce bundle part sans cartes de sources, ses plantages arriveront minifiés chez Sentry."
 
       # Règles de Google Play : le paquet publié ne vend rien (même garde que ci.yml).
       - name: La coque ne vend rien
