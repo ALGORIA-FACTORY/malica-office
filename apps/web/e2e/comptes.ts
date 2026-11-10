@@ -69,3 +69,21 @@ export async function preparerLAppareil(
     { l: locale, premiere: premiereVisite },
   );
 }
+
+/**
+ * Oublie ce que l'appareil a gardé des lectures (`lib/cache-de-l-appareil`,
+ * base IndexedDB `malica-cache`) : le prochain chargement relit tout, comme
+ * une première visite. À appeler quand un AUTRE acteur a changé la base par
+ * l'API et qu'aucun geste de l'écran n'invalide la lecture gardée.
+ */
+export async function oublierCeQueLAppareilAGarde(page: Page) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const r = indexedDB.deleteDatabase("malica-cache");
+        r.onsuccess = () => resolve();
+        r.onblocked = () => resolve();
+        r.onerror = () => reject(r.error);
+      }),
+  );
+}
