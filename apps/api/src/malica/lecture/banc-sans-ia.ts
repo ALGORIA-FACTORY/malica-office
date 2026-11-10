@@ -563,9 +563,13 @@ export async function mesurerLaPiece(
     d: DeviseLue,
     marques: readonly MarqueDeLaPage[] = [],
     texteExact = false,
+    // Le lecteur par vision : connu seulement une fois le relevé rendu. La preuve
+    // anticipée du tableau (`surLeTableau`) part avant, et n'existe que pour
+    // PaddleOCR : elle ne passe donc rien.
+    parVision = false,
   ) =>
     resoudreLaPiece(
-      jetonsDuSudoku(tokens, d, c, releve.lecteur === "vision"),
+      jetonsDuSudoku(tokens, d, c, parVision),
       c,
       moteur,
       {
@@ -580,7 +584,7 @@ export async function mesurerLaPiece(
       },
       marques,
       texteExact,
-      releve.lecteur === "vision",
+      parVision,
     );
   let releve: ReleveGarde;
   try {
@@ -615,7 +619,14 @@ export async function mesurerLaPiece(
   const t0 = performance.now();
   let tokens = releve.tokens;
   const exact = releve.lecteur === "pdf-text";
-  let sortie = resoudreSur(tokens, contexte, devise, releve.marques, exact);
+  let sortie = resoudreSur(
+    tokens,
+    contexte,
+    devise,
+    releve.marques,
+    exact,
+    releve.lecteur === "vision",
+  );
   // La relecture guidée par la contradiction : les cellules du tableau, seules, quand le
   // centre est prouvé et que les lignes ne le sont pas (`relecture.ts`).
   const total = champsDeLaGrille(contexte.grille).ht;
@@ -626,7 +637,14 @@ export async function mesurerLaPiece(
     );
     if (lues) {
       tokens = avecLesRelectures(tokens, contredites, lues);
-      sortie = resoudreSur(tokens, contexte, devise, releve.marques, exact);
+      sortie = resoudreSur(
+        tokens,
+        contexte,
+        devise,
+        releve.marques,
+        exact,
+        releve.lecteur === "vision",
+      );
     }
   }
   const sudokuMs = Math.round(performance.now() - t0);
