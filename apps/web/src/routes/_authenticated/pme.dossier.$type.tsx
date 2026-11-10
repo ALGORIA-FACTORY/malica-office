@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Fragment, useEffect, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
-import { CarteDeGroupe, IconeCalendrier, IconeSiege } from "@/components/malica/carte-de-groupe";
+import { CarteDeGroupe, IconeCalendrier } from "@/components/malica/carte-de-groupe";
+import { RangeeDesSieges, type Siege } from "@/components/malica/rangee-des-sieges";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { jourOuInstant, montant } from "@/lib/lisible";
@@ -92,6 +93,7 @@ function Dossier() {
     parSociete,
     parSiege,
     chargement: lecture,
+    nomDeSociete,
     parSieges,
     ouvrirSaSociete,
   } = usePiecesDesSocietes();
@@ -132,7 +134,18 @@ function Dossier() {
     .map((x) => x.piece)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   // ------------------------------------------------------------ les sièges
-  const sieges = parSieges(deLaSociete.map((x) => x.piece));
+  // Ceux des pièces que l'en-tête montre ; toutes les sociétés : chaque siège
+  // dit la sienne (celle de sa première pièce — un siège est d'une société).
+  const sieges: Siege[] = [...parSieges(deLaSociete.map((x) => x.piece))].map(([id, g]) => ({
+    id,
+    nom: g.nom,
+    pieces: g.pieces,
+    societe:
+      parSociete && societe === null
+        ? nomDeSociete(deLaSociete.find((x) => x.piece.auteurId === id)?.societe ?? "")
+        : null,
+  }));
+  const siegeChoisi = sieges.find((x) => x.id === siege) ?? null;
 
   // ----------------------------------------------------------- les périodes
   const annuel = dossier?.periode === "annee";
@@ -192,7 +205,7 @@ function Dossier() {
           </span>
           <span className="tx">
             <span className="k">
-              {[t("pme.dossier.kicker"), etiquette].filter(Boolean).join(" · ")}
+              {[t("pme.dossier.kicker"), etiquette, siegeChoisi?.nom].filter(Boolean).join(" · ")}
             </span>
             <h1>{libelle}</h1>
             <span>{t("pme.home.dossier.pieces", { count: retenues.length })}</span>
@@ -242,28 +255,15 @@ function Dossier() {
           <p className="vide">{t("pme.dossier.vide")}</p>
         ) : (
           <>
-            {parSiege && sieges.size > 0 ? (
-              <>
-                <div className="sec">
-                  <h2>{t("pme.dossier.sieges")}</h2>
-                  <span>{sieges.size}</span>
-                </div>
-                {[...sieges].map(([id, g]) => (
-                  <CarteDeGroupe
-                    key={id}
-                    presse={siege === id}
-                    accent={siege === id}
-                    onClick={() => {
-                      setSiege(siege === id ? null : id);
-                      setOuverte(undefined);
-                    }}
-                    icone={<IconeSiege />}
-                    titre={g.nom}
-                    valeur={total(g.pieces)}
-                    n={g.pieces.length}
-                  />
-                ))}
-              </>
+            {parSiege && sieges.length > 0 ? (
+              <RangeeDesSieges
+                sieges={sieges}
+                choisi={siege}
+                choisir={(id) => {
+                  setSiege(id);
+                  setOuverte(undefined);
+                }}
+              />
             ) : null}
 
             <div className="sec">
