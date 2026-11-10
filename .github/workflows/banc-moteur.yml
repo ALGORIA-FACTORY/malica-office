@@ -124,6 +124,11 @@ jobs:
           echo "::group::Le bulletin"
           cat sortie/banc.md
           echo "::endgroup::"
+          # Toutes les pièces sans preuve, tous corpus : le bulletin dit combien,
+          # cette liste dit lesquelles (le `tail` ci-dessous ne garde que la fin).
+          echo "::group::Les pièces sans preuve"
+          grep -E " (aucune|ambigue|sans_grille|signalee) — " sortie/banc.err || true
+          echo "::endgroup::"
           grep -v "^moteur " sortie/banc.err | tail -60
 
       - name: Le journal du service OCR
