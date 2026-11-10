@@ -1,3 +1,15 @@
+/**
+ * La TVA du mois (PME) — ce que le dirigeant encaisse, récupère et reverse.
+ *
+ * Route `/pme/tva`, `?mois=AAAA-MM` ouvre un mois précis (un mois mal formé ou à venir est
+ * ignoré). Un chiffre : le solde, à payer ou reporté ; puis ses deux termes et le détail par
+ * taux. Les données viennent de `useTvaPeriod` : extraits transmis du mois et taux gouvernés du
+ * pack, passés au moteur de TVA du Socle.
+ *
+ * R3 : l'écran lit ce que le moteur rend, il ne calcule rien ; il lit seulement de quel côté de
+ * zéro tombe le solde. R4 : aucun taux ni échéance écrits ici, tout vient du pack. Ce que le
+ * dessin demande et que les données ne servent pas s'affiche « — », jamais inventé.
+ */
 import { sensDuSolde } from "@/lib/sens-du-solde";
 import { CONVERSION_REFUSEE, EXTRAIT_EN_DEVISE } from "@malica/socle/engines/tva/des-extraits";
 import { useQuery } from "@tanstack/react-query";

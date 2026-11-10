@@ -1,3 +1,13 @@
+/**
+ * Les épreuves de l'écriture proposée — de la pièce lue à l'écriture que le comptable voit.
+ *
+ * Garantissent que `buildProposal` produit un libellé qui identifie l'opération sans
+ * montant ni référence inventée ; qu'un acheteur non assujetti ne déduit pas la TVA (elle
+ * rejoint la charge, au prorata et au millime près quand l'achat est ventilé, et les droits
+ * au coût suivent) ; que les seuils de confiance et les décimales viennent de l'appelant,
+ * et que sans décimales on REFUSE de proposer plutôt que de se replier sur deux (R4).
+ * Une devise imprévue se propose très bien dès que le pack dit son échelle (R5).
+ */
 import { describe, expect, it } from "vitest";
 
 import { factureAchatSimple, factureVenteSimple, TAX_RATES_TN } from "../../__tests__/fixtures.ts";

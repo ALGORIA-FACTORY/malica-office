@@ -1,3 +1,10 @@
+/**
+ * L'ordre de la revue — la file ne se réordonne pas sous les pieds du cabinet.
+ *
+ * Garantit que, d'une pièce à l'autre, l'ordre montré au départ est gardé même quand la
+ * base range autrement une pièce ouverte, qu'une pièce arrivée depuis va à la fin, qu'une
+ * pièce sortie est oubliée, et que l'ordre s'oublie au retour à la file.
+ */
 import { describe, expect, it } from "vitest";
 
 import { dansLOrdreVu, oublierLOrdre, ordreDeLaRevue, retenirLOrdre } from "./ordre-de-revue";

@@ -1,3 +1,11 @@
+/**
+ * La page Clients du cabinet quand une lecture échoue — jamais un portefeuille vide à tort.
+ *
+ * Garantit que la panne de l'une des trois lectures (clients, état des clients, mandats)
+ * s'annonce avec un moyen de réessayer, au lieu de dire à l'expert qu'il n'a aucun client ;
+ * que l'attente ne conclut rien ; et que seul le tout premier jour propose d'importer ou
+ * d'ajouter des clients.
+ */
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";

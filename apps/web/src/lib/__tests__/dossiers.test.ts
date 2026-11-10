@@ -1,3 +1,12 @@
+/**
+ * Les dossiers de la bibliothèque — dans quel dossier va une pièce, et quelle période.
+ *
+ * Garantit que le dossier d'une pièce vient de son type (un avoir suit le sens lu,
+ * achats ou ventes), qu'aucun dossier n'est deviné sans type, et que choisir un dossier
+ * écrit le bon type sans réécrire un avoir en facture. La période d'une carte dit vrai :
+ * le mois le plus récent qui a des pièces le 1er du mois, jamais un mois à venir, et
+ * une date illisible ne fait pas disparaître la pièce.
+ */
 import { describe, expect, it } from "vitest";
 
 import {

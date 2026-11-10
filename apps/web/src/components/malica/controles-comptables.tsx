@@ -1,3 +1,12 @@
+/**
+ * Les contrôles d'une pièce — ce que l'analyse a vérifié, vu par le cabinet.
+ *
+ * Écran cabinet, dans la bibliothèque : la liste des contrôles de la pièce, lue côté
+ * supervision, chacun conforme, non applicable ou à regarder, avec son motif. Rien n'est
+ * calculé ici : le moteur déterministe a rendu les statuts, l'écran les montre. Quatre
+ * états se disent à part : attente, panne, aucune analyse (on ne présente alors aucun
+ * contrôle fiscal), et analyse devenue ancienne, signalée pour ne pas passer pour à jour.
+ */
 import { useQuery } from "@tanstack/react-query";
 import { CircleCheck, CircleHelp, TriangleAlert } from "lucide-react";
 import { useI18n } from "@/i18n";

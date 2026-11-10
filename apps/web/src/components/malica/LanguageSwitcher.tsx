@@ -1,3 +1,11 @@
+/**
+ * Le sélecteur de langue — un bouton par langue, la langue active en négatif.
+ *
+ * Les langues viennent du module d'internationalisation (`@/i18n`), jamais d'une liste
+ * écrite ici ; l'arabe s'affiche par son nom, les autres par leur code. Le bouton de la
+ * langue active porte `aria-pressed`, et un libellé réservé aux lecteurs d'écran nomme le
+ * groupe. Le changement de langue bascule aussi le sens de lecture (RTL), ailleurs.
+ */
 import { LOCALES, LOCALE_NAMES, useI18n, type Locale } from "@/i18n";
 
 export function LanguageSwitcher() {

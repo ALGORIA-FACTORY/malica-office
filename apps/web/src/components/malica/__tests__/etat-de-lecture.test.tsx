@@ -1,4 +1,11 @@
 // @vitest-environment jsdom
+/**
+ * L'état de lecture d'une pièce, dans une liste — dire le motif une seule fois.
+ *
+ * Garantit que le motif déjà dit par la section (pièce personnelle) n'est pas répété sur
+ * chaque ligne, mais qu'un autre motif de refus (plafond atteint) garde sa phrase, même sur
+ * une pièce rendue privée : la personne doit savoir pourquoi une pièce n'a pas été lue.
+ */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

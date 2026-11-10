@@ -1,3 +1,12 @@
+/**
+ * Le numériseur — retrouver, redresser et juger un document photographié.
+ *
+ * Éprouvé sur des images fabriquées : la géométrie des coins, le redressement d'un document
+ * pris de biais, la détection de tout format (ticket, carte, facture) en préférant la forme
+ * qui ressemble à une feuille, l'affinage des coins sur les bords réels, et le verdict que
+ * voit la personne (approchez, stabilisez, trop sombre, de biais, page vierge). Le voyant
+ * vert promet que la photo sera acceptée : un faux vert la ferait refuser après le geste.
+ */
 import { describe, expect, it } from "vitest";
 
 import {

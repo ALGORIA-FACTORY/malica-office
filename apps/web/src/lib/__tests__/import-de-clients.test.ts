@@ -1,3 +1,12 @@
+/**
+ * L'import d'une liste de clients — CSV, lignes collées ou classeur Excel.
+ *
+ * Garantit que les colonnes sont reconnues quel que soit leur nom ou leur ordre, qu'un
+ * CSV au point-virgule avec guillemets est lu, que des lignes collées depuis un
+ * tableur sans en-tête le sont aussi, et que la première feuille d'un classeur Excel
+ * se lit. Le matricule est mis en forme et l'e-mail en minuscules, pour que le cabinet
+ * ne ressaisisse rien.
+ */
 // @vitest-environment jsdom
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";

@@ -1,3 +1,13 @@
+/**
+ * Le contrat d'amortissement — la forme d'un plan, d'une dépréciation et d'une cession.
+ *
+ * Décrit, et valide à l'exécution (zod), ce que le moteur des immobilisations rend :
+ * un plan annuel (base, taux, dotation, cumul, valeur nette), une dépréciation ou reprise
+ * à une date, et une cession (prix, valeur nette, plus ou moins-value). Tous les
+ * montants sont des chaînes décimales, jamais des flottants ; la durée d'usage est lue au
+ * pack, jamais écrite en dur (R4). Utilisé par le moteur `engines/immo` et l'écran des
+ * immobilisations du cabinet.
+ */
 import { z } from "zod";
 
 const CONTRACT_VERSION = "amortissement.v1" as const;

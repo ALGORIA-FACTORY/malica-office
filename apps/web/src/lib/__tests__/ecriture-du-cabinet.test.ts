@@ -1,3 +1,13 @@
+/**
+ * L'écriture du cabinet — partir de l'existant, et savoir si elle a été forcée.
+ *
+ * Garantit que l'écran de comptabilisation part de l'écriture déjà inscrite, sinon de
+ * la proposition du moteur, sinon de rien. Il garantit aussi la distinction entre une
+ * écriture validée telle que proposée et une écriture forcée : un montant récrit
+ * autrement (« 1 655,135 ») ne compte pas comme un changement, alors qu'un compte, un
+ * montant, le journal, le libellé ou une ligne en moins la rendent forcée. Un montant
+ * illisible n'égale rien.
+ */
 import { describe, expect, it } from "vitest";
 
 import type { Ecriture, PropositionDePiece } from "@malica/socle/ports/repositories";

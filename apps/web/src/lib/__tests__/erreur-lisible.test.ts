@@ -1,3 +1,13 @@
+/**
+ * Ce qu'on montre d'une erreur — la phrase prévue et une référence, jamais le moteur.
+ *
+ * Garantit qu'aucun message de moteur, de base, de pilote ou de validation n'atteint
+ * l'écran : seule une clé de refus venant de notre API se dit, dans la langue de la
+ * personne et avec la valeur qu'elle cite ; tout le reste devient la phrase prévue et
+ * une référence, et le détail part au journal sous la même référence. Une même erreur
+ * rendue deux fois garde sa référence et ne s'inscrit qu'une fois. Le journal se relit
+ * en clair dans les réglages.
+ */
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

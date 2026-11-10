@@ -1,3 +1,13 @@
+/**
+ * Le contrat de TVA — la forme d'une déclaration calculée par le moteur.
+ *
+ * Porte la TVA collectée et la TVA déductible par seau (taux et nature), les totaux et
+ * le solde (positif : à payer), et les lignes de la déclaration telles que le référentiel
+ * les définit. Il porte aussi ce que l'écran doit nommer : les pièces rangées sur la
+ * nature par défaut faute d'attribution, les seaux sans ligne au référentiel (qui comptent
+ * dans les totaux), les pièces refusées avec leur motif. Une ligne incertaine est un défaut
+ * livré que l'expert-comptable doit confirmer (R10). Produit par `engines/tva`.
+ */
 import { z } from "zod";
 
 const CONTRACT_VERSION = "tva.v1" as const;

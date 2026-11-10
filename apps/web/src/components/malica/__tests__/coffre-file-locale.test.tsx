@@ -1,3 +1,10 @@
+/**
+ * Le coffre de la PME — une capture privée encore sur le téléphone n'est pas un coffre vide.
+ *
+ * Garantit que, tant qu'une pièce privée attend d'être envoyée dans la file locale, l'écran
+ * la montre au lieu d'annoncer que le coffre est vide ; le vide ne s'annonce que si ni le
+ * serveur ni la file n'ont de pièce privée. Sinon la personne croirait sa capture perdue.
+ */
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
