@@ -87,7 +87,7 @@ function Onboarding() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="rule-b">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
+        <div className="flex w-full items-center justify-between px-4 py-4 sm:px-6 lg:px-9">
           <Link to="/office" className="text-sm font-semibold uppercase tracking-[0.18em]">
             {t("brand.name")}
           </Link>
@@ -95,12 +95,12 @@ function Onboarding() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-6 py-12">
+      <main className="w-full px-4 py-8 sm:px-6 lg:px-9 lg:py-12">
         <h1 className="text-2xl font-semibold tracking-tight">{t("onboarding.title")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{t("onboarding.subtitle")}</p>
 
-        <form onSubmit={onSubmit} className="mt-8 space-y-6">
-          <fieldset>
+        <form onSubmit={onSubmit} className="mt-8 grid items-start gap-6 lg:grid-cols-2">
+          <fieldset className="lg:col-span-2">
             <legend className="text-xs uppercase tracking-wide text-muted-foreground">
               {t("onboarding.kind")}
             </legend>
@@ -181,7 +181,7 @@ function Onboarding() {
             />
           </label>
 
-          <fieldset>
+          <fieldset className="lg:col-span-2">
             <legend className="text-xs uppercase tracking-wide text-muted-foreground">
               {t("onboarding.mode")}
             </legend>
@@ -203,13 +203,13 @@ function Onboarding() {
           </fieldset>
 
           {error && (
-            <p className="border border-signal-stop px-3 py-2 text-xs text-signal-stop">{error}</p>
+            <p className="border border-signal-stop px-3 py-2 text-xs text-signal-stop lg:col-span-2">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={pending}
-            className="w-full border border-foreground bg-foreground px-4 py-3 text-sm font-medium text-background transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
+            className="w-full border border-foreground bg-foreground px-4 py-3 text-sm font-medium text-background transition-colors hover:bg-background hover:text-foreground disabled:opacity-50 lg:col-span-2 lg:justify-self-start lg:px-10"
           >
             {pending ? t("auth.pending") : t("onboarding.submit")}
           </button>
