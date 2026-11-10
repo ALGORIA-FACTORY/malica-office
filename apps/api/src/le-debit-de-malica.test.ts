@@ -27,7 +27,6 @@ describe("le débit de Malica", { skip: !BASE_CONFIGUREE }, () => {
   let u: Utilisateur;
   let autre: Utilisateur;
   let org = "";
-  let fil = "";
   const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
 
   /** `n` questions admises de la personne, il y a `age` (un intervalle SQL). */
@@ -51,12 +50,6 @@ describe("le débit de Malica", { skip: !BASE_CONFIGUREE }, () => {
       );
       return rows[0]!.org;
     });
-    const c = await admin.query<{ id: string }>(
-      `insert into agents.conversations (tenant_id, created_by, titre)
-       values ($1, $2, 'débit') returning id`,
-      [org, u.id],
-    );
-    fil = c.rows[0]!.id;
   });
 
   after(async () => {
