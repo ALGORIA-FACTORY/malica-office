@@ -568,6 +568,10 @@ export const ar: Dict = {
   "pme.detail.puTtc": "سعر الوحدة بكل الأداءات {pu}",
   "pme.detail.totalNeFermePas":
     "المبالغ المقروءة لا تثبت هذا المجموع (دون الأداءات + الأداء على القيمة المضافة + المعاليم): يُرجى التثبت منه في الوثيقة.",
+  "pme.detail.nonLu": "غير مقروء",
+  "pme.detail.nonLuVoir": "غير مقروء · عرض المنطقة",
+  "pme.detail.montantsNonLus":
+    "لم أتمكّن من قراءة كل مبالغ هذا المستند: {champs}. يبقى التحقق منها على المستند.",
   "pme.detail.provenance": "كل سطر مصدره الوثيقة نفسها. لا أضيف شيئًا ولا أحتسب شيئًا.",
   "pme.lecture.releve": "رُصد · {mots} كلمة محدَّدة",
   "pme.verifie.total": "المجموع المقروء على الوثيقة",

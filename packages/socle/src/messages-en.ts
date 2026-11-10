@@ -584,6 +584,10 @@ export const en: Dict = {
   "pme.detail.puTtc": "Unit price incl. tax {pu}",
   "pme.detail.totalNeFermePas":
     "The amounts read do not verify this total (excl. tax + VAT + duties): check it on the document.",
+  "pme.detail.nonLu": "Not read",
+  "pme.detail.nonLuVoir": "Not read · see the area",
+  "pme.detail.montantsNonLus":
+    "I could not read every amount on this document: {champs}. They remain to be checked on the document.",
   "pme.detail.provenance":
     "Every line comes from the document itself. I add nothing, I compute nothing.",
   "pme.lecture.releve": "Noted · {mots} words located",
