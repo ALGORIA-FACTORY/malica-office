@@ -83,7 +83,8 @@ export const en: Dict = {
   "auth.eyebrow": "Entry traceability",
   "auth.hero.1": "Every entry",
   "auth.hero.2": "traces back to its document.",
-  "auth.proof.claim": "Entry proposed from the document, checked by the rules engine, validated by your accountant.",
+  "auth.proof.claim":
+    "Entry proposed from the document, checked by the rules engine, validated by your accountant.",
   "auth.proof.ref": "Document received",
   "auth.proof.page": "Document",
   "auth.principle": "AI proposes. A deterministic engine validates.",
