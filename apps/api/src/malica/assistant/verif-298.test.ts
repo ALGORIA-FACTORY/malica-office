@@ -167,9 +167,9 @@ describe("verif #298 — tools under RLS, route, browser payload", { skip: !BASE
     await s.fermer();
   });
 
-  it("the 9 tools, as amel (A, under mandate), never reach company B", async () => {
+  it("the 10 tools, as amel (A, under mandate), never reach company B", async () => {
     // A new tool must be added to the attempts below before this count moves.
-    assert.equal(DEFINITIONS.length, 9);
+    assert.equal(DEFINITIONS.length, 10);
     const c = ctx(appelDe(s.gens.amel.id), s.pme);
     const appels: Array<[string, unknown]> = [
       ["pieces_chercher", { texte: "SECRET" }],
@@ -180,6 +180,7 @@ describe("verif #298 — tools under RLS, route, browser payload", { skip: !BASE
       ["echeances_fiscales", { toutes: true, tenantId: orgB }],
       ["achats_par_fournisseur", { tenantId: orgB, tenant_id: orgB }],
       ["achats_par_fournisseur", { mois: "2026-10", tenantId: orgB }],
+      ["evolution_mensuelle", { mois: 12, tenantId: orgB, tenant_id: orgB }],
       ["ecritures_proposees", { piece_id: pieceB }],
       ["ecritures_proposees", {}],
       ["tiers_chercher", { texte: "SECRET" }],

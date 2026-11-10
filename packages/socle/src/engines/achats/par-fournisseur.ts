@@ -31,6 +31,8 @@ export interface PieceLuePourLesAchats {
   /** Le total TTC relevé, en chaîne décimale ; `null` s'il n'a pas été lu. */
   total: string | null;
   devise: string | null;
+  /** Ce qui désigne la pièce pour l'appelant (son identifiant) ; rendu tel quel, jamais lu. */
+  ref?: string;
 }
 
 export interface AchatsDUnFournisseur {
@@ -38,6 +40,8 @@ export interface AchatsDUnFournisseur {
   /** La somme TTC, à la précision de la devise. */
   total: string;
   pieces: number;
+  /** Les références des pièces sommées, dans l'ordre reçu. */
+  refs: string[];
 }
 
 export interface AchatsParFournisseur {
@@ -82,7 +86,10 @@ export function achatsParFournisseur(
   decimales: number,
 ): AchatsParFournisseur {
   const ecartees = { sansTotal: 0, autreDevise: 0, sansEmetteur: 0 };
-  const groupes = new Map<string, { ecritures: Map<string, number>; totaux: string[] }>();
+  const groupes = new Map<
+    string,
+    { ecritures: Map<string, number>; totaux: string[]; refs: string[] }
+  >();
   const tous: string[] = [];
 
   for (const p of pieces) {
@@ -101,9 +108,10 @@ export function achatsParFournisseur(
       ecartees.sansEmetteur += 1;
       continue;
     }
-    const g = groupes.get(cle) ?? { ecritures: new Map<string, number>(), totaux: [] };
+    const g = groupes.get(cle) ?? { ecritures: new Map<string, number>(), totaux: [], refs: [] };
     g.ecritures.set(nom, (g.ecritures.get(nom) ?? 0) + 1);
     g.totaux.push(p.total);
+    if (p.ref) g.refs.push(p.ref);
     groupes.set(cle, g);
     tous.push(p.total);
   }
@@ -119,7 +127,12 @@ export function achatsParFournisseur(
           fournisseur = ecriture;
         }
       }
-      return { fournisseur, total: sommeDecimale(g.totaux, decimales), pieces: g.totaux.length };
+      return {
+        fournisseur,
+        total: sommeDecimale(g.totaux, decimales),
+        pieces: g.totaux.length,
+        refs: g.refs,
+      };
     })
     .sort(
       (a, b) =>

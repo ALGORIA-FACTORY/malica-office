@@ -34,12 +34,21 @@ import { z } from "zod";
 import type { DeclarationTva, TaxRate } from "@malica/socle/ports/repositories";
 import type { BlocDeReponse, PropositionDAction } from "@malica/socle/ports/assistant";
 import { achatsParFournisseur } from "@malica/socle/engines/achats/par-fournisseur";
+import { piecesParMois } from "@malica/socle/engines/pieces/par-mois";
 import { HORS_DU_CALCUL, tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
 import { texte as message } from "@malica/socle/conseil";
 import type { MessageKey } from "@malica/socle/messages";
 
 import type { AppelApi } from "../appel-local.ts";
-import { blocDeLaTva, blocDesAchats, blocDesEcheances, moisEnClair } from "./blocs.ts";
+import {
+  blocDeLaTva,
+  blocDesAchats,
+  blocDesEcheances,
+  blocDesMois,
+  jourEnClair,
+  moisEnClair,
+  montant,
+} from "./blocs.ts";
 import type { ResultatDuConseilCite } from "../conseil/conseil-cite.ts";
 import { PORTEES, type ReponseDeConseil } from "../conseil/conseil.ts";
 import { loadMalicaContext } from "../conseil/context.ts";
@@ -203,6 +212,20 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
     },
   },
   {
+    name: "evolution_mensuelle",
+    description:
+      "Rend, mois par mois, la somme TTC des factures d'achat et des factures de vente lues du dossier, sur les " +
+      "derniers mois. Les sommes sont faites par le moteur de Malica sur TOUTES les pièces. À utiliser pour " +
+      "« comment évoluent mes ventes », « mes achats ces derniers mois », « compare ce mois au précédent ». " +
+      "Ce sont des totaux de pièces lues, pas un chiffre d'affaires comptable : dis-le ainsi. Un mois sans " +
+      "pièce lue n'a pas de montant : ne dis pas qu'il vaut zéro. `mois` : combien de mois (3 à 24).",
+    input_schema: {
+      type: "object",
+      properties: { mois: { type: "integer", minimum: 3, maximum: 24 } },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "action_proposer",
     description:
       "PROPOSE à la personne une action qui modifie son dossier. N'EXÉCUTE RIEN : l'écran affiche un bouton " +
@@ -257,6 +280,7 @@ const ETAPES: Readonly<Record<string, MessageKey>> = {
   piece_ouvrir: "pme.assistant.outil.piece_ouvrir",
   tva_du_mois: "pme.assistant.outil.tva_du_mois",
   achats_par_fournisseur: "pme.assistant.outil.achats_par_fournisseur",
+  evolution_mensuelle: "pme.assistant.outil.evolution_mensuelle",
   echeances_fiscales: "pme.assistant.outil.echeances_fiscales",
   ecritures_proposees: "pme.assistant.outil.ecritures_proposees",
   tiers_chercher: "pme.assistant.outil.tiers_chercher",
@@ -735,7 +759,23 @@ async function achatsDuDossier(ctx: ContexteDesOutils, brut: unknown): Promise<R
     ? toutes.filter((p) => (p.dateDocument ?? "").startsWith(mois.data!))
     : toutes;
   const dev = ctx.organisation.currency;
-  const achats = achatsParFournisseur(retenues, dev, params.moneyDecimals);
+  const achats = achatsParFournisseur(
+    retenues.map((p) => ({ ...p, ref: p.id })),
+    dev,
+    params.moneyDecimals,
+  );
+  // Ce qu'un clic sur une ligne ouvre : la date et le montant de chaque pièce.
+  const titres = new Map(
+    retenues.map((p) => [
+      p.id,
+      [
+        p.dateDocument ? jourEnClair(p.dateDocument, ctx.locale) : null,
+        p.total ? `${montant(p.total, params.moneyDecimals, ctx.locale)} ${dev}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    ]),
+  );
   const cle = `malica:achats:${mois.data ?? "toutes-dates"}`;
   const e = achats.ecartees;
   const ecartees = [
@@ -770,6 +810,83 @@ async function achatsDuDossier(ctx: ContexteDesOutils, brut: unknown): Promise<R
                 achats,
                 params.moneyDecimals,
                 mois.data ? moisEnClair(mois.data, ctx.locale) : null,
+                ctx.organisation.name ?? null,
+                ctx.locale,
+                titres,
+              ),
+            },
+          ],
+        }
+      : {}),
+  };
+}
+
+/** Sans précision de la personne, la fenêtre d'un graphique mensuel : six mois se lisent d'un coup d'œil. */
+const MOIS_PAR_DEFAUT = 6;
+
+async function evolutionMensuelle(ctx: ContexteDesOutils, brut: unknown): Promise<ResultatDOutil> {
+  const nb = z
+    .number()
+    .int()
+    .min(3)
+    .max(24)
+    .optional()
+    .safeParse((brut as { mois?: unknown } | null)?.mois);
+  if (!nb.success) return erreur("mois doit être un nombre entier de 3 à 24.");
+  const pack = await ctx.api.rpc<{ id: string } | null>("referentiel", "activePack", [
+    ctx.organisation.jurisdiction,
+  ]);
+  if (!pack)
+    return erreur(
+      "Le référentiel de la juridiction du dossier est introuvable : les pièces ne se somment pas.",
+    );
+  const [toutes, params] = await Promise.all([
+    ctx.api.rpc<PieceDeLaListe[]>("capture", "listAvecLecture", [ctx.tenantId]),
+    ctx.api.rpc<{ moneyDecimals: number }>("referentiel", "socleParams", [pack.id]),
+  ]);
+  const dev = ctx.organisation.currency;
+  const parMois = piecesParMois(
+    toutes,
+    dev,
+    params.moneyDecimals,
+    ctx.aujourdhui.slice(0, 7),
+    nb.data ?? MOIS_PAR_DEFAUT,
+  );
+  const cle = `malica:mois:${parMois.mois[0]!.mois}:${parMois.mois.at(-1)!.mois}`;
+  const e = parMois.ecartees;
+  const ecartees = [
+    e.sansTotal > 0 ? `${e.sansTotal} sans total lisible` : null,
+    e.autreDevise > 0 ? `${e.autreDevise} dans une autre devise que ${dev}` : null,
+    e.sansDate > 0 ? `${e.sansDate} sans date lue (hors de tout mois)` : null,
+  ].filter(Boolean);
+  const comptees = parMois.mois.reduce((n, m) => n + m.piecesAchats + m.piecesVentes, 0);
+  const texte = [
+    `Achats et ventes par mois, de ${parMois.mois[0]!.mois} à ${parMois.mois.at(-1)!.mois}, sommés par le moteur de Malica, en ${dev} TTC.`,
+    "Ce sont les totaux des factures lues, pas un chiffre d'affaires comptable.",
+    ...parMois.mois.map(
+      (m) =>
+        `- ${m.mois} : ventes ${m.ventes === null ? "aucune pièce lue" : `${m.ventes} ${dev} (${m.piecesVentes} pièce${m.piecesVentes > 1 ? "s" : ""})`} ; ` +
+        `achats ${m.achats === null ? "aucune pièce lue" : `${m.achats} ${dev} (${m.piecesAchats} pièce${m.piecesAchats > 1 ? "s" : ""})`}`,
+    ),
+    `Total des ventes sur la période : ${parMois.totalVentes} ${dev}. Total des achats : ${parMois.totalAchats} ${dev}.`,
+    ecartees.length > 0
+      ? `Factures écartées des sommes : ${ecartees.join(" ; ")}.`
+      : "Aucune facture écartée des sommes.",
+    ...(comptees === 0
+      ? ["Aucune facture lue n'entre dans cette période : ne donne aucun montant."]
+      : []),
+  ].join("\n");
+  return {
+    ok: true,
+    sources: [{ cle, genre: "liste", titre: "Achats et ventes par mois", objetId: null, texte }],
+    ...(comptees > 0
+      ? {
+          visuels: [
+            {
+              cle,
+              bloc: blocDesMois(
+                parMois,
+                params.moneyDecimals,
                 ctx.organisation.name ?? null,
                 ctx.locale,
               ),
@@ -1084,6 +1201,7 @@ const EXECUTANTS: Record<
   piece_ouvrir: pieceOuvrir,
   tva_du_mois: tvaDuMois,
   achats_par_fournisseur: achatsDuDossier,
+  evolution_mensuelle: evolutionMensuelle,
   echeances_fiscales: echeancesFiscales,
   ecritures_proposees: ecrituresProposees,
   tiers_chercher: tiersChercher,

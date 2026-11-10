@@ -134,3 +134,109 @@ describe("achats_par_fournisseur", () => {
     assert.deepEqual(appels, []);
   });
 });
+
+describe("le tableau des achats se trie et s'ouvre", () => {
+  it("rend, par colonne, l'ordre croissant des lignes — l'écran ne compare aucun montant", async () => {
+    const { ctx } = contexte();
+    const r = await executerOutil(ctx, "achats_par_fournisseur", {});
+    if (!r.ok) throw new Error("outil en échec");
+    const bloc = r.visuels![0]!.bloc;
+    if (bloc.type !== "tableau") throw new Error("type");
+    // Lignes : 0 Sismara (8000.000, 2), 1 Electro (4999.000, 1), 2 Kordane (4210.500, 1).
+    assert.deepEqual(bloc.ordres, {
+      fournisseur: [1, 2, 0],
+      montant: [2, 1, 0],
+      pieces: [1, 2, 0],
+    });
+  });
+
+  it("donne les pièces derrière chaque ligne, avec leur date et leur montant", async () => {
+    const { ctx } = contexte();
+    const r = await executerOutil(ctx, "achats_par_fournisseur", {});
+    if (!r.ok) throw new Error("outil en échec");
+    const bloc = r.visuels![0]!.bloc;
+    if (bloc.type !== "tableau") throw new Error("type");
+    assert.equal(bloc.pieces!.length, bloc.lignes.length);
+    assert.deepEqual(
+      bloc.pieces![0]!.map((p) => p.titre.replace(/\s/g, " ")),
+      ["28/10/2026 · 7 872,677 TND", "02/11/2026 · 127,323 TND"],
+    );
+    assert.deepEqual(
+      bloc.pieces![0]!.map((p) => p.id),
+      [PIECES[0]!.id, PIECES[1]!.id],
+    );
+    // Aucune pièce d'un autre fournisseur, ni la vente, ni la pièce sans total.
+    const ouvertes = new Set(bloc.pieces!.flatMap((l) => (l ?? []).map((p) => p.id)));
+    assert.ok(!ouvertes.has(PIECES[4]!.id) && !ouvertes.has(PIECES[5]!.id));
+  });
+});
+
+describe("evolution_mensuelle", () => {
+  it("somme par mois, laisse vide le mois sans pièce, et dit que ce n'est pas un chiffre d'affaires", async () => {
+    const { ctx, appels } = contexte();
+    const r = await executerOutil(ctx, "evolution_mensuelle", { mois: 3 });
+    if (!r.ok) throw new Error("outil en échec");
+    const texte = r.sources[0]!.texte;
+    assert.match(texte, /de 2026-09 à 2026-11/);
+    assert.match(texte, /pas un chiffre d'affaires comptable/);
+    assert.match(texte, /- 2026-09 : ventes aucune pièce lue ; achats aucune pièce lue/);
+    assert.match(
+      texte,
+      /- 2026-10 : ventes 99999\.000 TND \(1 pièce\) ; achats 17082\.177 TND \(3 pièces\)/,
+    );
+    assert.match(texte, /- 2026-11 : ventes aucune pièce lue ; achats 127\.323 TND \(1 pièce\)/);
+    assert.match(texte, /Factures écartées des sommes : 1 sans total lisible/);
+    for (const a of appels)
+      assert.ok(LECTURES_DES_OUTILS.has(a), `${a} n'est pas une lecture déclarée`);
+  });
+
+  it("compose des barres dont la hauteur est rapportée à la plus haute, sans valeur pour un mois vide", async () => {
+    const { ctx } = contexte();
+    const r = await executerOutil(ctx, "evolution_mensuelle", { mois: 3 });
+    if (!r.ok) throw new Error("outil en échec");
+    const bloc = r.visuels![0]!.bloc;
+    if (bloc.type !== "graphique") throw new Error("type");
+    assert.equal(bloc.forme, "barres");
+    assert.equal(bloc.unite, "TND");
+    assert.deepEqual(
+      bloc.series.map((s) => [s.nom, s.ton]),
+      [
+        ["Ventes", "positif"],
+        ["Achats", "neutre"],
+      ],
+    );
+    const [ventes, achats] = bloc.series;
+    assert.deepEqual(
+      ventes!.points.map((p) => [p.valeur?.replace(/\s/g, " ") ?? null, p.part]),
+      [
+        [null, 0],
+        ["99 999,000", 1],
+        [null, 0],
+      ],
+    );
+    assert.deepEqual(
+      achats!.points.map((p) => [p.valeur?.replace(/\s/g, " ") ?? null, p.part]),
+      [
+        [null, 0],
+        ["17 082,177", 0.171],
+        ["127,323", 0.001],
+      ],
+    );
+    assert.equal(bloc.periode, "Septembre 2026 – Novembre 2026");
+    // Chaque valeur affichée se relit dans la source remise au modèle.
+    const connus = new Set(chiffresDe(r.sources[0]!.texte));
+    for (const s of bloc.series)
+      for (const p of s.points)
+        for (const n of chiffresDe(p.valeur ?? ""))
+          assert.ok(connus.has(n), `chiffre sans source : ${n}`);
+  });
+
+  it("sans facture dans la période : aucun montant, aucun visuel ; un nombre de mois hors bornes est refusé", async () => {
+    const { ctx } = contexte([piece("X", "10.000", "2020-01-01")]);
+    const r = await executerOutil(ctx, "evolution_mensuelle", {});
+    if (!r.ok) throw new Error("outil en échec");
+    assert.match(r.sources[0]!.texte, /ne donne aucun montant/);
+    assert.equal(r.visuels, undefined);
+    assert.equal((await executerOutil(ctx, "evolution_mensuelle", { mois: 99 })).ok, false);
+  });
+});

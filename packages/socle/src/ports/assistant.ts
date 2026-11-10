@@ -100,6 +100,25 @@ export interface ChiffreDeBloc {
   ton: TonDeBloc;
 }
 
+/** Une pièce derrière un chiffre : ce qu'un clic ouvre. */
+export interface PieceDUnChiffre {
+  id: string;
+  /** Ce que la pièce est, en clair : sa date et son montant, déjà écrits. */
+  titre: string;
+}
+
+/** Un point d'un graphique : son étiquette, sa valeur écrite, et sa hauteur. */
+export interface PointDeGraphique {
+  etiquette: string;
+  /** La valeur, déjà formatée ; `null` quand la période n'a rien. */
+  valeur: string | null;
+  /**
+   * La hauteur du point, de 0 à 1, rapportée au plus grand point du graphique :
+   * le serveur la calcule, l'écran la dessine sans relire aucun montant.
+   */
+  part: number;
+}
+
 export type BlocDeReponse =
   | (EnTeteDeBloc & {
       type: "reponse_cle";
@@ -113,6 +132,25 @@ export type BlocDeReponse =
       lignes: Array<Record<string, string>>;
       /** La ligne de total, quand le tableau en a une. */
       total: Record<string, string> | null;
+      /**
+       * Pour chaque colonne qui se trie : les lignes dans l'ordre croissant (par
+       * leur indice). L'écran réordonne, il ne compare aucune valeur lui-même —
+       * « 1 090,504 » ne se trie pas comme un texte. Absent : pas de tri.
+       */
+      ordres?: Record<string, number[]>;
+      /**
+       * Les pièces derrière chaque ligne, alignées sur `lignes` : un clic sur la
+       * ligne les déplie. `null` pour une ligne sans pièce à ouvrir.
+       */
+      pieces?: Array<PieceDUnChiffre[] | null>;
+    })
+  | (EnTeteDeBloc & {
+      type: "graphique";
+      /** Les barres groupées par période. Une autre forme s'ajoutera ici avec son rendu. */
+      forme: "barres";
+      /** L'unité des valeurs (la devise), dite une fois. */
+      unite: string | null;
+      series: Array<{ nom: string; ton: TonDeBloc; points: PointDeGraphique[] }>;
     });
 
 export interface FinDeLaReponse {
@@ -123,7 +161,7 @@ export interface FinDeLaReponse {
   sources: SourceDeLAssistant[];
   propositions: PropositionDAction[];
   suggestions: SuggestionDeSuite[];
-  /** Les blocs que la réponse montrait (chiffre clé avec son détail, tableau), rangés avec elle. */
+  /** Les blocs que la réponse montrait (chiffre clé, tableau, graphique), rangés avec elle. */
   blocs: BlocDeReponse[];
   /** Le nombre de phrases retirées faute de source : jamais montrées, comptées. */
   chiffresRetires: number;

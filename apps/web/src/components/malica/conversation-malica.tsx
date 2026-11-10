@@ -296,7 +296,9 @@ export function ReponseDeMalica({
   return (
     <>
       {tour.contenu ? <TexteMarkdown texte={tour.contenu} /> : null}
-      {tour.blocs && tour.blocs.length > 0 ? <BlocsDeReponse blocs={tour.blocs} /> : null}
+      {tour.blocs && tour.blocs.length > 0 ? (
+        <BlocsDeReponse blocs={tour.blocs} espace={espace} />
+      ) : null}
       {tour.enCours && tour.outil ? (
         <p className="et1" role="status">
           <i />

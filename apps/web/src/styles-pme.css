@@ -2359,6 +2359,11 @@
 /* Les blocs d'une réponse (`blocs-de-reponse.tsx`) prennent les rayons de cette surface :
  * 16 pour une carte dense, 12 pour une puce. Ailleurs, ils restent à l'angle du thème. */
 [data-surface="pme"] [data-ecran="chat"] { --bloc-r: 16px; --bloc-r2: 12px }
+/* La colonne du fil ne s'élargit jamais au contenu : un tableau ou un graphique plus large que
+ * la bulle défile DANS son cadre. Sans cette borne, la piste de la grille prenait la largeur du
+ * tableau et la bulle sortait de l'écran à 320 px (relevé au rendu, 10 novembre 2026). */
+[data-surface="pme"] [data-ecran="chat"] .msgs{grid-template-columns:minmax(0,1fr)}
+[data-surface="pme"] [data-ecran="chat"] .mal{min-width:0}
 [data-surface="pme"] [data-famille="papiers"] { --s1: #F5F5F5; --s2: #ECEEEE }
 
 

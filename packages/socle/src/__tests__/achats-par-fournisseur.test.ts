@@ -21,8 +21,8 @@ describe("les achats par fournisseur", () => {
       3,
     );
     expect(r.lignes).toEqual([
-      { fournisseur: "Sismara Plasturgie SA", total: "7872.977", pieces: 3 },
-      { fournisseur: "Electro Import", total: "4999.000", pieces: 1 },
+      { fournisseur: "Sismara Plasturgie SA", total: "7872.977", pieces: 3, refs: [] },
+      { fournisseur: "Electro Import", total: "4999.000", pieces: 1, refs: [] },
     ]);
     expect(r.total).toBe("12871.977");
     expect(r.pieces).toBe(4);
@@ -87,13 +87,30 @@ describe("les achats par fournisseur", () => {
       achatsParFournisseur([achat("A", "1500", "XOF"), achat("A", "250", "XOF")], "XOF", 0),
     ).toMatchObject({
       total: "1750",
-      lignes: [{ fournisseur: "A", total: "1750", pieces: 2 }],
+      lignes: [{ fournisseur: "A", total: "1750", pieces: 2, refs: [] }],
     });
     expect(achatsParFournisseur([], "TND", 3)).toMatchObject({
       total: "0.000",
       lignes: [],
       pieces: 0,
     });
+  });
+
+  it("rend les références des pièces sommées, pour que l'appelant puisse les ouvrir", () => {
+    const r = achatsParFournisseur(
+      [
+        { ...achat("A", "1.000"), ref: "p1" },
+        { ...achat("B", "9.000"), ref: "p2" },
+        { ...achat("a", "2.000"), ref: "p3" },
+        { ...achat("A", null), ref: "p4" },
+      ],
+      "TND",
+      3,
+    );
+    expect(r.lignes.map((l) => [l.fournisseur, l.refs])).toEqual([
+      ["B", ["p2"]],
+      ["A", ["p1", "p3"]],
+    ]);
   });
 
   it("à total égal, classe par nom", () => {

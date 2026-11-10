@@ -15,9 +15,15 @@
  * Ces fonctions sont pures : elles reçoivent des valeurs et rendent des valeurs.
  */
 
-import type { BlocDeReponse, ChiffreDeBloc } from "@malica/socle/ports/assistant";
+import type {
+  BlocDeReponse,
+  ChiffreDeBloc,
+  PieceDUnChiffre,
+  PointDeGraphique,
+} from "@malica/socle/ports/assistant";
 import { texte } from "@malica/socle/conseil";
 import type { AchatsParFournisseur } from "@malica/socle/engines/achats/par-fournisseur";
+import type { PiecesParMois } from "@malica/socle/engines/pieces/par-mois";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 
 /** Les nombres s'écrivent à l'occidentale en arabe aussi (usage tunisien). */
@@ -152,12 +158,22 @@ const LIGNES_DU_CLASSEMENT = 12;
  * sommé. Les fournisseurs au-delà des douze premiers sont regroupés en une
  * ligne — leur somme est celle du moteur, pas une soustraction.
  */
+/** Au-delà de ce nombre, les pièces d'une ligne ne se listent plus : on dit combien il en reste. */
+const PIECES_PAR_LIGNE = 20;
+
+/** Les indices des lignes, rangés par une clé : l'ordre croissant d'une colonne. */
+function ordre<T>(lignes: readonly T[], comparer: (a: T, b: T) => number): number[] {
+  return lignes.map((_, i) => i).sort((i, j) => comparer(lignes[i]!, lignes[j]!) || i - j);
+}
+
 export function blocDesAchats(
   achats: AchatsParFournisseur,
   dec: number,
   periode: string | null,
   perimetre: string | null,
   langue: string,
+  /** Ce que chaque pièce est, par sa référence : l'outil le sait, le moteur non. */
+  titres: ReadonlyMap<string, string> = new Map(),
 ): BlocDeReponse {
   const tete = achats.lignes.slice(0, LIGNES_DU_CLASSEMENT);
   const reste = achats.lignes.slice(LIGNES_DU_CLASSEMENT);
@@ -166,6 +182,24 @@ export function blocDesAchats(
     montant: montant(total, dec, langue),
     pieces: String(pieces),
   });
+  const totalDuReste = sommeDecimale(
+    reste.map((l) => l.total),
+    dec,
+  );
+  // Ce que le tri compare : le nom, la somme et le nombre — jamais le texte formaté.
+  const cles = [
+    ...tete.map((l) => ({ nom: l.fournisseur, somme: Number(l.total), n: l.pieces })),
+    ...(reste.length > 0
+      ? [{ nom: "", somme: Number(totalDuReste), n: reste.reduce((n, l) => n + l.pieces, 0) }]
+      : []),
+  ];
+  const piecesDe = (refs: readonly string[]): PieceDUnChiffre[] | null => {
+    const connues = refs.flatMap((id) => {
+      const titre = titres.get(id);
+      return titre ? [{ id, titre }] : [];
+    });
+    return connues.length > 0 ? connues.slice(0, PIECES_PAR_LIGNE) : null;
+  };
   return {
     type: "tableau",
     titre: texte(langue, "pme.bloc.achats.titre"),
@@ -191,15 +225,85 @@ export function blocDesAchats(
         ? [
             ligne(
               texte(langue, "pme.bloc.achats.autres", { n: reste.length }),
-              sommeDecimale(
-                reste.map((l) => l.total),
-                dec,
-              ),
+              totalDuReste,
               reste.reduce((n, l) => n + l.pieces, 0),
             ),
           ]
         : []),
     ],
+    ordres: {
+      // « Autres fournisseurs » (nom vide) reste en dernier quand on trie par nom.
+      fournisseur: ordre(cles, (a, b) =>
+        a.nom === "" || b.nom === ""
+          ? Number(a.nom === "") - Number(b.nom === "")
+          : a.nom.localeCompare(b.nom, langue),
+      ),
+      montant: ordre(cles, (a, b) => a.somme - b.somme),
+      pieces: ordre(cles, (a, b) => a.n - b.n),
+    },
+    pieces: [...tete.map((l) => piecesDe(l.refs)), ...(reste.length > 0 ? [null] : [])],
     total: ligne(texte(langue, "pme.bloc.achats.total"), achats.total, achats.pieces),
+  };
+}
+
+/** « nov. 26 » : un mois AAAA-MM, court, pour l'axe d'un graphique. */
+function moisCourt(periode: string, langue: string): string {
+  const [a, m] = periode.split("-").map(Number);
+  if (!a || !m) return periode;
+  return new Intl.DateTimeFormat(LOCALE_DES_NOMBRES[langue] ?? "fr-FR", {
+    month: "short",
+    year: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(a, m - 1, 1)));
+}
+
+/**
+ * Les achats et les ventes mois par mois, en barres. La hauteur de chaque barre
+ * est rapportée à la plus haute des deux séries : l'écran la dessine telle
+ * quelle. Un mois sans pièce n'a ni valeur ni barre.
+ */
+export function blocDesMois(
+  parMois: PiecesParMois,
+  dec: number,
+  perimetre: string | null,
+  langue: string,
+): BlocDeReponse {
+  const max = Math.max(
+    0,
+    ...parMois.mois.flatMap((m) => [Number(m.achats ?? 0), Number(m.ventes ?? 0)]),
+  );
+  const point = (mois: string, somme: string | null): PointDeGraphique => ({
+    etiquette: moisCourt(mois, langue),
+    valeur: somme === null ? null : montant(somme, dec, langue),
+    part: somme === null || max === 0 ? 0 : Math.round((Number(somme) / max) * 1000) / 1000,
+  });
+  const premier = parMois.mois[0]?.mois;
+  const dernier = parMois.mois.at(-1)?.mois;
+  const comptees = parMois.mois.reduce((n, m) => n + m.piecesAchats + m.piecesVentes, 0);
+  return {
+    type: "graphique",
+    forme: "barres",
+    titre: texte(langue, "pme.bloc.mois.titre"),
+    periode:
+      premier && dernier
+        ? premier === dernier
+          ? moisEnClair(premier, langue)
+          : `${moisEnClair(premier, langue)} – ${moisEnClair(dernier, langue)}`
+        : null,
+    perimetre,
+    source: texte(langue, "pme.bloc.mois.source", { n: comptees }),
+    unite: parMois.devise,
+    series: [
+      {
+        nom: texte(langue, "pme.bloc.mois.ventes"),
+        ton: "positif",
+        points: parMois.mois.map((m) => point(m.mois, m.ventes)),
+      },
+      {
+        nom: texte(langue, "pme.bloc.mois.achats"),
+        ton: "neutre",
+        points: parMois.mois.map((m) => point(m.mois, m.achats)),
+      },
+    ],
   };
 }
