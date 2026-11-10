@@ -21,12 +21,28 @@ vi.mock("@tanstack/react-router", () => ({
   }) => <a href={to.replace("$pieceId", params.pieceId)}>{children}</a>,
 }));
 
+const api = vi.hoisted(() => ({
+  exporterUnBloc: vi.fn(),
+  enregistrerUnFichier: vi.fn(),
+  rendreBlocEnPdf: vi.fn(),
+}));
+vi.mock("@/verticals/malica-office/composition", () => ({
+  office: () => ({ malica: { exporterUnBloc: api.exporterUnBloc } }),
+}));
+vi.mock("@/capabilities/enregistrer-un-fichier", () => ({
+  enregistrerUnFichier: api.enregistrerUnFichier,
+}));
+vi.mock("@/capabilities/bloc-pdf", () => ({ rendreBlocEnPdf: api.rendreBlocEnPdf }));
+
 import { I18nProvider } from "@/i18n";
 import { chargerLesEspaces } from "@/i18n/dictionnaires";
 
 import { BlocsDeReponse } from "../blocs-de-reponse";
 
 beforeEach(async () => {
+  api.exporterUnBloc.mockReset().mockResolvedValue(new Blob(["x"]));
+  api.enregistrerUnFichier.mockReset().mockResolvedValue({ chemin: null });
+  api.rendreBlocEnPdf.mockReset().mockResolvedValue(new Blob(["p"]));
   window.localStorage.setItem("malica.locale", "fr");
   await chargerLesEspaces("fr");
 });
@@ -111,6 +127,26 @@ const MOIS: BlocDeReponse = {
   ],
 };
 
+const FEUILLE = {
+  entete: ["Fournisseur", "Montant TTC (TND)", "Pièces"],
+  lignes: [[{ texte: "Sismara" }, { montant: "8000.000" }, { montant: "2" }]],
+  totaux: [[{ texte: "Total" }, { montant: "13899.500" }, { montant: "4" }]],
+};
+
+const RESULTAT: BlocDeReponse = {
+  type: "cascade",
+  titre: "Du chiffre d'affaires au résultat",
+  periode: "Octobre 2026 – Novembre 2026",
+  perimetre: "SOTUMAG SARL",
+  source: "Écritures comptabilisées, totaux par classe",
+  unite: "TND",
+  etapes: [
+    { libelle: "Produits", valeur: "186 300,000", ton: "neutre", debut: 0, fin: 1 },
+    { libelle: "Charges", valeur: "154 460,000", ton: "negatif", debut: 0.171, fin: 1 },
+    { libelle: "Résultat", valeur: "31 840,000", ton: "positif", debut: 0, fin: 0.171 },
+  ],
+};
+
 const lignesDuCorps = () =>
   within(screen.getByRole("table"))
     .getAllByRole("row")
@@ -192,7 +228,7 @@ describe("les barres", () => {
   it("dessinent la hauteur que le serveur donne, et rien pour une période sans valeur", () => {
     rendre([MOIS]);
     const bloc = document.querySelector('[data-bloc="graphique"]') as HTMLElement;
-    const periodes = within(bloc).getAllByRole("button");
+    const periodes = [...bloc.querySelectorAll<HTMLElement>("button[aria-pressed]")];
     expect(periodes.map((p) => p.getAttribute("aria-label"))).toEqual([
       "sept. 26, Ventes —, Achats —",
       "oct. 26, Ventes 99 999,000, Achats 17 082,177",
@@ -210,7 +246,7 @@ describe("les barres", () => {
     const bloc = document.querySelector('[data-bloc="graphique"]') as HTMLElement;
     expect(within(bloc).getByText("Achats · nov. 26")).toBeTruthy();
     expect(within(bloc).getByText("127,323")).toBeTruthy();
-    fireEvent.click(within(bloc).getAllByRole("button")[1]!);
+    fireEvent.click(bloc.querySelectorAll<HTMLElement>("button[aria-pressed]")[1]!);
     expect(within(bloc).getByText("Ventes · oct. 26")).toBeTruthy();
     expect(within(bloc).getByText("99 999,000")).toBeTruthy();
     expect(within(bloc).getByText("17 082,177")).toBeTruthy();
@@ -225,5 +261,102 @@ describe("plusieurs blocs", () => {
     ).toEqual(["reponse_cle", "tableau", "graphique"]);
     cleanup();
     expect(rendre([]).container.querySelector("[data-bloc]")).toBeNull();
+  });
+});
+
+describe("la courbe", () => {
+  const LONGUE: BlocDeReponse = {
+    ...(MOIS as Extract<BlocDeReponse, { type: "graphique" }>),
+    forme: "courbe",
+    series: [
+      {
+        nom: "Ventes",
+        ton: "positif",
+        points: [
+          { etiquette: "juin 26", valeur: "10,000", part: 0.5 },
+          { etiquette: "juil. 26", valeur: "20,000", part: 1 },
+          { etiquette: "août 26", valeur: null, part: 0 },
+          { etiquette: "sept. 26", valeur: "5,000", part: 0.25 },
+        ],
+      },
+    ],
+  };
+
+  it("trace un trait par suite de périodes, et le COUPE sur une période sans valeur", () => {
+    rendre([LONGUE]);
+    const bloc = document.querySelector('[data-bloc="graphique"]') as HTMLElement;
+    const traits = [...bloc.querySelectorAll("svg path")].map((p) => p.getAttribute("d"));
+    // juin → juillet (un tronçon), puis septembre seul (un point marqué) : jamais de trait par-dessus août.
+    expect(traits).toEqual(["M12.50 50.00 L37.50 4.00 ", "M87.50 73.00 l0.01 0"]);
+    // Aucune barre n'est dessinée en courbe, mais chaque période reste touchable.
+    expect(bloc.querySelectorAll("button[aria-pressed] span > span").length).toBe(0);
+    fireEvent.click(within(bloc).getAllByRole("button", { pressed: false })[0]!);
+    expect(within(bloc).getByText("Ventes · juin 26")).toBeTruthy();
+  });
+});
+
+describe("la cascade", () => {
+  it("pose chaque barre entre le début et la fin que le serveur donne, et écrit chaque valeur", () => {
+    rendre([RESULTAT]);
+    const bloc = document.querySelector('[data-bloc="cascade"]') as HTMLElement;
+    const etapes = within(bloc).getAllByRole("listitem");
+    expect(etapes.map((e) => e.textContent)).toEqual([
+      "Produits186 300,000TND",
+      "Charges154 460,000TND",
+      "Résultat31 840,000TND",
+    ]);
+    const barre = (i: number) => etapes[i]!.querySelector<HTMLElement>("span > span")!.style;
+    expect([barre(0).bottom, barre(0).height]).toEqual(["0%", "max(2px, 100%)"]);
+    expect([barre(1).bottom, barre(1).height]).toEqual(["17.1%", "max(2px, 82.9%)"]);
+    expect([barre(2).bottom, barre(2).height]).toEqual(["0%", "max(2px, 17.1%)"]);
+    // Les charges portent le signal « arrêt », le résultat positif le signal « bon ».
+    expect(etapes[1]!.querySelector("span > span")!.className).toContain("bg-signal-stop");
+    expect(etapes[2]!.querySelector("span > span")!.className).toContain("bg-signal-ok");
+  });
+});
+
+describe("sortir un bloc de l'écran", () => {
+  it("en classeur : la feuille du bloc part telle quelle, et le fichier est remis sous le titre du bloc", async () => {
+    rendre([{ ...ACHATS, feuille: FEUILLE }]);
+    fireEvent.click(screen.getByRole("button", { name: "Excel" }));
+    expect(await screen.findByText("Fichier enregistré.")).toBeTruthy();
+    expect(api.exporterUnBloc).toHaveBeenCalledWith({
+      titre: "Achats par fournisseur",
+      droiteAGauche: false,
+      feuille: FEUILLE,
+    });
+    expect(api.enregistrerUnFichier.mock.calls[0]![1]).toBe("Achats par fournisseur.xlsx");
+  });
+
+  it("en PDF : ce que l'écran montre, mis à plat, dans le sens de lecture de la langue", async () => {
+    rendre([RESULTAT]);
+    fireEvent.click(screen.getByRole("button", { name: "PDF" }));
+    expect(await screen.findByText("Fichier enregistré.")).toBeTruthy();
+    const [imprimable, direction] = api.rendreBlocEnPdf.mock.calls[0]!;
+    expect(direction).toBe("ltr");
+    expect(imprimable).toEqual({
+      titre: "Du chiffre d'affaires au résultat",
+      sousTitre: "Octobre 2026 – Novembre 2026 · SOTUMAG SARL",
+      pied: "Écritures comptabilisées, totaux par classe",
+      entete: [],
+      lignes: [
+        ["Produits", "186 300,000 TND"],
+        ["Charges", "154 460,000 TND"],
+      ],
+      totaux: [["Résultat", "31 840,000 TND"]],
+      numerique: [false, true],
+    });
+    expect(api.enregistrerUnFichier.mock.calls[0]![1]).toBe(
+      "Du chiffre d'affaires au résultat.pdf",
+    );
+  });
+
+  it("sans feuille, pas de bouton Excel ; un export qui échoue le dit", async () => {
+    rendre([ACHATS]);
+    expect(screen.queryByRole("button", { name: "Excel" })).toBeNull();
+    api.rendreBlocEnPdf.mockRejectedValueOnce(new Error("canevas"));
+    fireEvent.click(screen.getByRole("button", { name: "PDF" }));
+    expect(await screen.findByText("L'export n'a pas abouti. Réessayez.")).toBeTruthy();
+    expect(api.enregistrerUnFichier).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,8 @@
 /**
  * Les blocs d'une réponse de Malica : ce que la bulle sait dessiner au-delà du
  * texte — un chiffre clé avec son détail, un tableau qui se trie et s'ouvre sur
- * ses pièces, des barres par période.
+ * ses pièces, des barres ou des courbes par période, une cascade — et de quoi
+ * sortir chacun de l'écran, en classeur ou en PDF.
  *
  * ============================================================ CE QU'ILS NE FONT PAS
  *
@@ -30,7 +31,9 @@ import { Fragment, useState } from "react";
 import type { BlocDeReponse, ChiffreDeBloc } from "@malica/socle/ports/assistant";
 
 import { useI18n } from "@/i18n";
+import { blocImprimable } from "@/lib/bloc-imprimable";
 import { cn } from "@/lib/utils";
+import { office } from "@/verticals/malica-office/composition";
 
 /** Où s'ouvre une pièce : l'espace de la PME ou celui de la comptabilité. */
 type Espace = "pme" | "cabinet";
@@ -42,16 +45,29 @@ const TON: Record<ChiffreDeBloc["ton"], string> = {
 };
 
 /** Un montant et son unité : les chiffres gardent leur sens de lecture, même en arabe. */
-function Valeur({ chiffre, grande }: { chiffre: ChiffreDeBloc; grande?: boolean }) {
+function Valeur({
+  chiffre,
+  taille = "courante",
+}: {
+  chiffre: ChiffreDeBloc;
+  /** « grande » pour le chiffre qui répond ; « serree » là où trois valeurs tiennent côte à côte. */
+  taille?: "grande" | "courante" | "serree";
+}) {
+  const grande = taille === "grande";
   return (
     <span
       className={cn(
         "flex flex-wrap items-baseline gap-x-1.5 font-mono font-semibold tabular-nums tracking-tight",
-        grande ? "text-[clamp(1.5rem,7vw,2rem)] leading-tight" : "text-[1.0625rem]",
+        grande
+          ? "text-[clamp(1.5rem,7vw,2rem)] leading-tight"
+          : taille === "serree"
+            ? "text-[0.8125rem]"
+            : "text-[1.0625rem]",
         TON[chiffre.ton],
       )}
     >
-      <bdi>{chiffre.valeur}</bdi>
+      {/* Un montant ne se coupe jamais entre ses milliers. */}
+      <bdi className="whitespace-nowrap">{chiffre.valeur}</bdi>
       {chiffre.unite ? (
         <span
           className={cn(
@@ -71,7 +87,7 @@ function ReponseCle({ bloc }: { bloc: Extract<BlocDeReponse, { type: "reponse_cl
     <>
       <div className="grid gap-0.5">
         <span className="text-[0.8125rem] text-muted-foreground">{bloc.cle.libelle}</span>
-        <Valeur chiffre={bloc.cle} grande />
+        <Valeur chiffre={bloc.cle} taille="grande" />
       </div>
       {bloc.details.length > 0 ? (
         <dl className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-2">
@@ -252,20 +268,92 @@ const BARRE: Record<ChiffreDeBloc["ton"], string> = {
   neutre: "bg-muted-foreground/55",
 };
 
+const TRAIT: Record<ChiffreDeBloc["ton"], string> = {
+  positif: "stroke-signal-ok",
+  negatif: "stroke-signal-stop",
+  neutre: "stroke-muted-foreground/70",
+};
+
 /**
- * Des barres groupées par période. La hauteur de chaque barre est la `part`
- * que le serveur a calculée : rien n'est relu ni mis à l'échelle ici. Toucher
- * une période écrit ses valeurs sous le graphique — au doigt, il n'y a pas de
- * survol. Au-delà de la largeur, les périodes défilent dans le cadre.
+ * Une courbe par série. Les points sont posés à la `part` que le serveur a
+ * calculée ; une période sans valeur COUPE le trait — relier deux mois par-dessus
+ * un mois vide dirait une tendance que personne n'a mesurée.
+ */
+function Courbes({ bloc }: { bloc: BlocGraphique }) {
+  const n = bloc.series[0]?.points.length ?? 0;
+  const x = (i: number) => (n <= 1 ? 50 : ((i + 0.5) / n) * 100);
+  const y = (part: number) => 96 - part * 92;
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0 top-1.5 h-28 w-full overflow-visible"
+    >
+      {bloc.series.map((s) => {
+        const troncons: string[] = [];
+        let courant = "";
+        s.points.forEach((p, i) => {
+          if (p.valeur == null) {
+            // Un point seul n'a pas de trait : il est marqué plus bas.
+            if (courant.includes("L")) troncons.push(courant);
+            courant = "";
+            return;
+          }
+          courant += `${courant ? "L" : "M"}${x(i).toFixed(2)} ${y(p.part).toFixed(2)} `;
+        });
+        if (courant.includes("L")) troncons.push(courant);
+        return (
+          <g key={s.nom} className={TRAIT[s.ton]} fill="none">
+            {troncons.map((d) => (
+              <path
+                key={d}
+                d={d}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+            {/* Un point isolé entre deux périodes vides n'a pas de trait : on le marque. */}
+            {s.points.map((p, i) =>
+              p.valeur != null &&
+              s.points[i - 1]?.valeur == null &&
+              s.points[i + 1]?.valeur == null ? (
+                <path
+                  key={i}
+                  d={`M${x(i).toFixed(2)} ${y(p.part).toFixed(2)} l0.01 0`}
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null,
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/**
+ * Des barres groupées par période, ou des courbes quand les périodes sont
+ * nombreuses. La hauteur de chaque point est la `part` que le serveur a
+ * calculée : rien n'est relu ni mis à l'échelle ici. Toucher une période écrit
+ * ses valeurs sous le graphique — au doigt, il n'y a pas de survol. Au-delà de
+ * la largeur, les périodes défilent dans le cadre.
  */
 function Graphique({ bloc }: { bloc: BlocGraphique }) {
   const periodes = bloc.series[0]?.points.map((p) => p.etiquette) ?? [];
+  const courbe = bloc.forme === "courbe";
   // La dernière période qui porte une valeur : c'est elle qu'on lit d'abord.
   const derniere = periodes.reduce(
     (retenue, _, i) => (bloc.series.some((s) => s.points[i]?.valeur != null) ? i : retenue),
     periodes.length - 1,
   );
   const [choisie, setChoisie] = useState(derniere);
+  // Sur une courbe longue, une étiquette sur trois suffit à situer : les autres se lisent au toucher.
+  const pas = periodes.length > 12 ? 3 : 1;
   return (
     <>
       <ul className="mb-2 flex flex-wrap gap-x-3 gap-y-1 text-[0.6875rem] text-muted-foreground">
@@ -277,7 +365,8 @@ function Graphique({ bloc }: { bloc: BlocGraphique }) {
         ))}
       </ul>
       <div className="overflow-x-auto" tabIndex={0}>
-        <div className="flex min-w-full items-end gap-1">
+        <div className={cn("relative flex min-w-full items-end", courbe ? "gap-0" : "gap-1")}>
+          {courbe ? <Courbes bloc={bloc} /> : null}
           {periodes.map((etiquette, i) => (
             <button
               key={etiquette}
@@ -289,30 +378,33 @@ function Graphique({ bloc }: { bloc: BlocGraphique }) {
               ].join(", ")}
               onClick={() => setChoisie(i)}
               className={cn(
-                "grid min-w-7 flex-1 gap-1 rounded-[var(--bloc-r2,0px)] px-0.5 pb-1 pt-1.5",
+                "grid flex-1 gap-1 rounded-[var(--bloc-r2,0px)] px-0.5 pb-1 pt-1.5",
+                courbe ? "min-w-3.5" : "min-w-7",
                 choisie === i && "bg-muted",
               )}
             >
               <span className="flex h-28 items-end justify-center gap-0.5">
-                {bloc.series.map((s) => {
-                  const p = s.points[i];
-                  return (
-                    <span
-                      key={s.nom}
-                      className={cn(
-                        "w-full max-w-3.5 rounded-t-[3px] motion-safe:transition-[height] motion-safe:duration-500",
-                        BARRE[s.ton],
-                      )}
-                      style={{
-                        // Une valeur présente se voit toujours, même infime ; une absence ne dessine rien.
-                        height: p?.valeur == null ? 0 : `max(2px, ${p.part * 100}%)`,
-                      }}
-                    />
-                  );
-                })}
+                {courbe
+                  ? null
+                  : bloc.series.map((s) => {
+                      const p = s.points[i];
+                      return (
+                        <span
+                          key={s.nom}
+                          className={cn(
+                            "w-full max-w-3.5 rounded-t-[3px] motion-safe:transition-[height] motion-safe:duration-500",
+                            BARRE[s.ton],
+                          )}
+                          style={{
+                            // Une valeur présente se voit toujours, même infime ; une absence ne dessine rien.
+                            height: p?.valeur == null ? 0 : `max(2px, ${p.part * 100}%)`,
+                          }}
+                        />
+                      );
+                    })}
               </span>
               <span className="truncate text-center text-[0.625rem] text-muted-foreground">
-                {etiquette}
+                {i % pas === 0 || i === choisie ? etiquette : "\u00a0"}
               </span>
             </button>
           ))}
@@ -344,6 +436,108 @@ function Graphique({ bloc }: { bloc: BlocGraphique }) {
   );
 }
 
+type BlocCascade = Extract<BlocDeReponse, { type: "cascade" }>;
+
+/**
+ * De ce qui entre à ce qui reste. Chaque barre va de `debut` à `fin`, que le
+ * serveur a calculés : les charges pendent du sommet des produits, le résultat
+ * repart du sol. La valeur de chaque étape est écrite dessous, toujours — une
+ * cascade se lit sans avoir à toucher.
+ */
+function Cascade({ bloc }: { bloc: BlocCascade }) {
+  return (
+    <ol className="grid grid-cols-[repeat(auto-fit,minmax(5.25rem,1fr))] gap-2">
+      {bloc.etapes.map((e) => (
+        <li key={e.libelle} className="grid min-w-0 gap-1.5">
+          <span className="relative block h-28 border-b border-border">
+            <span
+              className={cn(
+                "absolute inset-x-[18%] rounded-[3px] motion-safe:transition-[top,bottom] motion-safe:duration-500",
+                BARRE[e.ton],
+              )}
+              style={{
+                bottom: `${e.debut * 100}%`,
+                // Une étape présente se voit toujours, même infime.
+                height: `max(2px, ${Math.round((e.fin - e.debut) * 1000) / 10}%)`,
+              }}
+            />
+          </span>
+          <span className="text-[0.6875rem] text-muted-foreground">{e.libelle}</span>
+          <Valeur
+            taille="serree"
+            chiffre={{ libelle: e.libelle, valeur: e.valeur, unite: bloc.unite, ton: e.ton }}
+          />
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/**
+ * Sortir un bloc de l'écran : en classeur (les montants y sont des nombres, le
+ * serveur l'écrit) ou en PDF (ce que l'écran montre, dessiné ici). Le fichier
+ * est remis par le seul geste qui sait le faire dans les deux coques.
+ */
+function Exporter({ bloc }: { bloc: BlocDeReponse }) {
+  const { t, locale } = useI18n();
+  const [etat, setEtat] = useState<"repos" | "enCours" | "fait" | "echec">("repos");
+  const rtl = locale === "ar";
+  const sortir = async (fabriquer: () => Promise<Blob>, extension: string) => {
+    setEtat("enCours");
+    try {
+      const { enregistrerUnFichier } = await import("@/capabilities/enregistrer-un-fichier");
+      await enregistrerUnFichier(await fabriquer(), `${bloc.titre}.${extension}`);
+      setEtat("fait");
+    } catch {
+      setEtat("echec");
+    }
+  };
+  const bouton =
+    "inline-flex min-h-7 items-center rounded-full border border-border bg-muted px-2.5 text-[0.6875rem] font-semibold text-foreground disabled:opacity-50";
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      {etat === "fait" || etat === "echec" ? (
+        <span role="status" className={etat === "echec" ? "text-signal-stop" : undefined}>
+          {t(etat === "fait" ? "pme.bloc.exporter.fait" : "pme.bloc.exporter.echec")}
+        </span>
+      ) : null}
+      {bloc.feuille ? (
+        <button
+          type="button"
+          className={bouton}
+          disabled={etat === "enCours"}
+          onClick={() =>
+            void sortir(
+              () =>
+                office().malica.exporterUnBloc({
+                  titre: bloc.titre,
+                  droiteAGauche: rtl,
+                  feuille: bloc.feuille!,
+                }),
+              "xlsx",
+            )
+          }
+        >
+          {t("pme.bloc.exporter.xlsx")}
+        </button>
+      ) : null}
+      <button
+        type="button"
+        className={bouton}
+        disabled={etat === "enCours"}
+        onClick={() =>
+          void sortir(async () => {
+            const { rendreBlocEnPdf } = await import("@/capabilities/bloc-pdf");
+            return rendreBlocEnPdf(blocImprimable(bloc), rtl ? "rtl" : "ltr");
+          }, "pdf")
+        }
+      >
+        {t("pme.bloc.exporter.pdf")}
+      </button>
+    </span>
+  );
+}
+
 /** Les blocs d'une réponse, dans l'ordre où Malica les a montrés. */
 export function BlocsDeReponse({
   blocs,
@@ -370,12 +564,17 @@ export function BlocsDeReponse({
             <ReponseCle bloc={bloc} />
           ) : bloc.type === "tableau" ? (
             <Tableau bloc={bloc} espace={espace} />
-          ) : (
+          ) : bloc.type === "graphique" ? (
             <Graphique bloc={bloc} />
+          ) : (
+            <Cascade bloc={bloc} />
           )}
-          <p className="mt-3 border-t border-border pt-2.5 text-[0.6875rem] text-muted-foreground">
-            {[bloc.source, bloc.perimetre].filter(Boolean).join(" · ")}
-          </p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border pt-2.5 text-[0.6875rem] text-muted-foreground">
+            <p className="m-0 min-w-0">
+              {[bloc.source, bloc.perimetre].filter(Boolean).join(" · ")}
+            </p>
+            <Exporter bloc={bloc} />
+          </div>
         </figure>
       ))}
     </>

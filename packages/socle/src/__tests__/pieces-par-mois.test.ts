@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  moisPrecedents,
-  piecesParMois,
-  type PieceLuePourLesMois,
-} from "../engines/pieces/par-mois.ts";
+import { piecesParMois, type PieceLuePourLesMois } from "../engines/pieces/par-mois.ts";
 
 const p = (
   kind: string | null,
@@ -12,14 +8,6 @@ const p = (
   dateDocument: string | null,
   devise: string | null = "TND",
 ): PieceLuePourLesMois => ({ kind, total, dateDocument, devise });
-
-describe("les mois d'une fenêtre", () => {
-  it("remonte le temps, passe l'année, du plus ancien au plus récent", () => {
-    expect(moisPrecedents("2026-02", 4)).toEqual(["2025-11", "2025-12", "2026-01", "2026-02"]);
-    expect(moisPrecedents("2026-11", 1)).toEqual(["2026-11"]);
-    expect(() => moisPrecedents("novembre", 3)).toThrow(/mois illisible/);
-  });
-});
 
 describe("les achats et les ventes par mois", () => {
   const PIECES = [
@@ -51,6 +39,16 @@ describe("les achats et les ventes par mois", () => {
   it("dit ce qu'il écarte : total non lu, autre devise, date non lue", () => {
     const r = piecesParMois(PIECES, "TND", 3, "2026-11", 3);
     expect(r.ecartees).toEqual({ sansTotal: 1, autreDevise: 1, sansDate: 1 });
+  });
+
+  it("la fenêtre passe l'année, et un mois mal écrit se refuse", () => {
+    expect(piecesParMois([], "TND", 3, "2026-02", 4).mois.map((m) => m.mois)).toEqual([
+      "2025-11",
+      "2025-12",
+      "2026-01",
+      "2026-02",
+    ]);
+    expect(() => piecesParMois([], "TND", 3, "novembre", 3)).toThrow(/mois illisible/);
   });
 
   it("sans pièce : une fenêtre de mois vides et des totaux nuls", () => {

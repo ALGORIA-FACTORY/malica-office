@@ -52,6 +52,7 @@ import { LectureRefusee, readPieceFlow } from "./malica/lecture/read-flow.ts";
 import { redigerLePv } from "./malica/pv/rediger.ts";
 import { introuvableLisible, REFUS_SANS_CLE, refusLisible } from "./refus.ts";
 import { RpcIntrouvable } from "./rpc.ts";
+import { classeurXlsx, TYPE_MIME_XLSX } from "./xlsx.ts";
 import { exigerIdentite } from "./session.ts";
 
 export const malica = Router();
@@ -474,6 +475,59 @@ malica.post("/assistant", (req, res, next) => {
     // Avant le flux : le même traitement que toute route de Malica.
     repondre(res, next, () => Promise.reject(erreur));
   });
+});
+
+/* ------------------------------------------------- l'export d'un bloc */
+
+const CelluleDeFeuille = z.union([
+  z.object({ texte: z.string().max(500) }).strict(),
+  z.object({ montant: z.string().regex(/^-?\d{1,18}(\.\d{1,6})?$/) }).strict(),
+]);
+const LigneDeFeuille = z.array(CelluleDeFeuille).min(1).max(30);
+const BlocAExporter = z.object({
+  titre: z.string().trim().min(1).max(120),
+  droiteAGauche: z.boolean().default(false),
+  feuille: z.object({
+    entete: z.array(z.string().max(120)).min(1).max(30),
+    lignes: z.array(LigneDeFeuille).max(5000),
+    totaux: z.array(LigneDeFeuille).max(10).optional(),
+  }),
+});
+
+/**
+ * Un bloc de réponse, en classeur Excel.
+ *
+ * L'écran envoie la feuille du bloc qu'il affiche (`BlocDeReponse.feuille`) ;
+ * la route la met en forme — une feuille, des montants que le tableur additionne
+ * — et rend les octets. Elle ne lit rien en base et ne calcule rien : elle
+ * écrit ce qu'on lui donne, dans des bornes. L'écrivain est celui du journal du
+ * jour (`xlsx.ts`) : un seul, pas deux.
+ */
+malica.post("/blocs/classeur", (req, res, next) => {
+  let saisie: z.infer<typeof BlocAExporter>;
+  try {
+    saisie = BlocAExporter.parse(req.body);
+  } catch {
+    res.status(400).json({ erreur: "refus.saisie.mal_formee" });
+    return;
+  }
+  try {
+    const octets = classeurXlsx(
+      {
+        // Un nom de feuille Excel ne porte ni « / \\ ? * [ ] : ».
+        nom: saisie.titre.replace(/[\\/?*[\]:]/g, " "),
+        entete: saisie.feuille.entete,
+        lignes: saisie.feuille.lignes,
+        ...(saisie.feuille.totaux ? { totaux: saisie.feuille.totaux } : {}),
+        droiteAGauche: saisie.droiteAGauche,
+      },
+      new Date(),
+    );
+    res.status(200).setHeader("Content-Type", TYPE_MIME_XLSX);
+    res.send(Buffer.from(octets));
+  } catch (erreur) {
+    next(erreur);
+  }
 });
 
 /* ------------------------------------------------------------ rédaction */

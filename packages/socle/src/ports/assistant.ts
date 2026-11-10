@@ -89,6 +89,27 @@ export interface EnTeteDeBloc {
   perimetre: string | null;
   /** Ce d'où viennent les chiffres, en clair (« calcul de la TVA, 1 pièce transmise »). */
   source: string;
+  /**
+   * Où Malica a montré le bloc : le nombre de caractères de sa réponse déjà
+   * écrits à ce moment. L'écran le pose là, entre deux paragraphes. Absent
+   * (réponse ancienne) : après le texte.
+   */
+  apres?: number;
+  /**
+   * Le bloc en lignes et en colonnes, pour l'exporter (Excel, PDF) : les
+   * montants y sont en chaînes décimales brutes, pas formatées — un tableur
+   * doit pouvoir les additionner.
+   */
+  feuille?: FeuilleDeBloc;
+}
+
+/** Une cellule exportable : du texte, ou un montant en chaîne décimale. */
+export type CelluleDeFeuille = { texte: string } | { montant: string };
+
+export interface FeuilleDeBloc {
+  entete: string[];
+  lignes: CelluleDeFeuille[][];
+  totaux?: CelluleDeFeuille[][];
 }
 
 export type TonDeBloc = "positif" | "negatif" | "neutre";
@@ -146,11 +167,24 @@ export type BlocDeReponse =
     })
   | (EnTeteDeBloc & {
       type: "graphique";
-      /** Les barres groupées par période. Une autre forme s'ajoutera ici avec son rendu. */
-      forme: "barres";
+      /** Des barres groupées par période, ou une courbe quand les périodes sont nombreuses. */
+      forme: "barres" | "courbe";
       /** L'unité des valeurs (la devise), dite une fois. */
       unite: string | null;
       series: Array<{ nom: string; ton: TonDeBloc; points: PointDeGraphique[] }>;
+    })
+  | (EnTeteDeBloc & {
+      /** De ce qui entre à ce qui reste : chaque étape part d'où la précédente s'arrête. */
+      type: "cascade";
+      unite: string | null;
+      etapes: Array<{
+        libelle: string;
+        valeur: string;
+        ton: TonDeBloc;
+        /** Où la barre commence et finit, de 0 à 1 : le serveur les calcule. */
+        debut: number;
+        fin: number;
+      }>;
     });
 
 export interface FinDeLaReponse {

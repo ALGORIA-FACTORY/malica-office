@@ -15,6 +15,7 @@
  * Ce n'est PAS un chiffre d'affaires comptable : ce sont les totaux TTC des
  * pièces lues. L'appelant doit le dire tel quel.
  */
+import { moisGlissants } from "../../exercice.ts";
 import { sommeDecimale } from "../../somme-decimale.ts";
 
 export interface PieceLuePourLesMois {
@@ -47,18 +48,6 @@ export interface PiecesParMois {
 const ACHAT = "facture_achat";
 const VENTE = "facture_vente";
 
-/** Les `nb` mois qui finissent à `jusqua` (AAAA-MM), du plus ancien au plus récent. */
-export function moisPrecedents(jusqua: string, nb: number): string[] {
-  const [a, m] = jusqua.split("-").map(Number);
-  if (!a || !m || m < 1 || m > 12) throw new Error(`mois illisible : ${jusqua}`);
-  const mois: string[] = [];
-  for (let i = nb - 1; i >= 0; i -= 1) {
-    const rang = a * 12 + (m - 1) - i;
-    mois.push(`${Math.floor(rang / 12)}-${String((rang % 12) + 1).padStart(2, "0")}`);
-  }
-  return mois;
-}
-
 export function piecesParMois(
   pieces: readonly PieceLuePourLesMois[],
   devise: string,
@@ -66,7 +55,8 @@ export function piecesParMois(
   jusqua: string,
   nb: number,
 ): PiecesParMois {
-  const fenetre = moisPrecedents(jusqua, nb);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(jusqua)) throw new Error(`mois illisible : ${jusqua}`);
+  const fenetre = moisGlissants(jusqua, nb);
   const cases = new Map(
     fenetre.map((m) => [m, { achats: [] as string[], ventes: [] as string[] }]),
   );

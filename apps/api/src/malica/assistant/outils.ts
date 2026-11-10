@@ -35,6 +35,8 @@ import type { DeclarationTva, TaxRate } from "@malica/socle/ports/repositories";
 import type { BlocDeReponse, PropositionDAction } from "@malica/socle/ports/assistant";
 import { achatsParFournisseur } from "@malica/socle/engines/achats/par-fournisseur";
 import { piecesParMois } from "@malica/socle/engines/pieces/par-mois";
+import { computePnl } from "@malica/socle/engines/pnl/snapshot";
+import { moisGlissants } from "@malica/socle/exercice";
 import { HORS_DU_CALCUL, tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
 import { texte as message } from "@malica/socle/conseil";
 import type { MessageKey } from "@malica/socle/messages";
@@ -45,6 +47,7 @@ import {
   blocDesAchats,
   blocDesEcheances,
   blocDesMois,
+  blocDuResultat,
   jourEnClair,
   moisEnClair,
   montant,
@@ -226,6 +229,20 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
     },
   },
   {
+    name: "resultat_comptabilise",
+    description:
+      "Rend le résultat comptabilisé du dossier sur une période : produits, charges et résultat, calculés par le " +
+      "moteur de Malica sur les écritures que la comptabilité a inscrites. À utiliser pour « quel est mon résultat », " +
+      "« est-ce que je gagne de l'argent », « mes charges par rapport à mes produits ». Ce chiffre ne compte que ce " +
+      "qui est déjà comptabilisé : des pièces lues mais pas encore inscrites n'y sont pas — dis-le. `mois` : combien " +
+      "de mois jusqu'à ce mois-ci (1 à 24).",
+    input_schema: {
+      type: "object",
+      properties: { mois: { type: "integer", minimum: 1, maximum: 24 } },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "action_proposer",
     description:
       "PROPOSE à la personne une action qui modifie son dossier. N'EXÉCUTE RIEN : l'écran affiche un bouton " +
@@ -281,6 +298,7 @@ const ETAPES: Readonly<Record<string, MessageKey>> = {
   tva_du_mois: "pme.assistant.outil.tva_du_mois",
   achats_par_fournisseur: "pme.assistant.outil.achats_par_fournisseur",
   evolution_mensuelle: "pme.assistant.outil.evolution_mensuelle",
+  resultat_comptabilise: "pme.assistant.outil.resultat_comptabilise",
   echeances_fiscales: "pme.assistant.outil.echeances_fiscales",
   ecritures_proposees: "pme.assistant.outil.ecritures_proposees",
   tiers_chercher: "pme.assistant.outil.tiers_chercher",
@@ -363,6 +381,8 @@ export const LECTURES_DES_OUTILS: ReadonlySet<string> = new Set([
   "referentiel.taxRates",
   "referentiel.declarationTva",
   "referentiel.socleParams",
+  "referentiel.classesDeComptes",
+  "office.totauxParClasse",
   "conseil.contexte",
   "collab.echeances",
   "tiers.lister",
@@ -897,6 +917,107 @@ async function evolutionMensuelle(ctx: ContexteDesOutils, brut: unknown): Promis
   };
 }
 
+/** Sans précision, le résultat se lit sur une année glissante. */
+const MOIS_DU_RESULTAT = 12;
+
+async function resultatComptabilise(
+  ctx: ContexteDesOutils,
+  brut: unknown,
+): Promise<ResultatDOutil> {
+  const nb = z
+    .number()
+    .int()
+    .min(1)
+    .max(24)
+    .optional()
+    .safeParse((brut as { mois?: unknown } | null)?.mois);
+  if (!nb.success) return erreur("mois doit être un nombre entier de 1 à 24.");
+  const pack = await ctx.api.rpc<{ id: string } | null>("referentiel", "activePack", [
+    ctx.organisation.jurisdiction,
+  ]);
+  if (!pack)
+    return erreur(
+      "Le référentiel de la juridiction du dossier est introuvable : le résultat ne se calcule pas.",
+    );
+  const fenetre = moisGlissants(ctx.aujourdhui.slice(0, 7), nb.data ?? MOIS_DU_RESULTAT);
+  const premier = fenetre[0]!;
+  const dernier = fenetre.at(-1)!;
+  // Des totaux par classe, jamais des écritures : la PME d'un dossier confié à
+  // une comptabilité ne lit pas les écritures (R6) — la base ne lui rend que cela.
+  const [totaux, classes, params] = await Promise.all([
+    ctx.api.rpc<Array<{ mois: string; classe: string; debit: string; credit: string }>>(
+      "office",
+      "totauxParClasse",
+      [ctx.tenantId, `${premier}-01`, finDuMois(dernier)],
+    ),
+    ctx.api.rpc<Array<{ prefix: string; nature: "charge" | "produit" | "actif" | "passif" }>>(
+      "referentiel",
+      "classesDeComptes",
+      [pack.id],
+    ),
+    ctx.api.rpc<{ moneyDecimals: number }>("referentiel", "socleParams", [pack.id]),
+  ]);
+  const dev = ctx.organisation.currency;
+  const cle = `malica:resultat:${premier}:${dernier}`;
+  const periode =
+    premier === dernier
+      ? moisEnClair(premier, ctx.locale)
+      : `${moisEnClair(premier, ctx.locale)} – ${moisEnClair(dernier, ctx.locale)}`;
+  // R4 : sans la nature des classes, le moteur rendrait un résultat vide et plausible.
+  if (classes.length === 0)
+    return erreur(
+      "Le référentiel ne dit pas quelles classes sont des charges ou des produits : le résultat ne se calcule pas.",
+    );
+  if (totaux.length === 0) {
+    return {
+      ok: true,
+      sources: [
+        {
+          cle,
+          genre: "liste",
+          titre: "Résultat comptabilisé",
+          objetId: null,
+          texte:
+            `Résultat comptabilisé de ${premier} à ${dernier} : aucune écriture comptabilisée sur la période. ` +
+            "Le résultat n'est donc pas connu : ne donne aucun montant. Des pièces lues mais pas encore inscrites " +
+            "par la comptabilité n'entrent pas dans ce chiffre.",
+        },
+      ],
+    };
+  }
+  const pnl = computePnl({
+    period: dernier,
+    currency: { code: dev, decimals: params.moneyDecimals },
+    // Une entrée par classe : son préfixe tient lieu de code (comme l'accueil).
+    entries: totaux.map((l) => ({ account_code: l.classe, debit: l.debit, credit: l.credit })),
+    coa: [],
+    classes,
+  });
+  const texte = [
+    `Résultat comptabilisé de ${premier} à ${dernier}, calculé par le moteur de Malica sur les écritures inscrites, en ${dev}.`,
+    `Produits : ${pnl.produits} ${dev}.`,
+    `Charges : ${pnl.charges} ${dev}.`,
+    `Résultat : ${pnl.resultat} ${dev} (positif : bénéfice ; négatif : perte).`,
+    "Ce chiffre ne compte que ce qui est comptabilisé : des pièces lues mais pas encore inscrites n'y sont pas.",
+  ].join("\n");
+  return {
+    ok: true,
+    sources: [{ cle, genre: "liste", titre: "Résultat comptabilisé", objetId: null, texte }],
+    visuels: [
+      {
+        cle,
+        bloc: blocDuResultat(
+          { currency: dev, produits: pnl.produits, charges: pnl.charges, resultat: pnl.resultat },
+          params.moneyDecimals,
+          periode,
+          ctx.organisation.name ?? null,
+          ctx.locale,
+        ),
+      },
+    ],
+  };
+}
+
 interface Echeance {
   id: string;
   label: string;
@@ -1202,6 +1323,7 @@ const EXECUTANTS: Record<
   tva_du_mois: tvaDuMois,
   achats_par_fournisseur: achatsDuDossier,
   evolution_mensuelle: evolutionMensuelle,
+  resultat_comptabilise: resultatComptabilise,
   echeances_fiscales: echeancesFiscales,
   ecritures_proposees: ecrituresProposees,
   tiers_chercher: tiersChercher,

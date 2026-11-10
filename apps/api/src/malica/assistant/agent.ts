@@ -637,6 +637,7 @@ async function converser(
       input: unknown;
     }>;
     const resultats: unknown[] = [];
+    const annonces: string[] = [];
     let conclusionIllisible = false;
     for (const appel of appels) {
       if (appel.name === CONCLURE_REPONSE.name) {
@@ -662,10 +663,12 @@ async function converser(
         if (bloc && typeof cle === "string") {
           if (!montres.has(cle)) {
             montres.add(cle);
-            blocs.push(bloc);
+            // Là où Malica en est de sa réponse : l'écran pose le bloc à cet endroit.
+            const place = { ...bloc, apres: garde.texteEmis().length };
+            blocs.push(place);
             // En attente de la conclusion, le bloc attend aussi : une réponse
             // retenue ne montre que son message de relecture.
-            if (!enAttente) emettre({ type: "bloc", bloc });
+            if (!enAttente) emettre({ type: "bloc", bloc: place });
           }
           resultats.push({
             type: "tool_result",
@@ -703,14 +706,16 @@ async function converser(
       resultats.push({
         type: "tool_result",
         tool_use_id: appel.id,
-        content: [
-          ...r.sources.map(blocDeRecherche),
-          ...(r.visuels ?? []).map((v) => ({
-            type: "text" as const,
-            text: `Un visuel est disponible pour la source « ${v.cle} » : afficher_visuel le montre à la personne.`,
-          })),
-        ],
+        content: r.sources.map(blocDeRecherche),
       });
+      // Dit À CÔTÉ du résultat, jamais dedans : l'API refuse un résultat d'outil
+      // qui mêle des blocs de recherche à autre chose (essai réel du 10 novembre
+      // 2026 : « if any blocks in a tool result are of type search_result, all
+      // blocks must be of that type » — toute réponse à outil était interrompue).
+      for (const v of r.visuels ?? [])
+        annonces.push(
+          `Un visuel est disponible pour la source « ${v.cle} » : afficher_visuel le montre à la personne.`,
+        );
       for (const p of r.propositions ?? []) {
         propositions.push(p);
         // En attente de la conclusion, le bouton attend aussi : une réponse
@@ -725,7 +730,11 @@ async function converser(
     // La conclusion seule, et lisible : la réponse est finie, rien à renvoyer.
     if (appels.every((a) => a.name === CONCLURE_REPONSE.name) && !conclusionIllisible) break;
     messages.push({ role: "assistant", content: tourARenvoyer(m.content) });
-    messages.push({ role: "user", content: resultats });
+    messages.push({
+      role: "user",
+      // Les résultats d'outils d'abord, comme l'API l'exige ; les annonces ensuite.
+      content: [...resultats, ...annonces.map((text) => ({ type: "text" as const, text }))],
+    });
   }
 
   /* ------------------------------------------------------------ la fin */

@@ -37,7 +37,18 @@ const PIECES = [
   piece("Client X", "99999.000", "2026-10-14", "facture_vente"),
 ];
 
-function contexte(pieces = PIECES): { ctx: ContexteDesOutils; appels: string[] } {
+const TOTAUX = [
+  { mois: "2026-10", classe: "7", debit: "0.000", credit: "186300.000" },
+  { mois: "2026-10", classe: "6", debit: "150700.500", credit: "0.000" },
+  { mois: "2026-11", classe: "6", debit: "3759.500", credit: "0.000" },
+  // Une classe de bilan : elle n'entre ni dans les produits ni dans les charges.
+  { mois: "2026-11", classe: "4", debit: "0.000", credit: "999.000" },
+];
+
+function contexte(
+  pieces = PIECES,
+  totaux: typeof TOTAUX = TOTAUX,
+): { ctx: ContexteDesOutils; appels: string[] } {
   const appels: string[] = [];
   const api: AppelApi = {
     async rpc<T>(depot: string, methode: string): Promise<T> {
@@ -46,6 +57,13 @@ function contexte(pieces = PIECES): { ctx: ContexteDesOutils; appels: string[] }
       if (nom === "referentiel.activePack") return { id: "pack-tn" } as T;
       if (nom === "referentiel.socleParams") return { moneyDecimals: 3 } as T;
       if (nom === "capture.listAvecLecture") return pieces as T;
+      if (nom === "referentiel.classesDeComptes")
+        return [
+          { prefix: "6", nature: "charge" },
+          { prefix: "7", nature: "produit" },
+          { prefix: "4", nature: "passif" },
+        ] as T;
+      if (nom === "office.totauxParClasse") return totaux as T;
       throw new Error(`appel non prévu : ${nom}`);
     },
     async contenu() {
@@ -238,5 +256,118 @@ describe("evolution_mensuelle", () => {
     assert.match(r.sources[0]!.texte, /ne donne aucun montant/);
     assert.equal(r.visuels, undefined);
     assert.equal((await executerOutil(ctx, "evolution_mensuelle", { mois: 99 })).ok, false);
+  });
+});
+
+describe("resultat_comptabilise", () => {
+  it("rend produits, charges et résultat du moteur, sur des totaux par classe — jamais des écritures", async () => {
+    const { ctx, appels } = contexte();
+    const r = await executerOutil(ctx, "resultat_comptabilise", { mois: 2 });
+    if (!r.ok) throw new Error("outil en échec");
+    const texte = r.sources[0]!.texte;
+    assert.match(texte, /de 2026-10 à 2026-11/);
+    assert.match(texte, /Produits : 186300\.000 TND/);
+    assert.match(texte, /Charges : 154460\.000 TND/);
+    assert.match(texte, /Résultat : 31840\.000 TND/);
+    assert.match(texte, /pas encore inscrites n'y sont pas/);
+    assert.ok(appels.includes("office.totauxParClasse"));
+    for (const a of appels)
+      assert.ok(LECTURES_DES_OUTILS.has(a), `${a} n'est pas une lecture déclarée`);
+  });
+
+  it("compose une cascade : les charges descendent du sommet des produits, le résultat repart de zéro", async () => {
+    const { ctx } = contexte();
+    const r = await executerOutil(ctx, "resultat_comptabilise", { mois: 2 });
+    if (!r.ok) throw new Error("outil en échec");
+    const bloc = r.visuels![0]!.bloc;
+    if (bloc.type !== "cascade") throw new Error("type");
+    assert.deepEqual(
+      bloc.etapes.map((e) => [e.libelle, e.valeur.replace(/\s/g, " "), e.ton, e.debut, e.fin]),
+      [
+        ["Produits", "186 300,000", "neutre", 0, 1],
+        ["Charges", "154 460,000", "negatif", 0.171, 1],
+        ["Résultat", "31 840,000", "positif", 0, 0.171],
+      ],
+    );
+    assert.equal(bloc.periode, "Octobre 2026 – Novembre 2026");
+    assert.deepEqual(bloc.feuille, {
+      entete: ["Libellé", "Montant (TND)"],
+      lignes: [
+        [{ texte: "Produits" }, { montant: "186300.000" }],
+        [{ texte: "Charges" }, { montant: "154460.000" }],
+      ],
+      totaux: [[{ texte: "Résultat" }, { montant: "31840.000" }]],
+    });
+  });
+
+  it("une perte se dit en négatif, et la barre des charges bute à zéro", async () => {
+    const { ctx } = contexte(PIECES, [
+      { mois: "2026-11", classe: "7", debit: "0.000", credit: "100.000" },
+      { mois: "2026-11", classe: "6", debit: "400.000", credit: "0.000" },
+    ]);
+    const r = await executerOutil(ctx, "resultat_comptabilise", { mois: 1 });
+    if (!r.ok) throw new Error("outil en échec");
+    const bloc = r.visuels![0]!.bloc;
+    if (bloc.type !== "cascade") throw new Error("type");
+    assert.deepEqual(
+      bloc.etapes.map((e) => [e.ton, e.debut, e.fin]),
+      [
+        ["neutre", 0, 0.25],
+        ["negatif", 0, 0.25],
+        ["negatif", 0, 0.75],
+      ],
+    );
+    assert.match(r.sources[0]!.texte, /Résultat : -300\.000 TND/);
+  });
+
+  it("sans écriture comptabilisée : aucun montant, aucun visuel", async () => {
+    const { ctx } = contexte(PIECES, []);
+    const r = await executerOutil(ctx, "resultat_comptabilise", {});
+    if (!r.ok) throw new Error("outil en échec");
+    assert.match(r.sources[0]!.texte, /ne donne aucun montant/);
+    assert.equal(r.visuels, undefined);
+  });
+});
+
+describe("ce qu'un bloc exporte", () => {
+  it("le tableau des achats exporte TOUS les fournisseurs, en montants bruts", async () => {
+    const beaucoup = Array.from({ length: 15 }, (_, i) =>
+      piece(`Fournisseur ${String(i + 1).padStart(2, "0")}`, `${100 - i}.500`, "2026-10-01"),
+    );
+    const { ctx } = contexte(beaucoup);
+    const r = await executerOutil(ctx, "achats_par_fournisseur", {});
+    if (!r.ok) throw new Error("outil en échec");
+    const bloc = r.visuels![0]!.bloc;
+    if (bloc.type !== "tableau") throw new Error("type");
+    // À l'écran : douze lignes puis « Autres fournisseurs (3) ».
+    assert.equal(bloc.lignes.length, 13);
+    assert.equal(bloc.lignes.at(-1)!["fournisseur"], "Autres fournisseurs (3)");
+    // Dans la feuille : les quinze, et un montant qu'un tableur additionne.
+    assert.equal(bloc.feuille!.lignes.length, 15);
+    assert.deepEqual(bloc.feuille!.lignes[0], [
+      { texte: "Fournisseur 01" },
+      { montant: "100.500" },
+      { montant: "1" },
+    ]);
+    assert.deepEqual(bloc.feuille!.totaux, [
+      [{ texte: "Total" }, { montant: "1402.500" }, { montant: "15" }],
+    ]);
+  });
+
+  it("au-delà de douze mois, l'évolution passe en courbe ; un mois vide reste une cellule vide", async () => {
+    const { ctx } = contexte();
+    const r = await executerOutil(ctx, "evolution_mensuelle", { mois: 18 });
+    if (!r.ok) throw new Error("outil en échec");
+    const bloc = r.visuels![0]!.bloc;
+    if (bloc.type !== "graphique") throw new Error("type");
+    assert.equal(bloc.forme, "courbe");
+    assert.equal(bloc.series[0]!.points.length, 18);
+    const septembre = bloc.feuille!.lignes.find(
+      (l) => "texte" in l[0]! && l[0].texte === "2026-09",
+    )!;
+    assert.deepEqual(septembre, [{ texte: "2026-09" }, { texte: "" }, { texte: "" }]);
+    const douze = await executerOutil(ctx, "evolution_mensuelle", { mois: 12 });
+    if (!douze.ok) throw new Error("outil en échec");
+    assert.equal((douze.visuels![0]!.bloc as { forme: string }).forme, "barres");
   });
 });

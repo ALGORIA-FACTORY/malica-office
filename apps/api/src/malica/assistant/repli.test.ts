@@ -601,8 +601,8 @@ describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
   });
 
   /** Le dossier fictif, plus le calendrier fiscal que lit `echeances_fiscales`. */
-  const avecCalendrier = () => {
-    const d = dossierFictif({ anthropicEpuise: true });
+  const avecCalendrier = (options: { anthropicEpuise?: boolean } = { anthropicEpuise: true }) => {
+    const d = dossierFictif(options);
     const api: AppelApi = {
       ...d.api,
       async rpc<T>(depot: string, methode: string, args: unknown[] = []): Promise<T> {
@@ -687,6 +687,8 @@ describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
       ],
     );
     assert.equal(bloc.perimetre, "SOTUMAG d'essai");
+    // Le bloc sait où Malica l'a montré : après ce qu'elle avait déjà écrit (rien, ici).
+    assert.equal(bloc.apres, 0);
     assert.deepEqual(fin.blocs, partis);
     // Rangé avec la réponse : un fil rouvert le remontre.
     const range = fils.get(fin.conversationId)!.at(-1)! as MessageRange & {
@@ -696,6 +698,91 @@ describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
     // L'outil qui montre n'est pas une lecture : il ne compte pas parmi les outils consultés.
     assert.deepEqual(fin.mesure.outils, ["echeances_fiscales"]);
     assert.doesNotMatch(JSON.stringify(evenements), /afficher_visuel/);
+  });
+
+  it("Claude : un résultat d'outil ne porte QUE des blocs de recherche ; l'annonce du visuel est à côté", async () => {
+    // Essai réel du 10 novembre 2026 : l'API refuse un résultat d'outil qui mêle des
+    // blocs `search_result` à un autre type, et toute réponse à outil était interrompue.
+    const { api } = avecCalendrier({});
+    const requetes: Array<Record<string, unknown>> = [];
+    const suites = [
+      appelDOutil("echeances_fiscales"),
+      appelAvecEntree("afficher_visuel", { source: "malica:echeances:a-venir" }),
+      texte("Une échéance est en retard."),
+    ];
+    let n = 0;
+    const claude: ClientEnFlux = async function* (requete) {
+      requetes.push(JSON.parse(JSON.stringify(requete)));
+      yield* suites[Math.min(n++, suites.length - 1)]!;
+    };
+    const { fin } = await rejouer(api, {
+      claude,
+      conseil: pasDeConseil,
+      repli: async () => {
+        throw new Error("pas de repli");
+      },
+    });
+    assert.equal(fin.mesure.repli, null);
+    assert.equal(fin.blocs.length, 1);
+    type Bloc = { type: string; content?: unknown; text?: string };
+    const dernier = (requetes[1]!["messages"] as Array<{ role: string; content: Bloc[] }>).at(-1)!;
+    assert.equal(dernier.role, "user");
+    for (const b of dernier.content.filter((x) => x.type === "tool_result")) {
+      const contenu = b.content as Bloc[];
+      assert.ok(contenu.length > 0);
+      assert.ok(
+        contenu.every((c) => c.type === "search_result"),
+        "un résultat d'outil mêle les types",
+      );
+    }
+    // Les résultats d'outils d'abord, l'annonce ensuite, en texte.
+    assert.deepEqual(
+      dernier.content.map((b) => b.type),
+      ["tool_result", "text"],
+    );
+    assert.match(
+      dernier.content[1]!.text!,
+      /Un visuel est disponible pour la source « malica:echeances:a-venir »/,
+    );
+  });
+
+  it("le bloc se place là où Malica en est de sa réponse : après l'annonce, avant la suite", async () => {
+    const { api } = avecCalendrier();
+    const annonce = "Je regarde votre calendrier fiscal.";
+    const annonceEtVisuel: EvenementClaude[] = [
+      { type: "message_start", message: { model: "deepseek-chat", usage } },
+      { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+      { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: annonce } },
+      { type: "content_block_stop", index: 0 },
+      {
+        type: "content_block_start",
+        index: 1,
+        content_block: { type: "tool_use", id: "t2", name: "afficher_visuel", input: {} },
+      },
+      {
+        type: "content_block_delta",
+        index: 1,
+        delta: {
+          type: "input_json_delta",
+          partial_json: JSON.stringify({ source: "malica:echeances:a-venir" }),
+        },
+      },
+      { type: "content_block_stop", index: 1 },
+      { type: "message_delta", delta: { stop_reason: "tool_use" }, usage },
+    ];
+    const { fin, evenements } = await jouer(api, [
+      appelDOutil("echeances_fiscales"),
+      annonceEtVisuel,
+      texte("Une échéance est en retard."),
+    ]);
+    assert.equal(fin.blocs[0]!.apres, annonce.length);
+    // À l'écran, dans cet ordre : l'annonce, le bloc, la suite.
+    const ordre = evenements.flatMap((e) =>
+      e.type === "texte" || e.type === "bloc" ? [e.type] : [],
+    );
+    assert.deepEqual(ordre, ["texte", "bloc", "texte"]);
+    assert.equal(fin.reponse.slice(0, fin.blocs[0]!.apres), annonce);
+    assert.match(fin.reponse.slice(fin.blocs[0]!.apres!), /^\n\nUne échéance est en retard\.$/);
   });
 
   it("afficher_visuel deux fois pour la même source ne montre qu'un bloc", async () => {

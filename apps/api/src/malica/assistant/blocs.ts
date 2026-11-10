@@ -67,6 +67,12 @@ export function jourEnClair(jour: string, langue: string): string {
   }).format(new Date(Date.UTC(a, m - 1, j)));
 }
 
+/** « -342.000 » → « 342.000 » : la valeur absolue d'un montant écrit, sans passer par un flottant. */
+function montantAbsolu(valeur: string): string {
+  const v = valeur.trim();
+  return v.startsWith("-") ? v.slice(1) : v;
+}
+
 /** Ce que le moteur de TVA rend, réduit à ce que le bloc lit. */
 export interface TvaDuMois {
   period: string;
@@ -108,6 +114,22 @@ export function blocDeLaTva(
       chiffre("pme.bloc.tva.collectee", tva.totals.collectee, "neutre"),
       chiffre("pme.bloc.tva.deductible", tva.totals.deductible, "neutre"),
     ],
+    feuille: {
+      entete: [
+        texte(langue, "pme.bloc.feuille.libelle"),
+        `${texte(langue, "pme.bloc.feuille.montant")} (${tva.currency})`,
+      ],
+      lignes: [
+        [{ texte: texte(langue, "pme.bloc.tva.collectee") }, { montant: tva.totals.collectee }],
+        [{ texte: texte(langue, "pme.bloc.tva.deductible") }, { montant: tva.totals.deductible }],
+      ],
+      totaux: [
+        [
+          { texte: texte(langue, enCredit ? "pme.bloc.tva.credit" : "pme.bloc.tva.apayer") },
+          { montant: montantAbsolu(tva.totals.solde) },
+        ],
+      ],
+    },
   };
 }
 
@@ -147,6 +169,19 @@ export function blocDesEcheances(
       etat: texte(langue, etat(e)),
     })),
     total: null,
+    feuille: {
+      entete: [
+        texte(langue, "pme.bloc.ech.echeance"),
+        texte(langue, "pme.bloc.ech.limite"),
+        texte(langue, "pme.bloc.ech.etat"),
+      ],
+      // La date en AAAA-MM-JJ : un tableur la trie et la reconnaît dans toutes les langues.
+      lignes: echeances.map((e) => [
+        { texte: e.label },
+        { texte: e.dueDate },
+        { texte: texte(langue, etat(e)) },
+      ]),
+    },
   };
 }
 
@@ -242,9 +277,32 @@ export function blocDesAchats(
       pieces: ordre(cles, (a, b) => a.n - b.n),
     },
     pieces: [...tete.map((l) => piecesDe(l.refs)), ...(reste.length > 0 ? [null] : [])],
+    feuille: {
+      entete: [
+        texte(langue, "pme.bloc.achats.fournisseur"),
+        `${texte(langue, "pme.bloc.achats.montant")} (${achats.devise})`,
+        texte(langue, "pme.bloc.achats.pieces"),
+      ],
+      // L'export porte TOUS les fournisseurs : « Autres » n'est qu'un raccourci d'écran.
+      lignes: achats.lignes.map((l) => [
+        { texte: l.fournisseur },
+        { montant: l.total },
+        { montant: String(l.pieces) },
+      ]),
+      totaux: [
+        [
+          { texte: texte(langue, "pme.bloc.achats.total") },
+          { montant: achats.total },
+          { montant: String(achats.pieces) },
+        ],
+      ],
+    },
     total: ligne(texte(langue, "pme.bloc.achats.total"), achats.total, achats.pieces),
   };
 }
+
+/** Jusqu'à ce nombre de périodes, des barres ; au-delà, une courbe. */
+const MOIS_EN_BARRES = 12;
 
 /** « nov. 26 » : un mois AAAA-MM, court, pour l'axe d'un graphique. */
 function moisCourt(periode: string, langue: string): string {
@@ -282,7 +340,8 @@ export function blocDesMois(
   const comptees = parMois.mois.reduce((n, m) => n + m.piecesAchats + m.piecesVentes, 0);
   return {
     type: "graphique",
-    forme: "barres",
+    // Au-delà d'une année, des barres groupées ne se lisent plus : une courbe.
+    forme: parMois.mois.length > MOIS_EN_BARRES ? "courbe" : "barres",
     titre: texte(langue, "pme.bloc.mois.titre"),
     periode:
       premier && dernier
@@ -305,5 +364,98 @@ export function blocDesMois(
         points: parMois.mois.map((m) => point(m.mois, m.achats)),
       },
     ],
+    feuille: {
+      entete: [
+        texte(langue, "pme.bloc.feuille.mois"),
+        `${texte(langue, "pme.bloc.mois.ventes")} (${parMois.devise})`,
+        `${texte(langue, "pme.bloc.mois.achats")} (${parMois.devise})`,
+      ],
+      // Un mois sans pièce lue reste une cellule vide : ce n'est pas un zéro.
+      lignes: parMois.mois.map((m) => [
+        { texte: m.mois },
+        m.ventes === null ? { texte: "" } : { montant: m.ventes },
+        m.achats === null ? { texte: "" } : { montant: m.achats },
+      ]),
+      totaux: [
+        [
+          { texte: texte(langue, "pme.bloc.achats.total") },
+          { montant: parMois.totalVentes },
+          { montant: parMois.totalAchats },
+        ],
+      ],
+    },
+  };
+}
+
+/** Le compte de résultat que le moteur du Socle rend, réduit à ce que le bloc lit. */
+export interface ResultatDeLaPeriode {
+  currency: string;
+  produits: string;
+  charges: string;
+  resultat: string;
+}
+
+/**
+ * Du chiffre d'affaires au résultat : ce qui entre, ce qui sort, ce qui reste.
+ * La barre des charges part du sommet des produits et descend ; celle du
+ * résultat repart de zéro. Les positions (0 à 1) sont rapportées au plus grand
+ * des deux totaux : l'écran les dessine sans rien relire.
+ */
+export function blocDuResultat(
+  r: ResultatDeLaPeriode,
+  dec: number,
+  periode: string | null,
+  perimetre: string | null,
+  langue: string,
+): BlocDeReponse {
+  const produits = Number(r.produits);
+  const charges = Number(r.charges);
+  const resultat = Number(r.resultat);
+  const echelle = Math.max(produits, charges, 0);
+  const part = (v: number) =>
+    echelle === 0 ? 0 : Math.round(Math.min(1, Math.max(0, v / echelle)) * 1000) / 1000;
+  const etape = (
+    cle: Parameters<typeof texte>[1],
+    valeur: string,
+    ton: ChiffreDeBloc["ton"],
+    debut: number,
+    fin: number,
+  ) => ({ libelle: texte(langue, cle), valeur: montant(valeur, dec, langue), ton, debut, fin });
+  return {
+    type: "cascade",
+    titre: texte(langue, "pme.bloc.resultat.titre"),
+    periode,
+    perimetre,
+    source: texte(langue, "pme.bloc.resultat.source"),
+    unite: r.currency,
+    etapes: [
+      etape("pme.bloc.resultat.produits", r.produits, "neutre", 0, part(produits)),
+      // Les charges descendent du sommet des produits ; au-delà, elles butent à zéro.
+      etape(
+        "pme.bloc.resultat.charges",
+        r.charges,
+        "negatif",
+        part(produits - charges),
+        part(produits),
+      ),
+      etape(
+        "pme.bloc.resultat.resultat",
+        r.resultat,
+        resultat < 0 ? "negatif" : "positif",
+        0,
+        part(Math.abs(resultat)),
+      ),
+    ],
+    feuille: {
+      entete: [
+        texte(langue, "pme.bloc.feuille.libelle"),
+        `${texte(langue, "pme.bloc.feuille.montant")} (${r.currency})`,
+      ],
+      lignes: [
+        [{ texte: texte(langue, "pme.bloc.resultat.produits") }, { montant: r.produits }],
+        [{ texte: texte(langue, "pme.bloc.resultat.charges") }, { montant: r.charges }],
+      ],
+      totaux: [[{ texte: texte(langue, "pme.bloc.resultat.resultat") }, { montant: r.resultat }]],
+    },
   };
 }

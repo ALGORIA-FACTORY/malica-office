@@ -38,6 +38,7 @@ import { BlocsDeReponse } from "@/components/malica/blocs-de-reponse";
 import { clePiecesLues } from "@/hooks/use-pieces-lues";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { tranchesDeReponse } from "@/lib/tranches-de-reponse";
 import { office } from "@/verticals/malica-office/composition";
 
 export interface TourDeMalica {
@@ -295,10 +296,15 @@ export function ReponseDeMalica({
 
   return (
     <>
-      {tour.contenu ? <TexteMarkdown texte={tour.contenu} /> : null}
-      {tour.blocs && tour.blocs.length > 0 ? (
-        <BlocsDeReponse blocs={tour.blocs} espace={espace} />
-      ) : null}
+      {/* Le texte et les blocs, dans l'ordre où Malica les a donnés : un bloc se
+          pose là où elle l'a montré, entre deux paragraphes. */}
+      {tranchesDeReponse(tour.contenu, tour.blocs ?? []).map((tranche, i) =>
+        tranche.genre === "texte" ? (
+          <TexteMarkdown key={i} texte={tranche.texte} />
+        ) : (
+          <BlocsDeReponse key={i} blocs={tranche.blocs} espace={espace} />
+        ),
+      )}
       {tour.enCours && tour.outil ? (
         <p className="et1" role="status">
           <i />
