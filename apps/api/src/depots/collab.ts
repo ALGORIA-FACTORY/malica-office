@@ -581,6 +581,16 @@ export const collab = {
   },
 
   /**
+   * La longueur maximale d'un motif de réponse, telle que la base la porte
+   * (`app.motif_longueur_max()`) : la contrainte, la porte et l'écran lisent la
+   * même valeur, et aucune copie n'en vit dans le code.
+   */
+  async limiteDuMotif(db: Requete): Promise<number> {
+    const { rows } = await db.query<{ n: number }>(`select app.motif_longueur_max() as n`);
+    return rows[0]!.n;
+  },
+
+  /**
    * L'ÉTAT des demandes d'une pièce : le dernier fait par objet et par étape,
    * tel que la base le lit (`app.etat_des_demandes`) — la garde d'inscription
    * et les portes lisent le même. L'écran n'en refait aucune interprétation.

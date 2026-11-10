@@ -56,7 +56,14 @@ en enregistre dix.
 après le premier écran (`notifyAppReady`, sinon retour au bundle d'avant) ;
 Sentry (`lib/telemetrie.ts`) reçoit les plantages de la coque seulement, sans
 corps de requête, en-tête, cookie ni console — deux fonctions pures, testées,
-tiennent cette promesse. Sans `VITE_SENTRY_DSN`, rien ne part. Un bouton
+tiennent cette promesse. Sans `VITE_SENTRY_DSN`, rien ne part : il est posé
+depuis le 10 novembre 2026 dans les cibles staging, pilote et prod (projet
+`malica-coque`, organisation hébergée dans l'Union européenne), pas dans
+celle de l'émulateur. Les cartes de sources vont à Sentry et à lui seul :
+`outils/cartes-sources-sentry.mjs` les envoie puis les retire du bundle, dans
+`ota.yml` et `android.yml`, si le secret `SENTRY_AUTH_TOKEN` est posé ; sans
+lui le bundle part quand même, et le flux dit que ses piles seront
+illisibles. Un bouton
 « Quelque chose n'a pas marché ? » dans les réglages envoie un signalement
 volontaire (`app.signalements`), jamais une pièce.
 
@@ -161,7 +168,7 @@ chemins natifs s'exécutent, et la console dit ce qui casse.
    de l'application et son nom, même police). Le
    téléversement se fait depuis le Chrome de l'utilisateur (l'extension y
    dépose les fichiers) ; la piste de test fermé « Pilote » avec le cabinet
-   et les PME, qui déclenche la première revue ; un projet Sentry.
+   et les PME, qui déclenche la première revue.
 5. **Mises à jour en vol, sans le magasin** — fait le 7 septembre 2026 :
    compte Capgo au nom de w.barouni@algoria-factory.com, app
    `com.algoriafactory.malica`, canaux `staging`, `pilote` et `production`

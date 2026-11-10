@@ -19,7 +19,7 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
-import { lecture as lectureDEssai } from "./lecture-d-essai.ts";
+import { JOUR_D_ESSAI, lecture as lectureDEssai } from "./lecture-d-essai.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
 
@@ -71,7 +71,7 @@ describe("3B — la lecture journalisée, la pièce jugée", { skip: !BASE_CONFI
       flags: [],
       articles: [],
       documentKind: "facture_achat",
-      documentDate: "2026-09-10",
+      documentDate: JOUR_D_ESSAI,
       mode: "pdf-text",
       confianceParChamp: { "totals.ttc": 0.95, "references.numero": 0.95 },
     });

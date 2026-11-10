@@ -18,7 +18,7 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
-import { lecture as lectureDEssai } from "./lecture-d-essai.ts";
+import { JOUR_D_ESSAI, jourDEssai, lecture as lectureDEssai } from "./lecture-d-essai.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
 
@@ -146,12 +146,12 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     assert.ok(montants.includes("1234.560"), `HT imprimé : ${montants.join(", ")}`);
     assert.ok(montants.includes("234.566"), "TVA imprimée");
     assert.ok(montants.includes("1.000"), "timbre");
-    assert.equal(r.proposition.pivot.entry_date, "2026-09-10");
+    assert.equal(r.proposition.pivot.entry_date, JOUR_D_ESSAI);
     assert.equal(r.verdict, "à comptabiliser");
     // Une date LUE n'est jamais remplacée par une saisie.
     const saisie = (await rpc("office", "propositionDePiece", piece, "2026-01-01")) as Proposition;
     assert.ok(saisie.ok);
-    assert.equal(saisie.proposition.pivot.entry_date, "2026-09-10");
+    assert.equal(saisie.proposition.pivot.entry_date, JOUR_D_ESSAI);
   });
 
   it("une proforma n'a pas d'écriture : refus motivé par le verdict", async () => {
@@ -214,7 +214,7 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     const dossier = (await rpc("capture", "dossier", piece)) as {
       extraction: { payload: { document_date?: string | null } };
     };
-    assert.equal(dossier.extraction.payload.document_date, "2026-09-10");
+    assert.equal(dossier.extraction.payload.document_date, JOUR_D_ESSAI);
   });
 
   it("le jour de réception est celui du dossier, pas celui d'UTC", async () => {
@@ -225,7 +225,7 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
      * Tunis. La pièce est reçue à 00:30 au fuseau du dossier, le jour même de
      * sa date imprimée.
      */
-    const jour = "2026-09-10";
+    const jour = JOUR_D_ESSAI;
     const piece = await pieceLue("minuit", lecture({ numero: "P-MINUIT" }));
     const recevoirA = (heure: string) =>
       admin(async (p) => {
@@ -268,7 +268,7 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
       const veille = await dates();
       assert.deepEqual(
         [veille?.statut, veille?.preuves?.recueLe],
-        ["reserve", "2026-09-09"],
+        ["reserve", jourDEssai(-1)],
         "reçue la veille, au fuseau du dossier",
       );
     } finally {

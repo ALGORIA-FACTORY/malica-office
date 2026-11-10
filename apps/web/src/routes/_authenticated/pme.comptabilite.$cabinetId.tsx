@@ -6,13 +6,16 @@
  *   À répondre   les pièces qu'elle a retournées ;
  *   Transmis     ce qui est parti chez elle ;
  *   Mandat       les sociétés qu'elle tient.
- * Avec plusieurs sociétés, un choix « Toutes ses sociétés » les filtre.
+ * Avec plusieurs sociétés, c'est le sélecteur de l'EN-TÊTE qui filtre
+ * (10 novembre 2026, une seule sélection pour tous les écrans) : la société
+ * qu'il nomme si ce cabinet la tient, toutes ses sociétés sinon, et « Toutes
+ * les sociétés » les montre toutes.
  *
  * Aucune lecture de plus : les fiches des sociétés et les pièces viennent des
  * mêmes clés que les Réglages et la bibliothèque. Ni prix ni paiement ici.
  */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
@@ -38,16 +41,19 @@ function DossierDeLaComptabilite() {
   const revenir = useRevenir();
   const { fiches } = useFichesDesSocietes();
   const [onglet, setOnglet] = useState<Onglet>("repondre");
-  const [societe, setSociete] = useState<string>("toutes");
   /** Transmis se montre par tranches : rien n'est perdu au-delà de la première. */
   const [montres, setMontres] = useState(TRANCHE);
+  // Changer de société dans l'en-tête remet « Transmis » à sa première tranche.
+  useEffect(() => setMontres(TRANCHE), [pme.societeAffichee]);
 
   const siennes = (fiches.data ?? []).filter((f) => f.cabinetId === cabinetId);
   const nom = siennes[0]?.cabinet ?? "";
   const ids = siennes.map((f) => f.tenantId);
   const lectures = usePiecesLuesDesSocietes(ids);
   const nomDe = new Map(pme.dossiers.map((d) => [d.id, d.name]));
-  const vues = societe === "toutes" ? ids : ids.filter((id) => id === societe);
+  // La société de l'en-tête, si ce cabinet la tient ; sinon toutes les siennes.
+  const vues =
+    pme.societeAffichee !== null && ids.includes(pme.societeAffichee) ? [pme.societeAffichee] : ids;
   const pieces = ids.flatMap((id, i) =>
     vues.includes(id) ? (lectures[i]?.data ?? []).map((p) => ({ p, tenantId: id })) : [],
   );
@@ -132,24 +138,6 @@ function DossierDeLaComptabilite() {
             </button>
           ))}
         </div>
-        {ids.length > 1 && onglet !== "mandat" ? (
-          <select
-            className="choix"
-            value={societe}
-            aria-label={t("pme.compta.societes")}
-            onChange={(e) => {
-              setSociete(e.target.value);
-              setMontres(TRANCHE);
-            }}
-          >
-            <option value="toutes">{t("pme.compta.toutes")}</option>
-            {ids.map((id) => (
-              <option key={id} value={id}>
-                {nomDe.get(id) ?? id}
-              </option>
-            ))}
-          </select>
-        ) : null}
 
         {charge ? (
           <p className="foot">{t("common.loading")}</p>

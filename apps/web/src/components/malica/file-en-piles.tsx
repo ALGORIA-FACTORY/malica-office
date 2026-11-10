@@ -12,6 +12,7 @@ import { useMemo, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
+import { useLimiteDuMotif } from "@/hooks/use-limite-du-motif";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import {
@@ -59,6 +60,7 @@ function LigneDePiece({
   const qc = useQueryClient();
   const [refus, setRefus] = useState(false);
   const [motif, setMotif] = useState("");
+  const limiteDuMotif = useLimiteDuMotif();
   const [erreur, setErreur] = useState<string | null>(null);
   const objet = piece.demandeEnAttente ?? null;
   const repondre = useMutation({
@@ -127,6 +129,7 @@ function LigneDePiece({
               <input
                 autoFocus
                 value={motif}
+                maxLength={limiteDuMotif}
                 onChange={(e) => setMotif(e.target.value)}
                 aria-label={t("cab.demande.motif")}
                 placeholder={t("cab.demande.motif")}

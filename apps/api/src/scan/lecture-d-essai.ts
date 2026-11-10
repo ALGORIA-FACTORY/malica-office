@@ -4,6 +4,42 @@
  * appeler de modèle. Partagé par lecture-jugee.test.ts et proposition.test.ts.
  */
 
+/**
+ * Le jour imprimé sur la facture d'essai : dix jours avant celui où l'épreuve
+ * tourne, en UTC. Relatif, et non figé : du 10 septembre au 9 novembre 2026,
+ * la date « 2026-09-10 » a tenu sous le seuil `piece.ecart_date_jours` du pack
+ * (60 jours) ; le 10 novembre, l'écart avec la réception l'a dépassé et le
+ * contrôle `coherence_dates` a mis en réserve toute la suite. Dix jours
+ * gardent la pièce avant sa réception, quel que soit le fuseau du dossier, et
+ * loin du seuil.
+ */
+export const JOUR_D_ESSAI = jourDEssai(0);
+
+/** Un jour relatif au jour d'essai : `jourDEssai(-1)` est la veille. */
+export function jourDEssai(decalageEnJours: number): string {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - 10 + decalageEnJours);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Le mois civil qui contient le jour d'essai, décalé de `decalageEnMois`
+ * (−1 : le mois précédent), comme bornes `du`/`au` incluses.
+ */
+export function moisDEssai(decalageEnMois = 0): { du: string; au: string } {
+  const [a, m] = JOUR_D_ESSAI.split("-").map(Number) as [number, number, number];
+  const premier = new Date(Date.UTC(a, m - 1 + decalageEnMois, 1));
+  const dernier = new Date(Date.UTC(a, m + decalageEnMois, 0));
+  return { du: premier.toISOString().slice(0, 10), au: dernier.toISOString().slice(0, 10) };
+}
+
+/** Le jour d'essai tel qu'il s'imprime sur la pièce : « JJ/MM/AAAA ». */
+function jourDEssaiImprime(): string {
+  const [a, m, j] = JOUR_D_ESSAI.split("-");
+  return `${j}/${m}/${a}`;
+}
+
 type Jeton = {
   page: number;
   ordinal: number;
@@ -55,7 +91,7 @@ export function lecture(
     ["SA", 0.12], // 2
     ["1234567B/B/M/000", 0.15], // 3
     [numero, 0.18], // 4
-    ["10/09/2026", 0.2], // 5
+    [jourDEssaiImprime(), 0.2], // 5
     [opts.clientMf ?? "1856324K/A/M/000", 0.25], // 6
     [opts.ht?.[0] ?? "1", 0.7], // 7 ─┐ « 1 234,560 », coupé en deux jetons
     [opts.ht?.[1] ?? "234,560", 0.7], // 8 ─┘
@@ -105,7 +141,7 @@ export function lecture(
   const extract = {
     contract: "extract.v1",
     issuer: "FOURNISSEUR SA",
-    document_date: opts.sansDate ? null : "2026-09-10",
+    document_date: opts.sansDate ? null : JOUR_D_ESSAI,
     currency: "TND",
     lines: [
       {

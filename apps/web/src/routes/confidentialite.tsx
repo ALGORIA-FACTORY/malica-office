@@ -31,7 +31,7 @@ function Confidentialite() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="rule-b">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
+        <div className="flex w-full items-center justify-between px-4 py-4 sm:px-6 lg:px-9">
           <Link to="/" className="text-sm font-semibold uppercase tracking-[0.2em]">
             Malica Office
           </Link>
@@ -39,7 +39,7 @@ function Confidentialite() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 py-10">
+      <main className="w-full px-4 py-8 sm:px-6 lg:px-9 lg:py-10">
         <article lang="fr" className="space-y-6 text-[15px] leading-relaxed">
           <h1 className="text-3xl font-semibold tracking-tight">Politique de confidentialité</h1>
           <p>
@@ -306,7 +306,7 @@ function Confidentialite() {
       </main>
 
       <footer className="rule-t">
-        <div className="mx-auto max-w-3xl px-6 py-6 text-xs text-muted-foreground">
+        <div className="w-full px-4 py-6 text-xs text-muted-foreground sm:px-6 lg:px-9">
           Malica Office · Algoria Factory · {CONTACT}
         </div>
       </footer>

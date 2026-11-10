@@ -2,12 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Fragment, useEffect, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
-import {
-  CarteDeGroupe,
-  IconeCalendrier,
-  IconeSiege,
-  IconeSociete,
-} from "@/components/malica/carte-de-groupe";
+import { CarteDeGroupe, IconeCalendrier, IconeSiege } from "@/components/malica/carte-de-groupe";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { jourOuInstant, montant } from "@/lib/lisible";
@@ -97,18 +92,17 @@ function Dossier() {
     parSociete,
     parSiege,
     chargement: lecture,
-    nomDeSociete,
     parSieges,
     ouvrirSaSociete,
   } = usePiecesDesSocietes();
 
   /*
-   * La société montrée : celle des puces de la bibliothèque, partagée
-   * (`pme.societeAffichee`), toutes par défaut — plus le dossier ouvert de
-   * l'en-tête, parti le 3 novembre 2026.
+   * La société montrée est CELLE DE L'EN-TÊTE (`pme.societeAffichee`, « Toutes
+   * les sociétés » = `null`). Une seule sélection pour tous les écrans
+   * (10 novembre 2026) : plus de cartes « Organisations » ici, qui la
+   * redisaient.
    */
   const societe = pme.societeAffichee;
-  const setSociete = pme.afficherSociete;
   const [siege, setSiege] = useState<string | null>(null);
   /** La période déroulée ; `undefined` : la plus récente qui a des pièces. */
   const [ouverte, setOuverte] = useState<string | null | undefined>(undefined);
@@ -137,16 +131,6 @@ function Dossier() {
     .filter((x) => !parSiege || !siege || x.piece.auteurId === siege)
     .map((x) => x.piece)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  // ----------------------------------------------------------- les sociétés
-  const cartesSocietes = pme.dossiers
-    .map((d) => ({
-      id: d.id,
-      pieces: toutes
-        .filter((x) => x.societe === d.id && (!parSiege || !siege || x.piece.auteurId === siege))
-        .map((x) => x.piece),
-    }))
-    .filter((c) => c.pieces.length > 0 || c.id === societe);
-
   // ------------------------------------------------------------ les sièges
   const sieges = parSieges(deLaSociete.map((x) => x.piece));
 
@@ -258,49 +242,6 @@ function Dossier() {
           <p className="vide">{t("pme.dossier.vide")}</p>
         ) : (
           <>
-            {parSociete ? (
-              <>
-                <div className="sec">
-                  <h2>{t("pme.dossier.organisations")}</h2>
-                  <span>{cartesSocietes.length}</span>
-                </div>
-                {/* « Toutes les sociétés » en tête : la sélection est ici, une fois. */}
-                <CarteDeGroupe
-                  presse={societe === null}
-                  accent={societe === null}
-                  onClick={() => {
-                    setSociete(null);
-                    setSiege(null);
-                    setOuverte(undefined);
-                  }}
-                  icone={<IconeSociete />}
-                  titre={t("pme.societes.toutes")}
-                  valeur={total(
-                    toutes
-                      .filter((x) => !parSiege || !siege || x.piece.auteurId === siege)
-                      .map((x) => x.piece),
-                  )}
-                  n={toutes.filter((x) => !parSiege || !siege || x.piece.auteurId === siege).length}
-                />
-                {cartesSocietes.map((c) => (
-                  <CarteDeGroupe
-                    key={c.id}
-                    presse={societe === c.id}
-                    accent={societe === c.id}
-                    onClick={() => {
-                      setSociete(societe === c.id ? null : c.id);
-                      setSiege(null);
-                      setOuverte(undefined);
-                    }}
-                    icone={<IconeSociete />}
-                    titre={nomDeSociete(c.id)}
-                    valeur={total(c.pieces)}
-                    n={c.pieces.length}
-                  />
-                ))}
-              </>
-            ) : null}
-
             {parSiege && sieges.size > 0 ? (
               <>
                 <div className="sec">

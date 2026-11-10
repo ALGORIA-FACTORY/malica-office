@@ -3135,6 +3135,11 @@ export interface CollabRepository {
     accorde: boolean,
     note?: string | null,
   ): Promise<void>;
+  /**
+   * La longueur maximale d'un motif de réponse, lue en base : l'écran ne laisse
+   * pas saisir plus, et c'est la base qui tranche.
+   */
+  limiteDuMotif(): Promise<number>;
   /** Les faits d'une demande, du plus récent au plus ancien : son histoire. */
   demandesDUnePiece(pieceId: string): Promise<FaitDeDemande[]>;
   /** L'état des demandes, par objet et par étape : ce que l'écran décide. */
