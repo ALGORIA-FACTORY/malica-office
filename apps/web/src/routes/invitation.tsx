@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { MarqueRg } from "@/components/malica/office-ui";
+import { CadreConnexion } from "@/components/malica/cadre-connexion";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
@@ -110,29 +110,29 @@ function Invitation() {
 
   let corps: React.ReactNode;
   if (jeton === undefined) {
-    corps = <p className="text-[14px] text-[#9A9AA0]">{t("common.loading")}</p>;
+    corps = <p className="cx-sub">{t("common.loading")}</p>;
   } else if (introuvable) {
     corps = (
-      <p className="text-[16px] leading-[1.6] text-[#C7C7CC]">{t("invitation.introuvable")}</p>
+      <p className="cx-sub">{t("invitation.introuvable")}</p>
     );
   } else if (compte.isLoading || (compte.data && lue.isLoading)) {
-    corps = <p className="text-[14px] text-[#9A9AA0]">{t("common.loading")}</p>;
+    corps = <p className="cx-sub">{t("common.loading")}</p>;
   } else if (!compte.data) {
     corps = (
       <>
-        <p className="text-[16px] leading-[1.6] text-[#C7C7CC]">{t("invitation.anonyme")}</p>
-        <div className="mt-8 space-y-2">
+        <p className="cx-sub">{t("invitation.anonyme")}</p>
+        <div className="cx-stack">
           <Link
             to="/auth"
             search={{ suite: "/invitation", mode: "signup" }}
-            className="flex h-14 w-full items-center justify-center bg-[#FAFAFA] text-[16px] font-semibold text-[#0A0A0A]"
+            className="cx-submit"
           >
             {t("invitation.creer")}
           </Link>
           <Link
             to="/auth"
             search={{ suite: "/invitation" }}
-            className="flex h-12 w-full items-center justify-center text-[15px] font-medium text-[#C7C7CC]"
+            className="cx-secondary"
           >
             {t("invitation.connecter")}
           </Link>
@@ -141,29 +141,26 @@ function Invitation() {
     );
   } else if (inv && !inv.valable) {
     corps = (
-      <p className="text-[16px] leading-[1.6] text-[#C7C7CC]">{t("invitation.plusValable")}</p>
+      <p className="cx-sub">{t("invitation.plusValable")}</p>
     );
   } else if (inv) {
     corps = (
       <>
-        <p className="text-[17px] leading-[1.6] text-[#FAFAFA]">
+        <p className="cx-sub">
           {t("invitation.dossier", { cabinet: inv.cabinet ?? "—", pme: inv.pme })}
         </p>
-        <p className="mt-3 text-[14px] text-[#9A9AA0]">
+        <p className="cx-sub">
           {t("invitation.adresse", { email: inv.email })}
         </p>
         {adresseDifferente ? (
           <>
-            <p
-              role="alert"
-              className="mt-6 border border-[#E3B75C] px-3 py-2 text-[14px] text-[#E3B75C]"
-            >
+            <p role="alert" className="cx-alert">
               {t("invitation.mauvaiseAdresse", { email: inv.email })}
             </p>
             <button
               type="button"
               onClick={() => deconnecter.mutate()}
-              className="mt-4 h-12 w-full border border-[#3A3A3C] text-[15px] font-medium text-[#FAFAFA]"
+              className="cx-secondary"
             >
               {t("invitation.connecter")}
             </button>
@@ -171,7 +168,7 @@ function Invitation() {
         ) : (
           <>
             {accepter.isError ? (
-              <p role="alert" className="mt-6 text-[14px] text-[#E08163]">
+              <p role="alert" className="cx-msg cx-err">
                 {texteDeLErreur(accepter.error, "invitation : accepter", t("common.error"))}
               </p>
             ) : null}
@@ -179,9 +176,11 @@ function Invitation() {
               type="button"
               onClick={() => accepter.mutate()}
               disabled={accepter.isPending}
-              className="mt-8 h-14 w-full bg-[#FAFAFA] text-[16px] font-semibold text-[#0A0A0A] disabled:opacity-60"
+              aria-busy={accepter.isPending}
+              className="cx-submit"
             >
-              {t("invitation.rejoindre")}
+              <span className="cx-fill" aria-hidden="true" />
+              <span className="cx-label">{t("invitation.rejoindre")}</span>
             </button>
           </>
         )}
@@ -190,21 +189,14 @@ function Invitation() {
   }
 
   return (
-    <div className="pt-safe relative mx-auto flex min-h-screen w-full max-w-md flex-col overflow-hidden bg-[#0A0A0A] text-[#FAFAFA]">
-      <MarqueRg
-        aria-hidden
-        className="pointer-events-none absolute -bottom-[90px] -start-[70px] h-[340px] w-[340px] opacity-[0.08]"
-      />
-      <main className="relative flex-1 px-[26px] pb-8 pt-9">
-        <MarqueRg aria-hidden className="h-[30px] w-[30px]" />
-        <p className="mt-11 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#E3B75C]">
-          {t("invitation.kicker")}
-        </p>
-        <h1 className="mt-3 text-[34px] font-semibold leading-[1.08] tracking-[-0.035em]">
-          {t(lienMort ? "invitation.titreLienMort" : "invitation.titre")}
-        </h1>
-        <div className="mt-5">{corps}</div>
-      </main>
-    </div>
+    <CadreConnexion>
+      <div className="cx-form">
+        <div className="cx-head">
+          <p className="cx-kicker">{t("invitation.kicker")}</p>
+          <h1 className="cx-title">{t(lienMort ? "invitation.titreLienMort" : "invitation.titre")}</h1>
+        </div>
+        {corps}
+      </div>
+    </CadreConnexion>
   );
 }

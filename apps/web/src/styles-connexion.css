@@ -89,3 +89,12 @@
 .cx-flip { display: inline-block }
 :root[dir="rtl"] .cx-flip { transform: scaleX(-1) }
 @media (prefers-reduced-motion: reduce) { .cx-submit, .cx-input, .cx-seg button, .cx-submit[aria-busy="true"] .cx-fill { transition: none } }
+
+/* Liens et boutons secondaires des pages d'accès (invitation, réinitialisation). */
+.cx-submit { text-decoration: none }
+.cx-secondary { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--foreground); font: inherit; font-size: 0.9375rem; font-weight: 500; text-decoration: none; cursor: pointer }
+.cx-secondary:hover { border-color: var(--foreground) }
+.cx-secondary:focus-visible { outline: 2px solid var(--signal-info); outline-offset: 2px }
+.cx-alert { margin: 0; padding: 0.75rem 0.875rem; border: 1px solid var(--signal-warn); border-radius: 8px; font-size: 0.875rem; line-height: 1.45; color: var(--signal-warn) }
+.cx-kicker { font: 500 0.6875rem "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted-foreground) }
+.cx-stack { display: flex; flex-direction: column; gap: 0.5rem }
