@@ -10,5 +10,6 @@ le dit.
 | 2026-11-09 | Revérification des constats (n° 2, encodage) | Qwen (Model Studio)  |      1 | ≈ 0,000 001 $ |
 | 2026-11-09 | Liste des modèles servis                     | DeepSeek (`/models`) |      2 |       gratuit |
 | 2026-11-09 | Mesure de référence, 24 questions (staging)  | DeepSeek             |     24 |      0,2294 $ |
+| 2026-11-10 | Lot A : parité Claude et DeepSeek, 6 questions (staging) | Claude (Haiku, Sonnet) et DeepSeek | 12 | 0,2262 $ |
 
-**Total engagé : 0,23 $ sur 100 $.**
+**Total engagé : 0,46 $ sur 100 $.**

@@ -385,8 +385,17 @@ describe("le chat de Malica — section 11", { skip: !BASE_CONFIGUREE }, () => {
     } finally {
       delete modele.usage;
     }
-    const runId = corps["runId"] as string;
-    assert.ok(runId);
+    // L'identifiant d'exécution ne part plus au navigateur (lot C) : le journal se
+    // relit par ce que cet appel y a laissé, ses jetons.
+    assert.equal(corps["runId"], null);
+    const { rows: trouve } = await admin.query<{ id: string }>(
+      `select id from agents.agent_runs
+        where tenant_id = $1 and agent = 'malica.conseil' and tokens_in = 12345
+        order by created_at desc limit 1`,
+      [pme],
+    );
+    const runId = trouve[0]?.id as string;
+    assert.ok(runId, "l'appel n'a rien laissé au journal des agents");
 
     const { rows } = await admin.query<Record<string, string | number>>(
       `select r.agent, r.model, r.status, r.tokens_in, r.tokens_out, r.cost::text as cout,
@@ -439,7 +448,8 @@ describe("le chat de Malica — section 11", { skip: !BASE_CONFIGUREE }, () => {
     }
     assert.equal(r.corps["reasoning"], null);
     assert.ok(!r.brut.includes(secret));
-    // Ce qui part aujourd'hui avec la réponse (constat 10), figé tel quel.
+    // Ce qui part avec la réponse : les clés d'avant (une application installée les lit),
+    // mais plus aucune valeur de la mécanique (lot C, 10 novembre 2026).
     assert.deepEqual(Object.keys(r.corps).sort(), [
       "answer",
       "conseil",
@@ -455,6 +465,11 @@ describe("le chat de Malica — section 11", { skip: !BASE_CONFIGUREE }, () => {
       "tokensIn",
       "tokensOut",
     ]);
+    assert.equal(r.corps["model"], "");
+    assert.equal(r.corps["latencyMs"], 0);
+    assert.equal(r.corps["tokensIn"], null);
+    assert.equal(r.corps["tokensOut"], null);
+    assert.equal(r.corps["runId"], null);
 
     const fil = r.corps["conversationId"] as string;
     const { corps: relu, brut } = await rpc<Array<Record<string, unknown>>>(
@@ -484,6 +499,14 @@ describe("le chat de Malica — section 11", { skip: !BASE_CONFIGUREE }, () => {
       "tokensIn",
       "tokensOut",
     ]);
+    // Le modèle, les jetons et la durée du fil rouvert : neutres aussi, alors que la base les garde.
+    assert.deepEqual(
+      relu.map((m) => [m["model"], m["tokensIn"], m["tokensOut"], m["latencyMs"]]),
+      [
+        [null, null, null, null],
+        [null, null, null, null],
+      ],
+    );
     // Il est gardé en base, pour la tour : seul le navigateur ne le reçoit pas.
     const { rows } = await admin.query<{ raisonnement: string | null }>(
       `select raisonnement from agents.conversation_messages

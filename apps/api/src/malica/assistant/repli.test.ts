@@ -27,6 +27,7 @@ import {
 } from "./agent.ts";
 import type { ClientEnFlux, EvenementClaude } from "./claude-flux.ts";
 import { lireConfigurationAssistant } from "./configuration.ts";
+import { clientDeepSeekEnFlux } from "./deepseek-flux.ts";
 import { repliParDeepSeek } from "./repli.ts";
 
 const TENANT = "11111111-1111-4111-8111-111111111111";
@@ -474,5 +475,141 @@ describe("le fil garde les sources et les propositions de la réponse", () => {
     // À la réouverture, le fil les rend tels quels.
     const relu = await api.rpc<MessageRange[]>("conversations", "ouvrir", [fin.conversationId]);
     assert.deepEqual(relu.at(-1)!.propositions, fin.propositions);
+  });
+});
+
+/* ------------------------- DeepSeek dans la boucle d'outils (lot B, parité) -- */
+
+describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
+  /** Une réponse de DeepSeek au format Messages, en flux SSE. */
+  const sse = (evs: EvenementClaude[]) =>
+    new Response(evs.map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join(""), {
+      status: 200,
+      headers: { "content-type": "text/event-stream" },
+    });
+  const usage = { input_tokens: 120, output_tokens: 30 };
+  const appelDOutil = (nom: string): EvenementClaude[] => [
+    { type: "message_start", message: { model: "deepseek-chat", usage } },
+    {
+      type: "content_block_start",
+      index: 0,
+      content_block: { type: "tool_use", id: "t1", name: nom, input: {} },
+    },
+    {
+      type: "content_block_delta",
+      index: 0,
+      delta: { type: "input_json_delta", partial_json: "{}" },
+    },
+    { type: "content_block_stop", index: 0 },
+    { type: "message_delta", delta: { stop_reason: "tool_use" }, usage },
+  ];
+  const texte = (...morceaux: string[]): EvenementClaude[] => [
+    { type: "message_start", message: { model: "deepseek-chat", usage } },
+    { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+    ...morceaux.map((text): EvenementClaude => ({
+      type: "content_block_delta",
+      index: 0,
+      delta: { type: "text_delta", text },
+    })),
+    { type: "content_block_stop", index: 0 },
+    { type: "message_delta", delta: { stop_reason: "end_turn" }, usage },
+  ];
+
+  const lancer = async (reponses: EvenementClaude[][], options = { anthropicEpuise: true }) => {
+    const { api, fils } = dossierFictif(options);
+    const requetes: Array<Record<string, unknown>> = [];
+    let n = 0;
+    const deepseek = clientDeepSeekEnFlux({
+      apiKey: "cle-d-essai",
+      fetch: (async (_u: unknown, init?: RequestInit) => {
+        requetes.push(JSON.parse(String(init?.body)));
+        return sse(reponses[Math.min(n++, reponses.length - 1)]!);
+      }) as typeof fetch,
+    });
+    const r = await rejouer(api, {
+      claude: pasDeClaude,
+      deepseek,
+      conseil: pasDeConseil,
+      repli: async () => {
+        throw new Error("le repli ne devait pas être appelé : DeepSeek répond dans la boucle");
+      },
+    });
+    return { ...r, requetes, fils };
+  };
+
+  it("appelle les mêmes outils, numérote les passages et cite comme Claude", async () => {
+    const { fin, evenements, requetes, fils } = await lancer([
+      appelDOutil("ecritures_proposees"),
+      texte("Le compte TVA à payer porte 1090.504 TND ", "[S1]."),
+    ]);
+    assert.equal(fin.mesure.repli, "deepseek");
+    assert.equal(fin.mesure.motifDuRepli, "budget_claude");
+    assert.equal(fin.mesure.modele, "deepseek-chat");
+    assert.deepEqual(fin.mesure.outils, ["ecritures_proposees"]);
+    assert.equal(fin.chiffresRetires, 0);
+    assert.match(fin.reponse, /1090\.504 TND/);
+    assert.doesNotMatch(fin.reponse, /\[S\d/);
+    // Le modèle a reçu le passage numéroté, pas un bloc que DeepSeek ne connaît pas.
+    const second = JSON.stringify(requetes[1]);
+    assert.match(second, /\[S1\]/);
+    assert.doesNotMatch(second, /search_result|cache_control|output_config/);
+    // La réflexion est coupée : DeepSeek exigerait de la recevoir en retour.
+    assert.deepEqual(requetes[1]!["thinking"], { type: "disabled" });
+    // La source citée est celle que la garde a relue, et le fil range ce que l'écran a vu.
+    assert.ok(fin.sources.length >= 1);
+    const montre = evenements.flatMap((e) => (e.type === "texte" ? [e.texte] : [])).join("");
+    assert.equal(montre.trim(), fin.reponse.trim());
+    assert.equal(fils.get(fin.conversationId)!.at(-1)!.contenu, fin.reponse);
+    // Rien de la mécanique ne part au navigateur.
+    assert.doesNotMatch(JSON.stringify(evenements), /deepseek|tokens|latency|thinking/i);
+  });
+
+  it("retire la phrase dont le chiffre n'est dans aucune source remise", async () => {
+    const { fin, evenements } = await lancer([
+      appelDOutil("ecritures_proposees"),
+      texte("Le compte porte 1090.504 TND [S1]. Vous économiserez 300 dinars."),
+    ]);
+    assert.equal(fin.chiffresRetires, 1);
+    assert.ok(!JSON.stringify(evenements).includes("300"));
+  });
+
+  it("la réflexion de DeepSeek ne part pas, même si le fournisseur l'envoie", async () => {
+    const { fin, evenements } = await lancer([
+      [
+        { type: "message_start", message: { model: "deepseek-chat", usage } },
+        { type: "content_block_start", index: 0, content_block: { type: "thinking" } },
+        {
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "thinking_delta", thinking: "raisonnement-secret" },
+        },
+        { type: "content_block_stop", index: 0 },
+        { type: "content_block_start", index: 1, content_block: { type: "text", text: "" } },
+        {
+          type: "content_block_delta",
+          index: 1,
+          delta: { type: "text_delta", text: "L'inflation est la hausse des prix." },
+        },
+        { type: "content_block_stop", index: 1 },
+        { type: "message_delta", delta: { stop_reason: "end_turn" }, usage },
+      ],
+    ]);
+    assert.doesNotMatch(JSON.stringify({ fin, evenements }), /raisonnement-secret/);
+    assert.match(fin.reponse, /inflation/);
+  });
+
+  it("DeepSeek épuisé : l'ancien repli ne répond pas non plus, on s'arrête avec un message", async () => {
+    const { api } = dossierFictif({ anthropicEpuise: true, deepseekEpuise: true });
+    const { fin } = await rejouer(api, {
+      claude: pasDeClaude,
+      deepseek: () => {
+        throw new Error("DeepSeek épuisé : il ne devait pas être appelé");
+      },
+      conseil: pasDeConseil,
+      repli: async () => {
+        throw new Error("le repli ne devait pas être appelé");
+      },
+    });
+    assert.equal(fin.mesure.repli, "arret");
   });
 });

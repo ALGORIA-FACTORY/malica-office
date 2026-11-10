@@ -32,9 +32,11 @@ import { codeDeLecture } from "@malica/socle/issue-de-lecture";
 import { sousIdentite } from "./db.ts";
 import { creerAppelLocal, PieceIntrouvable } from "./malica/appel-local.ts";
 import type { EvenementDeLAssistant } from "@malica/socle/ports/assistant";
+import type { ReponseDeMalica } from "@malica/socle/ports/malica";
 
 import { converserAvecRepli, verifierLeDossier } from "./malica/assistant/agent.ts";
 import { clientClaudeEnFlux } from "./malica/assistant/claude-flux.ts";
+import { clientDeepSeekEnFlux } from "./malica/assistant/deepseek-flux.ts";
 import { repliParDeepSeek } from "./malica/assistant/repli.ts";
 import { redigerLeBriefing } from "./malica/briefing.ts";
 import { askMalica, repondreAuCabinet } from "./malica/conseil/ask.ts";
@@ -297,17 +299,37 @@ const Question = z.object({
   conversationId: Uuid.nullish(),
 });
 
+/**
+ * Ce que le navigateur reçoit d'une réponse : jamais la mécanique. Le modèle, les
+ * jetons, la durée et l'identifiant d'exécution restent au journal des agents
+ * (lot C, 10 novembre 2026). Les clés demeurent — une application installée les
+ * lit encore — à valeur neutre.
+ */
+function pourLeNavigateur<T extends ReponseDeMalica>(r: T): T {
+  return {
+    ...r,
+    reasoning: null,
+    model: "",
+    latencyMs: 0,
+    tokensIn: null,
+    tokensOut: null,
+    runId: null,
+  };
+}
+
 malica.post("/demander", (req, res, next) => {
   repondre(res, next, async () => {
     const q = Question.parse(req.body);
-    return askMalica(api(req), {
-      tenantId: q.tenantId,
-      pieceId: q.pieceId ?? null,
-      question: q.question,
-      locale: q.locale,
-      mode: q.mode,
-      conversationId: q.conversationId ?? null,
-    });
+    return pourLeNavigateur(
+      await askMalica(api(req), {
+        tenantId: q.tenantId,
+        pieceId: q.pieceId ?? null,
+        question: q.question,
+        locale: q.locale,
+        mode: q.mode,
+        conversationId: q.conversationId ?? null,
+      }),
+    );
   });
 });
 
@@ -403,6 +425,9 @@ malica.post("/assistant", (req, res, next) => {
         },
         {
           claude: cleClaude ? clientClaudeEnFlux({ apiKey: cleClaude }) : null,
+          deepseek: process.env["DEEPSEEK_API_KEY"]?.trim()
+            ? clientDeepSeekEnFlux({ apiKey: process.env["DEEPSEEK_API_KEY"] })
+            : null,
           conseil: (question, jour) =>
             conseilCite(
               appel,

@@ -75,8 +75,7 @@ export const conversations = {
   /** Le fil complet, dans l'ordre où il a été dit. */
   async ouvrir(db: Requete, conversationId: string): Promise<MessageDuFil[]> {
     const { rows } = await db.query<Record<string, unknown>>(
-      `select id, role, contenu, model, tokens_in, tokens_out,
-              latency_ms, created_at, sources, propositions
+      `select id, role, contenu, created_at, sources, propositions
          from agents.conversation_messages
         where conversation_id = $1
         -- A question and its answer share one transaction, hence one created_at: at
@@ -88,12 +87,15 @@ export const conversations = {
       id: r["id"] as string,
       role: r["role"] as "user" | "assistant",
       contenu: r["contenu"] as string,
-      // Gardé au journal, jamais rendu au client (ANO-023, 21 octobre 2026).
+      // Gardés au journal des agents, jamais rendus au client : le raisonnement
+      // (ANO-023, 21 octobre 2026), puis le modèle, les jetons et la durée (lot C,
+      // 10 novembre 2026). Les clés restent — une application installée les lit —,
+      // à valeur neutre.
       raisonnement: null,
-      model: (r["model"] as string | null) ?? null,
-      tokensIn: r["tokens_in"] === null ? null : Number(r["tokens_in"]),
-      tokensOut: r["tokens_out"] === null ? null : Number(r["tokens_out"]),
-      latencyMs: r["latency_ms"] === null ? null : Number(r["latency_ms"]),
+      model: null,
+      tokensIn: null,
+      tokensOut: null,
+      latencyMs: null,
       createdAt: String(r["created_at"]),
       // Ce que la réponse citait et proposait : un fil rouvert les réaffiche.
       sources: Array.isArray(r["sources"]) ? (r["sources"] as MessageDuFil["sources"]) : null,

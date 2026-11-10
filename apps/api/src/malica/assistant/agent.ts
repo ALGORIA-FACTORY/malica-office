@@ -189,6 +189,12 @@ function articlesCites(sources: readonly SourceConnue[]): SourceCitee[] {
 export interface DependancesDeLAssistant {
   /** Claude en flux ; `null` quand la clé n'est pas posée. */
   claude: ClientEnFlux | null;
+  /**
+   * DeepSeek, dans la MÊME boucle d'outils que Claude (`deepseek-flux.ts`) :
+   * mêmes outils, même garde, même consigne. Absent, le repli reste l'ancienne
+   * conversation (`repli`), qui ne voit qu'un instantané du dossier.
+   */
+  deepseek?: ClientEnFlux | null;
   /** Le conseil cité (#278), pour l'outil `conseil_fiscal`. */
   conseil: (question: string, jour: string | null) => Promise<ResultatDuConseilCite>;
   /**
@@ -390,6 +396,8 @@ async function converser(
   q: QuestionPosee,
   deps: DependancesDeLAssistant,
   emettre: (ev: EvenementDeLAssistant) => void,
+  /** Claude est tombé avant son premier mot : DeepSeek reprend, dans la même boucle. */
+  repriseApresPanne: boolean = false,
 ): Promise<FinMesuree> {
   const maintenant = deps.maintenant ?? (() => Date.now());
   const debut = maintenant();
@@ -404,28 +412,41 @@ async function converser(
   // Claude ne répond que si sa clé est posée, si le budget commun de la chaîne
   // n'est pas épuisé ET si l'assistant n'a pas atteint SON plafond (décision
   // du dirigeant, 8 novembre 2026 : la lecture des pièces garde sa part).
+  // Sinon DeepSeek répond DANS LA MÊME BOUCLE (mêmes outils, même garde) ; à
+  // défaut de client DeepSeek, l'ancienne conversation prend le relais.
   let motif: MotifDuRepli | null = !deps.claude
     ? "cle_absente"
     : !anthropic || anthropic.epuise
       ? "budget_claude"
-      : null;
+      : repriseApresPanne
+        ? "panne"
+        : null;
+  const deepseekEnBoucle = Boolean(deps.deepseek && deepseek && !deepseek.epuise);
   let configuration: ConfigurationDeLAssistant | null = null;
-  if (motif === null) {
+  if (motif === null || deepseekEnBoucle) {
     configuration = lireConfigurationAssistant(
       await api.rpc<unknown>("conseil", "configurationAssistant", []),
     );
-    if (configuration.plafond.epuise) motif = "plafond_assistant";
+    if (motif === null && configuration.plafond.epuise) motif = "plafond_assistant";
   }
+  const fournisseur: "claude" | "deepseek" | null =
+    motif === null ? "claude" : deepseekEnBoucle && configuration ? "deepseek" : null;
 
-  if (motif !== null || configuration === null) {
+  if (fournisseur === null || configuration === null) {
     const m = motif ?? "budget_claude";
     return repliPossible
       ? repondreParLeRepli(q, deps, emettre, debut, maintenant, m)
       : sArreter(api, q, emettre, debut, maintenant, m);
   }
+  const client = fournisseur === "claude" ? deps.claude! : deps.deepseek!;
 
   const reglage = configuration.reglage;
-  const choix = choisirLeModele(q.question, q.pieceIds.length, reglage);
+  const choixClaude = choisirLeModele(q.question, q.pieceIds.length, reglage);
+  // Le modèle de DeepSeek est celui que la chaîne règle (R8), jamais un nom en code.
+  const choix =
+    fournisseur === "deepseek" && deepseek
+      ? { ...choixClaude, modele: deepseek.modele }
+      : choixClaude;
 
   /*
    * La relecture du cabinet peut-elle retenir cette réponse ? Les conditions
@@ -529,7 +550,7 @@ async function converser(
     const debutAppel = maintenant();
     garde.nouveauTour();
     try {
-      for await (const ev of deps.claude!(requete)) {
+      for await (const ev of client(requete)) {
         assembleur.recevoir(ev);
         const i = ev.index;
         if (ev.type === "content_block_start" && typeof i === "number") {
@@ -570,7 +591,12 @@ async function converser(
         latencyMs: maintenant() - debutAppel,
         erreur: e instanceof Error ? e.message : String(e),
       });
-      if (tour === 0 && !texteMontre && repliPossible)
+      if (
+        fournisseur === "claude" &&
+        tour === 0 &&
+        !texteMontre &&
+        (repliPossible || deepseekEnBoucle)
+      )
         throw new PanneAvantLePremierMot(String(e), conversationId);
       interrompue = e instanceof Error ? e.message : String(e);
       break;
@@ -760,8 +786,8 @@ async function converser(
     sansCitations: false,
     mesure: {
       modele: modeleRendu,
-      repli: null,
-      motifDuRepli: null,
+      repli: fournisseur === "deepseek" ? "deepseek" : null,
+      motifDuRepli: fournisseur === "deepseek" ? motif : null,
       latencePremierMotMs: premierMot,
       latenceTotaleMs: latenceTotale,
       coutUsd: coutTotal === null ? null : Math.round(coutTotal * 1_000_000) / 1_000_000,
@@ -790,6 +816,18 @@ export async function converserAvecRepli(
     return await converser(api, dossier, q, deps, emettre);
   } catch (e) {
     if (!(e instanceof PanneAvantLePremierMot)) throw e;
+    // DeepSeek reprend la question DANS LA BOUCLE quand son client est branché :
+    // mêmes outils et même garde, sur le fil déjà ouvert.
+    if (deps.deepseek) {
+      return await converser(
+        api,
+        dossier,
+        { ...q, conversationId: e.conversationId },
+        deps,
+        emettre,
+        true,
+      );
+    }
     const maintenant = deps.maintenant ?? (() => Date.now());
     return repondreParLeRepli(
       { ...q, conversationId: e.conversationId },
