@@ -160,6 +160,19 @@ export default defineConfig(({ mode }) => {
     environments: {
       client: {
         build: {
+          /*
+           * Les cartes de sources — sur demande, jamais par défaut.
+           *
+           * Sentry reçoit des piles minifiées, illisibles sans elles. Mais une
+           * carte porte le code source : elle ne doit entrer ni dans l'AAB ni
+           * dans un bundle Capgo. `outils/cartes-sources-sentry.mjs` les
+           * envoie à Sentry puis les retire ; seuls les flux qui l'appellent
+           * (`ota.yml`, `android.yml`) posent MALICA_CARTES_SOURCES. « hidden » :
+           * aucune référence à la carte n'est écrite dans le JavaScript.
+           */
+          ...(coque && process.env["MALICA_CARTES_SOURCES"] === "1"
+            ? { sourcemap: "hidden" as const }
+            : {}),
           rolldownOptions: {
             output: {
               codeSplitting: {
