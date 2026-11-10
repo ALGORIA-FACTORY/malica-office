@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
+import { CadreConnexion } from "@/components/malica/cadre-connexion";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
 import { EchecAuth } from "@malica/socle/ports/auth";
@@ -59,39 +59,36 @@ function Reinitialiser() {
   }
 
   return (
-    <div className="pt-safe min-h-screen bg-background text-foreground">
-      <header className="rule-b">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
-          <Link to="/" className="text-sm font-semibold uppercase tracking-[0.18em]">
-            {t("brand.name")}
-          </Link>
-          <LanguageSwitcher />
+    <CadreConnexion>
+      <div className="cx-form">
+        <div className="cx-head">
+          <h1 className="cx-title">{t("auth.reset.title")}</h1>
         </div>
-      </header>
-
-      <main className="mx-auto max-w-md px-6 py-16">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("auth.reset.title")}</h1>
 
         {secret === "" ? (
-          <p className="mt-6 border border-signal-stop px-3 py-2 text-xs text-signal-stop">
+          <p role="alert" className="cx-msg cx-err">
             {t("auth.reset.expired")}
           </p>
         ) : (
-          <form onSubmit={onSubmit} className="mt-6 space-y-4">
+          <form onSubmit={onSubmit} className="cx-form">
             <ChampMotDePasse
+              id="cx-nouveau"
               label={t("auth.reset.new")}
               value={motDePasse}
               onChange={setMotDePasse}
+              erreur={Boolean(error)}
             />
             <ChampMotDePasse
+              id="cx-confirmation"
               label={t("auth.reset.confirm")}
               value={confirmation}
               onChange={setConfirmation}
+              erreur={Boolean(error)}
             />
-            <p className="text-xs text-muted-foreground">{t("auth.password.hint")}</p>
+            <p className="cx-hint">{t("auth.password.hint")}</p>
 
             {error && (
-              <p className="border border-signal-stop px-3 py-2 text-xs text-signal-stop">
+              <p id="cx-erreur" role="alert" className="cx-msg cx-err">
                 {error}
               </p>
             )}
@@ -99,42 +96,53 @@ function Reinitialiser() {
             <button
               type="submit"
               disabled={pending || !secret}
-              className="w-full border border-foreground bg-foreground px-4 py-3 text-sm font-medium text-background transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
+              aria-busy={pending}
+              className="cx-submit"
             >
-              {pending ? t("auth.pending") : t("auth.reset.submit")}
+              <span className="cx-fill" aria-hidden="true" />
+              <span className="cx-label">{pending ? t("auth.pending") : t("auth.reset.submit")}</span>
             </button>
           </form>
         )}
 
-        <Link to="/auth" className="mt-8 inline-block text-xs text-muted-foreground underline">
+        <Link to="/auth" className="cx-link-btn">
           {t("auth.reset.back")}
         </Link>
-      </main>
-    </div>
+      </div>
+    </CadreConnexion>
   );
 }
 
 function ChampMotDePasse({
+  id,
   label,
   value,
   onChange,
+  erreur,
 }: {
+  id: string;
   label: string;
   value: string;
   onChange: (next: string) => void;
+  erreur: boolean;
 }) {
   return (
-    <label className="block">
-      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
+    <div className="cx-field">
+      <label className="cx-lbl" htmlFor={id}>
+        {label}
+      </label>
       <input
+        id={id}
+        className="cx-input"
         type="password"
         value={value}
         required
         minLength={12}
         autoComplete="new-password"
+        aria-invalid={erreur || undefined}
+        aria-describedby={erreur ? "cx-erreur" : undefined}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
       />
-    </label>
+    </div>
   );
 }
