@@ -89,6 +89,41 @@ describe("sudoku — les jetons du plan", () => {
     assert.equal(j[3]!.date, null);
   });
 
+  describe("les substitutions 1 ↔ 7 (diagnostic du 8 novembre 2026)", () => {
+    const lues = (texte: string) =>
+      jetonsDuSudoku(
+        [{ page: 1, ordinal: 0, text: texte, x0: 0, y0: 0, x1: 1, y1: 1 }],
+        devise,
+        LECTURE,
+      )[0]!.montants;
+
+    it("« 7,000 » propose aussi « 1,000 », faible et substituée ; la lecture imprimée reste forte", () => {
+      assert.deepEqual(lues("7,000"), [
+        { v: 7_000, forte: true },
+        { v: 1_000, forte: false, substituee: true },
+      ]);
+    });
+
+    it("« 7.971,144 » (quatre positions) : quinze variantes, dont la lecture vraie « 7.971,744 »", () => {
+      const subst = lues("7.971,144").filter((m) => m.substituee);
+      assert.equal(subst.length, 15);
+      assert.ok(subst.every((m) => !m.forte));
+      assert.ok(subst.some((m) => m.v === 7_971_744));
+      assert.equal(new Set(subst.map((m) => m.v)).size, 15, "sans doublon");
+    });
+
+    it("sans « 1 » ni « 7 », rien n'est proposé", () => {
+      assert.deepEqual(lues("3 020,000"), [{ v: 3_020_000, forte: true }]);
+    });
+
+    it("au-delà de quatre positions, le jeton n'est pas un montant mal lu : rien n'est proposé", () => {
+      assert.deepEqual(
+        lues("1 171,717").filter((m) => m.substituee),
+        [],
+      );
+    });
+  });
+
   it("les experts de l'adaptateur lisent avec les règles du pack : date en morceaux, matricule vu", () => {
     const rangee = (texts: string[]): PageToken[] =>
       texts.map((text, ordinal) => ({
