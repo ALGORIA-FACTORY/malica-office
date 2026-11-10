@@ -174,6 +174,22 @@ export type BlocDeReponse =
       series: Array<{ nom: string; ton: TonDeBloc; points: PointDeGraphique[] }>;
     })
   | (EnTeteDeBloc & {
+      /**
+       * Une carte de chaleur : des lignes (les sociétés), des colonnes (les mois).
+       * La teinte de chaque case est sa `part`, de 0 à 1, rapportée à la plus
+       * forte case de la carte ; une case sans valeur reste vide.
+       */
+      type: "carte";
+      unite: string | null;
+      colonnes: string[];
+      lignes: Array<{
+        libelle: string;
+        cellules: Array<{ valeur: string | null; part: number }>;
+        /** Le total de la ligne, déjà écrit. */
+        total: string;
+      }>;
+    })
+  | (EnTeteDeBloc & {
       /** De ce qui entre à ce qui reste : chaque étape part d'où la précédente s'arrête. */
       type: "cascade";
       unite: string | null;
@@ -223,6 +239,12 @@ export interface QuestionALAssistant {
   conversationId: string | null;
   /** Les pièces jointes, DÉJÀ déposées et confiées à la lecture Malica (R2). */
   pieceIds: string[];
+  /**
+   * La personne regarde « Toutes les sociétés » : Malica peut alors comparer
+   * SES sociétés. Le serveur décide lesquelles — celles dont elle est membre —,
+   * jamais l'écran ni le modèle. Absent : la société ouverte, elle seule.
+   */
+  toutesLesSocietes?: boolean;
 }
 
 /**

@@ -11,5 +11,7 @@ le dit.
 | 2026-11-09 | Liste des modèles servis                     | DeepSeek (`/models`) |      2 |       gratuit |
 | 2026-11-09 | Mesure de référence, 24 questions (staging)  | DeepSeek             |     24 |      0,2294 $ |
 | 2026-11-10 | Lot A : parité Claude et DeepSeek, 6 questions (staging) | Claude (Haiku, Sonnet) et DeepSeek | 12 | 0,2262 $ |
+| 2026-11-10 | Lot I : boucle de l'assistant sur trois moteurs, 78 réponses (dossier fictif) | Claude (Haiku), DeepSeek (chat, flash) | 78 | 0,0668 $ + flash non chiffré |
+| 2026-11-10 | Sondes du point d'accès DeepSeek au format Messages (lot B) | DeepSeek | 8 | non chiffré, < 0,01 $ estimé |
 
-**Total engagé : 0,46 $ sur 100 $.**
+**Total engagé : 0,53 $ chiffrés sur 100 $**, plus les appels à `deepseek-flash` (22 réponses et 4 sondes), que la base ne sait pas chiffrer faute de tarif (M-4) : estimés à moins de 0,05 $, INCERTAIN.

@@ -62,6 +62,18 @@ export function blocImprimable(bloc: BlocDeReponse): BlocImprimable {
         numerique: [false, ...bloc.series.map(() => true)],
       };
     }
+    case "carte":
+      return {
+        ...commun,
+        entete: ["", ...bloc.colonnes, bloc.unite ? `Σ (${bloc.unite})` : "Σ"],
+        lignes: bloc.lignes.map((l) => [
+          l.libelle,
+          ...l.cellules.map((c) => c.valeur ?? "—"),
+          l.total,
+        ]),
+        totaux: [],
+        numerique: [false, ...bloc.colonnes.map(() => true), true],
+      };
     case "cascade":
       return {
         ...commun,

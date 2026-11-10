@@ -785,6 +785,55 @@ describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
     assert.match(fin.reponse.slice(fin.blocs[0]!.apres!), /^\n\nUne échéance est en retard\.$/);
   });
 
+  it("la comparaison des sociétés n'est offerte au modèle que si la personne regarde « Toutes les sociétés » et en a plusieurs", async () => {
+    const outilsOfferts = async (dossier: DossierVerifie, toutes: boolean) => {
+      const { api } = dossierFictif({ anthropicEpuise: true });
+      let offerts: string[] = [];
+      const deepseek = clientDeepSeekEnFlux({
+        apiKey: "cle-d-essai",
+        fetch: (async (_u: unknown, init?: RequestInit) => {
+          offerts = (JSON.parse(String(init?.body)).tools as Array<{ name: string }>).map(
+            (o) => o.name,
+          );
+          return sse(texte("Bonjour."));
+        }) as typeof fetch,
+      });
+      await converserAvecRepli(
+        api,
+        dossier,
+        { ...QUESTION, toutesLesSocietes: toutes },
+        {
+          claude: pasDeClaude,
+          deepseek,
+          conseil: pasDeConseil,
+          repli: async () => {
+            throw new Error("pas de repli");
+          },
+          aujourdhui: () => "2026-11-08",
+        },
+        () => undefined,
+      );
+      return offerts;
+    };
+    const DEUX = {
+      ...DOSSIER,
+      societes: [
+        { id: TENANT, name: "SOTUMAG d'essai", currency: "TND" },
+        { id: "22222222-2222-4222-8222-222222222222", name: "Nordex", currency: "TND" },
+      ],
+    };
+    assert.ok((await outilsOfferts(DEUX, true)).includes("comparer_les_societes"));
+    // Elle regarde une société : l'outil n'existe pas pour le modèle.
+    assert.ok(!(await outilsOfferts(DEUX, false)).includes("comparer_les_societes"));
+    // Elle regarde « toutes », mais n'en a qu'une : rien à comparer.
+    assert.ok(
+      !(await outilsOfferts({ ...DOSSIER, societes: [DEUX.societes[0]!] }, true)).includes(
+        "comparer_les_societes",
+      ),
+    );
+    assert.ok(!(await outilsOfferts(DOSSIER, true)).includes("comparer_les_societes"));
+  });
+
   it("afficher_visuel deux fois pour la même source ne montre qu'un bloc", async () => {
     const { api } = avecCalendrier();
     const { fin } = await jouer(api, [

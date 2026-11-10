@@ -37,6 +37,10 @@ const PIECES = [
   piece("Client X", "99999.000", "2026-10-14", "facture_vente"),
 ];
 
+const SOC_A = "11111111-1111-4111-8111-111111111111";
+const SOC_B = "22222222-2222-4222-8222-222222222222";
+const SOC_C = "33333333-3333-4333-8333-333333333333";
+
 const TOTAUX = [
   { mois: "2026-10", classe: "7", debit: "0.000", credit: "186300.000" },
   { mois: "2026-10", classe: "6", debit: "150700.500", credit: "0.000" },
@@ -57,6 +61,18 @@ function contexte(
       if (nom === "referentiel.activePack") return { id: "pack-tn" } as T;
       if (nom === "referentiel.socleParams") return { moneyDecimals: 3 } as T;
       if (nom === "capture.listAvecLecture") return pieces as T;
+      if (nom === "capture.listAvecLectureDesSocietes")
+        return [
+          { tenantId: SOC_A, pieces },
+          {
+            tenantId: SOC_B,
+            pieces: [
+              piece("Nous", "5000.000", "2026-10-03", "facture_vente"),
+              piece("Nous", "2500.500", "2026-11-04", "facture_vente"),
+              piece("Un fournisseur", "300.000", "2026-11-05"),
+            ],
+          },
+        ] as T;
       if (nom === "referentiel.classesDeComptes")
         return [
           { prefix: "6", nature: "charge" },
@@ -92,13 +108,13 @@ describe("achats_par_fournisseur", () => {
     const r = await executerOutil(ctx, "achats_par_fournisseur", {});
     assert.ok(r.ok);
     if (!r.ok) return;
-    const texte = r.sources[0]!.texte;
-    assert.match(texte, /Total des achats comptés : 17209\.500 TND/);
-    assert.match(texte, /- 1\. Sismara Plasturgie SA : 8000\.000 TND \(2 pièces\)/);
-    assert.match(texte, /- 2\. Electro Import Tunisie : 4999\.000 TND \(1 pièce\)/);
+    const texte = r.sources[0]!.texte.replace(/\s/g, " ");
+    assert.match(texte, /Total des achats comptés : 17 209,500 TND/);
+    assert.match(texte, /- 1\. Sismara Plasturgie SA : 8 000,000 TND \(2 pièces\)/);
+    assert.match(texte, /- 2\. Electro Import Tunisie : 4 999,000 TND \(1 pièce\)/);
     assert.match(texte, /Achats écartés des sommes : 1 sans total lisible/);
     // La vente n'entre nulle part.
-    assert.ok(!texte.includes("99999"));
+    assert.ok(!texte.includes("99 999"));
     for (const a of appels)
       assert.ok(LECTURES_DES_OUTILS.has(a), `${a} n'est pas une lecture déclarée`);
   });
@@ -132,7 +148,7 @@ describe("achats_par_fournisseur", () => {
     const r = await executerOutil(ctx, "achats_par_fournisseur", { mois: "2026-11" });
     if (!r.ok) throw new Error("outil en échec");
     assert.match(r.sources[0]!.texte, /factures datées de 2026-11/);
-    assert.match(r.sources[0]!.texte, /Total des achats comptés : 127\.323 TND/);
+    assert.match(r.sources[0]!.texte, /Total des achats comptés : 127,323 TND/);
     const bloc = r.visuels![0]!.bloc;
     assert.equal(bloc.periode, "Novembre 2026");
   });
@@ -194,15 +210,15 @@ describe("evolution_mensuelle", () => {
     const { ctx, appels } = contexte();
     const r = await executerOutil(ctx, "evolution_mensuelle", { mois: 3 });
     if (!r.ok) throw new Error("outil en échec");
-    const texte = r.sources[0]!.texte;
-    assert.match(texte, /de 2026-09 à 2026-11/);
+    const texte = r.sources[0]!.texte.replace(/\s/g, " ");
+    assert.match(texte, /de Septembre 2026 à Novembre 2026 \(2026-09 à 2026-11\)/);
     assert.match(texte, /pas un chiffre d'affaires comptable/);
     assert.match(texte, /- 2026-09 : ventes aucune pièce lue ; achats aucune pièce lue/);
     assert.match(
       texte,
-      /- 2026-10 : ventes 99999\.000 TND \(1 pièce\) ; achats 17082\.177 TND \(3 pièces\)/,
+      /- 2026-10 : ventes 99 999,000 TND \(1 pièce\) ; achats 17 082,177 TND \(3 pièces\)/,
     );
-    assert.match(texte, /- 2026-11 : ventes aucune pièce lue ; achats 127\.323 TND \(1 pièce\)/);
+    assert.match(texte, /- 2026-11 : ventes aucune pièce lue ; achats 127,323 TND \(1 pièce\)/);
     assert.match(texte, /Factures écartées des sommes : 1 sans total lisible/);
     for (const a of appels)
       assert.ok(LECTURES_DES_OUTILS.has(a), `${a} n'est pas une lecture déclarée`);
@@ -264,11 +280,11 @@ describe("resultat_comptabilise", () => {
     const { ctx, appels } = contexte();
     const r = await executerOutil(ctx, "resultat_comptabilise", { mois: 2 });
     if (!r.ok) throw new Error("outil en échec");
-    const texte = r.sources[0]!.texte;
-    assert.match(texte, /de 2026-10 à 2026-11/);
-    assert.match(texte, /Produits : 186300\.000 TND/);
-    assert.match(texte, /Charges : 154460\.000 TND/);
-    assert.match(texte, /Résultat : 31840\.000 TND/);
+    const texte = r.sources[0]!.texte.replace(/\s/g, " ");
+    assert.match(texte, /de Octobre 2026 à Novembre 2026 \(2026-10 à 2026-11\)/);
+    assert.match(texte, /Produits : 186 300,000 TND/);
+    assert.match(texte, /Charges : 154 460,000 TND/);
+    assert.match(texte, /Résultat : 31 840,000 TND/);
     assert.match(texte, /pas encore inscrites n'y sont pas/);
     assert.ok(appels.includes("office.totauxParClasse"));
     for (const a of appels)
@@ -317,7 +333,7 @@ describe("resultat_comptabilise", () => {
         ["negatif", 0, 0.75],
       ],
     );
-    assert.match(r.sources[0]!.texte, /Résultat : -300\.000 TND/);
+    assert.match(r.sources[0]!.texte, /Résultat : -300,000 TND/);
   });
 
   it("sans écriture comptabilisée : aucun montant, aucun visuel", async () => {
@@ -369,5 +385,108 @@ describe("ce qu'un bloc exporte", () => {
     const douze = await executerOutil(ctx, "evolution_mensuelle", { mois: 12 });
     if (!douze.ok) throw new Error("outil en échec");
     assert.equal((douze.visuels![0]!.bloc as { forme: string }).forme, "barres");
+  });
+});
+
+describe("comparer_les_societes", () => {
+  const avecSocietes = (societes: ContexteDesOutils["societes"]) => {
+    const c = contexte();
+    return { ...c, ctx: { ...c.ctx, ...(societes ? { societes } : {}) } };
+  };
+  const DEUX = [
+    { id: SOC_A, name: "SOTUMAG d'essai", currency: "TND" },
+    { id: SOC_B, name: "Nordex SARL", currency: "TND" },
+  ];
+
+  it("sans périmètre élargi, il ne regarde rien : le modèle ne peut pas l'ouvrir lui-même", async () => {
+    for (const societes of [undefined, [DEUX[0]!]]) {
+      const { ctx, appels } = avecSocietes(societes);
+      const r = await executerOutil(ctx, "comparer_les_societes", {
+        societes: [SOC_B],
+        tenantId: SOC_B,
+      });
+      assert.equal(r.ok, false);
+      assert.deepEqual(appels, []);
+    }
+  });
+
+  it("ne lit que les sociétés que le serveur a établies, et somme chacune par mois", async () => {
+    const { ctx, appels } = avecSocietes(DEUX);
+    const r = await executerOutil(ctx, "comparer_les_societes", { mois: 3 });
+    if (!r.ok) throw new Error("outil en échec");
+    const texte = r.sources[0]!.texte.replace(/\s/g, " ");
+    assert.match(texte, /Comparaison de 2 sociétés, de Septembre 2026 à Novembre 2026/);
+    assert.match(texte, /- SOTUMAG d'essai : ventes 99 999,000 TND, achats 17 209,500 TND/);
+    assert.match(texte, /- Nordex SARL : ventes 7 500,500 TND, achats 300,000 TND/);
+    assert.match(texte, /pas un chiffre d'affaires comptable/);
+    for (const a of appels)
+      assert.ok(LECTURES_DES_OUTILS.has(a), `${a} n'est pas une lecture déclarée`);
+  });
+
+  it("compose une carte : une ligne par société, une case par mois, teintée par rapport à la plus forte", async () => {
+    const { ctx } = avecSocietes(DEUX);
+    const r = await executerOutil(ctx, "comparer_les_societes", { mois: 3 });
+    if (!r.ok) throw new Error("outil en échec");
+    const bloc = r.visuels![0]!.bloc;
+    if (bloc.type !== "carte") throw new Error("type");
+    assert.equal(bloc.colonnes.length, 3);
+    assert.equal(bloc.perimetre, "2 sociétés");
+    assert.deepEqual(
+      bloc.lignes.map((l) => [
+        l.libelle,
+        l.cellules.map((c) => [c.valeur?.replace(/\s/g, " ") ?? null, c.part]),
+        l.total.replace(/\s/g, " "),
+      ]),
+      [
+        [
+          "SOTUMAG d'essai",
+          [
+            [null, 0],
+            ["99 999,000", 1],
+            [null, 0],
+          ],
+          "99 999,000",
+        ],
+        [
+          "Nordex SARL",
+          [
+            [null, 0],
+            ["5 000,000", 0.05],
+            ["2 500,500", 0.025],
+          ],
+          "7 500,500",
+        ],
+      ],
+    );
+    assert.deepEqual(bloc.feuille!.entete, [
+      "Société",
+      "2026-09",
+      "2026-10",
+      "2026-11",
+      "Total (TND)",
+    ]);
+    assert.deepEqual(bloc.feuille!.lignes[1], [
+      { texte: "Nordex SARL" },
+      { texte: "" },
+      { montant: "5000.000" },
+      { montant: "2500.500" },
+      { montant: "7500.500" },
+    ]);
+  });
+
+  it("une société dans une autre devise reste hors de la carte, et c'est dit", async () => {
+    const { ctx } = avecSocietes([...DEUX, { id: SOC_C, name: "Dakar SAS", currency: "XOF" }]);
+    const r = await executerOutil(ctx, "comparer_les_societes", {});
+    if (!r.ok) throw new Error("outil en échec");
+    assert.match(
+      r.sources[0]!.texte,
+      /1 société dans une autre devise que TND : hors de cette comparaison/,
+    );
+    const bloc = r.visuels![0]!.bloc;
+    if (bloc.type !== "carte") throw new Error("type");
+    assert.deepEqual(
+      bloc.lignes.map((l) => l.libelle),
+      ["SOTUMAG d'essai", "Nordex SARL"],
+    );
   });
 });

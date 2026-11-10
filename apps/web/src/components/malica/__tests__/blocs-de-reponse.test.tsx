@@ -360,3 +360,59 @@ describe("sortir un bloc de l'écran", () => {
     expect(api.enregistrerUnFichier).not.toHaveBeenCalled();
   });
 });
+
+describe("la carte de chaleur", () => {
+  const SOCIETES: BlocDeReponse = {
+    type: "carte",
+    titre: "Ventes par société et par mois",
+    periode: "Septembre 2026 – Novembre 2026",
+    perimetre: "2 sociétés",
+    source: "Totaux TTC des factures de vente lues",
+    unite: "TND",
+    colonnes: ["sept. 26", "oct. 26", "nov. 26"],
+    lignes: [
+      {
+        libelle: "SOTUMAG",
+        cellules: [
+          { valeur: null, part: 0 },
+          { valeur: "99 999,000", part: 1 },
+          { valeur: null, part: 0 },
+        ],
+        total: "99 999,000",
+      },
+      {
+        libelle: "Nordex SARL",
+        cellules: [
+          { valeur: null, part: 0 },
+          { valeur: "5 000,000", part: 0.05 },
+          { valeur: "2 500,500", part: 0.025 },
+        ],
+        total: "7 500,500",
+      },
+    ],
+  };
+
+  it("écrit chaque valeur dans sa case, teinte par la part du serveur, et laisse vide une case sans valeur", () => {
+    rendre([SOCIETES]);
+    const bloc = document.querySelector('[data-bloc="carte"]') as HTMLElement;
+    const lignes = within(bloc).getAllByRole("row").slice(1);
+    expect(lignes.map((l) => l.textContent)).toEqual([
+      "SOTUMAG—99 999,000—99 999,000",
+      "Nordex SARL—5 000,0002 500,5007 500,500",
+    ]);
+    const cases = (i: number) =>
+      [...lignes[i]!.querySelectorAll<HTMLElement>("td")]
+        .slice(0, 3)
+        .map((c) => c.style.background);
+    // La plus forte case est la plus pleine ; une case vide n'a pas de fond.
+    expect(cases(0)).toEqual([
+      "transparent",
+      "color-mix(in srgb, var(--signal-ok) 50%, transparent)",
+      "transparent",
+    ]);
+    expect(cases(1)[1]).toBe("color-mix(in srgb, var(--signal-ok) 10%, transparent)");
+    expect(
+      within(bloc).getByText("Totaux TTC des factures de vente lues · 2 sociétés"),
+    ).toBeTruthy();
+  });
+});

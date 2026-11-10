@@ -71,7 +71,15 @@ const ACTIONS: Record<PropositionDAction["action"], MessageKey> = {
  * Le fil de conversation : les tours, l'envoi en flux, la reprise d'un fil.
  * Le fil voyage par son identifiant, jamais par son contenu.
  */
-export function useConversationMalica(tenantId: string | null | undefined) {
+export function useConversationMalica(
+  tenantId: string | null | undefined,
+  /**
+   * La personne regarde « Toutes les sociétés » (le choix de l'en-tête) : la
+   * question part avec ce périmètre, et le serveur décide de quelles sociétés
+   * il s'agit. Lu au moment de l'envoi.
+   */
+  toutesLesSocietes = false,
+) {
   const { locale } = useI18n();
   const [tours, setTours] = useState<TourDeMalica[]>([]);
   const [filId, setFilId] = useState<string | null>(null);
@@ -147,7 +155,14 @@ export function useConversationMalica(tenantId: string | null | undefined) {
       };
       try {
         await office().malica.converser(
-          { tenantId, question: q, locale, conversationId: filId, pieceIds },
+          {
+            tenantId,
+            question: q,
+            locale,
+            conversationId: filId,
+            pieceIds,
+            ...(toutesLesSocietes ? { toutesLesSocietes: true } : {}),
+          },
           surEvenement,
           controleur.signal,
         );
@@ -162,7 +177,7 @@ export function useConversationMalica(tenantId: string | null | undefined) {
       }
       return { conversationId: nouveauFil, reponse };
     },
-    [tenantId, enCours, locale, filId],
+    [tenantId, enCours, locale, filId, toutesLesSocietes],
   );
 
   /**

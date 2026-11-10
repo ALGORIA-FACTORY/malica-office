@@ -204,6 +204,27 @@ describe("verif #298 — tools under RLS, route, browser payload", { skip: !BASE
     }
   });
 
+  it("« all companies » is the caller's own companies, and even a forged perimeter reads nothing of B", async () => {
+    // What the server establishes: only organisations amel belongs to.
+    const d = await verifierLeDossier(appelDe(s.gens.amel.id), s.pme);
+    assert.ok(d.societes && d.societes.length >= 1);
+    assert.ok(!d.societes.some((x) => x.id === orgB), "B entered amel's perimeter");
+    assert.equal(d.societes[0]!.id, s.pme);
+    // And if the perimeter were forged anyway, the base (RLS) still returns nothing of B.
+    const c = {
+      ...ctx(appelDe(s.gens.amel.id), s.pme),
+      societes: [
+        { id: s.pme, name: "A", currency: "TND" },
+        { id: orgB, name: "B", currency: "TND" },
+      ],
+    };
+    const r = await executerOutil(c, "comparer_les_societes", { mois: 12 });
+    const tout = JSON.stringify(r);
+    LOG("comparer_les_societes with a forged perimeter", { ok: r.ok, extrait: tout.slice(0, 300) });
+    assert.ok(!tout.includes(SECRET_B), "the comparison leaked B's amount");
+    assert.ok(!tout.includes("SECRET B"), "the comparison leaked B's names");
+  });
+
   it("the route refuses a tenant the caller does not belong to (the model cannot pick it either)", async () => {
     await assert.rejects(verifierLeDossier(appelDe(s.gens.amel.id), orgB));
     await assert.rejects(verifierLeDossier(appelDe(userB), s.pme));

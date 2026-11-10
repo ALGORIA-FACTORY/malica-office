@@ -459,3 +459,60 @@ export function blocDuResultat(
     },
   };
 }
+
+/** Les ventes d'une société sur la fenêtre, telles que le moteur des mois les rend. */
+export interface VentesDUneSociete {
+  nom: string;
+  /** Une valeur par mois de la fenêtre ; `null` : aucune vente lue ce mois-là. */
+  ventes: Array<string | null>;
+  total: string;
+}
+
+/**
+ * Les ventes de plusieurs sociétés, mois par mois, en carte de chaleur. La
+ * teinte d'une case est rapportée à la plus forte case de TOUTE la carte : on
+ * compare les sociétés entre elles, pas chacune à elle-même.
+ */
+export function blocDesSocietes(
+  societes: readonly VentesDUneSociete[],
+  mois: readonly string[],
+  devise: string,
+  dec: number,
+  langue: string,
+): BlocDeReponse {
+  const max = Math.max(0, ...societes.flatMap((s) => s.ventes.map((v) => Number(v ?? 0))));
+  const premier = mois[0];
+  const dernier = mois.at(-1);
+  return {
+    type: "carte",
+    titre: texte(langue, "pme.bloc.societes.titre"),
+    periode:
+      premier && dernier
+        ? `${moisEnClair(premier, langue)} – ${moisEnClair(dernier, langue)}`
+        : null,
+    perimetre: texte(langue, "pme.bloc.societes.perimetre", { count: societes.length }),
+    source: texte(langue, "pme.bloc.societes.source"),
+    unite: devise,
+    colonnes: mois.map((m) => moisCourt(m, langue)),
+    lignes: societes.map((s) => ({
+      libelle: s.nom,
+      cellules: s.ventes.map((v) => ({
+        valeur: v === null ? null : montant(v, dec, langue),
+        part: v === null || max === 0 ? 0 : Math.round((Number(v) / max) * 1000) / 1000,
+      })),
+      total: montant(s.total, dec, langue),
+    })),
+    feuille: {
+      entete: [
+        texte(langue, "pme.bloc.societes.societe"),
+        ...mois,
+        `${texte(langue, "pme.bloc.societes.total")} (${devise})`,
+      ],
+      lignes: societes.map((s) => [
+        { texte: s.nom },
+        ...s.ventes.map((v) => (v === null ? { texte: "" } : { montant: v })),
+        { montant: s.total },
+      ]),
+    },
+  };
+}

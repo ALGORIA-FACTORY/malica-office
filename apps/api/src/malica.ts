@@ -398,6 +398,8 @@ const QuestionALAssistant = z.object({
   conversationId: Uuid.nullish(),
   /** Les pièces jointes, déjà déposées et confiées à la lecture Malica (R2). */
   pieceIds: z.array(Uuid).max(5).default([]),
+  /** La personne regarde « Toutes les sociétés » : le serveur décide lesquelles. */
+  toutesLesSocietes: z.boolean().default(false),
 });
 
 /**
@@ -439,6 +441,7 @@ malica.post("/assistant", (req, res, next) => {
           locale: q.locale,
           conversationId: q.conversationId ?? null,
           pieceIds: q.pieceIds,
+          toutesLesSocietes: q.toutesLesSocietes,
         },
         {
           claude: cleClaude ? clientClaudeEnFlux({ apiKey: cleClaude }) : null,

@@ -99,4 +99,28 @@ describe("un bloc, mis à plat pour l'impression", () => {
       totaux: [["Résultat", "6,000 TND"]],
     });
   });
+
+  it("la carte : une ligne par société, un tiret pour un mois sans valeur, le total en dernière colonne", () => {
+    const b: BlocDeReponse = {
+      ...tete,
+      type: "carte",
+      unite: "TND",
+      colonnes: ["oct. 26", "nov. 26"],
+      lignes: [
+        {
+          libelle: "SOTUMAG",
+          cellules: [
+            { valeur: "9,000", part: 1 },
+            { valeur: null, part: 0 },
+          ],
+          total: "9,000",
+        },
+      ],
+    };
+    expect(blocImprimable(b)).toMatchObject({
+      entete: ["", "oct. 26", "nov. 26", "Σ (TND)"],
+      lignes: [["SOTUMAG", "9,000", "—", "9,000"]],
+      numerique: [false, true, true, true],
+    });
+  });
 });

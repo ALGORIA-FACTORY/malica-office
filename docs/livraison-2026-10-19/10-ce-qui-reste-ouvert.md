@@ -756,3 +756,22 @@ DeepSeek traite désormais les mêmes données que Claude (mêmes outils, sous l
 peut pas répondre. Point juridique ouvert : l'information des clients sur les prestataires, et la possibilité de
 désactiver DeepSeek par société ou par comptabilité (non construite).
 
+### M-6 — Le brouillon à valider (relance, demande de pièce, message) n'est pas construit
+
+Les autres formes du volet visuel sont faites (chiffre clé, tableau, barres, courbe, cascade, carte de chaleur, export).
+Le brouillon ne l'est pas, pour deux raisons qui ne sont pas techniques. (1) Un envoi vers l'extérieur — une relance à
+un fournisseur — est un engagement externe : il lui faut un chemin d'envoi décidé (Brevo, expéditeur, mentions) et
+validé par le dirigeant. (2) Vers la comptabilité, le seul chemin qui existe est la file de relecture
+(`conseil.creer`) ; un brouillon rangé avec la réponse se remontrerait à chaque réouverture du fil avec ses boutons, et
+pourrait être validé deux fois, faute d'un état « déjà envoyé » rangé en base. **À trancher :** par quoi commencer
+(« demander l'avis de ma comptabilité » par la file existante, ou la relance par courriel), et où ranger l'état d'un
+brouillon validé.
+
+### M-7 — « Toutes les sociétés » dans la conversation : ce qui est fait, ce qui reste à trancher
+
+Choisi dans l'en-tête, « Toutes les sociétés » reste désormais sur la conversation et ouvre à Malica la comparaison des
+sociétés de la personne (celles dont elle est membre, établies par le serveur ; même devise que le dossier ouvert). Le
+budget et le débit restent comptés sur le dossier ouvert. **À trancher :** la règle « une question sur la licence du
+propriétaire principal » (non construite : il n'y a pas de notion de propriétaire principal dans le chat), et le sort
+des sociétés d'une autre devise (aujourd'hui dites et laissées hors de la carte).
+

@@ -189,6 +189,9 @@ function PmeLayout() {
     path.startsWith("/pme/dossier") ||
     path.startsWith("/pme/echeances") ||
     path.startsWith("/pme/comptabilite") ||
+    // Malica sait comparer les sociétés de la personne : « Toutes les sociétés »,
+    // choisi dans l'en-tête, reste sur la conversation et lui en ouvre le périmètre.
+    path.startsWith("/pme/malica") ||
     path.startsWith("/pme/societes");
   // L'accueil est celui d'UNE société : y revenir quitte la vue consolidée.
   useEffect(() => {

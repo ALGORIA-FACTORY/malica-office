@@ -473,6 +473,85 @@ function Cascade({ bloc }: { bloc: BlocCascade }) {
   );
 }
 
+type BlocCarte = Extract<BlocDeReponse, { type: "carte" }>;
+
+/**
+ * Une carte de chaleur : une ligne par société, une case par mois. La teinte
+ * d'une case est la `part` que le serveur a calculée — plus elle est forte,
+ * plus la case est pleine ; une case sans valeur reste vide, avec un tiret.
+ * La valeur est écrite dans chaque case : la couleur aide à comparer, elle ne
+ * porte jamais seule l'information. Au-delà de la largeur, la carte défile dans
+ * son cadre, la colonne des sociétés restant en place.
+ */
+function Carte({ bloc }: { bloc: BlocCarte }) {
+  const { t } = useI18n();
+  return (
+    <div className="overflow-x-auto" tabIndex={0}>
+      <table className="w-full border-separate border-spacing-[3px] text-[0.6875rem]">
+        <thead>
+          <tr>
+            <th
+              scope="col"
+              className="sticky start-0 z-[1] bg-background text-start font-normal text-muted-foreground"
+            >
+              {t("pme.bloc.societes.societe")}
+            </th>
+            {bloc.colonnes.map((c) => (
+              <th
+                key={c}
+                scope="col"
+                className="whitespace-nowrap px-1 text-center font-normal text-muted-foreground"
+              >
+                {c}
+              </th>
+            ))}
+            <th
+              scope="col"
+              className="whitespace-nowrap ps-2 text-end font-semibold text-muted-foreground"
+            >
+              {t("pme.bloc.societes.total")}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {bloc.lignes.map((l) => (
+            <tr key={l.libelle}>
+              <th
+                scope="row"
+                className="sticky start-0 z-[1] max-w-[8.5rem] bg-background pe-2 text-start text-[0.75rem] font-semibold leading-tight"
+              >
+                {l.libelle}
+              </th>
+              {l.cellules.map((c, i) => (
+                <td
+                  key={i}
+                  className="min-w-[4.25rem] rounded-[4px] px-1.5 py-2 text-center font-mono tabular-nums"
+                  style={{
+                    // La teinte va du fond à l'accent du « bon signal » ; le texte reste à l'encre.
+                    background:
+                      c.valeur == null
+                        ? "transparent"
+                        : `color-mix(in srgb, var(--signal-ok) ${Math.round(8 + c.part * 42)}%, transparent)`,
+                  }}
+                >
+                  {c.valeur == null ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : (
+                    <bdi className="whitespace-nowrap">{c.valeur}</bdi>
+                  )}
+                </td>
+              ))}
+              <td className="whitespace-nowrap ps-2 text-end font-mono font-semibold tabular-nums">
+                <bdi>{l.total}</bdi>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /**
  * Sortir un bloc de l'écran : en classeur (les montants y sont des nombres, le
  * serveur l'écrit) ou en PDF (ce que l'écran montre, dessiné ici). Le fichier
@@ -566,6 +645,8 @@ export function BlocsDeReponse({
             <Tableau bloc={bloc} espace={espace} />
           ) : bloc.type === "graphique" ? (
             <Graphique bloc={bloc} />
+          ) : bloc.type === "carte" ? (
+            <Carte bloc={bloc} />
           ) : (
             <Cascade bloc={bloc} />
           )}

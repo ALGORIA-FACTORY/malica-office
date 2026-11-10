@@ -47,6 +47,7 @@ import {
   blocDesAchats,
   blocDesEcheances,
   blocDesMois,
+  blocDesSocietes,
   blocDuResultat,
   jourEnClair,
   moisEnClair,
@@ -284,6 +285,25 @@ export const AFFICHER_VISUEL: DefinitionDOutil = {
   },
 };
 
+/**
+ * L'outil qui COMPARE les sociétés de la personne. Il n'est offert au modèle
+ * que si elle regarde « Toutes les sociétés » et en a plusieurs (`agent.ts`) ;
+ * il ne prend AUCUNE société en paramètre : le serveur les a déjà établies.
+ */
+export const COMPARER_LES_SOCIETES: DefinitionDOutil = {
+  name: "comparer_les_societes",
+  description:
+    "Compare les sociétés de la personne : pour chacune, la somme TTC de ses factures de vente lues, mois par " +
+    "mois, et ses achats sur la période. À utiliser pour « où en sont toutes mes sociétés », « laquelle vend le " +
+    "plus », « compare mes sociétés ». Ce sont des totaux de pièces lues, pas un chiffre d'affaires comptable. " +
+    "`mois` : combien de mois (3 à 12).",
+  input_schema: {
+    type: "object",
+    properties: { mois: { type: "integer", minimum: 3, maximum: 12 } },
+    additionalProperties: false,
+  },
+};
+
 /** Les noms, pour le journal et l'épreuve. */
 const NOMS_DES_OUTILS = DEFINITIONS.map((d) => d.name);
 
@@ -299,6 +319,7 @@ const ETAPES: Readonly<Record<string, MessageKey>> = {
   achats_par_fournisseur: "pme.assistant.outil.achats_par_fournisseur",
   evolution_mensuelle: "pme.assistant.outil.evolution_mensuelle",
   resultat_comptabilise: "pme.assistant.outil.resultat_comptabilise",
+  comparer_les_societes: "pme.assistant.outil.comparer_les_societes",
   echeances_fiscales: "pme.assistant.outil.echeances_fiscales",
   ecritures_proposees: "pme.assistant.outil.ecritures_proposees",
   tiers_chercher: "pme.assistant.outil.tiers_chercher",
@@ -372,6 +393,7 @@ export function lireLaConclusion(entree: unknown): ConclusionDeLaReponse | null 
  */
 export const LECTURES_DES_OUTILS: ReadonlySet<string> = new Set([
   "capture.listAvecLecture",
+  "capture.listAvecLectureDesSocietes",
   "capture.dossier",
   "capture.contexteAssistant",
   "office.extraitsTransmis",
@@ -395,6 +417,12 @@ export interface ContexteDesOutils {
   tenantId: string;
   locale: string;
   organisation: { jurisdiction: string; currency: string; name?: string };
+  /**
+   * Les sociétés de la personne, quand elle regarde « Toutes les sociétés » :
+   * établies par le SERVEUR (celles dont elle est membre), jamais par le
+   * modèle ni par l'écran. Absent ou une seule : aucune comparaison.
+   */
+  societes?: ReadonlyArray<{ id: string; name: string; currency: string }>;
   /** Aujourd'hui à Tunis, AAAA-MM-JJ. */
   aujourdhui: string;
   conseil: (question: string, jour: string | null) => Promise<ResultatDuConseilCite>;
@@ -803,13 +831,16 @@ async function achatsDuDossier(ctx: ContexteDesOutils, brut: unknown): Promise<R
     e.autreDevise > 0 ? `${e.autreDevise} dans une autre devise que ${dev}` : null,
     e.sansEmetteur > 0 ? `${e.sansEmetteur} sans émetteur lu` : null,
   ].filter(Boolean);
+  // Les montants s'écrivent ici comme la personne les lit (séparateurs, décimales de la
+  // devise) : les moteurs les reprennent alors dans la même écriture que le bloc.
+  const ecrit = (v: string) => `${montant(v, params.moneyDecimals, ctx.locale)} ${dev}`;
   const texte = [
     `Achats par fournisseur${mois.data ? `, factures datées de ${mois.data}` : ", toutes dates"}, sommés par le moteur de Malica, en ${dev} TTC.`,
     `Factures d'achat comptées : ${achats.pieces}. Fournisseurs : ${achats.lignes.length}.`,
-    `Total des achats comptés : ${achats.total} ${dev}.`,
+    `Total des achats comptés : ${ecrit(achats.total)}.`,
     ...achats.lignes.map(
       (l, i) =>
-        `- ${i + 1}. ${l.fournisseur} : ${l.total} ${dev} (${l.pieces} pièce${l.pieces > 1 ? "s" : ""})`,
+        `- ${i + 1}. ${l.fournisseur} : ${ecrit(l.total)} (${l.pieces} pièce${l.pieces > 1 ? "s" : ""})`,
     ),
     ecartees.length > 0
       ? `Achats écartés des sommes : ${ecartees.join(" ; ")}. Ces pièces ne sont pas dans le total.`
@@ -880,15 +911,20 @@ async function evolutionMensuelle(ctx: ContexteDesOutils, brut: unknown): Promis
     e.sansDate > 0 ? `${e.sansDate} sans date lue (hors de tout mois)` : null,
   ].filter(Boolean);
   const comptees = parMois.mois.reduce((n, m) => n + m.piecesAchats + m.piecesVentes, 0);
+  // Les montants s'écrivent ici comme la personne les lit (séparateurs, décimales de la
+  // devise) : les moteurs les reprennent alors dans la même écriture que le bloc.
+  const ecrit = (v: string) => `${montant(v, params.moneyDecimals, ctx.locale)} ${dev}`;
   const texte = [
-    `Achats et ventes par mois, de ${parMois.mois[0]!.mois} à ${parMois.mois.at(-1)!.mois}, sommés par le moteur de Malica, en ${dev} TTC.`,
+    // La période en toutes lettres : écrite « 2025-12 », un moteur la redisait de travers
+    // (essai réel du 10 novembre 2026 : « de février à novembre » pour décembre à novembre).
+    `Achats et ventes par mois, de ${moisEnClair(parMois.mois[0]!.mois, ctx.locale)} à ${moisEnClair(parMois.mois.at(-1)!.mois, ctx.locale)} (${parMois.mois[0]!.mois} à ${parMois.mois.at(-1)!.mois}), sommés par le moteur de Malica, en ${dev} TTC.`,
     "Ce sont les totaux des factures lues, pas un chiffre d'affaires comptable.",
     ...parMois.mois.map(
       (m) =>
-        `- ${m.mois} : ventes ${m.ventes === null ? "aucune pièce lue" : `${m.ventes} ${dev} (${m.piecesVentes} pièce${m.piecesVentes > 1 ? "s" : ""})`} ; ` +
-        `achats ${m.achats === null ? "aucune pièce lue" : `${m.achats} ${dev} (${m.piecesAchats} pièce${m.piecesAchats > 1 ? "s" : ""})`}`,
+        `- ${m.mois} : ventes ${m.ventes === null ? "aucune pièce lue" : `${ecrit(m.ventes)} (${m.piecesVentes} pièce${m.piecesVentes > 1 ? "s" : ""})`} ; ` +
+        `achats ${m.achats === null ? "aucune pièce lue" : `${ecrit(m.achats)} (${m.piecesAchats} pièce${m.piecesAchats > 1 ? "s" : ""})`}`,
     ),
-    `Total des ventes sur la période : ${parMois.totalVentes} ${dev}. Total des achats : ${parMois.totalAchats} ${dev}.`,
+    `Total des ventes sur la période : ${ecrit(parMois.totalVentes)}. Total des achats : ${ecrit(parMois.totalAchats)}.`,
     ecartees.length > 0
       ? `Factures écartées des sommes : ${ecartees.join(" ; ")}.`
       : "Aucune facture écartée des sommes.",
@@ -908,6 +944,101 @@ async function evolutionMensuelle(ctx: ContexteDesOutils, brut: unknown): Promis
                 parMois,
                 params.moneyDecimals,
                 ctx.organisation.name ?? null,
+                ctx.locale,
+              ),
+            },
+          ],
+        }
+      : {}),
+  };
+}
+
+async function comparerLesSocietes(ctx: ContexteDesOutils, brut: unknown): Promise<ResultatDOutil> {
+  const societes = ctx.societes ?? [];
+  // Le périmètre vient du serveur : sans lui, l'outil ne regarde rien d'autre que le dossier ouvert.
+  if (societes.length < 2)
+    return erreur(
+      "La personne regarde une seule société : il n'y a rien à comparer. Réponds sur la société ouverte.",
+    );
+  const nb = z
+    .number()
+    .int()
+    .min(3)
+    .max(12)
+    .optional()
+    .safeParse((brut as { mois?: unknown } | null)?.mois);
+  if (!nb.success) return erreur("mois doit être un nombre entier de 3 à 12.");
+  const pack = await ctx.api.rpc<{ id: string } | null>("referentiel", "activePack", [
+    ctx.organisation.jurisdiction,
+  ]);
+  if (!pack)
+    return erreur(
+      "Le référentiel de la juridiction du dossier est introuvable : les pièces ne se somment pas.",
+    );
+  const dev = ctx.organisation.currency;
+  // Une seule devise par carte : aucun cours n'est appliqué ici. Les autres sont dites.
+  const memeDevise = societes.filter((s) => s.currency === dev);
+  const autres = societes.length - memeDevise.length;
+  const [lots, params] = await Promise.all([
+    // La base filtre encore (RLS) : une société où la personne n'est pas membre revient vide.
+    ctx.api.rpc<Array<{ tenantId: string; pieces: PieceDeLaListe[] }>>(
+      "capture",
+      "listAvecLectureDesSocietes",
+      [memeDevise.map((s) => s.id)],
+    ),
+    ctx.api.rpc<{ moneyDecimals: number }>("referentiel", "socleParams", [pack.id]),
+  ]);
+  const jusqua = ctx.aujourdhui.slice(0, 7);
+  const parSociete = memeDevise.map((s) => {
+    const pieces = lots.find((l) => l.tenantId.toLowerCase() === s.id.toLowerCase())?.pieces ?? [];
+    return {
+      nom: s.name,
+      parMois: piecesParMois(pieces, dev, params.moneyDecimals, jusqua, nb.data ?? MOIS_PAR_DEFAUT),
+    };
+  });
+  const mois = parSociete[0]!.parMois.mois.map((m) => m.mois);
+  const ecrit = (v: string) => `${montant(v, params.moneyDecimals, ctx.locale)} ${dev}`;
+  const cle = `malica:societes:${mois[0]}:${mois.at(-1)}`;
+  const comptees = parSociete.reduce(
+    (n, s) => n + s.parMois.mois.reduce((k, m) => k + m.piecesVentes + m.piecesAchats, 0),
+    0,
+  );
+  const texte = [
+    `Comparaison de ${parSociete.length} sociétés, de ${moisEnClair(mois[0]!, ctx.locale)} à ${moisEnClair(mois.at(-1)!, ctx.locale)} (${mois[0]} à ${mois.at(-1)}), sommée par le moteur de Malica, en ${dev} TTC.`,
+    "Ce sont les totaux des factures lues de chaque société, pas un chiffre d'affaires comptable.",
+    ...parSociete.map(
+      (s) =>
+        `- ${s.nom} : ventes ${ecrit(s.parMois.totalVentes)}, achats ${ecrit(s.parMois.totalAchats)} sur la période. ` +
+        `Ventes par mois : ${s.parMois.mois
+          .map((m) => `${m.mois} ${m.ventes === null ? "aucune pièce lue" : ecrit(m.ventes)}`)
+          .join(" ; ")}.`,
+    ),
+    ...(autres > 0
+      ? [
+          `${autres} société${autres > 1 ? "s" : ""} dans une autre devise que ${dev} : hors de cette comparaison.`,
+        ]
+      : []),
+    ...(comptees === 0
+      ? ["Aucune facture lue n'entre dans cette période : ne donne aucun montant."]
+      : []),
+  ].join("\n");
+  return {
+    ok: true,
+    sources: [{ cle, genre: "liste", titre: "Comparaison des sociétés", objetId: null, texte }],
+    ...(comptees > 0
+      ? {
+          visuels: [
+            {
+              cle,
+              bloc: blocDesSocietes(
+                parSociete.map((s) => ({
+                  nom: s.nom,
+                  ventes: s.parMois.mois.map((m) => m.ventes),
+                  total: s.parMois.totalVentes,
+                })),
+                mois,
+                dev,
+                params.moneyDecimals,
                 ctx.locale,
               ),
             },
@@ -993,11 +1124,14 @@ async function resultatComptabilise(
     coa: [],
     classes,
   });
+  // Les montants s'écrivent ici comme la personne les lit (séparateurs, décimales de la
+  // devise) : les moteurs les reprennent alors dans la même écriture que le bloc.
+  const ecrit = (v: string) => `${montant(v, params.moneyDecimals, ctx.locale)} ${dev}`;
   const texte = [
-    `Résultat comptabilisé de ${premier} à ${dernier}, calculé par le moteur de Malica sur les écritures inscrites, en ${dev}.`,
-    `Produits : ${pnl.produits} ${dev}.`,
-    `Charges : ${pnl.charges} ${dev}.`,
-    `Résultat : ${pnl.resultat} ${dev} (positif : bénéfice ; négatif : perte).`,
+    `Résultat comptabilisé de ${moisEnClair(premier, ctx.locale)} à ${moisEnClair(dernier, ctx.locale)} (${premier} à ${dernier}), calculé par le moteur de Malica sur les écritures inscrites, en ${dev}.`,
+    `Produits : ${ecrit(pnl.produits)}.`,
+    `Charges : ${ecrit(pnl.charges)}.`,
+    `Résultat : ${ecrit(pnl.resultat)} (positif : bénéfice ; négatif : perte).`,
     "Ce chiffre ne compte que ce qui est comptabilisé : des pièces lues mais pas encore inscrites n'y sont pas.",
   ].join("\n");
   return {
@@ -1324,6 +1458,7 @@ const EXECUTANTS: Record<
   achats_par_fournisseur: achatsDuDossier,
   evolution_mensuelle: evolutionMensuelle,
   resultat_comptabilise: resultatComptabilise,
+  comparer_les_societes: comparerLesSocietes,
   echeances_fiscales: echeancesFiscales,
   ecritures_proposees: ecrituresProposees,
   tiers_chercher: tiersChercher,

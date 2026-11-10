@@ -84,6 +84,7 @@ import {
 import { GardeDesChiffres, type SourceConnue } from "./garde.ts";
 import {
   AFFICHER_VISUEL,
+  COMPARER_LES_SOCIETES,
   CONCLURE_REPONSE,
   DEFINITIONS,
   etapeDeLOutil,
@@ -222,6 +223,8 @@ export interface QuestionPosee {
   locale: "fr" | "en" | "ar";
   conversationId: string | null;
   pieceIds: string[];
+  /** La personne regarde « Toutes les sociétés » : la comparaison lui est ouverte. */
+  toutesLesSocietes?: boolean;
 }
 
 /** Ce qui est vérifié AVANT d'ouvrir le flux : un refus part en 4xx, pas dans un flux. */
@@ -234,6 +237,8 @@ export interface DossierVerifie {
     currency: string;
     role: string;
   };
+  /** Les sociétés de la personne (même genre que le dossier), la société ouverte en tête. */
+  societes?: ReadonlyArray<{ id: string; name: string; currency: string }>;
 }
 
 function aujourdhuiATunis(maintenant: Date = new Date()): string {
@@ -257,7 +262,15 @@ export async function verifierLeDossier(api: AppelApi, tenantId: string): Promis
   // R4 : aucune juridiction par défaut.
   if (!organisation.jurisdiction) throw new Error("assistant.juridiction_absente");
   await api.rpc("conseil", "exigerBudget", [tenantId]);
-  return { organisation };
+  return {
+    organisation,
+    // Ses sociétés, telles que la base les lui reconnaît : c'est le seul périmètre
+    // que « Toutes les sociétés » peut ouvrir. La société ouverte vient en premier.
+    societes: organisations
+      .filter((o) => o.kind === organisation.kind)
+      .sort((a, b) => Number(b.id === tenantId) - Number(a.id === tenantId))
+      .map((o) => ({ id: o.id, name: o.name, currency: o.currency })),
+  };
 }
 
 const LANGUES: Record<string, string> = { fr: "français", en: "anglais", ar: "arabe" };
@@ -501,11 +514,21 @@ async function converser(
     aujourdhui,
     conseil: deps.conseil,
     idProposition: deps.idProposition ?? (() => crypto.randomUUID()),
+    // Le périmètre élargi : seulement si la personne le regarde, et sur SES sociétés.
+    ...(q.toutesLesSocietes && (dossier.societes?.length ?? 0) > 1
+      ? { societes: dossier.societes! }
+      : {}),
   };
 
   /* ------------------------------------------------------------ la requête */
   // L'outil final vient en dernier : c'est lui qui porte le point de cache.
-  const definitions = [...DEFINITIONS, AFFICHER_VISUEL, CONCLURE_REPONSE];
+  const definitions = [
+    ...DEFINITIONS,
+    // Offert seulement quand il y a de quoi comparer : le modèle ne le voit pas autrement.
+    ...(ctx.societes ? [COMPARER_LES_SOCIETES] : []),
+    AFFICHER_VISUEL,
+    CONCLURE_REPONSE,
+  ];
   const outils = definitions.map((d, i) =>
     i === definitions.length - 1 ? { ...d, cache_control: { type: "ephemeral" as const } } : d,
   );
