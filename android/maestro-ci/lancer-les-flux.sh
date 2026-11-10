@@ -7,6 +7,13 @@
 # revienne. L'émulateur qui disparaissait en plein flux (21 octobre 2026,
 # exécution 39565902966) emportait tous les flux suivants avec lui.
 #
+# Quand l'émulateur ne revient pas — son processus est mort (qemu en SIGSEGV,
+# exécution 42821890932, 10 novembre 2026) —, attendre ne sert à rien : la
+# boucle s'arrête, et écrit dans `maestro-emulateur-perdu.txt` les flux qui
+# n'ont pas rendu de verdict. android-e2e.yml relève alors l'émulateur UNE fois
+# et rappelle ce script, qui ne joue que ceux-là : les verdicts déjà rendus
+# (`maestro-reussis.txt`, `maestro-echecs.txt`) ne se rejouent pas.
+#
 #   bash android/maestro-ci/lancer-les-flux.sh
 #
 # Lit MALICA_EMAIL et MALICA_MOT_DE_PASSE dans l'environnement.
@@ -33,16 +40,36 @@ retrouver_appareil() {
   appareil_pret
 }
 
-echecs=()
+REUSSIS="maestro-reussis.txt"
+ECHECS="maestro-echecs.txt"
+PERDU="maestro-emulateur-perdu.txt"
+touch "$REUSSIS" "$ECHECS"
+rm -f "$PERDU"
+
+perdu=""
 for flux in android/maestro/*.yaml; do
   nom=$(basename "$flux" .yaml)
+  if grep -qxF "$nom" "$REUSSIS"; then
+    echo "${nom} : déjà réussi avant la relève de l'émulateur."
+    continue
+  fi
+  if grep -qxF "$nom" "$ECHECS"; then
+    echo "${nom} : déjà en échec avant la relève de l'émulateur ; il n'est pas rejoué."
+    continue
+  fi
+  # L'émulateur est perdu : ce flux n'a pas de verdict, il attend la relève.
+  if [ -n "$perdu" ]; then
+    echo "$nom" >> "$PERDU"
+    continue
+  fi
   for essai in 1 2; do
     echo "::group::${nom} (essai ${essai})"
     if ! retrouver_appareil; then
       echo "::endgroup::"
       echo "::error::${nom} : aucun émulateur joignable."
       free -m || true
-      echecs+=("${nom} (émulateur perdu)")
+      perdu="oui"
+      echo "$nom" >> "$PERDU"
       break
     fi
     adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
@@ -54,21 +81,35 @@ for flux in android/maestro/*.yaml; do
     echo "::endgroup::"
     if [ "$code" -eq 0 ]; then
       echo "${nom} : réussi."
+      echo "$nom" >> "$REUSSIS"
       break
     fi
-    if [ "$essai" -eq 1 ] && grep -Eq "$DECONNEXION" "$journal"; then
-      echo "::warning::${nom} : l'émulateur s'est déconnecté pendant le flux ; un seul rejeu."
-      free -m || true
-      continue
+    if grep -Eq "$DECONNEXION" "$journal"; then
+      if [ "$essai" -eq 1 ]; then
+        echo "::warning::${nom} : l'émulateur s'est déconnecté pendant le flux ; un seul rejeu."
+        free -m || true
+        continue
+      fi
+      # Deux déconnexions de suite : ce n'est pas un verdict sur le flux.
+      echo "::error::${nom} : l'émulateur s'est déconnecté deux fois."
+      perdu="oui"
+      echo "$nom" >> "$PERDU"
+      break
     fi
     echo "::error::${nom} : échec (code ${code})."
-    echecs+=("$nom")
+    echo "$nom" >> "$ECHECS"
     break
   done
 done
 
-if [ "${#echecs[@]}" -gt 0 ]; then
-  echo "Flux en échec : ${echecs[*]}"
-  exit 1
+statut=0
+if [ -s "$ECHECS" ]; then
+  echo "Flux en échec : $(tr '\n' ' ' < "$ECHECS")"
+  statut=1
 fi
-echo "Tous les flux sont passés."
+if [ -n "$perdu" ]; then
+  echo "Émulateur perdu ; flux sans verdict : $(tr '\n' ' ' < "$PERDU")"
+  statut=1
+fi
+[ "$statut" -eq 0 ] && echo "Tous les flux sont passés."
+exit "$statut"
