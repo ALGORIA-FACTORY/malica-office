@@ -238,61 +238,40 @@ jobs:
           (vmstat -t 10 > vmstat.log 2>&1 &)
           (while true; do date -u +%T; ps -eo pid,rss,comm --sort=-rss | head -8; sleep 10; done > processus.log 2>&1 &)
 
+      # qemu tombe parfois de lui-même en plein flux (SIGSEGV dans
+      # qemu-system-x86_64-headless, cœur vidé — exécution 42821890932, 10
+      # novembre 2026, mémoire libre à 4,6 Go : ni le noyau ni la coque n'y
+      # sont pour rien). Le rejeu de lancer-les-flux.sh ne peut rien quand le
+      # processus de l'émulateur n'existe plus : tous les flux suivants
+      # tombaient avec lui. L'émulateur est donc RELEVÉ une fois, et seuls les
+      # flux qui n'ont pas encore rendu de verdict sont joués. Un flux tombé
+      # sur une assertion n'est jamais rejoué, ni ici ni là ; une seconde chute
+      # de l'émulateur échoue pour de bon.
       - name: Lancer l'émulateur et les flux
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          # Image AOSP, sans services Google. La machine de GitHub (dépôt privé)
-          # n'a que 2 processeurs et 8 Go : avec l'image google_apis, les
-          # services Google saturaient l'émulateur (« bg anr » de
-          # com.google.android.gms.persistent), Android tuait l'application
-          # qui dépendait de leur fournisseur de polices, puis qemu lui-même
-          # tombait (cœur vidé, exécution 39583495404). ML Kit n'y servait à
-          # rien : le greffon refuse le scanner sur tout émulateur.
-          target: default
-          arch: x86_64
-          profile: pixel_6
-          # 3 Go plutôt que 4 : la machine partage sa mémoire avec Postgres,
-          # l'API, le site et Maestro (voir l'étape d'échange ci-dessus).
-          ram-size: 3072M
-          disk-size: 6000M
-          disable-animations: true
-          # Pas de caméra émulée : le scanner ML Kit refuse de toute façon les
-          # émulateurs (voir annuler-le-scanner.yaml), et la caméra virtuelle
-          # coûte du processeur à une machine qui en manque.
-          #
-          # Rendu par ANGLE sur SwiftShader (swangle_indirect), plus
-          # swiftshader_indirect : qemu tombait en SEGV dans son rendu GLES
-          # cinq secondes après « Entrer », quand l'accueil se dessine
-          # (coredumpctl, exécution 39587645730) — trois nuits de suite, au
-          # même pas. (La WebView en --disable-gpu, essayée ensuite, plantait
-          # son moteur de rendu : exécution 39591622354. On ne touche qu'au GPU
-          # de l'émulateur.)
-          emulator-options: -no-snapshot -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
-          # Deux processeurs, rendu logiciel : l'interface système de l'émulateur
-          # tarde, et Android pose « System UI isn't responding » par-dessus
-          # l'application — les assertions ne voient plus l'écran, qui est
-          # pourtant bien là (exécution 35091995778, capture de connexion). Ces
-          # fenêtres d'erreur système sont masquées ; une vraie panne de
-          # l'application reste visible, puisque son écran n'apparaît pas.
-          #
-          # Les sondes du diagnostic D25 (android/maestro-diagnostic) ne tournent
-          # plus chaque nuit : elles ont rendu leur verdict (D27), coûtaient deux
-          # connexions et un passage en mode avion avant les vrais flux, et
-          # tombaient avec l'émulateur. Elles restent lançables à la main.
-          #
-          # Chaque ligne de `script` est un shell à part : la boucle des flux
-          # (un flux à la fois, un seul rejeu sur déconnexion de l'émulateur,
-          # jamais sur une assertion) vit dans android/maestro-ci.
-          script: |
-            adb wait-for-device
-            adb shell settings put global hide_error_dialogs 1
-            adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS
-            adb install -r android/app/build/outputs/apk/emulateur/debug/app-emulateur-debug.apk
-            bash android/maestro-ci/lancer-les-flux.sh
+        id: emulateur
+        continue-on-error: true
+        uses: ./.github/actions/emulateur-et-flux
+
+      - name: Relever l'émulateur tombé et finir les flux
+        id: releve
+        if: steps.emulateur.outcome == 'failure' && hashFiles('maestro-emulateur-perdu.txt') != ''
+        uses: ./.github/actions/emulateur-et-flux
+
+      # La première étape ne fait pas échouer le job à elle seule : sans
+      # relève (un flux tombé sur une assertion, une coque qui ne s'installe
+      # pas), c'est ici qu'il échoue.
+      - name: Verdict des flux
+        if: steps.emulateur.outcome == 'failure' && steps.releve.outcome == 'skipped'
+        run: |
+          echo "::error::L'étape de l'émulateur a échoué et il n'y a pas d'émulateur perdu à relever. Flux en échec : $(tr '\n' ' ' < maestro-echecs.txt 2>/dev/null || true)"
+          exit 1
+
+      - name: Dire que l'émulateur a été relevé
+        if: steps.releve.outcome == 'success'
+        run: echo "::warning::L'émulateur est tombé pendant les flux et a été relevé une fois ; les flux restants sont passés. Le cœur vidé est dans les journaux."
 
       - name: Journaux
-        if: failure()
+        if: failure() || steps.emulateur.outcome == 'failure'
         run: |
           echo "::group::api"; tail -100 api.log || true; echo "::endgroup::"
           echo "::group::web"; tail -100 web.log || true; echo "::endgroup::"
@@ -309,6 +288,7 @@ jobs:
           path: |
             maestro-*.xml
             maestro-*.log
+            maestro-*.txt
             vmstat.log
             processus.log
             ~/.maestro/tests
