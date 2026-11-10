@@ -33,12 +33,13 @@ import { z } from "zod";
 
 import type { DeclarationTva, TaxRate } from "@malica/socle/ports/repositories";
 import type { BlocDeReponse, PropositionDAction } from "@malica/socle/ports/assistant";
+import { achatsParFournisseur } from "@malica/socle/engines/achats/par-fournisseur";
 import { HORS_DU_CALCUL, tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
 import { texte as message } from "@malica/socle/conseil";
 import type { MessageKey } from "@malica/socle/messages";
 
 import type { AppelApi } from "../appel-local.ts";
-import { blocDeLaTva, blocDesEcheances } from "./blocs.ts";
+import { blocDeLaTva, blocDesAchats, blocDesEcheances, moisEnClair } from "./blocs.ts";
 import type { ResultatDuConseilCite } from "../conseil/conseil-cite.ts";
 import { PORTEES, type ReponseDeConseil } from "../conseil/conseil.ts";
 import { loadMalicaContext } from "../conseil/context.ts";
@@ -187,6 +188,21 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
     },
   },
   {
+    name: "achats_par_fournisseur",
+    description:
+      "Rend le classement des achats du dossier par fournisseur : pour chaque fournisseur, la somme TTC de ses " +
+      "factures d'achat lues et leur nombre, puis le total. Les sommes sont faites par le moteur de Malica sur " +
+      "TOUTES les pièces du dossier, pas sur un extrait : c'est l'outil à utiliser pour « mes dépenses par " +
+      "fournisseur », « qui me coûte le plus », « combien j'ai acheté chez X », « compare mes fournisseurs ». " +
+      "Avec `mois` (AAAA-MM), seulement les factures datées de ce mois. Le résultat dit aussi les achats écartés " +
+      "des sommes (total non lu, autre devise, émetteur non lu) : dis-le à la personne.",
+    input_schema: {
+      type: "object",
+      properties: { mois: { type: "string", description: "AAAA-MM ; absent : toutes les dates." } },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "action_proposer",
     description:
       "PROPOSE à la personne une action qui modifie son dossier. N'EXÉCUTE RIEN : l'écran affiche un bouton " +
@@ -240,6 +256,7 @@ const ETAPES: Readonly<Record<string, MessageKey>> = {
   pieces_chercher: "pme.assistant.outil.pieces_chercher",
   piece_ouvrir: "pme.assistant.outil.piece_ouvrir",
   tva_du_mois: "pme.assistant.outil.tva_du_mois",
+  achats_par_fournisseur: "pme.assistant.outil.achats_par_fournisseur",
   echeances_fiscales: "pme.assistant.outil.echeances_fiscales",
   ecritures_proposees: "pme.assistant.outil.ecritures_proposees",
   tiers_chercher: "pme.assistant.outil.tiers_chercher",
@@ -695,6 +712,74 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
   };
 }
 
+async function achatsDuDossier(ctx: ContexteDesOutils, brut: unknown): Promise<ResultatDOutil> {
+  const saisi = (brut as { mois?: unknown } | null)?.mois;
+  const mois = z
+    .string()
+    .regex(/^\d{4}-\d{2}$/)
+    .optional()
+    .safeParse(saisi);
+  if (!mois.success) return erreur("mois doit s'écrire AAAA-MM.");
+  const pack = await ctx.api.rpc<{ id: string } | null>("referentiel", "activePack", [
+    ctx.organisation.jurisdiction,
+  ]);
+  if (!pack)
+    return erreur(
+      "Le référentiel de la juridiction du dossier est introuvable : les achats ne se somment pas.",
+    );
+  const [toutes, params] = await Promise.all([
+    ctx.api.rpc<PieceDeLaListe[]>("capture", "listAvecLecture", [ctx.tenantId]),
+    ctx.api.rpc<{ moneyDecimals: number }>("referentiel", "socleParams", [pack.id]),
+  ]);
+  const retenues = mois.data
+    ? toutes.filter((p) => (p.dateDocument ?? "").startsWith(mois.data!))
+    : toutes;
+  const dev = ctx.organisation.currency;
+  const achats = achatsParFournisseur(retenues, dev, params.moneyDecimals);
+  const cle = `malica:achats:${mois.data ?? "toutes-dates"}`;
+  const e = achats.ecartees;
+  const ecartees = [
+    e.sansTotal > 0 ? `${e.sansTotal} sans total lisible` : null,
+    e.autreDevise > 0 ? `${e.autreDevise} dans une autre devise que ${dev}` : null,
+    e.sansEmetteur > 0 ? `${e.sansEmetteur} sans émetteur lu` : null,
+  ].filter(Boolean);
+  const texte = [
+    `Achats par fournisseur${mois.data ? `, factures datées de ${mois.data}` : ", toutes dates"}, sommés par le moteur de Malica, en ${dev} TTC.`,
+    `Factures d'achat comptées : ${achats.pieces}. Fournisseurs : ${achats.lignes.length}.`,
+    `Total des achats comptés : ${achats.total} ${dev}.`,
+    ...achats.lignes.map(
+      (l, i) =>
+        `- ${i + 1}. ${l.fournisseur} : ${l.total} ${dev} (${l.pieces} pièce${l.pieces > 1 ? "s" : ""})`,
+    ),
+    ecartees.length > 0
+      ? `Achats écartés des sommes : ${ecartees.join(" ; ")}. Ces pièces ne sont pas dans le total.`
+      : "Aucun achat écarté des sommes.",
+    ...(achats.pieces === 0
+      ? ["Aucune facture d'achat lue n'entre dans ce classement : ne donne aucun montant."]
+      : []),
+  ].join("\n");
+  return {
+    ok: true,
+    sources: [{ cle, genre: "liste", titre: "Achats par fournisseur", objetId: null, texte }],
+    ...(achats.pieces > 0
+      ? {
+          visuels: [
+            {
+              cle,
+              bloc: blocDesAchats(
+                achats,
+                params.moneyDecimals,
+                mois.data ? moisEnClair(mois.data, ctx.locale) : null,
+                ctx.organisation.name ?? null,
+                ctx.locale,
+              ),
+            },
+          ],
+        }
+      : {}),
+  };
+}
+
 interface Echeance {
   id: string;
   label: string;
@@ -998,6 +1083,7 @@ const EXECUTANTS: Record<
   pieces_chercher: piecesChercher,
   piece_ouvrir: pieceOuvrir,
   tva_du_mois: tvaDuMois,
+  achats_par_fournisseur: achatsDuDossier,
   echeances_fiscales: echeancesFiscales,
   ecritures_proposees: ecrituresProposees,
   tiers_chercher: tiersChercher,

@@ -17,6 +17,8 @@
 
 import type { BlocDeReponse, ChiffreDeBloc } from "@malica/socle/ports/assistant";
 import { texte } from "@malica/socle/conseil";
+import type { AchatsParFournisseur } from "@malica/socle/engines/achats/par-fournisseur";
+import { sommeDecimale } from "@malica/socle/somme-decimale";
 
 /** Les nombres s'écrivent à l'occidentale en arabe aussi (usage tunisien). */
 const LOCALE_DES_NOMBRES: Record<string, string> = {
@@ -139,5 +141,65 @@ export function blocDesEcheances(
       etat: texte(langue, etat(e)),
     })),
     total: null,
+  };
+}
+
+/** Au-delà de ce nombre de lignes, le reste se regroupe : un tableau se lit, il ne se parcourt pas. */
+const LIGNES_DU_CLASSEMENT = 12;
+
+/**
+ * Le classement des achats par fournisseur, tel que le moteur du Socle l'a
+ * sommé. Les fournisseurs au-delà des douze premiers sont regroupés en une
+ * ligne — leur somme est celle du moteur, pas une soustraction.
+ */
+export function blocDesAchats(
+  achats: AchatsParFournisseur,
+  dec: number,
+  periode: string | null,
+  perimetre: string | null,
+  langue: string,
+): BlocDeReponse {
+  const tete = achats.lignes.slice(0, LIGNES_DU_CLASSEMENT);
+  const reste = achats.lignes.slice(LIGNES_DU_CLASSEMENT);
+  const ligne = (fournisseur: string, total: string, pieces: number) => ({
+    fournisseur,
+    montant: montant(total, dec, langue),
+    pieces: String(pieces),
+  });
+  return {
+    type: "tableau",
+    titre: texte(langue, "pme.bloc.achats.titre"),
+    periode: periode ?? texte(langue, "pme.bloc.achats.toutes"),
+    perimetre,
+    source: texte(langue, "pme.bloc.achats.source", { n: achats.pieces }),
+    colonnes: [
+      {
+        id: "fournisseur",
+        libelle: texte(langue, "pme.bloc.achats.fournisseur"),
+        numerique: false,
+      },
+      {
+        id: "montant",
+        libelle: `${texte(langue, "pme.bloc.achats.montant")} (${achats.devise})`,
+        numerique: true,
+      },
+      { id: "pieces", libelle: texte(langue, "pme.bloc.achats.pieces"), numerique: true },
+    ],
+    lignes: [
+      ...tete.map((l) => ligne(l.fournisseur, l.total, l.pieces)),
+      ...(reste.length > 0
+        ? [
+            ligne(
+              texte(langue, "pme.bloc.achats.autres", { n: reste.length }),
+              sommeDecimale(
+                reste.map((l) => l.total),
+                dec,
+              ),
+              reste.reduce((n, l) => n + l.pieces, 0),
+            ),
+          ]
+        : []),
+    ],
+    total: ligne(texte(langue, "pme.bloc.achats.total"), achats.total, achats.pieces),
   };
 }
