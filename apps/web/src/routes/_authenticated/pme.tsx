@@ -188,6 +188,7 @@ function PmeLayout() {
     path.startsWith("/pme/list") ||
     path.startsWith("/pme/dossier") ||
     path.startsWith("/pme/echeances") ||
+    path.startsWith("/pme/comptabilite") ||
     path.startsWith("/pme/societes");
   // L'accueil est celui d'UNE société : y revenir quitte la vue consolidée.
   useEffect(() => {
