@@ -1,5 +1,6 @@
 import type { QualificationDeRetenue } from "@malica/socle/use-cases/retenue-au-reglement";
 import type { QueueItem } from "@malica/socle/ports/repositories";
+import { MOTIF_LONGUEUR_MAX } from "@malica/socle/circuit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -724,6 +725,8 @@ function CabinetReviewDeLaPiece() {
             <input
               value={noteDeRefus}
               onChange={(e) => setNoteDeRefus(e.target.value)}
+              maxLength={MOTIF_LONGUEUR_MAX}
+              aria-label={t("cab.demande.motif")}
               placeholder={t("cab.demande.motif")}
               className="h-9 min-w-[220px] flex-1 border border-border bg-background px-2 text-[13px]"
             />

@@ -29,6 +29,13 @@ const OBJETS: readonly DemandeSurPiece[] = ["rappel", "suppression"];
  */
 export const MOTIF_DU_PLAFOND = "plafond_atteint";
 
+/**
+ * La longueur maximale d'un motif de réponse à une demande. La base la porte
+ * (`app.motif_longueur_max()`) et c'est elle qui tranche ; l'écran la connaît
+ * pour ne pas laisser saisir plus. Un test compare les deux valeurs.
+ */
+export const MOTIF_LONGUEUR_MAX = 1000;
+
 export interface PieceDuCircuit {
   vis: Visibility;
   status: string;

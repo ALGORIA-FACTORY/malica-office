@@ -18,6 +18,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
+import { MOTIF_LONGUEUR_MAX } from "@malica/socle/circuit";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
@@ -218,7 +219,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
 
     await assert.rejects(
       () => rpcCab("collab", "repondreSurPiece", id, "rappel", false, null),
-      /demandes_refus_motive/,
+      /refus\.piece\.motif_requis/,
       "un refus sans motif n'apprend rien, et la question reviendra la semaine suivante",
     );
 
@@ -227,6 +228,49 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     const h = await faits(id);
     assert.equal(h[h.length - 1]!.fait, "refusee");
     assert.match(h[h.length - 1]!.note!, /déclaration/);
+  });
+
+  it("le motif se nettoie et se borne, et la base et l'écran disent la même limite", async () => {
+    // Audit du 10 novembre 2026 : 100 000 caractères étaient acceptés et
+    // recopiés dans les notifications, que R7 interdit d'effacer.
+    const max = await admin(async (p) => {
+      const { rows } = await p.query<{ n: number }>(`select app.motif_longueur_max() as n`);
+      return rows[0]!.n;
+    });
+    assert.equal(max, MOTIF_LONGUEUR_MAX, "la base et l'écran ne doivent pas diverger");
+
+    const id = await piece("motif");
+    await transmettre(id);
+    await rpc("collab", "demanderSurPiece", id, "rappel");
+
+    await assert.rejects(
+      () => rpcCab("collab", "repondreSurPiece", id, "rappel", false, "x".repeat(max + 1)),
+      /refus\.piece\.motif_trop_long/,
+    );
+    await assert.rejects(
+      () => rpcCab("collab", "repondreSurPiece", id, "rappel", false, "   "),
+      /refus\.piece\.motif_requis/,
+    );
+    assert.deepEqual(
+      (await faits(id)).map((f) => f.fait),
+      ["demandee"],
+      "un refus invalide n'inscrit rien : la demande attend toujours",
+    );
+
+    await rpcCab("collab", "repondreSurPiece", id, "rappel", false, "  Déjà porté.  ");
+    const h = await faits(id);
+    assert.equal(h[h.length - 1]!.note, "Déjà porté.", "le motif est gardé sans ses espaces");
+
+    // Exactement la limite passe ; une demande nouvelle reste permise après un refus.
+    await rpc("collab", "demanderSurPiece", id, "rappel");
+    await rpcCab("collab", "repondreSurPiece", id, "rappel", false, "x".repeat(max));
+    assert.equal((await faits(id)).at(-1)!.note!.length, max);
+
+    // Un accord n'a pas besoin de motif : un motif d'espaces devient aucun motif.
+    await rpc("collab", "demanderSurPiece", id, "rappel");
+    await rpcCab("collab", "repondreSurPiece", id, "rappel", true, "   ");
+    const fin = (await faits(id)).at(-1)!;
+    assert.deepEqual({ fait: fin.fait, note: fin.note }, { fait: "accordee", note: null });
   });
 
   it("LA BASE refuse le retrait unilatéral, pas seulement l'écran", async () => {

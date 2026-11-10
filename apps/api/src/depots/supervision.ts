@@ -284,7 +284,10 @@ export const supervision = {
          ) dem on true
         where ${TRANSMISE}
           and ($2::uuid is null or p.tenant_id = $2)
-        order by coalesce(p.transmise_le, p.created_at) desc
+        -- Une demande en attente passe AVANT la date : la file est plafonnée, et
+        -- une demande sur une pièce ancienne en sortait alors que l'inscription
+        -- restait bloquée sous le rappel, sans écran pour la lever.
+        order by (dem.objet is null), coalesce(p.transmise_le, p.created_at) desc
         limit 200`,
       [cabinetTenantId, tenantId ?? null, CLE_CONFIANCE_GLOBALE],
     );

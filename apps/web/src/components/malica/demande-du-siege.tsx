@@ -2,13 +2,14 @@
  * La demande d'un siège, chez le propriétaire (« Malica sans blocage »,
  * lot 4) : le propriétaire est au siège ce que le comptable est au
  * propriétaire — il accorde ou refuse, et un refus porte sa note, ici comme
- * en base (`demandes_refus_motive`).
+ * en base (`refus.piece.motif_requis`).
  *
  * La même carte que la décision de la fiche : un mot, deux boutons de 48 px,
  * le principal plein à gauche. Ce que fait l'accord est dans le ⓘ : sur une
  * pièce déjà chez le comptable, la demande y part d'elle-même.
  */
 import type { DemandeSurPiece } from "@malica/socle/ports/repositories";
+import { MOTIF_LONGUEUR_MAX } from "@malica/socle/circuit";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -78,7 +79,12 @@ export function DemandeDuSiege({
       {refus ? (
         <label className="f-dec-note">
           <span>{t("circuit.demande.note")}</span>
-          <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+          <textarea
+            rows={2}
+            value={note}
+            maxLength={MOTIF_LONGUEUR_MAX}
+            onChange={(e) => setNote(e.target.value)}
+          />
         </label>
       ) : null}
       <div className="f-dec-gestes deux">

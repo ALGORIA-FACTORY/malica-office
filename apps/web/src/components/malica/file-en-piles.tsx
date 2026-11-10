@@ -5,6 +5,7 @@
  * et s'ouvre par client et fournisseur. Le détail d'un groupe se déplie.
  */
 import type { QueueItem } from "@malica/socle/ports/repositories";
+import { MOTIF_LONGUEUR_MAX } from "@malica/socle/circuit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
@@ -127,6 +128,7 @@ function LigneDePiece({
               <input
                 autoFocus
                 value={motif}
+                maxLength={MOTIF_LONGUEUR_MAX}
                 onChange={(e) => setMotif(e.target.value)}
                 aria-label={t("cab.demande.motif")}
                 placeholder={t("cab.demande.motif")}
