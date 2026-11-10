@@ -1746,10 +1746,12 @@
 [data-surface="pme"] [data-ecran="chat"] .sig .ph img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;display:block}
 [data-surface="pme"] [data-ecran="chat"] .sig b{font-size:.75rem;font-weight:600;color:var(--t2);letter-spacing:-.01em}
 [data-surface="pme"] [data-ecran="chat"] .srcs{display:flex;flex-wrap:wrap;gap:.375rem;margin-top:.875rem}
-[data-surface="pme"] [data-ecran="chat"] .srcs a{display:inline-flex;align-items:center;gap:.4375rem;text-decoration:none; background:var(--s1);border-radius:999px;padding:.375rem .6875rem;font-size:.75rem; color:var(--t2);transition:background .18s}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="chat"] .srcs a:hover{background:var(--s2);color:var(--tx)}}
-[data-surface="pme"] [data-ecran="chat"] .srcs a svg{width:12px;height:12px;color:var(--t3);flex:none}
-[data-surface="pme"] [data-ecran="chat"] .srcs a em{font-style:normal;color:var(--t3)}
+/* Une source qui s'ouvre est un lien (une pièce) ; une source qui se déplie est un bouton
+ * (un article, un chiffre du dossier). Les deux portent la même puce : le bouton restait nu. */
+[data-surface="pme"] [data-ecran="chat"] .srcs a,[data-surface="pme"] [data-ecran="chat"] .srcs button{border:0;font:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:.4375rem;text-decoration:none; background:var(--s1);border-radius:999px;padding:.375rem .6875rem;font-size:.75rem; color:var(--t2);transition:background .18s}
+@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="chat"] .srcs a:hover,[data-surface="pme"] [data-ecran="chat"] .srcs button:hover{background:var(--s2);color:var(--tx)}}
+[data-surface="pme"] [data-ecran="chat"] .srcs a svg,[data-surface="pme"] [data-ecran="chat"] .srcs button svg{width:12px;height:12px;color:var(--t3);flex:none}
+[data-surface="pme"] [data-ecran="chat"] .srcs a em,[data-surface="pme"] [data-ecran="chat"] .srcs button em{font-style:normal;color:var(--t3)}
 [data-surface="pme"] [data-ecran="chat"] .et1{display:flex;align-items:center;gap:.5rem;margin-top:.75rem;font-size:.75rem;color:var(--am)}
 [data-surface="pme"] [data-ecran="chat"] .et1 i{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
 [data-surface="pme"] [data-ecran="chat"] .et1.ok{color:var(--acc)}
@@ -2354,6 +2356,9 @@
 [data-surface="pme"] [data-ecran="alire"] .bas .pr:disabled{background:var(--d2);color:var(--t3);cursor:default}
 [data-surface="pme"] [data-ecran="alire"] .bas .plafond{margin:0 0 .6rem;font-size:.875rem;line-height:1.35;color:var(--am)}
 [data-surface="pme"] [data-ecran="chat"] { --s1: #F5F5F5; --s2: #ECEEEE }
+/* Les blocs d'une réponse (`blocs-de-reponse.tsx`) prennent les rayons de cette surface :
+ * 16 pour une carte dense, 12 pour une puce. Ailleurs, ils restent à l'angle du thème. */
+[data-surface="pme"] [data-ecran="chat"] { --bloc-r: 16px; --bloc-r2: 12px }
 [data-surface="pme"] [data-famille="papiers"] { --s1: #F5F5F5; --s2: #ECEEEE }
 
 

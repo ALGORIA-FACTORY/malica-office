@@ -74,6 +74,47 @@ export interface SuggestionDeSuite {
   texte: string;
 }
 
+/**
+ * Un bloc de réponse : une forme que la bulle de Malica sait dessiner, au-delà
+ * du texte. Les valeurs viennent d'un MOTEUR ou de la base, composées par le
+ * serveur (R3) : le modèle choisit de montrer un bloc, il n'en écrit jamais un
+ * chiffre. Ce que le navigateur reçoit est déjà formaté (séparateurs, décimales
+ * de la devise) et déjà traduit : l'écran ne calcule rien.
+ */
+export interface EnTeteDeBloc {
+  titre: string;
+  /** La période que le bloc couvre, déjà écrite (« Novembre 2026 »). */
+  periode: string | null;
+  /** Le périmètre : la société, ou « 3 sociétés ». */
+  perimetre: string | null;
+  /** Ce d'où viennent les chiffres, en clair (« calcul de la TVA, 1 pièce transmise »). */
+  source: string;
+}
+
+export type TonDeBloc = "positif" | "negatif" | "neutre";
+
+export interface ChiffreDeBloc {
+  libelle: string;
+  valeur: string;
+  unite: string | null;
+  ton: TonDeBloc;
+}
+
+export type BlocDeReponse =
+  | (EnTeteDeBloc & {
+      type: "reponse_cle";
+      /** Le chiffre qui répond, en grand ; les autres, dessous, le composent. */
+      cle: ChiffreDeBloc;
+      details: ChiffreDeBloc[];
+    })
+  | (EnTeteDeBloc & {
+      type: "tableau";
+      colonnes: Array<{ id: string; libelle: string; numerique: boolean }>;
+      lignes: Array<Record<string, string>>;
+      /** La ligne de total, quand le tableau en a une. */
+      total: Record<string, string> | null;
+    });
+
 export interface FinDeLaReponse {
   conversationId: string;
   messageId: string | null;
@@ -82,6 +123,8 @@ export interface FinDeLaReponse {
   sources: SourceDeLAssistant[];
   propositions: PropositionDAction[];
   suggestions: SuggestionDeSuite[];
+  /** Les blocs que la réponse montrait (chiffre clé avec son détail, tableau), rangés avec elle. */
+  blocs: BlocDeReponse[];
   /** Le nombre de phrases retirées faute de source : jamais montrées, comptées. */
   chiffresRetires: number;
   /** Le modèle de secours a répondu : sa réponse ne porte pas de citations. */
@@ -95,6 +138,8 @@ export type EvenementDeLAssistant =
   | { type: "outil"; etiquette: string; etat: "debut" | "fin" }
   | { type: "retire"; nombre: number }
   | { type: "proposition"; proposition: PropositionDAction }
+  /** Un bloc entier, composé par le serveur : jamais un morceau. */
+  | { type: "bloc"; bloc: BlocDeReponse }
   | { type: "fin"; fin: FinDeLaReponse }
   | { type: "erreur"; erreur: string };
 

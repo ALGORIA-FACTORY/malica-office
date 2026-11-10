@@ -95,4 +95,51 @@ describe("un fil rouvert ne dit rien de la mécanique", { skip: !BASE_CONFIGUREE
     assert.doesNotMatch(sur_le_reseau, /claude|sonnet|haiku|deepseek|anthropic|1234|567|8901/i);
     assert.equal(reponse.contenu, "Un crédit.");
   });
+
+  it("un fil rouvert remontre les blocs de sa réponse, tels qu'ils ont été rangés par la porte", async () => {
+    const c = await admin.query<{ id: string }>(
+      `insert into agents.conversations (tenant_id, created_by, titre)
+       values ($1, $2, 'blocs') returning id`,
+      [org, u.id],
+    );
+    const fil = c.rows[0]!.id;
+    const bloc = {
+      type: "reponse_cle",
+      titre: "TVA du mois",
+      periode: "Novembre 2026",
+      perimetre: "ESSAI",
+      source: "Moteur de TVA · pièces prises en compte : 1",
+      cle: { libelle: "Crédit de TVA", valeur: "342,000", unite: "TND", ton: "positif" },
+      details: [],
+    };
+    await sousIdentiteDuServeur(u.id, (db) =>
+      conversations.ajouter(db, {
+        conversationId: fil,
+        question: "Ma TVA ?",
+        reponse: "Un crédit.",
+        blocs: [bloc],
+      }),
+    );
+    const relu = await sousIdentiteDuServeur(u.id, (db) => conversations.ouvrir(db, fil));
+    assert.deepEqual(
+      relu.map((m) => m.blocs),
+      [null, [bloc]],
+    );
+
+    // Sans bloc, la colonne reste vide : pas de tableau vide en base.
+    await sousIdentiteDuServeur(u.id, (db) =>
+      conversations.ajouter(db, {
+        conversationId: fil,
+        question: "Et ?",
+        reponse: "Rien.",
+        blocs: [],
+      }),
+    );
+    const { rows } = await admin.query<{ n: string }>(
+      `select count(*)::text as n from agents.conversation_messages
+        where conversation_id = $1 and blocs is not null`,
+      [fil],
+    );
+    assert.equal(rows[0]!.n, "1");
+  });
 });

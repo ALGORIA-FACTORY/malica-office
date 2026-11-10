@@ -8,7 +8,7 @@ import type { DerniereLecture } from "../issue-de-lecture.ts";
 import type { LigneSaisie } from "../ecriture-saisie.ts";
 import type { CircuitInterne, StatutCabinet, SuiviDEnvoi } from "../statut-d-envoi.ts";
 import type { CodeVerdict } from "../verdicts.ts";
-import type { PropositionDAction, SourceDeLAssistant } from "./assistant.ts";
+import type { BlocDeReponse, PropositionDAction, SourceDeLAssistant } from "./assistant.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 import type { SensDeTva } from "../contracts/tva.v1.ts";
 
@@ -390,6 +390,8 @@ export interface MessageDuFil {
   sources?: SourceDeLAssistant[] | null | undefined;
   /** Les actions que la réponse proposait (boutons à confirmer) ; nul sinon. */
   propositions?: PropositionDAction[] | null | undefined;
+  /** Les blocs que la réponse montrait (chiffre clé, tableau) ; nul sinon. */
+  blocs?: BlocDeReponse[] | null | undefined;
 }
 
 export interface JurisdictionPack {

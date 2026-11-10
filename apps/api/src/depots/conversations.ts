@@ -19,7 +19,11 @@
  * personne. Le raisonnement, l'invite et le corpus vivent côté web.
  */
 
-import type { PropositionDAction, SourceDeLAssistant } from "@malica/socle/ports/assistant";
+import type {
+  PropositionDAction,
+  SourceDeLAssistant,
+  BlocDeReponse,
+} from "@malica/socle/ports/assistant";
 
 import type { Requete } from "../db.ts";
 
@@ -45,6 +49,8 @@ export interface MessageDuFil {
   sources: SourceDeLAssistant[] | null;
   /** Les actions que la réponse proposait ; nul s'il n'y en avait aucune. */
   propositions: PropositionDAction[] | null;
+  /** Les blocs que la réponse montrait ; nul s'il n'y en avait aucun. */
+  blocs: BlocDeReponse[] | null;
 }
 
 /** Le nombre de fils rendus à l'écran. Au-delà, on ne lit plus, on cherche. */
@@ -75,7 +81,7 @@ export const conversations = {
   /** Le fil complet, dans l'ordre où il a été dit. */
   async ouvrir(db: Requete, conversationId: string): Promise<MessageDuFil[]> {
     const { rows } = await db.query<Record<string, unknown>>(
-      `select id, role, contenu, created_at, sources, propositions
+      `select id, role, contenu, created_at, sources, propositions, blocs
          from agents.conversation_messages
         where conversation_id = $1
         -- A question and its answer share one transaction, hence one created_at: at
@@ -102,6 +108,7 @@ export const conversations = {
       propositions: Array.isArray(r["propositions"])
         ? (r["propositions"] as MessageDuFil["propositions"])
         : null,
+      blocs: Array.isArray(r["blocs"]) ? (r["blocs"] as MessageDuFil["blocs"]) : null,
     }));
   },
 
@@ -151,10 +158,12 @@ export const conversations = {
       sources?: unknown[] | null;
       /** Les actions proposées (boutons), rangées avec la réponse. */
       propositions?: unknown[] | null;
+      /** Les blocs montrés (chiffre clé, tableau), rangés avec la réponse. */
+      blocs?: unknown[] | null;
     },
   ): Promise<void> {
     await db.query(
-      `select public.conversation_repondre($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb)`,
+      `select public.conversation_repondre($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11::jsonb)`,
       [
         input.conversationId,
         input.question,
@@ -166,6 +175,7 @@ export const conversations = {
         input.latencyMs ?? null,
         input.sources?.length ? JSON.stringify(input.sources) : null,
         input.propositions?.length ? JSON.stringify(input.propositions) : null,
+        input.blocs?.length ? JSON.stringify(input.blocs) : null,
       ],
     );
   },

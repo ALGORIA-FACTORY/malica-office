@@ -487,6 +487,7 @@ describe("le chat de Malica — section 11", { skip: !BASE_CONFIGUREE }, () => {
     // that a reopened thread shows its sources (the director's mission). Reasoning still
     // never leaves the server (asserted above).
     assert.deepEqual(Object.keys(relu[1]!).sort(), [
+      "blocs",
       "contenu",
       "createdAt",
       "id",

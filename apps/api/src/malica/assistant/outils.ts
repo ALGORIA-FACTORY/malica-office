@@ -32,12 +32,13 @@
 import { z } from "zod";
 
 import type { DeclarationTva, TaxRate } from "@malica/socle/ports/repositories";
-import type { PropositionDAction } from "@malica/socle/ports/assistant";
+import type { BlocDeReponse, PropositionDAction } from "@malica/socle/ports/assistant";
 import { HORS_DU_CALCUL, tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
 import { texte as message } from "@malica/socle/conseil";
 import type { MessageKey } from "@malica/socle/messages";
 
 import type { AppelApi } from "../appel-local.ts";
+import { blocDeLaTva, blocDesEcheances } from "./blocs.ts";
 import type { ResultatDuConseilCite } from "../conseil/conseil-cite.ts";
 import { PORTEES, type ReponseDeConseil } from "../conseil/conseil.ts";
 import { loadMalicaContext } from "../conseil/context.ts";
@@ -206,6 +207,27 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
   },
 ];
 
+/**
+ * L'outil qui MONTRE : le modèle désigne, par sa clé, une source qu'un outil
+ * vient de lui rendre et pour laquelle le serveur a composé un visuel. Il
+ * n'écrit aucun chiffre : le bloc vient du moteur ou de la base (R3). L'agent
+ * l'exécute lui-même (`agent.ts`) — il ne consulte rien. Quand s'en servir est
+ * dit dans la consigne versionnée en base (« MONTRER UN VISUEL »), pas ici.
+ */
+export const AFFICHER_VISUEL: DefinitionDOutil = {
+  name: "afficher_visuel",
+  description:
+    "Montre à la personne, sous ta réponse, le visuel disponible pour une source qu'un outil vient de te rendre " +
+    "(chiffre clé, tableau). `source` est la clé de cette source, telle que le résultat de l'outil te l'a donnée. " +
+    "Voir la consigne, section « MONTRER UN VISUEL ».",
+  input_schema: {
+    type: "object",
+    properties: { source: { type: "string", description: "La clé de la source à montrer." } },
+    required: ["source"],
+    additionalProperties: false,
+  },
+};
+
 /** Les noms, pour le journal et l'épreuve. */
 const NOMS_DES_OUTILS = DEFINITIONS.map((d) => d.name);
 
@@ -311,7 +333,7 @@ export interface ContexteDesOutils {
   api: AppelApi;
   tenantId: string;
   locale: string;
-  organisation: { jurisdiction: string; currency: string };
+  organisation: { jurisdiction: string; currency: string; name?: string };
   /** Aujourd'hui à Tunis, AAAA-MM-JJ. */
   aujourdhui: string;
   conseil: (question: string, jour: string | null) => Promise<ResultatDuConseilCite>;
@@ -326,6 +348,8 @@ export type ResultatDOutil =
       /** Le conseil cité : ce qu'il a coûté, et la mention « En vigueur au » composée par le code. */
       coutUsd?: number | null;
       mention?: string | null;
+      /** Les visuels que le serveur a composés pour ces sources, par clé de source. */
+      visuels?: Array<{ cle: string; bloc: BlocDeReponse }>;
     }
   | { ok: false; erreur: string };
 
@@ -656,6 +680,18 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
         texte,
       },
     ],
+    visuels: [
+      {
+        cle: `malica:tva:${tva.period}`,
+        bloc: blocDeLaTva(
+          tva,
+          params.moneyDecimals,
+          comptees,
+          ctx.organisation.name ?? null,
+          ctx.locale,
+        ),
+      },
+    ],
   };
 }
 
@@ -696,6 +732,21 @@ async function echeancesFiscales(ctx: ContexteDesOutils, brut: unknown): Promise
             : "Aucune échéance à faire n'est inscrite au calendrier du dossier."),
       },
     ],
+    ...(retenues.length > 0
+      ? {
+          visuels: [
+            {
+              cle: `malica:echeances:${toutes ? "toutes" : "a-venir"}`,
+              bloc: blocDesEcheances(
+                retenues,
+                ctx.aujourdhui,
+                ctx.organisation.name ?? null,
+                ctx.locale,
+              ),
+            },
+          ],
+        }
+      : {}),
   };
 }
 

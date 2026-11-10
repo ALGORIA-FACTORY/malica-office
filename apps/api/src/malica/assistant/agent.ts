@@ -60,6 +60,7 @@
 
 import { texte as message } from "@malica/socle/conseil";
 import type {
+  BlocDeReponse,
   EvenementDeLAssistant,
   FinDeLaReponse,
   PropositionDAction,
@@ -82,6 +83,7 @@ import {
 } from "./configuration.ts";
 import { GardeDesChiffres, type SourceConnue } from "./garde.ts";
 import {
+  AFFICHER_VISUEL,
   CONCLURE_REPONSE,
   DEFINITIONS,
   etapeDeLOutil,
@@ -148,6 +150,8 @@ function versLEcran(f: FinMesuree): FinDeLaReponse {
     sources: f.sources,
     propositions: f.propositions,
     suggestions: f.suggestions,
+    // Les blocs composés par le serveur : déjà formatés, déjà traduits, sans mécanique.
+    blocs: f.blocs,
     chiffresRetires: f.chiffresRetires,
     sansCitations: f.sansCitations,
   };
@@ -501,7 +505,7 @@ async function converser(
 
   /* ------------------------------------------------------------ la requête */
   // L'outil final vient en dernier : c'est lui qui porte le point de cache.
-  const definitions = [...DEFINITIONS, CONCLURE_REPONSE];
+  const definitions = [...DEFINITIONS, AFFICHER_VISUEL, CONCLURE_REPONSE];
   const outils = definitions.map((d, i) =>
     i === definitions.length - 1 ? { ...d, cache_control: { type: "ephemeral" as const } } : d,
   );
@@ -522,6 +526,11 @@ async function converser(
 
   const outilsAppeles: string[] = [];
   const propositions: PropositionDAction[] = [];
+  // Les visuels que les outils ont composés (par clé de source), et ceux que le
+  // modèle a choisi de montrer — dans l'ordre, une fois chacun.
+  const visuels = new Map<string, BlocDeReponse>();
+  const blocs: BlocDeReponse[] = [];
+  const montres = new Set<string>();
   const mentions: string[] = [];
   let conclusion: ConclusionDeLaReponse | null = null;
   let usageTotal: UsageDeLAppel = { ...USAGE_NUL };
@@ -647,6 +656,36 @@ async function converser(
         });
         continue;
       }
+      if (appel.name === AFFICHER_VISUEL.name) {
+        const cle = (appel.input as { source?: unknown } | null)?.source;
+        const bloc = typeof cle === "string" ? visuels.get(cle) : undefined;
+        if (bloc && typeof cle === "string") {
+          if (!montres.has(cle)) {
+            montres.add(cle);
+            blocs.push(bloc);
+            // En attente de la conclusion, le bloc attend aussi : une réponse
+            // retenue ne montre que son message de relecture.
+            if (!enAttente) emettre({ type: "bloc", bloc });
+          }
+          resultats.push({
+            type: "tool_result",
+            tool_use_id: appel.id,
+            content:
+              "Visuel affiché sous ta réponse. Ne recopie pas ses lignes : dis ce qu'elles veulent dire.",
+          });
+        } else {
+          resultats.push({
+            type: "tool_result",
+            tool_use_id: appel.id,
+            content:
+              visuels.size > 0
+                ? `Aucun visuel pour cette source. Visuels disponibles : ${[...visuels.keys()].join(", ")}.`
+                : "Aucun visuel n'est disponible : réponds en texte.",
+            is_error: true,
+          });
+        }
+        continue;
+      }
       outilsAppeles.push(appel.name);
       const r = await executerOutil(ctx, appel.name, appel.input);
       etape(appel.name, "fin");
@@ -660,10 +699,17 @@ async function converser(
         continue;
       }
       for (const s of r.sources) garde.ajouterSource(s);
+      for (const v of r.visuels ?? []) visuels.set(v.cle, v.bloc);
       resultats.push({
         type: "tool_result",
         tool_use_id: appel.id,
-        content: r.sources.map(blocDeRecherche),
+        content: [
+          ...r.sources.map(blocDeRecherche),
+          ...(r.visuels ?? []).map((v) => ({
+            type: "text" as const,
+            text: `Un visuel est disponible pour la source « ${v.cle} » : afficher_visuel le montre à la personne.`,
+          })),
+        ],
       });
       for (const p of r.propositions ?? []) {
         propositions.push(p);
@@ -735,6 +781,7 @@ async function converser(
     if (enAttente) {
       // La conclusion est connue et la réponse peut partir : d'un bloc.
       montrer(reponse);
+      for (const b of blocs) emettre({ type: "bloc", bloc: b });
       for (const p of propositions) emettre({ type: "proposition", proposition: p });
       if (garde.retirees().length > 0) emettre({ type: "retire", nombre: garde.retirees().length });
     } else {
@@ -747,6 +794,7 @@ async function converser(
     ? []
     : sourcesCitees.filter((s) => !s.cle.startsWith("malica:proposition:")).map(versSourceAffichee);
   const propositionsAffichees = retenue ? [] : propositions;
+  const blocsAffiches = retenue ? [] : blocs;
   await api.rpc<void>("conversations", "ajouter", [
     {
       conversationId,
@@ -761,6 +809,7 @@ async function converser(
       // propositions (le bouton se rejuge alors contre la porte du circuit).
       sources: sourcesAffichees,
       propositions: propositionsAffichees,
+      blocs: blocsAffiches,
     },
   ]);
   const dernierMessage = await api
@@ -782,6 +831,7 @@ async function converser(
     sources: sourcesAffichees,
     propositions: propositionsAffichees,
     suggestions: retenue ? [] : suggestionsDeSuite(outilsAppeles, q.locale),
+    blocs: blocsAffiches,
     chiffresRetires: retenue ? 0 : garde.retirees().length,
     sansCitations: false,
     mesure: {
@@ -879,6 +929,7 @@ async function repondreParLeRepli(
     sources: [],
     propositions: [],
     suggestions: retenue ? [] : suggestionsDeSuite([], q.locale),
+    blocs: [],
     chiffresRetires: garde.retirees().length,
     sansCitations: !retenue,
     mesure: {
@@ -924,6 +975,7 @@ async function sArreter(
     sources: [],
     propositions: [],
     suggestions: [],
+    blocs: [],
     chiffresRetires: 0,
     sansCitations: false,
     mesure: {

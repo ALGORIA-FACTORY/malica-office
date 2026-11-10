@@ -26,6 +26,7 @@ import { Link } from "@tanstack/react-router";
 import { Fragment, useCallback, useRef, useState, type ReactNode } from "react";
 
 import type {
+  BlocDeReponse,
   EvenementDeLAssistant,
   PropositionDAction,
   SourceDeLAssistant,
@@ -33,6 +34,7 @@ import type {
 } from "@malica/socle/ports/assistant";
 
 import { useEnvoyer } from "@/hooks/use-gestes-du-circuit";
+import { BlocsDeReponse } from "@/components/malica/blocs-de-reponse";
 import { clePiecesLues } from "@/hooks/use-pieces-lues";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -43,6 +45,8 @@ export interface TourDeMalica {
   contenu: string;
   sources?: SourceDeLAssistant[] | undefined;
   propositions?: PropositionDAction[] | undefined;
+  /** Les blocs que Malica montre sous son texte, composés par le serveur. */
+  blocs?: BlocDeReponse[] | undefined;
   suggestions?: SuggestionDeSuite[] | undefined;
   /** Phrases chiffrées retirées faute de source : jamais montrées, comptées. */
   retirees?: number | undefined;
@@ -116,6 +120,9 @@ export function useConversationMalica(tenantId: string | null | undefined) {
               propositions: [...(t.propositions ?? []), ev.proposition],
             }));
             return;
+          case "bloc":
+            majDernier((t) => ({ ...t, blocs: [...(t.blocs ?? []), ev.bloc] }));
+            return;
           case "fin":
             reponse = ev.fin.reponse;
             majDernier((t) => ({
@@ -123,6 +130,8 @@ export function useConversationMalica(tenantId: string | null | undefined) {
               contenu: ev.fin.reponse,
               sources: ev.fin.sources,
               propositions: ev.fin.propositions,
+              // Une application servie par un serveur plus ancien ne reçoit pas ce champ.
+              blocs: ev.fin.blocs ?? t.blocs,
               suggestions: ev.fin.suggestions,
               retirees: ev.fin.chiffresRetires,
               repli: ev.fin.sansCitations,
@@ -167,6 +176,7 @@ export function useConversationMalica(tenantId: string | null | undefined) {
         contenu: string;
         sources?: SourceDeLAssistant[] | null | undefined;
         propositions?: PropositionDAction[] | null | undefined;
+        blocs?: BlocDeReponse[] | null | undefined;
       }>,
     ) => {
       arret.current?.abort();
@@ -177,6 +187,7 @@ export function useConversationMalica(tenantId: string | null | undefined) {
           contenu: m.contenu,
           sources: m.sources ?? undefined,
           propositions: m.propositions ?? undefined,
+          blocs: m.blocs ?? undefined,
         })),
       );
     },
@@ -285,6 +296,7 @@ export function ReponseDeMalica({
   return (
     <>
       {tour.contenu ? <TexteMarkdown texte={tour.contenu} /> : null}
+      {tour.blocs && tour.blocs.length > 0 ? <BlocsDeReponse blocs={tour.blocs} /> : null}
       {tour.enCours && tour.outil ? (
         <p className="et1" role="status">
           <i />
