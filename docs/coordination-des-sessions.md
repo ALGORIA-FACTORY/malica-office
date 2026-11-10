@@ -48,11 +48,25 @@ réécriture entière ; une insertion par ancre, relue juste avant d'écrire,
 et un pluriel toujours en `cle#one` / `cle#other`, l'arabe avec les mêmes
 formes que le français.
 
-## Git
+## Git et GitHub
 
-La branche est `application-android`. Aucun `checkout`, `stash`, `reset`
-ni `commit` d'un côté sans l'avoir écrit ici d'abord ; l'autre session
-commite ce qu'elle a annoncé, et rien d'autre.
+**GitHub a un seul responsable** (décision du dirigeant, 10 novembre 2026) :
+la session CAIO du projet claude.ai « Malica Office ». Elle relit, fusionne,
+suit la CI de `main` et nettoie les branches. Toute autre session — Claude
+Code sur le poste, Cowork, une conversation — travaille ainsi :
+
+1. une branche `chantier/<sujet>` partie de `main`, une PR ouverte dès le
+   premier commit poussé ; une branche sans PR n'existe pas ;
+2. jamais de push ni de fusion sur `main`, jamais de fusion de PR, même
+   verte : la fusion déploie le staging ;
+3. une PR dit ce qui a été vérifié et ce qui ne l'a pas été ;
+4. une branche fusionnée est supprimée ; une branche abandonnée devient
+   une étiquette `archive/branches/<nom>` avant d'être supprimée.
+
+Le responsable fusionne en squash, après une CI verte sur la tête de la PR
+et l'accord du dirigeant pour ce qui part en staging. Un commit qu'il ajoute
+à la branche d'une autre session est un commit de plus ou une fusion de
+`main` : jamais de réécriture ni de push forcé.
 
 ## La base
 
@@ -450,3 +464,4 @@ une base jetable.
 - 2026-11-09 - Claude Code (branche `claude/malica-comme-claude`, PR #298, correctif après vérification indépendante) - **La file du cabinet reçoit de nouveau ce que l'assistant doit faire relire, et rien de la mécanique ne part au navigateur.** (1) L'assistant tient la règle d'`askMalica` (`doitEtreRelue`) : le modèle conclut par un outil final `conclure_reponse` (conseil, portée, certitude, doute, thème ; schéma strict), dont la consigne vit en base (migration `20261209090100_l_assistant_conclut_sa_reponse.sql`, version nouvelle de la consigne, l'ancienne intacte). Quand un cabinet engagé peut relire (membre de la PME, cabinet mandaté), le texte gardé attend la conclusion : retenue, la PME ne lit que `pme.conseil.relecture` et la réponse part dans la file (`conseil.creer`, en attente) ; sinon elle part d'un bloc. Sans conclusion : portée incertaine, retenue. Sans cabinet engagé, ou le cabinet lui-même : flux direct. Le repli DeepSeek retient déjà par `askMalica`, rien n'est déposé deux fois. (2) Une phrase retirée ne part plus : `retire` et `fin.chiffresRetires` portent un nombre. (3) Le flux ne porte plus ni modèle (`debut`), ni mesure (`fin.mesure` reste au serveur, journal des coûts), ni nom d'outil : `outil.etiquette`, étape traduite par le serveur, aucune pour un outil inconnu. `ANTHROPIC_URL`/`ANTHROPIC_VERSION` en un seul endroit (`lecture/claude.ts`). Épreuves : `epreuve-assistant.test.ts` (file du cabinet, ce qui part au navigateur), `la-file-du-cabinet-recoit-l-assistant.test.ts` et `verif-298.test.ts` (vérificateur, sur base).
 
 - 2026-11-09 · malica-mission (chat Malica sur Claude et DeepSeek, lot A) · **Preuve de l'existant, avant toute reconstruction du chat.** Les 14 constats de départ revérifiés par exécution (`docs/validation-chat-malica/constats.md`). Défaut trouvé et corrigé : un fil se relisait dans le désordre une fois sur deux (question et réponse au même `created_at`, puis tri par un identifiant aléatoire). La section 11 du dirigeant est figée par 68 épreuves (`section-11.md`), dont une par règle du conseil. Mesure de référence réelle sur le staging (`reference.md`) : 13,5 s en médiane sans flux, 13/19 réponses justes, 4/5 pièges refusés, 0,23 $. **#278 fermée** (déjà dans `main` par #293) ; **#298** (l'agent Claude) corrigé et approuvé par un vérificateur indépendant, à fusionner APRÈS ce lot. Registre des dépenses : `depenses.md`, plafond 100 $. Sur le poste, le mot de passe local du rôle `malica_api` ne s'authentifie plus : non touché.
+- 2026-11-10 · CAIO (projet claude.ai « Malica Office ») · **Un seul responsable de GitHub.** Décision du dirigeant : la session CAIO relit, fusionne et nettoie ; les autres sessions ouvrent des PR et ne fusionnent plus (section « Git et GitHub », qui remplace la règle de la branche `application-android`, périmée). Contexte : quatre fusions directes sur `main` sans PR dans la nuit du 9 au 10, et deux branches poussées sans PR (`chantier/banc-preuve-du-tableau`, `chantier/carte-bienvenue-bornee`), reprises en #336 et #337.
