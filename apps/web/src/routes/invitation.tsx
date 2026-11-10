@@ -112,9 +112,7 @@ function Invitation() {
   if (jeton === undefined) {
     corps = <p className="cx-sub">{t("common.loading")}</p>;
   } else if (introuvable) {
-    corps = (
-      <p className="cx-sub">{t("invitation.introuvable")}</p>
-    );
+    corps = <p className="cx-sub">{t("invitation.introuvable")}</p>;
   } else if (compte.isLoading || (compte.data && lue.isLoading)) {
     corps = <p className="cx-sub">{t("common.loading")}</p>;
   } else if (!compte.data) {
@@ -122,46 +120,30 @@ function Invitation() {
       <>
         <p className="cx-sub">{t("invitation.anonyme")}</p>
         <div className="cx-stack">
-          <Link
-            to="/auth"
-            search={{ suite: "/invitation", mode: "signup" }}
-            className="cx-submit"
-          >
+          <Link to="/auth" search={{ suite: "/invitation", mode: "signup" }} className="cx-submit">
             {t("invitation.creer")}
           </Link>
-          <Link
-            to="/auth"
-            search={{ suite: "/invitation" }}
-            className="cx-secondary"
-          >
+          <Link to="/auth" search={{ suite: "/invitation" }} className="cx-secondary">
             {t("invitation.connecter")}
           </Link>
         </div>
       </>
     );
   } else if (inv && !inv.valable) {
-    corps = (
-      <p className="cx-sub">{t("invitation.plusValable")}</p>
-    );
+    corps = <p className="cx-sub">{t("invitation.plusValable")}</p>;
   } else if (inv) {
     corps = (
       <>
         <p className="cx-sub">
           {t("invitation.dossier", { cabinet: inv.cabinet ?? "—", pme: inv.pme })}
         </p>
-        <p className="cx-sub">
-          {t("invitation.adresse", { email: inv.email })}
-        </p>
+        <p className="cx-sub">{t("invitation.adresse", { email: inv.email })}</p>
         {adresseDifferente ? (
           <>
             <p role="alert" className="cx-alert">
               {t("invitation.mauvaiseAdresse", { email: inv.email })}
             </p>
-            <button
-              type="button"
-              onClick={() => deconnecter.mutate()}
-              className="cx-secondary"
-            >
+            <button type="button" onClick={() => deconnecter.mutate()} className="cx-secondary">
               {t("invitation.connecter")}
             </button>
           </>
@@ -193,7 +175,9 @@ function Invitation() {
       <div className="cx-form">
         <div className="cx-head">
           <p className="cx-kicker">{t("invitation.kicker")}</p>
-          <h1 className="cx-title">{t(lienMort ? "invitation.titreLienMort" : "invitation.titre")}</h1>
+          <h1 className="cx-title">
+            {t(lienMort ? "invitation.titreLienMort" : "invitation.titre")}
+          </h1>
         </div>
         {corps}
       </div>
