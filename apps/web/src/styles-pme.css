@@ -2981,6 +2981,32 @@ html.dark:has([data-surface="pme"]),
 [data-surface="pme"] .selsoc .ep svg{width:17px;height:17px}
 [data-surface="pme"] .selsoc .ep[aria-pressed="true"]{color:var(--acc)}
 [data-surface="pme"] .selsoc .ep[aria-pressed="true"] svg{fill:currentColor}
+/* L'anneau d'une pastille de la feuille et la mention à droite : le ton du siège (10 novembre 2026). */
+[data-surface="pme"] .selsoc .ini[data-ton="am"]{box-shadow:inset 0 0 0 2px var(--am)}
+[data-surface="pme"] .selsoc .ini[data-ton="ok"]{box-shadow:inset 0 0 0 2px var(--acc)}
+[data-surface="pme"] .selsoc .so em[data-ton="am"]{color:var(--am)}
+/* La rangée des sièges d'un dossier : des pastilles empilées, hautes comme une carte ; un choix, pas une liste. */
+[data-surface="pme"] [data-ecran="pochette"] .sieges .rangee{display:flex;align-items:center;gap:.875rem;min-height:64px;padding:.625rem .875rem;border-radius:16px;border:1px solid var(--dl);background:var(--d1);color:var(--tx);font:inherit;text-align:start;width:100%;box-sizing:border-box}
+[data-surface="pme"] [data-ecran="pochette"] .sieges button.rangee{cursor:pointer}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .rangee[data-choisi]{border-color:var(--am)}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .pile{display:flex;align-items:center;border:0;background:none;padding:0;cursor:pointer}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .past{width:36px;height:36px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--d2);color:var(--tx);font-size:.8125rem;font-weight:600;box-shadow:0 0 0 2px var(--d1);overflow:hidden}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .past img{width:100%;height:100%;object-fit:cover}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .past + .past{margin-inline-start:-10px}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .past[data-ton="am"]{box-shadow:0 0 0 2px var(--d1),0 0 0 4px var(--am)}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .past[data-ton="ok"]{box-shadow:0 0 0 2px var(--d1),0 0 0 4px var(--acc)}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .past.plus{font-family:var(--mono);font-size:.75rem;font-weight:500;background:var(--dl)}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .past[data-grande]{width:40px;height:40px;position:relative;z-index:2}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .past.repli{width:28px;height:28px;background:var(--d2);margin-inline-start:-14px;position:relative;z-index:1}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .past.repli.petit{width:22px;height:22px;margin-inline-start:-12px;z-index:0}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .esp{flex:1}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .chev{width:18px;height:18px;color:var(--t3);flex:none}
+[dir="rtl"] [data-surface="pme"] [data-ecran="pochette"] .sieges .chev{transform:scaleX(-1)}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .rangee .bd{flex:1;min-width:0;display:grid;gap:.125rem}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .rangee .bd b{font-size:.875rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .rangee .bd span{font-size:.75rem;color:var(--t3);font-family:var(--mono)}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .x{width:36px;height:36px;flex:none;border-radius:50%;border:1px solid var(--dl);background:none;color:var(--tx);display:grid;place-items:center;cursor:pointer}
+[data-surface="pme"] [data-ecran="pochette"] .sieges .x svg{width:16px;height:16px}
 [data-surface="pme"] .selsoc .rien{margin:1.5rem 0;text-align:center;color:var(--t3);font-size:.875rem}
 @keyframes selsoc-voile{from{opacity:0}to{opacity:1}}
 @keyframes selsoc-monte{from{transform:translateY(100%)}to{transform:none}}
