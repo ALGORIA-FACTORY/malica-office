@@ -2394,6 +2394,8 @@ export const ar: Dict = {
     "هذا النوع من الملفات ليس وثيقة: أودِع ملف PDF أو صورة (JPEG أو PNG أو WebP أو HEIC).",
   "refus.piece.non_partagee": "هذه الوثيقة غير مشتركة مع المحاسبة.",
   "refus.piece.aucune_demande": "لا طلب معلّقًا على هذه الوثيقة.",
+  "refus.piece.motif_requis": "يجب أن يذكر الرفض سببه: اكتب السبب.",
+  "refus.piece.motif_trop_long": "السبب طويل جدًا: يُرجى اختصاره.",
   "refus.rattachement.motif": "اذكر لماذا تفصل هذه الوثيقة.",
   "refus.rattachement.absent": "هذه الوثيقة غير مرتبطة بهذه الوثيقة.",
   "refus.rattachement.a_elle_meme": "لا تُربط الوثيقة بنفسها.",

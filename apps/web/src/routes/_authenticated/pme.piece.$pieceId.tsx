@@ -743,6 +743,17 @@ function PieceScreen() {
   );
   const demandeDeRappel = dernierFaitDuRappel?.fait ?? null;
   const noteDuRappel = dernierFaitDuRappel?.note ?? null;
+  /**
+   * Le refus du rappel, dit UNE fois et visible quel que soit l'onglet ou l'état
+   * de la pièce (lue ou non) : avant, il ne se lisait que dans « Suivi », et pas
+   * du tout sur une pièce encore chez le cabinet sans lecture.
+   */
+  const refusDuRappel =
+    demandeDeRappel === "refusee" ? (
+      <p className="f-note" role="status">
+        {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
+      </p>
+    ) : null;
   const dernierFaitDeSuppression = etatDeMaDemande(
     demandes.data ?? [],
     "suppression",
@@ -1510,6 +1521,7 @@ function PieceScreen() {
          * Le bouton reste : c'est la base qui tranche, et un plafond relevé la
          * minute d'après doit pouvoir être essayé sans quitter l'écran.
          */}
+        {refusDuRappel}
         {motifNonLue === null ? null : (
           <RefusDeLecture
             motif={motifNonLue}
@@ -2334,6 +2346,8 @@ function PieceScreen() {
         </div>
       ) : null}
 
+      {refusDuRappel}
+
       {/* ── 4 · les onglets ───────────────────────────────────────────── */}
       <div
         id="onglets-de-la-piece"
@@ -2599,11 +2613,7 @@ function PieceScreen() {
                     quand: momentDeLEnvoi(dernierFaitDuRappel.createdAt, locale).quand,
                   })}
                 />
-              ) : demandeDeRappel === "refusee" ? (
-                <p className="f-note">
-                  {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
-                </p>
-              ) : rappeler?.a === "proprietaire" ? (
+              ) : demandeDeRappel === "refusee" ? null : rappeler?.a === "proprietaire" ? (
                 rappeler.isError ? (
                   <PasEncoreParti
                     qui={envoiVers.quiPour("proprietaire")}
@@ -2641,11 +2651,8 @@ function PieceScreen() {
                         quand: momentDeLEnvoi(dernierFaitDuRappel.createdAt, locale).quand,
                       })}
                     />
-                  ) : demandeDeRappel === "refusee" ? (
-                    <p className="f-note">
-                      {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
-                    </p>
-                  ) : rappeler?.a !== "cabinet" ? null : rappeler.isError ? (
+                  ) : demandeDeRappel === "refusee" ? null : rappeler?.a !==
+                    "cabinet" ? null : rappeler.isError ? (
                     <PasEncoreParti
                       qui={cabinet.data.name}
                       reessayer={() => rappeler.mutate()}

@@ -2483,6 +2483,8 @@ export const en: Dict = {
     "This file type is not a document: upload a PDF or a photo (JPEG, PNG, WebP, HEIC).",
   "refus.piece.non_partagee": "This document is not shared with the accountant.",
   "refus.piece.aucune_demande": "No request is pending on this document.",
+  "refus.piece.motif_requis": "A refusal must say why: write the reason.",
+  "refus.piece.motif_trop_long": "The reason is too long: please shorten it.",
   "refus.rattachement.motif": "Say why you are detaching this document.",
   "refus.rattachement.absent": "This document is not attached to this document.",
   "refus.rattachement.a_elle_meme": "A document cannot be attached to itself.",

@@ -22,6 +22,7 @@ import {
   tiersDeLaPiece,
 } from "../bibliotheque.ts";
 
+import { retenirPourLaFile } from "./fenetre-de-la-file.ts";
 import { COLONNES_DU_SUIVI, statutAuCabinet, versSuivi } from "./suivi.ts";
 
 /** Chaque statut compte, même à zéro : un client sans pièce doit s'afficher. */
@@ -63,6 +64,36 @@ const PIECES_DU_CABINET = `pieces_v p
 const TRANSMISE = `p.vis = 'partage'
           and not app.piece_accompagne(p.id)
           and p.remplacee_par is null and p.archivee_le is null`;
+
+/**
+ * La demande qui attend la réponse du cabinet sur la pièce `p`, s'il y en a
+ * une. La sélection de la file et son détail lisent la MÊME jointure.
+ */
+const DEMANDE_EN_ATTENTE = `-- La demande en attente, s'il y en a une.
+         --
+         -- Le 11 octobre, le commanditaire a posé que le rappel d'une pièce
+         -- transmise doit être APPROUVÉ par le cabinet. J'avais livré la
+         -- demande et le bouton côté PME, et aucun écran pour y répondre : on
+         -- pouvait demander, personne ne pouvait trancher.
+         --
+         -- Elle paraît donc ICI, dans la file, et non dans un écran séparé :
+         -- une demande qu'il faut aller chercher est une demande qui dort.
+         -- Le DERNIER fait décide : une demande accordée hier n'est plus en
+         -- attente aujourd'hui, et la file ne doit pas la redemander. D'où le
+         -- test sur le dernier fait plutôt qu'un filtre sur « demandee » :
+         -- ce filtre ressortirait une vieille demande déjà tranchée, parce
+         -- qu'il y a toujours une ligne « demandee » quelque part dans
+         -- l'histoire.
+         -- L'état par étape (revue Codex de #146) : seule la demande faite
+         -- AU CABINET l'attend ; celle d'un siège à son propriétaire n'est
+         -- pas la sienne, et sa décision ne clôt pas celle du cabinet.
+         left join lateral (
+           select e.objet
+             from app.etat_des_demandes_lisible(p.id) e
+            where e.etape = 'cabinet' and e.fait = 'demandee'
+            order by e.objet
+            limit 1
+         ) dem on true`;
 
 /**
  * L'ordre de la file : ce qui attend le cabinet d'abord — la pièce corrigée
@@ -175,6 +206,38 @@ export const supervision = {
   },
 
   async queue(db: Requete, cabinetTenantId: string, tenantId?: string) {
+    /*
+     * D'abord CE QUE la file retient, ensuite le détail de ces pièces seules.
+     *
+     * La file était coupée aux 200 plus récentes, tous statuts confondus : une
+     * pièce jamais traitée en sortait derrière 200 pièces prises en charge, et
+     * une demande en attente sur une pièce ancienne aussi, l'inscription
+     * restant bloquée sans écran pour la lever (audit du 10 novembre 2026).
+     * Ce qui attend le cabinet n'est plus jamais coupé (`retenirPourLaFile`).
+     *
+     * La lecture est celle des compteurs (`listClients`) — le même ensemble, le
+     * même statut par `statutAuCabinet` — plus la demande en attente : le
+     * compteur et la file ne peuvent plus dire deux nombres.
+     */
+    const { rows: transmises } = await db.query(
+      `select p.id as piece_id, p.status, dem.objet as demande_objet, ${COLONNES_DU_SUIVI}
+         from ${PIECES_DU_CABINET}
+         left join lateral app.suivi_de_la_piece(p.id) s on true
+         ${DEMANDE_EN_ATTENTE}
+        where ${TRANSMISE}
+          and ($2::uuid is null or p.tenant_id = $2)
+        order by coalesce(p.transmise_le, p.created_at) desc, p.id`,
+      [cabinetTenantId, tenantId ?? null],
+    );
+    const retenues = retenirPourLaFile(
+      (transmises as Record<string, unknown>[]).map((p) => ({
+        id: p["piece_id"] as string,
+        statut: statutAuCabinet(p["status"] as string, p),
+        demandeEnAttente: p["demande_objet"] != null,
+      })),
+    );
+    if (retenues.length === 0) return [];
+
     const { rows } = await db.query(
       `select p.id as piece_id, p.tenant_id, p.status, p.source, p.created_at,
               -- La date d'envoi : une photo reprise hérite de celle de l'ancienne
@@ -257,36 +320,11 @@ export const supervision = {
             where a.cabinet_tenant_id = $1 and a.client_tenant_id = p.tenant_id and a.active
             order by a.created_at desc limit 1
          ) c on true
-         -- La demande en attente, s'il y en a une.
-         --
-         -- Le 11 octobre, le commanditaire a posé que le rappel d'une pièce
-         -- transmise doit être APPROUVÉ par le cabinet. J'avais livré la
-         -- demande et le bouton côté PME, et aucun écran pour y répondre : on
-         -- pouvait demander, personne ne pouvait trancher.
-         --
-         -- Elle paraît donc ICI, dans la file, et non dans un écran séparé :
-         -- une demande qu'il faut aller chercher est une demande qui dort.
-         -- Le DERNIER fait décide : une demande accordée hier n'est plus en
-         -- attente aujourd'hui, et la file ne doit pas la redemander. D'où le
-         -- test sur le dernier fait plutôt qu'un filtre sur « demandee » :
-         -- ce filtre ressortirait une vieille demande déjà tranchée, parce
-         -- qu'il y a toujours une ligne « demandee » quelque part dans
-         -- l'histoire.
-         -- L'état par étape (revue Codex de #146) : seule la demande faite
-         -- AU CABINET l'attend ; celle d'un siège à son propriétaire n'est
-         -- pas la sienne, et sa décision ne clôt pas celle du cabinet.
-         left join lateral (
-           select e.objet
-             from app.etat_des_demandes_lisible(p.id) e
-            where e.etape = 'cabinet' and e.fait = 'demandee'
-            order by e.objet
-            limit 1
-         ) dem on true
+         ${DEMANDE_EN_ATTENTE}
         where ${TRANSMISE}
           and ($2::uuid is null or p.tenant_id = $2)
-        order by coalesce(p.transmise_le, p.created_at) desc
-        limit 200`,
-      [cabinetTenantId, tenantId ?? null, CLE_CONFIANCE_GLOBALE],
+          and p.id = any($4::uuid[])`,
+      [cabinetTenantId, tenantId ?? null, CLE_CONFIANCE_GLOBALE, retenues],
     );
 
     /*

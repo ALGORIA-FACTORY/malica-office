@@ -2573,6 +2573,8 @@ export const fr = {
     "Ce type de fichier n’est pas une pièce : déposez un PDF ou une photo (JPEG, PNG, WebP, HEIC).",
   "refus.piece.non_partagee": "Cette pièce n’est pas partagée avec la comptabilité.",
   "refus.piece.aucune_demande": "Aucune demande n’est en attente sur cette pièce.",
+  "refus.piece.motif_requis": "Un refus doit dire pourquoi : écrivez le motif.",
+  "refus.piece.motif_trop_long": "Le motif est trop long : abrégez-le.",
   "refus.rattachement.motif": "Dites pourquoi vous détachez ce document.",
   "refus.rattachement.absent": "Ce document n’est pas rattaché à cette pièce.",
   "refus.rattachement.a_elle_meme": "Une pièce ne se rattache pas à elle-même.",
