@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Ce qu'on montre d'une erreur — la phrase prévue et une référence, jamais le moteur.
  *
@@ -8,7 +9,6 @@
  * rendue deux fois garde sa référence et ne s'inscrit qu'une fois. Le journal se relit
  * en clair dans les réglages.
  */
-// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const journal = vi.hoisted(() => ({
