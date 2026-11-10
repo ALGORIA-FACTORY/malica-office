@@ -1,6 +1,5 @@
 import type { QualificationDeRetenue } from "@malica/socle/use-cases/retenue-au-reglement";
 import type { QueueItem } from "@malica/socle/ports/repositories";
-import { MOTIF_LONGUEUR_MAX } from "@malica/socle/circuit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -34,6 +33,7 @@ import {
   SectionTitle,
   SignalLight,
 } from "@/components/malica/office-ui";
+import { useLimiteDuMotif } from "@/hooks/use-limite-du-motif";
 import { useI18n, type MessageKey } from "@/i18n";
 import { dateEnChiffres, montant, quantite } from "@/lib/lisible";
 import { saisieDecimale } from "@malica/socle/saisie-decimale";
@@ -130,6 +130,7 @@ function CabinetReviewDeLaPiece() {
   // Le motif d'un refus. Exige par la base, et exige ici : un refus sans
   // motif n'apprend rien a celui qui a demande.
   const [noteDeRefus, setNoteDeRefus] = useState<string>("");
+  const limiteDuMotif = useLimiteDuMotif();
   const [erreurDeReponse, setErreurDeReponse] = useState<string | null>(null);
   // Dans la coque native il n'y a pas de dossier de téléchargements qu'on
   // puisse ouvrir : on dit OÙ le fichier a été écrit. Un bouton qui semble ne
@@ -725,7 +726,7 @@ function CabinetReviewDeLaPiece() {
             <input
               value={noteDeRefus}
               onChange={(e) => setNoteDeRefus(e.target.value)}
-              maxLength={MOTIF_LONGUEUR_MAX}
+              maxLength={limiteDuMotif}
               aria-label={t("cab.demande.motif")}
               placeholder={t("cab.demande.motif")}
               className="h-9 min-w-[220px] flex-1 border border-border bg-background px-2 text-[13px]"

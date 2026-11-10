@@ -5,7 +5,6 @@
  * et s'ouvre par client et fournisseur. Le détail d'un groupe se déplie.
  */
 import type { QueueItem } from "@malica/socle/ports/repositories";
-import { MOTIF_LONGUEUR_MAX } from "@malica/socle/circuit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
@@ -13,6 +12,7 @@ import { useMemo, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
+import { useLimiteDuMotif } from "@/hooks/use-limite-du-motif";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import {
@@ -60,6 +60,7 @@ function LigneDePiece({
   const qc = useQueryClient();
   const [refus, setRefus] = useState(false);
   const [motif, setMotif] = useState("");
+  const limiteDuMotif = useLimiteDuMotif();
   const [erreur, setErreur] = useState<string | null>(null);
   const objet = piece.demandeEnAttente ?? null;
   const repondre = useMutation({
@@ -128,7 +129,7 @@ function LigneDePiece({
               <input
                 autoFocus
                 value={motif}
-                maxLength={MOTIF_LONGUEUR_MAX}
+                maxLength={limiteDuMotif}
                 onChange={(e) => setMotif(e.target.value)}
                 aria-label={t("cab.demande.motif")}
                 placeholder={t("cab.demande.motif")}

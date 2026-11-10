@@ -18,7 +18,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
-import { MOTIF_LONGUEUR_MAX } from "@malica/socle/circuit";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
@@ -230,14 +229,18 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     assert.match(h[h.length - 1]!.note!, /déclaration/);
   });
 
-  it("le motif se nettoie et se borne, et la base et l'écran disent la même limite", async () => {
+  it("le motif se nettoie et se borne, et l'écran lit la limite de la base", async () => {
     // Audit du 10 novembre 2026 : 100 000 caractères étaient acceptés et
     // recopiés dans les notifications, que R7 interdit d'effacer.
     const max = await admin(async (p) => {
       const { rows } = await p.query<{ n: number }>(`select app.motif_longueur_max() as n`);
       return rows[0]!.n;
     });
-    assert.equal(max, MOTIF_LONGUEUR_MAX, "la base et l'écran ne doivent pas diverger");
+    assert.equal(
+      await rpc("collab", "limiteDuMotif"),
+      max,
+      "l'écran lit la valeur de la base : aucune copie ne vit dans le code",
+    );
 
     const id = await piece("motif");
     await transmettre(id);
@@ -271,6 +274,36 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     await rpcCab("collab", "repondreSurPiece", id, "rappel", true, "   ");
     const fin = (await faits(id)).at(-1)!;
     assert.deepEqual({ fait: fin.fait, note: fin.note }, { fait: "accordee", note: null });
+  });
+
+  it("le droit de trancher se juge avant le motif", async () => {
+    // Qui n'a pas à trancher apprend qu'il ne tranche pas — et rien sur la
+    // forme du motif. Le motif ne se juge qu'une fois le droit établi.
+    const max = (await rpc("collab", "limiteDuMotif")) as number;
+    const id = await piece("droit-avant-motif");
+    await transmettre(id);
+
+    // Aucune demande n'attend : c'est ce que le cabinet lit, motif fautif ou non.
+    for (const motif of [null, "   ", "x".repeat(max + 1)]) {
+      await assert.rejects(
+        () => rpcCab("collab", "repondreSurPiece", id, "rappel", false, motif),
+        /refus\.piece\.aucune_demande/,
+      );
+    }
+
+    // La demande est faite AU CABINET : la société ne la tranche pas elle-même.
+    await rpc("collab", "demanderSurPiece", id, "rappel");
+    for (const motif of [null, "   ", "x".repeat(max + 1)]) {
+      await assert.rejects(
+        () => rpc("collab", "repondreSurPiece", id, "rappel", false, motif),
+        /refus\.reserve\.cabinet_mandate/,
+      );
+    }
+    assert.deepEqual(
+      (await faits(id)).map((f) => f.fait),
+      ["demandee"],
+      "rien n'est inscrit : la demande attend toujours le cabinet",
+    );
   });
 
   it("LA BASE refuse le retrait unilatéral, pas seulement l'écran", async () => {

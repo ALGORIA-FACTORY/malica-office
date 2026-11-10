@@ -9,11 +9,11 @@
  * pièce déjà chez le comptable, la demande y part d'elle-même.
  */
 import type { DemandeSurPiece } from "@malica/socle/ports/repositories";
-import { MOTIF_LONGUEUR_MAX } from "@malica/socle/circuit";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Aide } from "@/components/malica/aide";
+import { useLimiteDuMotif } from "@/hooks/use-limite-du-motif";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
@@ -38,6 +38,7 @@ export function DemandeDuSiege({
   const { t } = useI18n();
   const [refus, setRefus] = useState(false);
   const [note, setNote] = useState("");
+  const limiteDuMotif = useLimiteDuMotif();
   const [erreur, setErreur] = useState<string | null>(null);
   const qui = auteur ?? t("circuit.siege");
 
@@ -82,7 +83,7 @@ export function DemandeDuSiege({
           <textarea
             rows={2}
             value={note}
-            maxLength={MOTIF_LONGUEUR_MAX}
+            maxLength={limiteDuMotif}
             onChange={(e) => setNote(e.target.value)}
           />
         </label>

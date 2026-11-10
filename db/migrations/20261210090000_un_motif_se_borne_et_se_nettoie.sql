@@ -7,13 +7,16 @@
 -- contrainte, dont la violation remontait en erreur brute sans message.
 --
 --   * `app.motif_longueur_max()` : UNE valeur, lue par la contrainte, par la
---     porte et par un test qui la compare à celle de l'écran ;
---   * `piece_repondre` nettoie la note (trim, vide devient null), exige un motif
---     pour un refus et le borne, avec deux clés `refus.*` dites en fr, en et ar ;
+--     porte et par l'écran (`collab.limiteDuMotif`) — aucune copie hors de la base ;
+--   * `app.motif_d_une_reponse()` : UNE règle — trim, vide devient null, motif
+--     exigé pour un refus, borné —, avec deux clés `refus.*` dites en fr, en et ar ;
+--   * `piece_repondre` l'appelle APRÈS ses contrôles d'accès, juste avant
+--     d'écrire : qui n'a pas le droit de trancher apprend qu'il ne l'a pas, et
+--     rien sur la forme attendue du motif ;
 --   * la contrainte est posée `not valid` : elle vaut pour toute écriture à
 --     venir et ne réécrit rien (R7) — une note plus ancienne et plus longue reste.
--- Corps de `piece_repondre` repris tel qu'en base (20261125120000) ; seules
--- les premières lignes changent.
+-- Corps de `piece_repondre` repris tel qu'en base (20261125120000) ; seuls
+-- les deux appels à `app.motif_d_une_reponse` s'y ajoutent.
 
 begin;
 
@@ -30,6 +33,28 @@ alter table collab.demandes_sur_piece
   add constraint demandes_note_bornee
   check (note is null or length(note) <= app.motif_longueur_max()) not valid;
 
+-- La règle du motif, en un seul endroit. Elle rend le motif nettoyé, ou refuse.
+-- Appelée par la porte seule (security definer) : personne ne l'exécute en direct.
+create or replace function app.motif_d_une_reponse(p_accorde boolean, p_note text)
+returns text
+language plpgsql
+immutable
+set search_path to ''
+as $$
+declare
+  v_note text := nullif(btrim(p_note), '');
+begin
+  if not p_accorde and v_note is null then
+    raise exception 'refus.piece.motif_requis' using errcode = 'check_violation';
+  end if;
+  if length(v_note) > app.motif_longueur_max() then
+    raise exception 'refus.piece.motif_trop_long' using errcode = 'check_violation';
+  end if;
+  return v_note;
+end
+$$;
+revoke all on function app.motif_d_une_reponse(boolean, text) from public, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.piece_repondre(p_piece uuid, p_objet text, p_accorde boolean, p_note text DEFAULT NULL::text)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -45,17 +70,6 @@ declare
   v_relayee boolean := false;
   v_vivante uuid;
 begin
-  -- Le motif se nettoie et se borne ICI, avant toute écriture : une note de
-  -- plusieurs Mo était acceptée (audit du 10 novembre 2026), recopiée dans les
-  -- notifications, et R7 interdit de l'effacer ensuite.
-  p_note := nullif(btrim(p_note), '');
-  if p_accorde is not null and not p_accorde and p_note is null then
-    raise exception 'refus.piece.motif_requis' using errcode = 'check_violation';
-  end if;
-  if length(p_note) > app.motif_longueur_max() then
-    raise exception 'refus.piece.motif_trop_long' using errcode = 'check_violation';
-  end if;
-
   if p_accorde is null then
     raise exception 'refus.reponse.sans_decision' using errcode = 'check_violation';
   end if;
@@ -94,6 +108,9 @@ begin
         using errcode = '42501';
     end if;
     v_demandeur := v_dernier.auteur;
+    -- Le droit de trancher est établi : le motif se nettoie et se borne, avant
+    -- toute écriture (audit du 10 novembre 2026).
+    p_note := app.motif_d_une_reponse(p_accorde, p_note);
 
     -- Accordée sur une pièce chez le comptable, la demande y part : un fait.
     v_relayee := p_accorde and v_vis = 'partage'::app.vis_t;
@@ -151,6 +168,9 @@ begin
     raise exception 'refus.piece.aucune_demande'
       using errcode = 'check_violation';
   end if;
+  -- Le droit de trancher est établi : le motif se nettoie et se borne, avant
+  -- toute écriture (audit du 10 novembre 2026).
+  p_note := app.motif_d_une_reponse(p_accorde, p_note);
 
   insert into collab.demandes_sur_piece (tenant_id, piece_id, objet, fait, note, auteur, etape)
   values (v_tenant, p_piece, p_objet,
