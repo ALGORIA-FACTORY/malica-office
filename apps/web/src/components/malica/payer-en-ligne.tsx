@@ -194,7 +194,7 @@ export function PayerEnLigneCabinet() {
       ) : !paiement || paiement.etat === "paye" || paiement.etat === "remplace" ? (
         <p className="text-sm text-muted-foreground">{t("pme.payer.rienARegler")}</p>
       ) : (
-        <div className="max-w-xl space-y-4">
+        <div className="w-full space-y-4">
           <div className="rounded-lg border border-border p-4">
             <p className="font-medium">{libelleDuPaiement(paiement, t)}</p>
             <p className="num text-sm text-muted-foreground">
@@ -251,7 +251,7 @@ export function PayerEnLigneCabinet() {
         </div>
       )}
       {retour.simulateur && retour.revenu === paiementId && !retour.retour ? (
-        <div className="max-w-xl space-y-2 rounded-lg border border-border p-3">
+        <div className="w-full space-y-2 rounded-lg border border-border p-3">
           <p className="text-sm">{t("pme.reglages.paiement.simulateur")}</p>
           <div className="flex flex-wrap gap-2">
             {(["paye", "refuse"] as const).map((decision) => (

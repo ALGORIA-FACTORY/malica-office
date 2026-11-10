@@ -175,7 +175,7 @@ function CabinetLayout() {
 
   if (cabinets.isPending) {
     return (
-      <main className="mx-auto max-w-5xl px-6 py-12">
+      <main className="w-full px-4 py-8 sm:px-6 lg:px-9 lg:py-12">
         <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
       </main>
     );
@@ -183,7 +183,7 @@ function CabinetLayout() {
 
   if (!org) {
     return (
-      <main className="mx-auto max-w-3xl space-y-6 px-6 py-12">
+      <main className="w-full space-y-6 px-4 py-8 sm:px-6 lg:px-9 lg:py-12">
         <h1 className="text-xl font-semibold tracking-tight">{t("cab.brand")}</h1>
         <EmptyState>{t("cab.noorg")}</EmptyState>
         <Link
