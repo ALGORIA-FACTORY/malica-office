@@ -8,6 +8,11 @@
       "chemins": ["public.agents_run_log"]
     },
     {
+      "objet": "agents.assistant_questions",
+      "privilege": "INSERT",
+      "chemins": ["public.assistant_debit_exiger"]
+    },
+    {
       "objet": "agents.conversation_messages",
       "privilege": "INSERT",
       "chemins": ["public.conversation_poser", "public.conversation_repondre"]

@@ -26,6 +26,7 @@ import type { SuiviDeTrace } from "@malica/socle/ports/repositories";
 import {
   decouperLeFlux,
   type EvenementDeLAssistant,
+  type FeuilleDeBloc,
   type FinDeLaReponse,
   type QuestionALAssistant,
 } from "@malica/socle/ports/assistant";
@@ -139,6 +140,27 @@ export function creerMalicaHttp(): MalicaPort {
       }
       if (fin) return fin;
       throw new ErreurApi(erreur ?? "assistant.indisponible", 502);
+    },
+
+    /* Un bloc en classeur : la réponse est le fichier lui-même, pas du JSON. */
+    async exporterUnBloc(input: {
+      titre: string;
+      droiteAGauche: boolean;
+      feuille: FeuilleDeBloc;
+    }): Promise<Blob> {
+      const reponse = await transport().appeler("/malica/blocs/classeur", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (!reponse.ok) {
+        const corps = (await reponse.json().catch(() => null)) as { erreur?: string } | null;
+        throw new ErreurApi(
+          corps?.erreur ?? `malica /blocs/classeur : ${reponse.status}`,
+          reponse.status,
+        );
+      }
+      return reponse.blob();
     },
 
     demander(question: QuestionAMalica): Promise<ReponseDeMalica> {

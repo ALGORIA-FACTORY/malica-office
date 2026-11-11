@@ -167,8 +167,9 @@ describe("verif #298 — tools under RLS, route, browser payload", { skip: !BASE
     await s.fermer();
   });
 
-  it("the 8 tools, as amel (A, under mandate), never reach company B", async () => {
-    assert.equal(DEFINITIONS.length, 8);
+  it("the 12 tools, as amel (A, under mandate), never reach company B", async () => {
+    // A new tool must be added to the attempts below before this count moves.
+    assert.equal(DEFINITIONS.length, 12);
     const c = ctx(appelDe(s.gens.amel.id), s.pme);
     const appels: Array<[string, unknown]> = [
       ["pieces_chercher", { texte: "SECRET" }],
@@ -177,11 +178,16 @@ describe("verif #298 — tools under RLS, route, browser payload", { skip: !BASE
       ["piece_ouvrir", { piece_id: pieceB, tenantId: orgB }],
       ["tva_du_mois", { mois: "2026-10", tenantId: orgB }],
       ["echeances_fiscales", { toutes: true, tenantId: orgB }],
+      ["achats_par_fournisseur", { tenantId: orgB, tenant_id: orgB }],
+      ["achats_par_fournisseur", { mois: "2026-10", tenantId: orgB }],
+      ["evolution_mensuelle", { mois: 12, tenantId: orgB, tenant_id: orgB }],
+      ["resultat_comptabilise", { mois: 12, tenantId: orgB, tenant_id: orgB }],
       ["ecritures_proposees", { piece_id: pieceB }],
       ["ecritures_proposees", {}],
       ["tiers_chercher", { texte: "SECRET" }],
       ["tiers_chercher", { tenantId: orgB }],
       ["action_proposer", { action: "envoyer_au_cabinet", piece_id: pieceB, raison: "x" }],
+      ["calculer", { expression: "1 + 1", tenantId: orgB }],
       ["sql", { requete: "select * from capture.pieces" }],
       ["executer_code", { code: "process.exit(1)" }],
       ["lire_fichier", { chemin: "../../.env" }],
@@ -197,6 +203,27 @@ describe("verif #298 — tools under RLS, route, browser payload", { skip: !BASE
         `${nom} rendered B's piece`,
       );
     }
+  });
+
+  it("« all companies » is the caller's own companies, and even a forged perimeter reads nothing of B", async () => {
+    // What the server establishes: only organisations amel belongs to.
+    const d = await verifierLeDossier(appelDe(s.gens.amel.id), s.pme);
+    assert.ok(d.societes && d.societes.length >= 1);
+    assert.ok(!d.societes.some((x) => x.id === orgB), "B entered amel's perimeter");
+    assert.equal(d.societes[0]!.id, s.pme);
+    // And if the perimeter were forged anyway, the base (RLS) still returns nothing of B.
+    const c = {
+      ...ctx(appelDe(s.gens.amel.id), s.pme),
+      societes: [
+        { id: s.pme, name: "A", currency: "TND" },
+        { id: orgB, name: "B", currency: "TND" },
+      ],
+    };
+    const r = await executerOutil(c, "comparer_les_societes", { mois: 12 });
+    const tout = JSON.stringify(r);
+    LOG("comparer_les_societes with a forged perimeter", { ok: r.ok, extrait: tout.slice(0, 300) });
+    assert.ok(!tout.includes(SECRET_B), "the comparison leaked B's amount");
+    assert.ok(!tout.includes("SECRET B"), "the comparison leaked B's names");
   });
 
   it("the route refuses a tenant the caller does not belong to (the model cannot pick it either)", async () => {

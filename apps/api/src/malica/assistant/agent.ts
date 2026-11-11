@@ -60,6 +60,7 @@
 
 import { texte as message } from "@malica/socle/conseil";
 import type {
+  BlocDeReponse,
   EvenementDeLAssistant,
   FinDeLaReponse,
   PropositionDAction,
@@ -80,8 +81,11 @@ import {
   lireConfigurationAssistant,
   type ConfigurationDeLAssistant,
 } from "./configuration.ts";
-import { GardeDesChiffres, type SourceConnue } from "./garde.ts";
+import { chiffresDe, GardeDesChiffres, type SourceConnue } from "./garde.ts";
+import { FiltreDeMecanique } from "./sans-mecanique.ts";
 import {
+  AFFICHER_VISUEL,
+  COMPARER_LES_SOCIETES,
   CONCLURE_REPONSE,
   DEFINITIONS,
   etapeDeLOutil,
@@ -148,6 +152,8 @@ function versLEcran(f: FinMesuree): FinDeLaReponse {
     sources: f.sources,
     propositions: f.propositions,
     suggestions: f.suggestions,
+    // Les blocs composés par le serveur : déjà formatés, déjà traduits, sans mécanique.
+    blocs: f.blocs,
     chiffresRetires: f.chiffresRetires,
     sansCitations: f.sansCitations,
   };
@@ -189,6 +195,12 @@ function articlesCites(sources: readonly SourceConnue[]): SourceCitee[] {
 export interface DependancesDeLAssistant {
   /** Claude en flux ; `null` quand la clé n'est pas posée. */
   claude: ClientEnFlux | null;
+  /**
+   * DeepSeek, dans la MÊME boucle d'outils que Claude (`deepseek-flux.ts`) :
+   * mêmes outils, même garde, même consigne. Absent, le repli reste l'ancienne
+   * conversation (`repli`), qui ne voit qu'un instantané du dossier.
+   */
+  deepseek?: ClientEnFlux | null;
   /** Le conseil cité (#278), pour l'outil `conseil_fiscal`. */
   conseil: (question: string, jour: string | null) => Promise<ResultatDuConseilCite>;
   /**
@@ -212,6 +224,8 @@ export interface QuestionPosee {
   locale: "fr" | "en" | "ar";
   conversationId: string | null;
   pieceIds: string[];
+  /** La personne regarde « Toutes les sociétés » : la comparaison lui est ouverte. */
+  toutesLesSocietes?: boolean;
 }
 
 /** Ce qui est vérifié AVANT d'ouvrir le flux : un refus part en 4xx, pas dans un flux. */
@@ -224,6 +238,8 @@ export interface DossierVerifie {
     currency: string;
     role: string;
   };
+  /** Les sociétés de la personne (même genre que le dossier), la société ouverte en tête. */
+  societes?: ReadonlyArray<{ id: string; name: string; currency: string }>;
 }
 
 function aujourdhuiATunis(maintenant: Date = new Date()): string {
@@ -247,7 +263,15 @@ export async function verifierLeDossier(api: AppelApi, tenantId: string): Promis
   // R4 : aucune juridiction par défaut.
   if (!organisation.jurisdiction) throw new Error("assistant.juridiction_absente");
   await api.rpc("conseil", "exigerBudget", [tenantId]);
-  return { organisation };
+  return {
+    organisation,
+    // Ses sociétés, telles que la base les lui reconnaît : c'est le seul périmètre
+    // que « Toutes les sociétés » peut ouvrir. La société ouverte vient en premier.
+    societes: organisations
+      .filter((o) => o.kind === organisation.kind)
+      .sort((a, b) => Number(b.id === tenantId) - Number(a.id === tenantId))
+      .map((o) => ({ id: o.id, name: o.name, currency: o.currency })),
+  };
 }
 
 const LANGUES: Record<string, string> = { fr: "français", en: "anglais", ar: "arabe" };
@@ -390,6 +414,8 @@ async function converser(
   q: QuestionPosee,
   deps: DependancesDeLAssistant,
   emettre: (ev: EvenementDeLAssistant) => void,
+  /** Claude est tombé avant son premier mot : DeepSeek reprend, dans la même boucle. */
+  repriseApresPanne: boolean = false,
 ): Promise<FinMesuree> {
   const maintenant = deps.maintenant ?? (() => Date.now());
   const debut = maintenant();
@@ -404,28 +430,41 @@ async function converser(
   // Claude ne répond que si sa clé est posée, si le budget commun de la chaîne
   // n'est pas épuisé ET si l'assistant n'a pas atteint SON plafond (décision
   // du dirigeant, 8 novembre 2026 : la lecture des pièces garde sa part).
+  // Sinon DeepSeek répond DANS LA MÊME BOUCLE (mêmes outils, même garde) ; à
+  // défaut de client DeepSeek, l'ancienne conversation prend le relais.
   let motif: MotifDuRepli | null = !deps.claude
     ? "cle_absente"
     : !anthropic || anthropic.epuise
       ? "budget_claude"
-      : null;
+      : repriseApresPanne
+        ? "panne"
+        : null;
+  const deepseekEnBoucle = Boolean(deps.deepseek && deepseek && !deepseek.epuise);
   let configuration: ConfigurationDeLAssistant | null = null;
-  if (motif === null) {
+  if (motif === null || deepseekEnBoucle) {
     configuration = lireConfigurationAssistant(
       await api.rpc<unknown>("conseil", "configurationAssistant", []),
     );
-    if (configuration.plafond.epuise) motif = "plafond_assistant";
+    if (motif === null && configuration.plafond.epuise) motif = "plafond_assistant";
   }
+  const fournisseur: "claude" | "deepseek" | null =
+    motif === null ? "claude" : deepseekEnBoucle && configuration ? "deepseek" : null;
 
-  if (motif !== null || configuration === null) {
+  if (fournisseur === null || configuration === null) {
     const m = motif ?? "budget_claude";
     return repliPossible
       ? repondreParLeRepli(q, deps, emettre, debut, maintenant, m)
       : sArreter(api, q, emettre, debut, maintenant, m);
   }
+  const client = fournisseur === "claude" ? deps.claude! : deps.deepseek!;
 
   const reglage = configuration.reglage;
-  const choix = choisirLeModele(q.question, q.pieceIds.length, reglage);
+  const choixClaude = choisirLeModele(q.question, q.pieceIds.length, reglage);
+  // Le modèle de DeepSeek est celui que la chaîne règle (R8), jamais un nom en code.
+  const choix =
+    fournisseur === "deepseek" && deepseek
+      ? { ...choixClaude, modele: deepseek.modele }
+      : choixClaude;
 
   /*
    * La relecture du cabinet peut-elle retenir cette réponse ? Les conditions
@@ -449,7 +488,7 @@ async function converser(
   );
   emettre({ type: "debut", conversationId });
 
-  const garde = new GardeDesChiffres(q.question);
+  const garde = new GardeDesChiffres(q.question, configuration.garde);
   let premierMot: number | null = null;
   // Le texte gardé s'accumule dans la garde (`texteEmis`) ; il ne part à
   // l'écran qu'en flux libre. En attente de la conclusion, il attend.
@@ -476,11 +515,27 @@ async function converser(
     aujourdhui,
     conseil: deps.conseil,
     idProposition: deps.idProposition ?? (() => crypto.randomUUID()),
+    // Un calcul n'emploie que ce que la personne a écrit ou qu'un outil a rendu.
+    nombresAdmis: () =>
+      new Set([
+        ...chiffresDe(q.question),
+        ...garde.toutesLesSources().flatMap((s) => chiffresDe(`${s.titre}\n${s.texte}`)),
+      ]),
+    // Le périmètre élargi : seulement si la personne le regarde, et sur SES sociétés.
+    ...(q.toutesLesSocietes && (dossier.societes?.length ?? 0) > 1
+      ? { societes: dossier.societes! }
+      : {}),
   };
 
   /* ------------------------------------------------------------ la requête */
   // L'outil final vient en dernier : c'est lui qui porte le point de cache.
-  const definitions = [...DEFINITIONS, CONCLURE_REPONSE];
+  const definitions = [
+    ...DEFINITIONS,
+    // Offert seulement quand il y a de quoi comparer : le modèle ne le voit pas autrement.
+    ...(ctx.societes ? [COMPARER_LES_SOCIETES] : []),
+    AFFICHER_VISUEL,
+    CONCLURE_REPONSE,
+  ];
   const outils = definitions.map((d, i) =>
     i === definitions.length - 1 ? { ...d, cache_control: { type: "ephemeral" as const } } : d,
   );
@@ -501,6 +556,11 @@ async function converser(
 
   const outilsAppeles: string[] = [];
   const propositions: PropositionDAction[] = [];
+  // Les visuels que les outils ont composés (par clé de source), et ceux que le
+  // modèle a choisi de montrer — dans l'ordre, une fois chacun.
+  const visuels = new Map<string, BlocDeReponse>();
+  const blocs: BlocDeReponse[] = [];
+  const montres = new Set<string>();
   const mentions: string[] = [];
   let conclusion: ConclusionDeLaReponse | null = null;
   let usageTotal: UsageDeLAppel = { ...USAGE_NUL };
@@ -526,10 +586,12 @@ async function converser(
 
     const assembleur = new Assembleur();
     const blocsDeTexte = new Set<number>();
+    // Par tour : une conclusion écrite en clair coupe la suite du tour, pas la réponse suivante.
+    const filtre = new FiltreDeMecanique();
     const debutAppel = maintenant();
     garde.nouveauTour();
     try {
-      for await (const ev of deps.claude!(requete)) {
+      for await (const ev of client(requete)) {
         assembleur.recevoir(ev);
         const i = ev.index;
         if (ev.type === "content_block_start" && typeof i === "number") {
@@ -545,7 +607,7 @@ async function converser(
           blocsDeTexte.has(i)
         ) {
           if (ev.delta?.type === "text_delta") {
-            envoyerTexte(garde.recevoirTexte(ev.delta.text ?? ""));
+            envoyerTexte(garde.recevoirTexte(filtre.passer(ev.delta.text ?? "")));
           } else if (ev.delta?.type === "citations_delta" && ev.delta.citation) {
             garde.recevoirCitation(ev.delta.citation);
           }
@@ -554,6 +616,7 @@ async function converser(
           typeof i === "number" &&
           blocsDeTexte.has(i)
         ) {
+          envoyerTexte(garde.recevoirTexte(filtre.vider()));
           const j = garde.fermerBloc();
           envoyerTexte(j.aEmettre);
           // Le nombre seulement : la phrase retirée porte le chiffre sans source.
@@ -570,7 +633,12 @@ async function converser(
         latencyMs: maintenant() - debutAppel,
         erreur: e instanceof Error ? e.message : String(e),
       });
-      if (tour === 0 && !texteMontre && repliPossible)
+      if (
+        fournisseur === "claude" &&
+        tour === 0 &&
+        !texteMontre &&
+        (repliPossible || deepseekEnBoucle)
+      )
         throw new PanneAvantLePremierMot(String(e), conversationId);
       interrompue = e instanceof Error ? e.message : String(e);
       break;
@@ -602,6 +670,7 @@ async function converser(
       input: unknown;
     }>;
     const resultats: unknown[] = [];
+    const annonces: string[] = [];
     let conclusionIllisible = false;
     for (const appel of appels) {
       if (appel.name === CONCLURE_REPONSE.name) {
@@ -621,6 +690,38 @@ async function converser(
         });
         continue;
       }
+      if (appel.name === AFFICHER_VISUEL.name) {
+        const cle = (appel.input as { source?: unknown } | null)?.source;
+        const bloc = typeof cle === "string" ? visuels.get(cle) : undefined;
+        if (bloc && typeof cle === "string") {
+          if (!montres.has(cle)) {
+            montres.add(cle);
+            // Là où Malica en est de sa réponse : l'écran pose le bloc à cet endroit.
+            const place = { ...bloc, apres: garde.texteEmis().length };
+            blocs.push(place);
+            // En attente de la conclusion, le bloc attend aussi : une réponse
+            // retenue ne montre que son message de relecture.
+            if (!enAttente) emettre({ type: "bloc", bloc: place });
+          }
+          resultats.push({
+            type: "tool_result",
+            tool_use_id: appel.id,
+            content:
+              "Visuel affiché sous ta réponse. Ne recopie pas ses lignes : dis ce qu'elles veulent dire.",
+          });
+        } else {
+          resultats.push({
+            type: "tool_result",
+            tool_use_id: appel.id,
+            content:
+              visuels.size > 0
+                ? `Aucun visuel pour cette source. Visuels disponibles : ${[...visuels.keys()].join(", ")}.`
+                : "Aucun visuel n'est disponible : réponds en texte.",
+            is_error: true,
+          });
+        }
+        continue;
+      }
       outilsAppeles.push(appel.name);
       const r = await executerOutil(ctx, appel.name, appel.input);
       etape(appel.name, "fin");
@@ -634,11 +735,20 @@ async function converser(
         continue;
       }
       for (const s of r.sources) garde.ajouterSource(s);
+      for (const v of r.visuels ?? []) visuels.set(v.cle, v.bloc);
       resultats.push({
         type: "tool_result",
         tool_use_id: appel.id,
         content: r.sources.map(blocDeRecherche),
       });
+      // Dit À CÔTÉ du résultat, jamais dedans : l'API refuse un résultat d'outil
+      // qui mêle des blocs de recherche à autre chose (essai réel du 10 novembre
+      // 2026 : « if any blocks in a tool result are of type search_result, all
+      // blocks must be of that type » — toute réponse à outil était interrompue).
+      for (const v of r.visuels ?? [])
+        annonces.push(
+          `Un visuel est disponible pour la source « ${v.cle} » : afficher_visuel le montre à la personne.`,
+        );
       for (const p of r.propositions ?? []) {
         propositions.push(p);
         // En attente de la conclusion, le bouton attend aussi : une réponse
@@ -653,7 +763,11 @@ async function converser(
     // La conclusion seule, et lisible : la réponse est finie, rien à renvoyer.
     if (appels.every((a) => a.name === CONCLURE_REPONSE.name) && !conclusionIllisible) break;
     messages.push({ role: "assistant", content: tourARenvoyer(m.content) });
-    messages.push({ role: "user", content: resultats });
+    messages.push({
+      role: "user",
+      // Les résultats d'outils d'abord, comme l'API l'exige ; les annonces ensuite.
+      content: [...resultats, ...annonces.map((text) => ({ type: "text" as const, text }))],
+    });
   }
 
   /* ------------------------------------------------------------ la fin */
@@ -709,6 +823,7 @@ async function converser(
     if (enAttente) {
       // La conclusion est connue et la réponse peut partir : d'un bloc.
       montrer(reponse);
+      for (const b of blocs) emettre({ type: "bloc", bloc: b });
       for (const p of propositions) emettre({ type: "proposition", proposition: p });
       if (garde.retirees().length > 0) emettre({ type: "retire", nombre: garde.retirees().length });
     } else {
@@ -721,6 +836,7 @@ async function converser(
     ? []
     : sourcesCitees.filter((s) => !s.cle.startsWith("malica:proposition:")).map(versSourceAffichee);
   const propositionsAffichees = retenue ? [] : propositions;
+  const blocsAffiches = retenue ? [] : blocs;
   await api.rpc<void>("conversations", "ajouter", [
     {
       conversationId,
@@ -735,6 +851,7 @@ async function converser(
       // propositions (le bouton se rejuge alors contre la porte du circuit).
       sources: sourcesAffichees,
       propositions: propositionsAffichees,
+      blocs: blocsAffiches,
     },
   ]);
   const dernierMessage = await api
@@ -756,12 +873,13 @@ async function converser(
     sources: sourcesAffichees,
     propositions: propositionsAffichees,
     suggestions: retenue ? [] : suggestionsDeSuite(outilsAppeles, q.locale),
+    blocs: blocsAffiches,
     chiffresRetires: retenue ? 0 : garde.retirees().length,
     sansCitations: false,
     mesure: {
       modele: modeleRendu,
-      repli: null,
-      motifDuRepli: null,
+      repli: fournisseur === "deepseek" ? "deepseek" : null,
+      motifDuRepli: fournisseur === "deepseek" ? motif : null,
       latencePremierMotMs: premierMot,
       latenceTotaleMs: latenceTotale,
       coutUsd: coutTotal === null ? null : Math.round(coutTotal * 1_000_000) / 1_000_000,
@@ -790,6 +908,18 @@ export async function converserAvecRepli(
     return await converser(api, dossier, q, deps, emettre);
   } catch (e) {
     if (!(e instanceof PanneAvantLePremierMot)) throw e;
+    // DeepSeek reprend la question DANS LA BOUCLE quand son client est branché :
+    // mêmes outils et même garde, sur le fil déjà ouvert.
+    if (deps.deepseek) {
+      return await converser(
+        api,
+        dossier,
+        { ...q, conversationId: e.conversationId },
+        deps,
+        emettre,
+        true,
+      );
+    }
     const maintenant = deps.maintenant ?? (() => Date.now());
     return repondreParLeRepli(
       { ...q, conversationId: e.conversationId },
@@ -841,6 +971,7 @@ async function repondreParLeRepli(
     sources: [],
     propositions: [],
     suggestions: retenue ? [] : suggestionsDeSuite([], q.locale),
+    blocs: [],
     chiffresRetires: garde.retirees().length,
     sansCitations: !retenue,
     mesure: {
@@ -886,6 +1017,7 @@ async function sArreter(
     sources: [],
     propositions: [],
     suggestions: [],
+    blocs: [],
     chiffresRetires: 0,
     sansCitations: false,
     mesure: {

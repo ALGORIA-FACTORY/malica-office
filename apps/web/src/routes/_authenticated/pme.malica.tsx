@@ -99,7 +99,11 @@ function PmeMalica() {
   const revenir = useRevenir();
   const voix = useVoix(locale);
 
-  const conversation = useConversationMalica(pme.tenantId);
+  const conversation = useConversationMalica(
+    pme.tenantId,
+    // « Toutes les sociétés », choisi dans l'en-tête, quand il y en a plusieurs.
+    pme.societeAffichee === null && pme.dossiers.length > 1,
+  );
   const { tours, filId, enCours } = conversation;
   const jointe = useJointe(pme.tenantId);
   const fichier = useRef<HTMLInputElement>(null);
