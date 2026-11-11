@@ -1,3 +1,10 @@
+/**
+ * Le calcul que Malica peut demander : une opération, évaluée en décimal.
+ *
+ * Le modèle ne calcule pas lui-même ; il écrit l'opération, ce module la
+ * rend exacte et nomme ses opérandes pour la garde des chiffres. Tout ce qui
+ * n'est pas une opération arithmétique simple est refusé, y compris du code.
+ */
 import { describe, expect, it } from "vitest";
 
 import { evaluerLeCalcul } from "../calcul.ts";
