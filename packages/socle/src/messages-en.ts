@@ -1224,6 +1224,9 @@ export const en: Dict = {
     "I can't answer right now: this month's assistant budget has been reached. The Malica team has been notified; your documents and file remain available.",
   "pme.assistant.interrompue": "My answer was interrupted. Ask again if it seems incomplete.",
   "pme.assistant.indisponible": "I couldn't answer right now. Please try again in a moment.",
+  "pme.assistant.nonVerifie": "_(unverified)_",
+  "pme.assistant.nonVerifieNote":
+    "I did not find this point in the legal texts: what is marked “unverified” comes from my general knowledge. Do not apply it before a chartered accountant has confirmed it.",
   "pme.assistant.vide": "I found nothing reliable to answer. Could you clarify your question?",
   "pme.assistant.outil.pieces_chercher": "Looking at your documents…",
   "pme.assistant.outil.piece_ouvrir": "Opening the document…",

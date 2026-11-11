@@ -274,6 +274,8 @@ function dossierFictif(
     relecture?: "annoncer" | "retenir";
     /** La file du cabinet refuse l'écriture. */
     fileEnPanne?: boolean;
+    /** Quand le corpus ne répond pas : lu en base ; absent, la garde retire. */
+    sansTexte?: "marquer" | "retirer";
   } = {},
 ): {
   api: AppelApi;
@@ -312,9 +314,11 @@ function dossierFictif(
         case "conseil.exigerBudget":
           return r({ depense: "0", plafond: "10" });
         case "conseil.configurationAssistant":
-          return r(
-            options.relecture ? { ...CONFIGURATION, relecture: options.relecture } : CONFIGURATION,
-          );
+          return r({
+            ...CONFIGURATION,
+            ...(options.relecture ? { relecture: options.relecture } : {}),
+            ...(options.sansTexte ? { sans_texte: options.sansTexte } : {}),
+          });
         case "capture.chaineDeDesignation":
           return r(chaine(options.anthropicEpuise ?? false, options.deepseekEpuise ?? false));
         case "capture.journaliserAgent":
@@ -1497,5 +1501,107 @@ describe("ce qui part au navigateur", () => {
     assert.equal((finEnvoyee as { fin: { chiffresRetires: unknown } }).fin.chiffresRetires, 1);
     // La mesure reste côté serveur, pour le journal des coûts et l'épreuve.
     assert.ok(fin.mesure.outils.includes("pieces_chercher"));
+  });
+});
+
+/*
+ * Point M-9, choix du dirigeant (11 novembre 2026) : quand le corpus, consulté,
+ * ne répond pas, Malica répond quand même ; un chiffre tiré de sa mémoire part
+ * avec la marque « non vérifié », et la réponse part chez le comptable.
+ */
+const NON_VERIFIE = message("fr", "pme.assistant.nonVerifie");
+const NOTE_NON_VERIFIE = message("fr", "pme.assistant.nonVerifieNote");
+const PISCINES = "Quelle taxe s'applique aux piscines des hôtels ?";
+const SANS_TEXTE: EtapeSimulee[] = [
+  { outils: [{ nom: "conseil_fiscal", entree: { question: "taxe sur les piscines des hôtels" } }] },
+  {
+    texte:
+      "Je n'ai pas trouvé ce point dans les textes. Cette taxe est en général de 7 % du prix. Elle se déclare avec les autres taxes.",
+    conclusion: { conseil: true, portee: "generale", certitude: 0.3, doute: null, theme: null },
+  },
+];
+
+async function poserSansTexte(
+  etapes: EtapeSimulee[],
+  options: Parameters<typeof dossierFictif>[0] = {},
+) {
+  const { api, trace } = dossierFictif(options);
+  const requetes: Parameters<typeof claudeSimule>[1] = [];
+  const { fin, evenements } = await rejouer(
+    { tenantId: TENANT, question: PISCINES, locale: "fr", conversationId: null, pieceIds: [] },
+    { claude: claudeSimule(etapes, requetes), conseil: conseilFictif, repli: sansRepli },
+    api,
+  );
+  const textes = evenements.flatMap((e) => (e.type === "texte" ? [e.texte] : [])).join("");
+  return { fin, textes, file: trace.file, requetes };
+}
+
+describe("sans texte dans le corpus, Malica répond et marque ce qu'elle chiffre de mémoire", () => {
+  const MARQUER = { relecture: "annoncer", sansTexte: "marquer" } as const;
+
+  it("la phrase chiffrée reste, marquée ; la note et l'annonce suivent ; le cabinet reçoit la réponse", async () => {
+    const r = await poserSansTexte(SANS_TEXTE, MARQUER);
+    assert.ok(r.textes.includes(`est en général de 7 % du prix. ${NON_VERIFIE}`), r.textes);
+    assert.ok(r.textes.includes("Elle se déclare avec les autres taxes."));
+    assert.ok(r.textes.includes(NOTE_NON_VERIFIE));
+    assert.ok(
+      r.textes.endsWith(A_CONFIRMER),
+      "une question générale au chiffre non vérifié part aussi",
+    );
+    assert.equal(r.fin.mesure.nonVerifies, 1);
+    assert.equal(r.fin.chiffresRetires, 0);
+    assert.equal(r.file.length, 1);
+    assert.equal(r.file[0]!["statut"], "en_attente");
+  });
+
+  it("l'outil dit au modèle de répondre quand même, au lieu de rapporter le silence", async () => {
+    const r = await poserSansTexte(SANS_TEXTE, MARQUER);
+    const vu = JSON.stringify(r.requetes.at(-1));
+    assert.ok(vu.includes("Réponds quand même"), "la consigne de l'outil n'a pas changé");
+    assert.ok(!vu.includes("sans ajouter de règle de mémoire"));
+  });
+
+  it("sans cabinet : la réponse marquée part, avec la note, sans annonce d'un envoi", async () => {
+    const r = await poserSansTexte(SANS_TEXTE, {
+      ...MARQUER,
+      contexte: { cabinetId: null, appelantMembre: true },
+    });
+    assert.ok(r.textes.includes(NON_VERIFIE));
+    assert.ok(r.textes.endsWith(NOTE_NON_VERIFIE));
+    assert.equal(r.file.length, 0);
+  });
+
+  it("sans la règle en base : la phrase chiffrée est retirée, comme avant", async () => {
+    const r = await poserSansTexte(SANS_TEXTE, { relecture: "annoncer" });
+    assert.ok(!r.textes.includes("7 %"), r.textes);
+    assert.ok(!r.textes.includes(NON_VERIFIE));
+    assert.equal(r.fin.mesure.nonVerifies, 0);
+    assert.equal(r.fin.chiffresRetires, 1);
+    const vu = JSON.stringify(r.requetes.at(-1));
+    assert.ok(vu.includes("sans ajouter de règle de mémoire"));
+  });
+
+  it("un montant du dossier sans source reste retiré : la marque ne vaut que si le corpus s'est tu", async () => {
+    const r = await poserSansTexte(
+      [{ texte: "Vous devez 4321 dinars de pénalités. Je reste à votre disposition." }],
+      MARQUER,
+    );
+    assert.ok(!r.textes.includes("4321"), r.textes);
+    assert.ok(!r.textes.includes(NON_VERIFIE));
+    assert.equal(r.fin.mesure.nonVerifies, 0);
+  });
+
+  it("un chiffre de mémoire n'entre pas dans un calcul : l'outil le refuse", async () => {
+    const r = await poserSansTexte(
+      [
+        SANS_TEXTE[0]!,
+        { outils: [{ nom: "calculer", entree: { expression: "8000 * 7 / 100" } }] },
+        { texte: "Je n'ai pas trouvé ce point dans les textes." },
+      ],
+      MARQUER,
+    );
+    const vu = JSON.stringify(r.requetes.at(-1));
+    assert.ok(vu.includes("Demande ce nombre"), "le calcul sur un nombre de mémoire a été accepté");
+    assert.ok(!r.textes.includes("560"));
   });
 });

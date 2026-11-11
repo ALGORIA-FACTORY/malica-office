@@ -1212,6 +1212,9 @@ export const ar: Dict = {
     "لا أستطيع الإجابة الآن: بلغت ميزانية المساعد لهذا الشهر حدّها. تم إعلام فريق مليكة، ووثائقك وملفك متاحة دائمًا.",
   "pme.assistant.interrompue": "انقطعت إجابتي. أعد طرح السؤال إن بدت لك ناقصة.",
   "pme.assistant.indisponible": "لم أتمكّن من الإجابة الآن. أعد المحاولة بعد قليل.",
+  "pme.assistant.nonVerifie": "_(غير مؤكد)_",
+  "pme.assistant.nonVerifieNote":
+    "لم أجد هذه المسألة في النصوص: ما ورد بعلامة «غير مؤكد» مصدره معارفي العامة. لا تطبقوه قبل أن يؤكده خبير محاسب.",
   "pme.assistant.vide": "لم أجد إجابة موثوقة. هل يمكنك توضيح سؤالك؟",
   "pme.assistant.outil.pieces_chercher": "أطّلع على وثائقك…",
   "pme.assistant.outil.piece_ouvrir": "أفتح الوثيقة…",

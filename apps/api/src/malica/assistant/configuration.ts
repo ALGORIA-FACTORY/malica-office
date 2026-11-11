@@ -59,6 +59,11 @@ export interface ConfigurationDeLAssistant {
    * et l'envoie au cabinet ; `retenir` ne montre que le message de relecture.
    */
   relecture: ModeDeRelecture;
+  /**
+   * Quand le corpus ne répond pas (M-9) : `marquer` laisse Malica répondre, ses
+   * chiffres marqués « non vérifié » ; `retirer` garde la règle stricte.
+   */
+  sansTexte: "marquer" | "retirer";
 }
 
 const EFFORTS: readonly Effort[] = ["low", "medium", "high"];
@@ -97,6 +102,7 @@ export function lireConfigurationAssistant(brut: unknown): ConfigurationDeLAssis
     garde: lireLaGarde(c.garde),
     // Absent ou illisible : on retient, comme avant — le manque retombe du côté prudent.
     relecture: c.relecture === "annoncer" ? "annoncer" : "retenir",
+    sansTexte: (c as { sans_texte?: unknown }).sans_texte === "marquer" ? "marquer" : "retirer",
   };
 }
 

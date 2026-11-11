@@ -1284,6 +1284,9 @@ export const fr = {
   "pme.assistant.interrompue":
     "Ma réponse a été interrompue. Reposez la question si elle vous semble incomplète.",
   "pme.assistant.indisponible": "Je n'ai pas pu répondre pour l'instant. Réessayez dans un moment.",
+  "pme.assistant.nonVerifie": "_(non vérifié)_",
+  "pme.assistant.nonVerifieNote":
+    "Je n’ai pas trouvé ce point dans les textes : ce qui est marqué « non vérifié » vient de mes connaissances générales. Ne l’appliquez pas avant qu’un expert-comptable l’ait confirmé.",
   "pme.assistant.vide":
     "Je n'ai rien trouvé de sûr à vous répondre. Pouvez-vous préciser votre question ?",
   "pme.assistant.outil.pieces_chercher": "Je regarde vos pièces…",

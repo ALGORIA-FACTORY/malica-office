@@ -183,6 +183,9 @@ export class GardeDesChiffres {
   private readonly chiffresDeLaQuestion: Set<string>;
   private readonly citees = new Map<string, SourceConnue>();
   private readonly retireesDuTour: string[] = [];
+  private readonly marqueesDuTour: string[] = [];
+  /** La marque d'un chiffre sans source ; `null` : la phrase est retirée. */
+  private marque: string | null = null;
   private emis = "";
   private aSeparer = false;
 
@@ -218,6 +221,15 @@ export class GardeDesChiffres {
     if (this.marques.some((trouve) => trouve(cherchee))) return chiffres;
     const seuil = this.entierLiantDes;
     return chiffres.filter((n) => n.includes(".") || Number(n) >= seuil);
+  }
+
+  /**
+   * À partir d'ici, une phrase au chiffre liant sans source n'est plus retirée :
+   * elle part avec cette marque (« non vérifié »). L'agent ne l'appelle que
+   * lorsque le corpus, consulté dans ce tour, n'a pas répondu (M-9).
+   */
+  marquerSansSource(marque: string): void {
+    this.marque = marque.trim() || null;
   }
 
   /** Une source remise au modèle ; rend son `search_result_index`. */
@@ -324,6 +336,10 @@ export class GardeDesChiffres {
       if (toutPorte) {
         aEmettre += phrase;
         for (const s of porteuses.values()) this.citees.set(s.cle, s);
+      } else if (this.marque) {
+        const corps = phrase.trimEnd();
+        aEmettre += `${corps} ${this.marque}${phrase.slice(corps.length)}`;
+        this.marqueesDuTour.push(corps.replace(/\s+/g, " ").trim());
       } else {
         retirees.push(phrase.replace(/\s+/g, " ").trim());
       }
@@ -362,5 +378,10 @@ export class GardeDesChiffres {
 
   retirees(): string[] {
     return [...this.retireesDuTour];
+  }
+
+  /** Les phrases parties avec la marque « non vérifié ». */
+  marquees(): string[] {
+    return [...this.marqueesDuTour];
   }
 }

@@ -310,3 +310,37 @@ describe("la garde ne retient que ce qui engage, quand la base dit ce qui engage
     );
   });
 });
+
+describe("le chiffre sans source part marqué quand le corpus s'est tu (M-9)", () => {
+  it("sans la marque, la phrase est retirée", () => {
+    const g = new GardeDesChiffres("Quel est le taux ?");
+    const j = g.jugerTout("Le taux est de 7 %. Il se déclare chaque mois.");
+    assert.equal(j.aEmettre, "Il se déclare chaque mois.");
+    assert.deepEqual(g.marquees(), []);
+    assert.equal(g.retirees().length, 1);
+  });
+
+  it("avec la marque, la phrase reste et porte la marque avant l'espace qui la suit", () => {
+    const g = new GardeDesChiffres("Quel est le taux ?");
+    g.marquerSansSource("_(non vérifié)_");
+    const j = g.jugerTout("Le taux est de 7 %. Il se déclare chaque mois.");
+    assert.equal(j.aEmettre, "Le taux est de 7 %. _(non vérifié)_ Il se déclare chaque mois.");
+    assert.deepEqual(g.marquees(), ["Le taux est de 7 %."]);
+    assert.deepEqual(g.retirees(), []);
+  });
+
+  it("un chiffre porté par une source ne reçoit pas la marque", () => {
+    const g = new GardeDesChiffres("Quel est le taux ?");
+    g.ajouterSource({
+      cle: "malica:article:ESSAI:7",
+      genre: "article",
+      titre: "Texte d'essai, article 7",
+      objetId: null,
+      texte: "Le taux est fixé à 19 %.",
+    });
+    g.marquerSansSource("_(non vérifié)_");
+    const j = g.jugerTout("Le taux est de 19 %.");
+    assert.equal(j.aEmettre, "Le taux est de 19 %.");
+    assert.deepEqual(g.marquees(), []);
+  });
+});

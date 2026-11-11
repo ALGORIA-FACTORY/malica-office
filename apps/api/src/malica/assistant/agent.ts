@@ -134,6 +134,8 @@ interface MesureDeLaReponse {
   retenue: boolean;
   /** La réponse est partie, marquée « à confirmer », et le cabinet l'a reçue ou non. */
   annoncee: boolean;
+  /** Les phrases parties avec la marque « non vérifié » (le corpus n'avait pas répondu). */
+  nonVerifies: number;
 }
 
 /** La fin telle que le serveur la connaît : ce que l'écran reçoit, plus la mesure. */
@@ -520,6 +522,7 @@ async function converser(
     aujourdhui,
     conseil: deps.conseil,
     idProposition: deps.idProposition ?? (() => crypto.randomUUID()),
+    repondreSansTexte: configuration.sansTexte === "marquer",
     // Un calcul n'emploie que ce que la personne a écrit ou qu'un outil a rendu.
     nombresAdmis: () =>
       new Set([
@@ -740,6 +743,14 @@ async function converser(
         continue;
       }
       for (const s of r.sources) garde.ajouterSource(s);
+      // Le corpus, consulté, n'a pas répondu : Malica répond quand même, et ce
+      // qu'elle chiffre de mémoire part marqué (M-9, choix du dirigeant).
+      if (
+        configuration.sansTexte === "marquer" &&
+        r.sources.some((s) => s.cle.startsWith("malica:conseil:refus:"))
+      ) {
+        garde.marquerSansSource(message(q.locale, "pme.assistant.nonVerifie"));
+      }
       for (const v of r.visuels ?? []) visuels.set(v.cle, v.bloc);
       resultats.push({
         type: "tool_result",
@@ -796,7 +807,13 @@ async function converser(
    * modèle a conclu (ou à la portée incertaine, s'il n'a pas conclu). Une
    * réponse vide n'a rien à faire relire.
    */
-  const aRelire = dite !== "" && doitEtreRelue(conclusion ?? SANS_CONCLUSION, contexte);
+  // Un chiffre « non vérifié » part chez le comptable quelle que soit la portée
+  // que le modèle a conclue : c'est la raison même de la marque.
+  const nonVerifie = garde.marquees().length > 0;
+  const cabinetPeutRelire = contexte?.appelantMembre === true && contexte.cabinetId !== null;
+  const aRelire =
+    dite !== "" &&
+    (doitEtreRelue(conclusion ?? SANS_CONCLUSION, contexte) || (nonVerifie && cabinetPeutRelire));
   const retenue = enAttente && aRelire;
   const sourcesCitees = garde.sourcesCitees();
   const deposerAuCabinet = async (): Promise<void> => {
@@ -826,6 +843,7 @@ async function converser(
    * qui n'a pas eu lieu : elle dit de la faire confirmer.
    */
   let annonce: string | null = null;
+  if (nonVerifie && !retenue) ajouts.push(message(q.locale, "pme.assistant.nonVerifieNote"));
   if (aRelire && !retenue) {
     annonce = await deposerAuCabinet().then(
       () => message(q.locale, "pme.conseil.aConfirmer"),
@@ -910,6 +928,7 @@ async function converser(
       conclusion,
       retenue,
       annoncee: annonce !== null,
+      nonVerifies: garde.marquees().length,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
@@ -1009,6 +1028,7 @@ async function repondreParLeRepli(
       conclusion: null,
       retenue,
       annoncee: false,
+      nonVerifies: 0,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
@@ -1056,6 +1076,7 @@ async function sArreter(
       conclusion: null,
       retenue: false,
       annoncee: false,
+      nonVerifies: 0,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
