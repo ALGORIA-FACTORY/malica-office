@@ -797,3 +797,17 @@ migration ; R10 demande qu'elle se change sans migration).
 **Confirmé par le dirigeant le 11 novembre 2026** : le principe (la garde suit R3) est retenu. Restent
 ouverts la revue de la liste et du seuil par un expert-comptable, et la carte de la tour
 (`docs/validation-chat-malica/etat-fige-2026-11-11.md`, actions D3 et D4).
+
+### M-9 — Malica répond toujours : que devient le chiffre sans texte
+
+**Consigne du dirigeant, 11 novembre 2026** : Malica répond toujours ; en cas de doute, elle le dit et
+annonce l'envoi à l'expert-comptable, qui confirme, corrige ou écarte
+(`docs/validation-chat-malica/strategie-corpus-2026-11-11.md`, section 6 bis).
+
+À trancher : quand aucun texte n'est trouvé, le chiffre que le modèle tire de sa mémoire est-il affiché avec
+la marque « non vérifié », ou retenu jusqu'au retour de l'expert. Aujourd'hui la garde le retire (R2, R3).
+
+**Tranché par défaut, pour ne pas s'arrêter** : affiché et marqué, sans jamais pouvoir entrer dans un calcul
+ni dans une écriture. Rien n'est codé à ce jour.
+
+À préciser aussi : qui est « l'expert » d'une société sans cabinet rattaché.
