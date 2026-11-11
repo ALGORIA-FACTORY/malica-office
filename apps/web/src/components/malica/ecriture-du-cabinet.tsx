@@ -161,13 +161,16 @@ export function EcritureDuCabinet({
   // suivante) : ce qui suit l'attente ne touche plus un écran démonté. Sans
   // cette garde, la fin du tampon arrivait après le démontage et, en épreuve,
   // après la fin de l'environnement (« window is not defined », 11 nov. 2026).
+  // La garde ne retient que les mises à jour d'état : une première version
+  // abandonnait toute la suite du tampon, dont le passage à la pièce suivante
+  // (e2e cabinet, 11 nov. 2026).
   const monte = useRef(true);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    monte.current = true;
+    return () => {
       monte.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
 
   const journaux = useQuery({
     queryKey: ["journaux", locale],
@@ -257,8 +260,9 @@ export function EcritureDuCabinet({
     onSuccess: async () => {
       setTampon(true);
       await new Promise((fin) => setTimeout(fin, 700));
-      if (!monte.current) return;
-      setTampon(false);
+      // Seul l'état de CET écran se garde : relire et passer à la suite valent
+      // même s'il a été remplacé pendant le tampon.
+      if (monte.current) setTampon(false);
       await relire();
       onInscrite?.();
     },
