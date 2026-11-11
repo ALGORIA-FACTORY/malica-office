@@ -1389,7 +1389,7 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
             `Les textes du corpus fiscal tunisien ne répondent pas à cette question (à la date du ${r.enVigueurAu}). ` +
             `Réponse du conseil cité : ${r.reponse}\n` +
             (ctx.repondreSansTexte
-              ? "Réponds quand même à la personne. Dis d'abord, en une phrase, que tu n'as pas trouvé ce point dans les textes. " +
+              ? "Réponds quand même à la personne, dans la langue de sa question, du premier au dernier mot. Dis d'abord, en une phrase, que tu n'as pas trouvé ce point dans les textes. " +
                 "Puis explique la règle telle que tu la connais de façon générale : le principe, à qui il s'applique, ce qu'il faut faire. " +
                 "Si tu donnes un taux, un délai ou un montant de mémoire, il s'affichera avec la marque « non vérifié » : " +
                 "n'en donne que si tu en es raisonnablement sûre, et n'en fais aucun calcul. " +

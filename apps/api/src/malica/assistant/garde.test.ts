@@ -344,3 +344,38 @@ describe("le chiffre sans source part marqué quand le corpus s'est tu (M-9)", (
     assert.deepEqual(g.marquees(), []);
   });
 });
+
+describe("une phrase qui nomme un outil ne part pas à l'écran", () => {
+  const NOMS = ["afficher_visuel", "conseil_fiscal", "calculer"];
+
+  it("en flux comme à la fin du bloc, la phrase est tue et les autres passent", () => {
+    const g = new GardeDesChiffres("Combien ai-je acheté chez Kordane ?");
+    g.taire(NOMS);
+    g.ouvrirBloc();
+    const flux = g.recevoirTexte(
+      "Je regarde vos achats. Calling afficher_visuel on that source is what they're asking for. Voici le total. ",
+    );
+    const fin = g.fermerBloc();
+    assert.equal(flux + fin.aEmettre, "Je regarde vos achats. Voici le total. ");
+    assert.equal(g.tues().length, 1);
+    assert.deepEqual(g.retirees(), [], "une phrase tue n'est pas un chiffre retiré");
+  });
+
+  it("un mot de tous les jours n'est pas un nom d'outil : « calculer » passe", () => {
+    const g = new GardeDesChiffres("Peux-tu calculer ?");
+    g.taire(NOMS);
+    assert.equal(
+      g.jugerTout("Je peux calculer cela pour vous.").aEmettre,
+      "Je peux calculer cela pour vous.",
+    );
+    assert.deepEqual(g.tues(), []);
+  });
+
+  it("sans liste, rien n'est tu", () => {
+    const g = new GardeDesChiffres("Bonjour");
+    assert.equal(
+      g.jugerTout("L'outil conseil_fiscal répond.").aEmettre,
+      "L'outil conseil_fiscal répond.",
+    );
+  });
+});

@@ -168,6 +168,9 @@ function versLEcran(f: FinMesuree): FinDeLaReponse {
  * du conseil à la portée incertaine, sans certitude — retenu si un cabinet
  * peut relire, comme `askMalica` le fait d'une réponse qu'il ne sait pas lire.
  */
+/** Les noms d'outils : la garde tait toute phrase qui en porte un. */
+const NOMS_DE_LA_MECANIQUE = [...DEFINITIONS, AFFICHER_VISUEL, CONCLURE_REPONSE].map((d) => d.name);
+
 /** Ce qu'on dit au modèle qui a répondu sans conclure. Aucun texte n'en sort à l'écran. */
 const DEMANDE_DE_CONCLUSION =
   "Tu as répondu sans conclure. Appelle maintenant conclure_reponse pour la réponse que tu viens de donner, et rien d'autre.";
@@ -500,6 +503,8 @@ async function converser(
   emettre({ type: "debut", conversationId });
 
   const garde = new GardeDesChiffres(q.question, configuration.garde);
+  // Aucun nom d'outil ne part à l'écran, quoi que le modèle écrive.
+  garde.taire(NOMS_DE_LA_MECANIQUE);
   let premierMot: number | null = null;
   // Le texte gardé s'accumule dans la garde (`texteEmis`) ; il ne part à
   // l'écran qu'en flux libre. En attente de la conclusion, il attend.

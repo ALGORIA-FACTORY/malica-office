@@ -186,6 +186,9 @@ export class GardeDesChiffres {
   private readonly marqueesDuTour: string[] = [];
   /** La marque d'un chiffre sans source ; `null` : la phrase est retirée. */
   private marque: string | null = null;
+  /** Les noms de la mécanique (outils) : une phrase qui en porte un ne part pas. */
+  private tus: string[] = [];
+  private readonly tuesDuTour: string[] = [];
   private emis = "";
   private aSeparer = false;
 
@@ -221,6 +224,31 @@ export class GardeDesChiffres {
     if (this.marques.some((trouve) => trouve(cherchee))) return chiffres;
     const seuil = this.entierLiantDes;
     return chiffres.filter((n) => n.includes(".") || Number(n) >= seuil);
+  }
+
+  /**
+   * Les noms que la personne ne doit jamais lire — ceux des outils. Mesuré le
+   * 11 novembre 2026 : le modèle a écrit en clair « Calling afficher_visuel on
+   * that source is what they're asking for ». Une phrase qui porte l'un de ces
+   * noms est du raisonnement échappé : elle est tue, sans être comptée parmi
+   * les chiffres retirés.
+   */
+  taire(noms: readonly string[]): void {
+    // Seuls les identifiants : « calculer » est aussi un mot de tous les jours.
+    this.tus = noms.map((n) => n.trim().toLowerCase()).filter((n) => n.includes("_"));
+  }
+
+  private estTue(phrase: string): boolean {
+    if (this.tus.length === 0) return false;
+    const p = phrase.toLowerCase();
+    if (!this.tus.some((n) => p.includes(n))) return false;
+    this.tuesDuTour.push(phrase.replace(/\s+/g, " ").trim());
+    return true;
+  }
+
+  /** Les phrases tues parce qu'elles nommaient la mécanique. */
+  tues(): string[] {
+    return [...this.tuesDuTour];
   }
 
   /**
@@ -277,7 +305,7 @@ export class GardeDesChiffres {
         this.retenu = true;
         break;
       }
-      sortie += phrase;
+      if (!this.estTue(phrase)) sortie += phrase;
       position += phrase.length;
     }
     this.emisDuBloc = position;
@@ -309,6 +337,7 @@ export class GardeDesChiffres {
     const retirees: string[] = [];
     for (const s of citations) this.citees.set(s.source.cle, s.source);
     for (const phrase of phrasesDe(texte)) {
+      if (this.estTue(phrase)) continue;
       const chiffres = this.aJuger(phrase);
       if (chiffres.length === 0) {
         aEmettre += phrase;
