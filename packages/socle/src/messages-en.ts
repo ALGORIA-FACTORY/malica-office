@@ -1208,6 +1208,8 @@ export const en: Dict = {
   "cab.journal.conseil.ecarte": "Advice question set aside",
   "pme.conseil.relecture":
     "Your accountant is reviewing my answer: I will pass it on as soon as they have validated it.",
+  "pme.conseil.douteNonVerifie":
+    "Answer given with no text found in the corpus: the figures marked “unverified” come from the model's memory.",
   "pme.conseil.aConfirmer":
     "To be confirmed by your accountant: I am sending them this answer, and they will confirm, correct or dismiss it.",
   "pme.conseil.aConfirmerSansEnvoi":

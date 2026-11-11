@@ -169,7 +169,12 @@ function versLEcran(f: FinMesuree): FinDeLaReponse {
  * peut relire, comme `askMalica` le fait d'une réponse qu'il ne sait pas lire.
  */
 /** Les noms d'outils : la garde tait toute phrase qui en porte un. */
-const NOMS_DE_LA_MECANIQUE = [...DEFINITIONS, AFFICHER_VISUEL, CONCLURE_REPONSE].map((d) => d.name);
+const NOMS_DE_LA_MECANIQUE = [
+  ...DEFINITIONS,
+  COMPARER_LES_SOCIETES,
+  AFFICHER_VISUEL,
+  CONCLURE_REPONSE,
+].map((d) => d.name);
 
 /** Ce qu'on dit au modèle qui a répondu sans conclure. Aucun texte n'en sort à l'écran. */
 const DEMANDE_DE_CONCLUSION =
@@ -683,7 +688,12 @@ async function converser(
     coutTotal = coutTotal === null || cout === null ? null : coutTotal + cout;
 
     if (m.stopReason !== "tool_use") {
-      dernierTour = m.content;
+      // Seulement un tour fini proprement et qui ne porte que du texte : un
+      // tour coupé au milieu d'un outil ne se renvoie pas au modèle.
+      const renvoi = tourARenvoyer(m.content);
+      const propre =
+        m.stopReason === "end_turn" && renvoi.length > 0 && renvoi.every((b) => b.type === "text");
+      dernierTour = propre ? m.content : null;
       break;
     }
 
@@ -764,7 +774,10 @@ async function converser(
         configuration.sansTexte === "marquer" &&
         r.sources.some((s) => s.cle.startsWith("malica:conseil:refus:"))
       ) {
-        garde.marquerSansSource(message(q.locale, "pme.assistant.nonVerifie"));
+        garde.marquerSansSource(
+          message(q.locale, "pme.assistant.nonVerifie"),
+          configuration.unitesMarquables,
+        );
       }
       for (const v of r.visuels ?? []) visuels.set(v.cle, v.bloc);
       resultats.push({
@@ -857,8 +870,16 @@ async function converser(
       ) as { input: unknown } | undefined;
       const lue = appel ? lireLaConclusion(appel.input) : null;
       if (lue) conclusion = lue;
-    } catch {
-      // La demande a échoué : la portée reste incertaine, et la réponse est relue.
+    } catch (e) {
+      // La demande a échoué : la portée reste incertaine, et la réponse est
+      // relue. L'échec se journalise — un appel payant ne disparaît pas.
+      await journaliser(api, {
+        tenantId: q.tenantId,
+        modele: choix.modele,
+        usage: assembleur.message().usage,
+        latencyMs: maintenant() - debutAppel,
+        erreur: e instanceof Error ? e.message : String(e),
+      }).catch(() => undefined);
     }
   }
 
@@ -903,8 +924,22 @@ async function converser(
         reponse: reponseGardee,
         sources: articles,
         // Comme `lireReponseDeConseil` : sans article cité, un avis vaut zéro.
-        certitude: !c.conseil ? 1 : articles.length === 0 ? 0 : Math.round(c.certitude * 100) / 100,
-        doute: c.conseil ? c.doute : null,
+        // Un chiffre « non vérifié » est la raison même de l'envoi : la réponse
+        // n'arrive jamais au cabinet comme certaine, et le doute le lui dit.
+        certitude: nonVerifie
+          ? 0
+          : !c.conseil
+            ? 1
+            : articles.length === 0
+              ? 0
+              : Math.round(c.certitude * 100) / 100,
+        doute: nonVerifie
+          ? [c.conseil ? c.doute : null, message(q.locale, "pme.conseil.douteNonVerifie")]
+              .filter(Boolean)
+              .join(" ")
+          : c.conseil
+            ? c.doute
+            : null,
         canal: "conversation",
         theme: c.conseil ? c.theme : null,
         langue: q.locale,

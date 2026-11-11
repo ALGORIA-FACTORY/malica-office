@@ -1267,6 +1267,8 @@ export const fr = {
   "cab.journal.conseil.ecarte": "Question de conseil écartée",
   "pme.conseil.relecture":
     "Votre comptable relit ma réponse : je vous la transmets dès qu’il l’a validée.",
+  "pme.conseil.douteNonVerifie":
+    "Réponse donnée sans texte trouvé dans le corpus : les chiffres marqués « non vérifié » viennent de la mémoire du modèle.",
   "pme.conseil.aConfirmer":
     "À confirmer par votre comptable : je lui envoie cette réponse, il la confirmera, la corrigera ou l’écartera.",
   "pme.conseil.aConfirmerSansEnvoi":

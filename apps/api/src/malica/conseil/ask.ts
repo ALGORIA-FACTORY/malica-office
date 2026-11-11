@@ -564,10 +564,33 @@ export async function askMalica(
     : "retenir";
   const retenue = aRelire && mode !== "annoncer";
 
+  const deposerAuCabinet = () =>
+    api.rpc<{ id: string; cabinetId: string }>("conseil", "creer", [
+      {
+        tenantId: input.tenantId,
+        conversationId,
+        question: input.question,
+        reponse: lu.reponse,
+        sources: lu.sources,
+        certitude: lu.certitude,
+        doute: lu.doute,
+        canal: "conversation",
+        theme: lu.theme,
+        langue: input.locale,
+        statut: "en_attente",
+      },
+    ]);
+  /*
+   * Annoncée, la réponse dit qu'elle part chez le comptable. Le dépôt suit le
+   * rangement au fil (la file relie l'avis à la question rangée) : s'il échoue,
+   * l'appel échoue, comme pour une réponse retenue.
+   */
+  const annonce = aRelire && !retenue ? texte(input.locale, "pme.conseil.aConfirmer") : null;
+
   const reponseRendue = retenue
     ? texte(input.locale, "pme.conseil.relecture")
-    : aRelire
-      ? `${lu.reponse}\n\n${texte(input.locale, "pme.conseil.aConfirmer")}`
+    : annonce
+      ? `${lu.reponse}\n\n${annonce}`
       : arbitrable && !cabinet
         ? `${lu.reponse}\n\n${texte(input.locale, "pme.conseil.sansCabinet")}`
         : lu.reponse;
@@ -605,23 +628,7 @@ export async function askMalica(
    * tenue, même sous mandat : le cabinet la consulte si elle la lui partage.
    * Voir `partAuCabinet`, et le défaut qu'elle corrige.
    */
-  if (cabinet && partAuCabinet(aRelire)) {
-    await api.rpc<{ id: string; cabinetId: string }>("conseil", "creer", [
-      {
-        tenantId: input.tenantId,
-        conversationId,
-        question: input.question,
-        reponse: lu.reponse,
-        sources: lu.sources,
-        certitude: lu.certitude,
-        doute: lu.doute,
-        canal: "conversation",
-        theme: lu.theme,
-        langue: input.locale,
-        statut: "en_attente",
-      },
-    ]);
-  }
+  if (cabinet && partAuCabinet(aRelire)) await deposerAuCabinet();
 
   let controles: Verdict[] = [];
   let messageId: string | null = null;

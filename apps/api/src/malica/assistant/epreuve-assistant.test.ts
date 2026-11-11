@@ -318,6 +318,7 @@ function dossierFictif(
             ...CONFIGURATION,
             ...(options.relecture ? { relecture: options.relecture } : {}),
             ...(options.sansTexte ? { sans_texte: options.sansTexte } : {}),
+            ...(options.sansTexte === "marquer" ? { unites_marquables: ["%", "jours"] } : {}),
           });
         case "capture.chaineDeDesignation":
           return r(chaine(options.anthropicEpuise ?? false, options.deepseekEpuise ?? false));
@@ -1558,6 +1559,9 @@ describe("sans texte dans le corpus, Malica répond et marque ce qu'elle chiffre
     assert.equal(r.fin.chiffresRetires, 0);
     assert.equal(r.file.length, 1);
     assert.equal(r.file[0]!["statut"], "en_attente");
+    // Le cabinet ne la reçoit jamais comme certaine, et sait pourquoi elle est là.
+    assert.equal(r.file[0]!["certitude"], 0);
+    assert.equal(r.file[0]!["doute"], message("fr", "pme.conseil.douteNonVerifie"));
   });
 
   it("l'outil dit au modèle de répondre quand même, au lieu de rapporter le silence", async () => {

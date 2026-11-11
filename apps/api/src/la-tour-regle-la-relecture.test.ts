@@ -84,6 +84,7 @@ describe("the tower sets the review mode of the assistant", { skip: !ADMIN }, ()
       const c = await configuration(db);
       assert.equal(c["relecture"], "annoncer");
       assert.equal(c["sans_texte"], "marquer");
+      assert.ok((c["unites_marquables"] as string[]).includes("jours"));
     });
   });
 
@@ -132,6 +133,8 @@ describe("the tower sets the review mode of the assistant", { skip: !ADMIN }, ()
       const c = await configuration(db);
       assert.equal(c["relecture"], "retenir");
       assert.equal(c["sans_texte"], "retirer");
+      // The list of markable units is not a choice of the card: it is carried over.
+      assert.ok((c["unites_marquables"] as string[]).includes("%"));
     });
   });
 

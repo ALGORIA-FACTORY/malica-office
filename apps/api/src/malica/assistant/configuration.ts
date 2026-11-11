@@ -64,6 +64,11 @@ export interface ConfigurationDeLAssistant {
    * chiffres marqués « non vérifié » ; `retirer` garde la règle stricte.
    */
   sansTexte: "marquer" | "retirer";
+  /**
+   * Les unités de taux et de durée (« % », « jours »…) qu'un chiffre de mémoire
+   * peut porter pour partir marqué. Tout autre chiffre sans source est retiré.
+   */
+  unitesMarquables: string[];
 }
 
 const EFFORTS: readonly Effort[] = ["low", "medium", "high"];
@@ -103,6 +108,10 @@ export function lireConfigurationAssistant(brut: unknown): ConfigurationDeLAssis
     // Absent ou illisible : on retient, comme avant — le manque retombe du côté prudent.
     relecture: c.relecture === "annoncer" ? "annoncer" : "retenir",
     sansTexte: (c as { sans_texte?: unknown }).sans_texte === "marquer" ? "marquer" : "retirer",
+    unitesMarquables: ((c as { unites_marquables?: unknown }).unites_marquables instanceof Array
+      ? ((c as { unites_marquables: unknown[] }).unites_marquables as unknown[])
+      : []
+    ).filter((u): u is string => typeof u === "string" && u.trim() !== ""),
   };
 }
 
