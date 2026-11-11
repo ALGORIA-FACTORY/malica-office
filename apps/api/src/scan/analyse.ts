@@ -58,6 +58,7 @@ import {
 import { lireLeChange, type ChangeDuJugement } from "./cours-de-change.ts";
 import { partiesSelonLeSens } from "./parties-selon-le-sens.ts";
 import { normaliserMontants, type ResultatNormalisation } from "./normaliser-montants.ts";
+import { appliquerLesPrecisions } from "./precisions-de-lecture.ts";
 import {
   lireLesReglagesComptables,
   reglageDesAvoirs,
@@ -309,7 +310,7 @@ interface PayloadLu {
   document_date?: string | null;
   document_kind?: string | null;
   currency?: string | null;
-  lines?: Array<{ tax_code?: string | null }>;
+  lines?: Array<{ tax_code?: string | null; base_ht?: string | null }>;
   articles?: Array<{
     designation?: string | null;
     quantity?: string | null;
@@ -318,9 +319,9 @@ interface PayloadLu {
     total_ht?: string | null;
     tax_code?: string | null;
   }>;
-  other_charges?: Array<{ code?: string | null }>;
+  other_charges?: Array<{ code?: string | null; amount?: string | null }>;
   references?: Record<string, string>;
-  totals?: { ttc?: string | null };
+  totals?: { base_ht?: string | null; vat?: string | null; ttc?: string | null };
 }
 
 /** Le sens retenu : celui que la personne a dit, à défaut celui de la lecture. */
@@ -981,9 +982,37 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
       }
     : payload;
 
+  /*
+   * CE QUE LA PERSONNE A CORRIGÉ SUR SA FACTURE (10 novembre 2026).
+   *
+   * Une précision de montant (`totals.vat`, `other_charges[0].amount`…) prend
+   * la place du texte imprimé de sa citation, et le moteur juge comme il juge
+   * un montant imprimé : la saisie est une hypothèse, l'arithmétique tranche
+   * (R3). La lecture n'est pas modifiée (R7).
+   */
+  const { rows: saisies } = await db.query<{ champ: string; valeur: string }>(
+    `select distinct on (champ) champ, valeur from capture.precisions
+      where piece_id = $1 and app.est_un_champ_de_lecture(champ)
+      order by champ, decided_at desc`,
+    [pieceId],
+  );
+  const deLaDevise = saisies.length
+    ? (await lireLesDevises(db)).find(
+        (d) => d.code === (payloadJuge.currency?.toUpperCase() || org.currency),
+      )
+    : undefined;
+  const corrige = deLaDevise
+    ? appliquerLesPrecisions(
+        payloadJuge,
+        (champ) => imprime.get(champ)?.join(" ") ?? null,
+        saisies,
+        { decimales: deLaDevise.decimales, separateur: deLaDevise.separateurDecimal },
+      )
+    : null;
+
   const lecture: LectureAJuger = {
-    payload: payloadJuge,
-    imprime: (champ) => imprime.get(champ)?.join(" ") ?? null,
+    payload: corrige?.payload ?? payloadJuge,
+    imprime: corrige?.imprime ?? ((champ) => imprime.get(champ)?.join(" ") ?? null),
     titre: haut.length > 0 ? haut.map((t) => t.text).join(" ") : null,
     sensDit,
     date: datePiece,

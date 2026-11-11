@@ -18,6 +18,8 @@
   "capture": [
     "analyser",
     "annulerPaiement",
+    "codesDeTva",
+    "corrigerLeChamp",
     "corrigerPaiement",
     "daterLaPiece",
     "deplacerJustificatif",
