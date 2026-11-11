@@ -67,13 +67,3 @@ export function IconeCalendrier() {
     </svg>
   );
 }
-
-/** Une silhouette — un siège, la personne qui a déposé la pièce. */
-export function IconeSiege() {
-  return (
-    <svg viewBox="0 0 24 24" className="g">
-      <circle cx="12" cy="8.5" r="3.5" />
-      <path d="M5 20.5c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" />
-    </svg>
-  );
-}
