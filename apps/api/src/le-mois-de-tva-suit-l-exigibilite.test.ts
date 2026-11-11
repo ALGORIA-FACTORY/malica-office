@@ -26,7 +26,7 @@ import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
-import { lecture as lectureDEssai, moisDEssai } from "./scan/lecture-d-essai.ts";
+import { jourDEssai, lecture as lectureDEssai, moisDEssai } from "./scan/lecture-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -274,7 +274,9 @@ describe("le mois de TVA suit l'exigibilité", { skip: !BASE_CONFIGUREE }, () =>
     const id = await s.piece("facture_vente", "Prestation de maintenance");
     assert.deepEqual(await s.reservesDuMois(id), []);
     await s.valider(id);
-    await s.regler(id, null, FACTURE.au);
+    // Le lendemain de la facture, jamais la fin de son mois : elle peut être à
+    // venir, et un paiement futur est refusé (`paiement.date_future`).
+    await s.regler(id, null, jourDEssai(1));
     assert.ok(dans(await s.transmis(FACTURE), id));
   });
 
