@@ -1948,11 +1948,12 @@ describe("Malica cherche sur internet", () => {
     }
   });
 
-  it("la phrase citée reste avec son lien ; l'annonce et le calcul fait de tête tombent", async () => {
+  it("la réponse reste entière, avec son lien et sa note ; l'annonce tombe", async () => {
     const { fin, evenements } = await jouer({ active: true });
     assert.ok(fin.reponse.includes("Le dollar valait 2,9690 TND le 5 novembre 2026."));
     assert.ok(!fin.reponse.includes("Je cherche le cours du jour"), "l'annonce est partie");
-    assert.ok(!fin.reponse.includes("5 938"), "un calcul sur un nombre lu sur internet est passé");
+    // La réponse dit qu'elle vient d'internet ; ses chiffres tiennent à ce titre (M-13).
+    assert.ok(fin.reponse.includes("5 938,000 TND"));
     assert.ok(fin.reponse.includes(message("fr", "pme.assistant.webNote")));
     const page = fin.sources.find((s) => s.genre === "web");
     assert.equal(page?.url, PAGE);

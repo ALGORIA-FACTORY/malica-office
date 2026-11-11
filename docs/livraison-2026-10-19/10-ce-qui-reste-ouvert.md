@@ -850,6 +850,28 @@ phrase de tableur. Ce n'est pas un chiffre du dossier ni un calcul repris ailleu
 sans source à l'écran. **À confirmer par le dirigeant** ; pour revenir en arrière, retirer la règle de
 `garde.ts` (`CELLULE_NOMMEE`) — une ligne.
 
+### M-13 — Ce que Malica lit sur internet n'est pas vérifié, et elle le dit
+
+**Demande du dirigeant, 11 novembre 2026** : Malica cherche sur internet, comme un assistant généraliste.
+
+**Construit le même jour** (branche `chantier/malica-droit-et-rendu`) : l'outil de recherche du fournisseur du
+modèle, offert quand la tour le laisse actif (carte « Réponse à confirmer », troisième choix). Les pages
+citées s'affichent en liens sous la réponse, et la réponse se termine par une note : « Ces informations
+viennent d'internet… Malica ne les a pas vérifiées. »
+
+**Tranché par défaut, pour ne pas s'arrêter** : dès qu'une recherche a rendu des résultats, la garde des
+chiffres laisse passer les chiffres de la réponse — jugée bloc par bloc, elle sortait en lambeaux. Un nombre
+lu sur internet n'entre dans aucun calcul (`calculer` ne l'admet pas) ni dans aucune écriture, et le droit
+tunisien reste lu dans le corpus.
+
+**Ce que cela ouvre, dit franchement** : dans une réponse où Malica a cherché sur internet, un chiffre
+qu'elle écrirait de mémoire passe aussi, sous la même note. **À confirmer par le dirigeant.** Pour revenir
+à la règle stricte : couper la recherche dans la tour, sans déploiement.
+
+**Non chiffré** : le fournisseur facture chaque recherche en plus des jetons ; ce tarif n'est pas en base
+(INCERTAIN, à lire sur sa grille). Le coût affiché d'une réponse avec recherche est donc sous-estimé.
+Le modèle de secours n'a pas cet outil.
+
 ### M-11 — Ce que coûte une question de droit, et pourquoi
 
 Mesuré le 11 novembre 2026 sur le vrai modèle : une question de droit coûte entre 0,06 $ et 0,09 $, contre

@@ -360,6 +360,58 @@ describe("le chiffre sans source part marqué quand le corpus s'est tu (M-9)", (
   });
 });
 
+describe("une page d'internet citée porte les chiffres de son bloc, et de lui seul", () => {
+  const REGLE = { marques_liantes: ["tnd", "%", "dinar"], entier_liant_des: 10000 };
+  const citer = (g: GardeDesChiffres, extrait: string) =>
+    g.recevoirCitation({
+      type: "web_search_result_location",
+      url: "https://www.bct.gov.tn/cours",
+      title: "Cours de change",
+      cited_text: extrait,
+    });
+
+  it("le chiffre passe même si l'extrait rendu est coupé avant lui", () => {
+    const g = new GardeDesChiffres("Le cours du dollar ?", REGLE);
+    g.ouvrirBloc();
+    assert.equal(citer(g, "Taux de change · Banque Centrale de Tunisie"), true);
+    g.recevoirTexte("Le dollar vaut 2,9690 TND.");
+    assert.equal(g.fermerBloc().aEmettre, "Le dollar vaut 2,9690 TND.");
+    assert.equal(g.citeInternet(), true);
+    assert.equal(g.sourcesCitees()[0]!.url, "https://www.bct.gov.tn/cours");
+  });
+
+  it("après une recherche qui a rendu des résultats, les chiffres de la réponse tiennent", () => {
+    const g = new GardeDesChiffres("Le cours du dollar ?", REGLE);
+    g.consulterInternet();
+    assert.equal(g.jugerTout("Le dollar vaut 2,9690 TND.").aEmettre, "Le dollar vaut 2,9690 TND.");
+    assert.equal(g.citeInternet(), true);
+    // Rien n'entre dans les sources des outils : le calcul reste fermé à ces nombres.
+    assert.equal(g.toutesLesSources().length, 0);
+  });
+
+  it("le bloc suivant, sans citation, ne profite pas de la page", () => {
+    const g = new GardeDesChiffres("Le cours du dollar ?", REGLE);
+    g.ouvrirBloc();
+    citer(g, "USD 2,9690");
+    g.recevoirTexte("Le dollar vaut 2,9690 TND.");
+    g.fermerBloc();
+    g.ouvrirBloc();
+    g.recevoirTexte("Donc 1 000 dollars font 2 969,000 TND.");
+    assert.equal(g.fermerBloc().aEmettre, "");
+    // Et la page n'entre pas dans les sources des outils : rien ne se calcule dessus.
+    assert.equal(g.toutesLesSources().length, 0);
+  });
+
+  it("une adresse qui n'est pas http(s) n'est pas une source", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    g.ouvrirBloc();
+    assert.equal(
+      g.recevoirCitation({ type: "web_search_result_location", url: "javascript:alert(1)" }),
+      false,
+    );
+  });
+});
+
 describe("ce que Malica a déjà dit dans le fil peut se redire", () => {
   const REGLE = { marques_liantes: ["tnd", "%"], entier_liant_des: 10000 };
 

@@ -230,6 +230,8 @@ export class GardeDesChiffres {
   private tus: string[] = [];
   private readonly tuesDuTour: string[] = [];
   private emis = "";
+  /** Une recherche sur internet a rendu des résultats dans cette réponse. */
+  private internetConsulte = false;
   /** Les pages d'internet citées, par adresse. */
   private readonly pagesWeb = new Map<string, SourceConnue>();
   /** La réponse a donné une formule de tableur. */
@@ -417,9 +419,14 @@ export class GardeDesChiffres {
     return true;
   }
 
-  /** Des pages d'internet sont-elles citées dans cette réponse ? */
+  /** Une recherche sur internet a rendu des résultats pour cette réponse. */
+  consulterInternet(): void {
+    this.internetConsulte = true;
+  }
+
+  /** La réponse s'appuie-t-elle sur internet — une recherche faite, ou une page citée ? */
   citeInternet(): boolean {
-    return [...this.citees.values()].some((s) => s.genre === "web");
+    return this.internetConsulte || [...this.citees.values()].some((s) => s.genre === "web");
   }
 
   /** Un morceau de texte du bloc ; rend ce qui peut partir maintenant. */
@@ -526,6 +533,28 @@ export class GardeDesChiffres {
           porteuses.set(remise.cle, remise);
           continue;
         }
+        // Enfin une page d'internet citée par CE bloc. Le fournisseur n'en rend
+        // qu'un court extrait, souvent coupé avant le chiffre (essai réel du
+        // 11 novembre 2026 : le cours du dollar tombait, phrase après phrase).
+        // La citation est posée par son API sur la phrase même : elle suffit à
+        // dire d'où vient le chiffre — et la réponse dit qu'il n'est pas vérifié.
+        const page = citations.find((c) => c.source.genre === "web");
+        if (page) {
+          porteuses.set(page.source.cle, page.source);
+          continue;
+        }
+        /*
+         * Et, à défaut, la recherche elle-même. Le fournisseur découpe une
+         * réponse web en petits blocs, dont certains portent la citation et
+         * d'autres non : jugée bloc par bloc, la réponse sortait en lambeaux
+         * (essai réel du 11 novembre 2026 : une liste de cours sans ses
+         * libellés, une marque au milieu d'une phrase). Dès qu'une recherche
+         * sur internet a rendu des résultats, les chiffres de la réponse sont
+         * donc tenus pour venir d'internet — et la réponse le dit, en clair,
+         * avec ses liens. Ils n'entrent pas pour autant dans les sources des
+         * outils : rien ne se calcule dessus (point M-13).
+         */
+        if (this.internetConsulte) continue;
         toutPorte = false;
         break;
       }
