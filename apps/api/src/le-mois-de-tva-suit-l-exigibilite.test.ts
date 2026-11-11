@@ -274,8 +274,7 @@ describe("le mois de TVA suit l'exigibilité", { skip: !BASE_CONFIGUREE }, () =>
     const id = await s.piece("facture_vente", "Prestation de maintenance");
     assert.deepEqual(await s.reservesDuMois(id), []);
     await s.valider(id);
-    // Le lendemain de la facture, jamais la fin de son mois : elle peut être à
-    // venir, et un paiement futur est refusé (`paiement.date_future`).
+    // le lendemain de la facture : dans son mois, et jamais dans le futur
     await s.regler(id, null, jourDEssai(1));
     assert.ok(dans(await s.transmis(FACTURE), id));
   });

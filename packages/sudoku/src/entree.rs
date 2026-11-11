@@ -141,6 +141,24 @@ pub struct Jeton {
     pub decoupes: Vec<Decoupe>,
 }
 
+impl Entree {
+    /// Ce que l'entrée garde des lectures substituées (`Lecture::substituee`) : celles des
+    /// jetons incertains seulement, et jamais fortes. Un jeton lu avec assurance n'offre pas
+    /// d'autre chiffre que le sien.
+    pub fn retenir_les_substitutions(&mut self) {
+        let pack = &self.pack;
+        for j in self.jetons.iter_mut() {
+            if j.incertain(pack) {
+                for l in j.montants.iter_mut().filter(|l| l.substituee) {
+                    l.forte = false;
+                }
+            } else {
+                j.montants.retain(|l| !l.substituee);
+            }
+        }
+    }
+}
+
 impl Jeton {
     /// Un texte qu'aucun calcul ne prouve (une désignation, un nom) ne se rend pas lu par ce
     /// jeton : un mot que le lexique de l'adaptateur dit douteux, une ligne lue sous la
@@ -188,6 +206,13 @@ pub struct Decoupe {
 pub struct Lecture {
     pub v: i64,
     pub forte: bool,
+    /// Une lecture obtenue en SUBSTITUANT un chiffre confondu par l'OCR (« 1 » ↔ « 7 »,
+    /// diagnostic du 8 novembre 2026 : la faute de lecture la plus fréquente). L'adaptateur
+    /// la propose pour tout jeton qui s'y prête ; le moteur ne la retient que si le jeton
+    /// est INCERTAIN au sens du pack (`Jeton::incertain`), et toujours faible : c'est
+    /// l'arithmétique de la pièce qui la choisit, jamais la lecture seule.
+    #[serde(default)]
+    pub substituee: bool,
 }
 
 #[derive(Deserialize)]
