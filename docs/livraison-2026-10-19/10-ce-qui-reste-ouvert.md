@@ -759,6 +759,13 @@ désactiver DeepSeek par société ou par comptabilité (non construite).
 
 ### M-6 — Le brouillon à valider (relance, demande de pièce, message) n'est pas construit
 
+> **Tranché par le dirigeant le 11 novembre 2026 : le brouillon à valider est un avis à la comptabilité.**
+> Construit le même jour (branche `chantier/malica-droit-et-rendu`) : sous la réponse de Malica, « Demander
+> l'avis de <comptabilité> » envoie la dernière question et sa réponse dans la file de relecture
+> (`POST /malica/avis`, canal « avis »). L'état « déjà envoyé » est la ligne elle-même : `arbitrage_creer`
+> rend l'arbitrage qui existe au lieu d'en écrire un second. La relance par courriel vers l'extérieur reste
+> non construite : c'est un engagement externe, à décider à part.
+
 Les autres formes du volet visuel sont faites (chiffre clé, tableau, barres, courbe, cascade, carte de chaleur, export).
 Le brouillon ne l'est pas, pour deux raisons qui ne sont pas techniques. (1) Un envoi vers l'extérieur — une relance à
 un fournisseur — est un engagement externe : il lui faut un chemin d'envoi décidé (Brevo, expéditeur, mentions) et
@@ -818,3 +825,72 @@ se règle dans la tour, et ne vaut que si le corpus, consulté dans le tour, n'a
 
 Reste ouvert : qui est « l'expert » d'une société sans cabinet rattaché. Aujourd'hui, sans cabinet, la
 réponse marquée part avec une note qui dit de la faire confirmer par un expert-comptable ; rien n'est envoyé.
+
+**Tranché par le dirigeant le 11 novembre 2026 : « la comptabilité est l'expert ».** Codé le même jour
+(branche `chantier/malica-droit-et-rendu`) : Malica parle de « votre comptabilité » dans ses annonces ; sans
+comptabilité reliée au dossier, un avis qui engage la société se termine par « à faire confirmer par votre
+comptabilité », en disant qu'elle ne peut pas le lui envoyer.
+
+**Précisé par le dirigeant le 11 novembre 2026 : la comptabilité peut être interne ou un cabinet ; il n'y a
+rien de plus à construire.** Une société sans cabinet relié fait confirmer la réponse par sa comptabilité
+interne, hors de l'application ; Malica le lui dit. Le point est clos.
+
+### M-10 — Une phrase qui nomme une cellule de tableur garde ses valeurs d'exemple
+
+**Demande du dirigeant, 11 novembre 2026** : l'explication d'une formule de tableur doit être complète (elle
+valait 5 sur 10 : la garde retirait la phrase qui dit comment saisir le taux, et l'exemple).
+
+**Tranché par défaut, pour ne pas s'arrêter** : une phrase qui nomme une cellule entre accents graves
+(« dans `B2`, saisissez 10 % ou 0,10 ») n'est plus jugée par la garde des chiffres ; la consigne demande des
+valeurs rondes, présentées comme un exemple et non comme un taux en vigueur. Sans cellule nommée, un taux
+sans source tombe toujours.
+
+**Ce que cela ouvre, dit franchement** : le modèle peut écrire un vrai taux de mémoire (« 19 % ») dans une
+phrase de tableur. Ce n'est pas un chiffre du dossier ni un calcul repris ailleurs, mais c'est un chiffre
+sans source à l'écran. **À confirmer par le dirigeant** ; pour revenir en arrière, retirer la règle de
+`garde.ts` (`CELLULE_NOMMEE`) — une ligne.
+
+### M-13 — Ce que Malica lit sur internet n'est pas vérifié, et elle le dit
+
+**Demande du dirigeant, 11 novembre 2026** : Malica cherche sur internet, comme un assistant généraliste.
+
+**Construit le même jour** (branche `chantier/malica-droit-et-rendu`) : l'outil de recherche du fournisseur du
+modèle, offert quand la tour le laisse actif (carte « Réponse à confirmer », troisième choix). Les pages
+citées s'affichent en liens sous la réponse, et la réponse se termine par une note : « Ces informations
+viennent d'internet… Malica ne les a pas vérifiées. »
+
+**Tranché par défaut, pour ne pas s'arrêter** : dès qu'une recherche a rendu des résultats, la garde des
+chiffres laisse passer les chiffres de la réponse — jugée bloc par bloc, elle sortait en lambeaux. Un nombre
+lu sur internet n'entre dans aucun calcul (`calculer` ne l'admet pas) ni dans aucune écriture, et le droit
+tunisien reste lu dans le corpus.
+
+**Ce que cela ouvre, dit franchement** : dans une réponse où Malica a cherché sur internet, un chiffre
+qu'elle écrirait de mémoire passe aussi, sous la même note. **À confirmer par le dirigeant.** Pour revenir
+à la règle stricte : couper la recherche dans la tour, sans déploiement.
+
+**Non chiffré** : le fournisseur facture chaque recherche en plus des jetons ; ce tarif n'est pas en base
+(INCERTAIN, à lire sur sa grille). Le coût affiché d'une réponse avec recherche est donc sous-estimé.
+Le modèle de secours n'a pas cet outil.
+
+### M-11 — Ce que coûte une question de droit, et pourquoi
+
+Mesuré le 11 novembre 2026 sur le vrai modèle : une question de droit coûte entre 0,06 $ et 0,09 $, contre
+moins de 0,01 $ pour une question sur le dossier. Deux causes :
+
+1. Le conseil cité passe au modèle des questions difficiles dès que les passages viennent de trois corpus
+   distincts (`plateforme.conseil_reglages.corpus_distincts_difficile`). Or chaque année de notes communes
+   est un corpus à part (`NC-2005`, `NC-2007`…) : presque toute question de droit franchit ce seuil.
+2. Depuis ce chantier, un refus du modèle courant devant des textes est relu une fois par le modèle
+   difficile : une question hors corpus coûte deux appels.
+
+Au plafond de 150 $ par mois, cela fait de l'ordre de 1 700 à 2 500 questions de droit. **À trancher** :
+compter les notes communes comme une seule famille pour ce seuil (un réglage, pas un déploiement si la règle
+passe en base), ou relever le plafond.
+
+### M-12 — Il n'existe pas d'environnement de production
+
+Relevé le 11 novembre 2026 : le dépôt GitHub ne porte qu'un environnement, `staging`. Le flux `deployer.yml`
+attend `pilote` et `production`, qui n'existent pas, et la coque Android de la piste interne embarque
+l'adresse de staging. « Déployer partout » veut donc dire aujourd'hui : staging (à chaque fusion sur
+`main`), la mise à jour en vol du canal staging, et un AAB sur la piste de test interne. **À décider par le
+dirigeant** : quand et où monter le pilote, puis la production.

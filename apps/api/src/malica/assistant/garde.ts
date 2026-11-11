@@ -66,6 +66,9 @@ export interface CitationRecue {
   source?: string;
   cited_text?: string;
   search_result_index?: number;
+  /** Pour une page trouvée sur internet (`web_search_result_location`). */
+  url?: string;
+  title?: string | null;
 }
 
 /** Ce qui rend un chiffre liant, lu en base (`plateforme.assistant_gardes`). */
@@ -108,6 +111,34 @@ function chercheurDeMarque(marque: string): ((phrase: string) => boolean) | null
  * « pour cent » d'une formule (« `1` », « `/100` »). Hors formule, une
  * référence de cellule (« A2 », « $B$4 ») non plus.
  */
+/** Une cellule de tableur nommée entre accents graves : « `B2` », « `$B$2` », « `A2 = 1 000` ». */
+const CELLULE_NOMMEE = /`[^`\n]*\$?\b[A-Za-z]{1,3}\$?\d{1,7}\b[^`\n]*`/;
+
+/** Combien de pages montrer quand le modèle n'en a cité aucune. */
+const PAGES_MONTREES = 3;
+
+/** Le site d'une adresse http(s), sans « www. » ; vide si ce n'en est pas une. */
+function hoteDe(url: string): string {
+  if (!/^https?:\/\//i.test(url)) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+/** Le type d'une citation de page web, tel que l'API le nomme. */
+const CITATION_WEB = "web_search_result_location";
+
+/** Une formule de tableur : un signe égal suivi d'un calcul qui nomme une cellule. */
+const FORMULE = /(?:^|`|\n)[ \t]*=[^`\n]*\$?\b[A-Za-z]{1,3}\$?\d{1,7}\b/;
+
+/** En deçà, une phrase peut se répéter sans que ce soit une redite (« Oui. », « Voici le détail : »). */
+const LONGUEUR_D_UNE_REDITE = 60;
+
+/** La puce ou le numéro qui ouvre une ligne de liste, avec son espace. */
+const PUCE = /^[ \t]*(?:[-*•]|\d{1,2}[.)])[ \t]+/;
+
 function sansFormules(texte: string): string {
   const cellule = /\$?[A-Za-z]{1,3}\$?\d{1,7}\b/;
   return texte
@@ -212,6 +243,20 @@ export class GardeDesChiffres {
   private tus: string[] = [];
   private readonly tuesDuTour: string[] = [];
   private emis = "";
+  /** Une recherche sur internet a rendu des résultats dans cette réponse. */
+  private internetConsulte = false;
+  /** Les pages que les recherches ont rendues, dans l'ordre. */
+  private readonly pagesTrouvees: SourceConnue[] = [];
+  /** Les pages d'internet citées, par adresse. */
+  private readonly pagesWeb = new Map<string, SourceConnue>();
+  /** Où commence, dans ce qui a été dit, le tour en cours — et ce qui l'était avant lui. */
+  private debutDuTour = 0;
+  private ditesAvantLeTour = new Set<string>();
+  private marqueesAvantLeTour = 0;
+  /** La réponse a donné une formule de tableur. */
+  private tableur = false;
+  /** Les longues phrases déjà parties dans cette réponse. */
+  private readonly dites = new Set<string>();
   private aSeparer = false;
 
   // Le bloc de texte en cours.
@@ -240,12 +285,37 @@ export class GardeDesChiffres {
   /** Les chiffres d'une phrase qui doivent trouver une source (voir l'en-tête). */
   private aJuger(phrase: string): string[] {
     if (this.entierLiantDes === null) return chiffresDe(phrase);
+    // Une phrase qui nomme une cellule entre accents graves parle du tableur :
+    // ses nombres sont des valeurs à saisir ou un exemple (« saisissez le taux
+    // dans `B2`, en pourcentage (10 %) ou en décimale (0,10) »), pas un chiffre
+    // du dossier ni du droit. Mesuré le 11 novembre 2026 : ces phrases-là
+    // tombaient, et l'explication d'une formule sortait amputée.
+    if (FORMULE.test(phrase)) this.tableur = true;
+    if (CELLULE_NOMMEE.test(phrase)) return [];
+    // Et une réponse qui a donné une formule, sans qu'aucun outil ait rien rendu,
+    // est une explication de tableur : ni dossier, ni droit. Ses phrases
+    // suivantes (« le 3 arrondit aux millimes », « si vous saisissez 19 sans le
+    // signe % ») ne citent pas de cellule et tombaient quand même, laissant une
+    // formule sans sa phrase. Dès qu'un outil a répondu, la garde redevient entière.
+    if (this.tableur && this.sources.length === 0) return [];
     const chiffres = chiffresDe(sansFormules(phrase));
     if (chiffres.length === 0) return chiffres;
     const cherchee = sansAccent(phrase);
     if (this.marques.some((trouve) => trouve(cherchee))) return chiffres;
     const seuil = this.entierLiantDes;
     return chiffres.filter((n) => n.includes(".") || Number(n) >= seuil);
+  }
+
+  /**
+   * Ce que Malica a déjà dit dans ce fil peut se redire. Chaque chiffre d'une
+   * réponse rangée au fil a passé cette même garde, avec sa source, quand elle
+   * a été écrite. Relevé à l'écran le 11 novembre 2026 : à « Et le deuxième ? »,
+   * posé juste après le classement des fournisseurs, le modèle reprenait le
+   * montant sans rappeler l'outil, la phrase tombait, et la personne lisait
+   * « je n'ai rien trouvé de sûr à vous répondre ».
+   */
+  admettreDuFil(reponses: readonly string[]): void {
+    for (const r of reponses) for (const n of chiffresDe(r)) this.chiffresDeLaQuestion.add(n);
   }
 
   /**
@@ -326,11 +396,70 @@ export class GardeDesChiffres {
    * relecture que `lireLaReponseCitee`).
    */
   recevoirCitation(c: CitationRecue): boolean {
+    if (c.type === CITATION_WEB) return this.recevoirCitationWeb(c);
     const i = c.search_result_index;
     const source = typeof i === "number" && Number.isInteger(i) ? this.sources[i] : undefined;
     if (c.type !== "search_result_location" || !source || c.source !== source.cle) return false;
     this.citationsDuBloc.push({ source, extrait: c.cited_text ?? "" });
     return true;
+  }
+
+  /**
+   * Une citation d'une page trouvée sur internet. La page devient une source
+   * de la réponse, avec son adresse : la personne peut l'ouvrir. Elle n'entre
+   * pas dans les sources remises par les outils du dossier — un nombre lu sur
+   * internet ne s'emploie donc ni dans un calcul ni dans une autre phrase que
+   * celle qui le cite. Seule une adresse http(s) est admise.
+   */
+  private recevoirCitationWeb(c: CitationRecue): boolean {
+    const url = typeof c.url === "string" ? c.url.trim() : "";
+    if (!/^https?:\/\/[^\s]+$/i.test(url)) return false;
+    let source = this.pagesWeb.get(url);
+    if (!source) {
+      let hote = url;
+      try {
+        hote = new URL(url).hostname;
+      } catch {
+        return false;
+      }
+      source = {
+        cle: `web:${url}`,
+        genre: "web",
+        titre: (c.title ?? "").trim() || hote,
+        objetId: null,
+        url,
+        texte: "",
+      };
+      this.pagesWeb.set(url, source);
+    }
+    const extrait = c.cited_text ?? "";
+    source.texte += `${extrait}\n`;
+    this.citationsDuBloc.push({ source, extrait });
+    return true;
+  }
+
+  /** Une recherche sur internet a rendu des résultats pour cette réponse : ses pages. */
+  consulterInternet(pages: ReadonlyArray<{ url?: unknown; title?: unknown }> = []): void {
+    this.internetConsulte = true;
+    for (const p of pages) {
+      const url = typeof p.url === "string" ? p.url.trim() : "";
+      const hote = hoteDe(url);
+      if (!hote || this.pagesTrouvees.some((x) => x.url === url)) continue;
+      const titre = typeof p.title === "string" && p.title.trim() ? p.title.trim() : hote;
+      this.pagesTrouvees.push({
+        cle: `web:${url}`,
+        genre: "web",
+        titre,
+        objetId: null,
+        url,
+        texte: "",
+      });
+    }
+  }
+
+  /** La réponse s'appuie-t-elle sur internet — une recherche faite, ou une page citée ? */
+  citeInternet(): boolean {
+    return this.internetConsulte || [...this.citees.values()].some((s) => s.genre === "web");
   }
 
   /** Un morceau de texte du bloc ; rend ce qui peut partir maintenant. */
@@ -378,11 +507,47 @@ export class GardeDesChiffres {
     let aEmettre = "";
     const retirees: string[] = [];
     for (const s of citations) this.citees.set(s.source.cle, s.source);
+    /*
+     * RECOUDRE CE QU'UNE PHRASE RETIRÉE LAISSE. Mesuré le 11 novembre 2026 : une
+     * phrase retirée seule dans son paragraphe laissait deux lignes vides de
+     * trop, et une phrase retirée en tête d'une puce emportait la puce — la
+     * suite de la ligne restait sans son tiret (« Négociez donnant-donnant. »
+     * au milieu d'une liste). Après un retrait en début de ligne, les sauts de
+     * ligne qui suivent tombent donc avec lui ; et la puce d'une phrase retirée
+     * passe à la phrase qui la suit sur la même ligne.
+     */
+    let sautsATaire = false;
+    let puceEnAttente = "";
+    const garder = (phrase: string): void => {
+      // Une longue phrase déjà dite dans cette réponse ne se redit pas : le modèle
+      // répète parfois son texte après avoir posé un visuel.
+      const cle = phrase.replace(/\s+/g, " ").trim();
+      if (cle.length >= LONGUEUR_D_UNE_REDITE) {
+        if (this.dites.has(cle)) return;
+        this.dites.add(cle);
+      }
+      aEmettre += puceEnAttente + phrase;
+      puceEnAttente = "";
+      sautsATaire = false;
+    };
+    const retirer = (phrase: string): void => {
+      retirees.push(phrase.replace(/\s+/g, " ").trim());
+      const dit = this.emis + aEmettre;
+      const enDebutDeLigne = dit === "" || /\n[ \t]*$/.test(dit);
+      puceEnAttente = enDebutDeLigne ? (PUCE.exec(phrase)?.[0] ?? "") : "";
+      sautsATaire = enDebutDeLigne;
+    };
     for (const phrase of phrasesDe(texte)) {
       if (this.estTue(phrase)) continue;
+      if (phrase.trim() === "") {
+        // Un saut de ligne : il clôt la ligne de la puce, et ne s'ajoute pas au trou.
+        puceEnAttente = "";
+        if (!sautsATaire) aEmettre += phrase;
+        continue;
+      }
       const chiffres = this.aJuger(phrase);
       if (chiffres.length === 0) {
-        aEmettre += phrase;
+        garder(phrase);
         continue;
       }
       const porteuses = new Map<string, SourceConnue>();
@@ -401,18 +566,44 @@ export class GardeDesChiffres {
           porteuses.set(remise.cle, remise);
           continue;
         }
+        // Enfin une page d'internet citée par CE bloc. Le fournisseur n'en rend
+        // qu'un court extrait, souvent coupé avant le chiffre (essai réel du
+        // 11 novembre 2026 : le cours du dollar tombait, phrase après phrase).
+        // La citation est posée par son API sur la phrase même : elle suffit à
+        // dire d'où vient le chiffre — et la réponse dit qu'il n'est pas vérifié.
+        const page = citations.find((c) => c.source.genre === "web");
+        if (page) {
+          porteuses.set(page.source.cle, page.source);
+          continue;
+        }
+        /*
+         * Et, à défaut, la recherche elle-même. Le fournisseur découpe une
+         * réponse web en petits blocs, dont certains portent la citation et
+         * d'autres non : jugée bloc par bloc, la réponse sortait en lambeaux
+         * (essai réel du 11 novembre 2026 : une liste de cours sans ses
+         * libellés, une marque au milieu d'une phrase). Dès qu'une recherche
+         * sur internet a rendu des résultats, les chiffres de la réponse sont
+         * donc tenus pour venir d'internet — et la réponse le dit, en clair,
+         * avec ses liens. Ils n'entrent pas pour autant dans les sources des
+         * outils : rien ne se calcule dessus (point M-13).
+         */
+        if (this.internetConsulte) continue;
         toutPorte = false;
         break;
       }
       if (toutPorte) {
-        aEmettre += phrase;
+        garder(phrase);
         for (const s of porteuses.values()) this.citees.set(s.cle, s);
       } else if (this.marque && this.peutPartirMarquee(phrase)) {
         const corps = phrase.trimEnd();
-        aEmettre += `${corps} ${this.marque}${phrase.slice(corps.length)}`;
+        // Le modèle l'écrit parfois lui-même, malgré la consigne (« 18 % (non
+        // vérifié) », relevé le 11 novembre 2026) : la marque ne se dit qu'une fois.
+        const motsDeLaMarque = sansAccent(this.marque.replace(/[_*()]/g, "").trim());
+        const dejaDite = motsDeLaMarque !== "" && sansAccent(corps).includes(motsDeLaMarque);
+        garder(dejaDite ? phrase : `${corps} ${this.marque}${phrase.slice(corps.length)}`);
         this.marqueesDuTour.push(corps.replace(/\s+/g, " ").trim());
       } else {
-        retirees.push(phrase.replace(/\s+/g, " ").trim());
+        retirer(phrase);
       }
     }
     this.retireesDuTour.push(...retirees);
@@ -426,6 +617,24 @@ export class GardeDesChiffres {
    */
   nouveauTour(): void {
     this.aSeparer = this.emis.trim() !== "" && !/\s$/.test(this.emis);
+    this.debutDuTour = this.emis.length;
+    this.ditesAvantLeTour = new Set(this.dites);
+    this.marqueesAvantLeTour = this.marqueesDuTour.length;
+  }
+
+  /**
+   * Ce que le modèle a écrit dans ce tour n'était pas sa réponse : il vient de
+   * demander une autre lecture. Mesuré sur quatre séries, le 11 novembre 2026 :
+   * il écrivait une réponse, relançait un outil, puis l'écrivait de nouveau —
+   * la personne lisait la même chose deux à quatre fois. La réponse est donc
+   * ce que Malica écrit quand elle a fini de lire ; ce tour-ci s'oublie.
+   */
+  oublierLeTour(): void {
+    this.emis = this.emis.slice(0, this.debutDuTour);
+    this.dites.clear();
+    for (const d of this.ditesAvantLeTour) this.dites.add(d);
+    this.marqueesDuTour.length = this.marqueesAvantLeTour;
+    this.aSeparer = false;
   }
 
   /** Ce qui part : le saut de paragraphe dû, puis le texte ; compté dans ce qui a été dit. */
@@ -444,7 +653,22 @@ export class GardeDesChiffres {
 
   /** Les sources effectivement citées ou portant un chiffre de la réponse. */
   sourcesCitees(): SourceConnue[] {
-    return [...this.citees.values()];
+    const citees = [...this.citees.values()];
+    if (!this.internetConsulte || citees.some((s) => s.genre === "web")) return citees;
+    /*
+     * Une recherche a nourri la réponse, mais le modèle n'a posé aucune
+     * citation (essai réel du 11 novembre 2026 : il écrivait les adresses
+     * dans son texte). La personne doit quand même pouvoir ouvrir d'où cela
+     * vient : les pages dont l'adresse ou le site figure dans la réponse, ou,
+     * à défaut, les premières que la recherche a rendues.
+     */
+    const dit = this.emis.toLowerCase();
+    const nommees = this.pagesTrouvees.filter((p) => {
+      const hote = hoteDe(p.url ?? "");
+      return dit.includes((p.url ?? "").toLowerCase()) || (hote !== "" && dit.includes(hote));
+    });
+    const pages = nommees.length > 0 ? nommees : this.pagesTrouvees;
+    return [...citees, ...pages.slice(0, PAGES_MONTREES)];
   }
 
   retirees(): string[] {

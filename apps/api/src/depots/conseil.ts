@@ -269,8 +269,8 @@ export const conseil = {
       langue: string;
       statut: "en_attente" | "repondue";
     },
-  ): Promise<{ id: string; cabinetId: string }> {
-    const { rows } = await db.query<{ r: { id: string; cabinetId: string } }>(
+  ): Promise<{ id: string; cabinetId: string; deja: boolean }> {
+    const { rows } = await db.query<{ r: { id: string; cabinetId: string; deja?: boolean } }>(
       `select public.arbitrage_creer($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11) as r`,
       [
         input.tenantId,
@@ -288,7 +288,8 @@ export const conseil = {
     );
     const r = rows[0]?.r;
     if (!r?.id) throw new Error("arbitrage.non_cree");
-    return { id: r.id, cabinetId: r.cabinetId };
+    // `deja` : le canal « avis » a retrouvé la question déjà posée, rien n'a été écrit.
+    return { id: r.id, cabinetId: r.cabinetId, deja: r.deja === true };
   },
 
   /** Les comptes du cabinet : par client, par sujet, et en tout. Rien n'est calculé ailleurs. */

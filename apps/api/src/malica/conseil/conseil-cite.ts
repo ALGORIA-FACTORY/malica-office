@@ -44,7 +44,7 @@ import {
   type UsageDeLAppel,
 } from "./cite.ts";
 import type { ClientClaude } from "./client-claude.ts";
-import { parametresPour, type ParametreFiscal } from "./corpus.ts";
+import { numerosEcrits, parametresPour, type ParametreFiscal } from "./corpus.ts";
 
 /** Le nom de l'organe au journal des agents. */
 export const AGENT_CONSEIL_CITE = "malica.conseil.cite";
@@ -156,6 +156,14 @@ export function mentionDeVigueur(
 
 const USAGE_NUL: UsageDeLAppel = { entree: 0, sortie: 0, cacheLu: 0, cacheEcrit: 0 };
 
+/** Un texte sans ordre de lecture en base se lit après tous les autres. */
+export function dansLOrdreDeLecture<P extends { ordreDeLecture?: number | null }>(
+  passages: readonly P[],
+): P[] {
+  const ordre = (p: P) => p.ordreDeLecture ?? Number.POSITIVE_INFINITY;
+  return [...passages].sort((a, b) => ordre(a) - ordre(b));
+}
+
 export async function conseilCite(
   api: AppelApi,
   input: { tenantId: string; question: string; locale: string; jour?: string | null | undefined },
@@ -194,6 +202,7 @@ export async function conseilCite(
       nb: reglage.passages_max,
       distanceMax: reglage.distance_max,
       distanceMaxMots: reglage.distance_max_mots,
+      numeros: numerosEcrits(question),
     },
   ]);
   /*
@@ -204,7 +213,10 @@ export async function conseilCite(
    * à elle seule, quel était son état. Mieux vaut le dire que transposer.
    */
   const lacunes = trouves.filter((p) => p.lacune);
-  const passages = trouves.filter((p) => !p.lacune);
+  // Remis au modèle dans l'ordre de lecture arrêté en base : le code, puis la
+  // loi, puis la loi de finances, puis la doctrine. À ordre égal, le classement
+  // de la recherche tient (le tri est stable).
+  const passages = dansLOrdreDeLecture(trouves.filter((p) => !p.lacune));
   const lacuneEnTete = trouves[0]?.lacune === true ? trouves[0] : null;
 
   let parametres: ParametreFiscal[] = [];
@@ -324,12 +336,22 @@ export async function conseilCite(
    * provisionnels ? » — la réponse était dans l'article 51, remis. Ce n'est
    * pas le corpus qui se tait : c'est le modèle. On repasse alors la
    * question, une fois, au modèle des questions difficiles.
+   *
+   * UN REFUS DEVANT DES TEXTES SE RELIT AUSSI. Mesuré le 11 novembre 2026 : le
+   * modèle courant répondait parfois « je ne trouve pas cela dans les textes »
+   * alors que l'article qui répond lui était remis, noyé parmi d'autres. Des
+   * passages ont passé le seuil de la recherche : avant de dire à la personne
+   * que le droit se tait, le modèle des questions difficiles les relit, une
+   * fois. S'il refuse à son tour, le refus tient.
    */
   let escalade = false;
+  let motifDEscalade: "reponse_vide" | "refus_relu" | null = null;
   let coutTotal = appel.cout;
   let latence = appel.envoi.latencyMs;
   let usage = appel.usage;
-  if (appel.lu.affirmations.length === 0 && modele !== reglage.modele_difficile) {
+  const vide = appel.lu.affirmations.length === 0;
+  if ((vide || appel.lu.refus) && modele !== reglage.modele_difficile) {
+    motifDEscalade = vide ? "reponse_vide" : "refus_relu";
     escalade = true;
     modele = reglage.modele_difficile;
     const second = await appeler(modele);
@@ -365,7 +387,7 @@ export async function conseilCite(
     })),
     modele: envoi.reponse.model || modele,
     difficile: choix.difficile || escalade,
-    motifDifficulte: escalade ? "reponse_vide" : choix.motif,
+    motifDifficulte: motifDEscalade ?? choix.motif,
     usage,
     coutUsd: coutTotal === null ? null : Math.round(coutTotal * 1_000_000) / 1_000_000,
     latencyMs: latence,

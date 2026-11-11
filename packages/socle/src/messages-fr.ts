@@ -1310,9 +1310,15 @@ export const fr = {
   "pme.conseil.douteNonVerifie":
     "Réponse donnée sans texte trouvé dans le corpus : les chiffres marqués « non vérifié » viennent de la mémoire du modèle.",
   "pme.conseil.aConfirmer":
-    "À confirmer par votre comptable : je lui envoie cette réponse, il la confirmera, la corrigera ou l’écartera.",
+    "À confirmer par votre comptabilité : je lui envoie cette réponse, elle la confirmera, la corrigera ou l’écartera.",
+  "pme.conseil.aConfirmerNonVerifie":
+    "Je n’ai pas trouvé ce point dans les textes : ce qui est marqué « non vérifié » vient de mes connaissances générales. J’envoie cette réponse à votre comptabilité, qui la confirmera, la corrigera ou l’écartera.",
+  "pme.conseil.aConfirmerSansComptabilite":
+    "À faire confirmer par votre comptabilité avant de l’appliquer : aucune comptabilité n’est reliée à ce dossier dans Malica, je ne peux donc pas la lui envoyer.",
+  "pme.conseil.douteAvisDemande":
+    "La personne a lu cette réponse de Malica et demande l’avis de sa comptabilité.",
   "pme.conseil.aConfirmerSansEnvoi":
-    "À faire confirmer par votre comptable : je n’ai pas pu lui transmettre cette réponse.",
+    "À faire confirmer par votre comptabilité : je n’ai pas pu lui transmettre cette réponse.",
   "pme.conseil.sansCabinet":
     "Aucune comptabilité ne suit encore ce dossier : cette réponse n’a pas été relue par un expert-comptable.",
   "pme.conseil.relu": "Relu et validé par votre comptable.",
@@ -1329,12 +1335,31 @@ export const fr = {
     "Je ne peux pas répondre pour l'instant : le budget du mois pour l'assistant est atteint. L'équipe Malica en est informée ; vos pièces et votre dossier restent accessibles.",
   "pme.assistant.interrompue":
     "Ma réponse a été interrompue. Reposez la question si elle vous semble incomplète.",
+  "pme.assistant.reprise": "La connexion a été coupée : je récupère ma réponse…",
   "pme.assistant.indisponible": "Je n'ai pas pu répondre pour l'instant. Réessayez dans un moment.",
   "pme.assistant.nonVerifie": "_(non vérifié)_",
   "pme.assistant.nonVerifieNote":
-    "Je n’ai pas trouvé ce point dans les textes : ce qui est marqué « non vérifié » vient de mes connaissances générales. Ne l’appliquez pas avant qu’un expert-comptable l’ait confirmé.",
+    "Je n’ai pas trouvé ce point dans les textes : ce qui est marqué « non vérifié » vient de mes connaissances générales. Ne l’appliquez pas avant que votre comptabilité l’ait confirmé.",
   "pme.assistant.vide":
     "Je n'ai rien trouvé de sûr à vous répondre. Pouvez-vous préciser votre question ?",
+  "pme.assistant.source.pieces": "Recherche de pièces",
+  "pme.assistant.source.piece": "Pièce",
+  "pme.assistant.source.tva": "TVA de {mois}",
+  "pme.assistant.source.achats": "Achats par fournisseur",
+  "pme.assistant.source.mois": "Achats et ventes par mois",
+  "pme.assistant.source.societes": "Comparaison des sociétés",
+  "pme.assistant.source.resultat": "Résultat comptabilisé",
+  "pme.assistant.source.echeances": "Calendrier fiscal du dossier",
+  "pme.assistant.source.ecritures": "Écritures du dossier",
+  "pme.assistant.source.tiers": "Tiers du dossier",
+  "pme.assistant.source.conseilSansTexte": "Conseil cité — les textes ne répondent pas",
+  "pme.assistant.source.conseil": "Conseil cité — droit en vigueur au {date}",
+  "pme.assistant.source.calcul": "Calcul",
+  "pme.assistant.source.ecriture": "Écriture {journal} du {date} — {libelle}",
+  "pme.assistant.source.proposition": "Proposition : {action} — {libelle}",
+  "pme.assistant.outil.web_search": "Je cherche sur internet…",
+  "pme.assistant.webNote":
+    "Ces informations viennent d’internet : je cite leurs liens, mais Malica ne les a pas vérifiées. Ne vous en servez pas pour une écriture ou une déclaration sans les confirmer.",
   "pme.assistant.outil.pieces_chercher": "Je regarde vos pièces…",
   "pme.assistant.outil.piece_ouvrir": "J'ouvre la pièce…",
   "pme.assistant.outil.tva_du_mois": "Je calcule la TVA du mois avec le moteur Malica…",
@@ -1448,6 +1473,10 @@ export const fr = {
     "Répondre quand même ; un chiffre de mémoire porte la marque « non vérifié »",
   "tour.assistant.relecture.retirer":
     "Dire que les textes ne répondent pas ; retirer tout chiffre sans source",
+  "tour.assistant.relecture.web": "Recherche sur internet",
+  "tour.assistant.relecture.web.active":
+    "Active : Malica peut chercher sur internet et cite ses liens",
+  "tour.assistant.relecture.web.coupee": "Coupée : Malica ne cherche pas sur internet",
   "tour.assistant.reglage": "Réglage de l'assistant",
   "tour.assistant.reglage.aide":
     "Le modèle courant répond à tout ; le modèle des questions difficiles prend la main quand la question dépasse la longueur réglée, contient l'un des mots, ou joint plusieurs pièces. La dépense est bornée par le plafond de l'assistant (carte ci-dessus), lui-même sous le plafond de la chaîne des modèles.",
@@ -5095,6 +5124,13 @@ export const fr = {
   "pme.malica.suiteAvis": "Demander l'avis de {cabinet}",
   "pme.malica.suiteAvisSansNom": "Demander l'avis de votre comptabilité",
   "pme.malica.suiteTransmission": "Demander la transmission au propriétaire du dossier",
+  "pme.malica.avis.detail":
+    "Elle recevra votre question et cette réponse, pour la confirmer ou la corriger",
+  "pme.malica.avis.envoi": "Envoi en cours…",
+  "pme.malica.avis.envoye": "Demande envoyée : sa réponse arrivera dans ce fil",
+  "pme.malica.avis.deja": "Cette réponse est déjà chez votre comptabilité",
+  "pme.malica.avis.sansReponse": "Posez d’abord votre question à Malica",
+  "pme.malica.avis.echec": "La demande n’a pas pu partir. Réessayez",
   "pme.malica.suitePasEncore": "La demande n'est pas encore ouverte depuis cet écran",
   "pme.malica.suiteSansCabinet": "Demander l'avis d'une comptabilité",
   "pme.malica.suiteSansCabinetDetail": "Aucune comptabilité n'est mandatée sur ce dossier",

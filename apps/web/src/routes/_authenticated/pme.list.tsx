@@ -15,7 +15,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
-import { CarteDeGroupe, IconeCalendrier, IconeSiege } from "@/components/malica/carte-de-groupe";
+import { CarteDeGroupe, IconeCalendrier } from "@/components/malica/carte-de-groupe";
+import { RangeeDesSieges, type Siege } from "@/components/malica/rangee-des-sieges";
+import { usePhotosDeProfil } from "@/hooks/use-photos-de-profil";
 import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
@@ -247,7 +249,8 @@ function Bibliotheque() {
   const lues = usePiecesLues();
   const brutes = useMemo(() => lues.data ?? [], [lues.data]);
   const aLire = useMemo(() => piecesALire(brutes), [brutes]);
-  const { toutes, parSiege, chargement, parSieges, ouvrirSaSociete } = usePiecesDesSocietes();
+  const { toutes, parSiege, parSociete, nomDeSociete, chargement, parSieges, ouvrirSaSociete } =
+    usePiecesDesSocietes();
   /*
    * Les pièces montrées : celle de l'en-tête, ou toutes les sociétés quand
    * l'en-tête dit « Toutes » (`pme.societeAffichee`, 9 novembre 2026) —
@@ -270,6 +273,18 @@ function Bibliotheque() {
 
   // -------------------------------------------------------------- les groupes
   const sieges = parSieges(ici);
+  // Les sièges tels que la rangée les montre ; toutes les sociétés : chacun dit la sienne.
+  const photos = usePhotosDeProfil([...sieges.keys()]);
+  const rangee: Siege[] = [...sieges].map(([id, g]) => ({
+    id,
+    nom: g.nom,
+    pieces: g.pieces,
+    photo: photos[id] ?? null,
+    societe:
+      parSociete && pme.societeAffichee === null
+        ? nomDeSociete(toutes.find((x) => x.piece.auteurId === id)?.societe ?? "")
+        : null,
+  }));
   const mois = useMemo(() => {
     const carte = new Map<string, PieceLue[]>();
     for (const p of ici) {
@@ -499,23 +514,17 @@ function Bibliotheque() {
              * choisit aussi.
              */}
             {/* ------------------------------------------------- les sièges */}
-            {parSiege && sieges.size > 0 ? (
-              <>
-                <div className="sec">
-                  <h2>{t("pme.dossier.sieges")}</h2>
-                  <span>{sieges.size}</span>
-                </div>
-                {[...sieges].map(([id, g]) => (
-                  <CarteDeGroupe
-                    key={id}
-                    onClick={() => ouvrir({ genre: "siege", cle: id })}
-                    icone={<IconeSiege />}
-                    titre={g.nom}
-                    valeur={sommes(g.pieces)}
-                    n={g.pieces.length}
-                  />
-                ))}
-              </>
+            {/*
+             * La même rangée que dans un dossier (10 novembre 2026) : une carte
+             * par siège poussait les mois hors de l'écran dès qu'une organisation
+             * en comptait quelques dizaines. Choisir un siège ouvre ses pièces.
+             */}
+            {parSiege && rangee.length > 0 ? (
+              <RangeeDesSieges
+                sieges={rangee}
+                choisi={null}
+                choisir={(id) => (id ? ouvrir({ genre: "siege", cle: id }) : setOuvert(null))}
+              />
             ) : null}
 
             {/* --------------------------------------------------- les mois */}

@@ -342,6 +342,15 @@ export type ResultatRedaction =
 
 /* ------------------------------------------------------------- le port */
 
+/** Ce qu'il advient d'une demande d'avis à la comptabilité. */
+export type AvisDemande =
+  /** La question est chez la comptabilité ; `deja` : elle y était avant ce geste. */
+  | { etat: "envoye"; deja: boolean }
+  /** Aucune comptabilité n'est reliée au dossier. */
+  | { etat: "sans_comptabilite" }
+  /** Le fil ne porte pas encore de réponse de Malica. */
+  | { etat: "sans_reponse" };
+
 export interface MalicaPort {
   /**
    * « Parler à Malica » : la question part, la réponse revient EN FLUX —
@@ -404,6 +413,15 @@ export interface MalicaPort {
     question: string;
     locale: Locale;
   }): Promise<ReponseAuCabinet>;
+  /**
+   * « Demander l'avis de ma comptabilité » sur la dernière réponse d'un fil.
+   * Le serveur relit le fil ; la demande ne se pose qu'une fois (`deja`).
+   */
+  demanderLAvis(input: {
+    tenantId: string;
+    conversationId: string;
+    locale: Locale;
+  }): Promise<AvisDemande>;
   redigerLePv(input: { pvId: string; locale: Locale }): Promise<ResultatRedaction>;
   /** Le briefing de transfert d'un dossier, depuis les faits que les moteurs rendent. */
   redigerLeBriefing(input: {

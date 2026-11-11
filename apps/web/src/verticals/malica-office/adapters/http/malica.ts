@@ -12,6 +12,7 @@
  */
 import type { Locale } from "@malica/socle/messages";
 import type {
+  AvisDemande,
   Briefing,
   EtatDeLecture,
   LectureDeCarte,
@@ -173,6 +174,14 @@ export function creerMalicaHttp(): MalicaPort {
       locale: Locale;
     }): Promise<ReponseAuCabinet> {
       return appelerRoute("/conseil", { corps: input });
+    },
+
+    demanderLAvis(input: {
+      tenantId: string;
+      conversationId: string;
+      locale: Locale;
+    }): Promise<AvisDemande> {
+      return appelerRoute("/avis", { corps: input });
     },
 
     redigerLePv(input: { pvId: string; locale: Locale }): Promise<ResultatRedaction> {

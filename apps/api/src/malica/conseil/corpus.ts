@@ -241,15 +241,17 @@ function motsSignificatifs(question: string): string[] {
     "plus",
     "moins",
   ]);
+  const sansAccent = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  // Un sigle écrit en capitales (« TVA », « IS », « RAS ») porte le sujet malgré
+  // sa longueur ; en minuscules, un mot de trois lettres est un mot-outil.
+  const sigles = sansAccent(question).match(/\b[A-Z]{2,3}\b/g) ?? [];
   return [
-    ...new Set(
-      question
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[̀-ͯ]/g, "")
+    ...new Set([
+      ...sansAccent(question.toLowerCase())
         .split(/[^a-z0-9]+/)
         .filter((m) => m.length >= 4 && !OUTILS.has(m)),
-    ),
+      ...sigles.map((m) => m.toLowerCase()),
+    ]),
   ];
 }
 
@@ -278,6 +280,21 @@ export async function parametresPour(
       jour: input.jour ?? null,
     },
   ]);
+}
+
+const RANG_LATIN = "bis|ter|quater|quinquies|sexies|septies|octies|nonies|decies";
+
+/**
+ * Les numéros d'article que la personne a écrits : « l'article 52 », « art. 51
+ * ter ». Ils départagent des passages voisins ; ils n'en font entrer aucun.
+ */
+export function numerosEcrits(question: string): string[] {
+  const trouves = new Set<string>();
+  const motif = new RegExp(`\\bart(?:icle)?s?\\.?\\s*(\\d{1,4})(?:\\s+(${RANG_LATIN})\\b)?`, "gi");
+  for (const m of question.matchAll(motif)) {
+    trouves.add(m[2] ? `${m[1]} ${m[2].toLowerCase()}` : m[1]!);
+  }
+  return [...trouves];
 }
 
 export function parametresEnTexte(parametres: readonly ParametreFiscal[]): string {

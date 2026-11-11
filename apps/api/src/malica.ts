@@ -41,6 +41,7 @@ import { clientDeepSeekEnFlux } from "./malica/assistant/deepseek-flux.ts";
 import { repliParDeepSeek } from "./malica/assistant/repli.ts";
 import { redigerLeBriefing } from "./malica/briefing.ts";
 import { askMalica, repondreAuCabinet } from "./malica/conseil/ask.ts";
+import { demanderLAvis } from "./malica/conseil/avis.ts";
 import { clientClaudeHttp } from "./malica/conseil/client-claude.ts";
 import { conseilCite } from "./malica/conseil/conseil-cite.ts";
 import { empreinteDeLaQuestion } from "./malica/conseil/corpus.ts";
@@ -347,6 +348,17 @@ malica.post("/demander", (req, res, next) => {
       }),
     );
   });
+});
+
+const Avis = z.object({ tenantId: Uuid, conversationId: Uuid, locale: Locale });
+
+/**
+ * « Demander l'avis de ma comptabilité » sur la dernière réponse d'un fil. Le
+ * serveur relit le fil : le navigateur ne nomme que lui. Sans effet la
+ * seconde fois (voir `demanderLAvis`).
+ */
+malica.post("/avis", (req, res, next) => {
+  repondre(res, next, async () => demanderLAvis(api(req), Avis.parse(req.body)));
 });
 
 const QuestionDuCabinet = z.object({

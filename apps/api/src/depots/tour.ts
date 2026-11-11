@@ -356,10 +356,16 @@ export const tour = {
   },
 
   /** La tour inscrit une décision nouvelle, datée et motivée ; rien ne se réécrit. */
-  async reglerRelectureDeLAssistant(db: Requete, mode: string, sansTexte: string, motif: string) {
+  async reglerRelectureDeLAssistant(
+    db: Requete,
+    mode: string,
+    sansTexte: string,
+    web: string,
+    motif: string,
+  ) {
     const { rows } = await db.query<{ r: unknown }>(
-      `select plateforme.assistant_relecture_regler($1, $2, $3) as r`,
-      [mode, sansTexte, motif],
+      `select plateforme.assistant_relecture_regler($1, $2, $3, $4) as r`,
+      [mode, sansTexte, web, motif],
     );
     return rows[0]?.r ?? null;
   },

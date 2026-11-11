@@ -49,7 +49,8 @@ export interface SourceDeLAssistant {
     | "article"
     | "parametre"
     | "calcul"
-    | "question";
+    | "question"
+    | "web";
   titre: string;
   /** L'identifiant de l'objet ouvert par un clic (pièce, écriture) ; `null` sinon. */
   objetId: string | null;
@@ -57,6 +58,8 @@ export interface SourceDeLAssistant {
   article?: { corpus: string; numero: string | null; validFrom: string | null } | null;
   /** Pour un article ou un paramètre : le passage remis au modèle, que l'écran déplie. */
   extrait?: string;
+  /** Pour une page trouvée sur internet : son adresse, que l'écran ouvre dans un nouvel onglet. */
+  url?: string;
 }
 
 /** Une action que Malica propose et que seule la personne peut exécuter. */

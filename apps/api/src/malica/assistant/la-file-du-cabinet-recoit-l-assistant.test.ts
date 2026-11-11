@@ -136,7 +136,7 @@ describe("#298 — the assistant and the firm's review queue", { skip: !BASE_CON
     // Mode "annoncer": the answer is shown and announced, no longer withheld.
     assert.equal(corps.retenue, false);
     assert.ok(corps.answer.includes("doit retenir à la source"), "the answer was withheld");
-    assert.ok(corps.answer.includes("confirmer par votre comptable"), "not announced");
+    assert.ok(corps.answer.includes("confirmer par votre comptabilité"), "not announced");
     assert.equal(await fileDuCabinet(), avant + 1);
   });
 
@@ -153,8 +153,56 @@ describe("#298 — the assistant and the firm's review queue", { skip: !BASE_CON
     // Decision of 11 November 2026 (mode "annoncer", delivered in base): the
     // PME reads the answer itself, marked, instead of the review message.
     assert.ok(corps.includes("doit retenir à la source"), "the answer was withheld");
-    assert.ok(corps.includes("confirmer par votre comptable"), "the review was not announced");
+    assert.ok(corps.includes("confirmer par votre comptabilité"), "the review was not announced");
     assert.ok(!corps.includes("relit ma réponse"), "the review message replaced the answer");
+  });
+
+  it("asking the accounting team's opinion on an answer already sent writes nothing twice", async () => {
+    // The assistant's answer above is already in the firm's queue (announced).
+    const r = await poser("/malica/assistant", {});
+    const flux = await r.text();
+    const fil = /"conversationId":"([0-9a-f-]{36})"/.exec(flux)?.[1];
+    assert.ok(fil, "the stream did not name its thread");
+    const avant = await fileDuCabinet();
+    for (const tour of [1, 2]) {
+      const avis = await fetch(`${base}/malica/avis`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${jeton}`, "content-type": "application/json" },
+        body: JSON.stringify({ tenantId: s.pme, conversationId: fil, locale: "fr" }),
+      });
+      assert.equal(avis.status, 200, await avis.clone().text());
+      assert.deepEqual(await avis.json(), { etat: "envoye", deja: true }, `request ${tour}`);
+    }
+    assert.equal(await fileDuCabinet(), avant, "the same question entered the queue twice");
+  });
+
+  it("the opinion request enters the queue once when the answer was not there yet", async () => {
+    // A thread whose question never went to the firm: the door is called as the
+    // server calls it, with the channel "avis".
+    const { id: fil } = (await s.fait("amel", "conversations.ouvrirNouvelle", s.pme)) as {
+      id: string;
+    };
+    const question = "Comment classer mes factures d'achat ?";
+    await s.fait("amel", "conversations.poser", { conversationId: fil, question });
+    const demande = {
+      tenantId: s.pme,
+      conversationId: fil,
+      question,
+      reponse: "Par mois, puis par fournisseur.",
+      sources: [],
+      certitude: 0,
+      doute: "La personne demande l'avis de sa comptabilité.",
+      canal: "avis",
+      theme: null,
+      langue: "fr",
+      statut: "repondue",
+    };
+    const avant = await fileDuCabinet();
+    const premiere = (await s.fait("amel", "conseil.creer", demande)) as { deja: boolean };
+    const seconde = (await s.fait("amel", "conseil.creer", demande)) as { deja: boolean };
+    assert.equal(premiere.deja, false);
+    assert.equal(seconde.deja, true);
+    assert.equal(await fileDuCabinet(), avant + 1);
   });
 
   it("a figure the guard removed never reaches the browser", async () => {

@@ -81,14 +81,15 @@ import {
   lireConfigurationAssistant,
   type ConfigurationDeLAssistant,
 } from "./configuration.ts";
-import { chiffresDe, GardeDesChiffres, type SourceConnue } from "./garde.ts";
+import { chiffresDe, GardeDesChiffres, type CitationRecue, type SourceConnue } from "./garde.ts";
 import { FiltreDeMecanique } from "./sans-mecanique.ts";
 import {
-  AFFICHER_VISUEL,
   COMPARER_LES_SOCIETES,
   CONCLURE_REPONSE,
   DEFINITIONS,
   etapeDeLOutil,
+  outilDeRechercheWeb,
+  RECHERCHE_WEB,
   executerOutil,
   lireLaConclusion,
   type ConclusionDeLaReponse,
@@ -136,6 +137,8 @@ interface MesureDeLaReponse {
   annoncee: boolean;
   /** Les phrases parties avec la marque « non vérifié » (le corpus n'avait pas répondu). */
   nonVerifies: number;
+  /** Les annonces d'outil (« je regarde vos pièces ») que l'écran n'a pas reçues. */
+  annoncesTues: number;
 }
 
 /** La fin telle que le serveur la connaît : ce que l'écran reçoit, plus la mesure. */
@@ -169,12 +172,22 @@ function versLEcran(f: FinMesuree): FinDeLaReponse {
  * peut relire, comme `askMalica` le fait d'une réponse qu'il ne sait pas lire.
  */
 /** Les noms d'outils : la garde tait toute phrase qui en porte un. */
-const NOMS_DE_LA_MECANIQUE = [
-  ...DEFINITIONS,
-  COMPARER_LES_SOCIETES,
-  AFFICHER_VISUEL,
-  CONCLURE_REPONSE,
-].map((d) => d.name);
+const NOMS_DE_LA_MECANIQUE = [...DEFINITIONS, COMPARER_LES_SOCIETES, CONCLURE_REPONSE].map(
+  (d) => d.name,
+);
+
+/**
+ * Les outils qui SUIVENT une réponse au lieu de la précéder : un geste proposé,
+ * la conclusion. Le paragraphe écrit juste
+ * avant eux est la réponse ; avant tout autre outil, c'est une annonce.
+ */
+const ACTION_PROPOSER = "action_proposer";
+const CONSEIL_FISCAL = "conseil_fiscal";
+/** Deux consultations suffisent à une question en deux volets ; au-delà, c'est une boucle. */
+const CONSEILS_PAR_REPONSE = 2;
+/** Un paragraphe fini, puis le début d'un autre. */
+const SECOND_PARAGRAPHE = /\S[ \t]*\n\s*\n\s*\S/;
+const SUITES_D_UNE_REPONSE: ReadonlySet<string> = new Set([CONCLURE_REPONSE.name, ACTION_PROPOSER]);
 
 /** Ce qu'on dit au modèle qui a répondu sans conclure. Aucun texte n'en sort à l'écran. */
 const DEMANDE_DE_CONCLUSION =
@@ -293,13 +306,59 @@ export async function verifierLeDossier(api: AppelApi, tenantId: string): Promis
 const LANGUES: Record<string, string> = { fr: "français", en: "anglais", ar: "arabe" };
 
 /** Le contexte du jour : hors cache, parce qu'il change. Aucun chiffre du dossier ici. */
-function contexteDuJour(d: DossierVerifie, locale: string, aujourdhui: string): string {
+const LANGUES_DES_NOTES = ["fr", "en", "ar"] as const;
+/** Les notes que Malica pose sous une réponse qu'elle n'a pas vérifiée, dans les trois langues. */
+const NOTES_DE_NON_VERIFICATION: readonly string[] = LANGUES_DES_NOTES.flatMap((l) => [
+  message(l, "pme.assistant.webNote"),
+  message(l, "pme.assistant.nonVerifieNote"),
+  message(l, "pme.assistant.nonVerifie"),
+]);
+
+/**
+ * Une réponse du fil dont les chiffres ont tous passé la garde avec une source
+ * du dossier ou du droit. Une réponse qui cite une page d'internet, ou qui porte
+ * la note ou la marque « non vérifié », n'en est pas une : ses nombres ne se
+ * redisent pas sans leur avertissement et n'entrent pas dans un calcul (revue
+ * de la PR #358 : un cours lu sur internet passait la garde au tour suivant).
+ */
+export function estUneReponseVerifiee(m: {
+  role: "user" | "assistant";
+  contenu: string;
+  sources?: ReadonlyArray<{ genre?: string }> | null;
+}): boolean {
+  if (m.role !== "assistant") return false;
+  if ((m.sources ?? []).some((s) => s.genre === "web")) return false;
+  return !NOTES_DE_NON_VERIFICATION.some((note) => m.contenu.includes(note));
+}
+
+/** Le message est-il écrit en arabe — la majorité de ses lettres le sont ? */
+export function ecritEnArabe(texte: string): boolean {
+  const lettres = texte.match(/\p{L}/gu) ?? [];
+  if (lettres.length === 0) return false;
+  const arabes = lettres.filter((l) => /\p{Script=Arabic}/u.test(l)).length;
+  return arabes * 2 > lettres.length;
+}
+
+function contexteDuJour(
+  d: DossierVerifie,
+  locale: string,
+  aujourdhui: string,
+  question: string,
+): string {
   const o = d.organisation;
   return [
     `Aujourd'hui : ${aujourdhui} (heure de Tunis).`,
     `Dossier ouvert : « ${o.name} » (${o.kind === "cabinet" ? "cabinet d'expertise comptable" : "société"}), juridiction ${o.jurisdiction}, devise ${o.currency}.`,
     `La personne qui parle y a le rôle : ${o.role}.`,
     `Langue de l'interface : ${LANGUES[locale] ?? LANGUES["fr"]}. Réponds dans la langue du message de la personne.`,
+    // Les résultats d'outils et les textes de loi arrivent en français : mesuré
+    // le 11 novembre 2026, ils entraînaient la langue de la réponse une fois
+    // sur trois. Quand le message est en arabe, c'est dit ici, en toutes lettres.
+    ...(ecritEnArabe(question)
+      ? [
+          "Le message de la personne est écrit en arabe : ta réponse est entièrement en arabe, du premier au dernier mot, quelle que soit la langue des résultats d'outils et des textes.",
+        ]
+      : []),
   ].join("\n");
 }
 
@@ -500,11 +559,13 @@ async function converser(
   const conversationId =
     q.conversationId ??
     (await api.rpc<{ id: string }>("conversations", "ouvrirNouvelle", [q.tenantId])).id;
-  const passe = await api.rpc<Array<{ role: "user" | "assistant"; contenu: string }>>(
-    "conversations",
-    "ouvrir",
-    [conversationId],
-  );
+  const passe = await api.rpc<
+    Array<{
+      role: "user" | "assistant";
+      contenu: string;
+      sources?: Array<{ genre?: string }> | null;
+    }>
+  >("conversations", "ouvrir", [conversationId]);
   emettre({ type: "debut", conversationId });
 
   const garde = new GardeDesChiffres(q.question, configuration.garde);
@@ -541,6 +602,7 @@ async function converser(
     nombresAdmis: () =>
       new Set([
         ...chiffresDe(q.question),
+        ...dejaDit.flatMap(chiffresDe),
         ...garde.toutesLesSources().flatMap((s) => chiffresDe(`${s.titre}\n${s.texte}`)),
       ]),
     // Le périmètre élargi : seulement si la personne le regarde, et sur SES sociétés.
@@ -551,19 +613,33 @@ async function converser(
 
   /* ------------------------------------------------------------ la requête */
   // L'outil final vient en dernier : c'est lui qui porte le point de cache.
+  /*
+   * UN MODÈLE QUI RÉFLÉCHIT CONCLUT APRÈS, PAS DANS LE MÊME TOUR. Essai réel du
+   * 11 novembre 2026 sur le modèle des questions difficiles : dès qu'un outil
+   * suit sa réponse dans le même tour, l'API rend cette réponse comme une
+   * « réflexion », pas comme du texte — la personne lisait « je n'ai rien
+   * trouvé de sûr à vous répondre » une fois sur deux. À ce modèle-là, l'outil
+   * final n'est donc pas offert pendant la réponse : il écrit, finit son tour,
+   * et la conclusion lui est demandée ensuite (voir « LA CONCLUSION DEMANDÉE »).
+   */
+  const conclutApres = choix.reflexion !== "disabled";
   const definitions = [
     ...DEFINITIONS,
     // Offert seulement quand il y a de quoi comparer : le modèle ne le voit pas autrement.
     ...(ctx.societes ? [COMPARER_LES_SOCIETES] : []),
-    AFFICHER_VISUEL,
-    CONCLURE_REPONSE,
+    ...(conclutApres ? [] : [CONCLURE_REPONSE]),
   ];
-  const outils = definitions.map((d, i) =>
-    i === definitions.length - 1 ? { ...d, cache_control: { type: "ephemeral" as const } } : d,
-  );
+  // La recherche sur internet est un outil du fournisseur : offerte seulement
+  // au modèle qui la sert, et seulement si la tour l'a laissée active.
+  const web = fournisseur === "claude" ? configuration.web : null;
+  const outils: unknown[] = [
+    ...definitions.slice(0, -1),
+    ...(web ? [outilDeRechercheWeb(web)] : []),
+    { ...definitions.at(-1)!, cache_control: { type: "ephemeral" as const } },
+  ];
   const system = [
     { type: "text", text: configuration.consigne.texte, cache_control: { type: "ephemeral" } },
-    { type: "text", text: contexteDuJour(dossier, q.locale, aujourdhui) },
+    { type: "text", text: contexteDuJour(dossier, q.locale, aujourdhui, q.question) },
   ];
   const historique = passe.slice(-2 * reglage.tours_transmis);
   while (historique[0]?.role === "assistant") historique.shift();
@@ -571,16 +647,25 @@ async function converser(
     q.pieceIds.length > 0
       ? `\n\n[Pièces jointes à ce message, lues par la lecture Malica — ouvre-les avec piece_ouvrir : ${q.pieceIds.join(", ")}]`
       : "";
-  const messages: Array<{ role: "user" | "assistant"; content: unknown }> = [
+  // Seulement pour le fournisseur qui accepte une consigne d'opérateur en cours de fil.
+  const rappelDeLangue =
+    fournisseur === "claude" && ecritEnArabe(q.question)
+      ? "Rappel : le message de la personne est en arabe. Ta réponse est entièrement en arabe, quelle que soit la langue des résultats ci-dessus."
+      : null;
+  const messages: Array<{ role: "user" | "assistant" | "system"; content: unknown }> = [
     ...historique.map((m) => ({ role: m.role, content: m.contenu })),
     { role: "user", content: `${q.question}${jointes}` },
   ];
 
+  // Ce que Malica a déjà dit dans ce fil, garde passée, peut se redire et se
+  // recalculer — sauf ce qu'elle n'avait pas vérifié : une réponse nourrie par
+  // internet ou donnée de mémoire ne devient pas une source au tour suivant.
+  const dejaDit = historique.filter(estUneReponseVerifiee).map((m) => m.contenu);
+  garde.admettreDuFil(dejaDit);
   const outilsAppeles: string[] = [];
+  const appelsFaits = new Set<string>();
   const propositions: PropositionDAction[] = [];
-  // Les visuels que les outils ont composés (par clé de source), et ceux que le
-  // modèle a choisi de montrer — dans l'ordre, une fois chacun.
-  const visuels = new Map<string, BlocDeReponse>();
+  // Les visuels que les outils ont composés, posés dans l'ordre, une fois chacun.
   const blocs: BlocDeReponse[] = [];
   const montres = new Set<string>();
   const mentions: string[] = [];
@@ -593,6 +678,8 @@ async function converser(
   // Le dernier tour du modèle, s'il a fini sans appeler d'outil : ce qu'on lui
   // remet quand il faut lui demander sa conclusion.
   let dernierTour: Parameters<typeof tourARenvoyer>[0] | null = null;
+  // Les annonces d'outil que l'écran n'a pas vues (mesure).
+  let annoncesTues = 0;
 
   for (let tour = 0; tour < reglage.iterations_max; tour += 1) {
     iterations = tour + 1;
@@ -615,6 +702,49 @@ async function converser(
     const filtre = new FiltreDeMecanique();
     const debutAppel = maintenant();
     garde.nouveauTour();
+    /*
+     * L'ANNONCE D'UN OUTIL NE PART PAS À L'ÉCRAN. Avant de lire, le modèle écrit
+     * souvent une phrase pour lui-même (« Je regarde d'abord ce que disent les
+     * textes », parfois en anglais, parfois « ce message vient de l'interface »
+     * — relevé à l'écran sur staging le 11 novembre 2026). L'écran dit déjà
+     * l'étape en cours, dans la langue de la personne. Le premier paragraphe
+     * d'un tour attend donc de savoir ce qui le suit : une lecture, et il
+     * tombe ; un second paragraphe, une conclusion ou la fin du tour, et il
+     * part tel quel, jugé par la garde comme le reste. Une réponse n'y perd
+     * que l'attente de son premier paragraphe. Et si le modèle demande une
+     * lecture après avoir écrit davantage, tout le tour s'oublie
+     * (`oublierLeTour`) : la réponse est ce qu'il écrit quand il a fini de lire.
+     */
+    let preambule: { texte: string; citations: CitationRecue[]; close: boolean } | null = {
+      texte: "",
+      citations: [],
+      close: false,
+    };
+    const liberer = (): void => {
+      if (!preambule) return;
+      const tenue = preambule;
+      preambule = null;
+      garde.ouvrirBloc();
+      for (const c of tenue.citations) garde.recevoirCitation(c);
+      envoyerTexte(garde.recevoirTexte(tenue.texte));
+      if (tenue.close) fermer();
+    };
+    const fermer = (): void => {
+      const j = garde.fermerBloc();
+      envoyerTexte(j.aEmettre);
+      // Le nombre seulement : la phrase retirée porte le chiffre sans source.
+      if (!enAttente && j.retirees.length > 0)
+        emettre({ type: "retire", nombre: j.retirees.length });
+    };
+    const texteDuModele = (t: string): void => {
+      if (!preambule) {
+        envoyerTexte(garde.recevoirTexte(t));
+        return;
+      }
+      preambule.texte += t;
+      // Un second paragraphe commence : ce n'était pas une annonce.
+      if (SECOND_PARAGRAPHE.test(preambule.texte)) liberer();
+    };
     try {
       for await (const ev of client(requete)) {
         assembleur.recevoir(ev);
@@ -622,9 +752,28 @@ async function converser(
         if (ev.type === "content_block_start" && typeof i === "number") {
           if (ev.content_block?.type === "text") {
             blocsDeTexte.add(i);
-            garde.ouvrirBloc();
+            // Un second bloc de texte : le premier n'annonçait pas un outil.
+            if (preambule?.close) liberer();
+            if (!preambule) garde.ouvrirBloc();
+          } else if (ev.content_block?.type === "server_tool_use") {
+            // Une recherche lancée chez le fournisseur : une lecture comme une
+            // autre — l'annonce tombe, l'étape s'affiche, et elle se compte.
+            if (preambule?.texte.trim()) annoncesTues += 1;
+            preambule = null;
+            outilsAppeles.push(RECHERCHE_WEB);
+            etape(RECHERCHE_WEB, "debut");
+          } else if (ev.content_block?.type === "web_search_tool_result") {
+            etape(RECHERCHE_WEB, "fin");
+            // Des résultats : une liste. Une erreur du fournisseur est un objet, et ne compte pas.
+            const pages = (ev.content_block as { content?: unknown }).content;
+            if (Array.isArray(pages)) garde.consulterInternet(pages);
           } else if (ev.content_block?.type === "tool_use") {
-            etape(String((ev.content_block as { name?: string }).name), "debut");
+            const nom = String((ev.content_block as { name?: string }).name);
+            if (preambule && !SUITES_D_UNE_REPONSE.has(nom)) {
+              if (preambule.texte.trim()) annoncesTues += 1;
+              preambule = null;
+            } else liberer();
+            etape(nom, "debut");
           }
         } else if (
           ev.type === "content_block_delta" &&
@@ -632,23 +781,23 @@ async function converser(
           blocsDeTexte.has(i)
         ) {
           if (ev.delta?.type === "text_delta") {
-            envoyerTexte(garde.recevoirTexte(filtre.passer(ev.delta.text ?? "")));
+            texteDuModele(filtre.passer(ev.delta.text ?? ""));
           } else if (ev.delta?.type === "citations_delta" && ev.delta.citation) {
-            garde.recevoirCitation(ev.delta.citation);
+            if (preambule) preambule.citations.push(ev.delta.citation);
+            else garde.recevoirCitation(ev.delta.citation);
           }
         } else if (
           ev.type === "content_block_stop" &&
           typeof i === "number" &&
           blocsDeTexte.has(i)
         ) {
-          envoyerTexte(garde.recevoirTexte(filtre.vider()));
-          const j = garde.fermerBloc();
-          envoyerTexte(j.aEmettre);
-          // Le nombre seulement : la phrase retirée porte le chiffre sans source.
-          if (!enAttente && j.retirees.length > 0)
-            emettre({ type: "retire", nombre: j.retirees.length });
+          texteDuModele(filtre.vider());
+          if (preambule) preambule.close = true;
+          else fermer();
         }
       }
+      // Le tour finit sans lecture : ce qui attendait était la réponse.
+      liberer();
     } catch (e) {
       const m = assembleur.message();
       await journaliser(api, {
@@ -687,6 +836,12 @@ async function converser(
     const cout = coutDeLAppel(choix.modele, m.usage, configuration.tarifs);
     coutTotal = coutTotal === null || cout === null ? null : coutTotal + cout;
 
+    // Le fournisseur a suspendu un tour long (une recherche en cours) : on le
+    // lui rend tel quel, et il reprend où il en était.
+    if (m.stopReason === "pause_turn") {
+      messages.push({ role: "assistant", content: tourARenvoyer(m.content) });
+      continue;
+    }
     if (m.stopReason !== "tool_use") {
       // Seulement un tour fini proprement et qui ne porte que du texte : un
       // tour coupé au milieu d'un outil ne se renvoie pas au modèle.
@@ -702,8 +857,10 @@ async function converser(
       name: string;
       input: unknown;
     }>;
+    // Le modèle demande une lecture : ce qu'il a écrit dans ce tour n'était pas
+    // sa réponse. On l'oublie avant de poser quoi que ce soit d'autre.
+    if (appels.some((a) => !SUITES_D_UNE_REPONSE.has(a.name))) garde.oublierLeTour();
     const resultats: unknown[] = [];
-    const annonces: string[] = [];
     let conclusionIllisible = false;
     for (const appel of appels) {
       if (appel.name === CONCLURE_REPONSE.name) {
@@ -723,38 +880,29 @@ async function converser(
         });
         continue;
       }
-      if (appel.name === AFFICHER_VISUEL.name) {
-        const cle = (appel.input as { source?: unknown } | null)?.source;
-        const bloc = typeof cle === "string" ? visuels.get(cle) : undefined;
-        if (bloc && typeof cle === "string") {
-          if (!montres.has(cle)) {
-            montres.add(cle);
-            // Là où Malica en est de sa réponse : l'écran pose le bloc à cet endroit.
-            const place = { ...bloc, apres: garde.texteEmis().length };
-            blocs.push(place);
-            // En attente de la conclusion, le bloc attend aussi : une réponse
-            // retenue ne montre que son message de relecture.
-            if (!enAttente) emettre({ type: "bloc", bloc: place });
-          }
-          resultats.push({
-            type: "tool_result",
-            tool_use_id: appel.id,
-            content:
-              "Visuel affiché sous ta réponse. Ne recopie pas ses lignes : dis ce qu'elles veulent dire.",
-          });
-        } else {
-          resultats.push({
-            type: "tool_result",
-            tool_use_id: appel.id,
-            content:
-              visuels.size > 0
-                ? `Aucun visuel pour cette source. Visuels disponibles : ${[...visuels.keys()].join(", ")}.`
-                : "Aucun visuel n'est disponible : réponds en texte.",
-            is_error: true,
-          });
-        }
+      /*
+       * UN OUTIL NE SE RAPPELLE PAS POUR RIEN. Mesuré le 11 novembre 2026 : le
+       * modèle rappelait parfois le même outil avec la même demande, ou le
+       * conseil fiscal quatre fois de suite, et écrivait sa réponse à chaque
+       * tour — la personne lisait la même réponse deux à quatre fois. Le même
+       * appel ne s'exécute donc qu'une fois par réponse, et le conseil fiscal
+       * au plus `CONSEILS_PAR_REPONSE` fois.
+       */
+      const cleDAppel = `${appel.name}:${JSON.stringify(appel.input)}`;
+      const conseilsFaits = outilsAppeles.filter((n) => n === CONSEIL_FISCAL).length;
+      if (
+        appelsFaits.has(cleDAppel) ||
+        (appel.name === CONSEIL_FISCAL && conseilsFaits >= CONSEILS_PAR_REPONSE)
+      ) {
+        resultats.push({
+          type: "tool_result",
+          tool_use_id: appel.id,
+          content:
+            "Tu as déjà ce résultat dans cette réponse. Ne rappelle pas cet outil : réponds maintenant avec ce que tu as, sans répéter ce que tu as déjà écrit.",
+        });
         continue;
       }
+      appelsFaits.add(cleDAppel);
       outilsAppeles.push(appel.name);
       const r = await executerOutil(ctx, appel.name, appel.input);
       etape(appel.name, "fin");
@@ -779,20 +927,31 @@ async function converser(
           configuration.unitesMarquables,
         );
       }
-      for (const v of r.visuels ?? []) visuels.set(v.cle, v.bloc);
+      /*
+       * LE VISUEL S'AFFICHE DE LUI-MÊME. Il fallait jusqu'ici que le modèle le
+       * demande, sur la foi d'une ligne ajoutée à son tour (« un visuel est
+       * disponible… »). Mesuré le 11 novembre 2026, sur trois passes : cette
+       * ligne, lue comme un message, faisait écrire au modèle une phrase sur
+       * elle (parfois en anglais), le faisait répondre en français à une
+       * question en arabe, et lui faisait écrire sa réponse deux fois, avant
+       * puis après le visuel. Un outil du dossier qui rend un tableau ou un
+       * graphique a été appelé pour cette question : son visuel se pose donc
+       * là où Malica en est, sans rien demander au modèle.
+       */
+      for (const v of r.visuels ?? []) {
+        if (montres.has(v.cle)) continue;
+        montres.add(v.cle);
+        const place = { ...v.bloc, apres: garde.texteEmis().length };
+        blocs.push(place);
+        // En attente de la conclusion, le bloc attend aussi : une réponse
+        // retenue ne montre que son message de relecture.
+        if (!enAttente) emettre({ type: "bloc", bloc: place });
+      }
       resultats.push({
         type: "tool_result",
         tool_use_id: appel.id,
         content: r.sources.map(blocDeRecherche),
       });
-      // Dit À CÔTÉ du résultat, jamais dedans : l'API refuse un résultat d'outil
-      // qui mêle des blocs de recherche à autre chose (essai réel du 10 novembre
-      // 2026 : « if any blocks in a tool result are of type search_result, all
-      // blocks must be of that type » — toute réponse à outil était interrompue).
-      for (const v of r.visuels ?? [])
-        annonces.push(
-          `Un visuel est disponible pour la source « ${v.cle} » : afficher_visuel le montre à la personne.`,
-        );
       for (const p of r.propositions ?? []) {
         propositions.push(p);
         // En attente de la conclusion, le bouton attend aussi : une réponse
@@ -809,9 +968,11 @@ async function converser(
     messages.push({ role: "assistant", content: tourARenvoyer(m.content) });
     messages.push({
       role: "user",
-      // Les résultats d'outils d'abord, comme l'API l'exige ; les annonces ensuite.
-      content: [...resultats, ...annonces.map((text) => ({ type: "text" as const, text }))],
+      content: resultats,
     });
+    // Les résultats viennent d'arriver, en français : c'est le moment où la
+    // langue de la réponse se perdait. La consigne d'opérateur le redit ici.
+    if (rappelDeLangue) messages.push({ role: "system", content: rappelDeLangue });
   }
 
   /*
@@ -827,7 +988,10 @@ async function converser(
     dernierTour !== null &&
     !interrompue &&
     garde.texteEmis() !== "" &&
-    doitEtreRelue(SANS_CONCLUSION, contexte)
+    // Un cabinet peut relire ; ou bien le modèle n'a pas pu conclure dans son
+    // tour et vient de consulter le droit, pour une personne du dossier.
+    (doitEtreRelue(SANS_CONCLUSION, contexte) ||
+      (conclutApres && contexte?.appelantMembre === true && outilsAppeles.includes(CONSEIL_FISCAL)))
   ) {
     const assembleur = new Assembleur();
     const debutAppel = maintenant();
@@ -836,10 +1000,12 @@ async function converser(
         model: choix.modele,
         max_tokens: reglage.sortie_max_jetons,
         output_config: { effort: choix.effort },
-        thinking: { type: "disabled" },
+        // Le modèle qui réfléchit n'accepte ni réflexion coupée ni outil imposé :
+        // on ne lui offre que l'outil final, et la demande le nomme.
+        thinking: { type: conclutApres ? choix.reflexion : "disabled" },
         cache_control: { type: "ephemeral" },
-        tools: outils,
-        tool_choice: { type: "tool", name: CONCLURE_REPONSE.name },
+        tools: conclutApres ? [CONCLURE_REPONSE] : outils,
+        ...(conclutApres ? {} : { tool_choice: { type: "tool", name: CONCLURE_REPONSE.name } }),
         system,
         messages: [
           ...messages,
@@ -954,12 +1120,40 @@ async function converser(
    * qui n'a pas eu lieu : elle dit de la faire confirmer.
    */
   let annonce: string | null = null;
-  if (nonVerifie && !retenue) ajouts.push(message(q.locale, "pme.assistant.nonVerifieNote"));
+  // La note du « non vérifié » ne se pose que si la réponse ne part pas chez la
+  // comptabilité : sinon l'annonce de l'envoi la porte, en une seule phrase
+  // (le correcteur relevait trois avertissements empilés sous une même réponse).
+  let noteNonVerifie = nonVerifie && !retenue;
+  // Ce qui vient d'internet se dit : la personne sait d'où vient ce qu'elle lit.
+  if (garde.citeInternet() && !retenue) ajouts.push(message(q.locale, "pme.assistant.webNote"));
   if (aRelire && !retenue) {
     annonce = await deposerAuCabinet().then(
-      () => message(q.locale, "pme.conseil.aConfirmer"),
+      () => {
+        if (!nonVerifie) return message(q.locale, "pme.conseil.aConfirmer");
+        noteNonVerifie = false;
+        return message(q.locale, "pme.conseil.aConfirmerNonVerifie");
+      },
       () => message(q.locale, "pme.conseil.aConfirmerSansEnvoi"),
     );
+  } else if (
+    /*
+     * SANS COMPTABILITÉ RELIÉE AU DOSSIER, la comptabilité de la société reste
+     * l'expert (décision du dirigeant, 11 novembre 2026). Malica n'a personne à
+     * qui envoyer sa réponse dans l'application : elle dit de la faire
+     * confirmer, et pourquoi elle ne l'envoie pas. Seulement pour un avis que
+     * le modèle a lui-même conclu engageant : sans conclusion, une explication
+     * générale ne s'annonce pas ; et un chiffre non vérifié porte déjà sa note,
+     * qui dit la même chose.
+     */
+    dite !== "" &&
+    !nonVerifie &&
+    contexte?.appelantMembre === true &&
+    contexte.cabinetId === null &&
+    conclusion !== null &&
+    conclusion.conseil &&
+    conclusion.portee !== "generale"
+  ) {
+    annonce = message(q.locale, "pme.conseil.aConfirmerSansComptabilite");
   }
   let reponse: string;
   if (retenue) {
@@ -969,6 +1163,7 @@ async function converser(
     reponse = message(q.locale, "pme.conseil.relecture");
     montrer(reponse);
   } else {
+    if (noteNonVerifie) ajouts.push(message(q.locale, "pme.assistant.nonVerifieNote"));
     if (annonce) ajouts.push(annonce);
     reponse = [dite, ...ajouts].filter(Boolean).join("\n\n");
     if (enAttente) {
@@ -1040,6 +1235,7 @@ async function converser(
       retenue,
       annoncee: annonce !== null,
       nonVerifies: garde.marquees().length,
+      annoncesTues,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
@@ -1140,6 +1336,7 @@ async function repondreParLeRepli(
       retenue,
       annoncee: false,
       nonVerifies: 0,
+      annoncesTues: 0,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
@@ -1188,6 +1385,7 @@ async function sArreter(
       retenue: false,
       annoncee: false,
       nonVerifies: 0,
+      annoncesTues: 0,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });

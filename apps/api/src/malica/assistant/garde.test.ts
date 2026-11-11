@@ -279,8 +279,12 @@ describe("la garde ne retient que ce qui engage, quand la base dit ce qui engage
     assert.deepEqual(juger(morceau), { aEmettre: morceau, retirees: [] });
     const unite = "Le `1` représente le HT lui-même, et `/100` ramène le taux à une fraction.";
     assert.deepEqual(juger(unite), { aEmettre: unite, retirees: [] });
-    // Un taux d'exemple sorti de la mémoire reste retiré, formule ou non.
-    assert.equal(juger("Si B2 contient 19 %, `1+B2` vaut 1,19.").retirees.length, 1);
+    // Une valeur d'exemple dans une phrase qui nomme sa cellule reste (demande du
+    // dirigeant, 11 novembre 2026 : l'explication d'une formule doit être
+    // complète ; point M-10). Sans cellule nommée, elle tombe toujours.
+    const exemple = "Si `B2` contient 10 %, `1+B2` vaut 1,10.";
+    assert.deepEqual(juger(exemple), { aEmettre: exemple, retirees: [] });
+    assert.equal(juger("Si le taux est de 19 %, le produit vaut 1,19.").retirees.length, 1);
   });
 
   it("une marque est un mot entier ou une racine, pas un bout de mot", () => {
@@ -331,6 +335,15 @@ describe("le chiffre sans source part marqué quand le corpus s'est tu (M-9)", (
     assert.deepEqual(g.retirees(), []);
   });
 
+  it("la marque que le modèle a écrite lui-même ne se dit pas deux fois", () => {
+    const g = new GardeDesChiffres("Quel est le taux ?");
+    g.marquerSansSource("_(non vérifié)_", UNITES);
+    const j = g.jugerTout("Le taux y est de **18 %** (non vérifié). Il se déclare chaque mois.");
+    assert.equal(j.aEmettre, "Le taux y est de **18 %** (non vérifié). Il se déclare chaque mois.");
+    // Elle compte quand même : c'est elle qui envoie la réponse à la comptabilité.
+    assert.equal(g.marquees().length, 1);
+  });
+
   it("un chiffre porté par une source ne reçoit pas la marque", () => {
     const g = new GardeDesChiffres("Quel est le taux ?");
     g.ajouterSource({
@@ -344,6 +357,171 @@ describe("le chiffre sans source part marqué quand le corpus s'est tu (M-9)", (
     const j = g.jugerTout("Le taux est de 19 %.");
     assert.equal(j.aEmettre, "Le taux est de 19 %.");
     assert.deepEqual(g.marquees(), []);
+  });
+});
+
+describe("une page d'internet citée porte les chiffres de son bloc, et de lui seul", () => {
+  const REGLE = { marques_liantes: ["tnd", "%", "dinar"], entier_liant_des: 10000 };
+  const citer = (g: GardeDesChiffres, extrait: string) =>
+    g.recevoirCitation({
+      type: "web_search_result_location",
+      url: "https://www.bct.gov.tn/cours",
+      title: "Cours de change",
+      cited_text: extrait,
+    });
+
+  it("le chiffre passe même si l'extrait rendu est coupé avant lui", () => {
+    const g = new GardeDesChiffres("Le cours du dollar ?", REGLE);
+    g.ouvrirBloc();
+    assert.equal(citer(g, "Taux de change · Banque Centrale de Tunisie"), true);
+    g.recevoirTexte("Le dollar vaut 2,9690 TND.");
+    assert.equal(g.fermerBloc().aEmettre, "Le dollar vaut 2,9690 TND.");
+    assert.equal(g.citeInternet(), true);
+    assert.equal(g.sourcesCitees()[0]!.url, "https://www.bct.gov.tn/cours");
+  });
+
+  it("après une recherche qui a rendu des résultats, les chiffres de la réponse tiennent", () => {
+    const g = new GardeDesChiffres("Le cours du dollar ?", REGLE);
+    g.consulterInternet();
+    assert.equal(g.jugerTout("Le dollar vaut 2,9690 TND.").aEmettre, "Le dollar vaut 2,9690 TND.");
+    assert.equal(g.citeInternet(), true);
+    // Rien n'entre dans les sources des outils : le calcul reste fermé à ces nombres.
+    assert.equal(g.toutesLesSources().length, 0);
+  });
+
+  it("sans citation du modèle, les pages nommées dans la réponse s'affichent quand même", () => {
+    const g = new GardeDesChiffres("Le cours du dollar ?", REGLE);
+    g.consulterInternet([
+      { url: "https://www.bct.gov.tn/cours", title: "Cours de change" },
+      { url: "https://www.exemple.tn/autre", title: "Autre" },
+      { url: "javascript:alert(1)", title: "Refusée" },
+    ]);
+    g.jugerTout("Selon bct.gov.tn, le dollar vaut 2,9690 TND.");
+    assert.deepEqual(
+      g.sourcesCitees().map((s) => s.url),
+      ["https://www.bct.gov.tn/cours"],
+    );
+  });
+
+  it("le bloc suivant, sans citation, ne profite pas de la page", () => {
+    const g = new GardeDesChiffres("Le cours du dollar ?", REGLE);
+    g.ouvrirBloc();
+    citer(g, "USD 2,9690");
+    g.recevoirTexte("Le dollar vaut 2,9690 TND.");
+    g.fermerBloc();
+    g.ouvrirBloc();
+    g.recevoirTexte("Donc 1 000 dollars font 2 969,000 TND.");
+    assert.equal(g.fermerBloc().aEmettre, "");
+    // Et la page n'entre pas dans les sources des outils : rien ne se calcule dessus.
+    assert.equal(g.toutesLesSources().length, 0);
+  });
+
+  it("une adresse qui n'est pas http(s) n'est pas une source", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    g.ouvrirBloc();
+    assert.equal(
+      g.recevoirCitation({ type: "web_search_result_location", url: "javascript:alert(1)" }),
+      false,
+    );
+  });
+});
+
+describe("ce que Malica a déjà dit dans le fil peut se redire", () => {
+  const REGLE = { marques_liantes: ["tnd", "%"], entier_liant_des: 10000 };
+
+  it("un montant d'une réponse précédente passe ; un montant nouveau tombe", () => {
+    const g = new GardeDesChiffres("Et le deuxième ?", REGLE);
+    g.admettreDuFil(["Le premier pèse 26 109,600 TND et le deuxième 4 999,000 TND."]);
+    const j = g.jugerTout("Le deuxième est à 4 999,000 TND. Le troisième est à 1 234,000 TND.");
+    assert.equal(j.aEmettre, "Le deuxième est à 4 999,000 TND. ");
+    assert.equal(g.retirees().length, 1);
+  });
+
+  it("une longue phrase répétée dans la même réponse ne part qu'une fois", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    const longue =
+      "Je vous conseille de surveiller le premier fournisseur, qui pèse le plus dans vos achats.";
+    const j = g.jugerTout(`${longue}\n\nVoici le détail.\n\n${longue}`);
+    assert.equal(j.aEmettre.split(longue).length - 1, 1);
+  });
+});
+
+describe("ce qu'une phrase retirée laisse derrière elle se recoud", () => {
+  const REGLE = { marques_liantes: ["%", "taux", "dinar"], entier_liant_des: 10000 };
+
+  it("un paragraphe retiré ne laisse pas de lignes vides en trop", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    const j = g.jugerTout(
+      "Premier paragraphe.\n\nUn café coûte 10 % de plus.\n\nDernier paragraphe.",
+    );
+    assert.equal(j.aEmettre, "Premier paragraphe.\n\nDernier paragraphe.");
+  });
+
+  it("la puce d'une phrase retirée passe à la suite de sa ligne", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    const j = g.jugerTout("- Un : oui.\n- Deux : le taux monte de 5 %. Négociez.\n- Trois : fin.");
+    assert.equal(j.aEmettre, "- Un : oui.\n- Négociez.\n- Trois : fin.");
+  });
+
+  it("une puce entièrement retirée disparaît avec sa ligne", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    const j = g.jugerTout("- Un : oui.\n- Le taux monte de 5 %.\n- Trois : fin.");
+    assert.equal(j.aEmettre, "- Un : oui.\n- Trois : fin.");
+  });
+
+  it("une phrase retirée au milieu d'une ligne ne touche pas aux sauts", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    const j = g.jugerTout("Début. Le taux est de 5 %.\n\nSuite.");
+    assert.equal(j.aEmettre, "Début. \n\nSuite.");
+  });
+});
+
+describe("une phrase qui nomme une cellule de tableur n'affirme aucun chiffre", () => {
+  const REGLE = { marques_liantes: ["%", "taux", "tva", "tnd"], entier_liant_des: 10000 };
+
+  it("la saisie du taux et l'exemple en cellules restent", () => {
+    const g = new GardeDesChiffres("Une formule pour le TTC ?", REGLE);
+    const texte =
+      "Dans `B2`, saisissez le taux en pourcentage (10 %) ou en décimale (0,10). " +
+      "Avec `A2 = 1 000` et `B2 = 10 %`, la cellule `C2` affiche 1 100.";
+    const j = g.jugerTout(texte);
+    assert.equal(j.aEmettre, texte);
+    assert.deepEqual(g.retirees(), []);
+  });
+
+  it("après une formule, sans outil, l'explication reste entière", () => {
+    const g = new GardeDesChiffres("Une formule pour le TTC ?", REGLE);
+    const texte =
+      "`=ARRONDI(A2*(1+B2);3)`\nLe 3 arrondit à trois décimales, les millimes du dinar. " +
+      "Si vous saisissez 19 sans le signe %, divisez le taux par 100.";
+    assert.equal(g.jugerTout(texte).aEmettre, texte);
+  });
+
+  it("après une formule, dès qu'un outil a répondu, la garde redevient entière", () => {
+    const g = new GardeDesChiffres("Une formule pour ma TVA ?", REGLE);
+    g.ajouterSource({
+      cle: "malica:tva:2026-11",
+      genre: "tva",
+      titre: "TVA",
+      objetId: null,
+      texte: "Solde : 342,000 TND",
+    });
+    const j = g.jugerTout("`=A2*(1+B2)`\nLe taux de TVA est de 19 %.");
+    assert.equal(g.retirees().length, 1);
+    assert.ok(!j.aEmettre.includes("19 %"));
+  });
+
+  it("sans cellule nommée, un taux sans source tombe toujours", () => {
+    const g = new GardeDesChiffres("Une formule pour le TTC ?", REGLE);
+    const j = g.jugerTout("Le taux de TVA est de 19 %.");
+    assert.equal(j.aEmettre, "");
+    assert.equal(g.retirees().length, 1);
+  });
+
+  it("sans règle en base, la garde reste stricte, cellule ou non", () => {
+    const g = new GardeDesChiffres("Une formule pour le TTC ?");
+    g.jugerTout("Dans `B2`, saisissez 10 %.");
+    assert.equal(g.retirees().length, 1);
   });
 });
 

@@ -213,12 +213,18 @@ describe("evolution_mensuelle", () => {
     const texte = r.sources[0]!.texte.replace(/\s/g, " ");
     assert.match(texte, /de Septembre 2026 à Novembre 2026 \(2026-09 à 2026-11\)/);
     assert.match(texte, /pas un chiffre d'affaires comptable/);
-    assert.match(texte, /- 2026-09 : ventes aucune pièce lue ; achats aucune pièce lue/);
     assert.match(
       texte,
-      /- 2026-10 : ventes 99 999,000 TND \(1 pièce\) ; achats 17 082,177 TND \(3 pièces\)/,
+      /- Septembre 2026 \(2026-09\) : ventes aucune pièce lue ; achats aucune pièce lue/,
     );
-    assert.match(texte, /- 2026-11 : ventes aucune pièce lue ; achats 127,323 TND \(1 pièce\)/);
+    assert.match(
+      texte,
+      /- Octobre 2026 \(2026-10\) : ventes 99 999,000 TND \(1 pièce\) ; achats 17 082,177 TND \(3 pièces\)/,
+    );
+    assert.match(
+      texte,
+      /- Novembre 2026 \(2026-11\) : ventes aucune pièce lue ; achats 127,323 TND \(1 pièce\)/,
+    );
     assert.match(texte, /Factures écartées des sommes : 1 sans total lisible/);
     for (const a of appels)
       assert.ok(LECTURES_DES_OUTILS.has(a), `${a} n'est pas une lecture déclarée`);

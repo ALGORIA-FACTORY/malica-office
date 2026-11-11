@@ -20,6 +20,8 @@ import type { AppelApi } from "../appel-local.ts";
 import type { ResultatDuConseilCite } from "../conseil/conseil-cite.ts";
 import {
   converserAvecRepli,
+  ecritEnArabe,
+  estUneReponseVerifiee,
   type DependancesDeLAssistant,
   type FinMesuree,
   type DossierVerifie,
@@ -276,6 +278,10 @@ function dossierFictif(
     fileEnPanne?: boolean;
     /** Quand le corpus ne répond pas : lu en base ; absent, la garde retire. */
     sansTexte?: "marquer" | "retirer";
+    /** La réflexion du modèle courant ; absente, celle du réglage d'essai (coupée). */
+    reflexion?: "between_tools" | "adaptive";
+    /** La recherche sur internet, telle que la base la rend ; absente, l'outil n'est pas offert. */
+    web?: { active: boolean; outil: string; recherches_max: number };
   } = {},
 ): {
   api: AppelApi;
@@ -319,6 +325,10 @@ function dossierFictif(
             ...(options.relecture ? { relecture: options.relecture } : {}),
             ...(options.sansTexte ? { sans_texte: options.sansTexte } : {}),
             ...(options.sansTexte === "marquer" ? { unites_marquables: ["%", "jours"] } : {}),
+            ...(options.web ? { web: options.web } : {}),
+            ...(options.reflexion
+              ? { reglage: { ...CONFIGURATION.reglage, reflexion_courant: options.reflexion } }
+              : {}),
           });
         case "capture.chaineDeDesignation":
           return r(chaine(options.anthropicEpuise ?? false, options.deepseekEpuise ?? false));
@@ -1164,6 +1174,7 @@ describe("les gardes de la boucle", () => {
 /* ------------------------------------------------------------ la file du cabinet -- */
 
 const RELECTURE = message("fr", "pme.conseil.relecture");
+const SANS_COMPTABILITE = message("fr", "pme.conseil.aConfirmerSansComptabilite");
 const LOYER = "Ma société doit-elle appliquer la retenue à la source sur le loyer de notre local ?";
 const REPONSE_DOSSIER = "Oui, votre société doit retenir à la source sur ce loyer.";
 const CONCLUSION_DOSSIER = {
@@ -1296,11 +1307,15 @@ describe("la file du cabinet reçoit ce que l'assistant retient", () => {
       REPONSE_DOSSIER,
       CONCLUSION_DOSSIER,
     );
-    assert.equal(r.textes, REPONSE_DOSSIER);
+    // La comptabilité de la société reste l'expert : Malica dit de faire
+    // confirmer, sans annoncer un envoi qu'elle ne peut pas faire.
+    assert.equal(r.textes, `${REPONSE_DOSSIER}\n\n${SANS_COMPTABILITE}`);
     assert.equal(r.file.length, 0);
+    // Une réponse d'une seule phrase part dès que le modèle passe à sa
+    // conclusion : avant que celle-ci soit rendue, donc sans l'attendre.
     assert.ok(
-      r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:texte"),
-      `le texte a attendu : ${r.journal.join(" → ")}`,
+      r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:conclusion"),
+      `le texte a attendu la conclusion : ${r.journal.join(" → ")}`,
     );
     assert.deepEqual(r.fin.mesure.conclusion, {
       conseil: true,
@@ -1319,7 +1334,7 @@ describe("la file du cabinet reçoit ce que l'assistant retient", () => {
     );
     assert.equal(r.textes, REPONSE_DOSSIER);
     assert.equal(r.file.length, 0);
-    assert.ok(r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:texte"));
+    assert.ok(r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:conclusion"));
   });
 
   it("sans conclusion : la portée est incertaine, la réponse est retenue", async () => {
@@ -1422,15 +1437,26 @@ describe("en mode « annoncer », la réponse à relire s'affiche et part au cab
     assert.equal(r.file.length, 0);
   });
 
-  it("sans cabinet : la réponse part seule, sans annonce d'un envoi impossible", async () => {
+  it("sans cabinet : la réponse dit de la faire confirmer, sans annonce d'un envoi impossible", async () => {
     const r = await poserAuCabinet(
       { cabinetId: null, appelantMembre: true },
       REPONSE_DOSSIER,
       CONCLUSION_DOSSIER,
       { relecture: "annoncer" },
     );
-    assert.equal(r.textes, REPONSE_DOSSIER);
+    assert.equal(r.textes, `${REPONSE_DOSSIER}\n\n${SANS_COMPTABILITE}`);
+    assert.ok(!r.textes.includes(A_CONFIRMER), "un envoi impossible a été annoncé");
     assert.equal(r.file.length, 0);
+  });
+
+  it("sans cabinet, une règle générale ne s'annonce pas", async () => {
+    const r = await poserAuCabinet(
+      { cabinetId: null, appelantMembre: true },
+      "Le taux se lit dans le code.",
+      { conseil: true, portee: "generale", certitude: 1, doute: null, theme: "Taux" },
+      { relecture: "annoncer" },
+    );
+    assert.equal(r.textes, "Le taux se lit dans le code.");
   });
 
   it("la file refuse : la réponse reste, et Malica n'annonce pas un envoi qui n'a pas eu lieu", async () => {
@@ -1546,15 +1572,16 @@ async function poserSansTexte(
 describe("sans texte dans le corpus, Malica répond et marque ce qu'elle chiffre de mémoire", () => {
   const MARQUER = { relecture: "annoncer", sansTexte: "marquer" } as const;
 
-  it("la phrase chiffrée reste, marquée ; la note et l'annonce suivent ; le cabinet reçoit la réponse", async () => {
+  it("la phrase chiffrée reste, marquée ; un seul avertissement suit ; le cabinet reçoit la réponse", async () => {
     const r = await poserSansTexte(SANS_TEXTE, MARQUER);
     assert.ok(r.textes.includes(`est en général de 7 % du prix. ${NON_VERIFIE}`), r.textes);
     assert.ok(r.textes.includes("Elle se déclare avec les autres taxes."));
-    assert.ok(r.textes.includes(NOTE_NON_VERIFIE));
+    // Un seul avertissement sous la réponse : il dit d'où vient le chiffre et où part la réponse.
     assert.ok(
-      r.textes.endsWith(A_CONFIRMER),
+      r.textes.endsWith(message("fr", "pme.conseil.aConfirmerNonVerifie")),
       "une question générale au chiffre non vérifié part aussi",
     );
+    assert.ok(!r.textes.includes(NOTE_NON_VERIFIE), "deux avertissements empilés");
     assert.equal(r.fin.mesure.nonVerifies, 1);
     assert.equal(r.fin.chiffresRetires, 0);
     assert.equal(r.file.length, 1);
@@ -1715,5 +1742,398 @@ describe("le modèle qui répond sans conclure se voit demander sa conclusion", 
       r.journal.filter((j) => j.startsWith("claude:")),
       ["claude:réponse"],
     );
+  });
+});
+
+describe("l'annonce d'un outil ne part pas à l'écran", () => {
+  const QUESTION = {
+    tenantId: TENANT,
+    question: "Mes pièces ?",
+    locale: "fr" as const,
+    conversationId: null,
+    pieceIds: [],
+  };
+  const REPONSE = "Vous avez des pièces à traiter. Je vous les détaille si vous le souhaitez.";
+  const jouer = async (etapes: EtapeSimulee[]) => {
+    const { api, fils } = dossierFictif({ contexte: { cabinetId: null, appelantMembre: true } });
+    const { fin, evenements } = await rejouer(
+      QUESTION,
+      { claude: claudeSimule(etapes, []), conseil: conseilFictif, repli: sansRepli },
+      api,
+    );
+    const ecran = evenements.flatMap((e) => (e.type === "texte" ? [e.texte] : [])).join("");
+    return { fin, ecran, range: fils.get(fin.conversationId)?.at(-1) };
+  };
+
+  it("la phrase écrite avant une lecture tombe ; l'étape, elle, s'affiche", async () => {
+    const { api } = dossierFictif({ contexte: { cabinetId: null, appelantMembre: true } });
+    const { fin, evenements } = await rejouer(
+      QUESTION,
+      {
+        claude: claudeSimule(
+          [
+            {
+              texte: "This message comes from the interface, I will look at the documents first.",
+              outils: [{ nom: "pieces_chercher", entree: {} }],
+            },
+            { texte: REPONSE },
+          ],
+          [],
+        ),
+        conseil: conseilFictif,
+        repli: sansRepli,
+      },
+      api,
+    );
+    const ecran = evenements.flatMap((e) => (e.type === "texte" ? [e.texte] : [])).join("");
+    assert.equal(ecran.trim(), REPONSE);
+    assert.equal(fin.reponse.trim(), REPONSE);
+    assert.equal(fin.mesure.annoncesTues, 1);
+    assert.ok(
+      evenements.some((e) => e.type === "outil" && e.etat === "debut"),
+      "l'étape en cours n'est plus dite",
+    );
+  });
+
+  it("le fil ne garde pas l'annonce non plus", async () => {
+    const r = await jouer([
+      { texte: "Je regarde vos pièces.", outils: [{ nom: "pieces_chercher", entree: {} }] },
+      { texte: REPONSE },
+    ]);
+    assert.ok(!JSON.stringify(r.range).includes("Je regarde vos pièces"));
+  });
+
+  it("une réponse sans outil part entière, même en une seule phrase", async () => {
+    const r = await jouer([{ texte: "Bonjour, je suis là." }]);
+    assert.equal(r.ecran.trim(), "Bonjour, je suis là.");
+    assert.equal(r.fin.mesure.annoncesTues, 0);
+  });
+
+  it("deux phrases d'annonce avant la première lecture tombent ensemble", async () => {
+    const r = await jouer([
+      {
+        texte: "Cette question porte sur vos pièces : je les consulte. Je vérifie leur état.",
+        outils: [{ nom: "pieces_chercher", entree: {} }],
+      },
+      { texte: REPONSE },
+    ]);
+    assert.equal(r.ecran.trim(), REPONSE);
+    assert.equal(r.fin.mesure.annoncesTues, 1);
+  });
+
+  it("ce qui est écrit avant une lecture n'est pas la réponse, quelle qu'en soit la longueur", async () => {
+    const r = await jouer([
+      {
+        texte: "Votre question porte sur vos pièces.\n\nJe vérifie leur état.",
+        outils: [{ nom: "pieces_chercher", entree: {} }],
+      },
+      { texte: REPONSE },
+    ]);
+    assert.equal(r.fin.reponse.trim(), REPONSE);
+  });
+
+  it("une réponse écrite, puis une autre lecture, puis la même réponse : elle ne se lit qu'une fois", async () => {
+    const r = await jouer([
+      { texte: "Je regarde.", outils: [{ nom: "pieces_chercher", entree: {} }] },
+      { texte: REPONSE, outils: [{ nom: "tiers_chercher", entree: {} }] },
+      { texte: REPONSE },
+    ]);
+    assert.equal(r.fin.reponse.trim(), REPONSE);
+    assert.ok(!JSON.stringify(r.range).includes(`${REPONSE}\n\n${REPONSE}`));
+  });
+});
+
+describe("Malica cherche sur internet", () => {
+  const QUESTION = {
+    tenantId: TENANT,
+    question: "Quel est le cours du dollar aujourd'hui ?",
+    locale: "fr" as const,
+    conversationId: null,
+    pieceIds: [],
+  };
+  const PAGE = "https://www.bct.gov.tn/cours";
+  /** Un Claude qui cherche chez son fournisseur, puis répond en citant la page. */
+  const claudeQuiCherche = (requetes: Array<Record<string, unknown>>): ClientEnFlux =>
+    async function* (requete) {
+      requetes.push(structuredClone(requete));
+      yield { type: "message_start", message: { model: "modele-courant", usage: {} } };
+      yield { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } };
+      yield {
+        type: "content_block_delta",
+        index: 0,
+        delta: { type: "text_delta", text: "Je cherche le cours du jour." },
+      };
+      yield { type: "content_block_stop", index: 0 };
+      yield {
+        type: "content_block_start",
+        index: 1,
+        content_block: { type: "server_tool_use", id: "srvtoolu_1", name: "web_search", input: {} },
+      };
+      yield {
+        type: "content_block_delta",
+        index: 1,
+        delta: { type: "input_json_delta", partial_json: '{"query":"cours dollar dinar BCT"}' },
+      };
+      yield { type: "content_block_stop", index: 1 };
+      yield {
+        type: "content_block_start",
+        index: 2,
+        content_block: {
+          type: "web_search_tool_result",
+          tool_use_id: "srvtoolu_1",
+          content: [{ type: "web_search_result", url: PAGE, title: "Cours de change — BCT" }],
+        },
+      };
+      yield { type: "content_block_stop", index: 2 };
+      yield { type: "content_block_start", index: 3, content_block: { type: "text", text: "" } };
+      yield {
+        type: "content_block_delta",
+        index: 3,
+        delta: {
+          type: "citations_delta",
+          citation: {
+            type: "web_search_result_location",
+            url: PAGE,
+            title: "Cours de change — BCT",
+            cited_text: "USD : 2,9690 TND au 5 novembre 2026",
+          },
+        },
+      };
+      yield {
+        type: "content_block_delta",
+        index: 3,
+        delta: { type: "text_delta", text: "Le dollar valait 2,9690 TND le 5 novembre 2026. " },
+      };
+      yield { type: "content_block_stop", index: 3 };
+      yield { type: "content_block_start", index: 4, content_block: { type: "text", text: "" } };
+      yield {
+        type: "content_block_delta",
+        index: 4,
+        delta: { type: "text_delta", text: "Cela vous fait 5 938,000 TND pour 2 000 dollars." },
+      };
+      yield { type: "content_block_stop", index: 4 };
+      yield { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: {} };
+    };
+
+  const jouer = async (web: { active: boolean } | null) => {
+    const { api } = dossierFictif({
+      contexte: { cabinetId: null, appelantMembre: true },
+      ...(web ? { web: { ...web, outil: "outil-de-recherche-d-essai", recherches_max: 2 } } : {}),
+    });
+    const requetes: Array<Record<string, unknown>> = [];
+    const { fin, evenements } = await rejouer(
+      QUESTION,
+      { claude: claudeQuiCherche(requetes), conseil: conseilFictif, repli: sansRepli },
+      api,
+    );
+    const outils = (requetes[0]!["tools"] as Array<Record<string, unknown>>) ?? [];
+    return { fin, evenements, outils };
+  };
+
+  it("l'outil du fournisseur est offert avec le type et le plafond lus en base", async () => {
+    const { outils } = await jouer({ active: true });
+    assert.deepEqual(
+      outils.find((o) => o["name"] === "web_search"),
+      { type: "outil-de-recherche-d-essai", name: "web_search", max_uses: 2 },
+    );
+    assert.ok(outils.at(-1)!["cache_control"], "le point de cache n'est plus sur le dernier outil");
+  });
+
+  it("coupée, ou sans réglage : l'outil n'est pas offert", async () => {
+    for (const web of [{ active: false }, null]) {
+      const { outils } = await jouer(web);
+      assert.equal(
+        outils.some((o) => o["name"] === "web_search"),
+        false,
+      );
+    }
+  });
+
+  it("la réponse reste entière, avec son lien et sa note ; l'annonce tombe", async () => {
+    const { fin, evenements } = await jouer({ active: true });
+    assert.ok(fin.reponse.includes("Le dollar valait 2,9690 TND le 5 novembre 2026."));
+    assert.ok(!fin.reponse.includes("Je cherche le cours du jour"), "l'annonce est partie");
+    // La réponse dit qu'elle vient d'internet ; ses chiffres tiennent à ce titre (M-13).
+    assert.ok(fin.reponse.includes("5 938,000 TND"));
+    assert.ok(fin.reponse.includes(message("fr", "pme.assistant.webNote")));
+    const page = fin.sources.find((s) => s.genre === "web");
+    assert.equal(page?.url, PAGE);
+    assert.equal(page?.titre, "Cours de change — BCT");
+    assert.ok(
+      evenements.some(
+        (e) =>
+          e.type === "outil" && e.etiquette === message("fr", "pme.assistant.outil.web_search"),
+      ),
+      "l'étape « je cherche sur internet » n'est pas dite",
+    );
+  });
+});
+
+describe("la langue du message se dit au modèle quand c'est l'arabe", () => {
+  it("reconnaît un message en arabe, même mêlé d'un sigle latin", () => {
+    assert.equal(ecritEnArabe("ما هي نسبة الأداء على القيمة المضافة في تونس؟"), true);
+    assert.equal(ecritEnArabe("اعرض لي مصاريفي حسب المزوّد TVA"), true);
+    assert.equal(ecritEnArabe("Quel est le taux de la TVA ?"), false);
+    assert.equal(ecritEnArabe("2026 ?"), false);
+  });
+
+  it("le contexte du jour le dit en toutes lettres, et seulement alors", async () => {
+    const vu = async (question: string) => {
+      const { api } = dossierFictif({ contexte: { cabinetId: null, appelantMembre: true } });
+      const requetes: RequeteVue[] = [];
+      await rejouer(
+        { tenantId: TENANT, question, locale: "fr", conversationId: null, pieceIds: [] },
+        {
+          claude: claudeSimule([{ texte: "Réponse." }], requetes),
+          conseil: conseilFictif,
+          repli: sansRepli,
+        },
+        api,
+      );
+      return requetes[0]!.system[1]!.text;
+    };
+    assert.match(await vu("اعرض لي مصاريفي حسب المزوّد."), /entièrement en arabe/);
+    assert.doesNotMatch(await vu("Montre-moi mes dépenses."), /entièrement en arabe/);
+  });
+});
+
+describe("ce qui n'était pas vérifié ne devient pas une source au tour suivant", () => {
+  const reponse = (contenu: string, sources: Array<{ genre: string }> = []) => ({
+    role: "assistant" as const,
+    contenu,
+    sources,
+  });
+
+  it("une réponse du dossier se redit ; une réponse d'internet ou de mémoire, non", () => {
+    assert.equal(estUneReponseVerifiee(reponse("Le premier pèse 26 109,600 TND.")), true);
+    assert.equal(
+      estUneReponseVerifiee(reponse("Le dollar vaut 3,47 TND.", [{ genre: "web" }])),
+      false,
+    );
+    assert.equal(
+      estUneReponseVerifiee(
+        reponse(`Le dollar vaut 3,47 TND.\n\n${message("fr", "pme.assistant.webNote")}`),
+      ),
+      false,
+    );
+    assert.equal(
+      estUneReponseVerifiee(
+        reponse(`Le taux est de 18 %. ${message("ar", "pme.assistant.nonVerifie")}`),
+      ),
+      false,
+    );
+    assert.equal(
+      estUneReponseVerifiee({ role: "user", contenu: "J'ai payé 3,47 TND.", sources: null }),
+      false,
+    );
+  });
+
+  it("au tour suivant, le cours lu sur internet ne passe ni la garde ni le calcul", async () => {
+    const { api, fils } = dossierFictif({ contexte: { cabinetId: null, appelantMembre: true } });
+    const fil = "fil-web";
+    fils.set(fil, [
+      { role: "user", contenu: "Le cours du dollar ?" },
+      {
+        role: "assistant",
+        contenu: `Le dollar vaut 3,47 TND.\n\n${message("fr", "pme.assistant.webNote")}`,
+        sources: [{ genre: "web", cle: "web:https://exemple.tn", titre: "Cours", objetId: null }],
+      },
+    ]);
+    const { fin } = await rejouer(
+      {
+        tenantId: TENANT,
+        question: "Et pour mille dollars ?",
+        locale: "fr",
+        conversationId: fil,
+        pieceIds: [],
+      },
+      {
+        claude: claudeSimule([{ texte: "Au cours de 3,47 TND, cela fait une somme en TND." }], []),
+        conseil: conseilFictif,
+        repli: sansRepli,
+      },
+      api,
+    );
+    assert.ok(!fin.reponse.includes("3,47"), "un chiffre non vérifié du fil a passé la garde");
+  });
+});
+
+describe("un modèle qui réfléchit conclut après sa réponse, pas dans le même tour", () => {
+  const QUESTION = {
+    tenantId: TENANT,
+    question: LOYER,
+    locale: "fr" as const,
+    conversationId: null,
+    pieceIds: [],
+  };
+
+  it("l'outil final n'est pas offert pendant la réponse ; il est demandé ensuite, sans outil imposé", async () => {
+    const { api, trace } = dossierFictif({
+      contexte: SOUS_MANDAT,
+      relecture: "annoncer",
+      reflexion: "between_tools",
+    });
+    const requetes: Array<Record<string, unknown>> = [];
+    const claude: ClientEnFlux = async function* (requete) {
+      requetes.push(structuredClone(requete));
+      yield { type: "message_start", message: { model: "modele-courant", usage: {} } };
+      if (requetes.length === 1) {
+        yield { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } };
+        yield {
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "text_delta", text: REPONSE_DOSSIER },
+        };
+        yield { type: "content_block_stop", index: 0 };
+        yield { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: {} };
+        return;
+      }
+      yield {
+        type: "content_block_start",
+        index: 0,
+        content_block: { type: "tool_use", id: "toolu_c", name: "conclure_reponse", input: {} },
+      };
+      yield {
+        type: "content_block_delta",
+        index: 0,
+        delta: { type: "input_json_delta", partial_json: JSON.stringify(CONCLUSION_DOSSIER) },
+      };
+      yield { type: "content_block_stop", index: 0 };
+      yield { type: "message_delta", delta: { stop_reason: "tool_use" }, usage: {} };
+    };
+    const { fin } = await rejouer(
+      QUESTION,
+      { claude, conseil: conseilFictif, repli: sansRepli },
+      api,
+    );
+    const noms = (r: Record<string, unknown>) =>
+      (r["tools"] as Array<{ name: string }>).map((o) => o.name);
+    assert.ok(!noms(requetes[0]!).includes("conclure_reponse"), "l'outil final suit la réponse");
+    assert.deepEqual(noms(requetes[1]!), ["conclure_reponse"]);
+    assert.equal(
+      requetes[1]!["tool_choice"],
+      undefined,
+      "un outil imposé est refusé par ce modèle",
+    );
+    assert.deepEqual(requetes[1]!["thinking"], { type: "between_tools" });
+    // La réponse est là, entière, et elle part chez la comptabilité avec sa conclusion.
+    assert.ok(fin.reponse.startsWith(REPONSE_DOSSIER));
+    assert.equal(fin.mesure.conclusion?.portee, "dossier");
+    assert.equal(trace.file.length, 1);
+  });
+
+  it("le modèle sans réflexion garde l'outil final dans son tour", async () => {
+    const { api } = dossierFictif({ contexte: SOUS_MANDAT, relecture: "annoncer" });
+    const requetes: RequeteVue[] = [];
+    await rejouer(
+      QUESTION,
+      {
+        claude: claudeSimule([{ texte: "Réponse." }], requetes),
+        conseil: conseilFictif,
+        repli: sansRepli,
+      },
+      api,
+    );
+    assert.ok(requetes[0]!.tools.some((o) => o.name === "conclure_reponse"));
   });
 });

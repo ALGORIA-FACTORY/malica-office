@@ -79,6 +79,12 @@ export interface PassageTrouve {
   distance: number;
   /** Trouvé aussi par les mots de la question (index lexical). */
   parLesMots: boolean;
+  /**
+   * L'ordre de lecture de ce texte, lu en base (`legal.sources`, ou celui du
+   * corpus quand c'est un code consolidé) : le plus petit se lit d'abord.
+   * Absent sur une ligne d'avant la colonne : le texte se range en dernier.
+   */
+  ordreDeLecture?: number | null;
   /** Le score de fusion des deux classements (RRF). */
   score: number;
   /**
@@ -179,7 +185,7 @@ export const corpus = {
     },
   ) {
     const articles = input.articles ?? [];
-    const mots = (input.mots ?? []).filter((m) => m.length >= 4).slice(0, 12);
+    const mots = (input.mots ?? []).filter((m) => m.length >= 2).slice(0, 12);
     const nb = Math.min(Math.max(input.nb ?? 25, 1), 60);
 
     const { rows } = await db.query<Record<string, unknown>>(
@@ -187,26 +193,49 @@ export const corpus = {
          select p.*,
                 -- Un paramètre accroché à un article transmis passe devant :
                 -- c'est le lien le plus sûr entre un chiffre et son fondement.
-                case when exists (
-                  select 1 from unnest($2::text[], $3::text[]) as a(corpus, numero)
-                   where a.corpus = p.corpus
-                     and p.article ~* ('(^|[^0-9])' || regexp_replace(a.numero, '\\s+', '\\\\s+', 'g') || '($|[^0-9])')
-                ) then 0 else 1 end as rang
+                -- Sa place est celle de son article dans la liste remise : le
+                -- chiffre du texte qui répond le mieux vient d'abord.
+                (select min(a.place)
+                   from unnest($2::text[], $3::text[]) with ordinality as a(corpus, numero, place)
+                  where a.corpus = any(string_to_array(p.corpus, '/'))
+                    and p.article ~* ('(^|[^0-9])' || regexp_replace(a.numero, '\\s+', '\\\\s+', 'g') || '($|[^0-9])')
+                ) as place
            from ref.fiscal_parameters p
           where p.jurisdiction = $1
             and p.valid_from <= coalesce($4::date, current_date)
             and (p.valid_to is null or p.valid_to > coalesce($4::date, current_date))
+       ),
+       /*
+        * LE POIDS D'UN MOT : l'inverse du nombre de paramètres qu'il touche.
+        * « taux » en touche des dizaines et ne désigne rien ; « honoraires » ou
+        * « timbre » en touchent une poignée et désignent le sujet. Sans ce
+        * poids, la coupe tombait dans l'ordre alphabétique des codes : le
+        * 11 novembre 2026, « retenue sur les honoraires d'un avocat » rendait
+        * vingt-cinq taux sans rapport et laissait dehors celui de l'article 52.
+        */
+       touche as (
+         select v.code, m.mot
+           from vise v
+           join unnest($5::text[]) as m(mot)
+             -- Un sigle (« tva », « is ») ne vaut que comme segment entier du
+             -- code : « is » se trouve au milieu de la moitié des libellés.
+             on case when length(m.mot) < 4
+                     then lower(m.mot) = any(string_to_array(lower(v.code), '_'))
+                     else v.code ilike '%' || m.mot || '%' or v.libelle ilike '%' || m.mot || '%'
+                end
+       ),
+       poids as (
+         select t.code, sum(1.0 / f.n) as poids
+           from touche t
+           join (select mot, count(*) as n from touche group by mot) f on f.mot = t.mot
+          group by t.code
        )
-       select code, libelle, forme, echelle, valeur_brute, corpus, article, citation,
+       select vise.code, libelle, forme, echelle, valeur_brute, corpus, article, citation,
               autorite, confiance, valid_from, valid_to, note
          from vise
-        where rang = 0
-           or exists (
-             select 1 from unnest($5::text[]) as m(mot)
-              where vise.code ilike '%' || m.mot || '%'
-                 or vise.libelle ilike '%' || m.mot || '%'
-           )
-        order by rang, code
+         left join poids on poids.code = vise.code
+        where place is not null or poids.poids is not null
+        order by place nulls last, poids.poids desc nulls last, vise.code
         limit $6`,
       [
         input.jurisdiction,
@@ -470,6 +499,8 @@ export const corpus = {
       nb: number;
       distanceMax: number;
       distanceMaxMots: number;
+      /** Les numéros d'article que la personne a écrits (« article 52 »). */
+      numeros?: string[];
     },
   ): Promise<PassageTrouve[]> {
     const vecteur = input.vecteur;
@@ -489,6 +520,9 @@ export const corpus = {
     // « a or b or c » : websearch_to_tsquery sait l'union, et une question
     // entière ne contient jamais TOUS ses mots dans un même fragment.
     const requeteMots = mots.join(" or ");
+    const numeros = (Array.isArray(input.numeros) ? input.numeros : [])
+      .filter((n) => typeof n === "string" && n.trim().length > 0)
+      .slice(0, 8);
 
     const { rows } = await db.query<Record<string, unknown>>(
       `with derniere as (
@@ -535,6 +569,11 @@ export const corpus = {
                   exists (select 1 from legal.ingestion_queue q
                            where q.corpus = a.corpus and q.type_document = 'CODE_CONSOLIDE')
                 ) as consolide,
+                -- L'ordre de lecture, en base : celui du corpus s'il en a un
+                -- (un code consolidé), sinon celui de la nature du texte.
+                coalesce(n.ordre_de_lecture, s.ordre_de_lecture) as ordre_de_lecture,
+                -- Le numéro que la personne a écrit elle-même.
+                a.numero = any($7::text[]) as ecrit,
                 c.embedding operator(extensions.<=>) $1::extensions.vector as distance,
                 case when $2 = '' then 0
                      else ts_rank_cd('{0.1, 0.2, 0.4, 1.0}', c.recherche,
@@ -558,20 +597,43 @@ export const corpus = {
            from candidats where rang_mots > 0
           order by rang_mots desc limit ${CANDIDATS_PAR_CLASSEMENT}
        ),
+       /*
+        * LE TROISIÈME CLASSEMENT : les textes qui se lisent d'abord. La
+        * doctrine commente un sujet à la fois, la loi en règle vingt dans un
+        * article : au vecteur comme aux mots, une note commune passe devant
+        * l'article qu'elle commente. Le 11 novembre 2026, « la retenue sur
+        * les honoraires » et « le timbre d'une facture » ne remontaient que
+        * des notes communes, et le modèle répondait sans l'article du code.
+        * On classe donc à part les passages du premier ordre de lecture
+        * arrêté en base (le code consolidé), par distance, et ce classement
+        * vote comme les deux autres. Aucun seuil n'est levé pour autant.
+        */
+       par_ordre as (
+         select id, row_number() over (order by distance) as rang
+           from candidats
+          where ordre_de_lecture = (select min(ordre_de_lecture) from candidats)
+          order by distance limit ${CANDIDATS_PAR_CLASSEMENT}
+       ),
        fusion as (
          select k.*, pm.rang is not null as par_les_mots,
                 coalesce(1.0 / (${RRF_K} + pv.rang), 0)
                   + coalesce(1.0 / (${RRF_K} + pm.rang), 0)
-                  + case when k.consolide then 0.002 else 0 end as score
+                  + coalesce(1.0 / (${RRF_K} + po.rang), 0)
+                  + case when k.consolide then 0.002 else 0 end
+                  -- Un numéro écrit par la personne départage à score voisin.
+                  + case when k.ecrit then 0.01 else 0 end as score
            from candidats k
            left join par_vecteur pv on pv.id = k.id
            left join par_mots pm on pm.id = k.id
-          where (pv.rang is not null or pm.rang is not null)
-            and (k.distance <= $5 or (pm.rang is not null and k.distance <= $6))
+           left join par_ordre po on po.id = k.id
+          where (pv.rang is not null or pm.rang is not null or po.rang is not null)
+            and (k.distance <= $5
+                 or ((pm.rang is not null or po.rang is not null or k.ecrit)
+                     and k.distance <= $6))
        ),
        un_par_article as (
          select distinct on (article_id) *
-           from fusion order by article_id, score desc
+           from fusion order by article_id, score desc, distance
        ),
        retenus as (
          select * from un_par_article order by score desc, distance limit $4
@@ -593,7 +655,8 @@ export const corpus = {
               (select x.entete from legal.chunks x where x.id = r.id) as entete,
               r.statut, r.abroge_par, r.nature, r.autorite, r.opposable_a, r.jort_reference,
               r.extraction_confiance, round(r.distance::numeric, 4) as distance,
-              r.par_les_mots, round(r.score::numeric, 6) as score, r.lacune, r.reprise
+              r.par_les_mots, round(r.score::numeric, 6) as score, r.lacune, r.reprise,
+              r.ordre_de_lecture
          from retenus r
         order by r.score desc, r.distance`,
       [
@@ -603,6 +666,7 @@ export const corpus = {
         nb,
         input.distanceMax,
         input.distanceMaxMots,
+        numeros,
       ],
     );
 
@@ -611,6 +675,7 @@ export const corpus = {
       numero: r["numero"] as string,
       validFrom: enDate(r["valid_from"]),
       validTo: enDate(r["valid_to"]),
+      ordreDeLecture: r["ordre_de_lecture"] === null ? null : Number(r["ordre_de_lecture"]),
       ordinal: Number(r["ordinal"]),
       langue: r["langue"] as string,
       texte: r["texte"] as string,

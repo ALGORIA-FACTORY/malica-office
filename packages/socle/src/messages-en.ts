@@ -1250,9 +1250,15 @@ export const en: Dict = {
   "pme.conseil.douteNonVerifie":
     "Answer given with no text found in the corpus: the figures marked “unverified” come from the model's memory.",
   "pme.conseil.aConfirmer":
-    "To be confirmed by your accountant: I am sending them this answer, and they will confirm, correct or dismiss it.",
+    "To be confirmed by your accounting team: I am sending them this answer, and they will confirm, correct or dismiss it.",
+  "pme.conseil.aConfirmerNonVerifie":
+    "I did not find this point in the legal texts: what is marked “unverified” comes from my general knowledge. I am sending this answer to your accounting team, who will confirm, correct or dismiss it.",
+  "pme.conseil.aConfirmerSansComptabilite":
+    "Have your accounting team confirm this before you apply it: no accounting team is connected to this file in Malica, so I cannot send it to them.",
+  "pme.conseil.douteAvisDemande":
+    "The person has read this answer from Malica and asks for their accounting team's opinion.",
   "pme.conseil.aConfirmerSansEnvoi":
-    "Have your accountant confirm this: I could not pass this answer on to them.",
+    "Have your accounting team confirm this: I could not pass this answer on to them.",
   "pme.conseil.sansCabinet":
     "No accountant follows this file yet: this answer has not been reviewed by a chartered accountant.",
   "pme.conseil.relu": "Reviewed and validated by your accountant.",
@@ -1268,11 +1274,30 @@ export const en: Dict = {
   "pme.assistant.arret":
     "I can't answer right now: this month's assistant budget has been reached. The Malica team has been notified; your documents and file remain available.",
   "pme.assistant.interrompue": "My answer was interrupted. Ask again if it seems incomplete.",
+  "pme.assistant.reprise": "The connection dropped: I am fetching my answer…",
   "pme.assistant.indisponible": "I couldn't answer right now. Please try again in a moment.",
   "pme.assistant.nonVerifie": "_(unverified)_",
   "pme.assistant.nonVerifieNote":
-    "I did not find this point in the legal texts: what is marked “unverified” comes from my general knowledge. Do not apply it before a chartered accountant has confirmed it.",
+    "I did not find this point in the legal texts: what is marked “unverified” comes from my general knowledge. Do not apply it before your accounting team has confirmed it.",
   "pme.assistant.vide": "I found nothing reliable to answer. Could you clarify your question?",
+  "pme.assistant.source.pieces": "Document search",
+  "pme.assistant.source.piece": "Document",
+  "pme.assistant.source.tva": "VAT for {mois}",
+  "pme.assistant.source.achats": "Purchases by supplier",
+  "pme.assistant.source.mois": "Purchases and sales by month",
+  "pme.assistant.source.societes": "Company comparison",
+  "pme.assistant.source.resultat": "Booked result",
+  "pme.assistant.source.echeances": "Tax calendar of the file",
+  "pme.assistant.source.ecritures": "Entries of the file",
+  "pme.assistant.source.tiers": "Third parties of the file",
+  "pme.assistant.source.conseilSansTexte": "Cited advice — the texts do not answer",
+  "pme.assistant.source.conseil": "Cited advice — law in force on {date}",
+  "pme.assistant.source.calcul": "Calculation",
+  "pme.assistant.source.ecriture": "Entry {journal} of {date} — {libelle}",
+  "pme.assistant.source.proposition": "Proposal: {action} — {libelle}",
+  "pme.assistant.outil.web_search": "Searching the internet…",
+  "pme.assistant.webNote":
+    "This information comes from the internet: I cite the links, but Malica has not verified it. Do not use it for an entry or a filing without confirming it.",
   "pme.assistant.outil.pieces_chercher": "Looking at your documents…",
   "pme.assistant.outil.piece_ouvrir": "Opening the document…",
   "pme.assistant.outil.tva_du_mois": "Computing the month's VAT with the Malica engine…",
@@ -1384,6 +1409,9 @@ export const en: Dict = {
     "Answer anyway; a figure from memory carries the mark “unverified”",
   "tour.assistant.relecture.retirer":
     "Say the texts do not answer; remove any figure without a source",
+  "tour.assistant.relecture.web": "Internet search",
+  "tour.assistant.relecture.web.active": "On: Malica can search the internet and cites her links",
+  "tour.assistant.relecture.web.coupee": "Off: Malica does not search the internet",
   "tour.assistant.reglage": "Assistant settings",
   "tour.assistant.reglage.aide":
     "The standard model answers everything; the model for hard questions takes over when a question exceeds the set length, contains one of the words, or attaches several documents. Spending is bounded by the assistant cap (card above), itself under the model chain's cap.",
@@ -4889,6 +4917,13 @@ export const en: Dict = {
   "pme.malica.suiteAvis": "Ask {cabinet} for advice",
   "pme.malica.suiteAvisSansNom": "Ask your accountant for advice",
   "pme.malica.suiteTransmission": "Ask the file owner to send it",
+  "pme.malica.avis.detail":
+    "They will receive your question and this answer, to confirm or correct it",
+  "pme.malica.avis.envoi": "Sending…",
+  "pme.malica.avis.envoye": "Request sent: their reply will arrive in this thread",
+  "pme.malica.avis.deja": "This answer is already with your accounting team",
+  "pme.malica.avis.sansReponse": "Ask Malica your question first",
+  "pme.malica.avis.echec": "The request could not be sent. Try again",
   "pme.malica.suitePasEncore": "This request cannot be made from this screen yet",
   "pme.malica.suiteSansCabinet": "Ask an accountant for advice",
   "pme.malica.suiteSansCabinetDetail": "No accountant is engaged on this file",

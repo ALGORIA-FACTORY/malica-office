@@ -286,27 +286,6 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
 ];
 
 /**
- * L'outil qui MONTRE : le modèle désigne, par sa clé, une source qu'un outil
- * vient de lui rendre et pour laquelle le serveur a composé un visuel. Il
- * n'écrit aucun chiffre : le bloc vient du moteur ou de la base (R3). L'agent
- * l'exécute lui-même (`agent.ts`) — il ne consulte rien. Quand s'en servir est
- * dit dans la consigne versionnée en base (« MONTRER UN VISUEL »), pas ici.
- */
-export const AFFICHER_VISUEL: DefinitionDOutil = {
-  name: "afficher_visuel",
-  description:
-    "Montre à la personne, sous ta réponse, le visuel disponible pour une source qu'un outil vient de te rendre " +
-    "(chiffre clé, tableau). `source` est la clé de cette source, telle que le résultat de l'outil te l'a donnée. " +
-    "Voir la consigne, section « MONTRER UN VISUEL ».",
-  input_schema: {
-    type: "object",
-    properties: { source: { type: "string", description: "La clé de la source à montrer." } },
-    required: ["source"],
-    additionalProperties: false,
-  },
-};
-
-/**
  * L'outil qui COMPARE les sociétés de la personne. Il n'est offert au modèle
  * que si elle regarde « Toutes les sociétés » et en a plusieurs (`agent.ts`) ;
  * il ne prend AUCUNE société en paramètre : le serveur les a déjà établies.
@@ -333,6 +312,9 @@ const NOMS_DES_OUTILS = DEFINITIONS.map((d) => d.name);
  * première personne, traduite par le serveur. Le nom de l'outil ne part
  * jamais au navigateur ; un nom que le modèle invente n'a pas d'étape.
  */
+/** Le nom de l'outil de recherche sur internet, fixé par l'API du fournisseur. */
+export const RECHERCHE_WEB = "web_search";
+
 const ETAPES: Readonly<Record<string, MessageKey>> = {
   pieces_chercher: "pme.assistant.outil.pieces_chercher",
   piece_ouvrir: "pme.assistant.outil.piece_ouvrir",
@@ -347,7 +329,16 @@ const ETAPES: Readonly<Record<string, MessageKey>> = {
   conseil_fiscal: "pme.assistant.outil.conseil_fiscal",
   calculer: "pme.assistant.outil.calculer",
   action_proposer: "pme.assistant.outil.action_proposer",
+  [RECHERCHE_WEB]: "pme.assistant.outil.web_search",
 };
+
+/**
+ * La recherche sur internet, telle que l'API du fournisseur l'attend : un outil
+ * qu'il exécute lui-même. Son type et son plafond viennent de la base.
+ */
+export function outilDeRechercheWeb(reglage: { outil: string; recherchesMax: number }) {
+  return { type: reglage.outil, name: RECHERCHE_WEB, max_uses: reglage.recherchesMax };
+}
 
 /** L'étape d'un outil, dans la langue de la personne ; `null` pour tout autre nom. */
 export function etapeDeLOutil(nom: string, locale: string): string | null {
@@ -573,7 +564,7 @@ async function piecesChercher(ctx: ContexteDesOutils, brut: unknown): Promise<Re
   const bilan: SourceConnue = {
     cle: `malica:liste:pieces:${critere || "toutes"}`,
     genre: "liste",
-    titre: `Recherche de pièces${critere ? ` (${critere})` : ""}`,
+    titre: `${message(ctx.locale, "pme.assistant.source.pieces")}${critere ? ` (${critere})` : ""}`,
     objetId: null,
     texte:
       `Pièces trouvées : ${trouvees.length}` +
@@ -668,7 +659,7 @@ async function pieceOuvrir(ctx: ContexteDesOutils, brut: unknown): Promise<Resul
       {
         cle: `malica:piece:${d.piece.id}`,
         genre: "piece",
-        titre: `${x?.issuer ?? "Pièce"}${x?.document_date ? ` du ${x.document_date}` : ""}`,
+        titre: `${x?.issuer ?? message(ctx.locale, "pme.assistant.source.piece")}${x?.document_date ? ` — ${jourEnClair(x.document_date, ctx.locale)}` : ""}`,
         objetId: d.piece.id,
         texte: lignes.join("\n"),
       },
@@ -755,7 +746,9 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
         {
           cle: `malica:tva:${tva.period}`,
           genre: "tva",
-          titre: `TVA de ${tva.period}`,
+          titre: message(ctx.locale, "pme.assistant.source.tva", {
+            mois: moisEnClair(tva.period, ctx.locale).toLocaleLowerCase(ctx.locale),
+          }),
           objetId: null,
           texte:
             `TVA du mois ${tva.period} : aucune pièce n'entre dans le calcul ` +
@@ -766,20 +759,23 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
       ],
     };
   }
+  // Les montants s'écrivent comme dans le bloc affiché (séparateurs, décimales de la
+  // devise) : la réponse et le visuel portent alors le même chiffre, écrit pareil.
+  const ecrit = (v: string) => `${montant(v, params.moneyDecimals, ctx.locale)} ${dev}`;
   const texte = [
     `TVA du mois ${tva.period}, calculée par le moteur de TVA de Malica, en ${dev}.`,
     `Périmètre : ${aUnCabinet ? "les pièces transmises au cabinet" : "les pièces comptabilisées"} ce mois-là.`,
     `Pièces prises en compte : ${comptees}.`,
-    `TVA collectée : ${tva.totals.collectee} ${dev}.`,
-    `TVA déductible : ${tva.totals.deductible} ${dev}.`,
-    `Solde : ${tva.totals.solde} ${dev} (positif : TVA à payer ; négatif : crédit de TVA).`,
+    `TVA collectée : ${ecrit(tva.totals.collectee)}.`,
+    `TVA déductible : ${ecrit(tva.totals.deductible)}.`,
+    `Solde : ${ecrit(tva.totals.solde)} (positif : TVA à payer ; négatif : crédit de TVA).`,
     ...tva.collectee.map(
       (b) =>
-        `Collectée au taux ${enPourcentage(b.rate)} : base ${b.base} ${dev}, TVA ${b.vat} ${dev}.`,
+        `Collectée au taux ${enPourcentage(b.rate)} : base ${ecrit(b.base)}, TVA ${ecrit(b.vat)}.`,
     ),
     ...tva.deductible.map(
       (b) =>
-        `Déductible au taux ${enPourcentage(b.rate)} : base ${b.base} ${dev}, TVA ${b.vat} ${dev}.`,
+        `Déductible au taux ${enPourcentage(b.rate)} : base ${ecrit(b.base)}, TVA ${ecrit(b.vat)}.`,
     ),
     ...(tva.refused.length > 0
       ? [
@@ -796,7 +792,9 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
       {
         cle: `malica:tva:${tva.period}`,
         genre: "tva",
-        titre: `TVA de ${tva.period}`,
+        titre: message(ctx.locale, "pme.assistant.source.tva", {
+          mois: moisEnClair(tva.period, ctx.locale).toLocaleLowerCase(ctx.locale),
+        }),
         objetId: null,
         texte,
       },
@@ -883,7 +881,15 @@ async function achatsDuDossier(ctx: ContexteDesOutils, brut: unknown): Promise<R
   ].join("\n");
   return {
     ok: true,
-    sources: [{ cle, genre: "liste", titre: "Achats par fournisseur", objetId: null, texte }],
+    sources: [
+      {
+        cle,
+        genre: "liste",
+        titre: message(ctx.locale, "pme.assistant.source.achats"),
+        objetId: null,
+        texte,
+      },
+    ],
     ...(achats.pieces > 0
       ? {
           visuels: [
@@ -953,7 +959,7 @@ async function evolutionMensuelle(ctx: ContexteDesOutils, brut: unknown): Promis
     "Ce sont les totaux des factures lues, pas un chiffre d'affaires comptable.",
     ...parMois.mois.map(
       (m) =>
-        `- ${m.mois} : ventes ${m.ventes === null ? "aucune pièce lue" : `${ecrit(m.ventes)} (${m.piecesVentes} pièce${m.piecesVentes > 1 ? "s" : ""})`} ; ` +
+        `- ${moisEnClair(m.mois, ctx.locale)} (${m.mois}) : ventes ${m.ventes === null ? "aucune pièce lue" : `${ecrit(m.ventes)} (${m.piecesVentes} pièce${m.piecesVentes > 1 ? "s" : ""})`} ; ` +
         `achats ${m.achats === null ? "aucune pièce lue" : `${ecrit(m.achats)} (${m.piecesAchats} pièce${m.piecesAchats > 1 ? "s" : ""})`}`,
     ),
     `Total des ventes sur la période : ${ecrit(parMois.totalVentes)}. Total des achats : ${ecrit(parMois.totalAchats)}.`,
@@ -966,7 +972,15 @@ async function evolutionMensuelle(ctx: ContexteDesOutils, brut: unknown): Promis
   ].join("\n");
   return {
     ok: true,
-    sources: [{ cle, genre: "liste", titre: "Achats et ventes par mois", objetId: null, texte }],
+    sources: [
+      {
+        cle,
+        genre: "liste",
+        titre: message(ctx.locale, "pme.assistant.source.mois"),
+        objetId: null,
+        texte,
+      },
+    ],
     ...(comptees > 0
       ? {
           visuels: [
@@ -1056,7 +1070,15 @@ async function comparerLesSocietes(ctx: ContexteDesOutils, brut: unknown): Promi
   ].join("\n");
   return {
     ok: true,
-    sources: [{ cle, genre: "liste", titre: "Comparaison des sociétés", objetId: null, texte }],
+    sources: [
+      {
+        cle,
+        genre: "liste",
+        titre: message(ctx.locale, "pme.assistant.source.societes"),
+        objetId: null,
+        texte,
+      },
+    ],
     ...(comptees > 0
       ? {
           visuels: [
@@ -1138,7 +1160,7 @@ async function resultatComptabilise(
         {
           cle,
           genre: "liste",
-          titre: "Résultat comptabilisé",
+          titre: message(ctx.locale, "pme.assistant.source.resultat"),
           objetId: null,
           texte:
             `Résultat comptabilisé de ${premier} à ${dernier} : aucune écriture comptabilisée sur la période. ` +
@@ -1168,7 +1190,15 @@ async function resultatComptabilise(
   ].join("\n");
   return {
     ok: true,
-    sources: [{ cle, genre: "liste", titre: "Résultat comptabilisé", objetId: null, texte }],
+    sources: [
+      {
+        cle,
+        genre: "liste",
+        titre: message(ctx.locale, "pme.assistant.source.resultat"),
+        objetId: null,
+        texte,
+      },
+    ],
     visuels: [
       {
         cle,
@@ -1212,7 +1242,7 @@ async function echeancesFiscales(ctx: ContexteDesOutils, brut: unknown): Promise
       {
         cle: `malica:echeances:${toutes ? "toutes" : "a-venir"}`,
         genre: "echeance",
-        titre: "Calendrier fiscal du dossier",
+        titre: message(ctx.locale, "pme.assistant.source.echeances"),
         objetId: null,
         texte:
           `Aujourd'hui : ${ctx.aujourdhui}. Échéances ${toutes ? "du calendrier" : "restant à faire"} : ${retenues.length}.\n` +
@@ -1248,11 +1278,15 @@ interface Ecriture {
   lignes: Array<{ compte: string; libelle: string; debit: string; credit: string }>;
 }
 
-function sourceDeLEcriture(e: Ecriture): SourceConnue {
+function sourceDeLEcriture(e: Ecriture, locale: string): SourceConnue {
   return {
     cle: `malica:ecriture:${e.id}`,
     genre: "ecriture",
-    titre: `Écriture ${e.journal} du ${e.date} — ${e.libelle}`,
+    titre: message(locale, "pme.assistant.source.ecriture", {
+      journal: e.journal,
+      date: jourEnClair(e.date, locale),
+      libelle: e.libelle,
+    }),
     objetId: e.id,
     texte: [
       `Journal ${e.journal}, date ${e.date}, statut ${e.status}, libellé « ${e.libelle} ».`,
@@ -1305,13 +1339,13 @@ async function ecrituresProposees(ctx: ContexteDesOutils, brut: unknown): Promis
       {
         cle: `malica:liste:ecritures:${typeof pieceId === "string" ? pieceId : "dossier"}`,
         genre: "liste",
-        titre: "Écritures du dossier",
+        titre: message(ctx.locale, "pme.assistant.source.ecritures"),
         objetId: null,
         texte:
           `Écritures trouvées : ${ecritures.length}.` +
           (ecritures.length === 0 ? " Aucune écriture." : ""),
       },
-      ...rendues.map(sourceDeLEcriture),
+      ...rendues.map((e) => sourceDeLEcriture(e, ctx.locale)),
     ],
   };
 }
@@ -1345,7 +1379,7 @@ async function tiersChercher(ctx: ContexteDesOutils, brut: unknown): Promise<Res
       {
         cle: `malica:liste:tiers:${e.data.nature ?? "tous"}:${e.data.texte ?? ""}`,
         genre: "tiers",
-        titre: "Tiers du dossier",
+        titre: message(ctx.locale, "pme.assistant.source.tiers"),
         objetId: null,
         texte:
           `Tiers trouvés : ${trouves.length}.\n` +
@@ -1382,7 +1416,7 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
         {
           cle: `malica:conseil:refus:${plat(e.data.question).slice(0, 60)}`,
           genre: "article",
-          titre: "Conseil cité — les textes ne répondent pas",
+          titre: message(ctx.locale, "pme.assistant.source.conseilSansTexte"),
           objetId: null,
           article: null,
           texte:
@@ -1414,7 +1448,7 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
       parTexte.set(cle, {
         cle,
         genre: c.code ? "parametre" : "article",
-        titre: `${nom}${c.numero ? `, article ${c.numero}` : ""}${c.code ? ` (paramètre ${c.code})` : ""}${c.validFrom ? ` — version du ${c.validFrom}` : ""}`,
+        titre: `${nom}${c.numero ? `, article ${c.numero}` : ""}${c.code ? ` (paramètre ${c.code})` : ""}${c.validFrom ? ` — ${jourEnClair(c.validFrom, ctx.locale)}` : ""}`,
         objetId: null,
         article: { corpus: c.corpus, numero: c.numero, validFrom: c.validFrom },
         texte: c.extrait,
@@ -1424,7 +1458,9 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
   const synthese: SourceConnue = {
     cle: `malica:conseil:${plat(e.data.question).slice(0, 60)}@${r.enVigueurAu}`,
     genre: "article",
-    titre: `Conseil cité — droit en vigueur au ${r.enVigueurAu}`,
+    titre: message(ctx.locale, "pme.assistant.source.conseil", {
+      date: jourEnClair(r.enVigueurAu, ctx.locale),
+    }),
     objetId: null,
     article: null,
     texte: r.affirmations.map((a) => a.texte.trim()).join("\n\n"),
@@ -1474,7 +1510,10 @@ async function actionProposer(ctx: ContexteDesOutils, brut: unknown): Promise<Re
       {
         cle: `malica:proposition:${proposition.id}`,
         genre: "piece",
-        titre: `Proposition : ${e.data.action === "envoyer_au_cabinet" ? "envoyer au cabinet" : "valider l'écriture"} — ${libelle}`,
+        titre: message(ctx.locale, "pme.assistant.source.proposition", {
+          action: message(ctx.locale, `pme.assistant.proposition.${e.data.action}`),
+          libelle,
+        }),
         objetId: e.data.piece_id,
         texte:
           "PROPOSITION AFFICHÉE, RIEN N'A ÉTÉ EXÉCUTÉ. La personne voit un bouton de confirmation sous ta réponse. " +
@@ -1545,7 +1584,7 @@ async function calculer(ctx: ContexteDesOutils, brut: unknown): Promise<Resultat
       {
         cle: `malica:calcul:${expression.replace(/\s+/g, "")}`,
         genre: "calcul",
-        titre: "Calcul",
+        titre: message(ctx.locale, "pme.assistant.source.calcul"),
         objetId: null,
         texte: `Opération : ${expression}\nRésultat exact : ${enClair(rendu.valeur)}`,
         extrait: `${expression} = ${enClair(rendu.valeur)}`,

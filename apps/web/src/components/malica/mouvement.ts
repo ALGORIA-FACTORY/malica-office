@@ -109,10 +109,64 @@ const dansLaSurface = (chemin: string) => chemin === SURFACE || chemin.startsWit
  *    de son URL. Index illisible : on suppose qu'on avance, parce que c'est
  *    ce qu'un premier geste fait neuf fois sur dix.
  */
+/**
+ * Les noms sous lesquels le navigateur dit « j'ai sauté la transition » : la
+ * taille de l'écran a changé (le clavier s'ouvre, le téléphone tourne), une
+ * autre transition a pris la place, le document n'était pas visible, ou la
+ * préparation a trop duré.
+ */
+const TRANSITION_SAUTEE: ReadonlySet<string> = new Set([
+  "InvalidStateError",
+  "AbortError",
+  "TimeoutError",
+]);
+
+/**
+ * Une transition sautée n'est pas une erreur.
+ *
+ * Le routeur appelle `document.startViewTransition()` et ne garde pas ce
+ * qu'elle rend. Or sa promesse `ready` est REJETÉE chaque fois que le
+ * navigateur saute l'animation — l'écran change quand même, sans glisser. Rien
+ * n'écoutant ce rejet, il remontait comme une erreur non gérée : Sentry l'a
+ * signalé le 11 novembre 2026 sur la coque Android (« InvalidStateError:
+ * Transition was aborted because of invalid state. Viewport size changed »,
+ * au moment où le clavier s'ouvrait).
+ *
+ * On écoute donc `ready`, et on ne tait QUE ces rejets-là. Une autre erreur
+ * est signalée (`reportError`, que Sentry entend), et tout ce que rejette la
+ * mise à jour de l'écran elle-même (`finished`, `updateCallbackDone`) remonte
+ * comme avant.
+ *
+ * Rend la fonction qui remet le navigateur comme il était.
+ */
+export function taireLesTransitionsSautees(
+  doc: Document,
+  signaler: (erreur: unknown) => void = (erreur) => globalThis.reportError(erreur),
+): () => void {
+  const origine = doc.startViewTransition;
+  if (typeof origine !== "function") return () => undefined;
+  const ecoutee = function (this: Document, ...args: Parameters<typeof origine>) {
+    const transition = origine.apply(doc, args);
+    transition.ready.catch((erreur: unknown) => {
+      const nom = (erreur as { name?: unknown } | null)?.name;
+      if (typeof nom === "string" && TRANSITION_SAUTEE.has(nom)) return;
+      // Tout autre rejet reste une erreur, et se signale comme telle.
+      signaler(erreur);
+    });
+    return transition;
+  } as typeof origine;
+  doc.startViewTransition = ecoutee;
+  return () => {
+    // Seulement si personne d'autre ne l'a remplacée entre-temps.
+    if (doc.startViewTransition === ecoutee) doc.startViewTransition = origine;
+  };
+}
+
 export function useTransitionDEcran(): void {
   const router = useRouter();
 
   useEffect(() => {
+    const rendre = typeof document === "undefined" ? null : taireLesTransitionsSautees(document);
     const precedent = router.options.defaultViewTransition;
     router.options.defaultViewTransition = {
       types: ({ fromLocation, toLocation, pathChanged }) => {
@@ -137,6 +191,7 @@ export function useTransitionDEcran(): void {
        */
       if (precedent === undefined) delete router.options.defaultViewTransition;
       else router.options.defaultViewTransition = precedent;
+      rendre?.();
     };
   }, [router]);
 }
