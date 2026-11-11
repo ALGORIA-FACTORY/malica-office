@@ -10,6 +10,7 @@ import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n, type MessageKey } from "@/i18n";
 import { AffichageSignale } from "@/components/malica/affichage-signale";
 import { CommentCEstPaye } from "@/components/malica/comment-c-est-paye";
+import { PiedDeLecture } from "@/components/malica/pied-de-lecture";
 import { QuestionDuType } from "@/components/malica/question-du-type";
 import { NomDeLEmetteur } from "@/components/malica/nom-de-l-emetteur";
 import { usePme } from "@/components/malica/pme-context";
@@ -1370,56 +1371,38 @@ function PieceScreen() {
                * LE PIED DE FACTURE EN ENTIER, et pas seulement la base. Montrer
                * une base sans sa TVA et sans son total laisse la personne
                * incapable de vérifier que le produit a bien lu — ce qui est la
-               * seule chose qu'on lui demande.
+               * seule chose qu'on lui demande. Un montant non lu s'y dit « non
+               * lu », et mène à sa source quand il en a une.
                */}
-              <div className="flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
-                <span className="text-[13.5px] font-semibold">{t("pme.extract.base")}</span>
-                <span className="num text-[13.5px] font-semibold">
-                  {lisible(totaux?.base_ht) ?? "—"}
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between gap-3 pt-1.5">
-                <span className="text-[13.5px]">{t("pme.extract.vat")}</span>
-                <span className="num text-[13.5px]">{lisible(totaux?.vat) ?? "—"}</span>
-              </div>
-              {droits.map((d, i) => (
-                <div
-                  key={`${d.code}-${i}`}
-                  className="flex items-baseline justify-between gap-3 pt-1.5"
-                >
-                  <span className="text-[13.5px]">
-                    {d.libelle}
-                    {d.connu ? "" : ` · ${t("pme.extract.droitInconnu")}`}
-                  </span>
-                  <span className="num text-[13.5px]">{lisible(d.montant) ?? "—"}</span>
-                </div>
-              ))}
-              <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
-                <span className="text-[14px] font-semibold">
-                  {duCabinet ? t("pme.verifie.totalTtc") : t("pme.verifie.total")}
-                </span>
-                <span
-                  className={cn(
-                    "num text-[15px] font-semibold",
-                    totalNeFermePas && "text-[color:var(--ve)]",
-                  )}
-                >
-                  {lisible(totaux?.ttc) ?? "—"} {deviseDeLaPiece}
-                </span>
-              </div>
-              {/*
-               * Un total que la somme des montants lus ne donne pas (2 novembre
-               * 2026 : « 510,000 » relevé « 810,000 ») : le jugement le refuse,
-               * et l'écran ne l'affiche plus comme s'il était juste.
-               */}
-              {totalNeFermePas ? (
-                <p
-                  role="alert"
-                  className="mt-1.5 text-[12px] leading-[1.45] text-[color:var(--ve)]"
-                >
-                  {t("pme.detail.totalNeFermePas")}
-                </p>
-              ) : null}
+              <PiedDeLecture
+                base={{
+                  champ: "totals.base_ht",
+                  libelle: t("pme.extract.base"),
+                  valeur: lisible(totaux?.base_ht),
+                  aUneSource: byField.has("totals.base_ht"),
+                }}
+                tva={{
+                  champ: "totals.vat",
+                  libelle: t("pme.extract.vat"),
+                  valeur: lisible(totaux?.vat),
+                  aUneSource: byField.has("totals.vat"),
+                }}
+                droits={droits.map((d, i) => ({
+                  cle: `${d.code}-${i}`,
+                  libelle: d.connu ? d.libelle : `${d.libelle} · ${t("pme.extract.droitInconnu")}`,
+                  valeur: lisible(d.montant),
+                }))}
+                total={{
+                  champ: "totals.ttc",
+                  libelle: duCabinet ? t("pme.verifie.totalTtc") : t("pme.verifie.total"),
+                  valeur: lisible(totaux?.ttc),
+                  aUneSource: byField.has("totals.ttc"),
+                }}
+                devise={deviseDeLaPiece}
+                parLeCabinet={duCabinet !== null}
+                totalNeFermePas={totalNeFermePas}
+                onVoirLaSource={voirLaSource}
+              />
             </div>
           )}
           <p className="mt-4 text-[11.5px] leading-[1.5] text-muted-foreground">

@@ -624,6 +624,10 @@ export const fr = {
   "pme.detail.puTtc": "PU TTC {pu}",
   "pme.detail.totalNeFermePas":
     "Les montants lus ne vérifient pas ce total (HT + TVA + droits) : à vérifier sur la pièce.",
+  "pme.detail.nonLu": "Non lu",
+  "pme.detail.nonLuVoir": "Non lu · voir la zone",
+  "pme.detail.montantsNonLus":
+    "Je n’ai pas su lire tous les montants de cette pièce : {champs}. Ils restent à vérifier sur la pièce.",
   "pme.detail.provenance":
     "Chaque ligne vient de la pièce elle-même. Je n'ajoute ni ne calcule rien.",
   "pme.lecture.releve": "Relevé · {mots} mots situés",
