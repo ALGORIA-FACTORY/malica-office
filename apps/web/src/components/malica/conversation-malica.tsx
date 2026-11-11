@@ -91,6 +91,8 @@ async function retrouverLaReponse(
     const fil = await office()
       .conversations.ouvrir(conversationId)
       .catch(() => null);
+    // Le fil a pu être quitté pendant cette lecture : sa réponse n'est plus celle qu'on attend.
+    if (signal.aborted) return null;
     const derniere = fil?.at(-1);
     const avant = fil?.at(-2);
     if (
@@ -221,7 +223,8 @@ export function useConversationMalica(
                 majDernier((t) => ({ ...t, outil: dire("pme.assistant.reprise") })),
               )
             : null;
-          if (retrouvee) {
+          // Revérifié ici : la réponse retrouvée ne s'écrit jamais dans un autre fil.
+          if (retrouvee && !controleur.signal.aborted) {
             reponse = retrouvee.contenu;
             majDernier((t) => ({
               ...t,

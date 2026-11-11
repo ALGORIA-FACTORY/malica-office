@@ -306,6 +306,31 @@ export async function verifierLeDossier(api: AppelApi, tenantId: string): Promis
 const LANGUES: Record<string, string> = { fr: "français", en: "anglais", ar: "arabe" };
 
 /** Le contexte du jour : hors cache, parce qu'il change. Aucun chiffre du dossier ici. */
+const LANGUES_DES_NOTES = ["fr", "en", "ar"] as const;
+/** Les notes que Malica pose sous une réponse qu'elle n'a pas vérifiée, dans les trois langues. */
+const NOTES_DE_NON_VERIFICATION: readonly string[] = LANGUES_DES_NOTES.flatMap((l) => [
+  message(l, "pme.assistant.webNote"),
+  message(l, "pme.assistant.nonVerifieNote"),
+  message(l, "pme.assistant.nonVerifie"),
+]);
+
+/**
+ * Une réponse du fil dont les chiffres ont tous passé la garde avec une source
+ * du dossier ou du droit. Une réponse qui cite une page d'internet, ou qui porte
+ * la note ou la marque « non vérifié », n'en est pas une : ses nombres ne se
+ * redisent pas sans leur avertissement et n'entrent pas dans un calcul (revue
+ * de la PR #358 : un cours lu sur internet passait la garde au tour suivant).
+ */
+export function estUneReponseVerifiee(m: {
+  role: "user" | "assistant";
+  contenu: string;
+  sources?: ReadonlyArray<{ genre?: string }> | null;
+}): boolean {
+  if (m.role !== "assistant") return false;
+  if ((m.sources ?? []).some((s) => s.genre === "web")) return false;
+  return !NOTES_DE_NON_VERIFICATION.some((note) => m.contenu.includes(note));
+}
+
 /** Le message est-il écrit en arabe — la majorité de ses lettres le sont ? */
 export function ecritEnArabe(texte: string): boolean {
   const lettres = texte.match(/\p{L}/gu) ?? [];
@@ -534,11 +559,13 @@ async function converser(
   const conversationId =
     q.conversationId ??
     (await api.rpc<{ id: string }>("conversations", "ouvrirNouvelle", [q.tenantId])).id;
-  const passe = await api.rpc<Array<{ role: "user" | "assistant"; contenu: string }>>(
-    "conversations",
-    "ouvrir",
-    [conversationId],
-  );
+  const passe = await api.rpc<
+    Array<{
+      role: "user" | "assistant";
+      contenu: string;
+      sources?: Array<{ genre?: string }> | null;
+    }>
+  >("conversations", "ouvrir", [conversationId]);
   emettre({ type: "debut", conversationId });
 
   const garde = new GardeDesChiffres(q.question, configuration.garde);
@@ -615,8 +642,10 @@ async function converser(
     { role: "user", content: `${q.question}${jointes}` },
   ];
 
-  // Ce que Malica a déjà dit dans ce fil, garde passée, peut se redire et se recalculer.
-  const dejaDit = historique.filter((m) => m.role === "assistant").map((m) => m.contenu);
+  // Ce que Malica a déjà dit dans ce fil, garde passée, peut se redire et se
+  // recalculer — sauf ce qu'elle n'avait pas vérifié : une réponse nourrie par
+  // internet ou donnée de mémoire ne devient pas une source au tour suivant.
+  const dejaDit = historique.filter(estUneReponseVerifiee).map((m) => m.contenu);
   garde.admettreDuFil(dejaDit);
   const outilsAppeles: string[] = [];
   const appelsFaits = new Set<string>();

@@ -21,6 +21,7 @@ import type { ResultatDuConseilCite } from "../conseil/conseil-cite.ts";
 import {
   converserAvecRepli,
   ecritEnArabe,
+  estUneReponseVerifiee,
   type DependancesDeLAssistant,
   type FinMesuree,
   type DossierVerifie,
@@ -1994,5 +1995,66 @@ describe("la langue du message se dit au modèle quand c'est l'arabe", () => {
     };
     assert.match(await vu("اعرض لي مصاريفي حسب المزوّد."), /entièrement en arabe/);
     assert.doesNotMatch(await vu("Montre-moi mes dépenses."), /entièrement en arabe/);
+  });
+});
+
+describe("ce qui n'était pas vérifié ne devient pas une source au tour suivant", () => {
+  const reponse = (contenu: string, sources: Array<{ genre: string }> = []) => ({
+    role: "assistant" as const,
+    contenu,
+    sources,
+  });
+
+  it("une réponse du dossier se redit ; une réponse d'internet ou de mémoire, non", () => {
+    assert.equal(estUneReponseVerifiee(reponse("Le premier pèse 26 109,600 TND.")), true);
+    assert.equal(
+      estUneReponseVerifiee(reponse("Le dollar vaut 3,47 TND.", [{ genre: "web" }])),
+      false,
+    );
+    assert.equal(
+      estUneReponseVerifiee(
+        reponse(`Le dollar vaut 3,47 TND.\n\n${message("fr", "pme.assistant.webNote")}`),
+      ),
+      false,
+    );
+    assert.equal(
+      estUneReponseVerifiee(
+        reponse(`Le taux est de 18 %. ${message("ar", "pme.assistant.nonVerifie")}`),
+      ),
+      false,
+    );
+    assert.equal(
+      estUneReponseVerifiee({ role: "user", contenu: "J'ai payé 3,47 TND.", sources: null }),
+      false,
+    );
+  });
+
+  it("au tour suivant, le cours lu sur internet ne passe ni la garde ni le calcul", async () => {
+    const { api, fils } = dossierFictif({ contexte: { cabinetId: null, appelantMembre: true } });
+    const fil = "fil-web";
+    fils.set(fil, [
+      { role: "user", contenu: "Le cours du dollar ?" },
+      {
+        role: "assistant",
+        contenu: `Le dollar vaut 3,47 TND.\n\n${message("fr", "pme.assistant.webNote")}`,
+        sources: [{ genre: "web", cle: "web:https://exemple.tn", titre: "Cours", objetId: null }],
+      },
+    ]);
+    const { fin } = await rejouer(
+      {
+        tenantId: TENANT,
+        question: "Et pour mille dollars ?",
+        locale: "fr",
+        conversationId: fil,
+        pieceIds: [],
+      },
+      {
+        claude: claudeSimule([{ texte: "Au cours de 3,47 TND, cela fait une somme en TND." }], []),
+        conseil: conseilFictif,
+        repli: sansRepli,
+      },
+      api,
+    );
+    assert.ok(!fin.reponse.includes("3,47"), "un chiffre non vérifié du fil a passé la garde");
   });
 });
