@@ -132,6 +132,8 @@ interface MesureDeLaReponse {
   conclusion: ConclusionDeLaReponse | null;
   /** La réponse a été retenue pour le cabinet (par l'agent ou par `askMalica`). */
   retenue: boolean;
+  /** La réponse est partie, marquée « à confirmer », et le cabinet l'a reçue ou non. */
+  annoncee: boolean;
 }
 
 /** La fin telle que le serveur la connaît : ce que l'écran reçoit, plus la mesure. */
@@ -476,7 +478,10 @@ async function converser(
   const contexte = await api
     .rpc<ContexteConseil>("conseil", "contexte", [q.tenantId])
     .catch(() => null);
-  const enAttente = doitEtreRelue(SANS_CONCLUSION, contexte);
+  // En mode « annoncer », rien n'est retenu : la réponse part en flux, et
+  // l'envoi au cabinet se dit à la fin.
+  const enAttente =
+    configuration.relecture === "retenir" && doitEtreRelue(SANS_CONCLUSION, contexte);
 
   const conversationId =
     q.conversationId ??
@@ -791,15 +796,12 @@ async function converser(
    * modèle a conclu (ou à la portée incertaine, s'il n'a pas conclu). Une
    * réponse vide n'a rien à faire relire.
    */
-  const retenue =
-    enAttente && dite !== "" && doitEtreRelue(conclusion ?? SANS_CONCLUSION, contexte);
+  const aRelire = dite !== "" && doitEtreRelue(conclusion ?? SANS_CONCLUSION, contexte);
+  const retenue = enAttente && aRelire;
   const sourcesCitees = garde.sourcesCitees();
-  let reponse: string;
-  if (retenue) {
+  const deposerAuCabinet = async (): Promise<void> => {
     const c = conclusion ?? SANS_CONCLUSION;
     const articles = articlesCites(sourcesCitees);
-    // Une réponse retenue qui ne pourrait pas entrer dans la file serait
-    // perdue : cet échec-là remonte, comme dans `askMalica`.
     await api.rpc<{ id: string; cabinetId: string }>("conseil", "creer", [
       {
         tenantId: q.tenantId,
@@ -816,10 +818,30 @@ async function converser(
         statut: "en_attente",
       },
     ]);
+  };
+  /*
+   * « ANNONCER » (décision du dirigeant, 11 novembre 2026) : la réponse est
+   * déjà partie, entière. Elle entre dans la file du cabinet, et Malica le dit.
+   * Si la file la refuse, la réponse reste — mais Malica n'annonce pas un envoi
+   * qui n'a pas eu lieu : elle dit de la faire confirmer.
+   */
+  let annonce: string | null = null;
+  if (aRelire && !retenue) {
+    annonce = await deposerAuCabinet().then(
+      () => message(q.locale, "pme.conseil.aConfirmer"),
+      () => message(q.locale, "pme.conseil.aConfirmerSansEnvoi"),
+    );
+  }
+  let reponse: string;
+  if (retenue) {
+    // Une réponse retenue qui ne pourrait pas entrer dans la file serait
+    // perdue : cet échec-là remonte, comme dans `askMalica`.
+    await deposerAuCabinet();
     reponse = message(q.locale, "pme.conseil.relecture");
     montrer(reponse);
   } else {
-    reponse = reponseGardee;
+    if (annonce) ajouts.push(annonce);
+    reponse = [dite, ...ajouts].filter(Boolean).join("\n\n");
     if (enAttente) {
       // La conclusion est connue et la réponse peut partir : d'un bloc.
       montrer(reponse);
@@ -887,6 +909,7 @@ async function converser(
       iterations,
       conclusion,
       retenue,
+      annoncee: annonce !== null,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
@@ -985,6 +1008,7 @@ async function repondreParLeRepli(
       iterations: 1,
       conclusion: null,
       retenue,
+      annoncee: false,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
@@ -1031,6 +1055,7 @@ async function sArreter(
       iterations: 0,
       conclusion: null,
       retenue: false,
+      annoncee: false,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });

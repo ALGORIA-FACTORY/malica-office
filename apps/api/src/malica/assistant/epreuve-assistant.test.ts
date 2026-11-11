@@ -270,6 +270,10 @@ function dossierFictif(
     anthropicEpuise?: boolean;
     deepseekEpuise?: boolean;
     contexte?: { cabinetId: string | null; appelantMembre: boolean } | undefined;
+    /** Le mode de relecture lu en base ; absent, le serveur retient. */
+    relecture?: "annoncer" | "retenir";
+    /** La file du cabinet refuse l'écriture. */
+    fileEnPanne?: boolean;
   } = {},
 ): {
   api: AppelApi;
@@ -308,7 +312,9 @@ function dossierFictif(
         case "conseil.exigerBudget":
           return r({ depense: "0", plafond: "10" });
         case "conseil.configurationAssistant":
-          return r(CONFIGURATION);
+          return r(
+            options.relecture ? { ...CONFIGURATION, relecture: options.relecture } : CONFIGURATION,
+          );
         case "capture.chaineDeDesignation":
           return r(chaine(options.anthropicEpuise ?? false, options.deepseekEpuise ?? false));
         case "capture.journaliserAgent":
@@ -393,6 +399,7 @@ function dossierFictif(
         case "conseil.contexte":
           return r(options.contexte ?? SOUS_MANDAT);
         case "conseil.creer":
+          if (options.fileEnPanne) return Promise.reject(new Error("file en panne"));
           trace.file.push(args[0] as Record<string, unknown>);
           return r({ id: `arbitrage-${trace.file.length}`, cabinetId: "cab" });
         case "office.extraitsTransmis":
@@ -1209,8 +1216,9 @@ async function poserAuCabinet(
   contexte: NonNullable<Parameters<typeof dossierFictif>[0]>["contexte"],
   texte: string,
   conclusion: Record<string, unknown> | null,
+  options: { relecture?: "annoncer" | "retenir"; fileEnPanne?: boolean } = {},
 ) {
-  const { api, trace, fils } = dossierFictif({ contexte });
+  const { api, trace, fils } = dossierFictif({ contexte, ...options });
   const journal: string[] = [];
   const evenements: EvenementDeLAssistant[] = [];
   let t = 0;
@@ -1346,6 +1354,91 @@ describe("la file du cabinet reçoit ce que l'assistant retient", () => {
     assert.equal(fin.reponse, RELECTURE);
     assert.equal(trace.file.length, 0, "l'agent a déposé une seconde fois");
     assert.ok(!JSON.stringify(evenements).includes("deepseek"));
+  });
+});
+
+/*
+ * Décision du dirigeant, 11 novembre 2026 : Malica répond toujours. En mode
+ * « annoncer », la réponse à relire s'affiche, marquée, et part au cabinet.
+ */
+const A_CONFIRMER = message("fr", "pme.conseil.aConfirmer");
+const A_CONFIRMER_SANS_ENVOI = message("fr", "pme.conseil.aConfirmerSansEnvoi");
+
+describe("en mode « annoncer », la réponse à relire s'affiche et part au cabinet", () => {
+  it("la PME lit la réponse entière, puis l'annonce ; la file reçoit la réponse sans l'annonce", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, CONCLUSION_DOSSIER, {
+      relecture: "annoncer",
+    });
+    assert.equal(r.textes, `${REPONSE_DOSSIER}\n\n${A_CONFIRMER}`);
+    assert.ok(!r.textes.includes(RELECTURE), "le message de relecture ne remplace plus la réponse");
+    assert.equal(r.fin.reponse, `${REPONSE_DOSSIER}\n\n${A_CONFIRMER}`);
+    assert.equal(r.range?.contenu, r.fin.reponse, "le fil garde ce que la PME a lu");
+    assert.equal(r.fin.mesure.retenue, false);
+    assert.equal(r.fin.mesure.annoncee, true);
+    assert.equal(r.file.length, 1, "la file du cabinet reçoit la réponse");
+    assert.equal(r.file[0]!["reponse"], REPONSE_DOSSIER);
+    assert.equal(r.file[0]!["statut"], "en_attente");
+    assert.equal(r.file[0]!["doute"], "Le régime du bailleur n'est pas connu.");
+  });
+
+  it("la réponse part en flux : l'écran la reçoit avant que le modèle conclue", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, CONCLUSION_DOSSIER, {
+      relecture: "annoncer",
+    });
+    assert.ok(
+      r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:conclusion"),
+      `la réponse a attendu la conclusion : ${r.journal.join(", ")}`,
+    );
+  });
+
+  it("sans conclusion : la réponse s'affiche quand même, annoncée et envoyée", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, null, { relecture: "annoncer" });
+    assert.ok(r.textes.startsWith(REPONSE_DOSSIER));
+    assert.ok(r.textes.endsWith(A_CONFIRMER));
+    assert.equal(r.file.length, 1);
+  });
+
+  it("question générale : rien n'est annoncé, rien ne part au cabinet", async () => {
+    const generale = "La retenue à la source s'applique aux loyers versés par une société.";
+    const r = await poserAuCabinet(
+      SOUS_MANDAT,
+      generale,
+      { ...CONCLUSION_DOSSIER, portee: "generale" },
+      { relecture: "annoncer" },
+    );
+    assert.equal(r.textes, generale);
+    assert.equal(r.fin.mesure.annoncee, false);
+    assert.equal(r.file.length, 0);
+  });
+
+  it("sans cabinet : la réponse part seule, sans annonce d'un envoi impossible", async () => {
+    const r = await poserAuCabinet(
+      { cabinetId: null, appelantMembre: true },
+      REPONSE_DOSSIER,
+      CONCLUSION_DOSSIER,
+      { relecture: "annoncer" },
+    );
+    assert.equal(r.textes, REPONSE_DOSSIER);
+    assert.equal(r.file.length, 0);
+  });
+
+  it("la file refuse : la réponse reste, et Malica n'annonce pas un envoi qui n'a pas eu lieu", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, CONCLUSION_DOSSIER, {
+      relecture: "annoncer",
+      fileEnPanne: true,
+    });
+    assert.equal(r.textes, `${REPONSE_DOSSIER}\n\n${A_CONFIRMER_SANS_ENVOI}`);
+    assert.ok(!r.textes.includes(A_CONFIRMER));
+    assert.equal(r.file.length, 0);
+  });
+
+  it("en mode « retenir », la règle du 4 octobre tient toujours", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, CONCLUSION_DOSSIER, {
+      relecture: "retenir",
+    });
+    assert.equal(r.textes, RELECTURE);
+    assert.equal(r.fin.mesure.annoncee, false);
+    assert.equal(r.file.length, 1);
   });
 });
 

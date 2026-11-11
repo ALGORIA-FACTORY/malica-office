@@ -1204,6 +1204,10 @@ export const en: Dict = {
   "cab.journal.conseil.ecarte": "Advice question set aside",
   "pme.conseil.relecture":
     "Your accountant is reviewing my answer: I will pass it on as soon as they have validated it.",
+  "pme.conseil.aConfirmer":
+    "To be confirmed by your accountant: I am sending them this answer, and they will confirm, correct or dismiss it.",
+  "pme.conseil.aConfirmerSansEnvoi":
+    "Have your accountant confirm this: I could not pass this answer on to them.",
   "pme.conseil.sansCabinet":
     "No accountant follows this file yet: this answer has not been reviewed by a chartered accountant.",
   "pme.conseil.relu": "Reviewed and validated by your accountant.",

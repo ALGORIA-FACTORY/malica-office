@@ -1263,6 +1263,10 @@ export const fr = {
   "cab.journal.conseil.ecarte": "Question de conseil écartée",
   "pme.conseil.relecture":
     "Votre comptable relit ma réponse : je vous la transmets dès qu’il l’a validée.",
+  "pme.conseil.aConfirmer":
+    "À confirmer par votre comptable : je lui envoie cette réponse, il la confirmera, la corrigera ou l’écartera.",
+  "pme.conseil.aConfirmerSansEnvoi":
+    "À faire confirmer par votre comptable : je n’ai pas pu lui transmettre cette réponse.",
   "pme.conseil.sansCabinet":
     "Aucune comptabilité ne suit encore ce dossier : cette réponse n’a pas été relue par un expert-comptable.",
   "pme.conseil.relu": "Relu et validé par votre comptable.",

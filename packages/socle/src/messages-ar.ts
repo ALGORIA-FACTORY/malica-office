@@ -1193,6 +1193,10 @@ export const ar: Dict = {
   "cab.journal.conseil.corrige": "إجابة استشارية صحّحتها المحاسبة",
   "cab.journal.conseil.ecarte": "سؤال استشاري استُبعد",
   "pme.conseil.relecture": "محاسبكم يراجع إجابتي: أنقلها إليكم ما إن يصادق عليها.",
+  "pme.conseil.aConfirmer":
+    "في انتظار تأكيد محاسبكم: أرسل إليه هذه الإجابة ليؤكدها أو يصححها أو يستبعدها.",
+  "pme.conseil.aConfirmerSansEnvoi":
+    "يُستحسن أن يؤكدها محاسبكم: لم أتمكن من إرسال هذه الإجابة إليه.",
   "pme.conseil.sansCabinet": "لا محاسب يتابع هذا الملف بعد: هذه الإجابة لم يراجعها خبير محاسب.",
   "pme.conseil.relu": "راجعها محاسبكم وصادق عليها.",
   "pme.conseil.sources": "المصادر: {liste}",

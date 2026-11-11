@@ -43,6 +43,9 @@ interface PlafondDeLAssistant {
   epuise: boolean;
 }
 
+/** Lu en base (`plateforme.assistant_relectures`). */
+type ModeDeRelecture = "annoncer" | "retenir";
+
 export interface ConfigurationDeLAssistant {
   consigne: { id: string; texte: string; decide_le: string };
   reglage: ReglageDeLAssistant;
@@ -50,6 +53,12 @@ export interface ConfigurationDeLAssistant {
   plafond: PlafondDeLAssistant;
   /** Ce qui rend un chiffre liant ; `null` : la garde juge tout chiffre. */
   garde: RegleDeLaGarde | null;
+  /**
+   * Ce que devient une réponse que le cabinet doit relire (décision du
+   * dirigeant, 11 novembre 2026) : `annoncer` l'affiche marquée « à confirmer »
+   * et l'envoie au cabinet ; `retenir` ne montre que le message de relecture.
+   */
+  relecture: ModeDeRelecture;
 }
 
 const EFFORTS: readonly Effort[] = ["low", "medium", "high"];
@@ -86,6 +95,8 @@ export function lireConfigurationAssistant(brut: unknown): ConfigurationDeLAssis
     tarifs: (c.tarifs ?? []).map((t) => ({ ...t, in: Number(t.in), out: Number(t.out) })),
     plafond: lirePlafond(c.plafond),
     garde: lireLaGarde(c.garde),
+    // Absent ou illisible : on retient, comme avant — le manque retombe du côté prudent.
+    relecture: c.relecture === "annoncer" ? "annoncer" : "retenir",
   };
 }
 
