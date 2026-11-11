@@ -110,3 +110,29 @@ Accès restants : `legislation.tn` ne répond pas depuis ce poste (HTTP 503 en c
 son éditeur reste non confirmé. `doc-fiscale.finances.gov.tn` : 503. Le Journal Officiel lui-même (`iort.gov.tn`)
 n'est pas joignable d'ici. Les PDF ci-dessus sont des numéros du Journal Officiel ; la consolidation des codes,
 elle, reste à obtenir d'une source officielle.
+
+## 7. Éditions officielles du ministère récupérées (sept PDF)
+
+Sur `www.finances.gov.tn`, les seuls codes disponibles sont des éditions de la DGELF **à jour au 1er janvier ou
+au 1er avril 2017**. Elles sont plus anciennes que notre corpus (2018 à 2026) : elles ne comblent ni C2 ni C3.
+Lues le 11 novembre 2026 (titre et date lus dans le document) :
+
+| Texte                                                             | Mise à jour lue            | Pages | SHA-256 (début)    |
+| ----------------------------------------------------------------- | -------------------------- | ----: | ------------------ |
+| Code des droits d'enregistrement et de timbre                     | 1er janvier 2017           |    93 | `83f4464cbaf77141` |
+| Code de la fiscalité locale et textes d'application               | 1er janvier 2017           |   104 | `033b4bd525ef4b44` |
+| Recueil des textes non incorporés dans les codes fiscaux          | 1er avril 2017             |   468 | `55cd9d13e970ccdd` |
+| Code de la TVA, droit de consommation et textes d'application     | 2017 (date exacte non lue) |   252 | `288858ac5e15caf6` |
+| Loi 2017-8 portant refonte du dispositif des avantages fiscaux    | 14 février 2017            |    14 | `146910137c1e7694` |
+| Liste des États à régime fiscal privilégié (loi 2018-56, art. 35) | 11 avril 2019              |     3 | `6fdb6726b6ef421d` |
+| Code de la comptabilité publique (Imprimerie Officielle)          | 2010                       |   128 | `26dbd5d3d5143338` |
+
+Adresses : `https://www.finances.gov.tn/sites/default/files/` suivi du nom de fichier listé sur
+`/fr/cadre-reglementaire-6`. Ces fichiers ne sont pas ingérés : ils ajouteraient des versions 2017, sans corriger
+un défaut mesuré. Ils confirment le titre officiel du recueil (C10a, migration `20261211110000`).
+
+**Ce qui reste inaccessible de façon officielle, après recherche** : les codes IRPP/IS et CDPF consolidés
+(`doc-fiscale.finances.gov.tn`, 503), la DGI (TLS), le Journal Officiel (`iort.gov.tn` : connexion refusée),
+`legislation.tn` (connexion refusée). `legislation-securite.tn` est géré par le DCAF (Genève), non officiel, sans
+code fiscal ; `arp.tn` ne donne pas d'adresse exploitable. Aucune édition consolidée 2018-2026 n'existe sur les
+sites officiels lisibles d'ici.
