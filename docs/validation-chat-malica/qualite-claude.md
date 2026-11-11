@@ -97,3 +97,40 @@ Dans b5, l'échec de la fiche du fournisseur vient de l'essai (lecture non simul
 
 `preuves/qualite-claude/malica-2026-11-11.json` et `claude-seul-2026-11-11.json` : chaque réponse entière,
 les outils, les blocs, les passages du corpus remontés, les durées et les coûts.
+
+## Avec Claude Opus 5.5 (ajout du même jour)
+
+Les mêmes questions, rejouées sur `claude-opus-5-5` : seul, puis dans Malica.
+
+| Axe | Malica sur Haiku (en vigueur) | Malica sur Opus 5.5 | Opus 5.5 seul |
+| --- | ---: | ---: | ---: |
+| La société (9) | **8,0** | 4,1 | 2,9 |
+| Le droit fiscal (7) | **6,4** | 1,9 | 5,3 |
+| Parler de tout (8) | 5,5 | 7,3 | **9,4** |
+| Secret (1) | 10 | 10 | sans objet |
+| Ensemble | **6,8** | 4,7 | 5,8 |
+
+**Opus 5.5 seul.** Excellent sur le général (tableaux, exemples, calcul vérifié deux fois). Sur la société il
+ne peut rien lire. Sur le droit il nomme la Tunisie parmi d'autres pays quand la question ne dit pas le
+pays : 28 du mois pour les sociétés (conforme au corpus), 1 dinar de timbre attribué à la loi de finances
+2022 (le corpus dit l'article 69 de la loi de finances pour 2023), retenue de « 10 % » ou « 3 % » sans
+source (INCERTAIN : le corpus n'a pas répondu), IS donné pour la France seule. Aucune source.
+
+**Malica sur Opus 5.5 ne fonctionne pas aujourd'hui.** Deux défauts, trouvés en jouant :
+
+1. **Avec le réglage en vigueur** (`reflexion_courant = disabled`, `reflexion_difficile = between_tools`),
+   Claude refuse chaque appel : « "thinking.type.disabled" is not supported for this model ». Les 25
+   questions sont alors **parties sur DeepSeek sans que rien ne le dise à l'écran**. Changer le modèle dans
+   la table ne suffit donc pas (R8 n'est pas tenu pour ce modèle).
+2. **Avec `adaptive`**, Claude répond, mais **après un outil le texte est vide** : l'écran reçoit la phrase
+   d'annonce, le bloc (tableau, graphique, cascade) et la mention de l'article, sans la réponse. 15 questions
+   sur 16 avec outil sont dans ce cas. La cause n'est pas diagnostiquée.
+
+Sans outil, Malica sur Opus répond mieux que sur Haiku (inflation, courriel, photosynthèse, Ibn Khaldoun,
+fonds de roulement en arabe). La garde retire encore la formule Excel, et Malica refuse le calcul de 17 %.
+
+Premier signe sur Opus : 1,6 s en médiane (cible : 1 s). Fin : 7,4 s sur la société, 24 s sur le droit.
+Le coût d'Opus n'est pas chiffré : la base n'a pas de tarif pour ce modèle.
+
+Preuves : `claude-opus-seul-…json`, `malica-sur-opus-…json` (réglage `adaptive`),
+`malica-sur-opus-reglage-courant-…json` (le repli silencieux sur DeepSeek).
