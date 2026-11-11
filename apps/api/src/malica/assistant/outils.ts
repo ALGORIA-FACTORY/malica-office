@@ -286,27 +286,6 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
 ];
 
 /**
- * L'outil qui MONTRE : le modèle désigne, par sa clé, une source qu'un outil
- * vient de lui rendre et pour laquelle le serveur a composé un visuel. Il
- * n'écrit aucun chiffre : le bloc vient du moteur ou de la base (R3). L'agent
- * l'exécute lui-même (`agent.ts`) — il ne consulte rien. Quand s'en servir est
- * dit dans la consigne versionnée en base (« MONTRER UN VISUEL »), pas ici.
- */
-export const AFFICHER_VISUEL: DefinitionDOutil = {
-  name: "afficher_visuel",
-  description:
-    "Montre à la personne, sous ta réponse, le visuel disponible pour une source qu'un outil vient de te rendre " +
-    "(chiffre clé, tableau). `source` est la clé de cette source, telle que le résultat de l'outil te l'a donnée. " +
-    "Voir la consigne, section « MONTRER UN VISUEL ».",
-  input_schema: {
-    type: "object",
-    properties: { source: { type: "string", description: "La clé de la source à montrer." } },
-    required: ["source"],
-    additionalProperties: false,
-  },
-};
-
-/**
  * L'outil qui COMPARE les sociétés de la personne. Il n'est offert au modèle
  * que si elle regarde « Toutes les sociétés » et en a plusieurs (`agent.ts`) ;
  * il ne prend AUCUNE société en paramètre : le serveur les a déjà établies.

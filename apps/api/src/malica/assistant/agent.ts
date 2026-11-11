@@ -84,7 +84,6 @@ import {
 import { chiffresDe, GardeDesChiffres, type CitationRecue, type SourceConnue } from "./garde.ts";
 import { FiltreDeMecanique } from "./sans-mecanique.ts";
 import {
-  AFFICHER_VISUEL,
   COMPARER_LES_SOCIETES,
   CONCLURE_REPONSE,
   DEFINITIONS,
@@ -173,16 +172,13 @@ function versLEcran(f: FinMesuree): FinDeLaReponse {
  * peut relire, comme `askMalica` le fait d'une réponse qu'il ne sait pas lire.
  */
 /** Les noms d'outils : la garde tait toute phrase qui en porte un. */
-const NOMS_DE_LA_MECANIQUE = [
-  ...DEFINITIONS,
-  COMPARER_LES_SOCIETES,
-  AFFICHER_VISUEL,
-  CONCLURE_REPONSE,
-].map((d) => d.name);
+const NOMS_DE_LA_MECANIQUE = [...DEFINITIONS, COMPARER_LES_SOCIETES, CONCLURE_REPONSE].map(
+  (d) => d.name,
+);
 
 /**
- * Les outils qui SUIVENT une réponse au lieu de la précéder : un visuel posé
- * sous le texte, un geste proposé, la conclusion. Le paragraphe écrit juste
+ * Les outils qui SUIVENT une réponse au lieu de la précéder : un geste proposé,
+ * la conclusion. Le paragraphe écrit juste
  * avant eux est la réponse ; avant tout autre outil, c'est une annonce.
  */
 const ACTION_PROPOSER = "action_proposer";
@@ -191,11 +187,7 @@ const CONSEIL_FISCAL = "conseil_fiscal";
 const CONSEILS_PAR_REPONSE = 2;
 /** Un paragraphe fini, puis le début d'un autre. */
 const SECOND_PARAGRAPHE = /\S[ \t]*\n\s*\n\s*\S/;
-const SUITES_D_UNE_REPONSE: ReadonlySet<string> = new Set([
-  AFFICHER_VISUEL.name,
-  CONCLURE_REPONSE.name,
-  ACTION_PROPOSER,
-]);
+const SUITES_D_UNE_REPONSE: ReadonlySet<string> = new Set([CONCLURE_REPONSE.name, ACTION_PROPOSER]);
 
 /** Ce qu'on dit au modèle qui a répondu sans conclure. Aucun texte n'en sort à l'écran. */
 const DEMANDE_DE_CONCLUSION =
@@ -314,13 +306,34 @@ export async function verifierLeDossier(api: AppelApi, tenantId: string): Promis
 const LANGUES: Record<string, string> = { fr: "français", en: "anglais", ar: "arabe" };
 
 /** Le contexte du jour : hors cache, parce qu'il change. Aucun chiffre du dossier ici. */
-function contexteDuJour(d: DossierVerifie, locale: string, aujourdhui: string): string {
+/** Le message est-il écrit en arabe — la majorité de ses lettres le sont ? */
+export function ecritEnArabe(texte: string): boolean {
+  const lettres = texte.match(/\p{L}/gu) ?? [];
+  if (lettres.length === 0) return false;
+  const arabes = lettres.filter((l) => /\p{Script=Arabic}/u.test(l)).length;
+  return arabes * 2 > lettres.length;
+}
+
+function contexteDuJour(
+  d: DossierVerifie,
+  locale: string,
+  aujourdhui: string,
+  question: string,
+): string {
   const o = d.organisation;
   return [
     `Aujourd'hui : ${aujourdhui} (heure de Tunis).`,
     `Dossier ouvert : « ${o.name} » (${o.kind === "cabinet" ? "cabinet d'expertise comptable" : "société"}), juridiction ${o.jurisdiction}, devise ${o.currency}.`,
     `La personne qui parle y a le rôle : ${o.role}.`,
     `Langue de l'interface : ${LANGUES[locale] ?? LANGUES["fr"]}. Réponds dans la langue du message de la personne.`,
+    // Les résultats d'outils et les textes de loi arrivent en français : mesuré
+    // le 11 novembre 2026, ils entraînaient la langue de la réponse une fois
+    // sur trois. Quand le message est en arabe, c'est dit ici, en toutes lettres.
+    ...(ecritEnArabe(question)
+      ? [
+          "Le message de la personne est écrit en arabe : ta réponse est entièrement en arabe, du premier au dernier mot, quelle que soit la langue des résultats d'outils et des textes.",
+        ]
+      : []),
   ].join("\n");
 }
 
@@ -577,7 +590,6 @@ async function converser(
     ...DEFINITIONS,
     // Offert seulement quand il y a de quoi comparer : le modèle ne le voit pas autrement.
     ...(ctx.societes ? [COMPARER_LES_SOCIETES] : []),
-    AFFICHER_VISUEL,
     CONCLURE_REPONSE,
   ];
   // La recherche sur internet est un outil du fournisseur : offerte seulement
@@ -590,7 +602,7 @@ async function converser(
   ];
   const system = [
     { type: "text", text: configuration.consigne.texte, cache_control: { type: "ephemeral" } },
-    { type: "text", text: contexteDuJour(dossier, q.locale, aujourdhui) },
+    { type: "text", text: contexteDuJour(dossier, q.locale, aujourdhui, q.question) },
   ];
   const historique = passe.slice(-2 * reglage.tours_transmis);
   while (historique[0]?.role === "assistant") historique.shift();
@@ -609,9 +621,7 @@ async function converser(
   const outilsAppeles: string[] = [];
   const appelsFaits = new Set<string>();
   const propositions: PropositionDAction[] = [];
-  // Les visuels que les outils ont composés (par clé de source), et ceux que le
-  // modèle a choisi de montrer — dans l'ordre, une fois chacun.
-  const visuels = new Map<string, BlocDeReponse>();
+  // Les visuels que les outils ont composés, posés dans l'ordre, une fois chacun.
   const blocs: BlocDeReponse[] = [];
   const montres = new Set<string>();
   const mentions: string[] = [];
@@ -802,7 +812,6 @@ async function converser(
       input: unknown;
     }>;
     const resultats: unknown[] = [];
-    const annonces: string[] = [];
     let conclusionIllisible = false;
     for (const appel of appels) {
       if (appel.name === CONCLURE_REPONSE.name) {
@@ -820,38 +829,6 @@ async function converser(
                 is_error: true,
               }),
         });
-        continue;
-      }
-      if (appel.name === AFFICHER_VISUEL.name) {
-        const cle = (appel.input as { source?: unknown } | null)?.source;
-        const bloc = typeof cle === "string" ? visuels.get(cle) : undefined;
-        if (bloc && typeof cle === "string") {
-          if (!montres.has(cle)) {
-            montres.add(cle);
-            // Là où Malica en est de sa réponse : l'écran pose le bloc à cet endroit.
-            const place = { ...bloc, apres: garde.texteEmis().length };
-            blocs.push(place);
-            // En attente de la conclusion, le bloc attend aussi : une réponse
-            // retenue ne montre que son message de relecture.
-            if (!enAttente) emettre({ type: "bloc", bloc: place });
-          }
-          resultats.push({
-            type: "tool_result",
-            tool_use_id: appel.id,
-            content:
-              "Visuel affiché. N'en parle pas : ne dis ni qu'il est affiché, ni où, ni ce qu'il montre. Ne recopie pas ses lignes : dis ce que ses chiffres veulent dire pour la personne.",
-          });
-        } else {
-          resultats.push({
-            type: "tool_result",
-            tool_use_id: appel.id,
-            content:
-              visuels.size > 0
-                ? `Aucun visuel pour cette source. Visuels disponibles : ${[...visuels.keys()].join(", ")}.`
-                : "Aucun visuel n'est disponible : réponds en texte.",
-            is_error: true,
-          });
-        }
         continue;
       }
       /*
@@ -901,20 +878,31 @@ async function converser(
           configuration.unitesMarquables,
         );
       }
-      for (const v of r.visuels ?? []) visuels.set(v.cle, v.bloc);
+      /*
+       * LE VISUEL S'AFFICHE DE LUI-MÊME. Il fallait jusqu'ici que le modèle le
+       * demande, sur la foi d'une ligne ajoutée à son tour (« un visuel est
+       * disponible… »). Mesuré le 11 novembre 2026, sur trois passes : cette
+       * ligne, lue comme un message, faisait écrire au modèle une phrase sur
+       * elle (parfois en anglais), le faisait répondre en français à une
+       * question en arabe, et lui faisait écrire sa réponse deux fois, avant
+       * puis après le visuel. Un outil du dossier qui rend un tableau ou un
+       * graphique a été appelé pour cette question : son visuel se pose donc
+       * là où Malica en est, sans rien demander au modèle.
+       */
+      for (const v of r.visuels ?? []) {
+        if (montres.has(v.cle)) continue;
+        montres.add(v.cle);
+        const place = { ...v.bloc, apres: garde.texteEmis().length };
+        blocs.push(place);
+        // En attente de la conclusion, le bloc attend aussi : une réponse
+        // retenue ne montre que son message de relecture.
+        if (!enAttente) emettre({ type: "bloc", bloc: place });
+      }
       resultats.push({
         type: "tool_result",
         tool_use_id: appel.id,
         content: r.sources.map(blocDeRecherche),
       });
-      // Dit À CÔTÉ du résultat, jamais dedans : l'API refuse un résultat d'outil
-      // qui mêle des blocs de recherche à autre chose (essai réel du 10 novembre
-      // 2026 : « if any blocks in a tool result are of type search_result, all
-      // blocks must be of that type » — toute réponse à outil était interrompue).
-      for (const v of r.visuels ?? [])
-        annonces.push(
-          `[Note de l'application Malica, pas un message de la personne] Un visuel est disponible pour la source « ${v.cle} » : afficher_visuel le montre à la personne.`,
-        );
       for (const p of r.propositions ?? []) {
         propositions.push(p);
         // En attente de la conclusion, le bouton attend aussi : une réponse
@@ -931,8 +919,7 @@ async function converser(
     messages.push({ role: "assistant", content: tourARenvoyer(m.content) });
     messages.push({
       role: "user",
-      // Les résultats d'outils d'abord, comme l'API l'exige ; les annonces ensuite.
-      content: [...resultats, ...annonces.map((text) => ({ type: "text" as const, text }))],
+      content: resultats,
     });
   }
 

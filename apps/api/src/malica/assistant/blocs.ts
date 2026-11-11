@@ -5,9 +5,9 @@
  *
  * Un chiffre qui s'affiche en grand, dans un tableau ou dans une tuile, est un
  * chiffre liant : il vient d'un moteur du Socle ou de la base (R3), jamais du
- * modèle. Le modèle ne fait que DÉSIGNER ce qu'il veut montrer
- * (`afficher_visuel`, par la clé d'une source qu'un outil vient de lui rendre) ;
- * le serveur compose le bloc à partir des données de cet outil, formate les
+ * modèle. Le modèle ne désigne même plus ce qu'il montre : l'outil du dossier
+ * qu'il appelle rend son visuel, et le serveur le pose de lui-même (11 novembre
+ * 2026) ; le serveur compose le bloc à partir des données de cet outil, formate les
  * montants à la précision de la devise et traduit les libellés (R12). L'écran
  * ne calcule rien, ne reformate rien, et le même bloc sert quelle que soit la
  * machine qui répond.

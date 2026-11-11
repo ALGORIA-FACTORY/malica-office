@@ -628,15 +628,6 @@ describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
     };
     return { ...d, api };
   };
-  const appelAvecEntree = (nom: string, entree: unknown): EvenementClaude[] => {
-    const evs = appelDOutil(nom);
-    evs[2] = {
-      type: "content_block_delta",
-      index: 0,
-      delta: { type: "input_json_delta", partial_json: JSON.stringify(entree) },
-    };
-    return evs;
-  };
   const jouer = async (api: AppelApi, reponses: EvenementClaude[][]) => {
     const requetes: Array<Record<string, unknown>> = [];
     let n = 0;
@@ -658,21 +649,14 @@ describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
     return { ...r, requetes };
   };
 
-  it("afficher_visuel : le bloc est composé par le serveur, part en un événement et se range au fil", async () => {
+  it("le visuel d'un outil s'affiche de lui-même : composé par le serveur, un événement, rangé au fil", async () => {
     const { api, fils } = avecCalendrier();
     const { fin, evenements, requetes } = await jouer(api, [
       appelDOutil("echeances_fiscales"),
-      appelAvecEntree("afficher_visuel", { source: "malica:echeances:a-venir" }),
       texte("Une échéance est en retard : la déclaration de TVA."),
     ]);
-    // Le modèle a été prévenu qu'un visuel existe pour cette source, et l'outil lui est offert.
-    assert.match(
-      JSON.stringify(requetes[1]),
-      /Un visuel est disponible pour la source « malica:echeances:a-venir »/,
-    );
-    assert.ok(
-      (requetes[0]!["tools"] as Array<{ name: string }>).some((o) => o.name === "afficher_visuel"),
-    );
+    // Rien n'est demandé au modèle : ni outil pour montrer, ni ligne ajoutée à son tour.
+    assert.doesNotMatch(JSON.stringify(requetes), /visuel est disponible|afficher_visuel/);
     const partis = evenements.flatMap((e) => (e.type === "bloc" ? [e.bloc] : []));
     assert.equal(partis.length, 1);
     const bloc = partis[0]!;
@@ -695,21 +679,15 @@ describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
       blocs?: unknown[] | null;
     };
     assert.deepEqual(range.blocs, partis);
-    // L'outil qui montre n'est pas une lecture : il ne compte pas parmi les outils consultés.
     assert.deepEqual(fin.mesure.outils, ["echeances_fiscales"]);
-    assert.doesNotMatch(JSON.stringify(evenements), /afficher_visuel/);
   });
 
-  it("Claude : un résultat d'outil ne porte QUE des blocs de recherche ; l'annonce du visuel est à côté", async () => {
+  it("Claude : un résultat d'outil ne porte QUE des blocs de recherche, et rien ne s'y ajoute", async () => {
     // Essai réel du 10 novembre 2026 : l'API refuse un résultat d'outil qui mêle des
     // blocs `search_result` à un autre type, et toute réponse à outil était interrompue.
     const { api } = avecCalendrier({});
     const requetes: Array<Record<string, unknown>> = [];
-    const suites = [
-      appelDOutil("echeances_fiscales"),
-      appelAvecEntree("afficher_visuel", { source: "malica:echeances:a-venir" }),
-      texte("Une échéance est en retard."),
-    ];
+    const suites = [appelDOutil("echeances_fiscales"), texte("Une échéance est en retard.")];
     let n = 0;
     const claude: ClientEnFlux = async function* (requete) {
       requetes.push(JSON.parse(JSON.stringify(requete)));
@@ -735,54 +713,26 @@ describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
         "un résultat d'outil mêle les types",
       );
     }
-    // Les résultats d'outils d'abord, l'annonce ensuite, en texte.
+    // Aucune ligne de texte n'accompagne les résultats : le modèle n'a rien à commenter.
     assert.deepEqual(
       dernier.content.map((b) => b.type),
-      ["tool_result", "text"],
-    );
-    assert.match(
-      dernier.content[1]!.text!,
-      /Un visuel est disponible pour la source « malica:echeances:a-venir »/,
+      ["tool_result"],
     );
   });
 
-  it("le bloc se place là où Malica en est de sa réponse : après l'annonce, avant la suite", async () => {
+  it("le bloc se place là où Malica en est : avant la réponse qui le commente", async () => {
     const { api } = avecCalendrier();
-    const annonce = "Je regarde votre calendrier fiscal.";
-    const annonceEtVisuel: EvenementClaude[] = [
-      { type: "message_start", message: { model: "deepseek-chat", usage } },
-      { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
-      { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: annonce } },
-      { type: "content_block_stop", index: 0 },
-      {
-        type: "content_block_start",
-        index: 1,
-        content_block: { type: "tool_use", id: "t2", name: "afficher_visuel", input: {} },
-      },
-      {
-        type: "content_block_delta",
-        index: 1,
-        delta: {
-          type: "input_json_delta",
-          partial_json: JSON.stringify({ source: "malica:echeances:a-venir" }),
-        },
-      },
-      { type: "content_block_stop", index: 1 },
-      { type: "message_delta", delta: { stop_reason: "tool_use" }, usage },
-    ];
     const { fin, evenements } = await jouer(api, [
       appelDOutil("echeances_fiscales"),
-      annonceEtVisuel,
       texte("Une échéance est en retard."),
     ]);
-    assert.equal(fin.blocs[0]!.apres, annonce.length);
-    // À l'écran, dans cet ordre : l'annonce, le bloc, la suite.
+    assert.equal(fin.blocs[0]!.apres, 0);
+    // À l'écran, dans cet ordre : le bloc, puis ce que Malica en dit — une seule fois.
     const ordre = evenements.flatMap((e) =>
       e.type === "texte" || e.type === "bloc" ? [e.type] : [],
     );
-    assert.deepEqual(ordre, ["texte", "bloc", "texte"]);
-    assert.equal(fin.reponse.slice(0, fin.blocs[0]!.apres), annonce);
-    assert.match(fin.reponse.slice(fin.blocs[0]!.apres!), /^\n\nUne échéance est en retard\.$/);
+    assert.deepEqual(ordre, ["bloc", "texte"]);
+    assert.equal(fin.reponse, "Une échéance est en retard.");
   });
 
   it("la comparaison des sociétés n'est offerte au modèle que si la personne regarde « Toutes les sociétés » et en a plusieurs", async () => {
@@ -834,27 +784,14 @@ describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
     assert.ok(!(await outilsOfferts(DOSSIER, true)).includes("comparer_les_societes"));
   });
 
-  it("afficher_visuel deux fois pour la même source ne montre qu'un bloc", async () => {
+  it("le même outil appelé deux fois ne montre qu'un bloc", async () => {
     const { api } = avecCalendrier();
     const { fin } = await jouer(api, [
       appelDOutil("echeances_fiscales"),
-      appelAvecEntree("afficher_visuel", { source: "malica:echeances:a-venir" }),
-      appelAvecEntree("afficher_visuel", { source: "malica:echeances:a-venir" }),
+      appelDOutil("echeances_fiscales"),
       texte("Voilà."),
     ]);
     assert.equal(fin.blocs.length, 1);
-  });
-
-  it("afficher_visuel sur une source inventée ne montre rien, et le modèle l'apprend", async () => {
-    const { api } = avecCalendrier();
-    const { fin, evenements, requetes } = await jouer(api, [
-      appelDOutil("echeances_fiscales"),
-      appelAvecEntree("afficher_visuel", { source: "malica:invention" }),
-      texte("Voilà."),
-    ]);
-    assert.equal(fin.blocs.length, 0);
-    assert.ok(!evenements.some((e) => e.type === "bloc"));
-    assert.match(JSON.stringify(requetes[2]), /Aucun visuel pour cette source/);
   });
 
   it("DeepSeek épuisé : l'ancien repli ne répond pas non plus, on s'arrête avec un message", async () => {

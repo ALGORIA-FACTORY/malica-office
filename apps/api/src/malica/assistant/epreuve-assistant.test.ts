@@ -20,6 +20,7 @@ import type { AppelApi } from "../appel-local.ts";
 import type { ResultatDuConseilCite } from "../conseil/conseil-cite.ts";
 import {
   converserAvecRepli,
+  ecritEnArabe,
   type DependancesDeLAssistant,
   type FinMesuree,
   type DossierVerifie,
@@ -1965,5 +1966,33 @@ describe("Malica cherche sur internet", () => {
       ),
       "l'étape « je cherche sur internet » n'est pas dite",
     );
+  });
+});
+
+describe("la langue du message se dit au modèle quand c'est l'arabe", () => {
+  it("reconnaît un message en arabe, même mêlé d'un sigle latin", () => {
+    assert.equal(ecritEnArabe("ما هي نسبة الأداء على القيمة المضافة في تونس؟"), true);
+    assert.equal(ecritEnArabe("اعرض لي مصاريفي حسب المزوّد TVA"), true);
+    assert.equal(ecritEnArabe("Quel est le taux de la TVA ?"), false);
+    assert.equal(ecritEnArabe("2026 ?"), false);
+  });
+
+  it("le contexte du jour le dit en toutes lettres, et seulement alors", async () => {
+    const vu = async (question: string) => {
+      const { api } = dossierFictif({ contexte: { cabinetId: null, appelantMembre: true } });
+      const requetes: RequeteVue[] = [];
+      await rejouer(
+        { tenantId: TENANT, question, locale: "fr", conversationId: null, pieceIds: [] },
+        {
+          claude: claudeSimule([{ texte: "Réponse." }], requetes),
+          conseil: conseilFictif,
+          repli: sansRepli,
+        },
+        api,
+      );
+      return requetes[0]!.system[1]!.text;
+    };
+    assert.match(await vu("اعرض لي مصاريفي حسب المزوّد."), /entièrement en arabe/);
+    assert.doesNotMatch(await vu("Montre-moi mes dépenses."), /entièrement en arabe/);
   });
 });
