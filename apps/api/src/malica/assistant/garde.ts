@@ -111,6 +111,9 @@ function chercheurDeMarque(marque: string): ((phrase: string) => boolean) | null
 /** Une cellule de tableur nommée entre accents graves : « `B2` », « `$B$2` », « `A2 = 1 000` ». */
 const CELLULE_NOMMEE = /`[^`\n]*\$?\b[A-Za-z]{1,3}\$?\d{1,7}\b[^`\n]*`/;
 
+/** Une formule de tableur : un signe égal suivi d'un calcul qui nomme une cellule. */
+const FORMULE = /(?:^|`|\n)[ \t]*=[^`\n]*\$?\b[A-Za-z]{1,3}\$?\d{1,7}\b/;
+
 /** En deçà, une phrase peut se répéter sans que ce soit une redite (« Oui. », « Voici le détail : »). */
 const LONGUEUR_D_UNE_REDITE = 60;
 
@@ -221,6 +224,8 @@ export class GardeDesChiffres {
   private tus: string[] = [];
   private readonly tuesDuTour: string[] = [];
   private emis = "";
+  /** La réponse a donné une formule de tableur. */
+  private tableur = false;
   /** Les longues phrases déjà parties dans cette réponse. */
   private readonly dites = new Set<string>();
   private aSeparer = false;
@@ -256,7 +261,14 @@ export class GardeDesChiffres {
     // dans `B2`, en pourcentage (10 %) ou en décimale (0,10) »), pas un chiffre
     // du dossier ni du droit. Mesuré le 11 novembre 2026 : ces phrases-là
     // tombaient, et l'explication d'une formule sortait amputée.
+    if (FORMULE.test(phrase)) this.tableur = true;
     if (CELLULE_NOMMEE.test(phrase)) return [];
+    // Et une réponse qui a donné une formule, sans qu'aucun outil ait rien rendu,
+    // est une explication de tableur : ni dossier, ni droit. Ses phrases
+    // suivantes (« le 3 arrondit aux millimes », « si vous saisissez 19 sans le
+    // signe % ») ne citent pas de cellule et tombaient quand même, laissant une
+    // formule sans sa phrase. Dès qu'un outil a répondu, la garde redevient entière.
+    if (this.tableur && this.sources.length === 0) return [];
     const chiffres = chiffresDe(sansFormules(phrase));
     if (chiffres.length === 0) return chiffres;
     const cherchee = sansAccent(phrase);

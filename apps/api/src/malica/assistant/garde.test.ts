@@ -423,6 +423,28 @@ describe("une phrase qui nomme une cellule de tableur n'affirme aucun chiffre", 
     assert.deepEqual(g.retirees(), []);
   });
 
+  it("après une formule, sans outil, l'explication reste entière", () => {
+    const g = new GardeDesChiffres("Une formule pour le TTC ?", REGLE);
+    const texte =
+      "`=ARRONDI(A2*(1+B2);3)`\nLe 3 arrondit à trois décimales, les millimes du dinar. " +
+      "Si vous saisissez 19 sans le signe %, divisez le taux par 100.";
+    assert.equal(g.jugerTout(texte).aEmettre, texte);
+  });
+
+  it("après une formule, dès qu'un outil a répondu, la garde redevient entière", () => {
+    const g = new GardeDesChiffres("Une formule pour ma TVA ?", REGLE);
+    g.ajouterSource({
+      cle: "malica:tva:2026-11",
+      genre: "tva",
+      titre: "TVA",
+      objetId: null,
+      texte: "Solde : 342,000 TND",
+    });
+    const j = g.jugerTout("`=A2*(1+B2)`\nLe taux de TVA est de 19 %.");
+    assert.equal(g.retirees().length, 1);
+    assert.ok(!j.aEmettre.includes("19 %"));
+  });
+
   it("sans cellule nommée, un taux sans source tombe toujours", () => {
     const g = new GardeDesChiffres("Une formule pour le TTC ?", REGLE);
     const j = g.jugerTout("Le taux de TVA est de 19 %.");

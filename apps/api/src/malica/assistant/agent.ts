@@ -184,6 +184,9 @@ const NOMS_DE_LA_MECANIQUE = [
  * avant eux est la réponse ; avant tout autre outil, c'est une annonce.
  */
 const ACTION_PROPOSER = "action_proposer";
+const CONSEIL_FISCAL = "conseil_fiscal";
+/** Deux consultations suffisent à une question en deux volets ; au-delà, c'est une boucle. */
+const CONSEILS_PAR_REPONSE = 2;
 /** Un paragraphe fini, puis le début d'un autre. */
 const SECOND_PARAGRAPHE = /\S[ \t]*\n\s*\n\s*\S/;
 const SUITES_D_UNE_REPONSE: ReadonlySet<string> = new Set([
@@ -597,6 +600,7 @@ async function converser(
   const dejaDit = historique.filter((m) => m.role === "assistant").map((m) => m.contenu);
   garde.admettreDuFil(dejaDit);
   const outilsAppeles: string[] = [];
+  const appelsFaits = new Set<string>();
   const propositions: PropositionDAction[] = [];
   // Les visuels que les outils ont composés (par clé de source), et ceux que le
   // modèle a choisi de montrer — dans l'ordre, une fois chacun.
@@ -825,6 +829,29 @@ async function converser(
         }
         continue;
       }
+      /*
+       * UN OUTIL NE SE RAPPELLE PAS POUR RIEN. Mesuré le 11 novembre 2026 : le
+       * modèle rappelait parfois le même outil avec la même demande, ou le
+       * conseil fiscal quatre fois de suite, et écrivait sa réponse à chaque
+       * tour — la personne lisait la même réponse deux à quatre fois. Le même
+       * appel ne s'exécute donc qu'une fois par réponse, et le conseil fiscal
+       * au plus `CONSEILS_PAR_REPONSE` fois.
+       */
+      const cleDAppel = `${appel.name}:${JSON.stringify(appel.input)}`;
+      const conseilsFaits = outilsAppeles.filter((n) => n === CONSEIL_FISCAL).length;
+      if (
+        appelsFaits.has(cleDAppel) ||
+        (appel.name === CONSEIL_FISCAL && conseilsFaits >= CONSEILS_PAR_REPONSE)
+      ) {
+        resultats.push({
+          type: "tool_result",
+          tool_use_id: appel.id,
+          content:
+            "Tu as déjà ce résultat dans cette réponse. Ne rappelle pas cet outil : réponds maintenant avec ce que tu as, sans répéter ce que tu as déjà écrit.",
+        });
+        continue;
+      }
+      appelsFaits.add(cleDAppel);
       outilsAppeles.push(appel.name);
       const r = await executerOutil(ctx, appel.name, appel.input);
       etape(appel.name, "fin");
