@@ -27,6 +27,8 @@ export interface ElementDeChoix {
   sous?: string | null | undefined;
   /** Ce que porte la pastille ; les initiales du nom par défaut. */
   initiales?: string;
+  /** Une photo (adresse `blob:`) : elle prend la place des initiales. */
+  photo?: string | null | undefined;
   /** Le ton de l'anneau de la pastille, dans le vocabulaire de `TON_PME` : `am` attend, `ok` pris en charge. */
   ton?: "ok" | "am" | "neutre" | undefined;
   /** À droite : « Ouverte », « 1 attend »… */
@@ -112,7 +114,7 @@ export function FeuilleDeChoix({
         onClick={() => prendre(e.id)}
       >
         <span className="ini" data-ton={e.ton} aria-hidden>
-          {e.initiales ?? initialesDe(e.nom)}
+          {e.photo ? <img src={e.photo} alt="" /> : (e.initiales ?? initialesDe(e.nom))}
         </span>
         <span className="bd">
           <b>{e.nom}</b>

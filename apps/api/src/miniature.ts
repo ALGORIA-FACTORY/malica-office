@@ -256,6 +256,47 @@ export async function fabriquerMiniature(octets: Uint8Array): Promise<Buffer | n
   return await toile.encode("jpeg", QUALITE);
 }
 
+/** Le côté d'un portrait, en pixels : une pastille de 36 px, vue à 3×, sans plus. */
+const COTE_DU_PORTRAIT = 256;
+const QUALITE_DU_PORTRAIT = 82;
+
+/**
+ * Le portrait d'une personne : un carré JPEG, recadré au centre, ré-encodé.
+ *
+ * Même porte que la miniature (signature des octets, dimensions de l'en-tête,
+ * plafond de pixels), et un seul format admis en entrée : JPEG, PNG, WebP —
+ * jamais un PDF. Le ré-encodage n'est pas un confort : il ne garde ni les
+ * métadonnées (position GPS d'une photo de téléphone, appareil, date) ni rien
+ * qu'un fichier forgé y cacherait ; les octets servis sont ceux que CE code a
+ * écrits. `null` quand les octets ne sont pas une image admise.
+ */
+export async function fabriquerPortrait(octets: Uint8Array): Promise<Buffer | null> {
+  const format = formatDe(octets);
+  if (!format || format === "pdf") return null;
+  const taille = dimensionsDe(octets, format);
+  if (!taille || taille.largeur * taille.hauteur > PLAFOND_PIXELS) return null;
+
+  const image = await loadImage(Buffer.from(octets));
+  if (!image.width || !image.height) return null;
+  const carre = Math.min(image.width, image.height);
+  const toile = createCanvas(COTE_DU_PORTRAIT, COTE_DU_PORTRAIT);
+  const ctx = toile.getContext("2d");
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, COTE_DU_PORTRAIT, COTE_DU_PORTRAIT);
+  ctx.drawImage(
+    image,
+    (image.width - carre) / 2,
+    (image.height - carre) / 2,
+    carre,
+    carre,
+    0,
+    0,
+    COTE_DU_PORTRAIT,
+    COTE_DU_PORTRAIT,
+  );
+  return await toile.encode("jpeg", QUALITE_DU_PORTRAIT);
+}
+
 /**
  * La fabrique, dans un objet : `stockage.ts` passe par lui, et une épreuve
  * peut la ralentir (`mock.method`) pour éprouver une suppression pendant la

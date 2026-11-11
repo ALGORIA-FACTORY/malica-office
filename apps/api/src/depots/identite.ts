@@ -694,6 +694,22 @@ export const identite = {
     return rows[0] ?? null;
   },
 
+  /**
+   * Quelles personnes ont une photo, parmi celles-ci : leur identifiant et la
+   * version de la photo (son empreinte). La RLS de `identity.profiles` décide
+   * de qui je vois — une personne que la base ne me rend pas n'a pas de photo
+   * pour moi. Les octets, eux, se lisent sur `/moi/photos/:id`.
+   */
+  async photosDesProfils(db: Requete, ids: readonly string[]) {
+    if (ids.length === 0) return {};
+    const { rows } = await db.query<{ user_id: string; photo_version: string }>(
+      `select user_id, photo_version from identity.profiles
+        where user_id = any($1::uuid[]) and photo_version is not null`,
+      [ids],
+    );
+    return Object.fromEntries(rows.map((r) => [r.user_id, r.photo_version]));
+  },
+
   /** Écrire son prénom et son nom. Un champ vide s'efface. */
   async ecrireMonProfil(db: Requete, prenom: string | null, nom: string | null) {
     const { rows } = await db.query<{

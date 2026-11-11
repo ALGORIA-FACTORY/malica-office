@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { CarteDeGroupe, IconeCalendrier } from "@/components/malica/carte-de-groupe";
 import { RangeeDesSieges, type Siege } from "@/components/malica/rangee-des-sieges";
+import { usePhotosDeProfil } from "@/hooks/use-photos-de-profil";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { jourOuInstant, montant } from "@/lib/lisible";
@@ -136,10 +137,13 @@ function Dossier() {
   // ------------------------------------------------------------ les sièges
   // Ceux des pièces que l'en-tête montre ; toutes les sociétés : chaque siège
   // dit la sienne (celle de sa première pièce — un siège est d'une société).
-  const sieges: Siege[] = [...parSieges(deLaSociete.map((x) => x.piece))].map(([id, g]) => ({
+  const groupes = [...parSieges(deLaSociete.map((x) => x.piece))];
+  const photos = usePhotosDeProfil(groupes.map(([id]) => id));
+  const sieges: Siege[] = groupes.map(([id, g]) => ({
     id,
     nom: g.nom,
     pieces: g.pieces,
+    photo: photos[id] ?? null,
     societe:
       parSociete && societe === null
         ? nomDeSociete(deLaSociete.find((x) => x.piece.auteurId === id)?.societe ?? "")
