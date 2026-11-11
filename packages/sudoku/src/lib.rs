@@ -92,10 +92,11 @@ fn erreur(m: String) -> String {
 
 /// Point d'entrée : JSON du contrat §3 en entrée, JSON du contrat §4 en sortie.
 pub fn solve(input_json: &str) -> String {
-    let entree: Entree = match serde_json::from_str(input_json) {
+    let mut entree: Entree = match serde_json::from_str(input_json) {
         Ok(e) => e,
         Err(e) => return erreur(format!("entrée invalide : {e}")),
     };
+    entree.retenir_les_substitutions();
     let sortie = resoudre_et_oublier(&entree).map(|s| {
         if s.issue == "aucune" && s.solutions == 0 {
             par_les_lettres(input_json, &entree).unwrap_or(s)
@@ -164,8 +165,13 @@ fn par_les_lettres(input_json: &str, entree: &Entree) -> Option<Sortie> {
         .collect();
 
     let mut avec: Entree = serde_json::from_str(input_json).ok()?;
+    avec.retenir_les_substitutions();
     for j in avec.jetons.iter_mut().filter(|j| j.lettres.is_some()) {
-        j.montants.push(entree::Lecture { v, forte: true });
+        j.montants.push(entree::Lecture {
+            v,
+            forte: true,
+            substituee: false,
+        });
     }
     let mut s = resoudre_et_oublier(&avec).ok()?;
     if s.issue != "prouvee" {
