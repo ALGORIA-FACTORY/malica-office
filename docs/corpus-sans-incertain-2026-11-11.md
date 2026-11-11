@@ -83,3 +83,30 @@ de la DGELF, à faire confirmer par un expert sur CASSUR 54–61 et CNSS 41–10
 - `apps/api/src/malica/` : après correction de C1, rejouer la question IS (article 49, taux de 20 %) pour
   vérifier l'hypothèse de la stratégie (§2 du document du 11 novembre) ; aujourd'hui elle reste une hypothèse.
 - `packages/socle/` : rien.
+
+## 6. Textes officiels lus le 11 novembre 2026 (lecture seule)
+
+Trois numéros du Journal Officiel, publiés par `www.finances.gov.tn`, lus en arabe sur le texte natif (extraction
+`pdftotext`, signature numérique de l'Imprimerie Officielle). L'empreinte est celle du fichier tel que reçu.
+
+| Texte                                           | Adresse                                                                | JORT                               | SHA-256 (fichier reçu)                                             |
+| ----------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------ |
+| Loi n° 2023-13 du 11 décembre 2023 (LF 2024)    | `https://www.finances.gov.tn/sites/default/files/2023-12/LF2024_0.pdf` | n° 144 du 12 décembre 2023, 184 p. | `5ef1dd07f7f5b10c1e70fc2d467912ad6e8fd1d8132c441b4348aeb4f99756a4` |
+| Loi n° 2024-48 du 9 décembre 2024 (**LF 2025**) | `https://www.finances.gov.tn/sites/default/files/2024-12/LF2025.pdf`   | n° 149 du 10 décembre 2024, 169 p. | `08feaf86e175c192c3f3f87a176b126abfafea044eb36e634a3ed5818cd0f889` |
+| Loi n° 2025-17 du 12 décembre 2025 (LF 2026)    | `https://www.finances.gov.tn/sites/default/files/2026-01/115725.pdf`   | n° 148 du 12 décembre 2025, 101 p. | `84f96735cc24a3fd90920e83c7fe4de2d0b22c128ada5b48df8a16135f053fc4` |
+
+Correction : la loi n° 2024-48 est la loi de finances **pour 2025**, pas pour 2024 (la section 3 la laissait INCERTAIN).
+
+**Premier fait sourcé pour C6 (date d'effet), article 49 du CIRPPIS.** L'article 37 de la loi 2024-48
+(JORT n° 149, p. 6428-6429) réécrit l'article 49 : taux de l'IS fixé à 20 %, 40 % pour les banques et les
+assurances, entre autres. Sa clause d'application, lue dans le texte, dit en substance que le chapitre
+s'applique aux **bénéfices réalisés à compter du 1er janvier 2024**, et, pour les plus-values de cession des
+non-résidents non établis, à compter du 1er janvier 2025. La version « édition 2025 » de l'article 49, datée du
+1er janvier 2025 en base, n'est donc pas sa date d'effet : c'est l'illustration exacte de C6. La clause est citée
+d'après une extraction de texte arabe (ordre des mots inversé par l'extracteur) : relecture par un juriste
+recommandée avant d'écrire la date en base. Aucune date d'effet n'a encore été écrite en base.
+
+Accès restants : `legislation.tn` ne répond pas depuis ce poste (HTTP 503 en clair, connexion refusée en TLS) ;
+son éditeur reste non confirmé. `doc-fiscale.finances.gov.tn` : 503. Le Journal Officiel lui-même (`iort.gov.tn`)
+n'est pas joignable d'ici. Les PDF ci-dessus sont des numéros du Journal Officiel ; la consolidation des codes,
+elle, reste à obtenir d'une source officielle.
