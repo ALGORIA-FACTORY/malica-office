@@ -139,7 +139,8 @@ describe("la preuve partielle d'une facture, sur la base", { skip: !(MOTEUR && B
     const ht = champs.find((x) => x.champ === "total_ht");
     assert.equal(ht?.statut, "prouve");
     assert.deepEqual(
-      ht?.citations.map((x) => x.ordinal),
+      // Une citation est un jeton (son ordinal) ou une case : ici, des jetons.
+      ht?.citations.map((x) => ("ordinal" in x ? x.ordinal : null)),
       [2],
     );
   });
