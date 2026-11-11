@@ -1,6 +1,6 @@
 -- Le chemin de secours de « Parler à Malica » annonce aussi la relecture.
 --
--- `20261212100000` a donné le mode de relecture à l'assistant, qui le lit par
+-- `20261212110000` a donné le mode de relecture à l'assistant, qui le lit par
 -- `public.assistant_configuration()` — réservée au serveur. L'ancienne
 -- conversation (`askMalica` : la route `/malica/demander` et le repli quand la
 -- boucle d'outils ne peut pas répondre) tourne sous les droits de la personne
