@@ -114,6 +114,19 @@ function chercheurDeMarque(marque: string): ((phrase: string) => boolean) | null
 /** Une cellule de tableur nommée entre accents graves : « `B2` », « `$B$2` », « `A2 = 1 000` ». */
 const CELLULE_NOMMEE = /`[^`\n]*\$?\b[A-Za-z]{1,3}\$?\d{1,7}\b[^`\n]*`/;
 
+/** Combien de pages montrer quand le modèle n'en a cité aucune. */
+const PAGES_MONTREES = 3;
+
+/** Le site d'une adresse http(s), sans « www. » ; vide si ce n'en est pas une. */
+function hoteDe(url: string): string {
+  if (!/^https?:\/\//i.test(url)) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
 /** Le type d'une citation de page web, tel que l'API le nomme. */
 const CITATION_WEB = "web_search_result_location";
 
@@ -232,6 +245,8 @@ export class GardeDesChiffres {
   private emis = "";
   /** Une recherche sur internet a rendu des résultats dans cette réponse. */
   private internetConsulte = false;
+  /** Les pages que les recherches ont rendues, dans l'ordre. */
+  private readonly pagesTrouvees: SourceConnue[] = [];
   /** Les pages d'internet citées, par adresse. */
   private readonly pagesWeb = new Map<string, SourceConnue>();
   /** La réponse a donné une formule de tableur. */
@@ -419,9 +434,23 @@ export class GardeDesChiffres {
     return true;
   }
 
-  /** Une recherche sur internet a rendu des résultats pour cette réponse. */
-  consulterInternet(): void {
+  /** Une recherche sur internet a rendu des résultats pour cette réponse : ses pages. */
+  consulterInternet(pages: ReadonlyArray<{ url?: unknown; title?: unknown }> = []): void {
     this.internetConsulte = true;
+    for (const p of pages) {
+      const url = typeof p.url === "string" ? p.url.trim() : "";
+      const hote = hoteDe(url);
+      if (!hote || this.pagesTrouvees.some((x) => x.url === url)) continue;
+      const titre = typeof p.title === "string" && p.title.trim() ? p.title.trim() : hote;
+      this.pagesTrouvees.push({
+        cle: `web:${url}`,
+        genre: "web",
+        titre,
+        objetId: null,
+        url,
+        texte: "",
+      });
+    }
   }
 
   /** La réponse s'appuie-t-elle sur internet — une recherche faite, ou une page citée ? */
@@ -602,7 +631,22 @@ export class GardeDesChiffres {
 
   /** Les sources effectivement citées ou portant un chiffre de la réponse. */
   sourcesCitees(): SourceConnue[] {
-    return [...this.citees.values()];
+    const citees = [...this.citees.values()];
+    if (!this.internetConsulte || citees.some((s) => s.genre === "web")) return citees;
+    /*
+     * Une recherche a nourri la réponse, mais le modèle n'a posé aucune
+     * citation (essai réel du 11 novembre 2026 : il écrivait les adresses
+     * dans son texte). La personne doit quand même pouvoir ouvrir d'où cela
+     * vient : les pages dont l'adresse ou le site figure dans la réponse, ou,
+     * à défaut, les premières que la recherche a rendues.
+     */
+    const dit = this.emis.toLowerCase();
+    const nommees = this.pagesTrouvees.filter((p) => {
+      const hote = hoteDe(p.url ?? "");
+      return dit.includes((p.url ?? "").toLowerCase()) || (hote !== "" && dit.includes(hote));
+    });
+    const pages = nommees.length > 0 ? nommees : this.pagesTrouvees;
+    return [...citees, ...pages.slice(0, PAGES_MONTREES)];
   }
 
   retirees(): string[] {

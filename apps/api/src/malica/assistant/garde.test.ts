@@ -389,6 +389,20 @@ describe("une page d'internet citée porte les chiffres de son bloc, et de lui s
     assert.equal(g.toutesLesSources().length, 0);
   });
 
+  it("sans citation du modèle, les pages nommées dans la réponse s'affichent quand même", () => {
+    const g = new GardeDesChiffres("Le cours du dollar ?", REGLE);
+    g.consulterInternet([
+      { url: "https://www.bct.gov.tn/cours", title: "Cours de change" },
+      { url: "https://www.exemple.tn/autre", title: "Autre" },
+      { url: "javascript:alert(1)", title: "Refusée" },
+    ]);
+    g.jugerTout("Selon bct.gov.tn, le dollar vaut 2,9690 TND.");
+    assert.deepEqual(
+      g.sourcesCitees().map((s) => s.url),
+      ["https://www.bct.gov.tn/cours"],
+    );
+  });
+
   it("le bloc suivant, sans citation, ne profite pas de la page", () => {
     const g = new GardeDesChiffres("Le cours du dollar ?", REGLE);
     g.ouvrirBloc();

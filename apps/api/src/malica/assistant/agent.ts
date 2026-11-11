@@ -709,8 +709,8 @@ async function converser(
           } else if (ev.content_block?.type === "web_search_tool_result") {
             etape(RECHERCHE_WEB, "fin");
             // Des résultats : une liste. Une erreur du fournisseur est un objet, et ne compte pas.
-            if (Array.isArray((ev.content_block as { content?: unknown }).content))
-              garde.consulterInternet();
+            const pages = (ev.content_block as { content?: unknown }).content;
+            if (Array.isArray(pages)) garde.consulterInternet(pages);
           } else if (ev.content_block?.type === "tool_use") {
             const nom = String((ev.content_block as { name?: string }).name);
             if (preambule && !SUITES_D_UNE_REPONSE.has(nom)) {
