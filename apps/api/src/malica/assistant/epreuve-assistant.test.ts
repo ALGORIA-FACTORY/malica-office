@@ -1298,9 +1298,11 @@ describe("la file du cabinet reçoit ce que l'assistant retient", () => {
     );
     assert.equal(r.textes, REPONSE_DOSSIER);
     assert.equal(r.file.length, 0);
+    // Une réponse d'une seule phrase part dès que le modèle passe à sa
+    // conclusion : avant que celle-ci soit rendue, donc sans l'attendre.
     assert.ok(
-      r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:texte"),
-      `le texte a attendu : ${r.journal.join(" → ")}`,
+      r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:conclusion"),
+      `le texte a attendu la conclusion : ${r.journal.join(" → ")}`,
     );
     assert.deepEqual(r.fin.mesure.conclusion, {
       conseil: true,
@@ -1319,7 +1321,7 @@ describe("la file du cabinet reçoit ce que l'assistant retient", () => {
     );
     assert.equal(r.textes, REPONSE_DOSSIER);
     assert.equal(r.file.length, 0);
-    assert.ok(r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:texte"));
+    assert.ok(r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:conclusion"));
   });
 
   it("sans conclusion : la portée est incertaine, la réponse est retenue", async () => {
@@ -1715,5 +1717,83 @@ describe("le modèle qui répond sans conclure se voit demander sa conclusion", 
       r.journal.filter((j) => j.startsWith("claude:")),
       ["claude:réponse"],
     );
+  });
+});
+
+describe("l'annonce d'un outil ne part pas à l'écran", () => {
+  const QUESTION = {
+    tenantId: TENANT,
+    question: "Mes pièces ?",
+    locale: "fr" as const,
+    conversationId: null,
+    pieceIds: [],
+  };
+  const REPONSE = "Vous avez des pièces à traiter. Je vous les détaille si vous le souhaitez.";
+  const jouer = async (etapes: EtapeSimulee[]) => {
+    const { api, fils } = dossierFictif({ contexte: { cabinetId: null, appelantMembre: true } });
+    const { fin, evenements } = await rejouer(
+      QUESTION,
+      { claude: claudeSimule(etapes, []), conseil: conseilFictif, repli: sansRepli },
+      api,
+    );
+    const ecran = evenements.flatMap((e) => (e.type === "texte" ? [e.texte] : [])).join("");
+    return { fin, ecran, range: fils.get(fin.conversationId)?.at(-1) };
+  };
+
+  it("la phrase écrite avant une lecture tombe ; l'étape, elle, s'affiche", async () => {
+    const { api } = dossierFictif({ contexte: { cabinetId: null, appelantMembre: true } });
+    const { fin, evenements } = await rejouer(
+      QUESTION,
+      {
+        claude: claudeSimule(
+          [
+            {
+              texte: "This message comes from the interface, I will look at the documents first.",
+              outils: [{ nom: "pieces_chercher", entree: {} }],
+            },
+            { texte: REPONSE },
+          ],
+          [],
+        ),
+        conseil: conseilFictif,
+        repli: sansRepli,
+      },
+      api,
+    );
+    const ecran = evenements.flatMap((e) => (e.type === "texte" ? [e.texte] : [])).join("");
+    assert.equal(ecran.trim(), REPONSE);
+    assert.equal(fin.reponse.trim(), REPONSE);
+    assert.equal(fin.mesure.annoncesTues, 1);
+    assert.ok(
+      evenements.some((e) => e.type === "outil" && e.etat === "debut"),
+      "l'étape en cours n'est plus dite",
+    );
+  });
+
+  it("le fil ne garde pas l'annonce non plus", async () => {
+    const r = await jouer([
+      { texte: "Je regarde vos pièces.", outils: [{ nom: "pieces_chercher", entree: {} }] },
+      { texte: REPONSE },
+    ]);
+    assert.ok(!JSON.stringify(r.range).includes("Je regarde vos pièces"));
+  });
+
+  it("une réponse sans outil part entière, même en une seule phrase", async () => {
+    const r = await jouer([{ texte: "Bonjour, je suis là." }]);
+    assert.equal(r.ecran.trim(), "Bonjour, je suis là.");
+    assert.equal(r.fin.mesure.annoncesTues, 0);
+  });
+
+  it("deux phrases avant une lecture : ce n'est plus une annonce, elles restent", async () => {
+    const r = await jouer([
+      {
+        texte: "Votre question porte sur vos pièces. Je vérifie leur état.",
+        outils: [{ nom: "pieces_chercher", entree: {} }],
+      },
+      { texte: REPONSE },
+    ]);
+    assert.ok(r.ecran.includes("Votre question porte sur vos pièces."));
+    assert.ok(r.ecran.includes(REPONSE));
+    assert.equal(r.fin.mesure.annoncesTues, 0);
   });
 });

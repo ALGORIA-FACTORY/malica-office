@@ -81,7 +81,7 @@ import {
   lireConfigurationAssistant,
   type ConfigurationDeLAssistant,
 } from "./configuration.ts";
-import { chiffresDe, GardeDesChiffres, type SourceConnue } from "./garde.ts";
+import { chiffresDe, GardeDesChiffres, type CitationRecue, type SourceConnue } from "./garde.ts";
 import { FiltreDeMecanique } from "./sans-mecanique.ts";
 import {
   AFFICHER_VISUEL,
@@ -136,6 +136,8 @@ interface MesureDeLaReponse {
   annoncee: boolean;
   /** Les phrases parties avec la marque « non vérifié » (le corpus n'avait pas répondu). */
   nonVerifies: number;
+  /** Les annonces d'outil (« je regarde vos pièces ») que l'écran n'a pas reçues. */
+  annoncesTues: number;
 }
 
 /** La fin telle que le serveur la connaît : ce que l'écran reçoit, plus la mesure. */
@@ -175,6 +177,20 @@ const NOMS_DE_LA_MECANIQUE = [
   AFFICHER_VISUEL,
   CONCLURE_REPONSE,
 ].map((d) => d.name);
+
+/**
+ * Les outils qui SUIVENT une réponse au lieu de la précéder : un visuel posé
+ * sous le texte, un geste proposé, la conclusion. Le paragraphe écrit juste
+ * avant eux est la réponse ; avant tout autre outil, c'est une annonce.
+ */
+const ACTION_PROPOSER = "action_proposer";
+/** Une phrase finie, puis le début d'une autre — en français, en anglais, en arabe. */
+const SECONDE_PHRASE = /[.!?…؟:]["»”)\]]*\s+\S/u;
+const SUITES_D_UNE_REPONSE: ReadonlySet<string> = new Set([
+  AFFICHER_VISUEL.name,
+  CONCLURE_REPONSE.name,
+  ACTION_PROPOSER,
+]);
 
 /** Ce qu'on dit au modèle qui a répondu sans conclure. Aucun texte n'en sort à l'écran. */
 const DEMANDE_DE_CONCLUSION =
@@ -593,6 +609,8 @@ async function converser(
   // Le dernier tour du modèle, s'il a fini sans appeler d'outil : ce qu'on lui
   // remet quand il faut lui demander sa conclusion.
   let dernierTour: Parameters<typeof tourARenvoyer>[0] | null = null;
+  // Les annonces d'outil que l'écran n'a pas vues (mesure).
+  let annoncesTues = 0;
 
   for (let tour = 0; tour < reglage.iterations_max; tour += 1) {
     iterations = tour + 1;
@@ -615,6 +633,47 @@ async function converser(
     const filtre = new FiltreDeMecanique();
     const debutAppel = maintenant();
     garde.nouveauTour();
+    /*
+     * L'ANNONCE D'UN OUTIL NE PART PAS À L'ÉCRAN. Avant de lire, le modèle écrit
+     * souvent une phrase pour lui-même (« Je regarde d'abord ce que disent les
+     * textes », parfois en anglais, parfois « ce message vient de l'interface »
+     * — relevé à l'écran sur staging le 11 novembre 2026). L'écran dit déjà
+     * l'étape en cours, dans la langue de la personne. La première phrase d'un
+     * tour attend donc de savoir ce qui la suit : une lecture, et elle tombe ;
+     * une seconde phrase, un visuel, une conclusion ou la fin du tour, et elle
+     * part telle quelle, jugée par la garde comme le reste. Une réponse n'y
+     * perd que l'attente de sa première phrase.
+     */
+    let preambule: { texte: string; citations: CitationRecue[]; close: boolean } | null = {
+      texte: "",
+      citations: [],
+      close: false,
+    };
+    const liberer = (): void => {
+      if (!preambule) return;
+      const tenue = preambule;
+      preambule = null;
+      garde.ouvrirBloc();
+      for (const c of tenue.citations) garde.recevoirCitation(c);
+      envoyerTexte(garde.recevoirTexte(tenue.texte));
+      if (tenue.close) fermer();
+    };
+    const fermer = (): void => {
+      const j = garde.fermerBloc();
+      envoyerTexte(j.aEmettre);
+      // Le nombre seulement : la phrase retirée porte le chiffre sans source.
+      if (!enAttente && j.retirees.length > 0)
+        emettre({ type: "retire", nombre: j.retirees.length });
+    };
+    const texteDuModele = (t: string): void => {
+      if (!preambule) {
+        envoyerTexte(garde.recevoirTexte(t));
+        return;
+      }
+      preambule.texte += t;
+      // Une seconde phrase commence : ce n'était pas une annonce.
+      if (SECONDE_PHRASE.test(preambule.texte)) liberer();
+    };
     try {
       for await (const ev of client(requete)) {
         assembleur.recevoir(ev);
@@ -622,9 +681,16 @@ async function converser(
         if (ev.type === "content_block_start" && typeof i === "number") {
           if (ev.content_block?.type === "text") {
             blocsDeTexte.add(i);
-            garde.ouvrirBloc();
+            // Un second bloc de texte : le premier n'annonçait pas un outil.
+            if (preambule?.close) liberer();
+            if (!preambule) garde.ouvrirBloc();
           } else if (ev.content_block?.type === "tool_use") {
-            etape(String((ev.content_block as { name?: string }).name), "debut");
+            const nom = String((ev.content_block as { name?: string }).name);
+            if (preambule && !SUITES_D_UNE_REPONSE.has(nom)) {
+              if (preambule.texte.trim()) annoncesTues += 1;
+              preambule = null;
+            } else liberer();
+            etape(nom, "debut");
           }
         } else if (
           ev.type === "content_block_delta" &&
@@ -632,23 +698,23 @@ async function converser(
           blocsDeTexte.has(i)
         ) {
           if (ev.delta?.type === "text_delta") {
-            envoyerTexte(garde.recevoirTexte(filtre.passer(ev.delta.text ?? "")));
+            texteDuModele(filtre.passer(ev.delta.text ?? ""));
           } else if (ev.delta?.type === "citations_delta" && ev.delta.citation) {
-            garde.recevoirCitation(ev.delta.citation);
+            if (preambule) preambule.citations.push(ev.delta.citation);
+            else garde.recevoirCitation(ev.delta.citation);
           }
         } else if (
           ev.type === "content_block_stop" &&
           typeof i === "number" &&
           blocsDeTexte.has(i)
         ) {
-          envoyerTexte(garde.recevoirTexte(filtre.vider()));
-          const j = garde.fermerBloc();
-          envoyerTexte(j.aEmettre);
-          // Le nombre seulement : la phrase retirée porte le chiffre sans source.
-          if (!enAttente && j.retirees.length > 0)
-            emettre({ type: "retire", nombre: j.retirees.length });
+          texteDuModele(filtre.vider());
+          if (preambule) preambule.close = true;
+          else fermer();
         }
       }
+      // Le tour finit sans lecture : ce qui attendait était la réponse.
+      liberer();
     } catch (e) {
       const m = assembleur.message();
       await journaliser(api, {
@@ -1040,6 +1106,7 @@ async function converser(
       retenue,
       annoncee: annonce !== null,
       nonVerifies: garde.marquees().length,
+      annoncesTues,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
@@ -1140,6 +1207,7 @@ async function repondreParLeRepli(
       retenue,
       annoncee: false,
       nonVerifies: 0,
+      annoncesTues: 0,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
@@ -1188,6 +1256,7 @@ async function sArreter(
       retenue: false,
       annoncee: false,
       nonVerifies: 0,
+      annoncesTues: 0,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });

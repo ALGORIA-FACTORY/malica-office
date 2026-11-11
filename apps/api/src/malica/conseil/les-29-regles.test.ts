@@ -227,7 +227,8 @@ describe("LES CHIFFRES", () => {
     assert.deepEqual(memoire.premierArgument("corpus.parametresPour"), {
       jurisdiction: "TN",
       articles: [{ corpus: "CTVA", numero: "7" }],
-      mots: ["taux", "ventes"],
+      // « TVA », écrit en capitales, est un sigle : il désigne le paramètre par son code.
+      mots: ["taux", "ventes", "tva"],
       jour: null,
     });
     assert.deepEqual(codes(r), []);

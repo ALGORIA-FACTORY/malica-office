@@ -44,7 +44,7 @@ import {
   type UsageDeLAppel,
 } from "./cite.ts";
 import type { ClientClaude } from "./client-claude.ts";
-import { parametresPour, type ParametreFiscal } from "./corpus.ts";
+import { numerosEcrits, parametresPour, type ParametreFiscal } from "./corpus.ts";
 
 /** Le nom de l'organe au journal des agents. */
 export const AGENT_CONSEIL_CITE = "malica.conseil.cite";
@@ -156,6 +156,14 @@ export function mentionDeVigueur(
 
 const USAGE_NUL: UsageDeLAppel = { entree: 0, sortie: 0, cacheLu: 0, cacheEcrit: 0 };
 
+/** Un texte sans ordre de lecture en base se lit après tous les autres. */
+export function dansLOrdreDeLecture<P extends { ordreDeLecture?: number | null }>(
+  passages: readonly P[],
+): P[] {
+  const ordre = (p: P) => p.ordreDeLecture ?? Number.POSITIVE_INFINITY;
+  return [...passages].sort((a, b) => ordre(a) - ordre(b));
+}
+
 export async function conseilCite(
   api: AppelApi,
   input: { tenantId: string; question: string; locale: string; jour?: string | null | undefined },
@@ -194,6 +202,7 @@ export async function conseilCite(
       nb: reglage.passages_max,
       distanceMax: reglage.distance_max,
       distanceMaxMots: reglage.distance_max_mots,
+      numeros: numerosEcrits(question),
     },
   ]);
   /*
@@ -204,7 +213,10 @@ export async function conseilCite(
    * à elle seule, quel était son état. Mieux vaut le dire que transposer.
    */
   const lacunes = trouves.filter((p) => p.lacune);
-  const passages = trouves.filter((p) => !p.lacune);
+  // Remis au modèle dans l'ordre de lecture arrêté en base : le code, puis la
+  // loi, puis la loi de finances, puis la doctrine. À ordre égal, le classement
+  // de la recherche tient (le tri est stable).
+  const passages = dansLOrdreDeLecture(trouves.filter((p) => !p.lacune));
   const lacuneEnTete = trouves[0]?.lacune === true ? trouves[0] : null;
 
   let parametres: ParametreFiscal[] = [];
