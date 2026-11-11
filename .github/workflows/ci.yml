@@ -244,8 +244,20 @@ jobs:
             node "$f" http://localhost:8080
           done
 
+      # Le navigateur vient du serveur de Playwright ; ses bibliothèques système,
+      # des miroirs d'Ubuntu. Le 11 novembre 2026, les runners n'ont plus résolu
+      # ces miroirs pendant des heures (« Temporary failure resolving
+      # security.ubuntu.com ») : `--with-deps` tombait avant tout test, et le
+      # staging resta en panne faute de pouvoir fusionner son correctif. L'image
+      # du runner porte déjà ces bibliothèques ; leur installation est donc
+      # tentée, et son échec dit, sans arrêter le job. Si une bibliothèque manque
+      # vraiment, le parcours ci-dessous échoue au lancement du navigateur : vert
+      # veut toujours dire que les épreuves ont tourné.
       - name: Installer Chromium
-        run: npx playwright install --with-deps chromium
+        run: |
+          npx playwright install chromium
+          npx playwright install-deps chromium \
+            || echo "::warning::Bibliothèques système de Chromium non installées (miroirs Ubuntu injoignables) : le parcours s'appuie sur celles de l'image."
 
       # Le site est déjà là : Playwright ne relance rien (reuseExistingServer).
       - name: Parcours dans un navigateur
