@@ -471,6 +471,60 @@ describe("le geste du conseil cité", () => {
     assert.ok(Math.abs((r.coutUsd ?? 0) - (haiku + sonnet)) < 1e-6);
   });
 
+  it("un refus devant des textes est relu une fois par le modèle difficile", async () => {
+    const refuser = (model: string) => ({
+      reponse: {
+        model,
+        stop_reason: "end_turn",
+        content: [
+          { type: "text", text: "Je ne trouve pas cela dans les textes que j'ai sous les yeux." },
+        ],
+        usage: { input_tokens: 1000, output_tokens: 20 },
+      },
+      latencyMs: 300,
+    });
+    // Le modèle courant refuse, le difficile trouve : la réponse est la sienne.
+    const { api } = baseSimulee(passageDuCas(cas));
+    const fidele = lecteurFidele();
+    const modeles: string[] = [];
+    const r = await conseilCite(
+      api,
+      { tenantId: TENANT, question: cas.question, locale: "fr", jour: cas.jour },
+      {
+        client: {
+          async envoyer(requete) {
+            modeles.push(requete.model);
+            return modeles.length === 1 ? refuser(requete.model) : fidele.envoyer(requete);
+          },
+        },
+        empreinte: async () => [0.1],
+      },
+    );
+    assert.deepEqual(modeles, ["claude-haiku-5-5", "claude-sonnet-5-5"]);
+    assert.equal(r.refus, false);
+    assert.equal(r.escalade, true);
+    assert.equal(r.motifDifficulte, "refus_relu");
+
+    // Les deux refusent : le refus tient, et il n'y a pas de troisième appel.
+    const second = baseSimulee(passageDuCas(cas));
+    const appels: string[] = [];
+    const r2 = await conseilCite(
+      second.api,
+      { tenantId: TENANT, question: cas.question, locale: "fr", jour: cas.jour },
+      {
+        client: {
+          async envoyer(requete) {
+            appels.push(requete.model);
+            return refuser(requete.model);
+          },
+        },
+        empreinte: async () => [0.1],
+      },
+    );
+    assert.deepEqual(appels, ["claude-haiku-5-5", "claude-sonnet-5-5"]);
+    assert.equal(r2.refus, true);
+  });
+
   it("aucune mention de vigueur sans article cité", () => {
     assert.equal(mentionDeVigueur("2026-06-30", [], "fr"), null);
   });

@@ -331,6 +331,15 @@ describe("le chiffre sans source part marqué quand le corpus s'est tu (M-9)", (
     assert.deepEqual(g.retirees(), []);
   });
 
+  it("la marque que le modèle a écrite lui-même ne se dit pas deux fois", () => {
+    const g = new GardeDesChiffres("Quel est le taux ?");
+    g.marquerSansSource("_(non vérifié)_", UNITES);
+    const j = g.jugerTout("Le taux y est de **18 %** (non vérifié). Il se déclare chaque mois.");
+    assert.equal(j.aEmettre, "Le taux y est de **18 %** (non vérifié). Il se déclare chaque mois.");
+    // Elle compte quand même : c'est elle qui envoie la réponse à la comptabilité.
+    assert.equal(g.marquees().length, 1);
+  });
+
   it("un chiffre porté par une source ne reçoit pas la marque", () => {
     const g = new GardeDesChiffres("Quel est le taux ?");
     g.ajouterSource({

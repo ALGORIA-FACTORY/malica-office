@@ -1164,6 +1164,7 @@ describe("les gardes de la boucle", () => {
 /* ------------------------------------------------------------ la file du cabinet -- */
 
 const RELECTURE = message("fr", "pme.conseil.relecture");
+const SANS_COMPTABILITE = message("fr", "pme.conseil.aConfirmerSansComptabilite");
 const LOYER = "Ma société doit-elle appliquer la retenue à la source sur le loyer de notre local ?";
 const REPONSE_DOSSIER = "Oui, votre société doit retenir à la source sur ce loyer.";
 const CONCLUSION_DOSSIER = {
@@ -1296,7 +1297,9 @@ describe("la file du cabinet reçoit ce que l'assistant retient", () => {
       REPONSE_DOSSIER,
       CONCLUSION_DOSSIER,
     );
-    assert.equal(r.textes, REPONSE_DOSSIER);
+    // La comptabilité de la société reste l'expert : Malica dit de faire
+    // confirmer, sans annoncer un envoi qu'elle ne peut pas faire.
+    assert.equal(r.textes, `${REPONSE_DOSSIER}\n\n${SANS_COMPTABILITE}`);
     assert.equal(r.file.length, 0);
     // Une réponse d'une seule phrase part dès que le modèle passe à sa
     // conclusion : avant que celle-ci soit rendue, donc sans l'attendre.
@@ -1424,15 +1427,26 @@ describe("en mode « annoncer », la réponse à relire s'affiche et part au cab
     assert.equal(r.file.length, 0);
   });
 
-  it("sans cabinet : la réponse part seule, sans annonce d'un envoi impossible", async () => {
+  it("sans cabinet : la réponse dit de la faire confirmer, sans annonce d'un envoi impossible", async () => {
     const r = await poserAuCabinet(
       { cabinetId: null, appelantMembre: true },
       REPONSE_DOSSIER,
       CONCLUSION_DOSSIER,
       { relecture: "annoncer" },
     );
-    assert.equal(r.textes, REPONSE_DOSSIER);
+    assert.equal(r.textes, `${REPONSE_DOSSIER}\n\n${SANS_COMPTABILITE}`);
+    assert.ok(!r.textes.includes(A_CONFIRMER), "un envoi impossible a été annoncé");
     assert.equal(r.file.length, 0);
+  });
+
+  it("sans cabinet, une règle générale ne s'annonce pas", async () => {
+    const r = await poserAuCabinet(
+      { cabinetId: null, appelantMembre: true },
+      "Le taux se lit dans le code.",
+      { conseil: true, portee: "generale", certitude: 1, doute: null, theme: "Taux" },
+      { relecture: "annoncer" },
+    );
+    assert.equal(r.textes, "Le taux se lit dans le code.");
   });
 
   it("la file refuse : la réponse reste, et Malica n'annonce pas un envoi qui n'a pas eu lieu", async () => {
@@ -1784,10 +1798,22 @@ describe("l'annonce d'un outil ne part pas à l'écran", () => {
     assert.equal(r.fin.mesure.annoncesTues, 0);
   });
 
-  it("deux phrases avant une lecture : ce n'est plus une annonce, elles restent", async () => {
+  it("deux phrases d'annonce avant la première lecture tombent ensemble", async () => {
     const r = await jouer([
       {
-        texte: "Votre question porte sur vos pièces. Je vérifie leur état.",
+        texte: "Cette question porte sur vos pièces : je les consulte. Je vérifie leur état.",
+        outils: [{ nom: "pieces_chercher", entree: {} }],
+      },
+      { texte: REPONSE },
+    ]);
+    assert.equal(r.ecran.trim(), REPONSE);
+    assert.equal(r.fin.mesure.annoncesTues, 1);
+  });
+
+  it("deux paragraphes avant une lecture : ce n'est plus une annonce, ils restent", async () => {
+    const r = await jouer([
+      {
+        texte: "Votre question porte sur vos pièces.\n\nJe vérifie leur état.",
         outils: [{ nom: "pieces_chercher", entree: {} }],
       },
       { texte: REPONSE },
@@ -1795,5 +1821,20 @@ describe("l'annonce d'un outil ne part pas à l'écran", () => {
     assert.ok(r.ecran.includes("Votre question porte sur vos pièces."));
     assert.ok(r.ecran.includes(REPONSE));
     assert.equal(r.fin.mesure.annoncesTues, 0);
+  });
+
+  it("après une première lecture, ce que Malica écrit avant la suivante reste", async () => {
+    const r = await jouer([
+      { texte: "Je regarde.", outils: [{ nom: "pieces_chercher", entree: {} }] },
+      {
+        texte: "Vos pièces sont à jour.",
+        outils: [{ nom: "pieces_chercher", entree: {} }],
+      },
+      { texte: REPONSE },
+    ]);
+    assert.ok(r.ecran.includes("Vos pièces sont à jour."));
+    assert.ok(r.ecran.includes(REPONSE));
+    assert.ok(!r.ecran.includes("Je regarde."));
+    assert.equal(r.fin.mesure.annoncesTues, 1);
   });
 });

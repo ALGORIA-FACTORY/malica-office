@@ -184,8 +184,8 @@ const NOMS_DE_LA_MECANIQUE = [
  * avant eux est la réponse ; avant tout autre outil, c'est une annonce.
  */
 const ACTION_PROPOSER = "action_proposer";
-/** Une phrase finie, puis le début d'une autre — en français, en anglais, en arabe. */
-const SECONDE_PHRASE = /[.!?…؟:]["»”)\]]*\s+\S/u;
+/** Un paragraphe fini, puis le début d'un autre. */
+const SECOND_PARAGRAPHE = /\S[ \t]*\n\s*\n\s*\S/;
 const SUITES_D_UNE_REPONSE: ReadonlySet<string> = new Set([
   AFFICHER_VISUEL.name,
   CONCLURE_REPONSE.name,
@@ -638,17 +638,17 @@ async function converser(
      * souvent une phrase pour lui-même (« Je regarde d'abord ce que disent les
      * textes », parfois en anglais, parfois « ce message vient de l'interface »
      * — relevé à l'écran sur staging le 11 novembre 2026). L'écran dit déjà
-     * l'étape en cours, dans la langue de la personne. La première phrase d'un
-     * tour attend donc de savoir ce qui la suit : une lecture, et elle tombe ;
-     * une seconde phrase, un visuel, une conclusion ou la fin du tour, et elle
-     * part telle quelle, jugée par la garde comme le reste. Une réponse n'y
-     * perd que l'attente de sa première phrase.
+     * l'étape en cours, dans la langue de la personne. Tant qu'aucun outil
+     * n'a encore rien rendu, le premier paragraphe d'un tour attend donc de
+     * savoir ce qui le suit : une lecture, et il tombe ; un second paragraphe,
+     * un visuel, une conclusion ou la fin du tour, et il part tel quel, jugé
+     * par la garde comme le reste. Une réponse n'y perd que l'attente de son
+     * premier paragraphe. Dès qu'un outil a répondu, plus rien n'attend : ce
+     * que Malica écrit alors peut être un début de réponse, et le perdre
+     * serait pire que de laisser passer une annonce.
      */
-    let preambule: { texte: string; citations: CitationRecue[]; close: boolean } | null = {
-      texte: "",
-      citations: [],
-      close: false,
-    };
+    let preambule: { texte: string; citations: CitationRecue[]; close: boolean } | null =
+      outilsAppeles.length === 0 ? { texte: "", citations: [], close: false } : null;
     const liberer = (): void => {
       if (!preambule) return;
       const tenue = preambule;
@@ -671,8 +671,8 @@ async function converser(
         return;
       }
       preambule.texte += t;
-      // Une seconde phrase commence : ce n'était pas une annonce.
-      if (SECONDE_PHRASE.test(preambule.texte)) liberer();
+      // Un second paragraphe commence : ce n'était pas une annonce.
+      if (SECOND_PARAGRAPHE.test(preambule.texte)) liberer();
     };
     try {
       for await (const ev of client(requete)) {
@@ -1026,6 +1026,25 @@ async function converser(
       () => message(q.locale, "pme.conseil.aConfirmer"),
       () => message(q.locale, "pme.conseil.aConfirmerSansEnvoi"),
     );
+  } else if (
+    /*
+     * SANS COMPTABILITÉ RELIÉE AU DOSSIER, la comptabilité de la société reste
+     * l'expert (décision du dirigeant, 11 novembre 2026). Malica n'a personne à
+     * qui envoyer sa réponse dans l'application : elle dit de la faire
+     * confirmer, et pourquoi elle ne l'envoie pas. Seulement pour un avis que
+     * le modèle a lui-même conclu engageant : sans conclusion, une explication
+     * générale ne s'annonce pas ; et un chiffre non vérifié porte déjà sa note,
+     * qui dit la même chose.
+     */
+    dite !== "" &&
+    !nonVerifie &&
+    contexte?.appelantMembre === true &&
+    contexte.cabinetId === null &&
+    conclusion !== null &&
+    conclusion.conseil &&
+    conclusion.portee !== "generale"
+  ) {
+    annonce = message(q.locale, "pme.conseil.aConfirmerSansComptabilite");
   }
   let reponse: string;
   if (retenue) {

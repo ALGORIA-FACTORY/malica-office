@@ -1250,9 +1250,11 @@ export const en: Dict = {
   "pme.conseil.douteNonVerifie":
     "Answer given with no text found in the corpus: the figures marked “unverified” come from the model's memory.",
   "pme.conseil.aConfirmer":
-    "To be confirmed by your accountant: I am sending them this answer, and they will confirm, correct or dismiss it.",
+    "To be confirmed by your accounting team: I am sending them this answer, and they will confirm, correct or dismiss it.",
+  "pme.conseil.aConfirmerSansComptabilite":
+    "Have your accounting team confirm this before you apply it: no accounting team is connected to this file in Malica, so I cannot send it to them.",
   "pme.conseil.aConfirmerSansEnvoi":
-    "Have your accountant confirm this: I could not pass this answer on to them.",
+    "Have your accounting team confirm this: I could not pass this answer on to them.",
   "pme.conseil.sansCabinet":
     "No accountant follows this file yet: this answer has not been reviewed by a chartered accountant.",
   "pme.conseil.relu": "Reviewed and validated by your accountant.",
@@ -1271,7 +1273,7 @@ export const en: Dict = {
   "pme.assistant.indisponible": "I couldn't answer right now. Please try again in a moment.",
   "pme.assistant.nonVerifie": "_(unverified)_",
   "pme.assistant.nonVerifieNote":
-    "I did not find this point in the legal texts: what is marked “unverified” comes from my general knowledge. Do not apply it before a chartered accountant has confirmed it.",
+    "I did not find this point in the legal texts: what is marked “unverified” comes from my general knowledge. Do not apply it before your accounting team has confirmed it.",
   "pme.assistant.vide": "I found nothing reliable to answer. Could you clarify your question?",
   "pme.assistant.outil.pieces_chercher": "Looking at your documents…",
   "pme.assistant.outil.piece_ouvrir": "Opening the document…",

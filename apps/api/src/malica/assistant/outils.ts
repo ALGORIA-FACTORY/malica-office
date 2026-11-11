@@ -755,7 +755,7 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
         {
           cle: `malica:tva:${tva.period}`,
           genre: "tva",
-          titre: `TVA de ${tva.period}`,
+          titre: `TVA de ${moisEnClair(tva.period, ctx.locale).toLocaleLowerCase(ctx.locale)}`,
           objetId: null,
           texte:
             `TVA du mois ${tva.period} : aucune pièce n'entre dans le calcul ` +
@@ -766,20 +766,23 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
       ],
     };
   }
+  // Les montants s'écrivent comme dans le bloc affiché (séparateurs, décimales de la
+  // devise) : la réponse et le visuel portent alors le même chiffre, écrit pareil.
+  const ecrit = (v: string) => `${montant(v, params.moneyDecimals, ctx.locale)} ${dev}`;
   const texte = [
     `TVA du mois ${tva.period}, calculée par le moteur de TVA de Malica, en ${dev}.`,
     `Périmètre : ${aUnCabinet ? "les pièces transmises au cabinet" : "les pièces comptabilisées"} ce mois-là.`,
     `Pièces prises en compte : ${comptees}.`,
-    `TVA collectée : ${tva.totals.collectee} ${dev}.`,
-    `TVA déductible : ${tva.totals.deductible} ${dev}.`,
-    `Solde : ${tva.totals.solde} ${dev} (positif : TVA à payer ; négatif : crédit de TVA).`,
+    `TVA collectée : ${ecrit(tva.totals.collectee)}.`,
+    `TVA déductible : ${ecrit(tva.totals.deductible)}.`,
+    `Solde : ${ecrit(tva.totals.solde)} (positif : TVA à payer ; négatif : crédit de TVA).`,
     ...tva.collectee.map(
       (b) =>
-        `Collectée au taux ${enPourcentage(b.rate)} : base ${b.base} ${dev}, TVA ${b.vat} ${dev}.`,
+        `Collectée au taux ${enPourcentage(b.rate)} : base ${ecrit(b.base)}, TVA ${ecrit(b.vat)}.`,
     ),
     ...tva.deductible.map(
       (b) =>
-        `Déductible au taux ${enPourcentage(b.rate)} : base ${b.base} ${dev}, TVA ${b.vat} ${dev}.`,
+        `Déductible au taux ${enPourcentage(b.rate)} : base ${ecrit(b.base)}, TVA ${ecrit(b.vat)}.`,
     ),
     ...(tva.refused.length > 0
       ? [
@@ -796,7 +799,7 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
       {
         cle: `malica:tva:${tva.period}`,
         genre: "tva",
-        titre: `TVA de ${tva.period}`,
+        titre: `TVA de ${moisEnClair(tva.period, ctx.locale).toLocaleLowerCase(ctx.locale)}`,
         objetId: null,
         texte,
       },
@@ -1424,7 +1427,7 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
   const synthese: SourceConnue = {
     cle: `malica:conseil:${plat(e.data.question).slice(0, 60)}@${r.enVigueurAu}`,
     genre: "article",
-    titre: `Conseil cité — droit en vigueur au ${r.enVigueurAu}`,
+    titre: `Conseil cité — droit en vigueur au ${jourEnClair(r.enVigueurAu, ctx.locale)}`,
     objetId: null,
     article: null,
     texte: r.affirmations.map((a) => a.texte.trim()).join("\n\n"),

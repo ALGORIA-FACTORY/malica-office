@@ -409,7 +409,11 @@ export class GardeDesChiffres {
         for (const s of porteuses.values()) this.citees.set(s.cle, s);
       } else if (this.marque && this.peutPartirMarquee(phrase)) {
         const corps = phrase.trimEnd();
-        aEmettre += `${corps} ${this.marque}${phrase.slice(corps.length)}`;
+        // Le modèle l'écrit parfois lui-même, malgré la consigne (« 18 % (non
+        // vérifié) », relevé le 11 novembre 2026) : la marque ne se dit qu'une fois.
+        const motsDeLaMarque = sansAccent(this.marque.replace(/[_*()]/g, "").trim());
+        const dejaDite = motsDeLaMarque !== "" && sansAccent(corps).includes(motsDeLaMarque);
+        aEmettre += dejaDite ? phrase : `${corps} ${this.marque}${phrase.slice(corps.length)}`;
         this.marqueesDuTour.push(corps.replace(/\s+/g, " ").trim());
       } else {
         retirees.push(phrase.replace(/\s+/g, " ").trim());

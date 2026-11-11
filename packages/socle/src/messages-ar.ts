@@ -537,7 +537,7 @@ export const ar: Dict = {
   "pme.photo.avis.blurry":
     "الصورة ضبابية: قد تكون القراءة ناقصة. يمكنك إعادة التصوير مع تثبيت الجهاز.",
   "pme.type.passer": "لا أعرف",
-  "pme.type.corrigeable": "تتحقّق منه مليكة عند القراءة. يمكنك تغييره لاحقًا.",
+  "pme.type.corrigeable": "تتحقّق منه ماليكا عند القراءة. يمكنك تغييره لاحقًا.",
   "pme.piece.type.modifier": "تغيير النوع",
   "pme.piece.nom.modifier": "تعديل اسم المُصدِر",
   "pme.piece.nom.label": "اسم المُصدِر",
@@ -1238,9 +1238,11 @@ export const ar: Dict = {
   "pme.conseil.douteNonVerifie":
     "إجابة قُدّمت دون نص في المدوّنة: الأرقام المعلَّمة «غير مؤكد» مصدرها ذاكرة النموذج.",
   "pme.conseil.aConfirmer":
-    "في انتظار تأكيد محاسبكم: أرسل إليه هذه الإجابة ليؤكدها أو يصححها أو يستبعدها.",
+    "في انتظار تأكيد محاسبتكم: أرسل إليها هذه الإجابة لتؤكدها أو تصححها أو تستبعدها.",
+  "pme.conseil.aConfirmerSansComptabilite":
+    "يُستحسن أن تؤكدها محاسبتكم قبل تطبيقها: لا توجد محاسبة مرتبطة بهذا الملف في ماليكا، لذلك لا أستطيع إرسالها إليها.",
   "pme.conseil.aConfirmerSansEnvoi":
-    "يُستحسن أن يؤكدها محاسبكم: لم أتمكن من إرسال هذه الإجابة إليه.",
+    "يُستحسن أن تؤكدها محاسبتكم: لم أتمكن من إرسال هذه الإجابة إليها.",
   "pme.conseil.sansCabinet": "لا محاسب يتابع هذا الملف بعد: هذه الإجابة لم يراجعها خبير محاسب.",
   "pme.conseil.relu": "راجعها محاسبكم وصادق عليها.",
   "pme.conseil.sources": "المصادر: {liste}",
@@ -1253,16 +1255,16 @@ export const ar: Dict = {
   "pme.assistant.suite.ecritures": "كيف سُجّلت وثائقي محاسبيًا؟",
   "pme.assistant.suite.textes": "على أيّ نصّ قانوني يستند هذا؟",
   "pme.assistant.arret":
-    "لا أستطيع الإجابة الآن: بلغت ميزانية المساعد لهذا الشهر حدّها. تم إعلام فريق مليكة، ووثائقك وملفك متاحة دائمًا.",
+    "لا أستطيع الإجابة الآن: بلغت ميزانية المساعد لهذا الشهر حدّها. تم إعلام فريق ماليكا، ووثائقك وملفك متاحة دائمًا.",
   "pme.assistant.interrompue": "انقطعت إجابتي. أعد طرح السؤال إن بدت لك ناقصة.",
   "pme.assistant.indisponible": "لم أتمكّن من الإجابة الآن. أعد المحاولة بعد قليل.",
   "pme.assistant.nonVerifie": "_(غير مؤكد)_",
   "pme.assistant.nonVerifieNote":
-    "لم أجد هذه المسألة في النصوص: ما ورد بعلامة «غير مؤكد» مصدره معارفي العامة. لا تطبقوه قبل أن يؤكده خبير محاسب.",
+    "لم أجد هذه المسألة في النصوص: ما ورد بعلامة «غير مؤكد» مصدره معارفي العامة. لا تطبقوه قبل أن تؤكده محاسبتكم.",
   "pme.assistant.vide": "لم أجد إجابة موثوقة. هل يمكنك توضيح سؤالك؟",
   "pme.assistant.outil.pieces_chercher": "أطّلع على وثائقك…",
   "pme.assistant.outil.piece_ouvrir": "أفتح الوثيقة…",
-  "pme.assistant.outil.tva_du_mois": "أحسب الأداء على القيمة المضافة للشهر بمحرّك مليكة…",
+  "pme.assistant.outil.tva_du_mois": "أحسب الأداء على القيمة المضافة للشهر بمحرّك ماليكا…",
   "pme.assistant.outil.echeances_fiscales": "أطّلع على رزنامتك الجبائية…",
   "pme.assistant.outil.ecritures_proposees": "أطّلع على القيود…",
   "pme.assistant.outil.tiers_chercher": "أبحث في مزوّديك وحرفائك…",
@@ -1271,7 +1273,7 @@ export const ar: Dict = {
   "pme.assistant.outil.action_proposer": "أُعِدّ مقترحًا…",
   "pme.assistant.proposition.envoyer_au_cabinet": "إرسال إلى المكتب",
   "pme.assistant.proposition.valider_ecriture": "المصادقة على القيد",
-  "pme.assistant.proposition.titre": "تقترح مليكة — لا شيء يُنفَّذ دونك",
+  "pme.assistant.proposition.titre": "تقترح ماليكا — لا شيء يُنفَّذ دونك",
   "pme.assistant.proposition.confirmer": "تأكيد",
   "pme.assistant.proposition.ignorer": "تجاهل",
   "pme.assistant.proposition.faite": "تمّ.",
@@ -1280,7 +1282,7 @@ export const ar: Dict = {
   "pme.assistant.sources": "المصادر",
   "pme.assistant.joindre": "إرفاق صورة أو ملف PDF",
   "pme.assistant.jointe.envoi": "إيداع الوثيقة…",
-  "pme.assistant.jointe.lecture": "مليكة تقرأ الوثيقة…",
+  "pme.assistant.jointe.lecture": "ماليكا تقرأ الوثيقة…",
   "pme.assistant.jointe.prete": "وثيقة مرفقة",
   "pme.assistant.jointe.retirer": "إزالة المرفق",
   "pme.assistant.repli": "إجابة من النموذج الاحتياطي، دون استشهادات.",
@@ -1336,16 +1338,16 @@ export const ar: Dict = {
   "pme.bloc.ech.retard": "متأخر",
   "pme.bloc.ech.faite": "منجز",
   "pme.bloc.ech.source": "رزنامة الملف",
-  "tour.menu.assistant": "التحدّث إلى مليكة",
+  "tour.menu.assistant": "التحدّث إلى ماليكا",
   "tour.assistant.consigne": "تعليمات المساعد",
   "tour.assistant.consigne.aide":
-    "تعليمات النظام لـ«التحدّث إلى مليكة»: الدور والأسلوب وقواعد الأمان والشكل. لا تتضمّن أيّ رقم ترتيبي. النشر ينشئ صيغة جديدة وتبقى السابقة في السجل.",
+    "تعليمات النظام لـ«التحدّث إلى ماليكا»: الدور والأسلوب وقواعد الأمان والشكل. لا تتضمّن أيّ رقم ترتيبي. النشر ينشئ صيغة جديدة وتبقى السابقة في السجل.",
   "tour.assistant.consigne.enVigueur": "سارية منذ {date}؛ عدد الصيغ في السجل: {versions}.",
   "tour.assistant.consigne.borne": "مئتا حرف على الأقل.",
   "tour.assistant.publier": "نشر هذه الصيغة",
   "tour.assistant.plafond": "سقف إنفاق المساعد",
   "tour.assistant.plafond.aide":
-    "ما يمكن أن ينفقه «التحدث إلى مليكة» على Claude. بعد تجاوزه، يجيب المساعد بالنموذج الاحتياطي (DeepSeek)، ثم يتوقف إذا نفد هو أيضًا. قراءة الوثائق لا تتأثر: تحتفظ ببقية ميزانية Claude.",
+    "ما يمكن أن ينفقه «التحدث إلى ماليكا» على Claude. بعد تجاوزه، يجيب المساعد بالنموذج الاحتياطي (DeepSeek)، ثم يتوقف إذا نفد هو أيضًا. قراءة الوثائق لا تتأثر: تحتفظ ببقية ميزانية Claude.",
   "tour.assistant.plafond.etatMois":
     "هذا الشهر: أُنفق {depense} $ من {plafond} $ — تقرّر في {date}.",
   "tour.assistant.plafond.etatJour": "اليوم: أُنفق {depense} $ من {plafond} $ — تقرّر في {date}.",
@@ -2179,7 +2181,7 @@ export const ar: Dict = {
   "refus.organisation.pas_une_societe": "لا يُسند إلى مسيّر إلا شركة.",
   "refus.organisation.deja_dirigee": "لهذه الشركة أعضاء بالفعل: مسيّروها هم من يدعون.",
   "refus.archivage.motif_requis": "اذكر سبب أرشفة هذه المؤسسة.",
-  "refus.organisation.emettrice": "هذه المؤسسة تُصدر فواتير مليكة: عيّن مُصدِرًا آخر قبل أرشفتها.",
+  "refus.organisation.emettrice": "هذه المؤسسة تُصدر فواتير ماليكا: عيّن مُصدِرًا آخر قبل أرشفتها.",
   "refus.introuvable.invitation": "الدعوة غير موجودة، أو ليس لك حق الوصول إليها.",
   "refus.introuvable.article": "الصنف غير موجود، أو ليس لك حق الوصول إليه.",
   "refus.introuvable.exemple": "المثال غير موجود، أو ليس لك حق الوصول إليه.",
@@ -2253,7 +2255,7 @@ export const ar: Dict = {
   "refus.ecriture.reglement_hors_paiement":
     "قيد التسوية هذا لا يطابق دفعته: اليومية أو حساب الخزينة أو الطرف أو المبلغ.",
   "refus.ecriture.deja_inscrite": "تحمل هذه الوثيقة قيدًا مسجَّلًا: قيد ثانٍ سيحتسبها مرتين.",
-  "cab.ecriture.malica_propose": "مليكة تقترح",
+  "cab.ecriture.malica_propose": "ماليكا تقترح",
   "cab.ecriture.inscrite": "قيد مسجَّل",
   "cab.ecriture.preuves": "عمليات التحقق الناجحة",
   "cab.ecriture.preuve.sans_doublon": "لا يوجد تكرار",
@@ -2794,7 +2796,7 @@ export const ar: Dict = {
   "cab.ecriture.ligne.champ": "{champ}، السطر {n}",
   "cab.ecriture.ligne.taxe": "الأداء",
   "cab.ecriture.illisible": "الحريف ما زال يرى القراءة",
-  "cab.ecriture.aRevoir": "تشير مليكة إلى نقطة تجب مراجعتها قبل المصادقة",
+  "cab.ecriture.aRevoir": "تشير ماليكا إلى نقطة تجب مراجعتها قبل المصادقة",
   "cab.ecriture.illisible.aide":
     "هذا القيد لا يُقرأ كفاتورة: طرف مقابل في جهة الوثيقة، أو المبلغ دون أداء مع الأداء والمعاليم لا يساوي مجموع الأطراف المقابلة. لا يُنشر أي مبلغ للحريف ما دام لا يُقرأ.",
   "cab.ecriture.reserve.nature_de_charge": "طبيعة الشراء يجب تحديدها",
@@ -3869,7 +3871,7 @@ export const ar: Dict = {
   "tour.abonnement": "الاشتراك",
   "tour.ia": "سقف إنفاق النماذج",
   "tour.ia.aide":
-    "ما يمكن لمؤسسة أن تنفقه شهريًا على استدعاء النماذج. بعده، تنتظر استشارة مليكة الشهر الموالي؛ ويمكن لسقف المؤسسة أن يخفّضه ولا يرفعه.",
+    "ما يمكن لمؤسسة أن تنفقه شهريًا على استدعاء النماذج. بعده، تنتظر استشارة ماليكا الشهر الموالي؛ ويمكن لسقف المؤسسة أن يخفّضه ولا يرفعه.",
   "tour.ia.enVigueur": "الساري: {plafond} $ لكل مؤسسة شهريًا، منذ {date}.",
   "tour.ia.plafond": "السقف الشهري (دولار)",
   "tour.ia.plafond.borne": "عدد موجب، بأربعة أرقام عشرية على الأكثر.",
@@ -4084,7 +4086,7 @@ export const ar: Dict = {
   "pme.reglages.recharges.aucune": "لا رصيد إضافي حاليا.",
   "pme.reglages.recharges.auto": "الشحن التلقائي",
   "pme.reglages.recharges.auto.sous":
-    "عند نفاد قراءات الشهر، تشتري مليكة الرصيد المختار دون تجاوز سقفك الشهري.",
+    "عند نفاد قراءات الشهر، تشتري ماليكا الرصيد المختار دون تجاوز سقفك الشهري.",
   "pme.reglages.recharges.auto.palier": "الرصيد",
   "pme.reglages.recharges.auto.plafond": "السقف الشهري (دون الأداء)",
   "pme.reglages.recharges.auto.activer": "تفعيل",
@@ -4710,7 +4712,7 @@ export const ar: Dict = {
   "pme.malica.canaux": "القنوات",
   "pme.malica.utilise": "ما استعملته",
   "pme.malica.rienEncore": "لا شيء بعد: اطرحوا سؤالا.",
-  "pme.malica.voix.parler": "تحدثوا إلى مليكة",
+  "pme.malica.voix.parler": "تحدثوا إلى ماليكا",
   "pme.malica.voix.ecoute": "أنا أستمع…",
   "pme.malica.pied":
     "أستشهد بالفصل وبنسخته السارية في التاريخ المعني. لا أحسم بدلًا من خبيركم المحاسب فيما له أثر على ملفكم.",
