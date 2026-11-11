@@ -378,8 +378,14 @@ export async function lireLeContexteDuSudoku(
           where c.grille_id = $1 order by c.code`,
       [grilleId],
     ),
-    db.query<{ code: string; expression: unknown; statut: string; variante: string | null }>(
-      `select code, expression, statut, variante from ref_grille_preuves_v
+    db.query<{
+      code: string;
+      expression: unknown;
+      statut: string;
+      variante: string | null;
+      partielle: boolean;
+    }>(
+      `select code, expression, statut, variante, partielle from ref_grille_preuves_v
         where grille_id = $1 and expression is not null order by code`,
       [grilleId],
     ),
@@ -534,6 +540,7 @@ export async function lireLeContexteDuSudoku(
         expression: p.expression,
         statut: p.statut,
         variante: p.variante,
+        ...(p.partielle ? { partielle: true } : {}),
       })),
     },
     pack: {
@@ -759,23 +766,47 @@ export function resoudreLaPiece(
   // « TTC hors timbre » fermait par les chiffres, « TTC avec timbre » par les
   // lettres seules, et l'ordre alphabétique faisait gagner les lettres. Le
   // « Total TTC » imprimé disparaissait, et le net à payer prenait sa place.
-  const toutesProuvees = jouees.filter((j) => j.sortie.issue === "prouvee");
+  //
+  // Une variante PARTIELLE (la base le dit, `ref.grille_preuves.partielle`) ne prouve qu'un
+  // noyau — HT, TVA par taux, TTC — jamais la pièce : elle ne compte ni parmi les variantes qui
+  // la prouvent, ni parmi celles qui la signalent ; elle ne parle qu'en dernier (plus bas).
+  const partielles = new Set(
+    grille.preuves.flatMap((p) => (p.partielle && p.variante ? [p.variante] : [])),
+  );
+  const estPartielle = (j: { variante: string }) => partielles.has(j.variante);
+  const entieres = jouees.filter((j) => !estPartielle(j));
+  const toutesProuvees = entieres.filter((j) => j.sortie.issue === "prouvee");
   const parLesChiffres = toutesProuvees.filter((j) => !j.sortie.par_lettres);
   const prouvees = parLesChiffres.length > 0 ? parLesChiffres : toutesProuvees;
-  if (prouvees.length === 0) {
-    // Une variante dont les chiffres ferment mais que les lettres contredisent : la pièce
-    // est signalée, et c'est ce qu'on en dit d'abord.
-    const signalee = jouees.find((j) => j.sortie.issue === "signalee");
-    if (signalee) return { ...signalee.sortie, variante: signalee.variante };
-    const ambigue = jouees.find((j) => j.sortie.issue === "ambigue");
-    return (ambigue ?? jouees[0]!).sortie;
-  }
   const roles = champsDeLaGrille(grille);
   const empreinte = (o: SortieDuSudoku) =>
     JSON.stringify([
       roles.ht ? (o.champs[roles.ht]?.valeur ?? null) : null,
       (roles.tva ? (o.champs[roles.tva]?.instances ?? []) : []).map((i) => [i.taux, i.valeur]),
     ]);
+  if (prouvees.length === 0) {
+    // Une variante dont les chiffres ferment mais que les lettres contredisent : la pièce
+    // est signalée, et c'est ce qu'on en dit d'abord.
+    const signalee = entieres.find((j) => j.sortie.issue === "signalee");
+    if (signalee) return { ...signalee.sortie, variante: signalee.variante };
+    const ambigue = entieres.find((j) => j.sortie.issue === "ambigue");
+    if (ambigue) return ambigue.sortie;
+    // Le noyau seul ferme : ses champs sortent prouvés, avec leurs citations, mais la pièce
+    // n'est PAS prouvée (`aucune`) : ni court-circuit du rattrapage ni de la relecture de
+    // nuit, ni écriture proposée sur cette seule base. Les autres montants restent signalés
+    // (décision du dirigeant, 10 novembre 2026).
+    const noyaux = jouees.filter((j) => estPartielle(j) && j.sortie.issue === "prouvee");
+    const noyauxChiffres = noyaux.filter((j) => !j.sortie.par_lettres);
+    const retenus = noyauxChiffres.length > 0 ? noyauxChiffres : noyaux;
+    const noyau = retenus[0];
+    if (noyau) {
+      if (retenus.some((j) => empreinte(j.sortie) !== empreinte(noyau.sortie))) {
+        return { ...noyau.sortie, issue: "ambigue", solutions: retenus.length };
+      }
+      return { ...noyau.sortie, issue: "aucune", variante: noyau.variante };
+    }
+    return (entieres[0] ?? jouees[0]!).sortie;
+  }
   const premiere = prouvees[0]!;
   if (prouvees.some((j) => empreinte(j.sortie) !== empreinte(premiere.sortie))) {
     return { ...premiere.sortie, issue: "ambigue", solutions: prouvees.length };
