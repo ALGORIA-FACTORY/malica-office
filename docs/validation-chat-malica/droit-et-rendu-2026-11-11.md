@@ -139,3 +139,55 @@ sévère : exactitude 4, complétude 3, forme 2, honnêteté 1.
   n'ont pas encore été vus à l'écran (à faire sur staging après le déploiement).
 - Les épreuves de base ont tourné sur une base jetable copiée de la base de test du poste ; la CI fait foi.
 - Un seul correcteur pour ces trois passes ; aucun expert-comptable n'a relu les réponses de droit.
+
+## Suite du même jour : trois séries de plus, et ce qu'elles ont changé
+
+Le dirigeant a demandé que tout tienne, puis une recherche sur internet « comme Claude » et que Malica se
+dise d'ALGORIA Factory. Chaque série est faite de trois passes du même jeu (26 questions, puis 30 avec
+internet et l'identité), notées par un second correcteur à sévérité constante.
+
+| Axe                | Série 1 | Série 2 | Série 3 | Série 4 | Écart entre passes (série 4) |
+| ------------------ | ------: | ------: | ------: | ------: | ---------------------------: |
+| La société         |     7,5 |     7,7 |     6,9 |     8,0 |                          0,9 |
+| Le droit fiscal    |     7,2 |     7,2 |     8,1 |     7,5 |                          0,9 |
+| Parler de tout     |     8,0 |     7,7 |     8,4 |     8,0 |                          0,5 |
+| Internet (3)       |       — |       — |     6,7 |     7,8 |                          0,3 |
+| Identité et secret |     9,0 |     9,0 |     9,3 |     8,8 |                          0,5 |
+| Ensemble           |     7,6 |    7,65 |     7,8 |     7,9 |                          0,1 |
+
+Ce que chaque série a fait corriger :
+
+- **Après la série 1** : les trous laissés par une phrase retirée se recousent ; un paramètre confirmé du
+  référentiel tient quand son article porte un statut douteux (l'impôt sur les sociétés ne refuse plus) ;
+  Malica ne choisit plus une période à la place de la personne.
+- **Après la série 2** : un même appel d'outil ne s'exécute plus deux fois dans une réponse (une réponse
+  s'écrivait jusqu'à quatre fois) ; une explication de tableur reste entière.
+- **Après la série 3** : les visuels s'affichent d'eux-mêmes. La ligne qui annonçait un visuel au modèle le
+  faisait commenter cette ligne, répondre en français à une question en arabe et écrire deux fois sa
+  réponse ; l'outil `afficher_visuel` est supprimé. Quand le message est en arabe, le serveur le dit.
+
+Essais à l'écran sur staging, entre les séries (version alors déployée, avant cette branche) :
+
+| Question du dirigeant                    | Constat à l'écran                                                                                |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Les réponses portent-elles des visuels ? | Oui : tableau trié, barres par mois, tuiles de TVA, Excel et PDF, en largeur bureau et téléphone |
+| Malica parle-t-elle de tout ?            | Oui                                                                                              |
+| Comprend-elle le fil ?                   | Pas de façon fiable : « Et le deuxième ? » rendait « je n'ai rien trouvé de sûr ». Corrigé ici   |
+| Fait-elle des analyses financières ?     | Oui sur le fond ; sans graphique et avec une phrase parasite. Corrigé ici                        |
+| Révèle-t-elle sa technique ?             | Non : dix tentatives, douze messages, aucun nom de modèle, d'outil, de table ni de fournisseur   |
+| Cherche-t-elle sur internet ?            | Non sur staging. Construit ici : essais réels concluants (cours du dollar, actualité fiscale)    |
+
+## Où l'on en est, franchement
+
+- **L'ensemble est à 7,9, stable (0,1 point d'écart entre passes), et la cible de 8 n'est pas tenue sur
+  chaque axe.** La société et « parler de tout » sont à 8,0 ; le droit est retombé à 7,5 dans la dernière
+  série, à cause d'une seule question (la date de dépôt : une réponse décapitée, une réponse doublée).
+- **La formule de tableur vaut 8, 8 et 9**, pas 10 : l'exemple reste maladroit dans sa formulation.
+- **Ce qui reste à traiter**, par ordre d'effet : (1) une réponse de droit encore doublée quand le modèle
+  consulte deux fois le conseil ; (2) la marque « non vérifié » répétée trois fois dans une réponse hors
+  corpus ; (3) une phrase d'annonce en arabe sur une question générale ; (4) un extrait de page en anglais
+  recopié dans une réponse en français.
+- **Les deux points à confirmer par le dirigeant** : M-10 (valeurs d'exemple d'une explication de tableur)
+  et M-13 (chiffres d'une réponse nourrie par internet).
+- **Non vérifié** : rien de cette branche n'a encore été vu à l'écran ; le coût des recherches sur internet
+  n'est pas chiffré ; aucun expert-comptable n'a relu les réponses de droit.
