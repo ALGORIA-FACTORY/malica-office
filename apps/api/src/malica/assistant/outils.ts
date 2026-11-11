@@ -333,6 +333,9 @@ const NOMS_DES_OUTILS = DEFINITIONS.map((d) => d.name);
  * première personne, traduite par le serveur. Le nom de l'outil ne part
  * jamais au navigateur ; un nom que le modèle invente n'a pas d'étape.
  */
+/** Le nom de l'outil de recherche sur internet, fixé par l'API du fournisseur. */
+export const RECHERCHE_WEB = "web_search";
+
 const ETAPES: Readonly<Record<string, MessageKey>> = {
   pieces_chercher: "pme.assistant.outil.pieces_chercher",
   piece_ouvrir: "pme.assistant.outil.piece_ouvrir",
@@ -347,7 +350,16 @@ const ETAPES: Readonly<Record<string, MessageKey>> = {
   conseil_fiscal: "pme.assistant.outil.conseil_fiscal",
   calculer: "pme.assistant.outil.calculer",
   action_proposer: "pme.assistant.outil.action_proposer",
+  [RECHERCHE_WEB]: "pme.assistant.outil.web_search",
 };
+
+/**
+ * La recherche sur internet, telle que l'API du fournisseur l'attend : un outil
+ * qu'il exécute lui-même. Son type et son plafond viennent de la base.
+ */
+export function outilDeRechercheWeb(reglage: { outil: string; recherchesMax: number }) {
+  return { type: reglage.outil, name: RECHERCHE_WEB, max_uses: reglage.recherchesMax };
+}
 
 /** L'étape d'un outil, dans la langue de la personne ; `null` pour tout autre nom. */
 export function etapeDeLOutil(nom: string, locale: string): string | null {

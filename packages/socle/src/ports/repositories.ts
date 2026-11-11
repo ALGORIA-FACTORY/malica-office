@@ -4763,6 +4763,8 @@ export interface ReglageDeLAssistant {
 export interface RelectureDeLAssistant {
   mode: "annoncer" | "retenir";
   sans_texte: "marquer" | "retirer";
+  /** La recherche sur internet : offerte au modèle, ou non. */
+  web: "active" | "coupee";
   motif: string;
   decide_le: string;
 }
@@ -4999,6 +5001,7 @@ export interface TourRepository {
   reglerRelectureDeLAssistant(
     mode: RelectureDeLAssistant["mode"],
     sansTexte: RelectureDeLAssistant["sans_texte"],
+    web: RelectureDeLAssistant["web"],
     motif: string,
   ): Promise<unknown>;
   /**

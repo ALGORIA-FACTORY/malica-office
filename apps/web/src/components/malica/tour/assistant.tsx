@@ -397,16 +397,18 @@ export function LaRelectureDeLAssistant() {
   const enVigueur = etat.data ?? null;
   const [mode, setMode] = useState<"annoncer" | "retenir">("retenir");
   const [sansTexte, setSansTexte] = useState<"marquer" | "retirer">("retirer");
+  const [web, setWeb] = useState<"active" | "coupee">("coupee");
   const [motif, setMotif] = useState("");
 
   useEffect(() => {
     if (!enVigueur) return;
     setMode(enVigueur.mode);
     setSansTexte(enVigueur.sans_texte);
+    setWeb(enVigueur.web);
   }, [enVigueur]);
 
   const regler = useMutation({
-    mutationFn: () => office().tour.reglerRelectureDeLAssistant(mode, sansTexte, motif),
+    mutationFn: () => office().tour.reglerRelectureDeLAssistant(mode, sansTexte, web, motif),
     onSuccess: async () => {
       setRetour(t("tour.fait"));
       setMotif("");
@@ -454,6 +456,18 @@ export function LaRelectureDeLAssistant() {
           >
             <option value="marquer">{t("tour.assistant.relecture.marquer")}</option>
             <option value="retirer">{t("tour.assistant.relecture.retirer")}</option>
+          </select>
+        </label>
+        <label className={TEXTE}>
+          {t("tour.assistant.relecture.web")}
+          <select
+            value={web}
+            onChange={(e) => setWeb(e.target.value === "active" ? "active" : "coupee")}
+            aria-label={t("tour.assistant.relecture.web")}
+            className={`${CHAMP} mt-1 w-full`}
+          >
+            <option value="active">{t("tour.assistant.relecture.web.active")}</option>
+            <option value="coupee">{t("tour.assistant.relecture.web.coupee")}</option>
           </select>
         </label>
         <input

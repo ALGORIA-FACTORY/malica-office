@@ -69,6 +69,12 @@ export interface ConfigurationDeLAssistant {
    * peut porter pour partir marqué. Tout autre chiffre sans source est retiré.
    */
   unitesMarquables: string[];
+  /**
+   * La recherche sur internet : le type de l'outil du fournisseur et le nombre
+   * de recherches par réponse, lus en base. `null` : coupée, ou réglage absent
+   * ou incomplet — l'outil n'est alors pas offert au modèle.
+   */
+  web: { outil: string; recherchesMax: number } | null;
 }
 
 const EFFORTS: readonly Effort[] = ["low", "medium", "high"];
@@ -112,7 +118,17 @@ export function lireConfigurationAssistant(brut: unknown): ConfigurationDeLAssis
       ? ((c as { unites_marquables: unknown[] }).unites_marquables as unknown[])
       : []
     ).filter((u): u is string => typeof u === "string" && u.trim() !== ""),
+    web: lireLeWeb((c as { web?: unknown }).web),
   };
+}
+
+/** Le réglage de la recherche sur internet. Coupée, absente ou incomplète : `null`. */
+function lireLeWeb(brut: unknown): ConfigurationDeLAssistant["web"] {
+  const w = brut as { active?: unknown; outil?: unknown; recherches_max?: unknown } | null;
+  const max = Number(w?.recherches_max);
+  if (w?.active !== true || typeof w.outil !== "string" || !w.outil.trim()) return null;
+  if (!Number.isInteger(max) || max < 1) return null;
+  return { outil: w.outil.trim(), recherchesMax: max };
 }
 
 /** La règle de la garde. Absente ou illisible : `null`, et la garde reste stricte. */

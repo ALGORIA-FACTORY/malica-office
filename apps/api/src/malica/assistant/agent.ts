@@ -89,6 +89,8 @@ import {
   CONCLURE_REPONSE,
   DEFINITIONS,
   etapeDeLOutil,
+  outilDeRechercheWeb,
+  RECHERCHE_WEB,
   executerOutil,
   lireLaConclusion,
   type ConclusionDeLaReponse,
@@ -578,9 +580,14 @@ async function converser(
     AFFICHER_VISUEL,
     CONCLURE_REPONSE,
   ];
-  const outils = definitions.map((d, i) =>
-    i === definitions.length - 1 ? { ...d, cache_control: { type: "ephemeral" as const } } : d,
-  );
+  // La recherche sur internet est un outil du fournisseur : offerte seulement
+  // au modèle qui la sert, et seulement si la tour l'a laissée active.
+  const web = fournisseur === "claude" ? configuration.web : null;
+  const outils: unknown[] = [
+    ...definitions.slice(0, -1),
+    ...(web ? [outilDeRechercheWeb(web)] : []),
+    { ...definitions.at(-1)!, cache_control: { type: "ephemeral" as const } },
+  ];
   const system = [
     { type: "text", text: configuration.consigne.texte, cache_control: { type: "ephemeral" } },
     { type: "text", text: contexteDuJour(dossier, q.locale, aujourdhui) },
@@ -692,6 +699,15 @@ async function converser(
             // Un second bloc de texte : le premier n'annonçait pas un outil.
             if (preambule?.close) liberer();
             if (!preambule) garde.ouvrirBloc();
+          } else if (ev.content_block?.type === "server_tool_use") {
+            // Une recherche lancée chez le fournisseur : une lecture comme une
+            // autre — l'annonce tombe, l'étape s'affiche, et elle se compte.
+            if (preambule?.texte.trim()) annoncesTues += 1;
+            preambule = null;
+            outilsAppeles.push(RECHERCHE_WEB);
+            etape(RECHERCHE_WEB, "debut");
+          } else if (ev.content_block?.type === "web_search_tool_result") {
+            etape(RECHERCHE_WEB, "fin");
           } else if (ev.content_block?.type === "tool_use") {
             const nom = String((ev.content_block as { name?: string }).name);
             if (preambule && !SUITES_D_UNE_REPONSE.has(nom)) {
@@ -761,6 +777,12 @@ async function converser(
     const cout = coutDeLAppel(choix.modele, m.usage, configuration.tarifs);
     coutTotal = coutTotal === null || cout === null ? null : coutTotal + cout;
 
+    // Le fournisseur a suspendu un tour long (une recherche en cours) : on le
+    // lui rend tel quel, et il reprend où il en était.
+    if (m.stopReason === "pause_turn") {
+      messages.push({ role: "assistant", content: tourARenvoyer(m.content) });
+      continue;
+    }
     if (m.stopReason !== "tool_use") {
       // Seulement un tour fini proprement et qui ne porte que du texte : un
       // tour coupé au milieu d'un outil ne se renvoie pas au modèle.
@@ -1052,6 +1074,8 @@ async function converser(
    */
   let annonce: string | null = null;
   if (nonVerifie && !retenue) ajouts.push(message(q.locale, "pme.assistant.nonVerifieNote"));
+  // Ce qui vient d'internet se dit : la personne sait d'où vient ce qu'elle lit.
+  if (garde.citeInternet() && !retenue) ajouts.push(message(q.locale, "pme.assistant.webNote"));
   if (aRelire && !retenue) {
     annonce = await deposerAuCabinet().then(
       () => message(q.locale, "pme.conseil.aConfirmer"),

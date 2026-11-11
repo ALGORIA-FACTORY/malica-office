@@ -1264,6 +1264,9 @@ export const ar: Dict = {
   "pme.assistant.nonVerifieNote":
     "لم أجد هذه المسألة في النصوص: ما ورد بعلامة «غير مؤكد» مصدره معارفي العامة. لا تطبقوه قبل أن تؤكده محاسبتكم.",
   "pme.assistant.vide": "لم أجد إجابة موثوقة. هل يمكنك توضيح سؤالك؟",
+  "pme.assistant.outil.web_search": "أبحث على الإنترنت…",
+  "pme.assistant.webNote":
+    "هذه المعلومات مصدرها الإنترنت: أذكر روابطها، لكن ماليكا لم تتحقق منها. لا تعتمدوها في قيد أو تصريح قبل تأكيدها.",
   "pme.assistant.outil.pieces_chercher": "أطّلع على وثائقك…",
   "pme.assistant.outil.piece_ouvrir": "أفتح الوثيقة…",
   "pme.assistant.outil.tva_du_mois": "أحسب الأداء على القيمة المضافة للشهر بمحرّك ماليكا…",
@@ -1372,6 +1375,9 @@ export const ar: Dict = {
   "tour.assistant.relecture.marquer":
     "الإجابة مع ذلك؛ الرقم المستحضر من الذاكرة يحمل علامة «غير مؤكد»",
   "tour.assistant.relecture.retirer": "القول إن النصوص لا تجيب؛ وحذف كل رقم بلا مصدر",
+  "tour.assistant.relecture.web": "البحث على الإنترنت",
+  "tour.assistant.relecture.web.active": "مفعّل: يمكن لماليكا البحث على الإنترنت مع ذكر الروابط",
+  "tour.assistant.relecture.web.coupee": "معطّل: ماليكا لا تبحث على الإنترنت",
   "tour.assistant.reglage": "إعدادات المساعد",
   "tour.assistant.reglage.aide":
     "يجيب النموذج العادي عن كل شيء، ويتولّى نموذج الأسئلة الصعبة عندما يتجاوز السؤال الطول المحدّد أو يتضمّن إحدى الكلمات أو يُرفق عدّة وثائق. ويحدّ الإنفاقَ سقفُ المساعد (البطاقة أعلاه)، وهو نفسه تحت سقف سلسلة النماذج.",

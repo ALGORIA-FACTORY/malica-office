@@ -66,6 +66,9 @@ export interface CitationRecue {
   source?: string;
   cited_text?: string;
   search_result_index?: number;
+  /** Pour une page trouvée sur internet (`web_search_result_location`). */
+  url?: string;
+  title?: string | null;
 }
 
 /** Ce qui rend un chiffre liant, lu en base (`plateforme.assistant_gardes`). */
@@ -110,6 +113,9 @@ function chercheurDeMarque(marque: string): ((phrase: string) => boolean) | null
  */
 /** Une cellule de tableur nommée entre accents graves : « `B2` », « `$B$2` », « `A2 = 1 000` ». */
 const CELLULE_NOMMEE = /`[^`\n]*\$?\b[A-Za-z]{1,3}\$?\d{1,7}\b[^`\n]*`/;
+
+/** Le type d'une citation de page web, tel que l'API le nomme. */
+const CITATION_WEB = "web_search_result_location";
 
 /** Une formule de tableur : un signe égal suivi d'un calcul qui nomme une cellule. */
 const FORMULE = /(?:^|`|\n)[ \t]*=[^`\n]*\$?\b[A-Za-z]{1,3}\$?\d{1,7}\b/;
@@ -224,6 +230,8 @@ export class GardeDesChiffres {
   private tus: string[] = [];
   private readonly tuesDuTour: string[] = [];
   private emis = "";
+  /** Les pages d'internet citées, par adresse. */
+  private readonly pagesWeb = new Map<string, SourceConnue>();
   /** La réponse a donné une formule de tableur. */
   private tableur = false;
   /** Les longues phrases déjà parties dans cette réponse. */
@@ -367,11 +375,51 @@ export class GardeDesChiffres {
    * relecture que `lireLaReponseCitee`).
    */
   recevoirCitation(c: CitationRecue): boolean {
+    if (c.type === CITATION_WEB) return this.recevoirCitationWeb(c);
     const i = c.search_result_index;
     const source = typeof i === "number" && Number.isInteger(i) ? this.sources[i] : undefined;
     if (c.type !== "search_result_location" || !source || c.source !== source.cle) return false;
     this.citationsDuBloc.push({ source, extrait: c.cited_text ?? "" });
     return true;
+  }
+
+  /**
+   * Une citation d'une page trouvée sur internet. La page devient une source
+   * de la réponse, avec son adresse : la personne peut l'ouvrir. Elle n'entre
+   * pas dans les sources remises par les outils du dossier — un nombre lu sur
+   * internet ne s'emploie donc ni dans un calcul ni dans une autre phrase que
+   * celle qui le cite. Seule une adresse http(s) est admise.
+   */
+  private recevoirCitationWeb(c: CitationRecue): boolean {
+    const url = typeof c.url === "string" ? c.url.trim() : "";
+    if (!/^https?:\/\/[^\s]+$/i.test(url)) return false;
+    let source = this.pagesWeb.get(url);
+    if (!source) {
+      let hote = url;
+      try {
+        hote = new URL(url).hostname;
+      } catch {
+        return false;
+      }
+      source = {
+        cle: `web:${url}`,
+        genre: "web",
+        titre: (c.title ?? "").trim() || hote,
+        objetId: null,
+        url,
+        texte: "",
+      };
+      this.pagesWeb.set(url, source);
+    }
+    const extrait = c.cited_text ?? "";
+    source.texte += `${extrait}\n`;
+    this.citationsDuBloc.push({ source, extrait });
+    return true;
+  }
+
+  /** Des pages d'internet sont-elles citées dans cette réponse ? */
+  citeInternet(): boolean {
+    return [...this.citees.values()].some((s) => s.genre === "web");
   }
 
   /** Un morceau de texte du bloc ; rend ce qui peut partir maintenant. */

@@ -1340,6 +1340,9 @@ export const fr = {
     "Je n’ai pas trouvé ce point dans les textes : ce qui est marqué « non vérifié » vient de mes connaissances générales. Ne l’appliquez pas avant que votre comptabilité l’ait confirmé.",
   "pme.assistant.vide":
     "Je n'ai rien trouvé de sûr à vous répondre. Pouvez-vous préciser votre question ?",
+  "pme.assistant.outil.web_search": "Je cherche sur internet…",
+  "pme.assistant.webNote":
+    "Ces informations viennent d’internet : je cite leurs liens, mais Malica ne les a pas vérifiées. Ne vous en servez pas pour une écriture ou une déclaration sans les confirmer.",
   "pme.assistant.outil.pieces_chercher": "Je regarde vos pièces…",
   "pme.assistant.outil.piece_ouvrir": "J'ouvre la pièce…",
   "pme.assistant.outil.tva_du_mois": "Je calcule la TVA du mois avec le moteur Malica…",
@@ -1453,6 +1456,10 @@ export const fr = {
     "Répondre quand même ; un chiffre de mémoire porte la marque « non vérifié »",
   "tour.assistant.relecture.retirer":
     "Dire que les textes ne répondent pas ; retirer tout chiffre sans source",
+  "tour.assistant.relecture.web": "Recherche sur internet",
+  "tour.assistant.relecture.web.active":
+    "Active : Malica peut chercher sur internet et cite ses liens",
+  "tour.assistant.relecture.web.coupee": "Coupée : Malica ne cherche pas sur internet",
   "tour.assistant.reglage": "Réglage de l'assistant",
   "tour.assistant.reglage.aide":
     "Le modèle courant répond à tout ; le modèle des questions difficiles prend la main quand la question dépasse la longueur réglée, contient l'un des mots, ou joint plusieurs pièces. La dépense est bornée par le plafond de l'assistant (carte ci-dessus), lui-même sous le plafond de la chaîne des modèles.",

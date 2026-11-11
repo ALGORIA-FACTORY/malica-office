@@ -85,6 +85,9 @@ describe("the tower sets the review mode of the assistant", { skip: !ADMIN }, ()
       assert.equal(c["relecture"], "annoncer");
       assert.equal(c["sans_texte"], "marquer");
       assert.ok((c["unites_marquables"] as string[]).includes("jours"));
+      // Internet search is delivered on; its tool type is data, not code.
+      assert.equal(etat["web"], "active");
+      assert.deepEqual(c["web"], { active: true, outil: "web_search_20250305", recherches_max: 3 });
     });
   });
 
@@ -93,7 +96,7 @@ describe("the tower sets the review mode of the assistant", { skip: !ADMIN }, ()
       await sous(db, m.dirigeant);
       for (const appel of [
         () => tour.relectureDeLAssistant(db),
-        () => tour.reglerRelectureDeLAssistant(db, "retenir", "retirer", "essai"),
+        () => tour.reglerRelectureDeLAssistant(db, "retenir", "retirer", "coupee", "essai"),
       ]) {
         const r = await refus(db, appel);
         assert.equal(r?.code, "42501");
@@ -118,10 +121,12 @@ describe("the tower sets the review mode of the assistant", { skip: !ADMIN }, ()
         db,
         "retenir",
         "retirer",
+        "coupee",
         "Retour à la règle du 4 octobre, pour l'essai.",
       )) as Record<string, unknown>;
       assert.equal(etat["mode"], "retenir");
       assert.equal(etat["sans_texte"], "retirer");
+      assert.equal(etat["web"], "coupee");
       const apres = (
         await db.query<{ n: string }>("select count(*) as n from plateforme.assistant_relectures")
       ).rows[0]!.n;
@@ -135,19 +140,26 @@ describe("the tower sets the review mode of the assistant", { skip: !ADMIN }, ()
       assert.equal(c["sans_texte"], "retirer");
       // The list of markable units is not a choice of the card: it is carried over.
       assert.ok((c["unites_marquables"] as string[]).includes("%"));
+      // Internet search is switched off, and its tool type and ceiling are carried over.
+      assert.deepEqual(c["web"], {
+        active: false,
+        outil: "web_search_20250305",
+        recherches_max: 3,
+      });
     });
   });
 
   it("an unknown mode or an empty reason is refused", async () => {
     await aBlanc(async (db, m) => {
       await sous(db, m.operateur);
-      for (const [mode, sansTexte, motif] of [
-        ["cacher", "marquer", "essai"],
-        ["annoncer", "inventer", "essai"],
-        ["annoncer", "marquer", "  "],
+      for (const [mode, sansTexte, web, motif] of [
+        ["cacher", "marquer", "active", "essai"],
+        ["annoncer", "inventer", "active", "essai"],
+        ["annoncer", "marquer", "peut-etre", "essai"],
+        ["annoncer", "marquer", "active", "  "],
       ] as const) {
         const r = await refus(db, () =>
-          tour.reglerRelectureDeLAssistant(db, mode, sansTexte, motif),
+          tour.reglerRelectureDeLAssistant(db, mode, sansTexte, web, motif),
         );
         assert.match(r?.message ?? "", /refus\.assistant\.saisie/);
       }

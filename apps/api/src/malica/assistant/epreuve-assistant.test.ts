@@ -276,6 +276,8 @@ function dossierFictif(
     fileEnPanne?: boolean;
     /** Quand le corpus ne répond pas : lu en base ; absent, la garde retire. */
     sansTexte?: "marquer" | "retirer";
+    /** La recherche sur internet, telle que la base la rend ; absente, l'outil n'est pas offert. */
+    web?: { active: boolean; outil: string; recherches_max: number };
   } = {},
 ): {
   api: AppelApi;
@@ -319,6 +321,7 @@ function dossierFictif(
             ...(options.relecture ? { relecture: options.relecture } : {}),
             ...(options.sansTexte ? { sans_texte: options.sansTexte } : {}),
             ...(options.sansTexte === "marquer" ? { unites_marquables: ["%", "jours"] } : {}),
+            ...(options.web ? { web: options.web } : {}),
           });
         case "capture.chaineDeDesignation":
           return r(chaine(options.anthropicEpuise ?? false, options.deepseekEpuise ?? false));
@@ -1836,5 +1839,130 @@ describe("l'annonce d'un outil ne part pas à l'écran", () => {
     assert.ok(r.ecran.includes(REPONSE));
     assert.ok(!r.ecran.includes("Je regarde."));
     assert.equal(r.fin.mesure.annoncesTues, 1);
+  });
+});
+
+describe("Malica cherche sur internet", () => {
+  const QUESTION = {
+    tenantId: TENANT,
+    question: "Quel est le cours du dollar aujourd'hui ?",
+    locale: "fr" as const,
+    conversationId: null,
+    pieceIds: [],
+  };
+  const PAGE = "https://www.bct.gov.tn/cours";
+  /** Un Claude qui cherche chez son fournisseur, puis répond en citant la page. */
+  const claudeQuiCherche = (requetes: Array<Record<string, unknown>>): ClientEnFlux =>
+    async function* (requete) {
+      requetes.push(structuredClone(requete));
+      yield { type: "message_start", message: { model: "modele-courant", usage: {} } };
+      yield { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } };
+      yield {
+        type: "content_block_delta",
+        index: 0,
+        delta: { type: "text_delta", text: "Je cherche le cours du jour." },
+      };
+      yield { type: "content_block_stop", index: 0 };
+      yield {
+        type: "content_block_start",
+        index: 1,
+        content_block: { type: "server_tool_use", id: "srvtoolu_1", name: "web_search", input: {} },
+      };
+      yield {
+        type: "content_block_delta",
+        index: 1,
+        delta: { type: "input_json_delta", partial_json: '{"query":"cours dollar dinar BCT"}' },
+      };
+      yield { type: "content_block_stop", index: 1 };
+      yield {
+        type: "content_block_start",
+        index: 2,
+        content_block: {
+          type: "web_search_tool_result",
+          tool_use_id: "srvtoolu_1",
+          content: [{ type: "web_search_result", url: PAGE, title: "Cours de change — BCT" }],
+        },
+      };
+      yield { type: "content_block_stop", index: 2 };
+      yield { type: "content_block_start", index: 3, content_block: { type: "text", text: "" } };
+      yield {
+        type: "content_block_delta",
+        index: 3,
+        delta: {
+          type: "citations_delta",
+          citation: {
+            type: "web_search_result_location",
+            url: PAGE,
+            title: "Cours de change — BCT",
+            cited_text: "USD : 2,9690 TND au 5 novembre 2026",
+          },
+        },
+      };
+      yield {
+        type: "content_block_delta",
+        index: 3,
+        delta: { type: "text_delta", text: "Le dollar valait 2,9690 TND le 5 novembre 2026. " },
+      };
+      yield { type: "content_block_stop", index: 3 };
+      yield { type: "content_block_start", index: 4, content_block: { type: "text", text: "" } };
+      yield {
+        type: "content_block_delta",
+        index: 4,
+        delta: { type: "text_delta", text: "Cela vous fait 5 938,000 TND pour 2 000 dollars." },
+      };
+      yield { type: "content_block_stop", index: 4 };
+      yield { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: {} };
+    };
+
+  const jouer = async (web: { active: boolean } | null) => {
+    const { api } = dossierFictif({
+      contexte: { cabinetId: null, appelantMembre: true },
+      ...(web ? { web: { ...web, outil: "outil-de-recherche-d-essai", recherches_max: 2 } } : {}),
+    });
+    const requetes: Array<Record<string, unknown>> = [];
+    const { fin, evenements } = await rejouer(
+      QUESTION,
+      { claude: claudeQuiCherche(requetes), conseil: conseilFictif, repli: sansRepli },
+      api,
+    );
+    const outils = (requetes[0]!["tools"] as Array<Record<string, unknown>>) ?? [];
+    return { fin, evenements, outils };
+  };
+
+  it("l'outil du fournisseur est offert avec le type et le plafond lus en base", async () => {
+    const { outils } = await jouer({ active: true });
+    assert.deepEqual(
+      outils.find((o) => o["name"] === "web_search"),
+      { type: "outil-de-recherche-d-essai", name: "web_search", max_uses: 2 },
+    );
+    assert.ok(outils.at(-1)!["cache_control"], "le point de cache n'est plus sur le dernier outil");
+  });
+
+  it("coupée, ou sans réglage : l'outil n'est pas offert", async () => {
+    for (const web of [{ active: false }, null]) {
+      const { outils } = await jouer(web);
+      assert.equal(
+        outils.some((o) => o["name"] === "web_search"),
+        false,
+      );
+    }
+  });
+
+  it("la phrase citée reste avec son lien ; l'annonce et le calcul fait de tête tombent", async () => {
+    const { fin, evenements } = await jouer({ active: true });
+    assert.ok(fin.reponse.includes("Le dollar valait 2,9690 TND le 5 novembre 2026."));
+    assert.ok(!fin.reponse.includes("Je cherche le cours du jour"), "l'annonce est partie");
+    assert.ok(!fin.reponse.includes("5 938"), "un calcul sur un nombre lu sur internet est passé");
+    assert.ok(fin.reponse.includes(message("fr", "pme.assistant.webNote")));
+    const page = fin.sources.find((s) => s.genre === "web");
+    assert.equal(page?.url, PAGE);
+    assert.equal(page?.titre, "Cours de change — BCT");
+    assert.ok(
+      evenements.some(
+        (e) =>
+          e.type === "outil" && e.etiquette === message("fr", "pme.assistant.outil.web_search"),
+      ),
+      "l'étape « je cherche sur internet » n'est pas dite",
+    );
   });
 });

@@ -1278,6 +1278,9 @@ export const en: Dict = {
   "pme.assistant.nonVerifieNote":
     "I did not find this point in the legal texts: what is marked “unverified” comes from my general knowledge. Do not apply it before your accounting team has confirmed it.",
   "pme.assistant.vide": "I found nothing reliable to answer. Could you clarify your question?",
+  "pme.assistant.outil.web_search": "Searching the internet…",
+  "pme.assistant.webNote":
+    "This information comes from the internet: I cite the links, but Malica has not verified it. Do not use it for an entry or a filing without confirming it.",
   "pme.assistant.outil.pieces_chercher": "Looking at your documents…",
   "pme.assistant.outil.piece_ouvrir": "Opening the document…",
   "pme.assistant.outil.tva_du_mois": "Computing the month's VAT with the Malica engine…",
@@ -1389,6 +1392,9 @@ export const en: Dict = {
     "Answer anyway; a figure from memory carries the mark “unverified”",
   "tour.assistant.relecture.retirer":
     "Say the texts do not answer; remove any figure without a source",
+  "tour.assistant.relecture.web": "Internet search",
+  "tour.assistant.relecture.web.active": "On: Malica can search the internet and cites her links",
+  "tour.assistant.relecture.web.coupee": "Off: Malica does not search the internet",
   "tour.assistant.reglage": "Assistant settings",
   "tour.assistant.reglage.aide":
     "The standard model answers everything; the model for hard questions takes over when a question exceeds the set length, contains one of the words, or attaches several documents. Spending is bounded by the assistant cap (card above), itself under the model chain's cap.",

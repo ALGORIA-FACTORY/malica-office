@@ -416,6 +416,12 @@ export function ReponseDeMalica({
                 <IconeSource />
                 {s.titre}
               </Link>
+            ) : s.genre === "web" && s.url ? (
+              // Une page trouvée sur internet : elle s'ouvre ailleurs, sans rien dire d'où l'on vient.
+              <a key={s.cle} href={s.url} target="_blank" rel="noopener noreferrer nofollow">
+                <IconeSource />
+                {s.titre}
+              </a>
             ) : (
               <button
                 key={s.cle}

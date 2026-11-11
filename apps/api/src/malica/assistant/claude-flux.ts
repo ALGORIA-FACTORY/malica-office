@@ -97,7 +97,7 @@ export class Assembleur {
       case "content_block_start": {
         const b = ev.content_block;
         if (!b || typeof ev.index !== "number") return;
-        if (b.type === "tool_use") {
+        if (b.type === "tool_use" || b.type === "server_tool_use") {
           this.blocs[ev.index] = { ...b, input: {}, _json: "" } as BlocBrut & { _json: string };
         } else if (b.type === "text") {
           this.blocs[ev.index] = { type: "text", text: "", citations: [] };
@@ -128,7 +128,10 @@ export class Assembleur {
       }
       case "content_block_stop": {
         const b = typeof ev.index === "number" ? this.blocs[ev.index] : undefined;
-        if (b?.type === "tool_use") {
+        // L'entrée d'un outil exécuté chez le fournisseur (la recherche sur
+        // internet) arrive en morceaux comme celle d'un outil du dossier, et
+        // doit être rendue entière quand le tour est renvoyé au modèle.
+        if (b?.type === "tool_use" || b?.type === "server_tool_use") {
           const brut = b._json?.trim() ?? "";
           let entree: unknown = {};
           try {
