@@ -1,4 +1,11 @@
 // @vitest-environment jsdom
+/**
+ * La feuille du crayon : corriger un montant lu sur une facture (#355).
+ *
+ * La zone de la photo vient au-dessus de la saisie, la saisie se lit par les
+ * outils décimaux du Socle à la précision de la devise, et le verdict « tombe
+ * juste » ou « pas encore » vient du jugement du serveur, jamais de l'écran (R3).
+ */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

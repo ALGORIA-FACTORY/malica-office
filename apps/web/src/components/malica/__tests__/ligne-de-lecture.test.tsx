@@ -1,4 +1,11 @@
 // @vitest-environment jsdom
+/**
+ * Une ligne de facture lue, avec un crayon sur chacune de ses composantes.
+ *
+ * Libellé, quantité, prix unitaire, montant et code TVA se corrigent un à un
+ * tant que la pièce est à la personne ; ensuite plus aucun crayon. Une valeur
+ * saisie dit qui l'a saisie et ce que la lecture avait lu.
+ */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

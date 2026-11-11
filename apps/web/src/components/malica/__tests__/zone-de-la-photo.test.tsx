@@ -1,4 +1,11 @@
 // @vitest-environment jsdom
+/**
+ * La zone de la photo d'un champ : là où la lecture a trouvé le montant.
+ *
+ * Le crayon montre la photo recadrée sur la zone citée, avec sa marge, pour
+ * que la personne corrige en voyant la pièce. Sans zone citée, ou pour un PDF
+ * sans image, l'écran le dit et renvoie à la pièce entière.
+ */
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

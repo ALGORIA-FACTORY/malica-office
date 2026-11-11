@@ -1,4 +1,11 @@
 // @vitest-environment jsdom
+/**
+ * Le cabinet voit ce que la personne a corrigé avec le crayon (#355).
+ *
+ * Une saisie ne passe jamais pour une lecture : le cabinet lit la valeur
+ * saisie, la valeur que la lecture avait trouvée (ou « rien »), l'auteur et le
+ * moment. La précision s'ajoute, la lecture reste (R7).
+ */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
