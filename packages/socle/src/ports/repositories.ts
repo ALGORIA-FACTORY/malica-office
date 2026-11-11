@@ -228,6 +228,11 @@ export interface IdentityRepository {
   ): Promise<{ mode: "donnee" | "suggeree" }>;
   /** Le prénom salue, le nom complet facture. `null` tant que rien n'est écrit. */
   monProfil(): Promise<MonProfil | null>;
+  /**
+   * Parmi ces personnes, celles qui ont une photo : identifiant → version.
+   * Les octets se lisent sur `/moi/photos/:id`, hors de `/rpc`.
+   */
+  photosDesProfils(ids: readonly string[]): Promise<Record<string, string>>;
   /** Un champ vide s'efface ; la base compose « Prénom Nom ». */
   ecrireMonProfil(prenom: string | null, nom: string | null): Promise<MonProfil | null>;
   /** Le côté du bouton « + » (planche 5) ; il suit le compte, sur tous les appareils. */
