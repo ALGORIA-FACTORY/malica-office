@@ -831,10 +831,9 @@ réponse marquée part avec une note qui dit de la faire confirmer par un expert
 comptabilité reliée au dossier, un avis qui engage la société se termine par « à faire confirmer par votre
 comptabilité », en disant qu'elle ne peut pas le lui envoyer.
 
-Reste ouvert, et ce n'est pas construit : **la comptabilité interne d'une société sans cabinet n'a pas de
-file dans l'application.** La file de relecture n'existe que pour un cabinet mandaté. Lui en donner une
-demande un écran (où la comptabilité de la société lit et tranche), un rôle (qui, dans la société, est « la
-comptabilité ») et une règle (le dirigeant peut-il confirmer sa propre question). À décider avant de coder.
+**Précisé par le dirigeant le 11 novembre 2026 : la comptabilité peut être interne ou un cabinet ; il n'y a
+rien de plus à construire.** Une société sans cabinet relié fait confirmer la réponse par sa comptabilité
+interne, hors de l'application ; Malica le lui dit. Le point est clos.
 
 ### M-10 — Une phrase qui nomme une cellule de tableur garde ses valeurs d'exemple
 
