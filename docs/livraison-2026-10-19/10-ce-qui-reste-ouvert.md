@@ -793,3 +793,7 @@ de dix mille et plus. Le reste passe. Sans ligne en base, tout chiffre se juge c
 
 Ce qui manque : la **carte de la tour** pour régler cette liste (aujourd'hui, une ligne de base posée par
 migration ; R10 demande qu'elle se change sans migration).
+
+**Confirmé par le dirigeant le 11 novembre 2026** : le principe (la garde suit R3) est retenu. Restent
+ouverts la revue de la liste et du seuil par un expert-comptable, et la carte de la tour
+(`docs/validation-chat-malica/etat-fige-2026-11-11.md`, actions D3 et D4).
