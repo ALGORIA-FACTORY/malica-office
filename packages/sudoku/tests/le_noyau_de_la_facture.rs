@@ -6,7 +6,7 @@
 //! les deux variantes de la grille exigent le net à payer ou le TTC timbre compris, et
 //! refusaient donc tout. La variante « noyau » ne demande que ce qui se prouve.
 //!
-//! Elle est ajoutée à la grille ICI, en attendant sa migration (`preuve_noyau`), et ne dit
+//! Elle vient de la base (preuve M05 de la grille facture, `partielle`) ; elle ne dit
 //! rien de la pièce entière : l'adaptateur garde la pièce « à vérifier » (décision du
 //! dirigeant, 10 novembre 2026). Exigences :
 //! - le noyau ferme sur la pièce du 10 novembre, et n'affirme pas le net à payer ;
@@ -16,20 +16,16 @@
 mod commun;
 
 use commun::donnees;
-use commun::jeux::{en_base, jeton, la_piece, par_variante, preuve_noyau, Piece};
+use commun::jeux::{en_base, en_base_avec_les_preuves_partielles, jeton, la_piece, par_variante, Piece};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-/// Code de la preuve du noyau dans la grille d'essai.
-const PREUVE: &str = "M05";
-
+/// La grille de la base avec le noyau (`avec`), et la même sans lui (`grille`) : ce que le
+/// moteur jouait avant la preuve partielle. Le noyau est la preuve que la base dit partielle,
+/// jamais un nom écrit ici.
 fn grilles() -> (Value, Value, Value) {
-    let (grille, pack) = en_base();
-    let mut avec = grille.clone();
-    avec["preuves"]
-        .as_array_mut()
-        .unwrap()
-        .push(preuve_noyau(PREUVE));
+    let (avec, pack) = en_base_avec_les_preuves_partielles();
+    let (grille, _) = en_base();
     (grille, avec, pack)
 }
 

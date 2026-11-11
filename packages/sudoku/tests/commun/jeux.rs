@@ -46,10 +46,23 @@ pub fn jeu(id: &str) -> &str {
     id.split('/').next().unwrap()
 }
 
-/// La grille facture et le pack livrés par la base.
-pub fn en_base() -> (Value, Value) {
+/// La grille facture et le pack livrés par la base, avec leurs preuves PARTIELLES : celles que
+/// la base dit `partielle` ne prouvent qu'une part de la pièce (`le_noyau_de_la_facture.rs`).
+pub fn en_base_avec_les_preuves_partielles() -> (Value, Value) {
     let c: Value = serde_json::from_str(&donnees("grille_facture_en_base.json")).unwrap();
     (c["grille"].clone(), c["pack"].clone())
+}
+
+/// La grille facture et le pack livrés par la base, pour prouver la pièce ENTIÈRE : sans les
+/// preuves partielles, que l'adaptateur (`resoudreLaPiece`) joue à part et ne compte jamais
+/// parmi celles qui prouvent la pièce.
+pub fn en_base() -> (Value, Value) {
+    let (mut grille, pack) = en_base_avec_les_preuves_partielles();
+    grille["preuves"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|p| p["partielle"] != true);
+    (grille, pack)
 }
 
 /// La preuve des lignes (anneau 1), ajoutée à la grille en attendant sa migration.
@@ -64,20 +77,6 @@ pub fn preuve_lignes(code: &str) -> Value {
                        "prix": "prix_unitaire_ht", "remise": "remise_ligne?", "montant": "montant_ligne_ht",
                        "taux": "taux_tva_ligne?", "total": "total_ht", "total_brut": "total_brut_ht?",
                        "remise_globale": "remise_globale?"}
-    })
-}
-
-/// La variante « noyau » (preuve partielle), ajoutée à la grille en attendant sa migration :
-/// le TTC hors timbre fermé par le HT et la TVA par taux, sans exiger le net à payer.
-pub fn preuve_noyau(code: &str) -> Value {
-    json!({
-        "code": code,
-        "regle": "Total TTC hors timbre = total HT + TVA par taux (+ FODEC)",
-        "genre": "arithmetique",
-        "statut": "defaut_a_valider",
-        "variante": "noyau",
-        "expression": {"op": "somme", "role": "ttc", "total": "total_ttc",
-                       "parties": ["total_ht", "montant_tva_par_taux", "montant_fodec?"]}
     })
 }
 

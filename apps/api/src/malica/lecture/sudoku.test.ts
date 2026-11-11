@@ -984,6 +984,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       lettres: "montant_en_lettres",
       ttc: [
         { variante: "ttc_hors_timbre", champ: "net_a_payer" },
+        { variante: "noyau", champ: "total_ttc" },
         { variante: "ttc_avec_timbre", champ: "total_ttc" },
       ],
       lignes: {

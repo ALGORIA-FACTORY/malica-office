@@ -115,6 +115,12 @@ export interface PreuveDeGrille {
   readonly statut: string;
   /** Nulle : la preuve vaut pour toute la grille. Nommée : pour cette variante seule. */
   readonly variante?: string | null;
+  /**
+   * La base dit que cette preuve ne couvre qu'une part de la pièce (`ref.grille_preuves.partielle`) :
+   * une variante qui en porte une, même fermée, ne rend jamais la pièce prouvée. Le moteur
+   * l'ignore ; c'est l'adaptateur qui le lit (`resoudreLaPiece`).
+   */
+  readonly partielle?: boolean;
 }
 
 export interface Grille {
