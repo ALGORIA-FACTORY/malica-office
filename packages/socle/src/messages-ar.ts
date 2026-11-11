@@ -1241,6 +1241,7 @@ export const ar: Dict = {
     "في انتظار تأكيد محاسبتكم: أرسل إليها هذه الإجابة لتؤكدها أو تصححها أو تستبعدها.",
   "pme.conseil.aConfirmerSansComptabilite":
     "يُستحسن أن تؤكدها محاسبتكم قبل تطبيقها: لا توجد محاسبة مرتبطة بهذا الملف في ماليكا، لذلك لا أستطيع إرسالها إليها.",
+  "pme.conseil.douteAvisDemande": "قرأ الحريف إجابة ماليكا هذه ويطلب رأي محاسبته.",
   "pme.conseil.aConfirmerSansEnvoi":
     "يُستحسن أن تؤكدها محاسبتكم: لم أتمكن من إرسال هذه الإجابة إليها.",
   "pme.conseil.sansCabinet": "لا محاسب يتابع هذا الملف بعد: هذه الإجابة لم يراجعها خبير محاسب.",
@@ -1257,6 +1258,7 @@ export const ar: Dict = {
   "pme.assistant.arret":
     "لا أستطيع الإجابة الآن: بلغت ميزانية المساعد لهذا الشهر حدّها. تم إعلام فريق ماليكا، ووثائقك وملفك متاحة دائمًا.",
   "pme.assistant.interrompue": "انقطعت إجابتي. أعد طرح السؤال إن بدت لك ناقصة.",
+  "pme.assistant.reprise": "انقطع الاتصال: أستعيد إجابتي…",
   "pme.assistant.indisponible": "لم أتمكّن من الإجابة الآن. أعد المحاولة بعد قليل.",
   "pme.assistant.nonVerifie": "_(غير مؤكد)_",
   "pme.assistant.nonVerifieNote":
@@ -4697,6 +4699,12 @@ export const ar: Dict = {
   "pme.malica.suiteAvis": "طلب رأي {cabinet}",
   "pme.malica.suiteAvisSansNom": "طلب رأي محاسبكم",
   "pme.malica.suiteTransmission": "طلب الإرسال من صاحب الملف",
+  "pme.malica.avis.detail": "ستتلقى سؤالكم وهذه الإجابة لتؤكدها أو تصححها",
+  "pme.malica.avis.envoi": "جارٍ الإرسال…",
+  "pme.malica.avis.envoye": "أُرسل الطلب: سيصل ردّها في هذه المحادثة",
+  "pme.malica.avis.deja": "هذه الإجابة موجودة بالفعل لدى محاسبتكم",
+  "pme.malica.avis.sansReponse": "اطرحوا سؤالكم على ماليكا أولًا",
+  "pme.malica.avis.echec": "تعذّر إرسال الطلب. أعيدوا المحاولة",
   "pme.malica.suitePasEncore": "لا يمكن تقديم هذا الطلب من هذه الشاشة بعد",
   "pme.malica.suiteSansCabinet": "طلب رأي محاسب",
   "pme.malica.suiteSansCabinetDetail": "لا يوجد محاسب موكَّل على هذا الملف",

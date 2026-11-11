@@ -1313,6 +1313,8 @@ export const fr = {
     "À confirmer par votre comptabilité : je lui envoie cette réponse, elle la confirmera, la corrigera ou l’écartera.",
   "pme.conseil.aConfirmerSansComptabilite":
     "À faire confirmer par votre comptabilité avant de l’appliquer : aucune comptabilité n’est reliée à ce dossier dans Malica, je ne peux donc pas la lui envoyer.",
+  "pme.conseil.douteAvisDemande":
+    "La personne a lu cette réponse de Malica et demande l’avis de sa comptabilité.",
   "pme.conseil.aConfirmerSansEnvoi":
     "À faire confirmer par votre comptabilité : je n’ai pas pu lui transmettre cette réponse.",
   "pme.conseil.sansCabinet":
@@ -1331,6 +1333,7 @@ export const fr = {
     "Je ne peux pas répondre pour l'instant : le budget du mois pour l'assistant est atteint. L'équipe Malica en est informée ; vos pièces et votre dossier restent accessibles.",
   "pme.assistant.interrompue":
     "Ma réponse a été interrompue. Reposez la question si elle vous semble incomplète.",
+  "pme.assistant.reprise": "La connexion a été coupée : je récupère ma réponse…",
   "pme.assistant.indisponible": "Je n'ai pas pu répondre pour l'instant. Réessayez dans un moment.",
   "pme.assistant.nonVerifie": "_(non vérifié)_",
   "pme.assistant.nonVerifieNote":
@@ -5097,6 +5100,13 @@ export const fr = {
   "pme.malica.suiteAvis": "Demander l'avis de {cabinet}",
   "pme.malica.suiteAvisSansNom": "Demander l'avis de votre comptabilité",
   "pme.malica.suiteTransmission": "Demander la transmission au propriétaire du dossier",
+  "pme.malica.avis.detail":
+    "Elle recevra votre question et cette réponse, pour la confirmer ou la corriger",
+  "pme.malica.avis.envoi": "Envoi en cours…",
+  "pme.malica.avis.envoye": "Demande envoyée : sa réponse arrivera dans ce fil",
+  "pme.malica.avis.deja": "Cette réponse est déjà chez votre comptabilité",
+  "pme.malica.avis.sansReponse": "Posez d’abord votre question à Malica",
+  "pme.malica.avis.echec": "La demande n’a pas pu partir. Réessayez",
   "pme.malica.suitePasEncore": "La demande n'est pas encore ouverte depuis cet écran",
   "pme.malica.suiteSansCabinet": "Demander l'avis d'une comptabilité",
   "pme.malica.suiteSansCabinetDetail": "Aucune comptabilité n'est mandatée sur ce dossier",

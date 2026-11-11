@@ -67,6 +67,44 @@ const ACTIONS: Record<PropositionDAction["action"], MessageKey> = {
   valider_ecriture: "pme.assistant.proposition.valider_ecriture",
 };
 
+/** Entre deux relectures du fil, et jusqu'à quand : la plus longue réponse de droit mesurée tient dedans. */
+const PAUSE_DE_REPRISE_MS = 2_000;
+const DUREE_DE_REPRISE_MS = 90_000;
+
+/**
+ * La réponse que le serveur a rangée pour cette question, une fois le flux
+ * perdu : on relit le fil jusqu'à ce que sa dernière ligne soit la réponse à
+ * la question posée. `null` si elle n'arrive pas dans le délai, ou si le fil
+ * est quitté.
+ */
+async function retrouverLaReponse(
+  conversationId: string,
+  question: string,
+  signal: AbortSignal,
+  surAttente: () => void,
+) {
+  const limite = Date.now() + DUREE_DE_REPRISE_MS;
+  while (Date.now() < limite && !signal.aborted) {
+    surAttente();
+    await new Promise((suite) => setTimeout(suite, PAUSE_DE_REPRISE_MS));
+    if (signal.aborted) return null;
+    const fil = await office()
+      .conversations.ouvrir(conversationId)
+      .catch(() => null);
+    const derniere = fil?.at(-1);
+    const avant = fil?.at(-2);
+    if (
+      derniere?.role === "assistant" &&
+      derniere.contenu.trim() &&
+      avant?.role === "user" &&
+      avant.contenu.trim() === question
+    ) {
+      return derniere;
+    }
+  }
+  return null;
+}
+
 /**
  * Le fil de conversation : les tours, l'envoi en flux, la reprise d'un fil.
  * Le fil voyage par son identifiant, jamais par son contenu.
@@ -80,7 +118,7 @@ export function useConversationMalica(
    */
   toutesLesSocietes = false,
 ) {
-  const { locale } = useI18n();
+  const { locale, t: dire } = useI18n();
   const [tours, setTours] = useState<TourDeMalica[]>([]);
   const [filId, setFilId] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
@@ -169,7 +207,35 @@ export function useConversationMalica(
       } catch (e) {
         // Un fil quitté en cours de réponse n'est pas une panne à montrer.
         if (!controleur.signal.aborted) {
-          majDernier((t) => ({ ...t, enCours: false, outil: null, erreur: e }));
+          /*
+           * LA CONNEXION A ÉTÉ COUPÉE, PAS LA RÉPONSE. Le serveur, lui, finit son
+           * travail et range la réponse au fil (relevé sur staging le
+           * 11 novembre 2026 : un changement de réseau en cours de flux
+           * affichait « je n'ai pas pu répondre » alors que la réponse était
+           * au fil, entière). Si le fil est connu, on va donc la chercher
+           * avant de montrer une panne — le cas d'un téléphone qui passe du
+           * Wi-Fi au réseau mobile au milieu d'une réponse.
+           */
+          const retrouvee = nouveauFil
+            ? await retrouverLaReponse(nouveauFil, q, controleur.signal, () =>
+                majDernier((t) => ({ ...t, outil: dire("pme.assistant.reprise") })),
+              )
+            : null;
+          if (retrouvee) {
+            reponse = retrouvee.contenu;
+            majDernier((t) => ({
+              ...t,
+              contenu: retrouvee.contenu,
+              sources: retrouvee.sources ?? undefined,
+              propositions: retrouvee.propositions ?? undefined,
+              blocs: retrouvee.blocs ?? undefined,
+              messageId: retrouvee.id,
+              enCours: false,
+              outil: null,
+            }));
+          } else if (!controleur.signal.aborted) {
+            majDernier((t) => ({ ...t, enCours: false, outil: null, erreur: e }));
+          }
         }
       } finally {
         setEnCours(false);
@@ -177,7 +243,7 @@ export function useConversationMalica(
       }
       return { conversationId: nouveauFil, reponse };
     },
-    [tenantId, enCours, locale, filId, toutesLesSocietes],
+    [tenantId, enCours, locale, filId, toutesLesSocietes, dire],
   );
 
   /**

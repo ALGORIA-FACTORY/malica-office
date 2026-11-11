@@ -228,6 +228,21 @@ function PmeMalica() {
   const filCourant = filId ? listeDesFils.find((f) => f.id === filId) : undefined;
 
   const parle = tours.length > 0;
+  // Le geste n'existe que s'il y a quelqu'un à qui demander, et un fil rangé.
+  const avisOuvert = aUnCabinet && !siege && Boolean(filId);
+  const avis = useMutation({
+    mutationFn: () =>
+      office().malica.demanderLAvis({
+        tenantId: pme.tenantId,
+        conversationId: filId!,
+        locale,
+      }),
+  });
+  // Une question nouvelle, un autre fil : le bouton redevient un geste à faire.
+  const reinitialiserLAvis = avis.reset;
+  useEffect(() => {
+    reinitialiserLAvis();
+  }, [filId, tours.length, reinitialiserLAvis]);
   const derniere = [...tours].reverse().find((x) => x.role === "assistant");
   const statut =
     enCours || voix.parle
@@ -465,25 +480,60 @@ function PmeMalica() {
                 </div>
 
                 {parle && !(conseil.isPending || conseil.isError || acces.isPending) ? (
-                  <div className="esc off">
-                    <span className="av">{siege ? "·" : initiales(cabinetNom)}</span>
-                    <span className="bd">
-                      <b>
-                        {siege
-                          ? t("pme.malica.suiteTransmission")
-                          : aUnCabinet
-                            ? cabinetNom
-                              ? t("pme.malica.suiteAvis", { cabinet: cabinetNom })
-                              : t("pme.malica.suiteAvisSansNom")
-                            : t("pme.malica.suiteSansCabinet")}
-                      </b>
-                      <span>
-                        {siege || aUnCabinet
-                          ? t("pme.malica.suitePasEncore")
-                          : t("pme.malica.suiteSansCabinetDetail")}
+                  avisOuvert ? (
+                    /*
+                     * « Demander l'avis de ma comptabilité » : la dernière réponse
+                     * part dans sa file. Le serveur relit le fil et ne pose la
+                     * demande qu'une fois ; le bouton dit ensuite où elle est.
+                     */
+                    <button
+                      type="button"
+                      className={avis.data?.etat === "envoye" ? "esc off" : "esc"}
+                      disabled={avis.isPending || avis.data?.etat === "envoye" || enCours}
+                      aria-live="polite"
+                      onClick={() => avis.mutate()}
+                    >
+                      <span className="av">{initiales(cabinetNom)}</span>
+                      <span className="bd">
+                        <b>
+                          {cabinetNom
+                            ? t("pme.malica.suiteAvis", { cabinet: cabinetNom })
+                            : t("pme.malica.suiteAvisSansNom")}
+                        </b>
+                        <span>
+                          {avis.isPending
+                            ? t("pme.malica.avis.envoi")
+                            : avis.isError
+                              ? t("pme.malica.avis.echec")
+                              : avis.data?.etat === "envoye"
+                                ? t(
+                                    avis.data.deja
+                                      ? "pme.malica.avis.deja"
+                                      : "pme.malica.avis.envoye",
+                                  )
+                                : avis.data?.etat === "sans_reponse"
+                                  ? t("pme.malica.avis.sansReponse")
+                                  : t("pme.malica.avis.detail")}
+                        </span>
                       </span>
-                    </span>
-                  </div>
+                    </button>
+                  ) : (
+                    <div className="esc off">
+                      <span className="av">{siege ? "·" : initiales(cabinetNom)}</span>
+                      <span className="bd">
+                        <b>
+                          {siege
+                            ? t("pme.malica.suiteTransmission")
+                            : t("pme.malica.suiteSansCabinet")}
+                        </b>
+                        <span>
+                          {siege
+                            ? t("pme.malica.suitePasEncore")
+                            : t("pme.malica.suiteSansCabinetDetail")}
+                        </span>
+                      </span>
+                    </div>
+                  )
                 ) : null}
 
                 {/*

@@ -1253,6 +1253,8 @@ export const en: Dict = {
     "To be confirmed by your accounting team: I am sending them this answer, and they will confirm, correct or dismiss it.",
   "pme.conseil.aConfirmerSansComptabilite":
     "Have your accounting team confirm this before you apply it: no accounting team is connected to this file in Malica, so I cannot send it to them.",
+  "pme.conseil.douteAvisDemande":
+    "The person has read this answer from Malica and asks for their accounting team's opinion.",
   "pme.conseil.aConfirmerSansEnvoi":
     "Have your accounting team confirm this: I could not pass this answer on to them.",
   "pme.conseil.sansCabinet":
@@ -1270,6 +1272,7 @@ export const en: Dict = {
   "pme.assistant.arret":
     "I can't answer right now: this month's assistant budget has been reached. The Malica team has been notified; your documents and file remain available.",
   "pme.assistant.interrompue": "My answer was interrupted. Ask again if it seems incomplete.",
+  "pme.assistant.reprise": "The connection dropped: I am fetching my answer…",
   "pme.assistant.indisponible": "I couldn't answer right now. Please try again in a moment.",
   "pme.assistant.nonVerifie": "_(unverified)_",
   "pme.assistant.nonVerifieNote":
@@ -4891,6 +4894,13 @@ export const en: Dict = {
   "pme.malica.suiteAvis": "Ask {cabinet} for advice",
   "pme.malica.suiteAvisSansNom": "Ask your accountant for advice",
   "pme.malica.suiteTransmission": "Ask the file owner to send it",
+  "pme.malica.avis.detail":
+    "They will receive your question and this answer, to confirm or correct it",
+  "pme.malica.avis.envoi": "Sending…",
+  "pme.malica.avis.envoye": "Request sent: their reply will arrive in this thread",
+  "pme.malica.avis.deja": "This answer is already with your accounting team",
+  "pme.malica.avis.sansReponse": "Ask Malica your question first",
+  "pme.malica.avis.echec": "The request could not be sent. Try again",
   "pme.malica.suitePasEncore": "This request cannot be made from this screen yet",
   "pme.malica.suiteSansCabinet": "Ask an accountant for advice",
   "pme.malica.suiteSansCabinetDetail": "No accountant is engaged on this file",
