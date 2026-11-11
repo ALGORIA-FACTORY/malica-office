@@ -810,4 +810,7 @@ la marque « non vérifié », ou retenu jusqu'au retour de l'expert. Aujourd'hu
 **Tranché par défaut, pour ne pas s'arrêter** : affiché et marqué, sans jamais pouvoir entrer dans un calcul
 ni dans une écriture. Rien n'est codé à ce jour.
 
+**Tranché par le dirigeant le 11 novembre 2026 : choix 1.** Le chiffre est affiché avec la marque « non
+vérifié », la question part chez l'expert, et ce chiffre n'entre jamais dans un calcul ni dans une écriture.
+
 À préciser aussi : qui est « l'expert » d'une société sans cabinet rattaché.
