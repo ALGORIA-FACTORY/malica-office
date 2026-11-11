@@ -1,6 +1,6 @@
 -- La tour règle ce que Malica fait d'une réponse à relire et d'un corpus muet.
 --
--- `20261211100000` et `20261211100200` ont livré les deux règles par migration
+-- `20261211120000` et `20261211120200` ont livré les deux règles par migration
 -- (`annoncer`, `marquer`). R10 : un défaut se change sans migration. La tour
 -- reçoit sa carte — elle lit la décision en vigueur et en inscrit une nouvelle,
 -- datée et motivée ; la précédente reste au registre.
