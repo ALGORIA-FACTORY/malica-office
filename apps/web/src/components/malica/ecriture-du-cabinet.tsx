@@ -27,7 +27,7 @@ import type { StatutCabinet, SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, ChevronDown, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 
@@ -157,6 +157,17 @@ export function EcritureDuCabinet({
   const [modifier, setModifier] = useState(false);
   const [ligneOuverte, setLigneOuverte] = useState<number | null>(null);
   const [tampon, setTampon] = useState(false);
+  // L'écran peut disparaître pendant le tampon (le comptable passe à la pièce
+  // suivante) : ce qui suit l'attente ne touche plus un écran démonté. Sans
+  // cette garde, la fin du tampon arrivait après le démontage et, en épreuve,
+  // après la fin de l'environnement (« window is not defined », 11 nov. 2026).
+  const monte = useRef(true);
+  useEffect(
+    () => () => {
+      monte.current = false;
+    },
+    [],
+  );
 
   const journaux = useQuery({
     queryKey: ["journaux", locale],
@@ -246,11 +257,14 @@ export function EcritureDuCabinet({
     onSuccess: async () => {
       setTampon(true);
       await new Promise((fin) => setTimeout(fin, 700));
+      if (!monte.current) return;
       setTampon(false);
       await relire();
       onInscrite?.();
     },
-    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
+    onError: (e: unknown) => {
+      if (monte.current) setErreur(texteDeLErreur(e, OU, t("common.error")));
+    },
   });
 
   // Trancher le sens : une précision datée à son nom, puis le Socle rejuge.
