@@ -613,11 +613,21 @@ async function converser(
 
   /* ------------------------------------------------------------ la requête */
   // L'outil final vient en dernier : c'est lui qui porte le point de cache.
+  /*
+   * UN MODÈLE QUI RÉFLÉCHIT CONCLUT APRÈS, PAS DANS LE MÊME TOUR. Essai réel du
+   * 11 novembre 2026 sur le modèle des questions difficiles : dès qu'un outil
+   * suit sa réponse dans le même tour, l'API rend cette réponse comme une
+   * « réflexion », pas comme du texte — la personne lisait « je n'ai rien
+   * trouvé de sûr à vous répondre » une fois sur deux. À ce modèle-là, l'outil
+   * final n'est donc pas offert pendant la réponse : il écrit, finit son tour,
+   * et la conclusion lui est demandée ensuite (voir « LA CONCLUSION DEMANDÉE »).
+   */
+  const conclutApres = choix.reflexion !== "disabled";
   const definitions = [
     ...DEFINITIONS,
     // Offert seulement quand il y a de quoi comparer : le modèle ne le voit pas autrement.
     ...(ctx.societes ? [COMPARER_LES_SOCIETES] : []),
-    CONCLURE_REPONSE,
+    ...(conclutApres ? [] : [CONCLURE_REPONSE]),
   ];
   // La recherche sur internet est un outil du fournisseur : offerte seulement
   // au modèle qui la sert, et seulement si la tour l'a laissée active.
@@ -637,7 +647,12 @@ async function converser(
     q.pieceIds.length > 0
       ? `\n\n[Pièces jointes à ce message, lues par la lecture Malica — ouvre-les avec piece_ouvrir : ${q.pieceIds.join(", ")}]`
       : "";
-  const messages: Array<{ role: "user" | "assistant"; content: unknown }> = [
+  // Seulement pour le fournisseur qui accepte une consigne d'opérateur en cours de fil.
+  const rappelDeLangue =
+    fournisseur === "claude" && ecritEnArabe(q.question)
+      ? "Rappel : le message de la personne est en arabe. Ta réponse est entièrement en arabe, quelle que soit la langue des résultats ci-dessus."
+      : null;
+  const messages: Array<{ role: "user" | "assistant" | "system"; content: unknown }> = [
     ...historique.map((m) => ({ role: m.role, content: m.contenu })),
     { role: "user", content: `${q.question}${jointes}` },
   ];
@@ -955,6 +970,9 @@ async function converser(
       role: "user",
       content: resultats,
     });
+    // Les résultats viennent d'arriver, en français : c'est le moment où la
+    // langue de la réponse se perdait. La consigne d'opérateur le redit ici.
+    if (rappelDeLangue) messages.push({ role: "system", content: rappelDeLangue });
   }
 
   /*
@@ -970,7 +988,10 @@ async function converser(
     dernierTour !== null &&
     !interrompue &&
     garde.texteEmis() !== "" &&
-    doitEtreRelue(SANS_CONCLUSION, contexte)
+    // Un cabinet peut relire ; ou bien le modèle n'a pas pu conclure dans son
+    // tour et vient de consulter le droit, pour une personne du dossier.
+    (doitEtreRelue(SANS_CONCLUSION, contexte) ||
+      (conclutApres && contexte?.appelantMembre === true && outilsAppeles.includes(CONSEIL_FISCAL)))
   ) {
     const assembleur = new Assembleur();
     const debutAppel = maintenant();
@@ -979,10 +1000,12 @@ async function converser(
         model: choix.modele,
         max_tokens: reglage.sortie_max_jetons,
         output_config: { effort: choix.effort },
-        thinking: { type: "disabled" },
+        // Le modèle qui réfléchit n'accepte ni réflexion coupée ni outil imposé :
+        // on ne lui offre que l'outil final, et la demande le nomme.
+        thinking: { type: conclutApres ? choix.reflexion : "disabled" },
         cache_control: { type: "ephemeral" },
-        tools: outils,
-        tool_choice: { type: "tool", name: CONCLURE_REPONSE.name },
+        tools: conclutApres ? [CONCLURE_REPONSE] : outils,
+        ...(conclutApres ? {} : { tool_choice: { type: "tool", name: CONCLURE_REPONSE.name } }),
         system,
         messages: [
           ...messages,

@@ -564,7 +564,7 @@ async function piecesChercher(ctx: ContexteDesOutils, brut: unknown): Promise<Re
   const bilan: SourceConnue = {
     cle: `malica:liste:pieces:${critere || "toutes"}`,
     genre: "liste",
-    titre: `Recherche de pièces${critere ? ` (${critere})` : ""}`,
+    titre: `${message(ctx.locale, "pme.assistant.source.pieces")}${critere ? ` (${critere})` : ""}`,
     objetId: null,
     texte:
       `Pièces trouvées : ${trouvees.length}` +
@@ -659,7 +659,7 @@ async function pieceOuvrir(ctx: ContexteDesOutils, brut: unknown): Promise<Resul
       {
         cle: `malica:piece:${d.piece.id}`,
         genre: "piece",
-        titre: `${x?.issuer ?? "Pièce"}${x?.document_date ? ` du ${x.document_date}` : ""}`,
+        titre: `${x?.issuer ?? message(ctx.locale, "pme.assistant.source.piece")}${x?.document_date ? ` — ${jourEnClair(x.document_date, ctx.locale)}` : ""}`,
         objetId: d.piece.id,
         texte: lignes.join("\n"),
       },
@@ -746,7 +746,9 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
         {
           cle: `malica:tva:${tva.period}`,
           genre: "tva",
-          titre: `TVA de ${moisEnClair(tva.period, ctx.locale).toLocaleLowerCase(ctx.locale)}`,
+          titre: message(ctx.locale, "pme.assistant.source.tva", {
+            mois: moisEnClair(tva.period, ctx.locale).toLocaleLowerCase(ctx.locale),
+          }),
           objetId: null,
           texte:
             `TVA du mois ${tva.period} : aucune pièce n'entre dans le calcul ` +
@@ -790,7 +792,9 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
       {
         cle: `malica:tva:${tva.period}`,
         genre: "tva",
-        titre: `TVA de ${moisEnClair(tva.period, ctx.locale).toLocaleLowerCase(ctx.locale)}`,
+        titre: message(ctx.locale, "pme.assistant.source.tva", {
+          mois: moisEnClair(tva.period, ctx.locale).toLocaleLowerCase(ctx.locale),
+        }),
         objetId: null,
         texte,
       },
@@ -877,7 +881,15 @@ async function achatsDuDossier(ctx: ContexteDesOutils, brut: unknown): Promise<R
   ].join("\n");
   return {
     ok: true,
-    sources: [{ cle, genre: "liste", titre: "Achats par fournisseur", objetId: null, texte }],
+    sources: [
+      {
+        cle,
+        genre: "liste",
+        titre: message(ctx.locale, "pme.assistant.source.achats"),
+        objetId: null,
+        texte,
+      },
+    ],
     ...(achats.pieces > 0
       ? {
           visuels: [
@@ -960,7 +972,15 @@ async function evolutionMensuelle(ctx: ContexteDesOutils, brut: unknown): Promis
   ].join("\n");
   return {
     ok: true,
-    sources: [{ cle, genre: "liste", titre: "Achats et ventes par mois", objetId: null, texte }],
+    sources: [
+      {
+        cle,
+        genre: "liste",
+        titre: message(ctx.locale, "pme.assistant.source.mois"),
+        objetId: null,
+        texte,
+      },
+    ],
     ...(comptees > 0
       ? {
           visuels: [
@@ -1050,7 +1070,15 @@ async function comparerLesSocietes(ctx: ContexteDesOutils, brut: unknown): Promi
   ].join("\n");
   return {
     ok: true,
-    sources: [{ cle, genre: "liste", titre: "Comparaison des sociétés", objetId: null, texte }],
+    sources: [
+      {
+        cle,
+        genre: "liste",
+        titre: message(ctx.locale, "pme.assistant.source.societes"),
+        objetId: null,
+        texte,
+      },
+    ],
     ...(comptees > 0
       ? {
           visuels: [
@@ -1132,7 +1160,7 @@ async function resultatComptabilise(
         {
           cle,
           genre: "liste",
-          titre: "Résultat comptabilisé",
+          titre: message(ctx.locale, "pme.assistant.source.resultat"),
           objetId: null,
           texte:
             `Résultat comptabilisé de ${premier} à ${dernier} : aucune écriture comptabilisée sur la période. ` +
@@ -1162,7 +1190,15 @@ async function resultatComptabilise(
   ].join("\n");
   return {
     ok: true,
-    sources: [{ cle, genre: "liste", titre: "Résultat comptabilisé", objetId: null, texte }],
+    sources: [
+      {
+        cle,
+        genre: "liste",
+        titre: message(ctx.locale, "pme.assistant.source.resultat"),
+        objetId: null,
+        texte,
+      },
+    ],
     visuels: [
       {
         cle,
@@ -1206,7 +1242,7 @@ async function echeancesFiscales(ctx: ContexteDesOutils, brut: unknown): Promise
       {
         cle: `malica:echeances:${toutes ? "toutes" : "a-venir"}`,
         genre: "echeance",
-        titre: "Calendrier fiscal du dossier",
+        titre: message(ctx.locale, "pme.assistant.source.echeances"),
         objetId: null,
         texte:
           `Aujourd'hui : ${ctx.aujourdhui}. Échéances ${toutes ? "du calendrier" : "restant à faire"} : ${retenues.length}.\n` +
@@ -1242,11 +1278,15 @@ interface Ecriture {
   lignes: Array<{ compte: string; libelle: string; debit: string; credit: string }>;
 }
 
-function sourceDeLEcriture(e: Ecriture): SourceConnue {
+function sourceDeLEcriture(e: Ecriture, locale: string): SourceConnue {
   return {
     cle: `malica:ecriture:${e.id}`,
     genre: "ecriture",
-    titre: `Écriture ${e.journal} du ${e.date} — ${e.libelle}`,
+    titre: message(locale, "pme.assistant.source.ecriture", {
+      journal: e.journal,
+      date: jourEnClair(e.date, locale),
+      libelle: e.libelle,
+    }),
     objetId: e.id,
     texte: [
       `Journal ${e.journal}, date ${e.date}, statut ${e.status}, libellé « ${e.libelle} ».`,
@@ -1299,13 +1339,13 @@ async function ecrituresProposees(ctx: ContexteDesOutils, brut: unknown): Promis
       {
         cle: `malica:liste:ecritures:${typeof pieceId === "string" ? pieceId : "dossier"}`,
         genre: "liste",
-        titre: "Écritures du dossier",
+        titre: message(ctx.locale, "pme.assistant.source.ecritures"),
         objetId: null,
         texte:
           `Écritures trouvées : ${ecritures.length}.` +
           (ecritures.length === 0 ? " Aucune écriture." : ""),
       },
-      ...rendues.map(sourceDeLEcriture),
+      ...rendues.map((e) => sourceDeLEcriture(e, ctx.locale)),
     ],
   };
 }
@@ -1339,7 +1379,7 @@ async function tiersChercher(ctx: ContexteDesOutils, brut: unknown): Promise<Res
       {
         cle: `malica:liste:tiers:${e.data.nature ?? "tous"}:${e.data.texte ?? ""}`,
         genre: "tiers",
-        titre: "Tiers du dossier",
+        titre: message(ctx.locale, "pme.assistant.source.tiers"),
         objetId: null,
         texte:
           `Tiers trouvés : ${trouves.length}.\n` +
@@ -1376,7 +1416,7 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
         {
           cle: `malica:conseil:refus:${plat(e.data.question).slice(0, 60)}`,
           genre: "article",
-          titre: "Conseil cité — les textes ne répondent pas",
+          titre: message(ctx.locale, "pme.assistant.source.conseilSansTexte"),
           objetId: null,
           article: null,
           texte:
@@ -1408,7 +1448,7 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
       parTexte.set(cle, {
         cle,
         genre: c.code ? "parametre" : "article",
-        titre: `${nom}${c.numero ? `, article ${c.numero}` : ""}${c.code ? ` (paramètre ${c.code})` : ""}${c.validFrom ? ` — version du ${c.validFrom}` : ""}`,
+        titre: `${nom}${c.numero ? `, article ${c.numero}` : ""}${c.code ? ` (paramètre ${c.code})` : ""}${c.validFrom ? ` — ${jourEnClair(c.validFrom, ctx.locale)}` : ""}`,
         objetId: null,
         article: { corpus: c.corpus, numero: c.numero, validFrom: c.validFrom },
         texte: c.extrait,
@@ -1418,7 +1458,9 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
   const synthese: SourceConnue = {
     cle: `malica:conseil:${plat(e.data.question).slice(0, 60)}@${r.enVigueurAu}`,
     genre: "article",
-    titre: `Conseil cité — droit en vigueur au ${jourEnClair(r.enVigueurAu, ctx.locale)}`,
+    titre: message(ctx.locale, "pme.assistant.source.conseil", {
+      date: jourEnClair(r.enVigueurAu, ctx.locale),
+    }),
     objetId: null,
     article: null,
     texte: r.affirmations.map((a) => a.texte.trim()).join("\n\n"),
@@ -1468,7 +1510,10 @@ async function actionProposer(ctx: ContexteDesOutils, brut: unknown): Promise<Re
       {
         cle: `malica:proposition:${proposition.id}`,
         genre: "piece",
-        titre: `Proposition : ${e.data.action === "envoyer_au_cabinet" ? "envoyer au cabinet" : "valider l'écriture"} — ${libelle}`,
+        titre: message(ctx.locale, "pme.assistant.source.proposition", {
+          action: message(ctx.locale, `pme.assistant.proposition.${e.data.action}`),
+          libelle,
+        }),
         objetId: e.data.piece_id,
         texte:
           "PROPOSITION AFFICHÉE, RIEN N'A ÉTÉ EXÉCUTÉ. La personne voit un bouton de confirmation sous ta réponse. " +
@@ -1539,7 +1584,7 @@ async function calculer(ctx: ContexteDesOutils, brut: unknown): Promise<Resultat
       {
         cle: `malica:calcul:${expression.replace(/\s+/g, "")}`,
         genre: "calcul",
-        titre: "Calcul",
+        titre: message(ctx.locale, "pme.assistant.source.calcul"),
         objetId: null,
         texte: `Opération : ${expression}\nRésultat exact : ${enClair(rendu.valeur)}`,
         extrait: `${expression} = ${enClair(rendu.valeur)}`,

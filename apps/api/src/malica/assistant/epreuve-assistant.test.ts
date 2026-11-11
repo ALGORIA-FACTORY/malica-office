@@ -278,6 +278,8 @@ function dossierFictif(
     fileEnPanne?: boolean;
     /** Quand le corpus ne répond pas : lu en base ; absent, la garde retire. */
     sansTexte?: "marquer" | "retirer";
+    /** La réflexion du modèle courant ; absente, celle du réglage d'essai (coupée). */
+    reflexion?: "between_tools" | "adaptive";
     /** La recherche sur internet, telle que la base la rend ; absente, l'outil n'est pas offert. */
     web?: { active: boolean; outil: string; recherches_max: number };
   } = {},
@@ -324,6 +326,9 @@ function dossierFictif(
             ...(options.sansTexte ? { sans_texte: options.sansTexte } : {}),
             ...(options.sansTexte === "marquer" ? { unites_marquables: ["%", "jours"] } : {}),
             ...(options.web ? { web: options.web } : {}),
+            ...(options.reflexion
+              ? { reglage: { ...CONFIGURATION.reglage, reflexion_courant: options.reflexion } }
+              : {}),
           });
         case "capture.chaineDeDesignation":
           return r(chaine(options.anthropicEpuise ?? false, options.deepseekEpuise ?? false));
@@ -2050,5 +2055,85 @@ describe("ce qui n'était pas vérifié ne devient pas une source au tour suivan
       api,
     );
     assert.ok(!fin.reponse.includes("3,47"), "un chiffre non vérifié du fil a passé la garde");
+  });
+});
+
+describe("un modèle qui réfléchit conclut après sa réponse, pas dans le même tour", () => {
+  const QUESTION = {
+    tenantId: TENANT,
+    question: LOYER,
+    locale: "fr" as const,
+    conversationId: null,
+    pieceIds: [],
+  };
+
+  it("l'outil final n'est pas offert pendant la réponse ; il est demandé ensuite, sans outil imposé", async () => {
+    const { api, trace } = dossierFictif({
+      contexte: SOUS_MANDAT,
+      relecture: "annoncer",
+      reflexion: "between_tools",
+    });
+    const requetes: Array<Record<string, unknown>> = [];
+    const claude: ClientEnFlux = async function* (requete) {
+      requetes.push(structuredClone(requete));
+      yield { type: "message_start", message: { model: "modele-courant", usage: {} } };
+      if (requetes.length === 1) {
+        yield { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } };
+        yield {
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "text_delta", text: REPONSE_DOSSIER },
+        };
+        yield { type: "content_block_stop", index: 0 };
+        yield { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: {} };
+        return;
+      }
+      yield {
+        type: "content_block_start",
+        index: 0,
+        content_block: { type: "tool_use", id: "toolu_c", name: "conclure_reponse", input: {} },
+      };
+      yield {
+        type: "content_block_delta",
+        index: 0,
+        delta: { type: "input_json_delta", partial_json: JSON.stringify(CONCLUSION_DOSSIER) },
+      };
+      yield { type: "content_block_stop", index: 0 };
+      yield { type: "message_delta", delta: { stop_reason: "tool_use" }, usage: {} };
+    };
+    const { fin } = await rejouer(
+      QUESTION,
+      { claude, conseil: conseilFictif, repli: sansRepli },
+      api,
+    );
+    const noms = (r: Record<string, unknown>) =>
+      (r["tools"] as Array<{ name: string }>).map((o) => o.name);
+    assert.ok(!noms(requetes[0]!).includes("conclure_reponse"), "l'outil final suit la réponse");
+    assert.deepEqual(noms(requetes[1]!), ["conclure_reponse"]);
+    assert.equal(
+      requetes[1]!["tool_choice"],
+      undefined,
+      "un outil imposé est refusé par ce modèle",
+    );
+    assert.deepEqual(requetes[1]!["thinking"], { type: "between_tools" });
+    // La réponse est là, entière, et elle part chez la comptabilité avec sa conclusion.
+    assert.ok(fin.reponse.startsWith(REPONSE_DOSSIER));
+    assert.equal(fin.mesure.conclusion?.portee, "dossier");
+    assert.equal(trace.file.length, 1);
+  });
+
+  it("le modèle sans réflexion garde l'outil final dans son tour", async () => {
+    const { api } = dossierFictif({ contexte: SOUS_MANDAT, relecture: "annoncer" });
+    const requetes: RequeteVue[] = [];
+    await rejouer(
+      QUESTION,
+      {
+        claude: claudeSimule([{ texte: "Réponse." }], requetes),
+        conseil: conseilFictif,
+        repli: sansRepli,
+      },
+      api,
+    );
+    assert.ok(requetes[0]!.tools.some((o) => o.name === "conclure_reponse"));
   });
 });
