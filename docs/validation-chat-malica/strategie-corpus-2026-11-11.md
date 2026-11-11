@@ -87,7 +87,7 @@ Règles communes :
 4. **Un article qui a une version en vigueur n'est pas présenté comme abrogé** (C1) : la mention d'abrogation
    partielle devient une note de l'article.
 5. **Un article long se lit par paragraphe** (C5) : les paramètres pointent déjà « 52-I-a ».
-6. **Pas de texte, pas de réponse** : lacune de date, article absent ou extraction incertaine se disent.
+6. **Malica répond toujours** (consigne du dirigeant, voir la section 6 bis) : une lacune de date, un article absent ou une extraction incertaine se disent, et ne ferment pas la réponse.
 
 Mesure avant et après chaque changement : le jeu de sondage existant (12 101 questions, `db/corpus/sonder.mjs`)
 pour le rappel, et la banque de cas pour la réponse, une fois validée par un expert.
@@ -130,13 +130,43 @@ Règles de rendu :
 | Citation               | Chaque phrase de droit porte sa source. Le clic ouvre le passage, la phrase citée surlignée             |
 | Chiffre                | Vient du paramètre, avec la mention « confirmé » ou « à confirmer »                                     |
 | Portée                 | Une note commune est dite « position de l'administration »                                              |
-| Texte manquant         | Refus clair, et ce qui manque : « le corpus n'a pas la version de 2024 de cet article »                 |
+| Texte manquant         | Malica répond quand même, au niveau « sans texte » de la section 6 bis, et dit ce qui manque            |
 | Textes contradictoires | Les deux sont montrés, la hiérarchie tranche, et la réponse le dit                                      |
 | Pas de verdict         | « À valider par votre comptable », avec l'envoi de l'avis en un geste                                   |
 | Langue                 | La réponse dans la langue de la personne ; le texte cité dans sa langue d'origine, et la réponse le dit |
 | Vitesse                | Le chemin du paramètre ne demande pas le modèle difficile : cible 3 s, contre 17 s aujourd'hui          |
 
 La cible de 3 s est une estimation, non mesurée.
+
+## 6 bis. Malica répond toujours (consigne du dirigeant, 11 novembre 2026)
+
+Constat du dirigeant : Malica refuse trop souvent. Consigne : elle répond toujours ; en cas de doute, elle le
+dit et annonce que la question part chez l'expert-comptable, qui confirme, corrige ou écarte.
+
+Sur le jeu figé, 2 questions de droit sur 7 ont fini en refus ou en réponse partielle alors que le texte
+était dans le corpus (retenue sur honoraires, délai de déclaration).
+
+| Niveau      | Quand                                                                                    | Ce que Malica rend                                                                    | Envoi à l'expert |
+| ----------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------- |
+| Établi      | Paramètre confirmé, ou article en vigueur trouvé                                         | La réponse, citée                                                                     | non              |
+| À confirmer | Paramètre « à confirmer », textes contradictoires, extraction incertaine, lacune de date | La réponse, marquée « à confirmer », avec la raison du doute                          | oui, annoncé     |
+| Sans texte  | Rien de trouvé dans le corpus                                                            | L'explication générale et la piste probable, marquées « non vérifié dans les textes » | oui, annoncé     |
+
+Ce que cela change : le refus disparaît comme issue. Les barrières (garde des chiffres, contrôles de
+citation) ne retirent plus la réponse : elles la **classent** dans un niveau.
+
+Deux limites qui restent, et pourquoi :
+
+- **Le niveau se voit.** Une réponse « à confirmer » ne ressemble jamais à une réponse établie : marque
+  visible, dans les trois langues.
+- **Le retour de l'expert revient dans le fil** : confirmé, corrigé ou écarté, daté, avec son nom.
+
+Point à trancher par le dirigeant : au niveau « sans texte », le **chiffre** que le modèle tire de sa
+mémoire (un taux, un délai) est-il affiché avec la marque « non vérifié », ou retenu jusqu'au retour de
+l'expert ? Aujourd'hui la garde le retire (R2, R3).
+
+L'envoi à l'expert écrit en base : il passe par une porte (R6). Non vérifié : ce que la file d'avis existante
+permet déjà, et qui est « l'expert » d'une société sans cabinet rattaché.
 
 ## 7. Ordre proposé
 
