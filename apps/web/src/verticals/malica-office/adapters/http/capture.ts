@@ -305,11 +305,9 @@ export function creerCaptureHttp(): CaptureRepository {
     },
 
     async corrigerLeChamp(pieceId: string, champ: string, valeur: string) {
-      return (await appeler("capture", "corrigerLeChamp", [
-        pieceId,
-        champ,
-        valeur,
-      ])) as Awaited<ReturnType<CaptureRepository["corrigerLeChamp"]>>;
+      return (await appeler("capture", "corrigerLeChamp", [pieceId, champ, valeur])) as Awaited<
+        ReturnType<CaptureRepository["corrigerLeChamp"]>
+      >;
     },
 
     async codesDeTva(pieceId: string, locale: string) {

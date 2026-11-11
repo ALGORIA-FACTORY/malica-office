@@ -123,3 +123,62 @@ describe("la feuille du crayon", () => {
     expect(screen.getByRole("alert").textContent).toBe("Ce montant a trop de décimales.");
   });
 });
+
+describe("la feuille du crayon pour une ligne", () => {
+  afterEach(cleanup);
+
+  it("le code de TVA se choisit dans la liste donnée, jamais saisi : pas de champ libre, pas de taux", () => {
+    const g = monter({
+      genre: "code",
+      champ: "Code TVA — ligne 1",
+      lu: "TVA19",
+      choix: [
+        { code: "TVA19", label: "TVA taux normal", taux: "0.190000" },
+        { code: "TVA07", label: "TVA taux réduit", taux: "0.070000" },
+      ],
+    });
+    expect(screen.queryByRole("textbox")).toBeNull();
+    const radios = screen.getAllByRole("radio");
+    expect(radios.map((r) => r.textContent?.replace(/[●○]/, ""))).toEqual([
+      "TVA19 · TVA taux normal",
+      "TVA07 · TVA taux réduit",
+    ]);
+    const enregistrer = screen.getByRole("button", {
+      name: "pme.crayon.enregistrer",
+    }) as HTMLButtonElement;
+    expect(enregistrer.disabled).toBe(true);
+    fireEvent.click(radios[1]!);
+    expect(radios[1]!.getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(enregistrer);
+    expect(g.onEnregistrer).toHaveBeenCalledWith("TVA07");
+  });
+
+  it("une quantité se lit par le Socle, avec six décimales au plus", () => {
+    const g = monter({ genre: "quantite", champ: "Quantité — ligne 1", lu: "200" });
+    const champ = screen.getByRole("textbox");
+    fireEvent.change(champ, { target: { value: "2,5" } });
+    fireEvent.click(screen.getByRole("button", { name: "pme.crayon.enregistrer" }));
+    expect(g.onEnregistrer).toHaveBeenCalledWith("2.5");
+    fireEvent.change(champ, { target: { value: "1,1234567" } });
+    expect(screen.getByRole("alert").textContent).toContain("saisie.refus.tropPrecis");
+  });
+
+  it("un libellé s'écrit tel qu'imprimé, blancs resserrés, et jamais vide", () => {
+    const g = monter({ genre: "texte", champ: "Libellé — ligne 1", lu: "Ramettes" });
+    const champ = screen.getByRole("textbox");
+    const enregistrer = screen.getByRole("button", {
+      name: "pme.crayon.enregistrer",
+    }) as HTMLButtonElement;
+    fireEvent.change(champ, { target: { value: "   " } });
+    expect(enregistrer.disabled).toBe(true);
+    fireEvent.change(champ, { target: { value: "  Ramettes   A4 " } });
+    fireEvent.click(enregistrer);
+    expect(g.onEnregistrer).toHaveBeenCalledWith("Ramettes A4");
+  });
+
+  it("un montant de ligne suit les décimales de la devise", () => {
+    monter({ genre: "montant", champ: "Prix unitaire HT — ligne 1", decimales: 2 });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "25,001" } });
+    expect(screen.getByRole("alert").textContent).toContain("saisie.refus.tropPrecis");
+  });
+});

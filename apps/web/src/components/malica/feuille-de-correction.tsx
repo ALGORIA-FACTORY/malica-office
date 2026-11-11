@@ -29,8 +29,27 @@ import { phraseDuRefus } from "@/lib/refus-de-saisie";
 import type { JugementDUneCorrection } from "@malica/socle/ports/repositories";
 import { saisieDecimale } from "@malica/socle/saisie-decimale";
 
+/**
+ * Ce que la saisie est : un montant (les décimales de la devise du référentiel),
+ * une quantité, un libellé, ou un code de TVA CHOISI dans la liste du
+ * référentiel à la date de la pièce — jamais un taux saisi (R4).
+ */
+export type GenreDeSaisie = "montant" | "quantite" | "texte" | "code";
+
+/** Les décimales d'une quantité : la borne que la base pose (`precision_de_lecture`). */
+const DECIMALES_DE_QUANTITE = 6;
+
+/** Un code de TVA du référentiel, avec son libellé traduit. */
+export interface ChoixDeTva {
+  code: string;
+  label: string;
+  taux: string;
+}
+
 export function FeuilleDeCorrection({
   champ,
+  genre = "montant",
+  choix = [],
   lu,
   devise,
   decimales,
@@ -47,10 +66,13 @@ export function FeuilleDeCorrection({
 }: {
   /** Le nom du champ, dans la langue de la personne (« TVA », « Total »). */
   champ: string;
+  genre?: GenreDeSaisie;
+  /** Les codes de TVA parmi lesquels choisir (`genre = "code"`) ; vide tant qu'ils se chargent. */
+  choix?: readonly ChoixDeTva[];
   /** Ce que la lecture a lu, tel qu'on l'affiche ; `null` si rien n'a été lu. */
   lu: string | null;
   devise: string;
-  /** Les décimales de la devise du référentiel (R4). */
+  /** Les décimales de la devise du référentiel (R4), pour un montant. */
   decimales: number;
   /** La zone de la photo (`ZoneDeLaPhoto`). */
   zone: ReactNode;
@@ -73,8 +95,15 @@ export function FeuilleDeCorrection({
   const [saisie, setSaisie] = useState("");
   useSuperposition(true, onFermer, feuille);
 
-  const canonique = saisieDecimale(saisie);
-  const refus = phraseDuRefus(saisie, decimales);
+  const [choisi, setChoisi] = useState<string | null>(null);
+  const bornes = genre === "quantite" ? DECIMALES_DE_QUANTITE : decimales;
+  const decimal = genre === "montant" || genre === "quantite";
+  const canonique = decimal
+    ? saisieDecimale(saisie)
+    : genre === "code"
+      ? choisi
+      : saisie.replace(/\s+/g, " ").trim() || null;
+  const refus = decimal ? phraseDuRefus(saisie, bornes) : null;
   const peutEnregistrer = !enCours && canonique !== null && refus === null;
 
   return (
@@ -97,25 +126,66 @@ export function FeuilleDeCorrection({
               if (peutEnregistrer && canonique !== null) onEnregistrer(canonique);
             }}
           >
-            <label htmlFor="valeur-corrigee" className="text-[12px] font-semibold text-text-2">
-              {t("pme.crayon.champ", { devise })}
-            </label>
-            <input
-              id="valeur-corrigee"
-              type="text"
-              inputMode="decimal"
-              dir="ltr"
-              autoComplete="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              autoFocus
-              value={saisie}
-              disabled={enCours}
-              onChange={(e) => setSaisie(e.target.value)}
-              aria-invalid={refus !== null}
-              aria-describedby="valeur-corrigee-aide"
-              className="num min-h-[48px] rounded-xl border border-border bg-background px-3 text-[17px] font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-foreground"
-            />
+            {genre === "code" ? (
+              <div
+                role="radiogroup"
+                aria-label={t("pme.crayon.champCode")}
+                className="grid gap-1.5"
+              >
+                <p className="text-[12px] font-semibold text-text-2">{t("pme.crayon.champCode")}</p>
+                {choix.map((c) => (
+                  <button
+                    key={c.code}
+                    type="button"
+                    role="radio"
+                    aria-checked={choisi === c.code}
+                    disabled={enCours}
+                    onClick={() => setChoisi(c.code)}
+                    className={`flex min-h-[48px] items-center justify-between gap-3 rounded-xl border px-3 text-start text-[14px] ${
+                      choisi === c.code
+                        ? "border-2 border-foreground font-semibold"
+                        : "border-border"
+                    }`}
+                  >
+                    <span>
+                      <span className="num font-semibold">{c.code}</span>
+                      <span className="text-text-2"> · {c.label}</span>
+                    </span>
+                    <span aria-hidden>{choisi === c.code ? "●" : "○"}</span>
+                  </button>
+                ))}
+                {choix.length === 0 ? (
+                  <p className="text-[12.5px] text-text-2">{t("common.loading")}</p>
+                ) : null}
+              </div>
+            ) : (
+              <>
+                <label htmlFor="valeur-corrigee" className="text-[12px] font-semibold text-text-2">
+                  {genre === "montant"
+                    ? t("pme.crayon.champ", { devise })
+                    : genre === "quantite"
+                      ? t("pme.crayon.champQuantite")
+                      : t("pme.crayon.champTexte")}
+                </label>
+                <input
+                  id="valeur-corrigee"
+                  type="text"
+                  inputMode={decimal ? "decimal" : "text"}
+                  dir={decimal ? "ltr" : "auto"}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  maxLength={decimal ? undefined : 200}
+                  autoFocus
+                  value={saisie}
+                  disabled={enCours}
+                  onChange={(e) => setSaisie(e.target.value)}
+                  aria-invalid={refus !== null}
+                  aria-describedby="valeur-corrigee-aide"
+                  className={`min-h-[48px] rounded-xl border border-border bg-background px-3 text-[17px] font-semibold text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-foreground ${decimal ? "num" : ""}`}
+                />
+              </>
+            )}
             <p id="valeur-corrigee-aide" className="text-[12.5px] leading-[1.45] text-text-2">
               {t("pme.crayon.aide")}
             </p>
@@ -124,7 +194,7 @@ export function FeuilleDeCorrection({
                 role="alert"
                 className="border-s-4 border-signal-stop ps-2 text-[12.5px] leading-[1.45]"
               >
-                {t(refus, { max: decimales })}
+                {t(refus, { max: bornes })}
               </p>
             ) : null}
             {erreur ? (

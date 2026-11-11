@@ -655,6 +655,19 @@ export const fr = {
   "pme.crayon.etat.valeurLue": "Lu : {valeur}",
   "pme.crayon.provenance":
     "Les montants marqués « Saisi » viennent de la personne, pas de la lecture ; la lecture reste intacte.",
+  "pme.crayon.champQuantite": "Votre quantité",
+  "pme.crayon.champTexte": "Libellé tel qu’imprimé",
+  "pme.crayon.champCode": "Choisissez le code de TVA",
+  "pme.crayon.ligne.designation": "Libellé",
+  "pme.crayon.ligne.quantity": "Quantité",
+  "pme.crayon.ligne.unit_price_ht": "Prix unitaire HT",
+  "pme.crayon.ligne.total_ht": "Montant HT",
+  "pme.crayon.ligne.tax_code": "Code TVA",
+  "pme.crayon.ligne.de": "{champ} — ligne {n}",
+  "pme.crayon.cabinet.titre": "Corrigé à la main sur cette pièce",
+  "pme.crayon.cabinet.valeurs": "Saisi : {saisi} · Lu : {lu}",
+  "pme.crayon.cabinet.luRien": "rien",
+  "pme.crayon.cabinet.note": "La lecture reste intacte ; la photo est la pièce elle-même.",
   "pme.detail.provenance":
     "Chaque ligne vient de la pièce elle-même. Je n'ajoute ni ne calcule rien.",
   "pme.lecture.releve": "Relevé · {mots} mots situés",
@@ -2675,6 +2688,12 @@ export const fr = {
     "Ce montant a trop de décimales : {max} au plus pour cette devise.",
   "refus.precision.devise_inconnue": "La devise de cette pièce n’est pas connue : {devise}.",
   "refus.precision.ligne_inconnue": "Cette ligne n’existe pas dans la lecture de la pièce.",
+  "refus.precision.libelle_vide": "Le libellé ne peut pas être vide.",
+  "refus.precision.libelle_trop_long": "Le libellé est trop long : {max} caractères au plus.",
+  "refus.precision.quantite_illisible":
+    "Cette quantité ne se lit pas : écrivez des chiffres et une virgule.",
+  "refus.precision.code_tva_inconnu":
+    "Ce code de TVA n’existe pas au référentiel à la date de la pièce : {code}.",
   "refus.precision.champ": "Ce champ ne se précise pas : {champ}.",
   "refus.lecture.citation_orpheline":
     "La lecture cite le champ {champ} à un emplacement où aucun mot n’a été lu.",

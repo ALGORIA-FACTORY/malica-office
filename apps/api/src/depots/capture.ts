@@ -37,8 +37,18 @@ import type {
 } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece, exposantDeLaDevise, lireLesDevises } from "../scan/analyse.ts";
-import { mettreLaValeur, valeurDuChemin } from "../scan/precisions-de-lecture.ts";
+import {
+  analyserPiece,
+  exposantDeLaDevise,
+  lireLesDevises,
+  lireParametres,
+} from "../scan/analyse.ts";
+import { lignesQuiNeTiennentPas } from "../scan/coherence-des-lignes.ts";
+import {
+  appliquerLesPrecisions,
+  mettreLaValeur,
+  valeurDuChemin,
+} from "../scan/precisions-de-lecture.ts";
 import { lireLesReglagesComptables } from "../scan/reglages-comptables.ts";
 import { effacerContenu } from "../stockage.ts";
 import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
@@ -547,6 +557,41 @@ function versPieceLue(r: Record<string, unknown>) {
               : new Date(r["lecture_reessaie_le"] as string | Date).toISOString(),
         }
       : null,
+  };
+}
+
+/**
+ * Le jour qui fait foi pour une pièce : la date lue, à défaut celle que la
+ * personne a donnée, à défaut la réception — la règle du jugement
+ * (`analyserPiece`) — et la juridiction de son dossier.
+ */
+async function jourDeLaPiece(
+  db: Requete,
+  pieceId: string,
+): Promise<{ jurisdiction: string; jour: string }> {
+  const { rows } = await db.query<{
+    jurisdiction: string;
+    recue_le: string;
+    lue: string | null;
+    dite: string | null;
+  }>(
+    `select o.jurisdiction, to_char(v.recue_le, 'YYYY-MM-DD') as recue_le,
+            (select x.payload ->> 'document_date' from capture.extractions x
+              where x.piece_id = p.id order by x.created_at desc limit 1) as lue,
+            (select q.valeur from capture.precisions q
+              where q.piece_id = p.id and q.champ = 'document_date'
+              order by q.decided_at desc limit 1) as dite
+       from capture.pieces p
+       join pieces_v v on v.id = p.id
+       join identity.organizations o on o.id = p.tenant_id
+      where p.id = $1`,
+    [pieceId],
+  );
+  const piece = rows[0];
+  if (!piece) throw new Error("piece.not_found");
+  return {
+    jurisdiction: piece.jurisdiction,
+    jour: dateDeLaPiece(piece.lue, piece.dite) ?? piece.recue_le,
   };
 }
 
@@ -1246,7 +1291,45 @@ export const capture = {
             droits: n.montants.autres.map(enDecimales),
             ttc: enDecimales(n.montants.ttc),
           };
-    const ferme = n.etat === "tranche";
+    /*
+     * Les lignes tiennent-elles ? Le jugement des montants tient le pied ; une
+     * ligne qui ne vaut pas quantité × prix, ou des lignes qui ne font pas la
+     * base, ne laissent pas dire « la facture tombe juste » (R3 : le moteur, pas
+     * l'écran). La tolérance et les décimales sont celles du référentiel.
+     */
+    let lignesEnDefaut: string[] = [];
+    if (/^articles\[/.test(p.champ) && exposant !== null) {
+      const { rows: lues } = await db.query<{ payload: Record<string, unknown> }>(
+        `select payload from capture.extractions where piece_id = $1
+          order by created_at desc limit 1`,
+        [pieceId],
+      );
+      const { rows: dites } = await db.query<{ champ: string; valeur: string }>(
+        `select distinct on (champ) champ, valeur from capture.precisions
+          where piece_id = $1 and app.est_un_champ_de_lecture(champ)
+          order by champ, decided_at desc`,
+        [pieceId],
+      );
+      const { rows: packs } = await db.query<{ pack_version_id: string }>(
+        `select pack_version_id from capture.analyses where id = $1`,
+        [j.id],
+      );
+      const { jour } = await jourDeLaPiece(db, pieceId);
+      const parametres = await lireParametres(db, packs[0]!.pack_version_id, jour);
+      const retenu = appliquerLesPrecisions(
+        (lues[0]?.payload ?? {}) as Parameters<typeof appliquerLesPrecisions>[0],
+        () => null,
+        dites,
+        { decimales: exposant, separateur: "," },
+      ).payload;
+      lignesEnDefaut = lignesQuiNeTiennentPas(
+        retenu.articles ?? [],
+        retenu.totals?.base_ht,
+        exposant,
+        parametres["lecture.tolerance_arrondi_mineure"],
+      );
+    }
+    const ferme = n.etat === "tranche" && lignesEnDefaut.length === 0;
     return {
       id: p.id,
       champ: p.champ,
@@ -1259,7 +1342,20 @@ export const capture = {
         // Le moteur dit que ça ne ferme pas ; il ne dit pas lequel des
         // montants est faux. On désigne celui qu'on vient de toucher, et le
         // total quand le moteur l'a écarté.
-        aVerifier: ferme ? [] : [...new Set([p.champ, ...(n.totalNonLu ? ["totals.ttc"] : [])])],
+        aVerifier: ferme
+          ? []
+          : [
+              ...new Set([
+                p.champ,
+                // Le pied lui-même ne ferme pas : une ligne corrigée n'en est pas la
+                // cause, et le moteur ne dit pas lequel des montants du pied est faux.
+                ...(n.etat !== "tranche" && /^articles\[/.test(p.champ)
+                  ? ["totals.base_ht", "totals.vat", "totals.ttc"]
+                  : []),
+                ...(n.totalNonLu ? ["totals.ttc"] : []),
+                ...lignesEnDefaut,
+              ]),
+            ],
       },
     };
   },
@@ -1271,27 +1367,7 @@ export const capture = {
    * traduits ; aucun taux n'est écrit ici (R4).
    */
   async codesDeTva(db: Requete, pieceId: string, locale: string) {
-    const { rows: pieces } = await db.query<{
-      jurisdiction: string;
-      recue_le: string;
-      lue: string | null;
-      dite: string | null;
-    }>(
-      `select o.jurisdiction, to_char(v.recue_le, 'YYYY-MM-DD') as recue_le,
-              (select x.payload ->> 'document_date' from capture.extractions x
-                where x.piece_id = p.id order by x.created_at desc limit 1) as lue,
-              (select q.valeur from capture.precisions q
-                where q.piece_id = p.id and q.champ = 'document_date'
-                order by q.decided_at desc limit 1) as dite
-         from capture.pieces p
-         join pieces_v v on v.id = p.id
-         join identity.organizations o on o.id = p.tenant_id
-        where p.id = $1`,
-      [pieceId],
-    );
-    const piece = pieces[0];
-    if (!piece) throw new Error("piece.not_found");
-    const jour = dateDeLaPiece(piece.lue, piece.dite) ?? piece.recue_le;
+    const piece = await jourDeLaPiece(db, pieceId);
     const { rows } = await db.query<{ code: string; label: string; taux: string }>(
       `select distinct on (t.code) t.code, t.rate::text as taux,
               coalesce(demandee.value, francais.value, t.label) as label
@@ -1305,7 +1381,7 @@ export const capture = {
                                     order by j.effective_from desc limit 1)
           and t.valid_from <= $2::date and (t.valid_to is null or t.valid_to >= $2::date)
         order by t.code, t.valid_from desc`,
-      [piece.jurisdiction, jour, locale],
+      [piece.jurisdiction, piece.jour, locale],
     );
     return rows;
   },

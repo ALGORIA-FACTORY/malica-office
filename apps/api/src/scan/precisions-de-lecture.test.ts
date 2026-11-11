@@ -6,11 +6,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import {
-  appliquerLesPrecisionsDeMontant,
-  mettreLaValeur,
-  valeurDuChemin,
-} from "./precisions-de-lecture.ts";
+import { appliquerLesPrecisions, mettreLaValeur, valeurDuChemin } from "./precisions-de-lecture.ts";
 
 const TND = { decimales: 3, separateur: "," };
 const lecture = {
@@ -23,7 +19,7 @@ const imprime = (champ: string) =>
 
 describe("les précisions de montant entrent dans le jugement", () => {
   it("la saisie prend la place du texte imprimé, à l'écriture de la devise", () => {
-    const r = appliquerLesPrecisionsDeMontant(
+    const r = appliquerLesPrecisions(
       lecture,
       imprime,
       [
@@ -42,23 +38,18 @@ describe("les précisions de montant entrent dans le jugement", () => {
 
   it("la lecture d'origine n'est pas modifiée", () => {
     const avant = JSON.stringify(lecture);
-    appliquerLesPrecisionsDeMontant(
-      lecture,
-      imprime,
-      [{ champ: "totals.vat", valeur: "1.000" }],
-      TND,
-    );
+    appliquerLesPrecisions(lecture, imprime, [{ champ: "totals.vat", valeur: "1.000" }], TND);
     assert.equal(JSON.stringify(lecture), avant);
   });
 
   it("sans précision, rien ne change", () => {
-    const r = appliquerLesPrecisionsDeMontant(lecture, imprime, [], TND);
+    const r = appliquerLesPrecisions(lecture, imprime, [], TND);
     assert.equal(r.payload, lecture);
     assert.equal(r.imprime, imprime);
   });
 
   it("une facture à un seul taux : la base du pied corrigée est aussi celle de la ligne", () => {
-    const r = appliquerLesPrecisionsDeMontant(
+    const r = appliquerLesPrecisions(
       lecture,
       imprime,
       [{ champ: "totals.base_ht", valeur: "14000.000" }],
@@ -70,7 +61,7 @@ describe("les précisions de montant entrent dans le jugement", () => {
 
   it("à plusieurs taux, la base du pied ne remplace pas celle de chaque ligne", () => {
     const deux = { ...lecture, lines: [{ base_ht: "10000.000" }, { base_ht: "5000.000" }] };
-    const r = appliquerLesPrecisionsDeMontant(
+    const r = appliquerLesPrecisions(
       deux,
       imprime,
       [{ champ: "totals.base_ht", valeur: "14000.000" }],
@@ -81,7 +72,7 @@ describe("les précisions de montant entrent dans le jugement", () => {
   });
 
   it("un droit se corrige ; l'index d'un droit que la lecture n'a pas relevé est ignoré", () => {
-    const r = appliquerLesPrecisionsDeMontant(
+    const r = appliquerLesPrecisions(
       lecture,
       imprime,
       [
@@ -96,7 +87,7 @@ describe("les précisions de montant entrent dans le jugement", () => {
   });
 
   it("une devise sans décimales s'écrit sans séparateur ; une saisie courte se complète", () => {
-    const xof = appliquerLesPrecisionsDeMontant(
+    const xof = appliquerLesPrecisions(
       lecture,
       imprime,
       [{ champ: "totals.vat", valeur: "2850" }],
@@ -104,13 +95,63 @@ describe("les précisions de montant entrent dans le jugement", () => {
     );
     assert.equal(xof.imprime("totals.vat"), "2850");
     // « 2850 » sans décimales se lirait en dinars ou en millimes : la devise complète.
-    const tnd = appliquerLesPrecisionsDeMontant(
+    const tnd = appliquerLesPrecisions(
       lecture,
       imprime,
       [{ champ: "totals.vat", valeur: "2850" }],
       TND,
     );
     assert.equal(tnd.imprime("totals.vat"), "2850,000");
+  });
+});
+
+describe("les composantes d'une ligne entrent aussi dans le jugement", () => {
+  const avecLignes = {
+    ...lecture,
+    articles: [
+      {
+        designation: "Ramettes",
+        quantity: "200",
+        unit_price_ht: "25.000",
+        total_ht: "5000.000",
+        tax_code: "TVA19",
+      },
+      {
+        designation: "Encre",
+        quantity: "20",
+        unit_price_ht: "500.000",
+        total_ht: "10000.000",
+        tax_code: "TVA19",
+      },
+    ],
+  };
+
+  it("chaque composante précisée remplace celle de sa ligne, et elle seule", () => {
+    const r = appliquerLesPrecisions(
+      avecLignes,
+      imprime,
+      [
+        { champ: "articles[1].quantity", valeur: "21" },
+        { champ: "articles[0].tax_code", valeur: "TVA07" },
+        { champ: "articles[0].designation", valeur: "Ramettes A4" },
+      ],
+      TND,
+    );
+    assert.equal(r.payload.articles?.[1]?.quantity, "21");
+    assert.equal(r.payload.articles?.[1]?.unit_price_ht, "500.000");
+    assert.equal(r.payload.articles?.[0]?.tax_code, "TVA07");
+    assert.equal(r.payload.articles?.[0]?.designation, "Ramettes A4");
+    assert.equal(avecLignes.articles[0]?.tax_code, "TVA19", "la lecture reste intacte");
+  });
+
+  it("une ligne que la lecture n'a pas relevée est ignorée", () => {
+    const r = appliquerLesPrecisions(
+      avecLignes,
+      imprime,
+      [{ champ: "articles[7].quantity", valeur: "9" }],
+      TND,
+    );
+    assert.equal(r.payload, avecLignes);
   });
 });
 

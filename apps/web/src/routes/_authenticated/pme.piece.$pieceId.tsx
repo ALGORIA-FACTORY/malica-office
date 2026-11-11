@@ -10,7 +10,8 @@ import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n, type MessageKey } from "@/i18n";
 import { AffichageSignale } from "@/components/malica/affichage-signale";
 import { CommentCEstPaye } from "@/components/malica/comment-c-est-paye";
-import { FeuilleDeCorrection } from "@/components/malica/feuille-de-correction";
+import { FeuilleDeCorrection, type GenreDeSaisie } from "@/components/malica/feuille-de-correction";
+import { LigneDeLecture } from "@/components/malica/ligne-de-lecture";
 import { PiedDeLecture, type EtatDuMontant } from "@/components/malica/pied-de-lecture";
 import { ZoneDeLaPhoto } from "@/components/malica/zone-de-la-photo";
 import { QuestionDuType } from "@/components/malica/question-du-type";
@@ -210,6 +211,23 @@ interface ExtractPayload {
   other_charges?: Array<{ code: string; label: string; amount: string }>;
   references?: Record<string, string>;
   totals?: { base_ht: string; vat: string; ttc: string };
+}
+
+/** Les composantes d'une ligne que le crayon corrige, et leur chemin de citation. */
+type ChampDeLigne = "designation" | "quantity" | "unit_price_ht" | "total_ht" | "tax_code";
+const ARTICLE = /^articles\[(\d+)\]\.(designation|quantity|unit_price_ht|total_ht|tax_code)$/;
+
+/** Ce que la personne saisit : un libellé, une quantité, un code de TVA du référentiel, ou un montant. */
+function genreDeSaisie(champ: string): GenreDeSaisie {
+  const ligne = ARTICLE.exec(champ);
+  if (!ligne) return "montant";
+  return ligne[2] === "designation"
+    ? "texte"
+    : ligne[2] === "quantity"
+      ? "quantite"
+      : ligne[2] === "tax_code"
+        ? "code"
+        : "montant";
 }
 
 /**
@@ -622,6 +640,12 @@ function PieceScreen() {
    * juste » ou « pas encore » — est le jugement rendu, jamais un calcul d'écran.
    */
   const [crayon, setCrayon] = useState<{ champ: string; libelle: string } | null>(null);
+  /** Les codes de TVA du référentiel à la date de la pièce — lus seulement quand on en choisit un. */
+  const codesDeTva = useQuery({
+    queryKey: ["codes-tva", pieceId, locale],
+    queryFn: () => office().capture.codesDeTva(pieceId, locale),
+    enabled: crayon !== null && genreDeSaisie(crayon.champ) === "code",
+  });
   const corrigerUnChamp = useMutation({
     mutationFn: (v: { champ: string; valeur: string }) =>
       office().capture.corrigerLeChamp(pieceId, v.champ, v.valeur),
@@ -1070,6 +1094,8 @@ function PieceScreen() {
   const valeurLueDe = (champ: string): string | null => {
     const c = corrections.get(champ);
     if (c) return c.lue;
+    const ligne = ARTICLE.exec(champ);
+    if (ligne) return articles[Number(ligne[1])]?.[ligne[2] as ChampDeLigne] ?? null;
     const droit = /^other_charges\[(\d+)\]\.amount$/.exec(champ);
     if (droit) return droits[Number(droit[1])]?.montant ?? null;
     return champ === "totals.base_ht"
@@ -1078,8 +1104,32 @@ function PieceScreen() {
         ? (totaux?.vat ?? null)
         : (totaux?.ttc ?? null);
   };
+  /**
+   * Le crayon : tant que la pièce n'est pas engagée (même garde que la date) ;
+   * sans décimales au référentiel, la saisie n'a pas de borne : pas de crayon.
+   */
+  const ouvrirLeCrayon =
+    STATUTS_PRECISABLES.has(piece.status) && decimalesDeLaPiece !== null
+      ? (champ: string, libelle: string) => {
+          corrigerUnChamp.reset();
+          setCrayon({ champ, libelle });
+        }
+      : undefined;
+  /** Ce que la lecture avait lu à ce champ, tel qu'on l'affiche dans la feuille. */
+  const luPourLaFeuille = (champ: string): string | null => {
+    const v = valeurLueDe(champ);
+    if (v === null) return null;
+    const genre = genreDeSaisie(champ);
+    return genre === "quantite" ? quantite(v, locale) : genre === "montant" ? lisible(v) : v;
+  };
   /** Le nom d'un champ du pied, dans la langue de la personne. */
   const libelleDuChampDuPied = (champ: string): string => {
+    const ligne = ARTICLE.exec(champ);
+    if (ligne)
+      return t("pme.crayon.ligne.de", {
+        champ: t(`pme.crayon.ligne.${ligne[2] as ChampDeLigne}`),
+        n: Number(ligne[1]) + 1,
+      });
     const droit = /^other_charges\[(\d+)\]\.amount$/.exec(champ);
     if (droit) return droits[Number(droit[1])]?.libelle ?? champ;
     return champ === "totals.base_ht"
@@ -1420,25 +1470,16 @@ function PieceScreen() {
           ) : (
             <div className="mt-4">
               {articles.map((a, i) => (
-                <div key={i} className="border-t border-border py-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-[14px] font-medium">{a.designation}</span>
-                    <span className="num flex-none text-[13.5px] font-medium">
-                      {lisible(a.total_ht ?? undefined) ?? "—"}
-                    </span>
-                  </div>
-                  <p className="num mt-1 text-[11.5px] text-muted-foreground">
-                    {a.quantity
-                      ? t("pme.detail.qte", { q: quantite(a.quantity, locale) })
-                      : t("pme.detail.sansQte")}
-                    {a.unit_price_ht
-                      ? " · " + t("pme.detail.pu", { pu: lisible(a.unit_price_ht) ?? "—" })
-                      : a.unit_price_ttc
-                        ? " · " + t("pme.detail.puTtc", { pu: lisible(a.unit_price_ttc) ?? "—" })
-                        : ""}
-                    {a.tax_code ? " · " + a.tax_code : ""}
-                  </p>
-                </div>
+                <LigneDeLecture
+                  key={i}
+                  index={i}
+                  article={a}
+                  lisible={lisible}
+                  quantite={(q) => quantite(q, locale)}
+                  corrections={corrections}
+                  devise={deviseDeLaPiece}
+                  onCorriger={ouvrirLeCrayon}
+                />
               ))}
               {/*
                * LE PIED DE FACTURE EN ENTIER, et pas seulement la base. Montrer
@@ -1480,16 +1521,7 @@ function PieceScreen() {
                 parLeCabinet={duCabinet !== null}
                 totalNeFermePas={totalNeFermePas}
                 onVoirLaSource={voirLaSource}
-                onCorriger={
-                  // Tant que la pièce n'est pas engagée (même garde que la date) ;
-                  // sans décimales au référentiel, la saisie n'a pas de borne : pas de crayon.
-                  STATUTS_PRECISABLES.has(piece.status) && decimalesDeLaPiece !== null
-                    ? (champ, libelle) => {
-                        corrigerUnChamp.reset();
-                        setCrayon({ champ, libelle });
-                      }
-                    : undefined
-                }
+                onCorriger={ouvrirLeCrayon}
               />
             </div>
           )}
@@ -1502,7 +1534,9 @@ function PieceScreen() {
           <FeuilleDeCorrection
             key={crayon.champ}
             champ={crayon.libelle}
-            lu={lisible(valeurLueDe(crayon.champ))}
+            genre={genreDeSaisie(crayon.champ)}
+            choix={codesDeTva.data ?? []}
+            lu={luPourLaFeuille(crayon.champ)}
             devise={deviseDeLaPiece}
             decimales={decimalesDeLaPiece}
             zone={

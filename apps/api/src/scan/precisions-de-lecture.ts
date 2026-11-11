@@ -37,15 +37,26 @@ interface Totaux {
   ttc?: string | null;
 }
 
-/** La part du payload que les précisions de montant touchent. */
+/** Une ligne de la facture (un article), telle que la lecture la rend. */
+export interface ArticleLu {
+  designation?: string | null;
+  quantity?: string | null;
+  unit_price_ht?: string | null;
+  total_ht?: string | null;
+  tax_code?: string | null;
+}
+
+/** La part du payload que les précisions touchent. */
 interface PayloadPrecisable {
   lines?: Array<{ base_ht?: string | null }>;
+  articles?: ArticleLu[];
   other_charges?: Array<{ amount?: string | null }>;
   totals?: Totaux;
 }
 
 const TOTAL = /^totals\.(base_ht|vat|ttc)$/;
 const DROIT = /^other_charges\[(\d{1,3})\]\.amount$/;
+const ARTICLE = /^articles\[(\d{1,3})\]\.(designation|quantity|unit_price_ht|total_ht|tax_code)$/;
 
 /**
  * La valeur saisie, telle qu'un montant imprimé s'écrit pour la devise : le
@@ -60,10 +71,11 @@ function imprimeLaSaisie(canonique: string, forme: FormeDeLaDevise): string {
 }
 
 /**
- * Le payload et le texte imprimé, avec les précisions de montant. Ce qui n'est
- * pas précisé reste ce que la lecture a rendu.
+ * Le payload et le texte imprimé, avec les précisions de la personne : les
+ * montants du pied, ceux des droits, et les composantes des lignes. Ce qui
+ * n'est pas précisé reste ce que la lecture a rendu.
  */
-export function appliquerLesPrecisionsDeMontant<P extends PayloadPrecisable>(
+export function appliquerLesPrecisions<P extends PayloadPrecisable>(
   payload: P,
   imprime: (champ: string) => string | null,
   precisions: readonly PrecisionDeLecture[],
@@ -72,7 +84,12 @@ export function appliquerLesPrecisionsDeMontant<P extends PayloadPrecisable>(
   const dites = new Map<string, string>();
   for (const p of precisions) {
     const droit = DROIT.exec(p.champ);
+    const article = ARTICLE.exec(p.champ);
     if (TOTAL.test(p.champ)) dites.set(p.champ, p.valeur);
+    // Une ligne que la lecture n'a pas relevée ne se précise pas : l'index
+    // d'une autre lecture ne désigne pas la même ligne.
+    else if (article && Number(article[1]) < (payload.articles?.length ?? 0))
+      dites.set(p.champ, p.valeur);
     // Un droit que la lecture n'a pas relevé ne se précise pas ici : l'index
     // d'une autre lecture ne désigne pas le même droit.
     else if (droit && Number(droit[1]) < (payload.other_charges?.length ?? 0))
@@ -92,6 +109,20 @@ export function appliquerLesPrecisionsDeMontant<P extends PayloadPrecisable>(
     other_charges: payload.other_charges?.map((d, i) => {
       const v = dites.get(`other_charges[${i}].amount`);
       return v === undefined ? d : { ...d, amount: v };
+    }),
+    articles: payload.articles?.map((a, i) => {
+      const corrige: ArticleLu = { ...a };
+      for (const cle of [
+        "designation",
+        "quantity",
+        "unit_price_ht",
+        "total_ht",
+        "tax_code",
+      ] as const) {
+        const v = dites.get(`articles[${i}].${cle}`);
+        if (v !== undefined) corrige[cle] = v;
+      }
+      return corrige;
     }),
     // Une facture à un seul taux : la base de la ligne est celle du pied.
     lines:

@@ -11,6 +11,7 @@ import {
 import { Download, Eye } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { CorrectionsDeLaLecture } from "@/components/malica/corrections-de-la-lecture";
 import { Aide } from "@/components/malica/aide";
 import { dansLOrdreVu, ordreDeLaRevue, retenirLOrdre } from "@/lib/ordre-de-revue";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
@@ -1064,6 +1065,8 @@ function CabinetReviewDeLaPiece() {
               </InkTable>
             </>
           ) : null}
+
+          <CorrectionsDeLaLecture corrections={dossier.data.corrections ?? []} />
 
           {extraction && extraction.flags.length > 0 ? (
             <div className="border border-s-2 border-border border-s-signal-warn bg-card p-3">

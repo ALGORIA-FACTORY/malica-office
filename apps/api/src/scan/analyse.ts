@@ -58,7 +58,7 @@ import {
 import { lireLeChange, type ChangeDuJugement } from "./cours-de-change.ts";
 import { partiesSelonLeSens } from "./parties-selon-le-sens.ts";
 import { normaliserMontants, type ResultatNormalisation } from "./normaliser-montants.ts";
-import { appliquerLesPrecisionsDeMontant } from "./precisions-de-lecture.ts";
+import { appliquerLesPrecisions } from "./precisions-de-lecture.ts";
 import {
   lireLesReglagesComptables,
   reglageDesAvoirs,
@@ -1002,7 +1002,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
       )
     : undefined;
   const corrige = deLaDevise
-    ? appliquerLesPrecisionsDeMontant(
+    ? appliquerLesPrecisions(
         payloadJuge,
         (champ) => imprime.get(champ)?.join(" ") ?? null,
         saisies,

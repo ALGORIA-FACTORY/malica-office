@@ -616,6 +616,19 @@ export const en: Dict = {
   "pme.crayon.etat.valeurLue": "Read: {valeur}",
   "pme.crayon.provenance":
     "Amounts marked “Entered” come from the person, not from the reading; the reading stays intact.",
+  "pme.crayon.champQuantite": "Your quantity",
+  "pme.crayon.champTexte": "Label as printed",
+  "pme.crayon.champCode": "Choose the VAT code",
+  "pme.crayon.ligne.designation": "Label",
+  "pme.crayon.ligne.quantity": "Quantity",
+  "pme.crayon.ligne.unit_price_ht": "Unit price excl. VAT",
+  "pme.crayon.ligne.total_ht": "Amount excl. VAT",
+  "pme.crayon.ligne.tax_code": "VAT code",
+  "pme.crayon.ligne.de": "{champ} — line {n}",
+  "pme.crayon.cabinet.titre": "Corrected by hand on this document",
+  "pme.crayon.cabinet.valeurs": "Entered: {saisi} · Read: {lu}",
+  "pme.crayon.cabinet.luRien": "nothing",
+  "pme.crayon.cabinet.note": "The reading stays intact; the photo is the document itself.",
   "pme.detail.provenance":
     "Every line comes from the document itself. I add nothing, I compute nothing.",
   "pme.lecture.releve": "Noted · {mots} words located",
@@ -2582,6 +2595,12 @@ export const en: Dict = {
     "This amount has too many decimals: {max} at most for this currency.",
   "refus.precision.devise_inconnue": "The currency of this document is not known: {devise}.",
   "refus.precision.ligne_inconnue": "This line does not exist in the reading of the document.",
+  "refus.precision.libelle_vide": "The label cannot be empty.",
+  "refus.precision.libelle_trop_long": "The label is too long: {max} characters at most.",
+  "refus.precision.quantite_illisible":
+    "This quantity cannot be read: write digits and a decimal separator.",
+  "refus.precision.code_tva_inconnu":
+    "This VAT code does not exist in the reference data at the document date: {code}.",
   "refus.precision.champ": "This field cannot be specified: {champ}.",
   "refus.lecture.citation_orpheline":
     "The reading cites field {champ} at a place where no word was read.",
