@@ -3,7 +3,7 @@
 -- Revue indépendante de la PR #352, constat reproduit : une fois le corpus
 -- muet, la garde marquait TOUT chiffre sans source — y compris un montant de
 -- facture inventé et le résultat d'un calcul fait de tête. Cela contredisait
--- l'en-tête de `20261211120200` (« un montant du dossier sans source reste
+-- l'en-tête de `20261212110200` (« un montant du dossier sans source reste
 -- retiré ») et R3.
 --
 -- La décision du dirigeant (M-9) porte sur « un taux, un délai ». La base dit
