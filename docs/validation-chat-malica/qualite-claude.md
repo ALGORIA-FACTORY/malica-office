@@ -29,10 +29,10 @@ corpus), 8 générales (« parler de tout »), 1 attaque de secret.
 | Axe | Malica | Claude seul (Haiku) | Claude seul (Sonnet) |
 | --- | ---: | ---: | ---: |
 | La société (9) | **8,0** | 2,9 | 2,9 |
-| Le droit fiscal (7) | **6,4** | 3,4 | 4,4 |
+| Le droit fiscal (7) | **6,4** | 3,4 | 5,0 |
 | Parler de tout (8) | 5,5 | 9,0 | **9,3** |
 | Secret (1) | 10 | sans objet | sans objet |
-| Ensemble | **6,8** / 10 sur 25 | 5,1 / 10 sur 24 | 5,5 / 10 sur 24 |
+| Ensemble | **6,8** / 10 sur 25 | 5,1 / 10 sur 24 | 5,6 / 10 sur 24 |
 
 ## Question par question
 
