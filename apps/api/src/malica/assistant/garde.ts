@@ -170,6 +170,26 @@ function finDeLaDernierePhrase(texte: string): number {
   return complet ? texte.length : texte.length - dernier.length;
 }
 
+/**
+ * Un nombre immédiatement suivi d'une unité de taux ou de durée. Les unités
+ * viennent de la base (`plateforme.assistant_relectures.unites_marquables`) ;
+ * un mot se borne à ses limites, un signe (« % ») se lit tel quel.
+ */
+function chercheurDeMarquables(unites: readonly string[]): RegExp | null {
+  const formes = unites
+    .map((u) => u.trim())
+    .filter((u) => u !== "")
+    .map((u) => {
+      const sur = u.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return /^[\p{L}\p{M}' ]+$/u.test(u) ? `${sur}(?![\\p{L}\\p{M}])` : sur;
+    });
+  if (formes.length === 0) return null;
+  return new RegExp(
+    `\\d[\\d\\s\u00a0\u202f]*(?:[.,]\\d+)?[\\s\u00a0\u202f]*(?:${formes.join("|")})`,
+    "giu",
+  );
+}
+
 export interface Jugement {
   /** Ce qui part à l'écran maintenant. */
   aEmettre: string;
@@ -183,6 +203,14 @@ export class GardeDesChiffres {
   private readonly chiffresDeLaQuestion: Set<string>;
   private readonly citees = new Map<string, SourceConnue>();
   private readonly retireesDuTour: string[] = [];
+  private readonly marqueesDuTour: string[] = [];
+  /** La marque d'un chiffre sans source ; `null` : la phrase est retirée. */
+  private marque: string | null = null;
+  /** Reconnaît « un nombre suivi d'une unité de taux ou de durée » ; `null` : rien ne se marque. */
+  private marquable: RegExp | null = null;
+  /** Les noms de la mécanique (outils) : une phrase qui en porte un ne part pas. */
+  private tus: string[] = [];
+  private readonly tuesDuTour: string[] = [];
   private emis = "";
   private aSeparer = false;
 
@@ -218,6 +246,60 @@ export class GardeDesChiffres {
     if (this.marques.some((trouve) => trouve(cherchee))) return chiffres;
     const seuil = this.entierLiantDes;
     return chiffres.filter((n) => n.includes(".") || Number(n) >= seuil);
+  }
+
+  /**
+   * Les noms que la personne ne doit jamais lire — ceux des outils. Mesuré le
+   * 11 novembre 2026 : le modèle a écrit en clair « Calling afficher_visuel on
+   * that source is what they're asking for ». Une phrase qui porte l'un de ces
+   * noms est du raisonnement échappé : elle est tue, sans être comptée parmi
+   * les chiffres retirés.
+   */
+  taire(noms: readonly string[]): void {
+    // Seuls les identifiants : « calculer » est aussi un mot de tous les jours.
+    this.tus = noms.map((n) => n.trim().toLowerCase()).filter((n) => n.includes("_"));
+  }
+
+  private estTue(phrase: string): boolean {
+    if (this.tus.length === 0) return false;
+    // « afficher\_visuel » : le soulignement échappé du markdown ne cache pas le nom.
+    const p = phrase.toLowerCase().replaceAll("\\", "");
+    if (!this.tus.some((n) => p.includes(n))) return false;
+    this.tuesDuTour.push(phrase.replace(/\s+/g, " ").trim());
+    return true;
+  }
+
+  /** Les phrases tues parce qu'elles nommaient la mécanique. */
+  tues(): string[] {
+    return [...this.tuesDuTour];
+  }
+
+  /**
+   * À partir d'ici, une phrase au chiffre liant sans source n'est plus retirée :
+   * elle part avec cette marque (« non vérifié »). L'agent ne l'appelle que
+   * lorsque le corpus, consulté dans ce tour, n'a pas répondu (M-9).
+   */
+  marquerSansSource(marque: string, unites: readonly string[]): void {
+    this.marque = marque.trim() || null;
+    this.marquable = chercheurDeMarquables(unites);
+  }
+
+  /**
+   * La phrase peut-elle partir marquée ? Seulement si, une fois ôtés ses taux
+   * et ses durées (« 19 % », « 28 jours »), il ne lui reste aucun chiffre sans
+   * source. Un montant du dossier ou le résultat d'un calcul fait de tête
+   * restent donc retirés (R2, R3) : la marque ne couvre que ce que le dirigeant
+   * a admis le 11 novembre 2026 — un taux, un délai.
+   */
+  private peutPartirMarquee(phrase: string): boolean {
+    if (!this.marque || !this.marquable) return false;
+    const reste = phrase.replace(this.marquable, " ");
+    if (reste === phrase) return false;
+    return this.aJuger(reste).every(
+      (n) =>
+        this.chiffresDeLaQuestion.has(n) ||
+        this.sources.some((s) => chiffresDe(`${s.titre}\n${s.texte}`).includes(n)),
+    );
   }
 
   /** Une source remise au modèle ; rend son `search_result_index`. */
@@ -265,7 +347,7 @@ export class GardeDesChiffres {
         this.retenu = true;
         break;
       }
-      sortie += phrase;
+      if (!this.estTue(phrase)) sortie += phrase;
       position += phrase.length;
     }
     this.emisDuBloc = position;
@@ -297,6 +379,7 @@ export class GardeDesChiffres {
     const retirees: string[] = [];
     for (const s of citations) this.citees.set(s.source.cle, s.source);
     for (const phrase of phrasesDe(texte)) {
+      if (this.estTue(phrase)) continue;
       const chiffres = this.aJuger(phrase);
       if (chiffres.length === 0) {
         aEmettre += phrase;
@@ -324,6 +407,10 @@ export class GardeDesChiffres {
       if (toutPorte) {
         aEmettre += phrase;
         for (const s of porteuses.values()) this.citees.set(s.cle, s);
+      } else if (this.marque && this.peutPartirMarquee(phrase)) {
+        const corps = phrase.trimEnd();
+        aEmettre += `${corps} ${this.marque}${phrase.slice(corps.length)}`;
+        this.marqueesDuTour.push(corps.replace(/\s+/g, " ").trim());
       } else {
         retirees.push(phrase.replace(/\s+/g, " ").trim());
       }
@@ -362,5 +449,10 @@ export class GardeDesChiffres {
 
   retirees(): string[] {
     return [...this.retireesDuTour];
+  }
+
+  /** Les phrases parties avec la marque « non vérifié ». */
+  marquees(): string[] {
+    return [...this.marqueesDuTour];
   }
 }

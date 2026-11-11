@@ -270,6 +270,12 @@ function dossierFictif(
     anthropicEpuise?: boolean;
     deepseekEpuise?: boolean;
     contexte?: { cabinetId: string | null; appelantMembre: boolean } | undefined;
+    /** Le mode de relecture lu en base ; absent, le serveur retient. */
+    relecture?: "annoncer" | "retenir";
+    /** La file du cabinet refuse l'écriture. */
+    fileEnPanne?: boolean;
+    /** Quand le corpus ne répond pas : lu en base ; absent, la garde retire. */
+    sansTexte?: "marquer" | "retirer";
   } = {},
 ): {
   api: AppelApi;
@@ -308,7 +314,12 @@ function dossierFictif(
         case "conseil.exigerBudget":
           return r({ depense: "0", plafond: "10" });
         case "conseil.configurationAssistant":
-          return r(CONFIGURATION);
+          return r({
+            ...CONFIGURATION,
+            ...(options.relecture ? { relecture: options.relecture } : {}),
+            ...(options.sansTexte ? { sans_texte: options.sansTexte } : {}),
+            ...(options.sansTexte === "marquer" ? { unites_marquables: ["%", "jours"] } : {}),
+          });
         case "capture.chaineDeDesignation":
           return r(chaine(options.anthropicEpuise ?? false, options.deepseekEpuise ?? false));
         case "capture.journaliserAgent":
@@ -393,6 +404,7 @@ function dossierFictif(
         case "conseil.contexte":
           return r(options.contexte ?? SOUS_MANDAT);
         case "conseil.creer":
+          if (options.fileEnPanne) return Promise.reject(new Error("file en panne"));
           trace.file.push(args[0] as Record<string, unknown>);
           return r({ id: `arbitrage-${trace.file.length}`, cabinetId: "cab" });
         case "office.extraitsTransmis":
@@ -1209,8 +1221,15 @@ async function poserAuCabinet(
   contexte: NonNullable<Parameters<typeof dossierFictif>[0]>["contexte"],
   texte: string,
   conclusion: Record<string, unknown> | null,
+  options: {
+    relecture?: "annoncer" | "retenir";
+    fileEnPanne?: boolean;
+    /** Un autre Claude simulé que celui qui écrit puis conclut. */
+    claude?: (journal: string[]) => ClientEnFlux;
+  } = {},
 ) {
-  const { api, trace, fils } = dossierFictif({ contexte });
+  const { claude, ...base } = options;
+  const { api, trace, fils } = dossierFictif({ contexte, ...base });
   const journal: string[] = [];
   const evenements: EvenementDeLAssistant[] = [];
   let t = 0;
@@ -1219,7 +1238,7 @@ async function poserAuCabinet(
     DOSSIER,
     { tenantId: TENANT, question: LOYER, locale: "fr", conversationId: null, pieceIds: [] },
     {
-      claude: claudeQuiConclut(texte, conclusion, journal),
+      claude: claude ? claude(journal) : claudeQuiConclut(texte, conclusion, journal),
       conseil: conseilFictif,
       repli: sansRepli,
       maintenant: () => (t += 50),
@@ -1349,6 +1368,91 @@ describe("la file du cabinet reçoit ce que l'assistant retient", () => {
   });
 });
 
+/*
+ * Décision du dirigeant, 11 novembre 2026 : Malica répond toujours. En mode
+ * « annoncer », la réponse à relire s'affiche, marquée, et part au cabinet.
+ */
+const A_CONFIRMER = message("fr", "pme.conseil.aConfirmer");
+const A_CONFIRMER_SANS_ENVOI = message("fr", "pme.conseil.aConfirmerSansEnvoi");
+
+describe("en mode « annoncer », la réponse à relire s'affiche et part au cabinet", () => {
+  it("la PME lit la réponse entière, puis l'annonce ; la file reçoit la réponse sans l'annonce", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, CONCLUSION_DOSSIER, {
+      relecture: "annoncer",
+    });
+    assert.equal(r.textes, `${REPONSE_DOSSIER}\n\n${A_CONFIRMER}`);
+    assert.ok(!r.textes.includes(RELECTURE), "le message de relecture ne remplace plus la réponse");
+    assert.equal(r.fin.reponse, `${REPONSE_DOSSIER}\n\n${A_CONFIRMER}`);
+    assert.equal(r.range?.contenu, r.fin.reponse, "le fil garde ce que la PME a lu");
+    assert.equal(r.fin.mesure.retenue, false);
+    assert.equal(r.fin.mesure.annoncee, true);
+    assert.equal(r.file.length, 1, "la file du cabinet reçoit la réponse");
+    assert.equal(r.file[0]!["reponse"], REPONSE_DOSSIER);
+    assert.equal(r.file[0]!["statut"], "en_attente");
+    assert.equal(r.file[0]!["doute"], "Le régime du bailleur n'est pas connu.");
+  });
+
+  it("la réponse part en flux : l'écran la reçoit avant que le modèle conclue", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, CONCLUSION_DOSSIER, {
+      relecture: "annoncer",
+    });
+    assert.ok(
+      r.journal.indexOf("ecran:texte") < r.journal.indexOf("claude:conclusion"),
+      `la réponse a attendu la conclusion : ${r.journal.join(", ")}`,
+    );
+  });
+
+  it("sans conclusion : la réponse s'affiche quand même, annoncée et envoyée", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, null, { relecture: "annoncer" });
+    assert.ok(r.textes.startsWith(REPONSE_DOSSIER));
+    assert.ok(r.textes.endsWith(A_CONFIRMER));
+    assert.equal(r.file.length, 1);
+  });
+
+  it("question générale : rien n'est annoncé, rien ne part au cabinet", async () => {
+    const generale = "La retenue à la source s'applique aux loyers versés par une société.";
+    const r = await poserAuCabinet(
+      SOUS_MANDAT,
+      generale,
+      { ...CONCLUSION_DOSSIER, portee: "generale" },
+      { relecture: "annoncer" },
+    );
+    assert.equal(r.textes, generale);
+    assert.equal(r.fin.mesure.annoncee, false);
+    assert.equal(r.file.length, 0);
+  });
+
+  it("sans cabinet : la réponse part seule, sans annonce d'un envoi impossible", async () => {
+    const r = await poserAuCabinet(
+      { cabinetId: null, appelantMembre: true },
+      REPONSE_DOSSIER,
+      CONCLUSION_DOSSIER,
+      { relecture: "annoncer" },
+    );
+    assert.equal(r.textes, REPONSE_DOSSIER);
+    assert.equal(r.file.length, 0);
+  });
+
+  it("la file refuse : la réponse reste, et Malica n'annonce pas un envoi qui n'a pas eu lieu", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, CONCLUSION_DOSSIER, {
+      relecture: "annoncer",
+      fileEnPanne: true,
+    });
+    assert.equal(r.textes, `${REPONSE_DOSSIER}\n\n${A_CONFIRMER_SANS_ENVOI}`);
+    assert.ok(!r.textes.includes(A_CONFIRMER));
+    assert.equal(r.file.length, 0);
+  });
+
+  it("en mode « retenir », la règle du 4 octobre tient toujours", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, CONCLUSION_DOSSIER, {
+      relecture: "retenir",
+    });
+    assert.equal(r.textes, RELECTURE);
+    assert.equal(r.fin.mesure.annoncee, false);
+    assert.equal(r.file.length, 1);
+  });
+});
+
 describe("ce qui part au navigateur", () => {
   it("ni modèle, ni mesure, ni nom d'outil, ni phrase retirée : des étiquettes et un compte", async () => {
     const { api } = dossierFictif({ contexte: { cabinetId: null, appelantMembre: true } });
@@ -1404,5 +1508,212 @@ describe("ce qui part au navigateur", () => {
     assert.equal((finEnvoyee as { fin: { chiffresRetires: unknown } }).fin.chiffresRetires, 1);
     // La mesure reste côté serveur, pour le journal des coûts et l'épreuve.
     assert.ok(fin.mesure.outils.includes("pieces_chercher"));
+  });
+});
+
+/*
+ * Point M-9, choix du dirigeant (11 novembre 2026) : quand le corpus, consulté,
+ * ne répond pas, Malica répond quand même ; un chiffre tiré de sa mémoire part
+ * avec la marque « non vérifié », et la réponse part chez le comptable.
+ */
+const NON_VERIFIE = message("fr", "pme.assistant.nonVerifie");
+const NOTE_NON_VERIFIE = message("fr", "pme.assistant.nonVerifieNote");
+const PISCINES = "Quelle taxe s'applique aux piscines des hôtels ?";
+const SANS_TEXTE: EtapeSimulee[] = [
+  { outils: [{ nom: "conseil_fiscal", entree: { question: "taxe sur les piscines des hôtels" } }] },
+  {
+    texte:
+      "Je n'ai pas trouvé ce point dans les textes. Cette taxe est en général de 7 % du prix. Elle se déclare avec les autres taxes.",
+    conclusion: { conseil: true, portee: "generale", certitude: 0.3, doute: null, theme: null },
+  },
+];
+
+async function poserSansTexte(
+  etapes: EtapeSimulee[],
+  options: Parameters<typeof dossierFictif>[0] = {},
+) {
+  const { api, trace } = dossierFictif(options);
+  const requetes: Parameters<typeof claudeSimule>[1] = [];
+  const { fin, evenements } = await rejouer(
+    { tenantId: TENANT, question: PISCINES, locale: "fr", conversationId: null, pieceIds: [] },
+    { claude: claudeSimule(etapes, requetes), conseil: conseilFictif, repli: sansRepli },
+    api,
+  );
+  const textes = evenements.flatMap((e) => (e.type === "texte" ? [e.texte] : [])).join("");
+  return { fin, textes, file: trace.file, requetes };
+}
+
+describe("sans texte dans le corpus, Malica répond et marque ce qu'elle chiffre de mémoire", () => {
+  const MARQUER = { relecture: "annoncer", sansTexte: "marquer" } as const;
+
+  it("la phrase chiffrée reste, marquée ; la note et l'annonce suivent ; le cabinet reçoit la réponse", async () => {
+    const r = await poserSansTexte(SANS_TEXTE, MARQUER);
+    assert.ok(r.textes.includes(`est en général de 7 % du prix. ${NON_VERIFIE}`), r.textes);
+    assert.ok(r.textes.includes("Elle se déclare avec les autres taxes."));
+    assert.ok(r.textes.includes(NOTE_NON_VERIFIE));
+    assert.ok(
+      r.textes.endsWith(A_CONFIRMER),
+      "une question générale au chiffre non vérifié part aussi",
+    );
+    assert.equal(r.fin.mesure.nonVerifies, 1);
+    assert.equal(r.fin.chiffresRetires, 0);
+    assert.equal(r.file.length, 1);
+    assert.equal(r.file[0]!["statut"], "en_attente");
+    // Le cabinet ne la reçoit jamais comme certaine, et sait pourquoi elle est là.
+    assert.equal(r.file[0]!["certitude"], 0);
+    assert.equal(r.file[0]!["doute"], message("fr", "pme.conseil.douteNonVerifie"));
+  });
+
+  it("l'outil dit au modèle de répondre quand même, au lieu de rapporter le silence", async () => {
+    const r = await poserSansTexte(SANS_TEXTE, MARQUER);
+    const vu = JSON.stringify(r.requetes.at(-1));
+    assert.ok(vu.includes("Réponds quand même"), "la consigne de l'outil n'a pas changé");
+    assert.ok(!vu.includes("sans ajouter de règle de mémoire"));
+  });
+
+  it("sans cabinet : la réponse marquée part, avec la note, sans annonce d'un envoi", async () => {
+    const r = await poserSansTexte(SANS_TEXTE, {
+      ...MARQUER,
+      contexte: { cabinetId: null, appelantMembre: true },
+    });
+    assert.ok(r.textes.includes(NON_VERIFIE));
+    assert.ok(r.textes.endsWith(NOTE_NON_VERIFIE));
+    assert.equal(r.file.length, 0);
+  });
+
+  it("sans la règle en base : la phrase chiffrée est retirée, comme avant", async () => {
+    const r = await poserSansTexte(SANS_TEXTE, { relecture: "annoncer" });
+    assert.ok(!r.textes.includes("7 %"), r.textes);
+    assert.ok(!r.textes.includes(NON_VERIFIE));
+    assert.equal(r.fin.mesure.nonVerifies, 0);
+    assert.equal(r.fin.chiffresRetires, 1);
+    const vu = JSON.stringify(r.requetes.at(-1));
+    assert.ok(vu.includes("sans ajouter de règle de mémoire"));
+  });
+
+  it("un montant du dossier sans source reste retiré : la marque ne vaut que si le corpus s'est tu", async () => {
+    const r = await poserSansTexte(
+      [{ texte: "Vous devez 4321 dinars de pénalités. Je reste à votre disposition." }],
+      MARQUER,
+    );
+    assert.ok(!r.textes.includes("4321"), r.textes);
+    assert.ok(!r.textes.includes(NON_VERIFIE));
+    assert.equal(r.fin.mesure.nonVerifies, 0);
+  });
+
+  it("un chiffre de mémoire n'entre pas dans un calcul : l'outil le refuse", async () => {
+    const r = await poserSansTexte(
+      [
+        SANS_TEXTE[0]!,
+        { outils: [{ nom: "calculer", entree: { expression: "8000 * 7 / 100" } }] },
+        { texte: "Je n'ai pas trouvé ce point dans les textes." },
+      ],
+      MARQUER,
+    );
+    const vu = JSON.stringify(r.requetes.at(-1));
+    assert.ok(vu.includes("Demande ce nombre"), "le calcul sur un nombre de mémoire a été accepté");
+    assert.ok(!r.textes.includes("560"));
+  });
+});
+
+/*
+ * Mesuré le 11 novembre 2026 : le vrai modèle finit souvent une réponse générale
+ * sans conclure. Sous mandat, l'agent lui demande alors sa conclusion, outil imposé.
+ */
+function claudeQuiConclutSurDemande(
+  texte: string,
+  conclusion: Record<string, unknown> | null,
+): (journal: string[]) => ClientEnFlux {
+  return (journal) =>
+    async function* (requete) {
+      const impose = (requete as { tool_choice?: { type?: string } }).tool_choice?.type === "tool";
+      journal.push(impose ? "claude:conclusion demandée" : "claude:réponse");
+      yield {
+        type: "message_start",
+        message: { model: "modele-courant", usage: { input_tokens: 10, output_tokens: 1 } },
+      };
+      if (!impose) {
+        yield { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } };
+        yield { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: texte } };
+        yield { type: "content_block_stop", index: 0 };
+      } else if (conclusion) {
+        yield {
+          type: "content_block_start",
+          index: 0,
+          content_block: { type: "tool_use", id: "toolu_d", name: "conclure_reponse", input: {} },
+        };
+        yield {
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "input_json_delta", partial_json: JSON.stringify(conclusion) },
+        };
+        yield { type: "content_block_stop", index: 0 };
+      }
+      yield {
+        type: "message_delta",
+        delta: { stop_reason: impose && conclusion ? "tool_use" : "end_turn" },
+        usage: { output_tokens: 5 },
+      };
+      yield { type: "message_stop" };
+    };
+}
+
+describe("le modèle qui répond sans conclure se voit demander sa conclusion", () => {
+  const INFLATION = "L'inflation est une hausse générale et durable des prix.";
+  const GENERALE = { conseil: false, portee: "generale", certitude: 1, doute: null, theme: null };
+
+  it("réponse générale sous mandat : la conclusion demandée la laisse partir seule", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, INFLATION, null, {
+      relecture: "annoncer",
+      claude: claudeQuiConclutSurDemande(INFLATION, GENERALE),
+    });
+    assert.equal(r.textes, INFLATION, "une explication générale a été annoncée au comptable");
+    assert.equal(r.file.length, 0);
+    assert.equal(r.fin.mesure.annoncee, false);
+    assert.deepEqual(
+      r.journal.filter((j) => j.startsWith("claude:")),
+      ["claude:réponse", "claude:conclusion demandée"],
+    );
+    assert.equal(r.fin.mesure.conclusion?.portee, "generale");
+  });
+
+  it("en mode « retenir » aussi : une explication générale n'attend plus le comptable", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, INFLATION, null, {
+      relecture: "retenir",
+      claude: claudeQuiConclutSurDemande(INFLATION, GENERALE),
+    });
+    assert.equal(r.textes, INFLATION);
+    assert.equal(r.file.length, 0);
+  });
+
+  it("la conclusion demandée dit « dossier » : la réponse est annoncée et envoyée", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, null, {
+      relecture: "annoncer",
+      claude: claudeQuiConclutSurDemande(REPONSE_DOSSIER, CONCLUSION_DOSSIER),
+    });
+    assert.ok(r.textes.endsWith(A_CONFIRMER));
+    assert.equal(r.file.length, 1);
+    assert.equal(r.file[0]!["theme"], "Retenue à la source sur loyer");
+  });
+
+  it("le modèle ne conclut toujours pas : la portée reste incertaine, la réponse est relue", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, null, {
+      relecture: "annoncer",
+      claude: claudeQuiConclutSurDemande(REPONSE_DOSSIER, null),
+    });
+    assert.ok(r.textes.endsWith(A_CONFIRMER));
+    assert.equal(r.file.length, 1);
+  });
+
+  it("sans cabinet : aucune conclusion n'est demandée, aucun appel de plus", async () => {
+    const r = await poserAuCabinet({ cabinetId: null, appelantMembre: true }, INFLATION, null, {
+      relecture: "annoncer",
+      claude: claudeQuiConclutSurDemande(INFLATION, GENERALE),
+    });
+    assert.equal(r.textes, INFLATION);
+    assert.deepEqual(
+      r.journal.filter((j) => j.startsWith("claude:")),
+      ["claude:réponse"],
+    );
   });
 });

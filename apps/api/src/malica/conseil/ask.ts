@@ -553,13 +553,47 @@ export async function askMalica(
    * Ce n'est plus la certitude qui décide — voir `doitEtreRelue` et son test.
    * Le seuil du cabinet reste lu et affiché ; il informe, il ne retient plus.
    */
-  const retenue = doitEtreRelue(lu, contexte);
+  const aRelire = doitEtreRelue(lu, contexte);
+  /*
+   * Décision du dirigeant, 11 novembre 2026 : Malica répond toujours. En mode
+   * « annoncer », la réponse à relire s'affiche, marquée, et part au cabinet ;
+   * « retenir » garde la règle du 4 octobre. Un mode illisible retient.
+   */
+  const mode = aRelire
+    ? await api.rpc<"annoncer" | "retenir">("conseil", "relecture", []).catch(() => "retenir")
+    : "retenir";
+  const retenue = aRelire && mode !== "annoncer";
+
+  const deposerAuCabinet = () =>
+    api.rpc<{ id: string; cabinetId: string }>("conseil", "creer", [
+      {
+        tenantId: input.tenantId,
+        conversationId,
+        question: input.question,
+        reponse: lu.reponse,
+        sources: lu.sources,
+        certitude: lu.certitude,
+        doute: lu.doute,
+        canal: "conversation",
+        theme: lu.theme,
+        langue: input.locale,
+        statut: "en_attente",
+      },
+    ]);
+  /*
+   * Annoncée, la réponse dit qu'elle part chez le comptable. Le dépôt suit le
+   * rangement au fil (la file relie l'avis à la question rangée) : s'il échoue,
+   * l'appel échoue, comme pour une réponse retenue.
+   */
+  const annonce = aRelire && !retenue ? texte(input.locale, "pme.conseil.aConfirmer") : null;
 
   const reponseRendue = retenue
     ? texte(input.locale, "pme.conseil.relecture")
-    : arbitrable && !cabinet
-      ? `${lu.reponse}\n\n${texte(input.locale, "pme.conseil.sansCabinet")}`
-      : lu.reponse;
+    : annonce
+      ? `${lu.reponse}\n\n${annonce}`
+      : arbitrable && !cabinet
+        ? `${lu.reponse}\n\n${texte(input.locale, "pme.conseil.sansCabinet")}`
+        : lu.reponse;
 
   // La réponse, telle qu'elle sera rangée ET rendue : contrôlée d'abord, si
   // l'appelant le demande. Le fil ne garde jamais ce que l'écran n'a pas vu.
@@ -583,7 +617,8 @@ export async function askMalica(
   ]);
 
   /*
-   * La remise au cabinet — seulement si la réponse est retenue.
+   * La remise au cabinet — seulement si la réponse est à relire (retenue, ou
+   * annoncée à la personne).
    *
    * Une réponse retenue qui ne pourrait pas être rangée dans la file serait
    * perdue : le client attend son comptable, et le comptable ne saurait rien.
@@ -593,23 +628,7 @@ export async function askMalica(
    * tenue, même sous mandat : le cabinet la consulte si elle la lui partage.
    * Voir `partAuCabinet`, et le défaut qu'elle corrige.
    */
-  if (cabinet && partAuCabinet(retenue)) {
-    await api.rpc<{ id: string; cabinetId: string }>("conseil", "creer", [
-      {
-        tenantId: input.tenantId,
-        conversationId,
-        question: input.question,
-        reponse: lu.reponse,
-        sources: lu.sources,
-        certitude: lu.certitude,
-        doute: lu.doute,
-        canal: "conversation",
-        theme: lu.theme,
-        langue: input.locale,
-        statut: "en_attente",
-      },
-    ]);
-  }
+  if (cabinet && partAuCabinet(aRelire)) await deposerAuCabinet();
 
   let controles: Verdict[] = [];
   let messageId: string | null = null;

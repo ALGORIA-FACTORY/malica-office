@@ -132,7 +132,11 @@ describe("#298 — the assistant and the firm's review queue", { skip: !BASE_CON
     const avant = await fileDuCabinet();
     const r = await poser("/malica/demander", { mode: "chat" });
     assert.equal(r.status, 200, await r.clone().text());
-    assert.equal(((await r.json()) as { retenue: boolean }).retenue, true);
+    const corps = (await r.json()) as { retenue: boolean; answer: string };
+    // Mode "annoncer": the answer is shown and announced, no longer withheld.
+    assert.equal(corps.retenue, false);
+    assert.ok(corps.answer.includes("doit retenir à la source"), "the answer was withheld");
+    assert.ok(corps.answer.includes("confirmer par votre comptable"), "not announced");
     assert.equal(await fileDuCabinet(), avant + 1);
   });
 
@@ -140,12 +144,17 @@ describe("#298 — the assistant and the firm's review queue", { skip: !BASE_CON
     const avant = await fileDuCabinet();
     const r = await poser("/malica/assistant", {});
     assert.equal(r.status, 200);
-    await r.text();
+    const corps = await r.text();
     assert.equal(
       await fileDuCabinet(),
       avant + 1,
       "the assistant answered a dossier-specific tax question itself; the firm never sees it",
     );
+    // Decision of 11 November 2026 (mode "annoncer", delivered in base): the
+    // PME reads the answer itself, marked, instead of the review message.
+    assert.ok(corps.includes("doit retenir à la source"), "the answer was withheld");
+    assert.ok(corps.includes("confirmer par votre comptable"), "the review was not announced");
+    assert.ok(!corps.includes("relit ma réponse"), "the review message replaced the answer");
   });
 
   it("a figure the guard removed never reaches the browser", async () => {
