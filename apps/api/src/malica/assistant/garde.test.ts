@@ -210,3 +210,103 @@ describe("le flux de Claude", () => {
     assert.deepEqual(vus, ["message_start", "ping", "content_block_delta"]);
   });
 });
+
+describe("la garde ne retient que ce qui engage, quand la base dit ce qui engage", () => {
+  const regle = {
+    marques_liantes: [
+      "%",
+      "tnd",
+      "dinar*",
+      "taux",
+      "tva",
+      "factur*",
+      "delai*",
+      "ht",
+      "ttc",
+      "نسبة",
+    ],
+    entier_liant_des: 10000,
+  };
+  const juger = (texte: string, question = "question", sources: SourceConnue[] = []) => {
+    const g = new GardeDesChiffres(question, regle);
+    for (const s of sources) g.ajouterSource(s);
+    return g.jugerTout(texte);
+  };
+
+  it("laisse passer une année, un âge, un rang dans une phrase qui n'engage pas", () => {
+    const t =
+      "Ibn Khaldoun est né à Tunis en 1332 et mort au Caire en 1406. Il décrit un cycle de 3 générations.";
+    assert.deepEqual(juger(t), { aEmettre: t, retirees: [] });
+  });
+
+  it("retire toujours un taux, un montant, un délai écrits de mémoire", () => {
+    for (const phrase of [
+      "Le taux normal est de 19 %.",
+      "La TVA est de 19.",
+      "Vous devez 250 dinars.",
+      "Le délai est de 28 jours.",
+      "النسبة العادية هي 19.",
+      "Vous avez dépensé 5 310,500 chez Kordane.",
+      "Cela représente 48000 au total.",
+      "Votre facture 2417 est payée.",
+    ]) {
+      assert.deepEqual(juger(phrase), { aEmettre: "", retirees: [phrase] }, phrase);
+    }
+  });
+
+  it("garde un chiffre liant porté par la question ou par une source", () => {
+    const t = "17 % de 2 450 font 416,5.";
+    assert.equal(juger(t).retirees.length, 1, "sans source, le résultat est retiré");
+    const calcul = source(
+      "malica:calcul:2450*17/100",
+      "Opération : 2450 * 17 / 100\nRésultat exact : 416,5",
+    );
+    assert.deepEqual(juger(t, "Combien font 17 % de 2 450 ?", [calcul]), {
+      aEmettre: t,
+      retirees: [],
+    });
+  });
+
+  it("ne prend pas une formule de tableur pour un chiffre", () => {
+    const t =
+      "Mettez en C2 la formule du TTC :\n`=A2*(1+B2)`\nSi le taux est saisi en nombre entier : `=A2*(1+B2/100)`.\nA2 porte le HT et B2 le taux.";
+    assert.deepEqual(juger(t), { aEmettre: t, retirees: [] });
+    // Hors formule, la marque joue : un taux glissé entre accents graves reste jugé.
+    assert.equal(juger("Le taux est `19` aujourd'hui.").retirees.length, 1);
+    assert.equal(juger("Écrivez `=19%` comme taux.").retirees.length, 1);
+    // Le morceau qu'on explique nomme une cellule : il passe, phrase à marque comprise.
+    const morceau = "- `(1+B2)` ajoute la part du taux au HT.";
+    assert.deepEqual(juger(morceau), { aEmettre: morceau, retirees: [] });
+    const unite = "Le `1` représente le HT lui-même, et `/100` ramène le taux à une fraction.";
+    assert.deepEqual(juger(unite), { aEmettre: unite, retirees: [] });
+    // Un taux d'exemple sorti de la mémoire reste retiré, formule ou non.
+    assert.equal(juger("Si B2 contient 19 %, `1+B2` vaut 1,19.").retirees.length, 1);
+  });
+
+  it("une marque est un mot entier ou une racine, pas un bout de mot", () => {
+    // « ht » ne se trouve pas dans « http », « taux » pas dans « plateaux ».
+    const t = "Le site http répond en 2 secondes sur 3 plateaux.";
+    assert.deepEqual(juger(t), { aEmettre: t, retirees: [] });
+    assert.equal(juger("La facturation a 2 étapes.").retirees.length, 1);
+  });
+
+  it("en flux, une phrase à chiffre non liant part sans attendre la fin du bloc", () => {
+    const g = new GardeDesChiffres("question", regle);
+    g.ouvrirBloc();
+    assert.equal(g.recevoirTexte("Il est né en 1332. "), "Il est né en 1332. ");
+    assert.equal(g.recevoirTexte("Le taux est de 19 %. Et la suite. "), "");
+    assert.deepEqual(g.fermerBloc(), {
+      aEmettre: "Et la suite. ",
+      retirees: ["Le taux est de 19 %."],
+    });
+  });
+
+  it("sans règle, ou avec une règle vide, tout chiffre se juge comme avant", () => {
+    const t = "Il est né en 1332.";
+    assert.deepEqual(new GardeDesChiffres("q").jugerTout(t), { aEmettre: "", retirees: [t] });
+    assert.deepEqual(
+      new GardeDesChiffres("q", { marques_liantes: [], entier_liant_des: 10000 }).jugerTout(t),
+      { aEmettre: "", retirees: [t] },
+    );
+  });
+});

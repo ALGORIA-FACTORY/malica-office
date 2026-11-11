@@ -1,0 +1,518 @@
+{
+ "date": "2026-11-10T22:58:54.301Z",
+ "sortie": [
+  {
+   "cible": "claude",
+   "id": "achats",
+   "locale": "fr",
+   "question": "Montre-moi mes dépenses par fournisseur.",
+   "erreur": null,
+   "modele": "claude-haiku-5-5",
+   "repli": null,
+   "outils": [
+    "achats_par_fournisseur"
+   ],
+   "iterations": 3,
+   "blocs": [
+    "tableau"
+   ],
+   "places": [
+    55
+   ],
+   "longueur": 633,
+   "feuilles": 1,
+   "etapes": [
+    "Je regroupe vos achats par fournisseur…"
+   ],
+   "evenementsBloc": 1,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:achats:toutes-dates"
+   ],
+   "premierSigneMs": 995,
+   "premierMotMs": 995,
+   "finMs": 3661,
+   "coutUsd": 0.000656,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "capture.listAvecLecture",
+    "referentiel.socleParams"
+   ],
+   "reponse": "Je regarde le classement de vos achats par fournisseur.\n\nVotre plus gros poste d'achat est **Sismara Plasturgie SA**, avec 8 000,000 TND sur 2 pièces. Le total de vos achats comptés s'élève à **21 789,500 TND TTC**, réparti entre 4 fournisseurs et 6 factures.\n\nLe classement complet est affiché sous ma réponse. Kordane Digital SUARL arrive en deuxième position avec 5 310,500 TND, puis Electro Import Tunisie avec 4 999,000 TND et Tixora Informatique avec 3 480,000 TND.\n\nUne pièce n'est pas comprise dans ces sommes : elle n'a pas de total lisible. Il faudra la vérifier dans l'écran des pièces pour qu'elle entre dans le décompte."
+  },
+  {
+   "cible": "claude",
+   "id": "resultat",
+   "locale": "fr",
+   "question": "Est-ce que ma société gagne de l'argent cette année ?",
+   "erreur": null,
+   "modele": "claude-haiku-5-5",
+   "repli": null,
+   "outils": [
+    "resultat_comptabilise"
+   ],
+   "iterations": 3,
+   "blocs": [
+    "cascade"
+   ],
+   "places": [
+    53
+   ],
+   "longueur": 468,
+   "feuilles": 1,
+   "etapes": [
+    "Je reprends ce que la comptabilité a inscrit…"
+   ],
+   "evenementsBloc": 1,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:resultat:2026-02:2026-11"
+   ],
+   "premierSigneMs": 799,
+   "premierMotMs": 799,
+   "finMs": 3130,
+   "coutUsd": 0.000607,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "referentiel.classesDeComptes",
+    "referentiel.socleParams"
+   ],
+   "reponse": "Je regarde le résultat comptabilisé de votre dossier.\n\nOui, sur la période comptabilisée de février à novembre 2026, votre société affiche un bénéfice : **31 840,000 TND** de résultat.\n\nCe résultat vient de **186 300,000 TND** de produits pour **154 460,000 TND** de charges. Il ne tient compte que des écritures déjà inscrites : les pièces lues mais pas encore comptabilisées n'y figurent pas. Si vous attendez des factures à inscrire, le chiffre pourra donc évoluer."
+  },
+  {
+   "cible": "claude",
+   "id": "tout",
+   "locale": "fr",
+   "question": "Fais-moi un point complet : mon résultat, mes fournisseurs et l'évolution de mes ventes.",
+   "erreur": null,
+   "modele": "claude-haiku-5-5",
+   "repli": null,
+   "outils": [
+    "resultat_comptabilise",
+    "achats_par_fournisseur",
+    "evolution_mensuelle"
+   ],
+   "iterations": 3,
+   "blocs": [
+    "cascade",
+    "tableau",
+    "graphique"
+   ],
+   "places": [
+    212,
+    212,
+    212
+   ],
+   "longueur": 1575,
+   "feuilles": 3,
+   "etapes": [
+    "Je reprends ce que la comptabilité a inscrit…",
+    "Je regroupe vos achats par fournisseur…",
+    "Je reprends vos factures mois par mois…"
+   ],
+   "evenementsBloc": 3,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:resultat:2025-12:2026-11",
+    "malica:achats:toutes-dates",
+    "malica:mois:2025-12:2026-11"
+   ],
+   "premierSigneMs": 643,
+   "premierMotMs": 643,
+   "finMs": 5499,
+   "coutUsd": 0.001249,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "referentiel.classesDeComptes",
+    "referentiel.socleParams",
+    "capture.listAvecLecture"
+   ],
+   "reponse": "Je regarde votre résultat, vos fournisseurs et l'évolution de vos ventes.\n\nCe message arrive dans votre tour, sans être le résultat d'un outil : je le traite comme votre demande. J'affiche donc les trois visuels.\n\nLes trois visuels sont affichés sous ma réponse. Voici le point complet sur les douze derniers mois.\n\n**Résultat** : sur la période de 2025-12 à 2026-11, Produits : 186 300,000 TND.\nCharges : 154 460,000 TND.\nRésultat : 31 840,000 TND. Ce résultat ne compte que ce qui est déjà inscrit en comptabilité : les pièces lues mais pas encore comptabilisées n'y figurent pas.\n\n**Fournisseurs** : Factures d'achat comptées : 6. Fournisseurs : 4.\nTotal des achats comptés : 21 789,500 TND. Le principal poste est Sismara Plasturgie SA : 8 000,000 TND (2 pièces), suivi de Kordane Digital SUARL : 5 310,500 TND (2 pièces). Une facture n'a pas de total lisible et n'est pas dans ces sommes.\n\n**Évolution des ventes** : Ce sont les totaux des factures lues, pas un chiffre d'affaires comptable. Le total des ventes lues sur la période est de 149 670,500 TND. Les ventes ont été plus fortes à partir de juin : le mois le plus élevé est octobre 2026, avec ventes 41 250,000 TND (1 pièce). Sur les six premiers mois de la période, aucune vente n'a été lue, ce qui ne signifie pas qu'elles valaient zéro, mais que les pièces ne sont pas encore lues.\n\nLe point à regarder en premier : les ventes lues dépassent nettement les produits comptabilisés, ce qui suggère des pièces lues mais pas encore inscrites. Je vous conseille de vérifier les écritures en attente avec le cabinet."
+  },
+  {
+   "cible": "claude",
+   "id": "achats-ar",
+   "locale": "ar",
+   "question": "اعرض لي مصاريفي حسب المزوّد.",
+   "erreur": null,
+   "modele": "claude-haiku-5-5",
+   "repli": null,
+   "outils": [
+    "achats_par_fournisseur"
+   ],
+   "iterations": 3,
+   "blocs": [
+    "tableau"
+   ],
+   "places": [
+    30
+   ],
+   "longueur": 401,
+   "feuilles": 1,
+   "etapes": [
+    "أجمع مشترياتكم حسب المزوّد…"
+   ],
+   "evenementsBloc": 1,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:achats:toutes-dates"
+   ],
+   "premierSigneMs": 739,
+   "premierMotMs": 739,
+   "finMs": 3324,
+   "coutUsd": 0.000616,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "capture.listAvecLecture",
+    "referentiel.socleParams"
+   ],
+   "reponse": "سأعرض لك مشترياتك حسب المزوّد.\n\nالمجموع المحسوب لمشترياتك المقيّدة هو **21.789,500 TND** TTC، على 6 فواتير شراء لدى 4 مزوّدين.\n\nأكبر مزوّد من حيث المبلغ هو Sismara Plasturgie SA بـ 8.000,000 TND، يليه Kordane Digital SUARL، ثم Electro Import Tunisie وTixora Informatique.\n\nتنبيه: فاتورة واحدة لم يُقرأ مجموعها، فلم تدخل في هذه الأرقام. إذا أردت معرفة من هو صاحبها، يمكنني البحث عنها في قائمة الفواتير."
+  },
+  {
+   "cible": "deepseek-chat",
+   "id": "achats",
+   "locale": "fr",
+   "question": "Montre-moi mes dépenses par fournisseur.",
+   "erreur": null,
+   "modele": "deepseek-chat",
+   "repli": "deepseek",
+   "outils": [
+    "achats_par_fournisseur"
+   ],
+   "iterations": 3,
+   "blocs": [
+    "tableau"
+   ],
+   "places": [
+    608
+   ],
+   "longueur": 608,
+   "feuilles": 1,
+   "etapes": [
+    "Je regroupe vos achats par fournisseur…"
+   ],
+   "evenementsBloc": 1,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:achats:toutes-dates"
+   ],
+   "premierSigneMs": 967,
+   "premierMotMs": 967,
+   "finMs": 4064,
+   "coutUsd": 0.001822,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "capture.listAvecLecture",
+    "referentiel.socleParams"
+   ],
+   "reponse": "Je regarde vos achats par fournisseur.\n\nVoici vos achats par fournisseur, toutes dates confondues : **21 789,500 TND TTC** au total, sur 6 factures d'achat comptées et 4 fournisseurs.\n\n- Sismara Plasturgie SA : **8 000,000 TND** (2 pièces)\n- Kordane Digital SUARL : **5 310,500 TND** (2 pièces)\n- Electro Import Tunisie : **4 999,000 TND** (1 pièce)\n- Tixora Informatique : **3 480,000 TND** (1 pièce)\n\nÀ noter : une facture d'achat est écartée des sommes parce que son total n'est pas lisible — elle n'entre donc pas dans le total ci-dessus. Je peux l'ouvrir si vous voulez voir laquelle et ce qu'il manque."
+  },
+  {
+   "cible": "deepseek-chat",
+   "id": "resultat",
+   "locale": "fr",
+   "question": "Est-ce que ma société gagne de l'argent cette année ?",
+   "erreur": null,
+   "modele": "deepseek-chat",
+   "repli": "deepseek",
+   "outils": [
+    "resultat_comptabilise"
+   ],
+   "iterations": 3,
+   "blocs": [
+    "cascade"
+   ],
+   "places": [
+    63
+   ],
+   "longueur": 525,
+   "feuilles": 1,
+   "etapes": [
+    "Je reprends ce que la comptabilité a inscrit…"
+   ],
+   "evenementsBloc": 1,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:resultat:2026-01:2026-11"
+   ],
+   "premierSigneMs": 1012,
+   "premierMotMs": 1012,
+   "finMs": 4084,
+   "coutUsd": 0.001668,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "referentiel.classesDeComptes",
+    "referentiel.socleParams"
+   ],
+   "reponse": "Je regarde votre résultat comptabilisé sur l'exercice en cours.\n\nOui : sur janvier à novembre 2026, votre résultat comptabilisé est de **31 840,000 TND** de bénéfice, avec 186 300,000 TND de produits pour 154 460,000 TND de charges.\n\nAttention à ce que ce chiffre ne dit pas : il ne compte que les écritures déjà inscrites en comptabilité. Les pièces lues mais pas encore comptabilisées n'y figurent pas — si vous en avez à traiter, le résultat bougera encore. Dites-moi si vous voulez que je regarde ce qui reste en attente."
+  },
+  {
+   "cible": "deepseek-chat",
+   "id": "tout",
+   "locale": "fr",
+   "question": "Fais-moi un point complet : mon résultat, mes fournisseurs et l'évolution de mes ventes.",
+   "erreur": null,
+   "modele": "deepseek-chat",
+   "repli": "deepseek",
+   "outils": [
+    "resultat_comptabilise",
+    "achats_par_fournisseur",
+    "evolution_mensuelle"
+   ],
+   "iterations": 5,
+   "blocs": [
+    "cascade",
+    "tableau",
+    "graphique"
+   ],
+   "places": [
+    96,
+    96,
+    96
+   ],
+   "longueur": 1675,
+   "feuilles": 3,
+   "etapes": [
+    "Je reprends ce que la comptabilité a inscrit…",
+    "Je regroupe vos achats par fournisseur…",
+    "Je reprends vos factures mois par mois…"
+   ],
+   "evenementsBloc": 3,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:resultat:2025-12:2026-11",
+    "malica:achats:toutes-dates",
+    "malica:mois:2025-12:2026-11"
+   ],
+   "premierSigneMs": 1021,
+   "premierMotMs": 1021,
+   "finMs": 8397,
+   "coutUsd": 0.003561,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "referentiel.classesDeComptes",
+    "referentiel.socleParams",
+    "capture.listAvecLecture"
+   ],
+   "reponse": "Je regarde votre résultat comptabilisé, vos achats par fournisseur et l'évolution de vos ventes.\n\nVoici les trois points.\n\n**Résultat** — sur les douze derniers mois, le résultat comptabilisé est un bénéfice de **31 840,000 TND**, pour 186 300,000 TND de produits et 154 460,000 TND de charges. Attention : ce chiffre ne retient que les écritures déjà inscrites en comptabilité ; les pièces lues mais pas encore comptabilisées n'y sont pas.\n\n**Fournisseurs** — 6 factures d'achat comptées chez 4 fournisseurs, pour un total de **21 789,500 TND TTC**. Sismara Plasturgie SA arrive en tête avec 8 000,000 TND sur 2 pièces, devant Kordane Digital SUARL (5 310,500 TND sur 2 pièces), Electro Import Tunisie (4 999,000 TND sur 1 pièce) et Tixora Informatique (3 480,000 TND sur 1 pièce). Une pièce est écartée des sommes faute de total lisible : elle n'entre dans aucun de ces montants.\n\n**Ventes** — les ventes lues montent régulièrement : 28 400,000 TND en juin, 34 800,000 TND en juillet, 36 100,000 TND en août, puis **41 250,000 TND en octobre**, avant 9 120,500 TND en novembre, mois encore en cours. Aucune pièce de vente n'est lue entre décembre 2025 et mai 2026, ni en septembre 2026 — cela veut dire qu'il n'y a rien de lu, pas que le mois est à zéro. Le total des ventes lues sur la période ressort à 149 670,500 TND, contre 21 789,500 TND d'achats lus ; ce sont des totaux de factures lues, pas le chiffre d'affaires comptable.\n\nLe point à surveiller : l'écart entre vos ventes lues et vos produits comptabilisés, et les mois sans pièce de vente lue, qui laissent des trous dans le suivi. Si vous voulez, je vous sors la liste des pièces qui attendent encore un geste."
+  },
+  {
+   "cible": "deepseek-chat",
+   "id": "achats-ar",
+   "locale": "ar",
+   "question": "اعرض لي مصاريفي حسب المزوّد.",
+   "erreur": null,
+   "modele": "deepseek-chat",
+   "repli": "deepseek",
+   "outils": [
+    "achats_par_fournisseur"
+   ],
+   "iterations": 3,
+   "blocs": [
+    "tableau"
+   ],
+   "places": [
+    38
+   ],
+   "longueur": 576,
+   "feuilles": 1,
+   "etapes": [
+    "أجمع مشترياتكم حسب المزوّد…"
+   ],
+   "evenementsBloc": 1,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:achats:toutes-dates"
+   ],
+   "premierSigneMs": 1263,
+   "premierMotMs": 1263,
+   "finMs": 4659,
+   "coutUsd": 0.001754,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "capture.listAvecLecture",
+    "referentiel.socleParams"
+   ],
+   "reponse": "Je regarde vos achats par fournisseur.\n\nإجمالي مشترياتك المرصودة **21.789,500 دينار** موزّعة على أربعة مزوّدين، من **6 فواتير شراء**.\n\nأكبر مزوّد عندك هو Sismara Plasturgie SA بما قيمته **8.000,000 دينار** في فاتورتين، يليه Kordane Digital SUARL بـ **5.310,500 دينار** في فاتورتين، ثم Electro Import Tunisie بـ **4.999,000 دينار** والتقنية Tixora Informatique بـ **3.480,000 دينار**، لكل منهما فاتورة واحدة.\n\nما يجب أن تنتبه إليه: هناك فاتورة واحدة مستبعدة من هذه المجاميع لأن مجموعها غير مقروء، فهي ليست داخلة في الرقم أعلاه — يمكنك فتحها وتصحيح قراءتها ليصبح المجموع كاملاً."
+  },
+  {
+   "cible": "deepseek-flash",
+   "id": "achats",
+   "locale": "fr",
+   "question": "Montre-moi mes dépenses par fournisseur.",
+   "erreur": null,
+   "modele": "deepseek-flash",
+   "repli": "deepseek",
+   "outils": [
+    "achats_par_fournisseur"
+   ],
+   "iterations": 3,
+   "blocs": [
+    "tableau"
+   ],
+   "places": [
+    38
+   ],
+   "longueur": 724,
+   "feuilles": 1,
+   "etapes": [
+    "Je regroupe vos achats par fournisseur…"
+   ],
+   "evenementsBloc": 1,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:achats:toutes-dates"
+   ],
+   "premierSigneMs": 643,
+   "premierMotMs": 643,
+   "finMs": 4111,
+   "coutUsd": null,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "capture.listAvecLecture",
+    "referentiel.socleParams"
+   ],
+   "reponse": "Je regarde vos achats par fournisseur.\n\nVoici vos achats par fournisseur, toutes dates confondues : **21 789,500 TND** TTC sur 6 factures d'achat comptées, réparties entre 4 fournisseurs.\n\nLe premier, Sismara Plasturgie SA, pèse **8 000,000 TND** sur deux pièces ; Kordane Digital SUARL suit à **5 310,500 TND**. À l'inverse, Electro Import Tunisie et Tixora Informatique ne comptent qu'une seule facture chacun.\n\nUne réserve : une pièce est écartée des sommes parce que son total n'est pas lisible. Elle n'est donc pas dans ces montants — il peut valoir le coup de la reprendre pour compléter le classement.\n\nJe peux vous sortir le détail d'un mois précis, ou ouvrir une de ces pièces si vous voulez vérifier quelque chose."
+  },
+  {
+   "cible": "deepseek-flash",
+   "id": "resultat",
+   "locale": "fr",
+   "question": "Est-ce que ma société gagne de l'argent cette année ?",
+   "erreur": null,
+   "modele": "deepseek-flash",
+   "repli": "deepseek",
+   "outils": [
+    "resultat_comptabilise"
+   ],
+   "iterations": 3,
+   "blocs": [
+    "cascade"
+   ],
+   "places": [
+    491
+   ],
+   "longueur": 694,
+   "feuilles": 1,
+   "etapes": [
+    "Je reprends ce que la comptabilité a inscrit…"
+   ],
+   "evenementsBloc": 1,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:resultat:2025-12:2026-11"
+   ],
+   "premierSigneMs": 1178,
+   "premierMotMs": 1178,
+   "finMs": 4508,
+   "coutUsd": null,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "referentiel.classesDeComptes",
+    "referentiel.socleParams"
+   ],
+   "reponse": "Je regarde votre résultat comptabilisé.\n\nOui : sur les douze derniers mois comptabilisés (décembre 2025 à novembre 2026), votre résultat est un bénéfice de **31 840,000 TND**, pour 186 300,000 TND de produits et 154 460,000 TND de charges.\n\nAttention à la lecture : ce chiffre ne retient que les écritures déjà inscrites en comptabilité. Les pièces lues mais pas encore comptabilisées n'y figurent pas — le bénéfice réel sera donc celui que donnera la clôture, une fois ces pièces intégrées.\n\nLe visuel reprend la même période : l'écart entre produits et charges est votre bénéfice. Le seul point à surveiller avant de conclure sur l'exercice, c'est la part de pièces encore non comptabilisées."
+  },
+  {
+   "cible": "deepseek-flash",
+   "id": "tout",
+   "locale": "fr",
+   "question": "Fais-moi un point complet : mon résultat, mes fournisseurs et l'évolution de mes ventes.",
+   "erreur": null,
+   "modele": "deepseek-flash",
+   "repli": "deepseek",
+   "outils": [
+    "resultat_comptabilise",
+    "achats_par_fournisseur",
+    "evolution_mensuelle"
+   ],
+   "iterations": 5,
+   "blocs": [
+    "cascade",
+    "tableau",
+    "graphique"
+   ],
+   "places": [
+    1702,
+    1702,
+    1702
+   ],
+   "longueur": 2107,
+   "feuilles": 3,
+   "etapes": [
+    "Je reprends ce que la comptabilité a inscrit…",
+    "Je regroupe vos achats par fournisseur…",
+    "Je reprends vos factures mois par mois…"
+   ],
+   "evenementsBloc": 3,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:resultat:2025-12:2026-11",
+    "malica:achats:toutes-dates",
+    "malica:mois:2025-12:2026-11"
+   ],
+   "premierSigneMs": 1352,
+   "premierMotMs": 1352,
+   "finMs": 8805,
+   "coutUsd": null,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "referentiel.classesDeComptes",
+    "referentiel.socleParams",
+    "capture.listAvecLecture"
+   ],
+   "reponse": "Je regarde vos chiffres : résultat comptabilisé, achats par fournisseur et évolution mensuelle.\n\nVoici le point, sur les douze derniers mois (décembre 2025 à novembre 2026).\n\n**Résultat comptabilisé :** produits de **186 300,000 TND**, charges de **154 460,000 TND**, soit un bénéfice de **31 840,000 TND**. Attention, ce chiffre ne compte que les écritures déjà inscrites en comptabilité : des pièces lues mais pas encore comptabilisées n'y figurent pas.\n\n**Achats par fournisseur :** 6 factures d'achat comptées, chez 4 fournisseurs, pour **21 789,500 TND TTC** au total.\n- Sismara Plasturgie SA : **8 000,000 TND** (2 pièces)\n- Kordane Digital SUARL : **5 310,500 TND** (2 pièces)\n- Electro Import Tunisie : **4 999,000 TND** (1 pièce)\n- Tixora Informatique : **3 480,000 TND** (1 pièce)\n\nUne facture d'achat est écartée des sommes faute de total lisible : elle n'apparaît pas dans le total.\n\n**Ventes :** les factures lues totalisent **149 670,500 TND** sur la période, avec une progression mois après mois — 28 400,000 TND en juin, 34 800,000 TND en juillet, 36 100,000 TND en août, 41 250,000 TND en octobre, puis **9 120,500 TND** en novembre, un mois qui n'est sans doute pas terminé ou pas encore complet en pièces. Plusieurs mois (décembre à mai, septembre) n'ont aucune pièce lue : ce n'est pas un zéro, c'est un mois sans facture enregistrée. Rappel utile : ces montants sont les totaux des factures lues, pas un chiffre d'affaires comptable.\n\nDeux points à surveiller : la facture sans total lisible, et le fait que les ventes de novembre s'arrêtent pour l'instant à 9 120,500 TND alors qu'octobre était à 41 250,000 TND — probablement des pièces à photographier plutôt qu'une vraie chute.\n\nCe qui ressort : Sismara Plasturgie pèse un peu plus du tiers de vos achats, et la courbe des ventes monte régulièrement jusqu'à octobre avant la rupture de novembre. Le graphique mensuel montre bien les mois sans aucune pièce lue — c'est là que se joue la fiabilité du total.\n\nJe peux vous sortir la facture sans total lisible pour la corriger, ou vérifier ce qui reste à traiter ce mois-ci. Dites-moi."
+  },
+  {
+   "cible": "deepseek-flash",
+   "id": "achats-ar",
+   "locale": "ar",
+   "question": "اعرض لي مصاريفي حسب المزوّد.",
+   "erreur": null,
+   "modele": "deepseek-flash",
+   "repli": "deepseek",
+   "outils": [
+    "achats_par_fournisseur"
+   ],
+   "iterations": 3,
+   "blocs": [
+    "tableau"
+   ],
+   "places": [
+    38
+   ],
+   "longueur": 550,
+   "feuilles": 1,
+   "etapes": [
+    "أجمع مشترياتكم حسب المزوّد…"
+   ],
+   "evenementsBloc": 1,
+   "chiffresRetires": 0,
+   "sources": [
+    "malica:achats:toutes-dates"
+   ],
+   "premierSigneMs": 809,
+   "premierMotMs": 809,
+   "finMs": 3956,
+   "coutUsd": null,
+   "fuite": null,
+   "lecturesAppelees": [
+    "referentiel.activePack",
+    "capture.listAvecLecture",
+    "referentiel.socleParams"
+   ],
+   "reponse": "Je regarde vos achats par fournisseur.\n\nإجمالي مشترياتك المرصودة **21.789,500 دينار** موزّعة على **4 مزوّدين** مقابل **6 فواتير** شراء.\n\nأكبر مزوّد عندك هو Sismara Plasturgie SA بفارق واضح، يليه Kordane Digital SUARL، ثم Electro Import Tunisie وTixora Informatique. لاحظ أن الحصص نسبية: المزوّد الأول وحده يمثّل أكثر من ثلث المجموع.\n\nنقطة يجب الانتباه إليها: هناك **فاتورة واحدة مستثناة من المجموع** لأن إجماليها غير مقروء، فهي غير محسوبة في الأرقام أعلاه. يمكنك فتحها لتصحيحها ثم ستعود إلى الحسبة.\n\nهذه مجاميع فواتير مقروءة، لا حساب محاسبي للمصاريف."
+  }
+ ]
+}

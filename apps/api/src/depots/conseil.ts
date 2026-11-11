@@ -163,6 +163,19 @@ export const conseil = {
     return rows[0]!.r;
   },
 
+  /**
+   * Le débit de « Parler à Malica » pour la personne qui appelle : les bornes
+   * réglées dans la tour, et ce qu'elle a déjà demandé aujourd'hui. Refuse
+   * au-delà du quota du jour (`refus.assistant.quota_du_jour`) ; sinon INSCRIT
+   * la question au registre du quota : l'appeler, c'est admettre une question.
+   */
+  async exigerDebit(db: Requete): Promise<{ parMinute: number; parJour: number; duJour: number }> {
+    const { rows } = await db.query<{ r: { parMinute: number; parJour: number; duJour: number } }>(
+      `select public.assistant_debit_exiger() as r`,
+    );
+    return rows[0]!.r;
+  },
+
   /** La file du cabinet : ce qui attend d'abord, puis le reste, le plus récent en tête. */
   async file(db: Requete, cabinetTenantId: string, statut?: string | null): Promise<Arbitrage[]> {
     const { rows } = await db.query<Record<string, unknown>>(

@@ -1,0 +1,654 @@
+{
+ "roleDeLecture": "",
+ "date": "2026-11-11T06:45:29.371Z",
+ "sortie": [
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "b1-achats",
+   "axe": "base",
+   "locale": "fr",
+   "question": "Montre-moi mes dépenses par fournisseur.",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "Je n'ai pas accès à vos données (comptabilité, banque, factures ou ERP). Je peux néanmoins vous aider de plusieurs façons :\n\n## 1. Analyser vos données directement\nCollez ici vos dépenses (copie d'un tableau Excel, export CSV, liste de factures), par exemple :\n\n```\nDate | Fournisseur | Montant\n05/01/2025 | Orange | 45,90\n12/01/2025 | Amazon | 128,00\n...\n```\n\nJe vous ferai un récapitulatif par fournisseur : total, nombre de factures, part du total, classement.\n\n## 2. Le faire vous-même dans Excel ou Google Sheets\n**Avec un tableau croisé dynamique :**\n1. Sélectionnez vos données (avec en-têtes).\n2. Allez dans **Insertion → Tableau croisé dynamique**.\n3. Placez **Fournisseur** dans *Lignes* et **Montant** dans *Valeurs* (Somme).\n4. Triez par montant décroissant.\n\n**Ou avec une formule :**\n```\n=SOMME.SI(B:B; \"Orange\"; C:C)\n```\n(B = colonne fournisseur, C = colonne montant)\n\n## 3. Dans votre logiciel de comptabilité\nLa plupart proposent ce rapport :\n- **Pennylane / Qonto / Indy** : filtre ou rapport « par fournisseur » ou « par contrepartie ».\n- **Sage / EBP / Cegid** : « Balance fournisseurs » ou « Grand livre fournisseurs » (comptes 401).\n- **QuickBooks** : Rapports → « Dépenses par fournisseur ».\n\nQuel outil utilisez-vous ? Ou souhaitez-vous m'envoyer vos données pour que je fasse l'analyse ?",
+   "usage": {
+    "input_tokens": 27,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 698,
+    "output_tokens_details": {
+     "thinking_tokens": 75
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 7339
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "b2-mois",
+   "axe": "base",
+   "locale": "fr",
+   "question": "Comment évoluent mes ventes et mes achats ces six derniers mois ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "Je n'ai pas accès à vos données commerciales ni à votre logiciel de gestion, donc je ne peux pas voir l'évolution de vos ventes et achats. En revanche, je peux les analyser si vous me les transmettez.\n\n## Ce que vous pouvez me fournir\n\nUn simple tableau suffit, par exemple :\n\n| Mois | Ventes (€) | Achats (€) |\n|------|-----------|-----------|\n| Mois 1 | … | … |\n| Mois 2 | … | … |\n| … | … | … |\n\nVous pouvez aussi copier-coller un export de votre outil (Excel, logiciel comptable, ERP, Shopify, Pennylane, Sage, etc.).\n\n## Ce que je pourrai en tirer\n\n- **La tendance générale** : croissance, stagnation ou baisse, avec le taux d'évolution mensuel et sur la période\n- **La marge brute** : l'écart entre ventes et achats et son évolution\n- **Le ratio achats/ventes** : vos achats augmentent-ils plus vite que vos ventes ?\n- **Les anomalies** : pics, creux, saisonnalité\n- **Une comparaison** avec la même période l'an dernier, si vous avez les données\n- **Des pistes d'action** selon ce qui ressort\n\n## Pour aller plus loin (facultatif)\n\nSi vous avez ces détails, l'analyse sera plus précise :\n- la répartition par produit, catégorie ou client\n- les volumes (quantités) en plus des montants\n- les principaux fournisseurs\n\nEnvoyez-moi vos chiffres et je m'occupe de l'analyse.",
+   "usage": {
+    "input_tokens": 35,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 644,
+    "output_tokens_details": {
+     "thinking_tokens": 89
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 6935
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "b3-echeances",
+   "axe": "base",
+   "locale": "fr",
+   "question": "Quelles sont mes prochaines échéances fiscales ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "Je n'ai pas accès à votre situation personnelle ni à votre espace fiscal, donc je ne peux pas connaître vos échéances exactes. Voici les **principales échéances habituelles en France**, que je peux préciser si vous m'en dites plus.\n\n## 👤 Particuliers\n\n| Période | Échéance |\n|---|---|\n| **Chaque mois (vers le 15)** | Prélèvement à la source (acomptes sur revenus fonciers, BIC/BNC…) |\n| **Avril à début juin** | Déclaration des revenus (date limite selon votre département et le mode de déclaration). L'IFI se déclare en même temps |\n| **Fin juillet à août** | Réception de l'avis d'impôt sur le revenu |\n| **Septembre à décembre** | Paiement du solde d'impôt sur le revenu, s'il y en a un (en plusieurs fois si supérieur à 300 €) |\n| **Mi-octobre** | Taxe foncière |\n| **Mi-décembre** | Taxe d'habitation (résidences secondaires uniquement) |\n\n## 🏢 Professionnels / entreprises\n\n- **TVA** : déclaration mensuelle, trimestrielle ou annuelle selon votre régime\n- **CFE** (cotisation foncière des entreprises) : 15 décembre\n- **Impôt sur les sociétés** : acomptes les 15 mars, 15 juin, 15 septembre et 15 décembre (pour un exercice calé sur l'année civile)\n- **Liasse fiscale** : début mai en général (exercice clos au 31 décembre)\n- **Micro-entrepreneurs** : déclaration du chiffre d'affaires mensuelle ou trimestrielle à l'URSSAF\n\n## 🔎 Pour connaître vos dates exactes\n- Votre **espace particulier ou professionnel sur impots.gouv.fr**, qui affiche votre agenda fiscal personnalisé.\n- L'application **impots.gouv**, qui peut vous envoyer des rappels.\n\nPour une réponse plus précise, pouvez-vous me dire :\n1. Dans quel **pays** vous êtes imposé (France, Belgique, Suisse, Québec…) ?\n2. Votre **situation** : salarié, retraité, indépendant, micro-entrepreneur, dirigeant de société, propriétaire bailleur… ?\n3. À quelle **période** vous vous intéressez ?",
+   "usage": {
+    "input_tokens": 29,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 1315,
+    "output_tokens_details": {
+     "thinking_tokens": 480
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 13626
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "b4-resultat",
+   "axe": "base",
+   "locale": "fr",
+   "question": "Est-ce que ma société gagne de l'argent cette année ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "Je n'ai pas accès aux données de votre société (comptabilité, comptes bancaires, logiciels de gestion), donc je ne peux pas vous répondre directement. En revanche, je peux vous aider à le déterminer.\n\n## Les chiffres à rassembler\n\n1. **Le chiffre d'affaires** depuis le début de l'année : total des ventes facturées, hors taxes.\n2. **Les charges** sur la même période :\n   - achats de marchandises ou de matières premières\n   - salaires et charges sociales\n   - loyer, énergie, assurances, abonnements\n   - honoraires (expert-comptable, avocat…)\n   - frais bancaires, intérêts d'emprunt\n   - amortissements du matériel\n3. **Les impôts et taxes** (CFE, impôt sur les sociétés…).\n\n## Le calcul de base\n\n**Résultat = Chiffre d'affaires − Charges totales**\n\n- Résultat positif : la société est bénéficiaire.\n- Résultat négatif : elle est déficitaire.\n\n## Attention à ne pas confondre\n\n- **Trésorerie et rentabilité** : avoir de l'argent sur le compte ne signifie pas forcément être rentable (clients qui paient d'avance, emprunt récent…). À l'inverse, on peut être rentable avec une trésorerie tendue (clients qui paient en retard, stocks importants).\n- **Chiffre d'affaires et bénéfice** : vendre beaucoup ne garantit pas de gagner de l'argent si les marges sont faibles.\n\n## Où trouver ces informations\n\n- Votre **expert-comptable** peut vous fournir une **situation intermédiaire**, c'est-à-dire un bilan provisoire en cours d'année.\n- Votre **logiciel de comptabilité ou de facturation** (Pennylane, QuickBooks, Sage, Indy…) propose souvent un tableau de bord.\n- Vos **relevés bancaires** donnent une première approximation.\n\nSi vous me communiquez vos chiffres, même approximatifs, je peux faire le calcul avec vous et vous aider à interpréter le résultat. Quel type de société avez-vous, et dans quel secteur ?",
+   "usage": {
+    "input_tokens": 30,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 809,
+    "output_tokens_details": {
+     "thinking_tokens": 63
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 8276
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "b5-un-fournisseur",
+   "axe": "base",
+   "locale": "fr",
+   "question": "Combien ai-je acheté chez Kordane Digital au total ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "Je n'ai pas accès à vos achats, à vos comptes ni à vos données personnelles, donc je ne peux pas calculer ce total pour vous. Voici comment le retrouver :\n\n1. **Votre compte client Kordane Digital** : connectez-vous sur leur site ou application et consultez la rubrique « Mes commandes », « Historique d'achats » ou « Factures ».\n2. **Vos e-mails** : cherchez « Kordane » dans votre messagerie pour retrouver les confirmations de commande et les factures.\n3. **Vos relevés bancaires** : recherchez les transactions au nom de Kordane Digital dans votre application bancaire ou sur PayPal.\n4. **Le service client** : vous pouvez leur demander un récapitulatif de vos achats. Dans l'UE, le RGPD vous donne le droit d'obtenir les données qu'une entreprise détient sur vous.\n\nSi vous me transmettez la liste de vos achats (dates et montants), je peux faire le calcul et vous présenter un récapitulatif clair.",
+   "usage": {
+    "input_tokens": 31,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 418,
+    "output_tokens_details": {
+     "thinking_tokens": 56
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 4528
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "b6-analyse",
+   "axe": "base",
+   "locale": "fr",
+   "question": "Quel fournisseur me coûte le plus cher, et qu'est-ce que tu me conseilles de regarder ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "Je n'ai pas accès à vos données (factures, comptabilité, ERP…). Je ne peux donc pas vous dire lequel vous coûte le plus cher. Si vous me les partagez, je fais l'analyse avec vous. En attendant, voici comment procéder.\n\n## 1. Les données à me fournir\nUn export simple suffit (Excel, CSV ou copier-coller) :\n- **Fournisseur**\n- **Montant HT** (par facture ou cumulé)\n- **Date**\n- **Catégorie d'achat** (matières premières, services, logistique, IT…)\n- Si possible : **quantités**, **délais de paiement**, **litiges ou retours**\n\nUne période de 12 mois est idéale pour lisser la saisonnalité.\n\n## 2. Ce que je vous conseille de regarder\n\n**Le volume brut (le réflexe de base)**\n- Classement des fournisseurs par dépense totale\n- Règle des 80/20 : souvent, 20 % des fournisseurs représentent 80 % des dépenses. Ce sont eux qu'il faut négocier en priorité.\n\n**Le coût réel, au-delà du prix facturé**\nLe fournisseur le plus cher n'est pas forcément celui qui facture le plus. Il faut aussi compter :\n- Les **frais annexes** : port, emballage, minimum de commande, frais de dossier\n- Les **retards de livraison** et leurs conséquences (ruptures, production arrêtée)\n- La **non-qualité** : retours, défauts, temps passé à gérer les litiges\n- Le **coût administratif** : erreurs de facturation, relances\n\n**Les tendances**\n- **Évolution des prix** sur 12 à 24 mois : des hausses régulières non justifiées ?\n- **Dérive des volumes** : une dépense qui grossit sans que personne l'ait décidée\n- **Prix unitaires comparés** entre fournisseurs pour un même produit\n\n**Les leviers de négociation**\n- **Dépendance** : un fournisseur unique sur un poste critique est un risque et vous affaiblit en négociation\n- **Conditions de paiement** : 30, 45 ou 60 jours, escomptes pour paiement anticipé\n- **Remises sur volume** : y avez-vous droit sans les obtenir ?\n- **Doublons** : plusieurs fournisseurs pour le même besoin, ce qui disperse votre pouvoir de négociation\n\n## 3. Action immédiate\nSi vous voulez commencer seul : dans Excel, faites un **tableau croisé dynamique** avec les fournisseurs en lignes et la somme des montants en valeurs, puis triez par ordre décroissant. Vous aurez votre top 10 en deux minutes.\n\nEnvoyez-moi vos données, même partielles ou anonymisées, et je vous fais une analyse détaillée avec des recommandations concrètes. Quel est votre secteur d'activité ?",
+   "usage": {
+    "input_tokens": 48,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 1088,
+    "output_tokens_details": {
+     "thinking_tokens": 92
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 11520
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "b7-piege-banque",
+   "axe": "base",
+   "locale": "fr",
+   "question": "Quel est mon solde bancaire aujourd'hui ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "Je n'ai pas accès à vos comptes bancaires ni à vos informations personnelles, donc je ne peux pas connaître votre solde.\n\nPour le consulter, vous pouvez :\n\n- **Utiliser l'application mobile** de votre banque\n- **Vous connecter à votre espace client** sur le site web de votre banque\n- **Retirer ou consulter** à un distributeur automatique (option « consultation de solde »)\n- **Appeler le serveur vocal** ou le service client de votre banque\n- **Activer les alertes SMS ou e-mail** pour recevoir votre solde régulièrement\n\n⚠️ **Conseil de sécurité :** ne communiquez jamais vos identifiants, mots de passe ou codes bancaires à qui que ce soit, y compris à un assistant en ligne. Votre banque ne vous les demandera jamais par e-mail ou par téléphone.\n\nJe peux en revanche vous aider à faire un budget, comprendre des frais bancaires ou organiser vos dépenses.",
+   "usage": {
+    "input_tokens": 29,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 393,
+    "output_tokens_details": {
+     "thinking_tokens": 46
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 3995
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "b8-piege-prevision",
+   "axe": "base",
+   "locale": "fr",
+   "question": "Combien vais-je vendre en décembre ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "Je ne peux pas le prévoir sans connaître votre activité, mais je peux vous aider à faire une estimation solide. Voici ce dont j'aurais besoin :\n\n**1. Votre historique de ventes**\n- Les ventes des derniers mois (idéalement 12 à 24 mois)\n- Surtout vos chiffres de **décembre des années précédentes**, si vous en avez\n\n**2. Votre contexte**\n- Votre secteur (commerce, e-commerce, restauration, services, B2B…)\n- Votre unité de mesure (chiffre d'affaires en €, nombre d'unités, de commandes…)\n\n**3. Les changements prévus**\n- Promotions ou campagnes marketing pour les fêtes\n- Nouveaux produits, hausse de prix, ouverture d'un point de vente\n- Évolutions connues (concurrence, stock, saisonnalité)\n\n**Quelques méthodes simples que je pourrai appliquer :**\n- **Méthode saisonnière** : décembre de l'an dernier × votre taux de croissance annuel\n- **Coefficient saisonnier** : vos ventes mensuelles moyennes × le ratio habituel de décembre (souvent 1,3 à 2× la moyenne dans le commerce de détail)\n- **Tendance récente** : prolongement de l'évolution des derniers mois, ajusté de l'effet fêtes\n\nPartagez-moi vos chiffres (même approximatifs) et je vous proposerai une estimation avec une fourchette basse, moyenne et haute.",
+   "usage": {
+    "input_tokens": 24,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 562,
+    "output_tokens_details": {
+     "thinking_tokens": 40
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 5691
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "b9-achats-ar",
+   "axe": "base",
+   "locale": "ar",
+   "question": "اعرض لي مصاريفي حسب المزوّد.",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "ليس لديّ وصول إلى حساباتك البنكية أو فواتيرك أو أي نظام محاسبي لديك، لذلك لا أستطيع عرض مصاريفك مباشرة. لكن يمكنني مساعدتك بإحدى الطرق التالية:\n\n### 1. أرسل لي بياناتك وأنظّمها لك\nالصق هنا قائمة بالمصاريف (أو محتوى ملف CSV / Excel) بهذا الشكل مثلًا:\n\n| التاريخ | المزوّد | المبلغ |\n|---|---|---|\n| 2024-05-01 | STC | 250 |\n| 2024-05-03 | أمازون | 120 |\n| 2024-05-10 | STC | 100 |\n\nوسأجمعها لك حسب المزوّد، مع الإجمالي والنسبة المئوية لكل مزوّد، وأرتّبها من الأعلى إلى الأقل.\n\n### 2. افعلها بنفسك في Excel أو Google Sheets\n- **باستخدام Pivot Table (جدول محوري):**\n  1. حدّد البيانات.\n  2. اختر: **إدراج ← جدول محوري**.\n  3. ضع عمود **المزوّد** في \"الصفوف\"، وعمود **المبلغ** في \"القيم\" (مجموع).\n- **أو باستخدام معادلة:**\n  ```\n  =SUMIF(B:B, \"STC\", C:C)\n  ```\n  حيث B عمود المزوّد وC عمود المبلغ.\n\n### 3. من تطبيق البنك أو أداة المحاسبة\nمعظم التطبيقات البنكية وبرامج المحاسبة (مثل QuickBooks وZoho Books وقيود ودفترة) توفّر تقريرًا باسم \"المصروفات حسب المورّد\" (Expenses by Vendor) ضمن قسم التقارير.\n\n---\nإذا كنت تقصد مزوّدي خدمات معيّنين، مثل مزوّدي الخدمات السحابية (AWS وAzure وGoogle Cloud) أو شركات الاتصالات، فأخبرني وسأوضح لك مكان هذا التقرير تحديدًا.",
+   "usage": {
+    "input_tokens": 29,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 937,
+    "output_tokens_details": {
+     "thinking_tokens": 173
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 9844
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "d1-tva",
+   "axe": "droit",
+   "locale": "fr",
+   "question": "Quel est le taux normal de la TVA en Tunisie ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "En Tunisie, le **taux normal de la TVA est de 19 %**. Il est en vigueur depuis le 1er janvier 2018 (loi de finances 2018), auparavant il était de 18 %.\n\nIl existe aussi des **taux réduits** :\n- **13 %** pour certains produits et services (par exemple certaines professions libérales, l'électricité basse et moyenne tension pour usage domestique au-delà de certains seuils, etc.)\n- **7 %** pour d'autres biens et services (par exemple certains produits de première nécessité, les services de santé, la restauration, l'hôtellerie, etc.)\n\nCertaines opérations sont par ailleurs **exonérées** de TVA.\n\nLes taux et leur champ d'application pouvant être modifiés par les lois de finances annuelles, il est conseillé de vérifier auprès de la Direction Générale des Impôts tunisienne ou d'un expert-comptable pour les cas précis.",
+   "usage": {
+    "input_tokens": 30,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 431,
+    "output_tokens_details": {
+     "thinking_tokens": 108
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 5053
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "d2-delai",
+   "axe": "droit",
+   "locale": "fr",
+   "question": "Jusqu'à quelle date une société doit-elle déposer sa déclaration mensuelle ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "La date dépend du **pays** et du **type de déclaration**. Voici les cas les plus courants :\n\n### 🇫🇷 France\n- **TVA (formulaire CA3, régime réel normal)** : entre le **15 et le 24 du mois suivant**. La date exacte dépend de la forme juridique, du lieu d'activité et du numéro SIREN (ou de la première lettre du nom). Elle figure dans votre **espace professionnel sur impots.gouv.fr**.\n- **DSN (déclaration sociale nominative)** :\n  - le **5 du mois suivant** pour les entreprises d'au moins 50 salariés qui versent les salaires dans le mois travaillé ;\n  - le **15 du mois suivant** dans les autres cas.\n\n### 🇹🇳 Tunisie (déclaration mensuelle des impôts)\n- **Personnes morales (sociétés)** : au plus tard le **28 du mois suivant**.\n- Personnes physiques : au plus tard le 15 du mois suivant.\n\n### Autres pays (TVA mensuelle)\n- 🇧🇪 **Belgique** : le **20 du mois suivant**.\n- 🇩🇿 **Algérie (série G50)** : le **20 du mois suivant**.\n- 🇲🇦 **Maroc** : avant la **fin du mois suivant**.\n\n⚠️ Ces règles peuvent évoluer. Lorsque la date limite tombe un week-end ou un jour férié, elle est souvent reportée au jour ouvrable suivant. Vérifiez auprès de l'administration fiscale ou de votre expert-comptable.\n\nSi vous m'indiquez le pays et le type de déclaration (TVA, sociale, retenues à la source…), je peux vous donner une réponse plus précise.",
+   "usage": {
+    "input_tokens": 42,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 1262,
+    "output_tokens_details": {
+     "thinking_tokens": 654
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 12038
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "d3-retenue",
+   "axe": "droit",
+   "locale": "fr",
+   "question": "Quel est le taux de la retenue à la source sur les honoraires versés à un avocat ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "# Le taux dépend du pays\n\nLe taux de retenue à la source sur les honoraires d'avocat varie selon la législation fiscale applicable. Pouvez-vous préciser le pays concerné ? Voici les principaux cas :\n\n**🇫🇷 France**\n- **Avocat résident en France** : pas de retenue à la source. L'avocat déclare lui-même ses revenus (BNC ou IS selon sa structure).\n- **Avocat non-résident** : retenue à la source de l'article 182 B du CGI, au taux normal de l'IS (**25 %**). Ce taux peut être réduit ou supprimé par une convention fiscale internationale.\n\n**🇹🇳 Tunisie**\n- Les honoraires sont soumis à une retenue à la source (article 52 du Code de l'IRPP et de l'IS), généralement de **10 %**.\n- Un taux réduit (de l'ordre de **3 %**) peut s'appliquer sous conditions, notamment pour les personnes soumises au régime réel.\n\n**🇲🇦 Maroc, 🇸🇳 Sénégal, 🇨🇮 Côte d'Ivoire, 🇨🇲 Cameroun, etc.**\n- Des régimes de retenue existent, mais les taux et les conditions (qualité du payeur, résidence du bénéficiaire, régime d'",
+   "usage": {
+    "input_tokens": 39,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 1500,
+    "output_tokens_details": {
+     "thinking_tokens": 1040
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 15955
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "d4-timbre",
+   "axe": "droit",
+   "locale": "fr",
+   "question": "Quel est le droit de timbre dû sur une facture ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "# Droit de timbre sur une facture\n\nLa réponse dépend du **pays**. Voici les principaux cas francophones :\n\n### 🇫🇷 France\n**Aucun droit de timbre** n'est dû sur les factures. Le timbre de quittance a été supprimé il y a longtemps. Une facture ne supporte que la TVA, le cas échéant.\n\n### 🇧🇪 Belgique\n**Pas de droit de timbre** sur les factures. Les droits de timbre ont été largement abolis.\n\n### 🇹🇳 Tunisie\n- **Montant :** droit de timbre fixe de **1 dinar** par facture (relevé de 600 millimes à 1 dinar par la loi de finances 2022).\n- **Application :** il est ajouté au montant TTC de la facture.\n- **Exceptions :** certaines opérations en sont exonérées, par exemple les factures à l'exportation ou celles adressées à l'État.\n\n### 🇲🇦 Maroc\n- **Taux :** **0,25 %** du montant de la facture.\n- **Condition :** il ne s'applique qu'aux factures **réglées en espèces**.\n- **Redevable :** le vendeur ou prestataire, qui le déclare et le reverse.\n\n### 🇩🇿 Algérie\n- **Principe :** un droit de timbre proportionnel (environ **1 %**) s'applique aux factures et quittances **réglées en espèces**.\n- **Modalités :** il existe un seuil d'exonération ainsi qu'un plafond.\n- Le règlement par chèque ou virement en est exonéré.\n\n### ⚠️ À noter\nLes montants et taux évoluent régulièrement avec les lois de finances. Vérifiez auprès de l'administration fiscale de votre pays ou d'un comptable.\n\n**Quel est votre pays ?** Je pourrai alors vous donner une réponse plus précise.",
+   "usage": {
+    "input_tokens": 28,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 1227,
+    "output_tokens_details": {
+     "thinking_tokens": 585
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 12109
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "d5-is",
+   "axe": "droit",
+   "locale": "fr",
+   "question": "Quel est le taux de l'impôt sur les sociétés applicable à une société commerciale ordinaire ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "# Taux de l'impôt sur les sociétés (IS) en France\n\n## Taux normal : **25 %**\nDepuis le 1er janvier 2022, toute société soumise à l'IS (SA, SAS, SARL, etc.) est imposée au taux normal de **25 %** sur l'ensemble de son bénéfice imposable, quel que soit son chiffre d'affaires.\n\n## Taux réduit pour les PME : **15 %**\nUn taux réduit de **15 %** s'applique sur la fraction du bénéfice allant **jusqu'à 42 500 €** (pour les exercices ouverts depuis le 1er janvier 2023). Au-delà, le taux de 25 % s'applique.\n\nConditions cumulatives :\n- chiffre d'affaires hors taxes **inférieur à 10 millions d'euros** ;\n- capital **entièrement libéré** ;\n- capital détenu **au moins à 75 % par des personnes physiques**, directement ou indirectement.\n\n## Contributions additionnelles (grandes entreprises)\n- **Contribution sociale sur l'IS de 3,3 %**, assise sur le montant de l'IS diminué d'un abattement de 763 000 €. Elle concerne les sociétés dont le chiffre d'affaires est d'au moins 7,63 M€.\n- **Contribution exceptionnelle sur les bénéfices** des très grandes entreprises (chiffre d'affaires d'au moins 1 milliard d'euros), instaurée par la loi de finances pour 2025 à titre temporaire.\n\n## Exemple\nUne PME éligible réalise un bénéfice de 100 000 € :\n- 42 500 € × 15 % = 6 375 €\n- 57 500 € × 25 % = 14 375 €\n- **IS total = 20 750 €**\n\n⚠️ Si votre question concerne un autre pays francophone, les taux diffèrent. Par exemple, le taux normal est de 25 % en Belgique et de 19,6 % au Luxembourg (taux combiné à Luxembourg-Ville, d'environ 24,9 %). Précisez le pays si besoin.",
+   "usage": {
+    "input_tokens": 45,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 992,
+    "output_tokens_details": {
+     "thinking_tokens": 268
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 9274
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "d6-hors-corpus",
+   "axe": "droit",
+   "locale": "fr",
+   "question": "Quel est le taux de TVA applicable au Sénégal ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "## Taux de TVA au Sénégal\n\n**Taux normal : 18 %**\n\nC'est le taux de droit commun, applicable à la plupart des biens et services. Il est fixé par le Code général des impôts (loi n° 2012-31 du 31 décembre 2012) et s'inscrit dans le cadre des directives de l'UEMOA, qui imposent aux États membres un taux unique compris entre 15 % et 20 %.\n\n**Taux réduit : 10 %**\n\nIl s'applique principalement aux prestations d'hébergement et de restauration fournies par les **établissements touristiques agréés**.\n\n**Exonérations**\n\nCertaines opérations sont exonérées de TVA, notamment :\n- certains produits alimentaires de première nécessité non transformés ;\n- les médicaments et prestations médicales ;\n- les services d'enseignement ;\n- certaines opérations bancaires et d'assurance (soumises à une taxe spécifique) ;\n- les exportations, qui sont exonérées avec droit à déduction.\n\n💡 La législation fiscale évolue régulièrement, notamment avec les lois de finances annuelles. Pour une situation précise, il est conseillé de consulter la **Direction générale des Impôts et des Domaines (DGID)** (www.dgid.sn) ou un conseiller fiscal.",
+   "usage": {
+    "input_tokens": 30,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 674,
+    "output_tokens_details": {
+     "thinking_tokens": 228
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 6902
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "d7-ar",
+   "axe": "droit",
+   "locale": "ar",
+   "question": "ما هي نسبة الأداء على القيمة المضافة في تونس؟",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "# نسب الأداء على القيمة المضافة (TVA) في تونس\n\nتعتمد تونس **ثلاث نسب** رئيسية:\n\n### 1. النسبة العادية: 19%\nتُطبَّق على أغلب السلع والخدمات التي لا تشملها نسبة مخفّضة أو إعفاء. ارتفعت من 18% إلى 19% بموجب قانون المالية لسنة 2018.\n\n### 2. النسبة المخفّضة: 13%\nتشمل بعض الأنشطة والمنتجات، منها:\n- بعض الخدمات المقدَّمة من المهن الحرة (مثل المحامين والمهندسين والمحاسبين).\n- الكهرباء ذات الضغط العالي والمتوسط.\n- بعض المواد والتجهيزات المحددة قانونًا.\n\n### 3. النسبة المخفّضة: 7%\nتشمل خاصة:\n- الأدوية والمنتجات الصيدلية.\n- الخدمات الطبية وبعض الخدمات الصحية.\n- الخدمات السياحية والفندقية والمطاعم السياحية.\n- بعض التجهيزات والمعدات المحددة.\n\n### الإعفاءات\nتُعفى بعض المنتجات والخدمات من الأداء، مثل عدد من المواد الغذائية الأساسية وبعض الخدمات التعليمية وخدمات أخرى منصوص عليها في **مجلة الأداء على القيمة المضافة**.\n\n---\n⚠️ **ملاحظة:** قد تُعدَّل قائمة السلع والخدمات الخاضعة لكل نسبة سنويًا عبر **قوانين المالية**. لذلك يُنصح بمراجعة **المديرية العامة للأداءات** أو موقع **وزارة المالية التونسية** أو مستشار جبائي للتأكد من النسبة المنطبقة على نشاطك.",
+   "usage": {
+    "input_tokens": 35,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 785,
+    "output_tokens_details": {
+     "thinking_tokens": 119
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 7920
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "l1-economie",
+   "axe": "libre",
+   "locale": "fr",
+   "question": "Explique-moi simplement la différence entre inflation et déflation.",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "**Inflation et déflation : l'essentiel**\n\n**L'inflation**, c'est quand **les prix augmentent** de façon générale et durable.\n➡️ Avec le même billet de 10 €, tu peux acheter **moins de choses** qu'avant. Ton argent **perd de la valeur**.\n\n*Exemple :* une baguette coûte 1 € cette année, puis 1,10 € l'année suivante.\n\n**La déflation**, c'est l'inverse : **les prix baissent** de façon générale et durable.\n➡️ Avec le même billet de 10 €, tu peux acheter **plus de choses**. Ton argent **gagne de la valeur**.\n\n*Exemple :* la baguette passe de 1 € à 0,90 €.\n\n---\n\n**Pourquoi ce n'est pas si simple ?**\n\nOn pourrait croire que la déflation est une bonne nouvelle, mais elle est souvent **dangereuse** pour l'économie :\n- Les gens **reportent leurs achats** en se disant « ce sera moins cher plus tard ».\n- Les entreprises vendent moins, gagnent moins, **embauchent moins** ou licencient.\n- L'économie peut ralentir, voire entrer dans un cercle vicieux.\n\nL'inflation, elle, n'est pas mauvaise en soi **si elle reste modérée**. Les banques centrales, comme la Banque centrale européenne, visent environ **2 % par an**. C'est trop élevé qu'elle devient un problème, car le pouvoir d'achat diminue si les salaires ne suivent pas.\n\n---\n\n**En résumé :**\n\n| | Inflation | Déflation |\n|---|---|---|\n| Prix | ⬆️ Montent | ⬇️ Baissent |\n| Valeur de l'argent | Diminue | Augmente |\n| Risque principal | Perte de pouvoir d'achat | Ralentissement de l'économie |",
+   "usage": {
+    "input_tokens": 30,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 647,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 5951
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "l2-courriel",
+   "axe": "libre",
+   "locale": "fr",
+   "question": "Rédige un courriel poli en anglais pour relancer un client qui a trois semaines de retard de paiement.",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "Voici une proposition de courriel de relance, à la fois courtois et ferme :\n\n---\n\n**Subject:** Friendly Reminder: Invoice [Invoice Number] – Payment Overdue\n\nDear [Client's Name],\n\nI hope this message finds you well.\n\nI am writing to follow up on invoice **[Invoice Number]**, dated **[Invoice Date]**, for the amount of **[Amount]**. According to our records, payment was due on **[Due Date]**, which is now three weeks ago.\n\nI understand that this may simply be an oversight, or that the invoice may have been delayed in processing on your end. For your convenience, I have attached a copy of the invoice to this email.\n\nCould you please let me know when we can expect payment? If it has already been sent, please disregard this message, and thank you. If there are any questions or issues regarding the invoice, I would be happy to discuss them and find a solution together.\n\nAs a reminder, payment can be made via **[payment method(s), e.g., bank transfer to account XXX / online payment link]**.\n\nThank you for your attention to this matter. I truly value our working relationship and look forward to hearing from you soon.\n\nKind regards,\n\n[Your Full Name]\n[Your Position]\n[Company Name]\n[Phone Number] | [Email Address]\n\n---\n\n**Quelques conseils :**\n- **Joignez la facture** pour éviter tout aller-retour inutile.\n- Si vous souhaitez un ton un peu plus ferme, vous pouvez ajouter une date limite, par exemple : *\"We would appreciate it if payment could be settled by [date].\"*\n- Si aucune réponse n'arrive sous une semaine, une seconde relance plus directe, voire un appel téléphonique, peut être envisagée.",
+   "usage": {
+    "input_tokens": 45,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 613,
+    "output_tokens_details": {
+     "thinking_tokens": 38
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 6496
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "l3-science",
+   "axe": "libre",
+   "locale": "fr",
+   "question": "Explique la photosynthèse à un enfant de dix ans.",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "# La photosynthèse, c'est quoi ?\n\nTu sais que toi, tu dois **manger** pour avoir de l'énergie, grandir et jouer. Les plantes aussi ont besoin de nourriture… mais elles n'ont pas de bouche et ne vont pas au supermarché ! Alors, comment font-elles ?\n\n**Elles fabriquent leur propre nourriture !** C'est ça, la photosynthèse. 🌱\n\n---\n\n## 🍳 La recette secrète des plantes\n\nImagine que chaque feuille est une **petite cuisine**. Pour préparer son repas, la plante a besoin de trois ingrédients :\n\n1. **☀️ La lumière du soleil** : c'est comme le feu de la cuisinière, elle donne l'énergie pour cuisiner.\n2. **💧 L'eau** : la plante la boit avec ses racines, comme avec une paille, et l'eau monte jusqu'aux feuilles.\n3. **💨 Un gaz dans l'air** : il s'appelle le **dioxyde de carbone**. C'est justement le gaz que toi, tu rejettes quand tu respires ! La plante l'attrape par de minuscules trous dans ses feuilles.\n\n---\n\n## 👨‍🍳 Le chef cuisinier : la chlorophylle\n\nDans les feuilles, il y a une substance magique qui s'appelle la **chlorophylle**. C'est elle qui capture la lumière du soleil. Et c'est aussi grâce à elle que les feuilles sont **vertes** !\n\nAvec ces trois ingrédients, la plante fabrique du **sucre**. Ce sucre, c'est sa nourriture : il lui donne l'énergie pour pousser, faire des fleurs et des fruits.\n\n---\n\n## 🎁 Le cadeau des plantes\n\nPendant qu'elle cuisine, la plante rejette quelque chose de très précieux : **l'oxygène**. C'est l'air que nous respirons pour vivre !\n\nDonc :\n- Toi, tu respires l'oxygène et tu rejettes du dioxyde de carbone.\n- La plante prend ce dioxyde de carbone et te redonne de l'oxygène.\n\n**C'est un super travail d'équipe entre les humains et les plantes !** 🤝\n\n---\n\n## ✨ En résumé\n\n> **Soleil + eau + air = nourriture pour la plante + oxygène pour nous !**\n\nLa prochaine fois que tu verras un arbre, dis-lui merci : il est en train de te fabriquer de l'air frais ! 🌳😊",
+   "usage": {
+    "input_tokens": 29,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 929,
+    "output_tokens_details": {
+     "thinking_tokens": 54
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 9287
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "l4-code",
+   "axe": "libre",
+   "locale": "fr",
+   "question": "Écris une formule Excel qui calcule le TTC à partir du HT en A2 et du taux en B2, puis explique-la.",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "# Formule Excel : calcul du TTC à partir du HT\n\n## La formule\n\nEn supposant que le taux est saisi en pourcentage dans B2 (par exemple **20 %**) :\n\n```excel\n=A2*(1+B2)\n```\n\n## Explication\n\n| Élément | Rôle |\n|---|---|\n| `A2` | Le montant hors taxes (HT) |\n| `B2` | Le taux de TVA (ex. 20 % = 0,20) |\n| `1+B2` | Le coefficient multiplicateur (1 + 0,20 = 1,20) |\n| `A2*(1+B2)` | Le HT augmenté de la TVA, donc le TTC |\n\n**Principe :** le TTC est égal au HT plus la TVA, soit `HT + HT × taux`. En factorisant par HT, on obtient `HT × (1 + taux)`.\n\n**Exemple :** avec 100 € en A2 et 20 % en B2 :\n`100 × (1 + 0,20) = 100 × 1,20 = 120 €`\n\nLes parenthèses sont indispensables. Sans elles, `=A2*1+B2` calculerait `100 × 1 + 0,20 = 100,20`, ce qui est faux.\n\n## Variantes utiles\n\n### 1. Si le taux est saisi comme un nombre entier (20 au lieu de 20 %)\n\n```excel\n=A2*(1+B2/100)\n```\n\nIl faut alors diviser le taux par 100 pour le convertir en décimal.\n\n### 2. Arrondir au centime\n\n```excel\n=ARRONDI(A2*(1+B2);2)\n```\n\nCette version évite les montants à rallonge comme 119,99999. Le `2` indique le nombre de décimales.\n\n### 3. Calculer seulement le montant de la TVA\n\n```excel\n=A2*B2\n```\n\n## Astuce\n\nPour recopier la formule sur plusieurs lignes, sélectionnez la cellule puis double-cliquez sur la poignée de recopie (le petit carré en bas à droite). Les références `A2` et `B2` s'ajusteront automatiquement en `A3`, `B3`, etc.\n\n> **Remarque :** les formules ci-dessus utilisent le point-virgule (`;`) comme séparateur, ce qui correspond à la version française d'Excel. Dans la version anglaise, on utiliserait `=ROUND(A2*(1+B2),2)`.",
+   "usage": {
+    "input_tokens": 51,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 898,
+    "output_tokens_details": {
+     "thinking_tokens": 87
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 8370
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "l5-calcul",
+   "axe": "libre",
+   "locale": "fr",
+   "question": "Combien font 17 % de 2 450 ? Montre le calcul.",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "# Calcul de 17 % de 2 450\n\n**Méthode : multiplier par 17 puis diviser par 100**\n\n$$17\\ \\% \\times 2\\,450 = \\frac{17}{100} \\times 2\\,450 = \\frac{17 \\times 2\\,450}{100}$$\n\n**Étape 1 : multiplier 17 par 2 450**\n\n- 10 × 2 450 = 24 500\n- 7 × 2 450 = 17 150\n- 24 500 + 17 150 = **41 650**\n\n**Étape 2 : diviser par 100**\n\n$$\\frac{41\\,650}{100} = 416{,}5$$\n\n**Vérification par une autre méthode**\n\n- 10 % de 2 450 = 245\n- 5 % de 2 450 = 122,5\n- 2 % de 2 450 = 49\n- Total : 245 + 122,5 + 49 = **416,5** ✓\n\n**Résultat : 17 % de 2 450 = 416,5**",
+   "usage": {
+    "input_tokens": 32,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 342,
+    "output_tokens_details": {
+     "thinking_tokens": 23
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 2984
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "l6-negociation",
+   "axe": "libre",
+   "locale": "fr",
+   "question": "Donne-moi cinq conseils pour négocier un meilleur prix avec un fournisseur.",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "# 5 conseils pour négocier un meilleur prix avec un fournisseur\n\n## 1. Préparez-vous en connaissant le marché\nAvant toute discussion, renseignez-vous sur les prix pratiqués par la concurrence. Demandez plusieurs devis : ils vous donnent des points de comparaison concrets et une alternative crédible si la négociation échoue.\n\n## 2. Mettez en avant votre valeur en tant que client\nMontrez au fournisseur ce que vous lui apportez : des volumes importants, une relation durable, des paiements ponctuels ou une visibilité pour sa marque. Un client fiable et fidèle mérite des conditions préférentielles.\n\n## 3. Négociez au-delà du prix unitaire\nSi le fournisseur bloque sur le prix, explorez d'autres leviers :\n- des remises sur volume ;\n- des délais de paiement plus longs ;\n- la livraison offerte ;\n- une garantie étendue ou un service après-vente inclus ;\n- un prix fixe sur une durée plus longue.\n\n## 4. Laissez le fournisseur faire la première offre\nÉvitez d'annoncer votre budget en premier. Demandez-lui sa meilleure proposition, puis gardez une marge de manœuvre. Quand il annonce un prix, un simple silence ou un « C'est au-dessus de ce que j'avais prévu » suffit souvent à obtenir une concession.\n\n## 5. Privilégiez une relation gagnant-gagnant\nUne négociation trop agressive peut dégrader la qualité du service ou la relation à long terme. Cherchez un accord où chacun s'y retrouve. Un fournisseur satisfait sera plus enclin à vous dépanner en cas d'urgence ou à vous accorder des faveurs plus tard.\n\n---\n\n💡 **Astuce bonus :** choisissez bien votre moment. Les fins de trimestre ou d'année, quand les commerciaux doivent atteindre leurs objectifs, sont souvent propices aux concessions.",
+   "usage": {
+    "input_tokens": 41,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 729,
+    "output_tokens_details": {
+     "thinking_tokens": 38
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 7275
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "l7-histoire",
+   "axe": "libre",
+   "locale": "fr",
+   "question": "Qui était Ibn Khaldoun et pourquoi est-il important ?",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "# Ibn Khaldoun (1332-1406)\n\n## Qui était-il ?\n\n**Abd al-Rahman Ibn Khaldoun** est un penseur, historien et homme politique arabe né à **Tunis en 1332** et mort au **Caire en 1406**. Issu d'une famille d'origine andalouse (de Séville), il reçoit une solide éducation en droit, théologie, logique et philosophie.\n\nSa vie est particulièrement mouvementée :\n- Il occupe des **fonctions politiques et administratives** auprès de plusieurs dynasties du Maghreb et d'al-Andalus (Hafsides à Tunis, Mérinides à Fès, Nasrides à Grenade).\n- Il connaît la faveur des princes, mais aussi la **disgrâce et la prison**, au gré des intrigues de cour.\n- Il se retire vers 1375 dans la forteresse de **Qal'at Ibn Salama** (dans l'actuelle Algérie), où il rédige l'essentiel de son œuvre majeure.\n- Il termine sa vie en Égypte comme **juge (cadi) malékite** et enseignant.\n- En 1401, il rencontre **Tamerlan** lors du siège de Damas, un épisode qu'il relate dans son autobiographie.\n\n## Son œuvre principale : la *Muqaddima*\n\nLa *Muqaddima* (« Introduction » ou « Prolégomènes »), achevée en 1377, est la préface de son histoire universelle, le *Kitab al-'Ibar* (« Livre des exemples »). Elle a fini par éclipser l'ouvrage qu'elle introduisait.\n\n## Pourquoi est-il important ?\n\n### 1. Une méthode critique de l'histoire\nIbn Khaldoun reproche aux historiens de son temps de compiler des récits sans les vérifier. Il propose de **juger la vraisemblance des faits** en fonction de ce que l'on sait de la nature des sociétés humaines. L'histoire devient ainsi une discipline analytique, et non plus une simple chronique.\n\n### 2. Une « science de la civilisation » (*'ilm al-'umran*)\nIl fonde une nouvelle discipline consacrée à l'étude des sociétés humaines : leur organisation, leur économie, leur pouvoir, leur culture. C'est pourquoi on le considère souvent comme un **précurseur de la sociologie**, plusieurs siècles avant Auguste Comte ou Émile Durkheim.\n\n### 3. Le concept d'*asabiyya*\nNotion centrale de sa pensée, l'**asabiyya** désigne la **solidarité de group",
+   "usage": {
+    "input_tokens": 34,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 1500,
+    "output_tokens_details": {
+     "thinking_tokens": 594
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 14979
+  },
+  {
+   "cible": "nu:claude-opus-5-5",
+   "id": "l8-ar",
+   "axe": "libre",
+   "locale": "ar",
+   "question": "اشرح لي ببساطة ما هو رأس المال العامل.",
+   "modele": "claude-opus-5-5",
+   "erreur": null,
+   "reponse": "# رأس المال العامل ببساطة\n\n**رأس المال العامل** هو المال المتاح للشركة لتشغيل أعمالها اليومية. ويُحسب بهذه المعادلة:\n\n> **رأس المال العامل = الأصول المتداولة − الخصوم المتداولة**\n\n## ما معنى هذه المصطلحات؟\n\n**الأصول المتداولة:** ما تملكه الشركة ويمكن تحويله إلى نقد خلال سنة تقريبًا، مثل:\n- النقد في الصندوق والبنك\n- البضاعة في المخزن\n- المبالغ المستحقة على العملاء\n\n**الخصوم المتداولة:** ما على الشركة من التزامات يجب سدادها خلال سنة، مثل:\n- مستحقات الموردين\n- الرواتب المستحقة\n- القروض قصيرة الأجل\n\n## مثال بسيط\n\nلنفترض أن لديك بقالة:\n- عندك نقد وبضاعة ومبالغ على الزبائن بقيمة **100,000 ريال**\n- وعليك للموردين وإيجار ورواتب **60,000 ريال**\n\nإذن رأس مالك العامل = 100,000 − 60,000 = **40,000 ريال**\n\nأي أنه بعد سداد كل التزاماتك القريبة، يبقى لديك 40,000 ريال تُسيّر بها عملك.\n\n## لماذا هو مهم؟\n\n- **إذا كان موجبًا:** تستطيع الشركة سداد التزاماتها والاستمرار بالعمل براحة.\n- **إذا كان سالبًا:** قد تواجه الشركة صعوبة في دفع ما عليها، وربما تحتاج إلى الاقتراض.\n- **إذا كان كبيرًا جدًا:** قد يعني ذلك وجود أموال مجمدة دون استثمار، كمخزون زائد أو نقد غير مستغل.\n\n## الخلاصة\nرأس المال العامل يشبه **\"الوقود اليومي\"** للشركة، فهو يبيّن هل تملك ما يكفي من المال لتغطية احتياجاتها القريبة ومواصلة نشاطها دون تعثر.",
+   "usage": {
+    "input_tokens": 32,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 799,
+    "output_tokens_details": {
+     "thinking_tokens": 36
+    },
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard"
+   },
+   "finMs": 8360
+  }
+ ]
+}

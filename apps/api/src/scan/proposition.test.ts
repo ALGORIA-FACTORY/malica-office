@@ -18,6 +18,7 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
+import { periodeDeTva } from "@malica/socle/exercice";
 import { JOUR_D_ESSAI, jourDEssai, lecture as lectureDEssai } from "./lecture-d-essai.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
@@ -266,9 +267,13 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     );
     try {
       const veille = await dates();
+      // Quand le jour d'essai est le 1er du mois, la veille est dans la période de
+      // TVA précédente : la pièce est alors datée d'une période postérieure à sa
+      // réception, et le contrôle rend une anomalie (sa règle), plus une réserve.
+      const attendu = periodeDeTva(jour) > periodeDeTva(jourDEssai(-1)) ? "anomalie" : "reserve";
       assert.deepEqual(
         [veille?.statut, veille?.preuves?.recueLe],
-        ["reserve", jourDEssai(-1)],
+        [attendu, jourDEssai(-1)],
         "reçue la veille, au fuseau du dossier",
       );
     } finally {
