@@ -688,7 +688,8 @@
      "montant": "droit_timbre"
     },
     "statut": "defaut_a_valider",
-    "variante": null
+    "variante": null,
+    "partielle": false
    },
    {
     "code": "M02",
@@ -700,7 +701,8 @@
      "assiette": "tva"
     },
     "statut": "defaut_a_valider",
-    "variante": null
+    "variante": null,
+    "partielle": false
    },
    {
     "code": "M03",
@@ -714,7 +716,8 @@
      ]
     },
     "statut": "defaut_a_valider",
-    "variante": "ttc_hors_timbre"
+    "variante": "ttc_hors_timbre",
+    "partielle": false
    },
    {
     "code": "M04",
@@ -728,7 +731,24 @@
      ]
     },
     "statut": "defaut_a_valider",
-    "variante": "ttc_hors_timbre"
+    "variante": "ttc_hors_timbre",
+    "partielle": false
+   },
+   {
+    "code": "M05",
+    "expression": {
+     "op": "somme",
+     "role": "ttc",
+     "total": "total_ttc",
+     "parties": [
+      "total_ht",
+      "montant_tva_par_taux",
+      "montant_fodec?"
+     ]
+    },
+    "statut": "defaut_a_valider",
+    "variante": "noyau",
+    "partielle": true
    },
    {
     "code": "P03",
@@ -741,7 +761,8 @@
      "exoneration": "mention_suspension_exoneration"
     },
     "statut": "defaut_a_valider",
-    "variante": null
+    "variante": null,
+    "partielle": false
    },
    {
     "code": "P04",
@@ -757,7 +778,8 @@
      ]
     },
     "statut": "defaut_a_valider",
-    "variante": "ttc_avec_timbre"
+    "variante": "ttc_avec_timbre",
+    "partielle": false
    },
    {
     "code": "P05",
@@ -767,7 +789,8 @@
      "format": "matricule_fiscal"
     },
     "statut": "defaut_a_valider",
-    "variante": null
+    "variante": null,
+    "partielle": false
    },
    {
     "code": "P05b",
@@ -777,7 +800,8 @@
      "format": "matricule_fiscal"
     },
     "statut": "defaut_a_valider",
-    "variante": null
+    "variante": null,
+    "partielle": false
    }
   ]
  },

@@ -46,10 +46,23 @@ pub fn jeu(id: &str) -> &str {
     id.split('/').next().unwrap()
 }
 
-/// La grille facture et le pack livrés par la base.
-pub fn en_base() -> (Value, Value) {
+/// La grille facture et le pack livrés par la base, avec leurs preuves PARTIELLES : celles que
+/// la base dit `partielle` ne prouvent qu'une part de la pièce (`le_noyau_de_la_facture.rs`).
+pub fn en_base_avec_les_preuves_partielles() -> (Value, Value) {
     let c: Value = serde_json::from_str(&donnees("grille_facture_en_base.json")).unwrap();
     (c["grille"].clone(), c["pack"].clone())
+}
+
+/// La grille facture et le pack livrés par la base, pour prouver la pièce ENTIÈRE : sans les
+/// preuves partielles, que l'adaptateur (`resoudreLaPiece`) joue à part et ne compte jamais
+/// parmi celles qui prouvent la pièce.
+pub fn en_base() -> (Value, Value) {
+    let (mut grille, pack) = en_base_avec_les_preuves_partielles();
+    grille["preuves"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|p| p["partielle"] != true);
+    (grille, pack)
 }
 
 /// La preuve des lignes (anneau 1), ajoutée à la grille en attendant sa migration.
