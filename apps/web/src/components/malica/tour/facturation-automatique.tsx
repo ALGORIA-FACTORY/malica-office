@@ -1,3 +1,14 @@
+/**
+ * La carte « Facturation automatique » de la tour — ouvrir ou couper l'émission.
+ *
+ * Écran réservé aux opérateurs d'ALGORIA (la tour). Pour chaque périmètre, cabinets
+ * puis PME, l'opérateur voit si l'émission automatique est ouverte ou coupée, qui l'a
+ * décidé et pourquoi, règle la fenêtre de rattrapage en mois, et lit ce que le dernier
+ * passage a émis, trouvé déjà émis, jugé sans rien à facturer, ou laissé en erreur.
+ * Ouvrir ou couper exige un motif, tracé avec la décision. Les données viennent de
+ * `office().tour` : la base décide, et refuse à qui n'est pas opérateur (R3). L'écran
+ * ne calcule aucune facture.
+ */
 import type {
   EtatDuPerimetreDeFacturation,
   PerimetreDeFacturation,

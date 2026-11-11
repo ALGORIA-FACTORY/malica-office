@@ -8,7 +8,7 @@ import type { DerniereLecture } from "../issue-de-lecture.ts";
 import type { LigneSaisie } from "../ecriture-saisie.ts";
 import type { CircuitInterne, StatutCabinet, SuiviDEnvoi } from "../statut-d-envoi.ts";
 import type { CodeVerdict } from "../verdicts.ts";
-import type { PropositionDAction, SourceDeLAssistant } from "./assistant.ts";
+import type { BlocDeReponse, PropositionDAction, SourceDeLAssistant } from "./assistant.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 import type { SensDeTva } from "../contracts/tva.v1.ts";
 
@@ -228,6 +228,11 @@ export interface IdentityRepository {
   ): Promise<{ mode: "donnee" | "suggeree" }>;
   /** Le prénom salue, le nom complet facture. `null` tant que rien n'est écrit. */
   monProfil(): Promise<MonProfil | null>;
+  /**
+   * Parmi ces personnes, celles qui ont une photo : identifiant → version.
+   * Les octets se lisent sur `/moi/photos/:id`, hors de `/rpc`.
+   */
+  photosDesProfils(ids: readonly string[]): Promise<Record<string, string>>;
   /** Un champ vide s'efface ; la base compose « Prénom Nom ». */
   ecrireMonProfil(prenom: string | null, nom: string | null): Promise<MonProfil | null>;
   /** Le côté du bouton « + » (planche 5) ; il suit le compte, sur tous les appareils. */
@@ -390,6 +395,8 @@ export interface MessageDuFil {
   sources?: SourceDeLAssistant[] | null | undefined;
   /** Les actions que la réponse proposait (boutons à confirmer) ; nul sinon. */
   propositions?: PropositionDAction[] | null | undefined;
+  /** Les blocs que la réponse montrait (chiffre clé, tableau) ; nul sinon. */
+  blocs?: BlocDeReponse[] | null | undefined;
 }
 
 export interface JurisdictionPack {
@@ -1299,6 +1306,19 @@ export interface PieceDossier {
    */
   precisions: Record<string, string>;
   /**
+   * Ce que la personne a corrigé sur la facture elle-même (le crayon, 10
+   * novembre 2026) : la valeur saisie, la valeur LUE qui reste, qui a saisi et
+   * quand. Le cabinet les lit comme la PME.
+   */
+  corrections: CorrectionDeLecture[];
+  /**
+   * Les champs que l'arithmétique de la dernière lecture a VÉRIFIÉS (chemins de
+   * citation) : « prouvé par le calcul », à côté de « lu » et de « saisi ».
+   */
+  prouves: string[];
+  /** Les décimales de la devise de la pièce au référentiel (R4) ; `null` si elle n'y est pas. */
+  decimalesDeLaPiece: number | null;
+  /**
    * Où elle en est chez le cabinet — envoyée, vue, corrigée, prise en charge —
    * ou `null` si elle n'y est jamais partie. Le mot se dérive au Socle
    * (`statut-d-envoi.ts`), le même pour la PME et le cabinet.
@@ -1322,6 +1342,41 @@ export interface PieceDossier {
   ecritureIllisible?: boolean;
   citations: Citation[];
   tokens: Token[];
+}
+
+/** Une composante de la facture corrigée à la main : une précision, jamais une réécriture (R7). */
+export interface CorrectionDeLecture {
+  /** Le chemin de citation du champ (`totals.vat`, `other_charges[0].amount`). */
+  champ: string;
+  /** La valeur retenue, celle de la personne. */
+  valeur: string;
+  /** Ce que la lecture avait lu, intact ; `null` si elle n'avait rien lu. */
+  lue: string | null;
+  /** Le nom de la personne qui a saisi, tel que la base le donne à qui lit la pièce. */
+  par: string | null;
+  le: string;
+}
+
+/**
+ * Le jugement rendu APRÈS une correction : c'est lui, jamais l'écran, qui dit
+ * si la facture tombe juste (R3). Les montants sont ceux que le moteur
+ * retient, aux décimales de la devise du référentiel (R4).
+ */
+export interface JugementDUneCorrection {
+  /** La facture tombe juste : le moteur a tranché une lecture qui ferme. */
+  ferme: boolean;
+  /** L'état de la normalisation (`tranche`, `incoherent`, `illisible`…). */
+  etat: string;
+  devise: string | null;
+  /** Les montants retenus ; `null` quand le moteur n'en retient aucun. */
+  montants: {
+    baseHt: string | null;
+    tva: string | null;
+    droits: Array<string | null>;
+    ttc: string | null;
+  } | null;
+  /** Les champs à vérifier, par chemin de citation, quand la facture ne ferme pas. */
+  aVerifier: string[];
 }
 
 /** HT, TVA, droits et TTC d'une pièce, tirés de l'écriture prise en charge. */
@@ -1723,6 +1778,29 @@ export interface CaptureRepository {
     champ: "document_kind" | "issuer",
     valeur: string,
   ): Promise<{ id: string | null; champ: string; valeur: string }>;
+  /**
+   * Corriger une composante de la facture lue (le crayon) : la précision
+   * s'inscrit, la pièce est rejugée, et le jugement revient avec elle. Le
+   * message que la personne lit vient de ce jugement.
+   */
+  corrigerLeChamp(
+    pieceId: string,
+    champ: string,
+    valeur: string,
+  ): Promise<{
+    id: string | null;
+    champ: string;
+    valeur: string;
+    jugement: JugementDUneCorrection;
+  }>;
+  /**
+   * Les codes de TVA qu'une personne peut choisir pour une ligne, lus au
+   * référentiel à la DATE de la pièce (R4) : jamais un taux saisi.
+   */
+  codesDeTva(
+    pieceId: string,
+    locale: string,
+  ): Promise<Array<{ code: string; label: string; taux: string }>>;
   /**
    * Rejuger la pièce après une précision : le verdict suit la réponse de la
    * personne. Sans ce geste, l'écran garderait le verdict d'avant.

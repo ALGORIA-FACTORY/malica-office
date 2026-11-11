@@ -1,3 +1,11 @@
+/**
+ * La configuration du lint — une seule pour tout le dépôt (`npm run lint`, job « atelier » de la CI).
+ *
+ * Elle porte les règles de JavaScript et de TypeScript recommandées, celles des hooks React, la
+ * forme de Prettier, et deux règles propres au produit expliquées sur place : un contexte React
+ * peut exporter son hook, et un identifiant machine (`field`, `status`) ne s'affiche jamais tel
+ * quel à une personne (dette D42).
+ */
 import js from "@eslint/js";
 import eslintPluginPrettier from "eslint-plugin-prettier/recommended";
 import globals from "globals";

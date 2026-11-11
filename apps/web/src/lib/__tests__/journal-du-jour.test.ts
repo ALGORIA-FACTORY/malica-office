@@ -1,3 +1,10 @@
+/**
+ * Le journal du jour, côté écran — naviguer de jour en jour et dire l'écart.
+ *
+ * Garantit que l'on recule et avance d'un jour à travers les mois et les années, que
+ * l'adresse ne donne un jour que s'il existe au calendrier (le 30 février est refusé),
+ * et que l'écart entre deux états ne dit que ses parties non nulles.
+ */
 import { describe, expect, it } from "vitest";
 
 import { jourLisible, jourVoisin, nombreDeChangements, partiesDeLEcart } from "../journal-du-jour";

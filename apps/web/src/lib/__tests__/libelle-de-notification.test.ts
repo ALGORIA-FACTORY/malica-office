@@ -1,3 +1,10 @@
+/**
+ * Les notifications — ce qu'elles disent, et ce qu'elles demandent.
+ *
+ * Garantit que la cloche compte ce qui attend un geste et non tout le non lu, que la
+ * coque mobile ne parle jamais d'abonnement, et qu'un genre de notification inconnu
+ * reçoit sa phrase par défaut plutôt qu'une clé brute.
+ */
 import { describe, expect, it } from "vitest";
 
 import { attendUnGeste, cleDuGenre, seMontreIci } from "../libelle-de-notification";

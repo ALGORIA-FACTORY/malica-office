@@ -1,4 +1,14 @@
 // @vitest-environment jsdom
+/**
+ * « Comment avez-vous payé ? » — la déclaration et la correction d'un règlement.
+ *
+ * Garantit les gardes de la feuille « Ajouter un règlement » : on n'inscrit rien tant que
+ * l'historique n'a pas répondu, un montant inconnu n'est jamais remplacé par zéro, un
+ * montant partiel qui s'arrondit à zéro ou qui dépasse le reste à payer est refusé en disant
+ * pourquoi, une référence n'est exigée que si le moyen en porte une, et une correction
+ * abandonnée ne préremplit pas l'ajout suivant. Le règlement alimente la comptabilité :
+ * une somme inventée ou en trop s'y retrouverait.
+ */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";

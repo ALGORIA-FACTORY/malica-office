@@ -1,3 +1,12 @@
+/**
+ * Le cadrage d'une photo — la cascade des détecteurs, qui n'invente jamais un cadre.
+ *
+ * Le cadrage essaie ses détecteurs l'un après l'autre (modèle, algorithme, version maison)
+ * et s'arrête au premier qui trouve. Ces tests garantissent qu'un détecteur en panne (le
+ * modèle se charge par le réseau, absent hors couverture) ne bloque pas les suivants, que
+ * des coins à faible présence de document sont refusés plutôt que de recadrer sur un objet
+ * quelconque, et que, faute de résultat, on le dit au lieu de fabriquer un cadre.
+ */
 import { describe, expect, it } from "vitest";
 
 import { cadrerAvec, CERTITUDE_MIN, type Detecteur } from "../cadrage";

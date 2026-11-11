@@ -1,3 +1,12 @@
+/**
+ * La lecture des pièces — ce qui est à lire, ce qui a échoué, et l'état de l'accueil.
+ *
+ * Garantit qu'une pièce est « à lire » seulement si elle n'est ni lue, ni gardée, ni
+ * refusée, ni en cours, ni en échec, et jamais un reçu ou un justificatif. Les échecs se
+ * voient, avec leur raison courte, et une panne attend sa reprise sans demander de geste.
+ * L'accueil et la liste classent par la même règle, et les deux phrases de l'accueil
+ * se dérivent d'un seul état : un retour du cabinet n'est jamais « en ordre ».
+ */
 import { describe, expect, it } from "vitest";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 

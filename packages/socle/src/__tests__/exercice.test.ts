@@ -1,3 +1,13 @@
+/**
+ * Les épreuves de l'exercice comptable — où il commence, où un cumul s'arrête.
+ *
+ * Garantissent le calcul des dates qui bornent un cumul : la fin d'un mois (courts,
+ * longs, bissextiles), le début de l'exercice selon la date de clôture du dossier
+ * (année civile par défaut, exercice décalé commençant le lendemain de la clôture,
+ * sur la bonne année), et l'arrêt du cumul au jour même pour le mois en cours, à la
+ * fin du mois pour un mois passé ou à venir. Un cumul qui commence ou s'arrête au mauvais
+ * jour fausse tous les chiffres de l'exercice.
+ */
 import { describe, expect, it } from "vitest";
 
 import { arreteDuCumul, debutDExercice, finDuMois } from "../exercice.ts";

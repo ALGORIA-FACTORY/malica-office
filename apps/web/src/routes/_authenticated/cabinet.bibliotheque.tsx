@@ -1,3 +1,15 @@
+/**
+ * La bibliothèque du cabinet — les pièces d'un client, rangées par mois puis par type.
+ *
+ * Écran du cabinet : le comptable choisit l'un de ses clients actifs, ouvre un mois,
+ * puis un type de document, et retrouve les pièces avec leur miniature. Il peut en
+ * télécharger une, ou tout le dossier comptable. Les clients et les pièces viennent
+ * de la supervision du cabinet (`supervision.listClients`) ; les pièces sont lues
+ * côté serveur, un mois à la fois quand le dossier est trop gros pour tenir d'un coup.
+ *
+ * Chaque niveau (client, mois, type) a sa propre adresse : le retour du navigateur,
+ * le geste retour du téléphone et un lien partagé ramènent au même endroit.
+ */
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Library, Search } from "lucide-react";

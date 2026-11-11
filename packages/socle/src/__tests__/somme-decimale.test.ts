@@ -1,3 +1,13 @@
+/**
+ * Les épreuves des sommes décimales — additionner des montants sans perdre un millime.
+ *
+ * Garantissent l'addition exacte de montants écrits en texte (là où un nombre flottant
+ * perdrait un millime), le nombre de décimales demandé, le refus d'un texte qui n'est pas
+ * un montant, la reconnaissance de zéro sous toutes ses écritures, le passage de l'entier
+ * de la base à la chaîne du document avec les décimales du pack (R4 : ni « / 1000 » dans
+ * un écran, ni zéros de queue perdus), et la lecture d'un montant en plus petite unité
+ * de la devise, qui refuse d'arrondir en silence.
+ */
 import { describe, expect, it } from "vitest";
 
 import { depuisUniteMineure, enUnitesExactes, estNul, sommeDecimale } from "../somme-decimale.ts";

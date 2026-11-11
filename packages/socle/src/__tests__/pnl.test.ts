@@ -1,3 +1,10 @@
+/**
+ * L'épreuve du compte de résultat — produits, charges et résultat d'un mois.
+ *
+ * Garantit que le moteur totalise les comptes de charge et de produit selon les classes
+ * du pack, laisse hors du résultat un compte qui n'est ni l'un ni l'autre (une dette
+ * fournisseur), et en déduit le résultat. Le chiffre sort d'un moteur déterministe (R3).
+ */
 import { describe, it, expect } from "vitest";
 import { computePnl } from "../engines/pnl/snapshot.ts";
 import { TND } from "./fixtures.ts";

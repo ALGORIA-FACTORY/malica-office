@@ -32,9 +32,12 @@ import { codeDeLecture } from "@malica/socle/issue-de-lecture";
 import { sousIdentite } from "./db.ts";
 import { creerAppelLocal, PieceIntrouvable } from "./malica/appel-local.ts";
 import type { EvenementDeLAssistant } from "@malica/socle/ports/assistant";
+import type { ReponseDeMalica } from "@malica/socle/ports/malica";
 
 import { converserAvecRepli, verifierLeDossier } from "./malica/assistant/agent.ts";
 import { clientClaudeEnFlux } from "./malica/assistant/claude-flux.ts";
+import { Rafale } from "./malica/assistant/debit.ts";
+import { clientDeepSeekEnFlux } from "./malica/assistant/deepseek-flux.ts";
 import { repliParDeepSeek } from "./malica/assistant/repli.ts";
 import { redigerLeBriefing } from "./malica/briefing.ts";
 import { askMalica, repondreAuCabinet } from "./malica/conseil/ask.ts";
@@ -49,6 +52,7 @@ import { LectureRefusee, readPieceFlow } from "./malica/lecture/read-flow.ts";
 import { redigerLePv } from "./malica/pv/rediger.ts";
 import { introuvableLisible, REFUS_SANS_CLE, refusLisible } from "./refus.ts";
 import { RpcIntrouvable } from "./rpc.ts";
+import { classeurXlsx, TYPE_MIME_XLSX } from "./xlsx.ts";
 import { exigerIdentite } from "./session.ts";
 
 export const malica = Router();
@@ -297,17 +301,51 @@ const Question = z.object({
   conversationId: Uuid.nullish(),
 });
 
+const rafale = new Rafale();
+
+/**
+ * Le débit d'une question à Malica, AVANT tout appel payant : le quota du jour
+ * (compté en base, qui refuse d'elle-même) puis la rafale de la minute. Les
+ * deux bornes viennent de la base, réglées dans la tour (R4).
+ */
+async function exigerLeDebit(req: Request): Promise<void> {
+  const debit = await api(req).rpc<{ parMinute: number }>("conseil", "exigerDebit", []);
+  if (!rafale.admettre(req.utilisateur!.id, debit.parMinute))
+    throw new SaisieInvalide("refus.assistant.debit");
+}
+
+/**
+ * Ce que le navigateur reçoit d'une réponse : jamais la mécanique. Le modèle, les
+ * jetons, la durée et l'identifiant d'exécution restent au journal des agents
+ * (lot C, 10 novembre 2026). Les clés demeurent — une application installée les
+ * lit encore — à valeur neutre.
+ */
+function pourLeNavigateur<T extends ReponseDeMalica>(r: T): T {
+  return {
+    ...r,
+    reasoning: null,
+    model: "",
+    latencyMs: 0,
+    tokensIn: null,
+    tokensOut: null,
+    runId: null,
+  };
+}
+
 malica.post("/demander", (req, res, next) => {
   repondre(res, next, async () => {
     const q = Question.parse(req.body);
-    return askMalica(api(req), {
-      tenantId: q.tenantId,
-      pieceId: q.pieceId ?? null,
-      question: q.question,
-      locale: q.locale,
-      mode: q.mode,
-      conversationId: q.conversationId ?? null,
-    });
+    await exigerLeDebit(req);
+    return pourLeNavigateur(
+      await askMalica(api(req), {
+        tenantId: q.tenantId,
+        pieceId: q.pieceId ?? null,
+        question: q.question,
+        locale: q.locale,
+        mode: q.mode,
+        conversationId: q.conversationId ?? null,
+      }),
+    );
   });
 });
 
@@ -360,6 +398,8 @@ const QuestionALAssistant = z.object({
   conversationId: Uuid.nullish(),
   /** Les pièces jointes, déjà déposées et confiées à la lecture Malica (R2). */
   pieceIds: z.array(Uuid).max(5).default([]),
+  /** La personne regarde « Toutes les sociétés » : le serveur décide lesquelles. */
+  toutesLesSocietes: z.boolean().default(false),
 });
 
 /**
@@ -380,6 +420,7 @@ malica.post("/assistant", (req, res, next) => {
     const q = QuestionALAssistant.parse(req.body);
     const appel = api(req);
     const dossier = await verifierLeDossier(appel, q.tenantId);
+    await exigerLeDebit(req);
 
     res.status(200);
     res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
@@ -400,9 +441,13 @@ malica.post("/assistant", (req, res, next) => {
           locale: q.locale,
           conversationId: q.conversationId ?? null,
           pieceIds: q.pieceIds,
+          toutesLesSocietes: q.toutesLesSocietes,
         },
         {
           claude: cleClaude ? clientClaudeEnFlux({ apiKey: cleClaude }) : null,
+          deepseek: process.env["DEEPSEEK_API_KEY"]?.trim()
+            ? clientDeepSeekEnFlux({ apiKey: process.env["DEEPSEEK_API_KEY"] })
+            : null,
           conseil: (question, jour) =>
             conseilCite(
               appel,
@@ -433,6 +478,59 @@ malica.post("/assistant", (req, res, next) => {
     // Avant le flux : le même traitement que toute route de Malica.
     repondre(res, next, () => Promise.reject(erreur));
   });
+});
+
+/* ------------------------------------------------- l'export d'un bloc */
+
+const CelluleDeFeuille = z.union([
+  z.object({ texte: z.string().max(500) }).strict(),
+  z.object({ montant: z.string().regex(/^-?\d{1,18}(\.\d{1,6})?$/) }).strict(),
+]);
+const LigneDeFeuille = z.array(CelluleDeFeuille).min(1).max(30);
+const BlocAExporter = z.object({
+  titre: z.string().trim().min(1).max(120),
+  droiteAGauche: z.boolean().default(false),
+  feuille: z.object({
+    entete: z.array(z.string().max(120)).min(1).max(30),
+    lignes: z.array(LigneDeFeuille).max(5000),
+    totaux: z.array(LigneDeFeuille).max(10).optional(),
+  }),
+});
+
+/**
+ * Un bloc de réponse, en classeur Excel.
+ *
+ * L'écran envoie la feuille du bloc qu'il affiche (`BlocDeReponse.feuille`) ;
+ * la route la met en forme — une feuille, des montants que le tableur additionne
+ * — et rend les octets. Elle ne lit rien en base et ne calcule rien : elle
+ * écrit ce qu'on lui donne, dans des bornes. L'écrivain est celui du journal du
+ * jour (`xlsx.ts`) : un seul, pas deux.
+ */
+malica.post("/blocs/classeur", (req, res, next) => {
+  let saisie: z.infer<typeof BlocAExporter>;
+  try {
+    saisie = BlocAExporter.parse(req.body);
+  } catch {
+    res.status(400).json({ erreur: "refus.saisie.mal_formee" });
+    return;
+  }
+  try {
+    const octets = classeurXlsx(
+      {
+        // Un nom de feuille Excel ne porte ni « / \\ ? * [ ] : ».
+        nom: saisie.titre.replace(/[\\/?*[\]:]/g, " "),
+        entete: saisie.feuille.entete,
+        lignes: saisie.feuille.lignes,
+        ...(saisie.feuille.totaux ? { totaux: saisie.feuille.totaux } : {}),
+        droiteAGauche: saisie.droiteAGauche,
+      },
+      new Date(),
+    );
+    res.status(200).setHeader("Content-Type", TYPE_MIME_XLSX);
+    res.send(Buffer.from(octets));
+  } catch (erreur) {
+    next(erreur);
+  }
 });
 
 /* ------------------------------------------------------------ rédaction */

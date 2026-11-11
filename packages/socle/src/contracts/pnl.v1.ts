@@ -1,3 +1,11 @@
+/**
+ * Le contrat du compte de résultat — la forme des produits, charges et résultat d'un mois.
+ *
+ * Porte, pour un mois et une devise, les produits, les charges, le résultat et le détail
+ * par compte (débit, crédit, solde). Montants en chaînes décimales. Produit par le moteur
+ * `engines/pnl`, lu par les écrans de synthèse ; le chiffre vient du moteur, pas de l'IA
+ * (R3).
+ */
 import { z } from "zod";
 
 const CONTRACT_VERSION = "pnl.v1" as const;

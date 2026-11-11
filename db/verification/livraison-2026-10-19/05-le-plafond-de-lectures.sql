@@ -1,3 +1,8 @@
+-- Preuve 05 — le plafond de lectures arrête la lecture, jamais la capture.
+--
+-- Une licence Basic avec 64 lectures consommées : la 65ᵉ est autorisée, la 66ᵉ refusée, la
+-- relecture d'une pièce déjà comptée reste gratuite. La pièce refusée existe bien en base :
+-- le plafond n'empêche pas de photographier, seulement de lire au-delà du forfait.
 \set ON_ERROR_STOP on
 \echo '=== LE PLAFOND DE LECTURES MORD, ET LA RELECTURE EST GRATUITE ==='
 do $$

@@ -1,3 +1,12 @@
+/**
+ * L'envoi au cabinet — la pièce suivante à transmettre, et le réessai d'une pièce.
+ *
+ * Garantit que, après un envoi, l'écran propose la pièce suivante dans l'ordre (en
+ * reprenant au début), jamais celle qui vient de partir, jamais une pièce que le
+ * propriétaire a retournée au siège, et rien quand il ne reste rien à envoyer. Il
+ * garantit aussi que réessayer une pièce restée garde les autres restées, sans les
+ * retenter, et remplace la raison du refus d'une pièce retentée.
+ */
 import { describe, expect, it } from "vitest";
 
 import { resteAEnvoyer } from "@malica/socle/circuit";

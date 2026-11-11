@@ -165,7 +165,7 @@ const CSP_DU_CONTENU = "sandbox; default-src 'none'";
  * un 500 dit « votre saisie a voyagé », là où un 404 ne dit rien. La forme se
  * vérifie donc ici, avant la base.
  */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Le chemin absolu d'une pièce, dérivé de la base et de rien d'autre.
@@ -297,10 +297,10 @@ export async function lireContenu(
  */
 const TAILLE_MAX_PIECE = 40 * 1024 * 1024;
 
-class PieceTropGrosse extends Error {}
+export class PieceTropGrosse extends Error {}
 
 /** Un passe-plat qui compte, et coupe le flux au-delà de la borne. */
-function borneDeTaille(max: number): Transform {
+export function borneDeTaille(max: number): Transform {
   let recu = 0;
   return new Transform({
     transform(morceau: Buffer, _encodage, suite) {

@@ -1,3 +1,10 @@
+/**
+ * Le refus d'un montant tapé — la phrase de l'écran quand il ne s'inscrit pas.
+ *
+ * Garantit qu'aucune phrase ne sort tant que rien n'est tapé ou que le montant
+ * s'inscrit, et que le refus dit pourquoi : trop de décimales pour la devise, valeur
+ * négative (avec la phrase propre à l'écran appelant) ou texte qui n'est pas un montant.
+ */
 import { describe, expect, it } from "vitest";
 
 import { phraseDuRefus } from "../refus-de-saisie";

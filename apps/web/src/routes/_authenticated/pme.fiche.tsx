@@ -1,3 +1,15 @@
+/**
+ * La situation fiscale — lue sur la carte d'identification, arrêtée par la personne.
+ *
+ * Écran de la PME : régime, assujettissement à la TVA, forme de la société et exercice du
+ * dossier. Le dirigeant photographie sa carte ; Malica lit et REMPLIT le formulaire sans
+ * l'enregistrer, et ce qu'elle n'a pas su lire reste vide au lieu d'être deviné. La personne
+ * corrige, puis enregistre : c'est elle qui arrête (R10).
+ *
+ * Sans cette fiche, Malica ne peut ni qualifier une opération ni répondre sur une
+ * déduction. Les régimes et les formes proposés viennent de la base (R8), pas du code. Il
+ * n'existe pas de maquette de cet écran : il emploie les éléments de la famille « papiers ».
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useId, useState } from "react";

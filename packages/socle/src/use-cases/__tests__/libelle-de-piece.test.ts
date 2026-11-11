@@ -1,3 +1,12 @@
+/**
+ * Les épreuves du libellé d'une pièce lue — de la lecture au libellé, sans rien inventer.
+ *
+ * Garantissent que la référence du document suit l'ordre de préférence des clés connues,
+ * ne prend pas une référence annexe pour un numéro de facture et vaut `null` quand rien
+ * n'existe ; que le libellé nomme la nature du document (pas son code technique), porte
+ * la date du DOCUMENT et jamais celle de la saisie, omet la référence absente ; et qu'une
+ * vente ne nomme jamais notre propre société comme client.
+ */
 import { describe, expect, it } from "vitest";
 
 import { composerLibelle } from "../../engines/libelle.ts";

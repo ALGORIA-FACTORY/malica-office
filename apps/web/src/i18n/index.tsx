@@ -1,3 +1,13 @@
+/**
+ * La langue de l'interface — le fournisseur de traductions et le hook `useI18n`.
+ *
+ * Fournit à tous les écrans la fonction `t(clé, variables)`, la langue active et son
+ * sens d'écriture (gauche-droite ou droite-gauche, réglé sur la page). La langue choisie
+ * est rangée dans le navigateur ; l'écran n'affiche une langue qu'une fois son
+ * dictionnaire chargé, et retombe sur le français hors ligne. Le pluriel se choisit
+ * par `Intl.PluralRules` quand une variable `count` est donnée, au lieu d'écrire
+ * « document(s) ». Une clé absente se montre telle quelle : c'est un défaut visible.
+ */
 import {
   createContext,
   useCallback,
