@@ -36,7 +36,7 @@
 --
 -- Les versions précédentes restent au registre : la tour y revient en un geste.
 -- La consigne du conseil cité gagne, elle, une section sur l'ordre des textes
--- (voir `20261212120000`).
+-- (voir `20261212130000`).
 
 begin;
 
