@@ -1324,6 +1324,21 @@ export const en: Dict = {
   "tour.assistant.plafond.parMois": "Per calendar month",
   "tour.assistant.plafond.parJour": "Per day",
   "tour.assistant.plafond.borne": "A positive amount, at most two decimals.",
+  "tour.assistant.relecture": "Answer to be confirmed",
+  "tour.assistant.relecture.aide":
+    "What Malica does when advice commits the dossier of a company followed by a firm, and when the legal texts do not answer a question.",
+  "tour.assistant.relecture.enVigueur": "In force since {date} — {motif}",
+  "tour.assistant.relecture.absente":
+    "No decision in base: the answer is withheld and a figure without a source is removed.",
+  "tour.assistant.relecture.mode": "Advice the accountant must review",
+  "tour.assistant.relecture.annoncer":
+    "Show the answer, marked “to be confirmed”, and send it to the accountant",
+  "tour.assistant.relecture.retenir": "Withhold the answer until the accountant validates it",
+  "tour.assistant.relecture.sansTexte": "Legal question with no text found",
+  "tour.assistant.relecture.marquer":
+    "Answer anyway; a figure from memory carries the mark “unverified”",
+  "tour.assistant.relecture.retirer":
+    "Say the texts do not answer; remove any figure without a source",
   "tour.assistant.reglage": "Assistant settings",
   "tour.assistant.reglage.aide":
     "The standard model answers everything; the model for hard questions takes over when a question exceeds the set length, contains one of the words, or attaches several documents. Spending is bounded by the assistant cap (card above), itself under the model chain's cap.",

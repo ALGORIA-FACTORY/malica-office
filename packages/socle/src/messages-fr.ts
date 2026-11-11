@@ -1387,6 +1387,21 @@ export const fr = {
   "tour.assistant.plafond.parMois": "Par mois civil",
   "tour.assistant.plafond.parJour": "Par jour",
   "tour.assistant.plafond.borne": "Un montant positif, deux décimales au plus.",
+  "tour.assistant.relecture": "Réponse à confirmer",
+  "tour.assistant.relecture.aide":
+    "Ce que Malica fait quand un avis engage le dossier d'une société suivie par un cabinet, et quand les textes ne répondent pas à une question de droit.",
+  "tour.assistant.relecture.enVigueur": "En vigueur depuis le {date} — {motif}",
+  "tour.assistant.relecture.absente":
+    "Aucune décision en base : la réponse est retenue et le chiffre sans source est retiré.",
+  "tour.assistant.relecture.mode": "Avis à faire relire par le comptable",
+  "tour.assistant.relecture.annoncer":
+    "Afficher la réponse, marquée « à confirmer », et l'envoyer au comptable",
+  "tour.assistant.relecture.retenir": "Retenir la réponse jusqu'à la validation du comptable",
+  "tour.assistant.relecture.sansTexte": "Question de droit sans texte trouvé",
+  "tour.assistant.relecture.marquer":
+    "Répondre quand même ; un chiffre de mémoire porte la marque « non vérifié »",
+  "tour.assistant.relecture.retirer":
+    "Dire que les textes ne répondent pas ; retirer tout chiffre sans source",
   "tour.assistant.reglage": "Réglage de l'assistant",
   "tour.assistant.reglage.aide":
     "Le modèle courant répond à tout ; le modèle des questions difficiles prend la main quand la question dépasse la longueur réglée, contient l'un des mots, ou joint plusieurs pièces. La dépense est bornée par le plafond de l'assistant (carte ci-dessus), lui-même sous le plafond de la chaîne des modèles.",

@@ -100,6 +100,7 @@
     "file",
     "lire",
     "nomsDesCorpus",
+    "relecture",
     "statistiques",
     "veille"
   ],
@@ -410,7 +411,9 @@
     "reglerPaiement",
     "reglerPlafondDeLAssistant",
     "reglerRelances",
+    "reglerRelectureDeLAssistant",
     "reglerRelectureNuit",
+    "relectureDeLAssistant",
     "relecturesDeNuit",
     "reprendre",
     "retirerAccesTotal",

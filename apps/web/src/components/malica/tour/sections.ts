@@ -34,7 +34,12 @@ import type { CleDeSection } from "./cles-des-sections";
 import { ReglerLAbonnement } from "./abonnement";
 import { LAccesTotal } from "./acces-total";
 import { LeCalendrierFiscal } from "./calendrier-fiscal";
-import { LaConsigneDeLAssistant, LePlafondDeLAssistant, LeReglageDeLAssistant } from "./assistant";
+import {
+  LaConsigneDeLAssistant,
+  LaRelectureDeLAssistant,
+  LePlafondDeLAssistant,
+  LeReglageDeLAssistant,
+} from "./assistant";
 import { LaChaineDeDesignation } from "./chaine-de-designation";
 import { LaConsigneDuConseil, LeReglageDuConseil } from "./conseil-cite";
 import { DesignerLEmetteur } from "./emetteur";
@@ -85,7 +90,12 @@ export const SECTIONS = {
   assistant: {
     libelle: "tour.menu.assistant",
     icone: MessagesSquare,
-    cartes: [LePlafondDeLAssistant, LaConsigneDeLAssistant, LeReglageDeLAssistant],
+    cartes: [
+      LePlafondDeLAssistant,
+      LaRelectureDeLAssistant,
+      LaConsigneDeLAssistant,
+      LeReglageDeLAssistant,
+    ],
   },
   compte: { libelle: "tour.menu.compte", icone: KeyRound, cartes: [LeCompteDeService] },
 } as const satisfies Record<CleDeSection, Section>;

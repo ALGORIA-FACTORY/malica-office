@@ -1311,6 +1311,19 @@ export const ar: Dict = {
   "tour.assistant.plafond.parMois": "لكل شهر ميلادي",
   "tour.assistant.plafond.parJour": "لكل يوم",
   "tour.assistant.plafond.borne": "مبلغ موجب، برقمين عشريين على الأكثر.",
+  "tour.assistant.relecture": "إجابة في انتظار التأكيد",
+  "tour.assistant.relecture.aide":
+    "ما تفعله ماليكا حين يُلزم الرأي ملف شركة يتابعها مكتب محاسبة، وحين لا تجيب النصوص عن سؤال قانوني.",
+  "tour.assistant.relecture.enVigueur": "سارية منذ {date} — {motif}",
+  "tour.assistant.relecture.absente": "لا قرار في القاعدة: تُحجز الإجابة ويُحذف كل رقم بلا مصدر.",
+  "tour.assistant.relecture.mode": "رأي يراجعه المحاسب",
+  "tour.assistant.relecture.annoncer":
+    "عرض الإجابة بعلامة «في انتظار التأكيد» وإرسالها إلى المحاسب",
+  "tour.assistant.relecture.retenir": "حجز الإجابة إلى أن يصادق عليها المحاسب",
+  "tour.assistant.relecture.sansTexte": "سؤال قانوني لم يوجد له نص",
+  "tour.assistant.relecture.marquer":
+    "الإجابة مع ذلك؛ الرقم المستحضر من الذاكرة يحمل علامة «غير مؤكد»",
+  "tour.assistant.relecture.retirer": "القول إن النصوص لا تجيب؛ وحذف كل رقم بلا مصدر",
   "tour.assistant.reglage": "إعدادات المساعد",
   "tour.assistant.reglage.aide":
     "يجيب النموذج العادي عن كل شيء، ويتولّى نموذج الأسئلة الصعبة عندما يتجاوز السؤال الطول المحدّد أو يتضمّن إحدى الكلمات أو يُرفق عدّة وثائق. ويحدّ الإنفاقَ سقفُ المساعد (البطاقة أعلاه)، وهو نفسه تحت سقف سلسلة النماذج.",

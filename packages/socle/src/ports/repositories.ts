@@ -4684,6 +4684,13 @@ export interface ReglageDeLAssistant {
 }
 
 /** Ce que la tour voit de « Parler à Malica ». */
+export interface RelectureDeLAssistant {
+  mode: "annoncer" | "retenir";
+  sans_texte: "marquer" | "retirer";
+  motif: string;
+  decide_le: string;
+}
+
 export interface EtatDeLAssistant {
   consignes: Array<{ id: string; texte: string; motif: string; decide_le: string }>;
   reglage: {
@@ -4903,6 +4910,19 @@ export interface TourRepository {
   reglerPlafondDeLAssistant(
     plafondUsd: string,
     periode: "jour" | "mois",
+    motif: string,
+  ): Promise<unknown>;
+  /**
+   * Ce que Malica fait d'une réponse que le cabinet doit relire (`annoncer` :
+   * affichée, marquée, envoyée ; `retenir` : seul le message de relecture) et
+   * d'un corpus qui ne répond pas (`marquer` : elle répond, ses chiffres de
+   * mémoire marqués « non vérifié » ; `retirer` : la règle stricte).
+   */
+  relectureDeLAssistant(): Promise<RelectureDeLAssistant | null>;
+  /** Inscrire une décision nouvelle : datée, motivée, en ajout seul. */
+  reglerRelectureDeLAssistant(
+    mode: RelectureDeLAssistant["mode"],
+    sansTexte: RelectureDeLAssistant["sans_texte"],
     motif: string,
   ): Promise<unknown>;
   /**
