@@ -249,6 +249,10 @@ export class GardeDesChiffres {
   private readonly pagesTrouvees: SourceConnue[] = [];
   /** Les pages d'internet citées, par adresse. */
   private readonly pagesWeb = new Map<string, SourceConnue>();
+  /** Où commence, dans ce qui a été dit, le tour en cours — et ce qui l'était avant lui. */
+  private debutDuTour = 0;
+  private ditesAvantLeTour = new Set<string>();
+  private marqueesAvantLeTour = 0;
   /** La réponse a donné une formule de tableur. */
   private tableur = false;
   /** Les longues phrases déjà parties dans cette réponse. */
@@ -613,6 +617,24 @@ export class GardeDesChiffres {
    */
   nouveauTour(): void {
     this.aSeparer = this.emis.trim() !== "" && !/\s$/.test(this.emis);
+    this.debutDuTour = this.emis.length;
+    this.ditesAvantLeTour = new Set(this.dites);
+    this.marqueesAvantLeTour = this.marqueesDuTour.length;
+  }
+
+  /**
+   * Ce que le modèle a écrit dans ce tour n'était pas sa réponse : il vient de
+   * demander une autre lecture. Mesuré sur quatre séries, le 11 novembre 2026 :
+   * il écrivait une réponse, relançait un outil, puis l'écrivait de nouveau —
+   * la personne lisait la même chose deux à quatre fois. La réponse est donc
+   * ce que Malica écrit quand elle a fini de lire ; ce tour-ci s'oublie.
+   */
+  oublierLeTour(): void {
+    this.emis = this.emis.slice(0, this.debutDuTour);
+    this.dites.clear();
+    for (const d of this.ditesAvantLeTour) this.dites.add(d);
+    this.marqueesDuTour.length = this.marqueesAvantLeTour;
+    this.aSeparer = false;
   }
 
   /** Ce qui part : le saut de paragraphe dû, puis le texte ; compté dans ce qui a été dit. */

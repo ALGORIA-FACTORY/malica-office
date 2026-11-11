@@ -1251,6 +1251,8 @@ export const en: Dict = {
     "Answer given with no text found in the corpus: the figures marked “unverified” come from the model's memory.",
   "pme.conseil.aConfirmer":
     "To be confirmed by your accounting team: I am sending them this answer, and they will confirm, correct or dismiss it.",
+  "pme.conseil.aConfirmerNonVerifie":
+    "I did not find this point in the legal texts: what is marked “unverified” comes from my general knowledge. I am sending this answer to your accounting team, who will confirm, correct or dismiss it.",
   "pme.conseil.aConfirmerSansComptabilite":
     "Have your accounting team confirm this before you apply it: no accounting team is connected to this file in Malica, so I cannot send it to them.",
   "pme.conseil.douteAvisDemande":

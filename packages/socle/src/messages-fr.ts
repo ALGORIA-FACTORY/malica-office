@@ -1311,6 +1311,8 @@ export const fr = {
     "Réponse donnée sans texte trouvé dans le corpus : les chiffres marqués « non vérifié » viennent de la mémoire du modèle.",
   "pme.conseil.aConfirmer":
     "À confirmer par votre comptabilité : je lui envoie cette réponse, elle la confirmera, la corrigera ou l’écartera.",
+  "pme.conseil.aConfirmerNonVerifie":
+    "Je n’ai pas trouvé ce point dans les textes : ce qui est marqué « non vérifié » vient de mes connaissances générales. J’envoie cette réponse à votre comptabilité, qui la confirmera, la corrigera ou l’écartera.",
   "pme.conseil.aConfirmerSansComptabilite":
     "À faire confirmer par votre comptabilité avant de l’appliquer : aucune comptabilité n’est reliée à ce dossier dans Malica, je ne peux donc pas la lui envoyer.",
   "pme.conseil.douteAvisDemande":

@@ -1567,15 +1567,16 @@ async function poserSansTexte(
 describe("sans texte dans le corpus, Malica répond et marque ce qu'elle chiffre de mémoire", () => {
   const MARQUER = { relecture: "annoncer", sansTexte: "marquer" } as const;
 
-  it("la phrase chiffrée reste, marquée ; la note et l'annonce suivent ; le cabinet reçoit la réponse", async () => {
+  it("la phrase chiffrée reste, marquée ; un seul avertissement suit ; le cabinet reçoit la réponse", async () => {
     const r = await poserSansTexte(SANS_TEXTE, MARQUER);
     assert.ok(r.textes.includes(`est en général de 7 % du prix. ${NON_VERIFIE}`), r.textes);
     assert.ok(r.textes.includes("Elle se déclare avec les autres taxes."));
-    assert.ok(r.textes.includes(NOTE_NON_VERIFIE));
+    // Un seul avertissement sous la réponse : il dit d'où vient le chiffre et où part la réponse.
     assert.ok(
-      r.textes.endsWith(A_CONFIRMER),
+      r.textes.endsWith(message("fr", "pme.conseil.aConfirmerNonVerifie")),
       "une question générale au chiffre non vérifié part aussi",
     );
+    assert.ok(!r.textes.includes(NOTE_NON_VERIFIE), "deux avertissements empilés");
     assert.equal(r.fin.mesure.nonVerifies, 1);
     assert.equal(r.fin.chiffresRetires, 0);
     assert.equal(r.file.length, 1);
@@ -1815,7 +1816,7 @@ describe("l'annonce d'un outil ne part pas à l'écran", () => {
     assert.equal(r.fin.mesure.annoncesTues, 1);
   });
 
-  it("deux paragraphes avant une lecture : ce n'est plus une annonce, ils restent", async () => {
+  it("ce qui est écrit avant une lecture n'est pas la réponse, quelle qu'en soit la longueur", async () => {
     const r = await jouer([
       {
         texte: "Votre question porte sur vos pièces.\n\nJe vérifie leur état.",
@@ -1823,24 +1824,17 @@ describe("l'annonce d'un outil ne part pas à l'écran", () => {
       },
       { texte: REPONSE },
     ]);
-    assert.ok(r.ecran.includes("Votre question porte sur vos pièces."));
-    assert.ok(r.ecran.includes(REPONSE));
-    assert.equal(r.fin.mesure.annoncesTues, 0);
+    assert.equal(r.fin.reponse.trim(), REPONSE);
   });
 
-  it("après une première lecture, ce que Malica écrit avant la suivante reste", async () => {
+  it("une réponse écrite, puis une autre lecture, puis la même réponse : elle ne se lit qu'une fois", async () => {
     const r = await jouer([
       { texte: "Je regarde.", outils: [{ nom: "pieces_chercher", entree: {} }] },
-      {
-        texte: "Vos pièces sont à jour.",
-        outils: [{ nom: "pieces_chercher", entree: {} }],
-      },
+      { texte: REPONSE, outils: [{ nom: "tiers_chercher", entree: {} }] },
       { texte: REPONSE },
     ]);
-    assert.ok(r.ecran.includes("Vos pièces sont à jour."));
-    assert.ok(r.ecran.includes(REPONSE));
-    assert.ok(!r.ecran.includes("Je regarde."));
-    assert.equal(r.fin.mesure.annoncesTues, 1);
+    assert.equal(r.fin.reponse.trim(), REPONSE);
+    assert.ok(!JSON.stringify(r.range).includes(`${REPONSE}\n\n${REPONSE}`));
   });
 });
 

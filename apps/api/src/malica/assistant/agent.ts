@@ -692,17 +692,19 @@ async function converser(
      * souvent une phrase pour lui-même (« Je regarde d'abord ce que disent les
      * textes », parfois en anglais, parfois « ce message vient de l'interface »
      * — relevé à l'écran sur staging le 11 novembre 2026). L'écran dit déjà
-     * l'étape en cours, dans la langue de la personne. Tant qu'aucun outil
-     * n'a encore rien rendu, le premier paragraphe d'un tour attend donc de
-     * savoir ce qui le suit : une lecture, et il tombe ; un second paragraphe,
-     * un visuel, une conclusion ou la fin du tour, et il part tel quel, jugé
-     * par la garde comme le reste. Une réponse n'y perd que l'attente de son
-     * premier paragraphe. Dès qu'un outil a répondu, plus rien n'attend : ce
-     * que Malica écrit alors peut être un début de réponse, et le perdre
-     * serait pire que de laisser passer une annonce.
+     * l'étape en cours, dans la langue de la personne. Le premier paragraphe
+     * d'un tour attend donc de savoir ce qui le suit : une lecture, et il
+     * tombe ; un second paragraphe, une conclusion ou la fin du tour, et il
+     * part tel quel, jugé par la garde comme le reste. Une réponse n'y perd
+     * que l'attente de son premier paragraphe. Et si le modèle demande une
+     * lecture après avoir écrit davantage, tout le tour s'oublie
+     * (`oublierLeTour`) : la réponse est ce qu'il écrit quand il a fini de lire.
      */
-    let preambule: { texte: string; citations: CitationRecue[]; close: boolean } | null =
-      outilsAppeles.length === 0 ? { texte: "", citations: [], close: false } : null;
+    let preambule: { texte: string; citations: CitationRecue[]; close: boolean } | null = {
+      texte: "",
+      citations: [],
+      close: false,
+    };
     const liberer = (): void => {
       if (!preambule) return;
       const tenue = preambule;
@@ -840,6 +842,9 @@ async function converser(
       name: string;
       input: unknown;
     }>;
+    // Le modèle demande une lecture : ce qu'il a écrit dans ce tour n'était pas
+    // sa réponse. On l'oublie avant de poser quoi que ce soit d'autre.
+    if (appels.some((a) => !SUITES_D_UNE_REPONSE.has(a.name))) garde.oublierLeTour();
     const resultats: unknown[] = [];
     let conclusionIllisible = false;
     for (const appel of appels) {
@@ -1092,12 +1097,19 @@ async function converser(
    * qui n'a pas eu lieu : elle dit de la faire confirmer.
    */
   let annonce: string | null = null;
-  if (nonVerifie && !retenue) ajouts.push(message(q.locale, "pme.assistant.nonVerifieNote"));
+  // La note du « non vérifié » ne se pose que si la réponse ne part pas chez la
+  // comptabilité : sinon l'annonce de l'envoi la porte, en une seule phrase
+  // (le correcteur relevait trois avertissements empilés sous une même réponse).
+  let noteNonVerifie = nonVerifie && !retenue;
   // Ce qui vient d'internet se dit : la personne sait d'où vient ce qu'elle lit.
   if (garde.citeInternet() && !retenue) ajouts.push(message(q.locale, "pme.assistant.webNote"));
   if (aRelire && !retenue) {
     annonce = await deposerAuCabinet().then(
-      () => message(q.locale, "pme.conseil.aConfirmer"),
+      () => {
+        if (!nonVerifie) return message(q.locale, "pme.conseil.aConfirmer");
+        noteNonVerifie = false;
+        return message(q.locale, "pme.conseil.aConfirmerNonVerifie");
+      },
       () => message(q.locale, "pme.conseil.aConfirmerSansEnvoi"),
     );
   } else if (
@@ -1128,6 +1140,7 @@ async function converser(
     reponse = message(q.locale, "pme.conseil.relecture");
     montrer(reponse);
   } else {
+    if (noteNonVerifie) ajouts.push(message(q.locale, "pme.assistant.nonVerifieNote"));
     if (annonce) ajouts.push(annonce);
     reponse = [dite, ...ajouts].filter(Boolean).join("\n\n");
     if (enAttente) {
