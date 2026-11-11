@@ -15,11 +15,22 @@
  */
 export const JOUR_D_ESSAI = jourDEssai(0);
 
-/** Un jour relatif au jour d'essai : `jourDEssai(-1)` est la veille. */
+/**
+ * Un jour relatif au jour d'essai : `jourDEssai(-1)` est la veille.
+ *
+ * Le jour d'essai ne tombe jamais sur un bord de mois : ramené entre le 2 et le
+ * 27, il a toujours sa veille et son lendemain dans le même mois. Deux épreuves
+ * l'ont appris : le 11 novembre 2026, dix jours avant tombait le 1er, la pièce
+ * « reçue la veille » l'était en octobre et la réserve devenait une anomalie ; et
+ * du 11 au 30 novembre, la fin du mois de la facture (le 30) était dans le futur,
+ * donc un règlement daté de ce jour était refusé (`paiement.date_future`).
+ */
 export function jourDEssai(decalageEnJours: number): string {
   const d = new Date();
   d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() - 10 + decalageEnJours);
+  d.setUTCDate(d.getUTCDate() - 10);
+  d.setUTCDate(Math.min(Math.max(d.getUTCDate(), 2), 27));
+  d.setUTCDate(d.getUTCDate() + decalageEnJours);
   return d.toISOString().slice(0, 10);
 }
 
