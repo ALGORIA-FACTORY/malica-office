@@ -1,3 +1,12 @@
+/**
+ * Les épreuves de la saisie d'un montant — lire ce qu'une personne tape, sans deviner.
+ *
+ * Garantissent que la saisie accepte les espaces de milliers de toute sorte, la virgule
+ * décimale et les chiffres arabes, rend la chaîne exacte du Socle, et refuse ce qui est
+ * ambigu (virgule et point mêlés) ou n'est pas un montant. Elles garantissent aussi que
+ * le refus a une raison dite à l'écran (trop précis pour la devise, négatif, illisible)
+ * au lieu d'un bouton grisé sans explication.
+ */
 import { describe, expect, it } from "vitest";
 
 import { refusDeSaisie, saisieDecimale } from "../saisie-decimale.ts";

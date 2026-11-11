@@ -1,3 +1,13 @@
+/*
+ * La feuille de base — Edition One, le langage visuel commun à tous les écrans.
+ *
+ * Jetons de couleur clairs et sombres (papier, encre, pierre), coins nets, aucune ombre portée,
+ * Inter et IBM Plex Mono, le Kufi pour l'arabe, les polices de repli aux mesures d'Inter. Le
+ * sens de lecture est un jeton signé (`--sens`) : les mouvements se retournent en arabe sans
+ * règle dupliquée. Les animations s'arrêtent pour qui demande moins de mouvement. La forme de
+ * l'aperçu d'une pièce, partagée par la PME et le cabinet, est écrite ici.
+ * Les feuilles de la PME et du cabinet viennent avec leurs écrans, pas par ce fichier.
+ */
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";

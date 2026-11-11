@@ -1,3 +1,10 @@
+/**
+ * La pile des superpositions — feuilles et fenêtres que le retour ferme une à une.
+ *
+ * Garantit que le retour ferme la dernière superposition ouverte, puis la précédente,
+ * puis ne ferme plus rien, et qu'une superposition fermée par son propre bouton quitte
+ * la pile. Retirer ce qui est déjà parti ne casse rien.
+ */
 import { describe, expect, it } from "vitest";
 
 import {

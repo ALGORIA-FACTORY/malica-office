@@ -1,4 +1,12 @@
 // @vitest-environment jsdom
+/**
+ * Le pied de « Ce que j'ai lu, ligne par ligne » nomme les montants non lus.
+ *
+ * Le 10 novembre 2026, sur une facture manuscrite, l'écran accusait « un total
+ * qui ne ferme pas » alors que la TVA et le total n'avaient pas été lus (#344).
+ * Ces épreuves tiennent la différence : un montant non lu se nomme et mène à sa
+ * zone ; seul un total lu qui ne ferme pas garde l'ancien message.
+ */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

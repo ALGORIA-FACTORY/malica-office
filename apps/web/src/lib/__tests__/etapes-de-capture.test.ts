@@ -1,3 +1,10 @@
+/**
+ * Les étapes de la capture — celles qui sont comptées en tête de l'écran.
+ *
+ * Garantit le nombre d'étapes montré selon le cas : huit quand tout se pose pour la
+ * société, deux de moins sans questions ni dates, et seulement « Pour qui ? » puis la
+ * fin quand la pièce est pour soi. Le compteur ne promet pas une étape qui n'existe pas.
+ */
 import { describe, expect, it } from "vitest";
 
 import { etapesVisibles } from "@/lib/etapes-de-capture";

@@ -1,3 +1,11 @@
+/**
+ * Le contexte du cabinet — le cabinet ouvert, et la colonne de droite où Malica parle.
+ *
+ * Tous les écrans du cabinet y lisent leur organisation (`useCabinet`) ; chacun déclare
+ * par `useMalicaPanel` la parole de Malica affichée dans la colonne de droite, retirée au
+ * démontage de l'écran pour qu'un panneau ne survive pas à sa page. Le fournisseur rend
+ * lui-même la coque autour (`render`) : le contexte ne dessine rien de son propre chef.
+ */
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import type { Organization } from "@malica/socle/ports/repositories";

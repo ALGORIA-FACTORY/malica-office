@@ -1,3 +1,12 @@
+/**
+ * Les épreuves de la répartition au plus fort reste — répartir sans perdre un millime.
+ *
+ * `repartir` ventile un montant entre des poids (par exemple la TVA d'un achat ventilé
+ * sur plusieurs charges). Ces épreuves garantissent que la somme des parts vaut toujours
+ * le montant, qu'aucune part n'est négative, que le reliquat va à la part au plus fort
+ * reste et non à la dernière ligne, et que montant négatif ou poids tous nuls sont
+ * refusés.
+ */
 import { describe, expect, it } from "vitest";
 
 import { repartir } from "../domain/decimal.ts";

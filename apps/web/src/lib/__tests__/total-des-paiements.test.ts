@@ -1,3 +1,11 @@
+/**
+ * Le total des paiements d'une pièce — exact, ou inconnu, jamais un zéro inventé.
+ *
+ * Garantit que le zéro d'une facture non payée ou d'une liste sans règlement est
+ * conservé, que les annulations et le constat « non payé » ne comptent pas, qu'un
+ * règlement incomplet, non entier ou hors précision rend inconnu, et qu'une retenue
+ * qualifiée solde la dette sans gonfler le paiement bancaire.
+ */
 import { describe, expect, it } from "vitest";
 
 import type { PaiementDUnePiece } from "@malica/socle/ports/repositories";

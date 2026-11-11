@@ -1,3 +1,10 @@
+/**
+ * Un bloc de réponse de Malica, mis à plat pour l'impression et l'export.
+ *
+ * Chaque forme (chiffre clé, tableau, graphique, cascade, carte) devient des
+ * lignes et un total, dans l'ordre que le serveur a composé : ce qui sort sur
+ * papier dit exactement ce que la bulle montrait, sans rien recalculer (R3).
+ */
 import { describe, expect, it } from "vitest";
 
 import type { BlocDeReponse } from "@malica/socle/ports/assistant";

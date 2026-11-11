@@ -1,3 +1,12 @@
+/**
+ * La fiche d'un reçu ou d'un justificatif — la pièce qui accompagne une facture.
+ *
+ * Garantit pour chaque cas (valide, périmé par un règlement annulé, ancien sans lien,
+ * justificatif joint, périmé ou seul) le ton, l'état, les gestes permis et les phrases
+ * de suppression. Il garantit aussi que le total attesté ne somme pas un inconnu, que
+ * reprendre la photo d'une pièce transmise est refusé avant d'ouvrir l'appareil, et que
+ * la clé d'un reçu ne dépend que de la facture et des règlements, de longueur fixe.
+ */
 import { describe, expect, it } from "vitest";
 
 import type { PieceQuiAccompagne, ReglementAccompagne } from "@malica/socle/ports/repositories";

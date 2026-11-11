@@ -1,3 +1,10 @@
+/**
+ * Les messages arabes de la bibliothèque et de la retenue — le même écran, en arabe.
+ *
+ * Traduction des clés `cab.retenue.*` et `cab.biblio.*` du cabinet : le type
+ * `MessagesDeLaBibliotheque` exige exactement les clés du français, donc une clé
+ * oubliée ici ne compile pas. Fusionné dans le dictionnaire arabe (`messages-ar`).
+ */
 import type { MessagesDeLaBibliotheque } from "./messages-bibliotheque.ts";
 
 export const arBibliotheque: MessagesDeLaBibliotheque = {

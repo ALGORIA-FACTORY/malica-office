@@ -1,3 +1,15 @@
+/**
+ * Mon espace — ce que le dirigeant garde pour lui, invisible à la comptabilité mandatée.
+ *
+ * Écran de la PME : une grille de miniatures rangées par mois et par rayon, un compte des
+ * papiers, et deux gestes sur ceux qu'on choisit : « Mettre dans la société » ou
+ * « Supprimer ». Mettre dans la société verse le papier à la bibliothèque de la société ;
+ * rien ne part chez le cabinet, et l'écran suivant le dit. La transmission au comptable est
+ * une décision séparée, jamais un effet de bord.
+ *
+ * Le mur est tenu par la base : seules les pièces personnelles de leur auteur paraissent
+ * ici (RLS). « Supprimer » n'est offert que si chaque papier choisi se supprime.
+ */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useRef, useState } from "react";

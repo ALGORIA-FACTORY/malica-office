@@ -1,3 +1,15 @@
+/**
+ * Le choix d'un espace — la porte d'entrée après la connexion.
+ *
+ * Écran commun aux PME et aux cabinets : la personne y voit ses organisations (société ou
+ * cabinet), leurs établissements et le référentiel fiscal en vigueur, et choisit où entrer.
+ * Quand un seul espace existe, on y entre directement, sans passer par cet écran ; dans la
+ * coque mobile, on va toujours à l'espace du dirigeant.
+ *
+ * La carte de la tour de contrôle n'apparaît qu'aux opérateurs de la plateforme : elle suit
+ * la même lecture que la tour elle-même (`tour.suisJePlateforme`). Les données viennent de
+ * `identity.listMyOrganizations` et de la supervision du cabinet.
+ */
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 

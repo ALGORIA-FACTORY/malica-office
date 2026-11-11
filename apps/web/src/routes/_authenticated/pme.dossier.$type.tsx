@@ -1,3 +1,16 @@
+/**
+ * Un dossier ouvert — la liste des pièces d'un des sept dossiers de la société.
+ *
+ * Écran de la PME : on y arrive en touchant la pochette d'un dossier sur l'accueil. Il
+ * montre toutes les pièces du dossier, rangées par société et par siège quand l'abonnement
+ * les ouvre, puis par mois (ou par année pour un dossier annuel) ; la période la plus
+ * récente est déroulée. Chaque ligne porte un aperçu et un état : un mot et une couleur,
+ * jamais une écriture comptable.
+ *
+ * Les pièces viennent de la lecture déjà faite par l'accueil (`capture.listAvecLecture`) :
+ * ouvrir un dossier ne coûte aucune requête de plus. Une pièce privée n'y figure pas.
+ * La société montrée est celle choisie dans l'en-tête.
+ */
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Fragment, useEffect, useState } from "react";
 

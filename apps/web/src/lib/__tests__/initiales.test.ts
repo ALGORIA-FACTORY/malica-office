@@ -1,3 +1,10 @@
+/**
+ * Les initiales d'une personne — pour sa pastille, sans jamais rien rendre de vide.
+ *
+ * Garantit les initiales tirées d'une adresse e-mail, d'un mot seul ou d'un nom complet,
+ * et le tiret « — » quand il n'y a rien à lire, pour que la pastille ne reste jamais
+ * vide.
+ */
 import { describe, expect, it } from "vitest";
 
 import { initialesDe } from "../initiales";

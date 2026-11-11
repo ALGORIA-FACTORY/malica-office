@@ -1,3 +1,11 @@
+/**
+ * Le moyen de paiement, côté cabinet — l'adresse qui ouvre le choix pour régler une facture.
+ *
+ * Route fine : elle ne porte que l'adresse et les titres de page, et charge à la demande
+ * le composant `PayerEnLigneCabinet`, qui partage sa logique avec l'écran de la société.
+ * Payer, c'est vendre : dans l'application Android (`COMMERCE` faux), la route renvoie au
+ * cabinet et le composant n'entre même pas dans le paquet.
+ */
 import { createFileRoute, lazyRouteComponent, redirect } from "@tanstack/react-router";
 
 import { COMMERCE } from "@/capabilities/coque";

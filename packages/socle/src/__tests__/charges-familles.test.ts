@@ -1,3 +1,14 @@
+/**
+ * Les épreuves des charges par famille — le total, les parts et l'écart qui mérite l'œil.
+ *
+ * Le moteur range les articles des factures par famille de charges et signale une
+ * famille dont le mois s'écarte de sa médiane des mois de référence. Ces épreuves
+ * garantissent que les parts sont exactes, que le montant se retrouve par quantité ×
+ * prix quand le total manque, et que l'alerte obéit au seuil du pack (écart, montant
+ * plancher, nombre de périodes de référence) : sans assez d'historique ou sous le
+ * plancher, rien n'est signalé, pour ne pas inquiéter le dirigeant à tort (R4 : le
+ * seuil est une donnée de paramétrage, jamais une constante du code).
+ */
 import { describe, it, expect } from "vitest";
 import {
   computeChargesByFamille,

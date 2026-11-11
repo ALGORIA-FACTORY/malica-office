@@ -1,3 +1,8 @@
+-- Preuve 03 — le bogue de suppression d'une pièce, avant et après le correctif.
+--
+-- Une pièce personnelle avec un règlement : AVANT, le garde strict du dépôt refuse de la
+-- supprimer ; APRÈS, avec le garde corrigé, la suppression réussit. Chaque essai tourne dans
+-- une transaction annulée, avec le rôle `authenticated`, comme l'application.
 \set ON_ERROR_STOP on
 \echo '=== LE BOGUE DE SUPPRESSION : AVANT / APRES ==='
 do $$

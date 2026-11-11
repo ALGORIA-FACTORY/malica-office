@@ -1,3 +1,10 @@
+/**
+ * L'étape montrée pendant la lecture d'une pièce — une par tranche de quatre secondes.
+ *
+ * Garantit que l'écran commence par le fournisseur, avance toutes les quatre secondes,
+ * tient la dernière étape jusqu'à la fin, et retombe sur la première sans date lisible
+ * ou avec une horloge en retard. L'attente ne montre jamais une étape inexistante.
+ */
 import { describe, expect, it } from "vitest";
 
 import { etapeMontree } from "@/lib/pendant-la-lecture";

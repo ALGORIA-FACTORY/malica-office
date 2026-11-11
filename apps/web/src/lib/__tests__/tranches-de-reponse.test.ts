@@ -1,3 +1,11 @@
+/**
+ * Où un bloc se pose dans le texte d'une réponse de Malica.
+ *
+ * Le modèle désigne la place d'un bloc pendant qu'il écrit ; l'écran coupe la
+ * réponse en tranches autour de ces places. Ces épreuves tiennent qu'aucun
+ * paragraphe n'est coupé en deux et qu'un bloc pas encore placé attend la fin
+ * du texte reçu, y compris pendant le flux.
+ */
 import { describe, expect, it } from "vitest";
 
 import type { BlocDeReponse } from "@malica/socle/ports/assistant";

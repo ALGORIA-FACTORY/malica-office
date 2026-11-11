@@ -1,3 +1,10 @@
+/**
+ * Le démarrage de l'application — l'intergiciel qui transforme une panne en page lisible.
+ *
+ * Toute erreur d'une requête, sauf celles qui portent déjà un code HTTP, devient la page
+ * d'erreur avec sa référence, inscrite aussi au journal. Plus aucune fonction serveur ici :
+ * les appels au modèle vivent dans l'API, sous `/malica`.
+ */
 import { createStart, createMiddleware } from "@tanstack/react-start";
 
 import { referenceDePanne, renderErrorPage } from "./lib/error-page";

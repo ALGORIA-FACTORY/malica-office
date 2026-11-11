@@ -1,3 +1,19 @@
+/**
+ * Les épreuves du moteur d'écriture — la pièce lue devient une écriture, ou elle est refusée.
+ *
+ * `computePivot` transforme une pièce lue en écriture équilibrée et lui donne un feu
+ * (VERT, ORANGE, ROUGE). Ces épreuves figent ce que le comptable doit pouvoir croire :
+ * une pièce équilibrée passe, une pièce déséquilibrée est ROUGE et non approuvable
+ * quel que soit le rôle de l'approbateur, une date sans taux applicable est refusée
+ * avec son motif, et aucun montant n'est jamais un nombre flottant (R3 : le chiffre
+ * sort d'un moteur déterministe).
+ *
+ * Elles couvrent aussi les cas fiscaux où une erreur serait plausible et invisible :
+ * la base sans TVA (régime d'export) qui garde son code, et les droits hors TVA
+ * (timbre, FODEC) qui équilibrent la contrepartie, entrent ou non dans la base de la
+ * TVA selon le référentiel, et bloquent l'inscription quand le pack n'a pas de compte
+ * pour eux, plutôt que d'inventer un montant.
+ */
 import { describe, it, expect } from "vitest";
 import { computePivot } from "../engines/p4/balance.ts";
 import { canApprove } from "../engines/p4/traffic-light.ts";

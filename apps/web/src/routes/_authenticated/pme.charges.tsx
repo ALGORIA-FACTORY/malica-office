@@ -1,3 +1,16 @@
+/**
+ * Vos charges — les charges de la période regroupées par famille, écarts signalés.
+ *
+ * Écran de la PME : une famille de charges, son total du mois, sa part, et un signal quand
+ * le mois s'écarte de la moyenne des mois précédents de l'exercice. Toucher une famille
+ * ouvre ses articles. Malica y pose aussi ses questions, avec deux réponses possibles, et
+ * garde la dernière réponse de chaque question et son auteur.
+ *
+ * Les familles, articles, seuil d'écart et questions viennent de la base (`charges.*`,
+ * `referential.socleParams`) ; le regroupement est fait par le moteur du Socle
+ * (`computeChargesByFamille`), pas ici (R3). Les cartes de l'offre supérieure restent
+ * visibles : un produit qui cache ce qu'il vend ne le vend pas.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";

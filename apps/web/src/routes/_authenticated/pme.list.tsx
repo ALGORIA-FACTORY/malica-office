@@ -1,3 +1,15 @@
+/**
+ * La bibliothèque — tout ce que la société a rangé, en cartes.
+ *
+ * Écran de la PME : de haut en bas, les sept dossiers en miniatures, les organisations et
+ * les sièges quand l'abonnement les ouvre, puis les mois, le plus récent devant. Toucher
+ * une carte montre toutes ses pièces ; le retour revient aux cartes. Un bouton transmet d'un
+ * geste au cabinet ce qui est resté chez la société : jamais l'espace privé, jamais une pièce
+ * que le dirigeant a décidé de garder.
+ *
+ * Les pièces viennent de la lecture déjà faite par l'accueil (`capture.listAvecLecture`) :
+ * aucune requête de plus. Une pièce privée n'y figure pas.
+ */
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";

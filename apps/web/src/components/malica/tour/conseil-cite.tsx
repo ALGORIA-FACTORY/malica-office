@@ -1,3 +1,12 @@
+/**
+ * Les réglages du conseil cité — la consigne et le choix des modèles (écran de la tour).
+ *
+ * Écran de l'opérateur ALGORIA, deux cartes : la consigne que Claude reçoit avant les
+ * passages du corpus, versionnée en base (publier crée une version datée et motivée, la
+ * précédente reste lisible), et le réglage des modèles avec la règle simple qui sépare les
+ * questions courantes des difficiles. La base refuse un modèle sans tarif en vigueur (R8)
+ * et toute valeur hors bornes. La consigne suit la règle R10 (versionnée en base).
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
