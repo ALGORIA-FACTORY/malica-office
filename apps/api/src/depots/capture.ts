@@ -1,4 +1,4 @@
-import { enUnitesExactes } from "@malica/socle/somme-decimale";
+import { depuisUniteMineure, enUnitesExactes } from "@malica/socle/somme-decimale";
 /**
  * La capture — pièces, plan de tokens, citations, lecture citée.
  *
@@ -26,6 +26,7 @@ import { enUnitesExactes } from "@malica/socle/somme-decimale";
 import { codeDeLecture } from "@malica/socle/issue-de-lecture";
 import { refusAvecValeurs } from "@malica/socle/refus-a-dire";
 import type {
+  CorrectionDeLecture,
   RangementPrive,
   ChampObserve,
   EtatDUnTravail,
@@ -37,6 +38,7 @@ import type {
 
 import type { Requete } from "../db.ts";
 import { analyserPiece, exposantDeLaDevise, lireLesDevises } from "../scan/analyse.ts";
+import { mettreLaValeur, valeurDuChemin } from "../scan/precisions-de-lecture.ts";
 import { lireLesReglagesComptables } from "../scan/reglages-comptables.ts";
 import { effacerContenu } from "../stockage.ts";
 import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
@@ -765,6 +767,8 @@ export const capture = {
       { rows: suivi },
       { rows: circuit },
       { rows: montants },
+      { rows: juge },
+      { rows: exposant },
     ] = await Promise.all([
       db.query(
         `select id, contract, payload, flags, created_at
@@ -778,8 +782,14 @@ export const capture = {
         [pieceId],
       ),
       // La dernière précision par champ : ce que la personne a tranché.
+      // Les champs de la lecture (montants du pied, lignes) portent en plus qui
+      // a saisi et quand : le cabinet voit la valeur lue, la valeur saisie,
+      // l'auteur. `app.auteur_d_une_precision` ne rend le nom qu'à qui lit la pièce.
       db.query(
-        `select distinct on (champ) champ, valeur
+        `select distinct on (champ) champ, valeur, decided_at,
+                app.est_un_champ_de_lecture(champ) as de_lecture,
+                case when app.est_un_champ_de_lecture(champ)
+                     then app.auteur_d_une_precision(id) end as par
            from precisions_v where piece_id = $1 order by champ, decided_at desc`,
         [pieceId],
       ),
@@ -792,6 +802,29 @@ export const capture = {
       db.query(`select ${COLONNES_DU_CIRCUIT} from app.circuit_de_la_piece($1) c`, [pieceId]),
       // Forcée, ses montants sont ceux du cabinet ; validée, ceux de la lecture.
       db.query(`select app.montants_pris_en_charge($1) as m`, [pieceId]),
+      // Ce que le dernier jugement de la dernière lecture a VÉRIFIÉ : un champ
+      // que l'arithmétique prouve se dit « prouvé par le calcul », pas « lu ».
+      db.query(
+        `select a.normalisation ->> 'etat' as etat, a.normalisation -> 'fermes' as fermes
+           from capture.analyses a
+           join lateral (select id from capture.extractions x
+                          where x.piece_id = a.piece_id order by x.created_at desc limit 1) e
+             on e.id = a.extraction_id
+          where a.piece_id = $1
+          order by a.created_at desc limit 1`,
+        [pieceId],
+      ),
+      // Les décimales de la devise de la pièce, au référentiel : celles de la saisie.
+      db.query(
+        `select d.exposant
+           from capture.pieces p
+           join identity.organizations o on o.id = p.tenant_id
+           left join lateral (select x.payload ->> 'currency' as devise from capture.extractions x
+                               where x.piece_id = p.id order by x.created_at desc limit 1) x on true
+           join ref.devises d on d.code = coalesce(nullif(upper(x.devise), ''), o.currency)
+          where p.id = $1`,
+        [pieceId],
+      ),
     ]);
 
     const extraction = (ex as Record<string, unknown>[])[0];
@@ -806,6 +839,16 @@ export const capture = {
      * comme dans le jugement (`scan/analyse.ts`). L'écran, la proposition
      * d'écriture et la liste voient le même type ; la base garde les deux.
      */
+    const brutLu = extraction?.["payload"];
+    const corrections: CorrectionDeLecture[] = (prec as Record<string, unknown>[])
+      .filter((r) => r["de_lecture"] === true)
+      .map((r) => ({
+        champ: r["champ"] as string,
+        valeur: r["valeur"] as string,
+        lue: valeurDuChemin(brutLu, r["champ"] as string),
+        par: (r["par"] as string | null) ?? null,
+        le: new Date(r["decided_at"] as string).toISOString(),
+      }));
     const payloadRendu = (() => {
       const brutPayload = extraction?.["payload"];
       if (!brutPayload || typeof brutPayload !== "object") return brutPayload;
@@ -824,6 +867,9 @@ export const capture = {
       // lu, comme le type : la personne a la pièce sous les yeux, la lecture
       // a pu prendre un logo pour un nom (« MITEK » pour « MyTek »).
       if (precisions["issuer"]) p["issuer"] = precisions["issuer"];
+      // Ce que la personne a corrigé sur la facture (10 novembre 2026) : le
+      // pied porte la valeur retenue ; la valeur lue reste dans `corrections`.
+      for (const c of corrections) mettreLaValeur(p, c.champ, c.valeur);
       return p;
     })();
     return {
@@ -838,6 +884,16 @@ export const capture = {
           }
         : null,
       precisions,
+      corrections,
+      prouves:
+        (juge as Record<string, unknown>[])[0]?.["etat"] === "tranche" &&
+        Array.isArray((juge as Record<string, unknown>[])[0]?.["fermes"])
+          ? ((juge as Record<string, unknown>[])[0]!["fermes"] as string[])
+          : [],
+      decimalesDeLaPiece:
+        (exposant as Record<string, unknown>[])[0]?.["exposant"] === undefined
+          ? null
+          : Number((exposant as Record<string, unknown>[])[0]!["exposant"]),
       suivi: suivi[0] ? versSuivi(suivi[0] as Record<string, unknown>) : null,
       circuit: circuit[0] ? versCircuit(circuit[0] as Record<string, unknown>) : null,
       montantsDuCabinet: versMontantsDuCabinet((montants as Record<string, unknown>[])[0]?.["m"]),
@@ -1160,6 +1216,98 @@ export const capture = {
     const p = (rows as Array<{ p: { id: string | null; champ: string; valeur: string } }>)[0]?.p;
     if (!p) throw new Error("precision.non_enregistree");
     return { id: p.id, champ: p.champ, valeur: p.valeur };
+  },
+
+  /**
+   * Corriger une composante de la facture lue — le crayon (10 novembre 2026).
+   *
+   * Trois temps, dans l'ordre : la précision s'inscrit (R7, la porte borne la
+   * saisie), la pièce est rejugée, et le jugement REVIENT. Le message que la
+   * personne lit — « la facture tombe juste » ou « pas encore » — est tiré de
+   * ce jugement : la saisie est une hypothèse (R3), le moteur déterministe
+   * tranche, l'écran répète.
+   */
+  async corrigerLeChamp(db: Requete, pieceId: string, champ: string, valeur: string) {
+    const p = await capture.preciser(db, pieceId, champ, valeur);
+    const j = await analyserPiece(db, pieceId);
+    const n = j.normalisation;
+    const exposant = n.devise ? await exposantDeLaDevise(db, n.devise) : null;
+    const enDecimales = (v: number | null) =>
+      v === null || exposant === null ? null : depuisUniteMineure(v, exposant);
+    const bases = n.montants.bases.map((b) => b.ht);
+    const montants =
+      exposant === null || n.etat !== "tranche"
+        ? null
+        : {
+            baseHt: bases.some((b) => b === null)
+              ? null
+              : enDecimales(bases.reduce<number>((a, b) => a + (b ?? 0), 0)),
+            tva: enDecimales(n.montants.tva),
+            droits: n.montants.autres.map(enDecimales),
+            ttc: enDecimales(n.montants.ttc),
+          };
+    const ferme = n.etat === "tranche";
+    return {
+      id: p.id,
+      champ: p.champ,
+      valeur: p.valeur,
+      jugement: {
+        ferme,
+        etat: n.etat,
+        devise: n.devise,
+        montants,
+        // Le moteur dit que ça ne ferme pas ; il ne dit pas lequel des
+        // montants est faux. On désigne celui qu'on vient de toucher, et le
+        // total quand le moteur l'a écarté.
+        aVerifier: ferme ? [] : [...new Set([p.champ, ...(n.totalNonLu ? ["totals.ttc"] : [])])],
+      },
+    };
+  },
+
+  /**
+   * Les codes de TVA qu'une ligne peut porter, au référentiel à la date de la
+   * pièce : la date lue, à défaut celle que la personne a donnée, à défaut la
+   * réception (même règle que le jugement). Le pack, puis ses libellés
+   * traduits ; aucun taux n'est écrit ici (R4).
+   */
+  async codesDeTva(db: Requete, pieceId: string, locale: string) {
+    const { rows: pieces } = await db.query<{
+      jurisdiction: string;
+      recue_le: string;
+      lue: string | null;
+      dite: string | null;
+    }>(
+      `select o.jurisdiction, to_char(v.recue_le, 'YYYY-MM-DD') as recue_le,
+              (select x.payload ->> 'document_date' from capture.extractions x
+                where x.piece_id = p.id order by x.created_at desc limit 1) as lue,
+              (select q.valeur from capture.precisions q
+                where q.piece_id = p.id and q.champ = 'document_date'
+                order by q.decided_at desc limit 1) as dite
+         from capture.pieces p
+         join pieces_v v on v.id = p.id
+         join identity.organizations o on o.id = p.tenant_id
+        where p.id = $1`,
+      [pieceId],
+    );
+    const piece = pieces[0];
+    if (!piece) throw new Error("piece.not_found");
+    const jour = dateDeLaPiece(piece.lue, piece.dite) ?? piece.recue_le;
+    const { rows } = await db.query<{ code: string; label: string; taux: string }>(
+      `select distinct on (t.code) t.code, t.rate::text as taux,
+              coalesce(demandee.value, francais.value, t.label) as label
+         from ref.tva_rates t
+         left join ref_labels_v demandee
+           on demandee.ns = 'tva_rate' and demandee.key = t.code and demandee.locale = $3
+         left join ref_labels_v francais
+           on francais.ns = 'tva_rate' and francais.key = t.code and francais.locale = 'fr'
+        where t.pack_version_id = (select j.id from ref.jurisdiction_packs j
+                                    where j.jurisdiction = $1 and j.effective_from <= $2::date
+                                    order by j.effective_from desc limit 1)
+          and t.valid_from <= $2::date and (t.valid_to is null or t.valid_to >= $2::date)
+        order by t.code, t.valid_from desc`,
+      [piece.jurisdiction, jour, locale],
+    );
+    return rows;
   },
 
   /**

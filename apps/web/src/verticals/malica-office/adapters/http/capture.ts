@@ -36,7 +36,7 @@ import type {
   PieceQuiAccompagne,
   RetourDuCabinet,
 } from "@malica/socle/ports/repositories";
-import type { SuiviDeTrace } from "@malica/socle/ports/repositories";
+import type { CorrectionDeLecture, SuiviDeTrace } from "@malica/socle/ports/repositories";
 import type { CircuitInterne, SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
 import { entetesDuSuivi, suiviDesArguments } from "@/lib/parcours/traces";
 import { transport } from "@/lib/transport";
@@ -238,6 +238,9 @@ export function creerCaptureHttp(): CaptureRepository {
         piece: Record<string, unknown>;
         extraction: Extraction | null;
         precisions?: Record<string, string>;
+        corrections?: CorrectionDeLecture[];
+        prouves?: string[];
+        decimalesDeLaPiece?: number | null;
         lectureRefusee?: { motif: string; le: string } | null;
         suivi?: SuiviDEnvoi | null;
         circuit?: CircuitInterne | null;
@@ -259,6 +262,9 @@ export function creerCaptureHttp(): CaptureRepository {
         contenu,
         extraction: brut.extraction,
         precisions: brut.precisions ?? {},
+        corrections: brut.corrections ?? [],
+        prouves: brut.prouves ?? [],
+        decimalesDeLaPiece: brut.decimalesDeLaPiece ?? null,
         lectureRefusee: brut.lectureRefusee ?? null,
         suivi: brut.suivi ?? null,
         circuit: brut.circuit ?? null,
@@ -296,6 +302,20 @@ export function creerCaptureHttp(): CaptureRepository {
         champ: string;
         valeur: string;
       };
+    },
+
+    async corrigerLeChamp(pieceId: string, champ: string, valeur: string) {
+      return (await appeler("capture", "corrigerLeChamp", [
+        pieceId,
+        champ,
+        valeur,
+      ])) as Awaited<ReturnType<CaptureRepository["corrigerLeChamp"]>>;
+    },
+
+    async codesDeTva(pieceId: string, locale: string) {
+      return (await appeler("capture", "codesDeTva", [pieceId, locale])) as Awaited<
+        ReturnType<CaptureRepository["codesDeTva"]>
+      >;
     },
 
     async analyser(pieceId: string): Promise<unknown> {

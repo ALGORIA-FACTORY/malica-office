@@ -628,6 +628,33 @@ export const fr = {
   "pme.detail.nonLuVoir": "Non lu · voir la zone",
   "pme.detail.montantsNonLus":
     "Je n’ai pas su lire tous les montants de cette pièce : {champs}. Ils restent à vérifier sur la pièce.",
+  "pme.crayon.modifier": "Corriger : {champ}",
+  "pme.crayon.titre": "Corriger : {champ}",
+  "pme.crayon.zone": "Zone de la photo",
+  "pme.crayon.sansZone": "Ce champ n’a pas de zone sur la photo.",
+  "pme.crayon.zoneAilleurs": "La photo se lit en entier.",
+  "pme.crayon.voirLaPhoto": "Voir la photo entière",
+  "pme.crayon.lu": "Lu sur la photo : {valeur}",
+  "pme.crayon.luRien": "Rien n’a été lu ici.",
+  "pme.crayon.champ": "Votre valeur ({devise})",
+  "pme.crayon.aide":
+    "On corrige ce que la machine a mal lu ; on ne change pas la facture. Recopiez ce qui est imprimé.",
+  "pme.crayon.enregistrer": "Enregistrer la correction",
+  "pme.crayon.ferme": "Avec votre correction, la facture tombe juste.",
+  "pme.crayon.retenus": "Montants retenus",
+  "pme.crayon.valider": "Valider ces montants",
+  "pme.crayon.neFermePas": "Avec votre correction, le total ne tombe pas encore juste.",
+  "pme.crayon.aVerifier": "À vérifier : {champs}.",
+  "pme.crayon.sansBloquer":
+    "Rien ne vous est bloqué : vous pouvez corriger un autre montant ou continuer.",
+  "pme.crayon.encore": "Corriger un autre montant",
+  "pme.crayon.etat.lu": "Lu",
+  "pme.crayon.etat.prouve": "Prouvé par le calcul",
+  "pme.crayon.etat.saisi": "Saisi par {nom}",
+  "pme.crayon.etat.saisiSans": "Saisi à la main",
+  "pme.crayon.etat.valeurLue": "Lu : {valeur}",
+  "pme.crayon.provenance":
+    "Les montants marqués « Saisi » viennent de la personne, pas de la lecture ; la lecture reste intacte.",
   "pme.detail.provenance":
     "Chaque ligne vient de la pièce elle-même. Je n'ajoute ni ne calcule rien.",
   "pme.lecture.releve": "Relevé · {mots} mots situés",
@@ -2642,6 +2669,12 @@ export const fr = {
   "refus.precision.date_a_venir": "Une date à venir ne se précise pas : {date}.",
   "refus.precision.nom_vide": "Le nom ne peut pas être vide.",
   "refus.precision.nom_trop_long": "Le nom est trop long : {max} caractères au plus.",
+  "refus.precision.montant_illisible":
+    "Ce montant ne se lit pas : écrivez des chiffres et une virgule.",
+  "refus.precision.montant_trop_precis":
+    "Ce montant a trop de décimales : {max} au plus pour cette devise.",
+  "refus.precision.devise_inconnue": "La devise de cette pièce n’est pas connue : {devise}.",
+  "refus.precision.ligne_inconnue": "Cette ligne n’existe pas dans la lecture de la pièce.",
   "refus.precision.champ": "Ce champ ne se précise pas : {champ}.",
   "refus.lecture.citation_orpheline":
     "La lecture cite le champ {champ} à un emplacement où aucun mot n’a été lu.",

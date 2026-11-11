@@ -590,6 +590,32 @@ export const en: Dict = {
   "pme.detail.nonLuVoir": "Not read · see the area",
   "pme.detail.montantsNonLus":
     "I could not read every amount on this document: {champs}. They remain to be checked on the document.",
+  "pme.crayon.modifier": "Correct: {champ}",
+  "pme.crayon.titre": "Correct: {champ}",
+  "pme.crayon.zone": "Area of the photo",
+  "pme.crayon.sansZone": "This field has no area on the photo.",
+  "pme.crayon.zoneAilleurs": "The photo is read as a whole.",
+  "pme.crayon.voirLaPhoto": "See the whole photo",
+  "pme.crayon.lu": "Read on the photo: {valeur}",
+  "pme.crayon.luRien": "Nothing was read here.",
+  "pme.crayon.champ": "Your value ({devise})",
+  "pme.crayon.aide":
+    "We correct what the machine misread; we do not change the invoice. Copy what is printed.",
+  "pme.crayon.enregistrer": "Save the correction",
+  "pme.crayon.ferme": "With your correction, the invoice adds up.",
+  "pme.crayon.retenus": "Amounts kept",
+  "pme.crayon.valider": "Confirm these amounts",
+  "pme.crayon.neFermePas": "With your correction, the total does not add up yet.",
+  "pme.crayon.aVerifier": "To check: {champs}.",
+  "pme.crayon.sansBloquer": "Nothing is blocked: you can correct another amount or carry on.",
+  "pme.crayon.encore": "Correct another amount",
+  "pme.crayon.etat.lu": "Read",
+  "pme.crayon.etat.prouve": "Proven by calculation",
+  "pme.crayon.etat.saisi": "Entered by {nom}",
+  "pme.crayon.etat.saisiSans": "Entered by hand",
+  "pme.crayon.etat.valeurLue": "Read: {valeur}",
+  "pme.crayon.provenance":
+    "Amounts marked “Entered” come from the person, not from the reading; the reading stays intact.",
   "pme.detail.provenance":
     "Every line comes from the document itself. I add nothing, I compute nothing.",
   "pme.lecture.releve": "Noted · {mots} words located",
@@ -2550,6 +2576,12 @@ export const en: Dict = {
   "refus.precision.date_a_venir": "A future date cannot be set: {date}.",
   "refus.precision.nom_vide": "The name cannot be empty.",
   "refus.precision.nom_trop_long": "The name is too long: {max} characters at most.",
+  "refus.precision.montant_illisible":
+    "This amount cannot be read: write digits and a decimal separator.",
+  "refus.precision.montant_trop_precis":
+    "This amount has too many decimals: {max} at most for this currency.",
+  "refus.precision.devise_inconnue": "The currency of this document is not known: {devise}.",
+  "refus.precision.ligne_inconnue": "This line does not exist in the reading of the document.",
   "refus.precision.champ": "This field cannot be specified: {champ}.",
   "refus.lecture.citation_orpheline":
     "The reading cites field {champ} at a place where no word was read.",

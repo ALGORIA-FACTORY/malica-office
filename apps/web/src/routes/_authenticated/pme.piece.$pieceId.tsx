@@ -10,7 +10,9 @@ import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n, type MessageKey } from "@/i18n";
 import { AffichageSignale } from "@/components/malica/affichage-signale";
 import { CommentCEstPaye } from "@/components/malica/comment-c-est-paye";
-import { PiedDeLecture } from "@/components/malica/pied-de-lecture";
+import { FeuilleDeCorrection } from "@/components/malica/feuille-de-correction";
+import { PiedDeLecture, type EtatDuMontant } from "@/components/malica/pied-de-lecture";
+import { ZoneDeLaPhoto } from "@/components/malica/zone-de-la-photo";
 import { QuestionDuType } from "@/components/malica/question-du-type";
 import { NomDeLEmetteur } from "@/components/malica/nom-de-l-emetteur";
 import { usePme } from "@/components/malica/pme-context";
@@ -38,6 +40,7 @@ import { jourEtMois, momentDeLEnvoi, montant, quantite } from "@/lib/lisible";
 import { pieceSuivanteATransmettre } from "@/lib/envoi";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation, EnvoiDUnePiece, GesteDeRetour } from "@malica/socle/ports/repositories";
+import type { JugementDUneCorrection } from "@malica/socle/ports/repositories";
 import { STATUTS_PRECISABLES } from "@malica/socle/statut-de-la-piece";
 import { estIntrouvable, texteDeLErreur } from "@/lib/erreur-lisible";
 import { codeDuVerdict } from "@malica/socle/verdicts";
@@ -611,6 +614,26 @@ function PieceScreen() {
   });
 
   /**
+   * LE CRAYON DE LA FACTURE (10 novembre 2026).
+   *
+   * Un crayon à côté de chaque composante du pied : la feuille du bas montre la
+   * zone de la photo, la personne corrige, et la base inscrit une précision
+   * (R7) puis rejuge la pièce. Le message de la feuille — « la facture tombe
+   * juste » ou « pas encore » — est le jugement rendu, jamais un calcul d'écran.
+   */
+  const [crayon, setCrayon] = useState<{ champ: string; libelle: string } | null>(null);
+  const corrigerUnChamp = useMutation({
+    mutationFn: (v: { champ: string; valeur: string }) =>
+      office().capture.corrigerLeChamp(pieceId, v.champ, v.valeur),
+    onSuccess: async () => {
+      setError(null);
+      // La proposition suit le jugement : sans cela, l'écran garderait celle d'avant.
+      await qc.invalidateQueries({ queryKey: ["proposition", pieceId] });
+      await invalidate();
+    },
+  });
+
+  /**
    * « Envoyer » — un seul geste, deux passages (lot 4) : le siège au
    * propriétaire, le propriétaire au comptable. La base choisit d'après les
    * droits de la personne, jamais d'après l'écran, et rend chez qui c'est parti.
@@ -1028,6 +1051,56 @@ function PieceScreen() {
     duCabinet ? duCabinet.droits : payload?.other_charges,
     packDroits.data ?? [],
   );
+  /*
+   * D'où vient chaque montant du pied — lu, prouvé par le calcul, ou saisi. La
+   * lecture a ce que le moteur a vérifié (`prouves`) ; la précision a qui a
+   * saisi, et ce qui avait été lu. Une saisie ne passe jamais pour une lecture.
+   */
+  const corrections = new Map(dossier.data.corrections.map((c) => [c.champ, c]));
+  const prouves = new Set(dossier.data.prouves);
+  const decimalesDeLaPiece = dossier.data.decimalesDeLaPiece;
+  const etatDuChamp = (champ: string, equivalents: string[] = []): EtatDuMontant => {
+    const c = corrections.get(champ);
+    if (c) return { genre: "saisi", par: c.par, lue: lisible(c.lue) };
+    return [champ, ...equivalents].some((x) => prouves.has(x))
+      ? { genre: "prouve" }
+      : { genre: "lu" };
+  };
+  /** Ce que la lecture avait lu à ce champ : la valeur retenue si personne n'y a touché. */
+  const valeurLueDe = (champ: string): string | null => {
+    const c = corrections.get(champ);
+    if (c) return c.lue;
+    const droit = /^other_charges\[(\d+)\]\.amount$/.exec(champ);
+    if (droit) return droits[Number(droit[1])]?.montant ?? null;
+    return champ === "totals.base_ht"
+      ? (totaux?.base_ht ?? null)
+      : champ === "totals.vat"
+        ? (totaux?.vat ?? null)
+        : (totaux?.ttc ?? null);
+  };
+  /** Le nom d'un champ du pied, dans la langue de la personne. */
+  const libelleDuChampDuPied = (champ: string): string => {
+    const droit = /^other_charges\[(\d+)\]\.amount$/.exec(champ);
+    if (droit) return droits[Number(droit[1])]?.libelle ?? champ;
+    return champ === "totals.base_ht"
+      ? t("pme.extract.base")
+      : champ === "totals.vat"
+        ? t("pme.extract.vat")
+        : t("pme.verifie.total");
+  };
+  /** Les montants que le moteur retient après la correction, libellés. */
+  const montantsRetenus = (j: JugementDUneCorrection | null) =>
+    j?.montants
+      ? [
+          { libelle: t("pme.extract.base"), valeur: lisible(j.montants.baseHt) },
+          { libelle: t("pme.extract.vat"), valeur: lisible(j.montants.tva) },
+          ...j.montants.droits.map((v, i) => ({
+            libelle: droits[i]?.libelle ?? t("pme.extract.droitInconnu"),
+            valeur: lisible(v),
+          })),
+          { libelle: t("pme.verifie.total"), valeur: lisible(j.montants.ttc) },
+        ].flatMap((m) => (m.valeur === null ? [] : [{ libelle: m.libelle, valeur: m.valeur }]))
+      : [];
   // Le sens, la date et la devise aussi : ceux de l'écriture, quand elle fait foi.
   const sensDeLaPiece = duCabinet?.documentKind ?? payload?.document_kind;
   const dateDeLaPiece = duCabinet?.dateEcriture ?? payload?.document_date;
@@ -1380,35 +1453,100 @@ function PieceScreen() {
                   libelle: t("pme.extract.base"),
                   valeur: lisible(totaux?.base_ht),
                   aUneSource: byField.has("totals.base_ht"),
+                  etat: etatDuChamp("totals.base_ht", ["lines[0].base_ht"]),
                 }}
                 tva={{
                   champ: "totals.vat",
                   libelle: t("pme.extract.vat"),
                   valeur: lisible(totaux?.vat),
                   aUneSource: byField.has("totals.vat"),
+                  etat: etatDuChamp("totals.vat"),
                 }}
                 droits={droits.map((d, i) => ({
                   cle: `${d.code}-${i}`,
+                  champ: `other_charges[${i}].amount`,
                   libelle: d.connu ? d.libelle : `${d.libelle} · ${t("pme.extract.droitInconnu")}`,
                   valeur: lisible(d.montant),
+                  etat: etatDuChamp(`other_charges[${i}].amount`),
                 }))}
                 total={{
                   champ: "totals.ttc",
                   libelle: duCabinet ? t("pme.verifie.totalTtc") : t("pme.verifie.total"),
                   valeur: lisible(totaux?.ttc),
                   aUneSource: byField.has("totals.ttc"),
+                  etat: etatDuChamp("totals.ttc"),
                 }}
                 devise={deviseDeLaPiece}
                 parLeCabinet={duCabinet !== null}
                 totalNeFermePas={totalNeFermePas}
                 onVoirLaSource={voirLaSource}
+                onCorriger={
+                  // Tant que la pièce n'est pas engagée (même garde que la date) ;
+                  // sans décimales au référentiel, la saisie n'a pas de borne : pas de crayon.
+                  STATUTS_PRECISABLES.has(piece.status) && decimalesDeLaPiece !== null
+                    ? (champ, libelle) => {
+                        corrigerUnChamp.reset();
+                        setCrayon({ champ, libelle });
+                      }
+                    : undefined
+                }
               />
             </div>
           )}
           <p className="mt-4 text-[11.5px] leading-[1.5] text-muted-foreground">
             {t("pme.detail.provenance")}
+            {dossier.data.corrections.length > 0 ? ` ${t("pme.crayon.provenance")}` : ""}
           </p>
         </div>
+        {crayon && decimalesDeLaPiece !== null ? (
+          <FeuilleDeCorrection
+            key={crayon.champ}
+            champ={crayon.libelle}
+            lu={lisible(valeurLueDe(crayon.champ))}
+            devise={deviseDeLaPiece}
+            decimales={decimalesDeLaPiece}
+            zone={
+              <ZoneDeLaPhoto
+                contenu={contenu}
+                citation={byField.get(crayon.champ)}
+                onVoirLaPhoto={() => {
+                  setCrayon(null);
+                  voirLaSource(crayon.champ);
+                  setPiece(true);
+                }}
+              />
+            }
+            enCours={corrigerUnChamp.isPending}
+            erreur={
+              corrigerUnChamp.isError
+                ? texteDeLErreur(
+                    corrigerUnChamp.error,
+                    "routes/_authenticated/pme.piece.$pieceId",
+                    t("common.error"),
+                  )
+                : null
+            }
+            jugement={corrigerUnChamp.data?.jugement ?? null}
+            montantsRetenus={montantsRetenus(corrigerUnChamp.data?.jugement ?? null)}
+            champsAVerifier={(corrigerUnChamp.data?.jugement.aVerifier ?? []).map(
+              libelleDuChampDuPied,
+            )}
+            onEnregistrer={(valeur) => corrigerUnChamp.mutate({ champ: crayon.champ, valeur })}
+            onFermer={() => {
+              corrigerUnChamp.reset();
+              setCrayon(null);
+            }}
+            onEncore={() => {
+              corrigerUnChamp.reset();
+              setCrayon(null);
+            }}
+            onValider={() => {
+              corrigerUnChamp.reset();
+              setCrayon(null);
+              setDetail(false);
+            }}
+          />
+        ) : null}
       </div>
     );
   }
