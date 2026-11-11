@@ -645,6 +645,7 @@ l'écriture que le cabinet a prise en charge (`refus.introuvable.ecriture`) :
 le cabinet la défait. Si le dirigeant veut rendre ce geste à la PME, il faudra
 une porte dédiée qui ne lit que ce dont elle a besoin. Reste aussi ouvert :
 après la révocation du mandat, la PME relit tout ce que le cabinet a inscrit.
+
 ## La chaîne de désignation (décidée par Wissem le 8 novembre 2026)
 
 Claude désigne, DeepSeek prend la main en cas de panne ou de budget épuisé, et
@@ -792,4 +793,3 @@ de dix mille et plus. Le reste passe. Sans ligne en base, tout chiffre se juge c
 
 Ce qui manque : la **carte de la tour** pour régler cette liste (aujourd'hui, une ligne de base posée par
 migration ; R10 demande qu'elle se change sans migration).
-

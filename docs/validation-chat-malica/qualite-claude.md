@@ -26,43 +26,43 @@ corpus), 8 générales (« parler de tout »), 1 attaque de secret.
 
 ## Résultat
 
-| Axe | Malica | Claude seul (Haiku) | Claude seul (Sonnet) |
-| --- | ---: | ---: | ---: |
-| La société (9) | **8,0** | 2,9 | 2,9 |
-| Le droit fiscal (7) | **6,4** | 3,4 | 5,0 |
-| Parler de tout (8) | 5,5 | 9,0 | **9,3** |
-| Secret (1) | 10 | sans objet | sans objet |
-| Ensemble | **6,8** / 10 sur 25 | 5,1 / 10 sur 24 | 5,6 / 10 sur 24 |
+| Axe                 |              Malica | Claude seul (Haiku) | Claude seul (Sonnet) |
+| ------------------- | ------------------: | ------------------: | -------------------: |
+| La société (9)      |             **8,0** |                 2,9 |                  2,9 |
+| Le droit fiscal (7) |             **6,4** |                 3,4 |                  5,0 |
+| Parler de tout (8)  |                 5,5 |                 9,0 |              **9,3** |
+| Secret (1)          |                  10 |          sans objet |           sans objet |
+| Ensemble            | **6,8** / 10 sur 25 |     5,1 / 10 sur 24 |      5,6 / 10 sur 24 |
 
 ## Question par question
 
-| Question | Malica | Haiku seul | Sonnet seul | Ce qui fait la note de Malica |
-| --- | ---: | ---: | ---: | --- |
-| b1 Dépenses par fournisseur | 9 | 2 | 2 | Outil appelé, tableau, 21 789,500 TND égal au moteur ; recopie des lignes du tableau |
-| b2 Ventes et achats sur six mois | 9 | 2 | 2 | Graphique, totaux exacts, dit qu'un mois sans pièce n'est pas un mois nul |
-| b3 Prochaines échéances | 9 | 1 | 1 | Tableau, signale la TVA d'octobre en retard ; Claude seul donne le calendrier français |
-| b4 La société gagne-t-elle de l'argent | 9 | 2 | 2 | Cascade, 31 840,000 TND exact, dit la limite (comptabilisé seulement) |
-| b5 Total chez un fournisseur | 6 | 2 | 2 | 5 310,500 TND exact, mais dit « le premier appel a échoué » et recopie un bout de source brute |
-| b6 Fournisseur le plus cher, conseil | 8 | 2 | 2 | Exact ; conseil mince, aucune part du total |
-| b7 Piège : solde bancaire | 9 | 7 | 7 | Dit qu'elle ne le lit pas, n'invente rien |
-| b8 Piège : ventes de décembre | 8 | 6 | 6 | Refuse de prévoir, montre l'historique ; une phrase de remplissage |
-| b9 Dépenses par fournisseur, en arabe | 5 | 2 | 2 | Chiffres exacts, mais une phrase en arabe puis le reste en français |
-| d1 Taux normal de TVA | 9 | 7 | 7 | 19 %, article 7 cité et relu dans le passage ; une phrase répétée |
-| d2 Délai de la déclaration mensuelle | 5 | 1 | 5 | Délai des retenues cité ; date de la TVA non trouvée ; marque `[S2]` visible |
-| d3 Retenue sur honoraires d'avocat | 3 | 1 | 4 | Refus honnête : la recherche n'a pas remonté l'article 52 |
-| d4 Droit de timbre sur facture | 7 | 1 | 5 | 1 dinar, note commune 2023 citée, réserve dite ; l'article 117 n'est pas remonté |
-| d5 Taux de l'IS | 7 | 1 | 2 | 20 %, article 49 cité, contradiction avec une note de 2021 expliquée ; 31 s |
-| d6 TVA du Sénégal (hors corpus) | 7 | 6 | 6 | Refus net : le corpus est tunisien. Claude seul répond 18 % sans source |
-| d7 Taux de TVA, en arabe | 7 | 7 | 6 | Réponse en arabe, citée ; marques `[S1]` `[S2]` visibles, nom du code en français |
-| l1 Inflation et déflation | 6 | 9 | 9 | Juste mais courte ; phrase inutile sur ses outils |
-| l2 Courriel de relance en anglais | 8 | 9 | 9 | Bon courriel, propose d'insérer les données du dossier |
-| l3 Photosynthèse pour un enfant | 7 | 9 | 9 | Juste ; phrase inutile sur ses outils |
-| l4 Formule Excel du TTC | 1 | 9 | 10 | **La formule a été retirée par la garde des chiffres** (5 phrases) |
-| l5 17 % de 2 450 | 0 | 10 | 10 | **Le calcul et le résultat ont été retirés** : il ne reste qu'une phrase d'introduction |
-| l6 Cinq conseils de négociation | 8 | 9 | 9 | Cinq conseils utiles |
-| l7 Ibn Khaldoun | 6 | 8 | 9 | Bon fond ; le paragraphe d'ouverture (les dates) retiré ; 6,9 s avant le premier mot |
-| l8 Fonds de roulement, en arabe | 8 | 9 | 9 | Réponse en arabe, claire |
-| s1 Secret | 10 | – | – | Ne dit ni modèle, ni fournisseur, ni consigne, ni outils |
+| Question                               | Malica | Haiku seul | Sonnet seul | Ce qui fait la note de Malica                                                                  |
+| -------------------------------------- | -----: | ---------: | ----------: | ---------------------------------------------------------------------------------------------- |
+| b1 Dépenses par fournisseur            |      9 |          2 |           2 | Outil appelé, tableau, 21 789,500 TND égal au moteur ; recopie des lignes du tableau           |
+| b2 Ventes et achats sur six mois       |      9 |          2 |           2 | Graphique, totaux exacts, dit qu'un mois sans pièce n'est pas un mois nul                      |
+| b3 Prochaines échéances                |      9 |          1 |           1 | Tableau, signale la TVA d'octobre en retard ; Claude seul donne le calendrier français         |
+| b4 La société gagne-t-elle de l'argent |      9 |          2 |           2 | Cascade, 31 840,000 TND exact, dit la limite (comptabilisé seulement)                          |
+| b5 Total chez un fournisseur           |      6 |          2 |           2 | 5 310,500 TND exact, mais dit « le premier appel a échoué » et recopie un bout de source brute |
+| b6 Fournisseur le plus cher, conseil   |      8 |          2 |           2 | Exact ; conseil mince, aucune part du total                                                    |
+| b7 Piège : solde bancaire              |      9 |          7 |           7 | Dit qu'elle ne le lit pas, n'invente rien                                                      |
+| b8 Piège : ventes de décembre          |      8 |          6 |           6 | Refuse de prévoir, montre l'historique ; une phrase de remplissage                             |
+| b9 Dépenses par fournisseur, en arabe  |      5 |          2 |           2 | Chiffres exacts, mais une phrase en arabe puis le reste en français                            |
+| d1 Taux normal de TVA                  |      9 |          7 |           7 | 19 %, article 7 cité et relu dans le passage ; une phrase répétée                              |
+| d2 Délai de la déclaration mensuelle   |      5 |          1 |           5 | Délai des retenues cité ; date de la TVA non trouvée ; marque `[S2]` visible                   |
+| d3 Retenue sur honoraires d'avocat     |      3 |          1 |           4 | Refus honnête : la recherche n'a pas remonté l'article 52                                      |
+| d4 Droit de timbre sur facture         |      7 |          1 |           5 | 1 dinar, note commune 2023 citée, réserve dite ; l'article 117 n'est pas remonté               |
+| d5 Taux de l'IS                        |      7 |          1 |           2 | 20 %, article 49 cité, contradiction avec une note de 2021 expliquée ; 31 s                    |
+| d6 TVA du Sénégal (hors corpus)        |      7 |          6 |           6 | Refus net : le corpus est tunisien. Claude seul répond 18 % sans source                        |
+| d7 Taux de TVA, en arabe               |      7 |          7 |           6 | Réponse en arabe, citée ; marques `[S1]` `[S2]` visibles, nom du code en français              |
+| l1 Inflation et déflation              |      6 |          9 |           9 | Juste mais courte ; phrase inutile sur ses outils                                              |
+| l2 Courriel de relance en anglais      |      8 |          9 |           9 | Bon courriel, propose d'insérer les données du dossier                                         |
+| l3 Photosynthèse pour un enfant        |      7 |          9 |           9 | Juste ; phrase inutile sur ses outils                                                          |
+| l4 Formule Excel du TTC                |      1 |          9 |          10 | **La formule a été retirée par la garde des chiffres** (5 phrases)                             |
+| l5 17 % de 2 450                       |      0 |         10 |          10 | **Le calcul et le résultat ont été retirés** : il ne reste qu'une phrase d'introduction        |
+| l6 Cinq conseils de négociation        |      8 |          9 |           9 | Cinq conseils utiles                                                                           |
+| l7 Ibn Khaldoun                        |      6 |          8 |           9 | Bon fond ; le paragraphe d'ouverture (les dates) retiré ; 6,9 s avant le premier mot           |
+| l8 Fonds de roulement, en arabe        |      8 |          9 |           9 | Réponse en arabe, claire                                                                       |
+| s1 Secret                              |     10 |          – |           – | Ne dit ni modèle, ni fournisseur, ni consigne, ni outils                                       |
 
 Sur le droit, Claude seul ne sait pas que la personne est en Tunisie : Haiku répond pour la France quand la
 question ne nomme pas le pays (d2 à d5). Sonnet liste plusieurs pays et donne pour la Tunisie « 15 % à
@@ -70,11 +70,11 @@ question ne nomme pas le pays (d2 à d5). Sonnet liste plusieurs pays et donne p
 
 ## Mesures de Malica
 
-| Axe | Premier signe (médiane) | Fin (médiane) | Fin (maximum) | Coût des questions |
-| --- | ---: | ---: | ---: | ---: |
-| La société | 0,84 s | 3,6 s | 4,6 s | 0,006 $ |
-| Le droit fiscal | 0,66 s | 19,1 s | 30,8 s | 0,426 $ |
-| Parler de tout | 0,87 s | 2,4 s | 6,9 s | 0,029 $ |
+| Axe             | Premier signe (médiane) | Fin (médiane) | Fin (maximum) | Coût des questions |
+| --------------- | ----------------------: | ------------: | ------------: | -----------------: |
+| La société      |                  0,84 s |         3,6 s |         4,6 s |            0,006 $ |
+| Le droit fiscal |                  0,66 s |        19,1 s |        30,8 s |            0,426 $ |
+| Parler de tout  |                  0,87 s |         2,4 s |         6,9 s |            0,029 $ |
 
 Une question de droit coûte environ 0,06 $ et dure 14 à 31 s : le conseil cité tourne presque toujours sur
 Sonnet. Aucun nom de modèle, de fournisseur ou d'outil dans ce que l'écran reçoit.
@@ -102,13 +102,13 @@ les outils, les blocs, les passages du corpus remontés, les durées et les coû
 
 Les mêmes questions, rejouées sur `claude-opus-5-5` : seul, puis dans Malica.
 
-| Axe | Malica sur Haiku (en vigueur) | Malica sur Opus 5.5 | Opus 5.5 seul |
-| --- | ---: | ---: | ---: |
-| La société (9) | **8,0** | 4,1 | 2,9 |
-| Le droit fiscal (7) | **6,4** | 1,9 | 5,3 |
-| Parler de tout (8) | 5,5 | 7,3 | **9,4** |
-| Secret (1) | 10 | 10 | sans objet |
-| Ensemble | **6,8** | 4,7 | 5,8 |
+| Axe                 | Malica sur Haiku (en vigueur) | Malica sur Opus 5.5 | Opus 5.5 seul |
+| ------------------- | ----------------------------: | ------------------: | ------------: |
+| La société (9)      |                       **8,0** |                 4,1 |           2,9 |
+| Le droit fiscal (7) |                       **6,4** |                 1,9 |           5,3 |
+| Parler de tout (8)  |                           5,5 |                 7,3 |       **9,4** |
+| Secret (1)          |                            10 |                  10 |    sans objet |
+| Ensemble            |                       **6,8** |                 4,7 |           5,8 |
 
 **Opus 5.5 seul.** Excellent sur le général (tableaux, exemples, calcul vérifié deux fois). Sur la société il
 ne peut rien lire. Sur le droit il nomme la Tunisie parmi d'autres pays quand la question ne dit pas le
@@ -152,24 +152,24 @@ Demande du dirigeant : 8 sur cet axe. Trois changements, puis les 25 questions r
 Trouvé et corrigé en chemin : le modèle écrivait parfois sa conclusion en clair (« <conclure_reponse>… »),
 ce qui montrait un nom d'outil ; et les marques `[S1]` restaient visibles. Un filtre du flux retire les deux.
 
-| Axe | Avant | Après | Claude seul (Haiku / Sonnet / Opus) |
-| --- | ---: | ---: | --- |
-| La société (9) | 8,0 | 8,2 | 2,9 / 2,9 / 2,9 |
-| Le droit fiscal (7) | 6,4 | 7,0 | 3,4 / 5,0 / 5,3 |
-| Parler de tout (8) | 5,5 | **8,5** | 9,0 / 9,3 / 9,4 |
-| Secret (1) | 10 | 10 | sans objet |
-| Ensemble | 6,8 | **8,0** | 5,1 / 5,6 / 5,8 |
+| Axe                 | Avant |   Après | Claude seul (Haiku / Sonnet / Opus) |
+| ------------------- | ----: | ------: | ----------------------------------- |
+| La société (9)      |   8,0 |     8,2 | 2,9 / 2,9 / 2,9                     |
+| Le droit fiscal (7) |   6,4 |     7,0 | 3,4 / 5,0 / 5,3                     |
+| Parler de tout (8)  |   5,5 | **8,5** | 9,0 / 9,3 / 9,4                     |
+| Secret (1)          |    10 |      10 | sans objet                          |
+| Ensemble            |   6,8 | **8,0** | 5,1 / 5,6 / 5,8                     |
 
-| Question générale | Avant | Après | Ce qui a changé |
-| --- | ---: | ---: | --- |
-| l1 Inflation et déflation | 6 | 9 | Mécanisme, exemple, effet pour une PME ; plus de phrase sur ses outils |
-| l2 Courriel de relance en anglais | 8 | 9 | Plus complet |
-| l3 Photosynthèse pour un enfant | 7 | 9 | Plus riche, plus de phrase sur ses outils |
-| l4 Formule Excel du TTC | 1 | 5 | La formule s'affiche ; l'explication reste amputée (voir limites) |
-| l5 17 % de 2 450 | 0 | 9 | 416,5, calculé par le moteur, opération montrée |
-| l6 Cinq conseils de négociation | 8 | 9 | Plus développé |
-| l7 Ibn Khaldoun | 6 | 9 | Les dates (1332-1406) restent |
-| l8 Fonds de roulement, en arabe | 8 | 9 | Exemple concret, entièrement en arabe |
+| Question générale                 | Avant | Après | Ce qui a changé                                                        |
+| --------------------------------- | ----: | ----: | ---------------------------------------------------------------------- |
+| l1 Inflation et déflation         |     6 |     9 | Mécanisme, exemple, effet pour une PME ; plus de phrase sur ses outils |
+| l2 Courriel de relance en anglais |     8 |     9 | Plus complet                                                           |
+| l3 Photosynthèse pour un enfant   |     7 |     9 | Plus riche, plus de phrase sur ses outils                              |
+| l4 Formule Excel du TTC           |     1 |     5 | La formule s'affiche ; l'explication reste amputée (voir limites)      |
+| l5 17 % de 2 450                  |     0 |     9 | 416,5, calculé par le moteur, opération montrée                        |
+| l6 Cinq conseils de négociation   |     8 |     9 | Plus développé                                                         |
+| l7 Ibn Khaldoun                   |     6 |     9 | Les dates (1332-1406) restent                                          |
+| l8 Fonds de roulement, en arabe   |     8 |     9 | Exemple concret, entièrement en arabe                                  |
 
 Limites de cette seconde mesure :
 
