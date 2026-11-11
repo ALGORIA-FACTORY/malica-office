@@ -1,3 +1,11 @@
+/**
+ * Un article marqué « abrogé » ne l'est que si son texte le dit vraiment (C1).
+ *
+ * 121 articles du corpus portaient le statut « abrogé » avec une version en
+ * vigueur. Ces épreuves tiennent les trois causes relevées le 11 novembre 2026
+ * (abrogation d'un seul alinéa, « abrogé et remplacé », mention du voisin) et
+ * gardent les vraies pierres tombales abrogées.
+ */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
