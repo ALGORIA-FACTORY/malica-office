@@ -279,8 +279,12 @@ describe("la garde ne retient que ce qui engage, quand la base dit ce qui engage
     assert.deepEqual(juger(morceau), { aEmettre: morceau, retirees: [] });
     const unite = "Le `1` représente le HT lui-même, et `/100` ramène le taux à une fraction.";
     assert.deepEqual(juger(unite), { aEmettre: unite, retirees: [] });
-    // Un taux d'exemple sorti de la mémoire reste retiré, formule ou non.
-    assert.equal(juger("Si B2 contient 19 %, `1+B2` vaut 1,19.").retirees.length, 1);
+    // Une valeur d'exemple dans une phrase qui nomme sa cellule reste (demande du
+    // dirigeant, 11 novembre 2026 : l'explication d'une formule doit être
+    // complète ; point M-10). Sans cellule nommée, elle tombe toujours.
+    const exemple = "Si `B2` contient 10 %, `1+B2` vaut 1,10.";
+    assert.deepEqual(juger(exemple), { aEmettre: exemple, retirees: [] });
+    assert.equal(juger("Si le taux est de 19 %, le produit vaut 1,19.").retirees.length, 1);
   });
 
   it("une marque est un mot entier ou une racine, pas un bout de mot", () => {
@@ -353,6 +357,33 @@ describe("le chiffre sans source part marqué quand le corpus s'est tu (M-9)", (
     const j = g.jugerTout("Le taux est de 19 %.");
     assert.equal(j.aEmettre, "Le taux est de 19 %.");
     assert.deepEqual(g.marquees(), []);
+  });
+});
+
+describe("une phrase qui nomme une cellule de tableur n'affirme aucun chiffre", () => {
+  const REGLE = { marques_liantes: ["%", "taux", "tva", "tnd"], entier_liant_des: 10000 };
+
+  it("la saisie du taux et l'exemple en cellules restent", () => {
+    const g = new GardeDesChiffres("Une formule pour le TTC ?", REGLE);
+    const texte =
+      "Dans `B2`, saisissez le taux en pourcentage (10 %) ou en décimale (0,10). " +
+      "Avec `A2 = 1 000` et `B2 = 10 %`, la cellule `C2` affiche 1 100.";
+    const j = g.jugerTout(texte);
+    assert.equal(j.aEmettre, texte);
+    assert.deepEqual(g.retirees(), []);
+  });
+
+  it("sans cellule nommée, un taux sans source tombe toujours", () => {
+    const g = new GardeDesChiffres("Une formule pour le TTC ?", REGLE);
+    const j = g.jugerTout("Le taux de TVA est de 19 %.");
+    assert.equal(j.aEmettre, "");
+    assert.equal(g.retirees().length, 1);
+  });
+
+  it("sans règle en base, la garde reste stricte, cellule ou non", () => {
+    const g = new GardeDesChiffres("Une formule pour le TTC ?");
+    g.jugerTout("Dans `B2`, saisissez 10 %.");
+    assert.equal(g.retirees().length, 1);
   });
 });
 

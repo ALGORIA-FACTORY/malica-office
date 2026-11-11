@@ -806,7 +806,7 @@ async function converser(
             type: "tool_result",
             tool_use_id: appel.id,
             content:
-              "Visuel affiché sous ta réponse. Ne recopie pas ses lignes : dis ce qu'elles veulent dire.",
+              "Visuel affiché. N'en parle pas : ne dis ni qu'il est affiché, ni où, ni ce qu'il montre. Ne recopie pas ses lignes : dis ce que ses chiffres veulent dire pour la personne.",
           });
         } else {
           resultats.push({

@@ -108,6 +108,9 @@ function chercheurDeMarque(marque: string): ((phrase: string) => boolean) | null
  * « pour cent » d'une formule (« `1` », « `/100` »). Hors formule, une
  * référence de cellule (« A2 », « $B$4 ») non plus.
  */
+/** Une cellule de tableur nommée entre accents graves : « `B2` », « `$B$2` », « `A2 = 1 000` ». */
+const CELLULE_NOMMEE = /`[^`\n]*\$?\b[A-Za-z]{1,3}\$?\d{1,7}\b[^`\n]*`/;
+
 function sansFormules(texte: string): string {
   const cellule = /\$?[A-Za-z]{1,3}\$?\d{1,7}\b/;
   return texte
@@ -240,6 +243,12 @@ export class GardeDesChiffres {
   /** Les chiffres d'une phrase qui doivent trouver une source (voir l'en-tête). */
   private aJuger(phrase: string): string[] {
     if (this.entierLiantDes === null) return chiffresDe(phrase);
+    // Une phrase qui nomme une cellule entre accents graves parle du tableur :
+    // ses nombres sont des valeurs à saisir ou un exemple (« saisissez le taux
+    // dans `B2`, en pourcentage (10 %) ou en décimale (0,10) »), pas un chiffre
+    // du dossier ni du droit. Mesuré le 11 novembre 2026 : ces phrases-là
+    // tombaient, et l'explication d'une formule sortait amputée.
+    if (CELLULE_NOMMEE.test(phrase)) return [];
     const chiffres = chiffresDe(sansFormules(phrase));
     if (chiffres.length === 0) return chiffres;
     const cherchee = sansAccent(phrase);
