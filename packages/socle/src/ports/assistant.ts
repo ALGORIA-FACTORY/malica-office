@@ -48,6 +48,7 @@ export interface SourceDeLAssistant {
     | "tiers"
     | "article"
     | "parametre"
+    | "calcul"
     | "question";
   titre: string;
   /** L'identifiant de l'objet ouvert par un clic (pièce, écriture) ; `null` sinon. */

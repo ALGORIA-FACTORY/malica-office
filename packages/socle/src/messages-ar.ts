@@ -1216,6 +1216,7 @@ export const ar: Dict = {
   "pme.assistant.outil.ecritures_proposees": "أطّلع على القيود…",
   "pme.assistant.outil.tiers_chercher": "أبحث في مزوّديك وحرفائك…",
   "pme.assistant.outil.conseil_fiscal": "أبحث في النصوص الجبائية…",
+  "pme.assistant.outil.calculer": "أُجري الحساب…",
   "pme.assistant.outil.action_proposer": "أُعِدّ مقترحًا…",
   "pme.assistant.proposition.envoyer_au_cabinet": "إرسال إلى المكتب",
   "pme.assistant.proposition.valider_ecriture": "المصادقة على القيد",

@@ -18,5 +18,6 @@ le dit.
 | 2026-11-11 | Les 24 questions à Claude Opus 5.5 seul (825 jetons lus, 20 192 écrits) | Claude (Opus) | 24 | non chiffré : pas de tarif en base |
 | 2026-11-11 | Malica sur Opus 5.5, réglage en vigueur : repli sur DeepSeek, conseil cité sur Sonnet | DeepSeek, Claude (Sonnet) | 25 | 0,5190 $ |
 | 2026-11-11 | Malica sur Opus 5.5, réflexion `adaptive` (25 questions) | Claude (Opus, Sonnet) | 25 | non chiffré : pas de tarif en base |
+| 2026-11-11 | Correction de « parler de tout » : cinq passes (65 réponses), dossier fictif, corpus réel en lecture seule | Claude (Haiku, Sonnet) | 65 | 0,9578 $ |
 
-**Total engagé : 1,77 $ chiffrés sur 100 $.** Non chiffrés faute de tarif en base (INCERTAIN) : `deepseek-flash` (moins de 0,05 $ estimé) et les deux passes sur Opus 5.5 du 11 novembre, dont la part de conseil cité sur Sonnet est de l'ordre de 0,45 $.
+**Total engagé : 2,73 $ chiffrés sur 100 $.** Non chiffrés faute de tarif en base (INCERTAIN) : `deepseek-flash` (moins de 0,05 $ estimé) et les deux passes sur Opus 5.5 du 11 novembre, dont la part de conseil cité sur Sonnet est de l'ordre de 0,45 $.

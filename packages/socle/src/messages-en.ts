@@ -1228,6 +1228,7 @@ export const en: Dict = {
   "pme.assistant.outil.ecritures_proposees": "Looking at the entries…",
   "pme.assistant.outil.tiers_chercher": "Searching your suppliers and customers…",
   "pme.assistant.outil.conseil_fiscal": "Searching the tax texts…",
+  "pme.assistant.outil.calculer": "Working out the calculation…",
   "pme.assistant.outil.action_proposer": "Preparing a proposal…",
   "pme.assistant.proposition.envoyer_au_cabinet": "Send to the firm",
   "pme.assistant.proposition.valider_ecriture": "Validate the entry",

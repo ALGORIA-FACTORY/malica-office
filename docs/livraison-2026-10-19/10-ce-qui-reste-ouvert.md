@@ -775,3 +775,21 @@ budget et le débit restent comptés sur le dossier ouvert. **À trancher :** la
 propriétaire principal » (non construite : il n'y a pas de notion de propriétaire principal dans le chat), et le sort
 des sociétés d'une autre devise (aujourd'hui dites et laissées hors de la carte).
 
+### M-8 — La garde des chiffres ne retient plus que ce qui engage : règle à confirmer
+
+**Tranché par défaut le 11 novembre 2026, pour ne pas s'arrêter.** Mesuré sur le vrai modèle, « toute phrase
+chiffrée sans source est retirée » vidait les réponses générales (un calcul sans résultat, Ibn Khaldoun sans
+ses dates). La garde lit désormais en base (`plateforme.assistant_gardes`) ce qui rend un chiffre liant : une
+phrase qui porte une marque d'argent, d'impôt ou de droit (124 marques livrées), ou un nombre à décimales ou
+de dix mille et plus. Le reste passe. Sans ligne en base, tout chiffre se juge comme avant.
+
+À trancher par le dirigeant, avec un expert-comptable :
+
+- la **liste des marques** : large à dessein, elle peut encore laisser passer un chiffre engageant écrit sans
+  aucun mot d'argent ni de droit (un petit entier), ou retirer à tort un chiffre anodin ;
+- le **seuil** de dix mille ;
+- le principe même : R2 dit « aucun chiffre sans source », R3 « aucune valeur liante ». La garde suit R3.
+
+Ce qui manque : la **carte de la tour** pour régler cette liste (aujourd'hui, une ligne de base posée par
+migration ; R10 demande qu'elle se change sans migration).
+

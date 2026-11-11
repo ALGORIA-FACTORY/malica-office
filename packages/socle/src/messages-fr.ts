@@ -1289,6 +1289,7 @@ export const fr = {
   "pme.assistant.outil.ecritures_proposees": "Je regarde les écritures…",
   "pme.assistant.outil.tiers_chercher": "Je cherche dans vos fournisseurs et clients…",
   "pme.assistant.outil.conseil_fiscal": "Je cherche dans les textes fiscaux…",
+  "pme.assistant.outil.calculer": "Je fais le calcul…",
   "pme.assistant.outil.action_proposer": "Je prépare une proposition…",
   "pme.assistant.proposition.envoyer_au_cabinet": "Envoyer au cabinet",
   "pme.assistant.proposition.valider_ecriture": "Valider l'écriture",

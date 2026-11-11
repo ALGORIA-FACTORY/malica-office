@@ -81,7 +81,8 @@ import {
   lireConfigurationAssistant,
   type ConfigurationDeLAssistant,
 } from "./configuration.ts";
-import { GardeDesChiffres, type SourceConnue } from "./garde.ts";
+import { chiffresDe, GardeDesChiffres, type SourceConnue } from "./garde.ts";
+import { FiltreDeMecanique } from "./sans-mecanique.ts";
 import {
   AFFICHER_VISUEL,
   COMPARER_LES_SOCIETES,
@@ -487,7 +488,7 @@ async function converser(
   );
   emettre({ type: "debut", conversationId });
 
-  const garde = new GardeDesChiffres(q.question);
+  const garde = new GardeDesChiffres(q.question, configuration.garde);
   let premierMot: number | null = null;
   // Le texte gardé s'accumule dans la garde (`texteEmis`) ; il ne part à
   // l'écran qu'en flux libre. En attente de la conclusion, il attend.
@@ -514,6 +515,12 @@ async function converser(
     aujourdhui,
     conseil: deps.conseil,
     idProposition: deps.idProposition ?? (() => crypto.randomUUID()),
+    // Un calcul n'emploie que ce que la personne a écrit ou qu'un outil a rendu.
+    nombresAdmis: () =>
+      new Set([
+        ...chiffresDe(q.question),
+        ...garde.toutesLesSources().flatMap((s) => chiffresDe(`${s.titre}\n${s.texte}`)),
+      ]),
     // Le périmètre élargi : seulement si la personne le regarde, et sur SES sociétés.
     ...(q.toutesLesSocietes && (dossier.societes?.length ?? 0) > 1
       ? { societes: dossier.societes! }
@@ -579,6 +586,8 @@ async function converser(
 
     const assembleur = new Assembleur();
     const blocsDeTexte = new Set<number>();
+    // Par tour : une conclusion écrite en clair coupe la suite du tour, pas la réponse suivante.
+    const filtre = new FiltreDeMecanique();
     const debutAppel = maintenant();
     garde.nouveauTour();
     try {
@@ -598,7 +607,7 @@ async function converser(
           blocsDeTexte.has(i)
         ) {
           if (ev.delta?.type === "text_delta") {
-            envoyerTexte(garde.recevoirTexte(ev.delta.text ?? ""));
+            envoyerTexte(garde.recevoirTexte(filtre.passer(ev.delta.text ?? "")));
           } else if (ev.delta?.type === "citations_delta" && ev.delta.citation) {
             garde.recevoirCitation(ev.delta.citation);
           }
@@ -607,6 +616,7 @@ async function converser(
           typeof i === "number" &&
           blocsDeTexte.has(i)
         ) {
+          envoyerTexte(garde.recevoirTexte(filtre.vider()));
           const j = garde.fermerBloc();
           envoyerTexte(j.aEmettre);
           // Le nombre seulement : la phrase retirée porte le chiffre sans source.

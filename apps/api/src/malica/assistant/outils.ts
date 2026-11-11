@@ -29,6 +29,7 @@
  * même que l'écran TVA ; le droit est celui du conseil cité (#278).
  */
 
+import { evaluerLeCalcul } from "@malica/socle/calcul";
 import { z } from "zod";
 
 import type { DeclarationTva, TaxRate } from "@malica/socle/ports/repositories";
@@ -201,6 +202,26 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
     },
   },
   {
+    name: "calculer",
+    description:
+      "Calcule une opération arithmétique, exactement : c'est le seul moyen de donner le résultat d'un " +
+      "calcul (un pourcentage, une somme, une différence, un TTC à partir d'un HT et d'un taux DONNÉS). " +
+      "Tu ne calcules jamais de tête. Écris l'opération avec des nombres et les signes + - * / ( ) % : " +
+      "« 2450 * 17 / 100 », « 1200 * (1 + 19 %) ». Chaque nombre doit venir de la personne (sa question) " +
+      "ou d'un résultat d'outil de ce tour : un nombre que tu apportes toi-même est refusé.",
+    input_schema: {
+      type: "object",
+      properties: {
+        expression: {
+          type: "string",
+          description: "L'opération, par exemple « 2450 * 17 / 100 ».",
+        },
+      },
+      required: ["expression"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "achats_par_fournisseur",
     description:
       "Rend le classement des achats du dossier par fournisseur : pour chaque fournisseur, la somme TTC de ses " +
@@ -324,6 +345,7 @@ const ETAPES: Readonly<Record<string, MessageKey>> = {
   ecritures_proposees: "pme.assistant.outil.ecritures_proposees",
   tiers_chercher: "pme.assistant.outil.tiers_chercher",
   conseil_fiscal: "pme.assistant.outil.conseil_fiscal",
+  calculer: "pme.assistant.outil.calculer",
   action_proposer: "pme.assistant.outil.action_proposer",
 };
 
@@ -427,6 +449,11 @@ export interface ContexteDesOutils {
   aujourdhui: string;
   conseil: (question: string, jour: string | null) => Promise<ResultatDuConseilCite>;
   idProposition: () => string;
+  /**
+   * Les nombres que la personne a écrits ou qu'un outil a rendus dans ce tour,
+   * sous leur forme comparable : les seuls qu'un calcul peut employer.
+   */
+  nombresAdmis?: () => ReadonlySet<string>;
 }
 
 export type ResultatDOutil =
@@ -1463,8 +1490,57 @@ const EXECUTANTS: Record<
   ecritures_proposees: ecrituresProposees,
   tiers_chercher: tiersChercher,
   conseil_fiscal: conseilFiscal,
+  calculer,
   action_proposer: actionProposer,
 };
+
+/* ---------------------------------------------------------------- le calcul -- */
+
+/** Les constantes d'une opération qui n'affirment rien : l'unité et le « pour cent ». */
+const NEUTRES: ReadonlySet<string> = new Set(["1", "100"]);
+
+/**
+ * Le calcul (R3) : le moteur du Socle évalue l'opération, le modèle n'en écrit
+ * que les termes. Et ces termes ne sont pas à lui : chaque nombre vient de la
+ * personne ou d'un outil de ce tour — sinon un taux sorti de sa mémoire
+ * entrerait par l'opération et ressortirait « sourcé ».
+ */
+async function calculer(ctx: ContexteDesOutils, brut: unknown): Promise<ResultatDOutil> {
+  const expression = String((brut as { expression?: unknown } | null)?.expression ?? "").trim();
+  let rendu: ReturnType<typeof evaluerLeCalcul>;
+  try {
+    rendu = evaluerLeCalcul(expression);
+  } catch (e) {
+    return erreur(
+      (e instanceof Error ? e.message : "") === "calcul.division_par_zero"
+        ? "Division par zéro : l'opération n'a pas de résultat."
+        : "Opération illisible. Écris seulement des nombres et les signes + - * / ( ) %, par exemple « 2450 * 17 / 100 ».",
+    );
+  }
+  const admis = ctx.nombresAdmis?.() ?? new Set<string>();
+  const etrangers = rendu.operandes.filter((n) => !NEUTRES.has(n) && !admis.has(n));
+  if (etrangers.length > 0) {
+    return erreur(
+      `Ce calcul emploie ${etrangers.join(", ")}, que ni la personne ni un outil de ce tour n'a donné. ` +
+        "Demande ce nombre à la personne, ou consulte l'outil qui le porte (le dossier, ou conseil_fiscal " +
+        "pour un taux), puis recalcule.",
+    );
+  }
+  const enClair = (n: string) => n.replace(".", ",");
+  return {
+    ok: true,
+    sources: [
+      {
+        cle: `malica:calcul:${expression.replace(/\s+/g, "")}`,
+        genre: "calcul",
+        titre: "Calcul",
+        objetId: null,
+        texte: `Opération : ${expression}\nRésultat exact : ${enClair(rendu.valeur)}`,
+        extrait: `${expression} = ${enClair(rendu.valeur)}`,
+      },
+    ],
+  };
+}
 
 /**
  * Exécute un outil. Une panne de lecture n'arrête pas la conversation : elle

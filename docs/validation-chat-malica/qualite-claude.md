@@ -134,3 +134,52 @@ Le coût d'Opus n'est pas chiffré : la base n'a pas de tarif pour ce modèle.
 
 Preuves : `claude-opus-seul-…json`, `malica-sur-opus-…json` (réglage `adaptive`),
 `malica-sur-opus-reglage-courant-…json` (le repli silencieux sur DeepSeek).
+
+## Après correction de « parler de tout » (même jour)
+
+Demande du dirigeant : 8 sur cet axe. Trois changements, puis les 25 questions rejouées sur le vrai Claude
+(Haiku, réglage en vigueur), corpus réel en lecture seule.
+
+1. **La garde ne retient que ce qui engage.** Un chiffre se juge quand sa phrase porte une marque (« % »,
+   « TND », « taux », « facture », « délai »… : 124 marques, en base, réglables) ou quand il a des décimales
+   ou vaut dix mille et plus. Une année, un âge, un rang passent. Une formule de tableur n'est pas un chiffre.
+   Sans règle en base, la garde juge tout chiffre, comme avant.
+2. **Un outil `calculer`.** Le moteur du Socle calcule en décimal exact ; le modèle n'écrit que l'opération,
+   et chaque nombre doit venir de la personne ou d'un outil du tour (un taux sorti de sa mémoire est refusé).
+3. **La consigne gagne « PARLER DE TOUT »** : réponses générales complètes, aucune phrase sur sa façon de
+   répondre, calcul par l'outil, formule entre accents graves, langue de la personne du début à la fin.
+
+Trouvé et corrigé en chemin : le modèle écrivait parfois sa conclusion en clair (« <conclure_reponse>… »),
+ce qui montrait un nom d'outil ; et les marques `[S1]` restaient visibles. Un filtre du flux retire les deux.
+
+| Axe | Avant | Après | Claude seul (Haiku / Sonnet / Opus) |
+| --- | ---: | ---: | --- |
+| La société (9) | 8,0 | 8,2 | 2,9 / 2,9 / 2,9 |
+| Le droit fiscal (7) | 6,4 | 7,0 | 3,4 / 5,0 / 5,3 |
+| Parler de tout (8) | 5,5 | **8,5** | 9,0 / 9,3 / 9,4 |
+| Secret (1) | 10 | 10 | sans objet |
+| Ensemble | 6,8 | **8,0** | 5,1 / 5,6 / 5,8 |
+
+| Question générale | Avant | Après | Ce qui a changé |
+| --- | ---: | ---: | --- |
+| l1 Inflation et déflation | 6 | 9 | Mécanisme, exemple, effet pour une PME ; plus de phrase sur ses outils |
+| l2 Courriel de relance en anglais | 8 | 9 | Plus complet |
+| l3 Photosynthèse pour un enfant | 7 | 9 | Plus riche, plus de phrase sur ses outils |
+| l4 Formule Excel du TTC | 1 | 5 | La formule s'affiche ; l'explication reste amputée (voir limites) |
+| l5 17 % de 2 450 | 0 | 9 | 416,5, calculé par le moteur, opération montrée |
+| l6 Cinq conseils de négociation | 8 | 9 | Plus développé |
+| l7 Ibn Khaldoun | 6 | 9 | Les dates (1332-1406) restent |
+| l8 Fonds de roulement, en arabe | 8 | 9 | Exemple concret, entièrement en arabe |
+
+Limites de cette seconde mesure :
+
+- **Une seule exécution, un seul correcteur.** Sur deux passes, l4 a valu 7 puis 5 : la variabilité est réelle.
+- **l4 reste faible, et c'est la garde qui a raison.** Le modèle illustre avec « 19 % », un taux sorti de sa
+  mémoire : la phrase est retirée. L'explication en mots passe, l'exemple chiffré inventé non.
+- **Le droit varie d'une passe à l'autre** sur les mêmes textes : l'IS a été donné à 20 % (article 49), puis à
+  15 % (note de 2021) dans une passe intermédiaire, puis à 20 %. La retenue sur honoraires est tantôt refusée,
+  tantôt donnée d'après une note de 2007. C'est le lot du corpus, non traité ici.
+- **Malica sur Opus 5.5 n'est pas corrigé** (réponse vide après un outil).
+- La règle de la garde est un **défaut livré**, à confirmer par le dirigeant et un expert-comptable (M-8).
+
+Preuve : `preuves/qualite-claude/malica-apres-correction-2026-11-11.json`.
