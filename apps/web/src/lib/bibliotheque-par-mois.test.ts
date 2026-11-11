@@ -1,3 +1,12 @@
+/**
+ * La bibliothèque du cabinet rangée par mois — ordre, trous, total et état.
+ *
+ * Garantit que les mois vont du plus récent au plus ancien, y compris au changement
+ * d'année, que les mois sans pièce se regroupent sans trou avant la première ni après
+ * la dernière pièce, que le total est une addition exacte qui refuse d'être faux
+ * (montant manquant, devises mêlées), que l'état d'un groupe vient du statut du Socle,
+ * et qu'un type inconnu du référentiel est rangé avec les autres.
+ */
 import { describe, expect, it } from "vitest";
 
 import {

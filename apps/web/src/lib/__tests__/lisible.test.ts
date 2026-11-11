@@ -1,3 +1,12 @@
+/**
+ * Les formats lisibles — montants, quantités, dates et mois dans la langue du lecteur.
+ *
+ * Garantit qu'un montant garde les décimales décidées par le Socle et ne perd pas un
+ * chiffre sur un grand nombre, avec un vrai signe moins. Un montant ou une date absents
+ * ne font jamais tomber l'écran. Un instant se lit à l'heure du lecteur et une date du
+ * Socle reste son jour, sans fuseau. Il garantit aussi l'élision devant un mois, la
+ * majuscule d'une initiale de phrase et le plafond « 99+ » d'un badge.
+ */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {

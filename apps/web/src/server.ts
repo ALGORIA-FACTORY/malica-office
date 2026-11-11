@@ -1,3 +1,11 @@
+/**
+ * L'entrée serveur — rend la page, et ne laisse jamais passer une erreur 500 brute.
+ *
+ * Elle charge l'application et le dictionnaire français avant le premier rendu. Toute panne,
+ * levée ou avalée par h3 sous forme de réponse JSON, devient une page d'erreur lisible portant
+ * une référence ; la même référence ouvre la ligne du journal, la personne peut donc la citer
+ * au support.
+ */
 import "./lib/error-capture";
 
 import { chargerLesEspaces } from "./i18n/dictionnaires";

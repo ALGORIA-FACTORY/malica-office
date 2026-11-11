@@ -347,6 +347,23 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /** Ce que Malica fait d'une réponse à relire et d'un corpus muet : la décision en vigueur. */
+  async relectureDeLAssistant(db: Requete) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.assistant_relecture_etat() as r`,
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour inscrit une décision nouvelle, datée et motivée ; rien ne se réécrit. */
+  async reglerRelectureDeLAssistant(db: Requete, mode: string, sansTexte: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.assistant_relecture_regler($1, $2, $3) as r`,
+      [mode, sansTexte, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /** La tour règle l'assistant : modèles, règle de difficulté, effort, réflexion, bornes. */
   async reglerAssistant(
     db: Requete,

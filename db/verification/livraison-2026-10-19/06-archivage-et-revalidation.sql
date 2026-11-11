@@ -1,3 +1,9 @@
+-- Preuve 06 — archiver un établissement, et corriger une pièce après sa transmission.
+--
+-- Le dernier établissement ouvert refuse de fermer ; un établissement qui porte une pièce en
+-- cours refuse et dit combien ; vidé, il s'archive et sort de `entities_v`. Une pièce lue puis
+-- corrigée revient à revalider, avec une précision inscrite ; une pièce comptabilisée refuse
+-- la correction directe.
 \set ON_ERROR_STOP on
 \echo '=== ARCHIVAGE D UN ETABLISSEMENT, ET REVALIDATION ==='
 do $$

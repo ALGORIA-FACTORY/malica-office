@@ -1,3 +1,10 @@
+/**
+ * Le sens confirmé d'une pièce — ce que la personne a déclaré, jamais ce que l'OCR a deviné.
+ *
+ * Seule une facture d'achat ou de vente dont la personne a confirmé le sens entre au moteur
+ * comme un fait connu, et place le dossier. Un sens seulement lu, un autre type de pièce ou
+ * une absence de type ne sont pas une déclaration : le moteur ne reçoit rien.
+ */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 

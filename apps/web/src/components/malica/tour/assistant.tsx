@@ -1,3 +1,12 @@
+/**
+ * Les réglages de l'assistant « Parler à Malica » — consigne, modèles et plafond (tour).
+ *
+ * Écran de l'opérateur ALGORIA, trois cartes : la consigne (le prompt système, versionné en
+ * base : publier crée une version datée et motivée, la précédente reste au registre), le
+ * réglage des modèles (courant, difficile, la règle qui les sépare, effort et réflexion), et
+ * le plafond de dépense propre à l'assistant. Rien n'est durci ici : les valeurs vivent en
+ * base (R10), qui refuse un modèle sans tarif en vigueur (R8) et toute valeur hors bornes.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
@@ -357,6 +366,107 @@ export function LePlafondDeLAssistant() {
           type="button"
           className={BOUTON}
           disabled={regler.isPending || motif.trim() === "" || !valide}
+          onClick={() => regler.mutate()}
+        >
+          {t("tour.enregistrer")}
+        </button>
+      </div>
+      {retour ? (
+        <p className={TEXTE} aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+const CLE_RELECTURE = ["tour-assistant-relecture"];
+
+/**
+ * Ce que Malica fait d'une réponse que le cabinet doit relire, et d'un corpus
+ * qui ne répond pas. Défaut livré le 11 novembre 2026 : annoncer, marquer.
+ */
+export function LaRelectureDeLAssistant() {
+  const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const { retour, setRetour, echec } = useRetour();
+  const etat = useQuery({
+    queryKey: CLE_RELECTURE,
+    queryFn: () => office().tour.relectureDeLAssistant(),
+  });
+  const enVigueur = etat.data ?? null;
+  const [mode, setMode] = useState<"annoncer" | "retenir">("retenir");
+  const [sansTexte, setSansTexte] = useState<"marquer" | "retirer">("retirer");
+  const [motif, setMotif] = useState("");
+
+  useEffect(() => {
+    if (!enVigueur) return;
+    setMode(enVigueur.mode);
+    setSansTexte(enVigueur.sans_texte);
+  }, [enVigueur]);
+
+  const regler = useMutation({
+    mutationFn: () => office().tour.reglerRelectureDeLAssistant(mode, sansTexte, motif),
+    onSuccess: async () => {
+      setRetour(t("tour.fait"));
+      setMotif("");
+      await qc.invalidateQueries({ queryKey: CLE_RELECTURE });
+    },
+    onError: echec,
+  });
+
+  return (
+    <div className={CARTE}>
+      <h2 className={TITRE}>{t("tour.assistant.relecture")}</h2>
+      <p className={TEXTE}>{t("tour.assistant.relecture.aide")}</p>
+      {enVigueur ? (
+        <p className={TEXTE}>
+          {t("tour.assistant.relecture.enVigueur", {
+            date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
+              new Date(enVigueur.decide_le),
+            ),
+            motif: enVigueur.motif,
+          })}
+        </p>
+      ) : (
+        <p className={ALERTE}>{t("tour.assistant.relecture.absente")}</p>
+      )}
+      <div className="mt-2 flex flex-col gap-2">
+        <label className={TEXTE}>
+          {t("tour.assistant.relecture.mode")}
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value === "annoncer" ? "annoncer" : "retenir")}
+            aria-label={t("tour.assistant.relecture.mode")}
+            className={`${CHAMP} mt-1 w-full`}
+          >
+            <option value="annoncer">{t("tour.assistant.relecture.annoncer")}</option>
+            <option value="retenir">{t("tour.assistant.relecture.retenir")}</option>
+          </select>
+        </label>
+        <label className={TEXTE}>
+          {t("tour.assistant.relecture.sansTexte")}
+          <select
+            value={sansTexte}
+            onChange={(e) => setSansTexte(e.target.value === "marquer" ? "marquer" : "retirer")}
+            aria-label={t("tour.assistant.relecture.sansTexte")}
+            className={`${CHAMP} mt-1 w-full`}
+          >
+            <option value="marquer">{t("tour.assistant.relecture.marquer")}</option>
+            <option value="retirer">{t("tour.assistant.relecture.retirer")}</option>
+          </select>
+        </label>
+        <input
+          value={motif}
+          onChange={(e) => setMotif(e.target.value)}
+          placeholder={t("common.motif")}
+          aria-label={t("common.motif")}
+          className={CHAMP}
+        />
+        <button
+          type="button"
+          className={BOUTON}
+          disabled={regler.isPending || motif.trim() === ""}
           onClick={() => regler.mutate()}
         >
           {t("tour.enregistrer")}

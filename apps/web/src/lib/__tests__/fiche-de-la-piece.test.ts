@@ -1,3 +1,12 @@
+/**
+ * La fiche d'une pièce côté PME — où elle en est, et ce qu'on peut en faire.
+ *
+ * Garantit les trois étapes montrées (envoyée, vue, prise en charge), dont une vue
+ * antérieure à un renvoi ne compte plus ; la note de suppression, qui ne parle que si
+ * la pièce est chez le cabinet ; l'étiquette d'une ligne lue, où le jugement décide et
+ * la PME ne confirme rien ; et la date donnée à la main, qui n'écrit ni deux fois la
+ * même ni une saisie incomplète.
+ */
 import { describe, expect, it } from "vitest";
 import type { SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
 

@@ -1,4 +1,11 @@
 // @vitest-environment jsdom
+/**
+ * Les réglages du cabinet — se consultent en lecture seule, se modifient volontairement.
+ *
+ * Garantit que les seuils s'affichent figés jusqu'au geste « Modifier », qu'annuler ne
+ * persiste rien, que l'édition ne se ferme qu'après un enregistrement réussi et garde la
+ * saisie sur un échec, et qu'une borne de revue au-dessus de la borne de lot est refusée.
+ */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

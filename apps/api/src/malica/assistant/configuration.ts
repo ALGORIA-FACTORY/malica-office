@@ -43,6 +43,9 @@ interface PlafondDeLAssistant {
   epuise: boolean;
 }
 
+/** Lu en base (`plateforme.assistant_relectures`). */
+type ModeDeRelecture = "annoncer" | "retenir";
+
 export interface ConfigurationDeLAssistant {
   consigne: { id: string; texte: string; decide_le: string };
   reglage: ReglageDeLAssistant;
@@ -50,6 +53,22 @@ export interface ConfigurationDeLAssistant {
   plafond: PlafondDeLAssistant;
   /** Ce qui rend un chiffre liant ; `null` : la garde juge tout chiffre. */
   garde: RegleDeLaGarde | null;
+  /**
+   * Ce que devient une réponse que le cabinet doit relire (décision du
+   * dirigeant, 11 novembre 2026) : `annoncer` l'affiche marquée « à confirmer »
+   * et l'envoie au cabinet ; `retenir` ne montre que le message de relecture.
+   */
+  relecture: ModeDeRelecture;
+  /**
+   * Quand le corpus ne répond pas (M-9) : `marquer` laisse Malica répondre, ses
+   * chiffres marqués « non vérifié » ; `retirer` garde la règle stricte.
+   */
+  sansTexte: "marquer" | "retirer";
+  /**
+   * Les unités de taux et de durée (« % », « jours »…) qu'un chiffre de mémoire
+   * peut porter pour partir marqué. Tout autre chiffre sans source est retiré.
+   */
+  unitesMarquables: string[];
 }
 
 const EFFORTS: readonly Effort[] = ["low", "medium", "high"];
@@ -86,6 +105,13 @@ export function lireConfigurationAssistant(brut: unknown): ConfigurationDeLAssis
     tarifs: (c.tarifs ?? []).map((t) => ({ ...t, in: Number(t.in), out: Number(t.out) })),
     plafond: lirePlafond(c.plafond),
     garde: lireLaGarde(c.garde),
+    // Absent ou illisible : on retient, comme avant — le manque retombe du côté prudent.
+    relecture: c.relecture === "annoncer" ? "annoncer" : "retenir",
+    sansTexte: (c as { sans_texte?: unknown }).sans_texte === "marquer" ? "marquer" : "retirer",
+    unitesMarquables: ((c as { unites_marquables?: unknown }).unites_marquables instanceof Array
+      ? ((c as { unites_marquables: unknown[] }).unites_marquables as unknown[])
+      : []
+    ).filter((u): u is string => typeof u === "string" && u.trim() !== ""),
   };
 }
 

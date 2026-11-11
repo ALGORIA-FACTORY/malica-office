@@ -1,3 +1,17 @@
+/**
+ * La revue d'une pièce — l'écran où le comptable supervise, valide ou retourne.
+ *
+ * Écran du cabinet : la pièce à gauche, l'écriture à droite. Le comptable lit les valeurs
+ * extraites avec leurs citations, voit l'écriture du Socle (comptabilisée, ou proposée,
+ * ou la raison pour laquelle il n'en propose aucune), puis la comptabilise ou retourne la
+ * pièce au client avec un motif. Il y inscrit aussi le règlement d'une pièce, répond à la
+ * demande du client sur la pièce, et ouvre les preuves jointes.
+ *
+ * Aucun calcul n'est fait ici (R3) : écritures, contrôles et motifs de refus viennent du
+ * Socle et de la base (`office.*`, `supervision.*`, `capture.dossier`). Un refus exige un
+ * motif, parce qu'un retour sans motif n'apprend rien à celui qui l'a demandé. Une adresse
+ * sans identifiant valide n'interroge pas la base.
+ */
 import type { QualificationDeRetenue } from "@malica/socle/use-cases/retenue-au-reglement";
 import type { QueueItem } from "@malica/socle/ports/repositories";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +25,7 @@ import {
 import { Download, Eye } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { CorrectionsDeLaLecture } from "@/components/malica/corrections-de-la-lecture";
 import { Aide } from "@/components/malica/aide";
 import { dansLOrdreVu, ordreDeLaRevue, retenirLOrdre } from "@/lib/ordre-de-revue";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
@@ -1064,6 +1079,8 @@ function CabinetReviewDeLaPiece() {
               </InkTable>
             </>
           ) : null}
+
+          <CorrectionsDeLaLecture corrections={dossier.data.corrections ?? []} />
 
           {extraction && extraction.flags.length > 0 ? (
             <div className="border border-s-2 border-border border-s-signal-warn bg-card p-3">

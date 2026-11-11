@@ -1,3 +1,13 @@
+/**
+ * La carte « Paiement » de la tour — choisir le prestataire de paiement.
+ *
+ * Écran réservé aux opérateurs d'ALGORIA (la tour). L'opérateur voit le prestataire
+ * actuel et choisit l'un de ceux que la base propose ; selon le prestataire retenu,
+ * l'écran demande l'adresse de l'API ou l'adresse de retour. Un motif est obligatoire
+ * pour enregistrer. La liste des prestataires, leur nom et ce qu'ils exigent viennent
+ * d'une table (`prestatairesDePaiement`), pas de l'écran. Les secrets du compte marchand
+ * restent sur le serveur : la carte dit seulement s'ils sont posés, jamais leur valeur.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 

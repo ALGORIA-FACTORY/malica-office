@@ -1,3 +1,14 @@
+/**
+ * Le moyen de paiement (PME) — l'écran où le dirigeant choisit comment régler en ligne.
+ *
+ * Route `/pme/payer/$paiementId`, côté société. Payer, c'est vendre : l'écran n'existe pas
+ * dans l'application Android. La constante `COMMERCE` renvoie alors aux réglages, et la page
+ * est chargée en différé sous `__COMMERCE__`, pour que son code quitte le paquet de la coque.
+ * Le composant (`payer-en-ligne`) est partagé avec la route du cabinet, qui garde son habillage.
+ *
+ * `remountDeps` remonte l'écran à chaque paiement : sans lui, le routeur garderait l'état du
+ * précédent (« Validée » affiché sur le suivant, boutons disparus).
+ */
 import { createFileRoute, lazyRouteComponent, redirect } from "@tanstack/react-router";
 
 import { COMMERCE } from "@/capabilities/coque";

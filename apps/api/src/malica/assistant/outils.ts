@@ -454,6 +454,11 @@ export interface ContexteDesOutils {
    * sous leur forme comparable : les seuls qu'un calcul peut employer.
    */
   nombresAdmis?: () => ReadonlySet<string>;
+  /**
+   * Quand le corpus ne répond pas, Malica répond quand même (M-9) : ses chiffres
+   * partent marqués « non vérifié ». Absent : elle rapporte le silence des textes.
+   */
+  repondreSansTexte?: boolean;
 }
 
 export type ResultatDOutil =
@@ -1382,7 +1387,14 @@ async function conseilFiscal(ctx: ContexteDesOutils, brut: unknown): Promise<Res
           article: null,
           texte:
             `Les textes du corpus fiscal tunisien ne répondent pas à cette question (à la date du ${r.enVigueurAu}). ` +
-            `Réponse du conseil cité : ${r.reponse}\nRapporte-le honnêtement, sans ajouter de règle de mémoire.`,
+            `Réponse du conseil cité : ${r.reponse}\n` +
+            (ctx.repondreSansTexte
+              ? "Réponds quand même à la personne, dans la langue de sa question, du premier au dernier mot. Dis d'abord, en une phrase, que tu n'as pas trouvé ce point dans les textes. " +
+                "Puis explique la règle telle que tu la connais de façon générale : le principe, à qui il s'applique, ce qu'il faut faire. " +
+                "Si tu donnes un taux, un délai ou un montant de mémoire, il s'affichera avec la marque « non vérifié » : " +
+                "n'en donne que si tu en es raisonnablement sûre, et n'en fais aucun calcul. " +
+                "N'écris pas toi-même la marque ni l'annonce de l'envoi au comptable : elles sont ajoutées pour toi."
+              : "Rapporte-le honnêtement, sans ajouter de règle de mémoire."),
         },
       ],
     };

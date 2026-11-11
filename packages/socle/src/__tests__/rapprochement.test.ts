@@ -1,3 +1,12 @@
+/**
+ * Les épreuves du rapprochement bancaire — apparier le relevé et les livres, sans doublon.
+ *
+ * Garantissent qu'un montant exact avec la même référence reçoit le meilleur score, qu'on
+ * apparie sans référence quand montant et date concordent, que les lignes hors tolérance
+ * restent orphelines des deux côtés, qu'une ligne n'est jamais appariée deux fois, et
+ * que l'écart global entre relevé et livres est exposé. Les tolérances (jours, montant)
+ * sont passées en paramètres, jamais en dur (R4).
+ */
 import { describe, expect, it } from "vitest";
 
 import { computeRapprochement } from "../engines/banque/rapprochement.ts";

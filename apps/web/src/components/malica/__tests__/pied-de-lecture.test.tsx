@@ -1,4 +1,12 @@
 // @vitest-environment jsdom
+/**
+ * Le pied de « Ce que j'ai lu, ligne par ligne » nomme les montants non lus.
+ *
+ * Le 10 novembre 2026, sur une facture manuscrite, l'écran accusait « un total
+ * qui ne ferme pas » alors que la TVA et le total n'avaient pas été lus (#344).
+ * Ces épreuves tiennent la différence : un montant non lu se nomme et mène à sa
+ * zone ; seul un total lu qui ne ferme pas garde l'ancien message.
+ */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -23,7 +31,14 @@ function monter(
     <PiedDeLecture
       base={lu("totals.base_ht", "Base HT", "15 000,000")}
       tva={lu("totals.vat", "TVA", "2 850,000")}
-      droits={[{ cle: "timbre-0", libelle: "Droit de timbre", valeur: "1,000" }]}
+      droits={[
+        {
+          cle: "timbre-0",
+          champ: "other_charges[0].amount",
+          libelle: "Droit de timbre",
+          valeur: "1,000",
+        },
+      ]}
       total={lu("totals.ttc", "Total lu sur la pièce", "17 851,000")}
       devise="TND"
       parLeCabinet={false}
@@ -69,6 +84,45 @@ describe("le pied de « Ce que j'ai lu, ligne par ligne »", () => {
   it("garde le message d'avant quand le total est lu mais ne ferme pas", () => {
     monter({ totalNeFermePas: true });
     expect(screen.getByRole("alert").textContent).toBe("pme.detail.totalNeFermePas");
+  });
+
+  /*
+   * 10 novembre 2026 : un crayon à côté de CHAQUE composante du pied, et trois
+   * états distincts par champ — lu, prouvé par le calcul, saisi (avec le nom).
+   */
+  it("met un crayon à côté de chaque composante, nommé par son champ", () => {
+    const corriger = vi.fn();
+    monter({ onCorriger: corriger });
+    const crayons = screen.getAllByRole("button", { name: /^pme\.crayon\.modifier/ });
+    expect(crayons).toHaveLength(4);
+    fireEvent.click(crayons[1]!);
+    expect(corriger).toHaveBeenCalledWith("totals.vat", "TVA");
+    fireEvent.click(crayons[2]!);
+    expect(corriger).toHaveBeenCalledWith("other_charges[0].amount", "Droit de timbre");
+  });
+
+  it("n'offre aucun crayon quand la pièce est engagée, ni sur un montant du cabinet", () => {
+    monter();
+    expect(screen.queryAllByRole("button", { name: /pme\.crayon\.modifier/ })).toHaveLength(0);
+    cleanup();
+    monter({ parLeCabinet: true, onCorriger: vi.fn() });
+    expect(screen.queryAllByRole("button", { name: /pme\.crayon\.modifier/ })).toHaveLength(0);
+  });
+
+  it("dit pour chaque champ s'il est lu, prouvé par le calcul ou saisi — et par qui", () => {
+    monter({
+      base: { ...lu("totals.base_ht", "Base HT", "15 000,000"), etat: { genre: "prouve" } },
+      tva: {
+        ...lu("totals.vat", "TVA", "2 850,000"),
+        etat: { genre: "saisi", par: "Amel Ben Salah", lue: "2 350,000" },
+      },
+      total: { ...lu("totals.ttc", "Total lu sur la pièce", "17 851,000"), etat: { genre: "lu" } },
+    });
+    expect(screen.getByText(/pme\.crayon\.etat\.prouve/)).toBeTruthy();
+    expect(screen.getByText(/pme\.crayon\.etat\.saisi/)).toBeTruthy();
+    // La valeur lue reste à côté de la valeur saisie.
+    expect(screen.getByText(/pme\.crayon\.etat\.valeurLue/)).toBeTruthy();
+    expect(screen.getByText(/pme\.crayon\.etat\.lu/)).toBeTruthy();
   });
 
   it("ne dit pas « non lu » d'un montant que le cabinet a tranché", () => {

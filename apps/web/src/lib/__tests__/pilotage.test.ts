@@ -1,3 +1,10 @@
+/**
+ * Le pilotage du cabinet — charge d'un collaborateur et santé d'un mandat.
+ *
+ * Garantit que l'état de charge se lit sur la capacité réglée et non sur un seuil écrit
+ * dans le code, que la santé d'un mandat se compare au taux moyen de retour du cabinet,
+ * et que le taux de retour est vide plutôt que faux quand il n'y a aucune pièce.
+ */
 import { describe, expect, it } from "vitest";
 
 import { etatDeCharge, santeDuMandat, tauxDeRetour } from "../pilotage";

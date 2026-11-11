@@ -1,3 +1,14 @@
+/**
+ * La création d'une organisation — nature, juridiction, mode de validation, établissement.
+ *
+ * Écran du premier pas : la personne dit si elle ouvre une PME ou un cabinet, donne le nom
+ * et l'identifiant légal, choisit le mode de validation et nomme l'établissement principal.
+ *
+ * Les juridictions proposées viennent du référentiel (R5, R8) : une option s'affiche parce
+ * qu'un pack est en vigueur, jamais parce qu'un code l'a écrite. La devise n'est pas
+ * demandée : elle appartient au pack de la juridiction, pour ne pas tenir une comptabilité
+ * dans une monnaie qui n'est pas la sienne. À la création, on retourne au choix d'espace.
+ */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";

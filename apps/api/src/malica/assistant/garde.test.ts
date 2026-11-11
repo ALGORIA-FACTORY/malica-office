@@ -310,3 +310,130 @@ describe("la garde ne retient que ce qui engage, quand la base dit ce qui engage
     );
   });
 });
+
+const UNITES = ["%", "pour cent", "jour", "jours", "mois", "يوم"];
+
+describe("le chiffre sans source part marqué quand le corpus s'est tu (M-9)", () => {
+  it("sans la marque, la phrase est retirée", () => {
+    const g = new GardeDesChiffres("Quel est le taux ?");
+    const j = g.jugerTout("Le taux est de 7 %. Il se déclare chaque mois.");
+    assert.equal(j.aEmettre, "Il se déclare chaque mois.");
+    assert.deepEqual(g.marquees(), []);
+    assert.equal(g.retirees().length, 1);
+  });
+
+  it("avec la marque, la phrase reste et porte la marque avant l'espace qui la suit", () => {
+    const g = new GardeDesChiffres("Quel est le taux ?");
+    g.marquerSansSource("_(non vérifié)_", UNITES);
+    const j = g.jugerTout("Le taux est de 7 %. Il se déclare chaque mois.");
+    assert.equal(j.aEmettre, "Le taux est de 7 %. _(non vérifié)_ Il se déclare chaque mois.");
+    assert.deepEqual(g.marquees(), ["Le taux est de 7 %."]);
+    assert.deepEqual(g.retirees(), []);
+  });
+
+  it("un chiffre porté par une source ne reçoit pas la marque", () => {
+    const g = new GardeDesChiffres("Quel est le taux ?");
+    g.ajouterSource({
+      cle: "malica:article:ESSAI:7",
+      genre: "article",
+      titre: "Texte d'essai, article 7",
+      objetId: null,
+      texte: "Le taux est fixé à 19 %.",
+    });
+    g.marquerSansSource("_(non vérifié)_", UNITES);
+    const j = g.jugerTout("Le taux est de 19 %.");
+    assert.equal(j.aEmettre, "Le taux est de 19 %.");
+    assert.deepEqual(g.marquees(), []);
+  });
+});
+
+describe("une phrase qui nomme un outil ne part pas à l'écran", () => {
+  const NOMS = ["afficher_visuel", "conseil_fiscal", "calculer"];
+
+  it("en flux comme à la fin du bloc, la phrase est tue et les autres passent", () => {
+    const g = new GardeDesChiffres("Combien ai-je acheté chez Kordane ?");
+    g.taire(NOMS);
+    g.ouvrirBloc();
+    const flux = g.recevoirTexte(
+      "Je regarde vos achats. Calling afficher_visuel on that source is what they're asking for. Voici le total. ",
+    );
+    const fin = g.fermerBloc();
+    assert.equal(flux + fin.aEmettre, "Je regarde vos achats. Voici le total. ");
+    assert.equal(g.tues().length, 1);
+    assert.deepEqual(g.retirees(), [], "une phrase tue n'est pas un chiffre retiré");
+  });
+
+  it("un mot de tous les jours n'est pas un nom d'outil : « calculer » passe", () => {
+    const g = new GardeDesChiffres("Peux-tu calculer ?");
+    g.taire(NOMS);
+    assert.equal(
+      g.jugerTout("Je peux calculer cela pour vous.").aEmettre,
+      "Je peux calculer cela pour vous.",
+    );
+    assert.deepEqual(g.tues(), []);
+  });
+
+  it("sans liste, rien n'est tu", () => {
+    const g = new GardeDesChiffres("Bonjour");
+    assert.equal(
+      g.jugerTout("L'outil conseil_fiscal répond.").aEmettre,
+      "L'outil conseil_fiscal répond.",
+    );
+  });
+});
+
+describe("la marque ne couvre qu'un taux ou une durée (revue de la PR #352)", () => {
+  const marquee = () => {
+    const g = new GardeDesChiffres("Quelle TVA dois-je ?");
+    g.ajouterSource({
+      cle: "malica:piece:1",
+      genre: "piece",
+      titre: "Facture F-07",
+      objetId: null,
+      texte: "Total TTC : 1 190,000 TND",
+    });
+    g.marquerSansSource("_(non vérifié)_", UNITES);
+    return g;
+  };
+
+  it("un montant de facture inventé et un calcul fait de tête restent retirés", () => {
+    const g = marquee();
+    const j = g.jugerTout(
+      "Le taux est de 19 %. Votre facture F-12 s'élève à 4 870,500 TND. Soit une TVA de 925,395 TND à payer.",
+    );
+    assert.equal(j.aEmettre, "Le taux est de 19 %. _(non vérifié)_ ");
+    assert.equal(g.retirees().length, 2);
+    assert.deepEqual(g.marquees(), ["Le taux est de 19 %."]);
+  });
+
+  it("une phrase qui mêle un taux et un montant sans source est retirée entière", () => {
+    const g = marquee();
+    assert.equal(g.jugerTout("Au taux de 19 %, vous devez 925,395 TND.").aEmettre, "");
+    assert.deepEqual(g.marquees(), []);
+  });
+
+  it("un taux à côté d'un montant du dossier, lui sourcé, part marqué", () => {
+    const g = marquee();
+    const j = g.jugerTout("Sur vos 1 190,000 TND, le taux serait de 19 %.");
+    assert.equal(j.aEmettre, "Sur vos 1 190,000 TND, le taux serait de 19 %. _(non vérifié)_");
+  });
+
+  it("une durée se marque, en français comme en arabe ; un mot voisin n'est pas une unité", () => {
+    const g = marquee();
+    assert.match(g.jugerTout("Le délai est de 28 jours.").aEmettre, /non vérifié/);
+    assert.match(g.jugerTout("الأجل 28 يوم.").aEmettre, /non vérifié/);
+    assert.equal(g.jugerTout("La taxe vaut 28 jourdains par facture.").aEmettre, "");
+  });
+
+  it("sans liste d'unités, rien ne se marque", () => {
+    const g = new GardeDesChiffres("Quel taux ?");
+    g.marquerSansSource("_(non vérifié)_", []);
+    assert.equal(g.jugerTout("Le taux est de 19 %.").aEmettre, "");
+  });
+
+  it("un nom d'outil au soulignement échappé est tu aussi", () => {
+    const g = new GardeDesChiffres("Bonjour");
+    g.taire(["afficher_visuel"]);
+    assert.equal(g.jugerTout("J'appelle afficher\\_visuel. Voici.").aEmettre, "Voici.");
+  });
+});

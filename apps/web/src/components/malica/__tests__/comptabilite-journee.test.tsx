@@ -1,4 +1,12 @@
 // @vitest-environment jsdom
+/**
+ * La journée de l'expert-comptable — l'écran d'accueil du cabinet, lu pièce par pièce.
+ *
+ * Garantit que la file se lit en piles et que le filtre retrouve toute la file, que sans
+ * mandat l'écran propose le portefeuille au lieu d'une revue factice, qu'une panne n'affiche
+ * jamais « Votre file est à jour », et que le rendu serveur reprend les composants de
+ * production (il peut être écrit dans MALICA_VISUAL_DIR pour la revue visuelle).
+ */
 import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";

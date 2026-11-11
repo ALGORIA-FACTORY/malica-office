@@ -1,3 +1,9 @@
+-- Preuve 01 — une licence Team : ses droits, ses sièges, et le plafond de sièges.
+--
+-- Monte un dirigeant, une organisation et une licence Team, puis lit `facturation.droits_v` :
+-- sans siège, puis avec trois sièges ajoutés (les lectures et le prix mensuel montent), puis
+-- jusqu'à dix places et une onzième, qui doit être refusée par la base.
+-- Chaque bloc dit l'attendu dans son `\echo` ; un écart se lit à l'œil.
 \set ON_ERROR_STOP on
 -- ─────────── fixture : un dirigeant, une organisation, une licence Team ───────────
 create extension if not exists pgcrypto;

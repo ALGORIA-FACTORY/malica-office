@@ -1,3 +1,11 @@
+/**
+ * Le portefeuille actif du cabinet — quels dossiers comptent, et quelles échéances.
+ *
+ * Garantit que seuls les mandats actifs entrent dans le périmètre opérationnel, même si
+ * une lecture privilégiée rend aussi les dossiers terminés, suspendus ou proposés, et que
+ * les échéances sont rangées en retard, semaine, mois ou suite, sans mêler les retards
+ * aux prochains jours.
+ */
 import { describe, expect, it } from "vitest";
 import { idsDesMandatsActifs, trancheDEcheance } from "../portefeuille-actif";
 

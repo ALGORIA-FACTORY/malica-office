@@ -1306,6 +1306,19 @@ export interface PieceDossier {
    */
   precisions: Record<string, string>;
   /**
+   * Ce que la personne a corrigé sur la facture elle-même (le crayon, 10
+   * novembre 2026) : la valeur saisie, la valeur LUE qui reste, qui a saisi et
+   * quand. Le cabinet les lit comme la PME.
+   */
+  corrections: CorrectionDeLecture[];
+  /**
+   * Les champs que l'arithmétique de la dernière lecture a VÉRIFIÉS (chemins de
+   * citation) : « prouvé par le calcul », à côté de « lu » et de « saisi ».
+   */
+  prouves: string[];
+  /** Les décimales de la devise de la pièce au référentiel (R4) ; `null` si elle n'y est pas. */
+  decimalesDeLaPiece: number | null;
+  /**
    * Où elle en est chez le cabinet — envoyée, vue, corrigée, prise en charge —
    * ou `null` si elle n'y est jamais partie. Le mot se dérive au Socle
    * (`statut-d-envoi.ts`), le même pour la PME et le cabinet.
@@ -1329,6 +1342,41 @@ export interface PieceDossier {
   ecritureIllisible?: boolean;
   citations: Citation[];
   tokens: Token[];
+}
+
+/** Une composante de la facture corrigée à la main : une précision, jamais une réécriture (R7). */
+export interface CorrectionDeLecture {
+  /** Le chemin de citation du champ (`totals.vat`, `other_charges[0].amount`). */
+  champ: string;
+  /** La valeur retenue, celle de la personne. */
+  valeur: string;
+  /** Ce que la lecture avait lu, intact ; `null` si elle n'avait rien lu. */
+  lue: string | null;
+  /** Le nom de la personne qui a saisi, tel que la base le donne à qui lit la pièce. */
+  par: string | null;
+  le: string;
+}
+
+/**
+ * Le jugement rendu APRÈS une correction : c'est lui, jamais l'écran, qui dit
+ * si la facture tombe juste (R3). Les montants sont ceux que le moteur
+ * retient, aux décimales de la devise du référentiel (R4).
+ */
+export interface JugementDUneCorrection {
+  /** La facture tombe juste : le moteur a tranché une lecture qui ferme. */
+  ferme: boolean;
+  /** L'état de la normalisation (`tranche`, `incoherent`, `illisible`…). */
+  etat: string;
+  devise: string | null;
+  /** Les montants retenus ; `null` quand le moteur n'en retient aucun. */
+  montants: {
+    baseHt: string | null;
+    tva: string | null;
+    droits: Array<string | null>;
+    ttc: string | null;
+  } | null;
+  /** Les champs à vérifier, par chemin de citation, quand la facture ne ferme pas. */
+  aVerifier: string[];
 }
 
 /** HT, TVA, droits et TTC d'une pièce, tirés de l'écriture prise en charge. */
@@ -1730,6 +1778,29 @@ export interface CaptureRepository {
     champ: "document_kind" | "issuer",
     valeur: string,
   ): Promise<{ id: string | null; champ: string; valeur: string }>;
+  /**
+   * Corriger une composante de la facture lue (le crayon) : la précision
+   * s'inscrit, la pièce est rejugée, et le jugement revient avec elle. Le
+   * message que la personne lit vient de ce jugement.
+   */
+  corrigerLeChamp(
+    pieceId: string,
+    champ: string,
+    valeur: string,
+  ): Promise<{
+    id: string | null;
+    champ: string;
+    valeur: string;
+    jugement: JugementDUneCorrection;
+  }>;
+  /**
+   * Les codes de TVA qu'une personne peut choisir pour une ligne, lus au
+   * référentiel à la DATE de la pièce (R4) : jamais un taux saisi.
+   */
+  codesDeTva(
+    pieceId: string,
+    locale: string,
+  ): Promise<Array<{ code: string; label: string; taux: string }>>;
   /**
    * Rejuger la pièce après une précision : le verdict suit la réponse de la
    * personne. Sans ce geste, l'écran garderait le verdict d'avant.
@@ -4689,6 +4760,13 @@ export interface ReglageDeLAssistant {
 }
 
 /** Ce que la tour voit de « Parler à Malica ». */
+export interface RelectureDeLAssistant {
+  mode: "annoncer" | "retenir";
+  sans_texte: "marquer" | "retirer";
+  motif: string;
+  decide_le: string;
+}
+
 export interface EtatDeLAssistant {
   consignes: Array<{ id: string; texte: string; motif: string; decide_le: string }>;
   reglage: {
@@ -4908,6 +4986,19 @@ export interface TourRepository {
   reglerPlafondDeLAssistant(
     plafondUsd: string,
     periode: "jour" | "mois",
+    motif: string,
+  ): Promise<unknown>;
+  /**
+   * Ce que Malica fait d'une réponse que le cabinet doit relire (`annoncer` :
+   * affichée, marquée, envoyée ; `retenir` : seul le message de relecture) et
+   * d'un corpus qui ne répond pas (`marquer` : elle répond, ses chiffres de
+   * mémoire marqués « non vérifié » ; `retirer` : la règle stricte).
+   */
+  relectureDeLAssistant(): Promise<RelectureDeLAssistant | null>;
+  /** Inscrire une décision nouvelle : datée, motivée, en ajout seul. */
+  reglerRelectureDeLAssistant(
+    mode: RelectureDeLAssistant["mode"],
+    sansTexte: RelectureDeLAssistant["sans_texte"],
     motif: string,
   ): Promise<unknown>;
   /**

@@ -1,3 +1,11 @@
+/**
+ * Les épreuves du moteur de change — un taux daté, ou un refus.
+ *
+ * Garantissent qu'une conversion applique le taux versionné valide à la date, que deux
+ * montants de même devise passent tels quels sans taux, et que l'absence de taux
+ * lève une erreur explicite au lieu d'en inventer un : un montant converti à un taux
+ * deviné serait plausible et faux dans le journal.
+ */
 import { describe, it, expect } from "vitest";
 import { convertFx, findFxRate, FxRateUnavailable } from "../engines/fx/convert.ts";
 import { EUR, TND } from "./fixtures.ts";

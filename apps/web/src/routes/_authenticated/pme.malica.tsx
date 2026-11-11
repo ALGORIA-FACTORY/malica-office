@@ -1,3 +1,16 @@
+/**
+ * Converser avec Malica — l'écran où le dirigeant pose ses questions.
+ *
+ * Écran de la PME : Malica accueille avec trois questions toutes prêtes, puis se range dans
+ * l'en-tête et laisse le fil parler. Sa réponse arrive en flux, après la garde des chiffres,
+ * avec ses sources, ses propositions d'action à confirmer et ses suggestions de suite. Le
+ * micro ouvre la voix là où l'appareil le permet. Une pièce jointe est déposée puis confiée
+ * à la lecture Malica : le modèle n'en voit jamais l'image.
+ *
+ * R3 : aucun chiffre n'est écrit ni déduit ici ; ceux de l'écran viennent du texte rendu par
+ * le Socle et des comptes renvoyés par les lectures. Les appels sont ceux du contrat RPC (R2).
+ * Sur ordinateur, trois colonnes : conversations, fil, et ce que Malica a utilisé.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";

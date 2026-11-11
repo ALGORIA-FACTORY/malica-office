@@ -1,3 +1,12 @@
+/**
+ * Le contrat du rapprochement bancaire — la forme des lignes, des paires et des écarts.
+ *
+ * Décrit une ligne de relevé importée telle quelle, une ligne comptable candidate, une
+ * paire appariée avec son score déterministe de 0 à 100 (montant, date, référence ;
+ * aucun modèle d'IA) et le résultat complet : paires, lignes orphelines de chaque côté,
+ * écart global. Les tolérances de jours et de montant sont lues au pack, jamais en dur
+ * (R4). Produit par `engines/banque/rapprochement`.
+ */
 import { z } from "zod";
 
 const decimalString = z.string().regex(/^-?\d+(\.\d+)?$/);

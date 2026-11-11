@@ -628,6 +628,46 @@ export const fr = {
   "pme.detail.nonLuVoir": "Non lu · voir la zone",
   "pme.detail.montantsNonLus":
     "Je n’ai pas su lire tous les montants de cette pièce : {champs}. Ils restent à vérifier sur la pièce.",
+  "pme.crayon.modifier": "Corriger : {champ}",
+  "pme.crayon.titre": "Corriger : {champ}",
+  "pme.crayon.zone": "Zone de la photo",
+  "pme.crayon.sansZone": "Ce champ n’a pas de zone sur la photo.",
+  "pme.crayon.zoneAilleurs": "La photo se lit en entier.",
+  "pme.crayon.voirLaPhoto": "Voir la photo entière",
+  "pme.crayon.lu": "Lu sur la photo : {valeur}",
+  "pme.crayon.luRien": "Rien n’a été lu ici.",
+  "pme.crayon.champ": "Votre valeur ({devise})",
+  "pme.crayon.aide":
+    "On corrige ce que la machine a mal lu ; on ne change pas la facture. Recopiez ce qui est imprimé.",
+  "pme.crayon.enregistrer": "Enregistrer la correction",
+  "pme.crayon.ferme": "Avec votre correction, la facture tombe juste.",
+  "pme.crayon.retenus": "Montants retenus",
+  "pme.crayon.valider": "Valider ces montants",
+  "pme.crayon.neFermePas": "Avec votre correction, le total ne tombe pas encore juste.",
+  "pme.crayon.aVerifier": "À vérifier : {champs}.",
+  "pme.crayon.sansBloquer":
+    "Rien ne vous est bloqué : vous pouvez corriger un autre montant ou continuer.",
+  "pme.crayon.encore": "Corriger un autre montant",
+  "pme.crayon.etat.lu": "Lu",
+  "pme.crayon.etat.prouve": "Prouvé par le calcul",
+  "pme.crayon.etat.saisi": "Saisi par {nom}",
+  "pme.crayon.etat.saisiSans": "Saisi à la main",
+  "pme.crayon.etat.valeurLue": "Lu : {valeur}",
+  "pme.crayon.provenance":
+    "Les montants marqués « Saisi » viennent de la personne, pas de la lecture ; la lecture reste intacte.",
+  "pme.crayon.champQuantite": "Votre quantité",
+  "pme.crayon.champTexte": "Libellé tel qu’imprimé",
+  "pme.crayon.champCode": "Choisissez le code de TVA",
+  "pme.crayon.ligne.designation": "Libellé",
+  "pme.crayon.ligne.quantity": "Quantité",
+  "pme.crayon.ligne.unit_price_ht": "Prix unitaire HT",
+  "pme.crayon.ligne.total_ht": "Montant HT",
+  "pme.crayon.ligne.tax_code": "Code TVA",
+  "pme.crayon.ligne.de": "{champ} — ligne {n}",
+  "pme.crayon.cabinet.titre": "Corrigé à la main sur cette pièce",
+  "pme.crayon.cabinet.valeurs": "Saisi : {saisi} · Lu : {lu}",
+  "pme.crayon.cabinet.luRien": "rien",
+  "pme.crayon.cabinet.note": "La lecture reste intacte ; la photo est la pièce elle-même.",
   "pme.detail.provenance":
     "Chaque ligne vient de la pièce elle-même. Je n'ajoute ni ne calcule rien.",
   "pme.lecture.releve": "Relevé · {mots} mots situés",
@@ -1267,6 +1307,12 @@ export const fr = {
   "cab.journal.conseil.ecarte": "Question de conseil écartée",
   "pme.conseil.relecture":
     "Votre comptable relit ma réponse : je vous la transmets dès qu’il l’a validée.",
+  "pme.conseil.douteNonVerifie":
+    "Réponse donnée sans texte trouvé dans le corpus : les chiffres marqués « non vérifié » viennent de la mémoire du modèle.",
+  "pme.conseil.aConfirmer":
+    "À confirmer par votre comptable : je lui envoie cette réponse, il la confirmera, la corrigera ou l’écartera.",
+  "pme.conseil.aConfirmerSansEnvoi":
+    "À faire confirmer par votre comptable : je n’ai pas pu lui transmettre cette réponse.",
   "pme.conseil.sansCabinet":
     "Aucune comptabilité ne suit encore ce dossier : cette réponse n’a pas été relue par un expert-comptable.",
   "pme.conseil.relu": "Relu et validé par votre comptable.",
@@ -1284,6 +1330,9 @@ export const fr = {
   "pme.assistant.interrompue":
     "Ma réponse a été interrompue. Reposez la question si elle vous semble incomplète.",
   "pme.assistant.indisponible": "Je n'ai pas pu répondre pour l'instant. Réessayez dans un moment.",
+  "pme.assistant.nonVerifie": "_(non vérifié)_",
+  "pme.assistant.nonVerifieNote":
+    "Je n’ai pas trouvé ce point dans les textes : ce qui est marqué « non vérifié » vient de mes connaissances générales. Ne l’appliquez pas avant qu’un expert-comptable l’ait confirmé.",
   "pme.assistant.vide":
     "Je n'ai rien trouvé de sûr à vous répondre. Pouvez-vous préciser votre question ?",
   "pme.assistant.outil.pieces_chercher": "Je regarde vos pièces…",
@@ -1384,6 +1433,21 @@ export const fr = {
   "tour.assistant.plafond.parMois": "Par mois civil",
   "tour.assistant.plafond.parJour": "Par jour",
   "tour.assistant.plafond.borne": "Un montant positif, deux décimales au plus.",
+  "tour.assistant.relecture": "Réponse à confirmer",
+  "tour.assistant.relecture.aide":
+    "Ce que Malica fait quand un avis engage le dossier d'une société suivie par un cabinet, et quand les textes ne répondent pas à une question de droit.",
+  "tour.assistant.relecture.enVigueur": "En vigueur depuis le {date} — {motif}",
+  "tour.assistant.relecture.absente":
+    "Aucune décision en base : la réponse est retenue et le chiffre sans source est retiré.",
+  "tour.assistant.relecture.mode": "Avis à faire relire par le comptable",
+  "tour.assistant.relecture.annoncer":
+    "Afficher la réponse, marquée « à confirmer », et l'envoyer au comptable",
+  "tour.assistant.relecture.retenir": "Retenir la réponse jusqu'à la validation du comptable",
+  "tour.assistant.relecture.sansTexte": "Question de droit sans texte trouvé",
+  "tour.assistant.relecture.marquer":
+    "Répondre quand même ; un chiffre de mémoire porte la marque « non vérifié »",
+  "tour.assistant.relecture.retirer":
+    "Dire que les textes ne répondent pas ; retirer tout chiffre sans source",
   "tour.assistant.reglage": "Réglage de l'assistant",
   "tour.assistant.reglage.aide":
     "Le modèle courant répond à tout ; le modèle des questions difficiles prend la main quand la question dépasse la longueur réglée, contient l'un des mots, ou joint plusieurs pièces. La dépense est bornée par le plafond de l'assistant (carte ci-dessus), lui-même sous le plafond de la chaîne des modèles.",
@@ -2642,6 +2706,18 @@ export const fr = {
   "refus.precision.date_a_venir": "Une date à venir ne se précise pas : {date}.",
   "refus.precision.nom_vide": "Le nom ne peut pas être vide.",
   "refus.precision.nom_trop_long": "Le nom est trop long : {max} caractères au plus.",
+  "refus.precision.montant_illisible":
+    "Ce montant ne se lit pas : écrivez des chiffres et une virgule.",
+  "refus.precision.montant_trop_precis":
+    "Ce montant a trop de décimales : {max} au plus pour cette devise.",
+  "refus.precision.devise_inconnue": "La devise de cette pièce n’est pas connue : {devise}.",
+  "refus.precision.ligne_inconnue": "Cette ligne n’existe pas dans la lecture de la pièce.",
+  "refus.precision.libelle_vide": "Le libellé ne peut pas être vide.",
+  "refus.precision.libelle_trop_long": "Le libellé est trop long : {max} caractères au plus.",
+  "refus.precision.quantite_illisible":
+    "Cette quantité ne se lit pas : écrivez des chiffres et une virgule.",
+  "refus.precision.code_tva_inconnu":
+    "Ce code de TVA n’existe pas au référentiel à la date de la pièce : {code}.",
   "refus.precision.champ": "Ce champ ne se précise pas : {champ}.",
   "refus.lecture.citation_orpheline":
     "La lecture cite le champ {champ} à un emplacement où aucun mot n’a été lu.",

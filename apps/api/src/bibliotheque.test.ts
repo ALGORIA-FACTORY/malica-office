@@ -1,3 +1,16 @@
+/**
+ * La bibliothèque comptable du cabinet — éprouvée sous les rôles réels de la base.
+ *
+ * Le cabinet ne voit d'un client que ce que le client lui a transmis, sous un mandat
+ * accepté. Ce test le garantit avec le cas piège : un expert qui est aussi membre de la
+ * société et pourrait lire des pièces privées, sans qu'elles sortent dans la bibliothèque.
+ * Il couvre aussi le classement par mois (date du document, sinon réception dans le
+ * fuseau de la personne), les contrôles restitués et leur ancienneté, et le retrait de
+ * l'accès à la révocation du mandat.
+ *
+ * Il tourne sur la vraie base (RLS, sans superutilisateur) et s'ignore, sans la signaler
+ * comme réussi, quand DATABASE_URL, DATABASE_URL_ADMIN et JWT_SECRET manquent.
+ */
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import pg from "pg";

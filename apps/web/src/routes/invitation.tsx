@@ -1,3 +1,15 @@
+/**
+ * La page d'invitation — ce que le contact ouvre depuis son lien pour rejoindre une société.
+ *
+ * Route `/invitation`, rendue sur l'appareil. Le jeton arrive dans le fragment de l'adresse,
+ * qu'aucun serveur ne voit ; il est rangé en mémoire d'onglet puis effacé de la barre
+ * d'adresse, pour ne rester ni dans l'historique ni dans un lien copié. Sans session : créer
+ * l'accès ou se connecter, puis revenir ici. Avec session : le dossier rejoint, l'adresse
+ * invitée, et un seul bouton.
+ *
+ * Une session sur une autre adresse que l'invitation est signalée. Un lien introuvable ou
+ * périmé le dit dans le titre comme dans le corps. Accepté, le contact entre dans `/pme`.
+ */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";

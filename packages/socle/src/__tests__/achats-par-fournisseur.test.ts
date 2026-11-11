@@ -1,3 +1,10 @@
+/**
+ * Le moteur des achats par fournisseur, celui que Malica cite (#345).
+ *
+ * Une somme exacte en décimal, un classement stable, et ce qui est écarté
+ * (total non lu, autre devise, émetteur absent) dit au lieu d'être tu : un
+ * chiffre que l'assistant affiche doit venir d'un moteur, jamais du modèle (R3).
+ */
 import { describe, expect, it } from "vitest";
 
 import {

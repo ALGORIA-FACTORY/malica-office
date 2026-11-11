@@ -1,3 +1,15 @@
+/**
+ * L'accueil de la PME — ce qui attend le dirigeant, ses dossiers et ses pièces récentes.
+ *
+ * Écran de la PME, sa page d'entrée : les sept dossiers en pochettes, le résumé de la
+ * période, les pièces récentes, un accès direct à Malica et au cabinet mandaté. Un dossier
+ * neuf est renvoyé vers l'écran d'arrivée (`/pme/bienvenue`).
+ *
+ * Les données viennent de `useAccueil` et de la coque PME. Un compteur absent s'affiche « — »,
+ * jamais « 0 » : zéro est un fait comptable, l'absence n'en est pas un. L'offre se voit au
+ * compteur de lectures et aux cartes verrouillées, visibles et jamais masquées. Le dépôt
+ * « cabinet » n'est pas au contrat : aucun appel n'est inventé pour lui.
+ */
 import { InvitationsPourMoi } from "@/components/malica/InvitationsPourMoi";
 import { sensDuSolde } from "@/lib/sens-du-solde";
 import { useQuery } from "@tanstack/react-query";
