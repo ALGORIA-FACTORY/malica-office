@@ -11,6 +11,7 @@
  */
 
 import type { TarifDeModele } from "../conseil/cite.ts";
+import type { RegleDeLaGarde } from "./garde.ts";
 
 type Effort = "low" | "medium" | "high";
 type Reflexion = "disabled" | "between_tools" | "adaptive";
@@ -47,6 +48,8 @@ export interface ConfigurationDeLAssistant {
   reglage: ReglageDeLAssistant;
   tarifs: TarifDeModele[];
   plafond: PlafondDeLAssistant;
+  /** Ce qui rend un chiffre liant ; `null` : la garde juge tout chiffre. */
+  garde: RegleDeLaGarde | null;
 }
 
 const EFFORTS: readonly Effort[] = ["low", "medium", "high"];
@@ -82,7 +85,19 @@ export function lireConfigurationAssistant(brut: unknown): ConfigurationDeLAssis
     },
     tarifs: (c.tarifs ?? []).map((t) => ({ ...t, in: Number(t.in), out: Number(t.out) })),
     plafond: lirePlafond(c.plafond),
+    garde: lireLaGarde(c.garde),
   };
+}
+
+/** La règle de la garde. Absente ou illisible : `null`, et la garde reste stricte. */
+function lireLaGarde(brut: unknown): RegleDeLaGarde | null {
+  const g = brut as Partial<Record<keyof RegleDeLaGarde, unknown>> | null | undefined;
+  const marques = Array.isArray(g?.marques_liantes)
+    ? g.marques_liantes.filter((m): m is string => typeof m === "string" && m.trim() !== "")
+    : [];
+  const seuil = Number(g?.entier_liant_des);
+  if (marques.length === 0 || !Number.isInteger(seuil) || seuil < 1) return null;
+  return { marques_liantes: marques, entier_liant_des: seuil };
 }
 
 /**

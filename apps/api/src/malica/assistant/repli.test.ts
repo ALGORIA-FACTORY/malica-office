@@ -27,6 +27,7 @@ import {
 } from "./agent.ts";
 import type { ClientEnFlux, EvenementClaude } from "./claude-flux.ts";
 import { lireConfigurationAssistant } from "./configuration.ts";
+import { clientDeepSeekEnFlux } from "./deepseek-flux.ts";
 import { repliParDeepSeek } from "./repli.ts";
 
 const TENANT = "11111111-1111-4111-8111-111111111111";
@@ -142,6 +143,7 @@ function dossierFictif(options: {
             reponse: string;
             sources?: unknown[] | null;
             propositions?: unknown[] | null;
+            blocs?: unknown[] | null;
           };
           fils.get(a.conversationId)?.push(
             { role: "user", contenu: a.question },
@@ -150,6 +152,7 @@ function dossierFictif(options: {
               contenu: a.reponse,
               sources: a.sources ?? null,
               propositions: a.propositions ?? null,
+              ...(a.blocs?.length ? { blocs: a.blocs } : {}),
             },
           );
           return r(undefined);
@@ -474,5 +477,398 @@ describe("le fil garde les sources et les propositions de la réponse", () => {
     // À la réouverture, le fil les rend tels quels.
     const relu = await api.rpc<MessageRange[]>("conversations", "ouvrir", [fin.conversationId]);
     assert.deepEqual(relu.at(-1)!.propositions, fin.propositions);
+  });
+});
+
+/* ------------------------- DeepSeek dans la boucle d'outils (lot B, parité) -- */
+
+describe("DeepSeek répond dans la même boucle d'outils que Claude", () => {
+  /** Une réponse de DeepSeek au format Messages, en flux SSE. */
+  const sse = (evs: EvenementClaude[]) =>
+    new Response(evs.map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join(""), {
+      status: 200,
+      headers: { "content-type": "text/event-stream" },
+    });
+  const usage = { input_tokens: 120, output_tokens: 30 };
+  const appelDOutil = (nom: string): EvenementClaude[] => [
+    { type: "message_start", message: { model: "deepseek-chat", usage } },
+    {
+      type: "content_block_start",
+      index: 0,
+      content_block: { type: "tool_use", id: "t1", name: nom, input: {} },
+    },
+    {
+      type: "content_block_delta",
+      index: 0,
+      delta: { type: "input_json_delta", partial_json: "{}" },
+    },
+    { type: "content_block_stop", index: 0 },
+    { type: "message_delta", delta: { stop_reason: "tool_use" }, usage },
+  ];
+  const texte = (...morceaux: string[]): EvenementClaude[] => [
+    { type: "message_start", message: { model: "deepseek-chat", usage } },
+    { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+    ...morceaux.map((text): EvenementClaude => ({
+      type: "content_block_delta",
+      index: 0,
+      delta: { type: "text_delta", text },
+    })),
+    { type: "content_block_stop", index: 0 },
+    { type: "message_delta", delta: { stop_reason: "end_turn" }, usage },
+  ];
+
+  const lancer = async (reponses: EvenementClaude[][], options = { anthropicEpuise: true }) => {
+    const { api, fils } = dossierFictif(options);
+    const requetes: Array<Record<string, unknown>> = [];
+    let n = 0;
+    const deepseek = clientDeepSeekEnFlux({
+      apiKey: "cle-d-essai",
+      fetch: (async (_u: unknown, init?: RequestInit) => {
+        requetes.push(JSON.parse(String(init?.body)));
+        return sse(reponses[Math.min(n++, reponses.length - 1)]!);
+      }) as typeof fetch,
+    });
+    const r = await rejouer(api, {
+      claude: pasDeClaude,
+      deepseek,
+      conseil: pasDeConseil,
+      repli: async () => {
+        throw new Error("le repli ne devait pas être appelé : DeepSeek répond dans la boucle");
+      },
+    });
+    return { ...r, requetes, fils };
+  };
+
+  it("appelle les mêmes outils, numérote les passages et cite comme Claude", async () => {
+    const { fin, evenements, requetes, fils } = await lancer([
+      appelDOutil("ecritures_proposees"),
+      texte("Le compte TVA à payer porte 1090.504 TND ", "[S1]."),
+    ]);
+    assert.equal(fin.mesure.repli, "deepseek");
+    assert.equal(fin.mesure.motifDuRepli, "budget_claude");
+    assert.equal(fin.mesure.modele, "deepseek-chat");
+    assert.deepEqual(fin.mesure.outils, ["ecritures_proposees"]);
+    assert.equal(fin.chiffresRetires, 0);
+    assert.match(fin.reponse, /1090\.504 TND/);
+    assert.doesNotMatch(fin.reponse, /\[S\d/);
+    // Le modèle a reçu le passage numéroté, pas un bloc que DeepSeek ne connaît pas.
+    const second = JSON.stringify(requetes[1]);
+    assert.match(second, /\[S1\]/);
+    assert.doesNotMatch(second, /search_result|cache_control|output_config/);
+    // La réflexion est coupée : DeepSeek exigerait de la recevoir en retour.
+    assert.deepEqual(requetes[1]!["thinking"], { type: "disabled" });
+    // La source citée est celle que la garde a relue, et le fil range ce que l'écran a vu.
+    assert.ok(fin.sources.length >= 1);
+    const montre = evenements.flatMap((e) => (e.type === "texte" ? [e.texte] : [])).join("");
+    assert.equal(montre.trim(), fin.reponse.trim());
+    assert.equal(fils.get(fin.conversationId)!.at(-1)!.contenu, fin.reponse);
+    // Rien de la mécanique ne part au navigateur.
+    assert.doesNotMatch(JSON.stringify(evenements), /deepseek|tokens|latency|thinking/i);
+  });
+
+  it("retire la phrase dont le chiffre n'est dans aucune source remise", async () => {
+    const { fin, evenements } = await lancer([
+      appelDOutil("ecritures_proposees"),
+      texte("Le compte porte 1090.504 TND [S1]. Vous économiserez 300 dinars."),
+    ]);
+    assert.equal(fin.chiffresRetires, 1);
+    assert.ok(!JSON.stringify(evenements).includes("300"));
+  });
+
+  it("la réflexion de DeepSeek ne part pas, même si le fournisseur l'envoie", async () => {
+    const { fin, evenements } = await lancer([
+      [
+        { type: "message_start", message: { model: "deepseek-chat", usage } },
+        { type: "content_block_start", index: 0, content_block: { type: "thinking" } },
+        {
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "thinking_delta", thinking: "raisonnement-secret" },
+        },
+        { type: "content_block_stop", index: 0 },
+        { type: "content_block_start", index: 1, content_block: { type: "text", text: "" } },
+        {
+          type: "content_block_delta",
+          index: 1,
+          delta: { type: "text_delta", text: "L'inflation est la hausse des prix." },
+        },
+        { type: "content_block_stop", index: 1 },
+        { type: "message_delta", delta: { stop_reason: "end_turn" }, usage },
+      ],
+    ]);
+    assert.doesNotMatch(JSON.stringify({ fin, evenements }), /raisonnement-secret/);
+    assert.match(fin.reponse, /inflation/);
+  });
+
+  /** Le dossier fictif, plus le calendrier fiscal que lit `echeances_fiscales`. */
+  const avecCalendrier = (options: { anthropicEpuise?: boolean } = { anthropicEpuise: true }) => {
+    const d = dossierFictif(options);
+    const api: AppelApi = {
+      ...d.api,
+      async rpc<T>(depot: string, methode: string, args: unknown[] = []): Promise<T> {
+        if (`${depot}.${methode}` === "collab.echeances")
+          return [
+            {
+              id: "e1",
+              label: "Déclaration de TVA",
+              period: "2026-10",
+              dueDate: "2026-10-28",
+              status: "a_faire",
+            },
+            {
+              id: "e2",
+              label: "Acompte provisionnel",
+              period: null,
+              dueDate: "2026-12-15",
+              status: "a_faire",
+            },
+          ] as T;
+        return d.api.rpc<T>(depot, methode, args);
+      },
+    };
+    return { ...d, api };
+  };
+  const appelAvecEntree = (nom: string, entree: unknown): EvenementClaude[] => {
+    const evs = appelDOutil(nom);
+    evs[2] = {
+      type: "content_block_delta",
+      index: 0,
+      delta: { type: "input_json_delta", partial_json: JSON.stringify(entree) },
+    };
+    return evs;
+  };
+  const jouer = async (api: AppelApi, reponses: EvenementClaude[][]) => {
+    const requetes: Array<Record<string, unknown>> = [];
+    let n = 0;
+    const deepseek = clientDeepSeekEnFlux({
+      apiKey: "cle-d-essai",
+      fetch: (async (_u: unknown, init?: RequestInit) => {
+        requetes.push(JSON.parse(String(init?.body)));
+        return sse(reponses[Math.min(n++, reponses.length - 1)]!);
+      }) as typeof fetch,
+    });
+    const r = await rejouer(api, {
+      claude: pasDeClaude,
+      deepseek,
+      conseil: pasDeConseil,
+      repli: async () => {
+        throw new Error("le repli ne devait pas être appelé");
+      },
+    });
+    return { ...r, requetes };
+  };
+
+  it("afficher_visuel : le bloc est composé par le serveur, part en un événement et se range au fil", async () => {
+    const { api, fils } = avecCalendrier();
+    const { fin, evenements, requetes } = await jouer(api, [
+      appelDOutil("echeances_fiscales"),
+      appelAvecEntree("afficher_visuel", { source: "malica:echeances:a-venir" }),
+      texte("Une échéance est en retard : la déclaration de TVA."),
+    ]);
+    // Le modèle a été prévenu qu'un visuel existe pour cette source, et l'outil lui est offert.
+    assert.match(
+      JSON.stringify(requetes[1]),
+      /Un visuel est disponible pour la source « malica:echeances:a-venir »/,
+    );
+    assert.ok(
+      (requetes[0]!["tools"] as Array<{ name: string }>).some((o) => o.name === "afficher_visuel"),
+    );
+    const partis = evenements.flatMap((e) => (e.type === "bloc" ? [e.bloc] : []));
+    assert.equal(partis.length, 1);
+    const bloc = partis[0]!;
+    assert.equal(bloc.type, "tableau");
+    if (bloc.type !== "tableau") return;
+    // Les valeurs sont celles du calendrier, l'état est dit par le serveur (aujourd'hui : 2026-11-08).
+    assert.deepEqual(
+      bloc.lignes.map((l) => [l["echeance"], l["limite"], l["etat"]]),
+      [
+        ["Déclaration de TVA", "28/10/2026", "En retard"],
+        ["Acompte provisionnel", "15/12/2026", "À faire"],
+      ],
+    );
+    assert.equal(bloc.perimetre, "SOTUMAG d'essai");
+    // Le bloc sait où Malica l'a montré : après ce qu'elle avait déjà écrit (rien, ici).
+    assert.equal(bloc.apres, 0);
+    assert.deepEqual(fin.blocs, partis);
+    // Rangé avec la réponse : un fil rouvert le remontre.
+    const range = fils.get(fin.conversationId)!.at(-1)! as MessageRange & {
+      blocs?: unknown[] | null;
+    };
+    assert.deepEqual(range.blocs, partis);
+    // L'outil qui montre n'est pas une lecture : il ne compte pas parmi les outils consultés.
+    assert.deepEqual(fin.mesure.outils, ["echeances_fiscales"]);
+    assert.doesNotMatch(JSON.stringify(evenements), /afficher_visuel/);
+  });
+
+  it("Claude : un résultat d'outil ne porte QUE des blocs de recherche ; l'annonce du visuel est à côté", async () => {
+    // Essai réel du 10 novembre 2026 : l'API refuse un résultat d'outil qui mêle des
+    // blocs `search_result` à un autre type, et toute réponse à outil était interrompue.
+    const { api } = avecCalendrier({});
+    const requetes: Array<Record<string, unknown>> = [];
+    const suites = [
+      appelDOutil("echeances_fiscales"),
+      appelAvecEntree("afficher_visuel", { source: "malica:echeances:a-venir" }),
+      texte("Une échéance est en retard."),
+    ];
+    let n = 0;
+    const claude: ClientEnFlux = async function* (requete) {
+      requetes.push(JSON.parse(JSON.stringify(requete)));
+      yield* suites[Math.min(n++, suites.length - 1)]!;
+    };
+    const { fin } = await rejouer(api, {
+      claude,
+      conseil: pasDeConseil,
+      repli: async () => {
+        throw new Error("pas de repli");
+      },
+    });
+    assert.equal(fin.mesure.repli, null);
+    assert.equal(fin.blocs.length, 1);
+    type Bloc = { type: string; content?: unknown; text?: string };
+    const dernier = (requetes[1]!["messages"] as Array<{ role: string; content: Bloc[] }>).at(-1)!;
+    assert.equal(dernier.role, "user");
+    for (const b of dernier.content.filter((x) => x.type === "tool_result")) {
+      const contenu = b.content as Bloc[];
+      assert.ok(contenu.length > 0);
+      assert.ok(
+        contenu.every((c) => c.type === "search_result"),
+        "un résultat d'outil mêle les types",
+      );
+    }
+    // Les résultats d'outils d'abord, l'annonce ensuite, en texte.
+    assert.deepEqual(
+      dernier.content.map((b) => b.type),
+      ["tool_result", "text"],
+    );
+    assert.match(
+      dernier.content[1]!.text!,
+      /Un visuel est disponible pour la source « malica:echeances:a-venir »/,
+    );
+  });
+
+  it("le bloc se place là où Malica en est de sa réponse : après l'annonce, avant la suite", async () => {
+    const { api } = avecCalendrier();
+    const annonce = "Je regarde votre calendrier fiscal.";
+    const annonceEtVisuel: EvenementClaude[] = [
+      { type: "message_start", message: { model: "deepseek-chat", usage } },
+      { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+      { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: annonce } },
+      { type: "content_block_stop", index: 0 },
+      {
+        type: "content_block_start",
+        index: 1,
+        content_block: { type: "tool_use", id: "t2", name: "afficher_visuel", input: {} },
+      },
+      {
+        type: "content_block_delta",
+        index: 1,
+        delta: {
+          type: "input_json_delta",
+          partial_json: JSON.stringify({ source: "malica:echeances:a-venir" }),
+        },
+      },
+      { type: "content_block_stop", index: 1 },
+      { type: "message_delta", delta: { stop_reason: "tool_use" }, usage },
+    ];
+    const { fin, evenements } = await jouer(api, [
+      appelDOutil("echeances_fiscales"),
+      annonceEtVisuel,
+      texte("Une échéance est en retard."),
+    ]);
+    assert.equal(fin.blocs[0]!.apres, annonce.length);
+    // À l'écran, dans cet ordre : l'annonce, le bloc, la suite.
+    const ordre = evenements.flatMap((e) =>
+      e.type === "texte" || e.type === "bloc" ? [e.type] : [],
+    );
+    assert.deepEqual(ordre, ["texte", "bloc", "texte"]);
+    assert.equal(fin.reponse.slice(0, fin.blocs[0]!.apres), annonce);
+    assert.match(fin.reponse.slice(fin.blocs[0]!.apres!), /^\n\nUne échéance est en retard\.$/);
+  });
+
+  it("la comparaison des sociétés n'est offerte au modèle que si la personne regarde « Toutes les sociétés » et en a plusieurs", async () => {
+    const outilsOfferts = async (dossier: DossierVerifie, toutes: boolean) => {
+      const { api } = dossierFictif({ anthropicEpuise: true });
+      let offerts: string[] = [];
+      const deepseek = clientDeepSeekEnFlux({
+        apiKey: "cle-d-essai",
+        fetch: (async (_u: unknown, init?: RequestInit) => {
+          offerts = (JSON.parse(String(init?.body)).tools as Array<{ name: string }>).map(
+            (o) => o.name,
+          );
+          return sse(texte("Bonjour."));
+        }) as typeof fetch,
+      });
+      await converserAvecRepli(
+        api,
+        dossier,
+        { ...QUESTION, toutesLesSocietes: toutes },
+        {
+          claude: pasDeClaude,
+          deepseek,
+          conseil: pasDeConseil,
+          repli: async () => {
+            throw new Error("pas de repli");
+          },
+          aujourdhui: () => "2026-11-08",
+        },
+        () => undefined,
+      );
+      return offerts;
+    };
+    const DEUX = {
+      ...DOSSIER,
+      societes: [
+        { id: TENANT, name: "SOTUMAG d'essai", currency: "TND" },
+        { id: "22222222-2222-4222-8222-222222222222", name: "Nordex", currency: "TND" },
+      ],
+    };
+    assert.ok((await outilsOfferts(DEUX, true)).includes("comparer_les_societes"));
+    // Elle regarde une société : l'outil n'existe pas pour le modèle.
+    assert.ok(!(await outilsOfferts(DEUX, false)).includes("comparer_les_societes"));
+    // Elle regarde « toutes », mais n'en a qu'une : rien à comparer.
+    assert.ok(
+      !(await outilsOfferts({ ...DOSSIER, societes: [DEUX.societes[0]!] }, true)).includes(
+        "comparer_les_societes",
+      ),
+    );
+    assert.ok(!(await outilsOfferts(DOSSIER, true)).includes("comparer_les_societes"));
+  });
+
+  it("afficher_visuel deux fois pour la même source ne montre qu'un bloc", async () => {
+    const { api } = avecCalendrier();
+    const { fin } = await jouer(api, [
+      appelDOutil("echeances_fiscales"),
+      appelAvecEntree("afficher_visuel", { source: "malica:echeances:a-venir" }),
+      appelAvecEntree("afficher_visuel", { source: "malica:echeances:a-venir" }),
+      texte("Voilà."),
+    ]);
+    assert.equal(fin.blocs.length, 1);
+  });
+
+  it("afficher_visuel sur une source inventée ne montre rien, et le modèle l'apprend", async () => {
+    const { api } = avecCalendrier();
+    const { fin, evenements, requetes } = await jouer(api, [
+      appelDOutil("echeances_fiscales"),
+      appelAvecEntree("afficher_visuel", { source: "malica:invention" }),
+      texte("Voilà."),
+    ]);
+    assert.equal(fin.blocs.length, 0);
+    assert.ok(!evenements.some((e) => e.type === "bloc"));
+    assert.match(JSON.stringify(requetes[2]), /Aucun visuel pour cette source/);
+  });
+
+  it("DeepSeek épuisé : l'ancien repli ne répond pas non plus, on s'arrête avec un message", async () => {
+    const { api } = dossierFictif({ anthropicEpuise: true, deepseekEpuise: true });
+    const { fin } = await rejouer(api, {
+      claude: pasDeClaude,
+      deepseek: () => {
+        throw new Error("DeepSeek épuisé : il ne devait pas être appelé");
+      },
+      conseil: pasDeConseil,
+      repli: async () => {
+        throw new Error("le repli ne devait pas être appelé");
+      },
+    });
+    assert.equal(fin.mesure.repli, "arret");
   });
 });
