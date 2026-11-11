@@ -29,15 +29,31 @@
  * même que l'écran TVA ; le droit est celui du conseil cité (#278).
  */
 
+import { evaluerLeCalcul } from "@malica/socle/calcul";
 import { z } from "zod";
 
 import type { DeclarationTva, TaxRate } from "@malica/socle/ports/repositories";
-import type { PropositionDAction } from "@malica/socle/ports/assistant";
+import type { BlocDeReponse, PropositionDAction } from "@malica/socle/ports/assistant";
+import { achatsParFournisseur } from "@malica/socle/engines/achats/par-fournisseur";
+import { piecesParMois } from "@malica/socle/engines/pieces/par-mois";
+import { computePnl } from "@malica/socle/engines/pnl/snapshot";
+import { moisGlissants } from "@malica/socle/exercice";
 import { HORS_DU_CALCUL, tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
 import { texte as message } from "@malica/socle/conseil";
 import type { MessageKey } from "@malica/socle/messages";
 
 import type { AppelApi } from "../appel-local.ts";
+import {
+  blocDeLaTva,
+  blocDesAchats,
+  blocDesEcheances,
+  blocDesMois,
+  blocDesSocietes,
+  blocDuResultat,
+  jourEnClair,
+  moisEnClair,
+  montant,
+} from "./blocs.ts";
 import type { ResultatDuConseilCite } from "../conseil/conseil-cite.ts";
 import { PORTEES, type ReponseDeConseil } from "../conseil/conseil.ts";
 import { loadMalicaContext } from "../conseil/context.ts";
@@ -186,6 +202,69 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
     },
   },
   {
+    name: "calculer",
+    description:
+      "Calcule une opération arithmétique, exactement : c'est le seul moyen de donner le résultat d'un " +
+      "calcul (un pourcentage, une somme, une différence, un TTC à partir d'un HT et d'un taux DONNÉS). " +
+      "Tu ne calcules jamais de tête. Écris l'opération avec des nombres et les signes + - * / ( ) % : " +
+      "« 2450 * 17 / 100 », « 1200 * (1 + 19 %) ». Chaque nombre doit venir de la personne (sa question) " +
+      "ou d'un résultat d'outil de ce tour : un nombre que tu apportes toi-même est refusé.",
+    input_schema: {
+      type: "object",
+      properties: {
+        expression: {
+          type: "string",
+          description: "L'opération, par exemple « 2450 * 17 / 100 ».",
+        },
+      },
+      required: ["expression"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "achats_par_fournisseur",
+    description:
+      "Rend le classement des achats du dossier par fournisseur : pour chaque fournisseur, la somme TTC de ses " +
+      "factures d'achat lues et leur nombre, puis le total. Les sommes sont faites par le moteur de Malica sur " +
+      "TOUTES les pièces du dossier, pas sur un extrait : c'est l'outil à utiliser pour « mes dépenses par " +
+      "fournisseur », « qui me coûte le plus », « combien j'ai acheté chez X », « compare mes fournisseurs ». " +
+      "Avec `mois` (AAAA-MM), seulement les factures datées de ce mois. Le résultat dit aussi les achats écartés " +
+      "des sommes (total non lu, autre devise, émetteur non lu) : dis-le à la personne.",
+    input_schema: {
+      type: "object",
+      properties: { mois: { type: "string", description: "AAAA-MM ; absent : toutes les dates." } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "evolution_mensuelle",
+    description:
+      "Rend, mois par mois, la somme TTC des factures d'achat et des factures de vente lues du dossier, sur les " +
+      "derniers mois. Les sommes sont faites par le moteur de Malica sur TOUTES les pièces. À utiliser pour " +
+      "« comment évoluent mes ventes », « mes achats ces derniers mois », « compare ce mois au précédent ». " +
+      "Ce sont des totaux de pièces lues, pas un chiffre d'affaires comptable : dis-le ainsi. Un mois sans " +
+      "pièce lue n'a pas de montant : ne dis pas qu'il vaut zéro. `mois` : combien de mois (3 à 24).",
+    input_schema: {
+      type: "object",
+      properties: { mois: { type: "integer", minimum: 3, maximum: 24 } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "resultat_comptabilise",
+    description:
+      "Rend le résultat comptabilisé du dossier sur une période : produits, charges et résultat, calculés par le " +
+      "moteur de Malica sur les écritures que la comptabilité a inscrites. À utiliser pour « quel est mon résultat », " +
+      "« est-ce que je gagne de l'argent », « mes charges par rapport à mes produits ». Ce chiffre ne compte que ce " +
+      "qui est déjà comptabilisé : des pièces lues mais pas encore inscrites n'y sont pas — dis-le. `mois` : combien " +
+      "de mois jusqu'à ce mois-ci (1 à 24).",
+    input_schema: {
+      type: "object",
+      properties: { mois: { type: "integer", minimum: 1, maximum: 24 } },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "action_proposer",
     description:
       "PROPOSE à la personne une action qui modifie son dossier. N'EXÉCUTE RIEN : l'écran affiche un bouton " +
@@ -206,6 +285,46 @@ export const DEFINITIONS: readonly DefinitionDOutil[] = [
   },
 ];
 
+/**
+ * L'outil qui MONTRE : le modèle désigne, par sa clé, une source qu'un outil
+ * vient de lui rendre et pour laquelle le serveur a composé un visuel. Il
+ * n'écrit aucun chiffre : le bloc vient du moteur ou de la base (R3). L'agent
+ * l'exécute lui-même (`agent.ts`) — il ne consulte rien. Quand s'en servir est
+ * dit dans la consigne versionnée en base (« MONTRER UN VISUEL »), pas ici.
+ */
+export const AFFICHER_VISUEL: DefinitionDOutil = {
+  name: "afficher_visuel",
+  description:
+    "Montre à la personne, sous ta réponse, le visuel disponible pour une source qu'un outil vient de te rendre " +
+    "(chiffre clé, tableau). `source` est la clé de cette source, telle que le résultat de l'outil te l'a donnée. " +
+    "Voir la consigne, section « MONTRER UN VISUEL ».",
+  input_schema: {
+    type: "object",
+    properties: { source: { type: "string", description: "La clé de la source à montrer." } },
+    required: ["source"],
+    additionalProperties: false,
+  },
+};
+
+/**
+ * L'outil qui COMPARE les sociétés de la personne. Il n'est offert au modèle
+ * que si elle regarde « Toutes les sociétés » et en a plusieurs (`agent.ts`) ;
+ * il ne prend AUCUNE société en paramètre : le serveur les a déjà établies.
+ */
+export const COMPARER_LES_SOCIETES: DefinitionDOutil = {
+  name: "comparer_les_societes",
+  description:
+    "Compare les sociétés de la personne : pour chacune, la somme TTC de ses factures de vente lues, mois par " +
+    "mois, et ses achats sur la période. À utiliser pour « où en sont toutes mes sociétés », « laquelle vend le " +
+    "plus », « compare mes sociétés ». Ce sont des totaux de pièces lues, pas un chiffre d'affaires comptable. " +
+    "`mois` : combien de mois (3 à 12).",
+  input_schema: {
+    type: "object",
+    properties: { mois: { type: "integer", minimum: 3, maximum: 12 } },
+    additionalProperties: false,
+  },
+};
+
 /** Les noms, pour le journal et l'épreuve. */
 const NOMS_DES_OUTILS = DEFINITIONS.map((d) => d.name);
 
@@ -218,10 +337,15 @@ const ETAPES: Readonly<Record<string, MessageKey>> = {
   pieces_chercher: "pme.assistant.outil.pieces_chercher",
   piece_ouvrir: "pme.assistant.outil.piece_ouvrir",
   tva_du_mois: "pme.assistant.outil.tva_du_mois",
+  achats_par_fournisseur: "pme.assistant.outil.achats_par_fournisseur",
+  evolution_mensuelle: "pme.assistant.outil.evolution_mensuelle",
+  resultat_comptabilise: "pme.assistant.outil.resultat_comptabilise",
+  comparer_les_societes: "pme.assistant.outil.comparer_les_societes",
   echeances_fiscales: "pme.assistant.outil.echeances_fiscales",
   ecritures_proposees: "pme.assistant.outil.ecritures_proposees",
   tiers_chercher: "pme.assistant.outil.tiers_chercher",
   conseil_fiscal: "pme.assistant.outil.conseil_fiscal",
+  calculer: "pme.assistant.outil.calculer",
   action_proposer: "pme.assistant.outil.action_proposer",
 };
 
@@ -291,6 +415,7 @@ export function lireLaConclusion(entree: unknown): ConclusionDeLaReponse | null 
  */
 export const LECTURES_DES_OUTILS: ReadonlySet<string> = new Set([
   "capture.listAvecLecture",
+  "capture.listAvecLectureDesSocietes",
   "capture.dossier",
   "capture.contexteAssistant",
   "office.extraitsTransmis",
@@ -300,6 +425,8 @@ export const LECTURES_DES_OUTILS: ReadonlySet<string> = new Set([
   "referentiel.taxRates",
   "referentiel.declarationTva",
   "referentiel.socleParams",
+  "referentiel.classesDeComptes",
+  "office.totauxParClasse",
   "conseil.contexte",
   "collab.echeances",
   "tiers.lister",
@@ -311,11 +438,22 @@ export interface ContexteDesOutils {
   api: AppelApi;
   tenantId: string;
   locale: string;
-  organisation: { jurisdiction: string; currency: string };
+  organisation: { jurisdiction: string; currency: string; name?: string };
+  /**
+   * Les sociétés de la personne, quand elle regarde « Toutes les sociétés » :
+   * établies par le SERVEUR (celles dont elle est membre), jamais par le
+   * modèle ni par l'écran. Absent ou une seule : aucune comparaison.
+   */
+  societes?: ReadonlyArray<{ id: string; name: string; currency: string }>;
   /** Aujourd'hui à Tunis, AAAA-MM-JJ. */
   aujourdhui: string;
   conseil: (question: string, jour: string | null) => Promise<ResultatDuConseilCite>;
   idProposition: () => string;
+  /**
+   * Les nombres que la personne a écrits ou qu'un outil a rendus dans ce tour,
+   * sous leur forme comparable : les seuls qu'un calcul peut employer.
+   */
+  nombresAdmis?: () => ReadonlySet<string>;
 }
 
 export type ResultatDOutil =
@@ -326,6 +464,8 @@ export type ResultatDOutil =
       /** Le conseil cité : ce qu'il a coûté, et la mention « En vigueur au » composée par le code. */
       coutUsd?: number | null;
       mention?: string | null;
+      /** Les visuels que le serveur a composés pour ces sources, par clé de source. */
+      visuels?: Array<{ cle: string; bloc: BlocDeReponse }>;
     }
   | { ok: false; erreur: string };
 
@@ -656,6 +796,386 @@ async function tvaDuMois(ctx: ContexteDesOutils, brut: unknown): Promise<Resulta
         texte,
       },
     ],
+    visuels: [
+      {
+        cle: `malica:tva:${tva.period}`,
+        bloc: blocDeLaTva(
+          tva,
+          params.moneyDecimals,
+          comptees,
+          ctx.organisation.name ?? null,
+          ctx.locale,
+        ),
+      },
+    ],
+  };
+}
+
+async function achatsDuDossier(ctx: ContexteDesOutils, brut: unknown): Promise<ResultatDOutil> {
+  const saisi = (brut as { mois?: unknown } | null)?.mois;
+  const mois = z
+    .string()
+    .regex(/^\d{4}-\d{2}$/)
+    .optional()
+    .safeParse(saisi);
+  if (!mois.success) return erreur("mois doit s'écrire AAAA-MM.");
+  const pack = await ctx.api.rpc<{ id: string } | null>("referentiel", "activePack", [
+    ctx.organisation.jurisdiction,
+  ]);
+  if (!pack)
+    return erreur(
+      "Le référentiel de la juridiction du dossier est introuvable : les achats ne se somment pas.",
+    );
+  const [toutes, params] = await Promise.all([
+    ctx.api.rpc<PieceDeLaListe[]>("capture", "listAvecLecture", [ctx.tenantId]),
+    ctx.api.rpc<{ moneyDecimals: number }>("referentiel", "socleParams", [pack.id]),
+  ]);
+  const retenues = mois.data
+    ? toutes.filter((p) => (p.dateDocument ?? "").startsWith(mois.data!))
+    : toutes;
+  const dev = ctx.organisation.currency;
+  const achats = achatsParFournisseur(
+    retenues.map((p) => ({ ...p, ref: p.id })),
+    dev,
+    params.moneyDecimals,
+  );
+  // Ce qu'un clic sur une ligne ouvre : la date et le montant de chaque pièce.
+  const titres = new Map(
+    retenues.map((p) => [
+      p.id,
+      [
+        p.dateDocument ? jourEnClair(p.dateDocument, ctx.locale) : null,
+        p.total ? `${montant(p.total, params.moneyDecimals, ctx.locale)} ${dev}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    ]),
+  );
+  const cle = `malica:achats:${mois.data ?? "toutes-dates"}`;
+  const e = achats.ecartees;
+  const ecartees = [
+    e.sansTotal > 0 ? `${e.sansTotal} sans total lisible` : null,
+    e.autreDevise > 0 ? `${e.autreDevise} dans une autre devise que ${dev}` : null,
+    e.sansEmetteur > 0 ? `${e.sansEmetteur} sans émetteur lu` : null,
+  ].filter(Boolean);
+  // Les montants s'écrivent ici comme la personne les lit (séparateurs, décimales de la
+  // devise) : les moteurs les reprennent alors dans la même écriture que le bloc.
+  const ecrit = (v: string) => `${montant(v, params.moneyDecimals, ctx.locale)} ${dev}`;
+  const texte = [
+    `Achats par fournisseur${mois.data ? `, factures datées de ${mois.data}` : ", toutes dates"}, sommés par le moteur de Malica, en ${dev} TTC.`,
+    `Factures d'achat comptées : ${achats.pieces}. Fournisseurs : ${achats.lignes.length}.`,
+    `Total des achats comptés : ${ecrit(achats.total)}.`,
+    ...achats.lignes.map(
+      (l, i) =>
+        `- ${i + 1}. ${l.fournisseur} : ${ecrit(l.total)} (${l.pieces} pièce${l.pieces > 1 ? "s" : ""})`,
+    ),
+    ecartees.length > 0
+      ? `Achats écartés des sommes : ${ecartees.join(" ; ")}. Ces pièces ne sont pas dans le total.`
+      : "Aucun achat écarté des sommes.",
+    ...(achats.pieces === 0
+      ? ["Aucune facture d'achat lue n'entre dans ce classement : ne donne aucun montant."]
+      : []),
+  ].join("\n");
+  return {
+    ok: true,
+    sources: [{ cle, genre: "liste", titre: "Achats par fournisseur", objetId: null, texte }],
+    ...(achats.pieces > 0
+      ? {
+          visuels: [
+            {
+              cle,
+              bloc: blocDesAchats(
+                achats,
+                params.moneyDecimals,
+                mois.data ? moisEnClair(mois.data, ctx.locale) : null,
+                ctx.organisation.name ?? null,
+                ctx.locale,
+                titres,
+              ),
+            },
+          ],
+        }
+      : {}),
+  };
+}
+
+/** Sans précision de la personne, la fenêtre d'un graphique mensuel : six mois se lisent d'un coup d'œil. */
+const MOIS_PAR_DEFAUT = 6;
+
+async function evolutionMensuelle(ctx: ContexteDesOutils, brut: unknown): Promise<ResultatDOutil> {
+  const nb = z
+    .number()
+    .int()
+    .min(3)
+    .max(24)
+    .optional()
+    .safeParse((brut as { mois?: unknown } | null)?.mois);
+  if (!nb.success) return erreur("mois doit être un nombre entier de 3 à 24.");
+  const pack = await ctx.api.rpc<{ id: string } | null>("referentiel", "activePack", [
+    ctx.organisation.jurisdiction,
+  ]);
+  if (!pack)
+    return erreur(
+      "Le référentiel de la juridiction du dossier est introuvable : les pièces ne se somment pas.",
+    );
+  const [toutes, params] = await Promise.all([
+    ctx.api.rpc<PieceDeLaListe[]>("capture", "listAvecLecture", [ctx.tenantId]),
+    ctx.api.rpc<{ moneyDecimals: number }>("referentiel", "socleParams", [pack.id]),
+  ]);
+  const dev = ctx.organisation.currency;
+  const parMois = piecesParMois(
+    toutes,
+    dev,
+    params.moneyDecimals,
+    ctx.aujourdhui.slice(0, 7),
+    nb.data ?? MOIS_PAR_DEFAUT,
+  );
+  const cle = `malica:mois:${parMois.mois[0]!.mois}:${parMois.mois.at(-1)!.mois}`;
+  const e = parMois.ecartees;
+  const ecartees = [
+    e.sansTotal > 0 ? `${e.sansTotal} sans total lisible` : null,
+    e.autreDevise > 0 ? `${e.autreDevise} dans une autre devise que ${dev}` : null,
+    e.sansDate > 0 ? `${e.sansDate} sans date lue (hors de tout mois)` : null,
+  ].filter(Boolean);
+  const comptees = parMois.mois.reduce((n, m) => n + m.piecesAchats + m.piecesVentes, 0);
+  // Les montants s'écrivent ici comme la personne les lit (séparateurs, décimales de la
+  // devise) : les moteurs les reprennent alors dans la même écriture que le bloc.
+  const ecrit = (v: string) => `${montant(v, params.moneyDecimals, ctx.locale)} ${dev}`;
+  const texte = [
+    // La période en toutes lettres : écrite « 2025-12 », un moteur la redisait de travers
+    // (essai réel du 10 novembre 2026 : « de février à novembre » pour décembre à novembre).
+    `Achats et ventes par mois, de ${moisEnClair(parMois.mois[0]!.mois, ctx.locale)} à ${moisEnClair(parMois.mois.at(-1)!.mois, ctx.locale)} (${parMois.mois[0]!.mois} à ${parMois.mois.at(-1)!.mois}), sommés par le moteur de Malica, en ${dev} TTC.`,
+    "Ce sont les totaux des factures lues, pas un chiffre d'affaires comptable.",
+    ...parMois.mois.map(
+      (m) =>
+        `- ${m.mois} : ventes ${m.ventes === null ? "aucune pièce lue" : `${ecrit(m.ventes)} (${m.piecesVentes} pièce${m.piecesVentes > 1 ? "s" : ""})`} ; ` +
+        `achats ${m.achats === null ? "aucune pièce lue" : `${ecrit(m.achats)} (${m.piecesAchats} pièce${m.piecesAchats > 1 ? "s" : ""})`}`,
+    ),
+    `Total des ventes sur la période : ${ecrit(parMois.totalVentes)}. Total des achats : ${ecrit(parMois.totalAchats)}.`,
+    ecartees.length > 0
+      ? `Factures écartées des sommes : ${ecartees.join(" ; ")}.`
+      : "Aucune facture écartée des sommes.",
+    ...(comptees === 0
+      ? ["Aucune facture lue n'entre dans cette période : ne donne aucun montant."]
+      : []),
+  ].join("\n");
+  return {
+    ok: true,
+    sources: [{ cle, genre: "liste", titre: "Achats et ventes par mois", objetId: null, texte }],
+    ...(comptees > 0
+      ? {
+          visuels: [
+            {
+              cle,
+              bloc: blocDesMois(
+                parMois,
+                params.moneyDecimals,
+                ctx.organisation.name ?? null,
+                ctx.locale,
+              ),
+            },
+          ],
+        }
+      : {}),
+  };
+}
+
+async function comparerLesSocietes(ctx: ContexteDesOutils, brut: unknown): Promise<ResultatDOutil> {
+  const societes = ctx.societes ?? [];
+  // Le périmètre vient du serveur : sans lui, l'outil ne regarde rien d'autre que le dossier ouvert.
+  if (societes.length < 2)
+    return erreur(
+      "La personne regarde une seule société : il n'y a rien à comparer. Réponds sur la société ouverte.",
+    );
+  const nb = z
+    .number()
+    .int()
+    .min(3)
+    .max(12)
+    .optional()
+    .safeParse((brut as { mois?: unknown } | null)?.mois);
+  if (!nb.success) return erreur("mois doit être un nombre entier de 3 à 12.");
+  const pack = await ctx.api.rpc<{ id: string } | null>("referentiel", "activePack", [
+    ctx.organisation.jurisdiction,
+  ]);
+  if (!pack)
+    return erreur(
+      "Le référentiel de la juridiction du dossier est introuvable : les pièces ne se somment pas.",
+    );
+  const dev = ctx.organisation.currency;
+  // Une seule devise par carte : aucun cours n'est appliqué ici. Les autres sont dites.
+  const memeDevise = societes.filter((s) => s.currency === dev);
+  const autres = societes.length - memeDevise.length;
+  const [lots, params] = await Promise.all([
+    // La base filtre encore (RLS) : une société où la personne n'est pas membre revient vide.
+    ctx.api.rpc<Array<{ tenantId: string; pieces: PieceDeLaListe[] }>>(
+      "capture",
+      "listAvecLectureDesSocietes",
+      [memeDevise.map((s) => s.id)],
+    ),
+    ctx.api.rpc<{ moneyDecimals: number }>("referentiel", "socleParams", [pack.id]),
+  ]);
+  const jusqua = ctx.aujourdhui.slice(0, 7);
+  const parSociete = memeDevise.map((s) => {
+    const pieces = lots.find((l) => l.tenantId.toLowerCase() === s.id.toLowerCase())?.pieces ?? [];
+    return {
+      nom: s.name,
+      parMois: piecesParMois(pieces, dev, params.moneyDecimals, jusqua, nb.data ?? MOIS_PAR_DEFAUT),
+    };
+  });
+  const mois = parSociete[0]!.parMois.mois.map((m) => m.mois);
+  const ecrit = (v: string) => `${montant(v, params.moneyDecimals, ctx.locale)} ${dev}`;
+  const cle = `malica:societes:${mois[0]}:${mois.at(-1)}`;
+  const comptees = parSociete.reduce(
+    (n, s) => n + s.parMois.mois.reduce((k, m) => k + m.piecesVentes + m.piecesAchats, 0),
+    0,
+  );
+  const texte = [
+    `Comparaison de ${parSociete.length} sociétés, de ${moisEnClair(mois[0]!, ctx.locale)} à ${moisEnClair(mois.at(-1)!, ctx.locale)} (${mois[0]} à ${mois.at(-1)}), sommée par le moteur de Malica, en ${dev} TTC.`,
+    "Ce sont les totaux des factures lues de chaque société, pas un chiffre d'affaires comptable.",
+    ...parSociete.map(
+      (s) =>
+        `- ${s.nom} : ventes ${ecrit(s.parMois.totalVentes)}, achats ${ecrit(s.parMois.totalAchats)} sur la période. ` +
+        `Ventes par mois : ${s.parMois.mois
+          .map((m) => `${m.mois} ${m.ventes === null ? "aucune pièce lue" : ecrit(m.ventes)}`)
+          .join(" ; ")}.`,
+    ),
+    ...(autres > 0
+      ? [
+          `${autres} société${autres > 1 ? "s" : ""} dans une autre devise que ${dev} : hors de cette comparaison.`,
+        ]
+      : []),
+    ...(comptees === 0
+      ? ["Aucune facture lue n'entre dans cette période : ne donne aucun montant."]
+      : []),
+  ].join("\n");
+  return {
+    ok: true,
+    sources: [{ cle, genre: "liste", titre: "Comparaison des sociétés", objetId: null, texte }],
+    ...(comptees > 0
+      ? {
+          visuels: [
+            {
+              cle,
+              bloc: blocDesSocietes(
+                parSociete.map((s) => ({
+                  nom: s.nom,
+                  ventes: s.parMois.mois.map((m) => m.ventes),
+                  total: s.parMois.totalVentes,
+                })),
+                mois,
+                dev,
+                params.moneyDecimals,
+                ctx.locale,
+              ),
+            },
+          ],
+        }
+      : {}),
+  };
+}
+
+/** Sans précision, le résultat se lit sur une année glissante. */
+const MOIS_DU_RESULTAT = 12;
+
+async function resultatComptabilise(
+  ctx: ContexteDesOutils,
+  brut: unknown,
+): Promise<ResultatDOutil> {
+  const nb = z
+    .number()
+    .int()
+    .min(1)
+    .max(24)
+    .optional()
+    .safeParse((brut as { mois?: unknown } | null)?.mois);
+  if (!nb.success) return erreur("mois doit être un nombre entier de 1 à 24.");
+  const pack = await ctx.api.rpc<{ id: string } | null>("referentiel", "activePack", [
+    ctx.organisation.jurisdiction,
+  ]);
+  if (!pack)
+    return erreur(
+      "Le référentiel de la juridiction du dossier est introuvable : le résultat ne se calcule pas.",
+    );
+  const fenetre = moisGlissants(ctx.aujourdhui.slice(0, 7), nb.data ?? MOIS_DU_RESULTAT);
+  const premier = fenetre[0]!;
+  const dernier = fenetre.at(-1)!;
+  // Des totaux par classe, jamais des écritures : la PME d'un dossier confié à
+  // une comptabilité ne lit pas les écritures (R6) — la base ne lui rend que cela.
+  const [totaux, classes, params] = await Promise.all([
+    ctx.api.rpc<Array<{ mois: string; classe: string; debit: string; credit: string }>>(
+      "office",
+      "totauxParClasse",
+      [ctx.tenantId, `${premier}-01`, finDuMois(dernier)],
+    ),
+    ctx.api.rpc<Array<{ prefix: string; nature: "charge" | "produit" | "actif" | "passif" }>>(
+      "referentiel",
+      "classesDeComptes",
+      [pack.id],
+    ),
+    ctx.api.rpc<{ moneyDecimals: number }>("referentiel", "socleParams", [pack.id]),
+  ]);
+  const dev = ctx.organisation.currency;
+  const cle = `malica:resultat:${premier}:${dernier}`;
+  const periode =
+    premier === dernier
+      ? moisEnClair(premier, ctx.locale)
+      : `${moisEnClair(premier, ctx.locale)} – ${moisEnClair(dernier, ctx.locale)}`;
+  // R4 : sans la nature des classes, le moteur rendrait un résultat vide et plausible.
+  if (classes.length === 0)
+    return erreur(
+      "Le référentiel ne dit pas quelles classes sont des charges ou des produits : le résultat ne se calcule pas.",
+    );
+  if (totaux.length === 0) {
+    return {
+      ok: true,
+      sources: [
+        {
+          cle,
+          genre: "liste",
+          titre: "Résultat comptabilisé",
+          objetId: null,
+          texte:
+            `Résultat comptabilisé de ${premier} à ${dernier} : aucune écriture comptabilisée sur la période. ` +
+            "Le résultat n'est donc pas connu : ne donne aucun montant. Des pièces lues mais pas encore inscrites " +
+            "par la comptabilité n'entrent pas dans ce chiffre.",
+        },
+      ],
+    };
+  }
+  const pnl = computePnl({
+    period: dernier,
+    currency: { code: dev, decimals: params.moneyDecimals },
+    // Une entrée par classe : son préfixe tient lieu de code (comme l'accueil).
+    entries: totaux.map((l) => ({ account_code: l.classe, debit: l.debit, credit: l.credit })),
+    coa: [],
+    classes,
+  });
+  // Les montants s'écrivent ici comme la personne les lit (séparateurs, décimales de la
+  // devise) : les moteurs les reprennent alors dans la même écriture que le bloc.
+  const ecrit = (v: string) => `${montant(v, params.moneyDecimals, ctx.locale)} ${dev}`;
+  const texte = [
+    `Résultat comptabilisé de ${moisEnClair(premier, ctx.locale)} à ${moisEnClair(dernier, ctx.locale)} (${premier} à ${dernier}), calculé par le moteur de Malica sur les écritures inscrites, en ${dev}.`,
+    `Produits : ${ecrit(pnl.produits)}.`,
+    `Charges : ${ecrit(pnl.charges)}.`,
+    `Résultat : ${ecrit(pnl.resultat)} (positif : bénéfice ; négatif : perte).`,
+    "Ce chiffre ne compte que ce qui est comptabilisé : des pièces lues mais pas encore inscrites n'y sont pas.",
+  ].join("\n");
+  return {
+    ok: true,
+    sources: [{ cle, genre: "liste", titre: "Résultat comptabilisé", objetId: null, texte }],
+    visuels: [
+      {
+        cle,
+        bloc: blocDuResultat(
+          { currency: dev, produits: pnl.produits, charges: pnl.charges, resultat: pnl.resultat },
+          params.moneyDecimals,
+          periode,
+          ctx.organisation.name ?? null,
+          ctx.locale,
+        ),
+      },
+    ],
   };
 }
 
@@ -696,6 +1216,21 @@ async function echeancesFiscales(ctx: ContexteDesOutils, brut: unknown): Promise
             : "Aucune échéance à faire n'est inscrite au calendrier du dossier."),
       },
     ],
+    ...(retenues.length > 0
+      ? {
+          visuels: [
+            {
+              cle: `malica:echeances:${toutes ? "toutes" : "a-venir"}`,
+              bloc: blocDesEcheances(
+                retenues,
+                ctx.aujourdhui,
+                ctx.organisation.name ?? null,
+                ctx.locale,
+              ),
+            },
+          ],
+        }
+      : {}),
   };
 }
 
@@ -947,12 +1482,65 @@ const EXECUTANTS: Record<
   pieces_chercher: piecesChercher,
   piece_ouvrir: pieceOuvrir,
   tva_du_mois: tvaDuMois,
+  achats_par_fournisseur: achatsDuDossier,
+  evolution_mensuelle: evolutionMensuelle,
+  resultat_comptabilise: resultatComptabilise,
+  comparer_les_societes: comparerLesSocietes,
   echeances_fiscales: echeancesFiscales,
   ecritures_proposees: ecrituresProposees,
   tiers_chercher: tiersChercher,
   conseil_fiscal: conseilFiscal,
+  calculer,
   action_proposer: actionProposer,
 };
+
+/* ---------------------------------------------------------------- le calcul -- */
+
+/** Les constantes d'une opération qui n'affirment rien : l'unité et le « pour cent ». */
+const NEUTRES: ReadonlySet<string> = new Set(["1", "100"]);
+
+/**
+ * Le calcul (R3) : le moteur du Socle évalue l'opération, le modèle n'en écrit
+ * que les termes. Et ces termes ne sont pas à lui : chaque nombre vient de la
+ * personne ou d'un outil de ce tour — sinon un taux sorti de sa mémoire
+ * entrerait par l'opération et ressortirait « sourcé ».
+ */
+async function calculer(ctx: ContexteDesOutils, brut: unknown): Promise<ResultatDOutil> {
+  const expression = String((brut as { expression?: unknown } | null)?.expression ?? "").trim();
+  let rendu: ReturnType<typeof evaluerLeCalcul>;
+  try {
+    rendu = evaluerLeCalcul(expression);
+  } catch (e) {
+    return erreur(
+      (e instanceof Error ? e.message : "") === "calcul.division_par_zero"
+        ? "Division par zéro : l'opération n'a pas de résultat."
+        : "Opération illisible. Écris seulement des nombres et les signes + - * / ( ) %, par exemple « 2450 * 17 / 100 ».",
+    );
+  }
+  const admis = ctx.nombresAdmis?.() ?? new Set<string>();
+  const etrangers = rendu.operandes.filter((n) => !NEUTRES.has(n) && !admis.has(n));
+  if (etrangers.length > 0) {
+    return erreur(
+      `Ce calcul emploie ${etrangers.join(", ")}, que ni la personne ni un outil de ce tour n'a donné. ` +
+        "Demande ce nombre à la personne, ou consulte l'outil qui le porte (le dossier, ou conseil_fiscal " +
+        "pour un taux), puis recalcule.",
+    );
+  }
+  const enClair = (n: string) => n.replace(".", ",");
+  return {
+    ok: true,
+    sources: [
+      {
+        cle: `malica:calcul:${expression.replace(/\s+/g, "")}`,
+        genre: "calcul",
+        titre: "Calcul",
+        objetId: null,
+        texte: `Opération : ${expression}\nRésultat exact : ${enClair(rendu.valeur)}`,
+        extrait: `${expression} = ${enClair(rendu.valeur)}`,
+      },
+    ],
+  };
+}
 
 /**
  * Exécute un outil. Une panne de lecture n'arrête pas la conversation : elle

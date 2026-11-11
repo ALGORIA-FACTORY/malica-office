@@ -27,6 +27,26 @@
  * Claude découpe une réponse citée en blocs courts (un par passage cité) : un
  * bloc retenu l'est le temps d'une phrase ou deux.
  *
+ * ======================================== CE QUI ENGAGE, ET CE QUI N'ENGAGE PAS
+ *
+ * (11 novembre 2026.) Mesurée sur le vrai modèle, la règle « tout chiffre »
+ * vidait les réponses générales : « 17 % de 2 450 » sans résultat, une formule
+ * de tableur sans la formule, Ibn Khaldoun sans ses dates. R3 interdit à Malica
+ * d'émettre une valeur LIANTE ; une année de naissance n'en est pas une.
+ *
+ * La garde reçoit donc, de la base (`plateforme.assistant_gardes`, réglable,
+ * R4), ce qui rend un chiffre liant :
+ *   - par le CONTEXTE : la phrase porte une marque (« % », « TND », « taux »,
+ *     « facture », « délai »…) — alors tous ses chiffres se jugent ;
+ *   - par la FORME : un nombre à décimales, ou un entier à partir d'un seuil
+ *     (un montant) — il se juge où qu'il soit.
+ * Le reste — une année, un âge, un rang dans une phrase sans marque — passe.
+ * Une formule de tableur (« =A2*(1+B2) ») n'est pas un chiffre : ses références
+ * de cellules et ses constantes ne se jugent pas.
+ *
+ * Sans règle remise (`null`), la garde juge TOUT chiffre, comme avant : une
+ * configuration incomplète retombe du côté strict, jamais du côté permissif.
+ *
  * Pur : aucun réseau, aucune base. `garde.test.ts` l'éprouve phrase par phrase.
  */
 
@@ -46,6 +66,56 @@ export interface CitationRecue {
   source?: string;
   cited_text?: string;
   search_result_index?: number;
+}
+
+/** Ce qui rend un chiffre liant, lu en base (`plateforme.assistant_gardes`). */
+export interface RegleDeLaGarde {
+  /**
+   * Les marques d'une phrase qui engage. Un mot entier (« taux », « ht »), une
+   * racine suivie d'un astérisque (« factur* »), ou un signe (« % », « € »).
+   * Écrites en minuscules, sans accent.
+   */
+  marques_liantes: string[];
+  /** Un entier à partir de ce seuil se juge toujours : c'est un montant, pas une année. */
+  entier_liant_des: number;
+}
+
+const sansAccent = (t: string): string =>
+  t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr");
+
+/** La marque telle qu'elle se cherche : un mot, une racine, ou un signe trouvé tel quel. */
+function chercheurDeMarque(marque: string): ((phrase: string) => boolean) | null {
+  const m = sansAccent(marque.trim());
+  if (!m) return null;
+  const racine = m.endsWith("*");
+  const corps = racine ? m.slice(0, -1) : m;
+  if (!corps) return null;
+  // Latin : aux bornes du mot. Tout autre signe ou écriture (« % », arabe, où
+  // l'article se colle au mot) : la simple présence.
+  if (!/^[a-z0-9' -]+$/.test(corps)) return (phrase) => phrase.includes(corps);
+  const motif = corps.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(?<![a-z0-9])${motif}${racine ? "" : "(?![a-z0-9])"}`);
+  return (phrase) => re.test(phrase);
+}
+
+/**
+ * Une formule de tableur n'affirme aucun chiffre : une ligne qui commence par
+ * « = » et nomme une cellule, ou un passage entre accents graves qui en nomme
+ * une (« `1+B2` », le morceau qu'on explique) ou n'est que l'unité ou le
+ * « pour cent » d'une formule (« `1` », « `/100` »). Hors formule, une
+ * référence de cellule (« A2 », « $B$4 ») non plus.
+ */
+function sansFormules(texte: string): string {
+  const cellule = /\$?[A-Za-z]{1,3}\$?\d{1,7}\b/;
+  return texte
+    .replace(/`([^`\n]*)`/g, (tout, code: string) =>
+      cellule.test(code) || /^[\s()+*/=-]*(?:1|100)[\s()+*/=-]*$/.test(code) ? " " : tout,
+    )
+    .replace(/^[ \t]*=.*$/gm, (ligne) => (cellule.test(ligne) ? " " : ligne))
+    .replace(/(?<![\p{L}\d])\$?[A-Za-z]{1,3}\$?\d{1,7}(?![\p{L}\d.,])/gu, " ");
 }
 
 /** « 1234.500 » et « 1234.5 » sont le même montant écrit à deux précisions. */
@@ -122,10 +192,32 @@ export class GardeDesChiffres {
   private retenu = false;
   private citationsDuBloc: Array<{ source: SourceConnue; extrait: string }> = [];
 
-  constructor(question: string) {
+  private readonly marques: Array<(phrase: string) => boolean>;
+  private readonly entierLiantDes: number | null;
+
+  constructor(question: string, regle: RegleDeLaGarde | null = null) {
     // Ce que la personne a écrit elle-même n'est pas une invention de Malica :
     // « ma facture 2417 » se répète sans outil.
     this.chiffresDeLaQuestion = new Set(chiffresDe(question));
+    this.marques = (regle?.marques_liantes ?? [])
+      .map(chercheurDeMarque)
+      .filter((c): c is (phrase: string) => boolean => c !== null);
+    // Sans règle complète : tout chiffre se juge.
+    this.entierLiantDes =
+      regle && this.marques.length > 0 && Number.isFinite(regle.entier_liant_des)
+        ? regle.entier_liant_des
+        : null;
+  }
+
+  /** Les chiffres d'une phrase qui doivent trouver une source (voir l'en-tête). */
+  private aJuger(phrase: string): string[] {
+    if (this.entierLiantDes === null) return chiffresDe(phrase);
+    const chiffres = chiffresDe(sansFormules(phrase));
+    if (chiffres.length === 0) return chiffres;
+    const cherchee = sansAccent(phrase);
+    if (this.marques.some((trouve) => trouve(cherchee))) return chiffres;
+    const seuil = this.entierLiantDes;
+    return chiffres.filter((n) => n.includes(".") || Number(n) >= seuil);
   }
 
   /** Une source remise au modèle ; rend son `search_result_index`. */
@@ -168,8 +260,8 @@ export class GardeDesChiffres {
     let sortie = "";
     let position = this.emisDuBloc;
     for (const phrase of phrasesDe(this.tampon.slice(this.emisDuBloc, jusqua))) {
-      if (chiffresDe(phrase).length > 0) {
-        // Une phrase chiffrée : tout le reste du bloc attend ses citations.
+      if (this.aJuger(phrase).length > 0) {
+        // Une phrase au chiffre liant : tout le reste du bloc attend ses citations.
         this.retenu = true;
         break;
       }
@@ -205,7 +297,7 @@ export class GardeDesChiffres {
     const retirees: string[] = [];
     for (const s of citations) this.citees.set(s.source.cle, s.source);
     for (const phrase of phrasesDe(texte)) {
-      const chiffres = chiffresDe(phrase);
+      const chiffres = this.aJuger(phrase);
       if (chiffres.length === 0) {
         aEmettre += phrase;
         continue;

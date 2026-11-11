@@ -1746,10 +1746,12 @@
 [data-surface="pme"] [data-ecran="chat"] .sig .ph img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;display:block}
 [data-surface="pme"] [data-ecran="chat"] .sig b{font-size:.75rem;font-weight:600;color:var(--t2);letter-spacing:-.01em}
 [data-surface="pme"] [data-ecran="chat"] .srcs{display:flex;flex-wrap:wrap;gap:.375rem;margin-top:.875rem}
-[data-surface="pme"] [data-ecran="chat"] .srcs a{display:inline-flex;align-items:center;gap:.4375rem;text-decoration:none; background:var(--s1);border-radius:999px;padding:.375rem .6875rem;font-size:.75rem; color:var(--t2);transition:background .18s}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="chat"] .srcs a:hover{background:var(--s2);color:var(--tx)}}
-[data-surface="pme"] [data-ecran="chat"] .srcs a svg{width:12px;height:12px;color:var(--t3);flex:none}
-[data-surface="pme"] [data-ecran="chat"] .srcs a em{font-style:normal;color:var(--t3)}
+/* Une source qui s'ouvre est un lien (une pièce) ; une source qui se déplie est un bouton
+ * (un article, un chiffre du dossier). Les deux portent la même puce : le bouton restait nu. */
+[data-surface="pme"] [data-ecran="chat"] .srcs a,[data-surface="pme"] [data-ecran="chat"] .srcs button{border:0;font:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:.4375rem;text-decoration:none; background:var(--s1);border-radius:999px;padding:.375rem .6875rem;font-size:.75rem; color:var(--t2);transition:background .18s}
+@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="chat"] .srcs a:hover,[data-surface="pme"] [data-ecran="chat"] .srcs button:hover{background:var(--s2);color:var(--tx)}}
+[data-surface="pme"] [data-ecran="chat"] .srcs a svg,[data-surface="pme"] [data-ecran="chat"] .srcs button svg{width:12px;height:12px;color:var(--t3);flex:none}
+[data-surface="pme"] [data-ecran="chat"] .srcs a em,[data-surface="pme"] [data-ecran="chat"] .srcs button em{font-style:normal;color:var(--t3)}
 [data-surface="pme"] [data-ecran="chat"] .et1{display:flex;align-items:center;gap:.5rem;margin-top:.75rem;font-size:.75rem;color:var(--am)}
 [data-surface="pme"] [data-ecran="chat"] .et1 i{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
 [data-surface="pme"] [data-ecran="chat"] .et1.ok{color:var(--acc)}
@@ -2157,7 +2159,8 @@
 [data-surface="pme"] [data-ecran="parametres"] .fac .btn{width:auto;min-height:40px;padding:.5rem 1rem;font-size:.8125rem}
 /* Le profil : une personne, centrée — son initiale, son nom, ses rôles. */
 [data-surface="pme"] [data-ecran="parametres"] .profil{display:grid;justify-items:center;gap:.375rem;text-align:center;padding:1.5rem 1.125rem 1.125rem;border-radius:24px}
-[data-surface="pme"] [data-ecran="parametres"] .profil > .av{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;margin-bottom:.375rem;background:var(--acc);color:var(--on-acc);font-size:1.875rem;font-weight:800;letter-spacing:-.04em}
+[data-surface="pme"] [data-ecran="parametres"] .profil > .av{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;margin-bottom:.375rem;background:var(--acc);color:var(--on-acc);font-size:1.875rem;font-weight:800;letter-spacing:-.04em;overflow:hidden}
+[data-surface="pme"] [data-ecran="parametres"] .profil > .av img{width:100%;height:100%;object-fit:cover}
 [data-surface="pme"] [data-ecran="parametres"] .profil > b{font-size:1.375rem;font-weight:800;letter-spacing:-.03em;line-height:1.2;overflow-wrap:anywhere}
 [data-surface="pme"] [data-ecran="parametres"] .profil > .ml{font-family:var(--mono);font-size:.75rem;color:var(--t2);overflow-wrap:anywhere}
 [data-surface="pme"] [data-ecran="parametres"] .profil .pills{display:flex;flex-wrap:wrap;justify-content:center;gap:.375rem;margin-top:.375rem}
@@ -2354,6 +2357,14 @@
 [data-surface="pme"] [data-ecran="alire"] .bas .pr:disabled{background:var(--d2);color:var(--t3);cursor:default}
 [data-surface="pme"] [data-ecran="alire"] .bas .plafond{margin:0 0 .6rem;font-size:.875rem;line-height:1.35;color:var(--am)}
 [data-surface="pme"] [data-ecran="chat"] { --s1: #F5F5F5; --s2: #ECEEEE }
+/* Les blocs d'une réponse (`blocs-de-reponse.tsx`) prennent les rayons de cette surface :
+ * 16 pour une carte dense, 12 pour une puce. Ailleurs, ils restent à l'angle du thème. */
+[data-surface="pme"] [data-ecran="chat"] { --bloc-r: 16px; --bloc-r2: 12px }
+/* La colonne du fil ne s'élargit jamais au contenu : un tableau ou un graphique plus large que
+ * la bulle défile DANS son cadre. Sans cette borne, la piste de la grille prenait la largeur du
+ * tableau et la bulle sortait de l'écran à 320 px (relevé au rendu, 10 novembre 2026). */
+[data-surface="pme"] [data-ecran="chat"] .msgs{grid-template-columns:minmax(0,1fr)}
+[data-surface="pme"] [data-ecran="chat"] .mal{min-width:0}
 [data-surface="pme"] [data-famille="papiers"] { --s1: #F5F5F5; --s2: #ECEEEE }
 
 
@@ -2971,7 +2982,8 @@ html.dark:has([data-surface="pme"]),
 [data-surface="pme"] .selsoc .so:hover{background:var(--s1)}
 [data-surface="pme"] .selsoc .so[aria-current]{background:var(--s1);box-shadow:inset 0 0 0 1.5px var(--acc)}
 [data-surface="pme"] .selsoc .so.toutes{width:100%;margin-top:.5rem}
-[data-surface="pme"] .selsoc .ini{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;background:var(--d2);font-size:.75rem;font-weight:800;letter-spacing:.02em;color:var(--t2)}
+[data-surface="pme"] .selsoc .ini{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;overflow:hidden;background:var(--d2);font-size:.75rem;font-weight:800;letter-spacing:.02em;color:var(--t2)}
+[data-surface="pme"] .selsoc .ini img{width:100%;height:100%;object-fit:cover}
 [data-surface="pme"] .selsoc .so[aria-current] .ini{background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] .selsoc .bd{flex:1;min-width:0;display:grid;gap:.125rem}
 [data-surface="pme"] .selsoc .bd b{font-size:.875rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

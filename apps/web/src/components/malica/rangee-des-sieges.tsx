@@ -12,8 +12,9 @@
  * ne va jamais plus loin que l'en-tête.
  *
  * L'anneau d'une pastille est fonctionnel : Amber, une pièce de ce siège
- * attend la personne ; Evergreen, tout est pris en charge (tons `am` et `ok` de `TON_PME`). La pastille porte les initiales ; une photo de profil, le jour
- * où le compte en aura une, prendra sa place sans toucher à cet écran.
+ * attend la personne ; Evergreen, tout est pris en charge (tons `am` et `ok` de `TON_PME`). La pastille porte les initiales ; la photo de profil du compte
+ * (`identity.profiles.photo_version`, `usePhotosDeProfil`), quand il en a une,
+ * prend leur place — ici et dans la feuille.
  */
 import { useRef, useState } from "react";
 
@@ -30,7 +31,7 @@ export interface Siege {
   pieces: readonly PieceLue[];
   /** La société, quand l'en-tête les montre toutes. */
   societe?: string | null;
-  /** La photo du compte, quand il en aura une. */
+  /** La photo du compte (adresse `blob:`), quand il en a une. */
   photo?: string | null;
 }
 
@@ -78,6 +79,7 @@ export function RangeeDesSieges({
         .filter(Boolean)
         .join(" · "),
       ton: tonDuSiege(s.pieces),
+      photo: s.photo ?? null,
       mention: attend > 0 ? t("pme.sieges.attend", { count: attend }) : null,
     };
   };
