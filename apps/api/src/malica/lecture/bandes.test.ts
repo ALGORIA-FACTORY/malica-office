@@ -1,3 +1,12 @@
+/**
+ * Les bandes d'une page dense — la couper sans perdre ni doubler une ligne.
+ *
+ * Garantit que les bandes se chevauchent et couvrent toute la page, que les positions lues
+ * dans une bande sont replacées dans le repère de la page, que la ligne du chevauchement
+ * n'est gardée qu'une fois, et que les ordinaux sont renumérotés dans l'ordre de lecture.
+ * Sinon une facture dense perdrait des lignes ou en compterait deux, et les totaux ne
+ * fermeraient plus.
+ */
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";

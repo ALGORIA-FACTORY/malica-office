@@ -1,4 +1,12 @@
 // @vitest-environment jsdom
+/**
+ * La visionneuse de document — afficher la pièce, photo ou PDF, sans « Document illisible ».
+ *
+ * Garantit qu'une photo garde une URL locale vivante même en mode strict de React, que
+ * « Réessayer » repart d'une URL neuve, que l'URL est révoquée au départ, et que pendant
+ * l'ouverture d'un PDF l'aperçu de la pièce reste visible et le canevas encore vide caché
+ * (il s'affichait en grand bloc noir sur téléphone).
+ */
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

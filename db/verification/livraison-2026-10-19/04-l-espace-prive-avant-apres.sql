@@ -1,3 +1,9 @@
+-- Preuve 04 — l'espace privé d'un collaborateur : ce que le dirigeant voit, avant et après.
+--
+-- Un collaborateur garde une pièce pour lui. AVANT, avec l'ancienne politique de lecture, le
+-- dirigeant la voit avec sa lecture ; APRÈS, il ne la voit plus et son auteur la voit encore.
+-- Termine par le quota : une pièce personnelle ne se lit pas (`lecture_autorisee`).
+-- Chaque essai est annulé en fin de transaction.
 \set ON_ERROR_STOP on
 \echo '=== ESPACE PRIVE : AVANT / APRES, ET LE QUOTA ==='
 do $$

@@ -1,3 +1,11 @@
+/**
+ * Les épreuves du calcul de TVA — collectée, déductible, solde, ou refus.
+ *
+ * Garantissent que le moteur agrège la TVA collectée sur les ventes et la TVA déductible
+ * sur les achats (un seau par taux), calcule le solde (positif : à payer), et refuse
+ * explicitement une pièce dont la date n'a aucun taux applicable, sans en inventer un
+ * et sans l'ajouter aux totaux (R4).
+ */
 import { describe, it, expect } from "vitest";
 import { computeTva } from "../engines/tva/compute.ts";
 import {

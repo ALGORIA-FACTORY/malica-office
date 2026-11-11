@@ -1,3 +1,13 @@
+/**
+ * Les épreuves de la valorisation des stocks — CUMP, FIFO, variation, dépréciation.
+ *
+ * Garantissent que la sortie est valorisée au coût moyen pondéré (CUMP) ou lot par lot
+ * (FIFO, un lot épuisé avant le suivant, une sortie qui traverse deux lots), que les
+ * garde-fous refusent une entrée sans coût et une sortie supérieure au stock, que la
+ * variation de stock vaut stock final moins stock initial, et que la dépréciation
+ * provisionne l'écart entre le coût et la valeur nette de réalisation, ne provisionne rien
+ * quand celle-ci dépasse le coût, et ne reprend jamais plus que le cumul constaté.
+ */
 import { describe, expect, it } from "vitest";
 
 import {

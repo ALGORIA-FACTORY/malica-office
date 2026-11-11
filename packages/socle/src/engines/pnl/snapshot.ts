@@ -1,3 +1,13 @@
+/**
+ * Le moteur du compte de résultat — produits, charges et résultat d'un mois.
+ *
+ * Totalise les lignes de journal par compte, range chaque compte dans sa classe d'après
+ * le plan du pack (le préfixe le plus long l'emporte) et en déduit le résultat. La classe
+ * est EXIGÉE : elle n'est pas devinée sur le premier chiffre du code, car une juridiction
+ * qui numérote autrement donnerait un résultat vide mais plausible (R4). Un compte d'une
+ * classe inconnue reste visible au détail, sans effet sur les totaux. Calcul décimal
+ * exact, sans IA (R3).
+ */
 import { D, sum, toFixedStr } from "../../domain/decimal.ts";
 import type { CurrencyDef, AccountRow } from "../../domain/types.ts";
 import type { AccountClass } from "../../ports/repositories.ts";

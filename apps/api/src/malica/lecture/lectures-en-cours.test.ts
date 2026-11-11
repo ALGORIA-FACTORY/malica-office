@@ -1,3 +1,11 @@
+/**
+ * Le registre des lectures en cours — une pièce ne se lit qu'une fois, même si on réessaie.
+ *
+ * Garantit qu'une seconde demande pour la même pièce rejoint la lecture qui tourne au lieu
+ * d'en lancer une autre (un appel de modèle payé deux fois), qu'une lecture qui échoue est
+ * oubliée pour qu'on puisse réessayer, et que chaque pièce est suivie à part. C'est ce qui
+ * permet à un téléphone qui se verrouille puis revient de retrouver sa lecture.
+ */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 

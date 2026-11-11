@@ -19,6 +19,8 @@ import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-doss
 import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
 import { LienMonEspaceParti } from "@/components/malica/mon-espace-parti";
+import { MaPhoto } from "@/components/malica/ma-photo";
+import { usePhotosDeProfil } from "@/hooks/use-photos-de-profil";
 import { usePrix } from "@/hooks/use-decimales";
 import { usePrixEnPlus } from "@/hooks/use-prix-en-plus";
 import { libelleDOffre, offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/use-offres";
@@ -155,6 +157,8 @@ function PmeReglages() {
     queryFn: () => office().identity.monProfil(),
   });
   const acces = useMonAcces(pme.tenantId);
+  // Ma photo, quand j'en ai une : elle prend la place de l'initiale.
+  const maPhoto = usePhotosDeProfil(compte.data ? [compte.data.id] : [])[compte.data?.id ?? ""];
   const prixEnPlus = usePrixEnPlus(pme.tenantId);
 
   const abo = useLAbonnement();
@@ -211,7 +215,11 @@ function PmeReglages() {
            */}
           <div className="card profil">
             <span className="av" aria-hidden>
-              {initiale(profil.data?.prenom || compte.data?.email || null)}
+              {maPhoto ? (
+                <img src={maPhoto} alt="" />
+              ) : (
+                initiale(profil.data?.prenom || compte.data?.email || null)
+              )}
             </span>
             <b>
               {[profil.data?.prenom, profil.data?.nom].filter(Boolean).join(" ") ||
@@ -238,6 +246,7 @@ function PmeReglages() {
             <span className="ro">
               {t("pme.reglages.compte.orgs", { count: pme.dossiers.length })}
             </span>
+            <MaPhoto aUnePhoto={Boolean(maPhoto)} />
             <MonNom />
             {/* Son Mon espace des sociétés quittées : il part avec le compte (lot 4). */}
             <LienMonEspaceParti className="btn btn-sec mt-2" />

@@ -1,3 +1,11 @@
+/**
+ * Le contrat d'échéance — la forme d'une date limite fiscale ou déclarative.
+ *
+ * Une échéance porte sa juridiction, sa nature (par exemple une TVA mensuelle), son
+ * libellé, la période concernée, la date limite et, si on la connaît, sa référence légale.
+ * Utilisé par le moteur `engines/echeance` (`computeEcheances`), qui en dresse la
+ * liste pour une période.
+ */
 import { z } from "zod";
 
 const CONTRACT_VERSION = "echeance.v1" as const;

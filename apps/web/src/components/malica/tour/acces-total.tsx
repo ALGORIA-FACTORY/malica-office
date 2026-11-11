@@ -1,3 +1,12 @@
+/**
+ * L'accès total — qui l'a, et le geste de l'accorder ou de le retirer (écran de la tour).
+ *
+ * Écran de l'opérateur ALGORIA : la liste des accès en vigueur (qui, depuis quand, par qui,
+ * pour quel motif), l'accord à un compte par son e-mail et le retrait, chacun avec un motif
+ * obligatoire. L'écran ne décide rien : la base refuse un compte qui n'est pas opérateur
+ * et un motif vide, et journalise chaque décision sous son auteur. Un accès dont le
+ * titulaire n'est plus opérateur est signalé inactif.
+ */
 import type { AccesTotalEnVigueur } from "@malica/socle/ports/repositories";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";

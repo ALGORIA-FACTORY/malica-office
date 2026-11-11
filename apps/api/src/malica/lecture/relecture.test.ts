@@ -1,3 +1,11 @@
+/**
+ * La relecture guidée par la contradiction — ne relire que ce que l'arithmétique désigne.
+ *
+ * Garantit que seules les cellules des rangées d'articles sont relues, et seulement quand
+ * le total est prouvé mais que les lignes ne ferment pas ; et qu'une relecture ne remplace
+ * un jeton que si elle est plus sûre que lui, sans toucher au plan d'origine. La preuve
+ * reste l'arithmétique du moteur : la relecture n'affirme rien d'elle-même.
+ */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 

@@ -1,3 +1,10 @@
+/**
+ * Le moteur des achats et des ventes par mois, source des graphiques de Malica.
+ *
+ * Il somme exactement par mois et par sens, garde visibles les mois sans pièce,
+ * et dit ce qu'il écarte (total ou date non lus, autre devise) : un graphique
+ * de la bulle ne montre que ce que ce moteur a compté (R3).
+ */
 import { describe, expect, it } from "vitest";
 
 import { piecesParMois, type PieceLuePourLesMois } from "../engines/pieces/par-mois.ts";

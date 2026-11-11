@@ -1,3 +1,13 @@
+/**
+ * La file du cabinet — classer les pièces reçues en piles de travail.
+ *
+ * Garantit le nombre de jours d'attente (jamais négatif), la couleur de chaque statut
+ * (à traiter, chez le client, pris en charge), le décompte des prises en charge dans
+ * une fenêtre et le filtre par statut ou par doublon. Il garantit surtout les piles :
+ * « prête » est une promesse, donc une pièce sans sens connu, en doublon ou en anomalie
+ * est à compléter ; une demande de la société passe avant tout ; une pièce non lue
+ * attend ; une pièce prise en charge sort du travail.
+ */
 import { describe, expect, it } from "vitest";
 
 import type { SuiviDEnvoi } from "@malica/socle/statut-d-envoi";

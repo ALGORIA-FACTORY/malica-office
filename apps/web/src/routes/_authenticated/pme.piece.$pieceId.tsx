@@ -1,3 +1,17 @@
+/**
+ * La fiche d'une pièce (PME) — lecture citée, règlement et suivi d'une facture ou d'un reçu.
+ *
+ * Route `/pme/piece/$pieceId`, l'écran du dirigeant ou de son collaborateur. Une carte de
+ * décision, puis trois onglets — Lecture, Règlement, Suivi — que `?onglet=` peut ouvrir.
+ * Les données viennent du dossier de la pièce (`capture.dossier`), des gestes du circuit
+ * (envoyer, garder, renvoyer, supprimer, demander au cabinet) et des droits de la personne :
+ * l'écran propose ce que la base accepte, il ne devine pas un rôle.
+ *
+ * Ce qui est sensible ici : une correction ajoute une précision à côté de la lecture sans la
+ * réécrire (R7) ; un règlement ne se modifie pas, il s'annule par une ligne motivée ; une pièce
+ * transmise ne revient que sur accord du cabinet. Une pièce absente se dit calmement, sans
+ * message de panne. `remountDeps` remonte l'écran à chaque pièce.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";

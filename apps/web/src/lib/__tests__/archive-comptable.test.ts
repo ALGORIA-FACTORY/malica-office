@@ -1,3 +1,14 @@
+/**
+ * L'archive comptable — ce que le cabinet reçoit en ZIP doit être fidèle et sûr.
+ *
+ * Garantit que les originaux passent octet pour octet, sans doublon, avec l'empreinte
+ * scellée à la réception et sans la recalculer ; que l'ordre du dossier est gardé même
+ * si les pièces arrivent dans le désordre ; que le téléchargement reste borné à quatre
+ * pièces à la fois, s'arrête dès qu'une pièce manque ou que la personne annule, et ne
+ * rend jamais une archive incomplète. Les noms de fichiers sont neutralisés contre la
+ * traversée de chemins, et les formules des CSV aussi : l'archive est ouverte dans un
+ * tableur, qui ne doit rien exécuter.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { unzipSync, strFromU8 } from "fflate";
 import type { DossierComptable, DocumentComptable } from "@malica/socle/ports/repositories";

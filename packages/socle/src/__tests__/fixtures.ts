@@ -1,3 +1,12 @@
+/**
+ * Les pièces et les paramètres d'essai — le jeu commun des épreuves du Socle.
+ *
+ * Ce fichier ne contient aucune épreuve : il fournit aux tests des devises (TND à trois
+ * décimales, EUR à deux), des taux de TVA, des règles de comptes, des tolérances, une
+ * déclaration de TVA minimale et des factures types (achat simple, multi-taux,
+ * déséquilibrée, à taux manquant, vente). Ce sont des données de test synthétiques,
+ * pas des paramètres de production : ceux-ci viennent des packs en base (R4).
+ */
 import type { AccountMappingRule, CurrencyDef, TaxRateRow, Tolerances } from "../domain/types.ts";
 import type { ExtractV1 } from "../contracts/extract.v1.ts";
 

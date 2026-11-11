@@ -1,3 +1,20 @@
+-- Les quatre verrous des notifications de Malica — ce qui empêche un message de partir.
+--
+-- Script de vérification de la livraison, joué à la main dans psql sur une base de
+-- recette : il crée un utilisateur, une organisation et un appareil mobile d'essai
+-- (identifiants tirés au hasard), puis appelle `notif.poster` et affiche si le message
+-- est posté ou retenu, avec son motif. Aucune assertion automatique : on lit la sortie.
+--
+-- Les verrous exercés :
+--   - une seule fois par sujet : le même sujet reposté n'est pas renvoyé, un autre mois
+--     repart ;
+--   - le silence : pendant la plage choisie, le push est retenu, mais le centre de
+--     notifications de l'application reçoit quand même la ligne ;
+--   - la cadence : l'utilisateur qui a choisi « jamais » ne reçoit rien ;
+--   - le droit : un siège révoqué (membre supprimé de l'organisation) ne reçoit plus.
+--
+-- Il affiche aussi l'état déduit de l'envoi et le texte rendu, figé avec ses jetons
+-- remplacés.
 \set ON_ERROR_STOP on
 \echo '=== LES QUATRE VERROUS DE MALICA ==='
 do $$

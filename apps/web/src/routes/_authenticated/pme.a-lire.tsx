@@ -1,3 +1,14 @@
+/**
+ * À lire — choisir, parmi les pièces prises et pas encore lues, celles qu'on fait lire.
+ *
+ * Écran de la PME : la lecture peut se faire au scan ou plus tard, et pour plusieurs pièces
+ * d'un coup. Les pièces remises à plus tard se retrouvent ici, cochées d'office ; la
+ * personne décoche ce qu'elle ne veut pas, puis « Lire les N » rouvre le parcours à la
+ * question « Pour qui ? », qui précède toute lecture.
+ *
+ * Les pièces viennent de la lecture que la bibliothèque a déjà faite (`capture.listAvecLecture`).
+ * Un lot a un plafond (`PLAFOND_ELEMENTS`) : au-delà, cocher est refusé et l'écran le dit.
+ */
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";

@@ -1,3 +1,12 @@
+/**
+ * Les épreuves du gabarit de phrase — remplir sans déformer, élider comme on écrit.
+ *
+ * `remplirLeGabarit` place les valeurs dans les messages affichés. Ces épreuves
+ * garantissent qu'une valeur est insérée telle quelle même si elle ressemble à un motif
+ * de remplacement (`$&`, `$1`…), et que « de » s'élide en « d’ » devant une voyelle
+ * (accentuée ou non, majuscule comprise) mais pas devant une consonne, un h, un chiffre,
+ * un signe ou un nombre : « Retour d’AUDICORP », jamais « Retour de AUDICORP ».
+ */
 import { describe, expect, it } from "vitest";
 
 import { remplirLeGabarit } from "../gabarit.ts";

@@ -1,3 +1,16 @@
+/**
+ * Vos échéances — les dates qui viennent, annoncées à l'avance, jamais à la dernière minute.
+ *
+ * Écran de la PME : les échéances sont groupées en trois tranches (cette semaine, ce mois,
+ * à venir) ; chaque ligne dit sa date et sa règle. La phrase de Malica passe avant la
+ * liste : une échéance se prépare, elle ne se crie pas, et seule une échéance dépassée
+ * prend la couleur d'alerte.
+ *
+ * Aucune date, aucun délai, aucun taux n'est écrit ici (R4) : chaque date vient de `dueDate`,
+ * que la base dérive du pack de juridiction en vigueur. Les deux bornes du fichier ne sont
+ * qu'un découpage d'affichage. Le contrat ne rend aucun montant : les montants s'affichent
+ * « — ». Les lignes se lisent, elles ne mènent nulle part : aucune route n'ouvre une échéance.
+ */
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 

@@ -1,3 +1,10 @@
+/**
+ * Le sens d'un solde — dû, crédit, nul ou inconnu, jamais un crédit par défaut.
+ *
+ * Garantit qu'un solde nul n'est pas présenté comme un crédit, qu'une absence ou une
+ * valeur illisible est dite inconnue, et que le sens des soldes réellement servis par
+ * le moteur est conservé.
+ */
 import { describe, expect, it } from "vitest";
 
 import { sensDuSolde } from "../sens-du-solde";

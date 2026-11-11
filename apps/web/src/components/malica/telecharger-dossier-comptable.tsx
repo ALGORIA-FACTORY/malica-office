@@ -1,3 +1,12 @@
+/**
+ * Le bouton « Télécharger le dossier » — l'archive comptable d'un client, côté cabinet.
+ *
+ * Il ouvre une boîte de dialogue qui prépare, pièce par pièce, une archive ZIP des
+ * documents sélectionnés avec leurs documents liés (lus sous le mandat du cabinet), montre
+ * la progression, puis l'enregistre sur l'appareil. La préparation s'interrompt à la
+ * fermeture ; une panne se dit dans la boîte. Le bouton est grisé sans pièce, et, sur une
+ * carte qui s'ouvre, télécharger n'ouvre pas la carte.
+ */
 import { useMutation } from "@tanstack/react-query";
 import { Download, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";

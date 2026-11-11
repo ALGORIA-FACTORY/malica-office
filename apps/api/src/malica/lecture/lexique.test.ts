@@ -1,3 +1,12 @@
+/**
+ * Le lexique des mots douteux — signaler une désignation que l'OCR a pu mal lire.
+ *
+ * Garantit qu'un signe étranger au français sur un mot connu sans accents, ou une capitale
+ * suivie d'un « s » au dessin d'un 5, rend le mot douteux, mais qu'un accent omis, un nom
+ * propre étranger, une unité ou un sigle ne sont jamais accusés à tort. Un faux doute
+ * ferait relire à la personne ce qui est juste ; l'absence de doute laisserait passer une
+ * désignation fausse.
+ */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 

@@ -1,4 +1,11 @@
 // @vitest-environment jsdom
+/**
+ * Les livrables reçus par le client — consulter ne vaut pas accuser réception.
+ *
+ * Garantit que l'ouverture d'un document publié par le cabinet n'enregistre aucune
+ * réception, que le bouton la confirme une seule fois puis reflète l'état du serveur, et
+ * qu'une panne ne fait jamais passer le document pour reçu.
+ */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

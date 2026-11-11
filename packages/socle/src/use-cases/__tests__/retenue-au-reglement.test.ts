@@ -1,3 +1,15 @@
+/**
+ * Les épreuves de la retenue à la source — jamais devinée, toujours qualifiée.
+ *
+ * Garantissent qu'un écart entre le TTC et le payé ne prouve jamais une retenue : sans
+ * qualification explicite du comptable, le cas reste « à confirmer ». Une retenue
+ * qualifiée a le montant calculé sur sa base réglée (y compris pour un versement partiel),
+ * exige sa justification, et la TVA retenue exige une TVA connue. Sous le seuil légal du
+ * paramétrage, aucune question n'est posée ; au seuil exactement, elle l'est ; au-dessus,
+ * « sans retenue » se motive. L'écriture de règlement s'équilibre toujours, et une retenue
+ * sans compte au paramétrage est refusée, pas devinée. La qualification reçue est relue :
+ * un champ étranger ou un montant non textuel est refusé.
+ */
 import { describe, expect, it } from "vitest";
 import { construireReglement, type EntreeReglement } from "../ecriture-de-reglement.ts";
 import {

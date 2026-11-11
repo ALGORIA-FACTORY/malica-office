@@ -1,3 +1,12 @@
+/**
+ * La réparation géométrique des articles — retrouver les cellules d'une ligne par leur place.
+ *
+ * Quand le modèle désigne la désignation d'une ligne mais oublie quantité, prix ou total,
+ * on les retrouve dans la même rangée, sous la bande de colonne imprimée. Ces tests
+ * garantissent qu'on n'invente rien (colonne non imprimée, désignation non citée), qu'on
+ * garde ce que le modèle a déjà désigné, et que le module marche sur un plan tel qu'un œil
+ * le rend vraiment : en-têtes coupés sur les espaces, désignation sur plusieurs lignes.
+ */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 

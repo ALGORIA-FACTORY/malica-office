@@ -58,6 +58,7 @@ import {
   NOM_COOKIE,
   presenterLeClient,
 } from "./session.ts";
+import { oterMaPhoto, poserMaPhoto, servirUnePhoto } from "./photo-de-profil.ts";
 import {
   deposerContenu,
   servirContenu,
@@ -166,6 +167,21 @@ app.get("/pieces/:id/contenu", exigerIdentite, (req, res, next) => {
 /** Sa miniature, pour les listes — voir `miniature.ts`. Même garde, même RLS. */
 app.get("/pieces/:id/miniature", exigerIdentite, (req, res, next) => {
   servirMiniature(req, res).catch(next);
+});
+
+/**
+ * La photo de profil : la mienne se pose et s'ôte, celle d'une personne que la
+ * base me laisse voir se lit — voir `photo-de-profil.ts`. Montées avant
+ * `express.json`, comme les pièces : un dépôt se lit comme un flux.
+ */
+app.put("/moi/photo", exigerIdentite, (req, res, next) => {
+  poserMaPhoto(req, res).catch(next);
+});
+app.delete("/moi/photo", exigerIdentite, (req, res, next) => {
+  oterMaPhoto(req, res).catch(next);
+});
+app.get("/moi/photos/:id", exigerIdentite, (req, res, next) => {
+  servirUnePhoto(req, res).catch(next);
 });
 
 /** Un export numéroté du journal du jour, gardé — voir `stockage.ts`. Même garde, même RLS. */

@@ -1,3 +1,11 @@
+/**
+ * Le contrat des stocks — la forme des mouvements, de la valorisation et de la dépréciation.
+ *
+ * Décrit un mouvement d'article (entrée valorisée, sortie en quantité), la valorisation
+ * ligne à ligne avec le coût moyen, la variation de stock d'une période et la
+ * dépréciation d'un stock. La méthode (CUMP ou FIFO) et le nombre de décimales des
+ * quantités sont lus au pack de juridiction (R4). Produit par `engines/stock`.
+ */
 import { z } from "zod";
 
 const decimalString = z.string().regex(/^-?\d+(\.\d+)?$/);

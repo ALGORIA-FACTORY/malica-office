@@ -1,3 +1,13 @@
+/**
+ * Le hook de la TVA du mois — assembler les extraits, les taux et la déclaration.
+ *
+ * Utilisé par l'écran TVA de la PME et par ses voisins (accueil, rail des dossiers).
+ * Le chiffre vient du moteur du Socle, jamais de l'écran : ce hook charge les extraits
+ * du mois, les taux gouvernés et les lignes de déclaration en vigueur, puis invoque le
+ * moteur. Avec un cabinet mandaté, la TVA du mois est celle des pièces transmises ce
+ * mois-là ; sans cabinet, celle des pièces comptabilisées. Tant que les décimales du
+ * pack (R4) ou une des sources manquent, il ne rend rien plutôt qu'un chiffre faux.
+ */
 import { finDuMois } from "@malica/socle/exercice";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
