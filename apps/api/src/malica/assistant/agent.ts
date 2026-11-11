@@ -132,6 +132,10 @@ interface MesureDeLaReponse {
   conclusion: ConclusionDeLaReponse | null;
   /** La réponse a été retenue pour le cabinet (par l'agent ou par `askMalica`). */
   retenue: boolean;
+  /** La réponse est partie, marquée « à confirmer », et le cabinet l'a reçue ou non. */
+  annoncee: boolean;
+  /** Les phrases parties avec la marque « non vérifié » (le corpus n'avait pas répondu). */
+  nonVerifies: number;
 }
 
 /** La fin telle que le serveur la connaît : ce que l'écran reçoit, plus la mesure. */
@@ -164,6 +168,18 @@ function versLEcran(f: FinMesuree): FinDeLaReponse {
  * du conseil à la portée incertaine, sans certitude — retenu si un cabinet
  * peut relire, comme `askMalica` le fait d'une réponse qu'il ne sait pas lire.
  */
+/** Les noms d'outils : la garde tait toute phrase qui en porte un. */
+const NOMS_DE_LA_MECANIQUE = [
+  ...DEFINITIONS,
+  COMPARER_LES_SOCIETES,
+  AFFICHER_VISUEL,
+  CONCLURE_REPONSE,
+].map((d) => d.name);
+
+/** Ce qu'on dit au modèle qui a répondu sans conclure. Aucun texte n'en sort à l'écran. */
+const DEMANDE_DE_CONCLUSION =
+  "Tu as répondu sans conclure. Appelle maintenant conclure_reponse pour la réponse que tu viens de donner, et rien d'autre.";
+
 const SANS_CONCLUSION: ConclusionDeLaReponse = {
   conseil: true,
   portee: "incertaine",
@@ -476,7 +492,10 @@ async function converser(
   const contexte = await api
     .rpc<ContexteConseil>("conseil", "contexte", [q.tenantId])
     .catch(() => null);
-  const enAttente = doitEtreRelue(SANS_CONCLUSION, contexte);
+  // En mode « annoncer », rien n'est retenu : la réponse part en flux, et
+  // l'envoi au cabinet se dit à la fin.
+  const enAttente =
+    configuration.relecture === "retenir" && doitEtreRelue(SANS_CONCLUSION, contexte);
 
   const conversationId =
     q.conversationId ??
@@ -489,6 +508,8 @@ async function converser(
   emettre({ type: "debut", conversationId });
 
   const garde = new GardeDesChiffres(q.question, configuration.garde);
+  // Aucun nom d'outil ne part à l'écran, quoi que le modèle écrive.
+  garde.taire(NOMS_DE_LA_MECANIQUE);
   let premierMot: number | null = null;
   // Le texte gardé s'accumule dans la garde (`texteEmis`) ; il ne part à
   // l'écran qu'en flux libre. En attente de la conclusion, il attend.
@@ -515,6 +536,7 @@ async function converser(
     aujourdhui,
     conseil: deps.conseil,
     idProposition: deps.idProposition ?? (() => crypto.randomUUID()),
+    repondreSansTexte: configuration.sansTexte === "marquer",
     // Un calcul n'emploie que ce que la personne a écrit ou qu'un outil a rendu.
     nombresAdmis: () =>
       new Set([
@@ -568,6 +590,9 @@ async function converser(
   let modeleRendu: string = choix.modele;
   let iterations = 0;
   let interrompue: string | null = null;
+  // Le dernier tour du modèle, s'il a fini sans appeler d'outil : ce qu'on lui
+  // remet quand il faut lui demander sa conclusion.
+  let dernierTour: Parameters<typeof tourARenvoyer>[0] | null = null;
 
   for (let tour = 0; tour < reglage.iterations_max; tour += 1) {
     iterations = tour + 1;
@@ -662,7 +687,15 @@ async function converser(
     const cout = coutDeLAppel(choix.modele, m.usage, configuration.tarifs);
     coutTotal = coutTotal === null || cout === null ? null : coutTotal + cout;
 
-    if (m.stopReason !== "tool_use") break;
+    if (m.stopReason !== "tool_use") {
+      // Seulement un tour fini proprement et qui ne porte que du texte : un
+      // tour coupé au milieu d'un outil ne se renvoie pas au modèle.
+      const renvoi = tourARenvoyer(m.content);
+      const propre =
+        m.stopReason === "end_turn" && renvoi.length > 0 && renvoi.every((b) => b.type === "text");
+      dernierTour = propre ? m.content : null;
+      break;
+    }
 
     const appels = m.content.filter((b) => b.type === "tool_use") as Array<{
       id: string;
@@ -735,6 +768,17 @@ async function converser(
         continue;
       }
       for (const s of r.sources) garde.ajouterSource(s);
+      // Le corpus, consulté, n'a pas répondu : Malica répond quand même, et ce
+      // qu'elle chiffre de mémoire part marqué (M-9, choix du dirigeant).
+      if (
+        configuration.sansTexte === "marquer" &&
+        r.sources.some((s) => s.cle.startsWith("malica:conseil:refus:"))
+      ) {
+        garde.marquerSansSource(
+          message(q.locale, "pme.assistant.nonVerifie"),
+          configuration.unitesMarquables,
+        );
+      }
       for (const v of r.visuels ?? []) visuels.set(v.cle, v.bloc);
       resultats.push({
         type: "tool_result",
@@ -770,6 +814,75 @@ async function converser(
     });
   }
 
+  /*
+   * LA CONCLUSION DEMANDÉE. Mesuré le 11 novembre 2026 sur le vrai modèle : cinq
+   * réponses générales sur huit finissaient sans `conclure_reponse`. Leur portée
+   * restait « incertaine », et sous mandat une explication de l'inflation
+   * partait en relecture chez le comptable. Quand un cabinet peut relire et que
+   * le modèle n'a pas conclu, on la lui demande une fois, outil imposé. S'il ne
+   * la rend pas, la portée reste incertaine : le défaut prudent ne bouge pas.
+   */
+  if (
+    conclusion === null &&
+    dernierTour !== null &&
+    !interrompue &&
+    garde.texteEmis() !== "" &&
+    doitEtreRelue(SANS_CONCLUSION, contexte)
+  ) {
+    const assembleur = new Assembleur();
+    const debutAppel = maintenant();
+    try {
+      for await (const ev of client({
+        model: choix.modele,
+        max_tokens: reglage.sortie_max_jetons,
+        output_config: { effort: choix.effort },
+        thinking: { type: "disabled" },
+        cache_control: { type: "ephemeral" },
+        tools: outils,
+        tool_choice: { type: "tool", name: CONCLURE_REPONSE.name },
+        system,
+        messages: [
+          ...messages,
+          { role: "assistant", content: tourARenvoyer(dernierTour) },
+          { role: "user", content: [{ type: "text", text: DEMANDE_DE_CONCLUSION }] },
+        ],
+      })) {
+        assembleur.recevoir(ev);
+      }
+      const m = assembleur.message();
+      await journaliser(api, {
+        tenantId: q.tenantId,
+        modele: choix.modele,
+        usage: m.usage,
+        latencyMs: maintenant() - debutAppel,
+        erreur: null,
+      });
+      usageTotal = {
+        entree: usageTotal.entree + m.usage.entree,
+        sortie: usageTotal.sortie + m.usage.sortie,
+        cacheLu: usageTotal.cacheLu + m.usage.cacheLu,
+        cacheEcrit: usageTotal.cacheEcrit + m.usage.cacheEcrit,
+      };
+      const cout = coutDeLAppel(choix.modele, m.usage, configuration.tarifs);
+      coutTotal = coutTotal === null || cout === null ? null : coutTotal + cout;
+      const appel = m.content.find(
+        (b) => b.type === "tool_use" && (b as { name?: string }).name === CONCLURE_REPONSE.name,
+      ) as { input: unknown } | undefined;
+      const lue = appel ? lireLaConclusion(appel.input) : null;
+      if (lue) conclusion = lue;
+    } catch (e) {
+      // La demande a échoué : la portée reste incertaine, et la réponse est
+      // relue. L'échec se journalise — un appel payant ne disparaît pas.
+      await journaliser(api, {
+        tenantId: q.tenantId,
+        modele: choix.modele,
+        usage: assembleur.message().usage,
+        latencyMs: maintenant() - debutAppel,
+        erreur: e instanceof Error ? e.message : String(e),
+      }).catch(() => undefined);
+    }
+  }
+
   /* ------------------------------------------------------------ la fin */
   // La mention « En vigueur au … » est composée par le code du conseil cité,
   // jamais par le modèle : elle part telle quelle, après la garde.
@@ -791,15 +904,18 @@ async function converser(
    * modèle a conclu (ou à la portée incertaine, s'il n'a pas conclu). Une
    * réponse vide n'a rien à faire relire.
    */
-  const retenue =
-    enAttente && dite !== "" && doitEtreRelue(conclusion ?? SANS_CONCLUSION, contexte);
+  // Un chiffre « non vérifié » part chez le comptable quelle que soit la portée
+  // que le modèle a conclue : c'est la raison même de la marque.
+  const nonVerifie = garde.marquees().length > 0;
+  const cabinetPeutRelire = contexte?.appelantMembre === true && contexte.cabinetId !== null;
+  const aRelire =
+    dite !== "" &&
+    (doitEtreRelue(conclusion ?? SANS_CONCLUSION, contexte) || (nonVerifie && cabinetPeutRelire));
+  const retenue = enAttente && aRelire;
   const sourcesCitees = garde.sourcesCitees();
-  let reponse: string;
-  if (retenue) {
+  const deposerAuCabinet = async (): Promise<void> => {
     const c = conclusion ?? SANS_CONCLUSION;
     const articles = articlesCites(sourcesCitees);
-    // Une réponse retenue qui ne pourrait pas entrer dans la file serait
-    // perdue : cet échec-là remonte, comme dans `askMalica`.
     await api.rpc<{ id: string; cabinetId: string }>("conseil", "creer", [
       {
         tenantId: q.tenantId,
@@ -808,18 +924,53 @@ async function converser(
         reponse: reponseGardee,
         sources: articles,
         // Comme `lireReponseDeConseil` : sans article cité, un avis vaut zéro.
-        certitude: !c.conseil ? 1 : articles.length === 0 ? 0 : Math.round(c.certitude * 100) / 100,
-        doute: c.conseil ? c.doute : null,
+        // Un chiffre « non vérifié » est la raison même de l'envoi : la réponse
+        // n'arrive jamais au cabinet comme certaine, et le doute le lui dit.
+        certitude: nonVerifie
+          ? 0
+          : !c.conseil
+            ? 1
+            : articles.length === 0
+              ? 0
+              : Math.round(c.certitude * 100) / 100,
+        doute: nonVerifie
+          ? [c.conseil ? c.doute : null, message(q.locale, "pme.conseil.douteNonVerifie")]
+              .filter(Boolean)
+              .join(" ")
+          : c.conseil
+            ? c.doute
+            : null,
         canal: "conversation",
         theme: c.conseil ? c.theme : null,
         langue: q.locale,
         statut: "en_attente",
       },
     ]);
+  };
+  /*
+   * « ANNONCER » (décision du dirigeant, 11 novembre 2026) : la réponse est
+   * déjà partie, entière. Elle entre dans la file du cabinet, et Malica le dit.
+   * Si la file la refuse, la réponse reste — mais Malica n'annonce pas un envoi
+   * qui n'a pas eu lieu : elle dit de la faire confirmer.
+   */
+  let annonce: string | null = null;
+  if (nonVerifie && !retenue) ajouts.push(message(q.locale, "pme.assistant.nonVerifieNote"));
+  if (aRelire && !retenue) {
+    annonce = await deposerAuCabinet().then(
+      () => message(q.locale, "pme.conseil.aConfirmer"),
+      () => message(q.locale, "pme.conseil.aConfirmerSansEnvoi"),
+    );
+  }
+  let reponse: string;
+  if (retenue) {
+    // Une réponse retenue qui ne pourrait pas entrer dans la file serait
+    // perdue : cet échec-là remonte, comme dans `askMalica`.
+    await deposerAuCabinet();
     reponse = message(q.locale, "pme.conseil.relecture");
     montrer(reponse);
   } else {
-    reponse = reponseGardee;
+    if (annonce) ajouts.push(annonce);
+    reponse = [dite, ...ajouts].filter(Boolean).join("\n\n");
     if (enAttente) {
       // La conclusion est connue et la réponse peut partir : d'un bloc.
       montrer(reponse);
@@ -887,6 +1038,8 @@ async function converser(
       iterations,
       conclusion,
       retenue,
+      annoncee: annonce !== null,
+      nonVerifies: garde.marquees().length,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
@@ -985,6 +1138,8 @@ async function repondreParLeRepli(
       iterations: 1,
       conclusion: null,
       retenue,
+      annoncee: false,
+      nonVerifies: 0,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });
@@ -1031,6 +1186,8 @@ async function sArreter(
       iterations: 0,
       conclusion: null,
       retenue: false,
+      annoncee: false,
+      nonVerifies: 0,
     },
   };
   emettre({ type: "fin", fin: versLEcran(fin) });

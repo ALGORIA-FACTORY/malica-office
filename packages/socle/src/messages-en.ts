@@ -1247,6 +1247,12 @@ export const en: Dict = {
   "cab.journal.conseil.ecarte": "Advice question set aside",
   "pme.conseil.relecture":
     "Your accountant is reviewing my answer: I will pass it on as soon as they have validated it.",
+  "pme.conseil.douteNonVerifie":
+    "Answer given with no text found in the corpus: the figures marked “unverified” come from the model's memory.",
+  "pme.conseil.aConfirmer":
+    "To be confirmed by your accountant: I am sending them this answer, and they will confirm, correct or dismiss it.",
+  "pme.conseil.aConfirmerSansEnvoi":
+    "Have your accountant confirm this: I could not pass this answer on to them.",
   "pme.conseil.sansCabinet":
     "No accountant follows this file yet: this answer has not been reviewed by a chartered accountant.",
   "pme.conseil.relu": "Reviewed and validated by your accountant.",
@@ -1263,6 +1269,9 @@ export const en: Dict = {
     "I can't answer right now: this month's assistant budget has been reached. The Malica team has been notified; your documents and file remain available.",
   "pme.assistant.interrompue": "My answer was interrupted. Ask again if it seems incomplete.",
   "pme.assistant.indisponible": "I couldn't answer right now. Please try again in a moment.",
+  "pme.assistant.nonVerifie": "_(unverified)_",
+  "pme.assistant.nonVerifieNote":
+    "I did not find this point in the legal texts: what is marked “unverified” comes from my general knowledge. Do not apply it before a chartered accountant has confirmed it.",
   "pme.assistant.vide": "I found nothing reliable to answer. Could you clarify your question?",
   "pme.assistant.outil.pieces_chercher": "Looking at your documents…",
   "pme.assistant.outil.piece_ouvrir": "Opening the document…",
@@ -1360,6 +1369,21 @@ export const en: Dict = {
   "tour.assistant.plafond.parMois": "Per calendar month",
   "tour.assistant.plafond.parJour": "Per day",
   "tour.assistant.plafond.borne": "A positive amount, at most two decimals.",
+  "tour.assistant.relecture": "Answer to be confirmed",
+  "tour.assistant.relecture.aide":
+    "What Malica does when advice commits the dossier of a company followed by a firm, and when the legal texts do not answer a question.",
+  "tour.assistant.relecture.enVigueur": "In force since {date} — {motif}",
+  "tour.assistant.relecture.absente":
+    "No decision in base: the answer is withheld and a figure without a source is removed.",
+  "tour.assistant.relecture.mode": "Advice the accountant must review",
+  "tour.assistant.relecture.annoncer":
+    "Show the answer, marked “to be confirmed”, and send it to the accountant",
+  "tour.assistant.relecture.retenir": "Withhold the answer until the accountant validates it",
+  "tour.assistant.relecture.sansTexte": "Legal question with no text found",
+  "tour.assistant.relecture.marquer":
+    "Answer anyway; a figure from memory carries the mark “unverified”",
+  "tour.assistant.relecture.retirer":
+    "Say the texts do not answer; remove any figure without a source",
   "tour.assistant.reglage": "Assistant settings",
   "tour.assistant.reglage.aide":
     "The standard model answers everything; the model for hard questions takes over when a question exceeds the set length, contains one of the words, or attaches several documents. Spending is bounded by the assistant cap (card above), itself under the model chain's cap.",

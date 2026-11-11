@@ -223,7 +223,7 @@ describe("le chat de Malica — section 11", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   /* ------------------------------------------------------------- 2 et 3 */
-  it("2, 3 — une réponse retenue entre dans la file du cabinet, avec thème, certitude, doute et sources", async () => {
+  it("2, 3 — une réponse à relire s'affiche, marquée, et entre dans la file du cabinet, avec thème, certitude, doute et sources", async () => {
     modele.reponse = {
       reponse: "Dans votre cas, la TVA sur ce véhicule ne se déduit pas.",
       conseil: true,
@@ -238,8 +238,13 @@ describe("le chat de Malica — section 11", { skip: !BASE_CONFIGUREE }, () => {
       question: "Puis-je déduire la TVA de ma voiture ?",
       locale: "fr",
     });
-    assert.equal(r.retenue, true);
-    assert.equal(r.answer, texte("fr", "pme.conseil.relecture"));
+    // Mode « annoncer », livré en base le 11 novembre 2026 : la personne lit la
+    // réponse et l'annonce de l'envoi, plus le seul message de relecture.
+    assert.equal(r.retenue, false);
+    assert.equal(
+      r.answer,
+      `Dans votre cas, la TVA sur ce véhicule ne se déduit pas.\n\n${texte("fr", "pme.conseil.aConfirmer")}`,
+    );
     assert.deepEqual(r.conseil, {
       conseil: true,
       theme: "Déduction de TVA sur véhicule",

@@ -120,8 +120,10 @@ export function doitEtreRelue(
 /**
  * La réponse part-elle au cabinet ?
  *
- * Non, sauf si elle est RETENUE : le client attend alors son comptable, et la
- * file est le seul chemin par lequel la réponse lui reviendra. Hors ce cas, la
+ * Non, sauf si elle est À RELIRE (`doitEtreRelue`). Retenue, le client attend
+ * son comptable, et la file est le seul chemin par lequel la réponse lui
+ * reviendra. Annoncée (11 novembre 2026), il l'a lue, marquée « à confirmer »,
+ * et Malica lui a dit qu'elle l'envoyait : rien ne part à son insu. Hors ce cas, la
  * conversation avec Malica appartient à la personne qui l'a tenue — même sous
  * mandat, même pour une question de droit. Le cabinet la consulte si, et
  * seulement si, elle la lui partage.
@@ -131,8 +133,8 @@ export function doitEtreRelue(
  * n'avait été demandé, et rien n'était dit à la personne. Corrigé le
  * 4 octobre 2026, à la demande du commanditaire.
  */
-export function partAuCabinet(retenue: boolean): boolean {
-  return retenue;
+export function partAuCabinet(aRelire: boolean): boolean {
+  return aRelire;
 }
 
 const SourceSchema = z.object({

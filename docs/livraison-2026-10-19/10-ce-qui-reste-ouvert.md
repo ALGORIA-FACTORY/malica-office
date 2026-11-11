@@ -810,4 +810,11 @@ la marque « non vérifié », ou retenu jusqu'au retour de l'expert. Aujourd'hu
 **Tranché par défaut, pour ne pas s'arrêter** : affiché et marqué, sans jamais pouvoir entrer dans un calcul
 ni dans une écriture. Rien n'est codé à ce jour.
 
-À préciser aussi : qui est « l'expert » d'une société sans cabinet rattaché.
+**Tranché par le dirigeant le 11 novembre 2026 : choix 1.** Le chiffre est affiché avec la marque « non
+vérifié », la question part chez l'expert, et ce chiffre n'entre jamais dans un calcul ni dans une écriture.
+
+**Codé le 11 novembre 2026** (PR #352) : la règle vit en base (`plateforme.assistant_relectures.sans_texte`),
+se règle dans la tour, et ne vaut que si le corpus, consulté dans le tour, n'a pas répondu.
+
+Reste ouvert : qui est « l'expert » d'une société sans cabinet rattaché. Aujourd'hui, sans cabinet, la
+réponse marquée part avec une note qui dit de la faire confirmer par un expert-comptable ; rien n'est envoyé.

@@ -1307,6 +1307,12 @@ export const fr = {
   "cab.journal.conseil.ecarte": "Question de conseil écartée",
   "pme.conseil.relecture":
     "Votre comptable relit ma réponse : je vous la transmets dès qu’il l’a validée.",
+  "pme.conseil.douteNonVerifie":
+    "Réponse donnée sans texte trouvé dans le corpus : les chiffres marqués « non vérifié » viennent de la mémoire du modèle.",
+  "pme.conseil.aConfirmer":
+    "À confirmer par votre comptable : je lui envoie cette réponse, il la confirmera, la corrigera ou l’écartera.",
+  "pme.conseil.aConfirmerSansEnvoi":
+    "À faire confirmer par votre comptable : je n’ai pas pu lui transmettre cette réponse.",
   "pme.conseil.sansCabinet":
     "Aucune comptabilité ne suit encore ce dossier : cette réponse n’a pas été relue par un expert-comptable.",
   "pme.conseil.relu": "Relu et validé par votre comptable.",
@@ -1324,6 +1330,9 @@ export const fr = {
   "pme.assistant.interrompue":
     "Ma réponse a été interrompue. Reposez la question si elle vous semble incomplète.",
   "pme.assistant.indisponible": "Je n'ai pas pu répondre pour l'instant. Réessayez dans un moment.",
+  "pme.assistant.nonVerifie": "_(non vérifié)_",
+  "pme.assistant.nonVerifieNote":
+    "Je n’ai pas trouvé ce point dans les textes : ce qui est marqué « non vérifié » vient de mes connaissances générales. Ne l’appliquez pas avant qu’un expert-comptable l’ait confirmé.",
   "pme.assistant.vide":
     "Je n'ai rien trouvé de sûr à vous répondre. Pouvez-vous préciser votre question ?",
   "pme.assistant.outil.pieces_chercher": "Je regarde vos pièces…",
@@ -1424,6 +1433,21 @@ export const fr = {
   "tour.assistant.plafond.parMois": "Par mois civil",
   "tour.assistant.plafond.parJour": "Par jour",
   "tour.assistant.plafond.borne": "Un montant positif, deux décimales au plus.",
+  "tour.assistant.relecture": "Réponse à confirmer",
+  "tour.assistant.relecture.aide":
+    "Ce que Malica fait quand un avis engage le dossier d'une société suivie par un cabinet, et quand les textes ne répondent pas à une question de droit.",
+  "tour.assistant.relecture.enVigueur": "En vigueur depuis le {date} — {motif}",
+  "tour.assistant.relecture.absente":
+    "Aucune décision en base : la réponse est retenue et le chiffre sans source est retiré.",
+  "tour.assistant.relecture.mode": "Avis à faire relire par le comptable",
+  "tour.assistant.relecture.annoncer":
+    "Afficher la réponse, marquée « à confirmer », et l'envoyer au comptable",
+  "tour.assistant.relecture.retenir": "Retenir la réponse jusqu'à la validation du comptable",
+  "tour.assistant.relecture.sansTexte": "Question de droit sans texte trouvé",
+  "tour.assistant.relecture.marquer":
+    "Répondre quand même ; un chiffre de mémoire porte la marque « non vérifié »",
+  "tour.assistant.relecture.retirer":
+    "Dire que les textes ne répondent pas ; retirer tout chiffre sans source",
   "tour.assistant.reglage": "Réglage de l'assistant",
   "tour.assistant.reglage.aide":
     "Le modèle courant répond à tout ; le modèle des questions difficiles prend la main quand la question dépasse la longueur réglée, contient l'un des mots, ou joint plusieurs pièces. La dépense est bornée par le plafond de l'assistant (carte ci-dessus), lui-même sous le plafond de la chaîne des modèles.",

@@ -237,6 +237,17 @@ export const conseil = {
   },
 
   /**
+   * Le mode de relecture en vigueur. Tout ce qui n'est pas « annoncer » retient :
+   * le manque retombe du côté prudent.
+   */
+  async relecture(db: Requete): Promise<"annoncer" | "retenir"> {
+    const { rows } = await db.query<{ mode: string | null }>(
+      `select public.conseil_relecture() as mode`,
+    );
+    return rows[0]?.mode === "annoncer" ? "annoncer" : "retenir";
+  },
+
+  /**
    * Un arbitrage nouveau, posé après que le fil a rangé la question.
    *
    * `statut` dit ce que Malica a fait : `en_attente` si elle a retenu sa

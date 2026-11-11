@@ -1235,6 +1235,12 @@ export const ar: Dict = {
   "cab.journal.conseil.corrige": "إجابة استشارية صحّحتها المحاسبة",
   "cab.journal.conseil.ecarte": "سؤال استشاري استُبعد",
   "pme.conseil.relecture": "محاسبكم يراجع إجابتي: أنقلها إليكم ما إن يصادق عليها.",
+  "pme.conseil.douteNonVerifie":
+    "إجابة قُدّمت دون نص في المدوّنة: الأرقام المعلَّمة «غير مؤكد» مصدرها ذاكرة النموذج.",
+  "pme.conseil.aConfirmer":
+    "في انتظار تأكيد محاسبكم: أرسل إليه هذه الإجابة ليؤكدها أو يصححها أو يستبعدها.",
+  "pme.conseil.aConfirmerSansEnvoi":
+    "يُستحسن أن يؤكدها محاسبكم: لم أتمكن من إرسال هذه الإجابة إليه.",
   "pme.conseil.sansCabinet": "لا محاسب يتابع هذا الملف بعد: هذه الإجابة لم يراجعها خبير محاسب.",
   "pme.conseil.relu": "راجعها محاسبكم وصادق عليها.",
   "pme.conseil.sources": "المصادر: {liste}",
@@ -1250,6 +1256,9 @@ export const ar: Dict = {
     "لا أستطيع الإجابة الآن: بلغت ميزانية المساعد لهذا الشهر حدّها. تم إعلام فريق مليكة، ووثائقك وملفك متاحة دائمًا.",
   "pme.assistant.interrompue": "انقطعت إجابتي. أعد طرح السؤال إن بدت لك ناقصة.",
   "pme.assistant.indisponible": "لم أتمكّن من الإجابة الآن. أعد المحاولة بعد قليل.",
+  "pme.assistant.nonVerifie": "_(غير مؤكد)_",
+  "pme.assistant.nonVerifieNote":
+    "لم أجد هذه المسألة في النصوص: ما ورد بعلامة «غير مؤكد» مصدره معارفي العامة. لا تطبقوه قبل أن يؤكده خبير محاسب.",
   "pme.assistant.vide": "لم أجد إجابة موثوقة. هل يمكنك توضيح سؤالك؟",
   "pme.assistant.outil.pieces_chercher": "أطّلع على وثائقك…",
   "pme.assistant.outil.piece_ouvrir": "أفتح الوثيقة…",
@@ -1346,6 +1355,19 @@ export const ar: Dict = {
   "tour.assistant.plafond.parMois": "لكل شهر ميلادي",
   "tour.assistant.plafond.parJour": "لكل يوم",
   "tour.assistant.plafond.borne": "مبلغ موجب، برقمين عشريين على الأكثر.",
+  "tour.assistant.relecture": "إجابة في انتظار التأكيد",
+  "tour.assistant.relecture.aide":
+    "ما تفعله ماليكا حين يُلزم الرأي ملف شركة يتابعها مكتب محاسبة، وحين لا تجيب النصوص عن سؤال قانوني.",
+  "tour.assistant.relecture.enVigueur": "سارية منذ {date} — {motif}",
+  "tour.assistant.relecture.absente": "لا قرار في القاعدة: تُحجز الإجابة ويُحذف كل رقم بلا مصدر.",
+  "tour.assistant.relecture.mode": "رأي يراجعه المحاسب",
+  "tour.assistant.relecture.annoncer":
+    "عرض الإجابة بعلامة «في انتظار التأكيد» وإرسالها إلى المحاسب",
+  "tour.assistant.relecture.retenir": "حجز الإجابة إلى أن يصادق عليها المحاسب",
+  "tour.assistant.relecture.sansTexte": "سؤال قانوني لم يوجد له نص",
+  "tour.assistant.relecture.marquer":
+    "الإجابة مع ذلك؛ الرقم المستحضر من الذاكرة يحمل علامة «غير مؤكد»",
+  "tour.assistant.relecture.retirer": "القول إن النصوص لا تجيب؛ وحذف كل رقم بلا مصدر",
   "tour.assistant.reglage": "إعدادات المساعد",
   "tour.assistant.reglage.aide":
     "يجيب النموذج العادي عن كل شيء، ويتولّى نموذج الأسئلة الصعبة عندما يتجاوز السؤال الطول المحدّد أو يتضمّن إحدى الكلمات أو يُرفق عدّة وثائق. ويحدّ الإنفاقَ سقفُ المساعد (البطاقة أعلاه)، وهو نفسه تحت سقف سلسلة النماذج.",
