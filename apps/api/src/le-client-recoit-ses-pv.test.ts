@@ -1,3 +1,13 @@
+/**
+ * Le client reçoit ses procès-verbaux — un livrable publié lui appartient.
+ *
+ * Éprouvé sur la vraie base : le client ne reçoit que le document publié par son cabinet
+ * (jamais un brouillon), un tiers ne reçoit rien, et l'accusé de réception est explicite,
+ * idempotent, journalisé, et n'altère pas le document. Le cumul d'un PV ne se date que
+ * lorsque ses chiffres s'écrivent. À la fin du mandat, le client garde ce qu'on lui a livré.
+ *
+ * Il s'ignore quand DATABASE_URL, DATABASE_URL_ADMIN et JWT_SECRET manquent.
+ */
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import pg from "pg";

@@ -14,7 +14,12 @@
  * des moteurs du Socle ou des tokens relus dans le plan — jamais d'un modèle
  * seul (R2).
  */
-import type { EvenementDeLAssistant, FinDeLaReponse, QuestionALAssistant } from "./assistant.ts";
+import type {
+  EvenementDeLAssistant,
+  FinDeLaReponse,
+  QuestionALAssistant,
+  FeuilleDeBloc,
+} from "./assistant.ts";
 import type { Locale } from "../messages.ts";
 import type { PvReunion, SourceCitee, SuiviDeTrace } from "./repositories.ts";
 
@@ -381,6 +386,15 @@ export interface MalicaPort {
     pieceId: string,
     suivi?: SuiviDeTrace | null,
   ): Promise<{ travailId: string; deja: boolean }>;
+  /**
+   * Un bloc de réponse, en classeur Excel : la feuille du bloc (ses montants en
+   * chaînes décimales) part, les octets du classeur reviennent.
+   */
+  exporterUnBloc(input: {
+    titre: string;
+    droiteAGauche: boolean;
+    feuille: FeuilleDeBloc;
+  }): Promise<Blob>;
   /** L'œil lit la carte d'identification fiscale ; l'écran propose, l'expert arrête (R10). */
   lireCarte(input: { jurisdiction: string; fichier: Blob }): Promise<LectureDeCarte>;
   demander(question: QuestionAMalica): Promise<ReponseDeMalica>;

@@ -1,3 +1,13 @@
+/**
+ * Les libellés lisibles — jamais un chemin brut ni un code technique à l'écran.
+ *
+ * Garantit que les montants et dates se disent dans la langue du lecteur, qu'un champ
+ * lu (« articles[3].designation ») se nomme par son rang et sa feuille, qu'un code de
+ * contrôle ou une action d'audit a sa phrase, et que le motif pour lequel une pièce
+ * n'est pas lue se dit en clair. Une pièce privée n'attend pas une lecture : son état
+ * se dérive de la visibilité, sans réécrire un fait (R7). Une panne n'est pas prise
+ * pour un refus.
+ */
 import { describe, expect, it } from "vitest";
 
 import {

@@ -94,8 +94,10 @@ export async function envoyerAClaude<R extends { stop_reason?: string | null }>(
     );
   }
 
-  const latencyMs = Date.now() - started;
+  // La durée court jusqu'à la FIN du corps : mesurée aux en-têtes, elle disait
+  // 463 ms d'une réponse de 6 à 15 s (relevé du 10 novembre 2026, staging).
   const text = await res.text();
+  const latencyMs = Date.now() - started;
   if (!res.ok) {
     // 429 (débit), 529 (surcharge) et 5xx sont passagers ; le reste ne l'est pas.
     const retryable = res.status === 429 || res.status >= 500;

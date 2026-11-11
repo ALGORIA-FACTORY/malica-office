@@ -1,3 +1,13 @@
+/**
+ * Les messages français de la bibliothèque et de la retenue — la source des clés.
+ *
+ * Textes de l'écran du cabinet qui réunit les documents et les écritures de chaque
+ * client (`cab.biblio.*`) et de la déclaration de retenue à la source sur un règlement
+ * (`cab.retenue.*`). Ce fichier définit les clés : `MessagesDeLaBibliotheque` en est
+ * déduit, et les versions anglaise et arabe doivent le suivre clé pour clé. Fusionné
+ * dans le dictionnaire français (`messages-fr`). Ces textes disent aussi ce que le
+ * contrôle ne prouve pas : les contrôles affichés ne valent pas validation fiscale.
+ */
 export const frBibliotheque = {
   "cab.retenue.irBase": "Assiette de la retenue IR",
   "cab.retenue.qualify": "Traitement du règlement",

@@ -1,3 +1,11 @@
+/**
+ * Votre comptabilité — un dossier par cabinet, ses sociétés et ce qui attend.
+ *
+ * Garantit que l'écran de la PME regroupe ses sociétés par cabinet mandaté, compte les
+ * pièces retournées qui attendent une réponse, ne montre rien pour une société sans
+ * mandat, et que, depuis une société précise, il ne montre que son cabinet et ce qui
+ * l'attend, elle.
+ */
 import { describe, expect, it } from "vitest";
 
 import type { FicheDeSociete, PieceLue } from "@malica/socle/ports/repositories";

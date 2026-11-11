@@ -1,3 +1,11 @@
+/**
+ * L'état du règlement d'une pièce — dit en une phrase, historique compris.
+ *
+ * Garantit qu'une pièce est dite non réglée, payée, payée en partie, non payée, ou à
+ * confirmer quand le TTC n'est pas lu (jamais « — »). Un règlement annulé ne compte
+ * pas, et il ne fait qu'une ligne d'historique, qui porte la date et le motif de
+ * l'annulation.
+ */
 import { describe, expect, it } from "vitest";
 import type { PaiementDUnePiece } from "@malica/socle/ports/repositories";
 

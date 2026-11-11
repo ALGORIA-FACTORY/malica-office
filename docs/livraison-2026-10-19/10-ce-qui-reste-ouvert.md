@@ -645,6 +645,7 @@ l'écriture que le cabinet a prise en charge (`refus.introuvable.ecriture`) :
 le cabinet la défait. Si le dirigeant veut rendre ce geste à la PME, il faudra
 une porte dédiée qui ne lit que ce dont elle a besoin. Reste aussi ouvert :
 après la révocation du mandat, la PME relit tout ce que le cabinet a inscrit.
+
 ## La chaîne de désignation (décidée par Wissem le 8 novembre 2026)
 
 Claude désigne, DeepSeek prend la main en cas de panne ou de budget épuisé, et
@@ -730,3 +731,83 @@ Tranché par défaut, à confirmer :
 - **« Valider l'écriture » proposé à un dirigeant** : la base refuse (seul le
   cabinet valide) et l'écran affiche le refus. La consigne le dit au modèle.
 - **Plafond de l'épreuve réelle : 15 $** par lancement (`--plafond 15`).
+
+## Malica sur Claude et DeepSeek (10 novembre 2026)
+
+### M-3 — Le débit de « Parler à Malica » : dix questions par minute, deux cents par jour
+
+Tranché par défaut pour ne pas s'arrêter : `plateforme.assistant_debits` livre 10 questions par minute et 200 par jour,
+par personne (migration `20261210100200`). Les deux bornes se règlent en base, sans déploiement ; la carte de la tour
+qui les règle n'est pas encore écrite. **À trancher par le dirigeant :** les valeurs, et le quota **par offre** (tant de
+questions selon le forfait), qui n'existe pas : aucune notion d'offre ne borne aujourd'hui le chat.
+
+### M-4 — Les nouveaux modèles de DeepSeek n'ont pas de tarif en base
+
+Relevé le 10 novembre 2026 : `/models` de DeepSeek ne rend plus que `deepseek-flash` et `deepseek-v4-pro` ; les noms de
+la base (`deepseek-chat`, `deepseek-reasoner`) répondent encore. La page officielle des prix
+(`api-docs.deepseek.com/quick_start/pricing`) donne deux tarifs par modèle, heures pleines et heures creuses (moitié
+prix), ce que `agents.model_pricing` ne sait pas porter (un prix par modèle et par rôle). INCERTAIN : l'attribution des
+colonnes de prix à chaque modèle a été lue par un agent, pas vérifiée à l'œil. Tant qu'un tarif n'est pas en base, ces
+modèles ne sont pas sélectionnables (R8). **À trancher :** journaliser au tarif des heures pleines (prudent, surévalue
+la dépense) ou étendre la table aux deux tarifs.
+
+### M-5 — Information des clients sur les prestataires d'IA
+
+DeepSeek traite désormais les mêmes données que Claude (mêmes outils, sous les droits de la personne) quand Claude ne
+peut pas répondre. Point juridique ouvert : l'information des clients sur les prestataires, et la possibilité de
+désactiver DeepSeek par société ou par comptabilité (non construite).
+
+### M-6 — Le brouillon à valider (relance, demande de pièce, message) n'est pas construit
+
+Les autres formes du volet visuel sont faites (chiffre clé, tableau, barres, courbe, cascade, carte de chaleur, export).
+Le brouillon ne l'est pas, pour deux raisons qui ne sont pas techniques. (1) Un envoi vers l'extérieur — une relance à
+un fournisseur — est un engagement externe : il lui faut un chemin d'envoi décidé (Brevo, expéditeur, mentions) et
+validé par le dirigeant. (2) Vers la comptabilité, le seul chemin qui existe est la file de relecture
+(`conseil.creer`) ; un brouillon rangé avec la réponse se remontrerait à chaque réouverture du fil avec ses boutons, et
+pourrait être validé deux fois, faute d'un état « déjà envoyé » rangé en base. **À trancher :** par quoi commencer
+(« demander l'avis de ma comptabilité » par la file existante, ou la relance par courriel), et où ranger l'état d'un
+brouillon validé.
+
+### M-7 — « Toutes les sociétés » dans la conversation : ce qui est fait, ce qui reste à trancher
+
+Choisi dans l'en-tête, « Toutes les sociétés » reste désormais sur la conversation et ouvre à Malica la comparaison des
+sociétés de la personne (celles dont elle est membre, établies par le serveur ; même devise que le dossier ouvert). Le
+budget et le débit restent comptés sur le dossier ouvert. **À trancher :** la règle « une question sur la licence du
+propriétaire principal » (non construite : il n'y a pas de notion de propriétaire principal dans le chat), et le sort
+des sociétés d'une autre devise (aujourd'hui dites et laissées hors de la carte).
+
+### M-8 — La garde des chiffres ne retient plus que ce qui engage : règle à confirmer
+
+**Tranché par défaut le 11 novembre 2026, pour ne pas s'arrêter.** Mesuré sur le vrai modèle, « toute phrase
+chiffrée sans source est retirée » vidait les réponses générales (un calcul sans résultat, Ibn Khaldoun sans
+ses dates). La garde lit désormais en base (`plateforme.assistant_gardes`) ce qui rend un chiffre liant : une
+phrase qui porte une marque d'argent, d'impôt ou de droit (124 marques livrées), ou un nombre à décimales ou
+de dix mille et plus. Le reste passe. Sans ligne en base, tout chiffre se juge comme avant.
+
+À trancher par le dirigeant, avec un expert-comptable :
+
+- la **liste des marques** : large à dessein, elle peut encore laisser passer un chiffre engageant écrit sans
+  aucun mot d'argent ni de droit (un petit entier), ou retirer à tort un chiffre anodin ;
+- le **seuil** de dix mille ;
+- le principe même : R2 dit « aucun chiffre sans source », R3 « aucune valeur liante ». La garde suit R3.
+
+Ce qui manque : la **carte de la tour** pour régler cette liste (aujourd'hui, une ligne de base posée par
+migration ; R10 demande qu'elle se change sans migration).
+
+**Confirmé par le dirigeant le 11 novembre 2026** : le principe (la garde suit R3) est retenu. Restent
+ouverts la revue de la liste et du seuil par un expert-comptable, et la carte de la tour
+(`docs/validation-chat-malica/etat-fige-2026-11-11.md`, actions D3 et D4).
+
+### M-9 — Malica répond toujours : que devient le chiffre sans texte
+
+**Consigne du dirigeant, 11 novembre 2026** : Malica répond toujours ; en cas de doute, elle le dit et
+annonce l'envoi à l'expert-comptable, qui confirme, corrige ou écarte
+(`docs/validation-chat-malica/strategie-corpus-2026-11-11.md`, section 6 bis).
+
+À trancher : quand aucun texte n'est trouvé, le chiffre que le modèle tire de sa mémoire est-il affiché avec
+la marque « non vérifié », ou retenu jusqu'au retour de l'expert. Aujourd'hui la garde le retire (R2, R3).
+
+**Tranché par défaut, pour ne pas s'arrêter** : affiché et marqué, sans jamais pouvoir entrer dans un calcul
+ni dans une écriture. Rien n'est codé à ce jour.
+
+À préciser aussi : qui est « l'expert » d'une société sans cabinet rattaché.

@@ -1,4 +1,12 @@
 // @vitest-environment jsdom
+/**
+ * Le retour au client et l'écran « Envoyé » — dire à l'expert ce qui est parti et ce qui reste.
+ *
+ * Garantit que le retour d'une pièce au client remonte son motif et sa note, qu'une panne
+ * va au journal et jamais en texte brut à l'écran, que l'écran d'un envoi en lot nomme les
+ * pièces restées chez la personne en permettant de les rouvrir, et ne montre aucune liste
+ * quand tout est parti.
+ */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

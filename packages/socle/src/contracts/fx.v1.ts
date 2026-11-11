@@ -1,3 +1,12 @@
+/**
+ * Le contrat de change — la forme d'un taux daté et d'une conversion.
+ *
+ * Un taux dit « 1 unité de la devise de base vaut tant de la devise cotée », sur une
+ * période de validité, avec sa source. Une conversion garde le montant d'origine, le
+ * montant converti, le taux réellement utilisé et sa date, pour que l'écriture puisse
+ * être justifiée. Montants et taux sont des chaînes décimales. Utilisé par le moteur de
+ * change (`engines/fx`).
+ */
 import { z } from "zod";
 
 const CONTRACT_VERSION = "fx.v1" as const;

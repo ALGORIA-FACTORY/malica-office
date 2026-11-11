@@ -1,3 +1,22 @@
+-- La tour de contrôle de la plateforme — ce qu'elle voit, et ce qu'elle ne voit pas.
+--
+-- Script de vérification de la livraison, joué à la main dans psql sur une base de
+-- recette, jamais en production : il crée ses propres utilisateurs, une organisation
+-- et une licence d'essai (identifiants tirés au hasard), puis affiche ce qu'il constate.
+-- Il ne contient aucune assertion automatique ; c'est une personne qui lit la sortie.
+--
+-- Quatre étapes, dans l'ordre :
+--   1. un opérateur de la plateforme, connecté comme un utilisateur ordinaire (rôle
+--      `authenticated`), compte les pièces du client qu'il peut lire, et les clients
+--      qu'il voit dans la tour (`plateforme.clients_v`) ;
+--   2. suspension, supplément de lectures et reprise d'une licence, avec leurs motifs ;
+--   3. une réquisition d'une autorité : refusée tant qu'une seconde signature manque,
+--      puis servie sous forme d'inventaire de métadonnées (empreinte, sans contenu) ;
+--   4. l'émission d'une facture, son encours avant et après encaissement, le flux du mois.
+--
+-- Les tables et fonctions appelées sont celles des schémas `plateforme`, `facturation`,
+-- `capture` et `identity` ; le script ne remplace aucune règle, il les exerce (R6 : c'est
+-- la base, pas l'application, qui porte l'isolation).
 \set ON_ERROR_STOP on
 \echo '=== LA TOUR : CE QU ELLE VOIT, ET CE QU ELLE NE VOIT PAS ==='
 do $$

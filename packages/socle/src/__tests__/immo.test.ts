@@ -1,3 +1,17 @@
+/**
+ * Les épreuves des immobilisations — amortir, déprécier, céder, au millime.
+ *
+ * Garantissent le plan d'amortissement linéaire (prorata du mois de mise en service,
+ * valeur résiduelle) et dégressif (bascule en linéaire quand il devient plus favorable,
+ * base soldée), la dépréciation et sa reprise plafonnée au cumul déjà constaté, le
+ * résultat de cession et la valeur nette comptable qui ne descend pas sous zéro.
+ *
+ * Elles figent aussi la sortie du plan : l'exercice de sortie est doté jusqu'au mois
+ * de sortie inclus, rien n'est doté après la fin du plan, le cumul est celui des
+ * dotations arrondies que les livres portent, et la dernière annuité solde la base,
+ * si bien que la somme des annuités égale exactement la base. Le comptable retrouve
+ * ainsi à l'écriture de cession le même cumul que dans ses livres.
+ */
 import { describe, expect, it } from "vitest";
 
 import {

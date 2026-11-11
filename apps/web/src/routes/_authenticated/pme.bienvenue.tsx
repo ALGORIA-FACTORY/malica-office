@@ -1,3 +1,14 @@
+/**
+ * L'arrivée — le premier écran du dirigeant : sa société, et son matricule fiscal à confirmer.
+ *
+ * Écran de la PME : la carte d'identification de la société, telle que Malica l'a lue. Le
+ * dirigeant vérifie le matricule et la raison sociale, puis confirme (il entre dans le
+ * produit) ou corrige (il va à la fiche, seul écran qui écrit ces champs).
+ *
+ * L'écran ne fait aucun appel : les valeurs descendent de la coque PME, qui les a déjà.
+ * Un champ vide s'affiche « — », jamais une valeur inventée. Il porte son propre bandeau
+ * du haut, qui efface celui de la mise en page.
+ */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import portraitMalica from "@/assets/malica.webp";

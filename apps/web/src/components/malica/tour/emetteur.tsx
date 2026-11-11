@@ -1,3 +1,12 @@
+/**
+ * L'émetteur des factures de la plateforme — le désigner, motif à l'appui (écran de la tour).
+ *
+ * Écran de l'opérateur ALGORIA : il montre l'organisation qui émet actuellement les
+ * factures, permet d'en chercher une autre et de la désigner à partir d'une date. Choisir,
+ * motiver, confirmer : jamais un clic seul, et l'émetteur en vigueur ne se propose pas à
+ * lui-même. La base reste juge de la désignation ; l'écran en transmet le geste et dit son
+ * retour.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 

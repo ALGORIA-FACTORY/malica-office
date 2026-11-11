@@ -1,3 +1,13 @@
+/**
+ * Les épreuves de l'issue d'une lecture — une seule règle pour tous les écrans.
+ *
+ * Garantissent que chaque écran (PME, cabinet) dit la même chose d'une pièce : lue,
+ * à lire, en cours, en attente de reprise, à reprendre (photo illisible), à relire, ou
+ * refusée avec son motif. Un refus l'emporte, sauf s'il est plus ancien qu'une nouvelle
+ * lecture ; une attente dont l'heure de reprise est passée devient un échec qu'on peut
+ * relire ; et un message technique (réseau, erreur interne) n'est jamais montré :
+ * seuls les codes de lecture connus passent (R2).
+ */
 import { describe, expect, it } from "vitest";
 
 import { codeDeLecture, demandeUnGeste, issueDeLecture } from "../issue-de-lecture.ts";

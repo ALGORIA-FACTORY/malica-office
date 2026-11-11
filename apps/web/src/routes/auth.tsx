@@ -1,3 +1,15 @@
+/**
+ * L'écran de connexion — se connecter, créer son accès ou demander un nouveau mot de passe.
+ *
+ * Route `/auth`, ouverte à tous. `?suite=` dit où revenir après la connexion (par défaut
+ * `/office`), par exemple la page d'invitation. Une session déjà ouverte y renvoie aussitôt.
+ * L'inscription ouvre la session dans le même geste : il n'y a pas de vérification par courriel.
+ * Le mot de passe oublié répond pareil que l'adresse existe ou non.
+ *
+ * Les échecs viennent d'un motif typé du port d'authentification (`EchecAuth`), pas du texte
+ * d'un tiers. Un service injoignable ne se dit jamais « vérifiez vos identifiants » : la
+ * personne retaperait un mot de passe juste.
+ */
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";

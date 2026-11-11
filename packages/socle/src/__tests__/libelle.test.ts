@@ -1,3 +1,13 @@
+/**
+ * Les épreuves du libellé d'écriture — composé de faits, jamais rédigé à la main.
+ *
+ * Garantissent que le libellé porte la nature, la contrepartie, la référence et la
+ * date dans l'ordre où on les cherche ; qu'il omet ce qui manque au lieu de l'inventer ;
+ * qu'il écrit la date en clair mais laisse passer une date illisible sans la déformer ;
+ * qu'il raccourcit la contrepartie, jamais la référence ; et que la critique d'un
+ * libellé signale un mot seul, un montant recopié ou une longueur qui se coupera en
+ * balance, sans confondre une référence numérique avec un montant.
+ */
 import { describe, expect, it } from "vitest";
 
 import { composerLibelle, critiquerLibelle, nomDeLaNature } from "../engines/libelle.ts";

@@ -1,3 +1,13 @@
+/**
+ * Les propositions d'écritures du cabinet — lots de confiance, masse et validation.
+ *
+ * Garantit que le lot d'une pièce suit les seuils réglés du cabinet, qu'une pièce lue
+ * par une recette n'entre dans aucun lot de confiance (son score neutre ne prouve
+ * rien), que l'écriture en masse additionne compte par compte sans perdre un millime,
+ * que le compte de charge ou de produit est bien trouvé, qu'un lot passe pièce par pièce
+ * sans qu'un échec arrête les suivantes, et que « Valider » ne prend d'un geste que
+ * le lot au-dessus du seuil.
+ */
 import { describe, expect, it } from "vitest";
 
 import type { Ecriture } from "@malica/socle/ports/repositories";

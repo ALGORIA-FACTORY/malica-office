@@ -1,3 +1,11 @@
+/**
+ * La carte « Licences » de la tour — l'état de chaque licence, en lecture seule.
+ *
+ * Écran réservé aux opérateurs d'ALGORIA (la tour). Une ligne par licence : la ou les
+ * sociétés concernées, l'offre, le statut, les lectures consommées sur le droit, les
+ * sièges occupés et les recharges disponibles. Tout vient de `office().tour.licences()`
+ * et s'affiche tel quel : l'écran ne recalcule aucun droit et n'offre aucun geste.
+ */
 import { useQuery } from "@tanstack/react-query";
 
 import { useI18n } from "@/i18n";

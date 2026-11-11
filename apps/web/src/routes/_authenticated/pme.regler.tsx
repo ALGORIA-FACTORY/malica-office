@@ -1,3 +1,15 @@
+/**
+ * Mon cabinet (PME) — ce que le cabinet a retourné ou répondu, avec son motif.
+ *
+ * Route `/pme/regler`, l'écran du dirigeant. Il liste les pièces que le cabinet a retournées,
+ * avec le MÊME libellé de motif que l'expert a choisi, et les avis rendus sur ses questions.
+ * Une pièce retournée n'est pas une faute : le ton le dit et reste sous la liste.
+ *
+ * Les données viennent des notifications (`piece.retournee`, genres `conseil.*`) et des PV
+ * publiés du dépôt `collab`, rien d'autre : la file du cabinet n'est pas lue, elle montrerait
+ * les dossiers des autres clients. Les cartes que le code ne sait pas alimenter ne sont pas
+ * inventées. L'écran reprend le dessin validé et ses classes de feuille, sans utilitaires.
+ */
 import { statutDuCircuit } from "@malica/socle/statut-d-envoi";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";

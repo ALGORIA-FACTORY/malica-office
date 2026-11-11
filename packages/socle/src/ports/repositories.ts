@@ -8,7 +8,7 @@ import type { DerniereLecture } from "../issue-de-lecture.ts";
 import type { LigneSaisie } from "../ecriture-saisie.ts";
 import type { CircuitInterne, StatutCabinet, SuiviDEnvoi } from "../statut-d-envoi.ts";
 import type { CodeVerdict } from "../verdicts.ts";
-import type { PropositionDAction, SourceDeLAssistant } from "./assistant.ts";
+import type { BlocDeReponse, PropositionDAction, SourceDeLAssistant } from "./assistant.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 import type { SensDeTva } from "../contracts/tva.v1.ts";
 
@@ -228,6 +228,11 @@ export interface IdentityRepository {
   ): Promise<{ mode: "donnee" | "suggeree" }>;
   /** Le prénom salue, le nom complet facture. `null` tant que rien n'est écrit. */
   monProfil(): Promise<MonProfil | null>;
+  /**
+   * Parmi ces personnes, celles qui ont une photo : identifiant → version.
+   * Les octets se lisent sur `/moi/photos/:id`, hors de `/rpc`.
+   */
+  photosDesProfils(ids: readonly string[]): Promise<Record<string, string>>;
   /** Un champ vide s'efface ; la base compose « Prénom Nom ». */
   ecrireMonProfil(prenom: string | null, nom: string | null): Promise<MonProfil | null>;
   /** Le côté du bouton « + » (planche 5) ; il suit le compte, sur tous les appareils. */
@@ -390,6 +395,8 @@ export interface MessageDuFil {
   sources?: SourceDeLAssistant[] | null | undefined;
   /** Les actions que la réponse proposait (boutons à confirmer) ; nul sinon. */
   propositions?: PropositionDAction[] | null | undefined;
+  /** Les blocs que la réponse montrait (chiffre clé, tableau) ; nul sinon. */
+  blocs?: BlocDeReponse[] | null | undefined;
 }
 
 export interface JurisdictionPack {

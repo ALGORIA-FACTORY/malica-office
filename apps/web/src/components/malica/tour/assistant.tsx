@@ -1,3 +1,12 @@
+/**
+ * Les réglages de l'assistant « Parler à Malica » — consigne, modèles et plafond (tour).
+ *
+ * Écran de l'opérateur ALGORIA, trois cartes : la consigne (le prompt système, versionné en
+ * base : publier crée une version datée et motivée, la précédente reste au registre), le
+ * réglage des modèles (courant, difficile, la règle qui les sépare, effort et réflexion), et
+ * le plafond de dépense propre à l'assistant. Rien n'est durci ici : les valeurs vivent en
+ * base (R10), qui refuse un modèle sans tarif en vigueur (R8) et toute valeur hors bornes.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 

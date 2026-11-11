@@ -1,3 +1,15 @@
+/**
+ * La garde de l'espace connecté — aucune page privée ne s'ouvre sans session.
+ *
+ * Toutes les routes `_authenticated` passent ici à chaque navigation, donc la garde reste
+ * gratuite : la session déjà connue est rendue sans réseau, relue en arrière-plan. Sans compte,
+ * retour à `/auth`. Les libellés des espaces arrivent en même temps que la session, avant le
+ * premier écran.
+ *
+ * Le cache de l'appareil est remis AVANT le premier écran (attente bornée à 250 ms), pour
+ * qu'il s'affiche aussitôt. Une session perdue ailleurs ramène à la connexion en vidant le cache
+ * de requêtes. Un réseau absent se dit avec un bouton « Réessayer » ; tout autre échec remonte.
+ */
 import { useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,

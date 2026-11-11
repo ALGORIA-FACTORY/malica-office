@@ -1,4 +1,12 @@
 // @vitest-environment jsdom
+/**
+ * Le profil du compte — modifier son nom sans perdre ni écraser sa saisie.
+ *
+ * Garantit qu'aucun champ ne s'ouvre avant le geste « Modifier », qu'ils ne se referment
+ * qu'une fois l'enregistrement confirmé par l'API, qu'annuler n'écrit rien, qu'un échec
+ * garde les champs et le brouillon ouverts, et qu'une actualisation du profil ne remplace
+ * pas la saisie en cours.
+ */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

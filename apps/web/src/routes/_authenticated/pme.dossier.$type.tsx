@@ -1,9 +1,23 @@
+/**
+ * Un dossier ouvert — la liste des pièces d'un des sept dossiers de la société.
+ *
+ * Écran de la PME : on y arrive en touchant la pochette d'un dossier sur l'accueil. Il
+ * montre toutes les pièces du dossier, rangées par société et par siège quand l'abonnement
+ * les ouvre, puis par mois (ou par année pour un dossier annuel) ; la période la plus
+ * récente est déroulée. Chaque ligne porte un aperçu et un état : un mot et une couleur,
+ * jamais une écriture comptable.
+ *
+ * Les pièces viennent de la lecture déjà faite par l'accueil (`capture.listAvecLecture`) :
+ * ouvrir un dossier ne coûte aucune requête de plus. Une pièce privée n'y figure pas.
+ * La société montrée est celle choisie dans l'en-tête.
+ */
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Fragment, useEffect, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { CarteDeGroupe, IconeCalendrier } from "@/components/malica/carte-de-groupe";
 import { RangeeDesSieges, type Siege } from "@/components/malica/rangee-des-sieges";
+import { usePhotosDeProfil } from "@/hooks/use-photos-de-profil";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { jourOuInstant, montant } from "@/lib/lisible";
@@ -136,10 +150,13 @@ function Dossier() {
   // ------------------------------------------------------------ les sièges
   // Ceux des pièces que l'en-tête montre ; toutes les sociétés : chaque siège
   // dit la sienne (celle de sa première pièce — un siège est d'une société).
-  const sieges: Siege[] = [...parSieges(deLaSociete.map((x) => x.piece))].map(([id, g]) => ({
+  const groupes = [...parSieges(deLaSociete.map((x) => x.piece))];
+  const photos = usePhotosDeProfil(groupes.map(([id]) => id));
+  const sieges: Siege[] = groupes.map(([id, g]) => ({
     id,
     nom: g.nom,
     pieces: g.pieces,
+    photo: photos[id] ?? null,
     societe:
       parSociete && societe === null
         ? nomDeSociete(deLaSociete.find((x) => x.piece.auteurId === id)?.societe ?? "")

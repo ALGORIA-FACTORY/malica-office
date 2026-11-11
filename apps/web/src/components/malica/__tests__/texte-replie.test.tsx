@@ -1,4 +1,10 @@
 // @vitest-environment jsdom
+/**
+ * Le texte replié — un long texte se lit en quatre lignes et s'ouvre sur demande.
+ *
+ * Garantit qu'un long texte est replié avec « Lire la suite », que le bouton le déplie puis
+ * le replie, et qu'un texte court reste tel quel, sans bouton inutile.
+ */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

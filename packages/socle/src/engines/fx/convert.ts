@@ -1,3 +1,12 @@
+/**
+ * Le moteur de change — convertir un montant au taux daté, ou refuser.
+ *
+ * Cherche le taux exact base → cotée valide à la date (aucune approximation) et applique
+ * montant × taux en décimal exact, arrondi à l'exposant de la devise d'arrivée. Même
+ * devise : le montant passe sans taux. Aucun taux : `FxRateUnavailable`, jamais un taux
+ * deviné — un montant converti à un taux inventé serait plausible et faux (R4). Les taux
+ * viennent de l'appelant ; `convertir-l-extrait` s'en sert pour les pièces en devise.
+ */
 import { D, toFixedStr } from "../../domain/decimal.ts";
 import type { CurrencyDef } from "../../domain/types.ts";
 import type { FxConversionV1, FxRateV1 } from "../../contracts/fx.v1.ts";

@@ -1,4 +1,12 @@
 // @vitest-environment jsdom
+/**
+ * Le bouton retour — revenir là d'où l'on vient — garanti par deux cas.
+ *
+ * Avec un historique, le retour recule (la bibliothèque si l'on venait d'elle). Sans
+ * historique — lien ouvert directement, notification — il va à l'écran parent, en
+ * remplaçant l'entrée courante pour ne pas empiler. Sans ce test, un dossier ouvert
+ * depuis la bibliothèque ramènerait de nouveau à l'accueil.
+ */
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 

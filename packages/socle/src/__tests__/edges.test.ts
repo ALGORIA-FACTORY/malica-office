@@ -1,3 +1,11 @@
+/**
+ * Les épreuves des cas limites — là où un moteur se trompe sans bruit.
+ *
+ * Trois branches rares, une par moteur : un taux de TVA abrogé n'est plus applicable
+ * après sa date de fin ; un écart d'arrondi sous la tolérance donne un feu ORANGE
+ * (motif `ROUNDING_WITHIN_TOLERANCE`) mais reste approuvable ; un compte absent du plan
+ * garde son code comme libellé dans le compte de résultat, la classe venant du pack.
+ */
 import { describe, it, expect } from "vitest";
 import { computePivot } from "../engines/p4/balance.ts";
 import { computePnl } from "../engines/pnl/snapshot.ts";

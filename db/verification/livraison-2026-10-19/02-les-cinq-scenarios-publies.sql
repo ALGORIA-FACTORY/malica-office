@@ -1,3 +1,9 @@
+-- Preuve 02 — les cinq scénarios de tarification publiés, recalculés par la base.
+--
+-- Pour chaque cas (offre, nombre de sociétés, nombre de sièges) : crée la licence et ses
+-- sièges, lit `facturation.droits_v`, et compare prix et lectures au chiffre publié, noté dans
+-- le script. Chaque ligne se termine par OK ou ECART : le tarif annoncé doit être celui que la
+-- base facture.
 \set ON_ERROR_STOP on
 \echo '=== LES CINQ SCENARIOS PUBLIES DU 17 OCTOBRE ==='
 do $$

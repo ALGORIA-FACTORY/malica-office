@@ -1,3 +1,14 @@
+/**
+ * Le contexte de la PME — le dossier ouvert, ses gestes et son abonnement, lus une fois.
+ *
+ * Le shell de l'écran PME le remplit, les écrans le consomment par `usePme` : dossier
+ * courant (société, juridiction, devise, matricule), dossiers de la personne et bascule
+ * entre eux, gestes de capture (photo, images, PDF, remplacement d'une photo, jointure à
+ * une pièce), file hors ligne du dossier, et forfait. Le forfait se lit à un seul endroit
+ * et se dit en trois états (en cours, illisible, absent) : un seul tiret ferait conclure à
+ * une panne là où il n'y en a pas. Il donne aussi au journal des pannes le dossier courant,
+ * pour que chaque panne soit consignée sous la bonne société.
+ */
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 
 import type { MonForfait, Visibility } from "@malica/socle/ports/repositories";

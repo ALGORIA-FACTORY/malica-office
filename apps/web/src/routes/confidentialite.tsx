@@ -53,7 +53,11 @@ function Confidentialite() {
             <ul className="list-disc space-y-2 ps-6">
               <li>
                 <strong>Votre compte</strong> : adresse e-mail, nom affiché, mot de passe (haché,
-                jamais lisible), et les organisations auxquelles vous appartenez.
+                jamais lisible), et les organisations auxquelles vous appartenez. Si vous en ajoutez
+                une, votre <strong>photo de profil</strong> : recadrée en carré et réduite sur nos
+                serveurs, sans les métadonnées de la photo d'origine, elle n'est visible que des
+                membres de vos organisations et de l'administration de la plateforme. Vous pouvez la
+                retirer à tout moment depuis les réglages.
               </li>
               <li>
                 <strong>Vos pièces</strong> : les factures, tickets, reçus et documents que vous
