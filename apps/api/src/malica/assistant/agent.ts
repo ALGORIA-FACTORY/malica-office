@@ -168,6 +168,10 @@ function versLEcran(f: FinMesuree): FinDeLaReponse {
  * du conseil à la portée incertaine, sans certitude — retenu si un cabinet
  * peut relire, comme `askMalica` le fait d'une réponse qu'il ne sait pas lire.
  */
+/** Ce qu'on dit au modèle qui a répondu sans conclure. Aucun texte n'en sort à l'écran. */
+const DEMANDE_DE_CONCLUSION =
+  "Tu as répondu sans conclure. Appelle maintenant conclure_reponse pour la réponse que tu viens de donner, et rien d'autre.";
+
 const SANS_CONCLUSION: ConclusionDeLaReponse = {
   conseil: true,
   portee: "incertaine",
@@ -576,6 +580,9 @@ async function converser(
   let modeleRendu: string = choix.modele;
   let iterations = 0;
   let interrompue: string | null = null;
+  // Le dernier tour du modèle, s'il a fini sans appeler d'outil : ce qu'on lui
+  // remet quand il faut lui demander sa conclusion.
+  let dernierTour: Parameters<typeof tourARenvoyer>[0] | null = null;
 
   for (let tour = 0; tour < reglage.iterations_max; tour += 1) {
     iterations = tour + 1;
@@ -670,7 +677,10 @@ async function converser(
     const cout = coutDeLAppel(choix.modele, m.usage, configuration.tarifs);
     coutTotal = coutTotal === null || cout === null ? null : coutTotal + cout;
 
-    if (m.stopReason !== "tool_use") break;
+    if (m.stopReason !== "tool_use") {
+      dernierTour = m.content;
+      break;
+    }
 
     const appels = m.content.filter((b) => b.type === "tool_use") as Array<{
       id: string;
@@ -784,6 +794,67 @@ async function converser(
       // Les résultats d'outils d'abord, comme l'API l'exige ; les annonces ensuite.
       content: [...resultats, ...annonces.map((text) => ({ type: "text" as const, text }))],
     });
+  }
+
+  /*
+   * LA CONCLUSION DEMANDÉE. Mesuré le 11 novembre 2026 sur le vrai modèle : cinq
+   * réponses générales sur huit finissaient sans `conclure_reponse`. Leur portée
+   * restait « incertaine », et sous mandat une explication de l'inflation
+   * partait en relecture chez le comptable. Quand un cabinet peut relire et que
+   * le modèle n'a pas conclu, on la lui demande une fois, outil imposé. S'il ne
+   * la rend pas, la portée reste incertaine : le défaut prudent ne bouge pas.
+   */
+  if (
+    conclusion === null &&
+    dernierTour !== null &&
+    !interrompue &&
+    garde.texteEmis() !== "" &&
+    doitEtreRelue(SANS_CONCLUSION, contexte)
+  ) {
+    const assembleur = new Assembleur();
+    const debutAppel = maintenant();
+    try {
+      for await (const ev of client({
+        model: choix.modele,
+        max_tokens: reglage.sortie_max_jetons,
+        output_config: { effort: choix.effort },
+        thinking: { type: "disabled" },
+        cache_control: { type: "ephemeral" },
+        tools: outils,
+        tool_choice: { type: "tool", name: CONCLURE_REPONSE.name },
+        system,
+        messages: [
+          ...messages,
+          { role: "assistant", content: tourARenvoyer(dernierTour) },
+          { role: "user", content: [{ type: "text", text: DEMANDE_DE_CONCLUSION }] },
+        ],
+      })) {
+        assembleur.recevoir(ev);
+      }
+      const m = assembleur.message();
+      await journaliser(api, {
+        tenantId: q.tenantId,
+        modele: choix.modele,
+        usage: m.usage,
+        latencyMs: maintenant() - debutAppel,
+        erreur: null,
+      });
+      usageTotal = {
+        entree: usageTotal.entree + m.usage.entree,
+        sortie: usageTotal.sortie + m.usage.sortie,
+        cacheLu: usageTotal.cacheLu + m.usage.cacheLu,
+        cacheEcrit: usageTotal.cacheEcrit + m.usage.cacheEcrit,
+      };
+      const cout = coutDeLAppel(choix.modele, m.usage, configuration.tarifs);
+      coutTotal = coutTotal === null || cout === null ? null : coutTotal + cout;
+      const appel = m.content.find(
+        (b) => b.type === "tool_use" && (b as { name?: string }).name === CONCLURE_REPONSE.name,
+      ) as { input: unknown } | undefined;
+      const lue = appel ? lireLaConclusion(appel.input) : null;
+      if (lue) conclusion = lue;
+    } catch {
+      // La demande a échoué : la portée reste incertaine, et la réponse est relue.
+    }
   }
 
   /* ------------------------------------------------------------ la fin */

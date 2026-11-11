@@ -1220,9 +1220,15 @@ async function poserAuCabinet(
   contexte: NonNullable<Parameters<typeof dossierFictif>[0]>["contexte"],
   texte: string,
   conclusion: Record<string, unknown> | null,
-  options: { relecture?: "annoncer" | "retenir"; fileEnPanne?: boolean } = {},
+  options: {
+    relecture?: "annoncer" | "retenir";
+    fileEnPanne?: boolean;
+    /** Un autre Claude simulé que celui qui écrit puis conclut. */
+    claude?: (journal: string[]) => ClientEnFlux;
+  } = {},
 ) {
-  const { api, trace, fils } = dossierFictif({ contexte, ...options });
+  const { claude, ...base } = options;
+  const { api, trace, fils } = dossierFictif({ contexte, ...base });
   const journal: string[] = [];
   const evenements: EvenementDeLAssistant[] = [];
   let t = 0;
@@ -1231,7 +1237,7 @@ async function poserAuCabinet(
     DOSSIER,
     { tenantId: TENANT, question: LOYER, locale: "fr", conversationId: null, pieceIds: [] },
     {
-      claude: claudeQuiConclut(texte, conclusion, journal),
+      claude: claude ? claude(journal) : claudeQuiConclut(texte, conclusion, journal),
       conseil: conseilFictif,
       repli: sansRepli,
       maintenant: () => (t += 50),
@@ -1603,5 +1609,107 @@ describe("sans texte dans le corpus, Malica répond et marque ce qu'elle chiffre
     const vu = JSON.stringify(r.requetes.at(-1));
     assert.ok(vu.includes("Demande ce nombre"), "le calcul sur un nombre de mémoire a été accepté");
     assert.ok(!r.textes.includes("560"));
+  });
+});
+
+/*
+ * Mesuré le 11 novembre 2026 : le vrai modèle finit souvent une réponse générale
+ * sans conclure. Sous mandat, l'agent lui demande alors sa conclusion, outil imposé.
+ */
+function claudeQuiConclutSurDemande(
+  texte: string,
+  conclusion: Record<string, unknown> | null,
+): (journal: string[]) => ClientEnFlux {
+  return (journal) =>
+    async function* (requete) {
+      const impose = (requete as { tool_choice?: { type?: string } }).tool_choice?.type === "tool";
+      journal.push(impose ? "claude:conclusion demandée" : "claude:réponse");
+      yield {
+        type: "message_start",
+        message: { model: "modele-courant", usage: { input_tokens: 10, output_tokens: 1 } },
+      };
+      if (!impose) {
+        yield { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } };
+        yield { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: texte } };
+        yield { type: "content_block_stop", index: 0 };
+      } else if (conclusion) {
+        yield {
+          type: "content_block_start",
+          index: 0,
+          content_block: { type: "tool_use", id: "toolu_d", name: "conclure_reponse", input: {} },
+        };
+        yield {
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "input_json_delta", partial_json: JSON.stringify(conclusion) },
+        };
+        yield { type: "content_block_stop", index: 0 };
+      }
+      yield {
+        type: "message_delta",
+        delta: { stop_reason: impose && conclusion ? "tool_use" : "end_turn" },
+        usage: { output_tokens: 5 },
+      };
+      yield { type: "message_stop" };
+    };
+}
+
+describe("le modèle qui répond sans conclure se voit demander sa conclusion", () => {
+  const INFLATION = "L'inflation est une hausse générale et durable des prix.";
+  const GENERALE = { conseil: false, portee: "generale", certitude: 1, doute: null, theme: null };
+
+  it("réponse générale sous mandat : la conclusion demandée la laisse partir seule", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, INFLATION, null, {
+      relecture: "annoncer",
+      claude: claudeQuiConclutSurDemande(INFLATION, GENERALE),
+    });
+    assert.equal(r.textes, INFLATION, "une explication générale a été annoncée au comptable");
+    assert.equal(r.file.length, 0);
+    assert.equal(r.fin.mesure.annoncee, false);
+    assert.deepEqual(
+      r.journal.filter((j) => j.startsWith("claude:")),
+      ["claude:réponse", "claude:conclusion demandée"],
+    );
+    assert.equal(r.fin.mesure.conclusion?.portee, "generale");
+  });
+
+  it("en mode « retenir » aussi : une explication générale n'attend plus le comptable", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, INFLATION, null, {
+      relecture: "retenir",
+      claude: claudeQuiConclutSurDemande(INFLATION, GENERALE),
+    });
+    assert.equal(r.textes, INFLATION);
+    assert.equal(r.file.length, 0);
+  });
+
+  it("la conclusion demandée dit « dossier » : la réponse est annoncée et envoyée", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, null, {
+      relecture: "annoncer",
+      claude: claudeQuiConclutSurDemande(REPONSE_DOSSIER, CONCLUSION_DOSSIER),
+    });
+    assert.ok(r.textes.endsWith(A_CONFIRMER));
+    assert.equal(r.file.length, 1);
+    assert.equal(r.file[0]!["theme"], "Retenue à la source sur loyer");
+  });
+
+  it("le modèle ne conclut toujours pas : la portée reste incertaine, la réponse est relue", async () => {
+    const r = await poserAuCabinet(SOUS_MANDAT, REPONSE_DOSSIER, null, {
+      relecture: "annoncer",
+      claude: claudeQuiConclutSurDemande(REPONSE_DOSSIER, null),
+    });
+    assert.ok(r.textes.endsWith(A_CONFIRMER));
+    assert.equal(r.file.length, 1);
+  });
+
+  it("sans cabinet : aucune conclusion n'est demandée, aucun appel de plus", async () => {
+    const r = await poserAuCabinet({ cabinetId: null, appelantMembre: true }, INFLATION, null, {
+      relecture: "annoncer",
+      claude: claudeQuiConclutSurDemande(INFLATION, GENERALE),
+    });
+    assert.equal(r.textes, INFLATION);
+    assert.deepEqual(
+      r.journal.filter((j) => j.startsWith("claude:")),
+      ["claude:réponse"],
+    );
   });
 });
