@@ -44,6 +44,7 @@ import {
   type EntreeDuSudoku,
   type Grille,
   type JetonDuSudoku,
+  type LectureDeMontant,
   type MarqueDuSudoku,
   type PackDuSudoku,
   type RefDeJeton,
@@ -195,7 +196,12 @@ export function jetonsDuSudoku(
  * algoria-018 : « 19 % 2 812,858 534,443. », la TVA d'un taux perdue, la pièce non
  * prouvée.
  */
-function montantsDuJeton(texte: string, devise: DeviseLue): { v: number; forte: boolean }[] {
+function montantsDuJeton(texte: string, devise: DeviseLue): LectureDeMontant[] {
+  const lues = lecturesDuTexte(texte, devise);
+  return [...lues, ...substitutionsUnSept(texte, devise, lues)];
+}
+
+function lecturesDuTexte(texte: string, devise: DeviseLue): LectureDeMontant[] {
   const lues = treillisMontant(texte, devise).map((h) => ({
     v: h.millimes,
     forte: h.lecture === "decimale" && SEPARATEUR.test(texte),
@@ -206,6 +212,43 @@ function montantsDuJeton(texte: string, devise: DeviseLue): { v: number; forte: 
   return treillisMontant(texte.trim().slice(0, -1), devise)
     .filter((h) => h.lecture === "decimale")
     .map((h) => ({ v: h.millimes, forte: false }));
+}
+
+/**
+ * Les lectures obtenues en échangeant « 1 » et « 7 » — la faute d'OCR la plus fréquente
+ * (diagnostic du 8 novembre 2026 : « 7.971,144 » lu « 7.971,744 », « 41,304 » lu
+ * « 91,304 », le timbre « 1,000 » lu « 7,000 » ; mesuré : +7 pièces prouvées, 0 faux
+ * de montant). Elles sont PROPOSÉES pour tout texte qui porte ces chiffres ; le moteur ne
+ * les retient que si le jeton est incertain au sens du pack, et toujours faibles : c'est
+ * l'arithmétique de la pièce qui choisit (règle ①, le moteur ne lit pas). Au plus quatre
+ * positions échangées (quinze variantes) : « 7.971,144 » en a quatre ; au-delà, le jeton
+ * est une suite de chiffres, pas un montant mal lu.
+ */
+const POSITIONS_SUBSTITUABLES = 4;
+
+function substitutionsUnSept(
+  texte: string,
+  devise: DeviseLue,
+  deja: readonly LectureDeMontant[],
+): LectureDeMontant[] {
+  const positions = [...texte].flatMap((c, i) => (c === "1" || c === "7" ? [i] : []));
+  if (positions.length === 0 || positions.length > POSITIONS_SUBSTITUABLES) return [];
+  const connues = new Set(deja.map((l) => l.v));
+  const variantes: LectureDeMontant[] = [];
+  const lettres = [...texte];
+  // Chaque sous-ensemble non vide de positions : 2^n − 1 variantes, n ≤ 3.
+  for (let masque = 1; masque < 1 << positions.length; masque++) {
+    const variante = [...lettres];
+    positions.forEach((pos, k) => {
+      if (masque & (1 << k)) variante[pos] = variante[pos] === "1" ? "7" : "1";
+    });
+    for (const l of lecturesDuTexte(variante.join(""), devise)) {
+      if (connues.has(l.v)) continue;
+      connues.add(l.v);
+      variantes.push({ v: l.v, forte: false, substituee: true });
+    }
+  }
+  return variantes;
 }
 
 /**
