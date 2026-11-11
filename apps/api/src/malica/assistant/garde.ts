@@ -111,6 +111,9 @@ function chercheurDeMarque(marque: string): ((phrase: string) => boolean) | null
 /** Une cellule de tableur nommée entre accents graves : « `B2` », « `$B$2` », « `A2 = 1 000` ». */
 const CELLULE_NOMMEE = /`[^`\n]*\$?\b[A-Za-z]{1,3}\$?\d{1,7}\b[^`\n]*`/;
 
+/** La puce ou le numéro qui ouvre une ligne de liste, avec son espace. */
+const PUCE = /^[ \t]*(?:[-*•]|\d{1,2}[.)])[ \t]+/;
+
 function sansFormules(texte: string): string {
   const cellule = /\$?[A-Za-z]{1,3}\$?\d{1,7}\b/;
   return texte
@@ -387,11 +390,40 @@ export class GardeDesChiffres {
     let aEmettre = "";
     const retirees: string[] = [];
     for (const s of citations) this.citees.set(s.source.cle, s.source);
+    /*
+     * RECOUDRE CE QU'UNE PHRASE RETIRÉE LAISSE. Mesuré le 11 novembre 2026 : une
+     * phrase retirée seule dans son paragraphe laissait deux lignes vides de
+     * trop, et une phrase retirée en tête d'une puce emportait la puce — la
+     * suite de la ligne restait sans son tiret (« Négociez donnant-donnant. »
+     * au milieu d'une liste). Après un retrait en début de ligne, les sauts de
+     * ligne qui suivent tombent donc avec lui ; et la puce d'une phrase retirée
+     * passe à la phrase qui la suit sur la même ligne.
+     */
+    let sautsATaire = false;
+    let puceEnAttente = "";
+    const garder = (phrase: string): void => {
+      aEmettre += puceEnAttente + phrase;
+      puceEnAttente = "";
+      sautsATaire = false;
+    };
+    const retirer = (phrase: string): void => {
+      retirees.push(phrase.replace(/\s+/g, " ").trim());
+      const dit = this.emis + aEmettre;
+      const enDebutDeLigne = dit === "" || /\n[ \t]*$/.test(dit);
+      puceEnAttente = enDebutDeLigne ? (PUCE.exec(phrase)?.[0] ?? "") : "";
+      sautsATaire = enDebutDeLigne;
+    };
     for (const phrase of phrasesDe(texte)) {
       if (this.estTue(phrase)) continue;
+      if (phrase.trim() === "") {
+        // Un saut de ligne : il clôt la ligne de la puce, et ne s'ajoute pas au trou.
+        puceEnAttente = "";
+        if (!sautsATaire) aEmettre += phrase;
+        continue;
+      }
       const chiffres = this.aJuger(phrase);
       if (chiffres.length === 0) {
-        aEmettre += phrase;
+        garder(phrase);
         continue;
       }
       const porteuses = new Map<string, SourceConnue>();
@@ -414,7 +446,7 @@ export class GardeDesChiffres {
         break;
       }
       if (toutPorte) {
-        aEmettre += phrase;
+        garder(phrase);
         for (const s of porteuses.values()) this.citees.set(s.cle, s);
       } else if (this.marque && this.peutPartirMarquee(phrase)) {
         const corps = phrase.trimEnd();
@@ -422,10 +454,10 @@ export class GardeDesChiffres {
         // vérifié) », relevé le 11 novembre 2026) : la marque ne se dit qu'une fois.
         const motsDeLaMarque = sansAccent(this.marque.replace(/[_*()]/g, "").trim());
         const dejaDite = motsDeLaMarque !== "" && sansAccent(corps).includes(motsDeLaMarque);
-        aEmettre += dejaDite ? phrase : `${corps} ${this.marque}${phrase.slice(corps.length)}`;
+        garder(dejaDite ? phrase : `${corps} ${this.marque}${phrase.slice(corps.length)}`);
         this.marqueesDuTour.push(corps.replace(/\s+/g, " ").trim());
       } else {
-        retirees.push(phrase.replace(/\s+/g, " ").trim());
+        retirer(phrase);
       }
     }
     this.retireesDuTour.push(...retirees);

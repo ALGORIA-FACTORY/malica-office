@@ -360,6 +360,36 @@ describe("le chiffre sans source part marqué quand le corpus s'est tu (M-9)", (
   });
 });
 
+describe("ce qu'une phrase retirée laisse derrière elle se recoud", () => {
+  const REGLE = { marques_liantes: ["%", "taux", "dinar"], entier_liant_des: 10000 };
+
+  it("un paragraphe retiré ne laisse pas de lignes vides en trop", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    const j = g.jugerTout(
+      "Premier paragraphe.\n\nUn café coûte 10 % de plus.\n\nDernier paragraphe.",
+    );
+    assert.equal(j.aEmettre, "Premier paragraphe.\n\nDernier paragraphe.");
+  });
+
+  it("la puce d'une phrase retirée passe à la suite de sa ligne", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    const j = g.jugerTout("- Un : oui.\n- Deux : le taux monte de 5 %. Négociez.\n- Trois : fin.");
+    assert.equal(j.aEmettre, "- Un : oui.\n- Négociez.\n- Trois : fin.");
+  });
+
+  it("une puce entièrement retirée disparaît avec sa ligne", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    const j = g.jugerTout("- Un : oui.\n- Le taux monte de 5 %.\n- Trois : fin.");
+    assert.equal(j.aEmettre, "- Un : oui.\n- Trois : fin.");
+  });
+
+  it("une phrase retirée au milieu d'une ligne ne touche pas aux sauts", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    const j = g.jugerTout("Début. Le taux est de 5 %.\n\nSuite.");
+    assert.equal(j.aEmettre, "Début. \n\nSuite.");
+  });
+});
+
 describe("une phrase qui nomme une cellule de tableur n'affirme aucun chiffre", () => {
   const REGLE = { marques_liantes: ["%", "taux", "tva", "tnd"], entier_liant_des: 10000 };
 
