@@ -132,7 +132,11 @@ describe("#298 — the assistant and the firm's review queue", { skip: !BASE_CON
     const avant = await fileDuCabinet();
     const r = await poser("/malica/demander", { mode: "chat" });
     assert.equal(r.status, 200, await r.clone().text());
-    assert.equal(((await r.json()) as { retenue: boolean }).retenue, true);
+    const corps = (await r.json()) as { retenue: boolean; answer: string };
+    // Mode "annoncer": the answer is shown and announced, no longer withheld.
+    assert.equal(corps.retenue, false);
+    assert.ok(corps.answer.includes("doit retenir à la source"), "the answer was withheld");
+    assert.ok(corps.answer.includes("confirmer par votre comptable"), "not announced");
     assert.equal(await fileDuCabinet(), avant + 1);
   });
 
