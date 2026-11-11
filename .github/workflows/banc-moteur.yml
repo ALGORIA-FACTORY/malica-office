@@ -116,7 +116,7 @@ jobs:
             --corpus algoria:outils/jeu-algoria \
             --corpus synthetique:outils/jeu-synthetique \
             --corpus dirigeant:packages/sudoku/tests/donnees/jeux_dirigeant_ocr.json \
-            --cache sortie/releves $cas \
+            --cache sortie/releves --entrees sortie/entrees $cas \
             --sortie sortie/banc.json > sortie/banc.md 2> sortie/banc.err
           code=$?
           echo "code de sortie du banc : $code" | tee sortie/code.txt
@@ -132,6 +132,20 @@ jobs:
           # Pour chacune : la raison du moteur, puis ses champs sans lecture juste, avec la
           # valeur attendue et si elle est absente de la lecture (silence « normal », perte
           # de l'OCR) ou présente mais non attribuée (repère non reconnu, preuve non fermée).
+          # Rejeu d'un cas (`cas` renseigné) : ce que le moteur a reçu, jeton par jeton
+          # (page, ordinal, texte, position, montants lus), pour le rejouer en natif.
+          if [ -n "${{ inputs.cas }}" ]; then
+            echo "::group::Ce que le moteur a reçu"
+            for f in sortie/entrees/*.json; do
+              echo "## $f"
+              node -e '
+                const e = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+                for (const j of e.jetons ?? [])
+                  console.log([j.page, j.ordinal, JSON.stringify(j.texte), j.x0?.toFixed(3), j.y0?.toFixed(3), JSON.stringify(j.montants ?? [])].join(" | "));
+              ' "$f" || true
+            done
+            echo "::endgroup::"
+          fi
           echo "::group::Les cases des pièces sans preuve"
           node -e '
             const m = JSON.parse(require("fs").readFileSync("sortie/banc.json", "utf8"));
