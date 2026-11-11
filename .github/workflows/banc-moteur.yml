@@ -138,6 +138,7 @@ jobs:
             echo "::group::Ce que le moteur a reçu"
             for f in sortie/entrees/*.json; do
               echo "## $f"
+              echo "JSON $(cat "$f")"
               node -e '
                 const e = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
                 for (const j of e.jetons ?? [])
