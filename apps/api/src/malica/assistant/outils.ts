@@ -956,7 +956,7 @@ async function evolutionMensuelle(ctx: ContexteDesOutils, brut: unknown): Promis
     "Ce sont les totaux des factures lues, pas un chiffre d'affaires comptable.",
     ...parMois.mois.map(
       (m) =>
-        `- ${m.mois} : ventes ${m.ventes === null ? "aucune pièce lue" : `${ecrit(m.ventes)} (${m.piecesVentes} pièce${m.piecesVentes > 1 ? "s" : ""})`} ; ` +
+        `- ${moisEnClair(m.mois, ctx.locale)} (${m.mois}) : ventes ${m.ventes === null ? "aucune pièce lue" : `${ecrit(m.ventes)} (${m.piecesVentes} pièce${m.piecesVentes > 1 ? "s" : ""})`} ; ` +
         `achats ${m.achats === null ? "aucune pièce lue" : `${ecrit(m.achats)} (${m.piecesAchats} pièce${m.piecesAchats > 1 ? "s" : ""})`}`,
     ),
     `Total des ventes sur la période : ${ecrit(parMois.totalVentes)}. Total des achats : ${ecrit(parMois.totalAchats)}.`,

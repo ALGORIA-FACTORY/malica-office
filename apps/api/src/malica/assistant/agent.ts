@@ -557,6 +557,7 @@ async function converser(
     nombresAdmis: () =>
       new Set([
         ...chiffresDe(q.question),
+        ...dejaDit.flatMap(chiffresDe),
         ...garde.toutesLesSources().flatMap((s) => chiffresDe(`${s.titre}\n${s.texte}`)),
       ]),
     // Le périmètre élargi : seulement si la personne le regarde, et sur SES sociétés.
@@ -592,6 +593,9 @@ async function converser(
     { role: "user", content: `${q.question}${jointes}` },
   ];
 
+  // Ce que Malica a déjà dit dans ce fil, garde passée, peut se redire et se recalculer.
+  const dejaDit = historique.filter((m) => m.role === "assistant").map((m) => m.contenu);
+  garde.admettreDuFil(dejaDit);
   const outilsAppeles: string[] = [];
   const propositions: PropositionDAction[] = [];
   // Les visuels que les outils ont composés (par clé de source), et ceux que le
@@ -857,7 +861,7 @@ async function converser(
       // blocks must be of that type » — toute réponse à outil était interrompue).
       for (const v of r.visuels ?? [])
         annonces.push(
-          `Un visuel est disponible pour la source « ${v.cle} » : afficher_visuel le montre à la personne.`,
+          `[Note de l'application Malica, pas un message de la personne] Un visuel est disponible pour la source « ${v.cle} » : afficher_visuel le montre à la personne.`,
         );
       for (const p of r.propositions ?? []) {
         propositions.push(p);

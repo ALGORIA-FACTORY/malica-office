@@ -360,6 +360,26 @@ describe("le chiffre sans source part marqué quand le corpus s'est tu (M-9)", (
   });
 });
 
+describe("ce que Malica a déjà dit dans le fil peut se redire", () => {
+  const REGLE = { marques_liantes: ["tnd", "%"], entier_liant_des: 10000 };
+
+  it("un montant d'une réponse précédente passe ; un montant nouveau tombe", () => {
+    const g = new GardeDesChiffres("Et le deuxième ?", REGLE);
+    g.admettreDuFil(["Le premier pèse 26 109,600 TND et le deuxième 4 999,000 TND."]);
+    const j = g.jugerTout("Le deuxième est à 4 999,000 TND. Le troisième est à 1 234,000 TND.");
+    assert.equal(j.aEmettre, "Le deuxième est à 4 999,000 TND. ");
+    assert.equal(g.retirees().length, 1);
+  });
+
+  it("une longue phrase répétée dans la même réponse ne part qu'une fois", () => {
+    const g = new GardeDesChiffres("q", REGLE);
+    const longue =
+      "Je vous conseille de surveiller le premier fournisseur, qui pèse le plus dans vos achats.";
+    const j = g.jugerTout(`${longue}\n\nVoici le détail.\n\n${longue}`);
+    assert.equal(j.aEmettre.split(longue).length - 1, 1);
+  });
+});
+
 describe("ce qu'une phrase retirée laisse derrière elle se recoud", () => {
   const REGLE = { marques_liantes: ["%", "taux", "dinar"], entier_liant_des: 10000 };
 

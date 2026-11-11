@@ -111,6 +111,9 @@ function chercheurDeMarque(marque: string): ((phrase: string) => boolean) | null
 /** Une cellule de tableur nommée entre accents graves : « `B2` », « `$B$2` », « `A2 = 1 000` ». */
 const CELLULE_NOMMEE = /`[^`\n]*\$?\b[A-Za-z]{1,3}\$?\d{1,7}\b[^`\n]*`/;
 
+/** En deçà, une phrase peut se répéter sans que ce soit une redite (« Oui. », « Voici le détail : »). */
+const LONGUEUR_D_UNE_REDITE = 60;
+
 /** La puce ou le numéro qui ouvre une ligne de liste, avec son espace. */
 const PUCE = /^[ \t]*(?:[-*•]|\d{1,2}[.)])[ \t]+/;
 
@@ -218,6 +221,8 @@ export class GardeDesChiffres {
   private tus: string[] = [];
   private readonly tuesDuTour: string[] = [];
   private emis = "";
+  /** Les longues phrases déjà parties dans cette réponse. */
+  private readonly dites = new Set<string>();
   private aSeparer = false;
 
   // Le bloc de texte en cours.
@@ -258,6 +263,18 @@ export class GardeDesChiffres {
     if (this.marques.some((trouve) => trouve(cherchee))) return chiffres;
     const seuil = this.entierLiantDes;
     return chiffres.filter((n) => n.includes(".") || Number(n) >= seuil);
+  }
+
+  /**
+   * Ce que Malica a déjà dit dans ce fil peut se redire. Chaque chiffre d'une
+   * réponse rangée au fil a passé cette même garde, avec sa source, quand elle
+   * a été écrite. Relevé à l'écran le 11 novembre 2026 : à « Et le deuxième ? »,
+   * posé juste après le classement des fournisseurs, le modèle reprenait le
+   * montant sans rappeler l'outil, la phrase tombait, et la personne lisait
+   * « je n'ai rien trouvé de sûr à vous répondre ».
+   */
+  admettreDuFil(reponses: readonly string[]): void {
+    for (const r of reponses) for (const n of chiffresDe(r)) this.chiffresDeLaQuestion.add(n);
   }
 
   /**
@@ -402,6 +419,13 @@ export class GardeDesChiffres {
     let sautsATaire = false;
     let puceEnAttente = "";
     const garder = (phrase: string): void => {
+      // Une longue phrase déjà dite dans cette réponse ne se redit pas : le modèle
+      // répète parfois son texte après avoir posé un visuel.
+      const cle = phrase.replace(/\s+/g, " ").trim();
+      if (cle.length >= LONGUEUR_D_UNE_REDITE) {
+        if (this.dites.has(cle)) return;
+        this.dites.add(cle);
+      }
       aEmettre += puceEnAttente + phrase;
       puceEnAttente = "";
       sautsATaire = false;
