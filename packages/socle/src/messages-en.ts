@@ -4335,6 +4335,7 @@ export const en: Dict = {
   "pme.reglages.abo.priseEnChargeEtComplement":
     "Chosen and paid for by your accountant, {comptabilite}. You pay the difference: {prix} {devise} excl. tax / month.",
   "pme.notifs.voirProposition": "See the offer",
+  "pme.notifs.voirAbonnement": "See my subscription",
   "pme.reglages.offres.empechement.engagement_annuel":
     "Your subscription is yearly: the plan stays the same until the commitment ends.",
   "pme.reglages.annuel.detail":

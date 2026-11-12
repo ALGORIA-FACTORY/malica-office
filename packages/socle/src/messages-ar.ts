@@ -4163,6 +4163,7 @@ export const ar: Dict = {
   "pme.reglages.abo.priseEnChargeEtComplement":
     "يختاره ويسدّده محاسبكم، {comptabilite}. تدفعون الفرق: {prix} {devise} دون احتساب الأداء / شهريًا.",
   "pme.notifs.voirProposition": "عرض الاقتراح",
+  "pme.notifs.voirAbonnement": "عرض اشتراكي",
   "pme.reglages.offres.empechement.engagement_annuel":
     "اشتراكك سنوي: لا تتغيّر الباقة قبل نهاية الالتزام.",
   "pme.reglages.annuel.detail":

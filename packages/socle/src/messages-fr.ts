@@ -4464,6 +4464,7 @@ export const fr = {
   "pme.reglages.abo.priseEnChargeEtComplement":
     "Choisi et réglé par votre comptabilité, {comptabilite}. Vous payez la différence : {prix} {devise} HT / mois.",
   "pme.notifs.voirProposition": "Voir la proposition",
+  "pme.notifs.voirAbonnement": "Voir mon abonnement",
   "pme.reglages.offres.empechement.engagement_annuel":
     "Votre abonnement est à l'année : l'offre ne change pas avant la fin de l'engagement.",
   "pme.reglages.annuel.detail":
