@@ -56,24 +56,35 @@ describe("un jour ne se paie pas deux fois", { skip: !ADMIN }, () => {
     await pool?.end();
   });
 
-  it("la comptabilité couvre Team, le dirigeant paie sa montée en Premium, la comptabilité monte le même jour : elle reste à Team jusqu'à la fin du mois", async () => {
+  it("la comptabilité couvre Solo, le dirigeant paie sa montée en Premium, la comptabilité monte en Team le même jour : elle reste à Solo jusqu'à la fin du mois", async () => {
     await aBlanc(async (db) => {
-      const d = await decor(db, "team");
+      const d = await decor(db, "solo");
       const c = await uneComptabilite(db, d);
-      const acces = await couvreDepuisLeDebutDuMois(db, d, c, "team");
-      const [team, premium] = [await prix(db, "team"), await prix(db, "premium")];
+      const acces = await couvreDepuisLeDebutDuMois(db, d, c, "solo");
+      const [solo, team, premium] = [
+        await prix(db, "solo"),
+        await prix(db, "team"),
+        await prix(db, "premium"),
+      ];
 
       // 2. Le dirigeant monte en Premium et règle l'écart jusqu'à la fin du mois.
       const acompte = await changerDOffre(db, d, "premium");
       assert.ok(acompte, "la montée prépare son acompte");
-      const ecartDuMois = millimes(((premium - team) * d.joursRestants) / d.joursDuMois);
+      const ecartDuMois = millimes(((premium - solo) * d.joursRestants) / d.joursDuMois);
       assert.equal(Number(acompte.montant_ht), ecartDuMois, "l'écart × jours restants / jours");
       await regler(db, d, acompte.paiement_id);
 
-      // 3. Le même jour, la comptabilité monte en Premium.
+      // 3. Le même jour, la comptabilité monte : Premium est l'offre du client,
+      // elle ne s'y « monte » pas (1.2) ; Team, oui.
+      await assert.rejects(
+        enPersonne(db, c.expert, () =>
+          db.query("select public.acces_changer_offre($1, 'premium')", [acces]),
+        ),
+        /refus\.abonnement\.deja_l_offre_du_client$/,
+      );
       const effet = await enPersonne(db, c.expert, async () => {
         const { rows } = await db.query<{ r: { effet: string } }>(
-          "select public.acces_changer_offre($1, 'premium') as r",
+          "select public.acces_changer_offre($1, 'team') as r",
           [acces],
         );
         return rows[0]!.r.effet;
@@ -82,38 +93,37 @@ describe("un jour ne se paie pas deux fois", { skip: !ADMIN }, () => {
 
       // Jour par jour : ce mois-ci, puis le suivant.
       const jours = await jourParJour(db, d.licence, d.mois, d.moisDApres);
-      assert.equal(jours.length > 0, true);
       for (const j of jours) {
         assert.equal(
           millimes(j.comptabilite + j.pme),
-          j.jour < d.jour ? team : premium,
+          j.jour < d.jour ? solo : premium,
           `${j.jour} : le prix de l'offre, ni plus ni moins`,
         );
       }
       const attendus: Array<[string, string, number, number]> = [
-        [d.mois, "team", team, 0],
-        [d.jour, "premium", team, millimes(premium - team)],
-        [d.moisSuivant, "premium", premium, 0],
+        [d.mois, "solo", solo, 0],
+        [d.jour, "premium", solo, millimes(premium - solo)],
+        [d.moisSuivant, "premium", team, millimes(premium - team)],
       ];
       assert.deepEqual(
         paliers(jours),
         d.jour === d.mois ? attendus.slice(1) : attendus,
-        "la comptabilité reste à Team tant que court ce que le dirigeant a payé",
+        "la comptabilité reste à Solo tant que court ce que le dirigeant a payé",
       );
 
       // La facture du mois, des deux côtés.
       assert.equal(
         await factureDeLaComptabilite(db, c.cabinet, d.licence, d.mois),
-        team,
-        "la comptabilité : Team tout le mois, pas un jour de Premium",
+        solo,
+        "la comptabilité : Solo tout le mois, pas un jour de Team",
       );
       assert.equal(
         await factureDeLaPme(db, d.licence, d.mois),
         ecartDuMois,
         "la PME : exactement ce qu'elle a réglé d'avance",
       );
-      assert.equal(await factureDeLaComptabilite(db, c.cabinet, d.licence, d.moisSuivant), premium);
-      assert.equal(await factureDeLaPme(db, d.licence, d.moisSuivant), 0);
+      assert.equal(await factureDeLaComptabilite(db, c.cabinet, d.licence, d.moisSuivant), team);
+      assert.equal(await factureDeLaPme(db, d.licence, d.moisSuivant), millimes(premium - team));
     });
   });
 
@@ -169,10 +179,14 @@ describe("un jour ne se paie pas deux fois", { skip: !ADMIN }, () => {
 
   it("périmètre « PME » ouvert : la comptabilité qui monte par-dessus un complément déjà facturé attend la fin de sa période", async () => {
     await aBlanc(async (db) => {
-      const d = await decor(db, "team");
+      const d = await decor(db, "solo");
       const c = await uneComptabilite(db, d);
-      const acces = await couvreDepuisLeDebutDuMois(db, d, c, "team");
-      const [team, premium] = [await prix(db, "team"), await prix(db, "premium")];
+      const acces = await couvreDepuisLeDebutDuMois(db, d, c, "solo");
+      const [solo, team, premium] = [
+        await prix(db, "solo"),
+        await prix(db, "team"),
+        await prix(db, "premium"),
+      ];
       await ouvrirLePerimetrePme(db, d);
 
       await enPersonne(db, d.titulaire, () =>
@@ -183,26 +197,30 @@ describe("un jour ne se paie pas deux fois", { skip: !ADMIN }, () => {
       assert.equal(autres.length, 0);
       assert.equal(complement!.nature, "complement");
       assert.equal(complement!.couvre_du, d.jour);
-      assert.equal(complement!.part_mensuelle_ht, millimes(premium - team));
+      assert.equal(complement!.part_mensuelle_ht, millimes(premium - solo));
       const echeance = complement!.couvre_au;
 
       await enPersonne(db, c.expert, () =>
-        db.query("select public.acces_changer_offre($1, 'premium')", [acces]),
+        db.query("select public.acces_changer_offre($1, 'team')", [acces]),
       );
 
       const jours = await jourParJour(db, d.licence, d.jour, d.moisDApres);
       assert.deepEqual(paliers(jours), [
-        [d.jour, "premium", team, millimes(premium - team)],
-        [echeance, "premium", premium, 0],
+        [d.jour, "premium", solo, millimes(premium - solo)],
+        [echeance, "premium", team, millimes(premium - team)],
       ]);
       assert.equal(
         await factureDeLaComptabilite(db, c.cabinet, d.licence, d.mois),
-        team,
-        "ce mois-ci : Team, comme avant",
+        solo,
+        "ce mois-ci : Solo, comme avant",
       );
-      // Rien de plus n'est facturé à la PME : son complément couvre déjà ces jours.
+      // Rien de plus n'est facturé à la PME d'ici là : son complément couvre ces
+      // jours. À l'échéance, elle ne paie plus que ce qui dépasse Team.
       await passer(db, echeance);
-      assert.equal((await facturesDAvance(db, d.licence)).length, 1);
+      const [, suivante, ...plus] = await facturesDAvance(db, d.licence);
+      assert.equal(plus.length, 0);
+      assert.equal(suivante!.couvre_du, echeance);
+      assert.equal(suivante!.part_mensuelle_ht, millimes(premium - team));
     });
   });
 });
