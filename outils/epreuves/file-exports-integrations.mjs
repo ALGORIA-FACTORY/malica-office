@@ -657,7 +657,7 @@ e.section("Notifications");
 }
 
 /* ------------------------------------------------ exports */
-e.section("Export FEC et CSV");
+e.section("Exports des écritures (18 colonnes) et CSV");
 const exercices = await e.rpc("exports", "exercices", [cabinet.id, dossier.tenantId]);
 const exercice = exercices.find((x) => !x.clos) ?? exercices[0];
 e.verdict(
@@ -698,7 +698,7 @@ const au = exercice.clos ? exercice.au : AUJOURDHUI;
     "fec",
   ]);
   e.verdict(
-    "un FEC sans dossier est refusé, en clair",
+    "un fichier à 18 colonnes sans dossier est refusé, en clair",
     refuse(fecSansDossier) && fecSansDossier.message.includes("dossier"),
     fecSansDossier?.message ?? "",
   );
@@ -758,15 +758,20 @@ const produits = [];
   const lignes = x.contenu.split("\r\n").filter((l) => l !== "");
   const colonnes = lignes.map((l) => l.split("|").length);
   e.verdict(
-    "le FEC aligne dix-huit colonnes sur chaque ligne, dates en AAAAMMJJ",
+    "le fichier des écritures aligne les dix-huit colonnes du FEC sur chaque ligne, dates en AAAAMMJJ",
     lignes[0].startsWith("JournalCode|JournalLib|EcritureNum|") &&
       colonnes.every((n) => n === 18) &&
       lignes.slice(1).every((l) => /^\d{8}$/.test(l.split("|")[3])),
     `${lignes.length - 1} ligne(s)`,
   );
+  // Le nom ne se dit plus « FEC » (recette du 11 novembre 2026, point 2.7) :
+  // ecritures-18-colonnes-<identifiant du dossier>-<date de fin>.txt.
+  const identifiant = (dossier.legalId ?? dossier.name)
+    .normalize("NFD")
+    .replace(/[^A-Za-z0-9]+/g, "");
   e.verdict(
-    "le fichier FEC porte l'identifiant du dossier et la date de fin",
-    x.nomDeFichier.endsWith(`FEC${au.replaceAll("-", "")}.txt`) &&
+    "le fichier des écritures porte l'identifiant du dossier et la date de fin",
+    x.nomDeFichier === `ecritures-18-colonnes-${identifiant}-${au.replaceAll("-", "")}.txt` &&
       x.typeMime.startsWith("text/plain"),
     x.nomDeFichier,
   );
