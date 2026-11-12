@@ -15,9 +15,10 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
-import type { PieceLue } from "@malica/socle/ports/repositories";
+import type { MonAcces, PieceLue } from "@malica/socle/ports/repositories";
 import { statutCabinet, statutDuCircuit, type SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
 
+import { creerCompte } from "./auth.ts";
 import {
   BASE_CONFIGUREE,
   monterUneSociete,
@@ -25,6 +26,7 @@ import {
   type SocieteDEssai,
 } from "./circuit-d-essai.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
+import { executerRpc } from "./rpc.ts";
 
 describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
   let s: SocieteDEssai;
@@ -945,5 +947,89 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     } finally {
       await dates(rows[0]!.starts_on, rows[0]!.ends_on);
     }
+  });
+
+  /* =================================== 12 · LE COMPTABLE INTERNE (7.2) */
+
+  /*
+   * Une colonne de plus à la matrice (décision du 12 novembre 2026) : le
+   * comptable salarié de la société. Ici la société est confiée à une
+   * comptabilité externe : il voit et PRÉPARE, il n'inscrit ni ne valide.
+   * Le cas sans comptabilité externe, où il tient seul les livres, est
+   * éprouvé de bout en bout par `le-comptable-interne-tient-les-livres`.
+   */
+  it("12 · Le comptable interne — voit la société et ses écritures, jamais le Privé ; prépare, sans valider à côté d'une comptabilité externe", async () => {
+    const u = await creerCompte(
+      `matrice-comptable-${Date.now()}@essai.local`,
+      "MotDePasseTresLong2026!",
+    );
+    assert.ok(u);
+    const sous = (methode: string, ...args: unknown[]) => {
+      const [depot, nom] = methode.split(".") as [string, string];
+      return sousIdentiteDuServeur(u.id, (db) => executerRpc(db, { depot, methode: nom, args }));
+    };
+    await s.fait("amel", "facturation.inviterComptableInterne", u.email, s.pme);
+    const [inv] = (await sous("collab.invitationsPourMoi")) as Array<{ id: string }>;
+    await sous("collab.repondreAInvitation", inv!.id, true);
+
+    // Ses droits, du référentiel : voir la société, tenir les livres. Rien d'autre.
+    const acces = (await sous("acces.monAcces", s.pme)) as MonAcces;
+    assert.equal(acces.role, "comptable");
+    assert.deepEqual(acces.droits, ["societe.tout_voir", "livres.tenir"]);
+
+    const litIl = (table: string, id: string, colonne = "id") =>
+      sousIdentiteDuServeur(u.id, async (db) => {
+        const { rows } = await db.query(`select 1 from ${table} where ${colonne} = $1`, [id]);
+        return rows.length > 0;
+      });
+    // VOIR : la société, ce qui lui est transmis, les écritures ; pas le Privé.
+    assert.equal(await litIl("capture.pieces", await s.deposer("sami", "entite")), true);
+    assert.equal(await litIl("capture.pieces", await s.deposer("amel", "personnel")), false);
+    const transmise = await chezLeComptable("sami");
+    assert.equal(await litIl("capture.pieces", transmise), true);
+    const ecriture = await s.priseEnCharge(transmise);
+    assert.equal(await litIl("socle.ecritures", ecriture), true);
+
+    // RECEVOIR : il prépare ; l'inscription, la validation et le retour sont à
+    // la comptabilité externe.
+    const aPreparer = await chezLeComptable("sami");
+    await sousIdentiteDuServeur(u.id, (db) =>
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [aPreparer]),
+    );
+    const proposee = (await sous("office.propose", {
+      pieceId: aPreparer,
+      journal: "ACH",
+      date: "2026-10-02",
+      libelle: "Facture essai",
+      packVersionId: s.pack,
+      devise: "TND",
+      lignes: [
+        { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: "EXO" },
+        {
+          account_code: "401",
+          libelle: "Fournisseur",
+          debit: "0",
+          credit: "100.000",
+          tax_code: null,
+        },
+      ],
+    })) as string;
+    await assert.rejects(sous("office.book", proposee), /refus\.inscription\.reservee_au_cabinet/);
+    await assert.rejects(
+      sous("supervision.retourner", {
+        pieceId: aPreparer,
+        motifId: s.motifs["piece_illisible"],
+        note: null,
+      }),
+      /refus\.supervision\.reservee/,
+    );
+    await s.fait("expert", "office.book", proposee);
+
+    // ENVOYER, l'abonnement, les places : rien.
+    await assert.rejects(
+      sous("facturation.inviterSiege", `x-${Date.now()}@essai.local`, s.pme),
+      /refus\./,
+    );
+    assert.equal(await sous("facturation.mesPrixEnPlus", s.pme), null);
   });
 });

@@ -99,6 +99,39 @@ function Invitation() {
     },
   });
 
+  /*
+   * La société invite sa comptabilité (7.1) : l'expert ne rejoint pas la
+   * société, il choisit SA comptabilité, et le mandat devient actif. Sans
+   * comptabilité, il la crée d'abord ; le jeton l'attend dans la session.
+   */
+  const pourLaComptabilite = Boolean(lue.data?.pourLaComptabilite);
+  const mesOrgs = useQuery({
+    queryKey: ["my-organizations"],
+    queryFn: () => office().identity.listMyOrganizations(),
+    enabled: pourLaComptabilite,
+  });
+  const mesComptabilites = (mesOrgs.data ?? []).filter(
+    (o) => o.kind === "cabinet" && o.role === "expert",
+  );
+  const [comptabilite, setComptabilite] = useState<string | null>(null);
+  const choisie = comptabilite ?? mesComptabilites[0]?.id ?? null;
+  const accepterLeMandat = useMutation({
+    mutationFn: () =>
+      office().identity.accepterInvitationDeLaSociete({
+        jeton: jeton!,
+        invitationId: null,
+        cabinetTenantId: choisie!,
+      }),
+    onSuccess: () => {
+      try {
+        sessionStorage.removeItem(CLE);
+      } catch {
+        /* rien à ranger */
+      }
+      void navigate({ to: "/cabinet/clients", replace: true });
+    },
+  });
+
   const deconnecter = useMutation({
     mutationFn: () => office().auth.deconnexion(),
     onSuccess: () => void compte.refetch(),
@@ -147,7 +180,9 @@ function Invitation() {
     corps = (
       <>
         <p className="cx-sub">
-          {t("invitation.dossier", { cabinet: inv.cabinet ?? "—", pme: inv.pme })}
+          {inv.pourLaComptabilite
+            ? t("invitation.comptabilite", { pme: inv.pme })
+            : t("invitation.dossier", { cabinet: inv.cabinet ?? "—", pme: inv.pme })}
         </p>
         <p className="cx-sub">{t("invitation.adresse", { email: inv.email })}</p>
         {adresseDifferente ? (
@@ -158,6 +193,42 @@ function Invitation() {
             <button type="button" onClick={() => deconnecter.mutate()} className="cx-secondary">
               {t("invitation.connecter")}
             </button>
+          </>
+        ) : pourLaComptabilite ? (
+          <>
+            {mesComptabilites.length > 0 ? (
+              <label className="cx-sub">
+                {t("invitation.comptabilite.choisir")}{" "}
+                <select value={choisie ?? ""} onChange={(e) => setComptabilite(e.target.value)}>
+                  {mesComptabilites.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : mesOrgs.isSuccess ? (
+              <Link to="/onboarding" className="cx-secondary">
+                {t("invitation.comptabilite.creer")}
+              </Link>
+            ) : null}
+            {accepterLeMandat.isError ? (
+              <p role="alert" className="cx-msg cx-err">
+                {texteDeLErreur(accepterLeMandat.error, "invitation : mandat", t("common.error"))}
+              </p>
+            ) : null}
+            {choisie ? (
+              <button
+                type="button"
+                onClick={() => accepterLeMandat.mutate()}
+                disabled={accepterLeMandat.isPending}
+                aria-busy={accepterLeMandat.isPending}
+                className="cx-submit"
+              >
+                <span className="cx-fill" aria-hidden="true" />
+                <span className="cx-label">{t("invitation.comptabilite.accepter")}</span>
+              </button>
+            ) : null}
           </>
         ) : (
           <>

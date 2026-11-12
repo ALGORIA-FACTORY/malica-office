@@ -70,6 +70,8 @@
         "public.charge_question_answer",
         "public.collab_assign",
         "public.collab_desaffecter",
+        "public.comptabilite_invitation_accepter",
+        "public.comptabilite_inviter",
         "public.etablissement_archiver",
         "public.export_journaliser",
         "public.fait_consigner",
@@ -296,6 +298,7 @@
       "privilege": "INSERT",
       "chemins": [
         "app.annulation_contre_passe_le_reglement",
+        "public.comptabilite_invitation_accepter",
         "public.piece_renvoyer",
         "public.pv_envoyer",
         "public.socle_ecriture_review"
@@ -423,12 +426,16 @@
     {
       "objet": "identity.engagements",
       "privilege": "INSERT",
-      "chemins": ["public.mandat_creer"]
+      "chemins": ["public.comptabilite_invitation_accepter", "public.mandat_creer"]
     },
     {
       "objet": "identity.engagements",
       "privilege": "UPDATE",
-      "chemins": ["public.mandat_creer", "public.set_engagement_status"]
+      "chemins": [
+        "public.comptabilite_invitation_accepter",
+        "public.mandat_creer",
+        "public.set_engagement_status"
+      ]
     },
     {
       "objet": "identity.entities",
@@ -453,7 +460,13 @@
     {
       "objet": "identity.invitations",
       "privilege": "INSERT",
-      "chemins": ["public.cabinet_inviter"]
+      "chemins": ["public.cabinet_inviter", "public.comptabilite_inviter"]
+    },
+    {
+      "objet": "identity.invitations",
+      "privilege": "UPDATE",
+      "colonnes": ["accepted_at", "accepted_by", "revoked_at", "revoked_by"],
+      "chemins": ["public.comptabilite_invitation_accepter", "public.comptabilite_inviter"]
     },
     {
       "objet": "identity.organizations",

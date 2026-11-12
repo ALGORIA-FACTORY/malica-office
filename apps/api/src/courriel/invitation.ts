@@ -21,6 +21,39 @@ export interface InvitationCourriel {
   pme: string;
   lien: string;
   expireLe: Date;
+  /**
+   * À qui l'invitation s'adresse : le dirigeant que sa comptabilité invite
+   * (par défaut), ou la comptabilité que la société invite (7.1). Le texte
+   * d'un comptable ne lui parle pas comme à un dirigeant.
+   */
+  pour?: "dirigeant" | "comptabilite";
+}
+
+/** Les phrases qui changent selon le destinataire ; le reste du courriel est commun. */
+function phrases(i: InvitationCourriel, cabinet: string, pme: string) {
+  if (i.pour === "comptabilite")
+    return {
+      sujet: `${i.pme} vous invite à tenir sa comptabilité sur Malica`,
+      apercu: `${pme} vous invite à tenir sa comptabilité.`,
+      titre: "Une société vous confie sa comptabilité.",
+      corpsTexte: `${i.pme} vous invite à tenir sa comptabilité sur Malica Office.`,
+      corpsHtml: `<strong style="font-weight:600;">${pme}</strong> vous invite à tenir sa comptabilité sur Malica Office.`,
+      suite:
+        "Créez votre accès ou connectez-vous, choisissez votre comptabilité ou créez-la : le mandat devient actif dès que vous acceptez.",
+      bouton: "Voir l'invitation",
+      demandeur: pme,
+    };
+  return {
+    sujet: `${i.cabinet} vous ouvre votre espace Malica`,
+    apercu: `${cabinet} a ouvert le dossier de ${pme}. Votre espace vous attend.`,
+    titre: "Votre espace est prêt.",
+    corpsTexte: `${i.cabinet} a ouvert le dossier de ${i.pme} sur Malica Office, et vous invite à le rejoindre.`,
+    corpsHtml: `<strong style="font-weight:600;">${cabinet}</strong> a ouvert le dossier de <strong style="font-weight:600;">${pme}</strong> sur Malica Office, et vous invite à le rejoindre.`,
+    suite:
+      "Photographiez vos factures : Malica les lit, les classe, et les transmet à votre comptabilité.",
+    bouton: "Rejoindre mon espace",
+    demandeur: cabinet,
+  };
 }
 
 function dateLisible(d: Date): string {
@@ -43,17 +76,18 @@ export function courrielInvitation(i: InvitationCourriel): {
   const pme = echapper(i.pme);
   const lien = echapper(i.lien);
   const jusquau = dateLisible(i.expireLe);
+  const p = phrases(i, cabinet, pme);
 
-  const sujet = `${i.cabinet} vous ouvre votre espace Malica`;
+  const sujet = p.sujet;
 
   const texte = [
     `Bonjour,`,
     ``,
-    `${i.cabinet} a ouvert le dossier de ${i.pme} sur Malica Office, et vous invite à le rejoindre.`,
+    p.corpsTexte,
     ``,
-    `Photographiez vos factures : Malica les lit, les classe, et les transmet à votre comptabilité.`,
+    p.suite,
     ``,
-    `Rejoindre mon espace :`,
+    `${p.bouton} :`,
     i.lien,
     ``,
     `Ce lien est personnel. Il vaut jusqu'au ${jusquau}, une seule fois, avec l'adresse à laquelle ce courriel vous parvient.`,
@@ -73,7 +107,7 @@ export function courrielInvitation(i: InvitationCourriel): {
 <title>${echapper(sujet)}</title>
 </head>
 <body style="margin:0;padding:0;background:${PAPIER};-webkit-text-size-adjust:100%;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${PAPIER};">${cabinet} a ouvert le dossier de ${pme}. Votre espace vous attend.</div>
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${PAPIER};">${p.apercu}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PAPIER};">
 <tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${FILET};">
@@ -89,15 +123,15 @@ export function courrielInvitation(i: InvitationCourriel): {
 
 <tr><td style="padding:44px 40px 8px 40px;font-family:${POLICE};">
 <p style="margin:0 0 14px 0;font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:${SOUCI};">Invitation</p>
-<h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;color:${ENCRE};">Votre espace est prêt.</h1>
-<p style="margin:20px 0 0 0;font-size:17px;line-height:1.6;color:${ENCRE};"><strong style="font-weight:600;">${cabinet}</strong> a ouvert le dossier de <strong style="font-weight:600;">${pme}</strong> sur Malica Office, et vous invite à le rejoindre.</p>
-<p style="margin:14px 0 0 0;font-size:16px;line-height:1.6;color:${GRIS};">Photographiez vos factures : Malica les lit, les classe, et les transmet à votre comptabilité.</p>
+<h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;color:${ENCRE};">${p.titre}</h1>
+<p style="margin:20px 0 0 0;font-size:17px;line-height:1.6;color:${ENCRE};">${p.corpsHtml}</p>
+<p style="margin:14px 0 0 0;font-size:16px;line-height:1.6;color:${GRIS};">${p.suite}</p>
 </td></tr>
 
 <tr><td style="padding:32px 40px 8px 40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
 <td style="background:${ENCRE};">
-<a href="${lien}" style="display:inline-block;padding:16px 30px;font-family:${POLICE};font-size:15px;font-weight:600;letter-spacing:0.02em;color:${PAPIER};text-decoration:none;">Rejoindre mon espace&nbsp;&nbsp;&rarr;</a>
+<a href="${lien}" style="display:inline-block;padding:16px 30px;font-family:${POLICE};font-size:15px;font-weight:600;letter-spacing:0.02em;color:${PAPIER};text-decoration:none;">${p.bouton}&nbsp;&nbsp;&rarr;</a>
 </td>
 </tr></table>
 </td></tr>
@@ -117,7 +151,7 @@ Si vous n'attendiez pas cette invitation, ignorez ce message&nbsp;: rien ne se p
 </td></tr>
 
 </table>
-<p style="margin:20px 0 0 0;font-family:${POLICE};font-size:11px;letter-spacing:0.08em;color:${GRIS};">MALICA OFFICE &middot; envoyé à la demande de ${cabinet}</p>
+<p style="margin:20px 0 0 0;font-family:${POLICE};font-size:11px;letter-spacing:0.08em;color:${GRIS};">MALICA OFFICE &middot; envoyé à la demande de ${p.demandeur}</p>
 </td></tr>
 </table>
 </body>
@@ -141,14 +175,27 @@ export type StatutCourriel = "envoye" | "non_configure" | "echec";
  * en-tête Referer.
  */
 export async function envoyerInvitation(
-  i: { cabinet: string; pme: string; email: string; jeton: string; expireLe: Date },
+  i: {
+    cabinet: string;
+    pme: string;
+    email: string;
+    jeton: string;
+    expireLe: Date;
+    pour?: "dirigeant" | "comptabilite";
+  },
   config: ConfigurationCourriel | null,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ courriel: StatutCourriel; lien: string | null }> {
   if (!config) return { courriel: "non_configure", lien: null };
   const lien = `${config.urlPublique}/invitation#${i.jeton}`;
   try {
-    const c = courrielInvitation({ cabinet: i.cabinet, pme: i.pme, lien, expireLe: i.expireLe });
+    const c = courrielInvitation({
+      cabinet: i.cabinet,
+      pme: i.pme,
+      lien,
+      expireLe: i.expireLe,
+      pour: i.pour ?? "dirigeant",
+    });
     await envoyerParBrevo(
       {
         cle: config.cle,

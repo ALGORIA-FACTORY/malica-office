@@ -15,7 +15,7 @@
  * `public.siege_inviter`, qui refuse la place de trop.
  */
 
-import type { EtatDeFacture } from "@malica/socle/ports/repositories";
+import type { EtatDeFacture, PlaceComptable } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
 import { enUnitesExactes } from "@malica/socle/somme-decimale";
@@ -396,6 +396,29 @@ export const facturation = {
     const r = rows[0]?.r;
     if (!r) throw new Error("invitation.non_creee");
     return { ...r, deja: Boolean(r.deja) };
+  },
+
+  /**
+   * Inviter le comptable interne de la société, sur la place « comptable »
+   * comprise dans l'offre (7.2) : jamais une place payante. La base refuse
+   * la place de trop, et l'appelant qui n'est pas le propriétaire.
+   */
+  async inviterComptableInterne(db: Requete, email: string, tenantId: string) {
+    const { rows } = await db.query<{
+      r: { id: string; email: string; role: string; expiresAt: string; deja: boolean };
+    }>(`select public.comptable_interne_inviter($1, $2) as r`, [tenantId, email]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("invitation.non_creee");
+    return { ...r, deja: Boolean(r.deja) };
+  },
+
+  /** La place « comptable » de la société : comprise, prise, attendue. Jamais un prix. */
+  async placeComptable(db: Requete, tenantId: string): Promise<PlaceComptable> {
+    const { rows } = await db.query<{ r: PlaceComptable }>(
+      `select public.place_comptable_lire($1) as r`,
+      [tenantId],
+    );
+    return rows[0]!.r;
   },
 
   /**

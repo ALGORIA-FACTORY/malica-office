@@ -922,3 +922,64 @@ fiscal, comme E : aucun avoir à la descente.
   lieu d'un. Accepté tel quel ; à revoir à l'ouverture du périmètre.
 - Le droit de timbre : l'acompte de l'année le porte (1.8, `20261218100000`) ; l'acompte d'une montée de
   l'année non, il s'impute sur une facture qui porte le sien.
+
+## Le comptable interne et la comptabilité qui invite (7.1, 7.2 — tranché par défaut, à confirmer)
+
+### C-1 — Qui valide quand un comptable interne et une comptabilité externe coexistent (7.2)
+
+Le prompt laissait la règle à la maquette. **Tranché par défaut, la plus simple et la plus sûre**
+(migration `20261221090000`) :
+
+- **sans comptabilité externe**, le comptable interne tient les livres : il inscrit, valide, force et
+  retourne. Le propriétaire n'inscrit plus lui-même : la société n'est plus « autonome » ;
+- **quand une comptabilité externe a un mandat actif**, c'est elle qui inscrit, valide, force et retourne.
+  Le comptable interne **prépare** seulement : il voit les pièces, établit leur type et propose
+  l'écriture, que la comptabilité externe inscrit.
+
+Deux prédicats en base portent la règle : `app.prepare_le_dossier` (préparer) et
+`app.supervise_le_dossier` (trancher). Changer la règle, c'est changer ce second prédicat, pas les
+portes. **À confirmer par le dirigeant.**
+
+### C-2 — La place « Comptable interne » (7.2)
+
+Une place par offre, dès Basic, hors des places payantes : colonne `ref.offres.places_comptable_incluses`,
+née à 1 sur les offres déjà publiées, puis sans défaut — une grille publiée à la tour la porte, ou la
+tour refuse la grille (`place_comptable_absente`, `places_comptable_decroissantes`). La même personne
+comptable dans deux sociétés d'une licence Premium n'occupe qu'une place. Elle s'offre depuis la coque
+Android : elle n'est jamais facturée. **À confirmer** : une seule place, et le propriétaire principal
+seul… ou tout propriétaire ? Tranché : **tout propriétaire de la société** l'offre (la place ne coûte
+rien), alors qu'une place payante reste au propriétaire principal.
+
+### C-3 — La société invite sa comptabilité externe (7.1)
+
+Migration `20261221100000`. Ce qui est tranché par défaut :
+
+- **Une comptabilité déjà inscrite** reçoit l'invitation dans « Invitations pour moi » (la même ligne que le
+  lien), et l'accepte avec sa comptabilité. Le prompt demandait de « réutiliser le mandat proposé » : un
+  mandat `propose` se répond côté **société** (`mandat_repondre`) ; le poser depuis la société l'aurait fait
+  apparaître à la société comme une proposition à accepter. L'invitation porte donc la demande, et
+  l'acceptation pose directement le mandat **actif**. **À confirmer.**
+- **Un mandat actif** : la société n'invite pas une seconde comptabilité (`refus.mandat.un_seul_actif`). Le
+  changement de comptabilité passe par 3.2.
+- **Adresse préremplie à la création de l'accès : non.** Elle exigerait de lire l'invitation sans session ;
+  c'est la décision de sécurité ouverte 4.5, et rien n'est ouvert ici. Le lien mène à « Créer mon accès » ;
+  l'expert saisit son adresse.
+- **Sans comptabilité**, l'expert la crée d'abord (`/onboarding`) ; le jeton l'attend dans la session.
+- Le courriel part par Brevo quand il est configuré (expéditeur et adresse publique en configuration,
+  aucune adresse en dur) ; il dit « tenir sa comptabilité », jamais « Dirigeant ». Les épreuves n'envoient
+  rien.
+
+### C-4 — Le comptable interne n'a pas encore d'espace de travail (revue de #369, constat 2)
+
+Le rôle, ses droits (lecture, préparation, inscription, validation, retour, export), sa place comprise et la
+règle C-1 sont en place côté base et API. **Il n'a pas d'écran pour revoir une pièce.** L'espace de la
+comptabilité (`/cabinet`) est construit autour d'une organisation de type cabinet ; la revue d'une pièce
+(`cabinet.piece.$pieceId`, 1 800 lignes) lit la file, le plan et les clients de cette organisation. Le
+rendre utilisable pour une société demande un écran dédié, à maquetter et à vérifier au clic.
+
+Décision prise pour ne rien présenter qui ne fonctionne pas : **le comptable interne n'est pas une
+destination des pièces** côté écran (envoi, circuit, capture lisent à nouveau seulement le mandat d'une
+comptabilité, comme sur `main`). Sa place reste affichée dans Réglages › Sociétés. **Conséquence à
+trancher avant toute mise en production** : une société qui n'a qu'un comptable interne ne peut plus
+inscrire ses propres écritures (`refus.inscription.reservee_au_cabinet`, règle C-1), et son comptable ne
+peut pas encore les revoir. Deux voies : construire l'espace, ou ne pas livrer la règle C-1 avant lui.
