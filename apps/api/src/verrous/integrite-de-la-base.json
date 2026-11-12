@@ -200,7 +200,7 @@
     "apps/web/src/routes/_authenticated/cabinet.cours.tsx": "Cours de change — comptabilité — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.dossier.$clientId.tsx": "Dossier client — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.echeances.tsx": "Échéances de la comptabilité — Malica Office",
-    "apps/web/src/routes/_authenticated/cabinet.export.tsx": "Export FEC et CSV — Malica Office",
+    "apps/web/src/routes/_authenticated/cabinet.export.tsx": "Exports des écritures — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.facture.$factureId.tsx": "Facture d'honoraires — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.immobilisations.tsx": "Immobilisations — Malica Office",
     "apps/web/src/routes/_authenticated/cabinet.index.tsx": "Aujourd'hui — comptabilité — Malica Office",

@@ -1528,7 +1528,7 @@ export const fr = {
   "cab.rail.role.assistant": "Assistant",
   "cab.rail.role.plateforme": "Développeur · accès à tout",
   "cab.rail.role.aucun": "Sans rôle ici",
-  "cab.nav.export": "Export FEC / CSV",
+  "cab.nav.export": "Exports des écritures",
   "cab.nav.conseil": "Conseil",
   "cab.abo.title": "Abonnements des clients",
   "cab.abo.kpi.couverts": "Sociétés couvertes",
@@ -1832,7 +1832,7 @@ export const fr = {
   "cab.review.reglement.retenue.aide":
     "Le règlement ne porte que le net : la retenue est versée à l’État pour le compte du fournisseur.",
   "cab.review.reglement.inscrire": "Inscrire",
-  "cab.review.reglement.inscrit": "Inscrit au journal — il figure au FEC.",
+  "cab.review.reglement.inscrit": "Inscrit au journal — il figure aux exports des écritures.",
   "cab.review.paiement.reference": "Référence",
   "cab.review.paiement.eteint": "Règlement annulé — sans effet comptable",
   "cab.review.paiement.annules": "{count} règlements annulés",
@@ -1895,7 +1895,7 @@ export const fr = {
   "cab.echeances.panel": "En retard : {late} · sous sept jours : {week}.",
   "cab.settings.title": "Réglages de la comptabilité",
   "cab.export.kicker": "Sortie de données · aucun verrou",
-  "cab.export.title": "Export FEC et CSV",
+  "cab.export.title": "Exports des écritures",
   "cab.export.lede":
     "Exportez les écritures comptabilisées de la période sélectionnée. Vérifiez le dossier, le format et le nombre de lignes avant de générer le fichier.",
   "cab.export.client": "Client",
@@ -1906,14 +1906,14 @@ export const fr = {
   "cab.export.exercice.civil": "La fiche ne dit pas la clôture : l’exercice civil s’applique.",
   "cab.export.exercice.aucun": "Aucun exercice à exporter.",
   "cab.export.format": "Format",
-  "cab.export.format.fec": "FEC",
-  "cab.export.format.fec.hint": "écritures · format légal",
+  "cab.export.format.fec": "Écritures, 18 colonnes",
+  "cab.export.format.fec.hint": "disposition du FEC français · conformité non attestée",
   "cab.export.format.csv_ecritures": "CSV des écritures",
   "cab.export.format.csv_ecritures.hint": "grand livre · tabulé",
   "cab.export.format.csv_plan": "CSV du plan",
   "cab.export.format.csv_plan.hint": "plan comptable · pack et comptabilité",
   "cab.export.format.fec.unDossier":
-    "Le FEC se produit dossier par dossier : choisissez un client.",
+    "Le fichier à 18 colonnes se produit dossier par dossier : choisissez un client.",
   "cab.export.taille": "{lignes} lignes · {taille}",
   "cab.export.taille#one": "{lignes} ligne · {taille}",
   "cab.export.taille#other": "{lignes} lignes · {taille}",
@@ -2061,7 +2061,7 @@ export const fr = {
     "Le relevé se colle dans le rapprochement. Les lignes déjà importées sont écartées, et aucune écriture n’est créée sans geste.",
   "cab.integ.releves.action": "Importer un relevé",
   "cab.integ.exports.nom": "Export des écritures",
-  "cab.integ.exports.nature": "Sortie · FEC et CSV",
+  "cab.integ.exports.nature": "Sortie · écritures et CSV",
   "cab.integ.exports.note":
     "Les écritures comptabilisées d’un mandat, dans un fichier que l’administration ou un autre logiciel sait lire. Chaque export est journalisé avec son empreinte.",
   "cab.integ.exports.action": "Produire un export",
@@ -2789,7 +2789,8 @@ export const fr = {
   "refus.export.fuseau": "Le fuseau de l’export n’est pas celui de la comptabilité.",
   "refus.export.concurrent": "Un autre export de ce journal vient d’être produit : recommencez.",
   "refus.export.format_absent": "Ce format d’export n’existe pas.",
-  "refus.export.fec_par_dossier": "Le FEC se produit dossier par dossier : choisissez un client.",
+  "refus.export.fec_par_dossier":
+    "Le fichier à 18 colonnes se produit dossier par dossier : choisissez un client.",
   "refus.export.periode_a_l_envers": "La période est à l’envers : le début suit la fin.",
   "refus.identifiant.invalide":
     "Cet identifiant n’a pas la forme attendue : « {valeur} ». Exemple : « {exemple} ».",
