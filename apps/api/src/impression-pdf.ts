@@ -300,11 +300,16 @@ export async function composerLImpression(
       const octets = await charger(piece.id);
       const images: Image[] = [];
       if (octets && estUnPdf(octets)) {
+        // Une page DE PLUS que la borne n'en laisse : un original plus long que
+        // ce que la base en sait se voit ici, et se refuse plutôt que d'être
+        // coupé en silence (relecture de #366).
+        const reste = pagesMax - pages;
         const rendues = await pagesDuPdf(
           octets,
-          { boite: BOITE_DE_RENDU, qualite: QUALITE, pages: pagesMax - pages },
-          limitesDuRenduPdf.delaiMs * piece.pages,
+          { boite: BOITE_DE_RENDU, qualite: QUALITE, pages: reste + 1 },
+          limitesDuRenduPdf.delaiMs * Math.max(piece.pages, 1),
         );
+        if ((rendues?.length ?? 0) > reste) throw new ImpressionTropVolumineuse();
         for (const jpeg of rendues ?? []) images.push(await loadImage(jpeg));
       } else if (octets) {
         const image = await imageDeLaPiece(octets);
