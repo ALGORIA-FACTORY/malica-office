@@ -21,6 +21,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { ficheComplete } from "@/lib/etat-des-clients";
 import { montant } from "@/lib/lisible";
+import { useNotesDHonoraires } from "@/lib/notes-d-honoraires";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type {
@@ -364,7 +365,12 @@ export function FicheClient({
   societesDeLaLicence: readonly string[];
 }) {
   const { t } = useI18n();
-  const [onglet, setOnglet] = useState<OngletFiche>(ongletInitial);
+  const [ongletChoisi, setOnglet] = useState<OngletFiche>(ongletInitial);
+  // L'onglet « Factures » est celui des notes d'honoraires : éteintes à la
+  // tour, il disparaît, et une adresse qui le demandait ouvre la société.
+  const notes = useNotesDHonoraires();
+  const onglet: OngletFiche =
+    ongletChoisi === "factures" && !notes.ouvertes ? "societe" : ongletChoisi;
 
   const fiche = useQuery({
     queryKey: ["fiche", client.tenantId],
@@ -418,7 +424,9 @@ export function FicheClient({
             titre: t("cab.cli.onglet.abo"),
             alerte: !etat?.accesStatut && !parLaLicence,
           },
-          { id: "factures", titre: t("cab.cli.onglet.factures") },
+          ...(notes.ouvertes
+            ? [{ id: "factures" as const, titre: t("cab.cli.onglet.factures") }]
+            : []),
         ]}
       />
       <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -499,7 +507,16 @@ function OngletSociete({
   const [mode, setMode] = useState("");
   const [secteur, setSecteur] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
+  const [fait, setFait] = useState<string | null>(null);
   const [seme, setSeme] = useState(false);
+  // Le matricule se fige à la première pièce reçue : la base le dit, par la
+  // règle de sa porte. Tant qu'elle n'a pas répondu, le champ reste gris.
+  const fige = useQuery({
+    queryKey: ["matricule-fige", org.id, client.tenantId],
+    queryFn: () => office().identity.matriculeFige(org.id, client.tenantId),
+    enabled: expert,
+  });
+  const matriculeFige = fige.data !== false;
 
   useEffect(() => {
     if (!ficheChargee || seme) return;
@@ -522,16 +539,19 @@ function OngletSociete({
 
   const enregistrer = useMutation({
     mutationFn: async () => {
+      // Figé, le matricule part tel qu'il est en base : il ne peut plus faire
+      // refuser le reste de la fiche (recette du 11 novembre 2026, 5.1).
+      const legalId = matriculeFige ? (client.legalId ?? "") : mf.trim();
       const societeChange =
         nom.trim() !== client.name ||
-        mf.trim().toUpperCase() !== (client.legalId ?? "").toUpperCase() ||
+        legalId.toUpperCase() !== (client.legalId ?? "").toUpperCase() ||
         (adresse.trim() || null) !== (etat?.adresse ?? null);
       if (societeChange) {
         await office().identity.modifierDossier({
           cabinetId: org.id,
           pmeId: client.tenantId,
           nom: nom.trim(),
-          legalId: mf.trim(),
+          legalId,
           adresse: adresse.trim() || null,
         });
       }
@@ -561,6 +581,9 @@ function OngletSociete({
     },
     onSuccess: async (change) => {
       setErreur(null);
+      // Le retour se dit dans la fiche, à côté du bouton : l'annonce de la page
+      // passe sous le tiroir et ne se voyait pas (recette du 11 novembre).
+      setFait(change ? t("cab.cli.enregistre") : t("cab.cli.rien.change"));
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["fiche", client.tenantId] }),
         qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
@@ -568,7 +591,10 @@ function OngletSociete({
       ]);
       annoncer(change ? t("cab.cli.enregistre") : t("cab.cli.rien.change"));
     },
-    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
+    onError: (e: unknown) => {
+      setFait(null);
+      setErreur(texteDeLErreur(e, OU, t("common.error")));
+    },
   });
 
   const libelleForme = (axe: "forme" | "mode", code: string) => {
@@ -597,9 +623,13 @@ function OngletSociete({
             required
             value={mf}
             onChange={(e) => setMf(e.target.value)}
-            className={cn(CHAMP, "num")}
+            disabled={matriculeFige}
+            aria-describedby="fiche-mf-aide"
+            className={cn(CHAMP, "num", matriculeFige && "cursor-not-allowed opacity-60")}
           />
-          <span className={AIDE}>{t("cab.cli.champ.mf.fige")}</span>
+          <span id="fiche-mf-aide" className={AIDE}>
+            {t(fige.data ? "cab.cli.champ.mf.figeDepuis" : "cab.cli.champ.mf.fige")}
+          </span>
         </label>
         <label className="block sm:col-span-2">
           <span className={ETIQUETTE}>{t("cab.cli.champ.adresse")}</span>
@@ -679,6 +709,7 @@ function OngletSociete({
       </fieldset>
       <p className="text-[12px] leading-[1.5] text-muted-foreground">{t("cab.cli.societe.note")}</p>
       <Retour ok={false} texte={erreur} />
+      <Retour ok texte={fait} />
       {expert ? (
         <button
           type="submit"

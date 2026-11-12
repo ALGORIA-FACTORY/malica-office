@@ -48,6 +48,7 @@ import {
   type LigneClient,
 } from "@/lib/etat-des-clients";
 import { montant } from "@/lib/lisible";
+import { useNotesDHonoraires } from "@/lib/notes-d-honoraires";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary } from "@malica/socle/ports/repositories";
@@ -114,7 +115,12 @@ function CabinetClients() {
   const { org } = useCabinet();
   const recherche = Route.useSearch();
   const navigate = useNavigate({ from: "/cabinet/clients" });
-  const vue: Vue = recherche.vue === "facturation" ? "facturation" : "clients";
+  // Les notes d'honoraires s'allument à la tour (éteintes le 12 novembre 2026) :
+  // sans elles, la vue Facturation ne porte que la facture de Malica — et rien
+  // du tout dans l'application installée, où elle disparaît donc.
+  const notes = useNotesDHonoraires();
+  const aUneFacturation = notes.ouvertes || FacturesMalica !== null;
+  const vue: Vue = recherche.vue === "facturation" && aUneFacturation ? "facturation" : "clients";
 
   const acces = useMonAcces(org.id);
   const expert = acces.data?.role === "expert";
@@ -180,7 +186,8 @@ function CabinetClients() {
   }, [actifs, etats.data, mandats.data, fiches]);
 
   const collabDe = useMemo(() => {
-    const parUser = new Map((membres.data ?? []).map((m) => [m.userId, m.email]));
+    // Le collaborateur se nomme ; son adresse seulement à défaut (4.4).
+    const parUser = new Map((membres.data ?? []).map((m) => [m.userId, m.nom ?? m.email]));
     const carte = new Map<string, string>();
     for (const a of (affectations.data ?? []).filter((x) => x.active)) {
       const email = parUser.get(a.collaboratorId);
@@ -286,7 +293,10 @@ function CabinetClients() {
       ) : (
         <>
           {/* ---- les deux vues */}
-          <div role="tablist" className="flex gap-1 border-b border-border">
+          <div
+            role="tablist"
+            className={cn("flex gap-1 border-b border-border", !aUneFacturation && "hidden")}
+          >
             {(["clients", "facturation"] as const).map((v) => (
               <button
                 key={v}
@@ -392,7 +402,7 @@ function CabinetClients() {
             </div>
           ) : (
             <div className="cab-entre space-y-8">
-              <HonorairesDeLaComptabilite />
+              {notes.ouvertes ? <HonorairesDeLaComptabilite /> : null}
               {FacturesMalica ? (
                 <section className="space-y-2">
                   <h2 className="text-[17px] font-semibold">{t("cab.cli.malica.titre")}</h2>
@@ -653,12 +663,18 @@ function Ligne({
         <span className="num block text-[11px] text-muted-foreground">
           {client.legalId ?? "—"}
           {client.aTraiter ? (
-            <span className="ms-2 text-marigold">
+            <span className="text-marigold">
+              {/* Un séparateur écrit, pas une marge : lu ou copié, le compte
+                  se collait au matricule (« …/0001 à superviser »). */}
+              {" · "}
               {t("cab.cli.a.superviser", { count: client.aTraiter })}
             </span>
           ) : null}
           {client.engagementStatus === "propose" ? (
-            <span className="ms-2 text-[#3d5a99]">{t("cab.cli.mandat.demande")}</span>
+            <span className="text-[#3d5a99]">
+              {" · "}
+              {t("cab.cli.mandat.demande")}
+            </span>
           ) : null}
         </span>
       </span>

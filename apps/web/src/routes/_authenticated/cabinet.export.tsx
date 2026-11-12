@@ -1,5 +1,5 @@
 /**
- * L'export FEC et CSV du cabinet — la sortie de données, sans verrou.
+ * Les exports des écritures du cabinet — la sortie de données, sans verrou.
  *
  * ============================================================== POURQUOI
  *
@@ -30,16 +30,17 @@ import type { ExportGenere, ExportRecent, FormatExport } from "@malica/socle/por
 export const Route = createFileRoute("/_authenticated/cabinet/export")({
   head: () => ({
     meta: [
-      { title: "Export FEC et CSV — Malica Office" },
+      { title: "Exports des écritures — Malica Office" },
       {
         name: "description",
         content:
           "Les écritures comptabilisées de vos mandats, au format légal ou tabulé, horodatées avec leur pack de rattachement.",
       },
-      { property: "og:title", content: "Export FEC et CSV — Malica Office" },
+      { property: "og:title", content: "Exports des écritures — Malica Office" },
       {
         property: "og:description",
-        content: "Sortie de données de la comptabilité : FEC, CSV des écritures, CSV du plan.",
+        content:
+          "Sortie de données de la comptabilité : écritures à 18 colonnes, CSV des écritures, CSV du plan.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

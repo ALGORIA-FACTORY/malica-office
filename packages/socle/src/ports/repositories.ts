@@ -1,3 +1,4 @@
+import type { FactureOuverte } from "../engines/banque/reglement-de-ligne.ts";
 import type { QualificationDeRetenue, TauxDeRetenue } from "../use-cases/retenue-au-reglement.ts";
 /**
  * Ports du domaine. Les écrans ne connaissent que ce vocabulaire :
@@ -56,6 +57,8 @@ export interface NewOrganization {
   currency: string;
   validationMode?: ValidationMode;
   defaultEntityName?: string;
+  /** L'adresse du siège, quand on la donne à la création. */
+  adresse?: string | null;
 }
 
 /** Un mandat proposé, vu depuis la PME qui doit y répondre. */
@@ -207,6 +210,8 @@ export interface IdentityRepository {
    */
   etablirFiche(input: NouvelleFiche): Promise<{ id: string }>;
   /** La comptabilité corrige le nom, le matricule (avant toute pièce) ou l'adresse. */
+  /** Le matricule de ce dossier est-il figé (une pièce est déjà reçue) ? */
+  matriculeFige(cabinetId: string, pmeId: string): Promise<boolean>;
   modifierDossier(input: {
     cabinetId: string;
     pmeId: string;
@@ -2409,6 +2414,26 @@ export interface StatistiquesCabinet {
   };
 }
 
+export interface ResultatsDeRecherche {
+  pieces: Array<{
+    pieceId: string;
+    tenantId: string;
+    client: string | null;
+    emetteur: string | null;
+    reference: string | null;
+    montant: string | null;
+  }>;
+  ecritures: Array<{
+    ecritureId: string;
+    pieceId: string | null;
+    tenantId: string;
+    client: string | null;
+    libelle: string | null;
+    compte: string | null;
+    dateEcriture: string;
+  }>;
+}
+
 export interface SupervisionRepository {
   /** Bibliothèque des seules pièces transmises d'un mandat actif et affecté. */
   documents(
@@ -2435,9 +2460,16 @@ export interface SupervisionRepository {
   ): Promise<
     Array<{ id: string; action: string; at: string; objet: string | null; objetId: string | null }>
   >;
+  /** Les pièces de ce dossier retournées au client entre deux jours inclus, selon le journal. */
+  piecesRetourneesEntre(tenantId: string, du: string, au: string): Promise<number>;
   /** Organisations cabinet dont l'utilisateur est membre. */
   listMyCabinets(): Promise<Organization[]>;
   listClients(cabinetTenantId: string): Promise<ClientSummary[]>;
+  /**
+   * La recherche ⌘K du cabinet : pièces (n°, émetteur, montant) et écritures
+   * (compte, libellé) de ses mandats visibles, huit au plus de chaque.
+   */
+  chercher(cabinetTenantId: string, texte: string): Promise<ResultatsDeRecherche>;
   /** File priorisée : corrigée, reçue, vue d'abord ; retournée ; prise en charge. */
   queue(cabinetTenantId: string, tenantId?: string): Promise<QueueItem[]>;
   motifs(locale: string, usage?: "retour" | "delettrage"): Promise<RejetMotif[]>;
@@ -2766,7 +2798,7 @@ export interface StockDepreciationRow {
 }
 
 export interface StocksRepository {
-  categories(packVersionId: string): Promise<StockCategory[]>;
+  categories(packVersionId: string, locale?: string): Promise<StockCategory[]>;
   listItems(tenantId: string): Promise<StockItem[]>;
   createItem(input: NewStockItem): Promise<string>;
   updateItem(input: {
@@ -2921,6 +2953,8 @@ export interface BanqueRepository {
   /** Journal d'audit des gestes bancaires du tenant. */
   audit(tenantId: string): Promise<AuditEntry[]>;
   setLineStatus(ligneId: string, status: "ouverte" | "rapprochee" | "ignoree"): Promise<void>;
+  /** Les factures inscrites dont le règlement reste à inscrire, ce qu'une ligne peut éteindre. */
+  facturesOuvertes(tenantId: string): Promise<FactureOuverte[]>;
 }
 
 // ------------------------------------------------------------- collaboration
@@ -2949,6 +2983,8 @@ export interface CabinetMember {
   userId: string;
   role: string;
   email: string;
+  /** Le nom que la personne a donné ; `null` sans nom, et l'écran montre l'adresse. */
+  nom: string | null;
 }
 
 /** Affectation d'un dossier client à un collaborateur. Rien ne s'efface (R7). */
@@ -3836,6 +3872,13 @@ export interface SyntheseHonoraires {
 }
 
 export interface HonorairesRepository {
+  /**
+   * Les notes d'honoraires sont-elles allumées à la tour ? Éteintes, l'écran
+   * ne montre ni facture ni trésorerie d'honoraires, et le serveur refuse de
+   * créer, d'émettre ou d'encaisser (`refus.honoraires.notes_eteintes`). Le
+   * mandat et son forfait ne s'éteignent pas.
+   */
+  notesOuvertes(): Promise<boolean>;
   mandats(cabinetTenantId: string): Promise<MandatHonoraires[]>;
   /** Clôt le mandat ouvert du client, s'il existe, et en ouvre un autre. */
   definirMandat(input: {
@@ -4703,6 +4746,20 @@ export interface AccesTotalEnVigueur {
 
 export type EtatFacturationAuto = Record<PerimetreDeFacturation, EtatDuPerimetreDeFacturation>;
 
+/** Une fonction du produit que la tour allume ou éteint (`plateforme.reglages_fonctions`). */
+export type FonctionDuProduit = "notes_honoraires";
+
+/** La décision en vigueur d'une fonction : allumée ou éteinte, pourquoi, depuis quand, par qui. */
+export interface EtatDUneFonction {
+  actif: boolean;
+  motif: string;
+  decide_le: string;
+  decide_par_email: string | null;
+  decide_par_nom: string | null;
+}
+
+export type EtatDesFonctions = Partial<Record<FonctionDuProduit, EtatDUneFonction>>;
+
 /** Un compte de service (le relecteur de nuit) : son état en vigueur et son nom. */
 export interface CompteDeService {
   code: string;
@@ -5046,6 +5103,14 @@ export interface TourRepository {
     rattrapageMois: number,
     motif: string,
   ): Promise<unknown>;
+  /** Les fonctions du produit que la tour tient : pour chacune, la décision en vigueur. */
+  fonctions(): Promise<EtatDesFonctions>;
+  /** La tour allume ou éteint une fonction : daté, motivé, en ajout seul. */
+  reglerFonction(
+    fonction: FonctionDuProduit,
+    actif: boolean,
+    motif: string,
+  ): Promise<EtatDUneFonction>;
   /** Le calendrier d'une juridiction : règle de report, jours fériés, reports publiés. */
   calendrier(juridiction: string): Promise<CalendrierDeLaJuridiction>;
   poserJourFerie(input: {

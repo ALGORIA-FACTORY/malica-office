@@ -96,3 +96,39 @@ export function dernierRetourParPiece<T extends { createdAt: string }>(
   }
   return [...parPiece.values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
+
+/** Un fait du journal de la pièce, tel que la comptabilité le lit. */
+interface FaitDeLaPiece {
+  id: string;
+  action: string;
+  at: string;
+  payload: unknown;
+}
+
+/**
+ * Ce que le client a répondu au DERNIER retour de la comptabilité, du plus
+ * récent au plus ancien (recette du 11 novembre 2026).
+ *
+ * La réponse partait — un fait au journal, une alerte — mais l'écran de la
+ * pièce ne la montrait pas : la comptabilité devait la trouver dans ses
+ * alertes. Elle se lit ici dans le journal déjà chargé, sans autre requête.
+ * Une réponse d'un siège à son propriétaire (`chez`) n'est pas adressée à la
+ * comptabilité ; une réponse à un retour plus ancien ne se répète pas.
+ */
+export function reponsesAuDernierRetour(
+  faits: readonly FaitDeLaPiece[],
+): Array<{ id: string; texte: string; le: string }> {
+  const dernierRetour = faits
+    .filter((f) => f.action === "piece.retournee")
+    .reduce<number | null>((t, f) => Math.max(t ?? 0, Date.parse(f.at)), null);
+  return faits
+    .flatMap((f) => {
+      if (f.action !== "piece.reponse_client") return [];
+      const p = (f.payload ?? {}) as { texte?: unknown; chez?: unknown };
+      if (typeof p.texte !== "string" || p.texte.trim() === "" || p.chez === "proprietaire")
+        return [];
+      if (dernierRetour !== null && Date.parse(f.at) < dernierRetour) return [];
+      return [{ id: f.id, texte: p.texte, le: f.at }];
+    })
+    .sort((a, b) => Date.parse(b.le) - Date.parse(a.le));
+}

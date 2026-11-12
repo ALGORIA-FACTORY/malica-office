@@ -31,7 +31,9 @@ vi.mock("@/verticals/malica-office/composition", () => ({
       reglagesCabinet: api.lire,
       definirReglagesCabinet: api.ecrire,
       plan: async () => [],
+      fuseauDuCabinet: async () => ({ regle: false, fuseau: null, defaut: "Africa/Tunis" }),
     },
+    acces: { monAcces: async () => ({ role: "expert" }) },
     referential: { activePack: async () => ({ version: "test" }) },
     collab: { members: async () => [], invitations: async () => [] },
   }),
@@ -117,5 +119,38 @@ describe("modifier volontairement les réglages", () => {
       screen.getByRole("button", { name: "cab.settings.enregistrer" }).matches(":disabled"),
     ).toBe(true);
     expect(api.ecrire).not.toHaveBeenCalled();
+  });
+});
+
+describe("une valeur hors bornes dit sa borne (recette du 11 novembre 2026, 5.2)", () => {
+  it("500 % pour un seuil : le bouton est gris ET la borne se dit", async () => {
+    monter();
+    await seuil();
+    fireEvent.click(screen.getByRole("button", { name: "relation.modifier" }));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "cab.settings.seuilLot" }), {
+      target: { value: "500" },
+    });
+    expect(
+      screen.getByRole("button", { name: "cab.settings.enregistrer" }).matches(":disabled"),
+    ).toBe(true);
+    expect(screen.getByRole("alert").textContent).toContain("cab.settings.borne.pourcentage");
+  });
+
+  it("une capacité de zéro dit qu'il faut au moins 1", async () => {
+    monter();
+    await seuil();
+    fireEvent.click(screen.getByRole("button", { name: "relation.modifier" }));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "cab.settings.capacite" }), {
+      target: { value: "0" },
+    });
+    expect(screen.getByRole("alert").textContent).toContain("cab.settings.borne.capacite");
+  });
+
+  it("un seul bouton « Enregistrer les réglages » sur la page", async () => {
+    monter();
+    await seuil();
+    await screen.findByText("cab.settings.fuseau.titre");
+    fireEvent.click(screen.getByRole("button", { name: "relation.modifier" }));
+    expect(screen.getAllByRole("button", { name: "cab.settings.enregistrer" })).toHaveLength(1);
   });
 });

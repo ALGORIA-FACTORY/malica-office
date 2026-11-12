@@ -42,6 +42,7 @@ import { COMMERCE } from "@/capabilities/coque";
 import { useI18n } from "@/i18n";
 import { nombre } from "@/lib/forfait";
 import { jourOuInstant, montant, montantSigne } from "@/lib/lisible";
+import { nomPourSaluer } from "@/lib/nom-de-la-personne";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
@@ -213,11 +214,16 @@ function PmeHome() {
    * chargement montrerait l'arrivée à un dossier qui en a déjà cent.
    */
   const dossierNeuf = !a.enCours && a.jamaisRienDepose;
+  // L'arrivée fait confirmer le matricule : c'est le geste du propriétaire
+  // principal. Un co-propriétaire invité ne reconfirme pas un matricule que
+  // le titulaire a déjà vérifié (recette du 11 novembre 2026, 4.3).
+  const titulaire = pme.forfait.ligne?.titulaire === true;
   useEffect(() => {
     // `replace` : revenir depuis l'accueil de bienvenue ne doit pas retomber
     // sur l'accueil qui renvoie aussitôt à la bienvenue.
-    if (dossierNeuf && !bienvenueDejaVue()) void navigate({ to: "/pme/bienvenue", replace: true });
-  }, [dossierNeuf, navigate]);
+    if (dossierNeuf && titulaire && !bienvenueDejaVue())
+      void navigate({ to: "/pme/bienvenue", replace: true });
+  }, [dossierNeuf, titulaire, navigate]);
 
   // Le prénom de la personne, pour le salut ; écrit dans les réglages.
   const profil = useQuery({
@@ -290,7 +296,9 @@ function PmeHome() {
    * 19 octobre 2026 : `identity.profiles.prenom`). Sans prénom, le salut nu —
    * jamais un prénom deviné depuis l'adresse.
    */
-  const prenom = profil.data?.prenom ?? null;
+  // Le prénom écrit dans les Réglages ; à défaut, le nom donné à l'inscription
+  // (« Bonsoir. » sans nom, recette du 11 novembre 2026, 4.4).
+  const prenom = nomPourSaluer(profil.data);
   const salut = prenom
     ? t(
         heure < 12

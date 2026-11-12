@@ -12,6 +12,9 @@
 
 import { createHash } from "node:crypto";
 
+import type { FactureOuverte } from "@malica/socle/engines/banque/reglement-de-ligne";
+import { estUnSensDeFacture } from "@malica/socle/sens-de-la-piece";
+
 import type { Requete } from "../db.ts";
 import { dec } from "./decimal.ts";
 
@@ -247,6 +250,64 @@ export const banque = {
       motifId: (r["motif_id"] as string | null) ?? null,
       payload: r["payload"],
     }));
+  },
+
+  /**
+   * Les factures inscrites du dossier dont le règlement n'est pas entièrement
+   * inscrit — ce qu'une ligne de relevé peut éteindre (recette du 11 novembre
+   * 2026). Le reste dû est le total de l'écriture de la facture moins ce que
+   * ses règlements vivants éteignent (`app.reglements_vivants`, la règle des
+   * échéances). Lu sous l'identité de la personne : ses droits, rien de plus.
+   */
+  async facturesOuvertes(db: Requete, tenantId: string): Promise<FactureOuverte[]> {
+    const { rows } = await db.query(
+      `select p.id as piece_id, p.document_kind, e.date_ecriture::text as date,
+              (t.total - coalesce(r.eteint, 0))::text as reste,
+              -- Le compte du tiers que l'écriture de la facture a crédité (achat)
+              -- ou débité (vente) : celui que son règlement solde. Vide s'il
+              -- n'est pas univoque — alors rien ne se propose.
+              nullif(app.compte_du_tiers_inscrit(p.id, p.document_kind, t.total), '') as compte_tiers,
+              coalesce(app.emetteur_dit(p.id), x.payload ->> 'issuer') as tiers,
+              (select v.valeur
+                 from jsonb_each_text(coalesce(x.payload -> 'references', '{}'::jsonb)) as v(cle, valeur)
+                where length(btrim(v.valeur)) > 0
+                order by (v.cle ~* 'invoice|facture|numero|number') desc, v.cle
+                limit 1) as reference
+         from ecritures_v e
+         join pieces_v p on p.id = app.version_courante(e.piece_id)
+         cross join lateral (
+           select sum(l.debit) as total from ecriture_lignes_v l where l.ecriture_id = e.id
+         ) t
+         left join lateral (
+           select sum(v.eteint_mineur / power(10, d.exposant)) as eteint
+             from app.reglements_vivants(array(select app.versions_de_la_piece(p.id))) v
+             join ref.devises d on d.code = e.devise
+         ) r on true
+         left join lateral (
+           select payload from extractions_v x2 where x2.piece_id = p.id
+            order by x2.created_at desc limit 1
+         ) x on true
+        where e.tenant_id = $1 and e.nature = 'piece' and e.status = 'booked'
+          and e.reverses_id is null and app.ecriture_vivante(e.id)
+          and t.total - coalesce(r.eteint, 0) > 0
+        order by e.date_ecriture, p.id`,
+      [tenantId],
+    );
+    return (rows as Record<string, unknown>[]).flatMap((r) => {
+      const sens = r["document_kind"] as string | null;
+      if (!estUnSensDeFacture(sens)) return [];
+      return [
+        {
+          pieceId: r["piece_id"] as string,
+          sens,
+          reste: dec(r["reste"]),
+          compteTiers: (r["compte_tiers"] as string | null) ?? null,
+          reference: (r["reference"] as string | null) ?? null,
+          tiers: (r["tiers"] as string | null) ?? null,
+          date: r["date"] as string,
+        },
+      ];
+    });
   },
 
   async setLineStatus(db: Requete, ligneId: string, status: string): Promise<void> {

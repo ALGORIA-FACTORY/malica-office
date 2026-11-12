@@ -35,6 +35,7 @@ import { visibiliteALaCapture } from "@/lib/visibilite-a-la-capture";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
 import { vidage } from "@/lib/hors-ligne";
 import { FilePleine } from "@/lib/hors-ligne/vidage";
+import { nomDeLaPersonne } from "@/lib/nom-de-la-personne";
 import { office } from "@/verticals/malica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { etiqueterLeDossier } from "@/lib/telemetrie";
@@ -624,7 +625,16 @@ function PmeLayout() {
    * pour les quinze écrans.
    */
   const { user } = useRouteContext({ from: "/_authenticated" });
-  const initiale = (user.email.trim().charAt(0) || "·").toLocaleUpperCase(locale);
+  // Le nom donné à l'inscription ou dans les Réglages, quand il existe : la
+  // pastille montrait l'initiale de l'adresse (« R » pour recette-…, 4.4).
+  const profil = useQuery({
+    queryKey: ["mon-profil"],
+    queryFn: () => office().identity.monProfil(),
+    staleTime: 10 * 60 * 1000,
+  });
+  const initiale = (
+    (nomDeLaPersonne(profil.data) ?? user.email).trim().charAt(0) || "·"
+  ).toLocaleUpperCase(locale);
 
   /*
    * LA CLOCHE (planche 12, 7 novembre 2026) : les alertes à traiter de TOUTES

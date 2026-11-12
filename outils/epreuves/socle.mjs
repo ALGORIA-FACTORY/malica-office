@@ -31,6 +31,9 @@
  * joignable depuis Internet, on ne laisse pas un mot de passe que le dépôt
  * publie.
  */
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
 const MDP_PAR_DEFAUT = "EpreuveMalica2026!";
 export const MDP_EPREUVE = process.env["MALICA_MDP_EPREUVE"] ?? MDP_PAR_DEFAUT;
 
@@ -62,6 +65,12 @@ export const DIRIGEANT_EPREUVE = {
 /** Sa PME. Matricule volontairement impossible : sept neuf, puis E/P. */
 export const PME_EPREUVE = { name: "ÉPREUVE ATELIER SARL", legalId: "9999999E/A/P/000" };
 
+/**
+ * L'opérateur d'épreuve : le compte qui règle la tour pendant une épreuve.
+ * Opérateur, il ne le devient que dans la base (`outils/operateur-plateforme.mjs`).
+ */
+const OPERATEUR_EPREUVE = { email: "epreuve.tour@malica.local", motDePasse: MDP_EPREUVE };
+
 /** Les adresses qui ne quittent pas la machine ou le réseau local. */
 const PRIVEE = /^(localhost$|127\.|::1$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
 
@@ -82,6 +91,53 @@ export function tolererLeCertificatLocal(base) {
   if (!PRIVEE.test(new URL(base).hostname)) return false;
   process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   return true;
+}
+
+/** Vrai pour une instance du poste ou de la CI : une adresse privée. */
+export function estUneInstanceLocale(base) {
+  return PRIVEE.test(new URL(base).hostname);
+}
+
+/**
+ * Allume ou éteint les notes d'honoraires, par la voie normale : la tour.
+ *
+ * Les notes d'honoraires sont livrées ÉTEINTES (décision du dirigeant,
+ * 12 novembre 2026) ; les épreuves qui les jouent les allument dans leur
+ * préparation, comme le ferait un opérateur d'ALGORIA — par `tour.reglerFonction`,
+ * avec un motif, sous un compte opérateur. Ce compte ne devient opérateur que
+ * dans la base : l'outil existant le fait (`outils/operateur-plateforme.mjs`,
+ * qui lit `DATABASE_URL_ADMIN` ou `apps/api/.env`). Sur une instance dont la
+ * base n'est pas à portée (le staging, la production), rien ne s'allume : la
+ * fonction rend `false`, et l'épreuve le dit au lieu de forcer. Le compte
+ * opérateur d'épreuve ne se crée jamais sur un hôte public.
+ */
+export async function reglerLesNotesDHonoraires(base, actif) {
+  const tour = creerEpreuve(`la tour ${actif ? "allume" : "éteint"} les notes d'honoraires`, base);
+  await tour.inscrireOuConnecter(OPERATEUR_EPREUVE, "Opérateur d'épreuve");
+  if ((await tour.rpc("honoraires", "notesOuvertes")) === actif) return true;
+  if (await tour.rpcAttenduEnEchec("tour", "fonctions")) {
+    // Un opérateur au mot de passe publié par le dépôt ne se crée que sur une
+    // instance du poste ou de la CI — jamais sur un hôte joignable d'Internet.
+    if (!estUneInstanceLocale(tour.BASE)) return false;
+    const promu = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(new URL("../operateur-plateforme.mjs", import.meta.url)),
+        OPERATEUR_EPREUVE.email,
+      ],
+      { stdio: "inherit" },
+    );
+    if (promu.status !== 0) return false;
+  }
+  const refus = await tour.rpcAttenduEnEchec("tour", "reglerFonction", [
+    "notes_honoraires",
+    actif,
+    actif
+      ? "Épreuve : les notes d'honoraires s'allument le temps de les éprouver."
+      : "Épreuve : les notes d'honoraires reviennent à leur état livré, éteintes.",
+  ]);
+  if (refus) console.log(`  —     la tour n'a pas réglé l'interrupteur : ${refus.message}`);
+  return !refus;
 }
 
 export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://localhost:8080") {

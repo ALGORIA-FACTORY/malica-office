@@ -190,7 +190,8 @@ export function CarteDuRetour({
       {reponseEnvoyee ? (
         <ConfirmationSurPlace
           titre={t("envoi.reponse.fait", { qui })}
-          detail={t("envoi.reponse.detail", {
+          // La réponse ne renvoie pas la pièce : à qui peut la renvoyer, on le dit.
+          detail={t(renvoyer ? "envoi.reponse.reste" : "envoi.reponse.detail", {
             texte: reponseEnvoyee.texte,
             quand: momentDeLEnvoi(reponseEnvoyee.le, locale).quand,
           })}

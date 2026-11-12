@@ -13,6 +13,7 @@ const CLES_DES_SECTIONS = [
   "paiement",
   "emetteur",
   "facturation",
+  "fonctions",
   "relances",
   "calendrier",
   "licences",

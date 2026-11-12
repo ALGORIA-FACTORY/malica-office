@@ -151,6 +151,28 @@ describe("une pièce retournée ne bloque jamais", () => {
       expect(within(aide).getByText(new RegExp(`pme\\.retour\\.aide\\.${cle}`))).toBeTruthy();
   });
 
+  it("la réponse partie dit que la pièce reste là, à qui peut la renvoyer", async () => {
+    monter();
+    fireEvent.click(screen.getByRole("button", { name: "pme.retour.geste.repondre" }));
+    fireEvent.change(screen.getByPlaceholderText("pme.retour.reponse.champ"), {
+      target: { value: "Il arrive lundi." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "pme.retour.reponse.envoyer" }));
+    expect(await screen.findByText(/envoi\.reponse\.reste .*Il arrive lundi\./)).toBeTruthy();
+    // La réponse ne renvoie pas la pièce : « Renvoyer » reste offert.
+    expect(sorties()).toContain("pme.retour.renvoyer");
+  });
+
+  it("au siège, qui ne renvoie pas, la réponse partie ne parle pas de renvoi", async () => {
+    monter({}, { renvoyer: false, garder: false });
+    fireEvent.click(screen.getByRole("button", { name: "pme.retour.geste.repondre" }));
+    fireEvent.change(screen.getByPlaceholderText("pme.retour.reponse.champ"), {
+      target: { value: "Il arrive lundi." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "pme.retour.reponse.envoyer" }));
+    expect(await screen.findByText(/envoi\.reponse\.detail .*Il arrive lundi\./)).toBeTruthy();
+  });
+
   it("une sortie en cours éteint les autres : un seul geste à la fois", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>

@@ -241,17 +241,23 @@ function CabinetClient() {
               {client.name}
             </h1>
             <p className="num mt-3 text-[13px] text-background/70">
-              {t("cab.dos.sous", {
-                cloture: synthese.clotureConnue
-                  ? dateLisible(synthese.debutExercice)
-                  : t("cab.dos.cloture.inconnue"),
-                depuis: client.mandatDepuis
+              {(() => {
+                const depuis = client.mandatDepuis
                   ? dateLisible(client.mandatDepuis)
-                  : t("cab.dos.depuis.inconnu"),
-                pack: synthese.pack
+                  : t("cab.dos.depuis.inconnu");
+                const pack = synthese.pack
                   ? `${client.jurisdiction} ${synthese.pack.version}`
-                  : t("cab.dos.pack.inconnu"),
-              })}
+                  : t("cab.dos.pack.inconnu");
+                // Sans clôture connue, la phrase change : « Exercice au clôture
+                // non renseignée » ne se disait pas (recette du 11 novembre).
+                return synthese.clotureConnue
+                  ? t("cab.dos.sous", {
+                      cloture: dateLisible(synthese.debutExercice),
+                      depuis,
+                      pack,
+                    })
+                  : t("cab.dos.sous.sansCloture", { depuis, pack });
+              })()}
             </p>
           </div>
           <div className="flex flex-wrap items-end gap-2">

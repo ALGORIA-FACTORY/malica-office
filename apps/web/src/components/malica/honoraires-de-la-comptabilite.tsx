@@ -823,6 +823,10 @@ export function MandatDuClient({
   const { t, locale } = useI18n();
   const { org } = useCabinet();
   const today = new Date().toISOString().slice(0, 10);
+  // « Mandat enregistré » vit ici, pas dans le formulaire : enregistrer ouvre
+  // un mandat NOUVEAU, le formulaire renaît sur lui (sa clé), et le message
+  // mourait avec l'ancien — rien ne s'affichait (recette du 11 novembre 2026).
+  const [enregistre, setEnregistre] = useState(false);
   const mandats = useQuery({
     queryKey: ["cab-hono-mandats", org.id],
     queryFn: () => office().honoraires.mandats(org.id),
@@ -861,6 +865,8 @@ export function MandatDuClient({
       compteADate={compteADate}
       somme={somme}
       dansLaFiche
+      enregistre={enregistre}
+      setEnregistre={setEnregistre}
     />
   );
 }
@@ -873,7 +879,12 @@ function FormulaireMandat({
   compteADate,
   somme,
   dansLaFiche = false,
+  enregistre,
+  setEnregistre,
 }: {
+  /** Le retour d'enregistrement, tenu au-dessus du formulaire, qui renaît. */
+  enregistre: boolean;
+  setEnregistre: (v: boolean) => void;
   clientTenantId: string;
   clientName: string;
   mandat: MandatHonoraires | null;
@@ -896,7 +907,6 @@ function FormulaireMandat({
   const [nouvelle, setNouvelle] = useState("");
   const [confirmer, setConfirmer] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  const [enregistre, setEnregistre] = useState(false);
 
   const rafraichir = () => {
     void qc.invalidateQueries({ queryKey: ["cab-hono-mandats"] });
@@ -1216,7 +1226,7 @@ function FormulaireMandat({
           >
             {t("cab.hono.mandat.enregistrer")}
           </button>
-          <span className="text-[11px] text-background/60">
+          <span role={enregistre ? "status" : undefined} className="text-[11px] text-background/60">
             {enregistre ? t("cab.hono.mandat.enregistre") : t("cab.hono.mandat.note")}
           </span>
         </div>

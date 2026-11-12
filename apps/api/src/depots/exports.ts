@@ -9,8 +9,11 @@
  * numéro d'écriture, les libellés de journal et de compte. Ici on ne décide
  * rien : on met en forme, on mesure, on empreint, on journalise.
  *
- * Les trois formats sont des affaires de fichier, pas de droit : le FEC
- * aligne dix-huit colonnes séparées par des barres, les CSV portent une
+ * Les trois formats sont des affaires de fichier, pas de droit : le fichier
+ * des écritures aligne les dix-huit colonnes du FEC français, séparées par
+ * des barres — sans prétendre à sa conformité, que rien dans ce dépôt ne
+ * décrit ni n'atteste (recette du 11 novembre 2026 : l'écran disait « FEC ·
+ * format légal ») ; les CSV portent une
  * marque d'ordre d'octets pour qu'un tableur les ouvre en UTF-8. Les montants
  * sortent avec la précision du pack — jamais une décimale posée ici.
  *
@@ -69,6 +72,7 @@ export const COLONNES_CSV_ECRITURES = [
   "piece",
   "date_piece",
   "comptabilisee_le",
+  "validee_le",
 ] as const;
 
 /** Les colonnes du CSV du plan comptable. */
@@ -96,6 +100,12 @@ export interface LigneExport {
   taxCode: string | null;
   /** La date de SUPERVISION ; `null` tant que le cabinet n'a pas validé (ANO-007). */
   valideLe: string | null;
+  /**
+   * Le jour où l'écriture est entrée au journal. La colonne
+   * « comptabilisee_le » portait la date de supervision, vide pour une
+   * écriture forcée ou pas encore revue (recette du 11 novembre 2026).
+   */
+  comptabiliseeLe: string | null;
   devise: string;
   /**
    * Le compte auxiliaire du tiers — son matricule — et son nom, sur la seule
@@ -231,6 +241,7 @@ export function formaterCsvEcritures(lignes: LigneExport[], decimales: number): 
       l.devise,
       l.pieceRef ?? "",
       l.pieceDate,
+      l.comptabiliseeLe ?? "",
       l.valideLe ?? "",
     ]),
   );
@@ -297,6 +308,7 @@ function versLigne(r: Record<string, unknown>): LigneExport {
     credit: String(r["credit"] ?? "0"),
     taxCode: (r["tax_code"] as string | null) ?? null,
     valideLe: (r["valide_le"] as string | null) ?? null,
+    comptabiliseeLe: (r["comptabilisee_le"] as string | null) ?? null,
     devise: r["devise"] as string,
     tiersNum: (r["tiers_num"] as string | null) ?? null,
     tiersLib: (r["tiers_lib"] as string | null) ?? null,
@@ -323,7 +335,7 @@ async function lignesDe(
     `select client_tenant_id, client_nom, client_legal_id, ecriture_id, numero, journal,
             journal_libelle, date_ecriture, ordinal, compte, compte_libelle, piece_ref,
             piece_date, ecriture_libelle, ligne_libelle, debit, credit, tax_code, valide_le,
-            devise, tiers_num, tiers_lib
+            devise, tiers_num, tiers_lib, comptabilisee_le
        from public.export_lignes_lire($1, $2, $3, $4)`,
     [cabinetTenantId, clientTenantId, du, au],
   );
@@ -436,7 +448,7 @@ async function construire(
     return {
       contenu: formaterFec(lignes, ctx.decimales, ctx.deviseDuPack),
       lignes: lignes.length,
-      nomDeFichier: `${ctx.nomDuPerimetre}FEC${dateFec(au)}.txt`,
+      nomDeFichier: `ecritures-18-colonnes-${ctx.nomDuPerimetre}-${dateFec(au)}.txt`,
       typeMime: "text/plain;charset=utf-8",
       packId: ctx.packId,
     };

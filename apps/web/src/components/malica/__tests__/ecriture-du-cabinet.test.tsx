@@ -400,6 +400,20 @@ describe("la pièce côté comptable", () => {
     expect(api.valider).not.toHaveBeenCalled();
   });
 
+  it("un compte inconnu du plan éteint « Forcer l'écriture », et le bouton dit pourquoi", () => {
+    monter(PROPOSITION);
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.modifier" }));
+    saisir("pme.journal.account", "99999", 0);
+    const forcer = screen.getByRole("button", { name: "cab.ecriture.forcer" });
+    expect((forcer as HTMLButtonElement).disabled).toBe(true);
+    const raison = document.getElementById(forcer.getAttribute("aria-describedby") ?? "");
+    expect(raison?.textContent).toContain("refus.ecriture.compte_hors_plan");
+    expect(raison?.textContent).toContain("99999");
+    saisir("pme.journal.account", "622", 0);
+    expect((forcer as HTMLButtonElement).disabled).toBe(false);
+    expect(forcer.getAttribute("aria-describedby")).toBeNull();
+  });
+
   /*
    * Staging, 30 octobre 2026 : un lecteur d'écran lisait « Débit » sur chaque
    * ligne, sans dire laquelle. Chaque champ se nomme par son rôle et sa ligne.

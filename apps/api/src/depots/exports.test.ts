@@ -45,6 +45,7 @@ function ligne(partiel: Partial<LigneExport> = {}): LigneExport {
     credit: "0",
     taxCode: null,
     valideLe: "2026-03-06",
+    comptabiliseeLe: "2026-03-05",
     devise: DEVISE_DU_PACK,
     ...partiel,
   };
@@ -134,6 +135,21 @@ describe("le CSV des écritures", () => {
     const lignes = texte.trimEnd().split("\r\n");
     assert.equal(lignes[0], "\uFEFF" + COLONNES_CSV_ECRITURES.join(";"));
     assert.ok(lignes[1]!.includes('"a;b ""c"""'));
+  });
+});
+
+describe("le CSV dit chaque date sous son nom", () => {
+  it("« comptabilisee_le » est le jour de l'inscription, rempli même avant la revue", () => {
+    // Recette du 11 novembre 2026 : la colonne portait la date de supervision, vide.
+    const [entete, corps] = formaterCsvEcritures([ligne({ valideLe: null })], 3)
+      .replace("\uFEFF", "")
+      .trimEnd()
+      .split("\r\n");
+    const champs = Object.fromEntries(
+      entete!.split(";").map((c, i) => [c, corps!.split(";")[i]] as const),
+    );
+    assert.equal(champs["comptabilisee_le"], "2026-03-05");
+    assert.equal(champs["validee_le"], "");
   });
 });
 

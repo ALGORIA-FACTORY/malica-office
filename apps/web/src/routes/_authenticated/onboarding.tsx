@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_authenticated/onboarding")({
 });
 
 function Onboarding() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -49,7 +49,7 @@ function Onboarding() {
   const [name, setName] = useState("");
   const [legalId, setLegalId] = useState("");
   const [mode, setMode] = useState<ValidationMode>("mandate");
-  const [entityName, setEntityName] = useState("");
+  const [adresse, setAdresse] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
 
   // Les juridictions viennent du référentiel : une option s'affiche parce qu'un
@@ -84,7 +84,9 @@ function Onboarding() {
         // tenir une comptabilité tunisienne en euros.
         currency: devise,
         validationMode: mode,
-        defaultEntityName: entityName,
+        // L'établissement principal porte la raison sociale ; ce qu'on tape ici
+        // est l'adresse du siège, et elle va sur la société (4.2).
+        adresse: adresse.trim() || null,
       });
       await queryClient.invalidateQueries();
       await navigate({ to: "/office" });
@@ -148,7 +150,12 @@ function Onboarding() {
               </option>
               {(juridictions.data ?? []).map((j) => (
                 <option key={j.jurisdiction} value={j.jurisdiction}>
-                  {j.jurisdiction} — {j.currency}
+                  {/* Le pays et la monnaie en mots, dans la langue de la
+                      personne (Intl) : « TN — TND » était du jargon (4.1). */}
+                  {t("onboarding.jurisdiction.option", {
+                    pays: nomDuPays(j.jurisdiction, locale),
+                    devise: nomDeLaDevise(j.currency, locale),
+                  })}
                 </option>
               ))}
             </select>
@@ -182,12 +189,12 @@ function Onboarding() {
 
           <label className="block">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("onboarding.entity")}
+              {t("onboarding.adresse")}
             </span>
             <input
-              value={entityName}
-              onChange={(e) => setEntityName(e.target.value)}
-              placeholder={name}
+              value={adresse}
+              onChange={(e) => setAdresse(e.target.value)}
+              autoComplete="street-address"
               className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
             />
           </label>
@@ -230,4 +237,22 @@ function Onboarding() {
       </main>
     </div>
   );
+}
+
+/** Le nom du pays d'un code de juridiction, ou le code s'il n'en a pas. */
+function nomDuPays(code: string, locale: string): string {
+  try {
+    return new Intl.DisplayNames([locale], { type: "region" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+/** Le nom de la monnaie d'un code ISO, ou le code s'il n'en a pas. */
+function nomDeLaDevise(code: string, locale: string): string {
+  try {
+    return new Intl.DisplayNames([locale], { type: "currency" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
 }

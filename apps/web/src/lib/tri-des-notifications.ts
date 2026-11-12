@@ -143,3 +143,12 @@ export function compteurs(
     tout: ici.length,
   };
 }
+
+/**
+ * L'onglet sur lequel l'écran s'ouvre : ce qui attend un geste, s'il y en a ;
+ * sinon tout. L'écran s'ouvrait sur « À traiter » vide pendant que « Tout »
+ * comptait des alertes non lues (recette du 11 novembre 2026).
+ */
+export function ongletDOuverture(nombres: Record<Onglet, number>): Onglet {
+  return nombres.aTraiter > 0 || nombres.tout === 0 ? "aTraiter" : "tout";
+}

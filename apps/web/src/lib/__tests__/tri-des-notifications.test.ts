@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { compteurs, sourceDe, trier, type NotificationTriee } from "../tri-des-notifications";
+import {
+  compteurs,
+  ongletDOuverture,
+  sourceDe,
+  trier,
+  type NotificationTriee,
+} from "../tri-des-notifications";
 
 /*
  * Planche 2 (approuvée le 7 novembre 2026) : 108 cartes une par une
@@ -84,5 +90,26 @@ describe("le tri de l'écran des notifications", () => {
   it("les compteurs des onglets comptent le non lu de la société choisie", () => {
     expect(compteurs(boite, null)).toEqual({ aTraiter: 11, comptabilite: 11, malica: 1, tout: 12 });
     expect(compteurs(boite, "B")).toEqual({ aTraiter: 2, comptabilite: 2, malica: 0, tout: 2 });
+  });
+});
+
+describe("l'onglet sur lequel l'écran s'ouvre", () => {
+  const nombres = (aTraiter: number, tout: number) => ({
+    aTraiter,
+    comptabilite: 0,
+    malica: 0,
+    tout,
+  });
+
+  it("ce qui attend un geste d'abord", () => {
+    expect(ongletDOuverture(nombres(2, 5))).toBe("aTraiter");
+  });
+
+  it("rien à traiter mais des alertes non lues : « Tout », jamais un onglet vide", () => {
+    expect(ongletDOuverture(nombres(0, 3))).toBe("tout");
+  });
+
+  it("rien du tout : « À traiter », qui le dit", () => {
+    expect(ongletDOuverture(nombres(0, 0))).toBe("aTraiter");
   });
 });
