@@ -19,7 +19,8 @@
 --   3. le JOURNAL : chaque impression s'inscrit dans `audit.event_log`
 --      (qui, quoi, quand), par une porte (R6). La porte ne journalise que
 --      des pièces que l'appelant voit, et jamais une pièce de l'espace
---      privé.
+--      privé (`personnel`) ; une pièce gardée à la société (`entite`)
+--      s'imprime pour qui la voit.
 --
 --  REJEU (R11) : dates en littéral ; aucune horloge n'écrit dans `ref`.
 -- ======================================================================
@@ -201,7 +202,7 @@ grant execute on function plateforme.impression_regler(integer, bigint, integer,
  * Une pièce qu'il ne voit pas, ou une pièce de l'espace privé, fait refuser
  * l'impression entière — on n'imprime, et on ne journalise, que ce qu'on voit.
  */
-create function public.impression_journaliser(
+create or replace function public.impression_journaliser(
   p_pieces uuid[], p_portee text, p_pages integer, p_octets bigint)
 returns integer
 language plpgsql
@@ -222,7 +223,7 @@ begin
   end if;
   select count(*) into v_vues
     from capture.pieces p
-   where p.id = any(p_pieces) and p.vis = 'partage';
+   where p.id = any(p_pieces) and p.vis <> 'personnel';
   if v_vues <> (select count(distinct x) from unnest(p_pieces) as x) then
     raise exception 'refus.introuvable.piece' using errcode = '42501';
   end if;
@@ -236,7 +237,7 @@ begin
                             'pages', p_pages,
                             'octets', p_octets)
     from capture.pieces p
-   where p.id = any(p_pieces) and p.vis = 'partage'
+   where p.id = any(p_pieces) and p.vis <> 'personnel'
    group by p.tenant_id;
   get diagnostics v_n = row_count;
   return v_n;

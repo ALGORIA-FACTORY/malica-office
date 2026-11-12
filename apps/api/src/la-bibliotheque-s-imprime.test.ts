@@ -82,6 +82,8 @@ describe("la bibliothèque s'imprime", { skip: !CONFIGUREE }, () => {
   let dirigeant: Utilisateur;
   let expert: Utilisateur;
   let intrus: Utilisateur;
+  /** Un collaborateur de la société : il voit ses pièces, pas celles du dirigeant. */
+  let collaborateur: Utilisateur;
   let societe = "";
   let seconde = "";
   let cabinet = "";
@@ -91,6 +93,10 @@ describe("la bibliothèque s'imprime", { skip: !CONFIGUREE }, () => {
   let justificatif = "";
   let privee = "";
   let autre = "";
+  let gardee = "";
+  let saPiece = "";
+  let pieceDuPatron = "";
+  let rayons = "";
 
   const imprimer = (qui: Utilisateur, corps: Record<string, unknown>) =>
     fetch(`${base}/impressions`, {
@@ -132,12 +138,17 @@ describe("la bibliothèque s'imprime", { skip: !CONFIGUREE }, () => {
     arret = () => new Promise<void>((resoudre) => serveur.close(() => resoudre()));
 
     const comptes = await Promise.all(
-      ["dirigeant", "expert", "intrus"].map((r) =>
+      ["dirigeant", "expert", "intrus", "collaborateur"].map((r) =>
         creerCompte(`${r}-${marque}@essai.local`, "MotDePasseTresLong2026!"),
       ),
     );
     assert.ok(comptes.every(Boolean));
-    [dirigeant, expert, intrus] = comptes as [Utilisateur, Utilisateur, Utilisateur];
+    [dirigeant, expert, intrus, collaborateur] = comptes as [
+      Utilisateur,
+      Utilisateur,
+      Utilisateur,
+      Utilisateur,
+    ];
     const creer = (u: Utilisateur, kind: string, nom: string, legal: string | null) =>
       sousIdentite(u.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
@@ -168,6 +179,7 @@ describe("la bibliothèque s'imprime", { skip: !CONFIGUREE }, () => {
       octets: Buffer,
       lu: { issuer: string; numero: string; date: string } | null,
       parent: string | null = null,
+      auteur: string = dirigeant.id,
     ) => {
       const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces
@@ -179,7 +191,7 @@ describe("la bibliothèque s'imprime", { skip: !CONFIGUREE }, () => {
           octets === pdf ? "pdf" : "photo",
           vis,
           `${marque}-${Math.random()}`,
-          dirigeant.id,
+          auteur,
           type,
           parent,
           recueLe,
@@ -239,6 +251,39 @@ describe("la bibliothèque s'imprime", { skip: !CONFIGUREE }, () => {
       numero: "FA-77",
       date: "2026-11-06",
     });
+    // Gardée à la société, jamais transmise : elle est dans sa bibliothèque.
+    gardee = await ajouter(societe, "entite", "ticket_caisse", "2026-11-07T09:00:00Z", jpeg, null);
+    // Une société d'atelier (sans licence, donc sans borne de places) : le
+    // dirigeant et un collaborateur, chacun sa pièce gardée.
+    const { rows: atelier } = await admin.query<{ id: string }>(
+      `insert into identity.organizations (kind, name, jurisdiction, currency)
+       values ('pme', $1, 'TN', 'TND') returning id`,
+      [`Rayons ${marque}`],
+    );
+    rayons = atelier[0]!.id;
+    await admin.query(
+      `insert into identity.memberships (tenant_id, user_id, role)
+       values ($1, $2, 'collaborateur'), ($1, $3, 'dirigeant')`,
+      [rayons, collaborateur.id, dirigeant.id],
+    );
+    saPiece = await ajouter(
+      rayons,
+      "entite",
+      "ticket_caisse",
+      "2026-11-08T09:00:00Z",
+      jpeg,
+      null,
+      null,
+      collaborateur.id,
+    );
+    pieceDuPatron = await ajouter(
+      rayons,
+      "entite",
+      "ticket_caisse",
+      "2026-11-09T09:00:00Z",
+      jpeg,
+      null,
+    );
   });
 
   after(async () => {
@@ -253,7 +298,7 @@ describe("la bibliothèque s'imprime", { skip: !CONFIGUREE }, () => {
       await admin.query(
         `update identity.organizations set archived_at = now(), archived_reason = 'fixture de test automatisé'
           where id = any($1::uuid[])`,
-        [[societe, seconde, cabinet].filter(Boolean)],
+        [[societe, seconde, cabinet, rayons].filter(Boolean)],
       );
     } finally {
       await admin.end();
@@ -323,6 +368,32 @@ describe("la bibliothèque s'imprime", { skip: !CONFIGUREE }, () => {
     assert.equal((await imprimer(intrus, { pieces: [facture] })).status, 404);
     const sansSession = await fetch(`${base}/impressions`, { method: "POST" });
     assert.equal(sansSession.status, 401);
+  });
+
+  it("un collaborateur imprime ses pièces, pas celles du dirigeant", async () => {
+    const siennes = await imprimer(collaborateur, { pieces: [saPiece], portee: "piece" });
+    assert.equal(siennes.headers.get("content-type"), "application/pdf");
+    assert.equal((await lire(await siennes.arrayBuffer())).length, 3);
+    assert.equal((await imprimer(collaborateur, { pieces: [pieceDuPatron] })).status, 404);
+    assert.equal((await imprimer(collaborateur, { pieces: [saPiece, pieceDuPatron] })).status, 404);
+    // Le dirigeant, lui, imprime la pièce de son collaborateur.
+    const duDirigeant = await imprimer(dirigeant, { pieces: [saPiece], portee: "piece" });
+    assert.equal(duDirigeant.headers.get("content-type"), "application/pdf");
+    await duDirigeant.arrayBuffer();
+    const lignes = await journal(collaborateur.id);
+    assert.equal(lignes.length, 1, "seule l'impression permise s'inscrit");
+    assert.deepEqual(lignes[0]!.payload["pieces"], [saPiece]);
+  });
+
+  it("imprime une pièce gardée à la société, que la comptabilité ne voit pas", async () => {
+    const reponse = await imprimer(dirigeant, { pieces: [gardee], portee: "piece" });
+    assert.equal(reponse.headers.get("content-type"), "application/pdf");
+    await reponse.arrayBuffer();
+    assert.equal(
+      (await imprimer(expert, { pieces: [gardee], cabinetId: cabinet })).status,
+      404,
+      "non transmise, elle n'existe pas pour la comptabilité",
+    );
   });
 
   it("n'imprime jamais l'espace privé, même mêlé à des pièces de la société", async () => {

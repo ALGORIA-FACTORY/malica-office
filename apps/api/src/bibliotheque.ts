@@ -298,7 +298,8 @@ export interface SocieteAImprimer {
  * Sous un cabinet (`cabinetId`), c'est la MÊME lecture que l'archive : le
  * mandat, la garde de l'export, et les documents liés. Sans cabinet, ce sont
  * les pièces que la base rend à la personne (RLS) : les siennes, ou celles de
- * sa société. Dans les deux cas l'espace privé n'y entre jamais, et une pièce
+ * sa société, transmises ou gardées. Dans les deux cas l'espace privé
+ * (`personnel`) n'y entre jamais, et une pièce
  * demandée que la personne ne voit pas fait refuser l'impression entière.
  */
 export async function documentsAImprimer(
@@ -308,7 +309,7 @@ export async function documentsAImprimer(
 ): Promise<SocieteAImprimer[]> {
   Choix.parse(pieces);
   const { rows: vues } = await db.query<{ id: string; tenant_id: string }>(
-    `select id, tenant_id from pieces_v where id = any($1::uuid[]) and vis = 'partage'`,
+    `select id, tenant_id from pieces_v where id = any($1::uuid[]) and vis <> 'personnel'`,
     [pieces],
   );
   if (new Set(pieces).size !== vues.length)
@@ -331,7 +332,7 @@ export async function documentsAImprimer(
     else {
       const { rows } = await db.query<LigneDocument>(
         `${DOCUMENTS}
-        where p.tenant_id = $1 and p.vis = 'partage' and p.id = any($2::uuid[])
+        where p.tenant_id = $1 and p.vis <> 'personnel' and p.id = any($2::uuid[])
         order by p.created_at, p.id`,
         [s.id, choix, fuseau],
       );
