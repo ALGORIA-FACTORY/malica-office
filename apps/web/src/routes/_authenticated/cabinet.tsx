@@ -63,7 +63,8 @@ import { useNotificationsDuCabinet } from "@/hooks/use-notifications-du-cabinet"
 import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
-import { compteDuBadge } from "@/lib/lisible";
+import { compteDuBadge, montant } from "@/lib/lisible";
+import { plier } from "@/lib/mes-societes";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary, MonAcces, Organization } from "@malica/socle/ports/repositories";
@@ -417,6 +418,7 @@ function Coquille({
           ouvrirTiroir={() => setTiroir(true)}
           clients={clients.data ?? []}
           groupes={groupesDeRecherche}
+          cabinetId={org.id}
         />
         {dossierAffiche ? (
           <BandeauDossier
@@ -584,6 +586,7 @@ function Rail({
           </label>
           {recherche.trim() ? (
             <Resultats
+              cabinetId={org.id}
               recherche={recherche}
               clients={clients}
               groupes={groupes}
@@ -769,64 +772,134 @@ function Rail({
   );
 }
 
-/** Ce que « Tout chercher » trouve : des écrans, des clients. */
+/**
+ * Ce que « Tout chercher » trouve : des écrans, des clients, des pièces (n°,
+ * émetteur, montant) et des écritures (compte, libellé). Recette du
+ * 11 novembre 2026 : seuls les clients se trouvaient, et « Échéances » tapé
+ * avec un accent composé ne trouvait pas l'écran. Pièces et écritures sont
+ * lues par le serveur sous l'identité de qui cherche (`supervision.chercher`).
+ */
 function Resultats({
+  cabinetId,
   recherche,
   clients,
   groupes,
   onChoisi,
 }: {
+  cabinetId: string;
   recherche: string;
   clients: ClientSummary[];
   groupes: Groupe[];
   onChoisi: () => void;
 }) {
-  const { t } = useI18n();
-  const q = recherche.trim().toLocaleLowerCase();
-  const ecrans = groupes
-    .flatMap((g) => g.items)
-    .filter((e) => e.label.toLocaleLowerCase().includes(q));
-  const trouves = clients.filter((c) => c.name.toLocaleLowerCase().includes(q)).slice(0, 8);
-  if (ecrans.length === 0 && trouves.length === 0) {
+  const { t, locale } = useI18n();
+  const q = plier(recherche.trim());
+  const ecrans = groupes.flatMap((g) => g.items).filter((e) => plier(e.label).includes(q));
+  const trouves = clients.filter((c) => plier(c.name).includes(q)).slice(0, 8);
+  const texte = recherche.trim();
+  const serveur = useQuery({
+    queryKey: ["cab-recherche", cabinetId, texte],
+    queryFn: () => office().supervision.chercher(cabinetId, texte),
+    enabled: texte.length >= 2,
+    staleTime: 30_000,
+  });
+  const pieces = serveur.data?.pieces ?? [];
+  const ecritures = serveur.data?.ecritures ?? [];
+  const titre = (cle: MessageKey) => (
+    <p className="px-2.5 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      {t(cle)}
+    </p>
+  );
+  const lien = "block px-2.5 py-1.5 text-[12.5px] hover:bg-accent";
+  const detail = "num block text-[10.5px] text-muted-foreground";
+  if (ecrans.length + trouves.length + pieces.length + ecritures.length === 0) {
     return (
-      <p className="mt-1 px-2.5 py-2 text-[12px] text-muted-foreground">{t("cab.palette.none")}</p>
+      <p className="mt-1 px-2.5 py-2 text-[12px] text-muted-foreground">
+        {serveur.isFetching ? t("common.loading") : t("cab.palette.none")}
+      </p>
     );
   }
   return (
-    <div className="mt-1 border border-border bg-card">
+    <div className="mt-1 divide-y divide-border border border-border bg-card">
       {ecrans.length > 0 ? (
         <div className="py-1">
-          <p className="px-2.5 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            {t("cab.palette.screens")}
-          </p>
+          {titre("cab.palette.screens")}
           {ecrans.map((e) => (
-            <Link
-              key={e.to}
-              to={e.to}
-              onClick={onChoisi}
-              className="block px-2.5 py-1.5 text-[12.5px] hover:bg-accent"
-            >
+            <Link key={e.to} to={e.to} onClick={onChoisi} className={lien}>
               {e.label}
             </Link>
           ))}
         </div>
       ) : null}
       {trouves.length > 0 ? (
-        <div className="border-t border-border py-1">
-          <p className="px-2.5 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            {t("cab.palette.clients")}
-          </p>
+        <div className="py-1">
+          {titre("cab.palette.clients")}
           {trouves.map((c) => (
             <Link
               key={c.tenantId}
               to="/cabinet/dossier/$clientId"
               params={{ clientId: c.tenantId }}
               onClick={onChoisi}
-              className="block px-2.5 py-1.5 text-[12.5px] hover:bg-accent"
+              className={lien}
             >
               {c.name}
             </Link>
           ))}
+        </div>
+      ) : null}
+      {pieces.length > 0 ? (
+        <div className="py-1">
+          {titre("cab.palette.pieces")}
+          {pieces.map((p) => (
+            <Link
+              key={p.pieceId}
+              to="/cabinet/piece/$pieceId"
+              params={{ pieceId: p.pieceId }}
+              onClick={onChoisi}
+              className={lien}
+            >
+              {[p.emetteur, p.reference].filter(Boolean).join(" · ") || t("cab.review.document")}
+              <span className={detail}>
+                {[p.client, p.montant ? montant(p.montant, locale) : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            </Link>
+          ))}
+        </div>
+      ) : null}
+      {ecritures.length > 0 ? (
+        <div className="py-1">
+          {titre("cab.palette.ecritures")}
+          {ecritures.map((e) =>
+            e.pieceId ? (
+              <Link
+                key={e.ecritureId}
+                to="/cabinet/piece/$pieceId"
+                params={{ pieceId: e.pieceId }}
+                onClick={onChoisi}
+                className={lien}
+              >
+                {[e.compte, e.libelle].filter(Boolean).join(" · ")}
+                <span className={detail}>
+                  {[e.client, e.dateEcriture].filter(Boolean).join(" · ")}
+                </span>
+              </Link>
+            ) : (
+              <Link
+                key={e.ecritureId}
+                to="/cabinet/journal"
+                search={{ client: e.tenantId }}
+                onClick={onChoisi}
+                className={lien}
+              >
+                {[e.compte, e.libelle].filter(Boolean).join(" · ")}
+                <span className={detail}>
+                  {[e.client, e.dateEcriture].filter(Boolean).join(" · ")}
+                </span>
+              </Link>
+            ),
+          )}
         </div>
       ) : null}
     </div>
@@ -844,7 +917,9 @@ function BarreDuHaut({
   ouvrirTiroir,
   clients,
   groupes,
+  cabinetId,
 }: {
+  cabinetId: string;
   section: string;
   detail: string;
   nonLues: number;
@@ -922,6 +997,7 @@ function BarreDuHaut({
             />
             {recherche.trim() ? (
               <Resultats
+                cabinetId={cabinetId}
                 recherche={recherche}
                 clients={clients}
                 groupes={groupes}

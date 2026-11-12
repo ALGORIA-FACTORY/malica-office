@@ -352,6 +352,7 @@
   ],
   "supervision": [
     "auditForPiece",
+    "chercher",
     "controlesPiece",
     "documents",
     "documentsLies",

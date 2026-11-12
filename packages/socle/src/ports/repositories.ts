@@ -2410,6 +2410,26 @@ export interface StatistiquesCabinet {
   };
 }
 
+export interface ResultatsDeRecherche {
+  pieces: Array<{
+    pieceId: string;
+    tenantId: string;
+    client: string | null;
+    emetteur: string | null;
+    reference: string | null;
+    montant: string | null;
+  }>;
+  ecritures: Array<{
+    ecritureId: string;
+    pieceId: string | null;
+    tenantId: string;
+    client: string | null;
+    libelle: string | null;
+    compte: string | null;
+    dateEcriture: string;
+  }>;
+}
+
 export interface SupervisionRepository {
   /** Bibliothèque des seules pièces transmises d'un mandat actif et affecté. */
   documents(
@@ -2439,6 +2459,11 @@ export interface SupervisionRepository {
   /** Organisations cabinet dont l'utilisateur est membre. */
   listMyCabinets(): Promise<Organization[]>;
   listClients(cabinetTenantId: string): Promise<ClientSummary[]>;
+  /**
+   * La recherche ⌘K du cabinet : pièces (n°, émetteur, montant) et écritures
+   * (compte, libellé) de ses mandats visibles, huit au plus de chaque.
+   */
+  chercher(cabinetTenantId: string, texte: string): Promise<ResultatsDeRecherche>;
   /** File priorisée : corrigée, reçue, vue d'abord ; retournée ; prise en charge. */
   queue(cabinetTenantId: string, tenantId?: string): Promise<QueueItem[]>;
   motifs(locale: string, usage?: "retour" | "delettrage"): Promise<RejetMotif[]>;
