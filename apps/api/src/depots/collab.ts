@@ -78,7 +78,11 @@ export const collab = {
                        nullif(btrim(p.display_name), '')) as nom
          from cabinet_members_v m
          left join identity.profiles p on p.user_id = m.user_id
-        where m.tenant_id = $1`,
+        where m.tenant_id = $1
+          -- Le comptable interne ne voit que les membres de SA comptabilité :
+          -- le rôle comptable. Les autres membres de sa société restent au dirigeant.
+          and (m.role = 'comptable'
+               or m.tenant_id not in (select app.dossiers_du_comptable_interne()))`,
       [cabinetTenantId],
     );
     return (rows as Record<string, unknown>[]).map((m) => ({
@@ -494,6 +498,19 @@ export const collab = {
    * comptable, et y renvoie la pièce qu'il lui a retournée. La base choisit
    * le passage d'après les droits de l'appelant (`piece_envoyer`).
    */
+  // Le propriétaire retire l'affectation d'un comptable interne. L'historique reste (R7).
+  async retirerComptableInterne(
+    db: Requete,
+    tenantId: string,
+    comptableId: string,
+  ): Promise<{ retiree: boolean }> {
+    const { rows } = await db.query<{ r: { retiree: boolean } }>(
+      `select public.comptable_interne_retirer($1, $2) as r`,
+      [tenantId, comptableId],
+    );
+    return { retiree: Boolean(rows[0]?.r.retiree) };
+  },
+
   async envoyer(
     db: Requete,
     pieceId: string,

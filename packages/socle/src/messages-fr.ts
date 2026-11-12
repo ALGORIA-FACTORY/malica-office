@@ -340,6 +340,8 @@ export const fr = {
   "refus.licence.transmission":
     "Transmission suspendue : un paiement de votre abonnement est en retard.",
   "refus.licence.export": "Export suspendu : l'abonnement de ce dossier n'est pas à jour.",
+  "refus.journal.immuable":
+    "Une écriture du journal ne se réécrit ni ne s'efface : on inscrit un fait daté.",
   "refus.place.comptable_prise":
     "La place « Comptable interne » comprise dans l'offre est déjà prise ({places} au total).",
   "refus.invitation.choisir_la_comptabilite":
@@ -1546,6 +1548,10 @@ export const fr = {
   "cab.today.charge.pieces#other": "{count} pièces en attente",
   "cab.rail.role": "Comptabilité",
   "cab.rail.role.expert": "Responsable de la comptabilité",
+  "cab.rail.role.comptable": "Comptable interne",
+  "cab.societes.choisir": "Société",
+  "cab.cli.grise.externe":
+    "Réservé à la comptabilité externe : les honoraires et l'abonnement se gèrent avec elle.",
   "cab.rail.role.dirigeant": "Dirigeant",
   "cab.rail.role.collaborateur": "Collaborateur",
   "cab.rail.role.assistant": "Assistant",
