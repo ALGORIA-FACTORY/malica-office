@@ -246,6 +246,33 @@ describe("l'ancienne comptabilité garde son archive", { skip: !BASE_CONFIGUREE 
     assert.equal(rows[0]?.status, "supervisee");
   });
 
+  it("redemander un mandat ne fait pas sortir la société de sa Bibliothèque", async () => {
+    // Revue de #362 : `mandat_proposer` réutilise l'engagement terminé et le
+    // repasse à « proposé » ; l'archive ne dépend pas de ce statut.
+    const legalId = (
+      await s.admin.query<{ legal_id: string }>(
+        `select legal_id from identity.organizations where id = $1`,
+        [s.pme],
+      )
+    ).rows[0]!.legal_id;
+    await sousIdentiteDuServeur(s.gens.expert.id, (db) =>
+      identite.proposerMandat(db, s.cabinet, legalId),
+    );
+    const clients = await sousIdentiteDuServeur(s.gens.expert.id, (db) =>
+      supervision.listClients(db, s.cabinet),
+    );
+    const client = clients.find((c) => c.tenantId === s.pme);
+    assert.equal(client?.engagementStatus, "propose");
+    assert.equal(client?.archive, true);
+    const docs = await sousIdentiteDuServeur(s.gens.expert.id, (db) =>
+      documents(db, s.cabinet, s.pme, null),
+    );
+    assert.deepEqual(
+      docs.map((d) => d.id),
+      [traitee],
+    );
+  });
+
   it("ce que la comptabilité suivante inscrit ensuite lui reste fermé", async () => {
     const legalId = (
       await s.admin.query<{ legal_id: string }>(
@@ -256,9 +283,9 @@ describe("l'ancienne comptabilité garde son archive", { skip: !BASE_CONFIGUREE 
     await sousIdentiteDuServeur(confrere.id, (db) =>
       identite.proposerMandat(db, nouvelle, legalId),
     );
-    const [propose] = await sousIdentiteDuServeur(s.gens.amel.id, (db) =>
-      identite.mandatsProposes(db, s.pme),
-    );
+    const propose = (
+      await sousIdentiteDuServeur(s.gens.amel.id, (db) => identite.mandatsProposes(db, s.pme))
+    ).find((p) => p.cabinetTenantId === nouvelle);
     await sousIdentiteDuServeur(s.gens.amel.id, (db) =>
       identite.repondreAuMandat(db, propose!.id, true),
     );

@@ -145,8 +145,11 @@ export const supervision = {
                 -- Un mandat terminé garde le nom du client (ANO-013).
                 coalesce(o.name, app.nom_d_un_client_du_cabinet(e.pme_org_id)) as name,
                 o.legal_id, o.jurisdiction, o.currency, o.validation_mode,
-                -- Mandat terminé, travail fait : l'archive reste, en lecture seule (1.6).
-                e.status = 'termine'
+                -- Aucun mandat en vigueur, et du travail fait : l'archive reste, en
+                -- lecture seule (1.6). Elle vient des mandats clos
+                -- (app.mes_archives), jamais du statut de l'engagement, que
+                -- mandat_proposer repasse à « proposé » (revue de #362).
+                not app.engagement_en_vigueur(e.status, e.starts_on, e.ends_on)
                   and e.pme_org_id in (select a.pme from app.mes_archives() a
                                         where a.cabinet = e.cabinet_org_id) as archive
            from engagements_v e
