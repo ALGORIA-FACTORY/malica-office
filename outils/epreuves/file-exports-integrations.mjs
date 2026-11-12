@@ -470,6 +470,14 @@ const motif = motifs.find((m) => m.requiresNote) ?? motifs[0];
 
 /* ---- le client répond et renvoie ; le comptable réimpute, jamais ne modifie */
 {
+  // Tant que la pièce est retournée, l'alerte du retour attend un geste : non lue.
+  const pendante = (await e.rpc("collab", "notifications", [clients.map((c) => c.tenantId)])).find(
+    (n) => n.kind === "piece.retournee" && n.payload?.piece_id === pieceB.id,
+  );
+  e.verdict(
+    "une alerte de retour encore pendante reste non lue",
+    Boolean(pendante) && !pendante.readAt,
+  );
   await e.rpc("capture", "repondreAuCabinet", [pieceB.id, "Une charge de verrerie."]);
   await e.rpc("capture", "renvoyer", [pieceB.id]);
   const avant = (await e.rpc("office", "ecrituresForPiece", [pieceB.id])).length;
@@ -620,9 +628,11 @@ e.section("Notifications");
   const deLaPasse = (piece) =>
     notifs.filter((n) => n.payload?.piece_id === piece && n.createdAt >= DEBUT);
   const retournee = deLaPasse(pieceB.id).find((n) => n.kind === "piece.retournee");
+  // Renvoyée par le client, la pièce n'est plus retournée : l'alerte est
+  // tranchée, donc lue (recette du 11 novembre 2026, point 2.3).
   e.verdict(
-    "le retour a posé une notification, non lue, qui mène à la pièce",
-    Boolean(retournee) && !retournee.readAt,
+    "le retour a posé une notification qui mène à la pièce, lue une fois la pièce renvoyée",
+    Boolean(retournee) && retournee.payload?.piece_id === pieceB.id && Boolean(retournee.readAt),
   );
   // La prise en charge ne dérange pas le client : il lit « Prise en charge »
   // sur sa pièce, aucune notification ne l'appelle.
