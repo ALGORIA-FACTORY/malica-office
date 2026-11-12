@@ -1876,6 +1876,10 @@ export const en: Dict = {
   "cab.journal.piece.vers_mon_espace": "Document moved to My space.",
   "cab.journal.piece.demande_accordee": "Client request granted.",
   "cab.journal.piece.demande_refusee": "Client request declined.",
+  "cab.settings.borne.pourcentage": "{champ}: between 0 and 100%.",
+  "cab.settings.borne.capacite": "{champ}: a whole number, at least 1.",
+  "cab.settings.borne.montant": "{champ}: a positive amount, or empty.",
+  "cab.settings.fuseau.enregistrer": "Save the time zone",
   "cab.settings.fuseau.titre": "Accounting time zone",
   "cab.settings.fuseau.lede":
     "The day of the journal, the number of its exports and their comparison are read in this time zone.",

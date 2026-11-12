@@ -1947,6 +1947,10 @@ export const fr = {
   "cab.journal.piece.vers_mon_espace": "Pièce passée dans Mon espace.",
   "cab.journal.piece.demande_accordee": "Demande du client accordée.",
   "cab.journal.piece.demande_refusee": "Demande du client refusée.",
+  "cab.settings.borne.pourcentage": "{champ} : entre 0 et 100 %.",
+  "cab.settings.borne.capacite": "{champ} : un nombre entier, au moins 1.",
+  "cab.settings.borne.montant": "{champ} : un montant positif, ou vide.",
+  "cab.settings.fuseau.enregistrer": "Enregistrer le fuseau",
   "cab.settings.fuseau.titre": "Fuseau horaire de la comptabilité",
   "cab.settings.fuseau.lede":
     "Le jour du journal, le numéro de ses exports et leur comparaison se lisent dans ce fuseau.",

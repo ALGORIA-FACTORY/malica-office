@@ -1839,6 +1839,10 @@ export const ar: Dict = {
   "cab.journal.piece.vers_mon_espace": "نُقلت الوثيقة إلى مساحتي.",
   "cab.journal.piece.demande_accordee": "قُبل طلب الحريف.",
   "cab.journal.piece.demande_refusee": "رُفض طلب الحريف.",
+  "cab.settings.borne.pourcentage": "{champ}: بين 0 و100 %.",
+  "cab.settings.borne.capacite": "{champ}: عدد صحيح، 1 على الأقل.",
+  "cab.settings.borne.montant": "{champ}: مبلغ موجب، أو فارغ.",
+  "cab.settings.fuseau.enregistrer": "حفظ المنطقة الزمنية",
   "cab.settings.fuseau.titre": "المنطقة الزمنية للمحاسبة",
   "cab.settings.fuseau.lede":
     "يُقرأ يوم اليومية ورقم تصديراتها والمقارنة بينها في هذه المنطقة الزمنية.",

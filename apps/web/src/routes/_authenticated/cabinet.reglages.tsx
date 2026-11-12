@@ -299,12 +299,25 @@ function CabinetEtEquipe() {
     );
   }
   const courant = reglages.data;
+  // Chaque borne se dit, champ par champ : un bouton gris sans raison laissait
+  // la personne deviner (500 % pour un seuil, recette du 11 novembre 2026).
+  const pourcent = (v: string) => v.trim() !== "" && Number(v) >= 0 && Number(v) <= 100;
+  const bornes: string[] = [
+    ...(pourcent(seuilLot)
+      ? []
+      : [t("cab.settings.borne.pourcentage", { champ: t("cab.settings.seuilLot") })]),
+    ...(pourcent(seuilRevue)
+      ? []
+      : [t("cab.settings.borne.pourcentage", { champ: t("cab.settings.seuilRevue") })]),
+    ...(Number.isInteger(Number(capacite)) && Number(capacite) >= 1 && capacite.trim() !== ""
+      ? []
+      : [t("cab.settings.borne.capacite", { champ: t("cab.settings.capacite") })]),
+    ...(doubleValidation.trim() === "" || Number(doubleValidation) >= 0
+      ? []
+      : [t("cab.settings.borne.montant", { champ: t("cab.settings.doubleValidation") })]),
+  ];
   const seuilsValides =
-    Number.isFinite(Number(seuilLot)) &&
-    Number.isFinite(Number(seuilRevue)) &&
-    Number(seuilRevue) >= 0 &&
-    Number(seuilLot) <= 100 &&
-    Number(seuilRevue) <= Number(seuilLot);
+    pourcent(seuilLot) && pourcent(seuilRevue) && Number(seuilRevue) <= Number(seuilLot);
 
   const verrou = !edition || enregistrer.isPending;
 
@@ -516,8 +529,7 @@ function CabinetEtEquipe() {
                 !capacite ||
                 !ton ||
                 !seuilsValides ||
-                !Number.isInteger(Number(capacite)) ||
-                Number(capacite) < 1
+                bornes.length > 0
               }
               onClick={() => enregistrer.mutate(courant)}
               className="border border-foreground bg-foreground px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-background hover:bg-marigold hover:text-foreground disabled:opacity-40"
@@ -539,7 +551,11 @@ function CabinetEtEquipe() {
             </button>
           </>
         ) : null}
-        {edition && !seuilsValides ? (
+        {edition && bornes.length > 0 ? (
+          <span role="alert" className="text-sm text-signal-stop">
+            {bornes.join(" ")}
+          </span>
+        ) : edition && !seuilsValides ? (
           <span role="alert" className="text-sm text-signal-stop">
             {t("relation.seuilsInvalides")}
           </span>
@@ -638,7 +654,9 @@ function FuseauDuCabinet() {
               onClick={() => enregistrer.mutate(valeur.trim())}
               className="min-h-[48px] border border-foreground bg-foreground px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
             >
-              {t("cab.settings.enregistrer")}
+              {/* Pas « Enregistrer les réglages » : deux boutons du même nom
+                  sur la page, et un seul enregistrait les réglages. */}
+              {t("cab.settings.fuseau.enregistrer")}
             </button>
             <button
               type="button"
