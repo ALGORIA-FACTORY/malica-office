@@ -128,6 +128,15 @@ const RESERVEES_AU_SERVEUR: Readonly<Partial<Record<NomDepot, ReadonlySet<string
 /** Les dépôts de la plateforme : un appel n'y entre que pour un opérateur d'ALGORIA. */
 const DEPOTS_DE_LA_PLATEFORME: ReadonlySet<string> = new Set<NomDepot>(["tour"]);
 
+/**
+ * La seule question de la tour que tout compte connecté peut poser : « suis-je
+ * opérateur ? ». Le portail la pose à chaque chargement pour savoir s'il montre
+ * la carte de la tour ; la refuser écrivait une erreur dans la console de
+ * chaque dirigeant et de chaque comptable (recette du 11 novembre 2026, 5.5).
+ * Elle ne rend qu'un oui ou un non sur l'appelant lui-même.
+ */
+const QUESTIONS_OUVERTES_DE_LA_PLATEFORME: ReadonlySet<string> = new Set(["tour.suisJePlateforme"]);
+
 function reserveeAuServeur(depot: string, methode: string): boolean {
   return RESERVEES_AU_SERVEUR[depot as NomDepot]?.has(methode) ?? false;
 }
@@ -230,7 +239,10 @@ export async function executerRpc(
   }
   const methode = depot[appel.methode] as (db: Requete, ...args: unknown[]) => Promise<unknown>;
 
-  if (DEPOTS_DE_LA_PLATEFORME.has(appel.depot)) {
+  if (
+    DEPOTS_DE_LA_PLATEFORME.has(appel.depot) &&
+    !QUESTIONS_OUVERTES_DE_LA_PLATEFORME.has(`${appel.depot}.${appel.methode}`)
+  ) {
     // La tour est aux opérateurs d'ALGORIA, en LECTURE aussi (ANO-028,
     // 21 octobre 2026) : `tour.licences`, `tour.reglagePaiement` et
     // `tour.reglageAbonnement` répondaient à tout compte connecté. Les
