@@ -16,7 +16,7 @@ import { useCabinet } from "@/components/malica/cabinet-context";
 import { Retour } from "@/components/malica/clients/fiche-client";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { effetDuChoix, type EffetDuChoix } from "@/lib/etat-des-clients";
+import { effetDuChoix, offreActuelle, type EffetDuChoix } from "@/lib/etat-des-clients";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type {
@@ -31,6 +31,7 @@ const ETIQUETTE = "block text-[11px] font-semibold text-text-2";
 const EFFET: Record<EffetDuChoix, MessageKey> = {
   a_proposer: "cab.cli.abo.effet.a_proposer",
   attente_dirigeant: "cab.cli.abo.effet.attente",
+  attente_reponse: "cab.cli.abo.effet.reponse",
   montee: "cab.cli.abo.effet.montee",
   descente: "cab.cli.abo.effet.descente",
   actuelle: "cab.cli.abo.effet.actuelle",
@@ -93,7 +94,7 @@ export function OngletAbonnement({
       const cles: Record<string, MessageKey> = {
         propose: "cab.cli.abo.ok.propose",
         attente: "cab.cli.abo.ok.attente",
-        proposition: "cab.cli.abo.ok.attente",
+        proposition: etat?.dirigeantPresent ? "cab.cli.abo.ok.propose" : "cab.cli.abo.ok.attente",
         immediat: "cab.cli.abo.ok.montee",
         accord_attendu: "cab.cli.abo.ok.descente",
         inchange: "cab.cli.rien.change",
@@ -131,6 +132,7 @@ export function OngletAbonnement({
     code ??
     "";
 
+  const actuelle = offreActuelle(etat, offres);
   const etatCourant = !etat?.accesStatut
     ? { titre: t("cab.cli.abo.aucun"), detail: t("cab.cli.abo.aucun.detail"), ton: "gris" }
     : etat.accesStatut === "propose"
@@ -142,7 +144,13 @@ export function OngletAbonnement({
           ton: "attente",
         }
       : {
-          titre: t("cab.cli.abo.paye", { offre: libelle(etat.accesOffre) }),
+          titre:
+            actuelle && actuelle !== etat.accesOffre
+              ? t("cab.cli.abo.paye.monteeParLeClient", {
+                  offre: libelle(etat.accesOffre),
+                  client: libelle(actuelle),
+                })
+              : t("cab.cli.abo.paye", { offre: libelle(etat.accesOffre) }),
           detail: etat.descenteOffre
             ? t("cab.cli.abo.descente.attente", { offre: libelle(etat.descenteOffre) })
             : t("cab.cli.abo.paye.detail"),
@@ -221,13 +229,16 @@ export function OngletAbonnement({
                 "rounded-xl p-3",
                 effet === "montee" && "bg-[#f4f8f5]",
                 (effet === "descente" || effet === "couvrir") && "bg-[#eef2fb] text-[#2b3f6b]",
-                (effet === "attente_dirigeant" || effet === "a_proposer") &&
+                (effet === "attente_dirigeant" ||
+                  effet === "attente_reponse" ||
+                  effet === "a_proposer") &&
                   "bg-[#fdf6e7] text-[#7a5410]",
                 effet === "actuelle" && "bg-[#f7f8f7]",
               )}
             >
               {t(EFFET[effet], {
                 prix: prix(offres.find((o) => o.code === choix)?.prix_mensuel_ht ?? "0"),
+                offre: libelle(actuelle),
               })}
             </p>
           ) : null}
@@ -235,7 +246,7 @@ export function OngletAbonnement({
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              disabled={!choix || choix === etat?.accesOffre || enregistrer.isPending}
+              disabled={!choix || effet === "actuelle" || enregistrer.isPending}
               onClick={() => enregistrer.mutate()}
               className="cab-button cab-button-primary"
             >
