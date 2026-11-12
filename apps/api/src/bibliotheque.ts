@@ -133,18 +133,29 @@ async function avecStatuts(
   return documents.map((d) => ({ ...d, statut: statutAuCabinet(d.status, faits.get(d.id)) }));
 }
 
-/** Un compte membre des deux espaces ne doit pas restituer ses pièces privées. */
-async function exigerMandat(db: Requete, cabinetId: string, clientId: string): Promise<void> {
+/**
+ * Un compte membre des deux espaces ne doit pas restituer ses pièces privées.
+ * Rend ce qui ouvre le dossier : le mandat en vigueur, ou l'archive.
+ */
+async function exigerMandat(
+  db: Requete,
+  cabinetId: string,
+  clientId: string,
+): Promise<"mandat" | "archive"> {
   Id.parse(cabinetId);
   Id.parse(clientId);
-  const { rows } = await db.query(
-    `select 1 from engagements_v g
+  const { rows } = await db.query<{ acces: "mandat" | "archive" }>(
+    `select 'mandat' as acces from engagements_v g
       where g.cabinet_org_id = $1 and g.pme_org_id = $2 and g.status = 'actif'
         and g.starts_on <= current_date and (g.ends_on is null or g.ends_on >= current_date)
-        and g.pme_org_id in (select app.mandats_visibles($1))`,
+        and g.pme_org_id in (select app.mandats_visibles($1))
+     union all
+     -- Mandat terminé : l'archive de la comptabilité, bornée par la base (1.6).
+     select 'archive' from app.mes_archives() a where a.cabinet = $1 and a.pme = $2`,
     [cabinetId, clientId],
   );
   if (!rows[0]) throw Object.assign(new Error("refus.introuvable.dossier"), { code: "42501" });
+  return rows[0].acces;
 }
 
 export async function documents(
@@ -207,9 +218,11 @@ export async function documentsLies(
   pieces: string[],
 ): Promise<DossierComptable> {
   Choix.parse(pieces);
-  await exigerMandat(db, cabinetId, clientId);
-  // Même garde de licence et de dates que les exports existants.
-  await db.query(`select app.export_mandats($1, $2)`, [cabinetId, clientId]);
+  // Même garde de licence et de dates que les exports existants. L'archive
+  // d'un mandat terminé n'en dépend pas : elle est à la comptabilité qui a
+  // travaillé, et la base la borne à ce qu'elle a pris en charge.
+  if ((await exigerMandat(db, cabinetId, clientId)) === "mandat")
+    await db.query(`select app.export_mandats($1, $2)`, [cabinetId, clientId]);
   // Les deux bouts de chaque arête sont joints aux pièces autorisées AVANT
   // la récursion. Une pièce cachée ne peut pas servir de pont vers une autre.
   // Chaque bout est lu à sa VERSION COURANTE : un lien saisi sur une photo

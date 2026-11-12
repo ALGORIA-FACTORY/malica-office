@@ -35,6 +35,7 @@ import { DocumentView } from "@/components/malica/document-view";
 import { ControlesComptables } from "@/components/malica/controles-comptables";
 import { EcritureDuCabinet } from "@/components/malica/ecriture-du-cabinet";
 import { PanneauRetourne, type RetourEnvoye } from "@/components/malica/envoye";
+import { PieceEnArchive } from "@/components/malica/piece-en-archive";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
 import { VersionPrecedente } from "@/components/malica/version-precedente";
 import { nomDeFichierDePiece } from "@/lib/nom-de-fichier";
@@ -184,7 +185,8 @@ function CabinetReviewDeLaPiece() {
    */
   const proposition = useQuery({
     queryKey: ["proposition", pieceId, dossier.data?.extraction?.id ?? null],
-    enabled: Boolean(dossier.data?.extraction),
+    // L'archive d'un mandat terminé ne se propose plus rien (1.6).
+    enabled: Boolean(dossier.data?.extraction) && !dossier.data?.archive,
     queryFn: () => office().office.propositionDePiece(pieceId),
   });
 
@@ -486,7 +488,11 @@ function CabinetReviewDeLaPiece() {
     onError: (e: unknown) =>
       void texteDeLErreur(e, "routes/_authenticated/cabinet.piece.$pieceId", ""),
   });
-  const aOuvrir = dossier.data?.piece.vis === "partage" && !dossier.data.piece.remplaceePar;
+  const aOuvrir =
+    dossier.data?.piece.vis === "partage" &&
+    !dossier.data.piece.remplaceePar &&
+    // Lire son archive n'est pas « voir » la pièce d'un client (1.6).
+    !dossier.data.archive;
   const { mutate: marquerVue } = voir;
   useEffect(() => {
     if (aOuvrir) marquerVue();
@@ -536,6 +542,37 @@ function CabinetReviewDeLaPiece() {
           <DocumentView contenu={contenu} highlight={null} label={t("cab.review.document")} />
         ) : null}
       </div>
+    );
+  }
+
+  /*
+   * ============================================== L'ARCHIVE D'UN MANDAT TERMINÉ
+   *
+   * Règle 10 du 16 octobre 2026 : la comptabilité qui a travaillé garde ce
+   * qu'elle a pris en charge, en lecture seule. La pièce, son fichier, ses
+   * écritures — et aucun geste : la base les refuserait tous.
+   */
+  if (dossier.data.archive) {
+    return (
+      <PieceEnArchive
+        retour={
+          <Link
+            to="/cabinet/bibliotheque"
+            search={{ client: piece.tenantId }}
+            aria-label={t("cab.review.back")}
+            title={t("cab.review.back")}
+            className="flex h-11 w-11 lg:h-[34px] lg:w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
+          >
+            ←
+          </Link>
+        }
+        mandatClosLe={dossier.data.archive.mandatClosLe}
+        contenu={contenu}
+        ecritures={ecritures.data ?? []}
+        telechargement={telecharger.isPending}
+        onTelecharger={() => telecharger.mutate()}
+        enregistreSous={cheminEnregistre}
+      />
     );
   }
 

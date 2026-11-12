@@ -63,7 +63,9 @@ function Bibliotheque() {
     queryKey: ["cab-clients", org.id],
     queryFn: () => office().supervision.listClients(org.id),
   });
-  const actifs = (clients.data ?? []).filter((c) => c.engagementStatus === "actif");
+  // Les mandats en vigueur, et les archives : un mandat terminé garde ce que
+  // la comptabilité a pris en charge, en lecture seule (1.6).
+  const actifs = (clients.data ?? []).filter((c) => c.engagementStatus === "actif" || c.archive);
   const client = recherche.client ? actifs.find((c) => c.tenantId === recherche.client) : actifs[0];
   const dansUnMois = Boolean(client && recherche.mois);
   const choisir = (id: string) => {
@@ -98,7 +100,7 @@ function Bibliotheque() {
                 onClick={() => choisir(c.tenantId)}
               >
                 <strong>{c.name}</strong>
-                <span>{c.legalId ?? c.jurisdiction}</span>
+                <span>{c.archive ? t("cab.archive.badge") : (c.legalId ?? c.jurisdiction)}</span>
               </button>
             ))}
           </div>
@@ -115,7 +117,7 @@ function Bibliotheque() {
                 </option>
                 {actifs.map((c) => (
                   <option key={c.tenantId} value={c.tenantId}>
-                    {c.name}
+                    {c.archive ? `${c.name} — ${t("cab.archive.badge")}` : c.name}
                   </option>
                 ))}
               </select>
@@ -123,6 +125,11 @@ function Bibliotheque() {
           </div>
         </>
       )}
+      {client?.archive ? (
+        <p role="status" className="border border-s-[3px] border-border bg-card p-3 text-[13px]">
+          {t("cab.archive.biblio")}
+        </p>
+      ) : null}
       {client ? (
         <BibliothequeDuClient
           key={client.tenantId}

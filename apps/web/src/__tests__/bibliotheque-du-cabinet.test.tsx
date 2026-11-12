@@ -80,6 +80,16 @@ vi.mock("@/verticals/malica-office/composition", () => ({
     supervision: {
       listClients: async () => [
         { tenantId: "client", name: "Client", engagementStatus: "actif", legalId: null },
+        // Mandat terminé, travail fait : l'archive reste (1.6).
+        {
+          tenantId: "ancien",
+          name: "Ancien client",
+          engagementStatus: "termine",
+          legalId: null,
+          archive: true,
+        },
+        // Mandat terminé sans rien pris en charge : rien à garder.
+        { tenantId: "parti", name: "Parti", engagementStatus: "termine", legalId: null },
       ],
       documents: async (_c: string, _t: string, periode: string | null) => {
         appels.push(periode);
@@ -123,6 +133,21 @@ describe("bibliothèque du cabinet", () => {
     await screen.findByText("Janvier 2026");
     expect(titres()).toEqual(["Janvier 2026", "Octobre 2025"]);
     expect(screen.getByText("cab.biblio.trou")).toBeTruthy();
+  });
+
+  it("garde la société d'un mandat terminé, marquée « lecture seule » (1.6)", async () => {
+    niveau = {};
+    ouvrir();
+    await screen.findByText("Janvier 2026");
+    const choix = [...document.querySelectorAll("option")].map((o) => o.textContent);
+    expect(choix).toContain("Ancien client — cab.archive.badge");
+    expect(choix.some((c) => c?.includes("Parti"))).toBe(false);
+    // Ouverte, elle dit que l'on ne lit que son archive.
+    expect(screen.queryByText("cab.archive.biblio")).toBeNull();
+    cleanup();
+    niveau = { client: "ancien" };
+    ouvrir();
+    expect(await screen.findByText("cab.archive.biblio")).toBeTruthy();
   });
 
   it("dans un mois, tire ses cartes du référentiel, pour les seuls types présents", async () => {

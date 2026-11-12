@@ -29,6 +29,11 @@ export const arBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.autres": "مستندات أخرى",
   "cab.biblio.empty": "لا توجد مستندات محالة في هذا العرض.",
   "cab.biblio.noClient": "اختر عميلاً لفتح مكتبته.",
+  "cab.archive.badge": "انتهى التوكيل · للقراءة فقط",
+  "cab.archive.notice":
+    "انتهى التوكيل في {date}. تحتفظون بأرشيف ما تكفّلتم به حتى ذلك اليوم: الوثيقة وقيودها تُقرأ وتُنزَّل دون تعديل.",
+  "cab.archive.biblio":
+    "انتهى التوكيل: لا تعرض هذه المكتبة سوى الوثائق التي تكفّلتم بها، للقراءة فقط.",
   "cab.biblio.download": "تنزيل الملف",
   "cab.biblio.selection": "تنزيل المستندات المحددة ({n})",
   "cab.biblio.select": "اختيار {reference}",

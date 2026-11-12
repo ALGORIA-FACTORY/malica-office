@@ -1319,6 +1319,12 @@ export interface PieceDossier {
   /** Les décimales de la devise de la pièce au référentiel (R4) ; `null` si elle n'y est pas. */
   decimalesDeLaPiece: number | null;
   /**
+   * La pièce se lit dans l'ARCHIVE d'une comptabilité dont le mandat a pris fin
+   * (`mandatClosLe`, AAAA-MM-JJ) : lecture seule, aucun geste. `null` partout
+   * ailleurs — y compris chez la même comptabilité, mandatée de nouveau.
+   */
+  archive: { mandatClosLe: string } | null;
+  /**
    * Où elle en est chez le cabinet — envoyée, vue, corrigée, prise en charge —
    * ou `null` si elle n'y est jamais partie. Le mot se dérive au Socle
    * (`statut-d-envoi.ts`), le même pour la PME et le cabinet.
@@ -2320,6 +2326,11 @@ export interface ClientSummary {
   mandatDepuis: string | null;
   /** Le dernier jour d'un mandat terminé ; rien tant qu'il court. */
   mandatJusquau: string | null;
+  /**
+   * Mandat terminé, travail fait : la comptabilité garde l'archive de ce
+   * qu'elle a pris en charge, en lecture seule (règle 10 du 16 octobre 2026).
+   */
+  archive: boolean;
   /** Pièces partagées par statut — le mur de visibilité est tenu par la base. */
   counts: Record<PieceStatus, number>;
   /** Les mêmes pièces, classées comme la file (Reçue · Vue · Corrigée · Retournée · Validée · Forcée). */
