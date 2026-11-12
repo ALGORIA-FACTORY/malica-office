@@ -60,6 +60,7 @@ describe("les adresses de la tour", () => {
           "paiement",
           "emetteur",
           "facturation",
+          "fonctions",
           "relances",
           "calendrier",
           "licences",

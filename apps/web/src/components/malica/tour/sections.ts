@@ -23,6 +23,7 @@ import {
   Send,
   ShieldCheck,
   Store,
+  ToggleRight,
   type LucideIcon,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -44,6 +45,7 @@ import { LaChaineDeDesignation } from "./chaine-de-designation";
 import { LaConsigneDuConseil, LeReglageDuConseil } from "./conseil-cite";
 import { DesignerLEmetteur } from "./emetteur";
 import { LaFacturationAutomatique } from "./facturation-automatique";
+import { LesFonctionsDuProduit } from "./fonctions";
 import { LaGrille } from "./grille";
 import { LesLicences } from "./licences";
 import { ReglerLePaiement } from "./paiement";
@@ -67,6 +69,11 @@ export const SECTIONS = {
     libelle: "tour.menu.facturation",
     icone: Receipt,
     cartes: [LaFacturationAutomatique],
+  },
+  fonctions: {
+    libelle: "tour.menu.fonctions",
+    icone: ToggleRight,
+    cartes: [LesFonctionsDuProduit],
   },
   relances: { libelle: "tour.menu.relances", icone: Send, cartes: [ReglerLesRelances] },
   calendrier: {
@@ -137,6 +144,7 @@ export const MENU: ReadonlyArray<{ cle: string; libelle: MessageKey; entrees: En
         "paiement",
         "emetteur",
         "facturation",
+        "fonctions",
         "relances",
         "calendrier",
         "licences",
