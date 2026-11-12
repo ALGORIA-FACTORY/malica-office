@@ -567,21 +567,30 @@ function Ligne({
       ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(iso))
       : "";
 
-  const dirigeant = etat?.dirigeantPresent
-    ? {
-        texte: etat.titulaireNom ?? t("cab.cli.dir.present"),
-        sous: t("cab.cli.dir.rejoint"),
-        ton: "",
-      }
-    : etat?.invitationEmail
-      ? {
-          texte: t("cab.cli.dir.invite"),
-          sous: etat.invitationExpiree
-            ? t("cab.cli.dir.expiree")
-            : t("cab.cli.dir.envoyee", { date: date(etat.invitationEnvoyee) }),
-          ton: "text-marigold",
-        }
-      : { texte: t("cab.cli.dir.personne"), sous: t("cab.cli.dir.inviter"), ton: "text-marigold" };
+  // Un mandat seulement demandé ne dit rien de la société (3.3) : la base ne
+  // rend ni le dirigeant ni son invitation, et l'écran le dit en un mot.
+  const dirigeant =
+    client.engagementStatus === "propose"
+      ? { texte: t("cab.cli.mandat.demande"), sous: t("cab.cli.mandat.attenteSociete"), ton: "" }
+      : etat?.dirigeantPresent
+        ? {
+            texte: etat.titulaireNom ?? t("cab.cli.dir.present"),
+            sous: t("cab.cli.dir.rejoint"),
+            ton: "",
+          }
+        : etat?.invitationEmail
+          ? {
+              texte: t("cab.cli.dir.invite"),
+              sous: etat.invitationExpiree
+                ? t("cab.cli.dir.expiree")
+                : t("cab.cli.dir.envoyee", { date: date(etat.invitationEnvoyee) }),
+              ton: "text-marigold",
+            }
+          : {
+              texte: t("cab.cli.dir.personne"),
+              sous: t("cab.cli.dir.inviter"),
+              ton: "text-marigold",
+            };
   const ficheTexte =
     fiche === undefined
       ? "…"
@@ -656,9 +665,6 @@ function Ligne({
             <span className="ms-2 text-marigold">
               {t("cab.cli.a.superviser", { count: client.aTraiter })}
             </span>
-          ) : null}
-          {client.engagementStatus === "propose" ? (
-            <span className="ms-2 text-[#3d5a99]">{t("cab.cli.mandat.demande")}</span>
           ) : null}
         </span>
       </span>

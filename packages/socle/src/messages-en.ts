@@ -5085,6 +5085,7 @@ export const en: Dict = {
   "cab.cli.groupe.detail": "{offre} · {societes} companies · extra seats {places}",
   "cab.cli.a.superviser": "{count} to review",
   "cab.cli.mandat.demande": "engagement requested",
+  "cab.cli.mandat.attenteSociete": "awaiting the company",
   "cab.cli.dir.present": "Joined",
   "cab.cli.dir.rejoint": "joined",
   "cab.cli.dir.invite": "Invited · not here yet",

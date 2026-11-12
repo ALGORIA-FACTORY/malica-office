@@ -5296,6 +5296,7 @@ export const fr = {
   "cab.cli.groupe.detail": "{offre} · {societes} sociétés · places en plus {places}",
   "cab.cli.a.superviser": "{count} à superviser",
   "cab.cli.mandat.demande": "mandat demandé",
+  "cab.cli.mandat.attenteSociete": "en attente de la société",
   "cab.cli.dir.present": "A rejoint",
   "cab.cli.dir.rejoint": "a rejoint",
   "cab.cli.dir.invite": "Invité · pas encore venu",

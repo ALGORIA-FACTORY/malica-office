@@ -4879,6 +4879,7 @@ export const ar: Dict = {
   "cab.cli.groupe.detail": "{offre} · {societes} شركات · مقاعد إضافية {places}",
   "cab.cli.a.superviser": "{count} للمراجعة",
   "cab.cli.mandat.demande": "تكليف مطلوب",
+  "cab.cli.mandat.attenteSociete": "في انتظار الشركة",
   "cab.cli.dir.present": "انضمّ",
   "cab.cli.dir.rejoint": "انضمّ",
   "cab.cli.dir.invite": "مدعوّ · لم يحضر بعد",

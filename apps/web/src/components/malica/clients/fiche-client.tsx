@@ -373,11 +373,14 @@ export function FicheClient({
     queryFn: () => office().identity.ficheCourante(client.tenantId),
   });
 
-  const bandeau = !etat?.dirigeantPresent
-    ? t("cab.cli.bandeau.attente")
-    : client.engagementStatus === "propose"
+  // Le mandat demandé d'abord : la base ne dit rien du dirigeant tant que la
+  // société n'a pas accepté (3.3).
+  const bandeau =
+    client.engagementStatus === "propose"
       ? t("cab.cli.bandeau.mandat")
-      : `${client.legalId ?? ""} · ${t("cab.cli.bandeau.actif")}`;
+      : !etat?.dirigeantPresent
+        ? t("cab.cli.bandeau.attente")
+        : `${client.legalId ?? ""} · ${t("cab.cli.bandeau.actif")}`;
 
   return (
     <Tiroir
@@ -433,6 +436,10 @@ export function FicheClient({
             expert={expert}
             annoncer={annoncer}
           />
+        ) : onglet === "acces" && client.engagementStatus === "propose" ? (
+          <p className="text-[13px] text-muted-foreground">
+            {t("cab.cli.mandat.demande")} · {t("cab.cli.mandat.attenteSociete")}
+          </p>
         ) : onglet === "acces" ? (
           <OngletAcces
             client={client}
