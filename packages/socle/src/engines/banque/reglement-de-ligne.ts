@@ -53,6 +53,20 @@ function normaliser(texte: string | null): string {
   return (texte ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+/**
+ * Le texte cite-t-il la référence ENTIÈRE ? La ponctuation entre ses signes
+ * est libre (« FA-2026-1111 », « FA 2026 1111 »), mais elle ne se prolonge ni
+ * avant ni après par une lettre ou un chiffre : « FA-10 » ne cite pas « FA-1 »
+ * (revue de #361 — par sous-chaîne, deux factures étaient reconnues, et rien
+ * n'était proposé).
+ */
+function citeLaReference(texte: string, reference: string | null): boolean {
+  const signes = [...normaliser(reference)];
+  if (signes.length === 0) return false;
+  const motif = new RegExp(`(?<![A-Z0-9])${signes.join("[^A-Z0-9]*")}(?![A-Z0-9])`);
+  return motif.test(texte.toUpperCase());
+}
+
 /** La facture que chaque ligne règle, quand une seule le peut. */
 export function reglementsDesLignes(
   lignes: readonly BankLine[],
@@ -66,10 +80,8 @@ export function reglementsDesLignes(
       (f) => f.compteTiers !== null && f.sens === sens && D(f.reste).eq(montant.abs()),
     );
   };
-  const citee = (l: BankLine, f: FactureOuverte) => {
-    const ref = normaliser(f.reference);
-    return ref.length > 0 && normaliser(`${l.label} ${l.reference ?? ""}`).includes(ref);
-  };
+  const citee = (l: BankLine, f: FactureOuverte) =>
+    citeLaReference(`${l.label} ${l.reference ?? ""}`, f.reference);
 
   const parLigne = new Map<string, ReglementPropose>();
   const prises = new Map<string, number>();

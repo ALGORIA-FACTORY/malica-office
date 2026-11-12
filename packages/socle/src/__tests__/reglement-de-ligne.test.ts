@@ -45,6 +45,21 @@ describe("le règlement qu'une ligne de relevé éteint", () => {
     ]);
   });
 
+  it("une référence se lit entière : « FA-10 » ne cite pas « FA-1 » (revue de #361)", () => {
+    const factures = [facture("f1", "358.000", "FA-1"), facture("f10", "358.000", "FA-10")];
+    expect(
+      reglementsDesLignes([ligne("l1", "-358.000", "VIR PAPETERIE FA-10")], factures).map((p) => [
+        p.facture.pieceId,
+        p.referenceExacte,
+      ]),
+    ).toEqual([["f10", true]]);
+    expect(
+      reglementsDesLignes([ligne("l2", "-358.000", "VIR PAPETERIE FA 1")], factures).map(
+        (p) => p.facture.pieceId,
+      ),
+    ).toEqual(["f1"]);
+  });
+
   it("le montant seul suffit quand une seule facture le porte", () => {
     const r = reglementsDesLignes(
       [ligne("l1", "-358.000", "VIR PAPETERIE")],
