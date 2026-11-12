@@ -4997,8 +4997,7 @@ export const en: Dict = {
   "pme.malica.rienEncore": "Nothing yet: ask a question.",
   "pme.malica.voix.parler": "Talk to Malica",
   "pme.malica.voix.ecoute": "I'm listening…",
-  "pme.malica.pied":
-    "I cite the article and the version in force on the date. I do not decide in place of your accountant on what has consequences for your file.",
+  "pme.malica.pied": "Malica can make mistakes.",
   // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).
   "pme.accompagne.genre.recu": "Receipt",
   "pme.accompagne.genre.justificatif": "Proof",

@@ -32,7 +32,6 @@ import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
 import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
-import { MandatsProposesDesSocietes } from "@/components/malica/MandatsProposes";
 import { usePme } from "@/components/malica/pme-context";
 import { useAccueil } from "@/hooks/use-accueil";
 import { libelleDOffre, useCatalogueDesOffres } from "@/hooks/use-offres";
@@ -475,16 +474,6 @@ function PmeHome() {
          * l'invitation de sa deuxième société restait introuvable.
          */}
         <InvitationsPourMoi />
-        {/*
-         * Chaque société de la personne (3 novembre 2026) : sans sélecteur
-         * dans l'en-tête, une proposition faite à une autre société que celle
-         * ouverte resterait invisible. La carte nomme la société dès qu'il y
-         * en a plusieurs.
-         */}
-        <MandatsProposesDesSocietes
-          societes={pme.dossiers.length > 0 ? pme.dossiers : [{ id: pme.tenantId, name: "" }]}
-          nommer={pme.dossiers.length > 1}
-        />
         <PastilleAEnvoyer />
       </div>
 

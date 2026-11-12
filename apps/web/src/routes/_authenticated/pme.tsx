@@ -12,6 +12,7 @@ import { CalendarClock, Home as HomeIcon, Library, Lock, Plus, Settings } from "
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
+import { usePhotosDeProfil } from "@/hooks/use-photos-de-profil";
 import { FichierNonPdf, files, type PickedFile } from "@/capabilities/files";
 import { BandeauHorsLigne } from "@/components/malica/bandeau-hors-ligne";
 import { EntetePme } from "@/components/malica/entete-pme";
@@ -636,6 +637,11 @@ function PmeLayout() {
     (nomDeLaPersonne(profil.data) ?? user.email).trim().charAt(0) || "·"
   ).toLocaleUpperCase(locale);
 
+  // Le même compte que les réglages (`["compte"]`) : une seule requête.
+  const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
+  const maPhoto =
+    usePhotosDeProfil(compte.data ? [compte.data.id] : [])[compte.data?.id ?? ""] ?? null;
+
   /*
    * LA CLOCHE (planche 12, 7 novembre 2026) : les alertes à traiter de TOUTES
    * les sociétés de la personne, en un appel — la route prend une liste.
@@ -737,6 +743,7 @@ function PmeLayout() {
          */}
         <EntetePme
           initiale={initiale}
+          photo={maPhoto}
           cloche={cloche}
           societe={
             org && pmeOrgs.length > 1

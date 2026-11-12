@@ -309,48 +309,136 @@ function enLigne(texte: string): ReactNode[] {
 }
 
 /**
- * Un markdown léger — paragraphes, listes à puces et numérotées, gras,
+ * Un markdown léger — paragraphes, listes à puces et numérotées, tableaux, gras,
  * italique, code — rendu en éléments React. Ce que la consigne demande au
- * modèle, et rien de plus : ni titre, ni tableau, ni lien, ni HTML.
+ * modèle, et rien de plus : ni titre, ni lien, ni HTML.
  */
-function TexteMarkdown({ texte }: { texte: string }) {
+const LIGNE_DE_TABLEAU = /^\s*\|.*\|\s*$/;
+const SEPARATEUR_DE_TABLEAU = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+
+/** Les cellules d'une ligne de tableau, sans les barres de bord. */
+function cellulesDe(ligne: string): string[] {
+  return ligne
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((c) => c.trim());
+}
+
+type BlocMarkdown = { tableau: string[] } | { texte: string };
+
+/**
+ * Découpe une réponse en tableaux (une ligne d'en-tête, son séparateur, puis
+ * les lignes à barres) et en texte. Un tableau n'a pas besoin de ligne vide
+ * avant lui : le modèle le colle souvent à la phrase qui le présente.
+ */
+function decoupeMarkdown(texte: string): BlocMarkdown[] {
+  const lignes = texte.split("\n");
+  const blocs: BlocMarkdown[] = [];
+  let tampon: string[] = [];
+  const vider = () => {
+    if (tampon.join("\n").trim()) blocs.push({ texte: tampon.join("\n") });
+    tampon = [];
+  };
+  for (let i = 0; i < lignes.length; i++) {
+    const ligne = lignes[i] ?? "";
+    if (LIGNE_DE_TABLEAU.test(ligne) && SEPARATEUR_DE_TABLEAU.test(lignes[i + 1] ?? "")) {
+      vider();
+      const tableau = [ligne];
+      let j = i + 2;
+      while (j < lignes.length && LIGNE_DE_TABLEAU.test(lignes[j] ?? "")) {
+        tableau.push(lignes[j] ?? "");
+        j++;
+      }
+      blocs.push({ tableau });
+      i = j - 1;
+      continue;
+    }
+    tampon.push(ligne);
+  }
+  vider();
+  return blocs;
+}
+
+function TableauMarkdown({ lignes }: { lignes: string[] }) {
+  const [entete = [], ...corps] = lignes.map(cellulesDe);
+  return (
+    <div className="my-1 overflow-x-auto">
+      <table className="w-full border-collapse text-start text-[13px]">
+        <thead>
+          <tr>
+            {entete.map((c, j) => (
+              <th key={j} className="border-b border-border py-1 pe-3 text-start font-semibold">
+                {enLigne(c)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {corps.map((cellules, i) => (
+            <tr key={i}>
+              {cellules.map((c, j) => (
+                <td key={j} className="border-b border-border/60 py-1 pe-3 align-top text-start">
+                  {enLigne(c)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function paragraphesMarkdown(texte: string) {
   const blocs = texte
     .split(/\n{2,}/)
     .map((b) => b.trim())
     .filter(Boolean);
+  return blocs.map((bloc, i) => {
+    const lignes = bloc.split("\n");
+    if (lignes.every((l) => /^\s*[-*•]\s+/.test(l))) {
+      return (
+        <ul key={i} className="list-disc ps-5">
+          {lignes.map((l, j) => (
+            <li key={j}>{enLigne(l.replace(/^\s*[-*•]\s+/, ""))}</li>
+          ))}
+        </ul>
+      );
+    }
+    if (lignes.every((l) => /^\s*\d{1,2}[.)]\s+/.test(l))) {
+      return (
+        <ol key={i} className="list-decimal ps-5">
+          {lignes.map((l, j) => (
+            <li key={j}>{enLigne(l.replace(/^\s*\d{1,2}[.)]\s+/, ""))}</li>
+          ))}
+        </ol>
+      );
+    }
+    return (
+      <p key={i}>
+        {lignes.map((l, j) => (
+          <Fragment key={j}>
+            {j > 0 ? <br /> : null}
+            {enLigne(l.replace(/^#{1,6}\s+/, ""))}
+          </Fragment>
+        ))}
+      </p>
+    );
+  });
+}
+
+function TexteMarkdown({ texte }: { texte: string }) {
   return (
     <>
-      {blocs.map((bloc, i) => {
-        const lignes = bloc.split("\n");
-        if (lignes.every((l) => /^\s*[-*•]\s+/.test(l))) {
-          return (
-            <ul key={i} className="list-disc ps-5">
-              {lignes.map((l, j) => (
-                <li key={j}>{enLigne(l.replace(/^\s*[-*•]\s+/, ""))}</li>
-              ))}
-            </ul>
-          );
-        }
-        if (lignes.every((l) => /^\s*\d{1,2}[.)]\s+/.test(l))) {
-          return (
-            <ol key={i} className="list-decimal ps-5">
-              {lignes.map((l, j) => (
-                <li key={j}>{enLigne(l.replace(/^\s*\d{1,2}[.)]\s+/, ""))}</li>
-              ))}
-            </ol>
-          );
-        }
-        return (
-          <p key={i}>
-            {lignes.map((l, j) => (
-              <Fragment key={j}>
-                {j > 0 ? <br /> : null}
-                {enLigne(l.replace(/^#{1,6}\s+/, ""))}
-              </Fragment>
-            ))}
-          </p>
-        );
-      })}
+      {decoupeMarkdown(texte).map((bloc, i) =>
+        "tableau" in bloc ? (
+          <TableauMarkdown key={i} lignes={bloc.tableau} />
+        ) : (
+          <Fragment key={i}>{paragraphesMarkdown(bloc.texte)}</Fragment>
+        ),
+      )}
     </>
   );
 }

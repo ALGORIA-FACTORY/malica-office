@@ -4797,8 +4797,7 @@ export const ar: Dict = {
   "pme.malica.rienEncore": "لا شيء بعد: اطرحوا سؤالا.",
   "pme.malica.voix.parler": "تحدثوا إلى ماليكا",
   "pme.malica.voix.ecoute": "أنا أستمع…",
-  "pme.malica.pied":
-    "أستشهد بالفصل وبنسخته السارية في التاريخ المعني. لا أحسم بدلًا من خبيركم المحاسب فيما له أثر على ملفكم.",
+  "pme.malica.pied": "قد يخطئ Malica.",
   // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).
   "pme.accompagne.genre.recu": "وصل",
   "pme.accompagne.genre.justificatif": "مؤيّد",
