@@ -40,6 +40,15 @@ const PRENOMS: Readonly<Record<Personne, string>> = {
   expert: "Kamel",
 };
 
+/** Une ligne d'écriture telle que la porte de proposition la reçoit. */
+export interface LigneDEssai {
+  account_code: string;
+  libelle: string;
+  debit: string;
+  credit: string;
+  tax_code: string | null;
+}
+
 export interface SocieteDEssai {
   pme: string;
   cabinet: string;
@@ -54,8 +63,11 @@ export interface SocieteDEssai {
   deposer: (qui: Personne, vis: "personnel" | "entite") => Promise<string>;
   /** Une lecture minimale, persistée par la porte du serveur. */
   lire: (qui: Personne, pieceId: string) => Promise<void>;
-  /** Le cabinet établit le type, propose et inscrit : « Prise en charge ». */
-  priseEnCharge: (pieceId: string) => Promise<string>;
+  /**
+   * Le cabinet établit le type, propose et inscrit : « Prise en charge ».
+   * Sans `lignes`, une écriture exonérée de 100 (601 / 401).
+   */
+  priseEnCharge: (pieceId: string, lignes?: LigneDEssai[]) => Promise<string>;
   /** Archive les organisations d'essai et ferme le pool d'administration. */
   fermer: () => Promise<void>;
 }
@@ -140,7 +152,11 @@ export async function monterUneSociete(marque: string): Promise<SocieteDEssai> {
     await sousIdentiteDuServeur(gens[qui].id, (db) => lireLaPieceDEssai(db, pieceId));
   };
 
-  const priseEnCharge = async (pieceId: string) => {
+  const exoneree: LigneDEssai[] = [
+    { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: "EXO" },
+    { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "100.000", tax_code: null },
+  ];
+  const priseEnCharge = async (pieceId: string, lignes: LigneDEssai[] = exoneree) => {
     await sousIdentiteDuServeur(gens.expert.id, (db) =>
       db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [pieceId]),
     );
@@ -152,16 +168,7 @@ export async function monterUneSociete(marque: string): Promise<SocieteDEssai> {
         libelle: "Facture essai",
         packVersionId: pack,
         devise: "TND",
-        lignes: [
-          { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: "EXO" },
-          {
-            account_code: "401",
-            libelle: "Fournisseur",
-            debit: "0",
-            credit: "100.000",
-            tax_code: null,
-          },
-        ],
+        lignes,
       }),
     );
     await sousIdentiteDuServeur(gens.expert.id, (db) => office.book(db, e));
