@@ -7,7 +7,7 @@
 -- pas signalée.
 --
 -- La règle vient du pack de la juridiction (`ref.identifiant_controles`, par
--- `app.lettre_de_controle_du_matricule`, posée par 20261215130000) : jamais du
+-- `app.lettre_de_controle_du_matricule`, posée par 20261219090400) : jamais du
 -- code (R4). Son effet aussi : `avertit` (le défaut livré du pack TN, la DGI ne
 -- publiant pas l'algorithme) se dit sur la ligne sans l'arrêter ; `bloque` la
 -- rendrait « à corriger ».
