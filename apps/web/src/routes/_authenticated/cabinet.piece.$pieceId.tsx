@@ -34,6 +34,7 @@ import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context"
 import { DocumentView } from "@/components/malica/document-view";
 import { ControlesComptables } from "@/components/malica/controles-comptables";
 import { EcritureDuCabinet } from "@/components/malica/ecriture-du-cabinet";
+import { EcritureDuConfrere } from "@/components/malica/ecriture-du-confrere";
 import { PanneauRetourne, type RetourEnvoye } from "@/components/malica/envoye";
 import { PieceEnArchive } from "@/components/malica/piece-en-archive";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
@@ -1201,6 +1202,13 @@ function CabinetReviewDeLaPiece() {
              */}
             {ecritures.isPending || (extraction && proposition.isPending) ? (
               <EmptyState>{t("common.loading")}</EmptyState>
+            ) : vivante?.inscritePar ? (
+              // Inscrite par la comptabilité précédente : elle se lit (7.3).
+              <EcritureDuConfrere
+                ecriture={vivante}
+                pieceId={pieceId}
+                inscritePar={vivante.inscritePar}
+              />
             ) : (
               <EcritureDuCabinet
                 key={`${vivante?.id ?? "-"}|${proposition.data?.ok ? "p" : "r"}`}

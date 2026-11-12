@@ -9,6 +9,7 @@
 
 import { configurationCourriel } from "../courriel/brevo.ts";
 import { envoyerInvitation, type StatutCourriel } from "../courriel/invitation.ts";
+import type { LettreAuConfrere } from "@malica/socle/ports/repositories";
 import type { Requete } from "../db.ts";
 import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 
@@ -426,6 +427,22 @@ export const identite = {
     const r = rows[0]?.r;
     if (!r) throw new Error("mandat.non_revoque");
     return r;
+  },
+
+  /**
+   * Le modèle de lettre au confrère remplacé (7.3) : ses éléments, lus en
+   * base pour l'expert de la comptabilité mandatée. `null` sans précédente.
+   */
+  async lettreAuConfrere(
+    db: Requete,
+    cabinetTenantId: string,
+    clientTenantId: string,
+  ): Promise<LettreAuConfrere | null> {
+    const { rows } = await db.query<{ r: LettreAuConfrere | null }>(
+      `select public.lettre_au_confrere_lire($1, $2) as r`,
+      [cabinetTenantId, clientTenantId],
+    );
+    return rows[0]?.r ?? null;
   },
 
   /** La PME répond : oui rend le mandat actif à compter d'aujourd'hui, non le termine. */

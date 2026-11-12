@@ -30,6 +30,7 @@ export const arBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.empty": "لا توجد مستندات محالة في هذا العرض.",
   "cab.biblio.noClient": "اختر عميلاً لفتح مكتبته.",
   "cab.archive.badge": "انتهى التوكيل · للقراءة فقط",
+  "cab.archive.ecritures": "القيود · للقراءة فقط",
   "cab.archive.notice":
     "انتهى التوكيل في {date}. تحتفظون بأرشيف ما تكفّلتم به حتى ذلك اليوم: الوثيقة وقيودها تُقرأ وتُنزَّل دون تعديل.",
   "cab.archive.biblio":

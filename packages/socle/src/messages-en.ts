@@ -1647,6 +1647,9 @@ export const en: Dict = {
   "cab.notif.kind.mandat.propose": "A mandate was proposed to the file.",
   "cab.notif.kind.mandat.accepte": "The file accepted the accountant’s mandate.",
   "cab.notif.kind.mandat.revoque": "The file ended the engagement.",
+  "cab.notif.kind.mandat.succede": "The client entrusted its accounting to another accountant.",
+  "cab.notif.kind.mandat.lettre_au_confrere":
+    "You succeed another accountant: a template letter to inform your colleague is waiting in the client file.",
   "cab.notif.kind.mandat.refuse": "The file declined the accountant’s mandate.",
   "cab.notif.kind.pv.envoye": "Minutes were sent to the client.",
   "cab.review.rank": "{n} of {total}",
@@ -2309,6 +2312,8 @@ export const en: Dict = {
     "Supervision belongs to the accounting team’s expert or staff member.",
   "refus.ecriture.contre_passee":
     "This entry has already been reversed: it can no longer be supervised.",
+  "refus.ecriture.d_un_confrere":
+    "This entry was recorded by the previous accountant: it is read-only. Reverse it as of today, then record the adjustment.",
   "refus.conversation.auteur_fixe": "A conversation keeps its author.",
   "refus.conversation.dossier_fixe": "A conversation keeps its file.",
   "refus.conversation.question_vide": "Write your question before sending it.",
@@ -2888,6 +2893,17 @@ export const en: Dict = {
   "statut.cab.validee": "Validated",
   "statut.cab.forcee": "Forced",
   "cab.ecriture.titre": "The entry · editable",
+  "cab.confrere.inscrite": "Recorded by {comptabilite} · read-only",
+  "cab.confrere.aide":
+    "Books are kept without alteration: this entry is neither edited nor returned. To correct it, reverse it as of today, in your name, then record the adjustment.",
+  "cab.confrere.contrePasser": "Reverse as of today",
+  "cab.confrere.lettre.titre": "Letter informing your colleague",
+  "cab.confrere.lettre.aide":
+    "The OECT code of professional duties (art. 12) requires informing the replaced colleague by registered letter with acknowledgement of receipt. Here is a template to adapt: Malica does not send it for you.",
+  "cab.confrere.lettre.modele":
+    "For the attention of {confrere}\n\nSubject: {client} file (tax ID {matricule})\n\nDear colleague,\n\n{client} has entrusted us with keeping its accounts as of {depuis}. In accordance with article 12 of the OECT code of professional duties, we hereby inform you of this appointment.\n\nPlease let us know whether any professional reason stands in the way of this handover, and how you will send us the documents of the file that you hold.\n\nYours sincerely,\n\n{comptabilite}",
+  "cab.confrere.lettre.copier": "Copy the template",
+  "cab.confrere.lettre.copie": "Template copied.",
   "cab.ecriture.rien": "The Socle proposes nothing: enter the entry, it will be “forced”.",
   "cab.ecriture.rien.pourquoi": "Why nothing is proposed",
   "cab.ecriture.date_hors_referentiel": "Document date outside the reference data: to check.",

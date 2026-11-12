@@ -31,6 +31,7 @@ export const enBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.empty": "No shared documents in this view.",
   "cab.biblio.noClient": "Select a client to open their library.",
   "cab.archive.badge": "Engagement ended · read-only",
+  "cab.archive.ecritures": "Entries · read-only",
   "cab.archive.notice":
     "The engagement ended on {date}. You keep an archive of what you handled up to that day: the document and its entries can be read and downloaded, not changed.",
   "cab.archive.biblio":

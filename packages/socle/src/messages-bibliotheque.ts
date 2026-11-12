@@ -32,6 +32,7 @@ export const frBibliotheque = {
   "cab.biblio.empty": "Aucun document transmis dans cette vue.",
   "cab.biblio.noClient": "Choisissez un client pour ouvrir sa bibliothèque.",
   "cab.archive.badge": "Mandat terminé · lecture seule",
+  "cab.archive.ecritures": "Les écritures · lecture seule",
   "cab.archive.notice":
     "Le mandat a pris fin le {date}. Vous gardez en archive ce que vous avez pris en charge jusqu’à ce jour : la pièce et ses écritures se lisent et se téléchargent, sans modification.",
   "cab.archive.biblio":

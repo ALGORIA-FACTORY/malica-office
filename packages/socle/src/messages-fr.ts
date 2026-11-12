@@ -1715,6 +1715,9 @@ export const fr = {
   "cab.notif.kind.mandat.propose": "Un mandat a été proposé au dossier.",
   "cab.notif.kind.mandat.accepte": "Le dossier a accepté le mandat de la comptabilité.",
   "cab.notif.kind.mandat.revoque": "Le dossier a mis fin au mandat.",
+  "cab.notif.kind.mandat.succede": "Le dossier a confié sa comptabilité à une autre comptabilité.",
+  "cab.notif.kind.mandat.lettre_au_confrere":
+    "Vous succédez à une autre comptabilité : un modèle de lettre d’information au confrère vous attend dans la fiche du client.",
   "cab.notif.kind.mandat.refuse": "Le dossier a décliné le mandat de la comptabilité.",
   "cab.notif.kind.pv.envoye": "Un procès-verbal a été envoyé au client.",
   "cab.review.rank": "{n} sur {total}",
@@ -2385,6 +2388,8 @@ export const fr = {
     "La supervision revient à l’expert ou au collaborateur de la comptabilité.",
   "refus.ecriture.contre_passee":
     "Cette écriture est déjà contre-passée : elle ne se supervise plus.",
+  "refus.ecriture.d_un_confrere":
+    "Cette écriture a été inscrite par la comptabilité précédente : elle se lit seulement. Contre-passez-la à la date du jour, puis régularisez.",
   "refus.conversation.auteur_fixe": "Une conversation garde son auteur.",
   "refus.conversation.dossier_fixe": "Une conversation garde son dossier.",
   "refus.conversation.question_vide": "Écrivez votre question avant de l’envoyer.",
@@ -2982,6 +2987,17 @@ export const fr = {
   "statut.cab.validee": "Validée",
   "statut.cab.forcee": "Forcée",
   "cab.ecriture.titre": "L’écriture · modifiable",
+  "cab.confrere.inscrite": "Inscrite par {comptabilite} · lecture seule",
+  "cab.confrere.aide":
+    "Les livres se tiennent sans altération : cette écriture n’est ni modifiée ni retournée. Pour la corriger, contre-passez-la à la date du jour, à votre nom, puis inscrivez la régularisation.",
+  "cab.confrere.contrePasser": "Contre-passer à la date du jour",
+  "cab.confrere.lettre.titre": "Lettre d’information au confrère",
+  "cab.confrere.lettre.aide":
+    "Le code des devoirs professionnels de l’OECT (art. 12) demande d’informer le confrère remplacé par lettre recommandée avec accusé de réception. Voici un modèle à adapter : Malica ne l’envoie pas à votre place.",
+  "cab.confrere.lettre.modele":
+    "À l’attention de {confrere}\n\nObjet : dossier {client} (matricule fiscal {matricule})\n\nCher confrère,\n\nLa société {client} nous a confié la tenue de sa comptabilité à compter du {depuis}. Conformément à l’article 12 du code des devoirs professionnels de l’OECT, nous vous informons de cette désignation.\n\nNous vous remercions de nous faire savoir si une raison professionnelle s’oppose à cette reprise, et de nous indiquer comment nous transmettre les documents du dossier que vous détenez.\n\nVeuillez agréer, cher confrère, l’expression de nos salutations confraternelles.\n\n{comptabilite}",
+  "cab.confrere.lettre.copier": "Copier le modèle",
+  "cab.confrere.lettre.copie": "Modèle copié.",
   "cab.ecriture.rien": "Le Socle ne propose rien : saisissez l’écriture, elle sera « forcée ».",
   "cab.ecriture.rien.pourquoi": "Pourquoi rien n’est proposé",
   "cab.ecriture.date_hors_referentiel": "Date du document hors du référentiel : à vérifier.",

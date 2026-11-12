@@ -16,6 +16,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "rea
 
 import { useCabinet } from "@/components/malica/cabinet-context";
 import { MandatDuClient } from "@/components/malica/honoraires-de-la-comptabilite";
+import { LettreAuConfrere } from "@/components/malica/lettre-au-confrere";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -364,6 +365,7 @@ export function FicheClient({
   societesDeLaLicence: readonly string[];
 }) {
   const { t } = useI18n();
+  const { org } = useCabinet();
   const [onglet, setOnglet] = useState<OngletFiche>(ongletInitial);
 
   const fiche = useQuery({
@@ -441,7 +443,10 @@ export function FicheClient({
           />
         ) : onglet === "mandat" ? (
           expert ? (
-            <MandatDuClient clientTenantId={client.tenantId} clientName={client.name} />
+            <>
+              <LettreAuConfrere cabinetId={org.id} clientTenantId={client.tenantId} />
+              <MandatDuClient clientTenantId={client.tenantId} clientName={client.name} />
+            </>
           ) : (
             <p className="text-[13px] text-muted-foreground">{t("cab.cli.reserve.expert")}</p>
           )

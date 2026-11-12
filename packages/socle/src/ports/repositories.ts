@@ -105,6 +105,16 @@ export const DROITS = [
 
 export type Droit = (typeof DROITS)[number];
 
+/** Les éléments du modèle de lettre au confrère : rien n'est envoyé par Malica. */
+export interface LettreAuConfrere {
+  confrere: string;
+  comptabilite: string;
+  client: string;
+  matricule: string | null;
+  /** Premier jour du nouveau mandat, AAAA-MM-JJ. */
+  depuis: string;
+}
+
 export interface IdentityRepository {
   listMyOrganizations(): Promise<Array<Organization & { role: string }>>;
   /**
@@ -130,6 +140,15 @@ export interface IdentityRepository {
     pmeTenantId: string,
     motif: string,
   ): Promise<{ id: string; statut: "termine"; le: string }>;
+  /**
+   * Le modèle de lettre d'information au confrère que la comptabilité
+   * remplace (code des devoirs professionnels de l'OECT, art. 12) : ce qu'il
+   * faut y écrire. `null` sans comptabilité précédente. Malica ne l'envoie pas.
+   */
+  lettreAuConfrere(
+    cabinetTenantId: string,
+    clientTenantId: string,
+  ): Promise<LettreAuConfrere | null>;
   listEntities(tenantId: string): Promise<Entity[]>;
   createOrganization(input: NewOrganization): Promise<string>;
   /**
@@ -1915,6 +1934,12 @@ export interface Ecriture {
    */
   bookedAt: string | null;
   lines: EcritureLine[];
+  /**
+   * Inscrite par une AUTRE comptabilité que celle de la personne (un mandat
+   * précédent) : son nom, et l'écriture se lit seulement — elle ne se corrige
+   * que par une contre-passation au jour, puis une régularisation (7.3).
+   */
+  inscritePar?: string | null;
 }
 
 export interface ProposedEcriture {
@@ -2241,6 +2266,11 @@ export interface OfficeRepository {
    */
   retenuesDuMois(tenantId: string, periode: string): Promise<RetenueDuMois[]>;
   book(ecritureId: string): Promise<void>;
+  /**
+   * Contre-passe, au jour et au nom de la comptabilité, une écriture que sa
+   * devancière a inscrite (7.3). Rend l'identifiant de la contre-passation.
+   */
+  contrePasserLEcritureDuConfrere(ecritureId: string): Promise<string>;
   ecrituresForPiece(pieceId: string): Promise<Ecriture[]>;
   ecrituresByIds(ids: string[]): Promise<Ecriture[]>;
   bookedExtracts(

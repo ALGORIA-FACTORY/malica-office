@@ -73,6 +73,10 @@ const PHRASE_DU_GENRE: Record<string, MessageKey> = {
   "mandat.refuse": "cab.notif.kind.mandat.refuse",
   // Recette du 20 octobre 2026 : la révocation n'arrivait pas chez le cabinet.
   "mandat.revoque": "cab.notif.kind.mandat.revoque",
+  // Changement de comptabilité (7.3) : l'ancienne prévenue, la nouvelle invitée
+  // à informer son confrère.
+  "mandat.succede": "cab.notif.kind.mandat.succede",
+  "mandat.lettre_au_confrere": "cab.notif.kind.mandat.lettre_au_confrere",
   "pv.envoye": "cab.notif.kind.pv.envoye",
   // Le client demande le retour ou l'effacement d'une pièce transmise. Sans
   // ces deux entrées, la demande arrivait sous une phrase générique et
@@ -124,6 +128,8 @@ const MENE_AUX_CLIENTS = new Set([
   "mandat.accepte",
   "mandat.refuse",
   "mandat.revoque",
+  "mandat.succede",
+  "mandat.lettre_au_confrere",
 ]);
 const MENE_AUX_PV = new Set(["pv.envoye"]);
 

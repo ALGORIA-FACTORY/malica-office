@@ -218,6 +218,7 @@
     "formesDisponibles",
     "invitationsDuDossier",
     "inviterContact",
+    "lettreAuConfrere",
     "lireInvitationParLien",
     "listEntities",
     "listMyOrganizations",
@@ -269,6 +270,7 @@
   "office": [
     "book",
     "bookedExtracts",
+    "contrePasserLEcritureDuConfrere",
     "coursDeChange",
     "dejaComptabilisee",
     "ecrituresByIds",

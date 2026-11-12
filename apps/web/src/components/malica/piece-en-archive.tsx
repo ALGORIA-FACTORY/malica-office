@@ -72,50 +72,59 @@ export function PieceEnArchive({
       {contenu ? (
         <DocumentView contenu={contenu} highlight={null} label={t("cab.review.document")} />
       ) : null}
-      <section aria-label={t("cab.ecriture.titre")} className="space-y-3">
+      <section aria-label={t("cab.archive.ecritures")} className="space-y-3">
         <h2 className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          {t("cab.ecriture.titre")}
+          {t("cab.archive.ecritures")}
         </h2>
         {ecritures.map((e) => (
-          <div key={e.id} className="border border-border bg-card">
-            <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-2.5 text-[13px]">
-              <span className="num text-muted-foreground">{e.journal}</span>
-              <span className="num" dir="ltr">
-                {dateEnChiffres(e.dateEcriture, locale)}
-              </span>
-              <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{e.libelle}</span>
-            </p>
-            <ul className="divide-y divide-border">
-              {e.lines.map((l, i) => {
-                const auCredit = Number(l.credit) > 0;
-                return (
-                  <li
-                    key={i}
-                    className="flex min-h-[44px] items-center gap-3 py-2 pe-3"
-                    style={{ paddingInlineStart: auCredit ? 32 : 14 }}
-                  >
-                    <span className="num w-[52px] shrink-0 text-[13px] text-muted-foreground">
-                      {l.accountCode}
-                    </span>
-                    <span className="min-w-0 flex-1 text-[14px] leading-tight [overflow-wrap:anywhere]">
-                      {l.libelle}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {t(auCredit ? "cab.ecriture.credit_court" : "cab.ecriture.debit_court")}
-                    </span>
-                    <span
-                      className="num w-[92px] shrink-0 text-end text-[14px] font-medium"
-                      dir="ltr"
-                    >
-                      {montant(auCredit ? l.credit : l.debit, locale)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          <EcritureEnLectureSeule key={e.id} ecriture={e} />
         ))}
       </section>
+    </div>
+  );
+}
+
+/**
+ * Une écriture telle qu'elle a été inscrite, sans aucun geste : l'archive
+ * d'un mandat terminé (1.6), et l'écriture de la comptabilité précédente chez
+ * la nouvelle (7.3).
+ */
+export function EcritureEnLectureSeule({ ecriture }: { ecriture: Ecriture }) {
+  const { t, locale } = useI18n();
+  return (
+    <div className="border border-border bg-card">
+      <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-2.5 text-[13px]">
+        <span className="num text-muted-foreground">{ecriture.journal}</span>
+        <span className="num" dir="ltr">
+          {dateEnChiffres(ecriture.dateEcriture, locale)}
+        </span>
+        <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{ecriture.libelle}</span>
+      </p>
+      <ul className="divide-y divide-border">
+        {ecriture.lines.map((l, i) => {
+          const auCredit = Number(l.credit) > 0;
+          return (
+            <li
+              key={i}
+              className="flex min-h-[44px] items-center gap-3 py-2 pe-3"
+              style={{ paddingInlineStart: auCredit ? 32 : 14 }}
+            >
+              <span className="num w-[52px] shrink-0 text-[13px] text-muted-foreground">
+                {l.accountCode}
+              </span>
+              <span className="min-w-0 flex-1 text-[14px] leading-tight [overflow-wrap:anywhere]">
+                {l.libelle}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                {t(auCredit ? "cab.ecriture.credit_court" : "cab.ecriture.debit_court")}
+              </span>
+              <span className="num w-[92px] shrink-0 text-end text-[14px] font-medium" dir="ltr">
+                {montant(auCredit ? l.credit : l.debit, locale)}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
