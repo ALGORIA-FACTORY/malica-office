@@ -894,3 +894,31 @@ attend `pilote` et `production`, qui n'existent pas, et la coque Android de la p
 l'adresse de staging. « Déployer partout » veut donc dire aujourd'hui : staging (à chaque fusion sur
 `main`), la mise à jour en vol du canal staging, et un AAB sur la piste de test interne. **À décider par le
 dirigeant** : quand et où monter le pilote, puis la production.
+
+## L'argent de l'abonnement après la recette du 11 novembre 2026 (tranché par défaut, à confirmer)
+
+### A-1 — Qui paie les jours déjà payés quand la comptabilité reprend (1.1)
+
+Le prompt admettait deux règles : rendre à la PME la part déjà payée (avoir ou imputation), ou ne facturer
+la comptabilité qu'à partir de la fin de la période déjà payée. **Tranché par défaut : la seconde**
+(migration `20261214090000`). Elle n'émet aucun avoir et ne crée aucune créance de la PME sur ALGORIA : la
+PME garde ce qu'elle a payé, la comptabilité prend la suite à l'échéance de la PME (fin du mois, périmètre
+« PME » coupé ; fin de la période payée d'avance, périmètre ouvert). **À confirmer par le dirigeant.**
+
+### A-2 — Une descente ne rend rien, au mois comme à la date anniversaire (1.4)
+
+Périmètre « PME » coupé, une descente qui ferme une montée engagée dans le mois garde l'offre montée due
+jusqu'à la fin du mois : la règle E du 4 novembre (`20261128090000`) vaut donc aussi au mois pour ce cas.
+Une descente sans montée dans le mois reste au prorata des jours, comme avant. INCERTAIN juridique et
+fiscal, comme E : aucun avoir à la descente.
+
+### A-3 — La montée pendant l'année (7.5)
+
+- Pendant l'année : écart mensuel × 12 × jours restants / jours de l'année. Lecture retenue de « l'écart
+  mensuel × les jours restants de la période annuelle » ; **à confirmer**.
+- Avant le début : écart × (12 − mois offerts), « au prix annuel correspondant ».
+- Périmètre « PME » ouvert et montée AVANT le début de l'année : les jours qui restent avant l'année partent
+  par le complément du jour (une facture), l'écart de l'année par son acompte : deux montants à régler au
+  lieu d'un. Accepté tel quel ; à revoir à l'ouverture du périmètre.
+- Le droit de timbre : l'acompte de l'année le porte (1.8, `20261214100000`) ; l'acompte d'une montée de
+  l'année non, il s'impute sur une facture qui porte le sien.

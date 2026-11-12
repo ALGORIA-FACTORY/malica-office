@@ -4,7 +4,7 @@
  * Douze mois à partir du premier du mois suivant ; (12 − offerts) × le prix
  * de l'offre, payé en ligne ; le mois où l'année commence porte la ligne, une
  * fois ; un mois couvert sans rien d'autre ne produit aucune facture ; l'offre
- * ne change pas pendant l'année. Les prix et les mois offerts se lisent dans
+ * ne descend pas pendant l'année (elle monte : `la-montee-pendant-l-annee.test.ts`). Les prix et les mois offerts se lisent dans
  * la base, jamais ici. Tout se passe dans une transaction annulée.
  */
 import assert from "node:assert/strict";
@@ -102,7 +102,7 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
       )
     ).rows[0]!.m;
 
-  it("l'année se propose, se souscrit, se paie, et fige l'offre", async () => {
+  it("l'année se propose, se souscrit, se paie, et ferme la descente", async () => {
     await aBlanc(async (db) => {
       const s = await societeSolo(db);
       const operateur = await emetteur(db);
@@ -160,18 +160,18 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
       );
       await assert.rejects(
         sous(db, s.principal, () =>
-          db.query("select public.forfait_changer('team', $1)", [s.tenant]),
+          db.query("select public.forfait_changer('basic', $1)", [s.tenant]),
         ),
         /refus\.forfait\.empeche\?motif=engagement_annuel&/,
       );
-      const team = await sous(db, s.principal, async () => {
+      const basic = await sous(db, s.principal, async () => {
         const { rows } = await db.query<{ e: string | null }>(
-          "select empechement as e from public.mes_offres($1) where code = 'team'",
+          "select empechement as e from public.mes_offres($1) where code = 'basic'",
           [s.tenant],
         );
         return rows[0]!.e;
       });
-      assert.equal(team, "engagement_annuel", "l'écran le dit avant le geste");
+      assert.equal(basic, "engagement_annuel", "l'écran le dit avant le geste : la descente");
 
       const emettre = (periode: string) =>
         sous(db, operateur, async () => {
