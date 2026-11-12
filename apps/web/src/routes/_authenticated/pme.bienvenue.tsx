@@ -141,6 +141,12 @@ function Bienvenue() {
   const matricule = ouAbsent(pme.matricule);
   const raison = ouAbsent(pme.orgName);
   const adresse = ouAbsent(pme.adresse);
+  // « Choisir votre forfait, puis inviter votre comptabilité » ne se promet
+  // qu'à qui peut les faire : le propriétaire principal d'une société qui paie
+  // seule. Un dirigeant dont la comptabilité a choisi l'abonnement, ou un
+  // co-propriétaire, ne touche ni à l'un ni à l'autre (recette du 11 novembre).
+  const ligne = pme.forfait.ligne;
+  const promettreLaSuite = ligne?.titulaire === true && !ligne.pris_en_charge_par;
 
   return (
     <div
@@ -243,7 +249,7 @@ function Bienvenue() {
           </button>
         </div>
 
-        <p className="foot">{t("pme.bienvenue.pied")}</p>
+        {promettreLaSuite ? <p className="foot">{t("pme.bienvenue.pied")}</p> : null}
       </div>
     </div>
   );

@@ -186,7 +186,8 @@ function CabinetClients() {
   }, [actifs, etats.data, mandats.data, fiches]);
 
   const collabDe = useMemo(() => {
-    const parUser = new Map((membres.data ?? []).map((m) => [m.userId, m.email]));
+    // Le collaborateur se nomme ; son adresse seulement à défaut (4.4).
+    const parUser = new Map((membres.data ?? []).map((m) => [m.userId, m.nom ?? m.email]));
     const carte = new Map<string, string>();
     for (const a of (affectations.data ?? []).filter((x) => x.active)) {
       const email = parUser.get(a.collaboratorId);
@@ -662,12 +663,18 @@ function Ligne({
         <span className="num block text-[11px] text-muted-foreground">
           {client.legalId ?? "—"}
           {client.aTraiter ? (
-            <span className="ms-2 text-marigold">
+            <span className="text-marigold">
+              {/* Un séparateur écrit, pas une marge : lu ou copié, le compte
+                  se collait au matricule (« …/0001 à superviser »). */}
+              {" · "}
               {t("cab.cli.a.superviser", { count: client.aTraiter })}
             </span>
           ) : null}
           {client.engagementStatus === "propose" ? (
-            <span className="ms-2 text-[#3d5a99]">{t("cab.cli.mandat.demande")}</span>
+            <span className="text-[#3d5a99]">
+              {" · "}
+              {t("cab.cli.mandat.demande")}
+            </span>
           ) : null}
         </span>
       </span>

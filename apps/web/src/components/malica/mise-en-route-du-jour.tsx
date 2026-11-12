@@ -3,12 +3,18 @@
  * saisissent rien, chacune ouvre la page où le geste se fait déjà. L'écran
  * « Mise en route » en quatre étapes est retiré : il doublait Réglages et
  * Clients. La carte s'efface d'elle-même quand l'équipe et les clients sont là.
+ *
+ * Ses trois gestes — inviter l'équipe, ajouter des clients, proposer leurs
+ * abonnements — sont ceux de l'expert : la base les refuse aux autres. Un
+ * collaborateur ne voit donc pas la carte (recette du 11 novembre 2026, 4.6) :
+ * on ne lui montre que ce qu'il peut faire.
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { COMMERCE } from "@/capabilities/coque";
 import { useCabinet } from "@/components/malica/cabinet-context";
+import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -16,6 +22,7 @@ import { office } from "@/verticals/malica-office/composition";
 export function MiseEnRouteDuJour() {
   const { t } = useI18n();
   const { org } = useCabinet();
+  const acces = useMonAcces(org.id);
   const membres = useQuery({
     queryKey: ["cab-members", org.id],
     queryFn: () => office().collab.members(org.id),
@@ -28,6 +35,7 @@ export function MiseEnRouteDuJour() {
     queryKey: ["cab-etat-clients", org.id],
     queryFn: () => office().identity.etatDesClients(org.id),
   });
+  if (acces.data?.role !== "expert") return null;
   if (membres.isPending || invitations.isPending || etats.isPending) return null;
   if (membres.isError || invitations.isError || etats.isError) return null;
 
@@ -60,7 +68,11 @@ export function MiseEnRouteDuJour() {
       titre: t("cab.mer.clients"),
       detail:
         clients.length > 0
-          ? t("cab.mer.clients.fait", { count: clients.length, rejoints })
+          ? // Deux nombres, deux accords : « 1 dossier · 1 dirigeant a rejoint ».
+            `${t("cab.mer.clients.fait", { count: clients.length })} · ${t(
+              "cab.mer.clients.rejoints",
+              { count: rejoints },
+            )}`
           : t("cab.mer.clients.lede"),
       lien: (
         <Link to="/cabinet/clients" className="font-semibold hover:text-[#168b50]">

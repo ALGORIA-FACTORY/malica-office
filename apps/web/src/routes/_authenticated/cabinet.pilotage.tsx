@@ -306,7 +306,7 @@ function CabinetPilotage() {
             key: "sans",
             label: t("cab.pil.kpi.sans"),
             value: String(sansCollab.length),
-            ctx: t("cab.pil.kpi.sans.ctx"),
+            ctx: t("cab.pil.kpi.sans.ctx", { count: sansCollab.length }),
           },
           {
             key: "delai",

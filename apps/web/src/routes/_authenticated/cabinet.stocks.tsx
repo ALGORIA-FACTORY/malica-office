@@ -165,8 +165,8 @@ function CabinetStocks() {
     enabled: !!pack.data,
   });
   const categories = useQuery({
-    queryKey: ["stock-categories", pack.data?.id],
-    queryFn: () => office().stocks.categories(pack.data!.id),
+    queryKey: ["stock-categories", pack.data?.id, locale],
+    queryFn: () => office().stocks.categories(pack.data!.id, locale),
     enabled: !!pack.data,
   });
   const items = useQuery({

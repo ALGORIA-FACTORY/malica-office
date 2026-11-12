@@ -79,6 +79,7 @@
         "public.journal_export_journaliser",
         "public.justificatif_deplacer",
         "public.justificatif_remplacer",
+        "public.organisation_adresse_poser",
         "public.organisation_definir",
         "public.paiement_annuler",
         "public.paiement_rattacher_justificatif",
@@ -456,7 +457,7 @@
     {
       "objet": "identity.organizations",
       "privilege": "UPDATE",
-      "chemins": ["public.organisation_definir"]
+      "chemins": ["public.organisation_adresse_poser", "public.organisation_definir"]
     },
     {
       "objet": "identity.profiles",
