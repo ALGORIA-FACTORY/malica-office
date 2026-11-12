@@ -209,6 +209,7 @@
     "synthese"
   ],
   "identite": [
+    "accepterInvitationDeLaSociete",
     "accepterInvitationParLien",
     "conventionDeDate",
     "createOrganization",
@@ -221,8 +222,10 @@
     "examinerMatricule",
     "ficheCourante",
     "formesDisponibles",
+    "invitationDeMaComptabilite",
     "invitationsDuDossier",
     "inviterContact",
+    "inviterMaComptabilite",
     "lettreAuConfrere",
     "lireInvitationParLien",
     "listEntities",

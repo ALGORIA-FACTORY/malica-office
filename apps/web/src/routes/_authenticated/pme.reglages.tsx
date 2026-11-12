@@ -17,6 +17,7 @@ import { useApparence, type Apparence } from "@/components/malica/apparence";
 import { Aide } from "@/components/malica/aide";
 import { AbonnementDeLaComptabilite } from "@/components/malica/abonnement-pilote";
 import { ComptableInterne } from "@/components/malica/comptable-interne";
+import { InviterMaComptabilite } from "@/components/malica/inviter-ma-comptabilite";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
@@ -1212,7 +1213,11 @@ function Organisation({
         <p className="mn">{t("pme.reglages.orgs.autreTitulaire", { societe: org.nom })}</p>
       ) : null}
       {/* La place « Comptable interne », comprise dans toute offre (7.2). */}
-      <ComptableInterne tenantId={org.tenantId} proprietaire={dossier?.role === "dirigeant"} />
+      <ComptableInterne tenantId={org.tenantId} />
+      {/* Le propriétaire invite sa comptabilité, externe ou interne (7.1, 7.2). */}
+      {dossier?.role === "dirigeant" ? (
+        <InviterMaComptabilite tenantId={org.tenantId} aUnMandat={Boolean(cabinet.data)} />
+      ) : null}
       {cabinet.data ? <LeMandat tenantId={org.tenantId} onRevoque={setRevoque} /> : null}
       {revoque && !cabinet.data ? (
         <p className="t-body" aria-live="polite">

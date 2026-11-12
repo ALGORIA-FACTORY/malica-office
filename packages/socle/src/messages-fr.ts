@@ -342,6 +342,8 @@ export const fr = {
   "refus.licence.export": "Export suspendu : l'abonnement de ce dossier n'est pas à jour.",
   "refus.place.comptable_prise":
     "La place « Comptable interne » comprise dans l'offre est déjà prise ({places} au total).",
+  "refus.invitation.choisir_la_comptabilite":
+    "Cette invitation confie une société à votre comptabilité : ouvrez-la et choisissez la comptabilité qui l'accepte.",
   "refus.place.incluses_prises": "Toutes les places incluses dans l'abonnement sont prises.",
   "pme.refus.licence_suspendue":
     "Votre abonnement est suspendu. La pièce est rangée, et je la lirai dès qu'il reprend.",
@@ -407,6 +409,17 @@ export const fr = {
   "pme.membres.lede":
     "Invitez quelqu'un par son adresse. Il crée son compte lui-même, et votre invitation l'attend — son mot de passe ne passe par personne.",
   "pme.membres.role.dirigeant": "Propriétaire",
+  "pme.inviterCompta.titre": "Inviter ma comptabilité",
+  "pme.inviterCompta.externe": "Externe",
+  "pme.inviterCompta.externe.sous":
+    "Votre expert-comptable : il accepte avec sa comptabilité, et le mandat devient actif. Votre abonnement ne change pas.",
+  "pme.inviterCompta.externe.adresse": "Adresse e-mail de votre expert-comptable",
+  "pme.inviterCompta.interne": "Interne",
+  "pme.inviterCompta.envoyer": "Envoyer l'invitation",
+  "pme.inviterCompta.suivi": "Invitation envoyée à {email} le {jour}",
+  "pme.inviterCompta.relancer": "Relancer",
+  "pme.inviterCompta.copier": "Copier le lien",
+  "pme.inviterCompta.copie": "Lien copié",
   "pme.membres.role.comptable": "Comptable interne",
   "pme.reglages.org.comptableInterne": "Comptable interne :",
   "pme.reglages.org.comptableInterne.aucun": "aucun",
@@ -414,7 +427,6 @@ export const fr = {
   "pme.comptableInterne.adresse": "Adresse e-mail de votre comptable salarié",
   "pme.comptableInterne.place":
     "Une place comprise dans votre offre : elle ne prend aucune place payante.",
-  "pme.comptableInterne.inviter": "Inviter le comptable interne",
   "pme.membres.role.collaborateur": "Utilisateur",
   "pme.membres.adresse": "adresse e-mail",
   "pme.membres.envoyee": "Invitation envoyée à {email}.",
@@ -1819,6 +1831,10 @@ export const fr = {
   "invitation.adresse": "Invitation adressée à {email}.",
   "invitation.mauvaiseAdresse":
     "Vous êtes connecté avec une autre adresse. Déconnectez-vous, puis entrez avec {email}.",
+  "invitation.comptabilite": "{pme} vous invite à tenir sa comptabilité.",
+  "invitation.comptabilite.choisir": "La comptabilité qui accepte",
+  "invitation.comptabilite.creer": "Ou créez votre comptabilité",
+  "invitation.comptabilite.accepter": "Accepter le mandat",
   "invitation.rejoindre": "Rejoindre mon espace",
   "invitation.plusValable":
     "Ce lien n'est plus valable. Demandez-en un nouveau à votre comptabilité.",

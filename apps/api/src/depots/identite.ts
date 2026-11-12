@@ -577,6 +577,97 @@ export const identite = {
     return { ...r, ...envoi };
   },
 
+  /**
+   * La société invite sa comptabilité externe (7.1). Le jeton n'est rendu
+   * qu'ici, une fois : le lien se copie à l'émission, et « Relancer » en émet
+   * un neuf (l'ancien est révoqué). Le courriel part si Brevo est configuré ;
+   * sinon, ou s'il échoue, l'invitation vaut et le lien se transmet à la main.
+   */
+  async inviterMaComptabilite(
+    db: Requete,
+    pmeTenantId: string,
+    email: string,
+  ): Promise<{
+    id: string;
+    email: string;
+    jeton: string;
+    expiresAt: string;
+    relance: boolean;
+    courriel: StatutCourriel;
+    lien: string | null;
+  }> {
+    const { rows } = await db.query<{
+      r: { id: string; email: string; jeton: string; expiresAt: string; relance: boolean };
+    }>(`select public.comptabilite_inviter($1, $2) as r`, [pmeTenantId, email]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("invitation.non_emise");
+
+    let config: ReturnType<typeof configurationCourriel>;
+    try {
+      config = configurationCourriel(process.env);
+    } catch (e) {
+      console.error(`[invitation] configuration du courriel : ${(e as Error).message}`);
+      return { ...r, relance: Boolean(r.relance), courriel: "echec", lien: null };
+    }
+    const noms = config ? await identite.lireInvitationParLien(db, r.jeton) : null;
+    const envoi = await envoyerInvitation(
+      {
+        cabinet: "",
+        pme: noms?.pme ?? "",
+        email: r.email,
+        jeton: r.jeton,
+        expireLe: new Date(r.expiresAt),
+        pour: "comptabilite",
+      },
+      config,
+    );
+    return { ...r, relance: Boolean(r.relance), ...envoi };
+  },
+
+  /** La dernière invitation de la comptabilité, pour le propriétaire. Jamais le jeton. */
+  async invitationDeMaComptabilite(
+    db: Requete,
+    pmeTenantId: string,
+  ): Promise<{
+    id: string;
+    email: string;
+    envoyeeLe: string;
+    expiresAt: string;
+    statut: "en_attente" | "acceptee" | "expiree" | "revoquee";
+  } | null> {
+    const { rows } = await db.query<{
+      r: {
+        id: string;
+        email: string;
+        envoyeeLe: string;
+        expiresAt: string;
+        statut: "en_attente" | "acceptee" | "expiree" | "revoquee";
+      } | null;
+    }>(`select public.comptabilite_invitation_lire($1) as r`, [pmeTenantId]);
+    return rows[0]?.r ?? null;
+  },
+
+  /**
+   * L'expert accepte l'invitation d'une société avec SA comptabilité : le
+   * mandat devient actif. Par le lien (`jeton`) ou depuis ses invitations
+   * (`invitationId`).
+   */
+  async accepterInvitationDeLaSociete(
+    db: Requete,
+    input: { jeton: string | null; invitationId: string | null; cabinetTenantId: string },
+  ): Promise<{ engagementId: string; pmeTenantId: string; cabinetTenantId: string }> {
+    const { rows } = await db.query<{
+      r: { engagementId: string; pmeTenantId: string; cabinetTenantId: string };
+    }>(`select public.comptabilite_invitation_accepter($1, $2, $3) as r`, [
+      input.jeton,
+      input.invitationId,
+      input.cabinetTenantId,
+    ]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("invitation.non_acceptee");
+    return r;
+  },
+
   /** Les invitations d'un dossier et leur état, pour le cabinet mandaté. Jamais le jeton. */
   async invitationsDuDossier(
     db: Requete,
@@ -623,6 +714,7 @@ export const identite = {
     email: string;
     statut: "en_attente" | "acceptee" | "expiree" | "revoquee";
     valable: boolean;
+    pourLaComptabilite?: boolean;
   } | null> {
     const { rows } = await db.query<{
       r: {
@@ -631,6 +723,7 @@ export const identite = {
         email: string;
         statut: "en_attente" | "acceptee" | "expiree" | "revoquee";
         valable: boolean;
+        pourLaComptabilite?: boolean;
       } | null;
     }>(`select public.invitation_par_lien_lire($1) as r`, [jeton]);
     return rows[0]?.r ?? null;

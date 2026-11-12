@@ -87,9 +87,12 @@ export interface MonMandat {
 /** Une invitation reçue, vue par la personne qui peut la rejoindre. */
 export interface InvitationRecue {
   id: string;
+  /** L'organisation qui invite (un cabinet, ou une société qui invite sa comptabilité). */
   cabinetTenantId: string;
   cabinet: string;
   role: string;
+  /** Le type de l'organisation qui invite : `pme` + `expert`, une société invite sa comptabilité. */
+  kind?: "pme" | "cabinet";
   expiresAt: string;
 }
 
@@ -243,9 +246,41 @@ export interface IdentityRepository {
     email: string;
     statut: StatutInvitation;
     valable: boolean;
+    /** La société invite sa comptabilité (7.1) : on choisit la comptabilité, on ne rejoint pas. */
+    pourLaComptabilite?: boolean;
   } | null>;
   /** Le contact rejoint le dossier ; son compte doit porter l'adresse invitée. */
   accepterInvitationParLien(jeton: string): Promise<{ tenantId: string; role: string }>;
+  /**
+   * La société invite sa comptabilité externe (7.1). Le jeton n'est rendu
+   * qu'ici ; `lien` est absolu quand l'adresse publique est connue.
+   */
+  inviterMaComptabilite(
+    pmeTenantId: string,
+    email: string,
+  ): Promise<{
+    id: string;
+    email: string;
+    jeton: string;
+    expiresAt: string;
+    relance: boolean;
+    courriel: "envoye" | "non_configure" | "echec";
+    lien: string | null;
+  }>;
+  /** La dernière invitation de la comptabilité, pour le propriétaire. */
+  invitationDeMaComptabilite(pmeTenantId: string): Promise<{
+    id: string;
+    email: string;
+    envoyeeLe: string;
+    expiresAt: string;
+    statut: StatutInvitation;
+  } | null>;
+  /** L'expert accepte l'invitation d'une société avec sa comptabilité : le mandat devient actif. */
+  accepterInvitationDeLaSociete(input: {
+    jeton: string | null;
+    invitationId: string | null;
+    cabinetTenantId: string;
+  }): Promise<{ engagementId: string; pmeTenantId: string; cabinetTenantId: string }>;
   /** Les régimes que la juridiction connaît, tels que la base les porte. */
   regimesDisponibles(jurisdiction: string): Promise<RegimeDisponible[]>;
   /** Les formes juridiques et modes de dépôt que le calendrier distingue. */

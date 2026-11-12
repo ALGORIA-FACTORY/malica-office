@@ -34,9 +34,37 @@ export function InvitationsPourMoi() {
     queryFn: () => office().collab.invitationsPourMoi(),
   });
 
+  /*
+   * Une société qui invite sa comptabilité (7.1) : accepter, c'est activer le
+   * mandat avec la comptabilité de l'expert — la première dont il est l'expert.
+   * Il ne rejoint pas la société.
+   */
+  const mesOrgs = useQuery({
+    queryKey: ["my-organizations"],
+    queryFn: () => office().identity.listMyOrganizations(),
+  });
+  const maComptabilite =
+    (mesOrgs.data ?? []).find((o) => o.kind === "cabinet" && o.role === "expert")?.id ?? null;
+  const pourLaComptabilite = (i: { kind?: string; role: string }) =>
+    i.kind === "pme" && i.role === "expert";
+
   const repondre = useMutation({
-    mutationFn: (input: { id: string; cabinet: string; accepte: boolean }) =>
-      office().collab.repondreAInvitation(input.id, input.accepte),
+    mutationFn: async (input: {
+      id: string;
+      cabinet: string;
+      accepte: boolean;
+      mandat: boolean;
+    }) => {
+      if (input.mandat && input.accepte && maComptabilite) {
+        await office().identity.accepterInvitationDeLaSociete({
+          jeton: null,
+          invitationId: input.id,
+          cabinetTenantId: maComptabilite,
+        });
+        return;
+      }
+      await office().collab.repondreAInvitation(input.id, input.accepte);
+    },
     onSuccess: async (_r, input) => {
       setErreur(null);
       setMessage(
@@ -75,7 +103,12 @@ export function InvitationsPourMoi() {
           <li key={i.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
             <div className="min-w-0">
               <p className="text-[14px]">
-                {t("portal.invitations.texte", { cabinet: i.cabinet, role: roleLisible(i.role) })}
+                {pourLaComptabilite(i)
+                  ? t("invitation.comptabilite", { pme: i.cabinet })
+                  : t("portal.invitations.texte", {
+                      cabinet: i.cabinet,
+                      role: roleLisible(i.role),
+                    })}
               </p>
               <p className="num mt-0.5 text-[11px] text-muted-foreground">
                 {t("portal.invitations.expire", { date: dateLisible(i.expiresAt) })}
@@ -84,8 +117,15 @@ export function InvitationsPourMoi() {
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={repondre.isPending}
-                onClick={() => repondre.mutate({ id: i.id, cabinet: i.cabinet, accepte: true })}
+                disabled={repondre.isPending || (pourLaComptabilite(i) && !maComptabilite)}
+                onClick={() =>
+                  repondre.mutate({
+                    id: i.id,
+                    cabinet: i.cabinet,
+                    accepte: true,
+                    mandat: pourLaComptabilite(i),
+                  })
+                }
                 className="border border-foreground bg-foreground px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-background disabled:opacity-40"
               >
                 {t("portal.invitations.rejoindre")}
@@ -93,7 +133,9 @@ export function InvitationsPourMoi() {
               <button
                 type="button"
                 disabled={repondre.isPending}
-                onClick={() => repondre.mutate({ id: i.id, cabinet: i.cabinet, accepte: false })}
+                onClick={() =>
+                  repondre.mutate({ id: i.id, cabinet: i.cabinet, accepte: false, mandat: false })
+                }
                 className="border border-border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] disabled:opacity-40"
               >
                 {t("portal.invitations.decliner")}

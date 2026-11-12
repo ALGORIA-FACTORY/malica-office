@@ -949,3 +949,22 @@ comptable dans deux sociétés d'une licence Premium n'occupe qu'une place. Elle
 Android : elle n'est jamais facturée. **À confirmer** : une seule place, et le propriétaire principal
 seul… ou tout propriétaire ? Tranché : **tout propriétaire de la société** l'offre (la place ne coûte
 rien), alors qu'une place payante reste au propriétaire principal.
+
+### C-3 — La société invite sa comptabilité externe (7.1)
+
+Migration `20261221100000`. Ce qui est tranché par défaut :
+
+- **Une comptabilité déjà inscrite** reçoit l'invitation dans « Invitations pour moi » (la même ligne que le
+  lien), et l'accepte avec sa comptabilité. Le prompt demandait de « réutiliser le mandat proposé » : un
+  mandat `propose` se répond côté **société** (`mandat_repondre`) ; le poser depuis la société l'aurait fait
+  apparaître à la société comme une proposition à accepter. L'invitation porte donc la demande, et
+  l'acceptation pose directement le mandat **actif**. **À confirmer.**
+- **Un mandat actif** : la société n'invite pas une seconde comptabilité (`refus.mandat.un_seul_actif`). Le
+  changement de comptabilité passe par 3.2.
+- **Adresse préremplie à la création de l'accès : non.** Elle exigerait de lire l'invitation sans session ;
+  c'est la décision de sécurité ouverte 4.5, et rien n'est ouvert ici. Le lien mène à « Créer mon accès » ;
+  l'expert saisit son adresse.
+- **Sans comptabilité**, l'expert la crée d'abord (`/onboarding`) ; le jeton l'attend dans la session.
+- Le courriel part par Brevo quand il est configuré (expéditeur et adresse publique en configuration,
+  aucune adresse en dur) ; il dit « tenir sa comptabilité », jamais « Dirigeant ». Les épreuves n'envoient
+  rien.
