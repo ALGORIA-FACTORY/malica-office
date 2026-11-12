@@ -922,3 +922,30 @@ fiscal, comme E : aucun avoir à la descente.
   lieu d'un. Accepté tel quel ; à revoir à l'ouverture du périmètre.
 - Le droit de timbre : l'acompte de l'année le porte (1.8, `20261218100000`) ; l'acompte d'une montée de
   l'année non, il s'impute sur une facture qui porte le sien.
+
+## Le comptable interne et la comptabilité qui invite (7.1, 7.2 — tranché par défaut, à confirmer)
+
+### C-1 — Qui valide quand un comptable interne et une comptabilité externe coexistent (7.2)
+
+Le prompt laissait la règle à la maquette. **Tranché par défaut, la plus simple et la plus sûre**
+(migration `20261221090000`) :
+
+- **sans comptabilité externe**, le comptable interne tient les livres : il inscrit, valide, force et
+  retourne. Le propriétaire n'inscrit plus lui-même : la société n'est plus « autonome » ;
+- **quand une comptabilité externe a un mandat actif**, c'est elle qui inscrit, valide, force et retourne.
+  Le comptable interne **prépare** seulement : il voit les pièces, établit leur type et propose
+  l'écriture, que la comptabilité externe inscrit.
+
+Deux prédicats en base portent la règle : `app.prepare_le_dossier` (préparer) et
+`app.supervise_le_dossier` (trancher). Changer la règle, c'est changer ce second prédicat, pas les
+portes. **À confirmer par le dirigeant.**
+
+### C-2 — La place « Comptable interne » (7.2)
+
+Une place par offre, dès Basic, hors des places payantes : colonne `ref.offres.places_comptable_incluses`,
+née à 1 sur les offres déjà publiées, puis sans défaut — une grille publiée à la tour la porte, ou la
+tour refuse la grille (`place_comptable_absente`, `places_comptable_decroissantes`). La même personne
+comptable dans deux sociétés d'une licence Premium n'occupe qu'une place. Elle s'offre depuis la coque
+Android : elle n'est jamais facturée. **À confirmer** : une seule place, et le propriétaire principal
+seul… ou tout propriétaire ? Tranché : **tout propriétaire de la société** l'offre (la place ne coûte
+rien), alors qu'une place payante reste au propriétaire principal.

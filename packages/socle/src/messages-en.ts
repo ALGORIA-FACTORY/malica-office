@@ -323,6 +323,8 @@ export const en: Dict = {
     "A return of this document has been requested from the accountant: wait for their answer.",
   "refus.licence.transmission": "Sending suspended: a payment on your subscription is overdue.",
   "refus.licence.export": "Export suspended: this client's subscription is not up to date.",
+  "refus.place.comptable_prise":
+    "The “In-house accountant” place included in the plan is already taken ({places} in total).",
   "refus.place.incluses_prises": "All the places included in the subscription are taken.",
   "pme.refus.licence_suspendue":
     "Your subscription is suspended. The document is filed, and I will read it as soon as it resumes.",
@@ -368,6 +370,13 @@ export const en: Dict = {
   "pme.membres.lede":
     "Invite someone by their address. They create their own account, and your invitation is waiting for them — their password goes through no one.",
   "pme.membres.role.dirigeant": "Owner",
+  "pme.membres.role.comptable": "In-house accountant",
+  "pme.reglages.org.comptableInterne": "In-house accountant:",
+  "pme.reglages.org.comptableInterne.aucun": "none",
+  "pme.reglages.org.comptableInterne.attend": "invitation sent to {email} on {jour}",
+  "pme.comptableInterne.adresse": "Email address of your salaried accountant",
+  "pme.comptableInterne.place": "A place included in your plan: it takes no paid place.",
+  "pme.comptableInterne.inviter": "Invite the in-house accountant",
   "pme.membres.role.collaborateur": "User",
   "pme.membres.adresse": "email address",
   "pme.membres.envoyee": "Invitation sent to {email}.",
@@ -4089,6 +4098,10 @@ export const en: Dict = {
   "tour.trou.places_incoherentes": "Max seats below included seats: {detail}",
   "tour.trou.prix_non_croissant": "The higher plan does not cost more: {detail}",
   "tour.trou.lectures_non_croissantes": "The higher plan does not give more reads: {detail}",
+  "tour.champ.places_comptable_incluses": "Included “In-house accountant” places",
+  "tour.trou.place_comptable_absente": "The plan includes no “In-house accountant” place: {detail}",
+  "tour.trou.places_comptable_decroissantes":
+    "The higher plan includes fewer “In-house accountant” places: {detail}",
   "tour.trou.personnes_decroissantes": "The higher plan gives fewer seats: {detail}",
   "tour.trou.monter_coute_plus_a_la_lecture": "Moving up makes a read more expensive: {detail}",
   "tour.trou.recharge_incomplete": "Incomplete top-up: {detail}",

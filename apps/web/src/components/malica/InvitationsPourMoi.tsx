@@ -20,6 +20,7 @@ const ROLES: Record<string, MessageKey> = {
   dirigeant: "cab.rail.role.dirigeant",
   collaborateur: "cab.rail.role.collaborateur",
   assistant: "cab.rail.role.assistant",
+  comptable: "pme.membres.role.comptable",
 };
 
 export function InvitationsPourMoi() {

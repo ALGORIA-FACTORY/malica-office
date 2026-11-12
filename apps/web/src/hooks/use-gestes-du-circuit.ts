@@ -38,7 +38,7 @@ import { unParUn } from "@/lib/un-par-un";
 import { office } from "@/verticals/malica-office/composition";
 
 import { useMonAcces } from "./use-mon-acces";
-import { useMonCabinet } from "./use-mon-cabinet";
+import { useComptabiliteDeLaSociete } from "./use-comptable-interne";
 
 /** Une pièce et ses faits, tels que la liste et la fiche les lisent. */
 export type PieceDuCircuitWeb = FaitsDeLaPiece & { id: string };
@@ -54,9 +54,9 @@ export type GesteOffert<R, V = void> = UseMutationResult<R, unknown, V>;
  */
 function useLeCircuit(tenantId: string | null | undefined) {
   const acces = useMonAcces(tenantId);
-  const cabinet = useMonCabinet(tenantId);
   const droits = acces.data?.droits ?? null;
-  const aUnCabinet = Boolean(cabinet.data);
+  // Une comptabilité mandatée, ou le comptable interne (7.2).
+  const aUnCabinet = useComptabiliteDeLaSociete(tenantId).aUneComptabilite;
   const faits = (f: FaitsDeLaPiece) => ({
     vis: f.vis,
     status: f.status,

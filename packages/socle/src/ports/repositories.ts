@@ -109,6 +109,7 @@ export const DROITS = [
   "piece.garder",
   "circuit.recevoir",
   "piece.supprimer_toutes",
+  "livres.tenir",
 ] as const;
 
 export type Droit = (typeof DROITS)[number];
@@ -4212,6 +4213,18 @@ export interface SiegeDeLaLicence {
   email: string | null;
 }
 
+/**
+ * La place « Comptable interne » de la société (7.2) : comprise dans chaque
+ * offre, hors des places payantes. Jamais un prix. `invitations` n'est rendu
+ * qu'au propriétaire.
+ */
+export interface PlaceComptable {
+  incluses: number;
+  engagees: number;
+  comptables: Array<{ userId: string; nom: string | null }>;
+  invitations: Array<{ id: string; email: string; envoyeeLe: string; expiresAt: string }>;
+}
+
 /** Une organisation de la licence, et ce qu'elle a consommé ce mois-ci. */
 /** Ce que la liste des sociétés montre de chacune (planche 4). */
 export interface FicheDeSociete {
@@ -4269,6 +4282,16 @@ export interface FacturationRepository {
     email: string,
     tenantId: string,
   ): Promise<{ id: string; email: string; role: string; expiresAt: string; deja: boolean }>;
+  /**
+   * Le propriétaire invite le comptable interne de sa société, sur la place
+   * « comptable » comprise dans l'offre (7.2). La base refuse la place de trop.
+   */
+  inviterComptableInterne(
+    email: string,
+    tenantId: string,
+  ): Promise<{ id: string; email: string; role: string; expiresAt: string; deja: boolean }>;
+  /** La place « comptable » de la société, et qui l'occupe ou l'attend. */
+  placeComptable(tenantId: string): Promise<PlaceComptable>;
   /** `{ libere: false, motif }` tant qu'il reste des pièces à trancher. */
   libererPlace(
     tenantId: string,

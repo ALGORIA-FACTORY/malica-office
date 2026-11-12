@@ -312,6 +312,8 @@ export const ar: Dict = {
   "refus.piece.rappelEnAttente": "طُلب من المحاسبة استرجاع هذه الوثيقة: انتظر ردّها.",
   "refus.licence.transmission": "الإرسال موقوف: دفعة من اشتراككم متأخرة.",
   "refus.licence.export": "التصدير موقوف: اشتراك هذا الملف غير مسدَّد.",
+  "refus.place.comptable_prise":
+    "مقعد «المحاسب الداخلي» المشمول في الباقة مشغول ({places} في المجموع).",
   "refus.place.incluses_prises": "كل المقاعد المشمولة في الاشتراك مشغولة.",
   "pme.refus.licence_suspendue": "اشتراكك موقوف. الوثيقة محفوظة، وسأقرؤها حالما يُستأنف.",
   "pme.refus.licence.autre": "اشتراكك لا يسمح بالقراءة في الوقت الحالي.",
@@ -354,6 +356,13 @@ export const ar: Dict = {
   "pme.membres.lede":
     "ادعُ شخصًا بعنوانه. ينشئ حسابه بنفسه، ودعوتك في انتظاره — كلمة سرّه لا تمرّ بأحد.",
   "pme.membres.role.dirigeant": "مالك",
+  "pme.membres.role.comptable": "محاسب داخلي",
+  "pme.reglages.org.comptableInterne": "المحاسب الداخلي:",
+  "pme.reglages.org.comptableInterne.aucun": "لا أحد",
+  "pme.reglages.org.comptableInterne.attend": "دعوة أُرسلت إلى {email} في {jour}",
+  "pme.comptableInterne.adresse": "البريد الإلكتروني لمحاسبكم الأجير",
+  "pme.comptableInterne.place": "مقعد مشمول في باقتكم: لا يأخذ أي مقعد مدفوع.",
+  "pme.comptableInterne.inviter": "دعوة المحاسب الداخلي",
   "pme.membres.role.collaborateur": "مستخدم",
   "pme.membres.adresse": "عنوان البريد الإلكتروني",
   "pme.membres.envoyee": "أُرسلت الدعوة إلى {email}.",
@@ -3927,6 +3936,10 @@ export const ar: Dict = {
   "tour.trou.places_incoherentes": "أقصى المقاعد أقل من المشمولة: {detail}",
   "tour.trou.prix_non_croissant": "الباقة الأعلى ليست أغلى: {detail}",
   "tour.trou.lectures_non_croissantes": "الباقة الأعلى لا تعطي قراءات أكثر: {detail}",
+  "tour.champ.places_comptable_incluses": "مقاعد «المحاسب الداخلي» المشمولة",
+  "tour.trou.place_comptable_absente": "الباقة لا تشمل أي مقعد «محاسب داخلي»: {detail}",
+  "tour.trou.places_comptable_decroissantes":
+    "الباقة الأعلى تشمل مقاعد «محاسب داخلي» أقل: {detail}",
   "tour.trou.personnes_decroissantes": "الباقة الأعلى تعطي مقاعد أقل: {detail}",
   "tour.trou.monter_coute_plus_a_la_lecture": "بالترقية تصبح القراءة أغلى: {detail}",
   "tour.trou.recharge_incomplete": "رصيد ناقص: {detail}",

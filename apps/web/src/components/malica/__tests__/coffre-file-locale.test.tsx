@@ -22,7 +22,13 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: ({ queryKey }: { queryKey: readonly unknown[] }) =>
     queryKey[0] === "mon-acces"
       ? { isSuccess: true, data: { droits: [] }, fetchStatus: "idle" }
-      : { isSuccess: true, data: [], fetchStatus: "idle" },
+      : queryKey[0] === "place-comptable"
+        ? {
+            isSuccess: true,
+            data: { incluses: 1, engagees: 0, comptables: [], invitations: [] },
+            fetchStatus: "idle",
+          }
+        : { isSuccess: true, data: [], fetchStatus: "idle" },
   useMutation: () => ({}),
   useQueryClient: () => ({}),
 }));

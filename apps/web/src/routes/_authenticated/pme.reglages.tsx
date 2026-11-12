@@ -16,6 +16,7 @@ import {
 import { useApparence, type Apparence } from "@/components/malica/apparence";
 import { Aide } from "@/components/malica/aide";
 import { AbonnementDeLaComptabilite } from "@/components/malica/abonnement-pilote";
+import { ComptableInterne } from "@/components/malica/comptable-interne";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
@@ -231,13 +232,7 @@ function PmeReglages() {
             {profil.data?.prenom ? <span className="ml">{compte.data?.email}</span> : null}
             <span className="pills">
               {acces.data?.role ? (
-                <span className="pill">
-                  {t(
-                    acces.data.role === "dirigeant"
-                      ? "pme.membres.role.dirigeant"
-                      : "pme.membres.role.collaborateur",
-                  )}
-                </span>
+                <span className="pill">{roleLisible(acces.data.role, t)}</span>
               ) : null}
               {/* Plusieurs sociétés : chacune a sa carte plus bas, aucune n'est « la » société. */}
               {pme.dossiers.length <= 1 ? <span className="pill neutre">{pme.orgName}</span> : null}
@@ -1216,6 +1211,8 @@ function Organisation({
       {titulaire === false ? (
         <p className="mn">{t("pme.reglages.orgs.autreTitulaire", { societe: org.nom })}</p>
       ) : null}
+      {/* La place « Comptable interne », comprise dans toute offre (7.2). */}
+      <ComptableInterne tenantId={org.tenantId} proprietaire={dossier?.role === "dirigeant"} />
       {cabinet.data ? <LeMandat tenantId={org.tenantId} onRevoque={setRevoque} /> : null}
       {revoque && !cabinet.data ? (
         <p className="t-body" aria-live="polite">
@@ -1894,13 +1891,19 @@ function etatDeLicence(code: string, t: (k: MessageKey) => string): string {
   return code;
 }
 
-/** Les deux rôles qu'un dossier de PME connaît ; les autres gardent leur code. */
+/** Les rôles qu'un dossier de PME connaît ; les autres gardent leur code. */
 function roleLisible(
   code: string,
-  t: (k: "pme.membres.role.dirigeant" | "pme.membres.role.collaborateur") => string,
+  t: (
+    k:
+      | "pme.membres.role.dirigeant"
+      | "pme.membres.role.collaborateur"
+      | "pme.membres.role.comptable",
+  ) => string,
 ): string {
   if (code === "dirigeant") return t("pme.membres.role.dirigeant");
   if (code === "collaborateur") return t("pme.membres.role.collaborateur");
+  if (code === "comptable") return t("pme.membres.role.comptable");
   return code;
 }
 
