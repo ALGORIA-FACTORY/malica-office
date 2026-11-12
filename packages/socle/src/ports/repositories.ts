@@ -4389,6 +4389,8 @@ export interface MonAnnuel {
     offre: string;
     montant_ht: string;
     mois_offerts: number;
+    /** HT + TVA + timbre, par `public.prix_ttc` : ce que l'acompte de l'année règle. */
+    ttc: string | null;
   } | null;
   /** Ce qui ferme l'année (un CODE), ou `null` quand elle est ouverte. */
   ferme?: string | null;

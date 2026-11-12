@@ -398,6 +398,12 @@ export function PayerALAnnee() {
             offerts: a.en_cours.mois_offerts,
           })}
         </p>
+        {/* Le même TTC que la proposition et que « À régler » : la base le rend (1.8). */}
+        {a.en_cours.ttc !== null ? (
+          <p className="t-body">
+            {t("pme.reglages.annuel.ttc", { ttc: aLEchelle(a.en_cours.ttc), devise: pme.currency })}
+          </p>
+        ) : null}
       </div>
     );
   }

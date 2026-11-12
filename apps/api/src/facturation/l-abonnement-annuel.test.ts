@@ -136,14 +136,23 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
       assert.ok(avant.proposition.ttc !== null, "le TTC vient de la fiscalité de la facture");
 
       const r = await sous(db, s.principal, async () => {
-        const { rows } = await db.query<{ r: { paiement: { objet: string; montant_ht: string } } }>(
-          "select public.annuel_souscrire($1) as r",
-          [s.tenant],
-        );
+        const { rows } = await db.query<{
+          r: { paiement: { objet: string; montant_ht: string; montant_ttc: string } };
+        }>("select public.annuel_souscrire($1) as r", [s.tenant]);
         return rows[0]!.r;
       });
       assert.equal(r.paiement.objet, "annuel");
       assert.equal(Number(r.paiement.montant_ht), prix * (12 - offerts));
+      // Recette du 11 novembre (1.8) : « À régler » porte le TTC annoncé, timbre compris.
+      assert.equal(Number(r.paiement.montant_ttc), Number(avant.proposition.ttc));
+      const enCours = await sous(db, s.principal, async () => {
+        const { rows } = await db.query<{ r: { en_cours: { ttc: string } } }>(
+          "select public.mon_annuel($1) as r",
+          [s.tenant],
+        );
+        return rows[0]!.r.en_cours;
+      });
+      assert.equal(Number(enCours.ttc), Number(avant.proposition.ttc), "la même vérité, engagée");
 
       await assert.rejects(
         sous(db, s.principal, () => db.query("select public.annuel_souscrire($1)", [s.tenant])),
@@ -190,6 +199,15 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
       assert.equal(l1.length, 1);
       assert.match(l1[0]!.libelle, /^Abonnement annuel solo/);
       assert.equal(Number(l1[0]!.montant_ht), prix * (12 - offerts));
+      const ttc = await db.query<{ t: string }>(
+        "select montant_ttc::text as t from facturation.factures where id = $1",
+        [debut.factures[0]!.facture_id],
+      );
+      assert.equal(
+        Number(ttc.rows[0]!.t),
+        Number(avant.proposition.ttc),
+        "la facture qui porte l'année a le TTC annoncé : rien de plus à régler",
+      );
 
       // Un mois couvert, sans rien d'autre : aucune facture.
       const couvert = await emettre(await mois(db, 2));
